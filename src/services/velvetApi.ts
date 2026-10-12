@@ -23,6 +23,9 @@ function normalizeEndpoint(url: string | undefined): string {
 /** 云同步开关：配了自研后端地址即启用 */
 export const cloudEnabled = Boolean(API_URL);
 
+/** 后端基址（供 userDataApi 等扩展模块复用）。未配置时为空串 */
+export const apiBaseUrl = API_URL;
+
 const TOKEN_KEY = 'velvet.jwt';
 const RECORD_KEY = 'velvet.record';
 
@@ -132,6 +135,12 @@ async function request<T>(path: string, init: RequestInit & { auth?: boolean } =
   if (!res.ok) throw new VelvetApiError(res.status, body);
   return body as T;
 }
+
+/** 供扩展模块（userDataApi / sync）复用的 fetch 封装：自动带 JWT、统一错误形状 */
+export { request as velvetRequest };
+
+/** 当前登录 token（供扩展模块判断会话态） */
+export const getAuthToken = (): string | null => currentToken;
 
 // ── 认证 API（契约对齐 auth.ts 现有调用形状） ───────────────
 

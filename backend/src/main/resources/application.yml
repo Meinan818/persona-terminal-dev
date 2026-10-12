@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  config:
+    import: optional:classpath:application-otp.yml
   datasource:
     url: jdbc:mysql://localhost:3306/persona_terminal?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root

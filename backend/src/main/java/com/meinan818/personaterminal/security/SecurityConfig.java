@@ -33,7 +33,8 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsSource()))
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/velvet/auth-with-password", "/api/velvet/register", "/actuator/health").permitAll()
+                .requestMatchers("/api/velvet/auth-with-password", "/api/velvet/register",
+                        "/api/velvet/otp/request", "/api/velvet/otp/verify", "/actuator/health").permitAll()
                 .anyRequest().authenticated())
             .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
                 res.setStatus(401);

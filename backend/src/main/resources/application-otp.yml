@@ -1,0 +1,19 @@
+spring:
+  mail:
+    host: smtp.163.com
+    port: 465
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
+
+velvet:
+  otp:
+    # 验证码有效期（分钟）
+    expire-minutes: 10
+    # 同一邮箱发送冷却（秒）
+    send-cooldown-seconds: 60

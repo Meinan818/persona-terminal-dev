@@ -5,10 +5,9 @@
 <h1 align="center">MASKARIA</h1>
 <p align="center"><em>Mask Terminal — 把人生过成一场 RPG</em></p>
 
-> **这是什么项目**：MASKARIA（面具庭园）—— 基于开源项目
-> [the-velvet（靛蓝色房间）](https://github.com/YuukiMarine/the-velvet) 二次开发的**个人毕业设计**。
-> 前端沿用上游代码（React），**后端由我自己用 Java / Spring Boot 重写**，从 PocketBase 云服务迁向自托管。
-> 上游的开发历程与本仓库的改造进度，分别在下方「上游项目历程」与「本仓改造历程」两节。
+> **MASKARIA（面具庭园）** —— 一款以 JRPG 精神为内核的**本地优先个人成长追踪器**，个人毕业设计作品。
+> 前端 React + TypeScript；**后端由我用 Java / Spring Boot + MySQL 自研实现**，从 PocketBase 云服务迁向自托管。
+> 本仓库自二次开发以来的进度，见下方「本仓改造历程」。
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0-8B5CF6?style=flat-square" />
@@ -233,14 +232,19 @@ npx cap sync android        # 同步进安卓工程
 - 名称「MASKARIA」、图标、美术素材和商店宣传素材**不在 GPL 之内**，保留所有权利，见 [ASSETS_LICENSE](ASSETS_LICENSE)。
 - 这是粉丝向的个人作品，界面与命名借鉴了 Persona 系列，与 ATLUS / SEGA 无关，也未获其认可。
 
-## 上游项目
-
-本项目基于开源项目 [the-velvet（靛蓝色房间）](https://github.com/YuukiMarine/the-velvet)
-二次开发，在此感谢原作者 YuukiMarine 的开源贡献。按 GPL-3.0-or-later 的要求，
-本项目保持同样协议开源，并保留上游版权声明（见 [NOTICE](NOTICE)）。
-
 ### 贡献
 
 欢迎提 PR。请给每个 commit 加上 `Signed-off-by`（`git commit -s`，即 [DCO](https://developercertificate.org/)），
 表示这段代码你有权提交。提交即表示你同意：贡献按 GPL-3.0-or-later（含 NOTICE 里的附加许可）授权，
 并允许维护者以其它协议再授权这部分贡献（用于继续上架应用商店、日后调整协议）。
+
+---
+
+<p align="center"><sub><strong>致谢与致敬</strong></sub></p>
+
+<p align="center"><sub>
+本项目基于开源项目 <a href="https://github.com/YuukiMarine/the-velvet">the-velvet（靛蓝色房间）</a> 二次开发，
+在此向原作者 <strong>YuukiMarine</strong> 致以诚挚的感谢与敬意。<br/>
+按 GPL-3.0-or-later 的要求，本项目保持同样协议开源，并保留上游版权声明（见 <a href="NOTICE">NOTICE</a>）。<br/>
+界面与命名借鉴了 Persona 系列，谨向 ATLUS / SEGA 致敬；本项目为粉丝向个人作品，与其无关，亦未获其认可。
+</sub></p>

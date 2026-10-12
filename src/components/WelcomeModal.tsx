@@ -658,7 +658,7 @@ export const WelcomeModal = () => {
                   className="text-[10px] font-semibold tracking-[0.34em] uppercase mb-3"
                   style={{ color: '#9cc2f2' }}
                 >
-                  Persona Terminal
+                  MASKARIA
                 </p>
 
                 {/* Title */}
@@ -670,7 +670,7 @@ export const WelcomeModal = () => {
                     textShadow: '0 0 42px rgba(150,190,250,0.35), 0 2px 12px rgba(0,0,0,0.8)',
                   }}
                 >
-                  面具终端
+                  MASKARIA
                 </h1>
 
                 {/* Divider line */}
@@ -917,7 +917,7 @@ export const WelcomeModal = () => {
               >
                 <h2 className="text-2xl font-bold mb-2 text-white">你叫什么名字？</h2>
                 <p className="text-sm mb-6" style={{ color: 'rgba(170,190,228,0.58)' }}>
-                  这将是你在面具终端中的称呼
+                  这将是你在面具庭园中的称呼
                 </p>
                 <input
                   type="text"
@@ -1275,7 +1275,7 @@ export const WelcomeModal = () => {
                   </motion.div>
                   <h2 className="text-2xl font-bold text-white mb-2">馆长的赐福</h2>
                   <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    尊敬的客人，既然你踏入了面具终端，
+                    尊敬的客人，既然你踏入了面具庭园，
                     <br />
                     说明你并非等闲之辈。
                   </p>

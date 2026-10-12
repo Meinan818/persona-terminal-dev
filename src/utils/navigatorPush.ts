@@ -119,7 +119,7 @@ export function planAssistantPush(input: PushInput): PlannedPush[] {
     at: c.at,
     kind: c.kind,
     ref: c.ref,
-    title: '面具终端',
+    title: 'MASKARIA',
     body: `${input.presetName}有话想跟你说`,
   }));
 }

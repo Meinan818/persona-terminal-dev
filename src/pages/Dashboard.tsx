@@ -920,7 +920,7 @@ export const Dashboard = () => {
             className="relative w-[62%] whitespace-nowrap text-[46px] font-black leading-[1.05] tracking-tight text-[#131313]"
             style={{ fontFamily: 'var(--p4-display-font, serif)' }}
           >
-            面具终端
+            MASKARIA
           </h1>
           <div className="relative mt-1.5 text-[13px] font-black tracking-[0.16em] text-[#131313]">
             TODAY&apos;S SHOW · <span className="text-[var(--p4-orange,#f9a11b)]">04</span>

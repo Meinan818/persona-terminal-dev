@@ -12,7 +12,7 @@
  *     写完就落库、祝福就生效，回来直接看；截断可「接着写」。
  *
  * 视觉刻意独立于三频道：仪式发生在「房间之外的命运空间」——深靛蓝星空 + 鎏金，
- * 全频道一致（这里本来就是面具终端的底色）。D0（校直/低机能）下粒子与星屑静默、
+ * 全频道一致（这里本来就是MASKARIA的底色）。D0（校直/低机能）下粒子与星屑静默、
  * 长按缩短，仪式仍完整可用。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -760,7 +760,7 @@ function FateCardFace({ verdict, width }: { verdict: string | null; width: numbe
       <div className="min-h-[30px] px-1 text-center text-[11px] font-black leading-snug" style={{ color: '#efe6c8' }}>
         {verdict ?? '……'}
       </div>
-      <div className="text-[7px] font-bold tracking-[0.3em]" style={{ color: 'rgba(239,230,200,0.4)' }}>PERSONA TERMINAL</div>
+      <div className="text-[7px] font-bold tracking-[0.3em]" style={{ color: 'rgba(239,230,200,0.4)' }}>MASKARIA</div>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.meinan818.personaterminal',
-  appName: '面具终端',
+  appName: 'MASKARIA',
   webDir: 'dist',
   server: {
     androidScheme: 'https'

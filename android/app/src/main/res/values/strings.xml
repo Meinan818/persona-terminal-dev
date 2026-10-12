@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">面具终端</string>
-    <string name="title_activity_main">面具终端</string>
+    <string name="app_name">MASKARIA</string>
+    <string name="title_activity_main">MASKARIA</string>
     <string name="package_name">com.meinan818.personaterminal</string>
     <string name="custom_url_scheme">com.meinan818.personaterminal</string>
 
@@ -15,5 +15,5 @@
     <string name="widget_agenda_name">清单</string>
     <string name="widget_agenda_desc">未完成任务 · 完成进度 · BIG DEAL 倒计时（会显示任务标题）</string>
     <!-- 整块组件是一张位图，无障碍读屏靠这一条 -->
-    <string name="widget_face_desc">面具终端小组件</string>
+    <string name="widget_face_desc">MASKARIA 小组件</string>
 </resources>

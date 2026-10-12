@@ -42,7 +42,7 @@ export async function exportBackup(
 
     // 调起系统分享面板（可发往微信、邮件、文件管理等）
     await Share.share({
-      title: '面具终端 · 数据备份',
+      title: 'MASKARIA · 数据备份',
       text: `备份文件：${filename}`,
       files: [uri],
       dialogTitle: '分享/保存备份文件',

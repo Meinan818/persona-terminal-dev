@@ -448,7 +448,7 @@ function ConfirmLayer({ title, body, confirmLabel, onCancel, onConfirm }: {
   );
 }
 
-// ── PERSONA TERMINAL 水印 ──────────────────────────────────────
+// ── MASKARIA 水印 ──────────────────────────────────────
 function VelvetWatermark() {
   return (
     <div
@@ -459,7 +459,7 @@ function VelvetWatermark() {
         className="text-5xl font-black tracking-[0.3em] text-gray-900 dark:text-white opacity-[0.04] dark:opacity-[0.06] rotate-[-12deg] whitespace-nowrap"
         style={{ fontFamily: 'sans-serif' }}
       >
-        PERSONA TERMINAL
+        MASKARIA
       </span>
     </div>
   );

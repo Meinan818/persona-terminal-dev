@@ -393,7 +393,7 @@ function P5Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
             </div>
           </div>
 
-          {/* PERSONA TERMINAL subtitle block — red on black */}
+          {/* MASKARIA subtitle block — red on black */}
           <div className="p5-title-block-sub opacity-0"
             style={{
               background: '#0a0a0a',
@@ -408,7 +408,7 @@ function P5Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
               color: '#cc0018',
               letterSpacing: '0.45em',
               textTransform: 'uppercase' as const,
-            }}>PERSONA TERMINAL</span>
+            }}>MASKARIA</span>
           </div>
         </div>
       )}
@@ -443,7 +443,7 @@ function P5Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
         </>
       )}
 
-      {/* ── Scattered small text fragments — "PERSONA TERMINAL" ── */}
+      {/* ── Scattered small text fragments — "MASKARIA" ── */}
       {phase >= 3 && (
         <>
           {[
@@ -674,7 +674,7 @@ function P3Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
     // 总时长：2200 →（v2.7.0.4）2700 →（v2.7.0.5）3700。两次都是用户口径「太快了」。
     // 加的时间全部给题字段——前两段（影时间敲钟 / 碎裂 glitch 换世界）的节拍是掐着
     // CSS 关键帧调的，一动就散架；题字落定在 ~1.2s，原本只留 0.55s 就收幕，现在留
-    // 2.05s，是"多看一眼面具终端"而不是"某一段变慢"。收幕淡入起点同步后移（见页尾）。
+    // 2.05s，是"多看一眼MASKARIA"而不是"某一段变慢"。收幕淡入起点同步后移（见页尾）。
     const t1 = setTimeout(() => setPhase(1), 380 * s);
     const t2 = setTimeout(() => setPhase(2), 860 * s);
     const t3 = setTimeout(onComplete, 3700 * s);
@@ -907,7 +907,7 @@ function P3Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
           </div>
         ))}
 
-        {/* 左右竖排装饰大字 PERSONA TERMINAL（主页装饰大字语言：空心描边 + 缓漂） */}
+        {/* 左右竖排装饰大字 MASKARIA（主页装饰大字语言：空心描边 + 缓漂） */}
         {phase >= 1 && (
           <>
             <div className="absolute left-[2%] top-0 bottom-0 flex items-center pointer-events-none select-none overflow-hidden">
@@ -918,7 +918,7 @@ function P3Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
                 color: 'transparent', WebkitTextStroke: '1px rgba(53,209,232,0.24)',
                 animation: `p3s-vdrift ${1.6 * s}s linear ${0.4 * s}s both`,
               }}>
-                PERSONA TERMINAL
+                MASKARIA
               </div>
             </div>
             <div className="absolute right-[2%] top-0 bottom-0 flex items-center pointer-events-none select-none overflow-hidden">
@@ -929,7 +929,7 @@ function P3Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
                 color: 'transparent', WebkitTextStroke: '1px rgba(27,87,255,0.28)',
                 animation: `p3s-vdrift-r ${1.6 * s}s linear ${0.55 * s}s both`,
               }}>
-                PERSONA TERMINAL
+                MASKARIA
               </div>
             </div>
           </>
@@ -1046,7 +1046,7 @@ function P3Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
                 fontFamily: '"Noto Sans SC Black", "Velvet Sans SC", sans-serif',
                 textShadow: '2px 3px 0 rgba(4, 12, 42, 0.55), 0 0 26px rgba(27, 87, 255, 0.35)',
               }}>
-                面具终端
+                MASKARIA
               </span>
             </div>
           </div>
@@ -1064,7 +1064,7 @@ function P3Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. P4 — Persona 4 "Midnight Channel" style
 //    Bright yellow, VHS static/glitch, analog color bars, film strip,
-//    "Persona Terminal" caution tape, flat vector, non-linear animation
+//    "MASKARIA" caution tape, flat vector, non-linear animation
 // ─────────────────────────────────────────────────────────────────────────────
 
 // SMPTE-inspired analog color bars
@@ -1365,7 +1365,7 @@ function P4Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
         />
       ))}
 
-      {/* ── Diagonal "Persona Terminal" caution tape (upper) ── */}
+      {/* ── Diagonal "MASKARIA" caution tape (upper) ── */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={phase >= 1 ? { opacity: 1 } : {}}
@@ -1380,13 +1380,13 @@ function P4Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
           <div className="inline-block bg-black py-2 px-1"
             style={{ fontSize: 'clamp(0.6rem,2vw,0.82rem)' }}>
             <span className="font-black tracking-[0.25em] uppercase" style={{ color: '#f4cc0a' }}>
-              {'⚠ PERSONA TERMINAL ⚠ CAUTION ⚠ PERSONA TERMINAL ⚠ DANGER ⚠ PERSONA TERMINAL ⚠ CAUTION ⚠ PERSONA TERMINAL ⚠ DANGER ⚠ PERSONA TERMINAL ⚠ CAUTION ⚠ PERSONA TERMINAL ⚠ DANGER '}
+              {'⚠ MASKARIA ⚠ CAUTION ⚠ MASKARIA ⚠ DANGER ⚠ MASKARIA ⚠ CAUTION ⚠ MASKARIA ⚠ DANGER ⚠ MASKARIA ⚠ CAUTION ⚠ MASKARIA ⚠ DANGER '}
             </span>
           </div>
         </div>
       </motion.div>
 
-      {/* ── Diagonal "Persona Terminal" caution tape (lower, reverse direction) ── */}
+      {/* ── Diagonal "MASKARIA" caution tape (lower, reverse direction) ── */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={phase >= 1 ? { opacity: 1 } : {}}
@@ -1401,7 +1401,7 @@ function P4Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
           <div className="inline-block bg-[#1a1a1a]/90 py-1.5 px-1"
             style={{ fontSize: 'clamp(0.5rem,1.6vw,0.7rem)' }}>
             <span className="font-black tracking-[0.3em] uppercase" style={{ color: '#f4cc0a' }}>
-              {'PERSONA TERMINAL ▪ PERSONA TERMINAL ▪ PERSONA TERMINAL ▪ PERSONA TERMINAL ▪ PERSONA TERMINAL ▪ PERSONA TERMINAL ▪ PERSONA TERMINAL ▪ PERSONA TERMINAL ▪ '}
+              {'MASKARIA ▪ MASKARIA ▪ MASKARIA ▪ MASKARIA ▪ MASKARIA ▪ MASKARIA ▪ MASKARIA ▪ MASKARIA ▪ '}
             </span>
           </div>
         </div>
@@ -1429,7 +1429,7 @@ function P4Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
                 fontWeight: 900,
                 letterSpacing: '-0.01em',
               }}>
-              面具终端
+              MASKARIA
             </div>
           </div>
           <motion.div
@@ -1443,7 +1443,7 @@ function P4Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
               transform: 'skewX(-10deg)',
             }}
           >
-            PERSONA TERMINAL
+            MASKARIA
           </motion.div>
         </motion.div>
       </div>

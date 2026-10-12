@@ -114,8 +114,10 @@ const WeatherGlyphP5 = ({ icon }: { icon: WeatherIcon | undefined }) => (
 );
 
 /**
- * 页头一行的设计宽度：拼贴五块（43 × 1.24 = 53.3，四道 3px 间隙）+ gap-3 + 日期卡 134。
- * 5 × 53.3 + 4 × 3 + 12 + 134 ≈ 425px。
+ * 页头一行的设计宽度：拼贴八块（26 × 1.24 = 32.2，七道 3px 间隙）+ gap-3 + 日期卡 150。
+ * 8 × 32.2 + 7 × 3 + 12 + 150 ≈ 441px。
+ * （原名 4 汉字瓷砖为 size 43；MASKARIA 是 8 个字母，为在 360dp 机型上不触发整行缩放、
+ *   保住日期卡原生字号，瓷砖降到 26——视觉权重与 4×43 的拼贴块相当。）
  */
 const HEAD_DESIGN_W = 441;
 
@@ -850,21 +852,25 @@ export const DashboardP5 = () => {
           </div>
 
           <FitRow designWidth={HEAD_DESIGN_W} className="flex items-start justify-between gap-3">
-            {/* 拼贴大字「面具终端」（五块瓷砖异色穿插，配色循环沿用稿上口径） */}
+            {/* 拼贴大字「MASKARIA」（八块瓷砖异色穿插，配色循环沿用稿上口径） */}
             <div className="min-w-0 pt-1">
-              {/* 字号 +30%（33→43）；瓷砖变宽后日期卡同步收窄，两块在 450 宽下仍互不挤压 */}
+              {/* 八块字母瓷砖并排；日期卡固定 150 宽，两块在 360dp 机型上仍放得下（见 HEAD_DESIGN_W） */}
               <P5Collage
-                size={43}
+                size={26}
                 gap={3}
                 tiles={[
-                  { ch: '面', bg: P5R.red, fg: P5R.ink, rot: -4, dy: 0 },
-                  { ch: '具', bg: P5R.paper, fg: P5R.ink, rot: 2.5, dy: 9 },
-                  { ch: '终', bg: P5R.ink, fg: P5R.greyLight, rot: -2, dy: 3 },
-                  { ch: '端', bg: P5R.red, fg: P5R.white, rot: -2.6, dy: 5 },
+                  { ch: 'M', bg: P5R.red, fg: P5R.ink, rot: -4, dy: 0 },
+                  { ch: 'A', bg: P5R.paper, fg: P5R.ink, rot: 2.5, dy: 9 },
+                  { ch: 'S', bg: P5R.ink, fg: P5R.greyLight, rot: -2, dy: 3 },
+                  { ch: 'K', bg: P5R.red, fg: P5R.white, rot: -2.6, dy: 5 },
+                  { ch: 'A', bg: P5R.paper, fg: P5R.ink, rot: 2, dy: 7 },
+                  { ch: 'R', bg: P5R.ink, fg: P5R.greyLight, rot: -3, dy: 2 },
+                  { ch: 'I', bg: P5R.red, fg: P5R.white, rot: 2.2, dy: 6 },
+                  { ch: 'A', bg: P5R.paper, fg: P5R.ink, rot: -2.4, dy: 4 },
                 ]}
               />
               <div className="mt-3 pl-6">
-                <P5SubBar segs={[{ t: 'PERSONA', c: P5R.red }, { t: 'TERMINAL', c: P5R.white }]} />
+                <P5SubBar segs={[{ t: '面具', c: P5R.red }, { t: '庭园', c: P5R.white }]} />
               </div>
             </div>
 
@@ -1330,7 +1336,7 @@ export const DashboardP5 = () => {
         </ModalPortal>
 
         {/* 读屏可达的问候（视觉由拼贴标题承担） */}
-        <h2 className="sr-only">{user?.name ? `${user.name}的面具终端` : '面具终端'}</h2>
+        <h2 className="sr-only">{user?.name ? `${user.name}的面具庭园` : '面具庭园'}</h2>
       </motion.div>
     </P5RPage>
   );

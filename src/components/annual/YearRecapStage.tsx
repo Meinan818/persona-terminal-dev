@@ -365,7 +365,7 @@ function CoverPage({ r, skin, channel, anim, userName }: Ctx) {
   const whole = r.asOf === `${r.year}-12-31`;
   return (
     <div className="text-center">
-      <div className="text-[12px] font-black tracking-[0.4em]" style={{ color: channel === 'p5' ? P5R.red : skin.accent, fontFamily: skin.font }}>PERSONA TERMINAL · {r.year}</div>
+      <div className="text-[12px] font-black tracking-[0.4em]" style={{ color: channel === 'p5' ? P5R.red : skin.accent, fontFamily: skin.font }}>MASKARIA · {r.year}</div>
       <motion.div
         className="mt-3 font-black leading-none tabular-nums"
         style={{ fontSize: 'min(34vw, 150px)', color: channel === 'p5' ? P5R.white : channel === 'p4' ? 'var(--ui-ink, #131313)' : channel === 'p3' ? P3R.blue : '#fff', fontFamily: skin.numFont, fontStyle: channel === 'p3' ? 'italic' : undefined,

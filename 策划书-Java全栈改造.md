@@ -1,8 +1,8 @@
-# 「面具终端」Java 全栈化改造策划书（毕业设计）
+# 「MASKARIA」Java 全栈化改造策划书（毕业设计）
 
 ## 一、项目概述
 
-**项目名称**：面具终端（Persona Terminal）——基于 Spring Boot + React 的个人成长追踪系统
+**项目名称**：MASKARIA（面具庭园）——基于 Spring Boot + React 的个人成长追踪系统
 
 **现状**：本项目现有一个已完成的高完成度 React 18 前端（TypeScript + Vite + Tailwind + Zustand + Dexie/IndexedDB + GSAP/motion 动画 + Capacitor 移动端封装），含 16+ 页面、200+ 组件、三套主题皮肤（P3/P4/P5 视觉系统）、塔罗/AI 对话等 AI 功能。数据目前存于浏览器 IndexedDB，云同步依赖第三方 PocketBase（Go 编写）。
 

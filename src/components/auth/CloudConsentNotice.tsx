@@ -132,7 +132,7 @@ export function CloudConsentModal({ isOpen, onAccept, onDecline }: {
             }}
           >
             <div className="px-7 pt-7 pb-2 text-center">
-              <div className="text-[11px] tracking-[0.5em] font-semibold" style={{ color: '#a78bfa' }}>PERSONA TERMINAL</div>
+              <div className="text-[11px] tracking-[0.5em] font-semibold" style={{ color: '#a78bfa' }}>MASKARIA</div>
               <div className="text-lg leading-none my-2" style={{ color: '#6b7ca8' }}>◆</div>
               <h2 className="text-xl font-serif" style={{ color: '#f5e6ff' }}>关于这朵云，补一份说明</h2>
               <p className="text-xs mt-2 leading-relaxed" style={{ color: '#a89dc0' }}>

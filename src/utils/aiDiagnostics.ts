@@ -74,7 +74,7 @@ export function buildAIDiagnostics(settings: Settings, env: { version?: string; 
   const active = settings.summaryApiProvider ?? 'deepseek';
   const host = (url?: string) => (url ? hostOf(url) || url : '默认地址');
   const lines: string[] = [
-    `面具终端 AI 诊断 · ${new Date().toLocaleString('zh-CN')}`,
+    `MASKARIA AI 诊断 · ${new Date().toLocaleString('zh-CN')}`,
     `版本 ${env.version ?? '-'} · ${env.platform ?? '-'}`,
     `当前服务商：${active} · ${host(settings.summaryApiBaseUrl)} · 模型 ${settings.summaryModel || '默认'} · Key ${settings.summaryApiKey?.trim() ? '已填' : '未填'}`,
     `深思熟虑：${settings.navigatorProvider ?? '跟随'} · ${settings.navigatorModel || '跟随'}；助手：${settings.assistantProvider ?? '跟随'} · ${settings.assistantModel || '跟随'}`,

@@ -558,7 +558,7 @@ extension Face {
 
     /// 快照缺失时的单行引导（锁屏版 notSynced）
     private static func lockNotSynced(_ ctx: inout GraphicsContext, _ w: CGFloat, _ h: CGFloat) {
-        Draw.text(&ctx, "打开一次面具终端", size: h * 0.24, color: .white, bold: true, slant: true,
+        Draw.text(&ctx, "打开一次 MASKARIA", size: h * 0.24, color: .white, bold: true, slant: true,
                   x: w / 2, baselineY: h * 0.58, align: .center)
     }
 
@@ -896,7 +896,7 @@ extension Face {
 
     /// 单行「清单」：只放最紧的一件事（同一天还有别的截止日就在末尾加「+N」）；没有截止日回落成「✦ 3/5」
     static func inlineAgenda(_ s: VelvetSnapshot) -> String {
-        guard s.present else { return "✦ 打开一次面具终端" }
+        guard s.present else { return "✦ 打开一次 MASKARIA" }
         guard s.agendaKnown else { return "✦ 打开 App 同步" }
         if let deal = s.agendaDeal, let d = deal.daysLeft, d <= 3 {
             let tag = d < 0 ? "已过截止" : d == 0 ? "今天截止" : "剩\(d)天"

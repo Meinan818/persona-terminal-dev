@@ -136,9 +136,9 @@ const COPY: Record<NotifContentType, CopyFn[]> = {
     () => ({ title: '本周委托', body: '三张委托已经贴在板上了，做完记得来领。' }),
   ],
   tarot: [
-    () => ({ title: '面具终端', body: '客人，今日的塔罗尚未翻开……命运在等你抽取。' }),
+    () => ({ title: 'MASKARIA', body: '客人，今日的塔罗尚未翻开……命运在等你抽取。' }),
     () => ({ title: '今日塔罗', body: '牌阵已为你铺好。来翻开属于今天的那一张吧。' }),
-    () => ({ title: '面具终端', body: '黎明的牌面还盖着。今天的指引，要现在揭晓吗？' }),
+    () => ({ title: 'MASKARIA', body: '黎明的牌面还盖着。今天的指引，要现在揭晓吗？' }),
   ],
   todos: [
     (c) => ({
@@ -173,7 +173,7 @@ const COPY: Record<NotifContentType, CopyFn[]> = {
   record: [
     () => ({ title: '夜间结算', body: '客人，今天还没有在房间里留下一笔……此刻的你，也值得被记下。' }),
     () => ({ title: '今日记录', body: '这一天就要合上了。要不要回来，记下你走过的痕迹？' }),
-    () => ({ title: '面具终端', body: '房间为你留着灯。今天的故事，还没有人书写。' }),
+    () => ({ title: 'MASKARIA', body: '房间为你留着灯。今天的故事，还没有人书写。' }),
   ],
 };
 
@@ -380,7 +380,7 @@ export async function sendTestNotification(): Promise<boolean> {
     await LocalNotifications.schedule({
       notifications: [{
         id: NOTIF_ID_TEST,
-        title: '面具终端',
+        title: 'MASKARIA',
         body: '欢迎回来，客人。这是一条测试提醒——通知链路已就绪。',
         extra: { source: 'f2a-test' },
       }],

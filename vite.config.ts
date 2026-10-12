@@ -120,8 +120,8 @@ export default defineConfig({
       // 挂在这里既不会报错也不会生效，纯粹是误导后来人的死配置（v2.6 上线前清掉）
       includeAssets: ['apple-touch-icon.png', 'icon.png'],
       manifest: {
-        name: '面具终端',
-        short_name: '面具终端',
+        name: 'MASKARIA',
+        short_name: 'MASKARIA',
         description: '个人成长追踪器',
         // 不写 lang 的话 vite-plugin-pwa 默认填 'en'——一个全中文的应用
         // 在系统/应用商店那里被标成英文，安装卡片与朗读都会走错语言
@@ -146,7 +146,7 @@ export default defineConfig({
          * 挂了 maskable 就等于告诉系统「这张图可以随便裁」，Android 会按圆 / squircle /
          * 泪滴各种遮罩去切，只有落在中心 80% 直径圆内的内容才保证不被切掉。
          * 实测原图的标记外接圆半径 239px，而安全半径只有 205px——四角会被啃掉一圈。
-         * maskable-*.png 是把同一张图缩到 80% 居中重铺底色生成的（复核后半径 190px，进了安全区）。
+         * maskable-*.png 由 scripts/MaskariaIcons.java 把同一张图缩到 80% 居中生成（复核后半径 190px，进了安全区）。
          */
         icons: [
           {

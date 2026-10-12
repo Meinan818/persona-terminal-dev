@@ -2577,7 +2577,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       userId: user.id,
       date: new Date(),
       description:
-        `你时隔 ${payload.daysAway} 天重新叩响了面具终端的房门，` +
+        `你时隔 ${payload.daysAway} 天重新叩响了面具庭园的房门，` +
         `第 ${payload.returnCount} 次回到了更生的旅途上。`,
       pointsAwarded: { ...zero },
       method: 'local',

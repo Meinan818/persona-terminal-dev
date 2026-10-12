@@ -69,7 +69,7 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 async function shareInvite(view: OrgView): Promise<'shared' | 'copied' | 'failed'> {
-  const text = `来「${view.org.name}」一起吧：打开面具终端 → 羁绊 → 点标题切到「组织」→ 输入邀请码 ${view.org.inviteCode}`;
+  const text = `来「${view.org.name}」一起吧：打开面具庭园 → 羁绊 → 点标题切到「组织」→ 输入邀请码 ${view.org.inviteCode}`;
   try {
     const { Capacitor } = await import('@capacitor/core');
     if (Capacitor.isNativePlatform()) {

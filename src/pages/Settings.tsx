@@ -1346,8 +1346,8 @@ export const Settings = () => {
                         {([
                           {
                             value: 'velvet',
-                            label: '面具终端',
-                            sub: 'Persona Terminal',
+                            label: 'MASKARIA',
+                            sub: 'MASKARIA',
                             sound: '/themea-switch.mp3',
                             color: '#7C3AED',
                             bg: 'rgba(124,58,237,0.08)',

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="icon.png" width="96" height="96" alt="面具终端" />
+  <img src="icon.png" width="96" height="96" alt="MASKARIA" />
 </p>
 
-<h1 align="center">面具终端</h1>
+<h1 align="center">MASKARIA</h1>
 <p align="center"><em>Mask Terminal — 把人生过成一场 RPG</em></p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 
 > *"你已经签订了契约。你拥有面对命运的力量……"*
 >
-> 欢迎来到面具终端。这里介于梦与现实之间，专为拥有特别潜能之人而存在。
+> 欢迎来到 MASKARIA。这里介于梦与现实之间，专为拥有特别潜能之人而存在。
 > 在这里，你的每一次行动化为属性加点，你的成长轨迹被 AI 回望与诠释，你的人格，正在逐渐成形。
 
 ---
@@ -191,7 +191,7 @@ npx cap sync android        # 同步进安卓工程
 代码按 **GPL-3.0-or-later** 发布（[LICENSE](LICENSE)），附两条附加许可（[NOTICE](NOTICE)）：
 允许通过应用商店分发；允许与 GSAP 链接。
 
-- 名称「面具终端」、图标、美术素材和商店宣传素材**不在 GPL 之内**，保留所有权利，见 [ASSETS_LICENSE](ASSETS_LICENSE)。
+- 名称「MASKARIA」、图标、美术素材和商店宣传素材**不在 GPL 之内**，保留所有权利，见 [ASSETS_LICENSE](ASSETS_LICENSE)。
 - 这是粉丝向的个人作品，界面与命名借鉴了 Persona 系列，与 ATLUS / SEGA 无关，也未获其认可。
 
 ## 上游项目

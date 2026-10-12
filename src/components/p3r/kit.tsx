@@ -89,7 +89,7 @@ export const P3RPage = ({ children, className, active = true }: { children: Reac
 
 /** 背景幽灵大字（多行，整块斜置；移动端低透明度护栏 §18.1）
  *  字重口径（2026-08-31 用户改稿）：Noto Sans SC Black 真 900——旧稿「Arial 合成加粗、
- *  比 Arial Black 细一档」被推翻（用户："PERSONA TERMINAL 字重太小了，让它们粗一点"）
+ *  比 Arial Black 细一档」被推翻（用户："MASKARIA 字重太小了，让它们粗一点"）
  *  动效（A3）：内层随页面滚动慢速视差漂移 + 极低频呼吸透明度；外层结构不变
  *  （调用方经 className/style 传入的定位与 rotate 覆盖全部保留），D0 静止。 */
 export const GhostWords = ({ words, className, style, parallax = true }: { words: ReactNode[]; className?: string; style?: CSSProperties; parallax?: boolean }) => {

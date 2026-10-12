@@ -66,23 +66,23 @@ public class OtpService {
             MimeMessageHelper helper = new MimeMessageHelper(msg, false, "UTF-8");
             helper.setFrom(fromUser);
             helper.setTo(to);
-            helper.setSubject("确认你的邮件地址 · 面具终端");
+            helper.setSubject("确认你的邮件地址 · MASKARIA");
             helper.setText("""
                 <div style="margin:0;padding:40px 0;background:#ffffff;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
                   <div style="max-width:420px;margin:0 auto;padding:0 24px;">
-                    <div style="width:48px;height:48px;background:#000000;color:#ffffff;font-size:28px;font-weight:700;line-height:48px;text-align:center;margin-bottom:32px;">面</div>
+                    <div style="width:48px;height:48px;background:#000000;color:#ffffff;font-size:28px;font-weight:700;line-height:48px;text-align:center;margin-bottom:32px;">M</div>
                     <h1 style="font-size:22px;font-weight:700;color:#0f1419;margin:0 0 32px;">确认你的邮件地址</h1>
-                    <p style="font-size:15px;color:#0f1419;margin:0 0 12px;">请输入此验证码以开始使用面具终端：</p>
+                    <p style="font-size:15px;color:#0f1419;margin:0 0 12px;">请输入此验证码以开始使用 MASKARIA：</p>
                     <p style="font-size:40px;font-weight:800;color:#0f1419;letter-spacing:4px;margin:0 0 12px;">%s</p>
                     <p style="font-size:14px;color:#536471;margin:0 0 32px;">验证码 %d 分钟后过期。</p>
                     <p style="font-size:15px;color:#0f1419;margin:0 0 4px;">谢谢，</p>
-                    <p style="font-size:15px;color:#0f1419;margin:0 0 48px;">面具终端</p>
+                    <p style="font-size:15px;color:#0f1419;margin:0 0 48px;">MASKARIA</p>
                     <p style="font-size:13px;color:#536471;text-align:center;border-top:1px solid #eff3f4;padding-top:20px;">
                       <a href="#" style="color:#536471;text-decoration:none;">帮助</a> ｜
                       <a href="#" style="color:#536471;text-decoration:none;">电子邮件安全提示</a>
                     </p>
                     <p style="font-size:12px;color:#8899a6;text-align:center;margin-top:8px;">
-                      Persona Terminal · 面具终端 · 此邮件由系统自动发送，请勿回复
+                      MASKARIA · 此邮件由系统自动发送，请勿回复
                     </p>
                   </div>
                 </div>

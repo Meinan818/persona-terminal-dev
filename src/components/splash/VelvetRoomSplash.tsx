@@ -7,7 +7,7 @@
  *   ② 灯带自远而近掠过 —— 严格分左右两列夹着门排布，形成纵深走廊
  *   ③ 镜头旋转着推进：场景整体 translateZ + rotate，门由小变大
  *   ④ 门先**看得见地**打开（52% 起转），门缝白光押后到 68% 才真正炸开
- *   ⑤ 白光充满 → 暗下来，标题浮出 + 上下两条大无衬线 PERSONA TERMINAL 划过
+ *   ⑤ 白光充满 → 暗下来，标题浮出 + 上下两条大无衬线 MASKARIA 划过
  *   ⑥ 水波纹 + 粒子收尾
  *
  * 工程护栏：
@@ -393,14 +393,14 @@ export function VelvetRoomSplash({ onComplete, s, reduced = false }: { onComplet
         style={{ background: 'radial-gradient(circle at 50% 48%, #ffffff 0%, #eef3ff 40%, #cdd8ff 100%)' }}
       />
 
-      {/* ⑤ 上下两条大无衬线 PERSONA TERMINAL 划过（P3 展示字面） */}
+      {/* ⑤ 上下两条大无衬线 MASKARIA 划过（P3 展示字面） */}
       {phase === 'title' && anim && (
         <>
           <div className="pointer-events-none absolute left-0 right-0 top-[7%] select-none overflow-hidden">
-            <div className="vlv-marquee" style={{ animation: `vlv-marquee-l ${3.4 * s}s linear forwards` }}>PERSONA TERMINAL</div>
+            <div className="vlv-marquee" style={{ animation: `vlv-marquee-l ${3.4 * s}s linear forwards` }}>MASKARIA</div>
           </div>
           <div className="pointer-events-none absolute bottom-[7%] left-0 right-0 select-none overflow-hidden">
-            <div className="vlv-marquee" style={{ animation: `vlv-marquee-r ${3.4 * s}s linear forwards` }}>PERSONA TERMINAL</div>
+            <div className="vlv-marquee" style={{ animation: `vlv-marquee-r ${3.4 * s}s linear forwards` }}>MASKARIA</div>
           </div>
         </>
       )}
@@ -438,9 +438,9 @@ export function VelvetRoomSplash({ onComplete, s, reduced = false }: { onComplet
             transition={{ duration: 1.0 * s, ease: [0.2, 0, 0.1, 1] }}
             className="relative flex text-[clamp(2.1rem,11vw,4rem)] font-black leading-none text-white"
             style={{ fontFamily: '"Noto Sans SC Black", "Noto Sans SC", "Arial Black", Arial, sans-serif' }}
-            aria-label="面具终端"
+            aria-label="MASKARIA"
           >
-            {'面具终端'.split('').map((ch, i) => (
+            {'MASKARIA'.split('').map((ch, i) => (
               <motion.span
                 key={i}
                 aria-hidden
@@ -460,7 +460,7 @@ export function VelvetRoomSplash({ onComplete, s, reduced = false }: { onComplet
             className="relative mt-3 text-[clamp(0.7rem,3.4vw,0.95rem)] italic text-[#a9bcff]"
             style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
           >
-            PERSONA TERMINAL
+            MASKARIA
           </motion.p>
         </div>
       )}

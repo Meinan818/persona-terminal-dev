@@ -1,10 +1,10 @@
 /**
- * BrandTitleReveal —— 首页流光品牌标题（「面具终端 / Persona Terminal」）。
+ * BrandTitleReveal —— 首页流光品牌标题（「MASKARIA / MASKARIA」）。
  *
  * 审计 S6 拍板：首页豁免 PageTitle 制式，保留这块 52px 流光品牌标题作为「品牌仪式感」
  * 最高权重首屏头。本组件在原样保留视觉的同时，把入场从 framer-motion 整体淡入升级为
  * 一条 GSAP 时间线（UI_DESIGN_BOLD_V2.5.md §2 规则5「排版即图形 / 文字怪物」）：
- *   眉标落位 → 五个字带斜界微旋逐字升起（GSAP SplitText 拆字）→ Persona Terminal 侧滑 →
+ *   眉标落位 → 八个字符带斜界微旋逐字升起（GSAP SplitText 拆字）→ MASKARIA 侧滑 →
  *   分隔线自左拉出。
  *
  * 流光渐变的坑（已踩实）：background-clip:text 只裁元素「自身的直系文字」、不裁后代。
@@ -67,7 +67,7 @@ export const BrandTitleReveal = ({ darkMode }: BrandTitleRevealProps) => {
     if (!base) return;
 
     const probe = document.createElement('div');
-    probe.textContent = '面具终端';
+    probe.textContent = 'MASKARIA';
     probe.setAttribute('aria-hidden', 'true');
     probe.style.cssText = 'position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;white-space:nowrap;';
     // 逐项抄而不是用 font 简写：简写在部分内核里回读为空串，量出来就是 0
@@ -80,7 +80,7 @@ export const BrandTitleReveal = ({ darkMode }: BrandTitleRevealProps) => {
     const natural = probe.getBoundingClientRect().width;
     box.removeChild(probe);
 
-    // clientWidth 含 padding（px-1 两边各 4px）；再留 6px 余量——「Persona Terminal」
+    // clientWidth 含 padding（px-1 两边各 4px）；再留 6px 余量——「MASKARIA」
     // 绝对定位在 -right-1，比 h1 右缘还往外探一点，缩到严丝合缝会把它顶出屏幕
     const avail = box.clientWidth - 8 - 6;
     if (natural > 0 && avail > 0 && natural > avail) {
@@ -104,7 +104,7 @@ export const BrandTitleReveal = ({ darkMode }: BrandTitleRevealProps) => {
       if (!bold || !titleRef.current) return;
 
       // 逐字拆分；aria:'auto' 把原文写进 <h1> 的 aria-label、并对装饰 span 置 aria-hidden，
-      // 读屏仍读"面具终端"整体而非五个孤立字
+      // 读屏仍读"MASKARIA"整体而非五个孤立字
       const split = SplitText.create(titleRef.current, {
         type: 'chars',
         charsClass: 'brand-char',
@@ -116,7 +116,7 @@ export const BrandTitleReveal = ({ darkMode }: BrandTitleRevealProps) => {
 
       // 流光自左向右扫过五字：靠左的字相位领先（负 delay 把播放进度拉早）。
       // 拆字后渐变下沉到每字（h1 的 background-clip:text 不裁后代文字），相位错开
-      // 才能复现原 <h1> 那道横扫的流光，而非五个字齐刷刷同步闪。
+      // 才能复现原 <h1> 那道横扫的流光，而非八个字符齐刷刷同步闪。
       const n = split.chars.length || 1;
       split.chars.forEach((c, i) => {
         (c as HTMLElement).style.animationDelay = `${(-(i / n) * 5).toFixed(2)}s`;
@@ -198,7 +198,7 @@ export const BrandTitleReveal = ({ darkMode }: BrandTitleRevealProps) => {
         欢迎来到
       </span>
 
-      {/* 主标题容器：relative 供 Persona Terminal 绝对定位 */}
+      {/* 主标题容器：relative 供 MASKARIA 绝对定位 */}
       <div className="relative inline-block">
         <h1
           ref={titleRef}
@@ -207,16 +207,16 @@ export const BrandTitleReveal = ({ darkMode }: BrandTitleRevealProps) => {
           // 都不会退化成「第二行只剩一个字」
           style={{ letterSpacing: '-0.04em', whiteSpace: 'nowrap' }}
         >
-          面具终端
+          MASKARIA
         </h1>
 
-        {/* Persona Terminal — 叠加在标题右下角 */}
+        {/* MASKARIA — 叠加在标题右下角 */}
         <span
           ref={velvetRef}
           className="absolute -bottom-1.5 -right-1 text-lg leading-none text-primary opacity-75 pointer-events-none"
           style={{ fontFamily: "'Caveat', cursive", fontWeight: 600 }}
         >
-          Persona Terminal
+          MASKARIA
         </span>
       </div>
 

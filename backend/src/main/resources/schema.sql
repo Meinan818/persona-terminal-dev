@@ -1,4 +1,4 @@
--- Persona Terminal 数据库初始化（MySQL 8）
+-- MASKARIA 数据库初始化（MySQL 8）
 -- 复杂嵌套结构按策划书 4.2 用 JSON 列，与前端 TS 类型直接对应
 CREATE DATABASE IF NOT EXISTS persona_terminal
   DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

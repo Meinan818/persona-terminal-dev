@@ -400,7 +400,7 @@ export const Menu = () => {
           {/* 居中头部：logo / 应用名 / 副题 / 版本 */}
           <div className="text-center py-2">
             <div className="text-5xl mb-4">🦋</div>
-            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">面具终端</h3>
+            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">MASKARIA</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">JRPG Growth Tracker</p>
             {upd.hasUpdate ? (
               // 有新版本：版本号变强调色，下面一行写新版本号，整块点了去 B 站动态（安卓包在那儿发）

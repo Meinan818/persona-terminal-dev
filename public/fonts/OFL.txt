@@ -6,7 +6,7 @@
 #       （© 2023 ChillType，基于小杉圆体/justfont粉圆/猫啃糖圆体；
 #        https://github.com/Warren2060/ChillRound）
 
-面具终端 内嵌字体说明 / Bundled font notice
+MASKARIA 内嵌字体说明 / Bundled font notice
 ================================================
 
 本目录下的两份字体是 Google Noto 字体的**子集**，用于保证应用在没有中文字体

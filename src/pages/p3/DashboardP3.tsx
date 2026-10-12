@@ -647,7 +647,7 @@ export const DashboardP3 = () => {
             className="relative inline-flex items-end text-[54px] font-black italic leading-[0.95] tracking-tight"
             style={{ color: '#021c36', fontSize: 'min(54px, 13.4vw)', isolation: 'isolate' }}
           >
-            面具终端
+            MASKARIA
             <TitlePeriod className="mb-1.5 ml-1.5" />
             {/* 底衬三角（八稿）：七稿（绕右顶点顺 5°，等效中心平移 (-1.6,-6.9)px + 净角 4°）
                 再以中心逆时针回 1°——净角 +3°；顶点连续沸腾 */}
@@ -672,7 +672,7 @@ export const DashboardP3 = () => {
                 // 原字与染色区之上——必须显式关掉
                 textShadow: 'none',
               }}
-            >面具终端</span>
+            >MASKARIA</span>
           </h1>
           <p className="mt-2 text-[15px] font-bold" style={{ color: P3R.blue }}>{greeting}</p>
 
@@ -1059,7 +1059,7 @@ export const DashboardP3 = () => {
         </ModalPortal>
 
         {/* 读屏可达的问候（视觉由上方标题承担） */}
-        <h2 className="sr-only">{user?.name ? `${user.name}的面具终端` : '面具终端'}</h2>
+        <h2 className="sr-only">{user?.name ? `${user.name}的面具庭园` : '面具庭园'}</h2>
       </motion.div>
     </P3RPage>
   );

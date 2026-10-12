@@ -101,7 +101,7 @@ export function CardBack({
             letterSpacing="4"
             fill={P5R.paper}
           >
-            PERSONA TERMINAL
+            MASKARIA
           </text>
           <text
             x={VB_W / 2}
@@ -327,7 +327,7 @@ export function CardBack({
         <text x={VB_W / 2} y="34" textAnchor="middle"
               fontFamily="Georgia, serif" fontSize="9" letterSpacing="3"
               fill="#F6E5B5" opacity="0.7">
-          PERSONA TERMINAL
+          MASKARIA
         </text>
         <text x={VB_W / 2} y={VB_H - 22} textAnchor="middle"
               fontFamily="Georgia, serif" fontSize="7" letterSpacing="2"

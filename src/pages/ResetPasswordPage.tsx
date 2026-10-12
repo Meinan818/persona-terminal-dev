@@ -93,7 +93,7 @@ export function ResetPasswordPage() {
   // 文档标题（这个页面生命周期短，副作用保留最小）
   useEffect(() => {
     const prev = document.title;
-    document.title = '重置密码 · 面具终端';
+    document.title = '重置密码 · MASKARIA';
     return () => { document.title = prev; };
   }, []);
 
@@ -162,7 +162,7 @@ export function ResetPasswordPage() {
           <h1 className="text-xl font-bold tracking-wide">
             {phase === 'success' ? '密码已更新' : phase === 'fatal' ? (fatal?.title ?? '出错了') : '重置密码'}
           </h1>
-          <p className="mt-1 text-xs text-violet-200/60">面具终端 · Persona Terminal</p>
+          <p className="mt-1 text-xs text-violet-200/60">MASKARIA · MASKARIA</p>
         </div>
 
         {/* 主体 */}

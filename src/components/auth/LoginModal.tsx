@@ -193,7 +193,7 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
     ? '把数据交给云端之前'
     : origin === 'welcome'
       ? '欢迎归来，客人'
-      : '登录面具终端';
+      : '登录MASKARIA';
   const subtitle = needConsent
     ? '几句实话，读完再决定'
     : '验证码最省心——没登记过的邮箱也能直接进';
@@ -232,7 +232,7 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
           >
             <div className="px-7 pt-7 pb-2 text-center">
               <div className="text-[11px] tracking-[0.5em] font-semibold" style={{ color: '#a78bfa' }}>
-                PERSONA TERMINAL
+                MASKARIA
               </div>
               <div className="text-lg leading-none my-2" style={{ color: '#6b7ca8' }}>◆</div>
               <h2 className="text-xl font-serif" style={{ color: '#f5e6ff' }}>{title}</h2>
@@ -389,7 +389,7 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
               className="pb-5 pt-1 text-center text-[10px] tracking-[0.3em]"
               style={{ color: '#4c4878' }}
             >
-              —— PERSONA TERMINAL ——
+              —— MASKARIA ——
             </div>
           </motion.div>
         </motion.div>

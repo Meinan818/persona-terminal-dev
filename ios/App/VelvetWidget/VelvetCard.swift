@@ -121,7 +121,7 @@ extension Draw {
         let u = min(w, h) / 20
         ghost(&ctx, pal, "VELVET", size: h * 0.42, x: -u, baselineY: h * 0.72)
         eyebrow(&ctx, "NOT SYNCED", size: u * 0.82, x: u * 1.6, baselineY: h * 0.40, color: pal.blue)
-        let msg = fit(ctx, "打开一次面具终端", size: u * 1.35, maxW: w - u * 3.2)
+        let msg = fit(ctx, "打开一次 MASKARIA", size: u * 1.35, maxW: w - u * 3.2)
         text(&ctx, msg, size: u * 1.35, color: pal.ink, bold: true, slant: true,
              x: u * 1.6, baselineY: h * 0.62)
         magentaCorner(&ctx, pal, w, h, u)

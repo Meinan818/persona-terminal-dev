@@ -556,7 +556,7 @@ export function OnlineConfidantProfileCard({
             className="pb-4 pt-1 text-center text-[10px] tracking-[0.3em]"
             style={{ color: '#4c4878' }}
           >
-            —— PERSONA TERMINAL ——
+            —— MASKARIA ——
           </div>
         </motion.div>
       </motion.div>

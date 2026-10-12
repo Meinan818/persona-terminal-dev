@@ -388,7 +388,7 @@ export function FinalBossFinale({ isOpen, onDone }: Props) {
                     className="px-1"
                   >
                     <p className="text-[13px] font-black" style={{ color: GOLD }}>
-                      {allyList ? allyList[step].name : '面具终端'}
+                      {allyList ? allyList[step].name : 'MASKARIA'}
                       {allyList && <span className="ml-2 text-[10px] font-bold text-white/35">羁绊 Lv{allyList[step].intimacy}</span>}
                     </p>
                     <p className="mt-1.5 text-[15px] leading-relaxed text-white/95">

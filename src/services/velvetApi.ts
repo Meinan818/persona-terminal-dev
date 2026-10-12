@@ -124,10 +124,12 @@ export const verifyOtp = async (email: string, code: string): Promise<VelvetReco
 
 async function request<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {
   if (!API_URL) throw new Error('云同步未配置');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...((init.headers as Record<string, string>) ?? {}),
-  };
+  const headers: Record<string, string> = {};
+  // FormData 必须让浏览器自己设 Content-Type（要带 multipart 的 boundary）；
+  // 手动写死 application/json 会让后端无法解析上传内容。
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+  if (!isFormData) headers['Content-Type'] = 'application/json';
+  Object.assign(headers, (init.headers as Record<string, string>) ?? {});
   if (init.auth !== false && currentToken) headers.Authorization = `Bearer ${currentToken}`;
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
   const text = await res.text();

@@ -53,3 +53,18 @@ export const deleteRow = (id: string): Promise<void> =>
 /** 用户档案写（对齐原 pb.collection('users').update），返回完整 record */
 export const updateProfile = (patch: Record<string, unknown>): Promise<Record<string, unknown>> =>
   velvetRequest<Record<string, unknown>>('/api/sync/profile', { method: 'PUT', body: JSON.stringify(patch) });
+
+/**
+ * 上传头像（multipart）。后端存盘并写 users.avatar，返回可访问路径。
+ * 对齐原 pb.collection('users').update(id, FormData) 的语义（字段名 file）。
+ */
+export const uploadAvatar = (blob: Blob, filename = 'avatar.jpg'): Promise<{ avatar: string; size: number }> => {
+  const form = new FormData();
+  form.append('file', blob, filename);
+  // 注意：multipart 不能手动设 Content-Type（浏览器要带 boundary），故这里不传 body 之外的头
+  return velvetRequest<{ avatar: string; size: number }>('/api/avatar', { method: 'POST', body: form });
+};
+
+/** 清空头像（后端删文件并置 users.avatar 为空）。204 无内容 */
+export const clearAvatar = (): Promise<void> =>
+  velvetRequest<void>('/api/avatar', { method: 'DELETE' });

@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { pb, getUserId } from './pocketbase';
+import { getUserId } from './pocketbase';
 import * as api from './userDataApi';
 import { useCloudStore } from '@/store/cloud';
 import { useAppStore, toLocalDateKey } from '@/store';
@@ -53,8 +53,8 @@ function dataUrlToBlob(dataUrl: string): Blob | null {
  *   2. 本地没 dataUrl，但指纹非空（说明云端有过） → 清空 PB.avatar + 重置指纹为空
  *   3. 都没动 → 无操作
  */
-async function syncAvatarIfChanged(userId: string): Promise<void> {
-  if (!pb) return;
+async function syncAvatarIfChanged(): Promise<void> {
+  if (!api.isAuthenticated()) return;
   const appState = useAppStore.getState();
   const localDataUrl = appState.user?.avatarDataUrl;
   const lastSig = appState.settings.lastUploadedAvatarSig ?? '';
@@ -69,20 +69,16 @@ async function syncAvatarIfChanged(userId: string): Promise<void> {
       return;
     }
     const ext = blob.type === 'image/png' ? 'png' : 'jpg';
-    const formData = new FormData();
-    formData.append('avatar', blob, `avatar.${ext}`);
     try {
-      const updated = await pb.collection('users').update(userId, formData);
-      pb.authStore.save(pb.authStore.token, updated);
+      await api.uploadAvatar(blob, `avatar.${ext}`);
     } catch (err) {
-      console.warn('[velvet-sync] avatar upload rejected by PB (size=' + blob.size + 'B)', err);
+      console.warn('[velvet-sync] avatar upload rejected (size=' + blob.size + 'B)', err);
       return; // 不更新指纹，下次还能重试
     }
   } else {
-    // 清空云端头像
+    // 清空云端头像（后端删文件并置 users.avatar 为空）
     try {
-      const updated = await pb.collection('users').update(userId, { avatar: null });
-      pb.authStore.save(pb.authStore.token, updated);
+      await api.clearAvatar();
     } catch (err) {
       console.warn('[velvet-sync] avatar clear failed', err);
       return;
@@ -154,9 +150,9 @@ export const pushUserProfile = async (): Promise<void> => {
   }
   // 名片状态 / 目标（v2.7.0.6 第 6 项）：单独一次，走同一 profile 端点
   await pushProfilePresence();
-  // 头像走单独的指纹比对路径（仍依赖 PB 文件存储，见函数注释——本轮未迁移）
+  // 头像走单独的指纹比对路径
   try {
-    await syncAvatarIfChanged(getUserId() ?? '');
+    await syncAvatarIfChanged();
   } catch (err) {
     console.warn('[velvet-sync] pushUserProfile: avatar sync failed', err);
   }
@@ -775,9 +771,9 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
     // 名片状态 / 目标（v2.7.0.6 第 6 项）：走同一 profile 端点
     await pushProfilePresence();
 
-    // 头像同步 —— 只在本地 dataUrl 与"上次上传指纹"不一致时才推（仍走 PB 文件存储，本轮未迁移）
+    // 头像同步 —— 只在本地 dataUrl 与"上次上传指纹"不一致时才推
     try {
-      await syncAvatarIfChanged(userId);
+      await syncAvatarIfChanged();
     } catch (e) {
       console.warn('[velvet-sync] push: avatar upload failed', e);
     }

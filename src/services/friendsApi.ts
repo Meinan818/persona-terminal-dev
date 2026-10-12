@@ -3,7 +3,7 @@
  *
  * 契约：后端 /api/social/**（FriendController），函数签名与 friends.ts 的 PB 实现镜像，
  * 返回结构统一映射为前端 Friendship / CloudProfile 类型（types/index.ts）。
- * 前端 friends.ts 按 settings.socialUseBackend 分流到这里或 PB 实现。
+ * 前端 friends.ts 按「是否登录了自研后端」自动分流到这里或 PB 实现（用户无感，无开关）。
  */
 import { velvetRequest } from './velvetApi';
 import type { CloudProfile, Friendship, FriendshipStatus } from '@/types';

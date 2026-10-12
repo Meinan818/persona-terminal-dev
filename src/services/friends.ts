@@ -14,11 +14,10 @@ import { pb, getUserId } from './pocketbase';
 import { parseGoalSnapshot, parseProfileStatus } from '@/utils/profilePresence';
 import { pbQuote } from './pbFilter';
 import type { CloudProfile, Friendship, FriendshipStatus } from '@/types';
-import { useAppStore } from '@/store';
 import * as friendsApi from './friendsApi';
 
-/** 社交迁移开关（第一波：好友）：true = 走自研后端 /api/social，false = 走 PocketBase（默认） */
-const useBackend = (): boolean => useAppStore.getState().settings.socialUseBackend === true;
+/** 社交数据源（自动）：登录了自研后端（velvet JWT 在）→ 走 /api/social；否则走 PocketBase。用户无感，无开关 */
+const useBackend = (): boolean => typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('velvet.jwt'));
 
 const FRIEND_REQUEST_TTL_DAYS = 21;
 const REJECTED_COOLDOWN_DAYS = 3;

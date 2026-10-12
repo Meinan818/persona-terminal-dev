@@ -1,5 +1,8 @@
 /**
- * 通知列表 API —— 包在 PocketBase `notifications` 集合之上。
+ * 通知列表 API —— 数据源自动分流：
+ *   登录了自研后端（localStorage 有 velvet.jwt）→ 走 /api/social/notifications（notificationsApi）
+ *   否则 → 走 PocketBase `notifications` 集合
+ * 用户无感，无开关。
  *
  * 每条通知只对收件人可见；收件人可以读 / 标记已读 / 删除。
  * 发送通知的创建逻辑在 `services/friends.ts` 等业务流程里，不在这里暴露。
@@ -8,7 +11,17 @@
 import type { RecordModel } from 'pocketbase';
 import { pb, getUserId } from './pocketbase';
 import { parseGoalSnapshot, parseProfileStatus } from '@/utils/profilePresence';
+import * as notificationsApi from './notificationsApi';
+import { sanitizeNotificationPayload } from './notificationPayload';
 import type { CloudProfile, NotificationEntry, NotificationType } from '@/types';
+
+// 清洗函数已抽到 notificationPayload.ts（供 PB 侧与自研侧共用，避免循环依赖）；
+// 这里再导出一次保持既有 import 路径可用。
+export { sanitizeNotificationPayload };
+
+/** 通知数据源（自动）：登录了自研后端（velvet JWT 在）→ 走 /api/social；否则走 PocketBase */
+const useBackend = (): boolean =>
+  typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('velvet.jwt'));
 
 const profileFromRecord = (r: RecordModel | undefined | null): CloudProfile | undefined => {
   if (!r) return undefined;
@@ -44,48 +57,6 @@ const profileFromRecord = (r: RecordModel | undefined | null): CloudProfile | un
   };
 };
 
-/** payload 里各字段的上限：字符串键超长就截，其余键 200 字；不是字符串的一律丢（面板直接 .trim/.slice，类型错了会整页崩） */
-const PAYLOAD_STRING_MAX: Record<string, number> = {
-  title: 60, message: 200, narrative: 400, persona_name: 40, skill_name: 40, archetype_id: 40, event: 20,
-  pact_kind: 10, mode: 10, deadline: 10, shadow_id: 20, pact_id: 20, friendship_id: 20, coop_bond_id: 20,
-  prayer_id: 20, coop_link_id: 20, kind: 40,
-};
-const PAYLOAD_NUMBER_KEYS = new Set(['days', 'damage', 'hp_remaining', 'delta', 'sp']);
-const PAYLOAD_BOOL_KEYS = new Set(['resonance_bonus', 'weakness_bonus', 'all_out']);
-
-/**
- * 通知是别人写来的：字段类型、长度都不能信。这里按键把类型对齐、把长度截掉，
- * 面板那边就可以放心当字符串用。认不出的键原样保留（限 2KB），嵌套对象只留小的。
- */
-export function sanitizeNotificationPayload(raw: unknown): Record<string, unknown> | undefined {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
-    if (k in PAYLOAD_STRING_MAX) {
-      if (typeof v !== 'string') continue;
-      const max = PAYLOAD_STRING_MAX[k];
-      out[k] = [...v].length > max ? [...v].slice(0, max).join('') : v;
-    } else if (PAYLOAD_NUMBER_KEYS.has(k)) {
-      if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
-    } else if (PAYLOAD_BOOL_KEYS.has(k)) {
-      out[k] = v === true;
-    } else if (typeof v === 'string') {
-      out[k] = [...v].length > 200 ? [...v].slice(0, 200).join('') : v;
-    } else if (typeof v === 'number') {
-      if (Number.isFinite(v)) out[k] = v;
-    } else if (typeof v === 'boolean') {
-      out[k] = v;
-    } else if (v && typeof v === 'object') {
-      try {
-        const text = JSON.stringify(v);
-        if (text.length <= 2048) out[k] = JSON.parse(text);
-      } catch { /* 循环引用之类：丢掉 */ }
-    }
-  }
-  return out;
-}
-
 const mapNotification = (r: RecordModel): NotificationEntry => {
   const expand = (r.expand ?? {}) as { from?: RecordModel };
   return {
@@ -105,6 +76,7 @@ const mapNotification = (r: RecordModel): NotificationEntry => {
  * 结算（祈愿 SP、一起进步事件）只看未读；以前只拉最新 100 条，通知多了以后更早的未读永远轮不到结算。
  */
 export const listNotifications = async (): Promise<NotificationEntry[]> => {
+  if (useBackend()) return notificationsApi.listNotifications();
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');
@@ -143,12 +115,14 @@ export const listNotifications = async (): Promise<NotificationEntry[]> => {
  *   - 如果只是 "一键全读" 这类批量操作，用 try/catch 忽略单条失败即可
  */
 export const markNotificationRead = async (id: string): Promise<void> => {
+  if (useBackend()) return notificationsApi.markNotificationRead(id);
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   await pb.collection('notifications').update(id, { read: true });
 };
 
 /** 把当前用户所有未读标成已读（一键清空红点） */
 export const markAllNotificationsRead = async (unread: NotificationEntry[]): Promise<number> => {
+  if (useBackend()) return notificationsApi.markAllNotificationsRead(unread);
   if (!pb || !pb.authStore.isValid) return 0;
   let ok = 0;
   for (const n of unread) {
@@ -165,6 +139,7 @@ export const markAllNotificationsRead = async (unread: NotificationEntry[]): Pro
 
 /** 删除一条通知（对自己不可见） */
 export const deleteNotification = async (id: string): Promise<void> => {
+  if (useBackend()) return notificationsApi.deleteNotification(id);
   if (!pb || !pb.authStore.isValid) return;
   try {
     await pb.collection('notifications').delete(id);

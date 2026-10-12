@@ -3,18 +3,15 @@
 </p>
 
 <h1 align="center">MASKARIA</h1>
-<p align="center"><em>Mask Terminal — 把人生过成一场 RPG</em></p>
-
-> **MASKARIA（面具庭园）** —— 一款以 JRPG 精神为内核的**本地优先个人成长追踪器**，个人毕业设计作品。
-> 前端 React + TypeScript；**后端由我用 Java / Spring Boot + MySQL 自研实现**，从 PocketBase 云服务迁向自托管。
-> 本仓库自二次开发以来的进度，见下方「本仓改造历程」。
+<p align="center"><em>面具庭园 —— 把人生过成一场 RPG</em></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0-8B5CF6?style=flat-square" />
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript" />
-  <img src="https://img.shields.io/badge/PWA-ready-5A0FC8?style=flat-square" />
-  <img src="https://img.shields.io/badge/Capacitor-iOS%20%C2%B7%20Android-53B0EA?style=flat-square" />
+  <img src="https://img.shields.io/badge/Spring%20Boot-3.2-6DB33F?style=flat-square&logo=springboot" />
+  <img src="https://img.shields.io/badge/MySQL-8-4479A1?style=flat-square&logo=mysql" />
+  <img src="https://img.shields.io/badge/Android-Capacitor-3DDC84?style=flat-square&logo=android" />
   <img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue?style=flat-square" />
 </p>
 
@@ -29,17 +26,24 @@
 
 ## 这是什么
 
-一款以 JRPG 精神为内核的**本地优先个人成长追踪器**。
+**MASKARIA（面具庭园）** 是一款**本地优先的个人成长追踪器**——把 RPG 的角色成长机制搬进真实生活：
 
-把 RPG 的角色成长机制搬进真实生活：记录你做的事 → 换成属性点数 → 升级 → 解锁技能与成就 →
-和内心的「逆影」对战 → 与 22 位塔罗同伴共度时光 → 让 AI 回望你的成长弧线。
+> 记录你做的事 → 换成属性点数 → 升级 → 解锁技能与成就 → 与内心的「逆影」对战 → 让 AI 回望你的成长弧线。
 
-数据默认完全留在本机。云同步是可选的，而且分类目：记账的每一笔、与助手和同伴的聊天原文
-**永远不上传**。应用内可随时导出备份、也可一键注销并级联删除云端数据。
+**技术形态**：
+
+| 层 | 实现 |
+|---|---|
+| 前端 | React 18 + TypeScript + Vite，PWA 可安装到手机桌面（离线可用） |
+| 后端 | **Java 17 / Spring Boot 3 + MySQL 8**，JWT 认证（自研） |
+| 客户端 | Android（Capacitor 打包） |
+| 数据 | 默认存本机（IndexedDB）；云同步可选，且分类目——**记账流水与聊天原文永不上传** |
+
+后端正在从第三方云服务（PocketBase）迁往**自研实现**，进度见下方「后端改造进度」。
 
 ---
 
-## 核心系统
+## 核心功能
 
 ### 人格五维
 
@@ -73,18 +77,18 @@
 
 一句话记一笔，AI 认金额与类目；支持一句多笔。
 真实总余额 + 月度预算环 + 「今日还可以花多少」；资产板块与月末结算。
-「成长」类支出会回过来给属性加点 —— 花在自己身上的不算白花。
+「成长」类支出会回过来给属性加点——花在自己身上的不算白花。
 
 ### 同伴
 
 用 22 张大阿卡纳代表你身边重要的人。记录互动涨亲密度，等级上去解锁道具与日常加成。
-每天可以向同伴祈愿（凌晨 4 点重置）。登录后输入对方 UserID 可以缔结 COOP，双向同步。
+每天可以向同伴祈愿（凌晨 4 点重置）。登录后输入对方 UserID 可缔结 COOP，双向同步。
 
 ### 逆影战场
 
-「影时间」降临时暗影出现。先召唤属于你的 Persona，为五项属性各绑一套技能，
+「影时间」降临时暗影出现。召唤属于你的「面具」，为五项属性各绑一套技能，
 出招看局势（伤害 / 暴击 / 蓄力 / 易伤）。想再往深处走就顺着高塔一层层往上爬，
-最深处是无尽的**深渊回廊**。
+最深处是无尽的深渊回廊。
 
 ### 星象
 
@@ -104,18 +108,18 @@
 
 ### 桌面小组件
 
-iOS 与 Android 双端桌面小组件：**清单组件**（今日任务 + 完成进度 + 倒计时，
-4×2 / 2×2 双规格，BIG DEAL 高亮）；iOS 另有**锁屏小组件**。全部跟随夜间模式。
+Android 桌面小组件：**清单组件**（今日任务 + 完成进度 + 倒计时，4×2 / 2×2 双规格，
+BIG DEAL 高亮），跟随夜间模式。
 
 ---
 
-## 三套视觉语言
+## 主题与视觉
 
-换主题不是换色号，是换一整套设计语言。
+四套视觉语言 + 自定义。换主题不是换色号，是换一整套设计语言。
 
 | 主题 | 语言 |
 |------|------|
-| 蓝 / 粉 | **白日水面** —— 近白底、左上→右下斜切平行四边形、超大黑斜体、背景幽灵英文大字 |
+| 蓝 / 粉 | **白日水面** —— 近白底、斜切平行四边形、超大黑斜体、背景幽灵英文大字 |
 | 黄 | **今日节目单** —— 高饱和黄舞台、衬线大标题、花瓣雷达、实景云天空 |
 | 红 | **剪报怪盗** —— 纯黑舞台、猩红斜块碰撞、半调网点、不规则撕纸卡、拼贴瓷砖标题 |
 | 自定义 | 中性皮，整族从你选的主色派生 |
@@ -124,93 +128,53 @@ iOS 与 Android 双端桌面小组件：**清单组件**（今日任务 + 完成
 
 ---
 
-## 上游项目历程
+## 技术栈与运行
 
-> 以下 v2.0 ~ v2.8 是**上游项目 the-velvet（YuukiMarine）**的开发历程，随初始导入一并带入，**不是本仓库的工作**。
-> 本仓库自二次开发以来的进度见下一节「本仓改造历程」。
+**前端**：React 18 · TypeScript 5 · Vite 5 · Tailwind 3 · Zustand · Dexie（IndexedDB）·
+motion/react + GSAP · Capacitor（Android）· vite-plugin-pwa
 
-### v2.8（2026-10）
-**组织上线**（最多 7 人：名册 / 公告板 / 周日会议 / 目标与作战 / 据点等级 / 同调借面具 / 满月团战 /
-等级名与称号可由队长自定义）· 羁绊「一起进步」（和好友约定打卡，在线同伴同步涨亲密度）·
-名片状态与目标 · **AI 助手拟人化**（记得认识多久 / 自己的一天 / 回访约定 / 主动找你）· 谏言翻新 ·
-塔罗重做（处境简报 / 解读者手记 / 写法轮转 / 全流式 / 底色牌）·
-成长总结重做（新排版 / 续写与三轮追问 / 自动撰写上一期 / 年度总结与「这一年的你」）·
-记录配图与读图代打字 · 任务截止日 · 精通星 · 当年今日 · 节令天气与岁时册 · 图鉴 ·
-委托板 / 回忆之光 / 深渊周常 / 满月心魔 · 塔屏改版 · 小组件明日预演 + 锁屏圆形 / 单行 + 色调模式 ·
-云同步对账与合并 · 协议改为 GPL-3.0-or-later
+**后端**：Java 17 · Spring Boot 3 · MyBatis-Plus · MySQL 8 · Spring Security + JWT ·
+Flyway（数据库版本化迁移）
 
-### v2.7（2026-08）
-**iOS 端落地并提交 App Store 审核** · iOS 清单小组件（4×2 / 2×2）+ 锁屏小组件 ·
-召唤页三频道齐装（黄「深夜档特番」/ 红「怪盗预告信」）· 黄频道战场夜档化 + VHS 扫描线 ·
-全站按压反馈毯 · 羁绊选项卡切换特效 · 首页手稿三角标题（蒙版染字 + 沸腾动效）·
-标题字面统一真栈 · 窄屏适配与一轮 UI 审计修复
+```bash
+# 前端
+npm install
+npm run dev                     # 开发（http://localhost:5173）
+npm run build                   # 构建到 dist/
 
-### v2.6（2026-08）
-愿望进度环 · 回归面板「欢迎回来」· 安卓桌面小组件（4×2 / 4×1 / 2×2，支持夜间模式）·
-爬塔入口重做 · 天气链路 · 内嵌中文字体 · 快速上手重做 · 一轮安卓真机回归修复
+# 后端（需要 MySQL）
+cd backend
+mvn spring-boot:run             # 启动（http://localhost:8080）
+mvn test                        # 集成测试
 
-### v2.5（2026-07）
-**三套频道视觉语言全部落地**（这个月 183 次提交，项目最重的一段）·
-对话式助手 · AI 设置改版（6 家服务商 / 四档模型 / 可跨家直连）·
-逆影战场大升级（引擎 v2 / 高塔 / 深渊回廊 / 战利品抽卡）· 任务 × 终端二合一
+# 移动端
+npm run cap:sync                # 同步进 Android 工程
+npm run cap:build:android       # 打包 Android
+```
 
-### v2.2 – v2.4（2026-06）
-心相记账从零到有 · 本地通知 · 三频道玄关皮肤 · 在线弹幕 · 「斜轴世界」设计系统
-
-### v2.1（2026-05）
-同伴羁绊 · 星象塔罗 · 成就与技能体系
-
-### v2.0（2026-04）
-五项属性 + 记录 + 任务 + 统计的核心闭环
+> **音效素材不在仓库内** —— `public/` 下需要自备若干 UI 反馈音（文件名见
+> `src/utils/feedback.ts` 与各处 `playSound()` 调用）。缺失时音效静默，不影响其它功能。
 
 ---
 
-## 本仓改造历程
+## 后端改造进度
 
-> 记录本仓库（MASKARIA）自上游 fork 之后的工作。由 git 历史核对，非估算。
+本项目正把数据层从第三方云服务（PocketBase）迁到**自研 Spring Boot + MySQL + JWT**。
+已完成的部分均附集成测试。
 
-### 2026-10 · 品牌与图标
-- `10889a5` 「面具终端」正式更名 **MASKARIA（面具庭园）**（含 README / 包名 / 各处文案）
-- `a709fb5` 主题 ↔ 软件图标联动（Android 桌面 / Web favicon / 应用内 logo）
-- `3433b3c` 五套主题图标生成（修复首版泛洪算法缺陷，5 张图中心泄漏 0.00%）
-- `06e783a` ContactSheet 图标对比图（供人眼目检）
-
-### 2026-10 · 后端改造（Java / Spring Boot，毕业设计主体）
-把数据层从 PocketBase 迁到**自研 Spring Boot + MySQL + JWT**。均为 TDD，附集成测试。
-
-| 提交 | 内容 |
+| 模块 | 状态 |
 |---|---|
-| `a11f1e3` | 后端 `/api/sync/rows` —— 镜像 PB 的 user_data KV 模型 |
-| `efbd43e` `f018b60` | 前端数据面切自研后端 + `userDataApi` 契约测试 |
-| `06600fa` | 档案同步切自研：`users.profile` JSON 列 + 扩展字段读写 |
-| `468aa31` | 档案推送前端回归测试 + vitest 补 `@` 路径别名 |
-| `f4a7010` | 后端头像文件存取 `/api/avatar`（上传 / 公开读 / 删除） |
-| `54c830c` | 前端头像上传切自研 + 回归测试 |
-| `92c61a2` | 引入 **Flyway** 版本化迁移 + 补 AuthController 集成测试 |
-
-**当前状态**：数据面、用户档案、头像三块已迁到自研后端；
-**社交功能（好友 / 通知 / 同伴 / 组织）仍挂在 PocketBase**，是下一步；
-AI 代理层与业务 CRUD 待做。完整交接见 `HANDOFF-2026-10-12.md`，合规边界见 `COMPLIANCE.md`（两者均在仓库根目录）。
+| 认证（注册 / 登录 / 邮箱验证码 / JWT） | ✅ 自研后端 |
+| 用户档案（昵称 / 等级 / 属性 / 状态） | ✅ 自研后端 |
+| 云端数据面（`/api/sync/rows`，镜像 KV 模型） | ✅ 自研后端 |
+| 头像上传 / 读取 / 删除 | ✅ 自研后端 |
+| 数据库版本化迁移（Flyway） | ✅ 已引入 |
+| 社交功能（好友 / 通知 / 同伴 / 组织） | ⏳ 迁移中（仍用 PocketBase） |
+| AI 代理层、业务 CRUD | ⏳ 待做 |
 
 **验证**：后端 `mvn test` 22 passed（Sync 6 + Auth 9 + Avatar 7）；前端 `npm test` 31 passed；`tsc --noEmit` 0 报错。
 
----
-
-## 技术栈
-
-React 18 · TypeScript 5 · Vite 5 · Tailwind 3 · Zustand · Dexie（IndexedDB）·
-motion/react + GSAP · Capacitor 5（iOS / Android）· vite-plugin-pwa · PocketBase（可选云端）
-
-```bash
-npm install
-npm run dev                 # 开发
-npm run build               # 构建到 dist/
-npx cap sync ios            # 同步进 iOS 工程
-npx cap sync android        # 同步进安卓工程
-```
-
-> **音效素材不在仓库内** —— `public/` 下需要自备 25 个 UI 反馈音（文件名见
-> `src/utils/feedback.ts` 与各处 `playSound()` 调用）。缺失时音效静默，不影响其它功能。
+完整交接见 HANDOFF-2026-10-12.md，合规边界见 COMPLIANCE.md。
 
 ---
 
@@ -219,32 +183,31 @@ npx cap sync android        # 同步进安卓工程
 | | |
 |---|---|
 | Web / PWA | ✅ 可安装、离线可用 |
-| iOS | ✅ Capacitor 打包，清单 + 锁屏小组件（App Store 审核中） |
-| Android | ✅ Capacitor 打包，含三块桌面小组件 |
+| Android | ✅ Capacitor 打包，含桌面小组件 |
+| 后端 | ✅ Spring Boot + MySQL（自研，迁移进行中） |
 
 ---
 
 ## 协议
 
-代码按 **GPL-3.0-or-later** 发布（[LICENSE](LICENSE)），附两条附加许可（[NOTICE](NOTICE)）：
+代码按 **GPL-3.0-or-later** 发布（LICENSE），附两条附加许可（NOTICE）：
 允许通过应用商店分发；允许与 GSAP 链接。
 
-- 名称「MASKARIA」、图标、美术素材和商店宣传素材**不在 GPL 之内**，保留所有权利，见 [ASSETS_LICENSE](ASSETS_LICENSE)。
-- 这是粉丝向的个人作品，界面与命名借鉴了 Persona 系列，与 ATLUS / SEGA 无关，也未获其认可。
+名称「MASKARIA」、图标、美术素材**不在 GPL 之内**，保留所有权利，见 ASSETS_LICENSE。
 
 ### 贡献
 
 欢迎提 PR。请给每个 commit 加上 `Signed-off-by`（`git commit -s`，即 [DCO](https://developercertificate.org/)），
-表示这段代码你有权提交。提交即表示你同意：贡献按 GPL-3.0-or-later（含 NOTICE 里的附加许可）授权，
-并允许维护者以其它协议再授权这部分贡献（用于继续上架应用商店、日后调整协议）。
+表示这段代码你有权提交。
 
 ---
 
-<p align="center"><sub><strong>致谢与致敬</strong></sub></p>
+<p align="center"><sub><strong>关于二次创作与致谢</strong></sub></p>
 
 <p align="center"><sub>
-本项目基于开源项目 <a href="https://github.com/YuukiMarine/the-velvet">the-velvet（靛蓝色房间）</a> 二次开发，
-在此向原作者 <strong>YuukiMarine</strong> 致以诚挚的感谢与敬意。<br/>
-按 GPL-3.0-or-later 的要求，本项目保持同样协议开源，并保留上游版权声明（见 <a href="NOTICE">NOTICE</a>）。<br/>
-界面与命名借鉴了 Persona 系列，谨向 ATLUS / SEGA 致敬；本项目为粉丝向个人作品，与其无关，亦未获其认可。
+本项目基于开源项目 <a href="https://github.com/YuukiMarine/the-velvet">the-velvet（靛蓝色房间）</a> 二次创作，
+在此向原作者 <strong>YuukiMarine</strong> 致以诚挚的敬意与感谢。按 GPL-3.0-or-later 的要求，
+本项目保持同样协议开源，并保留上游版权声明（见 <a href="NOTICE">NOTICE</a>）。<br/>
+界面与命名借鉴了 Persona 系列，谨向 ATLUS / SEGA 致敬。本项目为粉丝向的个人作品，
+与上述公司无关，亦未获其认可，请勿用于商业用途。
 </sub></p>

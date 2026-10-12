@@ -32,3 +32,17 @@ CREATE TABLE IF NOT EXISTS sync_log (
   synced_at  VARCHAR(40)  NOT NULL,
   INDEX idx_sync_user (user_id, entity)
 ) ENGINE=InnoDB;
+
+-- 云同步 KV 存储（对齐前端 sync.ts 把 PocketBase 当 KV 用的模型）
+-- 一条记录 = 一张本地表（key_name = 表名）或一个分片（key_name = '表名#n'）或 '_meta'
+-- value 存该表的行数组（原生 JSON）；服务端每次写入生成单调 updated，供前端乐观并发判定
+CREATE TABLE IF NOT EXISTS user_data (
+  id         VARCHAR(32)  NOT NULL PRIMARY KEY,          -- 雪花 ID，对齐原 PocketBase record id
+  user_id    VARCHAR(32)  NOT NULL,
+  key_name   VARCHAR(128) NOT NULL,                      -- 表名 / '表名#n' 分片 / '_meta'
+  value      JSON         NOT NULL,                      -- 行数组，原生 JSON 不做二次 stringify
+  created    VARCHAR(40)  NOT NULL,                      -- ISO-8601
+  updated    VARCHAR(40)  NOT NULL,                      -- 服务端生成，单调
+  UNIQUE KEY uk_userdata_user_key (user_id, key_name),
+  INDEX idx_userdata_user (user_id)
+) ENGINE=InnoDB;

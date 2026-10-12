@@ -196,7 +196,7 @@ const RELAY_THINKING_ALLOWANCE = 12_000;
  */
 export function getAIConfig(settings: Settings): AIConfig | null {
   syncNativeHosts(settings.aiNativeHosts);
-  syncAiProxy(settings.aiUseBackendProxy === true, getApiBaseUrl());
+  syncAiProxy(Boolean(localStorage.getItem('velvet.jwt')), getApiBaseUrl());
   const apiKey = cleanApiKey(settings.summaryApiKey).key;
   if (!apiKey) return null;
   const { baseUrl, model } = resolveProvider(
@@ -265,7 +265,7 @@ function applyModelOverride(
   strict = false,
 ): AIConfig | null {
   syncNativeHosts(settings.aiNativeHosts);
-  syncAiProxy(settings.aiUseBackendProxy === true, getApiBaseUrl());
+  syncAiProxy(Boolean(localStorage.getItem('velvet.jwt')), getApiBaseUrl());
   const activeProvider = settings.summaryApiProvider ?? DEFAULT_PROVIDER;
   if (pv && pv !== activeProvider) {
     const prof = settings.aiProfiles?.[pv];
@@ -292,7 +292,7 @@ function applyModelOverride(
  */
 export function fallbackAIConfig(settings: Settings): AIConfig {
   syncNativeHosts(settings.aiNativeHosts);
-  syncAiProxy(settings.aiUseBackendProxy === true, getApiBaseUrl());
+  syncAiProxy(Boolean(localStorage.getItem('velvet.jwt')), getApiBaseUrl());
   return {
     ...resolveProvider(settings.summaryApiProvider, settings.summaryApiBaseUrl, settings.summaryModel),
     apiKey: cleanApiKey(settings.summaryApiKey).key,

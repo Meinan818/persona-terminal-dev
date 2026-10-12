@@ -632,22 +632,6 @@ export function AIServiceSettings({ openConnection = false }: {
         )}
       </div>
 
-      {/* ── AI 走后端代理（钥匙不进浏览器）──
-          独立成卡放主干：任何主题、任何配置状态下都可见。开 = AI 请求发给自己登录的后端转发，Key 存服务端。 */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-gray-100 dark:border-gray-700/60 bg-white/60 dark:bg-gray-800/50">
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-gray-800 dark:text-white">AI 走后端代理</div>
-          <div className="text-[11px] text-gray-400 dark:text-gray-500">
-            钥匙存到服务器，浏览器里不留底，更安全；后端要配好对应钥匙，没配会提示。
-          </div>
-        </div>
-        <Toggle
-          checked={!!settings.aiUseBackendProxy}
-          onChange={(v) => updateSettings({ aiUseBackendProxy: v })}
-          aria-label="AI 走后端代理"
-        />
-      </div>
-
       {/* ── 模型分档（FS3.1 收进「高级设置」折叠）──
           快速响应=当前连接的便宜快模型；深思熟虑=可跨服务商的强模型；
           视觉=看图；听觉=听写。默认收起，摘要行直接报当前四档。 */}

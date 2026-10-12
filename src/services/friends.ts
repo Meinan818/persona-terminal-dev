@@ -98,6 +98,7 @@ const mapFriendship = (r: RecordModel, viewerId: string): Friendship => {
  * 不可用于模糊搜索（刻意减少被扫号的风险）。
  */
 export const searchUserByUserId = async (userId: string): Promise<CloudProfile | null> => {
+  if (useBackend()) return friendsApi.searchUserByUserId(userId);
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const normalized = userId.trim().toLowerCase();
   if (!normalized) return null;
@@ -117,6 +118,7 @@ export const searchUserByUserId = async (userId: string): Promise<CloudProfile |
 
 /** 拉取当前登录用户的全部好友关系（含 pending / linked / rejected / severed 等） */
 export const listFriendships = async (): Promise<Friendship[]> => {
+  if (useBackend()) return friendsApi.listFriendships();
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');
@@ -165,6 +167,7 @@ export interface SendFriendRequestInput {
  *  - 以上检查都过：update 回 pending / create 新记录
  */
 export const sendFriendRequest = async (input: SendFriendRequestInput): Promise<Friendship> => {
+  if (useBackend()) return friendsApi.sendFriendRequest(input);
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');

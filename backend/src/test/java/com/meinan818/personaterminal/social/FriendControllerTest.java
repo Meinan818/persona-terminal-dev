@@ -134,6 +134,39 @@ class FriendControllerTest {
         assertThat(((java.util.List<?>) get(b.token(), "/api/social/friends").getBody().get("items"))).isEmpty();
     }
 
+    /**
+     * 回归（2026-10-14）：前端搜索框让用户输入的是 **UserID**（users.name，如 bob123），
+     * 不是内部雪花 id。原先 lookup 只按 id 查（selectById），用户按提示输入 UserID
+     * 一律「用户不存在」——加好友第一步就断。
+     * 修复：resolve() 同时认 id 与 name；publicProfile 的 username 回填 users.name。
+     */
+    @Test
+    void 按UserID能查到人且档案回填username() {
+        String uid = "alice" + UUID.randomUUID().toString().substring(0, 8);
+        String email = "lookup-" + uid + "@example.com";
+        // 注册时显式传 UserID（前端注册就是把 userId 当 name 传）
+        Map<String, Object> body = Map.of("email", email, "password", "pw-123456", "name", uid);
+        ResponseEntity<Map> res = rest.postForEntity("/api/velvet/register", body, Map.class);
+        assertThat(res.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
+        Map<?, ?> rec = (Map<?, ?>) res.getBody().get("record");
+        String snowflakeId = (String) rec.get("id");
+        String token = (String) res.getBody().get("token");
+
+        // 用 UserID 查（前端真实输入形态）→ 200，且返回的 username 就是 UserID
+        ResponseEntity<Map> byUid = get(token, "/api/social/users?userId=" + uid);
+        assertThat(byUid.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
+        assertThat(byUid.getBody().get("id")).isEqualTo(snowflakeId);
+        assertThat(byUid.getBody().get("username")).isEqualTo(uid);
+
+        // 用内部雪花 id 查也照常可用（关系行内部按 id 操作）
+        assertThat(get(token, "/api/social/users?userId=" + snowflakeId).getStatusCode())
+                .isEqualTo(org.springframework.http.HttpStatus.OK);
+
+        // 不存在的 UserID → 401（不泄露存在性）
+        assertThat(get(token, "/api/social/users?userId=nobody" + UUID.randomUUID().toString().substring(0, 6))
+                .getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.UNAUTHORIZED);
+    }
+
     @Test
     void 越权访问返回404不泄露存在性() {
         Acct a = register("x");

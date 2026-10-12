@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AuthRecord } from 'pocketbase';
-import { cloudEnabled, pb, getAuthRecord } from '@/services/pocketbase';
+import { cloudEnabled, getAuthRecord, onAuthChange } from '@/services/pocketbase';
 import type { SyncDiff } from '@/services/sync';
 
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error' | 'offline';
@@ -65,10 +65,18 @@ export const useCloudStore = create<CloudState>(set => ({
   setLastSyncDirection: lastSyncDirection => set({ lastSyncDirection }),
   setDiffWarning: diffWarning => set({ diffWarning }),
 
+  /**
+   * 订阅登录状态变化，自动同步到本 store。
+   * 应用启动时调用一次即可。返回取消订阅函数。
+   *
+   * 走 pocketbase.ts 的 onAuthChange（已按数据源分流：自研模式转发 velvetApi 登录态、
+   * 否则转发 PB 的 authStore）——直接用 pb.authStore.onChange 的话，自研模式下
+   * pb 恒空、事件永不触发，登录后 cloudUser 停在初始值，社交页与账号页都拿不到用户。
+   */
   initAuthListener: () => {
-    if (!cloudEnabled || !pb) return () => {};
-    return pb.authStore.onChange((_token, record) => {
-      set({ cloudUser: record ?? null });
+    if (!cloudEnabled) return () => {};
+    return onAuthChange(record => {
+      set({ cloudUser: (record as AuthRecord | null) ?? null });
     });
   },
 }));

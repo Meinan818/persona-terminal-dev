@@ -1,5 +1,6 @@
 package com.meinan818.personaterminal.social;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meinan818.personaterminal.user.User;
 import com.meinan818.personaterminal.user.UserMapper;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,9 +35,27 @@ public class SocialUserService {
 
     private final UserMapper userMapper;
 
+    /**
+     * 按 id 或 UserID 解析用户。
+     *
+     * <p>两种键都要认：前端搜索框让用户输入的是 **UserID**（users.name，如 bob123），
+     * 而关系行里存的是 **雪花 id**（users.id）——加好友时先按 UserID 查人、
+     * 拿到 id 后后续操作全用 id。任一命中即可，都没有返回 null。
+     *
+     * <p>name 列没有唯一索引（历史数据可能重名），排序取第一条，避免 selectOne 抛异常。
+     */
+    public User resolve(String key) {
+        if (key == null || key.isBlank()) return null;
+        User byId = userMapper.selectById(key);
+        if (byId != null) return byId;
+        List<User> byName = userMapper.selectList(
+                new QueryWrapper<User>().eq("name", key).last("LIMIT 1"));
+        return byName.isEmpty() ? null : byName.get(0);
+    }
+
     /** JWT 用户 → 社交行（懒注册语义退化为「存在性校验」：users 表在注册时已建）。 */
     public User requireUser(String velvetUserId) {
-        User u = userMapper.selectById(velvetUserId);
+        User u = resolve(velvetUserId);
         if (u == null) {
             throw new SocialException(HttpStatus.UNAUTHORIZED, "用户不存在");
         }
@@ -48,8 +68,8 @@ public class SocialUserService {
      */
     public Map<String, Object> publicProfile(User u) {
         Map<String, Object> m = new HashMap<>();
-        m.put("id", u.getId());
-        m.put("username", u.getId());            // 前端以 id 作为「用户ID」查找键
+        m.put("id", u.getId());                  // 关系行/后续操作用的内部键（雪花 id）
+        m.put("username", u.getName());          // 对外「UserID」= users.name（用户可读、可输入的查找键）
         m.put("nickname", u.getName());
         m.put("avatarUrl", u.getAvatar());
         UserProfileFields.flatten(u.getProfile(), m);   // total_lv/attribute_*/status/goal…

@@ -1,5 +1,7 @@
 import { pb, cloudEnabled, getUserId } from './pocketbase';
 import { clearPactRunner } from './pactBackground';
+import * as velvetApi from './velvetApi';
+import { VelvetApiError } from './velvetApi';
 import type { RecordModel } from 'pocketbase';
 
 /** 简单的邮箱格式校验 */
@@ -190,28 +192,9 @@ const requestOTPByUserId = async (userId: string): Promise<string> => {
  * UserID + 密码 → 服务端代办认证，回 PB 原生的 {token, record}（登录者自己的记录）。
  * 与 callAuthWithOTP 的 raw-HTTP 回落同一收尾：authStore.save 之后 SDK 状态与原生登录无异。
  */
-const authWithPasswordByUserId = async (userId: string, password: string): Promise<RecordModel> => {
-  if (!pb) throw new Error('云同步未配置');
-  let result: { token?: string; record?: RecordModel };
-  try {
-    result = await pb.send<{ token?: string; record?: RecordModel }>('/api/velvet/auth-with-password', {
-      method: 'POST',
-      body: { identity: userId, password },
-      requestKey: null,
-    });
-  } catch (err) {
-    const status = (err as { status?: number })?.status;
-    if (status === 404) throw new Error('服务端尚未部署 UserID 登录接口，请先改用邮箱登录');
-    if (status === 429) throw new Error('尝试太频繁，请稍后再试');
-    if (status === 400) throw new Error(BAD_CREDENTIALS_HINT);
-    throw err;
-  }
-  if (!result?.token || !result?.record) throw new Error('服务器未返回登录凭据');
-  pb.authStore.save(result.token, result.record);
-  return result.record;
-};
-
-/** UserID → 服务端代发重置邮件，200 空体 */
+// v3 起登录统一走 velvetApi（自研后端），PB hook 路径仅保留给 OTP 流程
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+/** UserID → 服务端代发重置邮件，200 空体（v3 起此接口由自研后端提供同名语义） */
 const requestPasswordResetByUserId = async (userId: string): Promise<void> => {
   if (!pb) throw new Error('云同步未配置');
   try {
@@ -344,7 +327,8 @@ export interface SignupWithPasswordInput {
  * 用"密码"方式注册：创建 users 记录 → 立即用密码登录 → 顺便发一封验证邮件。
  */
 export const signUpWithPassword = async (input: SignupWithPasswordInput): Promise<RecordModel> => {
-  if (!cloudEnabled || !pb) throw new Error('云同步未配置');
+  // v3 切换：自研后端注册（username 语义 = 后端 name 字段，即 UserID）
+  if (!cloudEnabled) throw new Error('云同步未配置');
   const email = input.email.trim().toLowerCase();
   const username = input.userId.trim().toLowerCase();
   if (!isValidEmail(email)) throw new Error('邮箱格式不正确');
@@ -353,29 +337,15 @@ export const signUpWithPassword = async (input: SignupWithPasswordInput): Promis
   if (input.password !== input.passwordConfirm) throw new Error('两次密码不一致');
 
   try {
-    await pb.collection('users').create({
-      email,
-      username,
-      password: input.password,
-      passwordConfirm: input.passwordConfirm,
-      emailVisibility: false,
-      total_lv: 0,
-    });
+    return await velvetApi.register(email, input.password, username) as unknown as RecordModel;
   } catch (err) {
-    if (hasErrorCode(err, 'validation_not_unique')) {
-      throw new Error('邮箱或 UserID 已被占用');
+    if (err instanceof VelvetApiError) {
+      if (err.status === 409) throw new Error('邮箱或 UserID 已被占用');
+      if (err.status === 400) throw new Error('邮箱格式不正确');
+      if (err.status >= 500) throw new Error('服务器暂时出错，请稍后再试');
     }
-    const msg = firstFieldMessage(err);
-    throw new Error(msg || (err instanceof Error ? err.message : '注册失败'));
+    throw err;
   }
-
-  const authData = await pb.collection('users').authWithPassword(email, input.password);
-  try {
-    await pb.collection('users').requestVerification(email);
-  } catch (err) {
-    console.warn('[velvet-auth] signUpWithPassword: requestVerification failed (not fatal)', err);
-  }
-  return authData.record;
 };
 
 /** 给某邮箱重新发一封验证邮件 */
@@ -401,24 +371,19 @@ export const loginWithPassword = async (
   identity: string,
   password: string,
 ): Promise<RecordModel> => {
-  if (!cloudEnabled || !pb) throw new Error('云同步未配置');
+  // v3 切换：自研 Spring Boot 后端（JWT）。邮箱 / UserID(name) 统一交给服务端匹配。
+  if (!cloudEnabled) throw new Error('云同步未配置');
   if (!identity.trim()) throw new Error('请输入 UserID 或邮箱');
   if (!password) throw new Error('请输入密码');
-  const who = classifyIdentity(identity);
-
-  // UserID：服务端代办（见文件头契约）。邮箱：PB 原生。两边失败登录都只打一次认证。
-  if (who.kind === 'userId') return await authWithPasswordByUserId(who.value, password);
-
   try {
-    const authData = await pb.collection('users').authWithPassword(who.value, password);
-    return authData.record;
+    return await velvetApi.authWithPassword(identity.trim().toLowerCase(), password) as unknown as RecordModel;
   } catch (err) {
-    const status = (err as { status?: number })?.status;
-    if (status === 429) throw new Error('尝试太频繁，请稍后再试');
-    if (status !== 400) throw err;
-    // 400 不吞：服务端原话附在括号里，否则「密码认证被关」「规则挡下」「密码错」是同一句话
-    const detail = firstFieldMessage(err) || (err instanceof Error ? err.message : '');
-    throw new Error(BAD_CREDENTIALS_HINT + (detail ? `\n（服务器返回：${detail}）` : ''));
+    if (err instanceof VelvetApiError) {
+      if (err.status === 401) throw new Error(BAD_CREDENTIALS_HINT);
+      if (err.status === 429) throw new Error('尝试太频繁，请稍后再试');
+      if (err.status >= 500) throw new Error('服务器暂时出错，请稍后再试');
+    }
+    throw err;
   }
 };
 
@@ -480,7 +445,7 @@ export const requestPasswordReset = async (identity: string): Promise<void> => {
 
 /** 登出（清除本地 token，不调用远程） */
 export const logout = (): void => {
-  pb?.authStore.clear();
+  velvetApi.clearAuth();
   void clearPactRunner();
 };
 

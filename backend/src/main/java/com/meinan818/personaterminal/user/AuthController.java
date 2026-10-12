@@ -78,7 +78,9 @@ public class AuthController {
         }
         User u = userMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User>()
-                        .eq("email", identity.toLowerCase()).last("LIMIT 1"));
+                        .eq("email", identity.toLowerCase())
+                        .or().eq("name", identity.toLowerCase())
+                        .last("LIMIT 1"));
         if (u == null || !passwordEncoder.matches(req.getPassword(), u.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("velvet", "not_found"));
         }

@@ -1,4 +1,6 @@
 import PocketBase, { ClientResponseError, type AuthRecord, type SendOptions } from 'pocketbase';
+import * as velvetApi from './velvetApi';
+const velvetApiCloudEnabled = velvetApi.cloudEnabled;
 
 const normalizeEndpoint = (url: string | undefined): string => (url ?? '').trim().replace(/\/+$/, '');
 
@@ -22,8 +24,8 @@ const PB_FALLBACK_URLS = String(import.meta.env.VITE_PB_FALLBACK_URLS ?? '')
 /** 主地址在前，备用按配置顺序；没配主地址就整个为空（云同步关闭） */
 const PB_ENDPOINTS = PB_URL ? [PB_URL, ...new Set(PB_FALLBACK_URLS)] : [];
 
-/** 是否启用了云同步（配置了后端地址） */
-export const cloudEnabled = Boolean(PB_URL);
+/** 是否启用了云同步（自研后端或 PocketBase 任一配置了即可） */
+export const cloudEnabled = Boolean(PB_URL) || velvetApiCloudEnabled;
 
 /** 切到备用线路后记在这里，下次启动直接走它（主地址照常不记） */
 const ROUTE_KEY = 'velvet.pbRoute.v1';
@@ -171,8 +173,9 @@ if (pb) {
   }
 }
 
-/** 当前是否已登录（同步读取，不触发网络） */
+/** 当前是否已登录（同步读取，不触发网络）。自研后端优先，PocketBase 兜底 */
 export const isAuthenticated = (): boolean => {
+  if (velvetApiCloudEnabled) return velvetApi.isAuthenticated();
   return Boolean(pb?.authStore.isValid);
 };
 
@@ -183,6 +186,7 @@ export const isAuthenticated = (): boolean => {
  * 这里兼容两种属性名，以免升级 SDK 时出现"登录看起来 OK 但拿不到用户"的问题
  */
 export const getAuthRecord = (): AuthRecord | null => {
+  if (velvetApiCloudEnabled) return velvetApi.getAuthRecord() as AuthRecord | null;
   if (!pb || !pb.authStore.isValid) return null;
   const store = pb.authStore as unknown as {
     record?: AuthRecord | null;
@@ -201,6 +205,7 @@ export const getUserId = (): string | null => getAuthRecord()?.id ?? null;
 export const onAuthChange = (
   callback: (record: AuthRecord | null) => void
 ): (() => void) => {
+  if (velvetApiCloudEnabled) return velvetApi.onAuthChange(callback as Parameters<typeof velvetApi.onAuthChange>[0]);
   if (!pb) return () => {};
   return pb.authStore.onChange((_token, record) => {
     callback(record ?? null);
@@ -212,5 +217,6 @@ export const onAuthChange = (
  * 云端 token 本身无法强制作废（除非 PocketBase 做 token 黑名单，目前未启用）
  */
 export const clearAuth = (): void => {
+  if (velvetApiCloudEnabled) { velvetApi.clearAuth(); return; }
   pb?.authStore.clear();
 };

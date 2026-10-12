@@ -96,6 +96,27 @@ export const clearAuth = (): void => {
   listeners.forEach((l) => l(null));
 };
 
+// ── 邮箱验证码 OTP（登录/注册合一） ─────────────────────────
+
+/** 发送验证码。429 → 冷却（body.message 含秒数） */
+export const requestOtp = (email: string): Promise<void> =>
+  request<void>('/api/velvet/otp/request', {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify({ email }),
+  });
+
+/** 校验验证码 → {token, record}（新邮箱自动注册）。401 → 验证码错/过期 */
+export const verifyOtp = async (email: string, code: string): Promise<VelvetRecord> => {
+  const r = await request<{ token: string; record: VelvetRecord }>('/api/velvet/otp/verify', {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify({ email, code }),
+  });
+  saveAuth(r.token, r.record);
+  return r.record;
+};
+
 // ── fetch 封装 ──────────────────────────────────────────────
 
 async function request<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {

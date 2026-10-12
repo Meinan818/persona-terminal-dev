@@ -94,22 +94,6 @@ const callRequestOTP = async (email: string): Promise<string> => {
 };
 
 /** OTP 登录：同上，SDK 缺失时回落到 raw HTTP */
-const callAuthWithOTP = async (otpId: string, code: string): Promise<RecordModel> => {
-  if (!pb) throw new Error('云同步未配置');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const svc = pb.collection('users') as any;
-  if (typeof svc.authWithOTP === 'function') {
-    const authData = await svc.authWithOTP(otpId, code);
-    return (authData as { record: RecordModel }).record;
-  }
-  const result = await pb.send<{ token: string; record: RecordModel }>(
-    '/api/collections/users/auth-with-otp',
-    { method: 'POST', body: { otpId, password: code } },
-  );
-  pb.authStore.save(result.token, result.record);
-  return result.record;
-};
-
 /**
  * 生成随机密码（用于 OTP 注册时填充 password 字段——用户永远不会感知）。
  * 长度 16 字符：大小写字母 / 数字 / 后缀 `Aa1!`。
@@ -281,37 +265,19 @@ export const signUpWithOTP = async (input: SignupWithOTPInput): Promise<{ otpId:
 export const requestLoginOrSignupOTP = async (
   identity: string,
 ): Promise<{ otpId: string; wasSignup: boolean }> => {
-  if (!cloudEnabled || !pb) throw new Error('云同步未配置');
+  // v3 切换：自研后端 OTP（登录/注册合一，服务端自动判定新旧用户）
+  if (!cloudEnabled) throw new Error('云同步未配置');
   const normalized = identity.trim().toLowerCase();
   if (!normalized) throw new Error('请输入 UserID 或邮箱');
 
-  const isEmailInput = looksLikeEmail(normalized);
-  if (!isEmailInput && !isValidUserId(normalized)) {
-    throw new Error('UserID 格式不正确（3-18 位小写字母 / 数字 / ._-）');
-  }
-  if (isEmailInput && !isValidEmail(normalized)) {
-    throw new Error('邮箱格式不正确');
+  if (looksLikeEmail(normalized)) {
+    if (!isValidEmail(normalized)) throw new Error('邮箱格式不正确');
+    await velvetApi.requestOtp(normalized);
+    return { otpId: normalized, wasSignup: false }; // 新旧用户服务端自动判定
   }
 
-  // UserID 输入：只可能是老用户，交给服务端代发（邮箱不回到客户端）
-  if (!isEmailInput) {
-    const otpId = await requestOTPByUserId(normalized);
-    return { otpId, wasSignup: false };
-  }
-
-  // 邮箱输入：先试注册；邮箱已存在 → 回落给老用户发 OTP
-  try {
-    const { otpId } = await signUpWithOTP({ email: normalized });
-    return { otpId, wasSignup: true };
-  } catch (err) {
-    // signUpWithOTP 在邮箱重复时会抛 Error('邮箱或 UserID 已被占用')（见其内部实现）
-    if (err instanceof Error && /已被占用|not.?unique/i.test(err.message)) {
-      // 邮箱已注册 → 老用户登录
-      const otpId = await callRequestOTP(normalized);
-      return { otpId, wasSignup: false };
-    }
-    throw err;
-  }
+  // UserID 输入：自研后端按邮箱发码——提示用户改用邮箱
+  throw new Error('验证码登录请使用注册邮箱；UserID 请改用密码登录');
 };
 
 // ── 注册 · 密码（备选） ─────────────────────────────────────
@@ -413,16 +379,19 @@ const requestOTPByEmail = async (email: string): Promise<string> => {
 /** 兼容旧 import 名（注册流程用） */
 export const requestOTP = requestOTPByEmail;
 
-/** 提交验证码完成登录 */
+/** 提交验证码完成登录（自研后端：otpId 即邮箱） */
 export const verifyOTP = async (otpId: string, code: string): Promise<RecordModel> => {
-  if (!cloudEnabled || !pb) throw new Error('云同步未配置');
+  if (!cloudEnabled) throw new Error('云同步未配置');
   const trimmed = code.trim();
   if (!trimmed) throw new Error('请输入验证码');
   try {
-    return await callAuthWithOTP(otpId, trimmed);
+    return await velvetApi.verifyOtp(otpId, trimmed) as unknown as RecordModel;
   } catch (err) {
-    if ((err as { status?: number })?.status === 400) {
+    if (err instanceof VelvetApiError && err.status === 401) {
       throw new Error('验证码不正确或已过期');
+    }
+    if (err instanceof VelvetApiError && err.status === 429) {
+      throw new Error('尝试太频繁，请稍后再试');
     }
     throw err;
   }

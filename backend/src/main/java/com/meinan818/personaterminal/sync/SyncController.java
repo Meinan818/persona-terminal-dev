@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meinan818.personaterminal.security.JwtAuthFilter;
 import com.meinan818.personaterminal.user.User;
 import com.meinan818.personaterminal.user.UserMapper;
+import com.meinan818.personaterminal.user.UserProfileFields;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -194,6 +195,8 @@ public class SyncController {
         if (patch.containsKey("name")) u.setName(asString(patch.get("name")));
         if (patch.containsKey("username")) u.setName(asString(patch.get("username")));
         if (patch.containsKey("avatar")) u.setAvatar(asString(patch.get("avatar")));
+        // 档案扩展字段（nickname / total_lv / attribute_* / status / goal …）并入 profile JSON 列
+        u.setProfile(UserProfileFields.merge(u.getProfile(), patch));
         u.setUpdated(now());
         userMapper.updateById(u);
         return ResponseEntity.ok(toRecord(u));
@@ -210,6 +213,8 @@ public class SyncController {
         m.put("name", u.getName());
         m.put("username", u.getName());
         m.put("avatar", u.getAvatar());
+        // 档案扩展字段与基础字段同层（前端 cloudUser.nickname 等直接可读）
+        UserProfileFields.flatten(u.getProfile(), m);
         m.put("created", u.getCreated());
         m.put("updated", u.getUpdated());
         return m;

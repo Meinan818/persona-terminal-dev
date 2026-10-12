@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   name       VARCHAR(255) NULL,
   password   VARCHAR(100) NOT NULL,                      -- BCrypt
   avatar     VARCHAR(512) NULL,
+  profile    JSON         NULL,                          -- 档案扩展字段（nickname/total_lv/attribute_*/status/goal…）
   created    VARCHAR(40)  NOT NULL,                      -- ISO-8601 字符串，与前端一致
   updated    VARCHAR(40)  NOT NULL,
   INDEX idx_users_email (email)

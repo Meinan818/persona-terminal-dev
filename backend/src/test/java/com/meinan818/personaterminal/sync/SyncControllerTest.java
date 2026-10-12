@@ -30,9 +30,9 @@ class SyncControllerTest {
     @Autowired
     private TestRestTemplate rest;
 
-    private record Session(String token, String userId) {}
+    private record Session(String token, String userId, String email) {}
 
-    /** 注册一个唯一用户，返回 token 与 id。 */
+    /** 注册一个唯一用户，返回 token / id / 邮箱。 */
     private Session register() {
         String email = "synctest-" + UUID.randomUUID() + "@example.com";
         ResponseEntity<Map> res = rest.postForEntity("/api/velvet/register",
@@ -42,7 +42,7 @@ class SyncControllerTest {
         Map<?, ?> body = res.getBody();
         String token = (String) body.get("token");
         Map<?, ?> record = (Map<?, ?>) body.get("record");
-        return new Session(token, (String) record.get("id"));
+        return new Session(token, (String) record.get("id"), email);
     }
 
     private HttpHeaders authHeaders(String token) {
@@ -165,5 +165,54 @@ class SyncControllerTest {
         assertThat(res.getBody().get("name")).isEqualTo("改名了");
         assertThat(res.getBody().get("username")).isEqualTo("改名了");
         assertThat(res.getBody()).containsKeys("id", "email", "created", "updated");
+    }
+
+    /**
+     * 档案扩展字段（昵称 / 等级 / 属性 / 名片状态与目标）必须能写入并原样读回。
+     * 前端 pushUserProfile 推的正是这些字段，此前后端只认 name/username/avatar，其余静默丢弃。
+     */
+    @Test
+    void 档案扩展字段读写往返() {
+        Session s = register();
+
+        Map<String, Object> patch = new java.util.HashMap<>();
+        patch.put("nickname", "夜行者");
+        patch.put("total_lv", 42);
+        patch.put("level_difficulty", "hard");
+        patch.put("attribute_names", Map.of("str", "力量", "int", "智识"));
+        patch.put("attribute_levels", Map.of("str", 3, "int", 5));
+        patch.put("attribute_points", Map.of("str", 120, "int", 300));
+        patch.put("total_points", 420);
+        patch.put("unlocked_count", 7);
+        patch.put("attribute_level_titles", Map.of("str", List.of("Lv1 新手", "Lv2 修行者")));
+        patch.put("status", Map.of("id", "card-1", "at", "2026-10-13T00:00:00Z"));
+        patch.put("goal", Map.of("kind", "card", "title", "读完 12 本书", "progress", 40));
+        ResponseEntity<Map> res = rest.exchange("/api/sync/profile", HttpMethod.PUT,
+                new HttpEntity<>(patch, authHeaders(s.token())), Map.class);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // 返回契约为「平铺」：扩展字段与 id/email 同层，前端 cloudUser.nickname 直接可读
+        Map<?, ?> body = res.getBody();
+        assertThat(body.get("nickname")).isEqualTo("夜行者");
+        assertThat(((Number) body.get("total_lv")).intValue()).isEqualTo(42);
+        assertThat(body.get("level_difficulty")).isEqualTo("hard");
+        assertThat(body.get("total_points")).isEqualTo(420);
+        assertThat(body.get("unlocked_count")).isEqualTo(7);
+        assertThat(body.get("attribute_levels")).isInstanceOf(Map.class);
+        assertThat(((Map<?, ?>) body.get("goal")).get("title")).isEqualTo("读完 12 本书");
+
+        // 重新登录拿到的 record 也必须带上这些字段（登录即读全档案）
+        ResponseEntity<Map> login = rest.postForEntity("/api/velvet/auth-with-password",
+                Map.of("identity", s.email(), "password", "pw-123456"), Map.class);
+        assertThat(login.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Map<?, ?> rec = (Map<?, ?>) login.getBody().get("record");
+        assertThat(rec.get("nickname")).isEqualTo("夜行者");
+        assertThat(((Number) rec.get("total_lv")).intValue()).isEqualTo(42);
+
+        // GET /api/me 同样平铺
+        ResponseEntity<Map> me = rest.exchange("/api/me", HttpMethod.GET,
+                new HttpEntity<>(authHeaders(s.token())), Map.class);
+        assertThat(me.getBody().get("nickname")).isEqualTo("夜行者");
+        assertThat(((Number) me.getBody().get("total_lv")).intValue()).isEqualTo(42);
     }
 }

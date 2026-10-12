@@ -93,6 +93,8 @@ public class AuthController {
         record.put("email", u.getEmail());
         record.put("name", u.getName());
         record.put("avatar", u.getAvatar());
+        // 档案扩展字段与基础字段同层：登录即拿到完整档案（昵称 / 等级 / 状态 / 目标 …）
+        UserProfileFields.flatten(u.getProfile(), record);
         record.put("created", u.getCreated());
         record.put("updated", u.getUpdated());
         Map<String, Object> m = new HashMap<>();

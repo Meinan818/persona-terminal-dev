@@ -23,6 +23,13 @@ public class User {
     @TableField("avatar")
     private String avatar;
 
+    /**
+     * 档案扩展字段（nickname / total_lv / attribute_* / level_difficulty / status / goal …）
+     * 的 JSON 列。这些字段从 PB users 集合迁来、会随功能演进增删，用单列承载避免频繁加列。
+     * 读写统一走 {@link UserProfileFields}。
+     */
+    private String profile;
+
     private String created;
     private String updated;
 }

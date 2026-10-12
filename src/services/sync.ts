@@ -103,19 +103,17 @@ async function syncAvatarIfChanged(userId: string): Promise<void> {
  * 资料页改完立刻调一次，pushUserProfile / pushAll 也都会顺手推。
  */
 export const pushProfilePresence = async (): Promise<void> => {
-  if (!pb || !pb.authStore.isValid) return;
-  const userId = getUserId();
-  if (!userId) return;
+  if (!api.isAuthenticated()) return;
+  if (!getUserId()) return;
   const patch = buildPresencePatch(useAppStore.getState());
   try {
-    await pb.collection('users').update(userId, patch);
+    await api.updateProfile(patch);
   } catch { /* 字段还没建 / 离线：下次再推 */ }
 };
 
 export const pushUserProfile = async (): Promise<void> => {
-  if (!pb || !pb.authStore.isValid) return;
-  const userId = getUserId();
-  if (!userId) return;
+  if (!api.isAuthenticated()) return;
+  if (!getUserId()) return;
 
   const appState = useAppStore.getState();
   const totalLv = computeTotalLv(appState.attributes);
@@ -145,24 +143,20 @@ export const pushUserProfile = async (): Promise<void> => {
     unlocked_count: unlockedCount,
   };
   if (localUserName) profilePatch.nickname = localUserName;
+  // 难度档并入同一次写入：后端 profile 是 JSON 列、按字段逐个并入，不存在
+  // 「缺字段连累整份档案」的问题（那是 PB 字段级校验才有的约束）
+  profilePatch.level_difficulty = resolveLevelDifficulty(appState.settings);
 
   try {
-    const updated = await pb.collection('users').update(userId, profilePatch);
-    pb.authStore.save(pb.authStore.token, updated);
+    await api.updateProfile(profilePatch);
   } catch (err) {
     console.warn('[velvet-sync] pushUserProfile failed', err);
   }
-  // 难度档单发（PB 可能还没这个字段；混进上面会连累整份档案，见 pushAll 里的同款注释）
-  try {
-    await pb.collection('users').update(userId, {
-      level_difficulty: resolveLevelDifficulty(appState.settings),
-    });
-  } catch { /* 字段还没建，跳过 */ }
-  // 名片状态 / 目标（v2.7.0.6 第 6 项）：同样单发
+  // 名片状态 / 目标（v2.7.0.6 第 6 项）：单独一次，走同一 profile 端点
   await pushProfilePresence();
-  // 头像走单独的指纹比对路径
+  // 头像走单独的指纹比对路径（仍依赖 PB 文件存储，见函数注释——本轮未迁移）
   try {
-    await syncAvatarIfChanged(userId);
+    await syncAvatarIfChanged(getUserId() ?? '');
   } catch (err) {
     console.warn('[velvet-sync] pushUserProfile: avatar sync failed', err);
   }
@@ -771,33 +765,17 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
       };
       // 仅当本地有名字时才推（避免空字符串覆盖云端已有昵称）
       if (localUserName) profilePatch.nickname = localUserName;
-      if (pb) {
-        const updated = await pb.collection('users').update(userId, profilePatch);
-        // 同步更新本地 authStore.record，让 cloudUser 反映最新档案
-        pb.authStore.save(pb.authStore.token, updated);
-      }
+      // 难度档并入同一次写入（后端 profile 是 JSON 列、按字段并入，不存在缺字段连累整份的问题）
+      profilePatch.level_difficulty = resolveLevelDifficulty(appState.settings);
+      await api.updateProfile(profilePatch);
     } catch (e) {
       console.warn('[velvet-sync] push: failed to update user profile fields', e);
     }
 
-    // 名片状态 / 目标（v2.7.0.6 第 6 项）：同样单发（字段没建就跳过）
+    // 名片状态 / 目标（v2.7.0.6 第 6 项）：走同一 profile 端点
     await pushProfilePresence();
 
-    /**
-     * 难度档（R19）**单独发一次**，不并进上面那个 patch。
-     * 理由：它依赖 PB users 集合里有 level_difficulty 字段，而这个字段可能还没建。
-     * 混在一起发的话，缺字段会让**整份档案**（昵称/等级/称号…）一起推不上去。
-     * 拆开之后最坏情况只是"别人看不到你的难度标记"，其余档案照常。
-     */
-    try {
-      if (pb) await pb.collection('users').update(userId, {
-        level_difficulty: resolveLevelDifficulty(appState.settings),
-      });
-    } catch {
-      // PB 没这个字段就静默跳过——不是错误，是还没建
-    }
-
-    // 头像同步 —— 只在本地 dataUrl 与"上次上传指纹"不一致时才推
+    // 头像同步 —— 只在本地 dataUrl 与"上次上传指纹"不一致时才推（仍走 PB 文件存储，本轮未迁移）
     try {
       await syncAvatarIfChanged(userId);
     } catch (e) {
@@ -1324,13 +1302,9 @@ export const deleteAllCloudData = async (): Promise<{ deleted: number }> => {
       await api.deleteRow(r.id);
       deleted += 1;
     }
-    // 清除云端 total_lv（users 表本身不动，避免 RLS 问题）
-    if (pb) try {
-      const updated = await pb.collection('users').update(userId, {
-        total_lv: 0,
-        attribute_level_titles: {},
-      });
-      pb.authStore.save(pb.authStore.token, updated);
+    // 清除云端档案里的等级/称号（users 表本身不动，避免误删账号）
+    try {
+      await api.updateProfile({ total_lv: 0, attribute_level_titles: {} });
     } catch (e) {
       console.warn('[velvet-sync] deleteAllCloudData: failed to reset total_lv', e);
     }

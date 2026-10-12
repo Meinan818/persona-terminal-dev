@@ -131,6 +131,8 @@ export interface ChatOptions {
   relaySafe?: boolean;
   /** 内部：5xx 已经自动隔一下重试过一次（第 14 批） */
   retried5xx?: boolean;
+  /** 代理 502 后已尝试直连回退（防循环） */
+  retriedDirectFallback?: boolean;
 }
 
 /**
@@ -721,6 +723,15 @@ export async function chatComplete(
     // ③ 服务商不认 reasoning_effort 的取值（各家各代叫法不一）→ 不发这个字段重来
     if (isUnsupportedEffortError(e) && !opts.noReasoningEffort) {
       return await chatComplete(cfg, messages, { ...opts, noReasoningEffort: true });
+    }
+    // ③' 代理 502（服务端没配该家钥匙 / 代理不可达）→ 自动回退直连服务商（用户 Key 仍在本地）
+    if (e instanceof HttpStatusError && e.status === 502 && !opts.retriedDirectFallback) {
+      syncAiProxy(false, '');
+      try {
+        return await chatComplete(cfg, messages, { ...opts, retriedDirectFallback: true });
+      } finally {
+        syncAiProxy(Boolean(localStorage.getItem('velvet.jwt')), getApiBaseUrl());
+      }
     }
     // ④ 5xx（一个字都没收到）：隔一下再试一次——中转站临时没资源 / 网关抖一下常常第二发就好
     if (!opts.retried5xx && isRetryable5xx(e)) {

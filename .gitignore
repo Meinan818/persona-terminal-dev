@@ -78,15 +78,32 @@ scripts/*.class
 nginx.conf
 
 # 文档不入库（用户规则 2026-08-31）：除 README.md 外的 .md 一律不推
+# —— 2026-10-12 起改为私有开发仓库：策划书纳入版本管理；展示仓库（Persona-Terminal）仍沿用旧规则
 *.md
 !README.md
+!策划书*.md
+
+# ===== backend（Java/Maven）=====
+backend/target/
+backend/.idea/
+backend/*.iml
 
 # 本机测试台（无头浏览器脚本、假 PB、本机 PocketBase 实例）：只放本地，不上 GitHub
 tests-local/
+
+# ===== monorepo 本地目录（不上 GitHub）=====
+# the-velvet/：合并前的旧前端目录（内容已铺在根目录，且自留 .git）——保留本地作备用
+the-velvet/
+# 参考资料/截图/落选图标
+refs/
+反面案例/
+icon-candidates/
+# Rivet 工作区元数据
+.rivet/
 
 # ===== 本项目追加（2026-06）：公开仓库版权隔离 =====
 # 塔罗牌面 webp（public/tarot/ 三频道各 22 张）：来源上游美术，保守不入公开仓库
 public/tarot/
 
-# 毕业设计策划书等本地文档（*\.md 全局排除已覆盖，这里显式双保险）
-/策划书*.md
+# 毕设策划书：私有开发仓库中纳入版本管理（上面 !策划书*.md 已反向豁免）
+# 展示仓库如需隔离，用其自身的 .gitignore 规则

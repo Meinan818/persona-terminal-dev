@@ -116,6 +116,19 @@ export function syncAiProxy(enabled: boolean, baseUrl: string): void {
 export const aiProxyEnabled = (): boolean => proxyEnabled;
 
 /**
+ * 音频转写代理改道（FormData 专用）。
+ * 后端代理没有 /audio 端点时返回 null（直连兜底）；有则改发 /api/ai/audio。
+ */
+export function rewriteAudioForProxy(url: string, init: RequestInit): { url: string; init: RequestInit } {
+  const rewritten = rewriteForProxy(url, init);
+  if (rewritten && rewritten.url.endsWith('/api/ai/chat')) {
+    return { url: rewritten.url.replace('/api/ai/chat', '/api/ai/audio'), init: rewritten.init };
+  }
+  if (rewritten) return rewritten;
+  return { url, init };
+}
+
+/**
  * 把直连服务商的 URL/请求头改写成代理形态。
  * 返回 null = 不适用（调用方直连兜底）。
  */

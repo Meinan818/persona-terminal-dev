@@ -91,7 +91,7 @@ export async function fetchProviderBalance(
   if (!ep || !apiKey.trim()) return null;
   const t0 = Date.now();
   try {
-    const resp = await aiFetch(ep.url, { headers: { Authorization: `Bearer ${apiKey.trim()}` }, signal });
+    const resp = await aiFetch(ep.url, { headers: { Authorization: `Bearer ${apiKey.trim()}`, 'X-Upstream-Provider': provider ?? 'custom' }, signal });
     recordAIDiag({ kind: 'balance', provider, host: hostOfUrl(ep.url), ok: resp.ok, status: resp.status, ms: Date.now() - t0 });
     if (!resp.ok) return null;
     const parsed = parseBalance(ep, await resp.json().catch(() => null));

@@ -15,6 +15,7 @@ import type { Settings } from '@/types';
 import { getAudioAIConfig } from '@/utils/aiClient';
 import { extractProviderErrorMessage, getHttpStatusHint, moderationHint } from '@/utils/aiProviders';
 import { hostOf, recordAIDiag } from '@/utils/aiDiagnostics';
+import { rewriteAudioForProxy } from '@/utils/aiTransport';
 
 /** 听觉档是否可用（配了模型 + 有 Key） */
 export const speechAvailable = (settings: Settings): boolean => getAudioAIConfig(settings) !== null;
@@ -93,13 +94,16 @@ export async function transcribe(blob: Blob, settings: Settings, signal?: AbortS
   const t0 = Date.now();
   const diag = { kind: 'audio' as const, tier: 'audio', provider: cfg.provider, host: hostOf(cfg.baseUrl), model: cfg.model };
   try {
-    const resp = await fetch(`${cfg.baseUrl}/audio/transcriptions`, {
-      method: 'POST',
+    // 代理改道（钥匙在服务端时）：剥鉴权头、改发后端 /api/ai/audio；不走代理时照旧直连
+    const direct = {
+      method: 'POST' as const,
       // 不要手写 Content-Type：FormData 得由浏览器带 boundary
-      headers: { Authorization: `Bearer ${cfg.apiKey}` },
+      headers: { Authorization: `Bearer ${cfg.apiKey}`, 'X-Upstream-Provider': cfg.provider ?? 'custom' },
       body: form,
       signal: ac.signal,
-    });
+    };
+    const routed = rewriteAudioForProxy(`${cfg.baseUrl}/audio/transcriptions`, direct);
+    const resp = await fetch(routed.url, routed.init);
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
       const detail = extractProviderErrorMessage(body).slice(0, 160).trim();

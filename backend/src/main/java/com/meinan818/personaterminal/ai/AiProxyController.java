@@ -87,6 +87,52 @@ public class AiProxyController {
         return relay(body, request, "/v1/messages");
     }
 
+    /** 音频转写通道：/audio/transcriptions（multipart 透传，前端 FormData 由 Spring 解包后重建） */
+    @PostMapping(value = "/audio", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.ALL_VALUE)
+    public ResponseEntity<byte[]> audio(jakarta.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof com.meinan818.personaterminal.security.JwtAuthFilter.UserIdPrincipal)) {
+            return ResponseEntity.status(401).body(b("{\"velvet\":\"not_found\"}"));
+        }
+        String provider = request.getHeader("X-Upstream-Provider");
+        if (!StringUtils.hasText(provider)) {
+            return ResponseEntity.badRequest().body(b("{\"message\":\"缺少 X-Upstream-Provider 头\"}"));
+        }
+        provider = provider.toLowerCase();
+        String envKey = PROVIDER_ENV.get(provider);
+        if (envKey == null) {
+            return ResponseEntity.badRequest().body(b("{\"message\":\"不支持的服务商: \" + \"" + provider + "\"}"));
+        }
+        String apiKey = System.getenv(envKey);
+        if (!StringUtils.hasText(apiKey)) {
+            return ResponseEntity.status(502).body(b("{\"message\":\"服务端未配置 " + envKey + " 环境变量\"}"));
+        }
+        Set<String> hosts = PROVIDER_HOSTS.get(provider);
+        String upstreamBase = officialBase(provider, hosts);
+
+        // multipart 原样转发：读原始字节 + 保留 Content-Type（含 boundary）
+        byte[] raw = request.getInputStream().readAllBytes();
+        String contentType = request.getHeader("Content-Type");
+        try {
+            HttpRequest upstream = HttpRequest.newBuilder()
+                    .uri(URI.create(upstreamBase + "/audio/transcriptions"))
+                    .timeout(Duration.ofSeconds(120))
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", contentType != null ? contentType : "multipart/form-data")
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(raw))
+                    .build();
+            HttpResponse<byte[]> resp = http.send(upstream, HttpResponse.BodyHandlers.ofByteArray());
+            MediaType ct = resp.headers().firstValue("Content-Type")
+                    .map(MediaType::parseMediaType)
+                    .orElse(MediaType.APPLICATION_JSON);
+            return ResponseEntity.status(resp.statusCode()).contentType(ct)
+                    .body(resp.body() == null ? new byte[0] : resp.body());
+        } catch (Exception e) {
+            log.warn("AI 代理：音频转写上游失败 provider={} err={}", provider, e.getMessage());
+            return ResponseEntity.status(502).body(b("{\"message\":\"AI 服务商连接失败，请稍后重试\"}"));
+        }
+    }
+
     private ResponseEntity<byte[]> relay(byte[] body, HttpServletRequest request, String path) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof com.meinan818.personaterminal.security.JwtAuthFilter.UserIdPrincipal)) {

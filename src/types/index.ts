@@ -742,6 +742,8 @@ export interface Settings {
    * 设成 true 才随同步上云，方便多设备共用同一把钥匙。
    */
   syncCloudApiKey?: boolean;
+  /** AI 请求走自研后端代理（钥匙存服务端，浏览器不再持有 API Key）。未设 = 直连服务商 */
+  aiUseBackendProxy?: boolean;
   /**
    * 谏言冷却锚点：上一次"开启残响对话"的时间戳（ISO）。
    * 作为 3 天冷却的唯一真源 —— 不依赖 counselSessions / counselArchives 的存在与否，

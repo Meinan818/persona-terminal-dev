@@ -16,6 +16,9 @@
 
 const API_URL = normalizeEndpoint(import.meta.env.VITE_API_URL as string | undefined);
 
+/** 后端根地址（AI 代理改道用；未配置 = 空串） */
+export const getApiBaseUrl = (): string => API_URL;
+
 function normalizeEndpoint(url: string | undefined): string {
   return (url ?? '').trim().replace(/\/+$/, '');
 }

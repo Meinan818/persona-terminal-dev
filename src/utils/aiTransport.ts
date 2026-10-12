@@ -93,7 +93,47 @@ export async function nativeFetch(url: string, init: RequestInit = {}): Promise<
   return new Response(text, { status, headers: h });
 }
 
-/** fetch 的替身：原生主机（或 force）走原生通道，其余照旧 */
+/** fetch 的替身：代理开关开启时改道后端；原生主机走原生通道，其余照旧 */
 export function aiFetch(url: string, init: RequestInit = {}, force?: boolean): Promise<Response> {
+  const rewritten = rewriteForProxy(url, init);
+  if (rewritten) return fetch(rewritten.url, rewritten.init);
   return (force ?? isNativeHost(url)) ? nativeFetch(url, init) : fetch(url, init);
+}
+
+// ── 后端代理改道（钥匙不进浏览器）────────────────────────────────────────
+// 开关打开时，AI 请求不再直连服务商，而是发给自己登录的后端 /api/ai/*，由后端持有
+// API Key 转发。前端此时不需要带真 Key（后端按 X-Upstream-Provider 选服务端的 Key）。
+
+let proxyEnabled = false;
+let proxyBaseUrl = '';
+
+/** 由 aiClient 解析设置时调用：开关 + 后端地址（velvetApi 的 API_URL） */
+export function syncAiProxy(enabled: boolean, baseUrl: string): void {
+  proxyEnabled = enabled;
+  proxyBaseUrl = baseUrl.replace(/\/$/, '');
+}
+
+export const aiProxyEnabled = (): boolean => proxyEnabled;
+
+/**
+ * 把直连服务商的 URL/请求头改写成代理形态。
+ * 返回 null = 不适用（调用方直连兜底）。
+ */
+export function rewriteForProxy(url: string, init: RequestInit): { url: string; init: RequestInit } | null {
+  if (!proxyEnabled || !proxyBaseUrl) return null;
+  try {
+    const u = new URL(url);
+    // Anthropic 协议端点 …/v1/messages → 代理 /api/ai/messages；其余按 OpenAI 兼容 → /api/ai/chat
+    const path = u.pathname.endsWith('/messages') ? '/api/ai/messages' : '/api/ai/chat';
+    const headers = new Headers(init.headers ?? {});
+    const provider = headers.get('X-Upstream-Provider') ?? '';
+    const host = u.host;
+    headers.delete('Authorization');
+    headers.delete('x-api-key');
+    headers.set('X-Upstream-Provider', provider);
+    if (provider === 'custom') headers.set('X-Upstream-Host', host);
+    return { url: `${proxyBaseUrl}${path}`, init: { ...init, headers } };
+  } catch {
+    return null;
+  }
 }

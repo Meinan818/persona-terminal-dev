@@ -34,7 +34,8 @@ import {
   RELAY_CAPACITY_HINT,
   getProviderConfig,
   type ApiProvider, type ApiProtocol, DEFAULT_PROVIDER, cleanApiKey } from '@/utils/aiProviders';
-import { aiFetch, isNativeHost, syncNativeHosts } from '@/utils/aiTransport';
+import { aiFetch, isNativeHost, syncNativeHosts, syncAiProxy } from '@/utils/aiTransport';
+import { getApiBaseUrl } from '@/services/velvetApi';
 import { effortFixFromMessage, isEnableThinkingMessage, isLegacyThinkingMessage, isUnsupportedTemperatureMessage, quirksFor, rememberQuirk, thinkingSuffixBase } from '@/utils/aiQuirks';
 import { anthropicEndpoint, anthropicHeaders, buildAnthropicBody, mapAnthropicStreamEvent, parseAnthropicResponse } from '@/utils/aiAnthropic';
 import { hostOf as diagHostOf, recordAIDiag } from '@/utils/aiDiagnostics';
@@ -195,6 +196,7 @@ const RELAY_THINKING_ALLOWANCE = 12_000;
  */
 export function getAIConfig(settings: Settings): AIConfig | null {
   syncNativeHosts(settings.aiNativeHosts);
+  syncAiProxy(settings.aiUseBackendProxy === true, getApiBaseUrl());
   const apiKey = cleanApiKey(settings.summaryApiKey).key;
   if (!apiKey) return null;
   const { baseUrl, model } = resolveProvider(
@@ -263,6 +265,7 @@ function applyModelOverride(
   strict = false,
 ): AIConfig | null {
   syncNativeHosts(settings.aiNativeHosts);
+  syncAiProxy(settings.aiUseBackendProxy === true, getApiBaseUrl());
   const activeProvider = settings.summaryApiProvider ?? DEFAULT_PROVIDER;
   if (pv && pv !== activeProvider) {
     const prof = settings.aiProfiles?.[pv];
@@ -289,6 +292,7 @@ function applyModelOverride(
  */
 export function fallbackAIConfig(settings: Settings): AIConfig {
   syncNativeHosts(settings.aiNativeHosts);
+  syncAiProxy(settings.aiUseBackendProxy === true, getApiBaseUrl());
   return {
     ...resolveProvider(settings.summaryApiProvider, settings.summaryApiBaseUrl, settings.summaryModel),
     apiKey: cleanApiKey(settings.summaryApiKey).key,
@@ -432,10 +436,11 @@ async function postChat(cfg: AIConfig, body: string, signal: AbortSignal, kind: 
   const t0 = Date.now();
   const diag = { kind, tier: cfg.tier, provider: cfg.provider, host: diagHostOf(cfg.baseUrl), model: cfg.model, native: isNativeHost(cfg.baseUrl) };
   let resp: Response;
+  const providerHeader = { 'X-Upstream-Provider': cfg.provider ?? 'custom' } as Record<string, string>;
   try {
     resp = isAnthropic(cfg)
-      ? await aiFetch(anthropicEndpoint(cfg.baseUrl, 'messages'), { method: 'POST', headers: anthropicHeaders(cfg.apiKey, !!accept), body, signal })
-      : await aiFetch(`${cfg.baseUrl}/chat/completions`, { method: 'POST', headers: authHeaders(cfg, accept), body, signal });
+      ? await aiFetch(anthropicEndpoint(cfg.baseUrl, 'messages'), { method: 'POST', headers: { ...anthropicHeaders(cfg.apiKey, !!accept), ...providerHeader }, body, signal })
+      : await aiFetch(`${cfg.baseUrl}/chat/completions`, { method: 'POST', headers: { ...authHeaders(cfg, accept), ...providerHeader }, body, signal });
   } catch (e) {
     recordAIDiag({ ...diag, ok: false, status: 0, ms: Date.now() - t0, err: e instanceof Error ? (e.name === 'AbortError' ? '超时或取消' : e.message) : String(e) });
     throw e;

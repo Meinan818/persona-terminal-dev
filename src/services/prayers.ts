@@ -18,6 +18,8 @@
 
 import type { RecordModel } from 'pocketbase';
 import { pb, getUserId } from './pocketbase';
+import * as velvetApi from './velvetApi';
+import * as prayersApi from './prayersApi';
 import type { CloudProfile, Prayer } from '@/types';
 
 /** 祈愿日界：本地 04:00 */
@@ -101,10 +103,19 @@ const mapPrayer = (r: RecordModel): Prayer => {
  * 包含 from = me 和 to = me 两种方向。
  */
 export const listTodayPrayers = async (): Promise<Prayer[]> => {
+  const day = getPrayerDayKey();
+  // 自研后端：祈愿迁移到 /api/social/prayers（W3）
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await prayersApi.listTodayPrayers(day);
+    } catch (err) {
+      console.warn('[velvet-prayers] listTodayPrayers (backend) failed', err);
+      return [];
+    }
+  }
   if (!pb || !pb.authStore.isValid) return [];
   const me = getUserId();
   if (!me) return [];
-  const day = getPrayerDayKey();
   try {
     const records = await pb.collection('prayers').getFullList({
       filter: `day = "${day}" && (from = "${me}" || to = "${me}")`,
@@ -153,15 +164,21 @@ export const sendPrayer = async (
   targetUserId: string,
   existingTodayPrayers: Prayer[] = [],
 ): Promise<SendPrayerResult> => {
-  if (!pb || !pb.authStore.isValid) throw new Error('未登录');
-  const me = getUserId();
-  if (!me) throw new Error('用户信息缺失');
-  if (!targetUserId || targetUserId === me) throw new Error('不能对自己祈愿');
+  if (!targetUserId || targetUserId === velvetApi.getUserId()) throw new Error('不能对自己祈愿');
   if (hasPrayedToday(targetUserId, existingTodayPrayers)) {
     throw new Error('今天已经为 Ta 祈愿过了');
   }
-
   const day = getPrayerDayKey();
+
+  // 自研后端：祈愿迁移到 /api/social/prayers（W3）。通知由后端在服务端写（prayer_received）。
+  if (velvetApi.isAuthenticated()) {
+    return await prayersApi.sendPrayer(targetUserId, existingTodayPrayers, day);
+  }
+
+  if (!pb || !pb.authStore.isValid) throw new Error('未登录');
+  const me = getUserId();
+  if (!me) throw new Error('用户信息缺失');
+
   const created = await pb.collection('prayers').create(
     { from: me, to: targetUserId, day },
     { expand: 'from,to' },

@@ -744,6 +744,8 @@ export interface Settings {
   syncCloudApiKey?: boolean;
   /** AI 请求走自研后端代理（钥匙存服务端，浏览器不再持有 API Key）。未设 = 直连服务商 */
   aiUseBackendProxy?: boolean;
+  /** 社交走自研后端（好友等 /api/social/**）。未设/false = 走 PocketBase（迁移过渡期默认） */
+  socialUseBackend?: boolean;
   /**
    * 谏言冷却锚点：上一次"开启残响对话"的时间戳（ISO）。
    * 作为 3 天冷却的唯一真源 —— 不依赖 counselSessions / counselArchives 的存在与否，

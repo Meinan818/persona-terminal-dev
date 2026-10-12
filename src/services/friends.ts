@@ -14,6 +14,11 @@ import { pb, getUserId } from './pocketbase';
 import { parseGoalSnapshot, parseProfileStatus } from '@/utils/profilePresence';
 import { pbQuote } from './pbFilter';
 import type { CloudProfile, Friendship, FriendshipStatus } from '@/types';
+import { useAppStore } from '@/store';
+import * as friendsApi from './friendsApi';
+
+/** 社交迁移开关（第一波：好友）：true = 走自研后端 /api/social，false = 走 PocketBase（默认） */
+const useBackend = (): boolean => useAppStore.getState().settings.socialUseBackend === true;
 
 const FRIEND_REQUEST_TTL_DAYS = 21;
 const REJECTED_COOLDOWN_DAYS = 3;
@@ -253,6 +258,7 @@ const createFriendRequestNotification = async (
 
 /** 接受好友申请 */
 export const acceptFriendRequest = async (friendshipId: string): Promise<Friendship> => {
+  if (useBackend()) return friendsApi.acceptFriendRequest(friendshipId);
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');
@@ -283,6 +289,7 @@ export const acceptFriendRequest = async (friendshipId: string): Promise<Friends
 
 /** 拒绝好友申请（触发 3 天冷却） */
 export const rejectFriendRequest = async (friendshipId: string): Promise<Friendship> => {
+  if (useBackend()) return friendsApi.rejectFriendRequest(friendshipId);
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');
@@ -314,6 +321,7 @@ export const rejectFriendRequest = async (friendshipId: string): Promise<Friends
 
 /** 解除已建立的好友关系（触发 7 天冷却） */
 export const severFriendship = async (friendshipId: string): Promise<Friendship> => {
+  if (useBackend()) return friendsApi.severFriendship(friendshipId);
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');
@@ -351,6 +359,7 @@ export const severFriendship = async (friendshipId: string): Promise<Friendship>
  * 调用时机建议：每次 loadSocial 之后跑一次。
  */
 export const expireOutdatedPending = async (friendships: Friendship[]): Promise<number> => {
+  if (useBackend()) return friendsApi.expireOutdatedPending(friendships);
   if (!pb || !pb.authStore.isValid) return 0;
   const now = Date.now();
   let changed = 0;

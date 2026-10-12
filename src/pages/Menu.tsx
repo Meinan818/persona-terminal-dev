@@ -48,6 +48,7 @@ import { P4Flower, P4Sparkle, P4Highlight } from '@/ui/p4Kit';
 import { P3R, P3RPage, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_FONT, P5_TITLE_FONT, starPts, P5Collage, P5SubBar, P5Star, P5StarOutline, P5Dots, P5Slab, P5RPage } from '@/components/p5r/kit';
 import { computeTotalLv, resolveTier } from '@/utils/lvTiers';
+import { themeIconSrc } from '@/utils/iconSync';
 
 // ── 图标（24px stroke 制式，与 Navigation.tsx 同一套 heroicons outline 风格）──
 
@@ -397,9 +398,16 @@ export const Menu = () => {
         originRef={aboutTriggerRef}
       >
         <div className="space-y-4">
-          {/* 居中头部：logo / 应用名 / 副题 / 版本 */}
+          {/* 居中头部：logo / 应用名 / 副题 / 版本
+              logo 用主题联动图标（img[data-theme-logo] 由 iconSync 换图，兜底 /icon.png），
+              与 Android 桌面图标 / favicon 同源同主题。 */}
           <div className="text-center py-2">
-            <div className="text-5xl mb-4">🦋</div>
+            <img
+              data-theme-logo
+              src={themeIconSrc(user?.theme)}
+              alt="MASKARIA"
+              className="mx-auto mb-4 h-14 w-14 rounded-xl object-contain"
+            />
             <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">MASKARIA</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">JRPG Growth Tracker</p>
             {upd.hasUpdate ? (

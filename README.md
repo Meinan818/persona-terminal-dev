@@ -5,6 +5,11 @@
 <h1 align="center">MASKARIA</h1>
 <p align="center"><em>Mask Terminal — 把人生过成一场 RPG</em></p>
 
+> **这是什么项目**：MASKARIA（面具庭园）—— 基于开源项目
+> [the-velvet（靛蓝色房间）](https://github.com/YuukiMarine/the-velvet) 二次开发的**个人毕业设计**。
+> 前端沿用上游代码（React），**后端由我自己用 Java / Spring Boot 重写**，从 PocketBase 云服务迁向自托管。
+> 上游的开发历程与本仓库的改造进度，分别在下方「上游项目历程」与「本仓改造历程」两节。
+
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0-8B5CF6?style=flat-square" />
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" />
@@ -120,7 +125,10 @@ iOS 与 Android 双端桌面小组件：**清单组件**（今日任务 + 完成
 
 ---
 
-## 版本历程
+## 上游项目历程
+
+> 以下 v2.0 ~ v2.8 是**上游项目 the-velvet（YuukiMarine）**的开发历程，随初始导入一并带入，**不是本仓库的工作**。
+> 本仓库自二次开发以来的进度见下一节「本仓改造历程」。
 
 ### v2.8（2026-10）
 **组织上线**（最多 7 人：名册 / 公告板 / 周日会议 / 目标与作战 / 据点等级 / 同调借面具 / 满月团战 /
@@ -155,6 +163,37 @@ iOS 与 Android 双端桌面小组件：**清单组件**（今日任务 + 完成
 
 ### v2.0（2026-04）
 五项属性 + 记录 + 任务 + 统计的核心闭环
+
+---
+
+## 本仓改造历程
+
+> 记录本仓库（MASKARIA）自上游 fork 之后的工作。由 git 历史核对，非估算。
+
+### 2026-10 · 品牌与图标
+- `10889a5` 「面具终端」正式更名 **MASKARIA（面具庭园）**（含 README / 包名 / 各处文案）
+- `a709fb5` 主题 ↔ 软件图标联动（Android 桌面 / Web favicon / 应用内 logo）
+- `3433b3c` 五套主题图标生成（修复首版泛洪算法缺陷，5 张图中心泄漏 0.00%）
+- `06e783a` ContactSheet 图标对比图（供人眼目检）
+
+### 2026-10 · 后端改造（Java / Spring Boot，毕业设计主体）
+把数据层从 PocketBase 迁到**自研 Spring Boot + MySQL + JWT**。均为 TDD，附集成测试。
+
+| 提交 | 内容 |
+|---|---|
+| `a11f1e3` | 后端 `/api/sync/rows` —— 镜像 PB 的 user_data KV 模型 |
+| `efbd43e` `f018b60` | 前端数据面切自研后端 + `userDataApi` 契约测试 |
+| `06600fa` | 档案同步切自研：`users.profile` JSON 列 + 扩展字段读写 |
+| `468aa31` | 档案推送前端回归测试 + vitest 补 `@` 路径别名 |
+| `f4a7010` | 后端头像文件存取 `/api/avatar`（上传 / 公开读 / 删除） |
+| `54c830c` | 前端头像上传切自研 + 回归测试 |
+| `92c61a2` | 引入 **Flyway** 版本化迁移 + 补 AuthController 集成测试 |
+
+**当前状态**：数据面、用户档案、头像三块已迁到自研后端；
+**社交功能（好友 / 通知 / 同伴 / 组织）仍挂在 PocketBase**，是下一步；
+AI 代理层与业务 CRUD 待做。完整交接见 `HANDOFF-2026-10-12.md`，合规边界见 `COMPLIANCE.md`（两者均在仓库根目录）。
+
+**验证**：后端 `mvn test` 22 passed（Sync 6 + Auth 9 + Avatar 7）；前端 `npm test` 31 passed；`tsc --noEmit` 0 报错。
 
 ---
 

@@ -3,6 +3,7 @@ package com.meinan818.personaterminal.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -35,6 +36,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/velvet/auth-with-password", "/api/velvet/register",
                         "/api/velvet/otp/request", "/api/velvet/otp/verify", "/actuator/health").permitAll()
+                // 头像图片公开可读：好友资料卡要在未登录/跨账号下加载他人头像。
+                // 只放行 GET，上传(POST)/删除(DELETE) 仍需 JWT（见 AvatarController）。
+                .requestMatchers(HttpMethod.GET, "/api/avatar/**").permitAll()
                 .anyRequest().authenticated())
             .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
                 res.setStatus(401);

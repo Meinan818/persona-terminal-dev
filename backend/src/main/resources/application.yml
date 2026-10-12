@@ -4,6 +4,10 @@ server:
 spring:
   config:
     import: optional:classpath:application-otp.yml
+  servlet:
+    multipart:
+      max-file-size: 2MB        # 头像上传上限（前端压到 ~80KB，留余量）
+      max-request-size: 4MB
   datasource:
     url: jdbc:mysql://localhost:3306/persona_terminal?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
@@ -11,6 +15,10 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jackson:
     default-property-inclusion: non_null
+
+# 上传文件存储根目录（头像存 {app.upload-dir}/avatars/{userId}.{ext}）
+app:
+  upload-dir: ${APP_UPLOAD_DIR:uploads}
 
 mybatis-plus:
   configuration:

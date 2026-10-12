@@ -112,3 +112,11 @@ public/tarot/
 
 # ===== 上传文件（头像等，不入库）=====
 backend/uploads/
+
+# ===== 凭据防护（2026-10-13）=====
+# start.bat 曾误含明文邮箱授权码并入库，已移除。今后凭据只走环境变量，不进任何入库文件。
+# 若本机需要放凭据，用下面这些（均不入库）：
+.env.local
+.env.*.local
+*.local.bat
+start.local.bat

@@ -37,6 +37,7 @@ echo 按 Ctrl+C 停止服务器
 echo ====================================
 echo.
 
-set MAIL_USERNAME=19033087685@163.com
-set MAIL_PASSWORD=AFta3raJ8LA3w7bd
+rem 邮箱验证码的凭据（MAIL_USERNAME / MAIL_PASSWORD）属于后端，通过环境变量传入，
+rem 不要写在本文件或任何入库文件里——见 COMPLIANCE.md 与 .gitignore
+
 call npm run dev

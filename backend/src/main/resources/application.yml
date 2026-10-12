@@ -15,6 +15,16 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jackson:
     default-property-inclusion: non_null
+  # 数据库迁移（Flyway）：把「手工执行 schema.sql」改成版本化脚本，改动可追溯
+  # baseline-on-migrate + baseline-version=0：本机库在引入 Flyway 前已有表，
+  #   让它把现状当基线（0）后再执行 V1（V1 用 IF NOT EXISTS，对已有库是空操作）；
+  #   全新空库则直接从 V1 建起。两种情形都以「V1 已记录」结束。
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    clean-disabled: true          # 禁止 flyway clean（防误删全库）
+    locations: classpath:db/migration
 
 # 上传文件存储根目录（头像存 {app.upload-dir}/avatars/{userId}.{ext}）
 app:

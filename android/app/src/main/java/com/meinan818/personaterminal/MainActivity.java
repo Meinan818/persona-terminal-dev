@@ -13,6 +13,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(VelvetWidgetPlugin.class);
         // 一起进步 · 后台刷新（v2.7.0.6）：网页侧推登录凭据 / 开关过来，见 PactRefresh
         registerPlugin(PactRefreshPlugin.class);
+        // 主题 → 桌面图标切换（MASKARIA 更名后新增）：见 IconSwitcherPlugin
+        registerPlugin(IconSwitcherPlugin.class);
         super.onCreate(savedInstanceState);
 
         // 关掉 WebView 缩放（v2.7，用户上报「安卓设置页双指能把整页放大」）。

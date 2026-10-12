@@ -4,6 +4,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useAppStore } from '@/store';
 import { useNavigatorStore } from '@/store/navigator';
 import { triggerNavFeedback, triggerWheelOpenFeedback } from '@/utils/feedback';
+import { themeIconSrc } from '@/utils/iconSync';
 import { springSnappy } from '@/utils/motion';
 import { zClass } from '@/utils/zIndex';
 import { RadialQuickNav } from '@/components/RadialQuickNav';
@@ -126,6 +127,8 @@ const SidebarInner = () => {
   const actionsSubTab = useAppStore(s => s.actionsSubTab);
   const setActionsSubTab = useAppStore(s => s.setActionsSubTab);
   const ledgerOn = useAppStore(s => s.settings.ledgerEnabled !== false);
+  // 主题 → 应用内 logo：随主题换图标（与桌面图标/favicon 同一映射，见 utils/iconSync）
+  const theme = useAppStore(s => s.user?.theme);
   // F6：黑猫对话窗（NavigatorWindow 挂在 App 顶层，这里只负责打开）
   const openNavigator = useNavigatorStore((s) => s.open);
   // P3R：蓝主题侧栏换形（水面底 + 蓝斜块选中 + 洋红角），其余主题不受影响
@@ -209,7 +212,7 @@ const SidebarInner = () => {
       <div className="px-6 pt-8 pb-6">
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 overflow-hidden flex-shrink-0 ${p3 ? '' : 'rounded-xl'}`} style={p3 ? { clipPath: slantClip(5) } : undefined}>
-            <img src="/icon.png" alt="MASKARIA" className="w-full h-full object-cover" />
+            <img data-theme-logo src={themeIconSrc(theme)} alt="MASKARIA" className="w-full h-full object-cover" />
           </div>
           <div>
             {p3 ? (

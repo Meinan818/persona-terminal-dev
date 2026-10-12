@@ -13,6 +13,7 @@ import { ensureLifeQuestDay, lifeDayKeyOf, normTitle, recordLifeQuestEvent } fro
 import { ensureLifeQuestAttrMap, lifeAttrMapStatus, readLifeQuestAiCard } from '@/utils/lifeQuestAI';
 import { calcMaxStreak, daysSinceFirstRecord, streakDates } from '@/utils/streak';
 import { applyUiChannel, syncDarkClass } from '@/ui/channel';
+import { applyThemeIcon } from '@/utils/iconSync';
 import { computeAndSchedule, type NotifSnapshot } from '@/utils/notifications';
 import { getCachedNotifVoice, refreshNotifVoiceIfNeeded } from '@/utils/notifVoice';
 import { pushWidgetSnapshot } from '@/utils/widgetSnapshot';
@@ -987,6 +988,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       applyUiChannel(user.theme);
       // 频道就位后立刻按闸门重估 .dark（红频道要摘）；loadData 拿到落盘设置后还会再同步一次
       syncDarkClass(!!get().settings.darkMode);
+      // 冷启动：按落盘主题补一次图标（进程被杀后 alias 状态可能需重同步）
+      void applyThemeIcon(user.theme);
 
       await get().loadData();
       // F2a：历史成长总结一次性回填 viewedAt（=createdAt，视为已读），避免开启通知时旧总结被判「未读」刷屏。
@@ -1140,6 +1143,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       document.documentElement.setAttribute('data-theme', newUser.theme);
       applyUiChannel(newUser.theme);
       syncDarkClass(!!get().settings.darkMode);
+      void applyThemeIcon(newUser.theme);
 
       // 星象：首次创建用户时留白，由用户主动进入星象页抽卡
       await get().loadDailyDivination();
@@ -1185,6 +1189,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     applyUiChannel(theme);
     // 换肤后按闸门重估 .dark：切进红摘掉、切出红（且夜间开着）挂回
     syncDarkClass(!!settings.darkMode);
+    // 主题 → 软件图标联动（Android 桌面图标 / Web favicon / 应用内 logo）
+    void applyThemeIcon(theme);
     // 自定义主题：应用 CSS 变量
     if (theme === 'custom' && settings.customThemeColor) {
       applyCustomThemeColor(settings.customThemeColor);

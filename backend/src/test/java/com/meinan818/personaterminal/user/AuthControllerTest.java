@@ -176,4 +176,39 @@ class AuthControllerTest {
                 new HttpEntity<>(bearer("not.a.real.jwt")), String.class);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
+    /**
+     * 回归（2026-10-14）：改 UserID（= users.name）要查重——与注册一致。
+     * 原缺陷：PUT /api/velvet/profile 改 name 时不查重，两人能改成同一个 UserID，
+     * 之后「按 UserID 查人加好友」会有歧义。
+     */
+    @Test
+    void 改UserID撞车返回409() {
+        String idA = "uid" + UUID.randomUUID().toString().substring(0, 8);
+        String idB = "uid" + UUID.randomUUID().toString().substring(0, 8);
+        String tokenB = (String) register(uniqueEmail(), "pw-123456", idB).getBody().get("token");
+        String tokenA = (String) register(uniqueEmail(), "pw-123456", idA).getBody().get("token");
+
+        // A 想改成 B 的 UserID → 409
+        ResponseEntity<Map> conflict = rest.exchange("/api/velvet/profile", HttpMethod.PUT,
+                new HttpEntity<>(Map.of("username", idB), bearer(tokenA)), Map.class);
+        assertThat(conflict.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        // A 改成自己的（幂等 no-op）→ 200，不误报冲突
+        ResponseEntity<Map> self = rest.exchange("/api/velvet/profile", HttpMethod.PUT,
+                new HttpEntity<>(Map.of("username", idA), bearer(tokenA)), Map.class);
+        assertThat(self.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // A 改成一个没被占用的 → 200，且 name 生效
+        String fresh = "uid" + UUID.randomUUID().toString().substring(0, 8);
+        ResponseEntity<Map> ok = rest.exchange("/api/velvet/profile", HttpMethod.PUT,
+                new HttpEntity<>(Map.of("username", fresh), bearer(tokenA)), Map.class);
+        assertThat(ok.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(ok.getBody().get("username")).isEqualTo(fresh);
+
+        // B 的 token 仍可用（不受影响）
+        ResponseEntity<Map> bMe = rest.exchange("/api/me", HttpMethod.GET,
+                new HttpEntity<>(bearer(tokenB)), Map.class);
+        assertThat(bMe.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
 }

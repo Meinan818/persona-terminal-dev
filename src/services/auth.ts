@@ -454,16 +454,21 @@ export const updateProfile = async (
 };
 
 /**
- * 首次设置 / 修改 UserID（PB 的 username 字段）。
+ * 首次设置 / 修改 UserID（自研后端 = users.name；PB = username 字段）。
  * 冷却：PB 默认不给同一 username 加锁，但建议业务上只做 1 次。
  * 若撞到重复，会抛 "UserID 已被占用"。
  */
 export const setOrChangeUserId = async (newUserId: string): Promise<RecordModel> => {
+  const normalized = newUserId.trim().toLowerCase();
+  if (!isValidUserId(normalized)) throw new Error('UserID 应为 3-18 位小写字母 / 数字 / ._-');
+  // 自研后端：username 语义 = 后端 name 字段（MeController 的 PUT /api/velvet/profile）
+  if (velvetApi.isAuthenticated()) {
+    const updated = await velvetApi.updateProfile({ username: normalized });
+    return updated as unknown as RecordModel;
+  }
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const id = getUserId();
   if (!id) throw new Error('用户信息缺失');
-  const normalized = newUserId.trim().toLowerCase();
-  if (!isValidUserId(normalized)) throw new Error('UserID 应为 3-18 位小写字母 / 数字 / ._-');
   try {
     const updated = await pb.collection('users').update(id, { username: normalized });
     pb.authStore.save(pb.authStore.token, updated);

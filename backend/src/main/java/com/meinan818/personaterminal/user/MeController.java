@@ -1,7 +1,9 @@
 package com.meinan818.personaterminal.user;
 
 import com.meinan818.personaterminal.security.JwtAuthFilter;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,6 +44,22 @@ public class MeController {
     public ResponseEntity<?> updateProfile(@RequestBody Map<String, Object> patch) {
         User u = currentUser();
         if (u == null) return unauthorized();
+        // UserID（= users.name）唯一性：注册时已查重（AuthController.register），改的时候也要查，
+        // 否则两人能改成同一个 UserID，之后「按 UserID 查人加好友」（social/users?userId=）会有歧义。
+        // 排除自己：改成当前同名是幂等 no-op，不该报冲突。
+        Object newName = patch.containsKey("username") ? patch.get("username")
+                : patch.containsKey("name") ? patch.get("name") : null;
+        if (newName != null) {
+            String name = asString(newName);
+            if (name != null && !name.isBlank() && !name.equals(u.getName())) {
+                Long taken = userMapper.selectCount(
+                        new QueryWrapper<User>().eq("name", name).ne("id", u.getId()));
+                if (taken != null && taken > 0) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body(Map.of("velvet", "not_found", "message", "UserID 已被占用"));
+                }
+            }
+        }
         if (patch.containsKey("name")) u.setName(asString(patch.get("name")));
         if (patch.containsKey("username")) u.setName(asString(patch.get("username")));
         if (patch.containsKey("avatar")) u.setAvatar(asString(patch.get("avatar")));

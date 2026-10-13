@@ -1,7 +1,5 @@
 package com.meinan818.personaterminal;
 
-import android.app.ActivityManager;
-import android.app.ApplicationExitInfo;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -9,14 +7,10 @@ import android.os.Bundle;
 import android.view.Window;
 import android.webkit.WebSettings;
 
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.getcapacitor.BridgeActivity;
-
-import java.util.List;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -43,10 +37,6 @@ public class MainActivity extends BridgeActivity {
             window.setNavigationBarContrastEnforced(false);
             window.setStatusBarContrastEnforced(false);
         }
-
-        // 临时诊断：用户报「切主题后点底部导航会回到桌面」，先让机器自己说出上次是怎么没的。
-        // 只为定位问题，查清后可移除。
-        reportLastExitReasonIfAbnormal();
 
         // 关掉 WebView 缩放（v2.7，用户上报「安卓设置页双指能把整页放大」）。
         // Capacitor 自己从不碰这几项，走的是 WebView 默认值；而网页层的
@@ -120,50 +110,5 @@ public class MainActivity extends BridgeActivity {
                 WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         controller.setAppearanceLightStatusBars(!darkUi);
         controller.setAppearanceLightNavigationBars(!darkUi);
-    }
-
-    private void reportLastExitReasonIfAbnormal() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return;
-        try {
-            showLastExitDialog();
-        } catch (Exception ignored) {
-            // 取不到退出历史就算了，不能因为诊断把 App 拖下水
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.R)
-    private void showLastExitDialog() {
-        ActivityManager manager = getSystemService(ActivityManager.class);
-        if (manager == null) return;
-        List<ApplicationExitInfo> history = manager.getHistoricalProcessExitReasons(getPackageName(), 0, 1);
-        if (history.isEmpty()) return;
-        ApplicationExitInfo info = history.get(0);
-        long minutesAgo = (System.currentTimeMillis() - info.getTimestamp()) / 60_000L;
-        // 只报「刚发生」的那次，免得每次冷启动都弹一条几天前的旧记录
-        if (minutesAgo > 15) return;
-        // 用户上滑清理后台（小米的 SwipeUpClean）、系统回收任务都算正常退出，不该提示
-        if (info.getReason() == ApplicationExitInfo.REASON_USER_REQUESTED) return;
-        String message = "原因码 reason=" + info.getReason() + "（" + describeExitReason(info.getReason()) + "）"
-                + "\n说明 desc=" + info.getDescription()
-                + "\n退出时内存 pss≈" + (info.getPss() / 1024) + " MB"
-                + "\n发生在 " + minutesAgo + " 分钟前";
-        new AlertDialog.Builder(this)
-                .setTitle("上次退出诊断（临时）")
-                .setMessage(message)
-                .setPositiveButton("知道了", null)
-                .show();
-    }
-
-    private static String describeExitReason(int reason) {
-        switch (reason) {
-            case ApplicationExitInfo.REASON_CRASH: return "程序崩溃(4)";
-            case ApplicationExitInfo.REASON_CRASH_NATIVE: return "底层崩溃(5)";
-            case ApplicationExitInfo.REASON_ANR: return "无响应(6)";
-            case ApplicationExitInfo.REASON_LOW_MEMORY: return "内存不足被系统杀掉(13)";
-            case ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE: return "占用资源过高被杀(14)";
-            case ApplicationExitInfo.REASON_USER_REQUESTED: return "被移出任务列表(10)";
-            case ApplicationExitInfo.REASON_OTHER: return "其它原因(1)";
-            default: return "reason=" + reason;
-        }
     }
 }

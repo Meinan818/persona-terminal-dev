@@ -20,6 +20,7 @@ import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import { ACHIEVEMENT_UNLOCK_LINES } from '@/constants';
 import { SkillUnlockModal } from '@/components/SkillUnlockModal';
 import { db } from '@/db';
+import { isReloadNavigation } from '@/utils/navType';
 // 首页三个频道变体：中性/黄用这份（也是 default 路由的兜底，故静态），
 // 蓝/红各有一份 1:1 重绘稿——**一次会话只可能用到其中一份**，全静态导入等于
 // 让每个用户都下载并解析另外两套自己永远看不到的首页（v2.6.5 性能整改 C10）。
@@ -213,7 +214,10 @@ function App() {
   const uiChannel = useUiChannel();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showSplash, setShowSplash] = useState(true);
+  // 开屏动画只在**真正进入 App** 时放一遍；用户按 F5 / 下拉刷新不再重放。
+  // 依据浏览器 navigation type（reload / back_forward / prerender 判为"刷新"）。
+  // 惰性初始化：这个判定只该在挂载那一刻读一次，不能每次 render 重算。
+  const [showSplash, setShowSplash] = useState(() => !isReloadNavigation());
   // 启动看门狗（紧急修复 #1）：连续两次没走完 → 安全模式（轻开屏、不预热）+ 首页横幅可复制诊断
   const bootInfo = useMemo(() => getBootInfo(), []);
   const [bootNotice, setBootNotice] = useState(() => getBootInfo().safeMode);

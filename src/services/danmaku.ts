@@ -37,7 +37,12 @@
 
 import { pb, getUserId } from './pocketbase';
 import { watchDanmaku } from './danmakuWatch';
+import * as danmakuApi from './danmakuApi';
 import type { ThemeType } from '@/types';
+
+/** 数据源判据（与 notifications.ts 同款）：登录了自研后端（velvet JWT 在）→ 走 /api/danmaku */
+const useBackend = (): boolean =>
+  typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('velvet.jwt'));
 
 export type DanmakuTheme = 'blue' | 'yellow' | 'red';
 
@@ -99,6 +104,16 @@ export const blockDanmakuLocally = (id: string): void => {
  * （由 UI 退回种子池）；本地已屏蔽的条目在此处过滤。
  */
 export const listApprovedDanmaku = async (limit = DANMAKU_MAX_ON_SCREEN): Promise<DanmakuItem[]> => {
+  const blocked = readBlocked();
+  // 自研后端：/api/danmaku?limit=N（仅 approved，W5）
+  if (useBackend()) {
+    try {
+      return (await danmakuApi.listApproved(limit)).filter(it => !blocked.includes(it.id));
+    } catch (err) {
+      console.warn('[velvet-danmaku] listApproved (backend) failed', err);
+      return [];
+    }
+  }
   if (!pb) return [];
   try {
     const res = await pb.collection('danmaku').getList(1, limit, {
@@ -106,7 +121,6 @@ export const listApprovedDanmaku = async (limit = DANMAKU_MAX_ON_SCREEN): Promis
       sort: '-created',
       requestKey: null,
     });
-    const blocked = readBlocked();
     return res.items
       .map(r => ({ id: String((r as { id?: unknown }).id ?? ''), text: String((r as { text?: unknown }).text ?? '').trim() }))
       .filter(it => it.text && !blocked.includes(it.id));
@@ -136,14 +150,41 @@ const describeSubmitError = (err: unknown): string => {
 };
 
 /**
+ * 投稿失败（自研后端）→ 给用户看的一句中文。失败不扣机会，所以都带一句「机会还在」。
+ * 后端已把校验失败翻成中文（放在 body.message），优先透传；否则按 HTTP 状态给通用话术。
+ */
+const describeVelvetSubmitError = (err: unknown): string => {
+  const e = err as { status?: number; body?: { message?: string } | null; message?: string };
+  const status = typeof e?.status === 'number' ? e.status : -1;
+  const serverMsg = e?.body && typeof e.body.message === 'string' ? e.body.message : '';
+  console.warn('[velvet-danmaku] submit (backend) failed', status, serverMsg || e?.message);
+  if (serverMsg) return serverMsg;             // 后端校验原因（如「最多 20 字」）原样给用户
+  if (status === 0) return '网络没连上，机会还在，稍后再发';
+  if (status === 401) return '登录过期了，重新登录再发；机会还在';
+  if (status >= 500) return '服务器开小差了，机会还在，稍后再试';
+  return '服务器暂时不收投稿，机会还在，稍后再试';
+};
+
+/**
  * 投稿一条弹幕。需登录。**不存作者**（匿名：不写 createdBy），status='pending' 由 Create 规则
  * 强制（先审后发）。失败抛出一句中文说明（原始报错进控制台），由调用方提示、且不消费 token。
  */
 export const submitDanmaku = async (text: string, theme: DanmakuTheme): Promise<void> => {
-  if (!pb || !pb.authStore.isValid) throw new Error('登录后才能把鼓励发给其他人');
   if (!getUserId()) throw new Error('用户信息缺失');
   const v = validateDanmaku(text);
   if (!v.ok) throw new Error(v.reason ?? '内容不合法');
+  // 自研后端：/api/danmaku（后端自动过审，W5）
+  if (useBackend()) {
+    try {
+      const rec = await danmakuApi.submit(text.trim(), theme);
+      // 记下自己这条的 id，供开 App 时自查是否过审（id 即凭据，匿名不破）
+      watchDanmaku(rec.id, text.trim());
+      return;
+    } catch (err) {
+      throw new Error(describeVelvetSubmitError(err));
+    }
+  }
+  if (!pb || !pb.authStore.isValid) throw new Error('登录后才能把鼓励发给其他人');
   try {
     const rec = await pb.collection('danmaku').create({ text: text.trim(), theme, status: 'pending', isSeed: false, reportCount: 0 });
     // 记下自己这条的 id，供开 App 时自查是否过审（FS4 短期 C 路线）。
@@ -156,6 +197,15 @@ export const submitDanmaku = async (text: string, theme: DanmakuTheme): Promise<
 
 /** 举报一条弹幕（兜底已通过内容；失败静默）。UI 入口见 DanmakuLayer（点击弹幕 → 确认）。 */
 export const reportDanmaku = async (danmakuId: string, reason = ''): Promise<void> => {
+  // 自研后端：POST /api/danmaku/{id}/report（幂等，W5）
+  if (useBackend()) {
+    try {
+      await danmakuApi.report(danmakuId, reason);
+    } catch (err) {
+      console.warn('[velvet-danmaku] report (backend) failed', err);
+    }
+    return;
+  }
   if (!pb || !pb.authStore.isValid) return;
   const me = getUserId();
   try {

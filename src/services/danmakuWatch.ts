@@ -19,7 +19,12 @@
  * 所以：最多留 MAX_WATCH 条，超过 EXPIRE_MS 没结果就当被拒了、丢掉。
  */
 import { pb } from './pocketbase';
+import { isApproved as velvetIsApproved } from './danmakuApi';
 import { isNative } from '@/utils/native';
+
+/** 数据源判据（与 danmaku.ts 同款）：登录了自研后端（velvet JWT 在）→ 走 /api/danmaku */
+const useBackend = (): boolean =>
+  typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('velvet.jwt'));
 
 const KEY = 'velvet:danmaku-watch';
 /** 最多同时盯几条（弹幕投稿有三天冷却，正常人攒不到这个数） */
@@ -83,14 +88,23 @@ export async function checkApprovedDanmaku(): Promise<WatchItem[]> {
   const all = read();
   const fresh = all.filter(it => now - it.at <= EXPIRE_MS);
   if (fresh.length !== all.length) write(fresh);
-  if (fresh.length === 0 || !pb) return [];
+  if (fresh.length === 0) return [];
+
+  const backend = useBackend();
+  if (!backend && !pb) return [];
 
   const approved: WatchItem[] = [];
   const keep: WatchItem[] = [];
 
   for (const it of fresh) {
     try {
-      await pb.collection('danmaku').getOne(it.id, { requestKey: null });
+      if (backend) {
+        // 自研后端：GET /api/danmaku/{id} —— 200 = 已过审，404 = 还没结果（W5）
+        if (await velvetIsApproved(it.id)) approved.push(it);
+        else keep.push(it);
+        continue;
+      }
+      await pb!.collection('danmaku').getOne(it.id, { requestKey: null });
       approved.push(it); // 200 = View 规则放行 = status 已是 approved
     } catch {
       // 404（规则挡住 = 还没过审或已被拒）与 0/401/5xx（断网 / 未登录 / 服务端抖）

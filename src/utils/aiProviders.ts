@@ -493,7 +493,13 @@ export async function testAIConnection(opts: {
     try {
       const resp = await aiFetch(anthropic ? anthropicEndpoint(base, 'messages') : `${base}/chat/completions`, {
         method: 'POST',
-        headers: anthropic ? anthropicHeaders(apiKey) : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        headers: {
+          ...(anthropic ? anthropicHeaders(apiKey) : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }),
+          // 走自研后端代理时，后端靠这个头选服务商的 Key（aiTransport.rewriteForProxy 原样透传）。
+          // 漏了它会 400「缺少 X-Upstream-Provider 头」——真实对话一直带着，所以会出现
+          // 「聊天能用、测试连接却失败」这种看起来自相矛盾的现象。
+          'X-Upstream-Provider': opts.provider,
+        },
         body: buildBody(),
         signal: controller.signal,
       }, viaNative);
@@ -681,7 +687,11 @@ export async function fetchAvailableModels(opts: {
     const anthropic = (opts.protocol ?? (opts.provider === 'custom' ? customProtocol() : 'openai')) === 'anthropic';
     if (!baseUrl) { clearTimeout(timeout); return { ok: false, error: '自定义服务商要先填 API 地址' }; }
     const resp = await aiFetch(anthropic ? anthropicEndpoint(baseUrl, 'models') : `${baseUrl}/models`, {
-      headers: anthropic ? anthropicHeaders(apiKey) : { Authorization: `Bearer ${apiKey}` },
+      headers: {
+        ...(anthropic ? anthropicHeaders(apiKey) : { Authorization: `Bearer ${apiKey}` }),
+        // 同上：代理侧按这个头选服务商的 Key，少了它拉模型列表会被 400 挡掉
+        'X-Upstream-Provider': opts.provider,
+      },
       signal: controller.signal,
     }, viaNative);
     clearTimeout(timeout);

@@ -2,14 +2,15 @@ package com.meinan818.personaterminal;
 
 import android.app.ActivityManager;
 import android.app.ApplicationExitInfo;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Window;
 import android.webkit.WebSettings;
-import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
@@ -64,6 +65,26 @@ public class MainActivity extends BridgeActivity {
         syncSystemBarIcons();
     }
 
+    @Override
+    public void onStop() {
+        super.onStop();
+        // 桌面图标在这里才真正切换（换主题时只记了待切换项，见 IconSwitcherPlugin.setIcon）：
+        // 前台时动 alias 有可能把当前任务一起收掉。
+        applyPendingIconSwitch();
+    }
+
+    private void applyPendingIconSwitch() {
+        try {
+            SharedPreferences prefs = getSharedPreferences(IconSwitcherPlugin.PREFS, MODE_PRIVATE);
+            String pending = prefs.getString(IconSwitcherPlugin.KEY_PENDING, null);
+            if (pending == null) return;
+            prefs.edit().remove(IconSwitcherPlugin.KEY_PENDING).apply();
+            IconSwitcherPlugin.applyIconSwitch(this, pending);
+        } catch (Exception ignored) {
+            // 后台切换失败不该影响任何事，下次换主题再说
+        }
+    }
+
     /**
      * 换主题后由 IconSwitcherPlugin 调用：网页此刻还在把 data-ui-channel / .dark 写到 &lt;html&gt; 上，
      * 稍等一拍再读，避免读到切换前的旧值。
@@ -104,30 +125,31 @@ public class MainActivity extends BridgeActivity {
     private void reportLastExitReasonIfAbnormal() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return;
         try {
-            reportLastExitReason();
+            showLastExitDialog();
         } catch (Exception ignored) {
             // 取不到退出历史就算了，不能因为诊断把 App 拖下水
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    private void reportLastExitReason() {
+    private void showLastExitDialog() {
         ActivityManager manager = getSystemService(ActivityManager.class);
         if (manager == null) return;
-        List<ApplicationExitInfo> history = manager.getHistoricalProcessExitReasons(getPackageName(), 0, 3);
-        for (ApplicationExitInfo info : history) {
-            int reason = info.getReason();
-            if (reason == ApplicationExitInfo.REASON_USER_REQUESTED) return; // 正常退出，不打扰
-            if (reason == ApplicationExitInfo.REASON_CRASH
-                    || reason == ApplicationExitInfo.REASON_CRASH_NATIVE
-                    || reason == ApplicationExitInfo.REASON_ANR
-                    || reason == ApplicationExitInfo.REASON_LOW_MEMORY
-                    || reason == ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE) {
-                String detail = info.getDescription() == null ? "" : "｜" + info.getDescription();
-                Toast.makeText(this, "上次异常退出：" + describeExitReason(reason) + detail, Toast.LENGTH_LONG).show();
-                return;
-            }
-        }
+        List<ApplicationExitInfo> history = manager.getHistoricalProcessExitReasons(getPackageName(), 0, 1);
+        if (history.isEmpty()) return;
+        ApplicationExitInfo info = history.get(0);
+        long minutesAgo = (System.currentTimeMillis() - info.getTimestamp()) / 60_000L;
+        // 只报「刚发生」的那次，免得每次冷启动都弹一条几天前的旧记录
+        if (minutesAgo > 15) return;
+        String message = "原因码 reason=" + info.getReason() + "（" + describeExitReason(info.getReason()) + "）"
+                + "\n说明 desc=" + info.getDescription()
+                + "\n退出时内存 pss≈" + (info.getPss() / 1024) + " MB"
+                + "\n发生在 " + minutesAgo + " 分钟前";
+        new AlertDialog.Builder(this)
+                .setTitle("上次退出诊断（临时）")
+                .setMessage(message)
+                .setPositiveButton("知道了", null)
+                .show();
     }
 
     private static String describeExitReason(int reason) {
@@ -137,6 +159,8 @@ public class MainActivity extends BridgeActivity {
             case ApplicationExitInfo.REASON_ANR: return "无响应(6)";
             case ApplicationExitInfo.REASON_LOW_MEMORY: return "内存不足被系统杀掉(13)";
             case ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE: return "占用资源过高被杀(14)";
+            case ApplicationExitInfo.REASON_USER_REQUESTED: return "被移出任务列表(10)";
+            case ApplicationExitInfo.REASON_OTHER: return "其它原因(1)";
             default: return "reason=" + reason;
         }
     }

@@ -1,6 +1,7 @@
 package com.meinan818.personaterminal;
 
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.pm.PackageManager;
 
 import com.getcapacitor.JSObject;
@@ -33,6 +34,9 @@ public class IconSwitcherPlugin extends Plugin {
     /** 与 ThemeType / public/theme-icons/ 一一对应。 */
     private static final String[] NAMES = {"blue", "yellow", "red", "pink", "custom"};
     private static final String ALIAS_PREFIX = "MaskariaIcon_";
+    /** 待切换的图标名暂存在这里，等 App 退到后台再真正生效（见 MainActivity.onStop） */
+    static final String PREFS = "velvet_icon";
+    static final String KEY_PENDING = "pending_icon";
 
     @PluginMethod
     public void setIcon(PluginCall call) {
@@ -46,9 +50,28 @@ public class IconSwitcherPlugin extends Plugin {
             return;
         }
 
-        PackageManager pm = getContext().getPackageManager();
-        String pkg = getContext().getPackageName();
+        // ⚠️ 这里**故意不立刻**改 alias。
+        // 用户报「切完主题点一下底部导航就回到桌面」：当前显示的这个任务，root activity
+        // 是由旧 alias 拉起来的；在它还在前台时把旧 alias 禁掉，系统可能顺手把这个任务收掉。
+        // 所以只记下目标图标，等 App 退到后台（onStop）再切——那时没人看着，切换是安全的。
+        getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putString(KEY_PENDING, name).apply();
 
+        JSObject ret = new JSObject();
+        ret.put("name", name);
+        call.resolve(ret);
+
+        // 换主题连带系统栏一起变：状态栏/导航栏的图标深浅得跟着新频道的明暗走，
+        // 否则会出现在深色皮肤上用深色图标、什么都看不清。
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).scheduleSystemBarSync();
+        }
+    }
+
+    /** 真正把桌面图标切到 {@code name}：同一时刻只留一个 alias 启用。供 MainActivity 在后台调用。 */
+    static void applyIconSwitch(Context context, String name) {
+        PackageManager pm = context.getPackageManager();
+        String pkg = context.getPackageName();
         for (String n : NAMES) {
             ComponentName cn = new ComponentName(pkg, pkg + "." + ALIAS_PREFIX + n);
             int state = n.equals(name)
@@ -59,16 +82,6 @@ public class IconSwitcherPlugin extends Plugin {
             } catch (IllegalArgumentException e) {
                 // alias 未在 manifest 声明（旧壳）：跳过，不让整次调用失败
             }
-        }
-
-        JSObject ret = new JSObject();
-        ret.put("name", name);
-        call.resolve(ret);
-
-        // 换主题连带系统栏一起变：状态栏/导航栏的图标深浅得跟着新频道的明暗走，
-        // 否则会出现在深色皮肤上用深色图标、什么都看不清。
-        if (getActivity() instanceof MainActivity) {
-            ((MainActivity) getActivity()).scheduleSystemBarSync();
         }
     }
 }

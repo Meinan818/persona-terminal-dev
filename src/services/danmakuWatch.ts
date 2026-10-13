@@ -21,10 +21,10 @@
 import { pb } from './pocketbase';
 import { isApproved as velvetIsApproved } from './danmakuApi';
 import { isNative } from '@/utils/native';
+import { hasBackendSession } from './sessionSource';
 
-/** 数据源判据（与 danmaku.ts 同款）：登录了自研后端（velvet JWT 在）→ 走 /api/danmaku */
-const useBackend = (): boolean =>
-  typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('velvet.jwt'));
+/** 数据源判据（与 danmaku.ts 同款）：登录了自研后端 → 走 /api/danmaku。判据统一见 sessionSource */
+const useBackend = hasBackendSession;
 
 const KEY = 'velvet:danmaku-watch';
 /** 最多同时盯几条（弹幕投稿有三天冷却，正常人攒不到这个数） */

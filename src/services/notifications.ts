@@ -13,15 +13,15 @@ import { pb, getUserId } from './pocketbase';
 import { parseGoalSnapshot, parseProfileStatus } from '@/utils/profilePresence';
 import * as notificationsApi from './notificationsApi';
 import { sanitizeNotificationPayload } from './notificationPayload';
+import { hasBackendSession } from './sessionSource';
 import type { CloudProfile, NotificationEntry, NotificationType } from '@/types';
 
 // 清洗函数已抽到 notificationPayload.ts（供 PB 侧与自研侧共用，避免循环依赖）；
 // 这里再导出一次保持既有 import 路径可用。
 export { sanitizeNotificationPayload };
 
-/** 通知数据源（自动）：登录了自研后端（velvet JWT 在）→ 走 /api/social；否则走 PocketBase */
-const useBackend = (): boolean =>
-  typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('velvet.jwt'));
+/** 通知数据源（自动）：登录了自研后端 → 走 /api/social；否则走 PocketBase。判据统一见 sessionSource */
+const useBackend = hasBackendSession;
 
 const profileFromRecord = (r: RecordModel | undefined | null): CloudProfile | undefined => {
   if (!r) return undefined;

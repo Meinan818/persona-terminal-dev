@@ -38,11 +38,11 @@
 import { pb, getUserId } from './pocketbase';
 import { watchDanmaku } from './danmakuWatch';
 import * as danmakuApi from './danmakuApi';
+import { hasBackendSession } from './sessionSource';
 import type { ThemeType } from '@/types';
 
-/** 数据源判据（与 notifications.ts 同款）：登录了自研后端（velvet JWT 在）→ 走 /api/danmaku */
-const useBackend = (): boolean =>
-  typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('velvet.jwt'));
+/** 数据源判据：登录了自研后端 → 走 /api/danmaku。判据统一见 sessionSource */
+const useBackend = hasBackendSession;
 
 export type DanmakuTheme = 'blue' | 'yellow' | 'red';
 

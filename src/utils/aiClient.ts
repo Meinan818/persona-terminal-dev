@@ -36,6 +36,7 @@ import {
   type ApiProvider, type ApiProtocol, DEFAULT_PROVIDER, cleanApiKey } from '@/utils/aiProviders';
 import { aiFetch, isNativeHost, syncNativeHosts, syncAiProxy } from '@/utils/aiTransport';
 import { getApiBaseUrl } from '@/services/velvetApi';
+import { hasBackendSession } from '@/services/sessionSource';
 import { effortFixFromMessage, isEnableThinkingMessage, isLegacyThinkingMessage, isUnsupportedTemperatureMessage, quirksFor, rememberQuirk, thinkingSuffixBase } from '@/utils/aiQuirks';
 import { anthropicEndpoint, anthropicHeaders, buildAnthropicBody, mapAnthropicStreamEvent, parseAnthropicResponse } from '@/utils/aiAnthropic';
 import { hostOf as diagHostOf, recordAIDiag } from '@/utils/aiDiagnostics';
@@ -198,7 +199,7 @@ const RELAY_THINKING_ALLOWANCE = 12_000;
  */
 export function getAIConfig(settings: Settings): AIConfig | null {
   syncNativeHosts(settings.aiNativeHosts);
-  syncAiProxy(Boolean(localStorage.getItem('velvet.jwt')), getApiBaseUrl());
+  syncAiProxy(hasBackendSession(), getApiBaseUrl());
   const apiKey = cleanApiKey(settings.summaryApiKey).key;
   if (!apiKey) return null;
   const { baseUrl, model } = resolveProvider(
@@ -267,7 +268,7 @@ function applyModelOverride(
   strict = false,
 ): AIConfig | null {
   syncNativeHosts(settings.aiNativeHosts);
-  syncAiProxy(Boolean(localStorage.getItem('velvet.jwt')), getApiBaseUrl());
+  syncAiProxy(hasBackendSession(), getApiBaseUrl());
   const activeProvider = settings.summaryApiProvider ?? DEFAULT_PROVIDER;
   if (pv && pv !== activeProvider) {
     const prof = settings.aiProfiles?.[pv];
@@ -294,7 +295,7 @@ function applyModelOverride(
  */
 export function fallbackAIConfig(settings: Settings): AIConfig {
   syncNativeHosts(settings.aiNativeHosts);
-  syncAiProxy(Boolean(localStorage.getItem('velvet.jwt')), getApiBaseUrl());
+  syncAiProxy(hasBackendSession(), getApiBaseUrl());
   return {
     ...resolveProvider(settings.summaryApiProvider, settings.summaryApiBaseUrl, settings.summaryModel),
     apiKey: cleanApiKey(settings.summaryApiKey).key,
@@ -730,7 +731,7 @@ export async function chatComplete(
       try {
         return await chatComplete(cfg, messages, { ...opts, retriedDirectFallback: true });
       } finally {
-        syncAiProxy(Boolean(localStorage.getItem('velvet.jwt')), getApiBaseUrl());
+        syncAiProxy(hasBackendSession(), getApiBaseUrl());
       }
     }
     // ④ 5xx（一个字都没收到）：隔一下再试一次——中转站临时没资源 / 网关抖一下常常第二发就好

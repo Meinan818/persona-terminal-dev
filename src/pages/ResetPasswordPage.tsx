@@ -11,7 +11,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { pb } from '@/services/pocketbase';
+import { pb, cloudEnabled } from '@/services/pocketbase';
+import * as velvetApi from '@/services/velvetApi';
 
 type Phase = 'form' | 'submitting' | 'success' | 'fatal';
 
@@ -71,11 +72,11 @@ export function ResetPasswordPage() {
 
   // Token / 环境前置校验
   useEffect(() => {
-    if (!pb) {
+    if (!cloudEnabled) {
       setPhase('fatal');
       setFatal({
         title: '云同步未启用',
-        detail: '当前构建未配置 VITE_PB_URL，重置密码需要云端支持。请联系开发者。',
+        detail: '当前构建没有配置云端地址，重置密码需要云端支持。请联系开发者。',
         showHome: true,
       });
       return;
@@ -113,13 +114,17 @@ export function ResetPasswordPage() {
 
     setPhase('submitting');
     try {
-      await pb!.collection('users').confirmPasswordReset(token, pwd, confirm);
+      // 自研后端优先（与登录/注册同一条链路）：令牌由后端签发、一次性、30 分钟有效。
+      // 只有没配自研后端的历史部署才回落到 PocketBase。
+      if (velvetApi.cloudEnabled) await velvetApi.resetPassword(token, pwd);
+      else await pb!.collection('users').confirmPasswordReset(token, pwd, confirm);
       setPhase('success');
     } catch (err) {
       const { title, detail } = classifyError(err);
-      // 400 一类的"token 失效"属于终局错误，不让用户在同一页反复重试
+      // 令牌失效属于终局错误，不让用户在同一页反复重试。
+      // 401 是自研后端对"无效/过期令牌"的回答，400/404 是 PocketBase 时代的
       const status = (err as { status?: number })?.status;
-      if (status === 400 || status === 404) {
+      if (status === 400 || status === 401 || status === 404) {
         setPhase('fatal');
         setFatal({ title, detail, showHome: true });
       } else {

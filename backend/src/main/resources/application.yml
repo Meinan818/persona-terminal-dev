@@ -29,6 +29,8 @@ spring:
 # 上传文件存储根目录（头像存 {app.upload-dir}/avatars/{userId}.{ext}）
 app:
   upload-dir: ${APP_UPLOAD_DIR:uploads}
+  # 重置密码邮件里的链接前缀（部署时设成正式域名，如 https://maskaria.example.com）
+  public-url: ${APP_PUBLIC_URL:http://localhost:5173}
 
 mybatis-plus:
   configuration:

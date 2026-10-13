@@ -401,6 +401,22 @@ export const verifyOTP = async (otpId: string, code: string): Promise<RecordMode
 
 /** 向邮箱发送"重置密码"链接 */
 export const requestPasswordReset = async (identity: string): Promise<void> => {
+  // 自研后端优先：忘记密码时用户必然未登录，所以这里按「是否配置了自研后端」分流，
+  // 不能用登录态判断。配置了就整条走自研（PB 那条已不再发得出邮件）。
+  if (velvetApi.cloudEnabled) {
+    const normalized = identity.trim().toLowerCase();
+    if (!normalized) throw new Error('请输入 UserID 或邮箱');
+    try {
+      await velvetApi.requestPasswordReset(normalized);
+      return;
+    } catch (err) {
+      if (err instanceof VelvetApiError) {
+        if (err.status === 429) throw new Error('操作太频繁，请稍后再试');
+        if (err.status >= 500) throw new Error('服务器暂时出错，请稍后再试');
+      }
+      throw err;
+    }
+  }
   if (!pb) throw new Error('云同步未配置');
   const who = classifyIdentity(identity);
   if (who.kind === 'email') {

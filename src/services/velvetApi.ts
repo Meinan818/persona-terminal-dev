@@ -148,6 +148,27 @@ export const verifyOtp = async (email: string, code: string): Promise<VelvetReco
   return r.record;
 };
 
+// ── 忘记密码（邮件一次性链接） ───────────────────────────────
+
+/**
+ * 申请重置邮件。身份可以是邮箱或 UserID。
+ * 服务端对不存在的账号同样回成功（不泄露账号是否存在）；429 = 发送过频。
+ */
+export const requestPasswordReset = (identity: string): Promise<void> =>
+  request<void>('/api/velvet/request-password-reset', {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify({ identity }),
+  });
+
+/** 用邮件里的一次性令牌设置新密码。401 = 令牌无效或已过期（不区分哪一种） */
+export const resetPassword = (token: string, password: string): Promise<void> =>
+  request<void>('/api/velvet/reset-password', {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify({ token, password }),
+  });
+
 // ── fetch 封装 ──────────────────────────────────────────────
 
 async function request<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {

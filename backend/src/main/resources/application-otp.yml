@@ -17,3 +17,8 @@ velvet:
     expire-minutes: 10
     # 同一邮箱发送冷却（秒）
     send-cooldown-seconds: 60
+  reset:
+    # 重置链接有效期（分钟）
+    expire-minutes: 30
+    # 同一身份的发送冷却（秒）
+    send-cooldown-seconds: 60

@@ -11,7 +11,7 @@
  * 拿不到（网络 / 格式变了）就静默不显示。请求只带 Key，不带任何个人数据。
  */
 import type { ApiProvider } from '@/utils/aiProviders';
-import { aiFetch, hostOfUrl } from '@/utils/aiTransport';
+import { aiFetch, aiProxyEnabled, hostOfUrl, withoutAiProxy } from '@/utils/aiTransport';
 import { recordAIDiag } from '@/utils/aiDiagnostics';
 
 /** 低于这个数才提醒（按账户币种：¥0.5 / $0.5） */
@@ -91,7 +91,12 @@ export async function fetchProviderBalance(
   if (!ep || !apiKey.trim()) return null;
   const t0 = Date.now();
   try {
-    const resp = await aiFetch(ep.url, { headers: { Authorization: `Bearer ${apiKey.trim()}`, 'X-Upstream-Provider': provider ?? 'custom' }, signal });
+    const headers = { Authorization: `Bearer ${apiKey.trim()}`, 'X-Upstream-Provider': provider ?? 'custom' };
+    let resp = await aiFetch(ep.url, { headers, signal });
+    // 同上：代理不可用就改直连再来一次，别让余额面板无故空着
+    if (resp.status === 502 && aiProxyEnabled()) {
+      resp = await withoutAiProxy(() => aiFetch(ep.url, { headers, signal }));
+    }
     recordAIDiag({ kind: 'balance', provider, host: hostOfUrl(ep.url), ok: resp.ok, status: resp.status, ms: Date.now() - t0 });
     if (!resp.ok) return null;
     const parsed = parseBalance(ep, await resp.json().catch(() => null));

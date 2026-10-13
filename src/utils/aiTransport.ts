@@ -121,6 +121,11 @@ export function syncProxyProviders(providers: string[]): void {
   proxyProviders = new Set(providers);
 }
 
+/** 供诊断输出：服务端当前声明"配了钥匙"的服务商。空 = 一家都没配，请求都走直连 */
+export function proxyProvidersSnapshot(): string[] {
+  return [...proxyProviders];
+}
+
 export const aiProxyEnabled = (): boolean => proxyEnabled;
 
 /**

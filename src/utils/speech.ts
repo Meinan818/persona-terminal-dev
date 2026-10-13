@@ -15,7 +15,7 @@ import type { Settings } from '@/types';
 import { getAudioAIConfig } from '@/utils/aiClient';
 import { extractProviderErrorMessage, getHttpStatusHint, moderationHint } from '@/utils/aiProviders';
 import { hostOf, recordAIDiag } from '@/utils/aiDiagnostics';
-import { rewriteAudioForProxy } from '@/utils/aiTransport';
+import { aiProxyEnabled, rewriteAudioForProxy, withoutAiProxy } from '@/utils/aiTransport';
 
 /** 听觉档是否可用（配了模型 + 有 Key） */
 export const speechAvailable = (settings: Settings): boolean => getAudioAIConfig(settings) !== null;
@@ -103,7 +103,15 @@ export async function transcribe(blob: Blob, settings: Settings, signal?: AbortS
       signal: ac.signal,
     };
     const routed = rewriteAudioForProxy(`${cfg.baseUrl}/audio/transcriptions`, direct);
-    const resp = await fetch(routed.url, routed.init);
+    let resp = await fetch(routed.url, routed.init);
+    // 代理不可用（服务端没配这家钥匙）→ 关掉代理、用本机 Key 直连重发一次。
+    // 与非流式/流式两条路径同样的回退；语音转写这条当初也漏了。
+    if (resp.status === 502 && aiProxyEnabled()) {
+      resp = await withoutAiProxy(() => {
+        const again = rewriteAudioForProxy(`${cfg.baseUrl}/audio/transcriptions`, direct);
+        return fetch(again.url, again.init);
+      });
+    }
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
       const detail = extractProviderErrorMessage(body).slice(0, 160).trim();

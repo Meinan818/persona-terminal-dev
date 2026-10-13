@@ -12,6 +12,7 @@
  */
 import { CapacitorHttp, type HttpOptions, type HttpResponse } from '@capacitor/core';
 import { isNative } from '@/utils/native';
+import { getAuthToken, isAuthenticated } from '@/services/velvetApi';
 
 let nativeHosts = new Set<string>();
 let forceNativeForTest = false;
@@ -94,7 +95,7 @@ export async function nativeFetch(url: string, init: RequestInit = {}): Promise<
 }
 
 /** fetch 的替身：代理开关开启时改道后端；原生主机走原生通道，其余照旧 */
-export function aiFetch(url: string, init: RequestInit = {}, force?: boolean): Promise<Response> {
+export async function aiFetch(url: string, init: RequestInit = {}, force?: boolean): Promise<Response> {
   const rewritten = rewriteForProxy(url, init);
   if (rewritten) return fetch(rewritten.url, rewritten.init);
   return (force ?? isNativeHost(url)) ? nativeFetch(url, init) : fetch(url, init);
@@ -134,6 +135,8 @@ export function rewriteAudioForProxy(url: string, init: RequestInit): { url: str
  */
 export function rewriteForProxy(url: string, init: RequestInit): { url: string; init: RequestInit } | null {
   if (!proxyEnabled || !proxyBaseUrl) return null;
+  const session = getAuthToken();
+  if (!isAuthenticated() || !session) throw new Error('登录状态已失效，请重新登录后使用代理');
   try {
     const u = new URL(url);
     // Anthropic 协议端点 …/v1/messages → 代理 /api/ai/messages；其余按 OpenAI 兼容 → /api/ai/chat
@@ -143,8 +146,14 @@ export function rewriteForProxy(url: string, init: RequestInit): { url: string; 
     const host = u.host;
     headers.delete('Authorization');
     headers.delete('x-api-key');
+    headers.delete('X-Upstream-Key-Ref');
+    headers.set('Authorization', `Bearer ${session}`);
     headers.set('X-Upstream-Provider', provider);
-    if (provider === 'custom') headers.set('X-Upstream-Host', host);
+    if (provider === 'custom') {
+      headers.set('X-Upstream-Host', host);
+      const basePath = u.pathname.replace(/\/(?:chat\/completions|messages|audio\/transcriptions)\/?$/, '');
+      headers.set('X-Upstream-Base-Url', `${u.origin}${basePath}`);
+    }
     return { url: `${proxyBaseUrl}${path}`, init: { ...init, headers } };
   } catch {
     return null;

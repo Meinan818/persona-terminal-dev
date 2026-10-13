@@ -145,17 +145,20 @@ public class AiProxyController {
         }
         provider = provider.toLowerCase();
 
-        // custom 服务商：主机由用户在前端配置、服务端白名单显式登记（CustomAiHostRegistry）
+        // custom 只选择服务端登记的完整基础地址，凭据选择权不交给客户端。
         String upstreamBase;
         String apiKey;
         if ("custom".equals(provider)) {
             String host = request.getHeader("X-Upstream-Host");
-            String keyRef = request.getHeader("X-Upstream-Key-Ref");
-            if (!StringUtils.hasText(host) || !customHosts.isAllowed(host)) {
+            if (StringUtils.hasText(request.getHeader("X-Upstream-Key-Ref"))) {
+                return ResponseEntity.badRequest().body(b("{\"message\":\"客户端不能指定服务端凭据引用\"}"));
+            }
+            CustomAiHostRegistry.Endpoint endpoint = customHosts.resolve(request.getHeader("X-Upstream-Base-Url"), host);
+            if (endpoint == null) {
                 return ResponseEntity.badRequest().body(b("{\"message\":\"自定义服务商主机未在服务端登记\"}"));
             }
-            upstreamBase = "https://" + host;
-            apiKey = StringUtils.hasText(keyRef) ? System.getenv(keyRef) : null;
+            upstreamBase = endpoint.baseUrl();
+            apiKey = customHosts.credential(endpoint);
             if (!StringUtils.hasText(apiKey)) {
                 return ResponseEntity.status(502).body(b("{\"message\":\"该服务商的服务端 Key 未配置\"}"));
             }
@@ -173,7 +176,7 @@ public class AiProxyController {
             upstreamBase = officialBase(provider, hosts);
         }
 
-        String url = upstreamBase + path;
+        String url = upstreamBase + ("/v1/messages".equals(path) && upstreamBase.matches(".*/v\\d+$") ? "/messages" : path);
         HttpRequest upstream;
         try {
             HttpRequest.Builder rb = HttpRequest.newBuilder()
@@ -196,8 +199,7 @@ public class AiProxyController {
 
         try {
             HttpResponse<byte[]> resp = http.send(upstream, HttpResponse.BodyHandlers.ofByteArray());
-            MediaType ct = resp.headers().firstValueAsLong("Content-Type").isPresent()
-                    || resp.headers().firstValue("Content-Type").isPresent()
+            MediaType ct = resp.headers().firstValue("Content-Type").isPresent()
                     ? MediaType.parseMediaType(resp.headers().firstValue("Content-Type").orElse("application/json"))
                     : MediaType.APPLICATION_JSON;
             return ResponseEntity.status(resp.statusCode())

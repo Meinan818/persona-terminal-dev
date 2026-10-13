@@ -1,9 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { authWithPassword, clearAuth } from '@/services/velvetApi';
 import { syncAiProxy, rewriteForProxy, aiProxyEnabled, _setNativeRequestForTest } from '../aiTransport';
 
 describe('AI 后端代理改道（rewriteForProxy）', () => {
-  beforeEach(() => { _setNativeRequestForTest(null, false); });
-  afterEach(() => { syncAiProxy(false, ''); });
+  beforeEach(async () => {
+    _setNativeRequestForTest(null, false);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ token: 'synthetic-session', record: { id: 'test', email: 'test@example.invalid' } })));
+    await authWithPassword('test', 'synthetic');
+  });
+  afterEach(() => { syncAiProxy(false, ''); clearAuth(); vi.unstubAllGlobals(); });
 
   it('开关关闭时原样直连', () => {
     syncAiProxy(false, 'http://localhost:8080');
@@ -23,7 +28,7 @@ describe('AI 后端代理改道（rewriteForProxy）', () => {
     expect(r).not.toBeNull();
     expect(r!.url).toBe('http://localhost:8080/api/ai/chat');
     const h = new Headers(r!.init.headers);
-    expect(h.get('Authorization')).toBeNull();          // 真 Key 不随请求出门
+    expect(h.get('Authorization')).toBe('Bearer synthetic-session'); // 应用登录凭据与上游 Key 分开
     expect(h.get('X-Upstream-Provider')).toBe('deepseek');
     expect(r!.init.body).toBe('{"model":"x"}');         // 请求体原样透传
   });

@@ -61,13 +61,15 @@ public class AuthController {
         }
         User u = new User();
         u.setEmail(email);
-        u.setName(req.getName() == null ? email.split("@")[0] : req.getName());
         u.setPassword(passwordEncoder.encode(req.getPassword()));
         String now = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
         u.setCreated(now);
         u.setUpdated(now);
-        userMapper.insert(u);
-        return ResponseEntity.ok(body(u, jwtUtil.generate(u.getId(), u.getEmail())));
+        return UserIdPolicy.create(userMapper, req.getName(), email, name -> {
+            u.setName(name);
+            userMapper.insert(u);
+            return ResponseEntity.ok(body(u, jwtUtil.generate(u.getId(), u.getEmail())));
+        });
     }
 
     @PostMapping("/auth-with-password")
@@ -92,6 +94,7 @@ public class AuthController {
         record.put("id", u.getId());
         record.put("email", u.getEmail());
         record.put("name", u.getName());
+        record.put("username", u.getName());
         record.put("avatar", u.getAvatar());
         // 档案扩展字段与基础字段同层：登录即拿到完整档案（昵称 / 等级 / 状态 / 目标 …）
         UserProfileFields.flatten(u.getProfile(), record);

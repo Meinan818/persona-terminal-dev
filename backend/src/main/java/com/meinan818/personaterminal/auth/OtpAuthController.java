@@ -83,18 +83,24 @@ public class OtpAuthController {
             for (int i = 0; i < pwd.length; i++) pwd[i] = alphabet.charAt(RANDOM.nextInt(alphabet.length()));
             u = new User();
             u.setEmail(email);
-            u.setName(email.split("@")[0]);
             u.setPassword(passwordEncoder.encode(new String(pwd)));
             String now = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
             u.setCreated(now);
             u.setUpdated(now);
-            userMapper.insert(u);
+            User created = u;
+            u = com.meinan818.personaterminal.user.UserIdPolicy.create(userMapper, null, email, name -> {
+                created.setName(name);
+                userMapper.insert(created);
+                return created;
+            });
         }
         String token = jwtUtil.generate(u.getId(), u.getEmail());
         Map<String, Object> record = new HashMap<>();
         record.put("id", u.getId());
         record.put("email", u.getEmail());
         record.put("name", u.getName());
+        record.put("username", u.getName());
+        com.meinan818.personaterminal.user.UserProfileFields.flatten(u.getProfile(), record);
         record.put("avatar", u.getAvatar());
         record.put("created", u.getCreated());
         record.put("updated", u.getUpdated());

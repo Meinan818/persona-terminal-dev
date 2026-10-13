@@ -7,6 +7,7 @@ import com.meinan818.personaterminal.security.JwtAuthFilter;
 import com.meinan818.personaterminal.user.User;
 import com.meinan818.personaterminal.user.UserMapper;
 import com.meinan818.personaterminal.user.UserProfileFields;
+import com.meinan818.personaterminal.user.UserIdPolicy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -192,8 +193,17 @@ public class SyncController {
         if (userId == null) return unauthorized();
         User u = userMapper.selectById(userId);
         if (u == null) return unauthorized();
-        if (patch.containsKey("name")) u.setName(asString(patch.get("name")));
-        if (patch.containsKey("username")) u.setName(asString(patch.get("username")));
+        if (patch.containsKey("username") || patch.containsKey("name")) {
+            Object raw = patch.containsKey("username") ? patch.get("username") : patch.get("name");
+            return UserIdPolicy.write(userMapper, raw, u.getId(), name -> {
+                u.setName(name);
+                return saveProfile(u, patch);
+            });
+        }
+        return saveProfile(u, patch);
+    }
+
+    private ResponseEntity<?> saveProfile(User u, Map<String, Object> patch) {
         if (patch.containsKey("avatar")) u.setAvatar(asString(patch.get("avatar")));
         // 档案扩展字段（nickname / total_lv / attribute_* / status / goal …）并入 profile JSON 列
         u.setProfile(UserProfileFields.merge(u.getProfile(), patch));

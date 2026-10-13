@@ -373,7 +373,9 @@ function P5Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
               }}>面具</span>
             </div>
 
-            {/* 终端 — black on white block */}
+            {/* 庭园 — black on white block
+                （应用中文名是「面具庭园」：AI 提示词、欢迎语、页面标题都用这个。
+                  这里曾是改名时漏下的旧名「终端」，用户指出后改正。） */}
             <div className="p5-title-block-right opacity-0"
               style={{
                 background: '#ffffff',
@@ -389,7 +391,7 @@ function P5Splash({ onComplete, s }: { onComplete: () => void; s: number }) {
                 letterSpacing: '-0.02em',
                 lineHeight: 1,
                 display: 'block',
-              }}>终端</span>
+              }}>庭园</span>
             </div>
           </div>
 

@@ -64,5 +64,11 @@ public class IconSwitcherPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("name", name);
         call.resolve(ret);
+
+        // 换主题连带系统栏一起变：状态栏/导航栏的图标深浅得跟着新频道的明暗走，
+        // 否则会出现在深色皮肤上用深色图标、什么都看不清。
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).scheduleSystemBarSync();
+        }
     }
 }

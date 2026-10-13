@@ -22,5 +22,10 @@
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/launch_background</item>
         <item name="android:windowBackground">@drawable/launch_background</item>
+        <!-- 状态栏透明：冷启动那层近黑底与随后的 Web 开屏连成一片，不再出现一条灰带。
+             运行期由 MainActivity 接管（并把图标深浅跟着网页主题走）。 -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

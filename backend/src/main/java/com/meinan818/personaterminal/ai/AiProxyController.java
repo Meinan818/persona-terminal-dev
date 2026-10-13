@@ -2,6 +2,7 @@ package com.meinan818.personaterminal.ai;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -69,6 +70,9 @@ public class AiProxyController {
             // SSE 流式转发需要读超时足够宽松：空闲由前端管，这里只防整体挂死
             .build();
 
+    /** 统一用来产出错误体：手拼 JSON 出过事（见 errorBody）。 */
+    private static final ObjectMapper JSON = new ObjectMapper();
+
     public AiProxyController(CustomAiHostRegistry customHosts) {
         this.customHosts = customHosts;
     }
@@ -101,7 +105,7 @@ public class AiProxyController {
         provider = provider.toLowerCase();
         String envKey = PROVIDER_ENV.get(provider);
         if (envKey == null) {
-            return ResponseEntity.badRequest().body(b("{\"message\":\"不支持的服务商: \" + \"" + provider + "\"}"));
+            return ResponseEntity.badRequest().body(errorBody("不支持的服务商: " + provider));
         }
         String apiKey = System.getenv(envKey);
         if (!StringUtils.hasText(apiKey)) {
@@ -165,7 +169,7 @@ public class AiProxyController {
         } else {
             String envKey = PROVIDER_ENV.get(provider);
             if (envKey == null) {
-                return ResponseEntity.badRequest().body(b("{\"message\":\"不支持的服务商: \" + \"" + provider + "\"}"));
+                return ResponseEntity.badRequest().body(errorBody("不支持的服务商: " + provider));
             }
             apiKey = System.getenv(envKey);
             if (!StringUtils.hasText(apiKey)) {
@@ -227,5 +231,19 @@ public class AiProxyController {
 
     private static byte[] b(String s) {
         return s.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 错误体统一走 Jackson 序列化。
+     *
+     * <p>此前是手拼字符串，拼出的是 {@code {"message":"不支持的服务商: " + "xxx"}} —— 既不合法，
+     * 又把客户端传来的 provider 直接插进 JSON（可注入）。交给序列化器一次解决两个问题。
+     */
+    private static byte[] errorBody(String message) {
+        try {
+            return JSON.writeValueAsBytes(Map.of("message", message));
+        } catch (Exception e) {
+            return b("{\"message\":\"请求不合法\"}");
+        }
     }
 }

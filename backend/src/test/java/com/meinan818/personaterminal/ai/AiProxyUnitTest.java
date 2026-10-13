@@ -93,4 +93,18 @@ class AiProxyUnitTest {
         verify(http).send(sent.capture(), any(HttpResponse.BodyHandler.class));
         assertThat(sent.getValue().uri().toString()).isEqualTo("https://relay.example.invalid/custom/v1/messages");
     }
+
+    @Test
+    void unsupportedProviderReturnsParsableJson() throws Exception {
+        MockHttpServletRequest bad = new MockHttpServletRequest();
+        bad.addHeader("X-Upstream-Provider", "not-a-provider");
+        var result = controller.chat("{}".getBytes(), bad);
+        assertThat(result.getStatusCode().value()).isEqualTo(400);
+        String body = new String(result.getBody(), java.nio.charset.StandardCharsets.UTF_8);
+        // 修前这里是手工拼串，拼出 {"message":"不支持的服务商: " + "not-a-provider"}，JSON 解析必失败
+        assertThatCode(() -> new com.fasterxml.jackson.databind.ObjectMapper().readTree(body))
+                .as("错误体必须是合法 JSON").doesNotThrowAnyException();
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().readTree(body).path("message").asText())
+                .isEqualTo("不支持的服务商: not-a-provider");
+    }
 }

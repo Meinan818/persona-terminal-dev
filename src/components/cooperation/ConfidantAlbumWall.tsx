@@ -98,6 +98,25 @@ export interface ConfidantAlbumWallProps {
  * 三频道各一套配色：以前一律暗靛紫渐变，在红/黄主题里既出戏又不好读。
  *   p5 = 纸面黑框红点缀 · p4 = 奶油面墨字橙点缀 · p3 = 白底蓝字 · 中性 = 原靛紫。
  */
+/**
+ * 斜切描边的「内边带」。
+ *
+ * 为什么不能用 border：`clip-path` 作用于整元素，**边框会被一并裁掉**——
+ * 斜切那一端，边框整条落在裁剪区外，视觉上就是"框断了一截"。
+ * 唯一解法是把描边画进形状内部（四条 linear-gradient 边带），再被斜边裁一刀。
+ *
+ * 关键：**左右两条带（贴着斜边）厚度必须 ≥ 斜切量**，斜边处才剩得下可见框；
+ * 上下两条带贴的是水平边，1~2px 就够，不必跟着变粗（避免整圈变成粗框）。
+ * 实测（真实配色、像素扫描）：p3 斜切 8px 时，3px 带斜边仍有缺口，8px 带才连续。
+ */
+const edgeBand = (color: string, slantPx: number, flatPx = 2): string =>
+  [
+    `linear-gradient(to right, ${color} 0 ${slantPx}px, transparent ${slantPx}px)`,
+    `linear-gradient(to left, ${color} 0 ${slantPx}px, transparent ${slantPx}px)`,
+    `linear-gradient(to bottom, ${color} 0 ${flatPx}px, transparent ${flatPx}px)`,
+    `linear-gradient(to top, ${color} 0 ${flatPx}px, transparent ${flatPx}px)`,
+  ].join(', ');
+
 const BACK_SKIN = {
   p5: {
     face: '#f0e9df', line: '#050505', radius: 2,
@@ -143,6 +162,9 @@ const CardBackFace = ({ c, onOpenDetail, prayer }: {
   const channel = useUiChannel();
   const sk = BACK_SKIN[channel];
   const p5 = channel === 'p5';
+  // 祈愿按钮的斜切量（同 FriendCardBack：p3 = 8px 平行四边形，p5 = 3px 四边微斜）
+  const slantPx = channel === 'p3' ? 8 : p5 ? 3 : 0;
+  const btnClip = channel === 'p3' ? slantClip(8) : p5 ? 'polygon(3px 0, 100% 2px, calc(100% - 3px) 100%, 0 calc(100% - 2px))' : undefined;
   const card = TAROT_BY_ID[c.arcanaId];
   // 等级内进度（v2.7.0.6 改用真实阈值：之前是「20 + 等级×10」的近似值，和详情页对不上）
   const th = thresholdsFor(c);
@@ -242,11 +264,15 @@ const CardBackFace = ({ c, onOpenDetail, prayer }: {
             className="flex-1 py-2 text-[11px] font-black active:brightness-95 disabled:active:brightness-100"
             style={{
               // 已祈愿 = 描边留白态（不用 opacity 表达状态）；待回敬 = 强调色实心；常态 = 弱底描边
-              background: prayer.alreadyPrayed ? 'transparent' : prayer.waitingReciprocity ? sk.accent : 'transparent',
+              // 斜切频道：描边画在形状内部（border 会被 clip-path 裁掉，斜边处会「断框」）
+              backgroundColor: prayer.alreadyPrayed ? 'transparent' : prayer.waitingReciprocity ? sk.accent : 'transparent',
               color: prayer.alreadyPrayed ? sk.sub : prayer.waitingReciprocity ? (p5 || channel === 'p4' ? sk.btnInk : '#ffffff') : sk.accent,
-              border: `${p5 ? 2 : 1}px solid ${prayer.alreadyPrayed ? sk.line : sk.accent}`,
+              backgroundImage: btnClip ? edgeBand(prayer.alreadyPrayed ? sk.line : sk.accent, slantPx) : undefined,
+              backgroundSize: btnClip ? '100% 100%' : undefined,
+              backgroundRepeat: 'no-repeat',
+              border: btnClip ? 'none' : `${p5 ? 2 : 1}px solid ${prayer.alreadyPrayed ? sk.line : sk.accent}`,
               borderRadius: p5 ? 0 : 8,
-              clipPath: channel === 'p3' ? slantClip(8) : p5 ? 'polygon(3px 0, 100% 2px, calc(100% - 3px) 100%, 0 calc(100% - 2px))' : undefined,
+              clipPath: btnClip,
             }}
           >
             {prayer.pending ? '祈愿中…'
@@ -373,6 +399,8 @@ const FriendCardBack = ({ f, onOpen, onCrop, onProfile }: {
   const p5 = channel === 'p5';
   const name = f.profile.nickname || f.profile.userId || '未命名客人';
   const prayer = f.prayer;
+  // 祈愿按钮的斜切量：p3 = 8px（平行四边形），p5 = 最大 3px（四边微斜），其余不斜切
+  const slantPx = channel === 'p3' ? 8 : p5 ? 3 : 0;
   const btnClip = channel === 'p3' ? slantClip(8) : p5 ? 'polygon(3px 0, 100% 2px, calc(100% - 3px) 100%, 0 calc(100% - 2px))' : undefined;
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   // LV 与名片状态共用一枚（第 6 项）
@@ -450,9 +478,15 @@ const FriendCardBack = ({ f, onOpen, onCrop, onProfile }: {
               aria-label={prayer.alreadyPrayed ? '今日已祈愿' : prayer.waitingReciprocity ? '回敬祈愿' : '为 Ta 祈愿'}
               className="flex-1 py-2 text-[11px] font-black active:brightness-95 disabled:active:brightness-100"
               style={{
-                background: prayer.alreadyPrayed ? 'transparent' : prayer.waitingReciprocity ? sk.accent : 'transparent',
+                // 斜切 + 描边：clip-path 会把 border 一并裁掉，斜边处「框断一截」。
+                // 描边改画在形状内部（四条 linear-gradient 边带），左右带厚度 = 斜切量，斜边才不断。
+                backgroundColor: prayer.alreadyPrayed ? 'transparent' : prayer.waitingReciprocity ? sk.accent : 'transparent',
                 color: prayer.alreadyPrayed ? sk.sub : prayer.waitingReciprocity ? (p5 || channel === 'p4' ? sk.btnInk : '#ffffff') : sk.accent,
-                border: `${p5 ? 2 : 1}px solid ${prayer.alreadyPrayed ? sk.line : sk.accent}`,
+                backgroundImage: btnClip ? edgeBand(prayer.alreadyPrayed ? sk.line : sk.accent, slantPx) : undefined,
+                backgroundSize: btnClip ? '100% 100%' : undefined,
+                backgroundRepeat: 'no-repeat',
+                // 无斜切的频道（中性 / p4）保留原来的真边框
+                border: btnClip ? 'none' : `${p5 ? 2 : 1}px solid ${prayer.alreadyPrayed ? sk.line : sk.accent}`,
                 borderRadius: p5 ? 0 : 8,
                 clipPath: btnClip,
               }}

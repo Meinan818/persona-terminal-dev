@@ -394,6 +394,21 @@
   border-radius: 0 !important;
   clip-path: polygon(4px 0, 100% 2px, calc(100% - 5px) 100%, 0 calc(100% - 3px));
 }
+/* 上一条规则会连带命中**带描边**的按钮（如 AI 服务商卡片 rounded-xl + border），
+   而 clip-path 作用于整元素、会把外边框一并裁掉——斜边那一端整条框落在裁剪区外，
+   视觉上就是「框断了一截」。与 input / 列表卡同一手法（见上方注释）：把描边改画进
+   形状内部（四条 linear-gradient 内边带），带宽 = 斜切量 5px。
+   ——实测：边带 < 斜切量时斜边仍缺（3px 不够），= 5px 才连续。
+   仅覆盖**带 border 类且非实心底**的按钮：实心主按钮本就靠底色成形，不在此列。 */
+:root[data-ui-channel="p5"] .p5-reskin button:is(.rounded-lg, .rounded-xl)[class*="border"]:not([class*="bg-primary"]) {
+  border: none !important;
+  background-image:
+    linear-gradient(to right, #050505 0 5px, transparent 5px),
+    linear-gradient(to left, #050505 0 5px, transparent 5px),
+    linear-gradient(to bottom, #050505 0 5px, transparent 5px),
+    linear-gradient(to top, #050505 0 5px, transparent 5px) !important;
+  background-repeat: no-repeat !important;
+}
 /* amber/yellow 提示系 → 红黑纸三色律（「标记为重要」黄卡等） */
 :root[data-ui-channel="p5"] .p5-reskin [class*="bg-amber-400/"] {
   background-color: #e7dfd0 !important;

@@ -10,7 +10,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,6 +33,8 @@ class PasswordResetServiceUnitTest {
     private static final Pattern TOKEN = Pattern.compile("token=([A-Za-z0-9_-]+)");
 
     private UserMapper users;
+    private PasswordResetTokenMapper tokens;
+    private final Map<String, PasswordResetToken> tokenRows = new LinkedHashMap<>();
     private PasswordEncoder encoder;
     private JavaMailSender mail;
     private final List<MimeMessage> sent = new ArrayList<>();
@@ -40,6 +44,18 @@ class PasswordResetServiceUnitTest {
     @BeforeEach
     void setup() {
         users = mock(UserMapper.class);
+        // 用一个内存 Map 撑起「令牌表」：insert 存行、selectById 取行、deleteById 返回删除行数。
+        // 表结构与淘汰规则的真实验证放在集成测试与迁移脚本里，这里只管服务层的行为约定。
+        tokenRows.clear();
+        tokens = mock(PasswordResetTokenMapper.class);
+        when(tokens.insert(any(PasswordResetToken.class))).thenAnswer(invocation -> {
+            PasswordResetToken row = invocation.getArgument(0);
+            tokenRows.put(row.getDigest(), row);
+            return 1;
+        });
+        when(tokens.selectById(anyString())).thenAnswer(invocation -> tokenRows.get((String) invocation.getArgument(0)));
+        when(tokens.deleteById(anyString()))
+                .thenAnswer(invocation -> tokenRows.remove((String) invocation.getArgument(0)) == null ? 0 : 1);
         encoder = mock(PasswordEncoder.class);
         when(encoder.encode(any())).thenAnswer(invocation -> "ENC:" + invocation.getArgument(0));
         mail = mock(JavaMailSender.class);
@@ -49,7 +65,7 @@ class PasswordResetServiceUnitTest {
             sent.add(message);
             return message;
         });
-        service = new PasswordResetService(users, encoder, mail,
+        service = new PasswordResetService(users, tokens, encoder, mail,
                 "sender@example.invalid", "https://maskaria.example.invalid", 30, 60);
     }
 
@@ -77,6 +93,7 @@ class PasswordResetServiceUnitTest {
 
         service.request("Alice@Example.invalid");   // 大小写与空白都应能匹配
         String token = tokenFromLastMail();
+        assertThat(tokenRows).as("令牌应当写进存储层，而不是只留在进程内存").hasSize(1);
 
         assertThat(service.reset(token, "new-pw-123456")).isEqualTo("u1");
         verify(users).updateById(argThat(user -> "ENC:new-pw-123456".equals(user.getPassword())));
@@ -105,7 +122,7 @@ class PasswordResetServiceUnitTest {
     @Test
     void expiredAndGarbageTokensAreRejected() throws Exception {
         when(users.selectOne(any())).thenReturn(existingUser());
-        PasswordResetService expiring = new PasswordResetService(users, encoder, mail,
+        PasswordResetService expiring = new PasswordResetService(users, tokens, encoder, mail,
                 "sender@example.invalid", "https://maskaria.example.invalid", -1, 0);
         expiring.request("alice@example.invalid");
         String token = tokenFromLastMail();

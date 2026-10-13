@@ -29,9 +29,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>三条与安全有关的取舍：
  * · **不泄露账号是否存在**：身份查不到也返回成功，只是不发信；
- * · **令牌不落库**：内存保存令牌的 SHA-256（单实例毕设够用，与 OtpService 同口径），
- *   库被读走也拿不到可用令牌；重启后未用令牌失效，重新申请即可；
- * · **一次性**：用条件删除保证同一个令牌并发提交只有一次成功（与 OTP 消费同款做法）。
+ * · **只存摘要**：库里保存的是令牌的 SHA-256（表见 V13 迁移），库被读走也拿不到可用令牌；
+ *   令牌本身落库、不再留在进程内存里——否则每次重启后端，用户手里还没点开的邮件链接就白发了；
+ * · **一次性**：用「删除行数」保证同一个令牌并发提交只有一次成功（与 OTP 消费同款做法）。
  *
  * <p>改密成功即让旧会话失效——JWT 里带的是密码哈希摘要（credentialVersion），
  * 改密后旧 token 自然对不上（见 JwtAuthFilter）。
@@ -40,6 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PasswordResetService {
 
     private final UserMapper users;
+    private final PasswordResetTokenMapper tokens;
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
     private final String fromUser;
@@ -47,15 +48,12 @@ public class PasswordResetService {
     private final long expireMillis;
     private final long cooldownMillis;
 
-    /** 令牌摘要 → 用户与有效期 */
-    private record Entry(String userId, Instant expiresAt) {}
-
-    private final Map<String, Entry> store = new ConcurrentHashMap<>();
     /** 规范化身份 → 下次允许发送的时刻 */
     private final Map<String, Instant> cooldown = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
 
     public PasswordResetService(UserMapper users,
+                                PasswordResetTokenMapper tokens,
                                 PasswordEncoder passwordEncoder,
                                 JavaMailSender mailSender,
                                 @Value("${spring.mail.username}") String fromUser,
@@ -63,6 +61,7 @@ public class PasswordResetService {
                                 @Value("${velvet.reset.expire-minutes:30}") long expireMinutes,
                                 @Value("${velvet.reset.send-cooldown-seconds:60}") long cooldownSeconds) {
         this.users = users;
+        this.tokens = tokens;
         this.passwordEncoder = passwordEncoder;
         this.mailSender = mailSender;
         this.fromUser = fromUser;
@@ -89,7 +88,15 @@ public class PasswordResetService {
         byte[] raw = new byte[32];
         random.nextBytes(raw);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
-        store.put(hash(token), new Entry(user.getId(), now.plusMillis(expireMillis)));
+        // 先清掉这一位用户还没用的旧令牌，以及表里已经过期的行，免得表随时间无限长
+        tokens.delete(new QueryWrapper<PasswordResetToken>().eq("user_id", user.getId()));
+        tokens.delete(new QueryWrapper<PasswordResetToken>().lt("expires_at", iso(now)));
+        PasswordResetToken row = new PasswordResetToken();
+        row.setDigest(hash(token));
+        row.setUserId(user.getId());
+        row.setCreated(iso(now));
+        row.setExpiresAt(iso(now.plusMillis(expireMillis)));
+        tokens.insert(row);
         sendMail(user.getEmail(), token);
         cooldown.put(identity, now.plusMillis(cooldownMillis));
     }
@@ -101,14 +108,14 @@ public class PasswordResetService {
     public String reset(String rawToken, String newPassword) {
         if (rawToken == null || rawToken.isBlank()) throw new InvalidTokenException();
         String key = hash(rawToken.trim());
-        Entry entry = store.get(key);
-        if (entry == null || !Instant.now().isBefore(entry.expiresAt())) {
-            store.remove(key);
+        PasswordResetToken row = tokens.selectById(key);
+        if (row == null || !Instant.now().isBefore(parseInstant(row.getExpiresAt()))) {
+            if (row != null) tokens.deleteById(key);
             throw new InvalidTokenException();
         }
-        // 条件删除：并发提交同一令牌时只有一个线程能拿到
-        if (!store.remove(key, entry)) throw new InvalidTokenException();
-        User user = users.selectById(entry.userId());
+        // 一次性：并发提交同一令牌时只有一个请求能删到那一行，其余拿到 0 行
+        if (tokens.deleteById(key) == 0) throw new InvalidTokenException();
+        User user = users.selectById(row.getUserId());
         if (user == null) throw new InvalidTokenException();
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setUpdated(DateTimeFormatter.ISO_INSTANT.format(Instant.now()));
@@ -135,6 +142,20 @@ public class PasswordResetService {
                     MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception error) {
             throw new IllegalStateException(error);
+        }
+    }
+
+    /** ISO-8601 时刻串（与 users.created / updated 同口径） */
+    private static String iso(Instant instant) {
+        return DateTimeFormatter.ISO_INSTANT.format(instant);
+    }
+
+    /** 解析库里的失效时刻；脏数据一律按已过期处理 */
+    private static Instant parseInstant(String value) {
+        try {
+            return Instant.parse(value);
+        } catch (RuntimeException malformed) {
+            return Instant.EPOCH;
         }
     }
 

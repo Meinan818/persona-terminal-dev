@@ -64,6 +64,9 @@ scripts/*.class
 # 音频素材不入库（体积/授权考量）。public/ 下的 UI 反馈音需自备，
 # 文件名见 src/utils/feedback.ts 与各处 playSound() 调用；缺失时音效静默。
 *.mp3
+# 例外：UI 反馈音（26 个小文件，共约 200KB）随仓库走——它们必须进 public/
+# 才能被 Vite 打进 dist，否则线上静默无声（见 HANDOFF §二十六）。
+!public/*.mp3
 *.wav
 
 # 本地 Agent 工具目录

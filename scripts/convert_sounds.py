@@ -11,7 +11,7 @@ FFMPEG = r"C:\Users\Lqx24\.workbuddy\binaries\python\versions\3.13.12\Lib\site-p
 SRC = r"D:/下载/P5"
 UI_DIR = os.path.join(SRC, "PlayStation 3 - Persona 5 - Sound Effects - Battle_UI_Quotes Sounds")
 SKILL_DIR = os.path.join(SRC, "PlayStation 3 - Persona 5 - Sound Effects - Persona Skill Sounds")
-OUT = r"E:/靓蓝色房间/Persona-Terminal/public"
+OUT = r"E:/MASKARIA/public"
 
 def parse_wav(path):
     with open(path, 'rb') as f:

@@ -45,12 +45,25 @@ FLUSH PRIVILEGES;
 
 ## 4. 构建与上传
 
-开发机执行：
+**构建时必须把要访问的正式地址烤进前端**，否则会沿用 `.env.local` 里的本机地址，
+线上打开就是「连不上后端」：
 
 ```bash
-npm run build                              # 前端静态站，产出 dist/（含 PWA）
-cd backend && mvn -o -DskipTests package   # 后端，产出 target/*.jar
+# Linux / macOS（把域名换成你的；结尾不要带斜杠）
+VITE_API_URL=https://maskaria.example.com npm run build
+
+# Windows PowerShell
+$env:VITE_API_URL='https://maskaria.example.com'; npm run build
+
+# 后端
+cd backend && mvn -o -DskipTests package
 ```
+
+为什么填域名就行：nginx 已经把 `/api/` 反代到本机 8080（见第 6 节），
+前端与接口同源，不需要另配端口。
+
+> 本机已验证：用 `VITE_API_URL=https://maskaria.example.com` 构建后，产物里确实写进了该域名、
+> 没有 localhost 残留；PWA 的 `sw.js` 与 `manifest.webmanifest` 正常生成（118 条预缓存）。
 
 上传到服务器：
 
@@ -102,3 +115,30 @@ sudo certbot --nginx -d 你的域名          # 自动申请证书并改配置
 - 密码重置令牌存在后端内存里（与验证码同口径）：重启后端会让尚未使用的重置链接失效，用户重新申请即可。
 - 后端只支持单实例：内存里存验证码与重置令牌，多实例要改成共享存储。
 - AI 请求目前整段缓冲，不支持流式逐步返回（功能可用，只是首字延迟高一些）。
+
+## 10. 数据怎么搬到线上
+
+两条互不相干的数据，别混：
+
+**A. 服务器数据库（账号、云端同步数据）**
+
+开发机这份库可以整体搬过去：
+
+```bash
+# 开发机导出（含两个真实账号与其云端数据）
+mysqldump --single-transaction -u root -p --databases persona_terminal \
+  --result-file=persona_terminal-move.sql
+
+# 服务器导入
+mysql -u root -p < persona_terminal-move.sql
+```
+
+注意：线上要用专用账号，导入后把 `maskaria` 用户对 `persona_terminal` 授权一次（见第 2 节）。
+导入前若线上库已有数据，先按第 8 节备份。
+
+**B. 手机/浏览器里的本机数据（IndexedDB）**
+
+不需要迁移工具：应用是本地优先，登录后到「账号与数据」页点一次同步，
+本机数据就会推到云端；换设备登录同一账号再同步即可拉回。
+**注意**：记账流水、聊天原文、图片、导入音乐按设计不上云，只在本机——
+换设备时它们不会跟过去，需要走「导出备份 / 图片包」自己搬。

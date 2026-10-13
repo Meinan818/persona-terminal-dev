@@ -7,6 +7,15 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https'
   },
+  android: {
+    /**
+     * WebView 里的页面 origin 是 https://localhost，而自建后端目前是 http://<公网IP>，
+     * WebView 默认会把这种请求当成「混合内容」拦掉——打开就是这个开关放开。
+     * （系统层面的明文限制由 AndroidManifest 的 android:usesCleartextTraffic 放开。）
+     * 等后端挂上 HTTPS 域名后可以关掉。
+     */
+    allowMixedContent: true,
+  },
   ios: {
     /**
      * iPad 上 WKWebView 默认按「桌面版网站」渲染（UA 报成 Mac、viewport 的缩放锁可能不生效、能双指缩放），

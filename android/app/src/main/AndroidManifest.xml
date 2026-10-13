@@ -4,12 +4,16 @@
     <!-- 小组件零点闹钟：重启后要重新对表（VelvetWidgetClock） -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Android 9+ 默认禁止明文 HTTP。后端目前是 http://<公网IP>（还没买域名、没有证书），
+         不放开这一项，APK 里所有接口请求都会被系统直接拦掉。
+         等换到 HTTPS 域名后可以把这行删掉。 -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
 
         <activity

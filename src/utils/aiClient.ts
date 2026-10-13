@@ -34,8 +34,8 @@ import {
   RELAY_CAPACITY_HINT,
   getProviderConfig,
   type ApiProvider, type ApiProtocol, DEFAULT_PROVIDER, cleanApiKey } from '@/utils/aiProviders';
-import { aiFetch, isNativeHost, syncNativeHosts, syncAiProxy } from '@/utils/aiTransport';
-import { getApiBaseUrl } from '@/services/velvetApi';
+import { aiFetch, isNativeHost, syncNativeHosts, syncAiProxy, syncProxyProviders } from '@/utils/aiTransport';
+import { fetchAiCapabilities, getApiBaseUrl } from '@/services/velvetApi';
 import { hasBackendSession } from '@/services/sessionSource';
 import { effortFixFromMessage, isEnableThinkingMessage, isLegacyThinkingMessage, isUnsupportedTemperatureMessage, quirksFor, rememberQuirk, thinkingSuffixBase } from '@/utils/aiQuirks';
 import { anthropicEndpoint, anthropicHeaders, buildAnthropicBody, mapAnthropicStreamEvent, parseAnthropicResponse } from '@/utils/aiAnthropic';
@@ -193,13 +193,40 @@ const THINKING_ALLOWANCE = 65_536;
 /** 非官方地址（中转站）的思维链余量：它们多按模型上限直接 400，64K 只会撞回来；12K 是用户定的口径 */
 const RELAY_THINKING_ALLOWANCE = 12_000;
 
+/** 是否已经拉到「服务端配了哪几家钥匙」。只在成功时置位，失败允许下次重试 */
+let capabilitiesLoaded = false;
+
+/**
+ * 让 aiTransport 知道服务端手上到底有哪几家的钥匙。
+ *
+ * 不这么做的代价：登录后所有 AI 请求都会先发给代理，而服务器按 BYOK 设计并不持有各家 Key，
+ * 于是每次都要先撞一次 502「服务端未配置 XXX_API_KEY」再回退直连——白跑一个来回。
+ * 不阻塞调用方：还没拿到清单时按「没配」处理（直连），拉到之后自然就准了。
+ */
+async function ensureAiCapabilities(): Promise<void> {
+  if (capabilitiesLoaded || !hasBackendSession()) return;
+  capabilitiesLoaded = true;
+  try {
+    const capabilities = await fetchAiCapabilities();
+    syncProxyProviders(capabilities.providers ?? []);
+  } catch {
+    capabilitiesLoaded = false;   // 网络抖动 / 会话刚失效 → 下次解析配置时再试
+  }
+}
+
+/** 解析 AI 配置时统一同步：走不走代理 + 服务端手上有哪些钥匙 */
+function syncAiRouting(): void {
+  syncAiProxy(hasBackendSession(), getApiBaseUrl());
+  void ensureAiCapabilities();
+}
+
 /**
  * 从 Settings 解析运行时 AI 配置；未配置 API key 时返回 null。
  * 取代散落在 battleAI / activityAI 等处各写一遍的 getAIConfig。
  */
 export function getAIConfig(settings: Settings): AIConfig | null {
   syncNativeHosts(settings.aiNativeHosts);
-  syncAiProxy(hasBackendSession(), getApiBaseUrl());
+  syncAiRouting();
   const apiKey = cleanApiKey(settings.summaryApiKey).key;
   if (!apiKey) return null;
   const { baseUrl, model } = resolveProvider(
@@ -268,7 +295,7 @@ function applyModelOverride(
   strict = false,
 ): AIConfig | null {
   syncNativeHosts(settings.aiNativeHosts);
-  syncAiProxy(hasBackendSession(), getApiBaseUrl());
+  syncAiRouting();
   const activeProvider = settings.summaryApiProvider ?? DEFAULT_PROVIDER;
   if (pv && pv !== activeProvider) {
     const prof = settings.aiProfiles?.[pv];
@@ -295,7 +322,7 @@ function applyModelOverride(
  */
 export function fallbackAIConfig(settings: Settings): AIConfig {
   syncNativeHosts(settings.aiNativeHosts);
-  syncAiProxy(hasBackendSession(), getApiBaseUrl());
+  syncAiRouting();
   return {
     ...resolveProvider(settings.summaryApiProvider, settings.summaryApiBaseUrl, settings.summaryModel),
     apiKey: cleanApiKey(settings.summaryApiKey).key,

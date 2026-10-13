@@ -173,6 +173,18 @@ export const resetPassword = (token: string, password: string): Promise<void> =>
 export const deleteAccount = (): Promise<void> =>
   request<void>('/api/velvet/account', { method: 'DELETE' });
 
+/**
+ * 服务端**实际**配了钥匙的服务商清单（只回名字，不回 Key）。
+ * 前端据此决定某个服务商的请求该走后端代理还是直连 —— 服务器没配的那几家，
+ * 直连（用用户自己的 Key）才是能成功的路。
+ */
+export interface AiCapabilities {
+  providers: string[];
+}
+
+export const fetchAiCapabilities = (): Promise<AiCapabilities> =>
+  request<AiCapabilities>('/api/ai/capabilities', { method: 'GET' });
+
 // ── fetch 封装 ──────────────────────────────────────────────
 
 async function request<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {

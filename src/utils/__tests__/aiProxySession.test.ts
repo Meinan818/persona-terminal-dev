@@ -1,10 +1,12 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { authWithPassword, clearAuth } from '@/services/velvetApi';
-import { aiFetch, rewriteForProxy, syncAiProxy } from '../aiTransport';
+import { aiFetch, rewriteForProxy, syncAiProxy, syncProxyProviders } from '../aiTransport';
 
 beforeEach(async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ token: 'synthetic-session', record: { id: 'test', email: 'test@example.invalid' } })));
   await authWithPassword('test', 'synthetic'); syncAiProxy(true, 'http://localhost:8080');
+  // 服务端配了哪些家（真实值来自 GET /api/ai/capabilities）：走代理的前提是"这家服务端真有钥匙"
+  syncProxyProviders(['openai', 'deepseek', 'kimi', 'qwen', 'gemini', 'minimax', 'custom']);
 });
 afterEach(() => { clearAuth(); syncAiProxy(false, ''); vi.unstubAllGlobals(); });
 

@@ -50,6 +50,23 @@ class AiProxyControllerTest {
     private static final String CHAT_BODY = "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}]}";
 
     @Test
+    void 能力接口告诉前端服务端配了哪几家的钥匙() {
+        HttpHeaders headers = bearer(token());
+        ResponseEntity<Map> res = rest.exchange("/api/ai/capabilities", HttpMethod.GET, new HttpEntity<>(null, headers), Map.class);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // 测试环境没配任何 AI 环境变量（BYOK 模式的常态）→ 空数组；配了就该出现在列表里。
+        // 关键是接口必须存在且有这个字段：前端据此决定走不走代理。
+        assertThat(res.getBody()).containsKey("providers");
+        assertThat((java.util.List<?>) res.getBody().get("providers")).isNotNull();
+    }
+
+    @Test
+    void 未登录访问能力接口返回401() {
+        ResponseEntity<String> res = rest.getForEntity("/api/ai/capabilities", String.class);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     void 未登录访问代理返回401() {
         // 同 AuthControllerTest.loginRaw 的处理：默认 HttpURLConnection 在「流式 POST + 401」
         // 会抛 HttpRetryException（§十二 踩坑 1 同族），改用 JdkClientHttpRequestFactory 缓冲读取

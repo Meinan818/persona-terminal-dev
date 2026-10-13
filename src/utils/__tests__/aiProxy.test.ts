@@ -1,14 +1,23 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { authWithPassword, clearAuth } from '@/services/velvetApi';
-import { syncAiProxy, rewriteForProxy, aiProxyEnabled, _setNativeRequestForTest } from '../aiTransport';
+import { syncAiProxy, rewriteForProxy, aiProxyEnabled, syncProxyProviders, _setNativeRequestForTest } from '../aiTransport';
 
 describe('AI 后端代理改道（rewriteForProxy）', () => {
   beforeEach(async () => {
     _setNativeRequestForTest(null, false);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ token: 'synthetic-session', record: { id: 'test', email: 'test@example.invalid' } })));
     await authWithPassword('test', 'synthetic');
+    // 走代理的前提是「这家服务端真有钥匙」（真实值来自 GET /api/ai/capabilities）
+    syncProxyProviders(['openai', 'deepseek', 'kimi', 'qwen', 'gemini', 'minimax', 'custom']);
   });
-  afterEach(() => { syncAiProxy(false, ''); clearAuth(); vi.unstubAllGlobals(); });
+  afterEach(() => { syncAiProxy(false, ''); syncProxyProviders([]); clearAuth(); vi.unstubAllGlobals(); });
+
+  it('服务端没配这家钥匙时不改道（直接直连，省掉一次注定 502 的往返）', () => {
+    syncAiProxy(true, 'http://localhost:8080');
+    syncProxyProviders([]);   // BYOK 模式下的常态：服务端一家都没配
+    const init = { headers: { 'X-Upstream-Provider': 'deepseek' } };
+    expect(rewriteForProxy('https://api.deepseek.com/v1/chat/completions', init)).toBeNull();
+  });
 
   it('开关关闭时原样直连', () => {
     syncAiProxy(false, 'http://localhost:8080');

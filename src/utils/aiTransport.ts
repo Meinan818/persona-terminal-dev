@@ -107,11 +107,18 @@ export async function aiFetch(url: string, init: RequestInit = {}, force?: boole
 
 let proxyEnabled = false;
 let proxyBaseUrl = '';
+/** 服务端**实际**配了钥匙的服务商（来自 GET /api/ai/capabilities）；空 = 一家都没配 */
+let proxyProviders = new Set<string>();
 
 /** 由 aiClient 解析设置时调用：开关 + 后端地址（velvetApi 的 API_URL） */
 export function syncAiProxy(enabled: boolean, baseUrl: string): void {
   proxyEnabled = enabled;
   proxyBaseUrl = baseUrl.replace(/\/$/, '');
+}
+
+/** 由 aiClient 拉到能力清单后同步进来（见 ensureAiCapabilities） */
+export function syncProxyProviders(providers: string[]): void {
+  proxyProviders = new Set(providers);
 }
 
 export const aiProxyEnabled = (): boolean => proxyEnabled;
@@ -169,6 +176,9 @@ export function rewriteForProxy(url: string, init: RequestInit): { url: string; 
     const path = u.pathname.endsWith('/messages') ? '/api/ai/messages' : '/api/ai/chat';
     const headers = new Headers(init.headers ?? {});
     const provider = headers.get('X-Upstream-Provider') ?? '';
+    // 服务端没配这家的钥匙 → 直连（用用户自己的 Key）。
+    // 硬走代理只会白撞一次 502「服务端未配置 XXX_API_KEY」，再靠调用方回退 —— 每次多一个来回。
+    if (!proxyProviders.has(provider)) return null;
     const host = u.host;
     headers.delete('Authorization');
     headers.delete('x-api-key');

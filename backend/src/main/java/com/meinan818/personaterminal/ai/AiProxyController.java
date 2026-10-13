@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +31,7 @@ import java.util.Set;
  * 契约（对齐前端 aiClient / aiProviders 的既有形状，前端只换目的地不换协议）：
  *   POST /api/ai/chat     body = OpenAI 兼容 /chat/completions 的原样请求体（流式/非流式均透传）
  *   POST /api/ai/messages body = Anthropic /v1/messages 的原样请求体
+ *   GET  /api/ai/capabilities → {"providers":[…]} 服务端**实际**配了钥匙的服务商（只回名字，不回 Key）
  *   头：Authorization: Bearer <后端登录 JWT>（由 JwtAuthFilter 校验）
  *       X-Upstream-Provider: openai|deepseek|kimi|qwen|gemini|minimax|custom —— 决定用哪把服务端 Key
  *   响应：服务商原样回包（含 SSE 流式，透传 Content-Type）
@@ -75,6 +77,33 @@ public class AiProxyController {
 
     public AiProxyController(CustomAiHostRegistry customHosts) {
         this.customHosts = customHosts;
+    }
+
+    /**
+     * 代理能力：告诉前端「服务端到底配了哪几家的钥匙」。
+     *
+     * <p>为什么需要它：登录后前端默认把所有 AI 请求先发给代理，而服务器按 BYOK 的设计并不持有
+     * 各家的 Key —— 没配的那几家每次都要白撞一次 502 再退回直连。前端拿到这份清单后，
+     * 没配钥匙的服务商直接走直连（用用户自己的 Key）。
+     *
+     * <p>只回服务商名字，不回任何 Key 内容。
+     */
+    @GetMapping("/capabilities")
+    public ResponseEntity<byte[]> capabilities() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof com.meinan818.personaterminal.security.JwtAuthFilter.UserIdPrincipal)) {
+            return ResponseEntity.status(401).body(b("{\"velvet\":\"not_found\"}"));
+        }
+        StringBuilder json = new StringBuilder("{\"providers\":[");
+        boolean first = true;
+        for (Map.Entry<String, String> entry : PROVIDER_ENV.entrySet()) {
+            if (!StringUtils.hasText(System.getenv(entry.getValue()))) continue;
+            if (!first) json.append(',');
+            json.append('"').append(entry.getKey()).append('"');
+            first = false;
+        }
+        json.append("]}");
+        return ResponseEntity.ok(b(json.toString()));
     }
 
     /** OpenAI 兼容通道：/chat/completions（含流式 SSE 透传） */

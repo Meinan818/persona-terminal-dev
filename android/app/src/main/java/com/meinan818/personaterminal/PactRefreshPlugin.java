@@ -17,17 +17,20 @@ public class PactRefreshPlugin extends Plugin {
 
     @PluginMethod
     public void configure(PluginCall call) {
-        String pbUrl = call.getString("pbUrl");
+        String api = call.getString("api", "pb");
+        String baseUrl = call.getString("baseUrl");
+        if (baseUrl == null || baseUrl.isEmpty()) baseUrl = call.getString("pbUrl"); // 旧版网页侧只给 pbUrl
         String token = call.getString("token");
         String userId = call.getString("userId");
-        if (pbUrl == null || pbUrl.isEmpty() || token == null || token.isEmpty() || userId == null || userId.isEmpty()) {
-            call.reject("pbUrl / token / userId are required");
+        if (baseUrl == null || baseUrl.isEmpty() || token == null || token.isEmpty() || userId == null || userId.isEmpty()) {
+            call.reject("baseUrl / token / userId are required");
             return;
         }
         Boolean enabled = call.getBoolean("enabled", true);
         PactRefresh.configure(
                 getContext().getApplicationContext(),
-                pbUrl,
+                api,
+                baseUrl,
                 token,
                 userId,
                 call.getString("since", ""),

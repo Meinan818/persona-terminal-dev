@@ -98,17 +98,24 @@ final class PactRefresh {
         return b.toString();
     }
 
-    static void configure(Context ctx, String pbUrl, String token, String userId, String since, boolean enabled) {
+    /**
+     * @param api     'velvet' = 自研后端（/api/social/notifications）；其余按 PocketBase 处理
+     * @param baseUrl 服务器基址（自研后端就是前端构建时写进包的 VITE_API_URL）
+     */
+    static void configure(Context ctx, String api, String baseUrl, String token, String userId, String since, boolean enabled) {
+        String mode = "velvet".equals(api) ? "velvet" : "pb";
         String uid = keep(userId, ID_CHARS);
         String stamp = keep(since, STAMP_CHARS);
-        String base = pbUrl.endsWith("/") ? pbUrl.substring(0, pbUrl.length() - 1) : pbUrl;
+        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         synchronized (LOCK) {
             JSONObject prev = load(ctx);
             // 游标只往后走：App 已经看过的最新一条，和后台自己推进到的，取较晚的（换了账号就重来）
             String prevSince = prev != null && uid.equals(str(prev, "userId")) ? str(prev, "since") : "";
             JSONObject s = new JSONObject();
             try {
-                s.put("pbUrl", base);
+                s.put("api", mode);
+                s.put("baseUrl", base);
+                s.put("pbUrl", base); // 旧版本读这个键，留着不影响
                 s.put("token", token);
                 s.put("userId", uid);
                 s.put("since", prevSince.compareTo(stamp) > 0 ? prevSince : stamp);
@@ -179,11 +186,14 @@ final class PactRefresh {
     static boolean check(Context ctx) {
         JSONObject s = load(ctx);
         if (s == null || !s.optBoolean("enabled", true)) return true;
-        String base = str(s, "pbUrl");
+        String api = s.optString("api", "pb");
+        String base = str(s, "baseUrl");
+        if (base.isEmpty()) base = str(s, "pbUrl"); // 旧版状态里这个键叫 pbUrl
         String token = str(s, "token");
         String userId = str(s, "userId");
         String since = str(s, "since");
         if (base.isEmpty() || token.isEmpty() || userId.isEmpty()) return true;
+        if ("velvet".equals(api)) return checkVelvet(ctx, base, token, userId, since);
 
         HttpURLConnection conn = null;
         try {
@@ -213,31 +223,13 @@ final class PactRefresh {
                     if (it == null) continue;
                     String created = str(it, "created");
                     if (created.compareTo(cursor) > 0) cursor = created;
-                    String[] n = noticeFor(it);
+                    JSONObject expand = it.optJSONObject("expand");
+                    JSONObject from = expand != null ? expand.optJSONObject("from") : null;
+                    String[] n = noticeFor(it.optJSONObject("payload"), from);
                     if (n != null) notices.add(n);
                 }
             }
-            if (notices.size() > MAX_PER_RUN) {
-                notices = new ArrayList<>(notices.subList(notices.size() - MAX_PER_RUN, notices.size()));
-            }
-            List<Integer> ids = new ArrayList<>();
-            synchronized (LOCK) {
-                JSONObject cur = load(ctx);
-                // 拉取途中登出 / 换了账号：这一批作废
-                if (cur == null || !userId.equals(str(cur, "userId"))) return true;
-                if (cursor.compareTo(str(cur, "since")) > 0) cur.put("since", cursor);
-                int seq = cur.optInt("seq", 0);
-                for (int i = 0; i < notices.size(); i++) {
-                    seq = (seq + 1) % ID_SPAN;
-                    ids.add(ID_BASE + seq);
-                }
-                cur.put("seq", seq);
-                save(ctx, cur);
-            }
-            for (int i = 0; i < notices.size(); i++) {
-                post(ctx, ids.get(i), notices.get(i)[0], notices.get(i)[1]);
-            }
-            return true;
+            return commitNotices(ctx, userId, cursor, notices);
         } catch (Exception e) {
             // 离线 / 超时 / 返回的不是 JSON：下次再说
             Log.w(TAG, "check failed", e);
@@ -247,14 +239,89 @@ final class PactRefresh {
         }
     }
 
-    /** 一条 PB 通知 → { 标题, 正文 }；不是一起进步的返回 null */
-    static String[] noticeFor(JSONObject rec) {
-        JSONObject p = rec.optJSONObject("payload");
+    /**
+     * 自研后端（Java）：GET {base}/api/social/notifications，Authorization: Bearer &lt;JWT&gt;。
+     * 响应 {items:[{id,userId,type,fromId,fromProfile,payload,read,createdAt}]}，服务端已按时间倒序。
+     *
+     * 迁移前这里只会打 PocketBase 的 /api/collections/notifications/records，
+     * 自研账号的后台任务配上了也拉不到任何东西。
+     */
+    private static boolean checkVelvet(Context ctx, String base, String token, String userId, String since) {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(base + "/api/social/notifications").openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
+            int status = conn.getResponseCode();
+            if (status < 200 || status >= 300) {
+                // 登录过期（401）/ 服务器没开：等 App 下次推新凭据
+                Log.w(TAG, "velvet HTTP " + status);
+                return false;
+            }
+            JSONObject body = new JSONObject(readAll(conn.getInputStream()));
+            JSONArray items = body.optJSONArray("items");
+            String cursor = since;
+            List<String[]> notices = new ArrayList<>();
+            if (items != null) {
+                for (int i = 0; i < items.length(); i++) {
+                    JSONObject it = items.optJSONObject(i);
+                    if (it == null) continue;
+                    String created = str(it, "createdAt");
+                    if (created.isEmpty()) created = str(it, "created");
+                    if (!since.isEmpty() && created.compareTo(since) <= 0) continue; // App 已经看过的
+                    if (it.optBoolean("read", false)) continue;                      // 前台已经消费过
+                    if (!"event_logged".equals(str(it, "type"))) continue;           // 只认「一起进步」类
+                    if (created.compareTo(cursor) > 0) cursor = created;
+                    String[] n = noticeFor(it.optJSONObject("payload"), it.optJSONObject("fromProfile"));
+                    if (n != null) notices.add(n);
+                }
+            }
+            return commitNotices(ctx, userId, cursor, notices);
+        } catch (Exception e) {
+            Log.w(TAG, "velvet check failed", e);
+            return false;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    /** 把这一批新通知推进游标并弹出来（两种后端共用）。返回 true = 正常结束 */
+    private static boolean commitNotices(Context ctx, String userId, String cursor, List<String[]> notices) throws Exception {
+        if (notices.size() > MAX_PER_RUN) {
+            notices = new ArrayList<>(notices.subList(notices.size() - MAX_PER_RUN, notices.size()));
+        }
+        List<Integer> ids = new ArrayList<>();
+        synchronized (LOCK) {
+            JSONObject cur = load(ctx);
+            // 拉取途中登出 / 换了账号：这一批作废
+            if (cur == null || !userId.equals(str(cur, "userId"))) return true;
+            if (cursor.compareTo(str(cur, "since")) > 0) cur.put("since", cursor);
+            int seq = cur.optInt("seq", 0);
+            for (int i = 0; i < notices.size(); i++) {
+                seq = (seq + 1) % ID_SPAN;
+                ids.add(ID_BASE + seq);
+            }
+            cur.put("seq", seq);
+            save(ctx, cur);
+        }
+        for (int i = 0; i < notices.size(); i++) {
+            post(ctx, ids.get(i), notices.get(i)[0], notices.get(i)[1]);
+        }
+        return true;
+    }
+
+    /**
+     * 一条通知 → { 标题, 正文 }；不是「一起进步」的返回 null。
+     * payload 两种后端形状一致（kind / title），发件人一个来自 PB 的 expand.from，
+     * 一个来自自研接口的 fromProfile，所以这里统一成传两个 JSONObject。
+     */
+    static String[] noticeFor(JSONObject p, JSONObject from) {
         if (p == null) return null;
-        JSONObject expand = rec.optJSONObject("expand");
-        JSONObject from = expand != null ? expand.optJSONObject("from") : null;
         String who = clip(str(from, "nickname"), 12);
         if (who.isEmpty()) who = clip(str(from, "username"), 12);
+        if (who.isEmpty()) who = clip(str(p, "from_name"), 12);
         if (who.isEmpty()) who = "好友";
         String t = clip(str(p, "title").trim(), 30);
         String quoted = t.isEmpty() ? "约好的事" : "「" + t + "」";

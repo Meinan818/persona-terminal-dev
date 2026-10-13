@@ -12,10 +12,26 @@
  */
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { pb, getUserId } from './pocketbase';
+import {
+  apiBaseUrl,
+  getToken as getVelvetToken,
+  getUserId as getVelvetUserId,
+  isAuthenticated as velvetAuthenticated,
+} from './velvetApi';
 import type { NotificationEntry, Settings } from '@/types';
 
 interface PactRefreshPlugin {
-  configure(o: { pbUrl: string; token: string; userId: string; since: string; enabled: boolean }): Promise<void>;
+  configure(o: {
+    /** 'velvet' = 自研后端（/api/social/notifications）；'pb' = 历史 PocketBase */
+    api: string;
+    baseUrl: string;
+    /** 旧版原生（只认 pbUrl）的兼容字段，值与 baseUrl 相同 */
+    pbUrl: string;
+    token: string;
+    userId: string;
+    since: string;
+    enabled: boolean;
+  }): Promise<void>;
   setEnabled(o: { enabled: boolean }): Promise<void>;
   clear(): Promise<void>;
   /** 立刻拉一次（自检用） */
@@ -24,8 +40,34 @@ interface PactRefreshPlugin {
 
 const PactRefresh = registerPlugin<PactRefreshPlugin>('PactRefresh');
 
-/** PocketBase created 的格式：2026-09-24 04:00:00.123Z（原生那边按字符串比先后） */
-const pbStamp = (d: Date) => d.toISOString().replace('T', ' ');
+/** 原生按字符串比先后，两种后端各用各的定宽格式 */
+const pbStamp = (d: Date) => d.toISOString().replace('T', ' '); // PB created：2026-09-24 04:00:00.123Z
+const isoStamp = (d: Date) => d.toISOString();                   // 自研 createdAt：2026-09-24T04:00:00.123Z
+
+type RunnerSource = { api: 'velvet' | 'pb'; baseUrl: string; token: string; userId: string };
+
+/**
+ * 后台 runner 该连哪个后端、用哪份凭据。
+ *
+ * 自研会话走 /api/social/notifications；历史 PocketBase 会话保持原契约。
+ * 自研契约目前只在安卓原生落地，iOS 原生插件仍按 PB 实现——所以 iOS 上不推自研凭据，
+ * 宁可不动后台任务，也不拿 JWT 去轮询 PB 接口。
+ */
+function resolveRunnerSource(): RunnerSource | null {
+  if (velvetAuthenticated()) {
+    const userId = getVelvetUserId();
+    const token = getVelvetToken();
+    if (apiBaseUrl && userId && token && Capacitor.getPlatform() === 'android') {
+      return { api: 'velvet', baseUrl: apiBaseUrl, token, userId };
+    }
+  }
+  const pbToken = pb?.authStore.token;
+  const pbUserId = getUserId();
+  if (pb && pbToken && pbUserId && pb.baseURL) {
+    return { api: 'pb', baseUrl: pb.baseURL, token: pbToken, userId: pbUserId };
+  }
+  return null;
+}
 
 /** 提醒总开关开着，且至少一个启用的时段勾了「一起进步」 */
 export const pactPushEnabled = (settings: Settings): boolean =>
@@ -50,15 +92,17 @@ let lastEnabled: boolean | null = null;
  * 社交同步后调用。since = App 这次拉到的最新一条通知：这些已经在 App 里看过了，后台不再重复弹。
  */
 export async function configurePactRunner(notifications: NotificationEntry[], enabled: boolean): Promise<void> {
-  const me = getUserId();
-  const token = pb?.authStore.token;
-  if (!pb || !me || !token) return;
+  const source = resolveRunnerSource();
+  if (!source) return;
   const newest = notifications.reduce<Date | null>((m, n) => (!m || n.createdAt > m ? n.createdAt : m), null);
+  const since = (source.api === 'velvet' ? isoStamp : pbStamp)(newest ?? new Date());
   const ok = await call(() => PactRefresh.configure({
-    pbUrl: pb!.baseURL,
-    token,
-    userId: me,
-    since: pbStamp(newest ?? new Date()),
+    api: source.api,
+    baseUrl: source.baseUrl,
+    pbUrl: source.baseUrl,
+    token: source.token,
+    userId: source.userId,
+    since,
     enabled,
   }));
   if (ok) lastEnabled = enabled;

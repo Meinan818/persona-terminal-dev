@@ -159,22 +159,28 @@ npm run cap:build:android       # 打包 Android
 
 ## 后端改造进度
 
-本项目正把数据层从第三方云服务（PocketBase）迁到**自研 Spring Boot + MySQL + JWT**。
-已完成的部分均附集成测试。
+数据层已从第三方云服务（PocketBase）迁到**自研 Spring Boot + MySQL + JWT**：
+新登录一律走自研后端；PocketBase 只作为历史账号的回落路径保留，
+**退役清理还没做**（属于已知欠账，不影响新用户）。已完成的部分均附测试。
 
 | 模块 | 状态 |
 |---|---|
-| 认证（注册 / 登录 / 邮箱验证码 / JWT） | ✅ 自研后端 |
-| 用户档案（昵称 / 等级 / 属性 / 状态） | ✅ 自研后端 |
+| 认证（注册 / 密码登录 / 邮箱验证码 / JWT） | ✅ 自研后端 |
+| 忘记密码（邮件一次性链接改密） | ✅ 自研后端 |
+| 注销账号（删本人及名下数据） | ✅ 自研后端 |
+| 用户档案（昵称 / 等级 / 属性 / 状态 / 头像） | ✅ 自研后端 |
 | 云端数据面（`/api/sync/rows`，镜像 KV 模型） | ✅ 自研后端 |
-| 头像上传 / 读取 / 删除 | ✅ 自研后端 |
 | 数据库版本化迁移（Flyway） | ✅ 已引入 |
-| 社交功能（好友 / 通知 / 同伴 / 组织） | ⏳ 迁移中（仍用 PocketBase） |
-| AI 代理层、业务 CRUD | ⏳ 待做 |
+| 社交（好友 / 通知 / 同伴 / 组织 / 一起进步 / 弹幕） | ✅ 自研后端（PB 回落仍在） |
+| AI 代理层（可选：服务端持 Key 转发；默认关，产品仍是 BYOK） | ✅ 已实现 |
+| 记账流水 / 聊天原文 / 记录配图 / 导入音乐 | 按设计只存本机，不上云 |
 
-**验证**：后端 `mvn test` 22 passed（Sync 6 + Auth 9 + Avatar 7）；前端 `npm test` 31 passed；`tsc --noEmit` 0 报错。
+**验证（2026-10-14 实测）**：后端 `mvn test` **154 项全通过**（集成测试跑在隔离库
+`persona_terminal_test` 上，不再污染应用库）；前端 `npm test` **29 文件 / 192 项全通过**；
+`tsc --noEmit` 0 报错；生产构建 `VITE_API_URL=<正式地址> npm run build` 通过并正常生成 PWA。
 
-完整交接见 HANDOFF-2026-10-12.md，合规边界见 COMPLIANCE.md。
+上线步骤见 [`deploy/README.md`](deploy/README.md)，合规边界见 [`COMPLIANCE.md`](COMPLIANCE.md)，
+历史交接见 `HANDOFF-2026-10-12.md`。
 
 ---
 
@@ -184,7 +190,7 @@ npm run cap:build:android       # 打包 Android
 |---|---|
 | Web / PWA | ✅ 可安装、离线可用 |
 | Android | ✅ Capacitor 打包，含桌面小组件 |
-| 后端 | ✅ Spring Boot + MySQL（自研，迁移进行中） |
+| 后端 | ✅ Spring Boot + MySQL（自研；PocketBase 回落待退役） |
 
 ---
 

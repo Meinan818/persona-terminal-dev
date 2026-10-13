@@ -57,6 +57,10 @@ export class VelvetApiError extends Error {
 
 let currentToken: string | null = null;
 let currentRecord: VelvetRecord | null = null;
+let authGeneration = 0;
+
+/** 登出、换号或重新登录使在途操作失效；资料更新不改变会话代次。 */
+export const getAuthGeneration = (): number => authGeneration;
 
 /** 模块加载时恢复登录态（对齐 pb.authStore 刷新恢复行为） */
 try {
@@ -83,6 +87,7 @@ export const onAuthChange = (cb: AuthListener): (() => void) => {
 };
 
 const saveAuth = (token: string, record: VelvetRecord): void => {
+  if (currentToken !== token || currentRecord?.id !== record.id) authGeneration++;
   currentToken = token;
   currentRecord = record;
   try {
@@ -93,6 +98,7 @@ const saveAuth = (token: string, record: VelvetRecord): void => {
 };
 
 export const clearAuth = (): void => {
+  authGeneration++;
   currentToken = null;
   currentRecord = null;
   try {
@@ -101,6 +107,25 @@ export const clearAuth = (): void => {
   } catch { /* 无痕模式 */ }
   listeners.forEach((l) => l(null));
 };
+
+// 其他标签页登出或换号后，这个标签页的在途同步也必须失效。
+if (typeof window !== 'undefined') window.addEventListener('storage', event => {
+  if (event.storageArea !== localStorage || (event.key !== null && event.key !== TOKEN_KEY && event.key !== RECORD_KEY)) return;
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(RECORD_KEY);
+    const record = token && raw ? JSON.parse(raw) as VelvetRecord : null;
+    if (token !== currentToken || record?.id !== currentRecord?.id) authGeneration++;
+    currentToken = token;
+    currentRecord = record;
+    listeners.forEach(listener => listener(record));
+  } catch {
+    authGeneration++;
+    currentToken = null;
+    currentRecord = null;
+    listeners.forEach(listener => listener(null));
+  }
+});
 
 // ── 邮箱验证码 OTP（登录/注册合一） ─────────────────────────
 
@@ -136,7 +161,14 @@ async function request<T>(path: string, init: RequestInit & { auth?: boolean } =
   if (init.auth !== false && currentToken) headers.Authorization = `Bearer ${currentToken}`;
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
   const text = await res.text();
-  const body: unknown = text ? JSON.parse(text) : null;
+  let body: unknown = null;
+  if (text) {
+    try { body = JSON.parse(text); }
+    catch {
+      if (res.ok) throw new VelvetApiError(res.status, null, '服务器响应格式错误');
+      // 代理可能返回 HTML 错误页；保留 HTTP 状态，但不传播原始页面内容。
+    }
+  }
   if (!res.ok) throw new VelvetApiError(res.status, body);
   return body as T;
 }

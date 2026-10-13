@@ -2,6 +2,8 @@ import { defineConfig } from 'vitest/config';
 import path from 'node:path';
 
 export default defineConfig({
+  // 测试只使用显式的合成配置，不加载本机凭据文件。
+  envDir: path.resolve(__dirname, 'node_modules/.cache/vitest-empty-env'),
   test: {
     environment: 'jsdom',
     env: { VITE_API_URL: 'http://localhost:8080' },

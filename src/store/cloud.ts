@@ -76,7 +76,7 @@ export const useCloudStore = create<CloudState>(set => ({
   initAuthListener: () => {
     if (!cloudEnabled) return () => {};
     return onAuthChange(record => {
-      set({ cloudUser: (record as AuthRecord | null) ?? null });
+      set({ cloudUser: (record as AuthRecord | null) ?? null, syncStatus: 'idle', lastError: null });
     });
   },
 }));

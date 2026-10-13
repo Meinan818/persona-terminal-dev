@@ -1,6 +1,7 @@
 import { db } from '@/db';
 import { getUserId } from './pocketbase';
 import * as api from './userDataApi';
+import { getAuthGeneration } from './velvetApi';
 import { useCloudStore } from '@/store/cloud';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { computeTotalLv } from '@/utils/lvTiers';
@@ -53,7 +54,7 @@ function dataUrlToBlob(dataUrl: string): Blob | null {
  *   2. 本地没 dataUrl，但指纹非空（说明云端有过） → 清空 PB.avatar + 重置指纹为空
  *   3. 都没动 → 无操作
  */
-async function syncAvatarIfChanged(): Promise<void> {
+async function syncAvatarIfChanged(session = captureSyncSession()): Promise<void> {
   if (!api.isAuthenticated()) return;
   const appState = useAppStore.getState();
   const localDataUrl = appState.user?.avatarDataUrl;
@@ -70,7 +71,7 @@ async function syncAvatarIfChanged(): Promise<void> {
     }
     const ext = blob.type === 'image/png' ? 'png' : 'jpg';
     try {
-      await api.uploadAvatar(blob, `avatar.${ext}`);
+      await sessionCall(session, () => api.uploadAvatar(blob, `avatar.${ext}`));
     } catch (err) {
       console.warn('[velvet-sync] avatar upload rejected (size=' + blob.size + 'B)', err);
       return; // 不更新指纹，下次还能重试
@@ -78,7 +79,7 @@ async function syncAvatarIfChanged(): Promise<void> {
   } else {
     // 清空云端头像（后端删文件并置 users.avatar 为空）
     try {
-      await api.clearAvatar();
+      await sessionCall(session, () => api.clearAvatar());
     } catch (err) {
       console.warn('[velvet-sync] avatar clear failed', err);
       return;
@@ -86,6 +87,7 @@ async function syncAvatarIfChanged(): Promise<void> {
   }
 
   // 落本地指纹（同步会把 settings 推到云端，无需手动 push）
+  assertSyncSession(session);
   await appState.updateSettings({ lastUploadedAvatarSig: currentSig });
 }
 
@@ -98,18 +100,20 @@ async function syncAvatarIfChanged(): Promise<void> {
  * 单发：PB 上没建字段就静默跳过，不连累其它档案；目标算不出来（挂的宣告卡不在本机）就不动云端那份。
  * 资料页改完立刻调一次，pushUserProfile / pushAll 也都会顺手推。
  */
-export const pushProfilePresence = async (): Promise<void> => {
+export const pushProfilePresence = async (session?: SyncSession): Promise<void> => {
   if (!api.isAuthenticated()) return;
   if (!getUserId()) return;
+  session ??= captureSyncSession();
   const patch = buildPresencePatch(useAppStore.getState());
   try {
-    await api.updateProfile(patch);
+    await sessionCall(session, () => api.updateProfile(patch));
   } catch { /* 字段还没建 / 离线：下次再推 */ }
 };
 
 export const pushUserProfile = async (): Promise<void> => {
   if (!api.isAuthenticated()) return;
   if (!getUserId()) return;
+  const session = captureSyncSession();
 
   const appState = useAppStore.getState();
   const totalLv = computeTotalLv(appState.attributes);
@@ -144,15 +148,17 @@ export const pushUserProfile = async (): Promise<void> => {
   profilePatch.level_difficulty = resolveLevelDifficulty(appState.settings);
 
   try {
-    await api.updateProfile(profilePatch);
+    await sessionCall(session, () => api.updateProfile(profilePatch));
   } catch (err) {
     console.warn('[velvet-sync] pushUserProfile failed', err);
   }
   // 名片状态 / 目标（v2.7.0.6 第 6 项）：单独一次，走同一 profile 端点
-  await pushProfilePresence();
+  assertSyncSession(session);
+  await pushProfilePresence(session);
   // 头像走单独的指纹比对路径
   try {
-    await syncAvatarIfChanged();
+    assertSyncSession(session);
+    await syncAvatarIfChanged(session);
   } catch (err) {
     console.warn('[velvet-sync] pushUserProfile: avatar sync failed', err);
   }
@@ -392,13 +398,51 @@ interface CloudTableRec {
 }
 interface CloudSnapshot { tables: Map<string, CloudTableRec>; meta: CloudMeta; metaId: string | null }
 
+class SyncSessionChangedError extends Error {
+  constructor() { super('登录状态已变化，本次同步已停止'); }
+}
+interface SyncSession { userId: string; generation: number }
+const captureSyncSession = (): SyncSession => {
+  const userId = getUserId();
+  if (!api.isAuthenticated() || !userId) throw new Error('未登录');
+  return { userId, generation: getAuthGeneration() };
+};
+const isCurrentSession = (session: SyncSession): boolean =>
+  api.isAuthenticated() && getUserId() === session.userId && getAuthGeneration() === session.generation;
+const assertSyncSession = (session: SyncSession): void => {
+  if (!isCurrentSession(session)) throw new SyncSessionChangedError();
+};
+async function sessionCall<T>(session: SyncSession, fn: () => Promise<T>): Promise<T> {
+  assertSyncSession(session);
+  const result = await fn();
+  assertSyncSession(session);
+  return result;
+}
+
+const snapshotError = (key: string): Error => new Error(`云端数据不完整或格式错误（${key}），未覆盖本地数据`);
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value);
+
 const parseValue = (v: unknown): Row[] | null => {
   let parsed = v;
   if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch { return null; } }
   return Array.isArray(parsed) ? (parsed as Row[]) : null;
 };
-/** PB 的 updated 是「YYYY-MM-DD HH:MM:SS.mmmZ」，_meta.at 是 ISO：统一成前者再做字符串比较 */
-const pbStamp = (iso: string): string => iso.replace('T', ' ');
+const versionTime = (value: string, key: string): number => {
+  const time = Date.parse(value.replace(' ', 'T'));
+  if (!Number.isFinite(time)) throw snapshotError(key);
+  return time;
+};
+
+function validateRows(rows: Row[] | null, key: string): Row[] {
+  if (!rows) throw snapshotError(key);
+  const ids = new Set<string>();
+  for (const row of rows) {
+    if (!isObject(row) || typeof row.id !== 'string' || !row.id || ids.has(row.id)) throw snapshotError(key);
+    ids.add(row.id);
+  }
+  return rows;
+}
 
 /**
  * 把当前用户在 user_data 里的记录整理成「按表」的快照。
@@ -406,19 +450,28 @@ const pbStamp = (iso: string): string => iso.replace('T', ' ');
  * 又推过一次整表），以整表为准；否则拼分片。老版本 App 只认 SYNC_TABLES 里的 key，分片和 _meta 都会跳过，
  * 拉取时找不到整表记录就保留本地那张——不会拿到半张表。
  */
-async function fetchCloudSnapshot(mode: 'ids' | 'full'): Promise<CloudSnapshot> {
+async function fetchCloudSnapshot(mode: 'ids' | 'full', session = captureSyncSession()): Promise<CloudSnapshot> {
   if (!api.isAuthenticated()) throw new Error('云同步未配置');
   const userId = getUserId();
   if (!userId) throw new Error('用户信息缺失');
   const records = await api.listRows({ ids: mode === 'ids' });
+  assertSyncSession(session);
   let meta: CloudMeta = {};
   let metaId: string | null = null;
   const metaRec = records.find(r => r.key === META_KEY);
   if (metaRec) {
     metaId = metaRec.id;
     let v: unknown = mode === 'ids' ? (await api.getRow(metaRec.id)).value : metaRec.value;
-    if (typeof v === 'string') { try { v = JSON.parse(v); } catch { v = {}; } }
-    if (v && typeof v === 'object' && !Array.isArray(v)) meta = v as CloudMeta;
+    assertSyncSession(session);
+    if (typeof v === 'string') { try { v = JSON.parse(v); } catch { throw snapshotError(META_KEY); } }
+    if (!isObject(v)) throw snapshotError(META_KEY);
+    if (v.schema !== undefined && (!Number.isInteger(v.schema) || Number(v.schema) < 1)) throw snapshotError(META_KEY);
+    if (v.chunks !== undefined && !isObject(v.chunks)) throw snapshotError(META_KEY);
+    for (const [key, chunk] of Object.entries(v.chunks ?? {})) {
+      if (!isObject(chunk) || !Number.isInteger(chunk.n) || Number(chunk.n) < 1 || Number(chunk.n) > 100000 || typeof chunk.at !== 'string') throw snapshotError(key);
+      versionTime(chunk.at, key);
+    }
+    meta = v as CloudMeta;
   }
   if (typeof meta.schema === 'number' && meta.schema > SYNC_SCHEMA) {
     throw new SyncSchemaError('云端数据是更新版本的 App 写的，先更新 App 再同步');
@@ -430,15 +483,18 @@ async function fetchCloudSnapshot(mode: 'ids' | 'full'): Promise<CloudSnapshot> 
     return t;
   };
   const chunkValues = new Map<string, Map<number, Row[]>>();
+  const recordKeys = new Set<string>();
   for (const r of records) {
     const key = r.key as string;
+    if (typeof key !== 'string' || recordKeys.has(key)) throw snapshotError('重复或非法 key');
+    recordKeys.add(key);
     if (key === META_KEY) continue;
     const hash = key.indexOf('#');
     if (hash < 0) {
       const t = rec(key);
       t.plainId = r.id;
       t.plainUpdated = (r.updated as string) || (r.created as string) || '';
-      if (mode === 'full') t.rows = parseValue(r.value) ?? [];
+      if (mode === 'full') t.rows = validateRows(parseValue(r.value), key);
       continue;
     }
     const base = key.slice(0, hash);
@@ -448,25 +504,29 @@ async function fetchCloudSnapshot(mode: 'ids' | 'full'): Promise<CloudSnapshot> 
     if (mode === 'full') {
       let m = chunkValues.get(base);
       if (!m) { m = new Map(); chunkValues.set(base, m); }
-      m.set(idx, parseValue(r.value) ?? []);
+      m.set(idx, validateRows(parseValue(r.value), key));
     }
   }
+  // 即使全部分片消失，元数据声明的表也必须进入完整性检查。
+  for (const key of Object.keys(meta.chunks ?? {})) rec(key);
   for (const [key, t] of tables) {
     const chunkMeta = meta.chunks?.[key];
-    const hasChunks = t.chunkIds.size > 0 && !!chunkMeta;
-    const usePlain = !!t.plainId && (!hasChunks || (t.plainUpdated ?? '') > pbStamp(chunkMeta!.at));
+    if (!chunkMeta && t.chunkIds.size && !t.plainId) throw snapshotError(key);
+    const hasChunks = !!chunkMeta;
+    const usePlain = !!t.plainId && (!hasChunks || versionTime(t.plainUpdated ?? '', key) > versionTime(chunkMeta!.at, key));
     if (usePlain || !hasChunks) {
       t.version = t.plainUpdated ?? '';
     } else {
+      for (let i = 1; i <= chunkMeta!.n; i++) if (!t.chunkIds.has(i)) throw snapshotError(key);
       t.version = chunkMeta!.at;
       if (mode === 'full') {
         const parts = chunkValues.get(key) ?? new Map<number, Row[]>();
         const rows: Row[] = [];
-        for (let i = 1; i <= chunkMeta!.n; i++) rows.push(...(parts.get(i) ?? []));
-        t.rows = rows;
+        for (let i = 1; i <= chunkMeta!.n; i++) rows.push(...validateRows(parts.get(i) ?? null, key));
+        t.rows = validateRows(rows, key);
       }
     }
-    if (mode === 'full' && !t.rows) t.rows = [];
+    if (mode === 'full') validateRows(t.rows, key);
   }
   return { tables, meta, metaId };
 }
@@ -625,6 +685,7 @@ function stripForCloud(key: string, rows: Row[], includeApiKey: boolean): Row[] 
 export const pushAll = (opts: { force?: boolean } = {}): Promise<void> => runExclusive('推送', () => pushAllInner(opts));
 
 const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
+  const session = captureSyncSession();
   const cloudStore = useCloudStore.getState();
   if (!api.isAuthenticated()) throw new Error('未登录');
   const userId = getUserId();
@@ -633,7 +694,7 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
   cloudStore.setSyncStatus('syncing');
   cloudStore.setLastError(null);
   try {
-    const snap = await fetchCloudSnapshot('ids');
+    const snap = await fetchCloudSnapshot('ids', session);
     const meta: CloudMeta = { ...snap.meta, chunks: { ...(snap.meta.chunks ?? {}) } };
     /** 这一轮写完后各表的版本（记到 cloudSeen） */
     const versions: Record<string, string> = {};
@@ -653,14 +714,14 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
       if (changed.length) throw new SyncConflictError(changed);
     }
 
-    const del = async (id: string) => { try { await api.deleteRow(id); } catch (e) { console.warn('[velvet-sync] push: delete failed', id, e); } };
+    const del = (id: string) => sessionCall(session, () => api.deleteRow(id));
     /** 写一张表：小表整条记录；大表切片（key#1..n）并登记到 _meta，同时清掉另一种形态的残留 */
     const writeTable = async (key: string, rows: Row[]): Promise<void> => {
       const cur = snap.tables.get(key);
       if (jsonBytes(rows) <= CHUNK_THRESHOLD_BYTES) {
         const r = cur?.plainId
-          ? await api.updateRow(cur.plainId, rows)
-          : await api.createRow(key, rows);
+          ? await sessionCall(session, () => api.updateRow(cur.plainId!, rows))
+          : await sessionCall(session, () => api.createRow(key, rows));
         versions[key] = (r.updated as string) || '';
         for (const id of cur?.chunkIds.values() ?? []) await del(id);
         if (meta.chunks) delete meta.chunks[key];
@@ -671,8 +732,8 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
       for (let i = 0; i < parts.length; i++) {
         const idx = i + 1;
         const id = cur?.chunkIds.get(idx);
-        if (id) await api.updateRow(id, parts[i]);
-        else await api.createRow(`${key}#${idx}`, parts[i]);
+        if (id) await sessionCall(session, () => api.updateRow(id, parts[i]));
+        else await sessionCall(session, () => api.createRow(`${key}#${idx}`, parts[i]));
       }
       for (const [idx, id] of cur?.chunkIds ?? []) if (idx > parts.length) await del(id);
       if (cur?.plainId) await del(cur.plainId);
@@ -683,14 +744,21 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
     /** 没传上去的表：一张表失败不中断后面的（以前第一张出错整轮就停，后面的表永远传不上去） */
     const failed: Array<{ key: string; why: string }> = [];
     for (const key of SYNC_TABLES) {
+      assertSyncSession(session);
       if (skipSet.has(key)) {
         // 用户选择不上传该表。若云端还留着**上次开着开关时**推上去的那份（整表或分片），就顺手删掉——
         // 否则「关掉开关」只是停止继续上传，历史数据永远躺在服务器上，
         // 与同步隐私面板给用户的承诺（这类数据不出本机）对不上（FS7 审查）。
         const cur = snap.tables.get(key);
-        if (cur?.plainId) await del(cur.plainId);
-        for (const id of cur?.chunkIds.values() ?? []) await del(id);
-        if (meta.chunks) delete meta.chunks[key];
+        try {
+          if (cur?.plainId) await del(cur.plainId);
+          for (const id of cur?.chunkIds.values() ?? []) await del(id);
+          if (meta.chunks) delete meta.chunks[key];
+        } catch (error) {
+          assertSyncSession(session);
+          failed.push({ key, why: '历史云数据清理失败，请重试' });
+          console.warn('[velvet-sync] privacy cleanup failed', key, error);
+        }
         continue;
       }
       let rows = await db.table(key).toArray();
@@ -701,6 +769,7 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
       try {
         await writeTable(key, rows as Row[]);
       } catch (e) {
+        assertSyncSession(session);
         const st = (e as { status?: number })?.status;
         // 紧急修复 #4：把服务器的话带出来（PB 的 400 会说是哪个字段、为什么），别只剩一个数字
         const resp = (e as { response?: { message?: string; data?: Record<string, { message?: string }> } })?.response;
@@ -713,12 +782,13 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
     // _meta：格式版本 + 分片登记。分片表要靠它才读得到，写不成就当整轮没成（下次再推）
     try {
       const metaValue = { schema: SYNC_SCHEMA, chunks: meta.chunks ?? {} };
-      if (snap.metaId) await api.updateRow(snap.metaId, metaValue);
-      else await api.createRow(META_KEY, metaValue);
+      if (snap.metaId) await sessionCall(session, () => api.updateRow(snap.metaId!, metaValue));
+      else await sessionCall(session, () => api.createRow(META_KEY, metaValue));
     } catch (e) {
       failed.push({ key: '_meta', why: '登记分片失败' });
       console.warn('[velvet-sync] push: meta failed', e);
     }
+    assertSyncSession(session);
     rememberCloudSeen(versions);
 
     // 把"公开档案"一并同步到 users 表（在线同伴 / 好友页要查的就是这份数据）
@@ -763,17 +833,19 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
       if (localUserName) profilePatch.nickname = localUserName;
       // 难度档并入同一次写入（后端 profile 是 JSON 列、按字段并入，不存在缺字段连累整份的问题）
       profilePatch.level_difficulty = resolveLevelDifficulty(appState.settings);
-      await api.updateProfile(profilePatch);
+      await sessionCall(session, () => api.updateProfile(profilePatch));
     } catch (e) {
       console.warn('[velvet-sync] push: failed to update user profile fields', e);
     }
 
     // 名片状态 / 目标（v2.7.0.6 第 6 项）：走同一 profile 端点
-    await pushProfilePresence();
+    assertSyncSession(session);
+    await pushProfilePresence(session);
+    assertSyncSession(session);
 
     // 头像同步 —— 只在本地 dataUrl 与"上次上传指纹"不一致时才推
     try {
-      await syncAvatarIfChanged();
+      await syncAvatarIfChanged(session);
     } catch (e) {
       console.warn('[velvet-sync] push: avatar upload failed', e);
     }
@@ -782,6 +854,7 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
       // 传上去的表已经在云端了；没传上去的报出来，让用户知道哪几张还留在本机（下次再推）
       throw new Error(`这几张表没有传上去：${failed.map(f => `${f.key}（${f.why}）`).join('、')}`);
     }
+    assertSyncSession(session);
     saveSyncOwner(userId);
     const now = new Date();
     saveLastSync(now);
@@ -789,8 +862,10 @@ const pushAllInner = async (opts: { force?: boolean } = {}): Promise<void> => {
     cloudStore.setLastSyncDirection('push');
     cloudStore.setSyncStatus('success');
   } catch (err) {
-    cloudStore.setSyncStatus('error');
-    cloudStore.setLastError(err instanceof Error ? err.message : '推送失败');
+    if (isCurrentSession(session)) {
+      cloudStore.setSyncStatus('error');
+      cloudStore.setLastError(err instanceof Error ? err.message : '推送失败');
+    }
     throw err;
   }
 };
@@ -912,14 +987,19 @@ async function localizeCloudRows(key: string, rows: Row[]): Promise<Row[] | null
 }
 
 /** 把算好的各表一次性写进本机（一个事务，任何一张失败整体回滚），再重载内存态 */
-async function writePlansLocally(plans: Array<{ key: SyncKey; rows: Row[] }>): Promise<void> {
+async function writePlansLocally(plans: Array<{ key: SyncKey; rows: Row[] }>, session: SyncSession): Promise<void> {
+  assertSyncSession(session);
+  if (!plans.length) return;
   await db.transaction('rw', plans.map(p => db.table(p.key)), async () => {
+    assertSyncSession(session);
     for (const p of plans) {
       const table = db.table(p.key);
       await table.clear();
       if (p.rows.length) await table.bulkAdd(p.rows as never[]);
     }
+    assertSyncSession(session);
   });
+  assertSyncSession(session);
   // 重载 Zustand in-memory 状态
   await useAppStore.getState().initializeApp();
   // 拉回来的可能是**未做过任务×终端合并迁移**的老设备数据，这里补跑一次；已迁移则读到标记瞬时返回
@@ -928,9 +1008,11 @@ async function writePlansLocally(plans: Array<{ key: SyncKey; rows: Row[] }>): P
   } catch (e) {
     console.warn('[velvet-sync] pull: tasks-merge 迁移补跑失败，下次启动续跑', e);
   }
+  assertSyncSession(session);
 }
 
 const pullAllInner = async (): Promise<void> => {
+  const session = captureSyncSession();
   const cloudStore = useCloudStore.getState();
   if (!api.isAuthenticated()) throw new Error('未登录');
   const userId = getUserId();
@@ -939,7 +1021,7 @@ const pullAllInner = async (): Promise<void> => {
   cloudStore.setSyncStatus('syncing');
   cloudStore.setLastError(null);
   try {
-    const snap = await fetchCloudSnapshot('full');
+    const snap = await fetchCloudSnapshot('full', session);
     console.log('[velvet-sync] pull: fetched', snap.tables.size, 'cloud tables');
 
     const skipSet = getSkipSet();
@@ -959,7 +1041,7 @@ const pullAllInner = async (): Promise<void> => {
       plans.push({ key, rows: toWrite });
       totalRowsWritten += rows.length;
     }
-    await writePlansLocally(plans);
+    await writePlansLocally(plans, session);
     console.log('[velvet-sync] pull: rewrote', plans.length, 'tables,', totalRowsWritten, 'total rows');
 
     rememberCloudSeen(versionsOf(snap));
@@ -970,8 +1052,10 @@ const pullAllInner = async (): Promise<void> => {
     cloudStore.setLastSyncDirection('pull');
     cloudStore.setSyncStatus('success');
   } catch (err) {
-    cloudStore.setSyncStatus('error');
-    cloudStore.setLastError(err instanceof Error ? err.message : '拉取失败');
+    if (isCurrentSession(session)) {
+      cloudStore.setSyncStatus('error');
+      cloudStore.setLastError(err instanceof Error ? err.message : '拉取失败');
+    }
     throw err;
   }
 };
@@ -983,8 +1067,9 @@ export interface MergeTotals { onlyLocal: number; onlyCloud: number; conflict: n
 
 /** 对一遍账：每张表两边差在哪（不动数据） */
 export const previewMerge = (): Promise<MergePreview> => runExclusive('对账', async () => {
+  const session = captureSyncSession();
   if (!api.isAuthenticated()) throw new Error('未登录');
-  const snap = await fetchCloudSnapshot('full');
+  const snap = await fetchCloudSnapshot('full', session);
   const skipSet = getSkipSet();
   const includeApiKey = useAppStore.getState().settings.syncCloudApiKey === true;
   const tables: TableMergeStats[] = [];
@@ -994,6 +1079,7 @@ export const previewMerge = (): Promise<MergePreview> => runExclusive('对账', 
     const cloud = reviveRows(snap.tables.get(key)?.rows ?? []);
     tables.push(mergeTable(key, local, cloud, { conflictWins: 'local', dropOnlyCloud: new Set() }).stats);
   }
+  assertSyncSession(session);
   return { tables };
 });
 
@@ -1002,6 +1088,7 @@ export const previewMerge = (): Promise<MergePreview> => runExclusive('对账', 
  * 推的时候乐观并发照常生效：对账之后云端若又被别处改过，会被拦下来让用户再对一次。
  */
 export const applyMerge = (opts: MergeOptions): Promise<MergeTotals> => runExclusive('合并', async () => {
+  const session = captureSyncSession();
   const cloudStore = useCloudStore.getState();
   if (!api.isAuthenticated()) throw new Error('未登录');
   const userId = getUserId();
@@ -1009,7 +1096,7 @@ export const applyMerge = (opts: MergeOptions): Promise<MergeTotals> => runExclu
   cloudStore.setSyncStatus('syncing');
   cloudStore.setLastError(null);
   try {
-    const snap = await fetchCloudSnapshot('full');
+    const snap = await fetchCloudSnapshot('full', session);
     const skipSet = getSkipSet();
     const includeApiKey = useAppStore.getState().settings.syncCloudApiKey === true;
     const totals: MergeTotals = { onlyLocal: 0, onlyCloud: 0, conflict: 0 };
@@ -1027,15 +1114,17 @@ export const applyMerge = (opts: MergeOptions): Promise<MergeTotals> => runExclu
       if (!localized) continue;
       plans.push({ key, rows: localized });
     }
-    await writePlansLocally(plans);
+    await writePlansLocally(plans, session);
     rememberCloudSeen(versionsOf(snap));
     saveSyncOwner(userId);
     // 推到云端：已经持有 runExclusive 的锁，直接调内层
     await pushAllInner({ force: false });
     return totals;
   } catch (err) {
-    cloudStore.setSyncStatus('error');
-    cloudStore.setLastError(err instanceof Error ? err.message : '合并失败');
+    if (isCurrentSession(session)) {
+      cloudStore.setSyncStatus('error');
+      cloudStore.setLastError(err instanceof Error ? err.message : '合并失败');
+    }
     throw err;
   }
 });

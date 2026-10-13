@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useCloudStore } from '@/store/cloud';
 
 // velvetApi 只依赖全局 fetch 与 localStorage——jsdom 环境自带 localStorage
 import {
@@ -10,6 +11,8 @@ import {
   onAuthChange,
   getToken,
   VelvetApiError,
+  velvetRequest,
+  getAuthGeneration,
 } from '../velvetApi';
 
 const ok = (body: unknown, status = 200) =>
@@ -91,5 +94,41 @@ describe('velvetApi 认证客户端', () => {
 
   it('VelvetApiError 是 Error 实例（auth.ts 的 instanceof 逻辑依赖）', () => {
     expect(new VelvetApiError(404, { velvet: 'not_found' })).toBeInstanceOf(Error);
+  });
+
+  it.each([502, 401, 403])('非 JSON 错误体保留 HTTP %s，不传播原始 HTML', async status => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>gateway error</html>', { status })));
+    await expect(velvetRequest('/api/me')).rejects.toMatchObject({ status, body: null });
+  });
+  it('空错误体保留状态码，坏成功 JSON 报协议错误，204 正常返回', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(null, { status: 502 }))
+      .mockResolvedValueOnce(new Response('{broken', { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 })));
+    await expect(velvetRequest('/api/me')).rejects.toMatchObject({ status: 502 });
+    await expect(velvetRequest('/api/me')).rejects.toMatchObject({ status: 200, message: '服务器响应格式错误' });
+    await expect(velvetRequest('/api/avatar', { method: 'DELETE' })).resolves.toBeNull();
+  });
+  it('重新登录同一账号也会使旧会话代次失效', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => ok({ token: 'synthetic', record: { id: 'test', email: 'test@example.invalid' } })));
+    await authWithPassword('test', 'synthetic');
+    const generation = getAuthGeneration();
+    clearAuth(); await authWithPassword('test', 'synthetic');
+    expect(getAuthGeneration()).toBeGreaterThan(generation);
+  });
+  it('其他标签页登出后通知监听方，并使在途会话失效', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => ok({ token: 'synthetic', record: { id: 'test', email: 'test@example.invalid' } })));
+    await authWithPassword('test', 'synthetic');
+    const generation = getAuthGeneration();
+    localStorage.removeItem('velvet.jwt'); localStorage.removeItem('velvet.record');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'velvet.jwt', storageArea: localStorage }));
+    expect(isAuthenticated()).toBe(false); expect(getAuthGeneration()).toBeGreaterThan(generation);
+  });
+  it('登出后清除上一会话的同步中状态与错误', () => {
+    const off = useCloudStore.getState().initAuthListener();
+    try {
+      useCloudStore.setState({ syncStatus: 'syncing', lastError: 'previous session' });
+      clearAuth();
+      expect(useCloudStore.getState()).toMatchObject({ cloudUser: null, syncStatus: 'idle', lastError: null });
+    } finally { off(); }
   });
 });

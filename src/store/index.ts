@@ -77,6 +77,8 @@ export const ALL_LOCAL_TABLES = [
   'stamps',
   // 第 6 轮 委托板
   'quests',
+  // 在线名片裁图只存本机，全量清空及失败回滚仍须覆盖。
+  'onlineCardFaces',
 ] as const;
 
 /** importData 的返回：导入后记录已不存在的配图有几张、占多少字节（0 张 = 不用问） */
@@ -1672,36 +1674,38 @@ export const useAppStore = create<AppState>((set, get) => ({
      * 另外用 mutex 串行化：并发两次 updateSettings 都读到同一份底稿时，
      * 后写的那次会吞掉先写那次的字段。
      */
-    settingsWriteLock = settingsWriteLock.then(async () => {
-      const persisted = (await db.settings.toArray())[0];
-      const base = persisted ?? get().settings;
-      const nextThresholds = newSettings.levelThresholds ?? base.levelThresholds;
-      const updated = { ...base, ...newSettings } as Settings;
-      if (newSettings.attributeLevelTitles || newSettings.levelThresholds) {
-        updated.attributeLevelTitles = normalizeAttributeLevelTitles(
-          newSettings.attributeLevelTitles ?? base.attributeLevelTitles,
-          nextThresholds.length,
-        );
-      }
-      await db.settings.put(updated);
-      set({ settings: updated });
-    }).catch((err: unknown) => { console.error('[settings] 写入失败', err); });
-    await settingsWriteLock;
+    const write = settingsWriteLock.then(async () => {
+      const { updated, updatedAttributes } = await db.transaction('rw', [db.settings, db.attributes], async () => {
+        const persisted = (await db.settings.toArray())[0];
+        const base = persisted ?? get().settings;
+        const nextThresholds = newSettings.levelThresholds ?? base.levelThresholds;
+        const updated = { ...base, ...newSettings } as Settings;
+        if (newSettings.attributeLevelTitles || newSettings.levelThresholds) {
+          updated.attributeLevelTitles = normalizeAttributeLevelTitles(
+            newSettings.attributeLevelTitles ?? base.attributeLevelTitles,
+            nextThresholds.length,
+          );
+        }
+        await db.settings.put(updated);
+        let updatedAttributes: Attribute[] | undefined;
+        if (newSettings.levelThresholds) {
+          updatedAttributes = (await db.attributes.toArray()).map(attr => ({
+            ...attr,
+            level: levelForPoints(attr.points, updated.levelThresholds),
+            levelThresholds: updated.levelThresholds,
+          }));
+          await db.attributes.bulkPut(updatedAttributes);
+        }
+        return { updated, updatedAttributes };
+      });
+      set({ settings: updated, ...(updatedAttributes ? { attributes: updatedAttributes } : {}) });
+    });
+    settingsWriteLock = write.catch((err: unknown) => { console.error('[settings] 写入失败', err); });
+    await write;
     const settings = get().settings;
     const updated = settings;
     void pushWidgetSnapshot(); // 夜间 / 自定义主题色 / 名片状态都在 settings 里（第 5 轮补漏推）
 
-    if (newSettings.levelThresholds) {
-      const thresholds = updated.levelThresholds;
-      const attributes = await db.attributes.toArray();
-      const updatedAttributes = attributes.map((attr) => ({
-        ...attr,
-        level: levelForPoints(attr.points, thresholds),
-        levelThresholds: thresholds,
-      }));
-      await db.attributes.bulkPut(updatedAttributes);
-      set({ attributes: updatedAttributes });
-    }
     
     // 应用夜间模式设置（经闸门：红频道不响应夜间）
     if (updated.darkMode !== undefined) {
@@ -2954,10 +2958,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   resetAllData: async (opts) => {
-    for (const t of ALL_LOCAL_TABLES) {
-      if (opts?.keepImages && (t === 'activityImages' || t === 'activityImageData' || t === 'bgmTracks')) continue;
-      await db.table(t).clear();
-    }
+    const tables = ALL_LOCAL_TABLES.filter(t => !opts?.keepImages || (t !== 'activityImages' && t !== 'activityImageData' && t !== 'bgmTracks' && t !== 'onlineCardFaces'));
+    await db.transaction('rw', tables.map(t => db.table(t)), async () => {
+      for (const t of tables) await db.table(t).clear();
+    });
     if (!opts?.keepImages) await loadActivityImageIndex(true); // 表清了，内存里的缩略图索引也要清
     // 黑猫是独立 store：表清了，内存里的人格列表/消息流还留着，不重置会出现
     //「数据已清空但猫还在接着上一句说」的错乱。

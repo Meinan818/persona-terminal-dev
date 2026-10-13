@@ -35,8 +35,10 @@ class SyncControllerTest {
     /** 注册一个唯一用户，返回 token / id / 邮箱。 */
     private Session register() {
         String email = "synctest-" + UUID.randomUUID() + "@example.com";
+        // UserID 必须唯一：注册自 D13 起会查重，固定名在同一库上第二次跑就 409
+        String name = "s" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         ResponseEntity<Map> res = rest.postForEntity("/api/velvet/register",
-                Map.of("email", email, "password", "pw-123456", "name", "synctest"),
+                Map.of("email", email, "password", "pw-123456", "name", name),
                 Map.class);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<?, ?> body = res.getBody();
@@ -159,11 +161,14 @@ class SyncControllerTest {
     @Test
     void 档案写入返回完整record() {
         Session s = register();
+        // name / username 就是 UserID：D13 起走 UserIdPolicy 校验（3–18 位小写字母/数字），
+        // 中文展示名不在这个字段上（那是 profile.nickname）。这里用合规的随机 UserID 验往返。
+        String changed = "g" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         ResponseEntity<Map> res = rest.exchange("/api/sync/profile", HttpMethod.PUT,
-                new HttpEntity<>(Map.of("name", "改名了"), authHeaders(s.token())), Map.class);
+                new HttpEntity<>(Map.of("name", changed), authHeaders(s.token())), Map.class);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody().get("name")).isEqualTo("改名了");
-        assertThat(res.getBody().get("username")).isEqualTo("改名了");
+        assertThat(res.getBody().get("name")).isEqualTo(changed);
+        assertThat(res.getBody().get("username")).isEqualTo(changed);
         assertThat(res.getBody()).containsKeys("id", "email", "created", "updated");
     }
 

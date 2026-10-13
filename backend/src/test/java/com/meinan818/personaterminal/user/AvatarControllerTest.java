@@ -53,8 +53,10 @@ class AvatarControllerTest {
 
     private Session register() {
         String email = "avatest-" + UUID.randomUUID() + "@example.com";
+        // 同上：固定 UserID 会在同一库上第二次跑时撞唯一性
+        String name = "a" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         ResponseEntity<Map> res = rest.postForEntity("/api/velvet/register",
-                Map.of("email", email, "password", "pw-123456", "name", "avatest"),
+                Map.of("email", email, "password", "pw-123456", "name", name),
                 Map.class);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<?, ?> body = res.getBody();

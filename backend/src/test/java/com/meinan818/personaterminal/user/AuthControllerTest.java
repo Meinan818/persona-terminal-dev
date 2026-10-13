@@ -87,13 +87,16 @@ class AuthControllerTest {
     @Test
     void 注册成功返回token与record() {
         String email = uniqueEmail();
-        ResponseEntity<Map> res = register(email, "pw-123456", "张三");
+        // users.name 就是 UserID：规则是 3–18 位小写字母/数字（首尾为字母数字），中文名不是合法 UserID，
+        // 展示用中文名走 profile.nickname（见 MeController 的档案字段）。固定名还会在同一库上第二次跑就 409。
+        String name = "zhangsan" + UUID.randomUUID().toString().replace("-", "").substring(0, 4);
+        ResponseEntity<Map> res = register(email, "pw-123456", name);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<?, ?> body = res.getBody();
         assertThat(body.get("token")).isNotNull();
         Map<?, ?> record = (Map<?, ?>) body.get("record");
         assertThat(record.get("email")).isEqualTo(email);
-        assertThat(record.get("name")).isEqualTo("张三");
+        assertThat(record.get("name")).isEqualTo(name);
         assertThat(record.get("id")).isNotNull();
         // 绝不能把密码（哪怕是哈希）回传给客户端
         assertThat(record.containsKey("password")).isFalse();

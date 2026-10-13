@@ -113,7 +113,7 @@ cd backend && mvn -o -DskipTests package
 sudo systemctl daemon-reload
 sudo systemctl enable --now maskaria-backend
 sudo systemctl status maskaria-backend
-curl -s localhost:8080/actuator/health     # 期望 {"status":"UP"}
+curl -s localhost:8080/api/health           # 期望 {"db":"UP","status":"UP"}
 ```
 
 ## 6. 配 nginx 与 HTTPS

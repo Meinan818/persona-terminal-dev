@@ -38,7 +38,8 @@ public class SecurityConfig {
                         "/api/velvet/otp/request", "/api/velvet/otp/verify",
                         // 忘记密码链路：用户此时必然处于未登录状态
                         "/api/velvet/request-password-reset", "/api/velvet/reset-password",
-                        "/actuator/health").permitAll()
+                        // 健康检查（自研，见 common/HealthController；项目里没有引入 actuator）
+                        "/api/health").permitAll()
                 // 头像图片公开可读：好友资料卡要在未登录/跨账号下加载他人头像。
                 // 只放行 GET，上传(POST)/删除(DELETE) 仍需 JWT（见 AvatarController）。
                 .requestMatchers(HttpMethod.GET, "/api/avatar/**").permitAll()

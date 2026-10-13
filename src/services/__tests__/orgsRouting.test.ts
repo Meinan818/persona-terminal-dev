@@ -35,6 +35,12 @@ const h = vi.hoisted(() => {
     createMinutes: vi.fn(),
     createOpCard: vi.fn(),
     purgeUser: vi.fn(),
+    // 作战（第五波 第三步）
+    listOps: vi.fn(),
+    createOp: vi.fn(),
+    cancelOp: vi.fn(),
+    createCheckin: vi.fn(),
+    deleteCheckin: vi.fn(),
   };
   const pb = {
     authStore: { isValid: false, token: '', record: null },
@@ -62,6 +68,7 @@ import {
   updateMyMember, setMySlot, leaveOrg, kickMember, transferLeader, dissolveOrg,
   listOrgBoard, createMoment, setReaction, deletePost, reportPost,
   createMinutes, listOrgLedger, deleteUserContent,
+  listOrgOps, createOperation, cancelOperation, createCheckin, deleteCheckin,
 } from '../orgs';
 
 const ORG = {
@@ -296,5 +303,66 @@ describe('orgs.ts 公告板分流：自研登录态 → 走 orgsApi', () => {
 
     h.api.purgeUser.mockRejectedValue(new Error('网络错误'));
     await expect(deleteUserContent('org-1', 'user-x')).resolves.toBeUndefined();  // 不抛
+  });
+});
+
+describe('orgs.ts 作战分流：自研登录态 → 走 orgsApi', () => {
+  const OP = {
+    id: 'op-1', orgId: 'org-1', initiatorId: 'user-me', kind: 'small' as const, attr: 'knowledge' as const,
+    title: '读完一本书', deadline: '2026-10-30', participants: ['user-me'], assignments: {},
+    status: 'active' as const, createdAt: new Date(), updatedAt: new Date(),
+  };
+  const CHECKIN = {
+    id: 'ci-1', operationId: 'op-1', orgId: 'org-1', userId: 'user-me', kind: 'done' as const,
+    day: '2026-10-13', text: '', createdAt: new Date(),
+  };
+
+  it('listOrgOps 走 orgsApi（ops + checkins）', async () => {
+    h.api.listOps.mockResolvedValue({ ops: [OP], checkins: [CHECKIN] });
+    const got = await listOrgOps('org-1');
+    expect(h.api.listOps).toHaveBeenCalledWith('org-1');
+    expect(got.ops).toHaveLength(1);
+    expect(got.checkins).toHaveLength(1);
+  });
+
+  it('createOperation 走 orgsApi（屏蔽词检查在前）', async () => {
+    h.api.createOp.mockResolvedValue(OP);
+    const draft = { kind: 'small' as const, attr: 'knowledge' as const, title: '读完一本书', deadline: '2026-10-30', participants: ['user-me'], assignments: {} };
+    const got = await createOperation('org-1', draft as never);
+    expect(h.api.createOp).toHaveBeenCalledWith('org-1', draft);
+    expect(got.id).toBe('op-1');
+  });
+
+  it('createOperation 标题含屏蔽词 → 提前抛（不触后端）', async () => {
+    const draft = { kind: 'small' as const, attr: 'knowledge' as const, title: '傻逼东西', deadline: '2026-10-30', participants: ['user-me'], assignments: {} };
+    await expect(createOperation('org-1', draft as never)).rejects.toThrow();
+    expect(h.api.createOp).not.toHaveBeenCalled();
+  });
+
+  it('cancelOperation 走 orgsApi', async () => {
+    h.api.cancelOp.mockResolvedValue({ ...OP, status: 'cancelled' });
+    const got = await cancelOperation('op-1');
+    expect(h.api.cancelOp).toHaveBeenCalledWith('op-1');
+    expect(got.status).toBe('cancelled');
+  });
+
+  it('createCheckin 走 orgsApi；plan 空文本提前抛', async () => {
+    h.api.createCheckin.mockResolvedValue(CHECKIN);
+    const got = await createCheckin(OP as never, 'done', { day: '2026-10-13' });
+    expect(h.api.createCheckin).toHaveBeenCalledWith('op-1', 'done', '2026-10-13', '');
+    expect(got?.kind).toBe('done');
+
+    await expect(createCheckin(OP as never, 'plan', { text: '   ' })).rejects.toThrow('写一句你负责的那一份');
+  });
+
+  it('createCheckin 已取消/不在名单 → null 透传', async () => {
+    h.api.createCheckin.mockResolvedValue(null);
+    expect(await createCheckin(OP as never, 'done', { day: '2026-10-13' })).toBeNull();
+  });
+
+  it('deleteCheckin 走 orgsApi', async () => {
+    h.api.deleteCheckin.mockResolvedValue(undefined);
+    await deleteCheckin('ci-1');
+    expect(h.api.deleteCheckin).toHaveBeenCalledWith('ci-1');
   });
 });

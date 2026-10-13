@@ -770,6 +770,7 @@ export const mapCheckin = (r: RecordModel): OrgCheckin => ({
 
 /** 最近 62 天建的作战（进行中的最长 30 天，加 30 天的历史）+ 它们的打卡 */
 export async function listOrgOps(orgId: string): Promise<{ ops: OrgOperation[]; checkins: OrgCheckin[] }> {
+  if (velvetApi.isAuthenticated()) return orgsApi.listOps(orgId);
   const since = sinceIso(ORG_OP_FETCH_DAYS);
   const [ops, checkins] = await Promise.all([
     pb!.collection('org_operations').getFullList({ filter: `org = ${pbQuote(orgId)} && created >= ${pbQuote(since)}`, sort: 'created', requestKey: null }),
@@ -792,8 +793,15 @@ export async function listOrgLedger(orgId: string): Promise<OrgPost[]> {
 
 /** 发起作战（草稿已经 normalizeOpDraft + checkOpDraft 过；这里再过一道屏蔽词） */
 export async function createOperation(orgId: string, d: OpDraft): Promise<OrgOperation> {
-  const me = requireMe();
   assertClean(d.title, ...Object.values(d.assignments));
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.createOp(orgId, d);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没发出去，稍后再试'));
+    }
+  }
+  const me = requireMe();
   try {
     return mapOperation(await pb!.collection('org_operations').create({
       org: orgId, initiator: me, kind: d.kind, attr: d.attr, title: d.title, deadline: d.deadline,
@@ -807,6 +815,13 @@ export async function createOperation(orgId: string, d: OpDraft): Promise<OrgOpe
 
 /** 取消作战（发起人或队长） */
 export async function cancelOperation(opId: string): Promise<OrgOperation> {
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.cancelOp(opId);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没取消成，稍后再试'));
+    }
+  }
   requireMe();
   try {
     return mapOperation(await pb!.collection('org_operations').update(opId, { status: 'cancelled' }, { requestKey: null }));
@@ -821,12 +836,13 @@ export async function cancelOperation(opId: string): Promise<OrgOperation> {
  * 作战已经取消、我不在名单里 → 规则拒，返回 null（调用方按「不用再写了」处理）。
  */
 export async function createCheckin(op: Pick<OrgOperation, 'id' | 'orgId'>, kind: OrgCheckin['kind'], extra: { day?: string; text?: string } = {}): Promise<OrgCheckin | null> {
-  const me = requireMe();
   const text = kind === 'plan' ? [...(extra.text ?? '').trim()].slice(0, ORG_OP_TASK_MAX).join('') : '';
   if (kind === 'plan') {
     if (!text) throw new OrgError('写一句你负责的那一份');
     assertClean(text);
   }
+  if (velvetApi.isAuthenticated()) return orgsApi.createCheckin(op.id, kind, extra.day ?? '', text);
+  const me = requireMe();
   try {
     return mapCheckin(await pb!.collection('org_checkins').create({ operation: op.id, org: op.orgId, user: me, kind, day: extra.day ?? '', text }, { requestKey: null }));
   } catch (err) {
@@ -841,6 +857,7 @@ export async function createCheckin(op: Pick<OrgOperation, 'id' | 'orgId'>, kind
 
 /** 删自己的一条（撤销完成 / 改写那一份）；已经没了也算成功 */
 export async function deleteCheckin(id: string): Promise<void> {
+  if (velvetApi.isAuthenticated()) return orgsApi.deleteCheckin(id);
   requireMe();
   try {
     await pb!.collection('org_checkins').delete(id, { requestKey: null });

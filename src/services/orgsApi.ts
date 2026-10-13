@@ -10,9 +10,11 @@
  *  前端把 body.message 当作人话直接抛（后端文案已逐字对齐前端）。
  */
 import { velvetRequest } from './velvetApi';
+import type { OpDraft } from '@/utils/orgOps';
 import type {
   Org, OrgCustom, OrgMember, OrgMemberCard, OrgCodenameKind,
   OrgPost, OrgReaction, OrgReactionTag, OrgPostSnapshot, OrgMinutesSnapshot, OrgOpCardSnapshot,
+  OrgOperation, OrgCheckin,
 } from '@/types';
 
 /** 后端成员视图 → 前端 OrgMember */
@@ -389,4 +391,110 @@ export async function createOpCard(orgId: string, id: string, weekKey: string, s
 /** 删掉某人在这个组织的动态和标签。 */
 export async function purgeUser(orgId: string, userId: string): Promise<void> {
   await velvetRequest<{ ok: boolean }>(`/api/social/orgs/${orgId}/purge/${userId}`, { method: 'POST', body: JSON.stringify({}) });
+}
+
+// ── 作战（W3 第五波 第三步）────────────────────────────
+
+interface RawOperation {
+  id: string;
+  orgId: string;
+  initiatorId: string;
+  kind: string;
+  attr: string;
+  title: string;
+  deadline: string;
+  participants: string[];
+  assignments: Record<string, string>;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface RawCheckin {
+  id: string;
+  operationId: string;
+  orgId: string;
+  userId: string;
+  kind: string;
+  day: string;
+  text: string;
+  createdAt: string;
+}
+
+function mapOpRow(r: RawOperation): OrgOperation {
+  return {
+    id: r.id,
+    orgId: r.orgId || '',
+    initiatorId: r.initiatorId || '',
+    kind: r.kind === 'big' ? 'big' : 'small',
+    attr: r.attr as OrgOperation['attr'],
+    title: r.title || '',
+    deadline: r.deadline || '',
+    participants: r.participants ?? [],
+    assignments: r.assignments ?? {},
+    status: r.status === 'cancelled' ? 'cancelled' : 'active',
+    createdAt: new Date(r.createdAt),
+    updatedAt: new Date(r.updatedAt || r.createdAt),
+  };
+}
+
+function mapCheckinRow(r: RawCheckin): OrgCheckin {
+  return {
+    id: r.id,
+    operationId: r.operationId || '',
+    orgId: r.orgId || '',
+    userId: r.userId || '',
+    kind: r.kind === 'out' ? 'out' : r.kind === 'plan' ? 'plan' : 'done',
+    day: r.day || '',
+    text: r.text || '',
+    createdAt: new Date(r.createdAt),
+  };
+}
+
+/** 最近 62 天建的作战 + 它们的打卡。 */
+export async function listOps(orgId: string): Promise<{ ops: OrgOperation[]; checkins: OrgCheckin[] }> {
+  const res = await velvetRequest<{ ops: RawOperation[]; checkins: RawCheckin[] }>(`/api/social/orgs/${orgId}/ops`);
+  return {
+    ops: (res.ops ?? []).map(mapOpRow),
+    checkins: (res.checkins ?? []).map(mapCheckinRow),
+  };
+}
+
+/** 发起作战（big 只有队长能发）。 */
+export async function createOp(orgId: string, d: OpDraft): Promise<OrgOperation> {
+  return guard(
+    async () => mapOpRow(await velvetRequest<RawOperation>(`/api/social/orgs/${orgId}/ops`, {
+      method: 'POST',
+      body: JSON.stringify({
+        kind: d.kind, attr: d.attr, title: d.title, deadline: d.deadline,
+        participants: d.participants, assignments: d.kind === 'big' ? d.assignments : {},
+      }),
+    })),
+    '没发出去，稍后再试',
+  );
+}
+
+/** 取消作战（发起人或队长）。 */
+export async function cancelOp(opId: string): Promise<OrgOperation> {
+  return guard(
+    async () => mapOpRow(await velvetRequest<RawOperation>(`/api/social/ops/${opId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })),
+    '没取消成，稍后再试',
+  );
+}
+
+/** 打卡；已取消 / 不在名单 → null。 */
+export async function createCheckin(opId: string, kind: string, day: string, text: string): Promise<OrgCheckin | null> {
+  const raw = await velvetRequest<RawCheckin | null>(`/api/social/ops/${opId}/checkins`, {
+    method: 'POST',
+    body: JSON.stringify({ kind, day, text }),
+  });
+  return raw ? mapCheckinRow(raw) : null;
+}
+
+/** 删自己的一条打卡；已经没了也算成功。 */
+export async function deleteCheckin(id: string): Promise<void> {
+  await velvetRequest<{ ok: boolean }>(`/api/social/checkins/${id}`, { method: 'DELETE' });
 }

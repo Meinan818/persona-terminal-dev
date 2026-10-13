@@ -65,7 +65,7 @@ try {
   await delay(1500);
   const evidence = await evaluate(`(async () => {
     const { db } = await import('/src/db/index.ts');
-    const { useAppStore, ALL_LOCAL_TABLES } = await import('/src/store/index.ts');
+    const { useAppStore, ALL_LOCAL_TABLES, toLocalDateKey } = await import('/src/store/index.ts');
     const auth = await import('/src/services/velvetApi.ts');
     const sync = await import('/src/services/sync.ts');
     const results = [];
@@ -135,6 +135,93 @@ try {
         check((await db.todoCompletions.where('todoId').equals(todo.id).count()) === 1, 'Duplicate completion');
         check((await db.activities.filter(a => a.description === '完成任务: 并发验证任务').count()) === 1, 'Duplicate reward');
         check((await db.attributes.get('knowledge')).points === before + 1, 'Duplicate points');
+        check(await useAppStore.getState().completeTodo(todo.id) === null, 'Repeat accepted');
+        await useAppStore.getState().undoTodayTodoCompletion(todo.id);
+        check((await db.attributes.get('knowledge')).points === before, 'Undo failed');
+        check(await db.todoCompletions.where('todoId').equals(todo.id).count() === 0, 'Undo left completion');
+      });
+      await useAppStore.getState().saveBattleState({ id: 'current', playerHp: 100, playerMaxHp: 100, sp: 0, totalSpEarned: 0, status: 'idle', shadowsDefeated: 0 });
+      for (const stage of ['completion', 'activity', 'attribute', 'SP', 'archive']) {
+        await verify('任务 ' + stage + ' 写失败整体回滚且重试成功', async () => {
+          const title = '故障验证-' + stage;
+          await useAppStore.getState().addTodo({ title, attribute: 'knowledge', points: 1, frequency: 'single', repeatDaily: false, isActive: true });
+          const todo = useAppStore.getState().todos.find(t => t.title === title);
+          const before = (await db.attributes.get('knowledge')).points;
+          const oldSp = (await db.battleStates.get('current')).sp;
+          const target = stage === 'completion' ? db.todoCompletions : stage === 'activity' ? db.activities : stage === 'attribute' ? db.attributes : stage === 'SP' ? db.battleStates : db.todos;
+          const hook = ['completion', 'activity'].includes(stage) ? 'creating' : 'updating';
+          const fail = () => { throw new Error('synthetic ' + stage + ' failure'); };
+          target.hook(hook, fail);
+          try { await rejects(() => useAppStore.getState().completeTodo(todo.id)); } finally { target.hook(hook).unsubscribe(fail); }
+          check(await db.todoCompletions.where('todoId').equals(todo.id).count() === 0, 'Half completion');
+          check(await db.activities.filter(a => a.description === '完成任务: ' + title).count() === 0, 'Partial reward');
+          check((await db.attributes.get('knowledge')).points === before, 'Partial attribute');
+          check(useAppStore.getState().attributes.find(a => a.id === 'knowledge').points === before, 'Partial memory attribute');
+          check((await db.battleStates.get('current')).sp === oldSp && useAppStore.getState().battleState.sp === oldSp, 'Partial SP');
+          check((await db.todos.get(todo.id)).isActive, 'Partial archive');
+          check(!!await useAppStore.getState().completeTodo(todo.id), 'Retry blocked');
+          check((await db.attributes.get('knowledge')).points === before + 1, 'Retry reward wrong');
+          check((await db.battleStates.get('current')).sp === oldSp + 1, 'Retry SP wrong');
+          check(!(await db.todos.get(todo.id)).isActive, 'Successful single task not archived');
+        });
+      }
+      await verify('命运加成两条奖励一起提交，失败可重试', async () => {
+        const title = '命运事务验证';
+        await useAppStore.getState().addTodo({ title, attribute: 'guts', points: 1, frequency: 'single', repeatDaily: true, isActive: true, fateDrawnDate: toLocalDateKey() });
+        const todo = useAppStore.getState().todos.find(t => t.title === title);
+        const before = (await db.attributes.get('guts')).points;
+        const oldSp = (await db.battleStates.get('current')).sp;
+        const failBonus = (_key, value) => { if (value.description === '命运加成: ' + title) throw new Error('synthetic bonus failure'); };
+        db.activities.hook('creating', failBonus);
+        try { await rejects(() => useAppStore.getState().completeTodo(todo.id)); } finally { db.activities.hook('creating').unsubscribe(failBonus); }
+        check(await db.todoCompletions.where('todoId').equals(todo.id).count() === 0, 'Bonus half completion');
+        check((await db.attributes.get('guts')).points === before && (await db.battleStates.get('current')).sp === oldSp, 'Bonus partial points');
+        await useAppStore.getState().completeTodo(todo.id);
+        check((await db.attributes.get('guts')).points === before + 2, 'Bonus formula changed');
+        check((await db.battleStates.get('current')).sp === oldSp + 2, 'Bonus SP lost');
+        check(await db.activities.filter(a => a.description === '命运加成: ' + title || a.description === '完成任务: ' + title).count() === 2, 'Bonus rows wrong');
+      });
+      await verify('计数任务并发到达目标只奖励一次', async () => {
+        const title = '计数验证';
+        await useAppStore.getState().addTodo({ title, attribute: 'charm', points: 1, frequency: 'count', targetCount: 2, repeatDaily: true, isActive: true });
+        const todo = useAppStore.getState().todos.find(t => t.title === title);
+        const before = (await db.attributes.get('charm')).points;
+        await Promise.all(Array.from({ length: 3 }, () => useAppStore.getState().completeTodo(todo.id)));
+        const completions = await db.todoCompletions.where('todoId').equals(todo.id).toArray();
+        check(completions.length === 1 && completions[0].count === 2, 'Count contract changed');
+        check((await db.attributes.get('charm')).points === before + 1, 'Count duplicate reward');
+      });
+      await verify('每日任务跨日沿用每天一次的规则', async () => {
+        const title = '跨日验证';
+        await useAppStore.getState().addTodo({ title, attribute: 'guts', points: 1, frequency: 'daily', repeatDaily: true, isActive: true });
+        const todo = useAppStore.getState().todos.find(t => t.title === title);
+        await useAppStore.getState().completeTodo(todo.id);
+        const OriginalDate = Date;
+        const tomorrow = new OriginalDate(); tomorrow.setDate(tomorrow.getDate() + 1);
+        globalThis.Date = class extends OriginalDate {
+          constructor(...args) { super(...(args.length ? args : [tomorrow.getTime()])); }
+          static now() { return tomorrow.getTime(); }
+        };
+        try { check(!!await useAppStore.getState().completeTodo(todo.id), 'Next day blocked'); }
+        finally { globalThis.Date = OriginalDate; }
+        check(await db.todoCompletions.where('todoId').equals(todo.id).count() === 2, 'Daily completion rows wrong');
+      });
+      await verify('独立页面共享 IndexedDB 时同一任务只奖励一次', async () => {
+        const frame = document.createElement('iframe'); frame.src = '/'; document.body.append(frame);
+        await new Promise(resolve => { frame.onload = resolve; });
+        try {
+          frame.contentWindow.fetch = globalThis.fetch;
+          const second = await frame.contentWindow.eval('import("/src/store/index.ts")');
+          await second.useAppStore.getState().initializeApp();
+          second.useAppStore.setState({ syncNotifications: async () => {} });
+          const title = '跨页面验证';
+          await useAppStore.getState().addTodo({ title, attribute: 'dexterity', points: 1, frequency: 'single', repeatDaily: true, isActive: true });
+          const todo = useAppStore.getState().todos.find(t => t.title === title);
+          const before = (await db.attributes.get('dexterity')).points;
+          await Promise.all([useAppStore.getState().completeTodo(todo.id), second.useAppStore.getState().completeTodo(todo.id)]);
+          check(await db.todoCompletions.where('todoId').equals(todo.id).count() === 1, 'Cross-page completion duplicated');
+          check((await db.attributes.get('dexterity')).points === before + 1, 'Cross-page reward duplicated');
+        } finally { frame.remove(); }
       });
     }
     await verify('清空清单覆盖全部本地表且导入保留裁图', async () => {
@@ -159,6 +246,31 @@ try {
     auth.clearAuth(); globalThis.fetch = originalFetch;
     return { passed: results.length, results, persistence: 'real Chrome IndexedDB', services: 'synthetic HTTP; no external service calls' };
   })()`);
+  await evaluate(`(async () => {
+    const { useAppStore } = await import('/src/store/index.ts');
+    await useAppStore.getState().createUser('隔离验收角色');
+    await useAppStore.getState().addTodo({ title: '本地任务验收', attribute: 'knowledge', points: 1, frequency: 'daily', repeatDaily: true, isActive: true });
+    useAppStore.getState().setActionsSubTab('todos');
+    useAppStore.getState().setCurrentPage('actions');
+  })()`);
+  let ready = false;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    ready = await evaluate(`document.body.innerText.includes('本地任务验收')`);
+    if (ready) break;
+    await delay(200);
+  }
+  assert.ok(ready, 'Action task page did not become visible after splash');
+  evidence.pages = [];
+  for (const width of [390, 1280]) {
+    await send('Emulation.setDeviceMetricsOverride', { width, height: width === 390 ? 844 : 900, deviceScaleFactor: 1, mobile: width === 390 });
+    await delay(800);
+    const page = await evaluate(`({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth, rootChildren: document.querySelector('#root')?.childElementCount, taskVisible: document.body.innerText.includes('本地任务验收') })`);
+    assert.ok(page.taskVisible && page.rootChildren > 0 && page.scrollWidth <= page.width, 'Action page failed width check');
+    const shot = await send('Page.captureScreenshot', { format: 'png' });
+    const screenshot = path.join(work, `actions-${width}.png`);
+    await writeFile(screenshot, Buffer.from(shot.data, 'base64'));
+    evidence.pages.push({ ...page, screenshot });
+  }
   await writeFile(path.join(work, 'evidence.json'), JSON.stringify(evidence, null, 2));
   console.log(JSON.stringify({ ...evidence, artifact: path.join(work, 'evidence.json') }, null, 2));
 } finally {

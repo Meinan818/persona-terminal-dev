@@ -86,6 +86,17 @@ export interface ImportDataResult {
   orphanImages: { count: number; bytes: number };
 }
 
+interface ActivityOptions {
+  important?: boolean;
+  date?: Date;
+  category?: Activity['category'];
+  bigDealId?: string;
+  wishId?: string;
+  skipLoad?: boolean;
+  /** 外层事务调用时，刷新与通知交由调用方在成功提交后执行。 */
+  deferCommitEffects?: (effect: () => Promise<void>) => void;
+}
+
 /**
  * addConfidant 串行锁：防止两次并发调用绕过"22 arcana 唯一 / 在线同伴唯一"检查。
  * 实现方式：每次调用等待上一次 resolve 后再跑，失败也照常 unlock。
@@ -278,7 +289,7 @@ interface AppState {
   updateUser: (patch: Partial<Pick<User, 'name' | 'avatarDataUrl'>>) => Promise<void>;
   setTheme: (theme: ThemeType) => Promise<void>;
   /** skipLoad：调用方紧接着还要再记一条时，把内存刷新留给后一条（少跑一整轮 loadData） */
-  addActivity: (description: string, points: Record<string, number>, method: 'local' | 'todo' | 'battle', options?: { important?: boolean; date?: Date; category?: Activity['category']; bigDealId?: string; wishId?: string; skipLoad?: boolean }) => Promise<{ unlockHints: { achievements: number; skills: number }; activityId: string }>;
+  addActivity: (description: string, points: Record<string, number>, method: 'local' | 'todo' | 'battle', options?: ActivityOptions) => Promise<{ unlockHints: { achievements: number; skills: number }; activityId: string }>;
   updateAttribute: (attributeId: string, points: number) => Promise<void>;
   unlockAchievement: (achievementId: string) => Promise<void>;
   unlockSkill: (skillId: string) => Promise<void>;
@@ -1202,7 +1213,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  addActivity: async (description: string, points: Record<string, number>, method: 'local' | 'todo' | 'battle', options?: { important?: boolean; date?: Date; category?: Activity['category']; bigDealId?: string; wishId?: string; skipLoad?: boolean }) => {
+  addActivity: async (description: string, points: Record<string, number>, method: 'local' | 'todo' | 'battle', options?: ActivityOptions) => {
     const { user, dailyDivination, settings } = get();
     if (!user) return { unlockHints: { achievements: 0, skills: 0 }, activityId: '' };
 
@@ -1212,6 +1223,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const masteryUps: Array<{ attribute: AttributeId; stars: number }> = [];
     const difficulty = resolveLevelDifficulty(settings);
     const levelUpActivities: Activity[] = [];
+    const notificationsAfterCommit: Array<() => void> = [];
+    let rewardedBattleId: string | undefined;
     const activityDate = options?.date || new Date();
 
     // ── 前置纯计算：塔罗 / 技能 / 面具加成（只读，不写 DB）─────────────
@@ -1287,7 +1300,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     let attributesSnapshot: Attribute[] = [];
     await db.transaction(
       'rw',
-      [db.confidants, db.achievements, db.attributes, db.activities, db.todoCompletions, db.skills, db.weeklyGoals],
+      [db.confidants, db.achievements, db.attributes, db.activities, db.todoCompletions, db.skills, db.weeklyGoals,
+        ...(options?.deferCommitEffects ? [db.battleStates] : [])],
       async () => {
         // 同伴「日常加成」——每个同伴当日首次生效，乘区外 flat +N
         const todayKey = toLocalDateKey(activityDate);
@@ -1338,9 +1352,9 @@ export const useAppStore = create<AppState>((set, get) => ({
                 method: 'local' as const,
                 category: 'level_up',
               });
-              // 首次升级通知：setTimeout 500ms 后触发（事务早已提交，无副作用）
+              // 首次升级通知：成功提交后沿用 500ms 延迟，回滚不产生升级提示。
               if (levelUps.length === 1) {
-                setTimeout(() => {
+                notificationsAfterCommit.push(() => setTimeout(() => {
                   set({
                     levelUpNotification: {
                       id: attrId,
@@ -1348,7 +1362,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                       level: newLevel,
                     },
                   });
-                }, 500);
+                }, 500));
               }
             }
             await db.attributes.update(attrId, { points: newPoints, level: newLevel });
@@ -1370,7 +1384,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (levelUps.length === 0 && masteryUps.length > 0) {
           const m = masteryUps[0];
           const maxLevel = thresholdsOf(get().settings).length || 10;
-          setTimeout(() => {
+          notificationsAfterCommit.push(() => setTimeout(() => {
             set({
               levelUpNotification: {
                 id: m.attribute,
@@ -1379,7 +1393,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 masteryStars: m.stars,
               },
             });
-          }, 500);
+          }, 500));
         }
 
         // 活动写入（包含刚计算好的 levelUps）
@@ -1481,36 +1495,56 @@ export const useAppStore = create<AppState>((set, get) => ({
           const attr = attributes.find(a => a.id === skill.requiredAttribute);
           return !!attr && attr.level >= skill.requiredLevel;
         });
+        const battle = get().battleState;
+        if (options?.deferCommitEffects && battle) {
+          const totalPts = Object.values(adjustedPoints).reduce((sum, value) => sum + (value || 0), 0);
+          if (totalPts > 0) {
+            const current = await db.battleStates.get(battle.id);
+            if (!current) throw new Error('战场奖励数据缺失，请重试');
+            const earned = Math.round(totalPts);
+            await db.battleStates.put({ ...current, sp: current.sp + earned, totalSpEarned: current.totalSpEarned + earned });
+            rewardedBattleId = current.id;
+          }
+        }
       },
     );
     // 引用快照以免 TS 判定为未使用（保留语义，便于未来扩展）
     void achievementsSnapshot; void attributesSnapshot;
 
-    // 事务已提交：一次性刷新所有内存状态（含 confidants）。skipLoad：调用方紧接着还要再记一条（命运加成），由那条统一刷新
-    if (!options?.skipLoad) await get().loadData();
+    const afterCommit = async () => {
+      notificationsAfterCommit.forEach(notify => notify());
+      // 外层事务成功提交后才刷新、通知；失败不会把临时奖励发布到内存。
+      if (!options?.skipLoad) await get().loadData();
 
-    // 岁时印章（第 6 轮）：当天是节气 / 节日、且这条是当下记的用户记录 → 收进岁时册（只打开 App 不算，用户口径）
-    if (isTodayUserRecord) {
-      try {
-        const mark = seasonMarkOf(toLocalDateKey(activityDate));
-        if (mark && !(await db.stamps.get(mark.key))) {
-          await db.stamps.put({ id: mark.key, kind: mark.kind, name: mark.name, date: mark.date, year: Number(mark.date.slice(0, 4)), collectedAt: new Date().toISOString() });
-        }
-      } catch { /* 印章收不进不影响记录本身 */ }
-    }
+      // 岁时印章（第 6 轮）：当天是节气 / 节日、且这条是当下记的用户记录 → 收进岁时册（只打开 App 不算，用户口径）
+      if (isTodayUserRecord) {
+        try {
+          const mark = seasonMarkOf(toLocalDateKey(activityDate));
+          if (mark && !(await db.stamps.get(mark.key))) {
+            await db.stamps.put({ id: mark.key, kind: mark.kind, name: mark.name, date: mark.date, year: Number(mark.date.slice(0, 4)), collectedAt: new Date().toISOString() });
+          }
+        } catch { /* 印章收不进不影响记录本身 */ }
+      }
 
-    // 为战场 SP 奖励：活动获得的总点数即为 SP
-    const totalPts = Object.values(adjustedPoints).reduce((s, v) => s + (v || 0), 0);
-    if (totalPts > 0 && get().battleState) {
-      await get().earnSP(totalPts);
-    }
+      // 为战场 SP 奖励：活动获得的总点数即为 SP
+      const totalPts = Object.values(adjustedPoints).reduce((s, v) => s + (v || 0), 0);
+      if (!options?.deferCommitEffects && totalPts > 0 && get().battleState) {
+        await get().earnSP(totalPts);
+      }
+      if (rewardedBattleId) {
+        const latest = await db.battleStates.get(rewardedBattleId);
+        if (latest) set({ battleState: latest });
+      }
 
-    void get().syncNotifications(); // 已记录 → 重排，撤掉「提醒记录」提醒
+      void get().syncNotifications(); // 已记录 → 重排，撤掉「提醒记录」提醒
 
-    // 挂了愿望的记录 → 泵一次进度（PRD_V2.6 §8「每次任务完成都会评估涨了多少」）。
-    // 不 await：AI 评估要几秒，不能让"记一笔"卡在那里等；结果到了自己弹窗。
-    // 愿望已实现时写的那条纪念记录也带 wishId，但那时 status 已是 'done'，泵内自会挡掉。
-    if (options?.wishId) void get().bumpWishProgress(options.wishId);
+      // 挂了愿望的记录 → 泵一次进度（PRD_V2.6 §8「每次任务完成都会评估涨了多少」）。
+      // 不 await：AI 评估要几秒，不能让"记一笔"卡在那里等；结果到了自己弹窗。
+      // 愿望已实现时写的那条纪念记录也带 wishId，但那时 status 已是 'done'，泵内自会挡掉。
+      if (options?.wishId) void get().bumpWishProgress(options.wishId);
+    };
+    if (options?.deferCommitEffects) options.deferCommitEffects(afterCommit);
+    else await afterCommit();
 
     return {
       unlockHints: {
@@ -3706,65 +3740,55 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   completeTodo: async (todoId) => {
-    const { user, todos } = get();
+    const { user } = get();
     if (!user) return null;
+    const afterCommit: Array<() => Promise<void>> = [];
+    const deferCommitEffects = (effect: () => Promise<void>) => { afterCommit.push(effect); };
+    // IndexedDB 写事务同时承担判重与提交，跨标签页也不依赖内存锁。
+    const outcome = await db.transaction('rw', [db.todos, db.todoCompletions, db.confidants,
+      db.achievements, db.attributes, db.activities, db.skills, db.weeklyGoals, db.battleStates], async () => {
+      if (get().user?.id !== user.id) throw new Error('角色已变化，本次任务完成已停止');
+      const todo = await db.todos.get(todoId);
+      if (!todo || !todo.isActive || todo.isBigDeal) return null;
+      const today = toLocalDateKey();
+      const completion = await db.todoCompletions.where('todoId').equals(todoId).filter(c => c.date === today).first();
+      const target = todo.frequency === 'count' ? (todo.targetCount || 1) : 1;
+      if (completion && completion.count >= target) return null;
+      const newCount = completion ? completion.count + 1 : 1;
+      if (completion) await db.todoCompletions.update(completion.id, { count: newCount });
+      else await db.todoCompletions.add({ id: uuidv4(), todoId, date: today, count: newCount });
+      if (newCount < target) return { todo, today, result: null };
 
-    const todo = todos.find(t => t.id === todoId);
-    if (!todo || !todo.isActive) return null;
-    if (todo.isBigDeal) return null; // 大事只能逐子步完成（completeTodoStep），整单完成路径拦死
-
-    const today = toLocalDateKey();
-    const completion = await db.todoCompletions.where('todoId').equals(todoId).filter(c => c.date === today).first();
-    const target = todo.frequency === 'count' ? (todo.targetCount || 1) : 1;
-
-    if (completion && completion.count >= target) return null;
-
-    const newCount = completion ? completion.count + 1 : 1;
-    if (completion) {
-      await db.todoCompletions.update(completion.id, { count: newCount });
-    } else {
-      await db.todoCompletions.add({
-        id: uuidv4(),
-        todoId,
-        date: today,
-        count: newCount
-      });
-    }
-
-    const reachedTarget = newCount >= target;
-    if (reachedTarget) {
-      const points = {
-        knowledge: 0,
-        guts: 0,
-        dexterity: 0,
-        kindness: 0,
-        charm: 0
-      } as Record<string, number>;
+      const points: Record<string, number> = { knowledge: 0, guts: 0, dexterity: 0, kindness: 0, charm: 0 };
       points[todo.attribute] = todo.points;
-      // 合并多属性额外加成
-      if (todo.extraBoosts) {
-        for (const boost of todo.extraBoosts) {
-          points[boost.attribute] = (points[boost.attribute] || 0) + boost.points;
-        }
+      for (const boost of todo.extraBoosts ?? []) {
+        points[boost.attribute] = (points[boost.attribute] || 0) + boost.points;
       }
-      // 待办挂了愿望 → 完成它产生的活动带上同一个 wishId，愿望进度才数得到（V2.6 §1.3）
-      const fateBonus = todo.fateDrawnDate === today;
-      // 命运加成会紧接着再记一条：两条只在第二条之后刷新一次内存（第 4 轮，以前跑两整轮 loadData）
-      const result = await get().addActivity(`完成任务: ${todo.title}`, points, 'todo', { important: !!todo.important, wishId: todo.wishId, skipLoad: fateBonus });
-      // 命运加成（TASKS_MERGE_PRD §4.2）：当日抽中并完成 → 主属性额外 +1。
-      // 独立小记录而非改主记录描述——undoTodayTodoCompletion/deleteActivity 都按
-      // 「完成任务: {title}」逐字匹配，动模板会断撤销链；单删本记录也能正确回档
-      if (fateBonus) {
-        const bonus = { knowledge: 0, guts: 0, dexterity: 0, kindness: 0, charm: 0 } as Record<string, number>;
+      const result = await get().addActivity(`完成任务: ${todo.title}`, points, 'todo', {
+        important: !!todo.important, wishId: todo.wishId, skipLoad: true, deferCommitEffects,
+      });
+      // 保留两条活动的既有描述及奖励公式，撤销依赖这个契约。
+      if (todo.fateDrawnDate === today) {
+        const bonus: Record<string, number> = { knowledge: 0, guts: 0, dexterity: 0, kindness: 0, charm: 0 };
         bonus[todo.attribute] = 1;
-        await get().addActivity(`命运加成: ${todo.title}`, bonus, 'todo');
+        await get().addActivity(`命运加成: ${todo.title}`, bonus, 'todo', { skipLoad: true, deferCommitEffects });
       }
       await get().checkTodoCompletionAchievements({ skipLoad: true });
-
       if (!todo.repeatDaily && !todo.isLongTerm) {
         await db.todos.update(todo.id, { archivedAt: new Date(), completedAt: new Date(), isActive: false });
       }
-
+      if (get().user?.id !== user.id) throw new Error('角色已变化，本次任务完成已停止');
+      return { todo, today, result };
+    });
+    if (!outcome) return null;
+    if (get().user?.id !== user.id) return outcome.result;
+    for (const effect of afterCommit) {
+      if (get().user?.id !== user.id) return outcome.result;
+      await effect();
+    }
+    await get().loadData();
+    const { todo, today, result } = outcome;
+    if (result) {
       // ✦ 倒计时联动：完成 todo 后扫一遍宣告卡，若关联的全部完成会自动归档；
       //   归档后 cutInShown=false，App.tsx 顶层会立即弹出"宣告 · 达成"结算屏，
       //   不需要等用户回到 Dashboard。
@@ -3787,10 +3811,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       void get().syncNotifications(); // 待办完成 → 重排，撤掉已完成的「今日待办」提醒
       return result;
-    } else {
-      await get().loadData();
-      return null;
     }
+    return null;
   },
 
   undoTodayTodoCompletion: async (todoId: string) => {

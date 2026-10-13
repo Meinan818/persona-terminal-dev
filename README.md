@@ -178,8 +178,9 @@ npm run cap:sync           # 把前端产物同步进 Android 工程
 npm run cap:build:android  # 打包
 ```
 
-> **音效素材不在仓库里**：`public/` 下需要自备若干 UI 反馈音（文件名见
-> `src/utils/feedback.ts` 与各处 `playSound()` 调用）。缺失时音效静默，不影响其它功能。
+> **音效与部分场景图不随本仓库分发**：`public/` 下需自备若干 UI 反馈音与黄频道实景图
+> （文件名见 `src/utils/feedback.ts`、各处 `playSound()` 调用与 `public/assets/terminal/`）。
+> 缺失时会静默降级——音效不响、背景留白，不影响其它功能。
 
 ---
 

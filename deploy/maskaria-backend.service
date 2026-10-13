@@ -1,0 +1,25 @@
+# MASKARIA 后端 systemd 单元（模板）
+# 用法：复制到 /etc/systemd/system/maskaria-backend.service，改 User 与路径，然后
+#   sudo systemctl daemon-reload && sudo systemctl enable --now maskaria-backend
+[Unit]
+Description=MASKARIA backend (Spring Boot)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+# 建议建专用系统用户：sudo useradd --system --home /opt/maskaria --shell /usr/sbin/nologin maskaria
+User=maskaria
+WorkingDirectory=/opt/maskaria/backend
+# 密钥只放在这个文件里，权限 600、属主 maskaria
+EnvironmentFile=/etc/maskaria/backend.env
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar /opt/maskaria/backend/app.jar
+Restart=on-failure
+RestartSec=5
+# systemctl stop 发的 SIGTERM 不算失败
+SuccessExitStatus=143
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

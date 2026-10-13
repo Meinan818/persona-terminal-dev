@@ -555,6 +555,14 @@ const sinceIso = (days: number) => new Date(Date.now() - days * 86400000).toISOS
 
 /** 最近 30 天、最多 100 条动态（新的在前）+ 这些动态上的标签 */
 export async function listOrgBoard(orgId: string): Promise<{ posts: OrgPost[]; reactions: OrgReaction[] }> {
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.board(orgId);
+    } catch (err) {
+      console.warn('[velvet-org] listOrgBoard (backend) failed', err);
+      return { posts: [], reactions: [] };
+    }
+  }
   const since = sinceIso(ORG_BOARD_DAYS);
   const [posts, reactions] = await Promise.all([
     pb!.collection('org_posts').getList(1, ORG_BOARD_LIMIT, { filter: `org = ${pbQuote(orgId)} && created >= ${pbQuote(since)}`, sort: '-created', requestKey: null }),
@@ -565,10 +573,17 @@ export async function listOrgBoard(orgId: string): Promise<{ posts: OrgPost[]; r
 
 /** 分享一条动态（一句话过屏蔽词；快照不含记录原文） */
 export async function createMoment(orgId: string, text: string, snapshot: OrgPostSnapshot): Promise<OrgPost> {
-  const me = requireMe();
   const t = clip(text, ORG_POST_TEXT_MAX);
   if (!t) throw new OrgError('写一句话再分享');
   assertClean(t);
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.createMoment(orgId, t, cleanSnapshotNames(snapshot));
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没分享出去，稍后再试'));
+    }
+  }
+  const me = requireMe();
   try {
     return mapPost(await pb!.collection('org_posts').create({ org: orgId, user: me, kind: 'moment', text: t, snapshot: cleanSnapshotNames(snapshot), week_key: '' }, { requestKey: null }));
   } catch (err) {
@@ -581,6 +596,14 @@ export async function createMoment(orgId: string, text: string, snapshot: OrgPos
  * 两台设备同时贴会撞 (post, user) 唯一索引——撞了就读出已有那条，改成这次选的。
  */
 export async function setReaction(orgId: string, postId: string, tag: OrgReactionTag, existing: OrgReaction | undefined): Promise<OrgReaction | null> {
+  // 自研后端：撤/换/贴收敛到服务端（唯一键冲突由后端读回处理）（W3 第五波 第二步）
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.setReaction(orgId, postId, tag);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没贴上，稍后再试'));
+    }
+  }
   const me = requireMe();
   try {
     if (existing && existing.tag === tag) {
@@ -603,6 +626,14 @@ export async function setReaction(orgId: string, postId: string, tag: OrgReactio
 
 /** 删动态（自己的，或队长删任何一条）；标签跟着级联删 */
 export async function deletePost(postId: string): Promise<void> {
+  if (velvetApi.isAuthenticated()) {
+    try {
+      await orgsApi.deletePost(postId);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没删掉，稍后再试'));
+    }
+    return;
+  }
   requireMe();
   try {
     await pb!.collection('org_posts').delete(postId, { requestKey: null });
@@ -616,6 +647,14 @@ export type OrgReportReason = 'harass' | 'inappropriate' | 'ads' | 'other';
 
 /** 举报一条动态：带原话副本（动态被删了你在后台也看得到原话）；同一条举报过就算了 */
 export async function reportPost(post: OrgPost, reason: OrgReportReason): Promise<void> {
+  if (velvetApi.isAuthenticated()) {
+    try {
+      await orgsApi.report({ postId: post.id, orgId: post.orgId, targetUserId: post.userId, reason, textCopy: [...post.text].slice(0, 60).join('') });
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '举报没发出去，稍后再试'));
+    }
+    return;
+  }
   const me = requireMe();
   try {
     await pb!.collection('org_reports').create({
@@ -630,6 +669,9 @@ export async function reportPost(post: OrgPost, reason: OrgReportReason): Promis
 
 /** 发纪要：确定 id，两台设备同时发只会留一份——撞了（id 已存在）返回 null，调用方重新拉一次 */
 export async function createMinutes(orgId: string, minutes: OrgMinutesSnapshot): Promise<OrgPost | null> {
+  if (velvetApi.isAuthenticated()) {
+    return orgsApi.createMinutes(orgId, minutesId(orgId, minutes.week), minutes.week, minutes);
+  }
   const me = requireMe();
   try {
     return mapPost(await pb!.collection('org_posts').create({
@@ -643,10 +685,15 @@ export async function createMinutes(orgId: string, minutes: OrgMinutesSnapshot):
 
 /** 周日会议：自评（这周立过目标才有）+ 下周目标，只写自己那一行 */
 export async function saveMeeting(memberId: string, input: { week: string; result?: 'done' | 'partial' | 'missed'; goal: string; nextWeek: string }): Promise<OrgMember> {
-  requireMe();
   const goal = clip(input.goal, ORG_GOAL_MAX);
   if (!goal) throw new OrgError('写一句下周目标');
   assertClean(goal);
+  if (velvetApi.isAuthenticated()) {
+    const patch: MemberPatch = { goal, goalWeek: input.nextWeek };
+    if (input.result) { patch.result = input.result; patch.resultWeek = input.week; }
+    return updateMyMember(memberId, patch);
+  }
+  requireMe();
   const body: Record<string, unknown> = { goal, goal_week: input.nextWeek };
   if (input.result) { body.result = input.result; body.result_week = input.week; }
   try {
@@ -658,6 +705,14 @@ export async function saveMeeting(memberId: string, input: { week: string; resul
 
 /** 删掉某人在这个组织的动态和标签（退出时删自己的；请离时队长顺手删对方的）；尽力而为，失败只记日志 */
 export async function deleteUserContent(orgId: string, userId: string): Promise<void> {
+  if (velvetApi.isAuthenticated()) {
+    try {
+      await orgsApi.purgeUser(orgId, userId);
+    } catch (err) {
+      console.warn('[velvet-org] deleteUserContent (backend) failed', orgId, userId, err);
+    }
+    return;
+  }
   try {
     const [posts, reactions] = await Promise.all([
       pb!.collection('org_posts').getFullList({ filter: `org = ${pbQuote(orgId)} && user = ${pbQuote(userId)} && kind = "moment"`, requestKey: null }),
@@ -725,6 +780,7 @@ export async function listOrgOps(orgId: string): Promise<{ ops: OrgOperation[]; 
 
 /** 据点经验的来源：这个组织全部的纪要和作战达成卡（不限 30 天；每周几条，很小） */
 export async function listOrgLedger(orgId: string): Promise<OrgPost[]> {
+  if (velvetApi.isAuthenticated()) return orgsApi.ledger(orgId);
   const rows = await pb!.collection('org_posts').getFullList({
     filter: `org = ${pbQuote(orgId)} && (kind = "minutes" || kind = "operation")`,
     fields: 'id,org,user,kind,snapshot,week_key,created',
@@ -796,6 +852,7 @@ export async function deleteCheckin(id: string): Promise<void> {
 
 /** 发作战达成卡：确定 id，两台设备同时发只会留一份——撞了返回 null（调用方重新拉一次） */
 export async function createOpCard(orgId: string, cardId: string, card: OrgOpCardSnapshot): Promise<OrgPost | null> {
+  if (velvetApi.isAuthenticated()) return orgsApi.createOpCard(orgId, cardId, card.week ?? '', card);
   const me = requireMe();
   try {
     return mapPost(await pb!.collection('org_posts').create({ id: cardId, org: orgId, user: me, kind: 'operation', text: '', snapshot: card, week_key: card.week }, { requestKey: null }));

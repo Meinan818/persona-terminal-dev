@@ -12,6 +12,7 @@
 import { velvetRequest } from './velvetApi';
 import type {
   Org, OrgCustom, OrgMember, OrgMemberCard, OrgCodenameKind,
+  OrgPost, OrgReaction, OrgReactionTag, OrgPostSnapshot, OrgMinutesSnapshot, OrgOpCardSnapshot,
 } from '@/types';
 
 /** 后端成员视图 → 前端 OrgMember */
@@ -260,4 +261,132 @@ export async function dissolve(orgId: string): Promise<void> {
     () => velvetRequest<{ ok: boolean }>(`/api/social/orgs/${orgId}`, { method: 'DELETE' }),
     '没能解散，稍后再试',
   );
+}
+
+// ── 公告板（W3 第五波 第二步）────────────────────────────
+
+interface RawPost {
+  id: string;
+  orgId: string;
+  userId: string;
+  kind: string;
+  text: string;
+  snapshot?: unknown;
+  weekKey?: string | null;
+  createdAt: string;
+}
+
+interface RawReaction {
+  id: string;
+  postId: string;
+  orgId: string;
+  userId: string;
+  tag: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function mapPostRow(r: RawPost): OrgPost {
+  const kind = r.kind === 'minutes' ? 'minutes' : r.kind === 'operation' ? 'operation' : 'moment';
+  return {
+    id: r.id,
+    orgId: r.orgId || '',
+    userId: r.userId || '',
+    kind,
+    text: r.text || '',
+    snapshot: kind === 'moment' ? (r.snapshot as OrgPost['snapshot']) ?? null : null,
+    minutes: kind === 'minutes' ? (r.snapshot as OrgPost['minutes']) ?? null : null,
+    ...(kind === 'operation' ? { opCard: (r.snapshot as OrgPost['opCard']) ?? null } : {}),
+    weekKey: r.weekKey || undefined,
+    createdAt: new Date(r.createdAt),
+  };
+}
+
+function mapReactionRow(r: RawReaction): OrgReaction {
+  return {
+    id: r.id,
+    postId: r.postId || '',
+    orgId: r.orgId || '',
+    userId: r.userId || '',
+    tag: (r.tag as OrgReaction['tag']) || 'strong',
+    createdAt: new Date(r.createdAt),
+    updatedAt: new Date(r.updatedAt || r.createdAt),
+  };
+}
+
+/** 最近 30 天最多 100 条动态 + 标签。 */
+export async function board(orgId: string): Promise<{ posts: OrgPost[]; reactions: OrgReaction[] }> {
+  const res = await velvetRequest<{ posts: RawPost[]; reactions: RawReaction[] }>(`/api/social/orgs/${orgId}/board`);
+  return {
+    posts: (res.posts ?? []).map(mapPostRow),
+    reactions: (res.reactions ?? []).map(mapReactionRow),
+  };
+}
+
+/** 全部纪要 + 达成卡（不限 30 天）。 */
+export async function ledger(orgId: string): Promise<OrgPost[]> {
+  const res = await velvetRequest<{ items: RawPost[] }>(`/api/social/orgs/${orgId}/ledger`);
+  return (res.items ?? []).map(mapPostRow);
+}
+
+/** 发动态。 */
+export async function createMoment(orgId: string, text: string, snapshot: OrgPostSnapshot): Promise<OrgPost> {
+  return guard(
+    async () => mapPostRow(await velvetRequest<RawPost>(`/api/social/orgs/${orgId}/moments`, {
+      method: 'POST',
+      body: JSON.stringify({ text, snapshot }),
+    })),
+    '没分享出去，稍后再试',
+  );
+}
+
+/** 贴/换/撤标签。撤 → null。 */
+export async function setReaction(orgId: string, postId: string, tag: OrgReactionTag): Promise<OrgReaction | null> {
+  const raw = await guard(
+    () => velvetRequest<RawReaction | null>(`/api/social/orgs/${orgId}/reactions`, {
+      method: 'POST',
+      body: JSON.stringify({ postId, tag }),
+    }),
+    '没贴上，稍后再试',
+  );
+  return raw ? mapReactionRow(raw) : null;
+}
+
+/** 删动态（自己的，或队长删任何一条）。 */
+export async function deletePost(postId: string): Promise<void> {
+  await guard(
+    () => velvetRequest<{ ok: boolean }>(`/api/social/posts/${postId}`, { method: 'DELETE' }),
+    '没删掉，稍后再试',
+  );
+}
+
+/** 举报一条动态。 */
+export async function report(input: { postId: string; orgId: string; targetUserId: string; reason: string; textCopy: string }): Promise<void> {
+  await guard(
+    () => velvetRequest<{ ok: boolean }>('/api/social/orgs/reports', { method: 'POST', body: JSON.stringify(input) }),
+    '举报没发出去，稍后再试',
+  );
+}
+
+/** 发会议纪要（id 由前端确定）；撞了返回 null。 */
+export async function createMinutes(orgId: string, id: string, weekKey: string, snapshot: OrgMinutesSnapshot): Promise<OrgPost | null> {
+  const raw = await velvetRequest<RawPost | null>(`/api/social/orgs/${orgId}/minutes`, {
+    method: 'POST',
+    body: JSON.stringify({ id, weekKey, snapshot }),
+  });
+  return raw ? mapPostRow(raw) : null;
+}
+
+/** 发作战达成卡（id 由前端确定）；撞了返回 null。 */
+export async function createOpCard(orgId: string, id: string, weekKey: string, snapshot: OrgOpCardSnapshot): Promise<OrgPost | null> {
+  const raw = await velvetRequest<RawPost | null>(`/api/social/orgs/${orgId}/opcards`, {
+    method: 'POST',
+    body: JSON.stringify({ id, weekKey, snapshot }),
+  });
+  return raw ? mapPostRow(raw) : null;
+}
+
+/** 删掉某人在这个组织的动态和标签。 */
+export async function purgeUser(orgId: string, userId: string): Promise<void> {
+  await velvetRequest<{ ok: boolean }>(`/api/social/orgs/${orgId}/purge/${userId}`, { method: 'POST', body: JSON.stringify({}) });
 }

@@ -25,6 +25,16 @@ const h = vi.hoisted(() => {
     kick: vi.fn(),
     transfer: vi.fn(),
     dissolve: vi.fn(),
+    // 公告板（第五波 第二步）
+    board: vi.fn(),
+    ledger: vi.fn(),
+    createMoment: vi.fn(),
+    setReaction: vi.fn(),
+    deletePost: vi.fn(),
+    report: vi.fn(),
+    createMinutes: vi.fn(),
+    createOpCard: vi.fn(),
+    purgeUser: vi.fn(),
   };
   const pb = {
     authStore: { isValid: false, token: '', record: null },
@@ -50,6 +60,8 @@ import {
   listMyMemberships, listOrgMembers, fetchOrg, previewOrg,
   createOrg, joinOrg, updateOrgProfile, updateOrgCustom, rotateInviteCode,
   updateMyMember, setMySlot, leaveOrg, kickMember, transferLeader, dissolveOrg,
+  listOrgBoard, createMoment, setReaction, deletePost, reportPost,
+  createMinutes, listOrgLedger, deleteUserContent,
 } from '../orgs';
 
 const ORG = {
@@ -203,5 +215,86 @@ describe('orgs.ts 分流：自研登录态 → 走 orgsApi', () => {
     // orgsApi 内部已把 VelvetApiError 翻成人话文案；orgs.ts 分流层只负责透传
     h.api.join.mockRejectedValue(new Error('这个组织已经满 7 人了'));
     await expect(joinOrg('ABCD2345', 'n', [])).rejects.toThrow('这个组织已经满 7 人了');
+  });
+});
+
+describe('orgs.ts 公告板分流：自研登录态 → 走 orgsApi', () => {
+  const POST = {
+    id: 'post-1', orgId: 'org-1', userId: 'user-me', kind: 'moment' as const,
+    text: '分享一条', snapshot: null, minutes: null, createdAt: new Date(),
+  };
+  const REACTION = {
+    id: 'react-1', postId: 'post-1', orgId: 'org-1', userId: 'user-me',
+    tag: 'strong' as const, createdAt: new Date(), updatedAt: new Date(),
+  };
+
+  it('listOrgBoard 走 orgsApi（posts + reactions）', async () => {
+    h.api.board.mockResolvedValue({ posts: [POST], reactions: [REACTION] });
+    const got = await listOrgBoard('org-1');
+    expect(h.api.board).toHaveBeenCalledWith('org-1');
+    expect(got.posts).toHaveLength(1);
+    expect(got.reactions).toHaveLength(1);
+  });
+
+  it('createMoment 走 orgsApi', async () => {
+    h.api.createMoment.mockResolvedValue(POST);
+    const snap = { v: 1 as const, date: '2026-10-13', pts: {}, names: {}, by: { codename: '谁' } };
+    const got = await createMoment('org-1', '分享一条', snap);
+    expect(h.api.createMoment).toHaveBeenCalledWith('org-1', '分享一条', snap);
+    expect(got.id).toBe('post-1');
+  });
+
+  it('createMoment 空文本提前抛（不触后端）', async () => {
+    await expect(createMoment('org-1', '   ', { v: 1, date: 'x', pts: {}, names: {}, by: { codename: 'w' } }))
+      .rejects.toThrow('写一句话再分享');
+    expect(h.api.createMoment).not.toHaveBeenCalled();
+  });
+
+  it('setReaction 走 orgsApi；撤（null）透传', async () => {
+    h.api.setReaction.mockResolvedValue(REACTION);
+    const got = await setReaction('org-1', 'post-1', 'strong', undefined);
+    expect(h.api.setReaction).toHaveBeenCalledWith('org-1', 'post-1', 'strong');
+    expect(got?.tag).toBe('strong');
+
+    h.api.setReaction.mockResolvedValue(null);
+    expect(await setReaction('org-1', 'post-1', 'strong', REACTION as never)).toBeNull();
+  });
+
+  it('deletePost 走 orgsApi', async () => {
+    h.api.deletePost.mockResolvedValue(undefined);
+    await deletePost('post-1');
+    expect(h.api.deletePost).toHaveBeenCalledWith('post-1');
+  });
+
+  it('reportPost 走 orgsApi（带原话副本）', async () => {
+    h.api.report.mockResolvedValue(undefined);
+    await reportPost(POST as never, 'harass');
+    expect(h.api.report).toHaveBeenCalled();
+    const arg = h.api.report.mock.calls[0][0];
+    expect(arg.postId).toBe('post-1');
+    expect(arg.reason).toBe('harass');
+  });
+
+  it('createMinutes 走 orgsApi（确定 id + 周键）', async () => {
+    h.api.createMinutes.mockResolvedValue(POST);
+    const minutes = { v: 1 as const, week: '2026-10-13', rate: { done: 0, total: 0 }, done: [], goals: [], titles: [], absent: [] };
+    await createMinutes('org-1', minutes);
+    expect(h.api.createMinutes).toHaveBeenCalled();
+  });
+
+  it('listOrgLedger 走 orgsApi', async () => {
+    h.api.ledger.mockResolvedValue([POST]);
+    const got = await listOrgLedger('org-1');
+    expect(h.api.ledger).toHaveBeenCalledWith('org-1');
+    expect(got).toHaveLength(1);
+  });
+
+  it('deleteUserContent 走 orgsApi（尽力而为，失败只记日志）', async () => {
+    h.api.purgeUser.mockResolvedValue(undefined);
+    await deleteUserContent('org-1', 'user-x');
+    expect(h.api.purgeUser).toHaveBeenCalledWith('org-1', 'user-x');
+
+    h.api.purgeUser.mockRejectedValue(new Error('网络错误'));
+    await expect(deleteUserContent('org-1', 'user-x')).resolves.toBeUndefined();  // 不抛
   });
 });

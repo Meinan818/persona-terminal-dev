@@ -168,6 +168,20 @@ Android 端连**桌面图标**都会跟着主题换。
 
 ---
 
+## 看起来什么样
+
+<p align="center">
+  <img src="docs/screenshots/home-red.jpg" width="240" alt="红色主题首页" />
+  &nbsp;
+  <img src="docs/screenshots/assistant-red.jpg" width="240" alt="助手在记账" />
+  &nbsp;
+  <img src="docs/screenshots/home-blue.jpg" width="240" alt="蓝色主题首页" />
+</p>
+
+<p align="center"><sub>红色主题首页 · 助手记账 · 蓝色主题首页（同一套界面，四套设计语言）</sub></p>
+
+---
+
 ## 怎么跑起来
 
 **前端**

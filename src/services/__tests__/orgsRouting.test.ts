@@ -41,6 +41,10 @@ const h = vi.hoisted(() => {
     cancelOp: vi.fn(),
     createCheckin: vi.fn(),
     deleteCheckin: vi.fn(),
+    // 满月团战（第五波 第四步）
+    listRaids: vi.fn(),
+    createRaid: vi.fn(),
+    createRaidHit: vi.fn(),
   };
   const pb = {
     authStore: { isValid: false, token: '', record: null },
@@ -69,6 +73,7 @@ import {
   listOrgBoard, createMoment, setReaction, deletePost, reportPost,
   createMinutes, listOrgLedger, deleteUserContent,
   listOrgOps, createOperation, cancelOperation, createCheckin, deleteCheckin,
+  listOrgRaids, createRaid, createRaidHit,
 } from '../orgs';
 
 const ORG = {
@@ -364,5 +369,48 @@ describe('orgs.ts 作战分流：自研登录态 → 走 orgsApi', () => {
     h.api.deleteCheckin.mockResolvedValue(undefined);
     await deleteCheckin('ci-1');
     expect(h.api.deleteCheckin).toHaveBeenCalledWith('ci-1');
+  });
+});
+
+describe('orgs.ts 满月团战分流：自研登录态 → 走 orgsApi', () => {
+  const RAID = {
+    id: 'raid-1', orgId: 'org-1', slot: 1, boss: { v: 1 as const, name: '月影兽', weak: 'guts' as const, lv: 3 },
+    hpMax: 115, createdAt: new Date(),
+  };
+  const HIT = {
+    id: 'hit-1', raidId: 'raid-1', orgId: 'org-1', userId: 'user-me', kind: 'strike' as const,
+    night: '2026-10-13', skill: '蓄力斩', damage: 12, weak: true, createdAt: new Date(),
+  };
+
+  it('listOrgRaids 走 orgsApi（raids + hits）', async () => {
+    h.api.listRaids.mockResolvedValue({ raids: [RAID], hits: [HIT] });
+    const got = await listOrgRaids('org-1');
+    expect(h.api.listRaids).toHaveBeenCalledWith('org-1');
+    expect(got.raids).toHaveLength(1);
+    expect(got.hits).toHaveLength(1);
+  });
+
+  it('createRaid 走 orgsApi（确定 id + slot + boss + hpMax）', async () => {
+    h.api.createRaid.mockResolvedValue(RAID);
+    const boss = { v: 1 as const, name: '月影兽', weak: 'guts' as const, lv: 3 };
+    const got = await createRaid('org-1', 'raid-1', 1, boss, 115);
+    expect(h.api.createRaid).toHaveBeenCalledWith('org-1', 'raid-1', 1, boss, 115);
+    expect(got.id).toBe('raid-1');
+  });
+
+  it('createRaidHit 走 orgsApi；总攻击 night 归一为 allout', async () => {
+    h.api.createRaidHit.mockResolvedValue({ hit: HIT, dup: false });
+    await createRaidHit(RAID as never, { kind: 'strike', night: '2026-10-13', attr: 'guts', skill: '蓄力斩', damage: 12, weak: true });
+    expect(h.api.createRaidHit).toHaveBeenCalledWith('raid-1', '2026-10-13', 'strike', 'guts', '蓄力斩', 12, true);
+
+    await createRaidHit(RAID as never, { kind: 'allout', night: '2026-10-13', skill: '总攻击', damage: 40, weak: true });
+    // allout 的 night 被归一为 'allout'
+    expect(h.api.createRaidHit).toHaveBeenCalledWith('raid-1', 'allout', 'allout', undefined, '总攻击', 40, true);
+  });
+
+  it('createRaidHit 重复（dup=true）透传', async () => {
+    h.api.createRaidHit.mockResolvedValue({ hit: HIT, dup: true });
+    const got = await createRaidHit(RAID as never, { kind: 'strike', night: '2026-10-13', skill: '斩', damage: 1, weak: false });
+    expect(got.dup).toBe(true);
   });
 });

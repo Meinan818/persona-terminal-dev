@@ -11,10 +11,11 @@
  */
 import { velvetRequest } from './velvetApi';
 import type { OpDraft } from '@/utils/orgOps';
+import { parseRaidBoss, RAID_ATTRS } from '@/utils/orgRaid';
 import type {
   Org, OrgCustom, OrgMember, OrgMemberCard, OrgCodenameKind,
   OrgPost, OrgReaction, OrgReactionTag, OrgPostSnapshot, OrgMinutesSnapshot, OrgOpCardSnapshot,
-  OrgOperation, OrgCheckin,
+  OrgOperation, OrgCheckin, OrgRaid, OrgRaidHit, OrgRaidBoss, AttributeId,
 } from '@/types';
 
 /** 后端成员视图 → 前端 OrgMember */
@@ -497,4 +498,92 @@ export async function createCheckin(opId: string, kind: string, day: string, tex
 /** 删自己的一条打卡；已经没了也算成功。 */
 export async function deleteCheckin(id: string): Promise<void> {
   await velvetRequest<{ ok: boolean }>(`/api/social/checkins/${id}`, { method: 'DELETE' });
+}
+
+// ── 满月团战（W3 第五波 第四步）────────────────────────
+
+interface RawRaid {
+  id: string;
+  orgId: string;
+  slot: number;
+  boss: unknown;
+  hpMax: number;
+  createdAt: string;
+}
+
+interface RawRaidHit {
+  id: string;
+  raidId: string;
+  orgId: string;
+  userId: string;
+  kind: string;
+  night: string;
+  attr?: string | null;
+  skill: string;
+  damage: number;
+  weak: boolean;
+  createdAt: string;
+}
+
+function mapRaidRow(r: RawRaid): OrgRaid {
+  return {
+    id: r.id,
+    orgId: r.orgId || '',
+    slot: typeof r.slot === 'number' ? r.slot : Number(r.slot) || 0,
+    boss: parseRaidBoss(r.boss),
+    hpMax: Math.max(1, typeof r.hpMax === 'number' ? r.hpMax : Number(r.hpMax) || 1),
+    createdAt: new Date(r.createdAt),
+  };
+}
+
+function mapRaidHitRow(r: RawRaidHit): OrgRaidHit {
+  return {
+    id: r.id,
+    raidId: r.raidId || '',
+    orgId: r.orgId || '',
+    userId: r.userId || '',
+    kind: r.kind === 'allout' ? 'allout' : 'strike',
+    night: r.night || '',
+    ...(r.attr && RAID_ATTRS.includes(r.attr as AttributeId) ? { attr: r.attr as AttributeId } : {}),
+    skill: r.skill || '',
+    damage: typeof r.damage === 'number' ? r.damage : Number(r.damage) || 0,
+    weak: r.weak === true,
+    createdAt: new Date(r.createdAt),
+  };
+}
+
+/** 这个组织全部的团战和出手。 */
+export async function listRaids(orgId: string): Promise<{ raids: OrgRaid[]; hits: OrgRaidHit[] }> {
+  const res = await velvetRequest<{ raids: RawRaid[]; hits: RawRaidHit[] }>(`/api/social/orgs/${orgId}/raids`);
+  return {
+    raids: (res.raids ?? []).map(mapRaidRow),
+    hits: (res.hits ?? []).map(mapRaidHitRow),
+  };
+}
+
+/** 开团（确定 id）；撞 (org,slot) → 读回已有那场。 */
+export async function createRaid(orgId: string, id: string, slot: number, boss: OrgRaidBoss, hpMax: number): Promise<OrgRaid> {
+  return guard(
+    async () => mapRaidRow(await velvetRequest<RawRaid>(`/api/social/orgs/${orgId}/raids`, {
+      method: 'POST',
+      body: JSON.stringify({ id, slot, boss, hpMax }),
+    })),
+    '团战没开起来，稍后再试',
+  );
+}
+
+/** 出手 / 总攻击；撞唯一键 → dup=true。 */
+export async function createRaidHit(
+  raidId: string, night: string, kind: string, attr: AttributeId | undefined, skill: string, damage: number, weak: boolean,
+): Promise<{ hit: OrgRaidHit; dup: boolean }> {
+  return guard(
+    async () => {
+      const res = await velvetRequest<{ hit: RawRaidHit; dup: boolean }>(`/api/social/raids/${raidId}/hits`, {
+        method: 'POST',
+        body: JSON.stringify({ kind, night, attr, skill, damage, weak }),
+      });
+      return { hit: mapRaidHitRow(res.hit), dup: !!res.dup };
+    },
+    '没打出去，稍后再试',
+  );
 }

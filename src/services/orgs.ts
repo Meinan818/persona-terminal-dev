@@ -906,6 +906,7 @@ export const mapRaidHit = (r: RecordModel): OrgRaidHit => ({
 
 /** 这个组织全部的团战和出手（一个月一场、每场最多二十几条，很小）；表还没建会抛 404，调用方按「暂时拉不到」处理 */
 export async function listOrgRaids(orgId: string): Promise<{ raids: OrgRaid[]; hits: OrgRaidHit[] }> {
+  if (velvetApi.isAuthenticated()) return orgsApi.listRaids(orgId);
   const [raids, hits] = await Promise.all([
     pb!.collection('org_raids').getFullList({ filter: `org = ${pbQuote(orgId)}`, sort: 'slot', requestKey: null }),
     pb!.collection('org_raid_hits').getFullList({ filter: `org = ${pbQuote(orgId)}`, sort: 'created', requestKey: null }),
@@ -915,6 +916,13 @@ export async function listOrgRaids(orgId: string): Promise<{ raids: OrgRaid[]; h
 
 /** 开团：确定 id；同一次满月别人刚开过（撞了 id 或 (org, slot) 唯一索引）→ 读出那一条 */
 export async function createRaid(orgId: string, id: string, slot: number, boss: OrgRaidBoss, hpMax: number): Promise<OrgRaid> {
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.createRaid(orgId, id, slot, boss, hpMax);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '团战没开起来，稍后再试'));
+    }
+  }
   requireMe();
   try {
     return mapRaid(await pb!.collection('org_raids').create({ id, org: orgId, slot, boss, hp_max: hpMax }, { requestKey: null }));
@@ -932,12 +940,21 @@ export async function createRaid(orgId: string, id: string, slot: number, boss: 
  * 出手 / 总攻击。撞了唯一索引（这一晚已经打过了 / 总攻击用过了，多半是另一台设备）→ 读出已有那条，dup = true。
  */
 export async function createRaidHit(raid: Pick<OrgRaid, 'id' | 'orgId'>, hit: { kind: 'strike' | 'allout'; night: string; attr?: AttributeId; skill: string; damage: number; weak: boolean }): Promise<{ hit: OrgRaidHit; dup: boolean }> {
-  const me = requireMe();
   const night = hit.kind === 'allout' ? 'allout' : hit.night;
+  const skill = [...hit.skill].slice(0, 20).join('');
+  const damage = Math.max(0, Math.round(hit.damage));
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.createRaidHit(raid.id, night, hit.kind, hit.attr, skill, damage, hit.weak);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没打出去，稍后再试'));
+    }
+  }
+  const me = requireMe();
   try {
     const made = await pb!.collection('org_raid_hits').create({
       raid: raid.id, org: raid.orgId, user: me, kind: hit.kind, night,
-      ...(hit.attr ? { attr: hit.attr } : {}), skill: [...hit.skill].slice(0, 20).join(''), damage: Math.max(0, Math.round(hit.damage)), weak: hit.weak,
+      ...(hit.attr ? { attr: hit.attr } : {}), skill, damage, weak: hit.weak,
     }, { requestKey: null });
     return { hit: mapRaidHit(made), dup: false };
   } catch (err) {

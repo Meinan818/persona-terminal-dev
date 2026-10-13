@@ -159,6 +159,12 @@ export function rewriteForProxy(url: string, init: RequestInit): { url: string; 
   if (!isAuthenticated() || !session) throw new Error('登录状态已失效，请重新登录后使用代理');
   try {
     const u = new URL(url);
+    // 「拉模型列表」必须带用户自己的 Key 直连服务商，不能走代理：
+    //   · 代理会把 Authorization 换成后端 JWT（用户 Key 被删掉）；
+    //   · 后端按 BYOK 设计并不持有各家的 Key，真转发出去只会得到 404/502；
+    //   · 而且 GET /…/models 会被下面的改写规则并到 /api/ai/chat，而后端只有 POST 映射，
+    //     404 在错误分发里还会被鉴权过滤器当成匿名 → 前端拿到一个 401「密钥无效」的假象。
+    if (u.pathname.endsWith('/models')) return null;
     // Anthropic 协议端点 …/v1/messages → 代理 /api/ai/messages；其余按 OpenAI 兼容 → /api/ai/chat
     const path = u.pathname.endsWith('/messages') ? '/api/ai/messages' : '/api/ai/chat';
     const headers = new Headers(init.headers ?? {});

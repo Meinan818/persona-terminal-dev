@@ -8,6 +8,11 @@ beforeEach(async () => {
 });
 afterEach(() => { clearAuth(); syncAiProxy(false, ''); vi.unstubAllGlobals(); });
 
+it('拉模型列表不走代理（这类请求必须带用户自己的 Key 直连服务商）', () => {
+  const rewritten = rewriteForProxy('https://api.deepseek.com/v1/models', { headers: { Authorization: 'Bearer sk-user' } });
+  expect(rewritten).toBeNull();
+});
+
 it('代理剥离上游 Key 后携带当前应用会话，保留 body 和取消信号', async () => {
   const fetchSpy = vi.fn().mockResolvedValue(Response.json({})); vi.stubGlobal('fetch', fetchSpy);
   const controller = new AbortController();

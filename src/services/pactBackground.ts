@@ -11,7 +11,6 @@
  * 只在原生平台生效；旧安装包里没有这个插件、或调用失败，一律静默——前台的提醒（档 1）不受影响。
  */
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { pb, getUserId } from './pocketbase';
 import {
   apiBaseUrl,
   getToken as getVelvetToken,
@@ -40,33 +39,24 @@ interface PactRefreshPlugin {
 
 const PactRefresh = registerPlugin<PactRefreshPlugin>('PactRefresh');
 
-/** 原生按字符串比先后，两种后端各用各的定宽格式 */
-const pbStamp = (d: Date) => d.toISOString().replace('T', ' '); // PB created：2026-09-24 04:00:00.123Z
-const isoStamp = (d: Date) => d.toISOString();                   // 自研 createdAt：2026-09-24T04:00:00.123Z
+/** 原生按字符串比先后，用 ISO 定宽格式（2026-09-24T04:00:00.123Z） */
+const isoStamp = (d: Date) => d.toISOString();
 
-type RunnerSource = { api: 'velvet' | 'pb'; baseUrl: string; token: string; userId: string };
+type RunnerSource = { api: 'velvet'; baseUrl: string; token: string; userId: string };
 
 /**
- * 后台 runner 该连哪个后端、用哪份凭据。
+ * 后台 runner 该用哪份凭据。
  *
- * 自研会话走 /api/social/notifications；历史 PocketBase 会话保持原契约。
- * 自研契约目前只在安卓原生落地，iOS 原生插件仍按 PB 实现——所以 iOS 上不推自研凭据，
- * 宁可不动后台任务，也不拿 JWT 去轮询 PB 接口。
+ * 只服务自研会话（走 /api/social/notifications）。自研契约目前只在安卓原生落地，
+ * iOS 原生插件还没迁移——所以 iOS 上不推凭据，宁可不动后台任务，也不拿 JWT 去轮询旧接口。
  */
 function resolveRunnerSource(): RunnerSource | null {
-  if (velvetAuthenticated()) {
-    const userId = getVelvetUserId();
-    const token = getVelvetToken();
-    if (apiBaseUrl && userId && token && Capacitor.getPlatform() === 'android') {
-      return { api: 'velvet', baseUrl: apiBaseUrl, token, userId };
-    }
-  }
-  const pbToken = pb?.authStore.token;
-  const pbUserId = getUserId();
-  if (pb && pbToken && pbUserId && pb.baseURL) {
-    return { api: 'pb', baseUrl: pb.baseURL, token: pbToken, userId: pbUserId };
-  }
-  return null;
+  if (!velvetAuthenticated()) return null;
+  const userId = getVelvetUserId();
+  const token = getVelvetToken();
+  if (!apiBaseUrl || !userId || !token) return null;
+  if (Capacitor.getPlatform() !== 'android') return null;
+  return { api: 'velvet', baseUrl: apiBaseUrl, token, userId };
 }
 
 /** 提醒总开关开着，且至少一个启用的时段勾了「一起进步」 */
@@ -95,7 +85,7 @@ export async function configurePactRunner(notifications: NotificationEntry[], en
   const source = resolveRunnerSource();
   if (!source) return;
   const newest = notifications.reduce<Date | null>((m, n) => (!m || n.createdAt > m ? n.createdAt : m), null);
-  const since = (source.api === 'velvet' ? isoStamp : pbStamp)(newest ?? new Date());
+  const since = isoStamp(newest ?? new Date());
   const ok = await call(() => PactRefresh.configure({
     api: source.api,
     baseUrl: source.baseUrl,

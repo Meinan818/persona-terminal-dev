@@ -25,11 +25,6 @@ const h = vi.hoisted(() => {
   return { api, pb };
 });
 
-vi.mock('../pocketbase', () => ({
-  pb: h.pb,
-  getUserId: () => 'user-me',
-}));
-
 vi.mock('../notificationsApi', () => h.api);
 
 import {

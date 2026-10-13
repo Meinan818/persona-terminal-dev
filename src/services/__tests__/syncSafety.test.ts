@@ -23,8 +23,7 @@ vi.mock('@/db', () => ({ db: new Proxy({ table: h.table, transaction: h.transact
 }) }));
 vi.mock('@/store', () => ({ useAppStore: { getState: () => h.state }, toLocalDateKey: () => '2026-10-13' }));
 vi.mock('@/store/cloud', () => ({ useCloudStore: { getState: () => h.cloud } }));
-vi.mock('@/services/pocketbase', () => ({ getUserId: () => h.me }));
-vi.mock('@/services/velvetApi', () => ({ getAuthGeneration: () => h.generation }));
+vi.mock('@/services/velvetApi', () => ({ getAuthGeneration: () => h.generation, getUserId: () => h.me }));
 vi.mock('@/services/userDataApi', () => ({
   isAuthenticated: () => !!h.me, getUserId: () => h.me,
   listRows: h.listRows, getRow: async (id: string) => h.records.find(r => r.id === id),

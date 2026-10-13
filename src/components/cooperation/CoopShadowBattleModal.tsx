@@ -21,7 +21,7 @@ import {
   ALL_OUT_COMBO,
 } from '@/services/coopShadows';
 import { sumDamagePlus } from '@/utils/confidantLevels';
-import { getUserId } from '@/services/pocketbase';
+import { getUserId } from '@/services/velvetApi';
 import { archetypeById } from '@/constants/coopShadowPool';
 import { isDailyAttackWindow } from '@/utils/moonPhase';
 import type { AttributeId, CoopAttack, CoopShadow, PersonaSkill } from '@/types';

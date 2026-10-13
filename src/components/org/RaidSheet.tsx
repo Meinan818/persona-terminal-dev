@@ -21,7 +21,7 @@ import {
   raidSpOf, raidStateOf, strikeDamage, type RaidNow, type RaidState,
 } from '@/utils/orgRaid';
 import { allOutFromUi, strikeFromUi, type RaidHitResult } from '@/services/orgRaidSync';
-import { getUserId } from '@/services/pocketbase';
+import { getUserId } from '@/services/velvetApi';
 import { triggerLightHaptic, triggerSuccessFeedback } from '@/utils/feedback';
 import { OrgButton, OrgEmblem, OrgPanel, useOrgTone, type OrgTone } from './orgUi';
 import type { AttributeId, OrgMember, OrgRaid, OrgView, PersonaSkill } from '@/types';

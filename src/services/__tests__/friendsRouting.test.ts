@@ -31,11 +31,6 @@ const h = vi.hoisted(() => {
   return { api, pb };
 });
 
-vi.mock('../pocketbase', () => ({
-  pb: h.pb,
-  getUserId: () => 'user-me',
-}));
-
 vi.mock('../friendsApi', () => h.api);
 
 import { searchUserByUserId, listFriendships, sendFriendRequest } from '../friends';

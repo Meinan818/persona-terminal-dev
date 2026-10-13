@@ -10,7 +10,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/store';
 import { useCloudStore } from '@/store/cloud';
 import { useCloudSocialStore } from '@/store/cloudSocial';
-import { cloudEnabled } from '@/services/pocketbase';
+import { cloudEnabled } from '@/services/velvetApi';
 import { P3R, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_TITLE_FONT } from '@/components/p5r/kit';
 import { springSnappy, TAP } from '@/utils/motion';

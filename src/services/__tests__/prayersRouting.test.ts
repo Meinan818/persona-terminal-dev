@@ -21,11 +21,6 @@ const h = vi.hoisted(() => {
   return { api, pb };
 });
 
-vi.mock('../pocketbase', () => ({
-  pb: h.pb,
-  getUserId: () => 'user-me',
-}));
-
 // velvetApi.isAuthenticated 决定分流（自研登录态）；mock 成已登录
 vi.mock('../velvetApi', () => ({
   isAuthenticated: () => true,

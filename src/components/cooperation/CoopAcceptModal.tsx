@@ -13,7 +13,7 @@ import { useAppStore } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { acceptCoopBond, rejectCoopBond, viewFromMySide } from '@/services/coopBonds';
 import { loadSocial } from '@/services/social';
-import { getUserId } from '@/services/pocketbase';
+import { getUserId } from '@/services/velvetApi';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
 import { ArcanaPickerForm, type ArcanaPickerValue } from './ArcanaPickerForm';

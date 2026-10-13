@@ -15,7 +15,7 @@ import { useAppStore, toLocalDateKey } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { useCloudStore } from '@/store/cloud';
 import { db } from '@/db';
-import { getUserId } from './pocketbase';
+import { getUserId } from './velvetApi';
 import { markNotificationRead } from './notifications';
 import { configurePactRunner, pactPushEnabled } from './pactBackground';
 import {

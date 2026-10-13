@@ -11,7 +11,7 @@ import { useAppStore, toLocalDateKey } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { useCloudStore } from '@/store/cloud';
 import { db } from '@/db';
-import { getUserId } from './pocketbase';
+import { getUserId } from './velvetApi';
 import {
   OrgError, cancelOperation, createCheckin, createOpCard, createOperation, deleteCheckin, listOrgBoard, listOrgLedger, listOrgOps,
 } from './orgs';

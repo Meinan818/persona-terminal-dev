@@ -1,7 +1,6 @@
 import { db } from '@/db';
-import { getUserId } from './pocketbase';
+import { getAuthGeneration, getUserId } from './velvetApi';
 import * as api from './userDataApi';
-import { getAuthGeneration } from './velvetApi';
 import { useCloudStore } from '@/store/cloud';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { computeTotalLv } from '@/utils/lvTiers';

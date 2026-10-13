@@ -37,9 +37,7 @@ const h = vi.hoisted(() => {
   };
 });
 
-vi.mock('../pocketbase', () => ({
-  // 自研模式下 pb 存在但 authStore 恒空
-  pb: { authStore: { isValid: false, token: '', record: null } },
+vi.mock('../velvetApi', () => ({
   getUserId: () => 'user-me',
   isAuthenticated: h.isAuthenticated,
 }));

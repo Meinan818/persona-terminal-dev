@@ -13,7 +13,7 @@
  */
 import { useAppStore } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
-import { getUserId } from './pocketbase';
+import { getUserId } from './velvetApi';
 import { computeTotalLv } from '@/utils/lvTiers';
 import { masteryOf } from '@/utils/levels';
 import { resolveLevelDifficulty } from '@/utils/levelDifficulty';

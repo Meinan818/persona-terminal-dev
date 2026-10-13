@@ -9,7 +9,7 @@
 import { useAppStore } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { db } from '@/db';
-import { getUserId } from './pocketbase';
+import { getUserId } from './velvetApi';
 import { OrgError, createRaid, createRaidHit, listOrgRaids } from './orgs';
 import {
   allOutDamage, avgLvOf, buildRaidBoss, fullMoonDayOf, myRaidOptions, raidHpOf, raidId, raidNow, raidSpOf, raidStateOf, strikeDamage,

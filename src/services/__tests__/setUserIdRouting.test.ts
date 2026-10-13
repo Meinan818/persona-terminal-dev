@@ -24,11 +24,6 @@ const h = vi.hoisted(() => {
   return { velvetApi, pb };
 });
 
-vi.mock('../pocketbase', () => ({
-  pb: h.pb,
-  cloudEnabled: true,
-  getUserId: () => 'user-me',
-}));
 
 vi.mock('../velvetApi', () => ({
   ...h.velvetApi,

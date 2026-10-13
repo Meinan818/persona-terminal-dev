@@ -11,7 +11,7 @@ import { useCloudSocialStore } from '@/store/cloudSocial';
 import { SheetModal } from '@/components/SheetModal';
 import { slantClip } from '@/components/p3r/kit';
 import { roughQuad } from '@/components/p5r/kit';
-import { getUserId } from '@/services/pocketbase';
+import { getUserId } from '@/services/velvetApi';
 import { refreshBoard, shareActivity } from '@/services/orgSync';
 import {
   ORG_POSTS_PER_DAY, ORG_POST_TEXT_MAX, buildPostSnapshot, cleanSnapshotNames, defaultShareText, displayCodename, myPostsToday,

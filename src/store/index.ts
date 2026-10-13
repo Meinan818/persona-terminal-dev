@@ -3,7 +3,7 @@ import { User, Attribute, Activity, Achievement, Skill, Settings, ThemeType, Att
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { summarizeCounsel, type CounselContext, type CounselConfidantBrief, type CounselRecentEvent } from '@/utils/counselAI';
 import { db } from '@/db';
-import { getUserId as getCloudUserId } from '@/services/pocketbase';
+import { getUserId as getCloudUserId } from '@/services/velvetApi';
 import { flushCoopEvents } from '@/services/coopEvents';
 import { deleteImagesOfActivity, loadActivityImageIndex, findOrphanActivityImages, pruneOrphanActivityImages } from '@/utils/activityImages';
 import { freshUnreadSummary, reportPushDelivered, markReportPushScheduled } from '@/utils/reportNotice';

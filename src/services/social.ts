@@ -8,7 +8,7 @@
  *  - 用户手动"刷新"时
  */
 
-import { getUserId, isAuthenticated } from './pocketbase';
+import { getUserId, isAuthenticated } from './velvetApi';
 import { listFriendships, expireOutdatedPending } from './friends';
 import { listNotifications, markNotificationRead } from './notifications';
 import { listTodayPrayers } from './prayers';

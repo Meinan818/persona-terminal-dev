@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { useCloudStore } from '@/store/cloud';
 import { readLastSync, trySyncInBackground, resolveConflictKeepLocal, resolveConflictKeepCloud, acceptDiffKeepLocal, acceptDiffKeepCloud } from '@/services/sync';
-import { pb as pbClient } from '@/services/pocketbase';
 import { SyncStatusBadge } from '@/components/auth/SyncStatusBadge';
 import { ConflictDialog } from '@/components/auth/ConflictDialog';
 import { SyncMergeSheet } from '@/components/auth/SyncMergeSheet';
@@ -226,8 +225,6 @@ function App() {
   const primedRef = useRef(false);
   // 记录上次打开时的日期，用于检测隔天回来
   const lastDateRef = useRef(toLocalDateKey());
-  /** 上次续期登录的时间：回前台每 6 小时最多续一次（以前只在冷启动续，App 常驻后台一两周就过期、同步悄悄空转） */
-  const lastAuthRefreshRef = useRef(Date.now());
   // Android 返回键：双击退出提示
   const [showBackToast, setShowBackToast] = useState(false);
   const lastBackPressRef = useRef(0);
@@ -366,20 +363,6 @@ function App() {
     });
   }, []);
 
-  // 启动时若已有有效 token，静默刷新一次以延长有效期（避免每次进入都要重登）
-  // 刷新失败（token 过期 / 服务端拒绝）→ 清除本地 token，用户下次再登录
-  useEffect(() => {
-    const client = pbClient;
-    if (!client || !client.authStore.isValid) return;
-    client
-      .collection('users')
-      .authRefresh()
-      .catch((err: { status?: number }) => {
-        // 只有服务端明确说 token 无效（401 / 403）才清；离线（status 0）、服务端抖（5xx）不该把人登出
-        if (err?.status === 401 || err?.status === 403) client.authStore.clear();
-      });
-  }, []);
-
   // 点开通知：「成长总结写好了」直达那一份；一起进步的去首页 / 羁绊页（v2.7.0.6；仅原生平台有本地通知）
   useEffect(() => {
     if (!isNative()) return;
@@ -438,13 +421,6 @@ function App() {
 
     const handleVisibilityChange = async () => {
       if (document.visibilityState !== 'visible') return;
-      const client = pbClient;
-      if (client?.authStore.isValid && Date.now() - lastAuthRefreshRef.current > 6 * 3600_000) {
-        lastAuthRefreshRef.current = Date.now();
-        client.collection('users').authRefresh().catch((err: { status?: number }) => {
-          if (err?.status === 401 || err?.status === 403) client.authStore.clear();
-        });
-      }
       // 切回前台顺手刷新 social（好友 + 通知）；30 秒节流在 loadSocial 内部已做
       if (useCloudStore.getState().cloudUser) {
         import('@/services/social').then(({ loadSocial }) => {

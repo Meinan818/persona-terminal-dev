@@ -17,7 +17,7 @@ import { triggerLevelFeedback } from '@/utils/feedback';
 import { TERMINAL_DANMAKU_SEEDS } from '@/constants/terminalDanmaku';
 import { listApprovedDanmaku, type DanmakuItem } from '@/services/danmaku';
 import { DanmakuLayer } from '@/components/danmaku/DanmakuLayer';
-import { cloudEnabled } from '@/services/pocketbase';
+import { cloudEnabled } from '@/services/velvetApi';
 import { DanmakuCompose } from '@/components/danmaku/DanmakuCompose';
 import { zClass } from '@/utils/zIndex';
 

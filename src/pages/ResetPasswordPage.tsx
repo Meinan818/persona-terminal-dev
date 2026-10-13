@@ -11,8 +11,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { pb, cloudEnabled } from '@/services/pocketbase';
 import * as velvetApi from '@/services/velvetApi';
+import { cloudEnabled } from '@/services/velvetApi';
 
 type Phase = 'form' | 'submitting' | 'success' | 'fatal';
 
@@ -114,10 +114,8 @@ export function ResetPasswordPage() {
 
     setPhase('submitting');
     try {
-      // 自研后端优先（与登录/注册同一条链路）：令牌由后端签发、一次性、30 分钟有效。
-      // 只有没配自研后端的历史部署才回落到 PocketBase。
-      if (velvetApi.cloudEnabled) await velvetApi.resetPassword(token, pwd);
-      else await pb!.collection('users').confirmPasswordReset(token, pwd, confirm);
+      // 令牌由后端签发、一次性、30 分钟有效（与登录/注册同一条链路）
+      await velvetApi.resetPassword(token, pwd);
       setPhase('success');
     } catch (err) {
       const { title, detail } = classifyError(err);

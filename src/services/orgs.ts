@@ -16,6 +16,8 @@
 import type { RecordModel } from 'pocketbase';
 import { pb, getUserId } from './pocketbase';
 import { pbQuote } from './pbFilter';
+import * as velvetApi from './velvetApi';
+import * as orgsApi from './orgsApi';
 import { auditText } from '@/utils/textAudit';
 import {
   ORG_BOARD_DAYS, ORG_BOARD_LIMIT, ORG_CODENAME_MAX, ORG_GOAL_MAX, ORG_MAX_SEATS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_POST_TEXT_MAX,
@@ -144,6 +146,16 @@ export interface Membership { member: OrgMember; org: Org }
 
 /** 我的成员行 + 所属组织。失败返回 null（和「一个都没有」区分开，调用方别据此清空本地） */
 export async function listMyMemberships(): Promise<Membership[] | null> {
+  // 自研后端：组织核心迁移到 /api/social/orgs（W3 第五波 第一步）
+  if (velvetApi.isAuthenticated()) {
+    try {
+      const rows = await orgsApi.listMine();
+      return rows.map(r => ({ member: r.member, org: r.org }));
+    } catch (err) {
+      console.warn('[velvet-org] listMyMemberships (backend) failed', err);
+      return null;
+    }
+  }
   if (!pb || !pb.authStore.isValid) return null;
   const me = getUserId();
   if (!me) return null;
@@ -163,19 +175,28 @@ export async function listMyMemberships(): Promise<Membership[] | null> {
 }
 
 export async function listOrgMembers(orgId: string): Promise<OrgMember[]> {
+  if (velvetApi.isAuthenticated()) return orgsApi.members(orgId);
   const rows = await pb!.collection('org_members').getFullList({ filter: `org = ${pbQuote(orgId)}`, sort: 'seat', ...MEMBER_QUERY, requestKey: null });
   return rows.map(mapMember);
 }
 
 export async function fetchOrg(orgId: string): Promise<Org> {
+  if (velvetApi.isAuthenticated()) return orgsApi.fetch(orgId);
   return mapOrg(await pb!.collection('orgs').getOne(orgId, { requestKey: null }));
 }
 
 /** 凭邀请码看一眼（加入前的预览）：码不对 / 已经换了新码 → null */
 export async function previewOrg(rawCode: string): Promise<Org | null> {
-  requireMe();
   const code = normalizeInviteInput(rawCode);
   if (!isInviteCode(code)) throw new OrgError('邀请码是 8 位字母和数字');
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.preview(code);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '暂时查不到这个邀请码，稍后再试'));
+    }
+  }
+  requireMe();
   try {
     const res = await pb!.collection('orgs').getList(1, 1, { filter: `invite_code = ${pbQuote(code)}`, query: { code }, requestKey: null });
     return res.items[0] ? mapOrg(res.items[0]) : null;
@@ -201,9 +222,17 @@ const initialCard = (): OrgMemberCard => ({ streak: 0, persona: null, at: new Da
 
 /** 建立组织：先建组织（队长 = 我），再建我的成员行（1 号座位、「自建」）；第二步失败就删掉组织 */
 export async function createOrg(draft: OrgDraft, nickname: string, mine: OrgView[]): Promise<Membership> {
-  const me = requireMe();
   const d = checkDraft(draft);
-  if (mine.some(v => v.org.leaderId === me || v.me.slot === 'own')) throw new OrgError('你已经建过一个组织了（每人最多建一个）');
+  if (mine.some(v => v.me.slot === 'own')) throw new OrgError('你已经建过一个组织了（每人最多建一个）');
+  // 自研后端：建组织 + 建成员行（1 号座位）收敛到服务端一次请求（W3 第五波 第一步）
+  if (velvetApi.isAuthenticated()) {
+    const res = await orgsApi.create({
+      name: d.name, motto: d.motto, emblem: d.emblem, tz: deviceTimeZone(), codename: safeNickname(nickname) || '队长',
+    });
+    return { org: res.org, member: res.member };
+  }
+  const me = requireMe();
+  if (mine.some(v => v.org.leaderId === me)) throw new OrgError('你已经建过一个组织了（每人最多建一个）');
   let orgRec: RecordModel | null = null;
   for (let i = 0; i < 3 && !orgRec; i++) {
     try {
@@ -231,9 +260,14 @@ export async function createOrg(draft: OrgDraft, nickname: string, mine: OrgView
 
 /** 凭码加入：从 1 号座位往后试，撞了换下一个；7 个都满就进不去 */
 export async function joinOrg(rawCode: string, nickname: string, mine: OrgView[]): Promise<Membership> {
-  const me = requireMe();
   const code = normalizeInviteInput(rawCode);
   if (mine.some(v => v.me.slot === 'joined')) throw new OrgError('你已经加入了一个组织（每人最多加入一个）');
+  // 自研后端：座位分配 + 撞座位重试收敛到服务端（W3 第五波 第一步）
+  if (velvetApi.isAuthenticated()) {
+    const res = await orgsApi.join(code, safeNickname(nickname) || '新成员');
+    return { org: res.org, member: res.member };
+  }
+  const me = requireMe();
   const org = await previewOrg(code);
   if (!org) throw new OrgError('邀请码不对，或者组织已经换了新码');
   if (org.leaderId === me || mine.some(v => v.org.id === org.id)) throw new OrgError('你已经在这个组织里了');
@@ -263,8 +297,9 @@ export async function joinOrg(rawCode: string, nickname: string, mine: OrgView[]
 
 /** 队长改组织资料 */
 export async function updateOrgProfile(orgId: string, draft: OrgDraft): Promise<Org> {
-  requireMe();
   const d = checkDraft(draft);
+  if (velvetApi.isAuthenticated()) return orgsApi.updateProfile(orgId, d);
+  requireMe();
   try {
     return mapOrg(await pb!.collection('orgs').update(orgId, { name: d.name, motto: d.motto, emblem: d.emblem }, { requestKey: null }));
   } catch (err) {
@@ -277,13 +312,21 @@ export async function updateOrgProfile(orgId: string, draft: OrgDraft): Promise<
  * 再按读的时候同一套规则整理一遍（截长度、夹范围、去掉和默认一样的）；全空就清掉。
  */
 export async function updateOrgCustom(orgId: string, custom: OrgCustom): Promise<Org> {
-  requireMe();
   const names = [
     ...(custom.levelNames ?? []),
     ...ORG_BUILTIN_TITLES.map(t => custom.titleNames?.[t.id] ?? ''),
     ...(custom.titles ?? []).map(t => t.name),
   ].map(n => n.trim()).filter(Boolean);
   assertClean(...names);
+  // 自研后端：custom 直接落库（W3 第五波 第一步；PB 的「键被默默丢弃」检测不再需要）
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.updateCustom(orgId, parseOrgCustom(custom) ?? null);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没存上，稍后再试'));
+    }
+  }
+  requireMe();
   let rec: RecordModel;
   try {
     rec = await pb!.collection('orgs').update(orgId, { custom: parseOrgCustom(custom) ?? null }, { requestKey: null });
@@ -298,6 +341,13 @@ export async function updateOrgCustom(orgId: string, custom: OrgCustom): Promise
 
 /** 队长换邀请码（旧码立即作废） */
 export async function rotateInviteCode(orgId: string): Promise<Org> {
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.rotate(orgId);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没换成，稍后再试'));
+    }
+  }
   requireMe();
   for (let i = 0; i < 3; i++) {
     try {
@@ -315,11 +365,14 @@ export interface MemberPatch {
   codenameKind?: OrgCodenameKind;
   tarotId?: string;
   card?: OrgMemberCard;
+  goal?: string;
+  goalWeek?: string;
+  result?: 'done' | 'partial' | 'missed';
+  resultWeek?: string;
 }
 
-/** 改自己那一行（代号 / 代表牌 / 成员牌）。自己写的代号过屏蔽词 */
+/** 改自己那一行（代号 / 代表牌 / 成员牌 / 会议目标）。自己写的代号过屏蔽词 */
 export async function updateMyMember(memberId: string, patch: MemberPatch): Promise<OrgMember> {
-  requireMe();
   const body: Record<string, unknown> = {};
   if (patch.codename !== undefined) {
     const c = clip(patch.codename, ORG_CODENAME_MAX);
@@ -327,11 +380,34 @@ export async function updateMyMember(memberId: string, patch: MemberPatch): Prom
     assertClean(c);
     body.codename = c;
   }
-  if (patch.codenameKind) body.codename_kind = patch.codenameKind;
-  if (patch.tarotId !== undefined) body.tarot_id = patch.tarotId;
+  if (patch.codenameKind) body.codenameKind = patch.codenameKind;
+  if (patch.tarotId !== undefined) body.tarotId = patch.tarotId;
   if (patch.card) body.card = patch.card;
+  if (patch.goal !== undefined) body.goal = patch.goal;
+  if (patch.goalWeek !== undefined) body.goalWeek = patch.goalWeek;
+  if (patch.result !== undefined) body.result = patch.result;
+  if (patch.resultWeek !== undefined) body.resultWeek = patch.resultWeek;
+  // 自研后端：按 memberId 定位（W3 第五波 第一步）
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await orgsApi.updateMember(memberId, body);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没存上，稍后再试'));
+    }
+  }
+  requireMe();
+  // PB 分支：字段名转 snake_case
+  const pbBody: Record<string, unknown> = {};
+  if (body.codename !== undefined) pbBody.codename = body.codename;
+  if (body.codenameKind !== undefined) pbBody.codename_kind = body.codenameKind;
+  if (body.tarotId !== undefined) pbBody.tarot_id = body.tarotId;
+  if (body.card !== undefined) pbBody.card = body.card;
+  if (body.goal !== undefined) pbBody.goal = body.goal;
+  if (body.goalWeek !== undefined) pbBody.goal_week = body.goalWeek;
+  if (body.result !== undefined) pbBody.result = body.result;
+  if (body.resultWeek !== undefined) pbBody.result_week = body.resultWeek;
   try {
-    return mapMember(await pb!.collection('org_members').update(memberId, body, { requestKey: null }));
+    return mapMember(await pb!.collection('org_members').update(memberId, pbBody, { requestKey: null }));
   } catch (err) {
     throw new OrgError(describeOrgError(err, '没存上，稍后再试'));
   }
@@ -339,12 +415,22 @@ export async function updateMyMember(memberId: string, patch: MemberPatch): Prom
 
 /** 位置字段校正：只改 slot 一个字段（规则要求 slot 与是不是队长一致） */
 export async function setMySlot(memberId: string, slot: 'own' | 'joined'): Promise<OrgMember> {
+  if (velvetApi.isAuthenticated()) return orgsApi.setSlot(memberId, slot);
   return mapMember(await pb!.collection('org_members').update(memberId, { slot }, { requestKey: null }));
 }
 
 // ── 退出 / 请离 / 转让 / 解散 ─────────────────────────────────────────────────
 
 export async function leaveOrg(view: OrgView): Promise<void> {
+  if (velvetApi.isAuthenticated()) {
+    if (view.me.slot === 'own') throw new OrgError('队长要先把队长转让出去，或者解散组织');
+    try {
+      await orgsApi.leave(view.org.id);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没能退出，稍后再试'));
+    }
+    return;
+  }
   const me = requireMe();
   if (view.org.leaderId === me) throw new OrgError('队长要先把队长转让出去，或者解散组织');
   try {
@@ -357,6 +443,10 @@ export async function leaveOrg(view: OrgView): Promise<void> {
 
 /** 队长请离一位成员；随后自动换码，旧码作废。换码失败不算请离失败（返回 false 让界面提示手动换） */
 export async function kickMember(view: OrgView, memberId: string): Promise<{ rotated: Org | null }> {
+  if (velvetApi.isAuthenticated()) {
+    if (view.me.slot !== 'own') throw new OrgError('只有队长能请离成员');
+    return orgsApi.kick(view.org.id, memberId);
+  }
   const me = requireMe();
   if (view.org.leaderId !== me) throw new OrgError('只有队长能请离成员');
   const target = view.members.find(m => m.id === memberId);
@@ -382,6 +472,15 @@ export async function kickMember(view: OrgView, memberId: string): Promise<{ rot
  * 对方那行由对方的客户端在下次对账时改成「自建」。
  */
 export async function transferLeader(view: OrgView, toMemberId: string, alsoLeave: boolean): Promise<void> {
+  if (velvetApi.isAuthenticated()) {
+    if (view.me.slot !== 'own') throw new OrgError('只有队长能转让');
+    try {
+      await orgsApi.transfer(view.org.id, toMemberId, alsoLeave);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没转让成，稍后再试'));
+    }
+    return;
+  }
   const me = requireMe();
   if (view.org.leaderId !== me) throw new OrgError('只有队长能转让');
   const target = view.members.find(m => m.id === toMemberId);
@@ -402,6 +501,15 @@ export async function transferLeader(view: OrgView, toMemberId: string, alsoLeav
 
 /** 队长解散：删组织，成员行级联删除 */
 export async function dissolveOrg(view: OrgView): Promise<void> {
+  if (velvetApi.isAuthenticated()) {
+    if (view.me.slot !== 'own') throw new OrgError('只有队长能解散组织');
+    try {
+      await orgsApi.dissolve(view.org.id);
+    } catch (err) {
+      throw new OrgError(describeOrgError(err, '没能解散，稍后再试'));
+    }
+    return;
+  }
   const me = requireMe();
   if (view.org.leaderId !== me) throw new OrgError('只有队长能解散组织');
   try {

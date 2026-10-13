@@ -112,15 +112,15 @@ public class OrgController {
         return ResponseEntity.ok(orgService.rotate(m, id));
     }
 
-    @PutMapping("/api/social/orgs/{id}/members/{mid}")
-    public ResponseEntity<?> updateMember(@PathVariable String id, @PathVariable String mid, @RequestBody Map<String, Object> body) {
+    @PutMapping("/api/social/orgs/members/{mid}")
+    public ResponseEntity<?> updateMember(@PathVariable String mid, @RequestBody Map<String, Object> body) {
         String m = me();
         if (m == null) return unauthorized();
         return ResponseEntity.ok(orgService.updateMember(m, mid, body));
     }
 
-    @PutMapping("/api/social/orgs/{id}/members/{mid}/slot")
-    public ResponseEntity<?> setSlot(@PathVariable String id, @PathVariable String mid, @RequestBody Map<String, Object> body) {
+    @PutMapping("/api/social/orgs/members/{mid}/slot")
+    public ResponseEntity<?> setSlot(@PathVariable String mid, @RequestBody Map<String, Object> body) {
         String m = me();
         if (m == null) return unauthorized();
         return ResponseEntity.ok(orgService.setSlot(m, mid, String.valueOf(body.get("slot"))));

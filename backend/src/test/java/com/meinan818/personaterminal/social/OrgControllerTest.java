@@ -256,7 +256,7 @@ class OrgControllerTest {
         Map<String, Object> org = makeOrg(a, "改资料据点");
         String memberId = (String) org.get("memberId");
 
-        ResponseEntity<Map> r = put(a.token(), "/api/social/orgs/" + org.get("orgId") + "/members/" + memberId,
+        ResponseEntity<Map> r = put(a.token(), "/api/social/orgs/members/" + memberId,
                 Map.of("codename", "新代号", "goal", "下周读完一本书", "goalWeek", "2026-10-19"));
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(r.getBody().get("codename")).isEqualTo("新代号");

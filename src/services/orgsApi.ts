@@ -1,0 +1,263 @@
+/**
+ * orgsApi —— 组织模块的自研后端数据源（社交迁移 W3 第五波 第一步）。
+ *
+ * 契约：后端 /api/social/orgs*（OrgController）。屏蔽词 / 长度校验 / 卡片计算留在前端
+ * 纯逻辑（分流前已做），后端只负责落库 + 唯一索引兜底 + 队长身份校验。
+ *
+ * 错误语义（与 PB 不同，勿照抄）：
+ *  · 越权（非成员 / 非队长）→ HTTP 404 + body.message（与「不存在」不可区分）
+ *  · 业务拒绝（名额已用 / 满员 / 名字空）→ HTTP 400 + body.message
+ *  前端把 body.message 当作人话直接抛（后端文案已逐字对齐前端）。
+ */
+import { velvetRequest } from './velvetApi';
+import type {
+  Org, OrgCustom, OrgMember, OrgMemberCard, OrgCodenameKind,
+} from '@/types';
+
+/** 后端成员视图 → 前端 OrgMember */
+interface RawMember {
+  id: string;
+  orgId: string;
+  userId: string;
+  slot: string;
+  seat: number;
+  codename: string;
+  codenameKind: string;
+  tarotId?: string | null;
+  avatarUrl?: string | null;
+  card?: Record<string, unknown> | null;
+  goal?: string | null;
+  goalWeek?: string | null;
+  result?: string | null;
+  resultWeek?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface RawOrg {
+  id: string;
+  name: string;
+  motto: string;
+  emblem: string;
+  leaderId: string;
+  inviteCode: string;
+  tz: string;
+  custom?: OrgCustom | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const CODENAME_KINDS: readonly OrgCodenameKind[] = ['custom', 'nickname', 'tarot'];
+const RESULTS = ['done', 'partial', 'missed'] as const;
+
+function mapOrg(r: RawOrg): Org {
+  return {
+    id: r.id,
+    name: r.name || '',
+    motto: r.motto || '',
+    emblem: r.emblem || 'star',
+    leaderId: r.leaderId || '',
+    inviteCode: r.inviteCode || '',
+    tz: r.tz || 'UTC',
+    custom: r.custom ?? undefined,
+    createdAt: new Date(r.createdAt),
+    updatedAt: new Date(r.updatedAt),
+  };
+}
+
+function mapMember(r: RawMember): OrgMember {
+  return {
+    id: r.id,
+    orgId: r.orgId || '',
+    userId: r.userId || '',
+    slot: r.slot === 'own' ? 'own' : 'joined',
+    seat: typeof r.seat === 'number' ? r.seat : Number(r.seat) || 0,
+    codename: r.codename || '',
+    codenameKind: CODENAME_KINDS.includes(r.codenameKind as OrgCodenameKind) ? (r.codenameKind as OrgCodenameKind) : 'nickname',
+    tarotId: r.tarotId || undefined,
+    avatarUrl: r.avatarUrl || undefined,
+    card: (r.card as OrgMemberCard | null | undefined) ?? { streak: 0, persona: null, at: new Date().toISOString() },
+    goal: r.goal || undefined,
+    goalWeek: r.goalWeek || undefined,
+    result: (RESULTS as readonly string[]).includes(String(r.result)) ? (r.result as OrgMember['result']) : undefined,
+    resultWeek: r.resultWeek || undefined,
+    createdAt: new Date(r.createdAt),
+    updatedAt: new Date(r.updatedAt),
+  };
+}
+
+/** 后端错误 → 前端语义：把 body.message 当人话抛（后端文案已逐字对齐前端）。
+ *  用属性形状判断而非 instanceof——避免 ESM 模块图下 VelvetApiError 出现多份引用时漏判。 */
+function translate(err: unknown, fallback: string): Error {
+  // 后端返回了带 body 的错误（VelvetApiError 形状）：优先用 body.message 当人话
+  if (err && typeof err === 'object' && 'status' in err && 'body' in err) {
+    const msg = (err.body as { message?: string } | null)?.message;
+    if (typeof msg === 'string' && msg) return new Error(msg);
+    // 后端没给可读文案（body 空 / 无 message）→ 用调用方兜底，不透传技术黑话
+    return new Error(fallback);
+  }
+  return err instanceof Error ? err : new Error(fallback);
+}
+
+async function guard<T>(fn: () => Promise<T>, fallback: string): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    throw translate(err, fallback);
+  }
+}
+
+// ── 读 ────────────────────────────────────────────────
+
+/** 我加入的全部组织（{org, member} 列表）。 */
+export async function listMine(): Promise<Array<{ org: Org; member: OrgMember }>> {
+  const res = await velvetRequest<{ items: Array<{ org: RawOrg; member: RawMember }> }>('/api/social/orgs');
+  return (res.items ?? []).map(it => ({ org: mapOrg(it.org), member: mapMember(it.member) }));
+}
+
+/** 某组织全体成员（按座位）。 */
+export async function members(orgId: string): Promise<OrgMember[]> {
+  const res = await velvetRequest<{ items: RawMember[] }>(`/api/social/orgs/${orgId}/members`);
+  return (res.items ?? []).map(mapMember);
+}
+
+/** 单个组织。 */
+export async function fetch(orgId: string): Promise<Org> {
+  return mapOrg(await velvetRequest<RawOrg>(`/api/social/orgs/${orgId}`));
+}
+
+/** 凭邀请码预览；码不对返回 null。 */
+export async function preview(code: string): Promise<Org | null> {
+  const raw = await velvetRequest<RawOrg | null>(`/api/social/orgs/preview?code=${encodeURIComponent(code)}`);
+  return raw ? mapOrg(raw) : null;
+}
+
+// ── 建立 / 加入 ───────────────────────────────────────
+
+export interface CreateApiInput { name: string; motto: string; emblem: string; tz: string; codename: string }
+
+/** 建组织（队长 = 我，坐 1 号座位）。 */
+export async function create(input: CreateApiInput): Promise<{ org: Org; member: OrgMember }> {
+  const res = await guard(
+    () => velvetRequest<{ org: RawOrg; member: RawMember }>('/api/social/orgs', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+    '组织没建成，稍后再试',
+  );
+  return { org: mapOrg(res.org), member: mapMember(res.member) };
+}
+
+/** 凭码加入（座位由后端从 1 号往后分配）。 */
+export async function join(code: string, codename: string): Promise<{ org: Org; member: OrgMember }> {
+  const res = await guard(
+    () => velvetRequest<{ org: RawOrg; member: RawMember }>('/api/social/orgs/join', {
+      method: 'POST',
+      body: JSON.stringify({ code, codename }),
+    }),
+    '没能加入，稍后再试',
+  );
+  return { org: mapOrg(res.org), member: mapMember(res.member) };
+}
+
+// ── 改 ───────────────────────────────────────────────
+
+export async function updateProfile(orgId: string, draft: { name: string; motto: string; emblem: string }): Promise<Org> {
+  return guard(
+    async () => mapOrg(await velvetRequest<RawOrg>(`/api/social/orgs/${orgId}`, {
+      method: 'PUT',
+      body: JSON.stringify(draft),
+    })),
+    '没改成，稍后再试',
+  );
+}
+
+/** 改自定义；custom=null 表示清空。 */
+export async function updateCustom(orgId: string, custom: OrgCustom | null): Promise<Org> {
+  return guard(
+    async () => mapOrg(await velvetRequest<RawOrg>(`/api/social/orgs/${orgId}/custom`, {
+      method: 'PUT',
+      body: JSON.stringify({ custom }),
+    })),
+    '没存上，稍后再试',
+  );
+}
+
+/** 换邀请码。 */
+export async function rotate(orgId: string): Promise<Org> {
+  return guard(
+    async () => mapOrg(await velvetRequest<RawOrg>(`/api/social/orgs/${orgId}/rotate`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })),
+    '没换成，稍后再试',
+  );
+}
+
+export interface MemberApiPatch {
+  codename?: string;
+  codenameKind?: OrgCodenameKind;
+  tarotId?: string;
+  card?: OrgMemberCard;
+  goal?: string;
+  goalWeek?: string;
+  result?: 'done' | 'partial' | 'missed';
+  resultWeek?: string;
+}
+
+/** 改自己那一行（按 memberId 定位，后端校验归属）。 */
+export async function updateMember(memberId: string, patch: MemberApiPatch): Promise<OrgMember> {
+  return guard(
+    async () => mapMember(await velvetRequest<RawMember>(`/api/social/orgs/members/${memberId}`, {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    })),
+    '没存上，稍后再试',
+  );
+}
+
+/** 位置校正：只改 slot。 */
+export async function setSlot(memberId: string, slot: 'own' | 'joined'): Promise<OrgMember> {
+  return guard(
+    async () => mapMember(await velvetRequest<RawMember>(`/api/social/orgs/members/${memberId}/slot`, {
+      method: 'PUT',
+      body: JSON.stringify({ slot }),
+    })),
+    '没存上，稍后再试',
+  );
+}
+
+// ── 退出 / 请离 / 转让 / 解散 ─────────────────────────
+
+export async function leave(orgId: string): Promise<void> {
+  await guard(
+    () => velvetRequest<{ ok: boolean }>(`/api/social/orgs/${orgId}/leave`, { method: 'POST', body: JSON.stringify({}) }),
+    '没能退出，稍后再试',
+  );
+}
+
+/** 请离；返回 rotated（换码后的组织，失败为 null）。 */
+export async function kick(orgId: string, memberId: string): Promise<{ rotated: Org | null }> {
+  const res = await guard(
+    () => velvetRequest<{ rotated: RawOrg | null }>(`/api/social/orgs/${orgId}/kick/${memberId}`, { method: 'POST', body: JSON.stringify({}) }),
+    '没能请离，稍后再试',
+  );
+  return { rotated: res.rotated ? mapOrg(res.rotated) : null };
+}
+
+export async function transfer(orgId: string, toMemberId: string, alsoLeave: boolean): Promise<void> {
+  await guard(
+    () => velvetRequest<{ ok: boolean }>(`/api/social/orgs/${orgId}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify({ toMemberId, alsoLeave }),
+    }),
+    '没转让成，稍后再试',
+  );
+}
+
+export async function dissolve(orgId: string): Promise<void> {
+  await guard(
+    () => velvetRequest<{ ok: boolean }>(`/api/social/orgs/${orgId}`, { method: 'DELETE' }),
+    '没能解散，稍后再试',
+  );
+}

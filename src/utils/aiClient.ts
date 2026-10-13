@@ -895,11 +895,19 @@ export async function* chatStream(
   let relaySafe = !!opts.relaySafe;
   let relaySafeTried = false;
   let retried5xx = !!opts.retried5xx;
+  /**
+   * 代理 502（服务端没配这家钥匙 / 代理不可达）→ 本次调用改用直连。
+   * 非流式的 chatComplete 一直有这条回退，流式这条当初漏了：塔罗、谏言、年度总结这类走流式的功能
+   * 会把 502 原样甩给用户（2026-10-14 用户实测「塔罗 AI 不能用：服务端未配置 DEEPSEEK_API_KEY」）。
+   */
+  let proxyless = false;
   let last: StreamOutcome = { produced: false, sawReasoning: false, finishReason: '' };
   /** 正常收完才置 true；调用方提前 break（generator.return）或中途抛错时仍是 false → finally 里掐断底层请求 */
   let completed = false;
   try {
     for (let attempt = 0; attempt < 3; attempt++) {
+      // 已判定代理不可用：本次调用的后续尝试固定直连（函数收尾时在 finally 里恢复）
+      if (proxyless) syncAiProxy(false, '');
       const extra: Record<string, unknown> = {};
       // 第三发关思考：thinking 字段只有官方 DeepSeek 认；走过中转站保险的别再加回来（第 14 批：以前保险去掉了它，这里又塞回去）
       if (attempt === 2 && cfg.provider === 'deepseek' && !relaySafe && !quirksFor(cfg.baseUrl, cfg.model).relaySafe && isOfficialHost(cfg.baseUrl)) extra.thinking = { type: 'disabled' };
@@ -932,6 +940,8 @@ export async function* chatStream(
         if (!relaySafe && !quirks.relaySafe && isHttp400(e) && !isModerationError(e) && !isOfficialHost(cfg.baseUrl)) { relaySafe = true; relaySafeTried = !isOverBudgetError(e); attempt--; continue; }
         if (budgetStep < 2 && isOverBudgetError(e)) { budgetStep++; attempt--; continue; }
         if (!noEffort && isUnsupportedEffortError(e)) { noEffort = true; attempt--; continue; }
+        // 代理 502 → 关代理、用本机 Key 直连重发（与 chatComplete 的同名回退对齐）
+        if (e instanceof HttpStatusError && e.status === 502 && !proxyless) { proxyless = true; attempt--; continue; }
         // 5xx 也是在发出去时就被拒（一个字节都没流过来）：隔一下再试一次
         if (!retried5xx && isRetryable5xx(e)) { retried5xx = true; await sleepAbortable(RETRY_5XX_DELAY_MS, ab.signal); attempt--; continue; }
         throw e;
@@ -956,6 +966,7 @@ export async function* chatStream(
   } catch (e) {
     rethrowAbortAware(e, ab, opts);
   } finally {
+    if (proxyless) syncAiProxy(hasBackendSession(), getApiBaseUrl());
     ab.cleanup();
     /**
      * 调用方提前退出（拟真流被用户打断 / 组件卸载 break 掉 for-await）时，for-await 会调

@@ -22,4 +22,10 @@ public class SocialApiExceptionHandler {
     public ResponseEntity<Map<String, Object>> handle(SocialException e) {
         return ResponseEntity.status(e.getStatus()).body(Map.of("message", e.getMessage()));
     }
+
+    /** 带业务 code 的 409（每日限速等）——前端按 code 分派，不靠字符串匹配。 */
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(ConflictException e) {
+        return ResponseEntity.status(e.getStatus()).body(Map.of("message", e.getMessage(), "code", e.getCode()));
+    }
 }

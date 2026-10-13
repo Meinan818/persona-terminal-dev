@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
+import java.util.Base64;
+import java.security.MessageDigest;
 
 @Component
 public class JwtUtil {
@@ -23,11 +25,18 @@ public class JwtUtil {
         this.expireMillis = expireHours * 3600_000L;
     }
 
-    public String generate(String userId, String email) {
+    public static String credentialVersion(String passwordHash) {
+        if (passwordHash == null || passwordHash.isBlank()) return null;
+        try { return Base64.getUrlEncoder().withoutPadding().encodeToString(MessageDigest.getInstance("SHA-256").digest(passwordHash.getBytes(StandardCharsets.UTF_8))); }
+        catch (java.security.NoSuchAlgorithmException error) { throw new IllegalStateException(error); }
+    }
+
+    public String generate(String userId, String email, String passwordHash) {
         Date now = new Date();
         return Jwts.builder()
                 .setSubject(userId)
                 .claim("email", email)
+                .claim("credentialVersion", credentialVersion(passwordHash))
                 .setIssuedAt(now)
                 .setExpiration(new Date(now.getTime() + expireMillis))
                 .signWith(key, SignatureAlgorithm.HS256)

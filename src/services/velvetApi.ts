@@ -203,6 +203,16 @@ export const authWithPassword = async (identity: string, password: string): Prom
   return r.record;
 };
 
+export const changePassword = async (oldPassword: string, password: string, passwordConfirm: string): Promise<VelvetRecord> => {
+  const generation = getAuthGeneration();
+  const result = await request<{ token: string; record: VelvetRecord }>('/api/velvet/change-password', {
+    method: 'POST', body: JSON.stringify({ oldPassword, password, passwordConfirm }),
+  });
+  if (generation !== getAuthGeneration()) throw new Error('登录状态已变化，请重新登录');
+  saveAuth(result.token, result.record);
+  return result.record;
+};
+
 /** 当前用户（含 token 过期后的 401） */
 export const fetchMe = (): Promise<VelvetRecord> => request<VelvetRecord>('/api/me', { method: 'GET' });
 

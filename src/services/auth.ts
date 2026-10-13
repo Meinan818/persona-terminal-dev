@@ -491,11 +491,20 @@ export const changePasswordWithOld = async (
   newPassword: string,
   newPasswordConfirm: string,
 ): Promise<RecordModel> => {
+  if (newPassword.length < 8) throw new Error('新密码至少 8 位');
+  if (new TextEncoder().encode(newPassword).length > 72) throw new Error('新密码超过 72 字节上限');
+  if (newPassword !== newPasswordConfirm) throw new Error('两次新密码不一致');
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await velvetApi.changePassword(oldPassword, newPassword, newPasswordConfirm) as unknown as RecordModel;
+    } catch (error) {
+      if (error instanceof VelvetApiError && error.status === 400) throw new Error('旧密码不正确或新密码格式不符合要求');
+      throw error;
+    }
+  }
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const id = getUserId();
   if (!id) throw new Error('用户信息缺失');
-  if (newPassword.length < 8) throw new Error('新密码至少 8 位');
-  if (newPassword !== newPasswordConfirm) throw new Error('两次新密码不一致');
   try {
     const updated = await pb.collection('users').update(id, {
       oldPassword,

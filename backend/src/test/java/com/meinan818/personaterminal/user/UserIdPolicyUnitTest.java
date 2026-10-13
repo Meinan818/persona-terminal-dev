@@ -155,7 +155,7 @@ class UserIdPolicyUnitTest {
         when(users.selectOne(any())).thenReturn(current);
         PasswordEncoder passwords = mock(PasswordEncoder.class);
         when(passwords.matches(anyString(), anyString())).thenReturn(true);
-        JwtUtil jwt = mock(JwtUtil.class); when(jwt.generate(anyString(), anyString())).thenReturn("synthetic");
+        JwtUtil jwt = mock(JwtUtil.class); when(jwt.generate(anyString(), anyString(), anyString())).thenReturn("synthetic");
         var login = new AuthController.LoginReq(); login.setIdentity(current.getEmail()); login.setPassword("synthetic");
         ResponseEntity<?> passwordResult = new AuthController(users, passwords, jwt).authWithPassword(login);
         var otpService = mock(com.meinan818.personaterminal.auth.OtpService.class); when(otpService.verify(anyString(), anyString())).thenReturn(true);
@@ -169,5 +169,14 @@ class UserIdPolicyUnitTest {
             assertThat(record.get("nickname")).isEqualTo("Public name");
             assertThat(record.get("total_lv")).isEqualTo(5);
         }
+    }
+
+    @Test void profileWriteDoesNotRestoreAnOldPasswordHash() {
+        current.setPassword("synthetic-old-hash");
+        me.updateProfile(Map.of("nickname", "Updated"));
+        sync.updateProfile(Map.of("nickname", "Updated again"));
+        var changes = org.mockito.ArgumentCaptor.forClass(User.class);
+        verify(users, times(2)).updateById(changes.capture());
+        assertThat(changes.getAllValues()).allSatisfy(user -> assertThat(user.getPassword()).isNull());
     }
 }

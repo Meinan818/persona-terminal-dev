@@ -94,7 +94,7 @@ public class OtpAuthController {
                 return created;
             });
         }
-        String token = jwtUtil.generate(u.getId(), u.getEmail());
+        String token = jwtUtil.generate(u.getId(), u.getEmail(), u.getPassword());
         Map<String, Object> record = new HashMap<>();
         record.put("id", u.getId());
         record.put("email", u.getEmail());

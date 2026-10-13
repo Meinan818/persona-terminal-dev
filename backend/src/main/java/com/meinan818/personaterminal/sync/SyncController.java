@@ -208,7 +208,10 @@ public class SyncController {
         // 档案扩展字段（nickname / total_lv / attribute_* / status / goal …）并入 profile JSON 列
         u.setProfile(UserProfileFields.merge(u.getProfile(), patch));
         u.setUpdated(now());
-        userMapper.updateById(u);
+        User changes = new User();
+        changes.setId(u.getId()); changes.setName(u.getName()); changes.setAvatar(u.getAvatar());
+        changes.setProfile(u.getProfile()); changes.setUpdated(u.getUpdated());
+        userMapper.updateById(changes);
         return ResponseEntity.ok(toRecord(u));
     }
 

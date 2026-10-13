@@ -32,6 +32,8 @@
 
 import type { RecordModel } from 'pocketbase';
 import { pb, getUserId } from './pocketbase';
+import * as velvetApi from './velvetApi';
+import * as coopBondsApi from './coopBondsApi';
 import { parseGoalSnapshot, parseProfileStatus } from '@/utils/profilePresence';
 import type { AttributeId, CloudProfile, CoopBond, CoopBondStatus, TarotOrientation } from '@/types';
 
@@ -116,6 +118,15 @@ const orderPair = (a: string, b: string) => (a < b ? { userA: a, userB: b } : { 
 // ── 读 ────────────────────────────────────────────────────────────
 
 export const listCoopBonds = async (): Promise<CoopBond[]> => {
+  // 自研后端：羁绊迁移到 /api/social/coop/bonds（W3 第二波）
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await coopBondsApi.listCoopBonds();
+    } catch (err) {
+      console.warn('[velvet-coop] listCoopBonds (backend) failed', err);
+      return [];
+    }
+  }
   if (!pb || !pb.authStore.isValid) return [];
   const me = getUserId();
   if (!me) return [];
@@ -171,6 +182,11 @@ export interface ProposeCoopBondInput {
  * - 其他 → update 现有记录回 pending / 新建记录
  */
 export const proposeCoopBond = async (input: ProposeCoopBondInput): Promise<CoopBond> => {
+  // 自研后端：提议迁移到 /api/social/coop/bonds/propose（W3 第二波）。
+  // 状态机校验（已 linked / pending / 冷却期）在后端做，冲突返回 400。
+  if (velvetApi.isAuthenticated()) {
+    return await coopBondsApi.proposeCoopBond(input);
+  }
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');
@@ -258,6 +274,10 @@ export interface AcceptCoopBondInput {
 
 /** 对方接受 COOP 提议：写入接受方的 arcana，并转为 linked */
 export const acceptCoopBond = async (input: AcceptCoopBondInput): Promise<CoopBond> => {
+  // 自研后端：接受迁移到 /api/social/coop/bonds/{id}/accept（W3 第二波）
+  if (velvetApi.isAuthenticated()) {
+    return await coopBondsApi.acceptCoopBond(input);
+  }
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');
@@ -296,6 +316,10 @@ export const acceptCoopBond = async (input: AcceptCoopBondInput): Promise<CoopBo
  * 服务端二次校验：只有 status='pending' 才能被拒，避免 accept 后误操作让 bond 退回 rejected。
  */
 export const rejectCoopBond = async (bondId: string): Promise<CoopBond> => {
+  // 自研后端：拒绝迁移到 /api/social/coop/bonds/{id}/reject（W3 第二波）
+  if (velvetApi.isAuthenticated()) {
+    return await coopBondsApi.rejectCoopBond(bondId);
+  }
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');
@@ -320,6 +344,10 @@ export const rejectCoopBond = async (bondId: string): Promise<CoopBond> => {
 
 /** 解除已建立的 COOP（7 天冷却） */
 export const severCoopBond = async (bondId: string): Promise<CoopBond> => {
+  // 自研后端：解除迁移到 /api/social/coop/bonds/{id}/sever（W3 第二波）
+  if (velvetApi.isAuthenticated()) {
+    return await coopBondsApi.severCoopBond(bondId);
+  }
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');
@@ -368,6 +396,12 @@ const createCoopNotification = async (
 // ── 过期兜底 ─────────────────────────────────────────────────
 
 export const expireOutdatedCoopPending = async (bonds: CoopBond[]): Promise<number> => {
+  // 自研后端：listFor 已自动把过期 pending 置 expired（对齐 friendsApi.expireOutdatedPending 语义），
+  // 这里只统计前端列表里已过期的条数，不再发 PB 请求。
+  if (velvetApi.isAuthenticated()) {
+    const now = Date.now();
+    return bonds.filter(b => b.status === 'pending' && b.expiresAt && b.expiresAt.getTime() < now).length;
+  }
   if (!pb || !pb.authStore.isValid) return 0;
   const now = Date.now();
   let changed = 0;
@@ -426,6 +460,10 @@ export const viewFromMySide = (bond: CoopBond, me: string): MySideView => {
  * 真正决定衰减是否发生看 bothSidesAgreeOnDecay()
  */
 export const setCoopDecayPreference = async (bondId: string, enabled: boolean): Promise<CoopBond> => {
+  // 自研后端：逆流开关迁移到 /api/social/coop/bonds/{id}/decay（W3 第二波）
+  if (velvetApi.isAuthenticated()) {
+    return await coopBondsApi.setCoopDecayPreference(bondId, enabled);
+  }
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const me = getUserId();
   if (!me) throw new Error('用户信息缺失');

@@ -53,11 +53,12 @@ public class OtpService {
 
     /** 校验并消费验证码；不匹配/过期返回 false */
     public boolean verify(String email, String code) {
+        if (email == null || code == null) return false;
         Entry e = store.get(email);
-        if (e == null || Instant.now().isAfter(e.expiresAt())) return false;
+        if (e == null || !Instant.now().isBefore(e.expiresAt())) return false;
         if (!e.code().equals(code.trim())) return false;
-        store.remove(email); // 一次性
-        return true;
+        // 只消费刚校验的同一份记录，避免并发成功两次或误删新发的验证码。
+        return store.remove(email, e);
     }
 
     private void sendMail(String to, String code) {

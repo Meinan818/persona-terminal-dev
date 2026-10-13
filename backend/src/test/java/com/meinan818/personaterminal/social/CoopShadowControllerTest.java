@@ -36,6 +36,8 @@ class CoopShadowControllerTest {
     private SocialNotificationMapper notificationMapper;
 
     private record Acct(String token, String id, String name) {}
+    private final Map<String, Acct> accounts = new HashMap<>();
+    private final Map<String, String> linkedBonds = new HashMap<>();
 
     private Acct register(String name) {
         String email = "shadow-" + UUID.randomUUID() + "@example.com";
@@ -43,7 +45,9 @@ class CoopShadowControllerTest {
         ResponseEntity<Map> res = rest.postForEntity("/api/velvet/register", body, Map.class);
         assertThat(res.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
         Map<?, ?> rec = (Map<?, ?>) res.getBody().get("record");
-        return new Acct((String) res.getBody().get("token"), (String) rec.get("id"), name);
+        Acct account = new Acct((String) res.getBody().get("token"), (String) rec.get("id"), name);
+        accounts.put(account.id(), account);
+        return account;
     }
 
     private static HttpHeaders bearer(String token) {
@@ -74,11 +78,25 @@ class CoopShadowControllerTest {
 
     /** 造一只影（走 spawn 接口，指定 id 由调用方给）。 */
     private ResponseEntity<Map> spawn(String token, String meId, String otherId, String shadowRecId) {
+        String userA = CoopBond.smallerOf(meId, otherId);
+        String userB = CoopBond.largerOf(meId, otherId);
+        String pair = userA + ":" + userB;
+        String bondId = linkedBonds.get(pair);
+        if (bondId == null) {
+            // 建立真实测试关系，不再依赖服务端接受伪造 bond 的旧缺陷。
+            ResponseEntity<Map> proposed = post(accounts.get(userA).token(), "/api/social/coop/bonds/propose", Map.of("targetUserId", userB));
+            assertThat(proposed.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
+            bondId = (String) proposed.getBody().get("id");
+            ResponseEntity<Map> accepted = post(accounts.get(userB).token(), "/api/social/coop/bonds/" + bondId + "/accept", Map.of());
+            assertThat(accepted.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
+            assertThat(accepted.getBody().get("status")).isEqualTo("linked");
+            linkedBonds.put(pair, bondId);
+        }
         Map<String, Object> m = new HashMap<>();
         m.put("id", shadowRecId);
-        m.put("bondId", "bond-test");
-        m.put("userAId", meId);
-        m.put("userBId", otherId);
+        m.put("bondId", bondId);
+        m.put("userAId", userA);
+        m.put("userBId", userB);
         m.put("shadowId", "coop:despair");
         m.put("nameOverride", "测试之影");
         m.put("spawnedAt", java.time.Instant.now().toString());

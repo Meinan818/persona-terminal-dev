@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 羁绊之影服务（社交迁移 W3 第四波）。
@@ -40,6 +41,7 @@ public class CoopShadowService {
     private final CoopAttackMapper attackMapper;
     private final SocialNotificationMapper notificationMapper;
     private final SocialUserService socialUserService;
+    private final CoopBondMapper bondMapper;
     private final ObjectMapper json = new ObjectMapper();
 
     // ── 读 ────────────────────────────────────────────────
@@ -86,10 +88,24 @@ public class CoopShadowService {
         if (!userA.equals(me) && !userB.equals(me)) {
             throw new SocialException(HttpStatus.NOT_FOUND, "羁绊之影不存在");
         }
+        CoopBond bond = bondMapper.selectById(bondId);
+        if (bond == null || !"linked".equals(bond.getStatus())
+                || !Objects.equals(bond.getUserA(), userA) || !Objects.equals(bond.getUserB(), userB)
+                || bond.getUserA() == null || bond.getUserB() == null || userA.equals(userB)) {
+            throw new SocialException(HttpStatus.NOT_FOUND, "羁绊之影不存在");
+        }
+        // 身份以真实关系行为准，不信任客户端指定的双方。
+        userA = bond.getUserA();
+        userB = bond.getUserB();
         String partnerId = userA.equals(me) ? userB : userA;
+        User partner = socialUserService.requireUser(partnerId);
+        if (!Objects.equals(partner.getId(), partnerId)) {
+            throw new SocialException(HttpStatus.NOT_FOUND, "羁绊之影不存在");
+        }
 
         CoopShadow existing = shadowMapper.selectById(id);
         if (existing != null) {
+            assertBelongsToBond(existing, bond);
             Map<String, Object> v = toView(existing);
             v.put("created", false);
             return v;
@@ -123,6 +139,7 @@ public class CoopShadowService {
             // 撞 id = 对方/另一路同步抢先建了：读回已有
             CoopShadow dup = shadowMapper.selectById(id);
             if (dup != null) {
+                assertBelongsToBond(dup, bond);
                 Map<String, Object> v = toView(dup);
                 v.put("created", false);
                 return v;
@@ -136,6 +153,14 @@ public class CoopShadowService {
         Map<String, Object> v = toView(s);
         v.put("created", true);
         return v;
+    }
+
+    private void assertBelongsToBond(CoopShadow shadow, CoopBond bond) {
+        if (!Objects.equals(shadow.getBondId(), bond.getId())
+                || !Objects.equals(shadow.getUserA(), bond.getUserA())
+                || !Objects.equals(shadow.getUserB(), bond.getUserB())) {
+            throw new SocialException(HttpStatus.NOT_FOUND, "羁绊之影不存在");
+        }
     }
 
     // ── 识破 ──────────────────────────────────────────────

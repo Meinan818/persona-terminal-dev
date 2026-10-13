@@ -10,29 +10,8 @@
  *      若日后要做按作者防滥用，应由 pb_hook 服务端写 createdBy，且规则不引用它。）
  *   - 离线兜底：无云 / 集合未建 / 出错 → 返回空，由 DanmakuField 退回种子池。
  *
- * ── PocketBase 集合 `danmaku` schema（在 PB Admin 手动建立）──
- *   text        text     required, max 30
- *   theme       select   (blue / yellow / red)
- *   status      select   (pending / approved / rejected)   default pending
- *   isSeed      bool
- *   reportCount number
- *   approvedAt  date     optional（过审时间，可人工填）
- *   （不需要 createdBy；匿名靠「不存作者」实现）
- *
- *   API 规则（纯规则即可实现「先审后发」，无需 hook）。
- *   ⚠️ 字段引用语法随 PB 版本不同：v0.23+ 用 @request.body.*，v0.22 及更早用 @request.data.*。
- *     List/View rule : status = "approved"
- *     Create rule    : @request.auth.id != "" && @request.body.status = "pending"
- *     Update/Delete  : （锁定 = 仅 Admin；过审在后台点 approved）
- *   ⚠️ PB 规则三态：锁定(null)=仅 Admin（安全）；空字符串("")=对所有人公开无过滤（会泄漏
- *      pending/rejected！）；表达式=按条件。务必让 List/View 是 status="approved" 而非空。
- *
- * ── 可选集合 `danmaku_reports`（举报兜底，配合服务端扩展）──
- *   danmaku     relation → danmaku   required
- *   reason      text
- *   reporterId  relation → users
- *   唯一索引(unique): (danmaku, reporterId) —— ★必须：同一个人对同一条只记一次举报
- *   Create rule : @request.auth.id != "" && @request.body.reporterId = @request.auth.id  (v0.22-: @request.data)
+ * 数据面走自研后端 /api/danmaku*（列表 / 投稿 / 举报 / 过审自查见 danmakuApi）；
+ * PocketBase 时代的集合 schema 与访问规则已随退役删除，审核由服务端按内容自动完成。
  */
 
 import { getUserId } from './velvetApi';

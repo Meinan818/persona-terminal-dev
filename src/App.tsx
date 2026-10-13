@@ -338,7 +338,7 @@ function App() {
     return () => { cancelled = true; clearTimeout(kick); };
   }, [isLoading, showSplash, user]);
 
-  // 订阅云端登录状态变化（PocketBase token 刷新 / 登出）
+  // 订阅云端登录状态变化（登录 / 登出 / 换号 / 跨标签页）
   useEffect(() => {
     const unsub = useCloudStore.getState().initAuthListener();
     return unsub;

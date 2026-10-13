@@ -117,6 +117,26 @@ export function syncAiProxy(enabled: boolean, baseUrl: string): void {
 export const aiProxyEnabled = (): boolean => proxyEnabled;
 
 /**
+ * 临时关掉代理跑一次，跑完无论成败都恢复原状。
+ *
+ * 用途：后端代理「服务端没配这家钥匙」时（502），调用方改走直连、用本机保存的 Key 再试一次。
+ * 聊天路径一直有这个回退（见 aiClient 的「代理 502 → 直连」）；测试连接当初漏了，
+ * 于是出现「聊天明明能用、点测试连接却报 HTTP 502 服务端未配置 XXX_API_KEY」。
+ */
+export async function withoutAiProxy<T>(run: () => Promise<T>): Promise<T> {
+  const wasEnabled = proxyEnabled;
+  const previousBaseUrl = proxyBaseUrl;
+  proxyEnabled = false;
+  proxyBaseUrl = '';
+  try {
+    return await run();
+  } finally {
+    proxyEnabled = wasEnabled;
+    proxyBaseUrl = previousBaseUrl;
+  }
+}
+
+/**
  * 音频转写代理改道（FormData 专用）。
  * 后端代理没有 /audio 端点时返回 null（直连兜底）；有则改发 /api/ai/audio。
  */

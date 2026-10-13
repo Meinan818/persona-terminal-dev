@@ -3,7 +3,7 @@
  * 统一管理各 provider 的 baseUrl / defaultModel，避免分散在 store / Settings / SummaryModal 中重复
  * 所有 provider 均走 OpenAI 兼容的 /chat/completions 端点
  */
-import { aiFetch, hostOfUrl, nativeTransportAvailable } from '@/utils/aiTransport';
+import { aiFetch, aiProxyEnabled, hostOfUrl, nativeTransportAvailable, withoutAiProxy } from '@/utils/aiTransport';
 import { recordAIDiag } from '@/utils/aiDiagnostics';
 import { effortFixFromMessage, isEnableThinkingMessage, isLegacyThinkingMessage, isUnsupportedTemperatureMessage, quirksFor, rememberQuirk, thinkingSuffixBase } from '@/utils/aiQuirks';
 import { anthropicEndpoint, anthropicHeaders } from '@/utils/aiAnthropic';
@@ -508,6 +508,12 @@ export async function testAIConnection(opts: {
       if (!resp.ok) {
         const text = await resp.text().catch(() => '');
         const detail = extractProviderErrorMessage(text).slice(0, 240).trim();
+        // 代理不可用（服务端没配这家钥匙）→ 关掉代理，用本机保存的 Key 直连重试一次。
+        // 聊天路径一直有这个回退（见 aiClient 的「代理 502 → 直连」注释），测试连接当初漏了，
+        // 于是出现「聊天明明能用、测试连接却报 502 服务端未配置环境变量」这种自相矛盾的现象。
+        if (resp.status === 502 && detail.includes('服务端未配置') && aiProxyEnabled()) {
+          return withoutAiProxy(() => attempt(base, forceNative));
+        }
         const hint = moderationHint(detail) || relayHint(detail, isOfficialHost(base)) || getHttpStatusHint(resp.status, opts.provider);
         const prefix = hint ? `${hint} (HTTP ${resp.status})` : `HTTP ${resp.status}`;
         const error = detail ? `${prefix}: ${detail}` : `${prefix}: ${resp.statusText}`;
@@ -700,6 +706,10 @@ export async function fetchAvailableModels(opts: {
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
       const detail = extractProviderErrorMessage(body).slice(0, 200).trim();
+      // 同上：代理没配这家钥匙时改走直连，别让拉模型列表也倒在同一个坑里
+      if (resp.status === 502 && detail.includes('服务端未配置') && aiProxyEnabled()) {
+        return withoutAiProxy(() => fetchAvailableModels(opts));
+      }
       const hint = resp.status === 404
         ? '该地址不支持 /models 列表接口，请手动填写模型名'
         : (relayHint(detail, isOfficialHost(baseUrl)) || getHttpStatusHint(resp.status, opts.provider));

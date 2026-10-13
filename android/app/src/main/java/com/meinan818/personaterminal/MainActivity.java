@@ -141,6 +141,8 @@ public class MainActivity extends BridgeActivity {
         long minutesAgo = (System.currentTimeMillis() - info.getTimestamp()) / 60_000L;
         // 只报「刚发生」的那次，免得每次冷启动都弹一条几天前的旧记录
         if (minutesAgo > 15) return;
+        // 用户上滑清理后台（小米的 SwipeUpClean）、系统回收任务都算正常退出，不该提示
+        if (info.getReason() == ApplicationExitInfo.REASON_USER_REQUESTED) return;
         String message = "原因码 reason=" + info.getReason() + "（" + describeExitReason(info.getReason()) + "）"
                 + "\n说明 desc=" + info.getDescription()
                 + "\n退出时内存 pss≈" + (info.getPss() / 1024) + " MB"

@@ -159,9 +159,9 @@ npm run cap:build:android       # 打包 Android
 
 ## 后端改造进度
 
-数据层已从第三方云服务（PocketBase）迁到**自研 Spring Boot + MySQL + JWT**：
-新登录一律走自研后端；PocketBase 只作为历史账号的回落路径保留，
-**退役清理还没做**（属于已知欠账，不影响新用户）。已完成的部分均附测试。
+数据层已从第三方云服务（PocketBase）**完整迁到自研 Spring Boot + MySQL + JWT**：
+登录、社交、同步、账号管理全部走自研接口，PocketBase 的 SDK、依赖与代码路径已经删除，
+不再有第二套后端。已完成的部分均附测试。
 
 | 模块 | 状态 |
 |---|---|
@@ -171,7 +171,7 @@ npm run cap:build:android       # 打包 Android
 | 用户档案（昵称 / 等级 / 属性 / 状态 / 头像） | ✅ 自研后端 |
 | 云端数据面（`/api/sync/rows`，镜像 KV 模型） | ✅ 自研后端 |
 | 数据库版本化迁移（Flyway） | ✅ 已引入 |
-| 社交（好友 / 通知 / 同伴 / 组织 / 一起进步 / 弹幕） | ✅ 自研后端（PB 回落仍在） |
+| 社交（好友 / 通知 / 同伴 / 组织 / 一起进步 / 弹幕） | ✅ 自研后端（PocketBase 已退役） |
 | AI 代理层（可选：服务端持 Key 转发；默认关，产品仍是 BYOK） | ✅ 已实现 |
 | 记账流水 / 聊天原文 / 记录配图 / 导入音乐 | 按设计只存本机，不上云 |
 
@@ -190,7 +190,7 @@ npm run cap:build:android       # 打包 Android
 |---|---|
 | Web / PWA | ✅ 可安装、离线可用 |
 | Android | ✅ Capacitor 打包，含桌面小组件 |
-| 后端 | ✅ Spring Boot + MySQL（自研；PocketBase 回落待退役） |
+| 后端 | ✅ Spring Boot + MySQL（自研，PocketBase 已退役） |
 
 ---
 

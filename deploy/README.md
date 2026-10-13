@@ -7,9 +7,12 @@
 
 ## 0. 机器规格建议
 
-- 内存 ≥ 2 GB（后端常驻约 300–500 MB，MySQL 另需 300–500 MB；1 GB 会吃紧）。
+- 内存 ≥ 2 GB。2 GB 够跑：后端堆上限 512 MB（见 §5 的 systemd 单元）、MySQL 按 §1.1 收到
+  300 MB 上下、nginx 几十 MB。**2 GB 的机器必须先做 §1.1 那两步**，不然 MySQL 8 的默认配置会多吃几百兆。
 - 系统 Ubuntu 22.04 / 24.04 或同类。
 - 安全组只放 22 / 80 / 443；数据库不要对公网开放（只监听 127.0.0.1）。
+
+带宽 3 M 够用：首次打开要下约 5.9 MB 的 PWA 预缓存（十几秒），之后都走本地缓存。
 
 ## 1. 装运行环境
 
@@ -17,6 +20,35 @@
 sudo apt update
 sudo apt install -y openjdk-17-jre-headless mysql-server nginx certbot python3-certbot-nginx
 ```
+
+### 1.1 2 GB 内存的机器：先收 MySQL、再加 swap
+
+MySQL 8 默认配置按「机器很大」来分配内存，2 GB 上会和后端抢。装完 MySQL 后加一个配置文件：
+
+```bash
+sudo tee /etc/mysql/mysql.conf.d/zz-maskaria-small.cnf >/dev/null <<'CNF'
+[mysqld]
+innodb_buffer_pool_size = 128M
+performance_schema = OFF
+max_connections = 32
+CNF
+sudo systemctl restart mysql
+```
+
+再加 2 GB swap 兜底（云服务器通常默认没有 swap，内存一紧张就是 OOM kill）：
+
+```bash
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+# 换出别太积极，否则 MySQL 的热页会被换出去、反而更慢
+sudo sysctl -w vm.swappiness=10
+echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/99-maskaria.conf
+```
+
+做完用 `free -m` 确认 swap 那一行有 2047 MB 左右。
 
 ## 2. 建库与账号
 
@@ -103,6 +135,7 @@ sudo certbot --nginx -d 你的域名          # 自动申请证书并改配置
 6. 手机浏览器打开 → 加到主屏 → 从主屏图标进入，外观正常。
 7. 头像上传成功；重启后端后头像还在（说明上传目录没被当临时目录清掉）。
 8. 重启后端一次：`flyway_schema_history` 里仍是那些版本，没有重复建表。
+9. `free -m` 看一眼：空闲内存还在 300 MB 以上，swap 用量接近 0（都被吃掉说明 §1.1 没做到位）。
 
 ## 8. 备份与回滚
 

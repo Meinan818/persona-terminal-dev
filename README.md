@@ -176,7 +176,7 @@ npm run cap:build:android       # 打包 Android
 | 记账流水 / 聊天原文 / 记录配图 / 导入音乐 | 按设计只存本机，不上云 |
 
 **验证（2026-10-14 实测）**：后端 `mvn test` **154 项全通过**（集成测试跑在隔离库
-`persona_terminal_test` 上，不再污染应用库）；前端 `npm test` **29 文件 / 192 项全通过**；
+`persona_terminal_test` 上，不再污染应用库）；前端 `npm test` **30 文件 / 196 项全通过**；
 `tsc --noEmit` 0 报错；生产构建 `VITE_API_URL=<正式地址> npm run build` 通过并正常生成 PWA。
 
 上线步骤见 [`deploy/README.md`](deploy/README.md)，合规边界见 [`COMPLIANCE.md`](COMPLIANCE.md)，

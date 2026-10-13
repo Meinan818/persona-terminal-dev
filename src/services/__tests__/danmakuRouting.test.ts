@@ -1,10 +1,8 @@
 /**
- * danmaku.ts / danmakuWatch.ts 分流回归测试（社交迁移 W5）：
+ * danmaku.ts / danmakuWatch.ts 回归测试（PocketBase 退役后）：
  *
- * 自研后端登录态下（localStorage 有 velvet.jwt），弹幕的读/写/举报/过审自查
- * 必须走 danmakuApi（/api/danmaku*），而不是 PocketBase。
- *
- * 关键：① localStorage 放 velvet.jwt；② pb.collection 强制抛错作为硬断言。
+ * 弹幕的读/写/举报/过审自查一律走 danmakuApi（/api/danmaku*）；
+ * 身份取自 velvetApi（以前取自 pocketbase 的兜底函数）。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,17 +13,10 @@ const h = vi.hoisted(() => {
     isApproved: vi.fn(),
     report: vi.fn(),
   };
-  const pb = {
-    authStore: { isValid: true, token: 'pb-token', record: { id: 'pb-me' } },
-    baseURL: 'https://pb.example.com',
-    collection: vi.fn(() => {
-      throw new Error('不应触碰 PocketBase：自研登录态下必须走 danmakuApi');
-    }),
-  };
-  return { api, pb };
+  return { api };
 });
 
-vi.mock('../pocketbase', () => ({ pb: h.pb, getUserId: () => 'user-me' }));
+vi.mock('../velvetApi', () => ({ getUserId: () => 'user-me' }));
 vi.mock('../danmakuApi', () => h.api);
 
 /** 每个用例开始前放好 velvet.jwt（进入自研态） */
@@ -37,7 +28,6 @@ function setBackend(on: boolean) {
 beforeEach(() => {
   setBackend(true);
   Object.values(h.api).forEach(f => f.mockReset());
-  h.pb.collection.mockClear();
   localStorage.removeItem('velvet:danmaku-watch');
   localStorage.removeItem('velvet-danmaku-blocked-v1');
 });

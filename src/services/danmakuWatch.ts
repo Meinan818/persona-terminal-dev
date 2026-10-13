@@ -18,13 +18,8 @@
  * 被拒的弹幕永远返回 404，不清理的话这张表会无限攒下去，每次开 App 多打几个请求。
  * 所以：最多留 MAX_WATCH 条，超过 EXPIRE_MS 没结果就当被拒了、丢掉。
  */
-import { pb } from './pocketbase';
 import { isApproved as velvetIsApproved } from './danmakuApi';
 import { isNative } from '@/utils/native';
-import { hasBackendSession } from './sessionSource';
-
-/** 数据源判据（与 danmaku.ts 同款）：登录了自研后端 → 走 /api/danmaku。判据统一见 sessionSource */
-const useBackend = hasBackendSession;
 
 const KEY = 'velvet:danmaku-watch';
 /** 最多同时盯几条（弹幕投稿有三天冷却，正常人攒不到这个数） */
@@ -90,22 +85,14 @@ export async function checkApprovedDanmaku(): Promise<WatchItem[]> {
   if (fresh.length !== all.length) write(fresh);
   if (fresh.length === 0) return [];
 
-  const backend = useBackend();
-  if (!backend && !pb) return [];
-
   const approved: WatchItem[] = [];
   const keep: WatchItem[] = [];
 
   for (const it of fresh) {
     try {
-      if (backend) {
-        // 自研后端：GET /api/danmaku/{id} —— 200 = 已过审，404 = 还没结果（W5）
-        if (await velvetIsApproved(it.id)) approved.push(it);
-        else keep.push(it);
-        continue;
-      }
-      await pb!.collection('danmaku').getOne(it.id, { requestKey: null });
-      approved.push(it); // 200 = View 规则放行 = status 已是 approved
+      // GET /api/danmaku/{id} —— 200 = 已过审，404 = 还没结果
+      if (await velvetIsApproved(it.id)) approved.push(it);
+      else keep.push(it);
     } catch {
       // 404（规则挡住 = 还没过审或已被拒）与 0/401/5xx（断网 / 未登录 / 服务端抖）
       // 在这里的处置是同一个：保留，下次再探。

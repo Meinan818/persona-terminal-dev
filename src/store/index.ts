@@ -3357,7 +3357,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (data.summaries && Array.isArray(data.summaries)) {
         for (const s of data.summaries as unknown[]) {
           const ps = s as PeriodSummary;
-          await db.summaries.put({ ...ps, createdAt: new Date(ps.createdAt) });
+          // 这几个字段的类型是 Date，JSON 往返后成字符串，必须逐个还原：
+          //   · viewedAt —— 不还原就与类型说谎（真值判断碰巧还对，暂时看不出问题）
+          //   · followUp / followUps[].createdAt —— summaryAI.followUpsOf 合并「老记录的单轮追问」
+          //     与「重开后的多轮追问」时按 createdAt === 去重；字符串永不等于 Date，
+          //     于是老记录被当成没追问过，追问列表里会多出重复的一轮
+          await db.summaries.put({
+            ...ps,
+            createdAt: new Date(ps.createdAt),
+            viewedAt: ps.viewedAt ? new Date(ps.viewedAt) : undefined,
+            followUp: ps.followUp ? { ...ps.followUp, createdAt: new Date(ps.followUp.createdAt) } : undefined,
+            followUps: ps.followUps?.map(f => ({ ...f, createdAt: new Date(f.createdAt) })),
+          });
         }
       }
       // 本周目标
@@ -3458,6 +3469,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             ...nm,
             createdAt: new Date(nm.createdAt),
             lastRecalledAt: nm.lastRecalledAt ? new Date(nm.lastRecalledAt) : undefined,
+            // 回访约定的「关闭时间」：同样是 Date 类型，JSON 往返后成字符串
+            promiseClosedAt: nm.promiseClosedAt ? new Date(nm.promiseClosedAt) : undefined,
           });
         }
       }

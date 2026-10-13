@@ -1,6 +1,5 @@
 import { db } from '@/db';
-import { pb, getUserId } from './pocketbase';
-import { velvetRequest, isAuthenticated, getAuthGeneration } from './velvetApi';
+import { velvetRequest, isAuthenticated, getAuthGeneration, getUserId } from './velvetApi';
 import type { ConfidantEvent } from '@/types';
 
 let running: Promise<number> | null = null;
@@ -16,12 +15,9 @@ export function flushCoopEvents(): Promise<number> {
 
 async function flush(): Promise<number> {
   const accountId = getUserId();
-  const backend = isAuthenticated();
   const generation = getAuthGeneration();
-  const pbSession = pb?.authStore.token;
-  if (!accountId || (!backend && !pb?.authStore.isValid)) return 0;
-  const current = () => getUserId() === accountId && getAuthGeneration() === generation
-    && (backend ? isAuthenticated() : pb?.authStore.token === pbSession);
+  if (!accountId || !isAuthenticated()) return 0;
+  const current = () => getUserId() === accountId && getAuthGeneration() === generation && isAuthenticated();
   const events = (await db.confidantEvents.toArray()).filter(event =>
     event.broadcast?.accountId === accountId && !event.broadcast.deliveredAt);
   let sent = 0;
@@ -29,7 +25,7 @@ async function flush(): Promise<number> {
     if (!current()) break;
     const pending = event.broadcast!;
     try {
-      await send(event, backend, accountId, pending.recipientId, current);
+      await send(event, pending.recipientId);
       if (!current()) break;
       await db.confidantEvents.update(event.id, { broadcast: { ...pending, deliveredAt: new Date().toISOString() } });
       sent++;
@@ -41,23 +37,10 @@ async function flush(): Promise<number> {
   return sent;
 }
 
-async function send(event: ConfidantEvent, backend: boolean, me: string, recipientId: string, current: () => boolean): Promise<void> {
-  if (backend) {
-    await velvetRequest('/api/social/coop/events', { method: 'POST', body: JSON.stringify({
-      recipientId, eventId: event.id, date: event.date, delta: event.delta ?? 0,
-      narrative: event.narrative, advice: event.advice, userInput: event.userInput,
-    }) });
-    return;
-  }
-  if (!pb) throw new Error('未登录');
-  // PB 兼容路径重试前按事件标识查已有通知，保持原数据源用途。
-  const existing = await pb.collection('notifications').getList(1, 1, {
-    filter: pb.filter('from = {:me} && user = {:recipient} && payload.event_id = {:event}', { me, recipient: recipientId, event: event.id }), requestKey: null,
-  });
-  if (existing.items.length) return;
-  if (!current()) throw new Error('登录状态已变化');
-  await pb.collection('notifications').create({ user: recipientId, from: me, type: 'event_logged', read: false, payload: {
-    kind: 'coop_event', event_id: event.id, date: event.date, event_type: 'conversation', delta: event.delta,
-    narrative: event.narrative, advice: event.advice, user_input: event.userInput,
-  } });
+/** 事件标识由服务端派生（发送者 + eventId），重发同一事件不会产生第二条 */
+async function send(event: ConfidantEvent, recipientId: string): Promise<void> {
+  await velvetRequest('/api/social/coop/events', { method: 'POST', body: JSON.stringify({
+    recipientId, eventId: event.id, date: event.date, delta: event.delta ?? 0,
+    narrative: event.narrative, advice: event.advice, userInput: event.userInput,
+  }) });
 }

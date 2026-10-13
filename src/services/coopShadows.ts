@@ -16,22 +16,14 @@
  * Phase 1：客户端驱动所有业务逻辑；反作弊靠 PB access rules + unique index 兜底。
  */
 
-import type { RecordModel } from 'pocketbase';
-import { pb, getUserId } from './pocketbase';
 import * as velvetApi from './velvetApi';
 import * as coopShadowsApi from './coopShadowsApi';
-import {
-  archetypeById,
-  pickArchetypeForBond,
-} from '@/constants/coopShadowPool';
+import { pickArchetypeForBond } from '@/constants/coopShadowPool';
 import type {
   AttributeId,
   CoopAttack,
   CoopBond,
-  CoopMemorialStamp,
   CoopShadow,
-  CoopShadowStatus,
-  SharedBuffs,
 } from '@/types';
 import { isMoonPhaseNight, moonPhaseSlot } from '@/utils/moonPhase';
 
@@ -48,9 +40,6 @@ const SPAWN_COOLDOWN_DAYS = 14;
 
 /** COOP 缔结后多少天才能降临第一次 —— 给新 COOP 一个缓冲期 */
 const BOND_WARMUP_DAYS = 7;
-
-/** 共鸣印记的有效期 */
-const RESONANCE_WINDOW_HOURS = 12;
 
 /** 弱点属性加成 */
 const WEAKNESS_DMG_MULTIPLIER = 1.3;
@@ -126,36 +115,6 @@ export function allOutDamage(myTotalLevels: number, partnerTotalLevels: number, 
   return Math.max(1, Math.floor((Math.max(0, myTotalLevels) + Math.max(0, partnerTotalLevels)) * Math.min(Math.max(0, combo), ALL_OUT_COMBO_CAP)));
 }
 
-// ── Mapper ────────────────────────────────────────────────
-
-function mapCoopShadow(r: RecordModel): CoopShadow {
-  const memorial = r.memorial_stamp as CoopMemorialStamp | null | undefined;
-  return {
-    id: r.id,
-    bondId: r.bond_id as string,
-    userAId: r.user_a as string,
-    userBId: r.user_b as string,
-    shadowId: r.shadow_id as string,
-    nameOverride: (r.name_override as string | undefined) || undefined,
-    spawnedAt: new Date(r.spawned_at as string),
-    expiresAt: new Date(r.expires_at as string),
-    hpMax: r.hp_max as number,
-    hpCurrent: r.hp_current as number,
-    status: r.status as CoopShadowStatus,
-    weaknessAttribute: r.weakness_attribute as AttributeId,
-    resonanceUntil: r.resonance_until ? new Date(r.resonance_until as string) : undefined,
-    resonanceBy: (r.resonance_by as string | undefined) || undefined,
-    comboCount: typeof r.combo_count === 'number' ? (r.combo_count as number) : 0,
-    allOutByA: Boolean(r.all_out_by_a),
-    allOutByB: Boolean(r.all_out_by_b),
-    identifiedByA: Boolean(r.identified_by_a),
-    identifiedByB: Boolean(r.identified_by_b),
-    sharedBuffs: (r.shared_buffs as SharedBuffs | null | undefined) || {},
-    defeatedAt: r.defeated_at ? new Date(r.defeated_at as string) : undefined,
-    memorialStamp: memorial || undefined,
-  };
-}
-
 /**
  * 按双方 LV 总和阶梯决定 Boss HP。
  *
@@ -171,66 +130,26 @@ export function computeShadowHpMax(totalSumLevels: number): number {
   return 650;
 }
 
-function mapCoopAttack(r: RecordModel): CoopAttack {
-  return {
-    id: r.id,
-    shadowId: r.shadow_id as string,
-    attackerId: r.attacker as string,
-    day: r.day as string,
-    personaId: r.persona_id as string,
-    personaName: r.persona_name as string,
-    skillKind: r.skill_kind as CoopAttack['skillKind'],
-    skillName: r.skill_name as string,
-    damageRaw: r.damage_raw as number,
-    damageFinal: r.damage_final as number,
-    resonanceBonus: Boolean(r.resonance_bonus),
-    weaknessBonus: Boolean(r.weakness_bonus),
-    createdAt: new Date(r.created as string),
-  };
-}
-
 // ── 查询 ───────────────────────────────────────────────────
 
 /** 拉取当前登录用户相关的所有 coop_shadows（含 active / defeated / retreated）*/
 export const listCoopShadows = async (): Promise<CoopShadow[]> => {
-  // 自研后端：影迁移到 /api/social/shadows（W3 第四波）
-  if (velvetApi.isAuthenticated()) {
-    try {
-      return await coopShadowsApi.listCoopShadows();
-    } catch (err) {
-      console.warn('[velvet-coopShadows] listCoopShadows (backend) failed', err);
-      return [];
-    }
+  try {
+    return await coopShadowsApi.listCoopShadows();
+  } catch (err) {
+    console.warn('[velvet-coopShadows] listCoopShadows failed', err);
+    return [];
   }
-  if (!pb || !pb.authStore.isValid) return [];
-  const me = getUserId();
-  if (!me) return [];
-  const records = await pb.collection('coop_shadows').getFullList({
-    filter: `user_a = "${me}" || user_b = "${me}"`,
-    sort: '-spawned_at',
-    requestKey: null,
-  });
-  return records.map(mapCoopShadow);
 };
 
 /** 拉一只 shadow 的全部攻击事件（按时间倒序） */
 export const listAttacksFor = async (shadowId: string): Promise<CoopAttack[]> => {
-  // 自研后端：出手日志迁移到 /api/social/shadows/{id}/attacks（W3 第四波）
-  if (velvetApi.isAuthenticated()) {
-    try {
-      return await coopShadowsApi.listAttacksFor(shadowId);
-    } catch (err) {
-      console.warn('[velvet-coopShadows] listAttacksFor (backend) failed', err);
-      return [];
-    }
+  try {
+    return await coopShadowsApi.listAttacksFor(shadowId);
+  } catch (err) {
+    console.warn('[velvet-coopShadows] listAttacksFor failed', err);
+    return [];
   }
-  if (!pb || !pb.authStore.isValid) return [];
-  const records = await pb.collection('coop_attacks').getFullList({
-    filter: `shadow_id = "${shadowId}"`,
-    sort: '-created',
-    requestKey: null,
-  });
-  return records.map(mapCoopAttack);
 };
 
 /**
@@ -241,50 +160,21 @@ export const listAttacksFor = async (shadowId: string): Promise<CoopAttack[]> =>
 export const hpFromAttackLog = (hpMax: number, attacks: CoopAttack[]): number =>
   Math.max(0, hpMax - attacks.reduce((sum, a) => sum + Math.max(0, a.damageFinal || 0), 0));
 
-const fetchFreshShadow = async (id: string): Promise<CoopShadow> =>
-  mapCoopShadow(await pb!.collection('coop_shadows').getOne(id, { requestKey: null }));
-
-/** 出手前的门槛：以服务器上的最新记录为准，不信本机缓存（对方可能已经击杀，或它已经撤退） */
-function assertStillBattling(fresh: CoopShadow, now: Date): void {
-  if (fresh.status === 'defeated') throw new Error('这只羁绊之影已经被封印了，刷新看看结算');
-  if (fresh.status === 'retreated' || now.getTime() >= fresh.expiresAt.getTime()) throw new Error('这只羁绊之影已经撤退了');
-  if (fresh.status !== 'active') throw new Error('这只羁绊之影已经不在战斗中');
-}
-
 /**
  * 读侧纠偏：进行中的影按出手日志重算血量。
  * 算出来还有血 → 只改本地显示；算到归零而记录还是 active（对方击杀的那一下被本机的写回抹掉了）→
  * 再取一次最新记录，仍是 active 就补记击败，终结者 = 日志里最后出手的人。
  */
 export const reconcileActiveShadow = async (shadow: CoopShadow): Promise<CoopShadow> => {
-  // 自研后端：走 Api 版取日志/最新记录（W3 第四波）。读侧纠偏逻辑两条路径共用。
-  if (velvetApi.isAuthenticated()) {
-    if (shadow.status !== 'active') return shadow;
-    const attacks = await coopShadowsApi.listAttacksFor(shadow.id);
-    const hp = hpFromAttackLog(shadow.hpMax, attacks);
-    if (hp === shadow.hpCurrent) return shadow;
-    if (hp > 0) return { ...shadow, hpCurrent: hp };
-    const fresh = await coopShadowsApi.getCoopShadow(shadow.id);
-    if (fresh.status !== 'active') return fresh;
-    // 补记击败由后端读取侧（listFor 前的纠偏）与下次写回完成；这里保守返回 fresh
-    return fresh;
-  }
-  if (!pb || !pb.authStore.isValid || shadow.status !== 'active') return shadow;
+  if (shadow.status !== 'active') return shadow;
   const attacks = await listAttacksFor(shadow.id);
   const hp = hpFromAttackLog(shadow.hpMax, attacks);
   if (hp === shadow.hpCurrent) return shadow;
   if (hp > 0) return { ...shadow, hpCurrent: hp };
-  const fresh = await fetchFreshShadow(shadow.id);
+  const fresh = await coopShadowsApi.getCoopShadow(shadow.id);
   if (fresh.status !== 'active') return fresh;
-  const now = new Date();
-  const finisher = attacks[0]?.attackerId ?? fresh.userAId; // -created 排序：第一条最新
-  const updated = await pb.collection('coop_shadows').update(fresh.id, {
-    hp_current: 0,
-    status: 'defeated',
-    defeated_at: now.toISOString(),
-    memorial_stamp: buildMemorialStamp(fresh, now, finisher),
-  });
-  return mapCoopShadow(updated);
+  // 补记击败由后端读取侧（listFor 前的纠偏）与下次写回完成；这里保守返回 fresh
+  return fresh;
 };
 
 // ── 降临 ───────────────────────────────────────────────────
@@ -323,13 +213,13 @@ function shouldSpawn(
 }
 
 /**
- * 一对 COOP 在一个月夜里的那只影的记录 id（15 位小写字母数字，PB 允许创建时自带 id）。
+ * 一对 COOP 在一个月夜里的那只影的记录 id（15 位小写字母数字，服务端允许创建时自带 id）。
  *
  * 用户上报「SHADOW RETREATED 偶现重复弹两次」的根因：同一个月夜降临了不止一只。
  * 冷启动时 App 与同伴衰减维护会各发一次同步、两台设备也可能同时同步，每一路都读到
  * 「还没有进行中的影」就各建一只；页面只露出其中一只，另一只没人打，十天后照样撤退、
  * 照样弹结算屏——打没打都会弹。现在同一对、同一个月夜算出同一个 id，
- * 第二个人再建会被 PB 的主键唯一性挡回，转而读已有的那只。
+ * 第二个人再建会被服务端的主键唯一性挡回，转而读已有的那只。
  */
 export function shadowSlotId(bondId: string, slot: number): string {
   const src = `${bondId}:${slot}`;
@@ -347,9 +237,9 @@ export function shadowSlotId(bondId: string, slot: number): string {
 }
 
 /**
- * 降临一只新羁绊之影并创建 PB 记录。
+ * 降临一只新羁绊之影。slotId / hp / 名字在前端算好传过去，服务端落库并写降临通知。
  * 失败抛错；上层（social pipeline）会 catch + 下次 loadSocial 重试。
- * 这个月夜对方（或本机另一路同步）已经建过 → 返回已有的那只，created = false，不再通知对方。
+ * 这个月夜对方（或本机另一路同步）已经建过 → 服务端按主键唯一性挡住，返回已有的那只，created = false。
  *
  * hp_max 由双方属性等级之和分档（见 computeShadowHpMax）；spawn 时不一定能拿到对方的属性，
  * 用 bond.otherProfile.totalLv + 我方的 totalLv。
@@ -358,9 +248,7 @@ export const spawnCoopShadow = async (
   bond: CoopBond,
   mySumLevels: number,
 ): Promise<{ shadow: CoopShadow; created: boolean }> => {
-  const me = getUserId();
-  if (!me) throw new Error('用户信息缺失');
-  if (!velvetApi.isAuthenticated() && (!pb || !pb.authStore.isValid)) throw new Error('未登录');
+  if (!velvetApi.isAuthenticated()) throw new Error('未登录');
 
   const archetype = pickArchetypeForBond(bond.id);
   const partnerSumLevels = bond.otherProfile?.totalLv ?? 10; // 兜底
@@ -370,74 +258,18 @@ export const spawnCoopShadow = async (
   // 同一个 archetype 从两个候选名里随机抽一个 —— 同对 COOP 每次降临可能是不同名字
   const pickedName = archetype.names[Math.floor(Math.random() * archetype.names.length)];
 
-  // 自研后端：slotId/hp/名字在前端算好传过去，后端落库 + 写降临通知（W3 第四波）
-  if (velvetApi.isAuthenticated()) {
-    return await coopShadowsApi.spawnCoopShadow({
-      id: shadowSlotId(bond.id, moonPhaseSlot(now)),
-      bondId: bond.id,
-      userAId: bond.userAId,
-      userBId: bond.userBId,
-      shadowId: archetype.id,
-      nameOverride: pickedName,
-      spawnedAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      hpMax,
-      weaknessAttribute: archetype.weakness,
-    });
-  }
-
-  // PB 分支（自研态不会走到这里；守卫收窄供 TS 用）
-  if (!pb || !pb.authStore.isValid) throw new Error('未登录');
-
-  const fields = {
-    bond_id: bond.id,
-    user_a: bond.userAId,
-    user_b: bond.userBId,
-    shadow_id: archetype.id,
-    name_override: pickedName,
-    spawned_at: now.toISOString(),
-    expires_at: expiresAt.toISOString(),
-    hp_max: hpMax,
-    hp_current: hpMax,
-    status: 'active',
-    weakness_attribute: archetype.weakness,
-    combo_count: 0,
-    all_out_by_a: false,
-    all_out_by_b: false,
-    identified_by_a: false,
-    identified_by_b: false,
-  };
-  // 同一对 COOP、同一个月夜只有一只：id 定死，两边同时建也撞成同一条
-  const slotId = shadowSlotId(bond.id, moonPhaseSlot(now));
-  let created: RecordModel;
-  try {
-    created = await pb.collection('coop_shadows').create({ id: slotId, ...fields });
-  } catch (err) {
-    // 这个 id 已经有了 = 对方 / 本机另一路同步抢先建了：用那只，不再重复通知
-    try {
-      const existing = await pb.collection('coop_shadows').getOne(slotId, { requestKey: null });
-      return { shadow: mapCoopShadow(existing), created: false };
-    } catch {
-      // 读不到：不是撞 id，是别的原因（比如服务器不收自带 id）→ 退回不带 id 建
-      created = await pb.collection('coop_shadows').create(fields);
-    }
-  }
-
-  // 通知对方 Boss 降临
-  const partnerId = bond.userAId === me ? bond.userBId : bond.userAId;
-  try {
-    await pb.collection('notifications').create({
-      user: partnerId,
-      type: 'coop_shadow_spawned',
-      from: me,
-      payload: { shadow_id: created.id, archetype_id: archetype.id },
-      read: false,
-    });
-  } catch (err) {
-    console.warn('[velvet-coopShadows] spawn notification failed', err);
-  }
-
-  return { shadow: mapCoopShadow(created), created: true };
+  return await coopShadowsApi.spawnCoopShadow({
+    id: shadowSlotId(bond.id, moonPhaseSlot(now)),
+    bondId: bond.id,
+    userAId: bond.userAId,
+    userBId: bond.userBId,
+    shadowId: archetype.id,
+    nameOverride: pickedName,
+    spawnedAt: now.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    hpMax,
+    weaknessAttribute: archetype.weakness,
+  });
 };
 
 /**
@@ -501,41 +333,8 @@ export const maybeSpawnForBonds = async (
  * - 双方都识破后，攻击路径才会真正可用（由前端面板判定）
  */
 export const identifyShadow = async (shadow: CoopShadow): Promise<CoopShadow> => {
-  if (!velvetApi.isAuthenticated() && (!pb || !pb.authStore.isValid)) throw new Error('未登录');
-  // 自研后端：识破迁移到 /api/social/shadows/{id}/identify（W3 第四波）
-  if (velvetApi.isAuthenticated()) {
-    return await coopShadowsApi.identifyShadow(shadow.id);
-  }
-  // PB 分支（守卫收窄供 TS 用）
-  if (!pb || !pb.authStore.isValid) throw new Error('未登录');
-  const me = getUserId();
-  if (!me) throw new Error('用户信息缺失');
-  if (shadow.status !== 'active') throw new Error('这只羁绊之影已经不在战斗中');
-
-  const iAmA = shadow.userAId === me;
-  const alreadyIdentified = iAmA ? shadow.identifiedByA : shadow.identifiedByB;
-  if (alreadyIdentified) return shadow;
-
-  const patch = { [iAmA ? 'identified_by_a' : 'identified_by_b']: true };
-  const updated = await pb.collection('coop_shadows').update(shadow.id, patch);
-  const next = mapCoopShadow(updated);
-
-  // 通知对方 —— 借 coop_shadow_spawned 类型、payload.event='identify' 区分（通知面板按 event 显示「识破了」）。
-  // 独立 type 要服务器 notifications.type 先加选项，没加之前发了会被拒，所以先不换。
-  const partnerId = shadow.userAId === me ? shadow.userBId : shadow.userAId;
-  try {
-    await pb.collection('notifications').create({
-      user: partnerId,
-      type: 'coop_shadow_spawned', // 复用 —— 对方看到的语义是"有新动作"
-      from: me,
-      payload: { shadow_id: shadow.id, event: 'identify' },
-      read: false,
-    });
-  } catch (err) {
-    console.warn('[velvet-coopShadows] identify notification failed', err);
-  }
-
-  return next;
+  if (!velvetApi.isAuthenticated()) throw new Error('未登录');
+  return await coopShadowsApi.identifyShadow(shadow.id);
 };
 
 // ── 攻击 ───────────────────────────────────────────────────
@@ -570,9 +369,6 @@ export interface AttackResult {
 /** attack_up / vulnerability 倍率 */
 const BUFF_ATTACK_UP_MULT = 1.2;
 const BUFF_VULNERABILITY_MULT = 1.15;
-/** 每次 buff 技能延长的回合数，封顶 */
-const BUFF_DURATION_INC = 3;
-const BUFF_DURATION_CAP = 6;
 
 function isDamagingKind(kind: CoopAttack['skillKind']): boolean {
   // damage / crit / charge / attack_boost 走伤害路径
@@ -590,122 +386,34 @@ function isUtilityKind(kind: CoopAttack['skillKind']): boolean {
   return kind === 'buff' || kind === 'debuff';
 }
 
-/** 同 kind 不叠加数值，只延长回合数（封顶 BUFF_DURATION_CAP） */
-function extendBuff(prev: SharedBuffs, kind: 'attack_up' | 'vulnerability'): SharedBuffs {
-  const existing = prev[kind]?.remainingTurns ?? 0;
-  return { ...prev, [kind]: { remainingTurns: Math.min(BUFF_DURATION_CAP, existing + BUFF_DURATION_INC) } };
-}
-
-/** 每次伤害类攻击结束后 —— 所有 buff 剩余回合 -1；≤0 则移除 */
-function tickBuffs(prev: SharedBuffs): SharedBuffs {
-  const next: SharedBuffs = {};
-  if (prev.attack_up && prev.attack_up.remainingTurns - 1 > 0) {
-    next.attack_up = { remainingTurns: prev.attack_up.remainingTurns - 1 };
-  }
-  if (prev.vulnerability && prev.vulnerability.remainingTurns - 1 > 0) {
-    next.vulnerability = { remainingTurns: prev.vulnerability.remainingTurns - 1 };
-  }
-  return next;
-}
-
 /**
  * 对 Boss 发起一次攻击。负责：
  *   1. 计算最终伤害（弱点 × 共鸣加成）
- *   2. 写 coop_attacks 一条（会被 PB 唯一索引拦截每日重复）
- *   3. 更新 coop_shadows：hp_current / resonance_until / resonance_by / status
- *   4. 通知对方（coop_shadow_attacked 或 coop_shadow_defeated）
+ *   2. 交给服务端落库：出手日志、血量/共鸣/连击的更新、通知对方都由后端写；
+ *      每日一次的限制由后端判定（409 → 转成中文提示）
  *
  * 失败抛错；上层展示 toast + 不回滚本地 battleState（因为攻击记录是否落盘未知）。
  */
 export const attackCoopShadow = async (input: AttackInput): Promise<AttackResult> => {
-  if (!velvetApi.isAuthenticated() && (!pb || !pb.authStore.isValid)) throw new Error('未登录');
+  if (!velvetApi.isAuthenticated()) throw new Error('未登录');
 
   const { damageRaw, skillAttribute, skillKind } = input;
   const now = new Date();
 
-  // 自研后端：伤害在前端算好（依赖本地 persona 数据），后端落库 + 不变量（W3 第四波）
-  if (velvetApi.isAuthenticated()) {
-    const day = toLocalDateKey(now);
-    const isUtility = isUtilityKind(skillKind);
-    const isDamaging = isDamagingKind(skillKind);
-    const weaknessBonus = isDamaging && skillAttribute === input.shadow.weaknessAttribute;
-    const resonanceActive = !!(
-      isDamaging
-      && input.shadow.resonanceUntil
-      && input.shadow.resonanceUntil.getTime() > now.getTime()
-      && input.shadow.resonanceBy
-      && input.shadow.resonanceBy !== (getUserId() ?? '')
-    );
-    const critTriggered = skillKind === 'crit' && Math.random() < 0.5;
-    const curBuffs = input.shadow.sharedBuffs ?? {};
-    const attackUpActive = (curBuffs.attack_up?.remainingTurns ?? 0) > 0;
-    const vulnerabilityActive = (curBuffs.vulnerability?.remainingTurns ?? 0) > 0;
-
-    let damageFinal = 0;
-    if (isDamaging) {
-      let multiplier = 1;
-      if (weaknessBonus)       multiplier *= WEAKNESS_DMG_MULTIPLIER;
-      if (resonanceActive)     multiplier *= RESONANCE_DMG_MULTIPLIER;
-      if (critTriggered)       multiplier *= 2;
-      if (attackUpActive)      multiplier *= BUFF_ATTACK_UP_MULT;
-      if (vulnerabilityActive) multiplier *= BUFF_VULNERABILITY_MULT;
-      damageFinal = Math.round(damageRaw * multiplier);
-    }
-
-    const r = await coopShadowsApi.attackCoopShadow(input.shadow.id, {
-      day,
-      personaId: input.personaId,
-      personaName: input.personaName,
-      skillKind,
-      skillName: input.skillName,
-      damageRaw: isDamaging ? damageRaw : 0,
-      damageFinal,
-      resonanceBonus: resonanceActive,
-      weaknessBonus,
-    }).catch((err) => {
-      // 每日限速：后端 409 + code → 逐字原文案（不再用 PB 的 'unique' 字符串匹配）
-      if (err instanceof velvetApi.VelvetApiError && err.status === 409
-        && (err.body as { code?: string } | null)?.code === 'already_attacked_today') {
-        throw new Error('今天你已经对这只羁绊之影出过手了，明天再来');
-      }
-      throw err;
-    });
-    return {
-      attack: r.attack,
-      updatedShadow: r.updatedShadow,
-      weaknessBonus,
-      resonanceBonus: resonanceActive,
-      critTriggered,
-      isBuffCast: isUtility,
-      defeatedNow: r.defeatedNow,
-    };
-  }
-
-  // PB 分支（守卫收窄供 TS 用）
-  if (!pb || !pb.authStore.isValid) throw new Error('未登录');
-  const me = getUserId();
-  if (!me) throw new Error('用户信息缺失');
-  const shadow = await fetchFreshShadow(input.shadow.id);
-  assertStillBattling(shadow, now);
-  // 血量按日志算（见 hpFromAttackLog）：先把日志拉下来，写回时用「日志总伤害 + 这一下」
-  const priorLog = await listAttacksFor(shadow.id);
+  // 伤害在前端算好（依赖本地 persona 数据），服务端落库并保证不变量
   const day = toLocalDateKey(now);
   const isUtility = isUtilityKind(skillKind);
   const isDamaging = isDamagingKind(skillKind);
-
-  // 1) 计算最终伤害 / buff 效果
-  const weaknessBonus = isDamaging && skillAttribute === shadow.weaknessAttribute;
+  const weaknessBonus = isDamaging && skillAttribute === input.shadow.weaknessAttribute;
   const resonanceActive = !!(
     isDamaging
-    && shadow.resonanceUntil
-    && shadow.resonanceUntil.getTime() > now.getTime()
-    && shadow.resonanceBy
-    && shadow.resonanceBy !== me
+    && input.shadow.resonanceUntil
+    && input.shadow.resonanceUntil.getTime() > now.getTime()
+    && input.shadow.resonanceBy
+    && input.shadow.resonanceBy !== (velvetApi.getUserId() ?? '')
   );
-  // crit 技能：50% 翻倍
   const critTriggered = skillKind === 'crit' && Math.random() < 0.5;
-  // 读当前共享 buff
-  const curBuffs = shadow.sharedBuffs ?? {};
+  const curBuffs = input.shadow.sharedBuffs ?? {};
   const attackUpActive = (curBuffs.attack_up?.remainingTurns ?? 0) > 0;
   const vulnerabilityActive = (curBuffs.vulnerability?.remainingTurns ?? 0) > 0;
 
@@ -720,102 +428,32 @@ export const attackCoopShadow = async (input: AttackInput): Promise<AttackResult
     damageFinal = Math.round(damageRaw * multiplier);
   }
 
-  // 2) 写 coop_attacks（buff/debuff 也要写，只是 damage_final = 0，对方日志可见）
-  let attackRec: RecordModel;
-  try {
-    attackRec = await pb.collection('coop_attacks').create({
-      shadow_id: shadow.id,
-      attacker: me,
-      day,
-      persona_id: input.personaId,
-      persona_name: input.personaName,
-      skill_kind: skillKind,
-      skill_name: input.skillName,
-      damage_raw: isDamaging ? damageRaw : 0,
-      damage_final: damageFinal,
-      resonance_bonus: resonanceActive,
-      weakness_bonus: weaknessBonus,
-      counter_damage: 0,  // 联机模式玩家没有 HP —— 反击伤害作废
-    });
-  } catch (err) {
-    const errWithStatus = err as { status?: number; message?: string };
-    if (errWithStatus?.status === 400 && errWithStatus.message?.includes('unique')) {
+  const r = await coopShadowsApi.attackCoopShadow(input.shadow.id, {
+    day,
+    personaId: input.personaId,
+    personaName: input.personaName,
+    skillKind,
+    skillName: input.skillName,
+    damageRaw: isDamaging ? damageRaw : 0,
+    damageFinal,
+    resonanceBonus: resonanceActive,
+    weaknessBonus,
+  }).catch((err) => {
+    // 每日限速：后端 409 + code
+    if (err instanceof velvetApi.VelvetApiError && err.status === 409
+      && (err.body as { code?: string } | null)?.code === 'already_attacked_today') {
       throw new Error('今天你已经对这只羁绊之影出过手了，明天再来');
     }
     throw err;
-  }
-
-  // 3) 计算 shared_buffs 的下一步状态
-  let nextBuffs: SharedBuffs = curBuffs;
-  if (isUtility) {
-    // buff → 加 attack_up；debuff → 加 vulnerability；同 kind 只延长、不叠加
-    if (skillKind === 'buff')    nextBuffs = extendBuff(nextBuffs, 'attack_up');
-    if (skillKind === 'debuff')  nextBuffs = extendBuff(nextBuffs, 'vulnerability');
-  } else if (isDamaging) {
-    // 伤害类：所有 buff 剩余回合 -1
-    nextBuffs = tickBuffs(nextBuffs);
-  }
-
-  // 4) 更新 coop_shadows
-  const hpAfter = Math.max(0, hpFromAttackLog(shadow.hpMax, priorLog) - damageFinal);
-  const defeatedNow = isDamaging && hpAfter === 0;
-  const comboAfter = weaknessBonus ? shadow.comboCount + 1 : shadow.comboCount;
-  const patch: Record<string, unknown> = {
-    hp_current: hpAfter,
-    combo_count: comboAfter,
-    shared_buffs: nextBuffs,
-  };
-  // 只有伤害类攻击才更新 resonance 印记（utility 不影响节律）
-  if (isDamaging) {
-    patch.resonance_until = new Date(now.getTime() + RESONANCE_WINDOW_HOURS * 3600 * 1000).toISOString();
-    patch.resonance_by = me;
-  }
-  if (defeatedNow) {
-    patch.status = 'defeated';
-    patch.defeated_at = now.toISOString();
-    // 写入纪念图章（双方 loadSocial 时都能读到）：连胜与终结者在这一刻冻住
-    patch.memorial_stamp = buildMemorialStamp(shadow, now, me, bondStreak(input.history ?? [], shadow.bondId, shadow.id));
-  }
-  let updatedRec: RecordModel;
-  try {
-    updatedRec = await pb.collection('coop_shadows').update(shadow.id, patch);
-  } catch (err) {
-    // 两步写不是原子的：第二步没成，把第一步的出手记录撤掉，否则今天的次数被占了却没扣血
-    try { await pb.collection('coop_attacks').delete(attackRec.id); } catch { /* 撤不掉就留着，日志求和仍是对的 */ }
-    throw err;
-  }
-  const updatedShadow = mapCoopShadow(updatedRec);
-
-  // 4) 通知对方
-  const partnerId = shadow.userAId === me ? shadow.userBId : shadow.userAId;
-  try {
-    await pb.collection('notifications').create({
-      user: partnerId,
-      type: defeatedNow ? 'coop_shadow_defeated' : 'coop_shadow_attacked',
-      from: me,
-      payload: {
-        shadow_id: shadow.id,
-        damage: damageFinal,
-        resonance_bonus: resonanceActive,
-        weakness_bonus: weaknessBonus,
-        persona_name: input.personaName,
-        skill_name: input.skillName,
-        hp_remaining: hpAfter,
-      },
-      read: false,
-    });
-  } catch (err) {
-    console.warn('[velvet-coopShadows] attack notification failed', err);
-  }
-
+  });
   return {
-    attack: mapCoopAttack(attackRec),
-    updatedShadow,
+    attack: r.attack,
+    updatedShadow: r.updatedShadow,
     weaknessBonus,
     resonanceBonus: resonanceActive,
     critTriggered,
     isBuffCast: isUtility,
-    defeatedNow,
+    defeatedNow: r.defeatedNow,
   };
 };
 
@@ -823,42 +461,11 @@ export const attackCoopShadow = async (input: AttackInput): Promise<AttackResult
 
 /**
  * 把已过期但还是 active 的 shadow 转成 retreated。
- * 两个客户端都会 try 写一次；PB 没事务，以最后写入为准。
+ * 两端都可能各调一次；服务端按状态与过期时间判定，重复调用幂等。
  */
 export const retreatExpiredShadow = async (shadow: CoopShadow): Promise<CoopShadow> => {
-  if (!velvetApi.isAuthenticated() && (!pb || !pb.authStore.isValid)) throw new Error('未登录');
-  // 自研后端：撤退迁移到 /api/social/shadows/{id}/retreat（W3 第四波）
-  if (velvetApi.isAuthenticated()) {
-    return await coopShadowsApi.retreatExpiredShadow(shadow.id);
-  }
-  // PB 分支（守卫收窄供 TS 用）
-  if (!pb || !pb.authStore.isValid) throw new Error('未登录');
-  if (shadow.status !== 'active') return shadow;
-  const now = new Date();
-  if (now.getTime() < shadow.expiresAt.getTime()) return shadow;
-  // 写之前再取一次：对方可能刚在最后一刻击杀了它，盲写会把 defeated 翻成 retreated
-  const fresh = await fetchFreshShadow(shadow.id);
-  if (fresh.status !== 'active') return fresh;
-  const updated = await pb.collection('coop_shadows').update(shadow.id, {
-    status: 'retreated',
-  });
-  // 第 6 轮：撤退通知以前从没发过——翻成 retreated 的这一端告诉对方一声（两端都翻了就各收一条）
-  const me = getUserId();
-  if (me) {
-    const partnerId = shadow.userAId === me ? shadow.userBId : shadow.userAId;
-    try {
-      await pb.collection('notifications').create({
-        user: partnerId,
-        type: 'coop_shadow_retreated',
-        from: me,
-        payload: { shadow_id: shadow.id },
-        read: false,
-      });
-    } catch (err) {
-      console.warn('[velvet-coopShadows] retreat notification failed', err);
-    }
-  }
-  return mapCoopShadow(updated);
+  if (!velvetApi.isAuthenticated()) throw new Error('未登录');
+  return await coopShadowsApi.retreatExpiredShadow(shadow.id);
 };
 
 // ── 总攻击（All-Out） ─────────────────────────────────────
@@ -896,148 +503,23 @@ export interface AllOutAttackResult {
  *   - 用完就把 all_out_by_{a|b} 翻成 true（一位玩家对一只 Boss 只能一次）
  */
 export const allOutAttack = async (input: AllOutAttackInput): Promise<AllOutAttackResult> => {
-  if (!velvetApi.isAuthenticated() && (!pb || !pb.authStore.isValid)) throw new Error('未登录');
+  if (!velvetApi.isAuthenticated()) throw new Error('未登录');
 
   const { myTotalLevels, partnerTotalLevels } = input;
-  const now = new Date();
 
-  // 自研后端：伤害公式在前端算，后端落库（W3 第四波）
-  if (velvetApi.isAuthenticated()) {
-    // 前置校验（文案与 PB 路径一致；后端也会再校验）
-    if (input.shadow.comboCount < ALL_OUT_COMBO) throw new Error(`COMBO 未到 ${ALL_OUT_COMBO}，还不能释放总攻击`);
-    const me = getUserId();
-    const iAmA = input.shadow.userAId === me;
-    if (iAmA ? input.shadow.allOutByA : input.shadow.allOutByB) {
-      throw new Error('你已经对这只羁绊之影释放过总攻击了');
-    }
-    const damage = allOutDamage(myTotalLevels, partnerTotalLevels, input.shadow.comboCount);
-    return await coopShadowsApi.allOutAttack(input.shadow.id, {
-      personaId: input.personaId,
-      personaName: input.personaName,
-      damage,
-    });
+  // 前置校验（后端也会再校验）
+  if (input.shadow.comboCount < ALL_OUT_COMBO) throw new Error(`COMBO 未到 ${ALL_OUT_COMBO}，还不能释放总攻击`);
+  const iAmA = input.shadow.userAId === velvetApi.getUserId();
+  if (iAmA ? input.shadow.allOutByA : input.shadow.allOutByB) {
+    throw new Error('你已经对这只羁绊之影释放过总攻击了');
   }
-
-  // PB 分支（守卫收窄供 TS 用）
-  if (!pb || !pb.authStore.isValid) throw new Error('未登录');
-  const me = getUserId();
-  if (!me) throw new Error('用户信息缺失');
-  const shadow = await fetchFreshShadow(input.shadow.id);
-  assertStillBattling(shadow, now);
-  if (shadow.comboCount < ALL_OUT_COMBO) throw new Error(`COMBO 未到 ${ALL_OUT_COMBO}，还不能释放总攻击`);
-  const priorLog = await listAttacksFor(shadow.id);
-
-  const iAmA = shadow.userAId === me;
-  const alreadyUsed = iAmA ? shadow.allOutByA : shadow.allOutByB;
-  if (alreadyUsed) throw new Error('你已经对这只羁绊之影释放过总攻击了');
-
-  const damage = allOutDamage(myTotalLevels, partnerTotalLevels, shadow.comboCount);
-
-  // 1) 写 coop_attacks —— day='allout' 是 magic value，绕开每日唯一索引
-  let attackRec: RecordModel;
-  try {
-    attackRec = await pb.collection('coop_attacks').create({
-      shadow_id: shadow.id,
-      attacker: me,
-      day: 'allout',
-      persona_id: input.personaId,
-      persona_name: input.personaName,
-      skill_kind: 'attack_boost',
-      skill_name: '总攻击 · ALL-OUT',
-      damage_raw: damage,
-      damage_final: damage,
-      resonance_bonus: false,
-      weakness_bonus: false,
-      counter_damage: 0,  // 总攻击不吃反击
-    });
-  } catch (err) {
-    throw err;
-  }
-
-  // 2) 更新 coop_shadows（血量按日志算）
-  const hpAfter = Math.max(0, hpFromAttackLog(shadow.hpMax, priorLog) - damage);
-  const defeatedNow = hpAfter === 0;
-  const patch: Record<string, unknown> = {
-    hp_current: hpAfter,
-    [iAmA ? 'all_out_by_a' : 'all_out_by_b']: true,
-    // 不动 resonance / combo —— 总攻击不影响节律
-  };
-  if (defeatedNow) {
-    patch.status = 'defeated';
-    patch.defeated_at = now.toISOString();
-    patch.memorial_stamp = buildMemorialStamp(shadow, now, me, bondStreak(input.history ?? [], shadow.bondId, shadow.id));
-  }
-  let updatedRec: RecordModel;
-  try {
-    updatedRec = await pb.collection('coop_shadows').update(shadow.id, patch);
-  } catch (err) {
-    // 第二步没成就撤掉第一步：否则 'allout' 那条占着，all_out_by 却没翻，按钮常亮、每点一次都报冲突
-    try { await pb.collection('coop_attacks').delete(attackRec.id); } catch { /* 同上 */ }
-    throw err;
-  }
-  const updatedShadow = mapCoopShadow(updatedRec);
-
-  // 3) 通知对方
-  const partnerId = shadow.userAId === me ? shadow.userBId : shadow.userAId;
-  try {
-    await pb.collection('notifications').create({
-      user: partnerId,
-      type: defeatedNow ? 'coop_shadow_defeated' : 'coop_shadow_attacked',
-      from: me,
-      payload: {
-        shadow_id: shadow.id,
-        damage,
-        resonance_bonus: false,
-        weakness_bonus: false,
-        persona_name: input.personaName,
-        skill_name: '总攻击 · ALL-OUT',
-        all_out: true,
-        hp_remaining: hpAfter,
-      },
-      read: false,
-    });
-  } catch (err) {
-    console.warn('[velvet-coopShadows] allout notification failed', err);
-  }
-
-  return {
-    attack: mapCoopAttack(attackRec),
-    updatedShadow,
-    defeatedNow,
-  };
+  const damage = allOutDamage(myTotalLevels, partnerTotalLevels, input.shadow.comboCount);
+  return await coopShadowsApi.allOutAttack(input.shadow.id, {
+    personaId: input.personaId,
+    personaName: input.personaName,
+    damage,
+  });
 };
-
-// ── 纪念图章 ───────────────────────────────────────────────
-
-/**
- * 构造 memorial stamp —— 仅供 "attackCoopShadow 击杀瞬间" 使用，
- * 写入 coop_shadows.memorial_stamp；对方通过 loadSocial 读到。
- */
-function buildMemorialStamp(
-  shadow: CoopShadow,
-  defeatedAt: Date,
-  finisherId: string,
-  /** 修复路径（reconcileActiveShadow）拿不到降临史：不填，结算时按本机历史现算 */
-  streak?: number,
-): CoopMemorialStamp {
-  const archetype = archetypeById(shadow.shadowId);
-  return {
-    shadowId: shadow.shadowId,
-    shadowName: shadow.nameOverride || archetype?.names?.[0] || '羁绊之影',
-    weaknessAttribute: shadow.weaknessAttribute,
-    defeatedAt: defeatedAt.toISOString(),
-    // winners 的 nickname 由对方客户端在读 memorial 时补全（这里只放 id）
-    winners: [
-      { userId: shadow.userAId, nickname: '' },
-      { userId: shadow.userBId, nickname: '' },
-    ],
-    // myDamage / totalDamage 由 claimVictoryReward 时各自填入本地副本
-    totalDamage: shadow.hpMax,
-    // 第 6 轮：连胜与最后一击在击杀这一刻冻住，两端结算看同一份
-    ...(streak !== undefined ? { streak } : {}),
-    finisherId,
-  };
-}
 
 // ── helper ────────────────────────────────────────────────
 

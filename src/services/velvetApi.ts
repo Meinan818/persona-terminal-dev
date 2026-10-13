@@ -169,6 +169,10 @@ export const resetPassword = (token: string, password: string): Promise<void> =>
     body: JSON.stringify({ token, password }),
   });
 
+/** 注销账号：删除本人及名下云端数据。本机数据不动 */
+export const deleteAccount = (): Promise<void> =>
+  request<void>('/api/velvet/account', { method: 'DELETE' });
+
 // ── fetch 封装 ──────────────────────────────────────────────
 
 async function request<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {

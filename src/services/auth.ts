@@ -444,6 +444,14 @@ export const logout = (): void => {
  * 本机数据不动（本地优先应用，注销云端 ≠ 清空本地）。
  */
 export const deleteAccount = async (): Promise<void> => {
+  // 自研后端优先：PB 那条只服务历史账号（自研会话下 pb.authStore 恒空，
+  // 原来这里会直接抛「未登录」，等于自研用户根本注销不了）
+  if (velvetApi.isAuthenticated()) {
+    await velvetApi.deleteAccount();
+    velvetApi.clearAuth();
+    void clearPactRunner();
+    return;
+  }
   if (!pb || !pb.authStore.isValid) throw new Error('未登录');
   const id = getUserId();
   if (!id) throw new Error('用户信息缺失');

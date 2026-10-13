@@ -83,6 +83,17 @@ export const ALL_LOCAL_TABLES = [
   'onlineCardFaces',
 ] as const;
 
+/**
+ * 「清空数据」与「导入主备份」都要**保留**的本地专属表：记录配图两张、导入的音乐、在线名片裁图。
+ * 它们不进主备份、也不上云，所以导入主备份时不动它们（keepImages）。
+ *
+ * 收成一份的理由（与 ALL_LOCAL_TABLES 同一个病根）：resetAllData({keepImages:true}) 与
+ * importData 失败回滚的写回循环原本各列一遍保留表，两边一旦不一致就会出事——
+ * 保留下来没清的表又被 bulkAdd 写回，与库里同主键的行相撞（Dexie 抛 BulkError），
+ * 于是"导入失败已恢复原有数据"变成"恢复原有数据失败"，界面也不再重载。
+ */
+const KEEP_WITH_IMAGES_TABLES = new Set<string>(['activityImages', 'activityImageData', 'bgmTracks', 'onlineCardFaces']);
+
 /** importData 的返回：导入后记录已不存在的配图有几张、占多少字节（0 张 = 不用问） */
 export interface ImportDataResult {
   orphanImages: { count: number; bytes: number };
@@ -2994,7 +3005,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   resetAllData: async (opts) => {
-    const tables = ALL_LOCAL_TABLES.filter(t => !opts?.keepImages || (t !== 'activityImages' && t !== 'activityImageData' && t !== 'bgmTracks' && t !== 'onlineCardFaces'));
+    const tables = ALL_LOCAL_TABLES.filter(t => !opts?.keepImages || !KEEP_WITH_IMAGES_TABLES.has(t));
     await db.transaction('rw', tables.map(t => db.table(t)), async () => {
       for (const t of tables) await db.table(t).clear();
     });
@@ -3476,13 +3487,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       try {
         await get().resetAllData({ keepImages: true });
         for (const t of ALL_LOCAL_TABLES) {
-          if (t === 'activityImages' || t === 'activityImageData' || t === 'bgmTracks') continue;
+          // 与 resetAllData 共用同一份「保留表」清单：这些表刚才没被清空，写回就是拿同主键去撞 Dexie
+          if (KEEP_WITH_IMAGES_TABLES.has(t)) continue;
           const rows = snapshot[t];
           if (rows && rows.length) await db.table(t).bulkAdd(rows as never[]);
         }
-        await get().initializeApp();
       } catch (restoreError) {
         console.error('恢复原有数据失败:', restoreError);
+      }
+
+      // 恢复之后无论成败都重载界面。原实现把这句放在上面的 try 里：回滚中途一旦抛错
+      // （例如对保留表 bulkAdd 撞主键），界面就停在"已清空"的样子，而数据其实还在库里，
+      // 用户只能自己刷新才看得到。
+      try {
+        await get().initializeApp();
+      } catch (reloadError) {
+        console.error('导入失败后重新加载界面失败:', reloadError);
       }
 
       throw new Error('导入失败，已恢复原有数据。请检查备份文件是否完整');

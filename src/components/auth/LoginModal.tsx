@@ -7,17 +7,16 @@ import {
   requestLoginOrSignupOTP,
   verifyOTP,
   requestPasswordReset,
-  requestOTP as requestOTPByEmail,
 } from '@/services/auth';
 import { useBackHandler } from '@/utils/useBackHandler';
 import { useAppStore } from '@/store';
 import { CloudConsentNotice } from './CloudConsentNotice';
-import type { RecordModel } from 'pocketbase';
+import type { VelvetRecord } from '@/services/velvetApi';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (record: RecordModel) => void;
+  onSuccess?: (record: VelvetRecord) => void;
   /** 入口位置：'welcome' 来自欢迎页，'settings' 来自设置页 */
   origin?: 'welcome' | 'settings';
 }
@@ -476,9 +475,6 @@ function OTPCodeStep({
     </>
   );
 }
-
-// 保留 requestOTPByEmail 以备后续使用（当前 UI 未直接调用）
-void requestOTPByEmail;
 
 // ── 共享小组件 ─────────────────────────────────────────────
 

@@ -1,13 +1,12 @@
 /**
- * 「忘记密码」的分流：配置了自研后端就走自研（PB 那条已发不出邮件），
- * 没配置才回落 PocketBase。用 mock 把两条路都钉住，避免"看起来调了"的假通过。
+ * 「忘记密码」的行为：身份规范化后交给自研接口；冷却与服务器错误翻译成人话。
+ * PocketBase 回落已随退役删除——没配云端地址时直接报「云同步未配置」，不再悄悄走旧后端。
  */
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({
   velvetConfigured: true,
   requestReset: vi.fn(),
-  pbRequestReset: vi.fn(),
 }));
 
 vi.mock('../velvetApi', () => ({
@@ -19,12 +18,6 @@ vi.mock('../velvetApi', () => ({
   },
 }));
 
-vi.mock('../pocketbase', () => ({
-  cloudEnabled: true,
-  pb: { collection: () => ({ requestPasswordReset: h.pbRequestReset }) },
-  getUserId: () => 'me',
-}));
-
 import { requestPasswordReset } from '../auth';
 import { VelvetApiError } from '../velvetApi';
 
@@ -32,23 +25,25 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.velvetConfigured = true;
   h.requestReset.mockResolvedValue(undefined);
-  h.pbRequestReset.mockResolvedValue(undefined);
 });
 
-it('配置了自研后端时走自研接口，并把身份规范化', async () => {
+it('走自研接口，并把身份规范化', async () => {
   await requestPasswordReset('  Alice@Example.invalid ');
   expect(h.requestReset).toHaveBeenCalledWith('alice@example.invalid');
-  expect(h.pbRequestReset).not.toHaveBeenCalled();
 });
 
-it('同一个身份在冷却期内被拒时给出人话提示', async () => {
+it('身份为空时提前拦住，不打后端', async () => {
+  await expect(requestPasswordReset('   ')).rejects.toThrow('请输入 UserID 或邮箱');
+  expect(h.requestReset).not.toHaveBeenCalled();
+});
+
+it('冷却期内被拒时给出人话提示', async () => {
   h.requestReset.mockRejectedValueOnce(new VelvetApiError(429, null));
   await expect(requestPasswordReset('alice@example.invalid')).rejects.toThrow('操作太频繁');
 });
 
-it('未配置自研后端时才回落 PocketBase', async () => {
+it('没配云端地址时明确报错', async () => {
   h.velvetConfigured = false;
-  await requestPasswordReset('Alice@Example.invalid');
-  expect(h.pbRequestReset).toHaveBeenCalledWith('alice@example.invalid');
+  await expect(requestPasswordReset('alice@example.invalid')).rejects.toThrow('云同步未配置');
   expect(h.requestReset).not.toHaveBeenCalled();
 });

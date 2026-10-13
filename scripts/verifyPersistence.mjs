@@ -73,11 +73,18 @@ try {
     const verify = async (name, fn) => { try { await fn(); results.push(name); } catch (error) { throw new Error(name + ': ' + error.message); } };
     const rejects = async fn => { let failed = false; try { await fn(); } catch { failed = true; } check(failed, 'Expected failure'); };
     let cloudRows = [];
+    let eventOffline = true;
+    const eventRequests = [];
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async (input, init) => {
       const url = String(input);
       if (!url.startsWith('http://repair.invalid/')) return originalFetch(input, init);
       if (url.endsWith('/api/velvet/auth-with-password')) return Response.json({ token: 'synthetic-session', record: { id: 'synthetic-account', email: 'test@example.invalid' } });
+      if (url.endsWith('/api/social/coop/events')) {
+        eventRequests.push(JSON.parse(init.body));
+        if (eventOffline) throw new Error('synthetic event offline');
+        return Response.json({ id: 'synthetic-notification' });
+      }
       if (url.includes('/api/sync/rows') && (!init?.method || init.method === 'GET')) return Response.json(cloudRows);
       return Response.json({ id: 'synthetic', updated: new Date().toISOString() });
     };
@@ -222,6 +229,26 @@ try {
           check(await db.todoCompletions.where('todoId').equals(todo.id).count() === 1, 'Cross-page completion duplicated');
           check((await db.attributes.get('dexterity')).points === before + 1, 'Cross-page reward duplicated');
         } finally { frame.remove(); }
+      });
+    }
+    if (${JSON.stringify(process.argv.includes('--coop'))}) {
+      await verify('真实互动事件持久保存待发状态，离线重试沿用同一事件', async () => {
+        const { flushCoopEvents } = await import('/src/services/coopEvents.ts');
+        const { TAROT_BY_ID } = await import('/src/constants/tarot.ts');
+        const arcanaId = Object.keys(TAROT_BY_ID)[0];
+        await db.confidants.put({ id: 'synthetic-coop', userId: useAppStore.getState().user.id, name: '隔离同伴', source: 'online', linkedCloudUserId: 'synthetic-partner', arcanaId, orientation: 'upright', description: '', intimacy: 1, intimacyPoints: 0, buffs: [], createdAt: new Date() });
+        await useAppStore.getState().loadConfidants();
+        await useAppStore.getState().recordConfidantInteraction({ id: 'synthetic-coop', description: '合成互动', delta: 1, narrative: '合成解读' });
+        await flushCoopEvents();
+        const pending = (await db.confidantEvents.toArray()).find(event => event.broadcast?.recipientId === 'synthetic-partner');
+        check(!!pending && !pending.broadcast.deliveredAt, 'Offline queue was lost');
+        // 云端不能伪造本机发送标记；空快照也不覆盖本机未发记录。
+        cloudRows = [row('confidantEvents', [])]; await sync.pullAll();
+        check(!!await db.confidantEvents.get(pending.id), 'Pull erased offline queue');
+        eventOffline = false; check(await flushCoopEvents() === 1, 'Retry did not deliver');
+        check(!!(await db.confidantEvents.get(pending.id)).broadcast.deliveredAt, 'Delivery ack not persisted');
+        check(eventRequests.every(event => event.eventId === pending.id), 'Retry changed event identity');
+        check(await flushCoopEvents() === 0, 'Already-delivered event sent again');
       });
     }
     await verify('清空清单覆盖全部本地表且导入保留裁图', async () => {

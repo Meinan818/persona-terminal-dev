@@ -3,6 +3,8 @@ import { User, Attribute, Activity, Achievement, Skill, Settings, ThemeType, Att
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { summarizeCounsel, type CounselContext, type CounselConfidantBrief, type CounselRecentEvent } from '@/utils/counselAI';
 import { db } from '@/db';
+import { getUserId as getCloudUserId } from '@/services/pocketbase';
+import { flushCoopEvents } from '@/services/coopEvents';
 import { deleteImagesOfActivity, loadActivityImageIndex, findOrphanActivityImages, pruneOrphanActivityImages } from '@/utils/activityImages';
 import { freshUnreadSummary, reportPushDelivered, markReportPushScheduled } from '@/utils/reportNotice';
 import { useCloudSocialStore } from '@/store/cloudSocial';
@@ -736,7 +738,7 @@ interface AppState {
     delta: number,
     eventType?: ConfidantEvent['type'],
     narrative?: string,
-    extra?: { userInput?: string; advice?: string; eventId?: string; eventDate?: string; lastInteractionDate?: string },
+    extra?: { userInput?: string; advice?: string; eventId?: string; eventDate?: string; lastInteractionDate?: string; broadcast?: ConfidantEvent['broadcast'] },
   ) => Promise<{ leveledUp: boolean; newIntimacy: number; starShiftGained: number; eventId: string }>;
   /** 使用一次星移：写入新的 description / interpretation / advice / orientation，charges -1 */
   consumeStarShift: (
@@ -6348,6 +6350,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         narrative,
         userInput: extra?.userInput,
         advice: extra?.advice,
+        broadcast: extra?.broadcast,
         createdAt: now,
       });
       if (leveledUp) {
@@ -6394,59 +6397,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (current.lastInteractionDate === today) {
       throw new Error('今天已经和 Ta 解读过了，明天再来吧');
     }
+    const accountId = getCloudUserId();
     // 先把 lastInteractionDate 写进去（与 bumpConfidantIntimacy 的 loadConfidants 合并）
     await db.confidants.put({ ...current, lastInteractionDate: today });
     // 再 bump 亲密度：narrative=AI 解读、advice=相处建议、userInput=用户原话分别存储
     const res = await get().bumpConfidantIntimacy(
       id, delta, 'conversation', narrative,
-      { userInput: description.trim(), advice, lastInteractionDate: today },
+      { userInput: description.trim(), advice, lastInteractionDate: today,
+        ...(current.source === 'online' && current.linkedCloudUserId && accountId
+          ? { broadcast: { accountId, recipientId: current.linkedCloudUserId } } : {}),
+      },
     );
 
     // 在线 COOP：把这条事件广播给对方，让 Ta 的本地共享同一条 event_id + intimacy 同步
     if (current.source === 'online' && current.linkedCloudUserId) {
-      void (async () => {
-        try {
-          const { pb, getUserId } = await import('@/services/pocketbase');
-          if (!pb || !pb.authStore.isValid) {
-            console.warn('[velvet-store] coop broadcast skipped: not logged in');
-            return;
-          }
-          const me = getUserId();
-          if (!me) {
-            console.warn('[velvet-store] coop broadcast skipped: no user id');
-            return;
-          }
-          // 用现有的 event_logged 类型 + payload.kind = 'coop_event' 区分，
-          // 这样不需要在 PB select 字段里新增枚举值就能跑
-          const payload = {
-            kind: 'coop_event',
-            event_id: res.eventId,
-            date: today,
-            event_type: 'conversation',
-            delta,
-            narrative,
-            advice,
-            user_input: description.trim(),
-          };
-          const created = await pb.collection('notifications').create({
-            user: current.linkedCloudUserId,
-            type: 'event_logged',
-            from: me,
-            payload,
-            read: false,
-          });
-          console.info('[velvet-store] coop event broadcast OK, notif id =', created.id);
-        } catch (err) {
-          // PB 把字段级校验细节藏在 err.data 里，明确打出来
-          const rich = err as { status?: number; message?: string; data?: { data?: unknown; message?: string } };
-          console.error(
-            '[velvet-store] broadcast coop event FAILED:',
-            'status=', rich.status,
-            'msg=', rich.message,
-            'fieldErrors=', JSON.stringify(rich.data?.data ?? rich.data, null, 2),
-          );
-        }
-      })();
+      void flushCoopEvents().catch(() => { /* 本地待发送标记已保存，下次社交同步重试 */ });
     }
     // 可选：同步到 activities；可附带对某属性的加点（≤ 3 点）
     if (createActivity) {

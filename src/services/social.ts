@@ -26,6 +26,7 @@ import { useAppStore } from '@/store';
 import { getOnlineCardFace, clearOnlineCardFace } from './onlineCardFace';
 import { syncPacts } from './pactSync';
 import { syncOrgs } from './orgSync';
+import { flushCoopEvents } from './coopEvents';
 import { interpretLockedArcana, type ConfidantMatchResult } from '@/utils/confidantAI';
 import type { CoopBond, CoopShadow, Friendship, NotificationEntry } from '@/types';
 
@@ -80,6 +81,7 @@ const loadSocialOnce = async (options: { force?: boolean }): Promise<void> => {
   store.setLoading(true);
   store.setLastError(null);
   try {
+    await flushCoopEvents().catch(() => { /* 持久待发送队列保留，社交读取继续 */ });
     const [friendships, notifications, todayPrayers, coopBonds, rawShadows] = await Promise.all([
       listFriendships(),
       // 通知中心尚未迁移到自研后端（第二阶段做）：自研登录态下它会抛「未登录」，

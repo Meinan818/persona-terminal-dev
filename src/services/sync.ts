@@ -622,6 +622,7 @@ export const hasCloudData = async (): Promise<boolean | null> => {
  * 推送和「查阅并合并」的对账都走这里，两边比较的才是同一口径。
  */
 function stripForCloud(key: string, rows: Row[], includeApiKey: boolean): Row[] {
+  if (key === 'confidantEvents') return rows.map(({ broadcast: _local, ...row }) => row);
   if (key === 'activities') {
     // 记录上的天气只留本机（第 6 轮）：它是"那台设备当时看到的天气"，不是记录内容
     return rows.map(r => {
@@ -896,6 +897,17 @@ async function localizeCloudRows(key: string, rows: Row[]): Promise<Row[] | null
     return null;
   }
   let toWrite = rows;
+  if (key === 'confidantEvents') {
+    const local = await db.confidantEvents.toArray();
+    const byId = new Map(local.map(event => [event.id, event]));
+    toWrite = toWrite.map(({ broadcast: _remote, ...row }) => {
+      const broadcast = byId.get(row.id as string)?.broadcast;
+      return broadcast ? { ...row, broadcast } : row;
+    });
+    const ids = new Set(toWrite.map(row => row.id));
+    // 拉取快照不应丢失尚未发出的本机互动，也不接纳云端的发送权限标记。
+    for (const event of local) if (event.broadcast && !event.broadcast.deliveredAt && !ids.has(event.id)) toWrite.push(event as unknown as Row);
+  }
   if (key === 'confidants') {
     const local = await db.confidants.toArray();
     const avatarById = new Map(local.filter(c => typeof c.customAvatarDataUrl === 'string' && c.customAvatarDataUrl).map(c => [c.id, c.customAvatarDataUrl as string]));

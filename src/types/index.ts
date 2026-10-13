@@ -1871,6 +1871,8 @@ export interface ConfidantEvent {
   userInput?: string;
   /** AI 给出的相处建议（仅 conversation 事件写入；展开时与 narrative 分别展示） */
   advice?: string;
+  /** 本机通知发送状态，不进入云快照；账号绑定避免换号误发。 */
+  broadcast?: { accountId: string; recipientId: string; deliveredAt?: string };
   createdAt: Date;
 }
 

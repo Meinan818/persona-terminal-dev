@@ -33,6 +33,8 @@
 
 import type { RecordModel } from 'pocketbase';
 import { pb, getUserId } from './pocketbase';
+import * as velvetApi from './velvetApi';
+import * as coopPactsApi from './coopPactsApi';
 import { profileFromRecord } from './coopBonds';
 import { auditText } from '@/utils/textAudit';
 import type { CoopPact, NotificationEntry, PactKind, PactMode, PactStatus } from '@/types';
@@ -122,6 +124,15 @@ const fetchPact = async (id: string, me: string): Promise<CoopPact> => {
  * 失败返回 null（和「一条都没有」区分开，调用方别据此把本地待办归档）。
  */
 export const listMyPacts = async (): Promise<CoopPact[] | null> => {
+  // 自研后端：约定迁移到 /api/social/pacts（W3 第三波）
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await coopPactsApi.listMyPacts();
+    } catch (err) {
+      console.warn('[velvet-pact] listMyPacts (backend) failed', err);
+      return null;   // 失败返回 null（与「一条都没有」区分，调用方别据此归档本地待办）
+    }
+  }
   if (!pb || !pb.authStore.isValid) return null;
   const me = getUserId();
   if (!me) return null;
@@ -155,7 +166,10 @@ export interface CreatePactInput {
 
 /** 发起约定：写一条 pending 记录，给对方发邀请 */
 export const createPact = async (input: CreatePactInput, existing: CoopPact[]): Promise<CoopPact> => {
-  const me = requireMe();
+  // 自研登录态下不依赖 PB 的 authStore（requireMe 会因 pb.authStore.isValid=false 抛「未登录」）；
+  // 用 velvetApi.getUserId() 取当前用户。文案校验两条路径共用。
+  const me = velvetApi.isAuthenticated() ? (velvetApi.getUserId() ?? '') : requireMe();
+  if (!me) throw new Error('用户信息缺失');
   const to = input.toId.trim();
   if (!to || to === me) throw new Error('对方信息缺失');
   const title = input.title.trim().slice(0, PACT_TITLE_MAX);
@@ -170,6 +184,16 @@ export const createPact = async (input: CreatePactInput, existing: CoopPact[]): 
   const days = input.kind === 'daily' && (PACT_DAYS_OPTIONS as readonly number[]).includes(input.days) ? input.days : 0;
   if (input.kind === 'once' && (!input.deadline || !DAY_RE.test(input.deadline) || input.deadline < input.today)) {
     throw new Error('截止日要选今天或以后');
+  }
+  // 自研后端：约定迁移到 /api/social/pacts（W3 第三波）。上面的文案校验保留（前端先拦），
+  // 后端会再校验一遍并写服务端通知。
+  if (velvetApi.isAuthenticated()) {
+    return await coopPactsApi.createPact({
+      toId: to, kind: input.kind, mode: input.mode, title, days,
+      deadline: input.kind === 'once' ? input.deadline : undefined,
+      message: input.message?.trim().slice(0, 120) || undefined,
+      today: input.today,
+    });
   }
   const r = await pb!.collection('coop_pacts').create({
     from_user: me,
@@ -203,6 +227,10 @@ export const respondPact = async (
   accept: boolean,
   opts: { today: string; titleTo?: string },
 ): Promise<CoopPact> => {
+  // 自研后端：回应迁移到 /api/social/pacts/{id}/respond（W3 第三波）
+  if (velvetApi.isAuthenticated()) {
+    return await coopPactsApi.respondPact(pactId, accept, opts);
+  }
   const me = requireMe();
   const cur = await fetchPact(pactId, me);
   if (cur.toId !== me) throw new Error('这份邀请不是发给你的');
@@ -225,6 +253,10 @@ export const respondPact = async (
 
 /** 打卡 / 撤回打卡：只改自己那一栏 */
 export const setMyDone = async (pactId: string, day: string, done: boolean): Promise<CoopPact> => {
+  // 自研后端：打卡迁移到 /api/social/pacts/{id}/done（W3 第三波）
+  if (velvetApi.isAuthenticated()) {
+    return await coopPactsApi.setMyDone(pactId, day, done);
+  }
   const me = requireMe();
   const cur = await fetchPact(pactId, me);
   const field = sideOf(cur, me) === 'from' ? 'done_from' : 'done_to';
@@ -237,6 +269,10 @@ export const setMyDone = async (pactId: string, day: string, done: boolean): Pro
 
 /** 催一下：记下今天催过，给对方发消息 */
 export const nudgePact = async (pactId: string, today: string): Promise<CoopPact> => {
+  // 自研后端：催促迁移到 /api/social/pacts/{id}/nudge（W3 第三波）
+  if (velvetApi.isAuthenticated()) {
+    return await coopPactsApi.nudgePact(pactId, today);
+  }
   const me = requireMe();
   const cur = await fetchPact(pactId, me);
   if (cur.status !== 'active') throw new Error('约定已经结束了');
@@ -251,6 +287,10 @@ export const nudgePact = async (pactId: string, today: string): Promise<CoopPact
 
 /** 结束约定（撤回邀请也走这里） */
 export const endPact = async (pactId: string): Promise<CoopPact> => {
+  // 自研后端：结束迁移到 /api/social/pacts/{id}/end（W3 第三波）
+  if (velvetApi.isAuthenticated()) {
+    return await coopPactsApi.endPact(pactId);
+  }
   const me = requireMe();
   const cur = await fetchPact(pactId, me);
   if (!isPactLive(cur)) return cur;
@@ -263,6 +303,15 @@ export const endPact = async (pactId: string): Promise<CoopPact> => {
 
 /** 到期收尾（达成 / 过期）：两边谁先发现谁写，重复写同一个值无害 */
 export const closePact = async (pactId: string, status: 'finished' | 'expired'): Promise<CoopPact | null> => {
+  // 自研后端：收尾迁移到 /api/social/pacts/{id}/close（W3 第三波）
+  if (velvetApi.isAuthenticated()) {
+    try {
+      return await coopPactsApi.closePact(pactId, status);
+    } catch (err) {
+      console.warn('[velvet-pact] closePact (backend) failed', pactId, err);
+      return null;
+    }
+  }
   const me = requireMe();
   try {
     const cur = await fetchPact(pactId, me);

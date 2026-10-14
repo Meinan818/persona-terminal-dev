@@ -132,3 +132,8 @@ start.local.bat
 # 属于第三方内容，不进仓库（site/ 里没有任何参考站的代码或素材）。
 outputs/_recon/
 
+# ===== 安装包（2026-10-14）=====
+# 官网的下载按钮指向 site/download/ 里的 APK。25 MB 的二进制不进 git，
+# 换新版本时把新包覆盖进来即可（仓库只跟源码走）。
+site/download/*.apk
+

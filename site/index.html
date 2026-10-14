@@ -69,7 +69,7 @@
      main.js 让这几层按不同速度跟着滚动走一点（视差），于是「底」和「面」之间
      始终有相对运动——这是整站唯一一个全程在动的东西，也是各章之间连续的线索。 -->
 <div class="stage" aria-hidden="true">
-  <p class="stage__ghost">MASKARIA</p>
+  <p class="stage__ghost">没人看见的也算数</p>
   <div class="stage__dots"></div>
   <svg class="stage__slash" viewBox="0 0 520 900" preserveAspectRatio="none">
     <polygon class="plane plane--ink" points="330,-40 560,-40 560,940 120,940"/>
@@ -103,7 +103,6 @@
      → 两张撕纸标题 → 两张相纸（App 截图，压在面具边上）→ 底部出血的信息带 → 滚动提示。
      右侧的面具与相纸是「前景」，幽灵字标与斜块是「后景」，两者滚动时速度不同。 -->
 <section class="hero" data-field="1" aria-labelledby="hero-h">
-  <p class="hero__ghost" aria-hidden="true">MASKARIA</p>
   <div class="hero__splash" aria-hidden="true">
     <svg viewBox="0 0 400 400"><path d="M200 4 232 132 344 68 276 168 400 200 276 232 344 332 232 268 200 396 168 268 56 332 124 232 0 200 124 168 56 68 168 132Z" fill="currentColor"/></svg>
   </div>
@@ -125,19 +124,27 @@
     </figure>
   </div>
   <div class="hero__lead">
-    <p class="hero__kicker">MASKARIA · 面具庭园</p>
-    <h1 class="hero__h" id="hero-h">
-      <span class="slab slab--paper"><span class="slab__in" data-line>没人看见的</span></span>
-      <span class="slab slab--hot"><span class="slab__in" data-line>也算数</span></span>
+    <p class="hero__kicker">个人记录应用 · 把日常痕迹存成一张面具</p>
+    <!-- 字标：跟 App 首页那颗一样，八个字母块三色轮着来、每块角度与高低都错开，
+         再压一颗星、底下挂一条「面具庭园」的黑牌。名字是这张海报的主角。 -->
+    <h1 class="hero__h" id="hero-h" aria-label="MASKARIA，面具庭园">
+      <span class="wm" aria-hidden="true">
+        <span class="wm__l">M</span><span class="wm__l">A</span><span class="wm__l">S</span><span class="wm__l">K</span><span class="wm__l">A</span><span class="wm__l">R</span><span class="wm__l">I</span><span class="wm__l">A</span>
+        <span class="wm__star"><svg viewBox="0 0 100 100"><path d="M50 0 59 41 100 50 59 59 50 100 41 59 0 50 41 41Z" fill="currentColor"/></svg></span>
+      </span>
+      <span class="wm__sub" aria-hidden="true">面具庭园<i>★</i></span>
     </h1>
   </div>
-  <div class="hero__burst" aria-hidden="true">
-    <svg viewBox="0 0 200 200"><path d="M100 8 116 60 168 34 136 78 192 92 136 106 168 150 116 124 100 180 84 124 32 150 64 106 8 92 64 78 32 34 84 60Z" fill="currentColor"/></svg>
+  <div class="hero__say">
+    <p class="hero__tagline">
+      <span class="slab slab--paper"><span class="slab__in">没人看见的</span></span>
+      <span class="slab slab--hot"><span class="slab__in">也算数</span></span>
+    </p>
   </div>
   <div class="hero__foot">
     <p class="hero__tag">你说「今天看了二十页书」，它记下来，加你 0.5 点知识。就这么点事，剩下的交给时间。</p>
-    <p class="hero__act"><a class="pbtn pbtn--hot" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer"><span>去 GitHub</span></a></p>
-    <p class="hero__mini">Android 端可以直接装；iOS 没做，Apple 开发者账号太贵。</p>
+    <p class="hero__act"><a class="pbtn pbtn--hot" href="http://192.144.227.216/download/maskaria-2.8.2i-release.apk" download><span>下载安装包</span></a></p>
+    <p class="hero__mini">Android 端直接装 · v2.8.2 · 25 MB<br>iOS 没做，Apple 开发者账号太贵。</p>
   </div>
   <p class="hero__cue" aria-hidden="true"><span>往下翻</span><i></i></p>
 </section>
@@ -541,10 +548,10 @@
   </header>
   <div class="get">
     <div class="get__l">
-      <p class="body">源码就在那儿，自己捏一个。前端 32 个测试文件、202 项测试全绿，后端跑在 MySQL 上；Android 包你自己构建一次，命令都在仓库里。</p>
-      <p class="note">安装包 26 MB，不在仓库里，跟着源码一起构建：<span class="cmd" data-type="npm run cap:build:android">npm run cap:build:android</span></p>
-      <p class="get__act"><a class="pbtn pbtn--hot" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer"><span>去 GitHub</span></a></p>
-      <p class="note note--c">仓库：Meinan818/persona-terminal-dev</p>
+      <p class="body">源码就在那儿，自己捏一个。前端 32 个测试文件、202 项测试全绿，后端跑在 MySQL 上；不想自己构建，直接下安装包。</p>
+      <p class="note">安装包 v2.8.2 · 25 MB，Android 直接装。想自己构建也行：<span class="cmd" data-type="npm run cap:build:android">npm run cap:build:android</span></p>
+      <p class="get__act"><a class="pbtn pbtn--hot" href="http://192.144.227.216/download/maskaria-2.8.2i-release.apk" download><span>下载安装包</span></a></p>
+      <p class="note note--c">源码仓库：<a class="link" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer">Meinan818/persona-terminal-dev</a></p>
     </div>
     <div class="get__r">
       <figure class="photo photo--get" data-drift="-22">

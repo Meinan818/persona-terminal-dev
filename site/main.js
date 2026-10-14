@@ -269,8 +269,8 @@
     '35.7% 103%,22.5% 103%,0.1% 103%,-3% 86.9%,-3% 69.5%,-3% 57.1%,-3% 42.6%,-3% 29.7%,' +
     '-3% 12.5%,2.5% -3%,20.4% -3%,36.3% -3%)';
 
-  const heroEls = $$('.hero__ghost, .hero__splash, .hero__art, .hero__shots .photo, .hero__lead .slab, ' +
-    '.hero__burst, .hero__foot, .hero__cue, .hero__disc, .hdr, .hero__kicker');
+  const heroEls = $$('.hero__splash, .hero__art, .hero__shots .photo, .hero__tagline .slab, ' +
+    '.hero__foot, .hero__cue, .hero__disc, .hdr, .hero__kicker, .wm__l, .wm__star, .wm__sub');
   const hero = $('.hero');
 
   const intro = gsap.timeline({
@@ -314,18 +314,20 @@
       .fromTo(hero, { clipPath: SPLASH_IN },
         { clipPath: SPLASH_OUT, duration: .95, ease: 'power2.inOut' }, 1.6)
       .from('.hdr', { yPercent: -130, opacity: 0, duration: .5, ease: 'power3.out' }, 1.72)
-      .from('.hero__ghost', { opacity: 0, xPercent: -3, duration: .9 }, 1.8)
       .from('.hero__splash', { scale: 1.5, rotate: 30, opacity: 0, duration: .8 }, 1.72)
+      .from('.hero__kicker', { opacity: 0, x: -22, duration: .4 }, 1.78)
+      /* 字标是这张海报的主角，给它最重的一拍：八块字母一块块从下往上拍上来 */
+      .from('.wm__l', { yPercent: 132, rotate: -12, opacity: 0, duration: .42, stagger: .055, ease: 'back.out(1.25)' }, 1.84)
+      .from('.wm__star', { scale: 0, rotate: -90, opacity: 0, duration: .42, ease: 'back.out(2)' }, 2.36)
+      .from('.wm__sub', { x: -28, opacity: 0, duration: .42, ease: 'back.out(1.4)' }, 2.42)
       .from('.hero__disc', { opacity: 0, scale: .8, duration: .7 }, 1.95)
       .from('.hero__art', { yPercent: -40, scale: 1.22, rotate: 4, opacity: 0, duration: .72, ease: 'back.out(1.35)' }, 1.8)
       .from('.art__ink', { x: 0, y: 0, opacity: 0, duration: .26 }, 2.24)
       .from('.art__key', { scale: 1, opacity: 0, duration: .26 }, 2.24)
-      .from('.hero__lead .slab', { opacity: 0, scale: 1.26, duration: .34, stagger: .13, ease: 'power3.in' }, 1.92)
-      .from('.hero__kicker', { opacity: 0, x: -22, duration: .4 }, 1.88)
-      .from('.hero__burst', { scale: 0, rotate: -70, opacity: 0, duration: .5, ease: 'back.out(2)' }, 2.16)
-      .from('.hero__shots .photo', { y: 40, rotate: 0, opacity: 0, duration: .5, stagger: .12, ease: 'back.out(1.4)' }, 2.24)
-      .from('.hero__foot', { yPercent: 110, duration: .6 }, 2.34)
-      .from('.hero__cue', { opacity: 0, duration: .5 }, 2.6);
+      .from('.hero__tagline .slab', { opacity: 0, scale: 1.26, duration: .34, stagger: .13, ease: 'power3.in' }, 2.52)
+      .from('.hero__shots .photo', { y: 40, rotate: 0, opacity: 0, duration: .5, stagger: .12, ease: 'back.out(1.4)' }, 2.62)
+      .from('.hero__foot', { yPercent: 110, duration: .6 }, 2.72)
+      .from('.hero__cue', { opacity: 0, duration: .5 }, 2.96);
   }
 
   if (startAtAnchor) {

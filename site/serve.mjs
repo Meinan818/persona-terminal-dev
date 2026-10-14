@@ -24,6 +24,7 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.apk': 'application/vnd.android.package-archive',
   '.txt': 'text/plain; charset=utf-8',
 };
 

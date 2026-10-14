@@ -601,4 +601,9 @@
     root.classList.remove('js');
   };
   mq.addEventListener ? mq.addEventListener('change', onPrefChange) : mq.addListener(onPrefChange);
+
+  /* 黄色频道要用的衬线体先热一下：换过去时不闪 */
+  if (document.fonts && document.fonts.load) {
+    try { document.fonts.load('1em "Velvet Serif SC"'); } catch (e) { /* 加载失败就退到系统衬线 */ }
+  }
 })();

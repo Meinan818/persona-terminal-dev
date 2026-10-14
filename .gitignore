@@ -123,3 +123,7 @@ backend/uploads/
 .env.*.local
 *.local.bat
 start.local.bat
+
+# 设计工具的工作目录（方向稿、检查器报告、参考图，不入库）
+.taste-skill/
+

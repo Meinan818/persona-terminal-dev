@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MASKARIA 面具庭园 · 把日子过成存档</title>
+<title>MASKARIA 面具庭园 · 没人看见的也算数</title>
 <meta name="description" content="MASKARIA 是一个把日常痕迹存成一张人格面具的个人记录应用。五个属性、记账、同伴、逆影战场、星象，四套主题各自换一整套设计语言。Android 可用，数据留在你自己的设备上。">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="img/red.png">
@@ -20,6 +20,36 @@
      纯 CSS 时间线（.js 才显示），没脚本时这层根本不存在，页面直接是完成态。 -->
 <div class="loader" aria-hidden="true">
   <div class="loader__dots dots"></div>
+  <!-- 开过去的小货车：车是我自己画的 SVG（官方那辆的原图和立绘是人家的版权物，不搬），
+       要的是「车开过屏幕」这套演出：冲过去、轮子转、身后拉速度线、排气扑两下。 -->
+  <div class="loader__road" aria-hidden="true">
+    <div class="loader__speed"></div>
+    <svg class="loader__car" viewBox="0 0 266 112">
+      <!-- 一辆小两厢（自己画的）。车身与轮子分两组：轮子在路上滚，车身在上头颠。 -->
+      <g class="van__shell">
+        <path class="van__body" d="M16 90V68q0-10 10-10h42l22-28q4-5 11-5h52q7 0 10 5l20 28h46q10 0 12 10l3 12q1 8-7 8z"/>
+        <path class="van__win" d="M86 38h28l4 18H82z"/>
+        <path class="van__win" d="M120 38h22l13 18h-33z"/>
+        <path class="van__stripe" d="M18 66h226v10H18z"/>
+        <path class="van__decal" d="M124 46h32l-8 14h-32z"/>
+        <path class="van__lamp" d="M232 60l18 4v10l-18-4z"/>
+        <path class="van__tail" d="M16 62h10v12H16z"/>
+      </g>
+      <g class="van__axle">
+        <g class="van__wheel">
+          <circle class="van__tyre" cx="66" cy="90" r="17"/>
+          <circle class="van__rim" cx="66" cy="90" r="8"/>
+          <g class="van__spoke"><path d="M66 82v16M58 90h16M60 84l12 12M72 84l-12 12"/></g>
+        </g>
+        <g class="van__wheel">
+          <circle class="van__tyre" cx="198" cy="90" r="17"/>
+          <circle class="van__rim" cx="198" cy="90" r="8"/>
+          <g class="van__spoke"><path d="M198 82v16M190 90h16M192 84l12 12M204 84l-12 12"/></g>
+        </g>
+      </g>
+    </svg>
+    <div class="loader__puff"></div>
+  </div>
   <div class="loader__mid">
     <div class="loader__mark">
       <span>M</span><span>A</span><span>S</span><span>K</span><span>A</span><span>R</span><span>I</span><span>A</span>
@@ -27,7 +57,7 @@
     <div class="loader__burst">
       <svg viewBox="0 0 200 200"><path d="M100 4 118 62 176 40 140 88 200 100 140 112 176 160 118 138 100 196 82 138 24 160 60 112 0 100 60 88 24 40 82 62Z" fill="currentColor"/></svg>
     </div>
-    <p class="loader__note">把日子过成存档</p>
+    <p class="loader__note">没人看见的也算数</p>
   </div>
 </div>
 
@@ -73,8 +103,8 @@
          alt="MASKARIA 的红色主题图标：白色面具，背面是城市剪影、星与玫瑰的拼贴。">
   </figure>
   <h1 class="hero__h" id="hero-h">
-    <span class="tileline tileline--paper"><span class="line__i" data-line style="--i:0">把日子过成存档</span></span>
-    <span class="tileline tileline--ink"><span class="line__i" data-line style="--i:1">把存档过成人样</span></span>
+    <span class="tileline tileline--paper"><span class="line__i" data-line style="--i:0">没人看见的</span></span>
+    <span class="tileline tileline--ink"><span class="line__i" data-line style="--i:1">也算数</span></span>
   </h1>
   <p class="hero__tag" data-rise style="--i:2">你说「今天看了二十页书」，它记下来，给你加 0.5 点知识。就这 0.5 点。</p>
   <p class="hero__act"><a class="btn btn--burst" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer" data-rise style="--i:3">去 GitHub</a></p>
@@ -87,12 +117,15 @@
   <p class="say" data-reveal>你熬的那些夜算数，看的书算数，压下去的那通火也算数。</p>
   <div class="intro__rest">
     <div>
-      <p class="body" data-reveal>这些东西不会自己留下痕迹。久了连你自己都忘了，最后你会觉得那几年好像什么都没干。</p>
-      <p class="body" data-reveal>MASKARIA 就是干这个的：它替你把痕迹留下来。它没法让你变强，没有任何软件能做到那个。它只做一件很小的事，就是你上面看到的那句。</p>
+      <p class="body" data-reveal>这些东西不会自己留下痕迹。久了连你自己都忘了，最后你会觉得那几年<em class="hl">好像什么都没干</em>。</p>
+      <p class="body" data-reveal>MASKARIA 就是干这个的：它<em class="hl">替你把痕迹留下来</em>。它没法让你变强，没有任何软件能做到那个。它只做一件很小的事，就是你上面看到的那句。</p>
       <p class="body body--quiet" data-reveal>它也不催你。它就安静待在那儿，像一个知道你已经很累了的朋友。</p>
     </div>
-    <img class="chip chip--intro" src="img/shot-home-red.jpg" width="1220" height="2656" loading="lazy"
-         alt="红色主题的 MASKARIA 首页：黑白红拼贴版的字标，底下是今日任务与人格星象。">
+    <figure class="polaroid polaroid--intro">
+      <img src="img/shot-home-red.jpg" width="1220" height="2656" loading="lazy"
+           alt="红色主题的 MASKARIA 首页：黑白红拼贴版的字标，底下是今日任务与人格星象。">
+      <figcaption>红色主题 · 首页</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -243,8 +276,11 @@
       <p class="body body--on">一句话里好几笔也能拆开。流水按设计永不上传，只存在你的设备里。</p>
     </div>
   </div>
-  <img class="chip chip--say" src="img/shot-assistant.jpg" width="1220" height="2656" loading="lazy"
-       alt="红色主题的助手对话截图：用户说「我今天午饭吃了10块钱」，助手回「午饭十块，我记下了」，下面是一张记账卡。">
+  <figure class="polaroid polaroid--say">
+    <img src="img/shot-assistant.jpg" width="1220" height="2656" loading="lazy"
+         alt="红色主题的助手对话截图：用户说「我今天午饭吃了10块钱」，助手回「午饭十块，我记下了」，下面是一张记账卡。">
+    <figcaption>助手 · 记账</figcaption>
+  </figure>
 </section>
 
 <!-- ── 六 · 功能 ─────────────────────────────────────────────────────── -->
@@ -429,11 +465,12 @@
         </svg>
         <h2 class="p5t__cn" id="rules-h" data-reveal>两条硬规矩</h2>
       </div>
-      <p class="say say--s" data-reveal>记账流水、聊天原文、配图与音乐，永不上传。</p>
+      <p class="say say--s" data-reveal>记账流水、聊天原文、配图与音乐，<em class="hl">永不上传</em>。</p>
     </div>
     <div class="rules__side">
       <p class="say say--s" data-reveal>AI 是你自带的。Key 存本机，不上云、不进日志。</p>
       <p class="body" data-reveal>服务端只提供可选的转发通道，默认不持有任何服务商的密钥。云同步是你自己按类目开的开关，默认全关。这两条不是选项，是它做出来的时候就这么写的。</p>
+      <p class="stamp" data-reveal>自用项目 · 非商业</p>
       <div class="stripes" aria-hidden="true"></div>
     </div>
   </div>

@@ -29,6 +29,16 @@
   --tear:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='34' viewBox='0 0 220 34'%3E%3Cpath d='M0 0h220v9l-16 15 8-9-24 17-14-13-20 17-16-15-22 18-18-16-20 16-16-14-20 15-16-13-22 14V0z' fill='%23fff'/%3E%3C/svg%3E");
   /* 四角星 / 爆裂星：漫画记号 */
   --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 0 59 41 100 50 59 59 50 100 41 59 0 50 41 41Z' fill='%23fff'/%3E%3C/svg%3E");
+  /* 手撕纸的边：十二条边、没有两条平行，角上带缺口和折角。
+     全站的框都从这六张里挑，谁跟谁都不重样——P5 里没有正四边形。 */
+  --q1:polygon(2% 6%,18% 0,46% 3%,74% 0,100% 8%,97% 38%,100% 64%,94% 96%,62% 100%,34% 95%,6% 100%,0 70%,3% 40%);
+  --q2:polygon(0 10%,26% 2%,54% 8%,82% 1%,100% 14%,95% 44%,99% 72%,88% 99%,58% 92%,30% 100%,4% 92%,2% 58%);
+  --q3:polygon(4% 0,32% 6%,64% 0,92% 7%,100% 30%,96% 58%,100% 86%,72% 100%,44% 93%,16% 100%,0 78%,3% 44%);
+  --q4:polygon(0 4%,22% 10%,50% 2%,78% 9%,100% 2%,98% 34%,92% 62%,100% 92%,66% 100%,38% 94%,10% 99%,2% 66%,0 34%);
+  --q5:polygon(6% 0,40% 7%,70% 0,100% 10%,94% 40%,100% 70%,86% 100%,56% 93%,26% 100%,0 88%,5% 56%,0 26%);
+  --q6:polygon(0 12%,30% 0,60% 9%,88% 0,100% 20%,93% 50%,98% 80%,70% 100%,40% 90%,12% 100%,3% 74%,0 40%);
+  --q7:polygon(3% 8%,14% 0,52% 5%,86% 0,100% 12%,94% 46%,100% 74%,80% 100%,46% 94%,14% 100%,0 84%,4% 52%);
+  --q8:polygon(0 6%,36% 0,70% 5%,100% 0,96% 30%,100% 58%,90% 100%,52% 96%,20% 100%,2% 80%,6% 46%,0 28%);
 }
 
 /* ── 五套皮肤 ───────────────────────────────────────────────────────
@@ -57,6 +67,7 @@ html[data-skin="red"]{
   --face-display:'Velvet Sans SC','Velvet Round SC',sans-serif;
   --display-style:italic; --display-skew:-6deg; --ui-skew:-8deg;
   --tilebg1:#0d0d0d; --tilefg1:#f0e9df; --tilebg2:#ffffff; --tilefg2:#c00008; --tilebg3:#c00008; --tilefg3:#ffffff;
+  --hot:#e8150c; --hot-ink:#ffffff; --dark:#0d0d0d; --dark-ink:#f0e9df;
   --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%230d0d0d' fill-opacity='0.28'/%3E%3Ccircle cx='12' cy='12' r='1.5' fill='%230d0d0d' fill-opacity='0.2'/%3E%3C/svg%3E");
   --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%230d0d0d' stroke-width='9'/%3E%3C/svg%3E");
   --ghost:none;
@@ -82,6 +93,7 @@ html[data-skin="water-blue"]{
   --face-display:'Velvet Sans SC',sans-serif;
   --display-style:italic; --display-skew:-3deg; --ui-skew:-8deg;
   --tilebg1:#0a1230; --tilefg1:#ffffff; --tilebg2:#ffffff; --tilefg2:#1b57ff; --tilebg3:#1b57ff; --tilefg3:#ffffff;
+  --hot:#2f6dff; --hot-ink:#ffffff; --dark:#0a1230; --dark-ink:#ffffff;
   --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%230a1230' fill-opacity='0.22'/%3E%3C/svg%3E");
   --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%230a1230' stroke-width='9'/%3E%3C/svg%3E");
   --ghost:block;
@@ -107,6 +119,7 @@ html[data-skin="water-pink"]{
   --face-display:'Velvet Sans SC',sans-serif;
   --display-style:italic; --display-skew:-3deg; --ui-skew:-8deg;
   --tilebg1:#2b0a1c; --tilefg1:#ffffff; --tilebg2:#ffffff; --tilefg2:#cf0a6e; --tilebg3:#cf0a6e; --tilefg3:#ffffff;
+  --hot:#e0207e; --hot-ink:#ffffff; --dark:#2b0a1c; --dark-ink:#ffffff;
   --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%232b0a1c' fill-opacity='0.22'/%3E%3C/svg%3E");
   --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%232b0a1c' stroke-width='9'/%3E%3C/svg%3E");
   --ghost:block;
@@ -132,6 +145,7 @@ html[data-skin="yellow"]{
   --face-display:'Velvet Serif SC',serif;
   --display-style:normal; --display-skew:0deg; --ui-skew:-10deg;
   --tilebg1:#131313; --tilefg1:#ffd900; --tilebg2:#ffd900; --tilefg2:#131313; --tilebg3:#2e6be0; --tilefg3:#ffd900;
+  --hot:#131313; --hot-ink:#ffd900; --dark:#131313; --dark-ink:#ffd900;
   --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%23131313' fill-opacity='0.16'/%3E%3C/svg%3E");
   --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%23131313' stroke-width='9'/%3E%3C/svg%3E");
   --ghost:none;
@@ -157,6 +171,7 @@ html[data-skin="custom"]{
   --face-display:'Velvet Sans SC',sans-serif;
   --display-style:italic; --display-skew:-4deg; --ui-skew:-6deg;
   --tilebg1:#111827; --tilefg1:#f3f4f6; --tilebg2:#ffffff; --tilefg2:#111827; --tilebg3:#24639f; --tilefg3:#ffffff;
+  --hot:#111827; --hot-ink:#f3f4f6; --dark:#111827; --dark-ink:#f3f4f6;
   --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%23111827' fill-opacity='0.22'/%3E%3C/svg%3E");
   --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%23111827' stroke-width='9'/%3E%3C/svg%3E");
   --ghost:none;
@@ -232,9 +247,54 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .js .loader{
   display:grid; place-items:center; position:fixed; inset:0; z-index:120;
   background:var(--f3); color:var(--f3-fg);
-  animation:loaderOut 320ms var(--ease-in-out) 1000ms forwards;
+  animation:loaderOut 300ms var(--ease-in-out) 960ms forwards;
 }
 .loader__dots{position:absolute; inset:0; opacity:.5; animation:dottravel 6s linear infinite}
+/* ── 开屏那辆货车：冲过屏幕 ─────────────────────────────────────── */
+.loader__road{position:absolute; inset:auto 0 16% 0; height:36vh; overflow:hidden}
+.loader__car{
+  position:absolute; bottom:0; left:0; width:min(19vw,168px); height:auto;
+  animation:drive 850ms cubic-bezier(.34,.02,.36,1) 100ms forwards;
+}
+.loader__car .van__body{fill:#0d0d0d; stroke:var(--key); stroke-width:6}
+.loader__car .van__win{fill:var(--f2)}
+.loader__car .van__stripe{fill:var(--hot)}
+.loader__car .van__decal{fill:var(--hot); stroke:var(--key); stroke-width:4}
+.loader__car .van__lamp{fill:var(--key)}
+.loader__car .van__tyre{fill:#0d0d0d; stroke:var(--key); stroke-width:6}
+.loader__car .van__rim{fill:var(--key)}
+.loader__car .van__spoke path{stroke:var(--hot); stroke-width:5; stroke-linecap:square}
+.loader__car .van__tail{fill:var(--hot)}
+/* 轮子在路上滚 */
+.van__wheel{transform-box:fill-box; transform-origin:center; animation:wheel 240ms linear infinite}
+/* 车身在上头颠：分级的抖动，不是飘 */
+.van__shell{transform-box:fill-box; transform-origin:bottom center; animation:bump 170ms steps(2,end) infinite}
+@keyframes bump{
+  0%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-3px) rotate(-.7deg)}
+  100%{transform:translateY(1px) rotate(.5deg)}
+}
+@keyframes drive{
+  from{transform:translateX(-125%) rotate(0deg)}
+  55%{transform:translateX(150%) rotate(-1.2deg)}
+  to{transform:translateX(330%) rotate(0deg)}
+}
+@keyframes wheel{to{transform:rotate(360deg)}}
+/* 速度线：车后面拉的那一道道 */
+.loader__speed{
+  position:absolute; inset:auto 0 46px 0; height:26px; opacity:.9;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='26'%3E%3Cpath d='M0 8h150M40 18h190M0 24h120' stroke='%23f0e9df' stroke-width='5' stroke-opacity='0.55'/%3E%3C/svg%3E");
+  background-repeat:repeat-x; background-size:240px 26px;
+  animation:speedwalk 420ms linear infinite;
+}
+@keyframes speedwalk{to{background-position:-240px 0}}
+.loader__puff{
+  position:absolute; left:0; bottom:8%; width:200px; height:90px; opacity:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='90'%3E%3Cg fill='%23f0e9df' fill-opacity='0.5'%3E%3Ccircle cx='30' cy='70' r='16'/%3E%3Ccircle cx='62' cy='58' r='10'/%3E%3Ccircle cx='92' cy='72' r='7'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-size:contain;
+  animation:puff 850ms ease-out 140ms forwards;
+}
+@keyframes puff{0%{opacity:0; transform:translateX(0)}30%{opacity:.9}100%{opacity:0; transform:translateX(46vw)}}
 .loader__mid{position:relative; display:grid; place-items:center; gap:18px}
 .loader__mark{display:flex; gap:4px}
 .loader__mark span{
@@ -280,10 +340,11 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .p5t--pad{margin-inline:var(--gut)}
 /* 超大英文底带：黑带 + 纸白字母 + 白描边，斜在标题块后面 */
 .p5t__band{
-  position:absolute; left:-8%; top:-12%; width:min(62vw,780px); height:auto;
-  transform:rotate(-4deg); z-index:0; pointer-events:none;
+  position:absolute; left:-10%; top:-14%; width:min(64vw,820px); height:auto;
+  transform:rotate(-7deg); z-index:0; pointer-events:none;
 }
 .p5t__band polygon{fill:var(--slab)}
+.p5t__band polygon{stroke:var(--key); stroke-width:8px}
 .p5t__band text{
   font-family:var(--face-display); font-size:84px; font-weight:900; font-style:italic;
   letter-spacing:-.02em; fill:var(--slab-ink);
@@ -291,15 +352,21 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 }
 .p5t__cn{position:relative; z-index:2; display:flex; flex-wrap:wrap; gap:.06em; align-items:flex-end}
 .p5t__cn span{
-  display:block; padding:.06em .16em .1em;
+  display:block; padding:.07em .17em .12em;
   font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
   font-size:var(--s-h2); line-height:1.06; letter-spacing:-.01em;
-  clip-path:var(--jag);
   transition:background-color 400ms var(--ease-out), color 400ms var(--ease-out);
 }
-.p5t__cn span:nth-child(3n+1){background:var(--tilebg1); color:var(--tilefg1); transform:rotate(-2deg)}
-.p5t__cn span:nth-child(3n+2){background:var(--tilebg2); color:var(--tilefg2); transform:rotate(1.5deg)}
-.p5t__cn span:nth-child(3n){background:var(--tilebg3); color:var(--tilefg3); transform:rotate(-1deg)}
+/* 每一块形状、颜色、角度、高低都不一样：P5 的字母块绝不对齐 */
+.p5t__cn span:nth-child(3n+1){background:var(--tilebg1); color:var(--tilefg1);
+  transform:rotate(-4.5deg) translateY(3px);
+  clip-path:polygon(5% 16%,96% 0,100% 80%,60% 100%,0 86%)}
+.p5t__cn span:nth-child(3n+2){background:var(--tilebg2); color:var(--tilefg2);
+  transform:rotate(3.4deg) translateY(-4px);
+  clip-path:polygon(0 6%,86% 2%,100% 72%,90% 100%,8% 94%)}
+.p5t__cn span:nth-child(3n){background:var(--tilebg3); color:var(--tilefg3);
+  transform:rotate(-2deg) translateY(1px);
+  clip-path:polygon(2% 0,100% 12%,92% 96%,12% 100%,0 58%)}
 /* 没脚本时：整句落在一条黑带上，照样是官方站那种「白字黑条」 */
 .p5t__cn:not(:has(span)){padding:.06em .3em .12em; background:var(--slab); color:var(--slab-ink);
   clip-path:var(--jag); font-size:var(--s-h2); transform:rotate(-2deg)}
@@ -391,17 +458,34 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 /* ── 一 · 头版 ──────────────────────────────────────────────────────── */
 .hero{min-height:100svh; padding:16vh var(--gut) 40px; overflow:clip}
 .hero__h{position:relative; z-index:2}
+/* 撕出来的横幅：外层那块是粗描边，里层那块才是底色。
+   外描边 + 里底色各用一条不规则的锯齿边，跟官方站那种「手撕纸片」一样，两行绝不平行。 */
 .tileline{
   display:block; overflow:hidden; width:fit-content; max-width:100%;
-  padding:.1em .18em .14em; margin-bottom:.16em;
-  clip-path:polygon(1.2% 10%,99% 0,100% 86%,0 100%);
+  padding:7px; margin-bottom:.2em; border:0;
   font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
   font-size:var(--s-display); line-height:.9; letter-spacing:-.04em;
 }
-.tileline--ink{background:var(--f3); color:var(--f3-fg); transform:rotate(-1.4deg);
-  -webkit-text-stroke:2px var(--f2)}
-.tileline--paper{background:var(--f2); color:var(--f2-fg); transform:rotate(1.2deg); margin-left:1.6vw}
-.line__i{display:block}
+.tileline--ink{
+  background:var(--dark);
+  clip-path:polygon(0 16%,6% 0,21% 6%,38% 0,55% 7%,73% 0,89% 5%,100% 18%,97% 44%,100% 68%,95% 96%,
+    80% 89%,63% 100%,45% 91%,27% 100%,11% 89%,0 76%,4% 48%,0 30%);
+  transform:rotate(-2.4deg);
+}
+.tileline--paper{
+  background:var(--dark);
+  clip-path:polygon(2% 8%,18% 0,34% 5%,52% 0,69% 6%,85% 0,100% 12%,96% 40%,100% 62%,94% 94%,
+    78% 87%,60% 100%,42% 90%,24% 99%,8% 88%,0 68%,3% 42%);
+  transform:rotate(1.8deg); margin-left:2.4vw;
+}
+.line__i{
+  display:block; overflow:hidden; padding:.12em .2em .16em;
+  clip-path:polygon(0 12%,7% 2%,22% 8%,39% 2%,56% 9%,74% 2%,90% 7%,100% 20%,97% 46%,100% 70%,
+    95% 90%,79% 84%,62% 96%,44% 86%,26% 95%,10% 84%,0 72%,4% 46%,0 28%);
+}
+.tileline--ink .line__i{background:var(--hot); color:var(--hot-ink)}
+.tileline--paper .line__i{background:var(--f2); color:var(--f2-fg); margin-left:6px}
+.art__face{position:relative}
 .hero__art{position:absolute; z-index:1; right:-4%; bottom:2%; width:62vh; max-width:52vw}
 .art__key{position:absolute; inset:-3%; filter:brightness(0) invert(1)}
 .art__ink{position:absolute; inset:0; transform:translate(16px,16px); filter:brightness(0)}
@@ -438,9 +522,23 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 }
 .say--s{font-size:var(--s-h2); line-height:1.04; max-width:20em}
 .intro__rest{display:grid; grid-template-columns:1.7fr 1fr; gap:64px; align-items:start; margin-top:72px}
-.chip{width:100%; transform:rotate(3deg);
-  border:var(--key-w) solid var(--key); background:var(--f3)}
-.chip--intro{clip-path:inset(4% 3% 26% 3%)}
+/* ── 器具七 · 相纸：照片不许光秃秃贴上去，要装进白框、下边留一条放名字 ── */
+.polaroid{
+  position:relative; background:var(--key); color:var(--dark);
+  border:5px solid var(--dark);
+  padding:12px 12px 56px;
+  transform:rotate(-4deg);
+  transition:transform var(--t-ui) var(--ease-out);
+}
+.polaroid img{width:100%; height:auto; display:block; background:var(--dark)}
+.polaroid figcaption{
+  position:absolute; left:0; right:0; bottom:10px; padding-inline:14px;
+  font-size:var(--s-cap); font-weight:900; line-height:1.2; letter-spacing:.02em;
+}
+.polaroid--intro{width:100%; transform:rotate(-4deg)}
+.polaroid--intro img{clip-path:inset(4% 3% 40% 3%)}
+.polaroid--say{position:absolute; right:5vw; bottom:8%; width:min(24vw,260px); z-index:3; transform:rotate(5.5deg)}
+.polaroid--say img{clip-path:inset(30% 3% 6% 3%)}
 
 /* ── 三 · 五个属性（贴板特写）─────────────────────────────────────── */
 .mosaic{
@@ -453,10 +551,18 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
   grid-column:span 3; grid-row:span 2;
   padding:20px; overflow:hidden;
   background:var(--tile2); color:var(--tile2-i);
-  position:relative; transform:rotate(-.7deg);
+  position:relative;
   transition:transform var(--t-ui) var(--ease-out);
 }
-.tile:nth-child(even){transform:rotate(.7deg)}
+/* 每块贴纸都歪一点、大小差一点，像手贴上去的 */
+.mosaic>.tile:nth-child(1){transform:rotate(-2.6deg)}
+.mosaic>.tile:nth-child(2){transform:rotate(2.1deg) translateY(-6px)}
+.mosaic>.tile:nth-child(3){transform:rotate(-1.3deg)}
+.mosaic>.tile:nth-child(4){transform:rotate(1.6deg) translateY(4px)}
+.mosaic>.tile:nth-child(5){transform:rotate(-2.2deg) translateY(-3px)}
+.mosaic>.tile:nth-child(6){transform:rotate(1.1deg)}
+.mosaic>.tile:nth-child(7){transform:rotate(-1.7deg) translateY(-5px)}
+.mosaic>.tile:nth-child(8){transform:rotate(2.4deg)}
 .tile--b{grid-column:span 3; grid-row:span 2}
 .tile--c{grid-column:span 4; grid-row:span 2}
 .tile--a{grid-column:span 6; grid-row:span 4; background:var(--tile1); color:var(--tile1-i)}
@@ -511,8 +617,12 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 
 /* ── 四 · 记一笔的四步 ─────────────────────────────────────────────── */
 .band--flow{padding-inline:0; --tear-c:var(--f3)}
-.flow{display:grid; grid-template-columns:repeat(4,1fr); margin-top:56px; min-height:80svh}
+.flow{display:grid; grid-template-columns:1.16fr .92fr 1.24fr .88fr; margin-top:56px; min-height:80svh}
 .flow__p{padding:44px 29px; display:flex; flex-direction:column; gap:36px}
+.flow__p:nth-child(1){transform:rotate(-.9deg)}
+.flow__p:nth-child(2){transform:rotate(.7deg) translateY(-10px); margin-left:-14px}
+.flow__p:nth-child(3){transform:rotate(-1.2deg) translateY(6px); margin-left:-10px}
+.flow__p:nth-child(4){transform:rotate(.8deg); margin-left:-12px}
 .flow__p--1{background:#0d0d0d; color:#f0e9df}
 .flow__p--2{background:var(--f2); color:var(--f2-fg)}
 .flow__p--3{background:var(--accent); color:var(--on-accent)}
@@ -550,9 +660,19 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
   color:var(--f1-fg); -webkit-text-stroke:3px var(--f3);
 }
 .list__rows{display:grid; gap:10px}
-.row{background:#0d0d0d; color:#f0e9df; position:relative; transform:rotate(-.4deg)}
-.row:nth-child(even){transform:rotate(.4deg)}
+.row{background:#0d0d0d; color:#f0e9df; position:relative}
+/* 九条不是一根整齐的柱子：宽度、左缩进、角度条条不同，一条条错着往下走 */
+.row:nth-child(1){width:100%;margin-left:0;transform:rotate(-1.6deg)}
+.row:nth-child(2){width:91%;margin-left:6%;transform:rotate(1.3deg)}
+.row:nth-child(3){width:97%;margin-left:1%;transform:rotate(-1deg)}
+.row:nth-child(4){width:86%;margin-left:12%;transform:rotate(2deg)}
+.row:nth-child(5){width:99%;margin-left:0;transform:rotate(-2.2deg)}
+.row:nth-child(6){width:88%;margin-left:8%;transform:rotate(1.1deg)}
+.row:nth-child(7){width:96%;margin-left:3%;transform:rotate(-1.4deg)}
+.row:nth-child(8){width:92%;margin-left:9%;transform:rotate(2.3deg)}
+.row:nth-child(9){width:95%;margin-left:4%;transform:rotate(-1.8deg)}
 .row[open]{background:var(--key); color:#0d0d0d}
+.row__sum{padding-left:26px}
 .row__sum{
   display:flex; align-items:center; justify-content:space-between; gap:16px;
   min-height:70px; padding:12px 22px; cursor:pointer; list-style:none;
@@ -638,14 +758,58 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
 
 /* ── 九 · 致谢清单 ─────────────────────────────────────────────────── */
 .names{
-  margin-top:56px; font-family:var(--face-text); font-weight:800;
+  margin-top:150px; font-family:var(--face-text); font-weight:800;
   font-size:var(--s-h3); line-height:1.4; max-width:1100px;
 }
 .names li{display:inline; color:var(--sfg); transition:color 400ms var(--ease-out)}
 .names li::after{content:'、'; color:var(--sfg)}
 .names li:last-child::after{content:'。'}
 .names li.is-lit{color:var(--ink)}
-.band--thanks .body{margin-top:36px}
+.band--thanks .body{margin-top:118px}
+
+/* ── 器具五 · 手作痕迹：荧光笔划过去的一道、盖上去的印章 ──────────── */
+.boxed,
+.say,.say--s,.body,.lead,.note,.mosaic__note,.flow__clause,.tile__cap,
+.stat__cap,.kv__line,.names,.foot__notes p,.foot__credits,.foot__place,
+.row__panel p,.sel__desc .kv__line{
+  display:block; width:fit-content; padding:.44em .78em;
+  background:var(--slab); color:var(--slab-ink);
+  clip-path:var(--q1);
+}
+/* 每块撕法不一样：换块就换一条边 */
+.body+.body,.lead,.row__panel p,.tile__cap{clip-path:var(--q2)}
+.note,.stat__cap,.foot__credits{clip-path:var(--q3)}
+.flow__clause,.kv__line,.foot__notes p{clip-path:var(--q4)}
+.mosaic__note,.names,.foot__place,.sel__desc .kv__line{clip-path:var(--q7)}
+.say,.say--s{clip-path:var(--q5)}
+/* 块与块之间绝不平行：角度一条条错开 */
+.body{transform:rotate(-1.6deg)}
+.body+.body{transform:rotate(2.1deg)}
+.lead,.note,.mosaic__note{transform:rotate(-2.4deg)}
+.flow__clause{transform:rotate(1.7deg)}
+.tile__cap{transform:rotate(-2.2deg)}
+.stat__cap{transform:rotate(1.9deg)}
+.kv__line{transform:rotate(-2deg)}
+.names{transform:rotate(-1.4deg); margin-bottom:34px}
+.foot__notes p{transform:rotate(1.5deg)}
+.foot__credits{transform:rotate(-1.3deg)}
+.foot__place{transform:rotate(2deg)}
+.row__panel p{transform:rotate(-1.8deg)}
+.say,.say--s{transform:rotate(-1.1deg)}
+/* 这几块本来就是黑的（或纸的），别叠两层 */
+.frag--ledger,.frag--entry,.flow__card{background:var(--card); color:var(--card-ink)}
+.hl{
+  font-style:normal;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 18' preserveAspectRatio='none'%3E%3Cpath d='M1 12 199 5v9L2 18z' fill='%23ffe600' fill-opacity='0.72'/%3E%3C/svg%3E")
+    center 92% / 100% .66em no-repeat;
+  padding-inline:.1em;
+}
+.stamp{
+  display:inline-block; margin-top:26px; padding:8px 14px;
+  border:3px solid currentColor; border-radius:10px;
+  font-size:var(--s-small); font-weight:900; line-height:1.25; letter-spacing:.04em;
+  transform:rotate(-6deg); opacity:.92;
+}
 
 /* ── 十 · 完成到哪一步（三块错开的数字牌）────────────────────────── */
 .stats{
@@ -653,8 +817,10 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   max-width:1400px; margin:0 auto; align-items:start;
 }
 .stat{padding:28px; display:flex; flex-direction:column; justify-content:space-between; gap:24px;
-  transform:rotate(-1deg); transition:transform var(--t-ui) var(--ease-out)}
-.stat:nth-child(even){transform:rotate(1.2deg)}
+  transition:transform var(--t-ui) var(--ease-out)}
+.stat--tall{transform:rotate(-2.4deg)}
+.stat--ink{transform:rotate(2.2deg)}
+.stat--mid{transform:rotate(-1.6deg)}
 .stat__fig{font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
   font-size:var(--s-say); line-height:.9}
 .stat__cap{font-size:var(--s-small); line-height:1.45; max-width:18em}
@@ -716,8 +882,8 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   @keyframes dottravel{to{background-position:32px 32px}}
   .stripes{animation:stripewalk 9s linear infinite}
   @keyframes stripewalk{to{background-position:44px 0}}
-  .chip{animation:float 16s var(--ease-in-out) infinite alternate}
-  @keyframes float{from{transform:rotate(3deg)}to{transform:rotate(.6deg) translateY(-2%)}}
+  .polaroid{animation:float 16s var(--ease-in-out) infinite alternate}
+  @keyframes float{from{transform:rotate(-4deg)}to{transform:rotate(-1.5deg) translateY(-2%)}}
   .spark--star svg{animation:spin 26s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 }
@@ -736,6 +902,7 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
     --s-giant:clamp(96px,26vw,200px)}
   .band{padding:88px 20px}
   .band--intro,.band--skins{padding-block:92px}
+  .band--skins{padding-top:150px}
   .rules{grid-template-columns:1fr; gap:40px}
   .get{grid-template-columns:1fr; gap:36px; min-height:0}
   .say2{grid-template-columns:1fr}
@@ -783,8 +950,7 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   .hero__act{margin-top:20px}
   .hero__mini{margin-top:14px}
   .hero__dots,.hero__kv,.hero__spark{display:none}
-  .chip{position:relative; right:auto; top:auto; width:100%; min-width:0; margin-top:24px;
-    transform:none; clip-path:none}
+  .polaroid--intro{margin-top:26px; transform:rotate(-2deg)} .polaroid--say{position:relative; right:auto; bottom:auto; width:min(70%,300px); margin-top:0; transform:rotate(3deg)}
   .chip--say{margin-top:0}
   .intro__rest{grid-template-columns:1fr; gap:26px; margin-top:36px}
 
@@ -808,6 +974,7 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   .stats{grid-template-columns:1fr; row-gap:112px}
   .stat--tall,.stat--ink,.stat--mid{grid-column:1/1; min-height:36vh; margin-top:0}
   .say--s{font-size:var(--s-say)}
+  .say{font-size:var(--s-h3)}
   .foot__big{font-size:var(--s-h3)}
   .names{font-size:var(--s-h3)}
 }

@@ -340,7 +340,9 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 /* ── 器具一 · 章节标题：赎金信式字母块 + 一枚斜贴的小标签 ─────────────
    字母块由 main.js 把标题拆成一格一格（没脚本时就是一行普通标题）。
    三色交替：黑块白字 / 白块红字 / 红块白字——官方站的 N E W S 就是这么拼的。 */
-.p5t{position:relative; display:inline-block; padding-top:4px}
+.p5t{position:relative; display:inline-block; padding:4px 0 76px}
+.p5t--pad{margin-inline:var(--gut)}
+.list__head{padding-bottom:120px}
 .p5t--pad{margin-inline:var(--gut)}
 /* 超大英文底带：黑带 + 纸白字母 + 白描边，斜在标题块后面 */
 .p5t__band{
@@ -529,20 +531,22 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 /* ── 器具七 · 相纸：照片不许光秃秃贴上去，要装进白框、下边留一条放名字 ── */
 .polaroid{
   position:relative; background:var(--key); color:var(--dark);
-  border:5px solid var(--dark);
-  padding:12px 12px 56px;
+  border:4px solid var(--dark);
+  padding:9px 9px 38px;
   transform:rotate(-4deg);
   transition:transform var(--t-ui) var(--ease-out);
 }
-.polaroid img{width:100%; height:auto; display:block; background:var(--dark)}
+.polaroid img{
+  width:100%; display:block; background:var(--dark);
+  aspect-ratio:4/5; object-fit:cover; object-position:top center;
+}
 .polaroid figcaption{
   position:absolute; left:0; right:0; bottom:10px; padding-inline:14px;
   font-size:var(--s-cap); font-weight:900; line-height:1.2; letter-spacing:.02em;
 }
 .polaroid--intro{width:100%; transform:rotate(-4deg)}
-.polaroid--intro img{clip-path:inset(4% 3% 40% 3%)}
 .polaroid--say{position:absolute; right:5vw; bottom:8%; width:min(24vw,260px); z-index:3; transform:rotate(5.5deg)}
-.polaroid--say img{clip-path:inset(30% 3% 6% 3%)}
+.polaroid--say img{aspect-ratio:3/4; object-position:center 42%}
 
 /* ── 三 · 五个属性（贴板特写）─────────────────────────────────────── */
 .mosaic{
@@ -576,7 +580,7 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .tile--g{grid-column:span 5; grid-row:span 2; background:var(--tile1); color:var(--tile1-i)}
 .mosaic__note{margin:26px auto 0; max-width:1400px; font-size:var(--s-small); color:var(--f1-sfg)}
 .tile__cap{
-  position:absolute; left:20px; right:20px; bottom:18px;
+  position:static; margin-top:16px;
   font-size:var(--s-small); line-height:1.45; font-weight:600;
 }
 
@@ -619,24 +623,31 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .tile--b .frag,.tile--e .frag{font-size:18px}
 .flow__card .frag{font-size:17px}
 
-/* ── 四 · 记一笔的四步 ─────────────────────────────────────────────── */
+/* ── 四 · 记一笔的四步：四条斜着错开的横幅，像官方站那张规格表 ──────
+   一行 = 一个词条 + 一句说明，行与行的宽度、缩进、角度全不一样。 */
 .band--flow{padding-inline:0; --tear-c:var(--f3)}
-.flow{display:grid; grid-template-columns:1.16fr .92fr 1.24fr .88fr; margin-top:56px; min-height:80svh}
-.flow__p{padding:44px 29px; display:flex; flex-direction:column; gap:36px}
-.flow__p:nth-child(1){transform:rotate(-.9deg)}
-.flow__p:nth-child(2){transform:rotate(.7deg) translateY(-10px); margin-left:-14px}
-.flow__p:nth-child(3){transform:rotate(-1.2deg) translateY(6px); margin-left:-10px}
-.flow__p:nth-child(4){transform:rotate(.8deg); margin-left:-12px}
-.flow__p--1{background:#0d0d0d; color:#f0e9df}
-.flow__p--2{background:var(--f2); color:var(--f2-fg)}
-.flow__p--3{background:var(--accent); color:var(--on-accent)}
-.flow__p--4{background:var(--f2); color:var(--f2-fg)}
-.flow__card{
-  display:block; margin-block:auto; padding:22px;
-  background:var(--card); color:var(--card-ink);
-  border:var(--key-w) solid var(--key); max-width:290px;
+.flow{
+  display:grid; gap:16px; max-width:1240px; margin:40px auto 0;
+  padding-inline:var(--gut); align-items:center;
 }
-.flow__clause{font-size:var(--s-lead); font-weight:800; line-height:1.25; text-wrap:balance}
+.flow__p{
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center; gap:26px; padding:20px 26px;
+  clip-path:var(--q2);
+}
+.flow__p:nth-child(1){width:100%; margin-left:0; transform:rotate(-1.4deg); background:#0d0d0d; color:#f0e9df}
+.flow__p:nth-child(2){width:93%; margin-left:5%; transform:rotate(1.1deg); background:var(--f2); color:var(--f2-fg)}
+.flow__p:nth-child(3){width:98%; margin-left:1%; transform:rotate(-1.8deg); background:var(--accent); color:var(--on-accent)}
+.flow__p:nth-child(4){width:89%; margin-left:8%; transform:rotate(1.5deg); background:#0d0d0d; color:#f0e9df}
+.flow__lbl{
+  display:block; padding:.24em .52em .3em; background:#0d0d0d; color:#f0e9df;
+  font-size:var(--s-h3); font-weight:900; transform:rotate(-3deg); clip-path:var(--q4);
+}
+.flow__card{
+  display:block; padding:16px 20px; background:var(--card); color:var(--card-ink);
+  border:5px solid #0d0d0d; max-width:460px;
+}
+.flow__clause{font-size:var(--s-lead); font-weight:800; line-height:1.25; text-wrap:balance; max-width:22em}
 
 /* ── 五 · 一句话进去，一张卡出来 ───────────────────────────────────── */
 .band--say{padding-inline:0; padding-top:120px; padding-bottom:0; --tear-c:var(--f3)}
@@ -967,6 +978,7 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   .tile--c{order:-1}
 
   .flow,.sel__tabs{grid-template-columns:1fr}
+  .flow__lbl{font-size:var(--s-lead)}
   .sel__tabs{display:grid}
   .flow__p{min-height:0; padding:34px 18px}
   .say2__in,.say2__out{padding:40px 16px 48px}

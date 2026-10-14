@@ -247,14 +247,14 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .js .loader{
   display:grid; place-items:center; position:fixed; inset:0; z-index:120;
   background:var(--f3); color:var(--f3-fg);
-  animation:loaderOut 300ms var(--ease-in-out) 960ms forwards;
+  animation:loaderOut 420ms var(--ease-in-out) 1900ms forwards;
 }
 .loader__dots{position:absolute; inset:0; opacity:.5; animation:dottravel 6s linear infinite}
 /* ── 开屏那辆货车：冲过屏幕 ─────────────────────────────────────── */
 .loader__road{position:absolute; inset:auto 0 16% 0; height:36vh; overflow:hidden}
 .loader__car{
   position:absolute; bottom:0; left:0; width:min(19vw,168px); height:auto;
-  animation:drive 850ms cubic-bezier(.34,.02,.36,1) 100ms forwards;
+  animation:drive 1700ms cubic-bezier(.32,.02,.36,1) 180ms forwards;
 }
 .loader__car .van__body{fill:#0d0d0d; stroke:var(--key); stroke-width:6}
 .loader__car .van__win{fill:var(--f2)}
@@ -292,7 +292,7 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
   position:absolute; left:0; bottom:8%; width:200px; height:90px; opacity:0;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='90'%3E%3Cg fill='%23f0e9df' fill-opacity='0.5'%3E%3Ccircle cx='30' cy='70' r='16'/%3E%3Ccircle cx='62' cy='58' r='10'/%3E%3Ccircle cx='92' cy='72' r='7'/%3E%3C/g%3E%3C/svg%3E");
   background-repeat:no-repeat; background-size:contain;
-  animation:puff 850ms ease-out 140ms forwards;
+  animation:puff 1700ms ease-out 220ms forwards;
 }
 @keyframes puff{0%{opacity:0; transform:translateX(0)}30%{opacity:.9}100%{opacity:0; transform:translateX(46vw)}}
 .loader__mid{position:relative; display:grid; place-items:center; gap:18px}
@@ -305,7 +305,11 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .loader__burst{position:absolute; inset:50% auto auto 50%; width:min(68vw,560px); z-index:-1;
   color:var(--accent); transform:translate(-50%,-50%)}
 .loader__burst svg{width:100%; height:auto; display:block}
-.loader__note{font-size:var(--s-lead); font-weight:900; font-style:var(--display-style); letter-spacing:.02em}
+.loader__note{
+  padding:.16em .5em .2em; background:var(--hot); color:var(--hot-ink);
+  font-size:var(--s-h3); font-weight:900; font-style:var(--display-style);
+  clip-path:var(--q5); transform:rotate(-2deg);
+}
 .loader__mid{position:relative}
 @keyframes loaderOut{
   0%{clip-path:polygon(0 0,14% 0,28% 0,42% 0,56% 0,70% 0,84% 0,100% 0,100% 100%,0 100%)}
@@ -314,17 +318,17 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 @media (prefers-reduced-motion:no-preference){
   .js .loader__mark span{
     opacity:0; transform:translateY(120%) rotate(-14deg);
-    animation:slap 420ms var(--ease-out) forwards;
-    animation-delay:calc(var(--i,0) * 45ms);
+    animation:slap 460ms var(--ease-out) forwards;
+    animation-delay:calc(var(--i,0) * 70ms + 120ms);
   }
   .loader__mark span:nth-child(1){--i:0} .loader__mark span:nth-child(2){--i:1}
   .loader__mark span:nth-child(3){--i:2} .loader__mark span:nth-child(4){--i:3}
   .loader__mark span:nth-child(5){--i:4} .loader__mark span:nth-child(6){--i:5}
   .loader__mark span:nth-child(7){--i:6} .loader__mark span:nth-child(8){--i:7}
   @keyframes slap{to{opacity:1; transform:translateY(0) rotate(0)}}
-  .js .loader__burst{animation:burstIn 460ms var(--ease-out) 220ms both}
+  .js .loader__burst{animation:burstIn 620ms var(--ease-out) 620ms both}
   @keyframes burstIn{from{opacity:0; transform:scale(.3) rotate(-40deg)}to{opacity:.9; transform:scale(1) rotate(0)}}
-  .js .loader__note{animation:rise 500ms var(--ease-out) 420ms both}
+  .js .loader__note{animation:rise 620ms var(--ease-out) 1000ms both}
 }
 .lead{font-size:var(--s-lead); line-height:1.5; max-width:34em; margin-top:22px}
 .body{font-size:var(--s-body); line-height:1.62; max-width:38em; text-wrap:pretty}

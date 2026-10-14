@@ -25,6 +25,13 @@
   --s-giant:clamp(120px,44cqw,286px);
   --s-say:78px; --s-h2:44px; --s-h3:26px; --s-lead:22px;
   --s-body:19px; --s-small:16px; --s-cap:14px;
+  /* 重构后补的几档：巨数字、章节大词、编号导语。大小反差主要靠这两头撑起来。 */
+  --s-num:clamp(96px,13vw,224px);
+  --s-word:clamp(46px,7.2vw,126px);
+  --s-kick:14px;
+  --sect:clamp(96px,10.5vh,164px);
+  /* 斜切条 / 印章 / 爆裂星（二级形状）统一用这一条角度，免得各斜各的 */
+  --tilt:-1.8deg;
   /* 撕边：一条锯齿形的遮罩，颜色由 --tear-c 给，形状是白的 */
   --tear:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='34' viewBox='0 0 220 34'%3E%3Cpath d='M0 0h220v9l-16 15 8-9-24 17-14-13-20 17-16-15-22 18-18-16-20 16-16-14-20 15-16-13-22 14V0z' fill='%23fff'/%3E%3C/svg%3E");
   /* 四角星 / 爆裂星：漫画记号 */
@@ -190,8 +197,8 @@ body{
   overflow-x:clip;
 }
 img{display:block; max-width:100%; height:auto}
-h1,h2,h3,p,ul,figure{margin:0}
-ul{padding:0; list-style:none}
+h1,h2,h3,p,ul,ol,figure{margin:0}
+ul,ol{padding:0; list-style:none}
 button{font:inherit; color:inherit; border:0; background:none; cursor:pointer}
 a{color:inherit}
 .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
@@ -203,17 +210,28 @@ a{color:inherit}
 /* 每个章节自己是一块满幅色场。红的三块铺半调网点（官方站的红底也是网点）；
    每一块的上边压一条上家的「撕边」，所以章节之间是咬合的，不是平接的。 */
 .band,.hero,.foot{position:relative; overflow:clip}
+/* 重构：章节底不再满铺网点。网点（.dots）只出现在指定的一块面里，
+   这样红／黑／白的大色块之间才有真正的对比，而不是一张均匀的包装纸。 */
 [data-field="1"]{
-  background:var(--f1) var(--dots) repeat; background-size:16px 16px;
+  background:var(--f1);
   color:var(--f1-fg); --sfg:var(--f1-sfg); --slab:var(--s1); --slab-ink:var(--s1i);
 }
 [data-field="2"]{
-  background:var(--f2) var(--dots) repeat; background-size:16px 16px;
+  background:var(--f2);
   color:var(--f2-fg); --sfg:var(--f2-sfg); --slab:var(--s2); --slab-ink:var(--s2i);
 }
 [data-field="3"]{
   background:var(--f3); color:var(--f3-fg); --sfg:var(--f3-sfg); --slab:var(--s3); --slab-ink:var(--s3i);
 }
+/* 章节编号：main 里的每个 .band 自动拿一个，HTML 里不用写 */
+main{counter-reset:sec}
+.band{counter-increment:sec}
+/* 平面：写在内联 SVG 里的出血大面（一级形状），也可以直接当元素用。
+   用 --dark / --f2 / --hot 三个 token，所以五套皮肤自动跟着走。 */
+.plane{stroke:none}
+.plane--ink{fill:var(--dark)}
+.plane--paper{fill:var(--f2)}
+.plane--hot{fill:var(--hot)}
 .band::before,.foot::before{
   content:''; position:absolute; left:0; right:0; top:-1px; height:34px; z-index:0;
   background:var(--tear-c,transparent);
@@ -238,12 +256,12 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .band--attrs{--tear-c:var(--f3)}
 .band--flow{--tear-c:var(--f1)}
 .band--say{--tear-c:var(--f3)}
-.band--list{--tear-c:var(--f2)}
-.band--skins{--tear-c:var(--f1)}
-.band--rules{--tear-c:var(--f3)}
-.band--thanks{--tear-c:var(--f1)}
-.band--stats{--tear-c:var(--f3)}
-.band--get{--tear-c:var(--f1)}
+.band--list{--tear-c:var(--f1)}
+.band--skins{--tear-c:var(--f3)}
+.band--rules{--tear-c:var(--f1)}
+.band--thanks{--tear-c:var(--f3)}
+.band--stats{--tear-c:var(--f1)}
+.band--get{--tear-c:var(--f3)}
 
 /* ── 进场演出：黑幕 + 字母块拍上 + 爆裂星炸开 + 整块往上撕走 ──────────
    纯 CSS 时间线，总共约 1.1s；结束时 visibility:hidden，不留层。 */
@@ -341,45 +359,46 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .note{font-size:var(--s-cap); line-height:1.6; color:var(--sfg); max-width:44em}
 .cmd{font-weight:800}
 
-/* ── 器具一 · 章节标题：赎金信式字母块 + 一枚斜贴的小标签 ─────────────
-   字母块由 main.js 把标题拆成一格一格（没脚本时就是一行普通标题）。
-   三色交替：黑块白字 / 白块红字 / 红块白字——官方站的 N E W S 就是这么拼的。 */
-.p5t{position:relative; display:inline-block; padding:4px 0 76px}
-.p5t--pad{margin-inline:var(--gut)}
-.list__head{padding-bottom:120px}
-.p5t--pad{margin-inline:var(--gut)}
-/* 超大英文底带：黑带 + 纸白字母 + 白描边，斜在标题块后面 */
-.p5t__band{
-  position:absolute; left:-10%; top:-14%; width:min(64vw,820px); height:auto;
-  transform:rotate(-7deg); z-index:0; pointer-events:none;
+/* ── 器具一 · 章节头：编号 + 英文导语 + 一个大词 ────────────────────────
+   重构前：十节都顶着一块同一形状的斜切英文字带，节奏自然就平了。
+   现在编号由计数器给（main 里每个 .band 一个），导语一律直角细字；
+   赎金信字母块只留给 .head--tiles，其余章节是干净的大字。 */
+.head{position:relative; margin-bottom:clamp(32px,5vh,64px)}
+.head__kick{
+  display:flex; align-items:baseline; gap:14px; margin-top:clamp(14px,2.2vh,26px);
+  font-size:var(--s-small); font-weight:800;
 }
-.p5t__band polygon{fill:var(--slab)}
-.p5t__band polygon{stroke:var(--key); stroke-width:8px}
-.p5t__band text{
-  font-family:var(--face-display); font-size:84px; font-weight:900; font-style:italic;
-  letter-spacing:-.02em; fill:var(--slab-ink);
-  stroke:var(--key); stroke-width:5px; paint-order:stroke;
-}
-.p5t__cn{position:relative; z-index:2; display:flex; flex-wrap:wrap; gap:.06em; align-items:flex-end}
-.p5t__cn span{
-  display:block; padding:.07em .17em .12em;
+.head__kick--bare{margin-top:clamp(20px,3vh,36px)}
+.head__no{
   font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-h2); line-height:1.06; letter-spacing:-.01em;
+  font-size:var(--s-h2); line-height:.9; letter-spacing:-.04em; color:var(--accent);
+}
+.head__no::before{content:counter(sec,decimal-leading-zero)}
+.head__en{font-size:var(--s-small); font-weight:800; opacity:.62}
+.head__word{
+  margin-top:.14em; font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-word); line-height:.94; letter-spacing:-.03em; max-width:24em;
+}
+/* 赎金信字母块：三色交替，每块角度与高低都错开——P5 的字母块绝不对齐 */
+.head--tiles .head__word{display:flex; flex-wrap:wrap; gap:.05em; align-items:flex-end}
+.head--tiles .head__word span{
+  display:block; padding:.05em .16em .1em; line-height:1.02; letter-spacing:-.01em;
   transition:background-color 400ms var(--ease-out), color 400ms var(--ease-out);
 }
-/* 每一块形状、颜色、角度、高低都不一样：P5 的字母块绝不对齐 */
-.p5t__cn span:nth-child(3n+1){background:var(--tilebg1); color:var(--tilefg1);
+.head--tiles .head__word span:nth-child(3n+1){background:var(--tilebg1); color:var(--tilefg1);
   transform:rotate(-4.5deg) translateY(3px);
   clip-path:polygon(5% 16%,96% 0,100% 80%,60% 100%,0 86%)}
-.p5t__cn span:nth-child(3n+2){background:var(--tilebg2); color:var(--tilefg2);
+.head--tiles .head__word span:nth-child(3n+2){background:var(--tilebg2); color:var(--tilefg2);
   transform:rotate(3.4deg) translateY(-4px);
   clip-path:polygon(0 6%,86% 2%,100% 72%,90% 100%,8% 94%)}
-.p5t__cn span:nth-child(3n){background:var(--tilebg3); color:var(--tilefg3);
+.head--tiles .head__word span:nth-child(3n){background:var(--tilebg3); color:var(--tilefg3);
   transform:rotate(-2deg) translateY(1px);
   clip-path:polygon(2% 0,100% 12%,92% 96%,12% 100%,0 58%)}
-/* 没脚本时：整句落在一条黑带上，照样是官方站那种「白字黑条」 */
-.p5t__cn:not(:has(span)){padding:.06em .3em .12em; background:var(--slab); color:var(--slab-ink);
-  clip-path:var(--jag); font-size:var(--s-h2); transform:rotate(-2deg)}
+/* 没脚本时不拆字：整句落在一条黑带上，照样是官方站那种「白字黑条」 */
+.head--tiles .head__word:not(:has(span)){
+  padding:.06em .26em .12em; background:var(--slab); color:var(--slab-ink);
+  clip-path:var(--jag); transform:rotate(var(--tilt)); width:fit-content;
+}
 .p5tag{
   display:inline-block; margin-left:14px; padding:.2em .5em .28em;
   background:var(--slab); color:var(--slab-ink);
@@ -435,46 +454,43 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 }
 .link:hover{text-decoration-color:currentColor}
 
-/* ── 顶栏：官方站那种「一块块斜贴的黑牌」 ─────────────────────────── */
+/* ── 顶栏：直角结构（三级）。底与墨跟着下面那一章换；字标反色成块，
+   导航是安静的细字，只有「下载」是一个实心块，一屏里只留一个重音。 */
 .bar{
   position:fixed; inset:0 0 auto; z-index:40;
-  display:flex; align-items:center; gap:12px;
-  padding:12px var(--gut);
+  display:flex; align-items:center; gap:clamp(16px,2.4vw,34px);
+  padding:13px var(--gut);
   background:var(--bar-bg,var(--f3)); color:var(--bar-ink,var(--f3-fg));
   transition:background-color 300ms var(--ease-out), color 300ms var(--ease-out);
+  border-bottom:2px solid currentColor;
 }
-.mark{display:flex; gap:3px; text-decoration:none; margin-right:auto}
+.mark{display:flex; gap:2px; text-decoration:none; margin-right:auto}
 .mark__l{
-  display:block; padding:2px 6px; font-size:var(--s-small); font-weight:900; line-height:1.3;
-  background:var(--bar-ink); color:var(--bar-bg); clip-path:var(--jag);
-  transform:rotate(-3deg);
+  display:block; padding:3px 7px 4px; font-size:var(--s-small); font-weight:900; line-height:1;
+  background:var(--bar-ink); color:var(--bar-bg);
 }
 .mark__l:nth-child(3n){background:transparent; color:var(--bar-ink); padding-inline:2px}
-.bar__nav{display:flex; gap:8px; font-size:var(--s-small); font-weight:900}
-.bar__nav a{
-  text-decoration:none; padding:7px 16px; background:#0d0d0d; color:#f0e9df;
-  clip-path:polygon(6% 14%,100% 0,94% 86%,0 100%);
-  transform:rotate(-2deg);
-}
-.bar__nav a:nth-child(even){transform:rotate(2deg)}
-.bar__nav a:hover{background:var(--key); color:#0d0d0d}
+.bar__nav{display:flex; gap:clamp(14px,1.8vw,26px); font-size:var(--s-small); font-weight:800; letter-spacing:.06em}
+.bar__nav a{text-decoration:none; padding:6px 0; border-bottom:2px solid transparent}
+.bar__nav a:hover{border-bottom-color:currentColor}
 .bar__act{
-  font-size:var(--s-small); font-weight:900; text-decoration:none;
-  padding:9px 18px; background:var(--f1); color:var(--f1-fg);
-  clip-path:polygon(2% 10%,100% 0,98% 92%,0 100%);
-  transform:rotate(-3deg); margin-left:6px;
+  font-size:var(--s-small); font-weight:900; text-decoration:none; letter-spacing:.08em;
+  padding:9px 20px 10px; background:var(--bar-ink); color:var(--bar-bg); margin-left:4px;
 }
 
-/* ── 一 · 头版 ──────────────────────────────────────────────────────── */
-.hero{min-height:100svh; padding:16vh var(--gut) 40px; overflow:clip}
-.hero__h{position:relative; z-index:2}
+/* ── 一 · 头版：一张海报 ───────────────────────────────────────────────
+   三级形状各就各位：一级 = 出血的黑斜面与贴边白切片（.hero__kv 里那几块多边形）；
+   二级 = 面具后面唯一的一颗爆裂星；三级 = 主标题、信息带这些结构件。
+   幽灵字标压在最后面做纵深，网点只压在右上一条斜切带里。 */
+.hero{min-height:100svh; padding:clamp(104px,15vh,168px) var(--gut) clamp(26px,4vh,56px); overflow:clip}
+.hero__h{position:relative; z-index:4}
 /* 撕出来的横幅：外层那块是粗描边，里层那块才是底色。
-   外描边 + 里底色各用一条不规则的锯齿边，跟官方站那种「手撕纸片」一样，两行绝不平行。 */
+   外描边 + 里底色各用一条不规则的撕边，跟官方站那种「手撕纸片」一样，两行绝不平行。 */
 .tileline{
   display:block; overflow:hidden; width:fit-content; max-width:100%;
-  padding:7px; margin-bottom:.2em; border:0;
+  padding:clamp(6px,.9vw,12px); margin-bottom:.14em; border:0;
   font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-display); line-height:.9; letter-spacing:-.04em;
+  font-size:var(--s-display); line-height:.88; letter-spacing:-.04em;
 }
 .tileline--ink{
   background:var(--dark);
@@ -486,7 +502,7 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
   background:var(--dark);
   clip-path:polygon(2% 8%,18% 0,34% 5%,52% 0,69% 6%,85% 0,100% 12%,96% 40%,100% 62%,94% 94%,
     78% 87%,60% 100%,42% 90%,24% 99%,8% 88%,0 68%,3% 42%);
-  transform:rotate(1.8deg); margin-left:2.4vw;
+  transform:rotate(1.8deg); margin-left:3vw;
 }
 .line__i{
   display:block; overflow:hidden; padding:.12em .2em .16em;
@@ -494,44 +510,58 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
     95% 90%,79% 84%,62% 96%,44% 86%,26% 95%,10% 84%,0 72%,4% 46%,0 28%);
 }
 .tileline--ink .line__i{background:var(--hot); color:var(--hot-ink)}
-.tileline--paper .line__i{background:var(--f2); color:var(--f2-fg); margin-left:6px}
-.art__face{position:relative}
-.hero__art{position:absolute; z-index:1; right:-4%; bottom:2%; width:62vh; max-width:52vw}
-.art__key{position:absolute; inset:-3%; filter:brightness(0) invert(1)}
-.art__ink{position:absolute; inset:0; transform:translate(16px,16px); filter:brightness(0)}
-.art__face{position:relative}
-.hero__burst{position:absolute; z-index:0; right:1%; bottom:9%; width:min(44vw,500px); color:var(--f3)}
-.hero__burst svg{width:100%; height:auto; display:block}
-.hero__tag{
-  position:absolute; z-index:3; left:var(--gut); bottom:16vh;
-  max-width:34em; padding:12px 22px;
-  background:var(--f2); color:var(--f2-fg);
-  font-size:var(--s-small); line-height:1.6; font-weight:700;
-  clip-path:var(--jag2); transform:rotate(-1.5deg); filter:var(--paper-sh);
+.tileline--paper .line__i{background:var(--f2); color:var(--f2-fg); margin-left:.06em}
+/* 主标题那一块：导语 + 两行字，占画面左侧；右下的面具跟它咬在一起 */
+.hero__lead{position:relative; z-index:4; max-width:min(72vw,1040px)}
+.hero__kicker{
+  display:flex; align-items:center; gap:12px; margin-top:clamp(18px,2.6vh,32px);
+  font-size:var(--s-small); font-weight:800;
 }
-.hero__act{position:absolute; z-index:3; left:var(--gut); bottom:8vh}
-.hero__mini{position:absolute; z-index:3; left:var(--gut); bottom:3vh; font-size:var(--s-cap); color:var(--f1-sfg)}
-.hero__dots{position:absolute; inset:auto auto 0 0; width:38%; height:54%; z-index:0}
-.hero__kv{position:absolute; inset:0; z-index:0}
+.hero__kicker::before{content:''; width:clamp(30px,4vw,64px); height:6px; background:var(--f3)}
+/* 一级·幽灵字标：压在最后面，纵深就从它来 */
+.hero__ghost{
+  position:absolute; left:-1vw; top:30%; z-index:0; margin:0;
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-display); line-height:.8; letter-spacing:-.02em; white-space:nowrap;
+  color:currentColor; opacity:.12; pointer-events:none; user-select:none;
+}
+.hero__art{position:absolute; z-index:3; right:1.5vw; bottom:0; width:min(52vh,46vw); margin:0}
+.art__key{position:absolute; inset:-3%; filter:brightness(0) invert(1)}
+.art__ink{position:absolute; inset:0; transform:translate(18px,18px); filter:brightness(0)}
+.art__face{position:relative; display:block; width:100%}
+.hero__burst{position:absolute; z-index:2; right:-2%; top:8%; width:min(27vw,340px); color:var(--f3)}
+.hero__burst svg{width:100%; height:auto; display:block}
+/* 底部：一条编辑式信息带（三级结构）。它压在黑斜面上，所以用 dark-ink 那支墨 */
+.hero__foot{
+  position:absolute; z-index:5; left:var(--gut); bottom:clamp(22px,4vh,46px); width:min(62%,780px);
+  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,13em);
+  align-items:end; gap:clamp(16px,2.4vw,34px);
+  padding-top:16px; border-top:2px solid var(--dark-ink); color:var(--dark-ink);
+}
+.hero__tag{max-width:30em; font-size:var(--s-small); line-height:1.6; font-weight:600}
+.hero__act{justify-self:start}
+.hero__mini{text-align:right; font-size:var(--s-cap); opacity:.75}
+.hero__dots{position:absolute; right:0; top:0; z-index:1; width:52%; height:56%; opacity:.85;
+  clip-path:polygon(22% 0,100% 0,100% 100%,0 100%)}
+.hero__kv{position:absolute; inset:0; z-index:1; pointer-events:none}
 .hero__kv svg{width:100%; height:100%; display:block}
 /* 主视觉位：想更贴近官方站那种「满幅立绘打底」，把一张自己画的 KV 放到 img/kv.jpg，
    这一层自动就在标题、碎片和面具底下等着（没有这张图就什么都不显示）。 */
 .hero__kvart{
   position:absolute; inset:0; z-index:0; pointer-events:none;
   background:url('img/kv.jpg') center/cover no-repeat;
-  opacity:.62; mix-blend-mode:multiply;
+  opacity:.55; mix-blend-mode:multiply;
 }
-.hero__spark{position:absolute; top:38%; left:54%; width:124px; color:var(--f2)}
+.hero__spark{position:absolute; z-index:5; right:37%; top:57%; width:clamp(44px,4.6vw,78px); color:var(--hot)}
+.hero__spark svg{width:100%; height:auto; display:block}
 
-/* ── 二 · 没人看见的那些事 ─────────────────────────────────────────── */
-.band--intro{padding-block:130px 150px}
-.say{
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-say); line-height:.98; letter-spacing:-.02em;
-  max-width:24em; text-wrap:pretty; overflow-wrap:break-word;
+/* ── 二 · 没人看见的那些事：一句巨字声明 + 一段编辑式正文 + 一张相纸 ── */
+.band--intro{padding-block:var(--sect)}
+.intro__rest{
+  display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
+  gap:clamp(34px,4.5vw,84px); align-items:start; margin-top:clamp(44px,7vh,96px);
 }
-.say--s{font-size:var(--s-h2); line-height:1.04; max-width:20em}
-.intro__rest{display:grid; grid-template-columns:1.7fr 1fr; gap:64px; align-items:start; margin-top:72px}
+.intro__cols{max-width:44em}
 /* ── 器具七 · 相纸：照片不许光秃秃贴上去，要装进白框、下边留一条放名字 ── */
 .polaroid{
   position:relative; background:var(--key); color:var(--dark);
@@ -552,41 +582,67 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .polaroid--say{position:absolute; right:5vw; bottom:8%; width:min(24vw,260px); z-index:3; transform:rotate(5.5deg)}
 .polaroid--say img{aspect-ratio:3/4; object-position:center 42%}
 
-/* ── 三 · 五个属性（贴板特写）─────────────────────────────────────── */
-.mosaic{
-  display:grid; gap:var(--gap);
-  grid-template-columns:repeat(12,1fr);
-  grid-auto-rows:104px;
-  max-width:1400px; margin:64px auto 0;
+/* ── 三 · 五个属性：三个量级，不是八张等权贴纸 ─────────────────────────
+   一级 = 巨数字（坐在出血的纸白面上，是整节的视觉焦点）；二级 = 一个中等数字；
+   三级 = 三条方点账目。阅读顺序就是大小顺序，一眼知道先看哪儿。 */
+.attrs{
+  display:grid; gap:clamp(26px,3.6vw,60px);
+  grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);
+  align-items:start; margin-top:clamp(20px,3.4vh,48px);
 }
-.tile{
-  grid-column:span 3; grid-row:span 2;
-  padding:20px; overflow:hidden;
-  background:var(--tile2); color:var(--tile2-i);
-  position:relative;
-  transition:transform var(--t-ui) var(--ease-out);
+.fig{position:relative}
+.fig--big{
+  grid-row:span 2; --sfg:var(--f2-sfg);
+  padding:clamp(24px,3vw,44px) clamp(24px,3.4vw,48px) clamp(28px,3.4vw,48px);
+  background:var(--f2); color:var(--f2-fg);
+  clip-path:var(--q3); filter:var(--paper-sh);
 }
-/* 每块贴纸都歪一点、大小差一点，像手贴上去的 */
-.mosaic>.tile:nth-child(1){transform:rotate(-2.6deg)}
-.mosaic>.tile:nth-child(2){transform:rotate(2.1deg) translateY(-6px)}
-.mosaic>.tile:nth-child(3){transform:rotate(-1.3deg)}
-.mosaic>.tile:nth-child(4){transform:rotate(1.6deg) translateY(4px)}
-.mosaic>.tile:nth-child(5){transform:rotate(-2.2deg) translateY(-3px)}
-.mosaic>.tile:nth-child(6){transform:rotate(1.1deg)}
-.mosaic>.tile:nth-child(7){transform:rotate(-1.7deg) translateY(-5px)}
-.mosaic>.tile:nth-child(8){transform:rotate(2.4deg)}
-.tile--b{grid-column:span 3; grid-row:span 2}
-.tile--c{grid-column:span 4; grid-row:span 2}
-.tile--a{grid-column:span 6; grid-row:span 4; background:var(--tile1); color:var(--tile1-i)}
-.tile--d{grid-column:span 6; grid-row:span 4; background:var(--tile1); color:var(--tile1-i)}
-.tile--e{grid-column:span 3; grid-row:span 2}
-.tile--f{grid-column:span 4; grid-row:span 2; background:var(--tile1); color:var(--tile1-i)}
-.tile--g{grid-column:span 5; grid-row:span 2; background:var(--tile1); color:var(--tile1-i)}
-.mosaic__note{margin:26px auto 0; max-width:1400px; font-size:var(--s-small); color:var(--f1-sfg)}
-.tile__cap{
-  position:static; margin-top:16px;
-  font-size:var(--s-small); line-height:1.45; font-weight:600;
+.fig--big::after{
+  content:''; position:absolute; left:0; top:0; width:clamp(70px,9vw,140px); height:12px;
+  background:var(--accent);
 }
+.fig__no{
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-num); line-height:.8; letter-spacing:-.06em; margin-top:.08em;
+}
+.fig__name{margin-top:.3em; font-size:var(--s-h3); font-weight:900; line-height:1.14; letter-spacing:.01em}
+.fig__name span{font-size:var(--s-cap); font-weight:800; color:var(--sfg)}
+.fig__gain{margin-top:.55em; font-size:var(--s-small); font-weight:800; color:var(--f2-fg)}
+.fig__cap{margin-top:1.1em; font-size:var(--s-small); line-height:1.6; max-width:26em; color:var(--sfg)}
+.fig__bar{position:relative; height:14px; margin-top:1.5em; background:color-mix(in srgb,currentColor 16%,transparent)}
+.fig__bar i{position:absolute; inset:0 auto 0 0; width:12%; background:var(--accent)}
+/* 二级：同一个读数语言，换成黑面、数字降一档 */
+.fig--mid{
+  background:var(--dark); color:var(--dark-ink); clip-path:var(--q6);
+  filter:var(--paper-sh); padding:clamp(22px,2.6vw,38px);
+}
+.fig--mid .fig__no{font-size:var(--s-say)}
+.fig--mid .fig__name{font-size:var(--s-small)}
+.fig--mid .fig__name span{color:var(--dark-ink); opacity:.75}
+.fig--mid .fig__gain{color:var(--dark-ink); opacity:.85}
+.fig--mid .fig__cap{color:var(--dark-ink); opacity:.78}
+/* 三级：方点账目，像一份清单，不像三张卡 */
+.ledger{grid-column:2; display:grid; align-content:start; gap:6px}
+.ledger li{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px; padding:10px 0;
+}
+.ledger li::before{content:''; align-self:center; width:11px; height:11px; background:var(--accent); flex:none}
+.ledger b{font-size:var(--s-h3); font-weight:900; letter-spacing:-.01em; line-height:1.1}
+.ledger span{font-size:var(--s-cap); font-weight:800; color:var(--sfg)}
+.ledger i{font-style:normal; font-weight:800; font-size:var(--s-small)}
+.ledger em{margin-left:auto; font-style:normal; font-size:var(--s-small); line-height:1.5; color:var(--sfg); max-width:30em}
+.mosaic__note{margin-top:clamp(30px,4.6vh,58px); max-width:34em; font-size:var(--s-small); line-height:1.6; color:var(--sfg)}
+/* 记录样例：一窄一宽两条横带，App 自己的界面片段（data-ui 保留自己的卡面） */
+.specimen{
+  display:grid; grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);
+  gap:clamp(22px,3.2vw,58px); align-items:start; margin-top:clamp(34px,5.4vh,72px);
+}
+.spec{position:relative}
+.specimen .frag{
+  display:block; padding:clamp(18px,2vw,26px);
+  background:var(--card); color:var(--card-ink); border:var(--key-w) solid var(--key);
+}
+.spec__cap{margin-top:16px; font-size:var(--s-small); line-height:1.55; color:var(--sfg); max-width:36em}
 
 /* App 自己的属性读数（猩红斜标签 + 巨大数字 + 等级名）。
    内部一律用 em：贴板里放大整块读数只调根字号一处（data-ui 片段不参与全站字阶）。 */
@@ -619,101 +675,98 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
   background:var(--card-chip); color:var(--card-chip-ink); font-size:.84em; font-weight:900;
   transform:skewX(-6deg);
 }
-/* 黑块里的读数：等级名与加点都用黑块上的那支墨，别用纸卡上的墨 */
-.tile--a .frag,.tile--d .frag,.tile--f .frag,.tile--g .frag{--card-sfg:var(--tile1-i); --card-hot:var(--tile1-i)}
-.tile--b .frag,.tile--c .frag,.tile--e .frag{--card-sfg:var(--tile2-i); --card-hot:var(--card-chip)}
-.tile--a .frag,.tile--d .frag{font-size:27px}
-.tile--c .frag,.tile--f .frag,.tile--g .frag{font-size:21px}
-.tile--b .frag,.tile--e .frag{font-size:18px}
-.flow__card .frag{font-size:17px}
+/* App 的读数片段（data-ui）只收字号，卡面仍旧是 App 自己的那一套 */
+.flow__card .frag{font-size:15px}
 
-/* ── 四 · 记一笔的四步：四条斜着错开的横幅，像官方站那张规格表 ──────
-   一行 = 一个词条 + 一句说明，行与行的宽度、缩进、角度全不一样。 */
-.band--flow{padding-inline:0; --tear-c:var(--f3)}
+/* ── 四 · 记一笔的四步：一条有方向的横向序列 ───────────────────────────
+   重构前是四条各歪各的横幅，读起来像四张同款卡。现在是四个编号并排，
+   中间一条斜穿过去的带子就是「方向」本身，过程是走过去的，不是堆起来的。 */
+.band--flow{padding-inline:0}
 .flow{
-  display:grid; gap:16px; max-width:1240px; margin:40px auto 0;
-  padding-inline:var(--gut); align-items:center;
+  position:relative; display:grid; gap:clamp(18px,2.4vw,34px);
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  max-width:1400px; margin:clamp(26px,4vh,58px) auto 0; padding-inline:var(--gut);
+  align-items:start;
+}
+.flow::before{
+  content:''; position:absolute; left:0; right:0; top:46%; height:16px; z-index:0;
+  background:var(--accent);
 }
 .flow__p{
-  display:grid; grid-template-columns:auto minmax(0,1fr) auto;
-  align-items:center; gap:26px; padding:20px 26px;
-  clip-path:var(--q2); filter:var(--paper-sh);
+  position:relative; z-index:1; display:grid; gap:14px; align-content:start;
+  padding-top:18px; border-top:4px solid currentColor;
 }
-.flow__p:nth-child(1){width:100%; margin-left:0; transform:rotate(-1.4deg); background:#0d0d0d; color:#f0e9df}
-.flow__p:nth-child(2){width:93%; margin-left:5%; transform:rotate(1.1deg); background:var(--f2); color:var(--f2-fg)}
-.flow__p:nth-child(3){width:98%; margin-left:1%; transform:rotate(-1.8deg); background:var(--accent); color:var(--on-accent)}
-.flow__p:nth-child(4){width:89%; margin-left:8%; transform:rotate(1.5deg); background:#0d0d0d; color:#f0e9df}
+.flow__p:nth-child(even){margin-top:clamp(18px,3vw,48px)}
+.flow__no{
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:clamp(44px,5.2vw,88px); line-height:.84; letter-spacing:-.05em;
+}
 .flow__lbl{
-  display:block; padding:.24em .52em .3em; background:#0d0d0d; color:#f0e9df;
-  font-size:var(--s-h3); font-weight:900; transform:rotate(-3deg); clip-path:var(--q4);
+  display:block; width:fit-content; padding-bottom:.06em;
+  border-bottom:5px solid var(--accent);
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-h2); line-height:1.02; letter-spacing:-.02em;
 }
 .flow__card{
-  display:block; padding:16px 20px; background:var(--card); color:var(--card-ink);
-  border:5px solid #0d0d0d; max-width:460px;
+  display:block; padding:clamp(14px,1.6vw,22px);
+  background:var(--card); color:var(--card-ink); border:var(--key-w) solid var(--key);
 }
-.flow__clause{font-size:var(--s-lead); font-weight:800; line-height:1.25; text-wrap:balance; max-width:22em}
+.flow__clause{font-size:var(--s-body); font-weight:800; line-height:1.4; text-wrap:balance; max-width:20em}
 
-/* ── 五 · 一句话进去，一张卡出来 ───────────────────────────────────── */
-.band--say{padding-inline:0; padding-top:120px; padding-bottom:0; --tear-c:var(--f3)}
-.say2{display:grid; grid-template-columns:1fr 1fr; margin-top:56px}
-.say2__in,.say2__out{padding:56px var(--gut) 84px; display:flex; flex-direction:column; gap:26px}
-.say2__in{background:#0d0d0d; color:#f0e9df}
+/* ── 五 · 一句话进去，一张卡出来：一黑一白对切，左边原话，右边结果 ──── */
+.band--say{padding-inline:0; padding-bottom:0}
+.say2{display:grid; grid-template-columns:1fr 1fr; margin-top:clamp(26px,4vh,58px)}
+.say2__in,.say2__out{padding:clamp(38px,5vw,82px) var(--gut) clamp(56px,7vw,112px); display:flex; flex-direction:column; gap:26px}
+.say2__in{background:var(--f3); color:var(--f3-fg)}
 .say2__out{background:var(--f2); color:var(--f2-fg)}
 .say2__q{
   font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-h2); line-height:1.06; text-wrap:pretty; max-width:16em;
+  font-size:clamp(30px,3.6vw,58px); line-height:1.04; text-wrap:pretty; max-width:15em;
 }
 .body--on{max-width:30em}
-.chip--say{
-  position:absolute; right:5vw; bottom:-4%; width:15vw; min-width:150px;
-  transform:rotate(-3deg); clip-path:inset(30% 3% 6% 3%); z-index:3;
-}
 
-/* ── 六 · 功能（黑牌清单，压在红底上）─────────────────────────────── */
-.list{max-width:1180px; margin:0 auto; display:grid; gap:44px; grid-template-columns:1fr; container-type:inline-size}
-.list__head{position:relative; padding-top:6px}
+/* ── 六 · 功能：一条编号索引 + 一条被打开的特写 ───────────────────────
+   重构前是九条各歪各的黑牌，像九张同款卡。现在是一条直角索引：
+   编号自动生成、行间是细线，只有被打开的那一条翻成主色底，状态一目了然。 */
+.list{max-width:1240px; margin:0 auto; display:grid; gap:clamp(26px,4vh,56px); container-type:inline-size}
 .list__word{
-  position:relative; z-index:2; margin-top:.06em;
+  position:relative; z-index:2; padding-bottom:.06em;
   font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-giant); line-height:1; letter-spacing:-.04em;
-  color:var(--f1-fg); -webkit-text-stroke:3px var(--f3);
+  font-size:var(--s-giant); line-height:.86; letter-spacing:-.05em;
+  color:var(--f3-fg); border-bottom:clamp(8px,1vw,16px) solid var(--accent);
 }
-.list__rows{display:grid; gap:10px}
-.row{background:#0d0d0d; color:#f0e9df; position:relative}
-/* 九条不是一根整齐的柱子：宽度、左缩进、角度条条不同，一条条错着往下走 */
-.row:nth-child(1){width:100%;margin-left:0;transform:rotate(-1.6deg)}
-.row:nth-child(2){width:91%;margin-left:6%;transform:rotate(1.3deg)}
-.row:nth-child(3){width:97%;margin-left:1%;transform:rotate(-1deg)}
-.row:nth-child(4){width:86%;margin-left:12%;transform:rotate(2deg)}
-.row:nth-child(5){width:99%;margin-left:0;transform:rotate(-2.2deg)}
-.row:nth-child(6){width:88%;margin-left:8%;transform:rotate(1.1deg)}
-.row:nth-child(7){width:96%;margin-left:3%;transform:rotate(-1.4deg)}
-.row:nth-child(8){width:92%;margin-left:9%;transform:rotate(2.3deg)}
-.row:nth-child(9){width:95%;margin-left:4%;transform:rotate(-1.8deg)}
-.row[open]{background:var(--key); color:#0d0d0d}
-.row__sum{padding-left:26px}
+.list__rows{display:grid; counter-reset:feat}
+.row{position:relative}
+.row:nth-child(odd){background:color-mix(in srgb,currentColor 6%,transparent)}
+.row[open]{background:var(--accent); color:var(--on-accent)}
 .row__sum{
-  display:flex; align-items:center; justify-content:space-between; gap:16px;
-  min-height:70px; padding:12px 22px; cursor:pointer; list-style:none;
-  transform:skewX(var(--ui-skew));
+  display:flex; align-items:center; gap:clamp(14px,2vw,28px);
+  padding:clamp(16px,2.2vh,26px) 4px; cursor:pointer; list-style:none;
 }
 .row__sum::-webkit-details-marker{display:none}
-.row__name{font-size:var(--s-h3); font-weight:900; transform:skewX(calc(-1 * var(--ui-skew)))}
-.row__plus{
-  width:24px; height:24px; background:currentColor; flex:0 0 auto;
-  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
-  transition:transform var(--t-ui) var(--ease-out);
-  transform:skewX(calc(-1 * var(--ui-skew)));
+.row__sum::before{
+  counter-increment:feat; content:counter(feat,decimal-leading-zero);
+  font-family:var(--face-display); font-weight:900; font-size:var(--s-small);
+  letter-spacing:.1em; opacity:.6; min-width:2.6em;
 }
-.row[open] .row__plus{transform:skewX(calc(-1 * var(--ui-skew))) rotate(135deg)}
+.row__name{font-size:var(--s-h2); font-weight:900; line-height:1.05; letter-spacing:-.02em}
+.row__plus{
+  position:relative; margin-left:auto; width:22px; height:22px; flex:0 0 auto;
+}
+.row__plus::before,.row__plus::after{
+  content:''; position:absolute; left:0; right:0; top:50%; height:3px; background:currentColor;
+  transform:translateY(-50%); transition:transform var(--t-ui) var(--ease-out);
+}
+.row__plus::after{transform:translateY(-50%) rotate(90deg)}
+.row[open] .row__plus::after{transform:translateY(-50%) rotate(0deg)}
 .row__panel{display:grid; grid-template-rows:0fr; transition:grid-template-rows 320ms var(--ease-out)}
 .row[open] .row__panel{grid-template-rows:1fr}
-.row__panel>div{overflow:hidden; padding:0 22px}
-.row__panel p{font-size:var(--s-small); line-height:1.6; max-width:52em; padding-bottom:14px}
-.row[open] .row__panel p:last-child{padding-bottom:26px}
+.row__panel>div{overflow:hidden; padding-left:calc(2.6em + clamp(14px,2vw,28px))}
+.row__panel p{font-size:var(--s-body); line-height:1.68; max-width:54em; padding-bottom:16px}
+.row[open] .row__panel p:last-child{padding-bottom:30px}
 
 /* ── 七 · 四套设计语言：上排斜贴标签，下一块换人换景的舞台 ─────────── */
-.band--skins{padding-block:130px 140px; --tear-c:var(--f1)}
+.band--skins{padding-block:var(--sect)}
 .ghost{display:var(--ghost); position:absolute; inset:auto 0 6% 0; z-index:0; opacity:.14; pointer-events:none}
 .ghost svg{width:100%; height:32vh; display:block}
 .ghost text{
@@ -721,24 +774,37 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
   fill:currentColor; letter-spacing:-.02em;
 }
 .band--skins .lead,.sel{position:relative; z-index:1}
-.sel{display:grid; gap:26px; margin-top:48px}
-.sel__tabs{display:flex; flex-wrap:wrap; gap:12px}
-.stab{
-  display:flex; flex-direction:column; align-items:flex-start; gap:2px;
-  padding:12px 22px 14px; text-align:left;
-  background:#0d0d0d; color:#f0e9df;
-  font-size:var(--s-h3); font-weight:900; line-height:1.1;
-  clip-path:polygon(4% 10%,100% 0,96% 88%,0 100%);
-  transform:rotate(-2deg) skewX(var(--ui-skew));
-  transition:transform var(--t-ui) var(--ease-out), background-color var(--t-hover) ease;
+.sel{
+  display:grid; grid-template-columns:minmax(0,288px) minmax(0,1fr);
+  gap:clamp(26px,4vw,68px); margin-top:clamp(28px,4.6vh,58px); align-items:start;
 }
-.stab:nth-child(even){transform:rotate(2deg) skewX(var(--ui-skew))}
-.stab em{font-size:var(--s-cap); font-style:normal; font-weight:800; opacity:.8}
-.stab[data-on="true"]{background:var(--key); color:#0d0d0d}
-.stab[data-on="true"] em{opacity:1}
+.sel__hint{padding-bottom:12px; font-size:var(--s-small); font-weight:800}
+.sel__tabs{display:grid; counter-reset:skin}
+.stab{
+  display:flex; align-items:baseline; gap:12px; width:100%; text-align:left;
+  padding:clamp(12px,1.6vh,18px) 4px;
+  background:none; color:inherit;
+  border-bottom:0;
+  font-size:clamp(19px,1.9vw,26px); font-weight:900; line-height:1.14;
+  transition:background-color var(--t-hover) ease, color var(--t-hover) ease;
+}
+.stab::before{
+  counter-increment:skin; content:counter(skin,decimal-leading-zero);
+  font-family:var(--face-display); font-weight:900; font-size:var(--s-cap);
+  letter-spacing:.1em; opacity:.55; flex:none;
+}
+.stab em{
+  margin-left:auto; text-align:right; font-style:normal;
+  font-size:var(--s-cap); font-weight:800; letter-spacing:.14em; opacity:.6;
+}
+.stab:hover{background:color-mix(in srgb,currentColor 8%,transparent)}
+.stab[data-on="true"]{background:var(--accent); color:var(--on-accent); border-bottom-color:transparent}
+.stab[data-on="true"] em{opacity:.95}
 .sel__stage{position:relative}
 .kv{display:none; min-height:62svh; padding:44px var(--gut); position:relative;
-  background:var(--f2); color:var(--f2-fg); clip-path:var(--jag2)}
+  background:var(--f2); color:var(--f2-fg); clip-path:var(--q6)}
+.kv{min-height:56svh; padding:clamp(26px,3.4vw,52px); gap:clamp(22px,3.4vw,58px);
+  grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr); align-items:center}
 html[data-skin="red"] .kv[data-skin-show="red"],
 html[data-skin="water-blue"] .kv[data-skin-show="water-blue"],
 html[data-skin="water-pink"] .kv[data-skin-show="water-pink"],
@@ -746,17 +812,15 @@ html[data-skin="yellow"] .kv[data-skin-show="yellow"],
 html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-template-columns:1.2fr .8fr; gap:40px; align-items:center}
 .kv__txt{display:flex; flex-direction:column; gap:14px; max-width:34em}
 .kv__name{
-  display:inline-block; width:fit-content; padding:.04em .26em .1em;
-  background:var(--f3); color:var(--f3-fg);
   font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-h2); line-height:1.1; clip-path:var(--jag); transform:rotate(-2deg);
+  font-size:var(--s-h2); line-height:1.06; letter-spacing:-.03em;
+  padding-bottom:.12em; border-bottom:6px solid var(--accent);
 }
 .kv__line{font-size:var(--s-body); line-height:1.6}
-.kv__sample{font-size:var(--s-cap); font-weight:800; color:var(--f2-sfg); letter-spacing:.04em}
+.kv__sample{margin-top:8px; font-size:var(--s-cap); font-weight:800; color:var(--sfg)}
 .kv__btn{
-  display:inline-block; width:fit-content; padding:9px 28px;
+  display:inline-block; width:fit-content; padding:11px 30px 12px;
   background:var(--btn); color:var(--btn-fg); font-weight:900; font-size:var(--s-small);
-  clip-path:polygon(3% 10%,100% 0,97% 92%,0 100%); transform:skewX(var(--ui-skew));
 }
 .kv__sw{display:flex; gap:10px; flex-wrap:wrap}
 .pick{
@@ -766,63 +830,64 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
 }
 .pick--c{width:40px; height:40px; padding:0; background:var(--sw); clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
 .pick:active{transform:scale(.94)}
-.kv__art{position:relative; width:min(100%,400px); justify-self:end}
-.sel__desc{display:flex; gap:36px; flex-wrap:wrap}
-.sel__desc .kv__line{font-size:var(--s-small); color:var(--f1-sfg); max-width:34em}
+.kv__art{position:relative; width:min(100%,420px); margin:0; justify-self:start}
+.kv::before{
+  content:''; position:absolute; left:0; top:0;
+  width:clamp(24px,2.6vw,42px); height:clamp(24px,2.6vw,42px); background:var(--accent);
+}
+.sel__desc{
+  grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr;
+  gap:clamp(24px,3.4vw,62px); margin-top:clamp(30px,4.6vh,62px); padding-top:20px;
+  border-top:2px solid color-mix(in srgb,currentColor 40%,transparent);
+}
+.sel__desc .kv__line{font-size:var(--s-small); color:var(--sfg); max-width:38em}
 
-/* ── 八 · 两条硬规矩 ───────────────────────────────────────────────── */
-.rules{display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:start}
-.rules .say--s{margin-top:56px}
-.rules__side{display:flex; flex-direction:column; gap:26px; padding-top:26px}
+/* ── 八 · 两条硬规矩：两块巨字声明，一块纸白、一块主色 ─────────────────
+   声明是全页唯一允许倾斜的职能（二级形状），所以把最大的话放在这里。 */
+.rules{
+  display:grid; grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);
+  gap:clamp(30px,5vw,84px); align-items:start;
+}
+.rules__a,.rules__b{position:relative; padding-top:clamp(16px,2.4vh,28px)}
+.rules__mark{
+  font-family:var(--face-display); font-weight:900; line-height:.7;
+  font-size:var(--s-say); color:var(--accent); margin-bottom:-.04em;
+}
+.rules__a .say--s{background:var(--f2); color:var(--f2-fg)}
+.rules__b .say--s{background:var(--accent); color:var(--on-accent)}
+.rules__a .say--s,.rules__b .say--s{margin-top:.5em}
+.rules__sub{margin-top:clamp(20px,3vh,36px); max-width:34em}
+.rules__tape{grid-column:1/-1; height:18px; margin-top:clamp(22px,3.4vh,46px)}
 
 /* ── 九 · 致谢清单 ─────────────────────────────────────────────────── */
 .names{
-  margin-top:150px; font-family:var(--face-text); font-weight:800;
-  font-size:var(--s-h3); line-height:1.4; max-width:1100px;
+  margin-top:clamp(34px,5.6vh,76px); font-family:var(--face-text); font-weight:800;
+  font-size:clamp(19px,1.9vw,26px); line-height:1.62; max-width:60em;
 }
 .names li{display:inline; color:var(--sfg); transition:color 400ms var(--ease-out)}
 .names li::after{content:'、'; color:var(--sfg)}
 .names li:last-child::after{content:'。'}
-.names li.is-lit{color:var(--ink)}
-.band--thanks .body{margin-top:118px}
+.names li.is-lit{color:inherit}
+.band--thanks .body{margin-top:clamp(34px,5vh,74px); max-width:44em}
 
-/* ── 器具五 · 手作痕迹：荧光笔划过去的一道、盖上去的印章 ──────────── */
-.boxed,
-.say,.say--s,.body,.lead,.note,.mosaic__note,.flow__clause,.tile__cap,
-.stat__cap,.kv__line,.names,.foot__notes p,.foot__credits,.foot__place,
-.row__panel p,.sel__desc .kv__line{
-  display:block; width:fit-content; padding:.44em .78em;
-  background:var(--slab); color:var(--slab-ink);
-  clip-path:var(--q1);
-  filter:var(--paper-sh);
-}
-/* 底色留在块自己身上、影子走 drop-shadow，两者互不打架：
-   早前版本试过在块外面再套一层描边（伪元素 + z-index:-1），带 transform 的块
-   会自成层叠上下文，那一层反过来把块自己的底色盖住。drop-shadow 是在块画完之后
+/* ── 器具五 · 声明块：全页只允许这一个职能倾斜 ─────────────────────────
+   重构把「什么都可以斜」改成了分级：正文、说明、列表、页脚一律直角左对齐，
+   倾斜只留给「声明」，每屏最多两块，所以它一定是最响的那块。
+   底色留在块自己身上、影子走 drop-shadow，两者互不打架：
+   早前试过在块外面再套一层描边（伪元素 + z-index:-1），带 transform 的块
+   会自成层叠上下文，那层反过来把块自己的底色盖住；drop-shadow 是在块画完之后
    绕着它的剪影补一圈，不吃 z-index，也不动 HTML 结构。 */
-.boxed,.say,.say--s,.body,.lead,.note,.mosaic__note,.flow__clause,.tile__cap,
-.stat__cap,.kv__line,.names,.foot__notes p,.foot__credits,.foot__place,
-.row__panel p,.sel__desc .kv__line{position:relative}
-/* 每块撕法不一样：换块就换一条边 */
-.body+.body,.lead,.row__panel p,.tile__cap{clip-path:var(--q2)}
-.note,.stat__cap,.foot__credits{clip-path:var(--q3)}
-.flow__clause,.kv__line,.foot__notes p{clip-path:var(--q4)}
-.mosaic__note,.names,.foot__place,.sel__desc .kv__line{clip-path:var(--q7)}
-.say,.say--s{clip-path:var(--q5)}
-/* 块与块之间绝不平行：角度一条条错开 */
-.body{transform:rotate(-2.6deg)}
-.body+.body{transform:rotate(3.2deg)}
-.lead,.note,.mosaic__note{transform:rotate(-3.4deg)}
-.flow__clause{transform:rotate(2.6deg)}
-.tile__cap{transform:rotate(-3.1deg)}
-.stat__cap{transform:rotate(2.8deg)}
-.kv__line{transform:rotate(-3deg)}
-.names{transform:rotate(-2.2deg); margin-bottom:34px}
-.foot__notes p{transform:rotate(2.4deg)}
-.foot__credits{transform:rotate(-2deg)}
-.foot__place{transform:rotate(3deg)}
-.row__panel p{transform:rotate(-2.6deg)}
-.say,.say--s{transform:rotate(-1.8deg)}
+.say,.say--s{
+  display:block; width:fit-content; padding:.28em .5em .36em;
+  background:var(--slab); color:var(--slab-ink);
+  clip-path:var(--q5); filter:var(--paper-sh); transform:rotate(var(--tilt));
+}
+.say{
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-say); line-height:.98; letter-spacing:-.02em;
+  max-width:24em; text-wrap:pretty; overflow-wrap:break-word;
+}
+.say--s{font-size:var(--s-h2); line-height:1.08; max-width:22em}
 /* 这几块本来就是黑的（或纸的），别叠两层 */
 .frag--ledger,.frag--entry,.flow__card{background:var(--card); color:var(--card-ink)}
 .hl{
@@ -838,33 +903,45 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   transform:rotate(-6deg); opacity:.92;
 }
 
-/* ── 十 · 完成到哪一步（三块错开的数字牌）────────────────────────── */
+/* ── 十 · 完成到哪一步：一张数字海报，三个数字三个量级 ─────────────────
+   重构前是三块同款色卡；现在数字本身是主角，尺寸差出三四倍、位置一高一低，
+   眼睛先落在 202 上，再顺着 13 走到 0。 */
 .stats{
-  display:grid; gap:var(--gap); grid-template-columns:repeat(12,1fr);
-  max-width:1400px; margin:0 auto; align-items:start;
+  display:grid; gap:clamp(20px,3vw,50px); grid-template-columns:repeat(12,1fr);
+  align-items:start; margin-top:clamp(18px,3vh,46px);
 }
-.stat{padding:28px; display:flex; flex-direction:column; justify-content:space-between; gap:24px;
-  transition:transform var(--t-ui) var(--ease-out)}
-.stat--tall{transform:rotate(-2.4deg)}
-.stat--ink{transform:rotate(2.2deg)}
-.stat--mid{transform:rotate(-1.6deg)}
-.stat__fig{font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-say); line-height:.9}
-.stat__cap{font-size:var(--s-small); line-height:1.45; max-width:18em}
-.stat--tall{grid-column:1/7; min-height:64vh; background:var(--f3); color:var(--f3-fg); clip-path:var(--jag)}
-.stat--ink{grid-column:7/10; min-height:40vh; margin-top:13vh; background:var(--f2); color:var(--f2-fg);
-  outline:var(--key-w) solid var(--key)}
-.stat--mid{grid-column:10/13; min-height:30vh; margin-top:25vh; background:#0d0d0d; color:#f0e9df; clip-path:var(--jag2)}
-.stats__head{grid-column:7/13; grid-row:1; align-self:start}
+.stat{position:relative; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(20px,3.4vh,50px)}
+.stat__fig{
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  line-height:.82; letter-spacing:-.06em;
+}
+.stat__cap{font-size:var(--s-small); line-height:1.5; max-width:22em; font-weight:600}
+.stat--tall{
+  grid-column:1/8; padding:clamp(24px,3vw,46px); --sfg:var(--f2-sfg);
+  background:var(--f2); color:var(--f2-fg); clip-path:var(--q6); filter:var(--paper-sh);
+}
+.stat--tall .stat__fig{font-size:var(--s-num)}
+.stat--ink{
+  grid-column:8/13; padding:clamp(22px,2.6vw,38px); margin-top:clamp(40px,11vh,140px);
+  background:var(--accent); color:var(--on-accent);
+}
+.stat--ink .stat__fig{font-size:var(--s-say)}
+.stat--mid{grid-column:3/9; margin-top:clamp(30px,6vh,90px)}
+.stat--mid .stat__fig{font-size:var(--s-word)}
 
 /* ── 十一 · 拿一份 ─────────────────────────────────────────────────── */
-.get{display:grid; grid-template-columns:5fr 7fr; gap:56px; align-items:end; min-height:78svh}
+.get{
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.24fr);
+  gap:clamp(30px,4.6vw,88px); align-items:end; margin-top:clamp(18px,3vh,46px);
+}
 .get__l{display:flex; flex-direction:column; gap:22px}
-.get__r{display:flex; flex-direction:column; align-items:flex-start; gap:22px}
+.get__r{display:flex; flex-direction:column; align-items:flex-start; gap:clamp(18px,2.6vh,32px)}
 .note--c{opacity:.85}
+.frag--entry{max-width:360px}
 .navfrag{
   display:flex; align-items:flex-end; justify-content:space-between; gap:8px;
-  width:min(100%,520px); padding:14px 10px 10px; background:var(--key); color:#0d0d0d;
+  width:min(100%,520px); padding:14px 12px 10px;
+  background:var(--f2); color:var(--f2-fg); outline:var(--key-w) solid var(--key);
 }
 .navfrag__i{display:flex; flex-direction:column; align-items:center; gap:6px; font-size:var(--s-cap); font-weight:800; opacity:.6; width:5em}
 .navfrag__i--on{opacity:1; color:var(--card-chip)}
@@ -875,8 +952,10 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
 .navfrag__o{display:block; width:26px; height:26px; background:currentColor; transform:skewX(-6deg); opacity:.85}
 
 /* ── 十二 · 页脚 ───────────────────────────────────────────────────── */
-.foot{padding:56px var(--gut) 64px; display:flex; flex-direction:column; gap:52px; --tear-c:var(--f1)}
-.foot__notes{display:grid; grid-template-columns:1fr 1fr auto; gap:24px; font-size:var(--s-small)}
+.foot{padding:clamp(56px,8vh,98px) var(--gut) clamp(48px,7vh,84px); display:flex; flex-direction:column; gap:clamp(34px,4.6vh,66px); --tear-c:var(--f1)}
+.foot__notes{
+  display:grid; grid-template-columns:1fr 1fr auto; gap:24px; font-size:var(--s-small);
+}
 .foot__notes .link{justify-self:end}
 .foot__big{
   display:block; width:fit-content; padding:.1em .18em .16em;
@@ -897,66 +976,53 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   .js .line__i{transform:translateY(112%); animation:lineup 900ms var(--ease-out) forwards;
     animation-delay:calc(var(--i,0) * 110ms + 150ms)}
   @keyframes lineup{to{transform:translateY(0)}}
-  .js [data-rise]{opacity:0; transform:translateY(18px);
+  /* 入场一律走 translate 长属性，不碰 transform：
+     transform 上写着各块自己的角度，用 transform 做入场会把角度一起擦掉（旧版就是这样）。 */
+  .js [data-rise]{opacity:0; translate:0 22px;
     animation:rise 700ms var(--ease-out) forwards; animation-delay:calc(var(--i,0) * 90ms + 320ms)}
-  @keyframes rise{to{opacity:1; transform:none}}
-  .js [data-reveal]{opacity:0; transform:translateY(26px);
-    transition:opacity var(--t-reveal) var(--ease-out), transform 900ms var(--ease-out)}
-  .js [data-reveal].is-in{opacity:1; transform:none}
+  @keyframes rise{to{opacity:1; translate:0}}
+  .js [data-reveal]{opacity:0; translate:0 34px;
+    transition:opacity var(--t-reveal) var(--ease-out), translate 900ms var(--ease-out)}
+  .js [data-reveal].is-in{opacity:1; translate:0}
+  /* 面具缓慢上下；幽灵字标与网点的视差在 main.js 里 */
   .hero__art{animation:drift 14s var(--ease-in-out) infinite alternate}
-  @keyframes drift{from{transform:translateY(-1.5%)}to{transform:translateY(1.5%)}}
+  @keyframes drift{from{translate:0 -1.2%}to{translate:0 1.2%}}
   .dots{animation:dottravel 16s linear infinite}
   @keyframes dottravel{to{background-position:32px 32px}}
   .stripes{animation:stripewalk 9s linear infinite}
   @keyframes stripewalk{to{background-position:44px 0}}
   .polaroid{animation:float 16s var(--ease-in-out) infinite alternate}
   @keyframes float{from{transform:rotate(-4deg)}to{transform:rotate(-1.5deg) translateY(-2%)}}
-  .spark--star svg{animation:spin 26s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
 }
 @media (hover:hover) and (pointer:fine){
-  .tile:hover{transform:translateY(-4px) rotate(0deg)}
-  .stab:hover{transform:rotate(0deg) skewX(var(--ui-skew)) translateY(-3px)}
-  .row:hover{background:#000000}
-  .row[open]:hover{background:var(--key)}
+  .row:hover{background:color-mix(in srgb,currentColor 10%,transparent)}
+  .row[open]:hover{background:var(--accent); color:var(--on-accent)}
   .btn:hover{background:var(--btn-hover)}
-  .stat:hover{transform:rotate(0deg)}
 }
 
 /* ── 窄窗口与手机 ─────────────────────────────────────────────────── */
 @media (max-width:1100px){
   :root{--s-say:44px; --s-h2:34px; --s-h3:24px; --s-lead:20px; --s-body:18px;
-    --s-giant:clamp(96px,26vw,200px)}
-  .band{padding:88px 20px}
-  .band--intro,.band--skins{padding-block:92px}
-  .band--skins{padding-top:150px}
-  .rules{grid-template-columns:1fr; gap:40px}
-  .get{grid-template-columns:1fr; gap:36px; min-height:0}
-  .say2{grid-template-columns:1fr}
-  .intro__rest{grid-template-columns:1.4fr 1fr; gap:36px}
+    --s-giant:clamp(96px,26vw,200px); --s-word:clamp(38px,6.4vw,78px); --s-num:clamp(72px,11vw,140px)}
+  .band{padding:clamp(78px,10vh,124px) 20px}
+  .attrs{grid-template-columns:1fr; gap:clamp(22px,3.4vw,42px)}
+  .fig--big{grid-row:auto}
+  .ledger{grid-column:1}
+  .specimen{grid-template-columns:1fr 1fr}
   .flow{grid-template-columns:1fr 1fr}
-  /* 窄窗口里「词条 / 卡片 / 说明」还横排的话，中间那张卡会被挤成一条竖线
-     （实测只剩 50px 宽，字全竖起来），所以这里让每块横幅自己改成上下堆叠。 */
-  .flow__p{min-height:52svh; grid-template-columns:1fr; align-content:start; gap:16px}
-  .flow__lbl{justify-self:start}
-  .mosaic{grid-auto-rows:auto}
-  .tile,.tile--a,.tile--b,.tile--c,.tile--d,.tile--e,.tile--f,.tile--g{
-    grid-column:span 6; grid-row:auto; min-height:240px}
-  /* 贴板在窄窗口里手贴感更强：每块宽度都不一样，免得排成规规矩矩的一列 */
-  .mosaic>.tile:nth-child(1){width:100%}
-  .mosaic>.tile:nth-child(2){width:93%}
-  .mosaic>.tile:nth-child(3){width:97%}
-  .mosaic>.tile:nth-child(4){width:89%}
-  .mosaic>.tile:nth-child(5){width:95%}
-  .mosaic>.tile:nth-child(6){width:90%}
-  .mosaic>.tile:nth-child(7){width:99%}
-  .mosaic>.tile:nth-child(8){width:94%}
-  .stats{grid-template-columns:1fr 1fr}
-  .stat--tall{grid-column:1/3; min-height:44vh; margin-top:0}
-  .stat--ink,.stat--mid{grid-column:span 1; min-height:30vh; margin-top:40px}
-  .stats__head{grid-column:1/3; grid-row:auto; order:-1}
-  .stats__head{padding-bottom:56px}
+  .flow::before{display:none}
+  .flow__p:nth-child(even){margin-top:0}
+  .rules{grid-template-columns:1fr; gap:clamp(30px,5vw,58px)}
+  .get{grid-template-columns:1fr; gap:clamp(30px,4.4vw,54px)}
+  .say2{grid-template-columns:1fr}
+  .intro__rest{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:36px}
+  .sel{grid-template-columns:1fr; gap:clamp(24px,3.4vw,42px)}
+  .sel__tabs{grid-template-columns:1fr 1fr; column-gap:clamp(18px,3vw,42px)}
   .kv{min-height:0}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat--tall{grid-column:1/3; margin-top:0}
+  .stat--ink{grid-column:1/2; margin-top:0}
+  .stat--mid{grid-column:2/3; margin-top:0}
   .foot__notes,.foot__meta{grid-template-columns:1fr}
   .foot__notes .link{justify-self:start}
   .foot__place{text-align:left}
@@ -965,47 +1031,52 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
 
 @media (max-width:760px){
   :root{--s-display:11.6vw; --s-giant:22vw; --s-say:26px; --s-h2:28px; --s-h3:22px;
-    --s-lead:19px; --s-body:17px; --s-small:15px; --s-cap:13px}
-  .band{padding:64px 16px}
-  .band--intro,.band--skins{padding-block:68px}
-  .bar{gap:10px; padding:10px 16px}
+    --s-lead:19px; --s-body:17px; --s-small:15px; --s-cap:13px;
+    --s-word:clamp(32px,9vw,46px); --s-num:clamp(64px,20vw,110px)}
+  .band{padding:clamp(58px,9vh,84px) 16px}
+  .bar{gap:12px; padding:11px 16px}
   .bar__nav{display:none}
 
-  .hero{min-height:0; padding:14vh 16px 32px}
-  .tileline{font-size:var(--s-display); margin-bottom:.12em}
-  .tileline--paper{margin-left:0}
-  .hero__art{position:relative; right:auto; bottom:auto; width:68vw; max-width:68vw; margin:24px 0 0 auto}
-  .hero__tag,.hero__act,.hero__mini{position:relative; left:auto; bottom:auto; transform:none}
-  .hero__tag{margin-top:28px; padding:12px 16px}
-  .hero__act{margin-top:20px}
-  .hero__mini{margin-top:14px}
-  .hero__dots,.hero__kv,.hero__spark{display:none}
+  /* 头版在窄屏改成竖排的编辑式版面：斜面和网点撤掉，改成"先读字、再看图、最后读信息带" */
+  .hero{display:flex; flex-direction:column; min-height:0; padding:clamp(92px,14vh,124px) 16px 34px}
+  .hero__kv,.hero__dots,.hero__burst,.hero__spark{display:none}
+  .hero__ghost{top:7%; bottom:auto; font-size:20vw; opacity:.08}
+  .hero__lead{order:1; max-width:none}
+  .hero__art{order:2; position:relative; right:auto; bottom:auto;
+    width:min(72%,320px); margin:clamp(22px,4vh,40px) 0 0 auto}
+  .hero__foot{
+    order:3; position:relative; left:auto; bottom:auto; width:auto;
+    display:grid; grid-template-columns:1fr; gap:16px; margin-top:clamp(22px,4vh,40px);
+    color:currentColor; border-top-color:currentColor;
+  }
+  .hero__mini{text-align:left; max-width:none}
+  .hero__kicker{letter-spacing:.24em}
+  .tileline{font-size:var(--s-display); margin-bottom:.1em}
+  .tileline--paper{margin-left:6vw}
+
   .polaroid--intro{margin-top:26px; transform:rotate(-2deg)} .polaroid--say{position:relative; right:auto; bottom:auto; width:min(70%,300px); margin-top:0; transform:rotate(3deg)}
-  .chip--say{margin-top:0}
   .intro__rest{grid-template-columns:1fr; gap:26px; margin-top:36px}
+  .intro__cols{columns:1}
 
-  .mosaic{grid-template-columns:1fr; margin-top:36px}
-  .tile,.tile--a,.tile--b,.tile--c,.tile--d,.tile--e,.tile--f,.tile--g{
-    grid-column:1/1; min-height:0; padding:22px 18px; transform:none}
-  .tile--a,.tile--d{min-height:290px}
-  .tile--b,.tile--c,.tile--e,.tile--f,.tile--g{min-height:200px}
-  .tile--b{order:-2}
-  .tile--c{order:-1}
-
-  .flow,.sel__tabs{grid-template-columns:1fr}
-  .flow__lbl{font-size:var(--s-lead)}
-  .sel__tabs{display:grid}
-  .flow__p{min-height:0; padding:34px 18px}
-  .say2__in,.say2__out{padding:40px 16px 48px}
-  .kv{grid-template-columns:1fr !important; padding:30px 16px 36px}
-  .kv__art{justify-self:start; width:min(76%,300px); margin-bottom:8px}
+  .attrs{grid-template-columns:1fr}
+  .ledger em{flex-basis:100%; margin-left:0}
+  .specimen{grid-template-columns:1fr; gap:26px}
+  .flow{grid-template-columns:1fr}
+  .flow__p{padding-top:14px}
+  .say2__in,.say2__out{padding:40px 16px 52px}
+  .sel__tabs{grid-template-columns:1fr}
+  .kv{grid-template-columns:1fr; padding:clamp(22px,5vw,32px)}
+  .kv__art{justify-self:start; width:min(72%,280px); margin-bottom:10px}
   .kv__name{font-size:var(--s-h2)}
+  .sel__desc{grid-template-columns:1fr; gap:22px}
+  .rules__tape{display:none}
   .list{gap:36px}
-  .list__word{margin-top:0}
-  .stats{grid-template-columns:1fr; row-gap:112px}
-  .stat--tall,.stat--ink,.stat--mid{grid-column:1/1; min-height:36vh; margin-top:0}
-  .say--s{font-size:var(--s-say)}
+  .row__sum::before{min-width:2.2em}
+  .row__panel>div{padding-left:0}
+  .stats{grid-template-columns:1fr; row-gap:clamp(30px,7vh,66px)}
+  .stat--tall,.stat--ink,.stat--mid{grid-column:1/1; margin-top:0}
   .say{font-size:var(--s-h3)}
+  .say--s{font-size:var(--s-h3)}
   .foot__big{font-size:var(--s-h3)}
   .names{font-size:var(--s-h3)}
 }

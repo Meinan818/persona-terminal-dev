@@ -78,45 +78,57 @@
 
 <main id="main">
 
-<!-- ── 一 · 头版 ────────────────────────────────────────────────────────
-     满幅猩红。黑齿碎片打底，半调网点压左边，面具当贴纸贴上来（硬偏移一块黑），
-     两行字各自躺在自己的撕纸块上——一块米白纸配黑字，一块纯黑配纸白字。 -->
+<!-- ── 一 · 头版（一张海报，不是"红底排标题"）────────────────────────────
+     三级形状各司其职：
+       一级·舞台：幽灵字标做纵深；一块黑斜面从右下出血切进画面，白切片贴着它的边；
+       二级·重音：爆裂星垫在面具后面（全页只此一颗）、小四角星咬在黑白交界上；
+       三级·结构：主标题两行（纸白/猩红各一块撕纸）、底部一条编辑式信息带。
+     网点只压在左侧一块斜切带里，不再满铺整屏。 -->
 <section class="hero" data-field="1" aria-labelledby="hero-h">
-  <div class="hero__dots dots" aria-hidden="true"></div>
-  <div class="hero__spark" aria-hidden="true">
-    <svg viewBox="0 0 200 200"><path d="M100 0 118 82 200 100 118 118 100 200 82 118 0 100 82 82Z" fill="currentColor"/></svg>
-  </div>
-  <div class="hero__burst" aria-hidden="true">
-    <svg viewBox="0 0 200 200"><path d="M100 8 116 60 168 34 136 78 192 92 136 106 168 150 116 124 100 180 84 124 32 150 64 106 8 92 64 78 32 34 84 60Z" fill="#fff"/></svg>
-  </div>
+  <p class="hero__ghost" aria-hidden="true">MASKARIA</p>
   <div class="hero__kvart" aria-hidden="true"></div>
   <div class="hero__kv" aria-hidden="true">
     <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-      <polygon points="-40,600 300,520 210,900 -40,900" fill="#000"/>
-      <polygon points="1180,0 1440,0 1440,260 1240,180" fill="#000"/>
-      <polygon points="420,900 700,690 860,900" fill="#000"/>
+      <!-- 一级：从右下出血的黑斜面 + 贴边的白切片 + 压在下缘的红细带 -->
+      <polygon class="plane plane--ink" points="1080,-60 1520,-60 1520,960 520,960"/>
+      <polygon class="plane plane--paper" points="1084,-40 1116,-40 566,960 534,960"/>
+      <polygon class="plane plane--ink" points="-60,802 470,700 372,960 -60,960"/>
+      <polygon class="plane plane--hot" points="1080,-60 1520,-60 1520,26 1112,26"/>
     </svg>
+  </div>
+  <div class="hero__dots dots" aria-hidden="true"></div>
+  <div class="hero__burst" aria-hidden="true">
+    <svg viewBox="0 0 200 200"><path d="M100 8 116 60 168 34 136 78 192 92 136 106 168 150 116 124 100 180 84 124 32 150 64 106 8 92 64 78 32 34 84 60Z" fill="#fff"/></svg>
+  </div>
+  <div class="hero__spark" aria-hidden="true">
+    <svg viewBox="0 0 200 200"><path d="M100 0 118 82 200 100 118 118 100 200 82 118 0 100 82 82Z" fill="currentColor"/></svg>
   </div>
   <figure class="hero__art">
     <img class="art__ink" src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true">
     <img class="art__face" src="img/mask-red.png" width="632" height="616"
          alt="MASKARIA 的红色主题图标：白色面具，背面是城市剪影、星与玫瑰的拼贴。">
   </figure>
-  <h1 class="hero__h" id="hero-h">
-    <span class="tileline tileline--paper"><span class="line__i" data-line style="--i:0">没人看见的</span></span>
-    <span class="tileline tileline--ink"><span class="line__i" data-line style="--i:1">也算数</span></span>
-  </h1>
-  <p class="hero__tag" data-rise style="--i:2">你说「今天看了二十页书」，它记下来，加你 0.5 点知识。就这么点事，剩下的交给时间。</p>
-  <p class="hero__act"><a class="btn btn--burst" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer" data-rise style="--i:3">去 GitHub</a></p>
-  <p class="hero__mini">Android 端可以直接装；iOS 没做，Apple 开发者账号太贵。</p>
+  <div class="hero__lead">
+    <h1 class="hero__h" id="hero-h">
+      <span class="tileline tileline--paper"><span class="line__i" data-line style="--i:0">没人看见的</span></span>
+      <span class="tileline tileline--ink"><span class="line__i" data-line style="--i:1">也算数</span></span>
+    </h1>
+    <p class="hero__kicker">MASKARIA · 面具庭园</p>
+  </div>
+  <div class="hero__foot">
+    <p class="hero__tag" data-rise style="--i:2">你说「今天看了二十页书」，它记下来，加你 0.5 点知识。就这么点事，剩下的交给时间。</p>
+    <p class="hero__act"><a class="btn btn--burst" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer" data-rise style="--i:3">去 GitHub</a></p>
+    <p class="hero__mini">Android 端可以直接装；iOS 没做，Apple 开发者账号太贵。</p>
+  </div>
 </section>
 
 <!-- ── 二 · 没人看见的那些事 ─────────────────────────────────────────── -->
 <section class="band band--intro" data-field="3" aria-labelledby="intro-h">
   <h2 class="sr-only" id="intro-h">没人看见的那些事</h2>
   <p class="say" data-reveal>你熬的那些夜算数，看的书算数，压下去的那通火也算数。</p>
+  <p class="head__kick head__kick--bare"><span class="head__no"></span><span class="head__en">ABOUT</span></p>
   <div class="intro__rest">
-    <div>
+    <div class="intro__cols">
     <p class="body" data-reveal>这些东西不会自己留下痕迹。久了连你自己都忘了，最后你会觉得那几年<em class="hl">好像什么都没干</em>。</p>
     <p class="body" data-reveal>所以，收下这张面具。它不催你变强——它没那个本事，也没那个打算。它只干一件事：<em class="hl">你说，它记</em>。</p>
     <p class="body body--quiet" data-reveal>它就在那儿待着，一声不响。像那个知道你最近很累、但懒得劝你的老搭档。</p>
@@ -131,89 +143,63 @@
 
 <!-- ── 三 · 五个属性 ─────────────────────────────────────────────────── -->
 <section class="band band--attrs" id="attrs" data-field="1" aria-labelledby="attrs-h">
-  <div class="p5t">
-    <svg class="p5t__band" viewBox="0 0 620 140" aria-hidden="true">
-      <polygon points="8,30 606,2 616,102 0,130"/>
-      <text x="24" y="96" textLength="566" lengthAdjust="spacingAndGlyphs">STATUS</text>
-    </svg>
-    <h2 class="p5t__cn" id="attrs-h" data-reveal>五个属性</h2>
+  <header class="head head--tiles">
+    <h2 class="head__word" id="attrs-h" data-reveal>五个属性</h2>
+    <p class="head__kick"><span class="head__no"></span><span class="head__en">STATUS</span></p>
+  </header>
+
+  <!-- 三个量级：1（巨） > 0（中） > 三条账目（小）。不再是一张十二列看板。 -->
+  <div class="attrs">
+    <div class="fig fig--big" data-reveal>
+      <p class="fig__no">1</p>
+      <p class="fig__name">知识 <span>Lv.1</span> · 蒙昧初开</p>
+      <p class="fig__gain">看了二十页书　+0.5</p>
+      <p class="fig__cap">每做一件事，往上加一点。加着加着就升级了，升级解锁技能。</p>
+      <p class="fig__bar" aria-hidden="true"><i></i></p>
+    </div>
+    <div class="fig fig--mid" data-reveal>
+      <p class="fig__no">0</p>
+      <p class="fig__name">温柔 <span>Lv.1</span> · 冷眼旁观</p>
+      <p class="fig__gain">对别人好的那份算，对你自己的那份也算</p>
+      <p class="fig__cap">它不评价你做得够不够。评价是你自己的事，它只负责记账。</p>
+    </div>
+
+    <ol class="ledger">
+      <li data-reveal><b>胆量</b><span>Lv.1</span><i>畏首畏尾</i><em>跟人吵了一架但忍住了，也记。</em></li>
+      <li data-reveal><b>灵巧</b><span>Lv.1</span><i>手忙脚乱</i><em>手比昨天稳一点，也算数。</em></li>
+      <li data-reveal><b>魅力</b><span>Lv.1</span><i>平平无奇</i><em>不用变外向。有魅力这件事，很多时候只是睡够了。</em></li>
+    </ol>
   </div>
 
-  <div class="mosaic">
-    <div class="tile tile--b" data-reveal>
-      <div class="frag frag--s" data-ui>
-        <p class="frag__row"><span class="frag__name">胆量</span><span class="frag__lv">Lv.1</span></p>
-        <p class="frag__title">畏首畏尾</p>
-      </div>
-      <p class="tile__cap">跟人吵了一架但忍住了，也记。</p>
+  <!-- 记录样例：两条一窄一宽的横带，App 自己的界面片段（data-ui 保留自己的边框与投影） -->
+  <div class="specimen">
+    <div class="spec specimen--a" data-reveal>
+      <p class="frag frag--row" data-ui>
+        <span class="frag__quote">「看了二十页书」</span>
+        <span class="frag__gain">知识　+0.5</span>
+      </p>
+      <p class="spec__cap">记一笔：用大白话写你干了什么，属性它替你猜，猜错了你改。</p>
     </div>
-
-    <div class="tile tile--c" data-reveal>
-      <div class="frag frag--s" data-ui>
-        <p class="frag__row"><span class="frag__name">灵巧</span><span class="frag__lv">Lv.1</span></p>
-        <p class="frag__title">手忙脚乱</p>
-      </div>
-      <p class="tile__cap">手比昨天稳一点，也算数。</p>
-    </div>
-
-    <div class="tile tile--a" data-reveal>
-      <div class="frag" data-ui>
-        <p class="frag__row"><span class="frag__name">知识</span><span class="frag__lv">Lv.1</span></p>
-        <p class="frag__big">1</p>
-        <p class="frag__title">蒙昧初开</p>
-        <p class="frag__gain">看了二十页书　+0.5</p>
-      </div>
-      <p class="tile__cap">每做一件事，往上加一点。加着加着就升级了，升级解锁技能。</p>
-    </div>
-
-    <div class="tile tile--d" data-reveal>
-      <div class="frag" data-ui>
-        <p class="frag__row"><span class="frag__name">温柔</span><span class="frag__lv">Lv.1</span></p>
-        <p class="frag__big">0</p>
-        <p class="frag__title">冷眼旁观</p>
-        <p class="frag__gain">对别人好的那份算，对你自己的那份也算</p>
-      </div>
-      <p class="tile__cap">它不评价你做得够不够。评价是你自己的事，它只负责记账。</p>
-    </div>
-
-    <div class="tile tile--e" data-reveal>
-      <div class="frag frag--s" data-ui>
-        <p class="frag__row"><span class="frag__name">魅力</span><span class="frag__lv">Lv.1</span></p>
-        <p class="frag__title">平平无奇</p>
-      </div>
-      <p class="tile__cap">不用变外向。有魅力这件事，很多时候只是睡够了。</p>
-    </div>
-
-    <div class="tile tile--f" data-reveal>
-      <div class="frag frag--row" data-ui>
-        <p class="frag__quote">「看了二十页书」</p>
-        <p class="frag__gain">知识　+0.5</p>
-      </div>
-      <p class="tile__cap">记一笔：用大白话写你干了什么，属性它替你猜，猜错了你改。</p>
-    </div>
-
-    <div class="tile tile--g" data-reveal>
-      <div class="frag frag--row" data-ui>
-        <p class="frag__row"><span class="frag__name">支出 ¥10</span><span class="frag__lv">餐饮</span></p>
-        <p class="frag__gain">今天还能花 ¥87.5</p>
-      </div>
-      <p class="tile__cap">记账：一句话记一笔，「今天还能花多少」它替你算好。</p>
+    <div class="spec specimen--b" data-reveal>
+      <p class="frag frag--row" data-ui>
+        <span class="frag__row"><span class="frag__name">支出 ¥10</span><span class="frag__lv">餐饮</span></span>
+        <span class="frag__gain">今天还能花 ¥87.5</span>
+      </p>
+      <p class="spec__cap">记账：一句话记一笔，「今天还能花多少」它替你算好。</p>
     </div>
   </div>
   <p class="mosaic__note" data-reveal>名字随你改。改成「体重」「存款」「发际线」都行，它不拦你——这本账上写什么，你说了算。</p>
 </section>
 
 <!-- ── 四 · 记一笔的四步 ─────────────────────────────────────────────── -->
-<section class="band band--flow" id="flow" data-field="1" aria-labelledby="flow-h">
-  <div class="p5t p5t--pad">
-    <svg class="p5t__band" viewBox="0 0 620 140" aria-hidden="true">
-      <polygon points="8,30 606,2 616,102 0,130"/>
-      <text x="24" y="96" textLength="566" lengthAdjust="spacingAndGlyphs">HOW IT WORKS</text>
-    </svg>
-    <h2 class="p5t__cn" id="flow-h" data-reveal>记一笔的四步</h2>
-  </div>
-  <div class="flow">
-    <div class="flow__p flow__p--1" data-reveal><span class="flow__lbl">先</span>
+<section class="band band--flow" id="flow" data-field="3" aria-labelledby="flow-h">
+  <header class="head">
+    <h2 class="head__word" id="flow-h" data-reveal>记一笔的四步</h2>
+    <p class="head__kick"><span class="head__no"></span><span class="head__en">HOW IT WORKS</span></p>
+  </header>
+  <ol class="flow">
+    <li class="flow__p flow__p--1" data-reveal>
+      <span class="flow__lbl">先</span>
       <p class="flow__card">
         <span class="frag frag--row" data-ui>
           <span class="frag__quote">「看了二十页书」</span>
@@ -221,8 +207,9 @@
         </span>
       </p>
       <p class="flow__clause">你只管开口。</p>
-    </div>
-    <div class="flow__p flow__p--2" data-reveal><span class="flow__lbl">再</span>
+    </li>
+    <li class="flow__p flow__p--2" data-reveal>
+      <span class="flow__lbl">再</span>
       <p class="flow__card">
         <span class="frag frag--row" data-ui>
           <span class="frag__quote">「看了二十页书」</span>
@@ -230,8 +217,9 @@
         </span>
       </p>
       <p class="flow__clause">它猜一项，猜错你改。</p>
-    </div>
-    <div class="flow__p flow__p--3" data-reveal><span class="flow__lbl">然后</span>
+    </li>
+    <li class="flow__p flow__p--3" data-reveal>
+      <span class="flow__lbl">然后</span>
       <p class="flow__card">
         <span class="frag frag--row" data-ui>
           <span class="frag__row"><span class="frag__name">知识</span><span class="frag__lv">已入账</span></span>
@@ -239,8 +227,9 @@
         </span>
       </p>
       <p class="flow__clause">点头，落账。</p>
-    </div>
-    <div class="flow__p flow__p--4" data-reveal><span class="flow__lbl">最后</span>
+    </li>
+    <li class="flow__p flow__p--4" data-reveal>
+      <span class="flow__lbl">最后</span>
       <p class="flow__card">
         <span class="frag frag--row" data-ui>
           <span class="frag__row"><span class="frag__name">知识</span><span class="frag__lv">Lv.2 略有所知</span></span>
@@ -248,19 +237,16 @@
         </span>
       </p>
       <p class="flow__clause">然后它自己就长起来了。</p>
-    </div>
-  </div>
+    </li>
+  </ol>
 </section>
 
 <!-- ── 五 · 一句话进去，一张卡出来 ───────────────────────────────────── -->
 <section class="band band--say" data-field="1" aria-labelledby="say-h">
-  <div class="p5t p5t--pad">
-    <svg class="p5t__band" viewBox="0 0 620 140" aria-hidden="true">
-      <polygon points="8,30 606,2 616,102 0,130"/>
-      <text x="24" y="96" textLength="566" lengthAdjust="spacingAndGlyphs">ASSISTANT</text>
-    </svg>
-    <h2 class="p5t__cn" id="say-h" data-reveal>一句话进去，一张卡出来</h2>
-  </div>
+  <header class="head">
+    <h2 class="head__word" id="say-h" data-reveal>一句话进去，一张卡出来</h2>
+    <p class="head__kick"><span class="head__no"></span><span class="head__en">ASSISTANT</span></p>
+  </header>
   <div class="say2">
     <div class="say2__in" data-reveal>
       <p class="say2__q">「我今天午饭吃了10块钱」</p>
@@ -284,16 +270,13 @@
 </section>
 
 <!-- ── 六 · 功能 ─────────────────────────────────────────────────────── -->
-<section class="band band--list" id="list" data-field="1" aria-labelledby="list-h">
+<section class="band band--list" id="list" data-field="3" aria-labelledby="list-h">
   <div class="list">
-    <div class="list__head">
-      <svg class="p5t__band p5t__band--big" viewBox="0 0 620 140" aria-hidden="true">
-        <polygon points="8,30 606,2 616,102 0,130"/>
-        <text x="24" y="96" textLength="566" lengthAdjust="spacingAndGlyphs">FEATURES</text>
-      </svg>
-      <h2 class="list__word" id="list-h" data-reveal>功能</h2>
-    </div>
-    <div class="list__rows">
+    <header class="head head--giant">
+      <h2 class="list__word head__word" id="list-h" data-reveal>功能</h2>
+      <p class="head__kick"><span class="head__no"></span><span class="head__en">FEATURES</span></p>
+    </header>
+    <ol class="list__rows">
       <details class="row" open data-reveal>
         <summary class="row__sum"><span class="row__name">记一笔</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
@@ -353,34 +336,34 @@
           <p>人格可以换，也可以自己捏一个。聊天原文只存在你的设备上，永不上传。</p>
         </div></div>
       </details>
-    </div>
+    </ol>
   </div>
 </section>
 
 <!-- ── 七 · 四套设计语言（选一张，整页换装）───────────────────────────
      学的是官方站的「角色选择」：上面一排斜切标签，下面一整块换人换景的舞台。 -->
-<section class="band band--skins" id="skins" data-field="3" aria-labelledby="skins-h">
+<section class="band band--skins" id="skins" data-field="1" aria-labelledby="skins-h">
   <div class="ghost" aria-hidden="true">
     <svg viewBox="0 0 1200 320" preserveAspectRatio="xMidYMid slice">
       <text x="0" y="250" textLength="1200" lengthAdjust="spacingAndGlyphs">PERSONA TERMINAL</text>
     </svg>
   </div>
-  <div class="p5t p5t--pad">
-    <svg class="p5t__band" viewBox="0 0 620 140" aria-hidden="true">
-      <polygon points="8,30 606,2 616,102 0,130"/>
-      <text x="24" y="96" textLength="566" lengthAdjust="spacingAndGlyphs">THEMES</text>
-    </svg>
-    <h2 class="p5t__cn" id="skins-h" data-reveal>换主题不是换色号</h2>
-  </div>
+  <header class="head">
+    <h2 class="head__word" id="skins-h" data-reveal>换主题不是换色号</h2>
+    <p class="head__kick"><span class="head__no"></span><span class="head__en">THEMES</span></p>
+  </header>
   <p class="lead" data-reveal>换的不是色号，是一整套语言。在红色的世界里，完成叫「夺回」，删除叫「撕掉」。挑一套，整页跟你走。</p>
 
   <div class="sel">
+    <div class="sel__index">
+    <p class="sel__hint" aria-hidden="true">挑一套 · 整页换装</p>
     <div class="sel__tabs" role="group" aria-label="切换设计语言">
       <button class="stab" type="button" data-skin-set="red" aria-pressed="true">剪报怪盗<em>CLIPPING</em></button>
       <button class="stab" type="button" data-skin-set="water-blue" aria-pressed="false">白日水面<em>WATER · BLUE</em></button>
       <button class="stab" type="button" data-skin-set="water-pink" aria-pressed="false">白日水面 · 玫瑰<em>WATER · ROSE</em></button>
       <button class="stab" type="button" data-skin-set="yellow" aria-pressed="false">今日节目单<em>PROGRAM</em></button>
       <button class="stab" type="button" data-skin-set="custom" aria-pressed="false">中性皮<em>NEUTRAL</em></button>
+    </div>
     </div>
 
     <div class="sel__stage">
@@ -455,36 +438,32 @@
 </section>
 
 <!-- ── 八 · 两条硬规矩 ───────────────────────────────────────────────── -->
-<section class="band band--rules" id="rules" data-field="1" aria-labelledby="rules-h">
+<section class="band band--rules" id="rules" data-field="3" aria-labelledby="rules-h">
+  <header class="head">
+    <h2 class="head__word" id="rules-h" data-reveal>两条硬规矩</h2>
+    <p class="head__kick"><span class="head__no"></span><span class="head__en">RULES</span></p>
+  </header>
   <div class="rules">
-    <div>
-      <div class="p5t">
-        <svg class="p5t__band" viewBox="0 0 620 140" aria-hidden="true">
-          <polygon points="8,30 606,2 616,102 0,130"/>
-          <text x="24" y="96" textLength="566" lengthAdjust="spacingAndGlyphs">RULES</text>
-        </svg>
-        <h2 class="p5t__cn" id="rules-h" data-reveal>两条硬规矩</h2>
-      </div>
+    <div class="rules__a">
+      <p class="rules__mark" aria-hidden="true">&times;</p>
       <p class="say say--s" data-reveal>记账流水、聊天原文、配图与音乐，<em class="hl">永不上传</em>。</p>
+      <p class="body rules__sub" data-reveal>服务端只提供可选的转发通道，默认不持有任何服务商的密钥。云同步是你自己按类目开的开关，默认全关。这两条不是选项，是它做出来的时候就这么写的。</p>
     </div>
-    <div class="rules__side">
+    <div class="rules__b">
+      <p class="rules__mark" aria-hidden="true">&times;</p>
       <p class="say say--s" data-reveal>AI 是你自带的。Key 存本机，不上云、不进日志。</p>
-      <p class="body" data-reveal>服务端只提供可选的转发通道，默认不持有任何服务商的密钥。云同步是你自己按类目开的开关，默认全关。这两条不是选项，是它做出来的时候就这么写的。</p>
       <p class="stamp" data-reveal>自用项目 · 非商业</p>
-      <div class="stripes" aria-hidden="true"></div>
     </div>
+    <div class="stripes rules__tape" aria-hidden="true"></div>
   </div>
 </section>
 
 <!-- ── 九 · 它不是一个人写的 ─────────────────────────────────────────── -->
-<section class="band band--thanks" data-field="3" aria-labelledby="thanks-h">
-  <div class="p5t">
-    <svg class="p5t__band" viewBox="0 0 620 140" aria-hidden="true">
-      <polygon points="8,30 606,2 616,102 0,130"/>
-      <text x="24" y="96" textLength="566" lengthAdjust="spacingAndGlyphs">CREDITS</text>
-    </svg>
-    <h2 class="p5t__cn" id="thanks-h" data-reveal>它不是一个人写的</h2>
-  </div>
+<section class="band band--thanks" data-field="1" aria-labelledby="thanks-h">
+  <header class="head">
+    <h2 class="head__word" id="thanks-h" data-reveal>它不是一个人写的</h2>
+    <p class="head__kick"><span class="head__no"></span><span class="head__en">CREDITS</span></p>
+  </header>
   <ul class="names" data-reveal>
     <li>the-velvet</li><li>YuukiMarine</li><li>React</li><li>TypeScript</li><li>Vite</li><li>Tailwind CSS</li><li>Zustand</li><li>Dexie</li><li>GSAP</li><li>motion</li><li>Recharts</li><li>DOMPurify</li><li>Spring Boot</li><li>MyBatis-Plus</li><li>MySQL</li><li>Flyway</li><li>Capacitor</li><li>Noto Sans SC</li><li>寒蝉全圆体</li>
   </ul>
@@ -492,7 +471,11 @@
 </section>
 
 <!-- ── 十 · 完成到哪一步 ─────────────────────────────────────────────── -->
-<section class="band band--stats" data-field="1" aria-labelledby="stats-h">
+<section class="band band--stats" data-field="3" aria-labelledby="stats-h">
+  <header class="head">
+    <h2 class="head__word" id="stats-h" data-reveal>完成到哪一步</h2>
+    <p class="head__kick"><span class="head__no"></span><span class="head__en">PROGRESS</span></p>
+  </header>
   <div class="stats">
     <div class="stat stat--tall" data-reveal>
       <p class="stat__fig">202</p>
@@ -506,29 +489,17 @@
       <p class="stat__fig">0</p>
       <p class="stat__cap">条上传的记账流水，按设计一条都不会有</p>
     </div>
-    <div class="stats__head">
-      <div class="p5t">
-        <svg class="p5t__band" viewBox="0 0 620 140" aria-hidden="true">
-          <polygon points="8,30 606,2 616,102 0,130"/>
-          <text x="24" y="96" textLength="566" lengthAdjust="spacingAndGlyphs">PROGRESS</text>
-        </svg>
-        <h2 class="p5t__cn" id="stats-h" data-reveal>完成到哪一步</h2>
-      </div>
-    </div>
   </div>
 </section>
 
 <!-- ── 十一 · 拿一份 ─────────────────────────────────────────────────── -->
-<section class="band band--get" id="get" data-field="3" aria-labelledby="get-h">
+<section class="band band--get" id="get" data-field="1" aria-labelledby="get-h">
+  <header class="head">
+    <h2 class="head__word" id="get-h" data-reveal>把今天记下来</h2>
+    <p class="head__kick"><span class="head__no"></span><span class="head__en">START</span></p>
+  </header>
   <div class="get">
     <div class="get__l">
-      <div class="p5t">
-        <svg class="p5t__band" viewBox="0 0 620 140" aria-hidden="true">
-          <polygon points="8,30 606,2 616,102 0,130"/>
-          <text x="24" y="96" textLength="566" lengthAdjust="spacingAndGlyphs">START</text>
-        </svg>
-        <h2 class="p5t__cn" id="get-h" data-reveal>把今天记下来</h2>
-      </div>
       <p class="body" data-reveal>源码就在那儿，自己捏一个。前端 32 个测试文件、202 项测试全绿，后端跑在 MySQL 上；Android 包你自己构建一次，命令都在仓库里。</p>
       <p class="note" data-reveal>安装包 26 MB，不在仓库里，跟着源码一起构建：<span class="cmd">npm run cap:build:android</span></p>
     </div>

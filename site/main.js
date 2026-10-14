@@ -130,8 +130,9 @@
 
   /* ── 5 · 章节标题拆成「赎金信」字母块 ─────────────────────────────────
      官方站的分区标题就是一块块字母拼的；这里把每个字包成一块，三色交替。
+     只拆标了 .head--tiles 的那几节——其余章节是干净的大字，不拆更好读。
      没脚本时就是一行普通标题（CSS 里 :not(:has(span)) 接住）。 */
-  for (const h of document.querySelectorAll('.p5t__cn')) {
+  for (const h of document.querySelectorAll('.head--tiles .head__word')) {
     const text = (h.textContent || '').trim();
     if (!text) continue;
     h.textContent = '';

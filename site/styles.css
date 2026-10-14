@@ -935,7 +935,10 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   .say2{grid-template-columns:1fr}
   .intro__rest{grid-template-columns:1.4fr 1fr; gap:36px}
   .flow{grid-template-columns:1fr 1fr}
-  .flow__p{min-height:52svh}
+  /* 窄窗口里「词条 / 卡片 / 说明」还横排的话，中间那张卡会被挤成一条竖线
+     （实测只剩 50px 宽，字全竖起来），所以这里让每块横幅自己改成上下堆叠。 */
+  .flow__p{min-height:52svh; grid-template-columns:1fr; align-content:start; gap:16px}
+  .flow__lbl{justify-self:start}
   .mosaic{grid-auto-rows:auto}
   .tile,.tile--a,.tile--b,.tile--c,.tile--d,.tile--e,.tile--f,.tile--g{
     grid-column:span 6; grid-row:auto; min-height:240px}

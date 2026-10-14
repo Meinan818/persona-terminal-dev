@@ -1,197 +1,23 @@
-/* MASKARIA 官网 demo · 样式
+/* MASKARIA 官网 · 构成与动效
  *
- * 视觉语言照官方站的那一套来：红底 + 半调网点、黑带、锯齿撕边、白描边的
- * 斜切板块、赎金信式字母块标题、漫画爆裂星、抠像贴纸（白描边 + 硬偏移）。
- * 内容与素材全部是 MASKARIA 自己的：五套主题的面具图、首页与助手截图、
- * 应用自己的 token 与文案。
+ * 这一版把页面当成「一张会动的大海报」来排，不再是「一个个区块往下列」：
  *
- * 五套皮肤不是换色号，是换一整套设计语言：底、墨、字面、圆角、斜切、网点、
- * 描边、按钮的说法都跟着换。没有渐变、没有投影、没有细线：立体感靠「平色错位
- * 块」和「白描边」，分隔靠色块、撕边和留白。
+ *   1. 固定舞台（.stage）——压在各章底色之上、正文之下的一层，整页不随滚动离开视口，
+ *      里面是半调网点带、右侧一块出血的墨斜块、一颗慢慢转的四角星。四层的滚动速度
+ *      各不相同，所以「底」和「面」之间始终有相对运动。
+ *   2. 板块系统（.slab / .pbtn / .photo / .word）——一切「斜着贴上去的东西」都从这三样
+ *      派生：手撕边的纸板块、能滑动的按钮、白框相纸、赎金信字母块。
+ *   3. 每一章有各自的编排——擦除、拍上、钉住推进、交叉换人，不是同一条淡入。
+ *
+ * 素材与文案全部是 MASKARIA 自己的；主题 token 在 theme.css，五套皮肤照旧。
+ * 没有 JS / 关了动效时，这一份就是完成态：所有东西都在该在的位置上，只是不动。
  */
-
-@font-face{font-family:'Velvet Sans SC';src:url('fonts/velvet-sans-sc.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
-@font-face{font-family:'Velvet Round SC';src:url('fonts/velvet-round-sc.v4.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
-@font-face{font-family:'Velvet Serif SC';src:url('fonts/velvet-serif-sc.v2.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
-@font-face{font-family:'Caveat';src:url('fonts/caveat-latin-600-normal.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
-
-:root{
-  --ease-out:cubic-bezier(.22,1,.36,1);
-  --ease-soft:cubic-bezier(.33,1,.68,1);
-  --ease-in-out:cubic-bezier(.76,0,.24,1);
-  --t-press:140ms; --t-hover:180ms; --t-ui:240ms; --t-reveal:700ms;
-  --gut:24px; --gap:8px; --key-w:4px;
-  --s-display:clamp(40px,12.5vw,190px);
-  --s-giant:clamp(120px,44cqw,286px);
-  --s-say:78px; --s-h2:44px; --s-h3:26px; --s-lead:22px;
-  --s-body:19px; --s-small:16px; --s-cap:14px;
-  /* 重构后补的几档：巨数字、章节大词、编号导语。大小反差主要靠这两头撑起来。 */
-  --s-num:clamp(96px,13vw,224px);
-  --s-word:clamp(46px,7.2vw,126px);
-  --s-kick:14px;
-  --sect:clamp(96px,10.5vh,164px);
-  /* 斜切条 / 印章 / 爆裂星（二级形状）统一用这一条角度，免得各斜各的 */
-  --tilt:-1.8deg;
-  /* 撕边：一条锯齿形的遮罩，颜色由 --tear-c 给，形状是白的 */
-  --tear:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='34' viewBox='0 0 220 34'%3E%3Cpath d='M0 0h220v9l-16 15 8-9-24 17-14-13-20 17-16-15-22 18-18-16-20 16-16-14-20 15-16-13-22 14V0z' fill='%23fff'/%3E%3C/svg%3E");
-  /* 四角星 / 爆裂星：漫画记号 */
-  --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 0 59 41 100 50 59 59 50 100 41 59 0 50 41 41Z' fill='%23fff'/%3E%3C/svg%3E");
-  /* 手撕纸的边：上下两条是撕开的口子（细碎、疏密不均、幅度小），左右两侧基本平直，
-     因为纸是从本子上撕下来的，不是从四边崩开的。
-     八个变体轮着用，谁跟谁都不重样（顶点由 .taste-skill/make-torn.mjs 生成）。 */
-  --q1:polygon(0% 0%,4.87% 2.6%,10.32% 2.03%,16.16% 1.31%,19.83% 2.1%,24.92% 2.36%,29.65% 2.29%,33.92% 2.54%,40.56% 3.32%,44.81% 2.82%,50.62% 3.33%,54.52% 3.4%,60.13% 2.55%,64.63% 2.48%,70.82% 2.48%,74.18% 2.48%,79.08% 2.24%,85.31% 2.38%,90.3% 1.5%,94.1% 2.15%,100% 0%,99.45% 19.69%,99.21% 39.71%,99.43% 61.05%,99.41% 80.85%,100% 100%,95.31% 96.91%,89.79% 96.7%,86.01% 97.67%,80.21% 96.44%,74.84% 96.79%,69.54% 96.8%,65.03% 97.16%,58.82% 96.61%,55.91% 97.67%,49.52% 97.59%,44.78% 96.68%,39.1% 97.22%,33.99% 98.47%,30.59% 98.29%,25.11% 97.79%,20.03% 98.32%,14.05% 97.6%,10.14% 97.49%,5.29% 97.32%,0% 100%,0.63% 80.92%,0.7% 61.11%,0.39% 40.24%,0.85% 20.25%);
-  --q2:polygon(0% 0%,4.68% 3.08%,10.33% 2.3%,14.28% 2.43%,19.15% 2.24%,24.45% 2.86%,29.01% 2.96%,35.7% 2.77%,40.79% 2.94%,44.65% 2.81%,49.75% 2.57%,54.16% 2.28%,59.23% 1.88%,64.41% 2.65%,68.99% 2.17%,75.54% 2.62%,80.13% 2.74%,84.88% 2.24%,89.7% 1.85%,95.26% 2.37%,100% 0%,99.56% 19.42%,99.39% 39.61%,99.47% 59.5%,99.39% 80.02%,100% 100%,95.13% 97.66%,90.74% 98.39%,83.97% 97.96%,80.04% 97.49%,74.08% 96.91%,69.86% 97.11%,64.37% 97.37%,59.52% 97%,54.23% 96.95%,49.46% 98.21%,45.66% 97.31%,41.01% 98.35%,35.42% 97.91%,29.8% 97.92%,23.84% 98.5%,19.94% 98.21%,15.33% 97.99%,9.27% 97.53%,5.62% 97.6%,0% 100%,0.33% 79.41%,0.56% 59.77%,0.4% 39.73%,0.69% 20.13%);
-  --q3:polygon(0% 0%,3.98% 2.05%,11.14% 3.29%,14.59% 1.8%,19.78% 1.75%,23.93% 3.29%,29.8% 1.88%,36.09% 1.99%,40.77% 3.15%,45.97% 3.33%,51% 1.63%,55.32% 2.48%,59.25% 2.19%,63.98% 2.46%,70.69% 3.23%,75.61% 3.36%,79.61% 3.95%,85.51% 2.7%,90.81% 2.46%,96% 4.32%,100% 0%,99.59% 21.1%,99.58% 41.07%,99.3% 59.46%,99.18% 79.7%,100% 100%,94.58% 97.32%,90.2% 96.23%,83.87% 96.32%,79.74% 95.24%,76% 95.55%,69.88% 95.61%,65.51% 95.41%,59.12% 96.37%,54.18% 95.93%,50.18% 96.25%,44.2% 98.12%,40.62% 97.9%,35.85% 97.33%,29.26% 98.04%,24.54% 96.51%,20.54% 97.1%,14.6% 96.77%,9.52% 96.23%,5.02% 96.75%,0% 100%,0.87% 80.81%,0.93% 60.92%,0.54% 40.38%,0.67% 18.96%);
-  --q4:polygon(0% 0%,5.6% 1.65%,10.97% 2.14%,14.2% 2.97%,20.75% 2.91%,25.58% 2.97%,29.68% 3.2%,34.54% 3.55%,40.56% 3.13%,46.05% 3.08%,49.84% 2.3%,53.81% 2.63%,60.04% 1.96%,66.12% 2.57%,70.93% 1.99%,74.13% 2.11%,80.63% 2.87%,85.64% 3.25%,90.12% 2.97%,94.87% 3.74%,100% 0%,99.22% 19.3%,98.92% 40.66%,99.25% 59.34%,99% 79.68%,100% 100%,94.4% 98.68%,90.22% 97.8%,85.78% 97.42%,79.48% 98.25%,74.67% 98.36%,69.56% 97.64%,65.9% 97.46%,59.63% 97.27%,55.55% 97.41%,50.89% 96.73%,44.1% 97.74%,39.26% 97.58%,35.67% 96.43%,29.18% 96.6%,25.81% 97.36%,19.32% 96.59%,14.37% 96.36%,10.71% 96.1%,3.85% 97.42%,0% 100%,0.86% 79.9%,0.71% 59.5%,0.88% 39.93%,1.1% 20.38%);
-  --q5:polygon(0% 0%,4.96% 2%,9.87% 1.25%,14.8% 1.09%,19.54% 1.37%,24.37% 1.57%,30.18% 1.72%,35.5% 1.8%,40.25% 1.89%,44.09% 2.28%,49.95% 2.03%,55% 2.69%,59.55% 2.57%,65.94% 2.4%,69.17% 2.07%,74.83% 2.62%,79.44% 1.63%,83.83% 1.43%,89.13% 2.03%,94.69% 1.44%,100% 0%,99.12% 19.29%,99.05% 40.13%,99.16% 59.39%,99.35% 79.55%,100% 100%,96.2% 98.07%,90.85% 97.97%,84.16% 97.87%,78.88% 97.79%,75.45% 97.5%,68.96% 98.47%,63.99% 97.82%,60.04% 97.99%,54% 98.34%,49.87% 98.28%,45.97% 97.9%,38.94% 98.66%,34.33% 97.4%,29.11% 97.56%,24.7% 98.13%,20.87% 98.19%,15.77% 97.19%,11.18% 98.49%,5.04% 98.12%,0% 100%,1.02% 79.94%,0.77% 60.59%,1.33% 39.81%,0.71% 19.51%);
-  --q6:polygon(0% 0%,5.95% 1.94%,10.49% 2.38%,15.75% 2.31%,20.42% 2.88%,24.54% 2.46%,29.34% 2.62%,36.04% 3.64%,39.11% 3.52%,45.49% 3.82%,50.29% 2.21%,54.69% 3.55%,61.12% 2.64%,65.47% 2.82%,69.05% 2.35%,74.46% 2.35%,80.48% 2.41%,85.02% 1.81%,90.66% 1.72%,95.14% 2.47%,100% 0%,99.44% 19.58%,99.37% 40.79%,99.66% 60.62%,99.35% 80.02%,100% 100%,96.12% 96.55%,89.15% 97.49%,85.88% 96.11%,79.8% 96.74%,73.96% 97.43%,70.62% 97.67%,63.94% 97.82%,60.3% 98.26%,55.85% 97.85%,49.49% 98.53%,44.28% 97.26%,39.86% 97.37%,34.97% 97.23%,28.9% 97.95%,24.59% 98.36%,20.03% 97.68%,14.2% 98.07%,9.97% 96.51%,6% 96.25%,0% 100%,0.84% 79.82%,0.5% 59.62%,0.64% 39.23%,0.44% 20.9%);
-  --q7:polygon(0% 0%,5.72% 2.65%,9.03% 1.93%,16.03% 2.42%,20.56% 2.72%,23.99% 2.75%,29.96% 2.63%,33.88% 2.74%,39.98% 2.29%,45.71% 2.68%,49.41% 2.06%,54.03% 2.69%,59.55% 2.38%,64.37% 2.77%,69.57% 3.96%,75.16% 2.89%,79.43% 3.12%,83.89% 3.99%,89.36% 4.22%,94.21% 3.85%,100% 0%,99.48% 19.77%,99.44% 40.68%,99.15% 60.88%,98.96% 81.04%,100% 100%,93.83% 97.15%,88.84% 96%,85.9% 96.73%,79.62% 96.61%,74.56% 97.67%,70.91% 97.13%,65.9% 98.09%,60.69% 98.54%,54.59% 98.46%,49.75% 96.59%,44.32% 96.88%,39.22% 97.46%,34.29% 95.85%,31% 96.51%,26.17% 96.52%,18.92% 96.32%,15.87% 97.39%,10.42% 97.17%,5.74% 97.4%,0% 100%,0.61% 79.22%,0.64% 60.35%,0.83% 40.77%,0.72% 19.18%);
-  --q8:polygon(0% 0%,5.27% 2.14%,9.18% 3.03%,14.43% 1.98%,19.98% 2.44%,25.57% 2.09%,31.14% 2.97%,34.4% 2.01%,40.41% 2.72%,44.4% 2.85%,50.24% 2.29%,55.49% 2.56%,60.79% 2.53%,64.93% 1.68%,69.58% 2.14%,75.9% 1.74%,80.55% 2.16%,83.9% 1.29%,90.5% 1.57%,94.02% 1.73%,100% 0%,99.17% 19.63%,99.46% 40.43%,98.93% 60.37%,99.16% 78.93%,100% 100%,94.51% 98.37%,89.9% 98%,85.33% 98.92%,78.89% 98.08%,76.18% 98.08%,70.61% 98.82%,63.85% 98.21%,60.84% 97.46%,55.14% 97.56%,51.06% 98.44%,44.12% 97.07%,39.62% 97.5%,34.85% 97.26%,28.88% 97.11%,25.87% 96.96%,20.49% 97.55%,14.9% 97.98%,9.15% 98.03%,5.7% 97.14%,0% 100%,1.22% 80.78%,1.29% 59.2%,0.99% 38.94%,1.08% 18.81%);
-  /* 纸片浮起来的那点影子：跟上面的撕边一起用，纸才不像直接印在底上 */
-  --paper-sh:drop-shadow(0 5px 8px rgba(0, 0, 0, .42));
-}
-
-/* ── 五套皮肤 ───────────────────────────────────────────────────────
-   --ground = 整页的底（红）;--f1/f2/f3 = 三类章节底：红 / 纸 / 黑。
-   每一对「字色 / 底色」都过过 WCAG 对比度自检（.taste-skill/contrast.mjs）。
-   --key = 白描边那一圈的颜色，--sN/--sNi 是这一章上板块用哪个色。 */
-
-/* 红 · 剪报怪盗：红底黑带 / 猩红 #c00008 / 米白纸 / 橙点缀，白描边、锯齿、半调 */
-html[data-skin="red"]{
-  --ground:#c00008;
-  --f1:#c00008; --f1-fg:#f0e9df; --f1-sfg:#f4cfc9;
-  --f2:#f0e9df; --f2-fg:#050505; --f2-sfg:#4a453e;
-  --f3:#0d0d0d; --f3-fg:#f0e9df; --f3-sfg:#b9b3a9;
-  --s1:#0d0d0d; --s1i:#f0e9df; --s2:#0d0d0d; --s2i:#f0e9df; --s3:#f0e9df; --s3i:#050505;
-  --key:#ffffff;
-  --accent:#c00008; --on-accent:#f0e9df;
-  --accent-2:#e06808;
-  --card:#f0e9df; --card-ink:#050505; --card-sfg:#4a453e;
-  --card-chip:#c00008; --card-chip-ink:#ffffff; --card-hot:#c00008;
-  --step:#e2d9cb; --tile1:#0d0d0d; --tile1-i:#f0e9df; --tile2:#f0e9df; --tile2-i:#050505;
-  --btn:#0d0d0d; --btn-fg:#f0e9df; --btn-hover:#000000;
-  --r:4px;
-  --jag:polygon(2% 14%,98% 0,100% 84%,1% 100%);
-  --jag2:polygon(0 10%,100% 0,97% 88%,3% 100%);
-  --face-text:'Velvet Round SC','Velvet Sans SC',sans-serif;
-  --face-display:'Velvet Sans SC','Velvet Round SC',sans-serif;
-  --display-style:italic; --display-skew:-6deg; --ui-skew:-8deg;
-  --tilebg1:#0d0d0d; --tilefg1:#f0e9df; --tilebg2:#ffffff; --tilefg2:#c00008; --tilebg3:#c00008; --tilefg3:#ffffff;
-  --hot:#e8150c; --hot-ink:#ffffff; --dark:#0d0d0d; --dark-ink:#f0e9df;
-  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%230d0d0d' fill-opacity='0.28'/%3E%3Ccircle cx='12' cy='12' r='1.5' fill='%230d0d0d' fill-opacity='0.2'/%3E%3C/svg%3E");
-  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%230d0d0d' stroke-width='9'/%3E%3C/svg%3E");
-  --ghost:none;
-}
-
-/* 蓝 · 白日水面：近白底 / 靛蓝 CTA / 青信号 / 幽灵大字，斜切平行四边形 */
-html[data-skin="water-blue"]{
-  --ground:#1b57ff;
-  --f1:#1b57ff; --f1-fg:#ffffff; --f1-sfg:#dbe6ff;
-  --f2:#ffffff; --f2-fg:#0a1230; --f2-sfg:#55617e;
-  --f3:#eaf4ff; --f3-fg:#0a1230; --f3-sfg:#55617e;
-  --s1:#ffffff; --s1i:#0a1230; --s2:#0a1230; --s2i:#ffffff; --s3:#0a1230; --s3i:#ffffff;
-  --key:#ffffff;
-  --accent:#1b57ff; --on-accent:#ffffff; --accent-2:#d81f63;
-  --card:#ffffff; --card-ink:#0a1230; --card-sfg:#55617e;
-  --card-chip:#1b57ff; --card-chip-ink:#ffffff; --card-hot:#1b57ff;
-  --step:#eef3fb; --tile1:#0a1230; --tile1-i:#ffffff; --tile2:#ffffff; --tile2-i:#0a1230;
-  --btn:#0a1230; --btn-fg:#ffffff; --btn-hover:#050a1c;
-  --r:6px;
-  --jag:polygon(0 0,96% 2%,100% 100%,4% 96%);
-  --jag2:polygon(2% 0,100% 4%,98% 100%,0 92%);
-  --face-text:'Velvet Sans SC',sans-serif;
-  --face-display:'Velvet Sans SC',sans-serif;
-  --display-style:italic; --display-skew:-3deg; --ui-skew:-8deg;
-  --tilebg1:#0a1230; --tilefg1:#ffffff; --tilebg2:#ffffff; --tilefg2:#1b57ff; --tilebg3:#1b57ff; --tilefg3:#ffffff;
-  --hot:#2f6dff; --hot-ink:#ffffff; --dark:#0a1230; --dark-ink:#ffffff;
-  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%230a1230' fill-opacity='0.22'/%3E%3C/svg%3E");
-  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%230a1230' stroke-width='9'/%3E%3C/svg%3E");
-  --ghost:block;
-}
-
-/* 粉 · 白日水面的玫瑰皮：结构一个字不动，色相整体旋过来 */
-html[data-skin="water-pink"]{
-  --ground:#cf0a6e;
-  --f1:#cf0a6e; --f1-fg:#ffffff; --f1-sfg:#ffe3f1;
-  --f2:#ffffff; --f2-fg:#2b0a1c; --f2-sfg:#6d4a5c;
-  --f3:#fbe6f0; --f3-fg:#2b0a1c; --f3-sfg:#6d4a5c;
-  --s1:#ffffff; --s1i:#2b0a1c; --s2:#2b0a1c; --s2i:#ffffff; --s3:#2b0a1c; --s3i:#ffffff;
-  --key:#ffffff;
-  --accent:#cf0a6e; --on-accent:#ffffff; --accent-2:#8b32d9;
-  --card:#ffffff; --card-ink:#2b0a1c; --card-sfg:#6d4a5c;
-  --card-chip:#cf0a6e; --card-chip-ink:#ffffff; --card-hot:#cf0a6e;
-  --step:#f9e7f1; --tile1:#2b0a1c; --tile1-i:#ffffff; --tile2:#ffffff; --tile2-i:#2b0a1c;
-  --btn:#2b0a1c; --btn-fg:#ffffff; --btn-hover:#1a0611;
-  --r:6px;
-  --jag:polygon(0 0,96% 2%,100% 100%,4% 96%);
-  --jag2:polygon(2% 0,100% 4%,98% 100%,0 92%);
-  --face-text:'Velvet Sans SC',sans-serif;
-  --face-display:'Velvet Sans SC',sans-serif;
-  --display-style:italic; --display-skew:-3deg; --ui-skew:-8deg;
-  --tilebg1:#2b0a1c; --tilefg1:#ffffff; --tilebg2:#ffffff; --tilefg2:#cf0a6e; --tilebg3:#cf0a6e; --tilefg3:#ffffff;
-  --hot:#e0207e; --hot-ink:#ffffff; --dark:#2b0a1c; --dark-ink:#ffffff;
-  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%232b0a1c' fill-opacity='0.22'/%3E%3C/svg%3E");
-  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%232b0a1c' stroke-width='9'/%3E%3C/svg%3E");
-  --ghost:block;
-}
-
-/* 黄 · 今日节目单：高饱和黄舞台 / 黑信息面板 / 衬线大标题，圆角斜切胶囊 */
-html[data-skin="yellow"]{
-  --ground:#ffd900;
-  --f1:#ffd900; --f1-fg:#131313; --f1-sfg:#5b5330;
-  --f2:#fff6d0; --f2-fg:#131313; --f2-sfg:#6a6250;
-  --f3:#131313; --f3-fg:#ffd900; --f3-sfg:#c9a400;
-  --s1:#ffd900; --s1i:#131313; --s2:#131313; --s2i:#ffd900; --s3:#ffd900; --s3i:#131313;
-  --key:#131313;
-  --accent:#2e6be0; --on-accent:#ffd900; --accent-2:#55c34f;
-  --card:#131313; --card-ink:#ffd900; --card-sfg:#c9a400;
-  --card-chip:#ffd900; --card-chip-ink:#131313; --card-hot:#55c34f;
-  --step:#f6ebbf; --tile1:#131313; --tile1-i:#ffd900; --tile2:#fff6d0; --tile2-i:#131313;
-  --btn:#131313; --btn-fg:#ffd900; --btn-hover:#000000;
-  --r:18px;
-  --jag:polygon(1% 6%,100% 0,99% 94%,0 100%);
-  --jag2:polygon(0 0,99% 6%,100% 100%,1% 94%);
-  --face-text:'Velvet Sans SC',sans-serif;
-  --face-display:'Velvet Serif SC',serif;
-  --display-style:normal; --display-skew:0deg; --ui-skew:-10deg;
-  --tilebg1:#131313; --tilefg1:#ffd900; --tilebg2:#ffd900; --tilefg2:#131313; --tilebg3:#2e6be0; --tilefg3:#ffd900;
-  --hot:#131313; --hot-ink:#ffd900; --dark:#131313; --dark-ink:#ffd900;
-  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%23131313' fill-opacity='0.16'/%3E%3C/svg%3E");
-  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%23131313' stroke-width='9'/%3E%3C/svg%3E");
-  --ghost:none;
-}
-
-/* 中性皮 · 自定义：整族从你选的主色派生 */
-html[data-skin="custom"]{
-  --ground:#24639f;
-  --f1:#24639f; --f1-fg:#ffffff; --f1-sfg:#d3e2f3;
-  --f2:#ffffff; --f2-fg:#111827; --f2-sfg:#6b7280;
-  --f3:#111827; --f3-fg:#f3f4f6; --f3-sfg:#b6bccb;
-  --s1:#ffffff; --s1i:#111827; --s2:#111827; --s2i:#ffffff; --s3:#f3f4f6; --s3i:#111827;
-  --key:#ffffff;
-  --accent:#24639f; --on-accent:#ffffff; --accent-2:#3b82f6;
-  --card:#ffffff; --card-ink:#111827; --card-sfg:#6b7280;
-  --card-chip:#24639f; --card-chip-ink:#ffffff; --card-hot:#24639f;
-  --step:#eef1f5; --tile1:#111827; --tile1-i:#f3f4f6; --tile2:#ffffff; --tile2-i:#111827;
-  --btn:#111827; --btn-fg:#f3f4f6; --btn-hover:#050810;
-  --r:12px;
-  --jag:polygon(1% 5%,100% 0,99% 95%,0 100%);
-  --jag2:polygon(0 0,99% 5%,100% 100%,1% 95%);
-  --face-text:'Velvet Sans SC',sans-serif;
-  --face-display:'Velvet Sans SC',sans-serif;
-  --display-style:italic; --display-skew:-4deg; --ui-skew:-6deg;
-  --tilebg1:#111827; --tilefg1:#f3f4f6; --tilebg2:#ffffff; --tilefg2:#111827; --tilebg3:#24639f; --tilefg3:#ffffff;
-  --hot:#111827; --hot-ink:#f3f4f6; --dark:#111827; --dark-ink:#f3f4f6;
-  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%23111827' fill-opacity='0.22'/%3E%3C/svg%3E");
-  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%23111827' stroke-width='9'/%3E%3C/svg%3E");
-  --ghost:none;
-}
 
 /* ── 基础 ───────────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
-  margin:0; background:var(--ground); color:var(--ink);
+  margin:0; background:var(--ground); color:var(--f1-fg);
   font-family:var(--face-text); font-weight:500;
   font-size:var(--s-body); line-height:1.55;
   overflow-x:clip;
@@ -201,37 +27,29 @@ h1,h2,h3,p,ul,ol,figure{margin:0}
 ul,ol{padding:0; list-style:none}
 button{font:inherit; color:inherit; border:0; background:none; cursor:pointer}
 a{color:inherit}
+summary{cursor:pointer}
 .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 .skip{position:absolute; left:-9999px; top:0; z-index:99; padding:12px 18px; background:var(--f2); color:var(--f2-fg)}
 .skip:focus{left:12px; top:12px}
 :focus-visible{outline:3px solid var(--key); outline-offset:3px}
-::selection{background:#0d0d0d; color:#f0e9df}
+::selection{background:var(--dark); color:var(--f2)}
 
-/* 每个章节自己是一块满幅色场。红的三块铺半调网点（官方站的红底也是网点）；
-   每一块的上边压一条上家的「撕边」，所以章节之间是咬合的，不是平接的。 */
-.band,.hero,.foot{position:relative; overflow:clip}
-/* 重构：章节底不再满铺网点。网点（.dots）只出现在指定的一块面里，
-   这样红／黑／白的大色块之间才有真正的对比，而不是一张均匀的包装纸。 */
-[data-field="1"]{
-  background:var(--f1);
-  color:var(--f1-fg); --sfg:var(--f1-sfg); --slab:var(--s1); --slab-ink:var(--s1i);
-}
-[data-field="2"]{
-  background:var(--f2);
-  color:var(--f2-fg); --sfg:var(--f2-sfg); --slab:var(--s2); --slab-ink:var(--s2i);
-}
-[data-field="3"]{
-  background:var(--f3); color:var(--f3-fg); --sfg:var(--f3-sfg); --slab:var(--s3); --slab-ink:var(--s3i);
-}
-/* 章节编号：main 里的每个 .band 自动拿一个，HTML 里不用写 */
+/* 每个章节自己是一块满幅色场，上边压一条上家的撕边，章节之间是咬合的。
+   关键：.band 用 position:relative 但不给 z-index——给了 z-index 就自成层叠上下文，
+   固定舞台（z-index:1）就再也压不到它的底色上去了。所以这里靠「不给」来分层：
+   .band 的底色 < .stage < .band 的每个直接子元素（z-index:2）。 */
+[data-field="1"]{background:var(--f1); color:var(--f1-fg); --fg:var(--f1-fg); --bg:var(--f1);
+  --sfg:var(--f1-sfg); --slab:var(--s1); --slab-ink:var(--s1i)}
+[data-field="2"]{background:var(--f2); color:var(--f2-fg); --fg:var(--f2-fg); --bg:var(--f2);
+  --sfg:var(--f2-sfg); --slab:var(--s2); --slab-ink:var(--s2i)}
+[data-field="3"]{background:var(--f3); color:var(--f3-fg); --fg:var(--f3-fg); --bg:var(--f3);
+  --sfg:var(--f3-sfg); --slab:var(--s3); --slab-ink:var(--s3i)}
+
 main{counter-reset:sec}
-.band{counter-increment:sec}
-/* 平面：写在内联 SVG 里的出血大面（一级形状），也可以直接当元素用。
-   用 --dark / --f2 / --hot 三个 token，所以五套皮肤自动跟着走。 */
-.plane{stroke:none}
-.plane--ink{fill:var(--dark)}
-.plane--paper{fill:var(--f2)}
-.plane--hot{fill:var(--hot)}
+.band,.hero,.foot{position:relative; overflow:clip}
+.band{counter-increment:sec; padding:var(--sect) var(--gut)}
+.band>*,.hero>*,.foot>*{position:relative; z-index:2}
+/* 撕边：一条锯齿遮罩，颜色由 --tear-c 给。它落在底色之上、固定舞台之下，属于「底」的一部分。 */
 .band::before,.foot::before{
   content:''; position:absolute; left:0; right:0; top:-1px; height:34px; z-index:0;
   background:var(--tear-c,transparent);
@@ -240,19 +58,7 @@ main{counter-reset:sec}
   -webkit-mask-size:220px 34px; mask-size:220px 34px;
   pointer-events:none;
 }
-/* 撕边只压空处：章节里的东西一律在它上面。
-   注意这里不给 z-index——给了会自成层叠上下文，块后面的描边层就被自己的底色盖住。 */
-.band>*,.foot>*{position:relative}
-
-html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.stat,.kv,
-  .frag,.card,.btn,.navfrag,.stab,.bar,.frag__name,.frag__btn,.navfrag__d,.kv__btn){
-  transition:background-color 400ms var(--ease-out), color 400ms var(--ease-out);
-}
-
-.band{padding:120px var(--gut)}
-
-/* 每一块的上边压一条上家的撕边色：红→黑→红→黑这样咬合下去 */
-.band--intro{--tear-c:var(--f1)}
+.band--about{--tear-c:var(--f1)}
 .band--attrs{--tear-c:var(--f3)}
 .band--flow{--tear-c:var(--f1)}
 .band--say{--tear-c:var(--f3)}
@@ -262,708 +68,678 @@ html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.st
 .band--thanks{--tear-c:var(--f3)}
 .band--stats{--tear-c:var(--f1)}
 .band--get{--tear-c:var(--f3)}
+.foot{--tear-c:var(--f1)}
 
-/* ── 进场演出：黑幕 + 字母块拍上 + 爆裂星炸开 + 整块往上撕走 ──────────
-   纯 CSS 时间线，总共约 1.1s；结束时 visibility:hidden，不留层。 */
-.loader{display:none}
-.js .loader{
-  display:grid; place-items:center; position:fixed; inset:0; z-index:120;
-  background:var(--f3); color:var(--f3-fg);
-  animation:loaderOut 420ms var(--ease-in-out) 1900ms forwards;
+.plane{stroke:none}
+.plane--ink{fill:var(--dark)}
+.plane--paper{fill:var(--f2)}
+.plane--hot{fill:var(--hot)}
+
+/* ── 文字档位 ───────────────────────────────────────────────────────── */
+.kicker{
+  display:inline-flex; align-items:center; gap:12px; margin-bottom:clamp(14px,2vh,26px);
+  font-size:var(--s-kick); font-weight:900; letter-spacing:.22em;
 }
-.loader__dots{position:absolute; inset:0; opacity:.5; animation:dottravel 6s linear infinite}
-/* ── 开屏那辆货车：冲过屏幕 ─────────────────────────────────────── */
-.loader__road{position:absolute; inset:auto 0 16% 0; height:36vh; overflow:hidden}
-.loader__car{
-  position:absolute; bottom:0; left:0; width:min(19vw,168px); height:auto;
-  animation:drive 1700ms cubic-bezier(.32,.02,.36,1) 180ms forwards;
-}
-.loader__car .van__body{fill:#0d0d0d; stroke:var(--key); stroke-width:6}
-.loader__car .van__win{fill:var(--f2)}
-.loader__car .van__stripe{fill:var(--hot)}
-.loader__car .van__decal{fill:var(--hot); stroke:var(--key); stroke-width:4}
-.loader__car .van__lamp{fill:var(--key)}
-.loader__car .van__tyre{fill:#0d0d0d; stroke:var(--key); stroke-width:6}
-.loader__car .van__rim{fill:var(--key)}
-.loader__car .van__spoke path{stroke:var(--hot); stroke-width:5; stroke-linecap:square}
-.loader__car .van__tail{fill:var(--hot)}
-/* 轮子在路上滚 */
-.van__wheel{transform-box:fill-box; transform-origin:center; animation:wheel 240ms linear infinite}
-/* 车身在上头颠：分级的抖动，不是飘 */
-.van__shell{transform-box:fill-box; transform-origin:bottom center; animation:bump 170ms steps(2,end) infinite}
-@keyframes bump{
-  0%{transform:translateY(0) rotate(0deg)}
-  50%{transform:translateY(-3px) rotate(-.7deg)}
-  100%{transform:translateY(1px) rotate(.5deg)}
-}
-@keyframes drive{
-  from{transform:translateX(-125%) rotate(0deg)}
-  55%{transform:translateX(150%) rotate(-1.2deg)}
-  to{transform:translateX(330%) rotate(0deg)}
-}
-@keyframes wheel{to{transform:rotate(360deg)}}
-/* 速度线：车后面拉的那一道道 */
-.loader__speed{
-  position:absolute; inset:auto 0 46px 0; height:26px; opacity:.9;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='26'%3E%3Cpath d='M0 8h150M40 18h190M0 24h120' stroke='%23f0e9df' stroke-width='5' stroke-opacity='0.55'/%3E%3C/svg%3E");
-  background-repeat:repeat-x; background-size:240px 26px;
-  animation:speedwalk 420ms linear infinite;
-}
-@keyframes speedwalk{to{background-position:-240px 0}}
-.loader__puff{
-  position:absolute; left:0; bottom:8%; width:200px; height:90px; opacity:0;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='90'%3E%3Cg fill='%23f0e9df' fill-opacity='0.5'%3E%3Ccircle cx='30' cy='70' r='16'/%3E%3Ccircle cx='62' cy='58' r='10'/%3E%3Ccircle cx='92' cy='72' r='7'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat:no-repeat; background-size:contain;
-  animation:puff 1700ms ease-out 220ms forwards;
-}
-@keyframes puff{0%{opacity:0; transform:translateX(0)}30%{opacity:.9}100%{opacity:0; transform:translateX(46vw)}}
-.loader__mid{position:relative; display:grid; place-items:center; gap:18px}
-.loader__mark{display:flex; gap:4px}
-.loader__mark span{
-  display:block; padding:7px 14px; font-size:clamp(24px,3.6vw,46px); font-weight:900; line-height:1.1;
-  background:var(--f2); color:var(--f2-fg); clip-path:var(--jag);
-}
-.loader__mark span:nth-child(2n){background:var(--accent); color:var(--on-accent)}
-.loader__burst{position:absolute; inset:50% auto auto 50%; width:min(68vw,560px); z-index:-1;
-  color:var(--accent); transform:translate(-50%,-50%)}
-.loader__burst svg{width:100%; height:auto; display:block}
-.loader__note{
-  padding:.16em .5em .2em; background:var(--hot); color:var(--hot-ink);
-  font-size:var(--s-h3); font-weight:900; font-style:var(--display-style);
-  clip-path:var(--q5); transform:rotate(-2deg);
-}
-.loader__mid{position:relative}
-@keyframes loaderOut{
-  0%{clip-path:polygon(0 0,14% 0,28% 0,42% 0,56% 0,70% 0,84% 0,100% 0,100% 100%,0 100%)}
-  100%{clip-path:polygon(0 0,14% 0,28% 0,42% 0,56% 0,70% 0,84% 0,100% 0,100% 0,0 0); visibility:hidden}
-}
-@media (prefers-reduced-motion:no-preference){
-  .js .loader__mark span{
-    opacity:0; transform:translateY(120%) rotate(-14deg);
-    animation:slap 460ms var(--ease-out) forwards;
-    animation-delay:calc(var(--i,0) * 70ms + 120ms);
-  }
-  .loader__mark span:nth-child(1){--i:0} .loader__mark span:nth-child(2){--i:1}
-  .loader__mark span:nth-child(3){--i:2} .loader__mark span:nth-child(4){--i:3}
-  .loader__mark span:nth-child(5){--i:4} .loader__mark span:nth-child(6){--i:5}
-  .loader__mark span:nth-child(7){--i:6} .loader__mark span:nth-child(8){--i:7}
-  @keyframes slap{to{opacity:1; transform:translateY(0) rotate(0)}}
-  .js .loader__burst{animation:burstIn 620ms var(--ease-out) 620ms both}
-  @keyframes burstIn{from{opacity:0; transform:scale(.3) rotate(-40deg)}to{opacity:.9; transform:scale(1) rotate(0)}}
-  .js .loader__note{animation:rise 620ms var(--ease-out) 1000ms both}
-}
+.kicker::before{content:''; width:clamp(34px,4vw,70px); height:8px; background:var(--accent); flex:none}
 .lead{font-size:var(--s-lead); line-height:1.5; max-width:34em; margin-top:22px}
 .body{font-size:var(--s-body); line-height:1.62; max-width:38em; text-wrap:pretty}
 .body+.body{margin-top:18px}
 .body--quiet{color:var(--sfg)}
-.note{font-size:var(--s-cap); line-height:1.6; color:var(--sfg); max-width:44em}
-.cmd{font-weight:800}
-
-/* ── 器具一 · 章节头：编号 + 英文导语 + 一个大词 ────────────────────────
-   重构前：十节都顶着一块同一形状的斜切英文字带，节奏自然就平了。
-   现在编号由计数器给（main 里每个 .band 一个），导语一律直角细字；
-   赎金信字母块只留给 .head--tiles，其余章节是干净的大字。 */
-.head{position:relative; margin-bottom:clamp(32px,5vh,64px)}
-.head__kick{
-  display:flex; align-items:baseline; gap:14px; margin-top:clamp(14px,2.2vh,26px);
-  font-size:var(--s-small); font-weight:800;
-}
-.head__kick--bare{margin-top:clamp(20px,3vh,36px)}
-.head__no{
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-h2); line-height:.9; letter-spacing:-.04em; color:var(--accent);
-}
-.head__no::before{content:counter(sec,decimal-leading-zero)}
-.head__en{font-size:var(--s-small); font-weight:800; opacity:.62}
-.head__word{
-  margin-top:.14em; font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-word); line-height:.94; letter-spacing:-.03em; max-width:24em;
-}
-/* 赎金信字母块：三色交替，每块角度与高低都错开——P5 的字母块绝不对齐 */
-.head--tiles .head__word{display:flex; flex-wrap:wrap; gap:.05em; align-items:flex-end}
-.head--tiles .head__word span{
-  display:block; padding:.05em .16em .1em; line-height:1.02; letter-spacing:-.01em;
-  transition:background-color 400ms var(--ease-out), color 400ms var(--ease-out);
-}
-.head--tiles .head__word span:nth-child(3n+1){background:var(--tilebg1); color:var(--tilefg1);
-  transform:rotate(-4.5deg) translateY(3px);
-  clip-path:polygon(5% 16%,96% 0,100% 80%,60% 100%,0 86%)}
-.head--tiles .head__word span:nth-child(3n+2){background:var(--tilebg2); color:var(--tilefg2);
-  transform:rotate(3.4deg) translateY(-4px);
-  clip-path:polygon(0 6%,86% 2%,100% 72%,90% 100%,8% 94%)}
-.head--tiles .head__word span:nth-child(3n){background:var(--tilebg3); color:var(--tilefg3);
-  transform:rotate(-2deg) translateY(1px);
-  clip-path:polygon(2% 0,100% 12%,92% 96%,12% 100%,0 58%)}
-/* 没脚本时不拆字：整句落在一条黑带上，照样是官方站那种「白字黑条」 */
-.head--tiles .head__word:not(:has(span)){
-  padding:.06em .26em .12em; background:var(--slab); color:var(--slab-ink);
-  clip-path:var(--jag); transform:rotate(var(--tilt)); width:fit-content;
-}
-.p5tag{
-  display:inline-block; margin-left:14px; padding:.2em .5em .28em;
-  background:var(--slab); color:var(--slab-ink);
-  font-size:var(--s-cap); font-weight:900; letter-spacing:.06em; text-transform:uppercase;
-  clip-path:polygon(4% 12%,100% 0,96% 88%,0 100%);
-  transform:rotate(-4deg) skewX(var(--ui-skew));
-}
-
-/* ── 器具二 · 白描边：贴纸感的那一圈 ────────────────────────────────
-   凡是「斜切/锯齿」的板块，白描边只能靠底下一层同形的白块撑出来。 */
-.keyed{position:relative}
-.keyed::before{
-  content:''; position:absolute; inset:calc(-1 * var(--key-w)); z-index:-1;
-  background:var(--key); clip-path:var(--jag);
-}
-
-/* ── 器具三 · 半调网点、警示斜条、四角星、爆裂星 ──────────────────── */
-.dots{background-image:var(--dots); background-size:16px 16px}
-.stripes{
-  height:66px; width:100%;
-  background-image:var(--stripes); background-size:22px 22px;
-  transform:skewX(var(--ui-skew));
-  border-top:var(--key-w) solid var(--key); border-bottom:var(--key-w) solid var(--key);
-}
-.spark{position:absolute; z-index:1; pointer-events:none; color:var(--key)}
-.spark svg{width:100%; height:auto; display:block}
-.spark--star{width:120px}
-.spark--burst{width:260px; color:var(--f2)}
-
-/* ── 器具四 · 按钮：黑箭头块，白描边，白斜体字 ─────────────────────── */
-.btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  min-height:58px; padding:0 34px;
-  position:relative; background:transparent; color:var(--btn-fg);
-  font-size:var(--s-lead); font-weight:900; font-style:var(--display-style); text-decoration:none;
-  clip-path:polygon(3% 8%,100% 0,96% 100%,0 92%);
-  transform:rotate(-1.5deg) skewX(var(--ui-skew));
-  transition:transform var(--t-press) var(--ease-out), background-color var(--t-hover) ease;
-}
-/* 白描边 + 平色填充分两层铺在字下面：描边在外、色块在内，字永远在最上面 */
-.btn::before,.btn::after{
-  content:''; position:absolute; z-index:-1;
-  clip-path:polygon(3% 8%,100% 0,96% 100%,0 92%);
-}
-.btn::before{inset:calc(-1 * var(--key-w)); background:var(--key)}
-.btn::after{inset:0; background:var(--btn)}
-.btn:hover::after{background:var(--btn-hover)}
-.btn:active{transform:rotate(-1.5deg) skewX(var(--ui-skew)) scale(.97)}
-.link{
-  text-decoration:underline; text-decoration-thickness:.06em; text-underline-offset:.22em;
-  text-decoration-color:color-mix(in srgb, currentColor 40%, transparent);
-  transition:text-decoration-color var(--t-hover) ease;
-}
-.link:hover{text-decoration-color:currentColor}
-
-/* ── 顶栏：直角结构（三级）。底与墨跟着下面那一章换；字标反色成块，
-   导航是安静的细字，只有「下载」是一个实心块，一屏里只留一个重音。 */
-.bar{
-  position:fixed; inset:0 0 auto; z-index:40;
-  display:flex; align-items:center; gap:clamp(16px,2.4vw,34px);
-  padding:13px var(--gut);
-  background:var(--bar-bg,var(--f3)); color:var(--bar-ink,var(--f3-fg));
-  transition:background-color 300ms var(--ease-out), color 300ms var(--ease-out);
-  border-bottom:2px solid currentColor;
-}
-.mark{display:flex; gap:2px; text-decoration:none; margin-right:auto}
-.mark__l{
-  display:block; padding:3px 7px 4px; font-size:var(--s-small); font-weight:900; line-height:1;
-  background:var(--bar-ink); color:var(--bar-bg);
-}
-.mark__l:nth-child(3n){background:transparent; color:var(--bar-ink); padding-inline:2px}
-.bar__nav{display:flex; gap:clamp(14px,1.8vw,26px); font-size:var(--s-small); font-weight:800; letter-spacing:.06em}
-.bar__nav a{text-decoration:none; padding:6px 0; border-bottom:2px solid transparent}
-.bar__nav a:hover{border-bottom-color:currentColor}
-.bar__act{
-  font-size:var(--s-small); font-weight:900; text-decoration:none; letter-spacing:.08em;
-  padding:9px 20px 10px; background:var(--bar-ink); color:var(--bar-bg); margin-left:4px;
-}
-
-/* ── 一 · 头版：一张海报 ───────────────────────────────────────────────
-   三级形状各就各位：一级 = 出血的黑斜面与贴边白切片（.hero__kv 里那几块多边形）；
-   二级 = 面具后面唯一的一颗爆裂星；三级 = 主标题、信息带这些结构件。
-   幽灵字标压在最后面做纵深，网点只压在右上一条斜切带里。 */
-.hero{min-height:100svh; padding:clamp(104px,15vh,168px) var(--gut) clamp(26px,4vh,56px); overflow:clip}
-.hero__h{position:relative; z-index:4}
-/* 撕出来的横幅：外层那块是粗描边，里层那块才是底色。
-   外描边 + 里底色各用一条不规则的撕边，跟官方站那种「手撕纸片」一样，两行绝不平行。 */
-.tileline{
-  display:block; overflow:hidden; width:fit-content; max-width:100%;
-  padding:clamp(6px,.9vw,12px); margin-bottom:.14em; border:0;
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-display); line-height:.88; letter-spacing:-.04em;
-}
-.tileline--ink{
-  background:var(--dark);
-  clip-path:polygon(0 16%,6% 0,21% 6%,38% 0,55% 7%,73% 0,89% 5%,100% 18%,97% 44%,100% 68%,95% 96%,
-    80% 89%,63% 100%,45% 91%,27% 100%,11% 89%,0 76%,4% 48%,0 30%);
-  transform:rotate(-2.4deg);
-}
-.tileline--paper{
-  background:var(--dark);
-  clip-path:polygon(2% 8%,18% 0,34% 5%,52% 0,69% 6%,85% 0,100% 12%,96% 40%,100% 62%,94% 94%,
-    78% 87%,60% 100%,42% 90%,24% 99%,8% 88%,0 68%,3% 42%);
-  transform:rotate(1.8deg); margin-left:3vw;
-}
-.line__i{
-  display:block; overflow:hidden; padding:.12em .2em .16em;
-  clip-path:polygon(0 12%,7% 2%,22% 8%,39% 2%,56% 9%,74% 2%,90% 7%,100% 20%,97% 46%,100% 70%,
-    95% 90%,79% 84%,62% 96%,44% 86%,26% 95%,10% 84%,0 72%,4% 46%,0 28%);
-}
-.tileline--ink .line__i{background:var(--hot); color:var(--hot-ink)}
-.tileline--paper .line__i{background:var(--f2); color:var(--f2-fg); margin-left:.06em}
-/* 主标题那一块：导语 + 两行字，占画面左侧；右下的面具跟它咬在一起 */
-.hero__lead{position:relative; z-index:4; max-width:min(72vw,1040px)}
-.hero__kicker{
-  display:flex; align-items:center; gap:12px; margin-top:clamp(18px,2.6vh,32px);
-  font-size:var(--s-small); font-weight:800;
-}
-.hero__kicker::before{content:''; width:clamp(30px,4vw,64px); height:6px; background:var(--f3)}
-/* 一级·幽灵字标：压在最后面，纵深就从它来 */
-.hero__ghost{
-  position:absolute; left:-1vw; top:30%; z-index:0; margin:0;
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-display); line-height:.8; letter-spacing:-.02em; white-space:nowrap;
-  color:currentColor; opacity:.12; pointer-events:none; user-select:none;
-}
-.hero__art{position:absolute; z-index:3; right:1.5vw; bottom:0; width:min(52vh,46vw); margin:0}
-.art__key{position:absolute; inset:-3%; filter:brightness(0) invert(1)}
-.art__ink{position:absolute; inset:0; transform:translate(18px,18px); filter:brightness(0)}
-.art__face{position:relative; display:block; width:100%}
-.hero__burst{position:absolute; z-index:2; right:-2%; top:8%; width:min(27vw,340px); color:var(--f3)}
-.hero__burst svg{width:100%; height:auto; display:block}
-/* 底部：一条编辑式信息带（三级结构）。它压在黑斜面上，所以用 dark-ink 那支墨 */
-.hero__foot{
-  position:absolute; z-index:5; left:var(--gut); bottom:clamp(22px,4vh,46px); width:min(62%,780px);
-  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,13em);
-  align-items:end; gap:clamp(16px,2.4vw,34px);
-  padding-top:16px; border-top:2px solid var(--dark-ink); color:var(--dark-ink);
-}
-.hero__tag{max-width:30em; font-size:var(--s-small); line-height:1.6; font-weight:600}
-.hero__act{justify-self:start}
-.hero__mini{text-align:right; font-size:var(--s-cap); opacity:.75}
-.hero__dots{position:absolute; right:0; top:0; z-index:1; width:52%; height:56%; opacity:.85;
-  clip-path:polygon(22% 0,100% 0,100% 100%,0 100%)}
-.hero__kv{position:absolute; inset:0; z-index:1; pointer-events:none}
-.hero__kv svg{width:100%; height:100%; display:block}
-/* 主视觉位：想更贴近官方站那种「满幅立绘打底」，把一张自己画的 KV 放到 img/kv.jpg，
-   这一层自动就在标题、碎片和面具底下等着（没有这张图就什么都不显示）。 */
-.hero__kvart{
-  position:absolute; inset:0; z-index:0; pointer-events:none;
-  background:url('img/kv.jpg') center/cover no-repeat;
-  opacity:.55; mix-blend-mode:multiply;
-}
-.hero__spark{position:absolute; z-index:5; right:37%; top:57%; width:clamp(44px,4.6vw,78px); color:var(--hot)}
-.hero__spark svg{width:100%; height:auto; display:block}
-
-/* ── 二 · 没人看见的那些事：一句巨字声明 + 一段编辑式正文 + 一张相纸 ── */
-.band--intro{padding-block:var(--sect)}
-.intro__rest{
-  display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
-  gap:clamp(34px,4.5vw,84px); align-items:start; margin-top:clamp(44px,7vh,96px);
-}
-.intro__cols{max-width:44em}
-/* ── 器具七 · 相纸：照片不许光秃秃贴上去，要装进白框、下边留一条放名字 ── */
-.polaroid{
-  position:relative; background:var(--key); color:var(--dark);
-  border:4px solid var(--dark);
-  padding:9px 9px 38px;
-  transform:rotate(-4deg);
-  transition:transform var(--t-ui) var(--ease-out);
-}
-.polaroid img{
-  width:100%; display:block; background:var(--dark);
-  aspect-ratio:4/5; object-fit:cover; object-position:top center;
-}
-.polaroid figcaption{
-  position:absolute; left:0; right:0; bottom:10px; padding-inline:14px;
-  font-size:var(--s-cap); font-weight:900; line-height:1.2; letter-spacing:.02em;
-}
-.polaroid--intro{width:100%; transform:rotate(-4deg)}
-.polaroid--say{position:absolute; right:5vw; bottom:8%; width:min(24vw,260px); z-index:3; transform:rotate(5.5deg)}
-.polaroid--say img{aspect-ratio:3/4; object-position:center 42%}
-
-/* ── 三 · 五个属性：三个量级，不是八张等权贴纸 ─────────────────────────
-   一级 = 巨数字（坐在出血的纸白面上，是整节的视觉焦点）；二级 = 一个中等数字；
-   三级 = 三条方点账目。阅读顺序就是大小顺序，一眼知道先看哪儿。 */
-.attrs{
-  display:grid; gap:clamp(26px,3.6vw,60px);
-  grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);
-  align-items:start; margin-top:clamp(20px,3.4vh,48px);
-}
-.fig{position:relative}
-.fig--big{
-  grid-row:span 2; --sfg:var(--f2-sfg);
-  padding:clamp(24px,3vw,44px) clamp(24px,3.4vw,48px) clamp(28px,3.4vw,48px);
-  background:var(--f2); color:var(--f2-fg);
-  clip-path:var(--q3); filter:var(--paper-sh);
-}
-.fig--big::after{
-  content:''; position:absolute; left:0; top:0; width:clamp(70px,9vw,140px); height:12px;
-  background:var(--accent);
-}
-.fig__no{
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-num); line-height:.8; letter-spacing:-.06em; margin-top:.08em;
-}
-.fig__name{margin-top:.3em; font-size:var(--s-h3); font-weight:900; line-height:1.14; letter-spacing:.01em}
-.fig__name span{font-size:var(--s-cap); font-weight:800; color:var(--sfg)}
-.fig__gain{margin-top:.55em; font-size:var(--s-small); font-weight:800; color:var(--f2-fg)}
-.fig__cap{margin-top:1.1em; font-size:var(--s-small); line-height:1.6; max-width:26em; color:var(--sfg)}
-.fig__bar{position:relative; height:14px; margin-top:1.5em; background:color-mix(in srgb,currentColor 16%,transparent)}
-.fig__bar i{position:absolute; inset:0 auto 0 0; width:12%; background:var(--accent)}
-/* 二级：同一个读数语言，换成黑面、数字降一档 */
-.fig--mid{
-  background:var(--dark); color:var(--dark-ink); clip-path:var(--q6);
-  filter:var(--paper-sh); padding:clamp(22px,2.6vw,38px);
-}
-.fig--mid .fig__no{font-size:var(--s-say)}
-.fig--mid .fig__name{font-size:var(--s-small)}
-.fig--mid .fig__name span{color:var(--dark-ink); opacity:.75}
-.fig--mid .fig__gain{color:var(--dark-ink); opacity:.85}
-.fig--mid .fig__cap{color:var(--dark-ink); opacity:.78}
-/* 三级：方点账目，像一份清单，不像三张卡 */
-.ledger{grid-column:2; display:grid; align-content:start; gap:6px}
-.ledger li{
-  display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px; padding:10px 0;
-}
-.ledger li::before{content:''; align-self:center; width:11px; height:11px; background:var(--accent); flex:none}
-.ledger b{font-size:var(--s-h3); font-weight:900; letter-spacing:-.01em; line-height:1.1}
-.ledger span{font-size:var(--s-cap); font-weight:800; color:var(--sfg)}
-.ledger i{font-style:normal; font-weight:800; font-size:var(--s-small)}
-.ledger em{margin-left:auto; font-style:normal; font-size:var(--s-small); line-height:1.5; color:var(--sfg); max-width:30em}
-.mosaic__note{margin-top:clamp(30px,4.6vh,58px); max-width:34em; font-size:var(--s-small); line-height:1.6; color:var(--sfg)}
-/* 记录样例：一窄一宽两条横带，App 自己的界面片段（data-ui 保留自己的卡面） */
-.specimen{
-  display:grid; grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);
-  gap:clamp(22px,3.2vw,58px); align-items:start; margin-top:clamp(34px,5.4vh,72px);
-}
-.spec{position:relative}
-.specimen .frag{
-  display:block; padding:clamp(18px,2vw,26px);
-  background:var(--card); color:var(--card-ink); border:var(--key-w) solid var(--key);
-}
-.spec__cap{margin-top:16px; font-size:var(--s-small); line-height:1.55; color:var(--sfg); max-width:36em}
-
-/* App 自己的属性读数（猩红斜标签 + 巨大数字 + 等级名）。
-   内部一律用 em：贴板里放大整块读数只调根字号一处（data-ui 片段不参与全站字阶）。 */
-.frag{font-family:var(--face-text); font-size:19px}
-.frag--s,.frag--row,.frag--ledger,.frag--entry{display:block}
-.frag__row{display:flex; align-items:center; gap:.6em; flex-wrap:wrap}
-.frag__name{
-  display:inline-block; padding:.22em .7em .28em;
-  background:var(--card-chip); color:var(--card-chip-ink);
-  font-size:.84em; font-weight:900; letter-spacing:.02em;
-  transform:skewX(-6deg);
-}
-.frag__lv{font-size:.74em; font-weight:800; color:var(--card-sfg)}
-.frag__big{
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:5.2em; line-height:.86; margin-top:.2em;
-}
-.frag__big2{
-  display:block; font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:1.37em; margin-top:.4em;
-}
-.frag__title{font-size:1em; font-weight:800; margin-top:.2em}
-.frag__gain{display:block; margin-top:.3em; font-size:.84em; font-weight:700; color:var(--card-hot)}
-.frag__quote{font-size:1.15em; font-weight:800; text-wrap:pretty}
-.frag--ledger,.frag--entry{display:block; padding:24px; background:var(--card); color:var(--card-ink);
-  border:var(--key-w) solid var(--key)}
-.frag--ledger{max-width:420px}
-.frag__btn{
-  display:inline-block; margin-top:.9em; padding:.45em 1.2em;
-  background:var(--card-chip); color:var(--card-chip-ink); font-size:.84em; font-weight:900;
-  transform:skewX(-6deg);
-}
-/* App 的读数片段（data-ui）只收字号，卡面仍旧是 App 自己的那一套 */
-.flow__card .frag{font-size:15px}
-
-/* ── 四 · 记一笔的四步：一条有方向的横向序列 ───────────────────────────
-   重构前是四条各歪各的横幅，读起来像四张同款卡。现在是四个编号并排，
-   中间一条斜穿过去的带子就是「方向」本身，过程是走过去的，不是堆起来的。 */
-.band--flow{padding-inline:0}
-.flow{
-  position:relative; display:grid; gap:clamp(18px,2.4vw,34px);
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  max-width:1400px; margin:clamp(26px,4vh,58px) auto 0; padding-inline:var(--gut);
-  align-items:start;
-}
-.flow::before{
-  content:''; position:absolute; left:0; right:0; top:46%; height:16px; z-index:0;
-  background:var(--accent);
-}
-.flow__p{
-  position:relative; z-index:1; display:grid; gap:14px; align-content:start;
-  padding-top:18px; border-top:4px solid currentColor;
-}
-.flow__p:nth-child(even){margin-top:clamp(18px,3vw,48px)}
-.flow__no{
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:clamp(44px,5.2vw,88px); line-height:.84; letter-spacing:-.05em;
-}
-.flow__lbl{
-  display:block; width:fit-content; padding-bottom:.06em;
-  border-bottom:5px solid var(--accent);
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-h2); line-height:1.02; letter-spacing:-.02em;
-}
-.flow__card{
-  display:block; padding:clamp(14px,1.6vw,22px);
-  background:var(--card); color:var(--card-ink); border:var(--key-w) solid var(--key);
-}
-.flow__clause{font-size:var(--s-body); font-weight:800; line-height:1.4; text-wrap:balance; max-width:20em}
-
-/* ── 五 · 一句话进去，一张卡出来：一黑一白对切，左边原话，右边结果 ──── */
-.band--say{padding-inline:0; padding-bottom:0}
-.say2{display:grid; grid-template-columns:1fr 1fr; margin-top:clamp(26px,4vh,58px)}
-.say2__in,.say2__out{padding:clamp(38px,5vw,82px) var(--gut) clamp(56px,7vw,112px); display:flex; flex-direction:column; gap:26px}
-.say2__in{background:var(--f3); color:var(--f3-fg)}
-.say2__out{background:var(--f2); color:var(--f2-fg)}
-.say2__q{
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:clamp(30px,3.6vw,58px); line-height:1.04; text-wrap:pretty; max-width:15em;
-}
-.body--on{max-width:30em}
-
-/* ── 六 · 功能：一条编号索引 + 一条被打开的特写 ───────────────────────
-   重构前是九条各歪各的黑牌，像九张同款卡。现在是一条直角索引：
-   编号自动生成、行间是细线，只有被打开的那一条翻成主色底，状态一目了然。 */
-.list{max-width:1240px; margin:0 auto; display:grid; gap:clamp(26px,4vh,56px); container-type:inline-size}
-.list__word{
-  position:relative; z-index:2; padding-bottom:.06em;
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-giant); line-height:.86; letter-spacing:-.05em;
-  color:var(--f3-fg); border-bottom:clamp(8px,1vw,16px) solid var(--accent);
-}
-.list__rows{display:grid; counter-reset:feat}
-.row{position:relative}
-.row:nth-child(odd){background:color-mix(in srgb,currentColor 6%,transparent)}
-.row[open]{background:var(--accent); color:var(--on-accent)}
-.row__sum{
-  display:flex; align-items:center; gap:clamp(14px,2vw,28px);
-  padding:clamp(16px,2.2vh,26px) 4px; cursor:pointer; list-style:none;
-}
-.row__sum::-webkit-details-marker{display:none}
-.row__sum::before{
-  counter-increment:feat; content:counter(feat,decimal-leading-zero);
-  font-family:var(--face-display); font-weight:900; font-size:var(--s-small);
-  letter-spacing:.1em; opacity:.6; min-width:2.6em;
-}
-.row__name{font-size:var(--s-h2); font-weight:900; line-height:1.05; letter-spacing:-.02em}
-.row__plus{
-  position:relative; margin-left:auto; width:22px; height:22px; flex:0 0 auto;
-}
-.row__plus::before,.row__plus::after{
-  content:''; position:absolute; left:0; right:0; top:50%; height:3px; background:currentColor;
-  transform:translateY(-50%); transition:transform var(--t-ui) var(--ease-out);
-}
-.row__plus::after{transform:translateY(-50%) rotate(90deg)}
-.row[open] .row__plus::after{transform:translateY(-50%) rotate(0deg)}
-.row__panel{display:grid; grid-template-rows:0fr; transition:grid-template-rows 320ms var(--ease-out)}
-.row[open] .row__panel{grid-template-rows:1fr}
-.row__panel>div{overflow:hidden; padding-left:calc(2.6em + clamp(14px,2vw,28px))}
-.row__panel p{font-size:var(--s-body); line-height:1.68; max-width:54em; padding-bottom:16px}
-.row[open] .row__panel p:last-child{padding-bottom:30px}
-
-/* ── 七 · 四套设计语言：上排斜贴标签，下一块换人换景的舞台 ─────────── */
-.band--skins{padding-block:var(--sect)}
-.ghost{display:var(--ghost); position:absolute; inset:auto 0 6% 0; z-index:0; opacity:.14; pointer-events:none}
-.ghost svg{width:100%; height:32vh; display:block}
-.ghost text{
-  font-family:var(--face-display); font-size:260px; font-weight:900; font-style:italic;
-  fill:currentColor; letter-spacing:-.02em;
-}
-.band--skins .lead,.sel{position:relative; z-index:1}
-.sel{
-  display:grid; grid-template-columns:minmax(0,288px) minmax(0,1fr);
-  gap:clamp(26px,4vw,68px); margin-top:clamp(28px,4.6vh,58px); align-items:start;
-}
-.sel__hint{padding-bottom:12px; font-size:var(--s-small); font-weight:800}
-.sel__tabs{display:grid; counter-reset:skin}
-.stab{
-  display:flex; align-items:baseline; gap:12px; width:100%; text-align:left;
-  padding:clamp(12px,1.6vh,18px) 4px;
-  background:none; color:inherit;
-  border-bottom:0;
-  font-size:clamp(19px,1.9vw,26px); font-weight:900; line-height:1.14;
-  transition:background-color var(--t-hover) ease, color var(--t-hover) ease;
-}
-.stab::before{
-  counter-increment:skin; content:counter(skin,decimal-leading-zero);
-  font-family:var(--face-display); font-weight:900; font-size:var(--s-cap);
-  letter-spacing:.1em; opacity:.55; flex:none;
-}
-.stab em{
-  margin-left:auto; text-align:right; font-style:normal;
-  font-size:var(--s-cap); font-weight:800; letter-spacing:.14em; opacity:.6;
-}
-.stab:hover{background:color-mix(in srgb,currentColor 8%,transparent)}
-.stab[data-on="true"]{background:var(--accent); color:var(--on-accent); border-bottom-color:transparent}
-.stab[data-on="true"] em{opacity:.95}
-.sel__stage{position:relative}
-.kv{display:none; min-height:62svh; padding:44px var(--gut); position:relative;
-  background:var(--f2); color:var(--f2-fg); clip-path:var(--q6)}
-.kv{min-height:56svh; padding:clamp(26px,3.4vw,52px); gap:clamp(22px,3.4vw,58px);
-  grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr); align-items:center}
-html[data-skin="red"] .kv[data-skin-show="red"],
-html[data-skin="water-blue"] .kv[data-skin-show="water-blue"],
-html[data-skin="water-pink"] .kv[data-skin-show="water-pink"],
-html[data-skin="yellow"] .kv[data-skin-show="yellow"],
-html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-template-columns:1.2fr .8fr; gap:40px; align-items:center}
-.kv__txt{display:flex; flex-direction:column; gap:14px; max-width:34em}
-.kv__name{
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-h2); line-height:1.06; letter-spacing:-.03em;
-  padding-bottom:.12em; border-bottom:6px solid var(--accent);
-}
-.kv__line{font-size:var(--s-body); line-height:1.6}
-.kv__sample{margin-top:8px; font-size:var(--s-cap); font-weight:800; color:var(--sfg)}
-.kv__btn{
-  display:inline-block; width:fit-content; padding:11px 30px 12px;
-  background:var(--btn); color:var(--btn-fg); font-weight:900; font-size:var(--s-small);
-}
-.kv__sw{display:flex; gap:10px; flex-wrap:wrap}
-.pick{
-  font-size:var(--s-cap); font-weight:800; padding:6px 12px;
-  background:var(--f3); color:var(--f3-fg);
-  transition:transform var(--t-press) var(--ease-out);
-}
-.pick--c{width:40px; height:40px; padding:0; background:var(--sw); clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
-.pick:active{transform:scale(.94)}
-.kv__art{position:relative; width:min(100%,420px); margin:0; justify-self:start}
-.kv::before{
-  content:''; position:absolute; left:0; top:0;
-  width:clamp(24px,2.6vw,42px); height:clamp(24px,2.6vw,42px); background:var(--accent);
-}
-.sel__desc{
-  grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr;
-  gap:clamp(24px,3.4vw,62px); margin-top:clamp(30px,4.6vh,62px); padding-top:20px;
-  border-top:2px solid color-mix(in srgb,currentColor 40%,transparent);
-}
-.sel__desc .kv__line{font-size:var(--s-small); color:var(--sfg); max-width:38em}
-
-/* ── 八 · 两条硬规矩：两块巨字声明，一块纸白、一块主色 ─────────────────
-   声明是全页唯一允许倾斜的职能（二级形状），所以把最大的话放在这里。 */
-.rules{
-  display:grid; grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);
-  gap:clamp(30px,5vw,84px); align-items:start;
-}
-.rules__a,.rules__b{position:relative; padding-top:clamp(16px,2.4vh,28px)}
-.rules__mark{
-  font-family:var(--face-display); font-weight:900; line-height:.7;
-  font-size:var(--s-say); color:var(--accent); margin-bottom:-.04em;
-}
-.rules__a .say--s{background:var(--f2); color:var(--f2-fg)}
-.rules__b .say--s{background:var(--accent); color:var(--on-accent)}
-.rules__a .say--s,.rules__b .say--s{margin-top:.5em}
-.rules__sub{margin-top:clamp(20px,3vh,36px); max-width:34em}
-.rules__tape{grid-column:1/-1; height:18px; margin-top:clamp(22px,3.4vh,46px)}
-
-/* ── 九 · 致谢清单 ─────────────────────────────────────────────────── */
-.names{
-  margin-top:clamp(34px,5.6vh,76px); font-family:var(--face-text); font-weight:800;
-  font-size:clamp(19px,1.9vw,26px); line-height:1.62; max-width:60em;
-}
-.names li{display:inline; color:var(--sfg); transition:color 400ms var(--ease-out)}
-.names li::after{content:'、'; color:var(--sfg)}
-.names li:last-child::after{content:'。'}
-.names li.is-lit{color:inherit}
-.band--thanks .body{margin-top:clamp(34px,5vh,74px); max-width:44em}
-
-/* ── 器具五 · 声明块：全页只允许这一个职能倾斜 ─────────────────────────
-   重构把「什么都可以斜」改成了分级：正文、说明、列表、页脚一律直角左对齐，
-   倾斜只留给「声明」，每屏最多两块，所以它一定是最响的那块。
-   底色留在块自己身上、影子走 drop-shadow，两者互不打架：
-   早前试过在块外面再套一层描边（伪元素 + z-index:-1），带 transform 的块
-   会自成层叠上下文，那层反过来把块自己的底色盖住；drop-shadow 是在块画完之后
-   绕着它的剪影补一圈，不吃 z-index，也不动 HTML 结构。 */
-.say,.say--s{
-  display:block; width:fit-content; padding:.28em .5em .36em;
-  background:var(--slab); color:var(--slab-ink);
-  clip-path:var(--q5); filter:var(--paper-sh); transform:rotate(var(--tilt));
-}
-.say{
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  font-size:var(--s-say); line-height:.98; letter-spacing:-.02em;
-  max-width:24em; text-wrap:pretty; overflow-wrap:break-word;
-}
-.say--s{font-size:var(--s-h2); line-height:1.08; max-width:22em}
-/* 这几块本来就是黑的（或纸的），别叠两层 */
-.frag--ledger,.frag--entry,.flow__card{background:var(--card); color:var(--card-ink)}
+.note{font-size:var(--s-cap); line-height:1.7; color:var(--sfg); max-width:44em}
+.cmd{font-weight:900; padding:.1em .35em; background:var(--slab); color:var(--slab-ink)}
+.tail-note{margin-top:clamp(30px,4.6vh,58px); max-width:34em; font-size:var(--s-small); line-height:1.6; color:var(--sfg)}
 .hl{
   font-style:normal;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 18' preserveAspectRatio='none'%3E%3Cpath d='M1 12 199 5v9L2 18z' fill='%23ffe600' fill-opacity='0.72'/%3E%3C/svg%3E")
     center 92% / 100% .66em no-repeat;
   padding-inline:.1em;
 }
-.stamp{
-  display:inline-block; margin-top:26px; padding:8px 14px;
-  border:3px solid currentColor; border-radius:10px;
-  font-size:var(--s-small); font-weight:900; line-height:1.25; letter-spacing:.04em;
-  transform:rotate(-6deg); opacity:.92;
+
+/* ── 板块一 · 手撕纸的牌子（slab）──────────────────────────────────────
+   全站所有「贴上去的一块」都从这三样派生：纸牌、墨牌、猩红牌。
+   撕边用 --q* 那组不规则多边形（左右基本平直、上下是撕口），
+   白描边靠外面再垫一层同形的白块（.slab 的 padding 就是那一圈）。 */
+.slab{
+  position:relative; display:block; width:fit-content; max-width:100%;
+  padding:var(--key-w); background:var(--key); clip-path:var(--jag);
+  transform:rotate(var(--rot,0deg));
+}
+.slab__in{
+  display:block; padding:.05em .28em .1em;
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+}
+.slab--paper .slab__in{background:var(--f2); color:var(--f2-fg)}
+.slab--ink   .slab__in{background:var(--dark); color:var(--dark-ink)}
+.slab--hot   .slab__in{background:var(--hot); color:var(--hot-ink)}
+.slab--accent .slab__in{background:var(--accent); color:var(--on-accent)}
+/* 只有纸牌是「手撕」的：这四块是正文的落点，撕口让它们看起来是贴上去的 */
+.slab--paper{clip-path:var(--q3)}
+.slab--paper .slab__in{clip-path:var(--q5)}
+
+/* ── 板块二 · 按钮：白描边的斜块，鼠标压上去有一层色从左推进来 ───────── */
+.pbtn{
+  display:inline-block; padding:var(--key-w); background:var(--key);
+  clip-path:var(--jag); text-decoration:none; vertical-align:middle;
+  transition:transform var(--t-press) var(--ease-out);
+}
+.pbtn>span{
+  position:relative; display:block; overflow:hidden;
+  padding:.72em 1.7em .8em; background:var(--btn); color:var(--btn-fg);
+  font-size:var(--s-lead); font-weight:900; font-style:var(--display-style); letter-spacing:.02em;
+  clip-path:var(--jag);
+}
+.pbtn>span::before{
+  content:''; position:absolute; inset:0; z-index:0;
+  background:var(--btn-hover); transform:translateX(-101%);
+  transition:transform var(--t-hover) var(--ease-out);
+}
+/* 字得压在滑动层上面，所以给它自己一个相对定位 */
+.pbtn>span{isolation:isolate}
+.pbtn>span::after{content:''; position:absolute; inset:0; z-index:-1; background:transparent}
+.pbtn:hover>span::before,.pbtn:focus-visible>span::before{transform:none}
+.pbtn:active{transform:scale(.965)}
+.pbtn--hot>span{background:var(--hot); color:var(--hot-ink)}
+.pbtn--hot>span::before{background:color-mix(in srgb,var(--hot) 70%,var(--dark))}
+.pbtn--mini>span{padding:.42em 1.1em .5em; font-size:var(--s-small)}
+
+.link{
+  text-decoration:underline; text-decoration-thickness:.06em; text-underline-offset:.22em;
+  text-decoration-color:color-mix(in srgb,currentColor 40%,transparent);
+  transition:text-decoration-color var(--t-hover) ease;
+}
+.link:hover{text-decoration-color:currentColor}
+
+/* ── 板块三 · 相纸：截图一律装进白框，硬偏移的实心影子，微微歪着 ────── */
+.photo{
+  position:relative; display:block; background:var(--f2); color:var(--dark);
+  padding:var(--key-w); border:var(--key-w) solid var(--key);
+  box-shadow:12px 12px 0 color-mix(in srgb,var(--dark) 72%,transparent);
+  transition:transform var(--t-ui) var(--ease-out), box-shadow var(--t-ui) var(--ease-out);
+}
+.photo img{
+  width:100%; display:block; background:var(--dark);
+  aspect-ratio:4/5; object-fit:cover; object-position:top center;
+}
+.photo figcaption{
+  padding:.5em .6em .35em; font-size:var(--s-cap); font-weight:900; line-height:1.2;
+}
+.photo--get img,.photo--say img{aspect-ratio:9/16; object-position:center 12%}
+
+/* ── 板块四 · 标题：赎金信字母块 ───────────────────────────────────────
+   每个字单独一块，三色交替、角度和高低都错开——一排字母块绝不对齐。
+   没脚本时它就是一整块墨带上的白字（.word 自己的兜底样式）。 */
+.word{
+  margin-top:.12em;
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-word); line-height:.94; letter-spacing:-.03em; max-width:24em;
+  width:fit-content; padding:.06em .26em .12em;
+  background:var(--slab); color:var(--slab-ink);
+  clip-path:var(--jag); transform:rotate(var(--tilt));
+}
+.word--giant{font-size:var(--s-giant); border-bottom:clamp(8px,1vw,16px) solid var(--accent); padding-bottom:.1em}
+.word[data-tiles]{background:none; color:inherit; padding:0; clip-path:none; transform:none}
+.word[data-tiles]{
+  display:flex; flex-wrap:wrap; align-items:flex-end; gap:.05em;
+}
+.word[data-tiles] .tile{
+  display:block; padding:.04em .16em .1em; line-height:1.02; letter-spacing:-.01em;
+  transform-origin:50% 60%;
+}
+.word[data-tiles] .tile:nth-child(3n+1){
+  background:var(--tilebg1); color:var(--tilefg1);
+  clip-path:polygon(5% 16%,96% 0,100% 80%,60% 100%,0 86%);
+  --tr:rotate(-4.5deg) translateY(3px);
+}
+.word[data-tiles] .tile:nth-child(3n+2){
+  background:var(--tilebg2); color:var(--tilefg2);
+  clip-path:polygon(0 6%,86% 2%,100% 72%,90% 100%,8% 94%);
+  --tr:rotate(3.4deg) translateY(-4px);
+}
+.word[data-tiles] .tile:nth-child(3n){
+  background:var(--tilebg3); color:var(--tilefg3);
+  clip-path:polygon(2% 0,100% 12%,92% 96%,12% 100%,0 58%);
+  --tr:rotate(-2deg) translateY(1px);
+}
+.word[data-tiles] .tile{transform:var(--tr)}
+
+.head{margin-bottom:clamp(30px,5vh,62px)}
+.head--giant{margin-bottom:clamp(22px,3.4vh,44px)}
+.head--flow{margin-bottom:clamp(16px,2.4vh,30px)}
+
+/* ── 板块五 · 抠像（deco）────────────────────────────────────────────
+   就是那张面具图，放大、歪着、从边上出血，压在字的后面当画面；
+   不是随手画的几何图形——整站出现的「图像」全部来自 App 自己的素材。
+   换肤时 main.js 把 src 换成对应主题的那一张。 */
+.deco{position:absolute; z-index:1; pointer-events:none; user-select:none; height:auto}
+.deco--attrs{right:-8vw; bottom:-4vh; width:min(30vw,380px); transform:rotate(-8deg); opacity:.22}
+.deco--flow{right:1vw; top:50%; width:min(26vw,340px); translate:0 -50%; transform:rotate(9deg); opacity:.2}
+.deco--thanks{right:-6vw; top:4%; width:min(30vw,400px); transform:rotate(-9deg); opacity:.26}
+.deco--stats{left:-8vw; bottom:2%; width:min(26vw,340px); transform:rotate(7deg); opacity:.2}
+
+/* ── 固定舞台 ─────────────────────────────────────────────────────────
+   z-index:1 —— 比各章底色高（底色在 band 自己的层上），比正文低（正文是 z-index:2）。
+   四层各走各的滚动速度，所以整页「底」和「面」之间一直在相对运动。 */
+.stage{position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden}
+.stage__ghost{
+  position:absolute; left:-3vw; top:48%; margin:0;
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:clamp(120px,21vw,400px); line-height:.8; letter-spacing:-.04em; white-space:nowrap;
+  color:var(--dark); opacity:.07;
+}
+.stage__dots{
+  position:absolute; inset:auto 0 0 0; height:52vh;
+  background-image:var(--dots); background-size:16px 16px; opacity:.72;
+  clip-path:polygon(0 22%,100% 0,100% 100%,0 100%);
+  animation:dottravel 24s linear infinite;
+}
+@keyframes dottravel{to{background-position:32px 32px}}
+.stage__slash{position:absolute; right:-17vw; top:-6%; width:42vw; height:112%; opacity:.3}
+.stage__star{position:absolute; right:8vw; top:12%; width:clamp(64px,6vw,104px); color:var(--hot); opacity:.85}
+.stage__star svg{width:100%; height:auto; display:block}
+
+/* ── 开场幕 ───────────────────────────────────────────────────────────
+   默认不显示：它只在「允许动效 + 脚本跑起来」的时候才被 main.js 打开，
+   所以没脚本/关了动效时页面上根本不存在这一层。 */
+.curtain{display:none; position:fixed; inset:0; z-index:90}
+.curtain__band{position:absolute; left:0; right:0; z-index:0; background:var(--f3); will-change:transform}
+.curtain__band[data-band="0"]{top:0; height:34%}
+.curtain__band[data-band="1"]{top:34%; height:33%}
+.curtain__band[data-band="2"]{top:67%; height:33%}
+.curtain__core{
+  position:absolute; inset:0; z-index:2; display:grid; place-content:center; justify-items:center;
+  gap:clamp(14px,2.4vh,26px); color:var(--f3-fg); text-align:center;
+}
+.curtain__splash{position:absolute; width:min(58vw,540px); color:var(--accent); opacity:.85; z-index:-1}
+.curtain__splash svg{width:100%; height:auto; display:block}
+.curtain__mark{display:flex; gap:3px}
+.curtain__mark span{
+  display:block; padding:.06em .16em .12em;
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:clamp(30px,4.4vw,62px); line-height:1.05;
+  background:var(--f2); color:var(--f2-fg); clip-path:var(--jag);
+}
+.curtain__mark span:nth-child(2n){background:var(--accent); color:var(--on-accent)}
+.curtain__note{
+  padding:.1em .5em .16em; background:var(--hot); color:var(--hot-ink);
+  font-size:var(--s-h3); font-weight:900; font-style:var(--display-style);
+  clip-path:var(--q5); transform:rotate(-2deg);
+}
+.curtain__rail{position:relative; width:min(70vw,460px); height:26px}
+.curtain__rail::before{
+  content:''; position:absolute; left:0; right:0; bottom:6px; height:3px;
+  background:color-mix(in srgb,currentColor 45%,transparent);
+}
+.curtain__fill{
+  position:absolute; left:0; bottom:6px; height:3px; width:0;
+  background:var(--accent);
+}
+.curtain__van{position:absolute; left:0; bottom:6px; width:52px; height:22px; margin-left:-20px}
+.curtain__van svg{width:100%; height:auto; display:block; overflow:visible}
+.curtain__van .van__body{fill:var(--f2)}
+.curtain__van .van__win{fill:var(--accent)}
+.curtain__van .van__stripe{fill:var(--hot)}
+.curtain__van .van__lamp{fill:var(--accent)}
+.curtain__van .van__tyre{fill:var(--f2)}
+.curtain__van .van__rim{fill:var(--accent)}
+.van__wheel{transform-box:fill-box; transform-origin:center; animation:wheel 260ms linear infinite}
+.van__shell{transform-box:fill-box; transform-origin:bottom center; animation:bump 190ms steps(2,end) infinite}
+@keyframes wheel{to{transform:rotate(360deg)}}
+@keyframes bump{
+  0%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-2px) rotate(-.8deg)}
+  100%{transform:translateY(1px) rotate(.6deg)}
+}
+.curtain__pct{
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-small); letter-spacing:.24em; opacity:.7;
 }
 
-/* ── 十 · 完成到哪一步：一张数字海报，三个数字三个量级 ─────────────────
-   重构前是三块同款色卡；现在数字本身是主角，尺寸差出三四倍、位置一高一低，
-   眼睛先落在 202 上，再顺着 13 走到 0。 */
-.stats{
-  display:grid; gap:clamp(20px,3vw,50px); grid-template-columns:repeat(12,1fr);
-  align-items:start; margin-top:clamp(18px,3vh,46px);
+/* ── 顶栏 ─────────────────────────────────────────────────────────────
+   一排斜贴的牌子：每块的倾角和高低都不同（官方站的导航就是错开的），
+   压上去它立正、抬起来、翻色。滚过首屏之后整条栏才从上方滑进来。 */
+.hdr{
+  position:fixed; inset:0 0 auto; z-index:40;
+  display:flex; align-items:center; gap:clamp(14px,2vw,30px);
+  padding:12px var(--gut);
+  background:var(--bar-bg,var(--f3)); color:var(--bar-ink,var(--f3-fg));
+  transition:background-color var(--t-ui) var(--ease-out), color var(--t-ui) var(--ease-out),
+    translate var(--t-ui) var(--ease-out);
 }
-.stat{position:relative; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(20px,3.4vh,50px)}
-.stat__fig{
-  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
-  line-height:.82; letter-spacing:-.06em;
+/* 底栏那条撕边：让顶栏看起来也是「贴上去的一张纸」 */
+.hdr::after{
+  content:''; position:absolute; left:0; right:0; bottom:-16px; height:17px;
+  background:currentColor; opacity:.14;
+  -webkit-mask-image:var(--tear); mask-image:var(--tear);
+  -webkit-mask-repeat:repeat-x; mask-repeat:repeat-x;
+  -webkit-mask-size:220px 17px; mask-size:220px 17px;
+  pointer-events:none; transform:scaleY(-1);
 }
-.stat__cap{font-size:var(--s-small); line-height:1.5; max-width:22em; font-weight:600}
-.stat--tall{
-  grid-column:1/8; padding:clamp(24px,3vw,46px); --sfg:var(--f2-sfg);
-  background:var(--f2); color:var(--f2-fg); clip-path:var(--q6); filter:var(--paper-sh);
+.hdr__mark{display:flex; gap:2px; text-decoration:none; margin-right:auto}
+.hdr__mark span{
+  display:block; padding:3px 7px 4px; font-size:var(--s-small); font-weight:900; line-height:1;
+  background:currentColor;
+  color:var(--hdr-solid,var(--f3));
 }
-.stat--tall .stat__fig{font-size:var(--s-num)}
-.stat--ink{
-  grid-column:8/13; padding:clamp(22px,2.6vw,38px); margin-top:clamp(40px,11vh,140px);
+.hdr__mark span:nth-child(3n){background:none; color:inherit; padding-inline:2px}
+.hdr__nav{display:flex; align-items:flex-start; gap:clamp(6px,1vw,14px)}
+.hdr__nav a,.hdr__act{
+  display:block; padding:.34em .8em .42em; text-decoration:none;
+  font-size:var(--s-small); font-weight:900; letter-spacing:.02em;
+  background:var(--f2); color:var(--f2-fg); clip-path:var(--jag);
+  transition:transform 130ms var(--ease-out), background-color 130ms ease, color 130ms ease;
+}
+/* 每块牌子自己的倾角与高低，谁都跟谁不一样 */
+.hdr__nav a:nth-child(1){transform:rotate(-3.4deg) translateY(3px)}
+.hdr__nav a:nth-child(2){transform:rotate(2.2deg) translateY(-4px)}
+.hdr__nav a:nth-child(3){transform:rotate(-1.6deg) translateY(4px)}
+.hdr__nav a:nth-child(4){transform:rotate(3.1deg) translateY(-3px)}
+.hdr__nav a:nth-child(5){transform:rotate(-2.6deg) translateY(2px)}
+.hdr__nav a:nth-child(6){transform:rotate(1.8deg) translateY(-5px)}
+.hdr__nav a:hover,.hdr__nav a:focus-visible,.hdr__act:hover,.hdr__act:focus-visible{
+  transform:rotate(0deg) translateY(-4px) scale(1.06);
   background:var(--accent); color:var(--on-accent);
 }
+.hdr__nav a.is-here{background:var(--accent); color:var(--on-accent); transform:rotate(0deg)}
+.hdr__act{
+  margin-left:4px; padding:.5em 1.2em .56em; background:var(--btn); color:var(--btn-fg);
+  transform:rotate(-2deg);
+}
+.hdr__act.is-here{background:var(--accent); color:var(--on-accent)}
+/* 首屏里顶栏是浮在画上的：换成半透明的墨带，滚过首屏再变实 */
+.hdr.is-over{
+  background:color-mix(in srgb,var(--dark) 66%,transparent); color:var(--f2);
+  --hdr-solid:var(--dark);
+}
+.hdr.is-hidden{translate:0 -130%}
+
+/* ── 一 · 头版 ────────────────────────────────────────────────────────
+   网格两行：上面是标题与滚动提示，下面是压在底部的信息带。
+   面具、相纸、溅射、半调盘、幽灵字标全部绝对定位叠在右侧——它们是「前景」，
+   幽灵字标与溅射是「后景」，滚动时两组速度不同，画面就有纵深。 */
+.hero{
+  min-height:100svh; display:grid; grid-template-rows:1fr auto;
+  gap:clamp(18px,3vh,34px);
+  padding:clamp(92px,12.5vh,146px) var(--gut) clamp(14px,2.2vh,26px);
+}
+.hero__ghost{
+  position:absolute; left:-2vw; top:30%; z-index:0; margin:0;
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:clamp(96px,17vw,300px); line-height:.8; letter-spacing:-.03em; white-space:nowrap;
+  color:var(--dark); opacity:.13;
+}
+.hero__splash{position:absolute; z-index:1; right:-6%; top:10%; width:min(44vw,600px); color:var(--hot);
+  transform:rotate(9deg)}
+.hero__splash svg{width:100%; height:auto; display:block}
+.hero__disc{
+  position:absolute; z-index:1; right:2%; bottom:9%; width:min(30vw,420px); aspect-ratio:1;
+  border-radius:50%; opacity:.5;
+  background-image:var(--dots); background-size:14px 14px;
+}
+.hero__art{
+  position:absolute; z-index:3; right:-1vw; top:47%;
+  width:min(41vw,548px); margin:0; translate:0 -50%; transform:rotate(-5deg);
+}
+.hero__art img{width:100%; height:auto}
+.art__ink{position:absolute; inset:0; z-index:0; filter:brightness(0); transform:translate(16px,16px)}
+.art__key{position:absolute; inset:0; z-index:1; filter:brightness(0) invert(1); transform:scale(1.035)}
+.art__face{position:relative; z-index:2}
+.hero__shots{position:absolute; inset:0; z-index:4; pointer-events:none}
+.hero__shots .photo{pointer-events:auto; position:absolute}
+.photo--a{left:46%; bottom:15%; width:clamp(132px,13vw,196px); transform:rotate(-7deg)}
+.photo--b{right:9%; top:6%; width:clamp(104px,10.5vw,156px); transform:rotate(7.5deg)}
+.hero__lead{
+  grid-row:1; align-self:center; max-width:min(70vw,1040px);
+}
+.hero__kicker{
+  display:flex; align-items:center; gap:12px; margin-bottom:clamp(16px,2.6vh,30px);
+  font-size:var(--s-small); font-weight:900; letter-spacing:.18em;
+}
+.hero__kicker::before{content:''; width:clamp(30px,4vw,64px); height:7px; background:var(--dark); flex:none}
+.hero__h{display:grid; gap:clamp(6px,.9vw,14px); justify-items:start}
+.hero__h .slab{font-size:clamp(36px,10.8vw,156px); line-height:.88; letter-spacing:-.04em; white-space:nowrap}
+.slab--paper{--rot:-2.2deg}
+.slab--hot{--rot:1.6deg; margin-left:clamp(12px,3.6vw,64px)}
+.hero__burst{
+  position:absolute; z-index:5; left:55%; top:12%; width:clamp(84px,8.6vw,152px); color:var(--f2);
+}
+.hero__burst svg{width:100%; height:auto; display:block}
+.hero__foot{
+  grid-row:2; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,13em);
+  align-items:end; gap:clamp(16px,2.4vw,34px);
+  margin-inline:calc(var(--gut) * -1); padding:clamp(16px,2.6vh,26px) var(--gut) clamp(14px,2vh,22px);
+  background:var(--dark); color:var(--dark-ink);
+}
+.hero__foot::after{
+  content:''; position:absolute; left:0; right:0; top:-17px; height:18px;
+  background:var(--dark); transform:scaleY(-1);
+  -webkit-mask-image:var(--tear); mask-image:var(--tear);
+  -webkit-mask-repeat:repeat-x; mask-repeat:repeat-x;
+  -webkit-mask-size:220px 18px; mask-size:220px 18px;
+  pointer-events:none;
+}
+.hero__tag{max-width:30em; font-size:var(--s-small); line-height:1.6; font-weight:600}
+.hero__mini{text-align:right; font-size:var(--s-cap); opacity:.78}
+.hero__cue{
+  position:absolute; right:var(--gut); bottom:clamp(96px,14vh,132px); z-index:5;
+  display:grid; justify-items:center; gap:8px;
+  font-size:var(--s-cap); font-weight:900; letter-spacing:.2em;
+}
+.hero__cue i{display:block; width:16px; height:16px; border-right:5px solid currentColor; border-bottom:5px solid currentColor;
+  transform:rotate(45deg); animation:cue 1.6s var(--ease-in-out) infinite}
+@keyframes cue{0%,60%{opacity:0; translate:0 -6px}80%{opacity:1}100%{opacity:0; translate:0 6px}}
+
+/* ── 二 · 没人看见的那些事 ───────────────────────────────────────────── */
+.band--about .say{margin:clamp(10px,2vh,22px) 0 clamp(34px,6vh,84px)}
+.about__rest{
+  display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
+  gap:clamp(34px,4.5vw,84px); align-items:start;
+}
+.about__cols{max-width:44em}
+.photo--tilt{width:100%; transform:rotate(-4deg)}
+
+/* 声明块：全页最大的话，白描边 + 手撕边 + 微微歪着 */
+.say{
+  display:block; width:fit-content; max-width:26em;
+  padding:.05em .3em .12em; background:var(--slab); color:var(--slab-ink);
+  clip-path:var(--q5); transform:rotate(var(--tilt));
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-say); line-height:.98; letter-spacing:-.02em; text-wrap:pretty;
+  box-shadow:9px 9px 0 color-mix(in srgb,var(--accent) 70%,transparent);
+}
+.say--s{font-size:var(--s-h2); line-height:1.1; max-width:22em; box-shadow:none; padding:.14em .34em .2em}
+.say__row{display:block}
+
+/* 擦除揭示：一行一条，从左边擦过来（不是整块淡入） */
+.wipe{display:block}
+.wipe__row{display:block; width:fit-content; max-width:100%}
+.say .wipe__row,.say__row{overflow:hidden}
+
+/* ── 三 · 五个属性 ───────────────────────────────────────────────────
+   三个量级：一级是巨数字（坐在纸白面上，是整节的焦点），二级降一档，
+   三级是三条方点账目。阅读顺序就是大小顺序。 */
+.attrs{
+  display:grid; gap:clamp(24px,3.4vw,56px);
+  grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);
+  align-items:start; margin-top:clamp(18px,3vh,44px);
+}
+.fig{position:relative}
+.fig--big{
+  grid-row:span 2; padding:clamp(24px,3vw,44px) clamp(24px,3.4vw,48px) clamp(28px,3.4vw,48px);
+  background:var(--f2); color:var(--f2-fg); --sfg:var(--f2-sfg);
+  clip-path:var(--q3); box-shadow:14px 14px 0 color-mix(in srgb,var(--accent) 62%,transparent);
+}
+.fig--big::after{content:''; position:absolute; left:0; top:0; width:clamp(70px,9vw,140px); height:12px; background:var(--accent)}
+.fig__no{
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-num); line-height:.8; letter-spacing:-.06em; margin-top:.08em;
+}
+.fig__name{margin-top:.3em; font-size:var(--s-h3); font-weight:900; line-height:1.14}
+.fig__name span{font-size:var(--s-cap); font-weight:800; color:var(--sfg)}
+.fig__gain{margin-top:.55em; font-size:var(--s-small); font-weight:900}
+.fig__cap{margin-top:1.1em; font-size:var(--s-small); line-height:1.6; max-width:26em; color:var(--sfg)}
+.fig__bar{position:relative; height:14px; margin-top:1.5em; background:color-mix(in srgb,currentColor 16%,transparent)}
+.fig__bar i{position:absolute; inset:0 auto 0 0; width:12%; background:var(--accent); transform-origin:left center}
+.fig--mid{
+  background:var(--dark); color:var(--dark-ink); clip-path:var(--q6);
+  box-shadow:12px 12px 0 color-mix(in srgb,var(--accent) 55%,transparent);
+  padding:clamp(22px,2.6vw,38px);
+}
+.fig--mid .fig__no{font-size:var(--s-say)}
+.fig--mid .fig__name{font-size:var(--s-small)}
+.fig--mid .fig__name span,.fig--mid .fig__cap{color:var(--dark-ink); opacity:.78}
+.fig--mid .fig__gain{color:var(--dark-ink); opacity:.9}
+.ledger{grid-column:2; display:grid; align-content:start; gap:4px}
+.ledger li{
+  position:relative; display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px;
+  padding:11px 0 12px; border-bottom:2px solid color-mix(in srgb,currentColor 22%,transparent);
+}
+.ledger li::before{content:''; align-self:center; width:12px; height:12px; background:var(--accent); flex:none;
+  transform-origin:center}
+.ledger b{font-size:var(--s-h3); font-weight:900; line-height:1.1}
+.ledger span{font-size:var(--s-cap); font-weight:800; color:var(--sfg)}
+.ledger i{font-style:normal; font-weight:900; font-size:var(--s-small)}
+.ledger em{margin-left:auto; font-style:normal; font-size:var(--s-small); line-height:1.5; color:var(--sfg); max-width:30em}
+
+.specimen{display:grid; grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);
+  gap:clamp(22px,3.2vw,58px); align-items:start; margin-top:clamp(34px,5.4vh,72px)}
+.spec{position:relative}
+.spec--a{transform:rotate(-1.1deg)}
+.spec--b{transform:rotate(1.3deg); margin-top:clamp(6px,1.6vh,22px)}
+.specimen .frag{display:block; padding:clamp(18px,2vw,26px); background:var(--card); color:var(--card-ink);
+  border:var(--key-w) solid var(--key); box-shadow:10px 10px 0 color-mix(in srgb,var(--dark) 30%,transparent)}
+.spec__cap{margin-top:16px; font-size:var(--s-small); line-height:1.55; color:var(--sfg); max-width:36em}
+
+/* App 自己的界面片段：卡面一律保留 App 那一套，本站只给它外框与位置 */
+.frag{font-family:var(--face-text); font-size:19px}
+.frag--row,.frag--ledger,.frag--entry{display:block}
+.frag__row{display:flex; align-items:center; gap:.6em; flex-wrap:wrap}
+.frag__name{display:inline-block; padding:.22em .7em .28em; background:var(--card-chip); color:var(--card-chip-ink);
+  font-size:.84em; font-weight:900; transform:skewX(-6deg)}
+.frag__lv{font-size:.74em; font-weight:800; color:var(--card-sfg)}
+.frag__big2{display:block; font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:1.37em; margin-top:.4em}
+.frag__gain{display:block; margin-top:.3em; font-size:.84em; font-weight:700; color:var(--card-hot)}
+.frag__quote{font-size:1.15em; font-weight:800; text-wrap:pretty}
+.frag--ledger,.frag--entry{display:block; padding:24px; background:var(--card); color:var(--card-ink);
+  border:var(--key-w) solid var(--key)}
+.frag--ledger{max-width:440px}
+.frag__btn{display:inline-block; margin-top:.9em; padding:.45em 1.2em; background:var(--card-chip);
+  color:var(--card-chip-ink); font-size:.84em; font-weight:900; transform:skewX(-6deg)}
+
+/* ── 四 · 记一笔的四步：钉住的舞台 + 滚动推着走的时间线 ─────────────────
+   整节拉成 340vh，里面那层钉在视口里；滚动进度直接把四步横着推过去，
+   红带子同时从左边画过去。这一节是整页唯一「滚动即进度」的地方，
+   跟前后几节的「一次镜头」形成对比。 */
+.band--flow{padding-inline:0}
+.flow__pin{
+  padding:clamp(78px,11vh,120px) 0 clamp(40px,6vh,70px);
+  min-height:100svh; display:grid; gap:clamp(18px,3vh,36px); align-content:center;
+}
+.flow__pin .head{padding-inline:var(--gut)}
+.flow__ribbon{
+  position:relative; height:18px; margin-inline:var(--gut);
+  background:color-mix(in srgb,currentColor 16%,transparent);
+}
+.flow__ribbon i{
+  position:absolute; inset:0; transform-origin:left center; background:var(--accent); display:block;
+}
+.flow{display:flex; gap:clamp(20px,2.6vw,44px); padding-inline:var(--gut); width:max-content; align-items:start}
+.flow__p{
+  flex:0 0 auto; width:min(42vw,470px); display:grid; gap:14px; align-content:start;
+  padding-top:18px; border-top:5px solid currentColor;
+}
+.flow__lbl{
+  display:block; width:fit-content; padding:.06em .3em .12em;
+  background:var(--slab); color:var(--slab-ink); clip-path:var(--jag);
+  font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-h2); line-height:1.02;
+}
+.flow__card{display:block; padding:clamp(14px,1.6vw,22px); background:var(--card); color:var(--card-ink);
+  border:var(--key-w) solid var(--key); box-shadow:10px 10px 0 color-mix(in srgb,var(--dark) 28%,transparent)}
+.flow__card .frag{font-size:15px}
+.flow__clause{font-size:var(--s-body); font-weight:900; line-height:1.4; text-wrap:balance; max-width:20em}
+
+/* ── 五 · 一句话进去，一张卡出来 ─────────────────────────────────────── */
+.band--say{padding-bottom:0}
+.say2{display:grid; grid-template-columns:1fr 1fr; margin-inline:calc(var(--gut) * -1)}
+.say2__in,.say2__out{padding:clamp(40px,5vw,84px) var(--gut) clamp(72px,9vw,140px);
+  display:flex; flex-direction:column; gap:26px}
+.say2__in{background:var(--f3); color:var(--f3-fg)}
+.say2__out{background:var(--f2); color:var(--f2-fg)}
+.say2__q{font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:clamp(30px,3.6vw,58px); line-height:1.04; text-wrap:pretty; max-width:15em}
+.body--on{max-width:30em}
+.photo--say{position:absolute; z-index:4; right:6vw; bottom:6%; width:min(23vw,250px); transform:rotate(6deg)}
+
+/* ── 六 · 功能 ─────────────────────────────────────────────────────── */
+.list{max-width:1240px; margin:0 auto; display:grid; gap:clamp(24px,3.6vh,52px)}
+.list__rows{display:grid; counter-reset:feat}
+.row{position:relative; overflow:hidden}
+.row+.row{border-top:2px solid color-mix(in srgb,currentColor 20%,transparent)}
+.row::before{
+  content:''; position:absolute; inset:0 auto 0 0; width:8px; z-index:0;
+  background:var(--accent); transform:scaleX(0); transform-origin:left center;
+  transition:transform var(--t-ui) var(--ease-out);
+}
+.row__sum{display:flex; align-items:center; gap:clamp(14px,2vw,28px);
+  padding:clamp(16px,2.2vh,26px) 4px; list-style:none; position:relative; z-index:1}
+.row__sum::-webkit-details-marker{display:none}
+.row__sum::before{
+  counter-increment:feat; content:counter(feat,decimal-leading-zero);
+  font-family:var(--face-display); font-weight:900; font-size:var(--s-small);
+  letter-spacing:.1em; opacity:.55; min-width:2.6em;
+  transition:transform var(--t-ui) var(--ease-out), opacity var(--t-ui) ease;
+}
+.row__name{font-size:var(--s-h2); font-weight:900; line-height:1.05; letter-spacing:-.02em;
+  transition:translate var(--t-ui) var(--ease-out)}
+.row__plus{position:relative; margin-left:auto; width:24px; height:24px; flex:0 0 auto}
+.row__plus::before,.row__plus::after{
+  content:''; position:absolute; left:0; right:0; top:50%; height:4px; background:currentColor;
+  transform:translateY(-50%); transition:transform var(--t-ui) var(--ease-out);
+}
+.row__plus::after{transform:translateY(-50%) rotate(90deg)}
+.row[open] .row__plus::after{transform:translateY(-50%) rotate(0deg)}
+.row[open]{background:var(--accent); color:var(--on-accent)}
+.row__panel{display:grid; grid-template-rows:0fr; transition:grid-template-rows 340ms var(--ease-out);
+  position:relative; z-index:1}
+.row[open] .row__panel{grid-template-rows:1fr}
+.row__panel>div{overflow:hidden; padding-left:calc(2.6em + clamp(14px,2vw,28px))}
+.row__panel p{font-size:var(--s-body); line-height:1.68; max-width:54em; padding-bottom:16px}
+.row[open] .row__panel p:last-child{padding-bottom:32px}
+
+/* ── 七 · 五套设计语言 ─────────────────────────────────────────────── */
+.sel{display:grid; grid-template-columns:minmax(0,300px) minmax(0,1fr);
+  gap:clamp(26px,4vw,68px); margin-top:clamp(28px,4.6vh,58px); align-items:start}
+.sel__hint{padding-bottom:12px; font-size:var(--s-small); font-weight:900}
+.sel__tabs{display:grid; counter-reset:skin; gap:8px}
+.stab{
+  display:flex; align-items:baseline; gap:12px; width:100%; text-align:left;
+  padding:clamp(11px,1.5vh,17px) 14px;
+  background:var(--f2); color:var(--f2-fg); clip-path:var(--jag);
+  font-size:clamp(18px,1.8vw,25px); font-weight:900; line-height:1.14;
+  transition:transform 130ms var(--ease-out), background-color 130ms ease, color 130ms ease;
+}
+.sel__tabs .stab:nth-child(odd){transform:rotate(-1.2deg)}
+.sel__tabs .stab:nth-child(even){transform:rotate(1deg) translateX(10px)}
+.stab::before{
+  counter-increment:skin; content:counter(skin,decimal-leading-zero);
+  font-family:var(--face-display); font-weight:900; font-size:var(--s-cap);
+  letter-spacing:.1em; opacity:.55; flex:none;
+}
+.stab em{margin-left:auto; text-align:right; font-style:normal; font-size:var(--s-cap);
+  font-weight:800; letter-spacing:.14em; opacity:.6}
+.stab:hover,.stab:focus-visible{transform:rotate(0deg) translateX(6px); background:var(--accent); color:var(--on-accent)}
+.stab[data-on="true"]{background:var(--hot); color:var(--hot-ink); transform:rotate(0deg) translateX(17px)}
+.stab[data-on="true"] em{opacity:.95}
+.sel__stage{position:relative}
+/* 舞台上的「静音色」要跟着纸面走，不能沿用所在章节的色——不然白纸上的说明字是白粉色的 */
+.kv{display:none; --sfg:var(--f2-sfg)}
+html[data-skin="red"] .kv[data-skin-show="red"],
+html[data-skin="water-blue"] .kv[data-skin-show="water-blue"],
+html[data-skin="water-pink"] .kv[data-skin-show="water-pink"],
+html[data-skin="yellow"] .kv[data-skin-show="yellow"],
+html[data-skin="custom"] .kv[data-skin-show="custom"]{
+  display:grid; grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);
+  gap:clamp(22px,3.4vw,58px); align-items:center;
+  padding:clamp(26px,3.4vw,52px); min-height:56svh;
+  background:var(--f2); color:var(--f2-fg); clip-path:var(--q6);
+  box-shadow:16px 16px 0 color-mix(in srgb,var(--accent) 60%,transparent);
+}
+.kv__txt{display:flex; flex-direction:column; gap:14px; max-width:34em}
+.kv__name{font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  font-size:var(--s-h2); line-height:1.06; letter-spacing:-.03em; padding-bottom:.12em; border-bottom:6px solid var(--accent)}
+.kv__line{font-size:var(--s-body); line-height:1.6}
+.kv__sample{margin-top:8px; font-size:var(--s-cap); font-weight:900; color:var(--sfg)}
+.kv__sw{display:flex; gap:10px; flex-wrap:wrap}
+.pick{width:42px; height:42px; padding:0; background:var(--sw);
+  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+  transition:transform var(--t-press) var(--ease-out)}
+.pick:hover{transform:scale(1.18) rotate(45deg)}
+.pick:active{transform:scale(.9)}
+.kv__art{position:relative; width:min(100%,420px); margin:0}
+.kv__art img{width:100%; height:auto}
+.sel__desc{grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr;
+  gap:clamp(24px,3.4vw,62px); margin-top:clamp(30px,4.6vh,62px); padding-top:20px;
+  border-top:2px solid color-mix(in srgb,currentColor 40%,transparent)}
+.sel__desc .kv__line{font-size:var(--s-small); color:var(--sfg); max-width:38em}
+
+/* ── 八 · 两条硬规矩 ───────────────────────────────────────────────── */
+.rules{display:grid; grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);
+  gap:clamp(30px,5vw,84px); align-items:start}
+.rules__a,.rules__b{position:relative; padding-top:clamp(16px,2.4vh,28px)}
+.rules__mark{font-family:var(--face-display); font-weight:900; line-height:.7;
+  font-size:var(--s-say); color:var(--accent); margin-bottom:-.04em}
+.rules__a .say--s{background:var(--f2); color:var(--f2-fg)}
+.rules__b .say--s{background:var(--accent); color:var(--on-accent)}
+.rules__a .say--s,.rules__b .say--s{margin-top:.5em}
+.rules__sub{margin-top:clamp(20px,3vh,36px); max-width:34em}
+.tape{height:20px; background-image:var(--stripes); background-size:22px 22px;
+  border-top:var(--key-w) solid var(--key); border-bottom:var(--key-w) solid var(--key);
+  transform:skewX(var(--ui-skew))}
+.rules__tape{grid-column:1/-1; margin-top:clamp(22px,3.4vh,46px); transform-origin:left center}
+.stamp{display:inline-block; margin-top:26px; padding:8px 14px; border:3px solid currentColor;
+  border-radius:10px; font-size:var(--s-small); font-weight:900; line-height:1.25;
+  letter-spacing:.04em; transform:rotate(-6deg); opacity:.92}
+
+/* ── 九 · 致谢清单 ─────────────────────────────────────────────────── */
+.names{margin-top:clamp(34px,5.6vh,76px); font-family:var(--face-text); font-weight:800;
+  font-size:clamp(19px,1.9vw,26px); line-height:1.62; max-width:60em}
+.names li{display:inline; color:var(--sfg); transition:color 400ms var(--ease-out)}
+.names li::after{content:'、'; color:var(--sfg)}
+.names li:last-child::after{content:'。'}
+.names li.is-lit{color:inherit}
+.band--thanks .body{margin-top:clamp(34px,5vh,74px); max-width:44em}
+
+/* ── 十 · 完成到哪一步 ─────────────────────────────────────────────── */
+.stats{display:grid; gap:clamp(20px,3vw,50px); grid-template-columns:repeat(12,1fr);
+  align-items:start; margin-top:clamp(18px,3vh,46px)}
+.stat{position:relative; display:flex; flex-direction:column; justify-content:space-between;
+  gap:clamp(20px,3.4vh,50px)}
+.stat__fig{font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
+  line-height:.82; letter-spacing:-.06em; font-variant-numeric:tabular-nums}
+.stat__cap{font-size:var(--s-small); line-height:1.5; max-width:22em; font-weight:600}
+.stat--tall{grid-column:1/8; padding:clamp(24px,3vw,46px); background:var(--f2); color:var(--f2-fg);
+  --sfg:var(--f2-sfg); clip-path:var(--q6);
+  box-shadow:14px 14px 0 color-mix(in srgb,var(--accent) 60%,transparent)}
+.stat--tall .stat__fig{font-size:var(--s-num)}
+.stat--ink{grid-column:8/13; padding:clamp(22px,2.6vw,38px); margin-top:clamp(40px,11vh,140px);
+  background:var(--accent); color:var(--on-accent); transform:rotate(-1.4deg)}
 .stat--ink .stat__fig{font-size:var(--s-say)}
 .stat--mid{grid-column:3/9; margin-top:clamp(30px,6vh,90px)}
 .stat--mid .stat__fig{font-size:var(--s-word)}
 
 /* ── 十一 · 拿一份 ─────────────────────────────────────────────────── */
-.get{
-  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.24fr);
-  gap:clamp(30px,4.6vw,88px); align-items:end; margin-top:clamp(18px,3vh,46px);
-}
+.get{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.24fr);
+  gap:clamp(30px,4.6vw,88px); align-items:end; margin-top:clamp(18px,3vh,46px)}
 .get__l{display:flex; flex-direction:column; gap:22px}
+.get__act{margin-top:6px}
 .get__r{display:flex; flex-direction:column; align-items:flex-start; gap:clamp(18px,2.6vh,32px)}
 .note--c{opacity:.85}
-.frag--entry{max-width:360px}
+.photo--get{width:min(100%,300px); transform:rotate(-3deg)}
+.frag--entry{max-width:360px; box-shadow:10px 10px 0 color-mix(in srgb,var(--dark) 30%,transparent)}
 .navfrag{
   display:flex; align-items:flex-end; justify-content:space-between; gap:8px;
   width:min(100%,520px); padding:14px 12px 10px;
   background:var(--f2); color:var(--f2-fg); outline:var(--key-w) solid var(--key);
 }
-.navfrag__i{display:flex; flex-direction:column; align-items:center; gap:6px; font-size:var(--s-cap); font-weight:800; opacity:.6; width:5em}
+.navfrag__i{display:flex; flex-direction:column; align-items:center; gap:6px;
+  font-size:var(--s-cap); font-weight:800; opacity:.6; width:5em}
 .navfrag__i--on{opacity:1; color:var(--card-chip)}
-.navfrag__d{
-  display:block; width:34px; height:34px; background:var(--card-chip);
-  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
-}
+.navfrag__d{display:block; width:34px; height:34px; background:var(--card-chip);
+  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
 .navfrag__o{display:block; width:26px; height:26px; background:currentColor; transform:skewX(-6deg); opacity:.85}
 
 /* ── 十二 · 页脚 ───────────────────────────────────────────────────── */
-.foot{padding:clamp(56px,8vh,98px) var(--gut) clamp(48px,7vh,84px); display:flex; flex-direction:column; gap:clamp(34px,4.6vh,66px); --tear-c:var(--f1)}
-.foot__notes{
-  display:grid; grid-template-columns:1fr 1fr auto; gap:24px; font-size:var(--s-small);
-}
+.foot{padding:clamp(56px,8vh,98px) var(--gut) clamp(48px,7vh,84px);
+  display:flex; flex-direction:column; gap:clamp(34px,4.6vh,66px)}
+.foot__notes{display:grid; grid-template-columns:1fr 1fr auto; gap:24px; font-size:var(--s-small)}
 .foot__notes .link{justify-self:end}
 .foot__big{
-  display:block; width:fit-content; padding:.1em .18em .16em;
+  display:block; width:fit-content; padding:.1em .28em .18em;
   background:var(--f2); color:var(--f2-fg);
   font-family:var(--face-display); font-style:var(--display-style); font-weight:900;
   font-size:var(--s-say); line-height:1.12; letter-spacing:-.03em;
-  text-decoration:none; text-wrap:balance;
-  clip-path:var(--jag2); transform:rotate(-1deg);
+  text-decoration:none; text-wrap:balance; clip-path:var(--jag2); transform:rotate(-1deg);
 }
 .foot__big span{display:block}
 .foot__meta{display:grid; grid-template-columns:1fr 2fr auto; gap:28px; font-size:var(--s-cap); color:var(--sfg)}
@@ -971,51 +747,36 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
 .foot__credits{max-width:44em; line-height:1.6}
 .foot__place{text-align:right; white-space:nowrap}
 
-/* ── 动效：入场、手感、一帧在动的画面 ─────────────────────────────── */
-@media (prefers-reduced-motion:no-preference){
-  .js .line__i{transform:translateY(112%); animation:lineup 900ms var(--ease-out) forwards;
-    animation-delay:calc(var(--i,0) * 110ms + 150ms)}
-  @keyframes lineup{to{transform:translateY(0)}}
-  /* 入场一律走 translate 长属性，不碰 transform：
-     transform 上写着各块自己的角度，用 transform 做入场会把角度一起擦掉（旧版就是这样）。 */
-  .js [data-rise]{opacity:0; translate:0 22px;
-    animation:rise 700ms var(--ease-out) forwards; animation-delay:calc(var(--i,0) * 90ms + 320ms)}
-  @keyframes rise{to{opacity:1; translate:0}}
-  .js [data-reveal]{opacity:0; translate:0 34px;
-    transition:opacity var(--t-reveal) var(--ease-out), translate 900ms var(--ease-out)}
-  .js [data-reveal].is-in{opacity:1; translate:0}
-  /* 面具缓慢上下；幽灵字标与网点的视差在 main.js 里 */
-  .hero__art{animation:drift 14s var(--ease-in-out) infinite alternate}
-  @keyframes drift{from{translate:0 -1.2%}to{translate:0 1.2%}}
-  .dots{animation:dottravel 16s linear infinite}
-  @keyframes dottravel{to{background-position:32px 32px}}
-  .stripes{animation:stripewalk 9s linear infinite}
-  @keyframes stripewalk{to{background-position:44px 0}}
-  .polaroid{animation:float 16s var(--ease-in-out) infinite alternate}
-  @keyframes float{from{transform:rotate(-4deg)}to{transform:rotate(-1.5deg) translateY(-2%)}}
-}
-@media (hover:hover) and (pointer:fine){
-  .row:hover{background:color-mix(in srgb,currentColor 10%,transparent)}
-  .row[open]:hover{background:var(--accent); color:var(--on-accent)}
-  .btn:hover{background:var(--btn-hover)}
+/* ── 换肤时整页一起走：颜色与字面在 400ms 里一起换过去 ───────────────── */
+html.skinning :is(.hdr,.hdr__nav a,.hdr__act,.stab,.kv,.row,.fig,.stat,.say,.slab,.slab__in,
+  .flow__lbl,.flow__card,.specimen .frag,.pbtn>span,.photo,.band,.hero,.foot){
+  transition:background-color 420ms var(--ease-out), color 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out);
 }
 
-/* ── 窄窗口与手机 ─────────────────────────────────────────────────── */
+/* ── 鼠标用户的悬停镜头 ─────────────────────────────────────────────── */
+@media (hover:hover) and (pointer:fine){
+  .photo:hover{transform:rotate(0deg) scale(1.035); box-shadow:16px 16px 0 color-mix(in srgb,var(--dark) 72%,transparent)}
+  .row:hover::before{transform:scaleX(1)}
+  .row:hover .row__sum::before{transform:translateX(6px); opacity:1}
+  .row:hover .row__name{translate:8px 0}
+  .row:not([open]):hover{background:color-mix(in srgb,currentColor 9%,transparent)}
+  .hero__art:hover{transform:rotate(-2deg) scale(1.02)}
+}
+
+/* ── 窄窗口 ────────────────────────────────────────────────────────── */
 @media (max-width:1100px){
-  :root{--s-say:44px; --s-h2:34px; --s-h3:24px; --s-lead:20px; --s-body:18px;
+  :root{--s-say:46px; --s-h2:34px; --s-h3:24px; --s-lead:20px; --s-body:18px;
     --s-giant:clamp(96px,26vw,200px); --s-word:clamp(38px,6.4vw,78px); --s-num:clamp(72px,11vw,140px)}
   .band{padding:clamp(78px,10vh,124px) 20px}
   .attrs{grid-template-columns:1fr; gap:clamp(22px,3.4vw,42px)}
   .fig--big{grid-row:auto}
   .ledger{grid-column:1}
   .specimen{grid-template-columns:1fr 1fr}
-  .flow{grid-template-columns:1fr 1fr}
-  .flow::before{display:none}
-  .flow__p:nth-child(even){margin-top:0}
   .rules{grid-template-columns:1fr; gap:clamp(30px,5vw,58px)}
   .get{grid-template-columns:1fr; gap:clamp(30px,4.4vw,54px)}
   .say2{grid-template-columns:1fr}
-  .intro__rest{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:36px}
+  .about__rest{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:36px}
   .sel{grid-template-columns:1fr; gap:clamp(24px,3.4vw,42px)}
   .sel__tabs{grid-template-columns:1fr 1fr; column-gap:clamp(18px,3vw,42px)}
   .kv{min-height:0}
@@ -1027,56 +788,117 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   .foot__notes .link{justify-self:start}
   .foot__place{text-align:left}
   .foot__big{font-size:var(--s-h3)}
+  .hero__art{width:min(46vw,420px); right:2vw}
+  .photo--a{left:24%; bottom:20%}
+  /* 视口不够高的时候，头版的右侧叠层会互相压住：索性收成一列，
+     顺序写死成「先读字 → 再看图 → 最后信息带」，不靠自动排版去猜 */
+  .hero{min-height:0; display:flex; flex-direction:column;
+    gap:clamp(20px,4vh,40px); padding-bottom:clamp(16px,3vh,28px)}
+  .hero__lead{order:1}
+  .hero__shots{order:2}
+  .hero__art{order:3}
+  .hero__foot{order:4}
+  .hero__lead{max-width:none; padding-top:clamp(10px,2vh,24px)}
+  .hero__art{position:relative; top:auto; right:auto; translate:none; margin-left:auto;
+    width:min(62%,380px)}
+  .hero__shots{position:relative; inset:auto; display:grid; grid-template-columns:1fr 1fr;
+    gap:clamp(14px,3vw,26px); align-items:start}
+  .hero__shots .photo{position:relative; width:auto; left:auto; right:auto; top:auto; bottom:auto}
+  .photo--a{transform:rotate(-3deg)}
+  .photo--b{transform:rotate(3deg); margin-top:clamp(20px,6vh,48px)}
+  .hero__splash{width:min(58vw,420px); top:8%; right:-10%}
+  .hero__disc{display:none}
+  .hero__ghost{top:22%}
+  .hero__cue{display:none}
+  .hero__burst{right:8%; top:16%}
 }
 
+/* ── 手机 ────────────────────────────────────────────────────────────
+   手机不缩桌面版：头版收成一条竖排的阅读顺序（先读字 → 再看图 → 最后信息带），
+   钉住的那一节拆掉钉住，改成一摞依次拍上来的牌子。 */
 @media (max-width:760px){
-  :root{--s-display:11.6vw; --s-giant:22vw; --s-say:26px; --s-h2:28px; --s-h3:22px;
+  :root{--s-display:11.6vw; --s-giant:22vw; --s-say:28px; --s-h2:27px; --s-h3:21px;
     --s-lead:19px; --s-body:17px; --s-small:15px; --s-cap:13px;
-    --s-word:clamp(32px,9vw,46px); --s-num:clamp(64px,20vw,110px)}
-  .band{padding:clamp(58px,9vh,84px) 16px}
-  .bar{gap:12px; padding:11px 16px}
-  .bar__nav{display:none}
-
-  /* 头版在窄屏改成竖排的编辑式版面：斜面和网点撤掉，改成"先读字、再看图、最后读信息带" */
-  .hero{display:flex; flex-direction:column; min-height:0; padding:clamp(92px,14vh,124px) 16px 34px}
-  .hero__kv,.hero__dots,.hero__burst,.hero__spark{display:none}
-  .hero__ghost{top:7%; bottom:auto; font-size:20vw; opacity:.08}
-  .hero__lead{order:1; max-width:none}
-  .hero__art{order:2; position:relative; right:auto; bottom:auto;
-    width:min(72%,320px); margin:clamp(22px,4vh,40px) 0 0 auto}
-  .hero__foot{
-    order:3; position:relative; left:auto; bottom:auto; width:auto;
-    display:grid; grid-template-columns:1fr; gap:16px; margin-top:clamp(22px,4vh,40px);
-    color:currentColor; border-top-color:currentColor;
+    --s-word:clamp(32px,9vw,46px); --s-num:clamp(64px,20vw,110px); --gut:16px}
+  .band{padding:clamp(58px,9vh,84px) var(--gut)}
+  .hdr{gap:10px; padding:10px var(--gut)}
+  .hdr__nav{
+    display:flex; gap:8px; overflow-x:auto; padding:6px 2px 8px;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch;
   }
-  .hero__mini{text-align:left; max-width:none}
-  .hero__kicker{letter-spacing:.24em}
-  .tileline{font-size:var(--s-display); margin-bottom:.1em}
-  .tileline--paper{margin-left:6vw}
+  .hdr__nav::-webkit-scrollbar{display:none}
+  .hdr__nav a{flex:0 0 auto; font-size:var(--s-cap); transform:none}
+  .hdr__act{padding:.45em 1em .5em; font-size:var(--s-cap)}
+  .hdr__mark span{padding:2px 5px 3px; font-size:var(--s-cap)}
+  .stage__slash{width:70vw; right:-24vw}
+  .stage__ghost{font-size:38vw; top:20%}
 
-  .polaroid--intro{margin-top:26px; transform:rotate(-2deg)} .polaroid--say{position:relative; right:auto; bottom:auto; width:min(70%,300px); margin-top:0; transform:rotate(3deg)}
-  .intro__rest{grid-template-columns:1fr; gap:26px; margin-top:36px}
-  .intro__cols{columns:1}
+  .hero{padding-top:clamp(96px,15vh,126px); gap:clamp(18px,3.4vh,30px)}
+  .hero__ghost{font-size:26vw; top:8%; opacity:.12}
+  .hero__splash{width:64vw; top:4%; right:-16%; opacity:.85}
+  .hero__burst{width:64px; right:6%; top:9%}
+  .hero__art{width:min(70%,300px)}
+  .hero__foot{grid-template-columns:1fr; align-items:start; gap:14px}
+  .hero__mini{text-align:left}
+  .hero__act .pbtn{width:100%}
+  .hero__act .pbtn>span{text-align:center}
+  .hero__tag{font-size:var(--s-cap)}
+  .say{box-shadow:6px 6px 0 color-mix(in srgb,var(--accent) 70%,transparent)}
+  .say--s{padding:.16em .3em .22em}
 
-  .attrs{grid-template-columns:1fr}
-  .ledger em{flex-basis:100%; margin-left:0}
-  .specimen{grid-template-columns:1fr; gap:26px}
-  .flow{grid-template-columns:1fr}
-  .flow__p{padding-top:14px}
-  .say2__in,.say2__out{padding:40px 16px 52px}
-  .sel__tabs{grid-template-columns:1fr}
-  .kv{grid-template-columns:1fr; padding:clamp(22px,5vw,32px)}
-  .kv__art{justify-self:start; width:min(72%,280px); margin-bottom:10px}
-  .kv__name{font-size:var(--s-h2)}
-  .sel__desc{grid-template-columns:1fr; gap:22px}
-  .rules__tape{display:none}
-  .list{gap:36px}
-  .row__sum::before{min-width:2.2em}
+  .about__rest{grid-template-columns:1fr; gap:clamp(26px,5vh,44px)}
+  .photo--tilt{width:min(100%,320px); margin-left:auto}
+  .specimen{grid-template-columns:1fr; gap:clamp(20px,4vh,34px)}
+  .fig--big{box-shadow:8px 8px 0 color-mix(in srgb,var(--accent) 62%,transparent)}
+  .fig--mid{box-shadow:8px 8px 0 color-mix(in srgb,var(--accent) 55%,transparent)}
+  .ledger em{margin-left:0; width:100%}
+
+  /* 四步：竖着一摞，每块自己拍上来 */
+  .flow{flex-direction:column; width:auto; padding-inline:var(--gut); gap:clamp(20px,4vh,32px)}
+  .flow__p{width:auto}
+  .flow__ribbon{display:none}
+  .flow__pin{padding:clamp(58px,9vh,84px) 0 clamp(40px,7vh,70px)}
+
+  .say2__in,.say2__out{padding:clamp(30px,6vw,46px) var(--gut) clamp(46px,9vw,72px)}
+  .photo--say{position:relative; right:auto; bottom:auto; width:min(62%,240px);
+    margin:clamp(24px,5vh,40px) auto 0; transform:rotate(4deg)}
+
+  .row__name{font-size:clamp(22px,6.4vw,30px)}
+  .row__sum{gap:10px}
   .row__panel>div{padding-left:0}
-  .stats{grid-template-columns:1fr; row-gap:clamp(30px,7vh,66px)}
-  .stat--tall,.stat--ink,.stat--mid{grid-column:1/1; margin-top:0}
-  .say{font-size:var(--s-h3)}
-  .say--s{font-size:var(--s-h3)}
+
+  .sel__tabs{grid-template-columns:1fr}
+  .sel__tabs .stab:nth-child(even){transform:rotate(1deg)}
+  .stab[data-on="true"]{transform:rotate(0deg) translateX(8px)}
+  .kv{box-shadow:8px 8px 0 color-mix(in srgb,var(--accent) 60%,transparent)}
+  html[data-skin="red"] .kv[data-skin-show="red"],
+  html[data-skin="water-blue"] .kv[data-skin-show="water-blue"],
+  html[data-skin="water-pink"] .kv[data-skin-show="water-pink"],
+  html[data-skin="yellow"] .kv[data-skin-show="yellow"],
+  html[data-skin="custom"] .kv[data-skin-show="custom"]{grid-template-columns:1fr; padding:20px}
+  .kv__art{width:min(100%,260px)}
+  .sel__desc{grid-template-columns:1fr}
+
+  .rules{grid-template-columns:1fr}
+  .rules__mark{font-size:var(--s-h2)}
+  .stats{grid-template-columns:1fr; gap:clamp(26px,5vh,44px)}
+  .stat,.stat--tall,.stat--ink,.stat--mid{grid-column:1; margin-top:0}
+  .stat--ink{transform:rotate(-1deg)}
+  .get{grid-template-columns:1fr}
+  .photo--get{width:min(100%,260px)}
+  .navfrag{width:100%}
+  .navfrag__i{width:auto; flex:1 1 0; font-size:11px}
+  .navfrag__d{width:26px; height:26px}
+  .navfrag__o{width:20px; height:20px}
   .foot__big{font-size:var(--s-h3)}
-  .names{font-size:var(--s-h3)}
+  .tape{height:14px}
+  .curtain__rail{width:min(78vw,300px)}
+}
+
+/* ── 动了会难受的人：一切动画都不发生，页面就是完成态 ───────────────── */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important; transition-duration:.01ms !important}
+  .curtain{display:none !important}
+  .hero__cue i{opacity:1; translate:0}
+  .stage__dots{animation:none}
 }

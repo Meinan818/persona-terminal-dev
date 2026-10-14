@@ -1,0 +1,192 @@
+/* MASKARIA 官网 demo · 样式
+ *
+ * 视觉语言照官方站的那一套来：红底 + 半调网点、黑带、锯齿撕边、白描边的
+ * 斜切板块、赎金信式字母块标题、漫画爆裂星、抠像贴纸（白描边 + 硬偏移）。
+ * 内容与素材全部是 MASKARIA 自己的：五套主题的面具图、首页与助手截图、
+ * 应用自己的 token 与文案。
+ *
+ * 五套皮肤不是换色号，是换一整套设计语言：底、墨、字面、圆角、斜切、网点、
+ * 描边、按钮的说法都跟着换。没有渐变、没有投影、没有细线：立体感靠「平色错位
+ * 块」和「白描边」，分隔靠色块、撕边和留白。
+ */
+
+@font-face{font-family:'Velvet Sans SC';src:url('fonts/velvet-sans-sc.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Velvet Round SC';src:url('fonts/velvet-round-sc.v4.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Velvet Serif SC';src:url('fonts/velvet-serif-sc.v2.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Caveat';src:url('fonts/caveat-latin-600-normal.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
+
+:root{
+  --ease-out:cubic-bezier(.22,1,.36,1);
+  --ease-soft:cubic-bezier(.33,1,.68,1);
+  --ease-in-out:cubic-bezier(.76,0,.24,1);
+  --t-press:140ms; --t-hover:180ms; --t-ui:240ms; --t-reveal:700ms;
+  --gut:24px; --gap:8px; --key-w:4px;
+  --s-display:clamp(40px,12.5vw,190px);
+  --s-giant:clamp(120px,44cqw,286px);
+  --s-say:78px; --s-h2:44px; --s-h3:26px; --s-lead:22px;
+  --s-body:19px; --s-small:16px; --s-cap:14px;
+  /* 重构后补的几档：巨数字、章节大词、编号导语。大小反差主要靠这两头撑起来。 */
+  --s-num:clamp(96px,13vw,224px);
+  --s-word:clamp(46px,7.2vw,126px);
+  --s-kick:14px;
+  --sect:clamp(96px,10.5vh,164px);
+  /* 斜切条 / 印章 / 爆裂星（二级形状）统一用这一条角度，免得各斜各的 */
+  --tilt:-1.8deg;
+  /* 撕边：一条锯齿形的遮罩，颜色由 --tear-c 给，形状是白的 */
+  --tear:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='34' viewBox='0 0 220 34'%3E%3Cpath d='M0 0h220v9l-16 15 8-9-24 17-14-13-20 17-16-15-22 18-18-16-20 16-16-14-20 15-16-13-22 14V0z' fill='%23fff'/%3E%3C/svg%3E");
+  /* 四角星 / 爆裂星：漫画记号 */
+  --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 0 59 41 100 50 59 59 50 100 41 59 0 50 41 41Z' fill='%23fff'/%3E%3C/svg%3E");
+  /* 手撕纸的边：上下两条是撕开的口子（细碎、疏密不均、幅度小），左右两侧基本平直，
+     因为纸是从本子上撕下来的，不是从四边崩开的。
+     八个变体轮着用，谁跟谁都不重样（顶点由 .taste-skill/make-torn.mjs 生成）。 */
+  --q1:polygon(0% 0%,4.87% 2.6%,10.32% 2.03%,16.16% 1.31%,19.83% 2.1%,24.92% 2.36%,29.65% 2.29%,33.92% 2.54%,40.56% 3.32%,44.81% 2.82%,50.62% 3.33%,54.52% 3.4%,60.13% 2.55%,64.63% 2.48%,70.82% 2.48%,74.18% 2.48%,79.08% 2.24%,85.31% 2.38%,90.3% 1.5%,94.1% 2.15%,100% 0%,99.45% 19.69%,99.21% 39.71%,99.43% 61.05%,99.41% 80.85%,100% 100%,95.31% 96.91%,89.79% 96.7%,86.01% 97.67%,80.21% 96.44%,74.84% 96.79%,69.54% 96.8%,65.03% 97.16%,58.82% 96.61%,55.91% 97.67%,49.52% 97.59%,44.78% 96.68%,39.1% 97.22%,33.99% 98.47%,30.59% 98.29%,25.11% 97.79%,20.03% 98.32%,14.05% 97.6%,10.14% 97.49%,5.29% 97.32%,0% 100%,0.63% 80.92%,0.7% 61.11%,0.39% 40.24%,0.85% 20.25%);
+  --q2:polygon(0% 0%,4.68% 3.08%,10.33% 2.3%,14.28% 2.43%,19.15% 2.24%,24.45% 2.86%,29.01% 2.96%,35.7% 2.77%,40.79% 2.94%,44.65% 2.81%,49.75% 2.57%,54.16% 2.28%,59.23% 1.88%,64.41% 2.65%,68.99% 2.17%,75.54% 2.62%,80.13% 2.74%,84.88% 2.24%,89.7% 1.85%,95.26% 2.37%,100% 0%,99.56% 19.42%,99.39% 39.61%,99.47% 59.5%,99.39% 80.02%,100% 100%,95.13% 97.66%,90.74% 98.39%,83.97% 97.96%,80.04% 97.49%,74.08% 96.91%,69.86% 97.11%,64.37% 97.37%,59.52% 97%,54.23% 96.95%,49.46% 98.21%,45.66% 97.31%,41.01% 98.35%,35.42% 97.91%,29.8% 97.92%,23.84% 98.5%,19.94% 98.21%,15.33% 97.99%,9.27% 97.53%,5.62% 97.6%,0% 100%,0.33% 79.41%,0.56% 59.77%,0.4% 39.73%,0.69% 20.13%);
+  --q3:polygon(0% 0%,3.98% 2.05%,11.14% 3.29%,14.59% 1.8%,19.78% 1.75%,23.93% 3.29%,29.8% 1.88%,36.09% 1.99%,40.77% 3.15%,45.97% 3.33%,51% 1.63%,55.32% 2.48%,59.25% 2.19%,63.98% 2.46%,70.69% 3.23%,75.61% 3.36%,79.61% 3.95%,85.51% 2.7%,90.81% 2.46%,96% 4.32%,100% 0%,99.59% 21.1%,99.58% 41.07%,99.3% 59.46%,99.18% 79.7%,100% 100%,94.58% 97.32%,90.2% 96.23%,83.87% 96.32%,79.74% 95.24%,76% 95.55%,69.88% 95.61%,65.51% 95.41%,59.12% 96.37%,54.18% 95.93%,50.18% 96.25%,44.2% 98.12%,40.62% 97.9%,35.85% 97.33%,29.26% 98.04%,24.54% 96.51%,20.54% 97.1%,14.6% 96.77%,9.52% 96.23%,5.02% 96.75%,0% 100%,0.87% 80.81%,0.93% 60.92%,0.54% 40.38%,0.67% 18.96%);
+  --q4:polygon(0% 0%,5.6% 1.65%,10.97% 2.14%,14.2% 2.97%,20.75% 2.91%,25.58% 2.97%,29.68% 3.2%,34.54% 3.55%,40.56% 3.13%,46.05% 3.08%,49.84% 2.3%,53.81% 2.63%,60.04% 1.96%,66.12% 2.57%,70.93% 1.99%,74.13% 2.11%,80.63% 2.87%,85.64% 3.25%,90.12% 2.97%,94.87% 3.74%,100% 0%,99.22% 19.3%,98.92% 40.66%,99.25% 59.34%,99% 79.68%,100% 100%,94.4% 98.68%,90.22% 97.8%,85.78% 97.42%,79.48% 98.25%,74.67% 98.36%,69.56% 97.64%,65.9% 97.46%,59.63% 97.27%,55.55% 97.41%,50.89% 96.73%,44.1% 97.74%,39.26% 97.58%,35.67% 96.43%,29.18% 96.6%,25.81% 97.36%,19.32% 96.59%,14.37% 96.36%,10.71% 96.1%,3.85% 97.42%,0% 100%,0.86% 79.9%,0.71% 59.5%,0.88% 39.93%,1.1% 20.38%);
+  --q5:polygon(0% 0%,4.96% 2%,9.87% 1.25%,14.8% 1.09%,19.54% 1.37%,24.37% 1.57%,30.18% 1.72%,35.5% 1.8%,40.25% 1.89%,44.09% 2.28%,49.95% 2.03%,55% 2.69%,59.55% 2.57%,65.94% 2.4%,69.17% 2.07%,74.83% 2.62%,79.44% 1.63%,83.83% 1.43%,89.13% 2.03%,94.69% 1.44%,100% 0%,99.12% 19.29%,99.05% 40.13%,99.16% 59.39%,99.35% 79.55%,100% 100%,96.2% 98.07%,90.85% 97.97%,84.16% 97.87%,78.88% 97.79%,75.45% 97.5%,68.96% 98.47%,63.99% 97.82%,60.04% 97.99%,54% 98.34%,49.87% 98.28%,45.97% 97.9%,38.94% 98.66%,34.33% 97.4%,29.11% 97.56%,24.7% 98.13%,20.87% 98.19%,15.77% 97.19%,11.18% 98.49%,5.04% 98.12%,0% 100%,1.02% 79.94%,0.77% 60.59%,1.33% 39.81%,0.71% 19.51%);
+  --q6:polygon(0% 0%,5.95% 1.94%,10.49% 2.38%,15.75% 2.31%,20.42% 2.88%,24.54% 2.46%,29.34% 2.62%,36.04% 3.64%,39.11% 3.52%,45.49% 3.82%,50.29% 2.21%,54.69% 3.55%,61.12% 2.64%,65.47% 2.82%,69.05% 2.35%,74.46% 2.35%,80.48% 2.41%,85.02% 1.81%,90.66% 1.72%,95.14% 2.47%,100% 0%,99.44% 19.58%,99.37% 40.79%,99.66% 60.62%,99.35% 80.02%,100% 100%,96.12% 96.55%,89.15% 97.49%,85.88% 96.11%,79.8% 96.74%,73.96% 97.43%,70.62% 97.67%,63.94% 97.82%,60.3% 98.26%,55.85% 97.85%,49.49% 98.53%,44.28% 97.26%,39.86% 97.37%,34.97% 97.23%,28.9% 97.95%,24.59% 98.36%,20.03% 97.68%,14.2% 98.07%,9.97% 96.51%,6% 96.25%,0% 100%,0.84% 79.82%,0.5% 59.62%,0.64% 39.23%,0.44% 20.9%);
+  --q7:polygon(0% 0%,5.72% 2.65%,9.03% 1.93%,16.03% 2.42%,20.56% 2.72%,23.99% 2.75%,29.96% 2.63%,33.88% 2.74%,39.98% 2.29%,45.71% 2.68%,49.41% 2.06%,54.03% 2.69%,59.55% 2.38%,64.37% 2.77%,69.57% 3.96%,75.16% 2.89%,79.43% 3.12%,83.89% 3.99%,89.36% 4.22%,94.21% 3.85%,100% 0%,99.48% 19.77%,99.44% 40.68%,99.15% 60.88%,98.96% 81.04%,100% 100%,93.83% 97.15%,88.84% 96%,85.9% 96.73%,79.62% 96.61%,74.56% 97.67%,70.91% 97.13%,65.9% 98.09%,60.69% 98.54%,54.59% 98.46%,49.75% 96.59%,44.32% 96.88%,39.22% 97.46%,34.29% 95.85%,31% 96.51%,26.17% 96.52%,18.92% 96.32%,15.87% 97.39%,10.42% 97.17%,5.74% 97.4%,0% 100%,0.61% 79.22%,0.64% 60.35%,0.83% 40.77%,0.72% 19.18%);
+  --q8:polygon(0% 0%,5.27% 2.14%,9.18% 3.03%,14.43% 1.98%,19.98% 2.44%,25.57% 2.09%,31.14% 2.97%,34.4% 2.01%,40.41% 2.72%,44.4% 2.85%,50.24% 2.29%,55.49% 2.56%,60.79% 2.53%,64.93% 1.68%,69.58% 2.14%,75.9% 1.74%,80.55% 2.16%,83.9% 1.29%,90.5% 1.57%,94.02% 1.73%,100% 0%,99.17% 19.63%,99.46% 40.43%,98.93% 60.37%,99.16% 78.93%,100% 100%,94.51% 98.37%,89.9% 98%,85.33% 98.92%,78.89% 98.08%,76.18% 98.08%,70.61% 98.82%,63.85% 98.21%,60.84% 97.46%,55.14% 97.56%,51.06% 98.44%,44.12% 97.07%,39.62% 97.5%,34.85% 97.26%,28.88% 97.11%,25.87% 96.96%,20.49% 97.55%,14.9% 97.98%,9.15% 98.03%,5.7% 97.14%,0% 100%,1.22% 80.78%,1.29% 59.2%,0.99% 38.94%,1.08% 18.81%);
+  /* 纸片浮起来的那点影子：跟上面的撕边一起用，纸才不像直接印在底上 */
+  --paper-sh:drop-shadow(0 5px 8px rgba(0, 0, 0, .42));
+}
+
+/* ── 五套皮肤 ───────────────────────────────────────────────────────
+   --ground = 整页的底（红）;--f1/f2/f3 = 三类章节底：红 / 纸 / 黑。
+   每一对「字色 / 底色」都过过 WCAG 对比度自检（.taste-skill/contrast.mjs）。
+   --key = 白描边那一圈的颜色，--sN/--sNi 是这一章上板块用哪个色。 */
+
+/* 红 · 剪报怪盗：红底黑带 / 猩红 #c00008 / 米白纸 / 橙点缀，白描边、锯齿、半调 */
+html[data-skin="red"]{
+  --ground:#c00008;
+  --f1:#c00008; --f1-fg:#f0e9df; --f1-sfg:#f4cfc9;
+  --f2:#f0e9df; --f2-fg:#050505; --f2-sfg:#4a453e;
+  --f3:#0d0d0d; --f3-fg:#f0e9df; --f3-sfg:#b9b3a9;
+  --s1:#0d0d0d; --s1i:#f0e9df; --s2:#0d0d0d; --s2i:#f0e9df; --s3:#f0e9df; --s3i:#050505;
+  --key:#ffffff;
+  --accent:#c00008; --on-accent:#f0e9df;
+  --accent-2:#e06808;
+  --card:#f0e9df; --card-ink:#050505; --card-sfg:#4a453e;
+  --card-chip:#c00008; --card-chip-ink:#ffffff; --card-hot:#c00008;
+  --step:#e2d9cb; --tile1:#0d0d0d; --tile1-i:#f0e9df; --tile2:#f0e9df; --tile2-i:#050505;
+  --btn:#0d0d0d; --btn-fg:#f0e9df; --btn-hover:#000000;
+  --r:4px;
+  --jag:polygon(2% 14%,98% 0,100% 84%,1% 100%);
+  --jag2:polygon(0 10%,100% 0,97% 88%,3% 100%);
+  --face-text:'Velvet Round SC','Velvet Sans SC',sans-serif;
+  --face-display:'Velvet Sans SC','Velvet Round SC',sans-serif;
+  --display-style:italic; --display-skew:-6deg; --ui-skew:-8deg;
+  --tilebg1:#0d0d0d; --tilefg1:#f0e9df; --tilebg2:#ffffff; --tilefg2:#c00008; --tilebg3:#c00008; --tilefg3:#ffffff;
+  --hot:#e8150c; --hot-ink:#ffffff; --dark:#0d0d0d; --dark-ink:#f0e9df;
+  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%230d0d0d' fill-opacity='0.28'/%3E%3Ccircle cx='12' cy='12' r='1.5' fill='%230d0d0d' fill-opacity='0.2'/%3E%3C/svg%3E");
+  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%230d0d0d' stroke-width='9'/%3E%3C/svg%3E");
+  --ghost:none;
+}
+
+/* 蓝 · 白日水面：近白底 / 靛蓝 CTA / 青信号 / 幽灵大字，斜切平行四边形 */
+html[data-skin="water-blue"]{
+  --ground:#1b57ff;
+  --f1:#1b57ff; --f1-fg:#ffffff; --f1-sfg:#dbe6ff;
+  --f2:#ffffff; --f2-fg:#0a1230; --f2-sfg:#55617e;
+  --f3:#eaf4ff; --f3-fg:#0a1230; --f3-sfg:#55617e;
+  --s1:#ffffff; --s1i:#0a1230; --s2:#0a1230; --s2i:#ffffff; --s3:#0a1230; --s3i:#ffffff;
+  --key:#ffffff;
+  --accent:#1b57ff; --on-accent:#ffffff; --accent-2:#d81f63;
+  --card:#ffffff; --card-ink:#0a1230; --card-sfg:#55617e;
+  --card-chip:#1b57ff; --card-chip-ink:#ffffff; --card-hot:#1b57ff;
+  --step:#eef3fb; --tile1:#0a1230; --tile1-i:#ffffff; --tile2:#ffffff; --tile2-i:#0a1230;
+  --btn:#0a1230; --btn-fg:#ffffff; --btn-hover:#050a1c;
+  --r:6px;
+  --jag:polygon(0 0,96% 2%,100% 100%,4% 96%);
+  --jag2:polygon(2% 0,100% 4%,98% 100%,0 92%);
+  --face-text:'Velvet Sans SC',sans-serif;
+  --face-display:'Velvet Sans SC',sans-serif;
+  --display-style:italic; --display-skew:-3deg; --ui-skew:-8deg;
+  --tilebg1:#0a1230; --tilefg1:#ffffff; --tilebg2:#ffffff; --tilefg2:#1b57ff; --tilebg3:#1b57ff; --tilefg3:#ffffff;
+  --hot:#2f6dff; --hot-ink:#ffffff; --dark:#0a1230; --dark-ink:#ffffff;
+  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%230a1230' fill-opacity='0.22'/%3E%3C/svg%3E");
+  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%230a1230' stroke-width='9'/%3E%3C/svg%3E");
+  --ghost:block;
+}
+
+/* 粉 · 白日水面的玫瑰皮：结构一个字不动，色相整体旋过来 */
+html[data-skin="water-pink"]{
+  --ground:#cf0a6e;
+  --f1:#cf0a6e; --f1-fg:#ffffff; --f1-sfg:#ffe3f1;
+  --f2:#ffffff; --f2-fg:#2b0a1c; --f2-sfg:#6d4a5c;
+  --f3:#fbe6f0; --f3-fg:#2b0a1c; --f3-sfg:#6d4a5c;
+  --s1:#ffffff; --s1i:#2b0a1c; --s2:#2b0a1c; --s2i:#ffffff; --s3:#2b0a1c; --s3i:#ffffff;
+  --key:#ffffff;
+  --accent:#cf0a6e; --on-accent:#ffffff; --accent-2:#8b32d9;
+  --card:#ffffff; --card-ink:#2b0a1c; --card-sfg:#6d4a5c;
+  --card-chip:#cf0a6e; --card-chip-ink:#ffffff; --card-hot:#cf0a6e;
+  --step:#f9e7f1; --tile1:#2b0a1c; --tile1-i:#ffffff; --tile2:#ffffff; --tile2-i:#2b0a1c;
+  --btn:#2b0a1c; --btn-fg:#ffffff; --btn-hover:#1a0611;
+  --r:6px;
+  --jag:polygon(0 0,96% 2%,100% 100%,4% 96%);
+  --jag2:polygon(2% 0,100% 4%,98% 100%,0 92%);
+  --face-text:'Velvet Sans SC',sans-serif;
+  --face-display:'Velvet Sans SC',sans-serif;
+  --display-style:italic; --display-skew:-3deg; --ui-skew:-8deg;
+  --tilebg1:#2b0a1c; --tilefg1:#ffffff; --tilebg2:#ffffff; --tilefg2:#cf0a6e; --tilebg3:#cf0a6e; --tilefg3:#ffffff;
+  --hot:#e0207e; --hot-ink:#ffffff; --dark:#2b0a1c; --dark-ink:#ffffff;
+  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%232b0a1c' fill-opacity='0.22'/%3E%3C/svg%3E");
+  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%232b0a1c' stroke-width='9'/%3E%3C/svg%3E");
+  --ghost:block;
+}
+
+/* 黄 · 今日节目单：高饱和黄舞台 / 黑信息面板 / 衬线大标题，圆角斜切胶囊 */
+html[data-skin="yellow"]{
+  --ground:#ffd900;
+  --f1:#ffd900; --f1-fg:#131313; --f1-sfg:#5b5330;
+  --f2:#fff6d0; --f2-fg:#131313; --f2-sfg:#6a6250;
+  --f3:#131313; --f3-fg:#ffd900; --f3-sfg:#c9a400;
+  --s1:#ffd900; --s1i:#131313; --s2:#131313; --s2i:#ffd900; --s3:#ffd900; --s3i:#131313;
+  --key:#131313;
+  --accent:#2e6be0; --on-accent:#ffd900; --accent-2:#55c34f;
+  --card:#131313; --card-ink:#ffd900; --card-sfg:#c9a400;
+  --card-chip:#ffd900; --card-chip-ink:#131313; --card-hot:#55c34f;
+  --step:#f6ebbf; --tile1:#131313; --tile1-i:#ffd900; --tile2:#fff6d0; --tile2-i:#131313;
+  --btn:#131313; --btn-fg:#ffd900; --btn-hover:#000000;
+  --r:18px;
+  --jag:polygon(1% 6%,100% 0,99% 94%,0 100%);
+  --jag2:polygon(0 0,99% 6%,100% 100%,1% 94%);
+  --face-text:'Velvet Sans SC',sans-serif;
+  --face-display:'Velvet Serif SC',serif;
+  --display-style:normal; --display-skew:0deg; --ui-skew:-10deg;
+  --tilebg1:#131313; --tilefg1:#ffd900; --tilebg2:#ffd900; --tilefg2:#131313; --tilebg3:#2e6be0; --tilefg3:#ffd900;
+  --hot:#131313; --hot-ink:#ffd900; --dark:#131313; --dark-ink:#ffd900;
+  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%23131313' fill-opacity='0.16'/%3E%3C/svg%3E");
+  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%23131313' stroke-width='9'/%3E%3C/svg%3E");
+  --ghost:none;
+}
+
+/* 中性皮 · 自定义：整族从你选的主色派生 */
+html[data-skin="custom"]{
+  --ground:#24639f;
+  --f1:#24639f; --f1-fg:#ffffff; --f1-sfg:#d3e2f3;
+  --f2:#ffffff; --f2-fg:#111827; --f2-sfg:#6b7280;
+  --f3:#111827; --f3-fg:#f3f4f6; --f3-sfg:#b6bccb;
+  --s1:#ffffff; --s1i:#111827; --s2:#111827; --s2i:#ffffff; --s3:#f3f4f6; --s3i:#111827;
+  --key:#ffffff;
+  --accent:#24639f; --on-accent:#ffffff; --accent-2:#3b82f6;
+  --card:#ffffff; --card-ink:#111827; --card-sfg:#6b7280;
+  --card-chip:#24639f; --card-chip-ink:#ffffff; --card-hot:#24639f;
+  --step:#eef1f5; --tile1:#111827; --tile1-i:#f3f4f6; --tile2:#ffffff; --tile2-i:#111827;
+  --btn:#111827; --btn-fg:#f3f4f6; --btn-hover:#050810;
+  --r:12px;
+  --jag:polygon(1% 5%,100% 0,99% 95%,0 100%);
+  --jag2:polygon(0 0,99% 5%,100% 100%,1% 95%);
+  --face-text:'Velvet Sans SC',sans-serif;
+  --face-display:'Velvet Sans SC',sans-serif;
+  --display-style:italic; --display-skew:-4deg; --ui-skew:-6deg;
+  --tilebg1:#111827; --tilefg1:#f3f4f6; --tilebg2:#ffffff; --tilefg2:#111827; --tilebg3:#24639f; --tilefg3:#ffffff;
+  --hot:#111827; --hot-ink:#f3f4f6; --dark:#111827; --dark-ink:#f3f4f6;
+  --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='4' cy='4' r='2.6' fill='%23111827' fill-opacity='0.22'/%3E%3C/svg%3E");
+  --stripes:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M-6 6 6-6M0 22 22 0M16 28 28 16' stroke='%23111827' stroke-width='9'/%3E%3C/svg%3E");
+  --ghost:none;
+}
+
+/* ── 基础 ───────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}

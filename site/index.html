@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MASKARIA 面具庭园 · 没人看见的也算数</title>
-<meta name="description" content="MASKARIA 是一个把日常痕迹存成一张人格面具的个人记录应用。五个属性、记账、同伴、逆影战场、星象，四套主题各自换一整套设计语言。Android 可用，数据留在你自己的设备上。">
+<meta name="description" content="MASKARIA 是一个把日常痕迹存成一张人格面具的个人记录应用。五个属性、记账、同伴、逆影战场、星象，五套主题各自换一整套设计语言。Android 可用，数据留在你自己的设备上。">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="img/red.png">
 <link rel="preload" as="font" type="font/woff2" href="fonts/velvet-sans-sc.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="fonts/velvet-round-sc.v4.woff2" crossorigin>
+<link rel="preload" as="image" href="img/mask-red.png">
+<link rel="stylesheet" href="theme.css">
 <link rel="stylesheet" href="styles.css">
 <script>document.documentElement.classList.add('js')</script>
 </head>
@@ -16,171 +18,186 @@
 
 <a class="skip" href="#main">跳到正文</a>
 
-<!-- 进场演出：黑幕上字母块一个个拍上来，红色爆裂星炸开，然后整块往上撕走。
-     纯 CSS 时间线（.js 才显示），没脚本时这层根本不存在，页面直接是完成态。 -->
-<div class="loader" aria-hidden="true">
-  <div class="loader__dots dots"></div>
-  <!-- 开过去的小货车：车是我自己画的 SVG（官方那辆的原图和立绘是人家的版权物，不搬），
-       要的是「车开过屏幕」这套演出：冲过去、轮子转、身后拉速度线、排气扑两下。 -->
-  <div class="loader__road" aria-hidden="true">
-    <div class="loader__speed"></div>
-    <svg class="loader__car" viewBox="0 0 266 112">
-      <!-- 一辆小两厢（自己画的）。车身与轮子分两组：轮子在路上滚，车身在上头颠。 -->
-      <g class="van__shell">
-        <path class="van__body" d="M16 90V68q0-10 10-10h42l22-28q4-5 11-5h52q7 0 10 5l20 28h46q10 0 12 10l3 12q1 8-7 8z"/>
-        <path class="van__win" d="M86 38h28l4 18H82z"/>
-        <path class="van__win" d="M120 38h22l13 18h-33z"/>
-        <path class="van__stripe" d="M18 66h226v10H18z"/>
-        <path class="van__decal" d="M124 46h32l-8 14h-32z"/>
-        <path class="van__lamp" d="M232 60l18 4v10l-18-4z"/>
-        <path class="van__tail" d="M16 62h10v12H16z"/>
-      </g>
-      <g class="van__axle">
-        <g class="van__wheel">
-          <circle class="van__tyre" cx="66" cy="90" r="17"/>
-          <circle class="van__rim" cx="66" cy="90" r="8"/>
-          <g class="van__spoke"><path d="M66 82v16M58 90h16M60 84l12 12M72 84l-12 12"/></g>
-        </g>
-        <g class="van__wheel">
-          <circle class="van__tyre" cx="198" cy="90" r="17"/>
-          <circle class="van__rim" cx="198" cy="90" r="8"/>
-          <g class="van__spoke"><path d="M198 82v16M190 90h16M192 84l12 12M204 84l-12 12"/></g>
-        </g>
-      </g>
-    </svg>
-    <div class="loader__puff"></div>
-  </div>
-  <div class="loader__mid">
-    <div class="loader__mark">
+<!-- ── 开场幕 ────────────────────────────────────────────────────────────
+     三块黑幕叠在一起，中央是字标 + 面具 + 一条正在走的进度线（线上那辆小车
+     是自己画的 SVG）。演出分两拍：先把字标一块块拍上、面具顶着红色爆裂星顶出来，
+     然后幕布裂成三块向左右分别滑走，同时首屏被一颗锯齿溅射「冲开」。
+     这套幕布与首屏共用 main.js 里同一条时间线——开屏不是另一段动画，是首屏的前半段。 -->
+<div class="curtain" aria-hidden="true">
+  <div class="curtain__band" data-band="0"></div>
+  <div class="curtain__band" data-band="1"></div>
+  <div class="curtain__band" data-band="2"></div>
+  <div class="curtain__core">
+    <div class="curtain__splash">
+      <svg viewBox="0 0 200 200"><path d="M100 2 116 66 172 34 138 84 200 100 138 116 172 166 116 134 100 198 84 134 28 166 62 116 0 100 62 84 28 34 84 66Z" fill="currentColor"/></svg>
+    </div>
+    <div class="curtain__mark">
       <span>M</span><span>A</span><span>S</span><span>K</span><span>A</span><span>R</span><span>I</span><span>A</span>
     </div>
-    <div class="loader__burst">
-      <svg viewBox="0 0 200 200"><path d="M100 4 118 62 176 40 140 88 200 100 140 112 176 160 118 138 100 196 82 138 24 160 60 112 0 100 60 88 24 40 82 62Z" fill="currentColor"/></svg>
+    <p class="curtain__note">没人看见的也算数</p>
+    <div class="curtain__rail">
+      <i class="curtain__fill"></i>
+      <span class="curtain__van">
+        <svg viewBox="0 0 266 112">
+          <g class="van__shell">
+            <path class="van__body" d="M16 90V68q0-10 10-10h42l22-28q4-5 11-5h52q7 0 10 5l20 28h46q10 0 12 10l3 12q1 8-7 8z"/>
+            <path class="van__win" d="M86 38h28l4 18H82z"/>
+            <path class="van__win" d="M120 38h22l13 18h-33z"/>
+            <path class="van__stripe" d="M18 66h226v10H18z"/>
+            <path class="van__lamp" d="M232 60l18 4v10l-18-4z"/>
+          </g>
+          <g class="van__axle">
+            <g class="van__wheel">
+              <circle class="van__tyre" cx="66" cy="90" r="17"/>
+              <circle class="van__rim" cx="66" cy="90" r="8"/>
+            </g>
+            <g class="van__wheel">
+              <circle class="van__tyre" cx="198" cy="90" r="17"/>
+              <circle class="van__rim" cx="198" cy="90" r="8"/>
+            </g>
+          </g>
+        </svg>
+      </span>
     </div>
-    <p class="loader__note">没人看见的也算数</p>
+    <p class="curtain__pct">000</p>
   </div>
 </div>
 
-<!-- 顶栏：没有底没有边框，底与墨跟着下面那一章换。 -->
-<header class="bar" id="top">
-  <a class="mark" href="#top" aria-label="MASKARIA，回到顶部">
-    <span class="mark__l">M</span><span class="mark__l">A</span><span class="mark__l">S</span><span class="mark__l">K</span><span class="mark__l">A</span><span class="mark__l">R</span><span class="mark__l">I</span><span class="mark__l">A</span>
+<!-- ── 固定舞台 ──────────────────────────────────────────────────────────
+     压在每一章底色之上、正文之下的一层，整页不随滚动离开视口：
+     幽灵字标、半调网点带、右侧一块出血的墨斜块、一颗慢慢转的四角星。
+     main.js 让这几层按不同速度跟着滚动走一点（视差），于是「底」和「面」之间
+     始终有相对运动——这是整站唯一一个全程在动的东西，也是各章之间连续的线索。 -->
+<div class="stage" aria-hidden="true">
+  <p class="stage__ghost">MASKARIA</p>
+  <div class="stage__dots"></div>
+  <svg class="stage__slash" viewBox="0 0 520 900" preserveAspectRatio="none">
+    <polygon class="plane plane--ink" points="330,-40 560,-40 560,940 120,940"/>
+  </svg>
+  <div class="stage__star">
+    <svg viewBox="0 0 200 200"><path d="M100 0 118 82 200 100 118 118 100 200 82 118 0 100 82 82Z" fill="currentColor"/></svg>
+  </div>
+</div>
+
+<!-- 顶栏：一排斜贴的牌子。每块的倾角与高低都不一样（官方站的导航就是错开的），
+     鼠标压上去它立正、抬起来、翻色。滚过首屏之后整条栏才从上方滑进来。 -->
+<header class="hdr" id="top">
+  <a class="hdr__mark" href="#top" aria-label="MASKARIA，回到顶部">
+    <span>M</span><span>A</span><span>S</span><span>K</span><span>A</span><span>R</span><span>I</span><span>A</span>
   </a>
-  <nav class="bar__nav" aria-label="页面导航">
-    <a href="#attrs">属性</a>
-    <a href="#flow">怎么记</a>
-    <a href="#list">功能</a>
-    <a href="#skins">主题</a>
-    <a href="#rules">规矩</a>
+  <nav class="hdr__nav" aria-label="页面导航">
+    <a href="#about" data-nav="about">没人看见的</a>
+    <a href="#attrs" data-nav="attrs">五个属性</a>
+    <a href="#flow" data-nav="flow">怎么记</a>
+    <a href="#list" data-nav="list">功能</a>
+    <a href="#skins" data-nav="skins">主题</a>
+    <a href="#rules" data-nav="rules">规矩</a>
   </nav>
-  <a class="bar__act" href="#get">下载</a>
+  <a class="hdr__act" href="#get" data-nav="get">拿一份</a>
 </header>
 
 <main id="main">
 
-<!-- ── 一 · 头版（一张海报，不是"红底排标题"）────────────────────────────
-     三级形状各司其职：
-       一级·舞台：幽灵字标做纵深；一块黑斜面从右下出血切进画面，白切片贴着它的边；
-       二级·重音：爆裂星垫在面具后面（全页只此一颗）、小四角星咬在黑白交界上；
-       三级·结构：主标题两行（纸白/猩红各一块撕纸）、底部一条编辑式信息带。
-     网点只压在左侧一块斜切带里，不再满铺整屏。 -->
+<!-- ── 一 · 头版：一层层搭起来的一张海报 ─────────────────────────────────
+     层次从下往上：幽灵字标 → 溅射墨块 → 半调圆盘 → 面具贴纸（白描边 + 黑错位）
+     → 两张撕纸标题 → 两张相纸（App 截图，压在面具边上）→ 底部出血的信息带 → 滚动提示。
+     右侧的面具与相纸是「前景」，幽灵字标与斜块是「后景」，两者滚动时速度不同。 -->
 <section class="hero" data-field="1" aria-labelledby="hero-h">
   <p class="hero__ghost" aria-hidden="true">MASKARIA</p>
-  <div class="hero__kvart" aria-hidden="true"></div>
-  <div class="hero__kv" aria-hidden="true">
-    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-      <!-- 一级：从右下出血的黑斜面 + 贴边的白切片 + 压在下缘的红细带 -->
-      <polygon class="plane plane--ink" points="1080,-60 1520,-60 1520,960 520,960"/>
-      <polygon class="plane plane--paper" points="1084,-40 1116,-40 566,960 534,960"/>
-      <polygon class="plane plane--ink" points="-60,802 470,700 372,960 -60,960"/>
-      <polygon class="plane plane--hot" points="1080,-60 1520,-60 1520,26 1112,26"/>
-    </svg>
+  <div class="hero__splash" aria-hidden="true">
+    <svg viewBox="0 0 400 400"><path d="M200 4 232 132 344 68 276 168 400 200 276 232 344 332 232 268 200 396 168 268 56 332 124 232 0 200 124 168 56 68 168 132Z" fill="currentColor"/></svg>
   </div>
-  <div class="hero__dots dots" aria-hidden="true"></div>
-  <div class="hero__burst" aria-hidden="true">
-    <svg viewBox="0 0 200 200"><path d="M100 8 116 60 168 34 136 78 192 92 136 106 168 150 116 124 100 180 84 124 32 150 64 106 8 92 64 78 32 34 84 60Z" fill="#fff"/></svg>
-  </div>
-  <div class="hero__spark" aria-hidden="true">
-    <svg viewBox="0 0 200 200"><path d="M100 0 118 82 200 100 118 118 100 200 82 118 0 100 82 82Z" fill="currentColor"/></svg>
-  </div>
+  <div class="hero__disc dots" aria-hidden="true"></div>
   <figure class="hero__art">
     <img class="art__ink" src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true">
+    <img class="art__key" src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true">
     <img class="art__face" src="img/mask-red.png" width="632" height="616"
          alt="MASKARIA 的红色主题图标：白色面具，背面是城市剪影、星与玫瑰的拼贴。">
   </figure>
+  <div class="hero__shots">
+    <figure class="photo photo--a">
+      <img src="img/shot-home-red.jpg" width="1220" height="2656" alt="红色主题的 MASKARIA 首页：黑白红拼贴版的字标，底下是今日任务与人格星象。">
+      <figcaption>首页 · 红色主题</figcaption>
+    </figure>
+    <figure class="photo photo--b">
+      <img src="img/shot-assistant.jpg" width="1220" height="2656" loading="lazy" alt="红色主题的助手对话截图：用户说「我今天午饭吃了10块钱」，助手回「午饭十块，我记下了」，下面是一张记账卡。">
+      <figcaption>助手 · 一句话记账</figcaption>
+    </figure>
+  </div>
   <div class="hero__lead">
-    <h1 class="hero__h" id="hero-h">
-      <span class="tileline tileline--paper"><span class="line__i" data-line style="--i:0">没人看见的</span></span>
-      <span class="tileline tileline--ink"><span class="line__i" data-line style="--i:1">也算数</span></span>
-    </h1>
     <p class="hero__kicker">MASKARIA · 面具庭园</p>
+    <h1 class="hero__h" id="hero-h">
+      <span class="slab slab--paper"><span class="slab__in" data-line>没人看见的</span></span>
+      <span class="slab slab--hot"><span class="slab__in" data-line>也算数</span></span>
+    </h1>
+  </div>
+  <div class="hero__burst" aria-hidden="true">
+    <svg viewBox="0 0 200 200"><path d="M100 8 116 60 168 34 136 78 192 92 136 106 168 150 116 124 100 180 84 124 32 150 64 106 8 92 64 78 32 34 84 60Z" fill="currentColor"/></svg>
   </div>
   <div class="hero__foot">
-    <p class="hero__tag" data-rise style="--i:2">你说「今天看了二十页书」，它记下来，加你 0.5 点知识。就这么点事，剩下的交给时间。</p>
-    <p class="hero__act"><a class="btn btn--burst" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer" data-rise style="--i:3">去 GitHub</a></p>
+    <p class="hero__tag">你说「今天看了二十页书」，它记下来，加你 0.5 点知识。就这么点事，剩下的交给时间。</p>
+    <p class="hero__act"><a class="pbtn pbtn--hot" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer"><span>去 GitHub</span></a></p>
     <p class="hero__mini">Android 端可以直接装；iOS 没做，Apple 开发者账号太贵。</p>
   </div>
+  <p class="hero__cue" aria-hidden="true"><span>往下翻</span><i></i></p>
 </section>
 
-<!-- ── 二 · 没人看见的那些事 ─────────────────────────────────────────── -->
-<section class="band band--intro" data-field="3" aria-labelledby="intro-h">
-  <h2 class="sr-only" id="intro-h">没人看见的那些事</h2>
-  <p class="say" data-reveal>你熬的那些夜算数，看的书算数，压下去的那通火也算数。</p>
-  <p class="head__kick head__kick--bare"><span class="head__no"></span><span class="head__en">ABOUT</span></p>
-  <div class="intro__rest">
-    <div class="intro__cols">
-    <p class="body" data-reveal>这些东西不会自己留下痕迹。久了连你自己都忘了，最后你会觉得那几年<em class="hl">好像什么都没干</em>。</p>
-    <p class="body" data-reveal>所以，收下这张面具。它不催你变强——它没那个本事，也没那个打算。它只干一件事：<em class="hl">你说，它记</em>。</p>
-    <p class="body body--quiet" data-reveal>它就在那儿待着，一声不响。像那个知道你最近很累、但懒得劝你的老搭档。</p>
+<!-- ── 二 · 没人看见的那些事 ───────────────────────────────────────────── -->
+<section class="band band--about" id="about" data-field="3" aria-labelledby="about-h">
+  <h2 class="sr-only" id="about-h">没人看见的那些事</h2>
+  <p class="kicker">ABOUT</p>
+  <p class="say wipe"><span class="wipe__row">你熬的那些夜算数，</span><span class="wipe__row">看的书算数，</span><span class="wipe__row">压下去的那通火也算数。</span></p>
+  <div class="about__rest">
+    <div class="about__cols">
+      <p class="body wipe"><span class="wipe__row">这些东西不会自己留下痕迹。久了连你自己都忘了，最后你会觉得那几年<em class="hl">好像什么都没干</em>。</span></p>
+      <p class="body wipe"><span class="wipe__row">所以，收下这张面具。它不催你变强——它没那个本事，也没那个打算。它只干一件事：<em class="hl">你说，它记</em>。</span></p>
+      <p class="body body--quiet wipe"><span class="wipe__row">它就在那儿待着，一声不响。像那个知道你最近很累、但懒得劝你的老搭档。</span></p>
     </div>
-    <figure class="polaroid polaroid--intro">
-      <img src="img/shot-home-red.jpg" width="1220" height="2656" loading="lazy"
-           alt="红色主题的 MASKARIA 首页：黑白红拼贴版的字标，底下是今日任务与人格星象。">
+    <figure class="photo photo--tilt" data-drift="26">
+      <img src="img/shot-home-red.jpg" width="1220" height="2656" loading="lazy" alt="红色主题的 MASKARIA 首页：黑白红拼贴版的字标，底下是今日任务与人格星象。">
       <figcaption>红色主题 · 首页</figcaption>
     </figure>
   </div>
 </section>
 
-<!-- ── 三 · 五个属性 ─────────────────────────────────────────────────── -->
+<!-- ── 三 · 五个属性：三个量级，不是八张等权贴纸 ─────────────────────────── -->
 <section class="band band--attrs" id="attrs" data-field="1" aria-labelledby="attrs-h">
-  <header class="head head--tiles">
-    <h2 class="head__word" id="attrs-h" data-reveal>五个属性</h2>
-    <p class="head__kick"><span class="head__no"></span><span class="head__en">STATUS</span></p>
+  <img class="deco deco--attrs" data-deco src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true">
+  <header class="head">
+    <h2 class="word" id="attrs-h" data-tiles>五个属性</h2>
+    <p class="kicker">STATUS</p>
   </header>
 
-  <!-- 三个量级：1（巨） > 0（中） > 三条账目（小）。不再是一张十二列看板。 -->
   <div class="attrs">
-    <div class="fig fig--big" data-reveal>
+    <div class="fig fig--big" data-slam>
       <p class="fig__no">1</p>
       <p class="fig__name">知识 <span>Lv.1</span> · 蒙昧初开</p>
       <p class="fig__gain">看了二十页书　+0.5</p>
       <p class="fig__cap">每做一件事，往上加一点。加着加着就升级了，升级解锁技能。</p>
       <p class="fig__bar" aria-hidden="true"><i></i></p>
     </div>
-    <div class="fig fig--mid" data-reveal>
+    <div class="fig fig--mid" data-slam>
       <p class="fig__no">0</p>
       <p class="fig__name">温柔 <span>Lv.1</span> · 冷眼旁观</p>
       <p class="fig__gain">对别人好的那份算，对你自己的那份也算</p>
       <p class="fig__cap">它不评价你做得够不够。评价是你自己的事，它只负责记账。</p>
     </div>
-
     <ol class="ledger">
-      <li data-reveal><b>胆量</b><span>Lv.1</span><i>畏首畏尾</i><em>跟人吵了一架但忍住了，也记。</em></li>
-      <li data-reveal><b>灵巧</b><span>Lv.1</span><i>手忙脚乱</i><em>手比昨天稳一点，也算数。</em></li>
-      <li data-reveal><b>魅力</b><span>Lv.1</span><i>平平无奇</i><em>不用变外向。有魅力这件事，很多时候只是睡够了。</em></li>
+      <li><b>胆量</b><span>Lv.1</span><i>畏首畏尾</i><em>跟人吵了一架但忍住了，也记。</em></li>
+      <li><b>灵巧</b><span>Lv.1</span><i>手忙脚乱</i><em>手比昨天稳一点，也算数。</em></li>
+      <li><b>魅力</b><span>Lv.1</span><i>平平无奇</i><em>不用变外向。有魅力这件事，很多时候只是睡够了。</em></li>
     </ol>
   </div>
 
-  <!-- 记录样例：两条一窄一宽的横带，App 自己的界面片段（data-ui 保留自己的边框与投影） -->
   <div class="specimen">
-    <div class="spec specimen--a" data-reveal>
+    <div class="spec spec--a" data-slam>
       <p class="frag frag--row" data-ui>
         <span class="frag__quote">「看了二十页书」</span>
         <span class="frag__gain">知识　+0.5</span>
       </p>
       <p class="spec__cap">记一笔：用大白话写你干了什么，属性它替你猜，猜错了你改。</p>
     </div>
-    <div class="spec specimen--b" data-reveal>
+    <div class="spec spec--b" data-slam>
       <p class="frag frag--row" data-ui>
         <span class="frag__row"><span class="frag__name">支出 ¥10</span><span class="frag__lv">餐饮</span></span>
         <span class="frag__gain">今天还能花 ¥87.5</span>
@@ -188,148 +205,154 @@
       <p class="spec__cap">记账：一句话记一笔，「今天还能花多少」它替你算好。</p>
     </div>
   </div>
-  <p class="mosaic__note" data-reveal>名字随你改。改成「体重」「存款」「发际线」都行，它不拦你——这本账上写什么，你说了算。</p>
+  <p class="tail-note">名字随你改。改成「体重」「存款」「发际线」都行，它不拦你——这本账上写什么，你说了算。</p>
 </section>
 
-<!-- ── 四 · 记一笔的四步 ─────────────────────────────────────────────── -->
-<section class="band band--flow" id="flow" data-field="3" aria-labelledby="flow-h">
-  <header class="head">
-    <h2 class="head__word" id="flow-h" data-reveal>记一笔的四步</h2>
-    <p class="head__kick"><span class="head__no"></span><span class="head__en">HOW IT WORKS</span></p>
-  </header>
-  <ol class="flow">
-    <li class="flow__p flow__p--1" data-reveal>
-      <span class="flow__lbl">先</span>
-      <p class="flow__card">
-        <span class="frag frag--row" data-ui>
-          <span class="frag__quote">「看了二十页书」</span>
-          <span class="frag__gain">还没猜属性</span>
-        </span>
-      </p>
-      <p class="flow__clause">你只管开口。</p>
-    </li>
-    <li class="flow__p flow__p--2" data-reveal>
-      <span class="flow__lbl">再</span>
-      <p class="flow__card">
-        <span class="frag frag--row" data-ui>
-          <span class="frag__quote">「看了二十页书」</span>
-          <span class="frag__gain">知识　+0.5</span>
-        </span>
-      </p>
-      <p class="flow__clause">它猜一项，猜错你改。</p>
-    </li>
-    <li class="flow__p flow__p--3" data-reveal>
-      <span class="flow__lbl">然后</span>
-      <p class="flow__card">
-        <span class="frag frag--row" data-ui>
-          <span class="frag__row"><span class="frag__name">知识</span><span class="frag__lv">已入账</span></span>
-          <span class="frag__gain">10 月 14 日　热力日历上多一格</span>
-        </span>
-      </p>
-      <p class="flow__clause">点头，落账。</p>
-    </li>
-    <li class="flow__p flow__p--4" data-reveal>
-      <span class="flow__lbl">最后</span>
-      <p class="flow__card">
-        <span class="frag frag--row" data-ui>
-          <span class="frag__row"><span class="frag__name">知识</span><span class="frag__lv">Lv.2 略有所知</span></span>
-          <span class="frag__gain">技能激活后，加点再涨一点</span>
-        </span>
-      </p>
-      <p class="flow__clause">然后它自己就长起来了。</p>
-    </li>
-  </ol>
+<!-- ── 四 · 记一笔的四步：钉住的舞台 + 滚动推着走的一条时间线 ─────────────
+     整节拉成 340vh，里面那层钉在视口里；滚动进度直接把四步推着往前走，
+     红带子同时从左边画过去。手机会拆掉钉住，改成一摞依次拍上来的牌子。 -->
+<section class="band band--flow" id="flow" data-field="3" data-pin aria-labelledby="flow-h">
+  <div class="flow__pin">
+    <img class="deco deco--flow" data-deco src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true">
+    <header class="head head--flow">
+      <h2 class="word" id="flow-h" data-tiles>记一笔的四步</h2>
+      <p class="kicker">HOW IT WORKS</p>
+    </header>
+    <p class="flow__ribbon" aria-hidden="true"><i></i></p>
+    <ol class="flow">
+      <li class="flow__p">
+        <span class="flow__lbl">先</span>
+        <p class="flow__card">
+          <span class="frag frag--row" data-ui>
+            <span class="frag__quote">「看了二十页书」</span>
+            <span class="frag__gain">还没猜属性</span>
+          </span>
+        </p>
+        <p class="flow__clause">你只管开口。</p>
+      </li>
+      <li class="flow__p">
+        <span class="flow__lbl">再</span>
+        <p class="flow__card">
+          <span class="frag frag--row" data-ui>
+            <span class="frag__quote">「看了二十页书」</span>
+            <span class="frag__gain">知识　+0.5</span>
+          </span>
+        </p>
+        <p class="flow__clause">它猜一项，猜错你改。</p>
+      </li>
+      <li class="flow__p">
+        <span class="flow__lbl">然后</span>
+        <p class="flow__card">
+          <span class="frag frag--row" data-ui>
+            <span class="frag__row"><span class="frag__name">知识</span><span class="frag__lv">已入账</span></span>
+            <span class="frag__gain">10 月 14 日　热力日历上多一格</span>
+          </span>
+        </p>
+        <p class="flow__clause">点头，落账。</p>
+      </li>
+      <li class="flow__p">
+        <span class="flow__lbl">最后</span>
+        <p class="flow__card">
+          <span class="frag frag--row" data-ui>
+            <span class="frag__row"><span class="frag__name">知识</span><span class="frag__lv">Lv.2 略有所知</span></span>
+            <span class="frag__gain">技能激活后，加点再涨一点</span>
+          </span>
+        </p>
+        <p class="flow__clause">然后它自己就长起来了。</p>
+      </li>
+    </ol>
+  </div>
 </section>
 
-<!-- ── 五 · 一句话进去，一张卡出来 ───────────────────────────────────── -->
+<!-- ── 五 · 一句话进去，一张卡出来 ─────────────────────────────────────── -->
 <section class="band band--say" data-field="1" aria-labelledby="say-h">
   <header class="head">
-    <h2 class="head__word" id="say-h" data-reveal>一句话进去，一张卡出来</h2>
-    <p class="head__kick"><span class="head__no"></span><span class="head__en">ASSISTANT</span></p>
+    <h2 class="word" id="say-h" data-tiles>一句话进去，一张卡出来</h2>
+    <p class="kicker">ASSISTANT</p>
   </header>
   <div class="say2">
-    <div class="say2__in" data-reveal>
-      <p class="say2__q">「我今天午饭吃了10块钱」</p>
-      <p class="body body--on">原话，不用改。它不要求格式，也不等你分类。</p>
+    <div class="say2__in">
+      <p class="say2__q wipe"><span class="wipe__row">「我今天午饭</span><span class="wipe__row">吃了10块钱」</span></p>
+      <p class="body body--on wipe"><span class="wipe__row">原话，不用改。它不要求格式，也不等你分类。</span></p>
     </div>
-    <div class="say2__out" data-reveal>
-      <p class="frag frag--ledger" data-ui>
+    <div class="say2__out">
+      <p class="frag frag--ledger" data-ui data-slam>
         <span class="frag__row"><span class="frag__name">记账</span><span class="frag__lv">已记录</span></span>
         <span class="frag__big2">支出 ¥10</span>
         <span class="frag__gain">备注：午饭　餐饮</span>
         <span class="frag__gain">今天还能花 ¥87.5</span>
       </p>
-      <p class="body body--on">一句话里好几笔，它自己拆。流水按设计永不上传，只躺在你自己的机器里。</p>
+      <p class="body body--on wipe"><span class="wipe__row">一句话里好几笔，它自己拆。流水按设计永不上传，只躺在你自己的机器里。</span></p>
     </div>
   </div>
-  <figure class="polaroid polaroid--say">
+  <figure class="photo photo--say" data-drift="-30">
     <img src="img/shot-assistant.jpg" width="1220" height="2656" loading="lazy"
          alt="红色主题的助手对话截图：用户说「我今天午饭吃了10块钱」，助手回「午饭十块，我记下了」，下面是一张记账卡。">
     <figcaption>助手 · 记账</figcaption>
   </figure>
 </section>
 
-<!-- ── 六 · 功能 ─────────────────────────────────────────────────────── -->
+<!-- ── 六 · 功能 ───────────────────────────────────────────────────────── -->
 <section class="band band--list" id="list" data-field="3" aria-labelledby="list-h">
   <div class="list">
     <header class="head head--giant">
-      <h2 class="list__word head__word" id="list-h" data-reveal>功能</h2>
-      <p class="head__kick"><span class="head__no"></span><span class="head__en">FEATURES</span></p>
+      <h2 class="word word--giant" id="list-h">功能</h2>
+      <p class="kicker">FEATURES</p>
     </header>
     <ol class="list__rows">
-      <details class="row" open data-reveal>
+      <details class="row" open>
         <summary class="row__sum"><span class="row__name">记一笔</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
           <p>用大白话描述你干了什么。可以补记一周内的旧账——毕竟你也不是每天都记得上来写，人嘛。</p>
           <p>重要标记、日历热力图、按年月日归档、全文搜索，都在这一块里。</p>
         </div></div>
       </details>
-      <details class="row" data-reveal>
+      <details class="row">
         <summary class="row__sum"><span class="row__name">任务</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
           <p>任务绑定属性和点数，完成后自动加点。「每日重复」养习惯，「长期目标」记累计次数，「本周目标」盯住这一周的推进。</p>
         </div></div>
       </details>
-      <details class="row" data-reveal>
+      <details class="row">
         <summary class="row__sum"><span class="row__name">BIG DEAL</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
           <p>给「大事」准备的：拆成若干小步，一步一步勾掉，收官时一次性结算，顺手放一段庆祝动画。就当这世上还有人记得你干成了这件事。</p>
         </div></div>
       </details>
-      <details class="row" data-reveal>
+      <details class="row">
         <summary class="row__sum"><span class="row__name">宣告卡</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
           <p>为重要的事立一张卡：倒计时、目标宣言，钉在首页，每天映入眼帘。临期提醒，收官有专属演出。这是在给自己的未来写欠条。</p>
         </div></div>
       </details>
-      <details class="row" data-reveal>
+      <details class="row">
         <summary class="row__sum"><span class="row__name">记账</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
           <p>一句话记一笔。真实总余额、月度预算环、「今天还能花多少」、资产板块、月末结算。</p>
           <p>「成长」类的花销会反过来给你加属性点。花在自己身上的钱，不算白花。</p>
         </div></div>
       </details>
-      <details class="row" data-reveal>
+      <details class="row">
         <summary class="row__sum"><span class="row__name">同伴</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
           <p>用 22 张大阿卡纳代表你身边重要的人。记一次互动涨一点亲密度，等级上去解锁道具与日常加成。</p>
           <p>每天可以向同伴祈愿，凌晨四点重置——那会儿大多数人已经睡了。登录后输入对方的 UserID 可以缔结约定，双向同步。</p>
         </div></div>
       </details>
-      <details class="row" data-reveal>
+      <details class="row">
         <summary class="row__sum"><span class="row__name">逆影战场</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
           <p>「影时间」降临时，暗影出现。召唤属于你的面具，给五项属性各绑一套技能，出招看局势：伤害、暴击、蓄力、易伤。想往深处走就顺着高塔一层层往上爬。</p>
         </div></div>
       </details>
-      <details class="row" data-reveal>
+      <details class="row">
         <summary class="row__sum"><span class="row__name">星象</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
           <p>每天三选一抽一张塔罗，给一段运势和一句建议，顺手给某个属性加成。另有持续十四天、可以追问一次的中长期占卜。</p>
           <p>没配 AI 也能抽，有离线解读兜底，不至于让你对着一个转圈的加载图标发呆。</p>
         </div></div>
       </details>
-      <details class="row" data-reveal>
+      <details class="row">
         <summary class="row__sum"><span class="row__name">助手</span><span class="row__plus" aria-hidden="true"></span></summary>
         <div class="row__panel"><div>
           <p>住在底部中央那个 ◈ 里的对话式助手。说人话就能记账、加任务、写记录，它记得你手头在做的事，会在合适的时候提一句。</p>
@@ -340,91 +363,107 @@
   </div>
 </section>
 
-<!-- ── 七 · 四套设计语言（选一张，整页换装）───────────────────────────
-     学的是官方站的「角色选择」：上面一排斜切标签，下面一整块换人换景的舞台。 -->
+<!-- ── 七 · 五套设计语言（选一张，整页换装）─────────────────────────────
+     上面一排斜贴的牌子，下面一整块换人换景的舞台。换装时旧的那块往左退、
+     新的那块从右边进，同时整页的 token 一起换——不是同一个页面上刷一层色。 -->
 <section class="band band--skins" id="skins" data-field="1" aria-labelledby="skins-h">
-  <div class="ghost" aria-hidden="true">
-    <svg viewBox="0 0 1200 320" preserveAspectRatio="xMidYMid slice">
-      <text x="0" y="250" textLength="1200" lengthAdjust="spacingAndGlyphs">PERSONA TERMINAL</text>
-    </svg>
-  </div>
   <header class="head">
-    <h2 class="head__word" id="skins-h" data-reveal>换主题不是换色号</h2>
-    <p class="head__kick"><span class="head__no"></span><span class="head__en">THEMES</span></p>
+    <h2 class="word" id="skins-h" data-tiles>换主题不是换色号</h2>
+    <p class="kicker">THEMES</p>
   </header>
-  <p class="lead" data-reveal>换的不是色号，是一整套语言。在红色的世界里，完成叫「夺回」，删除叫「撕掉」。挑一套，整页跟你走。</p>
+  <p class="lead">换的不是色号，是一整套语言。在红色的世界里，完成叫「夺回」，删除叫「撕掉」。挑一套，整页跟你走。</p>
 
   <div class="sel">
     <div class="sel__index">
-    <p class="sel__hint" aria-hidden="true">挑一套 · 整页换装</p>
-    <div class="sel__tabs" role="group" aria-label="切换设计语言">
-      <button class="stab" type="button" data-skin-set="red" aria-pressed="true">剪报怪盗<em>CLIPPING</em></button>
-      <button class="stab" type="button" data-skin-set="water-blue" aria-pressed="false">白日水面<em>WATER · BLUE</em></button>
-      <button class="stab" type="button" data-skin-set="water-pink" aria-pressed="false">白日水面 · 玫瑰<em>WATER · ROSE</em></button>
-      <button class="stab" type="button" data-skin-set="yellow" aria-pressed="false">今日节目单<em>PROGRAM</em></button>
-      <button class="stab" type="button" data-skin-set="custom" aria-pressed="false">中性皮<em>NEUTRAL</em></button>
-    </div>
+      <p class="sel__hint" aria-hidden="true">挑一套 · 整页换装</p>
+      <div class="sel__tabs" role="group" aria-label="切换设计语言">
+        <button class="stab" type="button" data-skin-set="red" aria-pressed="true">剪报怪盗<em>CLIPPING</em></button>
+        <button class="stab" type="button" data-skin-set="water-blue" aria-pressed="false">白日水面<em>WATER · BLUE</em></button>
+        <button class="stab" type="button" data-skin-set="water-pink" aria-pressed="false">白日水面 · 玫瑰<em>WATER · ROSE</em></button>
+        <button class="stab" type="button" data-skin-set="yellow" aria-pressed="false">今日节目单<em>PROGRAM</em></button>
+        <button class="stab" type="button" data-skin-set="custom" aria-pressed="false">中性皮<em>NEUTRAL</em></button>
+      </div>
     </div>
 
     <div class="sel__stage">
       <article class="kv" data-skin-show="red">
-        <figure class="kv__art"><img class="art__ink" src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true"><img class="art__face" src="img/mask-red.png" width="632" height="616" loading="lazy" alt="红色主题的面具图标"></figure>
+        <figure class="kv__art">
+          <img class="art__ink" src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true">
+          <img class="art__key" src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true">
+          <img class="art__face" src="img/mask-red.png" width="632" height="616" alt="红色主题的面具图标">
+        </figure>
         <div class="kv__txt">
           <p class="kv__name">剪报怪盗</p>
           <p class="kv__line">纯黑舞台，猩红斜块碰撞，半调网点，撕纸卡，直角。</p>
           <p class="kv__line">完成叫「夺回」，删除叫「撕掉」，任务页叫「行动」。</p>
           <p class="kv__sample">按钮长这样</p>
-          <p class="kv__btn">夺回</p>
+          <p class="pbtn pbtn--mini"><span>夺回</span></p>
         </div>
       </article>
 
       <article class="kv" data-skin-show="water-blue">
-        <figure class="kv__art"><img class="art__ink" src="img/mask-blue.png" width="631" height="626" alt="" aria-hidden="true"><img class="art__face" src="img/mask-blue.png" width="631" height="626" loading="lazy" alt="蓝色主题的面具图标"></figure>
+        <figure class="kv__art">
+          <img class="art__ink" src="img/mask-blue.png" width="631" height="626" alt="" aria-hidden="true">
+          <img class="art__key" src="img/mask-blue.png" width="631" height="626" alt="" aria-hidden="true">
+          <img class="art__face" src="img/mask-blue.png" width="631" height="626" loading="lazy" alt="蓝色主题的面具图标">
+        </figure>
         <div class="kv__txt">
           <p class="kv__name">白日水面</p>
           <p class="kv__line">近白底，斜切平行四边形，超大黑斜体，背景里压着幽灵英文大字。</p>
           <p class="kv__line">完成叫「达成」，滑动切换，页面之间是水面漫过去的转场。</p>
           <p class="kv__sample">按钮长这样</p>
-          <p class="kv__btn">达成</p>
+          <p class="pbtn pbtn--mini"><span>达成</span></p>
         </div>
       </article>
 
       <article class="kv" data-skin-show="water-pink">
-        <figure class="kv__art"><img class="art__ink" src="img/mask-pink.png" width="630" height="637" alt="" aria-hidden="true"><img class="art__face" src="img/mask-pink.png" width="630" height="637" loading="lazy" alt="粉色主题的面具图标"></figure>
+        <figure class="kv__art">
+          <img class="art__ink" src="img/mask-pink.png" width="630" height="637" alt="" aria-hidden="true">
+          <img class="art__key" src="img/mask-pink.png" width="630" height="637" alt="" aria-hidden="true">
+          <img class="art__face" src="img/mask-pink.png" width="630" height="637" loading="lazy" alt="粉色主题的面具图标">
+        </figure>
         <div class="kv__txt">
           <p class="kv__name">白日水面 · 玫瑰</p>
           <p class="kv__line">同一套骨架，色相整体旋到玫瑰紫，青信号换成紫罗兰。</p>
           <p class="kv__line">结构、斜切、幽灵大字一个字不动，只换了这一族颜色。</p>
           <p class="kv__sample">按钮长这样</p>
-          <p class="kv__btn">达成</p>
+          <p class="pbtn pbtn--mini"><span>达成</span></p>
         </div>
       </article>
 
       <article class="kv" data-skin-show="yellow">
-        <figure class="kv__art"><img class="art__ink" src="img/mask-yellow.png" width="627" height="620" alt="" aria-hidden="true"><img class="art__face" src="img/mask-yellow.png" width="627" height="620" loading="lazy" alt="黄色主题的面具图标"></figure>
+        <figure class="kv__art">
+          <img class="art__ink" src="img/mask-yellow.png" width="627" height="620" alt="" aria-hidden="true">
+          <img class="art__key" src="img/mask-yellow.png" width="627" height="620" alt="" aria-hidden="true">
+          <img class="art__face" src="img/mask-yellow.png" width="627" height="620" loading="lazy" alt="黄色主题的面具图标">
+        </figure>
         <div class="kv__txt">
           <p class="kv__name">今日节目单</p>
           <p class="kv__line">高饱和黄舞台，黑信息面板，衬线大标题，圆角斜切胶囊。</p>
           <p class="kv__line">完成叫「打卡」，实景云天空当底，一天排成一档节目。</p>
           <p class="kv__sample">按钮长这样</p>
-          <p class="kv__btn">打卡</p>
+          <p class="pbtn pbtn--mini"><span>打卡</span></p>
         </div>
       </article>
 
       <article class="kv" data-skin-show="custom">
-        <figure class="kv__art"><img class="art__ink" src="img/mask-custom.png" width="632" height="628" alt="" aria-hidden="true"><img class="art__face" src="img/mask-custom.png" width="632" height="628" loading="lazy" alt="自定义主题的面具图标"></figure>
+        <figure class="kv__art">
+          <img class="art__ink" src="img/mask-custom.png" width="632" height="628" alt="" aria-hidden="true">
+          <img class="art__key" src="img/mask-custom.png" width="632" height="628" alt="" aria-hidden="true">
+          <img class="art__face" src="img/mask-custom.png" width="632" height="628" loading="lazy" alt="自定义主题的面具图标">
+        </figure>
         <div class="kv__txt">
           <p class="kv__name">中性皮</p>
           <p class="kv__line">你挑一个主色，整族从它派生：大色块压暗，白的字才站得住。</p>
           <p class="kv__line">下面这六个色号都是从上面几套语言里取下来的。</p>
           <p class="kv__sample">挑一个主色</p>
           <p class="kv__sw">
-            <button class="pick pick--c" type="button" data-skin-set="custom" data-accent="#1B57FF" style="--sw:#1B57FF"><span class="sr-only">主色：海蓝</span></button>
-            <button class="pick pick--c" type="button" data-skin-set="custom" data-accent="#35D1E8" style="--sw:#35D1E8"><span class="sr-only">主色：信号青</span></button>
-            <button class="pick pick--c" type="button" data-skin-set="custom" data-accent="#55C34F" style="--sw:#55C34F"><span class="sr-only">主色：绿</span></button>
-            <button class="pick pick--c" type="button" data-skin-set="custom" data-accent="#F59E0B" style="--sw:#F59E0B"><span class="sr-only">主色：琥珀</span></button>
-            <button class="pick pick--c" type="button" data-skin-set="custom" data-accent="#EC4899" style="--sw:#EC4899"><span class="sr-only">主色：玫红</span></button>
-            <button class="pick pick--c" type="button" data-skin-set="custom" data-accent="#EF4444" style="--sw:#EF4444"><span class="sr-only">主色：猩红</span></button>
+            <button class="pick" type="button" data-skin-set="custom" data-accent="#1B57FF" style="--sw:#1B57FF"><span class="sr-only">主色：海蓝</span></button>
+            <button class="pick" type="button" data-skin-set="custom" data-accent="#35D1E8" style="--sw:#35D1E8"><span class="sr-only">主色：信号青</span></button>
+            <button class="pick" type="button" data-skin-set="custom" data-accent="#55C34F" style="--sw:#55C34F"><span class="sr-only">主色：绿</span></button>
+            <button class="pick" type="button" data-skin-set="custom" data-accent="#F59E0B" style="--sw:#F59E0B"><span class="sr-only">主色：琥珀</span></button>
+            <button class="pick" type="button" data-skin-set="custom" data-accent="#EC4899" style="--sw:#EC4899"><span class="sr-only">主色：玫红</span></button>
+            <button class="pick" type="button" data-skin-set="custom" data-accent="#EF4444" style="--sw:#EF4444"><span class="sr-only">主色：猩红</span></button>
           </p>
         </div>
       </article>
@@ -437,95 +476,101 @@
   </div>
 </section>
 
-<!-- ── 八 · 两条硬规矩 ───────────────────────────────────────────────── -->
+<!-- ── 八 · 两条硬规矩 ────────────────────────────────────────────────── -->
 <section class="band band--rules" id="rules" data-field="3" aria-labelledby="rules-h">
   <header class="head">
-    <h2 class="head__word" id="rules-h" data-reveal>两条硬规矩</h2>
-    <p class="head__kick"><span class="head__no"></span><span class="head__en">RULES</span></p>
+    <h2 class="word" id="rules-h" data-tiles>两条硬规矩</h2>
+    <p class="kicker">RULES</p>
   </header>
   <div class="rules">
     <div class="rules__a">
-      <p class="rules__mark" aria-hidden="true">&times;</p>
-      <p class="say say--s" data-reveal>记账流水、聊天原文、配图与音乐，<em class="hl">永不上传</em>。</p>
-      <p class="body rules__sub" data-reveal>服务端只提供可选的转发通道，默认不持有任何服务商的密钥。云同步是你自己按类目开的开关，默认全关。这两条不是选项，是它做出来的时候就这么写的。</p>
+      <p class="rules__mark" aria-hidden="true" data-cross>&times;</p>
+      <p class="say say--s"><span class="say__row">记账流水、聊天原文、</span><span class="say__row">配图与音乐，<em class="hl">永不上传</em>。</span></p>
+      <p class="body rules__sub">服务端只提供可选的转发通道，默认不持有任何服务商的密钥。云同步是你自己按类目开的开关，默认全关。这两条不是选项，是它做出来的时候就这么写的。</p>
     </div>
     <div class="rules__b">
-      <p class="rules__mark" aria-hidden="true">&times;</p>
-      <p class="say say--s" data-reveal>AI 是你自带的。Key 存本机，不上云、不进日志。</p>
-      <p class="stamp" data-reveal>自用项目 · 非商业</p>
+      <p class="rules__mark" aria-hidden="true" data-cross>&times;</p>
+      <p class="say say--s"><span class="say__row">AI 是你自带的。</span><span class="say__row">Key 存本机，不上云、不进日志。</span></p>
+      <p class="stamp">自用项目 · 非商业</p>
     </div>
-    <div class="stripes rules__tape" aria-hidden="true"></div>
+    <div class="tape rules__tape" aria-hidden="true"></div>
   </div>
 </section>
 
-<!-- ── 九 · 它不是一个人写的 ─────────────────────────────────────────── -->
+<!-- ── 九 · 它不是一个人写的 ──────────────────────────────────────────── -->
 <section class="band band--thanks" data-field="1" aria-labelledby="thanks-h">
+  <img class="deco deco--thanks" data-deco src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true">
   <header class="head">
-    <h2 class="head__word" id="thanks-h" data-reveal>它不是一个人写的</h2>
-    <p class="head__kick"><span class="head__no"></span><span class="head__en">CREDITS</span></p>
+    <h2 class="word" id="thanks-h" data-tiles>它不是一个人写的</h2>
+    <p class="kicker">CREDITS</p>
   </header>
-  <ul class="names" data-reveal>
+  <ul class="names">
     <li>the-velvet</li><li>YuukiMarine</li><li>React</li><li>TypeScript</li><li>Vite</li><li>Tailwind CSS</li><li>Zustand</li><li>Dexie</li><li>GSAP</li><li>motion</li><li>Recharts</li><li>DOMPurify</li><li>Spring Boot</li><li>MyBatis-Plus</li><li>MySQL</li><li>Flyway</li><li>Capacitor</li><li>Noto Sans SC</li><li>寒蝉全圆体</li>
   </ul>
-  <p class="body body--quiet" data-reveal>上面是它真正用到的东西，一个不落。原始项目 the-velvet（靛蓝色房间）由 YuukiMarine 创作，本作基于它二次创作，按同一个协议开源。</p>
+  <p class="body body--quiet">上面是它真正用到的东西，一个不落。原始项目 the-velvet（靛蓝色房间）由 YuukiMarine 创作，本作基于它二次创作，按同一个协议开源。</p>
 </section>
 
-<!-- ── 十 · 完成到哪一步 ─────────────────────────────────────────────── -->
+<!-- ── 十 · 完成到哪一步 ──────────────────────────────────────────────── -->
 <section class="band band--stats" data-field="3" aria-labelledby="stats-h">
+  <img class="deco deco--stats" data-deco src="img/mask-red.png" width="632" height="616" alt="" aria-hidden="true">
   <header class="head">
-    <h2 class="head__word" id="stats-h" data-reveal>完成到哪一步</h2>
-    <p class="head__kick"><span class="head__no"></span><span class="head__en">PROGRESS</span></p>
+    <h2 class="word" id="stats-h" data-tiles>完成到哪一步</h2>
+    <p class="kicker">PROGRESS</p>
   </header>
   <div class="stats">
-    <div class="stat stat--tall" data-reveal>
-      <p class="stat__fig">202</p>
+    <div class="stat stat--tall" data-count="202">
+      <p class="stat__fig">0</p>
       <p class="stat__cap">项前端自动化测试通过，分布在 32 个测试文件里</p>
     </div>
-    <div class="stat stat--ink" data-reveal>
-      <p class="stat__fig">13</p>
+    <div class="stat stat--ink" data-count="13">
+      <p class="stat__fig">0</p>
       <p class="stat__cap">个数据库版本，从空库到能用一键完成</p>
     </div>
-    <div class="stat stat--mid" data-reveal>
+    <div class="stat stat--mid" data-count="0">
       <p class="stat__fig">0</p>
       <p class="stat__cap">条上传的记账流水，按设计一条都不会有</p>
     </div>
   </div>
 </section>
 
-<!-- ── 十一 · 拿一份 ─────────────────────────────────────────────────── -->
+<!-- ── 十一 · 拿一份 ──────────────────────────────────────────────────── -->
 <section class="band band--get" id="get" data-field="1" aria-labelledby="get-h">
   <header class="head">
-    <h2 class="head__word" id="get-h" data-reveal>把今天记下来</h2>
-    <p class="head__kick"><span class="head__no"></span><span class="head__en">START</span></p>
+    <h2 class="word" id="get-h" data-tiles>把今天记下来</h2>
+    <p class="kicker">START</p>
   </header>
   <div class="get">
     <div class="get__l">
-      <p class="body" data-reveal>源码就在那儿，自己捏一个。前端 32 个测试文件、202 项测试全绿，后端跑在 MySQL 上；Android 包你自己构建一次，命令都在仓库里。</p>
-      <p class="note" data-reveal>安装包 26 MB，不在仓库里，跟着源码一起构建：<span class="cmd">npm run cap:build:android</span></p>
+      <p class="body">源码就在那儿，自己捏一个。前端 32 个测试文件、202 项测试全绿，后端跑在 MySQL 上；Android 包你自己构建一次，命令都在仓库里。</p>
+      <p class="note">安装包 26 MB，不在仓库里，跟着源码一起构建：<span class="cmd" data-type="npm run cap:build:android">npm run cap:build:android</span></p>
+      <p class="get__act"><a class="pbtn pbtn--hot" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer"><span>去 GitHub</span></a></p>
+      <p class="note note--c">仓库：Meinan818/persona-terminal-dev</p>
     </div>
     <div class="get__r">
-      <div class="frag frag--entry" data-ui>
+      <figure class="photo photo--get" data-drift="-22">
+        <img src="img/shot-home-red.jpg" width="1220" height="2656" loading="lazy" alt="红色主题的 MASKARIA 首页截图。">
+        <figcaption>装上去就是这个样子</figcaption>
+      </figure>
+      <div class="frag frag--entry" data-ui data-float>
         <p class="frag__row"><span class="frag__name">今天</span><span class="frag__lv">10 月 14 日</span></p>
         <p class="frag__big2">看了二十页书</p>
         <p class="frag__gain">知识　+0.5　已入账</p>
         <p class="frag__btn">确认</p>
       </div>
-      <div class="navfrag" data-ui>
+      <div class="navfrag" data-ui data-float>
         <span class="navfrag__i navfrag__i--on"><span class="navfrag__o"></span>首页</span>
         <span class="navfrag__i"><span class="navfrag__o"></span>行动</span>
         <span class="navfrag__i"><span class="navfrag__d"></span>助手</span>
         <span class="navfrag__i"><span class="navfrag__o"></span>羁绊</span>
         <span class="navfrag__i"><span class="navfrag__o"></span>菜单</span>
       </div>
-      <a class="btn" href="https://github.com/Meinan818/persona-terminal-dev" target="_blank" rel="noreferrer">去 GitHub</a>
-      <p class="note note--c">仓库：Meinan818/persona-terminal-dev</p>
     </div>
   </div>
 </section>
 
 </main>
 
-<!-- ── 十二 · 页脚 ───────────────────────────────────────────────────── -->
+<!-- ── 十二 · 页脚 ─────────────────────────────────────────────────────── -->
 <footer class="foot" data-field="3" aria-labelledby="foot-h">
   <h2 class="sr-only" id="foot-h">怎么找到它</h2>
   <div class="foot__notes">
@@ -547,6 +592,8 @@
   </div>
 </footer>
 
+<script src="vendor/gsap.min.js"></script>
+<script src="vendor/ScrollTrigger.min.js"></script>
 <script src="main.js"></script>
 </body>
 </html>

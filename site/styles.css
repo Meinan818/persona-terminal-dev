@@ -31,14 +31,22 @@
   --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 0 59 41 100 50 59 59 50 100 41 59 0 50 41 41Z' fill='%23fff'/%3E%3C/svg%3E");
   /* 手撕纸的边：十二条边、没有两条平行，角上带缺口和折角。
      全站的框都从这六张里挑，谁跟谁都不重样——P5 里没有正四边形。 */
-  --q1:polygon(2% 6%,18% 0,46% 3%,74% 0,100% 8%,97% 38%,100% 64%,94% 96%,62% 100%,34% 95%,6% 100%,0 70%,3% 40%);
-  --q2:polygon(0 10%,26% 2%,54% 8%,82% 1%,100% 14%,95% 44%,99% 72%,88% 99%,58% 92%,30% 100%,4% 92%,2% 58%);
-  --q3:polygon(4% 0,32% 6%,64% 0,92% 7%,100% 30%,96% 58%,100% 86%,72% 100%,44% 93%,16% 100%,0 78%,3% 44%);
-  --q4:polygon(0 4%,22% 10%,50% 2%,78% 9%,100% 2%,98% 34%,92% 62%,100% 92%,66% 100%,38% 94%,10% 99%,2% 66%,0 34%);
-  --q5:polygon(6% 0,40% 7%,70% 0,100% 10%,94% 40%,100% 70%,86% 100%,56% 93%,26% 100%,0 88%,5% 56%,0 26%);
-  --q6:polygon(0 12%,30% 0,60% 9%,88% 0,100% 20%,93% 50%,98% 80%,70% 100%,40% 90%,12% 100%,3% 74%,0 40%);
-  --q7:polygon(3% 8%,14% 0,52% 5%,86% 0,100% 12%,94% 46%,100% 74%,80% 100%,46% 94%,14% 100%,0 84%,4% 52%);
-  --q8:polygon(0 6%,36% 0,70% 5%,100% 0,96% 30%,100% 58%,90% 100%,52% 96%,20% 100%,2% 80%,6% 46%,0 28%);
+  --q1:polygon(0 34%,9% 4%,24% 16%,44% 0,63% 12%,84% 2%,100% 24%,92% 44%,100% 62%,86% 92%,
+    64% 80%,48% 100%,26% 86%,8% 100%,0 74%,7% 52%);
+  --q2:polygon(2% 0,20% 14%,38% 2%,58% 16%,78% 0,100% 18%,88% 40%,100% 58%,82% 78%,96% 100%,62% 88%,
+    40% 100%,20% 84%,4% 96%,0 62%,6% 30%);
+  --q3:polygon(0 20%,16% 0,34% 14%,52% 2%,70% 16%,88% 0,100% 26%,90% 46%,100% 66%,80% 84%,
+    92% 100%,54% 90%,32% 100%,12% 88%,0 66%,8% 42%);
+  --q4:polygon(4% 0,22% 12%,40% 0,60% 14%,80% 4%,100% 22%,86% 42%,98% 60%,78% 82%,94% 100%,
+    58% 90%,36% 100%,16% 86%,2% 96%,0 56%,8% 28%);
+  --q5:polygon(0 28%,12% 2%,30% 18%,50% 0,70% 14%,88% 4%,100% 30%,88% 50%,100% 70%,76% 88%,
+    90% 100%,50% 92%,28% 100%,10% 84%,0 60%,6% 40%);
+  --q6:polygon(2% 12%,18% 0,36% 16%,56% 0,74% 14%,92% 2%,100% 28%,88% 48%,100% 68%,78% 86%,
+    92% 100%,56% 88%,34% 100%,14% 86%,0 68%,6% 38%);
+  --q7:polygon(0 24%,14% 2%,32% 14%,52% 0,72% 16%,90% 4%,100% 30%,90% 52%,100% 72%,80% 90%,
+    92% 100%,52% 90%,30% 100%,10% 86%,2% 64%,8% 36%);
+  --q8:polygon(6% 0,24% 14%,42% 2%,62% 16%,82% 0,100% 20%,88% 42%,98% 62%,80% 84%,94% 100%,
+    58% 88%,36% 100%,16% 84%,0 92%,4% 56%,10% 30%);
 }
 
 /* ── 五套皮肤 ───────────────────────────────────────────────────────
@@ -219,8 +227,9 @@ a{color:inherit}
   -webkit-mask-size:220px 34px; mask-size:220px 34px;
   pointer-events:none;
 }
-/* 撕边只压空处：章节里的东西一律在它上面 */
-.band>*,.foot>*{position:relative; z-index:1}
+/* 撕边只压空处：章节里的东西一律在它上面。
+   注意这里不给 z-index——给了会自成层叠上下文，块后面的描边层就被自己的底色盖住。 */
+.band>*,.foot>*{position:relative}
 
 html.skinning :is(.band,.hero,.foot,.tile,.flow__p,.say2__in,.say2__out,.row,.stat,.kv,
   .frag,.card,.btn,.navfrag,.stab,.bar,.frag__name,.frag__btn,.navfrag__d,.kv__btn){
@@ -791,6 +800,11 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
   background:var(--slab); color:var(--slab-ink);
   clip-path:var(--q1);
 }
+/* 底色留在块自己身上（外面不再套描边层）：带 transform 的块会自成层叠上下文，
+   套上去的描边反而会盖住底色。力从形状和角度来，不从描边来。 */
+.boxed,.say,.say--s,.body,.lead,.note,.mosaic__note,.flow__clause,.tile__cap,
+.stat__cap,.kv__line,.names,.foot__notes p,.foot__credits,.foot__place,
+.row__panel p,.sel__desc .kv__line{position:relative}
 /* 每块撕法不一样：换块就换一条边 */
 .body+.body,.lead,.row__panel p,.tile__cap{clip-path:var(--q2)}
 .note,.stat__cap,.foot__credits{clip-path:var(--q3)}
@@ -798,19 +812,19 @@ html[data-skin="custom"] .kv[data-skin-show="custom"]{display:grid; grid-templat
 .mosaic__note,.names,.foot__place,.sel__desc .kv__line{clip-path:var(--q7)}
 .say,.say--s{clip-path:var(--q5)}
 /* 块与块之间绝不平行：角度一条条错开 */
-.body{transform:rotate(-1.6deg)}
-.body+.body{transform:rotate(2.1deg)}
-.lead,.note,.mosaic__note{transform:rotate(-2.4deg)}
-.flow__clause{transform:rotate(1.7deg)}
-.tile__cap{transform:rotate(-2.2deg)}
-.stat__cap{transform:rotate(1.9deg)}
-.kv__line{transform:rotate(-2deg)}
-.names{transform:rotate(-1.4deg); margin-bottom:34px}
-.foot__notes p{transform:rotate(1.5deg)}
-.foot__credits{transform:rotate(-1.3deg)}
-.foot__place{transform:rotate(2deg)}
-.row__panel p{transform:rotate(-1.8deg)}
-.say,.say--s{transform:rotate(-1.1deg)}
+.body{transform:rotate(-2.6deg)}
+.body+.body{transform:rotate(3.2deg)}
+.lead,.note,.mosaic__note{transform:rotate(-3.4deg)}
+.flow__clause{transform:rotate(2.6deg)}
+.tile__cap{transform:rotate(-3.1deg)}
+.stat__cap{transform:rotate(2.8deg)}
+.kv__line{transform:rotate(-3deg)}
+.names{transform:rotate(-2.2deg); margin-bottom:34px}
+.foot__notes p{transform:rotate(2.4deg)}
+.foot__credits{transform:rotate(-2deg)}
+.foot__place{transform:rotate(3deg)}
+.row__panel p{transform:rotate(-2.6deg)}
+.say,.say--s{transform:rotate(-1.8deg)}
 /* 这几块本来就是黑的（或纸的），别叠两层 */
 .frag--ledger,.frag--entry,.flow__card{background:var(--card); color:var(--card-ink)}
 .hl{

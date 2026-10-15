@@ -354,6 +354,14 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 边界（已如实交付）：无头浏览器走首次引导时被「上次打开没走完」的恢复模式拦住（要求登录云端或导入备份），**进不到抽卡界面**，因此本轮没有应用内真实渲染截图，交给用户的是自包含预览页。
 - **用户验收（同日）**：用户本地登录后目视确认「已经改好了」——卡背视觉验收通过。
 
+### 2026-10-16：卡背上线 + APK 重打包 + 图片失败退避重试（用户按序授权的四件事）
+
+- **① 卡背部署到线上**：以 `VITE_API_URL=http://192.144.227.216` 重新构建（新入口 `index-bSmY4YbN.js`），先备份线上到 `/home/ubuntu/maskaria-backups/web-20261016-040418.tgz`（21,950,355 B），再 tar 流上传（排除 tarot）。线上核验：首页引用新入口；**卡背代码所在的星象分包 `Astrology-ChJdHCoK.js` 与本地 md5 完全一致**（`16a1ed87bb9e3ec2f9e34a132ceeed85`，含 `pink-back-bg` 标记）；缓存桶仍为 `tarot-art-v2`（**未重置**，不触发客户端缓存失效）；四套塔罗图 200 image/webp；`/api/health` UP。
+- **② 重新打包 APK**：`scripts/build-release.ps1` **执行失败**——PowerShell 5.1 按 GBK 读取 UTF-8 无 BOM 的脚本，中文注释被解码成乱码吃掉引号，**解析阶段即 ParserError**（一条命令都没执行，`dist/` 与产物未受影响）；本机无 `pwsh`。改为**手动执行等价步骤**：`npx cap sync android` → `cd android && ./gradlew.bat assembleRelease bundleRelease`（BUILD SUCCESSFUL in 3m 4s）→ 复制产物到 `outputs/`。新 APK 32,024,256 B（旧 30,445,504）、AAB 31,826,041 B；旧产物先留底为 `*.before-cardback-20261016`。**决定性验证**：`unzip -p` 解开 APK 取 `assets/public/assets/Astrology-ChJdHCoK.js` 命中 `pink-back-bg`，且包内 `assets/public/tarot/pink/` 有 22 张。
+- **③ 清理临时文件**：删除 `.rivet/scratch/pink-tarot/`（本次排查自建），保留 `outputs/pink-tarot-preview/` 对照图；scratch 下其他历史文件未动。
+- **④ 图片加载失败加固**（commit `9cb01bf`）：`tarotArt.ts` 新增 `ART_RETRY_DELAYS_MS` / `nextArtRetryDelay`（5s / 15s / 45s 三次，用尽即停）；`TarotCardSVG.tsx` 失败后按节奏清除 `failedSrc` 重试、`onLoad` 重置计数。验证：tarotArt 单测 11 passed、typecheck exit 0、全量 34 文件 218 项 passed。
+- **遗留**：第 ④ 项**尚未部署到线上**（线上仍是旧代码，加固未生效）；本轮重打的 APK 也**不含**该加固（但对 APK 意义有限——包内图片是本地打包的、不依赖服务器）。`build-release.ps1` 的编码缺陷仍在（未修），下次打包仍需手动执行，或先给脚本加 BOM / 改用 pwsh。
+
 ## 10. 证据索引：需要时再定位原文
 
 - §11为本地完整Git提交索引；先git show --stat查范围，再按非敏感文件查内容。历史可能含凭据，禁止批量输出历史文件。

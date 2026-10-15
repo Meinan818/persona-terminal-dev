@@ -368,6 +368,13 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **打包脚本编码缺陷已修**（commit `584bf7c`）：根因是 `scripts/build-release.ps1` 存为 UTF-8 无 BOM，而 Windows PowerShell 5.1 按 GBK 读，中文注释解码成乱码吃掉引号 → `ParserError`（本次手动打包时就是这么失败的）。加 UTF-8 BOM 后 `ParserFile` 零错误、中文可正确读出。本机无 `pwsh`，故采用 BOM 方案而非换 PowerShell 版本。**下次打包可恢复直接跑脚本**（未再实跑验证，仅静态解析通过）。
 - **残留**：线上 `assets/` 下留有历史分包（`Astrology-ChJdHCoK.js` 等），无害；本轮重打的 APK **不含**退避重试（对 APK 影响有限，包内图片为本地自带）。
 
+### 2026-10-16（续）：Push 到私有开发库
+
+- 用户指令「Push」后执行：`git push origin main` → `5983b00..1834c7e`（15 个提交，覆盖本日全部塔罗/卡背/加固/脚本修复与日志）。
+- **独立核验**（不取信 push 自身输出）：`git ls-remote origin main` = `1834c7e5e69aea97f41e6c4146f80f6816c66f95`，与本地 `git rev-parse HEAD` 完全一致。
+- 目标库：`git@github.com:Meinan818/persona-terminal-dev.git`（私有）。**公开展示库未动**——本次改动含项目日志与素材相关约定，按既定规则不同步公开库。
+- 未使用 `--force`；远端此前无分叉，为快进推送。
+
 ## 10. 证据索引：需要时再定位原文
 
 - §11为本地完整Git提交索引；先git show --stat查范围，再按非敏感文件查内容。历史可能含凭据，禁止批量输出历史文件。

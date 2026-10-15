@@ -375,6 +375,17 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 目标库：`git@github.com:Meinan818/persona-terminal-dev.git`（私有）。**公开展示库未动**——本次改动含项目日志与素材相关约定，按既定规则不同步公开库。
 - 未使用 `--force`；远端此前无分叉，为快进推送。
 
+### 2026-10-16（续）：缺陷 A —— 鸿蒙平板「记账完成」字体显示不全（已定位并修复）
+
+- 现象：用户鸿蒙平板手动记账后，弹出的「记账完成」标题显示不全；其他设备正常。
+- 定位：「记账完成」由 `TodoCompleteModal.tsx` 的 `BandCutInP3` 渲染（`LedgerSavedModal` 按频道分发）。标题 span 用 `WebkitTextStroke:'5px #ffffff'` + `paintOrder:'stroke fill'` 把白描边垫在字底下。
+- 根因：`paint-order` 是较新的 CSS 特性，部分鸿蒙设备 WebView 不支持；不支持时描边按默认顺序画在填充**之上**，5px 白边把笔画糊掉 —— 即用户看到的「显示不全」。**已排除字体缺字**：脚本解析字体 CSS 的 9068 个 unicode-range，「记账完成」四字均在 Noto Sans SC 黑体子集内。
+- **本地复现**（决定性）：自包含对照页 `outputs/pink-tarot-preview/ledger-font-repro.html` —— 去掉 `paint-order` 的那行字被白边糊掉，与用户描述吻合。
+- 修复（commit `7c33d43`）：改为**两层叠字**——底层 span 只画白描边（`absolute inset-0`）、上层只画填充（`relative`），先后由 DOM 层级决定，不依赖 `paint-order`。对照验证页 `outputs/pink-tarot-preview/ledger-font-fixed.html`：新结构在不支持该属性时仍清晰。
+- 验证：typecheck exit 0、全量 34 文件 218 项 passed。**鸿蒙真机未验证**（无该设备），依据为本地复现 + 对照；该修复需重新部署网页端 / 重打 APK 才能到达设备。
+- 同族风险（未修，用户未报）：项目内 `paintOrder` 仍有 9 处。其中 `p4r/cutins.tsx`、`p5r/kit.tsx` 用的是 **SVG 呈现属性**（支持早，风险低）；`AchievementUnlockModal.tsx`、`CallingCardCutIn.tsx` 与本次同为 **CSS 属性**（同源风险）。暂不扩大改动。
+- **缺陷 B/C 状态**：B 已定位到 `src/components/org/HideoutMap.tsx` 的 `SeatPin`（232 行，`avatarUrl` 走 `<img loading="lazy" className="absolute inset-[2px] …">`，按频道分别加 `clipPath`/圆角），但「手机端失败、电脑端正常」的具体表现未经用户确认，尚不能定根因；C（平板安装后图标不全）未开始。
+
 ## 10. 证据索引：需要时再定位原文
 
 - §11为本地完整Git提交索引；先git show --stat查范围，再按非敏感文件查内容。历史可能含凭据，禁止批量输出历史文件。

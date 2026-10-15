@@ -4,6 +4,7 @@
 
 <h1 align="center">MASKARIA · 面具庭园</h1>
 <p align="center"><em>把日子过成存档，把存档过成人样</em></p>
+<p align="center">当前 Android 正式版：<strong>v2.8.3</strong></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" />
@@ -212,6 +213,14 @@ npm run cap:sync           # 把前端产物同步进 Android 工程
 npm run cap:build:android  # 打包
 ```
 
+生成可覆盖安装的正式包：
+
+```powershell
+.\scripts\build-release.ps1
+```
+
+当前线上版沿用 Android Debug 证书，脚本会使用同一张证书以保证新包可覆盖升级。以后迁移到应用商店私钥时，再附加 `-KeystorePath` 并按提示在本机输入签名信息；密码不会写入仓库、日志或命令历史。
+
 > **音效与部分场景图不随本仓库分发**：`public/` 下需自备若干 UI 反馈音与黄频道实景图
 > （文件名见 `src/utils/feedback.ts`、各处 `playSound()` 调用与 `public/assets/terminal/`）。
 > 缺失时会静默降级——音效不响、背景留白，不影响其它功能。
@@ -238,7 +247,7 @@ npm run cap:build:android  # 打包
 
 ## 完成度
 
-前端 `npm test` **32 个测试文件 / 202 项**通过，`tsc --noEmit` 零报错；
+前端 `npm test` **32 个测试文件 / 203 项**通过，`tsc --noEmit` 零报错；
 后端 `mvn test` **159 项**通过（集成测试跑在独立测试库，不碰应用库）。
 数据库迁移 13 个版本，从空库到可用一键完成。
 

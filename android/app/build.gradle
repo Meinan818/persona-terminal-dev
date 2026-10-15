@@ -9,8 +9,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // ⚠️ 每次发布 release 必须把 versionCode 往上加（Google Play 要求严格递增），
         //    versionName 保持与 package.json 同步即可
-        versionCode 17
-        versionName "2.8.2"
+        versionCode 18
+        versionName "2.8.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,15 +18,21 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // Release 签名配置 —— 从 gradle.properties / 环境变量读 keystore，
-    // 未配置时签名块为空（assembleRelease 会报错，符合预期 —— 强制你提供 keystore）
+    // Release 签名配置 —— 优先读 Gradle 属性，没有时读当前进程环境变量。
+    // scripts/build-release.ps1 只在构建期间注入这些值，密钥不进仓库、不进命令行。
+    def signingValue = { String name -> project.findProperty(name) ?: System.getenv(name) }
+    def storeFilePath = signingValue('VELVET_STORE_FILE')
+    def storePasswordValue = signingValue('VELVET_STORE_PASSWORD')
+    def keyAliasValue = signingValue('VELVET_KEY_ALIAS')
+    def keyPasswordValue = signingValue('VELVET_KEY_PASSWORD')
+    def hasReleaseSigning = [storeFilePath, storePasswordValue, keyAliasValue, keyPasswordValue].every { it }
     signingConfigs {
         release {
-            if (project.hasProperty('VELVET_STORE_FILE')) {
-                storeFile file(project.property('VELVET_STORE_FILE'))
-                storePassword project.property('VELVET_STORE_PASSWORD')
-                keyAlias project.property('VELVET_KEY_ALIAS')
-                keyPassword project.property('VELVET_KEY_PASSWORD')
+            if (hasReleaseSigning) {
+                storeFile file(storeFilePath)
+                storePassword storePasswordValue
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
             }
         }
     }
@@ -34,10 +40,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            // 只有在 keystore 配置齐全时才挂上签名配置（否则 debug 构建仍然可跑）
-            if (project.hasProperty('VELVET_STORE_FILE')) {
-                signingConfig signingConfigs.release
-            }
+            // 线上 2.8.2 已使用本机 debug 证书签发；未迁移正式私钥前，沿用它才能覆盖升级。
+            // 配齐 VELVET_* 后自动改为正式私钥，方便未来上架。
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
         }
     }
 }

@@ -85,6 +85,7 @@ nginx.conf
 *.md
 !README.md
 !策划书*.md
+!PROJECT_STATE.md
 # 合规提醒：必须入库存档（署名/素材/使用边界），否则接手者看不到、易误删署名
 !COMPLIANCE.md
 

@@ -1,7 +1,9 @@
 import { motion } from 'motion/react';
 import { useUiChannel } from '@/ui/useUiChannel';
+import { useAppStore } from '@/store';
 import { P4_FLOWER_PATH } from '@/ui/p4Kit';
 import { P5R, P5_FONT, starPts } from '@/components/p5r/kit';
+import { backSkinOf } from './backSkin';
 // 卡背与卡面共用同一套撕边轮廓（都是 200×320），形状语言必须同源
 import { roughRectPts as backRectPts } from './TarotFaces';
 
@@ -43,12 +45,72 @@ export function CardBack({
   const VB_H = 320;
   const interactive = !!onClick && !disabled;
   const channel = useUiChannel();
-  const isP4 = channel === 'p4';
-  const isP3 = channel === 'p3';
+  const theme = useAppStore((s) => s.user?.theme);
+  const skin = backSkinOf(channel, theme);
+  const isP4 = skin === 'p4';
+  const isP3 = skin === 'p3';
+
+  // ── 粉主题卡背（2026-10-16，用户提供参考图）：品红底 + 白色细长四角星 + 双环 + 白细框 ──
+  // 用矢量复刻而不是塞图片：不引入加载失败/缓存桶一类问题（同类坑见 TarotCardSVG 的
+  // failedSrc 与 PWA 的 tarot-art 缓存），且任意尺寸都不糊。
+  if (skin === 'pink') {
+    return (
+      <motion.div
+        onClick={interactive ? onClick : undefined}
+        whileHover={hoverable && interactive ? { y: -4 } : undefined}
+        whileTap={interactive ? { scale: 0.97 } : undefined}
+        className={`relative inline-block select-none ${interactive ? 'cursor-pointer' : ''} ${className}`}
+        style={{ width, height, opacity: disabled ? 0.5 : 1 }}
+      >
+        {selected && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="pointer-events-none absolute inset-0"
+            style={{
+              boxShadow: '0 0 24px 4px rgba(239,44,139,0.6), 0 0 48px 8px rgba(239,44,139,0.3)',
+              borderRadius: 12,
+            }}
+          />
+        )}
+        <svg viewBox={`0 0 ${VB_W} ${VB_H}`} width={width} height={height} style={{ display: 'block' }}>
+          <defs>
+            <linearGradient id="pink-back-bg" x1="12%" y1="4%" x2="86%" y2="100%">
+              <stop offset="0%" stopColor="#EF2C8B" />
+              <stop offset="48%" stopColor="#DC1673" />
+              <stop offset="100%" stopColor="#BE1264" />
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width={VB_W} height={VB_H} rx="12" fill="url(#pink-back-bg)" />
+          {/* 斜向亮带（右上→左下）与左上角亮块，比底色亮一档 */}
+          <polygon points={`${VB_W},0 ${VB_W},128 34,${VB_H} 0,${VB_H} 0,244`} fill="#F8409F" opacity="0.42" />
+          <polygon points={`0,44 62,0 92,0 0,74`} fill="#F8409F" opacity="0.3" />
+          {/* 白细框 + 四角斜切（左上/右下为实心角，呼应参考图） */}
+          <rect x="11" y="11" width={VB_W - 22} height={VB_H - 22} fill="none" stroke="#ffffff" strokeWidth="1.5" opacity="0.95" />
+          <path d={`M${VB_W - 11} 11 L${VB_W - 52} 11 L${VB_W - 11} 52 Z`} fill="none" stroke="#ffffff" strokeWidth="1" opacity="0.9" />
+          <path d={`M11 ${VB_H - 11} L52 ${VB_H - 11} L11 ${VB_H - 52} Z`} fill="none" stroke="#ffffff" strokeWidth="1" opacity="0.9" />
+          <path d="M11 11 L52 11 L11 46 Z" fill="#ffffff" opacity="0.9" />
+          <path d={`M${VB_W - 11} ${VB_H - 11} L${VB_W - 52} ${VB_H - 11} L${VB_W - 11} ${VB_H - 46} Z`} fill="#ffffff" opacity="0.9" />
+          <circle cx="30" cy="36" r="5.5" fill="none" stroke="#ffffff" strokeWidth="1" />
+          {/* 双环（垫在星背后） */}
+          <circle cx={VB_W / 2} cy={VB_H / 2} r="66" fill="none" stroke="#ffffff" strokeWidth="1.1" opacity="0.85" />
+          <circle cx={VB_W / 2} cy={VB_H / 2} r="56" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity="0.45" />
+          {/* 中央白色细长四角星 */}
+          <path
+            d={`M${VB_W / 2} 32 L${VB_W / 2 + 6.5} 148 L${VB_W} 160 L${VB_W / 2 + 6.5} 172 L${VB_W / 2} 288 L${VB_W / 2 - 6.5} 172 L0 160 L${VB_W / 2 - 6.5} 148 Z`}
+            fill="#ffffff"
+          />
+          {/* 两点小闪光 */}
+          <path d="M154 86 L156 96 L166 98 L156 100 L154 110 L152 100 L142 98 L152 96 Z" fill="#ffffff" opacity="0.95" />
+          <path d="M46 240 L47.5 246 L54 248 L47.5 250 L46 256 L44.5 250 L38 248 L44.5 246 Z" fill="#ffffff" opacity="0.8" />
+        </svg>
+      </motion.div>
+    );
+  }
 
   // ── P5R 卡背（PRD_V2.6 §5）：纸面 + 黑撕边 + 猩红三环星 + 半调网点 ──
   // 此前红频道没有分支，翻牌前看到的是通用金框深紫卡——整个占卜入口都在破功。
-  if (channel === 'p5') {
+  if (skin === 'p5') {
     return (
       <motion.div
         onClick={interactive ? onClick : undefined}

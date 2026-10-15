@@ -9,6 +9,7 @@
 - 前端 React 18 / TypeScript 5 / Vite 5 / Zustand / Dexie，本地优先；账号、可选同步和社交走 Java 17 / Spring Boot 3.2 / MyBatis-Plus / MySQL 8 / Flyway。PocketBase 已退役，不恢复旧 SDK 或旧登录判断。
 - 记账流水、聊天原文、记录配图、导入音乐按设计不上云；本地备份、图片包、云同步各有范围，不可混同。AI 默认 BYOK，即用户自带 Key，开发者不统一供应 Key。
 - Android 当前正式修复版 `2.8.4 / versionCode 19`，已构建并上传腾讯云。2.8.3 APK因误含localhost后端地址导致手机同步失败，已由2.8.4纠正；签名连续；2026-10-15用户明确反馈“手机确认恢复”，手机端同步故障验收通过、此项关闭。Kitool模型列表未单独反馈，不扩大为全部AI验收通过。
+- 本地素材恢复候选版 `2.8.5 / versionCode 20` 已构建，未发布；按用户指令保留MASKARIA名称/图标，恢复旧站66张塔罗并换回26音效，4背景原本一致。线上官网/下载仍是已验收2.8.4，不把本地候选当已上线。
 - **两个网站都已上线**：应用网页在腾讯云，独立官网在 Cloudflare Pages。旧版状态说明“site/ 没有部署位置”是漏查原发布记录造成的错误，见 §3、§9。
 - **官网遗留已修并发布**：https://maskaria.pages.dev/ 两处下载均指向2.8.4，源码/隐私/合规链接改公开展示库；当前快照https://ac1d998c.maskaria.pages.dev/，源码2178a57。生产HTML与本地完全相同。
 - 应用视觉、布局、配色、主题、动画、图标和音效受保护。本轮修构建发布逻辑及已授权官网链接/版本，新增修复APK并发布Pages，没有改App外观、服务器配置、业务数据或应用网页根。
@@ -37,7 +38,7 @@
 | 官网首次发布快照 | `https://2d5f4986.maskaria.pages.dev/` | 2026-10-14 原发布记录；本轮未检查此快照，不冒称最新部署ID |
 | 最新 APK | `http://192.144.227.216/download/maskaria-2.8.4-release.apk`；服务器 `/opt/maskaria/web/download/` | 公网完整下载200、26,291,469字节；SHA-256与本地/服务器一致，见§9最新条目 |
 | 官网旧 APK（已被新下载入口取代） | `http://192.144.227.216/download/maskaria-2.8.2i-release.apk` | 日志恢复时确认曾指向它；本轮已更新2.8.4，旧文件保留，不再作为当前下载入口 |
-| 本地正式产物 | `outputs/maskaria-2.8.4-release.apk` 与 `.aab` | 本轮正式构建成功，最终APK核地址、版本和签名；AAB未上架商店 |
+| 本地构建产物 | `outputs/maskaria-2.8.4-release.apk`为线上版；`outputs/maskaria-2.8.5-release.apk`及`.aab`为素材恢复候选版 | 2.8.5已核素材/版本/名称/签名，未上传部署；AAB未上架商店 |
 | 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本轮Push及远端核实为4e0c5dd；后续日志回写提交同次授权推送，最新SHA用git log/ls-remote核；规则和总日志只归此库 |
 | 公开展示库 | `git@github.com:Meinan818/Persona-Terminal.git`，`main` | 本轮Push及SSH远端核实为4de5ff5；仅公开8个发布修复文件；可见性沿用原记录 |
 | 当前展示库工作区 | `E:/MASKARIA-showcase` | 现场确认原HEAD33f84de且干净；本次8个公开文件提交4de5ff5，已Push并核远端main一致。`.rivet/publish/`只是旧副本，不再作为同步入口 |
@@ -115,7 +116,7 @@
 
 | 顺序 | 事项及完成标准 | 谁做及边界 |
 |---|---|---|
-| 1 | 手机同步故障已关闭：2026-10-15用户明确“手机确认恢复” | 已获用户真机反馈；Kitool模型列表无单独结论，日常使用有问题再反馈，无需为此专门验收 |
+| 1 | 素材恢复本地候选2.8.5：66牌面、26音效已恢复且构建完成，查看预览图/试听/本地APK；同步故障已获用户手机确认、保持关闭 | 用户判断视觉与音效；候选未上线，不要求重新验已关闭同步故障 |
 | 2 | 两库Push已完成：用户明确批准后推送并核远端main一致，私有含日志及修复，公开仅8个公开文件 | 此项关闭；后续新Push仍需单独批准 |
 | 3 | 官网更新与私有链接修正已关闭：生产入口/快照200，HTML与本地一致，两处下载2.8.4，未含私有库链接 | 无需用户配置或去Cloudflare后台 |
 | 4 | 展示库入口核账已关闭：当前工作区E:/MASKARIA-showcase，旧.rivet/publish不使用；8个文件原始基线相同才同步 | 后续仍先核现场，不直接覆盖有差异文件 |
@@ -255,6 +256,18 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 这条反馈未单独说明Kitool模型列表、所有拉取/跨设备组合或其他功能，不扩大为全部功能通过；后续实际使用出现问题再处理。
 - 仅更新PROJECT_STATE.md，无代码、UI、部署或数据改动；文档差异检查，不重跑业务测试。此前两库Push状态保持；本次验收记录另做本地commit，未获得新的Push指令，不自动推送。
 - 下一步：正常使用，无需用户额外操作；维护会话收到新反馈后继续更新同一日志。
+
+### 2026-10-15：从旧站恢复缺失牌面及原音效（本地候选2.8.5）
+
+- 用户提供https://the-velvet.com/并要求恢复素材，随后明确“保留图标名称，音效也换恢复缺失素材”。该次授权针对素材恢复，不恢复旧名称/图标，不改变布局/主题或业务逻辑，也未授权新的Push/线上部署。
+- 先核旧站首页、sw预缓存113条和68个JS/CSS资源引用，仅作为只读取证，不执行远程代码。按现行tarotArt的牌名映射展开三套22张（P5正义/力量顺序不同，按slug恢复，未按罗马数字改名）。识别清单96项：66张WebP本地缺失，26个MP3与旧站不同，4张水面/天空背景与旧站SHA-256一致。
+- 从用户指定旧站取回上述素材到.rivet/scratch/asset-recovery-20261015/candidate，验证文件格式而非把SPA的200HTML当图片。FFmpeg解码全部66牌面，26个音频解码PCM哈希也全部与当前不同（不是仅文件元数据差异）。先按原哈希检查并备份26音效到同目录before/，再恢复public/tarot/{p3,p4,p5}各22张、替换public根26个音效；4背景未改。
+- 牌面恢复接上既有TarotCardSVG路径，没改组件或数据。真实无头浏览器隔离临时环境加载现行组件，依次切p3/p4/p5，各22张img.decode成功，尺寸560x896；没有退回程序化卡面。截图component-p3/p4/p5.jpg及component-evidence.json留同一证据目录。卡片总览输出outputs/restored-tarot-preview.jpg；音效可试听public/tarots.mp3等。
+- 验证：npm test 32文件203项通过；正式前端/Android APK+AAB构建成功（Gradle22秒）。aapt确认包名com.meinan818.personaterminal、名称MASKARIA、2.8.5/code20；apksigner证书SHA-256仍a7f0f3d95edf9947dba5512b04b86fd0faf840236b1448b7412c8b5dbe1c0567。最终APK内96个素材逐文件SHA-256与旧站清单一致；正式后端地址校验通过。
+- 候选APK：outputs/maskaria-2.8.5-release.apk，SHA-256 f955e74841f3eb30fef7e41c732ca94bd1c2040a09f7f8c21ab9b0d054ec95e3；本地生成，不冒称已上传或手机验收。线上仍2.8.4，README/官网的正式版本保持2.8.4，未重新发布网站。
+- 文件缺失的直接原因：源码已引用牌面，但public/tarot不在当前检出内容，.gitignore还把它排除了；这会让组件无声降级。恢复66张牌面需明确纳入私有库，公开展示库保留美术隔离，不能整仓复制素材过去；不改/删除现有许可声明。仅本机/私有恢复，公开分发仍须遵守ASSETS_LICENSE等现有约定。
+- 材料证据：inventory.json保存来源路径、旧/新哈希和差异状态；audio-decoded-comparison.json保存音频内容比对；frontend-tests.log/build.log保存测试/构建。原26音效备份未删除，旧站抓取源码仅本地留存，不提交。
+- 收尾仅提交本次66新图、26音效、版本配置及日志；既有iOS/缓存/outputs改动不纳入。未Push、未部署。下一步由用户查看/试听或将本地APK传到手机直接覆盖安装验效果；视觉与听觉未收到反馈前不标用户验收通过，不额外扩展任务。
 
 ## 10. 证据索引：需要时再定位原文
 

@@ -393,6 +393,18 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **③ Push**：`git push origin main` → `8a03c54..6661229`（3 个提交：`7c33d43` 记账字体、`f629ed7` 日志、`6661229` 头像地址解析）。
 - **待用户真机验收**：缺陷 A（鸿蒙平板记账字体）与 B（手机端头像图裂）——两者都需安装本次新 APK 才能验；本机无鸿蒙设备与手机，**不得声称已验证**。缺陷 C（平板图标）仍未开始。
 
+### 2026-10-16（续）：缺陷 B 的追查 —— 代码/配置全部核实无误，改版本号重打包
+
+- **用户反馈**：手机**浏览器**打开网页端头像正常，**只有 APP 里**裂（图二是红主题 APP，五角星上方是图裂图标；图一是网页端，真人头像正常）。
+- **本轮实测（全部通过，但现象未复现改善）**：
+  - APK 主 bundle 内 `const Ue="http://192.144.227.216".trim().replace(/\/+$/,"")` —— `apiBaseUrl` **有值**；
+  - 星象/组织分包内头像那行编译为 `src: nt(n)` —— **新加的补全函数确实被调用**（`Hintout-fTVWh3MO.js`）；
+  - APK 内 `capacitor.config.json` 含 `"android": { "allowMixedContent": true }`；Manifest 含 `usesCleartextTraffic="true"`。
+  - 即：**代码路径、构建产物、原生配置三项都正确**，但用户端仍裂 → 剩下的可能性发生在设备/安装环节，非本机可验证。
+- **处置（用户选择"换版本号重打"）**：`versionCode 20 → 21`、`versionName "2.8.5" → "2.8.6"`（同步 `android/app/build.gradle` 与 `package.json`）。重跑 `npm run build`（正式地址）→ `cap sync` → `gradlew assembleRelease bundleRelease`（BUILD SUCCESSFUL in 37s）。
+- **产物与核验**：`outputs\maskaria-2.8.6-release.apk`（32,024,575 B）/ `maskaria-2.8.6-release.aab`（31,826,323 B）。**决定性核验**：gradle 的 `output-metadata.json` 记 `versionCode: 21` —— Android 会认成升级，必定覆盖旧包（此前三个包同名 + 同 versionCode，用户很可能装的仍是旧包，这是最可能的原因）。
+- **仍未验证**：缺陷 B 在真机 APP 上是否已修好，**只能由用户装 2.8.6 后确认**。若装 2.8.6 仍裂，则需做"显示实际请求地址"的诊断包。
+
 ## 10. 证据索引：需要时再定位原文
 
 - §11为本地完整Git提交索引；先git show --stat查范围，再按非敏感文件查内容。历史可能含凭据，禁止批量输出历史文件。

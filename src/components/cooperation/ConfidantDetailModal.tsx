@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { resolveAssetUrl } from '@/utils/assetUrl';
 import { motion, AnimatePresence, type Variants } from 'motion/react';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { useAppStore, toLocalDateKey } from '@/store';
@@ -520,7 +521,7 @@ export function ConfidantDetailModal({
                       }}
                     >
                       <img
-                        src={confidant.customAvatarDataUrl || confidant.linkedProfile?.avatarUrl}
+                        src={confidant.customAvatarDataUrl || resolveAssetUrl(confidant.linkedProfile?.avatarUrl)}
                         alt={confidant.name}
                         className="w-full h-full object-cover"
                         draggable={false}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { resolveAssetUrl } from '@/utils/assetUrl';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { useCloudStore } from '@/store/cloud';
@@ -1150,7 +1151,7 @@ function OnlineFriendPlaceholderCard({
         <div className="flex items-center gap-3">
           <div className="w-14 h-14 rounded-full overflow-hidden bg-emerald-500/20 text-emerald-600 font-black text-lg flex items-center justify-center flex-shrink-0">
             {profile.avatarUrl ? (
-              <img src={profile.avatarUrl} alt={name} className="w-full h-full object-cover" draggable={false} />
+              <img src={resolveAssetUrl(profile.avatarUrl)} alt={name} className="w-full h-full object-cover" draggable={false} />
             ) : (
               (name[0] || '?').toUpperCase()
             )}

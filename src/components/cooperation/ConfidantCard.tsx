@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
+import { resolveAssetUrl } from '@/utils/assetUrl';
 import { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppStore } from '@/store';
@@ -56,7 +57,7 @@ export function ConfidantCard({ confidant, onClick, prayer, activeShadow, onShad
   let avatarSrc: string | undefined;
   if (isOnline) {
     if (!confidant.preferTarotOverAvatar) {
-      avatarSrc = confidant.linkedProfile?.avatarUrl || confidant.customAvatarDataUrl;
+      avatarSrc = resolveAssetUrl(confidant.linkedProfile?.avatarUrl) || confidant.customAvatarDataUrl;
     }
   } else {
     avatarSrc = confidant.customAvatarDataUrl;

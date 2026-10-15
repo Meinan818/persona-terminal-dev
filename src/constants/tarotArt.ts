@@ -54,3 +54,16 @@ export const tarotSetOf = (
 
 export const tarotArtUrl = (cardId: string, set: TarotArtSet): string | null =>
   MAJOR_WITH_ART.has(cardId) ? `${import.meta.env.BASE_URL}tarot/${set}/${cardId}.webp` : null;
+
+/**
+ * 卡面加载失败后的重试节奏（第 n 次失败等多久再试，毫秒）。超出数组长度即不再重试。
+ *
+ * 由来（2026-10-16 线上事故）：服务器缺 public/tarot 时，nginx 的 try_files 把每个
+ * `/tarot/*.webp` 兜底成 200 的 HTML，图片解码失败；TarotCardSVG 把该 URL 记进 failedSrc
+ * 后**永久不再尝试**——素材补传上去了，老页面仍一直显示程序化占位卡，只能靠用户清缓存
+ * 才恢复。这里给有限次数的退避重试：服务器抖一下能自愈，真不存在的图也不会死磕。
+ */
+export const ART_RETRY_DELAYS_MS = [5000, 15000, 45000] as const;
+
+export const nextArtRetryDelay = (attempt: number): number | null =>
+  attempt >= 0 && attempt < ART_RETRY_DELAYS_MS.length ? ART_RETRY_DELAYS_MS[attempt] : null;

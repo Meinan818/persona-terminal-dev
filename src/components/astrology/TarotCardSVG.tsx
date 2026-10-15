@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { TarotCardData, TarotOrientation, SUIT_META } from '@/constants/tarot';
-import { tarotArtUrl } from '@/constants/tarotArt';
+import { tarotArtUrl, nextArtRetryDelay } from '@/constants/tarotArt';
 import { useTarotArtSet } from '@/ui/useTarotArtSet';
 import { P4Face, P5Face, type TarotFaceProps } from './TarotFaces';
 
@@ -75,8 +75,22 @@ export function TarotCardSVG({
   const artSet = useTarotArtSet();
   // 记住**哪个 URL** 挂了而不是一个 bool：换卡面套时上一套的失败记录不该跟着过来
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  // 退避重试计数：一次失败不再等于"终身占位卡"，服务器恢复后自己爬得起来
+  // （2026-10-16 教训：缺图期间的失败被永久记住，素材补传后用户仍看到占位卡）
+  const [artRetry, setArtRetry] = useState(0);
   const artUrl = tarotArtUrl(card.id, artSet);
   const artSrc = faceOverride ?? (artUrl && artUrl !== failedSrc ? artUrl : null);
+
+  useEffect(() => {
+    if (!failedSrc) return;
+    const delay = nextArtRetryDelay(artRetry);
+    if (delay === null) return;
+    const t = setTimeout(() => {
+      setFailedSrc(null);
+      setArtRetry((n) => n + 1);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [failedSrc, artRetry]);
 
   // 内部使用的 viewBox 尺寸（方便绘制）
   const VB_W = 200;
@@ -139,6 +153,7 @@ export function TarotCardSVG({
           decoding="async"
           draggable={false}
           onError={() => setFailedSrc(artSrc)}
+          onLoad={() => setArtRetry(0)}
           style={{
             width,
             height,

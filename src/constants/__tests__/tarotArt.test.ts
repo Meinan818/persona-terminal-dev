@@ -7,7 +7,7 @@
  * 同类坑见 utils/iconSync.ts（图标联动）。
  */
 import { describe, it, expect } from 'vitest';
-import { tarotSetOf, tarotArtUrl } from '../tarotArt';
+import { tarotSetOf, tarotArtUrl, nextArtRetryDelay, ART_RETRY_DELAYS_MS } from '../tarotArt';
 
 /** constants/tarot.ts 里的 22 张大阿卡纳 id（与 tarotArt 的 MAJOR_WITH_ART 同口径） */
 const MAJORS = [
@@ -56,5 +56,30 @@ describe('tarotArt 卡面套映射', () => {
   it('小阿卡纳没有配图，返回 null 走程序化卡面', () => {
     expect(tarotArtUrl('wands_1', 'pink')).toBeNull();
     expect(tarotArtUrl('cups_14', 'p3')).toBeNull();
+  });
+});
+
+describe('卡面加载失败的退避重试', () => {
+  it('按节奏给出重试间隔，且递增', () => {
+    const delays = ART_RETRY_DELAYS_MS.map((_, i) => nextArtRetryDelay(i));
+    expect(delays).toEqual([...ART_RETRY_DELAYS_MS]);
+    for (let i = 1; i < delays.length; i++) {
+      expect(delays[i]!).toBeGreaterThan(delays[i - 1]!);
+    }
+  });
+
+  it('重试次数用尽后返回 null（不再死磕真不存在的图）', () => {
+    expect(nextArtRetryDelay(ART_RETRY_DELAYS_MS.length)).toBeNull();
+    expect(nextArtRetryDelay(ART_RETRY_DELAYS_MS.length + 5)).toBeNull();
+  });
+
+  it('非法次数（负数）也返回 null，不抛错', () => {
+    expect(nextArtRetryDelay(-1)).toBeNull();
+  });
+
+  it('第一次失败就必须有重试机会（防「一次失败=终身占位卡」回归）', () => {
+    // 这条对应 2026-10-16 的线上事故：faildstSrc 被永久记住，素材补传后仍显示占位卡
+    expect(nextArtRetryDelay(0)).not.toBeNull();
+    expect(nextArtRetryDelay(0)).toBeGreaterThan(0);
   });
 });

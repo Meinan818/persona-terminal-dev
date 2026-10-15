@@ -40,7 +40,7 @@
 | APK下载通道（已关闭） | 服务器 `/opt/maskaria/web/download/`；原2.8.4及其他旧直链 | 本次GET/HEAD全部410；3个旧APK保留，不删除，不再公开下载 |
 | 官网当前发布 | `https://maskaria.pages.dev/`；快照 `https://d3ea1293.maskaria.pages.dev/` | 下载关闭提示已上线；生产HTML与本地site/index.html逐字节一致；旧APK直链全部410 |
 | 本地构建产物 | `outputs/maskaria-2.8.4-release.apk`为线上版；`outputs/maskaria-2.8.5-release.apk`及`.aab`为素材恢复候选版 | 2.8.5已核素材/版本/名称/签名，未上传部署；AAB未上架商店 |
-| 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本轮Push及远端核实为4e0c5dd；后续日志回写提交同次授权推送，最新SHA用git log/ls-remote核；规则和总日志只归此库 |
+| 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本次素材及下载关闭节点已Push至32fb9ec，ls-remote与本地HEAD一致；本条结果日志随后同次授权Push。现场确认Private，素材和项目日志只归此库 |
 | 公开展示库 | `git@github.com:Meinan818/Persona-Terminal.git`，`main` | 本轮Push及SSH远端核实为4de5ff5；仅公开8个发布修复文件；可见性沿用原记录 |
 | 当前展示库工作区 | `E:/MASKARIA-showcase` | 现场确认原HEAD33f84de且干净；本次8个公开文件提交4de5ff5，已Push并核远端main一致。`.rivet/publish/`只是旧副本，不再作为同步入口 |
 
@@ -279,7 +279,7 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 腾讯云：现场核3个旧APK在/opt/maskaria/web/download/；在/etc/nginx/conf.d/maskaria.conf增加/download精确与目录阻断、APK/AAB后缀阻断，返回410；nginx -t成功后reload。原配置备份/etc/nginx/conf.d/maskaria.conf.before-close-download-20261015160126，3个文件保留。deploy/nginx-maskaria.conf模板同步规则，防止以后部署误开通道。使用旧部署专用SSH身份失败后，查原发布记录改用已授权的E盘身份成功，未读取或输出密钥正文。
 - 本轮验证：公网9种路径（含目录、2.8.2i/2.8.3/2.8.4/2.8.5、查询参数及大小写后缀）各GET和HEAD，共18次全410；应用根200，/api/health为status=UP、db=UP；生产官网HTML与本地SHA-256一致。真实无头浏览器1440及390宽度下各有2处“下载已关闭”、0个安装包链接、无横向溢出。证据.rivet/scratch/downloads-closed-browser.json及downloads-closed-1440/390.jpg；未动用户浏览器。
 - 本轮额外检查：npm test于16:05开始，32文件203项通过，命令exit0；npm run typecheck通过、exit0；git diff --check通过。只改静态官网文字与下载入口、nginx阻断及日志，未重建Android或重跑后端测试。
-- commit/Push：素材节点6f7019b及手机验收日志e4acd86原为本地领先提交；本次关闭下载及日志另做相关提交后按用户授权推送origin/main，只进私有库，远端核实结果回写本节。既有ios/App/Podfile、缓存、.rivet-config.json、outputs不纳入。
+- commit/Push：素材节点6f7019b、手机验收日志e4acd86及32fb9ec `fix(download): 关闭公开安装包通道并记录素材保密约定`已成功Push至私有origin/main；git ls-remote确认32fb9eca597435293b65defcdcb3bd0a5e616d82与本地HEAD一致。本次结果回写另做文档提交并沿用同次授权推送；最终SHA用git log/ls-remote核，不自引用尚未生成的SHA。公开展示库保持4de5ff5，未Push。既有ios/App/Podfile、缓存、.rivet-config.json、outputs不纳入。
 - 遗留与负责人：素材视觉/听觉仍待用户自愿体验本地2.8.5，不能写已验收；公开下载关闭由Codex验证完成，本次无需用户操作。没有新增外观设计，未改业务、数据或应用网页产物；已安装客户端可继续使用。本轮不把旧测试数字冒称重跑结果。
 
 ## 10. 证据索引：需要时再定位原文

@@ -334,6 +334,8 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **部署（同日，用户指令「把新代码部署到服务器」后执行）**：① `vite.config.ts` 的 tarot 缓存桶 `tarot-art-v1` → `tarot-art-v2`（弃用被 HTML 污染的缓存桶，注释写明缘由）；② 以 `VITE_API_URL=http://192.144.227.216` 构建——与线上既有构建同值（也与 `scripts/build-release.ps1` 默认值一致），防烤入 `.env.local` 的 `localhost:8080`；③ 产物自检：入口 `index-BZ82oxmb.js` 中 `localhost:8080` = 0、正式地址 = 1，`dist/sw.js` 内为 `tarot-art-v2`；④ 先备份线上现状到 `/home/ubuntu/maskaria-backups/web-20261016-033557.tgz`（20,744,124 B / 235 条，含当时入口 `index-BCuXre6P.js` 作回滚依据），再以 tar 流上传 dist（排除 tarot，线上已有）到 `/opt/maskaria/web/`。
 - **部署后线上核验（全部外部 curl）**：首页引用的入口已变为 `/assets/index-BZ82oxmb.js`；新入口内正式地址 = 1、localhost = 0（1,153,177 B）；四套塔罗图均 `200 image/webp`（p3 42660 / p4 38806 / p5 71828 / pink 52840，与本地逐一致）；`/api/health` → `{"status":"UP","db":"UP"}`；`index.html` 与 `sw.js` 时间戳更新为 03:35。tar 在设置目录属主/时间戳时报 `Operation not permitted`（目录属主是 maskaria、不是 ubuntu），**不影响文件内容写入**，已由上述外部 curl 独立证实。
 - **用户侧待确认（未验证）**：浏览器须经 SW 更新链（`registerType:'prompt'`，页面会弹「有新版本可用」）拿到新版本后，塔罗才会重新走网络取图；未在用户浏览器实测。若依旧显示占位卡，需清一次该站点的站点数据。
+- **用户确认恢复（2026-10-16）**：用户反馈「羁绊页恢复了」。至此本次塔罗事故完整闭环——链路为：服务器缺 `public/tarot` → nginx `try_files` 把 `/tarot/*.webp` 兜底成 200 的 HTML → PWA 规则 `CacheFirst` + `cacheableResponse.statuses:[0,200]` 把该 HTML 当图片缓存 180 天且不再发网络请求 → 补传素材后老浏览器仍显示程序化占位卡。修复分三层：① 补传四套素材到服务器；② 缓存桶 `tarot-art-v1`→`v2` 弃用污染缓存；③ 部署新代码（入口 `index-BZ82oxmb.js`）。用户端残留的 `tarot-art-v1` 桶经手动清理后恢复。
+- **同族缺陷线索（供后续排查参考）**：「星象页正常但羁绊页异常」这种**同一组件、不同页面表现不一致**的现象，本质是**组件实例级的 `failedSrc` 状态**（`TarotCardSVG.tsx`：图片失败一次即永久记住该 URL、不再重试）+ **缓存按 URL 粒度命中**（哪些 URL 曾被请求过就只坏哪些）。判断时看"该 URL 之前有没有被加载过"，而不是看"组件或页面有没有坏"。
 
 ### 2026-10-16：用户新报三个待修缺陷（用户要求先不修，仅记录）
 

@@ -9,9 +9,10 @@
 - 前端 React 18 / TypeScript 5 / Vite 5 / Zustand / Dexie，本地优先；账号、可选同步和社交走 Java 17 / Spring Boot 3.2 / MyBatis-Plus / MySQL 8 / Flyway。PocketBase 已退役，不恢复旧 SDK 或旧登录判断。
 - 记账流水、聊天原文、记录配图、导入音乐按设计不上云；本地备份、图片包、云同步各有范围，不可混同。AI 默认 BYOK，即用户自带 Key，开发者不统一供应 Key。
 - Android 当前正式修复版 `2.8.4 / versionCode 19`，已构建并上传腾讯云。2.8.3 APK因误含localhost后端地址导致手机同步失败，已由2.8.4纠正；签名连续；2026-10-15用户明确反馈“手机确认恢复”，手机端同步故障验收通过、此项关闭。Kitool模型列表未单独反馈，不扩大为全部AI验收通过。
-- 本地素材恢复候选版 `2.8.5 / versionCode 20` 已构建，未发布；按用户指令保留MASKARIA名称/图标，恢复旧站66张塔罗并换回26音效，4背景原本一致。线上官网/下载仍是已验收2.8.4，不把本地候选当已上线。
+- 本地素材恢复候选版 `2.8.5 / versionCode 20` 已构建，未公开发布；66张塔罗及26音效已由6f7019b保存，只进私有开发库，不同步公开展示库、不上传安装包或素材到公开渠道。用户本次明确要求素材不公开，后续持续遵守；已有介绍截图保留。
+- **下载通道已关闭（2026-10-15）**：官网两处入口均显示“下载已关闭”，最新快照 https://d3ea1293.maskaria.pages.dev/；腾讯云 `/download`、`/download/` 及APK/AAB地址返回410，服务器3个旧APK保留但禁止下载。应用网页和后端保持正常，手机已安装版本不受此关闭影响。此次私有库Push由用户明确授权，结果见§9最新节点。
 - **两个网站都已上线**：应用网页在腾讯云，独立官网在 Cloudflare Pages。旧版状态说明“site/ 没有部署位置”是漏查原发布记录造成的错误，见 §3、§9。
-- **官网遗留已修并发布**：https://maskaria.pages.dev/ 两处下载均指向2.8.4，源码/隐私/合规链接改公开展示库；当前快照https://ac1d998c.maskaria.pages.dev/，源码2178a57。生产HTML与本地完全相同。
+- 官网此前已修正源码/隐私/合规链接至公开展示库；2.8.4下载入口现已按用户要求关闭。原快照https://ac1d998c.maskaria.pages.dev/仅作历史回滚依据，旧快照里的APK链接同样被服务器410阻断。
 - 应用视觉、布局、配色、主题、动画、图标和音效受保护。本轮修构建发布逻辑及已授权官网链接/版本，新增修复APK并发布Pages，没有改App外观、服务器配置、业务数据或应用网页根。
 - 本轮开始已有 `ios/App/Podfile` 修改及未跟踪 `.cache/`、`.rivet-config.json`、`outputs/`；归属未核，不纳入本次提交，不清理或覆盖。
 
@@ -36,8 +37,8 @@
 | Java 后端 | 同主机 `/api/` 反代本机8080；历史路径 `/opt/maskaria/backend/app.jar`，服务 `maskaria-backend` | `/api/health` → 200、`{"status":"UP","db":"UP"}`。目录/配置是历史部署记录，本轮未 SSH 复核 |
 | 官网营销页 | `https://maskaria.pages.dev/`，Cloudflare Pages 项目 `maskaria`，发布分支 `main`；源码 `site/` | GET 200，标题 `MASKARIA 面具庭园 · 没人看见的也算数`。这是已部署网站，绝非仅有本地 demo |
 | 官网首次发布快照 | `https://2d5f4986.maskaria.pages.dev/` | 2026-10-14 原发布记录；本轮未检查此快照，不冒称最新部署ID |
-| 最新 APK | `http://192.144.227.216/download/maskaria-2.8.4-release.apk`；服务器 `/opt/maskaria/web/download/` | 公网完整下载200、26,291,469字节；SHA-256与本地/服务器一致，见§9最新条目 |
-| 官网旧 APK（已被新下载入口取代） | `http://192.144.227.216/download/maskaria-2.8.2i-release.apk` | 日志恢复时确认曾指向它；本轮已更新2.8.4，旧文件保留，不再作为当前下载入口 |
+| APK下载通道（已关闭） | 服务器 `/opt/maskaria/web/download/`；原2.8.4及其他旧直链 | 本次GET/HEAD全部410；3个旧APK保留，不删除，不再公开下载 |
+| 官网当前发布 | `https://maskaria.pages.dev/`；快照 `https://d3ea1293.maskaria.pages.dev/` | 下载关闭提示已上线；生产HTML与本地site/index.html逐字节一致；旧APK直链全部410 |
 | 本地构建产物 | `outputs/maskaria-2.8.4-release.apk`为线上版；`outputs/maskaria-2.8.5-release.apk`及`.aab`为素材恢复候选版 | 2.8.5已核素材/版本/名称/签名，未上传部署；AAB未上架商店 |
 | 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本轮Push及远端核实为4e0c5dd；后续日志回写提交同次授权推送，最新SHA用git log/ls-remote核；规则和总日志只归此库 |
 | 公开展示库 | `git@github.com:Meinan818/Persona-Terminal.git`，`main` | 本轮Push及SSH远端核实为4de5ff5；仅公开8个发布修复文件；可见性沿用原记录 |
@@ -116,12 +117,13 @@
 
 | 顺序 | 事项及完成标准 | 谁做及边界 |
 |---|---|---|
+| 0 | 用户要求关闭公开下载、素材不公开；官网与服务器均已关闭，私有Push已获本次授权 | Codex记录并核远端结果；后续禁止把恢复素材同步公开库或发布2.8.5包，重新开放下载须用户明确要求 |
 | 1 | 素材恢复本地候选2.8.5：66牌面、26音效已恢复且构建完成，查看预览图/试听/本地APK；同步故障已获用户手机确认、保持关闭 | 用户判断视觉与音效；候选未上线，不要求重新验已关闭同步故障 |
 | 2 | 两库Push已完成：用户明确批准后推送并核远端main一致，私有含日志及修复，公开仅8个公开文件 | 此项关闭；后续新Push仍需单独批准 |
 | 3 | 官网更新与私有链接修正已关闭：生产入口/快照200，HTML与本地一致，两处下载2.8.4，未含私有库链接 | 无需用户配置或去Cloudflare后台 |
 | 4 | 展示库入口核账已关闭：当前工作区E:/MASKARIA-showcase，旧.rivet/publish不使用；8个文件原始基线相同才同步 | 后续仍先核现场，不直接覆盖有差异文件 |
 
-最新授权：用户在同步失败反馈中明确要求把上述待办一并修复，覆盖本次修复包及官网链接发布；不延伸为今后UI/生产或Push通用授权。程序验证与用户反馈分开；用户已确认手机同步恢复，不再重复要求验同一故障。
+最新授权：用户明确“PUSH吧，记得记进日志，我想关闭软件的下载通道，记得我的素材不公开”。本次只推私有开发库，关闭官网入口和腾讯云APK通道，更新同一日志；不扩展为公开发布素材或新包。用户已确认手机同步恢复，不再重复要求验同一故障。
 
 ### 已完成、已关闭、暂缓或不做
 
@@ -268,6 +270,17 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 文件缺失的直接原因：源码已引用牌面，但public/tarot不在当前检出内容，.gitignore还把它排除了；这会让组件无声降级。恢复66张牌面需明确纳入私有库，公开展示库保留美术隔离，不能整仓复制素材过去；不改/删除现有许可声明。仅本机/私有恢复，公开分发仍须遵守ASSETS_LICENSE等现有约定。
 - 材料证据：inventory.json保存来源路径、旧/新哈希和差异状态；audio-decoded-comparison.json保存音频内容比对；frontend-tests.log/build.log保存测试/构建。原26音效备份未删除，旧站抓取源码仅本地留存，不提交。
 - 收尾仅提交本次66新图、26音效、版本配置及日志；既有iOS/缓存/outputs改动不纳入。未Push、未部署。下一步由用户查看/试听或将本地APK传到手机直接覆盖安装验效果；视觉与听觉未收到反馈前不标用户验收通过，不额外扩展任务。
+
+### 2026-10-15：恢复中断收尾、关闭公开下载并保护素材
+
+- 起因：上个聊天异常终止，恢复现场确认素材恢复工作已暂存；检查96文件差异及归属后提交6f7019b `feat(assets): 恢复塔罗牌面与原音效`。随后用户明确批准Push，并要求关闭软件下载通道、素材不公开。
+- 私有性：`gh repo view Meinan818/persona-terminal-dev --json nameWithOwner,isPrivate`确认isPrivate=true；origin仅指向该开发库；没有Actions工作流。公开展示工作区HEAD仍4de5ff5且干净，未跟踪public/tarot或public根MP3；GitHub公开库Releases为空。本次不改、不Push公开展示库，不发布2.8.5包或素材。此检查不代表已经撤回第三方此前下载的副本。
+- 官网：仅改site/index.html的两处下载按钮、相应说明和导航文字，保持现有布局/配色/动画。使用已有Wrangler4.150.0上传24个官网文件，仅1个HTML变更，不含APK/AAB及恢复素材。发布项目maskaria/main，快照https://d3ea1293.maskaria.pages.dev/，生产https://maskaria.pages.dev/；上一部署ac1d998c-306b-478d-9d63-ca27c8e76e5c留作回滚依据，回滚官网不应重新开放服务器下载。
+- 腾讯云：现场核3个旧APK在/opt/maskaria/web/download/；在/etc/nginx/conf.d/maskaria.conf增加/download精确与目录阻断、APK/AAB后缀阻断，返回410；nginx -t成功后reload。原配置备份/etc/nginx/conf.d/maskaria.conf.before-close-download-20261015160126，3个文件保留。deploy/nginx-maskaria.conf模板同步规则，防止以后部署误开通道。使用旧部署专用SSH身份失败后，查原发布记录改用已授权的E盘身份成功，未读取或输出密钥正文。
+- 本轮验证：公网9种路径（含目录、2.8.2i/2.8.3/2.8.4/2.8.5、查询参数及大小写后缀）各GET和HEAD，共18次全410；应用根200，/api/health为status=UP、db=UP；生产官网HTML与本地SHA-256一致。真实无头浏览器1440及390宽度下各有2处“下载已关闭”、0个安装包链接、无横向溢出。证据.rivet/scratch/downloads-closed-browser.json及downloads-closed-1440/390.jpg；未动用户浏览器。
+- 本轮额外检查：npm test于16:05开始，32文件203项通过，命令exit0；npm run typecheck通过、exit0；git diff --check通过。只改静态官网文字与下载入口、nginx阻断及日志，未重建Android或重跑后端测试。
+- commit/Push：素材节点6f7019b及手机验收日志e4acd86原为本地领先提交；本次关闭下载及日志另做相关提交后按用户授权推送origin/main，只进私有库，远端核实结果回写本节。既有ios/App/Podfile、缓存、.rivet-config.json、outputs不纳入。
+- 遗留与负责人：素材视觉/听觉仍待用户自愿体验本地2.8.5，不能写已验收；公开下载关闭由Codex验证完成，本次无需用户操作。没有新增外观设计，未改业务、数据或应用网页产物；已安装客户端可继续使用。本轮不把旧测试数字冒称重跑结果。
 
 ## 10. 证据索引：需要时再定位原文
 

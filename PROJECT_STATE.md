@@ -12,7 +12,7 @@
   5. **打包脚本编码修复**（`584bf7c`）：`scripts/build-release.ps1` 原为 UTF-8 无 BOM，Windows PowerShell 5.1 按 GBK 读会 ParserError（中文注释吃掉引号）→ 已加 BOM，`ParseFile` 零错误。
   6. **图片加载失败退避重试**（`9cb01bf`）：`TarotCardSVG` 原先一次失败即永久占位，改为 5s/15s/45s 三次重试。
 - **当前发布状态**：版本已升到 **`2.8.6 / versionCode 21`**（`6601fed`），产物 `outputs\maskaria-2.8.6-release.apk`（32,024,575 B）/ `.aab`。**网页端已部署最新产物**（入口 `index-CxeScLxs.js`，与本地 md5 一致）。
-- **⚠️ 唯一悬而未决**：**缺陷 B 在真机 APP 上仍裂**（用户反馈：手机浏览器正常、APP 不正常）。本机已核实三层全部正确——APK 内 `apiBaseUrl` 有值、头像行编译为 `src: nt(n)`（补全函数确实被调用）、`allowMixedContent:true` 与 `usesCleartextTraffic` 均已配。**判断最可能是此前三个包同名同 versionCode 导致装的仍是旧包**，故升 versionCode 21 重打包，**等用户装 2.8.6 确认**；若装 2.8.6 仍裂，下一步做"在页面上直接显示实际请求地址"的诊断包。
+- **⚠️ 唯一悬而未决**：**缺陷 B 在真机 APP 上仍裂**（用户反馈：手机浏览器正常、APP 不正常）。本机已核实三层全部正确——APK 内 `apiBaseUrl` 有值、头像行编译为 `src: nt(n)`（补全函数确实被调用）、`allowMixedContent:true` 与 `usesCleartextTraffic` 均已配。**判断最可能是此前三个包同名同 versionCode 导致装的仍是旧包**，故升 versionCode 21 重打包。**2026-10-16 二次追查（`4fbd0e0`）另修了一条确实也坏的线**（**注意：不是用户看到的那一处，见本段末**）：`resolveAssetUrl` 当时只接在 **8 个直接渲染点**上，**组织/好友卡那条公共线全体漏接** —— `MemberCard.tsx` 的 `useMemberFace`（驱动 BoardSection / OpsSection / RosterWall / MemberCard / OpCreateSheet / ShareToOrgSheet 全部成员牌面）、`ConfidantAlbumWall` 好友卡面与 `faceOf`、`Cooperation.openFriendCrop` / `ConfidantDetailModal.openCardFaceCrop` 两处 fetch 裁切；这些位置拿到的都是后端相对路径 `/api/avatar/{id}`，在 APP（origin `https://localhost`）里必裂、网页端同源正常。已全部补齐，并新增回归测试 `src\components\org\__tests__\memberAvatar.test.ts`（回滚修复确认 RED、修好后 GREEN）。**2026-10-16 三次追查：此判断被用户现象推翻**——用户指出裂的是**据点地图中央自己的座位头像**（`HideoutMap.tsx` 的 `SeatPin`，属 `6661229` 已修的 8 处之一），不是本条这条线；`4fbd0e0` 那批改动本身仍成立（独立缺陷、已测全绿），但**没有解决用户看到的问题**。新取证（全部本机实测）：拆 `outputs\maskaria-2.8.6-release.apk` 核对，`assets/public/assets/Hideout-DAp_s9t0.js` 里头像行确为 `src:nt(`（补全函数确实被调用），全包唯一 API 基址 `http://192.144.227.216`、无 localhost 残留；`curl -k https://192.144.227.216/api/health` → **https_code=000、超时（exit 28）→ 服务器根本没开 https**；在 https 页面注入 `http://192.144.227.216/icon.png` 实测 → **ERROR**。故两个可能并存、未判定：**(a)** 用户装的仍是旧包（其截图自述是「之前的」）；**(b)** 已装 2.8.6 仍裂 → 根因是**混合内容**（页面 origin `https://localhost` + 图片 `http://…`，而服务器无 https）。若 (b)，候选修复（**均未执行、需用户拍板**）：首选把 `server.androidScheme` 由 `https` 改 `http`（**代价：App 内 WebView 存储 origin 变更，未上云的本地数据如记账流水、聊天原文会读不到**）；备选给后端加 https（需域名/证书、要动服务器）；备选远程头像改 fetch→blob（改动点多但不动 origin）。Capacitor 侧已核无缺项（`@capacitor/android` 5.7.8，`Bridge.java:556` 在 `isMixedContentAllowed()` 时设 `MIXED_CONTENT_ALWAYS_ALLOW`，工程 `assets/capacitor.config.json` 确含 `android.allowMixedContent:true`）；外部查证受阻（`developer.chrome.com`、DuckDuckGo 抓取均超时），**「ALWAYS_ALLOW 是否仍会被 Chromium 自动升级为 https」仍是推断、未证**。**用户 2026-10-16 明确「先不管了，准备交接」→ 缺陷 B 暂停、未解决。** 原计划的下一步保留：若装 2.8.6 仍裂，做"在页面上直接显示实际请求地址"的诊断包。
 - **未开始**：缺陷 C（平板安装后桌面图标不全）。
 - **环境要点（本轮新增）**：部署服务器用 `E:\秘钥\xiangmu.pem` + `ubuntu@192.144.227.216`，静态目录 `/opt/maskaria/web`，**覆盖前必须先备份到 `~/maskaria-backups/`**（`/opt/maskaria/` 本身对 ubuntu 不可写）。构建必须显式 `VITE_API_URL=http://192.144.227.216`，否则 `.env.local` 的 localhost 会被烤进产物。
 
@@ -139,7 +139,7 @@
 | 5 | 手机端卡顿/音画不同步：诊断已完成并归档（§9 对应节点），用户 2026-10-15 选择「先不动，先记录归档」 | 代码未改。继续推进须用户先挑档：①三角沸腾 60→30fps；②查「低帧率自动降级」为何未在其手机生效；③StackCarousel 每帧样式；音效侧另有「叠播打断」与「高频短反馈音换回短音」两个选项。四项都会动到观感，须用户点头后再动手 |
 | 6 | 粉主题塔罗换新：① 卡面 22 张新素材（commit 90bdc93）② 卡背品红四角星（commit 883eb38）均已落地；线上已部署新代码（入口 `index-BZ82oxmb.js`、缓存桶 v2）；单测 / typecheck / 全量测试 / 构建全绿 | **卡面与卡背观感已获用户验收**（用户本地登录目视确认「已经改好了」）；要装到手机看须重新构建 APK，发布须用户另行明确要求 |
 | 7 | 线上网页端塔罗全缺：服务器没有 `tarot` 目录，四套图请求都返回网页而非图片，已定位根因并留完整证据（见 §9 2026-10-16 节点） | **未修**。修复需把 5.5 MB 素材上传到生产服务器，属生产操作，须用户明确授权后执行；本地与手机端不受影响 → **同日已获用户授权补传素材，随后用户指令「把新代码部署到服务器」，已一并部署完成**：线上入口现为 `index-BZ82oxmb.js`，缓存桶升 v2，四套图 200 + image/webp，`/api/health` UP。详见 §9 2026-10-16 节点 |
-| 8 | 用户报的三处缺陷进展：**A 鸿蒙平板记账字体**已修（`7c33d43`，本地复现验证）／**B 手机 APP 头像图裂**已修（`6661229`）／**C 平板安装后桌面图标不全：未开始排查** | A、B 的代码均已部署到网页端并打进 `maskaria-2.8.6-release.apk`（versionCode 21）；**B 的真机结果待用户装 2.8.6 确认**——手机浏览器正常但 APP 仍裂，若装上 2.8.6 仍裂则做"显示实际请求地址"的诊断包。C 待用户发起 |
+| 8 | 用户报的三处缺陷进展：**A 鸿蒙平板记账字体**已修（`7c33d43`，本地复现验证）／**B 手机 APP 头像图裂**已修（`6661229`）／**C 平板安装后桌面图标不全：未开始排查** | A、B 的代码均已部署到网页端并打进 `maskaria-2.8.6-release.apk`（versionCode 21）；**B 未解决、2026-10-16 用户明确决定暂停**（详见 §1 悬而未决条与 §9「三次追查」节点：用户看到的是据点地图 `HideoutMap.SeatPin` 那处，属 `6661229` 已修那一批、仍裂；`4fbd0e0` 补的是另一条线，未解决该现象；候选修复须用户先拍板）；原计划的下一步：若装上 2.8.6 仍裂则做"显示实际请求地址"的诊断包。C 待用户发起 |
 
 最新授权：用户明确“PUSH吧，记得记进日志，我想关闭软件的下载通道，记得我的素材不公开”。本次只推私有开发库，关闭官网入口和腾讯云APK通道，更新同一日志；不扩展为公开发布素材或新包。用户已确认手机同步恢复，不再重复要求验同一故障。
 
@@ -588,3 +588,33 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 | `9bf1b51` | 2026-10-14 | site: 首屏改成 P5 风格的 MASKARIA 字标，下载按钮接上安装包 |
 | `94557a7` | 2026-10-15 | fix(ai): 拉模型列表回退原生通道 |
 | `f55d8a0` | 2026-10-15 | release: 准备 2.8.3 正式安装包 |
+
+### 2026-10-16（续）：缺陷 B 二次追查 —— 找到「组织/好友卡那条线」整体漏接（`4fbd0e0`）
+
+- **起因**：用户新窗口接手时反馈「图标还是裂的」。前一轮判断为「装的仍是旧包」，本机重查后发现还有一处结构性漏网。
+- **根因**：`6661229` 引入 `resolveAssetUrl` 时只接在 8 个**直接**渲染点上（AddOnlineConfidantModal / ConfidantCard / ConfidantDetailModal / NotificationsPanel / OnlineConfidantProfileCard / HideoutMap.SeatPin / RaidSheet / Cooperation:1154）。而组织与好友卡走的是**间接公共线**：
+  - `src\components\org\MemberCard.tsx` 的 `useMemberFace` —— BoardSection（3 处）/ OpsSection / RosterWall / MemberCard（2 处）/ OpCreateSheet / ShareToOrgSheet 的牌面全经它取 `url`，但它返回的是原始 `m.avatarUrl`；
+  - `src\components\cooperation\ConfidantAlbumWall.tsx` 的 `FriendCardFace`（`faceDataUrl || profile.avatarUrl`）与 `faceOf`（`avatarAsCardFace` 时）；
+  - `src\pages\Cooperation.tsx` 的 `openFriendCrop`、`src\components\cooperation\ConfidantDetailModal.tsx` 的 `openCardFaceCrop` 两处 **fetch 原图**（APP 里 fetch 相对路径同样 404）。
+  后端 `OrgService.toMemberView`（OrgService.java:406）直接回 `users.avatar`，即 `/api/avatar/{id}` 相对路径，所以这些位置在 APP（origin `https://localhost`）里必然请求 `https://localhost/api/avatar/…` → 404 → 图裂；网页端同源解析所以看不出来。
+- **改动**：上述 4 个文件各补 `resolveAssetUrl`（`MemberCard` 一处覆盖其全部消费点），新增 `src\components\org\__tests__\memberAvatar.test.ts` 3 项。
+- **验证**：`npx tsc --noEmit` 无错误；`npx vitest run` **36 文件 / 227 项全通过**；回归测试做了 **RED 校验**（把 `useMemberFace` 的补全临时回滚 → 1 failed，恢复 → 3 passed），证明测试确有判别力。
+- **commit**：`4fbd0e0`（5 文件）。**未 Push**。
+- **边界与遗留**：**真机 APP 未验证**（本机无手机）——本次修的是代码层漏网，仍需用户装新包确认；「是否装的仍是旧包」这一可能未排除。缺陷 C（平板桌面图标不全）仍未开始。
+- **下一步（负责人）**：用户 —— 装含 `4fbd0e0` 的新包后确认；我 —— 若仍裂，做「页面上直接显示实际请求地址」的诊断包，并继续排查设备/安装环节。
+- **交付门备注**：`deliver_task` 判 YELLOW 且无法采证（自述「未生成可采证批命令（E:\MASKARIA）：请确认该项目的 runner 与采证适配」），故按降级路径用**显式点名文件**的 scoped 提交（只含本次 5 个文件，未用 `-A`）。
+
+### 2026-10-16（三次追查）：纠错 + 混合内容线索；用户决定暂停并交接
+
+- **起因**：用户接手会话后反馈「是组织界面的这个自己头像裂，你确定修对了吗」，并附两张截图（一张浅色界面、一张红主题 APP，红主题那张中央五角星上方是破图）。
+- **纠错（重要，纠正上一节点）**：用户指的是**据点地图中央、五角星上方的自己的座位头像**（`src\components\org\HideoutMap.tsx` 的 `SeatPin`；`:153` 传 `m.avatarUrl`、`:234` 调 `resolveAssetUrl`）——**属 `6661229` 已修的 8 处之一**，不是 `4fbd0e0` 补的 org/好友卡那条线。上一节点「找到真正的漏网点」的判断**被用户现象推翻**；`4fbd0e0` 那批改动本身仍成立（独立缺陷、测试全绿、已提交），但它**没有解决用户看到的问题**。
+- **本轮取证（全部本机实测，非推断）**：
+  - 拆 `outputs\maskaria-2.8.6-release.apk`：`assets/public/assets/Hideout-DAp_s9t0.js` 里头像行编译为 **`src:nt(`**（补全函数确实被调用）；全包唯一 API 基址 `http://192.144.227.216`，**无 localhost 残留**；`org-map-pulse` 在包内（确认与截图同一界面）。
+  - `curl -k -m12 https://192.144.227.216/api/health` → **https_code=000、超时（exit 28）→ 服务器没有 https**；同路径的 http → 200 正常。
+  - 在 `https://example.com` 注入 `<img src="http://192.144.227.216/icon.png">`，6 秒后 → **ERROR**（加密页面加载不加密图片会失败）。
+  - Capacitor 侧：装的 `@capacitor/android` 为 `5.7.8`；`Bridge.java:556` 在 `config.isMixedContentAllowed()` 为真时设 `MIXED_CONTENT_ALWAYS_ALLOW`；工程 `assets/capacitor.config.json` 确含 `android.allowMixedContent:true` → **配置本身不缺项**。
+- **未判定**：**(a)** 用户手机上装的仍是旧包（其截图自述是「之前的」，无法确认现装版本）；**(b)** 已装 2.8.6 仍裂 → 根因指向**混合内容**。外部查证受阻（`developer.chrome.com`、DuckDuckGo 抓取均超时），**「ALWAYS_ALLOW 下被动混合内容是否仍被自动升级为 https」这一点仍是推断、未证**。
+- **若 (b) 的候选修复（均未执行、需用户拍板）**：① `capacitor.config.ts` 的 `server.androidScheme` 由 `https` 改 `http`（最小改动；**代价：App 内 WebView 存储 origin 变更，未上云的本地数据——记账流水、聊天原文等——会读不到**）；② 给后端加 https（需域名/证书 + 动服务器，用户既有边界是「不改服务器配置」）；③ 远程头像改 fetch→blob（改动点多，但不动 origin 与服务器）。
+- **commit / Push**：本轮无新代码提交（`4fbd0e0` 是上一节点）；**未 Push**。
+- **状态**：用户 2026-10-16 明确「先不管了，准备交接」→ **缺陷 B 暂停、未解决**；缺陷 C（平板安装后桌面图标不全）仍未开始。
+- **下一步（负责人）**：**用户**——有空时装 2.8.6 后重截一张「现在」的图（用于区分 (a)/(b)，截图最好带设置页版本号）；**我**——拿到图后按 (a)/(b) 分支推进；走 (b) 的修复前必须先让用户确认代价。

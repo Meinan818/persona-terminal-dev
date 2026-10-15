@@ -386,6 +386,13 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 同族风险（未修，用户未报）：项目内 `paintOrder` 仍有 9 处。其中 `p4r/cutins.tsx`、`p5r/kit.tsx` 用的是 **SVG 呈现属性**（支持早，风险低）；`AchievementUnlockModal.tsx`、`CallingCardCutIn.tsx` 与本次同为 **CSS 属性**（同源风险）。暂不扩大改动。
 - **缺陷 B/C 状态**：B 已定位到 `src/components/org/HideoutMap.tsx` 的 `SeatPin`（232 行，`avatarUrl` 走 `<img loading="lazy" className="absolute inset-[2px] …">`，按频道分别加 `clipPath`/圆角），但「手机端失败、电脑端正常」的具体表现未经用户确认，尚不能定根因；C（平板安装后图标不全）未开始。
 
+### 2026-10-16（续）：A/B 修复部署上线 + 重打 APK + Push（用户指令「1和2＆3」）
+
+- **① 重打 APK**：`npx cap sync android` → `cd android && ./gradlew.bat assembleRelease bundleRelease`（BUILD SUCCESSFUL in 20s）。产物 `outputs\maskaria-2.8.5-release.apk`（32,024,486 B）/ `maskaria-2.8.5-release.aab`（31,826,262 B）；上一版留底为 `*.before-abfix-20261016`。核验：APK 内含本次构建的星象分包 `Astrology-BlGOEOCe.js`（证明包体来自本次 dist）。
+- **② 部署网页端**：以 `VITE_API_URL=http://192.144.227.216` 重建（新入口 `index-CxeScLxs.js`），先备份线上到 `/home/ubuntu/maskaria-backups/web-20261016-043553.tgz`，再 tar 流上传。核验：线上首页已引用新入口；星象分包 `Astrology-BlGOEOCe.js` 线上与本地 **md5 一致**。
+- **③ Push**：`git push origin main` → `8a03c54..6661229`（3 个提交：`7c33d43` 记账字体、`f629ed7` 日志、`6661229` 头像地址解析）。
+- **待用户真机验收**：缺陷 A（鸿蒙平板记账字体）与 B（手机端头像图裂）——两者都需安装本次新 APK 才能验；本机无鸿蒙设备与手机，**不得声称已验证**。缺陷 C（平板图标）仍未开始。
+
 ## 10. 证据索引：需要时再定位原文
 
 - §11为本地完整Git提交索引；先git show --stat查范围，再按非敏感文件查内容。历史可能含凭据，禁止批量输出历史文件。

@@ -362,6 +362,12 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **④ 图片加载失败加固**（commit `9cb01bf`）：`tarotArt.ts` 新增 `ART_RETRY_DELAYS_MS` / `nextArtRetryDelay`（5s / 15s / 45s 三次，用尽即停）；`TarotCardSVG.tsx` 失败后按节奏清除 `failedSrc` 重试、`onLoad` 重置计数。验证：tarotArt 单测 11 passed、typecheck exit 0、全量 34 文件 218 项 passed。
 - **遗留**：第 ④ 项**尚未部署到线上**（线上仍是旧代码，加固未生效）；本轮重打的 APK 也**不含**该加固（但对 APK 意义有限——包内图片是本地打包的、不依赖服务器）。`build-release.ps1` 的编码缺陷仍在（未修），下次打包仍需手动执行，或先给脚本加 BOM / 改用 pwsh。
 
+### 2026-10-16（续）：加固上线的部署 + 打包脚本编码修复
+
+- **加固部署到线上**（用户「你进行你的」后执行）：以 `VITE_API_URL=http://192.144.227.216` 重建（新入口 `index-DYndqtMl.js`），先备份线上到 `/home/ubuntu/maskaria-backups/web-20261016-041636.tgz`（22,978,640 B），再 tar 流上传。核验：首页引用新入口；**加固代码所在的星象分包由 `Astrology-ChJdHCoK.js` 变为 `Astrology-BjlH4v2b.js`**，且线上与本地 md5 完全一致（`ffa1be6d332b3a3067cea9b2cf875a46`）——这是"退避重试确实上线"的逐字节证据；缓存桶仍 `tarot-art-v2`；四套塔罗图 200 image/webp；`/api/health` UP。至此 2026-10-16 的第 ④ 项加固**已在生产生效**。
+- **打包脚本编码缺陷已修**（commit `584bf7c`）：根因是 `scripts/build-release.ps1` 存为 UTF-8 无 BOM，而 Windows PowerShell 5.1 按 GBK 读，中文注释解码成乱码吃掉引号 → `ParserError`（本次手动打包时就是这么失败的）。加 UTF-8 BOM 后 `ParserFile` 零错误、中文可正确读出。本机无 `pwsh`，故采用 BOM 方案而非换 PowerShell 版本。**下次打包可恢复直接跑脚本**（未再实跑验证，仅静态解析通过）。
+- **残留**：线上 `assets/` 下留有历史分包（`Astrology-ChJdHCoK.js` 等），无害；本轮重打的 APK **不含**退避重试（对 APK 影响有限，包内图片为本地自带）。
+
 ## 10. 证据索引：需要时再定位原文
 
 - §11为本地完整Git提交索引；先git show --stat查范围，再按非敏感文件查内容。历史可能含凭据，禁止批量输出历史文件。

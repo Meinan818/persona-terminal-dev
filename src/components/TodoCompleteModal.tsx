@@ -139,7 +139,17 @@ export const BandCutInP3 = ({ isOpen, onClose, title, totalPoints, unlockHint, e
                     <div className="flex items-end gap-2">
                       {/* 窄屏钳字号 + 禁折行（iPhone Air 实测「今日完成」最后一字被挤下行）：
                           分辨率不够时整体缩小，绝不换行 */}
-                      <span className="whitespace-nowrap font-black italic leading-[0.9]" style={{ fontSize: 'min(52px, 11.5vw)', color: 'var(--p3r-ink, #0a1230)', fontFamily: '"Noto Sans SC Black", "Velvet Sans SC", sans-serif', WebkitTextStroke: '5px #ffffff', paintOrder: 'stroke fill' }}>{eyebrow}</span>
+                      {/* 描边垫字（2026-10-16 修）：原先靠 `-webkit-text-stroke` + `paint-order` 把
+                          白边垫在字底下。部分鸿蒙设备的 WebView 不支持 paint-order，描边会按默认
+                          顺序盖到字面上、把笔画糊掉——用户报的「记账完成后字体显示不全」即此。
+                          改成两层叠字：底层只描边、上层只填充，先后由 DOM 层级决定，任何内核都一致。 */}
+                      <span
+                        className="relative inline-block whitespace-nowrap font-black italic leading-[0.9]"
+                        style={{ fontSize: 'min(52px, 11.5vw)', fontFamily: '"Noto Sans SC Black", "Velvet Sans SC", sans-serif' }}
+                      >
+                        <span aria-hidden className="absolute inset-0" style={{ color: '#ffffff', WebkitTextStroke: '5px #ffffff' }}>{eyebrow}</span>
+                        <span className="relative" style={{ color: 'var(--p3r-ink, #0a1230)' }}>{eyebrow}</span>
+                      </span>
                       <span aria-hidden className="mb-1 flex gap-[3px]">
                         <span className="h-[10px] w-[12px]" style={{ background: 'var(--p3r-magenta, #f0417f)', clipPath: 'polygon(30% 0, 100% 0, 70% 100%, 0 100%)' }} />
                         <span className="h-[8px] w-[9px]" style={{ background: 'rgba(240,65,127,0.55)', clipPath: 'polygon(30% 0, 100% 0, 70% 100%, 0 100%)' }} />

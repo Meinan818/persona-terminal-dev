@@ -65,7 +65,13 @@ export default defineConfig({
             urlPattern: ({ url }) => url.pathname.startsWith('/tarot/'),
             handler: 'CacheFirst',
             options: {
-              cacheName: 'tarot-art-v1',
+              // v1 → v2（2026-10-16）：服务器曾长时间缺少 public/tarot 目录，nginx 的
+              // `try_files … /index.html` 把每个 /tarot/*.webp 请求都兜底成 200 的 HTML；
+              // 本规则的 cacheableResponse 认 200 即成功，于是那批 HTML 被当成图片
+              // 缓存了 180 天——素材补传上服务器后，老浏览器仍吐缓存里的 HTML、塔罗
+              // 一直显示程序化占位卡（CacheFirst 根本不发网络请求）。
+              // 换 cacheName 即弃用旧缓存桶，让客户端重新按网络取图。
+              cacheName: 'tarot-art-v2',
               expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 180 },
               cacheableResponse: { statuses: [0, 200] },
             },

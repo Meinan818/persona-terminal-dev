@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$ApiUrl = 'http://192.144.227.216',
   [string]$KeystorePath = '',
   [string]$KeyAlias

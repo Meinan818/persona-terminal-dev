@@ -1,4 +1,5 @@
 param(
+  [string]$ApiUrl = 'http://192.144.227.216',
   [string]$KeystorePath = '',
   [string]$KeyAlias
 )
@@ -7,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 $initialLocation = Get-Location
 
 $root = Split-Path -Parent $PSScriptRoot
+$previousApiUrl = $env:VITE_API_URL
 
 function Convert-SecureString([Security.SecureString]$value) {
   $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($value)
@@ -15,6 +17,12 @@ function Convert-SecureString([Security.SecureString]$value) {
 }
 
 try {
+  Set-Location $root
+  node scripts/verify-release.mjs $ApiUrl
+  if ($LASTEXITCODE -ne 0) { throw '正式后端地址校验失败' }
+  # 进程环境优先于本机 .env.local，避免把 localhost 烤进手机安装包。
+  $env:VITE_API_URL = $ApiUrl.TrimEnd('/')
+  $releaseVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
   if ($KeystorePath) {
     if (-not (Test-Path -LiteralPath $KeystorePath -PathType Leaf)) {
       throw "找不到签名文件：$KeystorePath"
@@ -35,7 +43,9 @@ try {
   Set-Location $root
   npm run build
   if ($LASTEXITCODE -ne 0) { throw '前端构建失败' }
-  npm run cap:sync
+  node scripts/verify-release.mjs $env:VITE_API_URL dist
+  if ($LASTEXITCODE -ne 0) { throw '产物后端地址校验失败，停止打包' }
+  npx --no-install cap sync android
   if ($LASTEXITCODE -ne 0) { throw 'Capacitor 同步失败' }
 
   Set-Location (Join-Path $root 'android')
@@ -44,12 +54,13 @@ try {
 
   $outputDir = Join-Path $root 'outputs'
   New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
-  Copy-Item (Join-Path $root 'android\app\build\outputs\apk\release\app-release.apk') (Join-Path $outputDir 'maskaria-2.8.3-release.apk') -Force
-  Copy-Item (Join-Path $root 'android\app\build\outputs\bundle\release\app-release.aab') (Join-Path $outputDir 'maskaria-2.8.3-release.aab') -Force
-  Write-Host "正式 APK：$outputDir\maskaria-2.8.3-release.apk"
-  Write-Host "商店包 AAB：$outputDir\maskaria-2.8.3-release.aab"
+  Copy-Item (Join-Path $root 'android\app\build\outputs\apk\release\app-release.apk') (Join-Path $outputDir "maskaria-$releaseVersion-release.apk") -Force
+  Copy-Item (Join-Path $root 'android\app\build\outputs\bundle\release\app-release.aab') (Join-Path $outputDir "maskaria-$releaseVersion-release.aab") -Force
+  Write-Host "正式 APK：$outputDir\maskaria-$releaseVersion-release.apk"
+  Write-Host "商店包 AAB：$outputDir\maskaria-$releaseVersion-release.aab"
 }
 finally {
+  $env:VITE_API_URL = $previousApiUrl
   Remove-Item Env:VELVET_STORE_FILE -ErrorAction SilentlyContinue
   Remove-Item Env:VELVET_STORE_PASSWORD -ErrorAction SilentlyContinue
   Remove-Item Env:VELVET_KEY_ALIAS -ErrorAction SilentlyContinue

@@ -222,6 +222,15 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 仅文档/规则，没有UI、生产、用户数据、收费调用或部署。未重跑业务测试，历史数字注明来源。本次本地提交通过 `git log --oneline --grep="统一项目总日志"` 定位；未Push。
 - 遗留为§6官网同步/链接和手机反馈；不可访问聊天不能保证逐句恢复。下一步由后续维护会话按授权处理并维护本文件，本次阅读无需用户操作。
 
+### 2026-10-15：同步失败定位与2.8.4修复（发布进行中）
+
+- 用户提供手机“同步失败：Failed to fetch”截图并授权修复前述待办。依debugging/testing流程先取证：线上健康200、App来源预检200、截图时段无对应同步请求；直接解包旧APK，2.8.3入口index-TG_quZCc.js指向http://localhost:8080，2.8.2i指向正确腾讯云。根因是build-release.ps1未显式设置VITE_API_URL，开发配置进入正式包；原Vite检查还错查已退役VITE_PB_URL。不是据错误文本猜测跨域或改动真实数据。
+- scripts/build-release.ps1显式设置正式地址，前后验证并恢复进程环境，只同步Android以保护既有iOS改动，产物名读取package版本；新增verify-release.mjs及3项回归，拒绝本机地址、缺目标/混入本机地址的产物；Vite提示改查VITE_API_URL。版本2.8.4/code19；官网修新APK、公开库链接与测试数字。
+- 验证：旧dist被新校验拒绝；Node回归3/3，npm test 32文件203项，npm run typecheck通过；正式APK/AAB构建成功，最终APK仅含正确后端地址，aapt核版本，apksigner核2.8.3/2.8.4证书SHA-256一致。APK SHA-256：4ca13223770b7e3647f4b4e66d728ef02fe1b1af16c2a11c1049a45de415cc2f。
+- 已新增腾讯云/opt/maskaria/web/download/maskaria-2.8.4-release.apk，本地/上传临时文件/正式文件哈希相同；没覆盖旧包、没改nginx、应用根或后端。Cloudflare官网待发布；上一部署ID 2d5f4986-0b61-4419-a7e0-2cbf5ea5c6d1已用Wrangler核实，保留回退依据。
+- 查明当前实际展示库工作区是E:/MASKARIA-showcase，HEAD33f84de且原本干净；.rivet/publish是遗留副本，不作为同步入口。已核8个公开文件基线一致再同步本次代码/发布材料，未复制项目日志、规则、官网或私有材料。公共隐私/合规文档已在33f84de树中核实存在，GitHub HTTPS本机连接失败，不冒称浏览器可达。
+- 本节点本地提交见git log最新记录；尚未Push。下一步完成官网Pages发布/公网APK与按钮验证，再更新现行摘要；手机真实上传/拉取仍须用户用自己的账号验收，不擅用真实会话代测。
+
 ## 10. 证据索引：需要时再定位原文
 
 - §11为本地完整Git提交索引；先git show --stat查范围，再按非敏感文件查内容。历史可能含凭据，禁止批量输出历史文件。

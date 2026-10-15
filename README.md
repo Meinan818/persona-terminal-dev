@@ -4,7 +4,7 @@
 
 <h1 align="center">MASKARIA · 面具庭园</h1>
 <p align="center"><em>把日子过成存档，把存档过成人样</em></p>
-<p align="center">当前 Android 正式版：<strong>v2.8.3</strong></p>
+<p align="center">当前 Android 正式版：<strong>v2.8.4</strong></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" />
@@ -218,6 +218,8 @@ npm run cap:build:android  # 打包
 ```powershell
 .\scripts\build-release.ps1
 ```
+
+脚本显式使用正式后端地址，并在同步到 Android 前检查构建产物，拒绝包含 localhost 的正式包。后端迁移时用 `-ApiUrl '新的正式地址'`，不要依赖本机开发环境配置。
 
 当前线上版沿用 Android Debug 证书，脚本会使用同一张证书以保证新包可覆盖升级。以后迁移到应用商店私钥时，再附加 `-KeystorePath` 并按提示在本机输入签名信息；密码不会写入仓库、日志或命令历史。
 

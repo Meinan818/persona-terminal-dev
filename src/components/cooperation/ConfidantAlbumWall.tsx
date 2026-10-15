@@ -28,6 +28,7 @@ import { useUiChannel } from '@/ui/useUiChannel';
 import { useAppStore } from '@/store';
 import { useShortViewportScale } from '@/utils/useViewportScale';
 import { hardTagInk } from '@/utils/levelDifficulty';
+import { resolveAssetUrl } from '@/utils/assetUrl';
 import { P3R, slantClip } from '@/components/p3r/kit';
 import { WallSpinBackdrop } from './WallSpinBackdrop';
 
@@ -331,7 +332,8 @@ const FriendCardFace = ({ f }: { f: FriendWallItem }) => {
   const channel = useUiChannel();
   const sk = BACK_SKIN[channel];
   const p5 = channel === 'p5';
-  const src = f.faceDataUrl || f.profile.avatarUrl;
+  // 兜底的 profile.avatarUrl 是后端相对路径，APP 里必须补全后端地址（见 utils/assetUrl）
+  const src = f.faceDataUrl || resolveAssetUrl(f.profile.avatarUrl);
   const name = f.profile.nickname || f.profile.userId || '未命名客人';
   return (
     <div
@@ -531,7 +533,7 @@ const idOf = (item: WallItem) => (item === 'add' ? '__add__' : item.id);
 /** 「卡面用头像」开着时，整张牌面换成头像图（离线=本地上传，在线=对方云端头像） */
 const faceOf = (c: Confidant): string | undefined =>
   c.avatarAsCardFace
-    ? (c.cardFaceDataUrl || c.customAvatarDataUrl || c.linkedProfile?.avatarUrl || undefined)
+    ? (c.cardFaceDataUrl || c.customAvatarDataUrl || resolveAssetUrl(c.linkedProfile?.avatarUrl) || undefined)
     : undefined;
 
 /**

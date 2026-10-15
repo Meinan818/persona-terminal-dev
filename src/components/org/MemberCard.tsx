@@ -13,6 +13,7 @@ import { useCloudSocialStore } from '@/store/cloudSocial';
 import { toggleMemberFace } from '@/services/orgSync';
 import { liveStatus } from '@/constants/profileStatus';
 import { tarotArtUrl } from '@/constants/tarotArt';
+import { resolveAssetUrl } from '@/utils/assetUrl';
 import { useTarotArtSet } from '@/ui/useTarotArtSet';
 import { P3R, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_FONT, P5_TITLE_FONT, roughQuad } from '@/components/p5r/kit';
@@ -89,7 +90,10 @@ export function useMemberFace(m: Pick<OrgMember, 'userId' | 'tarotId' | 'avatarU
   // 服务器上的牌 id 不认识（手改数据 / 以后加的牌）就当没选，退回头像
   const rawTarot = m ? m.tarotId : fallbackTarot;
   const tarotId = tarotCardOf(rawTarot) ? rawTarot : undefined;
-  const avatar = m?.avatarUrl && (prefAvatar || !tarotId) ? m.avatarUrl : undefined;
+  // 后端（OrgService.toMemberView）直接回 users.avatar，即 /api/avatar/{id} 这种
+  // **相对路径**。APP 里 WebView origin 是 https://localhost，不补全就打本地 404 →
+  // 图裂；网页端同源解析所以正常 —— 这正是「电脑好、APP 裂」的成因（见 utils/assetUrl）。
+  const avatar = m?.avatarUrl && (prefAvatar || !tarotId) ? resolveAssetUrl(m.avatarUrl) : undefined;
   return {
     avatar: !!avatar,
     url: avatar ?? (tarotId ? tarotArtUrl(tarotId, set) : null),

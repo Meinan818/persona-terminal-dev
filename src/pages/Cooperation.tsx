@@ -367,7 +367,7 @@ export function Cooperation() {
    * toDataURL 抛异常；fetch 不因 4xx/5xx reject，必须自己查 res.ok。
    */
   const openFriendCrop = async (item: FriendWallItem) => {
-    const src = item.faceDataUrl || item.profile.avatarUrl;
+    const src = item.faceDataUrl || resolveAssetUrl(item.profile.avatarUrl);
     const name = item.profile.nickname || item.profile.userId || '未命名客人';
     if (!src) {
       setPrayerError({ id: item.profile.id, message: '还没取到 Ta 的头像，稍后再试' });

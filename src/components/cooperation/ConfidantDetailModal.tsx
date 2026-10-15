@@ -379,7 +379,7 @@ export function ConfidantDetailModal({
    * 必须自己查 res.ok，否则把一张错误页当图片塞进裁切框。
    */
   const openCardFaceCrop = async () => {
-    const src = confidant.customAvatarDataUrl || confidant.linkedProfile?.avatarUrl;
+    const src = confidant.customAvatarDataUrl || resolveAssetUrl(confidant.linkedProfile?.avatarUrl);
     if (!src) {
       setAvatarErr('还没取到 Ta 的头像，正在重新拉取…稍后再试一次');
       setTimeout(() => setAvatarErr(null), 3000);

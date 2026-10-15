@@ -637,8 +637,8 @@ export interface ModelCaps {
 }
 
 export type ModelListResult =
-  | { ok: true; models: string[]; caps: Record<string, ModelCaps> }
-  | { ok: false; error: string };
+  | { ok: true; models: string[]; caps: Record<string, ModelCaps>; transport?: 'native'; nativeHost?: string }
+  | { ok: false; error: string; transport?: 'native'; nativeHost?: string };
 
 /** 从 /models 的一行里读能力字段（各家字段名不一，认得的都收） */
 function capsOfRow(row: unknown): ModelCaps | null {
@@ -692,16 +692,29 @@ export async function fetchAvailableModels(opts: {
   try {
     const anthropic = (opts.protocol ?? (opts.provider === 'custom' ? customProtocol() : 'openai')) === 'anthropic';
     if (!baseUrl) { clearTimeout(timeout); return { ok: false, error: '自定义服务商要先填 API 地址' }; }
-    const resp = await aiFetch(anthropic ? anthropicEndpoint(baseUrl, 'models') : `${baseUrl}/models`, {
+    const url = anthropic ? anthropicEndpoint(baseUrl, 'models') : `${baseUrl}/models`;
+    const init: RequestInit = {
       headers: {
         ...(anthropic ? anthropicHeaders(apiKey) : { Authorization: `Bearer ${apiKey}` }),
         // 同上：代理侧按这个头选服务商的 Key，少了它拉模型列表会被 400 挡掉
         'X-Upstream-Provider': opts.provider,
       },
       signal: controller.signal,
-    }, viaNative);
+    };
+    let usedNative = !!viaNative;
+    let resp: Response;
+    try {
+      resp = await aiFetch(url, init, viaNative);
+    } catch (e) {
+      // 首次配置还没有把主机记进 aiNativeHosts：先走 WebView 拉列表会被 CORS 挡住。
+      // 这里与测试连接同口径，原生层能拿到 HTTP 响应就登记该主机，后续请求也不再撞预检。
+      if (!(e instanceof TypeError) || usedNative || !nativeTransportAvailable()) throw e;
+      usedNative = true;
+      resp = await aiFetch(url, init, true);
+    }
     clearTimeout(timeout);
-    recordAIDiag({ kind: 'models', provider: opts.provider, host: hostOfUrl(baseUrl), ok: resp.ok, status: resp.status, ms: Date.now() - t0, native: !!viaNative });
+    const nativeTag = usedNative ? { transport: 'native' as const, nativeHost: hostOfUrl(baseUrl) } : {};
+    recordAIDiag({ kind: 'models', provider: opts.provider, host: hostOfUrl(baseUrl), ok: resp.ok, status: resp.status, ms: Date.now() - t0, native: usedNative });
 
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
@@ -714,7 +727,7 @@ export async function fetchAvailableModels(opts: {
         ? '该地址不支持 /models 列表接口，请手动填写模型名'
         : (relayHint(detail, isOfficialHost(baseUrl)) || getHttpStatusHint(resp.status, opts.provider));
       const prefix = hint ? `${hint} (HTTP ${resp.status})` : `HTTP ${resp.status}`;
-      return { ok: false, error: detail ? `${prefix}: ${detail}` : prefix };
+      return { ok: false, error: detail ? `${prefix}: ${detail}` : prefix, ...nativeTag };
     }
 
     const data = (await resp.json().catch(() => null)) as unknown;
@@ -723,7 +736,7 @@ export async function fetchAvailableModels(opts: {
       : data && typeof data === 'object' && Array.isArray((data as { data?: unknown }).data)
         ? ((data as { data: unknown[] }).data)
         : null;
-    if (!rows) return { ok: false, error: '响应格式非 OpenAI 兼容（没有 data 数组）' };
+    if (!rows) return { ok: false, error: '响应格式非 OpenAI 兼容（没有 data 数组）', ...nativeTag };
 
     const caps: Record<string, ModelCaps> = {};
     const ids: string[] = [];
@@ -737,8 +750,8 @@ export async function fetchAvailableModels(opts: {
     }
     const models = [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 
-    if (models.length === 0) return { ok: false, error: '接口没有返回任何模型' };
-    return { ok: true, models, caps };
+    if (models.length === 0) return { ok: false, error: '接口没有返回任何模型', ...nativeTag };
+    return { ok: true, models, caps, ...nativeTag };
   } catch (e) {
     clearTimeout(timeout);
     recordAIDiag({ kind: 'models', provider: opts.provider, host: hostOfUrl(baseUrl), ok: false, status: 0, ms: Date.now() - t0, native: !!viaNative, err: e instanceof Error ? (e.name === 'AbortError' ? '超时' : e.message) : String(e) });

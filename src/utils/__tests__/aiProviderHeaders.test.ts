@@ -8,13 +8,13 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const h = vi.hoisted(() => ({ aiFetch: vi.fn() }));
+const h = vi.hoisted(() => ({ aiFetch: vi.fn(), nativeAvailable: false }));
 
 // 只替换网络出口：代理开关（syncAiProxy / aiProxyEnabled / withoutAiProxy）必须用真实现，
 // 否则测不出「代理 502 → 回退直连」这条路径。
 vi.mock('@/utils/aiTransport', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/utils/aiTransport')>();
-  return { ...actual, aiFetch: h.aiFetch, nativeTransportAvailable: () => false };
+  return { ...actual, aiFetch: h.aiFetch, nativeTransportAvailable: () => h.nativeAvailable };
 });
 
 import { fetchAvailableModels, testAIConnection } from '@/utils/aiProviders';
@@ -29,6 +29,7 @@ const headersOfFirstCall = (): Headers =>
 describe('AI 请求头：代理靠 X-Upstream-Provider 认服务商', () => {
   beforeEach(() => {
     h.aiFetch.mockReset();
+    h.nativeAvailable = false;
     localStorage.clear();
     syncAiProxy(false, '');
   });
@@ -43,6 +44,22 @@ describe('AI 请求头：代理靠 X-Upstream-Provider 认服务商', () => {
     h.aiFetch.mockResolvedValue(okJson({ data: [{ id: 'deepseek-chat' }] }));
     await fetchAvailableModels({ provider: 'deepseek', apiKey: 'sk-synthetic' });
     expect(headersOfFirstCall().get('X-Upstream-Provider')).toBe('deepseek');
+  });
+
+  it('首次拉模型被 WebView 跨域拦住时，改走原生通道并标记主机', async () => {
+    h.nativeAvailable = true;
+    h.aiFetch
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(okJson({ data: [{ id: 'kitool-model' }] }));
+
+    const result = await fetchAvailableModels({
+      provider: 'custom', apiKey: 'sk-synthetic', baseUrl: 'https://kitool.ai/v1',
+    });
+
+    expect(result).toMatchObject({ ok: true, models: ['kitool-model'], transport: 'native', nativeHost: 'kitool.ai' });
+    expect(h.aiFetch).toHaveBeenCalledTimes(2);
+    expect(h.aiFetch.mock.calls[0][2]).toBeUndefined();
+    expect(h.aiFetch.mock.calls[1][2]).toBe(true);
   });
 
   it('代理报「服务端未配置这家钥匙」时，回退直连再试一次', async () => {

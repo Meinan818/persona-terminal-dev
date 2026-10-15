@@ -94,6 +94,13 @@ export function AIServiceSettings({ openConnection = false }: {
     if (settings.summaryApiProvider === 'custom' && !settings.summaryModel?.trim()) {
       if (!settings.summaryApiBaseUrl?.trim()) { setApiTestStatus('error'); setApiTestMessage('先填 API 地址（或点上面的预设）'); return; }
       const listed = await fetchAvailableModels({ provider: 'custom', apiKey: keyToTest, baseUrl: settings.summaryApiBaseUrl, nativeHosts: settings.aiNativeHosts, protocol: customProto });
+      const hostsNow = settings.aiNativeHosts ?? [];
+      const nativeHost = listed.nativeHost;
+      const nativeHosts = nativeHost && !hostsNow.includes(nativeHost) ? [...hostsNow, nativeHost] : hostsNow;
+      const nativeNote = listed.transport === 'native'
+        ? '这个地址不放行跨域，已改走 App 原生通道（不支持流式，回复会整段出现）。\n'
+        : '';
+      if (nativeHosts !== hostsNow) updateSettings({ aiNativeHosts: nativeHosts });
       if (listed.ok) {
         updateSettings({
           aiProfiles: {
@@ -103,11 +110,11 @@ export function AIServiceSettings({ openConnection = false }: {
         });
         setApiTestStatus('idle');
         setApiTestMessage('');
-        setCustomModelNote(`${cleanNote}地址和 Key 都没问题，拉到 ${listed.models.length} 个模型：挑一个，再点一次「测试连接」。`);
+        setCustomModelNote(`${cleanNote}${nativeNote}地址和 Key 都没问题，拉到 ${listed.models.length} 个模型：挑一个，再点一次「测试连接」。`);
         setModelPicker('fast');
       } else {
         setApiTestStatus('error');
-        setApiTestMessage(`${cleanNote}${listed.error}\n它要是不给模型列表，就在「模型分档 → 快速响应」里直接手填模型名。`);
+        setApiTestMessage(`${cleanNote}${nativeNote}${listed.error}\n它要是不给模型列表，就在「模型分档 → 快速响应」里直接手填模型名。`);
       }
       return;
     }

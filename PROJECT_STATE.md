@@ -4,7 +4,7 @@
 
 ## 1. 当前全貌：先看这一节
 
-- 工作目录 `E:\MASKARIA`，分支 `main`。本次整理前 HEAD 为 `f55d8a0`，本轮已核私有远端同为该提交。整理后的最新提交请运行 `git log -1 --oneline`，不要把此基线当永久 HEAD。
+- 工作目录 `E:\MASKARIA`，分支 `main`。首次整理前 HEAD 为 `f55d8a0`；用户随后批准Push，修复与日志已推至两库main（见§9最新节点）。最新提交请运行 `git log -1 --oneline`，不要把此基线当永久 HEAD。
 - MASKARIA（面具庭园）：基于 `YuukiMarine/the-velvet` 二创的个人成长记录应用，也是 Java 全栈毕业设计。功能包括五维成长、行为记录、任务/愿望、记账、同伴/社交、逆影战斗、塔罗、AI 助手与总结、Android 桌面小组件。
 - 前端 React 18 / TypeScript 5 / Vite 5 / Zustand / Dexie，本地优先；账号、可选同步和社交走 Java 17 / Spring Boot 3.2 / MyBatis-Plus / MySQL 8 / Flyway。PocketBase 已退役，不恢复旧 SDK 或旧登录判断。
 - 记账流水、聊天原文、记录配图、导入音乐按设计不上云；本地备份、图片包、云同步各有范围，不可混同。AI 默认 BYOK，即用户自带 Key，开发者不统一供应 Key。
@@ -38,9 +38,9 @@
 | 最新 APK | `http://192.144.227.216/download/maskaria-2.8.4-release.apk`；服务器 `/opt/maskaria/web/download/` | 公网完整下载200、26,291,469字节；SHA-256与本地/服务器一致，见§9最新条目 |
 | 官网旧 APK（已被新下载入口取代） | `http://192.144.227.216/download/maskaria-2.8.2i-release.apk` | 日志恢复时确认曾指向它；本轮已更新2.8.4，旧文件保留，不再作为当前下载入口 |
 | 本地正式产物 | `outputs/maskaria-2.8.4-release.apk` 与 `.aab` | 本轮正式构建成功，最终APK核地址、版本和签名；AAB未上架商店 |
-| 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本轮 `git ls-remote` → `f55d8a0`；规则/总日志只归此库；可见性沿用原记录，本轮未查GitHub API |
-| 公开展示库 | `git@github.com:Meinan818/Persona-Terminal.git`，`main` | 本轮SSH `git ls-remote` → `33f84de`；HTTPS连接失败，改用现有SSH只读核实成功；可见性沿用原记录 |
-| 当前展示库工作区 | `E:/MASKARIA-showcase` | 现场确认原HEAD33f84de且干净；本次8个公开文件同步后本地提交4de5ff5，未Push。`.rivet/publish/`只是旧副本，不再作为同步入口 |
+| 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本轮Push及远端核实为4e0c5dd；后续日志回写提交同次授权推送，最新SHA用git log/ls-remote核；规则和总日志只归此库 |
+| 公开展示库 | `git@github.com:Meinan818/Persona-Terminal.git`，`main` | 本轮Push及SSH远端核实为4de5ff5；仅公开8个发布修复文件；可见性沿用原记录 |
+| 当前展示库工作区 | `E:/MASKARIA-showcase` | 现场确认原HEAD33f84de且干净；本次8个公开文件提交4de5ff5，已Push并核远端main一致。`.rivet/publish/`只是旧副本，不再作为同步入口 |
 
 源码commit、Git Push、腾讯云上传、Cloudflare发布、用户验收分别记录。本轮没有证据表明Push会自动部署任何一站；不能写“已推送所以官网更新”。
 
@@ -116,7 +116,7 @@
 | 顺序 | 事项及完成标准 | 谁做及边界 |
 |---|---|---|
 | 1 | 手机安装2.8.4覆盖旧版，账号与数据→立即同步到云端/拉取，确认不再Failed to fetch；顺便测试Kitool模型列表 | 用户有空使用反馈，不能代写通过；不要卸载或重置数据 |
-| 2 | 两库本地提交待Push：私有库含日志及修复，公开库仅8个公开文件；核远端后推荐推送，需明确批准 | 维护会话准备已完成，未经批准不推；不影响已发布APK/Pages |
+| 2 | 两库Push已完成：用户明确批准后推送并核远端main一致，私有含日志及修复，公开仅8个公开文件 | 此项关闭；后续新Push仍需单独批准 |
 | 3 | 官网更新与私有链接修正已关闭：生产入口/快照200，HTML与本地一致，两处下载2.8.4，未含私有库链接 | 无需用户配置或去Cloudflare后台 |
 | 4 | 展示库入口核账已关闭：当前工作区E:/MASKARIA-showcase，旧.rivet/publish不使用；8个文件原始基线相同才同步 | 后续仍先核现场，不直接覆盖有差异文件 |
 
@@ -240,6 +240,14 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 线上health再次200且db/status UP。本机已完成3项发布回归、203项前端测试、类型检查、正式APK/AAB、地址/签名/版本检查；未用真实用户账号上传/拉取、不改真实数据，手机验收待用户。
 - 公网完整下载首次60秒超时，保留失败事实；延长180秒重新以流式SHA-256核验成功：HTTP200、26,291,469字节，与本地/服务器哈希4ca13223770b7e3647f4b4e66d728ef02fe1b1af16c2a11c1049a45de415cc2f相同。没有把SSH哈希或HEAD代替完整下载。
 - 后续由用户直接覆盖安装2.8.4（无需卸载/重置），账号与数据→立即同步到云端，预期不再Failed to fetch，再核拉取与Kitool；验收反馈到来后维护会话主动更新本日志。两库代码提交尚未Push，须用户单独批准；官网/APK发布已完成，不依赖Push。
+
+### 2026-10-15：用户批准两库Push并核验
+
+- 用户明确“PUSH吧”，授权本次相关提交与推送。先核两库远端/分支、差异和敏感信息模式，私有12个改动文件、公开8个文件；公开范围不含PROJECT_STATE、AGENTS、.rivet规则或site。
+- 开发库git push origin main成功：f55d8a0→4e0c5dd，包含3c792bc、2178a57、4e0c5dd；展示库33f84de→4de5ff5成功。两边随后git ls-remote refs/heads/main均核实一致，展示库干净。
+- 本条及现行状态回写另做本地文档提交，并按同一次Push授权同步私有origin/main；最终SHA以git log -1与ls-remote为准，不自引用猜哈希。
+- 既有ios/App/Podfile、.cache/、.rivet-config.json、outputs/保留本地未上传。没有新增部署、UI或数据变更；APK/Pages仍为上轮已核的2.8.4，推送不等于用户已验收。
+- 下一步：用户手机覆盖安装2.8.4后验同步/Kitool，收到反馈后维护会话更新日志；除此本次Push无需用户操作。
 
 ## 10. 证据索引：需要时再定位原文
 

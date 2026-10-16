@@ -1154,3 +1154,24 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **验证（本轮实测）**：`npx tsc --noEmit` 退出 0；`npx vitest run` 全量 **39 个测试文件通过**、退出 0。
 - **未验证（如实）**：**动画时序本身我无法在会话内验证**——本会话没有浏览器自动化工具，无头浏览器又会被「引导建档」全屏层挡住。碎裂退场与「确认键单独出现」只能由用户在 `?rankup=1` 上再看一遍确认。
 - **提交**：`c9969d5`。分支 `feat/coop-cinematic`，**未 push**（领先 origin/main 13 条）。
+
+### 2026-10-16（验收 · 交接）：羁绊升级演出 —— 用户验收通过
+
+- **用户明确回复「验收通过」**（2026-10-16）。本功能闭环。
+- **交付物清单**：
+  - 代码：`src/components/cooperation/ConfidantRankUpCutIn.tsx`（演出本体 + 确认后接星移的邀请组件 + 开发预览触发）、`src/styles/confidant-rankup.css`（所有会显示的颜色走 `--rk-*` 变量，粉主题只覆盖一组变量）、`src/utils/confidantCelebration.ts`（「已庆祝」标记，与档案补弹共用同一把 localStorage 键）、`src/store/index.ts` 的 `confidantRankUpQueue` / `dismissConfidantRankUp` / `enqueueConfidantRankUp` / `starShiftInvite`、`src/App.tsx` 顶层的常驻挂载。
+  - 测试：`src/store/__tests__/confidantRankUpQueue.test.ts`（3 项）、`src/utils/__tests__/confidantCelebration.test.ts`（5 项）。
+  - 设计文档：`docs/superpowers/specs/2026-10-16-coop-rankup-cinematic-design.md`（**不入库**，仓库 `.md` 规则）；概念 demo `outputs/bond-rankup-demo/`（**不入库**）。
+- **本轮提交（12 条，均在 `feat/coop-cinematic`，全部未 push）**：`12f6ef9` `ff72ae5` `0f23b37` `c0624ea` `3bdaa39` `705b612` `c37d9a9` `a1b3fc7` `471e338` `d800291` `c9969d5` `0802879`。分支领先 `origin/main` **14 条**。
+- **本轮踩过、写给下一个窗口的坑**：
+  1. **先确认 dev server 跑在哪个目录**：本仓库在 E 盘有三份副本（`E:\MASKARIA` / `E:\MASKARIA-redesign` / `E:\MASKARIA-showcase`），本会话一大半排查时间花在「跑的是旧副本」上。判据：`netstat -ano | grep :5173` 拿 PID，再用 `Get-CimInstance Win32_Process` 看命令行里的路径。
+  2. **满屏浮层必须 portal 到 body，且 z-index 要高于同屏其它弹窗**：`App.tsx` 里 `<div className="relative z-10">` 是层叠上下文，留在树里的浮层对外只等效 z=10。
+  3. **从 demo 移植动画要逐段核对**：我漏抄了 demo 的第⑦段「整体碎裂退场」，导致确认键与牌/大字/胶囊叠在同一屏。
+  4. **`display` 与 `opacity` 要一起切**：只切 display 会让元素「存在但全透明」，用户看不见也点不到。
+  5. **任何满屏演出都要留逃生口**（这里用 Esc），否则一出问题用户就被卡死在演出里。
+- **遗留与下一步**：
+  - 12 条提交**未 push**，等用户决定。
+  - 红/黄/中性频道不做对应演出（本期范围），仍走老的恭喜弹窗。
+  - 开发预览入口 `?rankup=1` 保留着（只在 `import.meta.env.DEV` 生效、生产被摇掉）。若要清掉：删 `ConfidantRankUpCutIn` 里的预览 effect + store 的 `enqueueConfidantRankUp` 即可。
+  - `.rivet/scratch/rk-theme-blue.html` / `rk-theme-pink.html` 是主题对照入口（可复跑），`_shots/` 里是对照图。
+  - 本会话起的 dev server（PID 24084，`E:\MASKARIA`）是后台任务，**会话结束可能被收掉**；需要时在该目录自己跑 `npm run dev`。

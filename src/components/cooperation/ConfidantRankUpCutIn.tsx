@@ -4,12 +4,13 @@ import { useReducedMotion } from 'motion/react';
 import { useAppStore } from '@/store';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { TAROT_BY_ID } from '@/constants/tarot';
-import type { Confidant } from '@/types';
 import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
 import { INTIMACY_LABELS, MAX_INTIMACY, formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
 import { ConfidantStarShiftModal } from '@/components/cooperation/ConfidantStarShiftModal';
 import { ConfidantCelebrateScreen } from '@/components/cooperation/ConfidantCelebrateScreen';
+import { ConfidantRankUpCutInP5 } from '@/components/cooperation/ConfidantRankUpCutInP5';
+import { EXP, OVER, rand, PREVIEW_CONFIDANT, rankUpVariantFor } from '@/components/cooperation/confidantRankUpShared';
 import '@/styles/confidant-rankup.css';
 
 /**
@@ -24,33 +25,23 @@ import '@/styles/confidant-rankup.css';
  * 配色**全部**走 --rk-* 变量（见 src/styles/confidant-rankup.css）：
  * 蓝 = 深蓝水下，粉 = 浅底；粉主题只覆盖一组变量，这里一行都不用改。
  */
-const EXP = 'cubic-bezier(.16,1,.3,1)';
-const OVER = 'cubic-bezier(.34,1.56,.64,1)';
-
-const rand = (n: number) => (Math.random() - 0.5) * n;
+/* 缓动常量、随机抖动与开发预览用的占位同伴已抽到 confidantRankUpShared.ts：
+   红版（ConfidantRankUpCutInP5）要用同一套，而本文件的包装组件又要 import 红版，
+   留在本文件里就会形成两版互相 import 的循环。 */
 
 /**
- * 开发预览（?rankup）在没有**任何**同伴时用的占位同伴——全新档案 / 无头浏览器也能
- * 把演出本身放出来核对。只有 notice.preview 为真时才会用到它。
+ * 频道分流。红频道（p5）走红黑剪报版；其余一律走下面这个蓝版实现。
+ *
+ * 蓝版内部原有「非 p3 就不出新演出」的判定（出队跳过 + 时间线 return + 渲染 return null）**原样保留**：
+ * p5 时根本不会渲染到它，而 p4 / neutral 仍然走它，于是「本期不出新演出」的既有行为一字未改。
  */
-const PREVIEW_CONFIDANT = {
-  id: '__rankup_preview__',
-  userId: '__preview__',
-  source: 'offline',
-  name: '预览同伴',
-  arcanaId: 'fool',
-  orientation: 'upright',
-  description: '',
-  aiInterpretation: '',
-  aiAdvice: '',
-  intimacy: 4,
-  intimacyPoints: 0,
-  buffs: [],
-  decayEnabled: false,
-  createdAt: new Date(0),
-} as unknown as Confidant;
-
 export function ConfidantRankUpCutIn() {
+  // 判据是纯函数（confidantRankUpShared.rankUpVariantFor），可脱离 React / store 单测
+  if (rankUpVariantFor(useUiChannel()) === 'p5') return <ConfidantRankUpCutInP5 />;
+  return <RankUpCutInP3 />;
+}
+
+function RankUpCutInP3() {
   const channel = useUiChannel();
   const queue = useAppStore(s => s.confidantRankUpQueue);
   const confidants = useAppStore(s => s.confidants);

@@ -1,0 +1,364 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   羁绊升级演出 · 红频道（P5 红黑剪报）皮 —— 计划 Wave 1
+   ═══════════════════════════════════════════════════════════════════════════
+   分镜与形制照**用户已验收的**红版 demo（outputs/bond-rankup-demo-p5/index.html）移植；
+   色值不写死——组件在 .rk5-root 上注入 --rk5-*（取自 P5R 色板，见 kit.tsx）。
+
+   z-index 240 是刻意的（与 p3 版同值）：要压过同伴详情弹窗 z-150 与星移弹窗 z-180，
+   否则会出现「演出播了但用户只看到老弹窗」。这两处版本号改动前请先看 p3 版的注释。
+
+   红频道不挂 .dark（见 ui/channel.ts 的 syncDarkClass 铁律），所以这里**不要**写 dark 变体。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.rk5-root {
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+  overflow: hidden;
+  background: #070707;
+  color: var(--rk5-paper);
+  font-weight: 900;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ── 背景层：网点 / 同心星 / 两条猩红斜带 / 散落五角星 / 暗角 ── */
+.rk5-halftone {
+  position: absolute;
+  inset: 0;
+  opacity: 0.09;
+  background-image: radial-gradient(circle, var(--rk5-paper) 1px, transparent 1.4px);
+  background-size: 10px 10px;
+}
+
+.rk5-rings {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150vmax;
+  height: 150vmax;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+}
+.rk5-rings svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.rk5-slab {
+  position: absolute;
+  opacity: 0;
+  will-change: transform;
+}
+.rk5-slab-a {
+  left: -14%;
+  top: 4%;
+  width: 130%;
+  height: clamp(78px, 12.5vh, 120px);
+  background: var(--rk5-red);
+  transform: rotate(-3deg);
+  clip-path: polygon(0 8%, 100% 0, 99.2% 92%, 0.8% 100%);
+}
+.rk5-slab-b {
+  left: -10%;
+  bottom: 3%;
+  width: 122%;
+  height: clamp(56px, 9vh, 88px);
+  background: var(--rk5-red-deep);
+  transform: rotate(-1.4deg);
+  clip-path: polygon(1% 0, 100% 9%, 99% 100%, 0 90%);
+}
+
+.rk5-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.rk5-stars svg {
+  position: absolute;
+  opacity: 0.55;
+}
+
+.rk5-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 46%, transparent 40%, rgba(0, 0, 0, 0.66) 100%);
+}
+
+/* ── 内容层（流式堆叠，矮屏也不会把确认键挤出去） ── */
+.rk5-cast {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(9px, 2vh, 24px);
+  padding: clamp(56px, 9vh, 110px) clamp(16px, 3vw, 40px) clamp(78px, 12vh, 128px);
+}
+
+.rk5-card {
+  position: relative;
+  perspective: 1400px;
+  width: clamp(120px, 18.5vh, 178px);
+  opacity: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.rk5-card :global(svg),
+.rk5-card svg,
+.rk5-card img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 3px solid var(--rk5-paper);
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.78);
+}
+
+.rk5-arcana {
+  font-size: clamp(13px, 2.6vw, 20px);
+  letter-spacing: 0.24em;
+  color: var(--rk5-paper);
+  opacity: 0;
+  white-space: nowrap;
+}
+
+/* ── 等级行：旧级被盖掉、新级落定 ── */
+.rk5-rankzone {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.rk5-rank {
+  grid-area: 1 / 1;
+  font-size: clamp(38px, 9.4vw, 88px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.rk5-rank-old {
+  color: #5c5a55;
+  opacity: 0;
+  text-shadow: 0 2px 0 #000;
+}
+.rk5-rank-new {
+  color: var(--rk5-paper);
+  opacity: 0;
+  text-shadow: 2px 2px 0 var(--rk5-ink), 4px 4px 0 var(--rk5-ink), 6px 6px 0 var(--rk5-red-deep), 8px 9px 22px rgba(0, 0, 0, 0.72);
+}
+
+/* ── 盖印：两端斜切 + 四角错动的不规则四边形；红硬影层错开 7×6 ──
+   ⚠ 印面文字不能用 b 元素：本文件与 kit 的既有规则里 b 会被当描边框/粗体处理，
+     用 span.tx 与 em.sub 各承一层。 */
+.rk5-stamp {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(348px, 70vw);
+  height: clamp(64px, 10vh, 88px);
+  transform: translate(-50%, -190%) rotate(-13deg);
+  opacity: 0;
+  z-index: 7;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+.rk5-stamp .shadow,
+.rk5-stamp .plate {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(16px 0, 100% 0, calc(100% - 11px) 100%, 3px calc(100% - 7px));
+}
+.rk5-stamp .shadow {
+  background: var(--rk5-red);
+  transform: translate(7px, 6px);
+}
+.rk5-stamp .plate {
+  background: var(--rk5-ink);
+}
+/* 半调网点：dot 1.6 / gap 9（kit.tsx 的 P5Dots 参数），白点洒在黑上 */
+.rk5-stamp .plate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image: radial-gradient(circle, rgba(240, 233, 223, 0.85) 1.6px, transparent 2.1px);
+  background-size: 9px 9px;
+}
+.rk5-stamp .tx {
+  position: relative;
+  z-index: 2;
+  color: var(--rk5-paper);
+  white-space: nowrap;
+  font-size: clamp(23px, 4.4vh, 38px);
+  letter-spacing: 0.11em;
+  text-indent: 0.11em;
+}
+.rk5-stamp .sub {
+  position: absolute;
+  right: -9px;
+  bottom: -15px;
+  z-index: 3;
+  background: var(--rk5-red);
+  color: var(--rk5-ink);
+  font-style: normal;
+  font-size: clamp(11px, 1.85vh, 15px);
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  padding: 3px 13px 5px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+/* ── 落印痕迹：同形红环 + 椭圆冲击波 + 甩出的小红点 ── */
+.rk5-shock,
+.rk5-wave {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(348px, 70vw);
+  height: clamp(64px, 10vh, 88px);
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+.rk5-shock {
+  border: 3px solid var(--rk5-red-hot);
+  clip-path: polygon(16px 0, 100% 0, calc(100% - 11px) 100%, 3px calc(100% - 7px));
+}
+.rk5-wave {
+  border: 2px solid rgba(217, 0, 8, 0.78);
+  border-radius: 50%;
+  box-shadow: inset 0 0 30px rgba(217, 0, 8, 0.3);
+}
+.rk5-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+.rk5-sparks i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+/* 落定星芒：一圈细线 */
+.rk5-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+}
+.rk5-burst i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: var(--h);
+  margin-left: -1px;
+  transform-origin: 50% 0;
+  background: linear-gradient(180deg, var(--rk5-paper), transparent);
+}
+
+/* ── 誓约 / 受领 ── */
+.rk5-vow {
+  font-size: clamp(12px, 2.5vw, 17px);
+  letter-spacing: 0.16em;
+  text-align: center;
+  opacity: 0;
+}
+.rk5-vow b {
+  color: var(--rk5-orange);
+}
+
+.rk5-unlock {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 20px 5px 10px;
+  opacity: 0;
+  white-space: nowrap;
+  background: var(--rk5-paper);
+  clip-path: polygon(2% 0, 100% 7%, 98% 100%, 0 93%);
+}
+.rk5-unlock i {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--rk5-red);
+  color: var(--rk5-paper);
+  font-size: 12px;
+  font-style: normal;
+}
+.rk5-unlock span {
+  font-size: clamp(12px, 2.3vw, 15px);
+  color: var(--rk5-ink);
+}
+
+/* ── 确认键（停在确认态等用户点，不自动划走） ── */
+.rk5-confirm {
+  position: absolute;
+  left: 50%;
+  bottom: 2.4vh;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 12;
+}
+.rk5-confirm.on {
+  opacity: 1;
+  pointer-events: auto;
+}
+.rk5-confirm .hint {
+  font-size: clamp(10px, 1.4vw, 13px);
+  color: var(--rk5-grey);
+  letter-spacing: 0.34em;
+}
+.rk5-confirm .go {
+  border: 0;
+  background: var(--rk5-red);
+  color: var(--rk5-paper);
+  font-family: inherit;
+  font-weight: 900;
+  font-size: clamp(16px, 2.4vw, 20px);
+  padding: 13px 42px;
+  cursor: pointer;
+  letter-spacing: 0.18em;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+.rk5-confirm .go:active {
+  transform: scale(0.95) skewX(-5deg);
+}
+
+/* ── 减少动态：组件那边已直接置终态，这里保证背景层也可见 ── */
+@media (prefers-reduced-motion: reduce) {
+  .rk5-rings,
+  .rk5-slab,
+  .rk5-card,
+  .rk5-arcana,
+  .rk5-rank-old,
+  .rk5-rank-new,
+  .rk5-stamp,
+  .rk5-vow,
+  .rk5-unlock {
+    transition: none !important;
+  }
+}

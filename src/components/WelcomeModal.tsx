@@ -154,6 +154,9 @@ const heroPose = (el: HTMLElement): Pose => {
 
 const floaterEl = (slug: string) => document.querySelector<HTMLElement>(`img[data-for="${slug}"]`);
 
+/** 收尾转场翻出的那张牌：世界——呼应 demo 里「翻到新篇章」用的那张 */
+const FINISH_CARD = 'world';
+
 const Floaters = ({ step, hidden }: { step: string; hidden: string[] }) => {
   const reduce = prefersReducedMotion();
   return (
@@ -298,6 +301,9 @@ export const WelcomeModal = () => {
   const [hero, setHero] = useState<{ from: Step; to: Step; p0: Pose; p1: Pose } | null>(null);
   const [heroPhase, setHeroPhase] = useState<'out' | 'back'>('out');
   const [hiddenFloaters, setHiddenFloaters] = useState<string[]>([]);
+  // 收尾转场（建档提交那一下）：幕布从点击点铺满 + 牌翻面 + 英文巨词横穿，走完才真正建档
+  const [finish, setFinish] = useState<{ x: number; y: number; p0: Pose } | null>(null);
+  const [finishWord, setFinishWord] = useState<'in' | 'out'>('in');
   const busyRef = useRef(false);
 
   // 注意：本组件的「提前 return」必须放在所有 Hook 之后。
@@ -335,6 +341,10 @@ export const WelcomeModal = () => {
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : '建档失败，请重试');
       setSubmitting(false);
+      // 收尾转场失败：把幕布与牌收掉，否则用户只看到一片蓝、看不到错误
+      setFinish(null);
+      setHiddenFloaters([]);
+      busyRef.current = false;
     }
   };
 
@@ -432,6 +442,28 @@ export const WelcomeModal = () => {
     };
   }, [hero]);
 
+  /** 收尾转场 + 建档：点「接受赐福」后先让幕布从点击点铺满、牌翻成「世界」，
+   *  再扫一段英文巨词，约 1.45s 后才真正提交建档。
+   *  成功了引导整体卸载、主界面接上（幕布随组件一起消失，所以中间不会露出赐福屏）；
+   *  失败了把幕布收掉、露出错误条（见 handleSubmit 的 catch）。
+   *  时序照已验收 demo：幕布 760ms 铺满、巨词 760ms 起滑入 / 1060ms 起滑出。 */
+  const startFinish = () => {
+    if (busyRef.current || submitting) return;
+    busyRef.current = true;
+    const el = floaterEl('blessing');
+    setFinish({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      p0: el ? heroPose(el) : { x: 0, y: 0, s: 1 },
+    });
+    setHiddenFloaters(['blessing']);
+    setFinishWord('in');
+    setTimeout(() => setFinishWord('out'), 1060);
+    setTimeout(() => {
+      void handleSubmit();
+    }, 1450);
+  };
+
   /** 键盘与按钮共用的前进/后退：可用条件与各步按钮完全一致（不满足时静默不动） */
   const goNext = () => {
     if (step === 'welcome') navigate('name');
@@ -444,7 +476,7 @@ export const WelcomeModal = () => {
     } else if (step === 'done') navigate('guide');
     else if (step === 'guide') navigate('blessing');
     else if (step === 'blessing') {
-      if (blessingAttr && !submitting) void handleSubmit();
+      if (blessingAttr && !submitting) startFinish();
     }
   };
 
@@ -564,6 +596,80 @@ export const WelcomeModal = () => {
             />
           </motion.div>
         </motion.div>
+      )}
+
+      {/* 收尾转场（建档提交那一下）：幕布从点击点铺满 → 牌翻成「世界」 → 英文巨词横穿 → 才真正提交。
+          时序见 startFinish；幕布一直铺到组件卸载，所以中间不会露出赐福屏。 */}
+      {finish && (
+        <>
+          <motion.div
+            aria-hidden
+            data-finish="veil"
+            className="pointer-events-none fixed inset-0 z-[60]"
+            style={{ background: P3R.blue }}
+            initial={{ clipPath: `circle(0px at ${finish.x}px ${finish.y}px)` }}
+            animate={{ clipPath: `circle(170vmax at ${finish.x}px ${finish.y}px)` }}
+            transition={{ duration: 0.76, ease: [0.65, 0, 0.2, 1] }}
+          />
+          <motion.div
+            aria-hidden
+            data-finish="card"
+            className="pointer-events-none fixed left-1/2 top-1/2 z-[65]"
+            style={{
+              width: HERO_W,
+              height: HERO_H,
+              marginLeft: -HERO_W / 2,
+              marginTop: -HERO_H / 2,
+              perspective: 1200,
+            }}
+            initial={{ x: finish.p0.x, y: finish.p0.y, scale: finish.p0.s }}
+            animate={{ x: 0, y: 0, scale: 1 }}
+            transition={{ duration: 0.7, ease: [0.34, 1.38, 0.5, 1] }}
+          >
+            <motion.div
+              className="relative h-full w-full"
+              style={{ transformStyle: 'preserve-3d' }}
+              initial={{ rotateY: 0 }}
+              animate={{ rotateY: 180 }}
+              transition={{ delay: 0.62, duration: 0.46, ease: [0.65, 0, 0.2, 1] }}
+            >
+              <img
+                src={`/tarot/p3/${CARD_OF.blessing}.webp`}
+                alt=""
+                className="absolute inset-0 h-full w-full object-contain"
+                style={{ backfaceVisibility: 'hidden' }}
+              />
+              <img
+                src={`/tarot/p3/${FINISH_CARD}.webp`}
+                alt=""
+                className="absolute inset-0 h-full w-full object-contain"
+                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+              />
+            </motion.div>
+          </motion.div>
+          <motion.span
+            aria-hidden
+            data-finish="word"
+            className="pointer-events-none fixed left-0 top-1/2 z-[70] whitespace-nowrap font-black text-white"
+            style={{
+              fontFamily: "'Syncopate', 'Velvet Sans SC', sans-serif",
+              fontSize: 'clamp(110px,28vw,430px)',
+              lineHeight: 0.78,
+              letterSpacing: '-0.05em',
+            }}
+            initial={{ x: '-42%', y: '-50%', opacity: 0 }}
+            animate={
+              finishWord === 'out'
+                ? { x: '34%', y: '-50%', opacity: 0 }
+                : { x: '-4%', y: '-50%', opacity: 1 }
+            }
+            transition={
+              finishWord === 'out' ? { duration: 0.3, ease: [0.16, 1, 0.3, 1] } : { duration: 0.3, delay: 0.76, ease: [0.16, 1, 0.3, 1] }
+            }
+          >
+            MASKARIA
+          </motion.span>
+        </>
       )}
 
       {/* 楼层信息卡（左上）与按键提示条（右下）：真图每屏都有，用固定层挂住 */}
@@ -955,7 +1061,7 @@ export const WelcomeModal = () => {
                 onBack={() => navigate('guide')}
                 primaryLabel={submitting ? '正在建档…' : submitError ? '再试一次' : '接受赐福，开始旅程'}
                 disabled={!blessingAttr || submitting}
-                onPrimary={handleSubmit}
+                onPrimary={startFinish}
               />
             </div>
           </motion.section>

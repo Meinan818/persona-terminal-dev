@@ -1,0 +1,205 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   星移弹窗 · 红频道（P5 红黑剪报）皮 —— 计划 Wave 3
+   ═══════════════════════════════════════════════════════════════════════════
+   五屏形制照**用户已验收的**红版 demo（outputs/bond-rankup-demo-p5/index.html 第三页）移植；
+   色值不写死 —— 组件在 .sf5-sheet 上注入 --sf5-*（取自 P5R 色板，见 kit.tsx）。
+
+   容器分两层（与 p3 版同结构）：
+     .sf5-overlay —— 全屏黑遮罩，立即不透明（不做淡入，理由见组件注释）
+     .sf5-sheet   —— 弹窗本体（黑底剪报卡）
+
+   红频道不挂 .dark（见 ui/channel.ts 的 syncDarkClass 铁律），这里**不要**写 dark 变体。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sf5-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.sf5-sheet {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(88vh, 860px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  color: var(--sf5-paper);
+  background: #0b0b0a;
+  /* 纸白外圈 + 黑框 = 剪报卡的「不等宽边框」观感 */
+  box-shadow: 0 0 0 3px var(--sf5-paper), 0 0 0 7px var(--sf5-ink), 14px 16px 0 rgba(0, 0, 0, 0.55);
+  padding: clamp(16px, 2.8vh, 26px) clamp(16px, 3vw, 28px);
+
+  --sf5-exp: cubic-bezier(0.16, 1, 0.3, 1);
+  --sf5-title-font: 'Noto Sans SC Black', 'Velvet Sans SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  font-weight: 900;
+  -webkit-font-smoothing: antialiased;
+}
+.sf5-sheet::-webkit-scrollbar { width: 0; height: 0; }
+
+.sf5-body { display: flex; flex-direction: column; gap: clamp(10px, 1.8vh, 16px); }
+.sf5-gap-sm { gap: 6px; }
+
+/* ── 页头：斜切红标签（名·Lv）+ 《牌》副标 + ✕ ── */
+.sf5-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.sf5-who { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sf5-head .tag {
+  align-self: flex-start;
+  font: 900 clamp(12px, 1.8vw, 15px) / 1 var(--sf5-title-font);
+  color: var(--sf5-paper);
+  background: var(--sf5-red);
+  padding: 0.42em 0.9em 0.5em;
+  letter-spacing: 0.06em;
+  clip-path: polygon(0.5em 0, 100% 0, calc(100% - 0.5em) 100%, 0 100%);
+  box-shadow: 3px 3px 0 var(--sf5-ink);
+}
+.sf5-head .close {
+  flex: none;
+  border: 0;
+  cursor: pointer;
+  width: 34px;
+  height: 34px;
+  color: var(--sf5-ink);
+  background: var(--sf5-paper);
+  font: 900 15px / 1 var(--sf5-title-font);
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  box-shadow: 3px 3px 0 var(--sf5-red);
+}
+.sf5-head .close:active { transform: translate(1px, 1px); }
+
+.sf5-title { font: 900 clamp(18px, 2.6vw, 22px) / 1.45 var(--sf5-title-font); color: var(--sf5-paper); }
+.sf5-sub { font: 700 clamp(11px, 1.5vw, 13px) / 1.6 var(--sf5-title-font); color: var(--sf5-grey-light); }
+.sf5-strong { color: var(--sf5-paper); font-weight: 900; }
+.sf5-center { text-align: center; }
+.sf5-pad { padding: 24px 0; }
+.sf5-pad-lg { padding: 36px 0; }
+.sf5-mt { margin-top: 16px; }
+.sf5-mt-sm { margin-top: 12px; }
+.sf5-cloud { font-size: 28px; }
+
+/* ── 输入区 ── */
+.sf5-field { display: flex; flex-direction: column; gap: 6px; }
+.sf5-label { font: 900 clamp(11px, 1.6vw, 13px) / 1.6 var(--sf5-title-font); color: var(--sf5-paper); }
+.sf5-input {
+  width: 100%;
+  min-height: clamp(84px, 14vh, 124px);
+  border: 0;
+  resize: vertical;
+  outline: none;
+  color: var(--sf5-ink);
+  background: var(--sf5-paper);
+  padding: 12px 14px;
+  font: 700 14px / 1.7 var(--sf5-title-font);
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  box-shadow: 5px 6px 0 var(--sf5-red);
+}
+.sf5-input::placeholder { color: #6a655c; }
+.sf5-count { text-align: right; font: 700 11px var(--sf5-title-font); color: var(--sf5-grey-light); }
+
+/* ── 信息框（记录 / 变化 / 牌面调整）：黑底 + 纸白左条 ── */
+.sf5-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: #161513;
+  padding: clamp(10px, 1.7vh, 15px) clamp(13px, 2.4vw, 20px);
+  border-left: 4px solid var(--sf5-red);
+}
+.sf5-box .k {
+  font: 900 clamp(10px, 1.4vw, 12px) / 1.5 var(--sf5-title-font);
+  color: var(--sf5-red-hot);
+  letter-spacing: 0.2em;
+}
+.sf5-box small { font: 700 clamp(11px, 1.5vw, 13px) / 1.75 var(--sf5-title-font); color: var(--sf5-grey-light); }
+.sf5-box b { color: var(--sf5-paper); }
+
+/* 记录列表：内部滚动（与 p3 版同口径，长列表不撑高弹窗） */
+.sf5-scroll { max-height: 10rem; overflow-y: auto; scrollbar-width: none; }
+.sf5-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.sf5-row {
+  display: flex;
+  gap: 10px;
+  padding: 6px 0;
+  font: 700 clamp(11px, 1.5vw, 13px) / 1.7 var(--sf5-title-font);
+  color: var(--sf5-paper);
+}
+.sf5-row .d { flex: 0 0 auto; color: var(--sf5-red-hot); }
+
+/* ── 新旧对比 ── */
+.sf5-diff-title {
+  align-self: flex-start;
+  font: 900 clamp(10px, 1.4vw, 12px) / 1 var(--sf5-title-font);
+  color: var(--sf5-paper);
+  letter-spacing: 0.2em;
+  background: var(--sf5-red);
+  padding: 0.36em 0.7em 0.42em;
+  clip-path: polygon(0.4em 0, 100% 0, calc(100% - 0.4em) 100%, 0 100%);
+}
+.sf5-old {
+  font: 700 clamp(11px, 1.8vw, 14px) / 1.7 var(--sf5-title-font);
+  color: var(--sf5-grey);
+  background: #161513;
+  padding: 9px 13px;
+  text-decoration: line-through;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+.sf5-new {
+  font: 900 clamp(11.5px, 1.9vw, 15px) / 1.7 var(--sf5-title-font);
+  color: var(--sf5-ink);
+  background: var(--sf5-paper);
+  padding: 10px 14px;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  box-shadow: 5px 6px 0 var(--sf5-red);
+}
+
+/* ── 按钮组 ── */
+.sf5-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sf5-actions.single { grid-template-columns: 1fr; }
+.sf5-btn {
+  border: 0;
+  cursor: pointer;
+  font: 900 clamp(14px, 2.3vw, 17px) / 1 var(--sf5-title-font);
+  letter-spacing: 0.1em;
+  padding: 16px 8px;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  transition: transform 0.18s var(--sf5-exp);
+}
+.sf5-btn.main { background: var(--sf5-red); color: var(--sf5-paper); box-shadow: 5px 6px 0 var(--sf5-ink); }
+.sf5-btn.ghost { background: #1b1b19; color: var(--sf5-grey-light); box-shadow: 5px 6px 0 var(--sf5-ink); }
+.sf5-btn:active { transform: translate(2px, 2px); }
+.sf5-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── 生成中 / 完成标记 ── */
+.sf5-spin {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  color: var(--sf5-paper);
+  background: var(--sf5-red);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sf5-spin { animation: sf5-spin 1.1s linear infinite; }
+}
+@keyframes sf5-spin { to { transform: rotate(360deg); } }
+
+.sf5-done-mark {
+  width: 68px;
+  height: 68px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  color: var(--sf5-paper);
+  background: var(--sf5-red);
+  box-shadow: 5px 6px 0 var(--sf5-ink);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}

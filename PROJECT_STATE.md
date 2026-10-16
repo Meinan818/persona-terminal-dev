@@ -16,10 +16,10 @@
   - **`--p5-yellow` 已定（2026-10-16）→ `#fbfe3c`**。依据不是印象 —— 从真实 P5 关键帧素材取色：`D:\下载\互传\P5COOP\` 的 7~9.jpg 里黄稳定在此值（黄像素占比 0.6–0.74%，属点缀不是底色；1~6.jpg 里那点黄绿是压缩噪声，不算设计色）。取色脚本 `.rivet/scratch/p5-yellow-pick.mjs`，可重跑复现。
     落点：`src\components\p5r\kit.tsx` 的 `P5R.yellow`。**"色板里没有黄"这条已穷尽核实**：`src\` 内 830 个不同 hex 里筛出的 58 个黄橙系（`#F59E0B`/`#FBBF24`/`#D4AF37` 等）全属别的主题与成就模块，P5R 那 11 个色里确实没有。demo 的 `:root` 也加了同名 `--p5-yellow` 对齐。
     验证：`npm run typecheck` exit 0（独立跑，非复合命令）；grep 确认无测试文件引用 `P5R`（故未跑全量测试，改动是纯增量常量）。
-  - **▶ 接手入口（2026-10-16 · 红版三件落 src 交接 · Wave 2 已完）**：计划**执行到 Wave 2 / 4**，Wave 2（恭喜整页红版）已落地提交（本轮）。下个会话直接读计划 `.rivet\plans\红版三件落-src-给羁绊升级链补-p5-频道分支.md` 的 `### Wave 3 · 星移四屏`（其后 Wave 4 收尾），不必重新调研。
-    开工前先核两件事：① `git log -1` 是否已含本轮 Wave 2 提交；② `npm run typecheck` 是否 exit 0（当前应为 0）。
-    **Wave 3 与 Wave 1 / 2 是同一套路**（新建 P5 版组件 + 新建 `-p5.css` + 原组件加 wrapper 按频道分流），可照 Wave 2 的 `ConfidantCelebrateScreenP5.tsx` / `confidant-celebrate-p5.css` / `ConfidantCelebrateScreen.tsx` 的 wrapper 抄结构。星移弹窗有三种 props（`isOpen` / `confidant` / `onClose`），wrapper 直接透传即可，比 Wave 1 简单。**分流判据不要复用演出的 `rankUpVariantFor`** —— 演出在 p4/neutral 返回 null（不出演），而这两件在 p4/neutral 本来就要显示，照搬会让那两个频道点开一片空白；用本轮的 `confidantLiveryFor`（`confidantLivery.ts`，有单测）。
-    **验证通道已打通（本轮）**：新增 DEV 预览入口 `?celebrate=1`（与 `?rankup=1` 同套做法、同一占位同伴 `PREVIEW_CONFIDANT`），恭喜页截图**不必再走完首次引导**。探针 `.rivet\scratch\celebrate-probe.mjs <port> <channel>` 出红蓝对照图（`shots/celebrate-<channel>.png`）+ JSON 证据。**Wave 3 可照此给星移弹窗加一个 `?starshift=1` 预览口**，通道已证明可行。
+  - **▶ 接手入口（2026-10-16 · 红版三件落 src 交接 · Wave 3 已完）**：计划**执行到 Wave 3 / 4**，Wave 3（星移四屏红版）已落地提交（本轮）。三件（演出 / 恭喜整页 / 星移四屏）红版至此**全部落 src**。下个会话直接读计划 `.rivet\plans\红版三件落-src-给羁绊升级链补-p5-频道分支.md` 的 `### Wave 4 · 收尾`（若已无该节，则计划已可结项），不必重新调研。
+    开工前先核两件事：① `git log -1` 是否已含本轮 Wave 3 提交；② `npm run typecheck` 是否 exit 0（当前应为 0）。
+    **三件红版已齐**（Wave 1 演出 / Wave 2 恭喜整页 / Wave 3 星移四屏），都走同一套路：新建 P5 版组件 + 新建 `-p5.css` + 原组件加 wrapper 按 `confidantLiveryFor` 分流，**原 p3 实现一律下沉为内部函数、一字未改**。Wave 3 额外抽了 `useStarShiftFlow.ts`（两版共用业务逻辑），所以星移的 p3/p5 行为天然一致、只有外观不同。
+    **验证通道（已打通，Wave 2 起）**：DEV 预览入口 `?celebrate=1`（恭喜整页）+ `?rankup=1`（演出），生产构建摇掉。探针 `.rivet\scratch\celebrate-probe.mjs <port> <channel>`（恭喜页红蓝对照）与 `.rivet\scratch\starshift-probe.mjs <port> <channel>`（星移四屏 input/thinking/preview/done 逐屏 + 红蓝对照）——都出图到 `shots/` 并带 JSON 证据。**不必再走首次引导**。
   - **【Wave 1 完成 · commit `5a41175`】羁绊升级演出补上 P5 红频道版**（计划：`.rivet\plans\红版三件落-src-给羁绊升级链补-p5-频道分支.md`）：
     原来红主题（`red→p5`）下这场演出**根本不播** —— `ConfidantRankUpCutIn.tsx:74` 与 `:174` 两处 `channel !== 'p3'` 直接短路（出队跳过、时间线 return），红主题用户升羁绊只剩事后打开档案的补弹兜底。这不是皮不对，是功能缺失。
     现改为按频道分流：p5 走新建的 `ConfidantRankUpCutInP5.tsx`（照**用户已验收的**红版 demo 移植 9 段分镜），p3 走原蓝版，p4 / neutral 维持既有跳过行为 —— 蓝版内部判定**一字未改**，p3 侧零风险。
@@ -33,7 +33,15 @@
     **信息一字不减**：8 块（页头 / 塔罗牌 / RANK 巨字 / 称号副行 / 说明行 / 新解锁能力 / 星移机会 / 按钮组）与 p3 版逐条对齐，并用测试固化。
     验证（本轮实测）：`npx tsc --noEmit` exit 0（独立跑）；新增 `confidantCelebrateScreen.test.ts` 6 条全绿（**含「两版可见文本逐字相等」这条强断言**）+ `confidantLivery.test.ts` 4 条；全量 `npx vitest run` **43 文件 / 272 测试全绿**；CDP 截图红版（`p5Root:true, legacyRoot:false`）/ 蓝版（`legacyRoot:true`）对照见 `.rivet\scratch\shots\celebrate-p5.png`、`celebrate-p3.png`。
     ⚠ **未验证**：视觉观感与动效手感（**需用户验收**）；真机未测。截图里有一条 React `key` 警告，**两版都出现**（p3 走未改动的原实现），判定为既有组件（`swapTagProps` 等 `{...props}` 展开处）所带，非本轮引入。
-  - **待办**：① Wave 3（星移四屏）尚未开工；② 真机未测；③ `outputs\bond-rankup-demo-p5\stamp-options.html` 是最早的一次性印面对照稿，用的是已废弃的红底板块方案，可删。
+  - **【Wave 3 完成】星移弹窗补上 P5 红频道版（五屏）**（计划同前）：
+    用户反馈「这里没改好」并附截图 —— 红主题下点「使用星移」弹出的那扇窗**还是 p3 蓝皮白卡片**（蓝色标签 + 蓝色按钮）。根因：Wave 2 只换了「恭喜整页」，星移弹窗（`ConfidantStarShiftModal`）尚未换装。这不是皮不对，是上一波漏做的一件。
+    现按频道分流：p5 走新建的 `ConfidantStarShiftModalP5.tsx`（照**用户已验收的**红版 demo 第三页移植：黑底剪报卡 + 纸白外圈黑框 + 红标签 + 纸卡对比块），其余频道走原 P3R 版 —— 原实现**一字未改**（下沉为 `StarShiftP3`）。
+    本轮额外抽了 `useStarShiftFlow.ts`：把星移的业务逻辑（最近记录筛选合并 / AI 落墨调用 / 消耗次数写回 / 返回键 / 关闭重置）从原组件提出来，**两版共用同一份**。于是 p3 与 p5 行为天然一致——切频道只换外观，不会出现「红版逻辑走偏」。
+    新增 `confidant-starshift-p5.css`（色值走组件注入的 `--sf5-*`，取自 `P5R` 色板；含 `prefers-reduced-motion` 降级）。
+    **五屏信息一字不减**：input（页头 / 标签 / textarea + 占位 + 上限 300 / 计数 / 最近记录框 / 主按钮 + 次数为 0 时禁用）、thinking（页头副题 / 旋转标记 / 星移中……）、preview（这次的变化 / 三组新旧对比 / 牌面将调整 / 再想想·落墨 / 离线尾注）、done（收进档案）、error（☁ / 错误文本 / 返回重试）。
+    验证（本轮实测）：`npx tsc --noEmit` exit 0（独立跑）；新增 `confidantStarShiftModal.test.ts` 6 条全绿（**含输入屏「两版可见文本逐字相等」强断言** + textarea 占位/上限属性级比对 + 无次数时禁用）；全量 `npx vitest run` **44 文件 / 278 测试全绿**；CDP 探针实测红版四屏（input→thinking→preview→done，`.sf5-sheet` 在位 / `.sf-sheet` 不在位）、蓝版对照（`.sf-sheet` 在位），两版文本逐字一致；截图 `.rivet\scratch\shots\starshift-p5-*.png`、`starshift-p3-*.png`。
+    ⚠ **未验证**：error 屏未实测（需 AI 调用失败才能自然触发，本机离线模式不失败）；视觉观感与动效手感**需用户验收**；真机未测。截图里 React `key` 警告与 Wave 2 同源（既有组件 `{...props}` 展开处），非本轮引入。
+  - **待办**：① 真机未测（红版三件均未上真机）；② 视觉观感与动效手感**需用户验收**；③ `outputs\bond-rankup-demo-p5\stamp-options.html` 是最早的一次性印面对照稿，用的是已废弃的红底板块方案，可删。
   - **别动**：`ios/App/Podfile` 的改动**不是本会话改的**，没纳入提交。
 - **【最新 · 2026-10-16 续】红主题（P5）羁绊链 demo —— 三件已齐（演出 / 恭喜整页 / 星移四屏），基线是用户选定的 v3**：`outputs\bond-rankup-demo-p5\index.html`（**不入库**，同蓝粉 demo 例）。**本轮按用户那句「蓝粉做了什么、红版也要做」的清单补上了第三件：星移四屏**——照 `src\components\cooperation\ConfidantStarShiftModal.tsx` 的 `input → thinking → preview → done → error` 五屏重画，信息一字不减（变化说明、最近 3 条记录、三组新旧对比「关系描述/解读/未来」、余次、离线提示），入口接在第二页「✧ 使用星移」上；`?page=3`（可叠 `&sf=preview`）直达。**自此红版 demo 与蓝粉那条链三件对齐：① 升级演出 ② 升级恭喜整页 ③ 星移四屏。** 另外用户点名把 **v1 的背景（同心星层）、入场（星涟漪 + 集中线爆开）、五角星**搬到了这一版（搬时发现 v3 重写时漏了「散落星入场」那几行——五角星元素生成了却永远不亮，已补回）。演进与取舍：v1（红板版）→ v2/v3（**牌显形 + 等级刻印 + 誓约语，用户选定这一版**）→ v4（照用户提供的真实关键帧重做：锁链 + 剪报标签条 + 黄数字星排）→ **用户看过 v4 后决定回退，现 `index.html` 已恢复为 v3**（md5 与存档逐字节一致）。三份存档都在同目录：`index.html.bak-v1-20261016` / `index.html.bak-v3-liked-20261016` / `index.html.bak-v4-chains-20261016`，改主意可随时再取。
   **v4 那轮的参考结论仍然有效，留给以后**：真实 P5 羁绊升级的骨架是「**白色锁链**从四处飞入缠绕（完成后渐隐成灰残影）→ **猩红大斜带**贯穿 → **塔罗牌在左侧倾斜立起** → 一叠**黑色斜切剪报标签条**逐条砸落（`COOPERATION 社群羁绊` / `ARCANA 太阳` / `RANK` + **巨大黄数字**）→ **一排黄星 = 等级** → `GET ABILITY` + 能力说明条」；参考图在 `D:\下载\互传\P5COOP\1-9.jpg`。若将来要再往这个方向走，注意 **项目 `P5R` 色板里没有黄色**，需先与 `src\components\p5r\kit.tsx` 对齐。

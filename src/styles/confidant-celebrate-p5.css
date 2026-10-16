@@ -83,7 +83,10 @@
 .cl5-en {
   font-style: normal;
   font-size: clamp(10px, 1.5vw, 13px);
-  color: var(--cl5-red);
+  /* 照 demo 的印刷化收尾：白字 + 一枚黑错版（原先的亮红压在红带上读不出来） */
+  color: var(--cl5-paper);
+  opacity: 0.88;
+  text-shadow: 2px 2px 0 var(--cl5-ink);
   letter-spacing: 0.32em;
 }
 
@@ -98,13 +101,7 @@
   transform: rotate(var(--rot));
 }
 
-/* 塔罗牌（照 demo .p2-card + .p2-card img） */
-.cl5-card { width: clamp(112px, 26vw, 148px); aspect-ratio: 0.62; margin: clamp(6px, 1.6vh, 16px) auto 0; }
-.cl5-card img {
-  width: 100%; height: 100%; object-fit: cover; display: block;
-  border: 3px solid var(--cl5-paper);
-  box-shadow: 7px 8px 0 var(--cl5-red);
-}
+/* 塔罗牌不再放在页里（照 demo：由跨界面存活的主角牌 #hero 承担，它立在内容列左缘）。 */
 
 /* 巨字等级（照 demo .p2-rank） */
 .cl5-rank {
@@ -119,13 +116,33 @@
 .cl5-sub { font-size: clamp(14px, 2.4vw, 18px); }
 .cl5-note { font-size: clamp(11px, 1.8vw, 13px); color: var(--cl5-grey-light); font-weight: 700; }
 
-/* 纸卡（照 demo .p2-panel） */
+/* 纸卡（照 demo .p2-panel + 印刷化收尾）
+   ⚠ clip-path 会把 box-shadow / filter:drop-shadow 一起裁掉（本仓实测坑）：
+   所以本体撤掉 clip-path 与阴影，纸面与红错版各由一层垫层承担（与本体同形）。 */
 .cl5-panel {
-  background: var(--cl5-paper);
+  position: relative;
+  background: transparent;
   color: var(--cl5-ink);
   padding: clamp(12px, 2vh, 17px) clamp(15px, 3vw, 22px);
+  clip-path: none;
+  box-shadow: none;
+}
+.cl5-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--cl5-paper);
   clip-path: polygon(2% 0, 100% 3%, 98% 100%, 0 97%);
-  box-shadow: 6px 7px 0 var(--cl5-red-deep);
+}
+.cl5-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--cl5-red);
+  clip-path: polygon(2% 0, 100% 3%, 98% 100%, 0 97%);
+  transform: translate(9px, 10px);
 }
 .cl5-panel .cl5-k { display: block; font-size: clamp(10px, 1.6vw, 12px); color: var(--cl5-red); letter-spacing: 0.22em; }
 .cl5-panel b { display: block; font-size: clamp(15px, 2.6vw, 19px); margin-top: 3px; }
@@ -142,18 +159,32 @@
   letter-spacing: 0.1em;
   padding: 16px 8px;
   cursor: pointer;
-  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  background: transparent;
+  clip-path: none;
+  box-shadow: none;
   transition: transform 0.18s var(--cl5-exp);
 }
 .cl5-btn.ghost { background: #1b1b19; color: var(--cl5-grey-light); }
-.cl5-btn.main { background: var(--cl5-red); color: var(--cl5-paper); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5); }
+.cl5-btn.main { position: relative; color: var(--cl5-paper); }
+.cl5-btn.main::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--cl5-red);
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+/* 硬黑外环（margin:-4px 即环宽），照 demo .p2-btn.main::before */
+.cl5-btn.main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: -4px;
+  z-index: -2;
+  background: var(--cl5-ink);
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
 .cl5-btn:active { transform: scale(0.96) skewX(-4deg); }
 
-/* 入场（照 demo @keyframes p2in） */
-@keyframes cl5-in {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .cl5-anim { animation: cl5-in 0.6s var(--cl5-exp) both; }
-}
+/* 入场：内容斜插错峰（照 demo popIn —— delay 380+k*90 / 540ms / 回弹缓动 + 横向 60px 斜面偏移）。
+   由组件在挂载时调公共层的 popInP5() 触发；`.cl5-anim` 只是分组标记，不挂 CSS 动画。 */

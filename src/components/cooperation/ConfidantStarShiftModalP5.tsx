@@ -25,11 +25,14 @@
  * 红频道不挂 .dark（见 ui/channel.ts 的 syncDarkClass 铁律），故不写 dark 变体。
  */
 import { AnimatePresence, motion } from 'motion/react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Confidant } from '@/types';
 import { TAROT_BY_ID } from '@/constants/tarot';
+import { tarotArtUrl } from '@/constants/tarotArt';
 import { P5R } from '@/components/p5r/kit';
 import { P5Rings, P5ScatterStars } from '@/components/cooperation/confidantP5Scenery';
 import { useStarShiftFlow } from '@/components/cooperation/useStarShiftFlow';
+import { lastP5SweepOrigin, p5ScaleInP5, popInP5, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
 import '@/styles/confidant-starshift-p5.css';
 
 interface Props {
@@ -39,13 +42,56 @@ interface Props {
 }
 
 export function ConfidantStarShiftModalP5({ isOpen, confidant, onClose }: Props) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * 收场统一走转场（照 demo `exitPage3`）：主角牌翻回背面退回右缘 → 整页圆形收拢。
+   * ⚠ 这个包一层要有：hook 里的自动关屏（落墨成功 1400ms 后）与 Android 返回键都直接调 onClose，
+   *   只有把它传进 hook，那两条路径才同样带上转场。
+   */
+  const closeWithSweep = useCallback((origin?: { x: number; y: number }) => {
+    void runP5Sweep('COOPERATION', () => {
+      requestP5HeroPose('app');
+      onClose();
+    }, origin ?? lastP5SweepOrigin(), -1);
+  }, [onClose]);
+
   const {
     stage, setStage,
     changeNote, setChangeNote,
     result, err,
     recentActs, charges,
     handleStartShift, handleConfirm,
-  } = useStarShiftFlow(isOpen, confidant, onClose);
+  } = useStarShiftFlow(isOpen, confidant, closeWithSweep);
+
+  const artUrl = confidant ? tarotArtUrl(confidant.arcanaId, 'p5') : null;
+
+  /**
+   * 入场（照 demo `showPage3`）：整页自上一屏的点击点圆形展开 + 内容列缩小回弹，
+   * 主角牌翻回背面退到内容列右缘（它在这一屏是「背面朝外」的待命态）。
+   */
+  useEffect(() => {
+    if (!isOpen || !confidant) return;
+    const overlay = overlayRef.current;
+    setP5HeroArt(artUrl);
+    if (overlay) {
+      revealInP5(overlay, lastP5SweepOrigin());
+      const wrap = overlay.querySelector('.sf5-sheet');
+      p5ScaleInP5(wrap);
+    }
+    requestP5HeroPose('page3');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, confidant?.id]);
+
+  /** 四屏切换：新屏的直接子元素斜插错峰入场（照 demo `sfGo` → `popIn(新屏直接子元素)`） */
+  useEffect(() => {
+    if (!isOpen) return;
+    const id = requestAnimationFrame(() => {
+      const body = overlayRef.current?.querySelector('.sf5-body');
+      if (body) popInP5(body.children, 1);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isOpen, stage]);
 
   if (!isOpen || !confidant) return null;
 
@@ -56,6 +102,7 @@ export function ConfidantStarShiftModalP5({ isOpen, confidant, onClose }: Props)
           再冒出星移窗」（2026-10-16 用户报）。遮罩立即不透明即可；卡片本身仍走 spring 入场。
           此条与 p3 版同口径，两版都不做淡入。 */}
       <motion.div
+        ref={overlayRef}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="sf5-overlay"
@@ -70,7 +117,7 @@ export function ConfidantStarShiftModalP5({ isOpen, confidant, onClose }: Props)
           ['--sf5-grey-light' as string]: P5R.greyLight,
           ['--sf5-orange' as string]: P5R.orange,
         }}
-        onClick={stage === 'thinking' ? undefined : onClose}
+        onClick={stage === 'thinking' ? undefined : e => closeWithSweep({ x: e.clientX, y: e.clientY })}
       >
         {/* 布景（照 demo 第三页的 .scenery）：网点 + 同心星 + 两条猩红斜带 + 散落描边星 + 暗角。
             首版这扇窗**没有布景**，只有一层半透明黑遮罩 —— 于是红版星移与 demo 差了整块底子，
@@ -89,24 +136,29 @@ export function ConfidantStarShiftModalP5({ isOpen, confidant, onClose }: Props)
           exit={{ opacity: 0 }}
           transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           className="sf5-sheet"
+          data-p5-hero-anchor="page3"
           onClick={(e) => e.stopPropagation()}
         >
           <AnimatePresence mode="wait">
             {/* ── ① 星移输入阶段 ─────────────────────── */}
             {stage === 'input' && (
               <motion.div key="input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="sf5-body">
-                <SheetHead confidant={confidant} subtitle={`星移 · 余 ${charges}`} onClose={onClose} />
+                <SheetHead confidant={confidant} subtitle={`星移 · 余 ${charges}`} onClose={() => closeWithSweep()} />
 
                 <div className="sf5-field">
                   <label className="sf5-label">你觉得你们的关系发生了什么变化？（可不填）</label>
-                  <textarea
-                    className="sf5-input"
-                    value={changeNote}
-                    onChange={(e) => setChangeNote(e.target.value)}
-                    rows={5}
-                    maxLength={300}
-                    placeholder="例如：最近几次见面 Ta 愿意和我谈更深入的事情了 / 吵了一架之后我们之间多了一份小心翼翼……"
-                  />
+                  {/* ⚠ 输入框要包一层：textarea 是替换元素，自身不吃 ::before/::after ——
+                      demo 的纸面与红错版两层垫层挂在 .sf-inputw 上。 */}
+                  <div className="sf5-inputw">
+                    <textarea
+                      className="sf5-input"
+                      value={changeNote}
+                      onChange={(e) => setChangeNote(e.target.value)}
+                      rows={5}
+                      maxLength={300}
+                      placeholder="例如：最近几次见面 Ta 愿意和我谈更深入的事情了 / 吵了一架之后我们之间多了一份小心翼翼……"
+                    />
+                  </div>
                   <div className="sf5-count">{changeNote.length} / 300</div>
                 </div>
 
@@ -140,7 +192,7 @@ export function ConfidantStarShiftModalP5({ isOpen, confidant, onClose }: Props)
             {/* ── ② AI 生成中 ────────────────────────── */}
             {stage === 'thinking' && (
               <motion.div key="thinking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="sf5-body">
-                <SheetHead confidant={confidant} subtitle="星象正在重写这段关系" onClose={onClose} hideClose />
+                <SheetHead confidant={confidant} subtitle="星象正在重写这段关系" onClose={() => closeWithSweep()} hideClose />
                 <div className="sf5-center sf5-pad-lg">
                   <div className="sf5-spin">✦</div>
                   <p className="sf5-sub sf5-mt">星移中……</p>
@@ -151,7 +203,7 @@ export function ConfidantStarShiftModalP5({ isOpen, confidant, onClose }: Props)
             {/* ── ③ 预览（新旧对比） ──────────────────── */}
             {stage === 'preview' && result && (
               <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="sf5-body">
-                <SheetHead confidant={confidant} subtitle="预览新的落墨" onClose={onClose} />
+                <SheetHead confidant={confidant} subtitle="预览新的落墨" onClose={() => closeWithSweep()} />
 
                 {result.summary && (
                   <div className="sf5-box">

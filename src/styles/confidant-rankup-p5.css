@@ -17,6 +17,8 @@
   overflow: hidden;
   background: #070707;
   color: var(--rk5-paper);
+  /* 舞台左右留白（照 demo 的 --m） */
+  --rk5-m: clamp(16px, 3vw, 40px);
   /* 字体照 demo 的 body 口径（'Noto Sans SC' + font-weight 900），但换成**本项目的面名**：
      demo 是独立页面，'Noto Sans SC' 由系统/网络字体给出；App 里这个族名并不存在，
      直接写它会整段落到系统字体（实测：RANK 巨字的字重与字宽都与 demo 对不上）。
@@ -109,21 +111,15 @@
   background: linear-gradient(180deg, #4a0006, rgba(0, 0, 0, 0) 74%);
 }
 
-/* ── 牌的光晕与高光（照 demo .halo / .card3d .glint）── */
-.rk5-cardst { position: relative; perspective: 1400px; }
-.rk5-halo {
-  position: absolute; left: 50%; top: 50%;
-  width: clamp(300px, 52vh, 470px); height: clamp(300px, 52vh, 470px);
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  opacity: 0; pointer-events: none; z-index: -1;
-  background: radial-gradient(circle, rgba(255, 214, 206, 0.5) 0%, rgba(217, 0, 8, 0.3) 36%, transparent 68%);
-}
-.rk5-glint { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.rk5-glint::after {
-  content: ''; position: absolute; left: 0; top: 0;
-  width: 46%; height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+/* ── 牌的等尺寸占位块 ──────────────────────────────────────────────────
+   牌本体（img / 光晕 / 高光）已经搬到公共层的主角牌 `#hero`（跨界面存活：待命/演出/恭喜/星移
+   四个姿态共用同一张牌）。舞台上只留这个占位块，尺寸与主角牌共用 `--p5fx-cardw`
+   （公共层 confidant-p5-fx.css 在 :root 定义，含手机端与矮窗覆盖），布局零回归。 */
+.rk5-cardst {
+  position: relative;
+  perspective: 1400px;
+  width: var(--p5fx-cardw);
+  aspect-ratio: 0.62;
 }
 
 .rk5-vignette {
@@ -142,33 +138,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(9px, 2vh, 24px);
-  padding: clamp(56px, 9vh, 110px) clamp(16px, 3vw, 40px) clamp(78px, 12vh, 128px);
-}
-
-.rk5-card {
-  position: relative;
-  perspective: 1400px;
-  width: clamp(120px, 18.5vh, 178px);
-  /* 照 demo .card3d 的 aspect-ratio：牌比例取自素材本身的 560×896（≈.62），
-     不写这条时高度由内容决定，牌会随内层尺寸漂。 */
-  aspect-ratio: 0.62;
-  opacity: 0;
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-.rk5-card img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  border: 3px solid var(--rk5-paper);
-  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.78);
+  /* 照 demo（冲击力返工 + 深夜重排）：整条纵列改用以 --v（≈真实可见高度）配比的预算式尺寸，
+     常见窗口高度都整版放下，纵列底部与固定确认区保持硬性间隔。
+     用户点名的「网页端和手机端 UI 重叠这么重」就是原先按百分比硬钉造成的。 */
+  gap: clamp(3px, 0.6 * var(--p5fx-v), 9px);
+  padding: clamp(10px, 2 * var(--p5fx-v), 24px) var(--rk5-m) clamp(88px, 12.5 * var(--p5fx-v), 124px);
 }
 
 /* ── 命运编号（照 demo .arcana）：黑底斜切的罗马数字 + 拉丁名 + 中文名三段 ──
    首版把它压成了一行「《太阳》· 知己」，与 demo 的构成完全不同（用户报「复原不尽人意」）。 */
 .rk5-arcana {
+  /* 照 demo：压在巨字之上（巨字的八向描边会向外溢 4px） */
+  position: relative;
+  z-index: 6;
   display: flex;
   align-items: baseline;
   gap: clamp(8px, 1.6vw, 14px);
@@ -203,20 +185,41 @@
 }
 .rk5-rank {
   grid-area: 1 / 1;
-  font-size: clamp(38px, 9.4vw, 88px);
+  /* 照 demo 打击感档：巨字放到 150px 上限（clamp 的三档都以近真实可见高度换算） */
+  font-size: clamp(46px, min(13.5vw, 15 * var(--p5fx-v)), 150px);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
   white-space: nowrap;
 }
 .rk5-rank-old {
   color: #5c5a55;
   opacity: 0;
-  text-shadow: 0 2px 0 #000;
+  text-shadow: 0 3px 0 var(--rk5-ink);
 }
 .rk5-rank-new {
   color: var(--rk5-paper);
   opacity: 0;
-  text-shadow: 2px 2px 0 var(--rk5-ink), 4px 4px 0 var(--rk5-ink), 6px 6px 0 var(--rk5-red-deep), 8px 9px 22px rgba(0, 0, 0, 0.72);
+  /* 八向硬黑描边 + 右下一枚红错版（配方来自用户 P3R 原稿里的巨字）。 */
+  text-shadow:
+    4px 0 0 var(--rk5-ink), -4px 0 0 var(--rk5-ink), 0 4px 0 var(--rk5-ink), 0 -4px 0 var(--rk5-ink),
+    4px 4px 0 var(--rk5-ink), -4px -4px 0 var(--rk5-ink), 4px -4px 0 var(--rk5-ink), -4px 4px 0 var(--rk5-ink),
+    12px 13px 0 var(--rk5-red);
+}
+
+/* ── 等级星排（照 demo .rankstars，2026-10-16 打手法收尾）──
+   五颗亮黄星 = 红错版垫层 + 硬黑描边 + 亮黄顶面（色值走 P5R.yellow #fbfe3c，组件内注入）。
+   初始不可见，RANK 5 落定后逐颗砸落（时间线 T(3470)）。 */
+.rk5-rankstars {
+  display: flex;
+  gap: clamp(5px, 1.1vw, 13px);
+  transform: rotate(-1.6deg);
+  margin-top: clamp(2px, 0.5 * var(--p5fx-v), 6px);
+  z-index: 6;
+}
+.rk5-rankstars svg {
+  width: clamp(18px, 3.4 * var(--p5fx-v), 34px);
+  height: clamp(18px, 3.4 * var(--p5fx-v), 34px);
+  opacity: 0;
 }
 
 /* ── 盖印：两端斜切 + 四角错动的不规则四边形；红硬影层错开 7×6 ──
@@ -226,8 +229,9 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(348px, 70vw);
-  height: clamp(64px, 10vh, 88px);
+  /* 印章与落痕跟得上放大后的等级行（照 demo 的手手法收尾） */
+  width: min(400px, 72vw);
+  height: clamp(68px, 11.5 * var(--p5fx-v), 104px);
   transform: translate(-50%, -190%) rotate(-13deg);
   opacity: 0;
   z-index: 7;
@@ -289,8 +293,8 @@
   top: 50%;
   /* 照 demo：落印痕迹比印章本身大一圈（印章 348×88，痕迹 430×126），
      同尺寸会读成「印章又出现了一次」而不是「章砸下去的余响」。 */
-  width: min(430px, 74vw);
-  height: clamp(80px, 14vh, 126px);
+  width: min(500px, 82vw);
+  height: clamp(84px, 14.5 * var(--p5fx-v), 138px);
   transform: translate(-50%, -50%) scale(0.6);
   opacity: 0;
   z-index: 6;
@@ -348,7 +352,7 @@
      首版只留了一行居中文字、没有这条带子。 */
   align-self: stretch;
   background: var(--rk5-ink);
-  padding: clamp(7px, 1.5vh, 12px) clamp(16px, 3vw, 40px);
+  padding: clamp(6px, 1.4 * var(--p5fx-v), 12px) var(--rk5-m);
   opacity: 0;
   z-index: 8;
   clip-path: polygon(1% 0, 100% 5%, 99% 100%, 0 95%);
@@ -365,14 +369,35 @@
 }
 
 .rk5-unlock {
+  /* 印刷件走独立垫层：⚠ clip-path 会把 box-shadow / filter:drop-shadow 一起裁掉（本仓实测坑），
+     所以本体撤掉 clip-path 与旧阴影，由 ::after（纸面）与 ::before（红错版垫层）承担。 */
+  position: relative;
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 5px 20px 5px 10px;
   opacity: 0;
   white-space: nowrap;
+  background: transparent;
+  clip-path: none;
+  box-shadow: none;
+}
+.rk5-unlock::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: var(--rk5-paper);
   clip-path: polygon(2% 0, 100% 7%, 98% 100%, 0 93%);
+}
+.rk5-unlock::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--rk5-red-deep);
+  clip-path: polygon(2% 0, 100% 7%, 98% 100%, 0 93%);
+  transform: translate(7px, 8px);
 }
 .rk5-unlock i {
   width: 22px;
@@ -394,7 +419,8 @@
 .rk5-confirm {
   position: absolute;
   left: 50%;
-  bottom: 2.4vh;
+  /* 与誓约条同样走 --v，防止矮窗把两个底件顶到一起（用户点名的「解锁条贴确认键」） */
+  bottom: calc(1.6 * var(--p5fx-v));
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -415,17 +441,36 @@
   letter-spacing: 0.34em;
 }
 .rk5-confirm .go {
+  /* 红面件同样走独立垫层：::before 是外圈硬黑环（margin:-4px 即环宽） */
+  position: relative;
   border: 0;
-  background: var(--rk5-red);
+  background: transparent;
   color: var(--rk5-paper);
   font-family: inherit;
   font-weight: 900;
-  font-size: clamp(16px, 2.4vw, 20px);
-  padding: 13px 42px;
+  font-size: clamp(15px, 2.2 * var(--p5fx-v), 19px);
+  padding: 11px 36px;
   cursor: pointer;
   letter-spacing: 0.18em;
+  clip-path: none;
+  box-shadow: none;
+}
+.rk5-confirm .go::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--rk5-red);
   clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+.rk5-confirm .go::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: -4px;
+  z-index: -2;
+  background: var(--rk5-ink);
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
 }
 .rk5-confirm .go:active {
   transform: scale(0.95) skewX(-5deg);
@@ -435,7 +480,6 @@
 @media (prefers-reduced-motion: reduce) {
   .rk5-rings,
   .rk5-slab,
-  .rk5-card,
   .rk5-arcana,
   .rk5-rank-old,
   .rk5-rank-new,
@@ -443,5 +487,43 @@
   .rk5-vow,
   .rk5-unlock {
     transition: none !important;
+  }
+}
+
+/* ── 手机端重排（390×844 / 360×740 / 430×932 实测档）：靠重排保住冲击力，不靠缩小 ── */
+@media (max-width: 640px) {
+  .rk5-cast {
+    gap: clamp(3px, 0.6 * var(--p5fx-v), 8px);
+    padding: clamp(10px, 2 * var(--p5fx-v), 22px) var(--rk5-m) clamp(92px, 12.5 * var(--p5fx-v), 124px);
+  }
+  .rk5-rank {
+    font-size: clamp(46px, min(17vw, 16 * var(--p5fx-v)), 96px);
+  }
+  .rk5-rankstars svg {
+    width: clamp(18px, 3.2 * var(--p5fx-v), 28px);
+    height: clamp(18px, 3.2 * var(--p5fx-v), 28px);
+  }
+  .rk5-stamp {
+    width: min(330px, 86vw);
+    height: clamp(56px, 9 * var(--p5fx-v), 86px);
+  }
+  .rk5-shock,
+  .rk5-wave {
+    width: min(380px, 94vw);
+    height: clamp(64px, 10.4 * var(--p5fx-v), 102px);
+  }
+}
+
+/* 矮窗保险（如 936×540 的窄横窗）：再压一档，保证「不与确认区相撞」这条硬线 */
+@media (max-height: 600px) {
+  .rk5-cast {
+    gap: 3px;
+    padding: 8px var(--rk5-m) 92px;
+  }
+  .rk5-rank {
+    font-size: clamp(42px, min(12vw, 13 * var(--p5fx-v)), 120px);
+  }
+  .rk5-vow {
+    padding: 5px var(--rk5-m);
   }
 }

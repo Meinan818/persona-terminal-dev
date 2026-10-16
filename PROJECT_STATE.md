@@ -4,6 +4,17 @@
 
 ## 1. 当前全貌：先看这一节
 
+- **【2026-10-16 深夜·四 · 红版三件照已验收 demo 落进 `src/`（公共层 + 三屏；待用户目视验收）】** 用户确认 demo 验收通过后，本轮把「转场四件套 + 主角牌 + 三屏细节」全部移植进红频道（p5）实现：
+  - **新增公共层**：`src/components/cooperation/confidantP5Fx.tsx` + `src/styles/confidant-p5-fx.css` —— ① P5R 转场四件套（红斜杠 + 白闪 + 巨字横掠（出口按字宽）+ 点击点双圆环 + `revealIn/revealOut` 圆形展开收拢 + `popIn` 斜插错峰 + `p5ScaleIn` + busy 锁）；② **主角牌 `#hero`**（`app/show/page2/page3/hidden` 四姿态，平移 900ms / 翻面 780ms，P5 红版牌背，链断自动淡出，开局从天上坠入）。三件互不嵌套，靠模块级命令式 API 串起来（`requestP5HeroPose` / `runP5Sweep` / `setP5HeroArt` / `p5HeroEnterBeat`）。
+  - **App 顶层**挂 `<ConfidantP5FxLayer />`（在演出/恭喜两个组件之外层）。
+  - **第 1 页（演出）**：舞台里的牌撤掉 → 等尺寸占位块 `data-p5-card-slot="stage"`（尺寸与主角牌共用 `--p5fx-cardw`）；新增**等级星排**（5 颗亮黄 `#fbfe3c`，T(3470) 逐颗砸落）；巨字改八向硬黑描边 + 红错版；印章与落痕放大；解锁条与确认键改**独立垫层**（clip-path 会裁掉阴影，实测坑）；整版改 `--v` 预算式尺寸 + 手机/矮窗档；入场与确认都走转场。**顺带修**：时间线 effect 原先没看 `modalBlocker`（有弹窗挡着也会在暗处播完并写「已庆祝」）。
+  - **第 2 页（恭喜）**：页内静态牌撤掉（交给主角牌立在内容列左缘）；纸卡/主键改垫层；入场 = `revealIn` + `popIn` + 缩小回弹；两键分别走 `STAR SHIFT` / `COOPERATION` 转场。
+  - **第 3 页（星移）**：输入框包 `.sf5-inputw`（textarea 不吃伪元素）；`sf5-new` / `sf5-btn.main` / `sf5-done-mark` 改垫层；挂载入场 + 四屏切换 `popIn`；关闭统一走转场（**含 hook 的自动关屏与 Android 返回键**——为此把它传进 `useStarShiftFlow`）。
+  - **修掉一个既有缺陷**：`?starshift=1` 直达永远停在恭喜页 —— StrictMode 下「消费 ref」的写法第二遍会把 phase 翻回去；改为模块加载时读一次 URL。
+  - **jsdom 兼容**：公共层所有动画入口做能力探测（单测环境没有 `Element.animate`），单测不受影响。
+  - **验证（本轮实测）**：`npx tsc --noEmit` exit 0；`npm test` **44 文件 / 278 测试全绿**；CDP 探针三支全绿且**零未捕获异常、零横向溢出**：`p5-stage-probe`（1440×900 与 390×844：主角牌在演出位、牌面图加载成功、五颗星亮起、确认键可点）、`p5-chain-probe`（确认 → 转场四件动画数 1→2 → 恭喜页挂载 → 关窗后主角牌 `display:none`）、`p5-pages23-probe`（恭喜页无页内牌、主角牌在锚点、星移输入屏 `.sf5-inputw` 在位、点 ✕ 时转场在跑、关闭后收场）。截图：`.rivet/scratch/p5-stage-shots/`、`p5-chain-shots/`、`p5-pages23-shots/`。
+  - **遗留**：① 用户目视验收这三屏（App 内，非 demo）；② 8 视口的完整压叠矩阵本轮只跑了 1440×900 与 390×844 两档，其余档待补；③ 真机未测；④ 未 Push。
+
 - **【交接 · 2026-10-16 晚 · 本窗口交给下一个窗口：现场核对 + 接手入口】** 本条是**接手第一入口**；下面是本次交接当场跑出来的数字，不是沿用的旧记录。**核现场时以 `git log -1` 实测为准**（交接前 HEAD `476fbb4`；本次交接产生本文件的提交 `c261a1d`，其后可能还有一条更晚的尾提交）。
   - **现场（2026-10-16 22:3x 实测）**：分支 `feat/coop-cinematic`，交接前 HEAD `476fbb4`；远端 `origin/feat/coop-cinematic` 停在 `1ac04ef`，本地领先 **18 条未推**（加上本次交接的文档提交为 **19 条**）。工作区只剩非本会话遗留：`M ios/App/Podfile`（别的会话改的，**勿动**）、未跟踪 `.cache/`、`.rivet-config.json`，以及 `outputs/` 下若干产物（两个 demo 目录、2.8.5 的 APK/AAB 备份、`pink-tarot-preview`、`site-v2-preview`、`restored-tarot-preview.jpg`、`project-log-recovery-*`）。
   - **基线（本次新跑，可复现）**：`npm run typecheck` **exit 0**；`npm test` **44 文件 / 278 测试全绿**（22:32 本机，HEAD `476fbb4`）。

@@ -23,7 +23,7 @@
  *
  * 红频道不挂 .dark（见 ui/channel.ts 的 syncDarkClass 铁律），故不写 dark 变体。
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppStore } from '@/store';
 import type { Confidant } from '@/types';
@@ -32,6 +32,7 @@ import { tarotArtUrl } from '@/constants/tarotArt';
 import { INTIMACY_LABELS, buffsUnlockedInRange, formatBuffDisplay } from '@/utils/confidantLevels';
 import { P5R, P5Dots } from '@/components/p5r/kit';
 import { P5Rings, P5ScatterStars } from '@/components/cooperation/confidantP5Scenery';
+import { lastP5SweepOrigin, p5ScaleInP5, popInP5, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
 import '@/styles/confidant-celebrate-p5.css';
 
 interface Props {
@@ -101,8 +102,36 @@ export function ConfidantCelebrateScreenP5({ confidant, onClose, onUseStarShift 
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  /**
+   * 入场（照 demo `showPage2`）：上一屏的转场把这一页从点击点「圆形展开」出来 + 内容斜插错峰，
+   * 同时主角牌从演出位滑到这一页内容列的左缘立着（牌面朝外）。
+   *
+   * 这一页是转场 apply() 时才挂载的新组件，自己拿不到点击点 —— 用 `lastP5SweepOrigin()` 接上一屏的圆心。
+   */
+  const rootRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = rootRef.current;
+    const wrap = wrapRef.current;
+    if (!root) return;
+    setP5HeroArt(artUrl);
+    revealInP5(root, lastP5SweepOrigin());
+    requestP5HeroPose('page2');
+    if (wrap) {
+      p5ScaleInP5(wrap);
+      popInP5(wrap.querySelectorAll('.cl5-anim'), 1);
+    }
+  }, [artUrl]);
+
+  /** 点击点圆心（程序化点击的 clientX/Y 为 0 时退回元素中心，照 demo 的 originOf） */
+  const originFrom = (e: React.MouseEvent<HTMLElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return { x: e.clientX || r.left + r.width / 2, y: e.clientY || r.top + r.height / 2 };
+  };
+
   return createPortal(
     <div
+      ref={rootRef}
       className="cl5-root"
       role="dialog"
       aria-modal="true"
@@ -128,7 +157,7 @@ export function ConfidantCelebrateScreenP5({ confidant, onClose, onUseStarShift 
         <div className="cl5-vignette" />
       </div>
 
-      <div className="cl5-wrap">
+      <div className="cl5-wrap" ref={wrapRef} data-p5-hero-anchor="page2">
         {/* ① 页头：拼贴瓷砖标题 + 英文副标 */}
         <div className="cl5-head cl5-anim">
           <span className="cl5-tiles" aria-label="亲密度升级">
@@ -145,12 +174,8 @@ export function ConfidantCelebrateScreenP5({ confidant, onClose, onUseStarShift 
           <em className="cl5-en">INTIMACY UP</em>
         </div>
 
-        {/* ② 塔罗牌：P5 频道位图（照 demo <img> 同一套素材）+ 纸边红硬影 */}
-        <div className="cl5-card cl5-anim">
-          {artUrl && <img src={artUrl} alt={card?.name ?? '塔罗'} />}
-        </div>
-
-        {/* ③ RANK 巨字（数字走亮红）+ ④ 称号副行 + ⑤ 说明行 */}
+        {/* ② 牌不放在页里 —— 由公共层的主角牌 #hero 承担（跨界面存活：它在内容列左缘立着）。
+            ③ RANK 巨字（数字走亮红）+ ④ 称号副行 + ⑤ 说明行 */}
         <div className="cl5-rank cl5-anim">
           RANK <b>{level}</b>
         </div>
@@ -187,16 +212,43 @@ export function ConfidantCelebrateScreenP5({ confidant, onClose, onUseStarShift 
         {/* ⑧ 按钮组：与 p3 版同判据——有次数给两键，无次数给单键「欣然接受」 */}
         {charges > 0 ? (
           <div className="cl5-actions cl5-anim">
-            <button type="button" className="cl5-btn ghost" onClick={onClose}>
+            <button
+              type="button"
+              className="cl5-btn ghost"
+              onClick={e => {
+                const origin = originFrom(e);
+                void runP5Sweep('COOPERATION', () => {
+                  requestP5HeroPose('app');
+                  onClose();
+                }, origin, -1);
+              }}
+            >
               稍后再说
             </button>
-            <button type="button" className="cl5-btn main" onClick={onUseStarShift}>
+            <button
+              type="button"
+              className="cl5-btn main"
+              onClick={e => {
+                // 进星移：转场词 STAR SHIFT（照 demo showPage3）
+                void runP5Sweep('STAR SHIFT', () => onUseStarShift(), originFrom(e), 1);
+              }}
+            >
               ✧ 使用星移
             </button>
           </div>
         ) : (
           <div className="cl5-actions single cl5-anim">
-            <button type="button" className="cl5-btn main" onClick={onClose}>
+            <button
+              type="button"
+              className="cl5-btn main"
+              onClick={e => {
+                const origin = originFrom(e);
+                void runP5Sweep('COOPERATION', () => {
+                  requestP5HeroPose('app');
+                  onClose();
+                }, origin, -1);
+              }}
+            >
               欣然接受
             </button>
           </div>

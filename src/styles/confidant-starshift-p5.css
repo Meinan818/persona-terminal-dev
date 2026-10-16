@@ -153,22 +153,42 @@
   letter-spacing: 0.04em;
   margin-bottom: 8px;
 }
+/* ⚠ 印刷件一律「独立垫层」：clip-path 会把 box-shadow / filter:drop-shadow 一起裁掉（本仓实测坑）。
+   输入框本体（textarea 是替换元素，不吃伪元素）撤掉纸面与阴影，由 .sf5-inputw 的两层承担。 */
+.sf5-inputw { position: relative; display: block; }
+.sf5-inputw::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--sf5-paper);
+  clip-path: polygon(1% 0, 100% 2%, 99% 100%, 0 98%);
+}
+.sf5-inputw::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--sf5-red);
+  clip-path: polygon(1% 0, 100% 2%, 99% 100%, 0 98%);
+  transform: translate(7px, 8px);
+}
 .sf5-input {
   width: 100%;
   min-height: clamp(84px, 14vh, 124px);
   resize: vertical;
   border: 0;
   outline: 0;
-  background: var(--sf5-paper);
+  background: transparent;
   color: var(--sf5-ink);
   font-family: var(--sf5-title-font);
   font-weight: 700;
   font-size: clamp(12px, 2vw, 15px);
   line-height: 1.8;
   padding: clamp(10px, 1.6vh, 14px) clamp(12px, 2.2vw, 18px);
-  /* 不规则四边形（照 demo .sf-input）—— 不是平行四边形 */
-  clip-path: polygon(1% 0, 100% 2%, 99% 100%, 0 98%);
-  box-shadow: 5px 6px 0 var(--sf5-red-deep);
+  /* 不规则四边形（照 demo .sf-input）—— 由 .sf5-inputw 的垫层承担 */
+  clip-path: none;
+  box-shadow: none;
 }
 .sf5-input::placeholder { color: #9a948a; }
 .sf5-count {
@@ -176,7 +196,8 @@
   font-size: 11px;
   color: var(--sf5-grey-light);
   font-weight: 700;
-  margin-top: 5px;
+  /* 照 demo .sf-count：与输入框拉开一档（原先 5px 太贴） */
+  margin-top: 12px;
 }
 
 /* ── 信息框（记录 / 变化 / 牌面调整）：照 demo .sf-box —— 纯黑纸块 + 不规则四边形，
@@ -232,14 +253,33 @@
   clip-path: polygon(1% 0, 100% 2.5%, 99% 100%, 0 97.5%);
 }
 .sf5-new {
-  background: var(--sf5-paper);
+  /* 纸面 + 红错版改由两层垫层承担（印刷件与本体同形） */
+  position: relative;
+  background: transparent;
   color: var(--sf5-ink);
   font-size: clamp(11.5px, 1.95vw, 15px);
   font-weight: 900;
   line-height: 1.8;
   padding: 11px 15px;
+  clip-path: none;
+  box-shadow: none;
+}
+.sf5-new::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--sf5-paper);
   clip-path: polygon(0 2%, 100% 0, 99.4% 97%, 1% 100%);
-  box-shadow: 5px 6px 0 var(--sf5-red-deep);
+}
+.sf5-new::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--sf5-red);
+  clip-path: polygon(0 2%, 100% 0, 99.4% 97%, 1% 100%);
+  transform: translate(8px, 9px);
 }
 
 /* ── 按钮组（照 demo .sf-btn：按钮本身没有硬影，只有主键有柔影）── */
@@ -253,9 +293,28 @@
   font-size: clamp(14px, 2.3vw, 17px);
   letter-spacing: 0.1em;
   padding: 15px 10px;
+  background: transparent;
+  clip-path: none;
+}
+.sf5-btn.main { position: relative; color: var(--sf5-paper); }
+.sf5-btn.main::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--sf5-red);
   clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
 }
-.sf5-btn.main { background: var(--sf5-red); color: var(--sf5-paper); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5); }
+/* 硬黑外环（margin:-4px 即环宽），照 demo .sf-btn.main::before */
+.sf5-btn.main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: -4px;
+  z-index: -2;
+  background: var(--sf5-ink);
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
 .sf5-btn.ghost { background: #1b1b19; color: var(--sf5-grey-light); }
 .sf5-btn:active { transform: scale(0.96) skewX(-4deg); }
 .sf5-btn:disabled { opacity: 0.4; cursor: default; }
@@ -280,10 +339,27 @@
   width: clamp(64px, 14vw, 92px);
   height: clamp(64px, 14vw, 92px);
   margin: 0 auto;
-  background: var(--sf5-red);
+  position: relative;
+  background: transparent;
   color: var(--sf5-paper);
   font-size: clamp(26px, 6vw, 40px);
   font-style: normal;
+  clip-path: none;
+}
+.sf5-done-mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--sf5-red);
   clip-path: polygon(12% 0, 100% 10%, 88% 100%, 0 90%);
-  box-shadow: 7px 8px 0 var(--sf5-ink);
+}
+.sf5-done-mark::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--sf5-ink);
+  clip-path: polygon(12% 0, 100% 10%, 88% 100%, 0 90%);
+  transform: translate(8px, 9px);
 }

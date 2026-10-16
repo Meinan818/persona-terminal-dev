@@ -26,6 +26,7 @@ import { p5RingLayers, P5ScatterStars, P5Hoops } from '@/components/cooperation/
 import { formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
 import { EXP, SLAM, OVER, rand, PREVIEW_CONFIDANT } from './confidantRankUpShared';
+import { p5HeroEnterBeat, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
 import '@/styles/confidant-rankup-p5.css';
 
 export function ConfidantRankUpCutInP5() {
@@ -67,14 +68,16 @@ export function ConfidantRankUpCutInP5() {
   }, [notice, finishRankUp]);
 
   const [phase, setPhase] = useState<'playing' | 'confirm'>('playing');
+  // 转场期间舞台先不上屏（照 demo：apply() 里才 display:block）——
+  // 否则红斜杠还在飞、演出已经站在那儿了，转场就白做了。
+  const [stageOn, setStageOn] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const castRef = useRef<HTMLDivElement>(null);
   const ringsRef = useRef<HTMLDivElement>(null);
   const ripplesRef = useRef<HTMLDivElement>(null);
   const collectRef = useRef<HTMLDivElement>(null);
-  const haloRef = useRef<HTMLDivElement>(null);
-  const glintRef = useRef<HTMLDivElement>(null);
   const slabARef = useRef<HTMLDivElement>(null);
   const slabBRef = useRef<HTMLDivElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
   const arcanaRef = useRef<HTMLDivElement>(null);
   const oldRef = useRef<HTMLSpanElement>(null);
   const newRef = useRef<HTMLSpanElement>(null);
@@ -84,9 +87,11 @@ export function ConfidantRankUpCutInP5() {
   const sparksRef = useRef<HTMLDivElement>(null);
   const shardsRef = useRef<HTMLDivElement>(null);
   const starsRef = useRef<HTMLDivElement>(null);
+  const rankStarsRef = useRef<HTMLDivElement>(null);
   const burstRef = useRef<HTMLDivElement>(null);
   const vowRef = useRef<HTMLDivElement>(null);
   const unlockRef = useRef<HTMLDivElement>(null);
+  const confirmRef = useRef<HTMLDivElement>(null);
 
   // 落印甩出的小红点：起点沿印章轮廓铺一圈，再沿同方向甩出。
   // 换一条队列项就重建（位置随机，但同一条内稳定）。
@@ -138,11 +143,13 @@ export function ConfidantRankUpCutInP5() {
     [noticeId],
   );
 
-  useEffect(() => {
-    if (!notice || !confidant) return;
-    // 播放开始即标记「这一级庆祝过了」；预览（?rankup）不写——那是真实等级的事
-    if (!notice.preview) markLevelCelebrated(confidant.id, notice.newLevel);
-    setPhase('playing');
+  /**
+   * 演出时间线（照 demo `rankUp()` 的 ①→⑩ 逐段）。
+   * 抽成函数是因为它不再由 effect 直接跑：入口要先把「主角牌待命 → P5R 转场 → 舞台展开」
+   * 走完，再在 260ms 后开演（demo 里就是 `setTimeout(rankUp, 260)`）；返回值是清理函数。
+   */
+  const playTimeline = useCallback(() => {
+    if (!notice || !confidant) return () => {};
 
     const A = (el: Element | null, kf: Keyframe[], opts: KeyframeAnimationOptions = {}) =>
       el ? el.animate(kf, { duration: 400, easing: EXP, fill: 'forwards', ...opts }) : null;
@@ -152,12 +159,13 @@ export function ConfidantRankUpCutInP5() {
 
     if (reduce) {
       // 减少动态：直接呈现终态、停在确认态（与 p3 版同一降级口径）
-      [cardRef, arcanaRef, oldRef, vowRef, unlockRef].forEach(r => {
+      [arcanaRef, oldRef, newRef, vowRef, unlockRef].forEach(r => {
         if (r.current) r.current.style.opacity = '1';
       });
       if (ringsRef.current) ringsRef.current.style.opacity = '1';
       [slabARef, slabBRef].forEach(r => { if (r.current) r.current.style.opacity = '1'; });
       if (stampRef.current) stampRef.current.style.opacity = '1';
+      rankStarsRef.current?.querySelectorAll('svg').forEach(s => { (s as SVGElement).style.opacity = '1'; });
       T(0, () => setPhase('confirm'));
     } else {
       // ① 同心星定场 + 两条猩红斜带（只做动势，牌走中间的黑底）
@@ -172,16 +180,9 @@ export function ConfidantRankUpCutInP5() {
       A(slabARef.current, [{ opacity: 0, scale: 1.5, rotate: '-8deg' }, { opacity: 1, scale: 1, rotate: '-3deg' }], { duration: 760, delay: 80, easing: EXP });
       A(slabBRef.current, [{ opacity: 0, translate: '-44px 0' }, { opacity: 1, translate: '0 0' }], { duration: 700, delay: 220, easing: EXP });
 
-      // ② 牌「转向」显形（宿命显形的本体）+ 背后光晕呼吸 + 扫过的高光
-      A(haloRef.current, [{ opacity: 0, scale: 0.4 }, { opacity: 0.85, scale: 1, offset: 0.55 }, { opacity: 0.5, scale: 1.12 }], { duration: 1500, delay: 340, easing: EXP });
-      A(cardRef.current, [
-        { opacity: 0, transform: 'rotateY(-78deg) rotateZ(-9deg) scale(1.34)' },
-        { opacity: 1, transform: 'rotateY(0deg) rotateZ(0deg) scale(1)', offset: 0.62 },
-        { opacity: 1, transform: 'rotateY(0deg) rotateZ(0deg) scale(1.03)', offset: 0.78 },
-        { opacity: 1, transform: 'rotateY(0deg) rotateZ(0deg) scale(1)' },
-      ], { duration: 1180, delay: 400, easing: EXP });
-      // 牌面高光扫过（照 demo #glint：delay 1220、线性、从左到右）
-      A(glintRef.current, [{ opacity: 0, translate: '-140% 0' }, { opacity: 1, translate: '-10% 0', offset: 0.5 }, { opacity: 0, translate: '140% 0' }], { duration: 880, delay: 1220, easing: 'linear' });
+      // ② 牌的光晕 + 落地顿挫 + 高光扫过 —— 牌已经搬到公共层的主角牌上（跨界面存活），
+      //    这三下动作跟着搬过去，由 p5HeroEnterBeat() 一次触发（延迟与 demo 一致：240/420/1220ms）。
+      p5HeroEnterBeat();
 
       // ③ 命运行（牌名 + 称谓）
       T(1560, () => { A(arcanaRef.current, [{ opacity: 0, translate: '0 18px' }, { opacity: 1, translate: '0 0' }], { duration: 520, easing: EXP }); });
@@ -257,22 +258,89 @@ export function ConfidantRankUpCutInP5() {
         A(burstRef.current, [{ opacity: 0, scale: 0.2 }, { opacity: 1, scale: 1, offset: 0.35 }, { opacity: 0, scale: 1.35 }], { duration: 760, easing: EXP });
       });
 
+      // ⑦·2 等级星排：五颗亮黄星在 RANK 5 落定之后逐颗砸落（照 demo T(3470)）
+      T(3470, () => {
+        rankStarsRef.current?.querySelectorAll('svg').forEach((s, i) => {
+          A(s, [
+            { opacity: 0, scale: '2.4', filter: 'blur(9px)' },
+            { opacity: 1, scale: '1.12', filter: 'blur(0px)', offset: 0.55 },
+            { opacity: 1, scale: '.94', offset: 0.76 },
+            { opacity: 1, scale: '1' },
+          ], { delay: i * 80, duration: 300, easing: SLAM });
+        });
+      });
+
       // ⑧ 誓约
       T(4050, () => { A(vowRef.current, [{ opacity: 0, translate: '-7% 0' }, { opacity: 1, translate: '0 0' }], { duration: 620, easing: EXP }); });
       // ⑨ 受领
       T(4650, () => { A(unlockRef.current, [{ opacity: 0, translate: '0 16px' }, { opacity: 1, translate: '0 0' }], { duration: 520, easing: OVER }); });
-      // ⑩ 停驻待确认（不自动划走）
-      T(5250, () => setPhase('confirm'));
+      // ⑩ 停驻待确认（不自动划走）——确认区照 demo 淡入（460ms / OVER）
+      T(5250, () => {
+        A(confirmRef.current, [{ opacity: 0, translate: '0 14px' }, { opacity: 1, translate: '0 0' }], { duration: 460, easing: OVER });
+        setPhase('confirm');
+      });
     }
 
     return () => {
       timers.forEach(clearTimeout);
-      [ringsRef, collectRef, haloRef, glintRef, slabARef, slabBRef, cardRef, arcanaRef, oldRef, newRef, stampRef, shockRef, waveRef, burstRef, vowRef, unlockRef].forEach(r => {
+      [ringsRef, collectRef, slabARef, slabBRef, arcanaRef, oldRef, newRef, stampRef, shockRef, waveRef, burstRef, vowRef, unlockRef, confirmRef].forEach(r => {
         r.current?.getAnimations?.().forEach(a => a.cancel());
       });
       sparksRef.current?.querySelectorAll('i').forEach(s => s.getAnimations().forEach(a => a.cancel()));
     };
   }, [notice, confidant, reduce]);
+
+  /**
+   * 入场（照 demo `play()` 的 COOPERATION 一段）：
+   *   主角牌从天上坠到右缘待命（背面）→ P5R 转场四件套 → 应用层：舞台自点击点展开
+   *   （这里没有点击点，用屏幕中心）+ 舞台缩小回弹 + 牌飞向演出位翻面亮牌 → 260ms 后开演。
+   *
+   * ⚠ 闸门与渲染一致（含 modalBlocker）：有别的弹窗挡着时不出场。
+   *   此前时间线 effect 没看 modalBlocker，会在看不见的地方播完、还写「已庆祝」标记。
+   */
+  useEffect(() => {
+    if (!notice || modalBlocker || !confidant || !card) {
+      setStageOn(false);
+      return;
+    }
+    // 播放开始即标记「这一级庆祝过了」；预览（?rankup）不写——那是真实等级的事
+    if (!notice.preview) markLevelCelebrated(confidant.id, notice.newLevel);
+    setPhase('playing');
+    setStageOn(false);
+    setP5HeroArt(artUrl);
+    requestP5HeroPose('app', { instant: true });
+
+    let cancelled = false;
+    let raf = 0;
+    let startTimer = 0;
+    let stopTimeline: (() => void) | null = null;
+    // 圆心：App 里演出是「被升级推出来的」，没有点击点 → 用屏幕中心
+    const origin = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5 };
+
+    void runP5Sweep('COOPERATION', () => {
+      if (cancelled) return;
+      setStageOn(true);
+      raf = requestAnimationFrame(() => {
+        if (cancelled) return;
+        revealInP5(stageRef.current, origin);
+        const cast = castRef.current;
+        if (cast) cast.animate([{ transform: 'scale(1.13)' }, { transform: 'scale(1)' }], { duration: 820, easing: 'cubic-bezier(.65,0,.2,1)' });
+        requestP5HeroPose('show');
+        startTimer = window.setTimeout(() => {
+          if (cancelled) return;
+          stopTimeline = playTimeline();
+        }, 260);
+      });
+    }, origin, 1);
+
+    return () => {
+      cancelled = true;
+      if (raf) cancelAnimationFrame(raf);
+      if (startTimer) window.clearTimeout(startTimer);
+      stopTimeline?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notice, modalBlocker, confidant, card, artUrl, reduce]);
 
   if (!notice || modalBlocker || !confidant || !card) return null;
 
@@ -285,11 +353,14 @@ export function ConfidantRankUpCutInP5() {
   // 留在树里的浮层对外只等效 z=10，会被 body 级 portal（同伴详情 z-150、星移 z-180）盖住。
   return createPortal(
     <div
+      ref={stageRef}
       className="rk5-root"
       role="dialog"
       aria-modal="true"
       aria-label={`羁绊升级！${confidant.name} 亲密度 RANK ${notice.newLevel}`}
       style={{
+        // 转场期间先不上屏（照 demo 的 #stage：apply() 里才 display:block）
+        display: stageOn ? 'block' : 'none',
         ['--rk5-red' as string]: P5R.red,
         ['--rk5-red-deep' as string]: P5R.redDeep,
         ['--rk5-red-hot' as string]: P5R.redHot,
@@ -327,18 +398,11 @@ export function ConfidantRankUpCutInP5() {
       </div>
       <div className="rk5-vignette" aria-hidden />
 
-      <div className="rk5-cast">
-        <div className="rk5-cardst">
-          {/* 牌背后的光晕（demo #halo）：牌转向显形时的红白光，呼吸一轮 */}
-          <div className="rk5-halo" ref={haloRef} aria-hidden />
-          <div className="rk5-card" ref={cardRef}>
-            {/* 牌用**原图**而不是 TarotCardSVG：demo 里就是一张带米白描边 + 硬影的 <img>，
-                组件自带的那层边框/朝向标记/内边距会让牌比 demo 小一圈（用户报过「和 demo 不一样」）。 */}
-            {artUrl ? <img src={artUrl} alt={card.name} /> : null}
-            {/* 牌面扫过的高光条（demo #glint） */}
-            <div className="rk5-glint" ref={glintRef} aria-hidden />
-          </div>
-        </div>
+      <div className="rk5-cast" ref={castRef}>
+        {/* 牌的等尺寸占位块 —— 真牌由公共层的主角牌 #hero 承担（跨界面存活：待命/演出/恭喜/星移
+            四个姿态一张牌），这里只负责让整条纵列的布局与 demo 完全一致。
+            尺寸走公共层的 --p5fx-cardw，两端永远同步。 */}
+        <div className="rk5-cardst" data-p5-card-slot="stage" aria-hidden />
 
         {/* 命运编号（照 demo .arcana）：黑底斜切罗马数字 + 拉丁名 + 中文名。 */}
         <div className="rk5-arcana" ref={arcanaRef}>
@@ -378,6 +442,17 @@ export function ConfidantRankUpCutInP5() {
           </div>
         </div>
 
+        {/* 等级星排（照 demo .rankstars）：五颗亮黄星 = 红错版垫层 + 硬黑描边 + 亮黄顶面，
+            RANK 5 落定后逐颗砸落（时间线 T(3470)）。 */}
+        <div className="rk5-rankstars" ref={rankStarsRef} aria-hidden>
+          {Array.from({ length: 5 }, (_, i) => (
+            <svg key={i} viewBox="0 0 200 200" style={{ rotate: `${i % 2 ? -3.5 : 2.5}deg` }}>
+              <polygon points={starPts(100, 100, 80, -90, 0.44)} fill={P5R.redDeep} transform="translate(8 9)" />
+              <polygon points={starPts(100, 100, 80, -90, 0.44)} fill={P5R.yellow} stroke="#000000" strokeWidth={13} strokeLinejoin="round" />
+            </svg>
+          ))}
+        </div>
+
         {/* 盖印那一下炸出的剪报碎片（demo #shards：36 片，与 #sparks 分开——
             sparks 是沿轮廓甩出的 2–6px 火星，shards 是 9–37px 的纸片）。
             首版遗漏，2026-10-16 补。 */}
@@ -410,9 +485,21 @@ export function ConfidantRankUpCutInP5() {
         </div>
       </div>
 
-      <div className={`rk5-confirm ${phase === 'confirm' ? 'on' : ''}`}>
+      <div ref={confirmRef} className={`rk5-confirm ${phase === 'confirm' ? 'on' : ''}`}>
         <span className="hint">羁绊等级提升</span>
-        <button type="button" className="go" onClick={finishRankUp}>确 认</button>
+        <button
+          type="button"
+          className="go"
+          onClick={e => {
+            // 确认 → 转场进「恭喜」整页（照 demo showPage2：圆心取点击点）
+            const r = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX || r.left + r.width / 2;
+            const y = e.clientY || r.top + r.height / 2;
+            void runP5Sweep('INTIMACY UP', finishRankUp, { x, y }, 1);
+          }}
+        >
+          确 认
+        </button>
       </div>
     </div>,
     document.body,

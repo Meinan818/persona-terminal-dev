@@ -4,8 +4,8 @@
 
 ## 1. 当前全貌：先看这一节
 
-- **【交接 · 2026-10-16 晚 · 本窗口交给下一个窗口：现场核对 + 接手入口（HEAD `476fbb4`）】** 本条是**接手第一入口**；下面是本次交接当场跑出来的数字，不是沿用的旧记录。
-  - **现场（2026-10-16 22:3x 实测）**：分支 `feat/coop-cinematic`，HEAD `476fbb4`；远端 `origin/feat/coop-cinematic` 停在 `1ac04ef`，**本地领先 18 条未推**。工作区只剩非本会话遗留：`M ios/App/Podfile`（别的会话改的，**勿动**）、未跟踪 `.cache/`、`.rivet-config.json`，以及 `outputs/` 下若干产物（两个 demo 目录、2.8.5 的 APK/AAB 备份、`pink-tarot-preview`、`site-v2-preview`、`restored-tarot-preview.jpg`、`project-log-recovery-*`）。
+- **【交接 · 2026-10-16 晚 · 本窗口交给下一个窗口：现场核对 + 接手入口】** 本条是**接手第一入口**；下面是本次交接当场跑出来的数字，不是沿用的旧记录。**核现场时以 `git log -1` 实测为准**（交接前 HEAD `476fbb4`；本次交接产生本文件的提交 `c261a1d`，其后可能还有一条更晚的尾提交）。
+  - **现场（2026-10-16 22:3x 实测）**：分支 `feat/coop-cinematic`，交接前 HEAD `476fbb4`；远端 `origin/feat/coop-cinematic` 停在 `1ac04ef`，本地领先 **18 条未推**（加上本次交接的文档提交为 **19 条**）。工作区只剩非本会话遗留：`M ios/App/Podfile`（别的会话改的，**勿动**）、未跟踪 `.cache/`、`.rivet-config.json`，以及 `outputs/` 下若干产物（两个 demo 目录、2.8.5 的 APK/AAB 备份、`pink-tarot-preview`、`site-v2-preview`、`restored-tarot-preview.jpg`、`project-log-recovery-*`）。
   - **基线（本次新跑，可复现）**：`npm run typecheck` **exit 0**；`npm test` **44 文件 / 278 测试全绿**（22:32 本机，HEAD `476fbb4`）。
   - **demo 现场**：`outputs\bond-rankup-demo-p5\index.html` 与 `work-impact-full.html` **同字节**（md5 `B8BE77E66DC4AF2EC35669154E096879`，74,628 B，22:25）；`index.html.bak-v3-liked / bak-v3-stamp / bak-impact / bak-redraw-v9 / bak-v4-chains / bak-v1` 存档齐全。
   - **服务状态**：5199 与 5173–5177 **当前都没有监听**（本机既无 dev server 也无静态服务）——下个窗口要看 demo 或跑探针，得自己先起服务。
@@ -1519,4 +1519,4 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **基线（本次新跑，非沿用）**：`npm run typecheck` → exit 0；`npm test` → **44 文件 / 278 测试全绿**（Start 22:32，Duration 18.82s）。两条都在 HEAD `476fbb4` 上、未改动 `src`。
 - **服务状态**：5199 与 5173–5177 当前**都没有监听**（无 dev server、无静态服务）；要看 demo 或跑 `.rivet/scratch/impact-check.mjs` 之类探针，接手后得自己先起服务。
 - **交给下一个窗口的活**：① 用户目视验收红版 demo（`?still=1` / `?page=2` / `?page=3` 三条直达）；② 通过后落 `src/`：三件 + **转场四件机制** + **主角牌 `#hero` 机制**，并补第 3 页星移四屏动画的逐屏对齐；③ 18 条提交的 Push 需先向用户推荐并取得明确批准。
-- **本次无 push**：本文件用一个本地提交保存（见下一条 commit）；`outputs/`、`.rivet/scratch/` 照惯例不入库。
+- **本次无 push**：本文件用本地提交保存 —— 交接提交 `c261a1d`（HEAD，`feat/coop-cinematic`，领先 `origin/feat/coop-cinematic` **19 条未推**）；`outputs/`、`.rivet/scratch/` 照惯例不入库。

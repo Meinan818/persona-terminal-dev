@@ -133,8 +133,10 @@ export function ConfidantStarShiftModal({ isOpen, confidant, onClose }: Props) {
 
   return (
     <AnimatePresence>
+      {/* ⚠ 外层黑遮罩**不做淡入**：上面那层（整页恭喜/演出）一卸载，底下压着的
+          同伴详情弹窗会先露出来；遮罩若再慢悠悠淡入，用户就会看到「先闪出一个详情窗、
+          再冒出星移窗」（2026-10-16 用户报）。遮罩立即不透明即可；卡片本身仍走 spring 入场。 */}
       <motion.div
-        initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[180] flex items-center justify-center p-4 bg-black/75"

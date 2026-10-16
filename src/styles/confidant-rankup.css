@@ -124,13 +124,12 @@
   box-shadow: var(--rk-card-shadow);
   opacity: 0;
 }
-/* ⚠ TarotCardSVG 用**内联** style 固定尺寸（默认 160×256），内联样式压过这里的 width:100% ——
-   牌只有 160 宽、卡片却按 clamp 撑到 240，于是右边和下边露出一条底色。
-   深蓝水下看不出来，粉主题（浅底）下就是一条刺眼的白边
-   （用户 2026-10-16 报「塔罗牌那个框怎么变这么大」）。
-   这里用 !important 压过内联样式，让牌真正填满卡片。 */
+/* ⚠ 光设 `.rk-card > *` 不够：牌组件的尺寸写在外层 div 的**内联 style** 上（160×256），
+   里面那张 `<img width="160" height="256">` 又各自带着固定尺寸。只拉大外层 div，
+   里面的图还是老尺寸 —— 图案比框小一圈，看着就是「牌没填满框」（用户 2026-10-16 报）。
+   这里把外层 div 与里面的 img/svg 一起用 !important 拉满，比例一致（都是 0.625）不会变形。 */
 .rk-card > * { width: 100% !important; height: 100% !important; display: block; }
-.rk-card svg { display: block; width: 100%; height: 100%; }
+.rk-card svg, .rk-card img { display: block; width: 100% !important; height: 100% !important; object-fit: cover; }
 
 /* RANK UP! 巨字 */
 .rk-title {

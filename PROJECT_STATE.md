@@ -4,6 +4,14 @@
 
 ## 1. 当前全貌：先看这一节
 
+- **【交接 · 2026-10-16 晚 · 本窗口交给下一个窗口：现场核对 + 接手入口（HEAD `476fbb4`）】** 本条是**接手第一入口**；下面是本次交接当场跑出来的数字，不是沿用的旧记录。
+  - **现场（2026-10-16 22:3x 实测）**：分支 `feat/coop-cinematic`，HEAD `476fbb4`；远端 `origin/feat/coop-cinematic` 停在 `1ac04ef`，**本地领先 18 条未推**。工作区只剩非本会话遗留：`M ios/App/Podfile`（别的会话改的，**勿动**）、未跟踪 `.cache/`、`.rivet-config.json`，以及 `outputs/` 下若干产物（两个 demo 目录、2.8.5 的 APK/AAB 备份、`pink-tarot-preview`、`site-v2-preview`、`restored-tarot-preview.jpg`、`project-log-recovery-*`）。
+  - **基线（本次新跑，可复现）**：`npm run typecheck` **exit 0**；`npm test` **44 文件 / 278 测试全绿**（22:32 本机，HEAD `476fbb4`）。
+  - **demo 现场**：`outputs\bond-rankup-demo-p5\index.html` 与 `work-impact-full.html` **同字节**（md5 `B8BE77E66DC4AF2EC35669154E096879`，74,628 B，22:25）；`index.html.bak-v3-liked / bak-v3-stamp / bak-impact / bak-redraw-v9 / bak-v4-chains / bak-v1` 存档齐全。
+  - **服务状态**：5199 与 5173–5177 **当前都没有监听**（本机既无 dev server 也无静态服务）——下个窗口要看 demo 或跑探针，得自己先起服务。
+  - **待办（按优先级）**：① **用户目视验收 demo**（打开 `outputs\bond-rankup-demo-p5\index.html`；右下角重播、`?still=1` 定格、`?page=2` 恭喜页、`?page=3` 星移四屏）；② 验收通过后，把三件（演出 / 恭喜整页 / 星移四屏）连同**转场四件机制 + 主角牌 `#hero` 机制**落 `src/`，第 3 页星移四屏动画尚未照 demo 逐屏对齐，真机未测；③ **18 条本地提交待 Push** —— 必须先向用户说明推荐理由并取得明确批准，**不得擅自推送**。
+  - **动手前必读铁律**：`clip-path` 会连带裁掉 `box-shadow` / `filter:drop-shadow`（一律改独立垫层实现）；`.scenery` 的 z-index 必须是 **-1**；印章与落痕（`.stamp` / `#shock` / `#wave`）必须挂在 `.rankzone` 内；改 demo 前先备份、**两个 agent 不要同时改同一个文件**；`outputs/` 与 `.rivet/scratch/` 都不入库；PowerShell 的 `-match` 大小写不敏感（脚本替换踩过）。
+
 - **【交接 · 2026-10-16 深夜·三 · 主角牌跨界面存活（照 P3R 原稿 #char 机制落地）】** 用户指出「转场要像 D:\转场\P3R 菜单转场 · 水下 (3).html：切换界面时人物从一个位置到另一个位置、变换动作；里面的人物可用我们的塔罗牌替换」——已落地（demo 仍为 `outputs\bond-rankup-demo-p5\index.html`＝`work-impact-full.html` 同字节，未动 `src`）：
   - **#hero**＝固定层的主角牌，贯穿五个屏：界面页右缘待命（**背面朝外**，手机端只露一条边）→ 进入演出：飞向中央 + **翻面亮出牌面** + 落地顿挫 → 恭喜页：滑到内容左缘立着（牌面）→ 星移页：**翻回背面**退到右缘 → 返回时逐站退回。切换时平移+旋转+翻面（`heroPoseTo`，900ms 弹性缓动），常态呼吸浮动，开局从天上旋转坠入待命位（照原稿 intro 的登场）。
   - **牌背新设计**：红底 + 米白四角星 + 黑色描边环 + 半调点 + MASKARIA 字样（内联 SVG）。页 2 内容层原来那张静态小牌已删（避免和主角牌重复）。
@@ -34,7 +42,7 @@
   - **并行线状态**：本会话末尾开的两条子代理（手机端 `demo_mobile` / 探针 `probe_verify`）已按用户「先交接」的要求中断；`probe_verify` 只动 `.rivet\scratch\` 下的探针（不入库，无需处理）。
 
 - **【交接 · 2026-10-16 末 · 追加一轮】印章已按 P5 语言重做；三屏布景已统一**：
-  - **分支**：`feat/coop-cinematic`（⚠ **本地没配 upstream**，推的时候要显式写 `git push origin feat/coop-cinematic`）；本地领先 `origin/feat/coop-cinematic` **5 条未推**。本轮只动 `outputs\` 与 `.rivet\scratch\`（都不入库），未产生新提交。
+  - **分支**：`feat/coop-cinematic`（⚠ **本地没配 upstream**，推的时候要显式写 `git push origin feat/coop-cinematic`）；本地领先 `origin/feat/coop-cinematic` **5 条未推**（⚠ 数字已过期：2026-10-16 交接核对应为 **18 条**，见 §1 顶部交接 entry）。本轮只动 `outputs\` 与 `.rivet\scratch\`（都不入库），未产生新提交。
   - **印章（用户两轮否定后定稿）**：旧版是「亮红大块 + 白描边 + 居中字」，用户评「像一个色块，比之前的都丑」「毫无 P5 风格」。根因不是质感不够，是**形制不对** —— 照 `src\components\p5r\kit.tsx` L5-10 的语言重做：两端斜切 + 四角各自错动的不规则四边形、红色硬化影层错开 7×6px（层间露出即边框，不用描边）、半调网点 dot 1.6 / gap 9、印面 `RANK UP` + 右下角红底黑字「羁绊提升」小标。
     三条失败教训留档：① 在一块「横贯画面的红板」上堆纹理只会更脏，要换的是形制；② 动手前必须读项目自己的 P5 底座 `kit.tsx`，别凭印象做「P5 风」；③ 印面文字禁用 b 元素 —— 本文件有一条 .stamp 下的 b 规则（绝对定位 + inset + 描边 + clip-path）会把它变成描边框、把字整段裁光（三变体对照时踩过）。
   - **落印痕迹（同轮补，用户点名的「痕迹」）**：`#shock` 同形红环 + `#wave` 椭圆冲击波 + `#sparks` 24 颗 2–6px 小红点，接在 rankUp 的 T(3220) —— 印章 keyframe 在 2880+560×0.58≈3205ms 触底，痕迹略晚于触底才像「砸」。
@@ -1500,3 +1508,15 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 用户点名「切换界面时人物要从一个位置到另一个位置、变换动作，牌面可反转；人物=我们的塔罗牌」：把塔罗牌抽成固定层主角，界面页右缘背面待命 → 演出飞向中央翻面 → 恭喜左缘立着 → 星移翻背撤到右缘；新增 P5 红版牌背（四角星+MASKARIA）；舞台原位置留等尺寸占位块保布局零回归；站位全部按实际内容边界现算。
 - 验证：8 视口压叠 0 / 溢出 0 / 报错 0；转场 302 帧 avg 5.6ms longTasks 0。证据 `_shots/h1…h5-*.png`。
 - commit：本文件（另提）；demo 不入库；未 Push。
+
+### 2026-10-16（交接）：给下一个窗口 —— 现场核对与接手入口（HEAD `476fbb4`）
+
+- **起因**：用户在本窗口要求「`E:\MASKARIA\PROJECT_STATE.md` 进行交接」。本节就是交接产物：核现场 → 记下接手入口与待办 → 本地提交本文件（**不 Push**）。
+- **现场核对（本次实测，2026-10-16 22:3x）**：
+  - 分支 `feat/coop-cinematic`，HEAD `476fbb4`「docs(state): 主角牌跨界面存活（P3R #char 机制：待命/翻面/左缘/翻背）+ 8 视口复验」；远端 `origin/feat/coop-cinematic` 在 `1ac04ef`，**本地领先 18 条未推**（此前 §1 里「5 条未推」的写法已过期，已在原处标注纠正）。
+  - 工作区：除本文件外无本会话改动。遗留均为**非本会话**内容 —— `M ios/App/Podfile`（别的会话在改）、未跟踪 `.cache/`、`.rivet-config.json`、`outputs/` 下若干产物（含两个 demo 目录与 2.8.5 的 APK/AAB 备份）。
+  - demo：`outputs\bond-rankup-demo-p5\index.html` 与 `work-impact-full.html` 同字节（md5 `B8BE77E66DC4AF2EC35669154E096879`，74,628 B）。此前交接 entry 里记的 md5 `BAC72F70…`（26,177 B 那代 `bak-impact`）已不是当前版本，注意别按旧 md5 核对。
+- **基线（本次新跑，非沿用）**：`npm run typecheck` → exit 0；`npm test` → **44 文件 / 278 测试全绿**（Start 22:32，Duration 18.82s）。两条都在 HEAD `476fbb4` 上、未改动 `src`。
+- **服务状态**：5199 与 5173–5177 当前**都没有监听**（无 dev server、无静态服务）；要看 demo 或跑 `.rivet/scratch/impact-check.mjs` 之类探针，接手后得自己先起服务。
+- **交给下一个窗口的活**：① 用户目视验收红版 demo（`?still=1` / `?page=2` / `?page=3` 三条直达）；② 通过后落 `src/`：三件 + **转场四件机制** + **主角牌 `#hero` 机制**，并补第 3 页星移四屏动画的逐屏对齐；③ 18 条提交的 Push 需先向用户推荐并取得明确批准。
+- **本次无 push**：本文件用一个本地提交保存（见下一条 commit）；`outputs/`、`.rivet/scratch/` 照惯例不入库。

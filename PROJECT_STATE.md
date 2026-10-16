@@ -4,6 +4,15 @@
 
 ## 1. 当前全貌：先看这一节
 
+- **【接手第一入口 · 2026-10-16 收尾节点（用户说「准备交接」）】** 本项目当前**暂停开发**，等用户点头再继续。另一个 AI 只读这一条 + 下面时间线就能接手，不需要用户重讲历史。
+  - **现场**：分支 `feat/coop-cinematic`，HEAD `90b0a51`；远端 `origin/feat/coop-cinematic` 停在 `1ac04ef`，**本地领先 24 条未推**（Push 必须先向用户推荐并取得明确批准）。工作区只剩**非本会话**遗留：`M ios/App/Podfile`（别的会话在改，勿动）、未跟踪 `.cache/`、`.rivet-config.json`、`outputs/` 下若干产物（含两个 demo 目录）。本轮**无未提交的代码改动**。
+  - **本轮成果（2026-10-16 深夜）**：① **红版三件照用户已验收的 demo 落进 `src/`** —— 新增公共层 `src/components/cooperation/confidantP5Fx.tsx` + `src/styles/confidant-p5-fx.css`（P5R 转场四件套 + 主角牌 `#hero` 跨界面存活），App 顶层挂 `ConfidantP5FxLayer`，第 1/2/3 页逐条对齐（星排、印刷垫层、入场错峰、hero 接线）；② 修「升级后先弹恭喜页、弄完才跳演出」的**入队竞态**（队列改到数据刷新之前 + 邀请层队列闸门 + 回归测试）。
+  - **验证数字（本轮实测）**：`npx tsc --noEmit` exit 0；`npm test` **44 文件 / 279 测试全绿**；CDP 探针三支 + 冒烟一支全绿，零未捕获异常、零横向溢出（截图见 `.rivet/scratch/p5-stage-shots/`、`p5-chain-shots/`、`p5-pages23-shots/`）。
+  - **待办（按优先级）**：① **用户目视验收红版三屏**（App 内、不是 demo）：起 `npx vite --port 5184 --strictPort` → 用 **`http://localhost:5184/`**（vite 只绑 localhost，写 127.0.0.1 会连接被拒）→ 切**红色主题** → `?rankup=1`（演出，点确认进恭喜）/ `?celebrate=1` / `?starshift=1`；② 24 条提交的 **Push** 待用户批准；③ 8 视口压叠矩阵本轮只跑了 1440×900 与 390×844 两档（其余：1280×700 / 936×540 / 390×700 / 390×650 / 360×740 / 430×932），可复跑探针补齐；④ **真机未测**。
+  - **动手铁律**：`clip-path` 会连带裁掉 `box-shadow`/`filter:drop-shadow`（印刷件一律走**独立垫层**）；`.scenery` 背景层 z-index 必须 **-1**；印章与落痕（`.stamp`/`#shock`/`#wave`）必须挂在 `.rankzone` 内；主角牌与舞台占位块共用 `--p5fx-cardw`（改一边就得改另一边）；改 `outputs/` 里的 demo 前先备份、两个 agent 别同时改同一文件。
+  - **探针/调试的坑**：切红频道必须在**页面加载前**钉住（`Page.addScriptToEvaluateOnNewDocument` 强制 `data-ui-channel=p5` + MutationObserver 顶住）——预览入队发生在挂载时，晚设频道会被 P3 版消费掉；jsdom 里没有 `Element.animate`，公共层已做能力探测，**新加动画入口记得也走 `canAnimate`**。
+  - **本会话的另一条已知限制**：派子代理时任务正文读不出来（`encrypted_content` + 自定义 provider 通道）→ 要么**单窗口作业**，要么「先把任务写进对话明文 + `fork_turns="all"` 派发」。详见下方同名时间线条目。
+
 - **【2026-10-16 深夜·四 · 红版三件照已验收 demo 落进 `src/`（公共层 + 三屏；待用户目视验收）】** 用户确认 demo 验收通过后，本轮把「转场四件套 + 主角牌 + 三屏细节」全部移植进红频道（p5）实现：
   - **新增公共层**：`src/components/cooperation/confidantP5Fx.tsx` + `src/styles/confidant-p5-fx.css` —— ① P5R 转场四件套（红斜杠 + 白闪 + 巨字横掠（出口按字宽）+ 点击点双圆环 + `revealIn/revealOut` 圆形展开收拢 + `popIn` 斜插错峰 + `p5ScaleIn` + busy 锁）；② **主角牌 `#hero`**（`app/show/page2/page3/hidden` 四姿态，平移 900ms / 翻面 780ms，P5 红版牌背，链断自动淡出，开局从天上坠入）。三件互不嵌套，靠模块级命令式 API 串起来（`requestP5HeroPose` / `runP5Sweep` / `setP5HeroArt` / `p5HeroEnterBeat`）。
   - **App 顶层**挂 `<ConfidantP5FxLayer />`（在演出/恭喜两个组件之外层）。
@@ -1546,3 +1555,10 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **修复**：① `src/store/index.ts` —— 把队列入队**移到 `loadConfidants()` 之前**（数据一变成新级，队列里就已经有它）；② `ConfidantRankUpCutIn.tsx` 的 `ConfidantStarShiftInvite` 增加兜底闸门「队列非空时这一层不出场」；③ 顺手修 `runP5Sweep` 的 busy 锁：转场中再次请求时**动作照做**（原先直接 return，会把「关窗」这类动作吞掉）。
 - **回归测试**：`src/store/__tests__/confidantRankUpQueue.test.ts` 新增「入队先于数据刷新」不变量用例。**已验证它抓得住这个缺陷**：把顺序临时改回旧写法 → 该用例变红（`atNewLevel.every(s => s.queued)` 为 false）；改回修复 → 绿。
 - **验证**：`npx tsc --noEmit` exit 0；`npm test` **44 文件 / 279 测试全绿**（比上轮 +1 = 这条新用例）；`p5-chain-probe` 整链探针仍零报错。
+
+### 2026-10-16（收尾节点）：按用户「准备交接」做项目收尾
+
+- **用户当次定义（已写进 `AGENTS.md` 的 Project-Specific Rules）**：「准备交接」= 给项目收尾、暂停开发、把接手所需的一切记录好，方便其他 AI 上手。
+- **本次收尾做了什么**：① 核现场并把结果写进 §1 顶部「接手第一入口」（分支 / HEAD `90b0a51` / 24 条未推 / 工作区遗留归属 / 本轮成果 / 验证数字 / 待办 / 铁律 / 探针坑）；② 确认工作区**没有未提交的代码改动**（只剩非本会话遗留）；③ 把「准备交接」的含义写进项目 `AGENTS.md`；④ 本次只提交文档（**不 Push**）。
+- **给接手的 AI 的最短路径**：读 §1 顶部那条 + 本节下面三条时间线（深夜·四 / 深夜·五 / 本轮）；跑 `npm run typecheck` 与 `npm test`（应为 exit 0 与 44 文件 / 279 测试全绿）；要复现界面就起 dev server（**5184**，`http://localhost:5184/`，红主题，`?rankup=1` / `?celebrate=1` / `?starshift=1`）。**本轮结束时 5184 没有在跑**（会话结束时被回收），要看得自己起。
+- **边界（别越过）**：Push 未批准；`ios/App/Podfile` 是别的会话的改动；`outputs/` 与 `.rivet/scratch/` 不入库；真机未测、8 视口只跑了两档 —— 这些都是**已知边界**，不是待办里的「已做」。

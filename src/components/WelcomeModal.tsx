@@ -207,20 +207,6 @@ const InfoCard = ({ step, total }: { step: number; total: number }) => (
   </div>
 );
 
-/** 右下的按键提示条：每屏显示这一步能按什么（键盘绑定在 Wave 2 接上） */
-const KeyHint = ({ items }: { items: string[] }) => (
-  <div className="flex items-center gap-3">
-    {items.map((t) => (
-      <span key={t} className="flex items-center gap-1.5 text-[12px] font-black" style={{ color: P3R.inkSoft }}>
-        <span className="px-1.5 py-[1px] text-[11px] font-black" style={{ background: '#fff', color: P3R.ink, clipPath: slantClip(4), boxShadow: `inset 0 0 0 1.5px ${P3R.ink}` }}>
-          {t.split(' ')[0]}
-        </span>
-        {t.split(' ').slice(1).join(' ')}
-      </span>
-    ))}
-  </div>
-);
-
 /** 月相：按「年内第几天」推相位（29.53 天周期），照已验收 demo 的算法；
  *  SVG 用两段弧画出被照亮的那一块，新月与满月直接返回空路径。 */
 const MOON_NAMES = ['新月', '娥眉月', '上弦月', '盈凸月', '满月', '亏凸月', '下弦月', '残月'];
@@ -445,18 +431,6 @@ export const WelcomeModal = () => {
       setImportError(error instanceof Error ? error.message : '导入失败，请检查备份文件格式');
       setImportLoading(false);
     }
-  };
-
-  /** 右下角按键提示条的内容：每屏只写这一步真能按的键 */
-  const keyHints: Record<Step, string[]> = {
-    welcome: ['Enter 开始设定', 'Esc —'],
-    name: ['Enter 下一步', 'Esc 返回'],
-    preset: ['↓ 选择', 'Enter 下一步', 'Esc 返回'],
-    customize: ['Enter 下一项', 'Esc 返回'],
-    done: ['Enter 继续', 'Esc 返回'],
-    guide: ['Enter 继续', 'Esc 返回'],
-    blessing: ['↓ 选择', 'Enter 确认', 'Esc 返回'],
-    import: ['Esc 返回'],
   };
 
   /** 换屏统一入口：带塔罗翻牌转场；转场期间锁住输入，避免连点把时序打乱。
@@ -742,10 +716,8 @@ export const WelcomeModal = () => {
         <InfoCard step={stepNo} total={STEP_ORDER.length} />
       </div>
       {/* 底部：按键提示条在上、状态条（月相 / 时钟 / 影时间）横在最低一排——照 demo 的排布 */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex flex-col">
-        <div className="flex justify-end" style={{ padding: '0 clamp(18px,3.4vw,64px) 10px' }}>
-          <KeyHint items={keyHints[step]} />
-        </div>
+      {/* 底部状态条：月相 / 本机时钟 / 影时间（按键提示条按用户要求移除，键盘操作本身保留） */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20">
         <GuideStatusBar inShadow={inShadow} />
       </div>
 

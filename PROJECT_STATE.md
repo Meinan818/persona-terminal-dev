@@ -4,6 +4,13 @@
 
 ## 1. 当前全貌：先看这一节
 
+- **【交接 · 2026-10-16 深夜 · 红版 P5 羁绊链 demo 返工完成（待用户目视验收）】** 承接下一条（夜）：`outputs\bond-rankup-demo-p5\index.html` 已换为 `work-impact-full.html` 的同一字节（md5 `BAC72F70…`；工作文件保留为同名副本，旧基线留 `bak-before-finish-20261016` / `bak-impact`，完整版留 `bak-v3-stamp`）。
+  - **这轮做了什么**：① 把「冲击力返工」并回**完整版 v3-stamp**：印章重做（RANK UP 半调网点+红硬影）、落印痕迹（同形红环/椭圆波/24 颗火星）、三屏布景、第三页星移四屏全部回来了，并补齐此前缺件；② 打手法收尾：等级星排（五颗亮黄 `#fbfe3c`，RANK 5 落定后逐颗砸落）、印章与落痕随巨字放大、命运编号改「黑色标签条」（原白字叠白巨字读不出）；③ **P5R 转场四件套**（用户点名「高级、有冲击力、专属于 P5R」）：锯齿猩红闸门 + 巨字横掠（COOPERATION / RANK UP / STAR SHIFT）+ 白闪 + 点击点双圆环，`p5Sweep()` 统一实现，进演出/进恭喜/进星移/返回全走它，只动 transform/opacity；④ 手机端重排（390×844 / 360×740 / 430×932：靠出血保体积、不缩小；确认键与解锁条分离）；⑤ 页 2/3 全套「硬黑描边+错版」。
+  - **重要技术结论（务必沿用）**：**clip-path 会把 box-shadow 与 filter:drop-shadow 一并裁掉**（实测页 `.rivet/scratch/clip-shadow-test.html` + `clip-shadow-test2.png`）→ 上一轮补丁里 `.unlock/.confirm/.p2-panel/.sf-*` 那批「描边/错版」其实**从未渲染**；已全部改为**独立垫层**（元素本体撤 clip-path+旧阴影，由 ::before/::after 或兄弟层承担，垫层与本体同形）。以后加印刷效果一律用这个模式。
+  - **验证（最终实测）**：探针 `.rivet/scratch/impact-check.mjs`（取代 `redraw-shots.mjs`，后者不必再修）→ 四视口 **errorCount 0 / 无横向溢出 / 确认键 elementFromPoint 命中自身 / page2 可滚且按钮在视口内 / page3 不溢出**；1440 点确认转场：frames 300、avg 5.7ms、p95 5.7、over33 0、longTasks 0；特性计数：星排 5、火星 24、印章席面在位、转场层在位。报告 `.rivet/scratch/impact-shots/report.json`，截图 `_shots/w1…w5-*.png` 与 `_shots/impact-full/`。
+  - **未完成/下一步**：① **等用户目视验收**（打开 `outputs\bond-rankup-demo-p5\index.html`；`?still=1` 定格 / `?page=2` / `?page=3` 直达）；② 验收通过后把三件重描进 `src`——**必须带上转场四件套**；第 3 页星移四屏动画也还没照 demo 逐屏做；③ 真机未测。
+  - 本节点只动 `outputs\` 与 `.rivet\scratch\`（都不入库），无 `src` 改动；本文件另有随本次的文档提交。
+
 - **【交接 · 2026-10-16 夜 · 红版 P5 羁绊链 demo 返工中（未完成）】** 本轮全部落在 `outputs\bond-rankup-demo-p5\`（**不入库**）与 `.rivet\scratch\`，**未动 `src/`、无代码提交**。
   - **当前基线**：`index.html` = **用户认可的那版**（`index.html.bak-v3-liked-20261016`，24,457 B）+ 我在其 `</style>` 前追加的一段「**冲击力返工**」CSS（现 26,177 B；JS 语法通过、渲染 0 报错、转场最差帧 5.8ms / 0 长任务）。三条返工：① 牌放大到近满幅并斜置出血（`clamp(210px,42vh,400px)` + `rotate(-11deg) translate(-7vw,-6vh)`）；② 等级巨字放到 `clamp(60px,14.5vw,164px)` 并带「**八向 0 模糊硬黑描边 + 一枚红错版**」；③ 面板从白圈改成「**硬黑描边 + 错版垫层**」。
   - **真实 P5 参考（本轮才找到，此前一直没用）**：`E:\MASKARIA\.taste-skill\refs\` —— `p5s.html` + `p5s-fold.jpg` / `p5s-01…09.jpg` + `zhuzhan.html` 一组，**还带着官网原生 `main.css`(32KB) 与 `keyframes.css`(5.5KB)**。首屏读出的三条铁律：**每一块都是不规则形 + 2~4px 硬黑描边 + 红/黑错版垫层；主角是一张被四边裁切的满幅主视觉；红只做上下横带与文字重点色**。另有 `D:\转场\P3R 菜单转场 · 水下 (3).html`（用户自己的 P3R 原稿，蓝版那条链的编排来源）：转场四件套＝**巨字横掠 + 红色斜杠飞过 + 白闪 + 点击点双圆环**；巨字用「八向硬描边 + 错版」。
@@ -1458,3 +1465,12 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **验证（本轮实测）**：`.rivet\scratch\p5v8-stamp-align.mjs` —— 盖印落下那一刻，印章中心与 `#rankNew` 中心的**垂直偏差 3px、水平偏差 0px、垂直重叠 true**；星芒偏差 4px；`errorCount 0`。修前同口径偏差为 177px。截图 `_shots\v8-盖印落点.png`。
 - **判定口径说明**：用「印章 rect 与等级 rect 的中心距 + 是否垂直重叠」判定，不看动画中间态；定格模式下印章停在起始位（`-210%`）属正常（它那一刻本就不可见）。
 - **未验证 / 需用户验收**：盖印落下的观感（力度、是否正好压住等级）仍需用户目视确认；真机未测。
+
+### 2026-10-16（深夜）：红版 P5 demo 返工完成 —— 冲击力 + 打手法 + P5R 转场四件套 + 手机端三档
+
+- **起因**：承接当晚「红版 P5 羁绊链 demo 返工中」交接（用户多轮判定旧版「平庸／没有 P5 味／缺画面冲击力」；随后点名「不要忘记设计高级有冲击力专属于 P5R 风格的转场」）。
+- **改动**（`outputs\bond-rankup-demo-p5\work-impact-full.html` → 已复制为 `index.html`，demo 不入库）：① 完整版 v3-stamp 基线（印章重做/落印痕迹/三屏布景/第三页星移）+ 冲击力返工（满幅斜置出血牌、八向硬黑描边巨字+红错版、黑色标签条命运编号）；② 打手法收尾（等级星排五颗亮黄、印章/落痕随巨字放大、页 2/3 硬黑描边+错版）；③ P5R 转场四件套 `p5Sweep()`（锯齿猩红闸门+巨字横掠+白闪+点击点双圆环，只动 transform/opacity）；④ 手机端重排（390/360/430 三档）。
+- **根因级技术发现**：`clip-path` 会裁掉 `box-shadow` 与 `filter:drop-shadow`（`.rivet/scratch/clip-shadow-test.html` 实测）——旧补丁的描边/错版有一批从未渲染；现全部改为独立垫层实现。这条已写进 demo 顶部交接 bullet，落 src 时同样适用。
+- **验证（本轮实测）**：`.rivet/scratch/impact-check.mjs` 四视口：errorCount 0、无横向溢出、确认键可点、page2/3 可滚；1440 转场 frames 300 / avg 5.7ms / over33 0 / longTasks 0。证据：`_shots/impact-full/report.json`、`_shots/w1…w5-*.png`。
+- **commit/Push**：本次仅文档提交（本文件），未 Push；`outputs/`、`.rivet/scratch/` 不入库。
+- **遗留与负责人**：用户目视验收（打开 demo 或 5199 静态服务）；验收通过后三件（含转场四件套）重描进 `src`；真机未测。

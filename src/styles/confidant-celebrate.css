@@ -74,7 +74,11 @@
 
 /* 塔罗牌：硬投影 + 轻倾角 */
 .cl-card {
-  width: clamp(118px, 23vh, 190px);
+  /* 与演出同一约定：框跟着牌走（TarotCardSVG 自带 160 宽的内联盒），
+     容器比它大就会露出一圈底色 */
+  width: clamp(118px, 23vh, 160px);
+  /* 高度按塔罗比例自己算：TarotCardSVG 自带内联固定尺寸，容器不定高就会留白 */
+  aspect-ratio: 0.625;
   margin: clamp(4px, 1.4vh, 14px) auto 0;
   rotate: -3deg;
   border: 3px solid var(--cl-ink);
@@ -82,7 +86,10 @@
   overflow: hidden;
   box-shadow: 10px 10px 0 rgba(var(--cl-shade-soft), 0.15);
 }
-.cl-card > * { width: 100%; height: auto; display: block; }
+/* 与演出同一个坑：TarotCardSVG 的尺寸写在**内联** style 上，只有 !important 压得住，
+   否则牌比框小一圈、边上露出底色（粉/浅底下就是一条白边）。 */
+.cl-card > * { width: 100% !important; height: 100% !important; display: block; }
+.cl-card svg { display: block; width: 100%; height: 100%; }
 
 /* 巨字等级：叠影用「卡片底色 + 浅青」两层，深色主题下自动翻成深叠影 */
 .cl-rank {

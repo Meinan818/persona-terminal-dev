@@ -111,8 +111,12 @@
   position: absolute;
   left: 12vw;
   top: 15vh;
-  /* 宽度驱动、高度交给卡面比例：内层是 TarotCardSVG（SVG 自带塔罗比例） */
-  width: clamp(110px, 29vh, 240px);
+  /* 尺寸对齐 TarotCardSVG 的自带盒（160 宽，内联固定）。容器一旦比它大，
+     就会在右边/下边露出一圈底色 —— 深蓝水下看不出来，粉主题（浅底）下
+     就是一圈刺眼的白框（用户 2026-10-16 报「塔罗牌那个框怎么变这么大了」）。
+     所以**框跟着牌走**，不把牌拉大：矮视口再用 29vh 收一档。 */
+  width: clamp(110px, 29vh, 160px);
+  aspect-ratio: 0.625;
   rotate: -8deg;
   border-radius: 10px;
   overflow: hidden;
@@ -120,7 +124,13 @@
   box-shadow: var(--rk-card-shadow);
   opacity: 0;
 }
-.rk-card > * { width: 100%; height: auto; display: block; }
+/* ⚠ TarotCardSVG 用**内联** style 固定尺寸（默认 160×256），内联样式压过这里的 width:100% ——
+   牌只有 160 宽、卡片却按 clamp 撑到 240，于是右边和下边露出一条底色。
+   深蓝水下看不出来，粉主题（浅底）下就是一条刺眼的白边
+   （用户 2026-10-16 报「塔罗牌那个框怎么变这么大」）。
+   这里用 !important 压过内联样式，让牌真正填满卡片。 */
+.rk-card > * { width: 100% !important; height: 100% !important; display: block; }
+.rk-card svg { display: block; width: 100%; height: 100%; }
 
 /* RANK UP! 巨字 */
 .rk-title {

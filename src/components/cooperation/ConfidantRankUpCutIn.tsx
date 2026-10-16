@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReducedMotion } from 'motion/react';
 import { useAppStore } from '@/store';
@@ -106,6 +106,24 @@ export function ConfidantRankUpCutIn() {
     url.searchParams.delete('rankup');
     window.history.replaceState(null, '', url.toString());
   }, [confidants, enqueueConfidantRankUp]);
+
+  /** 收场：出队 + 接星移弹窗（用户定案 A：确认后接着弹星移） */
+  const finishRankUp = useCallback(() => {
+    if (!notice) return;
+    dismissConfidantRankUp(notice.id);
+    setStarShiftInvite(notice.confidantId);
+  }, [notice, dismissConfidantRankUp, setStarShiftInvite]);
+
+  // Esc 逃生口：项目里其它庆祝弹窗都保证「任何时刻能跳过」，演出也不例外——
+  // 没有这条，一旦确认键出了问题用户就被卡在满屏演出里出不来（2026-10-16 踩过）。
+  useEffect(() => {
+    if (!notice) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') finishRankUp();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [notice, finishRankUp]);
 
   const [phase, setPhase] = useState<'playing' | 'confirm'>('playing');
   const flashRef = useRef<HTMLDivElement>(null);
@@ -218,7 +236,31 @@ export function ConfidantRankUpCutIn() {
     // ⑥ 牌轻微摇摆
     T(2400, () => A(cardRef.current, [{ rotate: '-8deg' }, { rotate: '-6deg' }], { duration: 600, direction: 'alternate', iterations: 2, easing: 'ease-in-out' }));
 
-    // ⑦ 停在确认态（不自动划走）
+    // ⑦ 整体碎裂退场：牌一沉、各元素与星星淡出、碎片炸散。
+    // ⚠ 这一段是 demo 编排里的 ⑦，我第一版整段漏抄了 → 演出元素不消失、
+    // 确认键直接叠在它们上面（2026-10-16 用户：「按钮和这个在一个界面上了」）。
+    T(3600, () => {
+      A(cardRef.current, [{ rotate: '-8deg', scale: '1' }, { rotate: '-3deg', scale: '1.06' }], { duration: 140 });
+      [cardRef, titleRef, subRef, pillRef, capRef].forEach(r =>
+        A(r.current, [{ opacity: 1 }, { opacity: 0 }], { delay: 140, duration: 260, easing: 'linear' }),
+      );
+      Array.from(starsRef.current?.children ?? []).forEach(el =>
+        A(el, [{ opacity: 1 }, { opacity: 0 }], { delay: 140, duration: 260, easing: 'linear' }),
+      );
+      Array.from(glassRef.current?.children ?? []).forEach(g => {
+        const dx = `${(Math.random() * 30 - 15).toFixed(1)}vw`;
+        const dy = `${(Math.random() * 26 - 6).toFixed(1)}vh`;
+        const rot = `${(Math.random() * 360 - 180).toFixed(0)}deg`;
+        A(g, [
+          { opacity: 0, scale: '1', translate: '0 0', rotate: '0deg' },
+          { opacity: 0.9, offset: 0.12 },
+          { opacity: 0.75, offset: 0.6 },
+          { opacity: 0, scale: '.7', translate: `${dx} ${dy}`, rotate: rot },
+        ], { delay: 140 + Math.random() * 120, duration: 1700 + Math.random() * 600, easing: 'cubic-bezier(.2,.7,.3,1)' });
+      });
+    });
+
+    // ⑧ 停在确认态（不自动划走）——此时上面那些元素已经碎裂退场，画面只剩确认键
     T(4200, () => setPhase('confirm'));
 
     return () => {
@@ -296,11 +338,7 @@ export function ConfidantRankUpCutIn() {
           <button
             type="button"
             className="go"
-            onClick={() => {
-              dismissConfidantRankUp(notice.id);
-              // 用户定案 A：点确认后接着弹星移弹窗（把「事后补弹」提前到升级当下）
-              setStarShiftInvite(notice.confidantId);
-            }}
+            onClick={finishRankUp}
           >
             确 认
           </button>

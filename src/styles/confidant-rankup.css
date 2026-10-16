@@ -198,7 +198,17 @@
   gap: 16px;
   opacity: 0;
 }
-.rk-confirm.on { display: flex; }
+/* ⚠ 必须连 opacity 一起打开：上面的 .rk-confirm 是 opacity:0（原 demo 靠 WAAPI 把它
+   从 0 淡入到 1），我改成只切 class 时漏了这条 → 确认键「存在但全透明」，
+   用户看不见也点不到（2026-10-16 报「没按钮啊」）。 */
+.rk-confirm.on { display: flex; opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .rk-confirm.on { animation: rk-confirm-in 460ms var(--rk-over) both; }
+}
+@keyframes rk-confirm-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 16px)); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
 .rk-confirm .hint {
   font: italic 900 clamp(11px, 1.5vw, 14px) var(--rk-fx);
   color: var(--rk-cap);

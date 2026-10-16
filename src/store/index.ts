@@ -290,6 +290,14 @@ interface AppState {
   actionsSubTab: 'todos' | 'activities';
   /** masteryStars 有值 = 满级后的精通升星（第 6 轮），弹窗换精通口径 */
   levelUpNotification: { id: string; displayName: string; level: number; masteryStars?: number } | null;
+  /**
+   * 羁绊升级演出的待播队列——升级**当下**逐条播放（设计见
+   * docs/superpowers/specs/2026-10-16-coop-rankup-cinematic-design.md）。
+   * 由 bumpConfidantIntimacy 在升级时压入，App 顶层的播放器消费后出队。
+   */
+  confidantRankUpQueue: { id: string; confidantId: string; oldLevel: number; newLevel: number; starShiftGained: number }[];
+  /** 播放完一条后把它移出队列 */
+  dismissConfidantRankUp: (noticeId: string) => void;
   achievementNotification: { id: string; title: string } | null;
   skillNotification: { id: string; name: string } | null;
   modalBlocker: boolean;
@@ -984,6 +992,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // 每次启动首进「行动」先落记录页（内存态不持久化，会话内仍记忆上次停留）
   actionsSubTab: 'activities',
   levelUpNotification: null,
+  confidantRankUpQueue: [],
   achievementNotification: null,
   skillNotification: null,
   modalBlocker: false,
@@ -2990,6 +2999,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setLevelUpNotification: (notification) => {
     set({ levelUpNotification: notification });
+  },
+
+  dismissConfidantRankUp: (noticeId) => {
+    set(s => ({ confidantRankUpQueue: s.confidantRankUpQueue.filter(n => n.id !== noticeId) }));
   },
 
   setAchievementNotification: (notification) => {
@@ -6411,7 +6424,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
       await db.confidantEvents.bulkAdd(events);
-      return { leveledUp, newLv, starShiftGained, eventId };
+      return { leveledUp, newLv, oldLv, starShiftGained, eventId };
     });
     if (result === 'dup') {
       // 这笔已经发过（另一路先到了）：点数不动，把现状报回去
@@ -6420,6 +6433,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     if (!result) return { leveledUp: false, newIntimacy: 0, starShiftGained: 0, eventId: '' };
     await get().loadConfidants();
+    if (result.leveledUp) {
+      // 升级当下逐条播放的待播队列；App 顶层播放器消费后出队（旧级由事务内 oldLv 带出，不用新级反推）
+      set(s => ({
+        confidantRankUpQueue: [
+          ...s.confidantRankUpQueue,
+          { id: uuidv4(), confidantId: id, oldLevel: result.oldLv, newLevel: result.newLv, starShiftGained: result.starShiftGained },
+        ],
+      }));
+    }
     return { leveledUp: result.leveledUp, newIntimacy: result.newLv, starShiftGained: result.starShiftGained, eventId: result.eventId };
   },
 

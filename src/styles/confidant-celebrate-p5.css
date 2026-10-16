@@ -1,0 +1,166 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   羁绊升级「恭喜」整页 · 红频道（P5 红黑剪报）皮 —— 计划 Wave 2
+   ═══════════════════════════════════════════════════════════════════════════
+   版式与形制照**用户已验收的**红版 demo（outputs/bond-rankup-demo-p5/index.html 第二页）移植；
+   色值不写死 —— 组件在 .cl5-root 上注入 --cl5-*（取自 P5R 色板，见 kit.tsx）。
+
+   z-index 230 与 p3 版（confidant-celebrate.css 的 .cl-root）同值，是刻意的：
+   低于演出（240）、高于星移弹窗（180）。两版互斥渲染（包装组件按频道二选一），
+   不会同屏；但数值必须与 p3 版保持一致，否则换主题后层叠关系会突变。
+
+   红频道不挂 .dark（见 ui/channel.ts 的 syncDarkClass 铁律），这里**不要**写 dark 变体。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cl5-root {
+  position: fixed;
+  inset: 0;
+  z-index: 230;
+  overflow-y: auto;
+  /* 原生滚动条在手机上又宽又显眼（用户 2026-10-16 报过 p3 版同问题）。与 #root / .no-scrollbar 同做法 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  color: var(--cl5-paper);
+  background: var(--cl5-ink);
+  font-weight: 900;
+  -webkit-font-smoothing: antialiased;
+
+  --cl5-exp: cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cl5-root::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ── 背景布景（fixed 铺满，不随内容滚动）── */
+.cl5-scenery { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.cl5-halftone { position: absolute; inset: 0; opacity: 0.1; }
+.cl5-slab { position: absolute; }
+.cl5-slab-a {
+  left: -14%; top: 3%;
+  width: 130%; height: clamp(74px, 11vh, 108px);
+  background: var(--cl5-red);
+  transform: rotate(-3deg);
+  clip-path: polygon(0 8%, 100% 0, 99.2% 92%, 0.8% 100%);
+}
+.cl5-slab-b {
+  left: -10%; bottom: 2%;
+  width: 122%; height: clamp(52px, 8vh, 80px);
+  background: var(--cl5-red-deep);
+  transform: rotate(-1.4deg);
+  clip-path: polygon(1% 0, 100% 9%, 99% 100%, 0 90%);
+}
+.cl5-star { position: absolute; }
+.cl5-vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 42%, transparent 38%, rgba(0, 0, 0, 0.72) 100%);
+}
+
+/* ── 内容列 ── */
+.cl5-wrap {
+  position: relative;
+  max-width: 780px;
+  margin: 0 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(11px, 1.9vh, 17px);
+  padding: clamp(20px, 4.4vh, 42px) clamp(16px, 3.2vw, 34px)
+    calc(clamp(30px, 6vh, 60px) + env(safe-area-inset-bottom, 0px));
+}
+
+/* 页头：拼贴标题（kit 件）+ 英文副标 */
+.cl5-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cl5-en {
+  font-style: normal;
+  font-size: clamp(10px, 1.5vw, 13px);
+  font-weight: 900;
+  color: var(--cl5-red);
+  letter-spacing: 0.32em;
+}
+
+/* 塔罗牌：纸白边 + 红硬影错位（照 demo .p2-card img） */
+.cl5-card {
+  width: clamp(112px, 24vw, 150px);
+  aspect-ratio: 0.62;
+  margin: clamp(4px, 1.4vh, 14px) auto 0;
+  rotate: -3deg;
+  border: 3px solid var(--cl5-paper);
+  box-shadow: 7px 8px 0 var(--cl5-red);
+  overflow: hidden;
+}
+/* 与 p3 版同一个坑：TarotCardSVG 尺寸写在内联 style 上，外层与内层都要一起拉满，
+   只设外层会「图案比框小一圈」 */
+.cl5-card > * { width: 100% !important; height: 100% !important; display: block; }
+.cl5-card svg, .cl5-card img { display: block; width: 100% !important; height: 100% !important; object-fit: cover; }
+
+/* 巨字等级：数字走亮红（照 demo .p2-rank b） */
+.cl5-rank {
+  text-align: center;
+  font: 900 clamp(46px, 11vw, 82px) / 1 var(--cl5-title-font, inherit);
+  letter-spacing: -0.02em;
+  color: var(--cl5-paper);
+}
+.cl5-rank b { color: var(--cl5-red-hot); font-size: 1.1em; }
+
+.cl5-sub, .cl5-note { text-align: center; }
+.cl5-sub { font-size: clamp(14px, 2.4vw, 18px); color: var(--cl5-paper); }
+.cl5-note {
+  font-size: clamp(11px, 1.8vw, 13px);
+  color: var(--cl5-grey-light);
+  margin-top: -4px;
+}
+
+/* 新解锁的能力：P5Panel 已是纸面底（米白），文字用黑/暗红 */
+.cl5-panel-body {
+  padding: clamp(13px, 2.1vh, 18px) clamp(16px, 3vw, 24px);
+  color: var(--cl5-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cl5-panel-body .cl5-k {
+  font-size: clamp(10px, 1.6vw, 12px);
+  color: var(--cl5-red);
+  letter-spacing: 0.22em;
+}
+.cl5-panel-body > div { display: flex; flex-direction: column; gap: 2px; }
+.cl5-panel-body b {
+  font-size: clamp(15px, 2.6vw, 19px);
+  color: var(--cl5-ink);
+  line-height: 1.4;
+}
+.cl5-panel-body small {
+  font-size: clamp(11px, 1.9vw, 13px);
+  font-weight: 700;
+  color: #4a4640;
+  line-height: 1.75;
+}
+
+/* 按钮组：次要在左、主动作在右（照 p3 版与 demo） */
+.cl5-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: clamp(4px, 1vh, 10px); }
+.cl5-actions.single { grid-template-columns: 1fr; }
+
+/* 入场：逐块上浮（减少动态时不播） */
+@keyframes cl5-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cl5-anim { animation: cl5-in 0.6s var(--cl5-exp) both; }
+  .cl5-head { animation-delay: 0.04s; }
+  .cl5-card { animation-delay: 0.12s; }
+  .cl5-rank { animation-delay: 0.2s; }
+  .cl5-sub { animation-delay: 0.26s; }
+  .cl5-note { animation-delay: 0.3s; }
+  .cl5-panel { animation-delay: 0.36s; }
+  .cl5-actions { animation-delay: 0.44s; }
+}
+
+/* 桌面：竖向空间紧，牌与巨字各收一档 */
+@media (min-width: 641px) {
+  .cl5-card { width: clamp(104px, 17vh, 142px); }
+  .cl5-rank { font-size: clamp(42px, 6vw, 66px); }
+}

@@ -51,5 +51,8 @@ export const PREVIEW_CONFIDANT = {
   intimacyPoints: 0,
   buffs: [],
   decayEnabled: false,
+  // 星移次数：演出不读这个字段，但「恭喜整页」用它决定按钮组（有次数→两键）。
+  // 给 1 是为了 ?celebrate 预览能看到完整的两键形态。
+  starShiftCharges: 1,
   createdAt: new Date(0),
 } as unknown as Confidant;

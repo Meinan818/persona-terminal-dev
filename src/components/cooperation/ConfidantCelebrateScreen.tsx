@@ -5,6 +5,9 @@ import type { Confidant } from '@/types';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
 import { INTIMACY_LABELS, buffsUnlockedInRange, formatBuffDisplay } from '@/utils/confidantLevels';
+import { useUiChannel } from '@/ui/useUiChannel';
+import { confidantLiveryFor } from '@/components/cooperation/confidantLivery';
+import { ConfidantCelebrateScreenP5 } from '@/components/cooperation/ConfidantCelebrateScreenP5';
 import '@/styles/confidant-celebrate.css';
 
 /**
@@ -30,7 +33,20 @@ interface Props {
   onUseStarShift: () => void;
 }
 
-export function ConfidantCelebrateScreen({ confidant, onClose, onUseStarShift }: Props) {
+/**
+ * 频道分流：红频道（p5）走红黑剪报版（ConfidantCelebrateScreenP5）；
+ * 其余频道（p3 / p4 / neutral）一律走下面这个 P3R 版实现。
+ *
+ * ⚠ 判据与演出的 rankUpVariantFor **不是同一条**：这里 p4 / neutral 也走 legacy，
+ *   因为它们本来就在显示这一页；若照搬演出判据（p4/neutral 返回 null），
+ *   那两个频道的用户点开会看到空白。判据在 confidantLivery.ts，有单测固化。
+ */
+export function ConfidantCelebrateScreen(props: Props) {
+  if (confidantLiveryFor(useUiChannel()) === 'p5') return <ConfidantCelebrateScreenP5 {...props} />;
+  return <CelebrateP3 {...props} />;
+}
+
+function CelebrateP3({ confidant, onClose, onUseStarShift }: Props) {
   const settings = useAppStore(s => s.settings);
 
   const level = confidant.intimacy;

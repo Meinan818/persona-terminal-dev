@@ -352,7 +352,25 @@ export function ConfidantStarShiftInvite() {
   const invite = useAppStore(s => s.starShiftInvite);
   const confidants = useAppStore(s => s.confidants);
   const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
-  const confidant = invite ? confidants.find(c => c.id === invite) ?? null : null;
+  const confidant = invite
+    // 预览（?celebrate）用的是占位同伴，不在 store 里，单独兜一下
+    ? (invite === PREVIEW_CONFIDANT.id ? PREVIEW_CONFIDANT : confidants.find(c => c.id === invite) ?? null)
+    : null;
+
+  // ── 只在开发时的预览入口 ───────────────────────────────────────────────
+  // 地址后加 ?celebrate=1 直接把「恭喜整页」放出来，不用真升一级、也不走引导。
+  // 与演出的 ?rankup 同一套做法（同一个占位同伴）；生产构建里 import.meta.env.DEV
+  // 恒为 false，这一段会被整段摇掉。
+  const previewFiredRef = useRef(false);
+  useEffect(() => {
+    if (!import.meta.env.DEV || previewFiredRef.current) return;
+    if (!new URLSearchParams(window.location.search).has('celebrate')) return;
+    previewFiredRef.current = true;
+    setStarShiftInvite(PREVIEW_CONFIDANT.id);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('celebrate');
+    window.history.replaceState(null, '', url.toString());
+  }, [setStarShiftInvite]);
 
   // 每次换人（或重新邀请）都从「恭喜」这一屏开始；「稍后再说」直接关掉
   const [phase, setPhase] = useState<'celebrate' | 'shift'>('celebrate');

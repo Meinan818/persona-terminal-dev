@@ -300,7 +300,11 @@ export const WelcomeModal = () => {
   const [hiddenFloaters, setHiddenFloaters] = useState<string[]>([]);
   const busyRef = useRef(false);
 
-  if (user) return null;
+  // 注意：本组件的「提前 return」必须放在所有 Hook 之后。
+  // 建档成功那一刻 user 从 null 变成有值，若那句 return 排在 useEffect 之前，
+  // 这一次渲染就会少执行两个 Hook，React 直接抛
+  // "Rendered fewer hooks than expected"（用户 2026-10-16 报的最后一屏崩溃）。
+  // 下面第一个真正的提前 return 在键盘 effect 之后。
 
   const isCustomMode = selectedPreset === 2;
   const stepIndex = STEP_ORDER.indexOf(step);
@@ -404,7 +408,7 @@ export const WelcomeModal = () => {
   // 转场时序（照已验收 demo）：700ms 滑到屏心、620ms 起翻面 460ms、830ms 换页；
   // 换页后再过 130ms 牌才滑回下一屏的位置并淡出——早了会实心盖住刚显示出来的页面。
   useEffect(() => {
-    if (!hero) return;
+    if (user || !hero) return;
     const t1 = setTimeout(() => {
       setStep(hero.to);
       setHiddenFloaters([hero.from, hero.to]); // 目标那张先隐着，等转场牌落进它的位置再接上
@@ -462,6 +466,8 @@ export const WelcomeModal = () => {
   // 输入框里的按键交给元素自己处理（它有自己的 Enter 行为），这里不抢。
   // 不写依赖数组：每次渲染重挂，避免闭包里的 step 与选中项过期。
   useEffect(() => {
+    // 引导不显示时（已建档 / 已登录）不接管键盘，免得在主界面上误触
+    if (user) return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
@@ -488,6 +494,9 @@ export const WelcomeModal = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+
+  // 所有 Hook 执行完之后才允许提前返回（原因见上方注释）
+  if (user) return null;
 
   const reduce = prefersReducedMotion();
   const VIEW_CLS =

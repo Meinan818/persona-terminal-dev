@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { useCloudStore } from '@/store/cloud';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, type CSSProperties } from 'react';
 import { AttributeId, AttributeNames } from '@/types';
 import { isNative } from '@/utils/native';
 import { prefersReducedMotion } from '@/utils/boldness';
@@ -112,6 +112,85 @@ const GuideField = () => (
   </div>
 );
 
+/** 背景浮牌：八屏各飘一张自家塔罗（蓝频道那副大阿卡纳），按这一步的含义挑牌。
+ *  位置与倾角照已验收 demo 的定值；牌只做背景，所以压得淡（.26），各自错开浮动节拍。 */
+const CARD_OF: Record<string, string> = {
+  welcome: 'fool', // 旅程起点
+  name: 'magician', // 自我
+  preset: 'wheel_of_fortune', // 选择
+  customize: 'temperance', // 微调
+  done: 'sun', // 完成
+  guide: 'hierophant', // 教导
+  blessing: 'empress', // 赐福
+};
+
+const FLOATER_POS: Record<string, { pos: CSSProperties; rot: number }> = {
+  welcome: { pos: { right: '2%', top: '11%' }, rot: -9 },
+  name: { pos: { left: '1%', bottom: '7%' }, rot: 7 },
+  preset: { pos: { right: '3%', bottom: '5%' }, rot: -6 },
+  customize: { pos: { left: '2%', top: '9%' }, rot: 8 },
+  done: { pos: { right: '2%', top: '13%' }, rot: -11 },
+  guide: { pos: { left: '1%', bottom: '2%' }, rot: 5 },
+  blessing: { pos: { right: '1%', top: '7%' }, rot: -7 },
+};
+
+const CARD_ORDER = Object.keys(CARD_OF);
+
+/** 转场牌的基准尺寸（与已验收 demo 的 .hero 一致）：背景浮牌按高度比例换算成它的位移与缩放，
+ *  这样桌面/手机、八屏各自不同的落点都能自动对齐，不用为每屏写死坐标。 */
+const HERO_W = 260;
+const HERO_H = 416;
+
+type Pose = { x: number; y: number; s: number };
+
+const heroPose = (el: HTMLElement): Pose => {
+  const r = el.getBoundingClientRect();
+  return {
+    x: Math.round(r.left + r.width / 2 - window.innerWidth / 2),
+    y: Math.round(r.top + r.height / 2 - window.innerHeight / 2),
+    s: r.height ? +(r.height / HERO_H).toFixed(3) : 1,
+  };
+};
+
+const floaterEl = (slug: string) => document.querySelector<HTMLElement>(`img[data-for="${slug}"]`);
+
+const Floaters = ({ step, hidden }: { step: string; hidden: string[] }) => {
+  const reduce = prefersReducedMotion();
+  return (
+    <>
+      {CARD_ORDER.map((slug, i) => {
+        const active = slug === step;
+        // 转场期间被临时隐去的牌：「隐去」要瞬时（转场牌要在同一位置无缝接上），「回来」走 420ms 淡入
+        const isOut = hidden.includes(slug);
+        const opacity = isOut ? 0 : active ? 0.26 : 0;
+        const { pos, rot } = FLOATER_POS[slug];
+        return (
+          <motion.img
+            key={slug}
+            data-for={slug}
+            src={`/tarot/p3/${CARD_OF[slug]}.webp`}
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute select-none"
+            initial={false}
+            animate={reduce ? { opacity } : { y: [0, -14, 0], rotate: [rot, rot + 1.6, rot], opacity }}
+            transition={
+              reduce
+                ? { opacity: { duration: isOut ? 0 : 0.42 } }
+                : {
+                    y: { duration: 9, repeat: Infinity, ease: 'easeInOut', delay: i * -1.1 },
+                    rotate: { duration: 9, repeat: Infinity, ease: 'easeInOut', delay: i * -1.1 },
+                    opacity: { duration: isOut ? 0 : 0.42 },
+                  }
+            }
+            style={{ height: 'clamp(150px,30vh,330px)', width: 'auto', filter: 'saturate(.92)', ...pos }}
+          />
+        );
+      })}
+    </>
+  );
+};
+
 /** 左上的白底信息卡：当前第几步 + 版本（真图每屏左上角都有） */
 const InfoCard = ({ step, total }: { step: number; total: number }) => (
   <div className="flex items-center gap-2">
@@ -214,6 +293,13 @@ export const WelcomeModal = () => {
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 转场牌：从背景那张浮牌的实际位置滑出来、翻面成下一屏的牌、再滑回下一屏的位置。
+  // p0 / p1 是出发与到达两张浮牌换算出来的位移与缩放；busyRef 把转场期间的输入锁住。
+  const [hero, setHero] = useState<{ from: Step; to: Step; p0: Pose; p1: Pose } | null>(null);
+  const [heroPhase, setHeroPhase] = useState<'out' | 'back'>('out');
+  const [hiddenFloaters, setHiddenFloaters] = useState<string[]>([]);
+  const busyRef = useRef(false);
+
   if (user) return null;
 
   const isCustomMode = selectedPreset === 2;
@@ -254,8 +340,8 @@ export const WelcomeModal = () => {
   const canProceedCustomize = ATTR_IDS.every(id => attrNames[id].trim().length > 0);
 
   const handlePresetNext = () => {
-    if (isCustomMode) setStep('done');
-    else setStep('customize');
+    if (isCustomMode) navigate('done');
+    else navigate('customize');
   };
 
   const handleFileSelect = (file: File) => {
@@ -297,6 +383,112 @@ export const WelcomeModal = () => {
     import: ['Esc 返回'],
   };
 
+  /** 换屏统一入口：带塔罗翻牌转场；转场期间锁住输入，避免连点把时序打乱。
+   *  降级路径：用户开了「减少动态效果」或找不到对应浮牌时，直接换页。 */
+  const navigate = (to: Step, after?: () => void) => {
+    if (busyRef.current || to === step) return;
+    const fromEl = floaterEl(step);
+    const toEl = floaterEl(to);
+    if (prefersReducedMotion() || !fromEl || !toEl) {
+      setStep(to);
+      after?.();
+      return;
+    }
+    busyRef.current = true;
+    setHero({ from: step, to, p0: heroPose(fromEl), p1: heroPose(toEl) });
+    setHeroPhase('out');
+    setHiddenFloaters([step]); // 出发那张瞬时隐去，由转场牌在同一位置无缝接上
+    after?.();
+  };
+
+  // 转场时序（照已验收 demo）：700ms 滑到屏心、620ms 起翻面 460ms、830ms 换页；
+  // 换页后再过 130ms 牌才滑回下一屏的位置并淡出——早了会实心盖住刚显示出来的页面。
+  useEffect(() => {
+    if (!hero) return;
+    const t1 = setTimeout(() => {
+      setStep(hero.to);
+      setHiddenFloaters([hero.from, hero.to]); // 目标那张先隐着，等转场牌落进它的位置再接上
+    }, 830);
+    const t2 = setTimeout(() => {
+      setHeroPhase('back');
+      setHiddenFloaters([hero.from]); // 目标浮牌淡入（420ms），转场牌同时滑回 + 淡出
+    }, 960);
+    const t3 = setTimeout(() => {
+      // 收尾必须把「所有」浮牌的临时隐去清掉：中途换页后只按 from/to 清会漏，
+      // 下次回到那一屏它就是不可见的（demo 踩过这个坑）。
+      setHero(null);
+      setHeroPhase('out');
+      setHiddenFloaters([]);
+      busyRef.current = false;
+    }, 1340);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [hero]);
+
+  /** 键盘与按钮共用的前进/后退：可用条件与各步按钮完全一致（不满足时静默不动） */
+  const goNext = () => {
+    if (step === 'welcome') navigate('name');
+    else if (step === 'name') {
+      if (canProceedName) navigate('preset');
+    } else if (step === 'preset') {
+      if (canProceedPreset) navigate(isCustomMode ? 'done' : 'customize');
+    } else if (step === 'customize') {
+      if (canProceedCustomize) navigate('done');
+    } else if (step === 'done') navigate('guide');
+    else if (step === 'guide') navigate('blessing');
+    else if (step === 'blessing') {
+      if (blessingAttr && !submitting) void handleSubmit();
+    }
+  };
+
+  const prevStep = () => {
+    if (step === 'name') navigate('welcome');
+    else if (step === 'preset') navigate('name');
+    else if (step === 'customize') navigate('preset');
+    else if (step === 'done') navigate(isCustomMode ? 'preset' : 'customize');
+    else if (step === 'guide') navigate('done');
+    else if (step === 'blessing') navigate('guide');
+    else if (step === 'import') {
+      setImportJson('');
+      setImportError(null);
+      navigate('welcome');
+    }
+  };
+
+  // 键盘：Enter 前进 / Esc 返回 / 上下键选择。
+  // 输入框里的按键交给元素自己处理（它有自己的 Enter 行为），这里不抢。
+  // 不写依赖数组：每次渲染重挂，避免闭包里的 step 与选中项过期。
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        prevStep();
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const down = e.key === 'ArrowDown';
+        if (step === 'preset') {
+          e.preventDefault();
+          const cur = selectedPreset ?? -1;
+          handleSelectPreset(down ? Math.min(cur + 1, PRESETS.length - 1) : Math.max(cur - 1, 0));
+        } else if (step === 'blessing') {
+          e.preventDefault();
+          const cur = blessingAttr ? ATTR_IDS.indexOf(blessingAttr) : -1;
+          setBlessingAttr(ATTR_IDS[down ? Math.min(cur + 1, ATTR_IDS.length - 1) : Math.max(cur - 1, 0)]);
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        goNext();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
   const reduce = prefersReducedMotion();
   const VIEW_CLS =
     'relative z-10 flex min-h-[100dvh] items-center justify-center py-16';
@@ -312,6 +504,58 @@ export const WelcomeModal = () => {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: P3R.bg }}>
       <GuideField />
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-[1] overflow-hidden">
+        <Floaters step={step} hidden={hiddenFloaters} />
+      </div>
+
+      {/* 转场牌：一张牌从背景那张浮牌的实际位置滑出来、翻面成下一屏的牌、再滑回下一屏的位置。
+          翻面用两个面（正面=本屏的牌 / 背面=下一屏的牌，各自隐藏背面）——所以翻完自然就是新牌。 */}
+      {hero && (
+        <motion.div
+          aria-hidden
+          data-hero="1"
+          className="pointer-events-none fixed left-1/2 top-1/2 z-[3]"
+          style={{
+            width: HERO_W,
+            height: HERO_H,
+            marginLeft: -HERO_W / 2,
+            marginTop: -HERO_H / 2,
+            perspective: 1200,
+          }}
+          initial={{ x: hero.p0.x, y: hero.p0.y, scale: hero.p0.s, opacity: 1 }}
+          animate={
+            heroPhase === 'back'
+              ? { x: hero.p1.x, y: hero.p1.y, scale: hero.p1.s, opacity: 0 }
+              : { x: 0, y: 0, scale: 1, opacity: 1 }
+          }
+          transition={
+            heroPhase === 'back'
+              ? { duration: 0.38, ease: [0.16, 1, 0.3, 1] }
+              : { duration: 0.7, ease: [0.34, 1.38, 0.5, 1] }
+          }
+        >
+          <motion.div
+            className="relative h-full w-full"
+            style={{ transformStyle: 'preserve-3d' }}
+            initial={{ rotateY: 0 }}
+            animate={{ rotateY: 180 }}
+            transition={{ delay: 0.62, duration: 0.46, ease: [0.65, 0, 0.2, 1] }}
+          >
+            <img
+              src={`/tarot/p3/${CARD_OF[hero.from]}.webp`}
+              alt=""
+              className="absolute inset-0 h-full w-full object-contain"
+              style={{ backfaceVisibility: 'hidden' }}
+            />
+            <img
+              src={`/tarot/p3/${CARD_OF[hero.to]}.webp`}
+              alt=""
+              className="absolute inset-0 h-full w-full object-contain"
+              style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+            />
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* 楼层信息卡（左上）与按键提示条（右下）：真图每屏都有，用固定层挂住 */}
       <div
@@ -372,11 +616,11 @@ export const WelcomeModal = () => {
                 写下今天做了什么，它会变成你的五项人格指数。记录、任务、记账、同伴，与影时间的战斗，都从这里开始。
               </p>
 
-              <ActBar primaryLabel="开始设定" onPrimary={() => setStep('name')} />
+              <ActBar primaryLabel="开始设定" onPrimary={() => navigate('name')} />
 
               <button
                 type="button"
-                onClick={() => setStep('import')}
+                onClick={() => navigate('import')}
                 className="mt-6 block text-[13px] font-black underline-offset-4 hover:underline"
                 style={{ color: P3R.grey }}
               >
@@ -408,7 +652,7 @@ export const WelcomeModal = () => {
                   autoFocus
                   onChange={e => setName(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter' && canProceedName) setStep('preset');
+                    if (e.key === 'Enter' && canProceedName) navigate('preset');
                   }}
                   placeholder="写下你的称呼"
                   className="w-full max-w-[560px] px-5 py-4 text-[clamp(20px,2.2vw,30px)] font-black outline-none"
@@ -425,11 +669,11 @@ export const WelcomeModal = () => {
               </div>
 
               <ActBar
-                onBack={() => setStep('welcome')}
+                onBack={() => navigate('welcome')}
                 primaryLabel="接入"
                 primaryTone="soft"
                 disabled={!canProceedName}
-                onPrimary={() => setStep('preset')}
+                onPrimary={() => navigate('preset')}
               />
             </div>
           </motion.section>
@@ -487,7 +731,7 @@ export const WelcomeModal = () => {
               </div>
 
               <ActBar
-                onBack={() => setStep('name')}
+                onBack={() => navigate('name')}
                 primaryLabel="记录"
                 primaryTone="soft"
                 disabled={!canProceedPreset}
@@ -551,10 +795,10 @@ export const WelcomeModal = () => {
               </div>
 
               <ActBar
-                onBack={() => setStep('preset')}
+                onBack={() => navigate('preset')}
                 primaryLabel="归档"
                 disabled={!canProceedCustomize}
-                onPrimary={() => setStep('done')}
+                onPrimary={() => navigate('done')}
               />
             </div>
           </motion.section>
@@ -594,7 +838,7 @@ export const WelcomeModal = () => {
               <ActBar
                 onBack={() => setStep(isCustomMode ? 'preset' : 'customize')}
                 primaryLabel="继续"
-                onPrimary={() => setStep('guide')}
+                onPrimary={() => navigate('guide')}
               />
             </div>
           </motion.section>
@@ -644,9 +888,9 @@ export const WelcomeModal = () => {
               <P3EmptySlab className="mt-8 max-w-[560px]" />
 
               <ActBar
-                onBack={() => setStep('done')}
+                onBack={() => navigate('done')}
                 primaryLabel="继续"
-                onPrimary={() => setStep('blessing')}
+                onPrimary={() => navigate('blessing')}
               />
             </div>
           </motion.section>
@@ -699,7 +943,7 @@ export const WelcomeModal = () => {
               )}
 
               <ActBar
-                onBack={() => setStep('guide')}
+                onBack={() => navigate('guide')}
                 primaryLabel={submitting ? '正在建档…' : submitError ? '再试一次' : '接受赐福，开始旅程'}
                 disabled={!blessingAttr || submitting}
                 onPrimary={handleSubmit}
@@ -766,7 +1010,7 @@ export const WelcomeModal = () => {
 
               <ActBar
                 onBack={() => {
-                  setStep('welcome');
+                  navigate('welcome');
                   setImportJson('');
                   setImportError(null);
                 }}

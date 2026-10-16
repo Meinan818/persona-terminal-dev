@@ -1055,4 +1055,15 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **边界（未验证）**：**真机未实测**——本机无安卓设备/模拟器，原生取图这条路在真机上的实际表现需用户装包确认；桌面 Chromium 与 Android WebView 同源（同为 Blink）但版本可能不同。**网页端渲染未做浏览器视觉验证**（本次改动在网页端走的是原路径，理论上零变化）。
 - **下一步（负责人）**：我 —— 出 2.8.7（versionCode 22）安装包；**用户** —— 装包后确认据点座位上头像与名册牌面头像都正常。
 - **✅ 验收（2026-10-16 同日）**：用户装上 2.8.7 后回复「验收通过」——据点地图中央座位头像与名册成员卡翻面后的头像均正常显示，**缺陷 B 闭环**。此项属用户级行为验收（真机在用户手上，本机无安卓设备未复核）。至此 A、B 两处均已解决，**C（平板安装后桌面图标不全）仍未开始**。
-- **本次附带产物边界**：为打包重新构建过网页端产物（`dist/`，用正式 `VITE_API_URL`），**但未部署到服务器**——网页端本就走同源、不需要这个修复，线上仍是原产物；原 `dist/` 已备份到 `.rivet/backups/dist-before-287`。
+- **本次附带产物边界**：为打包重新构建过网页端产物（`dist/`，用正式 `VITE_API_URL`）；原 `dist/` 已备份到 `.rivet/backups/dist-before-287`。
+
+### 2026-10-16（缺陷 B 收尾）：网页端部署 + 私有库 Push
+
+- **网页端部署**（用户指令「先去部署网页端」）：把 `VITE_API_URL=http://192.144.227.216` 构建的产物上传 `/opt/maskaria/web`。
+  - **覆盖前已备份**（回滚依据）：服务器 `~/maskaria-backups/web-20261016-125942.tgz`（104 MB）。
+  - **线上入口**由 `index-CxeScLxs.js` 换为 **`index-Bn-jOVhp.js`**。
+  - **验证（本机 curl 实测）**：首页 200、标题 `MASKARIA - 个人成长追踪器`；`/api/health` → `{"status":"UP","db":"UP"}`；入口 JS 200 `application/javascript`（1,153,418 B）；`index-DOkhOxrP.css` 200；`/tarot/pink/fool.webp` 200 `image/webp`（素材完好）；`manifest.webmanifest` 200。
+  - 上传时 `tar` 报 `Cannot change mode/utime: Operation not permitted` —— 那是 `/opt/maskaria` 目录层的权限与时间戳设不上，**文件内容是正常写入的**（已由上述线上实测确认，不是失败）。
+  - 说明：网页端本就走同源、不需要这个修复；本次部署只是让线上与本地产物保持一致。
+- **Push**：`1f83398..ccd3e63` → `origin/main`（私有开发库 `persona-terminal-dev`），共 3 条（`f7b1d74` 修复 / `2897c7d` 发版 / `ccd3e63` 日志）。已 `git fetch` 核实：本地领先远端 0，HEAD 与 `origin/main` 同为 `ccd3e63`。
+- **遗留**：缺陷 C（平板安装后桌面图标不全）未开始；网页端未做浏览器视觉验证（本次工具集无 browser_debug）。

@@ -4,6 +4,7 @@
 
 ## 1. 当前全貌：先看这一节
 
+- **【最新 · 2026-10-16 续】红主题（P5）羁绊升级概念 demo 已产出**：`outputs\bond-rankup-demo-p5\index.html`（**不入库**，同蓝粉 demo 例）。用户在「红主题该走哪种画法」上选了 **P5 红黑剪报语言（重新设计一版）**——因为红主题在本项目里不是换色皮：`red→p5` 是**独立频道**（`src\ui\channel.ts` 的 `themeToChannel`），有整套自己的语言（纯黑舞台 + 猩红 `#c00008` + 米白纸 `#f0e9df` + 橙 `#e06808`，纸卡一律「四角各自错动」的不规则四边形、拼贴瓷砖标题、五角星图腾），色板出处是 `src\components\p5r\kit.tsx` 的 `P5R` 常量；编排照项目既有 `src\components\p5r\cutins.tsx` 的 `LevelUpP5` / `P5CutInStage` 骨架（黑幕→猩红闸门横掠→集中线爆开→大板景深砸落+落地震屏→拼贴标题逐字砸落→牌/巨星旋入→碎片迸溅→底部红条→停在确认态）。**本轮未动 `src/`**。验证：CDP 无头探针（`.rivet\scratch\p5-demo-check.mjs`）四帧状态全对 + **console 0 报错**，牌图解码成功；三种视口（360/390/1440）板内各块均无横向溢出。**动效观感与手感需用户目视验收（AI 不代签）。**
 - **【2026-10-16 交接摘要 · 新窗口先读这段】** 本轮（一天内）完成六件事：
   1. **粉主题换新塔罗卡面**（22 张用户私人素材，`90bdc93`）+ **卡背改成品红四角星**（`883eb38`）——用户已在本地登录目视验收通过。
   2. **修线上塔罗全缺事故**（已闭环）：服务器缺 `public/tarot` → nginx 的 `try_files` 把 `/tarot/*.webp` 兜底成 200 的 HTML → PWA 的 `CacheFirst` 把该 HTML 当图片缓存 180 天 → 补传 88 张素材后老浏览器仍显示占位卡。修复：补传素材 + 缓存桶 `tarot-art-v1`→`v2` + 部署新代码；用户确认「羁绊页恢复了」。
@@ -1311,3 +1312,22 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
   2. **「框比牌大」和「牌变小」是两回事**：正确解是**让牌填满原尺寸的框**，不是把框收小 —— 收小会连带把牌缩水，用户立刻认出「和 demo 不一样」。
   3. **dev server 端口不是固定的**：本机常同时跑多个副本，vite 会自动换端口（这次是 **5175**）。
   4. **交付门的采证通道识别不了本项目 vitest 的输出**：`deliver_task` 会以「impacted test 未覆盖」为由拒绝提交；按旧例改用**点名文件的限定范围提交**（只 `git add` 本次改的文件）。
+
+
+### 2026-10-16（续）：红主题（P5 红黑剪报）羁绊升级概念 demo
+
+- **起因**：用户「蓝粉设计通过了，接下来我们画红色主题COOP升级的demo吧」。**先取证再动手**：查得红主题并非「换个颜色的皮」，而是 `red→p5` **独立频道**（`src\ui\channel.ts` 的 `themeToChannel`），项目里已有整套 P5 语言底座（`src\components\p5r\kit.tsx` 的 `P5R` 色板与形状件、`p5r\cutins.tsx` 的 `LevelUpP5` / `P5CutInStage`）。**故把「红主题走哪种画法」作为产品层岔口抛给用户拍板**，用户选 **① P5 红黑剪报语言（重新设计一版）**（备选：② P3R 换色皮、③ 两版都做）。理由：红主题在真机里本来就是 P5 剪报风，用 P3R 换色皮做出来的 demo 与真实长相不符，验收会失真。
+- **产出**：`outputs\bond-rankup-demo-p5\index.html`（**不入库**，与蓝粉 demo 同例；蓝粉那版 `outputs\bond-rankup-demo\` 原样未动）。信息结构与蓝粉一致（假羁绊页 → 全屏演出：塔罗牌/等级 4→5/命名称谓/解锁能力 → 停在确认态 → 点确认 → 第二页「升级恭喜」→ 回界面；`?still=1` 定格、`?page=2` 直达第二页、`prefers-reduced-motion` 降级）。视觉语言整套换成 P5：纯黑舞台 + 猩红 `#c00008` + 米白纸 `#f0e9df` + 橙 `#e06808`；**不规则四边形用 mulberry32 种子生成**（对应 `kit.tsx` 的 `roughQuad`，同 seed 恒同形），一个 `.pq` 由硬影/黑框/纸面三片同源不同种子的多边形叠成，层间错位即「黑框粗细天然不等宽」；拼贴标题每字一块纸片、异色穿插、微旋转；同心星层/星涟漪/集中线/大圆环/巨星/碎片/五角星全部由 DOM + SVG API 生成。
+- **换幕手法**：不用蓝粉那版的「光涨满」，改 P5 的**猩红闸门横掠全屏**，掠过中点执行换层（界面↔演出↔第二页三处共用）。
+- **本轮踩的坑（写给下一个人）**：
+  1. **写单文件 HTML 时，JS 字符串里不能出现 HTML 标签字面量**（如 `'<i style="…"></i>'`，以及 `for(i=0;i<spec.length;i++)` 里的 `<spec`）——本仓 `write_file` 的 HTML 校验器会把 `<字母` 当成未闭合标签，报 `tag mismatch`（两次被拦：`expected </n>` / `expected </spec>`）。正解：装饰元素一律走 `createElement` / `createElementNS`，小于号比较写成反向（`N>i`）。
+  2. **「板偏右被截断」是我自己模拟视口参数错**：CDP `setDeviceMetricsOverride` 传 `deviceScaleFactor:2 + mobile:true` 会把 `innerWidth` 撑成 585，截图仍按 390 裁 → 画面看着像溢出。**实测板是居中的**（board 122.5..462.5 于 vw=585）。改 `deviceScaleFactor:1, mobile:false` 后正常。
+  3. **确认按钮原本居中悬浮，恰好压住「羁绊 COOP」红片**（实测 `confirmOverlapsAttr: true`）。P5 版是「居中一柱」的板，中央早被内容占了——已改到**板的下缘**流式浮出（并改成常驻占位只切 `opacity`，避免浮出时板高跳动）。蓝粉版没这问题，是因为它的演出构图是「牌在左、字在右」，中央本来就空。
+  4. **第二页的拼贴标题不可见**（实测瓷砖 `opacity: 0`）：`.tile` 的隐藏态是给演出层「逐字砸落」用的，第二页的瓷砖没解除。已加 `.page2 .tile{opacity:1}`。
+- **验证（本轮实测，命令与数字均来自当轮工具输出）**：
+  - `.rivet\scratch\p5-demo-check.mjs`（CDP + 无头 Chrome）：**errorCount 0**；四帧状态全对 —— 1.2s `stage=none`（在界面）→ 3.6s `stage=block, board=1.00`（演出中）→ 7.0s `confirm=flex`（**停在确认态**）→ 8.6s `page2=true`（点确认后进第二页）；`cardLoaded=true`（牌图解码成功，560px）；回归断言 `p2TileOpacity=1`、`confirmOverlapsAttr=false`。
+  - `.rivet\scratch\p5-fit.mjs`：三种视口（360×740 / 390×844 / 1440×900）下板内各块 rect 全在视口内（390 视口下板 25..365、解锁行 83.6..306.4、纸带 39..351）。`scrollWidth` 偏大是闸门（150% 宽）撑的，被 `body{overflow:hidden}` 挡住，无真实溢出。
+  - 截图 6 张留 `outputs\bond-rankup-demo-p5\_shots\`（01 界面 / 02 演出中 / 03 确认态 / 04 第二页 / 05 手机演出 / 06 手机第二页）。
+- **未验证 / 需用户验收**：**动效手感与观感**（AI 不代签）；真机未测；**红/黄/中性频道的真实演出落地本期不做**（`ConfidantRankUpCutIn` 目前非 p3 频道仍是「跳过出队、不标记已庆祝」→ 打开档案走老恭喜弹窗）。
+- **分支与提交**：工作分支 `feat/coop-cinematic`。demo 按惯例不入库；本轮仅更新本文件（总日志）。
+- **下一步（新窗口从这里接）**：① 用户打开 `outputs\bond-rankup-demo-p5\index.html` 目视验收（右下角「重播」；地址加 `?still=1` 定格、`?page=2` 直达第二页）；② 验收通过再决定是否把 P5 版演出落到 `src/`（参照 `ConfidantRankUpCutIn.tsx` 另开 p5 分支，颜色走 P5R 变量）；③ 蓝粉版落地与 Push 事宜仍在待办。

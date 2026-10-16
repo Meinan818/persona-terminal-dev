@@ -60,11 +60,12 @@ export function ConfidantDetailModal({
     settings,
     confidants,
     confidantEvents,
+    confidantRankUpQueue,
     updateConfidant,
     archiveConfidant,
     unarchiveConfidant,
     deleteConfidant,
-  } = useAppStore(useShallow(s => ({ settings: s.settings, confidants: s.confidants, confidantEvents: s.confidantEvents, updateConfidant: s.updateConfidant, archiveConfidant: s.archiveConfidant, unarchiveConfidant: s.unarchiveConfidant, deleteConfidant: s.deleteConfidant })));
+  } = useAppStore(useShallow(s => ({ settings: s.settings, confidants: s.confidants, confidantEvents: s.confidantEvents, confidantRankUpQueue: s.confidantRankUpQueue, updateConfidant: s.updateConfidant, archiveConfidant: s.archiveConfidant, unarchiveConfidant: s.unarchiveConfidant, deleteConfidant: s.deleteConfidant })));
 
   const confidant = useMemo(
     () => confidants.find(c => c.id === confidantId) || null,
@@ -190,12 +191,18 @@ export function ConfidantDetailModal({
   // 以 level_up 事件为事实来源：首次达到某等级后，打开详情时补弹升级祝贺。
   useEffect(() => {
     if (!isOpen || !confidant || starShiftOpen) return;
-    const pendingLevelUps = findUncelebratedLevelUps(confidant, confidantEvents);
+    // 已排进「升级演出」队列的等级不在这里补弹——两者抢跑时会先弹老弹窗，
+    // 而且老弹窗（z-180）会把演出（z-170）盖住，用户就只看到老弹窗（2026-10-16 实测）。
+    const queuedLevels = new Set(
+      confidantRankUpQueue.filter(n => n.confidantId === confidant.id).map(n => n.newLevel),
+    );
+    const pendingLevelUps = findUncelebratedLevelUps(confidant, confidantEvents)
+      .filter(item => !queuedLevels.has(item.level));
     if (pendingLevelUps.length === 0) return;
     pendingLevelUps.forEach(item => markLevelCelebrated(confidant.id, item.level));
     setStarShiftMode('celebrate');
     setStarShiftOpen(true);
-  }, [isOpen, confidant, confidantEvents, starShiftOpen]);
+  }, [isOpen, confidant, confidantEvents, confidantRankUpQueue, starShiftOpen]);
 
   if (!isOpen || !confidant) return null;
 

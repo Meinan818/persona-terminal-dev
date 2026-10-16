@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useReducedMotion } from 'motion/react';
 import { useAppStore } from '@/store';
 import { useUiChannel } from '@/ui/useUiChannel';
@@ -178,7 +179,10 @@ export function ConfidantRankUpCutIn() {
     ? unlocked.map(b => formatBuffDisplay(b, confidant.arcanaId, settings.attributeNames).title).join('、')
     : '';
 
-  return (
+  // ⚠ 必须 portal 到 body：App.tsx 的 <div className="relative z-10"> 是层叠上下文，
+  // 留在树里的浮层对外只等效 z=10，会被任何 body 级 portal（同伴详情弹窗 z-150、
+  // 星移弹窗 z-180）盖住——2026-10-16 实测就是「演出播了但用户只看到老弹窗」。
+  return createPortal(
     <div className="rk-root" role="dialog" aria-modal="true" aria-label={`羁绊升级！${confidant.name} 亲密度 RANK ${notice.newLevel}`}>
       <div className="rk-sea">
         <i />
@@ -245,7 +249,8 @@ export function ConfidantRankUpCutIn() {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

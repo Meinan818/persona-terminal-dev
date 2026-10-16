@@ -28,6 +28,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import type { Confidant } from '@/types';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { P5R } from '@/components/p5r/kit';
+import { P5Rings, P5ScatterStars } from '@/components/cooperation/confidantP5Scenery';
 import { useStarShiftFlow } from '@/components/cooperation/useStarShiftFlow';
 import '@/styles/confidant-starshift-p5.css';
 
@@ -58,24 +59,36 @@ export function ConfidantStarShiftModalP5({ isOpen, confidant, onClose }: Props)
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="sf5-overlay"
+        style={{
+          ['--sf5-red' as string]: P5R.red,
+          ['--sf5-red-deep' as string]: P5R.redDeep,
+          ['--sf5-red-hot' as string]: P5R.redHot,
+          ['--sf5-ink' as string]: P5R.ink,
+          ['--sf5-paper' as string]: P5R.paper,
+          ['--sf5-paper-dim' as string]: P5R.paperDim,
+          ['--sf5-grey' as string]: P5R.grey,
+          ['--sf5-grey-light' as string]: P5R.greyLight,
+          ['--sf5-orange' as string]: P5R.orange,
+        }}
         onClick={stage === 'thinking' ? undefined : onClose}
       >
+        {/* 布景（照 demo 第三页的 .scenery）：网点 + 同心星 + 两条猩红斜带 + 散落描边星 + 暗角。
+            首版这扇窗**没有布景**，只有一层半透明黑遮罩 —— 于是红版星移与 demo 差了整块底子，
+            也是「居中白框卡片」观感的来源。 */}
+        <div className="sf5-scenery" aria-hidden>
+          <div className="sf5-halftone" />
+          <P5Rings className="sf5-rings" />
+          <div className="sf5-slab sf5-slab-a" />
+          <div className="sf5-slab sf5-slab-b" />
+          <P5ScatterStars className="sf5-stars" />
+          <div className="sf5-vignette" />
+        </div>
         <motion.div
-          initial={{ scale: 0.92, opacity: 0, y: 12 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.92, opacity: 0 }}
-          transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           className="sf5-sheet"
-          style={{
-            ['--sf5-red' as string]: P5R.red,
-            ['--sf5-red-deep' as string]: P5R.redDeep,
-            ['--sf5-red-hot' as string]: P5R.redHot,
-            ['--sf5-ink' as string]: P5R.ink,
-            ['--sf5-paper' as string]: P5R.paper,
-            ['--sf5-paper-dim' as string]: P5R.paperDim,
-            ['--sf5-grey' as string]: P5R.grey,
-            ['--sf5-grey-light' as string]: P5R.greyLight,
-          }}
           onClick={(e) => e.stopPropagation()}
         >
           <AnimatePresence mode="wait">

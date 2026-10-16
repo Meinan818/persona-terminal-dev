@@ -30,7 +30,7 @@ import type { Confidant } from '@/types';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { tarotArtUrl } from '@/constants/tarotArt';
 import { INTIMACY_LABELS, buffsUnlockedInRange, formatBuffDisplay } from '@/utils/confidantLevels';
-import { P5R, P5CollageTitle, P5Dots } from '@/components/p5r/kit';
+import { P5R, P5Dots } from '@/components/p5r/kit';
 import { P5Rings, P5ScatterStars } from '@/components/cooperation/confidantP5Scenery';
 import '@/styles/confidant-celebrate-p5.css';
 
@@ -39,6 +39,43 @@ interface Props {
   onClose: () => void;
   /** 点「使用星移」——由调用方决定接着弹星移弹窗还是别的 */
   onUseStarShift: () => void;
+}
+
+/**
+ * 拼贴标题 —— **照 demo 的算法逐字复刻**（demo 的 collage()：mulberry32(333) +
+ * 六组色调 + 每字 ±7° 微旋转）。
+ *
+ * 为什么不复用 kit 的 P5CollageTitle：那是别处（剪报标题通用件）的一套取色/取角规则，
+ * 与本页 demo 的色块分布对不上（用户按像素比过：同一串字，每块纸片的底色与倾斜都不同）。
+ * 这一页要的是「和 demo 一模一样」，所以把 demo 那段算法原样搬进来。
+ */
+const mulberry32 = (a: number) => () => {
+  a |= 0; a = (a + 0x6d2b79f5) | 0;
+  let t = Math.imul(a ^ (a >>> 15), 1 | a);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+/** demo 的 tones 表：[底色, 文字色]，与 demo 同序 */
+const COLLAGE_TONES: ReadonlyArray<readonly [string, string]> = [
+  ['--cl5-red', '--cl5-paper'],
+  ['--cl5-ink', '--cl5-paper'],
+  ['--cl5-paper', '--cl5-ink'],
+  ['--cl5-ink', '--cl5-red'],
+  ['--cl5-paper', '--cl5-red'],
+  ['--cl5-orange', '--cl5-ink'],
+];
+
+function collageTiles(text: string, seed: number) {
+  const r = mulberry32(seed);
+  return text.split('').map((ch, i) => {
+    if (ch === ' ') {
+      return { key: i, ch, bg: 'transparent', fg: 'var(--cl5-paper)', rot: '0deg' };
+    }
+    const tone = COLLAGE_TONES[Math.floor(r() * COLLAGE_TONES.length)];
+    const rot = `${((r() * 2 - 1) * 7).toFixed(1)}deg`;
+    return { key: i, ch, bg: `var(${tone[0]})`, fg: `var(${tone[1]})`, rot };
+  });
 }
 
 export function ConfidantCelebrateScreenP5({ confidant, onClose, onUseStarShift }: Props) {
@@ -94,7 +131,17 @@ export function ConfidantCelebrateScreenP5({ confidant, onClose, onUseStarShift 
       <div className="cl5-wrap">
         {/* ① 页头：拼贴瓷砖标题 + 英文副标 */}
         <div className="cl5-head cl5-anim">
-          <P5CollageTitle text="亲密度升级" size={30} />
+          <span className="cl5-tiles" aria-label="亲密度升级">
+            {collageTiles('亲密度升级', 333).map(t => (
+              <span
+                key={t.key}
+                className="cl5-tile"
+                style={{ ['--bg' as string]: t.bg, ['--fg' as string]: t.fg, ['--rot' as string]: t.rot }}
+              >
+                {t.ch}
+              </span>
+            ))}
+          </span>
           <em className="cl5-en">INTIMACY UP</em>
         </div>
 

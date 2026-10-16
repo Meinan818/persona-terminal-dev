@@ -17,6 +17,11 @@
   overflow: hidden;
   background: #070707;
   color: var(--rk5-paper);
+  /* 字体照 demo 的 body 口径（'Noto Sans SC' + font-weight 900），但换成**本项目的面名**：
+     demo 是独立页面，'Noto Sans SC' 由系统/网络字体给出；App 里这个族名并不存在，
+     直接写它会整段落到系统字体（实测：RANK 巨字的字重与字宽都与 demo 对不上）。
+     这里用 App 自己的 900 重面栈（与 index.css 的 P5 标题兜底同序）。 */
+  font-family: 'Noto Sans SC Black', 'Velvet Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-weight: 900;
   -webkit-font-smoothing: antialiased;
   user-select: none;
@@ -74,6 +79,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* 照 demo .stars —— 五角星压在内容层之上（z-index 6）。少了这一条星会被内容盖住。 */
+  z-index: 6;
 }
 .rk5-stars svg {
   position: absolute;
@@ -143,26 +150,49 @@
   position: relative;
   perspective: 1400px;
   width: clamp(120px, 18.5vh, 178px);
+  /* 照 demo .card3d 的 aspect-ratio：牌比例取自素材本身的 560×896（≈.62），
+     不写这条时高度由内容决定，牌会随内层尺寸漂。 */
+  aspect-ratio: 0.62;
   opacity: 0;
   transform-style: preserve-3d;
   will-change: transform;
 }
-.rk5-card :global(svg),
-.rk5-card svg,
 .rk5-card img {
   width: 100%;
   height: 100%;
   display: block;
+  object-fit: cover;
   border: 3px solid var(--rk5-paper);
   box-shadow: 0 20px 56px rgba(0, 0, 0, 0.78);
 }
 
+/* ── 命运编号（照 demo .arcana）：黑底斜切的罗马数字 + 拉丁名 + 中文名三段 ──
+   首版把它压成了一行「《太阳》· 知己」，与 demo 的构成完全不同（用户报「复原不尽人意」）。 */
 .rk5-arcana {
-  font-size: clamp(13px, 2.6vw, 20px);
-  letter-spacing: 0.24em;
-  color: var(--rk5-paper);
+  display: flex;
+  align-items: baseline;
+  gap: clamp(8px, 1.6vw, 14px);
   opacity: 0;
   white-space: nowrap;
+}
+.rk5-arcana .num {
+  font-size: clamp(19px, 3.8vw, 30px);
+  color: var(--rk5-paper);
+  letter-spacing: 0.06em;
+  background: var(--rk5-ink);
+  padding: 0.08em 0.34em 0.14em;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+.rk5-arcana .name {
+  font-size: clamp(15px, 3vw, 24px);
+  color: var(--rk5-paper);
+  letter-spacing: 0.3em;
+}
+.rk5-arcana .cn {
+  font-size: clamp(11px, 2vw, 15px);
+  color: var(--rk5-paper);
+  opacity: 0.7;
+  letter-spacing: 0.2em;
 }
 
 /* ── 等级行：旧级被盖掉、新级落定 ── */
@@ -257,8 +287,10 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(348px, 70vw);
-  height: clamp(64px, 10vh, 88px);
+  /* 照 demo：落印痕迹比印章本身大一圈（印章 348×88，痕迹 430×126），
+     同尺寸会读成「印章又出现了一次」而不是「章砸下去的余响」。 */
+  width: min(430px, 74vw);
+  height: clamp(80px, 14vh, 126px);
   transform: translate(-50%, -50%) scale(0.6);
   opacity: 0;
   z-index: 6;
@@ -266,7 +298,7 @@
 }
 .rk5-shock {
   border: 3px solid var(--rk5-red-hot);
-  clip-path: polygon(16px 0, 100% 0, calc(100% - 11px) 100%, 3px calc(100% - 7px));
+  clip-path: polygon(3% 6%, 100% 0, 97% 92%, 0 100%);
 }
 .rk5-wave {
   border: 2px solid rgba(217, 0, 8, 0.78);
@@ -312,12 +344,23 @@
 
 /* ── 誓约 / 受领 ── */
 .rk5-vow {
-  font-size: clamp(12px, 2.5vw, 17px);
-  letter-spacing: 0.16em;
-  text-align: center;
+  /* 照 demo .vow：全宽斜切黑条（align-self:stretch 让它横贯画面），
+     首版只留了一行居中文字、没有这条带子。 */
+  align-self: stretch;
+  background: var(--rk5-ink);
+  padding: clamp(7px, 1.5vh, 12px) clamp(16px, 3vw, 40px);
   opacity: 0;
+  z-index: 8;
+  clip-path: polygon(1% 0, 100% 5%, 99% 100%, 0 95%);
 }
-.rk5-vow b {
+.rk5-vow p {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(12px, 2.5vw, 17px);
+  color: var(--rk5-paper);
+  letter-spacing: 0.16em;
+}
+.rk5-vow p b {
   color: var(--rk5-orange);
 }
 
@@ -367,7 +410,8 @@
 }
 .rk5-confirm .hint {
   font-size: clamp(10px, 1.4vw, 13px);
-  color: var(--rk5-grey);
+  /* 照 demo .confirm .hint —— 用的是 grey-light，首版写成了 grey（灰得更暗，压在红带上几乎看不见） */
+  color: var(--rk5-grey-light);
   letter-spacing: 0.34em;
 }
 .rk5-confirm .go {

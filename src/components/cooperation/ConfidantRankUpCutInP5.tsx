@@ -20,10 +20,10 @@ import { createPortal } from 'react-dom';
 import { useReducedMotion } from 'motion/react';
 import { useAppStore } from '@/store';
 import { TAROT_BY_ID } from '@/constants/tarot';
-import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
+import { tarotArtUrl } from '@/constants/tarotArt';
 import { P5R, starPts } from '@/components/p5r/kit';
 import { p5RingLayers, P5ScatterStars, P5Hoops } from '@/components/cooperation/confidantP5Scenery';
-import { INTIMACY_LABELS, formatBuffDisplay } from '@/utils/confidantLevels';
+import { formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
 import { EXP, SLAM, OVER, rand, PREVIEW_CONFIDANT } from './confidantRankUpShared';
 import '@/styles/confidant-rankup-p5.css';
@@ -41,6 +41,8 @@ export function ConfidantRankUpCutInP5() {
   const realConfidant = notice ? confidants.find(c => c.id === notice.confidantId) ?? null : null;
   const confidant = realConfidant ?? (notice?.preview ? PREVIEW_CONFIDANT : null);
   const card = confidant ? TAROT_BY_ID[confidant.arcanaId] : undefined;
+  // 牌面用 p5 那一套原图（与 demo 同一张），不走组件化卡面
+  const artUrl = confidant ? tarotArtUrl(confidant.arcanaId, 'p5') : null;
 
   // 同伴已被删/归档：跳过该条，不阻塞后面的
   useEffect(() => {
@@ -295,6 +297,7 @@ export function ConfidantRankUpCutInP5() {
         ['--rk5-paper' as string]: P5R.paper,
         ['--rk5-orange' as string]: P5R.orange,
         ['--rk5-grey' as string]: P5R.grey,
+        ['--rk5-grey-light' as string]: P5R.greyLight,
       }}
     >
       <div className="rk5-halftone" aria-hidden />
@@ -329,14 +332,19 @@ export function ConfidantRankUpCutInP5() {
           {/* 牌背后的光晕（demo #halo）：牌转向显形时的红白光，呼吸一轮 */}
           <div className="rk5-halo" ref={haloRef} aria-hidden />
           <div className="rk5-card" ref={cardRef}>
-            <TarotCardSVG card={card} orientation={confidant.orientation} staticCard showOrientationTag={false} />
+            {/* 牌用**原图**而不是 TarotCardSVG：demo 里就是一张带米白描边 + 硬影的 <img>，
+                组件自带的那层边框/朝向标记/内边距会让牌比 demo 小一圈（用户报过「和 demo 不一样」）。 */}
+            {artUrl ? <img src={artUrl} alt={card.name} /> : null}
             {/* 牌面扫过的高光条（demo #glint） */}
             <div className="rk5-glint" ref={glintRef} aria-hidden />
           </div>
         </div>
 
+        {/* 命运编号（照 demo .arcana）：黑底斜切罗马数字 + 拉丁名 + 中文名。 */}
         <div className="rk5-arcana" ref={arcanaRef}>
-          《{card.name}》· {INTIMACY_LABELS[notice.newLevel] ?? ''}
+          {card.roman ? <span className="num">{card.roman}</span> : null}
+          <span className="name">{card.nameEn.toUpperCase()}</span>
+          <span className="cn">{card.name}</span>
         </div>
 
         <div className="rk5-rankzone">
@@ -391,7 +399,9 @@ export function ConfidantRankUpCutInP5() {
         </div>
 
         <div className="rk5-vow" ref={vowRef}>
-          汝即我，我即汝 —— <b>汝已缔结新的誓约</b>
+          <p>
+            汝即我，我即汝 —— <b>汝已缔结新的誓约</b>
+          </p>
         </div>
 
         <div className="rk5-unlock" ref={unlockRef}>

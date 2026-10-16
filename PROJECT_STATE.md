@@ -4,6 +4,12 @@
 
 ## 1. 当前全貌：先看这一节
 
+- **【交接 · 2026-10-16 深夜·二 · 按用户两轮反馈：UI 重叠修复 + 转场推翻重做（P3R 原稿机制）】** demo 仍在 `outputs\bond-rankup-demo-p5\index.html`（=`work-impact-full.html` 同字节），未动 `src`。
+  - **① 重叠修复**：用户截图判「网页端和手机端 UI 重叠这么重」——此前把「标签条压巨字、星排压等级、解锁条贴确认键」当拼贴语言，读起来就是坏掉。已全部改为**元素互不压叠**：整条纵列改用以 `--v`（1vh；支持 svh 的浏览器用 `1svh`，治手机浏览器工具栏吃高度）配比的预算式尺寸 + 手机端重排 + 矮窗（≤600px）保险档。
+  - **② 转场推翻重做**：用户判旧转场「太低级／太快／字比红色背景长／有 BUG」，指定以其 P3R 原稿 `D:\转场\P3R 菜单转场 · 水下 (3).html` 为范本（原稿里的人物 → 换成我们的塔罗牌）。新机制照原稿：红斜杠飞过 + 白闪 + **巨字独立横扫**（不依附色块；出口距离按字宽计算——修掉长词 "COOPERATION" 掠出后留半截尾巴的 BUG）+ **自点击点圆形展开新屏**（退场=收拢）+ 点击点双圆环（尺寸按原稿 rings() 换算）+ 内容斜插错峰入场（页 2 `.p2-anim`、页 3 首屏）；牌改为照原稿 `.rcard` 的「坠入落位」；新增 `busy` 锁防转场期间重入。词表：进演出 COOPERATION／进恭喜 INTIMACY UP／进星移 STAR SHIFT／返回 COOPERATION。
+  - **验证（最终实测）**：探针 `.rivet/scratch/impact-check.mjs` 8 视口（1440×900 / 1280×700 / 936×540 / 390×844 / 390×700 / 390×650 / 360×740 / 430×932）→ 横向溢出 0、确认键 elementFromPoint 全命中、四组压叠量（arcana×rank、星排×rank、hint×unlock、go×unlock）全为 **0**、errorCount **0**；页 2/3 可滚；点确认转场 **303 帧 / avg 5.6ms / p95 5.7 / over33 0 / longTasks 0**。证据：`.rivet/scratch/impact-shots/report.json` + 各视口截图；转场帧 `_shots/t1…t4-*.png`。
+  - **未完成**：用户目视验收（打开 demo 或 5199 服务；点画面重播、`?page=2`/`?page=3` 直达）；通过后落 `src`（三件 + 转场四件机制）。
+
 - **【交接 · 2026-10-16 深夜 · 红版 P5 羁绊链 demo 返工完成（待用户目视验收）】** 承接下一条（夜）：`outputs\bond-rankup-demo-p5\index.html` 已换为 `work-impact-full.html` 的同一字节（md5 `BAC72F70…`；工作文件保留为同名副本，旧基线留 `bak-before-finish-20261016` / `bak-impact`，完整版留 `bak-v3-stamp`）。
   - **这轮做了什么**：① 把「冲击力返工」并回**完整版 v3-stamp**：印章重做（RANK UP 半调网点+红硬影）、落印痕迹（同形红环/椭圆波/24 颗火星）、三屏布景、第三页星移四屏全部回来了，并补齐此前缺件；② 打手法收尾：等级星排（五颗亮黄 `#fbfe3c`，RANK 5 落定后逐颗砸落）、印章与落痕随巨字放大、命运编号改「黑色标签条」（原白字叠白巨字读不出）；③ **P5R 转场四件套**（用户点名「高级、有冲击力、专属于 P5R」）：锯齿猩红闸门 + 巨字横掠（COOPERATION / RANK UP / STAR SHIFT）+ 白闪 + 点击点双圆环，`p5Sweep()` 统一实现，进演出/进恭喜/进星移/返回全走它，只动 transform/opacity；④ 手机端重排（390×844 / 360×740 / 430×932：靠出血保体积、不缩小；确认键与解锁条分离）；⑤ 页 2/3 全套「硬黑描边+错版」。
   - **重要技术结论（务必沿用）**：**clip-path 会把 box-shadow 与 filter:drop-shadow 一并裁掉**（实测页 `.rivet/scratch/clip-shadow-test.html` + `clip-shadow-test2.png`）→ 上一轮补丁里 `.unlock/.confirm/.p2-panel/.sf-*` 那批「描边/错版」其实**从未渲染**；已全部改为**独立垫层**（元素本体撤 clip-path+旧阴影，由 ::before/::after 或兄弟层承担，垫层与本体同形）。以后加印刷效果一律用这个模式。
@@ -1474,3 +1480,10 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **验证（本轮实测）**：`.rivet/scratch/impact-check.mjs` 四视口：errorCount 0、无横向溢出、确认键可点、page2/3 可滚；1440 转场 frames 300 / avg 5.7ms / over33 0 / longTasks 0。证据：`_shots/impact-full/report.json`、`_shots/w1…w5-*.png`。
 - **commit/Push**：本次仅文档提交（本文件），未 Push；`outputs/`、`.rivet/scratch/` 不入库。
 - **遗留与负责人**：用户目视验收（打开 demo 或 5199 静态服务）；验收通过后三件（含转场四件套）重描进 `src`；真机未测。
+
+### 2026-10-16（深夜·二）：用户两轮反馈 —— UI 重叠修复 + 转场推翻重做（按 P3R 原稿）
+
+- 反馈一「网页端和手机端 UI 重叠这么重」：去掉全部元素压叠（标签条/星排/解锁条/确认区各自独立），整版尺寸改以 `--v`（svh 优先）配比，加矮窗保险档。
+- 反馈二「转场太低级…字比红色背景长…应该推翻 D:\转场\P3R 菜单转场 · 水下 (3).html」：照该原稿重做转场 —— 红斜杠 + 白闪 + 巨字独立横扫（出口按字宽）+ 点击点圆形展开/收拢 + 点击点双圆环 + 内容斜插错峰 + 卡牌坠入 + `busy` 锁；词表 COOPERATION / INTIMACY UP / STAR SHIFT。
+- 验证：8 视口零压叠、零溢出、零报错；转场 303 帧 / avg 5.6ms / longTasks 0。探针 `impact-check.mjs`（默认 URL 现在指向 `work-impact-full.html`，两文件保持同字节）。
+- commit：本文件（另提）；demo 不入库；未 Push。

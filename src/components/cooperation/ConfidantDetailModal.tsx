@@ -413,12 +413,17 @@ export function ConfidantDetailModal({
 
   return createPortal(
     <AnimatePresence>
+      {/* App 顶层那条「升级恭喜 → 星移」开着时，这一整窗隐身：
+          否则它压在 z300 之下最底下，整页恭喜一撤走的那一瞬会先被看见
+          （用户 2026-10-16 报「先1后2」），星移窗才盖上来。
+          用 visibility 而不是卸载：保留它的状态，关掉星移窗后原样回来。 */}
       <motion.div
         key="cd-modal-bg"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        style={globalStarShiftInvite ? { visibility: 'hidden' } : undefined}
         onClick={onClose}
       >
         <motion.div

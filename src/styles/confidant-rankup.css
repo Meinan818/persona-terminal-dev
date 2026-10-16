@@ -12,7 +12,8 @@
 .rk-root {
   position: fixed;
   inset: 0;
-  z-index: 170; /* 压过庆祝基座(90)/cutin(120)，让出星移弹窗(180) */
+  z-index: 240; /* 满屏演出要压在所有浮层之上——星移弹窗是 z180，比它低就会
+                   变成「隔着它的黑色遮罩看水面」，用户看到的是「背景黑了一下」 */
   overflow: hidden;
   /* 复用项目变量 */
   --rk-accent: var(--p3r-blue, #1b57ff);

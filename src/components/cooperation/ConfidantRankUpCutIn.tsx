@@ -4,6 +4,7 @@ import { useReducedMotion } from 'motion/react';
 import { useAppStore } from '@/store';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { TAROT_BY_ID } from '@/constants/tarot';
+import type { Confidant } from '@/types';
 import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
 import { INTIMACY_LABELS, MAX_INTIMACY, formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
@@ -27,6 +28,27 @@ const OVER = 'cubic-bezier(.34,1.56,.64,1)';
 
 const rand = (n: number) => (Math.random() - 0.5) * n;
 
+/**
+ * 开发预览（?rankup）在没有**任何**同伴时用的占位同伴——全新档案 / 无头浏览器也能
+ * 把演出本身放出来核对。只有 notice.preview 为真时才会用到它。
+ */
+const PREVIEW_CONFIDANT = {
+  id: '__rankup_preview__',
+  userId: '__preview__',
+  source: 'offline',
+  name: '预览同伴',
+  arcanaId: 'fool',
+  orientation: 'upright',
+  description: '',
+  aiInterpretation: '',
+  aiAdvice: '',
+  intimacy: 4,
+  intimacyPoints: 0,
+  buffs: [],
+  decayEnabled: false,
+  createdAt: new Date(0),
+} as unknown as Confidant;
+
 export function ConfidantRankUpCutIn() {
   const channel = useUiChannel();
   const queue = useAppStore(s => s.confidantRankUpQueue);
@@ -36,9 +58,13 @@ export function ConfidantRankUpCutIn() {
   const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
   const enqueueConfidantRankUp = useAppStore(s => s.enqueueConfidantRankUp);
   const reduce = useReducedMotion();
+  // 有别的弹窗时自己让位排队（原来这层判断在 App 里，现在改常驻挂载、挪进来）
+  const modalBlocker = useAppStore(s => s.modalBlocker);
 
   const notice = queue[0] ?? null;
-  const confidant = notice ? confidants.find(c => c.id === notice.confidantId) ?? null : null;
+  const realConfidant = notice ? confidants.find(c => c.id === notice.confidantId) ?? null : null;
+  // 预览可以在没有真实同伴时用占位同伴（见 PREVIEW_CONFIDANT）
+  const confidant = realConfidant ?? (notice?.preview ? PREVIEW_CONFIDANT : null);
   const card = confidant ? TAROT_BY_ID[confidant.arcanaId] : undefined;
 
   // 非 p3 频道本期不出新演出：出队跳过、**不标记已庆祝**，
@@ -65,10 +91,11 @@ export function ConfidantRankUpCutIn() {
     if (!raw) return;
     previewFiredRef.current = true;
     const target = confidants.find(c => c.id === raw) ?? confidants.find(c => !c.archivedAt);
-    if (!target) return;
-    const newLevel = Math.min(MAX_INTIMACY, Math.max(1, target.intimacy + 1));
+    // 一个同伴都没有也放：用占位同伴，方便在全新档案 / 无头浏览器上核对演出本身
+    const fromLevel = target ? target.intimacy : PREVIEW_CONFIDANT.intimacy;
+    const newLevel = Math.min(MAX_INTIMACY, Math.max(1, fromLevel + 1));
     enqueueConfidantRankUp({
-      confidantId: target.id,
+      confidantId: target?.id ?? PREVIEW_CONFIDANT.id,
       oldLevel: Math.max(0, newLevel - 1),
       newLevel,
       starShiftGained: 1,
@@ -202,7 +229,7 @@ export function ConfidantRankUpCutIn() {
     };
   }, [notice, channel, confidant, reduce]);
 
-  if (!notice || channel !== 'p3' || !confidant || !card) return null;
+  if (!notice || modalBlocker || channel !== 'p3' || !confidant || !card) return null;
 
   const unlocked = confidant.buffs.filter(b => b.unlockAtLevel > notice.oldLevel && b.unlockAtLevel <= notice.newLevel);
   const unlockedText = unlocked.length

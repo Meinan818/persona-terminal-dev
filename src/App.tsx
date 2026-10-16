@@ -206,7 +206,6 @@ function App() {
   const modalBlocker = useAppStore(s => s.modalBlocker);
   const levelUpNotification = useAppStore(s => s.levelUpNotification);
   const setLevelUpNotification = useAppStore(s => s.setLevelUpNotification);
-  const confidantRankUpQueue = useAppStore(s => s.confidantRankUpQueue);
   const achievementNotification = useAppStore(s => s.achievementNotification);
   const setAchievementNotification = useAppStore(s => s.setAchievementNotification);
   const skillNotification = useAppStore(s => s.skillNotification);
@@ -1018,8 +1017,10 @@ function App() {
           <WishProposalDialog />
           {/* 组织（第 8 轮）：作战达成 / 据点升级的庆祝卡——对账时在任意页面都可能发现，故挂顶层 */}
           <OrgCelebrationCutIn />
-          {/* 羁绊升级演出（P3R）：升级当下逐条播放、停在确认态；有别的弹窗时排队等待 */}
-          {confidantRankUpQueue.length > 0 && !modalBlocker && <ConfidantRankUpCutIn />}
+          {/* 羁绊升级演出（P3R）：升级当下逐条播放、停在确认态。
+              常驻挂载（队列与 modalBlocker 的判断挪进组件内部）——这样开发预览入口
+              在队列还空着时也能触发；有别的弹窗时它自己让位排队。 */}
+          <ConfidantRankUpCutIn />
           {/* 升级演出点「确认」后接着弹的星移弹窗（挂在顶层：升级可能发生在任意页面） */}
           <ConfidantStarShiftInvite />
           {/* 回归面板（PRD_V2.6 §12）：离开 ≥7 天后的第一次打开 */}

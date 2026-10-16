@@ -828,6 +828,13 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 
 **状态与后续**：main 领先远端 40 个提交，**未 push**；feat/ui-redesign 分支保留未删；其工作区 E:/MASKARIA-redesign 的代码已落后 main（不含主线那 8 个修复），后续开发与打包建议回主工作区 E:/MASKARIA 做。
 
+**Push 到私有开发库（2026-10-16，用户明确同意「推」）**：`git push origin main` → `3126801..4751d7a main -> main`，一次推 41 个提交。
+
+- 远程核实（不是只在本地看）：`git ls-remote origin refs/heads/main` = `4751d7a2f944235c2c2b4c768837d4006ea259ac`，与本地 `git rev-parse HEAD` 一致；`git rev-list --left-right --count main...origin/main` = `0 0`。
+- 远端为私有开发库 `git@github.com:Meinan818/persona-terminal-dev.git`；**本次未触碰公开展示库**。
+- 分支 `feat/ui-redesign` 保留在本地、未推送（其内容已全部包含在 main 里）。
+- 源码提交 / Push / 部署 / 用户验收是四件事：本条只完成 Push，**未部署、未打 APK**。
+
 ## 10. 证据索引：需要时再定位原文
 
 - §11为本地完整Git提交索引；先git show --stat查范围，再按非敏感文件查内容。历史可能含凭据，禁止批量输出历史文件。

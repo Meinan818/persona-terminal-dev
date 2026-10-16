@@ -52,6 +52,7 @@ import { sweepDanmakuApprovals } from '@/services/danmakuWatch';
 const ReturnPanel = lazy(() => import('@/components/return/ReturnPanel').then(m => ({ default: m.ReturnPanel })));
 import { WishProgressCutIn } from '@/components/wish/WishProgressCutIn';
 import { OrgCelebrationCutIn } from '@/components/org/OrgCelebrationCutIn';
+import { ConfidantRankUpCutIn } from '@/components/cooperation/ConfidantRankUpCutIn';
 import { WishProposalDialog } from '@/components/wish/WishProposalDialog';
 // F6 黑猫对话窗（portal 到 body 的全屏 overlay；入口在 Sidebar / BottomNav 中央 ◈）
 const NavigatorWindow = lazy(() => import('@/components/navigator/NavigatorWindow').then(m => ({ default: m.NavigatorWindow })));
@@ -205,6 +206,7 @@ function App() {
   const modalBlocker = useAppStore(s => s.modalBlocker);
   const levelUpNotification = useAppStore(s => s.levelUpNotification);
   const setLevelUpNotification = useAppStore(s => s.setLevelUpNotification);
+  const confidantRankUpQueue = useAppStore(s => s.confidantRankUpQueue);
   const achievementNotification = useAppStore(s => s.achievementNotification);
   const setAchievementNotification = useAppStore(s => s.setAchievementNotification);
   const skillNotification = useAppStore(s => s.skillNotification);
@@ -1016,6 +1018,8 @@ function App() {
           <WishProposalDialog />
           {/* 组织（第 8 轮）：作战达成 / 据点升级的庆祝卡——对账时在任意页面都可能发现，故挂顶层 */}
           <OrgCelebrationCutIn />
+          {/* 羁绊升级演出（P3R）：升级当下逐条播放、停在确认态；有别的弹窗时排队等待 */}
+          {confidantRankUpQueue.length > 0 && !modalBlocker && <ConfidantRankUpCutIn />}
           {/* 回归面板（PRD_V2.6 §12）：离开 ≥7 天后的第一次打开 */}
           {returnPayload && (
             <Suspense fallback={null}>

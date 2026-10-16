@@ -1,0 +1,278 @@
+/* ══ 羁绊升级演出（ConfidantRankUpCutIn）═════════════════════════════════
+   从概念 demo outputs/bond-rankup-demo/index.html 移植。核心约定不变：
+
+   **凡是会显示出来的颜色——含半透明 rgba、阴影基色——一律走变量，没有例外。**
+   demo 第一版只把大块颜色变量化、放过水面波纹与碎裂片的写死青色，
+   结果粉主题下底子还是蓝的。这里不再重犯。
+
+   主题映射（用户定案）：p3 蓝 → 深蓝水下；p3 粉 → 浅底。
+   粉主题只覆盖下面那一组变量 + 浅底形态的几条规则；结构/时序/动效一行不改。
+   可复用的色（--p3r-*）直接取项目变量（粉主题已由 :root[data-theme="pink"] 覆盖）。 */
+
+.rk-root {
+  position: fixed;
+  inset: 0;
+  z-index: 170; /* 压过庆祝基座(90)/cutin(120)，让出星移弹窗(180) */
+  overflow: hidden;
+  /* 复用项目变量 */
+  --rk-accent: var(--p3r-blue, #1b57ff);
+  --rk-accent-deep: var(--p3r-blue-deep, #0a3bd6);
+  --rk-ink: var(--p3r-ink, #0a1230);
+  --rk-ink-soft: var(--p3r-ink-soft, #3d4a66);
+  --rk-cyan: var(--p3r-cyan, #35d1e8);
+  --rk-cyan-pale: var(--p3r-cyan-pale, #cfeaf6);
+  --rk-magenta: var(--p3r-magenta, #e8283c);
+  /* 演出新增：水下场四段 / 水面纹 / 碎片 / 投影 / 数字高亮 */
+  --rk-sea-1: #38d0ff;
+  --rk-sea-2: #1d6dff;
+  --rk-sea-3: #1233cc;
+  --rk-sea-4: #0a1a8c;
+  --rk-wave-1: rgba(220, 252, 255, 0.5);
+  --rk-wave-2: rgba(190, 240, 255, 0.45);
+  --rk-glass-1: rgba(160, 200, 255, 0.6);
+  --rk-glass-2: rgba(60, 110, 255, 0.25);
+  --rk-shade: 5, 10, 60;
+  --rk-shade-soft: 10, 30, 80;
+  --rk-hl: #ffd53a;
+  /* 深底形态的文字/描边 */
+  --rk-title: #ffffff;
+  --rk-sub: #ffffff;
+  --rk-cap: var(--rk-cyan-pale);
+  --rk-card-border: #ffffff;
+  --rk-card-shadow: 0 18px 40px rgba(var(--rk-shade), 0.45);
+  --rk-title-shadow:
+    1px 1px 0 var(--rk-accent), 2px 2px 0 var(--rk-accent), 3px 3px 0 var(--rk-accent),
+    4px 4px 0 var(--rk-accent), 5px 5px 0 var(--rk-accent), 6px 6px 0 var(--rk-accent-deep),
+    7px 7px 0 var(--rk-accent-deep), 8px 8px 0 var(--rk-accent-deep),
+    10px 12px 18px rgba(var(--rk-shade), 0.5);
+  --rk-star-color: #ffffff;
+  --rk-star-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  --rk-bub: rgba(255, 255, 255, 0.7);
+  --rk-shaft: rgba(255, 255, 255, 0.32);
+  --rk-margin: clamp(16px, 3vw, 40px);
+  --rk-exp: cubic-bezier(0.16, 1, 0.3, 1);
+  --rk-over: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --rk-fx: 'Arial Black', 'Helvetica Neue', Impact, sans-serif;
+  --rk-fc: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
+}
+
+/* ── 水下场：渐变 + 两层反向同心纹（互相干涉成焦散）+ 光柱 + 气泡 ── */
+.rk-sea {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--rk-sea-1) 0%, var(--rk-sea-2) 30%, var(--rk-sea-3) 64%, var(--rk-sea-4) 100%);
+}
+.rk-sea i {
+  position: absolute;
+  inset: -20%;
+  mix-blend-mode: screen;
+  background: repeating-radial-gradient(ellipse at 30% 18%, var(--rk-wave-1) 0 2px, transparent 2px 30px);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 62%);
+  mask-image: linear-gradient(180deg, #000, transparent 62%);
+}
+.rk-sea i:nth-child(2) {
+  background: repeating-radial-gradient(ellipse at 72% 10%, var(--rk-wave-2) 0 2px, transparent 2px 36px);
+}
+.rk-sea b {
+  position: absolute;
+  top: -10%;
+  width: 16vw;
+  height: 130%;
+  background: linear-gradient(180deg, var(--rk-shaft), transparent 70%);
+  transform: skewX(-22deg);
+}
+.rk-bub {
+  position: absolute;
+  bottom: -6vh;
+  width: var(--rk-s);
+  height: var(--rk-s);
+  border: 2px solid var(--rk-bub);
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rk-sea i:nth-child(1) { animation: rk-wv1 9s ease-in-out infinite alternate; }
+  .rk-sea i:nth-child(2) { animation: rk-wv2 11s ease-in-out infinite alternate; }
+  .rk-sea b { animation: rk-shaft 7s ease-in-out infinite alternate; }
+  .rk-bub { animation: rk-rise var(--rk-d) linear infinite; }
+}
+@keyframes rk-wv1 { to { transform: translate(4%, 3%) scale(1.06); } }
+@keyframes rk-wv2 { to { transform: translate(-4%, 2%) scale(1.08); } }
+@keyframes rk-shaft { to { opacity: 0.4; transform: skewX(-22deg) translateX(3vw); } }
+@keyframes rk-rise { to { transform: translate(var(--rk-dx), -115vh); } }
+
+.rk-flash { position: absolute; inset: 0; z-index: 4; background: #fff; opacity: 0; }
+.rk-cast { position: absolute; inset: 0; z-index: 5; }
+
+/* 塔罗牌：从左上坠入，稳稳压下 -8° */
+.rk-card {
+  position: absolute;
+  left: 12vw;
+  top: 15vh;
+  /* 宽度驱动、高度交给卡面比例：内层是 TarotCardSVG（SVG 自带塔罗比例） */
+  width: clamp(110px, 29vh, 240px);
+  rotate: -8deg;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 3px solid var(--rk-card-border);
+  box-shadow: var(--rk-card-shadow);
+  opacity: 0;
+}
+.rk-card > * { width: 100%; height: auto; display: block; }
+
+/* RANK UP! 巨字 */
+.rk-title {
+  position: absolute;
+  left: 33vw;
+  top: 22vh;
+  font: italic 900 clamp(60px, 12vw, 150px)/1 var(--rk-fx);
+  color: var(--rk-title);
+  letter-spacing: -0.02em;
+  opacity: 0;
+  text-shadow: var(--rk-title-shadow);
+}
+
+/* 副题：亲密度 RANK N · 牌名 */
+.rk-sub {
+  position: absolute;
+  left: 35vw;
+  top: calc(22vh + clamp(60px, 12vw, 150px) + 2vh);
+  font: italic 900 clamp(14px, 1.8vw, 20px) var(--rk-fc);
+  color: var(--rk-sub);
+  opacity: 0;
+}
+.rk-sub b { display: inline-block; margin: 0 8px; font: italic 900 1.6em var(--rk-fx); }
+.rk-sub b.hl { color: var(--rk-hl); }
+
+/* 奖励胶囊 */
+.rk-pill {
+  position: absolute;
+  left: 34vw;
+  top: calc(22vh + clamp(60px, 12vw, 150px) + 8vh);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 28px 8px 12px;
+  background: #fff;
+  color: var(--rk-ink);
+  font: italic 900 clamp(13px, 1.7vw, 18px) var(--rk-fc);
+  clip-path: polygon(0 0, 100% 0, 97% 100%, 0 100%);
+  opacity: 0;
+}
+.rk-pill .ic {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--rk-accent);
+  color: #fff;
+  font-size: 14px;
+  font-style: normal;
+}
+.rk-pill .ic.r { background: var(--rk-magenta); }
+.rk-pill i { width: 26px; height: 3px; background: var(--rk-accent); }
+.rk-pill small { display: block; font-size: 0.7em; font-weight: 700; color: var(--rk-ink-soft); }
+
+.rk-cap {
+  position: absolute;
+  left: 34vw;
+  bottom: 14vh;
+  font: 700 clamp(12px, 1.5vw, 16px) var(--rk-fc);
+  color: var(--rk-cap);
+  opacity: 0;
+}
+
+/* 确认键：P3R 斜切按钮，演出播完浮出，等用户自己点（不自动划走） */
+.rk-confirm {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  opacity: 0;
+}
+.rk-confirm.on { display: flex; }
+.rk-confirm .hint {
+  font: italic 900 clamp(11px, 1.5vw, 14px) var(--rk-fx);
+  color: var(--rk-cap);
+  letter-spacing: 0.2em;
+}
+.rk-confirm .go {
+  border: 0;
+  font: italic 900 clamp(17px, 2.4vw, 21px) var(--rk-fx);
+  padding: 15px 48px;
+  color: #fff;
+  background: var(--rk-accent);
+  cursor: pointer;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  letter-spacing: 0.14em;
+  box-shadow: 0 12px 30px rgba(var(--rk-shade), 0.45);
+}
+.rk-confirm .go:active { transform: scale(0.95) skewX(-5deg); }
+
+/* 星星与玻璃碎片 */
+.rk-star {
+  position: absolute;
+  color: var(--rk-star-color);
+  font-style: normal;
+  text-shadow: var(--rk-star-shadow);
+  opacity: 0;
+}
+.rk-glass {
+  position: absolute;
+  width: var(--rk-w);
+  height: var(--rk-h);
+  background: linear-gradient(135deg, var(--rk-glass-1), var(--rk-glass-2));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  opacity: 0;
+}
+
+/* ── 粉主题 = 浅底（用户定案：粉自带浅底，不是深色的换色版）──────────────
+   只覆盖变量与「浅底形态」的几条规则；结构 / 时序 / 动效 / 文案与蓝完全一致。 */
+:root[data-theme='pink'] .rk-root {
+  --rk-sea-1: #d98cf2;
+  --rk-sea-2: #a855f7;
+  --rk-sea-3: #6b1240;
+  --rk-sea-4: #2b0a1c;
+  --rk-wave-1: rgba(255, 214, 242, 0.5);
+  --rk-wave-2: rgba(255, 196, 236, 0.45);
+  --rk-glass-1: rgba(242, 168, 220, 0.6);
+  --rk-glass-2: rgba(225, 29, 116, 0.28);
+  --rk-shade: 60, 5, 32;
+  --rk-shade-soft: 80, 10, 45;
+  /* 浅底：底色近白、文字翻深墨、描边翻白 */
+  --rk-title: var(--rk-ink);
+  --rk-sub: var(--rk-ink);
+  --rk-cap: var(--rk-ink-soft);
+  --rk-card-border: var(--rk-ink);
+  --rk-card-shadow: 0 18px 40px rgba(var(--rk-shade-soft), 0.18);
+  --rk-title-shadow:
+    1px 1px 0 #fff, 2px 2px 0 #fff, 3px 3px 0 #fff, 4px 4px 0 #fff,
+    5px 5px 0 var(--rk-cyan-pale), 6px 6px 0 var(--rk-cyan-pale),
+    7px 7px 0 var(--rk-cyan-pale), 8px 8px 0 var(--rk-cyan-pale),
+    10px 12px 20px rgba(var(--rk-shade-soft), 0.22);
+  --rk-star-color: var(--rk-accent);
+  --rk-star-shadow: 0 0 8px rgba(var(--p3r-cyan-rgb, 168, 85, 247), 0.7);
+  --rk-bub: rgba(225, 29, 116, 0.32);
+  --rk-shaft: rgba(225, 29, 116, 0.14);
+}
+:root[data-theme='pink'] .rk-sea {
+  background: linear-gradient(180deg, #fff7fb 0%, #fdeff6 42%, #fbdcec 100%);
+}
+:root[data-theme='pink'] .rk-sea i { opacity: 0.45; }
+
+@media (max-width: 640px) {
+  /* 手机竖屏：牌在上、字在下，上下堆叠不重叠 */
+  .rk-card { left: 8vw; top: 9vh; width: clamp(96px, 22vh, 190px); }
+  .rk-title { left: 5vw; top: 38vh; font-size: clamp(46px, 15vw, 74px); letter-spacing: -0.03em; }
+  .rk-sub { left: 7vw; top: calc(38vh + clamp(46px, 15vw, 74px) + 1.5vh); }
+  .rk-pill { left: 7vw; top: calc(38vh + clamp(46px, 15vw, 74px) + 7vh); max-width: 84vw; padding: 7px 16px 7px 8px; font-size: 13px; }
+  .rk-pill small { font-size: 0.68em; }
+  .rk-cap { left: 7vw; bottom: 14vh; font-size: 12px; }
+}

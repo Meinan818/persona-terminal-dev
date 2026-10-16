@@ -814,6 +814,20 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 
 **下一步**：用户看观感（本次引导改了底色与整体语言，与旧的深蓝丝绒差异大）→ 拍板是否补幕布与涟漪 → 之后才谈打包与发布。
 
+### 2026-10-16（续）：feat/ui-redesign 合回主线
+
+**起因**：用户选择「先合回主线」。feat/ui-redesign 自 8a03c54 分叉后累积 37 个提交（引导 demo 全过程 + 引导接进 App），main 侧同期另有 8 个提交（头像修复、记账字体、2.8.6 版本号、缺陷 B 记录）。
+
+**过程**：
+- 合并前先摸清冲突面：双方都改过的文件**只有 PROJECT_STATE.md**（其余都是单边修改，自动合并）。两个工作区都备份了本文件（.rivet/scratch/state-main-backup.md / state-feat-backup.md / state-conflict-raw.md）。
+- 在主工作区 E:/MASKARIA 执行 `git merge feat/ui-redesign`。结果：代码与产物（src/components/WelcomeModal.tsx、src/styles/syncopate.css、outputs/p3r-guide-demo/*）全部自动合并成功；只有 PROJECT_STATE.md 报 3 处冲突。
+- 解冲突原则：**两边的记录一条都不丢**。3 处冲突块按「主线内容 + 分支内容」顺序合成；随后清掉 union 合并产生的唯一一处真重复（2.8.5 素材候选版的旧原文，主线已有带「已被 2.8.6 取代」标注的更新版）。
+- 合并提交 d0493a9。
+
+**合并后验证（均在主工作区实跑）**：`npm run typecheck` exit 0（输出显示版本号 2.8.6，证明确实是主线基线 + 引导改动）；`npm test` → 36 个测试文件 / 227 个用例全过（分支原为 34 / 218，多出的 2 个文件、9 个用例是主线侧的测试）。
+
+**状态与后续**：main 领先远端 40 个提交，**未 push**；feat/ui-redesign 分支保留未删；其工作区 E:/MASKARIA-redesign 的代码已落后 main（不含主线那 8 个修复），后续开发与打包建议回主工作区 E:/MASKARIA 做。
+
 ## 10. 证据索引：需要时再定位原文
 
 - §11为本地完整Git提交索引；先git show --stat查范围，再按非敏感文件查内容。历史可能含凭据，禁止批量输出历史文件。

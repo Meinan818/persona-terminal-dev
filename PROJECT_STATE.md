@@ -1094,3 +1094,17 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **分支与提交**：工作分支 `feat/coop-cinematic`（自 `964c534` 分出），**尚无任何提交**——本轮只产出 demo 与决策，**未动 `src/`**。另：`964c534`（缺陷 C 转不做）**未 push**，本地领先 `origin/main` **1 条**。
 - **未验证 / 需用户验收**：demo 的动效手感与观感（AI 不代签）；真机未测。
 - **下一步（新窗口从这里接）**：按 brainstorming 流程继续 —— ① 写设计文档到 `docs/superpowers/specs/` 并提交；② 转实施计划（`plan` 工具）并获批准；③ 再动 `src/`。实现要点已由 demo 锁定：复用 `CelebrationCutIn` 基座与 `playHeavyTransition`，颜色全走 `--p3r-*` 变量，粉主题靠变量覆盖而非第二套组件。
+
+### 2026-10-16（续）：羁绊升级演出 —— 按批准计划落地（Wave 1–3，共 3 条提交）
+
+- **起因**：上一节点定案「升级**当下**播 P3R 演出 → 点确认接星移弹窗」（用户选 A）。本节点按批准计划 `.rivet/plans/羁绊-coop-升级演出-实施计划.md` 施工。
+- **设计文档**：`docs/superpowers/specs/2026-10-16-coop-rankup-cinematic-design.md`（用户已认可）。因仓库既有「除白名单外 `.md` 不入库」规则，**它没有进 git**，与 demo 一样无版本保护。
+- **Wave 1 · 库层触发**（`12f6ef9`）：store 新增 `confidantRankUpQueue` 与出队动作 `dismissConfidantRankUp`；`bumpConfidantIntimacy`（`src/store/index.ts`，升级入口）在 `leveledUp` 且非重复事件时压队。**旧级由事务内 `oldLv` 带出，公开返回类型未改**（避免 6 个调用点回归）。新测试 `src/store/__tests__/confidantRankUpQueue.test.ts` 覆盖「升级入队 / 未升级不入队 / 重复事件不入队」——先 RED（2 失败 1 通过）后 GREEN（3/3）。
+- **Wave 2 · 全屏演出**（`ff72ae5`）：新建 `src/components/cooperation/ConfidantRankUpCutIn.tsx` + `src/styles/confidant-rankup.css`，App 顶层挂载（门控＝队列非空 && 非 `modalBlocker`，与既有全局结算同处）。编排照**已验收蓝版 demo 逐段移植**；**所有会显示的颜色（含半透明、阴影基色）全部走变量**，粉主题只覆盖一组变量、组件代码不改。非 p3 频道：出队跳过且**不标记已庆祝**，打开档案仍走老恭喜弹窗（不会「什么都没有」）。
+- **Wave 3 · 接星移 + 去重**（`0f23b37`）：「标记已庆祝」从详情弹窗抽到 `src/utils/confidantCelebration.ts`（演出与档案补弹**共用同一把 localStorage 键**），配 5 项单测；store 新增 `starShiftInvite`，演出确认后由 App 顶层渲染既有 `ConfidantStarShiftModal`。补弹扫描**保留作兜底**（演出没播成时档案仍能补上）。
+- **验证（本轮实测）**：`npx tsc --noEmit` 退出 0；`npx vitest run` 全量 **39 个测试文件通过**、退出 0（含本轮新增的 2 个测试文件）；单测 `confidantCelebration` 5/5。主题对照（用**真实 CSS** + 摆成演出峰值那一刻的 DOM）：`.rivet/scratch/_shots/blue/preview-desktop.png` 与 `.../pink/preview-desktop.png` —— 蓝＝深蓝水下、粉＝浅底，两套只靠变量切换成立；对照页本体在 `.rivet/scratch/rk-theme-blue.html` / `rk-theme-pink.html`（保留作复跑入口）。
+- **未验证 / 需用户验收**：**真机上跑真实 React 组件的观感与动效手感**——本会话工具集没有 browser_debug，没有在运行中的 app 里截过图；「升级 → 演出 → 确认 → 星移弹窗」的端到端也**未在运行中的 app 里走过**。这一条只能由用户验收。
+- **交付门降级（如实记录）**：`deliver_task` 无法为本项目生成「可采证批命令」（它认不出本仓 vitest 的输出格式，反复提示「请确认该项目的 runner 与采证适配」）。三条提交因此改用**显式点名文件的限定范围提交**（只 add 本次改动的文件），测试证据以本机 `npx vitest run` 全绿为准。
+- **分支与提交**：工作分支 `feat/coop-cinematic`；本轮 3 条 `12f6ef9` / `ff72ae5` / `0f23b37`，**均未 push**（现领先 `origin/main` 5 条）。
+- **遗留**：① 真机观感/手感验收（用户）；② 红/黄/中性频道的对应演出本期不做；③ 设计文档与 demo 无 git 保护；④ 计划里 Wave 4 的「端到端在运行中的 app 走一遍」未做。
+- **下一步（新窗口从这里接）**：请用户在自己机器上跑起来看演出（升级一次即可触发），验收通过后再决定是否 push、是否补其它频道。

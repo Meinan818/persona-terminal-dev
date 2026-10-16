@@ -16,7 +16,18 @@
   - **`--p5-yellow` 已定（2026-10-16）→ `#fbfe3c`**。依据不是印象 —— 从真实 P5 关键帧素材取色：`D:\下载\互传\P5COOP\` 的 7~9.jpg 里黄稳定在此值（黄像素占比 0.6–0.74%，属点缀不是底色；1~6.jpg 里那点黄绿是压缩噪声，不算设计色）。取色脚本 `.rivet/scratch/p5-yellow-pick.mjs`，可重跑复现。
     落点：`src\components\p5r\kit.tsx` 的 `P5R.yellow`。**"色板里没有黄"这条已穷尽核实**：`src\` 内 830 个不同 hex 里筛出的 58 个黄橙系（`#F59E0B`/`#FBBF24`/`#D4AF37` 等）全属别的主题与成就模块，P5R 那 11 个色里确实没有。demo 的 `:root` 也加了同名 `--p5-yellow` 对齐。
     验证：`npm run typecheck` exit 0（独立跑，非复合命令）；grep 确认无测试文件引用 `P5R`（故未跑全量测试，改动是纯增量常量）。
-  - **待办**：① 红版三件落 `src\`（黄已就位，可以动了）；② 真机未测；③ `outputs\bond-rankup-demo-p5\stamp-options.html` 是最早的一次性印面对照稿，用的是已废弃的红底板块方案，可删。
+  - **▶ 接手入口（2026-10-16 · 红版三件落 src 交接）**：计划**执行到 Wave 1 / 4**，Wave 1（升级演出红版）已提交 `5a41175`，本地领先 `origin/feat/coop-cinematic` **7 条未推**。下个会话直接读计划 `.rivet\plans\红版三件落-src-给羁绊升级链补-p5-频道分支.md` 的 `### Wave 2 · 恭喜整页`（其后 Wave 3 星移四屏、Wave 4 收尾），不必重新调研。
+    开工前先核两件事：① `git log -1` 是否已是 `5a41175` 或其后续；② `npm run typecheck` 是否 exit 0（当前应为 0）。
+    **Wave 2 / 3 与 Wave 1 是同一套路**（新建 P5 版组件 + 新建 `-p5.css` + 原组件加 wrapper 按频道分流），可照 Wave 1 的 `ConfidantRankUpCutInP5.tsx` / `confidantRankUpShared.ts` / `confidant-rankup-p5.css` 抄结构。两件都有 props（不是自读 store），wrapper 直接透传即可，比 Wave 1 简单。
+    **验证通道已知障碍**：`npm run dev`（当时在 5176 端口）能起、`?rankup=1` 是 DEV 预览入口，但 app 的**首次引导（7 步向导）挡住无头浏览器**——全链路截图没打通，探针 `.rivet\scratch\rk-p5-probe.mjs` 已写到「跳过引导失败」那一步就停了。若下轮想打通，方向是走完向导或用 `WelcomeModal` 的渲染条件找开关；否则沿用「纯函数单测 + 人工目视」。
+  - **【Wave 1 完成 · commit `5a41175`】羁绊升级演出补上 P5 红频道版**（计划：`.rivet\plans\红版三件落-src-给羁绊升级链补-p5-频道分支.md`）：
+    原来红主题（`red→p5`）下这场演出**根本不播** —— `ConfidantRankUpCutIn.tsx:74` 与 `:174` 两处 `channel !== 'p3'` 直接短路（出队跳过、时间线 return），红主题用户升羁绊只剩事后打开档案的补弹兜底。这不是皮不对，是功能缺失。
+    现改为按频道分流：p5 走新建的 `ConfidantRankUpCutInP5.tsx`（照**用户已验收的**红版 demo 移植 9 段分镜），p3 走原蓝版，p4 / neutral 维持既有跳过行为 —— 蓝版内部判定**一字未改**，p3 侧零风险。
+    新增 `confidantRankUpShared.ts`（两版共用的缓动 / 占位同伴 / 分流判据；抽出是为了避开「p5 版 import p3 版、p3 版又 import p5 版」的循环）、`confidant-rankup-p5.css`（P5 剪报皮，色值走组件注入的 `--rk5-*`，取自 `P5R` 色板）。
+    验证：`run_tests` 该测试文件阶段 A 隔离 / 阶段 B 集成双绿；`npm run typecheck` exit 0（独立跑、可归因）；分流判据单测 4/4（p5→红版、p3→蓝版、p4/neutral→不出）。
+    ⚠ **未验证**：演出在真实 app 里播出的样子。本地 dev server 的首次引导（7 步向导）挡住了无头浏览器，全链路截图通道没打通（探针 `.rivet\scratch\rk-p5-probe.mjs` 留着，通道打通后可复用）；视觉观感**需人工目视** —— dev server 在 5176 端口，`?rankup=1` 是预览入口（仅 DEV）。
+    ⚠ 交付门两次拒绝提交（`impacted tests were never covered`，且它自己报「未生成可采证批命令…请确认 runner 与采证适配」= 采证机制与本项目的 vitest 不适配）。按 shared-worktree 降级路径改用显式点名文件的 scoped commit，未用 `-A`、未碰并发会话的 `ios/App/Podfile`。
+  - **待办**：① Wave 2 / Wave 3（恭喜整页、星移四屏）尚未开工；② 真机未测；③ `outputs\bond-rankup-demo-p5\stamp-options.html` 是最早的一次性印面对照稿，用的是已废弃的红底板块方案，可删。
   - **别动**：`ios/App/Podfile` 的改动**不是本会话改的**，没纳入提交。
 - **【最新 · 2026-10-16 续】红主题（P5）羁绊链 demo —— 三件已齐（演出 / 恭喜整页 / 星移四屏），基线是用户选定的 v3**：`outputs\bond-rankup-demo-p5\index.html`（**不入库**，同蓝粉 demo 例）。**本轮按用户那句「蓝粉做了什么、红版也要做」的清单补上了第三件：星移四屏**——照 `src\components\cooperation\ConfidantStarShiftModal.tsx` 的 `input → thinking → preview → done → error` 五屏重画，信息一字不减（变化说明、最近 3 条记录、三组新旧对比「关系描述/解读/未来」、余次、离线提示），入口接在第二页「✧ 使用星移」上；`?page=3`（可叠 `&sf=preview`）直达。**自此红版 demo 与蓝粉那条链三件对齐：① 升级演出 ② 升级恭喜整页 ③ 星移四屏。** 另外用户点名把 **v1 的背景（同心星层）、入场（星涟漪 + 集中线爆开）、五角星**搬到了这一版（搬时发现 v3 重写时漏了「散落星入场」那几行——五角星元素生成了却永远不亮，已补回）。演进与取舍：v1（红板版）→ v2/v3（**牌显形 + 等级刻印 + 誓约语，用户选定这一版**）→ v4（照用户提供的真实关键帧重做：锁链 + 剪报标签条 + 黄数字星排）→ **用户看过 v4 后决定回退，现 `index.html` 已恢复为 v3**（md5 与存档逐字节一致）。三份存档都在同目录：`index.html.bak-v1-20261016` / `index.html.bak-v3-liked-20261016` / `index.html.bak-v4-chains-20261016`，改主意可随时再取。
   **v4 那轮的参考结论仍然有效，留给以后**：真实 P5 羁绊升级的骨架是「**白色锁链**从四处飞入缠绕（完成后渐隐成灰残影）→ **猩红大斜带**贯穿 → **塔罗牌在左侧倾斜立起** → 一叠**黑色斜切剪报标签条**逐条砸落（`COOPERATION 社群羁绊` / `ARCANA 太阳` / `RANK` + **巨大黄数字**）→ **一排黄星 = 等级** → `GET ABILITY` + 能力说明条」；参考图在 `D:\下载\互传\P5COOP\1-9.jpg`。若将来要再往这个方向走，注意 **项目 `P5R` 色板里没有黄色**，需先与 `src\components\p5r\kit.tsx` 对齐。

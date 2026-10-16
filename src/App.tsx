@@ -52,7 +52,7 @@ import { sweepDanmakuApprovals } from '@/services/danmakuWatch';
 const ReturnPanel = lazy(() => import('@/components/return/ReturnPanel').then(m => ({ default: m.ReturnPanel })));
 import { WishProgressCutIn } from '@/components/wish/WishProgressCutIn';
 import { OrgCelebrationCutIn } from '@/components/org/OrgCelebrationCutIn';
-import { ConfidantRankUpCutIn } from '@/components/cooperation/ConfidantRankUpCutIn';
+import { ConfidantRankUpCutIn, ConfidantStarShiftInvite } from '@/components/cooperation/ConfidantRankUpCutIn';
 import { WishProposalDialog } from '@/components/wish/WishProposalDialog';
 // F6 黑猫对话窗（portal 到 body 的全屏 overlay；入口在 Sidebar / BottomNav 中央 ◈）
 const NavigatorWindow = lazy(() => import('@/components/navigator/NavigatorWindow').then(m => ({ default: m.NavigatorWindow })));
@@ -1020,6 +1020,8 @@ function App() {
           <OrgCelebrationCutIn />
           {/* 羁绊升级演出（P3R）：升级当下逐条播放、停在确认态；有别的弹窗时排队等待 */}
           {confidantRankUpQueue.length > 0 && !modalBlocker && <ConfidantRankUpCutIn />}
+          {/* 升级演出点「确认」后接着弹的星移弹窗（挂在顶层：升级可能发生在任意页面） */}
+          <ConfidantStarShiftInvite />
           {/* 回归面板（PRD_V2.6 §12）：离开 ≥7 天后的第一次打开 */}
           {returnPayload && (
             <Suspense fallback={null}>

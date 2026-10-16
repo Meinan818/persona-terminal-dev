@@ -5,6 +5,8 @@ import { useUiChannel } from '@/ui/useUiChannel';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
 import { INTIMACY_LABELS, formatBuffDisplay } from '@/utils/confidantLevels';
+import { markLevelCelebrated } from '@/utils/confidantCelebration';
+import { ConfidantStarShiftModal } from '@/components/cooperation/ConfidantStarShiftModal';
 import '@/styles/confidant-rankup.css';
 
 /**
@@ -30,6 +32,7 @@ export function ConfidantRankUpCutIn() {
   const confidants = useAppStore(s => s.confidants);
   const settings = useAppStore(s => s.settings);
   const dismissConfidantRankUp = useAppStore(s => s.dismissConfidantRankUp);
+  const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
   const reduce = useReducedMotion();
 
   const notice = queue[0] ?? null;
@@ -93,6 +96,9 @@ export function ConfidantRankUpCutIn() {
   // ── 时间线（照 demo 逐段移植）──
   useEffect(() => {
     if (!notice || channel !== 'p3' || !confidant) return;
+    // 播放开始即标记「这一级庆祝过了」——打开档案时就不会被补弹第二次。
+    // （补弹扫描保留作兜底：万一演出没播成，档案里仍能看到祝贺。）
+    markLevelCelebrated(confidant.id, notice.newLevel);
     setPhase('playing');
 
     const A = (el: Element | null, kf: Keyframe[], opts: KeyframeAnimationOptions = {}) =>
@@ -226,9 +232,47 @@ export function ConfidantRankUpCutIn() {
 
         <div className={`rk-confirm ${phase === 'confirm' ? 'on' : ''}`}>
           <span className="hint">羁绊等级提升</span>
-          <button type="button" className="go" onClick={() => dismissConfidantRankUp(notice.id)}>确 认</button>
+          <button
+            type="button"
+            className="go"
+            onClick={() => {
+              dismissConfidantRankUp(notice.id);
+              // 用户定案 A：点确认后接着弹星移弹窗（把「事后补弹」提前到升级当下）
+              setStarShiftInvite(notice.confidantId);
+            }}
+          >
+            确 认
+          </button>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * 升级演出点「确认」后接着打开的星移弹窗（用户定案 A：把「事后补弹」提前到升级当下）。
+ *
+ * 挂在 App 顶层——升级可能发生在任意页面，不像原来只挂在同伴详情弹窗里。
+ * 「要不要用星移」这套界面直接复用既有的 ConfidantStarShiftModal（celebrate 阶段）。
+ */
+export function ConfidantStarShiftInvite() {
+  const invite = useAppStore(s => s.starShiftInvite);
+  const confidants = useAppStore(s => s.confidants);
+  const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
+  const confidant = invite ? confidants.find(c => c.id === invite) ?? null : null;
+
+  // 同伴已被删/归档：清掉邀请，别把弹窗卡在半开状态
+  useEffect(() => {
+    if (invite && !confidant) setStarShiftInvite(null);
+  }, [invite, confidant, setStarShiftInvite]);
+
+  if (!invite || !confidant) return null;
+  return (
+    <ConfidantStarShiftModal
+      isOpen
+      confidant={confidant}
+      initialMode="celebrate"
+      onClose={() => setStarShiftInvite(null)}
+    />
   );
 }

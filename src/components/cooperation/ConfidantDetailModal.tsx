@@ -21,6 +21,7 @@ import {
 import { useCloudStore } from '@/store/cloud';
 import { ConfidantInteractionModal } from '@/components/cooperation/ConfidantInteractionModal';
 import { ConfidantStarShiftModal } from '@/components/cooperation/ConfidantStarShiftModal';
+import { findUncelebratedLevelUps, markLevelCelebrated } from '@/utils/confidantCelebration';
 import { CounselChatModal } from '@/components/cooperation/CounselChatModal';
 import { CoopMemorialPanel } from '@/components/cooperation/CoopMemorialPanel';
 import { PactPanelModal, PactQuickEntry } from '@/components/cooperation/PactPanel';
@@ -31,7 +32,6 @@ import { ImageCropDialog } from '@/components/ImageCropDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useModalA11y } from '@/utils/useModalA11y';
 import { useBackHandler } from '@/utils/useBackHandler';
-import type { Confidant, ConfidantEvent } from '@/types';
 
 type Tab = 'info' | 'abilities' | 'history';
 
@@ -45,55 +45,8 @@ interface Props {
   onOpenCoopShadow?: (shadow: import('@/types').CoopShadow, partnerName: string) => void;
 }
 
-const LEVEL_UP_CELEBRATED_PREFIX = 'velvet_confidant_level_celebrated';
-
-const levelCelebrationKey = (confidantId: string, level: number) =>
-  `${LEVEL_UP_CELEBRATED_PREFIX}_${confidantId}_${level}`;
-
-const parseLevelUpLevel = (event: ConfidantEvent): number | null => {
-  if (typeof event.toLevel === 'number' && Number.isFinite(event.toLevel)) return event.toLevel;
-  const match = event.narrative?.match(/Lv\.?\s*(\d+)/i);
-  if (!match) return null;
-  const parsed = Number(match[1]);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const wasLevelCelebrated = (confidantId: string, level: number) => {
-  try {
-    return localStorage.getItem(levelCelebrationKey(confidantId, level)) === '1';
-  } catch {
-    return false;
-  }
-};
-
-const markLevelCelebrated = (confidantId: string, level: number) => {
-  try {
-    localStorage.setItem(levelCelebrationKey(confidantId, level), '1');
-  } catch { /* ignore unavailable localStorage */ }
-};
-
-const findUncelebratedLevelUps = (confidant: Confidant, events: ConfidantEvent[]) => {
-  const seen = new Set<number>();
-  return events
-    .filter(e => e.confidantId === confidant.id && e.type === 'level_up')
-    .map(event => ({ event, level: parseLevelUpLevel(event) }))
-    .filter((item): item is { event: ConfidantEvent; level: number } =>
-      item.level !== null
-      && item.level > 1
-      && item.level <= confidant.intimacy
-      && !seen.has(item.level)
-      && !wasLevelCelebrated(confidant.id, item.level),
-    )
-    .sort((a, b) => {
-      if (a.level !== b.level) return a.level - b.level;
-      return new Date(a.event.createdAt).getTime() - new Date(b.event.createdAt).getTime();
-    })
-    .filter(item => {
-      if (seen.has(item.level)) return false;
-      seen.add(item.level);
-      return true;
-    });
-};
+// 「已庆祝」标记 / 未庆祝扫描已抽到 @/utils/confidantCelebration（与升级演出共用同一把键，
+// 演出播过的等级不会在这里被补弹第二次）。
 
 export function ConfidantDetailModal({
   isOpen,

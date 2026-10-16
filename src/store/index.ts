@@ -298,6 +298,12 @@ interface AppState {
   confidantRankUpQueue: { id: string; confidantId: string; oldLevel: number; newLevel: number; starShiftGained: number }[];
   /** 播放完一条后把它移出队列 */
   dismissConfidantRankUp: (noticeId: string) => void;
+  /**
+   * 升级演出点「确认」后要接着打开的星移弹窗（同伴 id）；null = 不开。
+   * 由 App 顶层渲染的 ConfidantStarShiftInvite 消费。
+   */
+  starShiftInvite: string | null;
+  setStarShiftInvite: (confidantId: string | null) => void;
   achievementNotification: { id: string; title: string } | null;
   skillNotification: { id: string; name: string } | null;
   modalBlocker: boolean;
@@ -993,6 +999,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   actionsSubTab: 'activities',
   levelUpNotification: null,
   confidantRankUpQueue: [],
+  starShiftInvite: null,
   achievementNotification: null,
   skillNotification: null,
   modalBlocker: false,
@@ -3003,6 +3010,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   dismissConfidantRankUp: (noticeId) => {
     set(s => ({ confidantRankUpQueue: s.confidantRankUpQueue.filter(n => n.id !== noticeId) }));
+  },
+
+  setStarShiftInvite: (confidantId) => {
+    set({ starShiftInvite: confidantId });
   },
 
   setAchievementNotification: (notification) => {

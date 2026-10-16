@@ -8,6 +8,7 @@ import { isNative } from '@/utils/native';
 import { prefersReducedMotion } from '@/utils/boldness';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { syncOnLogin } from '@/services/sync';
+import { isInShadowTime } from '@/constants';
 import { P3R, SlantButton, P3EmptySlab, SectionMark, TitlePeriod, slantClip } from '@/components/p3r/kit';
 // 引导巨名的展示字体（与已验收的 demo 同一款）；只在引导 chunk 里加载，不影响其它页面
 import '@/styles/syncopate.css';
@@ -220,6 +221,59 @@ const KeyHint = ({ items }: { items: string[] }) => (
   </div>
 );
 
+/** 月相：按「年内第几天」推相位（29.53 天周期），照已验收 demo 的算法；
+ *  SVG 用两段弧画出被照亮的那一块，新月与满月直接返回空路径。 */
+const MOON_NAMES = ['新月', '娥眉月', '上弦月', '盈凸月', '满月', '亏凸月', '下弦月', '残月'];
+
+const moonPhaseOf = (now: Date) => {
+  const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / 86400000);
+  return ((((dayOfYear - 5) % 29.53) + 29.53) % 29.53) / 29.53;
+};
+
+const moonPathOf = (phase: number) => {
+  const r = 40;
+  const cx = 50;
+  const cy = 50;
+  if (phase <= 0.02 || phase >= 0.98) return '';
+  const lit = phase <= 0.5;
+  const k = lit ? phase * 2 : (1 - phase) * 2;
+  const rx = Math.abs(1 - 2 * k) * r;
+  const sweep = (lit ? phase < 0.25 : phase > 0.75) ? 1 : 0;
+  return `M ${cx} ${cy - r} A ${r} ${r} 0 0 1 ${cx} ${cy + r} A ${rx.toFixed(2)} ${r} 0 0 ${sweep} ${cx} ${cy - r} Z`;
+};
+
+/** 底部状态条：月相 / 本机时钟 / 影时间。照 demo 的口径，但影时间用应用自己的规则
+ *  （isInShadowTime + 用户设置），比 demo 里那句只看小时的判断准。 */
+const GuideStatusBar = ({ inShadow }: { inShadow: boolean }) => {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const phase = moonPhaseOf(now);
+  const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  return (
+    <div
+      className="flex items-center justify-between gap-4 py-2.5 text-[13px] font-black"
+      style={{ paddingLeft: 'clamp(18px,3.4vw,64px)', paddingRight: 'clamp(18px,3.4vw,64px)', background: 'rgba(255,255,255,0.93)', color: P3R.ink }}
+    >
+      <span className="flex items-center gap-2">
+        <svg viewBox="0 0 100 100" aria-hidden className="h-[30px] w-[30px] shrink-0" style={{ color: P3R.ink }}>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="7" opacity=".5" />
+          <path d={moonPathOf(phase)} fill="currentColor" />
+        </svg>
+        <b>
+          {MOON_NAMES[Math.round(phase * 8) % 8]} · {Math.round(phase * 100)}%
+        </b>
+      </span>
+      <span className="whitespace-nowrap">{clock}</span>
+      <span className="whitespace-nowrap" style={{ color: inShadow ? P3R.magenta : P3R.inkSoft }}>
+        影时间 · {inShadow ? '进行中' : '今夜降临'}
+      </span>
+    </div>
+  );
+};
+
 /** 每屏的操作条：返回（ghost）+ 主按钮（primary / soft） */
 const ActBar = ({
   onBack,
@@ -269,10 +323,18 @@ type Step =
 const STEP_ORDER: Step[] = ['welcome', 'name', 'preset', 'customize', 'done', 'guide', 'blessing'];
 
 export const WelcomeModal = () => {
-  const { user, createUser, importData } = useAppStore(
-    useShallow(s => ({ user: s.user, createUser: s.createUser, importData: s.importData }))
+  const { user, createUser, importData, settings } = useAppStore(
+    useShallow(s => ({ user: s.user, createUser: s.createUser, importData: s.importData, settings: s.settings }))
   );
   const cloudEnabled = useCloudStore(s => s.cloudEnabled);
+
+  // 影时间：用应用自己的规则与用户设置（而不是写死时段）。引导期间跨越时段边界的概率极低，
+  // 所以只在每次渲染时取一次，不另开定时器跟随。
+  const inShadow = isInShadowTime(
+    settings.battleShadowTimeDays ?? [5, 6, 0],
+    settings.battleShadowTimeStart ?? 20,
+    settings.battleShadowTimeEnd ?? 7
+  );
 
   const [step, setStep] = useState<Step>('welcome');
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -679,11 +741,12 @@ export const WelcomeModal = () => {
       >
         <InfoCard step={stepNo} total={STEP_ORDER.length} />
       </div>
-      <div
-        className="pointer-events-none fixed bottom-0 left-0 right-0 z-20 flex items-end justify-end"
-        style={{ padding: 'clamp(14px,2vh,26px) clamp(18px,3.4vw,64px)' }}
-      >
-        <KeyHint items={keyHints[step]} />
+      {/* 底部：按键提示条在上、状态条（月相 / 时钟 / 影时间）横在最低一排——照 demo 的排布 */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex flex-col">
+        <div className="flex justify-end" style={{ padding: '0 clamp(18px,3.4vw,64px) 10px' }}>
+          <KeyHint items={keyHints[step]} />
+        </div>
+        <GuideStatusBar inShadow={inShadow} />
       </div>
 
       <AnimatePresence mode="wait">

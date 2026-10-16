@@ -111,11 +111,11 @@
   position: absolute;
   left: 12vw;
   top: 15vh;
-  /* 尺寸对齐 TarotCardSVG 的自带盒（160 宽，内联固定）。容器一旦比它大，
-     就会在右边/下边露出一圈底色 —— 深蓝水下看不出来，粉主题（浅底）下
-     就是一圈刺眼的白框（用户 2026-10-16 报「塔罗牌那个框怎么变这么大了」）。
-     所以**框跟着牌走**，不把牌拉大：矮视口再用 29vh 收一档。 */
-  width: clamp(110px, 29vh, 160px);
+  /* 尺寸照已验收的 demo（它写的是 `height:46vh; aspect-ratio:.64`，900 视口下约 414×265）。
+     比例这里用 0.625，对应项目自己的牌图 560×896。
+     ⚠ 别再改成宽度 clamp：上一版把上限收到 160，牌跟着缩水，看起来就和 demo 不一样了。
+     容器比牌大才会露出底色 —— 那条由下面的 !important 兜住。 */
+  height: clamp(160px, 46vh, 430px);
   aspect-ratio: 0.625;
   rotate: -8deg;
   border-radius: 10px;
@@ -290,7 +290,7 @@
 
 @media (max-width: 640px) {
   /* 手机竖屏：牌在上、字在下，上下堆叠不重叠 */
-  .rk-card { left: 8vw; top: 9vh; width: clamp(96px, 22vh, 190px); }
+  .rk-card { left: 8vw; top: 9vh; height: clamp(120px, 25vh, 230px); }
   .rk-title { left: 5vw; top: 38vh; font-size: clamp(46px, 15vw, 74px); letter-spacing: -0.03em; }
   .rk-sub { left: 7vw; top: calc(38vh + clamp(46px, 15vw, 74px) + 1.5vh); }
   .rk-pill { left: 7vw; top: calc(38vh + clamp(46px, 15vw, 74px) + 7vh); max-width: 84vw; padding: 7px 16px 7px 8px; font-size: 13px; }

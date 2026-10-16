@@ -74,9 +74,7 @@
 
 /* 塔罗牌：硬投影 + 轻倾角 */
 .cl-card {
-  /* 与演出同一约定：框跟着牌走（TarotCardSVG 自带 160 宽的内联盒），
-     容器比它大就会露出一圈底色 */
-  width: clamp(118px, 23vh, 160px);
+  width: clamp(118px, 23vh, 190px);
   /* 高度按塔罗比例自己算：TarotCardSVG 自带内联固定尺寸，容器不定高就会留白 */
   aspect-ratio: 0.625;
   margin: clamp(4px, 1.4vh, 14px) auto 0;

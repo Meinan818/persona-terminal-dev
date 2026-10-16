@@ -14,6 +14,7 @@
 
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import { RemoteImg } from '@/components/ui/RemoteImg';
 import { OnlineStarBadge } from './OnlineStarBadge';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
@@ -202,7 +203,7 @@ export function OnlineConfidantProfileCard({
             <div className="flex items-start gap-3">
               <div className="w-16 h-16 rounded-full overflow-hidden bg-indigo-500/20 text-indigo-200 font-black text-2xl flex items-center justify-center flex-shrink-0 border border-white/10">
                 {profile.avatarUrl ? (
-                  <img src={resolveAssetUrl(profile.avatarUrl)} alt={name} className="w-full h-full object-cover" draggable={false} />
+                  <RemoteImg src={resolveAssetUrl(profile.avatarUrl)} alt={name} className="w-full h-full object-cover" draggable={false} />
                 ) : (
                   initial
                 )}

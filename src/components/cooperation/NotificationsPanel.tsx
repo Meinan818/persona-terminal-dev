@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import { RemoteImg } from '@/components/ui/RemoteImg';
 import { LocalErrorBoundary } from '@/components/ui/LocalErrorBoundary';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
@@ -604,7 +605,7 @@ function NotificationItem({
         {/* 头像占位 */}
         <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-indigo-500/20 text-indigo-500 font-bold text-base flex items-center justify-center">
           {n.fromProfile?.avatarUrl ? (
-            <img src={resolveAssetUrl(n.fromProfile.avatarUrl)} alt={fromName} className="w-full h-full object-cover" />
+            <RemoteImg src={resolveAssetUrl(n.fromProfile.avatarUrl)} alt={fromName} className="w-full h-full object-cover" />
           ) : (
             (fromName[0] || '?').toUpperCase()
           )}

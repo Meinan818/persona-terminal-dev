@@ -9,6 +9,7 @@
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import { RemoteImg } from '@/components/ui/RemoteImg';
 import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { SheetModal } from '@/components/SheetModal';
 import { useAppStore } from '@/store';
@@ -583,7 +584,7 @@ function MiniFace({ member, tone }: { member?: OrgMember; tone: OrgTone }) {
   const shape: CSSProperties = tone.channel === 'p3' ? { clipPath: slantClip(3) } : tone.channel === 'p5' ? { clipPath: roughQuad((member?.seat ?? 1) + 0.9, 1.5) } : { borderRadius: 999 };
   return (
     <span className="relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden text-[11px] font-black text-white" style={{ background: accentOf(tone), ...shape }}>
-      {member?.avatarUrl ? <img src={resolveAssetUrl(member.avatarUrl)} alt="" className="absolute inset-0 h-full w-full object-cover" /> : [...name][0]}
+      {member?.avatarUrl ? <RemoteImg src={resolveAssetUrl(member.avatarUrl)} alt="" className="absolute inset-0 h-full w-full object-cover" /> : [...name][0]}
     </span>
   );
 }

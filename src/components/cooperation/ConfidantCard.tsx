@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import { RemoteImg } from '@/components/ui/RemoteImg';
 import { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppStore } from '@/store';
@@ -181,7 +182,7 @@ export function ConfidantCard({ confidant, onClick, prayer, activeShadow, onShad
                   boxShadow: `0 4px 10px -6px ${accent}88`,
                 }}
               >
-                <img
+                <RemoteImg
                   src={avatarSrc}
                   alt={confidant.name}
                   className="w-full h-full object-cover"

@@ -29,6 +29,7 @@ import { useAppStore } from '@/store';
 import { useShortViewportScale } from '@/utils/useViewportScale';
 import { hardTagInk } from '@/utils/levelDifficulty';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import { RemoteImg } from '@/components/ui/RemoteImg';
 import { P3R, slantClip } from '@/components/p3r/kit';
 import { WallSpinBackdrop } from './WallSpinBackdrop';
 
@@ -346,7 +347,7 @@ const FriendCardFace = ({ f }: { f: FriendWallItem }) => {
       }}
     >
       {src ? (
-        <img src={src} alt={name} draggable={false} className="absolute inset-0 h-full w-full object-cover" />
+        <RemoteImg src={src} alt={name} draggable={false} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2" style={{ color: sk.accent }}>
           {/* 客人牌背纹样：频道色斜纹打底 */}

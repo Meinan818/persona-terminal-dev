@@ -15,6 +15,8 @@ import { liveStatus } from '@/constants/profileStatus';
 import { tarotArtUrl } from '@/constants/tarotArt';
 import { resolveAssetUrl } from '@/utils/assetUrl';
 import { useTarotArtSet } from '@/ui/useTarotArtSet';
+import { useRemoteAssetSrc } from '@/ui/useRemoteAssetSrc';
+import { RemoteImg } from '@/components/ui/RemoteImg';
 import { P3R, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_FONT, P5_TITLE_FONT, roughQuad } from '@/components/p5r/kit';
 import { P4Sparkle } from '@/ui/p4Kit';
@@ -115,6 +117,9 @@ export function MemberFace({ member, fallbackTarot, streak = 0, toggle = false, 
   style?: CSSProperties;
 }) {
   const face = useMemberFace(member, fallbackTarot);
+  // 远程头像在 App 里会被混合内容拦掉，换成能显示的地址（见 utils/remoteAsset）。
+  // 注意 key 仍用 face.url：翻面动画靠它重挂载，不能跟着解析结果变。
+  const faceSrc = useRemoteAssetSrc(face.url ?? undefined);
   const card = tarotCardOf(face.tarotId);
   // 只有「点了换面」才播翻面，页面刚出来那一下不翻
   const settled = useRef(false);
@@ -129,7 +134,7 @@ export function MemberFace({ member, fallbackTarot, streak = 0, toggle = false, 
       {face.url ? (
         <motion.img
           key={face.url}
-          src={face.url}
+          src={faceSrc}
           alt=""
           loading="lazy"
           draggable={false}
@@ -345,7 +350,7 @@ export function MemberCardFront({ view, member, minutes, width, height }: { view
         : { boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.25)' };
   return (
     <div className="relative h-full w-full overflow-hidden text-white" style={{ width, height, background: f.card?.accent ?? '#1f2937' }}>
-      {url ? <img src={url} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center text-[14px] font-black opacity-70">还没选代表牌</div>}
+      {url ? <RemoteImg src={url} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center text-[14px] font-black opacity-70">还没选代表牌</div>}
       <div className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
       <div aria-hidden className="pointer-events-none absolute inset-0" style={frame} />
       <div className="absolute left-4 top-4 flex items-center gap-2">

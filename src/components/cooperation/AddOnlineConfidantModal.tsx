@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from 'react';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import { RemoteImg } from '@/components/ui/RemoteImg';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
 import { useCloudStore } from '@/store/cloud';
@@ -182,7 +183,7 @@ export function AddOnlineConfidantModal({ isOpen, onClose }: Props) {
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   <div className="w-14 h-14 rounded-full overflow-hidden bg-emerald-500/20 text-emerald-600 font-black text-xl flex items-center justify-center flex-shrink-0">
                     {found.avatarUrl ? (
-                      <img src={resolveAssetUrl(found.avatarUrl)} alt={found.nickname ?? found.userId} className="w-full h-full object-cover" />
+                      <RemoteImg src={resolveAssetUrl(found.avatarUrl)} alt={found.nickname ?? found.userId} className="w-full h-full object-cover" />
                     ) : (
                       (found.nickname?.[0] ?? found.userId?.[0] ?? '?').toUpperCase()
                     )}

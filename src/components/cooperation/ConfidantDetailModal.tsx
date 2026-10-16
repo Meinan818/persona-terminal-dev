@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import { RemoteImg } from '@/components/ui/RemoteImg';
+import { fetchRemoteAssetBlob } from '@/utils/remoteAsset';
 import { motion, AnimatePresence, type Variants } from 'motion/react';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { useAppStore, toLocalDateKey } from '@/store';
@@ -389,11 +391,9 @@ export function ConfidantDetailModal({
     }
     setCardFaceLoading(true);
     try {
-      const res = await fetch(src);
-      // fetch 只在网络层失败时 reject，404/403 也是 resolve —— 不查 ok 就会把
-      // 一张 HTML 错误页当成图片塞进裁切框
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
+      // 经 utils/remoteAsset 取原图：App 里直接 fetch 远程 http 图会被混合内容拦掉；
+      // 那边同样「非 2xx 抛错」，与原先手查 res.ok 的语义一致
+      const blob = await fetchRemoteAssetBlob(src);
       if (!blob.type.startsWith('image/') && blob.size < 64) throw new Error('不是图片');
       setPendingCardFaceFile(new File([blob], 'card-face', { type: blob.type || 'image/jpeg' }));
     } catch {
@@ -520,7 +520,7 @@ export function ConfidantDetailModal({
                         boxShadow: `0 12px 30px -14px ${accent}80, inset 0 0 0 1px ${accent}55`,
                       }}
                     >
-                      <img
+                      <RemoteImg
                         src={confidant.customAvatarDataUrl || resolveAssetUrl(confidant.linkedProfile?.avatarUrl)}
                         alt={confidant.name}
                         className="w-full h-full object-cover"

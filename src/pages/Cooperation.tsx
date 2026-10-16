@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import { RemoteImg } from '@/components/ui/RemoteImg';
+import { fetchRemoteAssetBlob } from '@/utils/remoteAsset';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { useCloudStore } from '@/store/cloud';
@@ -376,9 +378,8 @@ export function Cooperation() {
       return;
     }
     try {
-      const res = await fetch(src);
-      if (!res.ok) throw new Error(String(res.status));
-      const blob = await res.blob();
+      // 经 utils/remoteAsset 取原图：App 里直接 fetch 远程 http 图同样会被混合内容拦掉
+      const blob = await fetchRemoteAssetBlob(src);
       setFriendCrop({ userId: item.profile.id, name, file: new File([blob], 'friend-face', { type: blob.type || 'image/jpeg' }) });
     } catch {
       setPrayerError({ id: item.profile.id, message: '取不到原图，换个网络再试' });
@@ -1151,7 +1152,7 @@ function OnlineFriendPlaceholderCard({
         <div className="flex items-center gap-3">
           <div className="w-14 h-14 rounded-full overflow-hidden bg-emerald-500/20 text-emerald-600 font-black text-lg flex items-center justify-center flex-shrink-0">
             {profile.avatarUrl ? (
-              <img src={resolveAssetUrl(profile.avatarUrl)} alt={name} className="w-full h-full object-cover" draggable={false} />
+              <RemoteImg src={resolveAssetUrl(profile.avatarUrl)} alt={name} className="w-full h-full object-cover" draggable={false} />
             ) : (
               (name[0] || '?').toUpperCase()
             )}

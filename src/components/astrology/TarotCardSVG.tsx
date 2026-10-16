@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { TarotCardData, TarotOrientation, SUIT_META } from '@/constants/tarot';
 import { tarotArtUrl, nextArtRetryDelay } from '@/constants/tarotArt';
 import { useTarotArtSet } from '@/ui/useTarotArtSet';
+import { useRemoteAssetSrc } from '@/ui/useRemoteAssetSrc';
 import { P4Face, P5Face, type TarotFaceProps } from './TarotFaces';
 
 interface TarotCardSVGProps {
@@ -80,6 +81,9 @@ export function TarotCardSVG({
   const [artRetry, setArtRetry] = useState(0);
   const artUrl = tarotArtUrl(card.id, artSet);
   const artSrc = faceOverride ?? (artUrl && artUrl !== failedSrc ? artUrl : null);
+  // faceOverride 可能是远程头像（羁绊「头像同步为卡面」），App 里会被混合内容拦掉，
+  // 经原生通道取回后换成本地可显示的形式；本地塔罗图不受影响（见 utils/remoteAsset）。
+  const imgSrc = useRemoteAssetSrc(artSrc ?? undefined);
 
   useEffect(() => {
     if (!failedSrc) return;
@@ -145,7 +149,7 @@ export function TarotCardSVG({
 
       {artSrc ? (
         <img
-          src={artSrc}
+          src={imgSrc ?? undefined}
           alt={`${card.name} ${card.nameEn}`}
           width={width}
           height={height}

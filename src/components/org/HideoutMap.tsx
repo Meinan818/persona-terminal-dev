@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import { RemoteImg } from '@/components/ui/RemoteImg';
 import { useAnyOverlayOpen } from '@/ui/overlayPause';
 import { useBoldness } from '@/utils/boldness';
 import { P3R, slantClip } from '@/components/p3r/kit';
@@ -231,7 +232,7 @@ function Landmark({ tone, label, en, on, dot }: { tone: OrgTone; label: string; 
 }
 
 function SeatPin({ tone, text, avatarUrl, mine, seat }: { tone: OrgTone; text: string; avatarUrl?: string; mine: boolean; seat: number }) {
-  const img = (style?: CSSProperties) => (avatarUrl ? <img src={resolveAssetUrl(avatarUrl)} alt="" draggable={false} loading="lazy" className="absolute inset-[2px] h-[calc(100%-4px)] w-[calc(100%-4px)] object-cover" style={style} /> : null);
+  const img = (style?: CSSProperties) => (avatarUrl ? <RemoteImg src={resolveAssetUrl(avatarUrl)} alt="" draggable={false} loading="lazy" className="absolute inset-[2px] h-[calc(100%-4px)] w-[calc(100%-4px)] object-cover" style={style} /> : null);
   if (tone.channel === 'p3') {
     return (
       <span className="relative block" title={`${seat} 号`}>

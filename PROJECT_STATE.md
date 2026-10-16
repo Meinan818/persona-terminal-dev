@@ -178,7 +178,7 @@
 | 8 | 用户新报三处缺陷：手机端组织页五角星上方头像显示失败、平板端安装后图标显示不全、鸿蒙平板记账完成后字体显示不全（详见 §9 2026-10-16 节点） | 用户明确要求先不修，仅记录；待用户发起再逐条复现取证 |
 | 9 | 引导 demo（八屏建档页）：观感已获用户验收通过，并已于 2026-10-16 接进真实 App、合回 `main`（落点 `src/components/WelcomeModal.tsx`）——**此项已完成** | 无待办。原「待用户拍板」已由用户确认接进，接入过程与未做项见 §9 对应节点；后续若要再改引导外观，仍须先按 §1 起 8899 服务并跑那三条回归 |
 
-| 10 | 羁绊升级演出 demo 的「第二页：升级恭喜」：已用 demo 自己的语言把 App 里那个星移弹窗（升级恭喜阶段）重画成演示页第二页，接在演出确认之后（落点 `outputs\bond-rankup-demo\index.html`，演示产物不入库）——**待用户验收观感** | 我做：改 demo。用户做：双击 `outputs\bond-rankup-demo\index.html`，播完演出点「确认」看第二页（或直接开 `?page=2`）。**验收通过后**下一步才是「接回 App、删掉老弹窗」（`src\components\cooperation\ConfidantStarShiftModal.tsx`）——那一步动 src，须用户另行点头 |
+| 10 | 羁绊升级演出 demo 的「第二页：升级恭喜」→ **已接回 App（2026-10-16）**：demo 第二页观感经用户验收通过后，已把同样的**整页「升级恭喜」**接进真实应用（新增 `src/components/cooperation/ConfidantCelebrateScreen.tsx` + `src/styles/confidant-celebrate.css`），并把老的 celebrate 白卡片弹窗从 `ConfidantStarShiftModal` 里**整段删除**。`tsc --noEmit` 0 错、全量 **40 个测试文件**通过、CDP 实跑蓝/粉两条链路 0 报错 | 无待办。**星移弹窗的输入/生成/预览/落墨四屏仍是老样子**——要不要也翻新成同一套语言，须用户另行发起 |
 
 最新授权：用户明确“PUSH吧，记得记进日志，我想关闭软件的下载通道，记得我的素材不公开”。本次只推私有开发库，关闭官网入口和腾讯云APK通道，更新同一日志；不扩展为公开发布素材或新包。用户已确认手机同步恢复，不再重复要求验同一故障。
 
@@ -1198,3 +1198,29 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
   - 用户验收第二页观感 → 通过后才谈「接回 App、删掉老弹窗」（那是 `src` 改动，须用户明说）。
   - 第二页的「✧ 使用星移」目前也回到假主界面——真实的星移输入／生成／落墨流程没做；要不要做成「第三页」等用户定。
   - 复跑：`cd E:\MASKARIA` 起 `python -m http.server 8898 --directory .`（牌图走 `../../public/tarot/`，服务根必须设在仓库根），另一终端跑 `node .rivet/scratch/p2-check.mjs`。
+
+### 2026-10-16（续）：把「升级恭喜」接回 App —— 老的白卡片恭喜弹窗整段删除
+
+- **起因**：用户验收 demo 第二页观感通过后说「接回 App、把老窗口删掉」。
+- **改动（本次是真正的 `src` 改动）**：
+  - **新增** `src/components/cooperation/ConfidantCelebrateScreen.tsx` + `src/styles/confidant-celebrate.css`：把 demo 第二页那版「升级恭喜」做成 App 里的**整页**浮层（portal 到 body，z-230，压过星移弹窗的 180、低于演出的 240）。信息与老弹窗一字不减（斜切标签 / 塔罗牌 / 巨字 RANK / 称谓 / 新解锁的能力 / 星移机会 / 两个按钮）。颜色**全走 `--p3r-*`**，所以蓝 / 粉 / 红 / 黄 / 夜间自动跟随，没有第二套。Esc 随时可退（沿用「庆祝浮层必须能跳过」的既有纪律）。
+  - **删除**：`ConfidantStarShiftModal.tsx` 里的 `celebrate` 阶段（那个白卡片恭喜弹窗）整段 —— 含它的 JSX、`Sparkles` 组件与 `LEVEL_UP_SPARKLES` 常量、`initialMode` 参数，以及只服务于它的 import（`TarotCardSVG` / `INTIMACY_LABELS` / `formatBuffDisplay` / `useReducedMotion`）。文件 540 → 360 行。这个弹窗现在只管「重新落墨」一条流程：输入 → 生成中 → 预览 → 落墨 → 完成。
+  - **接回两条入口**（两条都在，缺一不可）：
+    ① 升级演出点「确认」后 —— `ConfidantRankUpCutIn.tsx` 的 `ConfidantStarShiftInvite` 改两段式：先整页恭喜，点「使用星移」才切到星移弹窗；
+    ② 打开同伴档案时补弹未庆祝的升级 —— `ConfidantDetailModal.tsx` 按 mode 二选一渲染。
+  - **口径统一**（先写 RED 测试再实现）：新增纯函数 `buffsUnlockedInRange(buffs, 旧级, 新级)`（左开右闭）放进 `src/utils/confidantLevels.ts`；演出的奖励胶囊与新的恭喜页共用它，免得同一场升级在两处各报一批。
+- **验证（本轮实测）**：
+  - 新增测试 `src/utils/__tests__/confidantLevels.test.ts` —— 先 RED（6 项全红）后 GREEN。
+  - `npx tsc --noEmit` 退出 0；`npx vitest run` **40 个测试文件通过**（原 39 + 新增 1），隔离与集成两阶段都过。
+  - **CDP 实跑真实链路**（`.rivet/scratch/cl-probe.mjs`）：借页面自己的 store 建档 → 塞一个真同伴并把升级压进待播队列 → 演出 → 点确认 → 读 DOM 断言：
+    - 确认前 `cl-root` 不存在（恭喜页**没有**提前冒出来）；点确认后 `cl-root` 出现且 `rk-root` 撤下。
+    - 页内容读到 `RANK 5` / `《愚者》· 挚友` / 两块卡标题 / 两个按钮文本；牌图高 264px（已加载）；整页 900/900 一屏放下。
+    - **老白卡片恭喜弹窗指纹 `oldCelebrate = false`** —— 老界面确实不再出现。
+    - 点「使用星移」后 `cl-root` 撤下、星移弹窗出现（不叠加）。
+    - **蓝、粉两条都跑了一遍，页面报错均为 0**。截图在 `.rivet/scratch/cl-shots/`。
+  - ⚠ **踩到的验证陷阱（写给下一个窗口）**：`?rankup=1` 那条开发预览入口用的是**占位同伴**（id `__rankup_preview__`），它不在档案里 → 确认后 `ConfidantStarShiftInvite` 找不到人，什么都不渲染。**这不是本次的回归**（老弹窗当年同样如此），但意味着**只用预览入口验证不到「确认之后」的任何一环**；要用真同伴 + 真队列（见探针脚本做法）。
+  - **未验证（如实）**：① 动画手感与观感仍需用户过目；② 红(p5)/黄(p4)/夜间主题下这一页长什么样**没有实测**（颜色走 `--p3r-*`、理论上自动跟随，但没跑过）；③ 真机（手机 App 内）未测。
+- **commit 与 Push**：见下方本轮提交；分支仍是 `feat/coop-cinematic`，**未 push**。
+- **遗留与下一步**：
+  - 星移弹窗的输入 / 生成中 / 预览 / 落墨四屏**仍是老样式**（用户这次说的是「老窗口」＝那个恭喜界面）。要不要也翻新成同一套语言，须用户另行发起。
+  - 复跑探针：先 `npm run dev`（记下端口），再 `node .rivet/scratch/cl-probe.mjs`（加 `pink` 参数跑粉主题）。注意探针脚本里的端口要跟着改。

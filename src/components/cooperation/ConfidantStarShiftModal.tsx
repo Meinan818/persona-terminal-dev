@@ -1,44 +1,43 @@
 import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { useBackHandler } from '@/utils/useBackHandler';
 import type { Confidant } from '@/types';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { starShiftConfidant, type StarShiftResult } from '@/utils/confidantAI';
-import { INTIMACY_LABELS, formatBuffDisplay } from '@/utils/confidantLevels';
-import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
 
-type Stage = 'celebrate' | 'input' | 'thinking' | 'preview' | 'done' | 'error';
+type Stage = 'input' | 'thinking' | 'preview' | 'done' | 'error';
 
 interface Props {
   isOpen: boolean;
   confidant: Confidant | null;
-  /**
-   * 'celebrate' = 刚升级，进入恭喜界面，可选是否使用星移
-   * 'shift'     = 用户从详情页点击"星移"按钮，直接进入输入阶段
-   */
-  initialMode: 'celebrate' | 'shift';
   onClose: () => void;
 }
 
-export function ConfidantStarShiftModal({ isOpen, confidant, initialMode, onClose }: Props) {
+/**
+ * 星移弹窗 —— 只管「重新落墨」这一条流程：输入 → 生成中 → 预览 → 落墨 → 完成。
+ *
+ * ⚠ 2026-10-16 接回 App：原来的 celebrate 阶段（那个白卡片的「升级恭喜」弹窗）
+ * 已整段删除，由一个独立的整页 ConfidantCelebrateScreen 取代（版式取自已验收的
+ * 概念 demo outputs/bond-rankup-demo）。所以这里不再需要 initialMode，打开即输入阶段。
+ */
+export function ConfidantStarShiftModal({ isOpen, confidant, onClose }: Props) {
   const { settings, consumeStarShift, confidantEvents, activities } = useAppStore(useShallow(s => ({ settings: s.settings, consumeStarShift: s.consumeStarShift, confidantEvents: s.confidantEvents, activities: s.activities })));
-  const shouldReduceMotion = useReducedMotion();
 
-  const [stage, setStage] = useState<Stage>('celebrate');
+  const [stage, setStage] = useState<Stage>('input');
   const [changeNote, setChangeNote] = useState('');
   const [result, setResult] = useState<StarShiftResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setStage(initialMode === 'celebrate' ? 'celebrate' : 'input');
+      setStage('input');
       setChangeNote('');
       setResult(null);
       setErr(null);
     }
-  }, [isOpen, initialMode, confidant?.id]);
+  }, [isOpen, confidant?.id]);
 
   // Android 返回键：
   //   - thinking 阶段（AI 生成星移内容）→ 点遮罩已被阻止，back 同样 no-op
@@ -132,12 +131,6 @@ export function ConfidantStarShiftModal({ isOpen, confidant, initialMode, onClos
     }
   };
 
-  // 升级时新解锁的能力（按当前 buffs 对比）
-  const latestLevelUpEvent = [...confidantEvents]
-    .filter(e => e.confidantId === confidant.id && e.type === 'level_up')
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-  const recentUnlocks = confidant.buffs.filter(b => b.unlockAtLevel === confidant.intimacy);
-
   return (
     <AnimatePresence>
       <motion.div
@@ -159,141 +152,6 @@ export function ConfidantStarShiftModal({ isOpen, confidant, initialMode, onClos
           }}
         >
           <AnimatePresence mode="wait">
-            {/* ── 恭喜阶段 ─────────────────────────── */}
-            {stage === 'celebrate' && (
-              <motion.div
-                key="celebrate"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="relative px-6 pt-8 pb-6"
-              >
-                {/* 背景光晕 */}
-                <motion.div
-                  className="absolute inset-0 pointer-events-none rounded-3xl"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  style={{
-                    background: `radial-gradient(circle at 50% 30%, ${accent}33, transparent 60%)`,
-                  }}
-                />
-                {/* 星星粒子 */}
-                <Sparkles accent={accent} reduceMotion={shouldReduceMotion} />
-
-                <div className="relative text-center space-y-4">
-                  <motion.div
-                    initial={{ scale: 0.4, opacity: 0, rotate: -20 }}
-                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                    transition={{ type: 'spring', damping: 10, stiffness: 180 }}
-                    className="inline-block"
-                  >
-                    {card && (
-                      <TarotCardSVG
-                        card={card}
-                        orientation={confidant.orientation}
-                        width={120}
-                        staticCard
-                        showOrientationTag={false}
-                      />
-                    )}
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="space-y-1"
-                  >
-                    <div className="text-[11px] font-bold tracking-widest uppercase opacity-70" style={{ color: accent }}>
-                      亲密度升级
-                    </div>
-                    <div className="text-3xl font-black text-gray-900 dark:text-white">
-                      Lv.{confidant.intimacy}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      《{card?.name}》· {INTIMACY_LABELS[confidant.intimacy]}
-                    </div>
-                    <div className="text-base font-bold text-gray-800 dark:text-gray-100 mt-2">
-                      {confidant.name}
-                    </div>
-                    {latestLevelUpEvent?.narrative && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
-                        {latestLevelUpEvent.narrative}
-                      </div>
-                    )}
-                  </motion.div>
-
-                  {recentUnlocks.length > 0 && (
-                    <motion.div
-                      initial={{ y: 16, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.55 }}
-                      className="p-3 rounded-xl border text-left"
-                      style={{ background: `${accent}12`, borderColor: `${accent}44` }}
-                    >
-                      <div className="text-[10px] font-bold tracking-widest mb-1" style={{ color: accent }}>
-                        新解锁的能力
-                      </div>
-                      {recentUnlocks.map(b => {
-                        const d = formatBuffDisplay(b, confidant.arcanaId, settings.attributeNames);
-                        return (
-                          <div key={b.id} className="mt-1">
-                            <div className="text-sm font-bold text-gray-900 dark:text-white">{d.title}</div>
-                            <div className="text-[11px] text-gray-600 dark:text-gray-400">{d.description}</div>
-                          </div>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-
-                  <motion.div
-                    initial={{ y: 16, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.75 }}
-                    className="space-y-2 pt-2"
-                  >
-                    <div className="p-3 rounded-xl text-left"
-                         style={{ background: `${accent}10`, border: `1px dashed ${accent}55` }}>
-                      <div className="text-[10px] font-bold tracking-widest mb-1" style={{ color: accent }}>
-                        ✧ 获得一次星移机会（余 {charges}）
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                        星移可以以当前的相处状态，为这段关系重新撰写描述、解读与未来；
-                        若关系发生质变（上一阶段 vs 现在），很值得用一次。
-                      </p>
-                    </div>
-
-                    {charges > 0 ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={onClose}
-                          className="py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300"
-                        >
-                          稍后再说
-                        </button>
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => setStage('input')}
-                          className="py-2.5 rounded-xl text-white text-sm font-bold"
-                          style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
-                        >
-                          ✧ 使用星移
-                        </motion.button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={onClose}
-                        className="w-full py-2.5 rounded-xl text-white text-sm font-bold"
-                        style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
-                      >
-                        欣然接受
-                      </button>
-                    )}
-                  </motion.div>
-                </div>
-              </motion.div>
-            )}
-
             {/* ── 星移输入阶段 ─────────────────────── */}
             {stage === 'input' && (
               <motion.div key="input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6 space-y-4">
@@ -498,42 +356,5 @@ function DiffBlock({ title, prev, next, accent }: { title: string; prev: string;
         {next}
       </div>
     </div>
-  );
-}
-
-const LEVEL_UP_SPARKLES = [
-  { id: 0, top: 11, left: 18, size: 12, delay: 0.04 },
-  { id: 1, top: 16, left: 75, size: 9, delay: 0.18 },
-  { id: 2, top: 31, left: 10, size: 8, delay: 0.32 },
-  { id: 3, top: 38, left: 86, size: 13, delay: 0.12 },
-  { id: 4, top: 55, left: 20, size: 7, delay: 0.46 },
-  { id: 5, top: 63, left: 78, size: 10, delay: 0.28 },
-  { id: 6, top: 75, left: 36, size: 8, delay: 0.58 },
-  { id: 7, top: 82, left: 66, size: 11, delay: 0.4 },
-] as const;
-
-function Sparkles({ accent, reduceMotion }: { accent: string; reduceMotion: boolean | null }) {
-  if (reduceMotion) return null;
-
-  return (
-    <>
-      {LEVEL_UP_SPARKLES.map(s => (
-        <motion.span
-          key={s.id}
-          aria-hidden
-          className="absolute pointer-events-none select-none"
-          style={{
-            top: `${s.top}%`,
-            left: `${s.left}%`,
-            fontSize: s.size,
-            color: accent,
-            textShadow: `0 0 6px ${accent}cc`,
-          }}
-          initial={{ opacity: 0, scale: 0.6, rotate: 0 }}
-          animate={{ opacity: [0, 0.95, 0], scale: [0.65, 1.15, 0.9], rotate: 90 }}
-          transition={{ duration: 1.9, delay: s.delay, ease: 'easeOut' }}
-        >✦</motion.span>
-      ))}
-    </>
   );
 }

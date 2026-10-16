@@ -9,6 +9,7 @@ import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
 import { INTIMACY_LABELS, MAX_INTIMACY, formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
 import { ConfidantStarShiftModal } from '@/components/cooperation/ConfidantStarShiftModal';
+import { ConfidantCelebrateScreen } from '@/components/cooperation/ConfidantCelebrateScreen';
 import '@/styles/confidant-rankup.css';
 
 /**
@@ -350,10 +351,11 @@ export function ConfidantRankUpCutIn() {
 }
 
 /**
- * 升级演出点「确认」后接着打开的星移弹窗（用户定案 A：把「事后补弹」提前到升级当下）。
+ * 升级演出点「确认」后接的两段（用户定案 A：把「事后补弹」提前到升级当下）。
  *
  * 挂在 App 顶层——升级可能发生在任意页面，不像原来只挂在同伴详情弹窗里。
- * 「要不要用星移」这套界面直接复用既有的 ConfidantStarShiftModal（celebrate 阶段）。
+ *   第一段：整页「升级恭喜」（ConfidantCelebrateScreen，2026-10-16 接回 App）
+ *   第二段：点「使用星移」才切到星移弹窗（ConfidantStarShiftModal，只管落墨流程）
  */
 export function ConfidantStarShiftInvite() {
   const invite = useAppStore(s => s.starShiftInvite);
@@ -361,17 +363,33 @@ export function ConfidantStarShiftInvite() {
   const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
   const confidant = invite ? confidants.find(c => c.id === invite) ?? null : null;
 
-  // 同伴已被删/归档：清掉邀请，别把弹窗卡在半开状态
+  // 每次换人（或重新邀请）都从「恭喜」这一屏开始；「稍后再说」直接关掉
+  const [phase, setPhase] = useState<'celebrate' | 'shift'>('celebrate');
+  useEffect(() => {
+    setPhase('celebrate');
+  }, [invite]);
+
+  // 同伴已被删/归档：清掉邀请，别把浮层卡在半开状态
   useEffect(() => {
     if (invite && !confidant) setStarShiftInvite(null);
   }, [invite, confidant, setStarShiftInvite]);
 
   if (!invite || !confidant) return null;
+
+  if (phase === 'celebrate') {
+    return (
+      <ConfidantCelebrateScreen
+        confidant={confidant}
+        onClose={() => setStarShiftInvite(null)}
+        onUseStarShift={() => setPhase('shift')}
+      />
+    );
+  }
+
   return (
     <ConfidantStarShiftModal
       isOpen
       confidant={confidant}
-      initialMode="celebrate"
       onClose={() => setStarShiftInvite(null)}
     />
   );

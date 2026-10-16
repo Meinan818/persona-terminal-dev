@@ -21,6 +21,7 @@ import {
 import { useCloudStore } from '@/store/cloud';
 import { ConfidantInteractionModal } from '@/components/cooperation/ConfidantInteractionModal';
 import { ConfidantStarShiftModal } from '@/components/cooperation/ConfidantStarShiftModal';
+import { ConfidantCelebrateScreen } from '@/components/cooperation/ConfidantCelebrateScreen';
 import { findUncelebratedLevelUps, markLevelCelebrated } from '@/utils/confidantCelebration';
 import { CounselChatModal } from '@/components/cooperation/CounselChatModal';
 import { CoopMemorialPanel } from '@/components/cooperation/CoopMemorialPanel';
@@ -129,7 +130,7 @@ export function ConfidantDetailModal({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [starShiftOpen, setStarShiftOpen] = useState(false);
-  const [starShiftMode, setStarShiftMode] = useState<'celebrate' | 'shift'>('celebrate');
+  const [starShiftMode, setStarShiftMode] = useState<'celebrate' | 'shift'>('shift');
   const [counselOpen, setCounselOpen] = useState(false);
   const [memorialOpen, setMemorialOpen] = useState(false);
   // 一起进步（v2.7.0.6）：在线同伴详情页的快捷入口弹窗
@@ -1077,12 +1078,21 @@ export function ConfidantDetailModal({
         onClose={() => setInteractionOpen(false)}
         confidant={confidant}
       />
-      {/* 升级恭喜 + 星移弹窗 */}
+      {/* 升级恭喜（整页）→ 星移弹窗：点「使用星移」才切到后者。
+          2026-10-16 接回 App：恭喜从「弹窗里的一个阶段」变成独立整页，
+          所以这里按 mode 二选一渲染，不再给星移弹窗传 initialMode。 */}
+      {starShiftOpen && starShiftMode === 'celebrate' && (
+        <ConfidantCelebrateScreen
+          key="cd-celebrate"
+          confidant={confidant}
+          onClose={() => setStarShiftOpen(false)}
+          onUseStarShift={() => setStarShiftMode('shift')}
+        />
+      )}
       <ConfidantStarShiftModal
         key="cd-starshift"
-        isOpen={starShiftOpen}
+        isOpen={starShiftOpen && starShiftMode === 'shift'}
         confidant={confidant}
-        initialMode={starShiftMode}
         onClose={() => setStarShiftOpen(false)}
       />
 

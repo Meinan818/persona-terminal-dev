@@ -211,6 +211,20 @@ export function buffsForLevel(
 }
 
 /**
+ * 「这一次升级（旧级 → 新级）解锁了哪些能力」——升级演出与升级恭喜页共用同一口径。
+ *
+ * 口径是**左开右闭**：旧级之后、新级及以前。旧级那一轮已经报过一次，不重复报；
+ * 一次跨多级时区间内的全部一次报出。返回新数组，不改动入参。
+ */
+export function buffsUnlockedInRange<T extends { unlockAtLevel: number }>(
+  buffs: readonly T[],
+  fromExclusive: number,
+  toInclusive: number,
+): T[] {
+  return buffs.filter(b => b.unlockAtLevel > fromExclusive && b.unlockAtLevel <= toInclusive);
+}
+
+/**
  * 实时根据当前 attributeNames 生成可展示的 title/description。
  * 用于 UI 层，保证用户重命名属性后 buff 文本同步更新（不用重写 DB）。
  */

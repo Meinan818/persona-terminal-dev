@@ -56,10 +56,14 @@ export function ConfidantRankUpCutIn() {
   // 地址后加 ?rankup=1（或 ?rankup=<同伴id>）就立刻排一段演出，不用真升一级。
   // 走的是**真实的那条队列**，所以你看到的和真升级时完全同一套路径。
   // 生产构建里 import.meta.env.DEV 恒为 false，这一段会被整段摇掉。
+  const previewFiredRef = useRef(false);
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
+    // 只在**每次页面加载**里放一次：confidants 每次刷新数据都会换成新数组，
+    // 少了这道闸就会「数据一变又播一遍」（2026-10-16 用户报告：每次回车都触发一次）。
+    if (!import.meta.env.DEV || previewFiredRef.current) return;
     const raw = new URLSearchParams(window.location.search).get('rankup');
     if (!raw) return;
+    previewFiredRef.current = true;
     const target = confidants.find(c => c.id === raw) ?? confidants.find(c => !c.archivedAt);
     if (!target) return;
     const newLevel = Math.min(MAX_INTIMACY, Math.max(1, target.intimacy + 1));

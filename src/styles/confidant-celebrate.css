@@ -17,6 +17,10 @@
      点「使用星移」时这一页同时卸载，不会和星移弹窗互相压 */
   z-index: 230;
   overflow-y: auto;
+  /* 原生滚动条在手机上又宽又显眼（用户 2026-10-16 报「侧面有滚动条很丑」）。
+     隐掉它，滚动本身不受影响 —— 与项目 #root / .no-scrollbar 同一做法。 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   color: var(--p3r-ink, #0a1230);
   background: var(--p3r-sheet-grad, linear-gradient(172deg, #ffffff 0%, #f2f9fd 70%, #e8f4fa 100%));
 
@@ -38,6 +42,8 @@
 }
 /* 粉主题的投影基色跟着换（其余颜色都走 --p3r-*，不用在这里重复） */
 :root[data-theme='pink'] .cl-root { --cl-shade-soft: 80, 10, 45; }
+
+.cl-root::-webkit-scrollbar { width: 0; height: 0; }
 
 .cl-wrap {
   max-width: 820px;

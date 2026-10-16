@@ -130,6 +130,8 @@ export function ConfidantDetailModal({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [starShiftOpen, setStarShiftOpen] = useState(false);
+  /** App 顶层那条「升级恭喜 → 星移」是不是正开着（见下面让它位的 effect） */
+  const globalStarShiftInvite = useAppStore(s => s.starShiftInvite);
   const [starShiftMode, setStarShiftMode] = useState<'celebrate' | 'shift'>('shift');
   const [counselOpen, setCounselOpen] = useState(false);
   const [memorialOpen, setMemorialOpen] = useState(false);
@@ -204,6 +206,13 @@ export function ConfidantDetailModal({
     setStarShiftMode('celebrate');
     setStarShiftOpen(true);
   }, [isOpen, confidant, confidantEvents, confidantRankUpQueue, starShiftOpen]);
+
+  // 让位给 App 顶层那条（演出确认后的「升级恭喜 → 星移」）：
+  // 两处各弹一个星移窗时，用户关掉上面那个会露出下面那个
+  // （2026-10-16 用户报「叉掉这个窗口后还有一个」）。同一时刻只留上面那个。
+  useEffect(() => {
+    if (globalStarShiftInvite) setStarShiftOpen(false);
+  }, [globalStarShiftInvite]);
 
   if (!isOpen || !confidant) return null;
 
@@ -421,7 +430,7 @@ export function ConfidantDetailModal({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-          className="w-full max-w-md max-h-[92vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl"
+          className="no-scrollbar w-full max-w-md max-h-[92vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* 头部：大牌面（不加 overflow-hidden，否则长按菜单会被截断） */}

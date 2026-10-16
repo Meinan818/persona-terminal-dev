@@ -145,7 +145,7 @@ export function ConfidantStarShiftModal({ isOpen, confidant, onClose }: Props) {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.92, opacity: 0 }}
           transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-          className="w-full max-w-md max-h-[92vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl relative"
+          className="no-scrollbar w-full max-w-md max-h-[92vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl relative"
           onClick={(e) => e.stopPropagation()}
           style={{
             boxShadow: `0 20px 60px -20px ${accent}66, 0 0 0 1px ${accent}22`,

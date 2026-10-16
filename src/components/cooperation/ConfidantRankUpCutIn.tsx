@@ -36,9 +36,44 @@ import '@/styles/confidant-rankup.css';
  * p5 时根本不会渲染到它，而 p4 / neutral 仍然走它，于是「本期不出新演出」的既有行为一字未改。
  */
 export function ConfidantRankUpCutIn() {
-  // 判据是纯函数（confidantRankUpShared.rankUpVariantFor），可脱离 React / store 单测
-  if (rankUpVariantFor(useUiChannel()) === 'p5') return <ConfidantRankUpCutInP5 />;
+  const variant = rankUpVariantFor(useUiChannel());
+  // ⚠ 预览入队（?rankup）必须挂在**这一层**，不能留在 P3 组件里：
+  //   wrapper 在 p5 频道下直接返回 P5 版、根本不渲染 P3 —— 若入队逻辑留在 P3，
+  //   红频道下 ?rankup 会「点开什么都没发生」（2026-10-16 实测发现，
+  //   表现为探针等 .rk5-root 永远等不到）。入队属于「队列」职责，与皮肤无关。
+  useRankUpPreviewEnqueue();
+  if (variant === 'p5') return <ConfidantRankUpCutInP5 />;
   return <RankUpCutInP3 />;
+}
+
+/** 开发预览：地址后加 ?rankup=1（或 ?rankup=<同伴id>）立刻排一段演出，与皮肤无关。 */
+function useRankUpPreviewEnqueue() {
+  const confidants = useAppStore(s => s.confidants);
+  const enqueueConfidantRankUp = useAppStore(s => s.enqueueConfidantRankUp);
+  const previewFiredRef = useRef(false);
+  useEffect(() => {
+    // 只在**每次页面加载**里放一次：confidants 每次刷新数据都会换成新数组，
+    // 少了这道闸就会「数据一变又播一遍」（2026-10-16 用户报告：每次回车都触发一次）。
+    if (!import.meta.env.DEV || previewFiredRef.current) return;
+    const raw = new URLSearchParams(window.location.search).get('rankup');
+    if (!raw) return;
+    previewFiredRef.current = true;
+    const target = confidants.find(c => c.id === raw) ?? confidants.find(c => !c.archivedAt);
+    // 一个同伴都没有也放：用占位同伴，方便在全新档案 / 无头浏览器上核对演出本身
+    const fromLevel = target ? target.intimacy : PREVIEW_CONFIDANT.intimacy;
+    const newLevel = Math.min(MAX_INTIMACY, Math.max(1, fromLevel + 1));
+    enqueueConfidantRankUp({
+      confidantId: target?.id ?? PREVIEW_CONFIDANT.id,
+      oldLevel: Math.max(0, newLevel - 1),
+      newLevel,
+      starShiftGained: 1,
+      preview: true,
+    });
+    // 摘掉参数：免得热更 / 重渲染又推一条
+    const u = new URL(window.location.href);
+    u.searchParams.delete('rankup');
+    window.history.replaceState(null, '', u.toString());
+  }, [confidants, enqueueConfidantRankUp]);
 }
 
 function RankUpCutInP3() {
@@ -48,7 +83,6 @@ function RankUpCutInP3() {
   const settings = useAppStore(s => s.settings);
   const dismissConfidantRankUp = useAppStore(s => s.dismissConfidantRankUp);
   const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
-  const enqueueConfidantRankUp = useAppStore(s => s.enqueueConfidantRankUp);
   const reduce = useReducedMotion();
   // 有别的弹窗时自己让位排队（原来这层判断在 App 里，现在改常驻挂载、挪进来）
   const modalBlocker = useAppStore(s => s.modalBlocker);
@@ -71,33 +105,8 @@ function RankUpCutInP3() {
   }, [notice, confidant, dismissConfidantRankUp]);
 
   // ── 只在开发时的预览入口 ───────────────────────────────────────────────
-  // 地址后加 ?rankup=1（或 ?rankup=<同伴id>）就立刻排一段演出，不用真升一级。
-  // 走的是**真实的那条队列**，所以你看到的和真升级时完全同一套路径。
-  // 生产构建里 import.meta.env.DEV 恒为 false，这一段会被整段摇掉。
-  const previewFiredRef = useRef(false);
-  useEffect(() => {
-    // 只在**每次页面加载**里放一次：confidants 每次刷新数据都会换成新数组，
-    // 少了这道闸就会「数据一变又播一遍」（2026-10-16 用户报告：每次回车都触发一次）。
-    if (!import.meta.env.DEV || previewFiredRef.current) return;
-    const raw = new URLSearchParams(window.location.search).get('rankup');
-    if (!raw) return;
-    previewFiredRef.current = true;
-    const target = confidants.find(c => c.id === raw) ?? confidants.find(c => !c.archivedAt);
-    // 一个同伴都没有也放：用占位同伴，方便在全新档案 / 无头浏览器上核对演出本身
-    const fromLevel = target ? target.intimacy : PREVIEW_CONFIDANT.intimacy;
-    const newLevel = Math.min(MAX_INTIMACY, Math.max(1, fromLevel + 1));
-    enqueueConfidantRankUp({
-      confidantId: target?.id ?? PREVIEW_CONFIDANT.id,
-      oldLevel: Math.max(0, newLevel - 1),
-      newLevel,
-      starShiftGained: 1,
-      preview: true,
-    });
-    // 摘掉参数：免得热更 / 重渲染又推一条
-    const url = new URL(window.location.href);
-    url.searchParams.delete('rankup');
-    window.history.replaceState(null, '', url.toString());
-  }, [confidants, enqueueConfidantRankUp]);
+  // 预览入队（?rankup）已上提到 wrapper 层的 useRankUpPreviewEnqueue ——
+  // 它必须与皮肤无关，否则红频道下 P3 不渲染、预览永久失效（见那处注释）。
 
   /** 收场：出队 + 接星移弹窗（用户定案 A：确认后接着弹星移） */
   const finishRankUp = useCallback(() => {
@@ -362,19 +371,30 @@ export function ConfidantStarShiftInvite() {
   // 与演出的 ?rankup 同一套做法（同一个占位同伴）；生产构建里 import.meta.env.DEV
   // 恒为 false，这一段会被整段摇掉。
   const previewFiredRef = useRef(false);
+  // ?starshift=1 一次性消费的标记（先在本 effect 里置位，再由下方 effect 取用）
+  const starshiftDirectRef = useRef(false);
   useEffect(() => {
     if (!import.meta.env.DEV || previewFiredRef.current) return;
-    if (!new URLSearchParams(window.location.search).has('celebrate')) return;
+    const params = new URLSearchParams(window.location.search);
+    // ?celebrate=1 → 恭喜整页；?starshift=1 → 直接进星移四屏（跳过恭喜页）
+    const wantCelebrate = params.has('celebrate');
+    const wantStarshift = params.has('starshift');
+    if (!wantCelebrate && !wantStarshift) return;
     previewFiredRef.current = true;
     setStarShiftInvite(PREVIEW_CONFIDANT.id);
+    // 星移直达：先让恭喜页就位，再把它翻到 'shift' 那一屏（下方 effect 读这个标记）
+    if (wantStarshift) starshiftDirectRef.current = true;
     const url = new URL(window.location.href);
     url.searchParams.delete('celebrate');
+    url.searchParams.delete('starshift');
     window.history.replaceState(null, '', url.toString());
   }, [setStarShiftInvite]);
 
-  // 每次换人（或重新邀请）都从「恭喜」这一屏开始；「稍后再说」直接关掉
+  // 每次换人（或重新邀请）都从「恭喜」这一屏开始；「稍后再说」直接关掉。
+  // ?starshift=1 是例外：直接落到星移屏（一次性消费，见上）。
   const [phase, setPhase] = useState<'celebrate' | 'shift'>('celebrate');
   useEffect(() => {
+    if (starshiftDirectRef.current) { starshiftDirectRef.current = false; setPhase('shift'); return; }
     setPhase('celebrate');
   }, [invite]);
 

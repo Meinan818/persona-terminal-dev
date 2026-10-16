@@ -42,14 +42,25 @@ export const PREVIEW_CONFIDANT = {
   userId: '__preview__',
   source: 'offline',
   name: '预览同伴',
-  arcanaId: 'fool',
+  // 取「太阳」是为了与已验收的红版 demo 第二页（RANK 5 /《太阳》/挚友）同数据，
+  // ?celebrate / ?rankup 的截图才能和 demo 做有意义的像素对账。
+  arcanaId: 'sun',
   orientation: 'upright',
   description: '',
   aiInterpretation: '',
   aiAdvice: '',
-  intimacy: 4,
+  intimacy: 5,
   intimacyPoints: 0,
-  buffs: [],
+  // 与 demo 第二页同样的「新解锁的能力」一条，否则该纸卡整块不渲染、对账缺一块
+  buffs: [{
+    id: '__preview_buff__',
+    kind: 'attribute',
+    attribute: 'charm',
+    value: 1,
+    unlockAtLevel: 5,
+    title: '太阳的指引',
+    description: '每天首次为「灵巧」加点时，额外 +1 点（乘区外，每日一次）',
+  }],
   decayEnabled: false,
   // 星移次数：演出不读这个字段，但「恭喜整页」用它决定按钮组（有次数→两键）。
   // 给 1 是为了 ?celebrate 预览能看到完整的两键形态。

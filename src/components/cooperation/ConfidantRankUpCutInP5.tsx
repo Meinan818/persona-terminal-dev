@@ -22,21 +22,11 @@ import { useAppStore } from '@/store';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
 import { P5R, starPts } from '@/components/p5r/kit';
+import { p5RingLayers, P5ScatterStars, P5Hoops } from '@/components/cooperation/confidantP5Scenery';
 import { INTIMACY_LABELS, formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
 import { EXP, SLAM, OVER, rand, PREVIEW_CONFIDANT } from './confidantRankUpShared';
 import '@/styles/confidant-rankup-p5.css';
-
-/** 同心星层的色带（暗红/黑，由中心一圈圈辐射出画面）—— 与 demo 同一组 */
-const BANDS = ['#150001', '#3f0004', '#0f0001', '#4c0005', '#0b0000', '#340003', '#070000', '#280002', '#050000'];
-/** 四角散落的描边五角星：[左偏移, 上偏移, 尺寸, 旋转, 描边色] */
-const SCATTER_STARS: { x: number; y: string; size: number; rot: number; color: string }[] = [
-  { x: -14, y: '12%', size: 96, rot: -16, color: '#6b6862' },
-  { x: -10, y: '16%', size: 70, rot: 14, color: P5R.red },
-  { x: 6, y: '10%', size: 58, rot: -8, color: P5R.paper },
-  { x: 10, y: '26%', size: 80, rot: 20, color: P5R.orange },
-  { x: -16, y: '30%', size: 64, rot: -22, color: P5R.paper },
-];
 
 export function ConfidantRankUpCutInP5() {
   const queue = useAppStore(s => s.confidantRankUpQueue);
@@ -76,6 +66,10 @@ export function ConfidantRankUpCutInP5() {
 
   const [phase, setPhase] = useState<'playing' | 'confirm'>('playing');
   const ringsRef = useRef<HTMLDivElement>(null);
+  const ripplesRef = useRef<HTMLDivElement>(null);
+  const collectRef = useRef<HTMLDivElement>(null);
+  const haloRef = useRef<HTMLDivElement>(null);
+  const glintRef = useRef<HTMLDivElement>(null);
   const slabARef = useRef<HTMLDivElement>(null);
   const slabBRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -86,6 +80,8 @@ export function ConfidantRankUpCutInP5() {
   const shockRef = useRef<HTMLDivElement>(null);
   const waveRef = useRef<HTMLDivElement>(null);
   const sparksRef = useRef<HTMLDivElement>(null);
+  const shardsRef = useRef<HTMLDivElement>(null);
+  const starsRef = useRef<HTMLDivElement>(null);
   const burstRef = useRef<HTMLDivElement>(null);
   const vowRef = useRef<HTMLDivElement>(null);
   const unlockRef = useRef<HTMLDivElement>(null);
@@ -93,6 +89,32 @@ export function ConfidantRankUpCutInP5() {
   // 落印甩出的小红点：起点沿印章轮廓铺一圈，再沿同方向甩出。
   // 换一条队列项就重建（位置随机，但同一条内稳定）。
   const noticeId = notice?.id;
+  // 盖印炸出的剪报碎片（demo #shards：36 片）。形状走确定性随机，
+  // 免得每次重播都换一套形状（碎片面积大，乱跳很明显）。
+  // mulberry32 与 demo 同式；项目里 fateDraw.ts / lifeQuests.ts 也各有一份本地副本（既有惯例）。
+  const shards = useMemo(() => {
+    const mulberry32 = (a: number) => () => {
+      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const clampN = (n: number) => Math.max(0, Math.min(100, n));
+    return Array.from({ length: 36 }, (_, i) => {
+      const r = mulberry32(1500 + i);
+      const jag = 24;
+      const p = () => (r() * 2 - 1) * jag;
+      const cl = (v: number) => clampN(v).toFixed(2);
+      return {
+        w: `${(9 + r() * 28).toFixed(0)}px`,
+        h: `${(7 + r() * 17).toFixed(0)}px`,
+        r: `${(r() * 180).toFixed(0)}deg`,
+        dx: `${(r() * 26 - 13).toFixed(1)}vw`,
+        dy: `${(r() * 22 - 4).toFixed(1)}vh`,
+        clip: `polygon(${cl(p())}% ${cl(p())}%,${cl(100 - p())}% ${cl(p())}%,${cl(100 - p())}% ${cl(100 - p())}%,${cl(p())}% ${cl(100 - p())}%)`,
+      };
+    });
+  }, []);
   const sparks = useMemo(
     () =>
       Array.from({ length: 24 }, () => {
@@ -138,16 +160,26 @@ export function ConfidantRankUpCutInP5() {
     } else {
       // ① 同心星定场 + 两条猩红斜带（只做动势，牌走中间的黑底）
       A(ringsRef.current, [{ opacity: 0, scale: 0.42, rotate: '-22deg' }, { opacity: 1, scale: 1, rotate: '-9deg' }], { duration: 850, delay: 60, easing: EXP });
+      // 星涟漪三圈接力扩散（照 demo：每圈 delay = i*240ms）
+      const rippleSvgs = ripplesRef.current?.querySelectorAll('svg') ?? [];
+      rippleSvgs.forEach((sv, i) => {
+        A(sv, [{ opacity: 0.9, scale: 0.32, rotate: '-14deg' }, { opacity: 0, scale: 1.5, rotate: '-2deg' }], { duration: 820, delay: i * 240, easing: EXP });
+      });
+      // 集中线自中心爆开（照 demo：duration 1500、delay 180、中途 offset .4 最亮）
+      A(collectRef.current, [{ opacity: 0, scale: 0.1, rotate: '-18deg' }, { opacity: 1, scale: 1, rotate: '0deg', offset: 0.4 }, { opacity: 0, scale: 1, rotate: '0deg' }], { duration: 1500, delay: 180, easing: EXP });
       A(slabARef.current, [{ opacity: 0, scale: 1.5, rotate: '-8deg' }, { opacity: 1, scale: 1, rotate: '-3deg' }], { duration: 760, delay: 80, easing: EXP });
       A(slabBRef.current, [{ opacity: 0, translate: '-44px 0' }, { opacity: 1, translate: '0 0' }], { duration: 700, delay: 220, easing: EXP });
 
-      // ② 牌转向显形（宿命显形的本体）
+      // ② 牌「转向」显形（宿命显形的本体）+ 背后光晕呼吸 + 扫过的高光
+      A(haloRef.current, [{ opacity: 0, scale: 0.4 }, { opacity: 0.85, scale: 1, offset: 0.55 }, { opacity: 0.5, scale: 1.12 }], { duration: 1500, delay: 340, easing: EXP });
       A(cardRef.current, [
         { opacity: 0, transform: 'rotateY(-78deg) rotateZ(-9deg) scale(1.34)' },
         { opacity: 1, transform: 'rotateY(0deg) rotateZ(0deg) scale(1)', offset: 0.62 },
         { opacity: 1, transform: 'rotateY(0deg) rotateZ(0deg) scale(1.03)', offset: 0.78 },
         { opacity: 1, transform: 'rotateY(0deg) rotateZ(0deg) scale(1)' },
       ], { duration: 1180, delay: 400, easing: EXP });
+      // 牌面高光扫过（照 demo #glint：delay 1220、线性、从左到右）
+      A(glintRef.current, [{ opacity: 0, translate: '-140% 0' }, { opacity: 1, translate: '-10% 0', offset: 0.5 }, { opacity: 0, translate: '140% 0' }], { duration: 880, delay: 1220, easing: 'linear' });
 
       // ③ 命运行（牌名 + 称谓）
       T(1560, () => { A(arcanaRef.current, [{ opacity: 0, translate: '0 18px' }, { opacity: 1, translate: '0 0' }], { duration: 520, easing: EXP }); });
@@ -168,7 +200,26 @@ export function ConfidantRankUpCutInP5() {
       // ⑥ 落印痕迹：印章 keyframe 在 2880+560×0.58≈3205ms 触底，痕迹略晚于触底才像「砸」
       T(3000, () => {
         A(oldRef.current, [{ opacity: 0.95, scale: 1 }, { opacity: 0, scale: 1.28, filter: 'blur(5px)' }], { duration: 320, easing: 'ease-out' });
+        // 剪报碎片自中心炸开（照 demo #shards）
+        shardsRef.current?.querySelectorAll('i').forEach(g => {
+          const dx = g.getAttribute('data-dx') ?? '0vw';
+          const dy = g.getAttribute('data-dy') ?? '0vh';
+          const rot = g.getAttribute('data-r') ?? '0deg';
+          A(g, [
+            { opacity: 0, scale: '0.35', translate: '0 0' },
+            { opacity: 0.95, scale: '1', offset: 0.22 },
+            { opacity: 0, scale: '0.7', translate: `${dx} ${dy}`, rotate: rot },
+          ], { delay: Math.random() * 110, duration: 1250, easing: 'cubic-bezier(.2,.7,.3,1)' });
+        });
         A(stampRef.current, [{ opacity: 1 }, { opacity: 1, offset: 0.62 }, { opacity: 0 }], { duration: 520, delay: 150, easing: 'ease-out' });
+        // 散落五角星入场 + 轻闪两轮。
+        // ⚠ demo 源码注释点名：这几行原先与碎片写在一起，v3 重写时只留了碎片、
+        //   把星漏了 —— 于是星元素生成了却永远不亮（opacity 停在 CSS 的 0）。
+        //   同类「元素建了、动画漏了」的缺陷在本轮已出现三次，故此处显式补上并留字。
+        starsRef.current?.querySelectorAll('svg').forEach((s, i) => {
+          A(s, [{ opacity: 0, scale: '0', rotate: '-90deg' }, { opacity: 1, scale: '1', rotate: '0deg' }], { delay: 60 + i * 70, duration: 420, easing: OVER });
+          A(s, [{ opacity: 1 }, { opacity: 0.35 }, { opacity: 1 }], { delay: 700 + i * 70, duration: 1400, iterations: 2, easing: 'ease-in-out' });
+        });
       });
       T(3220, () => {
         A(shockRef.current, [
@@ -214,7 +265,7 @@ export function ConfidantRankUpCutInP5() {
 
     return () => {
       timers.forEach(clearTimeout);
-      [ringsRef, slabARef, slabBRef, cardRef, arcanaRef, oldRef, newRef, stampRef, shockRef, waveRef, burstRef, vowRef, unlockRef].forEach(r => {
+      [ringsRef, collectRef, haloRef, glintRef, slabARef, slabBRef, cardRef, arcanaRef, oldRef, newRef, stampRef, shockRef, waveRef, burstRef, vowRef, unlockRef].forEach(r => {
         r.current?.getAnimations?.().forEach(a => a.cancel());
       });
       sparksRef.current?.querySelectorAll('i').forEach(s => s.getAnimations().forEach(a => a.cancel()));
@@ -248,34 +299,40 @@ export function ConfidantRankUpCutInP5() {
     >
       <div className="rk5-halftone" aria-hidden />
       <div className="rk5-rings" ref={ringsRef} aria-hidden>
-        <svg viewBox="0 0 200 200">
-          {(() => {
-            const layers = [];
-            let R = 100;
-            let i = 0;
-            while (R > 0.6) {
-              layers.push(<polygon key={i} points={starPts(100, 100, R, -90 + i * 1.6, 0.42)} fill={BANDS[i % BANDS.length]} />);
-              R *= 0.912;
-              i++;
-            }
-            return layers;
-          })()}
-        </svg>
+        <svg viewBox="0 0 200 200">{p5RingLayers()}</svg>
+      </div>
+      {/* 星涟漪（三圈描边星接力扩散）/ 四角大圆环 / 集中线 —— demo 第一页的定场层，
+          首版遗漏，用户报「动画完全不合格」（2026-10-16）。 */}
+      <div className="rk5-ripples" ref={ripplesRef} aria-hidden>
+        {[0, 1, 2].map(i => (
+          <svg key={i} viewBox="0 0 200 200">
+            <polygon points={starPts(100, 100, 90, -90 + i * 12, 0.42)} fill="none" stroke="#7d0009" strokeWidth={6} />
+          </svg>
+        ))}
+      </div>
+      <P5Hoops className="rk5-hoops" />
+      <div className="rk5-collect" ref={collectRef} aria-hidden>
+        {Array.from({ length: 28 }, (_, i) => (
+          <i key={i} style={{ transform: `rotate(${(i * 360 / 28).toFixed(1)}deg)` }} />
+        ))}
       </div>
       <div className="rk5-slab rk5-slab-a" ref={slabARef} aria-hidden />
       <div className="rk5-slab rk5-slab-b" ref={slabBRef} aria-hidden />
-      <div className="rk5-stars" aria-hidden>
-        {SCATTER_STARS.map((s, i) => (
-          <svg key={i} viewBox="0 0 200 200" style={{ left: s.x, top: s.y, width: s.size, height: s.size }}>
-            <polygon points={starPts(100, 100, 88, s.rot, 0.42)} fill="none" stroke={s.color} strokeWidth={9} />
-          </svg>
-        ))}
+      {/* 散落星包一层 div 承接 ref —— P5ScatterStars 是函数组件，不转发 ref */}
+      <div ref={starsRef} className="rk5-stars" aria-hidden>
+        <P5ScatterStars />
       </div>
       <div className="rk5-vignette" aria-hidden />
 
       <div className="rk5-cast">
-        <div className="rk5-card" ref={cardRef}>
-          <TarotCardSVG card={card} orientation={confidant.orientation} staticCard showOrientationTag={false} />
+        <div className="rk5-cardst">
+          {/* 牌背后的光晕（demo #halo）：牌转向显形时的红白光，呼吸一轮 */}
+          <div className="rk5-halo" ref={haloRef} aria-hidden />
+          <div className="rk5-card" ref={cardRef}>
+            <TarotCardSVG card={card} orientation={confidant.orientation} staticCard showOrientationTag={false} />
+            {/* 牌面扫过的高光条（demo #glint） */}
+            <div className="rk5-glint" ref={glintRef} aria-hidden />
+          </div>
         </div>
 
         <div className="rk5-arcana" ref={arcanaRef}>
@@ -311,6 +368,26 @@ export function ConfidantRankUpCutInP5() {
               <i key={i} style={{ transform: `rotate(${(i * 360 / 28).toFixed(1)}deg)`, ['--h' as string]: `${(64 + rand(96) + 48).toFixed(0)}px` }} />
             ))}
           </div>
+        </div>
+
+        {/* 盖印那一下炸出的剪报碎片（demo #shards：36 片，与 #sparks 分开——
+            sparks 是沿轮廓甩出的 2–6px 火星，shards 是 9–37px 的纸片）。
+            首版遗漏，2026-10-16 补。 */}
+        <div className="rk5-shards" ref={shardsRef} aria-hidden>
+          {shards.map((s, i) => (
+            <i
+              key={i}
+              data-r={s.r}
+              data-dx={s.dx}
+              data-dy={s.dy}
+              style={{
+                width: s.w,
+                height: s.h,
+                background: i % 3 ? 'var(--rk5-red)' : 'var(--rk5-paper)',
+                clipPath: s.clip,
+              }}
+            />
+          ))}
         </div>
 
         <div className="rk5-vow" ref={vowRef}>

@@ -339,6 +339,23 @@ function App() {
     return () => { cancelled = true; clearTimeout(kick); };
   }, [isLoading, showSplash, user]);
 
+  /**
+   * 开发预览：地址带 ?theme=red|blue|yellow|pink 就直接把主题切过去。
+   *
+   * 用途是「验收红频道那几件」（演出 / 恭喜整页 / 星移四屏）——它们的显示由频道
+   * 决定，而频道来自 user.theme；不给这个开关，验收链接就只能在设置页手动切主题，
+   * 或（更糟）打开后看到的是蓝版、误判成「没做」。
+   * 生产构建里 import.meta.env.DEV 恒为 false，整段摇掉，不影响真实用户。
+   */
+  useEffect(() => {
+    if (!import.meta.env.DEV || !user) return;
+    const want = new URLSearchParams(window.location.search).get('theme');
+    if (!want || want === user.theme) return;
+    const allowed = ['red', 'blue', 'yellow', 'pink'] as const;
+    if (!(allowed as readonly string[]).includes(want)) return;
+    void useAppStore.getState().setTheme(want as (typeof allowed)[number]);
+  }, [user]);
+
   // 订阅云端登录状态变化（登录 / 登出 / 换号 / 跨标签页）
   useEffect(() => {
     const unsub = useCloudStore.getState().initAuthListener();

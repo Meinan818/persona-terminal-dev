@@ -549,6 +549,8 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 
 **验证（本轮实跑）**：`lint` **0 FAIL / 0 WARN**；**键盘行为探针 7/7 全绿**（新脚本 `.rivet/scratch/p3r-keyprobe.mjs`，用 CDP 发真实按键，验 Enter／Esc／↓／输入框内 Enter 四条路径都真的换屏或移动焦点，0 页面错误）；八步流程 **8/8 全绿**、无水平溢出、0 页面错误；换屏中间帧 2 张确认巨型词真的出现（`wipeWord` 实测为 NAME／ATTRIBUTE）。
 
+**反证实验（补的，因为「绿」本身不算证据）**：上一轮键盘探针报 7/7 绿，而绿灯只有在「功能不在时它会变红」的前提下才有意义，所以补做了一次反证。做法：在页面运行时注入 capture 阶段的 keydown 拦截桩（等效于「键盘绑定根本没接上」），再跑同样三条断言。结果 **3 条全部变红、0 条误绿**，且对照组（不注入桩的同一按键）成功。「功能不在 → 测试必定变红」成立，说明上一轮那个绿灯测的是真功能，不是空跑。脚本 `.rivet/scratch/p3r-keyprobe-red.mjs`。
+
 **遗留（下一窗口可直接接手）**：「巨大数字当版式主体」（CALENDAR 屏那条）未落地，可给 done／guide 屏用；场景素材仍是那张平面水纹图（真图是有透视的 3D 渲染场景），材质差距补不了；`inspect` 那 5 条 WARN（首屏按钮不够显眼、12px 小字、动效元素 9 项偏少等）与 v4 时同批，未处理。上一段列的「按键提示条只加在首屏」「巨型词转场未落地」两条已关闭。
 
 **改造方法（沿用上一窗口的提示，已补脚本）**：单屏截图用 `?view=<屏>`，八屏 id 是 welcome／name／preset／customize／done／guide／blessing／enter；`?all=1` 是展开模式，看不到真实场层。截图脚本 `.rivet/scratch/p3r-shots.mjs`（`node .rivet/scratch/p3r-shots.mjs <屏名>` 只截指定屏，不带参数截全部）；本地服务器在 `outputs/p3r-guide-demo` 下起 `python -m http.server 8899`。

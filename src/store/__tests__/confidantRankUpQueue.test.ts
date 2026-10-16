@@ -92,6 +92,30 @@ describe('羁绊升级待播队列（库层触发）', () => {
     expect(useAppStore.getState().confidantRankUpQueue).toHaveLength(0);
   });
 
+  /**
+   * 回归（2026-10-16 用户报「升级后先弹恭喜页、弄完才跳升级界面，只是偶尔会」）：
+   * 原先「先刷新 confidants、再压队列」，中间那一瞬是「等级已是新级 + 队列还空着」——
+   * 同伴档案的补弹判据正好是「有新等级 + 不在队列里」，于是抢先弹了恭喜页。
+   * 这条用例盯住不变量：**任何看到新等级的快照上，队列都必须已经有这条升级**。
+   */
+  it('入队先于数据刷新：看到新等级的那一刻，队列里已经有它', async () => {
+    const seen: Array<{ level: number; queued: boolean }> = [];
+    const unsub = useAppStore.subscribe(s => {
+      const c = s.confidants.find(x => x.id === 'c1');
+      if (!c) return;
+      seen.push({
+        level: c.intimacy,
+        queued: s.confidantRankUpQueue.some(n => n.confidantId === 'c1' && n.newLevel === c.intimacy),
+      });
+    });
+    await useAppStore.getState().bumpConfidantIntimacy('c1', 5, 'intimacy_up', '一起完成了作战');
+    unsub();
+
+    const atNewLevel = seen.filter(s => s.level === 2);
+    expect(atNewLevel.length).toBeGreaterThan(0); // 前提：确实观察到过「新等级已就位」
+    expect(atNewLevel.every(s => s.queued)).toBe(true);
+  });
+
   it('重复事件（同 eventId）：不重复入队', async () => {
     await useAppStore.getState().bumpConfidantIntimacy('c1', 5, 'intimacy_up', 'n', { eventId: 'e1' });
     await useAppStore.getState().bumpConfidantIntimacy('c1', 5, 'intimacy_up', 'n', { eventId: 'e1' });

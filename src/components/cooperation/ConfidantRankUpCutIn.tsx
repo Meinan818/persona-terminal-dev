@@ -368,6 +368,9 @@ function RankUpCutInP3() {
 export function ConfidantStarShiftInvite() {
   const invite = useAppStore(s => s.starShiftInvite);
   const confidants = useAppStore(s => s.confidants);
+  // 演出队列非空 = 还有没播的升级 → 这一层先不出场，避免「恭喜页抢在演出前面」
+  // （队列里的升级播完、点确认才会再设 invite，所以正常链路不受影响）
+  const queue = useAppStore(s => s.confidantRankUpQueue);
   const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
   const confidant = invite
     // 预览（?celebrate）用的是占位同伴，不在 store 里，单独兜一下
@@ -415,7 +418,7 @@ export function ConfidantStarShiftInvite() {
     if (invite && !confidant) setStarShiftInvite(null);
   }, [invite, confidant, setStarShiftInvite]);
 
-  if (!invite || !confidant) return null;
+  if (!invite || !confidant || queue.length > 0) return null;
 
   if (phase === 'celebrate') {
     return (

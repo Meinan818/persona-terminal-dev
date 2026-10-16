@@ -1538,3 +1538,11 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **服务状态**：5199 与 5173–5177 当前**都没有监听**（无 dev server、无静态服务）；要看 demo 或跑 `.rivet/scratch/impact-check.mjs` 之类探针，接手后得自己先起服务。
 - **交给下一个窗口的活**：① 用户目视验收红版 demo（`?still=1` / `?page=2` / `?page=3` 三条直达）；② 通过后落 `src/`：三件 + **转场四件机制** + **主角牌 `#hero` 机制**，并补第 3 页星移四屏动画的逐屏对齐；③ 18 条提交的 Push 需先向用户推荐并取得明确批准。
 - **本次无 push**：本文件用本地提交保存 —— 交接提交 `c261a1d`（HEAD，`feat/coop-cinematic`，领先 `origin/feat/coop-cinematic` **19 条未推**）；`outputs/`、`.rivet/scratch/` 照惯例不入库。
+
+### 2026-10-16（深夜·五）：修「偶尔先弹恭喜页、弄完才跳升级界面」（升级入队竞态）
+
+- **用户报告**：「有的时候升级 coop 后，弹出来的竟然是第二张恭喜界面（让我去改东西的那个），改完才给我跳升级界面，只是偶尔会。」
+- **根因（竞态，非偶发神秘现象）**：`bumpConfidantIntimacy` 原先的顺序是「事务提交 → `loadConfidants()` 刷新数据 → 压入演出队列」。事务一提交，同伴的等级就已经是新级、`level_up` 事件也已落库；刷新之后那一瞬间的状态是**「等级已是新级 + 队列还空着」**，而同伴档案的「补弹恭喜页」判据恰好是「有新等级 + 不在演出队列里」——于是补弹抢在演出前把恭喜页弹了出来（它还会顺手把该级标记成「已庆祝」）。队列随后才压入，所以用户「弄完恭喜页才看到升级演出」。「只是偶尔」是因为窗口很短，取决于 IndexedDB 与 React 的时序。
+- **修复**：① `src/store/index.ts` —— 把队列入队**移到 `loadConfidants()` 之前**（数据一变成新级，队列里就已经有它）；② `ConfidantRankUpCutIn.tsx` 的 `ConfidantStarShiftInvite` 增加兜底闸门「队列非空时这一层不出场」；③ 顺手修 `runP5Sweep` 的 busy 锁：转场中再次请求时**动作照做**（原先直接 return，会把「关窗」这类动作吞掉）。
+- **回归测试**：`src/store/__tests__/confidantRankUpQueue.test.ts` 新增「入队先于数据刷新」不变量用例。**已验证它抓得住这个缺陷**：把顺序临时改回旧写法 → 该用例变红（`atNewLevel.every(s => s.queued)` 为 false）；改回修复 → 绿。
+- **验证**：`npx tsc --noEmit` exit 0；`npm test` **44 文件 / 279 测试全绿**（比上轮 +1 = 这条新用例）；`p5-chain-probe` 整链探针仍零报错。

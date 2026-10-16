@@ -6449,9 +6449,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { leveledUp: false, newIntimacy: cur?.intimacy ?? 0, starShiftGained: 0, eventId: extra?.eventId ?? '' };
     }
     if (!result) return { leveledUp: false, newIntimacy: 0, starShiftGained: 0, eventId: '' };
-    await get().loadConfidants();
     if (result.leveledUp) {
       // 升级当下逐条播放的待播队列；App 顶层播放器消费后出队（旧级由事务内 oldLv 带出，不用新级反推）
+      // ⚠ 必须在 loadConfidants() **之前**压队列：事务提交后数据已经是新等级，
+      //   而「打开档案时的补弹」判据是「有新等级 + 不在队列里」——若先刷新数据、队列还是空的，
+      //   补弹就会抢在演出之前把恭喜页弹出来（用户报「先弹恭喜页、弄完才跳升级界面，只是偶尔会」，
+      //   2026-10-16 定为这条竞态）。
       set(s => ({
         confidantRankUpQueue: [
           ...s.confidantRankUpQueue,
@@ -6459,6 +6462,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         ],
       }));
     }
+    await get().loadConfidants();
     return { leveledUp: result.leveledUp, newIntimacy: result.newLv, starShiftGained: result.starShiftGained, eventId: result.eventId };
   },
 

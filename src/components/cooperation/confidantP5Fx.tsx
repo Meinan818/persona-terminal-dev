@@ -99,7 +99,7 @@ export function lastP5SweepOrigin(): P5FxOrigin {
 /** 圆形展开新层（圆心 = 点击点）——在 apply() 里对新屏调用 */
 export function revealInP5(el: Element | null, origin: P5FxOrigin): void {
   const node = el as HTMLElement | null;
-  if (!canAnimate(node) || prefersReduce()) return;
+  if (!node || !canAnimate(node) || prefersReduce()) return;
   const a = node.animate(
     [
       { clipPath: `circle(0px at ${origin.x}px ${origin.y}px)` },
@@ -118,7 +118,7 @@ export function revealInP5(el: Element | null, origin: P5FxOrigin): void {
 /** 圆形收拢旧层（退场）——调用方负责在动画后把该层从界面上摘掉 */
 export function revealOutP5(el: Element | null, origin: P5FxOrigin): void {
   const node = el as HTMLElement | null;
-  if (!canAnimate(node) || prefersReduce()) return;
+  if (!node || !canAnimate(node) || prefersReduce()) return;
   const a = node.animate(
     [
       { clipPath: `circle(170vmax at ${origin.x}px ${origin.y}px)` },
@@ -138,7 +138,7 @@ export function revealOutP5(el: Element | null, origin: P5FxOrigin): void {
 export function popInP5(els: Iterable<Element>, dir: 1 | -1 = 1): void {
   if (prefersReduce()) return;
   Array.from(els).forEach((el, k) => {
-    if (!canAnimate(el)) return;
+    if (!el || !canAnimate(el)) return;
     el.animate(
       [
         { opacity: 0, transform: `translateX(${dir * 60}px) skewX(-10deg)` },
@@ -151,7 +151,7 @@ export function popInP5(els: Iterable<Element>, dir: 1 | -1 = 1): void {
 
 /** 内容列「缩小回弹」入场（照 demo 的 wrap scale 1.12→1，760ms / EASE2）；jsdom 下自动跳过 */
 export function p5ScaleInP5(el: Element | null, from = 1.12, duration = 760): void {
-  if (!canAnimate(el)) return;
+  if (!el || !canAnimate(el)) return;
   el.animate([{ transform: `scale(${from})` }, { transform: 'scale(1)' }], { duration, easing: EASE2 });
 }
 
@@ -163,11 +163,11 @@ function prefersReduce(): boolean {
  * jsdom（单测环境）没有 `Element.animate` —— 本层所有动画入口都先过这道能力探测：
  * 跑不到动画就安静跳过（组件测试只关心结构与分流，不关心动画帧）。
  */
-const canAnimate = (el: Element | null | undefined): el is HTMLElement =>
+const canAnimate = (el: Element | null | undefined): boolean =>
   !!el && typeof (el as HTMLElement).animate === 'function';
 
 const A = (el: Element | null, kf: Keyframe[], opts: KeyframeAnimationOptions = {}) =>
-  canAnimate(el) ? el.animate(kf, { duration: 400, easing: EXP, fill: 'forwards', ...opts }) : null;
+  el && canAnimate(el) ? el.animate(kf, { duration: 400, easing: EXP, fill: 'forwards', ...opts }) : null;
 
 /* ── 固定层本体 ────────────────────────────────────────────────────────── */
 export function ConfidantP5FxLayer() {
@@ -320,7 +320,12 @@ export function ConfidantP5FxLayer() {
   /* ── 转场四件套 ── */
   const sweep = useCallback(
     (word: string, apply: () => void, origin: P5FxOrigin | null, dir: 1 | -1): Promise<boolean> => {
-      if (busyRef.current) return Promise.resolve(false);
+      // 正在转场时又来一次请求（例如连点）：不叠一层转场，但**动作照做** ——
+      // 早期版本这里直接 return，会把「关窗」这类动作吞掉（用户点了没反应）。
+      if (busyRef.current) {
+        apply();
+        return Promise.resolve(false);
+      }
       if (reduce) {
         apply();
         return Promise.resolve(true);

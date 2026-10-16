@@ -14,6 +14,14 @@ import { EXP, OVER, rand, PREVIEW_CONFIDANT, rankUpVariantFor } from '@/componen
 import '@/styles/confidant-rankup.css';
 
 /**
+ * DEV 预览直达 `?starshift=1`：**模块加载时读一次**。
+ * 为什么不在组件里读 URL：预览 effect 会立刻把参数从地址栏摘掉，组件若比它晚挂载（或重挂载），
+ * 再读就只剩「恭喜」了 —— 2026-10-16 用探针抓到 `?starshift=1` 永远停在恭喜页。
+ */
+const DEV_STARSHIFT_DIRECT = import.meta.env.DEV && typeof window !== 'undefined'
+  && new URLSearchParams(window.location.search).has('starshift');
+
+/**
  * 羁绊升级演出（P3R，p3 频道）——计划 Wave 2。
  *
  * 触发来自 store 的 confidantRankUpQueue（bumpConfidantIntimacy 在升级时压入）。
@@ -371,8 +379,6 @@ export function ConfidantStarShiftInvite() {
   // 与演出的 ?rankup 同一套做法（同一个占位同伴）；生产构建里 import.meta.env.DEV
   // 恒为 false，这一段会被整段摇掉。
   const previewFiredRef = useRef(false);
-  // ?starshift=1 一次性消费的标记（先在本 effect 里置位，再由下方 effect 取用）
-  const starshiftDirectRef = useRef(false);
   useEffect(() => {
     if (!import.meta.env.DEV || previewFiredRef.current) return;
     const params = new URLSearchParams(window.location.search);
@@ -382,8 +388,6 @@ export function ConfidantStarShiftInvite() {
     if (!wantCelebrate && !wantStarshift) return;
     previewFiredRef.current = true;
     setStarShiftInvite(PREVIEW_CONFIDANT.id);
-    // 星移直达：先让恭喜页就位，再把它翻到 'shift' 那一屏（下方 effect 读这个标记）
-    if (wantStarshift) starshiftDirectRef.current = true;
     const url = new URL(window.location.href);
     url.searchParams.delete('celebrate');
     url.searchParams.delete('starshift');
@@ -392,9 +396,17 @@ export function ConfidantStarShiftInvite() {
 
   // 每次换人（或重新邀请）都从「恭喜」这一屏开始；「稍后再说」直接关掉。
   // ?starshift=1 是例外：直接落到星移屏（一次性消费，见上）。
-  const [phase, setPhase] = useState<'celebrate' | 'shift'>('celebrate');
+  const [phase, setPhase] = useState<'celebrate' | 'shift'>(DEV_STARSHIFT_DIRECT ? 'shift' : 'celebrate');
+  const lastInviteRef = useRef<string | null>(null);
   useEffect(() => {
-    if (starshiftDirectRef.current) { starshiftDirectRef.current = false; setPhase('shift'); return; }
+    // 同一个邀请不动（StrictMode 的第二次 effect 会命中这条）——只有「换了个人」才复位到恭喜页。
+    // ⚠ 邀请是**挂载之后**才写进 store 的（升级链点确认 / DEV 预览），所以「首次邀请」是
+    //   null → id 那一次跳变；`?starshift=1` 直达要在这条跳变上保持星移屏（2026-10-16 实测修）。
+    if (lastInviteRef.current === invite) return;
+    const prev = lastInviteRef.current;
+    lastInviteRef.current = invite;
+    if (!invite) return;
+    if (prev === null && DEV_STARSHIFT_DIRECT) return; // ?starshift=1 直达：保持星移屏
     setPhase('celebrate');
   }, [invite]);
 

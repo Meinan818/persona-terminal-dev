@@ -53,6 +53,7 @@ const ReturnPanel = lazy(() => import('@/components/return/ReturnPanel').then(m 
 import { WishProgressCutIn } from '@/components/wish/WishProgressCutIn';
 import { OrgCelebrationCutIn } from '@/components/org/OrgCelebrationCutIn';
 import { ConfidantRankUpCutIn, ConfidantStarShiftInvite } from '@/components/cooperation/ConfidantRankUpCutIn';
+import { ConfidantP5FxLayer } from '@/components/cooperation/confidantP5Fx';
 import { WishProposalDialog } from '@/components/wish/WishProposalDialog';
 // F6 黑猫对话窗（portal 到 body 的全屏 overlay；入口在 Sidebar / BottomNav 中央 ◈）
 const NavigatorWindow = lazy(() => import('@/components/navigator/NavigatorWindow').then(m => ({ default: m.NavigatorWindow })));
@@ -1040,6 +1041,10 @@ function App() {
           <ConfidantRankUpCutIn />
           {/* 升级演出点「确认」后接着弹的星移弹窗（挂在顶层：升级可能发生在任意页面） */}
           <ConfidantStarShiftInvite />
+          {/* 红频道（p5）跨屏公共层：P5R 转场四件套 + 主角牌。
+              必须比上面两个「更外一层」——升级链是 演出 → 恭喜 → 星移 三段各自挂载的组件，
+              而牌与转场要**贯穿**整条链（照用户已验收的红版 demo）。 */}
+          <ConfidantP5FxLayer />
           {/* 回归面板（PRD_V2.6 §12）：离开 ≥7 天后的第一次打开 */}
           {returnPayload && (
             <Suspense fallback={null}>

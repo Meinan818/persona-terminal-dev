@@ -5,7 +5,7 @@ import { useAppStore } from '@/store';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
-import { INTIMACY_LABELS, formatBuffDisplay } from '@/utils/confidantLevels';
+import { INTIMACY_LABELS, MAX_INTIMACY, formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
 import { ConfidantStarShiftModal } from '@/components/cooperation/ConfidantStarShiftModal';
 import '@/styles/confidant-rankup.css';
@@ -34,6 +34,7 @@ export function ConfidantRankUpCutIn() {
   const settings = useAppStore(s => s.settings);
   const dismissConfidantRankUp = useAppStore(s => s.dismissConfidantRankUp);
   const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
+  const enqueueConfidantRankUp = useAppStore(s => s.enqueueConfidantRankUp);
   const reduce = useReducedMotion();
 
   const notice = queue[0] ?? null;
@@ -50,6 +51,30 @@ export function ConfidantRankUpCutIn() {
   useEffect(() => {
     if (notice && !confidant) dismissConfidantRankUp(notice.id);
   }, [notice, confidant, dismissConfidantRankUp]);
+
+  // ── 只在开发时的预览入口 ───────────────────────────────────────────────
+  // 地址后加 ?rankup=1（或 ?rankup=<同伴id>）就立刻排一段演出，不用真升一级。
+  // 走的是**真实的那条队列**，所以你看到的和真升级时完全同一套路径。
+  // 生产构建里 import.meta.env.DEV 恒为 false，这一段会被整段摇掉。
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const raw = new URLSearchParams(window.location.search).get('rankup');
+    if (!raw) return;
+    const target = confidants.find(c => c.id === raw) ?? confidants.find(c => !c.archivedAt);
+    if (!target) return;
+    const newLevel = Math.min(MAX_INTIMACY, Math.max(1, target.intimacy + 1));
+    enqueueConfidantRankUp({
+      confidantId: target.id,
+      oldLevel: Math.max(0, newLevel - 1),
+      newLevel,
+      starShiftGained: 1,
+      preview: true,
+    });
+    // 摘掉参数：免得热更 / 重渲染又推一条
+    const url = new URL(window.location.href);
+    url.searchParams.delete('rankup');
+    window.history.replaceState(null, '', url.toString());
+  }, [confidants, enqueueConfidantRankUp]);
 
   const [phase, setPhase] = useState<'playing' | 'confirm'>('playing');
   const flashRef = useRef<HTMLDivElement>(null);
@@ -99,7 +124,8 @@ export function ConfidantRankUpCutIn() {
     if (!notice || channel !== 'p3' || !confidant) return;
     // 播放开始即标记「这一级庆祝过了」——打开档案时就不会被补弹第二次。
     // （补弹扫描保留作兜底：万一演出没播成，档案里仍能看到祝贺。）
-    markLevelCelebrated(confidant.id, notice.newLevel);
+    // 预览（?rankup）不写「已庆祝」标记——那是真实等级的事，不能被预览污染
+    if (!notice.preview) markLevelCelebrated(confidant.id, notice.newLevel);
     setPhase('playing');
 
     const A = (el: Element | null, kf: Keyframe[], opts: KeyframeAnimationOptions = {}) =>

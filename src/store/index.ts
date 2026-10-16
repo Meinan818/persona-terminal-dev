@@ -295,9 +295,11 @@ interface AppState {
    * docs/superpowers/specs/2026-10-16-coop-rankup-cinematic-design.md）。
    * 由 bumpConfidantIntimacy 在升级时压入，App 顶层的播放器消费后出队。
    */
-  confidantRankUpQueue: { id: string; confidantId: string; oldLevel: number; newLevel: number; starShiftGained: number }[];
+  confidantRankUpQueue: { id: string; confidantId: string; oldLevel: number; newLevel: number; starShiftGained: number; preview?: boolean }[];
   /** 播放完一条后把它移出队列 */
   dismissConfidantRankUp: (noticeId: string) => void;
+  /** 开发预览用：手动排一条演出（入口见 ConfidantRankUpCutIn 的 ?rankup）。生产不调用。 */
+  enqueueConfidantRankUp: (notice: { confidantId: string; oldLevel: number; newLevel: number; starShiftGained: number; preview?: boolean }) => void;
   /**
    * 升级演出点「确认」后要接着打开的星移弹窗（同伴 id）；null = 不开。
    * 由 App 顶层渲染的 ConfidantStarShiftInvite 消费。
@@ -3010,6 +3012,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   dismissConfidantRankUp: (noticeId) => {
     set(s => ({ confidantRankUpQueue: s.confidantRankUpQueue.filter(n => n.id !== noticeId) }));
+  },
+
+  enqueueConfidantRankUp: (notice) => {
+    set(s => ({ confidantRankUpQueue: [...s.confidantRankUpQueue, { id: uuidv4(), ...notice }] }));
   },
 
   setStarShiftInvite: (confidantId) => {

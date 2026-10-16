@@ -6,6 +6,7 @@ import { useBackHandler } from '@/utils/useBackHandler';
 import type { Confidant } from '@/types';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import { starShiftConfidant, type StarShiftResult } from '@/utils/confidantAI';
+import '@/styles/confidant-starshift.css';
 
 type Stage = 'input' | 'thinking' | 'preview' | 'done' | 'error';
 
@@ -21,6 +22,10 @@ interface Props {
  * ⚠ 2026-10-16 接回 App：原来的 celebrate 阶段（那个白卡片的「升级恭喜」弹窗）
  * 已整段删除，由一个独立的整页 ConfidantCelebrateScreen 取代（版式取自已验收的
  * 概念 demo outputs/bond-rankup-demo）。所以这里不再需要 initialMode，打开即输入阶段。
+ *
+ * 同一轮把剩下的四屏也换成了与恭喜页同一套 P3R 语言（平面色块 + 斜切 + 硬投影，
+ * 见 confidant-starshift.css），不再用原来的灰白圆角卡片；
+ * 颜色全走 --p3r-*，蓝 / 粉 / 红 / 黄 / 夜间自动跟随。
  */
 export function ConfidantStarShiftModal({ isOpen, confidant, onClose }: Props) {
   const { settings, consumeStarShift, confidantEvents, activities } = useAppStore(useShallow(s => ({ settings: s.settings, consumeStarShift: s.consumeStarShift, confidantEvents: s.confidantEvents, activities: s.activities })));
@@ -85,7 +90,6 @@ export function ConfidantStarShiftModal({ isOpen, confidant, onClose }: Props) {
   if (!isOpen || !confidant) return null;
 
   const card = TAROT_BY_ID[confidant.arcanaId];
-  const accent = card?.accent || 'rgb(var(--color-bond-rgb))';
   const charges = confidant.starShiftCharges ?? 0;
 
   const handleStartShift = async () => {
@@ -147,158 +151,136 @@ export function ConfidantStarShiftModal({ isOpen, confidant, onClose }: Props) {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.92, opacity: 0 }}
           transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-          className="no-scrollbar w-full max-w-md max-h-[92vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl relative"
+          className="sf-sheet"
           onClick={(e) => e.stopPropagation()}
-          style={{
-            boxShadow: `0 20px 60px -20px ${accent}66, 0 0 0 1px ${accent}22`,
-          }}
         >
           <AnimatePresence mode="wait">
             {/* ── 星移输入阶段 ─────────────────────── */}
             {stage === 'input' && (
-              <motion.div key="input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6 space-y-4">
-                <Header confidant={confidant} accent={accent} onClose={onClose} subtitle={`星移 · 余 ${charges}`} />
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
-                    你觉得你们的关系发生了什么变化？（可不填）
-                  </label>
+              <motion.div key="input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="sf-body">
+                <SheetHead confidant={confidant} subtitle={`星移 · 余 ${charges}`} onClose={onClose} />
+
+                <div className="sf-field">
+                  <label className="sf-label">你觉得你们的关系发生了什么变化？（可不填）</label>
                   <textarea
+                    className="sf-input"
                     value={changeNote}
                     onChange={(e) => setChangeNote(e.target.value)}
                     rows={5}
                     maxLength={300}
                     placeholder="例如：最近几次见面 Ta 愿意和我谈更深入的事情了 / 吵了一架之后我们之间多了一份小心翼翼……"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                   />
-                  <p className="text-[10px] text-gray-400 mt-1 text-right">{changeNote.length} / 300</p>
+                  <div className="sf-count">{changeNote.length} / 300</div>
                 </div>
 
                 {recentActs.length > 0 && (
-                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    <div className="px-3 py-2 text-[10px] font-bold tracking-widest text-gray-400">
-                      最近 {recentActs.length} 条与 Ta 相关的记录（一同纳入星象推演）
-                    </div>
-                    <div className="max-h-40 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                  <div className="sf-box">
+                    <span className="k">最近 {recentActs.length} 条与 Ta 相关的记录（一同纳入星象推演）</span>
+                    <div className="sf-scroll">
                       {recentActs.map((a, i) => (
-                        <div key={i} className="px-3 py-2 text-[11px]">
-                          <span className="text-gray-400 tabular-nums mr-2">{a.date}</span>
-                          <span className="text-gray-700 dark:text-gray-200">{a.text}</span>
+                        <div key={i} className="sf-row">
+                          <span className="d">{a.date}</span>
+                          {a.text}
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleStartShift}
-                  disabled={charges <= 0}
-                  className="w-full py-3 rounded-xl text-white font-bold text-sm shadow-lg disabled:opacity-40"
-                  style={{
-                    background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
-                    boxShadow: `0 10px 28px -12px ${accent}80`,
-                  }}
-                >
-                  ✧ 重新落墨（消耗 1 次）
-                </motion.button>
+                <div className="sf-actions single">
+                  <button
+                    type="button"
+                    className="sf-btn main"
+                    onClick={handleStartShift}
+                    disabled={charges <= 0}
+                  >
+                    ✧ 重新落墨（消耗 1 次）
+                  </button>
+                </div>
               </motion.div>
             )}
 
             {/* ── AI 生成中 ────────────────────────── */}
             {stage === 'thinking' && (
-              <motion.div key="thinking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6">
-                <Header confidant={confidant} accent={accent} onClose={onClose} subtitle="星象正在重写这段关系" hideClose />
-                <div className="py-12 text-center">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                    className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white"
-                    style={{ background: `linear-gradient(135deg, ${accent}, ${accent}99)` }}
-                  >
-                    ✦
-                  </motion.div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-4">
-                    星移中……
-                  </p>
+              <motion.div key="thinking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="sf-body">
+                <SheetHead confidant={confidant} subtitle="星象正在重写这段关系" onClose={onClose} hideClose />
+                <div className="sf-center" style={{ padding: '36px 0' }}>
+                  <div className="sf-spin">✦</div>
+                  <p className="sf-sub" style={{ marginTop: 16 }}>星移中……</p>
                 </div>
               </motion.div>
             )}
 
             {/* ── 预览（新旧对比） ──────────────────── */}
             {stage === 'preview' && result && (
-              <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6 space-y-4">
-                <Header confidant={confidant} accent={accent} onClose={onClose} subtitle="预览新的落墨" />
+              <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="sf-body">
+                <SheetHead confidant={confidant} subtitle="预览新的落墨" onClose={onClose} />
 
                 {result.summary && (
-                  <div className="p-3 rounded-xl text-center" style={{ background: `${accent}14`, border: `1px solid ${accent}44` }}>
-                    <div className="text-[10px] font-bold tracking-widest mb-1" style={{ color: accent }}>
-                      ✧ 这次的变化
-                    </div>
-                    <div className="text-sm font-bold text-gray-800 dark:text-gray-100">
-                      {result.summary}
-                    </div>
+                  <div className="sf-box">
+                    <span className="k">✧ 这次的变化</span>
+                    <small style={{ color: 'var(--sf-ink)', fontWeight: 900 }}>{result.summary}</small>
                   </div>
                 )}
 
-                <DiffBlock title="关系描述" prev={confidant.description} next={result.description} accent={accent} />
-                <DiffBlock title="解读" prev={confidant.aiInterpretation} next={result.interpretation} accent={accent} />
-                <DiffBlock title="未来" prev={confidant.aiAdvice} next={result.advice} accent={accent} />
+                <DiffBlock title="关系描述" prev={confidant.description} next={result.description} />
+                <DiffBlock title="解读" prev={confidant.aiInterpretation} next={result.interpretation} />
+                <DiffBlock title="未来" prev={confidant.aiAdvice} next={result.advice} />
 
                 {result.orientation !== confidant.orientation && (
-                  <div className="p-2.5 rounded-lg text-xs bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-center">
-                    牌面将从 <b>{confidant.orientation === 'upright' ? '正位' : '逆位'}</b> 调整为 <b>{result.orientation === 'upright' ? '正位' : '逆位'}</b>
+                  <div className="sf-box">
+                    <span className="k">牌面将调整</span>
+                    <small>
+                      从 <b>{confidant.orientation === 'upright' ? '正位' : '逆位'}</b> 改为{' '}
+                      <b>{result.orientation === 'upright' ? '正位' : '逆位'}</b>
+                    </small>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setStage('input')}
-                    className="py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300"
-                  >
+                <div className="sf-actions">
+                  <button type="button" className="sf-btn ghost" onClick={() => setStage('input')}>
                     再想想
                   </button>
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleConfirm}
-                    className="py-2.5 rounded-xl text-white text-sm font-bold shadow-md"
-                    style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
-                  >
+                  <button type="button" className="sf-btn main" onClick={handleConfirm}>
                     落墨
-                  </motion.button>
+                  </button>
                 </div>
+
                 {result.source === 'offline' && (
-                  <div className="text-[10px] text-gray-400 text-center">· 本次为离线星移 ·</div>
+                  <div className="sf-sub sf-center">· 本次为离线星移 ·</div>
                 )}
               </motion.div>
             )}
 
             {/* ── 完成 ──────────────────────────────── */}
             {stage === 'done' && (
-              <motion.div key="done" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="p-10 text-center space-y-3">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1, rotate: [0, 15, 0] }}
-                  transition={{ type: 'spring', damping: 10, stiffness: 200 }}
-                  className="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl text-white"
-                  style={{ background: accent }}
-                >✧</motion.div>
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  这一次的落墨已经收进档案
-                </p>
+              <motion.div key="done" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="sf-body">
+                <div className="sf-center" style={{ padding: '24px 0' }}>
+                  <motion.div
+                    className="sf-done-mark"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1, rotate: [0, 15, 0] }}
+                    transition={{ type: 'spring', damping: 10, stiffness: 200 }}
+                  >
+                    ✧
+                  </motion.div>
+                  <p className="sf-sub" style={{ marginTop: 16 }}>这一次的落墨已经收进档案</p>
+                </div>
               </motion.div>
             )}
 
             {/* ── 错误 ──────────────────────────────── */}
             {stage === 'error' && (
-              <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-10 text-center space-y-3">
-                <div className="text-3xl">☁</div>
-                <p className="text-sm text-gray-700 dark:text-gray-200">{err || '出了点问题'}</p>
-                <button
-                  onClick={() => setStage('input')}
-                  className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm font-medium"
-                >
-                  返回重试
-                </button>
+              <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="sf-body">
+                <div className="sf-center" style={{ padding: '24px 0' }}>
+                  <div className="sf-sub" style={{ fontSize: 28 }}>☁</div>
+                  <p className="sf-title" style={{ marginTop: 12 }}>{err || '出了点问题'}</p>
+                </div>
+                <div className="sf-actions single">
+                  <button type="button" className="sf-btn ghost" onClick={() => setStage('input')}>
+                    返回重试
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -308,55 +290,45 @@ export function ConfidantStarShiftModal({ isOpen, confidant, onClose }: Props) {
   );
 }
 
-function Header({
+/** 页头：斜切标签（同伴名 + 等级）+ 副题 + 关闭键 */
+function SheetHead({
   confidant,
-  accent,
   subtitle,
   onClose,
   hideClose,
 }: {
   confidant: Confidant;
-  accent: string;
   subtitle?: string;
   onClose: () => void;
   hideClose?: boolean;
 }) {
   const card = TAROT_BY_ID[confidant.arcanaId];
   return (
-    <div className="flex items-center justify-between mb-2">
-      <div>
-        <h2 className="text-base font-bold text-gray-900 dark:text-white">
-          {confidant.name}
-          <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${accent}22`, color: accent }}>
-            Lv.{confidant.intimacy}
-          </span>
-        </h2>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+    <div className="sf-head">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span className="tag">
+          {confidant.name} · Lv.{confidant.intimacy}
+        </span>
+        <span className="sf-sub">
           《{card?.name}》{subtitle ? ` · ${subtitle}` : ''}
-        </p>
+        </span>
       </div>
       {!hideClose && (
-        <button
-          onClick={onClose}
-          className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 text-gray-500 flex items-center justify-center"
-          aria-label="关闭"
-        >✕</button>
+        <button type="button" className="close" onClick={onClose} aria-label="关闭">
+          ✕
+        </button>
       )}
     </div>
   );
 }
 
-function DiffBlock({ title, prev, next, accent }: { title: string; prev: string; next: string; accent: string }) {
+/** 新旧对比：旧的一条划掉、新的一条高亮 */
+function DiffBlock({ title, prev, next }: { title: string; prev: string; next: string }) {
   return (
-    <div className="space-y-2">
-      <div className="text-[10px] font-bold tracking-widest text-gray-400">{title}</div>
-      <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60 text-xs text-gray-500 dark:text-gray-400 line-through decoration-gray-400/60">
-        {prev || '（无）'}
-      </div>
-      <div className="p-3 rounded-xl text-sm text-gray-800 dark:text-gray-100"
-           style={{ background: `${accent}10`, border: `1px solid ${accent}44` }}>
-        {next}
-      </div>
+    <div className="sf-body" style={{ gap: 6 }}>
+      <span className="sf-box k" style={{ background: 'transparent', padding: 0 }}>{title}</span>
+      <div className="sf-old">{prev || '（无）'}</div>
+      <div className="sf-new">{next}</div>
     </div>
   );
 }

@@ -1,0 +1,167 @@
+/* ══ 星移弹窗（ConfidantStarShiftModal）════════════════════════════════════
+   2026-10-16：与「升级恭喜」整页（confidant-celebrate.css）统一成同一套 P3R 语言 ——
+   平面色块 + 斜切 + 巨字，不再用原来的灰色圆角卡片。
+
+   颜色**一律走项目变量 --p3r-***（每个主题都定义了），所以蓝 / 粉 / 红 / 黄 / 夜间
+   自动跟随，这里不写死任何颜色 —— 与演出、恭喜页同一约定。 */
+
+.sf-sheet {
+  --sf-accent: var(--p3r-blue, #1b57ff);
+  --sf-ink: var(--p3r-ink, #0a1230);
+  --sf-ink-soft: var(--p3r-ink-soft, #3d4a66);
+  --sf-panel: var(--p3r-panel, #ffffff);
+  --sf-panel-alt: var(--p3r-cyan-faint, rgba(27, 87, 255, 0.06));
+  --sf-line: var(--p3r-track, rgba(10, 18, 48, 0.12));
+  --sf-shade-soft: 10, 30, 80;
+  --sf-exp: cubic-bezier(0.16, 1, 0.3, 1);
+  --sf-fx: 'Arial Black', 'Helvetica Neue', Impact, sans-serif;
+  --sf-fc: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
+
+  width: 100%;
+  max-width: 30rem;
+  max-height: 92vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  color: var(--sf-ink);
+  background: var(--sf-panel);
+  padding: clamp(16px, 2.6vh, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.8vh, 16px);
+  /* 斜切外壳 + 硬投影（与恭喜页的卡片同一族） */
+  clip-path: polygon(18px 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+  box-shadow: 0 18px 40px rgba(var(--sf-shade-soft), 0.28);
+}
+.sf-sheet::-webkit-scrollbar { width: 0; height: 0; }
+:root[data-theme='pink'] .sf-sheet { --sf-shade-soft: 80, 10, 45; }
+
+/* 每一屏自己的纵向排布 */
+.sf-body { display: flex; flex-direction: column; gap: clamp(10px, 1.8vh, 16px); }
+
+/* 页头：斜切标签 + 右上角关闭 */
+.sf-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.sf-head .tag {
+  font: italic 900 clamp(12px, 1.8vw, 15px) / 1 var(--sf-fx);
+  color: #fff;
+  background: var(--sf-accent);
+  letter-spacing: 0.1em;
+  padding: 0.5em 0.9em 0.56em;
+  clip-path: polygon(0.5em 0, 100% 0, calc(100% - 0.5em) 100%, 0 100%);
+}
+.sf-head .close {
+  border: 0;
+  cursor: pointer;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  color: var(--sf-ink-soft);
+  background: var(--sf-panel-alt);
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+.sf-title { font: 900 clamp(18px, 2.6vw, 22px) / 1.45 var(--sf-fc); color: var(--sf-ink); }
+.sf-sub { font: 700 clamp(11px, 1.5vw, 13px) / 1.6 var(--sf-fc); color: var(--sf-ink-soft); }
+
+/* 输入区 */
+.sf-field { display: flex; flex-direction: column; gap: 6px; }
+.sf-label { font: 700 clamp(11px, 1.5vw, 13px) / 1.6 var(--sf-fc); color: var(--sf-ink-soft); }
+.sf-input {
+  width: 100%;
+  border: 0;
+  resize: none;
+  color: var(--sf-ink);
+  background: var(--sf-panel-alt);
+  padding: 12px 14px;
+  font: 600 14px / 1.7 var(--sf-fc);
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  outline: none;
+}
+.sf-input::placeholder { color: var(--sf-ink-soft); opacity: 0.7; }
+.sf-count { text-align: right; font: 700 11px var(--sf-fc); color: var(--sf-ink-soft); opacity: 0.75; }
+
+/* 记录条 / 对比块 */
+.sf-box {
+  background: var(--sf-panel-alt);
+  padding: 10px 14px;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sf-box .k {
+  font: italic 900 clamp(10px, 1.3vw, 12px) / 1.5 var(--sf-fx);
+  color: var(--sf-accent);
+  letter-spacing: 0.18em;
+}
+.sf-box small { font: 700 clamp(11px, 1.5vw, 13px) / 1.8 var(--sf-fc); color: var(--sf-ink-soft); }
+.sf-scroll { max-height: 10rem; overflow-y: auto; scrollbar-width: none; }
+.sf-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.sf-row { padding: 6px 0; font: 600 11px / 1.7 var(--sf-fc); color: var(--sf-ink-soft); }
+.sf-row .d { opacity: 0.7; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+/* 新旧对比：旧的一条划掉、新的一条高亮 */
+.sf-old {
+  font: 600 12px / 1.7 var(--sf-fc);
+  color: var(--sf-ink-soft);
+  opacity: 0.75;
+  text-decoration: line-through;
+  background: var(--sf-panel-alt);
+  padding: 10px 14px;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+.sf-new {
+  font: 600 13px / 1.75 var(--sf-fc);
+  color: var(--sf-ink);
+  background: color-mix(in srgb, var(--sf-accent) 10%, var(--sf-panel));
+  padding: 10px 14px;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+
+/* 按钮：斜切，主/次两级 */
+.sf-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sf-actions.single { grid-template-columns: 1fr; }
+.sf-btn {
+  border: 0;
+  cursor: pointer;
+  font: italic 900 clamp(14px, 1.8vw, 16px) / 1 var(--sf-fx);
+  letter-spacing: 0.08em;
+  padding: 15px 10px;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  transition: transform 0.18s var(--sf-exp);
+}
+.sf-btn.ghost { background: var(--sf-panel-alt); color: var(--sf-ink-soft); }
+.sf-btn.main { background: var(--sf-accent); color: #fff; }
+.sf-btn:active { transform: scale(0.96) skewX(-4deg); }
+.sf-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* 生成中 */
+.sf-spin {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  color: #fff;
+  background: var(--sf-accent);
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sf-spin { animation: sf-spin 3s linear infinite; }
+}
+@keyframes sf-spin { to { transform: rotate(360deg); } }
+
+/* 完成态的大对勾 */
+.sf-done-mark {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  color: #fff;
+  background: var(--sf-accent);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.sf-center { text-align: center; }

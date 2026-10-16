@@ -668,7 +668,8 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - `lint.mjs` → **0 FAIL 0 WARN**。首轮 1 FAIL：转场牌的 `drop-shadow` 被判成静态阴影，按 skill 的品牌例外在行尾加 `taste-skill-ignore`；另有 1 WARN（破折号）改掉后归零。
 - `flow-probe.mjs` → 八步流程 **8/8**、每步「有且仅有一屏可见」、0 页面错误、无横向溢出；`p3r-keyprobe.mjs` → **7/7**、0 页面错误。
 - **本轮自己引入又修掉的一个回归**：加了八张塔罗图之后，1920px 下首屏巨名溢出 90～170px（其余四档不变）。用**改动前的备份做同条件对照**（`.rivet/scratch/p3r-fit-compare.mjs`）才判明是本轮引入，根因是 `.titleline__lat` 用的拉丁字体 Syncopate 未就绪时量到的是回退字体宽度，而八张图的请求把字体挤后了；修法是 `document.fonts.ready` 之后再拟合一次。修后 1920 回到 over=4（改动前为 5），与既有水平一致。**教训：只跑一遍自己写的检查不足以判断「是不是我改坏的」，要拿改动前的备份做同条件对照。**
-- 未跑：`inspect.mjs` 渲染测量（本轮省略，未验证）；`.rivet/scratch/p3r-mask-test.mjs` 随面具撤除而失效。
+- `inspect.mjs` 渲染测量（`?all=1` + `--allow covered-text,gradient`）→ **1 FAIL / 2 WARN**，三条都不是本轮引入：① `few-pictures` 只数到 2 张 picture（八张浮牌每屏只显示一张、其余 `display:none` 不计，而原来那三张能面照片已按用户要求删除）——这条的统计口径从 v6 起就没查清，如实标未解决；② `no-footage`（无视频）对引导页不适用；③ `still-page` 11 个动效元素，与删幽灵词后补回的水平一致。认对的部分：hero headline = MASKARIA 196.9px、字号 4 种（13/16/81/197，skill 上限 5）、页面 10 张图。
+- `.rivet/scratch/p3r-mask-test.mjs` 随面具撤除而失效（它验的是 `--tilt`，那个变量已不存在）。
 
 **同轮修订（用户当天反馈「你看人家是怎么转场的，你写的不如人家一根」）——上面那段「转场整体替换为 `.flip`」的描述已被本次修订取代**：第一版把用户参考里那套转场（幕布自点击点圆形扩张 + 涟漪环 + 内容分层滑入）整个删掉、只留一张牌在屏幕中央干翻，用户判定远不如参考文件。改法是把参考文件那三层做齐、塔罗翻面叠在幕布上：
 - 幕布 `clip-path: circle(0 → 170vmax at 点击点)` 760ms / `cubic-bezier(.65,0,.2,1)`，退场 600ms；

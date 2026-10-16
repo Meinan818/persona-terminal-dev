@@ -1124,3 +1124,21 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **边界（如实）**：**没有在运行中的 app 里复现过**（本会话无 browser_debug），上面两条根因来自代码证据（层级规则注释 + portal 事实 + 渲染顺序），不是现场实测。**需用户用预览入口亲自验收。**
 - **提交**：`3bdaa39`（修复）、`705b612`（预览入口）。分支 `feat/coop-cinematic`，**均未 push**。
 - **下一步**：用户打开 `http://localhost:5173/?rankup=1` 看演出；确认无误后再谈 push 与是否补其它频道。
+
+### 2026-10-16（续）：用户仍看不到演出 —— 真凶是「dev server 跑在另一个副本上」+ 演出层级不够
+
+- **现象**：用户升级后仍只有老弹窗；`?rankup=1` 只看到「黑底 + 星星 + 碎片」。
+- **排查（全部命令行实测，非推断）**：
+  - 5173 上那个 dev server 是 `PID 25008 · node E:\MASKARIA-redesign\node_modules\...\vite\bin\vite.js` —— **它跑的是 `E:\MASKARIA-redesign`（同一个私有库、停在分支 `feat/ui-redesign` 的旧副本）**，不是 `E:\MASKARIA`。
+  - 佐证：向它请求 `/src/App.tsx`，里面 `ConfidantRankUpCutIn` / `confidantRankUpQueue` **一次都没有**；请求 `src/components/cooperation/ConfidantRankUpCutIn.tsx` 直接回首页（该文件不在它的根里）。
+  - E 盘共三份代码：`E:\MASKARIA`（私有开发库，分支 `feat/coop-cinematic`，含本轮全部改动）、`E:\MASKARIA-redesign`（同一私有库，分支 `feat/ui-redesign`）、`E:\MASKARIA-showcase`（公开展示库 Persona-Terminal/main）。后两份的 App.tsx 内容一致、都是旧版。
+  - **结论：本轮之前「看不到演出」与演出实现无关，是跑错了目录。**
+- **处置**：终止 `PID 25008`（用户明确要求），在 `E:\MASKARIA` 重新 `npm run dev`。新进程 `PID 24084 · node E:\MASKARIA\node_modules\...\vite\bin\vite.js`；再请求它发的 `/src/App.tsx`：`ConfidantRankUpCutIn` ×3、`ConfidantStarShiftInvite` ×2、`confidantRankUpQueue` ×3 —— **确认它发的就是本轮代码**。
+- **换到正确的目录后，用户看到的新现象**：「升级的时候背景黑了一下，老弹窗依旧在」。
+  - 根因：演出 `z-index:170`，而星移弹窗是 `z-180` 且自带 `bg-black/75` 黑色遮罩 —— 演出被压在它下面，亮蓝水面透 75% 黑就是「黑了一下」，白星白碎片还透得出来。
+  - 修复（`471e338`）：演出 `z-index` 抬到 **240**（压过合作域最高的 220），永远在最上层。
+  - 同时修：**预览入口原来寄生在演出组件里，而演出只在「队列非空」时才被挂载** → `?rankup=1` 永远触发不到（鸡生蛋）。现改为 App **常驻挂载**演出组件、把 `modalBlocker` / 队列判断挪进组件内部；并给预览加了「一个同伴都没有也能放」的占位同伴，便于在全新档案 / 无头浏览器上核对演出本身。
+- **验证（本轮实测）**：`npx tsc --noEmit` 退出 0；`npx vitest run` 全量 **39 个测试文件通过**、退出 0。
+- **未验证（如实）**：演出在正确目录下的**真机观感仍未经我确认**——无头浏览器打开的是空档案，会被「引导建档」全屏层盖住；`web_fetch` 又拒绝访问 localhost，我拿不到页面 DOM。只能靠用户用 `?rankup=1` 亲眼看。
+- **提交**：`471e338`。分支 `feat/coop-cinematic`，**未 push**。
+- **下一步**：用户打开 `http://localhost:5173/?rankup=1` 看演出；若仍不对，请连浏览器控制台（F12）的报错一起给我。

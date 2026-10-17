@@ -1,8 +1,18 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-17 21:35（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-17 22:22（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
 ## 1. 当前全貌：先看这一节
+
+- **【2.8.11 手机验收包 · 2026-10-17 22:22 · 红版升级演出进场背景抽动已修 / 待真机复验】**
+  - **用户反馈**：手机端升级演出进场时，背景在羁绊页与演出层之间「一抽一抽」地来回切；用户提供 1.29s 跨屏录屏与 4 张截图。录屏里能看到 `COOPERATION` 巨字横扫、主角牌与同心星，随后底色在两套画面之间反复跳。
+  - **根因（实测 + 既有先例）**：`src/components/cooperation/confidantP5Fx.tsx` 的 `revealInP5` 对**整屏**演出层做 `clip-path: circle(...)`。整屏裁切会让底下的羁绊页每帧重新栅格化；Android WebView 合成器跟不上时，会把「旧页帧」和「演出层帧」交替吐出来，表现就是底色反复切换。黄色演出早已踩过同一个坑：`confidantP4Cinema.tsx` 的 `crtOut` 手机档明确不用 `clip-path`，只做透明度。红版漏了这道分支。另把红版入场 effect 的依赖从 `confidant` 对象改为 `confidant?.id` / `notice?.id`，避免 store 刷新换对象引用时 cleanup → 隐藏舞台 → 重开展开（与 P4 的 `notice.id` 锁同一口径）。
+  - **修复**：① `revealInP5` 在 `compactFx()`（≤640px）下改为 260ms 透明度入场，桌面端仍走原来的圆形展开；② `ConfidantRankUpCutInP5` 入场只按本条通知 id 重开。只改这两个文件，未动演出时间线、牌位、文案和信息量；修复提交 `310f392`。
+  - **验证（本机实测，非真机）**：`npm run typecheck` exit 0；`npm test` **44 文件 / 281 项全绿**（22:05，Duration 16.56s）；新增真实链路探针 `.rivet/scratch/p5-entry-flicker-probe.mjs` 在 `390x844` 种 4 级《恋人》走「今日互动 → +5 → 记下」，演出层只出现一次（`stage: false → true` 一次），`clip` 全程 `none`，命中测试在展开后落到 `.rk5-cast`，0 JS error、0 横向溢出；逐帧截图里不再出现整页羁绊页与演出层交替。桌面 `p5-stage-probe.mjs 1440x900` 仍全通（牌面/五星/确认键/0 error/0 overflow）。
+  - **版本/产物**：`2.8.11` / `versionCode 26`；APK `outputs\maskaria-2.8.11-release.apk` **32,116,250 B** / SHA-256 `99940E660276E9C9263DD2C9A7EB14B213ADCD79DAE66F7251CE1AD006AAE0F6`；AAB `outputs\maskaria-2.8.11-release.aab` **31,918,032 B** / SHA-256 `237A42910159E40A22186B699C2AF131F3ED2F3490469C9A51F92A10FD558437`。
+  - **包核验**：aapt `versionCode 26 / versionName 2.8.11`；apksigner 证书 SHA-256 `a7f0f3d95edf9947dba5512b04b86fd0faf840236b1448b7412c8b5dbe1c0567`（与 2.8.7–2.8.10 相同，可覆盖升级）；包内入口 `assets/index-Pnwy9S5y.js`，其中 `revealInP5` 已同时包含手机 `opacity 260ms` 分支与桌面 `circle(170vmax)` 分支。
+  - **边界**：**真机未测**（本机无 ADB 设备）；手机档的圆形展开被替换为 260ms 透明度入场，桌面构图不变，观感需用户真机复看；本次**未部署 Web、未 Push**，线上仍是 2.8.8。
+  - **下一步**：用户安装 `outputs\maskaria-2.8.11-release.apk`，切红色主题，从一条 4 级同伴的「今日互动」升到 5 级，重点复看 `COOPERATION` 巨字之后到 `RANK 5` 出现之间的底色是否还会抽动；通过后再谈 Web 部署与 Push（Push 仍须明确批准）。
 
 - **【2.8.10 手机验收包 · 2026-10-17 21:35 · 用户桌面验收通过 / 待手机验收】**
   - **用户验收**：用户看过录屏并确认桌面端修复通过（原话「验收通过」），要求出手机版安装包做真机验收。

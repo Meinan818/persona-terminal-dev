@@ -1,17 +1,18 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-17 19:35（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-17 19:50（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
 ## 1. 当前全貌：先看这一节
 
-- **【接手第一入口 · 2026-10-17 19:35 · P4 升级链交接；新报「继续收看」无响应】** 项目按用户「先交接」暂停开发；本轮没有改代码，新问题只做只读定位，交给下一窗口先复现再修。
-  - **现场**：分支 `feat/coop-cinematic`，HEAD `8b81c1b`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，本地领先 **40 条**（本次交接文档提交后 **41 条**，Push 仍须用户明确批准）。没有暂存内容，也没有本会话新增/改动的源码。`ios/App/Podfile` 仍显示 `M`，但工作区 blob 与 HEAD 相同（换行/元数据差异），不要纳入提交；`.cache/`、`.rivet-config.json`、`outputs/` 为既有未跟踪产物，勿清理。
-  - **本轮唯一新增事项**：用户报告黄色主题 COOP 升级演出到「继续收看」按钮后没有反应。只读定位到按钮在 `src/components/cooperation/ConfidantRankUpCutInP4.tsx:322`，点击处理器 `continueToPage2` 在同文件 `:84`，它会调用 `runP4Relay('INTIMACY UP', …)`，在转场中点执行 `dismissConfidantRankUp(notice.id)` + `setStarShiftInvite(notice.confidantId)`，随后应由 `ConfidantCelebrateScreenP4` 接管第二页。**尚未确认真实鼠标点击是否命中按钮、React `onClick` 是否触发，以及队列/邀请是否实际变化**；没有修改 UI 或事件链。
-  - **为什么不能直接说已修**：现有 `p4-app-probe.mjs` / `p4-real-flow-probe.mjs` 用 `element.click()` 程序化触发，绕过了真实指针命中与遮挡检查；此前它们能进第二页，只能证明「处理器存在且直接调用有效」，不能证明用户在正式页面用鼠标/触屏点击也有效。本轮没有启动服务复跑真实指针链路。
-  - **下一窗口第一件事**：用当前黄色主题正式页面复现，不先改代码。最小证据顺序：① 在 `#p4-cinema-host` 的 shadowRoot 里量 `.confirm.on .go` 的 rect，并用 `shadowRoot.elementFromPoint(中心点)` 确认顶层命中；② 用 CDP `Input.dispatchMouseEvent` 发真实 pointer/mouse 点击（不要再用 `element.click()`），同时记录 DOM 变化、`queue`/`starShiftInvite`、`.page2.on` 和控制台错误作为判据；③ 若点击未命中，先查遮挡/`pointer-events`；若命中但无状态变化，查 React 事件代理与 Shadow DOM portal；若状态已变化而画面不变，查 `ConfidantStarShiftInvite` 的 `queue.length > 0` 闸门和 `ConfidantCelebrateScreenP4` 挂载。定位后再做最小修复，不要动已验证的牌落点/940ms 节奏。
-  - **基线（本轮实测）**：`npm run typecheck` exit 0；`npm test` **44 文件 / 281 项全绿**（Start 19:32，Duration 17.23s）；`git diff --check` 通过，仅有 `ios/App/Podfile` 的换行 warning。未重跑 build；上一节点在 `4cc7c65` 的构建通过记录仍有效，但不能替代本轮真实点击验证。
-  - **其他待办（按优先级）**：① 先修/复现「继续收看」；② 用户复看 P4 正式页面牌落位、恭喜页数字、互动 done → 世界的切点；③ 真机未测；④ P4 星移 thinking / preview / done / error 未在 App 内跑全；⑤ Push 41 条待批准。
-  - **交接边界**：本条写入并提交文档后停止写共享文件；未 Push、未部署、未改真实数据；没有把「继续收看无响应」写成已解决。
+- **【接手第一入口 · 2026-10-17 19:50 · P4 短屏「继续收看」已修（待用户复看）】** 用户补充截图后定位并修复：短屏手机把整颗确认键挤出视口，点击会命中底部电视条，不是点击处理器坏了。
+  - **现场**：分支 `feat/coop-cinematic`，代码修复提交 `2c6369f`（本文件提交后 HEAD 顺延 1 条）；`origin/feat/coop-cinematic` 停在 `1ac04ef`，本地领先 **42 条**（本次交接文档提交后 **43 条**，Push 仍须用户明确批准）。`ios/App/Podfile` 仍显示 `M`，但工作区 blob 与 HEAD 相同（换行/元数据差异），未纳入提交；`.cache/`、`.rivet-config.json`、`outputs/` 为既有未跟踪产物，勿清理。
+  - **根因（实测）**：`390×650` 下舞台内容高 `719px`，`继续收看` 按钮从 `y=672` 到 `719` 完整落在 `650px` 视口之外；真实点击坐标被限制到 `y=648` 后命中 `.tvbar.bottom`（底部电视条），所以“看得到按钮、点下去没反应”。用户截图里的按钮只剩底部一条，和这条测量一致。
+  - **修复（`2c6369f`）**：只改 `src/styles/confidant-p4-cinema.css`。新增短屏竖屏紧凑档 `max-width:860px + max-height:760px`：收小牌位、压缩留白/字号/间距，让确认键完整回到屏内；新增宽而矮横屏双栏档 `min-width:540px + max-height:480px`，避免横屏单列继续溢出。事件链、队列、转场时长和桌面构图未改，所有信息块保留。
+  - **验证（真实指针，不是 `.click()`）**：新增 `.rivet/scratch/p4-pointer-probe.mjs`，用 CDP `Input.dispatchMouseEvent` 走命中测试。`390×568 / 390×590 / 390×600 / 390×650 / 360×740 / 390×844 / 1440×900 / 568×390 / 600×390 / 844×390` 全部命中 `继续收看`，点击后 `.page2.on = true`；短屏按钮与 tvbar 之间已留出可见间隙。截图在 `.rivet/scratch/p4-pointer/`。
+  - **真实升级数据回归**：`node .rivet/scratch/p4-real-flow-probe.mjs 5184 390x650` → 真实同伴 4 升 5、星移余 2、buffs 2，恭喜页 `page2: true`，`0` 页面错误；该探针仍用程序化点击，只用于验证数据/画面链路，真实命中由上面的 pointer probe 负责。
+  - **工程验证**：`npm run typecheck` exit 0；`npm test` **44 文件 / 281 项全绿**（Start 19:50:09，Duration 16.96s）；`npx vite build --outDir .rivet/scratch/p4-click-build --emptyOutDir` exit 0（PWA 生成 119 条预缓存）。
+  - **边界**：真机（Android WebView）未测；本地 dev server 的 `?rankup=1` 与真实升级链都已走通，但没有 Push、没有部署、没有改真实用户数据。短屏上为了容纳按钮压小了字号和牌位，观感需用户复看；若觉得太紧，可只调这条紧凑档，不动桌面。
+  - **待办（按优先级）**：① 用户在黄色主题、当前本地版本上复看短屏按钮和第二页；② 真机；③ P4 星移 thinking / preview / done / error 仍需在 App 内跑全；④ 现有 P4 正式页面牌落位/切点复看；⑤ Push 43 条待批准。
 
 - **【接手第一入口 · 2026-10-17 19:20 · P4 正式页面交接（待用户复看）】** 黄色 P4 已从验收 demo 落进正式页面；真实升级链路的“跳牌/弹窗叠层”已修，但用户尚未复看修复后的正式页面，也未 Push。
   - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `4cc7c65`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，本地领先 **39 条**（本次交接文档提交后 **40 条**，Push 仍须用户明确批准）。工作区没有本窗口未提交的代码；只剩既有 `M ios/App/Podfile`、未跟踪 `.cache/`、`.rivet-config.json` 与 `outputs/` 产物（含 demo/探针截图），归属未核，勿动/勿纳入提交。
@@ -1684,3 +1685,11 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **未验证**：真实指针/触屏是否命中、Shadow DOM 内 React 事件是否收到、队列是否清空、`starShiftInvite` 是否设置、第二页是否因闸门未挂载；也未确认用户当前运行的是否为最新本地构建。
 - **基线**：`npm run typecheck` exit 0；`npm test` 44 文件 / 281 项全绿；本轮无源码差异。
 - **交接状态**：HEAD `8b81c1b`，本地领先远端 40 条；本文件提交后为 41 条。下一位先复现再定位，修复前不要改已验证的 P4 牌落位与节奏。
+
+### 2026-10-17（修复）：P4 短屏「继续收看」被挤出视口
+
+- **起因**：用户补充手机截图并明确要求修复；截图里蓝色确认键只剩底部一条，底部电视条压在最下面。
+- **复现（真实指针）**：新增 `.rivet/scratch/p4-pointer-probe.mjs`，在 `390×650` 实测舞台内容高 `719px`，按钮 `y=672..719` 完整在视口外；CDP 把点击点限制到 `y=648` 后 `shadowRoot.elementFromPoint` 返回 `.tvbar.bottom`，所以点击不会到按钮。`390×844`、`600×908` 和桌面则正常。
+- **修复**：`src/styles/confidant-p4-cinema.css` 增加短屏竖屏紧凑档和宽矮横屏双栏档；只压缩短屏排版，保留所有信息块、事件链、转场节奏与桌面构图。commit `2c6369f`。
+- **验证**：真实指针点击在 `390×568 / 390×590 / 390×600 / 390×650 / 360×740 / 390×844 / 1440×900 / 568×390 / 600×390 / 844×390` 全部命中按钮并进入第二页；真实升级数据 `390×650` 4→5、余 2、buffs 2、0 页面错误；`npm run typecheck` exit 0；`npm test` 44 文件 / 281 项全绿；独立构建 exit 0。
+- **边界**：真机未测；短屏字号/牌位有压缩，需用户复看观感；未 Push、未部署。下一位不要改事件处理器或 940ms 节奏，除非复现出新的点击链问题。

@@ -271,20 +271,20 @@ export function ConfidantP5FxLayer() {
 
       if (name === 'hidden') {
         lastPoseRef.current = 'hidden';
-        if (reduce) {
-          hero.style.opacity = '0';
-          return;
-        }
-        if (!canAnimate(hero)) {
-          hero.style.opacity = '0';
-          return;
-        }
-        const fade = hero.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 360, easing: 'linear', fill: 'forwards' });
-        fade.finished.catch(() => {});
+        // ⚠ 这里曾经用一条 `fill:'forwards'` 的淡出动画收场，而且从不取消 ——
+        //   动画的 fill 会**一直压过 inline style**（WAAPI 的层叠顺序），于是 opacity 被永久钉在 0：
+        //   「这次能看见、下次换屏就再也不出现」（用户报「像随机的一样」）。
+        //   现在直接写 inline（元素本身已经 display:none，视觉上没有差别）。
+        hero.style.opacity = '0';
         return;
       }
 
-      if (hero.style.opacity === '0') hero.style.opacity = '1';
+      // 任何新姿态：先把上一轮的动画清干净。
+      // 被顶掉的那一支若留着 fill:forwards，会在新动画结束后把**旧姿态**重新盖上来
+      // （牌「从演出位切到恭喜位时消失/跳回原位」就是这么来的，取决于上一次动画有没有跑完）。
+      hero.getAnimations().forEach(a => a.cancel());
+      h3.getAnimations().forEach(a => a.cancel());
+      hero.style.opacity = '1';
       const t = poseTargets(name);
       const tf = `translate(${t.x}px,${t.y}px) rotate(${t.rot}deg)`;
       const ff = `rotateY(${t.flip ? 180 : 0}deg)`;
@@ -450,10 +450,26 @@ export function ConfidantP5FxLayer() {
   // 姿态落地：等 DOM 上屏后再量（新层第一次出现时元素还不存在）
   useEffect(() => {
     if (req.pose === 'hidden' && req.n === 0) return;
-    const id = requestAnimationFrame(() => heroPoseTo(req.pose, req.instant));
-    return () => cancelAnimationFrame(id);
+    // 两帧再量：新屏挂载的那一帧里，内容列/滚动的布局还没稳，早量会差出二三十像素
+    let id2 = 0;
+    const id1 = requestAnimationFrame(() => {
+      id2 = requestAnimationFrame(() => heroPoseTo(req.pose, req.instant));
+    });
+    return () => {
+      cancelAnimationFrame(id1);
+      if (id2) cancelAnimationFrame(id2);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [req.n]);
+
+  // 窗口尺寸变化（转屏 / 拖拉窗口）：锚点会动，牌要重新落位（瞬时，不重播转场）
+  useEffect(() => {
+    const onResize = () => {
+      if (lastPoseRef.current !== 'hidden') heroPoseTo(lastPoseRef.current, true);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [heroPoseTo]);
 
   // 收牌不在这里判：改由各屏 `claimP5Hero()` 的**占用计数**决定（见该函数注释）——
   // 恭喜/星移还有「档案里的本地浮层」这条入口，它不写 store，按 store 判空会误收。
@@ -520,4 +536,14 @@ export function ConfidantP5FxLayer() {
     </div>,
     document.body,
   );
+}
+
+/* DEV 调试口：让探针能直接驱动主角牌姿态（验证「收起 → 再出现」「连续切换不残留旧姿态」）。
+   生产构建里 import.meta.env.DEV 恒为 false，这一整段会被摇掉。 */
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__p5fx = {
+    requestP5HeroPose,
+    claimP5Hero,
+    setP5HeroArt,
+  };
 }

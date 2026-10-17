@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
-import { MAJOR_ARCANA, TAROT_BY_ID, type TarotCardData } from '@/constants/tarot';
+import { MAJOR_ARCANA, MINOR_ARCANA, SUIT_META, TAROT_BY_ID, type TarotCardData, type TarotSuit } from '@/constants/tarot';
 import { toLocalDateKey } from '@/store';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { SEASON_ORDER, seasonOfDate } from '@/utils/calendar';
 import { triggerNavFeedback } from '@/utils/feedback';
-import { useSeasonCollection, useTarotCollection, type CollectedMark } from './codexData';
+import { useSeasonCollection, useTarotCollection, type CollectedMark, type TarotEntry } from './codexData';
 import { FlipBackPanel, FlipCardView } from './FlipCardView';
 import { SeasonCardSVG, seasonCardEn } from './SeasonCard';
 import { TarotFlipView } from './TarotFlipView';
 
 /**
  * 图鉴（第 6 轮，用户拍板：放在「技能与成就」页里，不单开页）。两本册子：
- *   · 塔罗册：22 张大阿卡纳 × 正 / 逆 = 44 格，每日抽牌与中长期占卜抽到都算收录（小阿卡纳不展示）。
+ *   · 塔罗册：78 张塔罗 × 正 / 逆 = 156 格，每日抽牌与中长期占卜抽到都算收录。
  *   · 岁时册：一年 24 节气 + 节日，按春夏秋冬四页左右翻，每枚是一张塔罗式的岁时卡（当天有记录才收）。
  * 影子档案留在战场的「阴影档案馆」。完成度全部来自已有行为，不发奖励——它是长尾目标，不是经济。
  */
@@ -51,39 +51,66 @@ const Progress = ({ value, max, tone }: { value: number; max: number; tone: Tone
 
 // ── 塔罗册 ──────────────────────────────────────────────────────────────
 
+const TarotCardCell = ({ card, entry, tone, onOpen }: { card: TarotCardData; entry?: TarotEntry; tone: Tone; onOpen: (id: string) => void }) => {
+  const up = !!entry?.upright.count;
+  const rev = !!entry?.reversed.count;
+  const any = up || rev;
+  return (
+    <button
+      type="button"
+      onClick={() => { triggerNavFeedback(); onOpen(card.id); }}
+      className="group flex flex-col items-center gap-1 text-center focus-visible:outline-none"
+      aria-label={`${card.name}${any ? '' : '（未收录）'}`}
+    >
+      <span className="relative block overflow-hidden rounded-md" style={{ width: 68, height: 109, filter: any ? undefined : 'grayscale(1) brightness(0.55)', opacity: any ? 1 : 0.55 }}>
+        <TarotCardSVG card={card} orientation="upright" width={68} staticCard showOrientationTag={false} />
+        {!any && card.roman && (
+          <span className="absolute inset-0 flex items-center justify-center text-[22px] font-black text-white/85 drop-shadow">{card.roman}</span>
+        )}
+      </span>
+      <span className="text-[11px] font-black leading-tight" style={{ color: any ? tone.ink : tone.sub }}>{card.name}</span>
+      <span className="flex gap-1 text-[9px] font-black leading-none">
+        <span className="rounded px-1 py-0.5" style={{ background: up ? tone.accent : tone.chip, color: up ? '#fff' : tone.sub }}>正{up ? ` ${entry!.upright.count}` : ''}</span>
+        <span className="rounded px-1 py-0.5" style={{ background: rev ? tone.accent : tone.chip, color: rev ? '#fff' : tone.sub }}>逆{rev ? ` ${entry!.reversed.count}` : ''}</span>
+      </span>
+    </button>
+  );
+};
+
+const MINOR_SUIT_ORDER: TarotSuit[] = ['wands', 'cups', 'swords', 'pentacles'];
+
 const TarotBook = ({ tone }: { tone: Tone }) => {
   const col = useTarotCollection();
   const [openId, setOpenId] = useState<string | null>(null);
   const openCard: TarotCardData | null = openId ? TAROT_BY_ID[openId] ?? null : null;
+  const open = (id: string) => setOpenId(id);
   return (
     <div className="space-y-4">
       <Section title="大阿卡纳" aside={`${col.majorCollected} / 44 · 正逆各算一格`} tone={tone}>
         <Progress value={col.majorCollected} max={44} tone={tone} />
         <div className="mt-4 grid grid-cols-4 gap-x-2 gap-y-3">
-          {MAJOR_ARCANA.map((card) => {
-            const e = col.entries.get(card.id);
-            const up = !!e?.upright.count, rev = !!e?.reversed.count;
-            const any = up || rev;
+          {MAJOR_ARCANA.map((card) => <TarotCardCell key={card.id} card={card} entry={col.entries.get(card.id)} tone={tone} onOpen={open} />)}
+        </div>
+      </Section>
+      <Section title="小阿卡纳" aside={`${col.minorCollected} / 112 · 正逆各算一格`} tone={tone}>
+        <Progress value={col.minorCollected} max={112} tone={tone} />
+        <div className="mt-4 space-y-5">
+          {MINOR_SUIT_ORDER.map((suit) => {
+            const cards = MINOR_ARCANA.filter((card) => card.suit === suit);
+            const collected = cards.reduce((total, card) => {
+              const e = col.entries.get(card.id);
+              return total + (e?.upright.count ? 1 : 0) + (e?.reversed.count ? 1 : 0);
+            }, 0);
             return (
-              <button
-                key={card.id}
-                type="button"
-                onClick={() => { triggerNavFeedback(); setOpenId(card.id); }}
-                className="group flex flex-col items-center gap-1 text-center focus-visible:outline-none"
-                aria-label={`${card.name}${any ? '' : '（未收录）'}`}
-              >
-                <span className="relative block overflow-hidden rounded-md" style={{ width: 68, height: 109, filter: any ? undefined : 'grayscale(1) brightness(0.55)', opacity: any ? 1 : 0.55 }}>
-                  <TarotCardSVG card={card} orientation="upright" width={68} staticCard showOrientationTag={false} />
-                  {!any && card.roman && (
-                    <span className="absolute inset-0 flex items-center justify-center text-[22px] font-black text-white/85 drop-shadow">{card.roman}</span>
-                  )}
-                </span>
-                <span className="text-[11px] font-black leading-tight" style={{ color: any ? tone.ink : tone.sub }}>{card.name}</span>
-                <span className="flex gap-1 text-[9px] font-black leading-none">
-                  <span className="rounded px-1 py-0.5" style={{ background: up ? tone.accent : tone.chip, color: up ? '#fff' : tone.sub }}>正{up ? ` ${e!.upright.count}` : ''}</span>
-                  <span className="rounded px-1 py-0.5" style={{ background: rev ? tone.accent : tone.chip, color: rev ? '#fff' : tone.sub }}>逆{rev ? ` ${e!.reversed.count}` : ''}</span>
-                </span>
-              </button>
+              <div key={suit}>
+                <div className="mb-2 flex items-baseline justify-between gap-2">
+                  <h4 className="text-[13px] font-black" style={{ color: SUIT_META[suit].color }}>{SUIT_META[suit].symbol} {SUIT_META[suit].name}</h4>
+                  <span className="text-[10px] font-bold tabular-nums" style={{ color: tone.sub }}>{collected} / 28</span>
+                </div>
+                <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+                  {cards.map((card) => <TarotCardCell key={card.id} card={card} entry={col.entries.get(card.id)} tone={tone} onOpen={open} />)}
+                </div>
+              </div>
             );
           })}
         </div>

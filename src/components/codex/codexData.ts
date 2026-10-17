@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
-import { MAJOR_ARCANA } from '@/constants/tarot';
+import { MAJOR_ARCANA, MINOR_ARCANA } from '@/constants/tarot';
 import { seasonMarksOfYear, seasonPagesOf, type SeasonMark, type SeasonPage } from '@/utils/calendar';
 import type { SeasonStamp, TarotOrientation } from '@/types';
 
@@ -25,8 +25,16 @@ export interface TarotCollection {
   entries: Map<string, TarotEntry>;
   /** 大阿卡纳 22 张 × 正 / 逆，已收几格（满 44） */
   majorCollected: number;
+  /** 小阿卡纳 56 张 × 正 / 逆，已收几格（满 112） */
+  minorCollected: number;
   loaded: boolean;
 }
+
+const collectedSlots = (cards: typeof MAJOR_ARCANA, entries: Map<string, TarotEntry>): number =>
+  cards.reduce((total, card) => {
+    const e = entries.get(card.id);
+    return total + (e?.upright.count ? 1 : 0) + (e?.reversed.count ? 1 : 0);
+  }, 0);
 
 export function useTarotCollection(): TarotCollection {
   const rows = useLiveQuery(async () => {
@@ -42,13 +50,12 @@ export function useTarotCollection(): TarotCollection {
         for (const p of r.picked ?? []) if (p?.cardId) bump(entries, p.cardId, p.orientation, date);
       }
     }
-    let majorCollected = 0;
-    for (const c of MAJOR_ARCANA) {
-      const e = entries.get(c.id);
-      if (e?.upright.count) majorCollected++;
-      if (e?.reversed.count) majorCollected++;
-    }
-    return { entries, majorCollected, loaded: !!rows };
+    return {
+      entries,
+      majorCollected: collectedSlots(MAJOR_ARCANA, entries),
+      minorCollected: collectedSlots(MINOR_ARCANA, entries),
+      loaded: !!rows,
+    };
   }, [rows]);
 }
 

@@ -4,7 +4,7 @@
 
 ## 1. 当前全貌：先看这一节
 
-- **【2.8.13 完整版已打包并部署 · 2026-10-18 05:22 · README/Push 待收尾】**
+- **【2.8.13 完整版已打包、部署并同步 · 2026-10-18 05:28】**
   - **范围**：将小阿卡纳 224 张牌面纳入正式网页与 Android 完整包；版本升至 `2.8.13` / `versionCode 28`。后端本轮未改，继续使用 `http://192.144.227.216`。
   - **构建证据**：`scripts/build-release.ps1 -ApiUrl http://192.144.227.216` 成功；Vite 1731 modules；Gradle `BUILD SUCCESSFUL`。APK `outputs/maskaria-2.8.13-release.apk` **49,409,652 B** / SHA-256 `95323003E9F5B0A747D9543933B318FE46A3EC1C4116B32E1CFC718F82841CD3`；AAB `outputs/maskaria-2.8.13-release.aab` **49,219,126 B** / SHA-256 `6A63F6D0B29F7144A49BE4A24D3407FB65D1CEFCD142B68C2718B5095B96FEFB`。aapt 核 `versionCode 28 / versionName 2.8.13`；签名证书 SHA-256 `a7f0f3d95edf9947dba5512b04b86fd0faf840236b1448b7412c8b5dbe1c0567`，与上一版一致；包内四套主题各 78 张牌图。
   - **网页部署**：线上备份 `/home/ubuntu/maskaria-backups/release-2.8.13-20261018-0518/web-before.tgz` **112,986,101 B**；新网页归档 `.rivet/scratch/release-2.8.13/web-2.8.13.tgz` **43,796,495 B** 已解包到 `/opt/maskaria/web`。公网入口 `/assets/index-BKYswpSC.js`；首页、入口 JS、`sw.js` 及 P3/P4/粉色代表牌图均 HTTP 200 且哈希与本地一致；四套线上牌图共 312 张；`/api/health` → `{"db":"UP","status":"UP"}`；`/download` 仍保持关闭。

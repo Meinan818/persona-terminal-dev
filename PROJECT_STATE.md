@@ -1,8 +1,19 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-18 00:36（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-18 00:58（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
 ## 1. 当前全貌：先看这一节
+
+- **【2.8.12 已发布 · 2026-10-18 00:58 · 网页/验证码后端上线，Android 包已出】**
+  - **授权与范围**：用户验收逐字剪贴预告函后明确“去打包发布吧”。本轮发布应用网页与验证码邮件服务，生成 Android APK/AAB；没有扩展 UI、重开下载通道或发布官网营销页。**未 Push**：用户此次授权为打包/部署，Git Push 仍待明确授权。
+  - **版本/产物**：`2.8.12` / `versionCode 27`，版本提交 **`8db6b0b`**；APK `outputs/maskaria-2.8.12-release.apk` **32,118,767 B** / SHA-256 `A639425414145650912E79D3A0105CCDA2ACEAA257968DB4BC7344CABCE8F7F8`；AAB `outputs/maskaria-2.8.12-release.aab` **31,920,553 B** / SHA-256 `7FBE40E9F54CE4234EB7D3C3D7D9483100933323A7BF667454298B8DC83A67DD`。aapt 核 27 / 2.8.12；apksigner 核证书 `a7f0f3d95edf9947dba5512b04b86fd0faf840236b1448b7412c8b5dbe1c0567`，与 2.8.11 相同，可覆盖安装。没有安装真机或上架商店。
+  - **发布前验证**：`scripts/build-release.ps1 -ApiUrl http://192.144.227.216` 成功（Vite 1731 modules，Gradle BUILD SUCCESSFUL）；已备份旧 `dist/` 到 `.rivet/scratch/release-2.8.12/dist-before/`；`npm test` **44 文件 / 281 项通过**（00:41:30，18.48s）；Java 17 `mvn -o -Dtest=OtpServiceUnitTest test` **5 项通过 / 0 跳过**。后端单测在沙箱内停在初始化，停止后使用获工具批准的沙箱外环境运行同一命令成功，没有跳过断言。
+  - **网页部署与核验**：应用仍为 `http://192.144.227.216/`，目录 `/opt/maskaria/web`。远端哈希清单对比 318 文件，仅上传变化的 58 文件（tgz **1,153,017 B**），保留旧指纹资源。入口现为 **`index-PBC2KXqU.js`**。公网直连下载首页、入口 JS、`sw.js`，SHA-256 分别为 `e70f9551f9381cb277e3200dbb6f88a67064459dd5a15075d0007f479b84ddb2` / `7ae946ebdb099e05cb90e6340f24850a99e65df51ef80b4559029d760e403ee0` / `b6f253116725ed8897b01985c3effd89c79015f33d81b763fa15a2ce16e0ba04`，均与本地一致。`/download` 仍 **410**。
+  - **后端采用最小替换**：服务器旧 JAR 与当前本地有 57 个类不同，未整包覆盖。以线上 JAR SHA-256 `f068f592b04cf8781e5f357a0362a575939104be5f7948f62b81c643a9a90b11` 为基线，仅替换 `OtpService` 与三个内部类（来自代码 `b36b8bc`）；逐项验证其余 JAR entry 内容完全相同，保留现有依赖、配置、迁移。部署后 JAR SHA-256 **`d3d7db69f3ce2a63ce591f96cac60abeb06871a9e070e8aea7574877847989b9`**。服务 `maskaria-backend` 已重启并 active；`/api/health` → `{"db":"UP","status":"UP"}`；合成错误验证码验证接口返回 **401**，未投递邮件、未创建账号或写用户数据。
+  - **用户“网站打不开/旧界面”排查**：发布中用户称应用网页白屏/久等，后称等待后能加载、登录界面未显示新内容。HTTP 直连 200、数据库 UP，HTTPS 连接失败（仍按原约定保留 IP+HTTP）。首次开屏等待没有证实单一根因，不冒称已全面解决。另在保留缓存的独立 Chrome 中**实证**旧首页 `diskCache=true / serviceWorker=false`，仍引用 `index-Pnwy9S5y.js`；线上首页缺少 Cache-Control。已补 `location = /index.html` 的 `Cache-Control: no-cache, must-revalidate`，`nginx -t` 通过后 reload；模板同步，提交 **`6eb0a83`**。公网 `/` 与 `/index.html` 均已核实该响应头。
+  - **浏览器发布复核**：新版直达 `http://192.144.227.216/?v=2.8.12`，独立 Chrome 加载 `index-PBC2KXqU.js` 并进入可交互欢迎页，0 JS 错误、0 失败资源。旧缓存可能在首次请求新规则前继续使用，以上版本参数链接用于这次直接进入新版，保留本机数据。**首次填写邮箱的界面保留原样，预告函在发码后的输入步骤和邮件中出现。** 没有为验证向真实邮箱发码；真实收件客户端和新 APK 真机观感仍需用户实际使用确认。
+  - **备份/回滚/部署身份**：本轮线上备份目录 **`/home/ubuntu/maskaria-backups/release-2.8.12-20261018-0050/`**，含 `web-before.tgz` **111,824,805 B**、`app-before.jar` **34,108,271 B**、`nginx-before-html-cache.conf`、`backend-provenance.json`。后端健康失败时发布脚本会恢复旧网页/JAR，本轮健康通过未触发。使用既有 `E:/秘钥/xiangmu.pem` + `ubuntu`（只调用 SSH，不读取密钥）；旧 `.rivet/ssh/maskaria_deploy` 已被服务器拒绝，后续不要再拿它尝试部署。
+  - **Git/遗留/下一步**：`main` 在 `6eb0a83` 时领先本地跟踪的 `origin/main` 6 条，本次记录提交后为 7 条；未 Push，展示库未修改。原有 Podfile 换行差异、`.cache/`、`.rivet-config.json`、`outputs/` 其它未跟踪产物保留。用户可用新版链接发码查看预告函、覆盖安装 2.8.12；Codex 仅在收到具体反馈或 Push 授权后继续对应工作，不再自行修改已验收视觉。
 
 - **【本地实现完成 · 2026-10-18 00:36 · 401 登录失效提示 + P5 逐字剪贴验证码预告函 · 视觉文案验收通过】**
   - **登录失效**：受保护请求返回 401 时只清除与该请求匹配的云端登录态；账号页与同步徽标明确提示“本机数据仍在”。公开 OTP 接口的 401、503、旧会话晚到的 401 均不会误登出当前新会话。未清空本地用户、设置或 IndexedDB。
@@ -362,18 +373,18 @@
 
 ## 3. 发布地图：网站、后端、安装包、仓库分别在哪
 
-### 3.1 2026-10-15 本轮核实
+### 3.1 发布地图（2026-10-18 更新应用网页、后端和安装包；其它项目保留原核实日期）
 
 | 对象 | 实际去向 | 现场证据与边界 |
 |---|---|---|
-| 应用网页/PWA | `http://192.144.227.216/`，腾讯云 nginx；正式目录 `/opt/maskaria/web/` | 2026-10-17 20:40 已部署 2.8.8；首页 200，入口 `/assets/index-BRVFDdwl.js`，入口与 `index.html` 哈希均与本地一致；`/api/health` UP。回滚备份 `/home/ubuntu/maskaria-backups/web-20261017-203956.tgz` |
-| Java 后端 | 同主机 `/api/` 反代本机8080；历史路径 `/opt/maskaria/backend/app.jar`，服务 `maskaria-backend` | `/api/health` → 200、`{"status":"UP","db":"UP"}`。目录/配置是历史部署记录，本轮未 SSH 复核 |
+| 应用网页/PWA | `http://192.144.227.216/`，腾讯云 nginx；正式目录 `/opt/maskaria/web/` | 2026-10-18 已部署 2.8.12；入口 `/assets/index-PBC2KXqU.js`，首页/JS/sw.js 公网哈希与本地一致；首页强制缓存重验。新版直达 `/?v=2.8.12`，浏览器进入欢迎页。回滚见本轮备份目录 |
+| Java 后端 | 同主机 `/api/` 反代本机8080；`/opt/maskaria/backend/app.jar`，服务 `maskaria-backend` | 2026-10-18 SSH 核实并仅更新 OTP 四个类；新 JAR SHA-256 `d3d7db69f3ce2a63ce591f96cac60abeb06871a9e070e8aea7574877847989b9`，服务 active，健康与数据库 UP。未覆盖其它后端模块 |
 | 官网营销页 | `https://maskaria.pages.dev/`，Cloudflare Pages 项目 `maskaria`，发布分支 `main`；源码 `site/` | GET 200，标题 `MASKARIA 面具庭园 · 没人看见的也算数`。这是已部署网站，绝非仅有本地 demo |
 | 官网首次发布快照 | `https://2d5f4986.maskaria.pages.dev/` | 2026-10-14 原发布记录；本轮未检查此快照，不冒称最新部署ID |
 | APK下载通道（已关闭） | 服务器 `/opt/maskaria/web/download/`；原2.8.4及其他旧直链 | 本次GET/HEAD全部410；3个旧APK保留，不删除，不再公开下载 |
 | 官网当前发布 | `https://maskaria.pages.dev/`；快照 `https://d3ea1293.maskaria.pages.dev/` | 下载关闭提示已上线；生产HTML与本地site/index.html逐字节一致；旧APK直链全部410 |
-| 本地构建产物 | `outputs/maskaria-2.8.8-release.apk` / `.aab`（2026-10-17 20:38） | APK `versionCode 23 / 2.8.8`，签名与 2.8.7 相同；AAB 同版本；均未上传分发、未上架商店。旧包 2.8.4/2.8.5/2.8.6/2.8.7 保留 |
-| 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本次素材及下载关闭节点已Push至32fb9ec，ls-remote与本地HEAD一致；本条结果日志随后同次授权Push。现场确认Private，素材和项目日志只归此库 |
+| 本地构建产物 | `outputs/maskaria-2.8.12-release.apk` / `.aab`（2026-10-18） | 27 / 2.8.12，APK 32,118,767 B；AAB 31,920,553 B；签名与 2.8.11 相同。未安装真机、未上传商店，旧包保留，下载通道仍关闭 |
+| 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本地跟踪远端 `3f513a5`；本轮版本提交 `8db6b0b`、缓存修复 `6eb0a83`。未 Push；日志仅在私有开发库，不复制展示库 |
 | 公开展示库 | `git@github.com:Meinan818/Persona-Terminal.git`，`main` | 本轮Push及SSH远端核实为4de5ff5；仅公开8个发布修复文件；可见性沿用原记录 |
 | 当前展示库工作区 | `E:/MASKARIA-showcase` | 现场确认原HEAD33f84de且干净；本次8个公开文件提交4de5ff5，已Push并核远端main一致。`.rivet/publish/`只是旧副本，不再作为同步入口 |
 
@@ -1903,3 +1914,13 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **commit / Push**：代码 **`b36b8bc`** `fix(auth): 修正登录失效并更新P5验证码预告函`；状态文档另存本地提交。未 Push、未部署。原有 Podfile/配置/产物保留。
 - **后续用户验收（2026-10-18 00:36）**：用户原话“验收通过”，当前逐字剪贴版视觉和文案已验收，停止继续打磨。真实邮箱客户端、真机等未验证边界保留；不将验收当作 Push 或部署授权。
 - **遗留与负责人**：用户本轮无需继续操作；Codex 等待明确的发布/打包任务后再推进对应部分。正式发布、手机包及 Push 未获授权，均未执行。
+
+### 2026-10-18（2.8.12 发布）：网页、OTP 邮件与 Android 包
+
+- **起因/授权**：用户验收后明确要求“去打包发布吧”；发布过程中反馈应用网页白屏/久等，后反馈能加载但登录界面仍旧。
+- **成果**：版本 2.8.12 / 27，APK/AAB 沿用旧证书；正式网页和 OTP 邮件服务已部署。验证码预告函仍只在发码后的步骤与邮件出现，初始邮箱输入页不变。
+- **验证**：前端 44 文件 / 281 项，OTP 5 项单测通过；正式构建与签名/后端地址检查通过；公网首页/JS/sw.js 与本地哈希相等；health/db UP、合成无效 OTP 401、download 410。独立浏览器新版链接加载正确入口并进入欢迎页，0 JS 错误/失败资源。实收邮箱和真机安装未验证。
+- **最小后端部署**：以线上旧 JAR 为基线，只替换 OTP 四个类，证明其它 entry 内容一致，避免夹带 57 个本地类差异；备份与 provenance 在 `/home/ubuntu/maskaria-backups/release-2.8.12-20261018-0050/`。没有执行数据库迁移脚本或改环境配置。
+- **故障与纠正**：浏览器缓存旧 HTML 的现象被实际复现，保存 `browser-stale-cache-evidence.json`；补 nginx HTML 强制重验、验证配置并 reload，公网响应头已生效。新版链接 `http://192.144.227.216/?v=2.8.12` 避开此前已存的旧首页；不要求清空本机数据。首次加载慢尚无单一根因，不将缓存修复写成全面性能修复。
+- **commit / Push**：`8db6b0b` `chore(release): 准备2.8.12网页与Android发布`；`6eb0a83` `fix(deploy): 首页缓存强制重验并更新2.8.12发布说明`；本记录另存本地提交。未 Push、未同步展示库；应用与后端已部署，官网营销页未动。
+- **下一步/负责人**：用户用新版链接发码确认邮件、覆盖安装 `outputs/maskaria-2.8.12-release.apk` 做实际使用复看；Codex 据具体反馈续办。Push 仍需明确批准。原有 Podfile/缓存/配置/其它未跟踪产物保留。

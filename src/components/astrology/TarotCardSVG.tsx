@@ -71,7 +71,7 @@ export function TarotCardSVG({
   const height = Math.round(width * 1.6);
   const flipped = orientation === 'reversed';
 
-  // 大阿卡纳走三套实拍卡面之一；无图 / 加载失败则退回下面的程序化卡面。
+  // 大小阿卡纳都走当前主题的实拍卡面；缺图 / 加载失败则退回下面的程序化卡面。
   // 自定义主题下这一套由用户挑（settings.customTarotSet），其余频道钉死。
   const artSet = useTarotArtSet();
   // 记住**哪个 URL** 挂了而不是一个 bool：换卡面套时上一套的失败记录不该跟着过来

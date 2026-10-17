@@ -82,8 +82,7 @@ export interface WidgetDayView {
   weekdayEn: string;
   /**
    * id 是给原生侧找图用的：小组件按 `assets/public/tarot/p3/<id>.webp` 直接读牌面原图
-   * （用户口径「抽完的塔罗牌就对应图片文件」）。小阿卡纳没有配图，原生侧读不到就退回
-   * 程序化卡面——和 Web 端 tarotArtUrl 的兜底口径一致。明日预演里恒为 null（明天还没抽）。
+   * （用户口径「抽完的塔罗牌就对应图片文件」）。明日预演里恒为 null（明天还没抽）。
    */
   tarot: { id: string; name: string; roman: string; reversed: boolean } | null;
   todos: { done: number; total: number };

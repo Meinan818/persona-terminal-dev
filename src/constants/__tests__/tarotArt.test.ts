@@ -53,9 +53,14 @@ describe('tarotArt 卡面套映射', () => {
     }
   });
 
-  it('小阿卡纳没有配图，返回 null 走程序化卡面', () => {
-    expect(tarotArtUrl('wands_1', 'pink')).toBeNull();
-    expect(tarotArtUrl('cups_14', 'p3')).toBeNull();
+  it('小阿卡纳按主题套返回对应图片路径', () => {
+    for (const set of ['p3', 'p5', 'pink'] as const) {
+      expect(tarotArtUrl('wands_1', set)).toBe(`/tarot/${set}/wands_1.webp`);
+      expect(tarotArtUrl('cups_14', set)).toBe(`/tarot/${set}/cups_14.webp`);
+    }
+    expect(tarotArtUrl('cups_14', 'p4')).toBe('/tarot/p4/cups_14.webp');
+    expect(tarotArtUrl('cups_1', 'p4')).toBe('/tarot/p4/cups_1.webp');
+    expect(tarotArtUrl('wands_2', 'p4')).toBe('/tarot/p4/wands_2.webp');
   });
 });
 

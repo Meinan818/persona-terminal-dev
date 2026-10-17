@@ -8,7 +8,7 @@
   - **现场**：分支 `feat/coop-cinematic`，HEAD `90b0a51`；远端 `origin/feat/coop-cinematic` 停在 `1ac04ef`，**本地领先 24 条未推**（Push 必须先向用户推荐并取得明确批准）。工作区只剩**非本会话**遗留：`M ios/App/Podfile`（别的会话在改，勿动）、未跟踪 `.cache/`、`.rivet-config.json`、`outputs/` 下若干产物（含两个 demo 目录）。本轮**无未提交的代码改动**。
   - **本轮成果（2026-10-16 深夜）**：① **红版三件照用户已验收的 demo 落进 `src/`** —— 新增公共层 `src/components/cooperation/confidantP5Fx.tsx` + `src/styles/confidant-p5-fx.css`（P5R 转场四件套 + 主角牌 `#hero` 跨界面存活），App 顶层挂 `ConfidantP5FxLayer`，第 1/2/3 页逐条对齐（星排、印刷垫层、入场错峰、hero 接线）；② 修「升级后先弹恭喜页、弄完才跳演出」的**入队竞态**（队列改到数据刷新之前 + 邀请层队列闸门 + 回归测试）。
   - **验证数字（本轮实测）**：`npx tsc --noEmit` exit 0；`npm test` **44 文件 / 279 测试全绿**；CDP 探针三支 + 冒烟一支全绿，零未捕获异常、零横向溢出（截图见 `.rivet/scratch/p5-stage-shots/`、`p5-chain-shots/`、`p5-pages23-shots/`）。
-  - **待办（按优先级）**：① **用户目视验收红版三屏**（App 内、不是 demo）：起 `npx vite --port 5184 --strictPort` → 用 **`http://localhost:5184/`**（vite 只绑 localhost，写 127.0.0.1 会连接被拒）→ 切**红色主题** → `?rankup=1`（演出，点确认进恭喜）/ `?celebrate=1` / `?starshift=1`；② 24 条提交的 **Push** 待用户批准；③ 8 视口压叠矩阵本轮只跑了 1440×900 与 390×844 两档（其余：1280×700 / 936×540 / 390×700 / 390×650 / 360×740 / 430×932），可复跑探针补齐；④ **真机未测**。
+  - **待办（按优先级）**：① **用户目视验收红版三屏**（App 内、不是 demo）：起 `npx vite --port 5184 --strictPort` → 用 **`http://localhost:5184/`**（vite 只绑 localhost，写 127.0.0.1 会连接被拒）→ 切**红色主题** → `?rankup=1`（演出，点确认进恭喜）/ `?celebrate=1` / `?starshift=1`；② **Push** 待用户批准；③ **真机未测**。（8 视口 × 三屏矩阵已于 2026-10-17 补齐，见当天时间线。）
   - **动手铁律**：`clip-path` 会连带裁掉 `box-shadow`/`filter:drop-shadow`（印刷件一律走**独立垫层**）；`.scenery` 背景层 z-index 必须 **-1**；印章与落痕（`.stamp`/`#shock`/`#wave`）必须挂在 `.rankzone` 内；主角牌与舞台占位块共用 `--p5fx-cardw`（改一边就得改另一边）；改 `outputs/` 里的 demo 前先备份、两个 agent 别同时改同一文件。
   - **探针/调试的坑**：切红频道必须在**页面加载前**钉住（`Page.addScriptToEvaluateOnNewDocument` 强制 `data-ui-channel=p5` + MutationObserver 顶住）——预览入队发生在挂载时，晚设频道会被 P3 版消费掉；jsdom 里没有 `Element.animate`，公共层已做能力探测，**新加动画入口记得也走 `canAnimate`**。
   - **本会话的另一条已知限制**：派子代理时任务正文读不出来（`encrypted_content` + 自定义 provider 通道）→ 要么**单窗口作业**，要么「先把任务写进对话明文 + `fork_turns="all"` 派发」。详见下方同名时间线条目。
@@ -1570,3 +1570,10 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **修复**：公共层新增 `claimP5Hero()`（挂载领、卸载还的占用计数；归还后留 600ms 宽限，覆盖 StrictMode 二次挂载与「演出卸载 → 恭喜挂载」的换手）；三个 P5 屏各自在挂载 effect 里 `claimP5Hero()`；层内删除「按 store 判空收牌」的旧逻辑。
 - **验证**：`npx tsc --noEmit` exit 0；`npm test` **44 文件 / 279 测试全绿**；`p5-chain-probe` 与 `p5-pages23-probe` 复跑：演出/恭喜/星移三屏 `heroDisplay: block`、关窗后 `none`、零报错零溢出。
 - **边界**：档案入口这条路径本轮用**代码定位 + 结构修复**验证，没有在真机/真档案里复现（headless 库里没有同伴数据）；请用户从档案里再走一遍确认。
+
+### 2026-10-17（续）：8 视口 × 三屏矩阵补齐（交接欠账）
+
+- **做了什么**：新增探针 `.rivet/scratch/p5-matrix.mjs`（一个 CDP 会话里用 `Emulation.setDeviceMetricsOverride` 轮 8 个视口 × 3 个场景），逐条记录错误数 / 横向溢出 / 舞台四组压叠量 / 主角牌是否在视口内 / 关键元素在位，并落截图。
+- **结果（2026-10-17 实测）**：8 视口（1440×900 / 1280×700 / 936×540 / 390×844 / 390×700 / 390×650 / 360×740 / 430×932）× 3 场景（演出确认态 / 恭喜页 / 星移输入屏）= **24 组全部通过**：`errorCount 0`、`overflowX 0`、舞台四组压叠量全 0、`heroOnScreen` 全为 true、三屏各自的关键元素在位。**FAILS: 0**。
+- **证据**：`.rivet/scratch/p5-matrix-shots/report.json` 与 24 张截图（如 `936x540-stage.png`、`360x740-stage.png`）。
+- **边界**：矩阵是程序化断言；观感仍以用户目视为准；真机（App 内 WebView）仍未测。

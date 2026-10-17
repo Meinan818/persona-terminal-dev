@@ -1,4 +1,7 @@
-import type { ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
+import { seasonArtUrl } from '@/constants/seasonArt';
+import { nextArtRetryDelay } from '@/constants/tarotArt';
+import { useTarotArtSet } from '@/ui/useTarotArtSet';
 import {
   FESTIVAL_EN, SOLAR_TERM_EN, seasonOfDate, termOrdinal,
   type SeasonKey, type SeasonMark, type SolarTermName,
@@ -6,9 +9,8 @@ import {
 
 /**
  * 岁时卡（第 6 轮，用户口径：「做成类似塔罗牌的感觉」）。
- * 没有美术资源，44 张卡面全部程序化画出来：一季一套底色，卡框 / 罗马数字 / 名字 / 英文名照塔罗的版式，
- * 中央是每个节气、节日各自的一枚线稿意象（同一支笔、同一种描边，成一套）。
- * 未收录的卡整体去色并用虚线内框，收录后右上角盖一枚朱印。
+ * 优先显示用户提供的四套主题美术；下面的程序化卡面用于缺图 / 加载失败兜底。
+ * 未收录仍整体去色，收录后右上角盖朱印；日期与小注仍由岁时册维护。
  */
 
 const VB_W = 200;
@@ -562,12 +564,59 @@ export function seasonCardEn(mark: SeasonMark): string {
   return (mark.kind === 'term' ? SOLAR_TERM_EN[mark.name as SolarTermName] : FESTIVAL_EN[mark.name]) ?? '';
 }
 
-export function SeasonCardSVG({ mark, collected, width = '100%', className }: {
+interface SeasonCardProps {
   mark: SeasonMark;
   collected: boolean;
   width?: number | string;
   className?: string;
-}) {
+}
+
+export function SeasonCardSVG(props: SeasonCardProps) {
+  const set = useTarotArtSet();
+  const src = seasonArtUrl(props.mark, set);
+  // 按图片地址重建加载状态，切主题 / 换卡时不会继承上一张的失败记录。
+  return src ? <SeasonArtCard key={src} {...props} src={src} /> : <SeasonCardFallback {...props} />;
+}
+
+function SeasonArtCard({ src, mark, collected, width = '100%', className }: SeasonCardProps & { src: string }) {
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    if (!failed) return;
+    const delay = nextArtRetryDelay(retry);
+    if (delay === null) return;
+    const timer = setTimeout(() => { setRetry(n => n + 1); setFailed(false); }, delay);
+    return () => clearTimeout(timer);
+  }, [failed, retry]);
+
+  if (failed) return <SeasonCardFallback mark={mark} collected={collected} width={width} className={className} />;
+  return (
+    <span className={className} style={{ display: 'block', position: 'relative', width, aspectRatio: '5 / 8', filter: collected ? undefined : 'grayscale(1)', opacity: collected ? 1 : 0.5 }}>
+      <img
+        src={src}
+        alt={`${mark.name} · ${seasonCardEn(mark)}`}
+        width={560}
+        height={896}
+        loading="lazy"
+        decoding="async"
+        draggable={false}
+        onError={() => setFailed(true)}
+        onLoad={() => setRetry(0)}
+        style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', borderRadius: 10 }}
+      />
+      {collected && (
+        <svg aria-hidden="true" viewBox="0 0 200 320" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          <g transform="translate(157,28)">
+            <rect width={19} height={19} rx={2} fill="#c8322a" opacity={0.92} />
+            <text x={9.5} y={14} textAnchor="middle" fontSize={11.5} fontWeight={700} fill="#fff5ee" fontFamily="'Songti SC', 'STSong', serif">收</text>
+          </g>
+        </svg>
+      )}
+    </span>
+  );
+}
+
+function SeasonCardFallback({ mark, collected, width = '100%', className }: SeasonCardProps) {
   const season = seasonOfDate(mark.date);
   const p = SEASON_PALETTES[season];
   const isTerm = mark.kind === 'term';

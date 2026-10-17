@@ -51,6 +51,16 @@ export default defineConfig({
         globIgnores: ['**/eruda-*.js', 'assets/terminal/*.png'],
         runtimeCaching: [
           {
+            // 岁时四套共 176 张 WebP，按需加载并缓存，不加入首次安装预缓存。
+            urlPattern: ({ url }) => url.pathname.startsWith('/season/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'season-art-v1',
+              expiration: { maxEntries: 176, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             // 黄频道实景舞台（见上方 globIgnores）。CacheFirst：素材是静态的，
             // 换图时文件名不变——真要换，改这里的 cacheName 版本号即可。
             urlPattern: ({ url }) => url.pathname.startsWith('/assets/terminal/'),

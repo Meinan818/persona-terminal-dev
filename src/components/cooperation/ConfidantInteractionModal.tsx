@@ -10,6 +10,8 @@ import { INTIMACY_LABELS, MAX_INTIMACY } from '@/utils/confidantLevels';
 import { triggerSuccessFeedback } from '@/utils/feedback';
 import { MusicalNotes } from '@/components/MusicalNotes';
 import { useBackHandler } from '@/utils/useBackHandler';
+import { useUiChannel } from '@/ui/useUiChannel';
+import '@/styles/coop-p5-skin.css';
 
 type Stage = 'input' | 'thinking' | 'result' | 'done' | 'error';
 
@@ -46,6 +48,8 @@ const DELTA_LABELS: Record<number, string> = {
  * 5. 一天仅限一次
  */
 export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props) {
+  // 红频道（p5）换皮：只加属性 + 皮肤样式，逻辑一行不动（见 coop-p5-skin.css 的头注释）
+  const p5 = useUiChannel() === 'p5';
   const { settings, recordConfidantInteraction, confidantEvents } = useAppStore(useShallow(s => ({ settings: s.settings, recordConfidantInteraction: s.recordConfidantInteraction, confidantEvents: s.confidantEvents })));
   const cloudUser = useCloudStore(s => s.cloudUser);
   const [stage, setStage] = useState<Stage>('input');
@@ -160,6 +164,7 @@ export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props)
   return (
     <AnimatePresence>
       <motion.div
+        data-livery={p5 ? 'p5' : undefined}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -172,13 +177,15 @@ export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props)
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 22, stiffness: 280 }}
           className="w-full max-w-md max-h-[92vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl"
+          data-p5-part="sheet"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="relative px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800"
+               data-p5-part="head"
                style={{ background: `linear-gradient(135deg, ${accent}18, transparent)` }}>
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white" data-p5-part="title">
                   今日与 {confidant.name} 的互动
                 </h2>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
@@ -188,6 +195,7 @@ export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props)
               <button
                 onClick={onClose}
                 className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 text-gray-500 flex items-center justify-center"
+                data-p5-part="close"
                 aria-label="关闭"
               >✕</button>
             </div>
@@ -223,13 +231,14 @@ export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props)
                       disabled={alreadyToday}
                       placeholder="可以很具体——一起吃了什么饭、聊了什么话题、Ta 说了一句让你印象深刻的话…… 也可以写下一次小小的矛盾。"
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/30 resize-none disabled:opacity-50"
+                      data-p5-part="paper"
                     />
                     <p className="text-[10px] text-gray-400 mt-1 text-right">
                       {description.length} / 400
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 space-y-2.5">
+                  <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 space-y-2.5" data-p5-part="block">
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input
                         type="checkbox"
@@ -324,7 +333,7 @@ export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props)
                   </div>
 
                   {err && (
-                    <div className="text-xs text-rose-500 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+                    <div className="text-xs text-rose-500 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2" data-p5-part="error">
                       {err}
                     </div>
                   )}
@@ -334,6 +343,7 @@ export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props)
                     onClick={handleEval}
                     disabled={alreadyToday || !description.trim()}
                     className="w-full py-3 rounded-xl text-white font-bold text-sm shadow-lg disabled:opacity-40"
+                    data-p5-part="primary"
                     style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, boxShadow: `0 8px 24px -10px ${accent}80` }}
                   >
                     解读这一段

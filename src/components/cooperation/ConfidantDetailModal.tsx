@@ -22,6 +22,7 @@ import { useCloudStore } from '@/store/cloud';
 import { ConfidantInteractionModal } from '@/components/cooperation/ConfidantInteractionModal';
 import { ConfidantStarShiftModal } from '@/components/cooperation/ConfidantStarShiftModal';
 import { ConfidantCelebrateScreen } from '@/components/cooperation/ConfidantCelebrateScreen';
+import '@/styles/coop-p5-skin.css';
 import { findUncelebratedLevelUps, markLevelCelebrated } from '@/utils/confidantCelebration';
 import { CounselChatModal } from '@/components/cooperation/CounselChatModal';
 import { CoopMemorialPanel } from '@/components/cooperation/CoopMemorialPanel';
@@ -127,6 +128,8 @@ export function ConfidantDetailModal({
   const [tab, setTab] = useState<Tab>('info');
   // P3R（蓝频道，p3-modal-09 稿）：tab 斜块 / CTA 蓝斜钮+洋红角 / 归档浅青·删除洋红
   const p3 = useUiChannel() === 'p3';
+  // 红频道（p5）换皮：只加属性 + 皮肤样式，逻辑一行不动（见 coop-p5-skin.css）
+  const p5 = useUiChannel() === 'p5';
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [starShiftOpen, setStarShiftOpen] = useState(false);
@@ -393,6 +396,7 @@ export function ConfidantDetailModal({
       whileTap={{ scale: 0.97 }}
       onClick={() => setInteractionOpen(true)}
       disabled={interactionDisabled}
+      data-p5-part="primary"
       className={p3
         ? `relative w-full ${half ? 'h-[52px] text-[15px]' : 'py-3.5 text-[16px]'} font-black text-white disabled:opacity-40`
         : `w-full ${half ? 'h-12' : 'py-3'} rounded-xl text-white text-sm font-bold shadow-lg disabled:opacity-40`}
@@ -419,6 +423,7 @@ export function ConfidantDetailModal({
           用 visibility 而不是卸载：保留它的状态，关掉星移窗后原样回来。 */}
       <motion.div
         key="cd-modal-bg"
+        data-livery={p5 ? 'p5' : undefined}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -436,11 +441,13 @@ export function ConfidantDetailModal({
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 22, stiffness: 280 }}
           className="no-scrollbar w-full max-w-md max-h-[92vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl"
+          data-p5-part="sheet"
           onClick={(e) => e.stopPropagation()}
         >
           {/* 头部：大牌面（不加 overflow-hidden，否则长按菜单会被截断） */}
           <div
             className="relative px-6 pt-8 pb-6"
+            data-p5-part="head"
             style={{
               background: `linear-gradient(160deg, ${accent}25, ${accent}08 70%, transparent)`,
             }}
@@ -448,6 +455,7 @@ export function ConfidantDetailModal({
             <button
               onClick={onClose}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/10 dark:bg-white/10 text-gray-500 flex items-center justify-center z-10"
+              data-p5-part="close"
               aria-label="关闭"
             >✕</button>
 
@@ -622,13 +630,14 @@ export function ConfidantDetailModal({
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white truncate" data-p5-part="title">
                   {confidant.name}
                 </h2>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   《{card?.name}》{isReversed ? '逆位' : '正位'}
                 </div>
                 <div className={`mt-2 inline-block px-3 py-1 rounded-full text-xs font-bold ${lvSwap.preset ? 'cursor-pointer' : ''}`}
+                  data-p5-part="tag"
                   style={{ background: `${accent}22`, color: accent }}
                   {...swapTagProps(lvSwap, `Lv.${confidant.intimacy} · ${INTIMACY_LABELS[confidant.intimacy]}`)}>
                   <SwapFaces swap={lvSwap} lv={<>Lv.{confidant.intimacy} · {INTIMACY_LABELS[confidant.intimacy]}</>} />
@@ -661,6 +670,7 @@ export function ConfidantDetailModal({
                     <button
                       onClick={() => onOpenCoopShadow(activeShadow, confidant.name)}
                       className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-black tracking-wider border transition-all active:scale-95"
+                      data-p5-part="tag"
                       style={{
                         background: identified
                           ? 'linear-gradient(135deg, rgb(var(--color-battle-rgb) / 0.22), rgb(var(--color-bond-bright-rgb) / 0.12))'
@@ -753,7 +763,7 @@ export function ConfidantDetailModal({
               })}
             </div>
           ) : (
-          <div className="grid grid-cols-3 gap-1 p-1 mx-6 mt-4 rounded-xl bg-black/5 dark:bg-white/5">
+          <div className="grid grid-cols-3 gap-1 p-1 mx-6 mt-4 rounded-xl bg-black/5 dark:bg-white/5" data-p5-part="tabs">
             {([
               { id: 'info', label: '信息' },
               { id: 'abilities', label: '能力' },
@@ -764,6 +774,7 @@ export function ConfidantDetailModal({
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
+                  data-p5-part={active ? 'tab-on' : 'tab'}
                   className={`py-2 rounded-lg text-xs font-bold transition-all ${
                     active ? 'bg-white dark:bg-gray-900 text-primary shadow-sm' : 'text-gray-500'
                   }`}
@@ -1339,7 +1350,7 @@ const INFO_ITEM_VARIANTS: Variants = {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+    <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50" data-p5-part="paper">
       <div className="text-[10px] font-bold tracking-widest text-gray-400 mb-1.5">{title}</div>
       {children}
     </div>

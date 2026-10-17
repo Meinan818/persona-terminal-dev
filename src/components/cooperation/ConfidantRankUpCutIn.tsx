@@ -188,7 +188,11 @@ function RankUpCutInP3() {
 
   // ── 时间线（照 demo 逐段移植）──
   useEffect(() => {
-    if (!notice || channel !== 'p3' || !confidant) return;
+    // ⚠ 必须等 modalBlocker 清掉再开演：升级常发生在「今日互动」弹窗里，
+    //   档案/互动窗还没收场时演出层被 return null 挡住；若时间线照跑，
+    //   用户真正看到时已经走到淡出尾段（录屏：只剩淡淡一层，随后直接确认）。
+    //   P5/P4 的时间线都有这道闸门，P3 此前漏了。
+    if (!notice || modalBlocker || channel !== 'p3' || !confidant) return;
     let cancelled = false;
     // 播放开始即标记「这一级庆祝过了」——打开档案时就不会被补弹第二次。
     // （补弹扫描保留作兜底：万一演出没播成，档案里仍能看到祝贺。）
@@ -223,14 +227,14 @@ function RankUpCutInP3() {
 
     // ① 白闪 + 牌从左上坠入
     A(flashRef.current, [{ opacity: 0.55 }, { opacity: 0 }], { duration: 450, easing: 'linear' });
-    A(cardRef.current, [{ opacity: 1, translate: '-20vw -60vh', rotate: '-40deg' }, { opacity: 1, translate: '0 0', rotate: '-8deg' }], { duration: 700, easing: OVER });
-    A(capRef.current, [{ opacity: 0 }, { opacity: 1 }], { delay: 350, duration: 400 });
+    const cardIn = A(cardRef.current, [{ opacity: 1, translate: '-20vw -60vh', rotate: '-40deg' }, { opacity: 1, translate: '0 0', rotate: '-8deg' }], { duration: 700, easing: OVER });
+    const capIn = A(capRef.current, [{ opacity: 0 }, { opacity: 1 }], { delay: 350, duration: 400 });
 
     // ② 巨字砸下 + 碎片飞散 + 星星弹入
     // 主标题的入场在挂载时就带上 delay 交给动画时间线；不用 setTimeout 点火。
     // 手机主线程被长任务占住时，setTimeout 会积压到解除阻塞后一起触发，画面就成了
     // 「先卡住、再一下跳出一堆东西」。WAAPI 的 delay 由浏览器时间线推进，不会成批补放。
-    A(titleRef.current, [{ opacity: 0, translate: '16vw 0', scale: '1.7' }, { opacity: 1, translate: '0 0', scale: '1' }], { delay: 700, duration: 380, easing: OVER });
+    const titleIn = A(titleRef.current, [{ opacity: 0, translate: '16vw 0', scale: '1.7' }, { opacity: 1, translate: '0 0', scale: '1' }], { delay: 700, duration: 380, easing: OVER });
     // 碎片/星星是装饰件：放在 700ms 一次点火即可。主标题/副题/胶囊已经交给动画时间线，
     // 即使这一批晚到，也不会再把信息本体一起补放。
     T(700, () => {
@@ -244,7 +248,7 @@ function RankUpCutInP3() {
     });
 
     // ③ 副题滑入
-    A(subRef.current, [{ opacity: 0, translate: '-4vw 0' }, { opacity: 1, translate: '0 0' }], { delay: 1300, duration: 420 });
+    const subIn = A(subRef.current, [{ opacity: 0, translate: '-4vw 0' }, { opacity: 1, translate: '0 0' }], { delay: 1300, duration: 420 });
 
     // ④ 数字旧级 → 新级 弹跳 + 高亮
     T(1900, () => {
@@ -255,15 +259,16 @@ function RankUpCutInP3() {
     });
 
     // ⑤ 奖励胶囊滑入
-    A(pillRef.current, [{ opacity: 0, translate: '10vw 0' }, { opacity: 1, translate: '0 0' }], { delay: 2300, duration: 420 });
+    const pillIn = A(pillRef.current, [{ opacity: 0, translate: '10vw 0' }, { opacity: 1, translate: '0 0' }], { delay: 2300, duration: 420 });
 
     // ⑥ 牌轻微摇摆
-    A(cardRef.current, [{ rotate: '-8deg' }, { rotate: '-6deg' }], { delay: 2400, duration: 600, direction: 'alternate', iterations: 2, easing: 'ease-in-out' });
+    const sway = A(cardRef.current, [{ rotate: '-8deg' }, { rotate: '-6deg' }], { delay: 2400, duration: 600, direction: 'alternate', iterations: 2, easing: 'ease-in-out' });
 
     // ⑦ 整体碎裂退场：牌一沉、各元素与星星淡出、碎片炸散。
     // ⚠ 这一段是 demo 编排里的 ⑦，我第一版整段漏抄了 → 演出元素不消失、
     // 确认键直接叠在它们上面（2026-10-16 用户：「按钮和这个在一个界面上了」）。
-    T(3600, () => {
+    const runExit = () => {
+      if (cancelled) return;
       const exits: Animation[] = [];
       const push = (a: Animation | null) => { if (a) exits.push(a); };
       push(A(cardRef.current, [{ rotate: '-8deg', scale: '1' }, { rotate: '-3deg', scale: '1.06' }], { duration: 140 }));
@@ -288,7 +293,20 @@ function RankUpCutInP3() {
       Promise.allSettled(exits.map(a => a.finished)).then(() => {
         if (!cancelled) setPhase('confirm');
       });
-    });
+    };
+
+    // 退场不再用固定 3.6s：浏览器卡顿时，主内容动画会晚开始；固定计时器会在
+    // 它们还没真正显示时就开始淡出（录屏里只剩淡淡一层，随后直接确认）。
+    // 等主内容动画全部结束，再停 500ms 让画面落住，才进入碎屏退场。
+    const mainEntries = [cardIn, capIn, titleIn, subIn, pillIn, sway]
+      .filter((a): a is Animation => !!a);
+    if (mainEntries.length > 0) {
+      Promise.allSettled(mainEntries.map(a => a.finished)).then(() => {
+        if (!cancelled) T(500, runExit);
+      });
+    } else {
+      T(3600, runExit);
+    }
 
     return () => {
       cancelled = true;
@@ -297,7 +315,7 @@ function RankUpCutInP3() {
         r.current?.getAnimations?.().forEach(a => a.cancel());
       });
     };
-  }, [notice, channel, confidant, reduce]);
+  }, [notice, modalBlocker, channel, confidant, reduce]);
 
   if (!notice || modalBlocker || channel !== 'p3' || !confidant || !card) return null;
 

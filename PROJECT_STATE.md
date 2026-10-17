@@ -1,18 +1,18 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-17 18:15（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-17 18:22（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
 ## 1. 当前全貌：先看这一节
 
-- **【当前现场 · 2026-10-17 18:15 · P4 黄色升级 demo 落牌节奏（未验收）】** 上一会话因上游 `413 Payload Too Large` 中断；本窗口已在原文件上继续，未改 `src/`，未 Push。
-  - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `5f676bf`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，当前本地领先 **34 条**（本次文档提交后为 **35 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留；本轮只改 `outputs/bond-rankup-demo-p4/index.html` 与 `.rivet/scratch` 探针，不动 `src/`。
-  - **本轮完成**：`#monitor` 已补齐 markup / JS（`monitorPoseTo` 四姿态、`relayWorld`、`p4Relay`），监视器带卡牌贯穿 app/stage/page2/page3；落牌改成一条连续弧线，约 1.05 秒，先划过屏幕、越过头顶，再加速下砸，中间不再悬停；白闪/冲击环与落点对齐（约 1.04 秒），约 1.08 秒收稳；背景与卡牌同长运动。1280×700 的 page2/page3 滚动条白线已用隐藏滚动条修掉。
-  - **验证（本轮实测）**：`.rivet/scratch/p4-drop-timing.mjs` → 落点约 `1041ms`、收稳 `1081ms`、最高速度 `2.384 px/ms` 出现在落点；`p4-demo-probe.mjs` 四视口 `1440x900 / 1280x700 / 390x844 / 360x740` → 0 JS error、0 横向溢出、四屏可进入、确认键出现；`p4-relay-probe.mjs` `1440x900 / 390x844 / 360x740` → 0 error、stage 已隐藏、page2/page3 可进入。截图与 GIF 在 `outputs/bond-rankup-demo-p4/_shots/relay/`。
-  - **用户当前未验收**：最新反馈是“我喜欢那种丝滑的而且非常有冲击力的”；本版刚按此调完，**尚未得到用户确认**。不要写成已完成或已验收。
-  - **下一步**：用户刷新 `http://127.0.0.1:8899/outputs/bond-rankup-demo-p4/index.html`（自动播放，点画面可重播）看落牌；认可后再讨论落 `src`。Push 35 条仍须用户明确批准。
+- **【当前现场 · 2026-10-17 18:22 · P4 黄色升级 demo 已回退到用户偏好的快落版（未验收）】** 上一会话因上游 `413 Payload Too Large` 中断；本窗口已在原文件上继续，未改 `src/`，未 Push。
+  - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `6c3a54b`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，当前本地领先 **35 条**（本次文档提交后为 **36 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留；本轮只改 `outputs/bond-rankup-demo-p4/index.html` 与 `.rivet/scratch` 探针，不动 `src/`。
+  - **本轮决定**：用户先反馈“牌砸的有点快”，试用慢版后又明确说“还是有点慢……还是之前的有冲击力”，要求回退。已用 `_bak/index-pre-slow-drop-20261017-180030.html` 恢复 940ms 快落版（白闪/冲击环在 400ms、`rankUp` 220ms、舞台 920ms 后隐藏），仅额外保留 page2/page3 隐藏滚动条的两行 CSS；当前文件与备份的 diff 只有这两行。慢版留底在 `_bak/index-pre-revert-20261017-181716.html`。
+  - **验证（回退后实测）**：`p4-demo-probe.mjs` 四视口 `1440x900 / 1280x700 / 390x844 / 360x740` → 0 JS error、0 横向溢出、四屏可进入、确认键出现；`p4-relay-probe.mjs` `1440x900 / 390x844` → 0 error、stage 已隐藏、page2/page3 可进入。回退版 GIF 在 `_shots/relay/stage-drop-1440-reverted.gif`。
+  - **用户当前未验收**：回退版尚未得到用户确认；不要写成已完成或已验收。
+  - **下一步**：用户刷新 `http://127.0.0.1:8899/outputs/bond-rankup-demo-p4/index.html`（自动播放，点画面可重播）看回退后的快落版；认可后再讨论落 `src`。Push 36 条仍须用户明确批准。
   - **上一轮异常中断原因（留档）**：上一会话最后请求被 `api.deepseek.com/responses` 以 `413 Payload Too Large` 拒绝；累计输入约 740 万 token，单次约 24 万 token（含多张截图），不是文件或代码崩溃。新窗口应少贴大图、用探针报告代替一次性塞满上下文。
 
-- **【历史交接 · 2026-10-17 黄色 COOP 升级 demo（已被上方 18:15 当前现场取代；保留现场与反馈）】** 黄色主题 demo 的开发**暂停**；这是上一轮交接点，再看下面的红版/换皮历史。
+- **【历史交接 · 2026-10-17 黄色 COOP 升级 demo（已被上方 18:22 当前现场取代；保留现场与反馈）】** 黄色主题 demo 的开发**暂停**；这是上一轮交接点，再看下面的红版/换皮历史。
   - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `564efc1`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，**本地领先 33 条未推**（本次交接文档提交后应为 **34 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留；**本轮没有改 `src/`，新增的 demo 全在未跟踪的 `outputs/`，不会进 Git**。
   - **本轮任务与用户原话方向**：读蓝色（p3）、红色（p5）COOP 升级 demo 与黄色软件内设计语言，做黄色 P4 版；用户还点名参考 `D:\转场\P3R 菜单转场 · 水下 (3).html`，要“背景跟随、卡片/人物跟背景一起转场”的高级感。用户随后连续明确否决：**不要抄 P5、不要删掉内容、不要只看这个像那个**，要做**独属于 P4 的 COOP 升级，并且有视觉冲击**。最新一次反馈是：“转场和背景互动完全没有，没有 P5 转场时卡牌跟背景转场的冲击力”。**这是当前最大的未完成项，不是已验收结果。**
   - **当前产物**：`outputs\bond-rankup-demo-p4\index.html`（当时工作版，约 86KB，未跟踪、没有 Git 保护；现在约 96KB）；`index-v1-p5ish.html` 是较早一版“黄皮 P5 感”备份，只用于对照，**不是当前方向**。截图在 `outputs\bond-rankup-demo-p4\_shots\`，四视口序列在 `_shots\series\`。

@@ -32,7 +32,7 @@ import { tarotArtUrl } from '@/constants/tarotArt';
 import { INTIMACY_LABELS, buffsUnlockedInRange, formatBuffDisplay } from '@/utils/confidantLevels';
 import { P5R, P5Dots } from '@/components/p5r/kit';
 import { P5Rings, P5ScatterStars } from '@/components/cooperation/confidantP5Scenery';
-import { lastP5SweepOrigin, p5ScaleInP5, popInP5, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
+import { claimP5Hero, lastP5SweepOrigin, p5ScaleInP5, popInP5, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
 import '@/styles/confidant-celebrate-p5.css';
 
 interface Props {
@@ -114,6 +114,8 @@ export function ConfidantCelebrateScreenP5({ confidant, onClose, onUseStarShift 
     const root = rootRef.current;
     const wrap = wrapRef.current;
     if (!root) return;
+    // 占住主角牌（这一屏可能是从全局邀请进来的，也可能是档案里的本地浮层——两种都要有牌）
+    const releaseHero = claimP5Hero();
     setP5HeroArt(artUrl);
     revealInP5(root, lastP5SweepOrigin());
     requestP5HeroPose('page2');
@@ -121,6 +123,7 @@ export function ConfidantCelebrateScreenP5({ confidant, onClose, onUseStarShift 
       p5ScaleInP5(wrap);
       popInP5(wrap.querySelectorAll('.cl5-anim'), 1);
     }
+    return releaseHero;
   }, [artUrl]);
 
   /** 点击点圆心（程序化点击的 clientX/Y 为 0 时退回元素中心，照 demo 的 originOf） */

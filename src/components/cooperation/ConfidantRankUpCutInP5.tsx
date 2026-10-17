@@ -26,7 +26,7 @@ import { p5RingLayers, P5ScatterStars, P5Hoops } from '@/components/cooperation/
 import { formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
 import { EXP, SLAM, OVER, rand, PREVIEW_CONFIDANT } from './confidantRankUpShared';
-import { p5HeroEnterBeat, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
+import { claimP5Hero, p5HeroEnterBeat, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
 import '@/styles/confidant-rankup-p5.css';
 
 export function ConfidantRankUpCutInP5() {
@@ -308,6 +308,8 @@ export function ConfidantRankUpCutInP5() {
     setPhase('playing');
     setStageOn(false);
     setP5HeroArt(artUrl);
+    // 这一屏占住主角牌：卸载时归还（计数归零才收牌，见 claimP5Hero 的注释）
+    const releaseHero = claimP5Hero();
     requestP5HeroPose('app', { instant: true });
 
     let cancelled = false;
@@ -338,6 +340,7 @@ export function ConfidantRankUpCutInP5() {
       if (raf) cancelAnimationFrame(raf);
       if (startTimer) window.clearTimeout(startTimer);
       stopTimeline?.();
+      releaseHero();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notice, modalBlocker, confidant, card, artUrl, reduce]);

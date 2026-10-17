@@ -19,7 +19,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReducedMotion } from 'motion/react';
-import { useAppStore } from '@/store';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { P5R } from '@/components/p5r/kit';
 import { EXP, OVER } from '@/components/cooperation/confidantRankUpShared';
@@ -48,6 +47,8 @@ let currentHeroReq: HeroRequest = { pose: 'hidden', instant: true };
 let sweepHandler: ((word: string, apply: () => void, origin: P5FxOrigin | null, dir: 1 | -1) => Promise<boolean>) | null = null;
 let heroBeatHandler: (() => void) | null = null;
 let lastSweepOrigin: P5FxOrigin = { x: 0, y: 0 };
+let heroClaims = 0;
+let heroHideTimer = 0;
 const heroArtSubs = new Set<(url: string | null) => void>();
 const heroPoseSubs = new Set<(req: HeroRequest) => void>();
 
@@ -61,6 +62,36 @@ export function setP5HeroArt(url: string | null): void {
 export function requestP5HeroPose(pose: P5HeroPose, opts?: { instant?: boolean }): void {
   currentHeroReq = { pose, instant: !!opts?.instant };
   heroPoseSubs.forEach(fn => fn(currentHeroReq));
+}
+
+/**
+ * 屏「占住」主角牌：挂载时领、卸载时还（返回值就是释放函数）。
+ *
+ * 为什么不用 store 判空（`queue` 空 + `invite` 空 就收牌）：
+ * 恭喜页 / 星移页有**两处入口** —— App 顶层的全局邀请（`starShiftInvite`），
+ * 以及同伴档案里的本地浮层（`ConfidantDetailModal` 的 `starShiftOpen`，**不写 store**）。
+ * 只看 store 会在档案入口把牌当成「链已结束」提前收走 —— 用户报「这几个页面的塔罗牌消失了」。
+ *
+ * 归还后留 600ms 宽限：StrictMode 的二次挂载、以及「演出卸载 → 恭喜挂载」的换手都落在这段里，
+ * 计数归零立刻收牌会闪一下。
+ */
+export function claimP5Hero(): () => void {
+  heroClaims += 1;
+  if (typeof window !== 'undefined' && heroHideTimer) {
+    window.clearTimeout(heroHideTimer);
+    heroHideTimer = 0;
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    heroClaims = Math.max(0, heroClaims - 1);
+    if (heroClaims > 0 || typeof window === 'undefined') return;
+    window.clearTimeout(heroHideTimer);
+    heroHideTimer = window.setTimeout(() => {
+      if (heroClaims === 0) requestP5HeroPose('hidden');
+    }, 600);
+  };
 }
 
 /** 演出进入时的「牌之光晕 + 落地顿挫 + 高光扫过」三连（照 demo rankUp 的 ② 段） */
@@ -172,8 +203,6 @@ const A = (el: Element | null, kf: Keyframe[], opts: KeyframeAnimationOptions = 
 /* ── 固定层本体 ────────────────────────────────────────────────────────── */
 export function ConfidantP5FxLayer() {
   const channel = useUiChannel();
-  const queue = useAppStore(s => s.confidantRankUpQueue);
-  const invite = useAppStore(s => s.starShiftInvite);
   const reduce = useReducedMotion();
 
   const [art, setArt] = useState<string | null>(heroArtUrl);
@@ -426,18 +455,8 @@ export function ConfidantP5FxLayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [req.n]);
 
-  // 链断了（队列空 + 没有星移邀请）就把主角牌收走：App 的真实界面不该被一张常驻浮牌压着。
-  // 800ms 宽限：确认那一刻是「先出队、再发邀请」，两条状态在同一批里更新，宽限还能兜住手滑。
-  const idle = queue.length === 0 && !invite;
-  useEffect(() => {
-    if (!idle) return;
-    const t = window.setTimeout(() => {
-      const st = useAppStore.getState();
-      if (st.confidantRankUpQueue.length > 0 || st.starShiftInvite) return;
-      requestP5HeroPose('hidden');
-    }, 800);
-    return () => window.clearTimeout(t);
-  }, [idle]);
+  // 收牌不在这里判：改由各屏 `claimP5Hero()` 的**占用计数**决定（见该函数注释）——
+  // 恭喜/星移还有「档案里的本地浮层」这条入口，它不写 store，按 store 判空会误收。
 
   if (channel !== 'p5') return null;
   const visible = req.pose !== 'hidden';

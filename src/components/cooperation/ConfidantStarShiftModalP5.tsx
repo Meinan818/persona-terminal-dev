@@ -32,7 +32,7 @@ import { tarotArtUrl } from '@/constants/tarotArt';
 import { P5R } from '@/components/p5r/kit';
 import { P5Rings, P5ScatterStars } from '@/components/cooperation/confidantP5Scenery';
 import { useStarShiftFlow } from '@/components/cooperation/useStarShiftFlow';
-import { lastP5SweepOrigin, p5ScaleInP5, popInP5, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
+import { claimP5Hero, lastP5SweepOrigin, p5ScaleInP5, popInP5, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
 import '@/styles/confidant-starshift-p5.css';
 
 interface Props {
@@ -73,6 +73,8 @@ export function ConfidantStarShiftModalP5({ isOpen, confidant, onClose }: Props)
   useEffect(() => {
     if (!isOpen || !confidant) return;
     const overlay = overlayRef.current;
+    // 占住主角牌：这一屏同样可能是「档案里的本地星移窗」，不写全局邀请
+    const releaseHero = claimP5Hero();
     setP5HeroArt(artUrl);
     if (overlay) {
       revealInP5(overlay, lastP5SweepOrigin());
@@ -80,6 +82,7 @@ export function ConfidantStarShiftModalP5({ isOpen, confidant, onClose }: Props)
       p5ScaleInP5(wrap);
     }
     requestP5HeroPose('page3');
+    return releaseHero;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, confidant?.id]);
 

@@ -21,7 +21,7 @@ import { createPortal } from 'react-dom';
 import { useReducedMotion } from 'motion/react';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { P5R } from '@/components/p5r/kit';
-import { EXP, OVER } from '@/components/cooperation/confidantRankUpShared';
+import { EXP, OVER, compactFx } from '@/components/cooperation/confidantRankUpShared';
 import '@/styles/confidant-p5-fx.css';
 
 export type P5HeroPose = 'app' | 'show' | 'page2' | 'page3' | 'hidden';
@@ -131,6 +131,31 @@ export function lastP5SweepOrigin(): P5FxOrigin {
 export function revealInP5(el: Element | null, origin: P5FxOrigin): void {
   const node = el as HTMLElement | null;
   if (!node || !canAnimate(node) || prefersReduce()) return;
+  /**
+   * 手机档：不做整屏 clip-path 圆形展开，只做一次透明度入场。
+   *
+   * 2026-10-17 用户手机录屏：升级演出进场时，底色在「羁绊页 / 演出层」之间
+   * 一抽一抽地来回跳。整屏 clip-path 会让旧页在每一帧重新栅格化，Android WebView
+   * 的合成器跟不上时就会把旧页帧和演出层帧交替吐出来——表现不是「擦得钝」，
+   * 而是两层底色反复切换。黄色演出早就踩过同一个坑，手机档的 crtOut 已经改成
+   * 纯透明度（见 confidantP4Cinema.tsx）；这里补上同样的分支，桌面端构图不变。
+   *
+   * 用 260ms 的透明度而不是直接硬切：白闪/巨字横扫还在上面盖着，观感是演出层
+   * 从黑场里显出来，不会露出旧页的整页内容。
+   */
+  if (compactFx()) {
+    const a = node.animate(
+      [{ opacity: 0 }, { opacity: 1 }],
+      { duration: 260, easing: EASE2, fill: 'backwards' },
+    );
+    a.finished
+      .then(() => {
+        node.style.opacity = '';
+        a.cancel();
+      })
+      .catch(() => {});
+    return;
+  }
   const a = node.animate(
     [
       { clipPath: `circle(0px at ${origin.x}px ${origin.y}px)` },

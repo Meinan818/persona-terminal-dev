@@ -360,8 +360,11 @@ export function ConfidantRankUpCutInP5() {
       stopTimeline?.();
       releaseHero();
     };
+    // 只按「这一条通知」重开入场：store 刷新会换 confidant 对象引用，
+    // 若把它放进依赖，演出会在播到一半时 cleanup → setStageOn(false) → 再展开一次，
+    // 手机上就是背景抽一下。P4 的同类修复也是按 notice.id 锁（2026-10-17）。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notice, modalBlocker, confidant, card, artUrl, reduce]);
+  }, [notice?.id, modalBlocker, confidant?.id, card, artUrl, reduce]);
 
   if (!notice || modalBlocker || !confidant || !card) return null;
 

@@ -1,8 +1,17 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-17 19:20（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-17 19:35（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
 ## 1. 当前全貌：先看这一节
+
+- **【接手第一入口 · 2026-10-17 19:35 · P4 升级链交接；新报「继续收看」无响应】** 项目按用户「先交接」暂停开发；本轮没有改代码，新问题只做只读定位，交给下一窗口先复现再修。
+  - **现场**：分支 `feat/coop-cinematic`，HEAD `8b81c1b`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，本地领先 **40 条**（本次交接文档提交后 **41 条**，Push 仍须用户明确批准）。没有暂存内容，也没有本会话新增/改动的源码。`ios/App/Podfile` 仍显示 `M`，但工作区 blob 与 HEAD 相同（换行/元数据差异），不要纳入提交；`.cache/`、`.rivet-config.json`、`outputs/` 为既有未跟踪产物，勿清理。
+  - **本轮唯一新增事项**：用户报告黄色主题 COOP 升级演出到「继续收看」按钮后没有反应。只读定位到按钮在 `src/components/cooperation/ConfidantRankUpCutInP4.tsx:322`，点击处理器 `continueToPage2` 在同文件 `:84`，它会调用 `runP4Relay('INTIMACY UP', …)`，在转场中点执行 `dismissConfidantRankUp(notice.id)` + `setStarShiftInvite(notice.confidantId)`，随后应由 `ConfidantCelebrateScreenP4` 接管第二页。**尚未确认真实鼠标点击是否命中按钮、React `onClick` 是否触发，以及队列/邀请是否实际变化**；没有修改 UI 或事件链。
+  - **为什么不能直接说已修**：现有 `p4-app-probe.mjs` / `p4-real-flow-probe.mjs` 用 `element.click()` 程序化触发，绕过了真实指针命中与遮挡检查；此前它们能进第二页，只能证明「处理器存在且直接调用有效」，不能证明用户在正式页面用鼠标/触屏点击也有效。本轮没有启动服务复跑真实指针链路。
+  - **下一窗口第一件事**：用当前黄色主题正式页面复现，不先改代码。最小证据顺序：① 在 `#p4-cinema-host` 的 shadowRoot 里量 `.confirm.on .go` 的 rect，并用 `shadowRoot.elementFromPoint(中心点)` 确认顶层命中；② 用 CDP `Input.dispatchMouseEvent` 发真实 pointer/mouse 点击（不要再用 `element.click()`），同时记录 DOM 变化、`queue`/`starShiftInvite`、`.page2.on` 和控制台错误作为判据；③ 若点击未命中，先查遮挡/`pointer-events`；若命中但无状态变化，查 React 事件代理与 Shadow DOM portal；若状态已变化而画面不变，查 `ConfidantStarShiftInvite` 的 `queue.length > 0` 闸门和 `ConfidantCelebrateScreenP4` 挂载。定位后再做最小修复，不要动已验证的牌落点/940ms 节奏。
+  - **基线（本轮实测）**：`npm run typecheck` exit 0；`npm test` **44 文件 / 281 项全绿**（Start 19:32，Duration 17.23s）；`git diff --check` 通过，仅有 `ios/App/Podfile` 的换行 warning。未重跑 build；上一节点在 `4cc7c65` 的构建通过记录仍有效，但不能替代本轮真实点击验证。
+  - **其他待办（按优先级）**：① 先修/复现「继续收看」；② 用户复看 P4 正式页面牌落位、恭喜页数字、互动 done → 世界的切点；③ 真机未测；④ P4 星移 thinking / preview / done / error 未在 App 内跑全；⑤ Push 41 条待批准。
+  - **交接边界**：本条写入并提交文档后停止写共享文件；未 Push、未部署、未改真实数据；没有把「继续收看无响应」写成已解决。
 
 - **【接手第一入口 · 2026-10-17 19:20 · P4 正式页面交接（待用户复看）】** 黄色 P4 已从验收 demo 落进正式页面；真实升级链路的“跳牌/弹窗叠层”已修，但用户尚未复看修复后的正式页面，也未 Push。
   - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `4cc7c65`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，本地领先 **39 条**（本次交接文档提交后 **40 条**，Push 仍须用户明确批准）。工作区没有本窗口未提交的代码；只剩既有 `M ios/App/Podfile`、未跟踪 `.cache/`、`.rivet-config.json` 与 `outputs/` 产物（含 demo/探针截图），归属未核，勿动/勿纳入提交。
@@ -1666,3 +1675,12 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **本次收尾做了什么**：① 核现场：工作区**没有未提交的代码改动**，只剩非本会话遗留（`ios/App/Podfile`、`.cache/`、`.rivet-config.json`、`outputs/`）；② 在 §1 顶部写入本节点的**接手第一入口**（现场 / 成果 / 验证数字 / 待办 / 换皮接入手册 / 探针与起服务方式）；③ 本次只提交文档，**不 Push**；④ 交接完成后停止写共享文件。
 - **接手的 AI 最短路径**：读 §1 顶部那条 → 跑 `npm run typecheck` 与 `npm test`（应为 exit 0 / 44 文件 279 测试全绿）→ 要看界面就起 `npx vite --port 5184 --strictPort` 并用 `http://localhost:5184/`（红主题；羁绊页卡片**下拖**开档案）。
 - **下一步建议（按用户优先级）**：先让用户目视验收换皮①②；再做资料卡/列表卡片的实拍核对；再按 ③ 的清单继续批次③；Push 32 条**等用户书面批准**。
+
+### 2026-10-17（交接·三）：P4 升级链暂停，记录「继续收看」无响应
+
+- **用户指令**：先交接；黄色 COOP 升级点的「继续收看」没有反应。
+- **本次范围**：按项目 §十九/AGENTS 的「准备交接」处理，不再开新改动；只读核对 Git、状态文件、按钮入口和现有探针，未启动服务、未改代码、未 Push。
+- **已核实**：按钮 DOM 在 `ConfidantRankUpCutInP4.tsx:322`，`onClick={continueToPage2}`；处理器在 `:84`，先置 `leavingRef`，再调用 `runP4Relay`，中点回调清队列并设置星移邀请。现有探针用 `element.click()`，能绕过真实命中测试，因此其历史通过不能证明用户这次的现象不存在。
+- **未验证**：真实指针/触屏是否命中、Shadow DOM 内 React 事件是否收到、队列是否清空、`starShiftInvite` 是否设置、第二页是否因闸门未挂载；也未确认用户当前运行的是否为最新本地构建。
+- **基线**：`npm run typecheck` exit 0；`npm test` 44 文件 / 281 项全绿；本轮无源码差异。
+- **交接状态**：HEAD `8b81c1b`，本地领先远端 40 条；本文件提交后为 41 条。下一位先复现再定位，修复前不要改已验证的 P4 牌落位与节奏。

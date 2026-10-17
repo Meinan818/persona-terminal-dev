@@ -4,6 +4,15 @@
 
 ## 1. 当前全貌：先看这一节
 
+- **【接手第一入口 · 2026-10-17 收尾节点（用户说「准备交接」）】** 项目**暂停开发**，等用户点头再继续。另一个 AI 只读这一条 + 下方时间线即可上手。
+  - **现场**：分支 `feat/coop-cinematic`，HEAD `5591656`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，**本地领先 32 条未推**（Push 须先向用户推荐并取得明确批准）。工作区只剩**非本会话**遗留：`M ios/App/Podfile`、未跟踪 `.cache/`、`.rivet-config.json`、`outputs/` 下产物（含三个 demo 目录）。**本轮无未提交代码**。
+  - **本轮做完的（2026-10-16 晚 → 10-17）**：① 红版三件照已验收 demo 落 `src/`（公共层 `confidantP5Fx`：转场四件套 + 主角牌；三屏对齐）；② 修「升级后先弹恭喜页」的入队竞态（含回归测试）；③ 修主角牌「时有时无」（动画 `fill` 残留把 `opacity` 钉死 / 旧姿态抢回）；④ 8 视口 × 三屏矩阵 24 组全绿；⑤ 星移全流程实测；⑥ **COOP 管理界面换皮批次①②**：共享皮肤 `src/styles/coop-p5-skin.css` + `data-livery="p5"` / `data-p5-part` 挂点——档案、今日互动、添加在线（实拍通过）；在线资料卡、列表卡片（已接入，**未实拍**）；新建同伴（本来就是 P5 纸白版）+ 牌面选择（继承）。
+  - **验证数字（本轮实测）**：`npx tsc --noEmit` exit 0；`npm test` **44 文件 / 279 测试全绿**；CDP 探针零未捕获异常、零横向溢出；换皮实拍：`.rivet/scratch/p5-coop-skin/02-detail.png`、`03-interaction.png`、`04-create.png`、`05-add-online.png`。
+  - **待办（按优先级）**：① **用户目视验收**换皮①②（红主题 → 羁绊 → 卡片下滑开档案 / 今日互动 / ＋ 新建 → 在线同伴）；② **资料卡 + 列表卡片**需要样本才能实拍核对（一个在线好友 / 切到列表视图）；③ **Push 32 条**待批准；④ **真机未测**；⑤ **换皮批次③未开始**：通知面板、影战、胜利屏、誓约面板/弹窗、纪念墙、AI 匹配/接受/提议（明细见 2026-10-17 换皮时间线）。
+  - **接入手册（换皮专用）**：皮肤只在 `[data-livery="p5"]` 作用域内生效（其它主题零影响）。新组件接入 = ①根节点加 `data-livery={p5 ? 'p5' : undefined}`；②关键件加 `data-p5-part`：`sheet`（黑底+红错版）、`head`（左红脊线）、`title`（红错版字）、`close`（黑方块斜切）、`paper`（米白纸+红硬影，**纸内文字已强制深色**）、`primary`（红面+硬黑环）、`tabs/tab/tab-on`、`tag`、`block`、`error`、`listcard`。
+  - **铁律**：`clip-path` 会把 `box-shadow`/`drop-shadow` 一起裁掉 → 硬影一律 `box-shadow`、与 `clip-path` 不同体；色值走 `P5R` 色板、字体用 `'Noto Sans SC Black'` 栈；改前先跑 `npm run typecheck` + `npm test` 基线。
+  - **复现/验收用的探针**：`.rivet/scratch/p5-coop-skin-probe.mjs`（往 IndexedDB 种一个同伴 → 进羁绊 → 卡片**下拖**开档案 → 今日互动 → ＋ 新建 → 在线）；`.rivet/scratch/p5-stage-probe.mjs` / `p5-chain-probe.mjs` / `p5-pages23-probe.mjs` / `p5-matrix.mjs` / `p5-starshift-flow.mjs`。dev server：`npx vite --port 5184 --strictPort`，用 **`http://localhost:5184/`**（vite 只绑 localhost）。
+
 - **【接手第一入口 · 2026-10-16 收尾节点（用户说「准备交接」）】** 本项目当前**暂停开发**，等用户点头再继续。另一个 AI 只读这一条 + 下面时间线就能接手，不需要用户重讲历史。
   - **现场**：分支 `feat/coop-cinematic`，HEAD `90b0a51`；远端 `origin/feat/coop-cinematic` 停在 `1ac04ef`，**本地领先 24 条未推**（Push 必须先向用户推荐并取得明确批准）。工作区只剩**非本会话**遗留：`M ios/App/Podfile`（别的会话在改，勿动）、未跟踪 `.cache/`、`.rivet-config.json`、`outputs/` 下若干产物（含两个 demo 目录）。本轮**无未提交的代码改动**。
   - **本轮成果（2026-10-16 深夜）**：① **红版三件照用户已验收的 demo 落进 `src/`** —— 新增公共层 `src/components/cooperation/confidantP5Fx.tsx` + `src/styles/confidant-p5-fx.css`（P5R 转场四件套 + 主角牌 `#hero` 跨界面存活），App 顶层挂 `ConfidantP5FxLayer`，第 1/2/3 页逐条对齐（星排、印刷垫层、入场错峰、hero 接线）；② 修「升级后先弹恭喜页、弄完才跳演出」的**入队竞态**（队列改到数据刷新之前 + 邀请层队列闸门 + 回归测试）。
@@ -1617,3 +1626,10 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - **牌面选择（ArcanaPickerForm）**：在新建窗里，继承新建窗的纸白语言，不需要单独换皮。
 - **验证**：`npx tsc --noEmit` exit 0；`npm test` 44 文件 / 279 测试全绿；端到端探针实拍 `04-create.png`（新建窗）、`05-add-online.png`（添加在线）、`02-detail.png`、`03-interaction.png`，零报错。
 - **边界**：资料卡与列表卡片只有代码级接入、没拿到实拍样本；真机未测。
+
+### 2026-10-17（收尾节点·二）：按用户「准备交接」收尾
+
+- **用户定义（已固化在 `AGENTS.md`）**：「准备交接」= 收尾、暂停开发、把接手所需的一切记录好。
+- **本次收尾做了什么**：① 核现场：工作区**没有未提交的代码改动**，只剩非本会话遗留（`ios/App/Podfile`、`.cache/`、`.rivet-config.json`、`outputs/`）；② 在 §1 顶部写入本节点的**接手第一入口**（现场 / 成果 / 验证数字 / 待办 / 换皮接入手册 / 探针与起服务方式）；③ 本次只提交文档，**不 Push**；④ 交接完成后停止写共享文件。
+- **接手的 AI 最短路径**：读 §1 顶部那条 → 跑 `npm run typecheck` 与 `npm test`（应为 exit 0 / 44 文件 279 测试全绿）→ 要看界面就起 `npx vite --port 5184 --strictPort` 并用 `http://localhost:5184/`（红主题；羁绊页卡片**下拖**开档案）。
+- **下一步建议（按用户优先级）**：先让用户目视验收换皮①②；再做资料卡/列表卡片的实拍核对；再按 ③ 的清单继续批次③；Push 32 条**等用户书面批准**。

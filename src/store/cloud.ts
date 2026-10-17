@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { cloudEnabled, getAuthRecord, onAuthChange, type VelvetRecord } from '@/services/velvetApi';
+import { cloudEnabled, getAuthRecord, onAuthChange, SESSION_EXPIRED_MESSAGE, type VelvetRecord } from '@/services/velvetApi';
 import type { SyncDiff } from '@/services/sync';
 
 /**
@@ -73,8 +73,13 @@ export const useCloudStore = create<CloudState>(set => ({
    */
   initAuthListener: () => {
     if (!cloudEnabled) return () => {};
-    return onAuthChange(record => {
-      set({ cloudUser: (record as CloudUser | null) ?? null, syncStatus: 'idle', lastError: null });
+    return onAuthChange((record, reason) => {
+      const expired = reason === 'session-expired';
+      set({
+        cloudUser: (record as CloudUser | null) ?? null,
+        syncStatus: expired ? 'error' : 'idle',
+        lastError: expired ? SESSION_EXPIRED_MESSAGE : null,
+      });
     });
   },
 }));

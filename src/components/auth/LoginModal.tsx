@@ -12,6 +12,9 @@ import { useBackHandler } from '@/utils/useBackHandler';
 import { useAppStore } from '@/store';
 import { CloudConsentNotice } from './CloudConsentNotice';
 import type { VelvetRecord } from '@/services/velvetApi';
+import { useUiChannel } from '@/ui/useUiChannel';
+import { P5R, P5_FONT, P5Btn } from '@/components/p5r/kit';
+import { P5CallingCard } from './P5CallingCard';
 
 interface Props {
   isOpen: boolean;
@@ -26,6 +29,7 @@ type AuthMode = 'otp' | 'password';
 const RESEND_COOLDOWN = 60;
 
 export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: Props) => {
+  const p5Theme = useUiChannel() === 'p5';
   const [mode, setMode] = useState<AuthMode>('otp');
   // 免责声明闸门（FS1.2）：没同意过就先出声明页，同意后本弹窗原地切到登录表单。
   // 同意态存在 settings 里并随账号上云，多设备只需同意一次。
@@ -41,6 +45,7 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
   const [otpId, setOtpId] = useState('');
   const [code, setCode] = useState('');
   const [otpStep, setOtpStep] = useState<'input' | 'code'>('input');
+  const p5CodeStep = p5Theme && mode === 'otp' && otpStep === 'code';
   const [cooldown, setCooldown] = useState(0);
   /** 本次发码是否附带了"新客人首次登记"的自动创建 —— 用来切文案 */
   const [signupInProgress, setSignupInProgress] = useState(false);
@@ -210,8 +215,9 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
           // z-[150]：system 段（见 zIndex.ts），值沿用
           className="fixed inset-0 z-[150] flex items-center justify-center p-4"
           style={{
-            background:
-              'radial-gradient(ellipse at center, rgba(30,20,60,0.85) 0%, rgba(8,6,20,0.96) 100%)',
+            background: p5CodeStep
+              ? 'rgba(5,5,5,0.88)'
+              : 'radial-gradient(ellipse at center, rgba(30,20,60,0.85) 0%, rgba(8,6,20,0.96) 100%)',
             backdropFilter: 'blur(8px)',
           }}
           // 不在蒙层点击时关闭——用底部"稍后再说"按钮或右上关闭；避免误触丢掉输入
@@ -222,26 +228,32 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             onClick={e => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-2xl overflow-hidden"
+            className={['relative w-full max-w-md', p5CodeStep ? 'max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[3px]' : 'overflow-hidden rounded-2xl'].join(' ')}
             style={{
-              background: 'linear-gradient(180deg, #1a1a3e 0%, #0f0f2e 100%)',
-              border: '1px solid rgba(196, 181, 253, 0.25)',
-              boxShadow: '0 30px 80px rgba(0,0,0,0.5), 0 0 40px rgba(124,58,237,0.25)',
+              background: p5CodeStep ? P5R.paper : 'linear-gradient(180deg, #1a1a3e 0%, #0f0f2e 100%)',
+              border: p5CodeStep ? '3px solid #050505' : '1px solid rgba(196, 181, 253, 0.25)',
+              boxShadow: p5CodeStep
+                ? '0 28px 72px rgba(0,0,0,0.58), 6px 7px 0 #050505'
+                : '0 30px 80px rgba(0,0,0,0.5), 0 0 40px rgba(124,58,237,0.25)',
             }}
           >
-            <div className="px-7 pt-7 pb-2 text-center">
-              <div className="text-[11px] tracking-[0.5em] font-semibold" style={{ color: '#a78bfa' }}>
-                MASKARIA
+            {p5CodeStep ? (
+              <P5CallingCard />
+            ) : (
+              <div className="px-7 pt-7 pb-2 text-center">
+                <div className="text-[11px] tracking-[0.5em] font-semibold" style={{ color: '#a78bfa' }}>
+                  MASKARIA
+                </div>
+                <div className="text-lg leading-none my-2" style={{ color: '#6b7ca8' }}>◆</div>
+                <h2 className="text-xl font-serif" style={{ color: '#f5e6ff' }}>{title}</h2>
+                <p className="text-xs mt-2 leading-relaxed" style={{ color: '#a89dc0' }}>{subtitle}</p>
               </div>
-              <div className="text-lg leading-none my-2" style={{ color: '#6b7ca8' }}>◆</div>
-              <h2 className="text-xl font-serif" style={{ color: '#f5e6ff' }}>{title}</h2>
-              <p className="text-xs mt-2 leading-relaxed" style={{ color: '#a89dc0' }}>{subtitle}</p>
-            </div>
+            )}
 
             <div
-              className="mx-7 my-4 h-px"
+              className={p5CodeStep ? 'mx-5 my-3 h-[2px]' : 'mx-7 my-4 h-px'}
               style={{
-                background: 'linear-gradient(90deg, transparent, rgba(196,181,253,0.4), transparent)',
+                background: p5CodeStep ? P5R.red : 'linear-gradient(90deg, transparent, rgba(196,181,253,0.4), transparent)',
               }}
             />
 
@@ -254,8 +266,11 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
             <div className="px-7 pb-6">
               {/* 两个 Tab：验证码（默认） / 密码 */}
               <div
-                className="grid grid-cols-2 gap-1 p-1 rounded-lg mb-5"
-                style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(196,181,253,0.15)' }}
+                className={['grid grid-cols-2 gap-1 p-1 mb-5', p5CodeStep ? 'border-2 border-[#050505]' : 'rounded-lg'].join(' ')}
+                style={{
+                  background: p5CodeStep ? P5R.ink : 'rgba(124,58,237,0.08)',
+                  border: p5CodeStep ? `2px solid ${P5R.ink}` : '1px solid rgba(196,181,253,0.15)',
+                }}
               >
                 {([
                   { id: 'otp', label: '验证码' },
@@ -266,15 +281,16 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
                     <button
                       key={t.id}
                       onClick={() => setMode(t.id)}
-                      className="py-1.5 rounded-md text-[11px] font-semibold tracking-wider transition-all"
+                      className={['py-1.5 text-[11px] font-semibold tracking-wider transition-all', p5CodeStep ? 'rounded-[2px]' : 'rounded-md'].join(' ')}
                       style={{
-                        background: active ? 'rgba(167,139,250,0.25)' : 'transparent',
-                        color: active ? '#f5e6ff' : '#a89dc0',
-                        border: active ? '1px solid rgba(196,181,253,0.4)' : '1px solid transparent',
+                        background: active ? (p5CodeStep ? P5R.red : 'rgba(167,139,250,0.25)') : 'transparent',
+                        color: active ? (p5CodeStep ? P5R.paper : '#f5e6ff') : (p5CodeStep ? P5R.paperDim : '#a89dc0'),
+                        border: active ? (p5CodeStep ? `1px solid ${P5R.paper}` : '1px solid rgba(196,181,253,0.4)') : '1px solid transparent',
+                        fontFamily: p5CodeStep ? P5_FONT : undefined,
                       }}
                     >
                       {t.label}
-                      {t.id === 'otp' && <span className="ml-1 text-[9px]" style={{ color: '#86efac' }}>· 推荐</span>}
+                      {t.id === 'otp' && <span className="ml-1 text-[9px]" style={{ color: p5CodeStep ? P5R.paper : '#86efac' }}>· 推荐</span>}
                     </button>
                   );
                 })}
@@ -313,6 +329,8 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
                     loading={loading}
                     cooldown={cooldown}
                     signupInProgress={signupInProgress}
+                    p5={p5CodeStep}
+                    email={otpId}
                     onBack={() => { setOtpStep('input'); setError(''); setInfo(''); setSignupInProgress(false); }}
                     onVerify={handleVerifyOTP}
                     onResend={handleResendOTP}
@@ -367,7 +385,7 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
 
               <div
                 className="mt-5 pt-4 border-t text-[10px] text-center leading-relaxed"
-                style={{ borderColor: 'rgba(196,181,253,0.15)', color: '#6b7ca8' }}
+                style={{ borderColor: p5CodeStep ? P5R.paperDim : 'rgba(196,181,253,0.15)', color: p5CodeStep ? P5R.grey : '#6b7ca8' }}
               >
                 新客人也可以直接填邮箱，第一次验证就等于登记
               </div>
@@ -376,7 +394,7 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
                 <button
                   onClick={onClose}
                   className="text-xs hover:opacity-80 transition-opacity"
-                  style={{ color: '#6b7ca8' }}
+                  style={{ color: p5CodeStep ? P5R.grey : '#6b7ca8' }}
                 >
                   稍后再说
                 </button>
@@ -386,9 +404,9 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
 
             <div
               className="pb-5 pt-1 text-center text-[10px] tracking-[0.3em]"
-              style={{ color: '#4c4878' }}
+              style={{ color: p5CodeStep ? P5R.grey : '#4c4878' }}
             >
-              —— MASKARIA ——
+              {p5CodeStep ? '—— MASKARIA，参上！ ——' : '—— MASKARIA ——'}
             </div>
           </motion.div>
         </motion.div>
@@ -401,7 +419,7 @@ export const LoginModal = ({ isOpen, onClose, onSuccess, origin = 'settings' }: 
 // ── OTP 验证码输入步骤 ─────────────────────────────────────
 
 function OTPCodeStep({
-  code, setCode, error, info, loading, cooldown, signupInProgress,
+  code, setCode, error, info, loading, cooldown, signupInProgress, p5, email,
   onBack, onVerify, onResend, firstInputRef,
 }: {
   code: string;
@@ -411,6 +429,8 @@ function OTPCodeStep({
   loading: boolean;
   cooldown: number;
   signupInProgress: boolean;
+  p5: boolean;
+  email: string;
   onBack: () => void;
   onVerify: () => void;
   onResend: () => void;
@@ -423,53 +443,64 @@ function OTPCodeStep({
 
   return (
     <>
+      {p5 && (
+        <div className="mb-4 border-b-2 pb-3" style={{ borderColor: P5R.paperDim }}>
+          <p className="text-[12px] font-bold" style={{ color: P5R.grey }}>验证码已发送至</p>
+          <p className="mt-1 break-all text-[13px] font-black" style={{ color: P5R.ink }}>{email}</p>
+        </div>
+      )}
       {signupInProgress && (
         <div
           className="mb-3 px-3 py-2 rounded-lg text-[11px] leading-relaxed"
           style={{
-            background: 'rgba(16,185,129,0.12)',
-            border: '1px solid rgba(16,185,129,0.35)',
-            color: '#86efac',
+            background: p5 ? '#f8f8f6' : 'rgba(16,185,129,0.12)',
+            border: p5 ? `1px solid ${P5R.red}` : '1px solid rgba(16,185,129,0.35)',
+            color: p5 ? P5R.ink : '#86efac',
           }}
         >
           新客人登记中——输入验证码即为你开一个房间。UserID 可以稍后在设置里补。
         </div>
       )}
-      <Label>验证码</Label>
+      {p5 ? (
+        <label className="mb-2 block text-[12px] font-black tracking-wider" style={{ color: P5R.ink }}>潜入暗号 · 邮箱验证码</label>
+      ) : <Label>验证码</Label>}
       <TextInput
         ref={firstInputRef}
         type="text"
         inputMode="numeric"
         value={code}
         onChange={v => setCode(v.replace(/\D/g, '').slice(0, 8))}
-        placeholder="----"
+        placeholder={p5 ? '······' : '----'}
         autoComplete="one-time-code"
         onEnter={onVerify}
         centered
         mono
+        p5={p5}
+        ariaLabel="邮箱验证码"
       />
-      {error && <ErrorText>{error}</ErrorText>}
-      {info && <InfoText>{info}</InfoText>}
+      {p5 && <p className="mt-2 text-[11px] font-semibold leading-relaxed" style={{ color: P5R.grey }}>此暗号仅用于本次登录，请勿转发；若不是你申请，可忽略邮件。</p>}
+      {error && <ErrorText p5={p5}>{p5 && error === '验证码不正确或已过期' ? '暗号不正确或已过期。请检查邮件，或重新领取。' : error}</ErrorText>}
+      {info && <InfoText p5={p5}>{p5 && info === '验证码已发送' ? '预告函已送达，请查收邮箱。' : p5 && info === '已重新发送' ? '新的预告函已寄出，请使用最新暗号。' : info}</InfoText>}
       <div className="mt-6">
-        <PrimaryButton loading={loading} onClick={onVerify}>
-          {loading ? '验证中…' : (signupInProgress ? '完成登记 · 进入房间' : '进入房间')}
+        <PrimaryButton loading={loading} onClick={onVerify} p5={p5}>
+          {loading ? (p5 ? '正在核对暗号…' : '验证中…') : (signupInProgress ? '完成登记 · 进入房间' : p5 ? '揭下面具 · 进入房间' : '进入房间')}
         </PrimaryButton>
       </div>
       <div className="mt-4 flex items-center justify-between text-xs">
         <button
           onClick={onBack}
           className="hover:opacity-80 transition-opacity"
-          style={{ color: '#6b7ca8' }}
+          style={{ color: p5 ? P5R.grey : '#6b7ca8', fontWeight: p5 ? 700 : undefined }}
         >
-          ← 换个身份
+          {p5 ? '更换邮箱' : '← 换个身份'}
         </button>
         <button
           onClick={onResend}
           disabled={cooldown > 0 || loading}
           className="transition-opacity disabled:opacity-40"
-          style={{ color: cooldown > 0 ? '#4c4878' : '#a78bfa' }}
+          style={{ color: cooldown > 0 ? (p5 ? P5R.grey : '#4c4878') : (p5 ? P5R.red : '#a78bfa'), fontWeight: p5 ? 800 : undefined }}
         >
-          {cooldown > 0 ? `重发 (${cooldown}s)` : '重新发送'}
+          {cooldown > 0 ? `${p5 ? '重寄' : '重发'} (${cooldown}s)` : p5 ? '重寄预告函' : '重新发送'}
         </button>
       </div>
     </>
@@ -494,11 +525,13 @@ interface TextInputProps {
   onEnter?: () => void;
   centered?: boolean;
   mono?: boolean;
+  p5?: boolean;
+  ariaLabel?: string;
 }
 
 const TextInput = forwardRef(
   (
-    { type, value, onChange, placeholder, autoComplete, inputMode, onEnter, centered, mono }: TextInputProps,
+    { type, value, onChange, placeholder, autoComplete, inputMode, onEnter, centered, mono, p5, ariaLabel }: TextInputProps,
     ref: ForwardedRef<HTMLInputElement>
   ) => {
     // iOS WKWebView + 中文输入法的经典坑（iPhone Air 实测拼音重复）：composition
@@ -517,10 +550,10 @@ const TextInput = forwardRef(
       }
     };
     const className = [
-      'w-full px-4 py-3 rounded-lg text-sm outline-none transition-colors',
-      'focus:border-violet-400',
+      'w-full px-4 py-3 text-sm outline-none transition-colors',
+      p5 ? 'rounded-[2px] focus-visible:ring-2 focus-visible:ring-[#c00008] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f0e9df]' : 'rounded-lg focus:border-violet-400',
       centered ? 'text-center' : '',
-      mono ? 'font-mono tracking-[0.4em] text-lg' : '',
+      p5 && mono ? 'font-mono tracking-[0.48em] text-[24px] font-bold' : mono ? 'font-mono tracking-[0.4em] text-lg' : '',
     ].join(' ');
     return (
       <input
@@ -545,11 +578,13 @@ const TextInput = forwardRef(
         placeholder={placeholder}
         autoComplete={autoComplete}
         inputMode={inputMode}
+        aria-label={ariaLabel}
         className={className}
         style={{
-          background: 'rgba(124,58,237,0.08)',
-          border: '1px solid rgba(196,181,253,0.22)',
-          color: '#f5e6ff',
+          background: p5 ? P5R.ink : 'rgba(124,58,237,0.08)',
+          border: p5 ? `2px solid ${P5R.red}` : '1px solid rgba(196,181,253,0.22)',
+          color: p5 ? P5R.paper : '#f5e6ff',
+          caretColor: p5 ? P5R.red : undefined,
         }}
       />
     );
@@ -557,23 +592,23 @@ const TextInput = forwardRef(
 );
 TextInput.displayName = 'LoginTextInput';
 
-const ErrorText = ({ children }: { children: ReactNode }) => (
+const ErrorText = ({ children, p5 = false }: { children: ReactNode; p5?: boolean }) => (
   <motion.p
     initial={{ opacity: 0, y: -4 }}
     animate={{ opacity: 1, y: 0 }}
     className="mt-3 text-xs leading-relaxed whitespace-pre-wrap"
-    style={{ color: '#fca5a5' }}
+    style={{ color: p5 ? P5R.red : '#fca5a5', fontWeight: p5 ? 800 : undefined }}
   >
     {children}
   </motion.p>
 );
 
-const InfoText = ({ children }: { children: ReactNode }) => (
+const InfoText = ({ children, p5 = false }: { children: ReactNode; p5?: boolean }) => (
   <motion.p
     initial={{ opacity: 0, y: -4 }}
     animate={{ opacity: 1, y: 0 }}
     className="mt-3 text-xs leading-relaxed"
-    style={{ color: '#86efac' }}
+    style={{ color: p5 ? '#23613d' : '#86efac', fontWeight: p5 ? 700 : undefined }}
   >
     {children}
   </motion.p>
@@ -583,11 +618,17 @@ const PrimaryButton = ({
   loading,
   onClick,
   children,
+  p5 = false,
 }: {
   loading: boolean;
   onClick: () => void;
   children: ReactNode;
-}) => (
+  p5?: boolean;
+}) => p5 ? (
+  <P5Btn disabled={loading} onClick={onClick} seed={319} rot={-1.2} className="w-full" bodyClassName="text-[14px]">
+    {children}
+  </P5Btn>
+) : (
   <motion.button
     whileHover={{ scale: loading ? 1 : 1.01 }}
     whileTap={{ scale: loading ? 1 : 0.98 }}

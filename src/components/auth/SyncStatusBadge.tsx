@@ -1,10 +1,11 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useCloudStore } from '@/store/cloud';
+import { SESSION_EXPIRED_MESSAGE } from '@/services/velvetApi';
 
 /**
  * 浮动的同步状态徽章。
- * 仅在已登录时呈现，会在以下状态显示：
+ * 已登录或会话刚失效时呈现，会在以下状态显示：
  *  - syncing：持续显示（紫色 + 转圈）
  *  - success：显示约 2.8 秒后淡出（绿色 + 对勾 + 方向文案）
  *  - error  ：持续显示，直到下次操作（红色 + 警告）
@@ -15,6 +16,7 @@ export const SyncStatusBadge = () => {
   const status = useCloudStore(s => s.syncStatus);
   const direction = useCloudStore(s => s.lastSyncDirection);
   const error = useCloudStore(s => s.lastError);
+  const sessionExpired = !cloudUser && status === 'error' && error === SESSION_EXPIRED_MESSAGE;
 
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -25,10 +27,10 @@ export const SyncStatusBadge = () => {
     return () => clearTimeout(t);
   }, [status]);
 
-  if (!cloudEnabled || !cloudUser) return null;
+  if (!cloudEnabled || (!cloudUser && !sessionExpired)) return null;
 
   const visible =
-    status === 'syncing' || status === 'error' || (status === 'success' && showSuccess);
+    sessionExpired || status === 'syncing' || status === 'error' || (status === 'success' && showSuccess);
   if (!visible) return null;
 
   const variants: Record<'syncing' | 'success' | 'error', { bg: string; icon: React.ReactNode; label: string }> = {
@@ -51,7 +53,7 @@ export const SyncStatusBadge = () => {
     error: {
       bg: 'rgba(239,68,68,0.95)',
       icon: <span className="text-sm leading-none">⚠</span>,
-      label: '同步失败',
+      label: sessionExpired ? '登录已失效 · 本机数据仍在' : '同步失败',
     },
   };
 

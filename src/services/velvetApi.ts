@@ -32,6 +32,9 @@ export const apiBaseUrl = API_URL;
 const TOKEN_KEY = 'velvet.jwt';
 const RECORD_KEY = 'velvet.record';
 
+export const SESSION_EXPIRED_MESSAGE = '云端登录已失效，请重新登录。本机数据仍保留。';
+export type AuthChangeReason = 'session-expired';
+
 export interface VelvetRecord {
   id: string;
   email: string;
@@ -70,7 +73,7 @@ try {
   if (!currentToken) currentRecord = null;
 } catch { /* 无痕模式：忽略 */ }
 
-type AuthListener = (record: VelvetRecord | null) => void;
+type AuthListener = (record: VelvetRecord | null, reason?: AuthChangeReason) => void;
 const listeners = new Set<AuthListener>();
 
 export const isAuthenticated = (): boolean => Boolean(currentToken && currentRecord);
@@ -97,7 +100,7 @@ const saveAuth = (token: string, record: VelvetRecord): void => {
   listeners.forEach((l) => l(record));
 };
 
-export const clearAuth = (): void => {
+export const clearAuth = (reason?: AuthChangeReason): void => {
   authGeneration++;
   currentToken = null;
   currentRecord = null;
@@ -105,7 +108,7 @@ export const clearAuth = (): void => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(RECORD_KEY);
   } catch { /* 无痕模式 */ }
-  listeners.forEach((l) => l(null));
+  listeners.forEach((l) => l(null, reason));
 };
 
 // 其他标签页登出或换号后，这个标签页的在途同步也必须失效。
@@ -190,12 +193,14 @@ export const fetchAiCapabilities = (): Promise<AiCapabilities> =>
 async function request<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {
   if (!API_URL) throw new Error('云同步未配置');
   const headers: Record<string, string> = {};
+  const requestToken = init.auth === false ? null : currentToken;
+  const requestAuthGeneration = authGeneration;
   // FormData 必须让浏览器自己设 Content-Type（要带 multipart 的 boundary）；
   // 手动写死 application/json 会让后端无法解析上传内容。
   const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
   if (!isFormData) headers['Content-Type'] = 'application/json';
   Object.assign(headers, (init.headers as Record<string, string>) ?? {});
-  if (init.auth !== false && currentToken) headers.Authorization = `Bearer ${currentToken}`;
+  if (requestToken) headers.Authorization = `Bearer ${requestToken}`;
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
   const text = await res.text();
   let body: unknown = null;
@@ -205,6 +210,14 @@ async function request<T>(path: string, init: RequestInit & { auth?: boolean } =
       if (res.ok) throw new VelvetApiError(res.status, null, '服务器响应格式错误');
       // 代理可能返回 HTML 错误页；保留 HTTP 状态，但不传播原始页面内容。
     }
+  }
+  if (res.status === 401 && requestToken) {
+    // 只清除发出这条请求时的那份登录态；旧请求晚到时不能登出刚换上的新账号。
+    if (currentToken !== requestToken || authGeneration !== requestAuthGeneration) {
+      throw new VelvetApiError(res.status, body);
+    }
+    clearAuth('session-expired');
+    throw new VelvetApiError(res.status, body, SESSION_EXPIRED_MESSAGE);
   }
   if (!res.ok) throw new VelvetApiError(res.status, body);
   return body as T;

@@ -26,6 +26,7 @@ import { CloudConsentModal } from '@/components/auth/CloudConsentNotice';
 import { LVTag } from '@/components/LVTag';
 import { computeTotalLv } from '@/utils/lvTiers';
 import { logout as cloudLogout, deleteAccount as cloudDeleteAccount } from '@/services/auth';
+import { SESSION_EXPIRED_MESSAGE } from '@/services/velvetApi';
 import { pushAll, pullAll, syncOnLogin, computeSyncDiff, SyncConflictError } from '@/services/sync';
 import { downloadBackup, copyBackupToClipboard, readBackupFile } from '@/services/backup';
 import { ImagesBackupBlock } from '@/components/settings/ImagesBackupBlock';
@@ -95,6 +96,7 @@ export const Account = () => {
   const syncStatus = useCloudStore(s => s.syncStatus);
   const lastSyncAt = useCloudStore(s => s.lastSyncAt);
   const lastCloudError = useCloudStore(s => s.lastError);
+  const sessionExpired = !cloudUser && syncStatus === 'error' && lastCloudError === SESSION_EXPIRED_MESSAGE;
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // 应用内注销账号（App Store 5.1.1(v) 合规）：确认弹窗 + 进行中 / 错误态
@@ -740,6 +742,15 @@ export const Account = () => {
                 </div>
               ) : !cloudUser ? (
                 <div className="space-y-3">
+                  {sessionExpired && (
+                    <div role="status" className="relative px-3.5 py-3.5">
+                      <P5Rough seed={193} jag={5} frame={3} face={P5R.paper} frameColor={P5R.red} shadow={{ x: 3, y: 4 }} />
+                      <div className="relative">
+                        <p className="text-[13px] font-black" style={{ color: P5R.red }}>云端登录已失效</p>
+                        <p className="mt-1 text-[12px] font-bold leading-relaxed" style={{ color: P5R.ink }}>本机数据仍在。重新登录即可继续同步。</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="relative px-3.5 py-3.5">
                     <P5Rough seed={188} jag={5} frame={3} shadow={null} />
                     <p className="relative text-[13.5px] font-black leading-relaxed" style={{ color: P5R.ink }}>
@@ -929,6 +940,12 @@ export const Account = () => {
               </div>
             ) : !cloudUser ? (
               <div className="space-y-3">
+                {sessionExpired && (
+                  <div role="status" className="px-4 py-3" style={{ clipPath: slantClip(8), background: '#fff1f2', color: '#881337' }}>
+                    <p className="text-[13px] font-bold">云端登录已失效。</p>
+                    <p className="mt-1 text-[12px] leading-relaxed">本机数据仍在，重新登录即可继续同步。</p>
+                  </div>
+                )}
                 <div className="px-5 py-4" style={{ clipPath: slantClip(12), background: P3R.panel }}>
                   <p className="text-[13px] font-semibold leading-relaxed" style={{ color: P3R.ink }}>
                     登录后，您在本机的数据可以同步到云端，让多台设备共享同一份成长记录。
@@ -1205,6 +1222,12 @@ export const Account = () => {
               </div>
             ) : !cloudUser ? (
               <>
+                {sessionExpired && (
+                  <div role="status" className="p-3 rounded-lg bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800">
+                    <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">云端登录已失效。</p>
+                    <p className="mt-1 text-xs text-rose-700 dark:text-rose-300">本机数据仍在，重新登录即可继续同步。</p>
+                  </div>
+                )}
                 <div className="p-4 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800">
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                     登录后，您在本机的数据可以同步到云端，让多台设备共享同一份成长记录。

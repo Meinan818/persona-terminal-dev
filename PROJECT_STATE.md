@@ -9,7 +9,7 @@
   - **构建证据**：`scripts/build-release.ps1 -ApiUrl http://192.144.227.216` 成功；Vite 1731 modules；Gradle `BUILD SUCCESSFUL`。APK `outputs/maskaria-2.8.13-release.apk` **49,409,652 B** / SHA-256 `95323003E9F5B0A747D9543933B318FE46A3EC1C4116B32E1CFC718F82841CD3`；AAB `outputs/maskaria-2.8.13-release.aab` **49,219,126 B** / SHA-256 `6A63F6D0B29F7144A49BE4A24D3407FB65D1CEFCD142B68C2718B5095B96FEFB`。aapt 核 `versionCode 28 / versionName 2.8.13`；签名证书 SHA-256 `a7f0f3d95edf9947dba5512b04b86fd0faf840236b1448b7412c8b5dbe1c0567`，与上一版一致；包内四套主题各 78 张牌图。
   - **网页部署**：线上备份 `/home/ubuntu/maskaria-backups/release-2.8.13-20261018-0518/web-before.tgz` **112,986,101 B**；新网页归档 `.rivet/scratch/release-2.8.13/web-2.8.13.tgz` **43,796,495 B** 已解包到 `/opt/maskaria/web`。公网入口 `/assets/index-BKYswpSC.js`；首页、入口 JS、`sw.js` 及 P3/P4/粉色代表牌图均 HTTP 200 且哈希与本地一致；四套线上牌图共 312 张；`/api/health` → `{"db":"UP","status":"UP"}`；`/download` 仍保持关闭。
   - **验证与边界**：`npm test` **44 文件 / 281 项通过**（05:14，15.92s）；`npm run typecheck` 由正式构建通过。未安装真机、未上架商店、未验证真实邮箱客户端；本轮未修改后端或数据库。
-  - **README/仓库**：开发库 README 与版本文件提交 **`d5160a7`**，已 Push 且 `git ls-remote` 核为 `d5160a7d1978e6cf98f255153d4159b651392b8c`；展示库 README 提交 **`911da5e`**，已 Push 且远端核为 `911da5e6ac8c6156829d979b967ef0b0c0fe317c`。展示库只更新版本说明，不复制私有牌面素材。
+  - **README/仓库**：开发库 README 与版本文件提交 **`d5160a7`**，随后状态记录提交 **`126342f`**；开发库远端已核为 `126342fdb5d4f09f1ff68e363c1228df40eca03c`。展示库 README 提交 **`911da5e`**，已 Push 且远端核为 `911da5e6ac8c6156829d979b967ef0b0c0fe317c`。展示库只更新版本说明，不复制私有牌面素材。
 
 - **【小阿卡纳素材已接入 · 2026-10-18 05:08 · 本地待提交】**
   - **改动**：读取 `E:\素材` 的 P3/P4/P5/粉色素材，并只从 `D:\桌面\P4\` 补入原目录缺失的 5 张，按现有 `TarotCardData` 的 `suit_number` ID 归名；四套主题共写入 224 张 560×896 WebP（每套 56 张）。PINK PNG、P4 大图统一居中裁成 5:8 后压缩，未重新定义画风。`tarotArtUrl` 现为大小阿卡纳返回主题图片路径，`TarotCardSVG` 及所有复用它的抽牌、档案、演出和组织卡片入口自动使用；加载失败仍走程序化兜底。
@@ -403,7 +403,7 @@
 | APK下载通道（已关闭） | 服务器 `/opt/maskaria/web/download/`；原2.8.4及其他旧直链 | 本次GET/HEAD全部410；3个旧APK保留，不删除，不再公开下载 |
 | 官网当前发布 | `https://maskaria.pages.dev/`；快照 `https://d3ea1293.maskaria.pages.dev/` | 下载关闭提示已上线；生产HTML与本地site/index.html逐字节一致；旧APK直链全部410 |
 | 本地构建产物 | `outputs/maskaria-2.8.13-release.apk` / `.aab`（2026-10-18） | 28 / 2.8.13，APK 49,409,652 B；AAB 49,219,126 B；签名与 2.8.12 相同。未安装真机、未上传商店，旧包保留，下载通道仍关闭 |
-| 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本轮含小阿卡纳素材、2.8.13 版本、README 与发布记录；远端已核为 `d5160a7d1978e6cf98f255153d4159b651392b8c`。日志仅在私有开发库，不复制展示库 |
+| 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本轮含小阿卡纳素材、2.8.13 版本、README 与发布记录；远端已核为 `126342fdb5d4f09f1ff68e363c1228df40eca03c`。日志仅在私有开发库，不复制展示库 |
 | 公开展示库 | `git@github.com:Meinan818/Persona-Terminal.git`，`main` | 本轮仅更新 README 到 v2.8.13，不同步私有牌面素材；远端已核为 `911da5e6ac8c6156829d979b967ef0b0c0fe317c` |
 | 当前展示库工作区 | `E:/MASKARIA-showcase` | 现场确认原HEAD33f84de且干净；本次8个公开文件提交4de5ff5，已Push并核远端main一致。`.rivet/publish/`只是旧副本，不再作为同步入口 |
 

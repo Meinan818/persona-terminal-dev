@@ -32,7 +32,8 @@ echo [3/3] 启动开发服务器...
 echo.
 echo ====================================
 echo 应用将在浏览器中自动打开
-echo 访问地址: http://localhost:5173
+echo 访问地址: http://127.0.0.1:5173
+echo 实际端口以本窗口显示的 Local 为准
 echo 按 Ctrl+C 停止服务器
 echo ====================================
 echo.
@@ -40,4 +41,6 @@ echo.
 rem 邮箱验证码的凭据（MAIL_USERNAME / MAIL_PASSWORD）属于后端，通过环境变量传入，
 rem 不要写在本文件或任何入库文件里——见 COMPLIANCE.md 与 .gitignore
 
-call npm run dev
+rem 明确绑 IPv4：Vite 默认的 localhost 在 Windows 上可能只监听 ::1，
+rem 浏览器若解析到 127.0.0.1 就会“打不开本地版”。
+call npm run dev -- --host 127.0.0.1 --open

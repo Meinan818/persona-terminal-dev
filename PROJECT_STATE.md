@@ -492,7 +492,7 @@
 
 ## 8. 运行与验证入口
 
-- 前端 `npm test`、`npm run typecheck`；应用 `npm run dev`。官网 `node site/serve.mjs` → `http://127.0.0.1:8123/`，不能假设服务已在跑。
+- 前端 `npm test`、`npm run typecheck`；应用 `npm run dev`。本地预览可直接双击 `start.bat`：它绑定 `127.0.0.1` 并用 `--open` 自动开浏览器，实际端口以窗口里的 `Local` 为准。官网 `node site/serve.mjs` → `http://127.0.0.1:8123/`，不能假设服务已在跑。
 - 验构建用独立outDir，核VITE_API_URL；不为文档检查覆盖现有dist。
 - 后端开跑先核isolated目标persona_terminal_test；backend下用上述Maven命令。缺环境只按约定读取本机环境/注册表且不回显凭据。
 - Android历史JDK `.rivet/jdk/jdk-17.0.12+7`、SDK `.rivet/android-sdk`、缓存 `.rivet/gradle-home`；已有构建产物，但新构建前仍核实际路径/变量，旧PID不是现行事实。

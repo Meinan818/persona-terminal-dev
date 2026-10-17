@@ -1,8 +1,17 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-17 20:31（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-17 20:45（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
 ## 1. 当前全貌：先看这一节
+
+- **【2.8.8 发版完成 · 2026-10-17 20:45 · Web 已上线 / Android 包已出 / 待 Push】**
+  - **版本**：`package.json` 2.8.8；Android `versionCode 23` / `versionName 2.8.8`；发版提交 `da94d06`。这是本轮唯一代码改动，业务逻辑未再改。
+  - **工程验证（本轮实测）**：`npm run typecheck` exit 0；`npm test` **44 文件 / 281 项全绿**（Start 20:36:15，Duration 15.49s）；`scripts/build-release.ps1` 构建成功（Vite 1730 modules，PWA 预缓存 119 条 / 6326.86 KiB）。
+  - **Android 产物**：`outputs\maskaria-2.8.8-release.apk` **32,115,779 B**，SHA-256 `DEE64F29E6E0951D06CEE97C2AB76CFE784EDBCDD827D81B5F63E916DA1C86FD`；`outputs\maskaria-2.8.8-release.aab` **31,917,538 B**，SHA-256 `49377D4DDCE0CDD1E564F61B7689DDB636E37E150A4E88812AE855CAF432F67A`。
+  - **Android 核验**：aapt 读 APK 为 `versionCode 23 / versionName 2.8.8`；apksigner 证书 SHA-256 `a7f0f3d95edf9947dba5512b04b86fd0faf840236b1448b7412c8b5dbe1c0567`，与 2.8.7 相同，可覆盖升级；包内入口 `assets/public/assets/index-BRVFDdwl.js`，含正式地址 `http://192.144.227.216`，无 `localhost`。
+  - **Web 部署**：先备份线上到 `/home/ubuntu/maskaria-backups/web-20261017-203956.tgz`（109,476,265 B），再解包覆盖 `/opt/maskaria/web`。线上首页入口现为 `index-BRVFDdwl.js`；`index.html` SHA-256 `5eddce8c0bd2c529132e33cf2230836d528f6c4809afaea3c00d30bfd38a42c5`、入口 JS SHA-256 `8486b83e23422a0e24aa82804d5396c1b4f6432a742a8bac7dd4d021ca9192fd`，均与本地一致。`/api/health` → `{"status":"UP","db":"UP"}`，`/tarot/p5/moon.webp` 200 `image/webp`。解包时 `tar` 只报目录 utime/mode 权限警告，文件内容已由哈希与线上 200 验证。
+  - **仓库**：`main` 发版提交后领先 `origin/main` **74 条**，本条状态提交后 **75 条**，**未 Push**；Push 须用户明确批准。下载通道保持关闭，未重新开放 APK 直链，也未改官网营销页或后端。
+  - **下一步**：获批后 Push 私有开发库；用户安装 `outputs\maskaria-2.8.8-release.apk` 做真机复看（重点 COOP 升级链、P4 短屏、主题/塔罗素材）。真机安装、收费 AI、多账号社交未在本轮验证。
 
 - **【合并完成 · 2026-10-17 20:31 · main 快进到 `fef97c6`】** `feat/coop-cinematic` 已按用户指令用 `--ff-only` 合入本地 `main`，没有产生额外 merge commit。
   - **合并前**：`main = 964c534`（领先 `origin/main` 1 条）；`feat/coop-cinematic = fef97c6`，领先 `main` 71 条、落后 0 条。
@@ -314,13 +323,13 @@
 
 | 对象 | 实际去向 | 现场证据与边界 |
 |---|---|---|
-| 应用网页/PWA | `http://192.144.227.216/`，腾讯云 nginx；历史应用目录 `/opt/maskaria/web/` | GET 200，标题 `MASKARIA - 个人成长追踪器`，入口 `/assets/index-BCuXre6P.js`（**此值已过期**：2026-10-16 本机实测线上入口为 `index-CxeScLxs.js`，见 §9 当天部署节点）。本轮未比对所有产物，不宣称网页代码已同步 2.8.3 |
+| 应用网页/PWA | `http://192.144.227.216/`，腾讯云 nginx；正式目录 `/opt/maskaria/web/` | 2026-10-17 20:40 已部署 2.8.8；首页 200，入口 `/assets/index-BRVFDdwl.js`，入口与 `index.html` 哈希均与本地一致；`/api/health` UP。回滚备份 `/home/ubuntu/maskaria-backups/web-20261017-203956.tgz` |
 | Java 后端 | 同主机 `/api/` 反代本机8080；历史路径 `/opt/maskaria/backend/app.jar`，服务 `maskaria-backend` | `/api/health` → 200、`{"status":"UP","db":"UP"}`。目录/配置是历史部署记录，本轮未 SSH 复核 |
 | 官网营销页 | `https://maskaria.pages.dev/`，Cloudflare Pages 项目 `maskaria`，发布分支 `main`；源码 `site/` | GET 200，标题 `MASKARIA 面具庭园 · 没人看见的也算数`。这是已部署网站，绝非仅有本地 demo |
 | 官网首次发布快照 | `https://2d5f4986.maskaria.pages.dev/` | 2026-10-14 原发布记录；本轮未检查此快照，不冒称最新部署ID |
 | APK下载通道（已关闭） | 服务器 `/opt/maskaria/web/download/`；原2.8.4及其他旧直链 | 本次GET/HEAD全部410；3个旧APK保留，不删除，不再公开下载 |
 | 官网当前发布 | `https://maskaria.pages.dev/`；快照 `https://d3ea1293.maskaria.pages.dev/` | 下载关闭提示已上线；生产HTML与本地site/index.html逐字节一致；旧APK直链全部410 |
-| 本地构建产物 | `outputs/maskaria-2.8.4-release.apk`为线上版；`outputs/maskaria-2.8.5-release.apk`及`.aab`为素材恢复候选版 | 2.8.5已核素材/版本/名称/签名，未上传部署；其素材已于2026-10-15获用户验收通过；AAB未上架商店 |
+| 本地构建产物 | `outputs/maskaria-2.8.8-release.apk` / `.aab`（2026-10-17 20:38） | APK `versionCode 23 / 2.8.8`，签名与 2.8.7 相同；AAB 同版本；均未上传分发、未上架商店。旧包 2.8.4/2.8.5/2.8.6/2.8.7 保留 |
 | 私有开发库 | `git@github.com:Meinan818/persona-terminal-dev.git`，`origin/main` | 本次素材及下载关闭节点已Push至32fb9ec，ls-remote与本地HEAD一致；本条结果日志随后同次授权Push。现场确认Private，素材和项目日志只归此库 |
 | 公开展示库 | `git@github.com:Meinan818/Persona-Terminal.git`，`main` | 本轮Push及SSH远端核实为4de5ff5；仅公开8个发布修复文件；可见性沿用原记录 |
 | 当前展示库工作区 | `E:/MASKARIA-showcase` | 现场确认原HEAD33f84de且干净；本次8个公开文件提交4de5ff5，已Push并核远端main一致。`.rivet/publish/`只是旧副本，不再作为同步入口 |
@@ -390,6 +399,13 @@
 | 2026-10-14阶段4复查 | 七条流程，修两处导入缺陷，前端30文件196项 | 当轮主要jsdom/mock及离线构建，不是完整真实浏览器/数据库/设备覆盖 |
 | 更早社交迁移 | 多轮双合成账号HTTP、CDP及契约/后端测试 | 不等于真实用户多人全组合验收 |
 
+### 5.3 2026-10-17 2.8.8 发版（本轮）
+
+- 工程：`npm run typecheck` exit 0；`npm test` 44 文件 / 281 项全绿；正式构建成功，PWA 119 条预缓存。
+- Android：APK 32,115,779 B / AAB 31,917,538 B；aapt 确认 `versionCode 23 / versionName 2.8.8`；apksigner 证书与 2.8.7 相同；包内入口与本地构建一致，正式 API 地址存在且无 localhost。
+- Web：线上 `index.html` 与入口 JS 的 SHA-256 均与本地 `dist/` 一致；首页、入口 JS、塔罗图 200；`/api/health` 为 `{"status":"UP","db":"UP"}`。
+- 边界：未做真机安装、收费 AI、多账号社交、Android 商店上架；官网营销页、后端、公开展示库本轮未改未部署。
+
 真机通知/小组件、国产ROM、完整社交组合、实际收费AI、iOS均有边界。旧《人工测试方案》的包名和数字不是当前版本标准。
 
 ## 6. 下一步、关闭项与用户决定
@@ -412,7 +428,9 @@
 
 | 10 | 羁绊升级演出 demo 的「第二页：升级恭喜」→ **已接回 App 并整条链路验收通过（2026-10-16）**：demo 第二页观感经用户验收后，已把同样的**整页「升级恭喜」**接进真实应用（新增 `src/components/cooperation/ConfidantCelebrateScreen.tsx` + `src/styles/confidant-celebrate.css`），并把老的 celebrate 白卡片弹窗从 `ConfidantStarShiftModal` 里**整段删除**。其后按用户实机反馈连修四处：两个星移窗叠着（`7c506de`）、牌框比牌大一圈（`c73922a`）、牌没填满框（`08a8c20`）、点使用星移时背景档案窗露一下（`36baf8a`）。`tsc --noEmit` 0 错、全量 **40 个测试文件**通过；**用户已实机确认「修好了」** | 无待办。**星移弹窗的输入/生成/预览/落墨四屏仍是老样子**——要不要也翻新成同一套语言，须用户另行发起 |
 
-最新授权：用户明确“PUSH吧，记得记进日志，我想关闭软件的下载通道，记得我的素材不公开”。本次只推私有开发库，关闭官网入口和腾讯云APK通道，更新同一日志；不扩展为公开发布素材或新包。用户已确认手机同步恢复，不再重复要求验同一故障。
+| 11 | **2.8.8 发版（2026-10-17）**：版本号已升、APK/AAB 已出、Web 已部署并核哈希 | **待 Push**（须用户明确批准，目标私有开发库 `origin/main`）；下载通道保持关闭；待用户真机复看 COOP 升级链与 P4 短屏 |
+
+最新授权（2026-10-17）：用户要求“发布新版本，仓库也要更新，软件也要更新”。本轮据此完成 2.8.8 版本号、APK/AAB 构建与 Web 部署；**Push 仍须用户明确批准**，下载通道保持关闭，官网营销页与后端不在本次范围。历史授权“关闭下载通道、素材不公开”继续有效。
 
 ### 已完成、已关闭、暂缓或不做
 
@@ -1787,3 +1805,12 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
 - 执行 `git switch main` + `git merge --ff-only feat/coop-cinematic`，快进到 `fef97c6`，无额外 merge commit；未删除 feature 分支。
 - 合并后 `origin/main` 仍为 `43cf13d`，本地 `main` 领先 72 条；工作区保留既有 Podfile 换行差异与未跟踪产物，均未纳入提交。
 - 合并后验证：`npm run typecheck` exit 0；`npm test` 44 文件 / 281 项全绿。未 Push、未部署、未打 APK。
+
+### 2026-10-17（发版）：2.8.8 Web 上线 + Android 正式包
+
+- **起因**：用户要求发布新版本，仓库和软件都要更新。按项目约定先核现场，再升版本、验证、构建和部署。
+- **改动**：`package.json` 2.8.7 → 2.8.8；`android/app/build.gradle` `versionCode 22 → 23`、`versionName 2.8.7 → 2.8.8`。commit `da94d06`，无业务代码改动。
+- **验证**：`npm run typecheck` exit 0；`npm test` 44 文件 / 281 项全绿；`scripts/build-release.ps1` 成功，Vite 1730 modules，PWA 119 条预缓存。
+- **Android**：APK 32,115,779 B / AAB 31,917,538 B；aapt 核 `versionCode 23 / versionName 2.8.8`；apksigner 证书与 2.8.7 相同；包内入口 `index-BRVFDdwl.js`，正式 API 地址存在且无 localhost。
+- **Web**：备份线上 `web-20261017-203956.tgz`（109,476,265 B）后覆盖 `/opt/maskaria/web`；线上 `index.html` 与入口 JS 哈希均与本地一致，`/api/health` UP，塔罗图 200。
+- **边界**：未 Push、未重新开放 APK 下载、未改官网/后端/公开展示库；真机安装与收费 AI/多账号社交未验证。

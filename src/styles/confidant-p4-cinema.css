@@ -621,3 +621,39 @@ button{font-family:inherit}
   .confirm{margin-top:6px}
   .confirm .go{padding:10px 30px 11px}
 }
+/* 短屏手机：演出的信息块本身比视口高，确认键会落到 tvbar 下方。
+   demo 的桌面构图不缩；这里只压缩留白、字号和卡位，保证“继续收看”整颗在屏内。 */
+@media (max-width:860px) and (max-height:760px){
+  :host{--cardw:min(clamp(120px,20vh,148px),36vw)}
+  .cast{padding-top:clamp(46px,8vh,56px);padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));gap:2px}
+  .cast-right{gap:3px}
+  .card-cap{margin-top:5px;padding:2px 8px 3px}
+  .show-title{margin-top:0;margin-bottom:0}
+  .show-kicker{padding:3px 8px 4px;font-size:8px}
+  .show-title h1{margin-top:4px;padding:4px 10px 7px;font-size:clamp(30px,9.2vw,38px);
+    box-shadow:0 0 0 4px var(--cream),0 0 0 6px var(--ink),7px 8px 0 rgba(19,19,19,.16)}
+  .lower-third{padding:7px 9px 8px;gap:4px 7px;border-radius:8px}
+  .lt-kicker{display:none}
+  .lower-third strong{font-size:clamp(13px,3.8vw,16px)}
+  .lt-small{flex-basis:100%;order:3;font-size:9px}
+  .rank-badge{width:26px;height:26px;font-size:16px;box-shadow:0 0 0 3px var(--cream)}
+  .rankstars{height:18px}
+  .rankstars svg{width:18px;height:18px}
+  .vow p{padding:4px 16px;font-size:11px}
+  .unlock{padding:3px 9px 3px 4px;gap:6px}
+  .unlock i{width:19px;height:19px;font-size:10px}
+  .unlock span{font-size:11px}
+  .confirm{margin-top:2px}
+  .confirm .hint{display:none}
+  .confirm .go{padding:8px 24px 9px;font-size:15px}
+}
+/* 宽而矮的横屏：单列必然超出一屏，恢复双栏只需压掉高度，不缩桌面构图。 */
+@media (min-width:540px) and (max-height:480px){
+  .cast{grid-template-columns:auto minmax(0,1fr);justify-items:stretch;gap:clamp(14px,2.4vw,30px);
+    padding-top:28px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+  .cast-right{align-items:flex-start;text-align:left;justify-self:start;max-width:min(560px,58vw);gap:3px}
+  .show-title{text-align:left}
+  .show-title h1{justify-content:flex-start}
+  .confirm{align-self:flex-start}
+  .stage-sky{width:min(26vw,280px);opacity:.8}
+}

@@ -185,3 +185,11 @@
 [data-livery='p5'] .h-2.rounded-full > div {
   background: var(--p5-red) !important;
 }
+
+/* 同伴卡片（列表视图）：去掉圆角与柔影，改硬红影；左侧花色条保留 */
+[data-livery='p5'] [data-p5-part='listcard'] {
+  border-radius: 0 !important;
+  border-color: #242424 !important;
+  background: #0b0b0b !important;
+  box-shadow: 8px 9px 0 0 var(--p5-red-deep) !important;
+}

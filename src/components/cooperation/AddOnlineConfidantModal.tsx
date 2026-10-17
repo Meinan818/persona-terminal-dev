@@ -15,6 +15,8 @@ import { resolveAssetUrl } from '@/utils/assetUrl';
 import { RemoteImg } from '@/components/ui/RemoteImg';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
+import { useUiChannel } from '@/ui/useUiChannel';
+import '@/styles/coop-p5-skin.css';
 import { useCloudStore } from '@/store/cloud';
 import { searchUserByUserId, sendFriendRequest } from '@/services/friends';
 import { loadSocial } from '@/services/social';
@@ -30,6 +32,8 @@ type Phase = 'search' | 'preview' | 'success';
 
 export function AddOnlineConfidantModal({ isOpen, onClose }: Props) {
   const cloudUser = useCloudStore(s => s.cloudUser);
+  // 红频道（p5）换皮：只加属性 + 共享皮肤，逻辑不动
+  const p5 = useUiChannel() === 'p5';
 
   const [userId, setUserId] = useState('');
   const [message, setMessage] = useState('');
@@ -100,6 +104,7 @@ export function AddOnlineConfidantModal({ isOpen, onClose }: Props) {
     <AnimatePresence>
       <motion.div
         key="bg"
+        data-livery={p5 ? 'p5' : undefined}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -114,6 +119,7 @@ export function AddOnlineConfidantModal({ isOpen, onClose }: Props) {
           transition={{ type: 'spring', damping: 24, stiffness: 280 }}
           onClick={(e) => e.stopPropagation()}
           className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden"
+          data-p5-part="sheet"
         >
           <div
             className="px-5 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3"

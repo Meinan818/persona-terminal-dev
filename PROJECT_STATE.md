@@ -1607,3 +1607,13 @@ a852d9c导入上游并保留GPL/NOTICE；179550a修启动编码；c9217ae整合m
   - 今日互动：同口径（纸面输入框、红主键、黑方块关闭键）。
   - `errorCount 0`；截图 `.rivet/scratch/p5-coop-skin/02-detail.png`、`03-interaction.png`。
 - **边界**：批次②（新建同伴 / 添加在线同伴 / 在线资料卡 / 同伴卡片 / 牌面选择）尚未开始；其他主题未受影响（皮肤只在 `[data-livery="p5"]` 下生效）。
+
+### 2026-10-17（续五）：换皮批次②（新建 / 添加在线 / 资料卡 / 列表卡片）
+
+- **新建同伴（ConfidantCreateModal）**：**本来就是 P5 纸白版**（拼贴标题 + 纸面表单项 + 斜切按钮，`p5-onpaper` 一套），实拍确认无需再改。
+- **添加在线同伴（AddOnlineConfidantModal）**：挂 `data-livery` + `data-p5-part="sheet"`，实拍已是黑底 + 红错版。
+- **在线同伴资料卡（OnlineConfidantProfileCard）**：同样挂 `data-livery` + `sheet`（原先是紫色渐变卡；皮肤里 `!important` 会压掉内联渐变）。**未实拍**（需要云端好友数据）。
+- **列表卡片（ConfidantCard）**：挂 `data-livery` + `data-p5-part="listcard"`（去圆角/柔影，改硬红影，左花色条保留）。**未实拍**（当前默认是卡墙视图）。
+- **牌面选择（ArcanaPickerForm）**：在新建窗里，继承新建窗的纸白语言，不需要单独换皮。
+- **验证**：`npx tsc --noEmit` exit 0；`npm test` 44 文件 / 279 测试全绿；端到端探针实拍 `04-create.png`（新建窗）、`05-add-online.png`（添加在线）、`02-detail.png`、`03-interaction.png`，零报错。
+- **边界**：资料卡与列表卡片只有代码级接入、没拿到实拍样本；真机未测。

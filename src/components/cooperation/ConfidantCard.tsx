@@ -12,6 +12,8 @@ import { TAROT_BY_ID } from '@/constants/tarot';
 import { PactPartnerTag } from './PactTag';
 import { OrgBadge } from '@/components/org/OrgBadge';
 import { GoalLine, SwapFaces, swapTagProps, useStatusSwap } from '@/components/profile/PresenceLine';
+import { useUiChannel } from '@/ui/useUiChannel';
+import '@/styles/coop-p5-skin.css';
 import { INTIMACY_LABELS, MAX_INTIMACY, pointsToNextLevel, levelBasePoints, thresholdsFor } from '@/utils/confidantLevels';
 import { TarotCardSVG } from '@/components/astrology/TarotCardSVG';
 
@@ -33,6 +35,8 @@ interface Props {
 
 export function ConfidantCard({ confidant, onClick, prayer, activeShadow, onShadowClick }: Props) {
   const card = TAROT_BY_ID[confidant.arcanaId];
+  // 红频道（p5）换皮：只加属性 + 共享皮肤
+  const p5 = useUiChannel() === 'p5';
   const accent = card?.accent || 'rgb(var(--color-bond-rgb))';
   const isReversed = confidant.orientation === 'reversed';
   const archived = !!confidant.archivedAt;
@@ -137,6 +141,8 @@ export function ConfidantCard({ confidant, onClick, prayer, activeShadow, onShad
     <motion.div
       whileHover={{ scale: 1.008, y: -1 }}
       whileTap={{ scale: 0.99 }}
+      data-livery={p5 ? 'p5' : undefined}
+      data-p5-part="listcard"
       transition={{ type: 'spring', stiffness: 300, damping: 22 }}
       onClick={handleCardClick}
       onPointerDown={handlePointerDown}

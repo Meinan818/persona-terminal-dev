@@ -18,6 +18,8 @@ import { RemoteImg } from '@/components/ui/RemoteImg';
 import { OnlineStarBadge } from './OnlineStarBadge';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
+import { useUiChannel } from '@/ui/useUiChannel';
+import '@/styles/coop-p5-skin.css';
 // 雷达图（recharts，400KB 上下）按需分包：只有打开资料卡才下载（第 4 轮）
 const ConfidantRadar = lazy(() => import('./ConfidantRadar'));
 import { useCloudSocialStore } from '@/store/cloudSocial';
@@ -64,6 +66,8 @@ export function OnlineConfidantProfileCard({
   onProposeCoop, onAcceptCoop,
 }: Props) {
   const todayPrayers = useCloudSocialStore(s => s.todayPrayers);
+  // 红频道（p5）换皮：只加属性 + 共享皮肤，逻辑不动
+  const p5 = useUiChannel() === 'p5';
   const coopBonds = useCloudSocialStore(s => s.coopBonds);
   const updateFriendship = useCloudSocialStore(s => s.updateFriendship);
   const cloudUser = useCloudStore(s => s.cloudUser);
@@ -172,6 +176,7 @@ export function OnlineConfidantProfileCard({
     <AnimatePresence>
       <motion.div
         key="bg"
+        data-livery={p5 ? 'p5' : undefined}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -186,6 +191,7 @@ export function OnlineConfidantProfileCard({
           transition={{ type: 'spring', damping: 22, stiffness: 260 }}
           onClick={(e) => e.stopPropagation()}
           className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
+          data-p5-part="sheet"
           style={{
             background: 'linear-gradient(180deg, #1c1b3a 0%, #0e0e25 100%)',
             border: '1px solid rgba(196,181,253,0.22)',

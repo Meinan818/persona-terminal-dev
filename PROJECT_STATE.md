@@ -4,12 +4,12 @@
 
 ## 1. 当前全貌：先看这一节
 
-- **【当前现场 · 2026-10-17 18:22 · P4 黄色升级 demo 已回退到用户偏好的快落版（未验收）】** 上一会话因上游 `413 Payload Too Large` 中断；本窗口已在原文件上继续，未改 `src/`，未 Push。
-  - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `6c3a54b`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，当前本地领先 **35 条**（本次文档提交后为 **36 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留；本轮只改 `outputs/bond-rankup-demo-p4/index.html` 与 `.rivet/scratch` 探针，不动 `src/`。
+- **【当前现场 · 2026-10-17 18:22 · P4 黄色升级 demo 快落版（用户已验收）】** 上一会话因上游 `413 Payload Too Large` 中断；本窗口已在原文件上继续，未改 `src/`，未 Push。
+  - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `d773e9a`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，当前本地领先 **36 条**（本次文档提交后为 **37 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留；本轮只改 `outputs/bond-rankup-demo-p4/index.html` 与 `.rivet/scratch` 探针，不动 `src/`。
   - **本轮决定**：用户先反馈“牌砸的有点快”，试用慢版后又明确说“还是有点慢……还是之前的有冲击力”，要求回退。已用 `_bak/index-pre-slow-drop-20261017-180030.html` 恢复 940ms 快落版（白闪/冲击环在 400ms、`rankUp` 220ms、舞台 920ms 后隐藏），仅额外保留 page2/page3 隐藏滚动条的两行 CSS；当前文件与备份的 diff 只有这两行。慢版留底在 `_bak/index-pre-revert-20261017-181716.html`。
   - **验证（回退后实测）**：`p4-demo-probe.mjs` 四视口 `1440x900 / 1280x700 / 390x844 / 360x740` → 0 JS error、0 横向溢出、四屏可进入、确认键出现；`p4-relay-probe.mjs` `1440x900 / 390x844` → 0 error、stage 已隐藏、page2/page3 可进入。回退版 GIF 在 `_shots/relay/stage-drop-1440-reverted.gif`。
-  - **用户当前未验收**：回退版尚未得到用户确认；不要写成已完成或已验收。
-  - **下一步**：用户刷新 `http://127.0.0.1:8899/outputs/bond-rankup-demo-p4/index.html`（自动播放，点画面可重播）看回退后的快落版；认可后再讨论落 `src`。Push 36 条仍须用户明确批准。
+  - **用户已验收（2026-10-17 18:21）**：用户对回退后的快落版表示“OK我很满意”；此前对慢版的否定已处理。此验收只覆盖已看过的黄色 P4 demo，不自动扩展到其它主题、真机或未演示内容。
+  - **下一步**：当前 demo 已验收但仍留在未跟踪的 `outputs/`；若要把这版落进黄色主题正式页面，需用户明确发起并单独改 `src/`。Push 37 条仍须用户明确批准。
   - **上一轮异常中断原因（留档）**：上一会话最后请求被 `api.deepseek.com/responses` 以 `413 Payload Too Large` 拒绝；累计输入约 740 万 token，单次约 24 万 token（含多张截图），不是文件或代码崩溃。新窗口应少贴大图、用探针报告代替一次性塞满上下文。
 
 - **【历史交接 · 2026-10-17 黄色 COOP 升级 demo（已被上方 18:22 当前现场取代；保留现场与反馈）】** 黄色主题 demo 的开发**暂停**；这是上一轮交接点，再看下面的红版/换皮历史。

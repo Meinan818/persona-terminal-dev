@@ -1,0 +1,187 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   红频道（p5）· COOP 管理界面皮肤
+   ═══════════════════════════════════════════════════════════════════════════
+   作用域：[data-livery="p5"] —— 只有红主题的浮层根节点带这个属性，其它主题零影响。
+   做法：不重建 JSX、不动逻辑，只做两件事
+     ① 把中性皮肤的「白卡 / 圆角 / 柔阴影 / 灰字」统一换成 P5 的黑底 + 米白纸 + 硬边；
+     ② 对少数关键件（面板 / 纸卡 / 标签 / 主键 / 错误条）用 data-p5-part 挂点做形制。
+
+   ⚠ 本仓实测：clip-path 会把 box-shadow 与 filter:drop-shadow 一起裁掉 ——
+     所以这里的硬影一律走 box-shadow，与 clip-path 不同体；需要斜切的只有文字标签（无影）。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-livery='p5'] {
+  --p5-red: #c00008;
+  --p5-red-deep: #8e0000;
+  --p5-red-hot: #d90008;
+  --p5-ink: #000;
+  --p5-paper: #f0e9df;
+  --p5-grey: #6b6862;
+  --p5-grey-light: #9b9791;
+  --p5-title-font: 'Noto Sans SC Black', 'Velvet Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: var(--p5-title-font);
+  font-weight: 900;
+  color-scheme: dark;
+}
+
+/* ── 圆角归零：P5 没有圆角卡 ── */
+[data-livery='p5'] .rounded-3xl,
+[data-livery='p5'] .rounded-2xl,
+[data-livery='p5'] .rounded-xl,
+[data-livery='p5'] .rounded-lg,
+[data-livery='p5'] .rounded-md,
+[data-livery='p5'] .rounded-full {
+  border-radius: 0 !important;
+}
+
+/* ── 白面 / 浅灰面 → 近黑 ── */
+[data-livery='p5'] .bg-white,
+[data-livery='p5'] .bg-white\/90,
+[data-livery='p5'] .bg-white\/80,
+[data-livery='p5'] .bg-white\/10,
+[data-livery='p5'] .bg-gray-50,
+[data-livery='p5'] .dark\:bg-gray-900,
+[data-livery='p5'] .dark\:bg-gray-800,
+[data-livery='p5'] .dark\:bg-gray-800\/50 {
+  background-color: #0b0b0b !important;
+}
+
+/* ── 深字 → 米白；灰字 → P5 灰 ── */
+[data-livery='p5'] .text-gray-900,
+[data-livery='p5'] .text-gray-800,
+[data-livery='p5'] .text-gray-700,
+[data-livery='p5'] .dark\:text-white,
+[data-livery='p5'] .dark\:text-gray-200,
+[data-livery='p5'] .dark\:text-gray-300 {
+  color: var(--p5-paper) !important;
+}
+[data-livery='p5'] .text-gray-600,
+[data-livery='p5'] .text-gray-500,
+[data-livery='p5'] .text-gray-400,
+[data-livery='p5'] .dark\:text-gray-400 {
+  color: var(--p5-grey-light) !important;
+}
+
+/* ── 边框：统一压到深灰；柔阴影全部撤掉（硬影由挂点给） ── */
+[data-livery='p5'] .border-gray-100,
+[data-livery='p5'] .border-gray-200,
+[data-livery='p5'] .border-gray-700,
+[data-livery='p5'] .dark\:border-gray-800,
+[data-livery='p5'] .dark\:border-gray-700,
+[data-livery='p5'] .dark\:border-gray-600 {
+  border-color: #242424 !important;
+}
+[data-livery='p5'] .shadow-2xl,
+[data-livery='p5'] .shadow-lg,
+[data-livery='p5'] .shadow-md,
+[data-livery='p5'] .shadow-sm {
+  box-shadow: none !important;
+}
+
+/* ── 面板：黑底 + 红色硬影（P5 的「错版」） ── */
+[data-livery='p5'] [data-p5-part='sheet'] {
+  position: relative;
+  background: #050505 !important;
+  box-shadow: 12px 14px 0 0 var(--p5-red-deep), inset 0 0 0 2px #191919 !important;
+}
+
+/* 页头：撤掉原来的彩色渐变，改成「左侧红色脊线 + 深色分隔」 */
+[data-livery='p5'] [data-p5-part='head'] {
+  background: transparent !important;
+  border-bottom: 2px solid #1c1c1c !important;
+  box-shadow: inset 6px 0 0 var(--p5-red);
+}
+[data-livery='p5'] [data-p5-part='title'] {
+  text-shadow: 3px 3px 0 var(--p5-red);
+  letter-spacing: -0.01em;
+}
+[data-livery='p5'] [data-p5-part='close'] {
+  background: var(--p5-ink) !important;
+  color: var(--p5-paper) !important;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+
+/* 纸卡（输入框 / 信息块）：米白纸 + 红色硬影，文字回到黑色 */
+[data-livery='p5'] [data-p5-part='paper'] {
+  background: var(--p5-paper) !important;
+  color: #151515 !important;
+  border: 0 !important;
+  box-shadow: 7px 8px 0 0 var(--p5-red) !important;
+}
+[data-livery='p5'] [data-p5-part='paper']::placeholder {
+  color: #8d877d !important;
+}
+/* 纸卡里的字必须回到深色（否则上面的「灰字 → 米白」规则会把纸卡写成浅字看不清） */
+[data-livery='p5'] [data-p5-part='paper'] * {
+  color: #151515 !important;
+}
+/* 纸卡上的小标签走红字（P5 的标签语言） */
+[data-livery='p5'] [data-p5-part='paper'] .tracking-widest {
+  color: var(--p5-red) !important;
+}
+
+/* 深色块（勾选行 / 次级信息）：左侧红脊线 */
+[data-livery='p5'] [data-p5-part='block'] {
+  background: #101010 !important;
+  border: 0 !important;
+  box-shadow: inset 4px 0 0 var(--p5-red);
+}
+
+/* 主键：红面 + 硬黑外环 */
+[data-livery='p5'] [data-p5-part='primary'] {
+  background: var(--p5-red) !important;
+  color: var(--p5-paper) !important;
+  border-radius: 0 !important;
+  letter-spacing: 0.14em;
+  box-shadow: 0 0 0 4px var(--p5-ink) !important;
+}
+[data-livery='p5'] [data-p5-part='primary']:disabled {
+  opacity: 0.4;
+}
+
+/* 小标签：斜切红块 / 深灰块 */
+[data-livery='p5'] [data-p5-part='tag'] {
+  display: inline-block;
+  background: var(--p5-red) !important;
+  color: var(--p5-paper) !important;
+  padding: 0.2em 0.62em 0.26em !important;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+}
+
+/* 危险 / 错误条：黑底红字 + 红环 */
+[data-livery='p5'] [data-p5-part='error'] {
+  background: #1a0000 !important;
+  border-color: var(--p5-red-deep) !important;
+  color: #ffb9b2 !important;
+}
+
+/* 页签条：P5 的斜切块（选中红底白字、未选深灰） */
+[data-livery='p5'] [data-p5-part='tabs'] {
+  background: transparent !important;
+  gap: 6px !important;
+  padding: 0 !important;
+}
+[data-livery='p5'] [data-p5-part='tab'],
+[data-livery='p5'] [data-p5-part='tab-on'] {
+  padding: 9px 6px !important;
+  letter-spacing: 0.16em;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+[data-livery='p5'] [data-p5-part='tab'] {
+  background: #141414 !important;
+  color: var(--p5-grey-light) !important;
+}
+[data-livery='p5'] [data-p5-part='tab-on'] {
+  background: var(--p5-red) !important;
+  color: var(--p5-paper) !important;
+}
+
+/* 羁绊进度条：深槽 + 红填充（原先是浅灰槽 + 花色强调色） */
+[data-livery='p5'] .h-2.rounded-full {
+  background: #1a1a1a !important;
+}
+[data-livery='p5'] .h-2.rounded-full > div {
+  background: var(--p5-red) !important;
+}

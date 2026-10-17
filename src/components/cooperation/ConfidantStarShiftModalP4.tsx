@@ -69,7 +69,7 @@ export function ConfidantStarShiftModalP4({ isOpen, confidant, onClose }: Props)
       window.cancelAnimationFrame(raf);
       release();
     };
-  }, [artUrl, confidant, isOpen, root]);
+  }, [artUrl, confidant?.id, isOpen, root]);
 
   useEffect(() => {
     if (!isOpen) return;

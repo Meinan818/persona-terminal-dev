@@ -28,6 +28,8 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   confidant: Confidant | null;
+  /** 本次互动触发了升级：由档案窗决定是否一起收场，让升级演出从页面层开始 */
+  onLevelUp?: () => void;
 }
 
 const DELTA_LABELS: Record<number, string> = {
@@ -47,10 +49,10 @@ const DELTA_LABELS: Record<number, string> = {
  * 4. 可选：同步到"记录"（category = confidant）
  * 5. 一天仅限一次
  */
-export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props) {
+export function ConfidantInteractionModal({ isOpen, onClose, confidant, onLevelUp }: Props) {
   // 红频道（p5）换皮：只加属性 + 皮肤样式，逻辑一行不动（见 coop-p5-skin.css 的头注释）
   const p5 = useUiChannel() === 'p5';
-  const { settings, recordConfidantInteraction, confidantEvents } = useAppStore(useShallow(s => ({ settings: s.settings, recordConfidantInteraction: s.recordConfidantInteraction, confidantEvents: s.confidantEvents })));
+  const { settings, recordConfidantInteraction, confidantEvents, setModalBlocker } = useAppStore(useShallow(s => ({ settings: s.settings, recordConfidantInteraction: s.recordConfidantInteraction, confidantEvents: s.confidantEvents, setModalBlocker: s.setModalBlocker })));
   const cloudUser = useCloudStore(s => s.cloudUser);
   const [stage, setStage] = useState<Stage>('input');
   const [description, setDescription] = useState('');
@@ -82,6 +84,14 @@ export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props)
       setErr(null);
     }
   }, [isOpen]);
+
+  // 互动窗是升级链的上游：它开着时先别让全局演出抢上来。
+  // 否则“就这样记下”的完成反馈还没走完，P4 舞台/恭喜页已经压在弹窗上了。
+  useEffect(() => {
+    if (!isOpen) return;
+    setModalBlocker(true);
+    return () => setModalBlocker(false);
+  }, [isOpen, setModalBlocker]);
 
   if (!isOpen || !confidant) return null;
 
@@ -142,6 +152,8 @@ export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props)
         activityAttribute: syncToActivity && activityAttr ? activityAttr : undefined,
         activityPoints: syncToActivity && activityAttr ? activityPoints : 0,
       });
+      const after = useAppStore.getState().confidants.find(c => c.id === confidant.id);
+      const leveledUp = !!after && after.intimacy > confidant.intimacy;
       // 复用 TodoComplete / SaveSuccess 那套音符 + 主题化成功反馈
       if (syncToActivity && activityAttr && activityPoints > 0) {
         triggerSuccessFeedback();
@@ -150,6 +162,7 @@ export function ConfidantInteractionModal({ isOpen, onClose, confidant }: Props)
       // 存在时间：延长 0.6 秒，让粒子和音符播完
       setTimeout(() => {
         onClose();
+        if (leveledUp) onLevelUp?.();
       }, syncToActivity ? 2600 : 1800);
     } catch (e) {
       setErr(e instanceof Error ? e.message : '保存失败');

@@ -1,16 +1,17 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-17 18:22（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-17 19:12（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
 ## 1. 当前全貌：先看这一节
 
-- **【当前现场 · 2026-10-17 18:55 · P4 黄色升级链已落 src（待用户验收）】** 用户说“开始吧”后，已把验收过的黄色 demo 接进正式页面；未 Push。
-  - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `8e88e87`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，当前本地领先 **37 条**（本次 feat 提交后为 **38 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留；本轮只改 `src/` 的 P4 链路与测试，不动 P3/P5 内部实现。
+- **【当前现场 · 2026-10-17 19:12 · P4 正式页面已接入并修复真实升级跳牌/叠层（待用户目视）】** 用户说“开始吧”后已把验收过的黄色 demo 接进正式页面；用户随后实测反馈“塔罗牌没出来、过渡乱”，本轮已修真实升级链路；未 Push。
+  - **现场**：分支 `feat/coop-cinematic`，当前 HEAD `821c2f3`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，当前本地领先 **38 条**（本次修复提交后为 **39 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留。
   - **落点**：新增 `src/components/cooperation/confidantP4Cinema.tsx`（Shadow DOM 电影层：世界背景 / 监视器 / CRT 转场）、`ConfidantRankUpCutInP4.tsx`、`ConfidantCelebrateScreenP4.tsx`、`ConfidantStarShiftModalP4.tsx`、`src/styles/confidant-p4-cinema.css`；`ConfidantRankUpCutIn.tsx` / `ConfidantCelebrateScreen.tsx` / `ConfidantStarShiftModal.tsx` 按 p4 分流；`confidantLivery.ts` / `confidantRankUpShared.ts` 判据改 p4；`App.tsx` 常驻挂 `ConfidantP4FxLayer`。
   - **为什么 Shadow DOM**：demo 是整页独立 HTML，CSS 全是 `#world` / `.stage` / `.page2` / `.sf-*` 全局选择器；放进 shadow root 可原样复用并隔离 P3/P5 与 App 全局样式。三屏通过 portal 进同一个 root，监视器/背景因此能跨屏存活。
-  - **验证（本轮实测）**：`npm run typecheck` exit 0；`npm test` **44 文件 / 281 测试全绿**；`npx vite build --outDir .rivet/scratch/p4-build` exit 0；P4 App 探针 `1440x900` 与 `390x844` → 演出 / 恭喜 / 星移 / 直达预览 / 关闭全通，**0 JS error、0 横向溢出**，监视器落到卡位，手机确认键与两键均完整可见；P5 stage probe `1440x900` → 0 error、5 星亮、`confirmOn`。截图在 `.rivet/scratch/p4-app-shots/`。
-  - **未验证/边界**：只跑了 DEV 预览 `?rankup=1` 与 `?celebrate=1` / `?starshift=1`，**没有用真实升级事件走一遍完整链路**；真机未测；P4 正式页面的观感尚未得到用户确认。`?rankup` 预览的等级终点已改为当前等级（默认 4→5），让演出与恭喜页数字一致；真实升级逻辑未改。
-  - **下一步**：用户切黄色主题后打开 `http://localhost:5184/?theme=yellow&rankup=1`（或正常升一级）看正式页面；认可后再谈 Push / 真机。Push 38 条待批准。
+  - **用户反馈与修复（19:12）**：用户实测“升级界面显示错误，塔罗牌没出来，过渡不自然/乱”。已用真实 IndexedDB 同伴（恶魔逆位，4 级 35 点）走「今日互动 → +5 → 记下」复现，根因两处：① 升级后 `loadConfidants()` 换新 confidant 对象，P4 演出 effect 因对象依赖重跑；第二次在转场忙时直接 `apply`，监视器留在右缘背面，舞台卡位空着；② 互动窗还没收场，舞台就压上来，和完成反馈叠层。修复：`ConfidantRankUpCutInP4` 用 `startedNoticeRef` 按 `notice.id` 只开一次，effect 依赖改为 id；`ConfidantInteractionModal` 打开时 `modalBlocker=true`，升级完成时通过 `onLevelUp` 关闭档案详情；详情收场后演出才从页面层开始。
+  - **验证（本轮实测）**：真实升级链路 `1440x900` → 4 升 5、星移余 2、buffs 2；监视器 rect `[262,266,250,384]` 对卡位 `[270,271,234,374]`，牌面 `/tarot/p4/devil.webp` 560×896 加载成功；恭喜页显示 RANK 5、余 2；0 JS error、0 横向溢出。DEV 预览/手机档（`1440x900`、`390x844`）仍全通；`npm run typecheck` exit 0；`npm test` **44 文件 / 281 测试全绿**；`npx vite build --outDir .rivet/scratch/p4-build` exit 0；P5 stage probe 0 error、五星亮、`confirmOn`。证据在 `.rivet/scratch/p4-real-flow-shots/`（含 260 帧转场序列）与 `p4-app-shots/`。
+  - **未验证/边界**：真实升级链路已在桌面 headless 走通，**真机未测**；互动完成反馈到 P4 世界的切点仍有约 1.8s 的 done 停留，转场本身牌/背景/字都按 demo 跑，但整体观感需用户复看确认；若仍觉得切得硬，再加遮罩/交叉淡化，不先扩大改动。`?rankup` 预览的等级终点已改为当前等级（默认 4→5），让演出与恭喜页数字一致；真实升级逻辑未改。
+  - **下一步**：用户切黄色主题后正常升一级，或打开 `http://localhost:5184/?theme=yellow&rankup=1`（占位同伴预览）复看；认可后再谈 Push / 真机。Push 39 条待批准。
 
 - **【上一节点 · 2026-10-17 18:22 · P4 黄色升级 demo 快落版（用户已验收；已落 src）】** 当前正式页面已接入，见上一条；本条保留 demo 验收与回退记录。
   - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `d773e9a`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，当前本地领先 **36 条**（本次文档提交后为 **37 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留；本轮只改 `outputs/bond-rankup-demo-p4/index.html` 与 `.rivet/scratch` 探针，不动 `src/`。

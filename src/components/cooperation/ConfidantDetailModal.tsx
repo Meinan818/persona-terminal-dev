@@ -1102,6 +1102,7 @@ export function ConfidantDetailModal({
         isOpen={interactionOpen}
         onClose={() => setInteractionOpen(false)}
         confidant={confidant}
+        onLevelUp={onClose}
       />
       {/* 升级恭喜（整页）→ 星移弹窗：点「使用星移」才切到后者。
           2026-10-16 接回 App：恭喜从「弹窗里的一个阶段」变成独立整页，

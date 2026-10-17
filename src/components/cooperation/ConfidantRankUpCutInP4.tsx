@@ -73,6 +73,7 @@ export function ConfidantRankUpCutInP4() {
   const starsRef = useRef<HTMLDivElement>(null);
   const stopTimelineRef = useRef<(() => void) | null>(null);
   const leavingRef = useRef(false);
+  const startedNoticeRef = useRef<string | null>(null);
 
   const finishRankUp = useCallback(() => {
     if (!notice) return;
@@ -101,6 +102,11 @@ export function ConfidantRankUpCutInP4() {
       setStageOn(false);
       return;
     }
+    // 同一条通知只开一次。真实升级会在 queue 之后 loadConfidants()，confidant 对象
+    // 换新但 id 不变；若把对象放进依赖，effect 会重跑并在转场忙时直接 apply，
+    // 结果就是「舞台出来了、监视器还留在右缘背面」（2026-10-17 实机复现）。
+    if (startedNoticeRef.current === notice.id) return;
+    startedNoticeRef.current = notice.id;
     if (!notice.preview) markLevelCelebrated(confidant.id, notice.newLevel);
     setPhase('playing');
     setStageOn(false);
@@ -116,8 +122,9 @@ export function ConfidantRankUpCutInP4() {
     return () => {
       cancelled = true;
       release();
+      startedNoticeRef.current = null;
     };
-  }, [artUrl, card, confidant, modalBlocker, notice, root]);
+  }, [artUrl, card?.id, confidant?.id, modalBlocker, notice?.id, root]);
 
   // 舞台显形后开演；220ms 与 demo 的 setTimeout(rankUp,220) 一致。
   useEffect(() => {
@@ -132,7 +139,7 @@ export function ConfidantRankUpCutInP4() {
       stopTimelineRef.current?.();
       stopTimelineRef.current = null;
     };
-  }, [confidant, notice, stageOn]);
+  }, [confidant?.id, notice?.id, stageOn]);
 
   const playTimeline = useCallback((): (() => void) => {
     if (!notice || !confidant) return () => {};

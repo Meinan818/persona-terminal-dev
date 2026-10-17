@@ -33,11 +33,11 @@ export const P5_SCATTER_STARS: { x: number; y: string; size: number; rot: number
 /** 同心星的层多边形（由外向内每层缩小 0.912、转 1.6°）。
  *  演出那件要给整层挂入场动画（ref 在它自己的 div 上），所以这里导出**层生成函数**
  *  而非只有组件 —— 两处几何定义唯一，渲染时机各自决定。 */
-export const p5RingLayers = () => {
+export const p5RingLayers = (maxLayers?: number) => {
   const layers = [];
   let R = 100;
   let i = 0;
-  while (R > 0.6) {
+  while (R > 0.6 && (!maxLayers || layers.length < maxLayers)) {
     layers.push(
       <polygon
         key={i}

@@ -11,7 +11,7 @@ import { ConfidantStarShiftModal } from '@/components/cooperation/ConfidantStarS
 import { ConfidantCelebrateScreen } from '@/components/cooperation/ConfidantCelebrateScreen';
 import { ConfidantRankUpCutInP5 } from '@/components/cooperation/ConfidantRankUpCutInP5';
 import { ConfidantRankUpCutInP4 } from '@/components/cooperation/ConfidantRankUpCutInP4';
-import { EXP, OVER, rand, PREVIEW_CONFIDANT, rankUpVariantFor } from '@/components/cooperation/confidantRankUpShared';
+import { EXP, OVER, rand, compactFx, PREVIEW_CONFIDANT, rankUpVariantFor } from '@/components/cooperation/confidantRankUpShared';
 import '@/styles/confidant-rankup.css';
 
 /**
@@ -153,15 +153,18 @@ function RankUpCutInP3() {
 
   // 碎片 / 星星：每次换一条重建（数量与位置随机，但同一条内稳定）
   const noticeId = notice?.id;
+  // 手机端减少同屏装饰件：碎片/气泡/星星不是信息本体，但每个都要建 DOM 和动画；
+  // 8x CPU 降速实测首帧会因此出现约 400ms 的长任务，动画随后成批弹出。
+  const compact = compactFx();
   const spawn = useMemo(
     () => ({
-      stars: Array.from({ length: 9 }, (_, k) => ({
+      stars: Array.from({ length: compact ? 6 : 9 }, (_, k) => ({
         k,
         left: 32 + Math.random() * 56,
         top: 12 + Math.random() * 52,
         size: 14 + Math.random() * 18,
       })),
-      glass: Array.from({ length: 48 }, () => ({
+      glass: Array.from({ length: compact ? 24 : 48 }, () => ({
         left: 14 + Math.random() * 70,
         top: 14 + Math.random() * 56,
         w: 10 + Math.random() * 36,
@@ -170,22 +173,23 @@ function RankUpCutInP3() {
       })),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [noticeId],
+    [noticeId, compact],
   );
 
   // 气泡：一次即可
   const bubbles = useMemo(
     () =>
-      Array.from({ length: 16 }, () => {
+      Array.from({ length: compact ? 8 : 16 }, () => {
         const size = 6 + Math.random() * 16;
         return { x: Math.random() * 100, size, dur: 5 + Math.random() * 7, dx: (Math.random() - 0.5) * 8, delay: -Math.random() * 10 };
       }),
-    [],
+    [compact],
   );
 
   // ── 时间线（照 demo 逐段移植）──
   useEffect(() => {
     if (!notice || channel !== 'p3' || !confidant) return;
+    let cancelled = false;
     // 播放开始即标记「这一级庆祝过了」——打开档案时就不会被补弹第二次。
     // （补弹扫描保留作兜底：万一演出没播成，档案里仍能看到祝贺。）
     // 预览（?rankup）不写「已庆祝」标记——那是真实等级的事，不能被预览污染
@@ -223,8 +227,13 @@ function RankUpCutInP3() {
     A(capRef.current, [{ opacity: 0 }, { opacity: 1 }], { delay: 350, duration: 400 });
 
     // ② 巨字砸下 + 碎片飞散 + 星星弹入
+    // 主标题的入场在挂载时就带上 delay 交给动画时间线；不用 setTimeout 点火。
+    // 手机主线程被长任务占住时，setTimeout 会积压到解除阻塞后一起触发，画面就成了
+    // 「先卡住、再一下跳出一堆东西」。WAAPI 的 delay 由浏览器时间线推进，不会成批补放。
+    A(titleRef.current, [{ opacity: 0, translate: '16vw 0', scale: '1.7' }, { opacity: 1, translate: '0 0', scale: '1' }], { delay: 700, duration: 380, easing: OVER });
+    // 碎片/星星是装饰件：放在 700ms 一次点火即可。主标题/副题/胶囊已经交给动画时间线，
+    // 即使这一批晚到，也不会再把信息本体一起补放。
     T(700, () => {
-      A(titleRef.current, [{ opacity: 0, translate: '16vw 0', scale: '1.7' }, { opacity: 1, translate: '0 0', scale: '1' }], { duration: 380, easing: OVER });
       Array.from(glassRef.current?.children ?? []).slice(0, 14).forEach((g, k) => {
         A(g, [{ opacity: 0, scale: '.3', translate: '0 0' }, { opacity: 0.85, scale: '1', offset: 0.25 }, { opacity: 0, translate: `${rand(6).toFixed(1)}vw 5vh` }], { delay: 60 + k * 20, duration: 1500, easing: 'ease-out' });
       });
@@ -235,7 +244,7 @@ function RankUpCutInP3() {
     });
 
     // ③ 副题滑入
-    T(1300, () => A(subRef.current, [{ opacity: 0, translate: '-4vw 0' }, { opacity: 1, translate: '0 0' }], { duration: 420 }));
+    A(subRef.current, [{ opacity: 0, translate: '-4vw 0' }, { opacity: 1, translate: '0 0' }], { delay: 1300, duration: 420 });
 
     // ④ 数字旧级 → 新级 弹跳 + 高亮
     T(1900, () => {
@@ -246,39 +255,43 @@ function RankUpCutInP3() {
     });
 
     // ⑤ 奖励胶囊滑入
-    T(2300, () => A(pillRef.current, [{ opacity: 0, translate: '10vw 0' }, { opacity: 1, translate: '0 0' }], { duration: 420 }));
+    A(pillRef.current, [{ opacity: 0, translate: '10vw 0' }, { opacity: 1, translate: '0 0' }], { delay: 2300, duration: 420 });
 
     // ⑥ 牌轻微摇摆
-    T(2400, () => A(cardRef.current, [{ rotate: '-8deg' }, { rotate: '-6deg' }], { duration: 600, direction: 'alternate', iterations: 2, easing: 'ease-in-out' }));
+    A(cardRef.current, [{ rotate: '-8deg' }, { rotate: '-6deg' }], { delay: 2400, duration: 600, direction: 'alternate', iterations: 2, easing: 'ease-in-out' });
 
     // ⑦ 整体碎裂退场：牌一沉、各元素与星星淡出、碎片炸散。
     // ⚠ 这一段是 demo 编排里的 ⑦，我第一版整段漏抄了 → 演出元素不消失、
     // 确认键直接叠在它们上面（2026-10-16 用户：「按钮和这个在一个界面上了」）。
     T(3600, () => {
-      A(cardRef.current, [{ rotate: '-8deg', scale: '1' }, { rotate: '-3deg', scale: '1.06' }], { duration: 140 });
+      const exits: Animation[] = [];
+      const push = (a: Animation | null) => { if (a) exits.push(a); };
+      push(A(cardRef.current, [{ rotate: '-8deg', scale: '1' }, { rotate: '-3deg', scale: '1.06' }], { duration: 140 }));
       [cardRef, titleRef, subRef, pillRef, capRef].forEach(r =>
-        A(r.current, [{ opacity: 1 }, { opacity: 0 }], { delay: 140, duration: 260, easing: 'linear' }),
+        push(A(r.current, [{ opacity: 1 }, { opacity: 0 }], { delay: 140, duration: 260, easing: 'linear' })),
       );
       Array.from(starsRef.current?.children ?? []).forEach(el =>
-        A(el, [{ opacity: 1 }, { opacity: 0 }], { delay: 140, duration: 260, easing: 'linear' }),
+        push(A(el, [{ opacity: 1 }, { opacity: 0 }], { delay: 140, duration: 260, easing: 'linear' })),
       );
       Array.from(glassRef.current?.children ?? []).forEach(g => {
         const dx = `${(Math.random() * 30 - 15).toFixed(1)}vw`;
         const dy = `${(Math.random() * 26 - 6).toFixed(1)}vh`;
         const rot = `${(Math.random() * 360 - 180).toFixed(0)}deg`;
-        A(g, [
+        push(A(g, [
           { opacity: 0, scale: '1', translate: '0 0', rotate: '0deg' },
           { opacity: 0.9, offset: 0.12 },
           { opacity: 0.75, offset: 0.6 },
           { opacity: 0, scale: '.7', translate: `${dx} ${dy}`, rotate: rot },
-        ], { delay: 140 + Math.random() * 120, duration: 1700 + Math.random() * 600, easing: 'cubic-bezier(.2,.7,.3,1)' });
+        ], { delay: 140 + Math.random() * 120, duration: (compact ? 1200 : 1700) + Math.random() * (compact ? 400 : 600), easing: 'cubic-bezier(.2,.7,.3,1)' }));
+      });
+      // ⑧ 等退场动画真的结束再露确认键；用固定 4200ms 会在碎片还在飞时就切页。
+      Promise.allSettled(exits.map(a => a.finished)).then(() => {
+        if (!cancelled) setPhase('confirm');
       });
     });
 
-    // ⑧ 停在确认态（不自动划走）——此时上面那些元素已经碎裂退场，画面只剩确认键
-    T(4200, () => setPhase('confirm'));
-
     return () => {
+      cancelled = true;
       timers.forEach(clearTimeout);
       [cardRef, titleRef, subRef, pillRef, capRef, starsRef, glassRef, flashRef].forEach(r => {
         r.current?.getAnimations?.().forEach(a => a.cancel());

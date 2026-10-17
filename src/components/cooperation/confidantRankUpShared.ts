@@ -35,6 +35,15 @@ export const rankUpVariantFor = (channel: UIChannel): 'p5' | 'p4' | 'p3' | null 
 export const rand = (n: number) => (Math.random() - 0.5) * n;
 
 /**
+ * 手机档的「轻量演出」判据。
+ *
+ * 演出的装饰件（碎片/火星/集中线/同心星层）在桌面上是质感，在手机上主要是
+ * 每帧的样式重算与大面积合成。宽度 ≤640px 时减量；不改信息、不改主分镜。
+ */
+export const compactFx = (): boolean =>
+  typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 640px)').matches;
+
+/**
  * 开发预览（`?rankup`）在**没有任何**同伴时用的占位同伴——全新档案 / 无头浏览器
  * 也能把演出本身放出来核对。只有 `notice.preview` 为真时才会用到它。
  */

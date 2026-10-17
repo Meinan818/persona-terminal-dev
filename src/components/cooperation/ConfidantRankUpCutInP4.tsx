@@ -17,7 +17,7 @@ import { TAROT_BY_ID } from '@/constants/tarot';
 import { tarotArtUrl } from '@/constants/tarotArt';
 import { INTIMACY_LABELS, formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
-import { PREVIEW_CONFIDANT } from '@/components/cooperation/confidantRankUpShared';
+import { compactFx, PREVIEW_CONFIDANT } from '@/components/cooperation/confidantRankUpShared';
 import {
   claimP4Cinema,
   ensureP4CinemaRoot,
@@ -143,6 +143,7 @@ export function ConfidantRankUpCutInP4() {
 
   const playTimeline = useCallback((): (() => void) => {
     if (!notice || !confidant) return () => {};
+    const compact = compactFx();
     const timers: number[] = [];
     const T = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
     const animate = (el: Element | null, kf: Keyframe[], opts: KeyframeAnimationOptions = {}) => {
@@ -181,15 +182,25 @@ export function ConfidantRankUpCutInP4() {
       { opacity: 1, transform: 'scale(1) rotate(0)' },
     ], { duration: 720, delay: 420, easing: OVER });
 
-    animate(showTitleRef.current, [
-      { opacity: 0, transform: 'translateY(34px) scale(1.18) rotate(-6deg)', clipPath: 'inset(0 0 100% 0)' },
-      { opacity: 1, transform: 'rotate(-2deg) skewX(-3deg)', clipPath: 'inset(0 0 0 0)' },
-    ], { duration: 620, delay: 700, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    animate(showTitleRef.current, compact
+      ? [
+          { opacity: 0, transform: 'translateY(34px) scale(1.18) rotate(-6deg)' },
+          { opacity: 1, transform: 'rotate(-2deg) skewX(-3deg)' },
+        ]
+      : [
+          { opacity: 0, transform: 'translateY(34px) scale(1.18) rotate(-6deg)', clipPath: 'inset(0 0 100% 0)' },
+          { opacity: 1, transform: 'rotate(-2deg) skewX(-3deg)', clipPath: 'inset(0 0 0 0)' },
+        ], { duration: 620, delay: 700, easing: 'cubic-bezier(.2,.8,.2,1)' });
 
-    animate(lowerThirdRef.current, [
-      { opacity: 0, transform: 'translateX(-32px)', clipPath: 'inset(0 100% 0 0)' },
-      { opacity: 1, transform: 'none', clipPath: 'inset(0 0 0 0)' },
-    ], { duration: 560, delay: 1120, easing: 'cubic-bezier(.72,0,.2,1)' });
+    animate(lowerThirdRef.current, compact
+      ? [
+          { opacity: 0, transform: 'translateX(-32px)' },
+          { opacity: 1, transform: 'none' },
+        ]
+      : [
+          { opacity: 0, transform: 'translateX(-32px)', clipPath: 'inset(0 100% 0 0)' },
+          { opacity: 1, transform: 'none', clipPath: 'inset(0 0 0 0)' },
+        ], { duration: 560, delay: 1120, easing: 'cubic-bezier(.72,0,.2,1)' });
 
     rankStarsRef.current?.querySelectorAll('svg').forEach((s, i) => {
       animate(s, [

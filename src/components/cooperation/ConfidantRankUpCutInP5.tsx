@@ -25,7 +25,7 @@ import { P5R, starPts } from '@/components/p5r/kit';
 import { p5RingLayers, P5ScatterStars, P5Hoops } from '@/components/cooperation/confidantP5Scenery';
 import { formatBuffDisplay } from '@/utils/confidantLevels';
 import { markLevelCelebrated } from '@/utils/confidantCelebration';
-import { EXP, SLAM, OVER, rand, PREVIEW_CONFIDANT } from './confidantRankUpShared';
+import { EXP, SLAM, OVER, rand, compactFx, PREVIEW_CONFIDANT } from './confidantRankUpShared';
 import { claimP5Hero, p5HeroEnterBeat, requestP5HeroPose, revealInP5, runP5Sweep, setP5HeroArt } from '@/components/cooperation/confidantP5Fx';
 import '@/styles/confidant-rankup-p5.css';
 
@@ -37,6 +37,7 @@ export function ConfidantRankUpCutInP5() {
   const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
   const modalBlocker = useAppStore(s => s.modalBlocker);
   const reduce = useReducedMotion();
+  const compact = compactFx();
 
   const notice = queue[0] ?? null;
   const realConfidant = notice ? confidants.find(c => c.id === notice.confidantId) ?? null : null;
@@ -96,7 +97,7 @@ export function ConfidantRankUpCutInP5() {
   // 落印甩出的小红点：起点沿印章轮廓铺一圈，再沿同方向甩出。
   // 换一条队列项就重建（位置随机，但同一条内稳定）。
   const noticeId = notice?.id;
-  // 盖印炸出的剪报碎片（demo #shards：36 片）。形状走确定性随机，
+  // 盖印炸出的剪报碎片（demo #shards：桌面 36 片，手机 18 片）。形状走确定性随机，
   // 免得每次重播都换一套形状（碎片面积大，乱跳很明显）。
   // mulberry32 与 demo 同式；项目里 fateDraw.ts / lifeQuests.ts 也各有一份本地副本（既有惯例）。
   const shards = useMemo(() => {
@@ -107,7 +108,7 @@ export function ConfidantRankUpCutInP5() {
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
     const clampN = (n: number) => Math.max(0, Math.min(100, n));
-    return Array.from({ length: 36 }, (_, i) => {
+    return Array.from({ length: compact ? 16 : 36 }, (_, i) => {
       const r = mulberry32(1500 + i);
       const jag = 24;
       const p = () => (r() * 2 - 1) * jag;
@@ -121,10 +122,10 @@ export function ConfidantRankUpCutInP5() {
         clip: `polygon(${cl(p())}% ${cl(p())}%,${cl(100 - p())}% ${cl(p())}%,${cl(100 - p())}% ${cl(100 - p())}%,${cl(p())}% ${cl(100 - p())}%)`,
       };
     });
-  }, []);
+  }, [compact]);
   const sparks = useMemo(
     () =>
-      Array.from({ length: 24 }, () => {
+      Array.from({ length: compact ? 10 : 24 }, () => {
         const ang = Math.random() * Math.PI * 2;
         const ex = 60 + Math.random() * 152;
         const ey = 17 + Math.random() * 46;
@@ -140,7 +141,7 @@ export function ConfidantRankUpCutInP5() {
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [noticeId],
+    [noticeId, compact],
   );
 
   /**
@@ -248,25 +249,42 @@ export function ConfidantRankUpCutInP5() {
 
       // ⑦ 新级落定 + 落定星芒
       T(3300, () => {
-        A(newRef.current, [
-          { opacity: 0, scale: 2.6, filter: 'blur(12px)' },
-          { opacity: 1, scale: 1.16, filter: 'blur(0px)', offset: 0.42 },
-          { opacity: 1, scale: 0.94, offset: 0.62 },
-          { opacity: 1, scale: 1.03, offset: 0.8 },
-          { opacity: 1, scale: 1 },
-        ], { duration: 640, easing: SLAM });
+        // 手机端不走 blur：12px 文字模糊每帧都要重算滤镜，是这套演出最贵的几帧之一；
+        // 保留缩放/回弹，落定观感不变，只少一层模糊。
+        A(newRef.current, compact
+          ? [
+              { opacity: 0, scale: 2.6 },
+              { opacity: 1, scale: 1.16, offset: 0.42 },
+              { opacity: 1, scale: 0.94, offset: 0.62 },
+              { opacity: 1, scale: 1.03, offset: 0.8 },
+              { opacity: 1, scale: 1 },
+            ]
+          : [
+              { opacity: 0, scale: 2.6, filter: 'blur(12px)' },
+              { opacity: 1, scale: 1.16, filter: 'blur(0px)', offset: 0.42 },
+              { opacity: 1, scale: 0.94, offset: 0.62 },
+              { opacity: 1, scale: 1.03, offset: 0.8 },
+              { opacity: 1, scale: 1 },
+            ], { duration: 640, easing: SLAM });
         A(burstRef.current, [{ opacity: 0, scale: 0.2 }, { opacity: 1, scale: 1, offset: 0.35 }, { opacity: 0, scale: 1.35 }], { duration: 760, easing: EXP });
       });
 
       // ⑦·2 等级星排：五颗亮黄星在 RANK 5 落定之后逐颗砸落（照 demo T(3470)）
       T(3470, () => {
         rankStarsRef.current?.querySelectorAll('svg').forEach((s, i) => {
-          A(s, [
-            { opacity: 0, scale: '2.4', filter: 'blur(9px)' },
-            { opacity: 1, scale: '1.12', filter: 'blur(0px)', offset: 0.55 },
-            { opacity: 1, scale: '.94', offset: 0.76 },
-            { opacity: 1, scale: '1' },
-          ], { delay: i * 80, duration: 300, easing: SLAM });
+          A(s, compact
+            ? [
+                { opacity: 0, scale: '2.4' },
+                { opacity: 1, scale: '1.12', offset: 0.55 },
+                { opacity: 1, scale: '.94', offset: 0.76 },
+                { opacity: 1, scale: '1' },
+              ]
+            : [
+                { opacity: 0, scale: '2.4', filter: 'blur(9px)' },
+                { opacity: 1, scale: '1.12', filter: 'blur(0px)', offset: 0.55 },
+                { opacity: 1, scale: '.94', offset: 0.76 },
+                { opacity: 1, scale: '1' },
+              ], { delay: i * 80, duration: 300, easing: SLAM });
         });
       });
 
@@ -376,7 +394,7 @@ export function ConfidantRankUpCutInP5() {
     >
       <div className="rk5-halftone" aria-hidden />
       <div className="rk5-rings" ref={ringsRef} aria-hidden>
-        <svg viewBox="0 0 200 200">{p5RingLayers()}</svg>
+        <svg viewBox="0 0 200 200">{p5RingLayers(compact ? 24 : undefined)}</svg>
       </div>
       {/* 星涟漪（三圈描边星接力扩散）/ 四角大圆环 / 集中线 —— demo 第一页的定场层，
           首版遗漏，用户报「动画完全不合格」（2026-10-16）。 */}
@@ -389,8 +407,8 @@ export function ConfidantRankUpCutInP5() {
       </div>
       <P5Hoops className="rk5-hoops" />
       <div className="rk5-collect" ref={collectRef} aria-hidden>
-        {Array.from({ length: 28 }, (_, i) => (
-          <i key={i} style={{ transform: `rotate(${(i * 360 / 28).toFixed(1)}deg)` }} />
+        {Array.from({ length: compact ? 14 : 28 }, (_, i) => (
+          <i key={i} style={{ transform: `rotate(${(i * 360 / (compact ? 14 : 28)).toFixed(1)}deg)` }} />
         ))}
       </div>
       <div className="rk5-slab rk5-slab-a" ref={slabARef} aria-hidden />
@@ -439,8 +457,8 @@ export function ConfidantRankUpCutInP5() {
             ))}
           </div>
           <div className="rk5-burst" ref={burstRef} aria-hidden>
-            {Array.from({ length: 28 }, (_, i) => (
-              <i key={i} style={{ transform: `rotate(${(i * 360 / 28).toFixed(1)}deg)`, ['--h' as string]: `${(64 + rand(96) + 48).toFixed(0)}px` }} />
+            {Array.from({ length: compact ? 14 : 28 }, (_, i) => (
+              <i key={i} style={{ transform: `rotate(${(i * 360 / (compact ? 14 : 28)).toFixed(1)}deg)`, ['--h' as string]: `${(64 + rand(96) + 48).toFixed(0)}px` }} />
             ))}
           </div>
         </div>

@@ -21,10 +21,11 @@
  * ⚠ jsdom 没有 `Element.animate`：本层所有动画入口都先做能力探测；单测只
  *   关心分流与文本，不关心帧。
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReducedMotion } from 'motion/react';
 import { useUiChannel } from '@/ui/useUiChannel';
+import { compactFx } from '@/components/cooperation/confidantRankUpShared';
 import p4CinemaCss from '@/styles/confidant-p4-cinema.css?inline';
 
 export type P4Pose = 'app' | 'stage' | 'page2' | 'page3';
@@ -269,10 +270,10 @@ export function ConfidantP4FxLayer() {
   const channel = useUiChannel();
   const reduce = !!useReducedMotion();
 
-  // 首帧就建好 shadow root：舞台组件与电影层同一次提交挂载时，
-  // 舞台 effect 可能先于「setRoot 的二次渲染」执行；若监视器 ref 此时还不存在，
-  // 开场转场会被直接 apply 掉（实测：牌留在 0,0、没有飞行）。
-  const [root] = useState<ShadowRoot | null>(() => ensureP4CinemaRoot());
+  // 只有黄频道才建 shadow root。其它主题在加载时不必解析这份 600+ 行的
+  // 电影层 CSS；黄频道切换时同步建好，仍保证舞台组件同一次提交就能拿到 root
+  // （否则开场转场会被直接 apply，牌会留在 0,0）。
+  const root = useMemo(() => channel === 'p4' ? ensureP4CinemaRoot() : null, [channel]);
   const [art, setArt] = useState<string | null>(monitorArtUrl);
   const [req, setReq] = useState<PoseRequest & { n: number }>({
     pose: currentPose,
@@ -451,10 +452,12 @@ export function ConfidantP4FxLayer() {
     (name: P4Pose, dir: 1 | -1, fromMon: PoseTarget, toMon: PoseTarget) => {
       const world = worldRef.current;
       if (!world) return;
+      const compact = compactFx();
       const to = WORLD[name] ?? WORLD.app;
       const from = worldStateRef.current ?? to;
       const flight = {
-        scale: 1.28,
+        // 手机端收小推拉幅度：整屏背景的缩放仍是每帧栅格化，1.28 的放大在高分屏上很贵。
+        scale: compact ? 1.12 : 1.28,
         x: from.x - dir * 9,
         y: from.y + (toMon.y < fromMon.y ? -4 : 4),
         rot: -dir * 2.6,
@@ -478,7 +481,7 @@ export function ConfidantP4FxLayer() {
       }).catch(() => {});
 
       const sun = world.querySelector('.sunrays');
-      if (sun) {
+      if (sun && !compact) {
         const prev = bgSpinRef.current;
         bgSpinRef.current += dir * 72;
         resetAnim(sun);
@@ -493,7 +496,7 @@ export function ConfidantP4FxLayer() {
       }
 
       const arcs = arcsRef.current;
-      if (arcs) {
+      if (arcs && !compact) {
         resetAnim(arcs);
         A(arcs, [
           { transform: 'scale(1) rotate(0deg)' },
@@ -520,6 +523,11 @@ export function ConfidantP4FxLayer() {
   const crtOut = useCallback((el: Element | null, c: P4Origin | null) => {
     if (!el || !canAnimate(el) || reduce) return;
     const p = c ?? centerOf(el);
+    if (compactFx()) {
+      // 手机端不用 clip-path + brightness/saturate：这两项都会让旧页每帧重新栅格化。
+      A(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: 'cubic-bezier(.65,0,.2,1)' });
+      return;
+    }
     A(el, [
       { clipPath: `circle(150% at ${p.x}px ${p.y}px)`, filter: 'brightness(1) saturate(1)' },
       { clipPath: `circle(0px at ${p.x}px ${p.y}px)`, filter: 'brightness(1.6) saturate(1.25)' },
@@ -575,7 +583,7 @@ export function ConfidantP4FxLayer() {
     sw.classList.add('on');
     resetTransition();
     if (wordRef.current) wordRef.current.textContent = word || 'ON AIR';
-    if (linesRef.current) {
+    if (linesRef.current && !compactFx()) {
       linesRef.current.style.setProperty('--cx', `${Math.round(c0.x)}px`);
       linesRef.current.style.setProperty('--cy', `${Math.round(c0.y)}px`);
     }

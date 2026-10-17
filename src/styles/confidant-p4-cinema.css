@@ -657,3 +657,14 @@ button{font-family:inherit}
   .confirm{align-self:flex-start}
   .stage-sky{width:min(26vw,280px);opacity:.8}
 }
+
+/* 手机端轻量档：去掉两层大面积重复渐变/网点与旋转太阳弧，
+   保留太阳盘、节目单卡片、监视器和转场主体；桌面构图不变。 */
+@media (max-width:640px){
+  .app-rays,.app-dots{display:none}
+  .sw-lines{display:none}
+  /* 大面积重复渐变/网点/装饰弧线只保留静态印象，不再逐帧参与合成。 */
+  .sunrays,.arcs,.halftone,.scanlines,.bloom,.bignum{display:none}
+  #hero .card3d{box-shadow:0 0 0 3px var(--ink),8px 9px 0 rgba(19,19,19,.18)}
+  #hero .cardback{box-shadow:0 0 0 3px var(--cream),8px 9px 0 rgba(19,19,19,.18)}
+}

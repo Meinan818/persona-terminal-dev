@@ -5,6 +5,7 @@ import { LongReading } from '@/types';
 import { TAROT_BY_ID, PERIOD_LABELS } from '@/constants/tarot';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { P3R, slantClip } from '@/components/p3r/kit';
+import { TarotCardSVG } from './TarotCardSVG';
 
 interface Props {
   onOpen: (reading: LongReading) => void;
@@ -105,7 +106,8 @@ function ReadingRow({
   state: 'active' | 'archived';
   p3: boolean;
 }) {
-  const firstCard = TAROT_BY_ID[reading.picked[0]?.cardId];
+  const firstDrawn = reading.picked[0];
+  const firstCard = TAROT_BY_ID[firstDrawn?.cardId];
   const created = new Date(reading.createdAt).toLocaleDateString('zh-CN');
   const periodLabel = PERIOD_LABELS[reading.period].label;
   const followCount = reading.followUps?.length ?? 0;
@@ -120,7 +122,11 @@ function ReadingRow({
         : 'relative rounded-2xl bg-black/5 dark:bg-white/5 p-4 flex items-center gap-3 cursor-pointer hover:bg-black/[0.08] dark:hover:bg-white/[0.08] transition-colors'}
       style={p3 ? { clipPath: slantClip(14), boxShadow: '0 8px 22px rgba(7,40,120,.10)' } : undefined}
     >
-      {p3 ? (
+      {firstCard ? (
+        <div className="h-16 w-10 flex-shrink-0 overflow-hidden rounded-md">
+          <TarotCardSVG card={firstCard} orientation={firstDrawn.orientation} width={40} staticCard showOrientationTag={false} />
+        </div>
+      ) : p3 ? (
         <div
           className="flex h-16 w-10 flex-shrink-0 items-center justify-center text-[13px] font-black"
           style={{
@@ -129,11 +135,11 @@ function ReadingRow({
             clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
           }}
         >
-          {firstCard ? firstCard.roman ?? firstCard.number : '?'}
+          ?
         </div>
       ) : (
         <div className="w-10 h-16 rounded-md bg-gradient-to-b from-[#1A1530] to-[#0F0A1F] border border-[#D4AF37]/40 flex items-center justify-center text-[#F6E5B5] text-xs flex-shrink-0">
-          {firstCard ? firstCard.roman ?? firstCard.number : '?'}
+          ?
         </div>
       )}
       <div className="flex-1 min-w-0">

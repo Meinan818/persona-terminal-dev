@@ -10,6 +10,7 @@ import { markLevelCelebrated } from '@/utils/confidantCelebration';
 import { ConfidantStarShiftModal } from '@/components/cooperation/ConfidantStarShiftModal';
 import { ConfidantCelebrateScreen } from '@/components/cooperation/ConfidantCelebrateScreen';
 import { ConfidantRankUpCutInP5 } from '@/components/cooperation/ConfidantRankUpCutInP5';
+import { ConfidantRankUpCutInP4 } from '@/components/cooperation/ConfidantRankUpCutInP4';
 import { EXP, OVER, rand, PREVIEW_CONFIDANT, rankUpVariantFor } from '@/components/cooperation/confidantRankUpShared';
 import '@/styles/confidant-rankup.css';
 
@@ -38,7 +39,8 @@ const DEV_STARSHIFT_DIRECT = import.meta.env.DEV && typeof window !== 'undefined
    留在本文件里就会形成两版互相 import 的循环。 */
 
 /**
- * 频道分流。红频道（p5）走红黑剪报版；其余一律走下面这个蓝版实现。
+ * 频道分流。红频道（p5）走红黑剪报版，黄频道（p4）走电视节目版；
+ * 其余一律走下面这个蓝版实现。
  *
  * 蓝版内部原有「非 p3 就不出新演出」的判定（出队跳过 + 时间线 return + 渲染 return null）**原样保留**：
  * p5 时根本不会渲染到它，而 p4 / neutral 仍然走它，于是「本期不出新演出」的既有行为一字未改。
@@ -51,6 +53,7 @@ export function ConfidantRankUpCutIn() {
   //   表现为探针等 .rk5-root 永远等不到）。入队属于「队列」职责，与皮肤无关。
   useRankUpPreviewEnqueue();
   if (variant === 'p5') return <ConfidantRankUpCutInP5 />;
+  if (variant === 'p4') return <ConfidantRankUpCutInP4 />;
   return <RankUpCutInP3 />;
 }
 
@@ -68,8 +71,11 @@ function useRankUpPreviewEnqueue() {
     previewFiredRef.current = true;
     const target = confidants.find(c => c.id === raw) ?? confidants.find(c => !c.archivedAt);
     // 一个同伴都没有也放：用占位同伴，方便在全新档案 / 无头浏览器上核对演出本身
-    const fromLevel = target ? target.intimacy : PREVIEW_CONFIDANT.intimacy;
-    const newLevel = Math.min(MAX_INTIMACY, Math.max(1, fromLevel + 1));
+    // 预览的“升级”以**当前等级**为终点：这样随后挂载的恭喜页
+    // （读 store 里的 confidant.intimacy）与演出页的 RANK 对齐；
+    // 占位同伴因此从 4 → 5，而不是 5 → 6（后者会让恭喜页仍显示 5）。
+    const previewNewLevel = target ? Math.max(1, target.intimacy) : PREVIEW_CONFIDANT.intimacy;
+    const newLevel = Math.min(MAX_INTIMACY, previewNewLevel);
     enqueueConfidantRankUp({
       confidantId: target?.id ?? PREVIEW_CONFIDANT.id,
       oldLevel: Math.max(0, newLevel - 1),

@@ -10,7 +10,7 @@ import type { Confidant } from '@/types';
  * 本项目 vitest 只收 `src/**\/*.test.ts`（不含 .tsx），所以这里用 createElement 而非 JSX。
  *
  * 两条断言：
- *   ① 分流：p5 频道渲染出红版（.cl5-root）、p4 渲染出原版（.cl-root）——直接驱动真组件，
+ *   ① 分流：p5 渲染红版（.cl5-root）、p4 渲染 P4 版（shadow root 内 .page2.on）——
  *      而不是只测 confidantLiveryFor 那个纯函数（纯函数单测在 confidantLivery.test.ts）。
  *   ② 信息一字不减：把两版渲染出来的文本各自归一化后比对 —— 这是「换皮不丢信息」的
  *      程序化证据。⚠ 只覆盖静态文本；外观/动画未在此验证（需人工目视）。
@@ -55,7 +55,8 @@ const renderIn = (channel: string, confidant: Confidant) => {
       confidant, onClose: () => {}, onUseStarShift: () => {},
     }));
   });
-  return document.body.textContent ?? '';
+  const p4Host = document.querySelector('#p4-cinema-host') as HTMLDivElement | null;
+  return `${document.body.textContent ?? ''} ${p4Host?.shadowRoot?.textContent ?? ''}`;
 };
 
 const teardown = () => {
@@ -83,11 +84,32 @@ describe('恭喜整页 · 频道分流', () => {
     expect(document.querySelector('.cl5-root')).toBeFalsy();
   });
 
-  it('p4 / neutral 也渲染原版，不是空白', () => {
-    for (const ch of ['p4', 'neutral']) {
-      teardown();
-      renderIn(ch, makeConfidant());
-      expect(document.querySelector('.cl-root'), `${ch} 应渲染原版`).toBeTruthy();
+  it('p4 渲染 P4 电视节目版；neutral 仍渲染原版', () => {
+    renderIn('p4', makeConfidant());
+    const p4Host = document.querySelector('#p4-cinema-host') as HTMLDivElement | null;
+    expect(p4Host?.shadowRoot?.querySelector('.page2.on')).toBeTruthy();
+    expect(document.querySelector('.cl-root')).toBeFalsy();
+    teardown();
+
+    renderIn('neutral', makeConfidant());
+    expect(document.querySelector('.cl-root')).toBeTruthy();
+  });
+});
+
+describe('恭喜整页 · P4 关键信息', () => {
+  it('P4 版保留等级 / 称谓 / 解锁能力 / 星移机会 / 两个按钮', () => {
+    const text = norm(renderIn('p4', makeConfidant()));
+    for (const t of [
+      'CALL SHEET',
+      '亲密度升级',
+      '《太阳》· 挚友',
+      '亲密度到达 RANK 5 · 本期节目通关',
+      '太阳的指引',
+      '获得一次星移机会（余 1）',
+      '稍后再说',
+      '✦ 使用星移',
+    ]) {
+      expect(text, `P4 版缺: ${t}`).toContain(t);
     }
   });
 });

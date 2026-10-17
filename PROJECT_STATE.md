@@ -4,12 +4,20 @@
 
 ## 1. 当前全貌：先看这一节
 
-- **【当前现场 · 2026-10-17 18:22 · P4 黄色升级 demo 快落版（用户已验收）】** 上一会话因上游 `413 Payload Too Large` 中断；本窗口已在原文件上继续，未改 `src/`，未 Push。
+- **【当前现场 · 2026-10-17 18:55 · P4 黄色升级链已落 src（待用户验收）】** 用户说“开始吧”后，已把验收过的黄色 demo 接进正式页面；未 Push。
+  - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `8e88e87`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，当前本地领先 **37 条**（本次 feat 提交后为 **38 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留；本轮只改 `src/` 的 P4 链路与测试，不动 P3/P5 内部实现。
+  - **落点**：新增 `src/components/cooperation/confidantP4Cinema.tsx`（Shadow DOM 电影层：世界背景 / 监视器 / CRT 转场）、`ConfidantRankUpCutInP4.tsx`、`ConfidantCelebrateScreenP4.tsx`、`ConfidantStarShiftModalP4.tsx`、`src/styles/confidant-p4-cinema.css`；`ConfidantRankUpCutIn.tsx` / `ConfidantCelebrateScreen.tsx` / `ConfidantStarShiftModal.tsx` 按 p4 分流；`confidantLivery.ts` / `confidantRankUpShared.ts` 判据改 p4；`App.tsx` 常驻挂 `ConfidantP4FxLayer`。
+  - **为什么 Shadow DOM**：demo 是整页独立 HTML，CSS 全是 `#world` / `.stage` / `.page2` / `.sf-*` 全局选择器；放进 shadow root 可原样复用并隔离 P3/P5 与 App 全局样式。三屏通过 portal 进同一个 root，监视器/背景因此能跨屏存活。
+  - **验证（本轮实测）**：`npm run typecheck` exit 0；`npm test` **44 文件 / 281 测试全绿**；`npx vite build --outDir .rivet/scratch/p4-build` exit 0；P4 App 探针 `1440x900` 与 `390x844` → 演出 / 恭喜 / 星移 / 直达预览 / 关闭全通，**0 JS error、0 横向溢出**，监视器落到卡位，手机确认键与两键均完整可见；P5 stage probe `1440x900` → 0 error、5 星亮、`confirmOn`。截图在 `.rivet/scratch/p4-app-shots/`。
+  - **未验证/边界**：只跑了 DEV 预览 `?rankup=1` 与 `?celebrate=1` / `?starshift=1`，**没有用真实升级事件走一遍完整链路**；真机未测；P4 正式页面的观感尚未得到用户确认。`?rankup` 预览的等级终点已改为当前等级（默认 4→5），让演出与恭喜页数字一致；真实升级逻辑未改。
+  - **下一步**：用户切黄色主题后打开 `http://localhost:5184/?theme=yellow&rankup=1`（或正常升一级）看正式页面；认可后再谈 Push / 真机。Push 38 条待批准。
+
+- **【上一节点 · 2026-10-17 18:22 · P4 黄色升级 demo 快落版（用户已验收；已落 src）】** 当前正式页面已接入，见上一条；本条保留 demo 验收与回退记录。
   - **现场**：分支 `feat/coop-cinematic`，交接前 HEAD `d773e9a`；`origin/feat/coop-cinematic` 停在 `1ac04ef`，当前本地领先 **36 条**（本次文档提交后为 **37 条**，Push 仍须用户明确批准）。`M ios/App/Podfile`、`.cache/`、`.rivet-config.json` 与既有 `outputs/` 产物是既有/非本会话遗留；本轮只改 `outputs/bond-rankup-demo-p4/index.html` 与 `.rivet/scratch` 探针，不动 `src/`。
   - **本轮决定**：用户先反馈“牌砸的有点快”，试用慢版后又明确说“还是有点慢……还是之前的有冲击力”，要求回退。已用 `_bak/index-pre-slow-drop-20261017-180030.html` 恢复 940ms 快落版（白闪/冲击环在 400ms、`rankUp` 220ms、舞台 920ms 后隐藏），仅额外保留 page2/page3 隐藏滚动条的两行 CSS；当前文件与备份的 diff 只有这两行。慢版留底在 `_bak/index-pre-revert-20261017-181716.html`。
   - **验证（回退后实测）**：`p4-demo-probe.mjs` 四视口 `1440x900 / 1280x700 / 390x844 / 360x740` → 0 JS error、0 横向溢出、四屏可进入、确认键出现；`p4-relay-probe.mjs` `1440x900 / 390x844` → 0 error、stage 已隐藏、page2/page3 可进入。回退版 GIF 在 `_shots/relay/stage-drop-1440-reverted.gif`。
   - **用户已验收（2026-10-17 18:21）**：用户对回退后的快落版表示“OK我很满意”；此前对慢版的否定已处理。此验收只覆盖已看过的黄色 P4 demo，不自动扩展到其它主题、真机或未演示内容。
-  - **下一步**：当前 demo 已验收但仍留在未跟踪的 `outputs/`；若要把这版落进黄色主题正式页面，需用户明确发起并单独改 `src/`。Push 37 条仍须用户明确批准。
+  - **当时的下一步（已完成）**：把这版落进黄色主题正式页面，已于 18:55 完成，见上一条；Push 仍须用户明确批准。
   - **上一轮异常中断原因（留档）**：上一会话最后请求被 `api.deepseek.com/responses` 以 `413 Payload Too Large` 拒绝；累计输入约 740 万 token，单次约 24 万 token（含多张截图），不是文件或代码崩溃。新窗口应少贴大图、用探针报告代替一次性塞满上下文。
 
 - **【历史交接 · 2026-10-17 黄色 COOP 升级 demo（已被上方 18:22 当前现场取代；保留现场与反馈）】** 黄色主题 demo 的开发**暂停**；这是上一轮交接点，再看下面的红版/换皮历史。

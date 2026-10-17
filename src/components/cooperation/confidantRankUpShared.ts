@@ -17,9 +17,10 @@ export const SLAM = 'cubic-bezier(.15,.95,.1,1)';
 /**
  * 本次升级演出在这个频道下该走哪一版。
  *
- *   'p5' → 红黑剪报版（本文件所在目录的 ConfidantRankUpCutInP5）
+ *   'p5' → 红黑剪报版（ConfidantRankUpCutInP5）
+ *   'p4' → 黄色电视节目版（ConfidantRankUpCutInP4）
  *   'p3' → 深蓝水下版（原有实现，含粉主题换色皮）
- *   null → 本期不出新演出（黄频道 p4 与中性 neutral 维持既有行为）
+ *   null → 本期不出新演出（中性 neutral 维持既有行为）
  *
  * 抽成纯函数是为了能单测——本项目 vitest 只收 `src/**\/*.test.ts`、且惯例是让这层判据
  * 脱离 React / store 独立可测（见 backSkin.ts 的同款理由）。组件里的包装只做一次 `if`。
@@ -27,8 +28,8 @@ export const SLAM = 'cubic-bezier(.15,.95,.1,1)';
  * ⚠ 修复来历：此前演出只认 `channel === 'p3'`，红主题（red→p5）被判为「非 p3」直接跳过——
  * 红主题用户升羁绊时**看不到演出**，只剩事后打开档案的补弹兜底。这不是皮不对，是功能缺失。
  */
-export const rankUpVariantFor = (channel: UIChannel): 'p5' | 'p3' | null =>
-  channel === 'p5' ? 'p5' : channel === 'p3' ? 'p3' : null;
+export const rankUpVariantFor = (channel: UIChannel): 'p5' | 'p4' | 'p3' | null =>
+  channel === 'p5' ? 'p5' : channel === 'p4' ? 'p4' : channel === 'p3' ? 'p3' : null;
 
 /** 以 0 为中心的对称随机抖动 */
 export const rand = (n: number) => (Math.random() - 0.5) * n;

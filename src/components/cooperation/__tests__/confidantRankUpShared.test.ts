@@ -21,13 +21,13 @@ describe('羁绊升级演出 · 频道分流', () => {
     expect(rankUpVariantFor('p3')).toBe('p3');
   });
 
-  it('黄频道（p4）与中性（neutral）维持「本期不出新演出」的既有行为', () => {
-    expect(rankUpVariantFor('p4')).toBeNull();
+  it('黄频道（p4）走黄色电视节目版；中性（neutral）仍不出新演出', () => {
+    expect(rankUpVariantFor('p4')).toBe('p4');
     expect(rankUpVariantFor('neutral')).toBeNull();
   });
 
-  it('四个频道里只有 p3 与 p5 有演出，其余一个都不新增', () => {
+  it('四个频道里 p3 / p4 / p5 有演出，neutral 不出', () => {
     const channels = ['p3', 'p4', 'p5', 'neutral'] as const;
-    expect(channels.filter(c => rankUpVariantFor(c) !== null)).toEqual(['p3', 'p5']);
+    expect(channels.filter(c => rankUpVariantFor(c) !== null)).toEqual(['p3', 'p4', 'p5']);
   });
 });

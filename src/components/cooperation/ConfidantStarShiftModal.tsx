@@ -4,6 +4,7 @@ import { TAROT_BY_ID } from '@/constants/tarot';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { confidantLiveryFor } from '@/components/cooperation/confidantLivery';
 import { ConfidantStarShiftModalP5 } from '@/components/cooperation/ConfidantStarShiftModalP5';
+import { ConfidantStarShiftModalP4 } from '@/components/cooperation/ConfidantStarShiftModalP4';
 import { useStarShiftFlow } from '@/components/cooperation/useStarShiftFlow';
 import '@/styles/confidant-starshift.css';
 
@@ -25,11 +26,14 @@ interface Props {
  * 颜色全走 --p3r-*，蓝 / 粉 / 黄 / 夜间自动跟随。
  *
  * 频道分流（Wave 3）：红频道（p5）走红黑剪报版 ConfidantStarShiftModalP5；
- * 其余频道走下面这个 P3R 版实现。两版共用同一份业务逻辑（useStarShiftFlow），
+ * 黄频道（p4）走 P4 电视剪辑版；其余频道走下面这个 P3R 版实现。
+ * 各版共用同一份业务逻辑（useStarShiftFlow），
  * 所以行为天然一致，切换只影响外观。
  */
 export function ConfidantStarShiftModal(props: Props) {
-  if (confidantLiveryFor(useUiChannel()) === 'p5') return <ConfidantStarShiftModalP5 {...props} />;
+  const livery = confidantLiveryFor(useUiChannel());
+  if (livery === 'p5') return <ConfidantStarShiftModalP5 {...props} />;
+  if (livery === 'p4') return <ConfidantStarShiftModalP4 {...props} />;
   return <StarShiftP3 {...props} />;
 }
 

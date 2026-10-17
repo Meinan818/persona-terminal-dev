@@ -10,7 +10,8 @@ import type { Confidant } from '@/types';
  * 本项目 vitest 只收 `src/**\/*.test.ts`（不含 .tsx），所以这里用 createElement 而非 JSX。
  *
  * 覆盖面说明（诚实标注）：
- *   ① 分流：p5 渲染红版（.sf5-sheet）、p3 渲染原版（.sf-sheet）、p4 走原版 —— 实测。
+ *   ① 分流：p5 渲染红版（.sf5-sheet）、p3 渲染原版（.sf-sheet）、
+ *      p4 渲染 P4 版（shadow root 内 .page3.on）—— 实测。
  *   ② 输入屏（默认屏）信息一字不减：两版可见文本逐字比对 —— 实测。
  *   ③ thinking / preview / done / error 四屏需要驱动 hook 状态（依赖 AI 调用与 mock），
  *      本测试**未覆盖**；那四屏的文案对齐靠人工比对源码（见交付报告）。
@@ -50,7 +51,8 @@ const renderIn = (channel: string, confidant: Confidant) => {
       isOpen: true, confidant, onClose: () => {},
     }));
   });
-  return document.body.textContent ?? '';
+  const p4Host = document.querySelector('#p4-cinema-host') as HTMLDivElement | null;
+  return `${document.body.textContent ?? ''} ${p4Host?.shadowRoot?.textContent ?? ''}`;
 };
 
 const teardown = () => {
@@ -77,12 +79,33 @@ describe('星移弹窗 · 频道分流', () => {
     expect(document.querySelector('.sf5-sheet')).toBeFalsy();
   });
 
-  it('p4 / neutral 也渲染原版，不是空白', () => {
-    for (const ch of ['p4', 'neutral']) {
-      teardown();
-      renderIn(ch, makeConfidant());
-      expect(document.querySelector('.sf-sheet'), `${ch} 应渲染原版`).toBeTruthy();
+  it('p4 渲染 P4 电视剪辑版；neutral 仍渲染原版', () => {
+    renderIn('p4', makeConfidant());
+    const p4Host = document.querySelector('#p4-cinema-host') as HTMLDivElement | null;
+    expect(p4Host?.shadowRoot?.querySelector('.page3.on .sf-wrap')).toBeTruthy();
+    expect(document.querySelector('.sf-sheet')).toBeFalsy();
+    teardown();
+
+    renderIn('neutral', makeConfidant());
+    expect(document.querySelector('.sf-sheet')).toBeTruthy();
+  });
+});
+
+describe('星移弹窗 · P4 输入屏', () => {
+  it('P4 版保留页头 / 标签 / 占位 / 计数 / 按钮，且上限 300', () => {
+    const text = norm(renderIn('p4', makeConfidant()));
+    for (const t of [
+      '阿萨 · Lv.2',
+      '《死神》· 星移剪辑 · 余 1',
+      '你觉得你们的关系发生了什么变化？（可不填）',
+      '0 / 300',
+      '✦ 重剪本期（消耗 1 次）',
+    ]) {
+      expect(text, `P4 版缺: ${t}`).toContain(t);
     }
+    const p4Host = document.querySelector('#p4-cinema-host') as HTMLDivElement | null;
+    const area = p4Host?.shadowRoot?.querySelector('.sf-input') as HTMLTextAreaElement | null;
+    expect(area?.maxLength).toBe(300);
   });
 });
 

@@ -1,5 +1,6 @@
 .journey-strip{display:flex;flex-wrap:wrap;gap:14px 30px;align-items:baseline;padding:16px 0;margin:0 0 22px;border-bottom:1px solid #b5efff88;color:#dcf5ff;font-size:13px;font-variant-numeric:tabular-nums}
 .journey-strip b{color:#fff;font-size:20px;margin-left:8px}.journey-strip>span:first-child{margin-right:auto}
+.journey-strip .journey-alert{color:#ff7fb3;font:italic 800 11px var(--sh-cd);letter-spacing:.16em}
 .journey-map .single-choice{grid-template-columns:1fr}.journey-map .route-node:disabled{opacity:.42;cursor:not-allowed}
 .tower-scene h2{font-family:'Noto Sans SC Black',Velvet,sans-serif;color:#fff;font-size:32px;line-height:1.4;margin-bottom:18px;text-wrap:balance}
 .tower-scene .scene-emblem>svg{color:#b5ffff;width:100px;height:100px}.tower-scene .echo-preview{display:grid;gap:12px;padding:20px 0;border-block:1px solid #a0e5ff88;color:#d7f3ff;font-size:14px;font-variant-numeric:tabular-nums}.echo-preview b{color:#ffe65a}

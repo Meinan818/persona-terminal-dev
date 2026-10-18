@@ -208,7 +208,7 @@ export function createEncounterDirector(api) {
   document.addEventListener('visibilitychange',()=>{if(qte)qte.last=performance.now();});
   return {
     get active(){return page??towerFlow.page;},get transforming(){return motion.transforming;},get bossPhase(){return boss?bossPhase:0;},screen,victory,open,close,act,effect,
-    towerRoute:()=>towerFlow.route(),towerPrep:()=>towerFlow.prep(),towerAct:action=>towerFlow.act(action),get towerActive(){return towerFlow.active;},get towerSnapshot(){return towerFlow.snapshot;},
+    towerRoute:()=>towerFlow.route(),towerPrep:()=>towerFlow.prep(),towerAct:action=>towerFlow.act(action),towerDebugJump:(floor,selected)=>towerFlow.debugJump?.(floor,selected),get towerActive(){return towerFlow.active;},get towerSnapshot(){return towerFlow.snapshot;},
     towerPreview:page=>towerFlow.preview(page),
     towerReturn(won,phase,receipt){if(!rehearsal)towerFlow.battleReturn(won,phase??bossPhase,receipt);},towerHide:()=>towerFlow.hide(),
     impact:(kind,options)=>motion.play(kind,options),

@@ -1196,6 +1196,9 @@ const flows=createEncounterDirector({
   },
 });
 const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom,persistP5State});
+if(new URLSearchParams(location.search).get('p5r-debug')==='1'){
+  window.__p5rDebug={jump:(floor,selected)=>flows.towerDebugJump(floor,selected)};
+}
 function buttonFeedback(control){
   if(reduced.matches)return;
   const r=control.getBoundingClientRect();

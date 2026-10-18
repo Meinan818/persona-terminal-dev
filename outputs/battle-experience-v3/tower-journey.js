@@ -15,7 +15,7 @@ const P5_ELEMENT_LABELS = {
   curse: '咒怨',
   almighty: '万能',
 };
-function encounterFor(floor, kind) {
+export function encounterFor(floor, kind) {
   const weakness = kind === 'boss'
     ? 'bless'
     : P5_WEAKNESSES[(floor - 4) % P5_WEAKNESSES.length];
@@ -39,6 +39,11 @@ export const towerNodes = {
   chest:{title:'月匣',kind:'月匣',icon:'box',hp:'—',weak:'—',note:'揭晓后再领取，不会重复发放同一份收获。',action:'查看月匣'},
   event:{title:'月光积水',kind:'异变',icon:'eye',hp:'—',weak:'—',note:'凝视水面，或保留气力绕开。选择后显示结果。',action:'走近看看'},
   quiz:{title:'镜之自问',kind:'镜问',icon:'eye',hp:'—',weak:'—',note:'从白昼的回声里，认出那份力量。',action:'回答镜中的自己'},
+  elite:{title:'守层的强影',kind:'强敌',icon:'sword',hp:'按遭遇生成',weak:'进入后侦察',note:'它比普通影子更吵，警戒会因此上升。',action:'迎战强敌'},
+  safe:{title:'安全屋',kind:'安全屋',icon:'shield',hp:'—',weak:'—',note:'只在这一层休息一次，压回警戒。',action:'进入安全屋'},
+  calling:{title:'预告信',kind:'预告信',icon:'star',hp:'—',weak:'—',note:'送出之后，塔顶的执念才会现身。',action:'写下预告信'},
+  trap:{title:'暗处的机关',kind:'机关',icon:'eye',hp:'—',weak:'—',note:'拆解会压低警戒，硬闯会惊动更多影子。',action:'处理机关'},
+  key:{title:'一把旧钥匙',kind:'钥匙',icon:'box',hp:'—',weak:'—',note:'塔内的锁，需要它。',action:'收下钥匙'},
   boss:{title:'回声的执念',kind:'心魔',icon:'mask',hp:'双形态',weak:'进入后侦察',note:'第一形态击破后，在同一个战斗舞台直接变身。',action:'迎战心魔'},
 };
 const floors={4:['echo','mob','chest'],5:['event','quiz','mob'],6:['echo','chest','mob'],7:['mob','event','chest'],8:['quiz','echo','mob'],9:['echo','mob','chest'],10:['boss']};

@@ -3,7 +3,8 @@ import {ITEM_DEFS} from './economy-rules.js';
 import {fuse,skillName,ARCANA_LABELS,itemize,lockdown,register,sacrifice,withdraw,specialFuse,specialRecipes,materialEntries} from './velvet-rules.js';
 import {getPersona} from './p5r-compendium.js';
 import {buildBattlePersona,setPersonaOverride} from './p5-combat-rules.js';
-import {formatCountdown,formatShadowTimeRange,isShadowTime,nextShadowTime,shadowTimeStatus} from './shadow-time.js';
+import {formatCountdown,formatShadowTimeRange,nextShadowTime,shadowTimeStatus} from './shadow-time.js';
+import {awakeningSummary,canEnterTower} from './awakening-state.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -275,9 +276,15 @@ export function createTowerFlow(api){
   }
   function prepPage(){
     const shadow=shadowState(),roster=rosterIds(),materialCount=materialEntries(state.materials).reduce((sum,item)=>sum+item.qty,0);
-    const nextText=shadow.active?'影时间正在流淌':shadow.nextStart?`下次开启还有 ${formatCountdown(shadow.nextStart.getTime()-Date.now())}`:'等待影时间';
+    const awakened=Boolean(state.personaCreated);
+    const canEnter=canEnterTower({shadowActive:shadow.active,personaCreated:awakened});
+    const gateTitle=!awakened?'面具还没有回应':shadow.active?'塔门已开启':'影时间尚未降临';
+    const gateCopy=!awakened?'影时间不替你做决定。先完成觉醒，塔门才会打开。':shadow.active?'进入后不能购物或融合；安全屋只负责休息和返回。':'据点随时可以整理。等到影时间降临，塔门才会回应。';
+    const nextText=!awakened?'先完成觉醒':shadow.active?'影时间正在流淌':shadow.nextStart?`下次开启还有 ${formatCountdown(shadow.nextStart.getTime()-Date.now())}`:'等待影时间';
+    const contract=awakeningSummary(state.personaAwakening);
     const card=(title,note,tag,action)=>`<article class="night-base-card"><span>${tag}</span><h3>${title}</h3><p>${note}</p><button type="button" data-tower="${action}">进入</button></article>`;
-    return frame('影时间据点。','DARK HOUR BASE',`<div class="night-base"><section class="night-base-head"><span class="slash-label">DARK HOUR / PREPARATION</span><h2>${shadow.active?'影时间，正在流淌。':'影时间，还没有降临。'}</h2><p>${shadow.active?'商店和天鹅绒房间都在塔外。整理好队伍，再从塔门进入。':'准备可以随时进行；只有塔门会在影时间开启。'}</p><div class="night-base-window"><span>${esc(formatShadowTimeRange())}</span><b>${nextText}</b></div></section><div class="night-base-stats"><div><span>持有</span><b>¥${money().toLocaleString()}</b></div><div><span>面具</span><b>${roster.length}</b><small>张</small></div><div><span>战利品</span><b>${state.battleLoot?.length??0}</b><small>件</small></div><div><span>素材</span><b>${materialCount}</b><small>件</small></div></div><section class="night-base-grid">${card('天鹅绒房间','融合、处刑、电椅、禁闭、图鉴与素材。','VELVET ROOM','prep-velvet')}${card('月见坂补给','战斗道具、复活针与 SP 饮料。','SUPPLY','prep-shop')}${card('队伍与 Persona','查看面具名录，调整契约与同行编成。','PERSONA','prep-persona')}</section><div class="night-base-gate ${shadow.active?'is-open':'is-closed'}"><div><span>TOWER GATE</span><h3>${shadow.active?'塔门已开启':'影时间尚未降临'}</h3><p>${shadow.active?'进入后就不能在塔内购物或融合；安全屋只负责休息和返回。':'据点随时可以整理。等到影时间降临，塔门才会回应。'}</p></div>${btn(shadow.active?'踏上高塔':'等待影时间','enter-tower','',!shadow.active)}</div>${prepMessage?`<p class="shop-message">${esc(prepMessage)}</p>`:''}<div class="night-base-foot">${btn('离开据点，回到战场','home')}</div></div>`);
+    const awakenBanner=awakened?'':`<div class="night-base-awaken"><div><span>FIRST CONTRACT</span><h3>还没有面具回应你。</h3><p>四道问题，一段自述。等你说完，它才会开口。</p></div><button type="button" data-tower="prep-awaken">回应它</button></div>`;
+    return frame('影时间据点。','DARK HOUR BASE',`<div class="night-base"><section class="night-base-head"><span class="slash-label">DARK HOUR / PREPARATION</span><h2>${shadow.active?'影时间，正在流淌。':'影时间，还没有降临。'}</h2><p>${shadow.active?'商店和天鹅绒房间都在塔外。整理好队伍，再从塔门进入。':'准备可以随时进行；只有塔门会在影时间开启。'}</p><div class="night-base-window"><span>${esc(formatShadowTimeRange())}</span><b>${nextText}</b></div></section><div class="night-base-stats"><div><span>持有</span><b>¥${money().toLocaleString()}</b></div><div><span>面具</span><b>${roster.length}</b><small>张</small></div><div><span>契约</span><b>${esc(contract)}</b></div><div><span>素材</span><b>${materialCount}</b><small>件</small></div></div>${awakenBanner}<section class="night-base-grid">${card('天鹅绒房间','融合、处刑、电椅、禁闭、图鉴与素材。','VELVET ROOM','prep-velvet')}${card('月见坂补给','战斗道具、复活针与 SP 饮料。','SUPPLY','prep-shop')}${card('队伍与 Persona','查看面具名录，调整契约与同行编成。','PERSONA','prep-persona')}</section><div class="night-base-gate ${canEnter?'is-open':'is-closed'}"><div><span>TOWER GATE</span><h3>${gateTitle}</h3><p>${gateCopy}</p></div>${btn(canEnter?'踏上高塔':!awakened?'等待觉醒':'等待影时间','enter-tower','',!canEnter)}</div>${prepMessage?`<p class="shop-message">${esc(prepMessage)}</p>`:''}<div class="night-base-foot">${btn('离开据点，回到战场','home')}</div></div>`);
   }
   function interludePage(){
     const reward=interlude?.reward;
@@ -359,7 +366,9 @@ export function createTowerFlow(api){
     if(action==='prep-shop'){shopReturn='prep';shopMessage='';show('shop');return;}
     if(action==='prep-velvet'){velvetReturn='prep';fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';velvetService='fusion';velvetMessage='';show('velvet');return;}
     if(action==='prep-persona'){stop();page=null;api.goRoom('persona');return;}
+    if(action==='prep-awaken'){api.openAwakening?.();return;}
     if(action==='enter-tower'){
+      if(!state.personaCreated){prepMessage='先让面具回应你。';show('prep');return;}
       const shadow=shadowState();
       if(!shadow.active){prepMessage=`影时间尚未降临。下次开启：${shadow.nextStart?shadow.nextStart.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'等待下次影时间'}。`;show('prep');return;}
       if(j.ended)model.start();

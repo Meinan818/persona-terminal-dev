@@ -41,6 +41,8 @@ const state = {
   compendium: { entries: [] },
   materials: {},
   personaOverrides: {},
+  personaCreated: false,
+  personaAwakening: null,
 };
 const scrolls = new Map();
 const masks = [
@@ -51,6 +53,14 @@ const masks = [
   { id:'succubus', attr:'魅力', name:'女梦魔', passive:'月 · 睡意与暴击', skills:[['永眠',3,'让目标陷入睡眠'],['反叛',5,'提升同伴暴击率']] },
   { id:'izanagi', attr:'借来的', name:'伊邪那岐', passive:'来自同伴 · 借来的雷霆', skills:[['十文字斩',20,'物理重击 · 单体两次'],['吉欧加',8,'电击伤害 · 单体']] },
 ];
+const SUMMON_LINES = {
+  arsene: '吾即是汝。影子，退后。',
+  pixie: '别怕。这次由我来。',
+  'jack-o-lantern': '借个火？不，借你的恐惧。',
+  silky: '睡吧。醒来时，夜已经过去了。',
+  succubus: '看着我。你只需要看着我。',
+  izanagi: '借来的雷，也要还。',
+};
 const attributeMarks = [['eye','KNOWLEDGE'],['sword','COURAGE'],['shield','DEXTERITY'],['star','KINDNESS'],['mask','CHARM'],['mask','BORROWED']];
 const ARCANA_LABELS = {
   fool:'愚者', magician:'魔术师', priestess:'女教皇', empress:'女皇', emperor:'皇帝',
@@ -110,6 +120,8 @@ function persistP5State() {
       compendium: state.compendium,
       materials: state.materials,
       personaOverrides: state.personaOverrides,
+      personaCreated: Boolean(state.personaCreated),
+      personaAwakening: state.personaAwakening,
     }));
   } catch {}
 }
@@ -133,6 +145,10 @@ function loadP5State() {
       state.personaOverrides = { ...saved.personaOverrides };
       for (const [id, override] of Object.entries(state.personaOverrides)) setPersonaOverride(id, override);
     }
+    state.personaCreated = Boolean(saved.personaCreated);
+    state.personaAwakening = saved.personaAwakening && typeof saved.personaAwakening === 'object'
+      ? { ...saved.personaAwakening }
+      : null;
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;
     }
@@ -1085,6 +1101,10 @@ function execute(options = {}) {
     notify(result.reason);
     return;
   }
+  if (action.type === 'switchMask') {
+    const name = masks.find(mask => mask.id === action.id)?.name ?? action.id;
+    state.battle.log.push(`${name}「${SUMMON_LINES[action.id] ?? '面具，回应。'}」`);
+  }
   const lines = state.battle.log.slice(logStart);
   const run = ++actionRun;
   const playback = actionPlayback(action, lines, syncBattleUi());
@@ -1164,6 +1184,7 @@ function execute(options = {}) {
 function goRoom(room){clearSignatureFx();actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.battle=null;state.battleView=null;state.battleActionKey='';state.battleReceipt=null;state.battleWon=false;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
 const flows=createEncounterDirector({
   state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle,persistP5State,
+  openAwakening:()=>preparation.act('create'),
   addPersonaToRoster: ensurePersonaInRoster,
   removePersonaFromRoster,
   onBossMorph(phase){
@@ -1174,7 +1195,7 @@ const flows=createEncounterDirector({
     syncBattleUi();
   },
 });
-const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom});
+const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom,persistP5State});
 function buttonFeedback(control){
   if(reduced.matches)return;
   const r=control.getBoundingClientRect();

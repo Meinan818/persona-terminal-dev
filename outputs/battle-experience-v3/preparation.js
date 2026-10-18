@@ -1,5 +1,6 @@
 import {escapeHtml as esc} from './encounters.js';
 import {requestAwakening,installPreviewAwakeningBridge} from './persona-ai.js';
+import {buildAwakeningRecord} from './awakening-state.js';
 
 export function createPreparationDirector(api) {
   const {state,masks,icon,openSheet,render,notify,arsenalItems} = api;
@@ -10,17 +11,17 @@ export function createPreparationDirector(api) {
   const settings={enabled:true,start:'20:00',end:'07:00',hp:40,scale:100};
   const growthState=masks.map(()=>({level:3,points:2,skillRanks:[1,1],selectedSkill:0}));
   const questions=[
-    ['对于人生，你认为：',['人生是一场修行，每次经历都是成长的磨砺','人生是一场探险，未知才是最大的魅力','人生是一份责任，对自己和他人都要负责','人生是一段旅程，重要的是沿途的风景和同行的人','人生是一面镜子，你投入什么就得到什么']],
-    ['在人群中，你通常：',['是推动事情发展的核心，引领方向','默默观察，在关键时刻给出精准建议','连接不同的人，调节气氛，让大家融为一体','专注于自己的事，保持独立与清醒','寻找志同道合的人，追求深度连接']],
-    ['面对过去，你倾向于：',['从失败和挫折中汲取力量，化为前进的动力','珍视美好的记忆，让它们温暖当下的每一刻','坦然接受，好的坏的都造就了现在的自己','有些遗憾，但也无怨无悔，坚定向前','希望改变某些事，因此更加珍惜现在的每个选择']],
-    ['对于未来，你持有：',['坚定的信念，目标清晰，步步为营','开放的心态，享受未知带来的一切可能','期待与担忧并存，但相信自己能够面对','专注当下，相信未来自然会到来','理想主义的憧憬，相信世界可以因自己而变得更好']],
+    ['影时间第一次叫你的名字。',['回答它。','推开那扇门。','先看清周围。','等别人先走。','记住这个声音。']],
+    ['有人把一张面具递给你。',['先问它从哪里来。','直接戴上。','翻看面具背面。','递给身边的人。','把它收进怀里。']],
+    ['你被推到人群中央。',['让所有人安静。','找一个能看见出口的位置。','先开口。','把话题交给别人。','观察谁在说谎。']],
+    ['面具问你：你要用我做什么？',['切开挡路的东西。','保护一个人。','让所有人记住我。','走到没人去过的地方。','把答案留到以后。']],
   ];
   const sourceLabels=['太初的光芒','文明的墨痕','蒸腾的汽焰','二进制之海','幻想与纹样'];
   const answerAttributes=[[0,1,2,3,4],[1,0,4,2,3],[1,3,0,4,2],[0,2,3,1,4]];
   const growthNames=['起心','定形','回响','越界','觉醒'];
   function btn(label,action,note='',tone=''){return `<button type="button" class="prep-button ${tone}" data-prep="${action}"><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;}
   function notice(text){const e=document.querySelector('#prep-notice');if(e)e.textContent=text;else notify(text);}
-  function footer(){return '<p class="prep-footnote">觉醒只改变此刻的面具，不写入正式存档。</p>';}
+  function footer(){return '<p class="prep-footnote">契约留在这里，不写入主 App 的记录。</p>';}
   function open(title,body){openSheet(title,`<div class="preparation-panel"><p id="prep-notice" role="alert"></p>${body}${footer()}</div>`);}
   function clearPreviewBridge(){if(previewBridgeInstalled){delete globalThis.MASKARIA_AI;previewBridgeInstalled=false;}}
   function answerScores(){
@@ -45,14 +46,14 @@ export function createPreparationDirector(api) {
     const picked=result.candidates?.[result.selected]||result.candidates?.[0]||candidateFromAnswers();
     const m=masks[picked.index]||masks[0];
     const skills=picked.skills?.length?picked.skills:m.skills.slice(0,2).map(skill=>({name:skill[0],seed:skill[2]}));
-    open('你的力量，已经醒来',`<div class="awakening-mark awakened">${icon('mask')}</div><div class="awakening-mode ${result.mode==='ai'?'is-ai':'is-offline'}"><b>${result.mode==='ai'?'面具回应':'旧契约回应'}</b><span>${result.mode==='ai'?(previewAI?'基于你的回答生成候选':'基于你的回答生成候选'):'由旧契约给出回应'}</span></div><div class="persona-candidate"><span class="candidate-kicker">回应属性 · ${m.attr}</span><h3 class="prep-lead">${esc(picked.name||m.name)}</h3><p>${esc(picked.description||m.passive)}</p><div class="candidate-skills">${skills.map(skill=>`<span>${esc(skill.name)}<small>${esc(skill.seed)}</small></span>`).join('')}</div></div><p class="candidate-words">“${esc(traits)}”</p><div class="candidate-memory"><span>觉醒记忆</span><b>${esc(result.memory||picked.memory||'这份回应会留在之后的战斗里。')}</b></div><p class="candidate-diagnosis">${esc(result.diagnosis||'你的回答之间，形成了一条仍在变化的力量线索。')}</p><div class="trait-bars" aria-label="回答形成的属性倾向">${scoreBars(result.scores||answerScores())}</div><div class="creation-receipt"><span>四问</span><b>${answers.filter(answer=>answer!==null).length} / 4</b><span>力量之源</span><b>${sources.length} / 2</b><span>候选</span><b>${result.candidates?.length||1} 张</b></div>${btn('确认这张面具','finish-create')}${btn('换一张回应','create-reroll','保留你的回答与自述','subtle')}${btn('回到自述，继续调整','create-return','','subtle')}`);
+    open('面具，睁开了眼。',`<div class="awakening-mark awakened">${icon('mask')}</div><div class="awakening-mode ${result.mode==='ai'?'is-ai':'is-offline'}"><b>${result.mode==='ai'?'面具回应':'旧契约回应'}</b><span>${result.mode==='ai'?'它听见了你的回答。':'它先借用了旧契约。'}</span></div><div class="persona-candidate"><span class="candidate-kicker">回应属性 · ${m.attr}</span><h3 class="prep-lead">${esc(picked.name||m.name)}</h3><p>${esc(picked.description||m.passive)}</p><div class="candidate-skills">${skills.map(skill=>`<span>${esc(skill.name)}<small>${esc(skill.seed)}</small></span>`).join('')}</div></div><p class="candidate-words">“${esc(traits)}”</p><div class="candidate-memory"><span>它记住的事</span><b>${esc(result.memory||picked.memory||'影时间记住了这次回答。')}</b></div><p class="candidate-diagnosis">${esc(result.diagnosis||'它没有解释。只是看着你。')}</p><div class="trait-bars" aria-label="回答形成的属性倾向">${scoreBars(result.scores||answerScores())}</div><div class="creation-receipt"><span>四问</span><b>${answers.filter(answer=>answer!==null).length} / 4</b><span>力量之源</span><b>${sources.length} / 2</b><span>候选</span><b>${result.candidates?.length||1} 张</b></div>${btn('与它立约','finish-create')}${btn('换一张回应','create-reroll','保留你的回答与自述','subtle')}${btn('回到自述，继续调整','create-return','','subtle')}`);
   }
   function showCreate(){
     if(createCandidate){showCreateResult();return;}
     const steps=`<ol class="awakening-steps" aria-label="觉醒进度">${[1,2,3,4,5].map(n=>`<li class="${n<=createStep?'reached':''}"><b>${String(n).padStart(2,'0')}</b><span>${n===5?'自述':'问答'}</span></li>`).join('')}</ol>`;
-    if(createStep===0){open('遇见另一个自己',`<div class="awakening-mark">${icon('mask')}</div><h3 class="prep-lead">那些构成你的力量，<br>正在等待回应。</h3><p>四个选择，一段自述。让面具从你的答案里浮现。</p>${btn('开始觉醒','create-next')}`);return;}
-    if(createStep<=4){const [title,options]=questions[createStep-1];open('觉醒问答',`${steps}<h3 class="prep-lead">${title}</h3><div class="answer-options">${options.map((text,i)=>`<button type="button" data-prep="answer:${i}" aria-pressed="${answers[createStep-1]===i}"><span>${String.fromCharCode(65+i)}</span>${text}</button>`).join('')}</div><div class="prep-actions">${btn('上一步','create-back','','subtle')}${btn(createStep===4?'写下自己的特质':'下一问','create-next')}</div>`);return;}
-    open('说说你自己',`${steps}<form id="awakening-form"><label class="field-label" for="awakening-traits">那些让你骄傲的品质</label><textarea id="awakening-traits" name="traits" rows="3" maxlength="240" required placeholder="例如：好奇、愿意尝试，也愿意为别人停下来。">${esc(traits)}</textarea><h3 class="source-title">力量之源 <small>可不选 · 最多两项</small></h3><div class="source-options">${sourceLabels.map((label,i)=>`<button type="button" data-prep="source:${i}" aria-pressed="${sources.includes(i)}" ${!sources.includes(i)&&sources.length>=2?'disabled':''}>${label}</button>`).join('')}</div><div class="prep-actions">${btn('回看问答','create-back','','subtle')}${btn('唤醒面具','create-generate')}</div></form>`);
+    if(createStep===0){open('面具，在看着你。',`<div class="awakening-mark">${icon('mask')}</div><h3 class="prep-lead">影时间不替你回答。</h3><p>四道问题，一段自述。等你说完，它才会开口。</p>${btn('回应它','create-next')}`);return;}
+    if(createStep<=4){const [title,options]=questions[createStep-1];open('它还在等。',`${steps}<h3 class="prep-lead">${title}</h3><div class="answer-options">${options.map((text,i)=>`<button type="button" data-prep="answer:${i}" aria-pressed="${answers[createStep-1]===i}"><span>${String.fromCharCode(65+i)}</span>${text}</button>`).join('')}</div><div class="prep-actions">${btn('上一步','create-back','','subtle')}${btn(createStep===4?'写下你不愿交出去的东西':'下一问','create-next')}</div>`);return;}
+    open('别急着给它名字。',`${steps}<form id="awakening-form"><label class="field-label" for="awakening-traits">你不想被拿走的东西</label><textarea id="awakening-traits" name="traits" rows="3" maxlength="240" required placeholder="例如：还想再试一次的念头。">${esc(traits)}</textarea><h3 class="source-title">力量之源 <small>可不选 · 最多两项</small></h3><div class="source-options">${sourceLabels.map((label,i)=>`<button type="button" data-prep="source:${i}" aria-pressed="${sources.includes(i)}" ${!sources.includes(i)&&sources.length>=2?'disabled':''}>${label}</button>`).join('')}</div><div class="prep-actions">${btn('回看问答','create-back','','subtle')}${btn('让面具听见','create-generate')}</div></form>`);
   }
   function showReshape(){
     if(reshapeTarget>=5)reshapeTarget=0;
@@ -101,15 +102,37 @@ export function createPreparationDirector(api) {
     if(kind==='answer'){answers[createStep-1]=Number(arg);showCreate();return;}
     if(kind==='source'){traits=document.querySelector('#awakening-traits')?.value??traits;const id=Number(arg);sources=sources.includes(id)?sources.filter(s=>s!==id):sources.length<2?[...sources,id]:sources;showCreate();return;}
     if(kind==='create-generate'){
-      const form=document.querySelector('#awakening-form');if(!form.reportValidity())return;traits=new FormData(form).get('traits').trim();if(!traits){notice('写下一点你珍视的品质，再继续。');return;}
+      const form=document.querySelector('#awakening-form');if(!form.reportValidity())return;traits=new FormData(form).get('traits').trim();if(!traits){notice('还差一句。写下来，再让它听。');return;}
       awakeningController?.abort();awakeningController=new AbortController();
       const selectedAnswers=answers.map((answer,question)=>({question:questions[question][0],answer:answer===null?'':questions[question][1][answer]||''}));
       const input={answers:selectedAnswers,traits,sources:[...sources],scores:answerScores(),roster:masks.slice(0,5).map(m=>({attr:m.attr,name:m.name,passive:m.passive,skills:m.skills.slice(0,2)}))};
-      open('面具正在回应',`<div class="awakening-mark is-awakening">${icon('mask')}</div><h3 class="prep-lead">面具，正在回应。</h3><p id="awakening-reasoning">${api.reduced.matches?'正在整理你的回答。':'它正在听你的回答、力量之源和矛盾。'}</p>`);
-      requestAwakening(input,{signal:awakeningController.signal,onReasoning:text=>{const node=document.querySelector('#awakening-reasoning');if(node&&text)node.textContent=text.slice(-120);}}).then(result=>{if(!sheet.open)return;createCandidate={...result,scores:input.scores};showCreateResult();}).catch(error=>{if(error?.name==='AbortError')return;createCandidate={mode:'offline',selected:0,candidates:[candidateFromAnswers()],scores:input.scores,diagnosis:'回应暂时中断，先用离线底盘保留你的答案。',memory:'你把这次没有说完的回应留到了下一次。'};if(sheet.open)showCreateResult();});return;
+      open('它在听。',`<div class="awakening-mark is-awakening">${icon('mask')}</div><h3 class="prep-lead">它没有立刻回答。</h3><p id="awakening-reasoning">${api.reduced.matches?'它翻看了你的回答。':'影时间把声音压得很低。'}</p>`);
+      requestAwakening(input,{signal:awakeningController.signal,onReasoning:text=>{const node=document.querySelector('#awakening-reasoning');if(node&&text)node.textContent=text.slice(-120);}}).then(result=>{if(!sheet.open)return;createCandidate={...result,scores:input.scores};showCreateResult();}).catch(error=>{if(error?.name==='AbortError')return;createCandidate={mode:'offline',selected:0,candidates:[candidateFromAnswers()],scores:input.scores,diagnosis:'它没有开口。答案还在。',memory:'这次没有说完的回应，留到了下一次。'};if(sheet.open)showCreateResult();});return;
     }
-    if(kind==='finish-create'){const result=createCandidate||{mode:'offline',selected:0,candidates:[candidateFromAnswers()]};const picked=result.candidates?.[result.selected]||result.candidates?.[0]||candidateFromAnswers();state.mask=picked.index;state.activePersonaId=masks[state.mask]?.id??state.activePersonaId;state.skill=0;state.personaCreated=true;growthLevel=growthState[state.mask].level;sheet.close();api.goRoom('persona');notify(`觉醒流程已完成 · ${picked.name||masks[state.mask].name} 已就绪`);return;}
-    if(kind==='create-error'){clearTimeout(working);open('回应暂时中断',`<div class="awakening-mark">${icon('eye')}</div><h3 class="prep-lead">你的答案，没有丢失。</h3><p>暂时没有得到回应。可以回看自己的描述，准备好后再试。</p>${btn('回到自述，重新尝试','create-return')}`);return;}
+    if(kind==='finish-create'){
+      const result=createCandidate||{mode:'offline',selected:0,candidates:[candidateFromAnswers()]};
+      const picked=result.candidates?.[result.selected]||result.candidates?.[0]||candidateFromAnswers();
+      state.mask=picked.index;
+      state.activePersonaId=masks[state.mask]?.id??state.activePersonaId;
+      state.skill=0;
+      state.personaCreated=true;
+      state.personaAwakening=buildAwakeningRecord({
+        personaId:state.activePersonaId,
+        name:picked.name||masks[state.mask].name,
+        memory:result.memory||picked.memory||'影时间记住了这次回答。',
+        diagnosis:result.diagnosis||'它没有解释。只是看着你。',
+        mode:result.mode,
+        traits,
+        sources,
+      });
+      growthLevel=growthState[state.mask].level;
+      sheet.close();
+      api.persistP5State?.();
+      api.goRoom('tower');
+      notify(`契约成立 · ${state.personaAwakening.name} 在等你`);
+      return;
+    }
+    if(kind==='create-error'){clearTimeout(working);open('它没有开口。',`<div class="awakening-mark">${icon('eye')}</div><h3 class="prep-lead">答案还在。</h3><p>影时间没有回应。你可以再看一遍自己写下的东西。</p>${btn('回到自述','create-return')}`);return;}
     if(kind==='create-return'){createCandidate=null;awakeningController?.abort();awakeningController=null;createStep=5;showCreate();return;}
     if(kind==='create-reroll'){if(!createCandidate)createCandidate={mode:'offline',selected:0,candidates:[candidateFromAnswers()]};createCandidate.selected=(createCandidate.selected+1)%createCandidate.candidates.length;showCreateResult();return;}
     if(kind==='reshape'){pendingName='';pendingDescription='';reshapeTarget=Math.min(4,state.mask);showReshape();return;}

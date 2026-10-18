@@ -1,5 +1,3 @@
-const ATTRIBUTES = ['知识', '勇气', '灵巧', '体贴', '魅力'];
-
 function clampText(value, max = 180) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
@@ -32,7 +30,7 @@ function normalizeResult(result, input) {
     mode: 'ai',
     selected,
     candidates,
-    diagnosis: clampText(result.diagnosis, 160) || '你的回答之间，形成了一条仍在变化的力量线索。',
+    diagnosis: clampText(result.diagnosis, 160) || '你的回答之间，有一条线。它还没有名字。',
     memory: clampText(result.memory, 160) || candidates[selected].memory,
   };
 }
@@ -48,8 +46,8 @@ function offlineAwakening(input) {
     mode: 'offline',
     selected: 0,
     candidates,
-    diagnosis: `离线回应：${lead.name} 与你当前最突出的${lead.index < ATTRIBUTES.length ? ATTRIBUTES[lead.index] : '力量'}倾向相合。`,
-    memory: `你没有交出答案的解释权，只让${lead.name}先记住这一刻。`,
+    diagnosis: `它没有借外力。它从你的回答里认出了${lead.name}。`,
+    memory: '你没有把答案交给别人。',
   };
 }
 
@@ -81,15 +79,15 @@ export function installPreviewAwakeningBridge() {
         const timer = setTimeout(resolve, ms);
         if (signal) signal.addEventListener('abort', () => { clearTimeout(timer); const error = new Error('aborted'); error.name = 'AbortError'; reject(error); }, { once: true });
       });
-      onReasoning?.('正在听见你的回答……'); await wait(180);
-      onReasoning?.('正在寻找回答里的矛盾与回声……'); await wait(220);
+      onReasoning?.('影时间把声音压得很低。'); await wait(180);
+      onReasoning?.('它在等你把话说完。'); await wait(220);
       const scores = input.scores ?? [1, 0, 0, 0, 0];
       const ranked = (input.roster ?? []).map((_, index) => ({ index, score: Number(scores[index]) || 0 })).sort((a, b) => b.score - a.score || a.index - b.index).slice(0, 3);
       const candidates = ranked.map(({ index }, order) => {
         const base = input.roster[index];
         return { index, name: `${base.name}·回应${order ? 'Ⅱ' : ''}`, description: `${base.passive}，并回应你这次写下的「${String(input.traits || '').slice(0, 18)}」。`, memory: `你在${base.attr}里留下了可被再次追问的回声。`, skills: base.skills.slice(0, 2).map((skill, i) => ({ name: `${skill[0]}·${i ? '留痕' : '改写'}`, seed: i ? '把这次选择留到下一回合' : '把敌人的判断变成可回应的窗口' })) };
       });
-      return { selected: 0, diagnosis: '这不是替你决定答案，而是把答案变成下一步可以行动的回应。', memory: candidates[0]?.memory ?? '这次回应会留在之后的战斗里。', candidates };
+      return { selected: 0, diagnosis: '它听见了你的回答。剩下的，由你走给它看。', memory: candidates[0]?.memory ?? '影时间记住了你这次没有退。', candidates };
     },
   };
   return true;

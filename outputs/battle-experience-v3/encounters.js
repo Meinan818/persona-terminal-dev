@@ -19,7 +19,7 @@ export function createEncounterDirector(api) {
     ['boss','Boss 变身','第一形态被击破后，舞台内直接破壳进入第二形态。','第一形态 HP 清零'],
   ];
   const catalog = [
-    ['战斗演出','BATTLE',['battle-flow','完整演出排练'],['fx:hit','受击'],['fx:critical','暴击'],['fx:heal','治疗'],['fx:guard','格挡反击'],['fx:one-more','追加回合'],['qte','总攻击 QTE'],['boss','Boss 登场与变身']],
+    ['战斗演出','BATTLE',['battle-flow','完整演出排练'],['battle-stage','战场状态取景'],['fx:hit','受击'],['fx:critical','暴击'],['fx:heal','治疗'],['fx:guard','格挡反击'],['fx:one-more','追加回合'],['qte','总攻击 QTE'],['boss','Boss 登场与变身']],
     ['战后与结算','AFTER THE FIGHT',['victory','战斗胜利'],['defeat','败退'],['retreat','撤退确认'],['loot','战利品揭晓']],
     ['高塔之间','BETWEEN FLOORS',['tower-flow','连贯高塔流程'],['reveal','区层显形'],['reveal-error','显形中断'],['event','异变事件'],['echo','月光回响'],['quiz','镜之自问'],['chest','月匣'],['recap','逐层下塔回顾'],['clear','区层通关'],['finale','终局']],
   ];
@@ -36,6 +36,7 @@ export function createEncounterDirector(api) {
   function open(kind, data = {}) {
     if(state.busy && kind!=='qte') { notify('等这一段行动结束，再切换。'); return; }
     if(rehearsal&&kind!=='battle-flow'){notify('退出排练后，再查看其他流程。');return;}
+    if(kind==='battle-stage'){location.href='?view=combat&visual=states&state=intent';return;}
     const known=new Set(['catalog','phase','event-result','tower-flow-error',...catalog.flatMap(([, ,...items])=>items.map(([id])=>id))]);
     if(!known.has(kind))kind='catalog';
     if(kind==='event-result'&&(!data.title||!data.text))kind='event';

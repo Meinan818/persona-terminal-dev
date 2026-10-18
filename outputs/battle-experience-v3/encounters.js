@@ -209,6 +209,7 @@ export function createEncounterDirector(api) {
   return {
     get active(){return page??towerFlow.page;},get transforming(){return motion.transforming;},get bossPhase(){return boss?bossPhase:0;},screen,victory,open,close,act,effect,
     towerRoute:()=>towerFlow.route(),towerAct:action=>towerFlow.act(action),get towerActive(){return towerFlow.active;},get towerSnapshot(){return towerFlow.snapshot;},
+    towerPreview:page=>towerFlow.preview(page),
     towerReturn(won,phase,receipt){if(!rehearsal)towerFlow.battleReturn(won,phase??bossPhase,receipt);},towerHide:()=>towerFlow.hide(),
     impact:(kind,options)=>motion.play(kind,options),
     get rehearsal(){return rehearsal;},rehearsalRail,resetView(){stop();page=null;rehearsal=null;motion.clear();},

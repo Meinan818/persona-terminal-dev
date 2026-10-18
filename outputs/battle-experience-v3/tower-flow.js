@@ -1,12 +1,78 @@
 import {createTowerJourney,towerNodes} from './tower-journey.js';
+import {ITEM_DEFS} from './economy-rules.js';
+import {fuse,skillName,ARCANA_LABELS} from './velvet-rules.js';
+import {getPersona} from './p5r-compendium.js';
+
+const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 export function createTowerFlow(api){
   const {state,icon,render,reduced}=api,model=createTowerJourney(),j=model.journey;
   const initialVitals={hp:state.hp,sp:state.sp};
   let page=null,receipt=null,clock=null,raf=0,serial=0,recap=null;
+  let interlude=null,shopReturn='interlude',shopMessage='',fusionPreview=null,fusionMessage='';
   const btn=(label,action,note='',disabled=false)=>`<button class="flow-button" data-tower="${action}" ${disabled?'disabled':''}><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;
   const frame=(title,en,body)=>`<section class="experience-scene tower-scene" data-tower-scene="${page}"><button class="flow-return" data-tower="back">${icon('back')}<span>返回<small>RETURN</small></span></button><div class="scene-ghost" aria-hidden="true">${en}</div><div class="scene-heading"><h1>${title}</h1><span>${en}</span></div>${body}</section>`;
   function stop(){cancelAnimationFrame(raf);clock=null;serial++;}
+  const money=()=>Number(state.money)||0;
+  const personaName=id=>getPersona(id)?.name??id;
+  const rosterIds=()=>[...new Set(state.personaRoster??[])].filter(id=>Boolean(getPersona(id)));
+  const SHOP_STOCK=['painkiller','sportsDrink','energyDrink','revive'];
+  function captureParty(){
+    return (state.battleView?.party??[]).map(member=>({
+      id:member.id,name:member.name,isPlayer:Boolean(member.isPlayer),
+      hp:member.hp,maxHp:member.maxHp,sp:member.sp,maxSp:member.maxSp,
+    }));
+  }
+  function restParty(){
+    if(!interlude||interlude.rested)return;
+    const party=interlude.party??[];
+    for(const member of party){
+      if(member.isPlayer){
+        state.hp=Math.min(member.maxHp,state.hp+Math.max(1,Math.ceil(member.maxHp*.3)));
+        state.sp=Math.min(member.maxSp,state.sp+Math.max(1,Math.ceil(member.maxSp*.3)));
+        continue;
+      }
+      const vitals=state.partyVitals?.[member.id];
+      if(!vitals)continue;
+      vitals.hp=Math.min(member.maxHp,(Number(vitals.hp)||0)+Math.max(1,Math.ceil(member.maxHp*.3)));
+      vitals.sp=Math.min(member.maxSp,(Number(vitals.sp)||0)+Math.max(1,Math.ceil(member.maxSp*.3)));
+    }
+    interlude.rested=true;
+    api.persistP5State?.();
+    render({focus:true});
+  }
+  function buyItem(id){
+    const item=ITEM_DEFS[id];
+    if(!item)return;
+    const price=Number(item.price)||0;
+    if(money()<price){shopMessage=`钱不够（需要 ¥${price}）。`;render();return;}
+    state.money-=price;
+    state.battleItems[id]=(Number(state.battleItems?.[id])||0)+1;
+    shopMessage=`买下 ${item.name} ×1（¥${price}）。`;
+    api.persistP5State?.();
+    render({focus:true});
+  }
+  function previewFusion(){
+    const a=document.querySelector('#velvet-a')?.value;
+    const b=document.querySelector('#velvet-b')?.value;
+    if(!a||!b){fusionMessage='先选择两张面具。';fusionPreview=null;render();return;}
+    const result=fuse(a,b);
+    if(!result.ok){fusionMessage=result.reason;fusionPreview=null;render();return;}
+    fusionMessage='';
+    fusionPreview={...result,a,b};
+    render({focus:true});
+  }
+  function confirmFusion(){
+    if(!fusionPreview)return;
+    const cost=Number(fusionPreview.cost)||0;
+    if(money()<cost){fusionMessage=`钱不够（需要 ¥${cost}）。`;fusionPreview=null;render();return;}
+    state.money-=cost;
+    api.addPersonaToRoster?.(fusionPreview.persona.id);
+    api.persistP5State?.();
+    fusionMessage=`${fusionPreview.persona.name} 已进入面具名录。`;
+    fusionPreview=null;
+    render({focus:true});
+  }
   function timeline(duration,onTick,onDone){
     stop();const id=serial;clock={elapsed:0,last:performance.now()};
     const tick=now=>{if(id!==serial||!clock)return;const dt=Math.max(0,now-clock.last);clock.last=now;if(!document.hidden)clock.elapsed+=dt;onTick(clock.elapsed);if(clock.elapsed>=duration){stop();onDone();return;}raf=requestAnimationFrame(tick);};
@@ -19,7 +85,7 @@ export function createTowerFlow(api){
     timeline(1100,()=>{},()=>show('reveal-ready'));
   }
   function routeBack(){stop();page=null;api.goRoom('tower');}
-  function start(error=false){model.start();Object.assign(state,initialVitals);receipt=null;reveal(error);}
+  function start(error=false){model.start();Object.assign(state,initialVitals);receipt=null;interlude=null;shopReturn='interlude';shopMessage='';fusionPreview=null;fusionMessage='';reveal(error);}
   function enter(){
     const pending=j.pending??model.enter();if(!pending)return;
     if(pending.resolved){receipt=pending.result;show('receipt');return;}
@@ -75,8 +141,29 @@ export function createTowerFlow(api){
     if(reduced.matches){finishRecap();return;}
     drawRecap(1);timeline(recap.target*300+650,ms=>drawRecap(Math.min(recap.target,1+Math.floor(ms/300))),finishRecap);
   }
+  function interludePage(){
+    const reward=interlude?.reward;
+    return frame('战后，喘口气。','SAFEHOUSE',`<div class="safehouse-layout"><section class="safehouse-copy"><span class="slash-label">SAFEHOUSE / AFTER BATTLE</span><h2>${esc(interlude?.battle?.summary??'挡路的影子散了。')}</h2><p>这一层已经完成。安全屋可以恢复体力，也可以补给后再继续。</p>${reward?`<p class="safehouse-reward">战斗奖励 ¥${reward.money}${reward.items.length?` · ${esc(reward.items.join(' / '))}`:''}${reward.sp?` · SP +${reward.sp}`:''}</p>`:''}<div class="safehouse-stats"><div><span>HP</span><b>${state.hp}</b><small>/ ${state.heroMaxHp??52}</small></div><div><span>SP</span><b>${state.sp}</b><small>/ ${state.heroMaxSp??34}</small></div><div><span>持有</span><b>¥${money().toLocaleString()}</b></div><div><span>战利品</span><b>${state.battleLoot?.length??0}</b><small>件</small></div></div></section><section class="safehouse-actions">${btn(interlude?.rested?'已休息':'安全屋休息','rest','恢复 30% HP / SP',interlude?.rested)}${btn('去商店','shop','买药、复活针、SP 饮料')}${btn('继续向上','continue','回到路线，显示下一层')}</section></div>`);
+  }
+  function shopPage(){
+    const backLabel=shopReturn==='return'?'回到回城':'回到安全屋';
+    return frame('月见坂补给。','SUPPLY',`<div class="shop-layout"><div class="shop-head"><span>月见坂补给</span><b>¥${money().toLocaleString()}</b></div><div class="shop-list">${SHOP_STOCK.map(id=>{const item=ITEM_DEFS[id];if(!item)return '';const qty=Number(state.battleItems?.[id])||0;return `<article class="shop-row"><div class="shop-item"><h3>${esc(item.name)}</h3><p>${esc(item.desc)}</p></div><div class="shop-meta"><b>¥${item.price}</b><small>持有 ${qty}</small></div><button class="small-button" data-tower="buy:${id}" ${money()<item.price?'disabled':''}>购买</button></article>`;}).join('')}</div>${shopMessage?`<p class="shop-message">${esc(shopMessage)}</p>`:''}<div class="shop-actions">${btn(backLabel,'shop-back')}${shopReturn==='interlude'?btn('继续向上','continue'):''}</div></div>`);
+  }
+  function returnPage(){
+    return frame('回城。','RETURN',`<div class="return-layout"><section class="return-copy"><span class="slash-label">MEMENTOS / RETURN</span><h2>影时间退去。</h2><p>Boss 已经被击破。把这一夜带回天鹅绒房间。</p><div class="return-stats"><div><span>持有</span><b>¥${money().toLocaleString()}</b></div><div><span>面具</span><b>${rosterIds().length}</b><small>张</small></div><div><span>战利品</span><b>${state.battleLoot?.length??0}</b><small>件</small></div><div><span>完成节点</span><b>${j.history.length}</b></div></div></section><section class="return-actions">${btn('去天鹅绒房间','velvet','融合两张面具')}${btn('补给商店','shop-return','买药与复活针')}${btn('回到战场','home')}</section></div>`);
+  }
+  function velvetPage(){
+    const roster=rosterIds();
+    const select=(id,selectedIndex)=>`<select id="${id}" class="velvet-select">${roster.map((pid,index)=>`<option value="${pid}" ${index===selectedIndex?'selected':''}>${esc(personaName(pid))}</option>`).join('')}</select>`;
+    const preview=fusionPreview;
+    return frame('天鹅绒房间。','VELVET ROOM',`<div class="velvet-layout"><section class="velvet-copy"><span class="slash-label">FUSION / ¥${money().toLocaleString()}</span><h2>把两段回声，合成新的名字。</h2><p>结果只来自 P5R 图鉴；融合会消耗金钱，并进入面具名录。</p><div class="velvet-selects"><label>面具 A${select('velvet-a',0)}</label><span>×</span><label>面具 B${select('velvet-b',1)}</label></div>${btn('预览融合','preview-fusion')}${fusionMessage?`<p class="velvet-message">${esc(fusionMessage)}</p>`:''}${preview?`<div class="velvet-preview"><h3>${esc(preview.persona.name)}</h3><p>Lv.${preview.persona.level} · ${esc(ARCANA_LABELS[preview.persona.arcana]??preview.persona.arcana)} · ${preview.persona.skills.length} 个技能</p><p>${preview.persona.skills.slice(0,4).map(id=>esc(skillName(id))).join(' · ')}</p>${btn(`确认融合 · ¥${preview.cost}`,'confirm-fusion')}</div>`:''}</section><section class="velvet-actions">${btn('回到回城','return-back')}${btn('回到战场','home')}</section></div>`);
+  }
   function screen(){
     if(!page)return null;
+    if(page==='interlude')return interludePage();
+    if(page==='shop')return shopPage();
+    if(page==='return')return returnPage();
+    if(page==='velvet')return velvetPage();
     if(page.startsWith('reveal'))return frame(page==='reveal-error'?'雾还没有散开。':'听见塔层，缓缓显形。','STRATUM',`<div class="reveal-layout ${page==='reveal-ready'?'ready':''}"><div class="tower-silhouette" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><span class="stratum-number">03<span>STRATUM</span></span><h2>${page==='reveal-error'?'显形暂时中断':page==='reveal-ready'?'回声之庭':'正在显形…'}</h2><p class="scene-copy">${page==='reveal-error'?'已走过的路还在，重新显形后继续。':'从 3F 接续这一次探索。先侦察前路，再作选择。'}</p>${page==='reveal-error'?btn('重新显形','retry'):btn(page==='reveal-ready'?'踏入高塔':'跳过显形，进入高塔','route')}<p class="scene-note">路线只在本夜生效。</p></div></div>`);
     if(page==='recap')return frame('塔层回看。','TONIGHT / RETURN',`<div class="recap-ascent ${recap.done?'is-settled':''}" data-floor="${recap.shown||1}" data-target="${recap.target}"><div class="recap-moon" aria-hidden="true"></div><div class="recap-counter"><b>${String(recap.shown||1).padStart(2,'0')}</b><span>FLOOR</span></div><div class="recap-floor-window" aria-label="逐层回望">${recapRows(recap.shown||1)}</div><p class="recap-arrival" role="status">${recap.done?`本次抵达 ${String(recap.target).padStart(2,'0')}F`:'从抵达层向下回看。'}</p></div>${!recap.done?btn('跳过回望','skip-recap','直接抵达抵达层'):''}${summary()}`);
     if(page==='retreat')return frame('今晚，走到这里？','DESCEND',`<div class="story-layout"><div class="scene-emblem">${icon('back')}</div><div><h2>你已抵达 ${j.floor}F。</h2><p class="scene-copy">${j.pending&&!j.pending.resolved?'当前节点尚未完成；下塔回顾会停在本次抵达层。':'战利品会留在本夜记录里。'}</p>${btn('继续探索','route','回到刚才的位置')}${btn('确认下塔，回望来路','descend','结束本夜行程')}</div></div>`);
@@ -97,6 +184,16 @@ export function createTowerFlow(api){
     return `<div class="page-heading"><h1>登塔<span>ASCEND / 03</span></h1><p>沿着走过的路，继续向上。</p></div><div class="journey-strip"><span>回声之庭 <b>${j.floor} / 10 F</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span></div><div class="tower-grid"><section class="route-map journey-map" aria-label="第三区层路线图"><div class="route-watermark" aria-hidden="true">ASCEND</div><svg class="route-tracks" viewBox="0 0 600 520" preserveAspectRatio="none" aria-hidden="true"><path class="track-future" d="M300 62V180M140 306V260L300 218L460 260V306M300 218V180M300 306V218"/>${choices.map((id,i)=>{const x=choices.length===1?300:[140,300,460][i];return `<path class="track-base" d="M300 430V386L${x} 350V306"/><path class="track-live ${id===kind?'chosen':''}" pathLength="1" d="M300 430V386L${x} 350V306"/>`;}).join('')}</svg><div class="route-floor"><span class="floor-tag"><b>10</b>F</span><div class="route-node fog boss-node"><span class="node-seal">${icon('mask')}</span><span class="node-caption">心魔 · 塔顶</span></div></div><div class="route-floor"><span class="floor-tag"><b>${Math.min(10,floor+1)}</b>F</span><div class="route-node fog"><span class="node-seal">${icon('eye')}</span><span class="node-caption">${floor===10?'塔顶就在眼前':'前路尚未显现'}</span></div></div><div class="route-floor branch-floor ${choices.length===1?'single-choice':''}"><span class="floor-tag"><b>${String(floor).padStart(2,'0')}</b>F</span>${choices.map(id=>`<button class="route-node next ${kind===id?'selected':''}" data-tower="select:${id}" aria-pressed="${kind===id}" ${locked&&id!==kind?'disabled':''}><span class="node-seal">${icon(towerNodes[id].icon)}</span><span class="node-caption">${towerNodes[id].kind}</span><span class="node-hint">${locked?(id===kind?'已选择':'本层未选择'):id===kind?'查看中':'可前往'}</span></button>`).join('')}</div><div class="route-floor"><span class="floor-tag"><b>${String(Math.max(3,floor-1)).padStart(2,'0')}</b>F</span><div class="route-node done"><span class="node-seal">${icon('check')}</span><span class="node-caption">已经走过</span></div></div><p class="route-caption">${j.ended?'这段行程已结束':locked?'当前节点尚待处理，完成后继续':'侦察节点，再确认这一步'}</p></section><section class="route-detail" aria-live="polite"><p class="detail-kind">${floor}F / ${n.kind}</p><h2>${n.title}</h2><p>${n.note}</p><div class="detail-row"><span>敌人生命</span><strong>${n.hp}</strong></div><div class="detail-row"><span>已知弱点</span><strong>${n.weak}</strong></div><div class="detail-row"><span>已完成</span><strong>${j.history.length} 个节点</strong></div>${btn(j.ended?'回顾本次行程':locked?'继续处理当前节点':n.action,j.ended?'recap':'enter')}<p class="info-note">路线只在本夜生效。</p></section></div><div class="tower-tools">${btn('下塔回顾','retreat')}${btn('区层情报','intel')}</div>`;
   }
   function act(action){
+    if(action==='rest'){restParty();return;}
+    if(action==='continue'){page=null;routeBack();return;}
+    if(action==='shop'){shopReturn='interlude';shopMessage='';show('shop');return;}
+    if(action==='shop-return'){shopReturn='return';shopMessage='';show('shop');return;}
+    if(action==='shop-back'){show(shopReturn);return;}
+    if(action.startsWith('buy:')){buyItem(action.slice(4));return;}
+    if(action==='velvet'){fusionPreview=null;fusionMessage='';show('velvet');return;}
+    if(action==='preview-fusion'){previewFusion();return;}
+    if(action==='confirm-fusion'){confirmFusion();return;}
+    if(action==='return-back'){show('return');return;}
     if(action.startsWith('select:')){if(model.select(action.slice(7))){render();document.querySelector(`[data-tower="${action}"]`)?.focus({preventScroll:true});}return;}
     if(action==='start'){start();return;}
     if(action==='retry'){reveal();return;}
@@ -113,12 +210,20 @@ export function createTowerFlow(api){
     if(action==='intel'){show('reveal-ready');return;}
     if(action==='finale'&&j.ended==='clear'){show('finale');return;}
     if(action==='home'){stop();page=null;api.goRoom('battle');return;}
-    if(action==='back'){if(page==='recap'&&!recap.done){finishRecap();return;}if(j.ended){stop();page=null;api.goRoom('battle');}else routeBack();}
+    if(action==='back'){
+      if(page==='shop'){show(shopReturn);return;}
+      if(page==='velvet'){show('return');return;}
+      if(page==='interlude'){routeBack();return;}
+      if(page==='return'){stop();page=null;api.goRoom('battle');return;}
+      if(page==='recap'&&!recap.done){finishRecap();return;}
+      if(j.ended){stop();page=null;api.goRoom('battle');}else routeBack();
+    }
   }
   document.addEventListener('visibilitychange',()=>{if(clock)clock.last=performance.now();});
   return {screen,route,act,start,showRecap,get snapshot(){return {active:j.active,floor:j.floor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
     hide(){stop();page=null;},recordLoot(reward){return model.addLoot(reward);},
-    battleReturn(won,phase,battleResult){if(!this.pendingBattle)return;if(won){model.resolve({label:'战斗胜利',detail:battleResult?.summary??'击破了挡路的阴影。',type:'battle',receipt:battleResult??null});model.advance();if(j.ended==='clear')page='clear';}else{j.pending.battleState={enemyHp:j.pending.kind==='boss'?state.enemyHp:312,stagger:j.pending.kind==='boss'?state.stagger:0,turn:state.turn,phase:j.pending.kind==='boss'?phase:1};page=null;}},
+    preview(next){if(next!=='return'&&next!=='velvet')return false;model.start();j.floor=10;j.ended='clear';interlude={battle:{summary:'这一夜的最后一道影子，已经散了。'},rested:false,party:[]};fusionPreview=null;fusionMessage='';page=next;return true;},
+    battleReturn(won,phase,battleResult){if(!this.pendingBattle)return;if(won){const floor=j.pending.floor,wasBoss=j.pending.kind==='boss';const drops=Array.isArray(battleResult?.drops)?battleResult.drops:[];const reward=battleResult?.reward??null;const items=[];let spGain=0;for(const drop of drops){if(drop?.item){items.push(drop.item);state.battleLoot.push(drop.item);}if(drop?.sp)spGain+=Number(drop.sp)||0;}if(reward?.item){items.push(reward.item);state.battleLoot.push(reward.item);}if(reward?.sp)spGain+=Number(reward.sp)||0;const moneyGain=240+floor*60;state.money+=moneyGain;if(spGain)state.sp=Math.min(state.heroMaxSp??state.sp,state.sp+spGain);api.persistP5State?.();interlude={battle:battleResult,rested:false,party:captureParty(),reward:{money:moneyGain,items,sp:spGain}};model.resolve({label:'战斗胜利',detail:battleResult?.summary??'击破了挡路的阴影。',type:'battle',receipt:battleResult??null});model.advance();page=(wasBoss||j.ended==='clear')?'return':'interlude';}else{j.pending.battleState={enemyHp:j.pending.kind==='boss'?state.enemyHp:312,stagger:j.pending.kind==='boss'?state.stagger:0,turn:state.turn,phase:j.pending.kind==='boss'?phase:1};page=null;}},
     defeat(){model.end('defeat');show('defeat');},
   };
 }

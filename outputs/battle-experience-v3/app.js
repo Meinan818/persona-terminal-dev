@@ -37,6 +37,7 @@ const state = {
   heroPersonaIds: [], personaRoster: [], activePersonaId: 'arsene',
   allyPersonaIds: ['cait-sith', 'agathion', 'kelpie'],
   battleItems: { painkiller: 2, energyDrink: 1, revive: 1 },
+  money: 8000,
 };
 const scrolls = new Map();
 const masks = [
@@ -100,6 +101,7 @@ function persistP5State() {
       allyPersonaIds: state.allyPersonaIds,
       personaRoster: state.personaRoster,
       battleItems: state.battleItems,
+      money: state.money,
     }));
   } catch {}
 }
@@ -116,6 +118,7 @@ function loadP5State() {
         if (ITEM_DEFS[id] && Number.isFinite(Number(qty))) state.battleItems[id] = Math.max(0, Number(qty));
       }
     }
+    if (Number.isFinite(Number(saved.money))) state.money = Math.max(0, Number(saved.money));
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;
     }
@@ -1130,7 +1133,8 @@ function execute(options = {}) {
 }
 function goRoom(room){clearSignatureFx();actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.battle=null;state.battleView=null;state.battleActionKey='';state.battleReceipt=null;state.battleWon=false;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
 const flows=createEncounterDirector({
-  state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle,
+  state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle,persistP5State,
+  addPersonaToRoster: ensurePersonaInRoster,
   onBossMorph(phase){
     if(!state.battle)return;
     promoteBossPhase(state.battle,{phase});
@@ -1224,7 +1228,10 @@ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!sheet.open
 document.addEventListener('visibilitychange',()=>document.body.classList.toggle('is-hidden',document.hidden));
 loadP5State();
 state.room=roomFromHash();
+const towerPreview=new URLSearchParams(location.search).get('tower');
+if(towerPreview)state.room='tower';
 render();
+if(towerPreview){flows.towerPreview?.(towerPreview);render();}
 if(fixture==='low-sp')startBattle('tower');
 else if(new URLSearchParams(location.search).get('view')==='combat'&&(!location.hash||state.room==='battle'))startBattle('battle');
 const initialScene=new URLSearchParams(location.search).get('scene');

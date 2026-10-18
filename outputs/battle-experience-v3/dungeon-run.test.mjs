@@ -37,6 +37,7 @@ test('警戒满时下一场战斗带先制标记，并把警戒压回可继续�
   model.journey.security = 96;
   model.enter();
   assert.equal(model.journey.pending.ambush, true);
+  assert.equal(model.journey.pending.encounter.ambush, true);
   assert.equal(model.journey.alert, true);
   assert.ok(model.journey.security < 100);
 });
@@ -127,4 +128,27 @@ test('不同塔层会改变路线与警戒压力', () => {
   assert.equal(model.journey.stratum, 'vanity');
   assert.equal(model.journey.security, 10);
   assert.equal(model.setStratum('escape'), false);
+});
+
+test('无尽模式击败 Boss 后回到下一轮，而不是结束', () => {
+  const model = createDungeonRun();
+  model.startEndless();
+  let guard = 0;
+  while (!model.journey.ended && model.journey.cycle === 1 && guard < 20) {
+    guard += 1;
+    const kind = model.choices()[0];
+    model.select(kind);
+    const pending = model.enter();
+    assert.ok(pending);
+    if (pending.kind === 'safe') model.rest();
+    if (pending.kind === 'calling') model.sendCallingCard();
+    if (pending.kind === 'trap') model.disarmTrap();
+    if (pending.kind === 'key') model.takeKey();
+    model.resolve({ label: '节点完成' });
+    model.advance();
+  }
+  assert.equal(model.journey.ended, null);
+  assert.equal(model.journey.cycle, 2);
+  assert.equal(model.journey.floor, 0);
+  assert.ok(model.journey.security >= 20);
 });

@@ -85,6 +85,16 @@
 .night-base-gate p{margin-top:5px;font-size:12px;line-height:1.65;color:#9fc0ff}
 .night-base-gate .flow-button{min-width:210px;margin:0}
 .night-base-foot{display:flex;justify-content:flex-end;margin-top:14px}
+.night-request{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:14px;padding:10px 14px;border-left:3px solid #ff7fb3;background:rgba(255,63,142,.08);font-size:12px;color:#ffd7e6}
+.night-request span{font:italic 800 9px var(--sh-cd);letter-spacing:.18em;color:#ff7fb3}
+.night-request b{font-size:14px;color:#fff}
+.night-request small{color:#ffd7e6}
+.night-request.completed{border-left-color:#ffd84a;background:rgba(255,216,74,.08);color:#ffeaa5}
+.night-npcs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}
+.night-npcs article{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid rgba(63,240,255,.18);background:rgba(2,10,42,.56)}
+.night-npcs article span{font:italic 800 8px var(--sh-cd);letter-spacing:.16em;color:#3ff0ff}
+.night-npcs article b{font-size:13px;color:#f4fbff}
+.night-npcs article small{font-size:10px;line-height:1.55;color:#9fc0ff}
 .tower-strata{margin-top:18px;padding:16px 18px;border:1px solid rgba(63,240,255,.24);background:rgba(3,13,42,.62)}
 .tower-strata-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
 .tower-strata-head span{font:italic 800 9px var(--sh-cd);letter-spacing:.2em;color:#3ff0ff}
@@ -146,6 +156,7 @@
   .night-base-awaken button{width:100%}
   .night-base-foot .flow-button{width:100%}
   .tower-strata-list{grid-template-columns:1fr}
+  .night-npcs{grid-template-columns:1fr 1fr}
   .gear-page{padding:18px 14px}
   .gear-summary h2{font-size:26px}
   .gear-slots{grid-template-columns:1fr}

@@ -18,6 +18,7 @@ import { buildBattlePersona, ELEMENTS, setPersonaOverride } from './p5-combat-ru
 import { clearSignatureFx, playAllOut, playStagger } from './p3-signature-fx.js';
 import { EQUIPMENT, equipmentBonuses } from './equipment.js';
 import { xpNeeded } from './persona-progress.js';
+import { createNpcTrust } from './npcs.js';
 installPreviewNegotiationBridge();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -50,6 +51,7 @@ const state = {
   ownedEquipment: ['training-blade', 'school-jacket'],
   personaXp: {},
   towerStratum: 'echo',
+  npcTrust: createNpcTrust(),
 };
 const scrolls = new Map();
 const masks = [
@@ -133,6 +135,7 @@ function persistP5State() {
       ownedEquipment: state.ownedEquipment,
       personaXp: state.personaXp,
       towerStratum: state.towerStratum,
+      npcTrust: state.npcTrust,
     }));
   } catch {}
 }
@@ -176,6 +179,9 @@ function loadP5State() {
     }
     if (['echo', 'vanity', 'escape'].includes(saved.towerStratum)) {
       state.towerStratum = saved.towerStratum;
+    }
+    if (saved.npcTrust && typeof saved.npcTrust === 'object') {
+      state.npcTrust = { ...createNpcTrust(), ...saved.npcTrust };
     }
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;
@@ -892,6 +898,8 @@ function startBattle(origin = state.room,options={}) {
   state.battleFloor=Number(options.floor)||4;
   state.battleReceipt=null;
   state.battleWon=false;
+  const ambush=Boolean(options.encounter?.ambush);
+  const startingHp=ambush?Math.max(1,Math.round(state.hp*0.85)):state.hp;
   state.battle=createTowerBattle({
     encounter:options.encounter??{},
     floor:state.battleFloor,
@@ -899,7 +907,7 @@ function startBattle(origin = state.room,options={}) {
     heroPersonaIds:state.heroPersonaIds,
     activePersonaId:state.activePersonaId,
     allyPersonaIds:state.allyPersonaIds,
-    heroHp:state.hp,
+    heroHp:startingHp,
     heroSp:state.sp,
     partyVitals:state.partyVitals,
     equipmentBonuses:equipmentBonuses(state.equipment),
@@ -918,7 +926,7 @@ function startBattle(origin = state.room,options={}) {
     state.battle.phase='holdUp';
   }
   syncAppState(state.battle,state,state.targetId);
-  state.log=options.negotiationHint?'先打它的弱点。把它打失衡，它就会开口。':'轮到你了。先看意图，再决定这一回合。';
+  state.log=options.negotiationHint?'先打它的弱点。把它打失衡，它就会开口。':ambush?'影子先看见了你。':'轮到你了。先看意图，再决定这一回合。';
   transition('ENCOUNTER',clickOrigin);
   render({focus:true});
   window.scrollTo(0,0);

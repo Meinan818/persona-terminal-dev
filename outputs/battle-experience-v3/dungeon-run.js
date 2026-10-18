@@ -61,6 +61,8 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     callingCardSent: false,
     keys: 0,
     stratum: getStratum(stratum).id,
+    endless: false,
+    cycle: 1,
   };
 
   const choices = () => {
@@ -85,7 +87,16 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
       callingCardSent: false,
       keys: 0,
       stratum: getStratum(stratumId).id,
+      endless: false,
+      cycle: 1,
     });
+  };
+
+  const startEndless = (stratumId = journey.stratum) => {
+    start(stratumId);
+    journey.endless = true;
+    journey.cycle = 1;
+    journey.security = 20;
   };
 
   const setStratum = stratumId => {
@@ -117,17 +128,19 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     }
     let encounter = null;
     if (kind === 'mob' || kind === 'boss' || kind === 'elite') {
-      const base = encounterFor(journey.floor, kind === 'boss' ? 'boss' : 'mob');
+      const cycleOffset = journey.endless ? (journey.cycle - 1) * 12 : 0;
+      const base = encounterFor(journey.floor + cycleOffset, kind === 'boss' ? 'boss' : 'mob');
       encounter = kind === 'elite'
         ? {
           ...base,
           name: journey.floor === 7 ? '失衡的守层者' : '回声的看门人',
-          level: journey.floor,
+          level: journey.floor + cycleOffset,
           maxHp: Math.round(base.maxHp * 1.6),
           attack: Math.round(base.attack * 1.25),
           defense: base.defense + 2,
         }
         : base;
+      encounter = { ...encounter, ambush };
     }
     journey.pending = {
       floor: journey.floor,
@@ -154,6 +167,15 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     if (journey.ended || !journey.pending?.resolved) return false;
     const last = journey.pending.kind;
     journey.pending = null;
+    if (last === 'boss' && journey.endless) {
+      journey.cycle += 1;
+      journey.floor = 0;
+      journey.pending = null;
+      journey.callingCardSent = false;
+      journey.security = Math.min(100, 20 + journey.cycle * 10);
+      journey.selected = choices()[0] ?? 'mob';
+      return true;
+    }
     if (last === 'boss') {
       journey.ended = 'clear';
       return true;
@@ -223,5 +245,6 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     disarmTrap,
     forceTrap,
     setStratum,
+    startEndless,
   };
 }

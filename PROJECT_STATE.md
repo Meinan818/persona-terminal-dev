@@ -11,6 +11,7 @@
   - 敌方意图：每回合从敌人自己的技能中预选，战斗视图显示“下一手 · 技能 · 属性”，敌方回合实际使用该技能。
   - 战斗视图与 `p5-battle-bridge` 同步 `showtimeUsed`、`intent` 字段。
 - **P4 演出（`f39763d`）**：Showtime 全屏 Cut-in（粉/黑/白斜带、巨字、双人名），截图在 `.rivet/scratch/p5r-rebuild-p4-20261019/showtime-1440.png`。
+- **P4 装备（`0b1d1b6`）**：武器/防具/饰品商店、装备页、攻防与 HP/SP 加成进入战斗；demo 测试 **96/96**；真实 Chrome 买铁制小刀后攻击 +2→+5。
 - **验证**：demo Node 测试 **91/91**；`node --check`、`git diff --check` 通过。真实 Chrome：第二回合出现 SHOWTIME 入口，使用后入口消失；意图显示“耶哈 · 咒怨”；`errors=[]`。
 - **P4 待续**：Showtime 全屏 Cut-in/演出、装备影响攻防、完整状态/Technical UI 说明；之后进入 P5 Persona 与经济。
 

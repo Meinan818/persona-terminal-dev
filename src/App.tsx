@@ -603,6 +603,10 @@ function App() {
     if (user?.theme === 'yellow') {
       color = '#ffd900';
     }
+    // 红频道自带黑色舞台，不跟通用浅色 / 夜间底走；半透明动画幕也要有黑底承接。
+    if (user?.theme === 'red') {
+      color = '#000000';
+    }
     // iOS standalone + 移动端：html/body 是系统安全区（状态栏/Home Bar）的着色来源，
     // 用中性面色而非主题色，避免顶/底被主题色染出「彩条」——用户真机手改口径
   const isStandalone = isStandalonePwa();
@@ -884,7 +888,10 @@ function App() {
           // P4 黄频道：舞台平面直接铺 --ui-bg（p4-redraw 定稿），暗色也保持黄
           // 用户自定义了背景图时让位——这层不透明黄会把图整块盖没（"背景图片没反应"）
           // 舞台底走 --p4-stage（夜间=紫），fallback 到 --ui-bg（白天=黄，黄同时兼任强调色）
-          style={user?.theme === 'yellow' && !settings.backgroundImage ? { background: 'var(--p4-stage, var(--ui-bg, #ffd900))' } : undefined}
+          style={!settings.backgroundImage
+            ? user?.theme === 'yellow' ? { background: 'var(--p4-stage, var(--ui-bg, #ffd900))' }
+              : user?.theme === 'red' ? { background: '#000000' } : undefined
+            : undefined}
         >
           {/* 背景图片（与擦除垫底层复刻的是同一个节点，见 bgImageLayer） */}
           {bgImageLayer}
@@ -946,6 +953,7 @@ function App() {
                   stageBg={
                     user?.theme === 'yellow' && !bgImageOn
                       ? 'var(--p4-stage, var(--ui-bg, #ffd900))'
+                      : user?.theme === 'red' && !bgImageOn ? '#000000'
                       : settings.darkMode ? '#111827' : '#f9fafb'
                   }
                   // 擦除垫底层要把**所有全局背景层**都复刻一份，否则垫层期间它们被盖成

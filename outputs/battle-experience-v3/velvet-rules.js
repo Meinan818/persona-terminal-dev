@@ -120,6 +120,36 @@ export function specialRecipes(ownedIds = []) {
       || a.result.level - b.result.level);
 }
 
+export function networkFusion(ownedIds = [], { rng = Math.random } = {}) {
+  const owned = new Set(ownedIds);
+  const ids = [...owned].filter(id => Boolean(getPersona(id)));
+  const candidates = [];
+  for (let i = 0; i < ids.length; i += 1) {
+    for (let j = i + 1; j < ids.length; j += 1) {
+      const result = fusionResult(ids[i], ids[j]);
+      if (!result || owned.has(result.id)) continue;
+      candidates.push({
+        a: getPersona(ids[i]),
+        b: getPersona(ids[j]),
+        result,
+      });
+    }
+  }
+  if (!candidates.length) return { ok: false, reason: '网络没有找到新的名字。' };
+  const picked = candidates[Math.min(candidates.length - 1, Math.floor(rng() * candidates.length))];
+  return {
+    ok: true,
+    persona: {
+      ...picked.result,
+      stats: { ...picked.result.stats },
+      skills: [...picked.result.skills],
+    },
+    sources: [picked.a.id, picked.b.id],
+    sourceNames: [picked.a.name, picked.b.name],
+    cost: picked.result.level * 500 + 1000,
+  };
+}
+
 let materialCatalogCache = null;
 
 function materialCatalog() {

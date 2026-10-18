@@ -7,6 +7,7 @@ import {
   itemize,
   lockdown,
   materialEntries,
+  networkFusion,
   register,
   sacrifice,
   specialFuse,
@@ -100,4 +101,17 @@ test('素材背包会聚合同类电椅产物并标注中文来源', () => {
   const belt = entries.find(entry => entry.id === 'Megaton Raid Belt');
   assert.equal(belt.label, '百万吨腰带');
   assert.equal(belt.category, 'equipment');
+});
+
+test('网络融合会从名册里找到一组新结果并返回费用', () => {
+  const result = networkFusion(['arsene', 'pixie', 'jack-o-lantern'], { rng: () => 0 });
+  assert.equal(result.ok, true);
+  assert.ok(result.persona?.id);
+  assert.equal(result.sources.length, 2);
+  assert.equal(result.cost, result.persona.level * 500 + 1000);
+});
+
+test('网络融合没有新名字时明确失败', () => {
+  assert.equal(networkFusion([]).ok, false);
+  assert.equal(networkFusion(['arsene']).ok, false);
 });

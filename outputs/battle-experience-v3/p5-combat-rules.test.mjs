@@ -94,6 +94,15 @@ test('异常状态记录剩余回合，并在到期后自动解除', () => {
   assert.match(battle.log.join('\n'), /睡眠.*解除|【睡眠】解除了/);
 });
 
+test('敌方回合会从影子自己的技能中选招，而不是永远只做普攻', () => {
+  const battle = createDefaultBattle({
+    rng: () => 0.1,
+    enemies: [{ id: 'a', name: '带招之影', maxHp: 60, attack: 12, recruitPersonaId: 'pixie' }],
+  });
+  battle.enemyPhase();
+  assert.match(battle.log.join('\n'), /使用「.+?」/);
+});
+
 test('无效属性不会造成伤害、倒地或 1 MORE', () => {
   const battle = createDefaultBattle({
     rng: steady,

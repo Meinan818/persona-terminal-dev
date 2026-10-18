@@ -5,6 +5,7 @@ import {
   DEFAULT_HERO_MASKS,
   activeHeroPersonaId,
   applyBattleReward,
+  applyBattleItem,
   battleReceipt,
   buildActionPayload,
   buildBattleView,
@@ -157,4 +158,17 @@ test('同伴 HP/SP 也能跨战斗沿用', () => {
   const nextAlly = next.party.find(member => member.id === 'ally:cait-sith');
   assert.equal(nextAlly.hp, 11);
   assert.equal(nextAlly.sp, 7);
+});
+
+test('战斗道具会回复目标、消耗行动并拒绝非战斗道具', () => {
+  const battle = towerBattle();
+  const hero = battle.party.find(member => member.isPlayer);
+  hero.hp = 20;
+  const result = applyBattleItem(battle, { kind: 'heal', name: '小瓶止痛药', hp: 40 });
+  assert.equal(result.ok, true);
+  assert.equal(result.amount, 32);
+  assert.equal(hero.hp, hero.maxHp);
+  assert.equal(battle.actor.id, 'ally:cait-sith');
+  const rejected = applyBattleItem(battle, { kind: 'material', name: '火之碎片' });
+  assert.equal(rejected.ok, false);
 });

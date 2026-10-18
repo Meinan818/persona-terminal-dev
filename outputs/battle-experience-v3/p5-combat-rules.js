@@ -112,6 +112,9 @@ function makeEnemy(spec) {
     status: null,
     statusTurns: 0,
     statusAppliedRound: 0,
+    skills: (buildBattlePersona(spec.recruitPersonaId)?.skills ?? [])
+      .filter(item => (item.power ?? 0) > 0)
+      .slice(0, 3),
     down: false,
     personality: spec.personality ?? 'proud',
     enraged: false,
@@ -622,9 +625,16 @@ export class P5Battle {
         const targets = this.aliveParty;
         const target = targets[Math.floor(this.rng() * targets.length)];
         if (target) {
-          const persona = personaFor(target);
-          const affinity = affinityOfPersona(persona, enemy.element);
-          const raw = Math.max(1, Math.round(enemy.attack * (0.9 + this.rng() * 0.2) * (enemy.enraged ? 1.4 : 1)));
+        const persona = personaFor(target);
+        const enemySkill = enemy.skills?.length && this.rng() < 0.45
+          ? enemy.skills[Math.floor(this.rng() * enemy.skills.length)]
+          : null;
+        const attackElement = enemySkill?.element ?? enemy.element;
+        const affinity = affinityOfPersona(persona, attackElement);
+        const skillFactor = enemySkill
+          ? Math.max(0.75, Math.min(1.5, (enemySkill.power ?? 24) / 24))
+          : 1;
+        const raw = Math.max(1, Math.round(enemy.attack * skillFactor * (0.9 + this.rng() * 0.2) * (enemy.enraged ? 1.4 : 1)));
           let damage = Math.max(1, Math.round((raw - (persona?.defense ?? 0) * 0.5) * (
             target.guarding ? 0.5 : 1
           )));
@@ -635,7 +645,7 @@ export class P5Battle {
           else if (affinity === 'absorb') { target.hp = Math.min(target.maxHp, target.hp + damage); damage = 0; labels.push('吸收'); }
           else if (affinity === 'repel') { enemy.hp = Math.max(0, enemy.hp - damage); damage = 0; labels.push('反弹'); }
           if (damage > 0) target.hp = Math.max(0, target.hp - damage);
-          this.push(`${enemy.name} 以${elementLabel(enemy.element)}攻击 ${target.name}，${damage ? `造成 ${damage} 伤害` : '没有造成伤害'}${labels.length ? `（${labels.join(' / ')}）` : ''}。`);
+          this.push(`${enemy.name} ${enemySkill ? `使用「${enemySkill.name}」` : `以${elementLabel(enemy.element)}攻击`} ${target.name}，${damage ? `造成 ${damage} 伤害` : '没有造成伤害'}${labels.length ? `（${labels.join(' / ')}）` : ''}。`);
           if (target.hp <= 0) this.push(`${target.name} 倒下了。`);
         }
       }

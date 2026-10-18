@@ -1,10 +1,12 @@
 import {createEncounterDirector,escapeHtml as esc} from './encounters.js';
 import {createPreparationDirector} from './preparation.js';
 import {visualArt} from './art.js';
+import {ITEM_DEFS} from './economy-rules.js';
 import {BRIBE_COST,NEGOTIATION_OPTIONS,OPTION_ORDER,PERSONALITIES,chanceLabel,createNegotiation,negotiationChance,resolveNegotiation} from './negotiation-rules.js';
 import {installPreviewNegotiationBridge,offlineNegotiation,requestNegotiation} from './negotiation-ai.js';
 import {
   applyBattleReward,
+  applyBattleItem,
   battleReceipt,
   buildActionPayload,
   buildBattleView,
@@ -33,6 +35,7 @@ const state = {
   battleEncounter: null, battleFloor: 4, battleReceipt: null, battleWon: false, partyVitals: {},
   heroPersonaIds: [], personaRoster: [], activePersonaId: 'arsene',
   allyPersonaIds: ['cait-sith', 'agathion', 'kelpie'],
+  battleItems: { painkiller: 2, energyDrink: 1, revive: 1 },
 };
 const scrolls = new Map();
 const masks = [
@@ -95,6 +98,7 @@ function persistP5State() {
       activePersonaId: state.activePersonaId,
       allyPersonaIds: state.allyPersonaIds,
       personaRoster: state.personaRoster,
+      battleItems: state.battleItems,
     }));
   } catch {}
 }
@@ -106,6 +110,11 @@ function loadP5State() {
     for (const id of saved.personaRoster ?? []) ensurePersonaInRoster(id);
     const allies = (saved.allyPersonaIds ?? []).filter(id => Boolean(buildBattlePersona(id)));
     if (allies.length === 3) state.allyPersonaIds = allies;
+    if (saved.battleItems && typeof saved.battleItems === 'object') {
+      for (const [id, qty] of Object.entries(saved.battleItems)) {
+        if (ITEM_DEFS[id] && Number.isFinite(Number(qty))) state.battleItems[id] = Math.max(0, Number(qty));
+      }
+    }
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;
     }
@@ -144,6 +153,64 @@ function openPartyEditor(focusSlot = 0) {
     return `<button type="button" data-ally-id="${id}" data-slot="${slot}" ${occupied ? 'disabled' : ''} aria-pressed="${state.allyPersonaIds[slot] === id}"><span>${esc(persona.name)}<small>Lv.${persona.level} · ${esc(persona.elementLabel ?? persona.element)}</small></span>${state.allyPersonaIds[slot] === id ? icon('check') : icon('arrow')}</button>`;
   }).join('');
   openSheet('同行面具', `<p class="sheet-lede">三张面具从名录借来，与你一同进入影时间。</p><div class="party-editor-slots">${cards}</div><h3 class="sheet-subhead">替换第 ${slot + 1} 位</h3><div class="ally-picker">${candidates}</div>`);
+}
+
+function openBattleItems() {
+  const entries = Object.entries(state.battleItems ?? {}).filter(([id, qty]) => (
+    Number(qty) > 0 && ['heal', 'sp', 'revive', 'cure'].includes(ITEM_DEFS[id]?.kind)
+  ));
+  if (!entries.length) {
+    openSheet('道具', '<p class="sheet-lede">随身包已经空了。</p>');
+    return;
+  }
+  openSheet('道具', `<p class="sheet-lede">使用一件道具会消耗当前行动。</p><div class="ally-picker">${entries.map(([id, qty]) => {
+    const item = ITEM_DEFS[id];
+    if (!item) return '';
+    return `<button data-battle-item="${id}"><span>${esc(item.name)} ×${qty}<small>${esc(item.desc)}</small></span>${icon('arrow')}</button>`;
+  }).join('')}</div>`);
+}
+
+function useBattleItemAction(id) {
+  if (!state.battle || state.busy || state.battle.phase !== 'party') return;
+  const item = ITEM_DEFS[id];
+  const qty = Number(state.battleItems?.[id]) || 0;
+  if (!item || qty <= 0) {
+    notify('这件道具已经用完了。');
+    return;
+  }
+  const actor = state.battle.actor;
+  const run = ++actionRun;
+  const result = applyBattleItem(state.battle, item, { targetId: actor?.id });
+  if (!result.ok) {
+    notify(result.reason);
+    return;
+  }
+  state.battleItems[id] = qty - 1;
+  persistP5State();
+  sheet.close();
+  state.busy = true;
+  state.log = `${actor?.name ?? '你'} 使用「${item.name}」。`;
+  const view = syncBattleUi();
+  const target = view?.party?.find(member => member.id === result.targetId);
+  render();
+  const kind = result.kind === 'sp' ? 'buff' : result.kind === 'heal' || result.kind === 'revive' ? 'heal' : 'buff';
+  flows.impact(kind, {
+    amount: result.amount,
+    target: 'party',
+    targetSelector: target ? `[data-party-id="${target.id}"]` : null,
+    meterTo: target?.hp,
+    meterMax: target?.maxHp,
+  }).finished.then(() => {
+    if (run !== actionRun) return;
+    state.busy = false;
+    const next = syncBattleUi();
+    if (next?.phase === 'defeat') {
+      state.fighting = false;
+      flows.open('defeat');
+      return;
+    }
+    render({ focus: true });
+  });
 }
 const nodes = {
   echo: { title:'回忆之光', kind:'回响', icon:'star', hp:'—', weak:'—', note:'短暂休息，听见一段来自白昼的回声。', action:'进入回响', reward:'恢复与回忆' },
@@ -252,11 +319,16 @@ function battleActionIcon(type) {
     analyze: 'eye',
     batonPass: 'chevrons',
     switchMask: 'mask',
+    items: 'box',
   }[type] ?? 'star';
 }
 function currentEngineView() {
   if (!state.battle) return null;
   const view = buildBattleView(state.battle, state.targetId);
+  const itemCount = Object.values(state.battleItems ?? {}).reduce((total, qty) => total + (Number(qty) || 0), 0);
+  if (view.phase === 'party') {
+    view.actions.push({ type: 'items', label: '道具', detail: `${itemCount} 件可用 · 消耗本回合`, cost: 0, disabled: itemCount <= 0 });
+  }
   state.battleView = view;
   if (view.selectedTargetId && view.selectedTargetId !== state.targetId) state.targetId = view.selectedTargetId;
   const available = view.actions ?? [];
@@ -309,7 +381,7 @@ function combat() {
     ? '现在可以威胁、讨好、讲理，或给它 SP。'
     : view.phase === 'holdUp'
       ? '可以谈判、总攻击，或让它们重新站起来继续战斗。'
-      : `预计攻击属性：${target?.elementLabel ?? '未知'} · 伤害会随机落在存活队员身上。`;
+      : `下一手：${target?.elementLabel ?? '未知'}系技能 · 目标随机。`;
   const normalDeck = `<div class="command-label"><span>${view.actorIsPlayer?'SKILL · 主角技能':'ALLY · 同伴行动'}</span><strong>COST</strong></div>
       <div class="command-grid engine-command-grid">${commandsAvailable.map((item,order)=>`<button data-battle-action="${battleActionKey(item)}" aria-pressed="${battleActionKey(item)===state.battleActionKey}" style="--tilt:${[-4,-1,2,4,1,-2][order%6]}deg" ${state.busy||!actorTurn||item.disabled?'disabled':''}>${icon(battleActionIcon(item.type))}<span>${esc(item.label)}<small>${esc(item.detail ?? item.type)}</small></span></button>`).join('')}</div>
       <div class="command-detail">${skills.length?`<div class="skill-list">${skills.map(item=>combatSkill(item)).join('')}</div><p>${esc(action?.detail ?? '选择一项行动。')}</p>`:`<div class="action-banner">${icon('sword')}<strong>没有可用技能</strong><b>0<small>SP</small></b></div><p>仍然可以使用普攻、枪击、防御或同伴行动。</p>`}</div>
@@ -827,7 +899,7 @@ function actionPlayback(action, lines, view) {
 
 function enemyPlaybacks(lines, view) {
   return lines.flatMap(line => {
-    const match = line.match(/^(.+?) 以.+?攻击 (.+?)，(?:造成 (\d+) 伤害|没有造成伤害|.*?(无效|吸收|反弹|抗性))/);
+    const match = line.match(/^(.+?) (?:以.+?攻击|使用「.+?」) (.+?)，(?:造成 (\d+) 伤害|没有造成伤害|.*?(无效|吸收|反弹|抗性))/);
     if (!match) return [];
     const amount = Number(match[3] || 0);
     const member = view.party.find(item => match[2].includes(item.name));
@@ -1071,6 +1143,8 @@ document.addEventListener('click',event=>{
   if(control.dataset.partySlot!==undefined){openPartyEditor(Number(control.dataset.partySlot));return;}
   if(control.dataset.allyId){const slot=Number(control.dataset.slot)||0;state.allyPersonaIds[slot]=control.dataset.allyId;persistP5State();openPartyEditor(slot);render();return;}
   if(control.dataset.targetId){state.targetId=control.dataset.targetId;syncBattleUi();render();return;}
+  if(control.dataset.battleItem){useBattleItemAction(control.dataset.battleItem);return;}
+  if(control.dataset.battleAction?.startsWith('items:')){openBattleItems();return;}
   if(control.dataset.battleAction){if(state.busy)return;state.battleActionKey=control.dataset.battleAction;render();$(`[data-battle-action="${state.battleActionKey}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.switchMask){state.battleActionKey=`switchMask:${control.dataset.switchMask}`;sheet.close();execute();return;}
   if(control.dataset.flow){flows.act(control.dataset.flow);return;}
@@ -1096,6 +1170,7 @@ document.addEventListener('click',event=>{
   else if(action==='awaken-persona')preparation.act('create');
   else if(action==='start-negotiation')startNegotiationDemo();
   else if(action==='hold-up-negotiate')beginEngineNegotiation();
+  else if(action==='open-battle-items')openBattleItems();
   else if(action==='negotiation-fight')closeNegotiation();
   else if(action==='negotiation-recruit')chooseNegotiationOutcome('recruit');
   else if(action==='negotiation-reward')chooseNegotiationOutcome('reward');

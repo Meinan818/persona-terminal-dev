@@ -294,6 +294,51 @@ export function applyBattleReward(battle, result) {
   return hero.sp - before;
 }
 
+export function applyBattleItem(battle, item, { targetId } = {}) {
+  if (!battle || !item) return { ok: false, reason: '没有这件道具。' };
+  if (battle.phase !== 'party' || !battle.actor) return { ok: false, reason: '现在不能使用道具。' };
+  const actor = battle.actor;
+  const chooseTarget = () => battle.party.find(member => member.id === targetId)
+    ?? actor
+    ?? battle.aliveParty[0];
+  let target = null;
+  let amount = 0;
+  if (item.kind === 'heal') {
+    target = chooseTarget();
+    if (!target || target.hp <= 0) return { ok: false, reason: '需要选择一名站着的同伴。' };
+    const before = target.hp;
+    target.hp = Math.min(target.maxHp, target.hp + (Number(item.hp) || 0));
+    amount = target.hp - before;
+  } else if (item.kind === 'sp') {
+    target = chooseTarget();
+    if (!target || target.hp <= 0) return { ok: false, reason: '需要选择一名站着的同伴。' };
+    const before = target.sp;
+    target.sp = Math.min(target.maxSp, target.sp + (Number(item.sp) || 0));
+    amount = target.sp - before;
+  } else if (item.kind === 'revive') {
+    target = battle.party.find(member => member.hp <= 0);
+    if (!target) return { ok: false, reason: '没有倒下的同伴。' };
+    target.hp = Math.max(1, Math.round(target.maxHp * (item.pct ?? 0.5)));
+    amount = target.hp;
+  } else if (item.kind === 'cure') {
+    target = chooseTarget();
+    if (!target) return { ok: false, reason: '没有可解除异常的目标。' };
+    target.status = null;
+  } else {
+    return { ok: false, reason: '这件道具不能在战斗中使用。' };
+  }
+  const effectText = item.kind === 'heal'
+    ? (amount ? `恢复 ${amount} HP` : 'HP 已满')
+    : item.kind === 'sp'
+      ? (amount ? `恢复 ${amount} SP` : 'SP 已满')
+      : item.kind === 'revive'
+        ? `以 ${amount} HP 复活`
+        : '异常解除';
+  battle.push(`${actor.name} 使用「${item.name}」→ ${target?.name ?? '目标'} ${effectText}。`);
+  battle.finishActor(actor);
+  return { ok: true, item, targetId: target?.id ?? actor.id, amount, kind: item.kind };
+}
+
 export function syncAppState(battle, state, selectedTargetId) {
   if (!battle) return null;
   const view = buildBattleView(battle, selectedTargetId);

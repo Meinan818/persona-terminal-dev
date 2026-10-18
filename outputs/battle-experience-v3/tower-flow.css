@@ -117,6 +117,27 @@
 .vr-compendium>p{padding:12px;color:#9fc0ff;font-size:12px}
 .vr-locked{padding:24px;border:1px dashed rgba(63,240,255,.4);background:rgba(6,25,90,.45);margin-top:18px}
 .vr-locked b{font:italic 800 24px var(--sh-cd);color:#ff7fb3}.vr-locked p{margin-top:8px;font-size:12px;line-height:1.7;color:#9fc0ff}
+.vr-recipes{display:grid;gap:6px;margin-top:16px;max-height:330px;overflow:auto;padding-right:4px}
+.vr-recipe{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:10px 12px;border:1px solid rgba(63,240,255,.22);background:rgba(10,29,69,.82);color:#f4fbff;text-align:left;cursor:pointer;transition:border-color .18s,background .18s}
+.vr-recipe:hover{background:rgba(20,70,216,.78);border-color:rgba(63,240,255,.55)}
+.vr-recipe.ready{border-color:rgba(255,216,74,.65);background:rgba(41,46,94,.85)}
+.vr-recipe-main{display:flex;align-items:baseline;gap:8px;min-width:0}
+.vr-recipe-main b{font-size:14px;color:#f4fbff}
+.vr-recipe-main small{font-size:10px;color:#9fc0ff}
+.vr-recipe-state{color:#ffd84a;font-size:11px;font-weight:900;white-space:nowrap;align-self:center}
+.vr-recipe-sources{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:2px 8px;font-size:11px;color:#9fc0ff}
+.vr-recipe-sources .owned{color:#8fffd2}.vr-recipe-sources .missing{color:#ff9fb8}
+.vr-recipe-sources i{font-style:normal;color:rgba(159,192,255,.45)}
+.vr-special-result{margin-bottom:16px}
+.vr-missing{margin-top:8px!important;font-size:11px!important;color:#ff9fb8!important}
+.vr-materials{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:16px;max-height:330px;overflow:auto;padding-right:4px}
+.vr-material{position:relative;display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid rgba(63,240,255,.25);background:rgba(10,29,69,.82)}
+.vr-material-tag{align-self:flex-start;padding:2px 6px;border:1px solid rgba(255,216,74,.5);color:#ffd84a;font-size:9px;font-weight:900;letter-spacing:.08em}
+.vr-material b{font-size:13px;line-height:1.4;color:#f4fbff;padding-right:30px}
+.vr-material-qty{position:absolute;right:12px;top:12px;font:italic 800 16px var(--sh-cd);color:#3ff0ff}
+.vr-material small{font-size:10px;line-height:1.5;color:#9fc0ff}
+.vr-empty{margin-top:18px;padding:24px;border:1px dashed rgba(63,240,255,.4);background:rgba(6,25,90,.45)}
+.vr-empty b{font-size:16px;color:#f4fbff}.vr-empty p{margin-top:6px;font-size:12px;line-height:1.7;color:#9fc0ff}
 .vr-side{display:flex;flex-direction:column;gap:12px}
 .vr-slot{position:relative;aspect-ratio:3/4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1.5px dashed rgba(191,246,255,.5);background:repeating-linear-gradient(45deg,rgba(191,246,255,.05) 0 7px,transparent 7px 14px);color:rgba(191,246,255,.85);text-align:center}
 .vr-slot b{font:italic 800 20px var(--sh-cd);letter-spacing:.08em;color:#ff7fb3}
@@ -131,6 +152,7 @@
   .vr-menu button{flex:1 1 calc(25% - 6px);min-width:0;min-height:46px;padding:6px 8px}.vr-menu button b{font-size:14px}
   .vr-panel{min-height:0;padding:18px 16px}.vr-panel h2{font-size:23px}
   .vr-selects{flex-direction:column;align-items:stretch}.vr-selects>span{display:none}
+  .vr-recipes{max-height:none}.vr-materials{grid-template-columns:1fr 1fr;max-height:none}
   .vr-side{display:grid;grid-template-columns:1fr 1fr;gap:10px}.vr-side blockquote{grid-column:1/-1}
   .vr-slot{aspect-ratio:1/1}.vr-slot b{font-size:16px}
 }

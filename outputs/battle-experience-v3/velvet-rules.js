@@ -7,9 +7,11 @@
 
 import {
   PERSONAS,
+  P5R_SPECIAL_FUSIONS,
   SKILLS,
   fusionResult,
   getPersona,
+  specialFusionResult,
 } from './p5r-compendium.js';
 
 export const ARCANA = [
@@ -50,6 +52,129 @@ export function fuse(aId, bId, { inherit = [] } = {}) {
     if (persona.skills.length >= 6) break;
   }
   return { ok: true, persona, cost: result.level * 500 };
+}
+
+export function specialFuse(sourceIds, { inherit = [] } = {}) {
+  if (!Array.isArray(sourceIds) || sourceIds.length < 2) {
+    return { ok: false, reason: '特殊融合至少需要两张面具。' };
+  }
+  if (new Set(sourceIds).size !== sourceIds.length) {
+    return { ok: false, reason: '特殊融合的素材不能重复。' };
+  }
+  const sources = sourceIds.map(id => getPersona(id));
+  if (sources.some(persona => !persona)) {
+    return { ok: false, reason: '图鉴里没有这个 Persona。' };
+  }
+  const result = specialFusionResult(sourceIds);
+  if (!result) return { ok: false, reason: '这组面具没有特殊融合配方。' };
+  const persona = {
+    ...result,
+    stats: { ...result.stats },
+    skills: [...result.skills],
+  };
+  const parentPool = new Set(sources.flatMap(source => source.skills));
+  for (const skillId of inherit) {
+    if (!parentPool.has(skillId)) continue;
+    if (result.inheritPool && !result.inheritPool.includes(skillId)) continue;
+    if (persona.skills.includes(skillId)) continue;
+    persona.skills.push(skillId);
+    if (persona.skills.length >= 6) break;
+  }
+  return { ok: true, persona, cost: result.level * 500, sourceIds: [...sourceIds] };
+}
+
+export function specialRecipes(ownedIds = []) {
+  const owned = new Set(ownedIds);
+  return P5R_SPECIAL_FUSIONS
+    .map(recipe => {
+      const result = getPersona(recipe.resultId);
+      if (!result) return null;
+      const sources = recipe.sources
+        .map(id => getPersona(id))
+        .filter(Boolean)
+        .map(persona => ({
+          id: persona.id,
+          name: persona.name,
+          level: persona.level,
+          owned: owned.has(persona.id),
+        }));
+      if (sources.length !== recipe.sources.length) return null;
+      const missing = sources.filter(source => !source.owned).length;
+      return {
+        resultId: result.id,
+        result,
+        resultOwned: owned.has(result.id),
+        sources,
+        sourceIds: sources.map(source => source.id),
+        ownedCount: sources.length - missing,
+        missing,
+        ready: missing === 0,
+        cost: result.level * 500,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) =>
+      Number(b.ready && !b.resultOwned) - Number(a.ready && !a.resultOwned)
+      || (b.ownedCount / b.sources.length) - (a.ownedCount / a.sources.length)
+      || a.missing - b.missing
+      || a.result.level - b.result.level);
+}
+
+let materialCatalogCache = null;
+
+function materialCatalog() {
+  if (materialCatalogCache) return materialCatalogCache;
+  const catalog = new Map();
+  for (const persona of Object.values(PERSONAS)) {
+    for (const [id, label, upgradedLabel] of [
+      [persona.item, persona.itemZh, persona.itemRZh],
+      [persona.itemR, persona.itemRZh, persona.itemZh],
+    ]) {
+      if (!id) continue;
+      const existing = catalog.get(id);
+      if (existing) {
+        existing.sourceIds.push(persona.id);
+        existing.sourceNames.push(persona.name);
+        continue;
+      }
+      catalog.set(id, {
+        id,
+        label: label || id,
+        upgradedLabel: upgradedLabel || null,
+        category: persona.skillCard ? 'skill-card' : 'equipment',
+        sourceIds: [persona.id],
+        sourceNames: [persona.name],
+      });
+    }
+  }
+  catalog.set('psyShard', {
+    id: 'psyShard',
+    label: '心灵碎片',
+    upgradedLabel: null,
+    category: 'material',
+    sourceIds: [],
+    sourceNames: [],
+  });
+  materialCatalogCache = catalog;
+  return catalog;
+}
+
+export function materialEntries(materials = {}) {
+  const catalog = materialCatalog();
+  return Object.entries(materials)
+    .map(([id, qty]) => ({ id, qty: Math.max(0, Math.floor(Number(qty) || 0)) }))
+    .filter(entry => entry.qty > 0)
+    .map(entry => ({
+      ...entry,
+      ...(catalog.get(entry.id) ?? {
+        label: entry.id,
+        upgradedLabel: null,
+        category: 'material',
+        sourceIds: [],
+        sourceNames: [],
+      }),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'zh-Hans-CN'));
 }
 
 export function createCompendium() {

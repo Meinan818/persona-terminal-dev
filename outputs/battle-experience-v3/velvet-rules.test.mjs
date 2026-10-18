@@ -6,8 +6,11 @@ import {
   fuse,
   itemize,
   lockdown,
+  materialEntries,
   register,
   sacrifice,
+  specialFuse,
+  specialRecipes,
   withdraw,
 } from './velvet-rules.js';
 
@@ -54,4 +57,47 @@ test('禁闭训练会提升指定属性', () => {
   const result = lockdown(PERSONAS.alice, 'attack');
   assert.equal(result.ok, true);
   assert.equal(result.persona.stats.attack, PERSONAS.alice.stats.attack + 2);
+});
+
+test('特殊融合按多张素材生成图鉴结果', () => {
+  const result = specialFuse(['jack-o-lantern', 'jack-frost', 'king-frost']);
+  assert.equal(result.ok, true);
+  assert.equal(result.persona.id, 'black-frost');
+  assert.equal(result.persona.name, '邪恶霜精');
+  assert.deepEqual(result.sourceIds, ['jack-o-lantern', 'jack-frost', 'king-frost']);
+  assert.equal(result.cost, result.persona.level * 500);
+});
+
+test('特殊融合拒绝重复或缺失素材', () => {
+  assert.equal(specialFuse(['shiva', 'shiva']).ok, false);
+  assert.equal(specialFuse(['shiva']).ok, false);
+  assert.equal(specialFuse(['shiva', 'not-a-persona']).ok, false);
+  assert.equal(specialFuse(['alice', 'nebiros']).ok, false);
+});
+
+test('特殊配方书标出素材缺口并优先排可融合项', () => {
+  const recipes = specialRecipes(['jack-o-lantern', 'jack-frost', 'king-frost', 'shiva']);
+  assert.equal(recipes[0].resultId, 'black-frost');
+  assert.equal(recipes[0].ready, true);
+  assert.equal(recipes[0].resultOwned, false);
+  const ardha = recipes.find(recipe => recipe.resultId === 'ardha');
+  assert.equal(ardha.ready, false);
+  assert.equal(ardha.ownedCount, 1);
+  assert.equal(ardha.missing, 1);
+  assert.deepEqual(ardha.sources.filter(source => !source.owned).map(source => source.id), ['parvati']);
+  const ownedRecipes = specialRecipes(['jack-o-lantern', 'jack-frost', 'king-frost', 'black-frost']);
+  assert.equal(ownedRecipes.find(recipe => recipe.resultId === 'black-frost').resultOwned, true);
+});
+
+test('素材背包会聚合同类电椅产物并标注中文来源', () => {
+  const entries = materialEntries({ Zio: 2, 'Megaton Raid Belt': 1, broken: 0 });
+  assert.equal(entries.length, 2);
+  const zio = entries.find(entry => entry.id === 'Zio');
+  assert.equal(zio.label, '吉欧');
+  assert.equal(zio.qty, 2);
+  assert.equal(zio.category, 'skill-card');
+  assert.ok(zio.sourceNames.includes('阿珈席翁'));
+  const belt = entries.find(entry => entry.id === 'Megaton Raid Belt');
+  assert.equal(belt.label, '百万吨腰带');
+  assert.equal(belt.category, 'equipment');
 });

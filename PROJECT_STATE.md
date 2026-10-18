@@ -1,8 +1,23 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-19 00:39（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-19 01:12（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 新对话交接 · 2026-10-19 00:39 · 等待用户优化版新母版
+## 当前续办入口 · 2026-10-19 01:12 · 接入 P3 优化版母版与专属失衡/总攻击演出
+
+- **现场**：分支 `codex/p5r-compendium-data`。本次基于用户发来的 `MASKARIA-P3-shadow-hour-v2.zip` 替换 demo 视觉基线；新增 P3 主题资源、舞台缩放、Barlow/P4 字体和 `p3-signature-fx`。未 Push、未部署；正式 `src/`、后端、存档、生产未改。
+- **用户决定**：改进版 Demo 作为 P3 视觉与交互母版；用户指定 `D:\下载\p3-shadow-hour.html` 中的“失衡 ONE MORE”和“总攻击”两段动画，要求保留素材位。P3-F（队伍剪影 / 斩线 2400×1120）继续以虚线素材位显示；P3-B/C/D 等原有素材位未移除。
+- **本轮完成**：
+  - `outputs/battle-experience-v3` 接入 `theme-base.css`、`theme-p3.css`、`src-p3-*`、`shadow-hour.js`，默认 `?theme=p3`；桌面 1440×900 / 手机 390×844 设计稿缩放。
+  - 新增 `p3-signature-fx.js/css`：弱点命中触发 ONE MORE 白板 + 碎晶 + SHIFT 提示；HOLD UP 后“总攻击”触发黑场闪白、三道斩线、22 片玻璃、伤害数字与 THE DARK HOUR ENDS。动画只负责表现，结算仍由 P5Battle 负责。
+  - 保留上一轮 bridge 的 `level` 字段；WIP 的 `p3-master.css` / `master-battle.css` 不再被 `index.html` 加载，暂留作历史参考，未删除。
+- **已验证**：
+  - demo Node 测试 **67/67**；项目 `npm test -- --runInBand` **45 文件 / 286 项**；`npm run typecheck` 通过；`node --check`、`git diff --check` 通过。
+  - 真实 Chrome 1440×900、390×844、320×568、844×390 走通：弱点 1 MORE → ONE MORE 动画 → 防御 → 亚森耶哈 → HOLD UP → 总攻击 → 战果；`errors=[]`，无横向溢出；截图在 `.rivet/scratch/p3-signature-fx/`。
+  - 回归：HOLD UP 交涉面板可打开，战斗道具面板可用，目标切换正常。
+- **边界 / 待续**：HOLD UP 提示仍是改进版自己的三选一布局；原母版 `ph-break` 的三张 P3-E Cut-in 槽位尚未接入。Showtime、完整状态/Technical、商店/安全屋/回城天鹅绒闭环、正式 `src/` 接入未做。未 Push、未部署、未打包 APK/AAB。
+- **怎么验收**：`cd E:\MASKARIA\outputs\battle-experience-v3; node serve.mjs` → `http://127.0.0.1:5187/?view=combat&theme=p3`。弱点命中看 ONE MORE 白板，全部倒地后点“总攻击”看黑场演出；也可用 `?v=m` / `?v=d` 强制构图。
+
+## 历史交接 · 2026-10-19 00:39 · 等待用户优化版新母版（已被 01:12 入口取代）
 
 这是交接节点。新窗口先只读核对本文件、Git、规则和用户新发来的 Demo；**在用户发来优化版 Demo 前，不要继续改新母版战斗壳**，也不要把当前 WIP 当成已验收视觉。
 

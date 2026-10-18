@@ -1,0 +1,351 @@
+/*
+ * P3 影时间 · 专属战斗演出
+ * 失衡：白色斜切 ONE MORE / SHIFT + 碎晶
+ * 总攻击：黑场闪白 / 斩线 / 玻璃碎片 / 伤害数字 / THE DARK HOUR ENDS
+ * 所有坐标都落在 .sh-stage 的 1440×900 / 390×844 设计稿内，随舞台一起缩放。
+ */
+
+html[data-theme=p3] .p3-stagger {
+  position: absolute;
+  inset: 0;
+  z-index: 36;
+  overflow: hidden;
+  pointer-events: none;
+  animation: p3-stagger-life 1.6s ease both;
+}
+
+html[data-theme=p3] .p3-stagger .slab {
+  position: absolute;
+  left: -60px;
+  right: -60px;
+  top: 300px;
+  height: 150px;
+  background: var(--paper);
+  transform: rotate(-6deg);
+  animation: p3-stagger-slide .25s cubic-bezier(.2, 1.3, .5, 1) both;
+}
+
+html[data-theme=p3] .p3-stagger .slab b {
+  position: absolute;
+  left: 260px;
+  top: 8px;
+  font: italic 800 140px/1 var(--sh-cd);
+  color: var(--ink);
+  letter-spacing: -.01em;
+  white-space: nowrap;
+}
+
+html[data-theme=p3] .p3-stagger .slab b span {
+  color: var(--red);
+}
+
+html[data-theme=p3] .p3-stagger .slab i {
+  position: absolute;
+  right: 300px;
+  top: 54px;
+  font: 900 22px var(--sh-sans);
+  font-style: normal;
+  color: var(--blue);
+  white-space: nowrap;
+}
+
+html[data-theme=p3] .p3-stagger .shards {
+  position: absolute;
+  inset: 0;
+}
+
+html[data-theme=p3] .p3-stagger .shards i {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(160, 240, 255, .3));
+  opacity: 0;
+  pointer-events: none;
+}
+
+html[data-theme=p3] .p3-stagger .shift {
+  position: absolute;
+  left: 900px;
+  top: 470px;
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: p3-shift-in .3s .3s both;
+}
+
+html[data-theme=p3] .p3-stagger .shift b {
+  font: italic 800 40px var(--sh-cd);
+  color: var(--yellow);
+  text-shadow: 0 0 16px var(--yellow);
+}
+
+html[data-theme=p3] .p3-stagger .shift span {
+  padding: 6px 12px;
+  border-left: 3px solid var(--yellow);
+  background: rgba(2, 10, 42, .85);
+  font: 900 14px var(--sh-sans);
+}
+
+html[data-theme=p3] .sh-stage .enemy-scene.p3-stagger-hit {
+  animation: p3-enemy-hit .5s cubic-bezier(.16, 1, .3, 1);
+}
+
+@keyframes p3-stagger-life {
+  0%, 72% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes p3-stagger-slide {
+  from { transform: rotate(-6deg) translateX(110%); }
+}
+
+@keyframes p3-shift-in {
+  from { opacity: 0; translate: 40px 0; }
+}
+
+@keyframes p3-enemy-hit {
+  0% { filter: brightness(1); translate: 0 0; }
+  18% { filter: brightness(2.2); translate: -14px 4px; }
+  38% { filter: brightness(1.5); translate: 10px -3px; }
+  62% { filter: brightness(1.1); translate: -4px 1px; }
+  100% { filter: brightness(1); translate: 0 0; }
+}
+
+html[data-theme=p3] .p3-aoa {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  overflow: hidden;
+  background: #000;
+  color: var(--paper);
+}
+
+html[data-theme=p3] .p3-aoa .sky {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 60% at 50% 50%, #1446d8, #020a2a 70%);
+  animation: p3-aoa-flash .12s 4;
+}
+
+html[data-theme=p3] .p3-aoa .ln {
+  position: absolute;
+  left: -100px;
+  right: -100px;
+  height: 4px;
+  background: var(--cyan);
+  box-shadow: 0 0 20px var(--cyan);
+  transform: scaleX(0);
+  animation: p3-aoa-line .2s forwards;
+}
+
+html[data-theme=p3] .p3-aoa .ln:nth-of-type(1) { top: 240px; --r: -18deg; animation-delay: .2s; }
+html[data-theme=p3] .p3-aoa .ln:nth-of-type(2) { top: 420px; --r: 12deg; animation-delay: .4s; }
+html[data-theme=p3] .p3-aoa .ln:nth-of-type(3) { top: 560px; --r: -8deg; animation-delay: .6s; }
+
+html[data-theme=p3] .p3-aoa .sil {
+  position: absolute;
+  left: 120px;
+  right: 120px;
+  top: 120px;
+  height: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px dashed rgba(191, 246, 255, .5);
+  background: repeating-linear-gradient(45deg, rgba(191, 246, 255, .05) 0 7px, transparent 7px 14px);
+  color: rgba(191, 246, 255, .85);
+  text-align: center;
+}
+
+html[data-theme=p3] .p3-aoa .sil span {
+  font: italic 800 28px var(--sh-cd);
+  letter-spacing: .08em;
+}
+
+html[data-theme=p3] .p3-aoa .sil b {
+  font: 900 18px var(--sh-sans);
+}
+
+html[data-theme=p3] .p3-aoa .sil small {
+  font: 700 13px var(--sh-cd);
+  letter-spacing: .12em;
+}
+
+html[data-theme=p3] .p3-aoa .glass {
+  position: absolute;
+  inset: 0;
+}
+
+html[data-theme=p3] .p3-aoa .glass i {
+  position: absolute;
+  background: rgba(191, 246, 255, .32);
+  border: 1px solid rgba(220, 250, 255, .85);
+  box-shadow: 0 0 12px rgba(191, 246, 255, .35);
+  opacity: 0;
+  animation: p3-aoa-glass 1.4s 1.2s forwards;
+}
+
+html[data-theme=p3] .p3-aoa .dmg {
+  position: absolute;
+  right: 80px;
+  top: 60px;
+  font: italic 800 160px/1 var(--sh-cd);
+  color: var(--red);
+  text-shadow: 0 0 30px var(--red);
+  opacity: 0;
+  animation: p3-aoa-fade .3s 1.6s forwards;
+}
+
+html[data-theme=p3] .p3-aoa .fin {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 640px;
+  text-align: center;
+  opacity: 0;
+  animation: p3-aoa-fade .4s 1.3s forwards;
+}
+
+html[data-theme=p3] .p3-aoa .fin b {
+  display: block;
+  white-space: nowrap;
+  font: italic 800 100px/1 var(--sh-cd);
+  letter-spacing: .04em;
+}
+
+html[data-theme=p3] .p3-aoa .fin span {
+  font: 900 18px var(--sh-sans);
+  color: var(--cyan);
+}
+
+@keyframes p3-aoa-flash {
+  50% { background: var(--paper); }
+}
+
+@keyframes p3-aoa-line {
+  to { transform: scaleX(1) rotate(var(--r)); }
+}
+
+@keyframes p3-aoa-glass {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--x), var(--y)) rotate(var(--a)); }
+}
+
+@keyframes p3-aoa-fade {
+  to { opacity: 1; }
+}
+
+html[data-theme=p3] body.p3-aoa-running .masthead {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 390×844 手机构图：沿用原母版的同一套动画，只改落点与字号。 */
+html[data-theme=p3] body.sh-m .p3-stagger .slab {
+  left: -20px;
+  right: -20px;
+  top: 250px;
+  height: 96px;
+}
+
+html[data-theme=p3] body.sh-m .p3-stagger .slab b {
+  left: 32px;
+  top: 10px;
+  font-size: 68px;
+  letter-spacing: -.03em;
+}
+
+html[data-theme=p3] body.sh-m .p3-stagger .slab i {
+  display: none;
+}
+
+html[data-theme=p3] body.sh-m .p3-stagger .shift {
+  left: 14px;
+  top: 372px;
+}
+
+html[data-theme=p3] body.sh-m .p3-stagger .shift b {
+  font-size: 26px;
+}
+
+html[data-theme=p3] body.sh-m .p3-stagger .shift span {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+html[data-theme=p3] body.sh-m .p3-aoa .sil {
+  left: 16px;
+  right: 16px;
+  top: 80px;
+  height: 480px;
+}
+
+html[data-theme=p3] body.sh-m .p3-aoa .sil span {
+  font-size: 20px;
+}
+
+html[data-theme=p3] body.sh-m .p3-aoa .sil b {
+  font-size: 13px;
+  padding: 0 20px;
+}
+
+html[data-theme=p3] body.sh-m .p3-aoa .ln:nth-of-type(1) { top: 150px; }
+html[data-theme=p3] body.sh-m .p3-aoa .ln:nth-of-type(2) { top: 300px; }
+html[data-theme=p3] body.sh-m .p3-aoa .ln:nth-of-type(3) { top: 450px; }
+
+html[data-theme=p3] body.sh-m .p3-aoa .fin {
+  top: 600px;
+}
+
+html[data-theme=p3] body.sh-m .p3-aoa .fin b {
+  font-size: 46px;
+  white-space: normal;
+  line-height: 1;
+  padding: 0 18px;
+}
+
+html[data-theme=p3] body.sh-m .p3-aoa .fin span {
+  display: block;
+  margin-top: 8px;
+  padding: 0 18px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+html[data-theme=p3] body.sh-m .p3-aoa .dmg {
+  right: 20px;
+  top: 40px;
+  font-size: 96px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme=p3] .p3-stagger,
+  html[data-theme=p3] .p3-stagger .slab,
+  html[data-theme=p3] .p3-stagger .shift,
+  html[data-theme=p3] .p3-aoa .sky,
+  html[data-theme=p3] .p3-aoa .ln,
+  html[data-theme=p3] .p3-aoa .glass i,
+  html[data-theme=p3] .p3-aoa .dmg,
+  html[data-theme=p3] .p3-aoa .fin {
+    animation-duration: .01ms !important;
+    animation-delay: 0s !important;
+  }
+}
+
+@media (max-height: 700px) {
+  html[data-theme=p3] body.sh-m .p3-aoa .fin {
+    top: 540px;
+  }
+
+  html[data-theme=p3] body.sh-m .p3-aoa .fin b {
+    font-size: 40px;
+  }
+
+  html[data-theme=p3] body.sh-m .p3-aoa .fin span {
+    font-size: 10px;
+  }
+}

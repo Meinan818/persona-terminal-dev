@@ -16,8 +16,13 @@
   <link rel="stylesheet" href="./mobile-battle.css">
   <link rel="stylesheet" href="./negotiation.css">
   <link rel="stylesheet" href="./battle-engine.css">
-  <link id="p3-master-style" rel="stylesheet" href="./p3-master.css" media="not all">
-  <link id="master-battle-style" rel="stylesheet" href="./master-battle.css" media="not all">
+  <script>/* 主题：?theme=p3|p4|p5，或记住上次选择；默认 P3 影时间 */(function(){var q=new URLSearchParams(location.search).get('theme'),t=q||localStorage.getItem('maskaria-theme')||'p3';if(!/^p[345]$/.test(t))t='p3';if(q)localStorage.setItem('maskaria-theme',t);document.documentElement.dataset.theme=t;})();</script>
+  <link rel="stylesheet" href="./theme-base.css">
+  <link rel="stylesheet" href="./theme-p3.css">
+  <link rel="stylesheet" href="./p3-signature-fx.css">
+  <link rel="stylesheet" href="./theme-p4.css">
+  <link rel="stylesheet" href="./theme-p5.css">
+  <script src="./shadow-hour.js" defer></script>
   <script src="./app.js" type="module"></script>
 </head>
 <body>
@@ -38,7 +43,9 @@
   </defs></svg>
   <div class="sea" aria-hidden="true"><i></i><i></i><b></b><b></b></div>
   <div class="ghost-word" aria-hidden="true">SHADOW</div>
+  <div class="sh-app-deco" aria-hidden="true"><div class="sh-moon"></div><div class="sh-word">DARK HOUR</div><div class="sh-water"><i></i><i></i><i></i><i></i><i></i></div><div class="sh-ripple"></div><div class="sh-ripple"></div></div>
   <header class="masthead">
+    <div class="sh-app-clock" aria-hidden="true"><b>0<span>:</span>00</b><i></i><em>THE DARK HOUR</em></div>
     <a href="#battle" class="brand">MASKARIA<span>面具庭园</span></a>
     <button class="icon-button settings-button" aria-label="战场设置" aria-controls="sheet" aria-haspopup="dialog" aria-expanded="false" data-action="settings"><svg aria-hidden="true"><use href="#i-gear"/></svg><span>设置<small>SETTINGS</small></span></button>
   </header>

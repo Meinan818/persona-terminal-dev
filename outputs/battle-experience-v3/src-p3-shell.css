@@ -1,0 +1,172 @@
+/* ===== P3 影时间 · 应用外壳：P3R 全屏菜单（非战斗页面） ===== */
+/* 素材占位框（用户自绘素材替换） */
+T .sh-ph{position:relative}
+T .figure>i,T .enemy-face>i,T .enemy-face>b,T .enemy-orbit{display:none!important}
+T .figure{border:1.5px dashed rgba(191,246,255,.6)!important;background:repeating-linear-gradient(45deg,rgba(191,246,255,.06) 0 8px,transparent 8px 16px)!important;clip-path:none!important;filter:none!important;display:flex!important;align-items:center;justify-content:center;text-align:center}
+T .figure:after{content:"P3-B\A Persona 塔罗牌面\A 440×640 · 透明 PNG";white-space:pre;font:700 12px/1.6 var(--sh-sans);color:rgba(191,246,255,.85)}
+T .enemy-face{border:1.5px dashed rgba(255,127,179,.75)!important;background:repeating-linear-gradient(45deg,rgba(255,63,142,.08) 0 8px,transparent 8px 16px)!important;box-shadow:none!important;border-radius:50%!important;transform:none!important;display:flex!important;align-items:center;justify-content:center;text-align:center}
+T .enemy-face:after{content:"P3-C\A 敌人 · 600×600\A 透明 PNG";white-space:pre;font:700 12px/1.6 var(--sh-sans);color:rgba(255,190,215,.9)}
+T .hero-stage .figure:after{content:"P3-H\A 主角立绘\A 900×1400 · 透明 PNG"}
+T .mask-art{border:1.5px dashed rgba(191,246,255,.6);background:repeating-linear-gradient(45deg,rgba(191,246,255,.06) 0 8px,transparent 8px 16px)!important;display:flex;align-items:center;justify-content:center;filter:none!important;clip-path:none!important;-webkit-mask:none!important;mask:none!important}
+T .mask-art:after{content:"P3-M\A 面具 / Persona 图\A 600×600";white-space:pre;text-align:center;font:700 12px/1.6 var(--sh-sans);color:rgba(191,246,255,.85)}
+T .mask-art>*{display:none}
+T .notag .figure:after,T .notag .enemy-face:after{content:none}
+
+/* 夜空装饰（全局） */
+T .sea,T .ghost-word{display:none}
+T .sh-app-deco{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(120% 90% at 72% 6%,#0c2a8a 0,#051557 40%,#020a2a 86%)}
+T .sh-app-deco .sh-moon{position:absolute;right:7%;top:-200px;left:auto;width:560px;height:560px}
+T .sh-app-deco .sh-word{position:absolute;left:auto;right:-40px;top:auto;bottom:6%;font-size:260px;transform:rotate(-6deg)}
+T .sh-app-deco .sh-ripple{left:62%;bottom:16%}
+T body:not(.sh-m):not(.sh-d) .sh-app-deco{display:block}
+
+/* 时钟 + 品牌（左上） */
+T .sh-app-clock{display:flex;align-items:flex-end;gap:14px}
+T .sh-app-clock b{font:italic 800 96px/.8 var(--sh-cd);letter-spacing:-.02em;color:#f4fbff;text-shadow:0 0 30px rgba(63,240,255,.6)}
+T .sh-app-clock b span{color:#3ff0ff}
+T .sh-app-clock i{width:44px;height:44px;border-radius:50%;background:#f4fbff;box-shadow:0 0 16px rgba(255,255,255,.7);position:relative;overflow:hidden;margin-bottom:4px}
+T .sh-app-clock i:after{content:"";position:absolute;inset:0;border-radius:50%;background:#06195a;transform:translateX(30%)}
+T .sh-app-clock em{font:italic 600 15px var(--sh-cd);letter-spacing:.2em;color:#3ff0ff;margin-bottom:4px}
+T body[data-fighting=true] .sh-app-clock{display:none}
+T body:not([data-fighting=true]) .masthead{position:fixed;left:0;top:0;right:0;z-index:20;max-width:none;margin:0;min-height:0;padding:28px 40px 0;display:flex;align-items:flex-start;gap:28px;pointer-events:none;background:none}
+T body:not([data-fighting=true]) .masthead>*{pointer-events:auto}
+T body:not([data-fighting=true]) .brand{margin-top:52px;font-size:20px}
+T body:not([data-fighting=true]) .settings-button{margin-left:auto}
+
+/* 左侧：P3R 巨型斜体导航 */
+T body.sh-d:not([data-fighting=true]) .room-nav{position:fixed;left:0;top:200px;width:470px;max-width:none;margin:0;padding:0;z-index:15;display:flex;flex-direction:column;align-items:flex-start;gap:6px;background:none}
+T body.sh-d:not([data-fighting=true]) .room-nav a{flex:0 0 auto;min-height:0;height:96px;width:auto;padding:0 60px 0 0;gap:0;color:#bff6ff;transform:rotate(-6deg);transform-origin:left center;transition:translate .25s cubic-bezier(.3,1.4,.5,1)}
+T body.sh-d:not([data-fighting=true]) .room-nav a:nth-child(1){margin-left:44px}
+T body.sh-d:not([data-fighting=true]) .room-nav a:nth-child(2){margin-left:74px}
+T body.sh-d:not([data-fighting=true]) .room-nav a:nth-child(3){margin-left:104px}
+T body.sh-d:not([data-fighting=true]) .room-nav a:nth-child(4){margin-left:134px}
+T body.sh-d:not([data-fighting=true]) .room-nav a:before{background:none;clip-path:none;box-shadow:none;left:-200px;right:0}
+T body.sh-d:not([data-fighting=true]) .room-nav a:after{content:none}
+T body.sh-d:not([data-fighting=true]) .room-nav a svg{display:none}
+T body.sh-d:not([data-fighting=true]) .room-nav a span{display:flex;flex-direction:column-reverse;align-items:flex-start;font-size:15px;font-weight:900;color:#9fc0ff;line-height:1}
+T body.sh-d:not([data-fighting=true]) .room-nav a small{display:block;margin:0 0 2px;font:italic 800 76px/.9 var(--sh-cd);letter-spacing:.01em;color:#bff6ff;-webkit-text-stroke:0}
+T body.sh-d:not([data-fighting=true]) .room-nav a:hover{translate:14px 0}
+T body.sh-d:not([data-fighting=true]) .room-nav a[aria-current=page]{color:#06195a}
+T body.sh-d:not([data-fighting=true]) .room-nav a[aria-current=page]:before{background:#f4fbff;clip-path:polygon(0 0,100% 0,calc(100% - 34px) 100%,0 100%);box-shadow:0 0 40px rgba(63,240,255,.5)}
+T body.sh-d:not([data-fighting=true]) .room-nav a[aria-current=page] small{color:#06195a;font-size:92px}
+T body.sh-d:not([data-fighting=true]) .room-nav a[aria-current=page] span{color:#ff3f8e}
+T body.sh-d:not([data-fighting=true]) .room-nav a[aria-current=page]:after{content:"";position:absolute;left:auto;right:-6px;bottom:auto;top:50%;width:0;height:0;margin-top:-14px;background:none;border:14px solid transparent;border-left:22px solid #ff3f8e}
+T body.sh-d:not([data-fighting=true]) .room-nav a:not([aria-current=page]):hover small{color:#3ff0ff}
+/* 内容区 */
+T body.sh-d:not([data-fighting=true]) #content{max-width:none;margin:0 0 0 520px;padding:170px 64px 60px 0;position:relative;z-index:5;min-height:100vh}
+/* 标题 */
+T .page-heading{margin-bottom:40px;align-items:flex-end}
+T .page-heading h1{font-size:72px;line-height:1;text-shadow:0 0 30px rgba(63,240,255,.45);transform:skewX(-8deg)}
+T .page-heading h1 span{font:italic 600 18px var(--sh-cd);letter-spacing:.3em;color:#3ff0ff;margin-top:14px;transform:none}
+T .page-heading p{color:#9fc0ff;font-size:13px}
+T .page-heading:after{content:"";position:absolute;left:0;right:0;bottom:-16px;height:1px;background:linear-gradient(90deg,#3ff0ff,rgba(63,240,255,0))}
+
+/* 首页：塔罗牌主角 + 任务面板 */
+T body.sh-d .home-grid{grid-template-columns:330px minmax(0,1fr);gap:56px;align-items:start}
+T .hero-stage{min-height:0!important;height:470px;margin:10px 0 0!important;border:2px solid #bff6ff;background:linear-gradient(160deg,rgba(20,70,216,.55),rgba(2,10,42,.9));box-shadow:0 0 50px rgba(63,240,255,.28);transform:rotate(-4deg);overflow:hidden}
+T .hero-stage:before{content:"— 0 —";position:absolute;inset:auto 0 auto 0;top:14px;border:0;border-radius:0;transform:none;text-align:center;font:600 20px var(--sh-cd);letter-spacing:.3em;color:#bff6ff;z-index:2}
+T .hero-stage:after{content:"THE FOOL";left:0;right:0;bottom:16px;text-align:center;font:italic 800 26px var(--sh-cd);letter-spacing:.2em;color:#3ff0ff;text-shadow:0 0 18px rgba(63,240,255,.6)}
+T .hero-stage>div,T .hero-stage>.visual-slot{position:absolute;inset:50px 22px 64px}
+T .hero-stage .figure{position:absolute;inset:50px 22px 64px;width:auto;height:auto;transform:none!important}
+T .hero-stage .slash-label{position:absolute;left:auto;right:-6px;bottom:62px;transform:rotate(0);z-index:3;font-size:11px}
+T .mission{padding:26px 30px 24px;background:linear-gradient(135deg,rgba(6,25,90,.85),rgba(2,10,42,.55));border-left:4px solid #3ff0ff;clip-path:polygon(0 0,100% 0,100% calc(100% - 26px),calc(100% - 26px) 100%,0 100%)}
+T .mission h2{font-size:42px;margin:16px 0 6px;text-shadow:0 0 18px rgba(63,240,255,.35)}
+T .mission>p{color:#bff6ff}
+T .mission-line{border-bottom:1px solid rgba(63,240,255,.18);padding:16px 0}
+T .mission-line span{color:#9fc0ff}
+T .mission-line b{font:italic 800 24px var(--sh-cd)}
+T .status-ribbon{gap:34px;border-top:1px solid rgba(63,240,255,.3)}
+T .status-ribbon span{font:italic 600 14px var(--sh-cd);letter-spacing:.1em;color:#9fc0ff}
+T .status-ribbon b{font:italic 800 34px var(--sh-cd);color:#f4fbff}
+T .main-button{font-size:22px;min-height:66px;padding:12px 28px 12px 36px}
+T .main-button small{color:#1446d8}
+/* Persona：面具做成塔罗牌列 */
+T .mask-tabs{flex-wrap:nowrap;overflow-x:auto;gap:14px;padding:16px 4px 22px;margin-bottom:22px;scrollbar-width:thin}
+T .mask-tabs button{flex:0 0 120px;min-height:168px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;border:2px solid rgba(191,246,255,.55)!important;background:linear-gradient(160deg,rgba(20,70,216,.55),rgba(2,10,42,.92))!important;clip-path:none!important;color:#f4fbff;font-size:15px;font-weight:900;white-space:normal;transition:transform .25s cubic-bezier(.3,1.4,.5,1)}
+T .mask-tabs button:nth-child(odd){transform:rotate(-3deg)}T .mask-tabs button:nth-child(even){transform:rotate(2deg)}
+T .mask-tabs button svg{width:40px;height:40px;color:#3ff0ff;margin-bottom:auto;margin-top:8px}
+T .mask-tabs button small{font:italic 600 11px var(--sh-cd);letter-spacing:.18em;color:#3ff0ff}
+T .mask-tabs button[aria-pressed=true]{background:#f4fbff!important;color:#06195a;border-color:#f4fbff!important;transform:translateY(-12px) rotate(0);box-shadow:0 0 40px rgba(63,240,255,.55),inset 0 -5px 0 #ff3f8e!important}
+T .mask-tabs button[aria-pressed=true] svg,T .mask-tabs button[aria-pressed=true] small{color:#1446d8}
+T .mask-tabs button:hover{transform:translateY(-6px)}
+T .duo-layout{gap:46px}
+T .mask-display .mask-art{width:100%;aspect-ratio:1;max-width:340px;margin:0 auto}
+T .mask-display p{color:#9fc0ff;font-size:13px;margin-top:14px;text-align:center}
+T .persona-info h2{font-size:46px;transform:skewX(-6deg);text-shadow:0 0 20px rgba(63,240,255,.4)}
+T .persona-skill{padding:12px 24px;margin-top:8px;background:linear-gradient(90deg,rgba(20,70,216,.7),rgba(6,25,90,.35));clip-path:polygon(16px 0,100% 0,calc(100% - 16px) 100%,0 100%);border:0}
+T .persona-skill:hover{background:#f4fbff;color:#06195a}
+T .persona-skill-cost{font:italic 800 30px var(--sh-cd);color:#ffd84a}
+/* 武库 */
+T .subnav,T .arsenal-tabs{gap:8px}
+T .subnav button{min-height:58px;font-size:16px;font-weight:900}
+T .subnav button small{display:block;font:italic 600 11px var(--sh-cd);letter-spacing:.18em;color:#3ff0ff}
+T .subnav button[aria-pressed=true] small{color:#1446d8}
+T .equipment-row{margin-top:10px;padding:16px 26px;background:linear-gradient(90deg,rgba(20,70,216,.7),rgba(6,25,90,.3));clip-path:polygon(18px 0,100% 0,calc(100% - 18px) 100%,0 100%);border:0}
+T .equipment-row h3{font-size:20px}
+T .equipment-row p{color:#9fc0ff}
+T .empty-state{padding:40px;text-align:center;clip-path:polygon(24px 0,100% 0,calc(100% - 24px) 100%,0 100%)}
+/* 登塔：深夜塔图 */
+T .route-map,T .route-detail,T .tower-tools{background:linear-gradient(160deg,rgba(6,25,90,.7),rgba(2,10,42,.4));border-color:rgba(63,240,255,.3)}
+T .node-seal{border-color:#bff6ff;background:#06195a;color:#3ff0ff;box-shadow:0 0 16px rgba(63,240,255,.4)}
+T .route-node[aria-pressed=true] .node-seal,T .route-node.current .node-seal{background:#f4fbff;color:#06195a;box-shadow:0 0 26px #3ff0ff}
+T .floor-tag,T .stratum-number{font-family:var(--sh-cd);font-style:italic}
+T .route-watermark,T .scene-ghost{color:transparent;-webkit-text-stroke:2px rgba(63,240,255,.14)}
+T .track-live{stroke:#3ff0ff}
+/* 剧情 / 结算页 */
+T .scene-heading h1,T .experience-scene h1{font-size:68px;transform:skewX(-8deg);text-shadow:0 0 30px rgba(63,240,255,.5)}
+T .scene-emblem,T .result-mark{border-color:#bff6ff;background:linear-gradient(160deg,rgba(20,70,216,.55),rgba(2,10,42,.9));color:#3ff0ff;box-shadow:0 0 40px rgba(63,240,255,.3)}
+
+/* ===== 手机外壳 ===== */
+T body.sh-m:not([data-fighting=true]) .masthead{padding:14px 16px 0;gap:10px;align-items:center;position:fixed;background:linear-gradient(180deg,rgba(2,10,42,.92),rgba(2,10,42,0));padding-bottom:16px}
+T body.sh-m .sh-app-clock b{font-size:46px}
+T body.sh-m .sh-app-clock i{width:20px;height:20px;margin-bottom:3px}
+T body.sh-m .sh-app-clock em{display:none}
+T body.sh-m:not([data-fighting=true]) .brand{margin-top:0;font-size:16px}
+T body.sh-m .sh-app-deco .sh-moon{right:-90px;top:-120px;width:300px;height:300px}
+T body.sh-m .sh-app-deco .sh-word{font-size:120px;bottom:12%}
+T body.sh-m:not([data-fighting=true]) .room-nav{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;margin:0;max-width:none;flex-direction:row;gap:4px;padding:8px 8px max(10px,env(safe-area-inset-bottom));z-index:20;background:linear-gradient(180deg,rgba(2,10,42,.4),rgba(2,10,42,.96) 30%);border-top:1px solid rgba(63,240,255,.35)}
+T body.sh-m:not([data-fighting=true]) .room-nav a{flex:1;min-height:54px;padding:4px 2px;gap:0;justify-content:center;flex-direction:column;transform:none;margin:0}
+T body.sh-m:not([data-fighting=true]) .room-nav a svg{display:none}
+T body.sh-m:not([data-fighting=true]) .room-nav a span{display:flex;flex-direction:column-reverse;align-items:center;font-size:10px;color:#9fc0ff;line-height:1.1}
+T body.sh-m:not([data-fighting=true]) .room-nav a small{display:block;margin:0 0 1px;font:italic 800 21px/.95 var(--sh-cd);letter-spacing:0;color:#bff6ff}
+T body.sh-m:not([data-fighting=true]) .room-nav a:before{background:none;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+T body.sh-m:not([data-fighting=true]) .room-nav a[aria-current=page]:before{background:#f4fbff;box-shadow:0 0 18px rgba(63,240,255,.5)}
+T body.sh-m:not([data-fighting=true]) .room-nav a[aria-current=page] small{color:#06195a}
+T body.sh-m:not([data-fighting=true]) .room-nav a[aria-current=page] span{color:#ff3f8e}
+T body.sh-m:not([data-fighting=true]) .room-nav a[aria-current=page]:after{left:16px;right:16px;bottom:0;height:3px;background:#ff3f8e}
+T body.sh-m:not([data-fighting=true]) #content{padding:96px 18px 110px;max-width:none;margin:0}
+T body.sh-m .page-heading{margin-bottom:28px}
+T body.sh-m .page-heading h1{font-size:46px}
+T body.sh-m .page-heading h1 span{font-size:13px;letter-spacing:.24em;margin-top:8px}
+T body.sh-m .page-heading p{display:none}
+T body.sh-m .home-grid{grid-template-columns:1fr;gap:0}
+T body.sh-m .hero-stage{position:absolute!important;right:4px;top:-112px;width:118px;height:176px;margin:0!important;z-index:2;box-shadow:0 0 26px rgba(63,240,255,.3)}
+T body.sh-m .hero-stage:before{font-size:11px;top:6px;letter-spacing:.2em}
+T body.sh-m .hero-stage:after{font-size:12px;bottom:6px;letter-spacing:.1em}
+T body.sh-m .hero-stage .figure,T body.sh-m .hero-stage>div{inset:24px 8px 26px}
+T body.sh-m .hero-stage .figure:after{font-size:9px;line-height:1.4}
+T body.sh-m .hero-stage .slash-label{display:none}
+T body.sh-m .home-grid{position:relative}
+T body.sh-m .mission{padding:18px 18px 16px}
+T body.sh-m .mission h2{font-size:30px}
+T body.sh-m .mission-line b{font-size:20px}
+T body.sh-m .status-ribbon{gap:16px}
+T body.sh-m .status-ribbon b{font-size:26px}
+T body.sh-m .main-button{font-size:18px;min-height:56px;padding:10px 22px 10px 28px}
+T body.sh-m .mask-tabs{gap:10px;padding:14px 2px 16px;margin:0 -18px 14px;padding-left:18px;padding-right:18px}
+T body.sh-m .mask-tabs button{flex:0 0 92px;min-height:132px;font-size:13px}
+T body.sh-m .mask-tabs button svg{width:30px;height:30px}
+T body.sh-m .duo-layout{grid-template-columns:1fr;gap:14px}
+T body.sh-m .mask-display .mask-art{max-width:200px}
+T body.sh-m .persona-info h2{font-size:34px}
+T body.sh-m .subnav button{min-height:52px;font-size:13px;padding:6px 4px}
+T body.sh-m .subnav button small{font-size:9px;letter-spacing:.08em}
+T body.sh-m .equipment-row{padding:12px 18px}
+T body.sh-m .scene-heading h1,T body.sh-m .experience-scene h1{font-size:42px}
+T .sh-app-deco .sh-moon{right:-140px;top:-280px;width:600px;height:600px;opacity:.75}
+T .mask-art{transform:none!important;rotate:none!important;margin:0 auto!important;border-radius:0!important}
+T .mask-display{align-self:start}
+T body.sh-d:not([data-fighting=true]) .room-nav a span{gap:4px}
+T body.sh-d .duo-layout{grid-template-columns:300px minmax(0,1fr)}
+T .mask-art:before{content:none!important}
+T .mask-art:after{content:"P3-M\A 面具 / Persona 图\A 600×600"!important;position:static!important;inset:auto!important;width:auto!important;height:auto!important;background:none!important;clip-path:none!important;transform:none!important;border:0!important;white-space:pre;text-align:center;font:700 12px/1.6 var(--sh-sans)!important;color:rgba(191,246,255,.85)!important}

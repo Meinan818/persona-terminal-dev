@@ -15,16 +15,22 @@ import {createRequest,recordRequest,requestForStratum} from './requests.js';
 import {NPCS,trustLabel} from './npcs.js';
 import {currentRoom,visibleRooms} from './floor-map.js';
 import {arsenalEffects} from './arsenal-effects.js';
+import {TONE_LABELS,offlineJudge,resolveTalkCheck} from './night-slice.js';
+import {requestShadowJudge} from './night-slice-ai.js';
+import {shadowProfileFor} from './grid-negotiation.js';
+import {regionForFloor} from './region-rules.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 export function createTowerFlow(api){
   const {state,icon,render,reduced}=api,model=createDungeonRun({stratum:state.towerStratum}),j=model.journey;
   const debugMode=new URLSearchParams(location.search).get('p5r-debug')==='1';
+  const offlineOnly=new URLSearchParams(location.search).get('slice-ai')==='off';
   const initialVitals={hp:state.hp,sp:state.sp};
   const RUN_KEY='maskaria.p5r.run.v1';
   let page=null,receipt=null,clock=null,raf=0,serial=0,recap=null;
   let interlude=null,shopReturn='interlude',shopMessage='',prepMessage='',requestMessage='',fusionPreview=null,fusionMessage='',specialPreview=null,specialMessage='',networkPreview=null,networkMessage='',skillCardSelected='',velvetService='fusion',velvetMessage='',velvetReturn='return',inventoryTab='consumables',inventoryMessage='';
+  let shadowTalk=null,shadowTalkBusy=false;
   const btn=(label,action,note='',disabled=false)=>{
     const tone=typeof disabled==='string'?disabled:'';
     return `<button class="flow-button${tone?` ${tone}`:''}" data-tower="${action}" ${disabled===true?'disabled':''}><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;
@@ -68,16 +74,17 @@ export function createTowerFlow(api){
   function restParty(){
     if(!interlude||interlude.rested)return;
     const party=interlude.party??[];
+    const heal=regionForFloor(j.floor).safeHeal??.3;
     for(const member of party){
       if(member.isPlayer){
-        state.hp=Math.min(member.maxHp,state.hp+Math.max(1,Math.ceil(member.maxHp*.3)));
-        state.sp=Math.min(member.maxSp,state.sp+Math.max(1,Math.ceil(member.maxSp*.3)));
+        state.hp=Math.min(member.maxHp,state.hp+Math.max(1,Math.ceil(member.maxHp*heal)));
+        state.sp=Math.min(member.maxSp,state.sp+Math.max(1,Math.ceil(member.maxSp*heal)));
         continue;
       }
       const vitals=state.partyVitals?.[member.id];
       if(!vitals)continue;
-      vitals.hp=Math.min(member.maxHp,(Number(vitals.hp)||0)+Math.max(1,Math.ceil(member.maxHp*.3)));
-      vitals.sp=Math.min(member.maxSp,(Number(vitals.sp)||0)+Math.max(1,Math.ceil(member.maxSp*.3)));
+      vitals.hp=Math.min(member.maxHp,(Number(vitals.hp)||0)+Math.max(1,Math.ceil(member.maxHp*heal)));
+      vitals.sp=Math.min(member.maxSp,(Number(vitals.sp)||0)+Math.max(1,Math.ceil(member.maxSp*heal)));
     }
     interlude.rested=true;
     api.persistP5State?.();
@@ -502,6 +509,26 @@ export function createTowerFlow(api){
     }
     return false;
   }
+  function debugShadowTalk(){
+    if(!j.explore||!j.map)return false;
+    const shadow=Object.values(j.map.rooms).find(room=>room.type==='shadow'&&!room.cleared);
+    if(!shadow)return false;
+    shadow.revealed=true;
+    for(const [dir,dx,dy] of MAP_STEPS){
+      const from=j.map.rooms[`${shadow.x-dx},${shadow.y-dy}`];
+      if(!from)continue;
+      j.explore.player={x:from.x,y:from.y};
+      const result=model.mapMove(dir);
+      if(result.pending&&result.pending.kind==='shadow'){
+        page=null;
+        j.mapMessage='它没有先动手。你可以开口，也可以拔刀。';
+        api.goRoom('tower');
+        renderMap();
+        return true;
+      }
+    }
+    return false;
+  }
   function start(error=false){
     clearRun();
     model.start(state.towerStratum);
@@ -521,6 +548,38 @@ export function createTowerFlow(api){
       page=null;api.startFight(pending.kind==='boss',pending.battleState,pending.encounter,pending.floor);return;
     }
     show(pending.kind);
+  }
+  function handlePending(result){
+    if(result.pending?.kind==='shadow'&&!result.pending.resolved){
+      page=null;
+      j.mapMessage='它没有先动手。你可以开口，也可以拔刀。';
+      renderMap();
+      revealRoomPanel();
+      return true;
+    }
+    enter();
+    return true;
+  }
+  function applyRegionStep(){
+    if(!j.explore)return;
+    const region=regionForFloor(j.floor);
+    const turn=Number(j.explore.turn)||0;
+    if(region.corrodeEvery&&turn>0&&turn%region.corrodeEvery===0){
+      const damage=Number(region.corrodeDamage)||2;
+      state.hp=Math.max(1,(Number(state.hp)||1)-damage);
+      j.mapMessage=`藤蔓收紧，HP -${damage}。`;
+    }
+    if(region.clockEvery&&turn>0&&turn%region.clockEvery===0){
+      const spend=Number(region.clockTime)||1;
+      const security=Number(region.clockSecurity)||3;
+      j.explore.time=Math.max(0,(Number(j.explore.time)||0)-spend);
+      j.explore.security=Math.min(100,(Number(j.explore.security)||0)+security);
+      j.explore.alert=j.explore.security>=100;
+      model.syncExplore();
+      if(j.explore.time<=0){j.explore.ended='timeout';j.timeout=true;j.ended='timeout';}
+      j.mapMessage=`钟摆响了一声：月光 -${spend}，警戒 +${security}。`;
+    }
+    if(region.securityPerMove)model.adjustSecurity(region.securityPerMove);
   }
   function choose(action){
     if(!j.pending||j.pending.resolved)return;
@@ -583,6 +642,7 @@ export function createTowerFlow(api){
     return shadowTimeStatus(new Date(),options);
   }
   function prepPage(){
+    if(!j.active&&state.towerStratum!=='echo'){state.towerStratum='echo';model.setStratum('echo');api.persistP5State?.();}
     const shadow=shadowState(),roster=rosterIds(),materialCount=materialEntries(state.materials).reduce((sum,item)=>sum+item.qty,0);
     const awakened=Boolean(state.personaCreated);
     const canEnter=canEnterTower({shadowActive:shadow.active,personaCreated:awakened});
@@ -594,10 +654,10 @@ export function createTowerFlow(api){
     const request=j.request??createRequest(requestForStratum(state.towerStratum));
     const card=(title,note,tag,action)=>`<article class="night-base-card"><span>${tag}</span><h3>${title}</h3><p>${note}</p><button type="button" data-tower="${action}">进入</button></article>`;
     const awakenBanner=awakened?'':`<div class="night-base-awaken"><div><span>FIRST CONTRACT</span><h3>还没有面具回应你。</h3><p>四道问题，一段自述。等你说完，它才会开口。</p></div><button type="button" data-tower="prep-awaken">回应它</button></div>`;
-    const sliceBanner=`<div class="night-base-slice"><div><span>AI SLICE / 白昼到夜里</span><h3>今晚的一层，自己长出来。</h3><p>默认不读白天的记录；偶尔想带一件事进去时，也可以。绕行、硬刚，或者自己写一段交涉。</p></div><button type="button" data-slice="open">进入单层切片</button></div>`;
+    const sliceBanner=`<div class="night-base-slice is-lab"><div><span>AI LAB / 试验层</span><h3>3–5 间房的短流程。</h3><p>用来验证自由交涉与夜层生成；主线仍是上面的格子高塔。</p></div><button type="button" data-slice="open">进入试验层</button></div>`;
     const savedRun=peekRun();
     const continueBanner=savedRun?`<div class="night-base-continue"><div><span>LAST RUN / 上次的塔</span><h3>上次停在 ${savedRun.floor}F。</h3><p>第 ${Math.max(1,Math.ceil(savedRun.floor/10))} 区段 · 继续这一夜，或者从 1F 重新开始。</p></div><div class="night-base-continue-actions"><button type="button" data-tower="continue-run">继续</button><button type="button" data-tower="new-run">重新开始</button></div></div>`:'';
-    const stratumPanel=`<section class="tower-strata"><div class="tower-strata-head"><span>塔层 / STRATUM</span><b>${esc(stratum.name)}</b><small>${esc(stratum.rule)}</small></div><div class="tower-strata-list">${TOWER_STRATA.map(item=>`<button type="button" data-tower="stratum:${item.id}" class="${item.id===state.towerStratum?'active':''}" ${j.active&&!j.ended?'disabled':''}><b>${esc(item.name)}</b><small>${esc(item.rule)}</small></button>`).join('')}</div></section>`;
+    const stratumPanel=`<section class="tower-strata"><div class="tower-strata-head"><span>塔层 / STRATUM</span><b>${esc(stratum.name)}</b><small>${esc(stratum.rule)}</small></div><div class="tower-strata-list">${TOWER_STRATA.map(item=>{const locked=item.id!=='echo';return `<button type="button" data-tower="stratum:${item.id}" class="${item.id===state.towerStratum?'active':''}" ${locked||(j.active&&!j.ended)?'disabled':''}><b>${esc(item.name)}</b><small>${esc(locked?'等独立玩法开放':item.rule)}</small></button>`;}).join('')}</div><p class="tower-strata-note">先做回声之庭；另外两座塔等有真正不同的玩法后再开放。</p></section>`;
     const npcEffect=id=>{
       const rank=trust(id);
       if(id==='velvet')return `融合费用 -${rank*5}%`;
@@ -606,7 +666,7 @@ export function createTowerFlow(api){
       return `战斗与请求金钱 +${rank*2}%`;
     };
     const npcPanel=`<section class="night-npcs">${NPCS.map(npc=>`<article><span>${esc(npc.role)}</span><b>${esc(npc.name)}</b><small>${esc(npc.line)} · ${trustLabel(state.npcTrust?.[npc.id]??0)} · ${npcEffect(npc.id)}</small></article>`).join('')}</section>`;
-    return frame('影时间据点。','DARK HOUR BASE',`<div class="night-base"><section class="night-base-head"><span class="slash-label">DARK HOUR / PREPARATION</span><h2>${shadow.active?'影时间，正在流淌。':'影时间，还没有降临。'}</h2><p>${shadow.active?'商店和天鹅绒房间都在塔外。整理好队伍，再从塔门进入。':'准备可以随时进行；只有塔门会在影时间开启。'}</p><div class="night-base-window"><span>${esc(formatShadowTimeRange({days:state.shadowTime?.days??[5,6,0],startHour:Number(String(state.shadowTime?.start??'20:00').split(':')[0]),endHour:Number(String(state.shadowTime?.end??'07:00').split(':')[0])}))}</span><b>${nextText}</b></div></section><div class="night-base-stats"><div><span>持有</span><b>¥${money().toLocaleString()}</b></div><div><span>面具</span><b>${roster.length}</b><small>张</small></div><div><span>契约</span><b>${esc(contract)}</b></div><div><span>素材</span><b>${materialCount}</b><small>件</small></div></div><div class="night-request ${request.completed?'completed':''}"><span>今夜请求</span><b>${esc(request.title)}</b><small>${esc(request.desc)} · ${request.progress}/${request.target}</small></div>${continueBanner}${awakenBanner}${sliceBanner}${stratumPanel}${npcPanel}<section class="night-base-grid">${card('天鹅绒房间','融合、处刑、电椅、禁闭、图鉴与素材。','VELVET ROOM','prep-velvet')}${card('月见坂补给','战斗道具、复活针与 SP 饮料。','SUPPLY','prep-shop')}${card('装备','武器、防具与饰品。','GEAR','prep-gear')}${card('队伍与 Persona','查看面具名录，调整契约与同行编成。','PERSONA','prep-persona')}${card('背包','消耗品、素材、出售与强化。','BACKPACK','prep-inventory')}</section><div class="night-base-gate ${canEnter?'is-open':'is-closed'}"><div><span>TOWER GATE</span><h3>${gateTitle}</h3><p>${gateCopy}</p></div>${btn(canEnter?'踏上高塔':!awakened?'等待觉醒':'等待影时间','enter-tower','',!canEnter)}</div>${prepMessage?`<p class="shop-message">${esc(prepMessage)}</p>`:''}${requestMessage?`<p class="shop-message">${esc(requestMessage)}</p>`:''}<div class="night-base-foot">${btn('离开据点，回到战场','home')}</div></div>`);
+    return frame('影时间据点。','DARK HOUR BASE',`<div class="night-base"><section class="night-base-head"><span class="slash-label">DARK HOUR / PREPARATION</span><h2>${shadow.active?'影时间，正在流淌。':'影时间，还没有降临。'}</h2><p>${shadow.active?'商店和天鹅绒房间都在塔外。整理好队伍，再从塔门进入。':'准备可以随时进行；只有塔门会在影时间开启。'}</p><div class="night-base-window"><span>${esc(formatShadowTimeRange({days:state.shadowTime?.days??[5,6,0],startHour:Number(String(state.shadowTime?.start??'20:00').split(':')[0]),endHour:Number(String(state.shadowTime?.end??'07:00').split(':')[0])}))}</span><b>${nextText}</b></div></section><div class="night-base-stats"><div><span>持有</span><b>¥${money().toLocaleString()}</b></div><div><span>面具</span><b>${roster.length}</b><small>张</small></div><div><span>契约</span><b>${esc(contract)}</b></div><div><span>素材</span><b>${materialCount}</b><small>件</small></div></div><div class="night-request ${request.completed?'completed':''}"><span>今夜请求</span><b>${esc(request.title)}</b><small>${esc(request.desc)} · ${request.progress}/${request.target}</small></div>${continueBanner}${awakenBanner}${stratumPanel}${npcPanel}<section class="night-base-grid">${card('天鹅绒房间','融合、处刑、电椅、禁闭、图鉴与素材。','VELVET ROOM','prep-velvet')}${card('月见坂补给','战斗道具、复活针与 SP 饮料。','SUPPLY','prep-shop')}${card('装备','武器、防具与饰品。','GEAR','prep-gear')}${card('队伍与 Persona','查看面具名录，调整契约与同行编成。','PERSONA','prep-persona')}${card('背包','消耗品、素材、出售与强化。','BACKPACK','prep-inventory')}</section><div class="night-base-gate ${canEnter?'is-open':'is-closed'}"><div><span>TOWER GATE</span><h3>${gateTitle}</h3><p>${gateCopy}</p></div>${btn(canEnter?'踏上高塔':!awakened?'等待觉醒':'等待影时间','enter-tower','',!canEnter)}</div>${sliceBanner}${prepMessage?`<p class="shop-message">${esc(prepMessage)}</p>`:''}${requestMessage?`<p class="shop-message">${esc(requestMessage)}</p>`:''}<div class="night-base-foot">${btn('离开据点，回到战场','home')}</div></div>`);
   }
   function interludePage(){
     const reward=interlude?.reward;
@@ -712,6 +772,112 @@ export function createTowerFlow(api){
     };
     return `<div class="velvet-room" data-velvet-service="${velvetService}"><div class="vr-bars" aria-hidden="true"></div><div class="vr-curtain vr-curtain-left" aria-hidden="true"></div><div class="vr-curtain vr-curtain-right" aria-hidden="true"></div><div class="vr-moon" aria-hidden="true"></div><div class="vr-spot" aria-hidden="true"></div><header class="vr-top"><button class="vr-back" data-tower="return-back">← ${backLabel}</button><div class="vr-title"><span>VELVET ROOM</span><h1>天鹅绒房间</h1><p>“${esc(quote)}”</p></div><div class="vr-wallet">¥${money().toLocaleString()}</div></header><div class="vr-layout"><nav class="vr-menu" aria-label="天鹅绒房间服务">${services.map(([id,label,en])=>`<button class="${velvetService===id?'active':''}" data-tower="velvet-service:${id}"><small>${en}</small><b>${label}</b></button>`).join('')}</nav><main class="vr-panel">${panel()}${velvetMessage?`<p class="vr-message">${esc(velvetMessage)}</p>`:''}${fusionMessage?`<p class="vr-message">${esc(fusionMessage)}</p>`:''}${specialMessage?`<p class="vr-message">${esc(specialMessage)}</p>`:''}</main><aside class="vr-side"><div class="vr-slot"><b>P5-VR-A</b><span>双子看守</span><small>900×1200 · 透明 PNG</small></div><div class="vr-slot"><b>P5-VR-B</b><span>房间背景</span><small>1600×900 · 透明 PNG</small></div><blockquote>“${esc(quote)}”</blockquote></aside></div><button class="vr-exit" data-tower="velvet-exit">离开房间 · ${backLabel}</button></div>`;
   }
+  function shadowTalkPage(){
+    const profile=shadowTalk?.profile;
+    if(!profile)return mapPage();
+    return frame('它开口了。','NEGOTIATION',`<div class="slice-talk-layout grid-talk">
+      <section class="slice-talk-stage">
+        <span class="slice-kicker">SHADOW · ${esc(profile.personalityLabel)} · ${esc(profile.attribute)}</span>
+        <h2>${esc(profile.name)}</h2>
+        <blockquote>「${esc(profile.opening)}」</blockquote>
+        <p class="slice-demand">它要的是：${esc(profile.demand)}</p>
+        <div class="slice-talk-box">
+          <label for="grid-talk-input">你想对它说什么？</label>
+          <textarea id="grid-talk-input" rows="4" maxlength="160" placeholder="不用选选项。写你真正想说的那句。">${esc(shadowTalk?.text??'')}</textarea>
+          <div class="slice-write-foot"><small>语气、内容和长度都会被听进去；成功率仍由规则计算。</small><span id="grid-talk-count">${(shadowTalk?.text??'').length} / 160</span></div>
+          <div class="slice-actions">
+            <button class="flow-button slice-primary" data-tower="shadow-talk-send" ${shadowTalkBusy?'disabled':''}><span>${shadowTalkBusy?'它在听…':'说出口'}<small>失败会开战</small></span>${icon('arrow')}</button>
+            ${btn('拔刀','shadow-talk-fight','直接开战','danger')}
+            ${btn('先退开','shadow-talk-back','回到房间','subtle')}
+          </div>
+          ${shadowTalk?.status?`<p class="slice-status" role="status">${esc(shadowTalk.status)}</p>`:''}
+        </div>
+      </section>
+      <aside class="slice-talk-side">
+        <div class="slice-shadow-meter"><span>它的耐心</span><i style="width:${Math.max(12,100-(j.explore?.security??0))}%"></i><small>警戒越高，它越不容易听进去。</small></div>
+        <div class="slice-side-note"><b>${shadowTalk?.judged?`判定：${shadowTalk.judged.mode==='ai'?'模型':'离线'}`:'判定方式'}</b><small>同一个“讲理”，写得好和写得敷衍，命中率不一样。</small></div>
+      </aside>
+    </div>`);
+  }
+  function shadowTalkResultPage(){
+    const result=shadowTalk?.result;
+    if(!result)return mapPage();
+    const success=Boolean(result.success);
+    return frame(success?'它让开了。':'它没有接受。',success?'IT LISTENED':'IT DID NOT',`<div class="slice-result ${success?'is-success':'is-fail'}">
+      <div class="slice-result-head">
+        <span class="slice-kicker">${esc(TONE_LABELS[result.tone]??'交涉')} · 质量 ${result.quality} · ${result.mode==='ai'?'模型判定':'离线判定'}</span>
+        <h2>${success?'影子把路让开了。':'影子没有让路。'}</h2>
+        <div class="slice-chance" role="img" aria-label="成功率 ${result.chance}%"><i style="width:${result.chance}%"></i><b>${result.chance}%</b></div>
+        <small>掷出 ${Math.round((Number(result.roll)||0)*100)} / 100</small>
+      </div>
+      <blockquote class="slice-reply">「${esc(result.reply??'')}」</blockquote>
+      <div class="slice-result-foot">
+        ${success?`<p>带走了 <b>${esc(result.reward?.label??'一点回声')}</b> 与 ¥${result.reward?.money??0}。</p>`:`<p>HP -${result.hpCost} · 警戒 ${j.security}%。它不打算再谈了。</p>`}
+        <div class="slice-actions">${success?btn('继续往前走','shadow-talk-continue'):btn('迎战','shadow-talk-fight','它已经准备好了','danger')}</div>
+      </div>
+    </div>`);
+  }
+  async function sendShadowTalk(){
+    if(shadowTalkBusy||!shadowTalk||!j.pending)return;
+    const field=document.querySelector('#grid-talk-input');
+    const text=(field?.value??'').trim().replace(/\s+/g,' ').slice(0,160);
+    shadowTalk.text=text;
+    if(!text){shadowTalk.status='总得说点什么。';render({focus:true});return;}
+    shadowTalkBusy=true;
+    shadowTalk.status='它在听。';
+    render({focus:true});
+    try{
+      const room={title:'影子房',shadow:shadowTalk.profile};
+      const judged=offlineOnly
+        ? offlineJudge({text,room})
+        : await requestShadowJudge({text,room,dayRecord:''},{onStatus:value=>{if(shadowTalk){shadowTalk.status=value;render();}}});
+      shadowTalk.judged=judged;
+      shadowTalk.status='';
+      if(judged.tone==='bribe'&&(Number(state.sp)||0)<20){
+        shadowTalk.status='它等着你拿出 20 SP，可你拿不出来。';
+        return;
+      }
+      const danger=j.pending?.blockBoss?'high':'mid';
+      const check=resolveTalkCheck({
+        personality:shadowTalk.profile.personality,
+        tone:judged.tone,
+        quality:judged.quality,
+        sp:Number(state.sp)||0,
+        hp:Number(state.hp)||1,
+        maxHp:state.heroMaxHp??52,
+        danger,
+      });
+      state.sp=Math.max(0,(Number(state.sp)||0)-check.spCost);
+      let reward=null;
+      if(check.success){
+        const granted=grantLoot(state,rollBattleLoot({floor:j.floor,kind:'shadow',stratum:j.stratum,rng:Math.random,dropBonus:gearFx().drop}));
+        const moneyGain=Math.round((120+j.floor*45)*(1+gearFx().money)*(regionForFloor(j.floor).reward||1));
+        state.money=(Number(state.money)||0)+moneyGain;
+        reward={money:moneyGain,label:granted.text||'一点回声'};
+        j.loot.push({floor:j.floor,label:reward.label,sp:0});
+        model.resolveMapBattle(true,{
+          label:'影子让开了',
+          detail:`${TONE_LABELS[judged.tone]??'交涉'} · ${check.chance}%`,
+          message:`影子让开了。${reward.label} · ¥${moneyGain}`,
+        });
+        j.mapMessage=`影子让开了。${reward.label} · ¥${moneyGain}`;
+      }else{
+        state.hp=Math.max(1,(Number(state.hp)||1)-check.hpCost);
+        model.adjustSecurity(check.alertGain);
+        if(j.pending)j.pending.talkFailed=true;
+        j.mapMessage='它没有接受。战斗开始前，你还有一次拔刀的机会。';
+      }
+      shadowTalk.result={...check,tone:judged.tone,quality:judged.quality,reply:judged.reply,mode:judged.mode,reward};
+      page='shadow-talk-result';
+      api.persistP5State?.();
+      saveRun();
+    }catch(error){
+      shadowTalk.status=error?.name==='AbortError'?'你收回了这句话。':'它没有回应，换离线方式再听了一次。';
+    }finally{
+      shadowTalkBusy=false;
+      render({focus:true});
+    }
+  }
   function screen(){
     if(!page)return null;
     if(page==='prep')return prepPage();
@@ -721,6 +887,8 @@ export function createTowerFlow(api){
     if(page==='inventory')return inventoryPage();
     if(page==='return')return returnPage();
     if(page==='velvet')return velvetPage();
+    if(page==='shadow-talk')return shadowTalkPage();
+    if(page==='shadow-talk-result')return shadowTalkResultPage();
     if(page.startsWith('reveal'))return frame(page==='reveal-error'?'雾还没有散开。':'听见塔层，缓缓显形。','STRATUM',`<div class="reveal-layout ${page==='reveal-ready'?'ready':''}"><div class="tower-silhouette" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><span class="stratum-number">03<span>STRATUM</span></span><h2>${page==='reveal-error'?'显形暂时中断':page==='reveal-ready'?esc(getStratum(j.stratum).name):'正在显形…'}</h2><p class="scene-copy">${page==='reveal-error'?'已走过的路还在，重新显形后继续。':'从 1F 接续这一次探索。先侦察前路，再作选择。'}</p>${page==='reveal-error'?btn('重新显形','retry'):btn(page==='reveal-ready'?'踏入高塔':'跳过显形，进入高塔','route')}<p class="scene-note">路线只在本夜生效。</p></div></div>`);
     if(page==='recap')return frame('塔层回看。','TONIGHT / RETURN',`<div class="recap-ascent ${recap.done?'is-settled':''}" data-floor="${recap.shown||1}" data-target="${recap.target}"><div class="recap-moon" aria-hidden="true"></div><div class="recap-counter"><b>${String(recap.shown||1).padStart(2,'0')}</b><span>FLOOR</span></div><div class="recap-floor-window" aria-label="逐层回望">${recapRows(recap.shown||1)}</div><p class="recap-arrival" role="status">${recap.done?`本次抵达 ${String(recap.target).padStart(2,'0')}F`:'从抵达层向下回看。'}</p></div>${!recap.done?btn('跳过回望','skip-recap','直接抵达抵达层'):''}${summary()}`);
     if(page==='retreat')return frame('今晚，走到这里？','DESCEND',`<div class="story-layout"><div class="scene-emblem">${icon('back')}</div><div><h2>你已抵达 ${j.floor}F。</h2><p class="scene-copy">${j.pending&&!j.pending.resolved?'当前节点尚未完成；下塔回顾会停在本次抵达层。':'战利品会留在本夜记录里。'}</p>${btn('继续探索','route','回到刚才的位置')}${btn('确认下塔，回望来路','descend','结束本夜行程')}</div></div>`);
@@ -780,7 +948,7 @@ export function createTowerFlow(api){
       if(room.type==='trap')return '机关已经处理完，不会再响。';
       if(room.type==='event')return '水面安静下来。这里不会再回应第二次。';
     }
-    return room.type==='start'?'回头是塔门。往前走，雾会散开。':room.type==='exit'?explore.exitUnlocked?'门已经开了。踏出去，下一层就会显形。':(explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated?'区段守层者还站在门前，钥匙打不开。':'门锁着。守卫或钥匙，选一条路。'):room.type==='guardian'?(room.blockBoss?'这一段由它守着。钥匙打不开它身后的门。':'它守着出口。打赢它，门就会开。'):room.type==='shadow'?'绕不开。它已经看见你了。':room.type==='chest'?'匣子的锁很旧。先检查会多花一步，直接打开也许更快。':room.type==='key'?'拿上它，出口可以不必经过守卫。':room.type==='trap'?'拆开会安静一点；硬闯会更快，也更吵。':room.type==='safe'?'这一层只能休息一次。恢复，或者继续贪。':room.type==='event'?'靠近它，或者只带走一点月光。':'雾在墙外。你可以听一听，或者直接走。';
+    return room.type==='start'?'回头是塔门。往前走，雾会散开。':room.type==='exit'?explore.exitUnlocked?'门已经开了。踏出去，下一层就会显形。':(explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated?'区段守层者还站在门前，钥匙打不开。':'门锁着。守卫或钥匙，选一条路。'):room.type==='guardian'?(room.blockBoss?'这一段由它守着。钥匙打不开它身后的门。':'它守着出口。打赢它，门就会开。'):room.type==='shadow'?'它已经看见你了。开口，或者拔刀。':room.type==='chest'?'匣子的锁很旧。先检查会多花一步，直接打开也许更快。':room.type==='key'?'拿上它，出口可以不必经过守卫。':room.type==='trap'?'拆开会安静一点；硬闯会更快，也更吵。':room.type==='safe'?'这一层只能休息一次。恢复，或者继续贪。':room.type==='event'?'靠近它，或者只带走一点月光。':'雾在墙外。你可以听一听，或者直接走。';
   };
   const MAP_STEPS=[['up',0,-1],['right',1,0],['down',0,1],['left',-1,0]];
   function findMapPath(targetX,targetY){
@@ -820,7 +988,8 @@ export function createTowerFlow(api){
     if(!path?.length)return;
     for(const step of path){
       const result=model.mapMove(step.dir);
-      if(result.pending){enter();return;}
+      if(result.ok)applyRegionStep();
+      if(result.pending){handlePending(result);return;}
       if(!result.ok){j.mapMessage=result.reason;break;}
       const room=currentRoom(j.explore);
       if(room&&(room.type==='exit'||room.type==='safe'||(!room.cleared&&['chest','key','trap','event'].includes(room.type))))break;
@@ -851,6 +1020,7 @@ export function createTowerFlow(api){
     if(!j.explore||!j.map)return '';
     const explore=j.explore,room=currentRoom(explore),floor=j.floor;
     const flavor=floorFlavor(floor);
+    const region=regionForFloor(floor);
     const blockBoss=Boolean(explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated);
     const revealed=visibleRooms(explore).length;
     const cells=[];
@@ -863,11 +1033,15 @@ export function createTowerFlow(api){
       if(room.type==='event'&&!room.cleared)return btn('触碰水面','event-heal','回复 15% HP')+btn('带走月光','event-buff','下一战伤害 +5%');
       if(room.type==='exit')return explore.exitUnlocked?btn('走下这一层','leave-floor','下一层还在上面'):`<p class="map-locked">${explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated?'区段守层者还站在门前。钥匙打不开，必须击破它。':'出口锁着。击破守卫，或带一把钥匙来。'}</p>`;
       if(room.type==='guardian'&&!room.cleared)return btn(room.blockBoss?'迎战区段守层者':'迎战守卫','enter',room.blockBoss?'钥匙无效 · 击破后本段出口解锁':'击破后解锁出口','danger');
-      if(room.type==='shadow'&&!room.cleared)return btn('迎战影子','enter','它挡在这里','danger');
+      if(room.type==='shadow'&&!room.cleared){
+        const failed=Boolean(j.pending?.talkFailed);
+        return `${failed?'<p class="map-locked">它不再听你说话了。</p>':btn('开口交涉','shadow-talk','自己写一句 · 失败会开战','yellow')}${btn('迎战影子','enter',failed?'只能打了':'它挡在这里','danger')}`;
+      }
       return `<p class="map-quiet">这里只有回声。继续走，或者听一听墙后的动静。</p>`;
     };
     return `<div class="page-heading map-page-heading"><h1>登塔<span>ASCEND / 03</span></h1><p>${esc(flavor.tagline)} · 每一步都会留下声音。</p></div>
-      <div class="map-hud"><span>${esc(getStratum(j.stratum).name)} <b>${floor} / ${j.maxFloor} F</b></span><span>区段 <b>${Math.ceil(floor/10)} / 10</b></span><span>月光 <b>${explore.time}</b> / ${explore.maxTime} 步</span><span>警戒 <b>${j.security}%</b></span><span>钥匙 <b>${j.keys}</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span>${j.alert?'<span class="journey-alert">ALERT · 被盯上了</span>':''}</div>
+      <div class="map-hud"><span>${esc(getStratum(j.stratum).name)} <b>${floor} / ${j.maxFloor} F</b></span><span>区域 <b>${esc(region.short)}</b></span><span>区段 <b>${Math.ceil(floor/10)} / 10</b></span><span>月光 <b>${explore.time}</b> / ${explore.maxTime} 步</span><span>警戒 <b>${j.security}%</b></span><span>钥匙 <b>${j.keys}</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span>${j.alert?'<span class="journey-alert">ALERT · 被盯上了</span>':''}</div>
+      <div class="map-region"><div><span>${region.from}–${region.to}F</span><b>${esc(region.name)}</b></div><p>${esc(region.rule)}</p></div>
       <div class="map-shell"><section class="map-board" aria-label="${esc(getStratum(j.stratum).name)} ${floor} 层房间地图">
         <div class="map-board-head"><div><span>FLOOR ${String(floor).padStart(2,'0')} / ${esc(flavor.name)} · BLOCK ${String(Math.ceil(floor/10)).padStart(2,'0')}</span><b>${explore.exitUnlocked?'出口已经开了':blockBoss?'击破区段守层者':'找到守卫或钥匙'}</b></div><div class="map-head-tools"><small>拖动查看 · 已探明 ${revealed} / 25</small><button type="button" data-tower="map-center">回到当前位置</button></div></div>
         <div class="map-viewport" data-map-viewport aria-label="可拖动查看的房间地图"><div class="map-grid">${cells.join('')}</div></div>
@@ -891,6 +1065,17 @@ export function createTowerFlow(api){
     return mapPage();
   }
   function act(action){
+    if(action==='shadow-talk'){
+      if(j.pending?.kind!=='shadow'||j.pending.resolved)return;
+      shadowTalk={profile:shadowProfileFor(j.pending.encounter??{},j.floor),text:'',status:'',judged:null,result:null};
+      page='shadow-talk';
+      render({focus:true});
+      return;
+    }
+    if(action==='shadow-talk-back'){page=null;renderMap();return;}
+    if(action==='shadow-talk-send'){void sendShadowTalk();return;}
+    if(action==='shadow-talk-fight'){page=null;enter();return;}
+    if(action==='shadow-talk-continue'){page=null;renderMap();return;}
     if(action.startsWith('room:')){
       const [,x,y]=action.split(':').map(Number);
       const path=findMapPath(x,y);
@@ -901,7 +1086,8 @@ export function createTowerFlow(api){
     }
     if(action.startsWith('move:')){
       const result=model.mapMove(action.slice('move:'.length));
-      if(result.pending){enter();return;}
+      if(result.ok)applyRegionStep();
+      if(result.pending){handlePending(result);return;}
       if(!result.ok)j.mapMessage=result.reason;
       renderMap();
       return;
@@ -923,7 +1109,7 @@ export function createTowerFlow(api){
       const inspect=action==='inspect-chest';
       const result=model.mapAct(action);
       if(result.ok){
-        const loot=rollChestLoot({floor:j.floor,tier:chestTierForKind(chest?.chestKind,j.floor,j.chestBonus??0)});
+        const loot=rollChestLoot({floor:j.floor,tier:chestTierForKind(chest?.chestKind,j.floor,(j.chestBonus??0)+(regionForFloor(j.floor).chestBonus||0))});
         const granted=grantLoot(state,loot);
         const max=state.heroMaxSp??34;
         state.sp=Math.min(max,state.sp+10);
@@ -957,8 +1143,9 @@ export function createTowerFlow(api){
       const result=model.mapAct('rest');
       if(result.ok){
         const maxHp=state.heroMaxHp??52,maxSp=state.heroMaxSp??34;
-        state.hp=Math.min(maxHp,state.hp+Math.max(1,Math.ceil(maxHp*.3)));
-        state.sp=Math.min(maxSp,state.sp+Math.max(1,Math.ceil(maxSp*.3)));
+        const heal=regionForFloor(j.floor).safeHeal??.3;
+        state.hp=Math.min(maxHp,state.hp+Math.max(1,Math.ceil(maxHp*heal)));
+        state.sp=Math.min(maxSp,state.sp+Math.max(1,Math.ceil(maxSp*heal)));
         markRequest('safe');
         j.mapMessage=`休息过了。HP ${state.hp}/${maxHp} · SP ${state.sp}/${maxSp}。`;
       }
@@ -1105,6 +1292,7 @@ export function createTowerFlow(api){
       if(page==='gear'){show('prep');return;}
       if(page==='inventory'){show('prep');return;}
       if(page==='velvet'){show(velvetReturn);return;}
+      if(page==='shadow-talk'||page==='shadow-talk-result'){page=null;renderMap();return;}
       if(page==='prep'){stop();page=null;api.goRoom('battle');return;}
       if(page==='interlude'){routeBack();return;}
       if(page==='return'){stop();page=null;api.goRoom('battle');return;}
@@ -1113,6 +1301,11 @@ export function createTowerFlow(api){
     }
   }
   document.addEventListener('visibilitychange',()=>{if(clock)clock.last=performance.now();});
+  document.addEventListener('input',event=>{
+    if(event.target?.id!=='grid-talk-input')return;
+    const counter=document.querySelector('#grid-talk-count');
+    if(counter)counter.textContent=`${event.target.value.length} / 160`;
+  });
   document.addEventListener('keydown',event=>{
     if(page||state.fighting||!j.explore)return;
     if(event.target?.matches?.('input,select,textarea'))return;
@@ -1121,7 +1314,7 @@ export function createTowerFlow(api){
     event.preventDefault();
     act(`move:${dir}`);
   });
-  return {screen,route,act,start,showRecap,prep(){return prepPage();},...debugMode?{debugJump,debugOpenChest,debugFightShadow,debugGuardian,debugExit}:{},get snapshot(){return {active:j.active,floor:j.floor,maxFloor:j.maxFloor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss','elite','guardian','shadow'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
+  return {screen,route,act,start,showRecap,prep(){return prepPage();},...debugMode?{debugJump,debugOpenChest,debugFightShadow,debugShadowTalk,debugGuardian,debugExit}:{},get snapshot(){return {active:j.active,floor:j.floor,maxFloor:j.maxFloor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss','elite','guardian','shadow'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
     hide(){stop();page=null;},recordLoot(reward){return model.addLoot(reward);},
     preview(next){if(next!=='return'&&next!=='velvet')return false;model.start(state.towerStratum);j.request=createRequest(requestForStratum(state.towerStratum));j.floor=j.maxFloor;j.ended='clear';interlude={battle:{summary:'这一夜的最后一道影子，已经散了。'},rested:false,party:[]};fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';networkPreview=null;networkMessage='';velvetService='fusion';velvetMessage='';velvetReturn='return';skillCardSelected='';prepMessage='';requestMessage='';page=next;return true;},
     battleReturn(won,phase,battleResult){
@@ -1154,7 +1347,7 @@ export function createTowerFlow(api){
       });
       const granted=grantLoot(state,battleLoot);
       if(granted.lines.length){items.push(...granted.lines);state.battleLoot.push(...granted.lines);}
-      const moneyGain=Math.round((240+floor*60)*(1+effects.money));
+      const moneyGain=Math.round((240+floor*60)*(1+effects.money)*(regionForFloor(floor).reward||1));
       state.money+=moneyGain;
       if(spGain)state.sp=Math.min(state.heroMaxSp??state.sp,state.sp+spGain);
       if(wasBoss){

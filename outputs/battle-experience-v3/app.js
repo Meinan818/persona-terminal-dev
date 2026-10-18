@@ -1361,6 +1361,7 @@ if(new URLSearchParams(location.search).get('p5r-debug')==='1'){
     guardian:()=>flows.towerDebugGuardian?.(),
     exit:()=>flows.towerDebugExit?.(),
     fightShadow:()=>flows.towerDebugFightShadow?.(),
+    shadowTalk:()=>flows.towerDebugShadowTalk?.(),
     winBattle:()=>{
       if(!state.battle)return false;
       state.battleWon=true;

@@ -6,6 +6,7 @@
  */
 
 import { encounterFor } from './tower-journey.js';
+import { regionForFloor } from './region-rules.js';
 import { adjustRoute, getStratum } from './tower-registry.js';
 import {
   createExplorationState,
@@ -334,11 +335,20 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
       stratum: journey.stratum,
       seed: floorSeed,
     });
+    const region = regionForFloor(floor);
     const explore = createExplorationState(map, {
-      maxTime: (floor <= 10 ? 20 : floor <= 50 ? 18 : 16) + (Number(journey.stepBonus) || 0),
+      maxTime: (floor <= 10 ? 20 : floor <= 50 ? 18 : 16)
+        + (Number(journey.stepBonus) || 0)
+        + (Number(region.steps) || 0),
       security: journey.security,
       keys: journey.keys,
     });
+    journey.region = region.id;
+    journey.regionName = region.name;
+    journey.regionRule = region.rule;
+    journey.regionChestBonus = region.chestBonus;
+    journey.regionReward = region.reward;
+    journey.regionSafeHeal = region.safeHeal;
     journey.map = map;
     journey.explore = explore;
     syncExplore();
@@ -349,13 +359,16 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     const base = encounterFor(floor, 'mob');
     if (kind !== 'guardian') return base;
     const blockBoss = floor % 10 === 0;
+    const region = regionForFloor(floor);
     return {
       ...base,
-      name: blockBoss ? `第${Math.ceil(floor / 10)}区段的守层者` : floor >= 10 ? '回声的看门人' : '守层的假面',
+      name: blockBoss
+        ? `第${Math.ceil(floor / 10)}区段的守层者`
+        : region.elite ? '镜厅的精英守卫' : floor >= 10 ? '回声的看门人' : '守层的假面',
       level: base.level + 1,
-      maxHp: Math.round(base.maxHp * (blockBoss ? 1.5 : 1.3)),
-      attack: Math.round(base.attack * (blockBoss ? 1.15 : 1.1)),
-      defense: base.defense + (blockBoss ? 2 : 1),
+      maxHp: Math.round(base.maxHp * (blockBoss ? 1.5 : 1.3) * (region.elite ? 1.15 : 1)),
+      attack: Math.round(base.attack * (blockBoss ? 1.15 : 1.1) * (region.elite ? 1.1 : 1)),
+      defense: base.defense + (blockBoss ? 2 : 1) + (region.elite ? 1 : 0),
       blockBoss,
     };
   };
@@ -461,7 +474,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     journey.dropBonus = Math.max(0, Number(dropBonus) || 0);
   };
 
-  const resolveMapBattle = won => {
+  const resolveMapBattle = (won, outcome = {}) => {
     if (!journey.explore || !journey.pending) return false;
     const kind = journey.pending.kind;
     const ambush = Boolean(journey.pending.ambush);
@@ -479,15 +492,24 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     journey.history.push({
       floor: journey.floor,
       kind,
-      label: kind === 'guardian' ? (journey.pending.blockBoss ? '区段守层者倒下' : '守卫倒下') : '影子散去',
-      detail: kind === 'guardian'
+      label: outcome.label ?? (kind === 'guardian' ? (journey.pending.blockBoss ? '区段守层者倒下' : '守卫倒下') : '影子散去'),
+      detail: outcome.detail ?? (kind === 'guardian'
         ? (journey.pending.blockBoss ? '区段守层者倒下，本段出口解锁。' : '出口已解锁。')
-        : `警戒 ${journey.security}%`,
+        : `警戒 ${journey.security}%`),
     });
-    journey.mapMessage = kind === 'guardian'
+    journey.mapMessage = outcome.message ?? (kind === 'guardian'
       ? (journey.pending.blockBoss ? '区段守层者倒下，本段出口解锁。' : '守卫倒下，出口解锁。')
-      : '影子散了，继续走。';
+      : '影子散了，继续走。');
     journey.pending = null;
+    return true;
+  };
+
+  const adjustSecurity = amount => {
+    if (!journey.explore) return false;
+    const next = Math.max(0, Math.min(100, (Number(journey.explore.security) || 0) + (Number(amount) || 0)));
+    journey.explore.security = next;
+    journey.explore.alert = next >= 100;
+    syncExplore();
     return true;
   };
 
@@ -531,6 +553,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     mapMove,
     mapAct,
     resolveMapBattle,
+    adjustSecurity,
     completeFloor,
     syncExplore,
   };

@@ -623,6 +623,33 @@ export function talkChance({ personality, tone, quality, lowHp = false, sp = 0 }
   return Math.round(clamp(chance, 5, 95));
 }
 
+/**
+ * 一次交涉判定的纯结果：语气/质量由 AI 或离线判定给出，成功率和代价在这里算。
+ * 塔内影子房和单层切片共用这一份规则。
+ */
+export function resolveTalkCheck({
+  personality,
+  tone,
+  quality,
+  sp,
+  hp,
+  maxHp,
+  danger = 'mid',
+  roll = Math.random(),
+}) {
+  const chance = talkChance({ personality, tone, quality, lowHp: hp <= maxHp * 0.3, sp });
+  const success = chance > 0 && roll * 100 < chance;
+  const cost = dangerCost(danger);
+  return {
+    chance,
+    roll,
+    success,
+    spCost: tone === 'bribe' && chance > 0 ? SLICE_LIMITS.bribeCost : 0,
+    hpCost: success ? 0 : Math.max(1, Math.round(cost.hp * 0.5)),
+    alertGain: success ? -4 : 18,
+  };
+}
+
 export function resolveTalk(run, room, judgement) {
   if (!run || !room?.shadow) return { ok: false, reason: '这里没有可以交涉的影子。' };
   const { personality } = room.shadow;
@@ -633,17 +660,18 @@ export function resolveTalk(run, room, judgement) {
     if (run.sp < SLICE_LIMITS.bribeCost) {
       return { ok: false, reason: `你拿不出 ${SLICE_LIMITS.bribeCost} SP。`, chance: 0 };
     }
-    run.sp -= SLICE_LIMITS.bribeCost;
   }
-  const chance = talkChance({
+  const check = resolveTalkCheck({
     personality,
     tone,
     quality,
-    lowHp: run.hp <= run.maxHp * 0.3,
-    sp: run.sp + (tone === 'bribe' ? SLICE_LIMITS.bribeCost : 0),
+    sp: run.sp,
+    hp: run.hp,
+    maxHp: run.maxHp,
+    danger: room.danger,
   });
-  const roll = Math.random();
-  const success = chance > 0 && roll * 100 < chance;
+  run.sp = clamp(run.sp - check.spCost, 0, run.maxSp);
+  const { chance, roll, success } = check;
   const reward = room.reward ?? { money: 120, itemId: 'echoShard', label: itemLabel('echoShard') };
   run.talked += 1;
   if (success) {
@@ -664,18 +692,17 @@ export function resolveTalk(run, room, judgement) {
       reply: reply ? `${reply} 最后，它让开了。` : '它让开了。',
     };
   }
-  const cost = dangerCost(room.danger);
-  run.hp = clamp(run.hp - cost.hp, 1, run.maxHp);
-  run.alert = clamp(run.alert + 18, 0, 100);
+  run.hp = clamp(run.hp - check.hpCost, 1, run.maxHp);
+  run.alert = clamp(run.alert + check.alertGain, 0, 100);
   run.memories.push(`「${room.shadow.name}」没有接受你的说法，但它记住了你开口的样子。`);
-  run.log.push(`交涉「${room.title}」失败 · ${TONE_LABELS[tone]} · ${chance}% · HP -${cost.hp} · 警戒 +18`);
+  run.log.push(`交涉「${room.title}」失败 · ${TONE_LABELS[tone]} · ${chance}% · HP -${check.hpCost} · 警戒 +${check.alertGain}`);
   advanceRoom(run, '');
   return {
     ok: true,
     success: false,
     chance,
     roll,
-    hpCost: cost.hp,
+    hpCost: check.hpCost,
     tone,
     quality,
     reply: reply ? `${reply} 但它最终没有让开。` : '但它最终没有让开。',

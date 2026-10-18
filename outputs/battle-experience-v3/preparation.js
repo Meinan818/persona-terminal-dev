@@ -3,10 +3,11 @@ import {escapeHtml as esc} from './encounters.js';
 export function createPreparationDirector(api) {
   const {state,masks,icon,openSheet,render,notify,arsenalItems} = api;
   const sheet=document.querySelector('#sheet');
-  let createStep=0,answers=[null,null,null,null],sources=[],traits='',working=0;
-  let pendingName='',pendingDescription='',reshapeTarget=0;
+  let createStep=0,answers=[null,null,null,null],sources=[],traits='',working=0,createCandidate=null;
+  let pendingName='',pendingDescription='',reshapeTarget=0,growthLevel=3;
   let disposed=new Set(),socket=null,oath=null,chain=null;
   const settings={enabled:true,start:'20:00',end:'07:00',hp:40,scale:100};
+  const growthState=masks.map(()=>({level:3,points:2,skillRanks:[1,1],selectedSkill:0}));
   const questions=[
     ['对于人生，你认为：',['人生是一场修行，每次经历都是成长的磨砺','人生是一场探险，未知才是最大的魅力','人生是一份责任，对自己和他人都要负责','人生是一段旅程，重要的是沿途的风景和同行的人','人生是一面镜子，你投入什么就得到什么']],
     ['在人群中，你通常：',['是推动事情发展的核心，引领方向','默默观察，在关键时刻给出精准建议','连接不同的人，调节气氛，让大家融为一体','专注于自己的事，保持独立与清醒','寻找志同道合的人，追求深度连接']],
@@ -14,11 +15,36 @@ export function createPreparationDirector(api) {
     ['对于未来，你持有：',['坚定的信念，目标清晰，步步为营','开放的心态，享受未知带来的一切可能','期待与担忧并存，但相信自己能够面对','专注当下，相信未来自然会到来','理想主义的憧憬，相信世界可以因自己而变得更好']],
   ];
   const sourceLabels=['太初的光芒','文明的墨痕','蒸腾的汽焰','二进制之海','幻想与纹样'];
+  const answerAttributes=[[0,1,2,3,4],[1,0,4,2,3],[1,3,0,4,2],[0,2,3,1,4]];
+  const growthNames=['起心','定形','回响','越界','觉醒'];
   function btn(label,action,note='',tone=''){return `<button type="button" class="prep-button ${tone}" data-prep="${action}"><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;}
   function notice(text){const e=document.querySelector('#prep-notice');if(e)e.textContent=text;else notify(text);}
   function footer(){return '<p class="prep-footnote">示例操作仅保留在本次预览中，刷新后恢复，不会调用模型或写入真实存档。</p>';}
   function open(title,body){openSheet(title,`<div class="preparation-panel"><p id="prep-notice" role="alert"></p>${body}${footer()}</div>`);}
+  function answerScores(){
+    const scores=[0,0,0,0,0];
+    answers.forEach((answer,question)=>{if(answer!==null)scores[answerAttributes[question][answer]]+=1;});
+    sources.forEach(source=>{scores[source]+=1;});
+    return scores;
+  }
+  function candidateFromAnswers(){
+    const scores=answerScores();
+    let index=scores.indexOf(Math.max(...scores));
+    if(index<0)index=0;
+    return {index,scores};
+  }
+  function scoreBars(scores){
+    const total=Math.max(1,...scores);
+    return masks.slice(0,5).map((m,i)=>`<div class="trait-bar"><span>${m.attr}</span><i><b style="width:${Math.max(12,scores[i]/total*100)}%"></b></i><strong>${scores[i]}</strong></div>`).join('');
+  }
+  function showCreateResult(){
+    const result=createCandidate||candidateFromAnswers();
+    createCandidate=result;
+    const m=masks[result.index];
+    open('你的力量，已经醒来',`<div class="awakening-mark awakened">${icon('mask')}</div><div class="persona-candidate"><span class="candidate-kicker">回应属性 · ${m.attr}</span><h3 class="prep-lead">${esc(m.name)}</h3><p>${esc(m.passive)}</p><div class="candidate-skills"><span>${esc(m.skills[0][0])}<small>${esc(m.skills[0][2])}</small></span><span>${esc(m.skills[1][0])}<small>${esc(m.skills[1][2])}</small></span></div></div><p class="candidate-words">“${esc(traits)}”</p><div class="trait-bars" aria-label="回答形成的属性倾向">${scoreBars(result.scores)}</div><div class="creation-receipt"><span>四问</span><b>${answers.filter(answer=>answer!==null).length} / 4</b><span>力量之源</span><b>${sources.length} / 2</b><span>技能组</span><b>2 项</b></div>${btn('确认这张面具','finish-create')}${btn('换一张回应','create-reroll','保留你的回答与自述','subtle')}${btn('回到自述，继续调整','create-return','','subtle')}`);
+  }
   function showCreate(){
+    if(createCandidate){showCreateResult();return;}
     const steps=`<ol class="awakening-steps" aria-label="觉醒进度">${[1,2,3,4,5].map(n=>`<li class="${n<=createStep?'reached':''}"><b>${String(n).padStart(2,'0')}</b><span>${n===5?'自述':'问答'}</span></li>`).join('')}</ol>`;
     if(createStep===0){open('遇见另一个自己',`<div class="awakening-mark">${icon('mask')}</div><h3 class="prep-lead">那些构成你的力量，<br>正在等待回应。</h3><p>四个选择，一段自述。让面具从你的答案里浮现。</p>${btn('开始觉醒','create-next')}`);return;}
     if(createStep<=4){const [title,options]=questions[createStep-1];open('觉醒问答',`${steps}<h3 class="prep-lead">${title}</h3><div class="answer-options">${options.map((text,i)=>`<button type="button" data-prep="answer:${i}" aria-pressed="${answers[createStep-1]===i}"><span>${String.fromCharCode(65+i)}</span>${text}</button>`).join('')}</div><div class="prep-actions">${btn('上一步','create-back','','subtle')}${btn(createStep===4?'写下自己的特质':'下一问','create-next')}</div>`);return;}
@@ -26,11 +52,20 @@ export function createPreparationDirector(api) {
   }
   function showReshape(){
     if(reshapeTarget>=5)reshapeTarget=0;
-    open('重塑一张面具',`<p>选择要重塑的属性，原来的面具会保留到你确认。</p><div class="reshape-attrs">${masks.slice(0,5).map((m,i)=>`<button data-prep="reshape-target:${i}" aria-pressed="${reshapeTarget===i}">${m.attr}</button>`).join('')}</div><div class="before-mask">${icon('mask')}<div><small>当前面具</small><b>${esc(masks[reshapeTarget].name)}</b></div></div><form id="reshape-form"><label class="field-label" for="new-mask-name">新的面具名称</label><input id="new-mask-name" name="name" maxlength="20" required value="${esc(pendingName)}" placeholder="给这份力量一个名字"><label class="field-label" for="new-mask-description">它与你的联系</label><textarea id="new-mask-description" name="description" maxlength="160" rows="3" placeholder="写下一句描述">${esc(pendingDescription)}</textarea>${btn('预览新的面具','reshape-preview')}</form>${btn('让面具重新回应','reshape-summon','查看示例召唤结果','subtle')}`);
+    const current=masks[reshapeTarget];
+    open('重塑一张面具',`<p>选择要重塑的属性。技能、SP 消耗和状态条会保留，确认后只替换这张面具的名字与自述。</p><div class="reshape-attrs">${masks.slice(0,5).map((m,i)=>`<button type="button" data-prep="reshape-target:${i}" aria-pressed="${reshapeTarget===i}">${m.attr}</button>`).join('')}</div><div class="before-mask">${icon('mask')}<div><small>当前面具 · ${current.attr}</small><b>${esc(current.name)}</b><span>${esc(current.passive)}</span></div></div><div class="reshape-contract"><span>保留</span><b>技能组 · SP 消耗 · 出战位置</b><span>替换</span><b>名称 · 与你的联系</b></div><form id="reshape-form"><label class="field-label" for="new-mask-name">新的面具名称</label><input id="new-mask-name" name="name" maxlength="20" required value="${esc(pendingName)}" placeholder="给这份力量一个名字"><label class="field-label" for="new-mask-description">它与你的联系</label><textarea id="new-mask-description" name="description" maxlength="160" rows="3" placeholder="写下一句描述">${esc(pendingDescription)}</textarea>${btn('预览新的面具','reshape-preview')}</form>${btn('让面具重新回应','reshape-summon','查看示例召唤结果','subtle')}`);
   }
-  function showGrowth(level=3){
-    const m=masks[state.mask];
-    open('力量如何生长',`<p class="growth-name">${esc(m.name)} <span>${m.attr}</span></p><div class="growth-track" aria-label="技能解锁等级">${[1,2,3,4,5].map(n=>`<button data-prep="growth:${n}" class="${n<=3?'unlocked':'locked'}" aria-pressed="${n===level}">${n<=3?icon('star'):icon('shield')}<span>LV ${n}</span></button>`).join('')}</div><div class="growth-detail"><b>${level<=3?'已解锁':'尚未解锁'}</b><h3>${esc(m.skills[(level-1)%m.skills.length][0])}</h3><p>${level<=3?'来自白昼积累的力量，可以在战斗中使用。':`对应属性达到 ${level} 级后解锁。`}</p><div class="mastery-bar"><i style="width:${level<=3?'66':'0'}%"></i></div><p>熟练度 · ${level<=3?'历经使用，继续成长':'等待解锁'}</p></div>`);
+  function showGrowth(level=growthLevel){
+    const m=masks[state.mask],progress=growthState[state.mask];
+    growthLevel=Math.max(1,Math.min(5,Number(level)||progress.level));
+    const unlocked=growthLevel<=progress.level;
+    const selectedSkill=progress.selectedSkill;
+    const skill=m.skills[selectedSkill];
+    const rank=progress.skillRanks[selectedSkill];
+    const nextLevel=progress.level+1;
+    const upgradeButton=unlocked&&progress.points>0?btn('模拟提升技能','growth-upgrade',`消耗 1 枚成长印记 · 当前 ${progress.points}`):progress.points<=0?'<p class="growth-hint">成长印记已用尽，本次预览不会自动补充。</p>':'';
+    const unlockButton=!unlocked&&growthLevel===nextLevel&&progress.points>0?btn(`解锁 LV ${growthLevel}`,'growth-unlock','消耗 1 枚成长印记'):'';
+    open('力量如何生长',`<div class="growth-heading"><p class="growth-name">${esc(m.name)} <span>${m.attr}</span></p><b>成长印记 <strong>${progress.points}</strong></b></div><div class="growth-track" aria-label="技能解锁等级">${[1,2,3,4,5].map(n=>`<button type="button" data-prep="growth:${n}" class="${n<=progress.level?'unlocked':'locked'}" aria-pressed="${n===growthLevel}">${n<=progress.level?icon('star'):icon('shield')}<span>LV ${n}</span><small>${growthNames[n-1]}</small></button>`).join('')}</div><div class="growth-detail"><div class="growth-status"><b>${unlocked?'已解锁':'尚未解锁'}</b><span>${unlocked?`面具等级 ${progress.level} · 可继续打磨`:`需要先达到 LV ${growthLevel}`}</span></div><h3>${unlocked?esc(skill[0]):`LV ${growthLevel} · 新的回应`}</h3><p>${unlocked?esc(skill[2]):`对应属性达到 ${growthLevel} 级后解锁新的技能节点。`}</p><div class="mastery-bar"><i style="width:${unlocked?Math.min(100,46+rank*18):0}%"></i></div><p>技能熟练度 · ${unlocked?`${rank} / 3 · 可在本次预览中提升`:'等待解锁'}</p></div>${unlocked?`<div class="growth-skill-list" aria-label="技能选择">${m.skills.map((s,i)=>`<button type="button" data-prep="growth-skill:${i}" class="${selectedSkill===i?'selected':''}" aria-pressed="${selectedSkill===i}"><span>${i+1}</span><b>${esc(s[0])}</b><small>等级 ${progress.skillRanks[i]} · ${esc(s[2])}</small></button>`).join('')}</div>${upgradeButton}`:unlockButton}${btn('恢复本次成长预览','growth-reset','','subtle')}`);
   }
   function showSettings(){
     open('战场设置',`<p>影时间，与自己的节奏对齐。</p><form id="battle-settings-form"><label class="check-setting"><span>启用逆影战场</span><input name="enabled" type="checkbox" ${settings.enabled?'checked':''}></label><div class="time-fields"><label class="field-label">影时间开始<input name="start" type="time" required value="${settings.start}"></label><label class="field-label">影时间结束<input name="end" type="time" required value="${settings.end}"></label></div><details class="advanced-settings"><summary>战斗参数</summary><label class="field-label">基础 HP<input name="hp" type="number" min="1" max="9999" required value="${settings.hp}"></label><label class="field-label">攻击倍率（%）<input name="scale" type="number" min="1" max="1000" required value="${settings.scale}"></label></details><div class="prep-actions">${btn('恢复默认','settings-reset','','subtle')}${btn('保存设置','settings-save')}</div></form>`);
@@ -55,30 +90,37 @@ export function createPreparationDirector(api) {
   }
   function act(action){
     const [kind,arg,extra]=action.split(':');
-    if(kind==='create'){clearTimeout(working);createStep=0;answers=[null,null,null,null];traits='';sources=[];showCreate();return;}
+    if(kind==='create'){clearTimeout(working);createStep=0;answers=[null,null,null,null];traits='';sources=[];createCandidate=null;showCreate();return;}
     if(kind==='create-next'){if(createStep>0&&createStep<=4&&answers[createStep-1]===null){notice('先选一个与你接近的回答。');return;}createStep=Math.min(5,createStep+1);showCreate();return;}
     if(kind==='create-back'){if(createStep===5)traits=document.querySelector('#awakening-traits')?.value??traits;createStep=Math.max(0,createStep-1);showCreate();return;}
     if(kind==='answer'){answers[createStep-1]=Number(arg);showCreate();return;}
     if(kind==='source'){traits=document.querySelector('#awakening-traits')?.value??traits;const id=Number(arg);sources=sources.includes(id)?sources.filter(s=>s!==id):sources.length<2?[...sources,id]:sources;showCreate();return;}
     if(kind==='create-generate'){
       const form=document.querySelector('#awakening-form');if(!form.reportValidity())return;traits=new FormData(form).get('traits').trim();if(!traits){notice('写下一点你珍视的品质，再继续。');return;}
+      createCandidate=candidateFromAnswers();
       open('听见回应',`<div class="awakening-mark is-awakening">${icon('mask')}</div><h3 class="prep-lead">面具，正在向你靠近。</h3><p>你给出的答案，已经有了回声。</p>`);
-      working=setTimeout(()=>{if(!sheet.open)return;open('你的力量，已经醒来',`<div class="awakening-mark awakened">${icon('mask')}</div><h3 class="prep-lead">${esc(masks[state.mask].name)}</h3><p>${esc(traits)}</p><div class="awakened-list">${masks.slice(0,5).map(m=>`<span>${m.attr}<b>${esc(m.name)}</b></span>`).join('')}</div>${btn('带着它们，向前','finish-create')}`);},api.reduced.matches?80:950);return;
+      working=setTimeout(()=>{if(!sheet.open)return;showCreateResult();},api.reduced.matches?80:950);return;
     }
-    if(kind==='finish-create'){state.personaCreated=true;sheet.close();api.goRoom('persona');notify('觉醒流程已完成 · 示例面具已就绪');return;}
+    if(kind==='finish-create'){const result=createCandidate||candidateFromAnswers();state.mask=result.index;state.skill=0;state.personaCreated=true;growthLevel=growthState[state.mask].level;sheet.close();api.goRoom('persona');notify(`觉醒流程已完成 · ${masks[state.mask].name} 已就绪`);return;}
     if(kind==='create-error'){clearTimeout(working);open('回应暂时中断',`<div class="awakening-mark">${icon('eye')}</div><h3 class="prep-lead">你的答案，没有丢失。</h3><p>暂时没有得到回应。可以回看自己的描述，准备好后再试。</p>${btn('回到自述，重新尝试','create-return')}`);return;}
-    if(kind==='create-return'){createStep=5;showCreate();return;}
+    if(kind==='create-return'){createCandidate=null;createStep=5;showCreate();return;}
+    if(kind==='create-reroll'){if(!createCandidate)createCandidate=candidateFromAnswers();const ranked=createCandidate.scores.map((score,index)=>({score,index})).sort((a,b)=>b.score-a.score||a.index-b.index);const current=ranked.findIndex(entry=>entry.index===createCandidate.index);createCandidate={...createCandidate,index:ranked[(current+1)%ranked.length].index};showCreateResult();return;}
     if(kind==='reshape'){pendingName='';pendingDescription='';reshapeTarget=Math.min(4,state.mask);showReshape();return;}
     if(kind==='reshape-target'){pendingName=document.querySelector('#new-mask-name')?.value??'';pendingDescription=document.querySelector('#new-mask-description')?.value??'';reshapeTarget=Number(arg);showReshape();return;}
     if(kind==='reshape-preview'){
       const form=document.querySelector('#reshape-form');if(!form.reportValidity())return;const data=new FormData(form);pendingName=data.get('name').trim();pendingDescription=data.get('description').trim();if(!pendingName){notice('名称不能只包含空格。');return;}
-      open('让新的名字落定',`<div class="reshape-comparison"><span><small>原来的面具</small><b>${esc(masks[reshapeTarget].name)}</b></span>${icon('arrow')}<span><small>新的面具</small><b>${esc(pendingName)}</b></span></div><p>${esc(pendingDescription||'这份力量，与你一同向前。')}</p>${btn('确认重塑','reshape-confirm')}${btn('再改一改','reshape-edit','','subtle')}`);return;
+      const current=masks[reshapeTarget];
+      open('让新的名字落定',`<div class="reshape-comparison"><span><small>原来的面具</small><b>${esc(current.name)}</b><em>${esc(current.passive)}</em></span>${icon('arrow')}<span><small>新的面具</small><b>${esc(pendingName)}</b><em>${esc(pendingDescription||'这份力量，与你一同向前。')}</em></span></div><div class="reshape-diff"><span>属性</span><b>${current.attr} · 保留</b><span>技能组</span><b>${current.skills.map(s=>esc(s[0])).join(' · ')} · 保留</b><span>状态条</span><b>HP / SP 位置与数值 · 保留</b></div>${btn('确认重塑','reshape-confirm')}${btn('再改一改','reshape-edit','','subtle')}`);return;
     }
     if(kind==='reshape-edit'){showReshape();return;}
     if(kind==='reshape-summon'){open('新的名字，正在靠近',`<div class="awakening-mark is-awakening">${icon('mask')}</div><h3 class="prep-lead">给这份力量，一次新的回应。</h3><p>示例召唤进行中…</p>`);working=setTimeout(()=>{if(!sheet.open)return;pendingName='远行者';pendingDescription='带着白昼积累的力量，走向未曾抵达的地方。';open('新的面具已回应',`<h3 class="prep-lead">${pendingName}</h3><p>${pendingDescription}</p>${btn('确认重塑','reshape-confirm')}${btn('手动调整','reshape-edit','','subtle')}`);},api.reduced.matches?80:950);return;}
     if(kind==='reshape-error'){open('重塑暂时中断',`<p>当前面具仍然保留。你可以重新尝试，或手动写下新的名称。</p>${btn('重新尝试','reshape-summon')}${btn('改为手动填写','reshape-edit','','subtle')}`);return;}
-    if(kind==='reshape-confirm'){masks[reshapeTarget].name=pendingName;if(pendingDescription)masks[reshapeTarget].passive=pendingDescription;state.mask=reshapeTarget;sheet.close();api.goRoom('persona');notify('这张示例面具已重塑');return;}
-    if(kind==='growth'){showGrowth(Number(arg)||3);return;}
+    if(kind==='reshape-confirm'){if(!pendingName.trim()){notice('先写下新的面具名称。');return;}masks[reshapeTarget].name=pendingName;if(pendingDescription)masks[reshapeTarget].passive=pendingDescription;state.mask=reshapeTarget;sheet.close();api.goRoom('persona');notify('这张示例面具已重塑 · 技能与状态保持不变');return;}
+    if(kind==='growth'){growthLevel=Number(arg)||growthState[state.mask].level;showGrowth(growthLevel);return;}
+    if(kind==='growth-skill'){const progress=growthState[state.mask];progress.selectedSkill=Math.max(0,Math.min(masks[state.mask].skills.length-1,Number(arg)||0));showGrowth(growthLevel);return;}
+    if(kind==='growth-upgrade'){const progress=growthState[state.mask];const skill=progress.selectedSkill;if(progress.points<=0){notice('成长印记已用尽。');return;}if(progress.skillRanks[skill]>=3){notice('这项技能已达到本次预览上限。');return;}progress.points-=1;progress.skillRanks[skill]+=1;showGrowth(growthLevel);return;}
+    if(kind==='growth-unlock'){const progress=growthState[state.mask];if(growthLevel!==progress.level+1){notice('请先选择紧邻的下一层。');return;}if(progress.points<=0){notice('成长印记已用尽。');return;}progress.points-=1;progress.level+=1;growthLevel=progress.level;showGrowth(growthLevel);return;}
+    if(kind==='growth-reset'){const progress=growthState[state.mask];progress.level=3;progress.points=2;progress.skillRanks=[1,1];progress.selectedSkill=0;growthLevel=3;showGrowth(3);return;}
     if(kind==='settings'){showSettings();return;}
     if(kind==='settings-reset'){const form=document.querySelector('#battle-settings-form');for(const [name,value] of Object.entries({start:'20:00',end:'07:00',hp:40,scale:100}))form.elements[name].value=value;form.elements.enabled.checked=true;notice('已恢复预览默认值，保存后生效。');return;}
     if(kind==='settings-save'){

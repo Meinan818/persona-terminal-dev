@@ -178,7 +178,7 @@ T .sh-stage .engine-hold-up>span{font:italic 800 150px/1 var(--sh-cd);color:#f4f
 @keyframes sh-slam{from{transform:scale(1.6);opacity:0}}
 T .sh-stage .engine-hold-up h3{margin-top:4px;font-size:28px;font-weight:900;color:#bff6ff}
 T .sh-stage .engine-hold-up p{margin-top:6px;font-size:15px;color:#9fc0ff}
-T .sh-stage .engine-hold-up>.p3-cutins{position:absolute;left:0;right:0;top:0;height:260px;display:flex;justify-content:center;align-items:flex-start;gap:0;margin:0;padding-top:42px;z-index:0;pointer-events:none;background:linear-gradient(180deg,#01040f 0,#01040f 62%,transparent 100%)}
+T .sh-stage .engine-hold-up>.p3-cutins{position:absolute;left:0;right:0;top:0;height:360px;display:flex;justify-content:center;align-items:flex-start;gap:0;margin:0;padding-top:138px;z-index:0;pointer-events:none;background:linear-gradient(180deg,#01040f 0,#01040f 78%,transparent 100%)}
 T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin{height:190px}
 T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin{position:relative;flex:0 0 250px;margin:0 -16px;border:1.5px dashed rgba(191,246,255,.5);background:repeating-linear-gradient(45deg,rgba(191,246,255,.05) 0 7px,transparent 7px 14px),rgba(6,25,90,.98);clip-path:polygon(18% 0,100% 0,82% 100%,0 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(191,246,255,.85);text-align:center}
 T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin:nth-child(1){transform:rotate(-3deg)}
@@ -278,7 +278,7 @@ T body.sh-m .sh-stage .engine-hold-up>span{font-size:76px}
 T body.sh-m .sh-stage .engine-hold-up h3{font-size:20px}
 T body.sh-m .sh-stage .engine-hold-up p{font-size:12px;padding:0 24px;text-align:center}
 T body.sh-m .sh-stage .engine-hold-up{padding-top:130px}
-T body.sh-m .sh-stage .engine-hold-up>.p3-cutins{top:0;height:150px;padding-top:24px}
+T body.sh-m .sh-stage .engine-hold-up>.p3-cutins{top:0;height:230px;padding-top:96px}
 T body.sh-m .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin{height:110px}
 T body.sh-m .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin{flex-basis:96px;margin:0 -5px}
 T body.sh-m .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin b{font-size:12px}

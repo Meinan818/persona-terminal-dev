@@ -139,10 +139,10 @@ function combat() {
       <div class="combat-hero" aria-hidden="true">${figure()}</div>
       <div class="combat-orbit" aria-hidden="true"><i></i><b></b></div>
       <div class="glass-shards" aria-hidden="true">${Array.from({length:9},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
-      <section class="enemy-scene ${flows.bossPhase?'boss-in-combat':''}" aria-label="敌人状态"><div class="enemy-name"><h1>${flows.bossPhase?'回声的执念':'聒噪的假面'}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:'LV 05'}</span></div>
+      <section class="enemy-scene ${flows.bossPhase?'boss-in-combat':''}" data-phase="${flows.bossPhase||1}" aria-label="敌人状态"><div class="enemy-name"><h1>${flows.bossPhase?'回声的执念':'聒噪的假面'}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:'LV 05'}</span></div>
       <div class="enemy-vitals"><span>敌人 HP</span><span><strong>${state.enemyHp}</strong> / 420</span></div>${meter(state.enemyHp,420)}
       <div class="weakness-line"><b>弱点 · 知识</b><span>${state.stagger >= 2?'失衡 · 总攻击窗口':`失衡 ${state.stagger} / 2`}</span></div>
-      <div class="enemy-art" aria-hidden="true">${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
+      <div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
       <div class="enemy-intent">${icon('eye')}<span><b>下一击：蓄势攻击</b><small>先看意图，再决定进攻还是防御。</small></span></div>
     </section><section class="command-deck" aria-label="战斗指令" aria-busy="${state.busy}">
       <div class="player-hud"><div class="player-tag"><b>ME</b><span>LV <strong>12</strong></span></div><div><span>HP <strong>${state.hp}</strong><em>/ 390</em></span>${meter(state.hp,390)}</div><div class="sp"><span>SP <strong>${state.sp}</strong><em>/ 260</em></span>${meter(state.sp,260)}</div></div>
@@ -234,16 +234,20 @@ function execute(options={}) {
   const command=state.command;
   const name=commandName();
   const weak=command==='skills'&&state.mask===0;
+  const skillAttacks=command==='skills'&&(state.mask===0||state.mask===4||(state.skill===0&&state.mask!==3));
+  const healing=command==='skills'&&state.mask===3&&state.skill===0;
+  const damage=command==='allout'?Math.round(168*(options.multiplier??1.5)/1.5):weak?72:48;
   state.busy=true;
   state.sp-=commandCost();
   state.log=`${name} · 行动演出中…`;
   render();
-  if(command==='allout')transition('ALL OUT',clickOrigin);else if(command==='defend')flows.effect('guard');else if(command==='skills'&&state.mask===3&&state.skill===0)flows.effect('heal');else hit(weak?'WEAK!':command==='insight'?'INSIGHT':'HIT!');
+  if(command==='allout'||command==='basic'||skillAttacks)flows.impact(command==='allout'?'allout':weak?'star':'slash',{amount:damage,meterTo:Math.max(0,state.enemyHp-damage)});
+  else if(healing)flows.impact('heal',{amount:Math.min(30,390-state.hp),meterTo:Math.min(390,state.hp+30)});
+  else flows.impact(command==='defend'?'guard':command==='insight'?'insight':'buff');
   resolveTimer=setTimeout(()=>{
     // Standalone presentation fixture only. Production actions must use BattleEngine.act().
-    const skillAttacks=command==='skills'&&(state.mask===0||state.mask===4||(state.skill===0&&state.mask!==3));
     if(skillAttacks||command==='basic'||command==='allout') {
-      state.enemyHp=Math.max(0,state.enemyHp-(command==='allout'?Math.round(168*(options.multiplier??1.5)/1.5):weak?72:48));
+      state.enemyHp=Math.max(0,state.enemyHp-damage);
       if(weak)state.stagger=Math.min(2,state.stagger+1);
       if(command==='allout')state.stagger=0;
     }
@@ -323,7 +327,7 @@ sheet.addEventListener('close',()=>{
   const fallback=state.fighting?$('[data-action="choose-mask"]'):$(`.room-nav a[data-room="${state.room}"]`);
   if(!document.activeElement||document.activeElement===document.body)fallback?.focus({preventScroll:true});
 });
-document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!sheet.open){if(flows.active){event.preventDefault();flows.close();return;}if(state.fighting){event.preventDefault();leaveBattle();}}});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!sheet.open){if(flows.transforming||flows.active){event.preventDefault();flows.close();return;}if(state.fighting){event.preventDefault();leaveBattle();}}});
 document.addEventListener('visibilitychange',()=>document.body.classList.toggle('is-hidden',document.hidden));
 state.room=roomFromHash();
 render();

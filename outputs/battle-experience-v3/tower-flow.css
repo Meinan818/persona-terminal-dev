@@ -54,6 +54,31 @@
 .velvet-preview h3{font-size:24px;color:#06195a}
 .velvet-preview p{font-size:12px;line-height:1.7;color:#36578f;margin-top:6px}
 .velvet-preview .flow-button{margin-top:14px}
+.night-base{margin-top:18px;padding:26px 28px;background:linear-gradient(135deg,rgba(6,25,90,.9),rgba(2,10,42,.72));border:1px solid rgba(63,240,255,.28);clip-path:polygon(0 0,100% 0,100% calc(100% - 26px),calc(100% - 26px) 100%,0 100%)}
+.night-base-head{max-width:760px}
+.night-base-head h2{font-size:38px;line-height:1.2;color:#f4fbff;margin-top:12px}
+.night-base-head>p{margin-top:10px;font-size:13px;line-height:1.75;color:#bfe7ff;max-width:62ch}
+.night-base-window{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-top:20px;padding:11px 14px;border-left:3px solid #ffd84a;background:rgba(255,216,74,.08);font-size:12px;color:#ffeaa5}
+.night-base-window b{font-size:13px;color:#fff;text-align:right}
+.night-base-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px;padding-top:16px;border-top:1px solid rgba(63,240,255,.24)}
+.night-base-stats>div{display:flex;flex-direction:column;gap:3px}
+.night-base-stats span{font-size:10px;color:#9fc0ff}
+.night-base-stats b{font:italic 800 24px var(--sh-cd);color:#f4fbff}
+.night-base-stats small{font-size:9px;color:#9fc0ff}
+.night-base-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
+.night-base-card{display:flex;flex-direction:column;gap:7px;min-height:190px;padding:16px;border:1px solid rgba(63,240,255,.24);background:rgba(10,29,69,.82)}
+.night-base-card>span{font:italic 800 9px var(--sh-cd);letter-spacing:.18em;color:#3ff0ff}
+.night-base-card h3{font-size:20px;color:#f4fbff}
+.night-base-card p{flex:1;font-size:12px;line-height:1.7;color:#9fc0ff}
+.night-base-card button{min-height:40px;border:1px solid rgba(191,246,255,.55);background:#f4fbff;color:#06195a;font-size:13px;font-weight:900;cursor:pointer}
+.night-base-gate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;margin-top:18px;padding:18px 20px;border:1px solid rgba(63,240,255,.3);background:rgba(3,13,42,.75)}
+.night-base-gate.is-open{border-color:rgba(255,216,74,.65);box-shadow:0 0 24px rgba(255,216,74,.12)}
+.night-base-gate.is-closed{opacity:.82}
+.night-base-gate span{font:italic 800 9px var(--sh-cd);letter-spacing:.2em;color:#3ff0ff}
+.night-base-gate h3{margin-top:5px;font-size:22px;color:#f4fbff}
+.night-base-gate p{margin-top:5px;font-size:12px;line-height:1.65;color:#9fc0ff}
+.night-base-gate .flow-button{min-width:210px;margin:0}
+.night-base-foot{display:flex;justify-content:flex-end;margin-top:14px}
 @media(max-width:760px){
   .safehouse-layout,.return-layout,.velvet-layout{grid-template-columns:1fr;gap:14px}
   .safehouse-copy,.return-copy,.velvet-copy{padding:18px 16px}
@@ -72,6 +97,16 @@
   .shop-actions>.flow-button{min-width:0}
   .velvet-selects{flex-direction:column;align-items:stretch}
   .velvet-selects>span{display:none}
+  .night-base{padding:18px 14px}
+  .night-base-head h2{font-size:26px}
+  .night-base-window{flex-direction:column;align-items:flex-start;gap:6px}
+  .night-base-window b{text-align:left}
+  .night-base-stats{grid-template-columns:1fr 1fr;gap:8px}
+  .night-base-grid{grid-template-columns:1fr}
+  .night-base-card{min-height:0}
+  .night-base-gate{grid-template-columns:1fr;gap:12px}
+  .night-base-gate .flow-button{width:100%}
+  .night-base-foot .flow-button{width:100%}
 }
 
 /* 天鹅绒房间 v1：独立场景、服务菜单与素材位 */

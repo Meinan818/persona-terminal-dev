@@ -60,7 +60,8 @@ const ARCANA_LABELS = {
   world:'世界', faith:'信念', consultant:'顾问',
 };
 const PARTY_CANDIDATE_IDS = ['cait-sith', 'agathion', 'kelpie', 'mandrake', 'archangel', 'principality'];
-const P5_PREVIEW_KEY = 'maskaria.p5.preview.v1';
+// 逆影战场重做：新模块独立存档；旧版 `maskaria.p5.preview.v1` 不读取、不迁移。
+const P5_PREVIEW_KEY = 'maskaria.p5r.rebuild.v1';
 const BASE_MASK_IDS = new Set(['arsene', 'pixie', 'jack-o-lantern', 'silky', 'succubus', 'izanagi']);
 state.heroPersonaIds = masks.map(mask => mask.id);
 state.personaRoster = [...state.heroPersonaIds];
@@ -311,7 +312,7 @@ function home() {
 }
 function figure() { return visualArt('hero','<div class="figure"><i class="head"></i><i class="coat"></i><i class="eye"></i><i class="cut"></i></div>'); }
 function tower() {
-  return flows.towerRoute();
+  return flows.screen() ?? (flows.towerActive ? flows.towerRoute() : flows.towerPrep());
 }
 function persona() {
   const m = masks[state.mask];

@@ -526,9 +526,9 @@ export class P5Battle {
       && STATUS[target.status]?.technicalWith?.includes(item.element),
     );
     const crit = !item.ignoreAffinity && roll(this.rng, item.crit ?? 0.08);
-    const stat = item.element === 'phys' || item.element === 'gun'
+    const stat = (item.element === 'phys' || item.element === 'gun'
       ? actor.strength ?? 5
-      : actor.magic ?? 5;
+      : actor.magic ?? 5) + (actor.attackBonus ?? 0);
     const attackFactor = 1 + Math.max(0, stat - 5) * 0.03;
     const defenseFactor = 1 - Math.min(0.45, (target.defense ?? 0) * 0.02);
     let mult = affinity === 'weak' ? 1.25 : affinity === 'resist' ? 0.5 : 1;
@@ -671,7 +671,7 @@ export class P5Battle {
           ? Math.max(0.75, Math.min(1.5, (enemySkill.power ?? 24) / 24))
           : 1;
         const raw = Math.max(1, Math.round(enemy.attack * skillFactor * (0.9 + this.rng() * 0.2) * (enemy.enraged ? 1.4 : 1)));
-          let damage = Math.max(1, Math.round((raw - (persona?.defense ?? 0) * 0.5) * (
+          let damage = Math.max(1, Math.round((raw - ((persona?.defense ?? 0) + (target.defenseBonus ?? 0)) * 0.5) * (
             target.guarding ? 0.5 : 1
           )));
           const labels = [];

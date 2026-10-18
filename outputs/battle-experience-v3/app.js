@@ -16,6 +16,7 @@ import {
 } from './p5-battle-bridge.js';
 import { buildBattlePersona, ELEMENTS, setPersonaOverride } from './p5-combat-rules.js';
 import { clearSignatureFx, playAllOut, playStagger } from './p3-signature-fx.js';
+import { EQUIPMENT, equipmentBonuses } from './equipment.js';
 installPreviewNegotiationBridge();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -44,6 +45,8 @@ const state = {
   personaOverrides: {},
   personaCreated: false,
   personaAwakening: null,
+  equipment: { weapon: 'training-blade', armor: 'school-jacket', accessory: null },
+  ownedEquipment: ['training-blade', 'school-jacket'],
 };
 const scrolls = new Map();
 const masks = [
@@ -123,6 +126,8 @@ function persistP5State() {
       personaOverrides: state.personaOverrides,
       personaCreated: Boolean(state.personaCreated),
       personaAwakening: state.personaAwakening,
+      equipment: state.equipment,
+      ownedEquipment: state.ownedEquipment,
     }));
   } catch {}
 }
@@ -150,6 +155,13 @@ function loadP5State() {
     state.personaAwakening = saved.personaAwakening && typeof saved.personaAwakening === 'object'
       ? { ...saved.personaAwakening }
       : null;
+    if (saved.equipment && typeof saved.equipment === 'object') {
+      state.equipment = { ...state.equipment, ...saved.equipment };
+    }
+    if (Array.isArray(saved.ownedEquipment)) {
+      state.ownedEquipment = [...new Set(saved.ownedEquipment.filter(id => Boolean(EQUIPMENT[id])))];
+      state.ownedEquipment = [...new Set([...state.ownedEquipment, 'training-blade', 'school-jacket'])];
+    }
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;
     }
@@ -872,6 +884,7 @@ function startBattle(origin = state.room,options={}) {
     heroHp:state.hp,
     heroSp:state.sp,
     partyVitals:state.partyVitals,
+    equipmentBonuses:equipmentBonuses(state.equipment),
   });
   state.targetId=state.battle.enemies[0]?.id??'';
   state.battleActionKey='';

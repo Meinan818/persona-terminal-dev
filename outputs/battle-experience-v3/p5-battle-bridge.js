@@ -129,6 +129,7 @@ export function createTowerBattle({
   heroHp,
   heroSp,
   partyVitals = {},
+  equipmentBonuses = {},
 } = {}) {
   const enemies = [primaryEnemySpec({ encounter, floor, boss })];
   if (!boss) enemies.push(secondaryEnemySpec({ encounter, floor }));
@@ -145,6 +146,18 @@ export function createTowerBattle({
   });
   const hero = battle.party.find(member => member.isPlayer);
   if (hero) {
+    hero.attackBonus = Number(equipmentBonuses.attack) || 0;
+    hero.defenseBonus = Number(equipmentBonuses.defense) || 0;
+    const hpBonus = Number(equipmentBonuses.hp) || 0;
+    const spBonus = Number(equipmentBonuses.sp) || 0;
+    if (hpBonus) {
+      hero.maxHp += hpBonus;
+      hero.hp = Math.min(hero.maxHp, hero.hp + hpBonus);
+    }
+    if (spBonus) {
+      hero.maxSp += spBonus;
+      hero.sp = Math.min(hero.maxSp, hero.sp + spBonus);
+    }
     if (Number.isFinite(heroHp)) hero.hp = clamp(Number(heroHp), 1, hero.maxHp);
     if (Number.isFinite(heroSp)) hero.sp = clamp(Number(heroSp), 0, hero.maxSp);
   }

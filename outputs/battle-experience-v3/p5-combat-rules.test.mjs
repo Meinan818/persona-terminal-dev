@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildBattlePersona, catalogPersonaChoices, createDefaultBattle, setPersonaOverride } from './p5-combat-rules.js';
-import { buildBattleView } from './p5-battle-bridge.js';
+import { buildBattleView, createTowerBattle } from './p5-battle-bridge.js';
 
 const steady = () => 0.5;
 
@@ -128,6 +128,20 @@ test('敌方意图在战斗视图中可见，并与敌方回合使用的技能�
   assert.equal(view.enemies[0].intent.label, intent.label);
   battle.enemyPhase();
   assert.ok(battle.enemies[0].intent?.label);
+});
+
+test('装备攻防与 HP/SP 加成进入战斗主角', () => {
+  const battle = createTowerBattle({
+    rng: steady,
+    heroHp: 52,
+    heroSp: 34,
+    equipmentBonuses: { attack: 4, defense: 3, hp: 10, sp: 5 },
+  });
+  const hero = battle.party.find(member => member.isPlayer);
+  assert.equal(hero.attackBonus, 4);
+  assert.equal(hero.defenseBonus, 3);
+  assert.equal(hero.maxHp, 62);
+  assert.equal(hero.maxSp, 39);
 });
 
 test('异常状态记录剩余回合，并在到期后自动解除', () => {

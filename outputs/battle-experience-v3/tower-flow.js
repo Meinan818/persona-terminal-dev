@@ -6,6 +6,7 @@ import {getPersona} from './p5r-compendium.js';
 import {buildBattlePersona,setPersonaOverride} from './p5-combat-rules.js';
 import {formatCountdown,formatShadowTimeRange,nextShadowTime,shadowTimeStatus} from './shadow-time.js';
 import {awakeningSummary,canEnterTower} from './awakening-state.js';
+import {EQUIPMENT,SLOT_LABELS,equipItem,equipmentBonuses,equipmentRows,unequipItem} from './equipment.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -54,6 +55,17 @@ export function createTowerFlow(api){
     state.money-=price;
     state.battleItems[id]=(Number(state.battleItems?.[id])||0)+1;
     shopMessage=`买下 ${item.name} ×1（¥${price}）。`;
+    api.persistP5State?.();
+    render({focus:true});
+  }
+  function buyEquipment(id){
+    const item=EQUIPMENT[id];
+    if(!item||item.price<=0)return;
+    if(state.ownedEquipment.includes(id)){shopMessage='这件装备已经在手里。';render();return;}
+    if(money()<item.price){shopMessage=`钱不够（需要 ¥${item.price}）。`;render();return;}
+    state.money-=item.price;
+    state.ownedEquipment=[...state.ownedEquipment,id];
+    shopMessage=`买下 ${item.name}（¥${item.price}）。去装备页换上。`;
     api.persistP5State?.();
     render({focus:true});
   }
@@ -295,7 +307,7 @@ export function createTowerFlow(api){
     const contract=awakeningSummary(state.personaAwakening);
     const card=(title,note,tag,action)=>`<article class="night-base-card"><span>${tag}</span><h3>${title}</h3><p>${note}</p><button type="button" data-tower="${action}">进入</button></article>`;
     const awakenBanner=awakened?'':`<div class="night-base-awaken"><div><span>FIRST CONTRACT</span><h3>还没有面具回应你。</h3><p>四道问题，一段自述。等你说完，它才会开口。</p></div><button type="button" data-tower="prep-awaken">回应它</button></div>`;
-    return frame('影时间据点。','DARK HOUR BASE',`<div class="night-base"><section class="night-base-head"><span class="slash-label">DARK HOUR / PREPARATION</span><h2>${shadow.active?'影时间，正在流淌。':'影时间，还没有降临。'}</h2><p>${shadow.active?'商店和天鹅绒房间都在塔外。整理好队伍，再从塔门进入。':'准备可以随时进行；只有塔门会在影时间开启。'}</p><div class="night-base-window"><span>${esc(formatShadowTimeRange())}</span><b>${nextText}</b></div></section><div class="night-base-stats"><div><span>持有</span><b>¥${money().toLocaleString()}</b></div><div><span>面具</span><b>${roster.length}</b><small>张</small></div><div><span>契约</span><b>${esc(contract)}</b></div><div><span>素材</span><b>${materialCount}</b><small>件</small></div></div>${awakenBanner}<section class="night-base-grid">${card('天鹅绒房间','融合、处刑、电椅、禁闭、图鉴与素材。','VELVET ROOM','prep-velvet')}${card('月见坂补给','战斗道具、复活针与 SP 饮料。','SUPPLY','prep-shop')}${card('队伍与 Persona','查看面具名录，调整契约与同行编成。','PERSONA','prep-persona')}</section><div class="night-base-gate ${canEnter?'is-open':'is-closed'}"><div><span>TOWER GATE</span><h3>${gateTitle}</h3><p>${gateCopy}</p></div>${btn(canEnter?'踏上高塔':!awakened?'等待觉醒':'等待影时间','enter-tower','',!canEnter)}</div>${prepMessage?`<p class="shop-message">${esc(prepMessage)}</p>`:''}<div class="night-base-foot">${btn('离开据点，回到战场','home')}</div></div>`);
+    return frame('影时间据点。','DARK HOUR BASE',`<div class="night-base"><section class="night-base-head"><span class="slash-label">DARK HOUR / PREPARATION</span><h2>${shadow.active?'影时间，正在流淌。':'影时间，还没有降临。'}</h2><p>${shadow.active?'商店和天鹅绒房间都在塔外。整理好队伍，再从塔门进入。':'准备可以随时进行；只有塔门会在影时间开启。'}</p><div class="night-base-window"><span>${esc(formatShadowTimeRange())}</span><b>${nextText}</b></div></section><div class="night-base-stats"><div><span>持有</span><b>¥${money().toLocaleString()}</b></div><div><span>面具</span><b>${roster.length}</b><small>张</small></div><div><span>契约</span><b>${esc(contract)}</b></div><div><span>素材</span><b>${materialCount}</b><small>件</small></div></div>${awakenBanner}<section class="night-base-grid">${card('天鹅绒房间','融合、处刑、电椅、禁闭、图鉴与素材。','VELVET ROOM','prep-velvet')}${card('月见坂补给','战斗道具、复活针与 SP 饮料。','SUPPLY','prep-shop')}${card('装备','武器、防具与饰品。','GEAR','prep-gear')}${card('队伍与 Persona','查看面具名录，调整契约与同行编成。','PERSONA','prep-persona')}</section><div class="night-base-gate ${canEnter?'is-open':'is-closed'}"><div><span>TOWER GATE</span><h3>${gateTitle}</h3><p>${gateCopy}</p></div>${btn(canEnter?'踏上高塔':!awakened?'等待觉醒':'等待影时间','enter-tower','',!canEnter)}</div>${prepMessage?`<p class="shop-message">${esc(prepMessage)}</p>`:''}<div class="night-base-foot">${btn('离开据点，回到战场','home')}</div></div>`);
   }
   function interludePage(){
     const reward=interlude?.reward;
@@ -303,7 +315,11 @@ export function createTowerFlow(api){
   }
   function shopPage(){
     const backLabel=shopReturn==='return'?'回到回城':shopReturn==='prep'?'回到据点':'回到安全屋';
-    return frame('月见坂补给。','SUPPLY',`<div class="shop-layout"><div class="shop-head"><span>月见坂补给</span><b>¥${money().toLocaleString()}</b></div><div class="shop-list">${SHOP_STOCK.map(id=>{const item=ITEM_DEFS[id];if(!item)return '';const qty=Number(state.battleItems?.[id])||0;return `<article class="shop-row"><div class="shop-item"><h3>${esc(item.name)}</h3><p>${esc(item.desc)}</p></div><div class="shop-meta"><b>¥${item.price}</b><small>持有 ${qty}</small></div><button class="small-button" data-tower="buy:${id}" ${money()<item.price?'disabled':''}>购买</button></article>`;}).join('')}</div>${shopMessage?`<p class="shop-message">${esc(shopMessage)}</p>`:''}<div class="shop-actions">${btn(backLabel,'shop-back')}${shopReturn==='interlude'?btn('继续向上','continue'):''}</div></div>`);
+    return frame('月见坂补给。','SUPPLY',`<div class="shop-layout"><div class="shop-head"><span>月见坂补给</span><b>¥${money().toLocaleString()}</b></div><div class="shop-list">${SHOP_STOCK.map(id=>{const item=ITEM_DEFS[id];if(!item)return '';const qty=Number(state.battleItems?.[id])||0;return `<article class="shop-row"><div class="shop-item"><h3>${esc(item.name)}</h3><p>${esc(item.desc)}</p></div><div class="shop-meta"><b>¥${item.price}</b><small>持有 ${qty}</small></div><button class="small-button" data-tower="buy:${id}" ${money()<item.price?'disabled':''}>购买</button></article>`;}).join('')}</div><div class="shop-gear"><h3>装备</h3>${Object.values(EQUIPMENT).filter(item=>item.price>0).map(item=>{const owned=state.ownedEquipment.includes(item.id);return `<article class="shop-row"><div class="shop-item"><h3>${esc(item.name)}</h3><p>${esc(item.desc)}</p></div><div class="shop-meta"><b>¥${item.price}</b><small>${SLOT_LABELS[item.slot]}${owned?' · 已拥有':''}</small></div><button class="small-button" data-tower="buy-equipment:${item.id}" ${owned||money()<item.price?'disabled':''}>${owned?'已拥有':'购买'}</button></article>`;}).join('')}</div>${shopMessage?`<p class="shop-message">${esc(shopMessage)}</p>`:''}<div class="shop-actions">${btn(backLabel,'shop-back')}${shopReturn==='interlude'?btn('继续向上','continue'):''}</div></div>`);
+  }
+  function gearPage(){
+    const rows=equipmentRows(state.equipment),bonuses=equipmentBonuses(state.equipment);
+    return frame('装备。','GEAR',`<div class="gear-page"><section class="gear-summary"><span class="slash-label">LOADOUT / EQUIPMENT</span><h2>带进塔里的东西。</h2><p>武器、防具和饰品只加攻防与 HP/SP，不改变 Persona 的技能和耐性。</p><div class="gear-bonuses"><span>攻击 <b>+${bonuses.attack}</b></span><span>防御 <b>+${bonuses.defense}</b></span><span>HP <b>+${bonuses.hp}</b></span><span>SP <b>+${bonuses.sp}</b></span></div></section><div class="gear-slots">${rows.map(row=>{const owned=state.ownedEquipment.map(id=>EQUIPMENT[id]).filter(item=>item&&item.slot===row.slot);return `<article class="gear-slot"><header><span>${row.label}</span><b>${row.item?esc(row.item.name):'未装备'}</b></header>${row.item?`<p>${esc(row.item.desc)}</p><small>攻 +${row.item.attack} · 防 +${row.item.defense} · HP +${row.item.hp} · SP +${row.item.sp}</small>${btn('卸下',`unequip:${row.slot}`)}`:'<p>这个位置还空着。</p>'}<div class="gear-owned">${owned.map(item=>`<button type="button" data-tower="equip:${item.id}" ${state.equipment[row.slot]===item.id?'disabled':''}>${esc(item.name)}<small>${state.equipment[row.slot]===item.id?'装备中':`攻 +${item.attack} · 防 +${item.defense}`}</small></button>`).join('')||'<span>还没有这个位置的装备。</span>'}</div></article>`;}).join('')}</div><div class="gear-foot">${btn('回到据点','prep-return')}</div></div>`);
   }
   function returnPage(){
     return frame('回城。','RETURN',`<div class="return-layout"><section class="return-copy"><span class="slash-label">DARK HOUR / RETURN</span><h2>影时间退去。</h2><p>Boss 已经被击破。把这一夜带回据点，再做补给和融合。</p><div class="return-stats"><div><span>持有</span><b>¥${money().toLocaleString()}</b></div><div><span>面具</span><b>${rosterIds().length}</b><small>张</small></div><div><span>战利品</span><b>${state.battleLoot?.length??0}</b><small>件</small></div><div><span>完成节点</span><b>${j.history.length}</b></div></div></section><section class="return-actions">${btn('回到影时间据点','prep-return','补给、融合与编成')}${btn('回到战场','home')}</section></div>`);
@@ -349,6 +365,7 @@ export function createTowerFlow(api){
     if(page==='prep')return prepPage();
     if(page==='interlude')return interludePage();
     if(page==='shop')return shopPage();
+    if(page==='gear')return gearPage();
     if(page==='return')return returnPage();
     if(page==='velvet')return velvetPage();
     if(page.startsWith('reveal'))return frame(page==='reveal-error'?'雾还没有散开。':'听见塔层，缓缓显形。','STRATUM',`<div class="reveal-layout ${page==='reveal-ready'?'ready':''}"><div class="tower-silhouette" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><span class="stratum-number">03<span>STRATUM</span></span><h2>${page==='reveal-error'?'显形暂时中断':page==='reveal-ready'?'回声之庭':'正在显形…'}</h2><p class="scene-copy">${page==='reveal-error'?'已走过的路还在，重新显形后继续。':'从 1F 接续这一次探索。先侦察前路，再作选择。'}</p>${page==='reveal-error'?btn('重新显形','retry'):btn(page==='reveal-ready'?'踏入高塔':'跳过显形，进入高塔','route')}<p class="scene-note">路线只在本夜生效。</p></div></div>`);
@@ -385,6 +402,7 @@ export function createTowerFlow(api){
     if(action==='take-key'){model.takeKey();if(model.resolve({label:'收下旧钥匙',detail:`钥匙 ${j.keys} 把`,type:'key'}))finish();return;}
     if(action==='prep-return'){prepMessage='';show('prep');return;}
     if(action==='prep-shop'){shopReturn='prep';shopMessage='';show('shop');return;}
+    if(action==='prep-gear'){show('gear');return;}
     if(action==='prep-velvet'){velvetReturn='prep';fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';velvetService='fusion';velvetMessage='';show('velvet');return;}
     if(action==='prep-persona'){stop();page=null;api.goRoom('persona');return;}
     if(action==='prep-awaken'){api.openAwakening?.();return;}
@@ -400,6 +418,17 @@ export function createTowerFlow(api){
     if(action==='shop-return'){shopReturn='return';shopMessage='';show('shop');return;}
     if(action==='shop-back'){show(shopReturn);return;}
     if(action.startsWith('buy:')){buyItem(action.slice(4));return;}
+    if(action.startsWith('buy-equipment:')){buyEquipment(action.slice('buy-equipment:'.length));return;}
+    if(action.startsWith('equip:')){
+      const result=equipItem(state.equipment,state.ownedEquipment,action.slice('equip:'.length));
+      if(result.ok){state.equipment=result.equipment;api.persistP5State?.();}
+      render({focus:true});return;
+    }
+    if(action.startsWith('unequip:')){
+      const result=unequipItem(state.equipment,action.slice('unequip:'.length));
+      if(result.ok){state.equipment=result.equipment;api.persistP5State?.();}
+      render({focus:true});return;
+    }
     if(action==='velvet'){velvetReturn='return';fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';velvetService='fusion';velvetMessage='';show('velvet');return;}
     if(action.startsWith('velvet-service:')){velvetService=action.slice('velvet-service:'.length);velvetMessage='';fusionMessage='';fusionPreview=null;specialPreview=null;specialMessage='';render({focus:true});return;}
     if(action==='gallows-exec'){gallowsExec();return;}
@@ -432,6 +461,7 @@ export function createTowerFlow(api){
     if(action==='back'){
       if(!page&&!j.active){stop();api.goRoom('battle');return;}
       if(page==='shop'){show(shopReturn);return;}
+      if(page==='gear'){show('prep');return;}
       if(page==='velvet'){show(velvetReturn);return;}
       if(page==='prep'){stop();page=null;api.goRoom('battle');return;}
       if(page==='interlude'){routeBack();return;}

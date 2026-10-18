@@ -144,11 +144,13 @@ export function createTowerFlow(api){
     const recipe=specialRecipes(rosterIds()).find(entry=>entry.resultId===resultId);
     if(!recipe){specialMessage='这张特殊配方不在图鉴里。';specialPreview=null;render();return;}
     const missing=recipe.sources.filter(source=>!source.owned);
+    const discount=Math.min(0.25,trust('velvet')*0.05);
     specialPreview={
       resultId:recipe.resultId,
       result:recipe.result,
       sources:recipe.sources,
-      cost:recipe.cost,
+      cost:Math.round(recipe.cost*(1-discount)),
+      discount,
       ready:recipe.ready&&!recipe.resultOwned,
     };
     specialMessage=recipe.resultOwned
@@ -167,18 +169,20 @@ export function createTowerFlow(api){
     }
     const result=specialFuse(recipe.sourceIds);
     if(!result.ok){specialMessage=result.reason;render();return;}
-    if(money()<result.cost){specialMessage=`钱不够（需要 ¥${result.cost}）。`;render();return;}
-    state.money-=result.cost;
+    const cost=Number(specialPreview.cost)||0;
+    if(money()<cost){specialMessage=`钱不够（需要 ¥${cost}）。`;render();return;}
+    state.money-=cost;
     api.addPersonaToRoster?.(result.persona.id);
     api.persistP5State?.();
-    specialMessage=`${result.persona.name} 已通过特殊融合进入面具名录（¥${result.cost}）。`;
+    specialMessage=`${result.persona.name} 已通过特殊融合进入面具名录（¥${cost}）。`;
     specialPreview=null;
     render({focus:true});
   }
   function scanNetwork(){
     const result=networkFusion(rosterIds());
     if(!result.ok){networkMessage=result.reason;networkPreview=null;render();return;}
-    networkPreview=result;
+    const discount=Math.min(0.25,trust('velvet')*0.05);
+    networkPreview={...result,cost:Math.round(result.cost*(1-discount)),discount};
     networkMessage='';
     render({focus:true});
   }

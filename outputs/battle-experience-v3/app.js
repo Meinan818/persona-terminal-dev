@@ -1,9 +1,9 @@
 import {createEncounterDirector,escapeHtml as esc} from './encounters.js';
 import {createPreparationDirector} from './preparation.js';
 import {visualArt} from './art.js';
-import {MAX_ROUNDS,STANCE_META,STANCE_ORDER,advanceRound,applyStance,createTrial,stanceAvailability,trialEnding} from './judgment-rules.js';
-import {installPreviewJudgmentBridge,offlineJudgment,requestJudgment} from './judgment-ai.js';
-installPreviewJudgmentBridge();
+import {BRIBE_COST,NEGOTIATION_OPTIONS,OPTION_ORDER,PERSONALITIES,chanceLabel,createNegotiation,negotiationChance,resolveNegotiation} from './negotiation-rules.js';
+import {installPreviewNegotiationBridge,offlineNegotiation,requestNegotiation} from './negotiation-ai.js';
+installPreviewNegotiationBridge();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const content = $('#content');
@@ -17,7 +17,7 @@ const state = {
   mask: 0, arsenalTab: 'relic', equipped: new Set(['moon']), command: 'skills', skill: 0,
   hp: 345, sp: fixture === 'low-sp' ? 4 : 217, enemyHp: 312,
   turn: 4, stagger: 0, busy: false, finished: false, turnPhase: 'player', log: '轮到你了。先看意图，再决定这一回合。',
-  judgmentBattle: false, judgment: null,
+  negotiation: null, enemyRage: 0, recruitedMasks: [], battleLoot: [],
 };
 const scrolls = new Map();
 const masks = [
@@ -83,15 +83,15 @@ function home() {
       <section class="mission"><span class="slash-label">${preparation.settings.enabled?'影时间进行中':'战场暂未启用'}</span><h2>${journey.ended?'带着回声，回来了。':'继续向上。'}</h2><p>${journey.ended?`这一次，你抵达了第 ${journey.floor} 层。`:`你停在第 ${journey.floor} 层。下一步，仍由你选择。`}</p>
         <div class="mission-line"><span>当前区层</span><b>第 03 区层</b></div>
         <div class="mission-line"><span>登塔进度</span><b>${journey.floor} / 10 F</b></div>
-        <button class="trial-quick" type="button" data-action="start-judgment"><span>2.0</span>进入天鹅绒审判 · 三幕</button>
+        <button class="trial-quick" type="button" data-action="start-negotiation"><span>2.0</span>打服它，再和它谈 · 交涉收服</button>
         ${mainButton(journey.ended?'查看本次行程':'继续登塔','open-tower',journey.ended?'回望走过的路':'回到当前层，查看下一条路线')}
         <button class="text-button" data-action="start-battle">查看当前遭遇战</button>
         <div class="mini-prep">${icon('mask')}<span>出战面具 <b>${esc(masks[state.mask].name)}</b></span><button class="text-button" data-action="open-persona">调整</button></div>
         <div class="status-ribbon"><span>HP <b>${state.hp}</b> / 390</span><span>SP <b>${state.sp}</b> / 260</span><span>遗物 <b>${state.equipped.size}</b> 件</span></div>
       </section></div>
     <section class="trial-banner">
-      <div><h2><span class="trial-mode">2.0</span>命运在等你开口。</h2><p>吾即是汝，汝即是吾。命运只是替你把这句话说完。三幕审判：面具、雾、时间。你只能认领、反叛或夺取；每一次回答都会留在天鹅绒的牌面上。</p></div>
-      <button class="trial-go" type="button" data-action="start-judgment"><span>进入天鹅绒审判<small>三幕 · 馆长主持 · 可离线</small></span>${icon('arrow')}</button>
+      <div><h2><span class="trial-mode">2.0</span>打服它，再和它谈。</h2><p>打中弱点、把它打失衡，影子会开口。威胁、讨好、讲理或给 SP——收服它，或拿走它身上的东西。AI 决定它的人格、条件和收服提案；成败由固定规则和你的选择决定。</p></div>
+      <button class="trial-go" type="button" data-action="start-negotiation"><span>进入交涉战<small>打弱点 · HOLD UP · 收服面具</small></span>${icon('arrow')}</button>
     </section>`;
 }
 function figure() { return visualArt('hero','<div class="figure"><i class="head"></i><i class="coat"></i><i class="eye"></i><i class="cut"></i></div>'); }
@@ -130,10 +130,18 @@ function commandCost() { return state.command === 'skills' ? masks[state.mask].s
 function commandName() { return state.command === 'skills' ? masks[state.mask].skills[state.skill][0] : state.command === 'allout' ? '总攻击' : commands.find(c => c[0] === state.command)[1]; }
 function combat() {
   if (state.finished) return flows.victory();
-  if (state.judgmentBattle) return judgmentCombat();
   const m = masks[state.mask];
   const descriptions = { basic:'普通攻击 · 0 SP。选择后再执行，避免误触。', defend:'防御 · 稳住这一回合，迎接敌人的下一击。', insight:'洞察 · 2 SP。查看敌人的意图与弱点情报。', allout:'总攻击 · 20 SP。抓住失衡窗口，展开攻势。' };
   const enemyTurn = state.turnPhase === 'enemy';
+  const negotiating = Boolean(state.negotiation?.active);
+  const intentTitle = negotiating ? 'HOLD UP · 它倒下了' : enemyTurn ? '敌方出手：蓄势攻击' : '下一击：蓄势攻击';
+  const intentNote = negotiating ? '现在可以威胁、讨好、讲理，或给它 SP。' : enemyTurn ? '准备承受这一击，或用防御化解。' : '先看意图，再决定进攻还是防御。';
+  const normalDeck = `<div class="command-label"><span>${state.command==='skills'?'SKILL · 技能':'ACTION · 行动'}</span><strong>COST</strong></div>
+      <div class="command-grid">${commands.map(([id,label,i],order)=>`<button data-command="${id}" aria-pressed="${id===state.command}" style="--tilt:${[-4,-1,2,4][order]}deg" ${state.busy?'disabled':''}>${icon(i)}<span>${label}<small>${['SKILL','ATTACK','GUARD','INSIGHT'][order]}</small></span></button>`).join('')}</div>
+      <div class="command-detail">${state.command==='skills'?`<div class="skill-list">${m.skills.map((s,i)=>combatSkill(s,i)).join('')}</div><p>${m.skills[state.skill][2]}</p>`:`<div class="action-banner">${icon(commands.find(c=>c[0]===state.command)?.[2]??'star')}<strong>${commandName()}</strong><b>${commandCost()}<small>SP</small></b></div><p>${descriptions[state.command]}</p>`}</div>
+      ${state.stagger>=2?`<button class="small-button allout-pick" data-command="allout" ${state.busy?'disabled':''}>${icon('star')}总攻击 · 20 SP</button>`:''}
+      <button class="main-button execute ${state.command==='allout'?'red':''}" data-action="execute" ${state.busy||state.sp<commandCost()?'disabled':''}><span>${state.busy?'行动演出中…':state.sp<commandCost()?'SP 不足':`执行 · ${commandName()}`}</span>${icon('arrow')}</button>
+      <p class="busy-text">${state.busy?(enemyTurn?'敌方出手，准备承受这一击。':'等待行动结束，避免重复出手。'):`${commandCost()} SP · 选好行动后执行`}</p>`;
   return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?(enemyTurn?'敌方回合':'行动演出中'):'你的回合'}</p></div>${flows.rehearsalRail?.()??''}${visualStateMode?visualStateRail():''}
     <div class="combat-poster">
       <div class="combat-word" aria-hidden="true">BATTLE</div>
@@ -142,249 +150,242 @@ function combat() {
       <div class="glass-shards" aria-hidden="true">${Array.from({length:9},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
       <section class="enemy-scene ${flows.bossPhase?'boss-in-combat':''} ${enemyTurn?'enemy-turn':''}" data-phase="${flows.bossPhase||1}" aria-label="敌人状态"><div class="enemy-name"><h1>${flows.bossPhase?'回声的执念':'聒噪的假面'}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:'LV 05'}</span></div>
       <div class="enemy-vitals"><span>敌人 HP</span><span><strong>${state.enemyHp}</strong> / 420</span></div>${meter(state.enemyHp,420)}
-      <div class="weakness-line"><b>弱点 · 知识</b><span>${state.stagger >= 2?'失衡 · 总攻击窗口':`失衡 ${state.stagger} / 2`}</span></div>
+      <div class="weakness-line"><b>弱点 · 知识</b><span>${negotiating?'HOLD UP · 可以交涉':state.stagger >= 2?'失衡 · 总攻击窗口':`失衡 ${state.stagger} / 2`}</span></div>
       <div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
-      <div class="enemy-intent">${icon('eye')}<span><b>${enemyTurn?'敌方出手：蓄势攻击':'下一击：蓄势攻击'}</b><small>${enemyTurn?'准备承受这一击，或用防御化解。':'先看意图，再决定进攻还是防御。'}</small></span></div>
-    </section><section class="command-deck" aria-label="战斗指令" aria-busy="${state.busy}">
+      <div class="enemy-intent">${icon('eye')}<span><b>${intentTitle}</b><small>${intentNote}</small></span></div>
+    </section><section class="command-deck" aria-label="战斗指令" aria-busy="${state.busy||negotiating}">
       <div class="player-hud"><div class="player-tag"><b>ME</b><span>LV <strong>12</strong></span></div><div><span>HP <strong>${state.hp}</strong><em>/ 390</em></span>${meter(state.hp,390)}</div><div class="sp"><span>SP <strong>${state.sp}</strong><em>/ 260</em></span>${meter(state.sp,260)}</div></div>
-      <div class="mask-switcher"><button class="icon-button" data-action="prev-mask" aria-label="上一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button><button data-action="choose-mask" ${state.busy?'disabled':''}><span class="mask-emblem">${icon('mask')}</span><span class="mask-switch-name">${esc(m.name)}<small>${m.attr} · PERSONA</small></span><b aria-hidden="true">${icon('chevrons')}</b></button><button class="icon-button" data-action="next-mask" aria-label="下一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button></div>
-      <div class="command-label"><span>${state.command==='skills'?'SKILL · 技能':'ACTION · 行动'}</span><strong>COST</strong></div>
-      <div class="command-grid">${commands.map(([id,label,i],order)=>`<button data-command="${id}" aria-pressed="${id===state.command}" style="--tilt:${[-4,-1,2,4][order]}deg" ${state.busy?'disabled':''}>${icon(i)}<span>${label}<small>${['SKILL','ATTACK','GUARD','INSIGHT'][order]}</small></span></button>`).join('')}</div>
-      <div class="command-detail">${state.command==='skills'?`<div class="skill-list">${m.skills.map((s,i)=>combatSkill(s,i)).join('')}</div><p>${m.skills[state.skill][2]}</p>`:`<div class="action-banner">${icon(commands.find(c=>c[0]===state.command)?.[2]??'star')}<strong>${commandName()}</strong><b>${commandCost()}<small>SP</small></b></div><p>${descriptions[state.command]}</p>`}</div>
-      ${state.stagger>=2?`<button class="small-button allout-pick" data-command="allout" ${state.busy?'disabled':''}>${icon('star')}总攻击 · 20 SP</button>`:''}
-      <button class="main-button execute ${state.command==='allout'?'red':''}" data-action="execute" ${state.busy||state.sp<commandCost()?'disabled':''}><span>${state.busy?'行动演出中…':state.sp<commandCost()?'SP 不足':`执行 · ${commandName()}`}</span>${icon('arrow')}</button>
-      <p class="busy-text">${state.busy?(enemyTurn?'敌方出手，准备承受这一击。':'等待行动结束，避免重复出手。'):`${commandCost()} SP · 选好行动后执行`}</p>
+      <div class="mask-switcher"><button class="icon-button" data-action="prev-mask" aria-label="上一张面具" ${state.busy||negotiating?'disabled':''}>${icon('chevrons')}</button><button data-action="choose-mask" ${state.busy||negotiating?'disabled':''}><span class="mask-emblem">${icon('mask')}</span><span class="mask-switch-name">${esc(m.name)}<small>${m.attr} · PERSONA</small></span><b aria-hidden="true">${icon('chevrons')}</b></button><button class="icon-button" data-action="next-mask" aria-label="下一张面具" ${state.busy||negotiating?'disabled':''}>${icon('chevrons')}</button></div>
+      ${negotiating ? negotiationPanel() : normalDeck}
     </section><p class="battle-log" role="status" aria-live="polite">${state.log}</p></div>`;
 }
 
-let judgmentRun = 0;
+let negotiationRun = 0;
 
-function createJudgmentTrial() {
-  const m = masks[state.mask];
-  const attribute = m.attr === '借来的' ? '知识' : m.attr;
-  return createTrial({
-    hp: state.hp,
-    sp: state.sp,
-    maxHp: 390,
-    maxSp: 260,
-    persona: {
-      name: m.name,
-      attribute,
-      attributes: { 知识: 4, 勇气: 3, 灵巧: 2, 体贴: 5, 魅力: 3 },
-      memory: '你把自己的名字写得很小，小到连影子都要替你签。',
-    },
-  });
+function negotiationModeLabel(mode) {
+  if (mode === 'offline') return '离线交涉';
+  if (mode === 'preview') return '演示交涉';
+  return 'AI 交涉';
 }
 
-function judgmentModeLabel(mode) {
-  if (mode === 'offline') return '馆长的旧牌';
-  if (mode === 'preview') return '馆长 · 演示回声';
-  return '馆长亲临';
-}
-
-function judgmentPanel() {
-  const j = state.judgment;
-  const trial = j.trial;
-  if (j.result) return judgmentResultPanel();
-  const actLabel = j.accusation?.intent?.label ?? ['第一幕 · 面具', '第二幕 · 雾', '终幕 · 时间'][trial.round - 1];
-  const head = `<div class="judgment-panel-head"><div><span>审判 / TRIAL</span><b>${esc(actLabel)}</b></div><span class="judgment-ai ${esc(j.aiMode)}">${esc(judgmentModeLabel(j.aiMode))}</span></div>`;
-  const gauges = `<div class="judgment-gauges"><span class="judgment-gauge verdict">执念 <b>${trial.verdict}</b>/${trial.maxVerdict}</span><span class="judgment-gauge doubt">动摇 <b>${trial.doubt}</b>/${trial.maxDoubt}</span><span class="judgment-gauge">共鸣 <b>${trial.resonance}</b>/${trial.maxResonance}</span></div>`;
-  if (j.loading || !j.accusation) {
-    return `${head}${gauges}<div class="judgment-loading" role="status"><span>馆长 · 正在洗牌</span><p>${esc(j.statusText)}</p><i></i></div>`;
-  }
-  const accusation = j.accusation;
-  const responses = STANCE_ORDER.map(stance => {
-    const meta = STANCE_META[stance];
-    const response = accusation.responses.find(item => item.stance === stance);
-    const gate = stanceAvailability(trial)[stance];
-    const disabled = state.busy || !gate.enabled;
-    return `<button class="judgment-action ${stance}" type="button" data-judgment-stance="${stance}" ${disabled ? 'disabled' : ''}>
-      <span class="j-stance"><b>${meta.label}</b><small>${meta.en}</small></span>
-      <span class="judgment-action-copy"><b>${esc(response?.line ?? '……')}</b><small>${esc(response?.hint ?? '')}${!gate.enabled && gate.reason ? ` · ${esc(gate.reason)}` : ''}</small>${gate.warning ? `<small class="warn">${esc(gate.warning)}</small>` : ''}</span>
-    </button>`;
-  }).join('');
-  const memory = trial.memory.length
-    ? trial.memory.slice(-2).map(entry => `<div><b>${esc(STANCE_META[entry.stance].label)}</b> ${esc(entry.echo)}</div>`).join('')
-    : '<span>牌面还是空的。你的第一句话，会决定下一张牌的花色。</span>';
-  return `${head}${gauges}<blockquote class="judgment-quote" tabindex="-1">${esc(accusation.accusation.text)}</blockquote><p class="judgment-evidence"><b>它看见</b>${esc(accusation.accusation.evidence)}</p><div class="judgment-actions">${responses}</div><div class="judgment-memory"><b>牌面 / MEMORY</b>${memory}</div>`;
-}
-
-function judgmentResultPanel() {
-  const j = state.judgment;
-  const result = j.result;
-  const ending = result.ending;
-  const memory = j.trial.memory.map(entry => `<div><b>${esc(STANCE_META[entry.stance].label)} · 第 ${entry.round} 句</b> ${esc(entry.echo)}</div>`).join('');
-  return `<div class="judgment-result ${esc(ending.id)}">
-    <span class="judgment-result-stamp">${esc(ending.kicker)}</span>
-    <h3>${esc(ending.title)}</h3>
-    <p>${esc(ending.copy)}</p>
-    <div class="judgment-result-memory">${memory}</div>
-    <div class="judgment-result-actions"><button class="main-button" type="button" data-action="judgment-restart"><span>再开一局</span></button><button class="small-button" type="button" data-action="return-after-battle">收起牌面</button></div>
+function negotiationSuccessCard() {
+  const data = state.negotiation.data;
+  return `<div class="negotiation-card">
+    <span class="stamp">DEAL</span>
+    <h4>它接受了你的条件。</h4>
+    <p>你可以把它收作面具，也可以拿走它身上的东西。</p>
+    <div class="skill-line"><b>收服</b> ${esc(data.recruit.name)} · ${esc(data.recruit.skillName)}<br>${esc(data.recruit.skillDesc)}</div>
+    <div class="skill-line"><b>奖励</b> SP +${data.reward.sp} · ${esc(data.reward.item)}</div>
+    <div class="negotiation-choices"><button type="button" data-action="negotiation-recruit">收服为面具</button><button type="button" data-action="negotiation-reward">索要奖励</button></div>
   </div>`;
 }
 
-function judgmentCombat() {
-  const m = masks[state.mask];
-  const j = state.judgment;
-  const trial = j.trial;
-  const accusation = j.accusation?.accusation;
-  const weak = accusation?.weakTo ?? trial.persona.attribute;
-  const enemyTurn = state.turnPhase === 'enemy';
-  const enemyHp = Math.round(420 * trial.verdict / trial.maxVerdict);
-  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?(enemyTurn?'审判演出中':'行动演出中'):'审判中'}</p></div>${flows.rehearsalRail?.()??''}
-    <div class="combat-poster judgment-poster">
-      <div class="combat-word" aria-hidden="true">TRIAL</div>
-      <div class="combat-hero" aria-hidden="true">${figure()}</div>
-      <div class="combat-orbit" aria-hidden="true"><i></i><b></b></div>
-      <div class="glass-shards" aria-hidden="true">${Array.from({length:9},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
-      <section class="enemy-scene boss-in-combat ${enemyTurn?'enemy-turn':''}" aria-label="审判者状态"><div class="enemy-name"><h1>回声的执念</h1><span>JUDGE</span></div>
-      <div class="enemy-vitals"><span>执念值</span><span><strong>${enemyHp}</strong> / 420</span></div>${meter(enemyHp,420)}
-      <div class="weakness-line"><b>弱点 · ${esc(weak)}</b><span>判词 ${trial.verdict} / ${trial.maxVerdict}</span></div>
-      <div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
-      <div class="enemy-intent">${icon('eye')}<span><b>${j.loading?'馆长正在洗牌':j.result?'审判结束':'命运在等你开口'}</b><small>${j.loading?'帷幕之后，有人在念你的名字。':j.result?'命运已经把这张牌收进袖口。':'认领、反叛或夺取——每一句都会写进下一张牌。'}</small></span></div>
-    </section><section class="command-deck" aria-label="审判指令" aria-busy="${state.busy}">
-      <div class="mask-switcher"><button class="icon-button" data-action="prev-mask" aria-label="上一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button><button data-action="choose-mask" ${state.busy?'disabled':''}><span class="mask-emblem">${icon('mask')}</span><span class="mask-switch-name">${esc(m.name)}<small>${m.attr} · PERSONA</small></span><b aria-hidden="true">${icon('chevrons')}</b></button><button class="icon-button" data-action="next-mask" aria-label="下一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button></div>
-      <div class="judgment-panel">${judgmentPanel()}</div>
-      <div class="player-hud"><div class="player-tag"><b>ME</b><span>LV <strong>12</strong></span></div><div><span>HP <strong>${state.hp}</strong><em>/ 390</em></span>${meter(state.hp,390)}</div><div class="sp"><span>SP <strong>${state.sp}</strong><em>/ 260</em></span>${meter(state.sp,260)}</div></div>
-    </section><p class="battle-log" role="status" aria-live="polite">${state.log}</p></div>`;
+function negotiationFailedCard() {
+  const chance = state.negotiation.chance;
+  return `<div class="negotiation-failed">
+    <h4>交涉破裂。</h4>
+    <p>它对“${esc(NEGOTIATION_OPTIONS[state.negotiation.option]?.label ?? '这个条件')}”不买账（把握：${chanceLabel(chance)}）。它被激怒了，下一击会更重。</p>
+    <button class="small-button" type="button" data-action="negotiation-fight">继续战斗</button>
+  </div>`;
 }
 
-async function loadJudgmentTurn() {
-  const j = state.judgment;
-  if (!j) return;
-  const run = ++judgmentRun;
-  const trial = j.trial;
+function negotiationResultCard() {
+  const result = state.negotiation.result;
+  if (result.type === 'recruit') {
+    return `<div class="negotiation-card">
+      <span class="stamp">RECRUITED</span>
+      <h4>${esc(result.name)} 加入了面具名录。</h4>
+      <p>${esc(result.attribute)} · ${esc(result.skillName)}</p>
+      <div class="skill-line">${esc(result.skillDesc)}</div>
+      <p>演示名录，不写入正式 Persona。</p>
+      <div class="negotiation-result-actions"><button class="main-button" type="button" data-action="return-after-battle"><span>返回战场</span></button></div>
+    </div>`;
+  }
+  return `<div class="negotiation-card">
+    <span class="stamp">LOOT</span>
+    <h4>拿到了 ${esc(result.item)}。</h4>
+    <p>SP +${result.sp}。它缩回影子里，没再挡路。</p>
+    <div class="negotiation-result-actions"><button class="main-button" type="button" data-action="return-after-battle"><span>返回战场</span></button></div>
+  </div>`;
+}
+
+function negotiationPanel() {
+  const n = state.negotiation;
+  if (!n?.active) return '';
+  const personality = PERSONALITIES[n.data?.personality] ?? PERSONALITIES.proud;
+  const head = `<div class="negotiation-head"><div><span>HOLD UP / 交涉</span><b>${esc(personality.label)}的影子</b></div><span class="negotiation-ai ${esc(n.aiMode)}">${esc(negotiationModeLabel(n.aiMode))}</span></div>`;
+  if (n.phase === 'loading') {
+    return `<div class="negotiation-panel" role="status">${head}<div class="negotiation-loading"><span>影子正在打量你</span><p>${esc(n.statusText)}</p><i></i></div></div>`;
+  }
+  if (n.phase === 'rolling') {
+    return `<div class="negotiation-panel" role="status">${head}<div class="negotiation-loading"><span>交涉判定</span><p>它在衡量你的话……</p><i></i></div></div>`;
+  }
+  if (n.phase === 'success') return `<div class="negotiation-panel">${head}${negotiationSuccessCard()}</div>`;
+  if (n.phase === 'failed') return `<div class="negotiation-panel">${head}${negotiationFailedCard()}</div>`;
+  if (n.phase === 'result') return `<div class="negotiation-panel">${head}${negotiationResultCard()}</div>`;
+  const data = n.data;
+  const options = OPTION_ORDER.map(id => {
+    const meta = NEGOTIATION_OPTIONS[id];
+    const disabled = state.busy || (id === 'bribe' && state.sp < BRIBE_COST);
+    const cost = id === 'bribe' ? ` · ${BRIBE_COST} SP` : '';
+    return `<button class="negotiation-option ${id}" type="button" data-negotiation-option="${id}" ${disabled ? 'disabled' : ''}>
+      <span class="n-stance"><b>${meta.label}</b><small>${meta.en}</small></span>
+      <span class="n-copy"><b>${esc(data.options[id])}</b><small>${esc(meta.blurb)} · <span class="n-risk">${meta.risk}风险</span>${cost}</small></span>
+    </button>`;
+  }).join('');
+  return `<div class="negotiation-panel" aria-live="polite">${head}
+    <span class="negotiation-personality">${esc(personality.label)} · ${esc(personality.blurb)}</span>
+    <blockquote class="negotiation-quote">“${esc(data.opening)}”</blockquote>
+    <p class="negotiation-demand"><b>它想要</b>${esc(data.demand)}</p>
+    <div class="negotiation-options">${options}</div>
+    <button class="negotiation-fight" type="button" data-action="negotiation-fight">不接话，继续打</button>
+  </div>`;
+}
+
+async function loadNegotiation() {
+  const n = state.negotiation;
+  if (!n) return;
+  const run = ++negotiationRun;
+  const enemyAttribute = flows.bossPhase ? '知识' : '魅力';
   const input = {
-    persona: trial.persona,
-    evidence: trial.evidence,
-    round: trial.round,
-    maxRounds: MAX_ROUNDS,
-    memory: trial.memory,
-    trial: { doubt: trial.doubt, resonance: trial.resonance, leverage: trial.leverage, verdict: trial.verdict, hp: trial.hp, sp: trial.sp },
+    enemy: { name: flows.bossPhase ? '回声的执念' : '聒噪的假面', attribute: enemyAttribute, level: 5, hp: state.enemyHp, maxHp: 420 },
+    persona: { name: masks[state.mask].name, attribute: masks[state.mask].attr },
+    player: { hp: state.hp, sp: state.sp, turn: state.turn },
+    history: state.log,
   };
   try {
-    const result = await requestJudgment(input, {
+    const result = await requestNegotiation(input, {
       onStatus: text => {
-        if (run !== judgmentRun || !state.judgment) return;
-        state.judgment.statusText = text;
-        const line = document.querySelector('.judgment-loading p');
+        if (run !== negotiationRun || !state.negotiation) return;
+        state.negotiation.statusText = text;
+        const line = document.querySelector('.negotiation-loading p');
         if (line) line.textContent = text;
       },
     });
-    if (run !== judgmentRun || !state.judgment) return;
-    state.judgment.accusation = result;
-    state.judgment.aiMode = result.mode;
-    state.judgment.loading = false;
-    state.log = `第 ${trial.round} 幕：牌面已经翻开。轮到你开口。`;
-    render();
-    document.querySelector('.judgment-quote')?.focus?.({ preventScroll: true });
-  } catch (error) {
-    if (run !== judgmentRun || error?.name === 'AbortError' || !state.judgment) return;
-    state.judgment.accusation = offlineJudgment(input);
-    state.judgment.aiMode = 'offline';
-    state.judgment.loading = false;
-    state.log = '馆长没有回应，旧牌自己翻了过来。';
-    render();
-  }
-}
-
-function startJudgmentBattle() {
-  actionRun++;
-  clearTimeout(enemyTimer);
-  state.judgmentBattle = true;
-  state.fighting = true;
-  state.finished = false;
-  state.busy = false;
-  state.turnPhase = 'player';
-  state.origin = 'battle';
-  state.mask = 0;
-  state.skill = 0;
-  state.hp = 345;
-  state.sp = 217;
-  state.enemyHp = 420;
-  state.stagger = 0;
-  state.turn = 1;
-  state.judgment = {
-    trial: createJudgmentTrial(),
-    accusation: null,
-    loading: true,
-    aiMode: 'preview',
-    statusText: '馆长正在洗牌……',
-    result: null,
-  };
-  state.log = '帷幕拉开。桌上已经摆好了三张牌。';
-  transition('FATE', clickOrigin);
-  render({ focus: true });
-  window.scrollTo(0, 0);
-  void loadJudgmentTurn();
-}
-
-function syncJudgmentPersona() {
-  if (!state.judgment) return;
-  const m = masks[state.mask];
-  state.judgment.trial.persona = {
-    ...state.judgment.trial.persona,
-    name: m.name,
-    attribute: m.attr === '借来的' ? '知识' : m.attr,
-  };
-}
-
-function judgmentAct(stance) {
-  const j = state.judgment;
-  if (!j || j.loading || j.result || state.busy || !j.accusation) return;
-  const gate = stanceAvailability(j.trial)[stance];
-  if (!gate?.enabled) {
-    notify(gate?.reason || '现在还不能这样回应。');
-    return;
-  }
-  const response = j.accusation.responses.find(item => item.stance === stance);
-  const before = j.trial;
-  const outcome = applyStance(j.trial, stance, j.accusation.accusation, response?.line ?? '');
-  if (!outcome.ok) {
-    notify(outcome.reason);
-    return;
-  }
-  const next = outcome.trial;
-  j.trial = next;
-  state.busy = true;
-  state.turnPhase = 'enemy';
-  state.log = `${outcome.result.title} · ${outcome.result.detail}`;
-  render();
-  const weak = outcome.result.weak;
-  const enemyAfter = Math.round(420 * next.verdict / next.maxVerdict);
-  const enemyDamage = stance === 'accept' ? 0 : stance === 'exploit' ? (weak ? 96 : 48) : (weak ? 96 : 64);
-  const kind = stance === 'accept' ? 'guard' : stance === 'refute' ? (weak ? 'critical' : 'slash') : 'insight';
-  const playback = flows.impact(kind, {
-    amount: stance === 'accept' ? Math.max(0, before.hp - next.hp) : enemyDamage,
-    target: stance === 'accept' ? 'player' : undefined,
-    meterTo: stance === 'accept' ? next.hp : enemyAfter,
-  });
-  playback.finished.then(() => {
-    if (state.judgment !== j) return;
-    state.hp = next.hp;
-    state.sp = next.sp;
-    state.enemyHp = enemyAfter;
-    if (weak || stance === 'exploit') state.stagger = Math.min(2, state.stagger + 1);
+    if (run !== negotiationRun || !state.negotiation) return;
+    state.negotiation.data = result;
+    state.negotiation.aiMode = result.mode;
+    state.negotiation.phase = 'offer';
     state.busy = false;
-    state.turnPhase = 'player';
-    if (next.status !== 'judging') {
-      j.result = { ...outcome.result, ending: trialEnding(next) };
-      state.log = j.result.ending.title;
+    state.log = `${PERSONALITIES[result.personality]?.label ?? '影子'}开口了。它在等你开价。`;
+    render();
+  } catch (error) {
+    if (run !== negotiationRun || error?.name === 'AbortError' || !state.negotiation) return;
+    state.negotiation.data = offlineNegotiation(input);
+    state.negotiation.aiMode = 'offline';
+    state.negotiation.phase = 'offer';
+    state.busy = false;
+    state.log = '影子按旧模板开口了。';
+    render();
+  }
+}
+
+function maybeOpenNegotiation(weak) {
+  const n = state.negotiation;
+  if (!n || n.used || n.active || state.finished) return false;
+  const staggered = state.stagger >= 2;
+  const chance = staggered ? 1 : weak ? 0.25 : 0;
+  if (chance <= 0 || Math.random() > chance) return false;
+  n.active = true;
+  n.used = true;
+  n.phase = 'loading';
+  n.aiMode = 'preview';
+  n.statusText = staggered ? '它倒下了。影子抬起头，第一次正眼看你。' : '它露出一瞬破绽，似乎有话要说。';
+  state.busy = true;
+  state.turnPhase = 'player';
+  state.log = n.statusText;
+  render();
+  void loadNegotiation();
+  return true;
+}
+
+function startNegotiationDemo() {
+  startBattle('battle', { negotiationHint: true });
+}
+
+function negotiationAct(option) {
+  const n = state.negotiation;
+  if (!n?.active || n.phase !== 'offer' || state.busy) return;
+  const meta = NEGOTIATION_OPTIONS[option];
+  if (!meta) return;
+  if (option === 'bribe' && state.sp < BRIBE_COST) {
+    notify(`SP 不足 ${BRIBE_COST}`);
+    return;
+  }
+  const input = {
+    personality: n.data.personality,
+    option,
+    staggered: state.stagger >= 2,
+    lowHp: state.enemyHp / 420 < 0.35,
+    weaknessMatch: state.mask === 0,
+    sp: state.sp,
+  };
+  const chance = negotiationChance(input);
+  if (chance <= 0) {
+    notify('现在给不出这个条件。');
+    return;
+  }
+  if (option === 'bribe') state.sp = Math.max(0, state.sp - BRIBE_COST);
+  const resolved = resolveNegotiation(input, Math.random());
+  n.option = option;
+  n.chance = resolved.chance;
+  n.roll = resolved.roll;
+  n.success = resolved.success;
+  n.phase = 'rolling';
+  state.busy = true;
+  state.log = '它在衡量你的话……';
+  render();
+  setTimeout(() => {
+    if (!state.negotiation || state.negotiation !== n) return;
+    state.busy = false;
+    if (n.success) {
+      n.phase = 'success';
+      state.log = '它接受了你的条件。';
       render();
-      notify(j.result.ending.title);
       return;
     }
-    state.turn++;
-    j.trial = advanceRound(next);
-    j.accusation = null;
-    j.loading = true;
-    j.statusText = '馆长在翻下一张牌……';
-    state.log = outcome.result.detail;
+    n.phase = 'failed';
+    state.enemyRage = 1;
+    state.stagger = 0;
+    state.hp = Math.max(1, state.hp - 18);
+    state.log = '交涉破裂。它被激怒了。';
     render();
-    setTimeout(() => {
-      if (state.judgment === j) void loadJudgmentTurn();
-    }, 650);
-  });
+  }, 700);
+}
+
+function chooseNegotiationOutcome(type) {
+  const n = state.negotiation;
+  if (!n?.active || n.phase !== 'success') return;
+  if (type === 'recruit') {
+    const recruit = n.data.recruit;
+    state.recruitedMasks.push({ ...recruit, obtainedAt: Date.now() });
+    n.result = { type: 'recruit', ...recruit };
+    state.log = `${recruit.name} 加入了面具名录。`;
+  } else {
+    const reward = n.data.reward;
+    state.sp = Math.min(260, state.sp + reward.sp);
+    state.battleLoot.push(reward.item);
+    n.result = { type: 'reward', ...reward };
+    state.log = `拿到了 ${reward.item}。`;
+  }
+  n.phase = 'result';
+  render();
+}
+
+function closeNegotiation() {
+  const n = state.negotiation;
+  if (!n?.active) return;
+  if (n.phase === 'success') return;
+  if (n.phase === 'result') {
+    returnFromBattle();
+    return;
+  }
+  n.active = false;
+  n.phase = null;
+  state.busy = false;
+  state.turnPhase = 'player';
+  state.log = n.success === false ? '它被激怒了。下一击会更重。' : '你没有接话。它重新摆好架势。';
+  render();
 }
 
 function visualStateRail(){
@@ -436,8 +437,8 @@ addEventListener('hashchange', () => {
 });
 function startBattle(origin = state.room,options={}) {
   actionRun++;clearTimeout(enemyTimer);
-  state.judgmentBattle = false;
-  state.judgment = null;
+  state.negotiation = createNegotiation();
+  state.enemyRage = 0;
   flows.battleStarted(options);
   state.origin = origin;
   state.fighting = true;
@@ -449,7 +450,7 @@ function startBattle(origin = state.room,options={}) {
   state.enemyHp=options.resume?.enemyHp??312;
   state.stagger=options.resume?.stagger??0;
   state.turn=options.resume?.turn??4;
-  state.log='轮到你了。先看意图，再决定这一回合。';
+  state.log=options.negotiationHint?'先打它的弱点。把它打失衡，它就会开口。':'轮到你了。先看意图，再决定这一回合。';
   if(!options.journey){state.sp=fixture==='low-sp'?4:217;state.hp=345;}
   transition('ENCOUNTER',clickOrigin);
   render({focus:true});
@@ -464,8 +465,8 @@ function returnFromBattle() {
   state.turnPhase='player';
   state.fighting=false;
   state.finished=false;
-  state.judgmentBattle=false;
-  state.judgment=null;
+  state.negotiation=null;
+  state.enemyRage=0;
   state.room=state.origin;
   history.replaceState(null,'',`#${state.room}`);
   transition(state.room==='tower'?'ASCEND':'SHADOW',clickOrigin);
@@ -511,6 +512,7 @@ function execute(options={}) {
     state.finished=state.enemyHp===0;
     if(state.finished){if(flows.battleFinished())return;transition('FINISH');}
     if(state.finished){state.busy=false;state.turnPhase='player';render();$('[data-action="return-after-battle"]')?.focus({preventScroll:true});return;}
+    if(maybeOpenNegotiation(weak))return;
     if(!enemyActs){state.turn++;state.busy=false;state.turnPhase='player';render();$('[data-action="execute"]')?.focus({preventScroll:true});return;}
     state.turnPhase='enemy';
     state.log=command==='defend'?'防御姿态已就绪，敌方正在出手。':'行动完成，敌方正在出手。';
@@ -518,11 +520,12 @@ function execute(options={}) {
     enemyTimer=setTimeout(()=>{
       const guarded=command==='defend';
       // 24 点沿用目录里已验收的受击演示；防御保留同一攻击的 50% 承伤。
-      const enemyDamage=guarded?12:24;
+      const enemyDamage=(guarded?12:24)+(state.enemyRage?12:0);
       const hpAfter=Math.max(0,state.hp-enemyDamage);
       flows.impact(guarded?'guard':'player-hit',{amount:enemyDamage,target:'player',meterTo:hpAfter}).finished.then(()=>{
         if(run!==actionRun)return;
         state.hp=hpAfter;
+        state.enemyRage=0;
         state.turn++;
         state.turnPhase='player';
         state.busy=false;
@@ -534,7 +537,7 @@ function execute(options={}) {
     },reduced.matches?0:220);
   });
 }
-function goRoom(room){actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.judgmentBattle=false;state.judgment=null;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
+function goRoom(room){actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
 const flows=createEncounterDirector({state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle});
 const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom});
 function buttonFeedback(control){
@@ -559,14 +562,14 @@ document.addEventListener('click',event=>{
   buttonFeedback(control);
   const box=control.getBoundingClientRect();
   clickOrigin={x:box.left+box.width/2,y:box.top+box.height/2};
-  if(control.dataset.judgmentStance){judgmentAct(control.dataset.judgmentStance);return;}
+  if(control.dataset.negotiationOption){negotiationAct(control.dataset.negotiationOption);return;}
   if(control.dataset.flow){flows.act(control.dataset.flow);return;}
   if(control.dataset.tower){flows.towerAct(control.dataset.tower);return;}
   if(control.dataset.prep){preparation.act(control.dataset.prep);return;}
   if(control.dataset.visualState){location.href=`?view=combat&visual=states&state=${encodeURIComponent(control.dataset.visualState)}`;return;}
   if(control.matches('.room-nav a')&&state.fighting){event.preventDefault();return;}
   if(control.dataset.node){state.selectedNode=control.dataset.node;render();$(`[data-node="${state.selectedNode}"]`)?.focus({preventScroll:true});return;}
-  if(control.dataset.mask!==undefined){state.mask=Number(control.dataset.mask);state.skill=0;syncJudgmentPersona();if(sheet.open)sheet.close();render();if(!state.fighting)$(`[data-mask="${state.mask}"]`)?.focus({preventScroll:true});return;}
+  if(control.dataset.mask!==undefined){state.mask=Number(control.dataset.mask);state.skill=0;if(sheet.open)sheet.close();render();if(!state.fighting)$(`[data-mask="${state.mask}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.arsenalTab){state.arsenalTab=control.dataset.arsenalTab;render();$(`[data-arsenal-tab="${state.arsenalTab}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.skill!==undefined){if(state.busy)return;state.skill=Number(control.dataset.skill);render();$(`[data-skill="${state.skill}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.command){if(state.busy)return;state.command=control.dataset.command;render();$(`[data-command="${state.command}"]`)?.focus({preventScroll:true});return;}
@@ -580,8 +583,10 @@ document.addEventListener('click',event=>{
   if(action==='open-tower'){if(!preparation.settings.enabled){preparation.act('settings');return;}if(!flows.towerActive){flows.open('tower-flow');return;}navigate('tower');}
   else if(action==='open-persona')navigate('persona');
   else if(action==='awaken-persona')preparation.act('create');
-  else if(action==='start-judgment')startJudgmentBattle();
-  else if(action==='judgment-restart')startJudgmentBattle();
+  else if(action==='start-negotiation')startNegotiationDemo();
+  else if(action==='negotiation-fight')closeNegotiation();
+  else if(action==='negotiation-recruit')chooseNegotiationOutcome('recruit');
+  else if(action==='negotiation-reward')chooseNegotiationOutcome('reward');
   else if(action==='start-battle')startBattle('battle');
   else if(action==='enter-node'){
     if(state.selectedNode==='mob'){scrolls.set('tower',scrollY);startBattle('tower');}
@@ -591,7 +596,7 @@ document.addEventListener('click',event=>{
   else if(action==='confirm-leave'||action==='return-after-battle')returnFromBattle();
   else if(action==='close-sheet')sheet.close();
   else if(action==='prev-mask'||action==='next-mask'){
-    if(state.busy)return;state.mask=(state.mask+(action==='next-mask'?1:-1)+masks.length)%masks.length;state.skill=0;syncJudgmentPersona();render();$(`[data-action="${action}"]`)?.focus({preventScroll:true});
+    if(state.busy)return;state.mask=(state.mask+(action==='next-mask'?1:-1)+masks.length)%masks.length;state.skill=0;render();$(`[data-action="${action}"]`)?.focus({preventScroll:true});
   }
   else if(action==='choose-mask')openSheet('选择出战面具',masks.map((m,i)=>`<button class="skill-row" data-mask="${i}" aria-pressed="${i===state.mask}">${icon('mask')}<span>${esc(m.name)}<small>${m.attr} · ${esc(m.passive)}</small></span>${i===state.mask?icon('check'):''}</button>`).join(''));
   else if(action==='execute')execute();

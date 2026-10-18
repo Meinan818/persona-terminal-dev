@@ -8,13 +8,13 @@ export function createEncounterDirector(api) {
   let page = null, details = {}, timer = 0, raf = 0, qte = null, rehearsal = null;
   let boss = false, bossPhase = 1, claimed = false, chestClaimed = false;
   const rehearsalSteps = [
-    ['hit','受击','敌方意图落地，玩家 HP 条承受冲击。'],
-    ['critical','暴击','敌人被命中，闪点、碎片与暴击跳字同时出现。'],
-    ['heal','治疗','回复演出抬升，状态条回到新的位置。'],
-    ['guard','格挡反击','护盾接住来袭轨迹，返程线给出反击回应。'],
-    ['one-more','追加回合','弱点窗口被抓住，行动权留在玩家手里。'],
-    ['qte','总攻击 QTE','3.5 秒连点决定总攻击档位，再落到命中演出。'],
-    ['boss','Boss 变身','第一形态被击破后，舞台内直接破壳进入第二形态。'],
+    ['hit','受击','敌方意图落地，玩家 HP 条承受冲击。','敌方回合结算'],
+    ['critical','暴击','敌人被命中，闪点、碎片与暴击跳字同时出现。','暴击结果确认'],
+    ['heal','治疗','回复演出抬升，状态条回到新的位置。','回复技能结算'],
+    ['guard','格挡反击','护盾接住来袭轨迹，返程线给出反击回应。','防御承伤结算'],
+    ['one-more','追加回合','弱点窗口被抓住，行动权留在玩家手里。','弱点/失衡窗口成立'],
+    ['qte','总攻击 QTE','3.5 秒连点决定总攻击档位，再落到命中演出。','失衡窗口确认'],
+    ['boss','Boss 变身','第一形态被击破后，舞台内直接破壳进入第二形态。','第一形态 HP 清零'],
   ];
   const catalog = [
     ['战斗演出','BATTLE',['battle-flow','完整演出排练'],['fx:hit','受击'],['fx:critical','暴击'],['fx:heal','治疗'],['fx:guard','格挡反击'],['fx:one-more','追加回合'],['qte','总攻击 QTE'],['boss','Boss 登场与变身']],
@@ -70,7 +70,7 @@ export function createEncounterDirector(api) {
     if(!rehearsal)return '';
     const finished=rehearsal.step>=rehearsalSteps.length;
     const current=rehearsalSteps[Math.min(rehearsal.step,rehearsalSteps.length-1)];
-    return `<section class="rehearsal-rail" aria-label="战斗演出排练" aria-live="polite"><div class="rehearsal-head"><span>演出排练 <small>${finished?'COMPLETE':`${rehearsal.step+1} / ${rehearsalSteps.length}`}</small></span><strong>${finished?'整条链路已走完':current[1]}</strong><em>${finished?'可以退出排练，保留这套节奏。':current[2]}</em></div><div class="rehearsal-steps">${rehearsalSteps.map(([id,label],index)=>`<span class="${index<rehearsal.step?'done ':''}${index===rehearsal.step&&!finished?'current':''}"><b>${String(index+1).padStart(2,'0')}</b>${label}</span>`).join('')}</div><div class="rehearsal-actions">${finished?button('结束排练','rehearsal-close','返回战场入口'):button(rehearsal.step===5?'进入 QTE':'播放下一段','rehearsal-next',state.busy?'当前演出中…':'按顺序查看反馈',rehearsal.step===6?'red':'')}${button('退出排练','rehearsal-close','','subtle')}</div></section>`;
+    return `<section class="rehearsal-rail" aria-label="战斗演出排练" aria-live="polite"><div class="rehearsal-head"><span>演出排练 <small>${finished?'COMPLETE':`${rehearsal.step+1} / ${rehearsalSteps.length}`}</small></span><strong>${finished?'整条链路已走完':current[1]}</strong><em>${finished?'可以退出排练，保留这套节奏。':`触发：${current[3]} · ${current[2]}`}</em></div><div class="rehearsal-steps">${rehearsalSteps.map(([id,label],index)=>`<span class="${index<rehearsal.step?'done ':''}${index===rehearsal.step&&!finished?'current':''}"><b>${String(index+1).padStart(2,'0')}</b>${label}</span>`).join('')}</div><div class="rehearsal-actions">${finished?button('结束排练','rehearsal-close','返回战场入口'):button(rehearsal.step===5?'进入 QTE':'播放下一段','rehearsal-next',state.busy?'当前演出中…':'按顺序查看反馈',rehearsal.step===6?'red':'')}${button('退出排练','rehearsal-close','','subtle')}</div></section>`;
   }
   function rehearsalEffect(kind) {
     const amount=kind==='hit'?24:kind==='critical'?96:kind==='heal'?Math.min(30,390-state.hp):0;

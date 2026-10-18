@@ -6,7 +6,7 @@
 
 - **本轮范围与结果**：承接 `235089d` 后继续 `outputs/battle-experience-v3/` 的 Persona 原型设计。创建流程现在会保留四问答案与最多两项力量之源，按属性倾向生成候选 Persona，展示技能组、回答形成的倾向条、四问/来源回执，支持保留回答换一张回应、回到自述和确认出战；确认会更新本次预览的出战面具，不接正式引擎或真实存档。重塑流程增加“保留/替换”契约、当前面具自述、前后名称与联系差异及技能组/SP/状态条保留说明，确认后只在内存预览中替换名称与自述。成长流程增加 LV1–5 节点、锁定/解锁状态、两项技能选择、熟练度、成长印记、相邻等级解锁、技能模拟提升和恢复本次预览；不改变现有战斗技能伤害、SP 消耗、HP/SP 状态条位置或正式数值。
 - **已验证**：`node --check`（`preparation.js`、`app.js`、`encounters.js`）通过；真实无头 Chrome 指针链在 1440×900、390×844、320×568 走通创建候选/重选→确认、重塑差异/确认、成长锁定→解锁→切换技能→升级，报告 `passed=true`、0 JS 异常；等待入场动效稳定后 320 宽 `body.scrollWidth=320`，无横向溢出。截图保留于 `.rivet/scratch/runtime-audit-20261018/persona-growth-20261018/`。`npm run typecheck` 退出 0；`npm test -- --runInBand` 为 45 文件 / 286 项通过（16.51s），stderr 仍包含既有 IndexedDB 缺失与合成错误日志，不影响退出码。
-- **Git / 发布**：本轮相关文件已本地提交 `8906401 feat(preview): 完善 Persona 创建重塑与技能成长流程`，状态记录随后提交为 `4a310ab docs(state): 记录 Persona 原型续办与验证结果`；分支 `main`，相对 `origin/main` 实测领先 23，未 Push、未部署。交接前 `ios/App/Podfile`、`.cache/`、`.rivet-config.json`、旧输出目录与 before 备份仍保留，未夹带进提交。
+- **Git / 发布**：本轮相关文件已本地提交 `8906401 feat(preview): 完善 Persona 创建重塑与技能成长流程`，状态记录随后提交为 `4a310ab docs(state): 记录 Persona 原型续办与验证结果`，并以 `81b8e5f` 校正状态；分支 `main`，相对 `origin/main` 实测领先 24，未 Push、未部署。交接前 `ios/App/Podfile`、`.cache/`、`.rivet-config.json`、旧输出目录与 before 备份仍保留，未夹带进提交。
 - **验收边界与下一步**：本轮是蓝色原型的真实交互与尺寸验证，不等同于用户视觉/手感最终验收，也不代表 React Persona、BattleEngine、Zustand、存档、正式人物/敌人素材已接通。下一节点按原顺序继续武库与设置的完整操作设计，随后才处理正式人物/敌人/动作素材；高塔流程、逐层回顾、状态条位置和既有玩法数值保持不动。服务仍可用时从 `http://127.0.0.1:5187/#persona` 进入；源码更新后刷新页面。
 
 ## 接手第一入口 · 2026-10-18 18:05 · 高塔已验收，Persona 设计待续，用户主动交接

@@ -523,6 +523,9 @@ function commandCost() {
 function commandName() {
   return selectedEngineAction()?.label ?? '选择行动';
 }
+function enemyUnitsHtml(view) {
+  return view.enemies.map((enemy, index) => `<button class="enemy-unit ${enemy.active ? 'is-active' : ''} ${!enemy.alive ? 'is-down' : ''}" data-target-id="${enemy.id}" data-unit="${index}" aria-pressed="${enemy.active}" ${!enemy.alive ? 'disabled' : ''} title="点击选中 ${esc(enemy.name)}"><span class="enemy-unit-face" aria-hidden="true"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="82" fill="#05040e" stroke="#ff3f8e" stroke-width="4"/><circle cx="100" cy="100" r="96" fill="none" stroke="rgba(255,63,142,.3)"/><ellipse cx="70" cy="90" rx="17" ry="10" fill="#ff7fb3"/><ellipse cx="130" cy="90" rx="17" ry="10" fill="#ff7fb3"/><path d="M76 132l8-8 8 8 8-8 8 8 8-8" stroke="#ff7fb3" stroke-width="5" fill="none"/></svg></span><span class="enemy-unit-label"><b>${esc(enemy.alive ? enemy.name : 'DEFEATED')}</b><small>${enemy.alive ? `HP ${enemy.hp} / ${enemy.maxHp}` : '已击破'}</small></span></button>`).join('');
+}
 let lastShownActorId = null;
 function combat() {
   if (state.finished) return flows.victory();
@@ -585,7 +588,7 @@ function combat() {
       <div class="enemy-targets" role="group" aria-label="战场上的敌人，共 ${view.enemies.length} 个"><span class="enemy-count">敌人 ${view.enemies.filter(e=>e.alive).length} / ${view.enemies.length}</span>${view.enemies.map(enemy=>`<button data-target-id="${enemy.id}" class="${enemy.active?'active':''} ${!enemy.alive?'down':''}" aria-pressed="${enemy.active}" ${!enemy.alive?'disabled':''}><b>${esc(!enemy.alive?'DEFEATED':enemy.name)}</b><small>${!enemy.alive?'已击破':`HP ${enemy.hp} / ${enemy.maxHp}`}</small></button>`).join('')}</div>
       <div class="enemy-vitals"><span>敌人 HP</span><span><strong>${target?.hp??0}</strong> / ${target?.maxHp??1}</span></div>${meter(target?.hp??0,target?.maxHp??1)}
       <div class="sh-affs" aria-label="耐性">${shAff}</div><div class="weakness-line"><b>${weakness}</b><span>${negotiating?'HOLD UP · 可以交涉':target?.status?`异常 · ${statusLabels[target.status]??target.status}${target.statusTurns?` · ${target.statusTurns} 回合`:''}`:target?.down?'失衡 · 1 MORE / 总攻击窗口':target?.enraged?'激怒 · 攻击提升':'耐性会随命中逐步发现'}</span></div>
-      <div class="sh-ring" aria-hidden="true"><i></i><i></i><i></i><b></b></div><div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
+      <div class="sh-ring" aria-hidden="true"><i></i><i></i><i></i><b></b></div>${enemyUnitsHtml(view)}
       <div class="enemy-intent">${icon('eye')}<span><b>${intentTitle}</b><small>${intentNote}</small></span></div>
     </section><section class="command-deck" aria-label="战斗指令" aria-busy="${state.busy||negotiating}">
       <div class="player-hud"><div class="player-tag"><b>${view.actorIsPlayer?'ME':'ALLY'}</b><span>${esc(view.actorPersona??view.actorName??'—')}<small>${view.actorPersonaLevel?`LV ${view.actorPersonaLevel}`:''}</small></span></div><div><span>HP <strong>${view.hudHp}</strong><em>/ ${view.hudMaxHp}</em></span>${meter(view.hudHp,view.hudMaxHp)}</div><div class="sp"><span>SP <strong>${view.hudSp}</strong><em>/ ${view.hudMaxSp}</em></span>${meter(view.hudSp,view.hudMaxSp)}</div></div>

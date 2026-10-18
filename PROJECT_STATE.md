@@ -4,7 +4,7 @@
 
 ## 当前续办入口 · 2026-10-18 23:08 · P5R 目录接入战斗与弱点发现
 
-- **现场**：分支 `codex/p5r-compendium-data`，业务提交 `3a9bced feat(preview): 将P5R目录接入战斗与弱点发现`。当前未 Push、未部署；正式 `src/`、后端、存档和生产仍未改。`ios/App/Podfile`、缓存和旧输出目录仍为接手前遗留。
+- **现场**：分支 `codex/p5r-compendium-data`，业务提交 `3a9bced feat(preview): 将P5R目录接入战斗与弱点发现`，随后补丁 `cc4968a feat(preview): 补齐P5蓄力即死复活与技能映射`。当前未 Push、未部署；正式 `src/`、后端、存档和生产仍未改。`ios/App/Podfile`、缓存和旧输出目录仍为接手前遗留。
 - **本轮完成**：
   - 新增 `p5r-battle-adapter.js`，232 个 Persona 都能从 P5R 目录生成战斗单位；等级、五项属性、十项抗性、技能学习等级继续来自目录。
   - `p5-combat-lab` 已增加主战 Persona 选择器，232 个 Persona 都可选；技能名中文，十属性和 HP/SP/伤害为 demo 自研平衡层。

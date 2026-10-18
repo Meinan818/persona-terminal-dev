@@ -45,6 +45,16 @@ test('开局从 P5R 目录生成四人小队，不再硬编码旧面具', () => 
   assert.equal(catalogPersonaChoices().length, 232);
 });
 
+test('玩家行动后日志会明确轮到下一名队友', () => {
+  const battle = createDefaultBattle({ rng: steady });
+  assert.equal(battle.actor.name, '你');
+  assert.equal(battle.act({ type: 'guard' }).ok, true);
+  const next = battle.actor;
+  assert.ok(next);
+  assert.notEqual(next.id, 'hero');
+  assert.match(battle.log.join('\n'), new RegExp(`轮到 ${next.name}`));
+});
+
 test('电击弱点触发倒地与 1 MORE', () => {
   const battle = createDefaultBattle({ rng: steady, activePersonaId: 'pixie' });
   assert.deepEqual(battle.snapshot().enemies[0].knownAffinities, {});

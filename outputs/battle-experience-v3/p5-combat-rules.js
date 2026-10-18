@@ -656,6 +656,7 @@ export class P5Battle {
     const next = this.party.find(p => p.hp > 0 && !p.acted);
     if (next) {
       this.currentId = next.id;
+      this.push(next.isPlayer ? '轮到你了。' : `轮到 ${next.name}。`);
       return;
     }
     this.enemyPhase();

@@ -34,6 +34,7 @@ const state = {
   negotiation: null, enemyRage: 0, weaknessKnown: false, recruitedMasks: [], battleLoot: [],
   battle: null, battleView: null, targetId: 'primary', battleActionKey: '',
   battleEncounter: null, battleFloor: 4, battleReceipt: null, battleWon: false, partyVitals: {},
+  showtimeCutIn: false,
   heroPersonaIds: [], personaRoster: [], activePersonaId: 'arsene',
   allyPersonaIds: ['cait-sith', 'agathion', 'kelpie'],
   battleItems: { painkiller: 2, energyDrink: 1, revive: 1 },
@@ -434,6 +435,9 @@ function combat() {
       : target?.intent
         ? `下一手：${target.intent.label} · ${target.intent.elementLabel} · 目标随机。`
         : `下一手：${target?.elementLabel ?? '未知'}系技能 · 目标随机。`;
+  const showtimeCutIn = state.showtimeCutIn
+    ? `<div class="showtime-cutin" aria-hidden="true"><span>SHOWTIME</span><b>${esc(view.actorName ?? '你')} × ${esc(view.party.find(member => !member.isPlayer)?.name ?? '同伴')}</b><small>ONE MORE CHANCE</small></div>`
+    : '';
   const normalDeck = `<div class="command-label"><span>${view.actorIsPlayer?'SKILL · 主角技能':'ALLY · 同伴行动'}</span><strong>COST</strong></div>
       <div class="command-grid engine-command-grid">${commandsAvailable.map((item,order)=>`<button data-battle-action="${battleActionKey(item)}" aria-pressed="${battleActionKey(item)===state.battleActionKey}" style="--tilt:${[-4,-1,2,4,1,-2][order%6]}deg" ${state.busy||!actorTurn||item.disabled?'disabled':''}>${icon(battleActionIcon(item.type))}<span>${esc(item.label)}<small>${esc(item.detail ?? item.type)}</small></span></button>`).join('')}</div>
       <div class="command-detail">${skills.length?`<div class="skill-list">${skills.map(item=>combatSkill(item)).join('')}</div><p>${esc(action?.detail ?? '选择一项行动。')}</p>`:`<div class="action-banner">${icon('sword')}<strong>没有可用技能</strong><b>0<small>SP</small></b></div><p>仍然可以使用普攻、枪击、防御或同伴行动。</p>`}</div>
@@ -443,7 +447,7 @@ function combat() {
   const holdUpDeck = view.phase === 'holdUp' ? `<div class="engine-hold-up">${holdUpCutins}<span>HOLD UP</span><h3>全部倒地。</h3><p>现在可以总攻击、交涉，或放它们站起来。</p><div class="hold-up-actions"><button data-holdup-engine="allOut">${icon('star')}总攻击</button><button data-action="hold-up-negotiate">${icon('eye')}交涉</button><button data-holdup-engine="continue">${icon('back')}放它们起来</button></div></div>` : '';
   const shAff = ['phys','gun','fire','ice','electric','wind','psy','nuclear','bless','curse'].map(el=>{const k=knownItems.find(item=>item.element===el);const nm={phys:'物',gun:'枪',fire:'火',ice:'冰',electric:'电',wind:'风',psy:'念',nuclear:'核',bless:'祝',curse:'咒'}[el];return `<span class="sh-aff ${k?'is-'+k.affinity:''}" title="${esc(k?k.label:nm)}"><i><em>${k?esc(k.short):'?'}</em></i><small>${nm}</small></span>`;}).join('');
   const shDeco = `<div class="sh-sky" aria-hidden="true"><div class="sh-moon"></div><div class="sh-word">DARK HOUR</div><div class="sh-water"><i></i><i></i><i></i><i></i><i></i></div><div class="sh-ripple"></div><div class="sh-ripple"></div></div><div class="sh-clock" aria-hidden="true"><b>0<span>:</span>00</b><i class="sh-phase"></i><div><strong>影时间 · ROUND ${String(view.round).padStart(2,'0')}</strong><em>THE DARK HOUR</em><small>${state.busy?'行动演出中':esc(view.actorName??'—')}${flows.bossPhase?` · PHASE 0${flows.bossPhase}`:''}</small></div></div><div class="p4-deco" aria-hidden="true"><i class="p4-fan a"></i><i class="p4-fan b"></i><i class="p4-spot s1"></i><i class="p4-spot s2"></i><i class="p4-stripe"></i><div class="p4-logo"><small>MIDNIGHT CHANNEL</small><b>午夜电视台</b><i>live tonight!</i></div><div class="p4-clock"><b>ROUND ${String(view.round).padStart(2,'0')}</b><i>${state.busy?'ON AIR · 演出中':'现场直播中'}</i></div><div class="p4-booth"><span class="p4-tag">导航员<b>NAVI</b></span><div class="p4-por"><em>P4-D</em>导航员立绘</div><div class="p4-sig"><b>后台导航</b><i>reading…</i><div class="p4-wave">${'<span></span>'.repeat(9)}</div><span class="p4-live"><i></i>ON AIR</span></div><h5>耐性表<i>affinity</i></h5></div><div class="p4-tv"><i class="ant l"></i><i class="ant r"></i><div class="body"></div><div class="scr"><div class="fog"></div><div class="floor"></div><div class="vhs"></div><div class="roll"></div><div class="vig"></div><div class="gl"></div><span class="osd tl">CH ${flows.bossPhase?'0'+flows.bossPhase:'01'} <b class="bug">LIVE</b></span><span class="osd tr"><b class="r">●</b> REC</span></div><div class="knobs"><span></span><span></span></div></div><div class="p4-cast"><h4>今晚的出演阵容<i>tonight's cast</i></h4></div><div class="p4-con"><div class="deck"></div><div class="nb"><i class="rings"></i></div></div></div>`;
-  return `<div class="sh-stage" data-phase="${esc(view.phase)}" data-negotiating="${negotiating}">${shDeco}<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><div class="party-rail" aria-label="队伍回合">${view.party.map(member=>`<span class="${member.active?'active':''} ${member.down?'down':''}" data-party-id="${member.id}"><b>${member.isPlayer?'YOU':'ALLY'}</b>${esc(member.name)}<small>${member.active?'行动中':member.down?'倒下':`HP ${member.hp}`}</small></span>`).join('')}</div><p>ROUND ${String(view.round).padStart(2,'0')} / ${state.busy?'行动演出中':view.actorName??'—'}</p></div>${flows.rehearsalRail?.()??''}${visualStateMode?visualStateRail():''}
+  return `${showtimeCutIn}<div class="sh-stage" data-phase="${esc(view.phase)}" data-negotiating="${negotiating}">${shDeco}<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><div class="party-rail" aria-label="队伍回合">${view.party.map(member=>`<span class="${member.active?'active':''} ${member.down?'down':''}" data-party-id="${member.id}"><b>${member.isPlayer?'YOU':'ALLY'}</b>${esc(member.name)}<small>${member.active?'行动中':member.down?'倒下':`HP ${member.hp}`}</small></span>`).join('')}</div><p>ROUND ${String(view.round).padStart(2,'0')} / ${state.busy?'行动演出中':view.actorName??'—'}</p></div>${flows.rehearsalRail?.()??''}${visualStateMode?visualStateRail():''}
     <div class="combat-poster">
       <div class="combat-word" aria-hidden="true">BATTLE</div>
       <div class="combat-hero" aria-hidden="true"><div class="sh-tarot"><span class="sh-num">— ${view.actorIsPlayer?'0':'I'} —</span><div class="sh-art">${figure()}</div><b>${esc(view.actorPersona??view.actorName??'—')}</b><em>${view.actorIsPlayer?'PERSONA':'ALLY'}${view.actorPersonaLevel?` · LV ${view.actorPersonaLevel}`:''}</em><i class="sh-glint"></i></div></div>
@@ -1103,6 +1107,14 @@ function execute(options = {}) {
   if (!result.ok) {
     notify(result.reason);
     return;
+  }
+  if (action.type === 'showtime') {
+    state.showtimeCutIn = true;
+    render({ focus: false });
+    setTimeout(() => {
+      state.showtimeCutIn = false;
+      render();
+    }, 900);
   }
   if (action.type === 'switchMask') {
     const name = masks.find(mask => mask.id === action.id)?.name ?? action.id;

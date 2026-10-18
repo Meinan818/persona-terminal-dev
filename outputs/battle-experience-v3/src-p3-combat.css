@@ -172,16 +172,28 @@ T .sh-stage .combat-poster .player-hud .sp .meter i{background:#e0a800}
 /* 日志 */
 T .sh-stage .combat-poster .battle-log{position:absolute;left:36px;right:auto;bottom:22px;width:270px;min-height:0;margin:0;padding:6px 0 0;border:0;border-top:1px solid rgba(63,240,255,.35);text-align:left;font-size:12px;font-style:normal;font-weight:700;color:#bff6ff;line-height:1.5;z-index:9}
 /* HOLD UP：总攻击询问 */
-T .sh-stage .engine-hold-up{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;margin:0;background:radial-gradient(60% 60% at 50% 45%,rgba(20,70,216,.5),rgba(1,4,15,.86));clip-path:none;transform:none;animation:sh-in .3s both}
+T .sh-stage .engine-hold-up{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;width:auto;max-width:none;padding:220px 0 0;margin:0;background:radial-gradient(60% 60% at 50% 45%,#0c2a8a 0,#020a2a 55%,#01040f 100%);clip-path:none;box-shadow:none;transform:none;animation:sh-in .3s both}
 @keyframes sh-in{from{opacity:0}}
 T .sh-stage .engine-hold-up>span{font:italic 800 150px/1 var(--sh-cd);color:#f4fbff;letter-spacing:.02em;text-shadow:0 0 40px #3ff0ff;animation:sh-slam .35s cubic-bezier(.2,1.4,.5,1) both}
 @keyframes sh-slam{from{transform:scale(1.6);opacity:0}}
 T .sh-stage .engine-hold-up h3{margin-top:4px;font-size:28px;font-weight:900;color:#bff6ff}
 T .sh-stage .engine-hold-up p{margin-top:6px;font-size:15px;color:#9fc0ff}
-T .sh-stage .engine-hold-up>div{display:flex;gap:24px;margin-top:40px}
+T .sh-stage .engine-hold-up>.p3-cutins{position:absolute;left:0;right:0;top:0;height:260px;display:flex;justify-content:center;align-items:flex-start;gap:0;margin:0;padding-top:42px;z-index:0;pointer-events:none;background:linear-gradient(180deg,#01040f 0,#01040f 62%,transparent 100%)}
+T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin{height:190px}
+T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin{position:relative;flex:0 0 250px;margin:0 -16px;border:1.5px dashed rgba(191,246,255,.5);background:repeating-linear-gradient(45deg,rgba(191,246,255,.05) 0 7px,transparent 7px 14px),rgba(6,25,90,.98);clip-path:polygon(18% 0,100% 0,82% 100%,0 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(191,246,255,.85);text-align:center}
+T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin:nth-child(1){transform:rotate(-3deg)}
+T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin:nth-child(2){transform:translateY(10px)}
+T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin:nth-child(3){transform:rotate(3deg)}
+T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin:nth-child(4){transform:rotate(-2deg) translateY(4px)}
+T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin b{font:italic 800 22px var(--sh-cd);color:#ff7fb3;letter-spacing:.08em}
+T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin em{font:900 12px var(--sh-sans);font-style:normal;color:#bff6ff}
+T .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin small{font:700 10px var(--sh-cd);letter-spacing:.08em;color:#9fc0ff}
+T .sh-stage .engine-hold-up>span,T .sh-stage .engine-hold-up>h3,T .sh-stage .engine-hold-up>p,T .sh-stage .engine-hold-up>.hold-up-actions{position:relative;z-index:1}
+T .sh-stage .engine-hold-up>.hold-up-actions{display:flex;gap:24px;margin-top:40px}
 T .sh-stage .engine-hold-up button{display:flex;align-items:center;gap:10px;min-width:220px;height:72px;justify-content:center;border:0;font-size:24px;font-weight:900;clip-path:polygon(22px 0,100% 0,calc(100% - 22px) 100%,0 100%);background:rgba(6,25,90,.9);color:#bff6ff;outline:1px solid #bff6ff}
 T .sh-stage .engine-hold-up button:first-child{background:#f4fbff;color:#06195a;outline:0}
 T .sh-stage .engine-hold-up button:hover{translate:0 -3px}
+T body.p3-hold-up .masthead{opacity:0;pointer-events:none}
 /* 交涉面板 */
 T .sh-stage .negotiation-panel{position:absolute;left:auto;right:30px;top:150px;bottom:130px;width:470px;z-index:20;overflow:auto;padding:22px 24px;margin:0;background:linear-gradient(160deg,rgba(6,25,90,.95),rgba(2,10,42,.95));border:1px solid rgba(63,240,255,.45);border-right:4px solid #3ff0ff;clip-path:polygon(24px 0,100% 0,100% 100%,0 100%);transform:none;color:#f4fbff}
 /* 回合转场与命中特效保持原逻辑，换配色 */
@@ -265,7 +277,14 @@ T body.sh-m .sh-stage .combat-poster .battle-log{left:12px;right:12px;width:auto
 T body.sh-m .sh-stage .engine-hold-up>span{font-size:76px}
 T body.sh-m .sh-stage .engine-hold-up h3{font-size:20px}
 T body.sh-m .sh-stage .engine-hold-up p{font-size:12px;padding:0 24px;text-align:center}
-T body.sh-m .sh-stage .engine-hold-up>div{flex-direction:column;gap:12px;margin-top:28px;width:300px}
+T body.sh-m .sh-stage .engine-hold-up{padding-top:130px}
+T body.sh-m .sh-stage .engine-hold-up>.p3-cutins{top:0;height:150px;padding-top:24px}
+T body.sh-m .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin{height:110px}
+T body.sh-m .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin{flex-basis:96px;margin:0 -5px}
+T body.sh-m .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin b{font-size:12px}
+T body.sh-m .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin em{font-size:8px}
+T body.sh-m .sh-stage .engine-hold-up>.p3-cutins>.p3-cutin small{font-size:7px}
+T body.sh-m .sh-stage .engine-hold-up>.hold-up-actions{flex-direction:column;gap:12px;margin-top:28px;width:300px}
 T body.sh-m .sh-stage .engine-hold-up button{min-width:0;width:100%;height:58px;font-size:20px}
 T body.sh-m .sh-stage .negotiation-panel{left:10px;right:10px;top:120px;bottom:66px;width:auto;padding:16px}
 /* ---- 修正：覆盖原按钮伪元素 / 碎片 / 手机塔罗 ---- */

@@ -17,6 +17,7 @@ import {
 import { buildBattlePersona, ELEMENTS, setPersonaOverride } from './p5-combat-rules.js';
 import { clearSignatureFx, playAllOut, playStagger } from './p3-signature-fx.js';
 import { EQUIPMENT, equipmentBonuses } from './equipment.js';
+import { xpNeeded } from './persona-progress.js';
 installPreviewNegotiationBridge();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -47,6 +48,7 @@ const state = {
   personaAwakening: null,
   equipment: { weapon: 'training-blade', armor: 'school-jacket', accessory: null },
   ownedEquipment: ['training-blade', 'school-jacket'],
+  personaXp: {},
 };
 const scrolls = new Map();
 const masks = [
@@ -128,6 +130,7 @@ function persistP5State() {
       personaAwakening: state.personaAwakening,
       equipment: state.equipment,
       ownedEquipment: state.ownedEquipment,
+      personaXp: state.personaXp,
     }));
   } catch {}
 }
@@ -161,6 +164,13 @@ function loadP5State() {
     if (Array.isArray(saved.ownedEquipment)) {
       state.ownedEquipment = [...new Set(saved.ownedEquipment.filter(id => Boolean(EQUIPMENT[id])))];
       state.ownedEquipment = [...new Set([...state.ownedEquipment, 'training-blade', 'school-jacket'])];
+    }
+    if (saved.personaXp && typeof saved.personaXp === 'object') {
+      state.personaXp = Object.fromEntries(
+        Object.entries(saved.personaXp)
+          .filter(([id, xp]) => Boolean(buildBattlePersona(id)) && Number.isFinite(Number(xp)))
+          .map(([id, xp]) => [id, Math.max(0, Number(xp))]),
+      );
     }
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;
@@ -345,9 +355,12 @@ function tower() {
 }
 function persona() {
   const m = masks[state.mask];
+  const built = buildBattlePersona(m.id);
+  const xp = Number(state.personaXp?.[m.id]) || 0;
+  const need = xpNeeded(built?.level ?? 1);
   return `${heading('Persona','THE OTHER SELF','契约仍在。')}
     <div class="mask-tabs" aria-label="选择面具">${masks.map(maskTabButton).join('')}</div>
-    <div class="duo-layout"><div class="mask-display"><div class="mask-art" aria-hidden="true"></div><p>${m.attr} · ${esc(m.passive)}</p></div><section class="persona-info"><h2>${esc(m.name)}</h2><p>当前契约。</p>
+    <div class="duo-layout"><div class="mask-display"><div class="mask-art" aria-hidden="true"></div><p>${m.attr} · ${esc(m.passive)}</p></div><section class="persona-info"><h2>${esc(m.name)}</h2><p>当前契约。<span class="persona-exp">Lv.${built?.level ?? 1} · EXP ${xp} / ${need}</span></p>
     <div class="persona-spec">${icon(attributeMarks[state.mask]?.[0]??'mask')}<span>契约面具</span><strong>${m.attr}</strong><b>${attributeMarks[state.mask]?.[1]??'PERSONA'}</b></div><div class="persona-skills">${m.skills.map((s,i) => `<article class="persona-skill" style="--order:${i}"><div class="persona-skill-mark">${icon(i===0?(attributeMarks[state.mask]?.[0]??'mask'):'star')}</div><div class="persona-skill-copy"><h3>${s[0]}</h3><p>${s[2]}</p></div><strong class="persona-skill-cost">${s[1]}<small>SP</small></strong></article>`).join('')}</div>
     ${mainButton('返回高塔','open-tower')}${preparation.personaTools()}<p class="info-note">契约会随你进入影时间。</p></section></div>`;
 }

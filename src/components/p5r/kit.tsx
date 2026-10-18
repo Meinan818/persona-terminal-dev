@@ -819,11 +819,8 @@ export const P5RPage = ({ children, className, active = true, decor = true }: {
   if (!active) return <>{children}</>;
   return (
     <div className={`relative ${className ?? ''}`}>
-      {animVeil && (
-        <div aria-hidden className="fixed inset-0 z-0 pointer-events-none" style={{ background: 'rgba(5,5,5,0.78)' }} />
-      )}
-      {!yieldStage && !animVeil && (
-      <div aria-hidden className="fixed inset-0 z-0 pointer-events-none" style={{ background: P5R.ink, contain: 'strict' }}>
+      {!yieldStage && (
+      <div data-p5-stage aria-hidden className="fixed inset-0 z-0 pointer-events-none" style={{ background: animVeil ? 'rgba(5,5,5,0.78)' : P5R.ink, contain: 'strict' }}>
         {decor && (
           <>
             {/* 右上暗红斜块（探出屏缘） */}

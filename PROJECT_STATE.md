@@ -1,6 +1,59 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-19 04:32（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-19 04:40（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+
+## 接手第一入口 · 2026-10-19 04:40 · 爬塔底层已建，主流程尚未接线
+
+这是交接收尾节点。接手者先只读本文件、项目 `AGENTS.md`、Git 和现场；用户暂时不画 UI，先做底层。未获明确批准不 Push、不部署。
+
+### 现场
+
+- 分支 `codex/p5r-compendium-data`，HEAD `5a613b8 docs(state): 记录房间地图爬塔底层`；本条交接记录会再产生一个本地 docs 提交。
+- 未设置 upstream，未 Push；相对 `origin/main` 有 **119** 个本地提交（含历史）。未部署、未打包 APK/AAB。
+- 正式 `src/`、后端、存档、生产未改；主 App 的定位仍是记录/记账/待办/Coop。
+- 工作区遗留均为既有：`ios/App/Podfile` 有修改；`outputs/battle-experience-v3/P5-P3-FUSION.md` 仅换行差异；`.cache/`、`.impeccable/`、`.rivet-config.json`、`outputs/` 下旧 demo/交付包/备份/恢复图未跟踪。不要 stash/reset/clean，也不要夹带。
+- 预览服务当前在跑：`http://127.0.0.1:5187/`；入口 `?theme=p3&shadow=1#tower`。
+
+### 已完成（逻辑层）
+
+- P1 影时间据点：商店/天鹅绒/装备/编队在塔外；影时间只锁塔门；影时间设置支持按星期多选。
+- P2 觉醒契约：未觉醒不能进塔；四问 + 自述 + 力量之源；AI/离线同结构；战斗内召唤台词。
+- P3 塔层：12 层、三路线、警戒、先制扣 15% HP、机关、钥匙、安全屋、预告信、两个强敌层、Boss；每层强制守卫战，非战斗每层最多一次，安全屋需先清守卫。
+- P4 战斗：1 More、Baton Pass、Technical、Hold Up、交涉、总攻击、Showtime Cut-in、敌方真实意图、装备攻防。
+- P5 Persona：技能卡学习、网络融合、Persona XP/升级、武器/防具/饰品商店与装备页。
+- P6 内容：回声之庭/虚荣剧场/逃避回廊三塔、今夜请求、四位 NPC 关系温度、无尽回廊轮次。
+- **新底层**：`floor-map.js` 已建立 5×5 房间地图（迷雾、移动、守卫/影子、钥匙/锁门、宝箱/机关/安全屋、警戒、回合），5 项单测；设计依据在 `docs/策划书-爬塔玩法底层设计.md`。
+
+### 已验证（交接前最后一次）
+
+- demo Node 测试 **117/117**；项目 `npm test -- --runInBand` **45 文件 / 286 项**；`npm run typecheck`、`node --check`、`git diff --check` 通过。
+- 真实 Chrome 已走通：影时间日期多选、据点服务、觉醒、塔层路线、安全屋、机关、预告信、Boss、Showtime、装备购买/更换、技能卡、网络融合、Persona 升级、三塔选择；`errors=[]`。
+- 注意：以上是逻辑/预览验证；用户尚未对视觉、手感做最终验收。
+
+### 关键未完成
+
+1. **`floor-map.js` 还没接进 `dungeon-run` / `tower-flow`。** 当前可玩主流程仍是旧的“三选一菜单 + 强制守卫”版本；房间地图目前只是独立底层和单测。
+2. 真实 UI 的完整 12 层长 run、潜行/巡逻表现、状态/Technical UI 仍未做；用户说自己画 UI。
+3. 红/黄/粉主题皮肤未接；蓝色主题已通。
+4. P7 正式接入 `src/` 未开始。
+
+### 下一优先级
+
+1. **把房间地图接进主流程**：每层生成 `floor-map`；移动触发影子/守卫战斗；战斗结束调用 `resolveEncounter`；守卫解锁出口；钥匙/宝箱/机关/安全屋接现有页面。
+2. 让 `dungeon-run` 的 12 层流程改为“一层一图”，保留现有强制守卫、请求、NPC、无尽和三塔规则。
+3. 给 UI 留稳定 API：UI 只读 `state/rooms`，调用 `move/act`；不要直接改地图。
+4. UI 接入后再做 P7 正式接入。
+
+### 接手铁律与踩坑
+
+- 先读本文件和项目 `AGENTS.md`；不要动 `ios/App/Podfile` 的既有修改，不要处理 `P5-P3-FUSION.md` 换行差异，不要夹带未跟踪旧输出。
+- 新存档键 `maskaria.p5r.rebuild.v1`；旧键 `maskaria.p5.preview.v1` 不读取、不迁移。
+- `floor-map.js` 的交互房间 `cleared` 初值必须为 false；`takeKey/openChest/disarmTrap` 各只结算一次。
+- `dungeon-run` 的安全层现在 `routesForFloor` 返回 `mob`，先打守卫，再由 `safeRoomPending` 进入安全屋；不要改回直接 `safe`。
+- `tower-flow` 的 `btn(label,action,note,disabled)` 第四个参数是 **disabled**，不是样式；传 `'subtle'` 会把按钮禁用。
+- 调试：`?p5r-debug=1` 下 `window.__p5rDebug.jump(floor, selected)` 可跳层；旧探针可能假设旧路线，需要按新流程更新。
+- 预览服务：`cd E:\MASKARIA\outputs\battle-experience-v3; node serve.mjs` → `http://127.0.0.1:5187/`。
+- 未获用户明确批准不 Push；正式 `src/`、后端、存档和生产不在本轮授权范围。
 
 ## 当前续办入口 · 2026-10-19 04:32 · 爬塔底层：房间地图模型已建立
 

@@ -64,8 +64,8 @@ test('钥匙、宝箱、机关和安全屋各自结算一次', () => {
 
   const chest = Object.values(map.rooms).find(room => room.type === 'chest');
   state.player = { x: chest.x, y: chest.y };
-  assert.equal(openChest(state), true);
-  assert.equal(openChest(state), false);
+  assert.equal(openChest(state).ok, true);
+  assert.equal(openChest(state).ok, false);
 
   const trap = Object.values(map.rooms).find(room => room.type === 'trap');
   state.player = { x: trap.x, y: trap.y };
@@ -99,6 +99,49 @@ test('钥匙可以在出口直接开锁，并消耗一把', () => {
   assert.equal(result.ok, true);
   assert.equal(state.exitUnlocked, true);
   assert.equal(state.keys, 0);
+});
+
+test('区段守层者未死时，钥匙不能打开出口', () => {
+  const map = createFloorMap({ floor: 10, seed: 7 });
+  const state = createExplorationState(map);
+  assert.equal(map.rooms[map.guardianId].blockBoss, true);
+  const exit = map.rooms[`${map.exit.x},${map.exit.y}`];
+  state.player = { x: exit.x - 1, y: exit.y };
+  state.keys = 1;
+  const blocked = move(state, 'right');
+  assert.equal(blocked.ok, false);
+  assert.match(blocked.reason, /守层者/);
+  assert.equal(state.keys, 1);
+  state.guardianDefeated = true;
+  const opened = move(state, 'right');
+  assert.equal(opened.ok, true);
+  assert.equal(state.exitUnlocked, true);
+  assert.equal(state.keys, 0);
+});
+
+test('陷阱匣直接开会触发，先检查会花一步避开', () => {
+  const map = createFloorMap({ floor: 30, seed: 7 });
+  const state = createExplorationState(map);
+  const chests = Object.values(map.rooms).filter(room => room.type === 'chest');
+  assert.ok(chests.length >= 2);
+
+  const direct = chests[0];
+  direct.chestKind = 'trapped';
+  state.player = { x: direct.x, y: direct.y };
+  state.time = 10;
+  const opened = openChest(state);
+  assert.equal(opened.ok, true);
+  assert.equal(opened.trapped, true);
+  assert.equal(state.time, 10);
+
+  const safe = chests[1];
+  safe.chestKind = 'trapped';
+  state.player = { x: safe.x, y: safe.y };
+  state.time = 10;
+  const inspected = openChest(state, { inspect: true });
+  assert.equal(inspected.ok, true);
+  assert.equal(inspected.trapped, false);
+  assert.equal(state.time, 9);
 });
 
 test('倾听会揭示更远的房间，但消耗一步并提高警戒', () => {

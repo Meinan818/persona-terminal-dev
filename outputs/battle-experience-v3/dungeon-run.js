@@ -347,13 +347,15 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
   const encounterForRoom = (kind, floor) => {
     const base = encounterFor(floor, 'mob');
     if (kind !== 'guardian') return base;
+    const blockBoss = floor % 10 === 0;
     return {
       ...base,
-      name: floor >= 10 ? '回声的看门人' : '守层的假面',
+      name: blockBoss ? `第${Math.ceil(floor / 10)}区段的守层者` : floor >= 10 ? '回声的看门人' : '守层的假面',
       level: base.level + 1,
-      maxHp: Math.round(base.maxHp * 1.45),
-      attack: Math.round(base.attack * 1.22),
-      defense: base.defense + 2,
+      maxHp: Math.round(base.maxHp * (blockBoss ? 1.95 : 1.45)),
+      attack: Math.round(base.attack * (blockBoss ? 1.4 : 1.22)),
+      defense: base.defense + (blockBoss ? 4 : 2),
+      blockBoss,
     };
   };
 
@@ -383,6 +385,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
         resolved: false,
         encounter,
         ambush: journey.explore.alert,
+        blockBoss: Boolean(encounter.blockBoss),
       };
       return { ...result, pending: journey.pending };
     }
@@ -412,14 +415,14 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
       if (ok) journey.pending = null;
       return { ok };
     }
-    if (action === 'open-chest') {
-      const ok = openMapChest(journey.explore);
-      if (ok) {
-        journey.loot.push({ floor: journey.floor, label: '回响之线', sp: 10 });
+    if (action === 'open-chest' || action === 'inspect-chest') {
+      const result = openMapChest(journey.explore, { inspect: action === 'inspect-chest' });
+      syncExplore();
+      if (result.ok) {
         journey.pending = null;
-        journey.mapMessage = '月匣已打开，回响之线收进背包。';
+        journey.mapMessage = result.trapped ? '匣子开了，机关弹了一下。' : '匣子开了，东西收进背包。';
       }
-      return { ok };
+      return result;
     }
     if (action === 'disarm-trap') {
       const ok = disarmMapTrap(journey.explore);
@@ -469,10 +472,14 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     journey.history.push({
       floor: journey.floor,
       kind,
-      label: kind === 'guardian' ? '守卫倒下' : '影子散去',
-      detail: kind === 'guardian' ? '出口已解锁。' : `警戒 ${journey.security}%`,
+      label: kind === 'guardian' ? (journey.pending.blockBoss ? '区段守层者倒下' : '守卫倒下') : '影子散去',
+      detail: kind === 'guardian'
+        ? (journey.pending.blockBoss ? '区段守层者倒下，本段出口解锁。' : '出口已解锁。')
+        : `警戒 ${journey.security}%`,
     });
-    journey.mapMessage = kind === 'guardian' ? '守卫倒下，出口解锁。' : '影子散了，继续走。';
+    journey.mapMessage = kind === 'guardian'
+      ? (journey.pending.blockBoss ? '区段守层者倒下，本段出口解锁。' : '守卫倒下，出口解锁。')
+      : '影子散了，继续走。';
     journey.pending = null;
     return true;
   };

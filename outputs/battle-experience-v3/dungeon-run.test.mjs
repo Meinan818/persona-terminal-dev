@@ -98,6 +98,24 @@ test('两个强敌层有独立的守层者名字与更高数值', () => {
   assert.ok(second.encounter.maxHp > 0);
 });
 
+test('每十层守卫成为区段守层者，战斗结算带区段标记', () => {
+  const model = createDungeonRun({ seed: 1 });
+  model.start();
+  model.beginFloor(10);
+  const guardian = model.journey.map.rooms[model.journey.map.guardianId];
+  assert.equal(guardian.blockBoss, true);
+  const neighbor = [
+    { x: guardian.x - 1, y: guardian.y, direction: 'right' },
+    { x: guardian.x + 1, y: guardian.y, direction: 'left' },
+    { x: guardian.x, y: guardian.y - 1, direction: 'down' },
+    { x: guardian.x, y: guardian.y + 1, direction: 'up' },
+  ].find(point => point.x >= 0 && point.y >= 0 && point.x < model.journey.map.width && point.y < model.journey.map.height);
+  model.journey.explore.player = { x: neighbor.x, y: neighbor.y };
+  const result = model.mapMove(neighbor.direction);
+  assert.equal(result.pending?.blockBoss, true);
+  assert.equal(result.pending?.encounter.name, '第1区段的守层者');
+});
+
 test('一条完整路线可以走完 100 层并进入 Boss 结算', () => {
   const model = createDungeonRun();
   model.start();

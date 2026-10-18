@@ -102,6 +102,7 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
   const guardianRoom = rooms[keyOf(guardianPoint.x, guardianPoint.y)];
   guardianRoom.type = 'guardian';
   guardianRoom.cleared = false;
+  guardianRoom.blockBoss = floor % 10 === 0;
 
   const keyRoom = placeSide();
   if (keyRoom) {
@@ -116,10 +117,17 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
     safeRoom.cleared = true;
   }
 
+  const chestKind = () => {
+    if (floor >= 30 && rng() < 0.18) return 'trapped';
+    return floor <= 20 ? 'wood' : floor <= 60 ? 'silver' : 'gold';
+  };
+  const chestTier = floor <= 20 ? 1 : floor <= 60 ? 2 : 3;
   const chestRoom = placeSide();
   if (chestRoom) {
     chestRoom.type = 'chest';
     chestRoom.cleared = false;
+    chestRoom.chestKind = chestKind();
+    chestRoom.chestTier = chestTier;
   }
   const eventRoom = placeSide();
   if (eventRoom) eventRoom.type = 'event';
@@ -142,6 +150,8 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
   if (secondChest) {
     secondChest.type = 'chest';
     secondChest.cleared = false;
+    secondChest.chestKind = chestKind();
+    secondChest.chestTier = chestTier;
   }
 
   return {
@@ -201,6 +211,10 @@ export function move(state, direction) {
   const room = state.map.rooms[keyOf(next.x, next.y)];
   if (!room) return { ok: false, reason: '前面是墙。' };
   if (room.type === 'exit' && !state.exitUnlocked) {
+    const guardianRoom = state.map.rooms[state.map.guardianId];
+    if (guardianRoom?.blockBoss && !state.guardianDefeated) {
+      return { ok: false, reason: '区段守层者还站在门前，钥匙打不开。' };
+    }
     if (state.keys > 0) {
       state.keys -= 1;
       state.exitUnlocked = true;
@@ -278,11 +292,21 @@ export function takeKey(state) {
   return true;
 }
 
-export function openChest(state) {
+export function openChest(state, { inspect = false } = {}) {
   const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
-  if (!room || room.type !== 'chest' || room.cleared) return false;
+  if (!room || room.type !== 'chest' || room.cleared) return { ok: false, reason: '这里没有可开的月匣。' };
+  if (inspect) {
+    if (state.time <= 0) return { ok: false, reason: '月光已经用完，没时间检查这个匣子。' };
+    state.time = Math.max(0, state.time - 1);
+    state.turn += 1;
+    bumpSecurity(state, 1);
+  }
   room.cleared = true;
-  return true;
+  return {
+    ok: true,
+    trapped: room.chestKind === 'trapped' && !inspect,
+    inspected: Boolean(inspect),
+  };
 }
 
 export function disarmTrap(state) {

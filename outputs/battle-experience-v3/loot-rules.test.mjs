@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  chestTierForKind,
   chestTierForFloor,
   gearTierForFloor,
   rollBattleLoot,
@@ -31,6 +32,16 @@ test('守卫和普通影子掉落真实背包 id', () => {
   assert.ok(guardian.items.some(item => item.id === 'enhanceStone'));
   const shadow = rollBattleLoot({ floor: 10, kind: 'shadow', rng: low });
   assert.ok(shadow.items.length > 0);
+});
+
+test('区段守层者必掉装备，并多给一块强化石', () => {
+  const loot = rollBattleLoot({ floor: 10, kind: 'guardian', blockBoss: true, rng: high });
+  assert.equal(loot.items.find(item => item.id === 'enhanceStone')?.qty, 2);
+  assert.equal(loot.equipment.length, 1);
+  assert.equal(chestTierForKind('wood', 50), 1);
+  assert.equal(chestTierForKind('silver', 50), 2);
+  assert.equal(chestTierForKind('gold', 50), 3);
+  assert.equal(chestTierForKind('trapped', 70), 3);
 });
 
 test('三座塔的 Boss 会给各自唯一装备', () => {

@@ -1273,7 +1273,9 @@ const preparation=createPreparationDirector({state,masks,icon,openSheet,render,n
 if(new URLSearchParams(location.search).get('p5r-debug')==='1'){
   window.__p5rDebug={
     jump:(floor,selected)=>flows.towerDebugJump(floor,selected),
-    openChest:()=>flows.towerDebugOpenChest?.(),
+    openChest:(kind)=>flows.towerDebugOpenChest?.(kind),
+    guardian:()=>flows.towerDebugGuardian?.(),
+    exit:()=>flows.towerDebugExit?.(),
     fightShadow:()=>flows.towerDebugFightShadow?.(),
     winBattle:()=>{
       if(!state.battle)return false;

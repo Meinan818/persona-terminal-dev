@@ -8,7 +8,7 @@ import {formatCountdown,formatShadowTimeRange,nextShadowTime,shadowTimeStatus} f
 import {awakeningSummary,canEnterTower} from './awakening-state.js';
 import {EQUIPMENT,SLOT_LABELS,equipItem,equipmentBonuses,equipmentEffects,equipmentRows,unequipItem} from './equipment.js';
 import {grantItem,grantLoot,sellInventoryItem,useInventoryItem,upgradeEquipment,inventoryEntries,equipmentSummary,slotLabel} from './inventory.js';
-import {rollChestLoot,rollBattleLoot,rollRequestLoot,chestTierForFloor} from './loot-rules.js';
+import {rollChestLoot,rollBattleLoot,rollRequestLoot,chestTierForKind} from './loot-rules.js';
 import {grantPersonaXp} from './persona-progress.js';
 import {TOWER_STRATA,getStratum} from './tower-registry.js';
 import {createRequest,recordRequest,requestForStratum} from './requests.js';
@@ -24,7 +24,10 @@ export function createTowerFlow(api){
   const RUN_KEY='maskaria.p5r.run.v1';
   let page=null,receipt=null,clock=null,raf=0,serial=0,recap=null;
   let interlude=null,shopReturn='interlude',shopMessage='',prepMessage='',requestMessage='',fusionPreview=null,fusionMessage='',specialPreview=null,specialMessage='',networkPreview=null,networkMessage='',skillCardSelected='',velvetService='fusion',velvetMessage='',velvetReturn='return',inventoryTab='consumables',inventoryMessage='';
-  const btn=(label,action,note='',disabled=false)=>`<button class="flow-button" data-tower="${action}" ${disabled?'disabled':''}><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;
+  const btn=(label,action,note='',disabled=false)=>{
+    const tone=typeof disabled==='string'?disabled:'';
+    return `<button class="flow-button${tone?` ${tone}`:''}" data-tower="${action}" ${disabled===true?'disabled':''}><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;
+  };
   const frame=(title,en,body)=>`<section class="experience-scene tower-scene" data-tower-scene="${page}"><button class="flow-return" data-tower="back">${icon('back')}<span>返回<small>RETURN</small></span></button><div class="scene-ghost" aria-hidden="true">${en}</div><div class="scene-heading"><h1>${title}</h1><span>${en}</span></div>${body}</section>`;
   function stop(){cancelAnimationFrame(raf);clock=null;serial++;}
   const money=()=>Number(state.money)||0;
@@ -414,20 +417,51 @@ export function createTowerFlow(api){
   function routeBack(){stop();page=null;api.goRoom('tower');if(j.explore)queueMapCenter();}
   function debugJump(floor,selected='mob'){
     j.active=true;
-    j.floor=Math.max(0,Math.min(j.maxFloor-1,Number(floor)-1));
+    j.floor=Math.max(1,Math.min(j.maxFloor,Number(floor)||1));
     j.pending=null;
     j.selected=selected;
     j.ended=null;
+    j.map=null;
+    j.explore=null;
+    model.beginFloor(j.floor);
     page=null;
     api.goRoom('tower');
+    queueMapCenter();
   }
-  function debugOpenChest(){
+  function debugOpenChest(kind){
     if(!j.explore||!j.map)return false;
-    const chest=Object.values(j.map.rooms).find(room=>room.type==='chest');
+    const chest=Object.values(j.map.rooms).find(room=>room.type==='chest'&&!room.cleared);
     if(!chest)return false;
+    if(kind)chest.chestKind=kind;
     j.explore.player={x:chest.x,y:chest.y};
     chest.revealed=true;
     chest.visited=true;
+    page=null;
+    api.goRoom('tower');
+    queueMapCenter();
+    return true;
+  }
+  function debugGuardian(){
+    if(!j.explore||!j.map)return false;
+    const guardian=j.map.rooms[j.map.guardianId];
+    if(!guardian||guardian.cleared)return false;
+    guardian.revealed=true;
+    for(const [dir,dx,dy] of MAP_STEPS){
+      const from=j.map.rooms[`${guardian.x-dx},${guardian.y-dy}`];
+      if(!from)continue;
+      j.explore.player={x:from.x,y:from.y};
+      const result=model.mapMove(dir);
+      if(result.pending){page=null;api.goRoom('tower');enter();return true;}
+    }
+    return false;
+  }
+  function debugExit(){
+    if(!j.explore||!j.map)return false;
+    const exit=j.map.rooms[`${j.map.exit.x},${j.map.exit.y}`];
+    if(!exit)return false;
+    exit.revealed=true;
+    exit.visited=true;
+    j.explore.player={x:exit.x,y:exit.y};
     page=null;
     api.goRoom('tower');
     queueMapCenter();
@@ -696,7 +730,7 @@ export function createTowerFlow(api){
       if(room.type==='trap')return '机关安静了。';
       if(room.type==='event')return '水面恢复平静。';
     }
-    return room.type==='start'?'入口。':room.type==='exit'?'出口。':room.type==='guardian'?'守卫挡在门前。':room.type==='shadow'?'影子在等你。':room.type==='chest'?'月光落在匣子上。':room.type==='key'?'一把旧钥匙。':room.type==='trap'?'脚下不太对。':room.type==='safe'?'门合上了。':room.type==='event'?'墙后有什么在响。':'这里暂时安静。';
+    return room.type==='start'?'入口。':room.type==='exit'?'出口。':room.type==='guardian'?(room.blockBoss?'本段守层者挡在门前。':'守卫挡在门前。'):room.type==='shadow'?'影子在等你。':room.type==='chest'?'月光落在匣子上。':room.type==='key'?'一把旧钥匙。':room.type==='trap'?'脚下不太对。':room.type==='safe'?'门合上了。':room.type==='event'?'墙后有什么在响。':'这里暂时安静。';
   };
   const roomCopy=(room,explore)=>{
     if(room.cleared){
@@ -707,7 +741,7 @@ export function createTowerFlow(api){
       if(room.type==='trap')return '机关已经处理完，不会再响。';
       if(room.type==='event')return '水面安静下来。这里不会再回应第二次。';
     }
-    return room.type==='start'?'回头是塔门。往前走，雾会散开。':room.type==='exit'?explore.exitUnlocked?'门已经开了。踏出去，下一层就会显形。':'门锁着。守卫或钥匙，选一条路。':room.type==='guardian'?'它守着出口。打赢它，门就会开。':room.type==='shadow'?'绕不开。它已经看见你了。':room.type==='chest'?'打开会消耗一点动静，但里面的东西能带回去。':room.type==='key'?'拿上它，出口可以不必经过守卫。':room.type==='trap'?'拆开会安静一点；硬闯会更快，也更吵。':room.type==='safe'?'这一层只能休息一次。恢复，或者继续贪。':room.type==='event'?'靠近它，或者只带走一点月光。':'雾在墙外。你可以听一听，或者直接走。';
+    return room.type==='start'?'回头是塔门。往前走，雾会散开。':room.type==='exit'?explore.exitUnlocked?'门已经开了。踏出去，下一层就会显形。':(explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated?'区段守层者还站在门前，钥匙打不开。':'门锁着。守卫或钥匙，选一条路。'):room.type==='guardian'?(room.blockBoss?'这一段由它守着。钥匙打不开它身后的门。':'它守着出口。打赢它，门就会开。'):room.type==='shadow'?'绕不开。它已经看见你了。':room.type==='chest'?'匣子的锁很旧。先检查会多花一步，直接打开也许更快。':room.type==='key'?'拿上它，出口可以不必经过守卫。':room.type==='trap'?'拆开会安静一点；硬闯会更快，也更吵。':room.type==='safe'?'这一层只能休息一次。恢复，或者继续贪。':room.type==='event'?'靠近它，或者只带走一点月光。':'雾在墙外。你可以听一听，或者直接走。';
   };
   const MAP_STEPS=[['up',0,-1],['right',1,0],['down',0,1],['left',-1,0]];
   function findMapPath(targetX,targetY){
@@ -778,29 +812,30 @@ export function createTowerFlow(api){
     if(!j.explore||!j.map)return '';
     const explore=j.explore,room=currentRoom(explore),floor=j.floor;
     const flavor=floorFlavor(floor);
+    const blockBoss=Boolean(explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated);
     const revealed=visibleRooms(explore).length;
     const cells=[];
     for(let y=0;y<j.map.height;y+=1)for(let x=0;x<j.map.width;x+=1)cells.push(mapCell(j.map.rooms[`${x},${y}`],explore,flavor));
     const roomActions=()=>{
       if(room.type==='key'&&!room.cleared)return btn('收下旧钥匙','take-key','出口可以直接开锁');
-      if(room.type==='chest'&&!room.cleared)return btn('打开月匣','open-chest','回响之线 ×1 · +10 SP');
+      if(room.type==='chest'&&!room.cleared)return btn('先检查','inspect-chest','消耗 1 步 · 安全打开')+btn('直接打开','open-chest','不耗步 · 可能触发陷阱','danger');
       if(room.type==='trap'&&!room.cleared)return btn('拆解机关','disarm-trap','警戒 -8%')+btn('硬闯','force-trap','警戒 +12% · HP -6','danger');
       if(room.type==='safe')return btn(room.rested?'已经休息过':'在安全屋休息','rest','警戒 -20% · 恢复 30% HP/SP',room.rested);
       if(room.type==='event'&&!room.cleared)return btn('触碰水面','event-heal','回复 15% HP')+btn('带走月光','event-buff','下一战伤害 +5%');
-      if(room.type==='exit')return explore.exitUnlocked?btn('走下这一层','leave-floor','下一层还在上面'):`<p class="map-locked">出口锁着。击破守卫，或带一把钥匙来。</p>`;
-      if(room.type==='guardian'&&!room.cleared)return btn('迎战守卫','enter','击破后解锁出口','danger');
+      if(room.type==='exit')return explore.exitUnlocked?btn('走下这一层','leave-floor','下一层还在上面'):`<p class="map-locked">${explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated?'区段守层者还站在门前。钥匙打不开，必须击破它。':'出口锁着。击破守卫，或带一把钥匙来。'}</p>`;
+      if(room.type==='guardian'&&!room.cleared)return btn(room.blockBoss?'迎战区段守层者':'迎战守卫','enter',room.blockBoss?'钥匙无效 · 击破后本段出口解锁':'击破后解锁出口','danger');
       if(room.type==='shadow'&&!room.cleared)return btn('迎战影子','enter','它挡在这里','danger');
       return `<p class="map-quiet">这里只有回声。继续走，或者听一听墙后的动静。</p>`;
     };
     return `<div class="page-heading map-page-heading"><h1>登塔<span>ASCEND / 03</span></h1><p>${esc(flavor.tagline)} · 每一步都会留下声音。</p></div>
       <div class="map-hud"><span>${esc(getStratum(j.stratum).name)} <b>${floor} / ${j.maxFloor} F</b></span><span>区段 <b>${Math.ceil(floor/10)} / 10</b></span><span>月光 <b>${explore.time}</b> / ${explore.maxTime} 步</span><span>警戒 <b>${j.security}%</b></span><span>钥匙 <b>${j.keys}</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span>${j.alert?'<span class="journey-alert">ALERT · 被盯上了</span>':''}</div>
       <div class="map-shell"><section class="map-board" aria-label="${esc(getStratum(j.stratum).name)} ${floor} 层房间地图">
-        <div class="map-board-head"><div><span>FLOOR ${String(floor).padStart(2,'0')} / ${esc(flavor.name)} · BLOCK ${String(Math.ceil(floor/10)).padStart(2,'0')}</span><b>${explore.exitUnlocked?'出口已经开了':'找到守卫或钥匙'}</b></div><div class="map-head-tools"><small>拖动查看 · 已探明 ${revealed} / 25</small><button type="button" data-tower="map-center">回到当前位置</button></div></div>
+        <div class="map-board-head"><div><span>FLOOR ${String(floor).padStart(2,'0')} / ${esc(flavor.name)} · BLOCK ${String(Math.ceil(floor/10)).padStart(2,'0')}</span><b>${explore.exitUnlocked?'出口已经开了':blockBoss?'击破区段守层者':'找到守卫或钥匙'}</b></div><div class="map-head-tools"><small>拖动查看 · 已探明 ${revealed} / 25</small><button type="button" data-tower="map-center">回到当前位置</button></div></div>
         <div class="map-viewport" data-map-viewport aria-label="可拖动查看的房间地图"><div class="map-grid">${cells.join('')}</div></div>
         <div class="map-legend"><span><i class="lg-you"></i>你</span><span><i class="lg-threat"></i>敌人</span><span><i class="lg-loot"></i>收获</span><span><i class="lg-fog"></i>迷雾</span></div>
       </section><aside class="map-side">
         <div class="map-current ${j.alert?'is-alert':''}"><span>${floor}F · ${esc(flavor.name)}</span><h2>${room.cleared?roomTitle(room):(flavor.rooms[room.type]??roomTitle(room))}</h2><p>${roomCopy(room,explore)}</p><div class="map-actions">${roomActions()}</div></div>
-        <div class="map-objective"><span>本层目标</span><b>${explore.exitUnlocked?'出口已开':'击破守卫 / 取得钥匙'}</b><small>${j.mapMessage||'剩下 '+explore.time+' 步。贪一间房，还是现在就走？'}</small></div>
+        <div class="map-objective"><span>本层目标</span><b>${explore.exitUnlocked?'出口已开':blockBoss?'击破区段守层者':'击破守卫 / 取得钥匙'}</b><small>${j.mapMessage||'剩下 '+explore.time+' 步。贪一间房，还是现在就走？'}</small></div>
         <div class="map-pad" aria-label="移动"><button data-tower="move:up" aria-label="向上">↑</button><button data-tower="move:left" aria-label="向左">←</button><button data-tower="map-listen" aria-label="倾听">听</button><button data-tower="move:right" aria-label="向右">→</button><button data-tower="move:down" aria-label="向下">↓</button></div>
         <div class="map-side-foot">${btn('听一听墙后','map-listen','消耗 1 步 · 警戒 +4')}${btn('下塔回顾','retreat','带走已经拿到的东西')}</div>
       </aside></div>`;
@@ -844,16 +879,25 @@ export function createTowerFlow(api){
       renderMap();
       return;
     }
-    if(action==='open-chest'&&j.explore){
-      const result=model.mapAct('open-chest');
+    if((action==='open-chest'||action==='inspect-chest')&&j.explore){
+      const chest=currentRoom(j.explore);
+      const inspect=action==='inspect-chest';
+      const result=model.mapAct(action);
       if(result.ok){
-        const loot=rollChestLoot({floor:j.floor,chestBonus:j.chestBonus??0});
+        const loot=rollChestLoot({floor:j.floor,tier:chestTierForKind(chest?.chestKind,j.floor,j.chestBonus??0)});
         const granted=grantLoot(state,loot);
         const max=state.heroMaxSp??34;
         state.sp=Math.min(max,state.sp+10);
+        let damage=0;
+        if(result.trapped){
+          damage=Math.max(1,Math.round((state.heroMaxHp??52)*.12));
+          state.hp=Math.max(1,state.hp-damage);
+        }
         j.loot.push({floor:j.floor,label:granted.text||'月匣收获',sp:10});
-        j.mapMessage=`月匣开了。${granted.text||'拿到一点东西'} · SP +10。`;
+        j.mapMessage=`月匣开了。${granted.text||'拿到一点东西'}${damage?` · 陷阱触发，HP -${damage}`:''} · SP +10。`;
         api.persistP5State?.();
+      }else{
+        j.mapMessage=result.reason??'这个匣子打不开。';
       }
       renderMap();
       return;
@@ -1038,7 +1082,7 @@ export function createTowerFlow(api){
     event.preventDefault();
     act(`move:${dir}`);
   });
-  return {screen,route,act,start,showRecap,prep(){return prepPage();},...debugMode?{debugJump,debugOpenChest,debugFightShadow}:{},get snapshot(){return {active:j.active,floor:j.floor,maxFloor:j.maxFloor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss','elite','guardian','shadow'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
+  return {screen,route,act,start,showRecap,prep(){return prepPage();},...debugMode?{debugJump,debugOpenChest,debugFightShadow,debugGuardian,debugExit}:{},get snapshot(){return {active:j.active,floor:j.floor,maxFloor:j.maxFloor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss','elite','guardian','shadow'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
     hide(){stop();page=null;},recordLoot(reward){return model.addLoot(reward);},
     preview(next){if(next!=='return'&&next!=='velvet')return false;model.start(state.towerStratum);j.request=createRequest(requestForStratum(state.towerStratum));j.floor=j.maxFloor;j.ended='clear';interlude={battle:{summary:'这一夜的最后一道影子，已经散了。'},rested:false,party:[]};fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';networkPreview=null;networkMessage='';velvetService='fusion';velvetMessage='';velvetReturn='return';skillCardSelected='';prepMessage='';requestMessage='';page=next;return true;},
     battleReturn(won,phase,battleResult){
@@ -1051,7 +1095,7 @@ export function createTowerFlow(api){
         page=null;
         return;
       }
-      const floor=j.pending.floor,wasBoss=battleKind==='boss';
+      const floor=j.pending.floor,wasBoss=battleKind==='boss',blockBoss=Boolean(j.pending.blockBoss);
       const effects=gearFx();
       const drops=Array.isArray(battleResult?.drops)?battleResult.drops:[];
       const reward=battleResult?.reward??null;
@@ -1067,6 +1111,7 @@ export function createTowerFlow(api){
         stratum:j.stratum,
         rng:Math.random,
         dropBonus:effects.drop,
+        blockBoss,
       });
       const granted=grantLoot(state,battleLoot);
       if(granted.lines.length){items.push(...granted.lines);state.battleLoot.push(...granted.lines);}
@@ -1089,7 +1134,7 @@ export function createTowerFlow(api){
       if(mapBattle){
         model.resolveMapBattle(true);
         page=null;
-        j.mapMessage=`${battleKind==='guardian'?'守卫倒下，出口解锁。':'影子散了。'} ¥${moneyGain}${granted.text?` · ${granted.text}`:''}`;
+        j.mapMessage=`${battleKind==='guardian'?(blockBoss?'区段守层者倒下，本段出口解锁。':'守卫倒下，出口解锁。'):'影子散了。'} ¥${moneyGain}${granted.text?` · ${granted.text}`:''}`;
         saveRun();
         queueMapCenter();
         return;

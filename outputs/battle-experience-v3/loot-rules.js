@@ -40,6 +40,11 @@ export function chestTierForFloor(floor = 1, chestBonus = 0) {
   return Math.max(1, Math.min(3, base + Math.max(0, Number(chestBonus) || 0)));
 }
 
+export function chestTierForKind(kind = 'wood', floor = 1, chestBonus = 0) {
+  const base = kind === 'wood' ? 1 : kind === 'silver' ? 2 : kind === 'gold' ? 3 : chestTierForFloor(floor);
+  return Math.max(1, Math.min(3, base + Math.max(0, Number(chestBonus) || 0)));
+}
+
 export function rollGear(floor = 1, { rng = Math.random, bonusTier = 0 } = {}) {
   const tier = Math.max(1, Math.min(5, gearTierForFloor(floor) + (Number(bonusTier) || 0)));
   return pick(rng, GEAR_POOLS[tier]);
@@ -61,7 +66,7 @@ export function rollChestLoot({ floor = 1, tier, rng = Math.random, chestBonus =
   return { money, items, equipment };
 }
 
-export function rollBattleLoot({ floor = 1, kind = 'shadow', stratum = 'echo', rng = Math.random, dropBonus = 0 } = {}) {
+export function rollBattleLoot({ floor = 1, kind = 'shadow', stratum = 'echo', rng = Math.random, dropBonus = 0, blockBoss = false } = {}) {
   const bonus = Math.max(0, Number(dropBonus) || 0);
   const items = [];
   const equipment = [];
@@ -72,9 +77,9 @@ export function rollBattleLoot({ floor = 1, kind = 'shadow', stratum = 'echo', r
     return { money: 0, items, equipment };
   }
   if (kind === 'guardian' || kind === 'elite') {
-    items.push({ id: 'enhanceStone', qty: 1 });
+    items.push({ id: 'enhanceStone', qty: blockBoss ? 2 : 1 });
     if (chance(rng, 0.55 + bonus)) items.push({ id: 'echoShard', qty: 1 });
-    if (chance(rng, 0.35 + bonus)) equipment.push(rollGear(floor, { rng }));
+    if (blockBoss || chance(rng, 0.35 + bonus)) equipment.push(rollGear(floor, { rng }));
     return { money: 0, items, equipment };
   }
   if (chance(rng, 0.55 + bonus)) items.push({ id: 'echoShard', qty: 1 });

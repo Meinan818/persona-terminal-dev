@@ -1,7 +1,8 @@
 import {createTowerJourney,towerNodes} from './tower-journey.js';
 import {ITEM_DEFS} from './economy-rules.js';
-import {fuse,skillName,ARCANA_LABELS} from './velvet-rules.js';
+import {fuse,skillName,ARCANA_LABELS,itemize,lockdown,register,sacrifice,withdraw} from './velvet-rules.js';
 import {getPersona} from './p5r-compendium.js';
+import {buildBattlePersona,setPersonaOverride} from './p5-combat-rules.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -9,7 +10,7 @@ export function createTowerFlow(api){
   const {state,icon,render,reduced}=api,model=createTowerJourney(),j=model.journey;
   const initialVitals={hp:state.hp,sp:state.sp};
   let page=null,receipt=null,clock=null,raf=0,serial=0,recap=null;
-  let interlude=null,shopReturn='interlude',shopMessage='',fusionPreview=null,fusionMessage='';
+  let interlude=null,shopReturn='interlude',shopMessage='',fusionPreview=null,fusionMessage='',velvetService='fusion',velvetMessage='';
   const btn=(label,action,note='',disabled=false)=>`<button class="flow-button" data-tower="${action}" ${disabled?'disabled':''}><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;
   const frame=(title,en,body)=>`<section class="experience-scene tower-scene" data-tower-scene="${page}"><button class="flow-return" data-tower="back">${icon('back')}<span>返回<small>RETURN</small></span></button><div class="scene-ghost" aria-hidden="true">${en}</div><div class="scene-heading"><h1>${title}</h1><span>${en}</span></div>${body}</section>`;
   function stop(){cancelAnimationFrame(raf);clock=null;serial++;}
@@ -73,6 +74,85 @@ export function createTowerFlow(api){
     fusionPreview=null;
     render({focus:true});
   }
+  function velvetPersona(id){
+    const persona=buildBattlePersona(id);
+    if(!persona)return null;
+    return {...persona,stats:{hp:persona.maxHp,sp:persona.maxSp,attack:persona.attack,defense:persona.defense}};
+  }
+  function applyOverride(id,persona){
+    if(!persona)return;
+    const previous=state.personaOverrides?.[id]??{};
+    const stats={...previous.stats};
+    const source=persona.stats??{};
+    for(const key of ['hp','sp','attack','defense']){
+      const value=source[key]??persona[key==='hp'?'maxHp':key==='sp'?'maxSp':key];
+      if(Number.isFinite(value))stats[key]=value;
+    }
+    const override={level:persona.level??previous.level,stats};
+    state.personaOverrides={...(state.personaOverrides??{}),[id]:override};
+    setPersonaOverride(id,override);
+  }
+  function gallowsExec(){
+    const baseId=document.querySelector('#vg-base')?.value;
+    const fodderId=document.querySelector('#vg-fodder')?.value;
+    if(!baseId||!fodderId||baseId===fodderId){velvetMessage='选择两个不同的面具。';render();return;}
+    const base=velvetPersona(baseId),fodder=velvetPersona(fodderId);
+    if(!base||!fodder){velvetMessage='图鉴里没有这张面具。';render();return;}
+    const result=sacrifice(base,fodder);
+    if(!result.ok){velvetMessage=result.reason;render();return;}
+    if(!api.removePersonaFromRoster?.(fodderId)){velvetMessage='基础契约面具不能被献祭；请选择后来获得的面具。';render();return;}
+    applyOverride(baseId,result.persona);
+    velvetMessage=`${fodder.name} 被献祭，${base.name} 升到 Lv.${result.persona.level}。`;
+    api.persistP5State?.();
+    render({focus:true});
+  }
+  function chairExec(){
+    const id=document.querySelector('#vc-persona')?.value;
+    const persona=velvetPersona(id);
+    if(!persona){velvetMessage='图鉴里没有这张面具。';render();return;}
+    const result=itemize(persona);
+    if(!result.ok){velvetMessage=result.reason;render();return;}
+    if(!api.removePersonaFromRoster?.(id)){velvetMessage='基础契约面具不能送上电椅；请选择后来获得的面具。';render();return;}
+    state.materials={...(state.materials??{}),[result.itemId]:(Number(state.materials?.[result.itemId])||0)+result.qty};
+    velvetMessage=`${persona.name} 坐上电椅，留下 ${result.itemLabel??result.itemId} ×${result.qty}。`;
+    api.persistP5State?.();
+    render({focus:true});
+  }
+  function lockdownExec(stat){
+    const id=document.querySelector('#vl-persona')?.value;
+    const persona=velvetPersona(id);
+    if(!persona){velvetMessage='图鉴里没有这张面具。';render();return;}
+    const cost=800;
+    if(money()<cost){velvetMessage=`钱不够（需要 ¥${cost}）。`;render();return;}
+    const result=lockdown(persona,stat);
+    if(!result.ok){velvetMessage=result.reason;render();return;}
+    state.money-=cost;
+    applyOverride(id,result.persona);
+    velvetMessage=`${result.message}（¥${cost}）`;
+    api.persistP5State?.();
+    render({focus:true});
+  }
+  function compendiumRegister(){
+    const id=document.querySelector('#vcp-persona')?.value;
+    const source=getPersona(id),built=buildBattlePersona(id);
+    if(!source||!built){velvetMessage='图鉴里没有这张面具。';render();return;}
+    const effective={...source,level:built.level,stats:{...source.stats,hp:built.maxHp,sp:built.maxSp,attack:built.attack,defense:built.defense},skills:source.skills};
+    register(state.compendium,effective);
+    velvetMessage=`${source.name} · Lv.${built.level} 已登记进图鉴。`;
+    api.persistP5State?.();
+    render({focus:true});
+  }
+  function withdrawPersona(id){
+    const wallet={money:money()};
+    const result=withdraw(state.compendium,id,wallet);
+    if(!result.ok){velvetMessage=result.reason;render();return;}
+    state.money=wallet.money;
+    applyOverride(result.persona.id,result.persona);
+    api.addPersonaToRoster?.(result.persona.id);
+    velvetMessage=`从图鉴取回 ${result.persona.name}（¥${result.cost}）。`;
+    api.persistP5State?.();
+    render({focus:true});
+  }
   function timeline(duration,onTick,onDone){
     stop();const id=serial;clock={elapsed:0,last:performance.now()};
     const tick=now=>{if(id!==serial||!clock)return;const dt=Math.max(0,now-clock.last);clock.last=now;if(!document.hidden)clock.elapsed+=dt;onTick(clock.elapsed);if(clock.elapsed>=duration){stop();onDone();return;}raf=requestAnimationFrame(tick);};
@@ -85,7 +165,7 @@ export function createTowerFlow(api){
     timeline(1100,()=>{},()=>show('reveal-ready'));
   }
   function routeBack(){stop();page=null;api.goRoom('tower');}
-  function start(error=false){model.start();Object.assign(state,initialVitals);receipt=null;interlude=null;shopReturn='interlude';shopMessage='';fusionPreview=null;fusionMessage='';reveal(error);}
+  function start(error=false){model.start();Object.assign(state,initialVitals);receipt=null;interlude=null;shopReturn='interlude';shopMessage='';fusionPreview=null;fusionMessage='';velvetService='fusion';velvetMessage='';reveal(error);}
   function enter(){
     const pending=j.pending??model.enter();if(!pending)return;
     if(pending.resolved){receipt=pending.result;show('receipt');return;}
@@ -156,7 +236,26 @@ export function createTowerFlow(api){
     const roster=rosterIds();
     const select=(id,selectedIndex)=>`<select id="${id}" class="velvet-select">${roster.map((pid,index)=>`<option value="${pid}" ${index===selectedIndex?'selected':''}>${esc(personaName(pid))}</option>`).join('')}</select>`;
     const preview=fusionPreview;
-    return frame('天鹅绒房间。','VELVET ROOM',`<div class="velvet-layout"><section class="velvet-copy"><span class="slash-label">FUSION / ¥${money().toLocaleString()}</span><h2>把两段回声，合成新的名字。</h2><p>结果只来自 P5R 图鉴；融合会消耗金钱，并进入面具名录。</p><div class="velvet-selects"><label>面具 A${select('velvet-a',0)}</label><span>×</span><label>面具 B${select('velvet-b',1)}</label></div>${btn('预览融合','preview-fusion')}${fusionMessage?`<p class="velvet-message">${esc(fusionMessage)}</p>`:''}${preview?`<div class="velvet-preview"><h3>${esc(preview.persona.name)}</h3><p>Lv.${preview.persona.level} · ${esc(ARCANA_LABELS[preview.persona.arcana]??preview.persona.arcana)} · ${preview.persona.skills.length} 个技能</p><p>${preview.persona.skills.slice(0,4).map(id=>esc(skillName(id))).join(' · ')}</p>${btn(`确认融合 · ¥${preview.cost}`,'confirm-fusion')}</div>`:''}</section><section class="velvet-actions">${btn('回到回城','return-back')}${btn('回到战场','home')}</section></div>`);
+    const quote={
+      fusion:'两个名字关进同一间牢房，剩下的那个，才是结果。',
+      gallows:'献祭不是结束，是另一种加法。',
+      chair:'坐上电椅。别担心，它比你更疼。',
+      lockdown:'锁上门。等它学会你想要的样子。',
+      compendium:'名字留下了。下一次，它会记得你。',
+      special:'特别的名字，需要特别的配方。',
+      skill:'牌还没有印好。',
+    }[velvetService]??'今天想怎么处置这些面具？';
+    const services=[['fusion','融合','FUSION'],['gallows','处刑','GALLOWS'],['chair','电椅','CHAIR'],['lockdown','禁闭','LOCKDOWN'],['compendium','图鉴','COMPENDIUM'],['special','特殊融合','SPECIAL'],['skill','技能卡','SKILL CARD']];
+    const compendiumEntries=state.compendium?.entries??[];
+    const panel=()=>{
+      if(velvetService==='fusion')return `<h2>双体融合 / FUSION</h2><p>选择两张面具，把它们关进同一间牢房。结果只来自 P5R 图鉴。</p><div class="vr-selects"><label>面具 A${select('velvet-a',0)}</label><span>×</span><label>面具 B${select('velvet-b',1)}</label></div>${btn('预览融合','preview-fusion')}${preview?`<div class="vr-result"><h3>${esc(preview.persona.name)}</h3><p>Lv.${preview.persona.level} · ${esc(ARCANA_LABELS[preview.persona.arcana]??preview.persona.arcana)} · ${preview.persona.skills.length} 个技能</p><p>${preview.persona.skills.slice(0,4).map(id=>esc(skillName(id))).join(' · ')}</p>${btn(`确认融合 · ¥${preview.cost}`,'confirm-fusion')}</div>`:''}`;
+      if(velvetService==='gallows')return `<h2>处刑 / GALLOWS</h2><p>献祭一个后来获得的面具，让另一个升级。基础契约面具不可处刑。</p><div class="vr-selects"><label>保留的面具${select('vg-base',0)}</label><span>←</span><label>被献祭的面具${select('vg-fodder',1)}</label></div><button class="vr-action danger" data-tower="gallows-exec">执行绞刑</button>`;
+      if(velvetService==='chair')return `<h2>电椅 / ELECTRIC CHAIR</h2><p>把面具变成材料。基础契约面具不可物品化。</p><div class="vr-selects"><label>送上电椅${select('vc-persona',0)}</label></div><button class="vr-action danger" data-tower="chair-exec">确认物品化</button>`;
+      if(velvetService==='lockdown')return `<h2>禁闭 / LOCKDOWN</h2><p>把面具关起来训练一个属性，费用 ¥800。</p><div class="vr-selects"><label>训练对象${select('vl-persona',0)}</label></div><div class="vr-lockdown-actions">${[['hp','HP'],['sp','SP'],['attack','攻击'],['defense','防御']].map(([stat,label])=>`<button data-tower="lockdown-exec:${stat}">训练 ${label}</button>`).join('')}</div>`;
+      if(velvetService==='compendium')return `<h2>图鉴 / COMPENDIUM</h2><p>登记当前面具，或花等级 × 300 取回。</p><div class="vr-selects"><label>登记面具${select('vcp-persona',0)}</label></div><button class="vr-action" data-tower="compendium-register">登记进图鉴</button><div class="vr-compendium">${compendiumEntries.length?compendiumEntries.map(persona=>`<button data-tower="withdraw:${persona.id}"><span>${esc(persona.name)} · Lv.${persona.level}</span><b>¥${persona.level*300}</b></button>`).join(''):'<p>图鉴还是空的。先登记一张面具。</p>'}</div>`;
+      return `<h2>${velvetService==='special'?'特殊融合':'技能卡'} / LOCKED</h2><div class="vr-locked"><b>${velvetService==='special'?'SPECIAL FUSION':'SKILL CARD'}</b><p>${velvetService==='special'?'需要剧情解锁的特殊配方和素材。入口先留在这里，不伪造结果。':'需要网络或剧情解锁的技能卡功能。入口先留在这里。'}</p></div>`;
+    };
+    return `<div class="velvet-room" data-velvet-service="${velvetService}"><div class="vr-bars" aria-hidden="true"></div><div class="vr-curtain vr-curtain-left" aria-hidden="true"></div><div class="vr-curtain vr-curtain-right" aria-hidden="true"></div><div class="vr-moon" aria-hidden="true"></div><div class="vr-spot" aria-hidden="true"></div><header class="vr-top"><button class="vr-back" data-tower="return-back">← 回到回城</button><div class="vr-title"><span>VELVET ROOM</span><h1>天鹅绒房间</h1><p>“${esc(quote)}”</p></div><div class="vr-wallet">¥${money().toLocaleString()}</div></header><div class="vr-layout"><nav class="vr-menu" aria-label="天鹅绒房间服务">${services.map(([id,label,en])=>`<button class="${velvetService===id?'active':''}" data-tower="velvet-service:${id}"><small>${en}</small><b>${label}</b></button>`).join('')}</nav><main class="vr-panel">${panel()}${velvetMessage?`<p class="vr-message">${esc(velvetMessage)}</p>`:''}${fusionMessage?`<p class="vr-message">${esc(fusionMessage)}</p>`:''}</main><aside class="vr-side"><div class="vr-slot"><b>P5-VR-A</b><span>双子看守</span><small>900×1200 · 透明 PNG</small></div><div class="vr-slot"><b>P5-VR-B</b><span>房间背景</span><small>1600×900 · 透明 PNG</small></div><blockquote>“${esc(quote)}”</blockquote></aside></div><button class="vr-exit" data-tower="home">离开房间 · 回到战场</button></div>`;
   }
   function screen(){
     if(!page)return null;
@@ -190,7 +289,13 @@ export function createTowerFlow(api){
     if(action==='shop-return'){shopReturn='return';shopMessage='';show('shop');return;}
     if(action==='shop-back'){show(shopReturn);return;}
     if(action.startsWith('buy:')){buyItem(action.slice(4));return;}
-    if(action==='velvet'){fusionPreview=null;fusionMessage='';show('velvet');return;}
+    if(action==='velvet'){fusionPreview=null;fusionMessage='';velvetService='fusion';velvetMessage='';show('velvet');return;}
+    if(action.startsWith('velvet-service:')){velvetService=action.slice('velvet-service:'.length);velvetMessage='';fusionMessage='';fusionPreview=null;render({focus:true});return;}
+    if(action==='gallows-exec'){gallowsExec();return;}
+    if(action==='chair-exec'){chairExec();return;}
+    if(action.startsWith('lockdown-exec:')){lockdownExec(action.slice('lockdown-exec:'.length));return;}
+    if(action==='compendium-register'){compendiumRegister();return;}
+    if(action.startsWith('withdraw:')){withdrawPersona(action.slice('withdraw:'.length));return;}
     if(action==='preview-fusion'){previewFusion();return;}
     if(action==='confirm-fusion'){confirmFusion();return;}
     if(action==='return-back'){show('return');return;}
@@ -222,7 +327,7 @@ export function createTowerFlow(api){
   document.addEventListener('visibilitychange',()=>{if(clock)clock.last=performance.now();});
   return {screen,route,act,start,showRecap,get snapshot(){return {active:j.active,floor:j.floor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
     hide(){stop();page=null;},recordLoot(reward){return model.addLoot(reward);},
-    preview(next){if(next!=='return'&&next!=='velvet')return false;model.start();j.floor=10;j.ended='clear';interlude={battle:{summary:'这一夜的最后一道影子，已经散了。'},rested:false,party:[]};fusionPreview=null;fusionMessage='';page=next;return true;},
+    preview(next){if(next!=='return'&&next!=='velvet')return false;model.start();j.floor=10;j.ended='clear';interlude={battle:{summary:'这一夜的最后一道影子，已经散了。'},rested:false,party:[]};fusionPreview=null;fusionMessage='';velvetService='fusion';velvetMessage='';page=next;return true;},
     battleReturn(won,phase,battleResult){if(!this.pendingBattle)return;if(won){const floor=j.pending.floor,wasBoss=j.pending.kind==='boss';const drops=Array.isArray(battleResult?.drops)?battleResult.drops:[];const reward=battleResult?.reward??null;const items=[];let spGain=0;for(const drop of drops){if(drop?.item){items.push(drop.item);state.battleLoot.push(drop.item);}if(drop?.sp)spGain+=Number(drop.sp)||0;}if(reward?.item){items.push(reward.item);state.battleLoot.push(reward.item);}if(reward?.sp)spGain+=Number(reward.sp)||0;const moneyGain=240+floor*60;state.money+=moneyGain;if(spGain)state.sp=Math.min(state.heroMaxSp??state.sp,state.sp+spGain);api.persistP5State?.();interlude={battle:battleResult,rested:false,party:captureParty(),reward:{money:moneyGain,items,sp:spGain}};model.resolve({label:'战斗胜利',detail:battleResult?.summary??'击破了挡路的阴影。',type:'battle',receipt:battleResult??null});model.advance();page=(wasBoss||j.ended==='clear')?'return':'interlude';}else{j.pending.battleState={enemyHp:j.pending.kind==='boss'?state.enemyHp:312,stagger:j.pending.kind==='boss'?state.stagger:0,turn:state.turn,phase:j.pending.kind==='boss'?phase:1};page=null;}},
     defeat(){model.end('defeat');show('defeat');},
   };

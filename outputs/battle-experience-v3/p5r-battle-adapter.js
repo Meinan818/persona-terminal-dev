@@ -12,6 +12,20 @@
  */
 import { P5R_SKILLS, P5R_PERSONA_BY_ID, getPersona, getSkill } from './p5r-compendium.js';
 
+const personaOverrides = new Map();
+
+export function setPersonaOverride(personaId, override) {
+  if (!personaId) return;
+  if (!override) {
+    personaOverrides.delete(personaId);
+    return;
+  }
+  personaOverrides.set(personaId, {
+    level: Number.isFinite(Number(override.level)) ? Number(override.level) : undefined,
+    stats: override.stats ? { ...override.stats } : undefined,
+  });
+}
+
 export const P5_ELEMENTS = {
   phys: { label: '物理', en: 'PHYS' },
   gun: { label: '枪击', en: 'GUN' },
@@ -187,7 +201,9 @@ export function buildBattleSkill(skillName) {
 export function buildBattlePersona(personaId, { level } = {}) {
   const persona = getPersona(personaId);
   if (!persona) return null;
-  const currentLevel = Number.isFinite(level) ? Math.max(1, Math.round(level)) : persona.level;
+  const override = personaOverrides.get(personaId);
+  const requestedLevel = Number.isFinite(level) ? level : persona.level;
+  const currentLevel = Math.max(1, Math.round(override?.level ?? requestedLevel));
   const unlocked = persona.skills.filter(
     skill => (persona.skillLevels[skill] ?? 0) <= currentLevel,
   );
@@ -209,7 +225,7 @@ export function buildBattlePersona(personaId, { level } = {}) {
     });
   }
   const [strength, magic, endurance, agility, luck] = persona.sourceStats;
-  return {
+  const built = {
     id: persona.id,
     name: persona.name,
     nameEn: persona.nameEn,
@@ -235,6 +251,14 @@ export function buildBattlePersona(personaId, { level } = {}) {
     rare: persona.rare,
     dlc: persona.dlc,
   };
+  const stats = override?.stats;
+  if (stats) {
+    if (Number.isFinite(stats.hp)) built.maxHp = stats.hp;
+    if (Number.isFinite(stats.sp)) built.maxSp = stats.sp;
+    if (Number.isFinite(stats.attack)) built.attack = stats.attack;
+    if (Number.isFinite(stats.defense)) built.defense = stats.defense;
+  }
+  return built;
 }
 
 export function recruitDataForPersona(personaId) {

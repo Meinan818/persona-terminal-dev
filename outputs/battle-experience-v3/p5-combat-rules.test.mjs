@@ -1,8 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { catalogPersonaChoices, createDefaultBattle } from './p5-combat-rules.js';
+import { buildBattlePersona, catalogPersonaChoices, createDefaultBattle, setPersonaOverride } from './p5-combat-rules.js';
 
 const steady = () => 0.5;
+
+test('天鹅绒房间的等级与属性覆盖会进入战斗 Persona', () => {
+  const base = buildBattlePersona('arsene');
+  setPersonaOverride('arsene', {
+    level: base.level + 2,
+    stats: {
+      hp: base.maxHp + 20,
+      sp: base.maxSp + 10,
+      attack: base.attack + 4,
+      defense: base.defense + 3,
+    },
+  });
+  try {
+    const boosted = buildBattlePersona('arsene');
+    assert.equal(boosted.level, base.level + 2);
+    assert.equal(boosted.maxHp, base.maxHp + 20);
+    assert.equal(boosted.maxSp, base.maxSp + 10);
+    assert.equal(boosted.attack, base.attack + 4);
+    assert.equal(boosted.defense, base.defense + 3);
+  } finally {
+    setPersonaOverride('arsene', null);
+  }
+});
 
 function forceHoldUp(battle) {
   for (const enemy of battle.enemies) enemy.down = true;

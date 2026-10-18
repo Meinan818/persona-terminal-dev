@@ -14,7 +14,7 @@ import {
   promoteBossPhase,
   syncAppState,
 } from './p5-battle-bridge.js';
-import { buildBattlePersona, ELEMENTS } from './p5-combat-rules.js';
+import { buildBattlePersona, ELEMENTS, setPersonaOverride } from './p5-combat-rules.js';
 import { clearSignatureFx, playAllOut, playStagger } from './p3-signature-fx.js';
 installPreviewNegotiationBridge();
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -38,6 +38,9 @@ const state = {
   allyPersonaIds: ['cait-sith', 'agathion', 'kelpie'],
   battleItems: { painkiller: 2, energyDrink: 1, revive: 1 },
   money: 8000,
+  compendium: { entries: [] },
+  materials: {},
+  personaOverrides: {},
 };
 const scrolls = new Map();
 const masks = [
@@ -58,6 +61,7 @@ const ARCANA_LABELS = {
 };
 const PARTY_CANDIDATE_IDS = ['cait-sith', 'agathion', 'kelpie', 'mandrake', 'archangel', 'principality'];
 const P5_PREVIEW_KEY = 'maskaria.p5.preview.v1';
+const BASE_MASK_IDS = new Set(['arsene', 'pixie', 'jack-o-lantern', 'silky', 'succubus', 'izanagi']);
 state.heroPersonaIds = masks.map(mask => mask.id);
 state.personaRoster = [...state.heroPersonaIds];
 state.activePersonaId = masks[state.mask].id;
@@ -102,6 +106,9 @@ function persistP5State() {
       personaRoster: state.personaRoster,
       battleItems: state.battleItems,
       money: state.money,
+      compendium: state.compendium,
+      materials: state.materials,
+      personaOverrides: state.personaOverrides,
     }));
   } catch {}
 }
@@ -119,6 +126,12 @@ function loadP5State() {
       }
     }
     if (Number.isFinite(Number(saved.money))) state.money = Math.max(0, Number(saved.money));
+    if (saved.compendium?.entries?.length) state.compendium = { entries: saved.compendium.entries };
+    if (saved.materials && typeof saved.materials === 'object') state.materials = { ...saved.materials };
+    if (saved.personaOverrides && typeof saved.personaOverrides === 'object') {
+      state.personaOverrides = { ...saved.personaOverrides };
+      for (const [id, override] of Object.entries(state.personaOverrides)) setPersonaOverride(id, override);
+    }
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;
     }
@@ -131,6 +144,22 @@ function selectPersona(personaId) {
   state.mask = index;
   state.activePersonaId = personaId;
   state.skill = 0;
+  persistP5State();
+  return true;
+}
+
+function removePersonaFromRoster(personaId) {
+  if (BASE_MASK_IDS.has(personaId)) return false;
+  state.personaRoster = state.personaRoster.filter(id => id !== personaId);
+  state.heroPersonaIds = state.heroPersonaIds.filter(id => id !== personaId);
+  const index = masks.findIndex(mask => mask.id === personaId);
+  if (index >= 0) masks.splice(index, 1);
+  delete state.personaOverrides[personaId];
+  setPersonaOverride(personaId, null);
+  if (state.activePersonaId === personaId) {
+    state.activePersonaId = masks[0]?.id ?? 'arsene';
+    state.mask = Math.max(0, masks.findIndex(mask => mask.id === state.activePersonaId));
+  }
   persistP5State();
   return true;
 }
@@ -1135,6 +1164,7 @@ function goRoom(room){clearSignatureFx();actionRun++;clearTimeout(enemyTimer);fl
 const flows=createEncounterDirector({
   state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle,persistP5State,
   addPersonaToRoster: ensurePersonaInRoster,
+  removePersonaFromRoster,
   onBossMorph(phase){
     if(!state.battle)return;
     promoteBossPhase(state.battle,{phase});

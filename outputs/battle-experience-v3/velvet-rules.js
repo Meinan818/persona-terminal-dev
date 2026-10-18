@@ -61,9 +61,18 @@ export function register(compendium, persona) {
   const source = getPersona(persona.id);
   if (!source) return { ok: false, reason: '图鉴里没有这个 Persona。' };
   const snapshot = {
-    ...source,
-    stats: { ...source.stats },
+    id: source.id,
+    name: source.name,
+    nameEn: source.nameEn,
+    level: Number.isFinite(Number(persona.level)) ? Number(persona.level) : source.level,
+    arcana: source.arcana,
+    element: source.element,
+    elementLabel: source.elementLabel,
+    sourceStats: [...(source.sourceStats ?? [])],
+    stats: { ...source.stats, ...(persona.stats ?? {}) },
+    resistance: { ...(source.resistance ?? {}) },
     skills: [...(persona.skills ?? source.skills)],
+    skillLevels: { ...(source.skillLevels ?? {}) },
   };
   const existing = compendium.entries.findIndex(entry => entry.id === source.id);
   if (existing >= 0) compendium.entries[existing] = snapshot;

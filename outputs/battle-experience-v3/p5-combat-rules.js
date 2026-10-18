@@ -12,6 +12,7 @@ import {
   buildPersonaLoadout,
   catalogPersonaChoices,
   recruitDataForPersona,
+  setPersonaOverride,
 } from './p5r-battle-adapter.js';
 
 export const ELEMENTS = P5_ELEMENTS;
@@ -792,4 +793,4 @@ export class P5Battle {
   }
 }
 
-export { buildBattlePersona, catalogPersonaChoices };
+export { buildBattlePersona, catalogPersonaChoices, setPersonaOverride };

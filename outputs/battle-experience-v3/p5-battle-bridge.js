@@ -201,7 +201,17 @@ export function buildBattleView(battle, selectedTargetId) {
     actorSp: actor?.sp ?? 0,
     actorMaxSp: actor?.maxSp ?? 1,
     actorPersona: persona?.name ?? null,
+    actorPersonaId: persona?.id ?? null,
     actorPersonaLevel: persona?.level ?? null,
+    actorPersonaArcana: persona?.arcana ?? null,
+    actorPersonaStats: persona ? {
+      strength: persona.strength,
+      magic: persona.magic,
+      endurance: persona.endurance,
+      agility: persona.agility,
+      luck: persona.luck,
+    } : null,
+    actorPersonaResistances: persona?.resistances ?? {},
     hudHp: actor?.hp ?? hero?.hp ?? 0,
     hudMaxHp: actor?.maxHp ?? hero?.maxHp ?? 1,
     hudSp: actor?.sp ?? hero?.sp ?? 0,
@@ -210,6 +220,7 @@ export function buildBattleView(battle, selectedTargetId) {
     selectedTarget: target ? {
       id: target.id,
       name: target.name,
+      level: target.level,
       hp: target.hp,
       maxHp: target.maxHp,
       attack: target.attack,
@@ -242,6 +253,7 @@ export function buildBattleView(battle, selectedTargetId) {
     enemies: battle.enemies.map(enemy => ({
       id: enemy.id,
       name: enemy.name,
+      level: enemy.level,
       hp: enemy.hp,
       maxHp: enemy.maxHp,
       element: enemy.element,

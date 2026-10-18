@@ -33,6 +33,7 @@ const state = {
   negotiation: null, enemyRage: 0, weaknessKnown: false, recruitedMasks: [], battleLoot: [],
   battle: null, battleView: null, targetId: 'primary', battleActionKey: '',
   battleEncounter: null, battleFloor: 4, battleReceipt: null, battleWon: false, partyVitals: {},
+  masterAoa: false,
   heroPersonaIds: [], personaRoster: [], activePersonaId: 'arsene',
   allyPersonaIds: ['cait-sith', 'agathion', 'kelpie'],
   battleItems: { painkiller: 2, energyDrink: 1, revive: 1 },
@@ -258,6 +259,28 @@ function openSheet(title, html) {
   $('.settings-button').setAttribute('aria-expanded',String(title==='战场设置'));
   if (!sheet.open) sheet.showModal();
 }
+
+function setMasterBattle(active) {
+  document.body.classList.toggle('master-battle', active);
+  for (const id of ['p3-master-style', 'master-battle-style']) {
+    const link = document.getElementById(id);
+    if (link) link.media = active ? 'all' : 'not all';
+  }
+  if (active) requestAnimationFrame(fitMasterBattle);
+}
+
+function fitMasterBattle() {
+  const stage = document.getElementById('master-stage');
+  if (!stage) return;
+  const mobile = matchMedia('(max-width: 760px)').matches;
+  stage.classList.toggle('m', mobile);
+  const width = mobile ? 390 : 1440;
+  const height = mobile ? 844 : 900;
+  const scale = Math.min(innerWidth / width, innerHeight / height);
+  stage.style.setProperty('--master-scale', String(scale));
+}
+
+addEventListener('resize', fitMasterBattle);
 function home() {
   const journey=flows.towerSnapshot;
   if (fixture === 'no-persona'&&!state.personaCreated) return `${heading('逆影战场','SHADOW BATTLE')}<div class="home-grid"><div class="hero-stage"><div aria-hidden="true">${figure()}</div></div><section class="mission"><h2>先遇见你的 Persona</h2><p>选择你的面具，再踏入影时间。</p>${mainButton('开始觉醒','awaken-persona')}<p class="info-note">还没有面具回应你。</p></section></div>`;
@@ -352,10 +375,113 @@ function commandCost() {
 function commandName() {
   return selectedEngineAction()?.label ?? '选择行动';
 }
+
+function masterBar(value, max, color) {
+  return `<div class="b"><i style="width:${Math.max(0, Math.min(100, value / Math.max(1, max) * 100))}%;background:${color}"></i></div>`;
+}
+
+function renderP3Battle(view) {
+  const target = view.selectedTarget;
+  const targetIndex = Math.max(0, view.enemies.findIndex(enemy => enemy.id === target?.id));
+  const selected = selectedEngineAction(view);
+  const skills = view.actions.filter(action => action.type === 'skill');
+  const baton = view.actions.filter(action => action.type === 'batonPass');
+  const seenCommandTypes = new Set(['skill-panel']);
+  const commandActions = [
+    { type: 'skill-panel', label: '技能', en: 'SKILL', detail: `${skills.length} 个可用技能`, cost: 0, disabled: !skills.length },
+    ...view.actions.filter(action => {
+      if (!['basic', 'gun', 'analyze', 'guard', 'switchMask'].includes(action.type)) return false;
+      if (seenCommandTypes.has(action.type)) return false;
+      seenCommandTypes.add(action.type);
+      return true;
+    }),
+  ];
+  const skillMarkup = skills.slice(0, 3).map((skill, index) => {
+    const key = battleActionKey(skill);
+    const active = key === state.battleActionKey || (!index && !state.battleActionKey.startsWith('skill:'));
+    return `<button class="sk ${active ? 'on' : ''}" data-battle-action="${key}" aria-pressed="${active}" ${skill.disabled ? 'disabled' : ''}><div class="bg"></div><span class="el"></span><b>${esc(skill.label)}</b><i>${esc(String(skill.id ?? '').toUpperCase())}</i><span class="ds">${esc(skill.detail ?? '')}</span><span class="c">${skill.cost ?? 0}<small>SP</small></span></button>`;
+  }).join('') || '<p class="master-empty">当前面具没有主动技能。</p>';
+  const executeAction = selected?.type === 'items' ? 'open-battle-items' : 'execute';
+  const executeLabel = state.busy ? '行动演出中…' : selected?.type === 'items' ? '道具' : `执行 · ${selected?.label ?? '选择行动'}`;
+  const party = view.party;
+  const hero = party.find(member => member.isPlayer);
+  const allies = party.filter(member => !member.isPlayer);
+  const foeMarkup = view.enemies.slice(0, 2).map((enemy, index) => `<button type="button" class="foe f${index + 1} ${enemy.active ? 'active' : ''}" data-target-id="${enemy.id}" aria-label="选择目标 ${esc(enemy.name)}" aria-pressed="${enemy.active}"><span class="refl"></span><svg class="foe-svg" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="82" fill="#05040e" stroke="#ff3f8e" stroke-width="4"></circle><ellipse cx="70" cy="90" rx="17" ry="10" fill="#ff7fb3"></ellipse><ellipse cx="130" cy="90" rx="17" ry="10" fill="#ff7fb3"></ellipse><path d="M76 132l8-8 8 8 8-8 8 8 8-8" stroke="#ff7fb3" stroke-width="5" fill="none"></path></svg><span class="asset"><em>P3-C${index + 1}</em>${esc(enemy.name)}<br>600×600</span><span class="foe-caption"><b>${enemy.down ? 'DOWN' : enemy.name}</b>${enemy.alive ? `HP ${enemy.hp} / ${enemy.maxHp}` : 'DEFEATED'}</span></button>`).join('');
+  const affinityElements = ['electric', 'fire', 'ice', 'wind', 'psy'];
+  const affinityMarkup = affinityElements.map(element => {
+    const known = target?.knownAffinities?.find(item => item.element === element);
+    return `<div class="${known?.affinity === 'weak' ? 'w' : known?.affinity === 'resist' ? 'r' : ''}"><span><em>${known?.short ?? '?'}</em></span><small>${ELEMENTS[element]?.label ?? element}</small></div>`;
+  }).join('');
+  const targetTag = target?.weaknessKnown
+    ? `弱点 · ${target.knownAffinities.find(item => item.element === target.knownAffinities.find(item => item.affinity === 'weak')?.element)?.label ?? '已发现'}`
+    : target?.knownAffinities?.length ? '耐性 · 已发现' : '弱点 · 未发现';
+  const commandMarkup = commandActions.map((action, index) => {
+    const key = action.type === 'skill-panel' ? 'skill-panel' : battleActionKey(action);
+    const isSkill = action.type === 'skill-panel';
+    const isSelected = isSkill ? state.battleActionKey.startsWith('skill:') : state.battleActionKey === key;
+    const attrs = isSkill
+      ? 'data-action="focus-skills"'
+      : action.type === 'switchMask'
+        ? 'data-action="choose-mask"'
+        : action.type === 'items'
+          ? 'data-action="open-battle-items"'
+          : `data-battle-action="${key}"`;
+    const english = action.en ?? {basic:'ATTACK',gun:'GUN',analyze:'ANALYZE',guard:'GUARD',switchMask:'PERSONA',items:'ITEM'}[action.type] ?? 'ACTION';
+    return `<button type="button" class="cmd ${isSelected ? 'on' : ''}" ${isSelected ? 'aria-pressed="true"' : ''} ${attrs} ${action.disabled ? 'disabled' : ''} style="top:${index * 72}px;width:${Math.max(150, 340 - index * 30)}px"><div class="bg"></div><small>${esc(action.detail ?? '')}</small><span>${esc(action.label ?? english)}</span><b>${english}</b></button>`;
+  }).join('');
+  const allyMarkup = allies.map((member, index) => `<div class="pm a${index + 1}" data-party-id="${member.id}"><div class="bg"></div><div class="av"><div class="asset"><div>P3-D${index + 1}</div></div></div><div class="nm"><b>${esc(member.persona ?? member.name)}</b><i>ALLY · ${member.down ? 'DOWN' : 'READY'}</i></div><div class="gs"><div class="g"><s>HP</s>${masterBar(member.hp, member.maxHp, 'var(--hp)')}<em>${member.hp}</em></div></div></div>`).join('');
+  const batonMarkup = baton.length ? `<div class="shift-targets">${baton.map(action => `<button type="button" data-battle-action="${battleActionKey(action)}">SHIFT → ${esc(action.targetId === 'ally:cait-sith' ? '猫妖精' : action.targetId === 'ally:agathion' ? '阿珈席翁' : '同伴')}</button>`).join('')}</div>` : '';
+  return `<div id="master-fit"><div id="master-stage" class="st target-${targetIndex} ${view.extraPending && view.phase === 'party' ? 'ph-down' : ''} ${view.phase === 'holdUp' ? 'ph-break' : ''} ${state.masterAoa ? 'ph-aoa' : ''}">
+    <div class="moon"></div><div class="dh">DARK HOUR</div><div class="water"></div><div class="ripple"></div><div class="ripple" style="animation-delay:2s"></div>
+    <div class="clk"><div class="t">0<span>:</span>00</div><div class="mn"></div><div class="info"><b>影时间 · ROUND ${String(view.round).padStart(2, '0')}</b><i>THE DARK HOUR</i><small>03F · 深渊规则</small></div></div>
+    <button class="back" data-action="leave-battle"><span>←</span>返回路线 <i>RETURN</i></button>
+    <div class="ord"><span class="lb">ORDER</span>${view.party.map(member => `<div class="o ${member.active ? 'now' : ''}"><small>${member.active ? 'NOW' : member.isPlayer ? 'ME' : `ALLY · HP${member.hp}`}</small><b>${esc(member.persona ?? member.name)}</b></div>`).join('')}${view.enemies.map(enemy => `<div class="o en"><small>ENEMY${enemy.down ? ' · DOWN' : ''}</small><b>${esc(enemy.name)}</b></div>`).join('')}</div>
+    <button class="set" data-action="settings"><span>⚙</span>设置</button>
+    <div class="rule"><b>ABYSS RING</b>月相 · 影时间 · 第 03 区层</div>
+    <div class="ring"><i></i><i></i><i></i><div class="sonar"></div></div><div class="tri"></div>
+    ${foeMarkup}
+    <div class="ecard"><div class="nm"><b>${esc(target?.name ?? '—')}</b><i>LV${String(target?.level ?? '--').padStart(2, '0')} · TARGET</i></div><div class="hpl"><span>敌人 HP</span><b>${target?.hp ?? 0}<small> / ${target?.maxHp ?? 0}</small></b></div><div class="bar"><i style="width:${target ? target.hp / target.maxHp * 100 : 0}%"></i></div><div class="wk">${affinityMarkup}</div><div class="brk">失衡 <s class="${target?.down ? 'f' : ''}"></s><s class="${target?.down ? 'f' : ''}"></s><span class="tag">${targetTag}</span></div></div>
+    <div class="intent"><small>NEXT · 敌方意图</small><p><strong>${esc(target?.name ?? '影子')}</strong> 下一手：${esc(target?.elementLabel ?? '未知')}系技能 · 目标随机。</p></div>
+    <div class="tarot"><div class="cv"><div class="fr"></div><div class="num">— ${String(view.round).padStart(2, '0')} —</div><div class="asset"><div><em>P3-B</em>Persona 塔罗牌面<br>${esc(view.actorPersona ?? 'PERSONA')}</div></div><div class="pn"><b>${esc(view.actorPersona ?? view.actorName ?? '—')}</b><i>PERSONA</i></div><div class="glint"></div></div><div class="sw"><button class="mask-arrow" data-action="choose-mask">‹</button>换面具消耗本回合<button class="mask-arrow" data-action="choose-mask">›</button></div></div>
+    <div class="cmds">${commandMarkup}</div>
+    <div class="skp"><div class="hd"><b>SKILL</b>${esc(view.actorName ?? '—')}技能 · ${esc(view.actorPersona ?? '')}<button class="item-chip" data-action="open-battle-items">ITEM ×${Object.values(state.battleItems ?? {}).reduce((total, qty) => total + (Number(qty) || 0), 0)}</button></div>${skillMarkup}<button class="exe" data-action="${executeAction}" ${state.busy || !selected || selected.disabled ? 'disabled' : ''}><span class="bg"></span><b>${executeLabel}</b><i>${selected?.cost ?? 0}SP → ${esc(target?.name ?? '目标')}</i><kbd>ENTER</kbd></button></div>
+    <div class="party">${allyMarkup}<div class="pm me" data-party-id="${hero?.id ?? 'hero'}"><div class="bg"></div><div class="av"><div class="asset" style="border-color:rgba(6,25,90,.5);color:var(--navy)"><div><em>P3-D</em>${esc(hero?.persona ?? 'ME')}<br>200×200</div></div></div><div class="nm"><b>${esc(hero?.persona ?? hero?.name ?? '你')}</b><i>ME · LV ${view.actorPersonaLevel ?? '—'}</i></div><div class="gs"><div class="g"><s>HP</s>${masterBar(hero?.hp ?? 0, hero?.maxHp ?? 1, '#12b37a')}<em>${hero?.hp ?? 0}</em></div><div class="g"><s>SP</s>${masterBar(hero?.sp ?? 0, hero?.maxSp ?? 1, '#e0a800')}<em>${hero?.sp ?? 0}</em></div></div><div class="theur"><svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="23" fill="none" stroke="rgba(6,25,90,.2)" stroke-width="5"></circle><circle cx="27" cy="27" r="23" fill="none" stroke="#3ff0ff" stroke-width="5" stroke-dasharray="${Math.min(100, 20 + view.batonChain * 25) * 1.45} 145" transform="rotate(-90 27 27)"></circle></svg><b>${Math.min(100, 20 + view.batonChain * 25)}%</b></div></div></div>
+    <div class="om"><div class="slab"><b>ONE <span>MORE!</span></b><i>弱点命中 · 再行动一次</i></div></div>
+    <div class="shift"><b>SHIFT ▸</b><span>把行动交给下一名同伴 · 下一击增强</span>${batonMarkup}</div>
+    <div class="ask"><div class="dim"></div><div class="cuts"><div class="asset"><div><em>P3-E</em>队员 Cut-in<br>480×760</div></div><div class="asset"><div><em>P3-E</em>队员 Cut-in</div></div><div class="asset"><div><em>P3-E</em>队员 Cut-in</div></div></div><h2>ALL-OUT ATTACK?</h2><h3>所有影子都倒下了。</h3><div class="yn"><button class="y" data-holdup-engine="allOut" ${state.busy ? 'disabled' : ''}>发动</button><button class="n2" data-action="hold-up-negotiate" ${state.busy ? 'disabled' : ''}>交涉</button><button class="n" data-holdup-engine="continue" ${state.busy ? 'disabled' : ''}>再等等</button></div></div>
+    <div class="aoa"><div class="sky"></div><div class="asset sil"><div><em>P3-F</em>总攻击：队伍剪影穿梭 / 斩线<br>2400×1120</div></div><div class="ln" style="top:240px;--r:-18deg"></div><div class="ln" style="top:420px;--r:12deg"></div><div class="ln" style="top:560px;--r:-8deg"></div><div class="dmg">ALL OUT</div><div class="fin"><b>THE DARK HOUR ENDS</b><span>影子退散 · 影时间重归安静</span></div></div>
+    ${renderP3Talk()}
+  </div></div>`;
+}
+
+function renderP3Talk() {
+  const n = state.negotiation;
+  if (!n?.active) return '';
+  const data = n.data ?? {};
+  const personality = PERSONALITIES[data.personality] ?? PERSONALITIES.proud;
+  let body = '';
+  if (n.phase === 'loading' || n.phase === 'rolling') {
+    body = `<h2>${n.phase === 'rolling' ? '它在衡量你的话。' : '影子正在看你。'}</h2><p class="talk-loading">${esc(n.statusText || '等它开口。')}</p>`;
+  } else if (n.phase === 'offer') {
+    body = `<h2>${esc(personality.label)}的影子</h2><blockquote class="talk-quote">“${esc(data.opening)}”</blockquote><p>${esc(data.demand)}</p><div class="p3-talk-options">${OPTION_ORDER.map(id => {
+      const option = NEGOTIATION_OPTIONS[id];
+      const disabled = state.busy || (id === 'bribe' && state.sp < BRIBE_COST);
+      return `<button data-negotiation-option="${id}" ${disabled ? 'disabled' : ''}><b>${esc(option.label)}<small>${esc(option.en)}</small></b><span>${esc(data.options?.[id] ?? option.blurb)}</span></button>`;
+    }).join('')}</div><button class="talk-fight" type="button" data-action="negotiation-fight">不接话，继续打</button>`;
+  } else if (n.phase === 'success') {
+    body = `<h2>它接受了条件。</h2><p>${esc(data.recruit?.name ?? '影子')} · ${esc(data.recruit?.skillName ?? '')}</p><div class="talk-actions"><button data-action="negotiation-recruit">收服为面具</button><button data-action="negotiation-reward">拿走奖励</button></div>`;
+  } else if (n.phase === 'failed') {
+    body = `<h2>交涉破裂。</h2><p>它被激怒了。下一击会更重。</p><button class="talk-fight" type="button" data-action="negotiation-fight">继续战斗</button>`;
+  } else if (n.phase === 'result') {
+    body = `<h2>${n.result?.type === 'recruit' ? `${esc(n.result.name)} 已记入名录。` : `拿到 ${esc(n.result?.item ?? '战利品')}。`}</h2><p>${n.result?.type === 'recruit' ? esc(n.result.skillDesc ?? '') : `SP +${n.result?.sp ?? 0}`}</p><div class="talk-actions"><button data-action="return-after-battle">返回高塔</button></div>`;
+  }
+  return `<div class="p3-talk"><section class="p3-talk-card"><span>HOLD UP / 交涉 · ${esc(personality.label)}</span>${body}</section></div>`;
+}
 function combat() {
-  if (state.finished) return flows.victory();
+  if (state.finished && !state.masterAoa) return flows.victory();
   const view = currentEngineView();
   if (!view) return flows.victory();
+  return renderP3Battle(view);
   const target = view.selectedTarget;
   const negotiating = Boolean(state.negotiation?.active);
   const actorTurn = view.phase === 'party' && !negotiating;
@@ -758,6 +884,7 @@ function render({ focus = false } = {}) {
   }
   const tabs=$('.mask-tabs');
   if(tabs){tabs.scrollLeft=previousMaskScroll;const active=$('[aria-pressed="true"]',tabs);if(active&&tabs.scrollWidth>tabs.clientWidth){tabs.scrollTo({left:active.offsetLeft-(tabs.clientWidth-active.offsetWidth)/2,behavior:reduced.matches?'instant':'smooth'});}}
+  if (state.fighting) requestAnimationFrame(fitMasterBattle);
   if (focus) content.focus({preventScroll:true});
 }
 let clickOrigin;
@@ -791,6 +918,7 @@ function startBattle(origin = state.room,options={}) {
   flows.battleStarted(options);
   state.origin = origin;
   state.fighting = true;
+  setMasterBattle(true);
   state.finished = false;
   state.busy = false;
   state.turnPhase = 'player';
@@ -852,6 +980,7 @@ function returnFromBattle() {
   state.battleWon=false;
   state.room=state.origin;
   history.replaceState(null,'',`#${state.room}`);
+  setMasterBattle(false);
   transition(state.room==='tower'?'ASCEND':'SHADOW',clickOrigin);
   render({focus:true});
   window.scrollTo(0,scrolls.get(state.room) ?? 0);
@@ -1103,7 +1232,7 @@ function execute(options = {}) {
     }
   });
 }
-function goRoom(room){actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.battle=null;state.battleView=null;state.battleActionKey='';state.battleReceipt=null;state.battleWon=false;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
+function goRoom(room){actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.battle=null;state.battleView=null;state.battleActionKey='';state.battleReceipt=null;state.battleWon=false;state.room=room;setMasterBattle(false);history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
 const flows=createEncounterDirector({
   state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle,
   onBossMorph(phase){
@@ -1171,6 +1300,7 @@ document.addEventListener('click',event=>{
   else if(action==='start-negotiation')startNegotiationDemo();
   else if(action==='hold-up-negotiate')beginEngineNegotiation();
   else if(action==='open-battle-items')openBattleItems();
+  else if(action==='focus-skills'){const first=currentEngineView()?.actions?.find(item=>item.type==='skill'&&!item.disabled);if(first){state.battleActionKey=battleActionKey(first);render();}else notify('当前没有可用技能。');}
   else if(action==='negotiation-fight')closeNegotiation();
   else if(action==='negotiation-recruit')chooseNegotiationOutcome('recruit');
   else if(action==='negotiation-reward')chooseNegotiationOutcome('reward');

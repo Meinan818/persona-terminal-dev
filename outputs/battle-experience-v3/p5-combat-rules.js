@@ -99,6 +99,7 @@ function makeEnemy(spec) {
   return {
     id: spec.id,
     name: spec.name,
+    level: spec.level ?? 1,
     hp: maxHp,
     maxHp,
     attack: spec.attack ?? 16,

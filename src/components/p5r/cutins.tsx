@@ -24,6 +24,8 @@ import { useBackHandler } from '@/utils/useBackHandler';
 import { useFeedbackOnce } from '@/utils/useFeedbackOnce';
 import { useModalA11y } from '@/utils/useModalA11y';
 import { zClass } from '@/utils/zIndex';
+import { useOverlayPresence } from '@/ui/overlayPause';
+import { CutInBackdrop } from './CutInBackdrop';
 
 // ── 通用小件 ─────────────────────────────────────────────────────────────────
 /** 硬角 ✕（不用字形，免得不同平台字重不一） */
@@ -111,9 +113,6 @@ const Shards = ({ delay = 0.34 }: { delay?: number }) => (
 );
 
 // ── 舞台 ─────────────────────────────────────────────────────────────────────
-/** 背景同心星层：由中心向外一圈圈铺开的暗红/黑星带（换幕之后的主结构底噪） */
-const STAGE_STAR_BANDS = ['#150001', '#3f0004', '#0f0001', '#4c0005', '#0b0000', '#340003', '#070000', '#280002', '#050000'];
-
 interface StageProps {
   isOpen: boolean;
   onClose: () => void;
@@ -143,12 +142,10 @@ const StageStarRipples = () => {
   return (
     <>
       {[0, 1, 2].map((k) => (
-        <svg
+        <CutInBackdrop
           key={k}
-          aria-hidden
-          viewBox="0 0 100 100"
-          width={640}
-          height={640}
+          kind="ripple"
+          size={640}
           className="wheel-burst pointer-events-none absolute left-1/2 top-1/2"
           style={{
             marginLeft: -320,
@@ -159,9 +156,7 @@ const StageStarRipples = () => {
             '--wb-delay': `${0.18 + k * 0.24}s`,
             '--wb-fade': 'wheel-burst-fade-cutin',
           } as CSSProperties}
-        >
-          <polygon points={starPts(50, 50, 46)} fill="none" stroke="#7d0007" strokeWidth={2.4} strokeLinejoin="miter" />
-        </svg>
+        />
       ))}
     </>
   );
@@ -178,21 +173,19 @@ const CollectLines = () => {
   }, []);
   if (gone) return null;
   return (
-    <span
-      aria-hidden
+    <CutInBackdrop
+      kind="lines"
       className="p5-collect-lines pointer-events-none absolute left-1/2 top-1/2 h-[210vmax] w-[210vmax]"
       style={{
         marginLeft: '-105vmax',
         marginTop: '-105vmax',
-        background: 'repeating-conic-gradient(from 0deg at 50% 50%, #050505 0deg 2.2deg, transparent 2.2deg 9deg)',
-        WebkitMaskImage: 'radial-gradient(circle at 50% 50%, transparent 16%, #000 44%)',
-        maskImage: 'radial-gradient(circle at 50% 50%, transparent 16%, #000 44%)',
       }}
     />
   );
 };
 
 const P5CutInStage = ({ isOpen, onClose, ariaLabel, autoCloseMs, onShown, maxW = 384, overlayExtras, children }: StageProps) => {
+  useOverlayPresence(isOpen);
   const containerRef = useModalA11y(isOpen, onClose);
   useBackHandler(isOpen, onClose);
   useAutoClose(isOpen, autoCloseMs, onClose);
@@ -215,12 +208,12 @@ const P5CutInStage = ({ isOpen, onClose, ariaLabel, autoCloseMs, onShown, maxW =
           <motion.div
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-1/2"
-            style={{ x: '-50%', y: '-50%' }}
+            style={{ x: '-50%', y: '-50%', willChange: anim ? 'transform, opacity' : undefined }}
             initial={anim ? { scale: 0.42, rotate: -22, opacity: 0 } : false}
             animate={{ scale: 1, rotate: -9, opacity: 1 }}
             transition={{ duration: 0.85, delay: 0.06, ease: [0.16, 1, 0.3, 1] }}
           >
-            <P5RingStar size={780} step={0.085} rings={STAGE_STAR_BANDS} />
+            <CutInBackdrop kind="bands" size={780} />
           </motion.div>
           {/* 星形涟漪：三圈描边星接力向外扩，坐实「辐射」这件事（CSS 合成器版，见组件注释） */}
           {anim && <StageStarRipples />}
@@ -255,7 +248,7 @@ const P5CutInStage = ({ isOpen, onClose, ariaLabel, autoCloseMs, onShown, maxW =
             aria-label={ariaLabel}
             onClick={(e) => e.stopPropagation()}
             className="relative z-10 w-full"
-            style={{ maxWidth: maxW }}
+            style={{ maxWidth: maxW, willChange: anim ? 'transform, opacity' : undefined }}
             initial={anim ? { scale: 1.75, rotate: -13, opacity: 0 } : false}
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             exit={{ scale: 0.72, rotate: 9, opacity: 0 }}
@@ -328,16 +321,12 @@ export const LevelUpP5 = ({ attributeName, newLevel, isOpen, onClose, masterySta
           {/* v2.7.0.2f：framer 逐帧 scale 无限循环 = 合成器反复重栅格化 620px 纹理，
               弹窗开多久闪多久（与轮盘表盘同款病灶，用户上报「疯狂闪烁」）。
               改 .p5-rings-zoom CSS 动画：栅格化一次，之后全程合成器。 */}
-          <svg
-            aria-hidden
-            viewBox="0 0 200 200"
+          <CutInBackdrop
+            kind="rings"
+            size={620}
             className="p5-rings-zoom pointer-events-none absolute left-1/2 top-1/2"
             style={{ width: 620, height: 620, marginLeft: -310, marginTop: -310 }}
-          >
-            {[6, 9, 13.5, 20.3, 30.4, 45.6, 68.4].map((r) => (
-              <circle key={r} cx="100" cy="100" r={r} fill="none" stroke="#e8464e" strokeWidth={r * 0.15} />
-            ))}
-          </svg>
+          />
           {/* 巨星：灰影星在后、纸白星在前（稿上是错位双层） */}
           {/* 位移写进 motion 的 x（用 -translate-x-1/2 会被 motion 的 transform 覆盖掉） */}
           <motion.div
@@ -453,15 +442,12 @@ export const TodoCompleteP5 = ({ isOpen, onClose, title, totalPoints, unlockHint
               所以 linear 循环看上去就是「永远在向外扩散的同心圆环」，没有接缝 */}
           <span aria-hidden className="pointer-events-none absolute inset-[7px] overflow-hidden" style={{ clipPath: TODO_PANEL_SHAPE }}>
             {/* v2.7.0.2f：同升级卡——无限环改 .p5-rings-zoom 合成器动画 */}
-            <svg
-              viewBox="0 0 200 200"
+            <CutInBackdrop
+              kind="rings"
+              size={640}
               className="p5-rings-zoom absolute left-1/2 top-1/2"
               style={{ width: 640, height: 640, marginLeft: -320, marginTop: -320 }}
-            >
-              {[6, 9, 13.5, 20.3, 30.4, 45.6, 68.4].map((r) => (
-                <circle key={r} cx="100" cy="100" r={r} fill="none" stroke="#e8464e" strokeWidth={r * 0.15} />
-              ))}
-            </svg>
+            />
           </span>
 
           {/* 巨星 + 黑勾：整体斜置，贴纸叠层 = 黑硬影 / 纸白不规则粗描边 / 黑粗锁边 / 纸面 */}

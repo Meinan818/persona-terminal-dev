@@ -12,6 +12,7 @@ import { useBackHandler } from '@/utils/useBackHandler';
 import { useFeedbackOnce } from '@/utils/useFeedbackOnce';
 import { useModalA11y } from '@/utils/useModalA11y';
 import { zClass } from '@/utils/zIndex';
+import { useOverlayPresence } from '@/ui/overlayPause';
 
 /**
  * 任务完成庆祝 —— P7.2 第一波收编进 CelebrationCutIn 基座。
@@ -69,6 +70,7 @@ const CHECK_BURST = [
  * 白色大斜带从右滑入 + 一道蓝青高光从左向右划过 + 巨大青色碎裂勾 + 幽灵词 + 音符雨。
  */
 export const BandCutInP3 = ({ isOpen, onClose, title, totalPoints, unlockHint, eyebrow, ghost }: BandCutInP3Props) => {
+  useOverlayPresence(isOpen);
   const containerRef = useModalA11y(isOpen, onClose);
   useBackHandler(isOpen, onClose);
   useAutoClose(isOpen, 3000, onClose);

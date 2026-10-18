@@ -26,6 +26,7 @@ import { useBackHandler } from '@/utils/useBackHandler';
 import { useFeedbackOnce } from '@/utils/useFeedbackOnce';
 import { useModalA11y } from '@/utils/useModalA11y';
 import { zClass } from '@/utils/zIndex';
+import { useOverlayPresence } from '@/ui/overlayPause';
 import { MusicalNotes } from '@/components/MusicalNotes';
 
 const CREAM = '#fff6d0';
@@ -172,6 +173,7 @@ const P4CutInStage = ({ isOpen, onClose, ariaLabel, autoCloseMs, onShown, ringTo
   children: ReactNode;
 }) => {
   const containerRef = useModalA11y(isOpen, onClose);
+  useOverlayPresence(isOpen);
   useBackHandler(isOpen, onClose);
   useAutoClose(isOpen, autoCloseMs, onClose);
   useFeedbackOnce(isOpen, onShown);

@@ -173,9 +173,9 @@ function Aurora({ darkMode, frozen, resumeKey }: { darkMode?: boolean; frozen?: 
   const sync = useSyncOnce(resumeKey);
   const d = (-sync).toFixed(2);
   const blobs = [
-    { anim: `aurora-a 22s ease-in-out ${d}s infinite`, size: '42vmax', top: '-12%', left: '-8%',  opacity: baseOp },
-    { anim: `aurora-b 28s ease-in-out ${d}s infinite`, size: '38vmax', top: '32%',  left: '46%',  opacity: baseOp * 0.85 },
-    { anim: `aurora-c 18s ease-in-out ${d}s infinite`, size: '32vmax', top: '58%',  left: '-4%',  opacity: baseOp * 0.7 },
+    { name: 'aurora-a', duration: 22, size: '42vmax', top: '-12%', left: '-8%',  opacity: baseOp },
+    { name: 'aurora-b', duration: 28, size: '38vmax', top: '32%',  left: '46%',  opacity: baseOp * 0.85 },
+    { name: 'aurora-c', duration: 18, size: '32vmax', top: '58%',  left: '-4%',  opacity: baseOp * 0.7 },
   ];
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', contain: 'strict' }}>
@@ -192,7 +192,12 @@ function Aurora({ darkMode, frozen, resumeKey }: { darkMode?: boolean; frozen?: 
             // 用更大的 radial-gradient 中间段模拟 blur，避免实时 filter: blur
             background: 'radial-gradient(circle, var(--color-primary) 0%, var(--color-primary) 15%, transparent 65%)',
             opacity: b.opacity,
-            animation: b.anim,
+            // 不混用 animation 简写和 animationPlayState：恢复相位时简写会重置暂停状态。
+            animationName: b.name,
+            animationDuration: `${b.duration}s`,
+            animationTimingFunction: 'ease-in-out',
+            animationDelay: `${d}s`,
+            animationIterationCount: 'infinite',
             animationPlayState: playState(frozen),
             willChange: frozen ? undefined : 'transform',
             transform: 'translateZ(0)',
@@ -235,7 +240,11 @@ function Particles({ darkMode, frozen, resumeKey }: { darkMode?: boolean; frozen
             borderRadius: '50%',
             background: 'var(--color-primary)',
             opacity: op,
-            animation: `particle-float-${p.v} ${p.dur}s ease-in ${(p.delay - sync).toFixed(2)}s infinite`,
+            animationName: `particle-float-${p.v}`,
+            animationDuration: `${p.dur}s`,
+            animationTimingFunction: 'ease-in',
+            animationDelay: `${(p.delay - sync).toFixed(2)}s`,
+            animationIterationCount: 'infinite',
             animationPlayState: playState(frozen),
             // both：delay 还没走完时先套 0% 帧（opacity:0）。否则那几颗正 delay 的粒子
             // 会以 opacity:0.35 干杵在屏幕底缘等自己出场——冷启动那几秒底边一排静止小点
@@ -270,7 +279,11 @@ function Wave({ darkMode, frozen, resumeKey }: { darkMode?: boolean; frozen?: bo
             'radial-gradient(ellipse at 50% 50%, var(--color-primary) 0%, transparent 40%)',
           ].join(', '),
           opacity: op,
-          animation: `wave-shift 20s ease-in-out ${(-sync).toFixed(2)}s infinite`,
+          animationName: 'wave-shift',
+          animationDuration: '20s',
+          animationTimingFunction: 'ease-in-out',
+          animationDelay: `${(-sync).toFixed(2)}s`,
+          animationIterationCount: 'infinite',
           animationPlayState: playState(frozen),
           willChange: frozen ? undefined : 'transform',
           transform: 'translateZ(0)',
@@ -293,7 +306,11 @@ function Pulse({ darkMode, frozen, resumeKey }: { darkMode?: boolean; frozen?: b
     backgroundImage: `linear-gradient(${deg}deg, var(--color-primary) 1px, transparent 1px)`,
     backgroundSize: size,
     opacity: initialOpacity,
-    animation: `${animName} 4s ease-in-out ${delay}s infinite`,
+    animationName: animName,
+    animationDuration: '4s',
+    animationTimingFunction: 'ease-in-out',
+    animationDelay: `${delay}s`,
+    animationIterationCount: 'infinite',
     animationPlayState: playState(frozen),
     animationFillMode: 'both' as const,
     willChange: frozen ? undefined : 'opacity',

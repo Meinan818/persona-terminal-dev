@@ -10,6 +10,7 @@ import { useModalA11y } from '@/utils/useModalA11y';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { zClass } from '@/utils/zIndex';
 import { P4Flower, P4Sparkle } from '@/ui/p4Kit';
+import { useOverlayPresence } from '@/ui/overlayPause';
 
 /**
  * CelebrationCutIn —— 庆祝弹窗基座（UI_AUDIT_V2.5.md §5：收口庆祝四件套
@@ -76,6 +77,7 @@ export const CelebrationCutIn = ({
   overlayExtras,
 }: CelebrationCutInProps) => {
   const titleId = useId();
+  useOverlayPresence(isOpen);
   const containerRef = useModalA11y(isOpen, onClose);
   useBackHandler(isOpen, onClose);
   useAutoClose(isOpen, autoCloseMs, onClose);

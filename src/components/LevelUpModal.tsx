@@ -12,6 +12,7 @@ import { useBackHandler } from '@/utils/useBackHandler';
 import { useFeedbackOnce } from '@/utils/useFeedbackOnce';
 import { useModalA11y } from '@/utils/useModalA11y';
 import { zClass } from '@/utils/zIndex';
+import { useOverlayPresence } from '@/ui/overlayPause';
 
 /**
  * 属性升级庆祝 —— P7.2 第一波收编：视觉内容保留，行为（portal/celebration 层/
@@ -32,6 +33,7 @@ interface LevelUpModalProps {
 
 /** P3R 全屏升级演出（p3-modal-05 1:1） */
 const LevelUpP3 = ({ attributeName, newLevel, isOpen, onClose, masteryStars }: LevelUpModalProps) => {
+  useOverlayPresence(isOpen);
   const stars = masteryStars ?? 0;
   const isMastery = stars > 0;
   const containerRef = useModalA11y(isOpen, onClose);

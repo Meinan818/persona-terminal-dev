@@ -13,6 +13,7 @@ import { ConfidantRankUpCutInP5 } from '@/components/cooperation/ConfidantRankUp
 import { ConfidantRankUpCutInP4 } from '@/components/cooperation/ConfidantRankUpCutInP4';
 import { EXP, OVER, rand, compactFx, PREVIEW_CONFIDANT, rankUpVariantFor } from '@/components/cooperation/confidantRankUpShared';
 import '@/styles/confidant-rankup.css';
+import { useOverlayPresence } from '@/ui/overlayPause';
 
 /**
  * DEV 预览直达 `?starshift=1`：**模块加载时读一次**。
@@ -46,7 +47,11 @@ const DEV_STARSHIFT_DIRECT = import.meta.env.DEV && typeof window !== 'undefined
  * p5 时根本不会渲染到它，而 p4 / neutral 仍然走它，于是「本期不出新演出」的既有行为一字未改。
  */
 export function ConfidantRankUpCutIn() {
-  const variant = rankUpVariantFor(useUiChannel());
+  const channel = useUiChannel();
+  const variant = rankUpVariantFor(channel);
+  const notice = useAppStore(s => s.confidantRankUpQueue[0]);
+  const modalBlocker = useAppStore(s => s.modalBlocker);
+  useOverlayPresence(!!notice && !modalBlocker && channel !== 'neutral');
   // ⚠ 预览入队（?rankup）必须挂在**这一层**，不能留在 P3 组件里：
   //   wrapper 在 p5 频道下直接返回 P5 版、根本不渲染 P3 —— 若入队逻辑留在 P3，
   //   红频道下 ?rankup 会「点开什么都没发生」（2026-10-16 实测发现，

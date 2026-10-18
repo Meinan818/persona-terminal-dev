@@ -4,7 +4,7 @@
 
 ## 当前续办入口 · 2026-10-19 01:12 · 接入 P3 优化版母版与专属失衡/总攻击演出
 
-- **现场**：分支 `codex/p5r-compendium-data`。本次基于用户发来的 `MASKARIA-P3-shadow-hour-v2.zip` 替换 demo 视觉基线；新增 P3 主题资源、舞台缩放、Barlow/P4 字体和 `p3-signature-fx`。未 Push、未部署；正式 `src/`、后端、存档、生产未改。
+- **现场**：分支 `codex/p5r-compendium-data`，业务提交 `5e60961 feat(preview): 接入P3优化版母版与失衡总攻击演出`。本次基于用户发来的 `MASKARIA-P3-shadow-hour-v2.zip` 替换 demo 视觉基线；新增 P3 主题资源、舞台缩放、Barlow/P4 字体和 `p3-signature-fx`。未 Push、未部署；正式 `src/`、后端、存档、生产未改。
 - **用户决定**：改进版 Demo 作为 P3 视觉与交互母版；用户指定 `D:\下载\p3-shadow-hour.html` 中的“失衡 ONE MORE”和“总攻击”两段动画，要求保留素材位。P3-F（队伍剪影 / 斩线 2400×1120）继续以虚线素材位显示；P3-B/C/D 等原有素材位未移除。
 - **本轮完成**：
   - `outputs/battle-experience-v3` 接入 `theme-base.css`、`theme-p3.css`、`src-p3-*`、`shadow-hour.js`，默认 `?theme=p3`；桌面 1440×900 / 手机 390×844 设计稿缩放。

@@ -4,6 +4,7 @@ import {
   createExplorationState,
   createFloorMap,
   disarmTrap,
+  listen,
   move,
   openChest,
   resolveEncounter,
@@ -86,4 +87,35 @@ test('越界移动失败，警戒满会进入警报', () => {
   state.security = 99;
   assert.equal(move(state, 'right').ok, true);
   assert.equal(state.alert, true);
+});
+
+test('钥匙可以在出口直接开锁，并消耗一把', () => {
+  const map = createFloorMap({ floor: 1, seed: 7 });
+  const state = createExplorationState(map);
+  const exit = map.rooms[`${map.exit.x},${map.exit.y}`];
+  state.player = { x: exit.x - 1, y: exit.y };
+  state.keys = 1;
+  const result = move(state, 'right');
+  assert.equal(result.ok, true);
+  assert.equal(state.exitUnlocked, true);
+  assert.equal(state.keys, 0);
+});
+
+test('倾听会揭示更远的房间，但消耗一步并提高警戒', () => {
+  const state = createExplorationState(createFloorMap({ floor: 1, seed: 7 }));
+  const beforeTime = state.time;
+  const beforeSecurity = state.security;
+  assert.equal(listen(state).ok, true);
+  assert.equal(state.time, beforeTime - 1);
+  assert.ok(state.security > beforeSecurity);
+  assert.ok(visibleRooms(state).length >= 3);
+});
+
+test('步数用完后不能再移动', () => {
+  const state = createExplorationState(createFloorMap({ floor: 1, seed: 7 }), { maxTime: 1 });
+  assert.equal(move(state, 'right').ok, true);
+  assert.equal(state.time, 0);
+  const blocked = move(state, 'down');
+  assert.equal(blocked.ok, false);
+  assert.equal(state.ended, 'timeout');
 });

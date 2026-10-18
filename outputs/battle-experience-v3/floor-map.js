@@ -12,6 +12,7 @@
 
 export const FLOOR_WIDTH = 5;
 export const FLOOR_HEIGHT = 5;
+export const FLOOR_TIME = 16;
 
 const DIRECTIONS = {
   up: { x: 0, y: -1 },
@@ -40,7 +41,7 @@ function makeRoom(x, y, type = 'empty') {
     y,
     type,
     revealed: false,
-    cleared: !['guardian', 'shadow', 'chest', 'key', 'trap', 'exit'].includes(type),
+    cleared: !['guardian', 'shadow', 'chest', 'key', 'trap', 'event', 'exit'].includes(type),
     visited: false,
   };
 }
@@ -132,6 +133,16 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
     shadowRoom.type = 'shadow';
     shadowRoom.cleared = false;
   }
+  const secondShadow = placeSide();
+  if (secondShadow) {
+    secondShadow.type = 'shadow';
+    secondShadow.cleared = false;
+  }
+  const secondChest = placeSide();
+  if (secondChest) {
+    secondChest.type = 'chest';
+    secondChest.cleared = false;
+  }
 
   return {
     floor,
@@ -148,16 +159,19 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
   };
 }
 
-export function createExplorationState(map) {
+export function createExplorationState(map, { maxTime = FLOOR_TIME, security = 0, keys = 0 } = {}) {
   const state = {
     map,
     player: { ...map.start },
-    security: 0,
-    keys: 0,
+    security: Math.max(0, Math.min(100, Number(security) || 0)),
+    keys: Math.max(0, Number(keys) || 0),
     guardianDefeated: false,
     exitUnlocked: false,
-    alert: false,
+    alert: security >= 100,
     turn: 0,
+    maxTime: Math.max(1, Number(maxTime) || FLOOR_TIME),
+    time: Math.max(0, Number(maxTime) || FLOOR_TIME),
+    listened: new Set(),
     history: [],
     ended: null,
   };
@@ -174,6 +188,10 @@ function bumpSecurity(state, amount) {
 
 export function move(state, direction) {
   if (!state || state.ended) return { ok: false, reason: '探索已经结束。' };
+  if (state.time <= 0) {
+    state.ended = 'timeout';
+    return { ok: false, reason: '这一层的月光已经用完了。' };
+  }
   const delta = DIRECTIONS[direction];
   if (!delta) return { ok: false, reason: '没有这个方向。' };
   const next = { x: state.player.x + delta.x, y: state.player.y + delta.y };
@@ -183,7 +201,12 @@ export function move(state, direction) {
   const room = state.map.rooms[keyOf(next.x, next.y)];
   if (!room) return { ok: false, reason: '前面是墙。' };
   if (room.type === 'exit' && !state.exitUnlocked) {
-    return { ok: false, reason: '门还锁着。先找到守卫或钥匙。' };
+    if (state.keys > 0) {
+      state.keys -= 1;
+      state.exitUnlocked = true;
+    } else {
+      return { ok: false, reason: '门还锁着。先找到守卫或钥匙。' };
+    }
   }
   if ((room.type === 'guardian' || room.type === 'shadow') && !room.cleared) {
     state.player = next;
@@ -191,6 +214,7 @@ export function move(state, direction) {
     reveal(state, next.x, next.y);
     bumpSecurity(state, 8);
     state.turn += 1;
+    state.time = Math.max(0, state.time - 1);
     return { ok: true, room, encounter: { roomId: room.id, type: room.type, guardian: room.type === 'guardian' } };
   }
 
@@ -199,8 +223,24 @@ export function move(state, direction) {
   reveal(state, next.x, next.y);
   bumpSecurity(state, 1);
   state.turn += 1;
+  state.time = Math.max(0, state.time - 1);
   state.history.push({ turn: state.turn, roomId: room.id, type: room.type });
   return { ok: true, room };
+}
+
+export function listen(state) {
+  if (!state || state.ended) return { ok: false, reason: '探索已经结束。' };
+  if (state.time <= 0) return { ok: false, reason: '这一层的月光已经用完了。' };
+  state.time = Math.max(0, state.time - 1);
+  state.turn += 1;
+  bumpSecurity(state, 4);
+  state.listened.add(`${state.player.x},${state.player.y}`);
+  reveal(state, state.player.x, state.player.y);
+  for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) {
+    const room = state.map.rooms[keyOf(state.player.x + dx, state.player.y + dy)];
+    if (room) room.revealed = true;
+  }
+  return { ok: true, time: state.time, security: state.security };
 }
 
 export function resolveEncounter(state, { won = false } = {}) {
@@ -219,6 +259,15 @@ export function resolveEncounter(state, { won = false } = {}) {
     bumpSecurity(state, 5);
   }
   return { ok: true, won: true, guardianDefeated: state.guardianDefeated };
+}
+
+export function unlockExitWithKey(state) {
+  const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
+  if (!room || room.type !== 'exit' || state.exitUnlocked) return false;
+  if (state.keys <= 0) return false;
+  state.keys -= 1;
+  state.exitUnlocked = true;
+  return true;
 }
 
 export function takeKey(state) {
@@ -259,6 +308,14 @@ export function restInSafeRoom(state) {
   bumpSecurity(state, -20);
   state.alert = false;
   return true;
+}
+
+export function roomAt(state, x, y) {
+  return state.map.rooms[keyOf(x, y)] ?? null;
+}
+
+export function currentRoom(state) {
+  return roomAt(state, state.player.x, state.player.y);
 }
 
 export function visibleRooms(state) {

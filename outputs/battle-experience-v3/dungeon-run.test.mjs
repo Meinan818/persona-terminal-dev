@@ -157,3 +157,70 @@ test('无尽模式击败 Boss 后回到下一轮，而不是结束', () => {
   assert.equal(model.journey.floor, 0);
   assert.ok(model.journey.security >= 20);
 });
+
+test('房间地图从第一层开始，步数与警戒进入 run', () => {
+  const model = createDungeonRun();
+  model.start();
+  const explore = model.beginFloor(1);
+  assert.ok(explore);
+  assert.equal(model.journey.floor, 1);
+  assert.equal(model.journey.timeLeft, 16);
+  assert.equal(model.journey.timeMax, 16);
+  assert.equal(model.journey.map.width, 5);
+});
+
+test('地图遭遇守卫后必须结算战斗，击破才解锁出口', () => {
+  const model = createDungeonRun();
+  model.start();
+  const explore = model.beginFloor(1);
+  const map = model.journey.map;
+  const guardian = map.rooms[map.guardianId];
+  const neighbor = [
+    { x: guardian.x - 1, y: guardian.y, direction: 'right' },
+    { x: guardian.x + 1, y: guardian.y, direction: 'left' },
+    { x: guardian.x, y: guardian.y - 1, direction: 'down' },
+    { x: guardian.x, y: guardian.y + 1, direction: 'up' },
+  ].find(point => point.x >= 0 && point.y >= 0 && point.x < map.width && point.y < map.height);
+  explore.player = { x: neighbor.x, y: neighbor.y };
+  const moved = model.mapMove(neighbor.direction);
+  assert.equal(moved.pending.kind, 'guardian');
+  assert.equal(explore.exitUnlocked, false);
+  assert.equal(model.resolveMapBattle(true), true);
+  assert.equal(explore.exitUnlocked, true);
+  assert.equal(model.journey.pending, null);
+});
+
+test('走到出口会进入下一层，并重置本层步数', () => {
+  const model = createDungeonRun();
+  model.start();
+  const explore = model.beginFloor(1);
+  const map = model.journey.map;
+  const exit = map.rooms[`${map.exit.x},${map.exit.y}`];
+  explore.player = { x: exit.x, y: exit.y };
+  explore.exitUnlocked = true;
+  explore.time = 3;
+  assert.equal(model.mapAct('leave-floor').ok, true);
+  assert.equal(model.journey.floor, 2);
+  assert.equal(model.journey.timeLeft, 16);
+  assert.ok(model.journey.map);
+});
+
+test('第十层出口接预告信，送信后才能进入塔顶 Boss', () => {
+  const model = createDungeonRun();
+  model.start();
+  const explore = model.beginFloor(10);
+  const map = model.journey.map;
+  const exit = map.rooms[`${map.exit.x},${map.exit.y}`];
+  explore.player = { x: exit.x, y: exit.y };
+  explore.exitUnlocked = true;
+  assert.equal(model.mapAct('leave-floor').ok, true);
+  assert.equal(model.journey.floor, CALLING_FLOOR);
+  assert.equal(model.journey.pending.kind, 'calling');
+  assert.equal(model.sendCallingCard(), true);
+  assert.equal(model.resolve({ label: '预告信已送出' }), true);
+  assert.equal(model.advance(), true);
+  assert.equal(model.journey.selected, 'boss');
+  const boss = model.enter();
+  assert.equal(boss.kind, 'boss');
+  assert.equal(model.journey.floor, DUNGEON_FLOORS);
+});

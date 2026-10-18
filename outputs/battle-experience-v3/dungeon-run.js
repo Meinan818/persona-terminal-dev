@@ -7,6 +7,19 @@
 
 import { encounterFor } from './tower-journey.js';
 import { adjustRoute, getStratum } from './tower-registry.js';
+import {
+  createExplorationState,
+  createFloorMap,
+  currentRoom,
+  disarmTrap as disarmMapTrap,
+  listen as listenOnMap,
+  move as moveOnMap,
+  openChest as openMapChest,
+  resolveEncounter,
+  restInSafeRoom,
+  takeKey as takeMapKey,
+  triggerTrap,
+} from './floor-map.js';
 
 export const DUNGEON_FLOORS = 12;
 export const SAFE_FLOORS = [4, 8];
@@ -65,6 +78,12 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     cycle: 1,
     nonCombatUsed: false,
     safeRoomPending: false,
+    map: null,
+    explore: null,
+    timeLeft: 0,
+    timeMax: 0,
+    mapMessage: '',
+    timeout: false,
   };
 
   const choices = () => {
@@ -95,6 +114,12 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
       cycle: 1,
       nonCombatUsed: false,
       safeRoomPending: false,
+      map: null,
+      explore: null,
+      timeLeft: 0,
+      timeMax: 0,
+      mapMessage: '',
+      timeout: false,
     });
   };
 
@@ -261,6 +286,184 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     return true;
   };
 
+  const syncExplore = () => {
+    if (!journey.explore) return;
+    journey.security = journey.explore.security;
+    journey.keys = journey.explore.keys;
+    journey.alert = journey.explore.alert;
+    journey.timeLeft = journey.explore.time;
+    journey.timeMax = journey.explore.maxTime;
+  };
+
+  const beginFloor = (floor = journey.floor + 1) => {
+    if (journey.ended) return null;
+    if (floor > journey.maxFloor) return null;
+    journey.floor = floor;
+    journey.pending = null;
+    journey.mapMessage = '';
+    journey.timeout = false;
+    if (floor === CALLING_FLOOR || floor >= journey.maxFloor) {
+      journey.map = null;
+      journey.explore = null;
+      return null;
+    }
+    const stratumIndex = ['echo', 'vanity', 'escape'].indexOf(journey.stratum);
+    const map = createFloorMap({
+      floor,
+      stratum: journey.stratum,
+      seed: floor * 7919 + journey.cycle * 104729 + Math.max(0, stratumIndex) * 31,
+    });
+    const explore = createExplorationState(map, {
+      maxTime: 16,
+      security: journey.security,
+      keys: journey.keys,
+    });
+    journey.map = map;
+    journey.explore = explore;
+    syncExplore();
+    return explore;
+  };
+
+  const encounterForRoom = (kind, floor) => {
+    const base = encounterFor(floor, 'mob');
+    if (kind !== 'guardian') return base;
+    return {
+      ...base,
+      name: floor >= 10 ? '回声的看门人' : '守层的假面',
+      level: base.level + 1,
+      maxHp: Math.round(base.maxHp * 1.45),
+      attack: Math.round(base.attack * 1.22),
+      defense: base.defense + 2,
+    };
+  };
+
+  const mapMove = direction => {
+    if (!journey.explore || journey.ended) return { ok: false, reason: '这一层已经结束。' };
+    const result = moveOnMap(journey.explore, direction);
+    syncExplore();
+    if (!result.ok) {
+      if (journey.explore.ended === 'timeout') {
+        journey.timeout = true;
+        journey.ended = 'timeout';
+      }
+      return result;
+    }
+    const room = result.room;
+    if (result.encounter) {
+      const kind = room.type === 'guardian' ? 'guardian' : 'shadow';
+      const encounter = { ...encounterForRoom(kind, journey.floor), ambush: journey.explore.alert };
+      journey.pending = {
+        floor: journey.floor,
+        kind,
+        roomId: room.id,
+        resolved: false,
+        encounter,
+        ambush: journey.explore.alert,
+      };
+      return { ...result, pending: journey.pending };
+    }
+    if (room.type === 'safe') {
+      journey.pending = { floor: journey.floor, kind: 'safe', roomId: room.id, resolved: false, rested: false };
+    } else if (['chest', 'key', 'trap', 'event'].includes(room.type) && !room.cleared) {
+      journey.pending = { floor: journey.floor, kind: room.type, roomId: room.id, resolved: false };
+    }
+    if (room.type === 'exit' && journey.explore.exitUnlocked) {
+      journey.mapMessage = '门已经开了。确认后进入下一层。';
+    }
+    return result;
+  };
+
+  const mapAct = action => {
+    if (!journey.explore || journey.ended) return { ok: false, reason: '这一层已经结束。' };
+    if (action === 'listen') {
+      const result = listenOnMap(journey.explore);
+      syncExplore();
+      return result;
+    }
+    const room = currentRoom(journey.explore);
+    if (!room) return { ok: false, reason: '这里没有房间。' };
+    if (action === 'take-key') {
+      const ok = takeMapKey(journey.explore);
+      syncExplore();
+      if (ok) journey.pending = null;
+      return { ok };
+    }
+    if (action === 'open-chest') {
+      const ok = openMapChest(journey.explore);
+      if (ok) {
+        journey.loot.push({ floor: journey.floor, label: '回响之线', sp: 10 });
+        journey.pending = null;
+        journey.mapMessage = '月匣已打开，回响之线收进背包。';
+      }
+      return { ok };
+    }
+    if (action === 'disarm-trap') {
+      const ok = disarmMapTrap(journey.explore);
+      syncExplore();
+      if (ok) journey.pending = null;
+      return { ok };
+    }
+    if (action === 'force-trap') {
+      const ok = triggerTrap(journey.explore);
+      syncExplore();
+      if (ok) journey.pending = null;
+      return { ok };
+    }
+    if (action === 'rest') {
+      const ok = restInSafeRoom(journey.explore);
+      syncExplore();
+      if (ok) journey.pending = null;
+      return { ok };
+    }
+    if (action === 'event-heal' || action === 'event-buff') {
+      if (room.type !== 'event' || room.cleared) return { ok: false };
+      room.cleared = true;
+      journey.pending = null;
+      journey.mapMessage = action === 'event-heal' ? '水面映出一点暖意。' : '你把月光收进了掌心。';
+      return { ok: true };
+    }
+    if (action === 'leave-floor') return { ok: completeFloor() };
+    return { ok: false, reason: '这个房间没有这个动作。' };
+  };
+
+  const resolveMapBattle = won => {
+    if (!journey.explore || !journey.pending) return false;
+    const kind = journey.pending.kind;
+    resolveEncounter(journey.explore, { won });
+    syncExplore();
+    if (!won) {
+      journey.ended = 'defeat';
+      return false;
+    }
+    journey.history.push({
+      floor: journey.floor,
+      kind,
+      label: kind === 'guardian' ? '守卫倒下' : '影子散去',
+      detail: kind === 'guardian' ? '出口已解锁。' : `警戒 ${journey.security}%`,
+    });
+    journey.mapMessage = kind === 'guardian' ? '守卫倒下，出口解锁。' : '影子散了，继续走。';
+    journey.pending = null;
+    return true;
+  };
+
+  const completeFloor = () => {
+    if (!journey.explore || !journey.explore.exitUnlocked) return false;
+    const room = currentRoom(journey.explore);
+    if (!room || room.type !== 'exit') return false;
+    journey.history.push({ floor: journey.floor, kind: 'exit', label: '层门已开', detail: `剩余 ${journey.explore.time} 步` });
+    journey.map = null;
+    journey.explore = null;
+    journey.pending = null;
+    journey.mapMessage = '';
+    if (journey.floor >= 10) {
+      journey.floor = CALLING_FLOOR;
+      journey.pending = { floor: CALLING_FLOOR, kind: 'calling', resolved: false };
+      return true;
+    }
+    beginFloor(journey.floor + 1);
+    return true;
+  };
+
   return {
     journey,
     choices,
@@ -278,5 +481,11 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     forceTrap,
     setStratum,
     startEndless,
+    beginFloor,
+    mapMove,
+    mapAct,
+    resolveMapBattle,
+    completeFloor,
+    syncExplore,
   };
 }

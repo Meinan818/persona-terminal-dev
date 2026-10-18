@@ -11,6 +11,7 @@ import {grantPersonaXp} from './persona-progress.js';
 import {TOWER_STRATA,getStratum} from './tower-registry.js';
 import {createRequest,recordRequest,requestForStratum} from './requests.js';
 import {NPCS,trustLabel} from './npcs.js';
+import {currentRoom,visibleRooms} from './floor-map.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -265,12 +266,43 @@ export function createTowerFlow(api){
     raf=requestAnimationFrame(tick);
   }
   function show(next){stop();page=next;render({focus:true});scrollTo(0,0);}
+  let mapCenterRun=0,mapDrag=null;
+  function centerMapViewport(smooth=false){
+    const view=document.querySelector('[data-map-viewport]');
+    const cell=view?.querySelector('.map-cell.is-current');
+    if(!view||!cell)return false;
+    const viewRect=view.getBoundingClientRect(),cellRect=cell.getBoundingClientRect();
+    const left=view.scrollLeft+cellRect.left-viewRect.left+cellRect.width/2-view.clientWidth/2;
+    const top=view.scrollTop+cellRect.top-viewRect.top+cellRect.height/2-view.clientHeight/2;
+    view.scrollTo({left:Math.max(0,left),top:Math.max(0,top),behavior:smooth&&!reduced.matches?'smooth':'auto'});
+    return true;
+  }
+  function queueMapCenter(smooth=false){
+    const run=++mapCenterRun;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{if(run===mapCenterRun)centerMapViewport(smooth);}));
+  }
+  const renderMap=()=>{render({focus:true});queueMapCenter();};
+  document.addEventListener('pointerdown',event=>{
+    const view=event.target.closest?.('[data-map-viewport]');
+    if(!view||event.button!==0||event.pointerType==='touch')return;
+    mapDrag={view,x:event.clientX,y:event.clientY,left:view.scrollLeft,top:view.scrollTop};
+    view.classList.add('is-dragging');
+    try{view.setPointerCapture?.(event.pointerId);}catch{}
+  });
+  document.addEventListener('pointermove',event=>{
+    if(!mapDrag)return;
+    mapDrag.view.scrollLeft=mapDrag.left-(event.clientX-mapDrag.x);
+    mapDrag.view.scrollTop=mapDrag.top-(event.clientY-mapDrag.y);
+  });
+  const endMapDrag=()=>{if(!mapDrag)return;mapDrag.view.classList.remove('is-dragging');mapDrag=null;};
+  document.addEventListener('pointerup',endMapDrag);
+  document.addEventListener('pointercancel',endMapDrag);
   function reveal(error=false){
     show(error?'reveal-error':'reveal');if(error)return;
     if(reduced.matches){show('reveal-ready');return;}
     timeline(1100,()=>{},()=>show('reveal-ready'));
   }
-  function routeBack(){stop();page=null;api.goRoom('tower');}
+  function routeBack(){stop();page=null;api.goRoom('tower');if(j.explore)queueMapCenter();}
   function debugJump(floor,selected='mob'){
     j.active=true;
     j.floor=Math.max(0,Math.min(j.maxFloor-1,Number(floor)-1));
@@ -293,7 +325,7 @@ export function createTowerFlow(api){
   function enter(){
     const pending=j.pending??model.enter();if(!pending)return;
     if(pending.resolved){receipt=pending.result;show('receipt');return;}
-    if(['mob','elite','boss'].includes(pending.kind)){
+    if(['mob','elite','boss','guardian','shadow'].includes(pending.kind)){
       page=null;api.startFight(pending.kind==='boss',pending.battleState,pending.encounter,pending.floor);return;
     }
     show(pending.kind);
@@ -459,13 +491,168 @@ export function createTowerFlow(api){
     if(page==='finale')return frame('你已经走过黑夜。','BEYOND THE MASK',`<div class="finale-layout"><div class="finale-star">${icon('star')}</div><h2>面具之外，<br>仍是你自己。</h2><p class="scene-copy">把这一刻的力量，带回白昼。</p>${btn('回望这段路','recap')}${btn('回到战场','home')}</div>`);
     return null;
   }
+  const mapIcon=type=>({start:'back',exit:'tower',guardian:'sword',shadow:'eye',chest:'box',key:'star',trap:'eye',safe:'shield',event:'star',empty:'chevrons'}[type]??'eye');
+  const mapName=type=>({start:'入口',exit:'出口',guardian:'守卫',shadow:'影子',chest:'月匣',key:'钥匙',trap:'机关',safe:'安全屋',event:'异响',empty:'空房'}[type]??'房间');
+  const FLOOR_FLAVOR=[
+    {name:'月台',tagline:'灯管一闪一闪，广播没有报站。',rooms:{start:'楼梯口',shadow:'候车的影子',guardian:'检票口守卫',chest:'遗失的行李',key:'值班室钥匙',trap:'松动的月台砖',safe:'值班室',event:'广播杂音',exit:'末班车门',empty:'空站台'}},
+    {name:'档案室',tagline:'抽屉全被拉开，名字被撕掉。',rooms:{start:'档案入口',shadow:'翻纸的手',guardian:'档案室看守',chest:'封存的抽屉',key:'标本柜钥匙',trap:'漏水的管道',safe:'值班室',event:'纸页摩擦声',exit:'档案后门',empty:'空档案架'}},
+    {name:'温室',tagline:'枯叶下面还有呼吸。',rooms:{start:'温室门',shadow:'花丛里的眼睛',guardian:'园丁的影子',chest:'玻璃花房',key:'工具柜钥匙',trap:'缠住脚踝的藤',safe:'花房后间',event:'滴水声',exit:'温室后门',empty:'枯花房'}},
+    {name:'剧场',tagline:'幕布后面有人替你鼓掌。',rooms:{start:'后台入口',shadow:'候场的影子',guardian:'舞台看守',chest:'道具箱',key:'化妆间钥匙',trap:'松动的舞台板',safe:'后台休息室',event:'空座席的回声',exit:'侧幕出口',empty:'空排练室'}},
+    {name:'走廊',tagline:'每一扇门后都是同一条走廊。',rooms:{start:'走廊尽头',shadow:'门后的脚步',guardian:'走廊守卫',chest:'门缝里的匣子',key:'尽头房间钥匙',trap:'错位的门框',safe:'楼梯间',event:'门铃',exit:'向上的楼梯',empty:'空走廊'}},
+    {name:'泳池',tagline:'水面高过池沿，却没有溢出来。',rooms:{start:'更衣室',shadow:'水下的手',guardian:'池边守卫',chest:'储物柜',key:'救生员钥匙',trap:'湿滑的池边',safe:'消毒间',event:'水声',exit:'排水口',empty:'空泳池'}},
+    {name:'食堂',tagline:'餐盘还在冒热气。',rooms:{start:'食堂门',shadow:'排队的影子',guardian:'后厨看守',chest:'保温柜',key:'冷库钥匙',trap:'油污地面',safe:'后厨',event:'餐具碰撞声',exit:'送货通道',empty:'空餐桌'}},
+    {name:'钟楼',tagline:'钟摆停在你进来的那一刻。',rooms:{start:'钟楼底',shadow:'报时的影子',guardian:'钟摆守卫',chest:'齿轮箱',key:'钟室钥匙',trap:'松动的齿轴',safe:'钟室',event:'钟声余响',exit:'钟楼顶门',empty:'空齿轮间'}},
+    {name:'天台',tagline:'风很大，脚印只有你的。',rooms:{start:'天台门',shadow:'风里的影子',guardian:'栏杆边的守卫',chest:'被风刮来的箱子',key:'水塔钥匙',trap:'碎裂的地砖',safe:'水塔下',event:'远处的低语',exit:'向上的梯子',empty:'空天台'}},
+    {name:'镜厅',tagline:'每一面镜子里的你都慢半拍。',rooms:{start:'镜厅入口',shadow:'镜中的你',guardian:'镜面守卫',chest:'倒影里的匣子',key:'镜框钥匙',trap:'碎裂的镜面',safe:'暗室',event:'镜子里的耳语',exit:'镜厅尽头',empty:'空镜框'}},
+    {name:'前厅',tagline:'门缝里有光，也有呼吸。',rooms:{start:'塔顶前厅',shadow:'最后的影子',guardian:'前厅守卫',chest:'最后的行李',key:'塔顶钥匙',trap:'断裂的地板',safe:'前厅角落',event:'门后的呼吸',exit:'塔顶之门',empty:'空前厅'}},
+    {name:'塔顶',tagline:'它已经等你很久了。',rooms:{start:'塔顶',shadow:'心魔的余响',guardian:'心魔',chest:'心魔的残片',key:'无用的钥匙',trap:'碎裂的塔砖',safe:'无',event:'心魔的低语',exit:'塔顶',empty:'空塔顶'}},
+  ];
+  const floorFlavor=floor=>FLOOR_FLAVOR[Math.max(0,Math.min(FLOOR_FLAVOR.length-1,Number(floor)-1))]??FLOOR_FLAVOR[0];
+  const roomTitle=(room)=>{
+    if(room.cleared){
+      if(room.type==='guardian')return '守卫倒下了。';
+      if(room.type==='shadow')return '影子散了。';
+      if(room.type==='chest')return '月匣空了。';
+      if(room.type==='key')return '钥匙已经带走。';
+      if(room.type==='trap')return '机关安静了。';
+      if(room.type==='event')return '水面恢复平静。';
+    }
+    return room.type==='start'?'入口。':room.type==='exit'?'出口。':room.type==='guardian'?'守卫挡在门前。':room.type==='shadow'?'影子在等你。':room.type==='chest'?'月光落在匣子上。':room.type==='key'?'一把旧钥匙。':room.type==='trap'?'脚下不太对。':room.type==='safe'?'门合上了。':room.type==='event'?'墙后有什么在响。':'这里暂时安静。';
+  };
+  const roomCopy=(room,explore)=>{
+    if(room.cleared){
+      if(room.type==='guardian')return '门已经开了。往右上走，就能离开这一层。';
+      if(room.type==='shadow')return '这里已经没有威胁。继续走，或者听一听墙后的动静。';
+      if(room.type==='chest')return '匣子空了。路还在。';
+      if(room.type==='key')return '钥匙在你身上。出口可以直接开锁。';
+      if(room.type==='trap')return '机关已经处理完，不会再响。';
+      if(room.type==='event')return '水面安静下来。这里不会再回应第二次。';
+    }
+    return room.type==='start'?'回头是塔门。往前走，雾会散开。':room.type==='exit'?explore.exitUnlocked?'门已经开了。踏出去，下一层就会显形。':'门锁着。守卫或钥匙，选一条路。':room.type==='guardian'?'它守着出口。打赢它，门就会开。':room.type==='shadow'?'绕不开。它已经看见你了。':room.type==='chest'?'打开会消耗一点动静，但里面的东西能带回去。':room.type==='key'?'拿上它，出口可以不必经过守卫。':room.type==='trap'?'拆开会安静一点；硬闯会更快，也更吵。':room.type==='safe'?'这一层只能休息一次。恢复，或者继续贪。':room.type==='event'?'靠近它，或者只带走一点月光。':'雾在墙外。你可以听一听，或者直接走。';
+  };
+  function mapCell(room,explore,flavor){
+    const current=room.x===explore.player.x&&room.y===explore.player.y;
+    const classes=['map-cell'];
+    if(!room.revealed)classes.push('is-fog');
+    else{
+      classes.push(`is-${room.type}`);
+      if(room.visited)classes.push('is-visited');
+      if(room.cleared&&room.type!=='empty')classes.push('is-cleared');
+      if(current)classes.push('is-current');
+    }
+    const body=room.revealed
+      ?`${current?`<span class="map-you">YOU</span>`:''}<span class="map-glyph">${icon(current?'mask':mapIcon(room.type))}</span><span class="map-name">${current?'你在这里':(flavor.rooms[room.type]??mapName(room.type))}</span>${room.type==='exit'&&explore.exitUnlocked?'<span class="map-open">OPEN</span>':''}`
+      :'<span class="map-fog-mark">?</span><span class="map-name">未探明</span>';
+    return `<div class="${classes.join(' ')}" ${current?'aria-current="true"':''} ${room.revealed?`aria-label="${mapName(room.type)}${current?'，当前位置':''}"`:'aria-label="未探明房间"'}>${body}</div>`;
+  }
+  function mapPage(){
+    if(!j.explore||!j.map)return '';
+    const explore=j.explore,room=currentRoom(explore),floor=j.floor;
+    const flavor=floorFlavor(floor);
+    const revealed=visibleRooms(explore).length;
+    const cells=[];
+    for(let y=0;y<j.map.height;y+=1)for(let x=0;x<j.map.width;x+=1)cells.push(mapCell(j.map.rooms[`${x},${y}`],explore,flavor));
+    const roomActions=()=>{
+      if(room.type==='key'&&!room.cleared)return btn('收下旧钥匙','take-key','出口可以直接开锁');
+      if(room.type==='chest'&&!room.cleared)return btn('打开月匣','open-chest','回响之线 ×1 · +10 SP');
+      if(room.type==='trap'&&!room.cleared)return btn('拆解机关','disarm-trap','警戒 -8%')+btn('硬闯','force-trap','警戒 +12% · HP -6','danger');
+      if(room.type==='safe')return btn(room.rested?'已经休息过':'在安全屋休息','rest','警戒 -20% · 恢复 30% HP/SP',room.rested);
+      if(room.type==='event'&&!room.cleared)return btn('触碰水面','event-heal','回复 15% HP')+btn('带走月光','event-buff','下一战伤害 +5%');
+      if(room.type==='exit')return explore.exitUnlocked?btn('走下这一层','leave-floor','下一层还在上面'):`<p class="map-locked">出口锁着。击破守卫，或带一把钥匙来。</p>`;
+      if(room.type==='guardian'&&!room.cleared)return btn('迎战守卫','enter','击破后解锁出口','danger');
+      if(room.type==='shadow'&&!room.cleared)return btn('迎战影子','enter','它挡在这里','danger');
+      return `<p class="map-quiet">这里只有回声。继续走，或者听一听墙后的动静。</p>`;
+    };
+    return `<div class="page-heading"><h1>登塔<span>ASCEND / 03</span></h1><p>${esc(flavor.tagline)} · 每一步都会留下声音。</p></div>
+      <div class="map-hud"><span>${esc(getStratum(j.stratum).name)} <b>${floor} / ${j.maxFloor} F</b></span><span>月光 <b>${explore.time}</b> / ${explore.maxTime} 步</span><span>警戒 <b>${j.security}%</b></span><span>钥匙 <b>${j.keys}</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span>${j.alert?'<span class="journey-alert">ALERT · 被盯上了</span>':''}</div>
+      <div class="map-shell"><section class="map-board" aria-label="${esc(getStratum(j.stratum).name)} ${floor} 层房间地图">
+        <div class="map-board-head"><div><span>FLOOR ${String(floor).padStart(2,'0')} / ${esc(flavor.name)}</span><b>${explore.exitUnlocked?'出口已经开了':'找到守卫或钥匙'}</b></div><div class="map-head-tools"><small>拖动查看 · 已探明 ${revealed} / 25</small><button type="button" data-tower="map-center">回到当前位置</button></div></div>
+        <div class="map-viewport" data-map-viewport aria-label="可拖动查看的房间地图"><div class="map-grid">${cells.join('')}</div></div>
+        <div class="map-legend"><span><i class="lg-you"></i>你</span><span><i class="lg-threat"></i>敌人</span><span><i class="lg-loot"></i>收获</span><span><i class="lg-fog"></i>迷雾</span></div>
+      </section><aside class="map-side">
+        <div class="map-current ${j.alert?'is-alert':''}"><span>${floor}F · ${esc(flavor.name)}</span><h2>${room.cleared?roomTitle(room):(flavor.rooms[room.type]??roomTitle(room))}</h2><p>${roomCopy(room,explore)}</p><div class="map-actions">${roomActions()}</div></div>
+        <div class="map-objective"><span>本层目标</span><b>${explore.exitUnlocked?'出口已开':'击破守卫 / 取得钥匙'}</b><small>${j.mapMessage||'剩下 '+explore.time+' 步。贪一间房，还是现在就走？'}</small></div>
+        <div class="map-pad" aria-label="移动"><button data-tower="move:up" aria-label="向上">↑</button><button data-tower="move:left" aria-label="向左">←</button><button data-tower="map-listen" aria-label="倾听">听</button><button data-tower="move:right" aria-label="向右">→</button><button data-tower="move:down" aria-label="向下">↓</button></div>
+        <div class="map-side-foot">${btn('听一听墙后','map-listen','消耗 1 步 · 警戒 +4')}${btn('下塔回顾','retreat','带走已经拿到的东西')}</div>
+      </aside></div>`;
+  }
   function route(){
     if(!j.active)model.start();
-    if(j.ended)return `<div class="page-heading"><h1>登塔<span>ASCEND / 03</span></h1></div><section class="journey-ended"><div class="recap-floor"><b>${String(j.floor).padStart(2,'0')}</b><span>FLOOR</span></div><div><h2>${j.ended==='clear'?'回声之庭，已经穿过。':'今晚的行程，停在这里。'}</h2><p class="scene-copy">这一次抵达 ${j.floor}F，完成 ${j.history.length} 个节点。回看本夜记录。</p>${btn('回看本夜记录','recap')}${j.ended==='clear'?btn('走向终局','finale'):''}${btn('重新进入此层','start','清空本夜进度并重新开始')}</div></section>`;
-    const floor=j.pending?j.floor:Math.min(j.maxFloor,j.floor+1),choices=model.choices(),kind=j.pending?.kind??j.selected,n=towerNodes[kind],locked=Boolean(j.pending),stratum=getStratum(j.stratum);
-    return `<div class="page-heading"><h1>登塔<span>ASCEND / 03</span></h1><p>沿着走过的路，继续向上。</p></div><div class="journey-strip"><span>${esc(stratum.name)} <b>${floor} / ${j.maxFloor} F</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span><span>警戒 <b>${j.security}%</b></span><span>请求 <b>${j.request?.progress??0}/${j.request?.target??0}</b></span>${j.endless?`<span>CYCLE <b>${j.cycle}</b></span>`:''}${j.alert?'<span class="journey-alert">ALERT</span>':''}</div><div class="tower-grid"><section class="route-map journey-map" aria-label="${esc(stratum.name)}路线图"><div class="route-watermark" aria-hidden="true">ASCEND</div><svg class="route-tracks" viewBox="0 0 600 520" preserveAspectRatio="none" aria-hidden="true"><path class="track-future" d="M300 62V180M140 306V260L300 218L460 260V306M300 218V180M300 306V218"/>${choices.map((id,i)=>{const x=choices.length===1?300:[140,300,460][i];return `<path class="track-base" d="M300 430V386L${x} 350V306"/><path class="track-live ${id===kind?'chosen':''}" pathLength="1" d="M300 430V386L${x} 350V306"/>`;}).join('')}</svg><div class="route-floor"><span class="floor-tag"><b>${j.maxFloor}</b>F</span><div class="route-node fog boss-node"><span class="node-seal">${icon('mask')}</span><span class="node-caption">心魔 · 塔顶</span></div></div><div class="route-floor"><span class="floor-tag"><b>${Math.min(j.maxFloor,floor+1)}</b>F</span><div class="route-node fog"><span class="node-seal">${icon('eye')}</span><span class="node-caption">${floor===j.maxFloor?'塔顶就在眼前':'前路尚未显现'}</span></div></div><div class="route-floor branch-floor ${choices.length===1?'single-choice':''}"><span class="floor-tag"><b>${String(floor).padStart(2,'0')}</b>F</span>${choices.map(id=>`<button class="route-node next ${kind===id?'selected':''}" data-tower="select:${id}" aria-pressed="${kind===id}" ${locked&&id!==kind?'disabled':''}><span class="node-seal">${icon(towerNodes[id].icon)}</span><span class="node-caption">${towerNodes[id].kind}</span><span class="node-hint">${locked?(id===kind?'已选择':'本层未选择'):id===kind?'查看中':'可前往'}</span></button>`).join('')}</div><div class="route-floor"><span class="floor-tag"><b>${String(Math.max(1,floor-1)).padStart(2,'0')}</b>F</span><div class="route-node done"><span class="node-seal">${icon('check')}</span><span class="node-caption">已经走过</span></div></div><p class="route-caption">${j.ended?'这段行程已结束':locked?'当前节点尚待处理，完成后继续':'侦察节点，再确认这一步'}</p></section><section class="route-detail" aria-live="polite"><p class="detail-kind">${floor}F / ${n.kind}</p><h2>${n.title}</h2><p>${n.note}</p><div class="detail-row"><span>敌人生命</span><strong>${n.hp}</strong></div><div class="detail-row"><span>已知弱点</span><strong>${n.weak}</strong></div><div class="detail-row"><span>已完成</span><strong>${j.history.length} 个节点</strong></div>${btn(j.ended?'回顾本次行程':locked?'继续处理当前节点':n.action,j.ended?'recap':'enter')}<p class="info-note">路线只在本夜生效。</p></section></div><div class="tower-tools">${btn('下塔回顾','retreat')}${btn('区层情报','intel')}</div>`;
+    if(j.ended)return `<div class="page-heading"><h1>登塔<span>ASCEND / 03</span></h1></div><section class="journey-ended"><div class="recap-floor"><b>${String(j.floor).padStart(2,'0')}</b><span>FLOOR</span></div><div><h2>${j.ended==='clear'?'回声之庭，已经穿过。':j.ended==='timeout'?'天亮了。':'今晚的行程，停在这里。'}</h2><p class="scene-copy">${j.ended==='timeout'?`这一层的月光用完了。你带着已经拿到的东西退回塔门。`:''}这一次抵达 ${j.floor}F，完成 ${j.history.length} 个节点。回看本夜记录。</p>${btn('回看本夜记录','recap')}${j.ended==='clear'?btn('走向终局','finale'):''}${btn('重新进入此层','start','清空本夜进度并重新开始')}</div></section>`;
+    if(j.pending?.kind==='calling')return frame('写下来。','CALLING CARD',`<div class="story-layout"><div class="scene-emblem">${icon('star')}</div><div><h2>${j.floor}F · 预告信</h2><p class="scene-copy">塔顶的执念已经察觉到你。把名字写上去，它才会从阴影里走出来。</p>${btn('送出预告信','send-calling','Boss 前置')}</div></div>`);
+    if(j.floor>=j.maxFloor||j.callingCardSent)return frame('塔顶，正在注视你。','SHADOW',`<div class="boss-layout"><div class="scene-emblem">${icon('mask')}</div><div><span class="boss-phase">MAIN SHADOW</span><h2>回声的执念</h2><p class="scene-copy">走过的每一层，最终都在这里相遇。</p>${btn('迎战心魔','enter','第一形态击破后会在战斗舞台变身')}</div></div>`);
+    if(!j.explore){
+      if(j.floor<1)model.beginFloor(1);else model.beginFloor(j.floor);
+    }
+    return mapPage();
   }
   function act(action){
+    if(action.startsWith('move:')){
+      const result=model.mapMove(action.slice('move:'.length));
+      if(result.pending){enter();return;}
+      if(!result.ok)j.mapMessage=result.reason;
+      renderMap();
+      return;
+    }
+    if(action==='map-listen'){
+      const result=model.mapAct('listen');
+      j.mapMessage=result.ok?`你听见墙后有一点动静。还剩 ${j.explore?.time??0} 步。`:result.reason??'什么也没听见。';
+      renderMap();
+      return;
+    }
+    if(action==='take-key'&&j.explore){
+      const result=model.mapAct('take-key');
+      if(result.ok){markRequest('key');j.mapMessage=`收下旧钥匙。出口可以直接开锁。`;}
+      renderMap();
+      return;
+    }
+    if(action==='open-chest'&&j.explore){
+      const result=model.mapAct('open-chest');
+      if(result.ok){const max=state.heroMaxSp??34;state.sp=Math.min(max,state.sp+10);j.mapMessage='月匣开了。回响之线 ×1，SP +10。';}
+      renderMap();
+      return;
+    }
+    if(action==='disarm-trap'&&j.explore){
+      const result=model.mapAct('disarm-trap');
+      if(result.ok)j.mapMessage=`机关拆开了。警戒 ${j.security}%。`;
+      renderMap();
+      return;
+    }
+    if(action==='force-trap'&&j.explore){
+      const result=model.mapAct('force-trap');
+      if(result.ok){state.hp=Math.max(1,state.hp-6);j.mapMessage=`硬闯过去。HP ${state.hp}，警戒 ${j.security}%。`;}
+      renderMap();
+      return;
+    }
+    if(action==='rest'&&j.explore){
+      const result=model.mapAct('rest');
+      if(result.ok){
+        const maxHp=state.heroMaxHp??52,maxSp=state.heroMaxSp??34;
+        state.hp=Math.min(maxHp,state.hp+Math.max(1,Math.ceil(maxHp*.3)));
+        state.sp=Math.min(maxSp,state.sp+Math.max(1,Math.ceil(maxSp*.3)));
+        markRequest('safe');
+        j.mapMessage=`休息过了。HP ${state.hp}/${maxHp} · SP ${state.sp}/${maxSp}。`;
+      }
+      renderMap();
+      return;
+    }
+    if(action==='event-heal'&&j.explore){
+      const result=model.mapAct('event-heal');
+      if(result.ok){const max=state.heroMaxHp??52;state.hp=Math.min(max,state.hp+Math.max(1,Math.round(max*.15)));j.mapMessage=`水面映出一点暖意。HP ${state.hp}/${max}。`;}
+      renderMap();
+      return;
+    }
+    if(action==='event-buff'&&j.explore){
+      const result=model.mapAct('event-buff');
+      if(result.ok){j.buffs.push('月光映照 +5%');j.mapMessage='你把月光收进掌心。下一战伤害 +5%。';}
+      renderMap();
+      return;
+    }
+    if(action==='leave-floor'&&j.explore){
+      if(model.completeFloor()){j.mapMessage='';renderMap();}
+      return;
+    }
+    if(action==='map-center'){centerMapViewport(true);return;}
     if(action==='rest'){restParty();return;}
     if(action==='continue'){page=null;routeBack();return;}
     if(action==='safe-rest'){if(model.rest()){markRequest('safe');render({focus:true});}return;}
@@ -495,8 +682,9 @@ export function createTowerFlow(api){
       if(!j.active||j.ended){
         model.start(state.towerStratum);
         j.request=createRequest(requestForStratum(state.towerStratum));
+        model.beginFloor(1);
       }
-      if(j.active&&j.history.length>0){page=null;api.goRoom('tower');return;}
+      if(j.active&&j.explore){page=null;api.goRoom('tower');queueMapCenter();return;}
       reveal(false);return;
     }
     if(action==='shop'){shopReturn='interlude';shopMessage='';show('shop');return;}
@@ -534,7 +722,12 @@ export function createTowerFlow(api){
     if(action.startsWith('select:')){if(model.select(action.slice(7))){render();document.querySelector(`[data-tower="${action}"]`)?.focus({preventScroll:true});}return;}
     if(action==='start'){start();return;}
     if(action==='retry'){reveal();return;}
-    if(action==='route'){if(!j.active){model.start(state.towerStratum);j.request=createRequest(requestForStratum(state.towerStratum));}routeBack();return;}
+    if(action==='route'){
+      if(!j.active){model.start(state.towerStratum);j.request=createRequest(requestForStratum(state.towerStratum));}
+      if(!j.explore&&!j.pending&&j.floor<j.maxFloor)model.beginFloor(j.floor<1?1:j.floor);
+      routeBack();
+      return;
+    }
     if(action==='enter'){enter();return;}
     if(['heal','buff','gaze','pass','correct','wrong'].includes(action)){choose(action);return;}
     if(action==='reveal-chest'&&page==='chest'){show('chest-open');return;}
@@ -561,10 +754,66 @@ export function createTowerFlow(api){
     }
   }
   document.addEventListener('visibilitychange',()=>{if(clock)clock.last=performance.now();});
-  return {screen,route,act,start,showRecap,prep(){return prepPage();},...debugMode?{debugJump}:{},get snapshot(){return {active:j.active,floor:j.floor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss','elite'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
+  document.addEventListener('keydown',event=>{
+    if(page||state.fighting||!j.explore)return;
+    if(event.target?.matches?.('input,select,textarea'))return;
+    const dir={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'}[event.key];
+    if(!dir)return;
+    event.preventDefault();
+    act(`move:${dir}`);
+  });
+  return {screen,route,act,start,showRecap,prep(){return prepPage();},...debugMode?{debugJump}:{},get snapshot(){return {active:j.active,floor:j.floor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss','elite','guardian','shadow'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
     hide(){stop();page=null;},recordLoot(reward){return model.addLoot(reward);},
     preview(next){if(next!=='return'&&next!=='velvet')return false;model.start(state.towerStratum);j.request=createRequest(requestForStratum(state.towerStratum));j.floor=j.maxFloor;j.ended='clear';interlude={battle:{summary:'这一夜的最后一道影子，已经散了。'},rested:false,party:[]};fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';networkPreview=null;networkMessage='';velvetService='fusion';velvetMessage='';velvetReturn='return';skillCardSelected='';prepMessage='';requestMessage='';page=next;return true;},
-    battleReturn(won,phase,battleResult){if(!this.pendingBattle)return;if(won){const floor=j.pending.floor,wasBoss=j.pending.kind==='boss';const drops=Array.isArray(battleResult?.drops)?battleResult.drops:[];const reward=battleResult?.reward??null;const items=[];let spGain=0;for(const drop of drops){if(drop?.item){items.push(drop.item);state.battleLoot.push(drop.item);}if(drop?.sp)spGain+=Number(drop.sp)||0;}if(reward?.item){items.push(reward.item);state.battleLoot.push(reward.item);}if(reward?.sp)spGain+=Number(reward.sp)||0;const moneyGain=240+floor*60;state.money+=moneyGain;if(spGain)state.sp=Math.min(state.heroMaxSp??state.sp,state.sp+spGain);if(wasBoss){markRequest('boss');state.npcTrust=Object.fromEntries(Object.entries(state.npcTrust??{}).map(([id,value])=>[id,Math.min(5,(Number(value)||0)+1)]));}else if(j.pending.kind==='elite')markRequest('elite');const xpPersonaId=state.activePersonaId,built=buildBattlePersona(xpPersonaId),xpGain=20+floor*4,progress=grantPersonaXp({xp:Number(state.personaXp?.[xpPersonaId])||0,level:built?.level??1},xpGain);state.personaXp={...(state.personaXp??{}),[xpPersonaId]:progress.xp};if(progress.leveled){const previous=state.personaOverrides?.[xpPersonaId]??{},override={...previous,level:progress.level};state.personaOverrides={...(state.personaOverrides??{}),[xpPersonaId]:override};setPersonaOverride(xpPersonaId,override);}api.persistP5State?.();interlude={battle:battleResult,rested:false,party:captureParty(),personaProgress:{id:xpPersonaId,name:built?.name??xpPersonaId,xpGain,...progress},reward:{money:moneyGain,items,sp:spGain}};model.resolve({label:'战斗胜利',detail:battleResult?.summary??'击破了挡路的阴影。',type:'battle',receipt:battleResult??null});model.advance();page=(wasBoss||j.ended==='clear')?'return':'interlude';}else{j.pending.battleState={enemyHp:j.pending.kind==='boss'?state.enemyHp:312,stagger:j.pending.kind==='boss'?state.stagger:0,turn:state.turn,phase:j.pending.kind==='boss'?phase:1};page=null;}},
+    battleReturn(won,phase,battleResult){
+      if(!this.pendingBattle)return;
+      const battleKind=j.pending.kind;
+      const mapBattle=['guardian','shadow'].includes(battleKind)&&Boolean(j.explore);
+      if(!won){
+        if(mapBattle){model.resolveMapBattle(false);page=null;show('defeat');return;}
+        j.pending.battleState={enemyHp:battleKind==='boss'?state.enemyHp:312,stagger:battleKind==='boss'?state.stagger:0,turn:state.turn,phase:battleKind==='boss'?phase:1};
+        page=null;
+        return;
+      }
+      const floor=j.pending.floor,wasBoss=battleKind==='boss';
+      const drops=Array.isArray(battleResult?.drops)?battleResult.drops:[];
+      const reward=battleResult?.reward??null;
+      const items=[];
+      let spGain=0;
+      for(const drop of drops){
+        if(drop?.item){items.push(drop.item);state.battleLoot.push(drop.item);}
+        if(drop?.sp)spGain+=Number(drop.sp)||0;
+      }
+      if(reward?.item){items.push(reward.item);state.battleLoot.push(reward.item);}
+      if(reward?.sp)spGain+=Number(reward.sp)||0;
+      const moneyGain=240+floor*60;
+      state.money+=moneyGain;
+      if(spGain)state.sp=Math.min(state.heroMaxSp??state.sp,state.sp+spGain);
+      if(wasBoss){
+        markRequest('boss');
+        state.npcTrust=Object.fromEntries(Object.entries(state.npcTrust??{}).map(([id,value])=>[id,Math.min(5,(Number(value)||0)+1)]));
+      }else if(battleKind==='elite'||battleKind==='guardian')markRequest('elite');
+      const xpPersonaId=state.activePersonaId,built=buildBattlePersona(xpPersonaId),xpGain=20+floor*4;
+      const progress=grantPersonaXp({xp:Number(state.personaXp?.[xpPersonaId])||0,level:built?.level??1},xpGain);
+      state.personaXp={...(state.personaXp??{}),[xpPersonaId]:progress.xp};
+      if(progress.leveled){
+        const previous=state.personaOverrides?.[xpPersonaId]??{},override={...previous,level:progress.level};
+        state.personaOverrides={...(state.personaOverrides??{}),[xpPersonaId]:override};
+        setPersonaOverride(xpPersonaId,override);
+      }
+      api.persistP5State?.();
+      if(mapBattle){
+        model.resolveMapBattle(true);
+        page=null;
+        j.mapMessage=`${battleKind==='guardian'?'守卫倒下，出口解锁。':'影子散了。'} ¥${moneyGain} 已入袋。`;
+        queueMapCenter();
+        return;
+      }
+      interlude={battle:battleResult,rested:false,party:captureParty(),personaProgress:{id:xpPersonaId,name:built?.name??xpPersonaId,xpGain,...progress},reward:{money:moneyGain,items,sp:spGain}};
+      model.resolve({label:'战斗胜利',detail:battleResult?.summary??'击破了挡路的阴影。',type:'battle',receipt:battleResult??null});
+      model.advance();
+      page=(wasBoss||j.ended==='clear')?'return':'interlude';
+    },
     defeat(){model.end('defeat');show('defeat');},
   };
 }

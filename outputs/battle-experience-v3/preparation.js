@@ -1,9 +1,10 @@
 import {escapeHtml as esc} from './encounters.js';
+import {requestAwakening} from './persona-ai.js';
 
 export function createPreparationDirector(api) {
   const {state,masks,icon,openSheet,render,notify,arsenalItems} = api;
   const sheet=document.querySelector('#sheet');
-  let createStep=0,answers=[null,null,null,null],sources=[],traits='',working=0,createCandidate=null;
+  let createStep=0,answers=[null,null,null,null],sources=[],traits='',working=0,createCandidate=null,awakeningController=null;
   let pendingName='',pendingDescription='',reshapeTarget=0,growthLevel=3;
   let disposed=new Set(),socket=null,oath=null,chain=null;
   const settings={enabled:true,start:'20:00',end:'07:00',hp:40,scale:100};
@@ -19,7 +20,7 @@ export function createPreparationDirector(api) {
   const growthNames=['起心','定形','回响','越界','觉醒'];
   function btn(label,action,note='',tone=''){return `<button type="button" class="prep-button ${tone}" data-prep="${action}"><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;}
   function notice(text){const e=document.querySelector('#prep-notice');if(e)e.textContent=text;else notify(text);}
-  function footer(){return '<p class="prep-footnote">示例操作仅保留在本次预览中，刷新后恢复，不会调用模型或写入真实存档。</p>';}
+  function footer(){return '<p class="prep-footnote">本次操作只保留在预览内；AI 由宿主配置提供，不写入密钥或真实存档。未接通 AI 时会明确降级为离线回应。</p>';}
   function open(title,body){openSheet(title,`<div class="preparation-panel"><p id="prep-notice" role="alert"></p>${body}${footer()}</div>`);}
   function answerScores(){
     const scores=[0,0,0,0,0];
@@ -38,10 +39,12 @@ export function createPreparationDirector(api) {
     return masks.slice(0,5).map((m,i)=>`<div class="trait-bar"><span>${m.attr}</span><i><b style="width:${Math.max(12,scores[i]/total*100)}%"></b></i><strong>${scores[i]}</strong></div>`).join('');
   }
   function showCreateResult(){
-    const result=createCandidate||candidateFromAnswers();
+    const result=createCandidate||{mode:'offline',selected:0,candidates:[candidateFromAnswers()]};
     createCandidate=result;
-    const m=masks[result.index];
-    open('你的力量，已经醒来',`<div class="awakening-mark awakened">${icon('mask')}</div><div class="persona-candidate"><span class="candidate-kicker">回应属性 · ${m.attr}</span><h3 class="prep-lead">${esc(m.name)}</h3><p>${esc(m.passive)}</p><div class="candidate-skills"><span>${esc(m.skills[0][0])}<small>${esc(m.skills[0][2])}</small></span><span>${esc(m.skills[1][0])}<small>${esc(m.skills[1][2])}</small></span></div></div><p class="candidate-words">“${esc(traits)}”</p><div class="trait-bars" aria-label="回答形成的属性倾向">${scoreBars(result.scores)}</div><div class="creation-receipt"><span>四问</span><b>${answers.filter(answer=>answer!==null).length} / 4</b><span>力量之源</span><b>${sources.length} / 2</b><span>技能组</span><b>2 项</b></div>${btn('确认这张面具','finish-create')}${btn('换一张回应','create-reroll','保留你的回答与自述','subtle')}${btn('回到自述，继续调整','create-return','','subtle')}`);
+    const picked=result.candidates?.[result.selected]||result.candidates?.[0]||candidateFromAnswers();
+    const m=masks[picked.index]||masks[0];
+    const skills=picked.skills?.length?picked.skills:m.skills.slice(0,2).map(skill=>({name:skill[0],seed:skill[2]}));
+    open('你的力量，已经醒来',`<div class="awakening-mark awakened">${icon('mask')}</div><div class="awakening-mode ${result.mode==='ai'?'is-ai':'is-offline'}"><b>${result.mode==='ai'?'AI 回应':'离线回应'}</b><span>${result.mode==='ai'?'基于你的回答生成候选':'当前预览未挂 AI bridge，使用确定性底盘'}</span></div><div class="persona-candidate"><span class="candidate-kicker">回应属性 · ${m.attr}</span><h3 class="prep-lead">${esc(picked.name||m.name)}</h3><p>${esc(picked.description||m.passive)}</p><div class="candidate-skills">${skills.map(skill=>`<span>${esc(skill.name)}<small>${esc(skill.seed)}</small></span>`).join('')}</div></div><p class="candidate-words">“${esc(traits)}”</p><div class="candidate-memory"><span>觉醒记忆</span><b>${esc(result.memory||picked.memory||'这份回应会留在之后的战斗里。')}</b></div><p class="candidate-diagnosis">${esc(result.diagnosis||'你的回答之间，形成了一条仍在变化的力量线索。')}</p><div class="trait-bars" aria-label="回答形成的属性倾向">${scoreBars(result.scores||answerScores())}</div><div class="creation-receipt"><span>四问</span><b>${answers.filter(answer=>answer!==null).length} / 4</b><span>力量之源</span><b>${sources.length} / 2</b><span>候选</span><b>${result.candidates?.length||1} 张</b></div>${btn('确认这张面具','finish-create')}${btn('换一张回应','create-reroll','保留你的回答与自述','subtle')}${btn('回到自述，继续调整','create-return','','subtle')}`);
   }
   function showCreate(){
     if(createCandidate){showCreateResult();return;}
@@ -90,21 +93,23 @@ export function createPreparationDirector(api) {
   }
   function act(action){
     const [kind,arg,extra]=action.split(':');
-    if(kind==='create'){clearTimeout(working);createStep=0;answers=[null,null,null,null];traits='';sources=[];createCandidate=null;showCreate();return;}
+    if(kind==='create'){clearTimeout(working);awakeningController?.abort();awakeningController=null;createStep=0;answers=[null,null,null,null];traits='';sources=[];createCandidate=null;showCreate();return;}
     if(kind==='create-next'){if(createStep>0&&createStep<=4&&answers[createStep-1]===null){notice('先选一个与你接近的回答。');return;}createStep=Math.min(5,createStep+1);showCreate();return;}
     if(kind==='create-back'){if(createStep===5)traits=document.querySelector('#awakening-traits')?.value??traits;createStep=Math.max(0,createStep-1);showCreate();return;}
     if(kind==='answer'){answers[createStep-1]=Number(arg);showCreate();return;}
     if(kind==='source'){traits=document.querySelector('#awakening-traits')?.value??traits;const id=Number(arg);sources=sources.includes(id)?sources.filter(s=>s!==id):sources.length<2?[...sources,id]:sources;showCreate();return;}
     if(kind==='create-generate'){
       const form=document.querySelector('#awakening-form');if(!form.reportValidity())return;traits=new FormData(form).get('traits').trim();if(!traits){notice('写下一点你珍视的品质，再继续。');return;}
-      createCandidate=candidateFromAnswers();
-      open('听见回应',`<div class="awakening-mark is-awakening">${icon('mask')}</div><h3 class="prep-lead">面具，正在向你靠近。</h3><p>你给出的答案，已经有了回声。</p>`);
-      working=setTimeout(()=>{if(!sheet.open)return;showCreateResult();},api.reduced.matches?80:950);return;
+      awakeningController?.abort();awakeningController=new AbortController();
+      const selectedAnswers=answers.map((answer,question)=>({question:questions[question][0],answer:answer===null?'':questions[question][1][answer]||''}));
+      const input={answers:selectedAnswers,traits,sources:[...sources],scores:answerScores(),roster:masks.slice(0,5).map(m=>({attr:m.attr,name:m.name,passive:m.passive,skills:m.skills.slice(0,2)}))};
+      open('AI 正在听见你',`<div class="awakening-mark is-awakening">${icon('mask')}</div><h3 class="prep-lead">面具，正在回应。</h3><p id="awakening-reasoning">${api.reduced.matches?'正在整理你的回答。':'AI 正在把你的回答、力量之源和矛盾放在一起。'}</p>`);
+      requestAwakening(input,{signal:awakeningController.signal,onReasoning:text=>{const node=document.querySelector('#awakening-reasoning');if(node&&text)node.textContent=text.slice(-120);}}).then(result=>{if(!sheet.open)return;createCandidate={...result,scores:input.scores};showCreateResult();}).catch(error=>{if(error?.name==='AbortError')return;createCandidate={mode:'offline',selected:0,candidates:[candidateFromAnswers()],scores:input.scores,diagnosis:'回应暂时中断，先用离线底盘保留你的答案。',memory:'你把这次没有说完的回应留到了下一次。'};if(sheet.open)showCreateResult();});return;
     }
-    if(kind==='finish-create'){const result=createCandidate||candidateFromAnswers();state.mask=result.index;state.skill=0;state.personaCreated=true;growthLevel=growthState[state.mask].level;sheet.close();api.goRoom('persona');notify(`觉醒流程已完成 · ${masks[state.mask].name} 已就绪`);return;}
+    if(kind==='finish-create'){const result=createCandidate||{mode:'offline',selected:0,candidates:[candidateFromAnswers()]};const picked=result.candidates?.[result.selected]||result.candidates?.[0]||candidateFromAnswers();state.mask=picked.index;state.skill=0;state.personaCreated=true;growthLevel=growthState[state.mask].level;sheet.close();api.goRoom('persona');notify(`觉醒流程已完成 · ${picked.name||masks[state.mask].name} 已就绪`);return;}
     if(kind==='create-error'){clearTimeout(working);open('回应暂时中断',`<div class="awakening-mark">${icon('eye')}</div><h3 class="prep-lead">你的答案，没有丢失。</h3><p>暂时没有得到回应。可以回看自己的描述，准备好后再试。</p>${btn('回到自述，重新尝试','create-return')}`);return;}
-    if(kind==='create-return'){createCandidate=null;createStep=5;showCreate();return;}
-    if(kind==='create-reroll'){if(!createCandidate)createCandidate=candidateFromAnswers();const ranked=createCandidate.scores.map((score,index)=>({score,index})).sort((a,b)=>b.score-a.score||a.index-b.index);const current=ranked.findIndex(entry=>entry.index===createCandidate.index);createCandidate={...createCandidate,index:ranked[(current+1)%ranked.length].index};showCreateResult();return;}
+    if(kind==='create-return'){createCandidate=null;awakeningController?.abort();awakeningController=null;createStep=5;showCreate();return;}
+    if(kind==='create-reroll'){if(!createCandidate)createCandidate={mode:'offline',selected:0,candidates:[candidateFromAnswers()]};createCandidate.selected=(createCandidate.selected+1)%createCandidate.candidates.length;showCreateResult();return;}
     if(kind==='reshape'){pendingName='';pendingDescription='';reshapeTarget=Math.min(4,state.mask);showReshape();return;}
     if(kind==='reshape-target'){pendingName=document.querySelector('#new-mask-name')?.value??'';pendingDescription=document.querySelector('#new-mask-description')?.value??'';reshapeTarget=Number(arg);showReshape();return;}
     if(kind==='reshape-preview'){
@@ -142,7 +147,7 @@ export function createPreparationDirector(api) {
     if(kind==='chain'){chain=Number(arg);render();item('chain');return;}
     if(kind==='remove-chain'){chain=null;render();item('chain');return;}
   }
-  sheet.addEventListener('close',()=>clearTimeout(working));
+  sheet.addEventListener('close',()=>{clearTimeout(working);awakeningController?.abort();awakeningController=null;});
   document.addEventListener('submit',event=>{const id=event.target.id;const action={'awakening-form':'create-generate','reshape-form':'reshape-preview','battle-settings-form':'settings-save'}[id];if(action){event.preventDefault();act(action);}});
   return {
     act,item,settings,

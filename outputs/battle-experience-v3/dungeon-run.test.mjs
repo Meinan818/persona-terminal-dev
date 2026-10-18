@@ -116,6 +116,29 @@ test('每十层守卫成为区段守层者，战斗结算带区段标记', () =>
   assert.equal(result.pending?.encounter.name, '第1区段的守层者');
 });
 
+test('地图战斗被先制后会把警戒压回可继续区间', () => {
+  const model = createDungeonRun({ seed: 1 });
+  model.start();
+  model.beginFloor(10);
+  model.journey.explore.security = 100;
+  model.journey.explore.alert = true;
+  model.journey.security = 100;
+  model.journey.alert = true;
+  const guardian = model.journey.map.rooms[model.journey.map.guardianId];
+  const neighbor = [
+    { x: guardian.x - 1, y: guardian.y, direction: 'right' },
+    { x: guardian.x + 1, y: guardian.y, direction: 'left' },
+    { x: guardian.x, y: guardian.y - 1, direction: 'down' },
+    { x: guardian.x, y: guardian.y + 1, direction: 'up' },
+  ].find(point => point.x >= 0 && point.y >= 0 && point.x < model.journey.map.width && point.y < model.journey.map.height);
+  model.journey.explore.player = { x: neighbor.x, y: neighbor.y };
+  const encounter = model.mapMove(neighbor.direction);
+  assert.equal(encounter.pending?.ambush, true);
+  assert.equal(model.resolveMapBattle(true), true);
+  assert.equal(model.journey.security, 65);
+  assert.equal(model.journey.alert, false);
+});
+
 test('一条完整路线可以走完 100 层并进入 Boss 结算', () => {
   const model = createDungeonRun();
   model.start();
@@ -139,6 +162,87 @@ test('一条完整路线可以走完 100 层并进入 Boss 结算', () => {
   assert.equal(model.journey.floor, DUNGEON_FLOORS);
   assert.ok(model.journey.history.length >= DUNGEON_FLOORS);
   assert.equal(model.journey.callingCardSent, true);
+});
+
+function mapPathTo(state, target) {
+  const start = `${state.player.x},${state.player.y}`;
+  const goal = `${target.x},${target.y}`;
+  if (start === goal) return [];
+  const queue = [start];
+  const prev = new Map([[start, null]]);
+  while (queue.length) {
+    const id = queue.shift();
+    const [x, y] = id.split(',').map(Number);
+    for (const [dir, dx, dy] of [['up', 0, -1], ['right', 1, 0], ['down', 0, 1], ['left', -1, 0]]) {
+      const room = state.map.rooms[`${x + dx},${y + dy}`];
+      if (!room || prev.has(room.id)) continue;
+      prev.set(room.id, { from: id, dir });
+      if (room.id === goal) {
+        const path = [];
+        let cursor = goal;
+        while (cursor !== start) {
+          const step = prev.get(cursor);
+          path.unshift(step.dir);
+          cursor = step.from;
+        }
+        return path;
+      }
+      queue.push(room.id);
+    }
+  }
+  return null;
+}
+
+function walkMap(model, target) {
+  const path = mapPathTo(model.journey.explore, target);
+  assert.ok(path, `floor ${model.journey.floor} should have a path`);
+  for (const dir of path) {
+    const result = model.mapMove(dir);
+    assert.equal(result.ok, true);
+    if (model.journey.pending && ['guardian', 'shadow'].includes(model.journey.pending.kind)) {
+      assert.equal(model.resolveMapBattle(true), true);
+    }
+  }
+}
+
+test('地图层可以从 1F 连续走到 98F，再送预告信并击破 Boss', () => {
+  const model = createDungeonRun({ seed: 1000 });
+  model.start();
+  model.beginFloor(1);
+  let guard = 0;
+  while (!model.journey.ended && guard < 600) {
+    guard += 1;
+    const journey = model.journey;
+    if (journey.pending?.kind === 'calling') {
+      assert.equal(model.sendCallingCard(), true);
+      assert.equal(model.resolve({ label: '预告信', detail: 'test' }), true);
+      model.advance();
+      continue;
+    }
+    if (journey.floor === 99 && journey.callingCardSent) {
+      assert.ok(model.enter());
+      model.resolve({ label: 'Boss', detail: 'test' });
+      model.advance();
+      continue;
+    }
+    if (!journey.explore) {
+      assert.ok(model.beginFloor(journey.floor < 1 ? 1 : journey.floor));
+      continue;
+    }
+    const map = journey.map;
+    const guardian = map.rooms[map.guardianId];
+    if (guardian?.blockBoss) {
+      walkMap(model, guardian);
+    } else {
+      walkMap(model, map.rooms[map.keyId]);
+      assert.equal(model.mapAct('take-key').ok, true);
+    }
+    walkMap(model, map.rooms[`${map.exit.x},${map.exit.y}`]);
+    assert.equal(journey.explore.exitUnlocked, true);
+    assert.equal(model.mapAct('leave-floor').ok, true);
+  }
+  assert.equal(model.journey.ended, 'clear');
+  assert.equal(guard < 600, true);
 });
 
 test('不同塔层会改变路线与警戒压力', () => {

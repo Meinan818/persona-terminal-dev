@@ -463,11 +463,17 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
   const resolveMapBattle = won => {
     if (!journey.explore || !journey.pending) return false;
     const kind = journey.pending.kind;
+    const ambush = Boolean(journey.pending.ambush);
     resolveEncounter(journey.explore, { won });
     syncExplore();
     if (!won) {
       journey.ended = 'defeat';
       return false;
+    }
+    if (ambush) {
+      journey.explore.security = Math.max(60, journey.explore.security - 35);
+      journey.explore.alert = journey.explore.security >= 100;
+      syncExplore();
     }
     journey.history.push({
       floor: journey.floor,

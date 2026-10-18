@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildBattlePersona, catalogPersonaChoices, createDefaultBattle, setPersonaOverride } from './p5-combat-rules.js';
+import { buildBattleView } from './p5-battle-bridge.js';
 
 const steady = () => 0.5;
 
@@ -100,6 +101,33 @@ test('睡眠后用枪击触发 TECHNICAL', () => {
   battle.phase = 'party';
   assert.equal(battle.act({ type: 'gun', targetId: 'b' }).ok, true);
   assert.match(battle.log.join('\n'), /TECHNICAL/);
+});
+
+test('SHOWTIME 在第二回合开放，每战限一次并打击全体', () => {
+  const battle = createDefaultBattle({ rng: steady });
+  battle.round = 2;
+  battle.currentId = 'hero';
+  battle.phase = 'party';
+  battle.party[0].acted = false;
+  const before = battle.enemies.map(enemy => enemy.hp);
+  assert.equal(battle.act({ type: 'showtime' }).ok, true);
+  assert.equal(battle.showtimeUsed, true);
+  assert.ok(battle.enemies[0].hp < before[0]);
+  assert.match(battle.log.join('\n'), /SHOWTIME/);
+  assert.equal(battle.act({ type: 'showtime' }).ok, false);
+});
+
+test('敌方意图在战斗视图中可见，并与敌方回合使用的技能一致', () => {
+  const battle = createDefaultBattle({
+    rng: () => 0.1,
+    enemies: [{ id: 'a', name: '带招之影', maxHp: 80, attack: 12, recruitPersonaId: 'pixie' }],
+  });
+  const intent = battle.enemies[0].intent;
+  assert.ok(intent?.label);
+  const view = buildBattleView(battle, 'a');
+  assert.equal(view.enemies[0].intent.label, intent.label);
+  battle.enemyPhase();
+  assert.ok(battle.enemies[0].intent?.label);
 });
 
 test('异常状态记录剩余回合，并在到期后自动解除', () => {

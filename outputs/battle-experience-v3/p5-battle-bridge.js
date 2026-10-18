@@ -232,6 +232,9 @@ export function buildBattleView(battle, selectedTargetId) {
       statusTurns: target.statusTurns,
       enraged: target.enraged,
       personality: target.personality,
+      intent: target.intent
+        ? { label: target.intent.label, elementLabel: target.intent.elementLabel, power: target.intent.power }
+        : null,
       knownAffinities: affinityView(target),
       weaknessKnown: target.knownAffinities?.[target.weakness] === 'weak',
     } : null,
@@ -262,6 +265,9 @@ export function buildBattleView(battle, selectedTargetId) {
       status: enemy.status,
       statusTurns: enemy.statusTurns,
       enraged: enemy.enraged,
+      intent: enemy.intent
+        ? { label: enemy.intent.label, elementLabel: enemy.intent.elementLabel, power: enemy.intent.power }
+        : null,
       active: enemy.id === target?.id,
       alive: enemy.hp > 0,
       knownAffinities: affinityView(enemy),
@@ -276,6 +282,7 @@ export function buildBattleView(battle, selectedTargetId) {
         }))
       : [],
     activeMaskId: actor?.isPlayer ? actor.activeMask : null,
+    showtimeUsed: Boolean(battle.showtimeUsed),
     actions: battle.actions.map(action => ({ ...action })),
     logs: battle.log.slice(-9),
     result: battle.result,

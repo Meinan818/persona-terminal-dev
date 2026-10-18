@@ -431,7 +431,9 @@ function combat() {
     ? '现在可以威胁、讨好、讲理，或给它 SP。'
     : view.phase === 'holdUp'
       ? '可以谈判、总攻击，或让它们重新站起来继续战斗。'
-      : `下一手：${target?.elementLabel ?? '未知'}系技能 · 目标随机。`;
+      : target?.intent
+        ? `下一手：${target.intent.label} · ${target.intent.elementLabel} · 目标随机。`
+        : `下一手：${target?.elementLabel ?? '未知'}系技能 · 目标随机。`;
   const normalDeck = `<div class="command-label"><span>${view.actorIsPlayer?'SKILL · 主角技能':'ALLY · 同伴行动'}</span><strong>COST</strong></div>
       <div class="command-grid engine-command-grid">${commandsAvailable.map((item,order)=>`<button data-battle-action="${battleActionKey(item)}" aria-pressed="${battleActionKey(item)===state.battleActionKey}" style="--tilt:${[-4,-1,2,4,1,-2][order%6]}deg" ${state.busy||!actorTurn||item.disabled?'disabled':''}>${icon(battleActionIcon(item.type))}<span>${esc(item.label)}<small>${esc(item.detail ?? item.type)}</small></span></button>`).join('')}</div>
       <div class="command-detail">${skills.length?`<div class="skill-list">${skills.map(item=>combatSkill(item)).join('')}</div><p>${esc(action?.detail ?? '选择一项行动。')}</p>`:`<div class="action-banner">${icon('sword')}<strong>没有可用技能</strong><b>0<small>SP</small></b></div><p>仍然可以使用普攻、枪击、防御或同伴行动。</p>`}</div>
@@ -937,6 +939,7 @@ function actionPlayback(action, lines, view) {
   else if (action.type === 'analyze') kind = 'insight';
   else if (action.type === 'batonPass') kind = 'one-more';
   else if (action.type === 'switchMask') kind = 'buff';
+  else if (action.type === 'showtime') kind = 'critical';
   else if (/回复|复活/.test(text) && healed > 0) kind = 'heal';
   else if (/TECHNICAL/.test(text)) kind = 'critical';
   else if (/弱点/.test(text)) kind = 'star';
@@ -1197,7 +1200,17 @@ const flows=createEncounterDirector({
 });
 const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom,persistP5State});
 if(new URLSearchParams(location.search).get('p5r-debug')==='1'){
-  window.__p5rDebug={jump:(floor,selected)=>flows.towerDebugJump(floor,selected)};
+  window.__p5rDebug={
+    jump:(floor,selected)=>flows.towerDebugJump(floor,selected),
+    setRound:(round)=>{
+      if(!state.battle)return false;
+      state.battle.round=Math.max(1,Number(round)||1);
+      state.battle.prepareIntents?.();
+      syncBattleUi();
+      render({focus:true});
+      return true;
+    },
+  };
 }
 function buttonFeedback(control){
   if(reduced.matches)return;

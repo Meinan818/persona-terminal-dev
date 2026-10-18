@@ -208,9 +208,26 @@ export class P5Battle {
     this.currentIsExtra = false;
     this.batonChain = 0;
     this.batonBoost = 0;
+    this.showtimeUsed = false;
     this.result = null;
     this.log = [];
     this.push(`第 1 回合：${party.map(p => p.name).join(' / ')} vs ${enemies.map(e => e.name).join(' / ')}`);
+    this.prepareIntents();
+  }
+
+  prepareIntents() {
+    this.enemies.forEach((enemy, index) => {
+      const options = (enemy.skills ?? []).filter(skill => (skill.power ?? 0) > 0);
+      const skill = options.length ? options[(this.round + index) % options.length] : null;
+      const element = skill?.element ?? enemy.element;
+      enemy.intent = {
+        skill,
+        label: skill?.name ?? `${elementLabel(element)}攻击`,
+        element,
+        elementLabel: elementLabel(element),
+        power: skill?.power ?? null,
+      };
+    });
   }
 
   push(text) {
@@ -282,6 +299,9 @@ export class P5Battle {
     }
     actions.push({ type: 'guard', label: '防御', detail: '本回合承伤减半', cost: 0 });
     if (actor.isPlayer) {
+      if (!this.showtimeUsed && this.round >= 2) {
+        actions.push({ type: 'showtime', label: 'SHOWTIME', detail: '双人合击 · 每战一次', cost: 0 });
+      }
       for (const [maskId, mask] of Object.entries(actor.masks)) {
         if (maskId === actor.activeMask) continue;
         actions.push({
@@ -370,6 +390,22 @@ export class P5Battle {
       this.push(`${actor.name} 进入防御。`);
       this.afterAction(actor);
       return { ok: true };
+    }
+
+    if (action.type === 'showtime') {
+      if (!actor.isPlayer) return { ok: false, reason: '只有主角能发动 SHOWTIME。' };
+      if (this.showtimeUsed) return { ok: false, reason: '这一战已经用过 SHOWTIME。' };
+      if (this.round < 2) return { ok: false, reason: '第一回合还不能发动。' };
+      this.showtimeUsed = true;
+      const damage = 72 + this.round * 10;
+      this.push(`SHOWTIME —— ${actor.name}与同伴的合击。`);
+      for (const enemy of this.aliveEnemies) {
+        enemy.hp = Math.max(0, enemy.hp - damage);
+        if (enemy.hp > 0) enemy.down = true;
+        this.push(`${enemy.name} 受到 ${damage} 伤害。`);
+      }
+      this.afterAction(actor);
+      return { ok: true, showtime: true };
     }
 
     if (action.type === 'basic' || action.type === 'gun') {
@@ -628,9 +664,7 @@ export class P5Battle {
         const target = targets[Math.floor(this.rng() * targets.length)];
         if (target) {
         const persona = personaFor(target);
-        const enemySkill = enemy.skills?.length && this.rng() < 0.45
-          ? enemy.skills[Math.floor(this.rng() * enemy.skills.length)]
-          : null;
+          const enemySkill = enemy.intent?.skill ?? null;
         const attackElement = enemySkill?.element ?? enemy.element;
         const affinity = affinityOfPersona(persona, attackElement);
         const skillFactor = enemySkill
@@ -682,6 +716,7 @@ export class P5Battle {
     this.batonChain = 0;
     this.batonBoost = 0;
     this.round++;
+    this.prepareIntents();
     this.currentId = this.aliveParty[0].id;
     this.push(`第 ${this.round} 回合。`);
   }

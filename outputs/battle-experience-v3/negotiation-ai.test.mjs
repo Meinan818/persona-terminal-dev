@@ -9,7 +9,7 @@ import { OPTION_ORDER } from './negotiation-rules.js';
 
 const input = {
   enemy: { name: '聒噪的假面', attribute: '魅力' },
-  persona: { name: '观测者', attribute: '知识' },
+  persona: { name: '奥丁·全知', attribute: '知识' },
   player: { sp: 217 },
 };
 

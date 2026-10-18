@@ -24,6 +24,20 @@ export const STATUS = {
   confuse: { label: '混乱', technicalWith: 'knowledge' },
 };
 
+import { getPersona, SKILLS } from './persona-compendium.js';
+
+function recruitData(id) {
+  const persona = getPersona(id);
+  const skill = SKILLS[persona.skills[0]];
+  return {
+    personaId: persona.id,
+    name: persona.name,
+    attribute: ELEMENTS[persona.element]?.label ?? persona.element,
+    skillName: skill?.name ?? persona.skills[0],
+    skillDesc: skill ? `图鉴固定技能：${skill.name}（${skill.element}，${skill.sp} SP）。` : '图鉴固定技能。',
+  };
+}
+
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const roll = (rng, probability) => rng() < probability;
 
@@ -46,21 +60,21 @@ export function createDefaultBattle({ rng = Math.random } = {}) {
     guarding: false, attackUp: 0,
     masks: {
       knowledge: {
-        name: '观测者', element: 'knowledge',
+        name: '奥丁·全知', element: 'knowledge',
         skills: [
           makeSkill('starfall', '星落', 'knowledge', 36, 18, { status: 'confuse' }),
           makeSkill('echo', '回响', 'knowledge', 20, 8),
         ],
       },
       guts: {
-        name: '反抗者', element: 'guts',
+        name: '须佐之男·斩蛇', element: 'guts',
         skills: [
           makeSkill('thrust', '疾风刺', 'guts', 34, 12),
           makeSkill('endure', '不屈', 'guts', 0, 10, { target: 'self', guard: true }),
         ],
       },
       dexterity: {
-        name: '织线者', element: 'dexterity',
+        name: '赫尔墨斯·疾风', element: 'dexterity',
         skills: [
           makeSkill('blade', '飞刃', 'dexterity', 32, 12),
           makeSkill('charge', '蓄力', 'dexterity', 0, 8, { target: 'self', attackUp: 1.3 }),
@@ -69,7 +83,7 @@ export function createDefaultBattle({ rng = Math.random } = {}) {
     },
   };
   const allyHealer = {
-    id: 'allyHealer', name: '守灯人', side: 'party', hp: 90, maxHp: 90, sp: 50, maxSp: 50,
+    id: 'allyHealer', name: '天照·守灯', side: 'party', hp: 90, maxHp: 90, sp: 50, maxSp: 50,
     ammo: 0, isPlayer: false, guarding: false, attackUp: 0, oneMoreUsed: false,
     element: 'kindness',
     skills: [
@@ -78,7 +92,7 @@ export function createDefaultBattle({ rng = Math.random } = {}) {
     ],
   };
   const allyEcho = {
-    id: 'allyEcho', name: '回声', side: 'party', hp: 85, maxHp: 85, sp: 50, maxSp: 50,
+    id: 'allyEcho', name: '卡门·回响', side: 'party', hp: 85, maxHp: 85, sp: 50, maxSp: 50,
     ammo: 0, isPlayer: false, guarding: false, attackUp: 0, oneMoreUsed: false,
     element: 'charm',
     skills: [
@@ -90,13 +104,13 @@ export function createDefaultBattle({ rng = Math.random } = {}) {
     {
       id: 'a', name: '诡辩之影', hp: 72, maxHp: 72, attack: 14, weakness: 'guts', resist: 'knowledge',
       status: null, down: false, personality: 'proud', enraged: false,
-      recruit: { name: '诡辩的假面', attribute: '知识', skillName: '诡辩', skillDesc: '下一次交涉时，先看穿对方的一句台词。' },
+      recruit: recruitData('sophist'),
       reward: { sp: 30, item: '诡辩的碎片' },
     },
     {
       id: 'b', name: '刻薄之影', hp: 64, maxHp: 64, attack: 12, weakness: 'charm', resist: 'kindness',
       status: null, down: false, personality: 'greedy', enraged: false,
-      recruit: { name: '刻薄的假面', attribute: '灵巧', skillName: '刻薄', skillDesc: '让敌人下一次攻击丢掉准头。' },
+      recruit: recruitData('stingy'),
       reward: { sp: 24, item: '刻薄的碎片' },
     },
   ];

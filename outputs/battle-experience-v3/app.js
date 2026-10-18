@@ -21,12 +21,12 @@ const state = {
 };
 const scrolls = new Map();
 const masks = [
-  { attr:'知识', name:'观测者', passive:'冷静地看穿表象', skills:[['星落',18,'知识伤害 · 命中敌人弱点'],['回响',8,'追加伤害 · 把握失衡时机']] },
-  { attr:'勇气', name:'反抗者', passive:'迎着恐惧向前', skills:[['疾风刺',12,'勇气伤害 · 单体攻击'],['不屈',10,'防护 · 迎接下一击']] },
-  { attr:'灵巧', name:'织线者', passive:'在缝隙中寻找机会', skills:[['飞刃',12,'灵巧伤害 · 单体攻击'],['蓄力',8,'准备下一次进攻']] },
-  { attr:'体贴', name:'守灯人', passive:'为自己留一盏灯', skills:[['微光',10,'回复生命'],['安宁',8,'防护 · 稳住脚步']] },
-  { attr:'魅力', name:'回声', passive:'让声音抵达彼岸', skills:[['回音斩',12,'魅力伤害 · 单体攻击'],['鼓舞',8,'强化下一次进攻']] },
-  { attr:'借来的', name:'同行者', passive:'来自同伴 · 本周剩余 2 场', skills:[['共鸣',14,'万能属性 · 借来的力量'],['守望',10,'防护 · 同伴的支持']] },
+  { attr:'知识', name:'奥丁·全知', passive:'以一只眼换来看穿表象', skills:[['星落',18,'知识伤害 · 命中敌人弱点'],['回响',8,'追加伤害 · 把握失衡时机']] },
+  { attr:'勇气', name:'须佐之男·斩蛇', passive:'迎着恐惧向前', skills:[['疾风刺',12,'勇气伤害 · 单体攻击'],['不屈',10,'防护 · 迎接下一击']] },
+  { attr:'灵巧', name:'赫尔墨斯·疾风', passive:'在缝隙中寻找机会', skills:[['飞刃',12,'灵巧伤害 · 单体攻击'],['蓄力',8,'准备下一次进攻']] },
+  { attr:'体贴', name:'天照·守灯', passive:'为自己留一盏灯', skills:[['微光',10,'回复生命'],['安宁',8,'防护 · 稳住脚步']] },
+  { attr:'魅力', name:'卡门·回响', passive:'让声音抵达彼岸', skills:[['回音斩',12,'魅力伤害 · 单体攻击'],['鼓舞',8,'强化下一次进攻']] },
+  { attr:'借来的', name:'伊邪那岐·大神', passive:'来自同伴 · 本周剩余 2 场', skills:[['共鸣',14,'万能属性 · 借来的力量'],['守望',10,'防护 · 同伴的支持']] },
 ];
 const attributeMarks = [['eye','KNOWLEDGE'],['sword','COURAGE'],['shield','DEXTERITY'],['star','KINDNESS'],['mask','CHARM'],['mask','BORROWED']];
 const nodes = {
@@ -391,7 +391,7 @@ function closeNegotiation() {
 function visualStateRail(){
   const states={intent:['大招前摇','HEAVY WIND-UP','下一击将释放重击；把它打入失衡即可打断。'],status:['异常状态','STATUS EFFECTS','回合开始结算中毒、沉静或警戒。'],mask:['面具切换','MASK SHIFT','切换是自由行动；借来的面具拥有独立次数。'],phase:['二形态展开','PHASE 02','第一形态清零后，同一舞台直接进入下一形态。'],support:['同伴援助','SUPPORT','支援从战斗上层进入，不遮挡玩家状态条。'],moon:['月度心魔','MOON SHADOW','月相改变弱点与词缀，战场进入本月专属状态。'],abyss:['深渊规则','ABYSS RING','本周规则会改变一整场战斗的取舍。'],finale:['伪神终局','FINAL BOSS','三条血与终局演出在同一战场系统内收束。']};
   const current=states[visualStateKey]??states.intent;
-  return `<section class="visual-state-rail" aria-label="战斗状态取景"><div class="visual-state-heading"><span>战场取景 / VISUAL COVERAGE</span><b>${current[0]}</b><em>${current[1]} · ${current[2]}</em></div><div class="visual-state-tabs">${Object.entries(states).map(([id,state])=>`<button type="button" class="${id===visualStateKey?'active':''}" data-visual-state="${id}">${state[0]}</button>`).join('')}</div></section><div class="visual-state-dock state-${visualStateKey}" aria-label="${current[0]} 示例">${visualStateKey==='intent'?`<span>${icon('eye')}<b>下一击：大招释放</b><small>前摇可被失衡打断 · 预计 96 点</small></span><strong>⚡</strong>`:visualStateKey==='status'?`<span class="state-chip poison">☠ 中毒 · 3 回合</span><span class="state-chip calm">◌ 沉静 · 1 回合</span><span class="state-chip guard">▣ 警戒 · 减伤</span>`:visualStateKey==='mask'?`<span>${icon('mask')} 观测者</span><i>${icon('arrow')}</i><b>${icon('mask')} 同行者</b><small>借来的面具 · 本周 3 场</small>`:visualStateKey==='support'?`<span class="support-glyph">${icon('shield')}</span><b>同伴庇护</b><small>致命一击前保留 1 HP · 支援提示</small>`:visualStateKey==='moon'?`<span class="moon-mark">☾</span><b>月度心魔：回声的执念</b><small>月蚀词缀 · 弱点暂时隐藏</small>`:visualStateKey==='abyss'?`<span class="abyss-mark">RING 07</span><b>静默规则</b><small>防御不回 SP · 深渊守卫已锁定意图</small>`:visualStateKey==='finale'?`<span class="finale-mark">01 / 03</span><b>伪神终局 · 第一条血</b><small>终局演出接管战斗收尾</small>`:`<b>PHASE 02</b><span>面具之下，意志重生。</span><i><em></em></i>`}</div>`;
+  return `<section class="visual-state-rail" aria-label="战斗状态取景"><div class="visual-state-heading"><span>战场取景 / VISUAL COVERAGE</span><b>${current[0]}</b><em>${current[1]} · ${current[2]}</em></div><div class="visual-state-tabs">${Object.entries(states).map(([id,state])=>`<button type="button" class="${id===visualStateKey?'active':''}" data-visual-state="${id}">${state[0]}</button>`).join('')}</div></section><div class="visual-state-dock state-${visualStateKey}" aria-label="${current[0]} 示例">${visualStateKey==='intent'?`<span>${icon('eye')}<b>下一击：大招释放</b><small>前摇可被失衡打断 · 预计 96 点</small></span><strong>⚡</strong>`:visualStateKey==='status'?`<span class="state-chip poison">☠ 中毒 · 3 回合</span><span class="state-chip calm">◌ 沉静 · 1 回合</span><span class="state-chip guard">▣ 警戒 · 减伤</span>`:visualStateKey==='mask'?`<span>${icon('mask')} 奥丁·全知</span><i>${icon('arrow')}</i><b>${icon('mask')} 伊邪那岐·大神</b><small>借来的面具 · 本周 3 场</small>`:visualStateKey==='support'?`<span class="support-glyph">${icon('shield')}</span><b>同伴庇护</b><small>致命一击前保留 1 HP · 支援提示</small>`:visualStateKey==='moon'?`<span class="moon-mark">☾</span><b>月度心魔：回声的执念</b><small>月蚀词缀 · 弱点暂时隐藏</small>`:visualStateKey==='abyss'?`<span class="abyss-mark">RING 07</span><b>静默规则</b><small>防御不回 SP · 深渊守卫已锁定意图</small>`:visualStateKey==='finale'?`<span class="finale-mark">01 / 03</span><b>伪神终局 · 第一条血</b><small>终局演出接管战斗收尾</small>`:`<b>PHASE 02</b><span>面具之下，意志重生。</span><i><em></em></i>`}</div>`;
 }
 function combatSkill(skill,index){
   const latin=[['STARFALL','ECHO'],['GALE THRUST','UNYIELDING'],['FLYING BLADE','CHARGE'],['LIGHT','SERENITY'],['ECHO SLASH','ENCOURAGE'],['RESONANCE','GUARD']];

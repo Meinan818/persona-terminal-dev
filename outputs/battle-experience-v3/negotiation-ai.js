@@ -6,6 +6,7 @@
  */
 
 import { NEGOTIATION_OPTIONS, OPTION_ORDER, PERSONALITIES } from './negotiation-rules.js';
+import { SKILLS, getPersona, recruitCandidates } from './persona-compendium.js';
 
 const ATTRIBUTES = ['知识', '勇气', '灵巧', '体贴', '魅力'];
 const PERSONALITY_BY_ATTRIBUTE = {
@@ -72,12 +73,12 @@ const TEMPLATES = {
   },
 };
 
-const RECRUIT_BY_ATTRIBUTE = {
-  知识: { name: '低语的假面', skillName: '回声分析', skillDesc: '看穿敌方的下一句判词，下一次攻击附带洞察。' },
-  勇气: { name: '咆哮的假面', skillName: '逆鳞斩', skillDesc: '在失衡窗口打出一次高额反击。' },
-  灵巧: { name: '错拍的假面', skillName: '断拍', skillDesc: '打乱敌方意图，让它失去一次行动。' },
-  体贴: { name: '带刺的假面', skillName: '温柔荆棘', skillDesc: '回复少量 HP，并让敌人下一次攻击变轻。' },
-  魅力: { name: '谄媚的假面', skillName: '甜言', skillDesc: '降低敌方戒心，下一次交涉更容易。' },
+const ELEMENT_BY_ATTRIBUTE = {
+  知识: 'knowledge',
+  勇气: 'guts',
+  灵巧: 'dexterity',
+  体贴: 'kindness',
+  魅力: 'charm',
 };
 
 const REWARD = { sp: 30, item: '裂开的假面碎片' };
@@ -91,6 +92,21 @@ function personalityOf(input) {
   return PERSONALITY_BY_ATTRIBUTE[attributeOf(input)] ?? 'proud';
 }
 
+function recruitFor(input) {
+  const attribute = attributeOf(input);
+  const element = ELEMENT_BY_ATTRIBUTE[attribute];
+  const level = Number(input?.enemy?.level) || 1;
+  const persona = recruitCandidates(element, level)[0] ?? getPersona('sophist');
+  const skill = SKILLS[persona.skills[0]];
+  return {
+    personaId: persona.id,
+    name: persona.name,
+    attribute,
+    skillName: skill?.name ?? persona.skills[0],
+    skillDesc: skill ? `图鉴固定技能：${skill.name}（${skill.element}，${skill.sp} SP）。` : '图鉴固定技能。',
+  };
+}
+
 export function offlineNegotiation(input = {}) {
   const personality = personalityOf(input);
   const template = TEMPLATES[personality] ?? TEMPLATES.proud;
@@ -101,7 +117,7 @@ export function offlineNegotiation(input = {}) {
     opening: template.opening,
     demand: template.demand,
     options: Object.fromEntries(OPTION_ORDER.map(id => [id, template.options[id]])),
-    recruit: { ...RECRUIT_BY_ATTRIBUTE[attribute], attribute },
+    recruit: recruitFor(input),
     reward: { ...REWARD },
   };
 }
@@ -116,6 +132,20 @@ export function normalizeNegotiation(raw, input = {}) {
     clampText(sourceOptions[id], 60) || fallback.options[id],
   ]));
   const sourceRecruit = raw.recruit && typeof raw.recruit === 'object' ? raw.recruit : {};
+  const requestedPersona = getPersona(sourceRecruit.personaId ?? raw.recruitPersonaId);
+  const recruit = requestedPersona
+    ? (() => {
+        const attribute = attributeOf(input);
+        const skill = SKILLS[requestedPersona.skills[0]];
+        return {
+          personaId: requestedPersona.id,
+          name: requestedPersona.name,
+          attribute,
+          skillName: skill?.name ?? requestedPersona.skills[0],
+          skillDesc: skill ? `图鉴固定技能：${skill.name}（${skill.element}，${skill.sp} SP）。` : '图鉴固定技能。',
+        };
+      })()
+    : fallback.recruit;
   const sourceReward = raw.reward && typeof raw.reward === 'object' ? raw.reward : {};
   return {
     mode: raw.mode === 'preview' ? 'preview' : raw.mode === 'offline' ? 'offline' : 'ai',
@@ -123,12 +153,7 @@ export function normalizeNegotiation(raw, input = {}) {
     opening: clampText(raw.opening, 90) || fallback.opening,
     demand: clampText(raw.demand, 60) || fallback.demand,
     options,
-    recruit: {
-      name: clampText(sourceRecruit.name, 24) || fallback.recruit.name,
-      skillName: clampText(sourceRecruit.skillName, 24) || fallback.recruit.skillName,
-      skillDesc: clampText(sourceRecruit.skillDesc, 80) || fallback.recruit.skillDesc,
-      attribute: ATTRIBUTES.includes(sourceRecruit.attribute) ? sourceRecruit.attribute : fallback.recruit.attribute,
-    },
+    recruit,
     reward: {
       sp: Math.max(10, Math.min(60, Number(sourceReward.sp) || fallback.reward.sp)),
       item: clampText(sourceReward.item, 30) || fallback.reward.item,
@@ -206,7 +231,7 @@ export function installPreviewNegotiationBridge() {
       onStatus?.('它开口了。');
       await wait(180, signal);
       const base = offlineNegotiation(input);
-      const personaName = clampText(input?.persona?.name, 16) || '观测者';
+      const personaName = clampText(input?.persona?.name, 16) || '奥丁·全知';
       return {
         ...base,
         mode: 'preview',

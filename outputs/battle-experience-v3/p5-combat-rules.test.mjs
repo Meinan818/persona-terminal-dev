@@ -35,7 +35,7 @@ test('BATON PASS 把追加行动交给队友并提高伤害', () => {
   battle.act({ type: 'switchMask', id: 'guts' });
   battle.act({ type: 'skill', id: 'thrust' });
   assert.equal(battle.act({ type: 'batonPass', targetId: 'allyEcho' }).ok, true);
-  assert.equal(battle.snapshot().actor, '回声');
+  assert.equal(battle.snapshot().actor, '卡门·回响');
   assert.equal(battle.batonChain, 1);
   assert.equal(battle.batonBoost, 0.25);
   assert.match(battle.log.join('\n'), /BATON PASS/);
@@ -74,7 +74,7 @@ test('交涉成功可以收服影子，失败会激怒它', () => {
   assert.equal(win.chooseResult('recruit').ok, true);
   assert.equal(win.phase, 'result');
   assert.equal(win.result.type, 'recruited');
-  assert.equal(win.result.name, '诡辩的假面');
+  assert.equal(win.result.name, '普罗米修斯·诡辩');
 
   const lose = createDefaultBattle({ rng: () => 0.99 });
   forceHoldUp(lose);

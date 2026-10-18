@@ -21,6 +21,7 @@ import { inventoryEntries, equipmentSummary, slotLabel, useInventoryItem, sellIn
 import { arsenalEffects, relicList, RELICS, CHAINS } from './arsenal-effects.js';
 import { xpNeeded } from './persona-progress.js';
 import { createNpcTrust } from './npcs.js';
+import { createSliceFlow } from './night-slice-flow.js';
 installPreviewNegotiationBridge();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -924,14 +925,15 @@ function appendHomePartyLine() {
 
 function render({ focus = false } = {}) {
   const previousMaskScroll=$('.mask-tabs')?.scrollLeft ?? 0;
-  document.body.dataset.fighting = String(state.fighting||Boolean(flows.active));
+  document.body.dataset.fighting = String(state.fighting||Boolean(flows.active)||sliceFlow.active);
   $$('.room-nav a').forEach(a => {
     if (a.dataset.room === state.room) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
   });
-  content.innerHTML = flows.screen() ?? (state.fighting ? combat() : ({battle:home,tower,persona,arsenal}[state.room])());
+  const overlay = sliceFlow.screen() ?? flows.screen();
+  content.innerHTML = overlay ?? (state.fighting ? combat() : ({battle:home,tower,persona,arsenal}[state.room])());
   document.body.classList.toggle('p3-hold-up', Boolean(state.fighting && state.battle?.phase === 'holdUp' && !state.negotiation?.active));
-  if (!state.fighting && !flows.screen() && state.room === 'persona') appendPersonaSystems();
-  if (!state.fighting && !flows.screen() && state.room === 'battle') appendHomePartyLine();
+  if (!state.fighting && !overlay && state.room === 'persona') appendPersonaSystems();
+  if (!state.fighting && !overlay && state.room === 'battle') appendHomePartyLine();
   if(flows.rehearsal){
     const deck=$('.command-deck');if(deck){deck.inert=true;$$('button',deck).forEach(button=>button.disabled=true);}
   }
@@ -950,6 +952,7 @@ function navigate(room) {
   location.hash = room;
 }
 addEventListener('hashchange', () => {
+  sliceFlow.dismiss();
   flows.towerHide();
   if(flows.active){flows.resetView();state.busy=false;}
   if (state.fighting) {
@@ -1035,7 +1038,8 @@ function returnFromBattle() {
   actionRun++;clearTimeout(enemyTimer);
   const won=state.finished||state.battleWon||state.negotiation?.phase==='result';
   const receipt=state.battleReceipt??(state.battle?battleReceipt(state.battle):null);
-  flows.towerReturn(won,flows.bossPhase,receipt);
+  if(sliceFlow.active) sliceFlow.battleReturn(won);
+  else flows.towerReturn(won,flows.bossPhase,receipt);
   flows.resetView?.();
   state.busy=false;
   state.turnPhase='player';
@@ -1349,6 +1353,7 @@ const flows=createEncounterDirector({
   },
 });
 const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom,persistP5State});
+const sliceFlow=createSliceFlow({state,icon,render,notify,persistP5State,goRoom,startBattle});
 if(new URLSearchParams(location.search).get('p5r-debug')==='1'){
   window.__p5rDebug={
     jump:(floor,selected)=>flows.towerDebugJump(floor,selected),
@@ -1406,6 +1411,7 @@ document.addEventListener('click',event=>{
   if(control.dataset.battleAction){if(state.busy)return;state.battleActionKey=control.dataset.battleAction;render();$(`[data-battle-action="${state.battleActionKey}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.switchMask){state.battleActionKey=`switchMask:${control.dataset.switchMask}`;sheet.close();execute();return;}
   if(control.dataset.flow){flows.act(control.dataset.flow);return;}
+  if(control.dataset.slice){sliceFlow.act(control.dataset.slice);return;}
   if(control.dataset.tower){flows.towerAct(control.dataset.tower);return;}
   if(control.dataset.prep){preparation.act(control.dataset.prep);return;}
   if(control.dataset.visualState){location.href=`?view=combat&visual=states&state=${encodeURIComponent(control.dataset.visualState)}`;return;}
@@ -1470,7 +1476,7 @@ sheet.addEventListener('close',()=>{
   const fallback=state.fighting?$('[data-action="choose-mask"]'):$(`.room-nav a[data-room="${state.room}"]`);
   if(!document.activeElement||document.activeElement===document.body)fallback?.focus({preventScroll:true});
 });
-document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!sheet.open){if(flows.transforming||flows.active||flows.rehearsal){event.preventDefault();flows.close();return;}if(state.fighting){event.preventDefault();leaveBattle();}}});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!sheet.open){if(sliceFlow.active&&!state.fighting){event.preventDefault();sliceFlow.close();return;}if(flows.transforming||flows.active||flows.rehearsal){event.preventDefault();flows.close();return;}if(state.fighting){event.preventDefault();leaveBattle();}}});
 document.addEventListener('visibilitychange',()=>document.body.classList.toggle('is-hidden',document.hidden));
 state.room=roomFromHash();
 const towerPreview=new URLSearchParams(location.search).get('tower');

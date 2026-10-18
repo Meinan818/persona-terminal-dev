@@ -1,6 +1,40 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-19 07:03（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-19 07:23（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+
+## 已完成节点 · 2026-10-19 · 单层 AI 切片跑通：默认塔夜层，记录可选
+
+### 现场
+
+- 分支 `codex/p5r-compendium-data`，业务 HEAD `4462bbf docs(state): 新对话交接 AI 单层切片优先`；本条状态记录会产生一个本地 docs 提交。
+- 未 Push、未部署、未重打交付 zip。`outputs/` 按惯例不入库；本轮新增的切片模块都在 `outputs/battle-experience-v3/`。
+- 工作区遗留保持原样：`ios/App/Podfile`、`outputs/battle-experience-v3/P5-P3-FUSION.md` 换行差异，以及未跟踪的缓存/旧输出。未 stash/reset/clean，未夹带。
+
+### 用户新决定（本轮修正）
+
+- 不要求玩家每天记录；**默认“直接入夜”不读记录**，塔自己生成一层。
+- 记录是可选入口，偶尔想带一件事进去时才用；不自动拿记录生成每一晚。
+- 怪物命名沿用塔的主题命名，不把记录内容写成怪物名字；模型输出如果拿记录当名字会被拦下。
+
+### 做了什么
+
+- `night-slice.js`：纯规则。3–5 间房、守卫/影子/事件/出口；绕行/硬刚/自由交涉；成功率、HP/SP、奖励、随机数全在这里。塔夜层 6 套主题（月台/档案室/温室/剧场/镜厅/钟楼），记录模式 6 套生活主题 + 空白日兜底。
+- `night-slice-ai.js`：`window.MASKARIA_AI.planNightFloor({mode, record, date, roster})` 与 `judgeShadowTalk({text, room, history, dayRecord})` 两个契约；超时/坏 JSON/缺字段自动落离线；`?slice-ai=preview` 才装预览桥，界面明确标注“未连接真实模型”。
+- `night-slice-flow.js` + `night-slice.css`：白昼页（直接入夜 + 可选记录抽屉）、夜层、交涉输入、判定结果、结算、刷新恢复；硬刚复用现有 P5Battle，胜负回写 HP/SP。
+- `app.js`：slice flow 接入 render/点击/Esc/战斗返回；`tower-flow.js` 据点加“单层切片”入口。
+- 命名保护：模型返回的影子名若和记录有 4 字以上重合，退回主题名。塔模式发给模型的记录恒为空串。
+
+### 验证
+
+- demo Node 测试 **173/173**（新增 23 项：塔夜层不读记录、空白日、模型收口、名字防泄漏、绕行/硬刚/交涉/结算）。
+- `node --check` 通过。
+- 真实 Chrome 1440×900 / 390×844：直接入夜 → 硬刚（`__p5rDebug.winBattle`）→ 自由输入交涉 → 结算 → 回到白昼 → 刷新保留；另外验证据点入口与记录模式；`errors=[]`，`overflowX=0`。截图在 `E:\MASKARIA\.rivet\scratch\p5r-night-slice-20261019\`，探针 `.rivet/scratch/p5r-night-slice-probe.mjs`。
+- 未验证：真实模型端到端（独立 demo 没有 provider/key，契约已留，需在主 App 注入）；手机真机；数值手感与长线平衡。
+
+### 下一步
+
+- 在主 App 里把 `planNightFloor` / `judgeShadowTalk` 接到现有 AI 传输（密钥只在主 App 设置里），跑一次真模型；再决定是否要“每隔几晚自动读一次记录”，当前不做自动读取。
+- 切片稳定后再做 UI 外包 brief；页面和交互冻结前不重画整套 UI。
 
 ## 准备交接 · 2026-10-19 07:03 · 新对话入口：AI 单层切片优先，UI 先做概念
 

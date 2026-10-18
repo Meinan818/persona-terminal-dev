@@ -2,7 +2,7 @@
   "name": "Persona-Terminal",
   "private": true,
   "license": "GPL-3.0-or-later",
-  "version": "2.8.13",
+  "version": "2.8.14",
   "type": "module",
   "scripts": {
     "dev": "vite",

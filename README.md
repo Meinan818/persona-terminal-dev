@@ -4,7 +4,7 @@
 
 <h1 align="center">MASKARIA · 面具庭园</h1>
 <p align="center"><em>把日子过成存档，把存档过成人样</em></p>
-<p align="center">当前 Android 正式版：<strong>v2.8.13</strong>（Web 已同步）</p>
+<p align="center">当前 Android 正式版：<strong>v2.8.14</strong>（Web 已同步）</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" />
@@ -125,6 +125,10 @@
 
 每天三选一抽一张塔罗，给一段运势和一句建议，顺手给某个属性加成。
 另有持续十四天、可以追问一次的中长期占卜。
+
+图鉴收录完整 78 张塔罗牌；岁时册提供四主题的 24 节气与 20 节日卡面。
+占卜档案直接显示已抽中的牌图，并保留正逆位；红主题背景动画保留原有暗红块、网点和星纹。
+手机庆祝演出的大装饰使用固定纹理，弹窗期间暂停背景动画、关闭后恢复；开发启动排除安装包目录的扫描和热重载。
 
 **没配 AI 也能抽**——有离线解读兜底，不至于让你对着一个转圈的加载图标发呆。
 
@@ -249,7 +253,7 @@ npm run cap:build:android  # 打包
 
 ## 完成度
 
-前端 `npm test` **44 个测试文件 / 281 项**通过，`tsc --noEmit` 零报错；
+前端 `npm test` **45 个测试文件 / 286 项**通过，`tsc --noEmit` 零报错；
 后端 `mvn test` **159 项**通过（集成测试跑在独立测试库，不碰应用库）。
 数据库迁移 13 个版本，从空库到可用一键完成。
 

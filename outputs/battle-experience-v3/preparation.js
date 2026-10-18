@@ -154,6 +154,6 @@ export function createPreparationDirector(api) {
   return {
     act,item,settings,
     itemStatus(id){return id==='myth'&&socket?'已镶嵌':id==='oath'&&oath!==null?'已装上':id==='chain'&&chain!==null?'已连接':'';},
-    personaTools(){return `<div class="preparation-tools"><button data-prep="create">${icon('star')}<span>觉醒问答</span></button><button data-prep="create-ai">${icon('eye')}<span>AI 觉醒<small>BRIDGE DEMO</small></span></button><button data-prep="reshape">${icon('mask')}<span>面具重塑</span></button><button data-prep="growth">${icon('eye')}<span>技能成长</span></button></div>`;},
+    personaTools(){return `<div class="preparation-tools"><button data-prep="create">${icon('star')}<span>觉醒问答</span></button><button data-prep="reshape">${icon('mask')}<span>面具重塑</span></button><button data-prep="growth">${icon('eye')}<span>技能成长</span></button></div>`;},
   };
 }

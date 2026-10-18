@@ -225,7 +225,7 @@ function combat() {
       <div class="enemy-name"><h1>${esc(target?.name??'敌人')}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:`${target?.down?'DOWN':'TARGET'}`}</span></div>
       <div class="enemy-targets" role="group" aria-label="选择攻击目标">${view.enemies.map(enemy=>`<button data-target-id="${enemy.id}" class="${enemy.active?'active':''} ${!enemy.alive?'down':''}" aria-pressed="${enemy.active}" ${!enemy.alive?'disabled':''}>${enemy.down?'DOWN':enemy.name}</button>`).join('')}</div>
       <div class="enemy-vitals"><span>敌人 HP</span><span><strong>${target?.hp??0}</strong> / ${target?.maxHp??1}</span></div>${meter(target?.hp??0,target?.maxHp??1)}
-      <div class="weakness-line"><b>${weakness}</b><span>${negotiating?'HOLD UP · 可以交涉':target?.status?`异常 · ${statusLabels[target.status]??target.status}`:target?.down?'失衡 · 1 MORE / 总攻击窗口':target?.enraged?'激怒 · 攻击提升':'耐性会随命中逐步发现'}</span></div>
+      <div class="weakness-line"><b>${weakness}</b><span>${negotiating?'HOLD UP · 可以交涉':target?.status?`异常 · ${statusLabels[target.status]??target.status}${target.statusTurns?` · ${target.statusTurns} 回合`:''}`:target?.down?'失衡 · 1 MORE / 总攻击窗口':target?.enraged?'激怒 · 攻击提升':'耐性会随命中逐步发现'}</span></div>
       <div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
       <div class="enemy-intent">${icon('eye')}<span><b>${intentTitle}</b><small>${intentNote}</small></span></div>
     </section><section class="command-deck" aria-label="战斗指令" aria-busy="${state.busy||negotiating}">

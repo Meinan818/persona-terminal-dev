@@ -79,6 +79,21 @@ test('睡眠后用枪击触发 TECHNICAL', () => {
   assert.match(battle.log.join('\n'), /TECHNICAL/);
 });
 
+test('异常状态记录剩余回合，并在到期后自动解除', () => {
+  const battle = createDefaultBattle({ rng: steady });
+  battle.currentId = 'ally:silky';
+  assert.equal(battle.act({ type: 'skill', id: 'Dormina', targetId: 'b' }).ok, true);
+  const enemy = battle.enemies.find(item => item.id === 'b');
+  assert.equal(enemy.status, 'sleep');
+  assert.equal(enemy.statusTurns, 3);
+  enemy.statusTurns = 1;
+  enemy.statusAppliedRound = battle.round - 1;
+  battle.enemyPhase();
+  assert.equal(enemy.status, null);
+  assert.equal(enemy.statusTurns, 0);
+  assert.match(battle.log.join('\n'), /睡眠.*解除|【睡眠】解除了/);
+});
+
 test('无效属性不会造成伤害、倒地或 1 MORE', () => {
   const battle = createDefaultBattle({
     rng: steady,
@@ -101,9 +116,9 @@ test('无效属性不会造成伤害、倒地或 1 MORE', () => {
 
 test('普通命中只结算伤害，不污染“已发现耐性”列表', () => {
   const battle = createDefaultBattle({ rng: steady });
-  assert.equal(battle.act({ type: 'skill', id: 'Eiha', targetId: 'a' }).ok, true);
-  assert.equal(battle.enemies[0].hp < battle.enemies[0].maxHp, true);
-  assert.deepEqual(battle.enemies[0].knownAffinities, {});
+  assert.equal(battle.act({ type: 'skill', id: 'Eiha', targetId: 'b' }).ok, true);
+  assert.equal(battle.enemies[1].hp < battle.enemies[1].maxHp, true);
+  assert.deepEqual(battle.enemies[1].knownAffinities, {});
 });
 
 test('交涉成功收服 P5R 目录里的真实 Persona', () => {

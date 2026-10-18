@@ -110,6 +110,8 @@ function makeEnemy(spec) {
     absorb: spec.absorb ?? [],
     repel: spec.repel ?? [],
     status: null,
+    statusTurns: 0,
+    statusAppliedRound: 0,
     down: false,
     personality: spec.personality ?? 'proud',
     enraged: false,
@@ -539,6 +541,8 @@ export class P5Battle {
     }
     if (item.status && target.hp > 0) {
       target.status = item.status;
+      target.statusTurns = item.statusTurns ?? 3;
+      target.statusAppliedRound = this.round;
       this.push(`${target.name} 陷入【${STATUS[item.status]?.label ?? item.status}】。`);
     }
     actor.attackUp = 0;
@@ -612,27 +616,37 @@ export class P5Battle {
       }
       if (enemy.status && ['sleep', 'freeze', 'shock', 'dizzy'].includes(enemy.status)) {
         this.push(`${enemy.name} 因【${STATUS[enemy.status].label}】无法行动。`);
-        enemy.status = null;
-        continue;
       }
-      const targets = this.aliveParty;
-      const target = targets[Math.floor(this.rng() * targets.length)];
-      if (!target) break;
-      const persona = personaFor(target);
-      const affinity = affinityOfPersona(persona, enemy.element);
-      const raw = Math.max(1, Math.round(enemy.attack * (0.9 + this.rng() * 0.2) * (enemy.enraged ? 1.4 : 1)));
-      let damage = Math.max(1, Math.round((raw - (persona?.defense ?? 0) * 0.5) * (
-        target.guarding ? 0.5 : 1
-      )));
-      const labels = [];
-      if (affinity === 'weak') { damage = Math.round(damage * 1.25); labels.push('弱点'); }
-      else if (affinity === 'resist') { damage = Math.round(damage * 0.5); labels.push('抗性'); }
-      else if (affinity === 'null') { damage = 0; labels.push('无效'); }
-      else if (affinity === 'absorb') { target.hp = Math.min(target.maxHp, target.hp + damage); damage = 0; labels.push('吸收'); }
-      else if (affinity === 'repel') { enemy.hp = Math.max(0, enemy.hp - damage); damage = 0; labels.push('反弹'); }
-      if (damage > 0) target.hp = Math.max(0, target.hp - damage);
-      this.push(`${enemy.name} 以${elementLabel(enemy.element)}攻击 ${target.name}，${damage ? `造成 ${damage} 伤害` : '没有造成伤害'}${labels.length ? `（${labels.join(' / ')}）` : ''}。`);
-      if (target.hp <= 0) this.push(`${target.name} 倒下了。`);
+      const disabled = enemy.status && ['sleep', 'freeze', 'shock', 'dizzy'].includes(enemy.status);
+      if (!disabled) {
+        const targets = this.aliveParty;
+        const target = targets[Math.floor(this.rng() * targets.length)];
+        if (target) {
+          const persona = personaFor(target);
+          const affinity = affinityOfPersona(persona, enemy.element);
+          const raw = Math.max(1, Math.round(enemy.attack * (0.9 + this.rng() * 0.2) * (enemy.enraged ? 1.4 : 1)));
+          let damage = Math.max(1, Math.round((raw - (persona?.defense ?? 0) * 0.5) * (
+            target.guarding ? 0.5 : 1
+          )));
+          const labels = [];
+          if (affinity === 'weak') { damage = Math.round(damage * 1.25); labels.push('弱点'); }
+          else if (affinity === 'resist') { damage = Math.round(damage * 0.5); labels.push('抗性'); }
+          else if (affinity === 'null') { damage = 0; labels.push('无效'); }
+          else if (affinity === 'absorb') { target.hp = Math.min(target.maxHp, target.hp + damage); damage = 0; labels.push('吸收'); }
+          else if (affinity === 'repel') { enemy.hp = Math.max(0, enemy.hp - damage); damage = 0; labels.push('反弹'); }
+          if (damage > 0) target.hp = Math.max(0, target.hp - damage);
+          this.push(`${enemy.name} 以${elementLabel(enemy.element)}攻击 ${target.name}，${damage ? `造成 ${damage} 伤害` : '没有造成伤害'}${labels.length ? `（${labels.join(' / ')}）` : ''}。`);
+          if (target.hp <= 0) this.push(`${target.name} 倒下了。`);
+        }
+      }
+      if (enemy.status && enemy.statusAppliedRound !== this.round) {
+        enemy.statusTurns = Math.max(0, enemy.statusTurns - 1);
+        if (enemy.statusTurns === 0) {
+          this.push(`${enemy.name} 的【${STATUS[enemy.status]?.label ?? enemy.status}】解除了。`);
+          enemy.status = null;
+          enemy.statusAppliedRound = 0;
+        }
+      }
     }
     if (this.aliveParty.length === 0) {
       this.phase = 'defeat';
@@ -753,6 +767,7 @@ export class P5Battle {
         hp: e.hp,
         maxHp: e.maxHp,
         status: e.status,
+        statusTurns: e.statusTurns,
         down: e.down,
         weakness: e.weakness,
         personality: e.personality,

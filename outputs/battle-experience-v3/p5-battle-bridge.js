@@ -99,11 +99,9 @@ function primaryEnemySpec({ encounter, floor, boss }) {
 }
 
 function secondaryEnemySpec({ encounter, floor }) {
-  const index = Math.max(0, Math.min(ELEMENTS.length - 1, floor - 1));
   const main = normalizedElement(encounter?.weakness);
-  const weakness = ELEMENTS.find((element, offset) => (
-    element !== main && ELEMENTS[(index + offset + 2) % ELEMENTS.length] === element
-  )) ?? ELEMENTS[(index + 2) % ELEMENTS.length];
+  const candidates = ['electric', 'fire', 'ice', 'curse'].filter(element => element !== main);
+  const weakness = candidates[Math.max(0, floor - 2) % candidates.length];
   const level = Math.max(1, (Number(encounter?.level) || floor) - 1);
   return {
     id: 'echo',
@@ -220,6 +218,7 @@ export function buildBattleView(battle, selectedTargetId) {
       elementLabel: ELEMENT_LABELS[target.element] ?? target.element,
       down: target.down,
       status: target.status,
+      statusTurns: target.statusTurns,
       enraged: target.enraged,
       personality: target.personality,
       knownAffinities: affinityView(target),
@@ -249,6 +248,7 @@ export function buildBattleView(battle, selectedTargetId) {
       elementLabel: ELEMENT_LABELS[enemy.element] ?? enemy.element,
       down: enemy.down,
       status: enemy.status,
+      statusTurns: enemy.statusTurns,
       enraged: enemy.enraged,
       active: enemy.id === target?.id,
       alive: enemy.hp > 0,

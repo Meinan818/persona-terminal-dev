@@ -10,10 +10,10 @@ function forceHoldUp(battle) {
   battle.currentId = 'hero';
 }
 
-test('开局从 P5R 目录生成三人小队，不再硬编码旧面具', () => {
+test('开局从 P5R 目录生成四人小队，不再硬编码旧面具', () => {
   const battle = createDefaultBattle({ rng: steady });
   const snap = battle.snapshot();
-  assert.equal(snap.party.length, 3);
+  assert.equal(snap.party.length, 4);
   assert.equal(snap.enemies.length, 2);
   assert.equal(snap.actor, '你');
   assert.equal(snap.persona, '亚森');
@@ -97,6 +97,13 @@ test('无效属性不会造成伤害、倒地或 1 MORE', () => {
   assert.equal(enemy.down, false);
   assert.equal(battle.extraId, null);
   assert.equal(enemy.knownAffinities.electric, 'null');
+});
+
+test('普通命中只结算伤害，不污染“已发现耐性”列表', () => {
+  const battle = createDefaultBattle({ rng: steady });
+  assert.equal(battle.act({ type: 'skill', id: 'Eiha', targetId: 'a' }).ok, true);
+  assert.equal(battle.enemies[0].hp < battle.enemies[0].maxHp, true);
+  assert.deepEqual(battle.enemies[0].knownAffinities, {});
 });
 
 test('交涉成功收服 P5R 目录里的真实 Persona', () => {

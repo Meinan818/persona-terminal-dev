@@ -18,7 +18,7 @@ export const ELEMENTS = P5_ELEMENTS;
 export const STATUS = P5_STATUS;
 
 const DEFAULT_HERO_PERSONAS = ['arsene', 'pixie', 'jack-o-lantern', 'angel'];
-const DEFAULT_ALLY_PERSONAS = ['silky', 'cait-sith'];
+const DEFAULT_ALLY_PERSONAS = ['silky', 'cait-sith', 'kelpie'];
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const roll = (rng, probability) => rng() < probability;
@@ -475,7 +475,9 @@ export class P5Battle {
   hitEnemy(actor, target, item) {
     const affinity = item.ignoreAffinity ? 'normal' : affinityOfEnemy(target, item.element);
     const newAffinity = !item.ignoreAffinity && !target.knownAffinities[item.element];
-    if (!item.ignoreAffinity) target.knownAffinities[item.element] = affinity;
+    if (!item.ignoreAffinity && affinity !== 'normal') {
+      target.knownAffinities[item.element] = affinity;
+    }
     const technical = Boolean(
       target.status
       && STATUS[target.status]?.technicalWith?.includes(item.element),

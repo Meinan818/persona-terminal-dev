@@ -8,7 +8,7 @@ export function createEncounterDirector(api) {
   const motion=createCombatMotion({reduced});
   let page = null, details = {}, timer = 0, raf = 0, qte = null, rehearsal = null, effectRun = 0;
   let boss = false, bossPhase = 1, claimed = false, chestClaimed = false;
-  const towerFlow=createTowerFlow({...api,startFight(isBoss,resume){page=null;boss=isBoss;bossPhase=resume?.phase??1;api.startBattle('tower',{bossEncounter:isBoss,journey:true,resume});}});
+  const towerFlow=createTowerFlow({...api,startFight(isBoss,resume,encounter,floor){page=null;boss=isBoss;bossPhase=resume?.phase??1;api.startBattle('tower',{bossEncounter:isBoss,journey:true,resume,encounter,floor});}});
   const rehearsalSteps = [
     ['hit','受击','敌方意图落地，玩家 HP 条承受冲击。','敌方回合结算'],
     ['critical','暴击','敌人被命中，闪点、碎片与暴击跳字同时出现。','暴击结果确认'],
@@ -77,7 +77,7 @@ export function createEncounterDirector(api) {
     const mapped={hit:'player-hit',critical:'critical',heal:'heal',guard:'guard','one-more':'one-more'}[kind];
     const amount=kind==='hit'?24:kind==='critical'?96:kind==='heal'?Math.min(30,390-state.hp):0;
     const next=kind==='hit'?Math.max(0,state.hp-amount):kind==='critical'?Math.max(0,state.enemyHp-amount):kind==='heal'?Math.min(390,state.hp+amount):undefined;
-    state.busy=true;state.log=`${labels[1]} · 场景演出`;render();motion.play(mapped,{amount,meterTo:next}).finished.then(()=>{if(run!==effectRun)return;if(kind==='hit'||kind==='heal')state.hp=next;if(kind==='critical')state.enemyHp=next;state.busy=false;state.log=`${labels[1]} · 演出完成`;render();});
+    state.busy=true;state.log=`${labels[1]} · 场景演出`;render();motion.play(mapped,{amount,meterTo:next,meterMax:kind==='critical'?state.enemyMaxHp:state.heroMaxHp}).finished.then(()=>{if(run!==effectRun)return;if(kind==='hit'||kind==='heal')state.hp=next;if(kind==='critical')state.enemyHp=next;state.busy=false;state.log=`${labels[1]} · 演出完成`;render();});
   }
   function rehearsalRail() {
     if(!rehearsal)return '';
@@ -94,7 +94,7 @@ export function createEncounterDirector(api) {
     const amount=kind==='hit'?24:kind==='critical'?96:kind==='heal'?Math.min(30,390-state.hp):0;
     const meterTo=kind==='hit'?Math.max(0,state.hp-amount):kind==='critical'?Math.max(0,state.enemyHp-amount):kind==='heal'?Math.min(390,state.hp+amount):state.hp;
     state.busy=true;state.log=`${rehearsalSteps[rehearsal.step][1]} · 排练中…`;render();
-    motion.play(kind==='hit'?'player-hit':kind,{amount,target:kind==='critical'?'enemy':'player',meterTo}).finished.then(()=>{
+    motion.play(kind==='hit'?'player-hit':kind,{amount,target:kind==='critical'?'enemy':'player',meterTo,meterMax:kind==='critical'?state.enemyMaxHp:state.heroMaxHp}).finished.then(()=>{
       if(rehearsal!==run)return;
       if(kind==='hit'||kind==='heal')state.hp=meterTo;if(kind==='critical')state.enemyHp=meterTo;
       rehearsal.step++;state.busy=false;state.log=`${rehearsalSteps[rehearsal.step-1][1]} · 已完成`;render();focusRehearsal();
@@ -109,21 +109,34 @@ export function createEncounterDirector(api) {
     page=null;state.finished=false;state.busy=true;state.log='面具正在破裂，另一层意志正在苏醒。';render({focus:true});
     motion.transformBoss({onMorph(){
       bossPhase=2;state.enemyHp=420;state.stagger=0;state.command='skills';state.skill=0;state.log='第二形态已展开。';
+      api.onBossMorph?.(2);
+      const enemyMax=state.enemyMaxHp??420;
       const scene=document.querySelector('.enemy-scene');if(!scene)return;
-      scene.dataset.phase='2';scene.querySelector('.enemy-name>span').textContent='PHASE 02';scene.querySelector('.enemy-vitals strong').textContent='420';
-      const fill=scene.querySelector(':scope>.meter i');if(fill){fill.style.width='100%';if(!reduced.matches)fill.animate([{width:'0%'},{width:'100%'}],{duration:650,easing:'cubic-bezier(.16,1,.3,1)'});}
+      scene.dataset.phase='2';scene.querySelector('.enemy-name>span').textContent='PHASE 02';scene.querySelector('.enemy-vitals strong').textContent=String(state.enemyHp);
+      const fill=scene.querySelector(':scope>.meter i');if(fill){const width=`${Math.max(0,Math.min(100,state.enemyHp/enemyMax*100))}%`;fill.style.width=width;if(!reduced.matches)fill.animate([{width:'0%'},{width}],{duration:650,easing:'cubic-bezier(.16,1,.3,1)'});}
       const log=document.querySelector('.battle-log');if(log)log.textContent='面具之下，意志重生。';
     },onComplete(){if(rehearsal)rehearsal.step++;state.busy=false;state.log='第二形态已展开，重新观察它的意图。';render({focus:true});if(rehearsal)focusRehearsal();}});
   }
   function victory() {
-    return frame('这一场，拿下。','VICTORY',`<div class="result-layout"><div class="result-mark">${icon('sword')}<b>WIN</b></div><div class="result-content"><p class="scene-copy">你把属于自己的力量，带到了这一刻。</p><div class="result-stats"><span>完成回合<b>${Math.max(1,state.turn-3)}</b></span><span>剩余 HP<b>${state.hp}</b></span><span>剩余 SP<b>${state.sp}</b></span></div><div class="reward-progress" aria-label="结算进度"><span class="done">01 战斗结束</span><span class="${claimed?'done':'current'}">02 ${claimed?'收获已收下':'揭晓收获'}</span><span>03 返回${state.origin==='tower'?'路线':'战场'}</span></div>${claimed?`<div class="reward-receipt" role="status">${icon('check')}<div><strong>这一战的收获，已收下。</strong><span>回响之线 ×1 · 10 SP</span><small>当前 SP ${state.sp} / 260 · 不会重复领取</small></div></div>`:`<div class="reward-line">${icon('box')}<span>战利品</span><b>等待揭晓</b></div>${button('揭晓战利品','open:loot','先看看这一战留下了什么')}`} ${api.mainButton(state.origin==='tower'?'返回高塔路线':'返回战场','return-after-battle')}<p class="scene-note">本次为内存示例收获，不写入正式存档。</p></div></div>`,'victory').replace('class="experience-scene','class="victory experience-scene');
+    const battleResult=state.battleReceipt;
+    const drop=battleResult?.drops?.[0]??battleResult?.reward??{sp:10,item:'回声碎片'};
+    const rounds=battleResult?.rounds??Math.max(1,state.turn);
+    const maxSp=state.heroMaxSp??34;
+    const rewardText=`${drop.item??'战利品'} ×1${drop.sp?` · ${drop.sp} SP`:''}`;
+    return frame('这一场，拿下。','VICTORY',`<div class="result-layout"><div class="result-mark">${icon('sword')}<b>WIN</b></div><div class="result-content"><p class="scene-copy">${escapeHtml(battleResult?.summary??'你把属于自己的力量，带到了这一刻。')}</p><div class="result-stats"><span>完成回合<b>${rounds}</b></span><span>剩余 HP<b>${state.hp}</b></span><span>剩余 SP<b>${state.sp}</b></span></div><div class="reward-progress" aria-label="结算进度"><span class="done">01 战斗结束</span><span class="${claimed?'done':'current'}">02 ${claimed?'回执已记录':'确认战利品'}</span><span>03 返回${state.origin==='tower'?'路线':'战场'}</span></div>${claimed?`<div class="reward-receipt" role="status">${icon('check')}<div><strong>这一战的收获，已收下。</strong><span>${escapeHtml(rewardText)}</span><small>当前 SP ${state.sp} / ${maxSp} · 不会重复领取</small></div></div>`:`<div class="reward-line">${icon('box')}<span>战利品</span><b>${escapeHtml(rewardText)}</b></div>${button('收下并记录','open:loot','写入本次预览的战后回执')}`} ${api.mainButton(state.origin==='tower'?'返回高塔路线':'返回战场','return-after-battle')}<p class="scene-note">战斗、收服和战利品均写入本次预览回执；不写入正式存档。</p></div></div>`,'victory').replace('class="experience-scene','class="victory experience-scene');
   }
   function screen() {
     if(towerFlow.page)return towerFlow.screen();
     if(!page)return null;
     if(page==='catalog') return frame('每一步，都有回应。','SCENE INDEX',`<p class="scene-copy">选一段流程，看看它如何发生。</p><div class="scene-index">${catalog.map(([title,en,...items])=>`<section><h2>${title}<small>${en}</small></h2>${items.map(([id,label])=>button(label,`open:${id}`)).join('')}</section>`).join('')}<section><h2>准备与成长<small>PREPARATION</small></h2><button class="flow-button" data-prep="create"><span>Persona 觉醒</span>${icon('arrow')}</button><button class="flow-button" data-prep="reshape"><span>面具重塑</span>${icon('arrow')}</button><button class="flow-button" data-prep="growth"><span>技能与成长</span>${icon('arrow')}</button><button class="flow-button" data-prep="settings"><span>设置编辑</span>${icon('arrow')}</button></section></div>`);
     if(page==='qte') return frame('把这一击，推到尽头。','ALL OUT',`<div class="qte-stage"><div class="qte-duel" aria-hidden="true"><span>${icon('mask')}<b>你的意志</b></span><i>${icon('sword')}</i><span>${icon('eye')}<b>${boss?'回声的执念':'聒噪的假面'}</b></span></div><p class="scene-copy">${reduced.matches?'减少动画已开启，可直接使用默认档位出手。':qte.running?'持续连点，把光条向前推。':'准备好再开始，倒计时不会提前走。'}</p><div class="qte-readout"><b id="qte-seconds">${(qte.remaining/1000).toFixed(1)}</b><span>SECONDS</span><strong id="qte-mult">×${qteMultiplier(qte.gauge).toFixed(1)}</strong></div><div class="qte-track" role="progressbar" aria-label="总攻击蓄力" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(qte.gauge)}"><i id="qte-fill" style="width:${qte.gauge}%"></i><b style="left:50%"></b><b style="left:75%"></b></div><div class="qte-thresholds" aria-hidden="true"><span>×1.2</span><span>50% · ×1.5</span><span>75% · ×1.8</span><span>100% · ×2.2</span></div>${qte.running?'<button class="qte-tap" data-flow="tap-qte">连点！<small>TAP / SPACE</small></button>':button(reduced.matches?'直接出手 · ×1.5':'开始连点','start-qte',reduced.matches?'使用默认档位':'3.5 秒 · 也可以按空格键')}${button('跳过连点，直接出手','skip-qte','默认档位 ×1.5','subtle')}<p class="scene-note">${reduced.matches?'保留结果提示，省略连点与飞行特效。':'时间结束后按当前蓄力出手；返回或 Esc 取消本次连点。'}</p></div>`);
-    if(page==='loot'||page==='chest') {const collected=page==='chest'?chestClaimed:claimed;return frame(collected?'这份收获，已属于你。':page==='chest'?'月光，把它留给了你。':'这一程的收获。',page==='chest'?'MOON CHEST':'REWARD',`<div class="loot-layout ${details.revealed?'is-revealed':''}"><div class="loot-object">${icon(collected?'check':details.revealed?'star':'box')}<i></i></div><div class="loot-copy">${details.revealed?`<span class="reward-rarity">残月 / RELIC</span><h2>回响之线</h2><p>一件来自塔层之间的遗物。让这段路留下回声。</p><div class="loot-rewards"><div>${icon('box')}<span>遗物<strong>回响之线</strong></span><b>×1</b></div><div>${icon('star')}<span>SP<strong>月光余力</strong></span><b>+10</b></div></div><p class="reward-sp-preview">${collected?`当前 SP ${state.sp} / 260 · 已收下`:`SP ${state.sp} → ${Math.min(260,state.sp+10)} / 260`}</p>${button(collected?(page==='chest'?'返回路线':'查看结算'):'收下这份收获','claim-loot',collected?'不会重复领取':'收下后展示回执')}`:`<h2>还有什么，等待被看见？</h2><p>亲手揭开，看看这段路留下了什么。</p>${button('揭晓','reveal-loot','REVEAL')}`}<p class="scene-note">仅在本次预览中展示示例收获。</p></div></div>`);}
+    if(page==='loot'||page==='chest') {
+      const chest=page==='chest';
+      const collected=chest?chestClaimed:claimed;
+      const drop=chest?{item:'回响之线',sp:10}:state.battleReceipt?.drops?.[0]??{item:'回声碎片',sp:10};
+      const maxSp=state.heroMaxSp??34;
+      return frame(collected?'这份收获，已属于你。':chest?'月光，把它留给了你。':'这一程的收获。',chest?'MOON CHEST':'REWARD',`<div class="loot-layout ${details.revealed?'is-revealed':''}"><div class="loot-object">${icon(collected?'check':details.revealed?'star':'box')}<i></i></div><div class="loot-copy">${details.revealed?`<span class="reward-rarity">${chest?'残月 / RELIC':'战斗 / DROP'}</span><h2>${escapeHtml(drop.item)}</h2><p>${chest?'一件来自塔层之间的遗物。让这段路留下回声。':'从这次战斗回执中确认的掉落。'}</p><div class="loot-rewards"><div>${icon('box')}<span>${chest?'遗物':'战利品'}<strong>${escapeHtml(drop.item)}</strong></span><b>×1</b></div><div>${icon('star')}<span>SP<strong>${chest?'月光余力':'战斗余力'}</strong></span><b>+${drop.sp??0}</b></div></div><p class="reward-sp-preview">${collected?`当前 SP ${state.sp} / ${maxSp} · 已收下`:`SP ${state.sp} → ${Math.min(maxSp,state.sp+(drop.sp??0))} / ${maxSp}`}</p>${button(collected?(chest?'返回路线':'查看结算'):'收下这份收获','claim-loot',collected?'不会重复领取':'收下后展示回执')}`:`<h2>还有什么，等待被看见？</h2><p>亲手揭开，看看这段路留下了什么。</p>${button('揭晓','reveal-loot','REVEAL')}`}<p class="scene-note">仅在本次预览中记录，不写入正式存档。</p></div></div>`);
+    }
     if(page==='echo')return frame('在这里，停一会儿。','MOON ECHO',`<div class="story-layout">${stamp('star')}<div class="story-content"><h2>月光回响</h2><p class="scene-copy">一小片月光落在塔层间。它愿意回应你一次。</p><div class="choice-stack">${button('沐浴月光','echo-heal','回复 20% 体力')}${button('汲取月辉','echo-buff','本次登塔伤害 +6%')}</div><p class="scene-note">选择后回到原来的路线。</p></div></div>`);
     if(page==='event')return frame('另一条路，正在回应。','ENCOUNTER',`<div class="story-layout">${stamp('eye')}<div class="story-content"><h2>月光积水</h2><p class="scene-copy">塔层的凹陷处积着一汪月光色的水，水面映出的不是你的脸。</p><div class="choice-stack">${button('凝视水面','event-gaze','靠近，听见水中的回答')}${button('绕开路过','event-pass','保留气力，继续向上')}</div></div></div>`);
     if(page==='event-result')return frame('你作出了选择。','AFTER THE ECHO',`<div class="story-layout">${stamp('check')}<div class="story-content"><h2>${details.title}</h2><p class="scene-copy">${details.text}</p><div class="effect-receipt">${icon('star')}<span>${details.effect}</span></div>${button('继续向上','finish-event','返回路线')}</div></div>`);
@@ -182,10 +195,10 @@ export function createEncounterDirector(api) {
     if(action==='claim-loot'){
       if((page!=='loot'&&page!=='chest')||!details.revealed)return;
       const wasChest=page==='chest',collected=wasChest?chestClaimed:claimed;
-      if(!collected){if(wasChest)chestClaimed=true;else{claimed=true;if(towerFlow.pendingBattle)towerFlow.recordLoot();}state.sp=Math.min(260,state.sp+10);render({focus:true});return;}
+      if(!collected){const drop=wasChest?{item:'回响之线',sp:10}:state.battleReceipt?.drops?.[0]??{item:'回声碎片',sp:10};if(wasChest)chestClaimed=true;else{claimed=true;state.battleLoot.push(drop.item);if(towerFlow.pendingBattle)towerFlow.recordLoot(drop);}state.sp=Math.min(state.heroMaxSp??34,state.sp+(drop.sp??0));render({focus:true});return;}
       page=null;if(wasChest)goTower();else render({focus:true});return;
     }
-    if(action==='echo-heal'||action==='echo-buff'){if(action==='echo-heal')state.hp=Math.min(390,state.hp+78);open('event-result',{title:action==='echo-heal'?'月光，回应了你。':'把这束光，带在身边。',text:action==='echo-heal'?'片刻停留之后，你重新站稳了脚步。':'月辉在掌心凝聚，陪你走进下一层。',effect:action==='echo-heal'?`体力 ${state.hp} / 390`:'月光回响 · 本次登塔伤害 +6%'});return;}
+    if(action==='echo-heal'||action==='echo-buff'){const max=state.heroMaxHp??52;if(action==='echo-heal')state.hp=Math.min(max,state.hp+Math.max(1,Math.round(max*.2)));open('event-result',{title:action==='echo-heal'?'月光，回应了你。':'把这束光，带在身边。',text:action==='echo-heal'?'片刻停留之后，你重新站稳了脚步。':'月辉在掌心凝聚，陪你走进下一层。',effect:action==='echo-heal'?`体力 ${state.hp} / ${max}`:'月光回响 · 本次登塔伤害 +6%'});return;}
     if(action==='event-gaze'||action==='event-pass'){open('event-result',{title:action==='event-gaze'?'水中的你，点了点头。':'继续往前。',text:action==='event-gaze'?'一股清亮的力量涌了上来。':'你没有理会，水面平静如常。',effect:action==='event-gaze'?'月光映照 · 本次登塔伤害 +5%':'保留气力 · 无额外变化'});return;}
     if(action==='quiz-correct'||action==='quiz-wrong'){open('event-result',{title:action==='quiz-correct'?'你认出了那份力量。':'也许，下次会看得更清楚。',text:'镜面里的片段渐渐散开，前路重新显现。',effect:action==='quiz-correct'?'镜之自问 · 回答正确':'镜之自问 · 本次未答对'});return;}
     if(action==='start-boss'){page=null;boss=true;bossPhase=1;api.startBattle('tower',{bossEncounter:true});return;}
@@ -196,7 +209,7 @@ export function createEncounterDirector(api) {
   return {
     get active(){return page??towerFlow.page;},get transforming(){return motion.transforming;},get bossPhase(){return boss?bossPhase:0;},screen,victory,open,close,act,effect,
     towerRoute:()=>towerFlow.route(),towerAct:action=>towerFlow.act(action),get towerActive(){return towerFlow.active;},get towerSnapshot(){return towerFlow.snapshot;},
-    towerReturn(won){if(!rehearsal)towerFlow.battleReturn(won,bossPhase);},towerHide:()=>towerFlow.hide(),
+    towerReturn(won,phase,receipt){if(!rehearsal)towerFlow.battleReturn(won,phase??bossPhase,receipt);},towerHide:()=>towerFlow.hide(),
     impact:(kind,options)=>motion.play(kind,options),
     get rehearsal(){return rehearsal;},rehearsalRail,resetView(){stop();page=null;rehearsal=null;motion.clear();},
     battleStarted({bossEncounter=false}={}){motion.clear();claimed=false;if(!bossEncounter){boss=false;bossPhase=1;}},

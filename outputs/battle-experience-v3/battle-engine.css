@@ -1,0 +1,333 @@
+/*
+ * P5Battle presentation bridge.
+ * Uses the accepted blue battlefield language; this file only adds the
+ * information needed by real turns, party members, targets and engine state.
+ */
+.combat-top .party-rail {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.combat-top .party-rail > span {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 6px;
+  min-width: 0;
+  max-width: 190px;
+  padding: 6px 11px 7px;
+  color: #d8f6ff;
+  background: #071844c9;
+  border-left: 3px solid #355ea8;
+  clip-path: polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
+  font-size: 11px;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.combat-top .party-rail > span.active {
+  color: #07102b;
+  background: #fff;
+  border-left-color: #f62c61;
+  box-shadow: 4px 4px 0 #06143a66;
+}
+
+.combat-top .party-rail > span.down {
+  opacity: 0.48;
+  filter: grayscale(1);
+}
+
+.combat-top .party-rail > span b {
+  grid-row: 1 / span 2;
+  padding: 4px 5px;
+  color: #071844;
+  background: #8ff8ff;
+  font: italic 900 9px/1 'Noto Sans SC Black', Velvet, sans-serif;
+}
+
+.combat-top .party-rail > span.active b {
+  color: #fff;
+  background: #f62c61;
+}
+
+.combat-top .party-rail > span small {
+  overflow: hidden;
+  color: #79a6d1;
+  font-size: 9px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.combat-top .party-rail > span.active small {
+  color: #28579d;
+}
+
+.combat-poster .enemy-targets {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 5px;
+  margin-top: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.combat-poster .enemy-targets::-webkit-scrollbar {
+  display: none;
+}
+
+.combat-poster .enemy-targets button {
+  flex: 0 0 auto;
+  min-height: 29px;
+  padding: 5px 11px;
+  border: 0;
+  color: #9bdcff;
+  background: #071844d9;
+  font-size: 10px;
+  font-weight: 900;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+
+.combat-poster .enemy-targets button.active {
+  color: #07102b;
+  background: #ffe142;
+}
+
+.combat-poster .enemy-targets button.down {
+  color: #ff8eb5;
+  background: #3c0d2b;
+}
+
+.combat-poster .player-tag > span {
+  display: grid;
+  gap: 3px;
+  max-width: 118px;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combat-poster .player-tag > span small {
+  color: #94c7f3;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.combat-poster .command-detail .skill-list {
+  max-height: min(35vh, 330px);
+  padding-right: 3px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.combat-poster .combat-skill > span {
+  overflow: hidden;
+}
+
+.combat-poster .combat-skill > span small {
+  max-width: 30ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.combat-poster .engine-command-grid button > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.combat-poster .engine-command-grid button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.engine-hold-up {
+  position: absolute;
+  z-index: 5;
+  left: 2%;
+  top: 19%;
+  width: 44%;
+  padding: 22px;
+  color: #07102b;
+  background: #fff;
+  clip-path: polygon(15px 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
+  box-shadow: 8px 9px 0 #06143a66;
+  transform: rotate(-2deg);
+}
+
+.engine-hold-up > span {
+  color: #e01f59;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.engine-hold-up h3 {
+  margin: 7px 0 4px;
+  font: italic 900 clamp(25px, 2.4vw, 38px)/1 'Noto Sans SC Black', Velvet, sans-serif;
+}
+
+.engine-hold-up p {
+  color: #38527c;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.engine-hold-up > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.engine-hold-up button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 45px;
+  padding: 8px 7px;
+  border: 1px solid #b5d4ff;
+  color: #e9f8ff;
+  background: #071844;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.engine-hold-up button:first-child {
+  color: #07102b;
+  background: #ffe142;
+  border-color: #07102b;
+}
+
+.engine-hold-up button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.negotiation-allout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 8px;
+  padding: 9px 15px;
+  border: 1px solid #ff6a9e;
+  color: #fff;
+  background: #310c2a;
+  text-align: left;
+}
+
+.negotiation-allout b {
+  color: #ffe142;
+  font-size: 15px;
+}
+
+.negotiation-allout small {
+  color: #ffb7d1;
+  font-size: 10px;
+}
+
+@media (max-width: 1000px) and (min-width: 761px) {
+  .combat-top .party-rail > span {
+    max-width: 132px;
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+}
+
+@media (max-width: 760px) {
+  .combat-top {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+  }
+
+  .combat-top .party-rail {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+    gap: 3px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .combat-top .party-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .combat-top .party-rail > span {
+    flex: 0 0 auto;
+    min-width: 80px;
+    max-width: 96px;
+    padding: 4px 6px;
+    gap: 0 4px;
+  }
+
+  .combat-top .party-rail > span b {
+    padding: 3px 4px;
+    font-size: 8px;
+  }
+
+  .combat-top .party-rail > span small {
+    font-size: 8px;
+  }
+
+  .combat-top > p {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .combat-poster .enemy-targets {
+    margin-top: 8px;
+  }
+
+  .combat-poster .enemy-targets button {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .combat-poster .player-tag > span {
+    max-width: 92px;
+    font-size: 11px;
+  }
+
+  .combat-poster .command-detail .skill-list {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .engine-hold-up {
+    position: relative;
+    left: auto;
+    top: auto;
+    order: 4;
+    width: 100%;
+    padding: 18px 15px;
+    transform: none;
+    clip-path: none;
+  }
+
+  .engine-hold-up > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combat-top .party-rail > span,
+  .combat-poster .enemy-targets button {
+    transition: none !important;
+  }
+}

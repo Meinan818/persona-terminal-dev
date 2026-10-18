@@ -24,19 +24,20 @@ export function createCombatMotion({reduced}) {
   function shake(node,amount=5) {
     animate(node,[{translate:'0 0'},{translate:`${-amount}px 2px`,offset:.2},{translate:`${amount}px -1px`,offset:.4},{translate:`${-amount/2}px 1px`,offset:.65},{translate:'0 0'}],{duration:280,easing:'ease-out'});
   }
-  function meter(target,to) {
+  function meter(target,to,maximumOverride) {
     if(!Number.isFinite(to))return;
     const player=target==='player';
     const fill=$(player?'.player-hud>div:nth-child(2) .meter i':'.enemy-scene>.meter i');
     const number=$(player?'.player-hud>div:nth-child(2) strong':'.enemy-vitals strong');
-    const maximum=player?390:420;
+    const maximum=Number(maximumOverride)>0?Number(maximumOverride):player?390:420;
     if(number)number.textContent=String(to);
     if(fill){const from=getComputedStyle(fill).width;fill.style.width=`${clamp(to/maximum*100,0,100)}%`;animate(fill,[{width:from},{width:fill.style.width}],{duration:440,fill:'forwards'});}
   }
-  function play(kind,{amount,target,meterTo}={}) {
-    const player=target==='player'||kind==='player-hit'||kind==='heal'||kind==='guard'||kind==='one-more'||kind==='buff';
-    const impact=point(player?'.combat-hero .head':'.enemy-art',{x:innerWidth*(player ? .2 : .73),y:innerHeight*.35});
-    const origin=point(player?'.enemy-art':'.combat-hero .head',{x:innerWidth*(player ? .73 : .2),y:innerHeight*.35});
+  function play(kind,{amount,target,meterTo,meterMax,targetSelector}={}) {
+    const partyTarget=Boolean(targetSelector)&&target==='party';
+    const player=!partyTarget&&(target==='player'||kind==='player-hit'||kind==='heal'||kind==='guard'||kind==='one-more'||kind==='buff');
+    const impact=point(partyTarget?targetSelector:player?'.combat-hero .head':'.enemy-art',{x:innerWidth*(player ? .2 : .73),y:innerHeight*.35});
+    const origin=point(partyTarget||player?'.enemy-art':'.combat-hero .head',{x:innerWidth*(player ? .73 : .2),y:innerHeight*.35});
     const root=document.createElement('div');root.className=`battle-impact impact-${kind}`;root.dataset.impact=kind;root.setAttribute('aria-hidden','true');
     root.style.setProperty('--hit-x',`${impact.x}px`);root.style.setProperty('--hit-y',`${impact.y}px`);
     root.style.setProperty('--text-shift',`${clamp(impact.x,110,innerWidth-110)-impact.x}px`);
@@ -54,8 +55,8 @@ export function createCombatMotion({reduced}) {
     if(!reduced.matches&&['star','slash','critical','allout'].includes(kind))animate($('.combat-hero .figure'),[{translate:'0 0'},{translate:'-9px 2px',offset:.25},{translate:'19px -3px',offset:.6},{translate:'0 0'}],{duration:380});
     const apply=()=>{
       if(!root.isConnected)return;
-      root.classList.add('has-contact');meter(player?'player':'enemy',meterTo);
-      const actor=player?$('.combat-hero .figure'):$('.enemy-art');
+      root.classList.add('has-contact');if(!partyTarget)meter(player?'player':'enemy',meterTo,meterMax);
+      const actor=partyTarget?$(targetSelector):player?$('.combat-hero .figure'):$('.enemy-art');
       if(kind==='heal'){
         animate($('.player-hud'),[{filter:'brightness(1)'},{filter:'brightness(1.65)',offset:.25},{filter:'brightness(1)'}],{duration:600});
       }else if(kind==='guard'){
@@ -67,7 +68,7 @@ export function createCombatMotion({reduced}) {
       }else{
         const baseScale=actor?(parseFloat(getComputedStyle(actor).scale)||1):1;
         animate(actor,[{translate:'0 0',scale:baseScale},{translate:player?'-15px 4px':'16px -4px',scale:baseScale*(player ? .94 : .88),offset:.18},{translate:player?'6px -1px':'-8px 3px',scale:baseScale*1.04,offset:.4},{translate:player?'-3px 0':'5px -1px',scale:baseScale*.98,offset:.65},{translate:'0 0',scale:baseScale}],{duration:470});
-        animate(player?$('.player-hud'):$('.enemy-face'),[{filter:'brightness(1)'},{filter:'brightness(2.6)',offset:.08},{filter:'brightness(1.1)',offset:.27},{filter:'brightness(1)'}],{duration:300});
+        animate(partyTarget?$(targetSelector):player?$('.player-hud'):$('.enemy-face'),[{filter:'brightness(1)'},{filter:'brightness(2.6)',offset:.08},{filter:'brightness(1.1)',offset:.27},{filter:'brightness(1)'}],{duration:300});
         shake($('.combat-poster'),kind==='critical'||kind==='allout'?5:3);
       }
     };

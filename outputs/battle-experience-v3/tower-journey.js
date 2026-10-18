@@ -34,12 +34,12 @@ function encounterFor(floor, kind) {
 }
 
 export const towerNodes = {
-  mob:{title:'聒噪的假面',kind:'小影',icon:'sword',hp:'312 / 420',weak:'未侦察',note:'先看意图，再决定这一回合。',action:'进入战斗'},
+  mob:{title:'聒噪的假面',kind:'小影',icon:'sword',hp:'按遭遇生成',weak:'进入后侦察',note:'先看意图，再决定这一回合。',action:'进入战斗'},
   echo:{title:'回忆之光',kind:'回响',icon:'star',hp:'—',weak:'—',note:'选择回复 20% 体力，或带走本次登塔伤害 +6%。',action:'进入回响'},
   chest:{title:'月匣',kind:'月匣',icon:'box',hp:'—',weak:'—',note:'揭晓后再领取，不会重复发放同一份收获。',action:'查看月匣'},
   event:{title:'月光积水',kind:'异变',icon:'eye',hp:'—',weak:'—',note:'凝视水面，或保留气力绕开。选择后显示结果。',action:'走近看看'},
   quiz:{title:'镜之自问',kind:'镜问',icon:'eye',hp:'—',weak:'—',note:'从白昼的回声里，认出那份力量。',action:'回答镜中的自己'},
-  boss:{title:'回声的执念',kind:'心魔',icon:'mask',hp:'312 / 420',weak:'未侦察',note:'第一形态击破后，在同一个战斗舞台直接变身。',action:'迎战心魔'},
+  boss:{title:'回声的执念',kind:'心魔',icon:'mask',hp:'双形态',weak:'进入后侦察',note:'第一形态击破后，在同一个战斗舞台直接变身。',action:'迎战心魔'},
 };
 const floors={4:['echo','mob','chest'],5:['event','quiz','mob'],6:['echo','chest','mob'],7:['mob','event','chest'],8:['quiz','echo','mob'],9:['echo','mob','chest'],10:['boss']};
 export function createTowerJourney(){
@@ -71,9 +71,9 @@ export function createTowerJourney(){
     journey.selected=(floors[journey.floor+1]??[])[0]??'boss';return true;
   };
   const end=reason=>{if(journey.ended)return false;journey.ended=reason;return true;};
-  const addLoot=()=>{
+  const addLoot=(reward={})=>{
     if(!journey.pending||journey.pending.rewarded||journey.ended)return false;
-    journey.pending.rewarded=true;journey.loot.push({floor:journey.floor,label:'回响之线',sp:10});return true;
+    journey.pending.rewarded=true;journey.loot.push({floor:journey.floor,label:reward.item??'回响之线',sp:reward.sp??10});return true;
   };
   return{journey,choices,start,select,enter,resolve,advance,end,addLoot};
 }

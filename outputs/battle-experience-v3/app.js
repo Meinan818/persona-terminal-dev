@@ -3,6 +3,17 @@ import {createPreparationDirector} from './preparation.js';
 import {visualArt} from './art.js';
 import {BRIBE_COST,NEGOTIATION_OPTIONS,OPTION_ORDER,PERSONALITIES,chanceLabel,createNegotiation,negotiationChance,resolveNegotiation} from './negotiation-rules.js';
 import {installPreviewNegotiationBridge,offlineNegotiation,requestNegotiation} from './negotiation-ai.js';
+import {
+  DEFAULT_HERO_MASKS,
+  activeHeroPersonaId,
+  applyBattleReward,
+  battleReceipt,
+  buildActionPayload,
+  buildBattleView,
+  createTowerBattle,
+  promoteBossPhase,
+  syncAppState,
+} from './p5-battle-bridge.js';
 installPreviewNegotiationBridge();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -15,18 +26,21 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const state = {
   room: 'battle', fighting: false, origin: 'battle', selectedNode: 'mob',
   mask: 0, arsenalTab: 'relic', equipped: new Set(['moon']), command: 'skills', skill: 0,
-  hp: 345, sp: fixture === 'low-sp' ? 4 : 217, enemyHp: 312,
+  hp: 52, sp: fixture === 'low-sp' ? 4 : 34, heroMaxHp: 52, heroMaxSp: 34,
+  enemyHp: 312, enemyMaxHp: 420,
   turn: 4, stagger: 0, busy: false, finished: false, turnPhase: 'player', log: '轮到你了。先看意图，再决定这一回合。',
   negotiation: null, enemyRage: 0, weaknessKnown: false, recruitedMasks: [], battleLoot: [],
+  battle: null, battleView: null, targetId: 'primary', battleActionKey: '',
+  battleEncounter: null, battleFloor: 4, battleReceipt: null, battleWon: false, partyVitals: {},
 };
 const scrolls = new Map();
 const masks = [
-  { attr:'知识', name:'奥丁·全知', passive:'以一只眼换来看穿表象', skills:[['星落',18,'知识伤害 · 命中敌人弱点'],['回响',8,'追加伤害 · 把握失衡时机']] },
-  { attr:'勇气', name:'须佐之男·斩蛇', passive:'迎着恐惧向前', skills:[['疾风刺',12,'勇气伤害 · 单体攻击'],['不屈',10,'防护 · 迎接下一击']] },
-  { attr:'灵巧', name:'赫尔墨斯·疾风', passive:'在缝隙中寻找机会', skills:[['飞刃',12,'灵巧伤害 · 单体攻击'],['蓄力',8,'准备下一次进攻']] },
-  { attr:'体贴', name:'天照·守灯', passive:'为自己留一盏灯', skills:[['微光',10,'回复生命'],['安宁',8,'防护 · 稳住脚步']] },
-  { attr:'魅力', name:'卡门·回响', passive:'让声音抵达彼岸', skills:[['回音斩',12,'魅力伤害 · 单体攻击'],['鼓舞',8,'强化下一次进攻']] },
-  { attr:'借来的', name:'伊邪那岐·大神', passive:'来自同伴 · 本周剩余 2 场', skills:[['共鸣',14,'万能属性 · 借来的力量'],['守望',10,'防护 · 同伴的支持']] },
+  { id:'arsene', attr:'知识', name:'亚森', passive:'愚者 · 以咒怨切开表象', skills:[['耶哈',4,'咒怨伤害 · 单体'],['斩击',6,'物理伤害 · 单体']] },
+  { id:'pixie', attr:'勇气', name:'皮克希', passive:'恋人 · 电击与微光', skills:[['吉欧',4,'电击伤害 · 单体'],['迪亚',3,'回复一名同伴的 HP']] },
+  { id:'jack-o-lantern', attr:'灵巧', name:'杰克灯笼', passive:'魔术师 · 火种与削弱', skills:[['亚基',4,'火焰伤害 · 单体'],['拉坤达',8,'降低目标防御']] },
+  { id:'silky', attr:'体贴', name:'希路奇', passive:'女教皇 · 冰冻与安眠', skills:[['永眠',3,'让目标陷入睡眠'],['布芙',4,'冰冻伤害 · 单体']] },
+  { id:'succubus', attr:'魅力', name:'女梦魔', passive:'月 · 睡意与暴击', skills:[['永眠',3,'让目标陷入睡眠'],['反叛',5,'提升同伴暴击率']] },
+  { id:'izanagi', attr:'借来的', name:'伊邪那岐', passive:'来自同伴 · 借来的雷霆', skills:[['十文字斩',20,'物理重击 · 单体两次'],['吉欧加',8,'电击伤害 · 单体']] },
 ];
 const attributeMarks = [['eye','KNOWLEDGE'],['sword','COURAGE'],['shield','DEXTERITY'],['star','KINDNESS'],['mask','CHARM'],['mask','BORROWED']];
 const nodes = {
@@ -87,7 +101,7 @@ function home() {
         ${mainButton(journey.ended?'查看本次行程':'继续登塔','open-tower',journey.ended?'回望走过的路':'回到当前层，查看下一条路线')}
         <button class="text-button" data-action="start-battle">查看当前遭遇战</button>
         <div class="mini-prep">${icon('mask')}<span>出战面具 <b>${esc(masks[state.mask].name)}</b></span><button class="text-button" data-action="open-persona">调整</button></div>
-        <div class="status-ribbon"><span>HP <b>${state.hp}</b> / 390</span><span>SP <b>${state.sp}</b> / 260</span><span>遗物 <b>${state.equipped.size}</b> 件</span></div>
+        <div class="status-ribbon"><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span><span>遗物 <b>${state.equipped.size}</b> 件</span></div>
       </section></div>
     <section class="trial-banner">
       <div><h2><span class="trial-mode">2.0</span>打服它，再和它谈。</h2><p>打中弱点、把它打失衡，影子会开口。威胁、讨好、讲理或给 SP——收服它，或拿走它身上的东西。AI 决定它的人格、条件和收服提案；成败由固定规则和你的选择决定。</p></div>
@@ -126,38 +140,99 @@ function skillRow(skill, index, selectable = false) {
 }
 const commands = [['skills','技能','star'],['basic','普攻','sword'],['defend','防御','shield'],['insight','洞察','eye']];
 function meter(value, maximum) { return `<div class="meter"><i style="--value:${Math.max(0, Math.min(100,value/maximum*100))}%"></i></div>`; }
-function commandCost() { return state.command === 'skills' ? masks[state.mask].skills[state.skill][1] : state.command === 'insight' ? 2 : state.command === 'allout' ? 20 : 0; }
-function commandName() { return state.command === 'skills' ? masks[state.mask].skills[state.skill][0] : state.command === 'allout' ? '总攻击' : commands.find(c => c[0] === state.command)[1]; }
+function battleActionKey(action) {
+  return action ? `${action.type}:${action.id ?? action.targetId ?? ''}` : '';
+}
+function battleActionIcon(type) {
+  return {
+    basic: 'sword',
+    gun: 'eye',
+    guard: 'shield',
+    analyze: 'eye',
+    batonPass: 'chevrons',
+    switchMask: 'mask',
+  }[type] ?? 'star';
+}
+function currentEngineView() {
+  if (!state.battle) return null;
+  const view = buildBattleView(state.battle, state.targetId);
+  state.battleView = view;
+  if (view.selectedTargetId && view.selectedTargetId !== state.targetId) state.targetId = view.selectedTargetId;
+  const available = view.actions ?? [];
+  if (!available.some(action => battleActionKey(action) === state.battleActionKey)) {
+    state.battleActionKey = battleActionKey(
+      available.find(action => action.type === 'skill' && !action.disabled)
+      ?? available.find(action => action.type === 'basic' && !action.disabled)
+      ?? available.find(action => !action.disabled)
+      ?? available[0],
+    );
+  }
+  return view;
+}
+function selectedEngineAction(view = currentEngineView()) {
+  return view?.actions?.find(action => battleActionKey(action) === state.battleActionKey) ?? null;
+}
+function commandCost() {
+  const action = selectedEngineAction();
+  return Number(action?.cost) || 0;
+}
+function commandName() {
+  return selectedEngineAction()?.label ?? '选择行动';
+}
 function combat() {
   if (state.finished) return flows.victory();
-  const m = masks[state.mask];
-  const descriptions = { basic:'普通攻击 · 0 SP。选择后再执行，避免误触。', defend:'防御 · 稳住这一回合，迎接敌人的下一击。', insight:'洞察 · 2 SP。查看敌人的意图与弱点情报。', allout:'总攻击 · 20 SP。抓住失衡窗口，展开攻势。' };
-  const enemyTurn = state.turnPhase === 'enemy';
+  const view = currentEngineView();
+  if (!view) return flows.victory();
+  const target = view.selectedTarget;
   const negotiating = Boolean(state.negotiation?.active);
-  const intentTitle = negotiating ? 'HOLD UP · 它倒下了' : enemyTurn ? '敌方出手：蓄势攻击' : '下一击：蓄势攻击';
-  const intentNote = negotiating ? '现在可以威胁、讨好、讲理，或给它 SP。' : enemyTurn ? '准备承受这一击，或用防御化解。' : '先看意图，再决定进攻还是防御。';
-  const normalDeck = `<div class="command-label"><span>${state.command==='skills'?'SKILL · 技能':'ACTION · 行动'}</span><strong>COST</strong></div>
-      <div class="command-grid">${commands.map(([id,label,i],order)=>`<button data-command="${id}" aria-pressed="${id===state.command}" style="--tilt:${[-4,-1,2,4][order]}deg" ${state.busy?'disabled':''}>${icon(i)}<span>${label}<small>${['SKILL','ATTACK','GUARD','INSIGHT'][order]}</small></span></button>`).join('')}</div>
-      <div class="command-detail">${state.command==='skills'?`<div class="skill-list">${m.skills.map((s,i)=>combatSkill(s,i)).join('')}</div><p>${m.skills[state.skill][2]}</p>`:`<div class="action-banner">${icon(commands.find(c=>c[0]===state.command)?.[2]??'star')}<strong>${commandName()}</strong><b>${commandCost()}<small>SP</small></b></div><p>${descriptions[state.command]}</p>`}</div>
-      ${state.stagger>=2?`<button class="small-button allout-pick" data-command="allout" ${state.busy?'disabled':''}>${icon('star')}总攻击 · 20 SP</button>`:''}
-      <button class="main-button execute ${state.command==='allout'?'red':''}" data-action="execute" ${state.busy||state.sp<commandCost()?'disabled':''}><span>${state.busy?'行动演出中…':state.sp<commandCost()?'SP 不足':`执行 · ${commandName()}`}</span>${icon('arrow')}</button>
-      <p class="busy-text">${state.busy?(enemyTurn?'敌方出手，准备承受这一击。':'等待行动结束，避免重复出手。'):`${commandCost()} SP · 选好行动后执行`}</p>`;
-  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?(enemyTurn?'敌方回合':'行动演出中'):'你的回合'}</p></div>${flows.rehearsalRail?.()??''}${visualStateMode?visualStateRail():''}
+  const actorTurn = view.phase === 'party' && !negotiating;
+  const action = selectedEngineAction(view);
+  const skills = view.actions.filter(item => item.type === 'skill');
+  const commandsAvailable = view.actions.filter(item => !['skill', 'switchMask'].includes(item.type));
+  const knownItems = target?.knownAffinities ?? [];
+  const knownWeak = knownItems.find(item => item.affinity === 'weak');
+  const knownText = knownItems.map(item => `${item.label}${item.short}`).join(' · ');
+  const weakness = knownWeak ? `弱点 · ${knownWeak.label}` : knownItems.length ? `已发现 · ${knownText}` : '弱点 · 未发现';
+  const statusLabels = {burn:'燃烧',freeze:'冰冻',shock:'触电',confuse:'混乱',fear:'恐惧',sleep:'睡眠',rage:'暴怒',despair:'绝望',dizzy:'眩晕',brainwash:'洗脑',forget:'遗忘'};
+  const disabled = state.busy || !actorTurn || !action || action.disabled;
+  const intentTitle = negotiating
+    ? 'HOLD UP · 它倒下了'
+    : view.phase === 'holdUp'
+      ? 'HOLD UP · 所有影子都倒下了'
+      : view.phase === 'party'
+        ? `${view.actorName} 的行动`
+        : view.phase === 'defeat'
+          ? '队伍倒下'
+          : '敌方回合';
+  const intentNote = negotiating
+    ? '现在可以威胁、讨好、讲理，或给它 SP。'
+    : view.phase === 'holdUp'
+      ? '可以谈判、总攻击，或让它们重新站起来继续战斗。'
+      : `预计攻击属性：${target?.elementLabel ?? '未知'} · 伤害会随机落在存活队员身上。`;
+  const normalDeck = `<div class="command-label"><span>${view.actorIsPlayer?'SKILL · 主角技能':'ALLY · 同伴行动'}</span><strong>COST</strong></div>
+      <div class="command-grid engine-command-grid">${commandsAvailable.map((item,order)=>`<button data-battle-action="${battleActionKey(item)}" aria-pressed="${battleActionKey(item)===state.battleActionKey}" style="--tilt:${[-4,-1,2,4,1,-2][order%6]}deg" ${state.busy||!actorTurn||item.disabled?'disabled':''}>${icon(battleActionIcon(item.type))}<span>${esc(item.label)}<small>${esc(item.detail ?? item.type)}</small></span></button>`).join('')}</div>
+      <div class="command-detail">${skills.length?`<div class="skill-list">${skills.map(item=>combatSkill(item)).join('')}</div><p>${esc(action?.detail ?? '选择一项行动。')}</p>`:`<div class="action-banner">${icon('sword')}<strong>没有可用技能</strong><b>0<small>SP</small></b></div><p>仍然可以使用普攻、枪击、防御或同伴行动。</p>`}</div>
+      <button class="main-button execute" data-action="execute" ${disabled?'disabled':''}><span>${state.busy?'行动演出中…':!actorTurn?'等待当前回合':action?.disabled?'当前无法使用':`执行 · ${esc(action?.label ?? '选择行动')}`}</span>${icon('arrow')}</button>
+      <p class="busy-text">${state.busy?'等待行动结束，避免重复出手。':!actorTurn?'当前不是行动者的回合。':`${commandCost()} SP · ${esc(action?.detail ?? '选好行动后执行')}`}</p>`;
+  const holdUpDeck = view.phase === 'holdUp' ? `<div class="engine-hold-up"><span>HOLD UP / 交涉窗口</span><h3>影子都倒下了。</h3><p>总攻击可以继续削减生命；谈判则有机会收服或取得奖励。</p><div><button data-holdup-engine="allOut">${icon('star')}总攻击</button><button data-action="hold-up-negotiate">${icon('eye')}开始交涉</button><button data-holdup-engine="continue">${icon('back')}继续战斗</button></div></div>` : '';
+  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><div class="party-rail" aria-label="队伍回合">${view.party.map(member=>`<span class="${member.active?'active':''} ${member.down?'down':''}" data-party-id="${member.id}"><b>${member.isPlayer?'YOU':'ALLY'}</b>${esc(member.name)}<small>${member.active?'行动中':member.down?'倒下':`HP ${member.hp}`}</small></span>`).join('')}</div><p>ROUND ${String(view.round).padStart(2,'0')} / ${state.busy?'行动演出中':view.actorName??'—'}</p></div>${flows.rehearsalRail?.()??''}${visualStateMode?visualStateRail():''}
     <div class="combat-poster">
       <div class="combat-word" aria-hidden="true">BATTLE</div>
       <div class="combat-hero" aria-hidden="true">${figure()}</div>
       <div class="combat-orbit" aria-hidden="true"><i></i><b></b></div>
       <div class="glass-shards" aria-hidden="true">${Array.from({length:9},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
-      <section class="enemy-scene ${flows.bossPhase?'boss-in-combat':''} ${enemyTurn?'enemy-turn':''}" data-phase="${flows.bossPhase||1}" aria-label="敌人状态"><div class="enemy-name"><h1>${flows.bossPhase?'回声的执念':'聒噪的假面'}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:'LV 05'}</span></div>
-      <div class="enemy-vitals"><span>敌人 HP</span><span><strong>${state.enemyHp}</strong> / 420</span></div>${meter(state.enemyHp,420)}
-      <div class="weakness-line"><b>弱点 · ${state.weaknessKnown?'知识 · 已发现':'未发现'}</b><span>${negotiating?'HOLD UP · 可以交涉':state.stagger >= 2?'失衡 · 总攻击窗口':`失衡 ${state.stagger} / 2`}</span></div>
+      <section class="enemy-scene ${flows.bossPhase?'boss-in-combat':''} ${state.busy?'enemy-turn':''}" data-phase="${flows.bossPhase||1}" aria-label="敌人状态">
+      <div class="enemy-name"><h1>${esc(target?.name??'敌人')}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:`${target?.down?'DOWN':'TARGET'}`}</span></div>
+      <div class="enemy-targets" role="group" aria-label="选择攻击目标">${view.enemies.map(enemy=>`<button data-target-id="${enemy.id}" class="${enemy.active?'active':''} ${!enemy.alive?'down':''}" aria-pressed="${enemy.active}" ${!enemy.alive?'disabled':''}>${enemy.down?'DOWN':enemy.name}</button>`).join('')}</div>
+      <div class="enemy-vitals"><span>敌人 HP</span><span><strong>${target?.hp??0}</strong> / ${target?.maxHp??1}</span></div>${meter(target?.hp??0,target?.maxHp??1)}
+      <div class="weakness-line"><b>${weakness}</b><span>${negotiating?'HOLD UP · 可以交涉':target?.status?`异常 · ${statusLabels[target.status]??target.status}`:target?.down?'失衡 · 1 MORE / 总攻击窗口':target?.enraged?'激怒 · 攻击提升':'耐性会随命中逐步发现'}</span></div>
       <div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
       <div class="enemy-intent">${icon('eye')}<span><b>${intentTitle}</b><small>${intentNote}</small></span></div>
     </section><section class="command-deck" aria-label="战斗指令" aria-busy="${state.busy||negotiating}">
-      <div class="player-hud"><div class="player-tag"><b>ME</b><span>LV <strong>12</strong></span></div><div><span>HP <strong>${state.hp}</strong><em>/ 390</em></span>${meter(state.hp,390)}</div><div class="sp"><span>SP <strong>${state.sp}</strong><em>/ 260</em></span>${meter(state.sp,260)}</div></div>
-      <div class="mask-switcher"><button class="icon-button" data-action="prev-mask" aria-label="上一张面具" ${state.busy||negotiating?'disabled':''}>${icon('chevrons')}</button><button data-action="choose-mask" ${state.busy||negotiating?'disabled':''}><span class="mask-emblem">${icon('mask')}</span><span class="mask-switch-name">${esc(m.name)}<small>${m.attr} · PERSONA</small></span><b aria-hidden="true">${icon('chevrons')}</b></button><button class="icon-button" data-action="next-mask" aria-label="下一张面具" ${state.busy||negotiating?'disabled':''}>${icon('chevrons')}</button></div>
-      ${negotiating ? negotiationPanel() : normalDeck}
-    </section><p class="battle-log" role="status" aria-live="polite">${state.log}</p></div>`;
+      <div class="player-hud"><div class="player-tag"><b>${view.actorIsPlayer?'ME':'ALLY'}</b><span>${esc(view.actorPersona??view.actorName??'—')}<small>${view.actorPersonaLevel?`LV ${view.actorPersonaLevel}`:''}</small></span></div><div><span>HP <strong>${view.hudHp}</strong><em>/ ${view.hudMaxHp}</em></span>${meter(view.hudHp,view.hudMaxHp)}</div><div class="sp"><span>SP <strong>${view.hudSp}</strong><em>/ ${view.hudMaxSp}</em></span>${meter(view.hudSp,view.hudMaxSp)}</div></div>
+      <div class="mask-switcher"><button class="icon-button" data-action="prev-mask" aria-label="上一张面具" ${state.busy||negotiating||!view.actorIsPlayer?'disabled':''}>${icon('chevrons')}</button><button data-action="choose-mask" ${state.busy||negotiating||!view.actorIsPlayer?'disabled':''}><span class="mask-emblem">${icon('mask')}</span><span class="mask-switch-name">${esc(view.actorPersona??view.actorName??'—')}<small>${view.actorIsPlayer?'PERSONA · 换面具消耗本回合':'ALLY · 当前同伴'}</small></span><b aria-hidden="true">${icon('chevrons')}</b></button><button class="icon-button" data-action="next-mask" aria-label="下一张面具" ${state.busy||negotiating||!view.actorIsPlayer?'disabled':''}>${icon('chevrons')}</button></div>
+      ${negotiating ? negotiationPanel() : view.phase === 'holdUp' ? holdUpDeck : normalDeck}
+    </section><p class="battle-log" role="status" aria-live="polite">${esc(state.log)}</p></div>`;
 }
 
 let negotiationRun = 0;
@@ -195,17 +270,17 @@ function negotiationResultCard() {
     return `<div class="negotiation-card">
       <span class="stamp">RECRUITED</span>
       <h4>${esc(result.name)} 加入了面具名录。</h4>
-      <p>${esc(result.attribute)} · ${esc(result.skillName)}</p>
+      <p>${esc(result.attribute ?? result.element ?? 'PERSONA')} · ${esc(result.skillName)}</p>
       <div class="skill-line">${esc(result.skillDesc)}</div>
       <p>演示名录，不写入正式 Persona。</p>
-      <div class="negotiation-result-actions"><button class="main-button" type="button" data-action="return-after-battle"><span>返回战场</span></button></div>
+      <div class="negotiation-result-actions"><button class="main-button" type="button" data-action="return-after-battle"><span>${state.origin==='tower'?'带着收服结果返回路线':'返回战场'}</span></button></div>
     </div>`;
   }
   return `<div class="negotiation-card">
     <span class="stamp">LOOT</span>
     <h4>拿到了 ${esc(result.item)}。</h4>
     <p>SP +${result.sp}。它缩回影子里，没再挡路。</p>
-    <div class="negotiation-result-actions"><button class="main-button" type="button" data-action="return-after-battle"><span>返回战场</span></button></div>
+    <div class="negotiation-result-actions"><button class="main-button" type="button" data-action="return-after-battle"><span>${state.origin==='tower'?'带着奖励返回路线':'返回战场'}</span></button></div>
   </div>`;
 }
 
@@ -238,6 +313,7 @@ function negotiationPanel() {
     <blockquote class="negotiation-quote">“${esc(data.opening)}”</blockquote>
     <p class="negotiation-demand"><b>它想要</b>${esc(data.demand)}</p>
     <div class="negotiation-options">${options}</div>
+    <button class="negotiation-allout" type="button" data-holdup-engine="allOut"><b>总攻击</b><small>不谈判，直接收尾</small></button>
     <button class="negotiation-fight" type="button" data-action="negotiation-fight">不接话，继续打</button>
   </div>`;
 }
@@ -246,10 +322,31 @@ async function loadNegotiation() {
   const n = state.negotiation;
   if (!n) return;
   const run = ++negotiationRun;
-  const enemyAttribute = flows.bossPhase ? '知识' : '魅力';
+  const view = state.battleView ?? currentEngineView();
+  const target = view?.selectedTarget;
+  const weakness = target?.knownAffinities?.find(item => item.affinity === 'weak')?.element;
+  const enemyAttribute = ({
+    electric: '知识',
+    bless: '勇气',
+    fire: '勇气',
+    ice: '体贴',
+    wind: '灵巧',
+    psy: '知识',
+    nuclear: '灵巧',
+    curse: '魅力',
+  })[weakness] ?? '魅力';
   const input = {
-    enemy: { name: flows.bossPhase ? '回声的执念' : '聒噪的假面', attribute: enemyAttribute, level: 5, hp: state.enemyHp, maxHp: 420 },
-    persona: { name: masks[state.mask].name, attribute: masks[state.mask].attr },
+    enemy: {
+      name: target?.name ?? (flows.bossPhase ? '回声的执念' : '聒噪的假面'),
+      attribute: enemyAttribute,
+      level: state.battleFloor,
+      hp: target?.hp ?? state.enemyHp,
+      maxHp: target?.maxHp ?? state.enemyMaxHp,
+    },
+    persona: {
+      name: view?.actorPersona ?? masks[state.mask].name,
+      attribute: enemyAttribute,
+    },
     player: { hp: state.hp, sp: state.sp, turn: state.turn },
     history: state.log,
   };
@@ -263,6 +360,15 @@ async function loadNegotiation() {
       },
     });
     if (run !== negotiationRun || !state.negotiation) return;
+    const battleEnemy = state.battle?.enemies.find(enemy => enemy.id === state.targetId);
+    if (battleEnemy?.recruit) {
+      result.recruit = {
+        ...result.recruit,
+        ...battleEnemy.recruit,
+        attribute: enemyAttribute,
+      };
+    }
+    if (battleEnemy?.reward) result.reward = { ...battleEnemy.reward };
     state.negotiation.data = result;
     state.negotiation.aiMode = result.mode;
     state.negotiation.phase = 'offer';
@@ -312,32 +418,32 @@ function negotiationAct(option) {
     notify(`SP 不足 ${BRIBE_COST}`);
     return;
   }
-  const input = {
-    personality: n.data.personality,
-    option,
-    staggered: state.stagger >= 2,
-    lowHp: state.enemyHp / 420 < 0.35,
-    weaknessMatch: state.mask === 0,
-    sp: state.sp,
-  };
-  const chance = negotiationChance(input);
-  if (chance <= 0) {
-    notify('现在给不出这个条件。');
-    return;
-  }
-  if (option === 'bribe') state.sp = Math.max(0, state.sp - BRIBE_COST);
-  const resolved = resolveNegotiation(input, Math.random());
   n.option = option;
-  n.chance = resolved.chance;
-  n.roll = resolved.roll;
-  n.success = resolved.success;
   n.phase = 'rolling';
   state.busy = true;
   state.log = '它在衡量你的话……';
   render();
   setTimeout(() => {
     if (!state.negotiation || state.negotiation !== n) return;
+    const result = state.battle?.holdUp({ type: 'negotiate', enemyId: state.targetId, option });
+    if (!result?.ok) {
+      state.busy = false;
+      n.phase = 'offer';
+      notify(result?.reason ?? '交涉无法继续。');
+      render();
+      return;
+    }
+    const view = syncBattleUi();
+    n.chance = negotiationChance({
+      personality: n.data?.personality,
+      option,
+      staggered: true,
+      lowHp: (view?.selectedTarget?.hp ?? 1) / (view?.selectedTarget?.maxHp ?? 1) < 0.35,
+      weaknessMatch: false,
+      sp: state.sp,
+    });
     state.busy = false;
+    n.success = state.battle.phase === 'negotiation';
     if (n.success) {
       n.phase = 'success';
       state.log = '它接受了你的条件。';
@@ -345,9 +451,6 @@ function negotiationAct(option) {
       return;
     }
     n.phase = 'failed';
-    state.enemyRage = 1;
-    state.stagger = 0;
-    state.hp = Math.max(1, state.hp - 18);
     state.log = '交涉破裂。它被激怒了。';
     render();
   }, 700);
@@ -357,17 +460,30 @@ function chooseNegotiationOutcome(type) {
   const n = state.negotiation;
   if (!n?.active || n.phase !== 'success') return;
   if (type === 'recruit') {
-    const recruit = n.data.recruit;
+    const result = state.battle?.chooseResult('recruit');
+    if (!result?.ok) {
+      notify(result?.reason ?? '现在无法收服。');
+      return;
+    }
+    const recruit = state.battle.result;
     state.recruitedMasks.push({ ...recruit, obtainedAt: Date.now() });
-    n.result = { type: 'recruit', ...recruit };
+    n.result = { type: 'recruit', name: recruit.name, personaId: recruit.personaId, element: recruit.element, skillName: recruit.skillName, skillDesc: recruit.skillDesc };
     state.log = `${recruit.name} 加入了面具名录。`;
   } else {
-    const reward = n.data.reward;
-    state.sp = Math.min(260, state.sp + reward.sp);
+    const result = state.battle?.chooseResult('reward');
+    if (!result?.ok) {
+      notify(result?.reason ?? '现在无法领取奖励。');
+      return;
+    }
+    const reward = state.battle.result;
+    applyBattleReward(state.battle, reward);
     state.battleLoot.push(reward.item);
     n.result = { type: 'reward', ...reward };
     state.log = `拿到了 ${reward.item}。`;
   }
+  state.battleWon = true;
+  state.battleReceipt = battleReceipt(state.battle);
+  syncBattleUi();
   n.phase = 'result';
   render();
 }
@@ -380,11 +496,26 @@ function closeNegotiation() {
     returnFromBattle();
     return;
   }
+  if (n.phase === 'failed') {
+    n.active = false;
+    n.phase = null;
+    state.busy = false;
+    syncBattleUi();
+    render({ focus: true });
+    return;
+  }
+  if (state.battle?.phase === 'holdUp') {
+    const result = state.battle.holdUp({ type: 'continue' });
+    if (!result.ok) {
+      notify(result.reason);
+      return;
+    }
+    syncBattleUi();
+  }
   n.active = false;
   n.phase = null;
   state.busy = false;
-  state.turnPhase = 'player';
-  state.log = n.success === false ? '它被激怒了。下一击会更重。' : '你没有接话。它重新摆好架势。';
+  state.log = '你没有接话。它重新摆好架势。';
   render();
 }
 
@@ -393,9 +524,10 @@ function visualStateRail(){
   const current=states[visualStateKey]??states.intent;
   return `<section class="visual-state-rail" aria-label="战斗状态取景"><div class="visual-state-heading"><span>战场取景 / VISUAL COVERAGE</span><b>${current[0]}</b><em>${current[1]} · ${current[2]}</em></div><div class="visual-state-tabs">${Object.entries(states).map(([id,state])=>`<button type="button" class="${id===visualStateKey?'active':''}" data-visual-state="${id}">${state[0]}</button>`).join('')}</div></section><div class="visual-state-dock state-${visualStateKey}" aria-label="${current[0]} 示例">${visualStateKey==='intent'?`<span>${icon('eye')}<b>下一击：大招释放</b><small>前摇可被失衡打断 · 预计 96 点</small></span><strong>⚡</strong>`:visualStateKey==='status'?`<span class="state-chip poison">☠ 中毒 · 3 回合</span><span class="state-chip calm">◌ 沉静 · 1 回合</span><span class="state-chip guard">▣ 警戒 · 减伤</span>`:visualStateKey==='mask'?`<span>${icon('mask')} 奥丁·全知</span><i>${icon('arrow')}</i><b>${icon('mask')} 伊邪那岐·大神</b><small>借来的面具 · 本周 3 场</small>`:visualStateKey==='support'?`<span class="support-glyph">${icon('shield')}</span><b>同伴庇护</b><small>致命一击前保留 1 HP · 支援提示</small>`:visualStateKey==='moon'?`<span class="moon-mark">☾</span><b>月度心魔：回声的执念</b><small>月蚀词缀 · 弱点暂时隐藏</small>`:visualStateKey==='abyss'?`<span class="abyss-mark">RING 07</span><b>静默规则</b><small>防御不回 SP · 深渊守卫已锁定意图</small>`:visualStateKey==='finale'?`<span class="finale-mark">01 / 03</span><b>伪神终局 · 第一条血</b><small>终局演出接管战斗收尾</small>`:`<b>PHASE 02</b><span>面具之下，意志重生。</span><i><em></em></i>`}</div>`;
 }
-function combatSkill(skill,index){
-  const latin=[['STARFALL','ECHO'],['GALE THRUST','UNYIELDING'],['FLYING BLADE','CHARGE'],['LIGHT','SERENITY'],['ECHO SLASH','ENCOURAGE'],['RESONANCE','GUARD']];
-  return `<button class="combat-skill ${state.skill===index?'selected':''}" data-skill="${index}" aria-pressed="${state.skill===index}" ${state.busy||state.sp<skill[1]?'disabled':''}>${icon('chevrons')}<span>${skill[0]}<small>${skill[0]==='铁壁之誓'?'AEGIS OATH':latin[state.mask][index]}${state.sp<skill[1]?' · SP 不足':''}</small></span><strong>${skill[1]}<small>SP</small></strong></button>`;
+function combatSkill(skill) {
+  const key = battleActionKey(skill);
+  const selected = state.battleActionKey === key;
+  return `<button class="combat-skill ${selected?'selected':''}" data-battle-action="${key}" aria-pressed="${selected}" ${state.busy||skill.disabled?'disabled':''}>${icon('chevrons')}<span>${esc(skill.label)}<small>${esc(skill.detail ?? '')}${skill.disabled?' · 当前不可用':''}</small></span><strong>${skill.cost??0}<small>SP</small></strong></button>`;
 }
 function render({ focus = false } = {}) {
   const previousMaskScroll=$('.mask-tabs')?.scrollLeft ?? 0;
@@ -448,19 +580,45 @@ function startBattle(origin = state.room,options={}) {
   state.command='skills';
   state.skill=0;
   state.weaknessKnown=false;
-  state.enemyHp=options.resume?.enemyHp??312;
-  state.stagger=options.resume?.stagger??0;
-  state.turn=options.resume?.turn??4;
+  state.battleEncounter=options.encounter??null;
+  state.battleFloor=Number(options.floor)||4;
+  state.battleReceipt=null;
+  state.battleWon=false;
+  state.battle=createTowerBattle({
+    encounter:options.encounter??{},
+    floor:state.battleFloor,
+    boss:Boolean(options.bossEncounter),
+    activePersonaId:activeHeroPersonaId(DEFAULT_HERO_MASKS,state.mask),
+    heroHp:state.hp,
+    heroSp:state.sp,
+    partyVitals:state.partyVitals,
+  });
+  state.targetId=state.battle.enemies[0]?.id??'';
+  state.battleActionKey='';
+  if(fixture==='low-sp'){
+    const hero=state.battle.party.find(member=>member.isPlayer);
+    if(hero)hero.sp=Math.min(4,hero.maxSp);
+  }
+  if(options.negotiationHint){
+    for(const enemy of state.battle.enemies){
+      enemy.down=true;
+      enemy.hp=Math.max(1,Math.round(enemy.maxHp*0.42));
+    }
+    state.battle.phase='holdUp';
+  }
+  syncAppState(state.battle,state,state.targetId);
   state.log=options.negotiationHint?'先打它的弱点。把它打失衡，它就会开口。':'轮到你了。先看意图，再决定这一回合。';
-  if(!options.journey){state.sp=fixture==='low-sp'?4:217;state.hp=345;}
   transition('ENCOUNTER',clickOrigin);
   render({focus:true});
   window.scrollTo(0,0);
+  if(options.negotiationHint)beginEngineNegotiation();
 }
 function returnFromBattle() {
   sheet.close();
   actionRun++;clearTimeout(enemyTimer);
-  flows.towerReturn(state.finished);
+  const won=state.finished||state.battleWon||state.negotiation?.phase==='result';
+  const receipt=state.battleReceipt??(state.battle?battleReceipt(state.battle):null);
+  flows.towerReturn(won,flows.bossPhase,receipt);
   flows.resetView?.();
   state.busy=false;
   state.turnPhase='player';
@@ -468,6 +626,12 @@ function returnFromBattle() {
   state.finished=false;
   state.negotiation=null;
   state.enemyRage=0;
+  state.battle=null;
+  state.battleView=null;
+  state.battleActionKey='';
+  state.battleEncounter=null;
+  state.battleReceipt=null;
+  state.battleWon=false;
   state.room=state.origin;
   history.replaceState(null,'',`#${state.room}`);
   transition(state.room==='tower'?'ASCEND':'SHADOW',clickOrigin);
@@ -480,67 +644,258 @@ function leaveBattle() {
   if(state.finished) { returnFromBattle(); return; }
   openSheet('返回前，确认一下', `<p>离开当前遭遇战，返回${state.origin==='tower'?'高塔路线':'战场'}？</p><p>本页是操作预览，不会更改正式存档。</p>${mainButton('留在战斗','close-sheet')}${mainButton('返回'+(state.origin==='tower'?'高塔路线':'战场'),'confirm-leave','','red')}`);
 }
-function execute(options={}) {
-  if(flows.rehearsal)return;
-  if (state.busy || state.finished || !state.fighting || state.sp < commandCost()) return;
-  if(state.command==='allout'&&!options.qteResolved){flows.open('qte');return;}
-  const command=state.command;
-  const name=commandName();
-  const weak=command==='skills'&&state.mask===0;
-  const skillAttacks=command==='skills'&&(state.mask===0||state.mask===4||(state.skill===0&&state.mask!==3));
-  const healing=command==='skills'&&state.mask===3&&state.skill===0;
-  const damage=command==='allout'?Math.round(168*(options.multiplier??1.5)/1.5):weak?72:48;
-  const enemyActs = command !== 'insight';
-  const run=++actionRun;
-  state.busy=true;
-  state.sp-=commandCost();
-  state.log=`${name} · 行动演出中…`;
-  render();
-  let playback;
-  if(command==='allout'||command==='basic'||skillAttacks)playback=flows.impact(command==='allout'?'allout':weak?'star':'slash',{amount:damage,meterTo:Math.max(0,state.enemyHp-damage)});
-  else if(healing)playback=flows.impact('heal',{amount:Math.min(30,390-state.hp),meterTo:Math.min(390,state.hp+30)});
-  else playback=flows.impact(command==='defend'?'guard':command==='insight'?'insight':'buff');
-  playback.finished.then(()=>{
-    if(run!==actionRun)return;
-    // Standalone presentation fixture only. Production actions must use BattleEngine.act().
-    if(skillAttacks||command==='basic'||command==='allout') {
-      state.enemyHp=Math.max(0,state.enemyHp-damage);
-      if(weak)state.stagger=Math.min(2,state.stagger+1);
-      if(command==='allout')state.stagger=0;
-    }
-    if(weak||command==='insight')state.weaknessKnown=true;
-    if(command==='skills'&&state.mask===3&&state.skill===0)state.hp=Math.min(390,state.hp+30);
-    state.log=command==='insight'?'意图已确认：下一击蓄势攻击，弱点为知识。':command==='defend'?'防御姿态已就绪。':state.enemyHp===0?'敌人倒下了。':state.stagger>=2?'敌人失衡！总攻击已可选择。':weak?'命中弱点！知识攻击奏效。':'行动结束，重新选择下一步。';
-    state.finished=state.enemyHp===0;
-    if(state.finished){if(flows.battleFinished())return;transition('FINISH');}
-    if(state.finished){state.busy=false;state.turnPhase='player';render();$('[data-action="return-after-battle"]')?.focus({preventScroll:true});return;}
-    if(maybeOpenNegotiation(weak))return;
-    if(!enemyActs){state.turn++;state.busy=false;state.turnPhase='player';render();$('[data-action="execute"]')?.focus({preventScroll:true});return;}
-    state.turnPhase='enemy';
-    state.log=command==='defend'?'防御姿态已就绪，敌方正在出手。':'行动完成，敌方正在出手。';
-    render();
-    enemyTimer=setTimeout(()=>{
-      const guarded=command==='defend';
-      // 24 点沿用目录里已验收的受击演示；防御保留同一攻击的 50% 承伤。
-      const enemyDamage=(guarded?12:24)+(state.enemyRage?12:0);
-      const hpAfter=Math.max(0,state.hp-enemyDamage);
-      flows.impact(guarded?'guard':'player-hit',{amount:enemyDamage,target:'player',meterTo:hpAfter}).finished.then(()=>{
-        if(run!==actionRun)return;
-        state.hp=hpAfter;
-        state.enemyRage=0;
-        state.turn++;
-        state.turnPhase='player';
-        state.busy=false;
-        state.log=guarded?`敌方出手：防御生效，受到 ${enemyDamage} 点伤害。`:`敌方出手：受到 ${enemyDamage} 点伤害。`;
-        if(state.hp<=0){state.fighting=false;flows.open('defeat');return;}
-        render();
-        $('[data-action="execute"]')?.focus({preventScroll:true});
-      });
-    },reduced.matches?0:220);
+function syncBattleUi() {
+  if (!state.battle) return null;
+  const view = syncAppState(state.battle, state, state.targetId);
+  state.battleView = view;
+  return view;
+}
+
+function actionPlayback(action, lines, view) {
+  const text = lines.join('\n');
+  const damage = [...text.matchAll(/受到\s*(\d+)\s*伤害/g)]
+    .reduce((total, match) => total + Number(match[1] || 0), 0);
+  const healed = [...text.matchAll(/回复\s*(\d+)\s*HP/g)]
+    .reduce((total, match) => total + Number(match[1] || 0), 0);
+  const invalid = /无效|没有受伤|抵抗了即死/.test(text);
+  let kind = 'slash';
+  if (action.type === 'guard') kind = 'guard';
+  else if (action.type === 'analyze') kind = 'insight';
+  else if (action.type === 'batonPass') kind = 'one-more';
+  else if (action.type === 'switchMask') kind = 'buff';
+  else if (/回复|复活/.test(text) && healed > 0) kind = 'heal';
+  else if (/TECHNICAL/.test(text)) kind = 'critical';
+  else if (/弱点/.test(text)) kind = 'star';
+  else if (/暴击/.test(text)) kind = 'critical';
+  else if (invalid) kind = 'insight';
+  const target = view.selectedTarget;
+  return {
+    kind,
+    amount: kind === 'heal' ? healed : invalid ? 0 : damage,
+    meterTo: kind === 'heal'
+      ? Math.min(view.hudMaxHp, view.hudHp + healed)
+      : target?.hp,
+    meterMax: kind === 'heal' ? view.hudMaxHp : target?.maxHp,
+  };
+}
+
+function enemyPlaybacks(lines, view) {
+  return lines.flatMap(line => {
+    const match = line.match(/^(.+?) 以.+?攻击 (.+?)，(?:造成 (\d+) 伤害|没有造成伤害|.*?(无效|吸收|反弹|抗性))/);
+    if (!match) return [];
+    const amount = Number(match[3] || 0);
+    const member = view.party.find(item => match[2].includes(item.name));
+    return [{
+      kind: amount > 0 ? 'player-hit' : 'guard',
+      amount,
+      target: member ? 'party' : 'player',
+      targetName: member?.name ?? view.party.find(item => item.isPlayer)?.name ?? '你',
+      targetSelector: member ? `[data-party-id="${member.id}"]` : null,
+      meterTo: member?.hp ?? view.hudHp,
+      meterMax: member?.maxHp ?? view.hudMaxHp,
+      log: line,
+    }];
   });
 }
-function goRoom(room){actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
-const flows=createEncounterDirector({state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle});
+
+function beginEngineNegotiation() {
+  if (!state.battle || state.battle.phase !== 'holdUp' || state.negotiation?.active) return;
+  const n = createNegotiation();
+  n.active = true;
+  n.used = true;
+  n.phase = 'loading';
+  n.aiMode = 'preview';
+  n.statusText = '它倒下了。影子抬起头，第一次正眼看你。';
+  state.negotiation = n;
+  state.busy = true;
+  state.log = n.statusText;
+  render();
+  void loadNegotiation();
+}
+
+function openMaskPicker() {
+  const view = currentEngineView();
+  if (!view?.actorIsPlayer) return;
+  const switches = view.actions.filter(action => action.type === 'switchMask');
+  openSheet('换面具 · 消耗本回合', switches.length
+    ? `<p>换面具会结束主角这次行动。选择一张仍在队列里的 Persona。</p>${switches.map(action => `<button class="skill-row" data-switch-mask="${action.id}" ${action.disabled?'disabled':''}>${icon('mask')}<span>${esc(action.label)}<small>${esc(action.detail)}</small></span><strong>换</strong></button>`).join('')}`
+    : '<p>现在没有可替换的 Persona。</p>');
+}
+
+function performHoldUpAction(type, option) {
+  if (!state.battle || state.battle.phase !== 'holdUp' || state.busy) return;
+  const run = ++actionRun;
+  const before = buildBattleView(state.battle, state.targetId);
+  const payload = type === 'negotiate'
+    ? { type, enemyId: state.targetId, option }
+    : { type };
+  const result = state.battle.holdUp(payload);
+  if (!result.ok) {
+    notify(result.reason);
+    return;
+  }
+  const view = syncBattleUi();
+  if (type === 'allOut') {
+    if (state.negotiation) {
+      state.negotiation.active = false;
+      state.negotiation.phase = null;
+    }
+    state.busy = true;
+    state.log = '总攻击！';
+    render();
+    flows.impact('allout', {
+      amount: Math.max(0, (before.selectedTarget?.hp ?? 0) - (view.selectedTarget?.hp ?? 0)),
+      meterTo: view.selectedTarget?.hp,
+    }).finished.then(() => {
+      if (run !== actionRun) return;
+      state.busy = false;
+      if (state.battle.phase === 'victory') {
+        state.finished = true;
+        state.battleReceipt = battleReceipt(state.battle);
+        if (flows.battleFinished()) return;
+        render();
+      } else {
+        render();
+      }
+    });
+    return;
+  }
+  if (type === 'negotiate') {
+    if (state.battle.phase === 'negotiation') {
+      state.negotiation.phase = 'success';
+      state.negotiation.success = true;
+      state.negotiation.chance = negotiationChance({
+        personality: state.negotiation.data?.personality,
+        option,
+        staggered: true,
+        lowHp: (view.selectedTarget?.hp ?? 1) / (view.selectedTarget?.maxHp ?? 1) < 0.35,
+        weaknessMatch: false,
+        sp: state.sp,
+      });
+      state.busy = false;
+      state.log = '它接受了你的条件。';
+    } else {
+      state.negotiation.phase = 'failed';
+      state.negotiation.success = false;
+      state.busy = false;
+      state.log = '交涉破裂。它被激怒了。';
+    }
+    render();
+    return;
+  }
+  state.negotiation.active = false;
+  state.negotiation.phase = null;
+  state.busy = false;
+  render({ focus: true });
+}
+
+function execute(options = {}) {
+  if (flows.rehearsal) return;
+  if (state.busy || state.finished || !state.fighting || !state.battle) return;
+  const view = currentEngineView();
+  if (!view || view.phase !== 'party') {
+    notify('当前不是可行动阶段。');
+    return;
+  }
+  const action = selectedEngineAction(view);
+  if (!action) {
+    notify('先选择一个行动。');
+    return;
+  }
+  if (action.disabled) {
+    notify('当前无法使用这个行动。');
+    return;
+  }
+  const payload = buildActionPayload(action, state.targetId);
+  if (action.type === 'switchMask') {
+    const nextMask = masks.findIndex(mask => mask.id === action.id);
+    if (nextMask >= 0) state.mask = nextMask;
+  }
+  const logStart = state.battle.log.length;
+  const result = state.battle.act(payload);
+  if (!result.ok) {
+    notify(result.reason);
+    return;
+  }
+  const lines = state.battle.log.slice(logStart);
+  const run = ++actionRun;
+  const playback = actionPlayback(action, lines, syncBattleUi());
+  state.busy = true;
+  state.log = lines.at(-1) ?? `${action.label} · 行动完成。`;
+  render();
+  const onDone = () => {
+    if (run !== actionRun) return;
+    const next = syncBattleUi();
+    const enemyHits = enemyPlaybacks(lines, next);
+    if (enemyHits.length && next.phase === 'party') {
+      state.log = enemyHits.at(-1).log;
+      render();
+      const sequence = enemyHits.reduce(
+        (promise, hit) => promise.then(() => flows.impact(hit.kind, hit).finished),
+        Promise.resolve(),
+      );
+      sequence.then(() => {
+        if (run !== actionRun) return;
+        state.busy = false;
+        syncBattleUi();
+        if (next.phase === 'defeat') {
+          state.fighting = false;
+          flows.open('defeat');
+          return;
+        }
+        render({ focus: true });
+      });
+      return;
+    }
+    state.busy = false;
+    syncBattleUi();
+    if (next.phase === 'victory') {
+      state.finished = true;
+      state.battleReceipt = battleReceipt(state.battle);
+      if (flows.battleFinished()) return;
+      transition('FINISH');
+      render();
+      $('[data-action="return-after-battle"]')?.focus({ preventScroll: true });
+      return;
+    }
+    if (next.phase === 'holdUp') {
+      render();
+      beginEngineNegotiation();
+      return;
+    }
+    if (next.phase === 'defeat') {
+      state.fighting = false;
+      flows.open('defeat');
+      return;
+    }
+    render({ focus: true });
+    $('[data-action="execute"]')?.focus({ preventScroll: true });
+  };
+  flows.impact(playback.kind, playback).finished.then(() => {
+    if (run !== actionRun) return;
+    const oneMore = state.battle?.phase === 'party' && lines.some(line => /1 MORE/.test(line));
+    if (oneMore) {
+      flows.impact('one-more', {
+        amount: 0,
+        meterTo: state.enemyHp,
+        meterMax: state.enemyMaxHp,
+      }).finished.then(onDone);
+    } else {
+      onDone();
+    }
+  });
+}
+function goRoom(room){actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.battle=null;state.battleView=null;state.battleActionKey='';state.battleReceipt=null;state.battleWon=false;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
+const flows=createEncounterDirector({
+  state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle,
+  onBossMorph(phase){
+    if(!state.battle)return;
+    promoteBossPhase(state.battle,{phase});
+    state.finished=false;
+    state.battleReceipt=null;
+    syncBattleUi();
+  },
+});
 const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom});
 function buttonFeedback(control){
   if(reduced.matches)return;
@@ -565,6 +920,10 @@ document.addEventListener('click',event=>{
   const box=control.getBoundingClientRect();
   clickOrigin={x:box.left+box.width/2,y:box.top+box.height/2};
   if(control.dataset.negotiationOption){negotiationAct(control.dataset.negotiationOption);return;}
+  if(control.dataset.holdupEngine){performHoldUpAction(control.dataset.holdupEngine);return;}
+  if(control.dataset.targetId){state.targetId=control.dataset.targetId;syncBattleUi();render();return;}
+  if(control.dataset.battleAction){if(state.busy)return;state.battleActionKey=control.dataset.battleAction;render();$(`[data-battle-action="${state.battleActionKey}"]`)?.focus({preventScroll:true});return;}
+  if(control.dataset.switchMask){state.battleActionKey=`switchMask:${control.dataset.switchMask}`;sheet.close();execute();return;}
   if(control.dataset.flow){flows.act(control.dataset.flow);return;}
   if(control.dataset.tower){flows.towerAct(control.dataset.tower);return;}
   if(control.dataset.prep){preparation.act(control.dataset.prep);return;}
@@ -586,6 +945,7 @@ document.addEventListener('click',event=>{
   else if(action==='open-persona')navigate('persona');
   else if(action==='awaken-persona')preparation.act('create');
   else if(action==='start-negotiation')startNegotiationDemo();
+  else if(action==='hold-up-negotiate')beginEngineNegotiation();
   else if(action==='negotiation-fight')closeNegotiation();
   else if(action==='negotiation-recruit')chooseNegotiationOutcome('recruit');
   else if(action==='negotiation-reward')chooseNegotiationOutcome('reward');
@@ -597,10 +957,7 @@ document.addEventListener('click',event=>{
   else if(action==='leave-battle')leaveBattle();
   else if(action==='confirm-leave'||action==='return-after-battle')returnFromBattle();
   else if(action==='close-sheet')sheet.close();
-  else if(action==='prev-mask'||action==='next-mask'){
-    if(state.busy)return;state.mask=(state.mask+(action==='next-mask'?1:-1)+masks.length)%masks.length;state.skill=0;render();$(`[data-action="${action}"]`)?.focus({preventScroll:true});
-  }
-  else if(action==='choose-mask')openSheet('选择出战面具',masks.map((m,i)=>`<button class="skill-row" data-mask="${i}" aria-pressed="${i===state.mask}">${icon('mask')}<span>${esc(m.name)}<small>${m.attr} · ${esc(m.passive)}</small></span>${i===state.mask?icon('check'):''}</button>`).join(''));
+  else if(action==='prev-mask'||action==='next-mask'||action==='choose-mask')openMaskPicker();
   else if(action==='execute')execute();
   else if(action==='settings'){
     if(state.fighting||state.busy){notify('先返回战场，再调整设置。');return;}

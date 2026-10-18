@@ -105,6 +105,20 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS } = {}) {
       journey.alert = true;
       journey.security = Math.max(60, journey.security - 35);
     }
+    let encounter = null;
+    if (kind === 'mob' || kind === 'boss' || kind === 'elite') {
+      const base = encounterFor(journey.floor, kind === 'boss' ? 'boss' : 'mob');
+      encounter = kind === 'elite'
+        ? {
+          ...base,
+          name: journey.floor === 7 ? '失衡的守层者' : '回声的看门人',
+          level: journey.floor,
+          maxHp: Math.round(base.maxHp * 1.6),
+          attack: Math.round(base.attack * 1.25),
+          defense: base.defense + 2,
+        }
+        : base;
+    }
     journey.pending = {
       floor: journey.floor,
       kind,
@@ -112,9 +126,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS } = {}) {
       result: null,
       rewarded: false,
       ambush,
-      encounter: kind === 'boss' || kind === 'mob' || kind === 'elite'
-        ? encounterFor(journey.floor, kind === 'boss' ? 'boss' : 'mob')
-        : null,
+      encounter,
     };
     return journey.pending;
   };

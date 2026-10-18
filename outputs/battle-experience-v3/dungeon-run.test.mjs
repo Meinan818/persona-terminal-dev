@@ -74,3 +74,45 @@ test('Boss 未送预告信时不能直接进入', () => {
   model.journey.selected = 'boss';
   assert.equal(model.enter(), null);
 });
+
+test('两个强敌层有独立的守层者名字与更高数值', () => {
+  const model = createDungeonRun();
+  model.start();
+  model.journey.floor = 6;
+  model.journey.selected = 'elite';
+  const first = model.enter();
+  assert.equal(first.encounter.name, '失衡的守层者');
+  assert.equal(first.encounter.level, 7);
+
+  model.journey.pending = null;
+  model.journey.floor = 9;
+  model.journey.selected = 'elite';
+  const second = model.enter();
+  assert.equal(second.encounter.name, '回声的看门人');
+  assert.ok(second.encounter.maxHp > 0);
+});
+
+test('一条完整路线可以走完 12 层并进入 Boss 结算', () => {
+  const model = createDungeonRun();
+  model.start();
+  let guard = 0;
+  while (!model.journey.ended && guard < 20) {
+    guard += 1;
+    const choices = model.choices();
+    assert.ok(choices.length > 0);
+    const kind = choices[0];
+    assert.equal(model.select(kind), true);
+    const pending = model.enter();
+    assert.ok(pending, `floor ${model.journey.floor} should enter`);
+    if (pending.kind === 'safe') model.rest();
+    if (pending.kind === 'calling') model.sendCallingCard();
+    if (pending.kind === 'trap') model.disarmTrap();
+    if (pending.kind === 'key') model.takeKey();
+    model.resolve({ label: '节点完成' });
+    model.advance();
+  }
+  assert.equal(model.journey.ended, 'clear');
+  assert.equal(model.journey.floor, DUNGEON_FLOORS);
+  assert.equal(model.journey.history.length, DUNGEON_FLOORS);
+  assert.equal(model.journey.callingCardSent, true);
+});

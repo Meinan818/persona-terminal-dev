@@ -13,6 +13,7 @@ export function createCombatMotion({reduced}) {
   }
   document.addEventListener('visibilitychange',()=>{
     morph?.resetClock();
+    for(const record of effects)record.last=performance.now();
     for(const animation of animations){if(document.hidden)animation.pause();else if(animation.playState==='paused')animation.play();}
   });
   function point(selector,fallback) {
@@ -46,7 +47,10 @@ export function createCombatMotion({reduced}) {
     root.innerHTML=`<svg class="attack-trace" viewBox="0 0 ${innerWidth} ${innerHeight}"><path pathLength="1" d="${path}"/><path pathLength="1" d="${path}"/></svg><div class="impact-point"><i class="impact-ring"></i><i class="impact-flare"></i><i class="impact-cut cut-one"></i><i class="impact-cut cut-two"></i><span class="damage-number">${kind==='heal'?'+':kind==='guard'||kind==='one-more'||kind==='insight'||kind==='buff'?'':'−'}${kind==='guard'?'BLOCK':kind==='one-more'?'1 MORE':kind==='insight'?'SCAN':kind==='buff'?'READY':value}</span><b class="impact-label">${label}</b>${Array.from({length:sparks},(_,i)=>{const angle=i*2.39996;const distance=42+(i%5)*17;return `<i class="impact-spark" style="--dx:${Math.cos(angle)*distance}px;--dy:${Math.sin(angle)*distance}px;--spin:${i*47}deg;--delay:${(i%3)*13}ms"></i>`;}).join('')}<svg class="guard-dome" viewBox="0 0 120 140"><path d="M60 8 106 30V73C106 101 79 124 60 134 41 124 14 101 14 73V30Z"/><path d="m39 68 15 16 29-35"/></svg><div class="spell-star"></div></div>`;
     if(kind==='guard'){const counter=document.createElementNS('http://www.w3.org/2000/svg','path');counter.setAttribute('class','counter-trace');counter.setAttribute('pathLength','1');counter.setAttribute('d',`M ${impact.x} ${impact.y} Q ${(impact.x+origin.x)/2} ${Math.min(impact.y,origin.y)+45} ${origin.x} ${origin.y}`);root.querySelector('.attack-trace').append(counter);}
     document.body.append(root);
-    const record={root,timer:0,impactTimer:0};effects.add(record);
+    let finish;
+    const record={root,elapsed:0,last:performance.now(),raf:0,finished:new Promise(resolve=>{finish=resolve;})};
+    record.finish=()=>{cancelAnimationFrame(record.raf);root.remove();effects.delete(record);finish();};
+    effects.add(record);
     if(!reduced.matches&&['star','slash','critical','allout'].includes(kind))animate($('.combat-hero .figure'),[{translate:'0 0'},{translate:'-9px 2px',offset:.25},{translate:'19px -3px',offset:.6},{translate:'0 0'}],{duration:380});
     const apply=()=>{
       if(!root.isConnected)return;
@@ -67,8 +71,15 @@ export function createCombatMotion({reduced}) {
         shake($('.combat-poster'),kind==='critical'||kind==='allout'?5:3);
       }
     };
-    record.impactTimer=setTimeout(apply,reduced.matches?0:110);
-    record.timer=setTimeout(()=>{root.remove();effects.delete(record);},reduced.matches?380:1050);
+    let contacted=false;
+    const tick=now=>{
+      const dt=Math.max(0,now-record.last);record.last=now;
+      if(!document.hidden)record.elapsed+=dt;
+      if(!contacted&&record.elapsed>=(reduced.matches?0:110)){contacted=true;apply();}
+      if(record.elapsed>=(reduced.matches?380:1050)){record.finish();return;}
+      record.raf=requestAnimationFrame(tick);
+    };
+    record.raf=requestAnimationFrame(tick);
     return record;
   }
   function transformBoss({onMorph,onComplete}) {
@@ -99,7 +110,7 @@ export function createCombatMotion({reduced}) {
   }
   function clear() {
     morph?.cancel();
-    for(const record of effects){clearTimeout(record.timer);clearTimeout(record.impactTimer);record.root.remove();}effects.clear();
+    for(const record of effects)record.finish();effects.clear();
     for(const animation of animations)animation.cancel();animations.clear();
   }
   return {play,transformBoss,clear,get transforming(){return Boolean(morph);},skipTransformation(){morph?.finish();}};

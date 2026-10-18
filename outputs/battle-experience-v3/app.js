@@ -39,7 +39,7 @@ function notify(text) {
   clearTimeout(notify.timer);
   notify.timer = setTimeout(() => $('.toast').classList.remove('visible'), 2400);
 }
-let sweepTimer, hitTimer, resolveTimer, enemyTimer;
+let sweepTimer, hitTimer, enemyTimer, actionRun=0;
 function transition(word, origin) {
   if (reduced.matches) return;
   const fx = $('.sweep');
@@ -167,6 +167,9 @@ function render({ focus = false } = {}) {
     if (a.dataset.room === state.room) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
   });
   content.innerHTML = flows.screen() ?? (state.fighting ? combat() : ({battle:home,tower,persona,arsenal}[state.room])());
+  if(flows.rehearsal){
+    const deck=$('.command-deck');if(deck){deck.inert=true;$$('button',deck).forEach(button=>button.disabled=true);}
+  }
   const tabs=$('.mask-tabs');
   if(tabs){tabs.scrollLeft=previousMaskScroll;const active=$('[aria-pressed="true"]',tabs);if(active&&tabs.scrollWidth>tabs.clientWidth){tabs.scrollTo({left:active.offsetLeft-(tabs.clientWidth-active.offsetWidth)/2,behavior:reduced.matches?'instant':'smooth'});}}
   if (focus) content.focus({preventScroll:true});
@@ -195,7 +198,7 @@ addEventListener('hashchange', () => {
   window.scrollTo(0,scrolls.get(state.room) ?? 0);
 });
 function startBattle(origin = state.room,options={}) {
-  clearTimeout(resolveTimer);clearTimeout(enemyTimer);
+  actionRun++;clearTimeout(enemyTimer);
   flows.battleStarted(options);
   state.origin = origin;
   state.fighting = true;
@@ -216,7 +219,7 @@ function startBattle(origin = state.room,options={}) {
 }
 function returnFromBattle() {
   sheet.close();
-  clearTimeout(resolveTimer);clearTimeout(enemyTimer);
+  actionRun++;clearTimeout(enemyTimer);
   flows.resetView?.();
   state.busy=false;
   state.turnPhase='player';
@@ -229,11 +232,13 @@ function returnFromBattle() {
   window.scrollTo(0,scrolls.get(state.room) ?? 0);
 }
 function leaveBattle() {
+  if(flows.rehearsal){flows.act('rehearsal-close');return;}
   if(state.busy) { notify('行动尚未结束，请稍候再返回。'); return; }
   if(state.finished) { returnFromBattle(); return; }
   openSheet('返回前，确认一下', `<p>离开当前遭遇战，返回${state.origin==='tower'?'高塔路线':'战场'}？</p><p>本页是操作预览，不会更改正式存档。</p>${mainButton('留在战斗','close-sheet')}${mainButton('返回'+(state.origin==='tower'?'高塔路线':'战场'),'confirm-leave','','red')}`);
 }
 function execute(options={}) {
+  if(flows.rehearsal)return;
   if (state.busy || state.finished || !state.fighting || state.sp < commandCost()) return;
   if(state.command==='allout'&&!options.qteResolved){flows.open('qte');return;}
   const command=state.command;
@@ -243,14 +248,17 @@ function execute(options={}) {
   const healing=command==='skills'&&state.mask===3&&state.skill===0;
   const damage=command==='allout'?Math.round(168*(options.multiplier??1.5)/1.5):weak?72:48;
   const enemyActs = command !== 'insight';
+  const run=++actionRun;
   state.busy=true;
   state.sp-=commandCost();
   state.log=`${name} · 行动演出中…`;
   render();
-  if(command==='allout'||command==='basic'||skillAttacks)flows.impact(command==='allout'?'allout':weak?'star':'slash',{amount:damage,meterTo:Math.max(0,state.enemyHp-damage)});
-  else if(healing)flows.impact('heal',{amount:Math.min(30,390-state.hp),meterTo:Math.min(390,state.hp+30)});
-  else flows.impact(command==='defend'?'guard':command==='insight'?'insight':'buff');
-  resolveTimer=setTimeout(()=>{
+  let playback;
+  if(command==='allout'||command==='basic'||skillAttacks)playback=flows.impact(command==='allout'?'allout':weak?'star':'slash',{amount:damage,meterTo:Math.max(0,state.enemyHp-damage)});
+  else if(healing)playback=flows.impact('heal',{amount:Math.min(30,390-state.hp),meterTo:Math.min(390,state.hp+30)});
+  else playback=flows.impact(command==='defend'?'guard':command==='insight'?'insight':'buff');
+  playback.finished.then(()=>{
+    if(run!==actionRun)return;
     // Standalone presentation fixture only. Production actions must use BattleEngine.act().
     if(skillAttacks||command==='basic'||command==='allout') {
       state.enemyHp=Math.max(0,state.enemyHp-damage);
@@ -271,8 +279,8 @@ function execute(options={}) {
       // 24 点沿用目录里已验收的受击演示；防御保留同一攻击的 50% 承伤。
       const enemyDamage=guarded?12:24;
       const hpAfter=Math.max(0,state.hp-enemyDamage);
-      flows.impact(guarded?'guard':'player-hit',{amount:enemyDamage,target:'player',meterTo:hpAfter});
-      enemyTimer=setTimeout(()=>{
+      flows.impact(guarded?'guard':'player-hit',{amount:enemyDamage,target:'player',meterTo:hpAfter}).finished.then(()=>{
+        if(run!==actionRun)return;
         state.hp=hpAfter;
         state.turn++;
         state.turnPhase='player';
@@ -281,11 +289,11 @@ function execute(options={}) {
         if(state.hp<=0){state.fighting=false;flows.open('defeat');return;}
         render();
         $('[data-action="execute"]')?.focus({preventScroll:true});
-      },reduced.matches?80:520);
+      });
     },reduced.matches?0:220);
-  },reduced.matches?80:660);
+  });
 }
-function goRoom(room){clearTimeout(resolveTimer);clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
+function goRoom(room){actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
 const flows=createEncounterDirector({state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle});
 const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom});
 function buttonFeedback(control){
@@ -306,6 +314,7 @@ document.addEventListener('pointerdown',event=>{
 document.addEventListener('click',event=>{
   const control=event.target.closest('button,a');
   if(!control||control.disabled)return;
+  if(flows.rehearsal&&!control.dataset.flow&&control.dataset.action!=='leave-battle'){event.preventDefault();return;}
   buttonFeedback(control);
   const box=control.getBoundingClientRect();
   clickOrigin={x:box.left+box.width/2,y:box.top+box.height/2};
@@ -351,7 +360,7 @@ sheet.addEventListener('close',()=>{
   const fallback=state.fighting?$('[data-action="choose-mask"]'):$(`.room-nav a[data-room="${state.room}"]`);
   if(!document.activeElement||document.activeElement===document.body)fallback?.focus({preventScroll:true});
 });
-document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!sheet.open){if(flows.transforming||flows.active){event.preventDefault();flows.close();return;}if(state.fighting){event.preventDefault();leaveBattle();}}});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!sheet.open){if(flows.transforming||flows.active||flows.rehearsal){event.preventDefault();flows.close();return;}if(state.fighting){event.preventDefault();leaveBattle();}}});
 document.addEventListener('visibilitychange',()=>document.body.classList.toggle('is-hidden',document.hidden));
 state.room=roomFromHash();
 render();

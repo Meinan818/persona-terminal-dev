@@ -8,6 +8,7 @@
   <title>MASKARIA · 逆影战场交互预览</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./combat.css">
+  <link rel="stylesheet" href="./refinements.css">
   <script src="./app.js" type="module"></script>
 </head>
 <body>
@@ -31,7 +32,7 @@
   <header class="masthead">
     <a href="#battle" class="brand">MASKARIA<span>面具庭园</span></a>
     <span class="preview-badge">示例数据预览</span>
-    <button class="icon-button settings-button" aria-label="战场设置" data-action="settings"><svg><use href="#i-gear"/></svg></button>
+    <button class="icon-button settings-button" aria-label="战场设置" aria-controls="sheet" aria-haspopup="dialog" aria-expanded="false" data-action="settings"><svg aria-hidden="true"><use href="#i-gear"/></svg><span>设置<small>SETTINGS</small></span></button>
   </header>
   <nav class="room-nav" aria-label="战场区域">
     <a href="#battle" data-room="battle"><svg><use href="#i-sword"/></svg><span>战斗<small>BATTLE</small></span></a>

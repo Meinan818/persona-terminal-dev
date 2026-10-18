@@ -19,6 +19,7 @@ const masks = [
   { attr:'魅力', name:'回声', passive:'让声音抵达彼岸', skills:[['回音斩',12,'魅力伤害 · 单体攻击'],['鼓舞',8,'强化下一次进攻']] },
   { attr:'借来的', name:'同行者', passive:'来自同伴 · 本周剩余 2 场', skills:[['共鸣',14,'万能属性 · 借来的力量'],['守望',10,'防护 · 同伴的支持']] },
 ];
+const attributeMarks = [['eye','KNOWLEDGE'],['sword','COURAGE'],['shield','DEXTERITY'],['star','KINDNESS'],['mask','CHARM'],['mask','BORROWED']];
 const nodes = {
   echo: { title:'回忆之光', kind:'回响', icon:'star', hp:'—', weak:'—', note:'短暂休息，听见一段来自白昼的回声。', action:'进入回响', reward:'恢复与回忆' },
   mob: { title:'聒噪的假面', kind:'小影', icon:'sword', hp:'312 / 420', weak:'知识', note:'它正在蓄势。查看敌人的意图，决定自己的第一步。', action:'进入战斗', reward:'战斗后结算' },
@@ -60,7 +61,9 @@ function hit(text) {
 }
 function openSheet(title, html) {
   $('#sheet-title').textContent = title;
+  sheet.classList.toggle('settings-sheet',title==='战场设置');
   $('#sheet-body').innerHTML = html;
+  $('.settings-button').setAttribute('aria-expanded',String(title==='战场设置'));
   if (!sheet.open) sheet.showModal();
 }
 function home() {
@@ -81,10 +84,12 @@ function tower() {
   const n = nodes[state.selectedNode];
   return `${heading('登塔','ASCEND / 03','保留走过的路，也看清下一步。')}
     <div class="tower-grid"><section class="route-map" aria-label="第三区层路线图">
-      <div class="route-floor"><span class="floor-tag">10 F</span><div class="route-node fog">${icon('mask')}<span>心魔 · 塔顶</span></div></div>
-      <div class="route-floor"><span class="floor-tag">05 F</span><div class="route-node fog">${icon('eye')}<span>尚未到达</span></div></div>
-      <div class="route-floor"><span class="floor-tag">04 F</span>${Object.entries(nodes).map(([id,node]) => `<button class="route-node next ${state.selectedNode === id ? 'selected' : ''}" data-node="${id}" aria-pressed="${state.selectedNode === id}" aria-label="选择${node.kind}">${icon(node.icon)}<span>${node.kind}</span></button>`).join('')}</div>
-      <div class="route-floor"><span class="floor-tag">03 F</span><div class="route-node done">${icon('check')}<span>你在这里</span></div></div>
+      <div class="route-watermark" aria-hidden="true">ASCEND</div>
+      <svg class="route-tracks" viewBox="0 0 600 520" preserveAspectRatio="none" aria-hidden="true"><path class="track-future" d="M300 62V180M140 306V260L300 218L460 260V306M300 218V180M300 306V218"/>${[['echo',140],['mob',300],['chest',460]].map(([id,x])=>`<path class="track-base" d="M300 430V386L${x} 350V306"/><path class="track-live ${state.selectedNode===id?'chosen':''}" pathLength="1" d="M300 430V386L${x} 350V306"/>`).join('')}</svg>
+      <div class="route-floor"><span class="floor-tag"><b>10</b>F</span><div class="route-node fog boss-node"><span class="node-seal">${icon('mask')}</span><span class="node-caption">心魔 · 塔顶</span></div></div>
+      <div class="route-floor"><span class="floor-tag"><b>05</b>F</span><div class="route-node fog"><span class="node-seal">${icon('eye')}</span><span class="node-caption">尚未到达</span></div></div>
+      <div class="route-floor branch-floor"><span class="floor-tag"><b>04</b>F</span>${Object.entries(nodes).map(([id,node]) => `<button class="route-node next ${state.selectedNode === id ? 'selected' : ''}" data-node="${id}" aria-pressed="${state.selectedNode === id}" aria-label="选择${node.kind}"><span class="node-seal">${icon(node.icon)}</span><span class="node-caption">${node.kind}</span><span class="node-hint">${state.selectedNode===id?'查看中':'可前往'}</span></button>`).join('')}</div>
+      <div class="route-floor"><span class="floor-tag"><b>03</b>F</span><div class="route-node done"><span class="node-seal">${icon('check')}</span><span class="node-caption">你在这里</span></div></div>
       <p class="route-caption">已走过的路 · 当前所在 · 下一步可达</p>
     </section><section class="route-detail" aria-live="polite"><p class="detail-kind">04 F / ${n.kind}</p><h2>${n.title}</h2><p>${n.note}</p>
       <div class="detail-row"><span>敌人生命</span><strong>${n.hp}</strong></div><div class="detail-row"><span>已知弱点</span><strong>${n.weak}</strong></div><div class="detail-row"><span>收获</span><strong>${n.reward}</strong></div>
@@ -94,9 +99,9 @@ function tower() {
 function persona() {
   const m = masks[state.mask];
   return `${heading('Persona','THE OTHER SELF','把力量准备好，再回到你的路。')}
-    <div class="mask-tabs" aria-label="选择面具">${masks.map((m,i) => `<button data-mask="${i}" aria-pressed="${i === state.mask}">${m.attr}</button>`).join('')}</div>
+    <div class="mask-tabs" aria-label="选择面具">${masks.map((m,i) => `<button data-mask="${i}" aria-pressed="${i === state.mask}">${icon(attributeMarks[i][0])}<span>${m.attr}<small>${attributeMarks[i][1]}</small></span><b aria-hidden="true">${icon('chevrons')}</b></button>`).join('')}</div>
     <div class="duo-layout"><div class="mask-display"><div class="mask-art" aria-hidden="true"></div><p>${m.attr} · ${m.passive}</p></div><section class="persona-info"><h2>${m.name}</h2><p>当前出战面具的技能与状态。</p>
-    <div class="detail-row"><span>出战面具</span><strong>${m.attr}</strong></div><div class="skill-list">${m.skills.map(s => skillRow(s)).join('')}</div>
+    <div class="persona-spec">${icon(attributeMarks[state.mask][0])}<span>出战面具</span><strong>${m.attr}</strong><b>${attributeMarks[state.mask][1]}</b></div><div class="persona-skills">${m.skills.map((s,i) => `<article class="persona-skill" style="--order:${i}"><div class="persona-skill-mark">${icon(i===0?attributeMarks[state.mask][0]:'star')}</div><div class="persona-skill-copy"><h3>${s[0]}</h3><p>${s[2]}</p></div><strong class="persona-skill-cost">${s[1]}<small>SP</small></strong></article>`).join('')}</div>
     ${mainButton('带着它，继续登塔','open-tower')}<p class="info-note">预览中的面具选择会保留到遭遇战。</p></section></div>`;
 }
 const arsenalItems = {
@@ -108,7 +113,7 @@ const arsenalItems = {
 function arsenal() {
   const tabs = [['relic','遗物'],['myth','迷思'],['oath','誓约'],['chain','共鸣链']];
   return `${heading('武库','ARSENAL','在这里准备好，把注意力留给战斗。')}
-    <div class="subnav" aria-label="武库分类">${tabs.map(([id,label]) => `<button data-arsenal-tab="${id}" aria-pressed="${id === state.arsenalTab}">${label}</button>`).join('')}</div>
+    <div class="subnav arsenal-tabs" aria-label="武库分类">${tabs.map(([id,label],i) => `<button data-arsenal-tab="${id}" aria-pressed="${id === state.arsenalTab}">${icon(['star','eye','shield','mask'][i])}<span>${label}<small>${['RELIC','MYTH','OATH','RESONANCE'][i]}</small></span></button>`).join('')}</div>
     ${fixture === 'empty' ? `<section class="empty-state">${icon('box')}<h2>这里还很安静。</h2><p>登塔获得的${tabs.find(t=>t[0]===state.arsenalTab)[1]}会收在这里。</p>${mainButton('回到高塔','open-tower')}</section>` : `<div class="arsenal-list">${arsenalItems[state.arsenalTab].map(([id,name,note])=>`<article class="equipment-row"><div class="equipment-glyph">${icon(state.arsenalTab==='relic'?'star':'box')}</div><div><h3>${name}</h3><p>${note}</p></div><button class="small-button" data-item="${id}">${state.arsenalTab==='relic'?(state.equipped.has(id)?'已携带':'查看'):'查看'}</button></article>`).join('')}</div><p class="info-note">遗物、迷思、誓约和共鸣链保留各自的操作位置。</p>`}`;
 }
 function skillRow(skill, index, selectable = false) {
@@ -125,7 +130,7 @@ function combat() {
   if (state.finished) return `<section class="victory"><h1>BATTLE<br>FINISH<span>这一场，到这里。</span></h1><p>战斗演出预览结束。沿原来的路线，继续向上。</p>${mainButton(state.origin==='tower'?'返回高塔路线':'返回战场','return-after-battle')}<p class="info-note">这是交互预览，没有发放奖励或写入存档。</p></section>`;
   const m = masks[state.mask];
   const descriptions = { basic:'普通攻击 · 0 SP。选择后再执行，避免误触。', defend:'防御 · 稳住这一回合，迎接敌人的下一击。', insight:'洞察 · 2 SP。查看敌人的意图与弱点情报。', allout:'总攻击 · 20 SP。抓住失衡窗口，展开攻势。' };
-  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}返回${state.origin==='tower'?'路线':'战场'}</button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?'行动演出中':'你的回合'}</p></div>
+  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?'行动演出中':'你的回合'}</p></div>
     <div class="combat-poster">
       <div class="combat-word" aria-hidden="true">BATTLE</div>
       <div class="combat-hero" aria-hidden="true">${figure()}</div>
@@ -138,9 +143,9 @@ function combat() {
       <div class="enemy-intent">${icon('eye')}<span><b>下一击：蓄势攻击</b><small>先看意图，再决定进攻还是防御。</small></span></div>
     </section><section class="command-deck" aria-label="战斗指令" aria-busy="${state.busy}">
       <div class="player-hud"><div class="player-tag"><b>ME</b><span>LV <strong>12</strong></span></div><div><span>HP <strong>${state.hp}</strong><em>/ 390</em></span>${meter(state.hp,390)}</div><div class="sp"><span>SP <strong>${state.sp}</strong><em>/ 260</em></span>${meter(state.sp,260)}</div></div>
-      <div class="mask-switcher"><button class="icon-button" data-action="prev-mask" aria-label="上一张面具" ${state.busy?'disabled':''}>${icon('back')}</button><button data-action="choose-mask" ${state.busy?'disabled':''}>${m.name}<small>${m.attr} / 点击选择面具</small></button><button class="icon-button" data-action="next-mask" aria-label="下一张面具" ${state.busy?'disabled':''}>${icon('arrow')}</button></div>
+      <div class="mask-switcher"><button class="icon-button" data-action="prev-mask" aria-label="上一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button><button data-action="choose-mask" ${state.busy?'disabled':''}><span class="mask-emblem">${icon('mask')}</span><span class="mask-switch-name">${m.name}<small>${m.attr} · PERSONA</small></span><b aria-hidden="true">${icon('chevrons')}</b></button><button class="icon-button" data-action="next-mask" aria-label="下一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button></div>
       <div class="command-label"><span>${state.command==='skills'?'SKILL · 技能':'ACTION · 行动'}</span><strong>COST</strong></div>
-      <div class="command-grid">${commands.map(([id,label,i])=>`<button data-command="${id}" aria-pressed="${id===state.command}" ${state.busy?'disabled':''}>${icon(i)}${label}</button>`).join('')}</div>
+      <div class="command-grid">${commands.map(([id,label,i],order)=>`<button data-command="${id}" aria-pressed="${id===state.command}" style="--tilt:${[-4,-1,2,4][order]}deg" ${state.busy?'disabled':''}>${icon(i)}<span>${label}<small>${['SKILL','ATTACK','GUARD','INSIGHT'][order]}</small></span></button>`).join('')}</div>
       <div class="command-detail">${state.command==='skills'?`<div class="skill-list">${m.skills.map((s,i)=>combatSkill(s,i)).join('')}</div><p>${m.skills[state.skill][2]}</p>`:`<div class="action-banner">${icon(commands.find(c=>c[0]===state.command)?.[2]??'star')}<strong>${commandName()}</strong><b>${commandCost()}<small>SP</small></b></div><p>${descriptions[state.command]}</p>`}</div>
       ${state.stagger>=2?`<button class="small-button allout-pick" data-command="allout" ${state.busy?'disabled':''}>${icon('star')}总攻击 · 20 SP</button>`:''}
       <button class="main-button execute ${state.command==='allout'?'red':''}" data-action="execute" ${state.busy||state.sp<commandCost()?'disabled':''}><span>${state.busy?'行动演出中…':state.sp<commandCost()?'SP 不足':`执行 · ${commandName()}`}</span>${icon('arrow')}</button>
@@ -152,11 +157,14 @@ function combatSkill(skill,index){
   return `<button class="combat-skill ${state.skill===index?'selected':''}" data-skill="${index}" aria-pressed="${state.skill===index}" ${state.busy||state.sp<skill[1]?'disabled':''}>${icon('chevrons')}<span>${skill[0]}<small>${latin[state.mask][index]}${state.sp<skill[1]?' · SP 不足':''}</small></span><strong>${skill[1]}<small>SP</small></strong></button>`;
 }
 function render({ focus = false } = {}) {
+  const previousMaskScroll=$('.mask-tabs')?.scrollLeft ?? 0;
   document.body.dataset.fighting = String(state.fighting);
   $$('.room-nav a').forEach(a => {
     if (a.dataset.room === state.room) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
   });
   content.innerHTML = state.fighting ? combat() : ({battle:home,tower,persona,arsenal}[state.room])();
+  const tabs=$('.mask-tabs');
+  if(tabs){tabs.scrollLeft=previousMaskScroll;const active=$('[aria-pressed="true"]',tabs);if(active&&tabs.scrollWidth>tabs.clientWidth){tabs.scrollTo({left:active.offsetLeft-(tabs.clientWidth-active.offsetWidth)/2,behavior:reduced.matches?'instant':'smooth'});}}
   if (focus) content.focus({preventScroll:true});
 }
 let clickOrigin;
@@ -243,9 +251,25 @@ function execute() {
     (state.finished?$('[data-action="return-after-battle"]'):$('[data-action="execute"]'))?.focus({preventScroll:true});
   },reduced.matches?80:660);
 }
+function buttonFeedback(control){
+  if(reduced.matches)return;
+  const r=control.getBoundingClientRect();
+  const flare=document.createElement('span');
+  flare.className=control.matches('.route-node')?'button-flare node-flare':'button-flare';
+  flare.setAttribute('aria-hidden','true');
+  Object.assign(flare.style,{left:`${r.left}px`,top:`${r.top}px`,width:`${r.width}px`,height:`${r.height}px`});
+  document.body.append(flare);
+  flare.animate([{opacity:.8,scale:.94,translate:'0 0'},{opacity:.5,scale:1.02,translate:'3px -2px',offset:.28},{opacity:0,scale:1.1,translate:'8px -5px'}],{duration:340,easing:'cubic-bezier(.16,1,.3,1)'}).finished.catch(()=>{}).finally(()=>flare.remove());
+}
+document.addEventListener('pointerdown',event=>{
+  const control=event.target.closest('button,a');
+  if(!control||control.disabled||reduced.matches)return;
+  control.animate([{scale:'1'},{scale:'.955',offset:.35},{scale:'1'}],{duration:220,easing:'cubic-bezier(.16,1,.3,1)'});
+});
 document.addEventListener('click',event=>{
   const control=event.target.closest('button,a');
   if(!control||control.disabled)return;
+  buttonFeedback(control);
   const box=control.getBoundingClientRect();
   clickOrigin={x:box.left+box.width/2,y:box.top+box.height/2};
   if(control.matches('.room-nav a')&&state.fighting){event.preventDefault();return;}
@@ -280,11 +304,12 @@ document.addEventListener('click',event=>{
   else if(action==='execute')execute();
   else if(action==='settings'){
     if(state.fighting){notify('先返回战场，再调整设置。');return;}
-    openSheet('战场设置','<p>设置集中在这里，不占用主战斗导航。</p><div class="setting-line"><span>启用逆影战场</span><b>已启用</b></div><div class="setting-line"><span>影时间</span><b>20:00 — 07:00</b></div><div class="setting-line"><span>战斗参数</span><b>沿用现有配置</b></div><p>这是设置位置预览，当前数值仅作展示。</p>');
+    openSheet('战场设置','<p class="settings-intro">影时间，与自己的节奏对齐。</p><div class="setting-line"><span>逆影战场<small>BATTLE STATUS</small></span><b class="setting-status">已启用</b></div><div class="setting-line"><span>影时间<small>SHADOW TIME</small></span><b>20:00 — 07:00</b></div><div class="setting-line"><span>战斗参数<small>BATTLE CONFIG</small></span><b>沿用现有配置</b></div><p class="settings-footnote">示例配置预览 · 不会更改你的战斗数据</p>');
   }
 });
 sheet.addEventListener('click',event=>{if(event.target!==sheet)return;const r=sheet.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)sheet.close();});
 sheet.addEventListener('close',()=>{
+  $('.settings-button').setAttribute('aria-expanded','false');
   const fallback=state.fighting?$('[data-action="choose-mask"]'):$(`.room-nav a[data-room="${state.room}"]`);
   if(!document.activeElement||document.activeElement===document.body)fallback?.focus({preventScroll:true});
 });

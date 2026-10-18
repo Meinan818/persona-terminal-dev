@@ -6,7 +6,12 @@
  */
 
 import { NEGOTIATION_OPTIONS, OPTION_ORDER, PERSONALITIES } from './negotiation-rules.js';
-import { SKILLS, getPersona, recruitCandidates } from './persona-compendium.js';
+import {
+  P5R_SKILLS as SKILLS,
+  getPersona,
+  recruitCandidates,
+} from './p5r-compendium.js';
+import { P5_ELEMENTS } from './p5r-battle-adapter.js';
 
 const ATTRIBUTES = ['知识', '勇气', '灵巧', '体贴', '魅力'];
 const PERSONALITY_BY_ATTRIBUTE = {
@@ -74,11 +79,11 @@ const TEMPLATES = {
 };
 
 const ELEMENT_BY_ATTRIBUTE = {
-  知识: 'knowledge',
-  勇气: 'guts',
-  灵巧: 'dexterity',
-  体贴: 'kindness',
-  魅力: 'charm',
+  知识: 'psy',
+  勇气: 'phys',
+  灵巧: 'wind',
+  体贴: 'ice',
+  魅力: 'fire',
 };
 
 const REWARD = { sp: 30, item: '裂开的假面碎片' };
@@ -96,14 +101,16 @@ function recruitFor(input) {
   const attribute = attributeOf(input);
   const element = ELEMENT_BY_ATTRIBUTE[attribute];
   const level = Number(input?.enemy?.level) || 1;
-  const persona = recruitCandidates(element, level)[0] ?? getPersona('sophist');
+  const persona = recruitCandidates(element, level)[0] ?? getPersona('pixie');
   const skill = SKILLS[persona.skills[0]];
   return {
     personaId: persona.id,
     name: persona.name,
     attribute,
-    skillName: skill?.name ?? persona.skills[0],
-    skillDesc: skill ? `图鉴固定技能：${skill.name}（${skill.element}，${skill.sp} SP）。` : '图鉴固定技能。',
+    skillName: skill?.nameZh ?? skill?.name ?? persona.skills[0],
+    skillDesc: skill
+      ? `图鉴技能：${skill.nameZh ?? skill.name}（${P5_ELEMENTS[skill.element]?.label ?? skill.element}）。`
+      : '图鉴技能。',
   };
 }
 
@@ -141,8 +148,10 @@ export function normalizeNegotiation(raw, input = {}) {
           personaId: requestedPersona.id,
           name: requestedPersona.name,
           attribute,
-          skillName: skill?.name ?? requestedPersona.skills[0],
-          skillDesc: skill ? `图鉴固定技能：${skill.name}（${skill.element}，${skill.sp} SP）。` : '图鉴固定技能。',
+          skillName: skill?.nameZh ?? skill?.name ?? requestedPersona.skills[0],
+          skillDesc: skill
+            ? `图鉴技能：${skill.nameZh ?? skill.name}（${P5_ELEMENTS[skill.element]?.label ?? skill.element}）。`
+            : '图鉴技能。',
         };
       })()
     : fallback.recruit;

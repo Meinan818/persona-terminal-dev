@@ -1,11 +1,45 @@
 // Fixed in-memory route for interaction design. Production routing remains owned by the tower store.
+import { recruitCandidates } from './p5r-compendium.js';
+
+const P5_WEAKNESSES = ['electric', 'bless', 'fire', 'ice', 'wind', 'psy', 'nuclear', 'curse'];
+const P5_ELEMENT_LABELS = {
+  phys: '物理',
+  gun: '枪击',
+  fire: '火焰',
+  ice: '冰冻',
+  electric: '电击',
+  wind: '疾风',
+  psy: '念动',
+  nuclear: '核热',
+  bless: '祝福',
+  curse: '咒怨',
+  almighty: '万能',
+};
+function encounterFor(floor, kind) {
+  const weakness = kind === 'boss'
+    ? 'bless'
+    : P5_WEAKNESSES[(floor - 4) % P5_WEAKNESSES.length];
+  const level = kind === 'boss' ? 10 : Math.min(10, floor);
+  const recruit = recruitCandidates(weakness, level)[0] ?? null;
+  return {
+    name: kind === 'boss' ? '回声的执念' : '聒噪的假面',
+    level,
+    weakness,
+    weaknessLabel: P5_ELEMENT_LABELS[weakness] ?? weakness,
+    maxHp: kind === 'boss' ? 220 : 58 + floor * 6,
+    attack: kind === 'boss' ? 30 : 10 + floor * 2,
+    defense: kind === 'boss' ? 12 : 3 + floor,
+    recruitPersonaId: recruit?.id ?? null,
+  };
+}
+
 export const towerNodes = {
-  mob:{title:'聒噪的假面',kind:'小影',icon:'sword',hp:'312 / 420',weak:'知识',note:'先看意图，再决定这一回合。',action:'进入战斗'},
+  mob:{title:'聒噪的假面',kind:'小影',icon:'sword',hp:'312 / 420',weak:'未侦察',note:'先看意图，再决定这一回合。',action:'进入战斗'},
   echo:{title:'回忆之光',kind:'回响',icon:'star',hp:'—',weak:'—',note:'选择回复 20% 体力，或带走本次登塔伤害 +6%。',action:'进入回响'},
   chest:{title:'月匣',kind:'月匣',icon:'box',hp:'—',weak:'—',note:'揭晓后再领取，不会重复发放同一份收获。',action:'查看月匣'},
   event:{title:'月光积水',kind:'异变',icon:'eye',hp:'—',weak:'—',note:'凝视水面，或保留气力绕开。选择后显示结果。',action:'走近看看'},
   quiz:{title:'镜之自问',kind:'镜问',icon:'eye',hp:'—',weak:'—',note:'从白昼的回声里，认出那份力量。',action:'回答镜中的自己'},
-  boss:{title:'回声的执念',kind:'心魔',icon:'mask',hp:'312 / 420',weak:'知识',note:'第一形态击破后，在同一个战斗舞台直接变身。',action:'迎战心魔'},
+  boss:{title:'回声的执念',kind:'心魔',icon:'mask',hp:'312 / 420',weak:'未侦察',note:'第一形态击破后，在同一个战斗舞台直接变身。',action:'迎战心魔'},
 };
 const floors={4:['echo','mob','chest'],5:['event','quiz','mob'],6:['echo','chest','mob'],7:['mob','event','chest'],8:['quiz','echo','mob'],9:['echo','mob','chest'],10:['boss']};
 export function createTowerJourney(){
@@ -15,7 +49,16 @@ export function createTowerJourney(){
   const select=kind=>{if(journey.pending||!choices().includes(kind))return false;journey.selected=kind;return true;};
   const enter=()=>{
     if(journey.ended||journey.pending||!choices().includes(journey.selected))return null;
-    journey.floor++;journey.pending={floor:journey.floor,kind:journey.selected,resolved:false,result:null,rewarded:false};return journey.pending;
+    journey.floor++;
+    journey.pending={
+      floor:journey.floor,
+      kind:journey.selected,
+      resolved:false,
+      result:null,
+      rewarded:false,
+      encounter:encounterFor(journey.floor,journey.selected),
+    };
+    return journey.pending;
   };
   const resolve=(result)=>{
     const pending=journey.pending;if(!pending||pending.resolved||journey.ended)return false;

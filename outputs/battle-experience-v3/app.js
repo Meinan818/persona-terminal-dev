@@ -17,7 +17,7 @@ const state = {
   mask: 0, arsenalTab: 'relic', equipped: new Set(['moon']), command: 'skills', skill: 0,
   hp: 345, sp: fixture === 'low-sp' ? 4 : 217, enemyHp: 312,
   turn: 4, stagger: 0, busy: false, finished: false, turnPhase: 'player', log: '轮到你了。先看意图，再决定这一回合。',
-  negotiation: null, enemyRage: 0, recruitedMasks: [], battleLoot: [],
+  negotiation: null, enemyRage: 0, weaknessKnown: false, recruitedMasks: [], battleLoot: [],
 };
 const scrolls = new Map();
 const masks = [
@@ -150,7 +150,7 @@ function combat() {
       <div class="glass-shards" aria-hidden="true">${Array.from({length:9},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
       <section class="enemy-scene ${flows.bossPhase?'boss-in-combat':''} ${enemyTurn?'enemy-turn':''}" data-phase="${flows.bossPhase||1}" aria-label="敌人状态"><div class="enemy-name"><h1>${flows.bossPhase?'回声的执念':'聒噪的假面'}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:'LV 05'}</span></div>
       <div class="enemy-vitals"><span>敌人 HP</span><span><strong>${state.enemyHp}</strong> / 420</span></div>${meter(state.enemyHp,420)}
-      <div class="weakness-line"><b>弱点 · 知识</b><span>${negotiating?'HOLD UP · 可以交涉':state.stagger >= 2?'失衡 · 总攻击窗口':`失衡 ${state.stagger} / 2`}</span></div>
+      <div class="weakness-line"><b>弱点 · ${state.weaknessKnown?'知识 · 已发现':'未发现'}</b><span>${negotiating?'HOLD UP · 可以交涉':state.stagger >= 2?'失衡 · 总攻击窗口':`失衡 ${state.stagger} / 2`}</span></div>
       <div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
       <div class="enemy-intent">${icon('eye')}<span><b>${intentTitle}</b><small>${intentNote}</small></span></div>
     </section><section class="command-deck" aria-label="战斗指令" aria-busy="${state.busy||negotiating}">
@@ -447,6 +447,7 @@ function startBattle(origin = state.room,options={}) {
   state.turnPhase = 'player';
   state.command='skills';
   state.skill=0;
+  state.weaknessKnown=false;
   state.enemyHp=options.resume?.enemyHp??312;
   state.stagger=options.resume?.stagger??0;
   state.turn=options.resume?.turn??4;
@@ -507,6 +508,7 @@ function execute(options={}) {
       if(weak)state.stagger=Math.min(2,state.stagger+1);
       if(command==='allout')state.stagger=0;
     }
+    if(weak||command==='insight')state.weaknessKnown=true;
     if(command==='skills'&&state.mask===3&&state.skill===0)state.hp=Math.min(390,state.hp+30);
     state.log=command==='insight'?'意图已确认：下一击蓄势攻击，弱点为知识。':command==='defend'?'防御姿态已就绪。':state.enemyHp===0?'敌人倒下了。':state.stagger>=2?'敌人失衡！总攻击已可选择。':weak?'命中弱点！知识攻击奏效。':'行动结束，重新选择下一步。';
     state.finished=state.enemyHp===0;

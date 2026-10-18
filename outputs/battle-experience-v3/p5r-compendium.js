@@ -164,6 +164,20 @@ export function recipesForTarget(targetId) {
     }));
 }
 
+export function recruitCandidates(element, level = 1) {
+  return P5R_PERSONAS
+    .filter(persona => {
+      if (persona.special || persona.rare) return false;
+      return !element
+        || persona.element === element
+        || persona.inherits === element
+        || persona.elementLabel === element;
+    })
+    .sort((a, b) =>
+      Math.abs(a.level - level) - Math.abs(b.level - level)
+      || a.level - b.level);
+}
+
 export function validateP5RCompendium() {
   const errors = [];
   const ids = new Set();

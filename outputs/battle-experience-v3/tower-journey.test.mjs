@@ -11,6 +11,13 @@ test('a route choice locks the reached floor until its outcome is completed',()=
  assert.equal(m.journey.history.length,1);assert.equal(m.advance(),true);
  assert.equal(m.journey.floor,4);assert.deepEqual(m.choices(),['event','quiz','mob']);
 });
+test('battle nodes carry P5 encounter specs from the shared Persona catalog',()=>{
+ const m=createTowerJourney();m.start();m.select('mob');const pending=m.enter();
+ assert.equal(pending.encounter.level,4);
+ assert.equal(pending.encounter.weakness,'electric');
+ assert.equal(pending.encounter.weaknessLabel,'电击');
+ assert.ok(pending.encounter.recruitPersonaId);
+});
 test('chest and battle rewards can each be recorded only once per pending node',()=>{
  const m=createTowerJourney();m.start();m.select('chest');m.enter();
  assert.equal(m.addLoot(),true);assert.equal(m.addLoot(),false);

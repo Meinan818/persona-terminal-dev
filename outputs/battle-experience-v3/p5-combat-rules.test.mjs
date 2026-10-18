@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDefaultBattle } from './p5-combat-rules.js';
+import { catalogPersonaChoices, createDefaultBattle } from './p5-combat-rules.js';
 
 const steady = () => 0.5;
 
@@ -10,35 +10,50 @@ function forceHoldUp(battle) {
   battle.currentId = 'hero';
 }
 
-test('开局是三人小队对两个影子，主角先手', () => {
+test('开局从 P5R 目录生成三人小队，不再硬编码旧面具', () => {
   const battle = createDefaultBattle({ rng: steady });
   const snap = battle.snapshot();
   assert.equal(snap.party.length, 3);
   assert.equal(snap.enemies.length, 2);
   assert.equal(snap.actor, '你');
+  assert.equal(snap.persona, '亚森');
   assert.equal(snap.phase, 'party');
+  assert.equal(catalogPersonaChoices().length, 232);
 });
 
-test('打中弱点会倒地并给 1 MORE', () => {
-  const battle = createDefaultBattle({ rng: steady });
-  assert.equal(battle.act({ type: 'switchMask', id: 'guts' }).ok, true);
-  assert.equal(battle.act({ type: 'skill', id: 'thrust' }).ok, true);
+test('电击弱点触发倒地与 1 MORE', () => {
+  const battle = createDefaultBattle({ rng: steady, activePersonaId: 'pixie' });
+  assert.deepEqual(battle.snapshot().enemies[0].knownAffinities, {});
+  assert.equal(battle.actor.name, '你');
+  assert.equal(battle.currentPersona.name, '皮克希');
+  assert.equal(battle.act({ type: 'skill', id: 'Zio', targetId: 'a' }).ok, true);
   const enemy = battle.enemies.find(e => e.id === 'a');
   assert.equal(enemy.down, true);
+  assert.equal(enemy.knownAffinities.electric, 'weak');
   assert.equal(battle.extraId, 'hero');
-  assert.equal(battle.snapshot().actor, '你');
   assert.match(battle.log.join('\n'), /1 MORE/);
 });
 
 test('BATON PASS 把追加行动交给队友并提高伤害', () => {
-  const battle = createDefaultBattle({ rng: steady });
-  battle.act({ type: 'switchMask', id: 'guts' });
-  battle.act({ type: 'skill', id: 'thrust' });
-  assert.equal(battle.act({ type: 'batonPass', targetId: 'allyEcho' }).ok, true);
-  assert.equal(battle.snapshot().actor, '卡门·回响');
+  const battle = createDefaultBattle({ rng: steady, activePersonaId: 'pixie' });
+  battle.act({ type: 'skill', id: 'Zio', targetId: 'a' });
+  assert.equal(battle.act({ type: 'batonPass', targetId: 'ally:silky' }).ok, true);
+  assert.equal(battle.actor.name, '希路奇');
+  assert.equal(battle.party[0].acted, true);
   assert.equal(battle.batonChain, 1);
   assert.equal(battle.batonBoost, 0.25);
   assert.match(battle.log.join('\n'), /BATON PASS/);
+});
+
+test('洞察会主动揭示目标的一项未发现耐性', () => {
+  const battle = createDefaultBattle({ rng: steady });
+  const before = battle.snapshot().enemies[0].knownAffinities;
+  assert.deepEqual(before, {});
+  const spBefore = battle.actor.sp;
+  assert.equal(battle.act({ type: 'analyze', targetId: 'a' }).ok, true);
+  assert.equal(battle.actor?.id, 'ally:silky');
+  assert.equal(battle.party[0].sp, spBefore - 2);
+  assert.equal(battle.enemies[0].knownAffinities.electric, 'weak');
 });
 
 test('所有人倒地后进入 HOLD UP，总攻击造成全体伤害', () => {
@@ -52,21 +67,19 @@ test('所有人倒地后进入 HOLD UP，总攻击造成全体伤害', () => {
   assert.equal(battle.phase, 'party');
 });
 
-test('技术伤害：先冻结，再用勇气打出 TECHNICAL', () => {
-  const battle = createDefaultBattle({ rng: steady });
-  battle.currentId = 'allyHealer';
-  assert.equal(battle.act({ type: 'skill', id: 'frost', targetId: 'b' }).ok, true);
-  const enemy = battle.enemies.find(e => e.id === 'b');
-  assert.equal(enemy.status, 'freeze');
+test('睡眠后用枪击触发 TECHNICAL', () => {
+  const battle = createDefaultBattle({ rng: steady, activePersonaId: 'pixie' });
+  battle.currentId = 'ally:silky';
+  battle.phase = 'party';
+  assert.equal(battle.act({ type: 'skill', id: 'Dormina', targetId: 'b' }).ok, true);
+  assert.equal(battle.enemies.find(e => e.id === 'b').status, 'sleep');
   battle.currentId = 'hero';
   battle.phase = 'party';
-  battle.act({ type: 'switchMask', id: 'guts' });
-  assert.equal(battle.act({ type: 'skill', id: 'thrust', targetId: 'b' }).ok, true);
+  assert.equal(battle.act({ type: 'gun', targetId: 'b' }).ok, true);
   assert.match(battle.log.join('\n'), /TECHNICAL/);
-  assert.equal(enemy.down, true);
 });
 
-test('交涉成功可以收服影子，失败会激怒它', () => {
+test('交涉成功收服 P5R 目录里的真实 Persona', () => {
   const win = createDefaultBattle({ rng: () => 0.01 });
   forceHoldUp(win);
   assert.equal(win.holdUp({ type: 'negotiate', enemyId: 'a', option: 'bribe' }).ok, true);
@@ -74,7 +87,8 @@ test('交涉成功可以收服影子，失败会激怒它', () => {
   assert.equal(win.chooseResult('recruit').ok, true);
   assert.equal(win.phase, 'result');
   assert.equal(win.result.type, 'recruited');
-  assert.equal(win.result.name, '普罗米修斯·诡辩');
+  assert.equal(win.result.personaId, 'agathion');
+  assert.equal(win.result.name, '阿珈席翁');
 
   const lose = createDefaultBattle({ rng: () => 0.99 });
   forceHoldUp(lose);
@@ -83,15 +97,21 @@ test('交涉成功可以收服影子，失败会激怒它', () => {
   assert.equal(lose.enemies.find(e => e.id === 'a').down, false);
 });
 
-test('枪有弹药限制，防御会减伤', () => {
+test('换面具消耗主角本回合行动，随后交给队友', () => {
+  const battle = createDefaultBattle({ rng: steady });
+  assert.equal(battle.act({ type: 'switchMask', id: 'pixie' }).ok, true);
+  assert.equal(battle.party[0].activeMask, 'pixie');
+  assert.equal(battle.party[0].acted, true);
+  assert.equal(battle.actor.name, '希路奇');
+});
+
+test('枪有弹药限制，防御会进入防御状态', () => {
   const battle = createDefaultBattle({ rng: steady });
   const hero = battle.party[0];
   assert.equal(battle.act({ type: 'gun' }).ok, true);
   assert.equal(hero.ammo, 2);
-  const hpBefore = battle.party[1].hp;
-  battle.currentId = 'allyHealer';
+  battle.currentId = 'ally:silky';
   battle.phase = 'party';
   assert.equal(battle.act({ type: 'guard' }).ok, true);
   assert.equal(battle.party[1].guarding, true);
-  assert.ok(battle.party[1].hp >= hpBefore);
 });

@@ -11,6 +11,10 @@ a{color:var(--cyan)}
 .lab-head p{max-width:70ch;margin:8px 0 0;font-size:12px;line-height:1.7;color:var(--muted)}
 .lab-head a{font-size:12px;font-weight:900;text-decoration:underline;text-underline-offset:4px;white-space:nowrap}
 #lab{max-width:1180px;margin:0 auto;padding:12px 20px 48px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:16px;align-items:start}
+.persona-loadout{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);background:#071844}
+.persona-loadout label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:900;color:var(--cyan);letter-spacing:.06em}
+.persona-loadout select{min-height:34px;max-width:min(520px,70vw);padding:5px 9px;border:1px solid #3a6bd6;background:#0b2f82;color:#fff;font:12px Velvet,'Microsoft YaHei',sans-serif}
+.persona-loadout small{font-size:10px;color:var(--muted)}
 .board{display:grid;gap:12px}
 .turnbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);background:#071844}
 .turnbar b{font-size:13px}

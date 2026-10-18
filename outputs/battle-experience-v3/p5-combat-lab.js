@@ -1,7 +1,20 @@
-import { createDefaultBattle, ELEMENTS, STATUS } from './p5-combat-rules.js';
+import { catalogPersonaChoices, createDefaultBattle } from './p5-combat-rules.js';
+import { P5_ELEMENTS, P5_STATUS } from './p5r-battle-adapter.js';
+import { PERSONALITIES } from './negotiation-rules.js';
 
 const lab = document.querySelector('#lab');
-let battle = createDefaultBattle();
+const ELEMENTS = P5_ELEMENTS;
+const STATUS = P5_STATUS;
+const personaChoices = catalogPersonaChoices();
+let heroPersonaId = 'arsene';
+const newBattle = () => createDefaultBattle({
+  heroPersonaIds: [
+    heroPersonaId,
+    ...['pixie', 'jack-o-lantern', 'angel'].filter(id => id !== heroPersonaId),
+  ],
+  activePersonaId: heroPersonaId,
+});
+let battle = newBattle();
 let selectedEnemy = 'a';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -21,9 +34,11 @@ function notify(text) {
 }
 
 function partyCard(member, current) {
-  const mask = member.activeMask ? ` · ${member.masks[member.activeMask].name}` : '';
+  const persona = member.isPlayer ? member.masks[member.activeMask] : member.activePersona;
+  const activePersona = persona?.name;
+  const mask = activePersona && activePersona !== member.name ? ` · ${activePersona}` : '';
   return `<article class="unit ${current ? 'current' : ''} ${member.hp <= 0 ? 'dead' : ''}">
-    <div><h2>${esc(member.name)}${esc(mask)}</h2><div class="meta">${member.guarding ? '<span class="chip">防御</span>' : ''}${member.hp <= 0 ? '<span class="chip down">倒下</span>' : ''}</div></div>
+    <div><h2>${esc(member.name)}${esc(mask)}${persona ? ` <small>Lv.${persona.level}</small>` : ''}</h2><div class="meta">${member.guarding ? '<span class="chip">防御</span>' : ''}${member.hp <= 0 ? '<span class="chip down">倒下</span>' : ''}${persona ? `<span class="chip">力${persona.strength} 魔${persona.magic} 耐${persona.endurance} 速${persona.agility} 运${persona.luck}</span>` : ''}</div></div>
     <div class="bars">
       <div class="bar"><span>HP <b>${member.hp}</b>/${member.maxHp}</span><i style="--v:${pct(member.hp, member.maxHp)}%"></i></div>
       <div class="bar sp"><span>SP <b>${member.sp}</b>/${member.maxSp}</span><i style="--v:${pct(member.sp, member.maxSp)}%"></i></div>
@@ -33,8 +48,12 @@ function partyCard(member, current) {
 
 function enemyCard(enemy) {
   const status = enemy.status ? `<span class="chip status">${esc(STATUS[enemy.status]?.label ?? enemy.status)}</span>` : '';
+  const known = Object.entries(enemy.knownAffinities ?? {})
+    .filter(([, affinity]) => affinity !== 'normal')
+    .map(([element, affinity]) => `${ELEMENTS[element]?.label ?? element}${affinity === 'weak' ? '弱' : affinity === 'resist' ? '耐' : affinity === 'null' ? '无' : affinity === 'absorb' ? '吸' : '反'}`);
+  const weakness = known.length ? `已发现 ${known.join(' / ')}` : '弱点未发现';
   return `<article class="unit enemy ${selectedEnemy === enemy.id ? 'selected' : ''} ${enemy.hp <= 0 ? 'dead' : ''}" data-target="${enemy.id}">
-    <div><h2>${esc(enemy.name)}</h2><div class="meta"><span class="chip weak">弱 ${esc(ELEMENTS[enemy.weakness]?.label ?? enemy.weakness)}</span>${enemy.down ? '<span class="chip down">DOWN</span>' : ''}${status}${enemy.enraged ? '<span class="chip">激怒</span>' : ''}${enemy.personality ? `<span class="chip">${esc(enemy.personality)}</span>` : ''}</div></div>
+    <div><h2>${esc(enemy.name)}</h2><div class="meta"><span class="chip ${known.length ? 'weak' : ''}">${esc(weakness)}</span>${enemy.down ? '<span class="chip down">倒地</span>' : ''}${status}${enemy.enraged ? '<span class="chip">激怒</span>' : ''}${enemy.personality ? `<span class="chip">${esc(PERSONALITIES[enemy.personality]?.label ?? enemy.personality)}</span>` : ''}</div></div>
     <div class="bars"><div class="bar"><span>HP <b>${enemy.hp}</b>/${enemy.maxHp}</span><i style="--v:${pct(enemy.hp, enemy.maxHp)}%"></i></div></div>
   </article>`;
 }
@@ -42,7 +61,7 @@ function enemyCard(enemy) {
 function actionButtons() {
   const actions = battle.actions;
   if (!actions.length) return '';
-  return `<section class="actions"><h3>${esc(battle.actor?.name ?? '')} 的行动</h3><small>点敌人卡切换目标；换面具是自由行动，不吞回合。</small><div class="action-grid">${actions.map((action, index) => `<button class="action" data-action-index="${index}" ${action.disabled ? 'disabled' : ''}><b>${esc(action.label)}${action.cost ? ` · ${action.cost} SP` : ''}</b><small>${esc(action.detail)}</small></button>`).join('')}</div></section>`;
+  return `<section class="actions"><h3>${esc(battle.actor?.name ?? '')} 的行动</h3><small>点敌人卡切换目标；换面具会消耗本回合行动。</small><div class="action-grid">${actions.map((action, index) => `<button class="action" data-action-index="${index}" ${action.disabled ? 'disabled' : ''}><b>${esc(action.label)}${action.cost ? ` · ${action.cost} SP` : ''}</b><small>${esc(action.detail)}</small></button>`).join('')}</div></section>`;
 }
 
 function holdUpPanel() {
@@ -69,7 +88,7 @@ function render() {
   const current = battle.actor;
   const aliveEnemies = battle.aliveEnemies;
   if (!aliveEnemies.some(e => e.id === selectedEnemy)) selectedEnemy = aliveEnemies[0]?.id ?? '';
-  lab.innerHTML = `<div class="board">
+  lab.innerHTML = `<div class="persona-loadout"><label>主战 Persona<select data-persona-select>${personaChoices.map(persona => `<option value="${persona.id}" ${persona.id === heroPersonaId ? 'selected' : ''}>${esc(persona.name)} · Lv.${persona.level} · ${esc(persona.element)}</option>`).join('')}</select></label><small>切换主战 Persona 会重开一局；战斗中的换面具消耗回合。</small></div><div class="board">
     <div class="turnbar"><b>第 ${s.round} 回合 · ${esc(s.actor ?? '—')} 行动</b><span class="${s.batonChain ? 'baton' : ''}">${s.batonChain ? `BATON PASS ×${s.batonChain} · 伤害 +${s.batonChain * 25}%` : 'P5 核心循环实验'}</span></div>
     <section class="team" aria-label="我方">${battle.party.map(member => partyCard(member, member.id === current?.id)).join('')}</section>
     <section class="team" aria-label="敌方">${battle.enemies.map(enemyCard).join('')}</section>
@@ -84,7 +103,7 @@ function act(index) {
   const action = battle.actions[index];
   if (!action) return;
   const payload = { ...action };
-  if (['skill', 'basic', 'gun'].includes(action.type) && selectedEnemy) payload.targetId = selectedEnemy;
+  if (['skill', 'basic', 'gun', 'analyze'].includes(action.type) && selectedEnemy) payload.targetId = selectedEnemy;
   const result = battle.act(payload);
   if (!result.ok) notify(result.reason);
   render();
@@ -123,10 +142,19 @@ lab.addEventListener('click', event => {
     return;
   }
   if (target.dataset.reset) {
-    battle = createDefaultBattle();
+    battle = newBattle();
     selectedEnemy = 'a';
     render();
   }
+});
+
+lab.addEventListener('change', event => {
+  const select = event.target.closest('[data-persona-select]');
+  if (!select) return;
+  heroPersonaId = select.value;
+  battle = newBattle();
+  selectedEnemy = 'a';
+  render();
 });
 
 render();

@@ -1,45 +1,36 @@
 /**
- * P5 × P3 战斗规则切片（纯逻辑，无 UI）
+ * P5 × P3 battle rules.
  *
- * 验证 P5 的核心循环：
- *   弱点/暴击 → 1 More → Baton Pass → 全体倒地 → Hold Up
- *   → 总攻击 / 交涉收服 / 索要奖励 / 失败激怒
- * 外加：多人小队、多敌人、技术伤害、枪/防御/面具切换。
- *
- * 只做规则，不接正式 BattleEngine、不写正式存档。
+ * Persona identity, levels, five stats, ten affinities and skill learn levels
+ * come from the shared P5R catalog. HP/SP and damage numbers are the demo's
+ * own balance layer, kept explicit in p5r-battle-adapter.js.
  */
+import {
+  P5_ELEMENTS,
+  P5_STATUS,
+  buildBattlePersona,
+  buildPersonaLoadout,
+  catalogPersonaChoices,
+  recruitDataForPersona,
+} from './p5r-battle-adapter.js';
 
-export const ELEMENTS = {
-  knowledge: { label: '知识', en: 'PSY', status: 'confuse' },
-  guts: { label: '勇气', en: 'PHYS', status: null },
-  dexterity: { label: '灵巧', en: 'WIND', status: null },
-  kindness: { label: '体贴', en: 'ICE', status: 'freeze' },
-  charm: { label: '魅力', en: 'FIRE', status: 'burn' },
-};
+export const ELEMENTS = P5_ELEMENTS;
+export const STATUS = P5_STATUS;
 
-export const STATUS = {
-  burn: { label: '燃烧', technicalWith: 'dexterity' },
-  freeze: { label: '冻结', technicalWith: 'guts' },
-  shock: { label: '触电', technicalWith: 'guts' },
-  confuse: { label: '混乱', technicalWith: 'knowledge' },
-};
-
-import { getPersona, SKILLS } from './persona-compendium.js';
-
-function recruitData(id) {
-  const persona = getPersona(id);
-  const skill = SKILLS[persona.skills[0]];
-  return {
-    personaId: persona.id,
-    name: persona.name,
-    attribute: ELEMENTS[persona.element]?.label ?? persona.element,
-    skillName: skill?.name ?? persona.skills[0],
-    skillDesc: skill ? `图鉴固定技能：${skill.name}（${skill.element}，${skill.sp} SP）。` : '图鉴固定技能。',
-  };
-}
+const DEFAULT_HERO_PERSONAS = ['arsene', 'pixie', 'jack-o-lantern', 'angel'];
+const DEFAULT_ALLY_PERSONAS = ['silky', 'cait-sith'];
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const roll = (rng, probability) => rng() < probability;
+const elementLabel = element => ELEMENTS[element]?.label ?? element;
+const affinityLabel = affinity => ({
+  weak: '弱点',
+  resist: '抗性',
+  null: '无效',
+  absorb: '吸收',
+  repel: '反弹',
+  normal: '普通',
+}[affinity] ?? affinity);
 
 const PERSONALITY_MODS = {
   proud: { threaten: -20, flatter: 20, reason: 5, bribe: -5 },
@@ -49,72 +40,152 @@ const PERSONALITY_MODS = {
   calm: { threaten: -10, flatter: 5, reason: 25, bribe: 5 },
 };
 
-function makeSkill(id, name, element, power, sp, extra = {}) {
-  return { id, name, element, power, sp, target: 'enemy', ...extra };
+function affinityOfPersona(persona, element) {
+  const code = persona?.resistances?.[element] ?? '-';
+  return {
+    wk: 'weak',
+    rs: 'resist',
+    nu: 'null',
+    ab: 'absorb',
+    rp: 'repel',
+  }[code] ?? 'normal';
 }
 
-export function createDefaultBattle({ rng = Math.random } = {}) {
+function affinityOfEnemy(enemy, element) {
+  if (enemy.affinities?.[element]) return enemy.affinities[element];
+  if (enemy.weakness === element) return 'weak';
+  if (enemy.resist === element) return 'resist';
+  if (enemy.null?.includes(element)) return 'null';
+  if (enemy.absorb?.includes(element)) return 'absorb';
+  if (enemy.repel?.includes(element)) return 'repel';
+  return 'normal';
+}
+
+function personaFor(actor) {
+  if (!actor) return null;
+  if (actor.isPlayer) return actor.masks[actor.activeMask] ?? null;
+  return actor.activePersona ?? null;
+}
+
+function actorSkills(actor) {
+  if (!actor) return [];
+  return actor.isPlayer
+    ? actor.masks[actor.activeMask]?.skills ?? []
+    : actor.skills ?? [];
+}
+
+function makePartyMember(persona) {
+  return {
+    id: `ally:${persona.id}`,
+    name: persona.name,
+    side: 'party',
+    hp: persona.maxHp,
+    maxHp: persona.maxHp,
+    sp: persona.maxSp,
+    maxSp: persona.maxSp,
+    ammo: 0,
+    isPlayer: false,
+    guarding: false,
+    attackUp: 0,
+    oneMoreUsed: false,
+    acted: false,
+    activePersona: persona,
+    skills: persona.skills,
+  };
+}
+
+function makeEnemy(spec) {
+  const maxHp = Number(spec.maxHp ?? spec.hp) || 60;
+  return {
+    id: spec.id,
+    name: spec.name,
+    hp: maxHp,
+    maxHp,
+    attack: spec.attack ?? 16,
+    defense: spec.defense ?? 5,
+    element: spec.element ?? 'phys',
+    weakness: spec.weakness ?? null,
+    resist: spec.resist ?? null,
+    null: spec.null ?? [],
+    absorb: spec.absorb ?? [],
+    repel: spec.repel ?? [],
+    status: null,
+    down: false,
+    personality: spec.personality ?? 'proud',
+    enraged: false,
+    recruit: recruitDataForPersona(spec.recruitPersonaId),
+    reward: spec.reward ?? { sp: 20, item: '阴影碎片' },
+    debuffs: {},
+    knownAffinities: {},
+  };
+}
+
+export function createDefaultBattle({
+  rng = Math.random,
+  heroPersonaIds = DEFAULT_HERO_PERSONAS,
+  activePersonaId,
+  allyPersonaIds = DEFAULT_ALLY_PERSONAS,
+  enemies: enemySpecs,
+} = {}) {
+  const masks = buildPersonaLoadout(heroPersonaIds);
+  const maskIds = Object.keys(masks);
+  if (!maskIds.length) throw new Error('至少需要一张有效的 Persona。');
+  const activeMask = masks[activePersonaId] ? activePersonaId : maskIds[0];
+  const active = masks[activeMask];
   const hero = {
-    id: 'hero', name: '你', side: 'party', hp: 120, maxHp: 120, sp: 90, maxSp: 90,
-    ammo: 3, isPlayer: true, activeMask: 'knowledge', switched: false, oneMoreUsed: false,
-    guarding: false, attackUp: 0,
-    masks: {
-      knowledge: {
-        name: '奥丁·全知', element: 'knowledge',
-        skills: [
-          makeSkill('starfall', '星落', 'knowledge', 36, 18, { status: 'confuse' }),
-          makeSkill('echo', '回响', 'knowledge', 20, 8),
-        ],
-      },
-      guts: {
-        name: '须佐之男·斩蛇', element: 'guts',
-        skills: [
-          makeSkill('thrust', '疾风刺', 'guts', 34, 12),
-          makeSkill('endure', '不屈', 'guts', 0, 10, { target: 'self', guard: true }),
-        ],
-      },
-      dexterity: {
-        name: '赫尔墨斯·疾风', element: 'dexterity',
-        skills: [
-          makeSkill('blade', '飞刃', 'dexterity', 32, 12),
-          makeSkill('charge', '蓄力', 'dexterity', 0, 8, { target: 'self', attackUp: 1.3 }),
-        ],
-      },
-    },
+    id: 'hero',
+    name: '你',
+    side: 'party',
+    hp: active.maxHp,
+    maxHp: active.maxHp,
+    sp: active.maxSp,
+    maxSp: active.maxSp,
+    ammo: 3,
+    isPlayer: true,
+    activeMask,
+    switched: false,
+    oneMoreUsed: false,
+    guarding: false,
+    attackUp: 0,
+    acted: false,
+    masks,
   };
-  const allyHealer = {
-    id: 'allyHealer', name: '天照·守灯', side: 'party', hp: 90, maxHp: 90, sp: 50, maxSp: 50,
-    ammo: 0, isPlayer: false, guarding: false, attackUp: 0, oneMoreUsed: false,
-    element: 'kindness',
-    skills: [
-      makeSkill('frost', '霜环', 'kindness', 24, 10, { status: 'freeze' }),
-      makeSkill('heal', '微光', 'kindness', 30, 8, { target: 'ally', heal: true }),
-    ],
-  };
-  const allyEcho = {
-    id: 'allyEcho', name: '卡门·回响', side: 'party', hp: 85, maxHp: 85, sp: 50, maxSp: 50,
-    ammo: 0, isPlayer: false, guarding: false, attackUp: 0, oneMoreUsed: false,
-    element: 'charm',
-    skills: [
-      makeSkill('echoSlash', '回音斩', 'charm', 30, 12, { status: 'burn' }),
-      makeSkill('inspire', '鼓舞', 'charm', 0, 8, { target: 'ally', attackUp: 1.3 }),
-    ],
-  };
-  const enemies = [
+
+  const allies = allyPersonaIds
+    .map(buildBattlePersona)
+    .filter(Boolean)
+    .map(makePartyMember);
+
+  const enemies = (enemySpecs ?? [
     {
-      id: 'a', name: '诡辩之影', hp: 72, maxHp: 72, attack: 14, weakness: 'guts', resist: 'knowledge',
-      status: null, down: false, personality: 'proud', enraged: false,
-      recruit: recruitData('sophist'),
+      id: 'a',
+      name: '诡辩之影',
+      maxHp: 72,
+      attack: 18,
+      defense: 6,
+      element: 'phys',
+      weakness: 'electric',
+      resist: 'curse',
+      personality: 'proud',
+      recruitPersonaId: 'agathion',
       reward: { sp: 30, item: '诡辩的碎片' },
     },
     {
-      id: 'b', name: '刻薄之影', hp: 64, maxHp: 64, attack: 12, weakness: 'charm', resist: 'kindness',
-      status: null, down: false, personality: 'greedy', enraged: false,
-      recruit: recruitData('stingy'),
+      id: 'b',
+      name: '刻薄之影',
+      maxHp: 64,
+      attack: 16,
+      defense: 5,
+      element: 'curse',
+      weakness: 'bless',
+      resist: 'fire',
+      personality: 'greedy',
+      recruitPersonaId: 'angel',
       reward: { sp: 24, item: '刻薄的碎片' },
     },
-  ];
-  return new P5Battle({ rng, party: [hero, allyHealer, allyEcho], enemies });
+  ]).map(makeEnemy);
+
+  return new P5Battle({ rng, party: [hero, ...allies], enemies });
 }
 
 export class P5Battle {
@@ -157,42 +228,71 @@ export class P5Battle {
     return alive.length > 0 && alive.every(e => e.down);
   }
 
+  get currentPersona() {
+    return personaFor(this.actor);
+  }
+
   get elementOf() {
-    const actor = this.actor;
-    if (!actor) return 'knowledge';
-    return actor.isPlayer ? actor.masks[actor.activeMask]?.element ?? 'knowledge' : actor.element;
+    return this.currentPersona?.element ?? 'phys';
   }
 
   get actions() {
     if (this.phase !== 'party' || !this.actor) return [];
     const actor = this.actor;
     const actions = [];
-    const skills = actor.isPlayer ? actor.masks[actor.activeMask].skills : actor.skills;
-    for (const item of skills) {
+    for (const item of actorSkills(actor)) {
       actions.push({
         type: 'skill',
         id: item.id,
         label: item.name,
-        detail: `${ELEMENTS[item.element]?.label ?? item.element} · ${item.target === 'ally' ? '我方' : item.target === 'self' ? '自身' : '敌方'}`,
+        detail: `${elementLabel(item.element)} · ${item.target === 'ally' ? '我方' : item.target === 'allAllies' ? '全体我方' : item.target === 'allEnemies' ? '全体敌人' : '敌方'}${item.status ? ` · ${STATUS[item.status]?.label ?? item.status}` : ''}`,
         cost: item.sp,
-        disabled: actor.sp < item.sp,
+        disabled: actor.sp < item.sp
+          || (
+            item.power <= 0
+            && !item.heal
+            && !item.debuff
+            && !item.status
+            && !item.attackUp
+            && !item.guard
+          ),
       });
     }
-    actions.push({ type: 'basic', label: '普攻', detail: `${ELEMENTS[this.elementOf]?.label ?? '物理'} · 18`, cost: 0 });
+    actions.push({
+      type: 'analyze',
+      label: '洞察',
+      detail: '2 SP · 发现目标的一项未知耐性',
+      cost: 2,
+      disabled: actor.sp < 2,
+    });
+    actions.push({ type: 'basic', label: '普攻', detail: '物理 · 18', cost: 0 });
     if (actor.isPlayer && actor.ammo > 0) {
-      actions.push({ type: 'gun', label: '手枪', detail: `物理 · 26 · 弹药 ${actor.ammo}`, cost: 0 });
+      actions.push({ type: 'gun', label: '手枪', detail: `枪击 · 26 · 弹药 ${actor.ammo}`, cost: 0 });
     }
     actions.push({ type: 'guard', label: '防御', detail: '本回合承伤减半', cost: 0 });
     if (actor.isPlayer) {
       for (const [maskId, mask] of Object.entries(actor.masks)) {
         if (maskId === actor.activeMask) continue;
-        actions.push({ type: 'switchMask', id: maskId, label: `换面具 · ${mask.name}`, detail: ELEMENTS[mask.element]?.label ?? mask.element, cost: 0, free: true, disabled: actor.switched });
+        actions.push({
+          type: 'switchMask',
+          id: maskId,
+          label: `换面具 · ${mask.name}`,
+          detail: `${mask.elementLabel ?? elementLabel(mask.element)} · 消耗本回合行动`,
+          cost: 0,
+          disabled: actor.switched,
+        });
       }
     }
     if (this.enemies.some(e => e.hp > 0 && e.down) && this.aliveParty.length > 1) {
       for (const target of this.aliveParty) {
         if (target.id === actor.id) continue;
-        actions.push({ type: 'batonPass', targetId: target.id, label: `BATON PASS → ${target.name}`, detail: `伤害 +${Math.min(3, this.batonChain + 1) * 25}%`, cost: 0 });
+        actions.push({
+          type: 'batonPass',
+          targetId: target.id,
+          label: `接力 → ${target.name}`,
+          detail: `BATON PASS · 伤害 +${Math.min(3, this.batonChain + 1) * 25}%`,
+          cost: 0,
+        });
       }
     }
     return actions;
@@ -201,18 +301,21 @@ export class P5Battle {
   act(action) {
     if (this.phase !== 'party' || !this.actor) return { ok: false, reason: '现在不是你的回合。' };
     const actor = this.actor;
-    if (action.type === 'switchMask') {
-      if (!actor.isPlayer) return { ok: false, reason: '只有主角能换面具。' };
-      if (actor.switched) return { ok: false, reason: '这一回合已经换过面具了。' };
-      if (!actor.masks[action.id]) return { ok: false, reason: '没有这张面具。' };
-      actor.activeMask = action.id;
-      actor.switched = true;
-      this.push(`你换上了「${actor.masks[action.id].name}」。`);
-      return { ok: true };
-    }
     const isExtra = this.extraId === actor.id && this.extraPending;
     this.currentIsExtra = isExtra;
     if (isExtra) this.extraPending = false;
+
+    if (action.type === 'switchMask') {
+      if (!actor.isPlayer) return { ok: false, reason: '只有主角能换面具。' };
+      if (!actor.masks[action.id]) return { ok: false, reason: '没有这张面具。' };
+      if (actor.masks[action.id].id === actor.activeMask) return { ok: false, reason: '已经装备这张面具。' };
+      actor.activeMask = action.id;
+      actor.switched = true;
+      this.push(`你换上了「${actor.masks[action.id].name}」，本次行动结束。`);
+      this.finishActor(actor);
+      return { ok: true };
+    }
+
     if (action.type === 'batonPass') {
       const target = this.party.find(p => p.id === action.targetId && p.hp > 0);
       if (!target || target.id === actor.id) return { ok: false, reason: '不能把回合传给自己。' };
@@ -226,12 +329,38 @@ export class P5Battle {
       this.push(`BATON PASS → ${target.name}，伤害 +${this.batonChain * 25}%。`);
       return { ok: true };
     }
+
+    if (action.type === 'analyze') {
+      const target = action.targetId
+        ? this.aliveEnemies.find(e => e.id === action.targetId)
+        : this.aliveEnemies[0];
+      if (!target) return { ok: false, reason: '没有目标。' };
+      if (actor.sp < 2) return { ok: false, reason: 'SP 不足 2。' };
+      const elements = Object.keys(P5_ELEMENTS).filter(
+        element => !['healing', 'support', 'ailment', 'passive', 'trait'].includes(element),
+      );
+      const unseen = elements.filter(element => !target.knownAffinities[element]);
+      const reveal = target.weakness && !target.knownAffinities[target.weakness]
+        ? target.weakness
+        : unseen[0];
+      if (!reveal) {
+        this.push(`${target.name} 的耐性已经被看穿了。`);
+        return { ok: true };
+      }
+      actor.sp -= 2;
+      target.knownAffinities[reveal] = affinityOfEnemy(target, reveal);
+      this.push(`洞察：发现 ${target.name} 对${elementLabel(reveal)}的反应是「${affinityLabel(target.knownAffinities[reveal])}」。`);
+      this.afterAction(actor);
+      return { ok: true };
+    }
+
     if (action.type === 'guard') {
       actor.guarding = true;
       this.push(`${actor.name} 进入防御。`);
       this.afterAction(actor);
       return { ok: true };
     }
+
     if (action.type === 'basic' || action.type === 'gun') {
       const target = action.targetId
         ? this.aliveEnemies.find(e => e.id === action.targetId)
@@ -240,71 +369,145 @@ export class P5Battle {
       if (action.type === 'gun') {
         if (actor.ammo <= 0) return { ok: false, reason: '没有子弹了。' };
         actor.ammo -= 1;
-        this.hitEnemy(actor, target, { name: '手枪', element: 'guts', power: 26, crit: 0.2 });
+        this.hitEnemy(actor, target, {
+          id: 'gun',
+          name: '手枪',
+          element: 'gun',
+          power: 26,
+          crit: 0.2,
+        });
       } else {
-        this.hitEnemy(actor, target, { name: '普攻', element: this.elementOf, power: 18 });
+        this.hitEnemy(actor, target, {
+          id: 'basic',
+          name: '普攻',
+          element: 'phys',
+          power: 18,
+        });
       }
       this.afterAction(actor);
       return { ok: true };
     }
+
     if (action.type === 'skill') {
-      const skills = actor.isPlayer ? actor.masks[actor.activeMask].skills : actor.skills;
-      const item = skills.find(s => s.id === action.id);
+      const item = actorSkills(actor).find(s => s.id === action.id);
       if (!item) return { ok: false, reason: '没有这个技能。' };
       if (actor.sp < item.sp) return { ok: false, reason: 'SP 不足。' };
       actor.sp -= item.sp;
-      if (item.target === 'enemy') {
-        const target = action.targetId
-          ? this.aliveEnemies.find(e => e.id === action.targetId)
-          : this.aliveEnemies[0];
-        if (!target) return { ok: false, reason: '没有目标。' };
-        this.hitEnemy(actor, target, item);
-      } else if (item.target === 'ally' && item.heal) {
-        const target = this.aliveParty.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-        const healed = Math.min(target.maxHp - target.hp, item.power);
-        target.hp += healed;
-        this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 回复 ${healed} HP。`);
-      } else if (item.target === 'ally' && item.attackUp) {
-        const target = this.aliveParty.find(p => p.id !== actor.id) ?? actor;
-        target.attackUp = Math.max(target.attackUp, item.attackUp);
-        this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 下一次攻击 ×${item.attackUp}。`);
-      } else if (item.target === 'self' && item.guard) {
-        actor.guarding = true;
-        this.push(`${actor.name} 使用「${item.name}」→ 进入防御。`);
-      } else if (item.target === 'self' && item.attackUp) {
-        actor.attackUp = Math.max(actor.attackUp, item.attackUp);
-        this.push(`${actor.name} 使用「${item.name}」→ 下一次攻击 ×${item.attackUp}。`);
-      }
+      this.useSkill(actor, item, action);
       this.afterAction(actor);
       return { ok: true };
     }
     return { ok: false, reason: '未知行动。' };
   }
 
+  useSkill(actor, item, action) {
+    if (item.heal) {
+      const targets = item.target === 'allAllies'
+        ? this.aliveParty
+        : [this.aliveParty.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]];
+      for (const target of targets) {
+        if (!target) continue;
+        const healed = Math.min(target.maxHp - target.hp, item.power);
+        target.hp += healed;
+        if (item.cure) target.status = null;
+        this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 回复 ${healed} HP${item.cure ? '，异常状态解除' : ''}。`);
+      }
+      return;
+    }
+    if (item.attackUp) {
+      const target = this.aliveParty.find(p => p.id !== actor.id) ?? actor;
+      target.attackUp = Math.max(target.attackUp, item.attackUp);
+      this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 攻击提升。`);
+      return;
+    }
+    if (item.guard) {
+      actor.guarding = true;
+      this.push(`${actor.name} 使用「${item.name}」→ 进入防御。`);
+      return;
+    }
+    if (item.debuff) {
+      const target = action.targetId
+        ? this.aliveEnemies.find(e => e.id === action.targetId)
+        : this.aliveEnemies[0];
+      if (target) {
+        target.debuffs[item.debuff] = true;
+        this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 的${item.debuff === 'defense' ? '防御' : '命中'}下降。`);
+      }
+      return;
+    }
+    if (item.target === 'allEnemies') {
+      for (const target of this.aliveEnemies) this.hitEnemy(actor, target, item);
+      return;
+    }
+    if (item.target === 'enemy') {
+      const target = action.targetId
+        ? this.aliveEnemies.find(e => e.id === action.targetId)
+        : this.aliveEnemies[0];
+      if (!target) return;
+      this.hitEnemy(actor, target, item);
+      return;
+    }
+    this.push(`${actor.name} 使用「${item.name}」，但没有可结算的效果。`);
+  }
+
   hitEnemy(actor, target, item) {
-    const affinity = target.weakness === item.element ? 'weak' : target.resist === item.element ? 'resist' : 'normal';
-    const technical = Boolean(target.status && STATUS[target.status]?.technicalWith === item.element);
-    const crit = roll(this.rng, item.crit ?? 0.1);
+    const affinity = item.ignoreAffinity ? 'normal' : affinityOfEnemy(target, item.element);
+    const newAffinity = !item.ignoreAffinity && !target.knownAffinities[item.element];
+    if (!item.ignoreAffinity) target.knownAffinities[item.element] = affinity;
+    const technical = Boolean(
+      target.status
+      && STATUS[target.status]?.technicalWith?.includes(item.element),
+    );
+    const crit = !item.ignoreAffinity && roll(this.rng, item.crit ?? 0.08);
+    const stat = item.element === 'phys' || item.element === 'gun'
+      ? actor.strength ?? 5
+      : actor.magic ?? 5;
+    const attackFactor = 1 + Math.max(0, stat - 5) * 0.03;
+    const defenseFactor = 1 - Math.min(0.45, (target.defense ?? 0) * 0.02);
     let mult = affinity === 'weak' ? 1.25 : affinity === 'resist' ? 0.5 : 1;
     if (technical) mult *= 1.5;
     if (crit) mult *= 1.5;
     if (this.batonBoost > 0) mult *= 1 + this.batonBoost;
     if (actor.attackUp > 1) mult *= actor.attackUp;
-    const damage = Math.max(1, Math.round(item.power * mult));
-    target.hp = Math.max(0, target.hp - damage);
+    if (target.debuffs?.defense) mult *= 1.25;
+    let damage = item.power > 0
+      ? Math.max(1, Math.round(item.power * attackFactor * defenseFactor * mult))
+      : 0;
     const labels = [];
     if (affinity === 'weak') labels.push('弱点');
     if (affinity === 'resist') labels.push('抗性');
+    if (affinity === 'null') labels.push('无效');
+    if (affinity === 'absorb') labels.push('吸收');
+    if (affinity === 'repel') labels.push('反弹');
     if (technical) labels.push('TECHNICAL');
     if (crit) labels.push('暴击');
-    this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 受到 ${damage} 伤害${labels.length ? `（${labels.join(' / ')}）` : ''}。`);
-    if (item.status) {
+
+    if (affinity === 'null') {
+      damage = 0;
+    } else if (affinity === 'absorb') {
+      target.hp = Math.min(target.maxHp, target.hp + damage);
+      damage = 0;
+    } else if (affinity === 'repel') {
+      actor.hp = Math.max(0, actor.hp - damage);
+      damage = 0;
+    }
+
+    if (damage > 0) target.hp = Math.max(0, target.hp - damage);
+    if (newAffinity && affinity !== 'normal') {
+      this.push(`发现 ${target.name} 对${elementLabel(item.element)}「${affinityLabel(affinity)}」。`);
+    }
+    if (item.power > 0 || damage > 0) {
+      this.push(
+        `${actor.name} 使用「${item.name}」→ ${target.name} ${damage ? `受到 ${damage} 伤害` : '没有受伤'}${labels.length ? `（${labels.join(' / ')}）` : ''}。`,
+      );
+    }
+    if (item.status && target.hp > 0) {
       target.status = item.status;
-      this.push(`${target.name} 陷入【${STATUS[item.status].label}】。`);
+      this.push(`${target.name} 陷入【${STATUS[item.status]?.label ?? item.status}】。`);
     }
     actor.attackUp = 0;
     this.batonBoost = 0;
-    if ((affinity === 'weak' || crit || technical) && !target.down) {
+    if ((affinity === 'weak' || crit) && target.hp > 0 && !target.down) {
       target.down = true;
       this.push(`${target.name} 倒下了。`);
       if (!actor.oneMoreUsed) {
@@ -366,13 +569,28 @@ export class P5Battle {
         enemy.down = false;
         continue;
       }
+      if (enemy.status && ['sleep', 'freeze', 'shock', 'dizzy'].includes(enemy.status)) {
+        this.push(`${enemy.name} 因【${STATUS[enemy.status].label}】无法行动。`);
+        enemy.status = null;
+        continue;
+      }
       const targets = this.aliveParty;
       const target = targets[Math.floor(this.rng() * targets.length)];
       if (!target) break;
-      const raw = enemy.attack * (0.9 + this.rng() * 0.2) * (enemy.enraged ? 1.4 : 1);
-      const damage = Math.max(1, Math.round(target.guarding ? raw * 0.5 : raw));
-      target.hp = Math.max(0, target.hp - damage);
-      this.push(`${enemy.name} 攻击 ${target.name}，造成 ${damage} 伤害${target.guarding ? '（防御减半）' : ''}。`);
+      const persona = personaFor(target);
+      const affinity = affinityOfPersona(persona, enemy.element);
+      const raw = Math.max(1, Math.round(enemy.attack * (0.9 + this.rng() * 0.2) * (enemy.enraged ? 1.4 : 1)));
+      let damage = Math.max(1, Math.round((raw - (persona?.defense ?? 0) * 0.5) * (
+        target.guarding ? 0.5 : 1
+      )));
+      const labels = [];
+      if (affinity === 'weak') { damage = Math.round(damage * 1.25); labels.push('弱点'); }
+      else if (affinity === 'resist') { damage = Math.round(damage * 0.5); labels.push('抗性'); }
+      else if (affinity === 'null') { damage = 0; labels.push('无效'); }
+      else if (affinity === 'absorb') { target.hp = Math.min(target.maxHp, target.hp + damage); damage = 0; labels.push('吸收'); }
+      else if (affinity === 'repel') { enemy.hp = Math.max(0, enemy.hp - damage); damage = 0; labels.push('反弹'); }
+      if (damage > 0) target.hp = Math.max(0, target.hp - damage);
+      this.push(`${enemy.name} 以${elementLabel(enemy.element)}攻击 ${target.name}，${damage ? `造成 ${damage} 伤害` : '没有造成伤害'}${labels.length ? `（${labels.join(' / ')}）` : ''}。`);
       if (target.hp <= 0) this.push(`${target.name} 倒下了。`);
     }
     if (this.aliveParty.length === 0) {
@@ -381,7 +599,10 @@ export class P5Battle {
       this.push('全员倒下。战斗失败。');
       return;
     }
-    for (const enemy of this.aliveEnemies) enemy.down = false;
+    for (const enemy of this.aliveEnemies) {
+      enemy.down = false;
+      enemy.debuffs = {};
+    }
     for (const member of this.party) {
       member.acted = false;
       member.guarding = false;
@@ -429,7 +650,13 @@ export class P5Battle {
       this.push(`交涉（${action.option}）：把握 ${finalChance}% → ${success ? '成功' : '失败'}。`);
       if (success) {
         this.phase = 'negotiation';
-        this.result = { type: 'negotiation', enemyId: enemy.id, enemyName: enemy.name, recruit: enemy.recruit, reward: enemy.reward };
+        this.result = {
+          type: 'negotiation',
+          enemyId: enemy.id,
+          enemyName: enemy.name,
+          recruit: enemy.recruit,
+          reward: enemy.reward,
+        };
         return { ok: true };
       }
       enemy.down = false;
@@ -452,11 +679,8 @@ export class P5Battle {
   chooseResult(type) {
     if (this.phase !== 'negotiation' || !this.result) return { ok: false, reason: '没有可领取的结果。' };
     const result = this.result;
-    if (type === 'recruit') {
-      this.result = { type: 'recruited', ...result.recruit };
-    } else {
-      this.result = { type: 'reward', ...result.reward };
-    }
+    if (type === 'recruit') this.result = { type: 'recruited', ...result.recruit };
+    else this.result = { type: 'reward', ...result.reward };
     this.phase = 'result';
     return { ok: true };
   }
@@ -467,13 +691,38 @@ export class P5Battle {
       round: this.round,
       currentId: this.currentId,
       actor: this.actor?.name ?? null,
+      persona: this.currentPersona?.name ?? null,
       extraId: this.extraId,
       batonChain: this.batonChain,
       batonBoost: this.batonBoost,
-      party: this.party.map(p => ({ id: p.id, name: p.name, hp: p.hp, maxHp: p.maxHp, sp: p.sp, maxSp: p.maxSp, activeMask: p.activeMask, guarding: p.guarding })),
-      enemies: this.enemies.map(e => ({ id: e.id, name: e.name, hp: e.hp, maxHp: e.maxHp, status: e.status, down: e.down, weakness: e.weakness, personality: e.personality, enraged: e.enraged })),
+      party: this.party.map(p => ({
+        id: p.id,
+        name: p.name,
+        hp: p.hp,
+        maxHp: p.maxHp,
+        sp: p.sp,
+        maxSp: p.maxSp,
+        activeMask: p.activeMask,
+        activePersona: p.activePersona?.name,
+        guarding: p.guarding,
+      })),
+      enemies: this.enemies.map(e => ({
+        id: e.id,
+        name: e.name,
+        hp: e.hp,
+        maxHp: e.maxHp,
+        status: e.status,
+        down: e.down,
+        weakness: e.weakness,
+        personality: e.personality,
+        enraged: e.enraged,
+        recruit: e.recruit?.name,
+        knownAffinities: { ...e.knownAffinities },
+      })),
       result: this.result,
       log: [...this.log],
     };
   }
 }
+
+export { buildBattlePersona, catalogPersonaChoices };

@@ -130,6 +130,7 @@ export function createTowerBattle({
   heroSp,
   partyVitals = {},
   equipmentBonuses = {},
+  equipmentEffects = {},
 } = {}) {
   const enemies = [primaryEnemySpec({ encounter, floor, boss })];
   if (!boss) enemies.push(secondaryEnemySpec({ encounter, floor }));
@@ -148,6 +149,8 @@ export function createTowerBattle({
   if (hero) {
     hero.attackBonus = Number(equipmentBonuses.attack) || 0;
     hero.defenseBonus = Number(equipmentBonuses.defense) || 0;
+    hero.critBonus = Number(equipmentEffects.crit) || 0;
+    hero.healBonus = Number(equipmentEffects.heal) || 0;
     const hpBonus = Number(equipmentBonuses.hp) || 0;
     const spBonus = Number(equipmentBonuses.sp) || 0;
     if (hpBonus) {
@@ -339,7 +342,8 @@ export function applyBattleItem(battle, item, { targetId } = {}) {
     target = chooseTarget();
     if (!target || target.hp <= 0) return { ok: false, reason: '需要选择一名站着的同伴。' };
     const before = target.hp;
-    target.hp = Math.min(target.maxHp, target.hp + (Number(item.hp) || 0));
+    const healBonus = Number(battle.party.find(member => member.isPlayer)?.healBonus) || 0;
+    target.hp = Math.min(target.maxHp, target.hp + Math.round((Number(item.hp) || 0) * (1 + healBonus)));
     amount = target.hp - before;
   } else if (item.kind === 'sp') {
     target = chooseTarget();

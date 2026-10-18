@@ -5,6 +5,8 @@
  * 商店名字与文案走 P5 语域，但不复刻原作店铺/商品名。
  */
 
+import { EQUIPMENT } from './equipment.js';
+
 export const ITEM_DEFS = {
   painkiller: { id: 'painkiller', name: '小瓶止痛药', kind: 'heal', hp: 40, price: 300, sell: 120, desc: '回响诊所的常备药。回复 40 HP。' },
   strongPainkiller: { id: 'strongPainkiller', name: '强效止痛药', kind: 'heal', hp: 100, price: 900, sell: 360, desc: '苦得让人清醒。回复 100 HP。' },
@@ -19,16 +21,16 @@ export const ITEM_DEFS = {
   windShard: { id: 'windShard', name: '风之碎片', kind: 'material', element: 'dexterity', price: 220, sell: 90, desc: '轻得像一句没说完的话。Persona 合成材料。' },
   psyShard: { id: 'psyShard', name: '念之碎片', kind: 'material', element: 'knowledge', price: 220, sell: 90, desc: '看久了会听见自己的声音。Persona 合成材料。' },
   physShard: { id: 'physShard', name: '力之碎片', kind: 'material', element: 'guts', price: 220, sell: 90, desc: '握紧时指节会发白。Persona 合成材料。' },
+  enhanceStone: { id: 'enhanceStone', name: '强化石', kind: 'material', price: 600, sell: 240, desc: '能把装备再往前推一点。强化装备时消耗。' },
+  echoShard: { id: 'echoShard', name: '回声碎片', kind: 'material', price: 160, sell: 64, desc: '影子散开后留下的薄片。' },
+  wanderShard: { id: 'wanderShard', name: '游荡碎片', kind: 'material', price: 180, sell: 72, desc: '还在轻轻震动，像没走完的脚步。' },
+  obsessionShard: { id: 'obsessionShard', name: '执念残片', kind: 'material', price: 900, sell: 360, desc: '塔顶的心魔留下的东西。' },
+  oldKey: { id: 'oldKey', name: '旧钥匙', kind: 'material', price: 0, sell: 120, desc: '从塔层带回来的旧钥匙。' },
+  sleepIncense: { id: 'sleepIncense', name: '安眠香', kind: 'material', price: 0, sell: 160, desc: '安全屋里剩下的安眠香。' },
 };
 
-export const EQUIPMENT_DEFS = {
-  rustyKnife: { id: 'rustyKnife', name: '生锈短刀', slot: 'weapon', attack: 2, price: 0, sell: 0, desc: '开局武器。刀口比记忆更钝。' },
-  nightMist: { id: 'nightMist', name: '短刀·夜雾', slot: 'weapon', attack: 10, price: 3200, sell: 1280, desc: '刀身很轻，适合先手。' },
-  crowModel: { id: 'crowModel', name: '模型枪·黑鸦', slot: 'weapon', attack: 8, price: 2800, sell: 1120, desc: '改装模型枪，声音很沉。' },
-  streetJacket: { id: 'streetJacket', name: '旧夹克', slot: 'armor', defense: 2, price: 0, sell: 0, desc: '至少能挡一点风。' },
-  ballisticVest: { id: 'ballisticVest', name: '防弹背心', slot: 'armor', defense: 8, price: 3600, sell: 1440, desc: '比看上去重，也比看上去可靠。' },
-  metalCharm: { id: 'metalCharm', name: '金属护符', slot: 'accessory', defense: 2, price: 1800, sell: 720, desc: '摸起来像从某个影子里掉出来的。' },
-};
+// 装备只认 equipment.js 一份目录，避免商店/宝箱/UI 三套 ID 漂移。
+export const EQUIPMENT_DEFS = EQUIPMENT;
 
 export const SHOP_DEFS = {
   clinic: {
@@ -43,7 +45,7 @@ export const SHOP_DEFS = {
     name: '黑鸦军品',
     npc: '戴墨镜的店主',
     tagline: '刀、枪、护具。别问来路。',
-    stock: ['nightMist', 'crowModel', 'ballisticVest', 'metalCharm', 'smokeBomb'],
+    stock: ['scout-knife', 'iron-knife', 'black-fang', 'kevlar-vest', 'old-watch', 'silver-ring', 'smokeBomb', 'enhanceStone'],
   },
   vending: {
     id: 'vending',
@@ -78,8 +80,8 @@ export function createWallet(money = 8000) {
     heroHp: 120,
     heroMaxHp: 120,
     inventory: { painkiller: 2, sportsDrink: 1 },
-    ownedEquipment: ['rustyKnife', 'streetJacket'],
-    equipment: { weapon: 'rustyKnife', armor: 'streetJacket', accessory: null },
+    ownedEquipment: ['training-blade', 'school-jacket'],
+    equipment: { weapon: 'training-blade', armor: 'school-jacket', accessory: null },
     log: ['钱包里还剩 ¥8,000。'],
   };
 }
@@ -109,6 +111,17 @@ export function buy(wallet, shopId, id, qty = 1) {
 export function sell(wallet, id, qty = 1) {
   const def = definitionOf(id);
   if (!def) return { ok: false, reason: '没有这个商品。' };
+  if (EQUIPMENT_DEFS[id]) {
+    if (!wallet.ownedEquipment.includes(id)) return { ok: false, reason: '还没有这件装备。' };
+    wallet.ownedEquipment = wallet.ownedEquipment.filter(owned => owned !== id);
+    for (const [slot, equipped] of Object.entries(wallet.equipment)) {
+      if (equipped === id) wallet.equipment[slot] = null;
+    }
+    const gain = def.sell * qty;
+    wallet.money += gain;
+    wallet.log.push(`卖出 ${def.name}（+¥${gain}）。`);
+    return { ok: true, gain };
+  }
   const count = wallet.inventory[id] ?? 0;
   if (count < qty) return { ok: false, reason: '数量不够。' };
   wallet.inventory[id] = count - qty;
@@ -150,12 +163,12 @@ function chestLoot(chest, rng) {
     loot.push(rng() < 0.5
       ? { type: 'item', id: 'strongPainkiller', qty: 1 }
       : { type: 'item', id: 'energyDrink', qty: 1 });
-    if (rng() < 0.35) loot.push({ type: 'item', id: 'metalCharm', qty: 1 });
+    if (rng() < 0.35) loot.push({ type: 'equipment', id: 'silver-ring' });
   } else {
     loot.push({ type: 'money', amount: randomInt(rng, 1400, 2600) });
     loot.push(rng() < 0.5
-      ? { type: 'equipment', id: 'nightMist' }
-      : { type: 'equipment', id: 'ballisticVest' });
+      ? { type: 'equipment', id: 'black-fang' }
+      : { type: 'equipment', id: 'moonlight-coat' });
     if (rng() < 0.6) loot.push({ type: 'item', id: 'revive', qty: 1 });
   }
   if (rng() < 0.45) {

@@ -46,6 +46,18 @@ test('塔层遭遇会生成目录 Persona 小队和真实弱点目标', () => {
   assert.equal(DEFAULT_ALLY_PERSONAS.includes('cait-sith'), true);
 });
 
+test('装备的战斗效果会进入主角', () => {
+  const battle = towerBattle({
+    equipmentBonuses: { attack: 6, defense: 3, hp: 8, sp: 4 },
+    equipmentEffects: { crit: 0.12, heal: 0.25, ambushGuard: true },
+  });
+  const hero = battle.party.find(member => member.isPlayer);
+  assert.equal(hero.attackBonus, 6);
+  assert.equal(hero.defenseBonus, 3);
+  assert.equal(hero.critBonus, 0.12);
+  assert.equal(hero.healBonus, 0.25);
+});
+
 test('普通塔层生成双目标，切换目标不会改变行动者', () => {
   const battle = towerBattle({ floor: 5 });
   const first = buildBattleView(battle, 'primary');

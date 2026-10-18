@@ -34,13 +34,13 @@ test('卖东西会加钱并减少数量', () => {
 
 test('买装备并装备后攻击/防御会变化', () => {
   const wallet = createWallet();
-  buy(wallet, 'arms', 'nightMist');
-  buy(wallet, 'arms', 'ballisticVest');
-  assert.equal(equip(wallet, 'weapon', 'nightMist').ok, true);
-  assert.equal(equip(wallet, 'armor', 'ballisticVest').ok, true);
+  buy(wallet, 'arms', 'black-fang');
+  buy(wallet, 'arms', 'kevlar-vest');
+  assert.equal(equip(wallet, 'weapon', 'black-fang').ok, true);
+  assert.equal(equip(wallet, 'armor', 'kevlar-vest').ok, true);
   const stats = statsOf(wallet);
-  assert.equal(stats.attack, 10);
-  assert.equal(stats.defense, 8);
+  assert.equal(stats.attack, 8);
+  assert.equal(stats.defense, 5);
 });
 
 test('元素封印箱必须用对应属性打开', () => {

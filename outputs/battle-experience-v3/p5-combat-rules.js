@@ -525,7 +525,7 @@ export class P5Battle {
       target.status
       && STATUS[target.status]?.technicalWith?.includes(item.element),
     );
-    const crit = !item.ignoreAffinity && roll(this.rng, item.crit ?? 0.08);
+    const crit = !item.ignoreAffinity && roll(this.rng, (item.crit ?? 0.08) + (actor.critBonus ?? 0));
     const stat = (item.element === 'phys' || item.element === 'gun'
       ? actor.strength ?? 5
       : actor.magic ?? 5) + (actor.attackBonus ?? 0);

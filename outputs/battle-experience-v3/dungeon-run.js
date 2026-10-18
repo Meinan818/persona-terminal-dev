@@ -81,6 +81,10 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     endless: false,
     cycle: 1,
     runSeed: 0,
+    stepBonus: 0,
+    securityGuard: 0,
+    chestBonus: 0,
+    dropBonus: 0,
     nonCombatUsed: false,
     safeRoomPending: false,
     map: null,
@@ -118,6 +122,10 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
       endless: false,
       cycle: 1,
       runSeed: nextRunSeed(),
+      stepBonus: 0,
+      securityGuard: 0,
+      chestBonus: 0,
+      dropBonus: 0,
       nonCombatUsed: false,
       safeRoomPending: false,
       map: null,
@@ -326,7 +334,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
       seed: floorSeed,
     });
     const explore = createExplorationState(map, {
-      maxTime: floor <= 10 ? 16 : floor <= 50 ? 14 : 12,
+      maxTime: (floor <= 10 ? 16 : floor <= 50 ? 14 : 12) + (Number(journey.stepBonus) || 0),
       security: journey.security,
       keys: journey.keys,
     });
@@ -352,6 +360,10 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
   const mapMove = direction => {
     if (!journey.explore || journey.ended) return { ok: false, reason: '这一层已经结束。' };
     const result = moveOnMap(journey.explore, direction);
+    if (journey.securityGuard > 0 && journey.explore.security > 0) {
+      journey.explore.security = Math.max(0, journey.explore.security - journey.securityGuard);
+      journey.explore.alert = journey.explore.security >= 100;
+    }
     syncExplore();
     if (!result.ok) {
       if (journey.explore.ended === 'timeout') {
@@ -438,6 +450,13 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     return { ok: false, reason: '这个房间没有这个动作。' };
   };
 
+  const setRunBonuses = ({ steps = 0, securityGuard = 0, chestBonus = 0, dropBonus = 0 } = {}) => {
+    journey.stepBonus = Math.max(0, Number(steps) || 0);
+    journey.securityGuard = Math.max(0, Number(securityGuard) || 0);
+    journey.chestBonus = Math.max(0, Number(chestBonus) || 0);
+    journey.dropBonus = Math.max(0, Number(dropBonus) || 0);
+  };
+
   const resolveMapBattle = won => {
     if (!journey.explore || !journey.pending) return false;
     const kind = journey.pending.kind;
@@ -493,6 +512,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     forceTrap,
     setStratum,
     startEndless,
+    setRunBonuses,
     beginFloor,
     mapMove,
     mapAct,

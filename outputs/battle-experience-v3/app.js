@@ -16,7 +16,7 @@ import {
 } from './p5-battle-bridge.js';
 import { buildBattlePersona, ELEMENTS, setPersonaOverride } from './p5-combat-rules.js';
 import { clearSignatureFx, playAllOut, playStagger } from './p3-signature-fx.js';
-import { EQUIPMENT, equipmentBonuses } from './equipment.js';
+import { EQUIPMENT, equipmentBonuses, equipmentEffects } from './equipment.js';
 import { xpNeeded } from './persona-progress.js';
 import { createNpcTrust } from './npcs.js';
 installPreviewNegotiationBridge();
@@ -49,6 +49,7 @@ const state = {
   personaAwakening: null,
   equipment: { weapon: 'training-blade', armor: 'school-jacket', accessory: null },
   ownedEquipment: ['training-blade', 'school-jacket'],
+  equipmentLevels: {},
   personaXp: {},
   towerStratum: 'echo',
   npcTrust: createNpcTrust(),
@@ -134,6 +135,7 @@ function persistP5State() {
       personaAwakening: state.personaAwakening,
       equipment: state.equipment,
       ownedEquipment: state.ownedEquipment,
+      equipmentLevels: state.equipmentLevels,
       personaXp: state.personaXp,
       towerStratum: state.towerStratum,
       npcTrust: state.npcTrust,
@@ -171,6 +173,13 @@ function loadP5State() {
     if (Array.isArray(saved.ownedEquipment)) {
       state.ownedEquipment = [...new Set(saved.ownedEquipment.filter(id => Boolean(EQUIPMENT[id])))];
       state.ownedEquipment = [...new Set([...state.ownedEquipment, 'training-blade', 'school-jacket'])];
+    }
+    if (saved.equipmentLevels && typeof saved.equipmentLevels === 'object') {
+      state.equipmentLevels = Object.fromEntries(
+        Object.entries(saved.equipmentLevels)
+          .filter(([id, level]) => Boolean(EQUIPMENT[id]) && Number.isFinite(Number(level)))
+          .map(([id, level]) => [id, Math.max(0, Math.min(5, Number(level)))]),
+      );
     }
     if (saved.personaXp && typeof saved.personaXp === 'object') {
       state.personaXp = Object.fromEntries(
@@ -907,7 +916,8 @@ function startBattle(origin = state.room,options={}) {
   state.battleFloor=Number(options.floor)||4;
   state.battleReceipt=null;
   state.battleWon=false;
-  const ambush=Boolean(options.encounter?.ambush);
+  const gearEffects=equipmentEffects(state.equipment,state.equipmentLevels);
+  const ambush=Boolean(options.encounter?.ambush)&&!gearEffects.ambushGuard;
   const startingHp=ambush?Math.max(1,Math.round(state.hp*0.85)):state.hp;
   state.battle=createTowerBattle({
     encounter:options.encounter??{},
@@ -919,7 +929,8 @@ function startBattle(origin = state.room,options={}) {
     heroHp:startingHp,
     heroSp:state.sp,
     partyVitals:state.partyVitals,
-    equipmentBonuses:equipmentBonuses(state.equipment),
+    equipmentBonuses:equipmentBonuses(state.equipment,state.equipmentLevels),
+    equipmentEffects:gearEffects,
   });
   state.targetId=state.battle.enemies[0]?.id??'';
   state.battleActionKey='';
@@ -1262,6 +1273,15 @@ const preparation=createPreparationDirector({state,masks,icon,openSheet,render,n
 if(new URLSearchParams(location.search).get('p5r-debug')==='1'){
   window.__p5rDebug={
     jump:(floor,selected)=>flows.towerDebugJump(floor,selected),
+    openChest:()=>flows.towerDebugOpenChest?.(),
+    fightShadow:()=>flows.towerDebugFightShadow?.(),
+    winBattle:()=>{
+      if(!state.battle)return false;
+      state.battleWon=true;
+      state.finished=true;
+      returnFromBattle();
+      return true;
+    },
     setRound:(round)=>{
       if(!state.battle)return false;
       state.battle.round=Math.max(1,Number(round)||1);

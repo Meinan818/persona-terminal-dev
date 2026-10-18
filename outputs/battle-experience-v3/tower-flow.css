@@ -224,6 +224,50 @@ button.map-cell:active{translate:0 1px}
 .gear-owned button small{color:#9fc0ff}.gear-owned button:disabled{opacity:.45;cursor:default}
 .gear-owned>span{font-size:11px;color:#9fc0ff}
 .gear-foot{display:flex;justify-content:flex-end;margin-top:18px}
+.gear-effects{margin-top:10px;padding:9px 12px;border-left:2px solid #ff7fb3;background:rgba(255,63,142,.08);font-size:11px;line-height:1.6;color:#ffd7e6}
+.gear-slot-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.gear-slot-actions>.flow-button{margin:0;min-height:38px;font-size:11px;flex:1;min-width:110px}
+.gear-owned button>span{display:flex;justify-content:space-between;gap:8px}
+.gear-owned button>span small{color:#ffd84a}
+.gear-owned button>small{display:block;margin-top:4px;color:#9fc0ff;font-size:10px;line-height:1.5}
+.shop-sections{display:flex;flex-direction:column;gap:16px;margin-top:14px}
+.shop-section{border:1px solid rgba(63,240,255,.18);background:rgba(3,13,42,.45);padding:12px 14px}
+.shop-section>header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid rgba(63,240,255,.2);padding-bottom:8px}
+.shop-section>header h3{font-size:18px;color:#f4fbff}
+.shop-section>header small{font-size:10px;color:#9fc0ff}
+.inventory-page{margin-top:18px;padding:22px 24px;background:linear-gradient(135deg,rgba(6,25,90,.9),rgba(2,10,42,.72));border:1px solid rgba(63,240,255,.28);clip-path:polygon(0 0,100% 0,100% calc(100% - 22px),calc(100% - 22px) 100%,0 100%)}
+.inventory-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding-bottom:14px;border-bottom:1px solid rgba(63,240,255,.25)}
+.inventory-head span{font:italic 800 9px var(--sh-cd);letter-spacing:.18em;color:#3ff0ff}
+.inventory-head h2{margin-top:5px;font-size:30px;color:#f4fbff}
+.inventory-wallet{font:italic 800 24px var(--sh-cd);color:#ffd84a;white-space:nowrap}
+.inventory-wallet b{display:block}
+.inventory-wallet small{display:block;margin-top:4px;font:700 10px var(--sh-sans);color:#9fc0ff;font-style:normal;white-space:nowrap}
+.inventory-tabs{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.inventory-tabs button{min-height:40px;padding:7px 14px;border:1px solid rgba(63,240,255,.3);background:rgba(6,25,90,.7);color:#bff6ff;font-size:12px;font-weight:900;cursor:pointer}
+.inventory-tabs button.active{background:#f4fbff;color:#06195a;border-color:#f4fbff}
+.inventory-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.inventory-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid rgba(63,240,255,.16);background:rgba(10,29,69,.62)}
+.inventory-mark{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid rgba(63,240,255,.3);color:#3ff0ff}
+.inventory-mark svg{width:20px;height:20px}
+.inventory-copy h3{font-size:15px;color:#f4fbff}
+.inventory-copy p{margin-top:4px;font-size:11px;line-height:1.55;color:#9fc0ff}
+.inventory-copy small{display:block;margin-top:4px;font-size:10px;line-height:1.5;color:#ffd84a}
+.inventory-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.inventory-actions>.flow-button{margin:0;min-height:36px;padding:7px 10px;font-size:10px;min-width:72px}
+.inventory-equipped{padding:7px 9px;border:1px solid rgba(255,216,74,.5);color:#ffd84a;font-size:10px;font-weight:900;white-space:nowrap}
+.inventory-empty{padding:18px;border:1px dashed rgba(63,240,255,.3);color:#9fc0ff;font-size:12px}
+.inventory-foot{display:flex;justify-content:flex-end;margin-top:16px}
+@media(max-width:760px){
+  .inventory-page{padding:16px 14px}
+  .inventory-head h2{font-size:24px}
+  .inventory-wallet{font-size:20px}
+  .inventory-row{grid-template-columns:34px minmax(0,1fr);gap:9px}
+  .inventory-actions{grid-column:1/-1;justify-content:stretch}
+  .inventory-actions>.flow-button{flex:1;min-width:0}
+  .gear-slot-actions{flex-direction:column}
+  .gear-slot-actions>.flow-button{min-width:0}
+  .shop-section{padding:10px}
+}
 .shop-gear{margin-top:22px;padding-top:14px;border-top:1px solid rgba(63,240,255,.28)}
 .shop-gear>h3{margin-bottom:4px;font:italic 800 22px var(--sh-cd);color:#ffd84a}
 @media(max-width:760px){

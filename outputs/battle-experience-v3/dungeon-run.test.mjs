@@ -240,3 +240,15 @@ test('每次 run 使用独立层种子，固定种子可复现同一张图', () 
   assert.equal(repeatMap.map.seed, firstMap.map.seed);
   assert.deepEqual(repeatMap.map.path, firstMap.map.path);
 });
+
+test('装备的额外步数和警戒减免会进入地图', () => {
+  const model = createDungeonRun({ seed: 303 });
+  model.start();
+  model.setRunBonuses({ steps: 2, securityGuard: 1 });
+  const explore = model.beginFloor(1);
+  assert.equal(explore.maxTime, 18);
+  assert.equal(explore.time, 18);
+  const moved = model.mapMove('up');
+  assert.equal(moved.ok, true);
+  assert.equal(explore.security, 0);
+});

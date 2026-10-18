@@ -1,6 +1,9 @@
 import {createEncounterDirector,escapeHtml as esc} from './encounters.js';
 import {createPreparationDirector} from './preparation.js';
 import {visualArt} from './art.js';
+import {MAX_ROUNDS,STANCE_META,STANCE_ORDER,advanceRound,applyStance,createTrial,stanceAvailability,trialEnding} from './judgment-rules.js';
+import {installPreviewJudgmentBridge,offlineJudgment,requestJudgment} from './judgment-ai.js';
+installPreviewJudgmentBridge();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const content = $('#content');
@@ -14,6 +17,7 @@ const state = {
   mask: 0, arsenalTab: 'relic', equipped: new Set(['moon']), command: 'skills', skill: 0,
   hp: 345, sp: fixture === 'low-sp' ? 4 : 217, enemyHp: 312,
   turn: 4, stagger: 0, busy: false, finished: false, turnPhase: 'player', log: '轮到你了。先看意图，再决定这一回合。',
+  judgmentBattle: false, judgment: null,
 };
 const scrolls = new Map();
 const masks = [
@@ -79,11 +83,16 @@ function home() {
       <section class="mission"><span class="slash-label">${preparation.settings.enabled?'影时间进行中':'战场暂未启用'}</span><h2>${journey.ended?'带着回声，回来了。':'继续向上。'}</h2><p>${journey.ended?`这一次，你抵达了第 ${journey.floor} 层。`:`你停在第 ${journey.floor} 层。下一步，仍由你选择。`}</p>
         <div class="mission-line"><span>当前区层</span><b>第 03 区层</b></div>
         <div class="mission-line"><span>登塔进度</span><b>${journey.floor} / 10 F</b></div>
+        <button class="trial-quick" type="button" data-action="start-judgment"><span>2.0</span>进入天鹅绒审判 · 三幕</button>
         ${mainButton(journey.ended?'查看本次行程':'继续登塔','open-tower',journey.ended?'回望走过的路':'回到当前层，查看下一条路线')}
         <button class="text-button" data-action="start-battle">查看当前遭遇战</button>
         <div class="mini-prep">${icon('mask')}<span>出战面具 <b>${esc(masks[state.mask].name)}</b></span><button class="text-button" data-action="open-persona">调整</button></div>
         <div class="status-ribbon"><span>HP <b>${state.hp}</b> / 390</span><span>SP <b>${state.sp}</b> / 260</span><span>遗物 <b>${state.equipped.size}</b> 件</span></div>
-      </section></div>`;
+      </section></div>
+    <section class="trial-banner">
+      <div><h2><span class="trial-mode">2.0</span>命运在等你开口。</h2><p>吾即是汝，汝即是吾。命运只是替你把这句话说完。三幕审判：面具、雾、时间。你只能认领、反叛或夺取；每一次回答都会留在天鹅绒的牌面上。</p></div>
+      <button class="trial-go" type="button" data-action="start-judgment"><span>进入天鹅绒审判<small>三幕 · 馆长主持 · 可离线</small></span>${icon('arrow')}</button>
+    </section>`;
 }
 function figure() { return visualArt('hero','<div class="figure"><i class="head"></i><i class="coat"></i><i class="eye"></i><i class="cut"></i></div>'); }
 function tower() {
@@ -121,6 +130,7 @@ function commandCost() { return state.command === 'skills' ? masks[state.mask].s
 function commandName() { return state.command === 'skills' ? masks[state.mask].skills[state.skill][0] : state.command === 'allout' ? '总攻击' : commands.find(c => c[0] === state.command)[1]; }
 function combat() {
   if (state.finished) return flows.victory();
+  if (state.judgmentBattle) return judgmentCombat();
   const m = masks[state.mask];
   const descriptions = { basic:'普通攻击 · 0 SP。选择后再执行，避免误触。', defend:'防御 · 稳住这一回合，迎接敌人的下一击。', insight:'洞察 · 2 SP。查看敌人的意图与弱点情报。', allout:'总攻击 · 20 SP。抓住失衡窗口，展开攻势。' };
   const enemyTurn = state.turnPhase === 'enemy';
@@ -146,6 +156,237 @@ function combat() {
       <p class="busy-text">${state.busy?(enemyTurn?'敌方出手，准备承受这一击。':'等待行动结束，避免重复出手。'):`${commandCost()} SP · 选好行动后执行`}</p>
     </section><p class="battle-log" role="status" aria-live="polite">${state.log}</p></div>`;
 }
+
+let judgmentRun = 0;
+
+function createJudgmentTrial() {
+  const m = masks[state.mask];
+  const attribute = m.attr === '借来的' ? '知识' : m.attr;
+  return createTrial({
+    hp: state.hp,
+    sp: state.sp,
+    maxHp: 390,
+    maxSp: 260,
+    persona: {
+      name: m.name,
+      attribute,
+      attributes: { 知识: 4, 勇气: 3, 灵巧: 2, 体贴: 5, 魅力: 3 },
+      memory: '你把自己的名字写得很小，小到连影子都要替你签。',
+    },
+  });
+}
+
+function judgmentModeLabel(mode) {
+  if (mode === 'offline') return '馆长的旧牌';
+  if (mode === 'preview') return '馆长 · 演示回声';
+  return '馆长亲临';
+}
+
+function judgmentPanel() {
+  const j = state.judgment;
+  const trial = j.trial;
+  if (j.result) return judgmentResultPanel();
+  const actLabel = j.accusation?.intent?.label ?? ['第一幕 · 面具', '第二幕 · 雾', '终幕 · 时间'][trial.round - 1];
+  const head = `<div class="judgment-panel-head"><div><span>审判 / TRIAL</span><b>${esc(actLabel)}</b></div><span class="judgment-ai ${esc(j.aiMode)}">${esc(judgmentModeLabel(j.aiMode))}</span></div>`;
+  const gauges = `<div class="judgment-gauges"><span class="judgment-gauge verdict">执念 <b>${trial.verdict}</b>/${trial.maxVerdict}</span><span class="judgment-gauge doubt">动摇 <b>${trial.doubt}</b>/${trial.maxDoubt}</span><span class="judgment-gauge">共鸣 <b>${trial.resonance}</b>/${trial.maxResonance}</span></div>`;
+  if (j.loading || !j.accusation) {
+    return `${head}${gauges}<div class="judgment-loading" role="status"><span>馆长 · 正在洗牌</span><p>${esc(j.statusText)}</p><i></i></div>`;
+  }
+  const accusation = j.accusation;
+  const responses = STANCE_ORDER.map(stance => {
+    const meta = STANCE_META[stance];
+    const response = accusation.responses.find(item => item.stance === stance);
+    const gate = stanceAvailability(trial)[stance];
+    const disabled = state.busy || !gate.enabled;
+    return `<button class="judgment-action ${stance}" type="button" data-judgment-stance="${stance}" ${disabled ? 'disabled' : ''}>
+      <span class="j-stance"><b>${meta.label}</b><small>${meta.en}</small></span>
+      <span class="judgment-action-copy"><b>${esc(response?.line ?? '……')}</b><small>${esc(response?.hint ?? '')}${!gate.enabled && gate.reason ? ` · ${esc(gate.reason)}` : ''}</small>${gate.warning ? `<small class="warn">${esc(gate.warning)}</small>` : ''}</span>
+    </button>`;
+  }).join('');
+  const memory = trial.memory.length
+    ? trial.memory.slice(-2).map(entry => `<div><b>${esc(STANCE_META[entry.stance].label)}</b> ${esc(entry.echo)}</div>`).join('')
+    : '<span>牌面还是空的。你的第一句话，会决定下一张牌的花色。</span>';
+  return `${head}${gauges}<blockquote class="judgment-quote" tabindex="-1">${esc(accusation.accusation.text)}</blockquote><p class="judgment-evidence"><b>它看见</b>${esc(accusation.accusation.evidence)}</p><div class="judgment-actions">${responses}</div><div class="judgment-memory"><b>牌面 / MEMORY</b>${memory}</div>`;
+}
+
+function judgmentResultPanel() {
+  const j = state.judgment;
+  const result = j.result;
+  const ending = result.ending;
+  const memory = j.trial.memory.map(entry => `<div><b>${esc(STANCE_META[entry.stance].label)} · 第 ${entry.round} 句</b> ${esc(entry.echo)}</div>`).join('');
+  return `<div class="judgment-result ${esc(ending.id)}">
+    <span class="judgment-result-stamp">${esc(ending.kicker)}</span>
+    <h3>${esc(ending.title)}</h3>
+    <p>${esc(ending.copy)}</p>
+    <div class="judgment-result-memory">${memory}</div>
+    <div class="judgment-result-actions"><button class="main-button" type="button" data-action="judgment-restart"><span>再开一局</span></button><button class="small-button" type="button" data-action="return-after-battle">收起牌面</button></div>
+  </div>`;
+}
+
+function judgmentCombat() {
+  const m = masks[state.mask];
+  const j = state.judgment;
+  const trial = j.trial;
+  const accusation = j.accusation?.accusation;
+  const weak = accusation?.weakTo ?? trial.persona.attribute;
+  const enemyTurn = state.turnPhase === 'enemy';
+  const enemyHp = Math.round(420 * trial.verdict / trial.maxVerdict);
+  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?(enemyTurn?'审判演出中':'行动演出中'):'审判中'}</p></div>${flows.rehearsalRail?.()??''}
+    <div class="combat-poster judgment-poster">
+      <div class="combat-word" aria-hidden="true">TRIAL</div>
+      <div class="combat-hero" aria-hidden="true">${figure()}</div>
+      <div class="combat-orbit" aria-hidden="true"><i></i><b></b></div>
+      <div class="glass-shards" aria-hidden="true">${Array.from({length:9},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
+      <section class="enemy-scene boss-in-combat ${enemyTurn?'enemy-turn':''}" aria-label="审判者状态"><div class="enemy-name"><h1>回声的执念</h1><span>JUDGE</span></div>
+      <div class="enemy-vitals"><span>执念值</span><span><strong>${enemyHp}</strong> / 420</span></div>${meter(enemyHp,420)}
+      <div class="weakness-line"><b>弱点 · ${esc(weak)}</b><span>判词 ${trial.verdict} / ${trial.maxVerdict}</span></div>
+      <div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
+      <div class="enemy-intent">${icon('eye')}<span><b>${j.loading?'馆长正在洗牌':j.result?'审判结束':'命运在等你开口'}</b><small>${j.loading?'帷幕之后，有人在念你的名字。':j.result?'命运已经把这张牌收进袖口。':'认领、反叛或夺取——每一句都会写进下一张牌。'}</small></span></div>
+    </section><section class="command-deck" aria-label="审判指令" aria-busy="${state.busy}">
+      <div class="mask-switcher"><button class="icon-button" data-action="prev-mask" aria-label="上一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button><button data-action="choose-mask" ${state.busy?'disabled':''}><span class="mask-emblem">${icon('mask')}</span><span class="mask-switch-name">${esc(m.name)}<small>${m.attr} · PERSONA</small></span><b aria-hidden="true">${icon('chevrons')}</b></button><button class="icon-button" data-action="next-mask" aria-label="下一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button></div>
+      <div class="judgment-panel">${judgmentPanel()}</div>
+      <div class="player-hud"><div class="player-tag"><b>ME</b><span>LV <strong>12</strong></span></div><div><span>HP <strong>${state.hp}</strong><em>/ 390</em></span>${meter(state.hp,390)}</div><div class="sp"><span>SP <strong>${state.sp}</strong><em>/ 260</em></span>${meter(state.sp,260)}</div></div>
+    </section><p class="battle-log" role="status" aria-live="polite">${state.log}</p></div>`;
+}
+
+async function loadJudgmentTurn() {
+  const j = state.judgment;
+  if (!j) return;
+  const run = ++judgmentRun;
+  const trial = j.trial;
+  const input = {
+    persona: trial.persona,
+    evidence: trial.evidence,
+    round: trial.round,
+    maxRounds: MAX_ROUNDS,
+    memory: trial.memory,
+    trial: { doubt: trial.doubt, resonance: trial.resonance, leverage: trial.leverage, verdict: trial.verdict, hp: trial.hp, sp: trial.sp },
+  };
+  try {
+    const result = await requestJudgment(input, {
+      onStatus: text => {
+        if (run !== judgmentRun || !state.judgment) return;
+        state.judgment.statusText = text;
+        const line = document.querySelector('.judgment-loading p');
+        if (line) line.textContent = text;
+      },
+    });
+    if (run !== judgmentRun || !state.judgment) return;
+    state.judgment.accusation = result;
+    state.judgment.aiMode = result.mode;
+    state.judgment.loading = false;
+    state.log = `第 ${trial.round} 幕：牌面已经翻开。轮到你开口。`;
+    render();
+    document.querySelector('.judgment-quote')?.focus?.({ preventScroll: true });
+  } catch (error) {
+    if (run !== judgmentRun || error?.name === 'AbortError' || !state.judgment) return;
+    state.judgment.accusation = offlineJudgment(input);
+    state.judgment.aiMode = 'offline';
+    state.judgment.loading = false;
+    state.log = '馆长没有回应，旧牌自己翻了过来。';
+    render();
+  }
+}
+
+function startJudgmentBattle() {
+  actionRun++;
+  clearTimeout(enemyTimer);
+  state.judgmentBattle = true;
+  state.fighting = true;
+  state.finished = false;
+  state.busy = false;
+  state.turnPhase = 'player';
+  state.origin = 'battle';
+  state.mask = 0;
+  state.skill = 0;
+  state.hp = 345;
+  state.sp = 217;
+  state.enemyHp = 420;
+  state.stagger = 0;
+  state.turn = 1;
+  state.judgment = {
+    trial: createJudgmentTrial(),
+    accusation: null,
+    loading: true,
+    aiMode: 'preview',
+    statusText: '馆长正在洗牌……',
+    result: null,
+  };
+  state.log = '帷幕拉开。桌上已经摆好了三张牌。';
+  transition('FATE', clickOrigin);
+  render({ focus: true });
+  window.scrollTo(0, 0);
+  void loadJudgmentTurn();
+}
+
+function syncJudgmentPersona() {
+  if (!state.judgment) return;
+  const m = masks[state.mask];
+  state.judgment.trial.persona = {
+    ...state.judgment.trial.persona,
+    name: m.name,
+    attribute: m.attr === '借来的' ? '知识' : m.attr,
+  };
+}
+
+function judgmentAct(stance) {
+  const j = state.judgment;
+  if (!j || j.loading || j.result || state.busy || !j.accusation) return;
+  const gate = stanceAvailability(j.trial)[stance];
+  if (!gate?.enabled) {
+    notify(gate?.reason || '现在还不能这样回应。');
+    return;
+  }
+  const response = j.accusation.responses.find(item => item.stance === stance);
+  const before = j.trial;
+  const outcome = applyStance(j.trial, stance, j.accusation.accusation, response?.line ?? '');
+  if (!outcome.ok) {
+    notify(outcome.reason);
+    return;
+  }
+  const next = outcome.trial;
+  j.trial = next;
+  state.busy = true;
+  state.turnPhase = 'enemy';
+  state.log = `${outcome.result.title} · ${outcome.result.detail}`;
+  render();
+  const weak = outcome.result.weak;
+  const enemyAfter = Math.round(420 * next.verdict / next.maxVerdict);
+  const enemyDamage = stance === 'accept' ? 0 : stance === 'exploit' ? (weak ? 96 : 48) : (weak ? 96 : 64);
+  const kind = stance === 'accept' ? 'guard' : stance === 'refute' ? (weak ? 'critical' : 'slash') : 'insight';
+  const playback = flows.impact(kind, {
+    amount: stance === 'accept' ? Math.max(0, before.hp - next.hp) : enemyDamage,
+    target: stance === 'accept' ? 'player' : undefined,
+    meterTo: stance === 'accept' ? next.hp : enemyAfter,
+  });
+  playback.finished.then(() => {
+    if (state.judgment !== j) return;
+    state.hp = next.hp;
+    state.sp = next.sp;
+    state.enemyHp = enemyAfter;
+    if (weak || stance === 'exploit') state.stagger = Math.min(2, state.stagger + 1);
+    state.busy = false;
+    state.turnPhase = 'player';
+    if (next.status !== 'judging') {
+      j.result = { ...outcome.result, ending: trialEnding(next) };
+      state.log = j.result.ending.title;
+      render();
+      notify(j.result.ending.title);
+      return;
+    }
+    state.turn++;
+    j.trial = advanceRound(next);
+    j.accusation = null;
+    j.loading = true;
+    j.statusText = '馆长在翻下一张牌……';
+    state.log = outcome.result.detail;
+    render();
+    setTimeout(() => {
+      if (state.judgment === j) void loadJudgmentTurn();
+    }, 650);
+  });
+}
+
 function visualStateRail(){
   const states={intent:['大招前摇','HEAVY WIND-UP','下一击将释放重击；把它打入失衡即可打断。'],status:['异常状态','STATUS EFFECTS','回合开始结算中毒、沉静或警戒。'],mask:['面具切换','MASK SHIFT','切换是自由行动；借来的面具拥有独立次数。'],phase:['二形态展开','PHASE 02','第一形态清零后，同一舞台直接进入下一形态。'],support:['同伴援助','SUPPORT','支援从战斗上层进入，不遮挡玩家状态条。'],moon:['月度心魔','MOON SHADOW','月相改变弱点与词缀，战场进入本月专属状态。'],abyss:['深渊规则','ABYSS RING','本周规则会改变一整场战斗的取舍。'],finale:['伪神终局','FINAL BOSS','三条血与终局演出在同一战场系统内收束。']};
   const current=states[visualStateKey]??states.intent;
@@ -195,6 +436,8 @@ addEventListener('hashchange', () => {
 });
 function startBattle(origin = state.room,options={}) {
   actionRun++;clearTimeout(enemyTimer);
+  state.judgmentBattle = false;
+  state.judgment = null;
   flows.battleStarted(options);
   state.origin = origin;
   state.fighting = true;
@@ -221,6 +464,8 @@ function returnFromBattle() {
   state.turnPhase='player';
   state.fighting=false;
   state.finished=false;
+  state.judgmentBattle=false;
+  state.judgment=null;
   state.room=state.origin;
   history.replaceState(null,'',`#${state.room}`);
   transition(state.room==='tower'?'ASCEND':'SHADOW',clickOrigin);
@@ -289,7 +534,7 @@ function execute(options={}) {
     },reduced.matches?0:220);
   });
 }
-function goRoom(room){actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
+function goRoom(room){actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.judgmentBattle=false;state.judgment=null;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
 const flows=createEncounterDirector({state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle});
 const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom});
 function buttonFeedback(control){
@@ -314,13 +559,14 @@ document.addEventListener('click',event=>{
   buttonFeedback(control);
   const box=control.getBoundingClientRect();
   clickOrigin={x:box.left+box.width/2,y:box.top+box.height/2};
+  if(control.dataset.judgmentStance){judgmentAct(control.dataset.judgmentStance);return;}
   if(control.dataset.flow){flows.act(control.dataset.flow);return;}
   if(control.dataset.tower){flows.towerAct(control.dataset.tower);return;}
   if(control.dataset.prep){preparation.act(control.dataset.prep);return;}
   if(control.dataset.visualState){location.href=`?view=combat&visual=states&state=${encodeURIComponent(control.dataset.visualState)}`;return;}
   if(control.matches('.room-nav a')&&state.fighting){event.preventDefault();return;}
   if(control.dataset.node){state.selectedNode=control.dataset.node;render();$(`[data-node="${state.selectedNode}"]`)?.focus({preventScroll:true});return;}
-  if(control.dataset.mask!==undefined){state.mask=Number(control.dataset.mask);state.skill=0;if(sheet.open)sheet.close();render();if(!state.fighting)$(`[data-mask="${state.mask}"]`)?.focus({preventScroll:true});return;}
+  if(control.dataset.mask!==undefined){state.mask=Number(control.dataset.mask);state.skill=0;syncJudgmentPersona();if(sheet.open)sheet.close();render();if(!state.fighting)$(`[data-mask="${state.mask}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.arsenalTab){state.arsenalTab=control.dataset.arsenalTab;render();$(`[data-arsenal-tab="${state.arsenalTab}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.skill!==undefined){if(state.busy)return;state.skill=Number(control.dataset.skill);render();$(`[data-skill="${state.skill}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.command){if(state.busy)return;state.command=control.dataset.command;render();$(`[data-command="${state.command}"]`)?.focus({preventScroll:true});return;}
@@ -334,6 +580,8 @@ document.addEventListener('click',event=>{
   if(action==='open-tower'){if(!preparation.settings.enabled){preparation.act('settings');return;}if(!flows.towerActive){flows.open('tower-flow');return;}navigate('tower');}
   else if(action==='open-persona')navigate('persona');
   else if(action==='awaken-persona')preparation.act('create');
+  else if(action==='start-judgment')startJudgmentBattle();
+  else if(action==='judgment-restart')startJudgmentBattle();
   else if(action==='start-battle')startBattle('battle');
   else if(action==='enter-node'){
     if(state.selectedNode==='mob'){scrolls.set('tower',scrollY);startBattle('tower');}
@@ -343,7 +591,7 @@ document.addEventListener('click',event=>{
   else if(action==='confirm-leave'||action==='return-after-battle')returnFromBattle();
   else if(action==='close-sheet')sheet.close();
   else if(action==='prev-mask'||action==='next-mask'){
-    if(state.busy)return;state.mask=(state.mask+(action==='next-mask'?1:-1)+masks.length)%masks.length;state.skill=0;render();$(`[data-action="${action}"]`)?.focus({preventScroll:true});
+    if(state.busy)return;state.mask=(state.mask+(action==='next-mask'?1:-1)+masks.length)%masks.length;state.skill=0;syncJudgmentPersona();render();$(`[data-action="${action}"]`)?.focus({preventScroll:true});
   }
   else if(action==='choose-mask')openSheet('选择出战面具',masks.map((m,i)=>`<button class="skill-row" data-mask="${i}" aria-pressed="${i===state.mask}">${icon('mask')}<span>${esc(m.name)}<small>${m.attr} · ${esc(m.passive)}</small></span>${i===state.mask?icon('check'):''}</button>`).join(''));
   else if(action==='execute')execute();

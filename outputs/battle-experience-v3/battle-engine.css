@@ -331,3 +331,16 @@
     transition: none !important;
   }
 }
+
+@media (max-width: 360px) {
+  .combat-top .party-rail > span {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 68px;
+    max-width: 76px;
+    padding: 4px 5px;
+  }
+
+  .combat-top .party-rail > span b {
+    display: none;
+  }
+}

@@ -1,6 +1,46 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-18 23:08（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-18 23:12（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+
+## 准备交接 · 2026-10-18 23:12 · P5R 图鉴与战斗底盘
+
+这是当前收尾节点。接手者先只读，不要直接继续改；用户下次明确说继续后再动共享文件。
+
+- **现场**：分支 `codex/p5r-compendium-data`，业务 HEAD `be78038`。最近提交依次为：
+  - `cbe8ea1 feat(preview): 接入P5R面具图鉴数据与中文技能名`
+  - `b632ec9 docs(state): 记录P5R图鉴数据接入与验证`
+  - `3a9bced feat(preview): 将P5R目录接入战斗与弱点发现`
+  - `cc4968a feat(preview): 补齐P5蓄力即死复活与技能映射`
+  - `be78038 docs(state): 补记P5战斗补丁提交`
+  本条交接记录会再产生一个本地状态提交。**未 Push、未部署**。当前无监听中的 5187 预览服务。
+- **工作区遗留**：`ios/App/Podfile` 有接手前已有的未提交修改；`.cache/`、`.impeccable/`、`.rivet-config.json`、`outputs/` 下的旧 demo、备份 APK/AAB 和恢复图均为接手前遗留。不要 stash/reset/restore/clean，也不要夹带。
+- **范围**：只改 `outputs/battle-experience-v3/` demo 与 `scripts/import-p5r-compendium.mjs`。正式 `src/`、后端、存档、路由、生产环境均未改。
+- **数据已完成**：
+  - 232 Persona、525 技能、273 阿卡纳组合、24 特殊融合、9 稀有 Persona、13 DLC 分组 / 25 DLC Persona、23 Confidant 限定已导入。
+  - P5R 等级、力/魔/耐/速/运、十项抗性和技能学习等级为数据字段；HP/SP、伤害数值、技能威力是 demo 自研兼容层。
+  - 中文 Persona 名与中文技能名已接入；232 个 Persona 的 1,614 条界面技能显示全部中文。
+  - 来源：P5R Fusion Planner `d23ca126…`（Apache-2.0）、megaten-fusion-tool `0b207612…`（Unlicense）。Wiki 未声明开放许可，仅用短展示名；详见 `outputs/battle-experience-v3/P5R-COMPENDIUM-REPORT.txt` 与 `P5R-DATA-NOTICE.txt`。
+- **战斗已完成**：
+  - `p5r-battle-adapter.js` 可把全部 232 个 Persona 转成战斗单位。
+  - `p5-combat-lab` 有 232 个主战 Persona 选项；弱点初始未知，攻击后揭示，洞察可主动发现；支持弱/耐/无/吸/反、1 MORE、倒地、HOLD UP、总攻击、BATON PASS、换面具消耗回合、枪、防御、基础治疗/支援/异常、蓄力/专心、即死、复活。
+  - 交涉收服从真实 P5R 目录取 Persona；主蓝色 Demo 已改成弱点“未发现 → 命中后已发现”。
+  - P3 爬塔节点已携带 P5 遭遇规格（等级、弱点、HP、收服目标），但尚未把主蓝色战斗 UI/`execute()` 接到新引擎。
+- **已验证（本轮真实结果）**：
+  - demo Node 测试 **53/53** 通过。
+  - 项目 `npm test -- --runInBand`：**45 文件 / 286 项**通过。
+  - `npm run typecheck` 通过；`node --check` 与 `git diff --check` 通过。
+  - 真实 Chrome：天鹅绒 232 卡；战斗台 232 个 Persona 选项、皮克希吉欧触发弱点和 1 MORE；1440×900、390×844 无 JS 异常、无横向溢出；主蓝色 Demo 弱点从未发现变为已发现。
+- **明确未完成 / 不要吹成完整 P5R**：
+  - 主蓝色 `app.js` 的 `execute()` 仍是旧演示结算；正式战斗面板、队伍回合、换面具和塔内 mob/Boss 还没有全部走 `P5Battle`。
+  - 完整技能效果库、状态持续回合、全套 Technical、社群 Baton Pass 加成、Showtime、敌人意图、多阶段 Boss、完整 P3 日历/社群/塔 run 仍未完成。
+  - `p5-combat-lab` 只是当前可验证的战斗规则入口，不是最终 UI。
+- **下一主线（按优先级）**：
+  1. 做 `app.js` ↔ `P5Battle` 的主蓝色战斗 bridge，保留现有视觉，同步队伍/回合/HP/SP/弱点/行动。
+  2. 让 `tower-flow` 的 mob/Boss 节点真正创建并使用该 bridge，再串 HOLD UP、交涉、总攻击、战斗回执。
+  3. 补状态持续、完整 Technical、技能效果和社群 Baton Pass 加成，再做 Showtime、Boss 阶段。
+  4. 最后补 P3 日历/社群/塔经济与正式 UI；不要另起孤立实验台。
+- **怎么起**：`cd E:\MASKARIA\outputs\battle-experience-v3; node serve.mjs` → `http://127.0.0.1:5187/`（蓝色 Demo）、`/p5-combat-lab.html`（战斗实验台）、`/p5-velvet-lab.html`（天鹅绒监狱）。
+- **接手铁律**：先读本文件和项目 AGENTS.md，再核 Git、测试现场与未跟踪遗留；当前只读等待用户明确继续。未 Push，用户验收/批准前不要推送或部署。
 
 ## 当前续办入口 · 2026-10-18 23:08 · P5R 目录接入战斗与弱点发现
 

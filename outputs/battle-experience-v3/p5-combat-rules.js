@@ -269,7 +269,7 @@ export class P5Battle {
         type: 'skill',
         id: item.id,
         label: item.name,
-        detail: `${elementLabel(item.element)} · ${item.target === 'ally' ? '我方' : item.target === 'allAllies' ? '全体我方' : item.target === 'allEnemies' ? '全体敌人' : '敌方'}${item.status ? ` · ${STATUS[item.status]?.label ?? item.status}` : ''}`,
+        detail: `${elementLabel(item.element)} · ${item.target === 'self' ? '自身' : item.target === 'ally' ? '我方' : item.target === 'allAllies' ? '全体我方' : item.target === 'allEnemies' ? '全体敌人' : '敌方'}${item.status ? ` · ${STATUS[item.status]?.label ?? item.status}` : ''}`,
         cost: item.sp,
         disabled: actor.sp < item.sp
           || (
@@ -472,7 +472,10 @@ export class P5Battle {
         : [this.aliveParty.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]];
       for (const target of targets) {
         if (!target) continue;
-        const healed = Math.min(target.maxHp - target.hp, item.power);
+        const healed = Math.min(
+          target.maxHp - target.hp,
+          Math.round(item.power * (1 + (actor.healBonus ?? 0))),
+        );
         target.hp += healed;
         if (item.cure) target.status = null;
         this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 回复 ${healed} HP${item.cure ? '，异常状态解除' : ''}。`);
@@ -525,20 +528,30 @@ export class P5Battle {
       target.status
       && STATUS[target.status]?.technicalWith?.includes(item.element),
     );
-    const crit = !item.ignoreAffinity && roll(this.rng, (item.crit ?? 0.08) + (actor.critBonus ?? 0));
+    const crit = !item.ignoreAffinity && roll(
+      this.rng,
+      (item.crit ?? 0.08) + (actor.critBonus ?? 0) + (actor.skillCrit?.[item.id] ?? 0),
+    );
     const stat = (item.element === 'phys' || item.element === 'gun'
       ? actor.strength ?? 5
       : actor.magic ?? 5) + (actor.attackBonus ?? 0);
     const attackFactor = 1 + Math.max(0, stat - 5) * 0.03;
     const defenseFactor = 1 - Math.min(0.45, (target.defense ?? 0) * 0.02);
-    let mult = affinity === 'weak' ? 1.25 : affinity === 'resist' ? 0.5 : 1;
+    let mult = affinity === 'weak' ? 1.25 + (actor.weakBonus ?? 0) : affinity === 'resist' ? 0.5 : 1;
     if (technical) mult *= 1.5;
     if (crit) mult *= 1.5;
     if (this.batonBoost > 0) mult *= 1 + this.batonBoost;
     if (actor.attackUp > 1) mult *= actor.attackUp;
     if (target.debuffs?.defense) mult *= 1.25;
     let damage = item.power > 0
-      ? Math.max(1, Math.round(item.power * attackFactor * defenseFactor * mult))
+      ? Math.max(1, Math.round(
+        item.power
+        * (1 + (actor.skillBonus ?? 0))
+        * (actor.skillPower?.[item.id] ?? 1)
+        * attackFactor
+        * defenseFactor
+        * mult,
+      ))
       : 0;
     const labels = [];
     if (affinity === 'weak') labels.push('弱点');
@@ -668,7 +681,7 @@ export class P5Battle {
         const attackElement = enemySkill?.element ?? enemy.element;
         const affinity = affinityOfPersona(persona, attackElement);
         const skillFactor = enemySkill
-          ? Math.max(0.75, Math.min(1.5, (enemySkill.power ?? 24) / 24))
+          ? Math.max(0.75, Math.min(1.3, (enemySkill.power ?? 24) / 24))
           : 1;
         const raw = Math.max(1, Math.round(enemy.attack * skillFactor * (0.9 + this.rng() * 0.2) * (enemy.enraged ? 1.4 : 1)));
           let damage = Math.max(1, Math.round((raw - ((persona?.defense ?? 0) + (target.defenseBonus ?? 0)) * 0.5) * (

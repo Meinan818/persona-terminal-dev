@@ -131,9 +131,20 @@ export function createTowerBattle({
   partyVitals = {},
   equipmentBonuses = {},
   equipmentEffects = {},
+  arsenal = {},
+  difficulty = 'normal',
 } = {}) {
   const enemies = [primaryEnemySpec({ encounter, floor, boss })];
   if (!boss) enemies.push(secondaryEnemySpec({ encounter, floor }));
+  const tuning = {
+    easy: { hp: 0.8, attack: 0.8 },
+    normal: { hp: 1, attack: 1 },
+    hard: { hp: 1.2, attack: 1.15 },
+  }[difficulty] ?? { hp: 1, attack: 1 };
+  for (const enemy of enemies) {
+    enemy.maxHp = Math.max(1, Math.round(enemy.maxHp * tuning.hp));
+    enemy.attack = Math.max(1, Math.round(enemy.attack * tuning.attack));
+  }
   const validHeroes = heroPersonaIds.filter(id => Boolean(buildBattlePersona(id)));
   const fallbackMask = validHeroes[0] ?? DEFAULT_HERO_MASKS[0];
   const battle = createDefaultBattle({
@@ -151,6 +162,11 @@ export function createTowerBattle({
     hero.defenseBonus = Number(equipmentBonuses.defense) || 0;
     hero.critBonus = Number(equipmentEffects.crit) || 0;
     hero.healBonus = Number(equipmentEffects.heal) || 0;
+    const arsenalEffects = arsenal.effects ?? {};
+    hero.critBonus += Number(arsenalEffects.crit) || 0;
+    hero.healBonus += Number(arsenalEffects.heal) || 0;
+    hero.skillBonus = Number(arsenalEffects.skillBonus) || 0;
+    hero.weakBonus = Number(arsenalEffects.weakBonus) || 0;
     const hpBonus = Number(equipmentBonuses.hp) || 0;
     const spBonus = Number(equipmentBonuses.sp) || 0;
     if (hpBonus) {
@@ -161,8 +177,50 @@ export function createTowerBattle({
       hero.maxSp += spBonus;
       hero.sp = Math.min(hero.maxSp, hero.sp + spBonus);
     }
+    const relicSp = Number(arsenalEffects.sp) || 0;
+    if (relicSp) {
+      hero.maxSp += relicSp;
+      hero.sp = Math.min(hero.maxSp, hero.sp + relicSp);
+    }
     if (Number.isFinite(heroHp)) hero.hp = clamp(Number(heroHp), 1, hero.maxHp);
     if (Number.isFinite(heroSp)) hero.sp = clamp(Number(heroSp), 0, hero.maxSp);
+  }
+  for (const member of battle.party) {
+    const persona = member.activePersona ?? member.masks?.[member.activeMask];
+    const activeId = member.isPlayer ? member.activeMask : persona?.id;
+    const skills = persona?.skills ?? [];
+    if (!activeId || !skills.length) continue;
+    const oath = arsenal.oath;
+    if (oath && oath.maskId === activeId) {
+      const index = Math.max(0, Number(oath.skillIndex) || 0);
+      if (skills[index]) {
+        skills[index] = {
+          id: 'oath-guard',
+          name: '铁壁之誓',
+          element: 'almighty',
+          sourceElement: 'almighty',
+          sp: 0,
+          power: 0,
+          guard: true,
+          target: 'self',
+          description: '以誓约挡下这一回合的伤害。',
+        };
+      }
+    }
+    const myth = arsenal.myth;
+    if (myth && myth.maskId === activeId) {
+      const skill = skills[Math.max(0, Number(myth.skillIndex) || 0)];
+      if (skill) member.skillCrit = { [skill.id]: 0.1 };
+    }
+    const ranks = arsenal.skillRanks?.[activeId];
+    if (Array.isArray(ranks)) {
+      member.skillPower = Object.fromEntries(
+        skills.map((skill, index) => {
+          const rank = Math.max(1, Number(ranks[index]) || 1);
+          return [skill.id, 1 + (rank - 1) * 0.06];
+        }),
+      );
+    }
   }
   for (const member of battle.party) {
     if (member.isPlayer) continue;

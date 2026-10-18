@@ -58,6 +58,43 @@ test('装备的战斗效果会进入主角', () => {
   assert.equal(hero.healBonus, 0.25);
 });
 
+test('武库的遗物、迷思、誓约和技能成长会进入战斗', () => {
+  const battle = towerBattle({
+    activePersonaId: 'pixie',
+    arsenal: {
+      effects: { sp: 8, crit: 0.06, heal: 0.3, weakBonus: 0.1, skillBonus: 0.06 },
+      myth: { maskId: 'pixie', skillIndex: 0 },
+      oath: { maskId: 'pixie', skillIndex: 1 },
+      skillRanks: { pixie: [1, 3] },
+    },
+  });
+  const hero = battle.party.find(member => member.isPlayer);
+  const persona = hero.masks[hero.activeMask];
+  const mythSkill = persona.skills[0];
+  assert.ok(hero.maxSp >= 42);
+  assert.equal(hero.critBonus, 0.06);
+  assert.equal(hero.healBonus, 0.3);
+  assert.equal(hero.weakBonus, 0.1);
+  assert.equal(hero.skillBonus, 0.06);
+  assert.equal(hero.skillCrit?.[mythSkill.id], 0.1);
+  assert.equal(persona.skills[1].id, 'oath-guard');
+  assert.equal(hero.skillPower?.[mythSkill.id], 1);
+  assert.equal(hero.skillPower?.['oath-guard'], 1.12);
+});
+
+test('难度会调整敌人 HP 与攻击', () => {
+  const normal = towerBattle();
+  const easy = towerBattle({ difficulty: 'easy' });
+  const hard = towerBattle({ difficulty: 'hard' });
+  const normalEnemy = normal.enemies[0];
+  const easyEnemy = easy.enemies[0];
+  const hardEnemy = hard.enemies[0];
+  assert.equal(easyEnemy.maxHp, Math.round(normalEnemy.maxHp * 0.8));
+  assert.equal(easyEnemy.attack, Math.round(normalEnemy.attack * 0.8));
+  assert.equal(hardEnemy.maxHp, Math.round(normalEnemy.maxHp * 1.2));
+  assert.equal(hardEnemy.attack, Math.round(normalEnemy.attack * 1.15));
+});
+
 test('普通塔层生成双目标，切换目标不会改变行动者', () => {
   const battle = towerBattle({ floor: 5 });
   const first = buildBattleView(battle, 'primary');

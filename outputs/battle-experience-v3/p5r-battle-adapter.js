@@ -230,7 +230,7 @@ export function buildBattlePersona(personaId, { level } = {}) {
   const [strength, magic, endurance, agility, luck] = persona.sourceStats;
   const built = {
     id: persona.id,
-    name: persona.name,
+    name: override?.name || persona.name,
     nameEn: persona.nameEn,
     arcana: persona.arcana,
     level: currentLevel,

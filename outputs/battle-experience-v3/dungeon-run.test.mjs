@@ -286,8 +286,8 @@ test('房间地图从第一层开始，步数与警戒进入 run', () => {
   const explore = model.beginFloor(1);
   assert.ok(explore);
   assert.equal(model.journey.floor, 1);
-  assert.equal(model.journey.timeLeft, 16);
-  assert.equal(model.journey.timeMax, 16);
+  assert.equal(model.journey.timeLeft, 20);
+  assert.equal(model.journey.timeMax, 20);
   assert.equal(model.journey.map.width, 5);
 });
 
@@ -323,7 +323,7 @@ test('走到出口会进入下一层，并重置本层步数', () => {
   explore.time = 3;
   assert.equal(model.mapAct('leave-floor').ok, true);
   assert.equal(model.journey.floor, 2);
-  assert.equal(model.journey.timeLeft, 16);
+  assert.equal(model.journey.timeLeft, 20);
   assert.ok(model.journey.map);
 });
 
@@ -368,8 +368,8 @@ test('装备的额外步数和警戒减免会进入地图', () => {
   model.start();
   model.setRunBonuses({ steps: 2, securityGuard: 1 });
   const explore = model.beginFloor(1);
-  assert.equal(explore.maxTime, 18);
-  assert.equal(explore.time, 18);
+  assert.equal(explore.maxTime, 22);
+  assert.equal(explore.time, 22);
   const moved = model.mapMove('up');
   assert.equal(moved.ok, true);
   assert.equal(explore.security, 0);

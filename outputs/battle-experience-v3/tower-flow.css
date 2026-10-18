@@ -397,3 +397,9 @@ button.map-cell:active{translate:0 1px}
   .vr-side{display:grid;grid-template-columns:1fr 1fr;gap:10px}.vr-side blockquote{grid-column:1/-1}
   .vr-slot{aspect-ratio:1/1}.vr-slot b{font-size:16px}
 }
+.persona-stats{display:flex;flex-wrap:wrap;gap:8px 14px;margin:12px 0 4px;color:#c5eaff;font-size:11px}
+.persona-stats b{color:#fff}
+.arsenal-wallet{display:flex;flex-wrap:wrap;gap:10px 18px;margin:10px 0 18px;padding:12px 14px;background:#08215ac9;color:#cfefff;font-size:11px}
+.arsenal-wallet b{color:#fff}
+.vr-panel-inline{padding:16px;background:#08215ac9;border-left:2px solid #ffd84a}
+.vr-panel-inline .effect-receipt{margin:0 0 12px}

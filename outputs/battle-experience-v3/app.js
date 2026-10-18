@@ -16,7 +16,9 @@ import {
 } from './p5-battle-bridge.js';
 import { buildBattlePersona, ELEMENTS, setPersonaOverride } from './p5-combat-rules.js';
 import { clearSignatureFx, playAllOut, playStagger } from './p3-signature-fx.js';
-import { EQUIPMENT, equipmentBonuses, equipmentEffects } from './equipment.js';
+import { EQUIPMENT, equipmentBonuses, equipmentEffects, equipItem, unequipItem } from './equipment.js';
+import { inventoryEntries, equipmentSummary, slotLabel, useInventoryItem, sellInventoryItem, upgradeEquipment } from './inventory.js';
+import { arsenalEffects, relicList, RELICS, CHAINS } from './arsenal-effects.js';
 import { xpNeeded } from './persona-progress.js';
 import { createNpcTrust } from './npcs.js';
 installPreviewNegotiationBridge();
@@ -30,7 +32,8 @@ const visualStateKey = new URLSearchParams(location.search).get('state') || 'int
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const state = {
   room: 'battle', fighting: false, origin: 'battle', selectedNode: 'mob',
-  mask: 0, arsenalTab: 'relic', equipped: new Set(['moon']), command: 'skills', skill: 0,
+  mask: 0, arsenalTab: 'gear', equipped: new Set(['moon']), command: 'skills', skill: 0,
+  relicDisposed: new Set(), chain: null, myth: null, oath: null, personaGrowth: {},
   hp: 52, sp: fixture === 'low-sp' ? 4 : 34, heroMaxHp: 52, heroMaxSp: 34,
   enemyHp: 312, enemyMaxHp: 420,
   turn: 4, stagger: 0, busy: false, finished: false, turnPhase: 'player', log: '轮到你了。先看意图，再决定这一回合。',
@@ -136,6 +139,13 @@ function persistP5State() {
       equipment: state.equipment,
       ownedEquipment: state.ownedEquipment,
       equipmentLevels: state.equipmentLevels,
+      relics: [...state.equipped],
+      relicDisposed: [...state.relicDisposed],
+      chain: state.chain,
+      myth: state.myth,
+      oath: state.oath,
+      personaGrowth: state.personaGrowth,
+      difficulty: state.difficulty,
       personaXp: state.personaXp,
       towerStratum: state.towerStratum,
       npcTrust: state.npcTrust,
@@ -181,6 +191,20 @@ function loadP5State() {
           .map(([id, level]) => [id, Math.max(0, Math.min(5, Number(level)))]),
       );
     }
+    if (Array.isArray(saved.relics)) {
+      state.equipped = new Set(saved.relics.filter(id => Boolean(RELICS[id])).slice(0, 2));
+    }
+    if (Array.isArray(saved.relicDisposed)) {
+      state.relicDisposed = new Set(saved.relicDisposed.filter(id => Boolean(RELICS[id])));
+      for (const id of state.relicDisposed) state.equipped.delete(id);
+    }
+    state.chain = Number.isInteger(saved.chain) && CHAINS[saved.chain] ? saved.chain : null;
+    state.myth = saved.myth && typeof saved.myth === 'object' ? { ...saved.myth } : null;
+    state.oath = saved.oath && typeof saved.oath === 'object' ? { ...saved.oath } : null;
+    if (saved.personaGrowth && typeof saved.personaGrowth === 'object') {
+      state.personaGrowth = { ...saved.personaGrowth };
+    }
+    if (['easy', 'normal', 'hard'].includes(saved.difficulty)) state.difficulty = saved.difficulty;
     if (saved.personaXp && typeof saved.personaXp === 'object') {
       state.personaXp = Object.fromEntries(
         Object.entries(saved.personaXp)
@@ -369,13 +393,13 @@ function home() {
         <div class="mission-line"><span>当前区段</span><b>第 ${Math.max(1, Math.ceil((journey.floor || 1) / 10))} 区段</b></div>
         <div class="mission-line"><span>登塔进度</span><b>${journey.floor} / ${journey.maxFloor ?? 100} F</b></div>
         ${mainButton(journey.ended?'查看本次行程':'继续登塔','open-tower',journey.ended?'回望走过的路':'回到当前层，查看下一条路线')}
-        <button class="text-button" data-action="start-battle">进入当前遭遇</button>
+        <button class="text-button" data-action="start-battle">进入训练遭遇</button>
         <div class="mini-prep">${icon('mask')}<span>契约面具 <b>${esc(masks[state.mask].name)}</b></span><button class="text-button" data-action="open-persona">交换</button></div>
-        <div class="status-ribbon"><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span><span>遗物 <b>${state.equipped.size}</b> 件</span></div>
+        <div class="status-ribbon"><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span><span>装备 <b>${Object.values(state.equipment??{}).filter(Boolean).length}</b> / 3</span><span>遗物 <b>${state.equipped.size}</b> / 2</span></div>
       </section></div>
     <section class="trial-banner">
       <div><h2><span class="trial-mode">HOLD UP</span>全部击倒后，影子会开口。</h2><p>弱点和暴击会让影子倒地。全部倒地时，战斗停下：你可以总攻击、交涉，或让它重新站起来。收服的 Persona 会进入面具名录。</p></div>
-      <button class="trial-go" type="button" data-action="start-battle"><span>进入遭遇<small>看弱点 · 找 One More · 触发 HOLD UP</small></span>${icon('arrow')}</button>
+      <button class="trial-go" type="button" data-action="start-battle"><span>进入训练遭遇<small>4F · 不影响塔层进度 · 看弱点 / One More / HOLD UP</small></span>${icon('arrow')}</button>
     </section>`;
 }
 function figure() { return visualArt('hero','<div class="figure"><i class="head"></i><i class="coat"></i><i class="eye"></i><i class="cut"></i></div>'); }
@@ -387,11 +411,25 @@ function persona() {
   const built = buildBattlePersona(m.id);
   const xp = Number(state.personaXp?.[m.id]) || 0;
   const need = xpNeeded(built?.level ?? 1);
+  const skillList = built?.skills?.length
+    ? built.skills.map(skill => ({
+      name: skill.name,
+      sp: skill.sp,
+      detail: `${ELEMENTS[skill.sourceElement]?.label ?? skill.element} · ${skill.target === 'ally' || skill.target === 'allAllies' ? '我方' : skill.target === 'allEnemies' ? '全体敌方' : '敌方'}${skill.guard ? ' · 防御' : ''}`,
+    }))
+    : m.skills.map(skill => ({ name: skill[0], sp: skill[1], detail: skill[2] }));
+  if (state.oath?.maskId === m.id && skillList[state.oath.skillIndex]) {
+    skillList[state.oath.skillIndex] = { name: '铁壁之誓', sp: 0, detail: '防御 · 以大盾挡下本回合伤害' };
+  }
+  const growth = state.personaGrowth?.[m.id];
+  const ranks = Array.isArray(growth?.skillRanks) ? growth.skillRanks : [];
   return `${heading('Persona','THE OTHER SELF','契约仍在。')}
     <div class="mask-tabs" aria-label="选择面具">${masks.map(maskTabButton).join('')}</div>
-    <div class="duo-layout"><div class="mask-display"><div class="mask-art" aria-hidden="true"></div><p>${m.attr} · ${esc(m.passive)}</p></div><section class="persona-info"><h2>${esc(m.name)}</h2><p>当前契约。<span class="persona-exp">Lv.${built?.level ?? 1} · EXP ${xp} / ${need}</span></p>
-    <div class="persona-spec">${icon(attributeMarks[state.mask]?.[0]??'mask')}<span>契约面具</span><strong>${m.attr}</strong><b>${attributeMarks[state.mask]?.[1]??'PERSONA'}</b></div><div class="persona-skills">${m.skills.map((s,i) => `<article class="persona-skill" style="--order:${i}"><div class="persona-skill-mark">${icon(i===0?(attributeMarks[state.mask]?.[0]??'mask'):'star')}</div><div class="persona-skill-copy"><h3>${s[0]}</h3><p>${s[2]}</p></div><strong class="persona-skill-cost">${s[1]}<small>SP</small></strong></article>`).join('')}</div>
-    ${mainButton('返回高塔','open-tower')}${preparation.personaTools()}<p class="info-note">契约会随你进入影时间。</p></section></div>`;
+    <div class="duo-layout"><div class="mask-display"><div class="mask-art" aria-hidden="true"></div><p>${m.attr} · ${esc(m.passive)}</p></div><section class="persona-info"><h2>${esc(built?.name ?? m.name)}</h2><p>当前契约。<span class="persona-exp">Lv.${built?.level ?? 1} · EXP ${xp} / ${need}</span></p>
+    <div class="persona-spec">${icon(attributeMarks[state.mask]?.[0]??'mask')}<span>契约面具</span><strong>${m.attr}</strong><b>${attributeMarks[state.mask]?.[1]??'PERSONA'}</b></div>
+    <div class="persona-stats"><span>HP <b>${built?.maxHp ?? 52}</b></span><span>SP <b>${built?.maxSp ?? 34}</b></span><span>攻 <b>${built?.attack ?? 0}</b></span><span>防 <b>${built?.defense ?? 0}</b></span><span>速 <b>${built?.agility ?? 0}</b></span><span>运 <b>${built?.luck ?? 0}</b></span></div>
+    <div class="persona-skills">${skillList.map((s,i) => `<article class="persona-skill" style="--order:${i}"><div class="persona-skill-mark">${icon(i===0?(attributeMarks[state.mask]?.[0]??'mask'):'star')}</div><div class="persona-skill-copy"><h3>${esc(s.name)}${ranks[i] > 1 ? ` <small>Lv.${ranks[i]}</small>` : ''}</h3><p>${esc(s.detail)}</p></div><strong class="persona-skill-cost">${s.sp}<small>SP</small></strong></article>`).join('')}</div>
+    ${mainButton('返回高塔','open-tower')}${preparation.personaTools()}<p class="info-note">技能成长会提高对应技能的伤害；迷思、誓约与装备会直接进入战斗。</p></section></div>`;
 }
 const arsenalItems = {
   relic:[['moon','月光碎片','半月遗物 · 已有装备可在这里调整。'],['thread','回响之线','残月遗物 · 查看说明后选择携带。']],
@@ -400,10 +438,37 @@ const arsenalItems = {
   chain:[['chain','共鸣链','查看两张面具之间的连接。']],
 };
 function arsenal() {
-  const tabs = [['relic','遗物'],['myth','迷思'],['oath','誓约'],['chain','共鸣链']];
-  return `${heading('武库','ARSENAL','在这里准备好，把注意力留给战斗。')}
-    <div class="subnav arsenal-tabs" aria-label="武库分类">${tabs.map(([id,label],i) => `<button data-arsenal-tab="${id}" aria-pressed="${id === state.arsenalTab}">${icon(['star','eye','shield','mask'][i])}<span>${label}<small>${['RELIC','MYTH','OATH','RESONANCE'][i]}</small></span></button>`).join('')}</div>
-    ${fixture === 'empty'||arsenalItems[state.arsenalTab].length===0 ? `<section class="empty-state">${icon('box')}<h2>这里还很安静。</h2><p>登塔获得的${tabs.find(t=>t[0]===state.arsenalTab)[1]}会收在这里。</p>${mainButton('回到高塔','open-tower')}</section>` : `<div class="arsenal-list">${arsenalItems[state.arsenalTab].map(([id,name,note])=>`<article class="equipment-row"><div class="equipment-glyph">${icon(state.arsenalTab==='relic'?'star':'box')}</div><div><h3>${name}</h3><p>${note}${preparation.itemStatus(id)?` · ${preparation.itemStatus(id)}`:''}</p></div><button class="small-button" data-item="${id}">${state.arsenalTab==='relic'?(state.equipped.has(id)?'已携带':'查看'):'查看'}</button></article>`).join('')}</div><p class="info-note">遗物、迷思、誓约和共鸣链保留各自的操作位置。</p>`}`;
+  const tabs = [['gear','装备'],['relic','遗物'],['myth','迷思'],['oath','誓约'],['chain','共鸣链']];
+  const entries = inventoryEntries(state);
+  const bonuses = equipmentBonuses(state.equipment, state.equipmentLevels);
+  const passive = arsenalEffects(state);
+  const tab = tabs.some(([id]) => id === state.arsenalTab) ? state.arsenalTab : 'gear';
+  const button = (label, action, disabled = false) => `<button class="small-button" data-arsenal="${action}" ${disabled ? 'disabled' : ''}>${label}</button>`;
+  const slots = ['weapon','armor','accessory'].map(slot => {
+    const item = EQUIPMENT[state.equipment?.[slot]];
+    return `<article class="equipment-row"><div class="equipment-glyph">${icon(slot === 'weapon' ? 'sword' : slot === 'armor' ? 'shield' : 'star')}</div><div><h3>${item ? esc(item.name) : `${slotLabel(slot)} · 空`}</h3><p>${item ? esc(equipmentSummary(item, state.equipmentLevels?.[item.id] ?? 0)) : '这个位置还没有装备。'}</p></div>${item ? button('卸下', `unequip:${slot}`) : ''}</article>`;
+  }).join('');
+  const ownedGear = entries.equipment.map(entry => `<article class="equipment-row"><div class="equipment-glyph">${icon('mask')}</div><div><h3>${esc(entry.item.name)} <small>+${entry.level}</small></h3><p>${esc(equipmentSummary(entry.item, entry.level))}</p></div><div class="inventory-actions">${entry.equipped ? '<span class="info-note">装备中</span>' : button('装备', `equip:${entry.item.id}`)}${button(`强化 +${entry.level + 1}`, `upgrade:${entry.item.id}`, entry.level >= 5 || state.money < entry.upgrade.money || (Number(state.materials.enhanceStone) || 0) < entry.upgrade.stones)}</div></article>`).join('');
+  const consumables = entries.consumables.map(entry => `<article class="equipment-row"><div class="equipment-glyph">${icon('box')}</div><div><h3>${esc(entry.item.name)} ×${entry.qty}</h3><p>${esc(entry.item.desc)}</p></div><div class="inventory-actions">${button('使用', `use:${entry.id}`, !['heal','sp'].includes(entry.item.kind))}${button('出售 ×1', `sell:${entry.id}`)}</div></article>`).join('');
+  const materials = entries.materials.map(entry => `<article class="equipment-row"><div class="equipment-glyph">${icon('star')}</div><div><h3>${esc(entry.item.name)} ×${entry.qty}</h3><p>${esc(entry.item.desc)}</p></div>${button('出售 ×1', `sell:${entry.id}`)}</article>`).join('');
+  const relics = relicList(state).map(relic => `<article class="equipment-row"><div class="equipment-glyph">${icon('star')}</div><div><h3>${esc(relic.name)}</h3><p>${esc(relic.desc)} · ${relic.equipped ? '已携带' : '未携带'}</p></div><div class="inventory-actions">${button(relic.equipped ? '卸下' : '携带', `relic:${relic.id}`)}<button class="small-button" data-item="${relic.id}">查看</button></div></article>`).join('');
+  const chains = CHAINS.map((chain, index) => `<article class="equipment-row"><div class="equipment-glyph">${icon('mask')}</div><div><h3>${esc(chain.name)}</h3><p>${esc(chain.pair)} · ${esc(chain.desc)}</p></div>${button(state.chain === index ? '解除' : '连接', `chain:${index}`)}</article>`).join('');
+  const myth = state.myth ? `<div class="effect-receipt">${icon('star')}<span>${esc(masks[state.myth.mask]?.name ?? '')} · ${esc(masks[state.myth.mask]?.skills?.[state.myth.skill]?.[0] ?? '技能')} · 暴击 +10%</span></div>${button('重新镶嵌', 'open:myth')}` : `<p class="info-note">迷思石可以给指定面具的一个技能追加 10% 暴击率。</p>${button('选择镶嵌技能', 'open:myth')}`;
+  const oath = state.oath ? `<div class="effect-receipt">${icon('shield')}<span>${esc(masks[state.oath.mask]?.name ?? '')} · ${esc(masks[state.oath.mask]?.skills?.[state.oath.skill]?.[0] ?? '技能')} → 铁壁之誓</span></div>${button('调整誓约', 'open:oath')}` : `<p class="info-note">誓约会把一个技能替换成“铁壁之誓”，在战斗中可以主动防御。</p>${button('选择誓约', 'open:oath')}`;
+  const body = tab === 'gear'
+    ? `<div class="gear-bonuses"><span>攻击 <b>+${bonuses.attack}</b></span><span>防御 <b>+${bonuses.defense}</b></span><span>HP <b>+${bonuses.hp}</b></span><span>SP <b>+${bonuses.sp}</b></span></div><div class="arsenal-list">${slots}${ownedGear || '<p class="info-note">还没有获得其他装备。</p>'}</div>`
+    : tab === 'relic'
+      ? `<div class="gear-bonuses"><span>遗物位 <b>${state.equipped.size} / 2</b></span><span>技能伤害 <b>+${Math.round(passive.skillBonus * 100)}%</b></span><span>金钱 <b>+${Math.round(passive.money * 100)}%</b></span></div><div class="arsenal-list">${relics}</div>`
+      : tab === 'myth'
+        ? `<div class="vr-panel-inline">${myth}</div>`
+        : tab === 'oath'
+          ? `<div class="vr-panel-inline">${oath}</div>`
+          : `<div class="arsenal-list">${chains}</div>`;
+  const extra = tab === 'gear' ? `<h3 class="source-title">消耗品</h3><div class="arsenal-list">${consumables || '<p class="info-note">背包里还没有消耗品。</p>'}</div><h3 class="source-title">素材</h3><div class="arsenal-list">${materials || '<p class="info-note">还没有素材。</p>'}</div>` : '';
+  return `${heading('武库','ARSENAL','每一件东西都真正进入战斗、经济或探索。')}
+    <div class="subnav arsenal-tabs" aria-label="武库分类">${tabs.map(([id,label],i) => `<button data-arsenal-tab="${id}" aria-pressed="${id === tab}">${icon(['sword','star','eye','shield','mask'][i])}<span>${label}<small>${['GEAR','RELIC','MYTH','OATH','RESONANCE'][i]}</small></span></button>`).join('')}</div>
+    <div class="arsenal-wallet"><span>持有 <b>¥${(Number(state.money) || 0).toLocaleString()}</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp ?? 52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp ?? 34}</span></div>
+    ${body}${extra}<p class="info-note">装备、遗物、迷思、誓约和共鸣链会立即生效。成长技能在 Persona 页提升。</p>`;
 }
 function skillRow(skill, index, selectable = false) {
   const selected = selectable && state.skill === index;
@@ -916,9 +981,13 @@ function startBattle(origin = state.room,options={}) {
   state.battleFloor=Number(options.floor)||4;
   state.battleReceipt=null;
   state.battleWon=false;
-  const gearEffects=equipmentEffects(state.equipment,state.equipmentLevels);
+  const baseGearEffects=equipmentEffects(state.equipment,state.equipmentLevels);
+  const doctorTrust=Math.max(0,Math.min(5,Number(state.npcTrust?.doctor)||0));
+  const gearEffects={...baseGearEffects,heal:baseGearEffects.heal+doctorTrust*0.05};
+  const passive=arsenalEffects(state);
   const ambush=Boolean(options.encounter?.ambush)&&!gearEffects.ambushGuard;
-  const startingHp=ambush?Math.max(1,Math.round(state.hp*0.85)):state.hp;
+  const ambushLoss={easy:0.04,normal:0.08,hard:0.15}[state.difficulty]??0.08;
+  const startingHp=ambush?Math.max(1,Math.round(state.hp*(1-ambushLoss))):state.hp;
   state.battle=createTowerBattle({
     encounter:options.encounter??{},
     floor:state.battleFloor,
@@ -931,6 +1000,15 @@ function startBattle(origin = state.room,options={}) {
     partyVitals:state.partyVitals,
     equipmentBonuses:equipmentBonuses(state.equipment,state.equipmentLevels),
     equipmentEffects:gearEffects,
+    arsenal:{
+      effects:passive,
+      myth:state.myth,
+      oath:state.oath,
+      skillRanks:Object.fromEntries(
+        Object.entries(state.personaGrowth??{}).map(([id,progress])=>[id,progress.skillRanks??[]]),
+      ),
+    },
+    difficulty:state.difficulty,
   });
   state.targetId=state.battle.enemies[0]?.id??'';
   state.battleActionKey='';
@@ -1256,6 +1334,7 @@ function execute(options = {}) {
   });
 }
 function goRoom(room){clearSignatureFx();actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.battle=null;state.battleView=null;state.battleActionKey='';state.battleReceipt=null;state.battleWon=false;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
+loadP5State();
 const flows=createEncounterDirector({
   state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle,persistP5State,
   openAwakening:()=>preparation.act('create'),
@@ -1334,6 +1413,23 @@ document.addEventListener('click',event=>{
   if(control.dataset.node){state.selectedNode=control.dataset.node;render();$(`[data-node="${state.selectedNode}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.mask!==undefined){const nextMask=Number(control.dataset.mask);state.mask=nextMask;state.activePersonaId=masks[nextMask]?.id??state.activePersonaId;state.skill=0;if(sheet.open)sheet.close();render();if(!state.fighting)$(`[data-mask="${state.mask}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.arsenalTab){state.arsenalTab=control.dataset.arsenalTab;render();$(`[data-arsenal-tab="${state.arsenalTab}"]`)?.focus({preventScroll:true});return;}
+  if(control.dataset.arsenal){
+    const [kind,arg]=control.dataset.arsenal.split(':');
+    if(kind==='equip'){const result=equipItem(state.equipment,state.ownedEquipment,arg);if(result.ok){state.equipment=result.equipment;notify(`${result.item.name} 已装备`);}else notify(result.reason);}
+    else if(kind==='unequip'){const result=unequipItem(state.equipment,arg);if(result.ok){state.equipment=result.equipment;notify('装备已卸下');}else notify(result.reason);}
+    else if(kind==='upgrade'){const result=upgradeEquipment(state,arg);notify(result.ok?`${result.label} 强化到 +${result.level}`:result.reason);}
+    else if(kind==='use'){const result=useInventoryItem(state,arg);notify(result.ok?`${result.label} 已使用`:result.reason);}
+    else if(kind==='sell'){const result=sellInventoryItem(state,arg,1);notify(result.ok?`卖出 ${result.label}，+¥${result.gain}`:result.reason);}
+    else if(kind==='relic'){
+      if(state.equipped.has(arg))state.equipped.delete(arg);
+      else if(state.equipped.size<2)state.equipped.add(arg);
+      else{notify('遗物位已满，先卸下一件。');render();return;}
+      notify(state.equipped.has(arg)?'遗物已携带':'遗物已卸下');
+    }
+    else if(kind==='chain'){const index=Number(arg);state.chain=state.chain===index?null:index;notify(state.chain===null?'共鸣链已解除':'共鸣链已连接');}
+    else if(kind==='open'){preparation.item(arg);return;}
+    persistP5State();render({focus:true});return;
+  }
   if(control.dataset.skill!==undefined){if(state.busy)return;state.skill=Number(control.dataset.skill);render();$(`[data-skill="${state.skill}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.command){if(state.busy)return;state.command=control.dataset.command;render();$(`[data-command="${state.command}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.item){
@@ -1376,7 +1472,6 @@ sheet.addEventListener('close',()=>{
 });
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!sheet.open){if(flows.transforming||flows.active||flows.rehearsal){event.preventDefault();flows.close();return;}if(state.fighting){event.preventDefault();leaveBattle();}}});
 document.addEventListener('visibilitychange',()=>document.body.classList.toggle('is-hidden',document.hidden));
-loadP5State();
 state.room=roomFromHash();
 const towerPreview=new URLSearchParams(location.search).get('tower');
 if(towerPreview)state.room='tower';

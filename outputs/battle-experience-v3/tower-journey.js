@@ -28,9 +28,9 @@ export function encounterFor(floor, kind) {
     level,
     weakness,
     weaknessLabel: P5_ELEMENT_LABELS[weakness] ?? weakness,
-    maxHp: kind === 'boss' ? 220 + tier * 80 : 58 + tier * 36 + within * 4,
-    attack: kind === 'boss' ? 30 + tier * 14 : Math.round(10 + tier * 8 + within * 1.5),
-    defense: kind === 'boss' ? 12 + tier * 6 : Math.round(3 + tier * 3 + within * 0.5),
+    maxHp: kind === 'boss' ? 180 + tier * 45 : 42 + tier * 21 + within * 3,
+    attack: kind === 'boss' ? 12 + tier * 3 : Math.round(6 + tier * 2.5 + within * 0.8),
+    defense: kind === 'boss' ? 8 + tier * 3 : Math.round(2 + tier * 2 + within * 0.4),
     recruitPersonaId: recruit?.id ?? null,
   };
 }

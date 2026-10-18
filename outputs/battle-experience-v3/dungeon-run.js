@@ -313,6 +313,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     if (journey.ended) return null;
     if (floor > journey.maxFloor) return null;
     journey.floor = floor;
+    if (floor > 1) journey.security = Math.max(0, journey.security - 15);
     journey.pending = null;
     journey.mapMessage = '';
     journey.timeout = false;
@@ -334,7 +335,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
       seed: floorSeed,
     });
     const explore = createExplorationState(map, {
-      maxTime: (floor <= 10 ? 16 : floor <= 50 ? 14 : 12) + (Number(journey.stepBonus) || 0),
+      maxTime: (floor <= 10 ? 20 : floor <= 50 ? 18 : 16) + (Number(journey.stepBonus) || 0),
       security: journey.security,
       keys: journey.keys,
     });
@@ -352,9 +353,9 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
       ...base,
       name: blockBoss ? `第${Math.ceil(floor / 10)}区段的守层者` : floor >= 10 ? '回声的看门人' : '守层的假面',
       level: base.level + 1,
-      maxHp: Math.round(base.maxHp * (blockBoss ? 1.95 : 1.45)),
-      attack: Math.round(base.attack * (blockBoss ? 1.4 : 1.22)),
-      defense: base.defense + (blockBoss ? 4 : 2),
+      maxHp: Math.round(base.maxHp * (blockBoss ? 1.5 : 1.3)),
+      attack: Math.round(base.attack * (blockBoss ? 1.15 : 1.1)),
+      defense: base.defense + (blockBoss ? 2 : 1),
       blockBoss,
     };
   };

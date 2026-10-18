@@ -1,16 +1,29 @@
 import {escapeHtml as esc} from './encounters.js';
 import {requestAwakening,installPreviewAwakeningBridge} from './persona-ai.js';
 import {buildAwakeningRecord} from './awakening-state.js';
+import {setPersonaOverride} from './p5-combat-rules.js';
 
 export function createPreparationDirector(api) {
   const {state,masks,icon,openSheet,render,notify,arsenalItems} = api;
   const sheet=document.querySelector('#sheet');
   let createStep=0,answers=[null,null,null,null],sources=[],traits='',working=0,createCandidate=null,awakeningController=null,previewAI=false,previewBridgeInstalled=false;
   let pendingName='',pendingDescription='',reshapeTarget=0,growthLevel=3;
-  let disposed=new Set(),socket=null,oath=null,chain=null;
-  const settings={enabled:true,start:state.shadowTime?.start??'20:00',end:state.shadowTime?.end??'07:00',days:[...(state.shadowTime?.days??[5,6,0])],hp:40,scale:100};
+  let disposed=state.relicDisposed instanceof Set?state.relicDisposed:new Set(state.relicDisposed??[]);
+  let socket=state.myth??null,oath=state.oath??null,chain=state.chain??null;
+  const settings={enabled:true,start:state.shadowTime?.start??'20:00',end:state.shadowTime?.end??'07:00',days:[...(state.shadowTime?.days??[5,6,0])],difficulty:state.difficulty??'normal'};
   const dayLabels=['周日','周一','周二','周三','周四','周五','周六'];
-  const growthState=masks.map(()=>({level:3,points:2,skillRanks:[1,1],selectedSkill:0}));
+  function growthOf(maskId=masks[state.mask].id){
+    if(!state.personaGrowth[maskId]){
+      state.personaGrowth[maskId]={level:1,points:3,skillRanks:[],selectedSkill:0};
+    }
+    const progress=state.personaGrowth[maskId];
+    if(!Array.isArray(progress.skillRanks))progress.skillRanks=[];
+    if(!Number.isInteger(progress.selectedSkill))progress.selectedSkill=0;
+    progress.selectedSkill=Math.max(0,Math.min((masks[state.mask]?.skills?.length??2)-1,progress.selectedSkill));
+    const count=masks[state.mask]?.skills?.length??2;
+    while(progress.skillRanks.length<count)progress.skillRanks.push(1);
+    return progress;
+  }
   const questions=[
     ['影时间第一次叫你的名字。',['回答它。','推开那扇门。','先看清周围。','等别人先走。','记住这个声音。']],
     ['有人把一张面具递给你。',['先问它从哪里来。','直接戴上。','翻看面具背面。','递给身边的人。','把它收进怀里。']],
@@ -62,19 +75,19 @@ export function createPreparationDirector(api) {
     open('重塑一张面具',`<p>选择要重塑的属性。技能、SP 消耗和状态条会保留，确认后只替换这张面具的名字与自述。</p><div class="reshape-attrs">${masks.slice(0,5).map((m,i)=>`<button type="button" data-prep="reshape-target:${i}" aria-pressed="${reshapeTarget===i}">${m.attr}</button>`).join('')}</div><div class="before-mask">${icon('mask')}<div><small>当前面具 · ${current.attr}</small><b>${esc(current.name)}</b><span>${esc(current.passive)}</span></div></div><div class="reshape-contract"><span>保留</span><b>技能组 · SP 消耗 · 出战位置</b><span>替换</span><b>名称 · 与你的联系</b></div><form id="reshape-form"><label class="field-label" for="new-mask-name">新的面具名称</label><input id="new-mask-name" name="name" maxlength="20" required value="${esc(pendingName)}" placeholder="给这份力量一个名字"><label class="field-label" for="new-mask-description">它与你的联系</label><textarea id="new-mask-description" name="description" maxlength="160" rows="3" placeholder="写下一句描述">${esc(pendingDescription)}</textarea>${btn('确认新的名字','reshape-preview')}</form>${btn('让面具重新回应','reshape-summon','让面具回应','subtle')}`);
   }
   function showGrowth(level=growthLevel){
-    const m=masks[state.mask],progress=growthState[state.mask];
+    const m=masks[state.mask],progress=growthOf();
     growthLevel=Math.max(1,Math.min(5,Number(level)||progress.level));
     const unlocked=growthLevel<=progress.level;
     const selectedSkill=progress.selectedSkill;
     const skill=m.skills[selectedSkill];
     const rank=progress.skillRanks[selectedSkill];
     const nextLevel=progress.level+1;
-    const upgradeButton=unlocked&&progress.points>0?btn('模拟提升技能','growth-upgrade',`消耗 1 枚成长印记 · 当前 ${progress.points}`):progress.points<=0?'<p class="growth-hint">成长印记已用尽，不会自动补充。</p>':'';
+    const upgradeButton=unlocked&&progress.points>0?btn('提升技能','growth-upgrade',`消耗 1 枚成长印记 · 当前 ${progress.points}`):progress.points<=0?'<p class="growth-hint">成长印记已用尽。每次 Persona 升级会获得新的印记。</p>':'';
     const unlockButton=!unlocked&&growthLevel===nextLevel&&progress.points>0?btn(`解锁 LV ${growthLevel}`,'growth-unlock','消耗 1 枚成长印记'):'';
     open('力量如何生长',`<div class="growth-heading"><p class="growth-name">${esc(m.name)} <span>${m.attr}</span></p><b>成长印记 <strong>${progress.points}</strong></b></div><div class="growth-track" aria-label="技能解锁等级">${[1,2,3,4,5].map(n=>`<button type="button" data-prep="growth:${n}" class="${n<=progress.level?'unlocked':'locked'}" aria-pressed="${n===growthLevel}">${n<=progress.level?icon('star'):icon('shield')}<span>LV ${n}</span><small>${growthNames[n-1]}</small></button>`).join('')}</div><div class="growth-detail"><div class="growth-status"><b>${unlocked?'已解锁':'尚未解锁'}</b><span>${unlocked?`面具等级 ${progress.level} · 可继续打磨`:`需要先达到 LV ${growthLevel}`}</span></div><h3>${unlocked?esc(skill[0]):`LV ${growthLevel} · 新的回应`}</h3><p>${unlocked?esc(skill[2]):`对应属性达到 ${growthLevel} 级后解锁新的技能节点。`}</p><div class="mastery-bar"><i style="width:${unlocked?Math.min(100,46+rank*18):0}%"></i></div><p>技能熟练度 · ${unlocked?`${rank} / 3 · 可提升`:'等待解锁'}</p></div>${unlocked?`<div class="growth-skill-list" aria-label="技能选择">${m.skills.map((s,i)=>`<button type="button" data-prep="growth-skill:${i}" class="${selectedSkill===i?'selected':''}" aria-pressed="${selectedSkill===i}"><span>${i+1}</span><b>${esc(s[0])}</b><small>等级 ${progress.skillRanks[i]} · ${esc(s[2])}</small></button>`).join('')}</div>${upgradeButton}`:unlockButton}${btn('恢复成长','growth-reset','','subtle')}`);
   }
   function showSettings(){
-    open('战场设置',`<p>影时间，与自己的节奏对齐。</p><form id="battle-settings-form"><label class="check-setting"><span>启用逆影战场</span><input name="enabled" type="checkbox" ${settings.enabled?'checked':''}></label><div class="time-fields"><label class="field-label">影时间开始<input name="start" type="time" required value="${settings.start}"></label><label class="field-label">影时间结束<input name="end" type="time" required value="${settings.end}"></label></div><h3 class="source-title">影时间日期 <small>可多选</small></h3><div class="shadow-days">${dayLabels.map((label,id)=>`<button type="button" data-prep="shadow-day:${id}" aria-pressed="${settings.days.includes(id)}">${label}</button>`).join('')}</div><details class="advanced-settings"><summary>战斗参数</summary><label class="field-label">基础 HP<input name="hp" type="number" min="1" max="9999" required value="${settings.hp}"></label><label class="field-label">攻击倍率（%）<input name="scale" type="number" min="1" max="1000" required value="${settings.scale}"></label></details><div class="prep-actions">${btn('恢复默认','settings-reset','','subtle')}${btn('保存设置','settings-save')}</div></form>`);
+    open('战场设置',`<p>影时间，与自己的节奏对齐。</p><form id="battle-settings-form"><label class="check-setting"><span>启用逆影战场</span><input name="enabled" type="checkbox" ${settings.enabled?'checked':''}></label><div class="time-fields"><label class="field-label">影时间开始<input name="start" type="time" required value="${settings.start}"></label><label class="field-label">影时间结束<input name="end" type="time" required value="${settings.end}"></label></div><h3 class="source-title">影时间日期 <small>可多选</small></h3><div class="shadow-days">${dayLabels.map((label,id)=>`<button type="button" data-prep="shadow-day:${id}" aria-pressed="${settings.days.includes(id)}">${label}</button>`).join('')}</div><h3 class="source-title">战斗难度 <small>影响敌人 HP 与攻击</small></h3><div class="source-options">${[['easy','轻松'],['normal','标准'],['hard','挑战']].map(([id,label])=>`<button type="button" data-prep="difficulty:${id}" aria-pressed="${settings.difficulty===id}">${label}</button>`).join('')}</div><div class="prep-actions">${btn('恢复默认','settings-reset','','subtle')}${btn('保存设置','settings-save')}</div></form>`);
     document.querySelector('.settings-button').setAttribute('aria-expanded','true');sheet.classList.add('settings-sheet');
   }
   function item(id){
@@ -126,7 +139,7 @@ export function createPreparationDirector(api) {
         traits,
         sources,
       });
-      growthLevel=growthState[state.mask].level;
+      growthLevel=growthOf().level;
       sheet.close();
       api.persistP5State?.();
       api.goRoom('tower');
@@ -146,33 +159,48 @@ export function createPreparationDirector(api) {
     if(kind==='reshape-edit'){showReshape();return;}
     if(kind==='reshape-summon'){open('新的名字，正在靠近',`<div class="awakening-mark is-awakening">${icon('mask')}</div><h3 class="prep-lead">给这份力量，一次新的回应。</h3><p>面具正在回应…</p>`);working=setTimeout(()=>{if(!sheet.open)return;pendingName='远行者';pendingDescription='带着白昼积累的力量，走向未曾抵达的地方。';open('新的面具已回应',`<h3 class="prep-lead">${pendingName}</h3><p>${pendingDescription}</p>${btn('确认重塑','reshape-confirm')}${btn('手动调整','reshape-edit','','subtle')}`);},api.reduced.matches?80:950);return;}
     if(kind==='reshape-error'){open('重塑暂时中断',`<p>当前面具仍然保留。你可以重新尝试，或手动写下新的名称。</p>${btn('重新尝试','reshape-summon')}${btn('改为手动填写','reshape-edit','','subtle')}`);return;}
-    if(kind==='reshape-confirm'){if(!pendingName.trim()){notice('先写下新的面具名称。');return;}masks[reshapeTarget].name=pendingName;if(pendingDescription)masks[reshapeTarget].passive=pendingDescription;state.mask=reshapeTarget;state.activePersonaId=masks[state.mask]?.id??state.activePersonaId;sheet.close();api.goRoom('persona');notify('这张面具已重塑 · 技能与状态保持不变');return;}
-    if(kind==='growth'){growthLevel=Number(arg)||growthState[state.mask].level;showGrowth(growthLevel);return;}
-    if(kind==='growth-skill'){const progress=growthState[state.mask];progress.selectedSkill=Math.max(0,Math.min(masks[state.mask].skills.length-1,Number(arg)||0));showGrowth(growthLevel);return;}
-    if(kind==='growth-upgrade'){const progress=growthState[state.mask];const skill=progress.selectedSkill;if(progress.points<=0){notice('成长印记已用尽。');return;}if(progress.skillRanks[skill]>=3){notice('这项技能已达到本次成长上限。');return;}progress.points-=1;progress.skillRanks[skill]+=1;showGrowth(growthLevel);return;}
-    if(kind==='growth-unlock'){const progress=growthState[state.mask];if(growthLevel!==progress.level+1){notice('请先选择紧邻的下一层。');return;}if(progress.points<=0){notice('成长印记已用尽。');return;}progress.points-=1;progress.level+=1;growthLevel=progress.level;showGrowth(growthLevel);return;}
-    if(kind==='growth-reset'){const progress=growthState[state.mask];progress.level=3;progress.points=2;progress.skillRanks=[1,1];progress.selectedSkill=0;growthLevel=3;showGrowth(3);return;}
+    if(kind==='reshape-confirm'){
+      if(!pendingName.trim()){notice('先写下新的面具名称。');return;}
+      const maskId=masks[reshapeTarget]?.id;
+      masks[reshapeTarget].name=pendingName;
+      if(pendingDescription)masks[reshapeTarget].passive=pendingDescription;
+      if(maskId){
+        const previous=state.personaOverrides?.[maskId]??{};
+        const next={...previous,name:pendingName};
+        state.personaOverrides={...(state.personaOverrides??{}),[maskId]:next};
+        setPersonaOverride(maskId,next);
+      }
+      state.mask=reshapeTarget;state.activePersonaId=masks[state.mask]?.id??state.activePersonaId;
+      api.persistP5State?.();sheet.close();api.goRoom('persona');notify('这张面具已重塑 · 技能与状态保持不变');return;
+    }
+    if(kind==='growth'){growthLevel=Number(arg)||growthOf().level;showGrowth(growthLevel);return;}
+    if(kind==='growth-skill'){const progress=growthOf();progress.selectedSkill=Math.max(0,Math.min(masks[state.mask].skills.length-1,Number(arg)||0));api.persistP5State?.();showGrowth(growthLevel);return;}
+    if(kind==='growth-upgrade'){const progress=growthOf();const skill=progress.selectedSkill;if(progress.points<=0){notice('成长印记已用尽。');return;}if(progress.skillRanks[skill]>=3){notice('这项技能已达到本次成长上限。');return;}progress.points-=1;progress.skillRanks[skill]+=1;api.persistP5State?.();showGrowth(growthLevel);return;}
+    if(kind==='growth-unlock'){const progress=growthOf();if(growthLevel!==progress.level+1){notice('请先选择紧邻的下一层。');return;}if(progress.points<=0){notice('成长印记已用尽。');return;}progress.points-=1;progress.level+=1;growthLevel=progress.level;api.persistP5State?.();showGrowth(growthLevel);return;}
+    if(kind==='growth-reset'){const progress=growthOf();progress.level=1;progress.points=3;progress.skillRanks=progress.skillRanks.map(()=>1);progress.selectedSkill=0;growthLevel=1;api.persistP5State?.();showGrowth(1);return;}
     if(kind==='settings'){showSettings();return;}
     if(kind==='shadow-day'){const id=Number(arg);settings.days=settings.days.includes(id)?settings.days.filter(day=>day!==id):[...settings.days,id];showSettings();return;}
-    if(kind==='settings-reset'){const form=document.querySelector('#battle-settings-form');for(const [name,value] of Object.entries({start:'20:00',end:'07:00',hp:40,scale:100}))form.elements[name].value=value;form.elements.enabled.checked=true;settings.days=[5,6,0];showSettings();return;}
+    if(kind==='difficulty'){settings.difficulty=['easy','normal','hard'].includes(arg)?arg:'normal';showSettings();return;}
+    if(kind==='settings-reset'){const form=document.querySelector('#battle-settings-form');for(const [name,value] of Object.entries({start:'20:00',end:'07:00'}))form.elements[name].value=value;form.elements.enabled.checked=true;settings.days=[5,6,0];settings.difficulty='normal';showSettings();return;}
     if(kind==='settings-save'){
-      const form=document.querySelector('#battle-settings-form');if(!form.reportValidity())return;const data=new FormData(form);Object.assign(settings,{enabled:data.has('enabled'),start:data.get('start'),end:data.get('end'),hp:Number(data.get('hp')),scale:Number(data.get('scale'))});state.shadowTime={days:[...settings.days],start:settings.start,end:settings.end};api.persistP5State?.();sheet.close();render();notify('设置已保存');return;
+      const form=document.querySelector('#battle-settings-form');if(!form.reportValidity())return;const data=new FormData(form);Object.assign(settings,{enabled:data.has('enabled'),start:data.get('start'),end:data.get('end')});state.shadowTime={days:[...settings.days],start:settings.start,end:settings.end};state.difficulty=settings.difficulty;api.persistP5State?.();sheet.close();render();notify('设置已保存');return;
     }
     if(kind==='item'){item(arg);return;}
     if(kind==='equip'){
       if(disposed.has(arg))return;
       if(state.equipped.has(arg))state.equipped.delete(arg);else if(state.equipped.size<2)state.equipped.add(arg);else{notice('当前装备位已满，先卸下一件遗物。');return;}
+      api.persistP5State?.();
       render();item(arg);return;
     }
     if(kind==='salvage'){open('分解前，确认一下',`<p>分解后，这件遗物会离开武库。</p><div class="effect-receipt">${icon('star')}<span>转化为 ${arg==='moon'?25:10} SP</span></div>${btn('保留遗物',`item:${arg}`)}${btn('确认分解',`salvage-confirm:${arg}`,'不可撤回','danger')}`);return;}
-    if(kind==='salvage-confirm'){if(disposed.has(arg))return;disposed.add(arg);state.equipped.delete(arg);state.sp=Math.min(260,state.sp+(arg==='moon'?25:10));const i=arsenalItems.relic.findIndex(r=>r[0]===arg);if(i>=0)arsenalItems.relic.splice(i,1);sheet.close();render();notify('遗物已分解，SP 已更新');return;}
-    if(kind==='socket'){if(oath?.mask===state.mask&&oath.skill===Number(arg)){notice('誓约技能不能镶嵌迷思。');return;}socket={mask:state.mask,skill:Number(arg)};render();item('myth');return;}
-    if(kind==='unsocket'){socket=null;render();item('myth');return;}
+    if(kind==='salvage-confirm'){if(disposed.has(arg))return;disposed.add(arg);state.relicDisposed=disposed;state.equipped.delete(arg);state.sp=Math.min(state.heroMaxSp??34,state.sp+(arg==='moon'?25:10));const i=arsenalItems.relic.findIndex(r=>r[0]===arg);if(i>=0)arsenalItems.relic.splice(i,1);api.persistP5State?.();sheet.close();render();notify('遗物已分解，SP 已更新');return;}
+    if(kind==='socket'){if(oath?.mask===state.mask&&oath.skill===Number(arg)){notice('誓约技能不能镶嵌迷思。');return;}socket={mask:state.mask,skill:Number(arg),maskId:masks[state.mask].id,skillIndex:Number(arg)};state.myth=socket;api.persistP5State?.();render();item('myth');return;}
+    if(kind==='unsocket'){socket=null;state.myth=null;api.persistP5State?.();render();item('myth');return;}
     if(kind==='oath-target'){open('选择誓约的技能位',`<p>选择 ${esc(masks[Number(arg)].name)} 的一个技能位。原技能会保留，卸下誓约时恢复。</p>${masks[Number(arg)].skills.map((s,i)=>btn(esc(s[0]),`oath:${arg}:${i}`,`技能位 ${i+1} · 替换为铁壁之誓`)).join('')}`);return;}
-    if(kind==='oath'){const mask=Number(arg),skill=Number(extra);if(oath){notice('先卸下当前誓约，再选择新的面具。');return;}oath={mask,skill,original:[...masks[mask].skills[skill]]};masks[mask].skills[skill]=['铁壁之誓',18,'护盾 · 视为完全格挡'];render();item('oath');return;}
-    if(kind==='remove-oath'){if(oath)masks[oath.mask].skills[oath.skill]=oath.original;oath=null;render();item('oath');return;}
-    if(kind==='chain'){chain=Number(arg);render();item('chain');return;}
-    if(kind==='remove-chain'){chain=null;render();item('chain');return;}
+    if(kind==='oath'){const mask=Number(arg),skill=Number(extra);if(oath){notice('先卸下当前誓约，再选择新的面具。');return;}oath={mask,skill,maskId:masks[mask].id,skillIndex:skill,original:[...masks[mask].skills[skill]]};state.oath=oath;masks[mask].skills[skill]=['铁壁之誓',18,'护盾 · 视为完全格挡'];api.persistP5State?.();render();item('oath');return;}
+    if(kind==='remove-oath'){if(oath)masks[oath.mask].skills[oath.skill]=oath.original;oath=null;state.oath=null;api.persistP5State?.();render();item('oath');return;}
+    if(kind==='chain'){chain=Number(arg);state.chain=chain;api.persistP5State?.();render();item('chain');return;}
+    if(kind==='remove-chain'){chain=null;state.chain=null;api.persistP5State?.();render();item('chain');return;}
   }
   sheet.addEventListener('close',()=>{clearTimeout(working);awakeningController?.abort();awakeningController=null;clearPreviewBridge();previewAI=false;});
   document.addEventListener('submit',event=>{const id=event.target.id;const action={'awakening-form':'create-generate','reshape-form':'reshape-preview','battle-settings-form':'settings-save'}[id];if(action){event.preventDefault();act(action);}});

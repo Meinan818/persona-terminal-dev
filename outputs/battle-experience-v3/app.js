@@ -70,13 +70,14 @@ function openSheet(title, html) {
   if (!sheet.open) sheet.showModal();
 }
 function home() {
+  const journey=flows.towerSnapshot;
   if (fixture === 'no-persona'&&!state.personaCreated) return `${heading('逆影战场','SHADOW BATTLE')}<div class="home-grid"><div class="hero-stage"><div aria-hidden="true">${figure()}</div></div><section class="mission"><h2>先遇见你的 Persona</h2><p>选择你的面具，再踏入影时间。</p>${mainButton('开始觉醒','awaken-persona')}<p class="info-note">尚未建立 Persona 的入口状态预览。</p></section></div>`;
   return `${heading('逆影战场','SHADOW BATTLE','把白昼积攒的力量，带到这一刻。')}
     <div class="home-grid"><div class="hero-stage" aria-hidden="true">${figure()}<span class="slash-label">与另一个自己，同路。</span></div>
-      <section class="mission"><span class="slash-label">${preparation.settings.enabled?'影时间进行中':'战场暂未启用'}</span><h2>继续向上。</h2><p>你停在第 3 层。下一步，仍由你选择。</p>
+      <section class="mission"><span class="slash-label">${preparation.settings.enabled?'影时间进行中':'战场暂未启用'}</span><h2>${journey.ended?'带着回声，回来了。':'继续向上。'}</h2><p>${journey.ended?`这一次，你抵达了第 ${journey.floor} 层。`:`你停在第 ${journey.floor} 层。下一步，仍由你选择。`}</p>
         <div class="mission-line"><span>当前区层</span><b>第 03 区层</b></div>
-        <div class="mission-line"><span>登塔进度</span><b>3 / 10 F</b></div>
-        ${mainButton('继续登塔','open-tower','回到当前层，查看下一条路线')}
+        <div class="mission-line"><span>登塔进度</span><b>${journey.floor} / 10 F</b></div>
+        ${mainButton(journey.ended?'查看本次行程':'继续登塔','open-tower',journey.ended?'回望走过的路':'回到当前层，查看下一条路线')}
         <button class="text-button" data-action="start-battle">查看当前遭遇战</button>
         <div class="mini-prep">${icon('mask')}<span>出战面具 <b>${esc(masks[state.mask].name)}</b></span><button class="text-button" data-action="open-persona">调整</button></div>
         <div class="status-ribbon"><span>HP <b>${state.hp}</b> / 390</span><span>SP <b>${state.sp}</b> / 260</span><span>遗物 <b>${state.equipped.size}</b> 件</span></div>
@@ -84,20 +85,7 @@ function home() {
 }
 function figure() { return visualArt('hero','<div class="figure"><i class="head"></i><i class="coat"></i><i class="eye"></i><i class="cut"></i></div>'); }
 function tower() {
-  const n = nodes[state.selectedNode];
-  return `${heading('登塔','ASCEND / 03','保留走过的路，也看清下一步。')}
-    <div class="tower-grid"><section class="route-map" aria-label="第三区层路线图">
-      <div class="route-watermark" aria-hidden="true">ASCEND</div>
-      <svg class="route-tracks" viewBox="0 0 600 520" preserveAspectRatio="none" aria-hidden="true"><path class="track-future" d="M300 62V180M140 306V260L300 218L460 260V306M300 218V180M300 306V218"/>${[['echo',140],['mob',300],['chest',460]].map(([id,x])=>`<path class="track-base" d="M300 430V386L${x} 350V306"/><path class="track-live ${state.selectedNode===id?'chosen':''}" pathLength="1" d="M300 430V386L${x} 350V306"/>`).join('')}</svg>
-      <div class="route-floor"><span class="floor-tag"><b>10</b>F</span><div class="route-node fog boss-node"><span class="node-seal">${icon('mask')}</span><span class="node-caption">心魔 · 塔顶</span></div></div>
-      <div class="route-floor"><span class="floor-tag"><b>05</b>F</span><div class="route-node fog"><span class="node-seal">${icon('eye')}</span><span class="node-caption">尚未到达</span></div></div>
-      <div class="route-floor branch-floor"><span class="floor-tag"><b>04</b>F</span>${Object.entries(nodes).map(([id,node]) => `<button class="route-node next ${state.selectedNode === id ? 'selected' : ''}" data-node="${id}" aria-pressed="${state.selectedNode === id}" aria-label="选择${node.kind}"><span class="node-seal">${icon(node.icon)}</span><span class="node-caption">${node.kind}</span><span class="node-hint">${state.selectedNode===id?'查看中':'可前往'}</span></button>`).join('')}</div>
-      <div class="route-floor"><span class="floor-tag"><b>03</b>F</span><div class="route-node done"><span class="node-seal">${icon('check')}</span><span class="node-caption">你在这里</span></div></div>
-      <p class="route-caption">已走过的路 · 当前所在 · 下一步可达</p>
-    </section><section class="route-detail" aria-live="polite"><p class="detail-kind">04 F / ${n.kind}</p><h2>${n.title}</h2><p>${n.note}</p>
-      <div class="detail-row"><span>敌人生命</span><strong>${n.hp}</strong></div><div class="detail-row"><span>已知弱点</span><strong>${n.weak}</strong></div><div class="detail-row"><span>收获</span><strong>${n.reward}</strong></div>
-      ${mainButton(n.action,'enter-node')}<p class="info-note">点节点查看情报，确认后再进入。</p>
-    </section></div>${flows.towerTools()}`;
+  return flows.towerRoute();
 }
 function persona() {
   const m = masks[state.mask];
@@ -185,6 +173,7 @@ function navigate(room) {
   location.hash = room;
 }
 addEventListener('hashchange', () => {
+  flows.towerHide();
   if(flows.active){flows.resetView();state.busy=false;}
   if (state.fighting) {
     history.replaceState(null,'',`#${state.room}`);
@@ -207,12 +196,11 @@ function startBattle(origin = state.room,options={}) {
   state.turnPhase = 'player';
   state.command='skills';
   state.skill=0;
-  state.enemyHp=312;
-  state.stagger=0;
-  state.turn=4;
+  state.enemyHp=options.resume?.enemyHp??312;
+  state.stagger=options.resume?.stagger??0;
+  state.turn=options.resume?.turn??4;
   state.log='轮到你了。先看意图，再决定这一回合。';
-  state.sp=fixture==='low-sp'?4:217;
-  state.hp=345;
+  if(!options.journey){state.sp=fixture==='low-sp'?4:217;state.hp=345;}
   transition('ENCOUNTER',clickOrigin);
   render({focus:true});
   window.scrollTo(0,0);
@@ -220,6 +208,7 @@ function startBattle(origin = state.room,options={}) {
 function returnFromBattle() {
   sheet.close();
   actionRun++;clearTimeout(enemyTimer);
+  flows.towerReturn(state.finished);
   flows.resetView?.();
   state.busy=false;
   state.turnPhase='player';
@@ -319,6 +308,7 @@ document.addEventListener('click',event=>{
   const box=control.getBoundingClientRect();
   clickOrigin={x:box.left+box.width/2,y:box.top+box.height/2};
   if(control.dataset.flow){flows.act(control.dataset.flow);return;}
+  if(control.dataset.tower){flows.towerAct(control.dataset.tower);return;}
   if(control.dataset.prep){preparation.act(control.dataset.prep);return;}
   if(control.matches('.room-nav a')&&state.fighting){event.preventDefault();return;}
   if(control.dataset.node){state.selectedNode=control.dataset.node;render();$(`[data-node="${state.selectedNode}"]`)?.focus({preventScroll:true});return;}
@@ -333,7 +323,7 @@ document.addEventListener('click',event=>{
   const action=control.dataset.action;
   if(!action)return;
   if(action.startsWith('equip-')){const id=action.slice(6);state.equipped.has(id)?state.equipped.delete(id):state.equipped.add(id);sheet.close();render();notify('示例装备已更新');return;}
-  if(action==='open-tower'){if(!preparation.settings.enabled){preparation.act('settings');return;}navigate('tower');}
+  if(action==='open-tower'){if(!preparation.settings.enabled){preparation.act('settings');return;}if(!flows.towerActive){flows.open('tower-flow');return;}navigate('tower');}
   else if(action==='open-persona')navigate('persona');
   else if(action==='awaken-persona')preparation.act('create');
   else if(action==='start-battle')startBattle('battle');

@@ -1,8 +1,51 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-19 02:30（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-19 02:38（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前续办入口 · 2026-10-19 02:30 · 天鹅绒房间 v1：多服务场景与战斗数值覆盖
+## 接手第一入口 · 2026-10-19 02:38 · 天鹅绒房间 v1 后的新对话交接
+
+这是收尾节点。接手者先只读本文件、项目 `AGENTS.md`、Git 和现场；在用户明确说继续前，不改共享文件、不重跑长流程、不 Push。
+
+### 现场
+
+- 分支 `codex/p5r-compendium-data`，HEAD `37de3e4 docs(state): 记录天鹅绒房间多服务场景`；本条交接记录会再产生一个本地 docs 提交。
+- 本分支未设置上游，未 Push；相对 `origin/main` 有 85 个本地提交（含历史）。本轮关键业务提交：`5cf176d feat(preview): 接通战后安全屋商店与回城天鹅绒`、`eaed5a7 feat(preview): 重建天鹅绒房间多服务场景`。
+- 工作区遗留均为接手前已有或本轮无内容差异：`ios/App/Podfile` 有未提交修改；`outputs/battle-experience-v3/P5-P3-FUSION.md` 仅换行差异（内容未改）；`.cache/`、`.impeccable/`、`.rivet-config.json`、`outputs/` 下旧 demo、交付包、before 备份、恢复图和 `outputs/p3-shadow-hour-v2/` 未跟踪。不要 stash/reset/clean，也不要夹带。
+- 正式 `src/`、后端、存档、生产未改；未部署、未打包 APK/AAB。
+
+### 本轮已完成
+
+- 一层 run：非 Boss 战斗胜利 → 战后安全屋（战斗奖励、休息 30%、商店补给、继续回路线）；Boss 胜利 → 回城页 → 天鹅绒。钱、道具、图鉴、材料、Persona 覆盖均持久化。
+- 天鹅绒房间 v1：独立蓝黑场景、铁栏/幕布/聚光、`P5-VR-A` 双子看守与 `P5-VR-B` 房间背景素材位、七个服务入口；已接通双体融合、处刑、电椅、禁闭、图鉴登记/取出，特殊融合/网络融合/技能卡保留锁定入口。
+- 处刑与禁闭写入 `personaOverrides`，由 `buildBattlePersona` 应用到战斗 Persona；图鉴登记保存当前等级/属性；电椅材料进入 `materials`。
+
+### 已验证（交接前最后一次）
+
+- demo Node 测试 **68/68**；项目 `npm test -- --runInBand` **45 文件 / 286 项**；`npm run typecheck`、`node --check`、`git diff --check` 通过。
+- 真实 Chrome 1440×900 / 390×844：3F 小影 → 弱点 1 MORE → HOLD UP → 总攻击 → 战后安全屋；奖励 ¥480 + 回声碎片/游荡的碎片 + SP 24；休息 HP 52/56→56/56、SP 36/36；商店买止痛药 ¥8480→8180、持有 2→3；继续回路线 5F；`errors=[]`。
+- 天鹅绒房间：亚森+皮克希→阿珈席翁；处刑阿珈席翁→亚森 Lv2（HP57/SP37/攻13/防7）；电椅曼陀罗→斯坤达材料；禁闭亚森 HP+8（HP65，钱 ¥4200）；图鉴登记亚森 Lv2（¥600），取回后钱 ¥3600；`errors=[]`。
+- **未完成**：完整 3F→10F Boss 长 run 没有从头打通；Boss 胜利→回城页接线已实现，但回城/天鹅绒页目前通过 `?tower=return` / `?tower=velvet` 预览入口验收，仍需真实 Boss 战后复验。
+
+### 下一优先级
+
+1. 特殊融合 + 材料背包 UI（电椅材料已存进 `materials`，但还没有独立背包界面）。
+2. 完整 3F→10F Boss 长 run，真实走通 Boss 胜利 → 回城 → 天鹅绒 → 回战场。
+3. Showtime（双人合体演出/槽位/一次战斗限一次）。
+4. 完整 Technical/状态链（状态持续、耐性/免疫、图标、解除、敌人意图）。
+5. 装备接入战斗攻防；最后再评估正式 `src/` 接入。
+
+### 接手铁律与踩坑
+
+- 先读本文件和项目 `AGENTS.md`；不要动 `ios/App/Podfile` 的既有修改，不要处理 `P5-P3-FUSION.md` 的换行差异，不要夹带未跟踪的旧输出。
+- `p3-master.css` / `master-battle.css` 是上一轮未采用的 WIP，已不被 `index.html` 加载；保留但不要混入新主题。
+- `?tower=return` / `?tower=velvet` 是预览验收入口，不是正式玩法捷径；`?theme=p3` 为当前 P3 主题。
+- 基础契约面具 `arsene / pixie / jack-o-lantern / silky / succubus / izanagi` 受保护，不能被处刑或电椅消耗；只有后来获得的面具可消耗。
+- 主题源在 `src-p3-*.css`，`build-themes.py` 必须保持 UTF-8 读取与 LF 写出；不要用 Windows 默认编码重生成。
+- HOLD UP 是全舞台遮罩，`body.p3-hold-up` 隐藏 masthead；失衡/总攻击演出在 `p3-signature-fx.js/css`。
+- 预览服务：`cd E:\MASKARIA\outputs\battle-experience-v3; node serve.mjs` → `http://127.0.0.1:5187/`；探针脚本在 `.rivet/scratch/`（`tower-run-probe.mjs`、`tower-return-probe.mjs`、`velvet-room-probe.mjs`）。
+- 未获用户明确批准不 Push；正式 `src/`、后端、存档和生产不在本轮授权范围内。
+
+## 历史节点 · 2026-10-19 02:30 · 天鹅绒房间 v1：多服务场景与战斗数值覆盖
 
 - **现场**：分支 `codex/p5r-compendium-data`，业务提交 `eaed5a7 feat(preview): 重建天鹅绒房间多服务场景`（此前 `5cf176d` 为一层 run 安全屋/商店/回城）。未 Push、未部署；正式 `src/`、后端、存档、生产未改。
 - **本轮完成**：

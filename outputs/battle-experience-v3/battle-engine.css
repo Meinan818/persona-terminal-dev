@@ -344,3 +344,420 @@
     display: none;
   }
 }
+
+/* Persona registry and party composition */
+.party-prep {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 9px 12px;
+  color: #dff8ff;
+  background: #071b55c9;
+  border-left: 3px solid #8ff8ff;
+  clip-path: polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
+  font-size: 11px;
+}
+
+.party-prep > svg {
+  width: 17px;
+  height: 17px;
+  color: #8ff8ff;
+}
+
+.party-prep > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-prep b {
+  color: #fff;
+}
+
+.party-prep .text-button {
+  margin: 0;
+  color: #ffe142;
+  white-space: nowrap;
+}
+
+.persona-ledger-stats {
+  display: grid;
+  gap: 10px;
+  margin: 2px 0 18px;
+  padding: 14px 0;
+  border-top: 1px solid #d6f5ff66;
+  border-bottom: 1px solid #d6f5ff66;
+}
+
+.persona-ledger-stats .stat-line {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.persona-ledger-stats .stat-line span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 7px 9px;
+  color: #cceeff;
+  background: #071b5577;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.persona-ledger-stats .stat-line b {
+  color: #fff;
+  font: italic 900 21px/1 'Noto Sans SC Black', Velvet, sans-serif;
+}
+
+.persona-ledger-stats .affinity-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.persona-ledger-stats .affinity-line span {
+  padding: 5px 9px;
+  color: #082454;
+  background: #dff8ff;
+  font-size: 10px;
+  font-weight: 900;
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+}
+
+.persona-ledger-stats .affinity-line span.wk {
+  color: #fff;
+  background: #f62c61;
+}
+
+.persona-ledger-stats .affinity-line span.nu,
+.persona-ledger-stats .affinity-line span.rp {
+  color: #07102b;
+  background: #ffe142;
+}
+
+.persona-roster-panel,
+.party-lineup-panel {
+  margin-top: 34px;
+  padding: 22px 0 4px;
+  border-top: 1px solid #bdeeff55;
+}
+
+.roster-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.roster-heading span {
+  display: block;
+  margin-bottom: 5px;
+  color: #9edfff;
+  font: 900 10px/1 'Noto Sans SC Black', Velvet, sans-serif;
+  letter-spacing: 0.16em;
+}
+
+.roster-heading h2 {
+  color: #fff;
+  font: italic 900 clamp(26px, 3vw, 40px)/1 'Noto Sans SC Black', Velvet, sans-serif;
+}
+
+.roster-heading > b {
+  color: #ffe142;
+  font: italic 900 24px/1 'Noto Sans SC Black', Velvet, sans-serif;
+}
+
+.roster-heading .small-button {
+  margin: 0;
+  background: #fff;
+  border-color: #fff;
+}
+
+.persona-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px;
+}
+
+.persona-roster-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 76px;
+  padding: 12px 13px;
+  color: #d8f7ff;
+  background: #071b55d9;
+  border-left: 4px solid #285cba;
+  text-align: left;
+  clip-path: polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
+}
+
+.persona-roster-grid button.active {
+  color: #07102b;
+  background: #fff;
+  border-left-color: #f62c61;
+  box-shadow: 5px 6px 0 #06143a55;
+}
+
+.persona-roster-grid button > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.persona-roster-grid button span {
+  color: #8ff8ff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.persona-roster-grid button.active span {
+  color: #e01f59;
+}
+
+.persona-roster-grid button b {
+  overflow: hidden;
+  font-size: 20px;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.persona-roster-grid button small {
+  color: #a9cce8;
+  font-size: 9px;
+}
+
+.persona-roster-grid button.active small {
+  color: #315881;
+}
+
+.persona-roster-grid button em {
+  color: #ffe142;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.party-lineup-panel > p,
+.sheet-lede {
+  max-width: 68ch;
+  margin: -5px 0 15px;
+  color: #c5e8ff;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.party-lineup {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.party-lineup button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 68px;
+  padding: 11px 13px;
+  color: #07102b;
+  background: #fff;
+  text-align: left;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+.party-lineup button > b {
+  color: #fff;
+  background: #f62c61;
+  padding: 7px 5px;
+  font: italic 900 16px/1 'Noto Sans SC Black', Velvet, sans-serif;
+}
+
+.party-lineup button > span {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.party-lineup button small {
+  color: #3b5f8d;
+  font-size: 9px;
+}
+
+.party-lineup button svg {
+  width: 18px;
+  height: 18px;
+  color: #124bd6;
+  transform: rotate(180deg);
+}
+
+.party-editor-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 16px 0 22px;
+}
+
+.party-slot {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 70px;
+  padding: 10px;
+  border: 1px solid #a7d9ff66;
+  color: #e5f9ff;
+  background: #071b55;
+  text-align: left;
+}
+
+.party-slot.selected {
+  color: #07102b;
+  background: #fff;
+  border-color: #f62c61;
+}
+
+.party-slot > b {
+  color: #ffe142;
+  font: italic 900 18px/1 'Noto Sans SC Black', Velvet, sans-serif;
+}
+
+.party-slot.selected > b {
+  color: #e01f59;
+}
+
+.party-slot > span {
+  display: grid;
+  gap: 3px;
+  font-weight: 900;
+}
+
+.party-slot small {
+  color: #9bc4e6;
+  font-size: 9px;
+}
+
+.party-slot.selected small {
+  color: #315881;
+}
+
+.sheet-subhead {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.ally-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.ally-picker button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 58px;
+  padding: 10px 12px;
+  color: #e9faff;
+  background: #0a2869;
+  border: 1px solid #9ddfff55;
+  text-align: left;
+}
+
+.ally-picker button[aria-pressed="true"] {
+  color: #07102b;
+  background: #ffe142;
+  border-color: #07102b;
+}
+
+.ally-picker button:disabled {
+  opacity: 0.35;
+}
+
+.ally-picker button span {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.ally-picker button small {
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.ally-picker button svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 760px) {
+  .party-prep {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .party-prep > span {
+    flex-basis: calc(100% - 28px);
+    white-space: normal;
+  }
+
+  .persona-ledger-stats .stat-line {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .persona-ledger-stats .stat-line span {
+    flex-direction: column;
+    align-items: center;
+    padding: 7px 4px;
+  }
+
+  .persona-roster-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .persona-roster-grid button {
+    min-height: 82px;
+    padding: 10px;
+  }
+
+  .persona-roster-grid button b {
+    font-size: 17px;
+  }
+
+  .party-lineup,
+  .party-editor-slots {
+    grid-template-columns: 1fr;
+  }
+
+  .ally-picker {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .persona-roster-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .persona-ledger-stats .stat-line span {
+    font-size: 9px;
+  }
+
+  .persona-ledger-stats .stat-line b {
+    font-size: 18px;
+  }
+}

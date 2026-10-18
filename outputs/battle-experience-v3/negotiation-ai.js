@@ -207,7 +207,7 @@ export async function requestNegotiation(input, { signal, onStatus } = {}) {
   const bridge = globalThis.MASKARIA_NEGOTIATION_AI?.negotiate
     ?? globalThis.MASKARIA_AI?.negotiateShadow;
   if (typeof bridge !== 'function') {
-    onStatus?.('没有连接 AI，影子按旧模板开口。');
+    onStatus?.('影子没有回应，旧契约替它开口。');
     return offlineNegotiation(input);
   }
   try {
@@ -219,7 +219,7 @@ export async function requestNegotiation(input, { signal, onStatus } = {}) {
     return normalizeNegotiation(result, input);
   } catch (error) {
     if (error?.name === 'AbortError' && signal?.aborted) throw error;
-    onStatus?.('AI 没有回应，影子按旧模板开口。');
+    onStatus?.('影子没有回应，旧契约替它开口。');
     return offlineNegotiation(input);
   }
 }

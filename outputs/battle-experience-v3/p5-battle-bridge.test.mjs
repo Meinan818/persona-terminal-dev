@@ -45,7 +45,7 @@ test('塔层遭遇会生成目录 Persona 小队和真实弱点目标', () => {
   assert.equal(DEFAULT_ALLY_PERSONAS.includes('cait-sith'), true);
 });
 
-test('塔层五层以后加入第二目标，切换目标不会改变行动者', () => {
+test('普通塔层生成双目标，切换目标不会改变行动者', () => {
   const battle = towerBattle({ floor: 5 });
   const first = buildBattleView(battle, 'primary');
   const second = buildBattleView(battle, 'echo');

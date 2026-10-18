@@ -4,8 +4,6 @@ import {visualArt} from './art.js';
 import {BRIBE_COST,NEGOTIATION_OPTIONS,OPTION_ORDER,PERSONALITIES,chanceLabel,createNegotiation,negotiationChance,resolveNegotiation} from './negotiation-rules.js';
 import {installPreviewNegotiationBridge,offlineNegotiation,requestNegotiation} from './negotiation-ai.js';
 import {
-  DEFAULT_HERO_MASKS,
-  activeHeroPersonaId,
   applyBattleReward,
   battleReceipt,
   buildActionPayload,
@@ -14,6 +12,7 @@ import {
   promoteBossPhase,
   syncAppState,
 } from './p5-battle-bridge.js';
+import { buildBattlePersona, ELEMENTS } from './p5-combat-rules.js';
 installPreviewNegotiationBridge();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -32,6 +31,8 @@ const state = {
   negotiation: null, enemyRage: 0, weaknessKnown: false, recruitedMasks: [], battleLoot: [],
   battle: null, battleView: null, targetId: 'primary', battleActionKey: '',
   battleEncounter: null, battleFloor: 4, battleReceipt: null, battleWon: false, partyVitals: {},
+  heroPersonaIds: [], personaRoster: [], activePersonaId: 'arsene',
+  allyPersonaIds: ['cait-sith', 'agathion', 'kelpie'],
 };
 const scrolls = new Map();
 const masks = [
@@ -43,6 +44,107 @@ const masks = [
   { id:'izanagi', attr:'借来的', name:'伊邪那岐', passive:'来自同伴 · 借来的雷霆', skills:[['十文字斩',20,'物理重击 · 单体两次'],['吉欧加',8,'电击伤害 · 单体']] },
 ];
 const attributeMarks = [['eye','KNOWLEDGE'],['sword','COURAGE'],['shield','DEXTERITY'],['star','KINDNESS'],['mask','CHARM'],['mask','BORROWED']];
+const ARCANA_LABELS = {
+  fool:'愚者', magician:'魔术师', priestess:'女教皇', empress:'女皇', emperor:'皇帝',
+  hierophant:'教皇', lovers:'恋人', chariot:'战车', justice:'正义', hermit:'隐者',
+  fortune:'命运', strength:'力量', hanged:'倒吊人', death:'死神', temperance:'节制',
+  devil:'恶魔', tower:'塔', star:'星', moon:'月', sun:'太阳', judgement:'审判',
+  world:'世界', faith:'信念', consultant:'顾问',
+};
+const PARTY_CANDIDATE_IDS = ['cait-sith', 'agathion', 'kelpie', 'mandrake', 'archangel', 'principality'];
+const P5_PREVIEW_KEY = 'maskaria.p5.preview.v1';
+state.heroPersonaIds = masks.map(mask => mask.id);
+state.personaRoster = [...state.heroPersonaIds];
+state.activePersonaId = masks[state.mask].id;
+
+function displayMaskFromPersona(persona, attr = '名录') {
+  if (!persona) return null;
+  const arcana = ARCANA_LABELS[persona.arcana] ?? persona.arcana;
+  const element = persona.elementLabel ?? ELEMENTS[persona.element]?.label ?? persona.element;
+  return {
+    id: persona.id,
+    attr,
+    name: persona.name,
+    passive: `${arcana} · ${element}`,
+    skills: persona.skills.map(skill => [
+      skill.name,
+      skill.sp,
+      `${ELEMENTS[skill.sourceElement]?.label ?? skill.sourceElement ?? '技能'} · ${skill.target === 'ally' || skill.target === 'allAllies' ? '我方' : skill.target === 'allEnemies' ? '全体敌方' : '敌方'}`,
+    ]),
+  };
+}
+
+function ensurePersonaInRoster(personaId, attr = '名录') {
+  if (!personaId) return null;
+  const built = buildBattlePersona(personaId);
+  if (!built) return null;
+  let display = masks.find(mask => mask.id === personaId);
+  if (!display) {
+    display = displayMaskFromPersona(built, attr);
+    if (!display) return null;
+    masks.push(display);
+  }
+  if (!state.heroPersonaIds.includes(personaId)) state.heroPersonaIds.push(personaId);
+  if (!state.personaRoster.includes(personaId)) state.personaRoster.push(personaId);
+  return display;
+}
+
+function persistP5State() {
+  try {
+    localStorage.setItem(P5_PREVIEW_KEY, JSON.stringify({
+      activePersonaId: state.activePersonaId,
+      allyPersonaIds: state.allyPersonaIds,
+      personaRoster: state.personaRoster,
+    }));
+  } catch {}
+}
+
+function loadP5State() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(P5_PREVIEW_KEY) ?? 'null');
+    if (!saved) return;
+    for (const id of saved.personaRoster ?? []) ensurePersonaInRoster(id);
+    const allies = (saved.allyPersonaIds ?? []).filter(id => Boolean(buildBattlePersona(id)));
+    if (allies.length === 3) state.allyPersonaIds = allies;
+    if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
+      state.activePersonaId = saved.activePersonaId;
+    }
+  } catch {}
+}
+
+function selectPersona(personaId) {
+  const index = masks.findIndex(mask => mask.id === personaId);
+  if (index < 0) return false;
+  state.mask = index;
+  state.activePersonaId = personaId;
+  state.skill = 0;
+  persistP5State();
+  return true;
+}
+
+function allyPersona(personaId) {
+  return buildBattlePersona(personaId);
+}
+
+function maskTabButton(mask, index) {
+  const mark = attributeMarks[index] ?? ['mask', 'PERSONA'];
+  return `<button data-mask="${index}" aria-pressed="${index === state.mask}">${icon(mark[0])}<span>${mask.attr}<small>${mark[1]}</small></span><b aria-hidden="true">${icon('chevrons')}</b></button>`;
+}
+
+function openPartyEditor(focusSlot = 0) {
+  const slot = Math.max(0, Math.min(2, Number(focusSlot) || 0));
+  const cards = state.allyPersonaIds.map((id, index) => {
+    const persona = allyPersona(id);
+    return `<button type="button" class="party-slot ${index === slot ? 'selected' : ''}" data-party-slot="${index}" aria-pressed="${index === slot}"><b>${String(index + 1).padStart(2, '0')}</b><span>${esc(persona?.name ?? id)}<small>${esc(persona ? `${ARCANA_LABELS[persona.arcana] ?? persona.arcana} · ${persona.elementLabel ?? persona.element}` : '同行面具')}</small></span></button>`;
+  }).join('');
+  const candidates = PARTY_CANDIDATE_IDS.map(id => {
+    const persona = allyPersona(id);
+    if (!persona) return '';
+    const occupied = state.allyPersonaIds.includes(id) && state.allyPersonaIds[slot] !== id;
+    return `<button type="button" data-ally-id="${id}" data-slot="${slot}" ${occupied ? 'disabled' : ''} aria-pressed="${state.allyPersonaIds[slot] === id}"><span>${esc(persona.name)}<small>Lv.${persona.level} · ${esc(persona.elementLabel ?? persona.element)}</small></span>${state.allyPersonaIds[slot] === id ? icon('check') : icon('arrow')}</button>`;
+  }).join('');
+  openSheet('同行面具', `<p class="sheet-lede">三张面具从名录借来，与你一同进入影时间。</p><div class="party-editor-slots">${cards}</div><h3 class="sheet-subhead">替换第 ${slot + 1} 位</h3><div class="ally-picker">${candidates}</div>`);
+}
 const nodes = {
   echo: { title:'回忆之光', kind:'回响', icon:'star', hp:'—', weak:'—', note:'短暂休息，听见一段来自白昼的回声。', action:'进入回响', reward:'恢复与回忆' },
   mob: { title:'聒噪的假面', kind:'小影', icon:'sword', hp:'312 / 420', weak:'知识', note:'它正在蓄势。查看敌人的意图，决定自己的第一步。', action:'进入战斗', reward:'战斗后结算' },
@@ -91,21 +193,20 @@ function openSheet(title, html) {
 }
 function home() {
   const journey=flows.towerSnapshot;
-  if (fixture === 'no-persona'&&!state.personaCreated) return `${heading('逆影战场','SHADOW BATTLE')}<div class="home-grid"><div class="hero-stage"><div aria-hidden="true">${figure()}</div></div><section class="mission"><h2>先遇见你的 Persona</h2><p>选择你的面具，再踏入影时间。</p>${mainButton('开始觉醒','awaken-persona')}<p class="info-note">尚未建立 Persona 的入口状态预览。</p></section></div>`;
-  return `${heading('逆影战场','SHADOW BATTLE','把白昼积攒的力量，带到这一刻。')}
+  if (fixture === 'no-persona'&&!state.personaCreated) return `${heading('逆影战场','SHADOW BATTLE')}<div class="home-grid"><div class="hero-stage"><div aria-hidden="true">${figure()}</div></div><section class="mission"><h2>先遇见你的 Persona</h2><p>选择你的面具，再踏入影时间。</p>${mainButton('开始觉醒','awaken-persona')}<p class="info-note">还没有面具回应你。</p></section></div>`;
+  return `${heading('逆影战场','SHADOW BATTLE','影时间没有尽头。')}
     <div class="home-grid"><div class="hero-stage" aria-hidden="true">${figure()}<span class="slash-label">与另一个自己，同路。</span></div>
-      <section class="mission"><span class="slash-label">${preparation.settings.enabled?'影时间进行中':'战场暂未启用'}</span><h2>${journey.ended?'带着回声，回来了。':'继续向上。'}</h2><p>${journey.ended?`这一次，你抵达了第 ${journey.floor} 层。`:`你停在第 ${journey.floor} 层。下一步，仍由你选择。`}</p>
+      <section class="mission"><span class="slash-label">${preparation.settings.enabled?'影时间进行中':'战场暂未启用'}</span><h2>${journey.ended?'塔门已关。':'下一层还在。'}</h2><p>${journey.ended?`本次抵达 ${journey.floor}F。`:`当前 ${journey.floor}F。路线还没有决定。`}</p>
         <div class="mission-line"><span>当前区层</span><b>第 03 区层</b></div>
         <div class="mission-line"><span>登塔进度</span><b>${journey.floor} / 10 F</b></div>
-        <button class="trial-quick" type="button" data-action="start-negotiation"><span>2.0</span>打服它，再和它谈 · 交涉收服</button>
         ${mainButton(journey.ended?'查看本次行程':'继续登塔','open-tower',journey.ended?'回望走过的路':'回到当前层，查看下一条路线')}
-        <button class="text-button" data-action="start-battle">查看当前遭遇战</button>
-        <div class="mini-prep">${icon('mask')}<span>出战面具 <b>${esc(masks[state.mask].name)}</b></span><button class="text-button" data-action="open-persona">调整</button></div>
+        <button class="text-button" data-action="start-battle">进入当前遭遇</button>
+        <div class="mini-prep">${icon('mask')}<span>契约面具 <b>${esc(masks[state.mask].name)}</b></span><button class="text-button" data-action="open-persona">交换</button></div>
         <div class="status-ribbon"><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span><span>遗物 <b>${state.equipped.size}</b> 件</span></div>
       </section></div>
     <section class="trial-banner">
-      <div><h2><span class="trial-mode">2.0</span>打服它，再和它谈。</h2><p>打中弱点、把它打失衡，影子会开口。威胁、讨好、讲理或给 SP——收服它，或拿走它身上的东西。AI 决定它的人格、条件和收服提案；成败由固定规则和你的选择决定。</p></div>
-      <button class="trial-go" type="button" data-action="start-negotiation"><span>进入交涉战<small>打弱点 · HOLD UP · 收服面具</small></span>${icon('arrow')}</button>
+      <div><h2><span class="trial-mode">HOLD UP</span>全部击倒后，影子会开口。</h2><p>弱点和暴击会让影子倒地。全部倒地时，战斗停下：你可以总攻击、交涉，或让它重新站起来。收服的 Persona 会进入面具名录。</p></div>
+      <button class="trial-go" type="button" data-action="start-battle"><span>进入遭遇<small>看弱点 · 找 One More · 触发 HOLD UP</small></span>${icon('arrow')}</button>
     </section>`;
 }
 function figure() { return visualArt('hero','<div class="figure"><i class="head"></i><i class="coat"></i><i class="eye"></i><i class="cut"></i></div>'); }
@@ -114,11 +215,11 @@ function tower() {
 }
 function persona() {
   const m = masks[state.mask];
-  return `${heading('Persona','THE OTHER SELF','把力量准备好，再回到你的路。')}
-    <div class="mask-tabs" aria-label="选择面具">${masks.map((m,i) => `<button data-mask="${i}" aria-pressed="${i === state.mask}">${icon(attributeMarks[i][0])}<span>${m.attr}<small>${attributeMarks[i][1]}</small></span><b aria-hidden="true">${icon('chevrons')}</b></button>`).join('')}</div>
-    <div class="duo-layout"><div class="mask-display"><div class="mask-art" aria-hidden="true"></div><p>${m.attr} · ${esc(m.passive)}</p></div><section class="persona-info"><h2>${esc(m.name)}</h2><p>当前出战面具的技能与状态。</p>
-    <div class="persona-spec">${icon(attributeMarks[state.mask][0])}<span>出战面具</span><strong>${m.attr}</strong><b>${attributeMarks[state.mask][1]}</b></div><div class="persona-skills">${m.skills.map((s,i) => `<article class="persona-skill" style="--order:${i}"><div class="persona-skill-mark">${icon(i===0?attributeMarks[state.mask][0]:'star')}</div><div class="persona-skill-copy"><h3>${s[0]}</h3><p>${s[2]}</p></div><strong class="persona-skill-cost">${s[1]}<small>SP</small></strong></article>`).join('')}</div>
-    ${mainButton('带着它，继续登塔','open-tower')}${preparation.personaTools()}<p class="info-note">预览中的面具选择会保留到遭遇战。</p></section></div>`;
+  return `${heading('Persona','THE OTHER SELF','契约仍在。')}
+    <div class="mask-tabs" aria-label="选择面具">${masks.map(maskTabButton).join('')}</div>
+    <div class="duo-layout"><div class="mask-display"><div class="mask-art" aria-hidden="true"></div><p>${m.attr} · ${esc(m.passive)}</p></div><section class="persona-info"><h2>${esc(m.name)}</h2><p>当前契约。</p>
+    <div class="persona-spec">${icon(attributeMarks[state.mask]?.[0]??'mask')}<span>契约面具</span><strong>${m.attr}</strong><b>${attributeMarks[state.mask]?.[1]??'PERSONA'}</b></div><div class="persona-skills">${m.skills.map((s,i) => `<article class="persona-skill" style="--order:${i}"><div class="persona-skill-mark">${icon(i===0?(attributeMarks[state.mask]?.[0]??'mask'):'star')}</div><div class="persona-skill-copy"><h3>${s[0]}</h3><p>${s[2]}</p></div><strong class="persona-skill-cost">${s[1]}<small>SP</small></strong></article>`).join('')}</div>
+    ${mainButton('返回高塔','open-tower')}${preparation.personaTools()}<p class="info-note">契约会随你进入影时间。</p></section></div>`;
 }
 const arsenalItems = {
   relic:[['moon','月光碎片','半月遗物 · 已有装备可在这里调整。'],['thread','回响之线','残月遗物 · 查看说明后选择携带。']],
@@ -214,7 +315,7 @@ function combat() {
       <div class="command-detail">${skills.length?`<div class="skill-list">${skills.map(item=>combatSkill(item)).join('')}</div><p>${esc(action?.detail ?? '选择一项行动。')}</p>`:`<div class="action-banner">${icon('sword')}<strong>没有可用技能</strong><b>0<small>SP</small></b></div><p>仍然可以使用普攻、枪击、防御或同伴行动。</p>`}</div>
       <button class="main-button execute" data-action="execute" ${disabled?'disabled':''}><span>${state.busy?'行动演出中…':!actorTurn?'等待当前回合':action?.disabled?'当前无法使用':`执行 · ${esc(action?.label ?? '选择行动')}`}</span>${icon('arrow')}</button>
       <p class="busy-text">${state.busy?'等待行动结束，避免重复出手。':!actorTurn?'当前不是行动者的回合。':`${commandCost()} SP · ${esc(action?.detail ?? '选好行动后执行')}`}</p>`;
-  const holdUpDeck = view.phase === 'holdUp' ? `<div class="engine-hold-up"><span>HOLD UP / 交涉窗口</span><h3>影子都倒下了。</h3><p>总攻击可以继续削减生命；谈判则有机会收服或取得奖励。</p><div><button data-holdup-engine="allOut">${icon('star')}总攻击</button><button data-action="hold-up-negotiate">${icon('eye')}开始交涉</button><button data-holdup-engine="continue">${icon('back')}继续战斗</button></div></div>` : '';
+  const holdUpDeck = view.phase === 'holdUp' ? `<div class="engine-hold-up"><span>HOLD UP</span><h3>全部倒地。</h3><p>现在可以总攻击、交涉，或放它们站起来。</p><div><button data-holdup-engine="allOut">${icon('star')}总攻击</button><button data-action="hold-up-negotiate">${icon('eye')}交涉</button><button data-holdup-engine="continue">${icon('back')}放它们起来</button></div></div>` : '';
   return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><div class="party-rail" aria-label="队伍回合">${view.party.map(member=>`<span class="${member.active?'active':''} ${member.down?'down':''}" data-party-id="${member.id}"><b>${member.isPlayer?'YOU':'ALLY'}</b>${esc(member.name)}<small>${member.active?'行动中':member.down?'倒下':`HP ${member.hp}`}</small></span>`).join('')}</div><p>ROUND ${String(view.round).padStart(2,'0')} / ${state.busy?'行动演出中':view.actorName??'—'}</p></div>${flows.rehearsalRail?.()??''}${visualStateMode?visualStateRail():''}
     <div class="combat-poster">
       <div class="combat-word" aria-hidden="true">BATTLE</div>
@@ -223,7 +324,7 @@ function combat() {
       <div class="glass-shards" aria-hidden="true">${Array.from({length:9},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
       <section class="enemy-scene ${flows.bossPhase?'boss-in-combat':''} ${state.busy?'enemy-turn':''}" data-phase="${flows.bossPhase||1}" aria-label="敌人状态">
       <div class="enemy-name"><h1>${esc(target?.name??'敌人')}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:`${target?.down?'DOWN':'TARGET'}`}</span></div>
-      <div class="enemy-targets" role="group" aria-label="选择攻击目标">${view.enemies.map(enemy=>`<button data-target-id="${enemy.id}" class="${enemy.active?'active':''} ${!enemy.alive?'down':''}" aria-pressed="${enemy.active}" ${!enemy.alive?'disabled':''}>${enemy.down?'DOWN':enemy.name}</button>`).join('')}</div>
+      <div class="enemy-targets" role="group" aria-label="选择攻击目标">${view.enemies.map(enemy=>`<button data-target-id="${enemy.id}" class="${enemy.active?'active':''} ${!enemy.alive?'down':''}" aria-pressed="${enemy.active}" ${!enemy.alive?'disabled':''}>${!enemy.alive?'DEFEATED':enemy.down?'DOWN':enemy.name}</button>`).join('')}</div>
       <div class="enemy-vitals"><span>敌人 HP</span><span><strong>${target?.hp??0}</strong> / ${target?.maxHp??1}</span></div>${meter(target?.hp??0,target?.maxHp??1)}
       <div class="weakness-line"><b>${weakness}</b><span>${negotiating?'HOLD UP · 可以交涉':target?.status?`异常 · ${statusLabels[target.status]??target.status}${target.statusTurns?` · ${target.statusTurns} 回合`:''}`:target?.down?'失衡 · 1 MORE / 总攻击窗口':target?.enraged?'激怒 · 攻击提升':'耐性会随命中逐步发现'}</span></div>
       <div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
@@ -238,9 +339,9 @@ function combat() {
 let negotiationRun = 0;
 
 function negotiationModeLabel(mode) {
-  if (mode === 'offline') return '离线交涉';
-  if (mode === 'preview') return '演示交涉';
-  return 'AI 交涉';
+  if (mode === 'offline') return '旧契约';
+  if (mode === 'preview') return 'HOLD UP';
+  return 'HOLD UP';
 }
 
 function negotiationSuccessCard() {
@@ -260,7 +361,7 @@ function negotiationFailedCard() {
   return `<div class="negotiation-failed">
     <h4>交涉破裂。</h4>
     <p>它对“${esc(NEGOTIATION_OPTIONS[state.negotiation.option]?.label ?? '这个条件')}”不买账（把握：${chanceLabel(chance)}）。它被激怒了，下一击会更重。</p>
-    <button class="small-button" type="button" data-action="negotiation-fight">继续战斗</button>
+    <button class="small-button" type="button" data-action="negotiation-fight">放它们起来</button>
   </div>`;
 }
 
@@ -272,7 +373,7 @@ function negotiationResultCard() {
       <h4>${esc(result.name)} 加入了面具名录。</h4>
       <p>${esc(result.attribute ?? result.element ?? 'PERSONA')} · ${esc(result.skillName)}</p>
       <div class="skill-line">${esc(result.skillDesc)}</div>
-      <p>演示名录，不写入正式 Persona。</p>
+      <p>它的名字，已记入面具名录。</p>
       <div class="negotiation-result-actions"><button class="main-button" type="button" data-action="return-after-battle"><span>${state.origin==='tower'?'带着收服结果返回路线':'返回战场'}</span></button></div>
     </div>`;
   }
@@ -466,6 +567,8 @@ function chooseNegotiationOutcome(type) {
       return;
     }
     const recruit = state.battle.result;
+    ensurePersonaInRoster(recruit.personaId, '收服');
+    persistP5State();
     state.recruitedMasks.push({ ...recruit, obtainedAt: Date.now() });
     n.result = { type: 'recruit', name: recruit.name, personaId: recruit.personaId, element: recruit.element, skillName: recruit.skillName, skillDesc: recruit.skillDesc };
     state.log = `${recruit.name} 加入了面具名录。`;
@@ -529,6 +632,46 @@ function combatSkill(skill) {
   const selected = state.battleActionKey === key;
   return `<button class="combat-skill ${selected?'selected':''}" data-battle-action="${key}" aria-pressed="${selected}" ${state.busy||skill.disabled?'disabled':''}>${icon('chevrons')}<span>${esc(skill.label)}<small>${esc(skill.detail ?? '')}${skill.disabled?' · 当前不可用':''}</small></span><strong>${skill.cost??0}<small>SP</small></strong></button>`;
 }
+
+function appendPersonaSystems() {
+  const info = $('.persona-info');
+  if (!info) return;
+  const built = buildBattlePersona(state.activePersonaId);
+  if (built) {
+    const resistanceLabels = { wk:'弱', rs:'耐', nu:'无', ab:'吸', rp:'反' };
+    const stats = document.createElement('section');
+    stats.className = 'persona-ledger-stats';
+    stats.innerHTML = `<div class="stat-line">${[
+      ['力', built.strength], ['魔', built.magic], ['耐', built.endurance], ['速', built.agility], ['运', built.luck],
+    ].map(([label, value]) => `<span>${label}<b>${value}</b></span>`).join('')}</div><div class="affinity-line">${Object.entries(built.resistances).filter(([, code]) => code !== '-').map(([element, code]) => `<span class="${code}">${ELEMENTS[element]?.label ?? element} ${resistanceLabels[code] ?? code}</span>`).join('') || '<span>耐性未显现</span>'}</div>`;
+    const skills = $('.persona-skills', info);
+    info.insertBefore(stats, skills ?? null);
+  }
+
+  const roster = document.createElement('section');
+  roster.className = 'persona-roster-panel';
+  roster.innerHTML = `<div class="roster-heading"><div><span>MASK REGISTRY</span><h2>面具名录</h2></div><b>${state.personaRoster.length} 张</b></div><div class="persona-roster-grid">${state.personaRoster.map(id => {
+    const persona = buildBattlePersona(id);
+    if (!persona) return '';
+    return `<button data-persona-id="${persona.id}" class="${persona.id === state.activePersonaId ? 'active' : ''}" aria-pressed="${persona.id === state.activePersonaId}"><div><span>${esc(ARCANA_LABELS[persona.arcana] ?? persona.arcana)}</span><b>${esc(persona.name)}</b><small>Lv.${persona.level} · ${esc(persona.elementLabel ?? persona.element)}</small></div><em>${persona.id === state.activePersonaId ? '契约中' : '交换'}</em></button>`;
+  }).join('')}</div>`;
+  content.append(roster);
+
+  const party = document.createElement('section');
+  party.className = 'party-lineup-panel';
+  party.innerHTML = `<div class="roster-heading"><div><span>PARTY PERSONA</span><h2>同行面具</h2></div><button class="small-button" data-action="open-party-editor">编成</button></div><p>这三张面具从名录借出，与你一同进入影时间。</p><div class="party-lineup">${state.allyPersonaIds.map((id, index) => {
+    const persona = allyPersona(id);
+    return `<button data-party-slot="${index}"><b>${String(index + 1).padStart(2, '0')}</b><span>${esc(persona?.name ?? id)}<small>Lv.${persona?.level ?? '—'} · ${esc(persona?.elementLabel ?? persona?.element ?? '同行面具')}</small></span>${icon('chevrons')}</button>`;
+  }).join('')}</div>`;
+  content.append(party);
+}
+
+function appendHomePartyLine() {
+  const prep = $('.mini-prep');
+  if (!prep || $('.party-prep')) return;
+  prep.insertAdjacentHTML('afterend', `<div class="party-prep">${icon('shield')}<span>同行面具 <b>${state.allyPersonaIds.map(id => esc(allyPersona(id)?.name ?? id)).join(' / ')}</b></span><button class="text-button" data-action="open-party-editor">编成</button></div>`);
+}
+
 function render({ focus = false } = {}) {
   const previousMaskScroll=$('.mask-tabs')?.scrollLeft ?? 0;
   document.body.dataset.fighting = String(state.fighting||Boolean(flows.active));
@@ -536,6 +679,8 @@ function render({ focus = false } = {}) {
     if (a.dataset.room === state.room) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
   });
   content.innerHTML = flows.screen() ?? (state.fighting ? combat() : ({battle:home,tower,persona,arsenal}[state.room])());
+  if (!state.fighting && !flows.screen() && state.room === 'persona') appendPersonaSystems();
+  if (!state.fighting && !flows.screen() && state.room === 'battle') appendHomePartyLine();
   if(flows.rehearsal){
     const deck=$('.command-deck');if(deck){deck.inert=true;$$('button',deck).forEach(button=>button.disabled=true);}
   }
@@ -588,7 +733,9 @@ function startBattle(origin = state.room,options={}) {
     encounter:options.encounter??{},
     floor:state.battleFloor,
     boss:Boolean(options.bossEncounter),
-    activePersonaId:activeHeroPersonaId(DEFAULT_HERO_MASKS,state.mask),
+    heroPersonaIds:state.heroPersonaIds,
+    activePersonaId:state.activePersonaId,
+    allyPersonaIds:state.allyPersonaIds,
     heroHp:state.hp,
     heroSp:state.sp,
     partyVitals:state.partyVitals,
@@ -611,7 +758,6 @@ function startBattle(origin = state.room,options={}) {
   transition('ENCOUNTER',clickOrigin);
   render({focus:true});
   window.scrollTo(0,0);
-  if(options.negotiationHint)beginEngineNegotiation();
 }
 function returnFromBattle() {
   sheet.close();
@@ -642,7 +788,7 @@ function leaveBattle() {
   if(flows.rehearsal){flows.act('rehearsal-close');return;}
   if(state.busy) { notify('行动尚未结束，请稍候再返回。'); return; }
   if(state.finished) { returnFromBattle(); return; }
-  openSheet('返回前，确认一下', `<p>离开当前遭遇战，返回${state.origin==='tower'?'高塔路线':'战场'}？</p><p>本页是操作预览，不会更改正式存档。</p>${mainButton('留在战斗','close-sheet')}${mainButton('返回'+(state.origin==='tower'?'高塔路线':'战场'),'confirm-leave','','red')}`);
+  openSheet('返回前，确认一下', `<p>离开当前遭遇战，返回${state.origin==='tower'?'高塔路线':'战场'}？</p><p>离开后，本场进度不会保留。</p>${mainButton('留在战斗','close-sheet')}${mainButton('返回'+(state.origin==='tower'?'高塔路线':'战场'),'confirm-leave','','red')}`);
 }
 function syncBattleUi() {
   if (!state.battle) return null;
@@ -809,7 +955,7 @@ function execute(options = {}) {
   const payload = buildActionPayload(action, state.targetId);
   if (action.type === 'switchMask') {
     const nextMask = masks.findIndex(mask => mask.id === action.id);
-    if (nextMask >= 0) state.mask = nextMask;
+    if (nextMask >= 0) selectPersona(action.id);
   }
   const logStart = state.battle.log.length;
   const result = state.battle.act(payload);
@@ -859,8 +1005,8 @@ function execute(options = {}) {
       return;
     }
     if (next.phase === 'holdUp') {
-      render();
-      beginEngineNegotiation();
+      render({ focus: true });
+      document.querySelector('[data-holdup-engine="allOut"]')?.focus({ preventScroll: true });
       return;
     }
     if (next.phase === 'defeat') {
@@ -921,6 +1067,9 @@ document.addEventListener('click',event=>{
   clickOrigin={x:box.left+box.width/2,y:box.top+box.height/2};
   if(control.dataset.negotiationOption){negotiationAct(control.dataset.negotiationOption);return;}
   if(control.dataset.holdupEngine){performHoldUpAction(control.dataset.holdupEngine);return;}
+  if(control.dataset.personaId){selectPersona(control.dataset.personaId);if(sheet.open)sheet.close();render({focus:true});return;}
+  if(control.dataset.partySlot!==undefined){openPartyEditor(Number(control.dataset.partySlot));return;}
+  if(control.dataset.allyId){const slot=Number(control.dataset.slot)||0;state.allyPersonaIds[slot]=control.dataset.allyId;persistP5State();openPartyEditor(slot);render();return;}
   if(control.dataset.targetId){state.targetId=control.dataset.targetId;syncBattleUi();render();return;}
   if(control.dataset.battleAction){if(state.busy)return;state.battleActionKey=control.dataset.battleAction;render();$(`[data-battle-action="${state.battleActionKey}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.switchMask){state.battleActionKey=`switchMask:${control.dataset.switchMask}`;sheet.close();execute();return;}
@@ -930,7 +1079,7 @@ document.addEventListener('click',event=>{
   if(control.dataset.visualState){location.href=`?view=combat&visual=states&state=${encodeURIComponent(control.dataset.visualState)}`;return;}
   if(control.matches('.room-nav a')&&state.fighting){event.preventDefault();return;}
   if(control.dataset.node){state.selectedNode=control.dataset.node;render();$(`[data-node="${state.selectedNode}"]`)?.focus({preventScroll:true});return;}
-  if(control.dataset.mask!==undefined){state.mask=Number(control.dataset.mask);state.skill=0;if(sheet.open)sheet.close();render();if(!state.fighting)$(`[data-mask="${state.mask}"]`)?.focus({preventScroll:true});return;}
+  if(control.dataset.mask!==undefined){const nextMask=Number(control.dataset.mask);state.mask=nextMask;state.activePersonaId=masks[nextMask]?.id??state.activePersonaId;state.skill=0;if(sheet.open)sheet.close();render();if(!state.fighting)$(`[data-mask="${state.mask}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.arsenalTab){state.arsenalTab=control.dataset.arsenalTab;render();$(`[data-arsenal-tab="${state.arsenalTab}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.skill!==undefined){if(state.busy)return;state.skill=Number(control.dataset.skill);render();$(`[data-skill="${state.skill}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.command){if(state.busy)return;state.command=control.dataset.command;render();$(`[data-command="${state.command}"]`)?.focus({preventScroll:true});return;}
@@ -940,9 +1089,10 @@ document.addEventListener('click',event=>{
   }
   const action=control.dataset.action;
   if(!action)return;
-  if(action.startsWith('equip-')){const id=action.slice(6);state.equipped.has(id)?state.equipped.delete(id):state.equipped.add(id);sheet.close();render();notify('示例装备已更新');return;}
+  if(action.startsWith('equip-')){const id=action.slice(6);state.equipped.has(id)?state.equipped.delete(id):state.equipped.add(id);sheet.close();render();notify('装备已更新');return;}
   if(action==='open-tower'){if(!preparation.settings.enabled){preparation.act('settings');return;}if(!flows.towerActive){flows.open('tower-flow');return;}navigate('tower');}
   else if(action==='open-persona')navigate('persona');
+  else if(action==='open-party-editor')openPartyEditor();
   else if(action==='awaken-persona')preparation.act('create');
   else if(action==='start-negotiation')startNegotiationDemo();
   else if(action==='hold-up-negotiate')beginEngineNegotiation();
@@ -972,6 +1122,7 @@ sheet.addEventListener('close',()=>{
 });
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!sheet.open){if(flows.transforming||flows.active||flows.rehearsal){event.preventDefault();flows.close();return;}if(state.fighting){event.preventDefault();leaveBattle();}}});
 document.addEventListener('visibilitychange',()=>document.body.classList.toggle('is-hidden',document.hidden));
+loadP5State();
 state.room=roomFromHash();
 render();
 if(fixture==='low-sp')startBattle('tower');

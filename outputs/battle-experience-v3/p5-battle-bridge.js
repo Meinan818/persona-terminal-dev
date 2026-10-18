@@ -131,7 +131,7 @@ export function createTowerBattle({
   partyVitals = {},
 } = {}) {
   const enemies = [primaryEnemySpec({ encounter, floor, boss })];
-  if (!boss && floor >= 5) enemies.push(secondaryEnemySpec({ encounter, floor }));
+  if (!boss) enemies.push(secondaryEnemySpec({ encounter, floor }));
   const validHeroes = heroPersonaIds.filter(id => Boolean(buildBattlePersona(id)));
   const fallbackMask = validHeroes[0] ?? DEFAULT_HERO_MASKS[0];
   const battle = createDefaultBattle({
@@ -338,7 +338,7 @@ export function battleReceipt(battle) {
     : reward
       ? `与影子达成交易，取得 ${reward.item}${reward.sp ? ` 与 ${reward.sp} SP` : ''}。`
       : won
-        ? '击破了挡路的阴影。'
+        ? '挡路的影子，散了。'
         : battle.phase === 'defeat'
           ? '全员倒下，今晚的探索暂时结束。'
           : '战斗尚未结束。';

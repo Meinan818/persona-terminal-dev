@@ -40,7 +40,7 @@ const ROUTES = [
 export function routesForFloor(floor, maxFloor = DUNGEON_FLOORS, stratumId = 'echo') {
   if (floor >= maxFloor) return ['boss'];
   if (floor === maxFloor - 1) return ['calling'];
-  if (SAFE_FLOORS.includes(floor)) return ['safe'];
+  if (SAFE_FLOORS.includes(floor)) return ['mob'];
   const stratum = getStratum(stratumId);
   return adjustRoute(ROUTES[(Math.max(1, floor) - 1) % ROUTES.length], stratum);
 }
@@ -63,10 +63,14 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     stratum: getStratum(stratum).id,
     endless: false,
     cycle: 1,
+    nonCombatUsed: false,
+    safeRoomPending: false,
   };
 
   const choices = () => {
     if (journey.ended) return [];
+    if (journey.safeRoomPending) return ['safe'];
+    if (journey.nonCombatUsed) return [getStratum(journey.stratum).eliteBias > 0 ? 'elite' : 'mob'];
     const floor = journey.pending ? journey.floor : Math.min(journey.maxFloor, journey.floor + 1);
     return routesForFloor(floor, journey.maxFloor, journey.stratum);
   };
@@ -89,6 +93,8 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
       stratum: getStratum(stratumId).id,
       endless: false,
       cycle: 1,
+      nonCombatUsed: false,
+      safeRoomPending: false,
     });
   };
 
@@ -117,8 +123,9 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     if (!choices().includes(journey.selected)) return null;
     if (journey.selected === 'boss' && !journey.callingCardSent) return null;
 
-    journey.floor += 1;
     const kind = journey.selected;
+    const isSafeRoom = kind === 'safe' && journey.safeRoomPending;
+    if (!isSafeRoom) journey.floor += 1;
     const risk = Math.max(0, (RISK[kind] ?? 0) + getStratum(journey.stratum).riskBonus);
     if (kind !== 'safe') journey.security = Math.min(100, journey.security + risk);
     const ambush = journey.security >= 100;
@@ -173,6 +180,8 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
       journey.pending = null;
       journey.callingCardSent = false;
       journey.security = Math.min(100, 20 + journey.cycle * 10);
+      journey.nonCombatUsed = false;
+      journey.safeRoomPending = false;
       journey.selected = choices()[0] ?? 'mob';
       return true;
     }
@@ -180,6 +189,29 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
       journey.ended = 'clear';
       return true;
     }
+    if (last === 'safe') {
+      journey.safeRoomPending = false;
+      journey.nonCombatUsed = false;
+      journey.selected = choices()[0] ?? 'boss';
+      return true;
+    }
+    if (last === 'calling') {
+      journey.nonCombatUsed = false;
+      journey.selected = 'boss';
+      return true;
+    }
+    if (SAFE_FLOORS.includes(journey.floor) && ['mob', 'elite'].includes(last)) {
+      journey.safeRoomPending = true;
+      journey.selected = 'safe';
+      return true;
+    }
+    if (!['mob', 'elite'].includes(last)) {
+      journey.nonCombatUsed = true;
+      journey.floor = Math.max(0, journey.floor - 1);
+      journey.selected = getStratum(journey.stratum).eliteBias > 0 ? 'elite' : 'mob';
+      return true;
+    }
+    journey.nonCombatUsed = false;
     journey.selected = choices()[0] ?? 'boss';
     return true;
   };

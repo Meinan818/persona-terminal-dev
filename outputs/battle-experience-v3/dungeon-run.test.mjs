@@ -6,7 +6,7 @@ test('第一座塔是 12 层，普通层有三条路线', () => {
   assert.equal(DUNGEON_FLOORS, 12);
   assert.deepEqual(routesForFloor(1), ['mob', 'chest', 'event']);
   assert.equal(routesForFloor(3).length, 3);
-  assert.deepEqual(routesForFloor(SAFE_FLOORS[0]), ['safe']);
+  assert.deepEqual(routesForFloor(SAFE_FLOORS[0]), ['mob']);
   assert.deepEqual(routesForFloor(CALLING_FLOOR), ['calling']);
   assert.deepEqual(routesForFloor(DUNGEON_FLOORS), ['boss']);
 });
@@ -23,11 +23,16 @@ test('进层会推高警戒，安全屋可以压回警戒并留一次休息', ()
 
   model.journey.floor = SAFE_FLOORS[0] - 1;
   model.journey.security = 60;
-  model.journey.selected = 'safe';
+  model.journey.selected = 'mob';
+  model.enter();
+  assert.equal(model.journey.pending.kind, 'mob');
+  model.resolve({ label: '守卫击破' });
+  model.advance();
+  assert.equal(model.journey.safeRoomPending, true);
   model.enter();
   assert.equal(model.journey.pending.kind, 'safe');
   assert.equal(model.rest(), true);
-  assert.equal(model.journey.security, 40);
+  assert.equal(model.journey.security, 48);
   assert.equal(model.rest(), false);
 });
 
@@ -114,7 +119,7 @@ test('一条完整路线可以走完 12 层并进入 Boss 结算', () => {
   }
   assert.equal(model.journey.ended, 'clear');
   assert.equal(model.journey.floor, DUNGEON_FLOORS);
-  assert.equal(model.journey.history.length, DUNGEON_FLOORS);
+  assert.ok(model.journey.history.length >= DUNGEON_FLOORS);
   assert.equal(model.journey.callingCardSent, true);
 });
 

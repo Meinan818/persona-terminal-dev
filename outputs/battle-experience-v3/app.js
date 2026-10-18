@@ -52,6 +52,7 @@ const state = {
   personaXp: {},
   towerStratum: 'echo',
   npcTrust: createNpcTrust(),
+  shadowTime: { days: [5, 6, 0], start: '20:00', end: '07:00' },
 };
 const scrolls = new Map();
 const masks = [
@@ -136,6 +137,7 @@ function persistP5State() {
       personaXp: state.personaXp,
       towerStratum: state.towerStratum,
       npcTrust: state.npcTrust,
+      shadowTime: state.shadowTime,
     }));
   } catch {}
 }
@@ -182,6 +184,13 @@ function loadP5State() {
     }
     if (saved.npcTrust && typeof saved.npcTrust === 'object') {
       state.npcTrust = { ...createNpcTrust(), ...saved.npcTrust };
+    }
+    if (saved.shadowTime && typeof saved.shadowTime === 'object') {
+      state.shadowTime = {
+        days: Array.isArray(saved.shadowTime.days) && saved.shadowTime.days.length ? saved.shadowTime.days : [5, 6, 0],
+        start: typeof saved.shadowTime.start === 'string' ? saved.shadowTime.start : '20:00',
+        end: typeof saved.shadowTime.end === 'string' ? saved.shadowTime.end : '07:00',
+      };
     }
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;

@@ -175,6 +175,31 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // 只扫描应用入口：仓库内另有 Android 生成页、历史构建与素材预览，
+  // 默认的 HTML 自动发现会把它们也卷进首次依赖扫描。
+  optimizeDeps: {
+    entries: ['index.html'],
+    // 明确列出浏览器依赖，跳过冷启动时的全源码递归发现。
+    // 新增浏览器 CJS 依赖时要同步此表；原生/构建 CLI 不进入浏览器预构建。
+    noDiscovery: true,
+    include: [
+      'react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'motion/react',
+      'gsap', 'gsap/DrawSVGPlugin', 'gsap/SplitText', 'gsap/MorphSVGPlugin', '@gsap/react',
+      'dexie', 'dexie-react-hooks', 'zustand', 'zustand/react/shallow', 'dompurify', 'recharts', 'uuid',
+      'embla-carousel', 'embla-carousel-react', 'tweakpane', 'eruda',
+      '@capacitor/core', '@capacitor/app', '@capacitor/filesystem', '@capacitor/local-notifications', '@capacitor/share',
+    ],
+  },
+  server: {
+    // Vite 5 预转换首屏模块，避免浏览器拿到网址后再串行等待整条 import 链。
+    warmup: {
+      clientFiles: ['./src/main.tsx', './src/pages/p3/DashboardP3.tsx', './src/pages/p5/DashboardP5.tsx'],
+    },
+    watch: {
+      // 打包产物不参与 HMR，否则 cap sync / Gradle 写 HTML 会重载正在使用的页面。
+      ignored: ['**/android/**', '**/ios/**', '**/.rivet/**', '**/outputs/**'],
+    },
+  },
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(pkg.version),
   },

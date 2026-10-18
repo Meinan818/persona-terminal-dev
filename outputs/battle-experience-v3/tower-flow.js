@@ -308,7 +308,7 @@ export function createTowerFlow(api){
       return true;
     }catch{return false;}
   }
-  let mapCenterRun=0,mapDrag=null;
+  let mapCenterRun=0,mapDrag=null,mapTouchStart=null,mapTouchMoved=false,suppressMapClick=false,lastRoomTap=0;
   function centerMapViewport(smooth=false){
     const view=document.querySelector('[data-map-viewport]');
     const cell=view?.querySelector('.map-cell.is-current');
@@ -327,18 +327,71 @@ export function createTowerFlow(api){
   document.addEventListener('pointerdown',event=>{
     const view=event.target.closest?.('[data-map-viewport]');
     if(!view||event.button!==0||event.pointerType==='touch')return;
-    mapDrag={view,x:event.clientX,y:event.clientY,left:view.scrollLeft,top:view.scrollTop};
+    mapDrag={view,x:event.clientX,y:event.clientY,left:view.scrollLeft,top:view.scrollTop,moved:false};
     view.classList.add('is-dragging');
     try{view.setPointerCapture?.(event.pointerId);}catch{}
   });
   document.addEventListener('pointermove',event=>{
     if(!mapDrag)return;
+    if(Math.abs(event.clientX-mapDrag.x)+Math.abs(event.clientY-mapDrag.y)>8)mapDrag.moved=true;
     mapDrag.view.scrollLeft=mapDrag.left-(event.clientX-mapDrag.x);
     mapDrag.view.scrollTop=mapDrag.top-(event.clientY-mapDrag.y);
   });
-  const endMapDrag=()=>{if(!mapDrag)return;mapDrag.view.classList.remove('is-dragging');mapDrag=null;};
+  const endMapDrag=()=>{
+    if(!mapDrag)return;
+    if(mapDrag.moved){
+      suppressMapClick=true;
+      setTimeout(()=>{suppressMapClick=false;},350);
+    }
+    mapDrag.view.classList.remove('is-dragging');
+    mapDrag=null;
+  };
   document.addEventListener('pointerup',endMapDrag);
   document.addEventListener('pointercancel',endMapDrag);
+  document.addEventListener('touchstart',event=>{
+    const view=event.target.closest?.('[data-map-viewport]');
+    if(!view||!event.touches[0])return;
+    mapTouchStart={x:event.touches[0].clientX,y:event.touches[0].clientY};
+    mapTouchMoved=false;
+  },{passive:true});
+  document.addEventListener('touchmove',event=>{
+    if(!mapTouchStart||!event.touches[0])return;
+    const dx=event.touches[0].clientX-mapTouchStart.x,dy=event.touches[0].clientY-mapTouchStart.y;
+    if(Math.abs(dx)+Math.abs(dy)>8)mapTouchMoved=true;
+  },{passive:true});
+  document.addEventListener('touchend',()=>{
+    if(mapTouchStart&&mapTouchMoved){
+      suppressMapClick=true;
+      setTimeout(()=>{suppressMapClick=false;},350);
+    }
+    mapTouchStart=null;
+  },{passive:true});
+  document.addEventListener('click',event=>{
+    if(suppressMapClick&&event.target.closest?.('[data-tower^="room:"]')){
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  },true);
+  function tapRoom(control){
+    if(!control||mapTouchMoved)return;
+    const now=Date.now();
+    if(now-lastRoomTap<350)return;
+    lastRoomTap=now;
+    suppressMapClick=true;
+    setTimeout(()=>{suppressMapClick=false;},350);
+    act(control.dataset.tower);
+  }
+  document.addEventListener('pointerup',event=>{
+    if(event.pointerType==='touch')tapRoom(event.target.closest?.('[data-tower^="room:"]'));
+  },true);
+  document.addEventListener('touchend',event=>{
+    const control=event.target.closest?.('[data-tower^="room:"]');
+    if(control)tapRoom(control);
+  },{passive:true});
+  function revealRoomPanel(){
+    if(!matchMedia('(max-width:760px)').matches)return;
+    requestAnimationFrame(()=>document.querySelector('.map-current')?.scrollIntoView({behavior:reduced.matches?'auto':'smooth',block:'center'}));
+  }
   function reveal(error=false){
     show(error?'reveal-error':'reveal');if(error)return;
     if(reduced.matches){show('reveal-ready');return;}
@@ -580,8 +633,56 @@ export function createTowerFlow(api){
     }
     return room.type==='start'?'回头是塔门。往前走，雾会散开。':room.type==='exit'?explore.exitUnlocked?'门已经开了。踏出去，下一层就会显形。':'门锁着。守卫或钥匙，选一条路。':room.type==='guardian'?'它守着出口。打赢它，门就会开。':room.type==='shadow'?'绕不开。它已经看见你了。':room.type==='chest'?'打开会消耗一点动静，但里面的东西能带回去。':room.type==='key'?'拿上它，出口可以不必经过守卫。':room.type==='trap'?'拆开会安静一点；硬闯会更快，也更吵。':room.type==='safe'?'这一层只能休息一次。恢复，或者继续贪。':room.type==='event'?'靠近它，或者只带走一点月光。':'雾在墙外。你可以听一听，或者直接走。';
   };
+  const MAP_STEPS=[['up',0,-1],['right',1,0],['down',0,1],['left',-1,0]];
+  function findMapPath(targetX,targetY){
+    if(!j.explore||!j.map)return null;
+    const start=`${j.explore.player.x},${j.explore.player.y}`;
+    const goal=`${targetX},${targetY}`;
+    if(start===goal)return [];
+    const queue=[start];
+    const prev=new Map([[start,null]]);
+    while(queue.length){
+      const id=queue.shift();
+      const [cx,cy]=id.split(',').map(Number);
+      for(const [dir,dx,dy] of MAP_STEPS){
+        const room=j.map.rooms[`${cx+dx},${cy+dy}`];
+        if(!room||!room.revealed||prev.has(room.id))continue;
+        const isGoal=room.id===goal;
+        if(!isGoal&&!room.cleared&&['guardian','shadow','chest','key','trap','event'].includes(room.type))continue;
+        if(!isGoal&&room.type==='exit'&&!j.explore.exitUnlocked)continue;
+        prev.set(room.id,{from:id,dir});
+        if(isGoal){
+          const path=[];
+          let cursor=room.id;
+          while(cursor!==start){
+            const step=prev.get(cursor);
+            if(!step)return null;
+            path.unshift({dir:step.dir,roomId:cursor});
+            cursor=step.from;
+          }
+          return path;
+        }
+        queue.push(room.id);
+      }
+    }
+    return null;
+  }
+  function walkMapPath(path){
+    if(!path?.length)return;
+    for(const step of path){
+      const result=model.mapMove(step.dir);
+      if(result.pending){enter();return;}
+      if(!result.ok){j.mapMessage=result.reason;break;}
+      const room=currentRoom(j.explore);
+      if(room&&(room.type==='exit'||room.type==='safe'||(!room.cleared&&['chest','key','trap','event'].includes(room.type))))break;
+    }
+    renderMap();
+    const room=currentRoom(j.explore);
+    if(room&&(room.type==='exit'||room.type==='safe'||(!room.cleared&&['chest','key','trap','event'].includes(room.type))))revealRoomPanel();
+  }
   function mapCell(room,explore,flavor){
     const current=room.x===explore.player.x&&room.y===explore.player.y;
+    const clickable=room.revealed&&!current;
     const classes=['map-cell'];
     if(!room.revealed)classes.push('is-fog');
     else{
@@ -593,7 +694,9 @@ export function createTowerFlow(api){
     const body=room.revealed
       ?`${current?`<span class="map-you">YOU</span>`:''}<span class="map-glyph">${icon(current?'mask':mapIcon(room.type))}</span><span class="map-name">${current?'你在这里':(flavor.rooms[room.type]??mapName(room.type))}</span>${room.type==='exit'&&explore.exitUnlocked?'<span class="map-open">OPEN</span>':''}`
       :'<span class="map-fog-mark">?</span><span class="map-name">未探明</span>';
-    return `<div class="${classes.join(' ')}" ${current?'aria-current="true"':''} ${room.revealed?`aria-label="${mapName(room.type)}${current?'，当前位置':''}"`:'aria-label="未探明房间"'}>${body}</div>`;
+    const tag=clickable?'button':'div';
+    const attrs=clickable?`type="button" data-tower="room:${room.x}:${room.y}"`:(current?'aria-current="true"':'');
+    return `<${tag} class="${classes.join(' ')}" ${attrs} ${room.revealed?`aria-label="${flavor.rooms[room.type]??mapName(room.type)}${current?'，当前位置':'，点击走过去'}"`:'aria-label="未探明房间"'}>${body}</${tag}>`;
   }
   function mapPage(){
     if(!j.explore||!j.map)return '';
@@ -613,7 +716,7 @@ export function createTowerFlow(api){
       if(room.type==='shadow'&&!room.cleared)return btn('迎战影子','enter','它挡在这里','danger');
       return `<p class="map-quiet">这里只有回声。继续走，或者听一听墙后的动静。</p>`;
     };
-    return `<div class="page-heading"><h1>登塔<span>ASCEND / 03</span></h1><p>${esc(flavor.tagline)} · 每一步都会留下声音。</p></div>
+    return `<div class="page-heading map-page-heading"><h1>登塔<span>ASCEND / 03</span></h1><p>${esc(flavor.tagline)} · 每一步都会留下声音。</p></div>
       <div class="map-hud"><span>${esc(getStratum(j.stratum).name)} <b>${floor} / ${j.maxFloor} F</b></span><span>区段 <b>${Math.ceil(floor/10)} / 10</b></span><span>月光 <b>${explore.time}</b> / ${explore.maxTime} 步</span><span>警戒 <b>${j.security}%</b></span><span>钥匙 <b>${j.keys}</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span>${j.alert?'<span class="journey-alert">ALERT · 被盯上了</span>':''}</div>
       <div class="map-shell"><section class="map-board" aria-label="${esc(getStratum(j.stratum).name)} ${floor} 层房间地图">
         <div class="map-board-head"><div><span>FLOOR ${String(floor).padStart(2,'0')} / ${esc(flavor.name)} · BLOCK ${String(Math.ceil(floor/10)).padStart(2,'0')}</span><b>${explore.exitUnlocked?'出口已经开了':'找到守卫或钥匙'}</b></div><div class="map-head-tools"><small>拖动查看 · 已探明 ${revealed} / 25</small><button type="button" data-tower="map-center">回到当前位置</button></div></div>
@@ -637,6 +740,14 @@ export function createTowerFlow(api){
     return mapPage();
   }
   function act(action){
+    if(action.startsWith('room:')){
+      const [,x,y]=action.split(':').map(Number);
+      const path=findMapPath(x,y);
+      if(path===null){j.mapMessage='这条路还没探明，或者被挡住了。先走近一点，或者用“听”。';renderMap();return;}
+      if(!path.length)return;
+      walkMapPath(path);
+      return;
+    }
     if(action.startsWith('move:')){
       const result=model.mapMove(action.slice('move:'.length));
       if(result.pending){enter();return;}

@@ -58,7 +58,11 @@ export function routesForFloor(floor, maxFloor = DUNGEON_FLOORS, stratumId = 'ec
   return adjustRoute(ROUTES[(Math.max(1, floor) - 1) % ROUTES.length], stratum);
 }
 
-export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } = {}) {
+const randomRunSeed = () => Math.floor(Math.random() * 0xffffffff) >>> 0;
+
+export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', seed = null } = {}) {
+  const fixedSeed = Number.isFinite(Number(seed)) ? Number(seed) >>> 0 : null;
+  const nextRunSeed = () => fixedSeed ?? randomRunSeed();
   const journey = {
     active: false,
     floor: 0,
@@ -76,6 +80,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     stratum: getStratum(stratum).id,
     endless: false,
     cycle: 1,
+    runSeed: 0,
     nonCombatUsed: false,
     safeRoomPending: false,
     map: null,
@@ -112,6 +117,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
       stratum: getStratum(stratumId).id,
       endless: false,
       cycle: 1,
+      runSeed: nextRunSeed(),
       nonCombatUsed: false,
       safeRoomPending: false,
       map: null,
@@ -307,11 +313,17 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
       journey.explore = null;
       return null;
     }
-    const stratumIndex = ['echo', 'vanity', 'escape'].indexOf(journey.stratum);
+    const stratumIndex = Math.max(0, ['echo', 'vanity', 'escape'].indexOf(journey.stratum));
+    const floorSeed = (
+      journey.runSeed
+      ^ Math.imul(floor, 0x9e3779b1)
+      ^ Math.imul(journey.cycle, 0x85ebca6b)
+      ^ Math.imul(stratumIndex + 1, 0xc2b2ae35)
+    ) >>> 0;
     const map = createFloorMap({
       floor,
       stratum: journey.stratum,
-      seed: floor * 7919 + journey.cycle * 104729 + Math.max(0, stratumIndex) * 31,
+      seed: floorSeed,
     });
     const explore = createExplorationState(map, {
       maxTime: floor <= 10 ? 16 : floor <= 50 ? 14 : 12,

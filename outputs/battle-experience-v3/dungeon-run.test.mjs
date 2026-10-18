@@ -224,3 +224,19 @@ test('第九十八层出口接预告信，送信后才能进入塔顶 Boss', () 
   assert.equal(boss.kind, 'boss');
   assert.equal(model.journey.floor, DUNGEON_FLOORS);
 });
+
+test('每次 run 使用独立层种子，固定种子可复现同一张图', () => {
+  const first = createDungeonRun({ seed: 101 });
+  first.start();
+  const firstMap = first.beginFloor(1);
+  const second = createDungeonRun({ seed: 202 });
+  second.start();
+  const secondMap = second.beginFloor(1);
+  assert.notEqual(firstMap.map.seed, secondMap.map.seed);
+
+  const repeat = createDungeonRun({ seed: 101 });
+  repeat.start();
+  const repeatMap = repeat.beginFloor(1);
+  assert.equal(repeatMap.map.seed, firstMap.map.seed);
+  assert.deepEqual(repeatMap.map.path, firstMap.map.path);
+});

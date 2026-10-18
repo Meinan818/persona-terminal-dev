@@ -39,7 +39,11 @@
 .map-viewport.is-dragging{cursor:grabbing;user-select:none}
 .map-viewport.is-dragging .map-cell{pointer-events:none}
 .map-grid{display:grid;grid-template-columns:repeat(5,104px);grid-auto-rows:88px;gap:22px 24px;width:max-content;min-width:100%;padding:28px 32px 34px;background-image:linear-gradient(rgba(63,240,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(63,240,255,.045) 1px,transparent 1px);background-size:28px 28px}
-.map-cell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:0;padding:10px 6px;border:1px solid rgba(63,240,255,.22);background:rgba(10,29,69,.86);color:#bff6ff;text-align:center;box-shadow:0 10px 24px rgba(0,0,0,.28),inset 0 0 0 1px rgba(191,246,255,.04);transition:border-color .18s,background .18s,translate .18s}
+.map-cell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:100%;height:100%;min-height:0;padding:10px 6px;border:1px solid rgba(63,240,255,.22);background:rgba(10,29,69,.86);color:#bff6ff;text-align:center;box-shadow:0 10px 24px rgba(0,0,0,.28),inset 0 0 0 1px rgba(191,246,255,.04);transition:border-color .18s,background .18s,translate .18s}
+button.map-cell{appearance:none;font:inherit;border-radius:0;cursor:pointer}
+button.map-cell:hover{border-color:#ffd84a;background:rgba(21,61,145,.9);translate:0 -2px}
+button.map-cell:focus-visible{outline:2px solid #ffd84a;outline-offset:2px}
+button.map-cell:active{translate:0 1px}
 .map-cell.is-fog{border-style:dashed;border-color:rgba(159,192,255,.18);background:rgba(2,10,34,.72);color:#5d7db5}
 .map-cell.is-visited{background:rgba(15,54,130,.72)}
 .map-cell.is-current{border-color:#ffd84a;background:rgba(255,216,74,.16);box-shadow:0 0 0 2px rgba(255,216,74,.32),0 0 24px rgba(255,216,74,.18);translate:0 -2px}
@@ -83,13 +87,18 @@
 .map-side-foot .flow-button{margin:0;min-height:44px;font-size:13px}
 @media(max-width:900px){.map-shell{grid-template-columns:1fr}.map-board{order:1}.map-side{order:2}.map-viewport{height:380px}.map-grid{grid-template-columns:repeat(5,96px);grid-auto-rows:82px;gap:20px 22px;padding:24px 28px 30px}}
 @media(max-width:760px){
+  .map-page-heading{display:none}
   .map-hud{gap:8px 16px;font-size:11px}
   .map-hud b{font-size:15px}
   .map-board{padding:12px 10px 10px}
+  .map-board{display:flex;flex-direction:column}
+  .map-board-head{flex-direction:column;align-items:flex-start;gap:8px}
   .map-board-head b{font-size:16px}
-  .map-head-tools{gap:6px}
+  .map-head-tools{width:100%;justify-content:space-between;gap:6px}
+  .map-head-tools small{white-space:normal;font-size:9px}
   .map-head-tools button{min-height:28px;font-size:9px}
-  .map-viewport{height:340px}
+  .map-viewport{order:3;height:340px}
+  .map-legend{order:2;margin-top:8px;margin-bottom:8px;padding-top:0;border-top:0}
   .map-grid{grid-template-columns:repeat(5,84px);grid-auto-rows:74px;gap:16px 16px;padding:18px 20px 24px}
   .map-cell{padding:6px 4px;gap:3px}
   .map-glyph{width:24px;height:24px}.map-glyph svg{width:20px;height:20px}
@@ -103,7 +112,7 @@
   .map-side-foot{flex-direction:row;flex-wrap:wrap}
   .map-side-foot .flow-button{flex:1;min-width:150px}
 }
-@media(max-width:360px){.map-grid{grid-template-columns:repeat(5,76px);grid-auto-rows:68px;gap:12px;padding:16px}.map-name{font-size:7px}.map-glyph svg{width:18px;height:18px}}
+@media(max-width:360px){.map-viewport{height:300px}.map-grid{grid-template-columns:repeat(5,76px);grid-auto-rows:68px;gap:12px;padding:16px}.map-name{font-size:7px}.map-glyph svg{width:18px;height:18px}}
 
 /* 一层 run：战后安全屋 / 商店 / 回城 / 天鹅绒 */
 .safehouse-layout,.return-layout,.velvet-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:34px;align-items:start;margin-top:18px}

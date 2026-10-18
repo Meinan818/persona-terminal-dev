@@ -24,6 +24,8 @@ let log = ['看守把一串钥匙放在桌上。今天可以处置这些面具�
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const label = id => ARCANA_LABELS[id] ?? id;
+const skillText = persona => (persona.skillNames?.length ? persona.skillNames : persona.skills).join(' / ');
+const elementText = persona => persona.elementLabel ?? persona.element;
 const selectedPersonas = () => selected.map(id => roster.find(p => p.id === id)).filter(Boolean);
 
 function say(line) {
@@ -33,8 +35,8 @@ function say(line) {
 function personaCard(persona) {
   return `<button class="persona ${selected.includes(persona.id) ? 'selected' : ''}" data-persona="${persona.id}">
     <h3>${esc(persona.name)}</h3>
-    <div class="meta"><span class="tag">${esc(label(persona.arcana))}</span><span class="tag red">Lv.${persona.level}</span><span class="tag">${esc(persona.element)}</span></div>
-    <small>${esc(persona.skills.join(' / '))}</small>
+    <div class="meta"><span class="tag">${esc(label(persona.arcana))}</span><span class="tag red">Lv.${persona.level}</span><span class="tag">${esc(elementText(persona))}</span></div>
+    <small>${esc(skillText(persona))}</small>
   </button>`;
 }
 
@@ -53,7 +55,7 @@ function fusionPanel() {
 
 function resultCard() {
   const persona = result.persona;
-  return `<div class="result"><h3>${esc(persona.name)}</h3><p>${esc(label(persona.arcana))} · Lv.${persona.level} · ${esc(persona.element)}</p><div class="statline"><span>HP <b>${persona.stats.hp}</b></span><span>SP <b>${persona.stats.sp}</b></span><span>攻 <b>${persona.stats.attack}</b></span><span>防 <b>${persona.stats.defense}</b></span></div><p>技能：${esc(persona.skills.join(' / '))}</p><div class="btn-row"><button class="primary" data-action="register">登记图鉴</button><button data-action="keep">加入名册</button></div></div>`;
+  return `<div class="result"><h3>${esc(persona.name)}</h3><p>${esc(label(persona.arcana))} · Lv.${persona.level} · ${esc(elementText(persona))}</p><div class="statline"><span>HP <b>${persona.stats.hp}</b></span><span>SP <b>${persona.stats.sp}</b></span><span>攻 <b>${persona.stats.attack}</b></span><span>防 <b>${persona.stats.defense}</b></span></div><p>技能：${esc(skillText(persona))}</p><div class="btn-row"><button class="primary" data-action="register">登记图鉴</button><button data-action="keep">加入名册</button></div></div>`;
 }
 
 function executionPanel() {
@@ -184,7 +186,7 @@ root.addEventListener('click', event => {
       roster = roster.filter(persona => persona.id !== pair[0].id);
       wallet.inventory = wallet.inventory ?? {};
       wallet.inventory[item.itemId] = (wallet.inventory[item.itemId] ?? 0) + item.qty;
-      addLog(`${pair[0].name} 坐上电椅，留下 ${ITEM_DEFS[item.itemId]?.name ?? item.itemId} ×${item.qty}。`);
+      addLog(`${pair[0].name} 坐上电椅，留下 ${item.itemLabel ?? ITEM_DEFS[item.itemId]?.name ?? item.itemId} ×${item.qty}。`);
       say('坐上电椅。别担心，它比你更疼。');
     }
     selected = [];

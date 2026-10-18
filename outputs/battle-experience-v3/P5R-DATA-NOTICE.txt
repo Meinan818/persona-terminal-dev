@@ -1,0 +1,50 @@
+P5R Compendium Data Notice
+
+This directory contains a generated P5R compendium data module adapted from:
+
+P5R Fusion Planner  
+https://github.com/AemiliusXIV/P5R-Fusion-Planner  
+Revision `d23ca126c8e9282f94cadc7036529eaa8af4eb5b`  
+Licensed under the Apache License, Version 2.0:
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Adapted source files:
+
+- `src/data/PersonaDataRoyal.ts`
+- `src/data/SkillDataRoyal.ts`
+- `src/data/Data5Royal.ts`
+
+Changes made for this project:
+
+- Converted TypeScript data modules to JavaScript.
+- Normalized arcana, inheritance and resistance keys.
+- Added demo compatibility fields for HP/SP and the old result panel.
+- Added explicit DLC grouping and a local fusion query layer.
+
+The upstream NOTICE credits:
+
+persona-fusion-calculator  
+Copyright 2013, Anthony Lieuallen  
+https://github.com/arantius/persona-fusion-calculator  
+Apache License 2.0
+
+persona5_calculator  
+Base codebase copyright 2013, Anthony Lieuallen.  
+Persona 5 / Royal data, fusion tables, skill data, and ongoing maintenance:
+copyright chinhodado.  
+https://github.com/chinhodado/persona5_calculator  
+Apache License 2.0
+
+The `companion/` GPL-3.0 save-reader code is not used.
+
+PERSONA 5 ROYAL is a trademark of Atlus Co., Ltd. SEGA is a registered
+trademark or trademark of SEGA Corporation. This is an unofficial,
+non-commercial personal prototype and is not affiliated with, endorsed by,
+or sponsored by Atlus or SEGA.
+
+Chinese and Japanese Persona, skill, trait and item display names are short
+localization labels cross-referenced from the user-provided P5R pages on
+女神转生 WIKI (Biligame). That wiki does not declare an open-content license.
+No wiki prose, images, templates, skill descriptions or numeric tables are
+included.

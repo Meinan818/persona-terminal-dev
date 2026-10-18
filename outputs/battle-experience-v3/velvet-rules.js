@@ -6,28 +6,28 @@
  */
 
 import {
-  COMPENDIUM_BY_ID,
+  PERSONAS,
   SKILLS,
   fusionResult,
   getPersona,
-} from './persona-compendium.js';
+} from './p5r-compendium.js';
 
 export const ARCANA = [
   'fool', 'magician', 'priestess', 'empress', 'emperor', 'hierophant',
   'lovers', 'chariot', 'strength', 'hermit', 'wheel', 'justice',
   'hanged', 'death', 'temperance', 'devil', 'tower', 'star',
-  'moon', 'sun', 'judgement', 'world',
+  'moon', 'sun', 'judgement', 'faith', 'councillor', 'world',
 ];
 
 export const ARCANA_LABELS = {
   fool: '愚者', magician: '魔术师', priestess: '女祭司', empress: '女皇', emperor: '皇帝',
   hierophant: '教皇', lovers: '恋人', chariot: '战车', strength: '力量', hermit: '隐者',
   wheel: '命运', justice: '正义', hanged: '倒吊人', death: '死神', temperance: '节制',
-  devil: '恶魔', tower: '塔', star: '星', moon: '月', sun: '太阳', judgement: '审判', world: '世界',
+  devil: '恶魔', tower: '塔', star: '星', moon: '月', sun: '太阳', judgement: '审判',
+  faith: '信念', councillor: '顾问官', world: '世界',
 };
 
-/** 兼容旧实验台的导出；所有条目都来自固定图鉴。 */
-export const PERSONAS = COMPENDIUM_BY_ID;
+export { PERSONAS };
 
 export function fuse(aId, bId, { inherit = [] } = {}) {
   const a = getPersona(aId);
@@ -101,16 +101,10 @@ export function sacrifice(base, fodder) {
 export function itemize(persona) {
   const source = persona ? getPersona(persona.id) : null;
   if (!source) return { ok: false, reason: '图鉴里没有这个 Persona。' };
-  const map = {
-    knowledge: 'psyShard',
-    guts: 'physShard',
-    dexterity: 'windShard',
-    kindness: 'frostShard',
-    charm: 'emberShard',
-  };
-  const itemId = map[source.element] ?? 'psyShard';
-  const qty = source.level >= 8 ? 2 : 1;
-  return { ok: true, itemId, qty, message: `${source.name} 被送上电椅，留下 ${itemId} ×${qty}。` };
+  const itemId = source.item ?? 'psyShard';
+  const itemLabel = source.itemZh ?? itemId;
+  const qty = 1;
+  return { ok: true, itemId, itemLabel, qty, message: `${source.name} 被送上电椅，留下 ${itemLabel} ×${qty}。` };
 }
 
 export function lockdown(persona, stat) {

@@ -1,6 +1,20 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-18 22:15（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-18 22:52（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+
+## 接手第一入口 · 2026-10-18 22:52 · P5R 面具图鉴真实数据接入（demo）
+
+- **现场**：分支 `codex/p5r-compendium-data`，从 `main@caa3a67` 新建；业务提交 `cbe8ea1 feat(preview): 接入P5R面具图鉴数据与中文技能名`。未 Push、未部署。工作区仍有接手前遗留 `ios/App/Podfile`、`.cache/`、`.impeccable/`、旧输出目录与安装包备份，未处理、未夹带。
+- **范围**：只改 `outputs/battle-experience-v3/` demo 数据层和展示字段；未改 `src/` 正式应用、后端、存档、路由或生产。
+- **完成**：
+  - 从 P5R Fusion Planner（固定提交 `d23ca126…`，Apache-2.0）导入 232 Persona、525 技能、273 阿卡纳组合、24 特殊融合、9 稀有 Persona、13 DLC 分组 / 25 DLC Persona、23 Confidant 限定。
+  - 等级、力/魔/耐/速/运五项属性、十项抗性、技能学习等级按 P5R 数据保留；HP/SP 仍为 demo 兼容字段，伤害和后续平衡由本项目自定。
+  - 天鹅绒图鉴显示中文 Persona 名、中文技能名和中文属性标签；232 个 Persona 的 1,614 条技能显示全部匹配中文，底层融合仍用英文 canonical skill key。
+  - 新增转换脚本、查询/融合层、数据完整性测试、来源 NOTICE 与校验报告。
+- **已验证**：demo Node 45/45；项目 `npm test` 45 文件 / 286 项；`npm run typecheck` 通过；`node --check` 与 `git diff --check` 通过；真实 Chrome 1440×900、390×844 均显示 232 卡、`errors=[]`、无横向溢出；实走“贝利亚 + 内比罗斯 → 爱丽丝”，结果 `Lv.83 / 咒怨 / HP113 / SP103 / 攻45 / 防49`。
+- **数据边界**：P5R Fusion Planner 与 megaten-fusion-tool 已交叉核；公开冲突记录在 `outputs/battle-experience-v3/P5R-COMPENDIUM-REPORT.txt`。Biligame P5R Wiki 未声明开放许可，仅取短展示名，不复制正文、图片、模板或数值表；若公开分发需移除或取得授权。Wiki 有 27 个剧情/同伴形态不在 232 条融合目录中，未补造。
+- **当前边界**：战斗/交涉实验台仍读旧 `persona-compendium.js` 的 51 条固定数据；本次只让天鹅绒图鉴使用 P5R 目录。是否把同一目录接进战斗、交涉和正式引擎，下一步由用户决定。
+- **怎么验收**：`cd E:\MASKARIA\outputs\battle-experience-v3; node serve.mjs` → `http://127.0.0.1:5187/p5-velvet-lab.html`。应看到中文 Persona 名与中文技能名，可点两个面具合成，如“贝利亚 + 内比罗斯 → 爱丽丝”。当前服务已停，需手动启动。
 
 ## 接手第一入口 · 2026-10-18 22:15 · 用户要求交接（P5×P3 规则地基与固定图鉴）
 

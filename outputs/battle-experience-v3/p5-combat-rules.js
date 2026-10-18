@@ -255,6 +255,10 @@ export class P5Battle {
             && !item.status
             && !item.attackUp
             && !item.guard
+            && !item.revive
+            && !item.instantKill
+            && !item.cleanseBuffs
+            && !item.cleanseDebuffs
           ),
       });
     }
@@ -401,6 +405,24 @@ export class P5Battle {
   }
 
   useSkill(actor, item, action) {
+    if (item.revive) {
+      const target = this.party.find(member => member.hp <= 0);
+      if (target) {
+        target.hp = Math.max(1, Math.round(target.maxHp * (item.revivePct ?? 0.5)));
+        this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 以 ${target.hp} HP 复活。`);
+      }
+      return;
+    }
+    if (item.cleanseBuffs) {
+      for (const target of this.aliveEnemies) target.debuffs = {};
+      this.push(`${actor.name} 使用「${item.name}」→ 敌方强化效果被清除。`);
+      return;
+    }
+    if (item.cleanseDebuffs) {
+      for (const target of this.aliveParty) target.attackUp = 0;
+      this.push(`${actor.name} 使用「${item.name}」→ 我方弱化效果被清除。`);
+      return;
+    }
     if (item.heal) {
       const targets = item.target === 'allAllies'
         ? this.aliveParty
@@ -496,6 +518,18 @@ export class P5Battle {
     if (newAffinity && affinity !== 'normal') {
       this.push(`发现 ${target.name} 对${elementLabel(item.element)}「${affinityLabel(affinity)}」。`);
     }
+    if (item.instantKill) {
+      if (!['null', 'absorb', 'repel'].includes(affinity) && roll(this.rng, item.instantKillChance ?? 0.15)) {
+        target.hp = 0;
+        target.down = true;
+        this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 被即死。`);
+      } else {
+        this.push(`${actor.name} 使用「${item.name}」→ ${target.name} 抵抗了即死。`);
+      }
+      actor.attackUp = 0;
+      this.batonBoost = 0;
+      return;
+    }
     if (item.power > 0 || damage > 0) {
       this.push(
         `${actor.name} 使用「${item.name}」→ ${target.name} ${damage ? `受到 ${damage} 伤害` : '没有受伤'}${labels.length ? `（${labels.join(' / ')}）` : ''}。`,
@@ -507,7 +541,12 @@ export class P5Battle {
     }
     actor.attackUp = 0;
     this.batonBoost = 0;
-    if ((affinity === 'weak' || crit) && target.hp > 0 && !target.down) {
+    if (
+      (affinity === 'weak' || crit)
+      && !['null', 'absorb', 'repel'].includes(affinity)
+      && target.hp > 0
+      && !target.down
+    ) {
       target.down = true;
       this.push(`${target.name} 倒下了。`);
       if (!actor.oneMoreUsed) {

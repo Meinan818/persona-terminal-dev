@@ -79,6 +79,26 @@ test('睡眠后用枪击触发 TECHNICAL', () => {
   assert.match(battle.log.join('\n'), /TECHNICAL/);
 });
 
+test('无效属性不会造成伤害、倒地或 1 MORE', () => {
+  const battle = createDefaultBattle({
+    rng: steady,
+    activePersonaId: 'pixie',
+    enemies: [{
+      id: 'null-test',
+      name: '无属性之影',
+      maxHp: 50,
+      attack: 10,
+      null: ['electric'],
+    }],
+  });
+  assert.equal(battle.act({ type: 'skill', id: 'Zio', targetId: 'null-test' }).ok, true);
+  const enemy = battle.enemies[0];
+  assert.equal(enemy.hp, 50);
+  assert.equal(enemy.down, false);
+  assert.equal(battle.extraId, null);
+  assert.equal(enemy.knownAffinities.electric, 'null');
+});
+
 test('交涉成功收服 P5R 目录里的真实 Persona', () => {
   const win = createDefaultBattle({ rng: () => 0.01 });
   forceHoldUp(win);

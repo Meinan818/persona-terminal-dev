@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildBattleSkill,
   buildBattlePersona,
   catalogPersonaChoices,
   recruitDataForPersona,
@@ -42,4 +43,10 @@ test('交涉收服提案引用目录内 Persona 的中文名和技能', () => {
   assert.equal(recruit.name, '阿珈席翁');
   assert.ok(recruit.skillName);
   assert.match(recruit.skillDesc, /图鉴技能/);
+});
+
+test('蓄力、即死、复活等 P5 技能不会被当成普通伤害', () => {
+  assert.equal(buildBattleSkill('Charge').attackUp, 2.5);
+  assert.equal(buildBattleSkill('Hama').instantKill, true);
+  assert.equal(buildBattleSkill('Recarm').revive, true);
 });

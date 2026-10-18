@@ -64,6 +64,7 @@ function effectTier(effect) {
 }
 
 function parsedPower(definition) {
+  if (/instantly killing|instant death/i.test(definition.effect ?? '')) return 0;
   const tier = effectTier(definition.effect);
   const base = { light: 24, medium: 36, heavy: 52, severe: 72 }[tier];
   const allFoes = /all foes|all enemies/i.test(definition.effect ?? '');
@@ -73,6 +74,14 @@ function parsedPower(definition) {
 function parsedHeal(definition) {
   const tier = effectTier(definition.effect);
   return { light: 30, medium: 55, heavy: 85, severe: 120 }[tier];
+}
+
+function parsedInstantKillChance(definition) {
+  const text = String(definition.effect ?? '').toLowerCase();
+  if (!/instantly killing|instant death/.test(text)) return null;
+  if (text.includes('high')) return 0.5;
+  if (text.includes('medium')) return 0.3;
+  return 0.15;
 }
 
 function parsedStatus(definition) {
@@ -112,8 +121,22 @@ function supportEffect(definition) {
       heal: true,
       power: parsedHeal(definition),
       cure: text.includes('cure'),
+      revive: text.includes('revive'),
+      revivePct: text.includes('all hp') ? 1 : 0.5,
       ignoreAffinity: true,
     };
+  }
+  if (text.includes('next') && text.includes('attack')) {
+    return { target: 'self', attackUp: 2.5, ignoreAffinity: true };
+  }
+  if (text.includes('shield') || text.includes('barrier')) {
+    return { target: 'ally', guard: true, barrier: true, ignoreAffinity: true };
+  }
+  if (text.includes('negate all -kaja')) {
+    return { target: 'allEnemies', cleanseBuffs: true, ignoreAffinity: true };
+  }
+  if (text.includes('negate all -nda')) {
+    return { target: 'allAllies', cleanseDebuffs: true, ignoreAffinity: true };
   }
   if (text.includes('decrease') && text.includes('defense')) {
     return { debuff: 'defense', ignoreAffinity: true };
@@ -149,6 +172,11 @@ export function buildBattleSkill(skillName) {
     target: parsedTarget(definition),
     description: definition.effect ?? '',
   };
+  const instantKillChance = parsedInstantKillChance(definition);
+  if (instantKillChance != null) {
+    base.instantKill = true;
+    base.instantKillChance = instantKillChance;
+  }
   if (status) base.status = status;
   const extra = SUPPORT_ELEMENTS.has(definition.element) ? supportEffect(definition) : {};
   if (extra.target) base.target = extra.target;

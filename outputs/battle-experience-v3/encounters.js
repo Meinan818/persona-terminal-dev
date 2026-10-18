@@ -5,10 +5,19 @@ export const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({'&':
 export function createEncounterDirector(api) {
   const {state, icon, render, reduced, transition, notify} = api;
   const motion=createCombatMotion({reduced});
-  let page = null, details = {}, timer = 0, raf = 0, qte = null;
+  let page = null, details = {}, timer = 0, raf = 0, qte = null, rehearsal = null;
   let boss = false, bossPhase = 1, claimed = false, chestClaimed = false;
+  const rehearsalSteps = [
+    ['hit','受击','敌方意图落地，玩家 HP 条承受冲击。'],
+    ['critical','暴击','敌人被命中，闪点、碎片与暴击跳字同时出现。'],
+    ['heal','治疗','回复演出抬升，状态条回到新的位置。'],
+    ['guard','格挡反击','护盾接住来袭轨迹，返程线给出反击回应。'],
+    ['one-more','追加回合','弱点窗口被抓住，行动权留在玩家手里。'],
+    ['qte','总攻击 QTE','3.5 秒连点决定总攻击档位，再落到命中演出。'],
+    ['boss','Boss 变身','第一形态被击破后，舞台内直接破壳进入第二形态。'],
+  ];
   const catalog = [
-    ['战斗演出','BATTLE',['fx:hit','受击'],['fx:critical','暴击'],['fx:heal','治疗'],['fx:guard','格挡反击'],['fx:one-more','追加回合'],['qte','总攻击 QTE'],['boss','Boss 登场与变身']],
+    ['战斗演出','BATTLE',['battle-flow','完整演出排练'],['fx:hit','受击'],['fx:critical','暴击'],['fx:heal','治疗'],['fx:guard','格挡反击'],['fx:one-more','追加回合'],['qte','总攻击 QTE'],['boss','Boss 登场与变身']],
     ['战后与结算','AFTER THE FIGHT',['victory','战斗胜利'],['defeat','败退'],['retreat','撤退确认'],['loot','战利品揭晓']],
     ['高塔之间','BETWEEN FLOORS',['reveal','区层显形'],['reveal-error','显形中断'],['event','异变事件'],['echo','月光回响'],['quiz','镜之自问'],['chest','月匣'],['recap','下塔回顾'],['clear','区层通关'],['finale','终局']],
   ];
@@ -28,6 +37,9 @@ export function createEncounterDirector(api) {
     if(!known.has(kind))kind='catalog';
     if(kind==='event-result'&&(!data.title||!data.text))kind='event';
     stop();
+    if(kind==='battle-flow'){
+      rehearsal={step:0,qte:false};page=null;api.startBattle('tower');state.log='战斗演出排练开始：按顺序检查每个反馈节点。';render({focus:true});return;
+    }
     if(kind.startsWith('fx:')) { page=null;if(!state.fighting||state.finished)api.startBattle('tower');else render();effect(kind.slice(3));return; }
     if(kind==='phase') {page=null;boss=true;bossPhase=1;api.startBattle('tower',{bossEncounter:true});state.enemyHp=0;startTransformation();return;}
     if(kind==='victory') { page=null;state.fighting=true;state.finished=true;state.origin='tower';claimed=false;render({focus:true});return; }
@@ -40,6 +52,7 @@ export function createEncounterDirector(api) {
   }
   function close() {
     if(motion.transforming){motion.skipTransformation();return;}
+    if(rehearsal){if(state.busy){notify('等当前演出结束，再退出排练。');return;}rehearsal=null;api.returnFromBattle();return;}
     if(!page&&state.finished){api.returnFromBattle();return;}
     if(page==='qte')state.busy=false;
     stop();page=null;render({focus:true});
@@ -53,6 +66,21 @@ export function createEncounterDirector(api) {
     state.busy=true;state.log=`${labels[1]} · 场景演出`;render();motion.play(mapped,{amount,meterTo:next});
     timer=setTimeout(()=>{if(kind==='hit'||kind==='heal')state.hp=next;if(kind==='critical')state.enemyHp=next;state.busy=false;state.log=`${labels[1]} · 演出完成`;render();},reduced.matches?60:660);
   }
+  function rehearsalRail() {
+    if(!rehearsal)return '';
+    const finished=rehearsal.step>=rehearsalSteps.length;
+    const current=rehearsalSteps[Math.min(rehearsal.step,rehearsalSteps.length-1)];
+    return `<section class="rehearsal-rail" aria-label="战斗演出排练" aria-live="polite"><div class="rehearsal-head"><span>演出排练 <small>${finished?'COMPLETE':`${rehearsal.step+1} / ${rehearsalSteps.length}`}</small></span><strong>${finished?'整条链路已走完':current[1]}</strong><em>${finished?'可以退出排练，保留这套节奏。':current[2]}</em></div><div class="rehearsal-steps">${rehearsalSteps.map(([id,label],index)=>`<span class="${index<rehearsal.step?'done ':''}${index===rehearsal.step&&!finished?'current':''}"><b>${String(index+1).padStart(2,'0')}</b>${label}</span>`).join('')}</div><div class="rehearsal-actions">${finished?button('结束排练','rehearsal-close','返回战场入口'):button(rehearsal.step===5?'进入 QTE':'播放下一段','rehearsal-next',state.busy?'当前演出中…':'按顺序查看反馈',rehearsal.step===6?'red':'')}${button('退出排练','rehearsal-close','','subtle')}</div></section>`;
+  }
+  function rehearsalEffect(kind) {
+    const amount=kind==='hit'?24:kind==='critical'?96:kind==='heal'?Math.min(30,390-state.hp):0;
+    const meterTo=kind==='hit'?Math.max(0,state.hp-amount):kind==='critical'?Math.max(0,state.enemyHp-amount):kind==='heal'?Math.min(390,state.hp+amount):state.hp;
+    state.busy=true;state.log=`${rehearsalSteps[rehearsal.step][1]} · 排练中…`;render();motion.play(kind==='hit'?'player-hit':kind,{amount,target:kind==='critical'?'enemy':'player',meterTo});
+    timer=setTimeout(()=>{if(kind==='hit'||kind==='heal')state.hp=meterTo;if(kind==='critical')state.enemyHp=meterTo;rehearsal.step++;state.busy=false;state.log=`${rehearsalSteps[rehearsal.step-1][1]} · 已完成`;render();},reduced.matches?60:660);
+  }
+  function rehearsalQte() {
+    page='qte';state.busy=true;qte={running:false,gauge:30,remaining:3500,last:0,rehearsal:true};render({focus:true});
+  }
   function startTransformation(){
     page=null;state.finished=false;state.busy=true;state.log='面具正在破裂，另一层意志正在苏醒。';render({focus:true});
     motion.transformBoss({onMorph(){
@@ -61,7 +89,7 @@ export function createEncounterDirector(api) {
       scene.dataset.phase='2';scene.querySelector('.enemy-name>span').textContent='PHASE 02';scene.querySelector('.enemy-vitals strong').textContent='420';
       const fill=scene.querySelector(':scope>.meter i');if(fill){fill.style.width='100%';if(!reduced.matches)fill.animate([{width:'0%'},{width:'100%'}],{duration:650,easing:'cubic-bezier(.16,1,.3,1)'});}
       const log=document.querySelector('.battle-log');if(log)log.textContent='面具之下，意志重生。';
-    },onComplete(){state.busy=false;state.log='第二形态已展开，重新观察它的意图。';render({focus:true});}});
+    },onComplete(){if(rehearsal)rehearsal.step++;state.busy=false;state.log='第二形态已展开，重新观察它的意图。';render({focus:true});}});
   }
   function victory() {
     return frame('这一场，拿下。','VICTORY',`<div class="result-layout"><div class="result-mark">${icon('sword')}<b>WIN</b></div><div class="result-content"><p class="scene-copy">你把属于自己的力量，带到了这一刻。</p><div class="result-stats"><span>完成回合<b>${state.turn-3}</b></span><span>剩余 HP<b>${state.hp}</b></span><span>剩余 SP<b>${state.sp}</b></span></div><div class="reward-line">${icon('star')}<span>战利品与奖励</span><b>${claimed?'已收下':'等待揭晓'}</b></div>${claimed?'<p class="scene-note">示例奖励已收下，不会重复结算。</p>':button('揭晓战利品','open:loot','查看这一战留下的收获')}${api.mainButton(state.origin==='tower'?'返回高塔路线':'返回战场','return-after-battle')}<p class="scene-note">原型示例结算，不会发放正式奖励或写入存档。</p></div></div>`,'victory').replace('class="experience-scene','class="victory experience-scene');
@@ -87,6 +115,9 @@ export function createEncounterDirector(api) {
   function finishQte(multiplier) {
     if(page!=='qte')return;
     stop();page=null;state.busy=false;
+    if(rehearsal?.qte){
+      rehearsal.qte=false;state.busy=true;const damage=Math.round(168*(multiplier??1.5)/1.5);state.log='总攻击 · 排练命中演出…';render();motion.play('allout',{amount:damage,meterTo:Math.max(0,state.enemyHp-damage)});timer=setTimeout(()=>{state.enemyHp=Math.max(0,state.enemyHp-damage);rehearsal.step++;state.busy=false;state.log=`总攻击 · ×${(multiplier??1.5).toFixed(1)} 档位完成`;render();},reduced.matches?60:660);return;
+    }
     if(!state.fighting){api.startBattle('tower');state.command='allout';state.stagger=2;}
     api.execute({qteResolved:true,multiplier});
   }
@@ -110,6 +141,14 @@ export function createEncounterDirector(api) {
     if(action==='start-qte'){runQte();return;}
     if(action==='tap-qte'){if(qte?.running)qte.gauge=Math.min(100,qte.gauge+2.2);return;}
     if(action==='skip-qte'){finishQte(1.5);return;}
+    if(action==='rehearsal-close'){close();return;}
+    if(action==='rehearsal-next'){
+      if(!rehearsal||state.busy)return;
+      if(rehearsal.step<5){rehearsalEffect(rehearsalSteps[rehearsal.step][0]);return;}
+      if(rehearsal.step===5){rehearsal.qte=true;rehearsalQte();return;}
+      if(rehearsal.step===6){boss=true;bossPhase=1;state.enemyHp=0;startTransformation();return;}
+      rehearsal.step=rehearsalSteps.length;render();return;
+    }
     if(action==='reveal-loot'){if(details.revealed)return;details.revealed=true;transition('REVEAL');render();return;}
     if(action==='claim-loot'){if(page!=='loot'&&page!=='chest')return;const wasChest=page==='chest';const collected=wasChest?chestClaimed:claimed;if(!collected){if(wasChest)chestClaimed=true;else claimed=true;state.sp=Math.min(260,state.sp+10);notify('示例收获已收下');}page=null;if(wasChest)goTower();else render({focus:true});return;}
     if(action==='echo-heal'||action==='echo-buff'){if(action==='echo-heal')state.hp=Math.min(390,state.hp+78);open('event-result',{title:action==='echo-heal'?'月光，回应了你。':'把这束光，带在身边。',text:action==='echo-heal'?'片刻停留之后，你重新站稳了脚步。':'月辉在掌心凝聚，陪你走进下一层。',effect:action==='echo-heal'?`体力 ${state.hp} / 390`:'月光回响 · 本次登塔伤害 +6%'});return;}
@@ -122,7 +161,7 @@ export function createEncounterDirector(api) {
   return {
     get active(){return page;},get transforming(){return motion.transforming;},get bossPhase(){return boss?bossPhase:0;},screen,victory,open,close,act,effect,
     impact:(kind,options)=>motion.play(kind,options),
-    resetView(){stop();page=null;motion.clear();},
+    get rehearsal(){return rehearsal;},rehearsalRail,resetView(){stop();page=null;rehearsal=null;motion.clear();},
     battleStarted({bossEncounter=false}={}){motion.clear();claimed=false;if(!bossEncounter){boss=false;bossPhase=1;}},
     battleFinished(){if(boss&&bossPhase===1){startTransformation();return true;}boss=false;return false;},
     towerTools(){return `<div class="tower-tools">${[['event','异变'],['echo','回响'],['chest','月匣'],['reveal','区层'],['retreat','下塔']].map(([id,label])=>`<button data-flow="open:${id}">${icon(id==='retreat'?'back':id==='reveal'?'tower':id==='chest'?'box':'star')}<span>${label}</span></button>`).join('')}</div>`;},

@@ -134,7 +134,7 @@ function combat() {
   const m = masks[state.mask];
   const descriptions = { basic:'普通攻击 · 0 SP。选择后再执行，避免误触。', defend:'防御 · 稳住这一回合，迎接敌人的下一击。', insight:'洞察 · 2 SP。查看敌人的意图与弱点情报。', allout:'总攻击 · 20 SP。抓住失衡窗口，展开攻势。' };
   const enemyTurn = state.turnPhase === 'enemy';
-  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?(enemyTurn?'敌方回合':'行动演出中'):'你的回合'}</p></div>
+  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?(enemyTurn?'敌方回合':'行动演出中'):'你的回合'}</p></div>${flows.rehearsalRail?.()??''}
     <div class="combat-poster">
       <div class="combat-word" aria-hidden="true">BATTLE</div>
       <div class="combat-hero" aria-hidden="true">${figure()}</div>
@@ -217,6 +217,7 @@ function startBattle(origin = state.room,options={}) {
 function returnFromBattle() {
   sheet.close();
   clearTimeout(resolveTimer);clearTimeout(enemyTimer);
+  flows.resetView?.();
   state.busy=false;
   state.turnPhase='player';
   state.fighting=false;

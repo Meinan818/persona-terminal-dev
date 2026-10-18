@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CALLING_FLOOR, DUNGEON_FLOORS, SAFE_FLOORS, createDungeonRun, routesForFloor } from './dungeon-run.js';
 
-test('第一座塔是 12 层，普通层有三条路线', () => {
-  assert.equal(DUNGEON_FLOORS, 12);
+test('第一座塔是 100 层，普通层有三条路线', () => {
+  assert.equal(DUNGEON_FLOORS, 100);
   assert.deepEqual(routesForFloor(1), ['mob', 'chest', 'event']);
   assert.equal(routesForFloor(3).length, 3);
   assert.deepEqual(routesForFloor(SAFE_FLOORS[0]), ['mob']);
@@ -91,18 +91,18 @@ test('两个强敌层有独立的守层者名字与更高数值', () => {
   assert.equal(first.encounter.level, 7);
 
   model.journey.pending = null;
-  model.journey.floor = 9;
+  model.journey.floor = 16;
   model.journey.selected = 'elite';
   const second = model.enter();
   assert.equal(second.encounter.name, '回声的看门人');
   assert.ok(second.encounter.maxHp > 0);
 });
 
-test('一条完整路线可以走完 12 层并进入 Boss 结算', () => {
+test('一条完整路线可以走完 100 层并进入 Boss 结算', () => {
   const model = createDungeonRun();
   model.start();
   let guard = 0;
-  while (!model.journey.ended && guard < 20) {
+  while (!model.journey.ended && guard < 220) {
     guard += 1;
     const choices = model.choices();
     assert.ok(choices.length > 0);
@@ -139,7 +139,7 @@ test('无尽模式击败 Boss 后回到下一轮，而不是结束', () => {
   const model = createDungeonRun();
   model.startEndless();
   let guard = 0;
-  while (!model.journey.ended && model.journey.cycle === 1 && guard < 20) {
+  while (!model.journey.ended && model.journey.cycle === 1 && guard < 220) {
     guard += 1;
     const kind = model.choices()[0];
     model.select(kind);
@@ -205,10 +205,10 @@ test('走到出口会进入下一层，并重置本层步数', () => {
   assert.ok(model.journey.map);
 });
 
-test('第十层出口接预告信，送信后才能进入塔顶 Boss', () => {
+test('第九十八层出口接预告信，送信后才能进入塔顶 Boss', () => {
   const model = createDungeonRun();
   model.start();
-  const explore = model.beginFloor(10);
+  const explore = model.beginFloor(98);
   const map = model.journey.map;
   const exit = map.rooms[`${map.exit.x},${map.exit.y}`];
   explore.player = { x: exit.x, y: exit.y };

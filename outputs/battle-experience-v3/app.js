@@ -357,8 +357,8 @@ function home() {
   return `${heading('逆影战场','SHADOW BATTLE','影时间没有尽头。')}
     <div class="home-grid"><div class="hero-stage" aria-hidden="true">${figure()}<span class="slash-label">与另一个自己，同路。</span><span class="sh-home-glint" aria-hidden="true"></span></div>
       <section class="mission"><span class="slash-label">${preparation.settings.enabled?'影时间进行中':'战场暂未启用'}</span><h2>${journey.ended?'塔门已关。':'下一层还在。'}</h2><p>${journey.ended?`本次抵达 ${journey.floor}F。`:`当前 ${journey.floor}F。路线还没有决定。`}</p>
-        <div class="mission-line"><span>当前区层</span><b>第 03 区层</b></div>
-        <div class="mission-line"><span>登塔进度</span><b>${journey.floor} / 10 F</b></div>
+        <div class="mission-line"><span>当前区段</span><b>第 ${Math.max(1, Math.ceil((journey.floor || 1) / 10))} 区段</b></div>
+        <div class="mission-line"><span>登塔进度</span><b>${journey.floor} / ${journey.maxFloor ?? 100} F</b></div>
         ${mainButton(journey.ended?'查看本次行程':'继续登塔','open-tower',journey.ended?'回望走过的路':'回到当前层，查看下一条路线')}
         <button class="text-button" data-action="start-battle">进入当前遭遇</button>
         <div class="mini-prep">${icon('mask')}<span>契约面具 <b>${esc(masks[state.mask].name)}</b></span><button class="text-button" data-action="open-persona">交换</button></div>

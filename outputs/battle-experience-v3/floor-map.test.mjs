@@ -54,7 +54,7 @@ test('守卫会拦住出口，击破后才解锁', () => {
 });
 
 test('钥匙、宝箱、机关和安全屋各自结算一次', () => {
-  const map = createFloorMap({ floor: 4, seed: 7 });
+  const map = createFloorMap({ floor: 10, seed: 7 });
   const state = createExplorationState(map);
   const key = map.rooms[map.keyId];
   state.player = { x: key.x, y: key.y };

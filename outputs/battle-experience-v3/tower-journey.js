@@ -19,16 +19,18 @@ export function encounterFor(floor, kind) {
   const weakness = kind === 'boss'
     ? 'bless'
     : P5_WEAKNESSES[(floor - 4) % P5_WEAKNESSES.length];
-  const level = kind === 'boss' ? 10 : Math.min(10, floor);
+  const level = kind === 'boss' ? 99 : Math.min(99, Math.max(1, floor));
+  const tier = Math.max(1, Math.ceil(floor / 10));
+  const within = ((Math.max(1, floor) - 1) % 10) + 1;
   const recruit = recruitCandidates(weakness, level)[0] ?? null;
   return {
     name: kind === 'boss' ? '回声的执念' : '聒噪的假面',
     level,
     weakness,
     weaknessLabel: P5_ELEMENT_LABELS[weakness] ?? weakness,
-    maxHp: kind === 'boss' ? 220 : 58 + floor * 6,
-    attack: kind === 'boss' ? 30 : 10 + floor * 2,
-    defense: kind === 'boss' ? 12 : 3 + floor,
+    maxHp: kind === 'boss' ? 220 + tier * 80 : 58 + tier * 36 + within * 4,
+    attack: kind === 'boss' ? 30 + tier * 14 : Math.round(10 + tier * 8 + within * 1.5),
+    defense: kind === 'boss' ? 12 + tier * 6 : Math.round(3 + tier * 3 + within * 0.5),
     recruitPersonaId: recruit?.id ?? null,
   };
 }

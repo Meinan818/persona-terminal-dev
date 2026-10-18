@@ -162,6 +162,13 @@
 .night-base-awaken h3{margin-top:5px;font-size:24px;color:#f4fbff}
 .night-base-awaken p{margin-top:5px;font-size:12px;line-height:1.65;color:#ffd7e6}
 .night-base-awaken button{min-width:180px;min-height:48px;border:1px solid #ff7fb3;background:#ff3f8e;color:#fff;font-size:15px;font-weight:900;cursor:pointer}
+.night-base-continue{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;margin-top:18px;padding:16px 18px;border:1px solid rgba(255,216,74,.55);background:linear-gradient(120deg,rgba(255,216,74,.12),rgba(6,25,90,.5))}
+.night-base-continue span{font:italic 800 9px var(--sh-cd);letter-spacing:.18em;color:#ffd84a}
+.night-base-continue h3{margin-top:5px;font-size:23px;color:#f4fbff}
+.night-base-continue p{margin-top:5px;font-size:12px;line-height:1.65;color:#ffeaa5}
+.night-base-continue-actions{display:flex;gap:8px;flex-wrap:wrap}
+.night-base-continue button{min-width:96px;min-height:42px;border:1px solid rgba(255,216,74,.7);background:#ffd84a;color:#06195a;font-size:13px;font-weight:900;cursor:pointer}
+.night-base-continue button+button{background:rgba(6,25,90,.7);color:#ffeaa5}
 .night-base-gate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;margin-top:18px;padding:18px 20px;border:1px solid rgba(63,240,255,.3);background:rgba(3,13,42,.75)}
 .night-base-gate.is-open{border-color:rgba(255,216,74,.65);box-shadow:0 0 24px rgba(255,216,74,.12)}
 .night-base-gate.is-closed{opacity:.82}
@@ -239,6 +246,8 @@
   .night-base-gate .flow-button{width:100%}
   .night-base-awaken{grid-template-columns:1fr;gap:12px}
   .night-base-awaken button{width:100%}
+  .night-base-continue{grid-template-columns:1fr;gap:10px}
+  .night-base-continue button{width:100%}
   .night-base-foot .flow-button{width:100%}
   .tower-strata-list{grid-template-columns:1fr}
   .night-npcs{grid-template-columns:1fr 1fr}

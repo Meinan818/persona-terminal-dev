@@ -1,5 +1,5 @@
 /**
- * 第一座塔的 run 状态：12 层、三条路线、警戒、机关、安全屋、预告信、Boss。
+ * 第一座塔的 run 状态：100 层、10 层一区段、警戒、机关、安全屋、预告信、Boss。
  *
  * 这里只管路线与风险结算；战斗、Persona 和掉落仍由现有 P5Battle 负责。
  * 选择路线会推高警戒，安全屋可以压回一部分；警戒满时下一场战斗会被先制。
@@ -21,9 +21,9 @@ import {
   triggerTrap,
 } from './floor-map.js';
 
-export const DUNGEON_FLOORS = 12;
-export const SAFE_FLOORS = [4, 8];
-export const CALLING_FLOOR = 11;
+export const DUNGEON_FLOORS = 100;
+export const SAFE_FLOORS = Array.from({ length: 9 }, (_, index) => (index + 1) * 10);
+export const CALLING_FLOOR = DUNGEON_FLOORS - 1;
 
 const RISK = {
   mob: 8,
@@ -314,7 +314,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
       seed: floor * 7919 + journey.cycle * 104729 + Math.max(0, stratumIndex) * 31,
     });
     const explore = createExplorationState(map, {
-      maxTime: 16,
+      maxTime: floor <= 10 ? 16 : floor <= 50 ? 14 : 12,
       security: journey.security,
       keys: journey.keys,
     });
@@ -455,7 +455,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } =
     journey.explore = null;
     journey.pending = null;
     journey.mapMessage = '';
-    if (journey.floor >= 10) {
+    if (journey.floor >= journey.maxFloor - 2) {
       journey.floor = CALLING_FLOOR;
       journey.pending = { floor: CALLING_FLOOR, kind: 'calling', resolved: false };
       return true;

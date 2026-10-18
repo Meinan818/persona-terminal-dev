@@ -8,7 +8,7 @@ export const TOWER_STRATA = [
     id: 'echo',
     name: '回声之庭',
     subtitle: 'ECHO COURT',
-    rule: '标准警戒。每层三条路，安全屋在第 4、8 层。',
+    rule: '标准警戒。每层一张房间图，每 10 层有安全屋。',
     riskBonus: 0,
     eliteBias: 0,
     trapBias: 0,

@@ -109,7 +109,7 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
     keyRoom.cleared = false;
   }
 
-  if ([4, 8].includes(floor)) {
+  if (floor % 10 === 0 && floor < 100) {
     const safePoint = path[Math.max(1, Math.floor(path.length / 2))];
     const safeRoom = rooms[keyOf(safePoint.x, safePoint.y)];
     safeRoom.type = 'safe';

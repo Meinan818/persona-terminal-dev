@@ -261,9 +261,9 @@ function openSheet(title, html) {
 }
 function home() {
   const journey=flows.towerSnapshot;
-  if (fixture === 'no-persona'&&!state.personaCreated) return `${heading('逆影战场','SHADOW BATTLE')}<div class="home-grid"><div class="hero-stage"><div aria-hidden="true">${figure()}</div></div><section class="mission"><h2>先遇见你的 Persona</h2><p>选择你的面具，再踏入影时间。</p>${mainButton('开始觉醒','awaken-persona')}<p class="info-note">还没有面具回应你。</p></section></div>`;
+  if (fixture === 'no-persona'&&!state.personaCreated) return `${heading('逆影战场','SHADOW BATTLE')}<div class="home-grid"><div class="hero-stage"><div aria-hidden="true">${figure()}</div><span class="sh-home-glint" aria-hidden="true"></span></div><section class="mission"><h2>先遇见你的 Persona</h2><p>选择你的面具，再踏入影时间。</p>${mainButton('开始觉醒','awaken-persona')}<p class="info-note">还没有面具回应你。</p></section></div>`;
   return `${heading('逆影战场','SHADOW BATTLE','影时间没有尽头。')}
-    <div class="home-grid"><div class="hero-stage" aria-hidden="true">${figure()}<span class="slash-label">与另一个自己，同路。</span></div>
+    <div class="home-grid"><div class="hero-stage" aria-hidden="true">${figure()}<span class="slash-label">与另一个自己，同路。</span><span class="sh-home-glint" aria-hidden="true"></span></div>
       <section class="mission"><span class="slash-label">${preparation.settings.enabled?'影时间进行中':'战场暂未启用'}</span><h2>${journey.ended?'塔门已关。':'下一层还在。'}</h2><p>${journey.ended?`本次抵达 ${journey.floor}F。`:`当前 ${journey.floor}F。路线还没有决定。`}</p>
         <div class="mission-line"><span>当前区层</span><b>第 03 区层</b></div>
         <div class="mission-line"><span>登塔进度</span><b>${journey.floor} / 10 F</b></div>

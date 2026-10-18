@@ -14,10 +14,10 @@ for theme in ['p3','p4','p5']:
     if not parts: continue
     out=''
     for p in parts:
-        css=open(p).read()
+        css=open(p, encoding='utf-8').read()
         css=re.sub(r'(^|[\n,{}])\s*T ',lambda m:m.group(1)+f'html[data-theme={theme}] ',css)
         out+=f'/* ---- {p} ---- */\n'+css+'\n'
-    open(f'theme-{theme}.css','w').write(out)
+    open(f'theme-{theme}.css','w', encoding='utf-8', newline='\n').write(out)
     print(theme,len(out))
 
-open('theme-base.css','w').write(fonts)
+open('theme-base.css','w', encoding='utf-8', newline='\n').write(fonts)

@@ -49,6 +49,7 @@ const state = {
   equipment: { weapon: 'training-blade', armor: 'school-jacket', accessory: null },
   ownedEquipment: ['training-blade', 'school-jacket'],
   personaXp: {},
+  towerStratum: 'echo',
 };
 const scrolls = new Map();
 const masks = [
@@ -131,6 +132,7 @@ function persistP5State() {
       equipment: state.equipment,
       ownedEquipment: state.ownedEquipment,
       personaXp: state.personaXp,
+      towerStratum: state.towerStratum,
     }));
   } catch {}
 }
@@ -171,6 +173,9 @@ function loadP5State() {
           .filter(([id, xp]) => Boolean(buildBattlePersona(id)) && Number.isFinite(Number(xp)))
           .map(([id, xp]) => [id, Math.max(0, Number(xp))]),
       );
+    }
+    if (['echo', 'vanity', 'escape'].includes(saved.towerStratum)) {
+      state.towerStratum = saved.towerStratum;
     }
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;

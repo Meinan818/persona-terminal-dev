@@ -85,6 +85,16 @@
 .night-base-gate p{margin-top:5px;font-size:12px;line-height:1.65;color:#9fc0ff}
 .night-base-gate .flow-button{min-width:210px;margin:0}
 .night-base-foot{display:flex;justify-content:flex-end;margin-top:14px}
+.tower-strata{margin-top:18px;padding:16px 18px;border:1px solid rgba(63,240,255,.24);background:rgba(3,13,42,.62)}
+.tower-strata-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.tower-strata-head span{font:italic 800 9px var(--sh-cd);letter-spacing:.2em;color:#3ff0ff}
+.tower-strata-head b{font-size:20px;color:#f4fbff}
+.tower-strata-head small{font-size:11px;color:#9fc0ff}
+.tower-strata-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.tower-strata-list button{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid rgba(63,240,255,.25);background:rgba(6,25,90,.72);color:#f4fbff;text-align:left;cursor:pointer}
+.tower-strata-list button.active{border-color:#ffd84a;background:rgba(255,216,74,.12)}
+.tower-strata-list button:disabled{opacity:.5;cursor:default}
+.tower-strata-list b{font-size:14px}.tower-strata-list small{font-size:10px;line-height:1.5;color:#9fc0ff}
 .gear-page{margin-top:18px;padding:24px 26px;background:linear-gradient(135deg,rgba(6,25,90,.9),rgba(2,10,42,.72));border-left:4px solid #3ff0ff}
 .gear-summary h2{margin-top:10px;font-size:34px;color:#f4fbff}
 .gear-summary>p{margin-top:8px;font-size:13px;line-height:1.7;color:#bfe7ff}
@@ -135,6 +145,7 @@
   .night-base-awaken{grid-template-columns:1fr;gap:12px}
   .night-base-awaken button{width:100%}
   .night-base-foot .flow-button{width:100%}
+  .tower-strata-list{grid-template-columns:1fr}
   .gear-page{padding:18px 14px}
   .gear-summary h2{font-size:26px}
   .gear-slots{grid-template-columns:1fr}

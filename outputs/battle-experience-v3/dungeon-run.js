@@ -6,6 +6,7 @@
  */
 
 import { encounterFor } from './tower-journey.js';
+import { adjustRoute, getStratum } from './tower-registry.js';
 
 export const DUNGEON_FLOORS = 12;
 export const SAFE_FLOORS = [4, 8];
@@ -36,14 +37,15 @@ const ROUTES = [
   ['event', 'elite', 'mob'],
 ];
 
-export function routesForFloor(floor, maxFloor = DUNGEON_FLOORS) {
+export function routesForFloor(floor, maxFloor = DUNGEON_FLOORS, stratumId = 'echo') {
   if (floor >= maxFloor) return ['boss'];
   if (floor === maxFloor - 1) return ['calling'];
   if (SAFE_FLOORS.includes(floor)) return ['safe'];
-  return [...ROUTES[(Math.max(1, floor) - 1) % ROUTES.length]];
+  const stratum = getStratum(stratumId);
+  return adjustRoute(ROUTES[(Math.max(1, floor) - 1) % ROUTES.length], stratum);
 }
 
-export function createDungeonRun({ floors = DUNGEON_FLOORS } = {}) {
+export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo' } = {}) {
   const journey = {
     active: false,
     floor: 0,
@@ -58,15 +60,16 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS } = {}) {
     alert: false,
     callingCardSent: false,
     keys: 0,
+    stratum: getStratum(stratum).id,
   };
 
   const choices = () => {
     if (journey.ended) return [];
     const floor = journey.pending ? journey.floor : Math.min(journey.maxFloor, journey.floor + 1);
-    return routesForFloor(floor, journey.maxFloor);
+    return routesForFloor(floor, journey.maxFloor, journey.stratum);
   };
 
-  const start = () => {
+  const start = (stratumId = journey.stratum) => {
     Object.assign(journey, {
       active: true,
       floor: 0,
@@ -81,7 +84,14 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS } = {}) {
       alert: false,
       callingCardSent: false,
       keys: 0,
+      stratum: getStratum(stratumId).id,
     });
+  };
+
+  const setStratum = stratumId => {
+    if (journey.pending) return false;
+    journey.stratum = getStratum(stratumId).id;
+    return true;
   };
 
   const select = kind => {
@@ -98,7 +108,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS } = {}) {
 
     journey.floor += 1;
     const kind = journey.selected;
-    const risk = RISK[kind] ?? 0;
+    const risk = Math.max(0, (RISK[kind] ?? 0) + getStratum(journey.stratum).riskBonus);
     if (kind !== 'safe') journey.security = Math.min(100, journey.security + risk);
     const ambush = journey.security >= 100;
     if (ambush) {
@@ -212,5 +222,6 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS } = {}) {
     takeKey,
     disarmTrap,
     forceTrap,
+    setStratum,
   };
 }

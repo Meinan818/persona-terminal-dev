@@ -116,3 +116,15 @@ test('一条完整路线可以走完 12 层并进入 Boss 结算', () => {
   assert.equal(model.journey.history.length, DUNGEON_FLOORS);
   assert.equal(model.journey.callingCardSent, true);
 });
+
+test('不同塔层会改变路线与警戒压力', () => {
+  assert.ok(routesForFloor(1, DUNGEON_FLOORS, 'vanity').includes('elite'));
+  assert.ok(routesForFloor(1, DUNGEON_FLOORS, 'escape').includes('trap'));
+
+  const model = createDungeonRun({ stratum: 'vanity' });
+  model.start();
+  model.enter();
+  assert.equal(model.journey.stratum, 'vanity');
+  assert.equal(model.journey.security, 10);
+  assert.equal(model.setStratum('escape'), false);
+});

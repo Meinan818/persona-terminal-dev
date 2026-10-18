@@ -70,7 +70,8 @@ export function createEncounterDirector(api) {
     if(!rehearsal)return '';
     const finished=rehearsal.step>=rehearsalSteps.length;
     const current=rehearsalSteps[Math.min(rehearsal.step,rehearsalSteps.length-1)];
-    return `<section class="rehearsal-rail" aria-label="战斗演出排练" aria-live="polite"><div class="rehearsal-head"><span>演出排练 <small>${finished?'COMPLETE':`${rehearsal.step+1} / ${rehearsalSteps.length}`}</small></span><strong>${finished?'整条链路已走完':current[1]}</strong><em>${finished?'可以退出排练，保留这套节奏。':`触发：${current[3]} · ${current[2]}`}</em></div><div class="rehearsal-steps">${rehearsalSteps.map(([id,label],index)=>`<span class="${index<rehearsal.step?'done ':''}${index===rehearsal.step&&!finished?'current':''}"><b>${String(index+1).padStart(2,'0')}</b>${label}</span>`).join('')}</div><div class="rehearsal-actions">${finished?button('结束排练','rehearsal-close','返回战场入口'):button(rehearsal.step===5?'进入 QTE':'播放下一段','rehearsal-next',state.busy?'当前演出中…':'按顺序查看反馈',rehearsal.step===6?'red':'')}${button('退出排练','rehearsal-close','','subtle')}</div></section>`;
+    const branchNote=rehearsal.step===6&&rehearsal.qteResult?`QTE 分支：${rehearsal.qteResult} · `:'';
+    return `<section class="rehearsal-rail" aria-label="战斗演出排练" aria-live="polite"><div class="rehearsal-head"><span>演出排练 <small>${finished?'COMPLETE':`${rehearsal.step+1} / ${rehearsalSteps.length}`}</small></span><strong>${finished?'整条链路已走完':current[1]}</strong><em>${finished?'可以退出排练，保留这套节奏。':`${branchNote}触发：${current[3]} · ${current[2]}`}</em></div><div class="rehearsal-steps">${rehearsalSteps.map(([id,label],index)=>`<span class="${index<rehearsal.step?'done ':''}${index===rehearsal.step&&!finished?'current':''}"><b>${String(index+1).padStart(2,'0')}</b>${label}</span>`).join('')}</div><div class="rehearsal-actions">${finished?button('结束排练','rehearsal-close','返回战场入口'):button(rehearsal.step===5?'进入 QTE':'播放下一段','rehearsal-next',state.busy?'当前演出中…':'按顺序查看反馈',rehearsal.step===6?'red':'')}${button('退出排练','rehearsal-close','','subtle')}</div></section>`;
   }
   function rehearsalEffect(kind) {
     const amount=kind==='hit'?24:kind==='critical'?96:kind==='heal'?Math.min(30,390-state.hp):0;
@@ -112,25 +113,25 @@ export function createEncounterDirector(api) {
     return null;
   }
   function qteMultiplier(value) { return value>=100?2.2:value>=75?1.8:value>=50?1.5:1.2; }
-  function finishQte(multiplier) {
+  function finishQte(multiplier,reason='timeout') {
     if(page!=='qte')return;
     stop();page=null;state.busy=false;
     if(rehearsal?.qte){
-      rehearsal.qte=false;state.busy=true;const damage=Math.round(168*(multiplier??1.5)/1.5);state.log='总攻击 · 排练命中演出…';render();motion.play('allout',{amount:damage,meterTo:Math.max(0,state.enemyHp-damage)});timer=setTimeout(()=>{state.enemyHp=Math.max(0,state.enemyHp-damage);rehearsal.step++;state.busy=false;state.log=`总攻击 · ×${(multiplier??1.5).toFixed(1)} 档位完成`;render();},reduced.matches?60:660);return;
+      rehearsal.qte=false;rehearsal.qteResult=reason;state.busy=true;const damage=Math.round(168*(multiplier??1.5)/1.5);state.log=`总攻击 · ${reason} · 排练命中演出…`;render();motion.play('allout',{amount:damage,meterTo:Math.max(0,state.enemyHp-damage)});timer=setTimeout(()=>{state.enemyHp=Math.max(0,state.enemyHp-damage);rehearsal.step++;state.busy=false;state.log=`总攻击 · ×${(multiplier??1.5).toFixed(1)} 档位完成`;render();},reduced.matches?60:660);return;
     }
     if(!state.fighting){api.startBattle('tower');state.command='allout';state.stagger=2;}
     api.execute({qteResolved:true,multiplier});
   }
   function runQte() {
     if(!qte||qte.running)return;
-    if(reduced.matches){finishQte(1.5);return;}
+    if(reduced.matches){finishQte(1.5,'reduced-motion');return;}
     qte.running=true;render();qte.last=performance.now();
     const tick=now=>{
       if(!qte||page!=='qte')return;
       const dt=Math.min(100,now-qte.last);qte.last=now;
       if(!document.hidden){qte.remaining=Math.max(0,qte.remaining-dt);qte.gauge=Math.max(0,qte.gauge-.016*dt);}
       const fill=document.querySelector('#qte-fill');if(fill){fill.style.width=`${qte.gauge}%`;fill.parentElement.setAttribute('aria-valuenow',String(Math.round(qte.gauge)));document.querySelector('#qte-seconds').textContent=(qte.remaining/1000).toFixed(1);document.querySelector('#qte-mult').textContent=`×${qteMultiplier(qte.gauge).toFixed(1)}`;}
-      if(qte.remaining<=0||qte.gauge>=100){finishQte(qteMultiplier(qte.gauge));return;}raf=requestAnimationFrame(tick);
+      if(qte.remaining<=0||qte.gauge>=100){finishQte(qteMultiplier(qte.gauge),qte.gauge>=100?'complete':'timeout');return;}raf=requestAnimationFrame(tick);
     };raf=requestAnimationFrame(tick);
   }
   function act(action) {
@@ -140,7 +141,7 @@ export function createEncounterDirector(api) {
     if(action==='go-home'){stop();page=null;api.goRoom('battle');return;}
     if(action==='start-qte'){runQte();return;}
     if(action==='tap-qte'){if(qte?.running)qte.gauge=Math.min(100,qte.gauge+2.2);return;}
-    if(action==='skip-qte'){finishQte(1.5);return;}
+    if(action==='skip-qte'){finishQte(1.5,'skip');return;}
     if(action==='rehearsal-close'){close();return;}
     if(action==='rehearsal-next'){
       if(!rehearsal||state.busy)return;

@@ -254,5 +254,5 @@ export function lockdown(persona, stat) {
 }
 
 export function skillName(id) {
-  return SKILLS[id]?.name ?? id;
+  return SKILLS[id]?.nameZh ?? SKILLS[id]?.name ?? id;
 }

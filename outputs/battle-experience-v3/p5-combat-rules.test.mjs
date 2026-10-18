@@ -144,6 +144,16 @@ test('装备攻防与 HP/SP 加成进入战斗主角', () => {
   assert.equal(hero.maxSp, 39);
 });
 
+test('技能卡写入 Persona 覆盖后会进入战斗技能组', () => {
+  setPersonaOverride('arsene', { skills: ['Zio'] });
+  try {
+    const built = buildBattlePersona('arsene');
+    assert.ok(built.skills.some(skill => skill.id === 'Zio'));
+  } finally {
+    setPersonaOverride('arsene', null);
+  }
+});
+
 test('异常状态记录剩余回合，并在到期后自动解除', () => {
   const battle = createDefaultBattle({ rng: steady });
   battle.currentId = 'ally:silky';

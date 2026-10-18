@@ -15,7 +15,7 @@ export function createTowerFlow(api){
   const debugMode=new URLSearchParams(location.search).get('p5r-debug')==='1';
   const initialVitals={hp:state.hp,sp:state.sp};
   let page=null,receipt=null,clock=null,raf=0,serial=0,recap=null;
-  let interlude=null,shopReturn='interlude',shopMessage='',prepMessage='',fusionPreview=null,fusionMessage='',specialPreview=null,specialMessage='',velvetService='fusion',velvetMessage='',velvetReturn='return';
+  let interlude=null,shopReturn='interlude',shopMessage='',prepMessage='',fusionPreview=null,fusionMessage='',specialPreview=null,specialMessage='',skillCardSelected='',velvetService='fusion',velvetMessage='',velvetReturn='return';
   const btn=(label,action,note='',disabled=false)=>`<button class="flow-button" data-tower="${action}" ${disabled?'disabled':''}><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;
   const frame=(title,en,body)=>`<section class="experience-scene tower-scene" data-tower-scene="${page}"><button class="flow-return" data-tower="back">${icon('back')}<span>返回<small>RETURN</small></span></button><div class="scene-ghost" aria-hidden="true">${en}</div><div class="scene-heading"><h1>${title}</h1><span>${en}</span></div>${body}</section>`;
   function stop(){cancelAnimationFrame(raf);clock=null;serial++;}
@@ -140,6 +140,7 @@ export function createTowerFlow(api){
       if(Number.isFinite(value))stats[key]=value;
     }
     const override={level:persona.level??previous.level,stats};
+    if(Array.isArray(previous.skills)&&previous.skills.length)override.skills=[...previous.skills];
     state.personaOverrides={...(state.personaOverrides??{}),[id]:override};
     setPersonaOverride(id,override);
   }
@@ -204,6 +205,26 @@ export function createTowerFlow(api){
     api.persistP5State?.();
     render({focus:true});
   }
+  function useSkillCard(){
+    const targetId=document.querySelector('#vsc-persona')?.value;
+    const cardId=skillCardSelected;
+    if(!targetId||!cardId){velvetMessage='先选一张技能卡和一张面具。';render();return;}
+    const qty=Number(state.materials?.[cardId])||0;
+    if(qty<=0){velvetMessage='这张技能卡已经用完了。';render();return;}
+    const built=buildBattlePersona(targetId);
+    if(!built){velvetMessage='图鉴里没有这张面具。';render();return;}
+    if(built.skills.some(skill=>skill.id===cardId)){velvetMessage=`${built.name} 已经会「${skillName(cardId)}」。`;render();return;}
+    const previous=state.personaOverrides?.[targetId]??{};
+    const override={...previous,skills:[...(Array.isArray(previous.skills)?previous.skills:[]),cardId]};
+    state.personaOverrides={...(state.personaOverrides??{}),[targetId]:override};
+    setPersonaOverride(targetId,override);
+    const nextQty=qty-1;
+    if(nextQty>0)state.materials={...state.materials,[cardId]:nextQty};
+    else{state.materials={...state.materials};delete state.materials[cardId];}
+    velvetMessage=`${built.name} 学会了「${skillName(cardId)}」。`;
+    api.persistP5State?.();
+    render({focus:true});
+  }
   function timeline(duration,onTick,onDone){
     stop();const id=serial;clock={elapsed:0,last:performance.now()};
     const tick=now=>{if(id!==serial||!clock)return;const dt=Math.max(0,now-clock.last);clock.last=now;if(!document.hidden)clock.elapsed+=dt;onTick(clock.elapsed);if(clock.elapsed>=duration){stop();onDone();return;}raf=requestAnimationFrame(tick);};
@@ -230,7 +251,7 @@ export function createTowerFlow(api){
     Object.assign(state,initialVitals);
     receipt=null;interlude=null;shopReturn='interlude';shopMessage='';prepMessage='';
     fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';
-    velvetService='fusion';velvetMessage='';velvetReturn='prep';
+    velvetService='fusion';velvetMessage='';velvetReturn='prep';skillCardSelected='';
     if(error){reveal(true);return;}
     show('prep');
   }
@@ -342,6 +363,7 @@ export function createTowerFlow(api){
     const compendiumEntries=state.compendium?.entries??[];
     const recipes=specialRecipes(roster);
     const materialList=materialEntries(state.materials);
+    const skillCards=materialList.filter(item=>item.category==='skill-card');
     const backLabel=velvetReturn==='prep'?'回到据点':'回到回城';
     const panel=()=>{
       if(velvetService==='fusion')return `<h2>双体融合 / FUSION</h2><p>选择两张面具，把它们关进同一间牢房。结果只来自 P5R 图鉴。</p><div class="vr-selects"><label>面具 A${select('velvet-a',0)}</label><span>×</span><label>面具 B${select('velvet-b',1)}</label></div>${btn('预览融合','preview-fusion')}${preview?`<div class="vr-result"><h3>${esc(preview.persona.name)}</h3><p>Lv.${preview.persona.level} · ${esc(ARCANA_LABELS[preview.persona.arcana]??preview.persona.arcana)} · ${preview.persona.skills.length} 个技能</p><p>${preview.persona.skills.slice(0,4).map(id=>esc(skillName(id))).join(' · ')}</p>${btn(`确认融合 · ¥${preview.cost}`,'confirm-fusion')}</div>`:''}`;
@@ -355,6 +377,9 @@ export function createTowerFlow(api){
       }
       if(velvetService==='materials'){
         return `<h2>素材 / MATERIALS</h2><p>电椅留下的技能卡与装备会收在这里。</p>${materialList.length?`<div class="vr-materials">${materialList.map(item=>`<article class="vr-material"><span class="vr-material-tag">${item.category==='skill-card'?'技能卡':item.category==='equipment'?'装备':'素材'}</span><b>${esc(item.label)}</b><span class="vr-material-qty">×${item.qty}</span><small>${item.sourceNames.length?`来源 · ${esc(item.sourceNames.slice(0,2).join(' / '))}${item.sourceNames.length>2?' 等':''}`:'电椅产物'}</small></article>`).join('')}</div>`:'<div class="vr-empty"><b>还没有素材。</b><p>把后来获得的面具送上电椅，产物会存入这里。</p></div>'}`;
+      }
+      if(velvetService==='skill'){
+        return `<h2>技能卡 / SKILL CARD</h2><p>电椅留下的技能卡，可以教给一张面具。每张面具最多保留六个主动技能。</p><div class="vr-skill-cards">${skillCards.length?skillCards.map(card=>`<button type="button" data-tower="skill-card:${card.id}" class="${skillCardSelected===card.id?'selected':''}"><span>${esc(card.label)}</span><small>×${card.qty}</small></button>`).join(''):'<p>还没有技能卡。把技能卡型面具送上电椅。</p>'}</div><div class="vr-selects"><label>教给哪张面具${select('vsc-persona',0)}</label></div>${btn('教给它','use-skill-card','',!skillCardSelected||!skillCards.length)}${velvetMessage?`<p class="vr-message">${esc(velvetMessage)}</p>`:''}`;
       }
       return `<h2>技能卡 / LOCKED</h2><div class="vr-locked"><b>SKILL CARD</b><p>需要网络或剧情解锁的技能卡功能。入口先留在这里。</p></div>`;
     };
@@ -430,7 +455,7 @@ export function createTowerFlow(api){
       render({focus:true});return;
     }
     if(action==='velvet'){velvetReturn='return';fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';velvetService='fusion';velvetMessage='';show('velvet');return;}
-    if(action.startsWith('velvet-service:')){velvetService=action.slice('velvet-service:'.length);velvetMessage='';fusionMessage='';fusionPreview=null;specialPreview=null;specialMessage='';render({focus:true});return;}
+    if(action.startsWith('velvet-service:')){velvetService=action.slice('velvet-service:'.length);velvetMessage='';fusionMessage='';fusionPreview=null;specialPreview=null;specialMessage='';skillCardSelected='';render({focus:true});return;}
     if(action==='gallows-exec'){gallowsExec();return;}
     if(action==='chair-exec'){chairExec();return;}
     if(action.startsWith('lockdown-exec:')){lockdownExec(action.slice('lockdown-exec:'.length));return;}
@@ -440,6 +465,8 @@ export function createTowerFlow(api){
     if(action==='confirm-fusion'){confirmFusion();return;}
     if(action.startsWith('special-recipe:')){previewSpecial(action.slice('special-recipe:'.length));return;}
     if(action==='confirm-special'){confirmSpecial();return;}
+    if(action.startsWith('skill-card:')){skillCardSelected=action.slice('skill-card:'.length);velvetMessage='';render({focus:true});return;}
+    if(action==='use-skill-card'){useSkillCard();return;}
     if(action==='return-back'){show(velvetReturn);return;}
     if(action==='velvet-exit'){show(velvetReturn);return;}
     if(action.startsWith('select:')){if(model.select(action.slice(7))){render();document.querySelector(`[data-tower="${action}"]`)?.focus({preventScroll:true});}return;}
@@ -473,7 +500,7 @@ export function createTowerFlow(api){
   document.addEventListener('visibilitychange',()=>{if(clock)clock.last=performance.now();});
   return {screen,route,act,start,showRecap,prep(){return prepPage();},...debugMode?{debugJump}:{},get snapshot(){return {active:j.active,floor:j.floor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss','elite'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
     hide(){stop();page=null;},recordLoot(reward){return model.addLoot(reward);},
-    preview(next){if(next!=='return'&&next!=='velvet')return false;model.start();j.floor=j.maxFloor;j.ended='clear';interlude={battle:{summary:'这一夜的最后一道影子，已经散了。'},rested:false,party:[]};fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';velvetService='fusion';velvetMessage='';velvetReturn='return';prepMessage='';page=next;return true;},
+    preview(next){if(next!=='return'&&next!=='velvet')return false;model.start();j.floor=j.maxFloor;j.ended='clear';interlude={battle:{summary:'这一夜的最后一道影子，已经散了。'},rested:false,party:[]};fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';velvetService='fusion';velvetMessage='';velvetReturn='return';skillCardSelected='';prepMessage='';page=next;return true;},
     battleReturn(won,phase,battleResult){if(!this.pendingBattle)return;if(won){const floor=j.pending.floor,wasBoss=j.pending.kind==='boss';const drops=Array.isArray(battleResult?.drops)?battleResult.drops:[];const reward=battleResult?.reward??null;const items=[];let spGain=0;for(const drop of drops){if(drop?.item){items.push(drop.item);state.battleLoot.push(drop.item);}if(drop?.sp)spGain+=Number(drop.sp)||0;}if(reward?.item){items.push(reward.item);state.battleLoot.push(reward.item);}if(reward?.sp)spGain+=Number(reward.sp)||0;const moneyGain=240+floor*60;state.money+=moneyGain;if(spGain)state.sp=Math.min(state.heroMaxSp??state.sp,state.sp+spGain);api.persistP5State?.();interlude={battle:battleResult,rested:false,party:captureParty(),reward:{money:moneyGain,items,sp:spGain}};model.resolve({label:'战斗胜利',detail:battleResult?.summary??'击破了挡路的阴影。',type:'battle',receipt:battleResult??null});model.advance();page=(wasBoss||j.ended==='clear')?'return':'interlude';}else{j.pending.battleState={enemyHp:j.pending.kind==='boss'?state.enemyHp:312,stagger:j.pending.kind==='boss'?state.stagger:0,turn:state.turn,phase:j.pending.kind==='boss'?phase:1};page=null;}},
     defeat(){model.end('defeat');show('defeat');},
   };

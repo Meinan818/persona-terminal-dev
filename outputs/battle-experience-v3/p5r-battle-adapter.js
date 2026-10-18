@@ -23,6 +23,7 @@ export function setPersonaOverride(personaId, override) {
   personaOverrides.set(personaId, {
     level: Number.isFinite(Number(override.level)) ? Number(override.level) : undefined,
     stats: override.stats ? { ...override.stats } : undefined,
+    skills: Array.isArray(override.skills) ? [...new Set(override.skills)] : undefined,
   });
 }
 
@@ -208,10 +209,12 @@ export function buildBattlePersona(personaId, { level } = {}) {
     skill => (persona.skillLevels[skill] ?? 0) <= currentLevel,
   );
   const available = unlocked.length ? unlocked : persona.skills;
-  const active = available
+  const learned = Array.isArray(override?.skills) ? override.skills : [];
+  const skillPool = [...new Set([...available, ...learned])];
+  const active = skillPool
     .map(buildBattleSkill)
     .filter(Boolean)
-    .slice(0, 5);
+    .slice(0, 6);
   if (!active.length) {
     active.push({
       id: 'basic-phys',

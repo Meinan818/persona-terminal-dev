@@ -27,6 +27,10 @@ body[data-fighting=true] .ghost-word{display:none}
 .combat-poster .enemy-face i{background:#ff65ad;height:12%;border-radius:50%;clip-path:none;top:36%}.combat-poster .enemy-face b{background:#ff65ad;height:8%;clip-path:polygon(0 75%,20% 0,45% 55%,65% 10%,100% 65%,85% 100%,65% 50%,45% 100%,20% 45%,8% 100%)}
 .combat-poster .enemy-orbit{inset:-15%;border-color:#efa4dc66;border-width:2px;transform:rotate(25deg) scaleY(.76)}
 .combat-poster .enemy-intent{bottom:-7%;left:3%;right:0;padding:11px 17px;background:#071844e8;color:#f7fdff;clip-path:var(--slant);transform:rotate(-3deg);font-size:14px}
+.combat-poster .enemy-scene.enemy-turn .enemy-intent{border-bottom:2px solid #ff6a9e;color:#fff1f7;animation:enemy-intent-pulse .72s ease-in-out infinite alternate}
+.combat-poster .enemy-scene.enemy-turn .enemy-intent svg{color:#ff7ca9}
+.combat-poster .enemy-scene.enemy-turn .enemy-art{filter:drop-shadow(0 12px 0 #07184433) drop-shadow(0 0 18px #ff4f9666)}
+@keyframes enemy-intent-pulse{from{filter:brightness(1)}to{filter:brightness(1.28)}}
 .combat-poster .enemy-intent svg{color:var(--cyan)}.combat-poster .enemy-intent small{color:#bfefff;font-size:11px}
 .combat-poster .command-deck{display:contents}
 .combat-poster .mask-switcher{position:absolute;left:2%;top:1%;width:43%;z-index:4;gap:5px;margin:0;color:#fff}

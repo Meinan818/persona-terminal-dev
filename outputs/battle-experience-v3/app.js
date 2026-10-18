@@ -11,7 +11,7 @@ const state = {
   room: 'battle', fighting: false, origin: 'battle', selectedNode: 'mob',
   mask: 0, arsenalTab: 'relic', equipped: new Set(['moon']), command: 'skills', skill: 0,
   hp: 345, sp: fixture === 'low-sp' ? 4 : 217, enemyHp: 312,
-  turn: 4, stagger: 0, busy: false, finished: false, log: '轮到你了。先看意图，再决定这一回合。',
+  turn: 4, stagger: 0, busy: false, finished: false, turnPhase: 'player', log: '轮到你了。先看意图，再决定这一回合。',
 };
 const scrolls = new Map();
 const masks = [
@@ -39,7 +39,7 @@ function notify(text) {
   clearTimeout(notify.timer);
   notify.timer = setTimeout(() => $('.toast').classList.remove('visible'), 2400);
 }
-let sweepTimer, hitTimer, resolveTimer;
+let sweepTimer, hitTimer, resolveTimer, enemyTimer;
 function transition(word, origin) {
   if (reduced.matches) return;
   const fx = $('.sweep');
@@ -133,17 +133,18 @@ function combat() {
   if (state.finished) return flows.victory();
   const m = masks[state.mask];
   const descriptions = { basic:'普通攻击 · 0 SP。选择后再执行，避免误触。', defend:'防御 · 稳住这一回合，迎接敌人的下一击。', insight:'洞察 · 2 SP。查看敌人的意图与弱点情报。', allout:'总攻击 · 20 SP。抓住失衡窗口，展开攻势。' };
-  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?'行动演出中':'你的回合'}</p></div>
+  const enemyTurn = state.turnPhase === 'enemy';
+  return `<div class="combat-top"><button class="back-button" data-action="leave-battle">${icon('back')}<span>返回${state.origin==='tower'?'路线':'战场'}<small>RETURN</small></span></button><p>TURN ${String(state.turn).padStart(2,'0')} / ${state.busy?(enemyTurn?'敌方回合':'行动演出中'):'你的回合'}</p></div>
     <div class="combat-poster">
       <div class="combat-word" aria-hidden="true">BATTLE</div>
       <div class="combat-hero" aria-hidden="true">${figure()}</div>
       <div class="combat-orbit" aria-hidden="true"><i></i><b></b></div>
       <div class="glass-shards" aria-hidden="true">${Array.from({length:9},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
-      <section class="enemy-scene ${flows.bossPhase?'boss-in-combat':''}" data-phase="${flows.bossPhase||1}" aria-label="敌人状态"><div class="enemy-name"><h1>${flows.bossPhase?'回声的执念':'聒噪的假面'}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:'LV 05'}</span></div>
+      <section class="enemy-scene ${flows.bossPhase?'boss-in-combat':''} ${enemyTurn?'enemy-turn':''}" data-phase="${flows.bossPhase||1}" aria-label="敌人状态"><div class="enemy-name"><h1>${flows.bossPhase?'回声的执念':'聒噪的假面'}</h1><span>${flows.bossPhase?`PHASE 0${flows.bossPhase}`:'LV 05'}</span></div>
       <div class="enemy-vitals"><span>敌人 HP</span><span><strong>${state.enemyHp}</strong> / 420</span></div>${meter(state.enemyHp,420)}
       <div class="weakness-line"><b>弱点 · 知识</b><span>${state.stagger >= 2?'失衡 · 总攻击窗口':`失衡 ${state.stagger} / 2`}</span></div>
       <div class="enemy-art" aria-hidden="true"><div class="boss-crown">${[-85,-50,-20,20,50,85,140,220].map(angle=>`<i style="--spike:${angle}deg"></i>`).join('')}</div>${visualArt('enemy','<div class="enemy-orbit"></div><div class="enemy-face"><i></i><i></i><b></b></div>')}</div>
-      <div class="enemy-intent">${icon('eye')}<span><b>下一击：蓄势攻击</b><small>先看意图，再决定进攻还是防御。</small></span></div>
+      <div class="enemy-intent">${icon('eye')}<span><b>${enemyTurn?'敌方出手：蓄势攻击':'下一击：蓄势攻击'}</b><small>${enemyTurn?'准备承受这一击，或用防御化解。':'先看意图，再决定进攻还是防御。'}</small></span></div>
     </section><section class="command-deck" aria-label="战斗指令" aria-busy="${state.busy}">
       <div class="player-hud"><div class="player-tag"><b>ME</b><span>LV <strong>12</strong></span></div><div><span>HP <strong>${state.hp}</strong><em>/ 390</em></span>${meter(state.hp,390)}</div><div class="sp"><span>SP <strong>${state.sp}</strong><em>/ 260</em></span>${meter(state.sp,260)}</div></div>
       <div class="mask-switcher"><button class="icon-button" data-action="prev-mask" aria-label="上一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button><button data-action="choose-mask" ${state.busy?'disabled':''}><span class="mask-emblem">${icon('mask')}</span><span class="mask-switch-name">${esc(m.name)}<small>${m.attr} · PERSONA</small></span><b aria-hidden="true">${icon('chevrons')}</b></button><button class="icon-button" data-action="next-mask" aria-label="下一张面具" ${state.busy?'disabled':''}>${icon('chevrons')}</button></div>
@@ -152,7 +153,7 @@ function combat() {
       <div class="command-detail">${state.command==='skills'?`<div class="skill-list">${m.skills.map((s,i)=>combatSkill(s,i)).join('')}</div><p>${m.skills[state.skill][2]}</p>`:`<div class="action-banner">${icon(commands.find(c=>c[0]===state.command)?.[2]??'star')}<strong>${commandName()}</strong><b>${commandCost()}<small>SP</small></b></div><p>${descriptions[state.command]}</p>`}</div>
       ${state.stagger>=2?`<button class="small-button allout-pick" data-command="allout" ${state.busy?'disabled':''}>${icon('star')}总攻击 · 20 SP</button>`:''}
       <button class="main-button execute ${state.command==='allout'?'red':''}" data-action="execute" ${state.busy||state.sp<commandCost()?'disabled':''}><span>${state.busy?'行动演出中…':state.sp<commandCost()?'SP 不足':`执行 · ${commandName()}`}</span>${icon('arrow')}</button>
-      <p class="busy-text">${state.busy?'等待行动结束，避免重复出手。':`${commandCost()} SP · 选好行动后执行`}</p>
+      <p class="busy-text">${state.busy?(enemyTurn?'敌方出手，准备承受这一击。':'等待行动结束，避免重复出手。'):`${commandCost()} SP · 选好行动后执行`}</p>
     </section><p class="battle-log" role="status" aria-live="polite">${state.log}</p></div>`;
 }
 function combatSkill(skill,index){
@@ -194,11 +195,13 @@ addEventListener('hashchange', () => {
   window.scrollTo(0,scrolls.get(state.room) ?? 0);
 });
 function startBattle(origin = state.room,options={}) {
+  clearTimeout(resolveTimer);clearTimeout(enemyTimer);
   flows.battleStarted(options);
   state.origin = origin;
   state.fighting = true;
   state.finished = false;
   state.busy = false;
+  state.turnPhase = 'player';
   state.command='skills';
   state.skill=0;
   state.enemyHp=312;
@@ -213,8 +216,9 @@ function startBattle(origin = state.room,options={}) {
 }
 function returnFromBattle() {
   sheet.close();
-  clearTimeout(resolveTimer);
+  clearTimeout(resolveTimer);clearTimeout(enemyTimer);
   state.busy=false;
+  state.turnPhase='player';
   state.fighting=false;
   state.finished=false;
   state.room=state.origin;
@@ -237,6 +241,7 @@ function execute(options={}) {
   const skillAttacks=command==='skills'&&(state.mask===0||state.mask===4||(state.skill===0&&state.mask!==3));
   const healing=command==='skills'&&state.mask===3&&state.skill===0;
   const damage=command==='allout'?Math.round(168*(options.multiplier??1.5)/1.5):weak?72:48;
+  const enemyActs = command !== 'insight';
   state.busy=true;
   state.sp-=commandCost();
   state.log=`${name} · 行动演出中…`;
@@ -252,16 +257,34 @@ function execute(options={}) {
       if(command==='allout')state.stagger=0;
     }
     if(command==='skills'&&state.mask===3&&state.skill===0)state.hp=Math.min(390,state.hp+30);
-    state.turn++;
-    state.busy=false;
     state.log=command==='insight'?'意图已确认：下一击蓄势攻击，弱点为知识。':command==='defend'?'防御姿态已就绪。':state.enemyHp===0?'敌人倒下了。':state.stagger>=2?'敌人失衡！总攻击已可选择。':weak?'命中弱点！知识攻击奏效。':'行动结束，重新选择下一步。';
     state.finished=state.enemyHp===0;
     if(state.finished){if(flows.battleFinished())return;transition('FINISH');}
+    if(state.finished){state.busy=false;state.turnPhase='player';render();$('[data-action="return-after-battle"]')?.focus({preventScroll:true});return;}
+    if(!enemyActs){state.turn++;state.busy=false;state.turnPhase='player';render();$('[data-action="execute"]')?.focus({preventScroll:true});return;}
+    state.turnPhase='enemy';
+    state.log=command==='defend'?'防御姿态已就绪，敌方正在出手。':'行动完成，敌方正在出手。';
     render();
-    (state.finished?$('[data-action="return-after-battle"]'):$('[data-action="execute"]'))?.focus({preventScroll:true});
+    enemyTimer=setTimeout(()=>{
+      const guarded=command==='defend';
+      // 24 点沿用目录里已验收的受击演示；防御保留同一攻击的 50% 承伤。
+      const enemyDamage=guarded?12:24;
+      const hpAfter=Math.max(0,state.hp-enemyDamage);
+      flows.impact(guarded?'guard':'player-hit',{amount:enemyDamage,target:'player',meterTo:hpAfter});
+      enemyTimer=setTimeout(()=>{
+        state.hp=hpAfter;
+        state.turn++;
+        state.turnPhase='player';
+        state.busy=false;
+        state.log=guarded?`敌方出手：防御生效，受到 ${enemyDamage} 点伤害。`:`敌方出手：受到 ${enemyDamage} 点伤害。`;
+        if(state.hp<=0){state.fighting=false;flows.open('defeat');return;}
+        render();
+        $('[data-action="execute"]')?.focus({preventScroll:true});
+      },reduced.matches?80:520);
+    },reduced.matches?0:220);
   },reduced.matches?80:660);
 }
-function goRoom(room){flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
+function goRoom(room){clearTimeout(resolveTimer);clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
 const flows=createEncounterDirector({state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle});
 const preparation=createPreparationDirector({state,masks,icon,openSheet,render,notify,arsenalItems,reduced,goRoom});
 function buttonFeedback(control){

@@ -41,6 +41,8 @@ import { useUiChannel } from '@/ui/useUiChannel';
 import { P3R, P3RPage, GhostWords, P3PageHeader, ShatteredStar, slantClip } from '@/components/p3r/kit';
 import { P4Sparkle, P4Magnifier, P4Scanlines, P4CautionStripes } from '@/ui/p4Kit';
 import { NoiseLayer } from '@/components/battle/warKit';
+import { UmbraRuntimeCheck } from '@/components/umbra/UmbraRuntimeCheck';
+import { resolveUmbraEntry } from '@/umbra/entry';
 import {
   P5R, P5_FONT, roughQuad, roughSlant,
   P5RPage, P5Panel, P5Btn, P5Collage, P5Star, P5StarOutline, P5RingStar, P5Dots, P5Slab, P5_TITLE_FONT,} from '@/components/p5r/kit';
@@ -70,6 +72,9 @@ const P5Viewfinder = ({ children }: { children: React.ReactNode }) => {
 
 export const BattleArena = () => {
   const umbraIdentity = useUmbraIdentity();
+  if (resolveUmbraEntry(window.location.search) === 'runtime') {
+    return <UmbraRuntimeCheck />;
+  }
   const {
     user, attributes, persona, shadow, battleState, settings, stratum,
     updateSettings: saveSettings, resetBattle, setCurrentPage,

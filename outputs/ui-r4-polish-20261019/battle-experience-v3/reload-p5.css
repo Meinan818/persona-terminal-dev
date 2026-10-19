@@ -2955,3 +2955,15 @@ html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>butto
 html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>button>svg{align-self:center}
 @media(max-width:400px){html[data-theme=p5] .settings-button{padding-right:20px!important}html[data-theme=p5] .settings-button small{letter-spacing:.02em!important}}
 html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>button[data-battle-action=analyze]{height:auto!important;min-height:106px!important;padding-bottom:12px!important}
+/* 桌面接力：沿指令环左下方展开三张斜牌，避免多个目标叠在同一坐标。 */
+html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>button[data-battle-action^="batonPass:"]{
+  width:160px;height:74px;margin:-37px 0 0 -80px;padding:29px 9px 5px 33px!important;
+  --x:-160px;--y:96px;--tilt:-5deg!important;
+}
+html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>button:nth-child(2 of [data-battle-action^="batonPass:"]){--x:-240px;--y:166px;--tilt:-2deg!important}
+html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>button:nth-child(3 of [data-battle-action^="batonPass:"]){--x:-60px;--y:166px;--tilt:5deg!important}
+html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>button[data-battle-action^="batonPass:"]:after{left:32px;top:5px;font-size:23px!important}
+html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>button[data-battle-action^="batonPass:"]>svg{left:7px;width:22px;height:22px;margin-top:-11px;padding:3px}
+html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>button[data-battle-action^="batonPass:"]>span{font-size:12px;line-height:1.15}
+html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-grid>button[data-battle-action^="batonPass:"]>span small{font-size:9px;letter-spacing:-.02em;line-height:1.1;max-height:none;white-space:nowrap!important}
+html[data-theme=p5] body:not(.sh-m) .sh-stage .combat-poster .command-deck:has([data-battle-action^="batonPass:"]) .busy-text{width:240px}

@@ -2,7 +2,42 @@
 
 最后更新：2026-10-19（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-19 · 桌面P5接力遮挡已修复，下一节点R4
+## 准备交接 · 2026-10-19 · 桌面/手机P5已验收，R4只完成源码排查、尚未实施
+
+### 接手先核现场
+
+- 用户在桌面修复交付后明确“通过，继续开发”，已关闭 `f9e2d57` 的桌面接力验收；手机 `60f3204` 的验收继续有效。随后先说交接、又撤回，当前最新明确“准备交接吧”，本源立即停止开发，仅做这次文档收尾。**R4只读排查已经做过，业务源码、测试和探针尚无任何R4改动**，不能把讨论或源码风险写成已修复。
+- 工作区 `E:\MASKARIA`，分支 `codex/p5r-compendium-data`，本次文档尾提交父节点 **`f9e2d57`**；尾提交标题 `docs: 交接已验收P5界面与R4请求生命周期待续`。最终SHA以本次回执和 `git log -1 --format='%H %s' -- PROJECT_STATE.md` 为准；不要误退到父节点。无upstream，交接前相对本地 `origin/main` 引用领先165，尾提交成功后166；未核实时远端，这不是实时未推条数。
+- 原遗留原样保留：`ios/App/Podfile`、旧 `outputs/battle-experience-v3/P5-P3-FUSION.md` 换行/工作区状态；`.cache/`、`.impeccable/`、`.rivet-config.json`、旧 `outputs/` 样例/安装包/交付zip等未跟踪文件。它们不归本次交接，不add、不stash/reset/restore/clean，不覆盖用户素材和旧交付。
+- 唯一Demo开发目录仍为 **`outputs/ui-r4-polish-20261019/battle-experience-v3/`**，外层 `serve.mjs` 和 `public/fonts/` 也是这份精修目录的依赖。旧 `outputs/battle-experience-v3/` 只作历史对照。正式App本聊天没有玩法接入、生产/安装包/营销站没有改动。
+
+### 已完成、验证与验收
+
+- `7e2589b`：再入塔显形后第一步前也立即保存地图，222项测试与四主题三宽度12组续档验证通过；原资源续档修复 `01b1fdd` 继续有效。
+- `60f3204`：P5手机重新构图及两/六技能滑选，斜切/错位/放射保留，底部HP/SP原位；`201646d` 保存用户手机验收。320/390/430×2/6技能6组，逐个技能、目标、道具/面具弹层、实际SP消耗、三目标接棒；原生触摸横滑、键盘、Hold Up与Boss入口均有证据。完整P5浏览器游玩到Boss第二阶段败退，不是通关；P3绕行路线此前真实浏览器两阶段通关，另一快攻路线30F败退。没有为脚本胜利改数值。
+- `f9e2d57`：桌面三张接力牌原来同坐标，前两张九点命中0；已沿左下展开，主指令环/GO!/技能/HP/SP几何保留。四桌面尺寸×三队员分别执行12组、少目标/正常动画/键盘/手机与主题隔离9组，合计21项真实检查，errors=[]。用户最新明确验收通过，不再无目的重画已通过界面。
+- 最近一次已完成Demo测试：`node --test --test-reporter=tap` **222/222**、exit0，`.rivet/scratch/demo-roadmap-20261019/p5-desktop-baton-tests.tap`；**本交接不重跑**。正式App类型检查/构建、真机、真实收费AI没有本轮新验证；既有历史数字不是本交接通过数字。所有本地提交未Push、未部署、未打包、未覆盖dist/交付zip。
+- 证据根 `.rivet/scratch/demo-roadmap-20261019/`：桌面 `p5-desktop-baton-before/` 原失败、`p5-desktop-baton-final/` 已完成12组（后续倒下队员夹具失败，不称整脚本成功）、`p5-desktop-baton-boundaries/` 最终9组、`p5-desktop-baton-comparison.png` 修前/修后；手机 `p5-mobile-final-v2/`、`p5-mobile-touch-v3/`；整轮 `r3-current-cautious-p3/`、`r3-current-aggressive-p3/`、`p5-mobile-real-run-v4/`。旧夹具失败和源码修前证据不删除；具体数字见下方各节点。
+
+### 唯一下一任务：R4的AI请求生命周期与只读输入
+
+- 授权沿用用户“通过，继续开发”和近期计划；接续先完成可离线验证部分，仍不收费、不Push/部署、不接正式App、不生图、不重做UI。R4目标是复用已有 **影子自由交涉 / `judgeShadowTalk`** 完成一条真实AI闭环，不同时展开战斗顾问、生成整塔、自主代理。AI只能判断语气/质量/回复；HP/SP、概率、RNG、奖励、存档与合法性由引擎负责，不传未知弱点或未探索地图。
+- **已经读过、但未复现/未修复的源码风险**：`night-slice-ai.js` 的 `withTimeout` 只在定时器里 `controller.abort()`，桥忽略signal时外层Promise仍可能不结束；未预检已取消signal，同步抛错的清理也需检查。传给 `judgeShadowTalk` 的 `room` / `history` 直接引用输入；应在边界白名单复制/限制长度并防止模型桥通过引用改交涉资料。`night-slice.js:normalizeJudge` 对任意object都可能标ai，对非法tone/quality/reply静默混入离线值，应先确认坏返回的处理与模式标识。
+- **过期结果风险**：`tower-flow.js:sendShadowTalk` 在await后直接读写当前全局 `shadowTalk` / `j.pending`，没有请求身份或AbortController；`shadow-talk-back`、`shadow-talk-fight`、通用back/导航/hide可能在等待中改变页面/遭遇。应先用可控延迟桥复现，再让取消/晚到status/结果不改HP/SP、警戒、钱、掉落、存档或抢回页面；同场最多一次交涉的现有规则不改。
+- **共享入口不可漏**：`night-slice-flow.js` 的 `planNight` / `sendTalk` 也调用共享包装器，`close` / `dismiss` 暂无取消，晚返回可能重新创建run或结算。修改共享包装器时覆盖现有AI LAB的取消、关闭和重开，不引入未处理的AbortError。`app.js` hashchange已有 `sliceFlow.dismiss()` / `flows.towerHide()`；`encounters.js` 的 `resetView()`只停自身演出，是否需额外失效处理要按实际导航路径求证，不猜。
+- 建议第一步：在现有Node测试中补能失败的超时（桥不理signal）、已取消/等待中取消、同步抛错、晚到状态/结果、只读输入/坏输出与新旧请求交错案例；然后最小修复，再用隔离真实浏览器四主题验证发送→退开/拔刀/换页→晚到回复，以及可用响应/失败降级。不要把假桥返回标为“已调用真实模型”；测试桥可以检验mode分支，但真实调用证据必须另做。
+- 代码入口：`night-slice-ai.js/.test.mjs`、`night-slice.js`、`tower-flow.js`（开头shadowTalk状态、`sendShadowTalk`、`act`、返回对象的hide）、`night-slice-flow.js`（请求/close/dismiss）、`grid-negotiation.js`（可见影子资料）；`run-vitals.test.mjs` / `run-flow-integrity.test.mjs` 可参考隔离globals与Map存储harness。**本轮尚未写上述新测试，也没选定最终实现结构**。
+- 接回正式系统的顺序已向用户说明：R4真实成功+失败降级验证→R5整个Demo玩法验收→R6只把已验证玩法/状态/独立存档接回正式UMBRA模块。手机/桌面排版通过不等于R5或正式App接回授权；收费真实调用需先完成具体可审阅准备，真实配置不放前端、不回显凭据。
+
+### 服务、工具与交接停止点
+
+- Demo预览 `http://127.0.0.1:5196/?theme=p5&shadow=1&slice-ai=off#battle`；交接现场5196监听在127.0.0.1，PID31044仅为本次只读核实，接手重新核，不按旧PID操作。该URL强制离线，验证注入桥要去掉 `slice-ai=off`，可用 `slice-ai=preview` 验证预览模式。不要把preview当真实AI。
+- 如需重启：先核端口，在 `E:\MASKARIA\outputs\ui-r4-polish-20261019\` 运行 `$env:PORT='5196'; node serve.mjs`。测试在其 `battle-experience-v3/` 运行 `node --test --test-reporter=tap`，语法用 `node --check <改动JS>`。直接双击index不能替代本地ES模块服务。正式App旧5198预览当前没有核到监听，不声称仍可用，也不为本任务重启。
+- 独立Chrome与证据继续放E盘：已有脚本使用本机Chrome `C:/Program Files/Google/Chrome/Application/chrome.exe` + CDP，profile放 `E:/CODEX/.cache/maskaria-ui/`。复用脚本前检查选择器、reload新文档、字体/动画/busy状态；手机改为点敌人本体，隐藏的重复姓名卡不是可点击入口。为新探针用独立目录，避免覆盖旧证据；无须安装新依赖。
+- 本聊天实际compact计数=0；这次是用户明确手动交接，不是第二次compact自动迁移。当前可用工具目录未提供 `create_thread` / `handoff_thread` / 自动化管理能力，没有代建或迁移聊天，没有新建自动化；不复用历史失败回执冒充成功。用户可在新聊天要求读取本入口接续。
+- 本源在这份文档尾提交并给出回执后 **停止写共享文件**，不继续R4、不跑测试或启动新业务任务；等待用户明确恢复或由用户手动新聊天接手。接续先只读核规则/本入口/Git/尾提交与遗留，再按R4下一任务继续。
+
+## 已完成节点 · 2026-10-19 · 桌面P5接力遮挡已修复，下一节点R4
 
 - 用户回复“1”，明确选择上一轮建议的第1项：修桌面三张接力牌重叠。授权仅这一操作缺陷，保留P5环形/斜切/错位构图，不扩展桌面重做、收费AI、Push或正式接回。本聊天compact计数仍为0。基线 `201646d`，分支 `codex/p5r-compendium-data`；本轮没有委派或新建自动化。
 - **根因与最小修改**：`reload-p5.css` 的桌面 `[data-battle-action^="batonPass"]` 全部使用 `--x:-120px;--y:130px`。本轮先真实命中弱点复现：前两张中心区域九点命中均为0，第三张9/9。现在只给桌面接力牌增加局部CSS，沿指令环左下方分成三张错位斜牌；保留所有动作/DOM钩子，普通指令、GO!、技能区和底部HP/SP几何不动。接力出现时底部重复说明缩到右侧空位，避免扫过接力牌。没有修改JS、战斗引擎、存档、数值或奖励。
@@ -10,7 +45,7 @@
 - **边界与隔离**：修正合成夹具后 `p5-desktop-baton-boundaries/report.json` **9/9组**完成：两/一个可接棒队员可独立选择与执行；正常动画下悬停、选中、focus、Tab与真实接棒；P5/390、P5/320、蓝/粉/黄桌面，以及没有接力时的P5桌面，启用/删除本补丁的关键控件几何/颜色/变换相同。两份最终证据合计21项通过、errors=[]。测试使用独立E盘Chrome资料、合成配装/debug楼层和回合，实际技能扣SP/弱点/接力由引擎执行；不是全塔游玩或真机验证。
 - Demo `node --test --test-reporter=tap` **222/222**、exit0，证据 `.rivet/scratch/demo-roadmap-20261019/p5-desktop-baton-tests.tap`。相关diff空白检查通过；纯CSS改动，无新增依赖/无正式App代码变化，不重跑正式App构建/类型检查。源码只动当前精修Demo的 `reload-p5.css`，主题地图同步小节；本日志一起保存，原Podfile、旧Demo换行及其他outputs/缓存不夹带。
 - 原失败保留于同一scratch目录：`p5-desktop-baton-before/report.json`、`before.png`；最终12组截图和正常动画截图已保存，1440修前/修后已目视复核。第一次倒下队员夹具错误地先离战（实际败退会删run），导致读取null；改为用完整合成run经真实“继续”恢复队员0 HP，再触发守卫战。没有改业务迎合夹具、没有删除断言。首次用子目录cwd读根目录相对日志失败，修正读取位置；测试本身确实exit0。
-- **验收边界**：P5手机 `60f3204` 的用户验收继续有效；桌面此次修复已经程序与截图验证，用户主观复看仍待反馈，不冒称用户已验收。预览 `http://127.0.0.1:5196/?theme=p5&shadow=1&slice-ai=off#battle`；桌面战斗命中一个敌人的弱点且另一个仍站立时，应看到三张接力牌，各自点选→GO!应轮到所选队员。无需用户重复自动检查。
+- **验收边界**：P5手机 `60f3204` 的用户验收继续有效；桌面 `f9e2d57` 随后收到用户“通过，继续开发”，本批验收已关闭，不扩为整个Demo/真机或真实AI验收。预览 `http://127.0.0.1:5196/?theme=p5&shadow=1&slice-ai=off#battle`；桌面战斗命中一个敌人的弱点且另一个仍站立时，应看到三张接力牌，各自点选→GO!应轮到所选队员。无需用户重复自动检查。
 - 本轮仅本地提交，标题 `fix(ui): 桌面P5接力牌错位展开避免遮挡`，最终SHA用 `git log -1 --format='%h %s' -- PROJECT_STATE.md` 核实；**未Push、未部署、未打包、未收费调用**，未核实时远端。用户“1”对应节点到此完成，未自动开展第2项。下一建议由Codex按后续指令进入R4：先完成交涉只读上下文、取消/真正超时回退和过期结果隔离的离线验证，再准备真实AI调用；真实费用/正式接回保持独立边界。
 
 ## 前一节点 · 2026-10-19 · P5手机战斗已验收；建议先收桌面接力硬伤，再做R4

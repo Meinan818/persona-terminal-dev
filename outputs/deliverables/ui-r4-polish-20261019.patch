@@ -1,0 +1,395 @@
+--- a/battle-experience-v3/index.html
++++ b/battle-experience-v3/index.html
+@@ -27,6 +27,7 @@
+   <link rel="stylesheet" href="./reload-p4.css">
+   <link rel="stylesheet" href="./reload-p5.css">
+   <link rel="stylesheet" href="./reload-hamuko.css">
++  <link rel="stylesheet" href="./ui-interaction.css">
+   <script src="./shadow-hour.js" defer></script>
+   <script src="./app.js" type="module"></script>
+   <script src="./reload-p3.js" defer></script>
+--- a/battle-experience-v3/preparation.js
++++ b/battle-experience-v3/preparation.js
+@@ -11,6 +11,7 @@
+   let disposed=state.relicDisposed instanceof Set?state.relicDisposed:new Set(state.relicDisposed??[]);
+   let socket=state.myth??null,oath=state.oath??null,chain=state.chain??null;
+   const settings={enabled:true,start:state.shadowTime?.start??'20:00',end:state.shadowTime?.end??'07:00',days:[...(state.shadowTime?.days??[5,6,0])],difficulty:state.difficulty??'normal'};
++  let settingsDraft=null;
+   const dayLabels=['周日','周一','周二','周三','周四','周五','周六'];
+   function growthOf(maskId=masks[state.mask].id){
+     if(!state.personaGrowth[maskId]){
+@@ -86,8 +87,12 @@
+     const unlockButton=!unlocked&&growthLevel===nextLevel&&progress.points>0?btn(`解锁 LV ${growthLevel}`,'growth-unlock','消耗 1 枚成长印记'):'';
+     open('力量如何生长',`<div class="growth-heading"><p class="growth-name">${esc(m.name)} <span>${m.attr}</span></p><b>成长印记 <strong>${progress.points}</strong></b></div><div class="growth-track" aria-label="技能解锁等级">${[1,2,3,4,5].map(n=>`<button type="button" data-prep="growth:${n}" class="${n<=progress.level?'unlocked':'locked'}" aria-pressed="${n===growthLevel}">${n<=progress.level?icon('star'):icon('shield')}<span>LV ${n}</span><small>${growthNames[n-1]}</small></button>`).join('')}</div><div class="growth-detail"><div class="growth-status"><b>${unlocked?'已解锁':'尚未解锁'}</b><span>${unlocked?`面具等级 ${progress.level} · 可继续打磨`:`需要先达到 LV ${growthLevel}`}</span></div><h3>${unlocked?esc(skill[0]):`LV ${growthLevel} · 新的回应`}</h3><p>${unlocked?esc(skill[2]):`对应属性达到 ${growthLevel} 级后解锁新的技能节点。`}</p><div class="mastery-bar"><i style="width:${unlocked?Math.min(100,46+rank*18):0}%"></i></div><p>技能熟练度 · ${unlocked?`${rank} / 3 · 可提升`:'等待解锁'}</p></div>${unlocked?`<div class="growth-skill-list" aria-label="技能选择">${m.skills.map((s,i)=>`<button type="button" data-prep="growth-skill:${i}" class="${selectedSkill===i?'selected':''}" aria-pressed="${selectedSkill===i}"><span>${i+1}</span><b>${esc(s[0])}</b><small>等级 ${progress.skillRanks[i]} · ${esc(s[2])}</small></button>`).join('')}</div>${upgradeButton}`:unlockButton}${btn('恢复成长','growth-reset','','subtle')}`);
+   }
++  function readSettingsDraft(){
++    const form=document.querySelector('#battle-settings-form');
++    if(form&&settingsDraft)Object.assign(settingsDraft,{enabled:form.elements.enabled.checked,start:form.elements.start.value,end:form.elements.end.value});
++  }
+   function showSettings(){
+-    open('战场设置',`<p>影时间，与自己的节奏对齐。</p><form id="battle-settings-form"><label class="check-setting"><span>启用逆影战场</span><input name="enabled" type="checkbox" ${settings.enabled?'checked':''}></label><div class="time-fields"><label class="field-label">影时间开始<input name="start" type="time" required value="${settings.start}"></label><label class="field-label">影时间结束<input name="end" type="time" required value="${settings.end}"></label></div><h3 class="source-title">影时间日期 <small>可多选</small></h3><div class="shadow-days">${dayLabels.map((label,id)=>`<button type="button" data-prep="shadow-day:${id}" aria-pressed="${settings.days.includes(id)}">${label}</button>`).join('')}</div><h3 class="source-title">战斗难度 <small>影响敌人 HP 与攻击</small></h3><div class="source-options">${[['easy','轻松'],['normal','标准'],['hard','挑战']].map(([id,label])=>`<button type="button" data-prep="difficulty:${id}" aria-pressed="${settings.difficulty===id}">${label}</button>`).join('')}</div><div class="prep-actions">${btn('恢复默认','settings-reset','','subtle')}${btn('保存设置','settings-save')}</div></form>`);
++    open('战场设置',`<p>影时间，与自己的节奏对齐。</p><form id="battle-settings-form"><label class="check-setting"><span>启用逆影战场</span><input name="enabled" type="checkbox" ${settingsDraft.enabled?'checked':''}></label><div class="time-fields"><label class="field-label">影时间开始<input name="start" type="time" required value="${settingsDraft.start}"></label><label class="field-label">影时间结束<input name="end" type="time" required value="${settingsDraft.end}"></label></div><h3 class="source-title">影时间日期 <small>可多选</small></h3><div class="shadow-days">${dayLabels.map((label,id)=>`<button type="button" data-prep="shadow-day:${id}" aria-pressed="${settingsDraft.days.includes(id)}">${label}</button>`).join('')}</div><h3 class="source-title">战斗难度 <small>影响敌人 HP 与攻击</small></h3><div class="source-options">${[['easy','轻松'],['normal','标准'],['hard','挑战']].map(([id,label])=>`<button type="button" data-prep="difficulty:${id}" aria-pressed="${settingsDraft.difficulty===id}">${label}</button>`).join('')}</div><div class="prep-actions">${btn('恢复默认','settings-reset','','subtle')}${btn('保存设置','settings-save')}</div></form>`);
+     document.querySelector('.settings-button').setAttribute('aria-expanded','true');sheet.classList.add('settings-sheet');
+   }
+   function item(id){
+@@ -178,12 +183,12 @@
+     if(kind==='growth-upgrade'){const progress=growthOf();const skill=progress.selectedSkill;if(progress.points<=0){notice('成长印记已用尽。');return;}if(progress.skillRanks[skill]>=3){notice('这项技能已达到本次成长上限。');return;}progress.points-=1;progress.skillRanks[skill]+=1;api.persistP5State?.();showGrowth(growthLevel);return;}
+     if(kind==='growth-unlock'){const progress=growthOf();if(growthLevel!==progress.level+1){notice('请先选择紧邻的下一层。');return;}if(progress.points<=0){notice('成长印记已用尽。');return;}progress.points-=1;progress.level+=1;growthLevel=progress.level;api.persistP5State?.();showGrowth(growthLevel);return;}
+     if(kind==='growth-reset'){const progress=growthOf();progress.level=1;progress.points=3;progress.skillRanks=progress.skillRanks.map(()=>1);progress.selectedSkill=0;growthLevel=1;api.persistP5State?.();showGrowth(1);return;}
+-    if(kind==='settings'){showSettings();return;}
+-    if(kind==='shadow-day'){const id=Number(arg);settings.days=settings.days.includes(id)?settings.days.filter(day=>day!==id):[...settings.days,id];showSettings();return;}
+-    if(kind==='difficulty'){settings.difficulty=['easy','normal','hard'].includes(arg)?arg:'normal';showSettings();return;}
+-    if(kind==='settings-reset'){const form=document.querySelector('#battle-settings-form');for(const [name,value] of Object.entries({start:'20:00',end:'07:00'}))form.elements[name].value=value;form.elements.enabled.checked=true;settings.days=[5,6,0];settings.difficulty='normal';showSettings();return;}
++    if(kind==='settings'){settingsDraft={...settings,days:[...settings.days]};showSettings();return;}
++    if(kind==='shadow-day'){readSettingsDraft();const id=Number(arg);settingsDraft.days=settingsDraft.days.includes(id)?settingsDraft.days.filter(day=>day!==id):[...settingsDraft.days,id];showSettings();return;}
++    if(kind==='difficulty'){readSettingsDraft();settingsDraft.difficulty=['easy','normal','hard'].includes(arg)?arg:'normal';showSettings();return;}
++    if(kind==='settings-reset'){settingsDraft={enabled:true,start:'20:00',end:'07:00',days:[5,6,0],difficulty:'normal'};showSettings();return;}
+     if(kind==='settings-save'){
+-      const form=document.querySelector('#battle-settings-form');if(!form.reportValidity())return;const data=new FormData(form);Object.assign(settings,{enabled:data.has('enabled'),start:data.get('start'),end:data.get('end')});state.shadowTime={days:[...settings.days],start:settings.start,end:settings.end};state.difficulty=settings.difficulty;api.persistP5State?.();sheet.close();render();notify('设置已保存');return;
++      const form=document.querySelector('#battle-settings-form');if(!form.reportValidity())return;readSettingsDraft();Object.assign(settings,settingsDraft,{days:[...settingsDraft.days]});state.shadowTime={days:[...settings.days],start:settings.start,end:settings.end};state.difficulty=settings.difficulty;api.persistP5State?.();sheet.close();render();notify('设置已保存');return;
+     }
+     if(kind==='item'){item(arg);return;}
+     if(kind==='equip'){
+@@ -202,7 +207,7 @@
+     if(kind==='chain'){chain=Number(arg);state.chain=chain;api.persistP5State?.();render();item('chain');return;}
+     if(kind==='remove-chain'){chain=null;state.chain=null;api.persistP5State?.();render();item('chain');return;}
+   }
+-  sheet.addEventListener('close',()=>{clearTimeout(working);awakeningController?.abort();awakeningController=null;clearPreviewBridge();previewAI=false;});
++  sheet.addEventListener('close',()=>{settingsDraft=null;clearTimeout(working);awakeningController?.abort();awakeningController=null;clearPreviewBridge();previewAI=false;});
+   document.addEventListener('submit',event=>{const id=event.target.id;const action={'awakening-form':'create-generate','reshape-form':'reshape-preview','battle-settings-form':'settings-save'}[id];if(action){event.preventDefault();act(action);}});
+   return {
+     act,item,settings,
+--- a/battle-experience-v3/reload-hamuko.css
++++ b/battle-experience-v3/reload-hamuko.css
+@@ -1253,15 +1253,15 @@
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body:not([data-fighting=true]) :is(.flow-return,.back-button) small{color:var(--hk-hot)!important}
+ 
+ /* ---------- 入场动效：卡片从右侧"翻页"进来 ---------- */
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*{animation:hk-in .6s var(--hk-ease) both}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(2){animation-delay:.06s}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(3){animation-delay:.12s}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(n+4){animation-delay:.18s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*{animation:hk-in .6s var(--hk-ease) both}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(2){animation-delay:.06s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(3){animation-delay:.12s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(n+4){animation-delay:.18s}
+ @keyframes hk-in{from{opacity:0;transform:translate(40px,14px) rotate(1.5deg)}to{opacity:1;transform:none}}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter.sh-d .room-nav a{animation:hk-navin .55s var(--hk-pop) both}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter.sh-d .room-nav a:nth-child(2){animation-delay:.05s}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter.sh-d .room-nav a:nth-child(3){animation-delay:.1s}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter.sh-d .room-nav a:nth-child(4){animation-delay:.15s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in).sh-d .room-nav a{animation:hk-navin .55s var(--hk-pop) both}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in).sh-d .room-nav a:nth-child(2){animation-delay:.05s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in).sh-d .room-nav a:nth-child(3){animation-delay:.1s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in).sh-d .room-nav a:nth-child(4){animation-delay:.15s}
+ @keyframes hk-navin{from{opacity:0;translate:120px 0}}
+ 
+ /* ---------- 转场画布 / 点击花瓣 ---------- */
+@@ -1471,15 +1471,15 @@
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.sh-m .sh-stage .combat-poster .player-hud{border-radius:24px 24px 0 0!important}
+ 
+ /* 进战斗入场 */
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button{animation:hk-cmdin .5s var(--hk-pop) both}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button:nth-child(1){animation-delay:.45s}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button:nth-child(2){animation-delay:.5s}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button:nth-child(3){animation-delay:.55s}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button:nth-child(n+4){animation-delay:.6s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button{animation:hk-cmdin .5s var(--hk-pop) both}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button:nth-child(1){animation-delay:.45s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button:nth-child(2){animation-delay:.5s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button:nth-child(3){animation-delay:.55s}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button:nth-child(n+4){animation-delay:.6s}
+ @keyframes hk-cmdin{from{opacity:0;translate:-120px 0}}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .enemy-unit{animation:hk-enemyin .6s var(--hk-pop) .4s both}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .enemy-unit{animation:hk-enemyin .6s var(--hk-pop) .4s both}
+ @keyframes hk-enemyin{from{opacity:0;scale:.4}}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .combat-hero{animation:hk-tarotin .7s var(--hk-pop) .5s both}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .combat-hero{animation:hk-tarotin .7s var(--hk-pop) .5s both}
+ @keyframes hk-tarotin{from{opacity:0;transform:translateX(120px) rotate(12deg)}}
+ 
+ /* ---------- 状态 / 细节修正 ---------- */
+@@ -2006,7 +2006,7 @@
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk[data-ui-page=battle] #content section.mission>.slash-label{transform:none!important;border-radius:4px!important;background:#ffd27a!important;color:#3a2405!important;box-shadow:none!important;font:900 12px/1 var(--hk-black)!important;padding:6px 10px!important;letter-spacing:.2em}
+ /* 终点站：翻牌字 */
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk[data-ui-page=battle] #content section.mission>h2{position:relative;display:inline-block!important;margin:14px 0 8px!important;padding:10px 16px!important;border-radius:8px;background:linear-gradient(180deg,#2e0d24 0 49%,#12040f 49% 51%,#250a1d 51%)!important;color:#fff4f8!important;font:900 clamp(34px,4vw,54px)/1.15 var(--hk-black)!important;letter-spacing:.14em;text-shadow:0 0 18px rgba(255,111,168,.45)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.08),0 6px 0 #050104!important;transform:none!important;transform-origin:50% 50%}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter[data-ui-page=battle] #content section.mission>h2{animation:hk-flap .9s steps(6) both!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter:has(>#content>.hk-in)[data-ui-page=battle] #content section.mission>h2{animation:hk-flap .9s steps(6) both!important}
+ @keyframes hk-flap{0%{transform:perspective(500px) rotateX(90deg);filter:blur(1px)}100%{transform:none}}
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk[data-ui-page=battle] #content section.mission>p{color:#ffc6dc!important;font:600 14px/1.6 Velvet,sans-serif!important}
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk[data-ui-page=battle] #content .mission-line{display:flex!important;align-items:baseline!important;gap:12px;padding:12px 0!important;border:0!important;border-bottom:1px dashed rgba(255,198,220,.25)!important;background:none!important}
+@@ -2431,9 +2431,9 @@
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk #content .roster-heading b{font:600 30px/1 HkHand,cursive!important;color:#ffc6dc!important}
+ 
+ /* 入场：牌从中心一张张发出 */
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter #content .mask-tabs button{animation:hk-deal 480ms var(--hk-out) both!important;animation-delay:calc(var(--hk-i,0) * 40ms)!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter:has(>#content>.hk-in) #content .mask-tabs button{animation:hk-deal 480ms var(--hk-out) both!important;animation-delay:calc(var(--hk-i,0) * 40ms)!important}
+ @keyframes hk-deal{0%{opacity:0;transform:rotate(calc(var(--d) * 7deg)) translateY(calc(var(--d) * var(--d) * 5px + 16px)) scale(.98)}}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter #content .duo-layout{animation:hk-book .8s var(--hk-ease) .2s both!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter:has(>#content>.hk-in) #content .duo-layout{animation:hk-book .8s var(--hk-ease) .2s both!important}
+ @keyframes hk-book{0%{opacity:0;transform:perspective(1400px) rotateX(24deg) translateY(60px)}100%{opacity:1;transform:rotate(-.6deg)}}
+ 
+ /* ---------- 窄屏 ---------- */
+@@ -2746,7 +2746,7 @@
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk #content .hk-ph-clock i{display:block;margin-top:10px;font:600 26px/1 HkHand,cursive;font-style:normal;letter-spacing:0;-webkit-text-stroke:0;color:#ff8fbd;transform:rotate(4deg)}
+ 
+ /* 手机入场：震动两下 */
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter #content .slice-talk-stage{animation:hk-buzz .9s var(--hk-ease) both!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter:has(>#content>.hk-in) #content .slice-talk-stage{animation:hk-buzz .9s var(--hk-ease) both!important}
+ @keyframes hk-buzz{0%{opacity:0;transform:translateY(60px) rotate(-8deg)}40%{opacity:1;transform:rotateY(-9deg) rotate(-2.2deg)}48%{transform:rotateY(-9deg) rotate(-4deg)}56%{transform:rotateY(-9deg) rotate(-.5deg)}64%{transform:rotateY(-9deg) rotate(-3.6deg)}72%,100%{transform:rotateY(-9deg) rotateX(3deg) rotate(-2.2deg)}}
+ 
+ /* ---------- 结果页：锁屏通知 + 送达回执 ---------- */
+@@ -2992,30 +2992,30 @@
+ /* 4a. 页面分层入场：背景静止 → 主视觉 → 标题 → 内容 → 按钮。opacity + translate(≤14px) + scale(.985→1)，480ms expo-out，stagger 40ms。
+        用独立属性 translate/scale，结束后不会与元素自身的 transform（旋转/倾斜）发生跳变。 */
+ @keyframes hk-in{from{opacity:0;translate:0 14px}to{opacity:1;translate:0 0}}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*{animation:hk-in var(--hk-t4) var(--hk-out) both!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(1){animation-delay:0ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(2){animation-delay:40ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(3){animation-delay:80ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(4){animation-delay:120ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(5){animation-delay:160ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(n+6){animation-delay:200ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*{animation:hk-in var(--hk-t4) var(--hk-out) both!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(1){animation-delay:0ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(2){animation-delay:40ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(3){animation-delay:80ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(4){animation-delay:120ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(5){animation-delay:160ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(n+6){animation-delay:200ms!important}
+ /* 标题从左侧短距滑入淡显（与页面上浮同拍，形成"共享标题"的位置衔接） */
+ @keyframes hk4-title{from{opacity:0;translate:-12px 0}to{opacity:1;translate:0 0}}  /* R4 收尾：原 clip-path 揭示在主线程逐帧重绘，改为合成层的 opacity+translate */
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content :is(.page-heading,.scene-heading) h1{animation:hk4-title 560ms var(--hk-out) 60ms both!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter.sh-d .room-nav a{animation:none!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content :is(.page-heading,.scene-heading) h1{animation:hk4-title 560ms var(--hk-out) 60ms both!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in).sh-d .room-nav a{animation:none!important}
+ @keyframes hk-navin{from{opacity:0;translate:24px 0}}
+ /* 战斗入场：舞台在斩屏特效后分层出现（敌人 → 指令逐个 → 塔罗牌） */
+ @keyframes hk-cmdin{from{opacity:0;translate:-16px 0}}
+ @keyframes hk-enemyin{from{opacity:0;scale:.92}}
+ @keyframes hk-tarotin{from{opacity:0;translate:16px 0;rotate:3deg}}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .enemy-unit{animation:hk-enemyin var(--hk-t4) var(--hk-out) 320ms both!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button{animation:hk-cmdin var(--hk-t3) var(--hk-out) both!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button:nth-child(1){animation-delay:400ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button:nth-child(2){animation-delay:440ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button:nth-child(3){animation-delay:480ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button:nth-child(4){animation-delay:520ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .command-grid button:nth-child(n+5){animation-delay:560ms!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight .sh-stage .combat-hero{animation:hk-tarotin var(--hk-t4) var(--hk-out) 480ms both!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .enemy-unit{animation:hk-enemyin var(--hk-t4) var(--hk-out) 320ms both!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button{animation:hk-cmdin var(--hk-t3) var(--hk-out) both!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button:nth-child(1){animation-delay:400ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button:nth-child(2){animation-delay:440ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button:nth-child(3){animation-delay:480ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button:nth-child(4){animation-delay:520ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .command-grid button:nth-child(n+5){animation-delay:560ms!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter-fight:has(>#content>.hk-in) .sh-stage .combat-hero{animation:hk-tarotin var(--hk-t4) var(--hk-out) 480ms both!important}
+ 
+ /* 4b. 交互：hover 上移 ≤2px、按下 scale .97（80ms）。用独立属性 translate/scale，和元素原有旋转叠加而不覆盖 */
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] :is(button,a[data-room],.small-button,.main-button,[role=button]){transition:translate var(--hk-t2) var(--hk-std),scale var(--hk-t1) var(--hk-std),opacity var(--hk-t2) var(--hk-std),background-color var(--hk-t2) var(--hk-std),border-color var(--hk-t2) var(--hk-std),color var(--hk-t2) var(--hk-std),box-shadow var(--hk-t2) var(--hk-std)!important}
+@@ -3058,7 +3058,7 @@
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] .sh-tarot .sh-glint:after{content:'';position:absolute;top:-20%;bottom:-20%;left:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);transform:translateX(-150%) skewX(-12deg);animation:hk4-glint 6s cubic-bezier(.45,0,.55,1) 1s infinite}
+ @keyframes hk4-glint{0%,70%{transform:translateX(-150%) skewX(-12deg)}100%{transform:translateX(450%) skewX(-12deg)}}
+ /* 所有 steps() 跳帧与 linear 的 UI 循环改为平滑曲线；过快的旋转放慢到 ≥12s */
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter[data-ui-page=battle] #content section.mission>h2{animation:hk-flap var(--hk-t4) var(--hk-out) both!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk.hk-enter:has(>#content>.hk-in)[data-ui-page=battle] #content section.mission>h2{animation:hk-flap var(--hk-t4) var(--hk-out) both!important}
+ 
+ /* ---------- 5. 滑动高亮块（JS 插入 .hk-glide） ---------- */
+ html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] #content .hk-glide-host{position:relative}
+@@ -3082,7 +3082,7 @@
+ /* ---------- 7. reduced-motion：只保留短淡入 ---------- */
+ @media (prefers-reduced-motion:reduce){
+   html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] .hk-sky{animation:none!important}
+-  html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*{animation:hk4-fade 160ms linear both!important;animation-delay:0ms!important}
++  html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*{animation:hk4-fade 160ms linear both!important;animation-delay:0ms!important}
+   html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] .hk-glide{transition:none!important}
+ }
+ @keyframes hk4-fade{from{opacity:0}to{opacity:1}}
+@@ -3253,8 +3253,8 @@
+ @keyframes hk-wipe{0%{transform:translate3d(110vw,0,0) skewX(-18deg)}100%{transform:translate3d(-170vw,0,0) skewX(-18deg)}}
+ @keyframes hk-wipe-back{0%{transform:translate3d(-170vw,0,0) skewX(-18deg)}100%{transform:translate3d(110vw,0,0) skewX(-18deg)}}
+ /* 新内容在丝带扫过后才升起，避免和丝带抢同一帧 */
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*{animation-delay:calc(var(--hk-wd,180ms) + var(--hk-i,0ms))!important}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(2){--hk-i:40ms}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(3){--hk-i:80ms}
+-html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter #content>*>*:nth-child(n+4){--hk-i:120ms}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*{animation-delay:calc(var(--hk-wd,180ms) + var(--hk-i,0ms))!important}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(2){--hk-i:40ms}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(3){--hk-i:80ms}
++html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] body.hk-enter:has(>#content>.hk-in) #content>*>*:nth-child(n+4){--hk-i:120ms}
+ @media (prefers-reduced-motion:reduce){html[data-theme=p3][data-skin=hamuko][data-skin][data-theme] .hk-wipe{display:none!important}}
+--- a/battle-experience-v3/reload-hamuko.js
++++ b/battle-experience-v3/reload-hamuko.js
+@@ -363,7 +363,7 @@
+     function pageKey(){
+       const f=content?.firstElementChild;
+       const scene=f?.querySelector?.('[data-tower-scene]')?.dataset.towerScene||f?.dataset?.towerScene||'';
+-      const cls=f?String(f.className||'').split(/\s+/).filter(c=>c&&!/^is-|active|busy|loading/.test(c)).slice(0,3).join('.'):'';
++      const cls=f?String(f.className||'').split(/\s+/).filter(c=>c&&c!=='hk-in'&&!/^is-|active|busy|loading/.test(c)).slice(0,3).join('.'):'';
+       const sl=document.querySelector('[data-slice-scene]')?.dataset.sliceScene||'';
+       return [location.hash,cls,scene,sl].join('|');
+     }
+@@ -375,7 +375,9 @@
+     }
+     function enter(kind){
+       if(reduce.matches)return;
+-      // 新插入的节点会自己从头播放入场动画，不需要强制回流（旧版 void offsetWidth 会在最重的那一帧再加一次同步布局）
++      content?.querySelectorAll(':scope>.hk-in').forEach(n=>n.classList.remove('hk-in'));
++      content?.firstElementChild?.classList.add('hk-in');
++      // Only this arrival root participates; later same-scene renders must not replay the entrance.
+       body.classList.remove(kind==='fight'?'hk-enter':'hk-enter-fight');
+       body.classList.add(kind==='fight'?'hk-enter-fight':'hk-enter');
+       clearTimeout(enter.t);enter.t=setTimeout(()=>{body.classList.remove('hk-enter','hk-enter-fight');ambient(true);},900);
+--- a/battle-experience-v3/reload-p3.js
++++ b/battle-experience-v3/reload-p3.js
+@@ -178,7 +178,7 @@
+       runWipe.anims=list;
+       Promise.all(list.map(x=>x.finished)).then(()=>{if(runWipe.anims===list)wipe.classList.remove('on');}).catch(()=>{});
+     }
+-    let lastPoint={x:W()*.5,y:H()*.45},goingBack=false,viaNav=false,leaveT=0;
++    let lastPoint={x:W()*.5,y:H()*.45},goingBack=false,viaNav=false;
+     addEventListener('pointerdown',e=>{
+       lastPoint={x:e.clientX,y:e.clientY};
+       const t=e.target.closest?.('[data-tower="back"],.back-button,.flow-return,[data-action="leave-battle"],[data-action="close-sheet"],[data-slice="back-day"],[data-slice="close"],[data-tower="prep-return"],[data-tower="return-back"],[data-tower="velvet-exit"],[data-tower="shop-back"]');
+@@ -188,13 +188,7 @@
+         const ls=$$('.room-nav a'),to=ls.indexOf(e.target.closest('.room-nav a')),from=ls.findIndex(a=>a.getAttribute('aria-current')==='page');
+         body.dataset.r3Dir=to<from?'up':'down';
+       }
+-      // 旧内容先 expo 退出（160ms）：只对确定会换页的入口（主菜单 / 据点入口 / 返回）；没换页则 450ms 后复原
+-      const nav2=e.target.closest?.('.room-nav a:not([aria-current=page]),[data-tower^=prep-],[data-tower=back],[data-tower=home],.flow-return,.back-button');
+-      if(nav2&&!reduce.matches&&e.button===0){
+-        body.classList.remove('r3-enter','r3-enter-back','r3-enter-fight');
+-        body.classList.add('r3-leaving');body.classList.toggle('r3-leaving-back',goingBack);
+-        clearTimeout(leaveT);leaveT=setTimeout(()=>body.classList.remove('r3-leaving','r3-leaving-back'),450);
+-      }
++      // Leaving is triggered by a real scene change, not by pressing a navigation-shaped control.
+     },{capture:true,passive:true});
+     addEventListener('keydown',e=>{if(e.key==='Escape')goingBack=true;},{capture:true,passive:true});
+ 
+--- a/battle-experience-v3/reload-p5.js
++++ b/battle-experience-v3/reload-p5.js
+@@ -53,13 +53,13 @@
+   }
+ 
+   /* ---- 红黑撕裂 / 星形扩散 转场 ---- */
+-  var lastWipe=0;
++  var activeWipe=null;
+   function wipe(kind){
+     if(reduced.matches)return;
+-    var now=Date.now();if(now-lastWipe<650)return;lastWipe=now;
++    if(activeWipe)activeWipe.remove();
+     var w=mk('div','p5r-wipe '+(kind||''));
+     w.innerHTML='<i class="p5r-wipe-a"></i><i class="p5r-wipe-b"></i><b class="p5r-wipe-star"></b><i class="p5r-wipe-c"></i>';
+-    document.body.appendChild(w);
++    document.body.appendChild(w);activeWipe=w;
+     var star=w.querySelector('.p5r-wipe-star'),a=w.querySelector('.p5r-wipe-a'),b=w.querySelector('.p5r-wipe-b'),c=w.querySelector('.p5r-wipe-c');
+     /* 第四轮修正：用户偏好上一版转场（红黑撕裂 + 星形扩散），恢复 r3 版本 */
+     var o={duration:560,easing:'cubic-bezier(.7,0,.2,1)',fill:'forwards'};
+@@ -69,7 +69,7 @@
+       c.animate([{transform:'translateY(-120%) rotate(-8deg)'},{transform:'translateY(0) rotate(-8deg)',offset:.4},{transform:'translateY(120%) rotate(-8deg)'}],Object.assign({},o,{duration:500,delay:60}));
+       star.animate([{transform:'translate(-50%,-50%) scale(0) rotate(0deg)',opacity:1},{transform:'translate(-50%,-50%) scale(1.4) rotate(40deg)',opacity:1,offset:.5},{transform:'translate(-50%,-50%) scale(3.4) rotate(80deg)',opacity:0}],{duration:620,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'});
+     }catch(e){}
+-    setTimeout(function(){w.remove();},760);
++    setTimeout(function(){w.remove();if(activeWipe===w)activeWipe=null;},760);
+   }
+   function sig(){
+     var m=document.getElementById('content');if(!m)return '';
+@@ -563,11 +563,11 @@
+     var c=document.getElementById('content');if(c)mo.observe(c,{childList:true,subtree:true});
+     var t=document.getElementById('sheet-title');if(t)mo.observe(t,{childList:true,characterData:true,subtree:true});
+     var sh=document.getElementById('sheet-body');if(sh)mo.observe(sh,{childList:true});
+-    addEventListener('hashchange',function(){wipe();});
++    addEventListener('hashchange',queue);
+     document.addEventListener('mouseover',menuHover,{passive:true});
+     addEventListener('resize',function(){slides={};document.querySelectorAll('.p5r4-hl').forEach(function(h){h.__p='';});queue();},{passive:true});
+     tick();
+-    if(!reduced.matches)setTimeout(function(){lastWipe=0;wipe('intro');},60);
++    if(!reduced.matches)setTimeout(function(){if(!activeWipe)wipe('intro');},60);
+   }
+   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+ })();
+--- /dev/null
++++ b/battle-experience-v3/ui-interaction.css
+@@ -0,0 +1,83 @@
++/* Four-theme interaction contract. Geometry, colors and battle rules stay in their theme. */
++/* Important declarations in this layer intentionally outrank the imported skins' legacy !important rules. */
++@layer ui-interaction {
++  :root { --ui-motion: 220ms; --ui-ease: cubic-bezier(.22,.61,.36,1); }
++  @media (prefers-reduced-motion: no-preference) {
++    :is(button, a[data-room], [role=button], .night-base-card, .night-npcs>article),
++    :is(button, a[data-room])::before,
++    :is(button, a[data-room])::after,
++    :is(button, a[data-room])>svg {
++      transition-property: transform, translate, rotate, scale, opacity, color, background-color, border-color, box-shadow, outline-color !important;
++      transition-duration: var(--ui-motion) !important;
++      transition-timing-function: var(--ui-ease) !important;
++      transition-delay: 0s !important;
++    }
++    /* Press and release both interpolate; keep each skin's positional transform intact. */
++    button:not(:disabled):active {
++      scale: .96 !important;
++      transition-duration: 80ms !important;
++    }
++  }
++  /* The inherited command-settle keyframe fights hover/selection and moves rebuilt buttons. */
++  .command-grid>button[aria-pressed=true] { animation-name: none !important; }
++  .command-grid>button { rotate: none !important; }
++  /* Input is ready when the conversation opens; do not hide it behind the bubble's 900ms delay. */
++  html[data-skin=hamuko] .slice-talk-box textarea {
++    animation: none !important;
++    opacity: 1 !important;
++  }
++  /* Keep money on one line inside the existing receipt; a wrapped final digit changes its meaning. */
++  html[data-theme=p4] .night-base-stats>div:first-child b {
++    white-space: nowrap !important;
++    overflow-wrap: normal !important;
++    flex-shrink: 0;
++  }
++  :is(.night-base-stats,.enemy-hp,.player-hud,.map-hud) {
++    font-variant-numeric: tabular-nums;
++  }
++  /* Long sheets need their own scroll area; keep the authored header and close control reachable. */
++  @media (max-width: 820px), (max-height: 700px) {
++    dialog#sheet[open] {
++      display: flex !important;
++      flex-direction: column;
++      overflow: hidden !important;
++    }
++    #sheet>.sheet-top { flex: 0 0 auto; }
++    #sheet>#sheet-body {
++      min-height: 0;
++      overflow-y: auto !important;
++      overscroll-behavior: contain;
++      scroll-padding-block: 16px;
++    }
++  }
++  html[data-theme=p3]:not([data-skin=hamuko]) .command-grid>button:hover:not(:disabled) {
++    translate: none !important;
++  }
++  /* A selection must not change the ribbon's width/height or move it 18–24px into its neighbor. */
++  html[data-skin=hamuko] .command-grid>button[aria-pressed=true] {
++    translate: 0 0 !important;
++    width: 280px !important;
++    height: 62px !important;
++  }
++  html[data-skin=hamuko] body.sh-m .command-grid>button[aria-pressed=true] {
++    width: 172px !important;
++    height: 34px !important;
++  }
++  /* Keyboard focus remains distinct from hover without changing the button's size. */
++  :is(button,a[data-room],[role=button]):focus-visible {
++    outline: 2px solid currentColor !important;
++    outline-offset: 4px !important;
++  }
++  :is(button,a[data-room],input,textarea,select) {
++    scroll-margin-block-start: 24px;
++    scroll-margin-block-end: calc(88px + env(safe-area-inset-bottom, 0px));
++  }
++  @media (prefers-reduced-motion: reduce) {
++    :is(button,a[data-room],[role=button]),
++    :is(button,a[data-room])::before,
++    :is(button,a[data-room])::after,
++    :is(button,a[data-room])>svg {
++      transition: none !important;
++    }
++  }
++}

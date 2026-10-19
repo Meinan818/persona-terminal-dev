@@ -2,6 +2,15 @@
 
 最后更新：2026-10-19（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前开发 · 2026-10-19 · U2a主题契约与正式房间地图接入
+
+- 把 Demo 已验证的 `tower-layout`、`loot-rules`、`floor-map` 纯规则机械迁入 `src/umbra/engine/`；迁移文件暂加 `@ts-nocheck`，行为由正式 Vitest 锁定，类型收口留到引擎完整搬完后统一做，禁止停在永久 `any`。
+- 新增 `src/umbra/themes.ts`：蓝色/粉色同走 TARTARUS 结构但使用不同 skin，红色 Mementos，黄色 Mayonaka TV，自定义/未知 UMBRA 中性皮肤。`UmbraRuntimeCheck` 现在写 `data-umbra-skin` 并从统一 CSS 变量取色，不再只有标题名称不同。
+- `?umbra=1` 接管页现已生成真实 5×5 房间地图，移动、迷雾、步数、警戒、钥匙和出口规则由正式 `floor-map` 引擎执行；遭遇只提示战斗下一节点接入，不伪造胜负或奖励。
+- 真实 Chrome 验证地图 25 格，起点 `0,4` 向右移动到 `1,4` 后“已走 1 步”，当前主题 `tartarus-blue`；1440/390/320 水平溢出均为 0、errors=[]。截图同 `umbra-migration-browser/`。
+- `floor-map` 正式测试 4/4、主题契约 4/4、入口 3/3 通过；`npm run typecheck` exit0。下一步 U2b：接 P5R 战斗适配和遭遇结算，仍不改默认旧入口。
+- 本节点仅本地提交，未 Push、未部署。
+
 ## 当前开发 · 2026-10-19 · U1完成，UMBRA隔离入口可打开
 
 - 新增 `?umbra=1` 显式入口开关；没有参数或 `umbra=0` 时仍打开旧战场，默认用户路径不变。

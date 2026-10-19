@@ -1,0 +1,109 @@
+.umbra-runtime {
+  --umbra-accent: #7c3aed;
+  --umbra-accent-soft: rgb(124 58 237 / 0.12);
+  --umbra-line: rgb(124 58 237 / 0.35);
+  --umbra-panel: rgb(255 255 255 / 0.82);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] {
+  --umbra-accent: #0891b2;
+  --umbra-accent-soft: rgb(8 145 178 / 0.12);
+  --umbra-line: rgb(8 145 178 / 0.35);
+  --umbra-panel: rgb(240 253 255 / 0.82);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] {
+  --umbra-accent: #db2777;
+  --umbra-accent-soft: rgb(219 39 119 / 0.12);
+  --umbra-line: rgb(219 39 119 / 0.35);
+  --umbra-panel: rgb(255 241 248 / 0.84);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] {
+  --umbra-accent: #dc2626;
+  --umbra-accent-soft: rgb(220 38 38 / 0.12);
+  --umbra-line: rgb(220 38 38 / 0.4);
+  --umbra-panel: rgb(255 247 247 / 0.9);
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] {
+  --umbra-accent: #ca8a04;
+  --umbra-accent-soft: rgb(202 138 4 / 0.14);
+  --umbra-line: rgb(202 138 4 / 0.4);
+  --umbra-panel: rgb(255 251 235 / 0.86);
+}
+
+.umbra-runtime .umbra-marker {
+  background: var(--umbra-accent-soft);
+  color: var(--umbra-accent);
+}
+
+.umbra-runtime .umbra-accent {
+  color: var(--umbra-accent);
+}
+
+.umbra-runtime .umbra-rule {
+  border-color: var(--umbra-line);
+}
+
+.umbra-runtime .umbra-note {
+  border-color: var(--umbra-line);
+  background: var(--umbra-accent-soft);
+}
+
+.umbra-runtime .umbra-map-grid {
+  background: var(--umbra-accent-soft);
+  border: 1px solid var(--umbra-line);
+  padding: 0.35rem;
+}
+
+.umbra-runtime .umbra-map-open,
+.umbra-runtime .umbra-map-fog,
+.umbra-runtime .umbra-map-current {
+  border-color: var(--umbra-line);
+}
+
+.umbra-runtime .umbra-map-open {
+  background: #fff;
+  color: #374151;
+}
+
+.umbra-runtime .umbra-map-fog {
+  background: rgb(17 24 39 / 0.9);
+  color: rgb(255 255 255 / 0.35);
+  border-color: rgb(255 255 255 / 0.08);
+}
+
+.umbra-runtime .umbra-map-clear {
+  background: var(--umbra-accent-soft);
+}
+
+.umbra-runtime .umbra-map-current {
+  background: var(--umbra-accent);
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--umbra-line);
+}
+
+.umbra-runtime .umbra-move-button {
+  min-height: 2.5rem;
+  border: 1px solid var(--umbra-line);
+  border-radius: 0.5rem;
+  background: var(--umbra-accent-soft);
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 900;
+}
+
+.umbra-runtime .umbra-move-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.dark .umbra-runtime .umbra-map-open {
+  background: #111827;
+  color: #e5e7eb;
+}
+
+.dark .umbra-runtime .umbra-move-button {
+  color: #e5e7eb;
+}

@@ -1,0 +1,151 @@
+/* P5手机战斗：敌人舞台、斜肩信息与拇指指令环。使用原DOM/点击钩子，桌面沿用原构图。 */
+html[data-theme=p5] body.sh-m .sh-stage{
+  --p5-mobile-ink:#0a0a0a;
+}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .combat-hero{display:none!important}
+html[data-theme=p5] body.sh-m .sh-stage .combat-top>p{left:112px;top:14px;font-size:21px;transform:rotate(-4deg)}
+html[data-theme=p5] body.sh-m .sh-stage .party-rail{top:46px;left:10px;right:10px;gap:5px}
+html[data-theme=p5] body.sh-m .sh-stage .party-rail>span{height:36px;min-height:0;padding:2px 11px;font-size:10px;line-height:1}
+html[data-theme=p5] body.sh-m .sh-stage .party-rail>span b{font-size:9px;line-height:1}
+html[data-theme=p5] body.sh-m .sh-stage .party-rail>span small{font-size:9px;line-height:1}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .battle-log{
+  position:fixed;left:15px;right:auto;top:90px;bottom:auto;width:310px;
+  padding:2px 8px;font-size:10px;line-height:1.3;transform:rotate(-2deg);pointer-events:none;
+}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .battle-log:before{content:none}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-scene{
+  left:10px;right:10px;top:113px;bottom:456px;width:auto;height:auto;min-height:0;
+}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-name{padding:4px 10px;max-width:282px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-name h1{font-size:20px}
+html[data-theme=p5] body.sh-m .sh-stage .enemy-name>span{font-size:11px;letter-spacing:.05em;padding:3px 6px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-vitals{
+  position:absolute;right:0;top:0;margin:0;font-size:11px;gap:3px;
+}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-vitals>span:first-child{display:none}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-vitals strong{font-size:24px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-scene>.meter{position:absolute;left:5px;right:4px;top:32px;height:4px;margin:0}
+html[data-theme=p5] body.sh-m .sh-stage .enemy-targets{
+  position:absolute;left:0;right:0;top:43px;margin:0;height:46px;gap:6px;
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;align-items:center;
+}
+html[data-theme=p5] body.sh-m .sh-stage .enemy-targets button{flex:0 0 auto;min-height:42px;max-width:142px;padding:3px 10px}
+html[data-theme=p5] body.sh-m .sh-stage .enemy-targets button b{font-size:11px!important}
+/* 敌人本体即选中按钮，手机去掉重复姓名卡；仍显示敌人数与所选目标的HP。 */
+html[data-theme=p5] body.sh-m .sh-stage .enemy-targets button{display:none}
+html[data-theme=p5] body.sh-m .sh-stage .sh-affs{
+  position:absolute;left:5px;right:0;top:94px;margin:0;justify-content:flex-start;gap:4px;
+  pointer-events:none;
+}
+html[data-theme=p5] body.sh-m .sh-stage .sh-aff{flex:none;width:24px}
+html[data-theme=p5] body.sh-m .sh-stage .sh-aff:not([class*="is-"]){display:none}
+html[data-theme=p5] body.sh-m .sh-stage .sh-aff i{width:19px;height:19px}
+html[data-theme=p5] body.sh-m .sh-stage .sh-aff small{font-size:9px;margin:1px 0 0}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .weakness-line{
+  position:absolute;left:4px;right:auto;top:94px;margin:0;max-width:220px;
+  flex-direction:column;align-items:flex-start;gap:3px;pointer-events:none;overflow:visible;
+}
+html[data-theme=p5] body.sh-m .sh-stage .sh-affs:has([class*="is-"])+.weakness-line{top:130px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .weakness-line b{font-size:11px;padding:3px 8px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .weakness-line span{font-size:10px;padding:2px 7px;max-width:185px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-unit{
+  width:clamp(110px,calc((var(--sh-h) - 480px)*.5),152px);
+  height:clamp(110px,calc((var(--sh-h) - 480px)*.5),152px);
+  left:65%!important;top:calc(50% + 30px)!important;
+  translate:-50% -50%;transform:none;
+}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-unit[data-unit="1"]{left:23%!important;top:calc(50% + 55px)!important;scale:.84}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-unit[data-unit="2"]{left:12%!important;top:calc(50% - 5px)!important;scale:.68}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-unit[data-unit="3"]{left:86%!important;top:calc(50% + 72px)!important;scale:.65}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-unit[data-unit="4"]{left:47%!important;top:calc(50% + 92px)!important;scale:.62}
+html[data-theme=p5] body.sh-m .sh-stage .enemy-unit-label b{font-size:11px}
+html[data-theme=p5] body.sh-m .sh-stage .enemy-unit-label small{font-size:11px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .command-deck .actor-turn{
+  left:13px;right:auto;top:auto;bottom:414px;width:146px;align-items:flex-start;
+  transform:rotate(-7deg);gap:2px;
+}
+html[data-theme=p5] body.sh-m .sh-stage .command-deck .actor-turn span{font-size:29px!important;max-width:none!important;white-space:nowrap!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-deck .actor-turn b{font-size:11px;padding:2px 6px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-intent{
+  left:172px;right:7px;top:auto;bottom:410px;width:auto;min-height:39px;
+  padding:5px 8px;gap:5px;transform:rotate(3deg);
+}
+html[data-theme=p5] body.sh-m .sh-stage .enemy-intent svg{width:19px;height:19px;padding:2px}
+html[data-theme=p5] body.sh-m .sh-stage .enemy-intent b{font-size:10px}
+html[data-theme=p5] body.sh-m .sh-stage .enemy-intent small{font-size:10px;max-width:156px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .mask-switcher{
+  left:8px;right:auto;top:auto;bottom:338px;width:145px;gap:2px;transform:rotate(-5deg);
+}
+html[data-theme=p5] body.sh-m .sh-stage .mask-switcher .icon-button{width:26px!important;min-width:26px!important;height:52px}
+html[data-theme=p5] body.sh-m .sh-stage .mask-switcher>button:nth-child(2){min-width:0;min-height:52px;padding:2px 5px;gap:3px}
+html[data-theme=p5] body.sh-m .sh-stage .mask-switcher .mask-emblem,
+html[data-theme=p5] body.sh-m .sh-stage .mask-switcher .mask-switch-name small,
+html[data-theme=p5] body.sh-m .sh-stage .mask-switcher>button:nth-child(2)>b{display:none}
+html[data-theme=p5] body.sh-m .sh-stage .mask-switch-name{font-size:14px;min-width:0}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .command-label{
+  display:none;
+}
+html[data-theme=p5] body.sh-m .sh-stage .command-label strong{font-size:11px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .command-detail{
+  left:162px;right:5px;top:auto;bottom:338px;width:auto;height:62px;padding:3px 5px;
+  overflow-x:auto;overflow-y:hidden;transform:rotate(2deg);z-index:12;
+}
+html[data-theme=p5] body.sh-m .sh-stage .combat-skill{
+  position:relative;flex:0 0 96px;width:96px;min-width:96px;height:56px;min-height:56px;
+  padding:4px 7px 20px!important;gap:4px;align-items:flex-start;
+}
+html[data-theme=p5] body.sh-m .sh-stage .combat-skill>svg{width:11px;height:11px;margin-top:3px;flex:none}
+html[data-theme=p5] body.sh-m .sh-stage .combat-skill>span{font-size:12px;line-height:1.15;white-space:normal;max-height:28px;overflow:hidden}
+html[data-theme=p5] body.sh-m .sh-stage .combat-skill>strong{position:absolute;right:8px;bottom:2px;font-size:19px}
+html[data-theme=p5] body.sh-m .sh-stage .command-detail .action-banner{width:205px;height:52px;font-size:12px}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .command-grid{
+  left:0;right:auto;top:auto;bottom:90px;width:390px;height:248px;z-index:11;display:block;
+}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .command-grid:before{left:49%;top:53%;width:235px;height:235px;margin:-117px 0 0 -117px;border-style:dashed;opacity:.45;transform:rotate(-13deg)}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .command-grid button{
+  left:50%;top:50%;width:112px;height:58px;margin:-29px 0 0 -56px;
+  padding:0 10px 7px 30px!important;overflow:visible;
+}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button[data-battle-action^="analyze:"]{--x:-128px!important;--y:-15px!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button[data-battle-action^="gun:"]{--x:110px!important;--y:-1px!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button[data-battle-action^="guard:"]{--x:-15px!important;--y:-75px!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button[data-battle-action^="items:"]{--x:-128px!important;--y:65px!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button[data-battle-action^="basic:"]{--x:128px!important;--y:87px!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button[data-battle-action^="showtime:"]{--x:119px!important;--y:-82px!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button>svg{left:5px;width:21px;height:21px}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button:after{left:28px;top:6px;font-size:18px!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button>span{font-size:12px!important;line-height:1.15}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button>span small{display:none!important}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .execute{
+  left:128px;right:auto;bottom:130px;width:136px;height:72px;transform:rotate(-8deg);z-index:12;
+}
+html[data-theme=p5] body.sh-m .sh-stage:has([data-battle-action^="batonPass:"]) .combat-poster .execute{bottom:154px}
+html[data-theme=p5] body.sh-m .sh-stage:has([data-battle-action^="batonPass:"]) .command-grid button[data-battle-action^="showtime:"]{--y:-91px!important}
+html[data-theme=p5] body.sh-m .sh-stage:has([data-battle-action^="batonPass:"]) .command-grid button[data-battle-action^="gun:"]{--y:-28px!important}
+html[data-theme=p5] body.sh-m .sh-stage:has([data-battle-action^="batonPass:"]) .command-grid button[data-battle-action^="basic:"]{--y:43px!important}
+html[data-theme=p5] body.sh-m .sh-stage:has([data-battle-action^="batonPass:"]) .command-grid button[data-battle-action^="items:"]{--y:39px!important}
+html[data-theme=p5] body.sh-m .sh-stage .combat-poster .command-deck:has(.p5-mobile-more-skills):after{
+  content:"滑动选技能 ↔";position:fixed;left:auto;right:12px;top:auto;bottom:400px;
+  width:auto;height:auto;padding:0;margin:0;border:0;background:none;box-shadow:none;
+  color:#fff;font:700 10px/1.2 Velvet,sans-serif;transform:rotate(2deg);clip-path:none;pointer-events:none;
+}
+html[data-theme=p5] body.sh-m .sh-stage .execute:after{font-size:32px}
+html[data-theme=p5] body.sh-m .sh-stage .execute>span{font-size:11px}
+/* 击倒后的三张接力牌沿弧线展开，每张保留独立点击区。 */
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button[data-battle-action^="batonPass:"]{width:110px;--x:-126px!important;--y:122px!important;--tilt:-7deg!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button:nth-child(2 of [data-battle-action^="batonPass:"]){--x:-4px!important;--y:114px!important;--tilt:-1deg!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button:nth-child(3 of [data-battle-action^="batonPass:"]){--x:119px!important;--y:128px!important;--tilt:6deg!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button[data-battle-action^="batonPass:"]:after{font-size:15px!important;content:"BATON"}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button[data-battle-action^="batonPass:"]>span{font-size:11px!important}
+html[data-theme=p5] body.sh-m .sh-stage .command-grid button:focus-visible,
+html[data-theme=p5] body.sh-m .sh-stage .combat-skill:focus-visible{outline:2px solid #fff;outline-offset:4px}
+html[data-theme=p5] body.sh-m .sh-stage .turn-handoff{pointer-events:none}
+@media(max-height:640px){
+  html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-unit{width:108px;height:108px}
+  html[data-theme=p5] body.sh-m .sh-stage .combat-poster .enemy-unit[data-unit="1"]{top:calc(50% + 15px)!important}
+  html[data-theme=p5] body.sh-m .sh-stage .command-deck .actor-turn span{font-size:25px!important}
+  html[data-theme=p5] body.sh-m .sh-stage .enemy-targets{top:37px}
+  html[data-theme=p5] body.sh-m .sh-stage .sh-affs{top:85px}
+  html[data-theme=p5] body.sh-m .sh-stage .combat-poster .weakness-line{top:82px;max-width:158px}
+  html[data-theme=p5] body.sh-m .sh-stage .sh-affs:has([class*="is-"])+.weakness-line{top:115px}
+}

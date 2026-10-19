@@ -195,3 +195,1260 @@
   background: #111827;
   color: #e5e7eb;
 }
+
+.umbra-runtime .umbra-shop-active {
+  border-width: 2px;
+  border-color: var(--umbra-accent);
+  color: var(--umbra-accent);
+}
+
+.umbra-runtime .umbra-shop-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--umbra-line);
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  background: #fff;
+  text-align: left;
+}
+
+.umbra-runtime .umbra-shop-item b {
+  display: block;
+  color: #374151;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.umbra-runtime .umbra-shop-item small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #6b7280;
+  font-size: 0.625rem;
+  line-height: 1.4;
+}
+
+.umbra-runtime .umbra-shop-item strong {
+  flex: none;
+  color: var(--umbra-accent);
+  font-size: 0.75rem;
+}
+
+.umbra-runtime .umbra-shop-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.dark .umbra-runtime .umbra-shop-item {
+  background: #111827;
+}
+
+.dark .umbra-runtime .umbra-shop-item b {
+  color: #e5e7eb;
+}
+
+/* The four UMBRA skins follow the accepted demo compositions instead of a
+   shared neutral card layout. Gameplay markup stays common; each channel owns
+   its background, typography, panel geometry and interaction states. */
+@font-face {
+  font-family: 'Umbra P4 Condensed';
+  src: url('/fonts/p4/bebas.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Umbra P4 Hand';
+  src: url('/fonts/p4/caveat-700.woff2') format('woff2');
+  font-display: swap;
+}
+
+.umbra-runtime {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  isolation: isolate;
+  font-family: 'Velvet Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.umbra-runtime::before,
+.umbra-runtime::after {
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+  content: '';
+}
+
+.umbra-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.umbra-runtime .umbra-panel,
+.umbra-runtime .umbra-side-card {
+  transition:
+    transform 180ms cubic-bezier(.16, 1, .3, 1),
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.umbra-runtime button:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}
+
+.umbra-runtime .umbra-title small {
+  flex: none;
+  white-space: nowrap;
+}
+
+.umbra-runtime .umbra-inventory-row {
+  display: flex;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  border: 1px solid var(--umbra-line);
+  border-radius: .5rem;
+  padding: .65rem .75rem;
+  background: color-mix(in srgb, var(--umbra-panel) 82%, white 18%);
+}
+
+.umbra-runtime .umbra-inventory-row > span:first-child {
+  min-width: 0;
+}
+
+.umbra-runtime .umbra-inventory-row b,
+.umbra-runtime .umbra-inventory-row small {
+  display: block;
+}
+
+.umbra-runtime .umbra-inventory-row b {
+  overflow-wrap: anywhere;
+  color: #1f2937;
+  font-size: .72rem;
+  font-weight: 900;
+}
+
+.umbra-runtime .umbra-inventory-row small {
+  margin-top: .18rem;
+  color: #6b7280;
+  font-size: .625rem;
+  line-height: 1.35;
+}
+
+.dark .umbra-runtime .umbra-inventory-row {
+  background: #111827;
+}
+
+.dark .umbra-runtime .umbra-inventory-row b {
+  color: #f3f4f6;
+}
+
+/* P3 blue: dark hour terminal, soul sea and skewed typography. */
+.umbra-runtime[data-umbra-skin='tartarus-blue'] {
+  --umbra-accent: #3ff0ff;
+  --umbra-accent-soft: rgb(63 240 255 / .12);
+  --umbra-line: rgb(191 246 255 / .38);
+  --umbra-panel: rgb(3 18 69 / .78);
+  background:
+    radial-gradient(120% 90% at 72% 4%, #0c2a8a 0, #051557 42%, #020a2a 90%),
+    #020a2a;
+  color: #f4fbff;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue']::before {
+  inset: -170px -120px auto auto;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 62% 40%, rgb(80 140 200 / .24) 0 8%, transparent 9%),
+    radial-gradient(circle at 36% 62%, rgb(80 140 200 / .18) 0 12%, transparent 13%),
+    radial-gradient(circle at 45% 45%, #fbfff2 0, #e9f6ff 45%, #9fd8ff 70%, transparent 71%);
+  box-shadow: 0 0 120px 40px rgb(120 210 255 / .28);
+  opacity: .82;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue']::after {
+  left: -8vw;
+  right: -8vw;
+  bottom: -28vh;
+  height: 62vh;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 42px, rgb(160 240 255 / .16) 43px 44px),
+    linear-gradient(180deg, transparent, rgb(10 60 180 / .3) 38%, rgb(2 10 42 / .92));
+  transform: perspective(600px) rotateX(62deg);
+  transform-origin: 50% 100%;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-header {
+  position: relative;
+  min-height: 235px;
+  border: 0 !important;
+  padding: 28px 26px 30px;
+  background:
+    linear-gradient(118deg, transparent 0 46%, rgb(63 240 255 / .1) 46.2% 46.6%, transparent 46.8%),
+    radial-gradient(80% 180% at 100% 0, rgb(63 240 255 / .18), transparent 62%);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 34px), calc(100% - 34px) 100%, 0 100%);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-terminal-label {
+  color: #3ff0ff !important;
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  font-style: italic;
+  font-size: .9rem !important;
+  letter-spacing: .24em !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-title {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-top: 12px !important;
+  transform: skewX(-8deg);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-title span {
+  color: #f4fbff;
+  font-size: clamp(3.5rem, 8vw, 7rem);
+  font-weight: 900;
+  line-height: .88;
+  text-shadow: 0 0 34px rgb(63 240 255 / .42);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-title small {
+  color: #ff3f8e;
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  font-size: clamp(1rem, 2vw, 1.45rem);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-subtitle {
+  max-width: 720px;
+  color: #9fc0ff !important;
+  font-weight: 700;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-back-button {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #f4fbff !important;
+  color: #06195a !important;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  box-shadow: inset -5px 0 0 #ff3f8e;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-stat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-stat {
+  position: relative;
+  min-height: 136px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #f4fbff !important;
+  color: #06195a !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 26px) 100%, 0 100%);
+  transform: skewX(-6deg);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-stat:nth-child(2) {
+  transform: translateY(12px) skewX(4deg);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-stat > * {
+  transform: skewX(6deg);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-stat:nth-child(2) > * {
+  transform: skewX(-4deg);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-stat :is(p, span, div) {
+  color: #06195a !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-stat .umbra-marker {
+  background: #06195a;
+  color: #3ff0ff;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-panel {
+  border-color: rgb(191 246 255 / .34) !important;
+  border-radius: 0 !important;
+  background:
+    linear-gradient(128deg, rgb(20 70 216 / .46), rgb(2 10 42 / .8)),
+    #06195a !important;
+  color: #f4fbff;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+  box-shadow: inset 4px 0 0 rgb(63 240 255 / .5);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-panel :is(h1, h2, b, strong) {
+  color: #f4fbff;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-panel :is(p, small, label) {
+  color: #bff6ff;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-persona-option,
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-battle-action,
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-inventory-row {
+  border-color: rgb(63 240 255 / .35) !important;
+  border-radius: 0 !important;
+  background: rgb(6 25 90 / .82) !important;
+  color: #f4fbff !important;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-persona-option.is-active,
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-shop-active {
+  border-color: #f4fbff !important;
+  background: #f4fbff !important;
+  color: #06195a !important;
+  box-shadow: inset 0 -5px 0 #ff3f8e;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-persona-option.is-active small {
+  color: #1446d8 !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-persona-option.is-active :is(b, small) {
+  color: #06195a !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-secondary-button {
+  border-color: #3ff0ff;
+  border-radius: 0;
+  background: #06195a;
+  color: #bff6ff;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-shop-item {
+  border-color: rgb(63 240 255 / .35);
+  border-radius: 0;
+  background: rgb(6 25 90 / .76);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-shop-item :is(b, strong) {
+  color: #f4fbff;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-shop-item small {
+  color: #9fc0ff;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-mission {
+  border: 0 !important;
+  border-left: 5px solid #3ff0ff !important;
+  border-radius: 0 !important;
+  background: linear-gradient(90deg, rgb(6 25 90 / .9), rgb(2 10 42 / .4)) !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-side-card {
+  border-color: rgb(63 240 255 / .28) !important;
+  border-radius: 0 !important;
+  background: rgb(6 25 90 / .7) !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-side-card :is(b, span) {
+  color: #f4fbff !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-side-card :is(span, small) {
+  color: #9fc0ff;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-map-grid {
+  border-color: rgb(63 240 255 / .42);
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgb(46 138 65 / .32), rgb(3 28 32 / .72)),
+    #051557;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-map-open {
+  border-radius: 0;
+  background: rgb(218 250 232 / .9);
+  color: #063325;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-map-current {
+  border-radius: 0;
+  background: #f4fbff;
+  color: #06195a;
+  box-shadow: 0 0 0 3px #3ff0ff, 0 0 24px rgb(63 240 255 / .6);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-map-fog {
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(125deg, rgb(255 255 255 / .045) 0 1px, transparent 1px 12px),
+    #020817;
+}
+
+/* P3 pink: her room, MP3 hardware and scrapbook geometry. */
+.umbra-runtime[data-umbra-skin='tartarus-pink'] {
+  --umbra-accent: #ff6fb1;
+  --umbra-accent-soft: rgb(255 111 177 / .16);
+  --umbra-line: rgb(255 220 239 / .36);
+  --umbra-panel: rgb(53 12 37 / .82);
+  background:
+    radial-gradient(80% 90% at 82% 10%, rgb(255 114 183 / .28), transparent 62%),
+    radial-gradient(70% 70% at 10% 88%, rgb(127 238 213 / .08), transparent 64%),
+    linear-gradient(135deg, #35132d, #5d173e 54%, #2b102a);
+  color: #fff5fb;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink']::before {
+  right: -110px;
+  bottom: -150px;
+  width: 470px;
+  height: 470px;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle, rgb(255 255 255 / .11) 0 1px, transparent 2px 10px);
+  opacity: .5;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink']::after {
+  left: 7vw;
+  top: 130px;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #ff6fb1 0 8%, #160b18 8.5% 12%, transparent 12.5%),
+    repeating-radial-gradient(circle, #140910 0 2px, #271021 3px 7px);
+  box-shadow: 0 0 60px rgb(255 111 177 / .25);
+  opacity: .22;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-header {
+  border: 0 !important;
+  padding: 28px 30px 30px;
+  background:
+    linear-gradient(120deg, rgb(255 255 255 / .08), transparent 48%),
+    rgb(40 13 33 / .72);
+  border-radius: 28px;
+  box-shadow: inset 0 0 0 2px rgb(255 164 207 / .35);
+  clip-path: polygon(0 4%, 98% 0, 100% 92%, 3% 100%);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-terminal-label {
+  display: inline-block;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: #7fead2;
+  color: #4b1437 !important;
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  letter-spacing: .12em !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-title {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-top: 14px !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-title span {
+  color: #fff;
+  font-size: clamp(3.2rem, 7vw, 6rem);
+  font-weight: 900;
+  line-height: .95;
+  text-shadow:
+    3px 3px 0 #ff4e9f,
+    7px 7px 0 rgb(39 8 29 / .8);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-title small {
+  border-radius: 999px;
+  padding: 4px 14px;
+  background: #ff5ca7;
+  color: #fff;
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  font-size: 1.1rem;
+  font-style: italic;
+  letter-spacing: .18em;
+  transform: rotate(-4deg);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-subtitle {
+  max-width: 720px;
+  color: #ffd7e9 !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-back-button {
+  border: 2px solid #ff8ac2 !important;
+  border-radius: 999px !important;
+  background: rgb(47 11 35 / .8) !important;
+  color: #fff !important;
+  box-shadow: inset 0 -3px 0 rgb(255 111 177 / .35);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-stat {
+  min-height: 150px;
+  border: 2px solid rgb(255 194 222 / .7) !important;
+  border-radius: 50% !important;
+  background:
+    radial-gradient(circle at 50% 35%, #fff 0, #ffd7e9 45%, #ff9bc9 100%) !important;
+  color: #5b123b !important;
+  text-align: center;
+  box-shadow: 0 12px 35px rgb(28 6 22 / .4);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-stat:nth-child(2) {
+  transform: translateY(-10px) rotate(2deg);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-stat:nth-child(3) {
+  transform: translateY(9px) rotate(-2deg);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-stat :is(p, span, div) {
+  color: #5b123b !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-stat .umbra-marker {
+  background: #5b123b;
+  color: #ffd9e9;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-panel {
+  border: 2px solid rgb(255 171 210 / .32) !important;
+  border-radius: 22px !important;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 5px, rgb(255 255 255 / .018) 6px),
+    linear-gradient(135deg, rgb(28 8 23 / .96), rgb(71 17 48 / .82)) !important;
+  clip-path: none;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-panel :is(h1, h2, b, strong) {
+  color: #fff5fb;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-panel :is(p, small, label) {
+  color: #ffd5e7;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-persona-option,
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-battle-action,
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-inventory-row {
+  border-color: rgb(255 168 207 / .42) !important;
+  border-radius: 999px !important;
+  background: rgb(37 10 30 / .76) !important;
+  color: #fff5fb !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-inventory-row {
+  border-radius: 16px !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-persona-option.is-active,
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-shop-active {
+  border-color: #fff !important;
+  background: #fff !important;
+  color: #6f1748 !important;
+  box-shadow: 0 0 22px rgb(255 128 188 / .45);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-persona-option.is-active small {
+  color: #a72f67 !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-persona-option.is-active :is(b, small) {
+  color: #6f1748 !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-secondary-button {
+  border-color: #ffa6cd;
+  border-radius: 999px;
+  background: #4d1537;
+  color: #fff4fa;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-shop-item {
+  border-color: rgb(255 168 207 / .42);
+  border-radius: 16px;
+  background: rgb(37 10 30 / .8);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-shop-item :is(b, strong) {
+  color: #fff5fb;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-shop-item small {
+  color: #ffc7df;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-mission {
+  border: 0 !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(110deg, #ffd8e8 0, #ffd8e8 78%, transparent 78%),
+    transparent !important;
+  color: #5b123b;
+  transform: rotate(-1deg);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-mission :is(p, span) {
+  color: #5b123b !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-side-card {
+  border-color: rgb(255 168 207 / .34) !important;
+  border-radius: 18px !important;
+  background: rgb(37 10 30 / .72) !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-side-card :is(b, span) {
+  color: #fff5fb !important;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-map-grid {
+  border-color: rgb(255 168 207 / .42);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 70% 0, rgb(255 126 185 / .18), transparent 52%),
+    #260d20;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-map-open {
+  border-radius: 10px;
+  background: #fff1f7;
+  color: #5b123b;
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-map-current {
+  border-radius: 50%;
+  background: #ff5ca7;
+  color: #fff;
+  box-shadow: 0 0 0 4px #fff, 0 0 24px rgb(255 92 167 / .7);
+}
+
+.umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-map-fog {
+  border-radius: 10px;
+  background: #120710;
+}
+
+/* P4 yellow: midnight television, OSD panels and channel controls. */
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] {
+  --umbra-accent: #ffe600;
+  --umbra-accent-soft: rgb(255 230 0 / .14);
+  --umbra-line: rgb(255 230 0 / .42);
+  --umbra-panel: rgb(15 14 10 / .92);
+  background:
+    radial-gradient(100% 58% at 82% 0, #ff9a00 0, #7b3c00 26%, transparent 58%),
+    repeating-linear-gradient(118deg, transparent 0 108px, rgb(255 230 0 / .045) 109px 116px),
+    linear-gradient(180deg, #1c1810, #0e0d0a 62%, #080705);
+  color: #fffbe8;
+  font-family: 'Velvet Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow']::before {
+  left: -24vw;
+  right: -24vw;
+  bottom: -34vh;
+  height: 70vh;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 46px, rgb(255 230 0 / .17) 47px 48px),
+    repeating-linear-gradient(90deg, transparent 0 46px, rgb(255 230 0 / .17) 47px 48px);
+  transform: perspective(520px) rotateX(66deg);
+  transform-origin: 50% 100%;
+  opacity: .8;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow']::after {
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgb(0 0 0 / .13) 4px 5px),
+      radial-gradient(ellipse 80% 65% at 50% 50%, transparent 48%, rgb(0 0 0 / .52));
+  opacity: .75;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-header {
+  position: relative;
+  min-height: 190px;
+  border: 0 !important;
+  padding: 24px 27px 38px;
+  background:
+    linear-gradient(90deg, rgb(255 230 0 / .95) 0 46%, rgb(14 13 10 / .92) 46% 100%);
+  clip-path: polygon(0 0, 100% 0, 97% 100%, 3% 94%);
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-header::after {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 13px;
+  background: repeating-linear-gradient(-45deg, #ffe600 0 12px, #0e0d0a 12px 24px);
+  content: '';
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-terminal-label {
+  display: inline-block;
+  padding: 4px 10px 2px;
+  background: #e8203a;
+  color: #fff !important;
+  font-family: 'Umbra P4 Condensed', Impact, sans-serif;
+  font-size: 1rem !important;
+  letter-spacing: .16em !important;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-title {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: 13px !important;
+  filter: drop-shadow(5px 5px 0 #0e0d0a);
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-title span {
+  color: #ffe600;
+  font-size: clamp(3.2rem, 7vw, 6.2rem);
+  font-weight: 900;
+  line-height: .92;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-title small {
+  padding: 3px 10px 1px;
+  background: #0e0d0a;
+  color: #fffbe8;
+  font-family: 'Umbra P4 Condensed', Impact, sans-serif;
+  font-size: 1.25rem;
+  letter-spacing: .18em;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-subtitle {
+  max-width: 690px;
+  color: #0e0d0a !important;
+  font-weight: 800;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-back-button {
+  border: 2px solid #ffe600 !important;
+  border-radius: 0 !important;
+  background: #0e0d0a !important;
+  color: #ffe600 !important;
+  padding-inline: 1.35rem !important;
+  clip-path: polygon(4% 0, 100% 6%, 96% 100%, 0 94%);
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-stat {
+  position: relative;
+  border: 2px solid #0e0d0a !important;
+  border-radius: 0 !important;
+  background: #fffbe8 !important;
+  color: #0e0d0a !important;
+  clip-path: polygon(0 4%, 98% 0, 100% 88%, 4% 100%);
+  box-shadow: 7px 7px 0 #ffe600;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-stat:nth-child(2) {
+  transform: translateY(8px) rotate(-1deg);
+  box-shadow: 7px 7px 0 #e8203a;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-stat :is(p, span, div) {
+  color: #0e0d0a !important;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-stat .umbra-marker {
+  border-radius: 0;
+  background: #0e0d0a;
+  color: #ffe600;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-panel {
+  border: 3px solid #6f6854 !important;
+  border-radius: 10px !important;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / .045), transparent 42%),
+    #12110d !important;
+  box-shadow:
+    inset 0 0 0 4px #0e0d0a,
+    inset 0 0 0 6px #3a3629,
+    8px 8px 0 rgb(255 230 0 / .18);
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-panel :is(h1, h2, b, strong) {
+  color: #fffbe8;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-panel :is(p, small, label) {
+  color: #d8cf9f;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-persona-option,
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-battle-action,
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-inventory-row {
+  border: 2px solid #1a1812 !important;
+  border-radius: 0 !important;
+  background: #fffbe8 !important;
+  color: #0e0d0a !important;
+  clip-path: polygon(2% 0, 100% 4%, 97% 100%, 0 94%);
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-inventory-row b {
+  color: #0e0d0a !important;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-persona-option.is-active,
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-shop-active {
+  border-color: #ffe600 !important;
+  background: #ffe600 !important;
+  color: #0e0d0a !important;
+  box-shadow: inset 4px 0 0 #e8203a;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-persona-option.is-active :is(b, small) {
+  color: #0e0d0a !important;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-secondary-button {
+  border: 2px solid #ffe600;
+  border-radius: 0;
+  background: #0e0d0a;
+  color: #ffe600;
+  clip-path: polygon(8% 0, 100% 7%, 92% 100%, 0 93%);
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-shop-item {
+  border: 2px solid #6f6854;
+  border-radius: 0;
+  background: #fffbe8;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-shop-item :is(b, strong) {
+  color: #0e0d0a;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-shop-item small {
+  color: #665f4c;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-mission {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background:
+    linear-gradient(90deg, #ffe600 0 20%, #0e0d0a 20% 100%) !important;
+  color: #fffbe8;
+  clip-path: polygon(0 0, 100% 0, 99% 82%, 91% 100%, 0 92%);
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-mission :is(p, span) {
+  color: #fffbe8 !important;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-side-card {
+  border: 2px solid #6f6854 !important;
+  border-radius: 0 !important;
+  background: #12110d !important;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-side-card :is(b, span) {
+  color: #fffbe8 !important;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-map-grid {
+  border: 2px solid #ffe600;
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 18px, rgb(255 230 0 / .08) 19px 20px),
+    #17140c;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-map-open {
+  border-color: #5e5741;
+  border-radius: 0;
+  background: #fffbe8;
+  color: #0e0d0a;
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-map-current {
+  border-radius: 0;
+  background: #ffe600;
+  color: #0e0d0a;
+  box-shadow: inset 0 0 0 3px #0e0d0a, 0 0 20px rgb(255 230 0 / .45);
+}
+
+.umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-map-fog {
+  border-radius: 0;
+  background: #090806;
+}
+
+/* P5 red: torn paper, halftone, black-red-white and calling-card geometry. */
+.umbra-runtime[data-umbra-skin='mementos-red'] {
+  --umbra-accent: #e5191c;
+  --umbra-accent-soft: rgb(229 25 28 / .16);
+  --umbra-line: rgb(255 255 255 / .34);
+  --umbra-panel: rgb(10 10 10 / .94);
+  background:
+    radial-gradient(circle at 78% 8%, rgb(229 25 28 / .18), transparent 30%),
+    radial-gradient(circle, rgb(255 255 255 / .07) 0 1px, transparent 1.5px) 0 0 / 9px 9px,
+    #050505;
+  color: #fff;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red']::before {
+  right: -18vw;
+  top: -12vh;
+  width: 48vw;
+  height: 130vh;
+  background: #e5191c;
+  transform: rotate(17deg);
+  transform-origin: 50% 50%;
+  opacity: .96;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red']::after {
+  left: -18vw;
+  bottom: -34vh;
+  width: 70vw;
+  height: 56vh;
+  background:
+    repeating-linear-gradient(-24deg, rgb(255 255 255 / .06) 0 2px, transparent 2px 11px),
+    transparent;
+  transform: rotate(-9deg);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-header {
+  position: relative;
+  border: 0 !important;
+  padding: 26px 28px 32px;
+  background: #0a0a0a;
+  clip-path: polygon(0 4%, 94% 0, 100% 90%, 88% 100%, 0 96%);
+  box-shadow: inset 0 -8px 0 #e5191c;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-header::before {
+  position: absolute;
+  left: 28px;
+  top: 0;
+  width: 220px;
+  height: 10px;
+  background: #fff;
+  content: '';
+  transform: rotate(-2deg);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-terminal-label {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 10px;
+  background: #e5191c;
+  color: #fff !important;
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-size: .9rem !important;
+  letter-spacing: .2em !important;
+  transform: rotate(-3deg);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-title {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-top: 14px !important;
+  transform: rotate(-2deg);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-title span {
+  display: inline-block;
+  padding: 2px 12px 6px;
+  background: #fff;
+  color: #0a0a0a;
+  font-size: clamp(3rem, 7vw, 6.2rem);
+  font-weight: 900;
+  line-height: .88;
+  clip-path: polygon(2% 4%, 100% 0, 96% 100%, 0 94%);
+  transform: skewX(-7deg);
+  box-shadow: 8px 8px 0 #e5191c;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-title small {
+  padding: 4px 10px 1px;
+  background: #e5191c;
+  color: #fff;
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: .18em;
+  transform: rotate(-5deg);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-subtitle {
+  max-width: 720px;
+  color: #d8d8d8 !important;
+  font-weight: 800;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-back-button {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  color: #0a0a0a !important;
+  margin-right: 8px;
+  padding-inline: 1.4rem !important;
+  clip-path: polygon(3% 0, 100% 5%, 97% 100%, 0 94%);
+  box-shadow: 5px 5px 0 #e5191c;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-stat {
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  background: #0a0a0a !important;
+  color: #fff !important;
+  clip-path: polygon(0 7%, 98% 0, 100% 92%, 5% 100%);
+  box-shadow: 6px 6px 0 #e5191c;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-stat:nth-child(2) {
+  background: #fff !important;
+  color: #0a0a0a !important;
+  transform: rotate(1.4deg);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-stat :is(p, span, div) {
+  color: inherit !important;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-stat .umbra-marker {
+  border-radius: 0;
+  background: #e5191c;
+  color: #fff;
+  clip-path: polygon(50% 0, 63% 30%, 100% 24%, 74% 54%, 94% 90%, 56% 72%, 40% 100%, 34% 66%, 0 76%, 24% 46%, 4% 14%, 40% 30%);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-panel {
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  background: #0a0a0a !important;
+  clip-path: polygon(0 2%, 99% 0, 97% 98%, 3% 100%);
+  box-shadow: 8px 8px 0 #e5191c;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-panel :is(h1, h2, b, strong) {
+  color: #fff;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-panel :is(p, small, label) {
+  color: #bdbdbd;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-persona-option,
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-battle-action,
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-inventory-row {
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  background: #111 !important;
+  color: #fff !important;
+  clip-path: polygon(2% 5%, 100% 0, 96% 100%, 0 92%);
+  box-shadow: 4px 4px 0 #e5191c;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-inventory-row b {
+  color: #fff !important;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-persona-option.is-active,
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-shop-active {
+  border-color: #0a0a0a !important;
+  background: #fff !important;
+  color: #0a0a0a !important;
+  box-shadow: 5px 5px 0 #e5191c;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-persona-option.is-active small {
+  color: #e5191c !important;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-persona-option.is-active :is(b, small) {
+  color: #0a0a0a !important;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-secondary-button {
+  border: 2px solid #fff;
+  border-radius: 0;
+  background: #fff;
+  color: #0a0a0a;
+  clip-path: polygon(5% 0, 100% 6%, 94% 100%, 0 92%);
+  font-weight: 900;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-shop-item {
+  border: 2px solid #fff;
+  border-radius: 0;
+  background: #f4f1ea;
+  clip-path: polygon(2% 0, 100% 5%, 97% 100%, 0 94%);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-shop-item :is(b, strong) {
+  color: #0a0a0a;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-shop-item small {
+  color: #555;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-mission {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #e5191c !important;
+  color: #fff;
+  clip-path: polygon(2% 0, 100% 5%, 98% 92%, 0 100%);
+  transform: rotate(-1deg);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-mission :is(p, span) {
+  color: #fff !important;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-side-card {
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  background: #0a0a0a !important;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-side-card :is(b, span) {
+  color: #fff !important;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-map-grid {
+  border: 2px solid #fff;
+  border-radius: 0;
+  background:
+    radial-gradient(circle, rgb(255 255 255 / .12) 0 1px, transparent 1.5px) 0 0 / 8px 8px,
+    #0a0a0a;
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-map-open {
+  border-color: #fff;
+  border-radius: 0;
+  background: #fff;
+  color: #0a0a0a;
+  clip-path: polygon(3% 0, 100% 6%, 95% 100%, 0 92%);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-map-current {
+  border-radius: 0;
+  background: #e5191c;
+  color: #fff;
+  box-shadow: inset 0 0 0 3px #fff, 0 0 22px rgb(229 25 28 / .7);
+  clip-path: polygon(50% 0, 61% 32%, 98% 22%, 72% 52%, 94% 88%, 56% 72%, 40% 100%, 34% 66%, 0 78%, 24% 48%, 4% 14%, 40% 30%);
+}
+
+.umbra-runtime[data-umbra-skin='mementos-red'] .umbra-map-fog {
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(-35deg, rgb(255 255 255 / .05) 0 2px, transparent 2px 8px),
+    #050505;
+}
+
+@media (max-width: 640px) {
+  .umbra-runtime {
+    padding-inline: 12px !important;
+  }
+
+  .umbra-runtime .umbra-shell {
+    gap: 14px;
+  }
+
+  .umbra-runtime .umbra-header {
+    min-height: 0 !important;
+    padding: 20px 18px 26px !important;
+  }
+
+  .umbra-runtime .umbra-title {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+
+  .umbra-runtime .umbra-title span {
+    font-size: clamp(2.7rem, 15vw, 4.2rem) !important;
+  }
+
+  .umbra-runtime .umbra-title small {
+    font-size: .82rem !important;
+  }
+
+  .umbra-runtime[data-umbra-skin='tartarus-blue'] .umbra-stat-grid,
+  .umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-stat-grid,
+  .umbra-runtime[data-umbra-skin='mementos-red'] .umbra-stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .umbra-runtime[data-umbra-skin='tartarus-pink'] .umbra-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .umbra-runtime .umbra-stat {
+    min-height: 112px !important;
+    transform: none !important;
+  }
+
+  .umbra-runtime .umbra-stat > * {
+    transform: none !important;
+  }
+
+  .umbra-runtime .umbra-panel {
+    padding: 14px !important;
+  }
+
+  .umbra-runtime .umbra-inventory-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .umbra-runtime .umbra-inventory-row > span:last-child {
+    width: 100%;
+    justify-content: flex-start !important;
+  }
+
+  .umbra-runtime[data-umbra-skin='mementos-red']::before {
+    right: -45vw;
+    width: 90vw;
+    opacity: .72;
+  }
+
+  .umbra-runtime[data-umbra-skin='tartarus-blue']::before {
+    right: -230px;
+    top: -260px;
+    width: 440px;
+    height: 440px;
+    opacity: .5;
+  }
+
+  .umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-header {
+    background: linear-gradient(150deg, rgb(255 230 0 / .95) 0 58%, rgb(14 13 10 / .92) 58% 100%);
+  }
+
+  .umbra-runtime[data-umbra-skin='mayonaka-yellow'] .umbra-subtitle {
+    color: #fffbe8 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .umbra-runtime *,
+  .umbra-runtime *::before,
+  .umbra-runtime *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

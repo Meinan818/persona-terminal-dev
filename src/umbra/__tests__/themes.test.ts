@@ -6,11 +6,13 @@ describe('UMBRA theme contract', () => {
     expect(umbraThemeFor('blue')).toMatchObject({
       skin: 'tartarus-blue',
       channel: 'p3',
+      terminalLabel: 'TARTARUS / BLUE HOUR',
       identity: { en: 'TARTARUS' },
     });
     expect(umbraThemeFor('pink')).toMatchObject({
       skin: 'tartarus-pink',
       channel: 'p3',
+      terminalLabel: 'TARTARUS / PINK HOUR',
       identity: { en: 'TARTARUS' },
     });
   });
@@ -19,6 +21,7 @@ describe('UMBRA theme contract', () => {
     expect(umbraThemeFor('red')).toMatchObject({
       skin: 'mementos-red',
       channel: 'p5',
+      terminalLabel: 'MEMENTOS / VEIL',
       identity: { en: 'Mementos' },
     });
   });
@@ -27,6 +30,7 @@ describe('UMBRA theme contract', () => {
     expect(umbraThemeFor('yellow')).toMatchObject({
       skin: 'mayonaka-yellow',
       channel: 'p4',
+      terminalLabel: 'MAYONAKA / SIGNAL',
       identity: { en: 'Mayonaka TV' },
     });
   });

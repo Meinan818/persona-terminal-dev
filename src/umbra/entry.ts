@@ -1,10 +1,17 @@
-export type UmbraEntryMode = 'legacy' | 'runtime';
+export type UmbraEntryMode = 'legacy' | 'demo' | 'runtime';
 
 /**
- * 显式入口开关。默认永远是旧战场，只有 URL 写 umbra=1 才进入 UMBRA runtime；
- * umbra=0 可强制回旧入口，便于迁移期排查和回退。
+ * 默认由 UMBRA Demo 整体取代旧战场。
+ * legacy=1 / umbra=0 仅供回退；umbra=runtime 仅供迁移开发核对正式引擎接线。
  */
 export function resolveUmbraEntry(search: string): UmbraEntryMode {
-  const values = new URLSearchParams(search.split('#')[0]).getAll('umbra');
-  return values.length === 1 && values[0] === '1' ? 'runtime' : 'legacy';
+  const params = new URLSearchParams(search.split('#')[0]);
+  if (params.get('legacy') === '1') return 'legacy';
+  const values = params.getAll('umbra');
+  if (values.length === 0) return 'demo';
+  if (values.length !== 1) return 'legacy';
+  if (values[0] === '1') return 'demo';
+  if (values[0] === 'runtime') return 'runtime';
+  if (values[0] === '0') return 'legacy';
+  return 'legacy';
 }

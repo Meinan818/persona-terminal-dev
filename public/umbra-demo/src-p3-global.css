@@ -1,0 +1,86 @@
+/* ===== P3 影时间 · 全局（首页 / 登塔 / Persona / 武库 / 弹窗 / 结算） ===== */
+T {--ink:#06195a;--blue:#1446d8;--cyan:#3ff0ff;--paper:#f4fbff;--red:#ff3f8e;--yellow:#ffd84a;--muted:#9fc0ff;background:#020a2a}
+
+/* 夜空：满月 + 水面 */
+T .sea{background:radial-gradient(120% 80% at 75% 0%,#0c2a8a 0,#051557 42%,#020a2a 88%)}
+T .sea b{top:-160px;left:auto;right:12%;width:380px;height:380px;border-radius:50%;transform:none;background:radial-gradient(circle at 45% 45%,#fbfff2 0,#e9f6ff 45%,#9fd8ff 70%,transparent 71%);box-shadow:0 0 120px 40px rgba(120,210,255,.28);opacity:.85}
+T .sea b+b{top:-60px;right:calc(12% - 40px);width:120px;height:120px;background:none;box-shadow:none;border:1px solid rgba(191,246,255,.25);opacity:1}
+T .sea i{inset:auto -30% -30% -30%;height:70%;background:repeating-radial-gradient(ellipse at 50% 0%,rgba(160,240,255,.18) 0 1px,transparent 2px 46px);mask-image:linear-gradient(transparent,#000 30%,transparent);transform:scaleY(.35);transform-origin:50% 0}
+T .sea i+i{background:linear-gradient(180deg,transparent,rgba(10,60,180,.25) 40%,rgba(2,10,42,.85));mask-image:none;transform:none;animation:none;inset:auto 0 0 0;height:40%}
+T .ghost-word{font-family:var(--sh-cd);font-style:italic;font-weight:800;color:transparent;-webkit-text-stroke:2px rgba(63,240,255,.12)}
+/* 顶栏与导航 */
+T .brand{font-family:var(--sh-cd);font-style:italic;font-weight:800;font-size:26px;letter-spacing:.06em;text-shadow:0 0 20px rgba(63,240,255,.5)}
+T .brand span{font-family:var(--sh-sans);font-style:normal;color:#7fa6e8}
+T .icon-button{border-color:rgba(191,246,255,.55);background:rgba(6,25,90,.55)}
+T .settings-button{background:none!important;border:0!important;clip-path:none!important;box-shadow:none!important;color:#bff6ff;display:flex;align-items:center;gap:10px;width:auto}
+T .settings-button:before,T .settings-button:after{content:none!important}
+T .settings-button svg{width:42px;height:42px;padding:9px;border:2px solid #bff6ff;border-radius:50%}
+T .settings-button span{color:#f4fbff;font-weight:900}
+T .settings-button small{display:block;font:italic 600 11px var(--sh-cd);letter-spacing:.2em;color:#7fa6e8}
+T .room-nav a{font-size:17px}
+T .room-nav a:before{background:rgba(6,25,90,.78);border:0;clip-path:polygon(18px 0,100% 0,calc(100% - 18px) 100%,0 100%)}
+T .room-nav a small{font:italic 600 11px var(--sh-cd);letter-spacing:.18em;color:#7fa6e8}
+T .room-nav a[aria-current=page]{color:#06195a}
+T .room-nav a[aria-current=page] small{color:#1446d8}
+T .room-nav a[aria-current=page]:before{background:#f4fbff;box-shadow:0 0 24px rgba(63,240,255,.45)}
+T .room-nav a[aria-current=page]:after{background:#ff3f8e;height:4px}
+T .room-nav a:hover:before{background:#1446d8}
+T .room-nav svg{color:#3ff0ff}
+T .room-nav a[aria-current=page] svg{color:#1446d8}
+/* 标题 */
+T .page-heading h1{text-shadow:0 0 30px rgba(63,240,255,.45);transform:skewX(-6deg)}
+T .page-heading h1 span{font:italic 600 18px var(--sh-cd);letter-spacing:.24em;color:#3ff0ff}
+T .page-heading p{color:#9fc0ff}
+T .page-heading:after{content:"";position:absolute;left:0;right:0;bottom:-14px;height:1px;background:linear-gradient(90deg,#3ff0ff,rgba(63,240,255,0))}
+T h1,T h2{letter-spacing:-.01em}
+/* 按钮与标签 */
+T .main-button{background:#f4fbff;color:#06195a;clip-path:polygon(22px 0,100% 0,calc(100% - 22px) 100%,0 100%);box-shadow:none;border-left:0}
+T .main-button:hover{background:#3ff0ff}
+T .main-button svg{color:#ff3f8e}
+T .main-button.red{background:#3ff0ff;color:#06195a}
+T .slash-label{background:#f4fbff;color:#06195a;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+T .text-button{color:#bff6ff}
+T .info-note,T .scene-note{color:#7fa6e8}
+/* 首页：主角做成塔罗牌 */
+T .hero-stage:before{border-color:rgba(63,240,255,.45);border-style:dashed}
+T .hero-stage:after{content:'THE DARK HOUR';font-family:var(--sh-cd);font-weight:800;color:#3ff0ff;text-shadow:0 0 20px rgba(63,240,255,.6)}
+T .figure .coat{background:linear-gradient(120deg,#f4fbff 0 43%,#3ff0ff 43% 64%,#1446d8 64%)}
+T .figure .cut{background:#020a2a}
+T .mission-line{border-bottom-color:rgba(63,240,255,.22)}
+T .mission-line span{color:#9fc0ff}
+T .mission h2{text-shadow:0 0 18px rgba(63,240,255,.35)}
+T .status-ribbon{border-top-color:rgba(63,240,255,.3)}
+T .status-ribbon b{font-family:var(--sh-cd);font-style:italic;font-size:26px;color:#3ff0ff}
+T .mini-prep b,T .party-prep b{color:#3ff0ff}
+/* 通用面板：深夜玻璃 + 斜切 */
+T .persona-skill,T .equipment-row,T .mission-card,T .tower-card,T .reward-line,T .reward-receipt,T .negotiation-option,T .empty-state{background:linear-gradient(90deg,rgba(20,70,216,.55),rgba(6,25,90,.35));border-color:rgba(63,240,255,.3)}
+T .persona-skill{clip-path:polygon(16px 0,100% 0,calc(100% - 16px) 100%,0 100%);border:0}
+T .persona-skill-cost,T .skill-row strong{font-family:var(--sh-cd);font-style:italic;color:#ffd84a}
+T .persona-spec{border-color:rgba(63,240,255,.35)}
+T .persona-spec strong,T .persona-spec b{color:#3ff0ff}
+T .mask-tabs button,T .subnav button,T .arsenal-tabs button{background:rgba(6,25,90,.75);color:#bff6ff;clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);border:0}
+T .mask-tabs button[aria-pressed=true],T .subnav button[aria-pressed=true],T .arsenal-tabs button[aria-pressed=true]{background:#f4fbff;color:#06195a;box-shadow:inset 0 -4px 0 #ff3f8e}
+T .mask-tabs button small,T .subnav button small{font-family:var(--sh-cd);font-style:italic;letter-spacing:.16em}
+T .mask-art{filter:drop-shadow(0 0 30px rgba(63,240,255,.5))}
+T .equipment-glyph{color:#3ff0ff}
+T .small-button{background:#f4fbff;color:#06195a;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);border:0}
+/* 弹窗 */
+T dialog#sheet{background:linear-gradient(160deg,#071d6a,#020a2a 70%);color:#f4fbff;border:1px solid rgba(63,240,255,.45);border-right:4px solid #3ff0ff;box-shadow:0 0 60px rgba(63,240,255,.25)}
+T dialog#sheet::backdrop{background:rgba(1,4,15,.72)}
+T .sheet-top h2{font-weight:900;text-shadow:0 0 16px rgba(63,240,255,.4)}
+/* 结算 / 剧情场景 */
+T .experience-scene h1,T .experience-scene h2{text-shadow:0 0 26px rgba(63,240,255,.5)}
+T .result-mark{color:#3ff0ff}
+T .result-mark b{font-family:var(--sh-cd);font-style:italic;font-weight:800;color:#f4fbff;text-shadow:0 0 30px #3ff0ff}
+T .result-stats b{font-family:var(--sh-cd);font-style:italic;color:#3ff0ff}
+T .reward-progress .done{color:#3ff0ff}
+T .reward-progress .current{color:#06195a;background:#f4fbff}
+/* 命中与转场：配色跟随主题 */
+T .sweep i,T .sweep b{background:#3ff0ff}
+T .sweep span{font-family:var(--sh-cd);font-style:italic}
+T .toast{background:#f4fbff;color:#06195a;border-left:4px solid #ff3f8e}
+T ::-webkit-scrollbar-thumb{background:#3ff0ff}
+/* 手机：底部导航 */
+T body.sh-m .brand{font-size:20px}
+T body.sh-m .settings-button svg{width:36px;height:36px;padding:7px}
+T body.sh-m .settings-button span{display:none}

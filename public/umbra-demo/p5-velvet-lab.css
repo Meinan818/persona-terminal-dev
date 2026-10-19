@@ -1,0 +1,53 @@
+@import url('/fonts/noto-sc-black.v2.css');
+@font-face{font-family:Velvet;src:url('/fonts/velvet-sans-sc.woff2') format('woff2');font-display:swap}
+:root{--ink:#081d58;--paper:#f7fdff;--cyan:#85efff;--red:#e42d49;--yellow:#ffe65a;--muted:#a9c9ef;--line:#85efff33;--ease:cubic-bezier(.16,1,.3,1)}
+*{box-sizing:border-box}
+body{margin:0;min-width:300px;min-height:100svh;overflow-x:hidden;font-family:Velvet,'Microsoft YaHei',sans-serif;color:var(--paper);background:radial-gradient(ellipse at 50% 0%,#12265f,#050a18 65%)}
+button{font:inherit;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
+a{color:var(--cyan)}
+.prison-bars{position:fixed;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(90deg,transparent 0 78px,#85efff12 78px 82px,transparent 82px 160px);mask-image:linear-gradient(#000 0 70%,transparent)}
+.prison-bars:after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 20%,#e42d4918,transparent 55%)}
+.velvet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;max-width:1180px;margin:0 auto;padding:26px 20px 14px}
+.velvet-head span{font-size:9px;font-weight:900;letter-spacing:.2em;color:var(--red)}
+.velvet-head h1{margin:6px 0 0;font:900 clamp(28px,5vw,52px)/1 'Noto Sans SC Black',Velvet,sans-serif;letter-spacing:-.04em}
+.velvet-head p{max-width:60ch;margin:10px 0 0;font-size:12px;line-height:1.7;color:var(--muted)}
+.velvet-head a{font-size:11px;font-weight:900;text-decoration:underline;text-underline-offset:4px;white-space:nowrap}
+#velvet{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:16px;max-width:1180px;margin:0 auto;padding:10px 20px 48px;align-items:start}
+.panel{padding:13px;border:1px solid var(--line);background:#071226d9}
+.panel h2{margin:0 0 4px;font-size:13px;color:var(--cyan);letter-spacing:.08em}
+.panel>p{margin:0 0 10px;font-size:10px;line-height:1.6;color:var(--muted)}
+.roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:7px}
+.persona{border:1px solid #85efff33;background:#0a1d45;padding:9px 10px;text-align:left;color:#fff}
+.persona.selected{border-color:var(--yellow);outline:1px solid var(--yellow);background:#102b61}
+.persona h3{margin:0;font-size:14px}
+.persona .meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.persona small{display:block;margin-top:5px;font-size:9px;line-height:1.5;color:var(--muted)}
+.tag{padding:2px 5px;border:1px solid #85efff44;font-size:8px;font-weight:900;color:var(--cyan)}
+.tag.red{color:#ff9ab3;border-color:#ff6a9a66}
+.fusion-box{display:grid;gap:8px;margin-top:10px}
+.fusion-slots{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.slot{min-height:54px;padding:8px;border:1px dashed #85efff55;font-size:11px;color:var(--muted);display:grid;place-content:center;text-align:center}
+.slot.filled{border-style:solid;color:#fff;background:#0a1d45}
+.skills{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.skills label{display:flex;align-items:center;gap:4px;padding:4px 6px;border:1px solid #85efff33;font-size:9px;color:var(--muted);cursor:pointer}
+.skills input{accent-color:var(--yellow)}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.btn-row button{min-height:40px;padding:7px 11px;border:1px solid #85efff55;background:#0b2f82;color:#fff;font-size:11px;font-weight:900}
+.btn-row button.primary{background:var(--yellow);color:var(--ink);border-color:var(--yellow)}
+.btn-row button.danger{background:var(--red);border-color:var(--red)}
+.result{border-top:4px solid var(--red);background:var(--paper);color:var(--ink);padding:12px;margin-top:10px}
+.result h3{margin:0;font:900 21px/1.15 'Noto Sans SC Black',Velvet,sans-serif}
+.result p{margin:6px 0 0;font-size:10px;line-height:1.6;color:#36578f}
+.result .statline{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:9px;color:#36578f}
+.result .statline b{color:#081d58}
+.compendium{display:grid;gap:5px;margin-top:8px}
+.compendium button{display:flex;justify-content:space-between;gap:8px;padding:7px 8px;border:1px solid #85efff22;background:#0a1d45;color:#fff;font-size:10px;text-align:left}
+.log{margin-top:10px;padding:10px;border:1px solid var(--line);background:#040916;max-height:220px;overflow:auto}
+.log p{margin:0 0 5px;font:10px/1.5 'Cascadia Mono',Consolas,monospace;color:#cbe7ff}
+@media(max-width:860px){
+  #velvet{grid-template-columns:1fr;padding:8px 12px 40px}
+  .velvet-head{padding:18px 14px 10px}
+  .fusion-slots{grid-template-columns:1fr;}
+  .slot{min-height:42px}
+}

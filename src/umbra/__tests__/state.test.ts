@@ -12,6 +12,7 @@ import {
 } from '@/umbra/state';
 import { createUmbraRunRecord, isUmbraRunCompatible } from '@/umbra/runtime';
 import { createRuntimePayload, restoreExploration } from '@/umbra/run';
+import { buyUmbraShopItem } from '@/umbra/shop';
 
 const now = new Date('2026-10-19T12:00:00.000Z');
 
@@ -118,6 +119,22 @@ describe('legacy UMBRA migration plan', () => {
     expect(used.result.ok).toBe(true);
     expect(used.profile.combat.hp).toBeGreaterThan(10);
     expect(used.profile.combat.battleItems.painkiller ?? 0).toBe(0);
+  });
+
+  it('商店购买会扣钱并写入装备或补给', () => {
+    const profile = createFreshUmbraProfile(now);
+    const nourished = {
+      ...profile,
+      economy: { ...profile.economy, money: 5000 },
+    };
+    const bought = buyUmbraShopItem(nourished, 'arms', 'iron-knife');
+    expect(bought.ok).toBe(true);
+    expect(bought.profile.economy.money).toBe(3200);
+    expect(bought.profile.combat.ownedEquipment).toContain('iron-knife');
+    const duplicate = buyUmbraShopItem(bought.profile, 'arms', 'iron-knife');
+    expect(duplicate.ok).toBe(false);
+    expect(duplicate.profile.economy.money).toBe(3200);
+    expect(duplicate.profile.combat.ownedEquipment.filter(id => id === 'iron-knife')).toHaveLength(1);
   });
 });
 

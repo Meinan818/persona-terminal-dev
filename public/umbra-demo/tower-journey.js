@@ -1,0 +1,86 @@
+// Fixed in-memory route for interaction design. Production routing remains owned by the tower store.
+import { recruitCandidates } from './p5r-compendium.js';
+
+const P5_WEAKNESSES = ['electric', 'bless', 'fire', 'ice', 'wind', 'psy', 'nuclear', 'curse'];
+const P5_ELEMENT_LABELS = {
+  phys: '物理',
+  gun: '枪击',
+  fire: '火焰',
+  ice: '冰冻',
+  electric: '电击',
+  wind: '疾风',
+  psy: '念动',
+  nuclear: '核热',
+  bless: '祝福',
+  curse: '咒怨',
+  almighty: '万能',
+};
+export function encounterFor(floor, kind) {
+  const weakness = kind === 'boss'
+    ? 'bless'
+    : P5_WEAKNESSES[(floor - 4) % P5_WEAKNESSES.length];
+  const level = kind === 'boss' ? 99 : Math.min(99, Math.max(1, floor));
+  const tier = Math.max(1, Math.ceil(floor / 10));
+  const within = ((Math.max(1, floor) - 1) % 10) + 1;
+  const recruit = recruitCandidates(weakness, level)[0] ?? null;
+  return {
+    name: kind === 'boss' ? '回声的执念' : '聒噪的假面',
+    level,
+    weakness,
+    weaknessLabel: P5_ELEMENT_LABELS[weakness] ?? weakness,
+    maxHp: kind === 'boss' ? 180 + tier * 45 : 42 + tier * 21 + within * 3,
+    attack: kind === 'boss' ? 12 + tier * 3 : Math.round(6 + tier * 2.5 + within * 0.8),
+    defense: kind === 'boss' ? 8 + tier * 3 : Math.round(2 + tier * 2 + within * 0.4),
+    recruitPersonaId: recruit?.id ?? null,
+  };
+}
+
+export const towerNodes = {
+  mob:{title:'聒噪的假面',kind:'小影',icon:'sword',hp:'按遭遇生成',weak:'进入后侦察',note:'先看意图，再决定这一回合。',action:'进入战斗'},
+  echo:{title:'回忆之光',kind:'回响',icon:'star',hp:'—',weak:'—',note:'选择回复 20% 体力，或带走本次登塔伤害 +6%。',action:'进入回响'},
+  chest:{title:'月匣',kind:'月匣',icon:'box',hp:'—',weak:'—',note:'揭晓后再领取，不会重复发放同一份收获。',action:'查看月匣'},
+  event:{title:'月光积水',kind:'异变',icon:'eye',hp:'—',weak:'—',note:'凝视水面，或保留气力绕开。选择后显示结果。',action:'走近看看'},
+  quiz:{title:'镜之自问',kind:'镜问',icon:'eye',hp:'—',weak:'—',note:'从白昼的回声里，认出那份力量。',action:'回答镜中的自己'},
+  elite:{title:'守层的强影',kind:'强敌',icon:'sword',hp:'按遭遇生成',weak:'进入后侦察',note:'它比普通影子更吵，警戒会因此上升。',action:'迎战强敌'},
+  safe:{title:'安全屋',kind:'安全屋',icon:'shield',hp:'—',weak:'—',note:'只在这一层休息一次，压回警戒。',action:'进入安全屋'},
+  calling:{title:'预告信',kind:'预告信',icon:'star',hp:'—',weak:'—',note:'送出之后，塔顶的执念才会现身。',action:'写下预告信'},
+  trap:{title:'暗处的机关',kind:'机关',icon:'eye',hp:'—',weak:'—',note:'拆解会压低警戒，硬闯会惊动更多影子。',action:'处理机关'},
+  key:{title:'一把旧钥匙',kind:'钥匙',icon:'box',hp:'—',weak:'—',note:'塔内的锁，需要它。',action:'收下钥匙'},
+  boss:{title:'回声的执念',kind:'心魔',icon:'mask',hp:'双形态',weak:'进入后侦察',note:'第一形态击破后，在同一个战斗舞台直接变身。',action:'迎战心魔'},
+};
+const floors={4:['echo','mob','chest'],5:['event','quiz','mob'],6:['echo','chest','mob'],7:['mob','event','chest'],8:['quiz','echo','mob'],9:['echo','mob','chest'],10:['boss']};
+export function createTowerJourney(){
+  const journey={active:false,floor:3,pending:null,selected:'mob',history:[],buffs:[],loot:[],ended:null};
+  const choices=()=>journey.ended?[]:floors[journey.pending?journey.floor:Math.min(10,journey.floor+1)]??[];
+  const start=()=>{Object.assign(journey,{active:true,floor:3,pending:null,selected:'mob',history:[],buffs:[],loot:[],ended:null});};
+  const select=kind=>{if(journey.pending||!choices().includes(kind))return false;journey.selected=kind;return true;};
+  const enter=()=>{
+    if(journey.ended||journey.pending||!choices().includes(journey.selected))return null;
+    journey.floor++;
+    journey.pending={
+      floor:journey.floor,
+      kind:journey.selected,
+      resolved:false,
+      result:null,
+      rewarded:false,
+      encounter:encounterFor(journey.floor,journey.selected),
+    };
+    return journey.pending;
+  };
+  const resolve=(result)=>{
+    const pending=journey.pending;if(!pending||pending.resolved||journey.ended)return false;
+    pending.resolved=true;pending.result=result;journey.history.push({floor:pending.floor,kind:pending.kind,...result});return true;
+  };
+  const advance=()=>{
+    if(journey.ended||!journey.pending?.resolved)return false;
+    const last=journey.pending.kind;journey.pending=null;
+    if(last==='boss'){journey.ended='clear';return true;}
+    journey.selected=(floors[journey.floor+1]??[])[0]??'boss';return true;
+  };
+  const end=reason=>{if(journey.ended)return false;journey.ended=reason;return true;};
+  const addLoot=(reward={})=>{
+    if(!journey.pending||journey.pending.rewarded||journey.ended)return false;
+    journey.pending.rewarded=true;journey.loot.push({floor:journey.floor,label:reward.item??'回响之线',sp:reward.sp??10});return true;
+  };
+  return{journey,choices,start,select,enter,resolve,advance,end,addLoot};
+}

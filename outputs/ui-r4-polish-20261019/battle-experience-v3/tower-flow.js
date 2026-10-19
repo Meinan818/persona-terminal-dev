@@ -1328,6 +1328,9 @@ export function createTowerFlow(api){
         return;
       }
       const floor=j.pending.floor,wasBoss=battleKind==='boss',blockBoss=Boolean(j.pending.blockBoss);
+      // 先认领合法遭遇，再产生任何资源副作用；异常旧存档不能先领奖。
+      if(mapBattle){if(!model.resolveMapBattle(true))return;}
+      else if(!model.resolve({label:'战斗胜利',detail:battleResult?.summary??'击破了挡路的阴影。',type:'battle',receipt:battleResult??null}))return;
       const effects=gearFx();
       const drops=Array.isArray(battleResult?.drops)?battleResult.drops:[];
       const reward=battleResult?.reward??null;
@@ -1374,7 +1377,6 @@ export function createTowerFlow(api){
       }
       api.persistP5State?.();
       if(mapBattle){
-        model.resolveMapBattle(true);
         page=null;
         j.mapMessage=`${battleKind==='guardian'?(blockBoss?'区段守层者倒下，本段出口解锁。':'守卫倒下，出口解锁。'):'影子散了。'} ¥${moneyGain}${granted.text?` · ${granted.text}`:''}`;
         saveRun();
@@ -1382,7 +1384,6 @@ export function createTowerFlow(api){
         return;
       }
       interlude={battle:battleResult,rested:false,party:captureParty(),personaProgress:{id:xpPersonaId,name:built?.name??xpPersonaId,xpGain,...progress},reward:{money:moneyGain,items,sp:spGain}};
-      model.resolve({label:'战斗胜利',detail:battleResult?.summary??'击破了挡路的阴影。',type:'battle',receipt:battleResult??null});
       model.advance();
       page=(wasBoss||j.ended==='clear')?'return':'interlude';
     },

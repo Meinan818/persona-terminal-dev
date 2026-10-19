@@ -61,7 +61,7 @@ export function routesForFloor(floor, maxFloor = DUNGEON_FLOORS, stratumId = 'ec
 const randomRunSeed = () => Math.floor(Math.random() * 0xffffffff) >>> 0;
 
 export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', seed = null } = {}) {
-  const fixedSeed = Number.isFinite(Number(seed)) ? Number(seed) >>> 0 : null;
+  const fixedSeed = seed !== null && seed !== '' && Number.isFinite(Number(seed)) ? Number(seed) >>> 0 : null;
   const nextRunSeed = () => fixedSeed ?? randomRunSeed();
   const journey = {
     active: false,

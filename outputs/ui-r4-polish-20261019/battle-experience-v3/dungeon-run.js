@@ -373,8 +373,15 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     };
   };
 
+  const hasUnresolvedMapBattle = () => Boolean(
+    journey.pending && !journey.pending.resolved
+    && ['guardian', 'shadow'].includes(journey.pending.kind),
+  );
+  const encounterBlocked = () => ({ ok: false, reason: '先解决眼前的遭遇：交涉或战斗。' });
+
   const mapMove = direction => {
     if (!journey.explore || journey.ended) return { ok: false, reason: '这一层已经结束。' };
+    if (hasUnresolvedMapBattle()) return encounterBlocked();
     const result = moveOnMap(journey.explore, direction);
     if (journey.securityGuard > 0 && journey.explore.security > 0) {
       journey.explore.security = Math.max(0, journey.explore.security - journey.securityGuard);
@@ -416,6 +423,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
 
   const mapAct = action => {
     if (!journey.explore || journey.ended) return { ok: false, reason: '这一层已经结束。' };
+    if (hasUnresolvedMapBattle()) return encounterBlocked();
     if (action === 'listen') {
       const result = listenOnMap(journey.explore);
       syncExplore();
@@ -475,10 +483,12 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
   };
 
   const resolveMapBattle = (won, outcome = {}) => {
-    if (!journey.explore || !journey.pending) return false;
+    if (!journey.explore || journey.ended || !hasUnresolvedMapBattle()) return false;
+    const room = currentRoom(journey.explore);
+    if (!room || room.id !== journey.pending.roomId || room.type !== journey.pending.kind || room.cleared) return false;
     const kind = journey.pending.kind;
     const ambush = Boolean(journey.pending.ambush);
-    resolveEncounter(journey.explore, { won });
+    if (!resolveEncounter(journey.explore, { won }).ok) return false;
     syncExplore();
     if (!won) {
       journey.ended = 'defeat';
@@ -514,7 +524,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
   };
 
   const completeFloor = () => {
-    if (!journey.explore || !journey.explore.exitUnlocked) return false;
+    if (!journey.explore || journey.ended || hasUnresolvedMapBattle() || !journey.explore.exitUnlocked) return false;
     const room = currentRoom(journey.explore);
     if (!room || room.type !== 'exit') return false;
     journey.history.push({ floor: journey.floor, kind: 'exit', label: '层门已开', detail: `剩余 ${journey.explore.time} 步` });

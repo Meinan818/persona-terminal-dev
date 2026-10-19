@@ -2,7 +2,7 @@
 
 最后更新：2026-10-19 18:00（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前开发 · 2026-10-19 · R0 已验证收敛，接着修遭遇移动
+## 当前开发 · 2026-10-19 · R0/R1 已完成，继续第一塔 40F
 
 - 最新授权：用户在计划书后明确“去把交给你了”，本轮按普通协作执行近期计划。R0→R1→R2→R3 依次推进；真实 AI 先做可离线验证部分，收费请求、Push、正式 App 接入/发布仍不越界。素材保持用户明确暂缓，不生图。
 - **唯一继续开发源码**：`outputs/ui-r4-polish-20261019/`，程序在其 `battle-experience-v3/`，启动文件/字体也在同一已保存目录。旧 `outputs/battle-experience-v3/` 仅为历史对照，不再并行修改或拿它的服务冒充新版本；原包、补丁和交付 zip 都保留。旧 Podfile、P5-P3-FUSION.md 换行和其他 untracked 遗留未动。
@@ -11,7 +11,15 @@
 - R0 未改规则与界面。导入的来源说明/字体许可证有原有行尾空格与两处 CSS 文件尾空行，保留来源内容，没有为让 diff-check 全绿批量改格式；新增状态/计划文本单独检查。证据在 `.rivet/scratch/demo-roadmap-20261019/`（r0-directory-diff.json、r0-tests.tap、r0-reconstructed-tests.tap、r0-browser/acceptance-report.json）。
 - 本地预览 `http://127.0.0.1:5196/?theme=p3`，主题 hamuko/p4/p5；启动：精修根目录 `$env:PORT='5196'; node serve.mjs`。接手时旧服务停止，本轮已重启；复合后台启动命令曾被工具策略拒绝，随后同一 exec 工具直接运行该服务成功，未改系统权限或配置。未主动打开用户浏览器。
 - **R1 现场**：模型和真实 UI 均重新复现 pending shadow 仍可走开；根因是 mapMove/mapAct/completeFloor 未统一阻止未解决战斗遭遇。scratch 专项 8 项中 6 项按预期失败，2 项正常路径通过，原失败留存；一次模型复现脚本把 rooms 对象当数组，修正 fixture 后复现，不计业务通过。下一步做中心入口最小修复并重跑专项/四主题真实操作。
-- 本节与完整 R0 基线同一提交保存，提交号见对应 `chore(preview)` 日志；未 Push、未部署、未打包、未接正式 src。用户“能凑合用”不扩写为精品验收。
+- R0 基线提交 `db87538 chore(preview): 收敛四主题可还原开发基线`；未 Push、未部署、未打包、未接正式 src。用户“能凑合用”不扩写为精品验收。
+
+### R1 完成：未解决遭遇不能被移动/倾听绕过
+
+- 根因/改动：`dungeon-run.js` 的地图入口缺少 pending 遭遇锁。仅在模型中心给 mapMove/mapAct/completeFloor 加锁，并让 resolveMapBattle 校验待解决类型、房间、结束/重复状态；宝箱等可选节点仍可略过，交涉/迎战/撤退仍可用。不改 CSS、DOM、主题、伤害或存档格式。
+- 真实复现：p3/390 下用既有 debug 只布置影子房，随后实际指针点方向键，位置改变且步数 19→18，pending 仍指向旧房；修复前 JSON/截图保留。独立 8 项回归先为 2 通过/6 失败，修后 **8/8**；全 Demo **189/189**。新增永久 `encounter-lock.test.mjs`。
+- 浏览器修后：四主题 × 1440/320，真实指针、键盘、倾听、交涉入口与迎战入口 **56/56**，0 JS 异常；不是完整战斗/全塔人工验收。历史异常位置/遭遇不一致的存档现在拒绝错误结算，不默默清房；旧 run 兼容将在 R2 另核。
+- 证据：`.rivet/scratch/demo-roadmap-20261019/r1-model-before.json`、`r1-tests-before.tap`、`r1-focused-after.tap`、`r1-all-after.tap`、`r1-browser/before-report.json`、`r1-browser/after-report.json`。本条与 R1 代码/测试同一修复提交，未 Push。
+- 下一项由 Codex 继续 R2：新 run 改为 40F/四区，保留旧 100F run 可继续，不清用户存档；同步预告信、掉落区间与现有文案。素材/收费 AI/正式接回继续保持独立边界。
 
 ## 历史精修记录 · 2026-10-19 · 基本可用评价及先前暂缓范围
 

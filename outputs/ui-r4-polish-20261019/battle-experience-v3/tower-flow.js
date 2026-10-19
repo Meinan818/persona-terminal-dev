@@ -74,7 +74,7 @@ export function createTowerFlow(api){
   function restParty(){
     if(!interlude||interlude.rested)return;
     const party=interlude.party??[];
-    const heal=regionForFloor(j.floor).safeHeal??.3;
+    const heal=regionForFloor(j.floor,j.maxFloor).safeHeal??.3;
     for(const member of party){
       if(member.isPlayer){
         state.hp=Math.min(member.maxHp,state.hp+Math.max(1,Math.ceil(member.maxHp*heal)));
@@ -562,7 +562,7 @@ export function createTowerFlow(api){
   }
   function applyRegionStep(){
     if(!j.explore)return;
-    const region=regionForFloor(j.floor);
+    const region=regionForFloor(j.floor,j.maxFloor);
     const turn=Number(j.explore.turn)||0;
     if(region.corrodeEvery&&turn>0&&turn%region.corrodeEvery===0){
       const damage=Number(region.corrodeDamage)||2;
@@ -850,8 +850,8 @@ export function createTowerFlow(api){
       state.sp=Math.max(0,(Number(state.sp)||0)-check.spCost);
       let reward=null;
       if(check.success){
-        const granted=grantLoot(state,rollBattleLoot({floor:j.floor,kind:'shadow',stratum:j.stratum,rng:Math.random,dropBonus:gearFx().drop}));
-        const moneyGain=Math.round((120+j.floor*45)*(1+gearFx().money)*(regionForFloor(j.floor).reward||1));
+        const granted=grantLoot(state,rollBattleLoot({floor:j.floor,maxFloor:j.maxFloor,kind:'shadow',stratum:j.stratum,rng:Math.random,dropBonus:gearFx().drop}));
+        const moneyGain=Math.round((120+j.floor*45)*(1+gearFx().money)*(regionForFloor(j.floor,j.maxFloor).reward||1));
         state.money=(Number(state.money)||0)+moneyGain;
         reward={money:moneyGain,label:granted.text||'一点回声'};
         j.loot.push({floor:j.floor,label:reward.label,sp:0});
@@ -1020,7 +1020,7 @@ export function createTowerFlow(api){
     if(!j.explore||!j.map)return '';
     const explore=j.explore,room=currentRoom(explore),floor=j.floor;
     const flavor=floorFlavor(floor);
-    const region=regionForFloor(floor);
+    const region=regionForFloor(floor,j.maxFloor);
     const blockBoss=Boolean(explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated);
     const revealed=visibleRooms(explore).length;
     const cells=[];
@@ -1029,7 +1029,7 @@ export function createTowerFlow(api){
       if(room.type==='key'&&!room.cleared)return btn('收下旧钥匙','take-key','出口可以直接开锁');
       if(room.type==='chest'&&!room.cleared)return btn('先检查','inspect-chest','消耗 1 步 · 安全打开')+btn('直接打开','open-chest','不耗步 · 可能触发陷阱','danger');
       if(room.type==='trap'&&!room.cleared)return btn('拆解机关','disarm-trap','警戒 -8%')+btn('硬闯','force-trap','警戒 +12% · HP -6','danger');
-      if(room.type==='safe')return btn(room.rested?'已经休息过':'在安全屋休息','rest','警戒 -20% · 恢复 30% HP/SP',room.rested);
+      if(room.type==='safe')return btn(room.rested?'已经休息过':blockBoss?'先击破区段守层者':'在安全屋休息','rest','警戒 -20% · 恢复 30% HP/SP',room.rested||blockBoss);
       if(room.type==='event'&&!room.cleared)return btn('触碰水面','event-heal','回复 15% HP')+btn('带走月光','event-buff','下一战伤害 +5%');
       if(room.type==='exit')return explore.exitUnlocked?btn('走下这一层','leave-floor','下一层还在上面'):`<p class="map-locked">${explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated?'区段守层者还站在门前。钥匙打不开，必须击破它。':'出口锁着。击破守卫，或带一把钥匙来。'}</p>`;
       if(room.type==='guardian'&&!room.cleared)return btn(room.blockBoss?'迎战区段守层者':'迎战守卫','enter',room.blockBoss?'钥匙无效 · 击破后本段出口解锁':'击破后解锁出口','danger');
@@ -1040,7 +1040,7 @@ export function createTowerFlow(api){
       return `<p class="map-quiet">这里只有回声。继续走，或者听一听墙后的动静。</p>`;
     };
     return `<div class="page-heading map-page-heading"><h1>登塔<span>ASCEND / 03</span></h1><p>${esc(flavor.tagline)} · 每一步都会留下声音。</p></div>
-      <div class="map-hud"><span>${esc(getStratum(j.stratum).name)} <b>${floor} / ${j.maxFloor} F</b></span><span>区域 <b>${esc(region.short)}</b></span><span>区段 <b>${Math.ceil(floor/10)} / 10</b></span><span>月光 <b>${explore.time}</b> / ${explore.maxTime} 步</span><span>警戒 <b>${j.security}%</b></span><span>钥匙 <b>${j.keys}</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span>${j.alert?'<span class="journey-alert">ALERT · 被盯上了</span>':''}</div>
+      <div class="map-hud"><span>${esc(getStratum(j.stratum).name)} <b>${floor} / ${j.maxFloor} F</b></span><span>区域 <b>${esc(region.short)}</b></span><span>区段 <b>${Math.ceil(floor/10)} / ${Math.ceil(j.maxFloor/10)}</b></span><span>月光 <b>${explore.time}</b> / ${explore.maxTime} 步</span><span>警戒 <b>${j.security}%</b></span><span>钥匙 <b>${j.keys}</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span>${j.alert?'<span class="journey-alert">ALERT · 被盯上了</span>':''}</div>
       <div class="map-region"><div><span>${region.from}–${region.to}F</span><b>${esc(region.name)}</b></div><p>${esc(region.rule)}</p></div>
       <div class="map-shell"><section class="map-board" aria-label="${esc(getStratum(j.stratum).name)} ${floor} 层房间地图">
         <div class="map-board-head"><div><span>FLOOR ${String(floor).padStart(2,'0')} / ${esc(flavor.name)} · BLOCK ${String(Math.ceil(floor/10)).padStart(2,'0')}</span><b>${explore.exitUnlocked?'出口已经开了':blockBoss?'击破区段守层者':'找到守卫或钥匙'}</b></div><div class="map-head-tools"><small>拖动查看 · 已探明 ${revealed} / 25</small><button type="button" data-tower="map-center">回到当前位置</button></div></div>
@@ -1109,7 +1109,7 @@ export function createTowerFlow(api){
       const inspect=action==='inspect-chest';
       const result=model.mapAct(action);
       if(result.ok){
-        const loot=rollChestLoot({floor:j.floor,tier:chestTierForKind(chest?.chestKind,j.floor,(j.chestBonus??0)+(regionForFloor(j.floor).chestBonus||0))});
+        const loot=rollChestLoot({floor:j.floor,maxFloor:j.maxFloor,tier:chestTierForKind(chest?.chestKind,j.floor,(j.chestBonus??0)+(regionForFloor(j.floor,j.maxFloor).chestBonus||0),j.maxFloor)});
         const granted=grantLoot(state,loot);
         const max=state.heroMaxSp??34;
         state.sp=Math.min(max,state.sp+10);
@@ -1143,7 +1143,7 @@ export function createTowerFlow(api){
       const result=model.mapAct('rest');
       if(result.ok){
         const maxHp=state.heroMaxHp??52,maxSp=state.heroMaxSp??34;
-        const heal=regionForFloor(j.floor).safeHeal??.3;
+        const heal=regionForFloor(j.floor,j.maxFloor).safeHeal??.3;
         state.hp=Math.min(maxHp,state.hp+Math.max(1,Math.ceil(maxHp*heal)));
         state.sp=Math.min(maxSp,state.sp+Math.max(1,Math.ceil(maxSp*heal)));
         markRequest('safe');
@@ -1339,6 +1339,7 @@ export function createTowerFlow(api){
       if(reward?.sp)spGain+=Number(reward.sp)||0;
       const battleLoot=rollBattleLoot({
         floor,
+        maxFloor:j.maxFloor,
         kind:wasBoss?'boss':battleKind,
         stratum:j.stratum,
         rng:Math.random,
@@ -1347,7 +1348,7 @@ export function createTowerFlow(api){
       });
       const granted=grantLoot(state,battleLoot);
       if(granted.lines.length){items.push(...granted.lines);state.battleLoot.push(...granted.lines);}
-      const moneyGain=Math.round((240+floor*60)*(1+effects.money)*(regionForFloor(floor).reward||1));
+      const moneyGain=Math.round((240+floor*60)*(1+effects.money)*(regionForFloor(floor,j.maxFloor).reward||1));
       state.money+=moneyGain;
       if(spGain)state.sp=Math.min(state.heroMaxSp??state.sp,state.sp+spGain);
       if(wasBoss){

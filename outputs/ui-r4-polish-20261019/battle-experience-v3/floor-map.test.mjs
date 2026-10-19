@@ -73,6 +73,8 @@ test('钥匙、宝箱、机关和安全屋各自结算一次', () => {
   assert.equal(disarmTrap(state), true);
   assert.ok(state.security <= before);
 
+  state.player = { x: map.rooms[map.guardianId].x, y: map.rooms[map.guardianId].y };
+  assert.equal(resolveEncounter(state, { won: true }).ok, true);
   const safe = Object.values(map.rooms).find(room => room.type === 'safe');
   state.player = { x: safe.x, y: safe.y };
   state.security = 40;

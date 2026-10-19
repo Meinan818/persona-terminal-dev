@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CALLING_FLOOR, DUNGEON_FLOORS, SAFE_FLOORS, createDungeonRun, routesForFloor } from './dungeon-run.js';
 
-test('第一座塔是 100 层，普通层有三条路线', () => {
-  assert.equal(DUNGEON_FLOORS, 100);
+test('第一座塔是 40 层，普通层有三条路线', () => {
+  assert.equal(DUNGEON_FLOORS, 40);
   assert.deepEqual(routesForFloor(1), ['mob', 'chest', 'event']);
   assert.equal(routesForFloor(3).length, 3);
   assert.deepEqual(routesForFloor(SAFE_FLOORS[0]), ['mob']);
@@ -139,7 +139,7 @@ test('地图战斗被先制后会把警戒压回可继续区间', () => {
   assert.equal(model.journey.alert, false);
 });
 
-test('一条完整路线可以走完 100 层并进入 Boss 结算', () => {
+test('一条完整路线可以走完 40 层并进入 Boss 结算', () => {
   const model = createDungeonRun();
   model.start();
   let guard = 0;
@@ -205,7 +205,7 @@ function walkMap(model, target) {
   }
 }
 
-test('地图层可以从 1F 连续走到 98F，再送预告信并击破 Boss', () => {
+test('地图层可以从 1F 连续走到 38F，再送预告信并击破 Boss', () => {
   const model = createDungeonRun({ seed: 1000 });
   model.start();
   model.beginFloor(1);
@@ -219,7 +219,7 @@ test('地图层可以从 1F 连续走到 98F，再送预告信并击破 Boss', (
       model.advance();
       continue;
     }
-    if (journey.floor === 99 && journey.callingCardSent) {
+    if (journey.floor === journey.maxFloor - 1 && journey.callingCardSent) {
       assert.ok(model.enter());
       model.resolve({ label: 'Boss', detail: 'test' });
       model.advance();
@@ -327,10 +327,10 @@ test('走到出口会进入下一层，并重置本层步数', () => {
   assert.ok(model.journey.map);
 });
 
-test('第九十八层出口接预告信，送信后才能进入塔顶 Boss', () => {
+test('第三十八层出口接预告信，送信后才能进入塔顶 Boss', () => {
   const model = createDungeonRun();
   model.start();
-  const explore = model.beginFloor(98);
+  const explore = model.beginFloor(38);
   const map = model.journey.map;
   const exit = map.rooms[`${map.exit.x},${map.exit.y}`];
   explore.player = { x: exit.x, y: exit.y };

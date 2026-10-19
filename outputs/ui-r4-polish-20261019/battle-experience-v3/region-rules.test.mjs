@@ -2,25 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { REGIONS, regionForFloor, regionRangeLabel } from './region-rules.js';
 
-test('五个区域连续覆盖 1–100 层', () => {
+test('四个区域连续覆盖 1–40 层', () => {
   assert.equal(REGIONS[0].from, 1);
-  assert.equal(REGIONS.at(-1).to, 100);
+  assert.equal(REGIONS.at(-1).to, 40);
   for (let index = 1; index < REGIONS.length; index += 1) {
     assert.equal(REGIONS[index].from, REGIONS[index - 1].to + 1);
   }
 });
 
 test('区段边界落在正确区域', () => {
-  assert.equal(regionForFloor(1).id, 'outer');
-  assert.equal(regionForFloor(20).id, 'outer');
-  assert.equal(regionForFloor(21).id, 'corrode');
-  assert.equal(regionForFloor(40).id, 'corrode');
-  assert.equal(regionForFloor(41).id, 'spotlight');
-  assert.equal(regionForFloor(60).id, 'spotlight');
-  assert.equal(regionForFloor(61).id, 'clock');
-  assert.equal(regionForFloor(80).id, 'clock');
-  assert.equal(regionForFloor(81).id, 'elite');
-  assert.equal(regionForFloor(100).id, 'elite');
+  for (const [floor, id] of [[1,'outer'],[10,'outer'],[11,'corrode'],[20,'corrode'],[21,'spotlight'],[30,'spotlight'],[31,'elite'],[40,'elite']]) {
+    assert.equal(regionForFloor(floor).id, id);
+  }
 });
 
 test('越界层数会夹到有效区域', () => {

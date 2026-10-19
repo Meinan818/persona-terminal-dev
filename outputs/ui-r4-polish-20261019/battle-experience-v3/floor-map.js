@@ -10,6 +10,9 @@
  * UI 只读 state/rooms，调用 move/act，不直接改地图。
  */
 
+import { DUNGEON_FLOORS } from './tower-layout.js';
+import { chestTierForFloor } from './loot-rules.js';
+
 export const FLOOR_WIDTH = 5;
 export const FLOOR_HEIGHT = 5;
 export const FLOOR_TIME = 16;
@@ -57,7 +60,7 @@ function reveal(state, x, y) {
   }
 }
 
-export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 7919, width = FLOOR_WIDTH, height = FLOOR_HEIGHT } = {}) {
+export function createFloorMap({ floor = 1, maxFloor = DUNGEON_FLOORS, stratum = 'echo', seed = floor * 7919, width = FLOOR_WIDTH, height = FLOOR_HEIGHT } = {}) {
   const rng = seededRandom(seed);
   const rooms = {};
   for (let y = 0; y < height; y += 1) {
@@ -102,7 +105,7 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
   const guardianRoom = rooms[keyOf(guardianPoint.x, guardianPoint.y)];
   guardianRoom.type = 'guardian';
   guardianRoom.cleared = false;
-  guardianRoom.blockBoss = floor % 10 === 0;
+  guardianRoom.blockBoss = floor % 10 === 0 && floor < maxFloor;
 
   const keyRoom = placeSide();
   if (keyRoom) {
@@ -110,7 +113,7 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
     keyRoom.cleared = false;
   }
 
-  if (floor % 10 === 0 && floor < 100) {
+  if (floor % 10 === 0 && floor < maxFloor) {
     const safePoint = path[Math.max(1, Math.floor(path.length / 2))];
     const safeRoom = rooms[keyOf(safePoint.x, safePoint.y)];
     safeRoom.type = 'safe';
@@ -119,9 +122,9 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
 
   const chestKind = () => {
     if (floor >= 30 && rng() < 0.18) return 'trapped';
-    return floor <= 20 ? 'wood' : floor <= 60 ? 'silver' : 'gold';
+    return ['wood', 'silver', 'gold'][chestTier - 1];
   };
-  const chestTier = floor <= 20 ? 1 : floor <= 60 ? 2 : 3;
+  const chestTier = chestTierForFloor(floor, 0, maxFloor);
   const chestRoom = placeSide();
   if (chestRoom) {
     chestRoom.type = 'chest';
@@ -156,6 +159,7 @@ export function createFloorMap({ floor = 1, stratum = 'echo', seed = floor * 791
 
   return {
     floor,
+    maxFloor,
     stratum,
     seed,
     width,
@@ -328,6 +332,7 @@ export function triggerTrap(state) {
 export function restInSafeRoom(state) {
   const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
   if (!room || room.type !== 'safe' || room.rested) return false;
+  if (state.map.rooms[state.map.guardianId]?.blockBoss && !state.guardianDefeated) return false;
   room.rested = true;
   bumpSecurity(state, -20);
   state.alert = false;

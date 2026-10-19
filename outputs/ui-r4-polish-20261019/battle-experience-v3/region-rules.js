@@ -1,11 +1,12 @@
 /**
  * 第一座塔 · 区段规则
  *
- * 100 层分成 5 个区域；格子地图不变，只改变每区的压力与收益。
- * 每 20 层换一次规则，避免把 100 层做成同一种重复劳动。
+ * 新行程为 4 区 × 10 层；旧 100 层行程继续使用原来的五区规则。
  */
 
-export const REGIONS = [
+import { DUNGEON_FLOORS } from './tower-layout.js';
+
+const LEGACY_REGIONS = [
   {
     id: 'outer',
     from: 1,
@@ -87,11 +88,14 @@ export const REGIONS = [
   },
 ];
 
-const LAST_FLOOR = 100;
+export const REGIONS = LEGACY_REGIONS.filter(region => region.id !== 'clock').map((region, index) => ({
+  ...region, from: index * 10 + 1, to: (index + 1) * 10,
+}));
 
-export function regionForFloor(floor = 1) {
-  const value = Math.max(1, Math.min(LAST_FLOOR, Number(floor) || 1));
-  return REGIONS.find(region => value >= region.from && value <= region.to) ?? REGIONS[0];
+export function regionForFloor(floor = 1, maxFloor = DUNGEON_FLOORS) {
+  const regions = maxFloor > DUNGEON_FLOORS ? LEGACY_REGIONS : REGIONS;
+  const value = Math.max(1, Math.min(regions.at(-1).to, Number(floor) || 1));
+  return regions.find(region => value >= region.from && value <= region.to) ?? regions[0];
 }
 
 export function regionRangeLabel(region) {

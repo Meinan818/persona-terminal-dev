@@ -1,11 +1,12 @@
 /**
- * 第一座塔的 run 状态：100 层、10 层一区段、警戒、机关、安全屋、预告信、Boss。
+ * 第一座塔的新 run：40 层（已有行程保留其 maxFloor）、10 层一区段、警戒、机关、安全屋、预告信、Boss。
  *
  * 这里只管路线与风险结算；战斗、Persona 和掉落仍由现有 P5Battle 负责。
  * 选择路线会推高警戒，安全屋可以压回一部分；警戒满时下一场战斗会被先制。
  */
 
 import { encounterFor } from './tower-journey.js';
+import { DUNGEON_FLOORS, SAFE_FLOORS, CALLING_FLOOR, safeFloorsFor } from './tower-layout.js';
 import { regionForFloor } from './region-rules.js';
 import { adjustRoute, getStratum } from './tower-registry.js';
 import {
@@ -22,9 +23,7 @@ import {
   triggerTrap,
 } from './floor-map.js';
 
-export const DUNGEON_FLOORS = 100;
-export const SAFE_FLOORS = Array.from({ length: 9 }, (_, index) => (index + 1) * 10);
-export const CALLING_FLOOR = DUNGEON_FLOORS - 1;
+export { DUNGEON_FLOORS, SAFE_FLOORS, CALLING_FLOOR };
 
 const RISK = {
   mob: 8,
@@ -54,7 +53,7 @@ const ROUTES = [
 export function routesForFloor(floor, maxFloor = DUNGEON_FLOORS, stratumId = 'echo') {
   if (floor >= maxFloor) return ['boss'];
   if (floor === maxFloor - 1) return ['calling'];
-  if (SAFE_FLOORS.includes(floor)) return ['mob'];
+  if (safeFloorsFor(maxFloor).includes(floor)) return ['mob'];
   const stratum = getStratum(stratumId);
   return adjustRoute(ROUTES[(Math.max(1, floor) - 1) % ROUTES.length], stratum);
 }
@@ -240,7 +239,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
       journey.selected = 'boss';
       return true;
     }
-    if (SAFE_FLOORS.includes(journey.floor) && ['mob', 'elite'].includes(last)) {
+    if (safeFloorsFor(journey.maxFloor).includes(journey.floor) && ['mob', 'elite'].includes(last)) {
       journey.safeRoomPending = true;
       journey.selected = 'safe';
       return true;
@@ -318,7 +317,8 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     journey.pending = null;
     journey.mapMessage = '';
     journey.timeout = false;
-    if (floor === CALLING_FLOOR || floor >= journey.maxFloor) {
+    if (floor === journey.maxFloor - 1 || floor >= journey.maxFloor) {
+      if (floor === journey.maxFloor - 1) journey.pending = { floor, kind: 'calling', resolved: false };
       journey.map = null;
       journey.explore = null;
       return null;
@@ -334,10 +334,11 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
       floor,
       stratum: journey.stratum,
       seed: floorSeed,
+      maxFloor: journey.maxFloor,
     });
-    const region = regionForFloor(floor);
+    const region = regionForFloor(floor, journey.maxFloor);
     const explore = createExplorationState(map, {
-      maxTime: (floor <= 10 ? 20 : floor <= 50 ? 18 : 16)
+      maxTime: (floor <= 10 ? 20 : floor <= journey.maxFloor / 2 ? 18 : 16)
         + (Number(journey.stepBonus) || 0)
         + (Number(region.steps) || 0),
       security: journey.security,
@@ -359,7 +360,7 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     const base = encounterFor(floor, 'mob');
     if (kind !== 'guardian') return base;
     const blockBoss = floor % 10 === 0;
-    const region = regionForFloor(floor);
+    const region = regionForFloor(floor, journey.maxFloor);
     return {
       ...base,
       name: blockBoss
@@ -533,8 +534,8 @@ export function createDungeonRun({ floors = DUNGEON_FLOORS, stratum = 'echo', se
     journey.pending = null;
     journey.mapMessage = '';
     if (journey.floor >= journey.maxFloor - 2) {
-      journey.floor = CALLING_FLOOR;
-      journey.pending = { floor: CALLING_FLOOR, kind: 'calling', resolved: false };
+      journey.floor = journey.maxFloor - 1;
+      journey.pending = { floor: journey.floor, kind: 'calling', resolved: false };
       return true;
     }
     beginFloor(journey.floor + 1);

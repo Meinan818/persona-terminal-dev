@@ -17,7 +17,7 @@ export interface UmbraProfile {
     orgRaidRewards: string[];
   };
   migration: {
-    source: 'legacy-battle';
+    source: 'legacy-battle' | 'fresh';
     capturedAt: Date;
     discardedLegacyProgress: true;
   };
@@ -111,5 +111,23 @@ export function planLegacyUmbraMigration(
       capturedAt,
       payload: cloneBattleState(legacy),
     },
+  };
+}
+
+export function createFreshUmbraProfile(now = new Date()): UmbraProfile {
+  const createdAt = new Date(now);
+  return {
+    id: UMBRA_PROFILE_ID,
+    schemaVersion: UMBRA_SCHEMA_VERSION,
+    createdAt,
+    updatedAt: createdAt,
+    economy: { sp: 0, totalSpEarned: 0 },
+    social: { orgRaidRewards: [] },
+    migration: {
+      source: 'fresh',
+      capturedAt: createdAt,
+      discardedLegacyProgress: true,
+    },
+    legacySummary: {},
   };
 }

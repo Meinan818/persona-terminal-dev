@@ -2,6 +2,7 @@ import type { BattleState } from '@/types';
 import { db } from '@/db';
 import {
   UMBRA_PROFILE_ID,
+  createFreshUmbraProfile,
   planLegacyUmbraMigration,
   type UmbraProfile,
 } from '@/umbra/state';
@@ -13,12 +14,18 @@ import {
 export async function ensureUmbraProfile(
   legacy: BattleState | null,
   now = new Date(),
+  opts: { createFresh?: boolean } = {},
 ): Promise<UmbraProfile | null> {
   const existing = await db.umbraProfiles.get(UMBRA_PROFILE_ID);
   if (existing) return existing;
 
   const plan = planLegacyUmbraMigration(legacy, now);
-  if (!plan) return null;
+  if (!plan) {
+    if (!opts.createFresh) return null;
+    const profile = createFreshUmbraProfile(now);
+    await db.umbraProfiles.put(profile);
+    return profile;
+  }
 
   await db.transaction('rw', db.umbraProfiles, db.umbraLegacyArchives, async () => {
     const raced = await db.umbraProfiles.get(UMBRA_PROFILE_ID);

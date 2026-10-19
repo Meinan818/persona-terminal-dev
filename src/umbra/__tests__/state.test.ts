@@ -4,8 +4,10 @@ import {
   UMBRA_LEGACY_ARCHIVE_ID,
   UMBRA_PROFILE_ID,
   UMBRA_SCHEMA_VERSION,
+  createFreshUmbraProfile,
   planLegacyUmbraMigration,
 } from '@/umbra/state';
+import { createUmbraRunRecord, isUmbraRunCompatible } from '@/umbra/runtime';
 
 const now = new Date('2026-10-19T12:00:00.000Z');
 
@@ -69,5 +71,40 @@ describe('legacy UMBRA migration plan', () => {
 
   it('没有旧战场时不伪造迁移资料', () => {
     expect(planLegacyUmbraMigration(null, now)).toBeNull();
+  });
+
+  it('新玩家生成干净的 UMBRA 永久资料', () => {
+    const profile = createFreshUmbraProfile(now);
+    expect(profile.economy).toEqual({ sp: 0, totalSpEarned: 0 });
+    expect(profile.social.orgRaidRewards).toEqual([]);
+    expect(profile.migration.source).toBe('fresh');
+  });
+});
+
+describe('UMBRA runtime records', () => {
+  it('行程记录带版本、时间并复制 payload', () => {
+    const payload = { floor: 1, nested: { hp: 52 } };
+    const run = createUmbraRunRecord('run-a', payload, now);
+    expect(run).toEqual({
+      id: 'run-a',
+      schemaVersion: UMBRA_SCHEMA_VERSION,
+      active: true,
+      updatedAt: now,
+      payload,
+    });
+    expect(run.payload).not.toBe(payload);
+    expect(isUmbraRunCompatible(run)).toBe(true);
+  });
+
+  it('空 id、数组 payload 和旧版本不能进入正式行程', () => {
+    expect(() => createUmbraRunRecord('', {})).toThrow();
+    expect(() => createUmbraRunRecord('run-a', [] as unknown as Record<string, unknown>)).toThrow();
+    expect(isUmbraRunCompatible({
+      id: 'run-a',
+      schemaVersion: 0 as typeof UMBRA_SCHEMA_VERSION,
+      active: true,
+      updatedAt: now,
+      payload: {},
+    })).toBe(false);
   });
 });

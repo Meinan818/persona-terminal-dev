@@ -2,6 +2,14 @@
 
 最后更新：2026-10-19（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前开发 · 2026-10-19 · U1运行时与store接口完成
+
+- 新玩家没有旧战场时会在首次进入 App 自动生成干净 UMBRA profile；不会再永远停在“没有资料”的空态。
+- 新增 UMBRA runtime record：行程带 schema 版本、活动状态、更新时间和独立 payload 快照；空 id、数组 payload、旧版本不会进入正式存档。
+- 正式 store 新增 `saveUmbraProfile` / `saveUmbraRun` / `clearUmbraRun`，加载时只认 `active` 且版本兼容的行程；UI 尚未切换，所以两个现有用户的默认入口仍保持原样。
+- 验证：UMBRA 8 项单测通过；`npm test` 48 文件、**312/312** 通过；真实 Chrome 在清空旧档后仍能为已有用户生成 `source=fresh`、SP 0 的新资料，errors=[]。证据继续写在同一 `umbra-migration-browser/report.json`。
+- 本节点仅本地提交，未 Push。下一步是 U1b：加入显式入口开关和 UMBRA runtime 页面壳，再开始把静态 Demo 领域模块接进 `src/`。
+
 ## 当前开发 · 2026-10-19 · UMBRA正式接管启动，U0数据底座完成
 
 ### 用户决定与当前方向

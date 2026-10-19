@@ -25,6 +25,7 @@ import { keepLocalAISecrets } from '@/utils/aiSecrets';
 import { syncCustomProvider } from '@/utils/aiProviders';
 import { buildSummaryRequest as buildSummaryRequestAI, getActiveSummaryPreset as getActiveSummaryPresetAI, type SummaryRequestData } from '@/utils/summaryAI';
 import { ensureUmbraProfile } from '@/umbra/migrate';
+import { isUmbraRunCompatible } from '@/umbra/runtime';
 import type { UmbraLegacyArchive, UmbraProfile, UmbraRunRecord } from '@/umbra/state';
 import {
   pointsToLevel,
@@ -632,6 +633,9 @@ interface AppState {
   umbraProfile: UmbraProfile | null;
   umbraRun: UmbraRunRecord | null;
   loadBattleData: () => Promise<void>;
+  saveUmbraProfile: (profile: UmbraProfile) => Promise<void>;
+  saveUmbraRun: (run: UmbraRunRecord) => Promise<void>;
+  clearUmbraRun: (id: string) => Promise<void>;
   savePersona: (persona: Persona) => Promise<void>;
   saveShadow: (shadow: Shadow) => Promise<void>;
   saveBattleState: (state: BattleState) => Promise<void>;
@@ -5056,14 +5060,17 @@ export const useAppStore = create<AppState>((set, get) => ({
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
       const battleState = battleStates[0] || null;
       let umbraProfile: UmbraProfile | null = umbraProfiles[0] ?? null;
-      if (!umbraProfile && battleState) {
+      if (!umbraProfile) {
         try {
-          umbraProfile = await ensureUmbraProfile(battleState);
+          umbraProfile = await ensureUmbraProfile(battleState, new Date(), {
+            createFresh: Boolean(get().user),
+          });
         } catch (error) {
           console.warn('[umbra] legacy migration failed; old battle state was not modified', error);
         }
       }
       const umbraRun = umbraRuns
+        .filter(run => run.active && isUmbraRunCompatible(run))
         .slice()
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0] || null;
       set({
@@ -5113,6 +5120,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   saveBattleState: async (state: BattleState) => {
     await db.battleStates.put(state);
     set({ battleState: state });
+  },
+
+  saveUmbraProfile: async (profile: UmbraProfile) => {
+    const updated = { ...profile, updatedAt: new Date() };
+    await db.umbraProfiles.put(updated);
+    set({ umbraProfile: updated });
+  },
+
+  saveUmbraRun: async (run: UmbraRunRecord) => {
+    if (!isUmbraRunCompatible(run)) throw new Error('UMBRA 行程版本不兼容');
+    const updated = { ...run, updatedAt: new Date() };
+    await db.umbraRuns.put(updated);
+    set(state => ({
+      umbraRun: updated.active || state.umbraRun?.id === updated.id ? updated : state.umbraRun,
+    }));
+  },
+
+  clearUmbraRun: async (id: string) => {
+    await db.umbraRuns.delete(id);
+    set(state => ({ umbraRun: state.umbraRun?.id === id ? null : state.umbraRun }));
   },
 
   earnSP: async (amount: number) => {

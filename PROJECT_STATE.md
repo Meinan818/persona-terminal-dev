@@ -2,6 +2,35 @@
 
 最后更新：2026-10-19（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前开发 · 2026-10-19 · UMBRA正式接管启动，U0数据底座完成
+
+### 用户决定与当前方向
+
+- 用户明确“推翻逆影战场”，由 **UMBRA（幽影协议）** 整体接管正式战斗模块，不再考虑旧战场长期并行。
+- 现有两名使用者只浅浅玩过旧战场，没有实际使用线上 COOP；旧塔楼层、旧路线和战斗临时进度丢弃，但主 App 数据、SP、组织领奖去重、好友、组织、备份和 AI 配置必须保护。
+- AI 聊天、战斗顾问和同伴记忆方向暂缓，等 UMBRA 主体、存档、好友和联机接回稳定后再定。上一轮中断留下的 `src/utils/shadowTalkAI.ts` / `shadowTalkAI.test.ts` 仍为未跟踪文件，本节点不接入、不删除、不提交。
+
+### U0 已完成
+
+- 数据库升级到 v20，新增 `umbraProfiles`、`umbraRuns`、`umbraLegacyArchives`：永久资料、新版行程、旧战场原始归档分开保存。
+- 新增纯迁移规则 `src/umbra/state.ts` 与持久化 `src/umbra/migrate.ts`：只迁移 SP、累计 SP、组织团战领奖去重和旧档摘要；不把旧楼层、旧战斗状态、旧塔结构塞进 UMBRA。
+- 旧 `battleState` **只读复制**到归档，不删除、不改写；没有旧战场时不伪造 UMBRA 资料。
+- `loadBattleData` 首次发现旧档且没有 UMBRA 资料时自动迁移，后续刷新幂等；迁移失败只记录警告，不阻塞旧战场。
+- `umbraProfiles` / `umbraRuns` 已进入云同步表；三张 UMBRA 表进入本机全量表、清空数据、备份导出和备份导入。备份版本升为 11；原始旧档归档只进本地备份，不上云。
+
+### 验证
+
+- `npx vitest run src/umbra/__tests__/state.test.ts`：5/5 通过。
+- `npm run typecheck`：exit0。
+- `npm test`：48 文件、**309/309** 通过；测试输出中的 Dexie `IndexedDB API missing` 是既有 jsdom 环境日志，非测试失败。
+- 独立 Chrome、独立 E 盘资料真实验证：预置旧 `battleState`（SP 77、组织领奖 A/B）并升级正式 App，v20 表正常创建；UMBRA profile 为 SP 77、领奖去重 A/B；旧 `battleState` 原样保留；旧档归档完整；`buildExportJson()` 含 profile/run/archive 且版本 11；再次刷新后 profile 和 archive 计数仍各为 1，迁移幂等、errors=[]。证据 `.rivet/scratch/demo-roadmap-20261019/umbra-migration-browser/report.json` 与 `after-migration.png`。
+
+### 下一步
+
+- U1 由 Codex 继续：建立 UMBRA runtime/store 适配层和正式入口开关，让新模块先能在隔离路由读取 profile/run，不改旧战场默认入口。
+- 随后 U2 才切换战斗与爬塔入口；在 UMBRA 主流程稳定前不删除旧代码，也不恢复被暂缓的 AI。
+- 本节点仅本地提交，最终 SHA 用 `git log -1 --format='%h %s' -- PROJECT_STATE.md` 核实；未 Push、未部署、未打包。
+
 ## 当前续办 · 2026-10-19 · R4离线请求生命周期已完成并验证
 
 ### 接手与改动

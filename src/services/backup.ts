@@ -61,6 +61,9 @@ export const buildExportJson = async (): Promise<string> => {
     shadows: await db.shadows.toArray(),
     battleStates: await db.battleStates.toArray(),
     strata: await db.strata.toArray(),  // 影时间高塔·区层（批2 新增，导入向后兼容）
+    umbraProfiles: await db.umbraProfiles.toArray(),
+    umbraRuns: await db.umbraRuns.toArray(),
+    umbraLegacyArchives: await db.umbraLegacyArchives.toArray(),
     // 星象 / 塔罗（v4 新增）
     dailyDivinations: await db.dailyDivinations.toArray(),
     longReadings: await db.longReadings.toArray(),
@@ -98,7 +101,7 @@ export const buildExportJson = async (): Promise<string> => {
     stamps: await db.stamps.toArray().catch(() => []),
     quests: await db.quests.toArray().catch(() => []),
     _exportedAt: new Date().toISOString(),
-    _version: 10,
+    _version: 11,
   };
   const json = JSON.stringify(data);
   // 出口校验：确保产生的 JSON 字符串可被原样解析回来。

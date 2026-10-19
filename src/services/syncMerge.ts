@@ -41,7 +41,7 @@ export interface TableMergeResult {
 type Row = Record<string, unknown>;
 
 /** 单行表：整张表就是一行 */
-const SINGLE_ROW_TABLES = new Set(['settings', 'users', 'battleStates']);
+const SINGLE_ROW_TABLES = new Set(['settings', 'users', 'battleStates', 'umbraProfiles']);
 const SAMPLE_MAX = 8;
 
 /** 不用 instanceof：IndexedDB 读出来的 Date 可能来自另一个 realm（iframe / 测试壳换过 Date），instanceof 会判错 */
@@ -196,7 +196,7 @@ export const TABLE_LABELS: Record<string, string> = {
   users: '客人档案', attributes: '属性', activities: '记录', achievements: '成就', skills: '技能',
   dailyEvents: '每日事件', dailyDivinations: '每日塔罗', longReadings: '中长期占卜', fateGlimpses: '命运一瞥',
   settings: '设置', todos: '任务', todoCompletions: '任务完成', summaries: '总结', weeklyGoals: '本周目标',
-  personas: '人格面具', shadows: '心魔', battleStates: '战场状态', confidants: '同伴', confidantEvents: '羁绊事件',
+  personas: '人格面具', shadows: '心魔', battleStates: '战场状态', umbraProfiles: 'UMBRA 永久资料', umbraRuns: 'UMBRA 行程', confidants: '同伴', confidantEvents: '羁绊事件',
   counselArchives: '谏言归档', callingCards: '宣告卡', wishes: '愿望', strata: '区层',
   navigatorPresets: '助手人格', navigatorMemos: '助手记忆', stamps: '岁时印章', quests: '委托',
 };

@@ -1,5 +1,6 @@
 import Dexie, { Table } from 'dexie';
 import { User, Attribute, Activity, Achievement, Skill, DailyEvent, DailyDivination, LongReading, FateGlimpse, Settings, Todo, TodoCompletion, PeriodSummary, WeeklyGoal, Persona, Shadow, BattleState, Confidant, ConfidantEvent, CounselSession, CounselArchive, CallingCard, LedgerEntry, Budget, LedgerAsset, Wish, NavigatorSessionRow, NavigatorMessageRow, NavigatorMemo, NavigatorPreset, TowerStratum, OnlineCardFace, ActivityImage, ActivityImageData, SeasonStamp, Quest, BgmTrack } from '@/types';
+import type { UmbraLegacyArchive, UmbraProfile, UmbraRunRecord } from '@/umbra/state';
 
 export class PGTDatabase extends Dexie {
   users!: Table<User>;
@@ -39,6 +40,9 @@ export class PGTDatabase extends Dexie {
   activityImages!: Table<ActivityImage>;            // v2.7.0.6 记录配图（元数据 + 缩略图；本地专属）
   activityImageData!: Table<ActivityImageData>;     // v2.7.0.6 记录配图原图（灯箱才取；本地专属）
   bgmTracks!: Table<BgmTrack>;                      // v19 导入音乐（Blob；本地专属，不上云不备份）
+  umbraProfiles!: Table<UmbraProfile>;              // v20 UMBRA 永久资料与共享经济快照
+  umbraRuns!: Table<UmbraRunRecord>;                // v20 UMBRA 行程快照
+  umbraLegacyArchives!: Table<UmbraLegacyArchive>;  // v20 旧战场原始归档（只在迁移期保留）
 
   constructor() {
     super('PGTDatabase');
@@ -321,6 +325,16 @@ export class PGTDatabase extends Dexie {
     // 本地专属：不进 SYNC_TABLES、不进主备份；「清空数据」清，导入备份不动它。
     this.version(19).stores({
       bgmTracks: 'id, createdAt'
+    });
+
+    // v20：UMBRA 正式接管逆影战场的数据底座。
+    // - profile 保存永久资源与社交领奖去重，不再把新塔进度塞进旧 battleState；
+    // - runs 保存新版行程，payload 由 UMBRA 领域层负责版本化；
+    // - legacyArchives 只保存升级时旧档的原始副本，迁移稳定后可单独确认清理。
+    this.version(20).stores({
+      umbraProfiles: 'id, updatedAt',
+      umbraRuns: 'id, updatedAt',
+      umbraLegacyArchives: 'id, capturedAt',
     });
   }
 }

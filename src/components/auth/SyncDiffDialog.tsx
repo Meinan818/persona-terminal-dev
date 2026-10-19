@@ -24,6 +24,8 @@ const TABLE_LABELS: Record<string, string> = {
   personas: 'Persona',
   shadows: 'Shadow',
   battleStates: '战斗状态',
+  umbraProfiles: 'UMBRA 永久资料',
+  umbraRuns: 'UMBRA 行程',
   confidants: '同伴',
   confidantEvents: '同伴事件',
 };

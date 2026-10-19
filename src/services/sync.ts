@@ -239,6 +239,9 @@ const SYNC_TABLES = [
   'personas',
   'shadows',
   'battleStates',
+  // UMBRA 正式接管：永久资料与新版行程进入同步；旧战场原始归档只进本地备份。
+  'umbraProfiles',
+  'umbraRuns',
   'confidants',
   'confidantEvents',
   // 谏言归档摘要（≤100 字第三人称小结），受"同伴"分组开关约束

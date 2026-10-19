@@ -24,6 +24,8 @@ import { chatComplete, getAIConfig, type AIConfig, type AIMessage } from '@/util
 import { keepLocalAISecrets } from '@/utils/aiSecrets';
 import { syncCustomProvider } from '@/utils/aiProviders';
 import { buildSummaryRequest as buildSummaryRequestAI, getActiveSummaryPreset as getActiveSummaryPresetAI, type SummaryRequestData } from '@/utils/summaryAI';
+import { ensureUmbraProfile } from '@/umbra/migrate';
+import type { UmbraLegacyArchive, UmbraProfile, UmbraRunRecord } from '@/umbra/state';
 import {
   pointsToLevel,
   levelBasePoints,
@@ -67,6 +69,7 @@ export const ALL_LOCAL_TABLES = [
   'dailyEvents', 'dailyDivinations', 'longReadings', 'fateGlimpses', 'callingCards',
   'settings', 'todos', 'todoCompletions', 'summaries', 'weeklyGoals',
   'personas', 'shadows', 'battleStates', 'strata',
+  'umbraProfiles', 'umbraRuns', 'umbraLegacyArchives',
   'confidants', 'confidantEvents', 'counselSessions', 'counselArchives',
   'ledgerEntries', 'budgets', 'assets', 'wishes',
   // F6 黑猫：人格 / 原子记忆 / 会话与消息（聊天原文 7 天即焚，但"清空数据"必须清）
@@ -626,6 +629,8 @@ interface AppState {
   persona: Persona | null;
   shadow: Shadow | null;
   battleState: BattleState | null;
+  umbraProfile: UmbraProfile | null;
+  umbraRun: UmbraRunRecord | null;
   loadBattleData: () => Promise<void>;
   savePersona: (persona: Persona) => Promise<void>;
   saveShadow: (shadow: Shadow) => Promise<void>;
@@ -1008,6 +1013,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   persona: null,
   shadow: null,
   battleState: null,
+  umbraProfile: null,
+  umbraRun: null,
   stratum: null,
   confidants: [],
   confidantEvents: [],
@@ -3075,6 +3082,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       persona: null,
       shadow: null,
       battleState: null,
+      umbraProfile: null,
+      umbraRun: null,
       confidants: [],
       confidantEvents: [],
       counselSession: null,
@@ -3345,6 +3354,33 @@ export const useAppStore = create<AppState>((set, get) => ({
         for (const s of data.strata as unknown[]) {
           const st = s as TowerStratum;
           await db.strata.put({ ...st, createdAt: new Date(st.createdAt) });
+        }
+      }
+      // UMBRA 正式数据（备份 v11+；旧备份缺失则留空，随后由只读旧战场所迁移）
+      if (data.umbraProfiles && Array.isArray(data.umbraProfiles)) {
+        for (const p of data.umbraProfiles as unknown[]) {
+          const profile = p as UmbraProfile;
+          await db.umbraProfiles.put({
+            ...profile,
+            createdAt: new Date(profile.createdAt),
+            updatedAt: new Date(profile.updatedAt),
+            migration: {
+              ...profile.migration,
+              capturedAt: new Date(profile.migration.capturedAt),
+            },
+          });
+        }
+      }
+      if (data.umbraRuns && Array.isArray(data.umbraRuns)) {
+        for (const r of data.umbraRuns as unknown[]) {
+          const run = r as UmbraRunRecord;
+          await db.umbraRuns.put({ ...run, updatedAt: new Date(run.updatedAt) });
+        }
+      }
+      if (data.umbraLegacyArchives && Array.isArray(data.umbraLegacyArchives)) {
+        for (const a of data.umbraLegacyArchives as unknown[]) {
+          const archive = a as UmbraLegacyArchive;
+          await db.umbraLegacyArchives.put({ ...archive, capturedAt: new Date(archive.capturedAt) });
         }
       }
 
@@ -5007,16 +5043,37 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   loadBattleData: async () => {
     try {
-      const [personas, shadows, battleStates, strata] = await Promise.all([
+      const [personas, shadows, battleStates, strata, umbraProfiles, umbraRuns] = await Promise.all([
         db.personas.toArray(),
         db.shadows.toArray(),
         db.battleStates.toArray(),
         db.strata.toArray(),
+        db.umbraProfiles.toArray(),
+        db.umbraRuns.toArray(),
       ]);
       const latestStratum = strata
         .slice()
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
-      set({ persona: personas[0] || null, shadow: shadows[0] || null, battleState: battleStates[0] || null, stratum: latestStratum });
+      const battleState = battleStates[0] || null;
+      let umbraProfile: UmbraProfile | null = umbraProfiles[0] ?? null;
+      if (!umbraProfile && battleState) {
+        try {
+          umbraProfile = await ensureUmbraProfile(battleState);
+        } catch (error) {
+          console.warn('[umbra] legacy migration failed; old battle state was not modified', error);
+        }
+      }
+      const umbraRun = umbraRuns
+        .slice()
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0] || null;
+      set({
+        persona: personas[0] || null,
+        shadow: shadows[0] || null,
+        battleState,
+        umbraProfile,
+        umbraRun,
+        stratum: latestStratum,
+      });
 
       // 惰性迁移（§2.7）：存量单只 Shadow 且从未生成过区层 → 迁入同级区层（保留主影本体，区层名用模板，AI 名后置）
       const sh = shadows[0];

@@ -57,9 +57,9 @@ const GROUPS: Group[] = [
   {
     id: 'battle',
     label: 'UMBRA（幽影协议）',
-    // strata（影时间高塔区层）与 battleStates 成对，同开同关——分开会让新设备"层数有、层没了"
-    hint: 'Persona / Shadow / 战斗状态 / 高塔区层',
-    tables: ['personas', 'shadows', 'battleStates', 'strata'],
+    // UMBRA 永久资料/新版行程与旧战场数据必须同组；迁移期额外保留旧表供回退。
+    hint: 'Persona / Shadow / UMBRA 永久资料与行程 / 旧战场迁移数据',
+    tables: ['personas', 'shadows', 'battleStates', 'strata', 'umbraProfiles', 'umbraRuns'],
   },
   {
     id: 'confidant',

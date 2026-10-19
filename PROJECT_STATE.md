@@ -1,6 +1,64 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-19 08:02（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-19 11:13（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+
+## 准备交接 · 2026-10-19 11:13 · 新对话入口：UI 外包中，功能冻结
+
+这是当前交接节点。用户说「交接」，按项目约定暂停开发、收干净、写接手入口；本轮只做状态记录，不改业务代码。下一个接手的 AI 先读本节、项目 `AGENTS.md`、Git 和 `git diff`，不要从旧摘要开工。
+
+### 现场
+
+- 分支 `codex/p5r-compendium-data`，业务 HEAD `52912e7 docs(handoff): 记录 40F 塔长收尾方案`。
+- 未 Push；相对 `origin/main` 有 **149** 个本地提交，未设置 upstream。Push 必须用户明确批准。
+- 工作区遗留保持原样：`ios/App/Podfile`、`outputs/battle-experience-v3/P5-P3-FUSION.md` 换行差异；`.cache/`、`.impeccable/`、`.rivet-config.json`、`outputs/` 下未跟踪的旧 demo/备份/交付包。不要 stash/reset/clean，不要夹带。
+- 本条交接会再产生一个本地 docs 提交；提交后停止写共享文件。
+
+### 本轮成果（相对 4462bbf）
+
+- `8b153f7` 单层 AI 切片：白昼 → 3–5 间房 → 绕行/硬刚/自由交涉 → 回白昼；默认塔夜层，记录可选；`night-slice.js` / `night-slice-ai.js` / `night-slice-flow.js` / `night-slice.css`；AI 契约 `planNightFloor` / `judgeShadowTalk`；离线/预览/真实三种模式明确区分。
+- `3b3a26f` 格子主塔影子房自由交涉 + 五区规则：进入影子房先「开口交涉 / 迎战」，成功清房，失败扣血/警戒并开战；每房一次；1–20/21–40/41–60/61–80/81–100 五区（外环/腐蚀/聚光/钟摆/镜厅）；另外两座塔锁定；切片降级为据点下方「AI LAB」。
+- `a060e86` 战斗反馈：敌人目标卡带 HP、`敌人 N / 总数`；`YOUR TURN / ALLY TURN` 横条 + 指令区常驻行动者标签 + 日志「轮到 X」。
+- `3519603` 多敌人立绘：按场上敌人数逐只渲染 `.enemy-unit`，点谁选谁；当前目标满亮、其余变暗，击破变灰禁用。
+- `b8943de` / `80adddc` / `c289e7c` / `b204a53` / `b8d13e8` / `52912e7` 外包交付与边界文档：r2 交付包、UI 交接说明、视觉绿灯/黄灯/红灯、功能冻结、三主题交付方式（同 DOM/钩子，P3 完整 + P4/P5 theme CSS）、三主题不同排版、40F 收尾方案。
+
+### 验证
+
+- demo Node 测试 **181/181**（`cd outputs/battle-experience-v3; node --test`），`node --check` 通过。
+- 真实 Chrome 1440×900 / 390×844：
+  - 切片：直接入夜 → 硬刚 → 自由交涉 → 结算 → 刷新保留；记录模式可选；`errors=[]`、`overflowX=0`。
+  - 格子：影子房成功清房、失败转战斗、25/45/65/85F 区域与步数正确；`errors=[]`、`overflowX=0`。
+  - 战斗：两个敌人立绘位可见、点击第二只切换目标、防御后出现 `ALLY TURN`；`errors=[]`、`overflowX=0`。
+- 截图：`E:\MASKARIA\.rivet\scratch\p5r-night-slice-20261019\`、`p5r-grid-talk-20261019\`、`p5r-battle-turn-20261019\`。
+- 探针：`.rivet/scratch/p5r-night-slice-probe.mjs`、`p5r-grid-talk-probe.mjs`、`p5r-battle-turn-probe.mjs`。探针已改随机调试端口 + 退出 `taskkill /T`，避免复用旧 Chrome。
+- 外包包：`outputs/deliverables/maskaria-demo-20261019-r2.zip`（18,511,340 B，SHA256 `37ABE69FC6B23D2C9863E24A4F00DA71224EFDB3D9AC4599FA2BF9D17F4997FF`，构建自 `3519603`）；解压副本 `node --test` 181/181，包内服务器 5189 对 `/`、`/app.js`、`/night-slice.css`、`/grid-negotiation.js`、`/region-rules.js` 均 200。
+- 未验证：真实模型端到端、手机真机、完整 40F/100F 人工长跑、Boss 二阶段手感、三主题外包成品。
+
+### 待办与优先级
+
+1. **用户侧**：把 r2 zip + `docs/UI-外包交接-20261019.md` 发给 UI AI；不要发旧包 `maskaria-demo-20261019.zip`（`6904a26`）。UI 只改表现层，保留 `data-*` 钩子；三主题同 DOM/钩子、可不同排版；改 DOM 附 `HOOK-MAP.md` / `THEME-MAP.md`。
+2. **UI 回来后的集成**：先跑 181 项测试和 1440/390 探针，再按 `HOOK-MAP` 对齐；不改规则/数值/存档/AI 契约。
+3. **40F 收尾（未执行）**：第一座塔 100F → 40F，4 区 × 10F（外环/腐蚀/聚光/镜厅），安全屋 10/20/30，预告信 39，Boss 40，钟摆移到无尽/挑战；同步 `DUNGEON_FLOORS`、`SAFE_FLOORS`、`CALLING_FLOOR`、`region-rules.js`、相关测试和文案。不要把 100F/5 区写死进 UI。
+4. **真实 AI（未接）**：先做薄地基 `battle-context.js`（只读快照、已知/未知分离、无副作用、测试）+ 一个真实战斗顾问；复用主 App BYOK/AI 服务；先「建议 + 一键预填 + 玩家确认」，不要先做自主代理；不把 Key 放前端；离线/预览/真实必须标注。
+5. **其他**：另外两座塔继续锁；三主题只换皮，不换规则；AI 同伴记忆放后，默认本地、可删。
+
+### 铁律与坑
+
+- 功能冻结：不要再加页面/系统；UI 外包期间只改表现层。
+- 不要把旧的 `maskaria-demo-20261019.zip` 当成交付；r2 才是当前版本。
+- 5×5 格子是主玩法，不能换成 3–5 间房；切片只是 AI LAB。
+- 影子房每间只能交涉一次；失败后只能打。
+- AI 不得改 HP/SP/奖励/存档；AI 只给文本/建议/意图，规则算结果。
+- `docs/*.md` 被 `.gitignore` 忽略，新增 docs 需 `git add -f`。
+- 交接后停止写共享文件；用户明确说继续再动。
+- Push 必须用户单独批准；本次未 Push。
+
+### 起服务与探针
+
+- 本地开发：`cd E:\MASKARIA\outputs\battle-experience-v3; node serve.mjs` → `http://127.0.0.1:5187/`。
+- 据点入口：`http://127.0.0.1:5187/?theme=p3&shadow=1#tower`；AI LAB 直达：`...&slice=1&slice-ai=off`。
+- 调试：`?p5r-debug=1`，Console：`__p5rDebug.jump(25)`、`shadowTalk()`、`fightShadow()`、`winBattle()`。
+- 外包包：解压后 `start-demo.cmd` → 5188；或 `PORT=5189 node serve.mjs`。
+- 测试：`cd outputs/battle-experience-v3; node --test`（181）。
 
 ## 已完成节点 · 2026-10-19 · 外包交付包 r2 与 UI 交接说明
 

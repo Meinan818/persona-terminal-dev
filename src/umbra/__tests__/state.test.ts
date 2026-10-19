@@ -5,8 +5,10 @@ import {
   UMBRA_PROFILE_ID,
   UMBRA_SCHEMA_VERSION,
   createFreshUmbraProfile,
+  equipUmbraItem,
   planLegacyUmbraMigration,
   setUmbraActivePersona,
+  useUmbraItem,
 } from '@/umbra/state';
 import { createUmbraRunRecord, isUmbraRunCompatible } from '@/umbra/runtime';
 import { createRuntimePayload, restoreExploration } from '@/umbra/run';
@@ -34,7 +36,7 @@ describe('legacy UMBRA migration plan', () => {
     const plan = planLegacyUmbraMigration(legacyState(), now);
     expect(plan?.profile.id).toBe(UMBRA_PROFILE_ID);
     expect(plan?.profile.schemaVersion).toBe(UMBRA_SCHEMA_VERSION);
-    expect(plan?.profile.economy).toEqual({ sp: 41, totalSpEarned: 230 });
+    expect(plan?.profile.economy).toEqual({ sp: 41, totalSpEarned: 230, money: 1000 });
     expect(plan?.profile.social.orgRaidRewards).toEqual(['raid-a', 'raid-b']);
     expect(plan?.profile.legacySummary).toEqual({
       status: 'in_battle',
@@ -67,7 +69,7 @@ describe('legacy UMBRA migration plan', () => {
       totalSpEarned: -10,
       orgRaidRewards: [null, '  ', 'raid-c'] as unknown as string[],
     }), now);
-    expect(plan?.profile.economy).toEqual({ sp: 0, totalSpEarned: 0 });
+    expect(plan?.profile.economy).toEqual({ sp: 0, totalSpEarned: 0, money: 1000 });
     expect(plan?.profile.social.orgRaidRewards).toEqual(['raid-c']);
   });
 
@@ -77,7 +79,7 @@ describe('legacy UMBRA migration plan', () => {
 
   it('新玩家生成干净的 UMBRA 永久资料', () => {
     const profile = createFreshUmbraProfile(now);
-    expect(profile.economy).toEqual({ sp: 0, totalSpEarned: 0 });
+    expect(profile.economy).toEqual({ sp: 0, totalSpEarned: 0, money: 1000 });
     expect(profile.social.orgRaidRewards).toEqual([]);
     expect(profile.combat.activePersonaId).toBe('arsene');
     expect(profile.combat.hp).toBe(52);
@@ -89,6 +91,33 @@ describe('legacy UMBRA migration plan', () => {
     const switched = setUmbraActivePersona(profile, 'pixie');
     expect(switched.combat.activePersonaId).toBe('pixie');
     expect(setUmbraActivePersona(profile, 'not-in-roster')).toBe(profile);
+  });
+
+  it('拥有装备后才能装上，并重算战斗加成', () => {
+    const profile = createFreshUmbraProfile(now);
+    expect(equipUmbraItem(profile, 'black-fang')).toBe(profile);
+    const owned = {
+      ...profile,
+      combat: {
+        ...profile.combat,
+        ownedEquipment: [...profile.combat.ownedEquipment, 'black-fang'],
+      },
+    };
+    const equipped = equipUmbraItem(owned, 'black-fang');
+    expect(equipped.combat.equipment.weapon).toBe('black-fang');
+    expect(equipped.combat.equipmentBonuses.attack).toBeGreaterThan(profile.combat.equipmentBonuses.attack);
+  });
+
+  it('战斗消耗品会回复资源并扣除背包数量', () => {
+    const profile = createFreshUmbraProfile(now);
+    const injured = {
+      ...profile,
+      combat: { ...profile.combat, hp: 10 },
+    };
+    const used = useUmbraItem(injured, 'painkiller');
+    expect(used.result.ok).toBe(true);
+    expect(used.profile.combat.hp).toBeGreaterThan(10);
+    expect(used.profile.combat.battleItems.painkiller ?? 0).toBe(0);
   });
 });
 

@@ -10,10 +10,21 @@ import {
 } from '@/umbra/engine/floor-map';
 import { createDefaultBattle } from '@/umbra/engine/p5-combat-rules';
 import { getPersona } from '@/umbra/engine/p5r-compendium';
+import { EQUIPMENT, SLOT_LABELS } from '@/umbra/engine/equipment';
+import { ITEM_DEFS } from '@/umbra/engine/economy-rules';
 import { createUmbraRunRecord } from '@/umbra/runtime';
 import { createRuntimePayload, restoreExploration, UMBRA_RUN_ID } from '@/umbra/run';
-import { createDefaultUmbraCombat, setUmbraActivePersona } from '@/umbra/state';
+import {
+  createDefaultUmbraCombat,
+  equipUmbraItem,
+  setUmbraActivePersona,
+  useUmbraItem,
+} from '@/umbra/state';
 import '@/styles/umbra-runtime.css';
+
+const equipmentById = EQUIPMENT as Record<string, any>;
+const itemDefs = ITEM_DEFS as Record<string, any>;
+const slotLabels = SLOT_LABELS as Record<string, string>;
 
 const migrationLabel = (source: 'legacy-battle' | 'fresh' | undefined): string => {
   if (source === 'legacy-battle') return '旧战场已归档，永久资源已迁移';
@@ -101,6 +112,29 @@ export function UmbraRuntimeCheck() {
     });
   };
 
+  const selectEquipment = (itemId: string) => {
+    if (!profile) return;
+    const updated = equipUmbraItem(profile, itemId);
+    if (updated === profile) return;
+    void useAppStore.getState().saveUmbraProfile(updated).catch(error => {
+      console.warn('[umbra] equipment checkpoint failed', error);
+    });
+  };
+
+  const consumeItem = (itemId: string) => {
+    if (!profile) return;
+    const used = useUmbraItem(profile, itemId);
+    if (!used.result.ok) {
+      setNotice(used.result.reason ?? '这个道具现在不能使用。');
+      return;
+    }
+    setNotice(`使用了 ${used.result.label}${used.result.amount ? `，回复 ${used.result.amount}` : ''}。`);
+    void useAppStore.getState().saveUmbraProfile(used.profile).catch(error => {
+      console.warn('[umbra] item checkpoint failed', error);
+    });
+    refresh();
+  };
+
   const returnLegacy = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('umbra');
@@ -163,10 +197,12 @@ export function UmbraRuntimeCheck() {
     });
     const hero = next.party.find((member: any) => member.isPlayer);
     if (hero) {
-      hero.hp = Math.max(1, Math.min(combat.maxHp, combat.hp));
-      hero.maxHp = combat.maxHp;
-      hero.sp = Math.max(0, Math.min(combat.maxSp, combat.sp));
-      hero.maxSp = combat.maxSp;
+      const maxHp = combat.maxHp + combat.equipmentBonuses.hp;
+      const maxSp = combat.maxSp + combat.equipmentBonuses.sp;
+      hero.hp = Math.max(1, Math.min(maxHp, combat.hp + combat.equipmentBonuses.hp));
+      hero.maxHp = maxHp;
+      hero.sp = Math.max(0, Math.min(maxSp, combat.sp + combat.equipmentBonuses.sp));
+      hero.maxSp = maxSp;
       hero.attackBonus = combat.equipmentBonuses.attack;
       hero.defenseBonus = combat.equipmentBonuses.defense;
     }
@@ -209,10 +245,10 @@ export function UmbraRuntimeCheck() {
         ...profile,
         combat: {
           ...combat,
-          hp: Math.max(1, Math.round(hero.hp)),
-          maxHp: Math.max(1, Math.round(hero.maxHp)),
-          sp: Math.max(0, Math.round(hero.sp)),
-          maxSp: Math.max(0, Math.round(hero.maxSp)),
+          hp: Math.max(1, Math.round(hero.hp) - combat.equipmentBonuses.hp),
+          maxHp: Math.max(1, combat.maxHp),
+          sp: Math.max(0, Math.round(hero.sp) - combat.equipmentBonuses.sp),
+          maxSp: Math.max(0, combat.maxSp),
         },
       }).catch(error => {
         console.warn('[umbra] combat profile checkpoint failed', error);
@@ -301,6 +337,74 @@ export function UmbraRuntimeCheck() {
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        <section
+          className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
+          data-umbra-equipment
+          data-equipment-bonus={`${combat.equipmentBonuses.attack}/${combat.equipmentBonuses.defense}/${combat.equipmentBonuses.hp}/${combat.equipmentBonuses.sp}`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="umbra-accent text-[10px] font-black tracking-[0.25em]">ARMORY</p>
+              <h2 className="mt-1 text-sm font-black text-gray-900 dark:text-gray-100">装备与补给</h2>
+            </div>
+            <span className="text-xs font-bold text-gray-400">¥{profile?.economy.money ?? 0}</span>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {Object.entries(SLOT_LABELS).map(([slot, label]) => {
+              const itemId = (combat.equipment as Record<string, string | null>)[slot];
+              const item = itemId ? equipmentById[itemId] : null;
+              return (
+                <div key={slot} className="rounded-lg border border-gray-200 p-2.5 dark:border-gray-800">
+                  <span className="text-[10px] font-bold text-gray-400">{label}</span>
+                  <b className="mt-1 block text-xs text-gray-800 dark:text-gray-100">{item?.name ?? '未装备'}</b>
+                  <small className="mt-1 block text-[10px] text-gray-400">
+                    {item ? `攻 ${item.attack} · 防 ${item.defense} · HP ${item.hp} · SP ${item.sp}` : '—'}
+                  </small>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {combat.ownedEquipment.map(itemId => {
+              const item = equipmentById[itemId];
+              if (!item) return null;
+              const equipped = (combat.equipment as Record<string, string | null>)[item.slot] === itemId;
+              return (
+                <button
+                  key={itemId}
+                  type="button"
+                  data-umbra-equip={itemId}
+                  aria-pressed={equipped}
+                  onClick={() => selectEquipment(itemId)}
+                  className={`umbra-persona-option ${equipped ? 'is-active' : ''}`}
+                >
+                  <b>{item.name}</b>
+                  <small>{slotLabels[item.slot]}</small>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-800">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-bold text-gray-400">战斗补给</span>
+              {Object.entries(combat.battleItems).filter(([, qty]) => qty > 0).map(([itemId, qty]) => (
+                <button
+                  key={itemId}
+                  type="button"
+                  data-umbra-item={itemId}
+                  onClick={() => consumeItem(itemId)}
+                  className="umbra-secondary-button"
+                >
+                  {itemDefs[itemId]?.name ?? itemId} ×{qty}
+                </button>
+              ))}
+              {!Object.values(combat.battleItems).some(qty => qty > 0) && (
+                <span className="text-[11px] text-gray-400">暂无战斗补给</span>
+              )}
+            </div>
           </div>
         </section>
 

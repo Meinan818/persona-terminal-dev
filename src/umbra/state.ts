@@ -1,6 +1,8 @@
 import type { BattleState } from '@/types';
+import { equipItem, equipmentBonuses } from '@/umbra/engine/equipment';
+import { useInventoryItem } from '@/umbra/engine/inventory';
 
-export const UMBRA_SCHEMA_VERSION = 2;
+export const UMBRA_SCHEMA_VERSION = 3;
 export const UMBRA_PROFILE_ID = 'current' as const;
 export const UMBRA_LEGACY_ARCHIVE_ID = 'legacy-battle-current' as const;
 
@@ -12,6 +14,7 @@ export interface UmbraProfile {
   economy: {
     sp: number;
     totalSpEarned: number;
+    money: number;
   };
   social: {
     orgRaidRewards: string[];
@@ -38,6 +41,15 @@ export interface UmbraCombatState {
   maxHp: number;
   sp: number;
   maxSp: number;
+  equipment: {
+    weapon: string | null;
+    armor: string | null;
+    accessory: string | null;
+  };
+  equipmentLevels: Record<string, number>;
+  ownedEquipment: string[];
+  battleItems: Record<string, number>;
+  materials: Record<string, number>;
   equipmentBonuses: {
     attack: number;
     defense: number;
@@ -97,16 +109,47 @@ export function createDefaultUmbraCombat(): UmbraCombatState {
     maxHp: 52,
     sp: 34,
     maxSp: 34,
-    equipmentBonuses: { attack: 0, defense: 0, hp: 0, sp: 0 },
+    equipment: {
+      weapon: 'training-blade',
+      armor: 'school-jacket',
+      accessory: 'old-watch',
+    },
+    equipmentLevels: {},
+    ownedEquipment: ['training-blade', 'school-jacket', 'old-watch'],
+    battleItems: { painkiller: 1, sportsDrink: 1 },
+    materials: {},
+    equipmentBonuses: { attack: 2, defense: 2, hp: 4, sp: 6 },
   };
 }
 
 export function normalizeUmbraProfile(profile: UmbraProfile): UmbraProfile {
-  if (profile.schemaVersion === UMBRA_SCHEMA_VERSION && profile.combat) return profile;
+  if (
+    profile.schemaVersion === UMBRA_SCHEMA_VERSION
+    && profile.combat
+    && profile.combat.equipment
+    && Array.isArray(profile.combat.ownedEquipment)
+    && profile.combat.battleItems
+  ) return profile;
+  const defaults = createDefaultUmbraCombat();
   return {
     ...profile,
     schemaVersion: UMBRA_SCHEMA_VERSION,
-    combat: profile.combat ?? createDefaultUmbraCombat(),
+    economy: {
+      ...profile.economy,
+      money: finiteInt(profile.economy?.money, 1000),
+    },
+    combat: {
+      ...defaults,
+      ...profile.combat,
+      equipment: { ...defaults.equipment, ...profile.combat?.equipment },
+      equipmentLevels: { ...defaults.equipmentLevels, ...profile.combat?.equipmentLevels },
+      ownedEquipment: Array.isArray(profile.combat?.ownedEquipment)
+        ? [...new Set(profile.combat.ownedEquipment)]
+        : defaults.ownedEquipment,
+      battleItems: { ...defaults.battleItems, ...profile.combat?.battleItems },
+      materials: { ...defaults.materials, ...profile.combat?.materials },
+      equipmentBonuses: { ...defaults.equipmentBonuses, ...profile.combat?.equipmentBonuses },
+    },
     updatedAt: new Date(),
   };
 }
@@ -118,6 +161,61 @@ export function setUmbraActivePersona(profile: UmbraProfile, personaId: string):
     ...profile,
     updatedAt: new Date(),
     combat: { ...profile.combat, activePersonaId: personaId },
+  };
+}
+
+export function refreshUmbraEquipmentBonuses(profile: UmbraProfile): UmbraProfile {
+  return {
+    ...profile,
+    updatedAt: new Date(),
+    combat: {
+      ...profile.combat,
+      equipmentBonuses: equipmentBonuses(profile.combat.equipment, profile.combat.equipmentLevels),
+    },
+  };
+}
+
+export function equipUmbraItem(profile: UmbraProfile, itemId: string): UmbraProfile {
+  const result = equipItem(profile.combat.equipment, profile.combat.ownedEquipment, itemId);
+  if (!result.ok) return profile;
+  return refreshUmbraEquipmentBonuses({
+    ...profile,
+    combat: {
+      ...profile.combat,
+      equipment: result.equipment,
+    },
+  });
+}
+
+export function useUmbraItem(profile: UmbraProfile, itemId: string): {
+  profile: UmbraProfile;
+  result: { ok: boolean; reason?: string; label?: string; amount?: number };
+} {
+  const inventory = {
+    hp: profile.combat.hp,
+    heroMaxHp: profile.combat.maxHp,
+    sp: profile.combat.sp,
+    heroMaxSp: profile.combat.maxSp,
+    battleItems: { ...profile.combat.battleItems },
+    materials: { ...profile.combat.materials },
+    equipment: { ...profile.combat.equipment },
+    equipmentLevels: { ...profile.combat.equipmentLevels },
+    ownedEquipment: [...profile.combat.ownedEquipment],
+  };
+  const result = useInventoryItem(inventory, itemId);
+  if (!result.ok) return { profile, result };
+  return {
+    profile: {
+      ...profile,
+      updatedAt: new Date(),
+      combat: {
+        ...profile.combat,
+        hp: inventory.hp,
+        sp: inventory.sp,
+        battleItems: inventory.battleItems,
+      },
+    },
+    result,
   };
 }
 
@@ -139,7 +237,7 @@ export function planLegacyUmbraMigration(
       schemaVersion: UMBRA_SCHEMA_VERSION,
       createdAt: capturedAt,
       updatedAt: capturedAt,
-      economy: { sp, totalSpEarned },
+      economy: { sp, totalSpEarned, money: 1000 },
       social: {
         orgRaidRewards: uniqueStrings(legacy.orgRaidRewards),
       },
@@ -172,7 +270,7 @@ export function createFreshUmbraProfile(now = new Date()): UmbraProfile {
     schemaVersion: UMBRA_SCHEMA_VERSION,
     createdAt,
     updatedAt: createdAt,
-    economy: { sp: 0, totalSpEarned: 0 },
+    economy: { sp: 0, totalSpEarned: 0, money: 1000 },
     social: { orgRaidRewards: [] },
     combat: createDefaultUmbraCombat(),
     migration: {

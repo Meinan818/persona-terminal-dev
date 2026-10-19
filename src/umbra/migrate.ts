@@ -3,6 +3,7 @@ import { db } from '@/db';
 import {
   UMBRA_PROFILE_ID,
   createFreshUmbraProfile,
+  normalizeUmbraProfile,
   planLegacyUmbraMigration,
   type UmbraProfile,
 } from '@/umbra/state';
@@ -17,7 +18,11 @@ export async function ensureUmbraProfile(
   opts: { createFresh?: boolean } = {},
 ): Promise<UmbraProfile | null> {
   const existing = await db.umbraProfiles.get(UMBRA_PROFILE_ID);
-  if (existing) return existing;
+  if (existing) {
+    const normalized = normalizeUmbraProfile(existing);
+    if (normalized !== existing) await db.umbraProfiles.put(normalized);
+    return normalized;
+  }
 
   const plan = planLegacyUmbraMigration(legacy, now);
   if (!plan) {

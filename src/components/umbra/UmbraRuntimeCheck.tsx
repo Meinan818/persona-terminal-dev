@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { useAppStore } from '@/store';
 import { umbraThemeFor } from '@/umbra/themes';
 import {
@@ -9,6 +9,9 @@ import {
   resolveEncounter,
 } from '@/umbra/engine/floor-map';
 import { createDefaultBattle } from '@/umbra/engine/p5-combat-rules';
+import { createUmbraRunRecord } from '@/umbra/runtime';
+import { createRuntimePayload, restoreExploration, UMBRA_RUN_ID } from '@/umbra/run';
+import { createDefaultUmbraCombat } from '@/umbra/state';
 import '@/styles/umbra-runtime.css';
 
 const migrationLabel = (source: 'legacy-battle' | 'fresh' | undefined): string => {
@@ -49,18 +52,44 @@ export function UmbraRuntimeCheck() {
   const visual = umbraThemeFor(theme);
   const profile = useAppStore(s => s.umbraProfile);
   const run = useAppStore(s => s.umbraRun);
-  const [seed, setSeed] = useState(7);
+  const initialSeed = Number(run?.payload?.seed) || 7;
+  const [seed, setSeed] = useState(initialSeed);
+  const [exploration, setExploration] = useState<any>(() => (
+    restoreExploration(run?.payload)
+    ?? createExplorationState(createFloorMap({ floor: 1, seed: initialSeed }))
+  ));
   const [, refresh] = useReducer(value => value + 1, 0);
   const [blocked, setBlocked] = useState(false);
   const [notice, setNotice] = useState('寻找守卫或钥匙，打开出口。');
   const [battle, setBattle] = useState<any>(null);
   const [targetId, setTargetId] = useState('encounter');
   const [battleNotice, setBattleNotice] = useState('');
-  const exploration: any = useMemo(
-    () => createExplorationState(createFloorMap({ floor: 1, seed })),
-    [seed],
-  );
+  const hydratedRunRef = useRef(Boolean(run?.payload));
   const map = exploration.map;
+  const combat = profile?.combat ?? createDefaultUmbraCombat();
+
+  useEffect(() => {
+    if (hydratedRunRef.current || !run?.payload) return;
+    const restored = restoreExploration(run.payload);
+    hydratedRunRef.current = true;
+    if (!restored) return;
+    setExploration(restored);
+    setSeed(Number(run.payload.seed) || 7);
+  }, [run?.id, run?.payload]);
+
+  const saveCheckpoint = (nextExploration = exploration, nextSeed = seed) => {
+    const payload = createRuntimePayload({
+      floor: 1,
+      maxFloor: 40,
+      stratum: 'echo',
+      seed: nextSeed,
+      exploration: nextExploration,
+    });
+    const record = createUmbraRunRecord(run?.id ?? UMBRA_RUN_ID, payload);
+    void useAppStore.getState().saveUmbraRun(record).catch(error => {
+      console.warn('[umbra] run checkpoint failed', error);
+    });
+  };
 
   const returnLegacy = () => {
     const url = new URL(window.location.href);
@@ -80,6 +109,7 @@ export function UmbraRuntimeCheck() {
     } else {
       setNotice(`进入${roomLabel(result.room?.type)}，月光 -1。`);
     }
+    saveCheckpoint(exploration, seed);
     refresh();
   };
 
@@ -87,20 +117,27 @@ export function UmbraRuntimeCheck() {
     if (blocked) return;
     const result = listen(exploration);
     setNotice(result.ok ? '听见了更多房间，警戒也升高了。' : (result.reason ?? '什么也没听见。'));
+    saveCheckpoint(exploration, seed);
     refresh();
   };
 
   const resetMap = () => {
+    const nextSeed = seed + 1;
+    const nextExploration = createExplorationState(createFloorMap({ floor: 1, seed: nextSeed }));
     setBlocked(false);
     setNotice('新的 5×5 房间已经展开。');
-    setSeed(value => value + 1);
+    setSeed(nextSeed);
+    setExploration(nextExploration);
     setBattle(null);
     setBattleNotice('');
+    saveCheckpoint(nextExploration, nextSeed);
   };
 
-  const startBattle = (name = '训练之影') => {
+  const startBattle = (name = '训练之影', activePersonaId = combat.activePersonaId) => {
     const next = (createDefaultBattle as any)({
-      activePersonaId: 'pixie',
+      heroPersonaIds: combat.heroPersonaIds,
+      activePersonaId,
+      allyPersonaIds: combat.allyPersonaIds,
       enemies: [{
         id: 'encounter',
         name,
@@ -114,6 +151,15 @@ export function UmbraRuntimeCheck() {
         recruitPersonaId: 'pixie',
       }],
     });
+    const hero = next.party.find((member: any) => member.isPlayer);
+    if (hero) {
+      hero.hp = Math.max(1, Math.min(combat.maxHp, combat.hp));
+      hero.maxHp = combat.maxHp;
+      hero.sp = Math.max(0, Math.min(combat.maxSp, combat.sp));
+      hero.maxSp = combat.maxSp;
+      hero.attackBonus = combat.equipmentBonuses.attack;
+      hero.defenseBonus = combat.equipmentBonuses.defense;
+    }
     setBattle(next);
     setTargetId('encounter');
     setBattleNotice(`${name} 挡住了路。`);
@@ -131,15 +177,38 @@ export function UmbraRuntimeCheck() {
     refresh();
   };
 
-  const holdUpAction = (type: 'allOut' | 'recruit' | 'reward') => {
+  const holdUpAction = (action: any) => {
     if (!battle) return;
-    const result = battle.holdUp({ type, targetId });
+    const result = battle.holdUp(action);
+    setBattleNotice(result.ok ? '' : (result.reason ?? '这个选择不能执行。'));
+    refresh();
+  };
+
+  const chooseBattleResult = (type: 'recruit' | 'reward') => {
+    if (!battle) return;
+    const result = battle.chooseResult(type);
     setBattleNotice(result.ok ? '' : (result.reason ?? '这个选择不能执行。'));
     refresh();
   };
 
   const finishBattle = () => {
     resolveEncounter(exploration, { won: true });
+    const hero = battle?.party?.find((member: any) => member.isPlayer);
+    if (profile && hero) {
+      void useAppStore.getState().saveUmbraProfile({
+        ...profile,
+        combat: {
+          ...combat,
+          hp: Math.max(1, Math.round(hero.hp)),
+          maxHp: Math.max(1, Math.round(hero.maxHp)),
+          sp: Math.max(0, Math.round(hero.sp)),
+          maxSp: Math.max(0, Math.round(hero.maxSp)),
+        },
+      }).catch(error => {
+        console.warn('[umbra] combat profile checkpoint failed', error);
+      });
+    }
+    saveCheckpoint(exploration, seed);
     setBlocked(false);
     setBattle(null);
     setBattleNotice('');
@@ -202,7 +271,7 @@ export function UmbraRuntimeCheck() {
                 type="button"
                 onClick={() => {
                   setBlocked(true);
-                  startBattle();
+                  startBattle('训练之影', 'pixie');
                 }}
                 className="umbra-secondary-button"
               >
@@ -344,14 +413,26 @@ export function UmbraRuntimeCheck() {
             )}
 
             {battleSnapshot.phase === 'holdUp' && (
-              <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                <button type="button" onClick={() => holdUpAction('allOut')} className="umbra-battle-action">总攻击</button>
-                <button type="button" onClick={() => holdUpAction('recruit')} className="umbra-battle-action">收服</button>
-                <button type="button" onClick={() => holdUpAction('reward')} className="umbra-battle-action">拿报酬</button>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <button type="button" onClick={() => holdUpAction({ type: 'allOut' })} className="umbra-battle-action">总攻击</button>
+                <button
+                  type="button"
+                  onClick={() => holdUpAction({ type: 'negotiate', enemyId: targetId, option: 'reason' })}
+                  className="umbra-battle-action"
+                >
+                  交涉
+                </button>
               </div>
             )}
 
-            {battleSnapshot.phase === 'result' && (
+            {battleSnapshot.phase === 'negotiation' && (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <button type="button" onClick={() => chooseBattleResult('recruit')} className="umbra-battle-action">收服</button>
+                <button type="button" onClick={() => chooseBattleResult('reward')} className="umbra-battle-action">拿报酬</button>
+              </div>
+            )}
+
+            {(battleSnapshot.phase === 'result' || battleSnapshot.phase === 'victory') && (
               <button type="button" onClick={finishBattle} className="umbra-battle-action mt-4 w-full">结算并返回房间</button>
             )}
 

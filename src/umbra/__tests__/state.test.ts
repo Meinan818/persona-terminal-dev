@@ -8,6 +8,7 @@ import {
   planLegacyUmbraMigration,
 } from '@/umbra/state';
 import { createUmbraRunRecord, isUmbraRunCompatible } from '@/umbra/runtime';
+import { createRuntimePayload, restoreExploration } from '@/umbra/run';
 
 const now = new Date('2026-10-19T12:00:00.000Z');
 
@@ -77,6 +78,8 @@ describe('legacy UMBRA migration plan', () => {
     const profile = createFreshUmbraProfile(now);
     expect(profile.economy).toEqual({ sp: 0, totalSpEarned: 0 });
     expect(profile.social.orgRaidRewards).toEqual([]);
+    expect(profile.combat.activePersonaId).toBe('arsene');
+    expect(profile.combat.hp).toBe(52);
     expect(profile.migration.source).toBe('fresh');
   });
 });
@@ -106,5 +109,33 @@ describe('UMBRA runtime records', () => {
       updatedAt: now,
       payload: {},
     })).toBe(false);
+  });
+});
+
+describe('UMBRA runtime map persistence', () => {
+  it('地图与探索状态可序列化后恢复', () => {
+    const exploration = {
+      map: {
+        rooms: { '0,0': { id: '0,0', type: 'start' } },
+        start: { x: 0, y: 0 },
+        exit: { x: 1, y: 0 },
+      },
+      player: { x: 0, y: 0 },
+      listened: new Set(['0,0']),
+      history: [],
+      time: 12,
+    };
+    const payload = createRuntimePayload({ seed: 7, exploration });
+    const restored = restoreExploration(payload);
+    expect(restored.map).toEqual(exploration.map);
+    expect(restored.player).toEqual({ x: 0, y: 0 });
+    expect([...restored.listened]).toEqual(['0,0']);
+    expect(restored.time).toBe(12);
+  });
+
+  it('缺地图的坏 payload 不会被当成可恢复行程', () => {
+    expect(restoreExploration(null)).toBeNull();
+    expect(restoreExploration({})).toBeNull();
+    expect(restoreExploration({ map: {}, exploration: {} })).toBeNull();
   });
 });

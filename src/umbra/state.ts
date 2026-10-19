@@ -1,6 +1,6 @@
 import type { BattleState } from '@/types';
 
-export const UMBRA_SCHEMA_VERSION = 1;
+export const UMBRA_SCHEMA_VERSION = 2;
 export const UMBRA_PROFILE_ID = 'current' as const;
 export const UMBRA_LEGACY_ARCHIVE_ID = 'legacy-battle-current' as const;
 
@@ -16,6 +16,7 @@ export interface UmbraProfile {
   social: {
     orgRaidRewards: string[];
   };
+  combat: UmbraCombatState;
   migration: {
     source: 'legacy-battle' | 'fresh';
     capturedAt: Date;
@@ -26,6 +27,22 @@ export interface UmbraProfile {
     shadowsDefeated?: number;
     lastBattleDate?: string;
     maxStratumLevel?: number;
+  };
+}
+
+export interface UmbraCombatState {
+  activePersonaId: string;
+  heroPersonaIds: string[];
+  allyPersonaIds: string[];
+  hp: number;
+  maxHp: number;
+  sp: number;
+  maxSp: number;
+  equipmentBonuses: {
+    attack: number;
+    defense: number;
+    hp: number;
+    sp: number;
   };
 }
 
@@ -71,6 +88,29 @@ const cloneBattleState = (state: BattleState): BattleState => (
     : JSON.parse(JSON.stringify(state)) as BattleState
 );
 
+export function createDefaultUmbraCombat(): UmbraCombatState {
+  return {
+    activePersonaId: 'arsene',
+    heroPersonaIds: ['arsene', 'pixie', 'jack-o-lantern', 'angel'],
+    allyPersonaIds: ['silky', 'cait-sith', 'kelpie'],
+    hp: 52,
+    maxHp: 52,
+    sp: 34,
+    maxSp: 34,
+    equipmentBonuses: { attack: 0, defense: 0, hp: 0, sp: 0 },
+  };
+}
+
+export function normalizeUmbraProfile(profile: UmbraProfile): UmbraProfile {
+  if (profile.schemaVersion === UMBRA_SCHEMA_VERSION && profile.combat) return profile;
+  return {
+    ...profile,
+    schemaVersion: UMBRA_SCHEMA_VERSION,
+    combat: profile.combat ?? createDefaultUmbraCombat(),
+    updatedAt: new Date(),
+  };
+}
+
 /**
  * 旧战场只贡献永久资源与领奖去重，不把当前楼层、战斗临时状态或塔结构带进新系统。
  * 原始 battleState 完整留在归档表，迁移失败或数据核对时可以回看。
@@ -93,6 +133,7 @@ export function planLegacyUmbraMigration(
       social: {
         orgRaidRewards: uniqueStrings(legacy.orgRaidRewards),
       },
+      combat: createDefaultUmbraCombat(),
       migration: {
         source: 'legacy-battle',
         capturedAt,
@@ -123,6 +164,7 @@ export function createFreshUmbraProfile(now = new Date()): UmbraProfile {
     updatedAt: createdAt,
     economy: { sp: 0, totalSpEarned: 0 },
     social: { orgRaidRewards: [] },
+    combat: createDefaultUmbraCombat(),
     migration: {
       source: 'fresh',
       capturedAt: createdAt,

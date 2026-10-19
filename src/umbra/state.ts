@@ -111,6 +111,16 @@ export function normalizeUmbraProfile(profile: UmbraProfile): UmbraProfile {
   };
 }
 
+export function setUmbraActivePersona(profile: UmbraProfile, personaId: string): UmbraProfile {
+  if (!profile.combat.heroPersonaIds.includes(personaId)) return profile;
+  if (profile.combat.activePersonaId === personaId) return profile;
+  return {
+    ...profile,
+    updatedAt: new Date(),
+    combat: { ...profile.combat, activePersonaId: personaId },
+  };
+}
+
 /**
  * 旧战场只贡献永久资源与领奖去重，不把当前楼层、战斗临时状态或塔结构带进新系统。
  * 原始 battleState 完整留在归档表，迁移失败或数据核对时可以回看。

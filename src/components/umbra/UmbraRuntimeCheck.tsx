@@ -9,9 +9,10 @@ import {
   resolveEncounter,
 } from '@/umbra/engine/floor-map';
 import { createDefaultBattle } from '@/umbra/engine/p5-combat-rules';
+import { getPersona } from '@/umbra/engine/p5r-compendium';
 import { createUmbraRunRecord } from '@/umbra/runtime';
 import { createRuntimePayload, restoreExploration, UMBRA_RUN_ID } from '@/umbra/run';
-import { createDefaultUmbraCombat } from '@/umbra/state';
+import { createDefaultUmbraCombat, setUmbraActivePersona } from '@/umbra/state';
 import '@/styles/umbra-runtime.css';
 
 const migrationLabel = (source: 'legacy-battle' | 'fresh' | undefined): string => {
@@ -88,6 +89,15 @@ export function UmbraRuntimeCheck() {
     const record = createUmbraRunRecord(run?.id ?? UMBRA_RUN_ID, payload);
     void useAppStore.getState().saveUmbraRun(record).catch(error => {
       console.warn('[umbra] run checkpoint failed', error);
+    });
+  };
+
+  const selectPersona = (personaId: string) => {
+    if (!profile) return;
+    const updated = setUmbraActivePersona(profile, personaId);
+    if (updated === profile) return;
+    void useAppStore.getState().saveUmbraProfile(updated).catch(error => {
+      console.warn('[umbra] persona checkpoint failed', error);
     });
   };
 
@@ -261,6 +271,37 @@ export function UmbraRuntimeCheck() {
               {migrationLabel(profile?.migration.source)}
             </p>
           </article>
+        </section>
+
+        <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="umbra-accent text-[10px] font-black tracking-[0.25em]">PERSONA LOADOUT</p>
+              <h2 className="mt-1 text-sm font-black text-gray-900 dark:text-gray-100">出战 Persona</h2>
+            </div>
+            <span className="text-xs text-gray-400">
+              当前 · {getPersona(combat.activePersonaId)?.name ?? combat.activePersonaId}
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-4">
+            {combat.heroPersonaIds.map(personaId => {
+              const persona = getPersona(personaId);
+              const active = combat.activePersonaId === personaId;
+              return (
+                <button
+                  key={personaId}
+                  type="button"
+                  data-umbra-persona={personaId}
+                  aria-pressed={active}
+                  onClick={() => selectPersona(personaId)}
+                  className={`umbra-persona-option ${active ? 'is-active' : ''}`}
+                >
+                  <b>{persona?.name ?? personaId}</b>
+                  <small>Lv.{persona?.level ?? '—'}</small>
+                </button>
+              );
+            })}
+          </div>
         </section>
 
         <section className="umbra-note rounded-xl border border-dashed p-5">

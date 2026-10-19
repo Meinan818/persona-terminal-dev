@@ -6,6 +6,7 @@ import {
   UMBRA_SCHEMA_VERSION,
   createFreshUmbraProfile,
   planLegacyUmbraMigration,
+  setUmbraActivePersona,
 } from '@/umbra/state';
 import { createUmbraRunRecord, isUmbraRunCompatible } from '@/umbra/runtime';
 import { createRuntimePayload, restoreExploration } from '@/umbra/run';
@@ -81,6 +82,13 @@ describe('legacy UMBRA migration plan', () => {
     expect(profile.combat.activePersonaId).toBe('arsene');
     expect(profile.combat.hp).toBe(52);
     expect(profile.migration.source).toBe('fresh');
+  });
+
+  it('只能切换正式名录内的出战 Persona', () => {
+    const profile = createFreshUmbraProfile(now);
+    const switched = setUmbraActivePersona(profile, 'pixie');
+    expect(switched.combat.activePersonaId).toBe('pixie');
+    expect(setUmbraActivePersona(profile, 'not-in-roster')).toBe(profile);
   });
 });
 

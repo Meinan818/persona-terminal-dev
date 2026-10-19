@@ -2,6 +2,14 @@
 
 最后更新：2026-10-19（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前开发 · 2026-10-20 · U2d出战Persona进入正式配装
+
+- UMBRA profile 的 4 张主角 Persona 现在可在接管页切换，切换只接受正式名录内 id；选择写入 `umbraProfiles.combat.activePersonaId`，地图遭遇战读取该出战 Persona，测试战仍固定皮克希用于电击弱点回归。
+- 页面显示 Persona 中文名与等级；`data-umbra-persona` / `aria-pressed` 提供稳定检查钩子。Persona 名单仍来自默认战斗配装，尚未接图鉴收集、融合结果和玩家自有名录。
+- 真实 Chrome：4 个 Persona 选项可见，选择皮克希后 IndexedDB profile 的 activePersonaId 为 `pixie`；随后地图移动、吉欧弱点、HOLD UP、总攻击结算和刷新续档继续通过，errors=[]。
+- `state` 正式测试 11/11、`p5-battle` 4/4、`floor-map` 4/4；`npm run typecheck` exit0。下一步 U2e：装备、消耗品/素材背包和商店数值进入 profile/run，再接天鹅绒。
+- 本节点仅本地提交，未 Push、未部署。
+
 ## 当前开发 · 2026-10-20 · U2c正式行程与战斗资源落库
 
 - UMBRA schema 升到 v2：profile 增加正式战斗配装/HP/SP/装备加成快照；旧 v1 profile 会被幂等补齐默认战斗资料，不丢失既有 SP/组织领奖记录。

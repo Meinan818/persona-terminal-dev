@@ -90,6 +90,8 @@ export function createSliceFlow(api) {
   let talkText = '';
   let busy = false;
   let planningMode = 'tower';
+  let requestId = 0;
+  let requestController = null;
 
   function load() {
     try {
@@ -126,6 +128,18 @@ export function createSliceFlow(api) {
   function setStatus(text) {
     status = text;
     if (page === 'planning' || page === 'judging') render();
+  }
+
+  function isCurrentRequest(id, controller) {
+    return active && id === requestId && controller === requestController;
+  }
+
+  function cancelRequest() {
+    requestId += 1;
+    requestController?.abort();
+    requestController = null;
+    busy = false;
+    status = '';
   }
 
   const btn = (label, action, note = '', tone = '', disabled = false) => (
@@ -444,6 +458,7 @@ export function createSliceFlow(api) {
   }
 
   function open() {
+    cancelRequest();
     active = true;
     page = 'day';
     status = '';
@@ -452,6 +467,7 @@ export function createSliceFlow(api) {
   }
 
   function close() {
+    cancelRequest();
     active = false;
     page = 'day';
     save();
@@ -468,28 +484,53 @@ export function createSliceFlow(api) {
     }
     record = text;
     planningMode = mode;
+    const controller = new AbortController();
+    const id = ++requestId;
+    requestController = controller;
+    const isCurrent = () => isCurrentRequest(id, controller);
     busy = true;
     status = '';
     page = 'planning';
     render({ focus: true });
     const date = new Date().toISOString().slice(0, 10);
-    const nextSpec = offlineOnly
-      ? (mode === 'tower' ? towerFloorSpec({ date }) : offlineFloorSpec(text, { date }))
-      : await requestFloorSpec({ mode, record: text, date }, { onStatus: setStatus });
-    spec = nextSpec;
-    const vitals = maxVitals();
-    run = createSliceRun(nextSpec, {
-      hp: Number(state.hp) || vitals.maxHp,
-      sp: Number(state.sp) || vitals.maxSp,
-      maxHp: vitals.maxHp,
-      maxSp: vitals.maxSp,
-    });
-    busy = false;
-    status = '';
-    page = 'night';
-    save();
-    render({ focus: true });
-    window.scrollTo(0, 0);
+    try {
+      const nextSpec = offlineOnly
+        ? (mode === 'tower' ? towerFloorSpec({ date }) : offlineFloorSpec(text, { date }))
+        : await requestFloorSpec(
+          { mode, record: text, date },
+          {
+            signal: controller.signal,
+            onStatus: value => {
+              if (!isCurrent()) return;
+              setStatus(value);
+            },
+          },
+        );
+      if (!isCurrent()) return;
+      spec = nextSpec;
+      const vitals = maxVitals();
+      run = createSliceRun(nextSpec, {
+        hp: Number(state.hp) || vitals.maxHp,
+        sp: Number(state.sp) || vitals.maxSp,
+        maxHp: vitals.maxHp,
+        maxSp: vitals.maxSp,
+      });
+      status = '';
+      page = 'night';
+      save();
+      render({ focus: true });
+      window.scrollTo(0, 0);
+    } catch (error) {
+      if (!isCurrent() || error?.name === 'AbortError') return;
+      status = '这一层没有显形，请再试一次。';
+      page = 'day';
+      render({ focus: true });
+    } finally {
+      if (isCurrent()) {
+        busy = false;
+        requestController = null;
+      }
+    }
   }
 
   function resumeNight() {
@@ -509,6 +550,7 @@ export function createSliceFlow(api) {
   async function sendTalk() {
     if (busy) return;
     const room = currentRoom(run);
+    if (!room) return;
     const field = document.querySelector('#slice-talk');
     const text = cleanTalk(field?.value ?? talkText);
     talkText = text;
@@ -517,29 +559,57 @@ export function createSliceFlow(api) {
       document.querySelector('#slice-talk')?.focus();
       return;
     }
+    const activeRun = run;
+    const controller = new AbortController();
+    const id = ++requestId;
+    requestController = controller;
+    const isCurrent = () => (
+      isCurrentRequest(id, controller) && run === activeRun && currentRoom(run) === room
+    );
     busy = true;
     page = 'judging';
     status = '';
     render({ focus: true });
-    const judged = offlineOnly
-      ? offlineJudge({ text, room })
-      : await requestShadowJudge({ text, room, dayRecord: record }, { onStatus: setStatus });
-    judgement = judged;
-    const resolved = resolveTalk(run, room, judged);
-    if (!resolved.ok) {
-      busy = false;
+    try {
+      const judged = offlineOnly
+        ? offlineJudge({ text, room })
+        : await requestShadowJudge(
+          { text, room, dayRecord: record },
+          {
+            signal: controller.signal,
+            onStatus: value => {
+              if (!isCurrent()) return;
+              setStatus(value);
+            },
+          },
+        );
+      if (!isCurrent()) return;
+      judgement = judged;
+      const resolved = resolveTalk(run, room, judged);
+      if (!resolved.ok) {
+        status = '';
+        page = 'talk';
+        notify(resolved.reason || '这次交涉没有成立。');
+        render({ focus: true });
+        return;
+      }
+      outcome = { ...resolved, room };
+      page = 'result';
+      save();
+      render({ focus: true });
+      window.scrollTo(0, 0);
+    } catch (error) {
+      if (!isCurrent() || error?.name === 'AbortError') return;
       status = '';
       page = 'talk';
-      notify(resolved.reason || '这次交涉没有成立。');
+      notify('它没有回应，请再试一次。');
       render({ focus: true });
-      return;
+    } finally {
+      if (isCurrent()) {
+        busy = false;
+        requestController = null;
+      }
     }
-    outcome = { ...resolved, room };
-    busy = false;
-    page = 'result';
-    save();
-    render({ focus: true });
-    window.scrollTo(0, 0);
   }
 
   function act(action) {
@@ -622,6 +692,7 @@ export function createSliceFlow(api) {
     open,
     close,
     dismiss() {
+      cancelRequest();
       active = false;
       page = 'day';
       status = '';

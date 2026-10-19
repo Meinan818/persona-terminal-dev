@@ -30,13 +30,19 @@ export function createTowerFlow(api){
   const RUN_KEY='maskaria.p5r.run.v1';
   let page=null,receipt=null,clock=null,raf=0,serial=0,recap=null;
   let interlude=null,shopReturn='interlude',shopMessage='',prepMessage='',requestMessage='',fusionPreview=null,fusionMessage='',specialPreview=null,specialMessage='',networkPreview=null,networkMessage='',skillCardSelected='',velvetService='fusion',velvetMessage='',velvetReturn='return',inventoryTab='consumables',inventoryMessage='';
-  let shadowTalk=null,shadowTalkBusy=false;
+  let shadowTalk=null,shadowTalkBusy=false,shadowTalkController=null,shadowTalkRequestId=0;
   const btn=(label,action,note='',disabled=false)=>{
     const tone=typeof disabled==='string'?disabled:'';
     return `<button class="flow-button${tone?` ${tone}`:''}" data-tower="${action}" ${disabled===true?'disabled':''}><span>${label}${note?`<small>${note}</small>`:''}</span>${icon('arrow')}</button>`;
   };
   const frame=(title,en,body)=>`<section class="experience-scene tower-scene" data-tower-scene="${page}"><button class="flow-return" data-tower="back">${icon('back')}<span>返回<small>RETURN</small></span></button><div class="scene-ghost" aria-hidden="true">${en}</div><div class="scene-heading"><h1>${title}</h1><span>${en}</span></div>${body}</section>`;
-  function stop(){cancelAnimationFrame(raf);clock=null;serial++;}
+  function cancelShadowTalk(){
+    shadowTalkRequestId+=1;
+    shadowTalkController?.abort();
+    shadowTalkController=null;
+    shadowTalkBusy=false;
+  }
+  function stop(){cancelAnimationFrame(raf);clock=null;serial++;cancelShadowTalk();}
   const money=()=>Number(state.money)||0;
   const trust=id=>Math.max(0,Math.min(5,Number(state.npcTrust?.[id])||0));
   const gearFx=()=>{
@@ -844,12 +850,17 @@ export function createTowerFlow(api){
     if(!text){shadowTalk.status='总得说点什么。';render({focus:true});return;}
     shadowTalkBusy=true;
     shadowTalk.status='它在听。';
+    const requestId=++shadowTalkRequestId;
+    const controller=new AbortController();
+    shadowTalkController=controller;
+    const isCurrent=()=>requestId===shadowTalkRequestId&&shadowTalkController===controller&&Boolean(shadowTalk);
     render({focus:true});
     try{
-      const room={title:'影子房',shadow:shadowTalk.profile};
+      const room={title:'影子房',shadow:{...shadowTalk.profile}};
       const judged=offlineOnly
         ? offlineJudge({text,room})
-        : await requestShadowJudge({text,room,dayRecord:''},{onStatus:value=>{if(shadowTalk){shadowTalk.status=value;render();}}});
+        : await requestShadowJudge({text,room,dayRecord:''},{signal:controller.signal,onStatus:value=>{if(isCurrent()){shadowTalk.status=value;render();}}});
+      if(!isCurrent())return;
       shadowTalk.judged=judged;
       shadowTalk.status='';
       if(judged.tone==='bribe'&&(Number(state.sp)||0)<20){
@@ -891,10 +902,14 @@ export function createTowerFlow(api){
       api.persistP5State?.();
       saveRun();
     }catch(error){
+      if(!isCurrent())return;
       shadowTalk.status=error?.name==='AbortError'?'你收回了这句话。':'它没有回应，换离线方式再听了一次。';
     }finally{
-      shadowTalkBusy=false;
-      render({focus:true});
+      if(isCurrent()){
+        shadowTalkBusy=false;
+        shadowTalkController=null;
+        render({focus:true});
+      }
     }
   }
   function screen(){
@@ -1091,10 +1106,10 @@ export function createTowerFlow(api){
       render({focus:true});
       return;
     }
-    if(action==='shadow-talk-back'){page=null;renderMap();return;}
+    if(action==='shadow-talk-back'){cancelShadowTalk();page=null;renderMap();return;}
     if(action==='shadow-talk-send'){void sendShadowTalk();return;}
-    if(action==='shadow-talk-fight'){page=null;enter();return;}
-    if(action==='shadow-talk-continue'){page=null;renderMap();return;}
+    if(action==='shadow-talk-fight'){cancelShadowTalk();page=null;enter();return;}
+    if(action==='shadow-talk-continue'){cancelShadowTalk();page=null;renderMap();return;}
     if(action.startsWith('room:')){
       const [,x,y]=action.split(':').map(Number);
       const path=findMapPath(x,y);
@@ -1313,7 +1328,7 @@ export function createTowerFlow(api){
       if(page==='gear'){show('prep');return;}
       if(page==='inventory'){show('prep');return;}
       if(page==='velvet'){show(velvetReturn);return;}
-      if(page==='shadow-talk'||page==='shadow-talk-result'){page=null;renderMap();return;}
+      if(page==='shadow-talk'||page==='shadow-talk-result'){cancelShadowTalk();page=null;renderMap();return;}
       if(page==='prep'){stop();page=null;api.goRoom('battle');return;}
       if(page==='interlude'){routeBack();return;}
       if(page==='return'){stop();page=null;api.goRoom('battle');return;}

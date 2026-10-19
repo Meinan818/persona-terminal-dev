@@ -128,3 +128,105 @@ test('预览桥明确标记 preview，且不覆盖真实桥', async () => {
     else globalThis.MASKARIA_AI = previous;
   }
 });
+
+
+test('桥忽略 signal 时超时会回到离线判定', async () => {
+  await withBridge({
+    judgeShadowTalk: async () => new Promise(() => {}),
+  }, async () => {
+    const started = Date.now();
+    const judged = await requestShadowJudge({
+      text: '我想和你讲理。',
+      room: { shadow: { personality: 'calm', demand: '说清楚。' } },
+    }, { timeoutMs: 15 });
+    assert.equal(judged.mode, 'offline');
+    assert.ok(Date.now() - started < 500);
+  });
+});
+
+test('外部取消会立即结束请求，即使桥忽略 signal', async () => {
+  const controller = new AbortController();
+  await withBridge({
+    judgeShadowTalk: async () => new Promise(() => {}),
+  }, async () => {
+    const pending = requestShadowJudge({ text: '先停一下。' }, {
+      signal: controller.signal,
+      timeoutMs: 5000,
+    });
+    controller.abort();
+    await assert.rejects(pending, error => error?.name === 'AbortError');
+  });
+});
+
+test('桥同步抛错也会回到离线判定', async () => {
+  await withBridge({
+    judgeShadowTalk: () => { throw new Error('bad bridge'); },
+  }, async () => {
+    const judged = await requestShadowJudge({ text: '我想和你讲理。' }, { timeoutMs: 15 });
+    assert.equal(judged.mode, 'offline');
+  });
+});
+
+test('交涉桥拿到的是受限副本，不能改写原始输入', async () => {
+  const room = {
+    id: 'shadow-1',
+    title: '影子房',
+    kind: 'shadow',
+    danger: 'high',
+    shadow: { name: '回声', personality: 'calm', opening: '停下。', demand: '说清楚。' },
+    reward: { itemId: 'painkiller', money: 99999 },
+  };
+  const history = [{ role: 'player', text: '旧话', secret: 'drop-me' }];
+  let received;
+  await withBridge({
+    judgeShadowTalk: async input => {
+      received = input;
+      input.room.shadow.name = '被桥改过';
+      input.history[0].text = '被桥改过';
+      return { tone: 'reason', quality: 70, reply: '听见了。' };
+    },
+  }, async () => {
+    const judged = await requestShadowJudge({
+      text: '我想和你讲理。', room, history, dayRecord: '白天记录',
+    });
+    assert.equal(judged.mode, 'ai');
+  });
+  assert.equal(room.shadow.name, '回声');
+  assert.equal(history[0].text, '旧话');
+  assert.equal(received.room.reward, undefined);
+  assert.equal(received.history[0].secret, undefined);
+});
+
+test('坏的模型判定不会标成 ai', async () => {
+  await withBridge({
+    judgeShadowTalk: async () => ({ tone: 'nonsense', quality: 'later', reply: '' }),
+  }, async () => {
+    const judged = await requestShadowJudge({
+      text: '我想和你讲理。',
+      room: { shadow: { personality: 'calm', demand: '说清楚。' } },
+    });
+    assert.equal(judged.mode, 'offline');
+    assert.notEqual(judged.tone, 'nonsense');
+  });
+});
+
+test('坏桥篡改收到的交涉副本也不能带偏离线兜底', async () => {
+  const input = {
+    text: '好。',
+    room: { shadow: { personality: 'calm', demand: '说清楚。' } },
+  };
+  const expected = await requestShadowJudge(input);
+  await withBridge({
+    judgeShadowTalk: async received => {
+      received.text = '因为你等了很久，所以我想听你解释。'.repeat(8);
+      received.room.shadow.demand = '因为你等了很久，所以我想听你解释。';
+      received.room.shadow.personality = 'greedy';
+      return { tone: 'nonsense', quality: 'later', reply: '' };
+    },
+  }, async () => {
+    const judged = await requestShadowJudge(input);
+    assert.equal(judged.mode, 'offline');
+    assert.equal(judged.quality, expected.quality);
+    assert.equal(judged.reply, expected.reply);
+  });
+});

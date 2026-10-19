@@ -14,32 +14,108 @@ import {
   towerFloorSpec,
 } from './night-slice.js';
 
+function namedError(name, message) {
+  const error = new Error(message);
+  error.name = name;
+  return error;
+}
+
 function withTimeout(run, timeoutMs, signal) {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(namedError('AbortError', 'aborted'));
+      return;
+    }
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const onAbort = () => controller.abort();
+    let settled = false;
+    const onAbort = () => {
+      controller.abort();
+      finish(reject, namedError('AbortError', 'aborted'));
+    };
+    const timer = setTimeout(() => {
+      controller.abort();
+      finish(reject, namedError('TimeoutError', 'timed out'));
+    }, timeoutMs);
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+    };
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback(value);
+    };
     signal?.addEventListener('abort', onAbort, { once: true });
-    run(controller.signal).then(
-      value => {
-        clearTimeout(timer);
-        signal?.removeEventListener('abort', onAbort);
-        resolve(value);
-      },
-      error => {
-        clearTimeout(timer);
-        signal?.removeEventListener('abort', onAbort);
-        reject(error);
-      },
-    );
+    Promise.resolve()
+      .then(() => run(controller.signal))
+      .then(value => finish(resolve, value), error => finish(reject, error));
   });
+}
+
+const copyText = (value, max) => (
+  typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, max) : ''
+);
+
+function snapshotShadow(shadow) {
+  if (!shadow || typeof shadow !== 'object') return undefined;
+  return {
+    name: copyText(shadow.name, 24),
+    personality: copyText(shadow.personality, 24),
+    opening: copyText(shadow.opening, 80),
+    demand: copyText(shadow.demand, 50),
+  };
+}
+
+function snapshotRoom(room) {
+  if (!room || typeof room !== 'object') return null;
+  const snapshot = {
+    id: copyText(room.id, 24),
+    kind: copyText(room.kind, 12),
+    title: copyText(room.title, 28),
+    line: copyText(room.line, 110),
+    danger: copyText(room.danger, 12),
+  };
+  const shadow = snapshotShadow(room.shadow);
+  if (shadow) snapshot.shadow = shadow;
+  return snapshot;
+}
+
+function snapshotHistory(history) {
+  if (!Array.isArray(history)) return [];
+  return history.slice(-12).map(entry => {
+    if (!entry || typeof entry !== 'object') return null;
+    const item = {
+      role: copyText(entry.role, 20),
+      text: copyText(entry.text, 160),
+      tone: copyText(entry.tone, 20),
+      reply: copyText(entry.reply, 110),
+    };
+    const quality = Number(entry.quality);
+    if (Number.isFinite(quality)) item.quality = Math.max(0, Math.min(100, Math.round(quality)));
+    return item;
+  }).filter(Boolean);
+}
+
+function snapshotRoster(roster) {
+  if (!Array.isArray(roster)) return [];
+  return roster.slice(0, 12).map(item => {
+    if (typeof item === 'string') return copyText(item, 40);
+    if (!item || typeof item !== 'object') return null;
+    return {
+      id: copyText(item.id, 24),
+      name: copyText(item.name, 40),
+      arcana: copyText(item.arcana, 24),
+      level: Number.isFinite(Number(item.level)) ? Number(item.level) : undefined,
+    };
+  }).filter(Boolean);
 }
 
 /**
  * 一条记录 → 夜层规格。
  * 模型超时、抛错、坏 JSON 或缺房间，都退回同一份离线夜层，不阻塞入夜。
  */
-export async function requestFloorSpec(input = {}, { signal, onStatus } = {}) {
+export async function requestFloorSpec(input = {}, { signal, onStatus, timeoutMs = 8000 } = {}) {
   const mode = input.mode === 'tower' ? 'tower' : 'record';
   const record = mode === 'tower' ? '' : cleanRecord(input.record);
   const seedInput = { record, date: input.date, seed: input.seed, mode };
@@ -51,11 +127,11 @@ export async function requestFloorSpec(input = {}, { signal, onStatus } = {}) {
   try {
     onStatus?.('它正在读你白天留下的那句话……');
     const raw = await withTimeout(
-      timeoutSignal => bridge({ mode, record, date: input.date, roster: input.roster ?? [] }, {
+      timeoutSignal => bridge({ mode, record, date: input.date, roster: snapshotRoster(input.roster) }, {
         signal: timeoutSignal,
         onStatus,
       }),
-      8000,
+      timeoutMs,
       signal,
     );
     onStatus?.('楼层正在合拢。');
@@ -71,30 +147,36 @@ export async function requestFloorSpec(input = {}, { signal, onStatus } = {}) {
  * 玩家自由输入 → 影子对语气和质量的判断。
  * 模型只给 tone / quality / reply；成功率由 night-slice.js 计算。
  */
-export async function requestShadowJudge(input = {}, { signal, onStatus } = {}) {
-  const text = cleanRecord(input.text) || '';
+export async function requestShadowJudge(input = {}, { signal, onStatus, timeoutMs = 7000 } = {}) {
+  const safeInput = {
+    text: cleanRecord(input.text) || '',
+    room: snapshotRoom(input.room),
+    history: snapshotHistory(input.history),
+    dayRecord: cleanRecord(input.dayRecord),
+  };
   const bridge = globalThis.MASKARIA_AI?.judgeShadowTalk;
   if (typeof bridge !== 'function') {
     onStatus?.('影子没有接上模型，只能用离线方式听你说话。');
-    return offlineJudge(input);
+    return offlineJudge(safeInput);
   }
   try {
     onStatus?.('它在听。');
+    const bridgeInput = {
+      text: safeInput.text,
+      room: snapshotRoom(safeInput.room),
+      history: snapshotHistory(safeInput.history),
+      dayRecord: safeInput.dayRecord,
+    };
     const raw = await withTimeout(
-      timeoutSignal => bridge({
-        text,
-        room: input.room,
-        history: input.history ?? [],
-        dayRecord: input.dayRecord,
-      }, { signal: timeoutSignal, onStatus }),
-      7000,
+      timeoutSignal => bridge(bridgeInput, { signal: timeoutSignal, onStatus }),
+      timeoutMs,
       signal,
     );
-    return normalizeJudge(raw, input);
+    return normalizeJudge(raw, safeInput);
   } catch (error) {
     if (error?.name === 'AbortError' && signal?.aborted) throw error;
     onStatus?.('它没有接上模型，换离线方式听完了。');
-    return offlineJudge(input);
+    return offlineJudge(safeInput);
   }
 }
 

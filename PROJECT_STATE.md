@@ -2,6 +2,28 @@
 
 最后更新：2026-10-19（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前续办 · 2026-10-19 · R4离线请求生命周期已完成并验证
+
+### 接手与改动
+
+- 用户说明上个对话异常终止并明确接手开发。接手时 HEAD 为 `c15a63d`，分支 `codex/p5r-compendium-data`；R4 四个业务/测试文件已有上个会话留下的未提交半成品。先核差异和失败复现后继续，没有清场、没有覆盖无关改动。
+- **AI 请求包装器**：`withTimeout` 现在会在外部取消或超时时真正结束外层等待，桥忽略 `signal` 也不会永久挂起；已预检已取消 signal，并隔离同步抛错。没有 bridge 时仍明确走离线。
+- **输入/输出边界**：楼层 roster、交涉 room/history/dayRecord 均按白名单复制和限长；模型桥拿到独立副本，不能借引用改原始交涉资料，也不能篡改坏返回后的离线兜底。`normalizeJudge` 对非法 mode/tone/quality/reply 统一回离线，不再把坏对象标成 `ai`。
+- **晚到结果隔离**：塔内 `sendShadowTalk` 增加 AbortController 和请求序号；退开、拔刀、继续、返回、通用离开都会取消当前请求，晚到回复不能再扣 HP/SP、改警戒/钱/掉落/存档或抢回页面。AI LAB 的 `planNight` / `sendTalk`、`close` / `dismiss` 同样接入请求身份与取消；关闭后重开时，旧请求不能覆盖新楼层。
+
+### 验证与证据
+
+- 先写失败回归再修复：新增 `night-slice-flow-lifecycle.test.mjs`、`shadow-talk-lifecycle.test.mjs`，并补坏桥篡改输入的用例。相关三文件 **17/17** 通过。
+- 全 Demo `node --test --test-reporter=tap` **234/234**、exit0；证据 `.rivet/scratch/demo-roadmap-20261019/r4-lifecycle-tests.tap`。四个改动 JS 与两个新测试均 `node --check` 通过，`git diff --check` 通过。
+- 独立 Chrome 真实浏览器 **3/3** 通过：交涉等待中“先退开”、等待中“拔刀”、等待中切到 `#battle`，随后让合成桥回复晚到；每条都对比离开前后存档，page/result 未重开，run/profile 存档不变。证据 `.rivet/scratch/demo-roadmap-20261019/r4-lifecycle-browser/report.json`、三张截图与探针 `r4-lifecycle-browser.mjs`，errors=[]。
+- 浏览器使用可控制延迟的合成 bridge，只证明取消、超时和晚到隔离；**不是真实模型调用**，也没有把 preview 冒充 ai。截图已目视确认：退开后仍在地图，拔刀后进入战斗，切页后离开塔层。
+
+### 边界与下一步
+
+- 本节点仅本地提交，最终 SHA 用 `git log -1 --format='%h %s' -- PROJECT_STATE.md` 核实；未 Push、未部署、未打包、未接正式 App、未收费调用、未生图，原 Podfile/旧换行/缓存/交付产物继续保留。
+- 本机 Demo 已启动：`http://127.0.0.1:5196/?theme=p5&shadow=1&slice-ai=off#battle`。真实桥验证要去掉 `slice-ai=off` 并注入 `MASKARIA_AI.judgeShadowTalk`；当前 Demo 自身没有真实 provider。
+- **下一节点由 Codex 负责离线准备**：把现有安全 AI 通路到 `judgeShadowTalk` 的适配边界单独核清，准备一次真实成功与一次失败降级验证；真实调用所需连接、费用/额度和配置范围未获本轮授权，不能自行收费或把凭据写进前端。R5 整轮玩法验收、R6 正式 UMBRA 接回继续单列。
+
 ## 准备交接 · 2026-10-19 · 桌面/手机P5已验收，R4只完成源码排查、尚未实施
 
 ### 接手先核现场

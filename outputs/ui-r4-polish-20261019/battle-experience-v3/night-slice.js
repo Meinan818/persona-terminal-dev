@@ -773,12 +773,17 @@ export function offlineReply(tone, personality, quality) {
 export function normalizeJudge(raw, input = {}) {
   const fallback = offlineJudge(input);
   if (!raw || typeof raw !== 'object') return fallback;
+  const mode = raw.mode === undefined || raw.mode === 'ai' || raw.mode === 'preview'
+    ? (raw.mode === 'preview' ? 'preview' : 'ai')
+    : null;
   const quality = Number(raw.quality);
+  const reply = cleanText(raw.reply, 110);
+  if (!mode || !TONES.includes(raw.tone) || !Number.isFinite(quality) || !reply) return fallback;
   return {
-    mode: raw.mode === 'preview' ? 'preview' : 'ai',
-    tone: TONES.includes(raw.tone) ? raw.tone : fallback.tone,
-    quality: Number.isFinite(quality) ? clamp(Math.round(quality), 0, 100) : fallback.quality,
-    reply: cleanText(raw.reply, 110) || fallback.reply,
+    mode,
+    tone: raw.tone,
+    quality: clamp(Math.round(quality), 0, 100),
+    reply,
   };
 }
 

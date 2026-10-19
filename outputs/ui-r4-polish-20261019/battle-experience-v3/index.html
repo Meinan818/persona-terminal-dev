@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#1557ee">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%231b57ff' d='M0 0h24v24H0z'/%3E%3Cpath fill='white' d='m4 4 16 0-2 12-6 5-6-5z'/%3E%3C/svg%3E">
+  <title>MASKARIA · 逆影战场</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./combat.css">
+  <link rel="stylesheet" href="./refinements.css">
+  <link rel="stylesheet" href="./experience.css">
+  <link rel="stylesheet" href="./combat-motion.css">
+  <link rel="stylesheet" href="./tower-flow.css">
+  <link rel="stylesheet" href="./v2-entry.css">
+  <link rel="stylesheet" href="./mobile-battle.css">
+  <link rel="stylesheet" href="./negotiation.css">
+  <link rel="stylesheet" href="./night-slice.css">
+  <link rel="stylesheet" href="./battle-engine.css">
+  <script>/* 主题：?theme=p3|hamuko|p4|p5，或记住上次选择；默认 P3 影时间。hamuko = P3 的同一套 DOM/样式基底 + data-skin="hamuko" 粉色皮肤 */(function(){var q=new URLSearchParams(location.search).get('theme'),t=q||localStorage.getItem('maskaria-theme')||'p3';if(!/^(p[345]|hamuko)$/.test(t))t='p3';if(q)localStorage.setItem('maskaria-theme',t);var r=document.documentElement;if(t==='hamuko'){r.dataset.theme='p3';r.dataset.skin='hamuko';}else{r.dataset.theme=t;delete r.dataset.skin;}})();</script>
+  <link rel="stylesheet" href="./theme-base.css">
+  <link rel="stylesheet" href="./theme-p3.css">
+  <link rel="stylesheet" href="./p3-signature-fx.css">
+  <link rel="stylesheet" href="./theme-p4.css">
+  <link rel="stylesheet" href="./theme-p5.css">
+  <link rel="stylesheet" href="./reload-p3.css">
+  <link rel="stylesheet" href="./reload-p4.css">
+  <link rel="stylesheet" href="./reload-p5.css">
+  <link rel="stylesheet" href="./reload-hamuko.css">
+  <link rel="stylesheet" href="./ui-interaction.css">
+  <script src="./shadow-hour.js" defer></script>
+  <script src="./app.js" type="module"></script>
+  <script src="./reload-p3.js" defer></script>
+  <script src="./reload-p4.js" defer></script>
+  <script src="./reload-p5.js" defer></script>
+  <script src="./reload-hamuko.js" defer></script>
+</head>
+<body>
+  <svg class="svg-defs" aria-hidden="true"><defs>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6"/></symbol>
+    <symbol id="i-sword" viewBox="0 0 24 24"><path d="m5 19 3-3m-3-4 7 7M8 13 18 3h3v3L11 16"/></symbol>
+    <symbol id="i-tower" viewBox="0 0 24 24"><path d="M5 21h14M8 21V9h8v12M9 9V3h6v6M6 9h12M11 13h2m-2 4h2"/></symbol>
+    <symbol id="i-mask" viewBox="0 0 24 24"><path d="M4 4h16v7c0 5-5 9-8 10-3-1-8-5-8-10V4Z"/><path d="m7 9 3 2m7-2-3 2m-5 5h6"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m3 7 9-4 9 4v12l-9 3-9-3V7Zm0 0 9 4 9-4M12 11v11m-5-17 10 4"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="m9 3-1 3-3 1-2 3 2 3-1 3 3 3 3-1 3 2 3-2 3-1 1-4-2-2 1-4-3-2-3 1-2-3Z"/><circle cx="11.5" cy="11.5" r="3"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 4v5c0 4-5 8-8 9-3-1-8-5-8-9V7l8-4Z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></symbol>
+    <symbol id="i-chevrons" viewBox="0 0 24 24"><path d="m11 4-8 8 8 8m10-16-8 8 8 8"/></symbol>
+  </defs></svg>
+  <div class="sea" aria-hidden="true"><i></i><i></i><b></b><b></b></div>
+  <div class="ghost-word" aria-hidden="true">SHADOW</div>
+  <div class="sh-app-deco" aria-hidden="true"><div class="sh-moon"></div><div class="sh-word">DARK HOUR</div><div class="sh-water"><i></i><i></i><i></i><i></i><i></i></div><div class="sh-ripple"></div><div class="sh-ripple"></div></div>
+  <header class="masthead">
+    <div class="sh-app-clock" aria-hidden="true"><b>0<span>:</span>00</b><i></i><em>THE DARK HOUR</em></div>
+    <a href="#battle" class="brand">MASKARIA<span>面具庭园</span></a>
+    <button class="icon-button settings-button" aria-label="战场设置" aria-controls="sheet" aria-haspopup="dialog" aria-expanded="false" data-action="settings"><svg aria-hidden="true"><use href="#i-gear"/></svg><span>设置<small>SETTINGS</small></span></button>
+  </header>
+  <nav class="room-nav" aria-label="战场区域">
+    <a href="#battle" data-room="battle"><svg><use href="#i-sword"/></svg><span>战斗<small>BATTLE</small></span></a>
+    <a href="#tower" data-room="tower"><svg><use href="#i-tower"/></svg><span>登塔<small>ASCEND</small></span></a>
+    <a href="#persona" data-room="persona"><svg><use href="#i-mask"/></svg><span>Persona<small>PERSONA</small></span></a>
+    <a href="#arsenal" data-room="arsenal"><svg><use href="#i-box"/></svg><span>武库<small>ARSENAL</small></span></a>
+  </nav>
+  <main id="content" tabindex="-1"></main>
+  <div class="sweep" aria-hidden="true"><i></i><b></b><span>SHADOW</span></div>
+  <div class="hit-fx" aria-hidden="true"><i></i><strong></strong></div>
+  <dialog id="sheet" aria-labelledby="sheet-title"><div class="sheet-top"><h2 id="sheet-title"></h2><button class="icon-button" data-action="close-sheet" aria-label="关闭"><svg><use href="#i-close"/></svg></button></div><div id="sheet-body"></div></dialog>
+  <p class="toast" role="status" aria-live="polite"></p>
+</body>
+</html>

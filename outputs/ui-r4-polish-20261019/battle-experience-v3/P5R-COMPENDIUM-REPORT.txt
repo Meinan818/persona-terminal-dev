@@ -1,0 +1,201 @@
+P5R 图鉴数据接入与校验报告
+
+日期：2026-10-18  
+范围：`outputs/battle-experience-v3/` demo 数据层  
+未触碰：`src/` 正式应用、后端、存档、路由、页面结构、CSS、构建产物与生产环境
+
+## 1. 这次做了什么
+
+现有页面还是 `p5-velvet-lab.html` / `p5-velvet-lab.js`，没有重做 UI。
+
+数据链路改成：
+
+```text
+p5-velvet-lab.js
+  → velvet-rules.js
+  → p5r-compendium.js
+  → p5r-compendium-data.js
+```
+
+其中：
+
+- `p5r-compendium-data.js`：生成后的 P5R 数据文件
+- `p5r-compendium.js`：按 ID/名称查询、二体融合、rare 融合、特殊融合、完整性检查
+- `velvet-rules.js`：继续向页面提供原有的 `PERSONAS` / `fuse` / `register` / `withdraw` 接口
+- `../../scripts/import-p5r-compendium.mjs`：数据转换脚本
+
+页面 DOM、CSS、路由和操作流程未改。
+
+## 2. 数值口径
+
+按 2026-10-18 的最终要求，以下四类数据作为游戏数值保留：
+
+- Persona 等级
+- 力 / 魔 / 耐 / 速 / 运五项基础属性
+- 物 / 枪 / 火 / 冰 / 电 / 风 / 念 / 核 / 祝 / 咒十项抗性
+- 每个技能的学习等级
+
+另外保留技能名、技能效果、SP 消耗、特性、电椅物品、特殊融合与 DLC 等结构字段。
+
+当前 demo 的旧结果卡还需要 HP、SP、攻击、防御四项，因此：
+
+- `stats.attack` 映射 P5R 的“力”
+- `stats.defense` 映射 P5R 的“耐”
+- `stats.hp` 沿用 demo 的 `30 + level`
+- `stats.sp` 沿用 demo 的 `20 + level`
+- 真正的五项 P5R 属性同时保存在 `sourceStats`
+
+HP/SP 不会被标成 P5R 原作数值；伤害结算和后续平衡仍由本项目自己定。
+
+## 3. 数据来源与许可
+
+### P5R Fusion Planner
+
+- 仓库：https://github.com/AemiliusXIV/P5R-Fusion-Planner
+- 固定提交：`d23ca126c8e9282f94cadc7036529eaa8af4eb5b`
+- 使用文件：
+  - `src/data/PersonaDataRoyal.ts`
+  - `src/data/SkillDataRoyal.ts`
+  - `src/data/Data5Royal.ts`
+- 许可证：Apache License 2.0
+- 上游：`persona5_calculator`（chinhodado）与 `persona-fusion-calculator`（Anthony Lieuallen）
+- 未使用其 `companion/` GPL-3.0 目录
+
+### aqiu384/megaten-fusion-tool
+
+- 仓库：https://github.com/aqiu384/megaten-fusion-tool
+- 固定提交：`0b207612f6cdcff092e62af16f5c355271a1d892`
+- 许可证：Unlicense
+- 用途：Persona、等级、属性、抗性、技能和特殊合成的交叉核对
+
+### 女神转生 WIKI（Biligame）
+
+- 页面：https://wiki.biligame.com/persona/P5R/%E4%BA%BA%E6%A0%BC%E9%9D%A2%E5%85%B7%E5%9B%BE%E9%89%B4
+- 修订：`13298`
+- 开放许可：未声明；站点页脚标注 `COPYRIGHT © 2009-2026 BILIBILI ALL RIGHTS RESERVED`
+- 使用范围：只取 Persona 中文/日文展示名，并交叉核对等级、阿卡纳和抗性
+- 未复制页面正文、模板、图片、技能表或美术资源
+
+## 4. 导入结果
+
+| 项目 | 数量 |
+|---|---:|
+| Persona | 232 |
+| 技能 | 525 |
+| 阿卡纳组合 | 273 |
+| 特殊融合 | 24 |
+| 稀有 Persona | 9 |
+| DLC 分组 | 13 |
+| DLC Persona | 25 |
+| Confidant 限定 Persona | 23 |
+| Wiki 展示名匹配 | 232 / 232 |
+| Wiki 技能页匹配 | 488 / 525 |
+| Persona 页面实际显示技能条 | 1,614 条，全部中文 |
+| 全有序配对检查 | 53,824 |
+| 有效融合配对 | 49,206 |
+| 去重融合结果 | 202 |
+
+数据文件大小：2,207,596 字节。
+
+技能显示名来自 `P5R/技能` 页面的中英文名对照。当前 232 个 Persona 实际展示的 1,614 条技能记录都已匹配中文名；另外 37 个未被这些 Persona 使用的技能记录暂时没有 Wiki 中文页匹配，数据中保留英文键，不会影响当前图鉴显示：
+
+`All-out Attack Boost`、`Attract`、`Conceal`、`EXP Boost`、`Famine's Scream`、`Great Aim`、`Kuzunoha's Order`、`Life Boost`、`Life Leech`、`Money Boost`、`Nuke Wall`、`Null Burn`、`Null Despair`、`Null Fear`、`Null Freeze`、`Null Hunger`、`Null Mortal`、`Null Shock`、`Resist Burn`、`Resist Curse`、`Resist Elec`、`Resist Fire`、`Resist Freeze`、`Resist Hunger`、`Resist Ice`、`Resist Nuke`、`Resist Phys`、`Resist Rage`、`Resist Shock`、`Reverse Rub`、`Samurai's Ruling`、`Self-Destruct`、`Soul Touch`、`Spirit Leech`、`Stealth`、`Stomach Blow`、`Summon`。
+
+## 5. 校验结果
+
+已验证：
+
+- Persona ID 重复：0
+- 英文名重复：0
+- 中文名重复：0
+- 缺失技能引用：0
+- 五项属性长度/范围错误：0
+- 十项抗性长度/编码错误：0
+- 技能学习等级错误：0
+- 阿卡纳组合引用错误：0
+- 特殊融合结果/原料引用错误：0
+- DLC 分组缺失：0
+- DLC Persona 未分组：0
+- Confidant 引用错误：0
+- 53,824 个有序配对都能返回目录内 Persona 或 `null`
+
+自动化测试：
+
+- demo Node 测试：53 / 53 通过
+- 项目 `npm test -- --runInBand`：45 文件 / 286 项通过
+- 项目 `npm run typecheck`：退出 0
+- `node --check`：数据、查询层、velvet 规则、转换脚本均通过
+
+真实浏览器：
+
+- 1440×900：232 张卡正常显示，无横向溢出
+- 390×844：232 张卡正常显示，无横向溢出
+- `errors=[]`
+- 实际执行“贝利亚 + 内比罗斯 → 爱丽丝”
+- 结果卡：`爱丽丝 / 死神 / Lv.83 / 咒怨 / HP 113 / SP 103 / 攻 45 / 防 49`
+- Persona 名、技能名、属性和结果卡标签均显示中文；融合键仍使用英文 canonical name
+
+## 6. 战斗接入进度
+
+这一轮已经把 P5R 目录接到战斗实验台：
+
+- 新增 `p5r-battle-adapter.js`，把 232 个 Persona 统一转成战斗单位。
+- `p5-combat-lab` 可以从 232 个 Persona 中选主战 Persona，不再写死旧五张面具。
+- 等级、五项属性、十项抗性、技能学习等级继续来自 P5R 数据。
+- HP/SP、伤害数字、技能威力、状态效果强度仍是本项目自己的 demo 平衡层。
+- 敌方弱点一开始显示“未发现”；攻击到某属性后只揭示该属性；洞察可主动揭示一项。
+- Baton Pass 会结束原行动者回合，把追加行动交给队友；换面具会消耗本回合行动。
+- 已支持蓄力/专心致志的下一击倍率、即死技能判定、复活技能、基础支援和异常状态；复杂技能尚未全部覆盖。
+- 交涉收服结果已经从真实 P5R 目录取 Persona，不再走旧的临时人物。
+- P3 爬塔节点开始带 P5 遭遇数据（等级、弱点、HP、收服目标），但主蓝色战斗页还没有整体切到新战斗引擎。
+
+主蓝色 demo 已先把弱点文案改成“未发现”，实际命中后才显示“已发现”；它的整体战斗结算仍是旧的演示逻辑，不能把本轮当成完整 P5R 战斗已经完成。
+
+## 7. 仍未完成的 P5 战斗项
+
+- 完整技能效果库：复活、解除异常、反射/吸收墙、蓄力/专心致志的完整回合规则。
+- 全套 Technical 组合与状态持续回合。
+- 暴击、倒地、1 More、Baton Pass、总攻击的完整 P5R 数值和社群加成。
+- 敌人意图、Boss 多阶段、Showtime、全体攻击目标和更多队友。
+- 主蓝色 demo 的正式战斗 UI 与正式 BattleEngine 接入。
+
+## 8. 冲突与缺失
+
+### 已确认冲突
+
+1. Mara 等级
+   - P5R Fusion Planner：73
+   - megaten-fusion-tool：73
+   - 中文 Wiki：77
+   - 处理：保留两个 GitHub 数据源一致的 73
+
+2. Take-Minakata 电抗
+   - P5R Fusion Planner：耐
+   - megaten-fusion-tool：耐
+   - 中文 Wiki：反
+   - 处理：保留两个 GitHub 数据源一致的“耐”
+
+3. Power 枪抗
+   - P5R Fusion Planner：弱
+   - 中文 Wiki：弱
+   - megaten-fusion-tool：无
+   - 处理：保留 Planner + Wiki 一致的“弱”
+
+### 名称等价归并
+
+交叉核对时只做了比较用归并，没有改最终字段：
+
+- `Drain *` → `Absorb *`
+- `Gattling Blows` → `Gatling Blows`
+- `Kusi Mitama` → `Kushi Mitama`
+- `Mithra` → `Mitra`
+
+### Wiki 有、P5R 目录没有的 27 个剧情/同伴形态
+
+这些条目不在 P5R Fusion Planner 的 232 条可融合/图鉴目录中，因此没有用 Wiki 数值补造：
+
+迪亚哥、佐罗、墨丘利、威廉、船长基德、齐天大圣、卡门、赫卡忒、赛莱斯廷、神须佐之男、五郎吉、五右卫门、安娜迪、艾格尼丝、琼安、普罗米修斯、死灵之书、阿尔阿吉夫、米莱狄、露西、阿斯塔尔塔、罗宾汉、凡娜迪丝、艾拉、赫里沃德、灰姑娘、洛基。
+
+### 许可边界
+
+中文/日文 Persona、技能、特性和物品展示名所在 Wiki 未声明开放许可。当前只在本机自用原型中保留短名称，不包含 Wiki 正文、模板、图片或数值表；若以后公开分发，需要移除这些展示名或取得明确授权。

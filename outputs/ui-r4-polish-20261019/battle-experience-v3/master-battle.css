@@ -1,0 +1,504 @@
+/* Runtime integration for the user-provided P3 shadow-hour master. */
+body.master-battle {
+  margin: 0;
+  overflow: hidden;
+  background: #01040f;
+}
+
+body.master-battle .masthead,
+body.master-battle .room-nav,
+body.master-battle .ghost-word,
+body.master-battle .sea {
+  display: none !important;
+}
+
+body.master-battle #content {
+  position: fixed;
+  inset: 0;
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+#master-fit {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 70% 10%, #0c2a8a 0, #051557 40%, #020a2a 85%);
+}
+
+#master-fit .st {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--master-scale, 1));
+  transform-origin: center center;
+}
+
+#master-fit .st.m {
+  transform: translate(-50%, -50%) scale(var(--master-scale, 1));
+}
+
+@media (min-width: 761px) {
+  #master-stage .cmds {
+    top: 130px;
+  }
+}
+
+.st button,
+.st .back,
+.st .set {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.st .back {
+  position: absolute;
+}
+
+.st .set {
+  position: absolute;
+}
+
+.st .ask .yn {
+  display: flex;
+  gap: 18px;
+}
+
+.st .ask .yn .n2 {
+  background: rgba(6, 25, 90, 0.9);
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+
+.st .ask .yn > button {
+  position: relative;
+  flex: 1;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 900 26px var(--sans);
+  cursor: pointer;
+  clip-path: polygon(22px 0, 100% 0, calc(100% - 22px) 100%, 0 100%);
+}
+
+.st .ask .yn > button.y {
+  background: var(--wh);
+  color: var(--navy);
+}
+
+.st .ask .yn > button.n {
+  background: rgba(6, 25, 90, 0.9);
+  color: var(--ice);
+  border: 1px solid var(--ice);
+}
+
+.st .ask .yn > button.n2 {
+  background: rgba(6, 25, 90, 0.9);
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+
+.st .ask .yn > button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.st .p3-talk {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  background: rgba(1, 4, 15, 0.78);
+}
+
+.st .p3-talk-card {
+  width: min(680px, 80%);
+  padding: 26px 30px 28px;
+  color: var(--wh);
+  background: rgba(6, 25, 90, 0.96);
+  border-top: 2px solid var(--cy);
+  border-bottom: 2px solid var(--pk);
+  box-shadow: 0 0 40px rgba(63, 240, 255, 0.2), 12px 12px 0 rgba(1, 4, 15, 0.45);
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+}
+
+.st .p3-talk-card > span {
+  color: var(--cy);
+  font: italic 700 13px var(--cd);
+  letter-spacing: 0.18em;
+}
+
+.st .p3-talk-card h2 {
+  margin: 8px 0 4px;
+  font: italic 800 42px/1 var(--cd);
+  letter-spacing: 0.02em;
+}
+
+.st .p3-talk-card p {
+  color: #b9dcff;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.st .p3-talk-card .talk-quote {
+  margin: 14px 0;
+  padding: 12px 16px;
+  color: var(--wh);
+  background: rgba(20, 70, 216, 0.35);
+  border-left: 3px solid var(--pk);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.st .p3-talk-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.st .p3-talk-options button,
+.st .p3-talk-card .talk-fight,
+.st .p3-talk-card .talk-action {
+  min-height: 50px;
+  padding: 9px 13px;
+  border: 1px solid rgba(191, 246, 255, 0.35);
+  color: var(--ice);
+  background: rgba(2, 10, 42, 0.72);
+  text-align: left;
+  cursor: pointer;
+}
+
+.st .p3-talk-options button:hover,
+.st .p3-talk-card .talk-fight:hover,
+.st .p3-talk-card .talk-action:hover {
+  border-color: var(--cy);
+}
+
+.st .p3-talk-options b {
+  display: block;
+  color: var(--wh);
+  font-size: 15px;
+}
+
+.st .p3-talk-options small {
+  display: block;
+  margin-top: 4px;
+  color: #8fb4ff;
+  font-size: 11px;
+}
+
+.st .p3-talk-options button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.st .p3-talk-card .talk-fight {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  color: #ffb2ca;
+}
+
+.st .p3-talk-card .talk-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.st .p3-talk-card .talk-actions button {
+  flex: 1;
+  min-height: 48px;
+  background: var(--wh);
+  color: var(--navy);
+  font-weight: 900;
+}
+
+.st .p3-talk-card .talk-loading {
+  color: var(--cy);
+  font-size: 13px;
+}
+
+.st .pm.a3 {
+  width: 390px;
+  bottom: 236px;
+}
+
+.st .pm.a3 .av {
+  width: 48px;
+  height: 48px;
+}
+
+.st .pm.a3 .nm {
+  width: 100px;
+}
+
+.st .pm.a3 .nm i {
+  display: none;
+}
+
+.st .pm.a3 .gs {
+  padding-right: 20px;
+}
+
+.st .pm.a3 .g em {
+  font-size: 23px;
+  width: 44px;
+}
+
+.st.target-0 .ring {
+  left: 385px;
+  top: 445px;
+}
+
+.st.target-0 .tri {
+  left: 369px;
+  top: 300px;
+}
+
+.st.target-1 .ring {
+  left: 615px;
+  top: 385px;
+}
+
+.st.target-1 .tri {
+  left: 599px;
+  top: 205px;
+}
+
+.st.m.target-0 .ring {
+  left: 101px;
+  top: 235px;
+}
+
+.st.m.target-0 .tri {
+  left: 90px;
+  top: 137px;
+}
+
+.st.m.target-1 .ring {
+  left: 261px;
+  top: 201px;
+}
+
+.st.m.target-1 .tri {
+  left: 250px;
+  top: 104px;
+}
+
+.st .shift-targets {
+  display: flex;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.st .shift-targets button {
+  min-height: 32px;
+  padding: 4px 9px;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  background: rgba(2, 10, 42, 0.88);
+  font: 900 11px var(--sans);
+  cursor: pointer;
+}
+
+.st .shift-targets button:hover {
+  color: var(--navy);
+  background: var(--gold);
+}
+
+.st .foe .foe-svg {
+  position: absolute;
+  inset: 0;
+}
+
+.st .foe .asset {
+  inset: auto;
+}
+
+.st .foe .foe-caption {
+  position: absolute;
+  left: 50%;
+  top: 238px;
+  width: 230px;
+  margin-left: -115px;
+  color: #9fc0ff;
+  font: 700 11px var(--sans);
+  text-align: center;
+}
+
+.st .foe .foe-caption b {
+  display: block;
+  color: var(--wh);
+  font-size: 14px;
+}
+
+.st .intent p strong {
+  color: var(--wh);
+}
+
+.st .ecard .wk {
+  flex-wrap: wrap;
+}
+
+.st .ecard .wk div {
+  width: 50px;
+}
+
+.st .ecard .wk small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.st .party .pm .me-persona {
+  position: absolute;
+  left: 96px;
+  bottom: 10px;
+  color: #9fc0ff;
+  font: 700 10px var(--sans);
+}
+
+.st .cmd[aria-pressed="true"] .bg {
+  background: var(--wh);
+  border-color: var(--pk);
+}
+
+.st .cmd[aria-pressed="true"] b {
+  color: var(--navy);
+  font-size: 56px;
+}
+
+.st .cmd[aria-pressed="true"] span {
+  color: var(--blue);
+}
+
+.st .cmd[aria-pressed="true"] small {
+  color: var(--pk);
+}
+
+.st .cmd[aria-pressed="true"]:before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  margin-top: -10px;
+  border: 10px solid transparent;
+  border-left: 16px solid var(--pk);
+  z-index: 2;
+}
+
+.st .cmd:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.st .skp .sk.locked {
+  opacity: 0.35;
+}
+
+.st .skp .sk[aria-pressed="true"] .bg {
+  background: var(--wh);
+}
+
+.st .skp .sk[aria-pressed="true"] b {
+  color: var(--navy);
+}
+
+.st .skp .sk[aria-pressed="true"] i,
+.st .skp .sk[aria-pressed="true"] .ds {
+  color: var(--blue);
+}
+
+.st .skp .sk[aria-pressed="true"] .c {
+  color: var(--pk);
+}
+
+.st .skp .item-chip {
+  margin-left: auto;
+  padding: 4px 8px;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  background: rgba(2, 10, 42, 0.72);
+  font: 900 10px var(--sans);
+  cursor: pointer;
+}
+
+.st .skp .item-chip:hover {
+  color: var(--navy);
+  background: var(--gold);
+}
+
+.st .master-empty {
+  color: #9fc0ff;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .st .p3-talk-card {
+    width: 340px;
+    padding: 18px 16px 20px;
+  }
+
+  .st .p3-talk-card h2 {
+    font-size: 32px;
+  }
+
+  .st .p3-talk-options {
+    grid-template-columns: 1fr;
+  }
+
+  .st .pm.a3 {
+    width: 195px;
+    right: 195px;
+    bottom: 88px;
+    height: 30px;
+    padding-left: 20px;
+  }
+
+  .st .pm.a3 .av {
+    width: 30px;
+    height: 30px;
+    margin-right: 6px;
+  }
+
+  .st .pm.a3 .nm {
+    width: 62px;
+  }
+
+  .st .pm.a3 .nm b {
+    font-size: 12px;
+  }
+
+  .st .pm.a3 .gs {
+    padding-right: 8px;
+  }
+
+  .st .pm.a3 .g em {
+    font-size: 16px;
+    width: 28px;
+  }
+
+  .st .ask .yn {
+    width: 340px;
+    margin-left: -170px;
+    gap: 8px;
+  }
+
+  .st .ask .yn > button {
+    height: 56px;
+    font-size: 19px;
+  }
+
+  .st .foe .foe-caption {
+    display: none;
+  }
+}

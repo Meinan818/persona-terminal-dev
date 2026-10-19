@@ -56,3 +56,16 @@ test('默认新行程使用新的随机种子，而显式 seed=0 仍可复现', 
   fixed.start();
   assert.equal(fixed.journey.runSeed, 0);
 });
+
+
+test('最终Boss结算后移除可继续行程，刷新不能复活同一Boss重复领奖', t => {
+  const { state, store } = harness(t);
+  const model = createDungeonRun({ seed: 7 });model.start();model.beginFloor(39);
+  store.set('maskaria.p5r.run.v1', JSON.stringify({ version: 1, journey: model.journey, map: null, explore: null }));
+  const flow = createTowerFlow({ state, icon: () => '', render() {}, reduced: { matches: true }, goRoom() {}, startFight() {}, persistP5State() {} });
+  flow.act('continue-run');flow.act('send-calling');flow.act('enter');
+  assert.equal(flow.pendingBattle, true);
+  flow.battleReturn(true, 2, { drops: [], summary: '两阶段战斗胜利' });
+  assert.equal(flow.snapshot.ended, 'clear');
+  assert.equal(store.has('maskaria.p5r.run.v1'), false);
+});

@@ -311,11 +311,29 @@ export function createTowerFlow(api){
     raf=requestAnimationFrame(tick);
   }
   function show(next){stop();page=next;render({focus:true});scrollTo(0,0);}
+  const finiteVital=value=>typeof value==='number'&&Number.isFinite(value);
+  const partyVitalsSnapshot=party=>Object.fromEntries(
+    Object.entries(party&&typeof party==='object'&&!Array.isArray(party)?party:{})
+      .filter(([,v])=>v&&finiteVital(v.hp)&&finiteVital(v.sp))
+      .map(([id,v])=>[id,{hp:Math.max(0,v.hp),sp:Math.max(0,v.sp)}]),
+  );
+  function restoreRunVitals(vitals){
+    // 旧行程没有资源快照时保留既有状态；只恢复白名单，不合并任意存档字段。
+    if(!vitals||typeof vitals!=='object'||Array.isArray(vitals))return;
+    if(finiteVital(vitals.heroMaxHp)&&vitals.heroMaxHp>0)state.heroMaxHp=vitals.heroMaxHp;
+    if(finiteVital(vitals.heroMaxSp)&&vitals.heroMaxSp>=0)state.heroMaxSp=vitals.heroMaxSp;
+    if(finiteVital(vitals.hp))state.hp=Math.max(0,Math.min(state.heroMaxHp??52,vitals.hp));
+    if(finiteVital(vitals.sp))state.sp=Math.max(0,Math.min(state.heroMaxSp??34,vitals.sp));
+    if(vitals.partyVitals&&typeof vitals.partyVitals==='object'&&!Array.isArray(vitals.partyVitals)){
+      state.partyVitals=partyVitalsSnapshot(vitals.partyVitals);
+    }
+  }
   function serializeRun(){
     if(!j.active||j.ended)return null;
     return {
       version:1,
       savedAt:Date.now(),
+      vitals:{hp:state.hp,sp:state.sp,heroMaxHp:state.heroMaxHp,heroMaxSp:state.heroMaxSp,partyVitals:partyVitalsSnapshot(state.partyVitals)},
       journey:{...j,map:null,explore:null},
       map:j.map?{...j.map}:null,
       explore:j.explore?{...j.explore,map:null,listened:[...j.explore.listened]}:null,
@@ -339,6 +357,7 @@ export function createTowerFlow(api){
       const data=JSON.parse(localStorage.getItem(RUN_KEY)??'null');
       if(!data?.journey?.active||data.journey.ended)return false;
       Object.assign(j,data.journey);
+      restoreRunVitals(data.vitals);
       if(data.map)j.map=data.map;
       if(data.explore){
         j.explore={...data.explore,map:j.map,listened:new Set(data.explore.listened??[])};
@@ -1203,6 +1222,7 @@ export function createTowerFlow(api){
       const result=useInventoryItem(state,action.slice('use-item:'.length));
       inventoryMessage=result.ok?`使用 ${result.label}，${result.kind==='heal'?'HP':result.kind==='sp'?'SP':''} +${result.amount}。`:result.reason;
       api.persistP5State?.();
+      if(result.ok)saveRun();
       render({focus:true});
       return;
     }
@@ -1314,7 +1334,7 @@ export function createTowerFlow(api){
     event.preventDefault();
     act(`move:${dir}`);
   });
-  return {screen,route,act,start,showRecap,prep(){return prepPage();},...debugMode?{debugJump,debugOpenChest,debugFightShadow,debugShadowTalk,debugGuardian,debugExit}:{},get snapshot(){return {active:j.active,floor:j.floor,maxFloor:j.maxFloor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss','elite','guardian','shadow'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
+  return {screen,route,act,start,showRecap,checkpoint:saveRun,prep(){return prepPage();},...debugMode?{debugJump,debugOpenChest,debugFightShadow,debugShadowTalk,debugGuardian,debugExit}:{},get snapshot(){return {active:j.active,floor:j.floor,maxFloor:j.maxFloor,ended:j.ended};},get active(){return j.active;},get page(){return page;},get pendingBattle(){return j.active&&['mob','boss','elite','guardian','shadow'].includes(j.pending?.kind)&&!j.pending.resolved&&!j.ended;},
     hide(){stop();page=null;},recordLoot(reward){return model.addLoot(reward);},
     preview(next){if(next!=='return'&&next!=='velvet')return false;model.start(state.towerStratum);j.request=createRequest(requestForStratum(state.towerStratum));j.floor=j.maxFloor;j.ended='clear';interlude={battle:{summary:'这一夜的最后一道影子，已经散了。'},rested:false,party:[]};fusionPreview=null;fusionMessage='';specialPreview=null;specialMessage='';networkPreview=null;networkMessage='';velvetService='fusion';velvetMessage='';velvetReturn='return';skillCardSelected='';prepMessage='';requestMessage='';page=next;return true;},
     battleReturn(won,phase,battleResult){
@@ -1385,6 +1405,7 @@ export function createTowerFlow(api){
       }
       interlude={battle:battleResult,rested:false,party:captureParty(),personaProgress:{id:xpPersonaId,name:built?.name??xpPersonaId,xpGain,...progress},reward:{money:moneyGain,items,sp:spGain}};
       model.advance();
+      if(j.ended)clearRun();else saveRun();
       page=(wasBoss||j.ended==='clear')?'return':'interlude';
     },
     defeat(){model.end('defeat');clearRun();show('defeat');},

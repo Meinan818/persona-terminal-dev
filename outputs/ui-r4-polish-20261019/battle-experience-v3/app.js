@@ -1437,7 +1437,7 @@ document.addEventListener('click',event=>{
     if(kind==='equip'){const result=equipItem(state.equipment,state.ownedEquipment,arg);if(result.ok){state.equipment=result.equipment;notify(`${result.item.name} 已装备`);}else notify(result.reason);}
     else if(kind==='unequip'){const result=unequipItem(state.equipment,arg);if(result.ok){state.equipment=result.equipment;notify('装备已卸下');}else notify(result.reason);}
     else if(kind==='upgrade'){const result=upgradeEquipment(state,arg);notify(result.ok?`${result.label} 强化到 +${result.level}`:result.reason);}
-    else if(kind==='use'){const result=useInventoryItem(state,arg);notify(result.ok?`${result.label} 已使用`:result.reason);}
+    else if(kind==='use'){const result=useInventoryItem(state,arg);if(result.ok)flows.checkpointTower();notify(result.ok?`${result.label} 已使用`:result.reason);}
     else if(kind==='sell'){const result=sellInventoryItem(state,arg,1);notify(result.ok?`卖出 ${result.label}，+¥${result.gain}`:result.reason);}
     else if(kind==='relic'){
       if(state.equipped.has(arg))state.equipped.delete(arg);

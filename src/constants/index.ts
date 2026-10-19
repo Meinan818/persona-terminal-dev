@@ -226,7 +226,7 @@ export const ACHIEVEMENTS = [
   {
     id: 'shadow_slayer_5',
     title: '华丽征服',
-    description: '在逆影战场中累计击败5次Shadow',
+    description: '在UMBRA（幽影协议）中累计击败5次Shadow',
     icon: '⚔️',
     unlocked: false,
     condition: { type: 'shadow_defeats' as const, value: 5 }
@@ -492,7 +492,7 @@ export const EVENT_POOL = [
   }
 ];
 
-// ── 逆影战场常量 ──────────────────────────────────────────
+// ── UMBRA（幽影协议）常量 ──────────────────────────────────────────
 
 // 引擎 v2 数值重锚（BATTLE_UPGRADE_PLAN_V2 §9.2，模拟战跑测后定标：
 // 聪明策略下 Lv1-2 单晚可胜、Lv3 五五开、Lv4-5 单晚推 55-70%，两三晚通关）

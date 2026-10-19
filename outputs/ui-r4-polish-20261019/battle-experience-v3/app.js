@@ -1,3 +1,4 @@
+import {currentUmbraIdentity,syncUmbraTitle} from './module-identity.js';
 import {createEncounterDirector,escapeHtml as esc} from './encounters.js';
 import {createPreparationDirector} from './preparation.js';
 import {visualArt} from './art.js';
@@ -23,6 +24,7 @@ import { xpNeeded } from './persona-progress.js';
 import { createNpcTrust } from './npcs.js';
 import { createSliceFlow } from './night-slice-flow.js';
 installPreviewNegotiationBridge();
+syncUmbraTitle();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const content = $('#content');
@@ -85,7 +87,7 @@ const ARCANA_LABELS = {
   world:'世界', faith:'信念', consultant:'顾问',
 };
 const PARTY_CANDIDATE_IDS = ['cait-sith', 'agathion', 'kelpie', 'mandrake', 'archangel', 'principality'];
-// 逆影战场重做：新模块独立存档；旧版 `maskaria.p5.preview.v1` 不读取、不迁移。
+// UMBRA（幽影协议）重做：新模块独立存档；旧版 `maskaria.p5.preview.v1` 不读取、不迁移。
 const P5_PREVIEW_KEY = 'maskaria.p5r.rebuild.v1';
 const BASE_MASK_IDS = new Set(['arsene', 'pixie', 'jack-o-lantern', 'silky', 'succubus', 'izanagi']);
 state.heroPersonaIds = masks.map(mask => mask.id);
@@ -387,8 +389,8 @@ function openSheet(title, html) {
 }
 function home() {
   const journey=flows.towerSnapshot;
-  if (fixture === 'no-persona'&&!state.personaCreated) return `${heading('逆影战场','SHADOW BATTLE')}<div class="home-grid"><div class="hero-stage"><div aria-hidden="true">${figure()}</div><span class="sh-home-glint" aria-hidden="true"></span></div><section class="mission"><h2>先遇见你的 Persona</h2><p>选择你的面具，再踏入影时间。</p>${mainButton('开始觉醒','awaken-persona')}<p class="info-note">还没有面具回应你。</p></section></div>`;
-  return `${heading('逆影战场','SHADOW BATTLE','影时间没有尽头。')}
+  if (fixture === 'no-persona'&&!state.personaCreated) return `${heading(currentUmbraIdentity().zh,currentUmbraIdentity().en)}<div class="home-grid"><div class="hero-stage"><div aria-hidden="true">${figure()}</div><span class="sh-home-glint" aria-hidden="true"></span></div><section class="mission"><h2>先遇见你的 Persona</h2><p>选择你的面具，再踏入影时间。</p>${mainButton('开始觉醒','awaken-persona')}<p class="info-note">还没有面具回应你。</p></section></div>`;
+  return `${heading(currentUmbraIdentity().zh,currentUmbraIdentity().en,'影时间没有尽头。')}
     <div class="home-grid"><div class="hero-stage" aria-hidden="true">${figure()}<span class="slash-label">与另一个自己，同路。</span><span class="sh-home-glint" aria-hidden="true"></span></div>
       <section class="mission"><span class="slash-label">${preparation.settings.enabled?'影时间进行中':'战场暂未启用'}</span><h2>${journey.ended?'塔门已关。':'下一层还在。'}</h2><p>${journey.ended?`本次抵达 ${journey.floor}F。`:`当前 ${journey.floor}F。路线还没有决定。`}</p>
         <div class="mission-line"><span>当前区段</span><b>第 ${Math.max(1, Math.ceil((journey.floor || 1) / 10))} 区段</b></div>

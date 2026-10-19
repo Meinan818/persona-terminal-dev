@@ -471,7 +471,7 @@
   })();
 
   var coveredKey = '', cal, crt, chan, comic, lastKey = '', lastHold = false, lastShow = false;
-  var channelNames = { battle: ['01', '逆影战场'], tower: ['02', '登塔'], persona: ['03', 'PERSONA'], arsenal: ['04', '武库'] };
+  var channelNames = { battle: ['01', 'Mayonaka TV'], tower: ['02', '登塔'], persona: ['03', 'PERSONA'], arsenal: ['04', '武库'] };
   function sceneKey() {
     var c = document.getElementById('content');
     if (!c) return '';

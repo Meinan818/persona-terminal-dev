@@ -1,3 +1,4 @@
+import { useUmbraIdentity } from '@/ui/useUmbraIdentity';
 import { motion, AnimatePresence } from 'motion/react';
 import { ModalPortal } from '@/components/ModalPortal';
 import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from 'react';
@@ -524,6 +525,7 @@ const SplashStyleButton = ({
 };
 
 export const Settings = () => {
+  const umbraIdentity = useUmbraIdentity();
   const {
     user,
     settings,
@@ -2179,7 +2181,7 @@ export const Settings = () => {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span aria-hidden className="text-gray-500 dark:text-gray-300"><SwordsIcon className="h-[18px] w-[18px]" /></span>
-                              <h4 className="text-sm font-bold text-gray-800 dark:text-white">逆影战场</h4>
+                              <h4 className="text-sm font-bold text-gray-800 dark:text-white">{umbraIdentity.en}</h4>
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-semibold">已关闭</span>
                             </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">

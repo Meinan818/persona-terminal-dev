@@ -940,7 +940,7 @@ export default function SummaryModal({ isOpen, onClose, defaultPeriod = 'week', 
                               transition={{ duration: 0.18 }}
                               className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed overflow-hidden"
                             >
-                              包括：逆影战场击破、本周目标、逆流、升级 / 成就 / 技能解锁 等。
+                              包括：UMBRA（幽影协议）击破、本周目标、逆流、升级 / 成就 / 技能解锁 等。
                               同伴（带"同伴"标签的条目）始终会被统计。
                             </motion.p>
                           )}

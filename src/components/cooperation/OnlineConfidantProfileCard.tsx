@@ -496,7 +496,7 @@ export function OnlineConfidantProfileCard({
             {/* SP 归处提示 */}
             {!battleState && (
               <p className="mt-3 text-[10px] text-center leading-relaxed" style={{ color: '#6b6591' }}>
-                Ta 给你的 SP 会先攒在通知里；开启逆影战场后自动入账。
+                Ta 给你的 SP 会先攒在通知里；开启UMBRA（幽影协议）后自动入账。
               </p>
             )}
             {canPrayDisabledReason && (

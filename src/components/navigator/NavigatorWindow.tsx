@@ -510,7 +510,7 @@ export const NavigatorWindow = () => {
       const app = useAppStore.getState();
       const cur = app.battleState;
       if (!cur?.pendingCatLetter) return; // 已被其他实例投递
-      useNavigatorStore.getState().pushCat(`📮 逆影战场·败因复盘\n${cur.pendingCatLetter.text}`);
+      useNavigatorStore.getState().pushCat(`📮 UMBRA（幽影协议）·败因复盘\n${cur.pendingCatLetter.text}`);
       void app.saveBattleState({ ...cur, pendingCatLetter: undefined });
     }, 2200);
     return () => clearTimeout(t);

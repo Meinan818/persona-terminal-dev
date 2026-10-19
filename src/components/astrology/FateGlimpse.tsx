@@ -695,7 +695,7 @@ function FateRitual({
                       )}
                     </div>
                     <p className="mt-1.5 text-[11px] leading-relaxed" style={{ color: 'rgba(239,230,200,0.85)' }}>
-                      逆影战场伤害 <b style={{ color: GOLD }}>+10%</b> · 每日首次记录，最高的那项属性加点额外 <b style={{ color: GOLD }}>+1</b>
+                      UMBRA（幽影协议）伤害 <b style={{ color: GOLD }}>+10%</b> · 每日首次记录，最高的那项属性加点额外 <b style={{ color: GOLD }}>+1</b>
                     </p>
                   </motion.div>
 

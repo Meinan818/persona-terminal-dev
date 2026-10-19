@@ -433,7 +433,7 @@ export async function saveMyCardFromUi(orgId: string, input: { tarotId: string; 
 export async function setShownMasksFromUi(orgId: string, attrs: AttributeId[]): Promise<number> {
   const view = viewOf(orgId);
   const st = useAppStore.getState();
-  if (attrs.length && !st.persona) throw new OrgError('还没有人格面具：先去逆影战场唤醒一张');
+  if (attrs.length && !st.persona) throw new OrgError('还没有人格面具：先去UMBRA（幽影协议）唤醒一张');
   if (attrs.length > ORG_MAX_SHOWN_MASKS) throw new OrgError(`最多展示 ${ORG_MAX_SHOWN_MASKS} 张`);
   const personas = maskSnapshots(attrs);
   const base = myCardFor(view);

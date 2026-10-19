@@ -115,7 +115,7 @@ export const QUEST_TEMPLATES: Record<QuestTemplateId, QuestTemplate> = {
   images_2: { id: 'images_2', tier: 10, target: 2, hint: '给本周的记录附上照片' },
   summary_1: { id: 'summary_1', tier: 10, target: 1, hint: '周报、月报任一份' },
   ledger_3: { id: 'ledger_3', tier: 5, target: 3, hint: '在心相记账里记 3 笔' },
-  battle_once: { id: 'battle_once', tier: 10, target: 1, hint: '进逆影战场打一晚' },
+  battle_once: { id: 'battle_once', tier: 10, target: 1, hint: '进UMBRA（幽影协议）打一晚' },
   important_2: { id: 'important_2', tier: 5, target: 2, hint: '给本周的记录点两颗星' },
   life_3: { id: 'life_3', tier: 10, target: 3, hint: '在上面的今日委托里挑，加入并做完' },
 };

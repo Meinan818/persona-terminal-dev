@@ -1,3 +1,4 @@
+import { useUmbraIdentity } from '@/ui/useUmbraIdentity';
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '@/store';
@@ -20,6 +21,7 @@ const ScanLines = ({ opacity = 0.5 }: { opacity?: number }) => (
 );
 
 export const BattleDashboardWidget = () => {
+  const umbraIdentity = useUmbraIdentity();
   // 逐字段订阅（A2）：首页常驻件，别让每次 store 写入都把它重算一遍
   const persona = useAppStore(s => s.persona);
   const shadow = useAppStore(s => s.shadow);
@@ -72,7 +74,7 @@ export const BattleDashboardWidget = () => {
         type="button"
         whileTap={{ x: 2, y: 3 }}
         onClick={() => setCurrentPage('battle')}
-        aria-label={inShadowTime ? '逆影战场：影时间进行中' : '逆影战场'}
+        aria-label={inShadowTime ? `${umbraIdentity.full}：影时间进行中` : umbraIdentity.full}
         className="relative block h-full min-h-[86px] w-full cursor-pointer select-none text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c00008]"
       >
         <span aria-hidden className="pointer-events-none absolute inset-0" style={{ transform: 'translate(5px, 6px)', background: P5R.ink, clipPath: roughBanner(47.7) }} />
@@ -90,7 +92,7 @@ export const BattleDashboardWidget = () => {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[17px] font-black leading-tight" style={{ color: P5R.white, fontFamily: P5_TITLE_FONT, textShadow: '2px 2px 0 #000000' }}>
-              逆影战场
+              {umbraIdentity.en}
             </span>
             <span className="mt-1 block truncate text-[12px] font-bold" style={{ color: P5R.white }}>{status}</span>
           </span>
@@ -185,7 +187,7 @@ export const BattleDashboardWidget = () => {
         {/* P4 的仪式卡只有半栏宽：眉标行把「影 / 显形时刻」收进来，右侧不再单开一列，
             省下的横向空间全给状态文案（否则"唤醒 Persona →"会被截成"唤…"）。 */}
         <p className={`flex items-center gap-1 whitespace-nowrap font-black uppercase mb-0.5 ${isP4 ? 'text-[10px]' : 'text-[10px] tracking-widest'} ${isP4 && inShadowTime ? 'text-[var(--p4-orange,#f9a11b)]' : labelCls}`}>
-          逆影战场
+          {umbraIdentity.en}
           {isP4 && <P4Sparkle size={9} color={inShadowTime ? 'var(--p4-orange,#f9a11b)' : 'var(--ui-accent)'} />}
           {isP4 && (inShadowTime ? (
             <motion.span

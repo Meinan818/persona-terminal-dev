@@ -2,9 +2,63 @@
 
 最后更新：2026-10-19（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 接手第一入口 · 2026-10-19 · 第二次压缩收尾：正式更名待续
+
+### 当前决定与范围
+
+- 用户最新指令“正式更名”：内部统一 **UMBRA（幽影协议）**；蓝色/粉色 **TARTARUS（塔尔塔罗斯）**；红色 **Mementos（印象空间）**；黄色 **Mayonaka TV（电视世界）**；自定义 **UMBRA（幽影协议）**。名称已写入代码，尚未完成正式 App 真实入口验收，不能报全部完成。
+- 仅命名展示：不改 battle 路由、存档键、数据库表、规则或布局；正式 App 本次只同步命名，不接入 Demo 玩法。保留旧文件路径和历史名称，不批量重写历史。素材继续暂缓；无收费模型/生图、无部署、无 Push 授权。
+- 唯一 Demo 源码 `E:\MASKARIA\outputs\ui-r4-polish-20261019\battle-experience-v3\`；旧 `outputs/battle-experience-v3/` 只作历史对照。本节之后的 R0–R3 细节仍有效，旧的“功能冻结”只作历史。
+
+### Git 现场与保存边界
+
+- 分支 `codex/p5r-compendium-data`；收尾父提交 `b179e308a270e06be2675fd81d62e82ff8b6cd6b`。此前依次保存 `db87538`（基线）、`c74303d`（遭遇锁）、`11a410d`（40F兼容）、`b179e30`（领奖顺序/种子）。
+- 本次将命名代码、测试、既有计划书和本日志精确保存为**待续检查点**，提交标题以 `wip(umbra)` 开头，不当作完成/发布。最终 SHA 以 `git log -1 --format='%H %s' -- PROJECT_STATE.md` 和用户回执为准，父提交须为上述 b179e30；不改写历史。
+- 分支无 upstream；收尾前相对本地 `origin/main` 引用领先158，检查点成功后预计159。未核实时远端，不能把本地引用计数称为实时未推条数。本轮未 Push。
+- 无关遗留仍保留：`ios/App/Podfile`、旧 Demo `P5-P3-FUSION.md` 换行，`.cache/`、`.impeccable/`、`.rivet-config.json`、其他未跟踪旧 outputs/安装包/交付包；不得 stash/reset/restore/clean，不夹带提交。
+
+### 更名源码地图（均在本检查点范围）
+
+- 正式 App：新增 `src/utils/umbraIdentity.ts`、`src/ui/useUmbraIdentity.ts`、`src/utils/umbraIdentity.test.ts`。从用户真实 theme 获取名称，不跟随可单独定制的视觉频道；custom/未知回退 UMBRA。
+- 正式入口：`src/pages/Menu.tsx`、`src/pages/Settings.tsx`、`src/components/BattleDashboardWidget.tsx`、`src/components/battle/BattleArena.tsx` 同步各主题名称/无障碍文案；红色沿用四字拼贴“印象空间”及英文 Mementos，不新做布局。
+- 跨主题帮助/组织/同步隐私/成就/导航等文案改内部统一全名。路由、ID、玩法均未改。剩余源码中的旧名主要为历史注释，不为更名批量改动。
+- Demo：新增 `module-identity.js`/`.test.mjs`，同步 `app.js`、`index.html`、`preparation.js`、`reload-p4.js` 的标题、标签页、设置与黄色频道名；仅增加 custom 名称回退，不新增自定义主题编辑界面。
+- 既有 `docs/策划书-P5R逆影战场重做.md` 顶部已定稿命名，文件路径保留。精修目录 `README*.txt` 首行仍旧模块名，**尚未同步**；用目录枚举获取实际路径（旧文件名显示乱码），不要猜路径或覆盖旧 zip。
+
+### 已有验证与未完成（本次压缩后没有重跑）
+
+证据根：`E:\MASKARIA\.rivet\scratch\demo-roadmap-20261019\`。
+
+- 正式 App `npm run typecheck` 通过（exit0）：`rename-typecheck.log`。
+- 正式 App `npm test -- --reporter=dot`：46文件、298/298，exit0。日志实际为 `E:\MASKARIA\.rivet\scratch\demo-roadmap-202610-roadmap-unused.log`（原路径有笔误，勿引用不存在的修正路径）。
+- Demo `node --test --test-reporter=tap`：212/212，`rename-demo-tests.tap`；app.js/preparation.js 语法检查通过。
+- scratch Vite构建已完成，收尾只查询原 exec88601 获 exit0、17.33s，保留既有 >500kB chunk 警告。`rename-build.log`，产物 `rename-build/`，未覆盖 dist、未部署。不能称零警告。
+- 浏览器：Demo p3/hamuko/p5/p4/custom × 1440/320，50/50（标题、设置、存档不变、无水平溢出）。正式 App首组 blue/1440：菜单新名与实际点击后 store到 battle 通过，但 root文本包含“塔尔塔罗斯”的断言失败；总计52/53，errors=[]。**正式 App 真实入口及其余主题/尺寸尚未通过**，0 JS错误不等于流程通过。
+- 原失败保留：`rename-browser.log`、`rename-browser/report.json`，十张 Demo截图同目录。未人工查看截图，不宣称视觉验收或手机真机覆盖。浏览器已退出，合成用户数据与用户真实浏览器/存档隔离。
+- 探针 `rename-browser-probe.mjs` 点击后只等1500ms。可能为异步加载/转场或实际业务缺陷，**根因未定位，不把猜测写成结论**。首次失败未保存正式 App失败DOM/截图，需要接续时先取证。
+
+### 唯一下一任务与操作入口
+
+1. 合法接续窗口先只读核本入口、AGENTS、Git和本次回执。定位正式 App blue/1440 的入口失败：记录实际 root/body文本、可见DOM与截图，再决定是否修探针等待或业务。使用有界等待实际标题，不只等store。新证据另存，保留原失败。
+2. 补齐正式 App五主题及窄屏、运行中换主题名称更新检查；同步现有 README 名称。遵守既有UI保护，不借更名重做视觉。完成后再正常提交，提供本地验收入口，不能以测试代用户主观验收。
+3. 更名闭环后回原 R3整轮游玩、补给与两套配装平衡。此前 R3模型初探未完整复刻XP/补给，不能作为平衡结论。R4收费AI、R5用户验收、R6玩法正式接回仍有独立边界。
+
+收尾时只读健康核实：5196与5198根路径均HTTP 200；仅证明服务可达，不代表正式 App入口验收通过。
+
+服务（接续必须先核HTTP，不信旧PID）：Demo `http://127.0.0.1:5196/?theme=p3`，精修根目录 `$env:PORT='5196'; node serve.mjs`；正式 App隔离预览 `http://127.0.0.1:5198/`，根目录 `node node_modules/vite/bin/vite.js --config .rivet/scratch/demo-roadmap-20261019/rename-vite.config.mts`。该配置 envDir指向scratch空目录、cache在E盘、API固定本地离线地址，不读凭据。旧exec分别78204/92027，仅供定位，不保证存活。构建命令 `node node_modules/vite/bin/vite.js build --config .rivet/scratch/demo-roadmap-20261019/rename-vite.config.mts --outDir .rivet/scratch/demo-roadmap-20261019/rename-build`，仅在合法接续后按需执行，不覆盖已有交付。
+
+### 本次专用交接回执（不复用历史回执）
+
+- 回执标识：`umbra-rename-compact2-20261019-b179e30`；本源聊天 compact计数=2。
+- source：当前聊天；target：null（未创建）。status：`blocked-native-tool-unavailable`，**不是 success**。
+- 本次已检查可用工具及 MCP资源/模板：无 create_thread/handoff_thread/list_threads 或工具搜索入口；资源仅Creative Production，模板为空。无法创建原生接续聊天/设置所要求模型，不用子代理或替代调度冒充接续。
+- sourceWillModifySharedFiles：本次待续检查点成功后为false；之后停止共享写入及业务/测试。finalCommit：包含本节且父提交为 b179e30 的 `wip(umbra)` 提交，以 `git log -1 --format='%H %s' -- PROJECT_STATE.md` 和最终用户回执核实。
+- 本任务未建立自动化；当前工具也无自动化枚举/迁移入口，不能声称已检查/迁移机器上其他自动化，不新增替代机制。
+- 阻碍只在原生接续能力；如由用户手动新建聊天，应明确带入本文件及检查点 SHA 作为新接手授权，先核现场，不把这份失败回执冒充成功迁移。源窗口不再继续业务写入。
+
 ## 当前开发 · 2026-10-19 · R0–R2 已保存，R3 待续；用户要求正式更名
 
-- 本聊天上下文压缩计数：1（2026-10-19 首次实际 compact）；按现有授权继续，第二次实际 compact 时仅收尾交接。
+- 本聊天上下文压缩计数：2（2026-10-19 第二次实际 compact）；只做交接收尾，不再开发或重跑测试。首次计数与已有成果保留于历史，接续窗口不能继承本窗口计数。
 
 - 最新授权：用户在计划书后明确“去把交给你了”，本轮按普通协作执行近期计划。R0→R1→R2→R3 依次推进；真实 AI 先做可离线验证部分，收费请求、Push、正式 App 接入/发布仍不越界。素材保持用户明确暂缓，不生图。
 - **唯一继续开发源码**：`outputs/ui-r4-polish-20261019/`，程序在其 `battle-experience-v3/`，启动文件/字体也在同一已保存目录。旧 `outputs/battle-experience-v3/` 仅为历史对照，不再并行修改或拿它的服务冒充新版本；原包、补丁和交付 zip 都保留。旧 Podfile、P5-P3-FUSION.md 换行和其他 untracked 遗留未动。

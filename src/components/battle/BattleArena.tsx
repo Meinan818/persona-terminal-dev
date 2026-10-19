@@ -1,3 +1,4 @@
+import { useUmbraIdentity } from '@/ui/useUmbraIdentity';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -68,6 +69,7 @@ const P5Viewfinder = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const BattleArena = () => {
+  const umbraIdentity = useUmbraIdentity();
   const {
     user, attributes, persona, shadow, battleState, settings, stratum,
     updateSettings: saveSettings, resetBattle, setCurrentPage,
@@ -560,7 +562,7 @@ export const BattleArena = () => {
           )}
         </div>
       )}
-      {p3 && <GhostWords words={['BATTLE']} className="right-[8px] top-[-14px] text-right text-[72px]" style={{ color: 'rgba(160,150,255,0.13)' }} />}
+      {p3 && <GhostWords words={[umbraIdentity.en]} className="right-[8px] top-[-14px] text-right text-[72px]" style={{ color: 'rgba(160,150,255,0.13)' }} />}
 
       {/* Header — 宫格子页页头归一 PageTitle 制式（审计 S6），返回归一 → 菜单 */}
       {p5 ? (
@@ -594,25 +596,21 @@ export const BattleArena = () => {
                   size={42}
                   gap={4}
                   tiles={[
-                    { ch: '逆', bg: P5R.red, fg: P5R.paper, rot: -3.6, dy: 0 },
-                    { ch: '影', bg: P5R.paper, fg: P5R.ink, rot: 2.6, dy: 7 },
-                    { ch: '战', bg: P5R.red, fg: P5R.paper, rot: -2, dy: 2 },
-                    { ch: '场', bg: P5R.paper, fg: P5R.ink, rot: 3, dy: 8 },
+                    { ch: '印', bg: P5R.red, fg: P5R.paper, rot: -3.6, dy: 0 },
+                    { ch: '象', bg: P5R.paper, fg: P5R.ink, rot: 2.6, dy: 7 },
+                    { ch: '空', bg: P5R.red, fg: P5R.paper, rot: -2, dy: 2 },
+                    { ch: '间', bg: P5R.paper, fg: P5R.ink, rot: 3, dy: 8 },
                   ]}
                 />
                 <div className="mt-2.5 pl-7">
                   <P5Collage
-                    size={21}
+                    size={21 * 6 / umbraIdentity.en.length}
                     gap={2}
                     delay={0.2}
-                    tiles={[
-                      { ch: 'B', bg: P5R.paper, fg: P5R.red, rot: -4, dy: 2 },
-                      { ch: 'A', bg: P5R.paper, fg: P5R.ink, rot: 2, dy: 0 },
-                      { ch: 'T', bg: P5R.paper, fg: P5R.ink, rot: -2.5, dy: 3 },
-                      { ch: 'T', bg: P5R.paper, fg: P5R.ink, rot: 3, dy: 1 },
-                      { ch: 'L', bg: P5R.paper, fg: P5R.red, rot: -3, dy: 4 },
-                      { ch: 'E', bg: P5R.paper, fg: P5R.ink, rot: 2.4, dy: 1 },
-                    ]}
+                    tiles={Array.from(umbraIdentity.en, (ch, i) => ({
+                      ch, bg: P5R.paper, fg: i % 4 === 0 ? P5R.red : P5R.ink,
+                      rot: [-4, 2, -2.5, 3, -3, 2.4][i % 6], dy: [2, 0, 3, 1, 4, 1][i % 6],
+                    }))}
                   />
                 </div>
               </div>
@@ -640,7 +638,7 @@ export const BattleArena = () => {
           {/* 标题左上小蓝斜片（设计稿装饰） */}
           <span aria-hidden className="absolute left-[2px] top-[30px] h-[12px] w-[22px]" style={{ background: P3R.blue, clipPath: 'polygon(30% 0, 100% 0, 70% 100%, 0 100%)' }} />
           <div className="flex items-end justify-between gap-3">
-            <P3PageHeader title="逆影战场" onBack={() => setCurrentPage('menu')} className="pt-2" />
+            <P3PageHeader title={umbraIdentity.zh} onBack={() => setCurrentPage('menu')} className="pt-2" />
             {inShadowTime && (
               <motion.span
                 animate={{ opacity: [1, 0.55, 1] }}
@@ -661,10 +659,10 @@ export const BattleArena = () => {
             <BackButton onClick={() => setCurrentPage('menu')} className="mt-1 -ml-1" />
             <div className="min-w-0 flex-1">
               <h1 className="text-[40px] font-black leading-none" style={{ color: '#fff6d0', fontFamily: 'var(--p4-display-font, serif)' }}>
-                逆影战场
+                {umbraIdentity.zh}
               </h1>
               <div className="-mt-0.5 pl-8 text-[21px] font-bold italic leading-none" style={{ color: 'var(--p4-orange, #f9a11b)', fontFamily: "'Caveat', 'Segoe Script', cursive" }}>
-                Midnight Battle
+                {umbraIdentity.en}
               </div>
             </div>
             <P4Magnifier size={30} rim="rgba(255,246,208,0.85)" glass="rgba(249,161,27,0.35)" className="mt-1 shrink-0" />
@@ -686,7 +684,7 @@ export const BattleArena = () => {
         <div className="battle-void-head flex items-start gap-3">
           <BackButton onClick={() => setCurrentPage('menu')} className="mt-1 -ml-1" />
           <div className="flex-1 min-w-0">
-            <PageTitle title="逆影战场" en="Battle" />
+            <PageTitle title={umbraIdentity.zh} en={umbraIdentity.en} />
           </div>
           {inShadowTime && (
             <motion.span
@@ -1281,7 +1279,7 @@ export const BattleArena = () => {
                     <div className={`${battleCard} overflow-hidden`}>
                       <div className="flex items-center gap-3 px-4 py-3.5">
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">启用逆影战场</p>
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">启用{umbraIdentity.en}</p>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">关闭后将隐藏战斗功能及其全部入口（首页与菜单）</p>
                         </div>
                         {/* 统一 Toggle（v2.7）：此前是手搓圆角开关——P5 毯式重皮盖不到它，
@@ -1293,7 +1291,7 @@ export const BattleArena = () => {
                             setBattleEnabled(next);
                             void saveSettings({ battleEnabled: next });
                           }}
-                          aria-label="启用逆影战场"
+                          aria-label={`启用${umbraIdentity.full}`}
                         />
                       </div>
                     </div>

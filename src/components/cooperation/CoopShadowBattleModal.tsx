@@ -292,7 +292,7 @@ export function CoopShadowBattleModal({ isOpen, shadow: shadowProp, partnerName,
       return;
     }
     if (!battleState) {
-      setErr('请先在逆影战场初始化你的战斗状态');
+      setErr('请先在UMBRA（幽影协议）初始化你的战斗状态');
       return;
     }
     if (battleState.sp < skill.spCost) {
@@ -733,7 +733,7 @@ export function CoopShadowBattleModal({ isOpen, shadow: shadowProp, partnerName,
               </div>
             ) : !persona ? (
               <div className="mx-5 mb-4 px-3 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-center text-[11px] text-rose-200">
-                你还没有创建 Persona —— 先去「逆影战场」召唤一位面具
+                你还没有创建 Persona —— 先去「UMBRA（幽影协议）」召唤一位面具
               </div>
             ) : (
               <>

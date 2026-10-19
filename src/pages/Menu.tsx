@@ -1,3 +1,4 @@
+import { useUmbraIdentity } from '@/ui/useUmbraIdentity';
 /**
  * 「菜单」页 —— P5 式对角断层宫格（UI_DESIGN_BOLD_V2.5.md §5「菜单」行）。
  *
@@ -197,6 +198,7 @@ const THEME_SWATCHES: { value: ThemeType; label: string; color?: string }[] = [
 ];
 
 export const Menu = () => {
+  const umbraIdentity = useUmbraIdentity();
   const { activities, achievements, skills, attributes, settings, user, setTheme, setCurrentPage } = useAppStore(useShallow(s => ({ activities: s.activities, achievements: s.achievements, skills: s.skills, attributes: s.attributes, settings: s.settings, user: s.user, setTheme: s.setTheme, setCurrentPage: s.setCurrentPage })));
   const bold = useBoldness();
   const isP4 = useUiChannel() === 'p4';
@@ -358,7 +360,7 @@ export const Menu = () => {
       onPress: () => setCurrentPage('statistics'),
     },
     ...(battleVisible
-      ? [{ key: 'battle', label: '逆影战场', indent: 26, icon: <span className="text-[var(--ui-bg)]"><BoltIcon /></span>,
+      ? [{ key: 'battle', label: umbraIdentity.en, indent: 26, icon: <span className="text-[var(--ui-bg)]"><BoltIcon /></span>,
           // inline-block：行内元素没有自己的合成层，animate-pulse 的 opacity 就在主线程逐帧重画（第 12 轮 P0）
           badge: inShadowTime ? <span aria-hidden className="inline-block animate-pulse text-base leading-none text-[var(--p4-orange,#f9a11b)]">✦</span> : undefined,
           onPress: () => setCurrentPage('battle') }]
@@ -764,11 +766,11 @@ export const Menu = () => {
                 <Tile
                   tone="ink" shape={TILE_SHAPE.battle}
                   icon={<BoltIcon />}
-                  label="逆影战场"
+                  label={umbraIdentity.en}
                   caption={inShadowTime ? <motion.span animate={{ opacity: [1, 0.45, 1] }} transition={{ repeat: Infinity, duration: 1.5 }} className="font-black" style={{ color: P5R.redHot }}>✦ 影时间</motion.span> : undefined}
                   star={{ pos: 'tr', color: P5R.paper }}
                   onPress={() => setCurrentPage('battle')}
-                  aria={inShadowTime ? '逆影战场：影时间进行中' : '逆影战场'}
+                  aria={inShadowTime ? `${umbraIdentity.full}：影时间进行中` : umbraIdentity.full}
                 />
               )}
               <Tile
@@ -844,13 +846,13 @@ export const Menu = () => {
         aria: `统计：当前连续 ${currentStreak} 天`,
       },
       ...(battleVisible ? [{
-        key: 'battle', label: '逆影战场', icon: <BoltIcon />, onPress: () => setCurrentPage('battle'),
+        key: 'battle', label: umbraIdentity.en, icon: <BoltIcon />, onPress: () => setCurrentPage('battle'),
         extra: (sel: boolean) => inShadowTime ? (
           <motion.span animate={{ opacity: [1, 0.55, 1] }} transition={{ repeat: Infinity, duration: 1.5 }} className="shrink-0 px-2 py-0.5 text-[11px] font-black" style={{ clipPath: slantClip(5), background: sel ? '#fff' : P3R.blue, color: sel ? P3R.blue : '#fff' }}>
             影时间
           </motion.span>
         ) : undefined,
-        aria: inShadowTime ? '逆影战场：影时间进行中' : '逆影战场',
+        aria: inShadowTime ? `${umbraIdentity.full}：影时间进行中` : umbraIdentity.full,
       }] : []),
       {
         key: 'theme', label: '主题', icon: <PaletteIcon />, onPress: () => setThemeSheetOpen(true),
@@ -1435,8 +1437,8 @@ export const Menu = () => {
                   <Tile
                     order={orderOf('right', 0)}
                     bold={bold}
-                    label="逆影战场"
-                    ariaLabel={inShadowTime ? '逆影战场：影时间进行中' : '逆影战场'}
+                    label={umbraIdentity.en}
+                    ariaLabel={inShadowTime ? `${umbraIdentity.full}：影时间进行中` : umbraIdentity.full}
                     icon={<BoltIcon />}
                     badge={
                       inShadowTime ? (

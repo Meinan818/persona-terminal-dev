@@ -103,7 +103,7 @@ export function BorrowMaskSheet({ view, member, open, onClose, onFlash }: {
     setError('');
     try {
       await borrowMaskFromUi(view, member, p);
-      onFlash(`同调成功：「${p.name}」在逆影战场面具切换栏的最后一格`);
+      onFlash(`同调成功：「${p.name}」在UMBRA（幽影协议）面具切换栏的最后一格`);
       onClose();
     } catch (e) {
       setError(errText(e, '没同调成，稍后再试'));
@@ -138,7 +138,7 @@ export function BorrowMaskSheet({ view, member, open, onClose, onFlash }: {
           {chip('只在本周有效', 2)}
         </div>
         <p className="text-[12px] font-semibold leading-relaxed text-gray-600 dark:text-gray-300">
-          同调来的面具是逆影战场面具切换栏的第六格：每周能带进 {BORROW_BATTLES_PER_WEEK} 场战斗（一场里第一次戴着它出手才算一场，之后这一场随便用），
+          同调来的面具是UMBRA（幽影协议）面具切换栏的第六格：每周能带进 {BORROW_BATTLES_PER_WEEK} 场战斗（一场里第一次戴着它出手才算一场，之后这一场随便用），
           伤害 = 威力 × 据点系数，万能属性（出招、挨打都不吃克制和弱点）；戴着它的时候，你自己面具的被动不生效。
         </p>
         {cur && (
@@ -146,7 +146,7 @@ export function BorrowMaskSheet({ view, member, open, onClose, onFlash }: {
             你现在同调着「{cur.persona.name}」（{cur.ownerCodename} 的）。{masks.some(same) ? '' : '借用这里的任何一张都会替换它。'}
           </p>
         )}
-        {!bs && <p className="text-[12px] font-bold leading-relaxed text-amber-600 dark:text-amber-400">你还没有自己的人格面具：先去逆影战场唤醒一张，才能同调别人的。</p>}
+        {!bs && <p className="text-[12px] font-bold leading-relaxed text-amber-600 dark:text-amber-400">你还没有自己的人格面具：先去UMBRA（幽影协议）唤醒一张，才能同调别人的。</p>}
         {masks.length === 0 && <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400">Ta 没有展示面具。</p>}
 
         {masks.length > 0 && (

@@ -56,7 +56,7 @@ const GROUPS: Group[] = [
   },
   {
     id: 'battle',
-    label: '逆影战场',
+    label: 'UMBRA（幽影协议）',
     // strata（影时间高塔区层）与 battleStates 成对，同开同关——分开会让新设备"层数有、层没了"
     hint: 'Persona / Shadow / 战斗状态 / 高塔区层',
     tables: ['personas', 'shadows', 'battleStates', 'strata'],

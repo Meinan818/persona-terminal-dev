@@ -762,7 +762,7 @@ export function AIServiceSettings({ openConnection = false }: {
                 <div className="space-y-1.5 pt-3 border-t border-gray-100 dark:border-gray-700/50">
                   <p className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400"><MoonIcon className="h-3.5 w-3.5" /> 深思熟虑</p>
                   <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                    助手对话、中长期占卜，以及逆影战场的生成（召唤 Persona、区层 / 伪神 / 满月心魔显形）走这档——
+                    助手对话、中长期占卜，以及UMBRA（幽影协议）的生成（召唤 Persona、区层 / 伪神 / 满月心魔显形）走这档——
                     值得等的深答案，可跨服务商选更强的模型（用那家已存的 Key 直连）。留空跟随快速响应。
                   </p>
                   <button

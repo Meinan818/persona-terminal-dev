@@ -493,7 +493,7 @@ export function RaidSheet({ view, open, onClose, onFlash }: {
                   );
                 })}
               </div>
-              {!battleState && <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">逆影战场还没开始，没有 SP：这次先用普攻。</p>}
+              {!battleState && <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">UMBRA（幽影协议）还没开始，没有 SP：这次先用普攻。</p>}
             </section>
           ) : (
             <Note tone={tone}>

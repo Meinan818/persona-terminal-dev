@@ -107,3 +107,55 @@
 .dark .umbra-runtime .umbra-move-button {
   color: #e5e7eb;
 }
+
+.umbra-runtime .umbra-secondary-button {
+  border: 1px solid var(--umbra-line);
+  border-radius: 0.5rem;
+  background: #fff;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #374151;
+}
+
+.umbra-runtime .umbra-battle-panel {
+  border-color: var(--umbra-line);
+  background: var(--umbra-panel);
+}
+
+.umbra-runtime .umbra-battle-action {
+  border: 1px solid var(--umbra-line);
+  border-radius: 0.5rem;
+  background: #fff;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+}
+
+.umbra-runtime .umbra-battle-action span {
+  display: block;
+  color: #1f2937;
+  font-size: 0.8125rem;
+  font-weight: 900;
+}
+
+.umbra-runtime .umbra-battle-action small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #6b7280;
+  font-size: 0.625rem;
+}
+
+.umbra-runtime .umbra-battle-active,
+.umbra-runtime .umbra-battle-target {
+  border-color: var(--umbra-accent);
+  background: var(--umbra-accent-soft);
+}
+
+.dark .umbra-runtime .umbra-secondary-button,
+.dark .umbra-runtime .umbra-battle-action {
+  background: #111827;
+}
+
+.dark .umbra-runtime .umbra-battle-action span {
+  color: #e5e7eb;
+}

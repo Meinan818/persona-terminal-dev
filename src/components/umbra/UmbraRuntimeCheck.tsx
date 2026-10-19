@@ -6,7 +6,9 @@ import {
   createFloorMap,
   listen,
   move,
+  resolveEncounter,
 } from '@/umbra/engine/floor-map';
+import { createDefaultBattle } from '@/umbra/engine/p5-combat-rules';
 import '@/styles/umbra-runtime.css';
 
 const migrationLabel = (source: 'legacy-battle' | 'fresh' | undefined): string => {
@@ -51,6 +53,9 @@ export function UmbraRuntimeCheck() {
   const [, refresh] = useReducer(value => value + 1, 0);
   const [blocked, setBlocked] = useState(false);
   const [notice, setNotice] = useState('寻找守卫或钥匙，打开出口。');
+  const [battle, setBattle] = useState<any>(null);
+  const [targetId, setTargetId] = useState('encounter');
+  const [battleNotice, setBattleNotice] = useState('');
   const exploration: any = useMemo(
     () => createExplorationState(createFloorMap({ floor: 1, seed })),
     [seed],
@@ -70,7 +75,8 @@ export function UmbraRuntimeCheck() {
     if (!result.ok) setNotice(result.reason ?? '这一步走不通。');
     else if (result.encounter) {
       setBlocked(true);
-      setNotice(`遭遇 ${result.encounter.guardian ? '守卫' : '影子'}，战斗引擎将在下一节点接入。`);
+      startBattle(result.encounter.guardian ? '月台守卫' : '游荡之影');
+      setNotice(`遭遇 ${result.encounter.guardian ? '守卫' : '影子'}，进入战斗。`);
     } else {
       setNotice(`进入${roomLabel(result.room?.type)}，月光 -1。`);
     }
@@ -88,7 +94,60 @@ export function UmbraRuntimeCheck() {
     setBlocked(false);
     setNotice('新的 5×5 房间已经展开。');
     setSeed(value => value + 1);
+    setBattle(null);
+    setBattleNotice('');
   };
+
+  const startBattle = (name = '训练之影') => {
+    const next = (createDefaultBattle as any)({
+      activePersonaId: 'pixie',
+      enemies: [{
+        id: 'encounter',
+        name,
+        maxHp: 92,
+        attack: 12,
+        defense: 4,
+        element: 'phys',
+        weakness: 'electric',
+        resist: 'curse',
+        personality: 'proud',
+        recruitPersonaId: 'pixie',
+      }],
+    });
+    setBattle(next);
+    setTargetId('encounter');
+    setBattleNotice(`${name} 挡住了路。`);
+    refresh();
+  };
+
+  const runBattleAction = (action: any) => {
+    if (!battle) return;
+    const result = battle.act({
+      type: action.type,
+      id: action.id,
+      targetId,
+    });
+    setBattleNotice(result.ok ? '' : (result.reason ?? '这个行动不能执行。'));
+    refresh();
+  };
+
+  const holdUpAction = (type: 'allOut' | 'recruit' | 'reward') => {
+    if (!battle) return;
+    const result = battle.holdUp({ type, targetId });
+    setBattleNotice(result.ok ? '' : (result.reason ?? '这个选择不能执行。'));
+    refresh();
+  };
+
+  const finishBattle = () => {
+    resolveEncounter(exploration, { won: true });
+    setBlocked(false);
+    setBattle(null);
+    setBattleNotice('');
+    setNotice('遭遇已解决，出口状态已更新。');
+    refresh();
+  };
+
+  const battleSnapshot = battle?.snapshot?.() ?? null;
 
   return (
     <main className="umbra-runtime min-h-[calc(100vh-5rem)] px-4 py-6 sm:px-6" data-umbra-skin={visual.skin}>
@@ -138,13 +197,21 @@ export function UmbraRuntimeCheck() {
         <section className="umbra-note rounded-xl border border-dashed p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="umbra-accent text-sm font-black">正式房间地图已接入</p>
-            <button
-              type="button"
-              onClick={resetMap}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-            >
-              换一张地图
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBlocked(true);
+                  startBattle();
+                }}
+                className="umbra-secondary-button"
+              >
+                测试战斗
+              </button>
+              <button type="button" onClick={resetMap} className="umbra-secondary-button">
+                换一张地图
+              </button>
+            </div>
           </div>
           <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
             地图规则来自幽影协议正式引擎。移动、迷雾、警戒、钥匙与出口已经生效；战斗结算将在下一节点接入。
@@ -212,6 +279,92 @@ export function UmbraRuntimeCheck() {
             </div>
           </aside>
         </section>
+
+        {battle && battleSnapshot && (
+          <section className="umbra-battle-panel rounded-xl border p-4" data-umbra-battle>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="umbra-accent text-[10px] font-black tracking-[0.3em]">P5 BATTLE ENGINE</p>
+                <h2 className="mt-1 text-lg font-black text-gray-900 dark:text-gray-100">
+                  第 {battleSnapshot.round} 回合 · {battleSnapshot.actor ?? '敌方回合'}
+                </h2>
+              </div>
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                {battleSnapshot.phase}
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.3fr]">
+              <div className="space-y-2">
+                <p className="text-xs font-black text-gray-400">我方</p>
+                {battleSnapshot.party.map((member: any) => (
+                  <div key={member.id} className={`rounded-lg border p-2.5 ${member.id === battleSnapshot.currentId ? 'umbra-battle-active' : 'border-gray-200 dark:border-gray-800'}`}>
+                    <div className="flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-200">
+                      <span>{member.name}</span>
+                      <span>HP {member.hp}/{member.maxHp} · SP {member.sp}/{member.maxSp}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-black text-gray-400">敌方</p>
+                {battleSnapshot.enemies.map((enemy: any) => (
+                  <button
+                    key={enemy.id}
+                    type="button"
+                    onClick={() => setTargetId(enemy.id)}
+                    className={`w-full rounded-lg border p-2.5 text-left ${targetId === enemy.id ? 'umbra-battle-target' : 'border-gray-200 dark:border-gray-800'}`}
+                  >
+                    <div className="flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-200">
+                      <span>{enemy.name}{enemy.down ? ' · DOWN' : ''}</span>
+                      <span>HP {enemy.hp}/{enemy.maxHp}</span>
+                    </div>
+                    <div className="mt-1 text-[10px] text-gray-400">
+                      {enemy.status ? `状态：${enemy.status}` : '状态：正常'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {battleSnapshot.phase === 'party' && (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {battle.actions.filter((action: any) => !action.disabled).map((action: any) => (
+                  <button
+                    key={`${action.type}:${action.id ?? ''}:${action.targetId ?? ''}`}
+                    type="button"
+                    onClick={() => runBattleAction(action)}
+                    className="umbra-battle-action"
+                  >
+                    <span>{action.label}</span>
+                    <small>{action.detail}{action.cost ? ` · ${action.cost} SP` : ''}</small>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {battleSnapshot.phase === 'holdUp' && (
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <button type="button" onClick={() => holdUpAction('allOut')} className="umbra-battle-action">总攻击</button>
+                <button type="button" onClick={() => holdUpAction('recruit')} className="umbra-battle-action">收服</button>
+                <button type="button" onClick={() => holdUpAction('reward')} className="umbra-battle-action">拿报酬</button>
+              </div>
+            )}
+
+            {battleSnapshot.phase === 'result' && (
+              <button type="button" onClick={finishBattle} className="umbra-battle-action mt-4 w-full">结算并返回房间</button>
+            )}
+
+            {battleSnapshot.phase === 'defeat' && (
+              <button type="button" onClick={resetMap} className="umbra-battle-action mt-4 w-full">战斗失败，重开地图</button>
+            )}
+
+            <div className="mt-3 space-y-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+              {battleNotice && <p className="font-bold text-rose-500">{battleNotice}</p>}
+              {battleSnapshot.log.slice(-4).map((line: string, index: number) => <p key={`${index}:${line}`}>{line}</p>)}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );

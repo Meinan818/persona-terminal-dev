@@ -540,9 +540,30 @@
   }
   /* ---- 调度 ---- */
   var lastSig='',queued=false,renderedSince=false;
+  var skillView=null,skillSignature='',skillScroll=0,skillSelection='',skillWidth=0;
+  function mobileSkillViewport(){
+    if(document.documentElement.dataset.theme!=='p5'||!document.body.classList.contains('sh-m'))return;
+    var view=document.querySelector('.sh-stage .command-detail');
+    if(!view){skillView=null;skillSignature='';skillScroll=0;skillSelection='';return;}
+    var skills=[].slice.call(view.querySelectorAll('.combat-skill'));
+    var signature=skills.map(function(el){return el.dataset.battleAction;}).join('|');
+    var selected=view.querySelector('.combat-skill.selected');
+    var selection=selected?selected.dataset.battleAction:'';
+    var replaced=view!==skillView,resized=view.clientWidth!==skillWidth;
+    if(replaced){view.scrollLeft=signature===skillSignature?skillScroll:0;}
+    if(selected&&(replaced||resized||selection!==skillSelection)){
+      var left=selected.offsetLeft-6,right=left+selected.offsetWidth+12;
+      if(left<view.scrollLeft)view.scrollLeft=Math.max(0,left);
+      else if(right>view.scrollLeft+view.clientWidth)view.scrollLeft=right-view.clientWidth;
+    }
+    view.classList.toggle('p5-mobile-more-skills',view.scrollWidth>view.clientWidth+3);
+    skillView=view;skillSignature=signature;skillScroll=view.scrollLeft;
+    skillSelection=selection;skillWidth=view.clientWidth;
+  }
   function tick(){
     queued=false;
     applyRansom();battleDeco();resultDeco();try{pageDeco();}catch(e){}
+    mobileSkillViewport();
     var s=sig();
     var M=null;
     try{enemyTick();}catch(e){}
@@ -565,6 +586,7 @@
     var sh=document.getElementById('sheet-body');if(sh)mo.observe(sh,{childList:true});
     addEventListener('hashchange',queue);
     document.addEventListener('mouseover',menuHover,{passive:true});
+    document.addEventListener('scroll',function(e){if(e.target===skillView)skillScroll=skillView.scrollLeft;},{passive:true,capture:true});
     addEventListener('resize',function(){slides={};document.querySelectorAll('.p5r4-hl').forEach(function(h){h.__p='';});queue();},{passive:true});
     tick();
     if(!reduced.matches)setTimeout(function(){if(!activeWipe)wipe('intro');},60);

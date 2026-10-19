@@ -1290,6 +1290,7 @@ export function createTowerFlow(api){
     if(action==='route'){
       if(!j.active){model.start(state.towerStratum);applyRunBonuses();j.request=createRequest(requestForStratum(state.towerStratum));}
       if(!j.explore&&!j.pending&&j.floor<j.maxFloor){applyRunBonuses();model.beginFloor(j.floor<1?1:j.floor);}
+      saveRun();
       routeBack();
       return;
     }

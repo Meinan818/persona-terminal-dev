@@ -11,7 +11,7 @@ function harness(t, mismatch = false) {
   e.player = mismatch ? { ...j.map.start } : { x: room.x, y: room.y };
   j.pending = { kind: 'guardian', floor: 10, roomId: room.id, resolved: false, blockBoss: true };
   const store = new Map([['maskaria.p5r.run.v1', JSON.stringify({ version: 1, journey: { ...j, map: null, explore: null }, map: j.map, explore: { ...e, map: null, listened: [] } })]]);
-  for (const [key, value] of Object.entries({ location: { search: '' }, document: { addEventListener() {} }, requestAnimationFrame: () => 0, cancelAnimationFrame() {}, localStorage: { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) } })) {
+  for (const [key, value] of Object.entries({ location: { search: '' }, document: { addEventListener() {} }, requestAnimationFrame: () => 0, cancelAnimationFrame() {}, scrollTo() {}, localStorage: { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) } })) {
     const old = Object.getOwnPropertyDescriptor(globalThis, key);
     Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
     t.after(() => old ? Object.defineProperty(globalThis, key, old) : delete globalThis[key]);
@@ -68,4 +68,16 @@ test('最终Boss结算后移除可继续行程，刷新不能复活同一Boss重
   flow.battleReturn(true, 2, { drops: [], summary: '两阶段战斗胜利' });
   assert.equal(flow.snapshot.ended, 'clear');
   assert.equal(store.has('maskaria.p5r.run.v1'), false);
+});
+
+
+test('结束后重新显形进入1F，第一步移动前也应立即可续档', t => {
+  const { flow, store } = harness(t);
+  flow.act('start');
+  assert.equal(store.has('maskaria.p5r.run.v1'), false);
+  flow.act('route');
+  const saved = JSON.parse(store.get('maskaria.p5r.run.v1') ?? 'null');
+  assert.ok(saved?.map, '已经显示的地图必须立即保存，不等第一步移动');
+  assert.equal(saved.journey.floor, 1);
+  assert.deepEqual(saved.explore.player, saved.map.start);
 });

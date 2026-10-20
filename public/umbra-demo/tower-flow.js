@@ -14,6 +14,7 @@ import {TOWER_STRATA,getStratum} from './tower-registry.js';
 import {createRequest,recordRequest,requestForStratum} from './requests.js';
 import {NPCS,trustLabel} from './npcs.js';
 import {currentRoom,visibleRooms} from './floor-map.js';
+import {adjacentRoomDirection} from './map-interaction.js';
 import {arsenalEffects} from './arsenal-effects.js';
 import {TONE_LABELS,offlineJudge,resolveTalkCheck} from './night-slice.js';
 import {requestShadowJudge} from './night-slice-ai.js';
@@ -984,57 +985,10 @@ export function createTowerFlow(api){
     }
     return room.type==='start'?'回头是塔门。往前走，雾会散开。':room.type==='exit'?explore.exitUnlocked?'门已经开了。踏出去，下一层就会显形。':(explore.map.rooms[explore.map.guardianId]?.blockBoss&&!explore.guardianDefeated?'区段守层者还站在门前，钥匙打不开。':'门锁着。守卫或钥匙，选一条路。'):room.type==='guardian'?(room.blockBoss?'这一段由它守着。钥匙打不开它身后的门。':'它守着出口。打赢它，门就会开。'):room.type==='shadow'?'它已经看见你了。开口，或者拔刀。':room.type==='chest'?'匣子的锁很旧。先检查会多花一步，直接打开也许更快。':room.type==='key'?'拿上它，出口可以不必经过守卫。':room.type==='trap'?'拆开会安静一点；硬闯会更快，也更吵。':room.type==='safe'?'这一层只能休息一次。恢复，或者继续贪。':room.type==='event'?'靠近它，或者只带走一点月光。':'雾在墙外。你可以听一听，或者直接走。';
   };
-  const MAP_STEPS=[['up',0,-1],['right',1,0],['down',0,1],['left',-1,0]];
-  function findMapPath(targetX,targetY){
-    if(!j.explore||!j.map)return null;
-    const start=`${j.explore.player.x},${j.explore.player.y}`;
-    const goal=`${targetX},${targetY}`;
-    if(start===goal)return [];
-    const queue=[start];
-    const prev=new Map([[start,null]]);
-    while(queue.length){
-      const id=queue.shift();
-      const [cx,cy]=id.split(',').map(Number);
-      for(const [dir,dx,dy] of MAP_STEPS){
-        const room=j.map.rooms[`${cx+dx},${cy+dy}`];
-        if(!room||!room.revealed||prev.has(room.id))continue;
-        const isGoal=room.id===goal;
-        if(!isGoal&&!room.cleared&&['guardian','shadow','chest','key','trap','event'].includes(room.type))continue;
-        if(!isGoal&&room.type==='exit'&&!j.explore.exitUnlocked)continue;
-        prev.set(room.id,{from:id,dir});
-        if(isGoal){
-          const path=[];
-          let cursor=room.id;
-          while(cursor!==start){
-            const step=prev.get(cursor);
-            if(!step)return null;
-            path.unshift({dir:step.dir,roomId:cursor});
-            cursor=step.from;
-          }
-          return path;
-        }
-        queue.push(room.id);
-      }
-    }
-    return null;
-  }
-  function walkMapPath(path){
-    if(!path?.length)return;
-    for(const step of path){
-      const result=model.mapMove(step.dir);
-      if(result.ok)applyRegionStep();
-      if(result.pending){handlePending(result);return;}
-      if(!result.ok){j.mapMessage=result.reason;break;}
-      const room=currentRoom(j.explore);
-      if(room&&(room.type==='exit'||room.type==='safe'||(!room.cleared&&['chest','key','trap','event'].includes(room.type))))break;
-    }
-    renderMap();
-    const room=currentRoom(j.explore);
-    if(room&&(room.type==='exit'||room.type==='safe'||(!room.cleared&&['chest','key','trap','event'].includes(room.type))))revealRoomPanel();
-  }
   function mapCell(room,explore,flavor){
     const current=room.x===explore.player.x&&room.y===explore.player.y;
-    const clickable=room.revealed&&!current;
+    const adjacent=adjacentRoomDirection(explore.player,room)!==null;
+    const clickable=room.revealed&&!current&&adjacent;
     const classes=['map-cell'];
     if(!room.revealed)classes.push('is-fog');
     else{
@@ -1048,7 +1002,7 @@ export function createTowerFlow(api){
       :'<span class="map-fog-mark">?</span><span class="map-name">未探明</span>';
     const tag=clickable?'button':'div';
     const attrs=clickable?`type="button" data-tower="room:${room.x}:${room.y}"`:(current?'aria-current="true"':'');
-    return `<${tag} class="${classes.join(' ')}" ${attrs} ${room.revealed?`aria-label="${flavor.rooms[room.type]??mapName(room.type)}${current?'，当前位置':'，点击走过去'}"`:'aria-label="未探明房间"'}>${body}</${tag}>`;
+    return `<${tag} class="${classes.join(' ')}" ${attrs} ${room.revealed?`aria-label="${flavor.rooms[room.type]??mapName(room.type)}${current?'，当前位置':clickable?'，相邻房间，点击移动一步':'，请先移动到相邻位置'}"`:'aria-label="未探明房间"'}>${body}</${tag}>`;
   }
   function mapPage(){
     if(!j.explore||!j.map)return '';
@@ -1077,7 +1031,7 @@ export function createTowerFlow(api){
       <div class="map-hud"><span>${esc(getStratum(j.stratum).name)} <b>${floor} / ${j.maxFloor} F</b></span><span>区域 <b>${esc(region.short)}</b></span><span>区段 <b>${Math.ceil(floor/10)} / ${Math.ceil(j.maxFloor/10)}</b></span><span>月光 <b>${explore.time}</b> / ${explore.maxTime} 步</span><span>警戒 <b>${j.security}%</b></span><span>钥匙 <b>${j.keys}</b></span><span>HP <b>${state.hp}</b> / ${state.heroMaxHp??52}</span><span>SP <b>${state.sp}</b> / ${state.heroMaxSp??34}</span>${j.alert?'<span class="journey-alert">ALERT · 被盯上了</span>':''}</div>
       <div class="map-region"><div><span>${region.from}–${region.to}F</span><b>${esc(region.name)}</b></div><p>${esc(region.rule)}</p></div>
       <div class="map-shell"><section class="map-board" aria-label="${esc(getStratum(j.stratum).name)} ${floor} 层房间地图">
-        <div class="map-board-head"><div><span>FLOOR ${String(floor).padStart(2,'0')} / ${esc(flavor.name)} · BLOCK ${String(Math.ceil(floor/10)).padStart(2,'0')}</span><b>${explore.exitUnlocked?'出口已经开了':blockBoss?'击破区段守层者':'找到守卫或钥匙'}</b></div><div class="map-head-tools"><small>拖动查看 · 已探明 ${revealed} / 25</small><button type="button" data-tower="map-center">回到当前位置</button></div></div>
+        <div class="map-board-head"><div><span>FLOOR ${String(floor).padStart(2,'0')} / ${esc(flavor.name)} · BLOCK ${String(Math.ceil(floor/10)).padStart(2,'0')}</span><b>${explore.exitUnlocked?'出口已经开了':blockBoss?'击破区段守层者':'找到守卫或钥匙'}</b></div><div class="map-head-tools"><small>拖动查看 · 点相邻格移动 · 已探明 ${revealed} / 25</small><button type="button" data-tower="map-center">回到当前位置</button></div></div>
         <div class="map-viewport" data-map-viewport aria-label="可拖动查看的房间地图"><div class="map-grid">${cells.join('')}</div></div>
         <div class="map-legend"><span><i class="lg-you"></i>你</span><span><i class="lg-threat"></i>敌人</span><span><i class="lg-loot"></i>收获</span><span><i class="lg-fog"></i>迷雾</span></div>
       </section><aside class="map-side">
@@ -1112,10 +1066,9 @@ export function createTowerFlow(api){
     if(action==='shadow-talk-continue'){cancelShadowTalk();page=null;renderMap();return;}
     if(action.startsWith('room:')){
       const [,x,y]=action.split(':').map(Number);
-      const path=findMapPath(x,y);
-      if(path===null){j.mapMessage='这条路还没探明，或者被挡住了。先走近一点，或者用“听”。';renderMap();return;}
-      if(!path.length)return;
-      walkMapPath(path);
+      const direction=adjacentRoomDirection(j.explore?.player,{x,y});
+      if(!direction){j.mapMessage='只能点击相邻房间。请用方向键逐步移动。';renderMap();return;}
+      act(`move:${direction}`);
       return;
     }
     if(action.startsWith('move:')){

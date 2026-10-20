@@ -2,6 +2,14 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前开发 · 2026-10-21 · 隔离 staging HTTPS 验收准备
+
+- **起因**：接手顶部交接后，从优先级 1“隔离 staging HTTPS 验收”继续；不改已验收 UI、玩法、PWA、天鹅绒或正式入口，不 Push、不部署、不打包。
+- **改动**：`23f769e` 新增 `scripts/staging-coop-smoke.mjs` 与规则测试。脚本拒绝 HTTP、本机/LAN/私有地址和未声明 `MASKARIA_STAGING_CONFIRM=isolated-staging` 的目标；自动检查受信任 TLS/证书、Health、前端入口、HTTP 降级、服务器时钟，以及双账号好友、COOP、共享事件和通知契约。报告会去掉密码、JWT、原始响应。
+- **验证**：`node --check scripts/staging-coop-smoke.mjs` 通过；`node --test scripts/staging-coop-smoke.test.mjs` 为 **4/4**；`--check-target` 接受公网 HTTPS 示例，并实测拒绝 `http://127.0.0.1:8080`。仓库没有可用的公网隔离 staging URL，因此没有发起真实 staging 请求，也没有创建远端测试账号。
+- **未验收与边界**：尚无受信任公网 staging、两台物理设备、跨运营商弱网或 OS 后台通知结果，不能把优先级 1 标成关闭。脚本对缺失 HSTS 只记警告，不把 TLS 可用冒充完整安全加固。
+- **下一步/负责人**：由用户或 staging 负责人提供不含正式用户数据的公网 HTTPS 地址；配置 `MASKARIA_STAGING_URL` 与隔离确认后运行 `node scripts/staging-coop-smoke.mjs`，再按报告清单在两台真机完成跨网络、弱网重试和后台通知验收。本轮无 Push、无部署，打包/发布仍未授权。
+
 ## 准备交接 · 2026-10-21 · 真机 COOP、PWA 与全量验收后
 
 ### 接手第一入口

@@ -11,9 +11,9 @@
 - **同调面具**：`BorrowMaskSheet` 与 `borrowMask.ts` 改读正式 `umbraProfile`。借用写入 `profile.online.borrow`，同时镜像到 Demo 原档；Demo 注册为不进入图鉴的临时 P5R Persona，可出现在名录、切换出战和真实战斗。每周三场、同一场只计一次、周键失效与用尽移除均已实现。
 - **自动回归**：在线 SP/奖励、旧档回填、云冲突合并、UMBRA Persona 适配、临时 Persona、借面具正式档与 Demo 镜像均补测试。`npm test` 59 文件 **362/362**，`npm run typecheck` exit0，`npm run build` exit0。构建仍有既有动态导入、大 chunk 与两个 2.21 MB 图鉴不预缓存警告。
 - **真实浏览器证据**：
-  - `.rivet/scratch/umbra-coop-modal-20261020/report.json`：真实 React 羁绊之影面板显示皮克希与吉欧，真实指针释放后 UMBRA SP 100→96，旧 Persona 不参与，390×844、Console errors=[]。
-  - `.rivet/scratch/umbra-borrow-sheet-20261020/report.json`：真实同调抽屉显示在线同伴的“旅人之面”，点击借用后正式 IndexedDB 写入 `online.borrow` 并同步 Demo 镜像，errors=[]。
-  - `.rivet/scratch/umbra-online-borrow-20261020/report.json`：同调 Persona 出现在 Demo 名录，可切为出战 Persona，首次行动后本周场次 0→1，刷新后仍恢复；390×844、errors=[]。
+  - `.rivet/scratch/umbra-coop-modal-20261020/report.json` 与 `coop-modal.png`：真实 React 羁绊之影面板显示皮克希与吉欧，真实指针释放后 UMBRA SP 100→96，旧 Persona 不参与，390×844、Console errors=[]。
+  - `.rivet/scratch/umbra-borrow-sheet-20261020/report.json` 与 `borrow-sheet.png`：真实同调抽屉显示在线同伴的“旅人之面”，点击借用后正式 IndexedDB 写入 `online.borrow` 并同步 Demo 镜像，errors=[]。
+  - `.rivet/scratch/umbra-online-borrow-20261020/report.json`、`borrow-roster.png`、`borrow-battle.png`：同调 Persona 出现在 Demo 名录，可切为出战 Persona，首次行动后本周场次 0→1，刷新后仍恢复；390×844、errors=[]。
 - **边界**：这些是真实组件、真实浏览器存储与合成 COOP API/数据，不是实际双账号生产联调；未用真实好友、生产云端或第二台真实设备。联机服务器网络抖动、权限冲突和并发攻击仍需隔离测试账号另行验收。
 - **commit / Push**：联机资源、Persona/同调迁移、测试与本记录做本地提交；未 Push、未部署、未打包。原有工作区遗留项未纳入。
 - **结算状态**：功能实现与自动/真实浏览器验证已完成，等待用户统一验收。验收重点为羁绊之影面板更名技能、同调抽屉借用、Demo 名录/战斗/周场次以及刷新恢复，不要求重新验已通过的天鹅绒与爬塔。

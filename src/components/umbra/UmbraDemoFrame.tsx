@@ -13,6 +13,7 @@ import {
   readDemoLocalState,
   seedDemoStorage,
 } from '@/umbra/demoBridge';
+import { attachUmbraDemoAiBridge } from '@/utils/umbraDemoAiBridge';
 import '@/styles/umbra-demo-frame.css';
 
 const demoThemeFor = (theme: ThemeType | undefined): string => {
@@ -56,6 +57,12 @@ export function UmbraDemoFrame() {
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [exitDemo]);
+
+  useEffect(() => attachUmbraDemoAiBridge({
+    win: window,
+    origin: window.location.origin,
+    target: () => frameRef.current?.contentWindow ?? null,
+  }), []);
 
   useEffect(() => {
     let disposed = false;
@@ -197,7 +204,7 @@ export function UmbraDemoFrame() {
         <iframe
           ref={frameRef}
           title="MASKARIA 幽影协议"
-          src={`/umbra-demo/index.html?theme=${demoTheme}`}
+          src={`/umbra-demo/index.html?theme=${demoTheme}&slice-ai=live`}
           onLoad={() => {
             setLoaded(true);
             frameRef.current?.contentDocument?.addEventListener('keydown', event => {

@@ -220,3 +220,81 @@ export function installPreviewSliceBridge() {
   };
   return true;
 }
+
+const PARENT_AI_SOURCE = 'maskaria-umbra-ai';
+const PARENT_AI_REQUEST = 'judge-shadow-talk';
+const PARENT_AI_CANCEL = 'judge-shadow-talk-cancel';
+const PARENT_AI_RESULT = 'judge-shadow-talk-result';
+const PARENT_AI_STATUS = 'judge-shadow-talk-status';
+
+/**
+ * 父应用持有真实 BYOK 配置与网络请求；iframe 只发送受限交涉快照。
+ * 本桥不读取密钥，父应用未配置或调用失败时由 requestShadowJudge 回落离线。
+ */
+export function installParentSliceBridge({
+  parent = globalThis.parent,
+  origin = globalThis.location?.origin,
+} = {}) {
+  if (!parent || parent === globalThis || !origin) return false;
+  if (typeof globalThis.MASKARIA_AI?.judgeShadowTalk === 'function') return false;
+  const pending = new Map();
+  let sequence = 0;
+
+  const cleanup = item => {
+    if (!item) return;
+    item.signal?.removeEventListener('abort', item.onAbort);
+    pending.delete(item.id);
+  };
+
+  const onMessage = event => {
+    if (event.origin !== origin || event.source !== parent) return;
+    const message = event.data;
+    if (!message || typeof message !== 'object' || message.source !== PARENT_AI_SOURCE) return;
+    const item = typeof message.id === 'string' ? pending.get(message.id) : null;
+    if (!item) return;
+    if (message.type === PARENT_AI_STATUS) {
+      const status = copyText(message.status, 120);
+      if (status) item.onStatus?.(status);
+      return;
+    }
+    if (message.type !== PARENT_AI_RESULT) return;
+    cleanup(item);
+    if (message.ok) {
+      item.resolve(message.value);
+      return;
+    }
+    item.reject(namedError(
+      message.errorName === 'AbortError' ? 'AbortError' : 'Error',
+      copyText(message.error, 200) || 'AI 请求失败',
+    ));
+  };
+
+  globalThis.addEventListener?.('message', onMessage);
+  const previous = globalThis.MASKARIA_AI;
+  globalThis.MASKARIA_AI = {
+    ...(previous && typeof previous === 'object' ? previous : {}),
+    judgeShadowTalk(input, { signal, onStatus } = {}) {
+      return new Promise((resolve, reject) => {
+        if (signal?.aborted) {
+          reject(namedError('AbortError', 'aborted'));
+          return;
+        }
+        const id = `shadow-${Date.now().toString(36)}-${++sequence}`;
+        const onAbort = () => {
+          cleanup(pending.get(id));
+          parent.postMessage({ source: PARENT_AI_SOURCE, type: PARENT_AI_CANCEL, id }, origin);
+          reject(namedError('AbortError', 'aborted'));
+        };
+        pending.set(id, { id, resolve, reject, signal, onAbort, onStatus });
+        signal?.addEventListener('abort', onAbort, { once: true });
+        parent.postMessage({
+          source: PARENT_AI_SOURCE,
+          type: PARENT_AI_REQUEST,
+          id,
+          input,
+        }, origin);
+      });
+    },
+  };
+  return true;
+}

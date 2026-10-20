@@ -24,6 +24,7 @@ import {
   towerFloorSpec,
 } from './night-slice.js';
 import {
+  installParentSliceBridge,
   installPreviewSliceBridge,
   requestFloorSpec,
   requestShadowJudge,
@@ -75,6 +76,7 @@ export function createSliceFlow(api) {
   const params = new URLSearchParams(location.search);
   const offlineOnly = params.get('slice-ai') === 'off';
   if (params.get('slice-ai') === 'preview') installPreviewSliceBridge();
+  else if (!offlineOnly) installParentSliceBridge();
 
   let active = params.get('slice') === '1';
   let page = 'day';

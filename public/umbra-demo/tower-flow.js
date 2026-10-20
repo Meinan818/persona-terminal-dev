@@ -820,7 +820,7 @@ export function createTowerFlow(api){
       </section>
       <aside class="slice-talk-side">
         <div class="slice-shadow-meter"><span>它的耐心</span><i style="width:${Math.max(12,100-(j.explore?.security??0))}%"></i><small>警戒越高，它越不容易听进去。</small></div>
-        <div class="slice-side-note"><b>${shadowTalk?.judged?`判定：${shadowTalk.judged.mode==='ai'?'模型':'离线'}`:'判定方式'}</b><small>同一个“讲理”，写得好和写得敷衍，命中率不一样。</small></div>
+        <div class="slice-side-note"><b>${shadowTalk?.judged?`判定：${shadowTalk.judged.mode==='ai'?'模型':shadowTalk.judged.mode==='preview'?'预览':'离线'}`:'判定方式'}</b><small>同一个“讲理”，写得好和写得敷衍，命中率不一样。</small></div>
       </aside>
     </div>`);
   }
@@ -830,7 +830,7 @@ export function createTowerFlow(api){
     const success=Boolean(result.success);
     return frame(success?'它让开了。':'它没有接受。',success?'IT LISTENED':'IT DID NOT',`<div class="slice-result ${success?'is-success':'is-fail'}">
       <div class="slice-result-head">
-        <span class="slice-kicker">${esc(TONE_LABELS[result.tone]??'交涉')} · 质量 ${result.quality} · ${result.mode==='ai'?'模型判定':'离线判定'}</span>
+        <span class="slice-kicker">${esc(TONE_LABELS[result.tone]??'交涉')} · 质量 ${result.quality} · ${result.mode==='ai'?'模型判定':result.mode==='preview'?'预览判定':'离线判定'}</span>
         <h2>${success?'影子把路让开了。':'影子没有让路。'}</h2>
         <div class="slice-chance" role="img" aria-label="成功率 ${result.chance}%"><i style="width:${result.chance}%"></i><b>${result.chance}%</b></div>
         <small>掷出 ${Math.round((Number(result.roll)||0)*100)} / 100</small>

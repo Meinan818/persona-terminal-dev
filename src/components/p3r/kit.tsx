@@ -37,6 +37,10 @@ export const P3R = {
   magenta: 'var(--p3r-magenta, #f0417f)',
   bg: 'var(--p3r-bg, #eef5f9)',
   panel: 'var(--p3r-panel, #ffffff)',
+  roseInk: 'var(--p3r-rose-ink, #1546e0)',
+  lilacInk: 'var(--p3r-lilac-ink, #0b7d96)',
+  coralInk: 'var(--p3r-coral-ink, #c8102e)',
+  gold: 'var(--p3r-gold, #ffd53a)',
   /** 半透明白面板（斜卡/分组壳的玻璃白）：夜间翻半透明深靛 */
   panelGlass: 'var(--p3r-panel-glass, rgba(255,255,255,0.93))',
 } as const;

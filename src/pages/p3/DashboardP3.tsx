@@ -61,6 +61,38 @@ const getSlot = (h: number) => {
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
+/** P3R 蓝版首页标题，顺序与结构直接对位 demo 的 HomeBrandTitle。 */
+export const HomeBrandTitle = ({ play = true }: { play?: boolean }) => (
+  <h1
+    className="relative inline-flex items-end font-heavy leading-[0.95] tracking-tight"
+    style={{ color: P3R.ink, fontSize: 'min(54px, 13.4vw)', isolation: 'isolate' }}
+  >
+    MASKARIA
+    <TitlePeriod className="mb-1.5 ml-1.5" />
+    <TitleTri
+      wobble={play}
+      style={{ left: -10, right: 30, top: 6, bottom: -8, transform: 'translate(-1.6px, -6.9px) rotate(3deg)' }}
+    />
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-0 select-none"
+      style={{
+        backgroundImage: TRI_MASK_URI,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: '-11.6px -0.9px',
+        backgroundSize: 'calc(100% - 20px) calc(100% + 2px)',
+        WebkitBackgroundClip: 'text',
+        backgroundClip: 'text',
+        color: 'transparent',
+        WebkitTextFillColor: 'transparent',
+        textShadow: 'none',
+      }}
+    >
+      MASKARIA
+    </span>
+  </h1>
+);
+
 /**
  * 页头三角蒙版染字（手稿四稿）：与底衬 TitleTri 同形状同位置的暗红三角，作为标题字的
  * 蒙版——被三角覆盖到的字变暗红，三角自身在字外不显形。实现走 background-clip:text：
@@ -643,45 +675,15 @@ export const DashboardP3 = () => {
 
         {/* ── 页头 ── */}
         <header className="relative pt-4">
-          <h1
-            className="relative inline-flex items-end text-[54px] font-black italic leading-[0.95] tracking-tight"
-            style={{ color: '#021c36', fontSize: 'min(54px, 13.4vw)', isolation: 'isolate' }}
-          >
-            MASKARIA
-            <TitlePeriod className="mb-1.5 ml-1.5" />
-            {/* 底衬三角（八稿）：七稿（绕右顶点顺 5°，等效中心平移 (-1.6,-6.9)px + 净角 4°）
-                再以中心逆时针回 1°——净角 +3°；顶点连续沸腾 */}
-            <TitleTri wobble style={{ left: -10, right: 30, top: 6, bottom: -8, transform: 'translate(-1.6px, -6.9px) rotate(3deg)' }} />
-            {/* 三角蒙版染字层：克隆字继承 h1 全部排版（字体/斜体/字距随继承走），背景三角
-                的定位与底衬 TitleTri 的 span 几何一致（left-10→bgX-10；top6+translateY5→bgY11；
-                size 即 span 盒尺寸），背景只透过字形显示 → 被覆盖的字变暗红 */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 select-none"
-              style={{
-                backgroundImage: TRI_MASK_URI,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: '-11.6px -0.9px',
-                backgroundSize: 'calc(100% - 20px) calc(100% + 2px)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                color: 'transparent',
-                WebkitTextFillColor: 'transparent',
-                // text-shadow 可继承：h1 的投影若漏到这层，即使字面全透明 shadow 也会
-                // 全量绘制（shadow 只认字形轮廓不认填充色），一份投影字形就会盖在
-                // 原字与染色区之上——必须显式关掉
-                textShadow: 'none',
-              }}
-            >MASKARIA</span>
-          </h1>
-          <p className="mt-2 text-[15px] font-bold" style={{ color: P3R.blue }}>{greeting}</p>
+          <HomeBrandTitle />
+          <p className="mt-2 text-[15px] font-bold" style={{ color: P3R.roseInk }}>{greeting}</p>
 
           {/* 日期块 */}
-          <div className="mt-4 flex items-center gap-2.5">
-            <span className="text-[56px] font-black italic leading-none" style={{ color: P3R.blue }}>
+          <div className="mt-4 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-2">
+            <span className="font-cond text-[58px] leading-none" style={{ color: P3R.blue }}>
               {now.getDate()}
             </span>
-            <span className="flex flex-col gap-0.5 text-[13px] font-black leading-none" style={{ color: P3R.blue }}>
+            <span className="flex flex-col gap-0.5 font-cond text-[14px] leading-none" style={{ color: P3R.roseInk }}>
               <span>{MONTHS[now.getMonth()]}</span>
               <span>{WEEKDAYS[now.getDay()]}</span>
             </span>
@@ -698,7 +700,7 @@ export const DashboardP3 = () => {
             type="button"
             onClick={jumpToCallingCardSection}
             className="mt-5 flex w-full items-center gap-3 px-5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b57ff]"
-            style={{ clipPath: slantClip(10), background: P3R.panel, boxShadow: '0 10px 24px rgba(38,96,140,0.10)' }}
+            style={{ clipPath: slantClip(10), background: P3R.panel, boxShadow: 'var(--p3r-shadow)' }}
           >
             <span aria-hidden className="h-9 w-[4px] shrink-0" style={{ background: P3R.blue, transform: 'skewX(-20deg)' }} />
             <span className="min-w-0 flex-1">
@@ -709,7 +711,7 @@ export const DashboardP3 = () => {
             {daysLeft !== null ? (
               <span className="flex shrink-0 items-baseline gap-1">
                 <span className="text-[11px] font-bold" style={{ color: P3R.inkSoft }}>剩</span>
-                <span className="text-[26px] font-black italic leading-none tabular-nums" style={{ color: daysLeft <= 3 ? P3R.magenta : P3R.blue }}>{daysLeft}</span>
+                <span className="font-cond text-[30px] leading-none tabular" style={{ color: daysLeft <= 3 ? P3R.coralInk : P3R.blue }}>{daysLeft}</span>
                 <span className="text-[11px] font-bold" style={{ color: P3R.inkSoft }}>天</span>
               </span>
             ) : (

@@ -6,6 +6,7 @@ import com.meinan818.personaterminal.user.User;
 import com.meinan818.personaterminal.user.UserMapper;
 import lombok.RequiredArgsConstructor;
 import com.meinan818.personaterminal.social.SocialException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -93,7 +94,19 @@ public class FriendService {
         f.setCreated(now());
         f.setUpdated(now());
         f.setExpiresAt(expiresAt());
-        friendshipMapper.insert(f);
+        try {
+            friendshipMapper.insert(f);
+        } catch (DuplicateKeyException race) {
+            // 双击/弱网重试可能同时越过上面的查询。唯一键保证只落一行；
+            // 输掉竞争的请求按幂等结果返回，而不是让异常落入鉴权错误链。
+            Friendship raced = findBetween(me, targetId);
+            if (raced != null
+                    && STATUS_PENDING.equals(raced.getStatus())
+                    && me.equals(raced.getInitiator())) {
+                return toView(raced, me);
+            }
+            throw race;
+        }
         notify(targetId, "friend_request", f, message);
         return toView(f, me);
     }

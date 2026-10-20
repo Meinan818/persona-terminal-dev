@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meinan818.personaterminal.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -118,7 +119,19 @@ public class CoopBondService {
         b.setExpiresAt(iso(now.plus(Duration.ofDays(PROPOSAL_TTL_DAYS))));
         b.setCreated(iso(now));
         b.setUpdated(iso(now));
-        coopBondMapper.insert(b);
+        try {
+            coopBondMapper.insert(b);
+        } catch (DuplicateKeyException race) {
+            // 并发提议由唯一键收口。后来者返回已经落库的 pending 提议，
+            // 不重复写通知，也不能把唯一键异常暴露成会话失效。
+            CoopBond raced = findByPair(userA, userB);
+            if (raced != null
+                    && "pending".equals(raced.getStatus())
+                    && me.equals(raced.getInitiator())) {
+                return toView(raced, me);
+            }
+            throw race;
+        }
         notify(me, targetId, "coop_proposal", b.getId(), message);
         return toView(b, me);
     }

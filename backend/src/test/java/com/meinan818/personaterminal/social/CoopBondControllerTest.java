@@ -14,7 +14,13 @@ import org.springframework.web.client.RestTemplate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -191,6 +197,44 @@ class CoopBondControllerTest {
         // 冷却期内 A 再提议 → 400
         assertThat(post(a.token(), "/api/social/coop/bonds/propose", proposeBody(b.id())).getStatusCode())
                 .isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void 并发提议由唯一键收口且全部幂等成功() throws Exception {
+        Acct a = register("burst-ca" + UUID.randomUUID().toString().substring(0, 6));
+        Acct b = register("burst-cb" + UUID.randomUUID().toString().substring(0, 6));
+        int workers = 6;
+        ExecutorService pool = Executors.newFixedThreadPool(workers);
+        CountDownLatch ready = new CountDownLatch(workers);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            java.util.List<Future<ResponseEntity<Map>>> futures = new java.util.ArrayList<>();
+            for (int i = 0; i < workers; i++) {
+                futures.add(pool.submit(() -> {
+                    ready.countDown();
+                    assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+                    return post(a.token(), "/api/social/coop/bonds/propose", proposeBody(b.id()));
+                }));
+            }
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            Set<Object> ids = new java.util.HashSet<>();
+            for (Future<ResponseEntity<Map>> future : futures) {
+                ResponseEntity<Map> response = future.get(15, TimeUnit.SECONDS);
+                assertThat(response.getStatusCode()).isIn(
+                        org.springframework.http.HttpStatus.OK,
+                        org.springframework.http.HttpStatus.BAD_REQUEST);
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    assertThat(response.getBody().get("status")).isEqualTo("pending");
+                    ids.add(response.getBody().get("id"));
+                }
+            }
+            assertThat(ids).hasSize(1);
+            assertThat(items(get(a.token(), "/api/social/coop/bonds"))).hasSize(1);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test

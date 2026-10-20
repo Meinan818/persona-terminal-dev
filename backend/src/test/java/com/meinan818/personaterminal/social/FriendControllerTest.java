@@ -13,6 +13,12 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -194,5 +200,40 @@ class FriendControllerTest {
         ResponseEntity<String> res = raw.exchange(rest.getRootUri() + "/api/social/friends",
                 HttpMethod.GET, new HttpEntity<>(h), String.class);
         assertThat(res.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void 并发申请由唯一键收口且全部幂等成功() throws Exception {
+        Acct a = register("burst-a");
+        Acct b = register("burst-b");
+        int workers = 6;
+        ExecutorService pool = Executors.newFixedThreadPool(workers);
+        CountDownLatch ready = new CountDownLatch(workers);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            java.util.List<Future<ResponseEntity<Map>>> futures = new java.util.ArrayList<>();
+            for (int i = 0; i < workers; i++) {
+                futures.add(pool.submit(() -> {
+                    ready.countDown();
+                    assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+                    return post(a.token(), "/api/social/friends/request",
+                            Map.of("targetId", b.id(), "message", "并发申请"));
+                }));
+            }
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            Set<Object> ids = new java.util.HashSet<>();
+            for (Future<ResponseEntity<Map>> future : futures) {
+                ResponseEntity<Map> response = future.get(15, TimeUnit.SECONDS);
+                assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
+                ids.add(response.getBody().get("id"));
+            }
+            assertThat(ids).hasSize(1);
+            assertThat(((java.util.List<?>) get(a.token(), "/api/social/friends").getBody().get("items")))
+                    .hasSize(1);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }

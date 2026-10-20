@@ -2,6 +2,18 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前开发 · 2026-10-21 · COOP 并发唯一键竞争修复
+
+- **用户决定**：真实 BYOK 通过后用户回复“继续”，按清单推进生产/真机 COOP；本机无 ADB/安卓设备，因此先把不需要外设的并发与重试风险在隔离后端跑实。
+- **环境**：Spring Boot 启动于 `127.0.0.1:8080`，明确覆盖 `SPRING_DATASOURCE_URL` 到 `persona_terminal_test`、上传目录到 `target/test-uploads`，没有连接正式库或真实用户；`/api/health` 返回 `status=UP, db=UP`。
+- **复现缺陷**：同一有效 JWT 并发发送 8 次好友申请/COOP 提议时，只有 1 次返回 200，其余 7 次返回 401 `{"velvet":"not_found"}`；数据库最终仍只有 1 行。好友申请与 COOP 提议都会在“先查无关系、后插入”的窗口撞唯一键，未捕获的 `DuplicateKeyException` 落入安全错误链，被错误包装成会话失效。
+- **最小修复**：`FriendService.request` 与 `CoopBondService.propose` 在插入撞唯一键后重新读取同一对用户的关系；若已是当前用户发起的 pending，则按幂等结果返回原行，不重复写通知。业务正常重复提议仍保留 200/400 的原契约，未改表结构、数据库迁移、前端权限或生产数据。
+- **永久回归**：好友与 COOP 测试各新增 6 线程同时起跑的并发用例；全后端 `mvn test` **161 项全通过**，Profile 为 `isolated`、数据库为 `persona_terminal_test`。
+- **修复后实跑**：好友申请并发 8/8 全部 200，同一 `id`，通知 1 条；COOP 提议并发 8/8 全部 200，同一 pending `id`，关系 1 行；同一 COOP 事件并发 12 次，`created=true` 1 次、`false` 11 次，目标账号只有 1 条通知。无 401/5xx。
+- **证据**：`.rivet/scratch/coop-staging-resilience-20261021/report.json`、`pre-fix-race.json`、`burst-inspection.json`、`inspect-burst.mjs`、`verify.mjs`。修复前失败证据保留，未删除或覆盖为通过。
+- **commit / Push**：源码与永久回归提交为 `0afdbe8`（`fix(coop): 并发申请与提议按唯一键幂等收口`）；本条状态记录随独立 docs 提交保存。未 Push、未部署。
+- **边界**：这不是生产 staging 或第二台物理设备验收。未验证公网弱网、系统通知权限、Android WebView、跨设备时钟/并发与生产服务；这些仍需隔离 staging 和真机。
+
 ## 当前验收 · 2026-10-21 · AI LAB 夜层真实 BYOK 单次通过
 
 - **用户决定**：用户在 40F 长跑后回复“继续”，按优先级进入第 2 项；真实请求由用户在自己的 Edge、现有 `custom / deepseek-flash` 配置中手动点击发起。

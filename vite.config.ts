@@ -48,8 +48,20 @@ export default defineConfig({
          * 云天图改走下面的 runtimeCaching，与塔罗图 / 字体同口径：见过一次即长期离线可用。
          * eruda 干脆不缓存 —— 会开 ?debug=1 的人不在乎多等一次网络。
          */
-        globIgnores: ['**/eruda-*.js', 'assets/terminal/*.png'],
+        globIgnores: ['**/eruda-*.js', 'assets/terminal/*.png', '**/p5r-compendium-data.js'],
         runtimeCaching: [
+          {
+            // UMBRA 图鉴资料约 2.21 MB；当前正式 Demo 只使用 /umbra-demo/ 这一份。
+            // 它不应进入首装预缓存，也不能触发 Workbox 的超限丢弃警告：
+            // 首次打开图鉴时收编进独立缓存，之后离线可用。
+            urlPattern: ({ url }) => url.pathname === '/umbra-demo/p5r-compendium-data.js',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'umbra-compendium-v1',
+              expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             // 岁时四套共 176 张 WebP，按需加载并缓存，不加入首次安装预缓存。
             urlPattern: ({ url }) => url.pathname.startsWith('/season/'),
@@ -106,6 +118,11 @@ export default defineConfig({
         // PWAUpdateToast 启动时 registration.update() → 有 waiting SW → 弹「立即更新」。
         // 排查"更新不生效"时请顺着 SW 更新链看，不要去找并不存在的网络优先超时。
         navigateFallback: '/index.html',
+        // UMBRA 在正式 App 里以同源 iframe 加载自己的 HTML。NavigationRoute 若也把
+        // iframe 导航兜底到主应用 index.html，会在 iframe 里再渲染一套主应用，
+        // AI LAB/塔界面就永远等不到自己的 day scene。旧历史副本一并放行，避免
+        // 本地对照页被同一个兜底劫持。
+        navigateFallbackDenylist: [/^\/umbra-demo(?:\/|$)/, /^\/umbra-demo-p3-v2(?:\/|$)/],
         // 明确清理旧版本的预缓存条目，避免 iOS 磁盘上残留过多旧 chunk
         cleanupOutdatedCaches: true,
       },

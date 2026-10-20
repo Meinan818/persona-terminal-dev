@@ -26,6 +26,7 @@ import { syncCustomProvider } from '@/utils/aiProviders';
 import { buildSummaryRequest as buildSummaryRequestAI, getActiveSummaryPreset as getActiveSummaryPresetAI, type SummaryRequestData } from '@/utils/summaryAI';
 import { ensureUmbraProfile } from '@/umbra/migrate';
 import { isUmbraRunCompatible } from '@/umbra/runtime';
+import { normalizeUmbraProfile } from '@/umbra/state';
 import type { UmbraLegacyArchive, UmbraProfile, UmbraRunRecord } from '@/umbra/state';
 import {
   pointsToLevel,
@@ -5067,6 +5068,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           });
         } catch (error) {
           console.warn('[umbra] legacy migration failed; old battle state was not modified', error);
+        }
+      } else {
+        const normalized = normalizeUmbraProfile(umbraProfile);
+        if (normalized !== umbraProfile) {
+          await db.umbraProfiles.put(normalized);
+          umbraProfile = normalized;
         }
       }
       const umbraRun = umbraRuns

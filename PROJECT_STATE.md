@@ -2,6 +2,16 @@
 
 最后更新：2026-10-20（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前开发 · 2026-10-20 · U2i Demo 存档双向桥接
+
+- Demo 仍保持原源码和三个原始 localStorage 键不变：`maskaria.p5r.rebuild.v1`、`maskaria.p5r.run.v1`、`maskaria.p5r.slice.v1`。父应用在 iframe 载入前把正式资料转成 Demo 初始档，载入后监听同源 `storage` 事件回写，不入侵 Demo 规则。
+- 正式 `umbraProfiles` 增加可选 `demo.p5r` / `demo.slice` 原档；永久状态会合并金币、出战/同行 Persona、装备、强化、背包、素材与装备加成。塔行程写入 `umbraRuns.payload.demoRun`，标记 `source=demo`；Demo 清除行程时同步清除正式 run。
+- 已有 Demo 本地档在正式档尚未桥接时会先导入；已有正式桥接档时由正式档覆盖本地旧值。iframe 在正式 profile 就绪前不加载，并订阅 store 后期就绪，避免刷新时本地旧档抢跑。所有回写经串行队列执行，避免 p5r/slice 两个事件用旧对象互相覆盖。
+- 同时修复一个存量漏洞：已有 `umbraProfiles` 在 App 加载时现在也会走 `normalizeUmbraProfile`，不再只有“首次建档”才归一化。
+- 真实 Chrome：正式档预置金币 2468，Demo 首载读到 2468；在 Demo“同行面具编成”实际选择阿珈席翁后，正式 profile 的同行数组同步为 `agathion / cait-sith / kelpie`；金币 4321、消耗品、素材、装备、塔层 3、AI LAB 日期均成功写入正式表。刷新前故意把 Demo 本地金币改成 1，正式档写 4321 后重进，Demo 恢复 4321，证明双向覆盖顺序正确。errors=[]，证据 `.rivet/scratch/umbra-bridge-browser-20261020/report.json`。
+- `npm test` 54 文件 **343/343**、`npm run typecheck` exit0、`npm run build` exit0。Demo 桥新增纯函数测试 6 项，覆盖正式初始档、非法字段、装备/Persona/背包合并、run/slice 归档、正式档与本地档覆盖顺序。
+- 当前桥接已随 `umbraProfiles` / `umbraRuns` 进入既有云同步和备份表，无需新增表。尚未验证真实云账号上传/下载往返；下一步应做一次隔离账号或合成同步 round-trip，再继续天鹅绒与联机接回。
+
 ## 当前开发 · 2026-10-20 · U2h Demo 本体直接取代旧战场入口
 
 - 用户明确纠正：验收 Demo 是为了接进主体准备的真实界面资产，不是供 Codex 照着重画。默认战场入口现在直接加载 Demo 本体，不再要求 `?umbra=1`，也不再把 React 迁移页当作玩家界面。

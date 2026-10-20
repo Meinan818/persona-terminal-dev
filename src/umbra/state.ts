@@ -31,6 +31,11 @@ export interface UmbraProfile {
     lastBattleDate?: string;
     maxStratumLevel?: number;
   };
+  demo?: {
+    p5r?: Record<string, unknown>;
+    slice?: Record<string, unknown>;
+    updatedAt?: string;
+  };
 }
 
 export interface UmbraCombatState {
@@ -94,6 +99,24 @@ const uniqueStrings = (value: unknown, limit = 100): string[] => {
   return [...seen].slice(-limit);
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+);
+
+const normalizeDemoArchive = (
+  value: UmbraProfile['demo'],
+): UmbraProfile['demo'] | undefined => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const p5r = isRecord(value.p5r) ? { ...value.p5r } : undefined;
+  const slice = isRecord(value.slice) ? { ...value.slice } : undefined;
+  if (!p5r && !slice) return undefined;
+  return {
+    ...(p5r ? { p5r } : {}),
+    ...(slice ? { slice } : {}),
+    ...(typeof value.updatedAt === 'string' ? { updatedAt: value.updatedAt } : {}),
+  };
+};
+
 const cloneBattleState = (state: BattleState): BattleState => (
   typeof structuredClone === 'function'
     ? structuredClone(state)
@@ -123,13 +146,14 @@ export function createDefaultUmbraCombat(): UmbraCombatState {
 }
 
 export function normalizeUmbraProfile(profile: UmbraProfile): UmbraProfile {
+  const demo = normalizeDemoArchive(profile.demo);
   if (
     profile.schemaVersion === UMBRA_SCHEMA_VERSION
     && profile.combat
     && profile.combat.equipment
     && Array.isArray(profile.combat.ownedEquipment)
     && profile.combat.battleItems
-  ) return profile;
+  ) return demo === profile.demo ? profile : { ...profile, demo };
   const defaults = createDefaultUmbraCombat();
   return {
     ...profile,
@@ -150,6 +174,7 @@ export function normalizeUmbraProfile(profile: UmbraProfile): UmbraProfile {
       materials: { ...defaults.materials, ...profile.combat?.materials },
       equipmentBonuses: { ...defaults.equipmentBonuses, ...profile.combat?.equipmentBonuses },
     },
+    demo,
     updatedAt: new Date(),
   };
 }

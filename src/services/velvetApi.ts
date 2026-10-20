@@ -14,7 +14,15 @@
  *   401 {velvet:"not_found"}；409 {velvet:"not_found", message:"email already registered"}
  */
 
-const API_URL = normalizeEndpoint(import.meta.env.VITE_API_URL as string | undefined);
+export function resolveApiUrl(configured: string | undefined, origin: string): string {
+  const normalized = normalizeEndpoint(configured);
+  return normalized === 'same-origin' ? origin.replace(/\/+$/, '') : normalized;
+}
+
+/**
+ * Web/PWA 可部署在同源反代后面，运行时跟随当前域名；原生包仍必须配置明确的远端地址。
+ */
+const API_URL = resolveApiUrl(import.meta.env.VITE_API_URL as string | undefined, window.location.origin);
 
 /** 后端根地址（AI 代理改道用；未配置 = 空串） */
 export const getApiBaseUrl = (): string => API_URL;

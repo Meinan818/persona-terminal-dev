@@ -1,0 +1,30 @@
+[Unit]
+Description=MASKARIA production backend
+Wants=network-online.target mysql.service
+After=network-online.target mysql.service
+
+[Service]
+Type=simple
+User=maskaria
+Group=maskaria
+WorkingDirectory=/opt/maskaria/backend
+EnvironmentFile=/etc/maskaria/backend.env
+ExecStart=/usr/bin/java -Xms256m -Xmx640m -XX:+ExitOnOutOfMemoryError -jar /opt/maskaria/backend/app.jar
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/opt/maskaria/uploads
+
+[Install]
+WantedBy=multi-user.target

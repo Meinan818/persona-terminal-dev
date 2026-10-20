@@ -12,6 +12,7 @@ function assertCloudEnv() {
     configResolved(cfg: { env: Record<string, string> }) {
       const url = (cfg.env.VITE_API_URL ?? '').trim();
       if (!url) console.warn('云同步后端 VITE_API_URL 未配置，此构建仅供离线使用');
+      else if (url === 'same-origin') console.log('云同步后端：同源 /api');
       else if (/^https?:\/\/(localhost|127\.)/i.test(url)) console.warn('当前构建使用本机开发后端，不可作为手机正式安装包发布');
       else console.log('云同步后端：' + url);
     },

@@ -1,0 +1,68 @@
+http://150.158.174.9 {
+	encode gzip zstd
+
+	@api path /api/*
+	handle @api {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	@index path / /index.html
+	header @index Cache-Control "no-cache, must-revalidate"
+
+	@serviceWorker path /sw.js
+	header @serviceWorker Cache-Control "no-cache"
+
+	@download path /download /download/*
+	respond @download 410
+
+	@archives path *.apk *.aab
+	respond @archives 410
+
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	root * /opt/maskaria/web
+	handle {
+		try_files {path} {path}/ /index.html
+		file_server
+	}
+
+	log {
+		output file /var/log/caddy/maskaria-production-access.log {
+			roll_size 10MiB
+			roll_keep 3
+		}
+	}
+}
+
+http://:8082 {
+	bind 127.0.0.1
+	encode gzip zstd
+
+	@api path /api/*
+	handle @api {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	@index path / /index.html
+	header @index Cache-Control "no-cache, must-revalidate"
+
+	@serviceWorker path /sw.js
+	header @serviceWorker Cache-Control "no-cache"
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=86400"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	root * /opt/maskaria/web
+	handle {
+		try_files {path} {path}/ /index.html
+		file_server
+	}
+}

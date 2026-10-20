@@ -6,6 +6,7 @@ import { isInShadowTime } from '@/constants';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { P4Flower, P4Sparkle } from '@/ui/p4Kit';
 import { P5R, P5_FONT, P5_TITLE_FONT, roughQuad, roughBanner, P5Star, P5Dots } from '@/components/p5r/kit';
+import { P3R, slantClip } from '@/components/p3r/kit';
 
 /** 影时间扫描线：CRT 横纹叠层（只在暗底上叠，靠 mix-blend 压出微亮/微暗交替） */
 const ScanLines = ({ opacity = 0.5 }: { opacity?: number }) => (
@@ -57,6 +58,88 @@ export const BattleDashboardWidget = () => {
   const shadowHpPct = shadow
     ? Math.min(100, (shadow.currentHp / shadow.maxHp) * 100)
     : 0;
+
+  if (channel === 'p3') {
+    const personaName = persona?.equippedMaskAttribute
+      ? (persona.attributePersonas?.[persona.equippedMaskAttribute]?.name ?? 'Persona')
+      : 'Persona';
+    const floorLabel = stratum
+      ? `${stratum.baseFloor + (stratum.nodes.find(node => node.id === stratum.currentNodeId)?.floor ?? 0)}F`
+      : shadow
+        ? `Lv.${shadow.level}`
+        : null;
+
+    return (
+      <motion.button
+        type="button"
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setCurrentPage('battle')}
+        aria-label={inShadowTime ? `${umbraIdentity.full}：影时间进行中` : umbraIdentity.full}
+        className="relative flex h-full min-h-[76px] w-full items-center gap-3 overflow-hidden px-5 py-3 text-left"
+        style={{
+          clipPath: slantClip(12),
+          background: inShadowTime
+            ? 'linear-gradient(135deg, #0a0f1b 0%, #1a284a 55%, #11182a 100%)'
+            : P3R.cyanPale,
+        }}
+      >
+        {inShadowTime && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 4px)' }}
+          />
+        )}
+        <span aria-hidden className="h-9 w-[4px] shrink-0" style={{ background: P3R.magenta, transform: 'skewX(-9deg)' }} />
+        <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden className="relative shrink-0">
+          <path
+            d="M4 3l7 7-2 2-7-7V3h2Zm16 0v2l-9.6 9.6 1.4 1.4-1.4 1.4-1.8-1.8L5 19l-2 2-1-1 2-2 3.4-3.6-1.8-1.8L7 11.2l1.4 1.4L18 3h2Z"
+            fill={inShadowTime ? 'var(--bk-bubble-a)' : P3R.blue}
+          />
+        </svg>
+        <span className="relative min-w-0 flex-1">
+          <span className="block text-[10px] font-black tracking-widest" style={{ color: inShadowTime ? 'var(--bk-bubble-a)' : P3R.lilacInk }}>
+            {umbraIdentity.zh}
+          </span>
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
+            {!persona ? (
+              <span className="truncate text-[14px] font-bold" style={{ color: inShadowTime ? 'rgba(255,255,255,0.7)' : P3R.inkSoft }}>唤醒 Persona →</span>
+            ) : !shadow ? (
+              <>
+                <span className="truncate text-[14px] font-black" style={{ color: inShadowTime ? '#fff' : P3R.ink }}>{personaName}</span>
+                <span className="shrink-0 text-[13px] font-bold" style={{ color: inShadowTime ? 'rgba(255,255,255,0.6)' : P3R.inkSoft }}>· 区层显形 →</span>
+              </>
+            ) : (
+              <>
+                <span className="truncate text-[14px] font-black" style={{ color: inShadowTime ? '#fff' : P3R.ink }}>{personaName}</span>
+                {battleState && (
+                  <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-black" style={{ background: 'rgb(var(--p3r-cyan-rgb) / 0.25)', color: inShadowTime ? '#d8f7ff' : P3R.lilacInk, clipPath: slantClip(3) }}>
+                    SP {battleState.sp}
+                  </span>
+                )}
+                <span className="min-w-0 truncate text-[11px] font-bold" style={{ color: inShadowTime ? 'rgba(255,255,255,0.65)' : P3R.inkSoft }}>
+                  {stratum?.name ?? shadow.name}
+                </span>
+                {floorLabel && (
+                  <span className="shrink-0 px-1 text-[10px] font-black tabular" style={{ background: 'var(--bk-danger-wash)', color: 'var(--p3r-coral-ink)' }}>
+                    {floorLabel}
+                  </span>
+                )}
+                <span className="relative h-1.5 w-10 shrink-0 overflow-hidden" style={{ background: inShadowTime ? 'rgba(255,255,255,0.12)' : 'var(--p3r-track)' }}>
+                  <span className="absolute inset-y-0 left-0" style={{ width: `${shadowHpPct}%`, background: P3R.magenta }} />
+                </span>
+              </>
+            )}
+          </span>
+        </span>
+        {inShadowTime ? (
+          <span className="relative shrink-0 px-2 py-1 text-[11px] font-black" style={{ background: P3R.magenta, color: '#fff', clipPath: slantClip(4) }}>影时间</span>
+        ) : (
+          <span className="relative shrink-0 text-[10px] font-black" style={{ color: P3R.grey }}>{settings.battleShadowTimeStart ?? 20}:00 显形</span>
+        )}
+      </motion.button>
+    );
+  }
 
   if (isP5) {
     const personaName = persona?.equippedMaskAttribute

@@ -146,7 +146,7 @@ const SkyBadge = ({ date }: { date: Date }) => {
           <span className="text-[13px] font-black" style={{ color: P3R.ink }}>
             {!ready ? '去设置天气' : errorKind === 'config' ? '天气设置有误' : error ? '天气取不到' : loading ? '取数中…' : `${weather?.temp}°C ${weather?.text}`}
           </span>
-          <span className="text-[9px] font-black tracking-[0.16em]" style={{ color: P3R.blue }}>
+          <span className="text-[9px] font-black tracking-[0.16em]" style={{ color: P3R.roseInk }}>
             {!ready || errorKind === 'config' ? 'SET UP' : error ? 'RETRY' : `FEELS ${weather?.feelsLike ?? '--'}°`}
           </span>
         </span>
@@ -185,18 +185,18 @@ const MoonPhase = ({ date }: { date: Date }) => {
           <circle cx="18" cy="18" r="15" fill={P3R.ink} />
           <motion.path
             d={moonLitPath(phase, 15, 18)}
-            fill={full ? MOON_YELLOW : P3R.cyan}
+            fill={full ? 'var(--p3r-gold)' : P3R.cyan}
             initial={anim ? { clipPath: waxing ? 'inset(0% 0% 0% 100%)' : 'inset(0% 100% 0% 0%)', opacity: 0.4 } : false}
             animate={{ clipPath: 'inset(0% 0% 0% 0%)', opacity: 1 }}
             transition={{ duration: 0.8, ease: [0.3, 0, 0.2, 1], delay: 0.2 }}
           />
-          <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(27,87,255,0.35)" strokeWidth="1.5" />
+          <circle cx="18" cy="18" r="15" fill="none" stroke="rgb(var(--p3r-blue-rgb) / 0.35)" strokeWidth="1.5" />
         </svg>
         <span aria-hidden className="absolute right-[3px] top-[3px] h-[7px] w-[9px]" style={{ background: P3R.magenta, clipPath: 'polygon(30% 0, 100% 0, 70% 100%, 0 100%)' }} />
       </span>
       <span className="flex flex-col gap-1 leading-none">
         <span className="text-[13px] font-black" style={{ color: P3R.ink }}>{name}</span>
-        <span className="text-[9px] font-black tracking-[0.16em]" style={{ color: P3R.blue }}>
+        <span className="text-[9px] font-black tracking-[0.16em]" style={{ color: P3R.roseInk }}>
           LUNAR <motion.span>{pctText}</motion.span>%
         </span>
       </span>
@@ -977,10 +977,10 @@ export const DashboardP3 = () => {
             { v: stats.totalPoints, label: '累计点数', color: P3R.blue },
             { v: stats.totalActivities, label: '总记录数', color: P3R.blue },
             { v: stats.totalLevel, label: '总等级', color: P3R.blue },
-            { v: stats.uniqueDays, label: '记录天数', color: '#10b981' },
+            { v: stats.uniqueDays, label: '记录天数', color: 'var(--p3r-mint)' },
           ].map((s, i) => (
             <div key={s.label} className={`flex flex-col items-center gap-1 px-1 ${i > 0 ? 'border-l' : ''}`} style={i > 0 ? { borderColor: 'var(--p3r-statstrip-div, rgba(255,255,255,0.7))' } : undefined}>
-              <span className="text-[26px] font-black italic leading-none tabular-nums" style={{ color: s.color }}>{s.v}</span>
+              <span className="font-cond text-[clamp(22px,6.6vw,28px)] leading-none tabular" style={{ color: s.color }}>{s.v}</span>
               <span className="text-center text-[11px] font-bold leading-tight" style={{ color: P3R.inkSoft }}>{s.label}</span>
             </div>
           ))}

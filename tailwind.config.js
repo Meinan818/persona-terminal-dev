@@ -1,5 +1,7 @@
 import plugin from 'tailwindcss/plugin';
 
+const p4gRgb = (name) => `rgb(var(--p4g-${name}-rgb) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -19,11 +21,80 @@ export default {
         battle: 'rgb(var(--color-battle-rgb, 124 58 237) / <alpha-value>)',
         bond: 'rgb(var(--color-bond-rgb, 99 102 241) / <alpha-value>)',
         gold: 'rgb(var(--color-gold-rgb, 245 158 11) / <alpha-value>)',
+        p4g: {
+          yellow: p4gRgb('yellow'),
+          'yellow-hi': p4gRgb('yellow-hi'),
+          'yellow-pale': p4gRgb('yellow-pale'),
+          cream: p4gRgb('cream'),
+          black: p4gRgb('black'),
+          white: p4gRgb('white'),
+          orange: p4gRgb('orange'),
+          'orange-deep': p4gRgb('orange-deep'),
+          red: p4gRgb('red'),
+          green: p4gRgb('green'),
+          cyan: p4gRgb('cyan'),
+          purple: p4gRgb('purple'),
+          blue: p4gRgb('blue'),
+          maroon: p4gRgb('maroon'),
+          brown: p4gRgb('brown'),
+          hp: p4gRgb('hp'),
+          sp: p4gRgb('sp'),
+          stage: p4gRgb('stage'),
+          surface: p4gRgb('surface'),
+          'surface-2': p4gRgb('surface-2'),
+          ink: p4gRgb('ink'),
+          'ink-soft': p4gRgb('ink-soft'),
+          muted: p4gRgb('muted'),
+          line: p4gRgb('line'),
+          accent: p4gRgb('accent'),
+          tag: p4gRgb('tag'),
+          select: p4gRgb('select'),
+          msg: p4gRgb('msg'),
+          danger: p4gRgb('danger'),
+          success: p4gRgb('success'),
+          info: p4gRgb('info'),
+          warn: p4gRgb('warn'),
+          'success-ink': p4gRgb('success-ink'),
+          'info-ink': p4gRgb('info-ink'),
+          'warn-ink': p4gRgb('warn-ink'),
+        },
+      },
+      fontFamily: {
+        'p4g-display': 'var(--p4g-font-display)',
+        'p4g-body': 'var(--p4g-font-body)',
+        'p4g-num': 'var(--p4g-font-num)',
       },
       fontSize: {
         // 字号阶梯最低档（UI_AUDIT_V2.5.md §4.1）：eyebrow/徽章/计数专用，
         // 替换全站 text-[9px]/[10px]/[11px] 任意值
         '2xs': ['10px', { lineHeight: '14px' }],
+        'p4g-cap': ['11px', { lineHeight: '15px' }],
+        'p4g-meta': ['12px', { lineHeight: '16px' }],
+        'p4g-body': ['14px', { lineHeight: '20px' }],
+        'p4g-lead': ['16px', { lineHeight: '22px' }],
+        'p4g-h3': ['18px', { lineHeight: '24px' }],
+        'p4g-h2': ['22px', { lineHeight: '26px' }],
+        'p4g-h1': ['clamp(28px, 8vw, 40px)', { lineHeight: '1' }],
+        'p4g-mega': ['clamp(40px, 13vw, 72px)', { lineHeight: '0.9' }],
+      },
+      borderRadius: {
+        'p4g-xs': 'var(--p4g-radius-xs)',
+        'p4g-sm': 'var(--p4g-radius-sm)',
+        'p4g-md': 'var(--p4g-radius-md)',
+        'p4g-lg': 'var(--p4g-radius-lg)',
+        'p4g-pill': 'var(--p4g-radius-pill)',
+      },
+      borderWidth: {
+        'p4g-hair': 'var(--p4g-stroke-hair)',
+        'p4g-thin': 'var(--p4g-stroke-thin)',
+        'p4g-3': 'var(--p4g-stroke)',
+        'p4g-bold': 'var(--p4g-stroke-bold)',
+      },
+      boxShadow: {
+        'p4g-hard': '4px 4px 0 var(--p4g-shadow-color)',
+        'p4g-hard-sm': '2px 2px 0 var(--p4g-shadow-color)',
+        'p4g-hard-lg': '6px 6px 0 var(--p4g-shadow-color)',
+        'p4g-plate': '6px 6px 0 var(--p4g-msg-plate)',
       },
       animation: {
         'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -43,6 +114,8 @@ export default {
     plugin(({ addVariant }) => {
       addVariant('wide', '@media (min-width: 768px) { :root.layout-wide & }');
       addVariant('wide-lg', '@media (min-width: 1024px) { :root.layout-wide & }');
+      addVariant('night', ':root.dark[data-ui-channel="p4"] &');
+      addVariant('lowmo', ':root[data-boldness="0"] &');
     }),
   ],
 }

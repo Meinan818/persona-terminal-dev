@@ -81,3 +81,44 @@
     }
   }
 }
+
+/* Mobile map sizing: keep the authored skins, but fit the existing 5x5 grid
+   and move the existing D-pad ahead of the long room descriptions. */
+@media (max-width: 900px) {
+  html body #content .map-grid {
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    grid-auto-rows: auto !important;
+    gap: 8px !important;
+    padding: 14px !important;
+    margin: 0 !important;
+  }
+
+  html body #content .map-cell {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    aspect-ratio: 1;
+  }
+
+  html body #content .map-viewport {
+    overflow-x: hidden !important;
+  }
+
+  html[data-theme='p3'][data-theme][data-theme]:not([data-skin='hamuko']) body #content .map-grid {
+    width: 76% !important;
+    margin-inline: auto !important;
+  }
+
+  html[data-theme='p5'][data-theme][data-theme] body #content .map-grid {
+    width: 92% !important;
+    margin-inline: auto !important;
+  }
+
+  html body #content .map-side > .map-pad {
+    order: -1;
+    flex: 0 0 auto;
+    margin: 6px auto 8px !important;
+  }
+}

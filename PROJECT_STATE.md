@@ -2,6 +2,71 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 准备交接 · 2026-10-21 · 蓝粉黄三主题源码接入中
+
+### 接手第一入口
+
+- **用户决定**：用户要求蓝、粉、黄三套 demo 各自达到 100% 后才算完成，中途暂停并要求准备交接。红色主题明确暂停，禁止擅自修改。本轮停止新开发，只核现场、提交已验证代码、写本接手入口并做文档尾提交；没有创建自动化任务。
+- **Git 现场**：工作区 `E:\MASKARIA`；分支 `codex/four-theme-demo-integration-20261021`；交接代码基线 `9b94fe8`；本地 `origin/main` 为 `7c88082`，当前领先 **8 条**，无 upstream。本交接文档会再形成一个本地尾提交，完成后预计领先 **9 条**。接手先跑 `git status --short --branch`、`git rev-parse HEAD`、`git rev-list --left-right --count origin/main...HEAD` 和 `git diff` 核实，不凭本节猜现场。
+- **工作区遗留**：既有无关 tracked 改动 `ios/App/Podfile`、`outputs/battle-experience-v3/P5-P3-FUSION.md`；既有 untracked `.cache/`、`.impeccable/`、`.rivet-config.json`、`deploy/staging/caddy.service.d.conf`、旧 `outputs/`、`public/umbra-demo-p3-v2/`；本轮新增 untracked `outputs/theme-demos-20261021/`。均不属于本轮已提交源码，不要 stash/reset/restore/clean，不要整目录盲目提交。
+- **Demo 来源**：四份用户原始 ZIP 为 `D:\下载\p3r-blue-demo.zip`、`p3r-pink-demo.zip`、`p4g-yellow-demo.zip`、`p5r-red-demo.zip`。Zip 路径穿越检查为 0；已解压到 `outputs/theme-demos-20261021/`。其中的 `node_modules/`、`dist-verify/`、`_verify-runtime/` 仅用于本轮验证，不是正式源码。
+- **当前运行现场**：本轮本地 Vite `5184` 已停止。生产服务与 Android 3.0.1 现场继续沿用下方旧交接，不得借主题任务改动正式库、服务器或安装包。
+
+### 已完成的源码接入
+
+- **基础资源**：蓝（P3R Blue）、粉（P3R Pink）、黄（P4G Yellow）的原始 token、字体和字体许可证已迁入：
+  - `src/styles/theme-demos/p3r-blue.tokens.css`
+  - `src/styles/theme-demos/p3r-pink.tokens.css`
+  - `src/styles/theme-demos/p4g-demo.css`
+  - `public/fonts/theme-demos/`
+- **P4G 语义层**：`tailwind.config.js` 已增加 P4G 原始色板、字体、圆角、描边、硬阴影、`night:` 和 `lowmo:` 变体；`p4g-demo.css` 的日夜选择器已映射到主应用 `data-ui-channel="p4"` / `dark`，红色选择器未改。
+- **蓝色首页**：`DashboardP3` 已接入 demo 原页面结构中的标题、日期条、宣言卡、任务行、今日仪式轮播、星盘、逆影战场入口、天空位和今日完成演出。新增原组件：
+  - `src/components/p3r-demo/P3TaskRow.tsx`
+  - `src/components/p3r-demo/P3StackCarousel.tsx`
+  - `src/components/p3r-demo/StarChartP3.tsx`
+  - `src/components/p3r-demo/P3BandCutIn.tsx`
+  - `src/components/p3r-demo/fxbits.tsx`
+- **蓝色行动页**：`Actions.tsx` 的 P3 分支已换成 demo 原 `CHECK STATUS` / `ACTION` 幽灵字 / 蓝斜块 / 臂章红角 / 横滑切换头；真实记录、任务子页和 store 记忆保留。
+- **蓝色宣告卡**：新增 `src/pages/p3/CallingCardsP3.tsx`，菜单 P3 分支新增“宣告卡”入口并显示真实进行中数量；页面直接复用真实 `CallingCardSection`，支持现有新建、编辑、钉选、归档、恢复和删除，不使用 demo mock。
+- **红色边界**：未修改 `DashboardP5`、P5 token、P5 Tailwind 语义或红色 demo 文件。
+
+### 已验证与证据
+
+- **四 demo 自身**：修正解压副本的 `@real/types` 路径后，四包 `tsc --noEmit` 全通过、`vite build` 全通过。蓝、粉、红真实 Chrome `file://` 首页可渲染且 0 页面错误；黄色 `file://` 有绝对资源路径限制，改走 HTTP 正常。
+- **主应用静态验证**：交接前实跑 `npm run build` 通过；`npx tsc --noEmit` exit 0；`npm test -- --reporter=dot` 为 **63 文件 / 380 项全通过**。
+- **蓝首页真实闭环**：真实 Chrome `390×844` 新建档案，添加真实任务“完成蓝主题首屏回归”；首页显示任务；点击完成后任务 `0/1→1/1`、累计点数 `0→3`、记录数 `0→1`、总等级 `0→1`，并触发原“今日完成”斜带、碎勾、波纹、音符雨和 3 秒倒计时。截图：
+  - `.rivet/scratch/theme-integration-20261021/blue-task-before.png`
+  - `.rivet/scratch/theme-integration-20261021/blue-task-cutin.png`
+- **蓝行动页**：同一真实新档进入行动页，记录/任务头、日历、搜索、筛选和空态正常，0 运行异常；截图 `.rivet/scratch/theme-integration-20261021/blue-actions.png`。
+- **蓝宣告卡页**：真实菜单入口 → 宣告卡页可进入，真实空态和“+ 新建/立下约定”入口正常；截图 `.rivet/scratch/theme-integration-20261021/blue-calling-cards.png`。
+- **已知日志**：`WelcomeModal` 的 React key spread warning 和 GitHub release API 404 是既有/外部问题，不是本轮主题组件报错。后续修复时可独立处理，勿混写成本轮通过项。
+
+### 待办与优先级
+
+1. **完成蓝色剩余页面与弹层**：菜单当前 P3 版已接近 demo，但还要逐项完成 Cooperation、Astrology、Achievements、Statistics、Hideout、Ledger、Settings、Account、各浮层和 P3 专属转场；按 `outputs/theme-demos-20261021/p3r-blue/HANDOFF.md`、`INVENTORY.md` 和 `status/pkg*.json` 逐条核销，不能用首页完成代表蓝色完成。
+2. **完成粉色全部页面与弹层**：目前只接入 P3R Pink token/字体，页面组件尚未迁移。按 `p3r-pink/HANDOFF.md` 的变量映射、页面/弹层对照逐项接入真实 store；大阿卡纳缺图要用现有程序卡面方案，不复制 mock。
+3. **完成黄色全部页面与弹层**：目前只接入 P4G token、字体和 Tailwind 语义；`Dashboard` 仍是旧布局。下一步从原 `Dashboard.p4g.tsx` 的 `DashHeader/GreetingPlate/PanelFrame/TaskRow/RitualCarousel/PersonaStarSection` 开始，再接页面和 75 项演出。
+4. **三套最终验收**：每套完成后再做同主题、同视口 demo/主应用截图对照；至少覆盖 `390×844`、`320×568`、`1440×900`、`844×390` 和关键弹层/演出。构建与测试通过不能代替用户视觉验收。
+5. **红色恢复条件**：只有用户明确解除暂停后才能修改红色；恢复时重新读取 `p5r-red-demo/HANDOFF.md` 与当前 P5 代码，不复用本轮蓝色假设。
+
+### 下次启动与验证
+
+- 切回分支：`git switch codex/four-theme-demo-integration-20261021`
+- 类型检查：`npm run typecheck`
+- 正式构建：`npm run build`
+- 全量测试：`npm test -- --reporter=dot`
+- 本地预览：`npx vite --host 127.0.0.1 --port 5184 --strictPort`
+- 蓝色真实流程可用 Playwright 从欢迎页新建档案；任务/宣告卡/行动页证据均在 `.rivet/scratch/theme-integration-20261021/`。
+
+### 接手铁律
+
+- 先核 Git、diff、本交接入口和当前页面源码；旧截图、旧测试数字和 demo mock 不能替代现场。
+- 视觉唯一依据是用户提供的四份 demo；禁止重新设计、近似重画或把“已经很像”当完成。
+- 只搬原组件、原 token、原字体、素材、状态与动效；必须换接主应用真实 store/IndexedDB/业务回调，删除 demo harness、mock、Dev 胶囊和演示路由。
+- 只改蓝色/粉色/黄色范围；红色主题保持暂停。不得 Push、部署、打包或改正式数据。
+- 保留现有无关改动和用户文件；不做 stash/reset/restore/clean，不提交 `.cache/`、`node_modules/`、`dist-verify/`、临时截图或未确认的 `outputs/theme-demos-20261021/`。
+- 三套全部完成并通过类型检查、构建、全量测试、真实关键流程和同视口截图核对后，才可报告完成；当前明确未达到 100%。
+
 ## 准备交接 · 2026-10-21 · 服务器迁移与 Android 3.0.1 后
 
 ### 接手第一入口

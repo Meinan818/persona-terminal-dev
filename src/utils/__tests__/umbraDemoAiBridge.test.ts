@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { attachUmbraDemoAiBridge, UMBRA_AI_SOURCE } from '@/utils/umbraDemoAiBridge';
 import type { ShadowTalkAIBridge } from '@/utils/shadowTalkAI';
+import type { BattleAdvisorBridge } from '@/utils/battleAdvisorAI';
 
 type Listener = (event: MessageEvent) => void;
 
-function harness(bridgeFactory: () => ShadowTalkAIBridge | null) {
+function harness(
+  bridgeFactory: () => ShadowTalkAIBridge | null,
+  advisorBridgeFactory?: () => BattleAdvisorBridge | null,
+) {
   const listeners = new Set<Listener>();
   const posted: Array<Record<string, unknown>> = [];
   const frame = {
@@ -29,6 +33,7 @@ function harness(bridgeFactory: () => ShadowTalkAIBridge | null) {
     origin: 'https://maskaria.test',
     target: () => frame as unknown as Window,
     bridgeFactory,
+    advisorBridgeFactory,
   });
   return { frame, posted, dispatch, cleanup, listeners };
 }
@@ -141,6 +146,44 @@ describe('UMBRA iframe AI bridge', () => {
     });
     await flush();
     expect(bridge.judgeShadowTalk).not.toHaveBeenCalled();
+    h.cleanup();
+  });
+
+  it('战斗顾问使用独立消息并只回传合法建议', async () => {
+    const advisor = {
+      adviseBattle: vi.fn(async (_input, hooks) => {
+        hooks?.onStatus?.('导航员正在读取战场。');
+        return {
+          mode: 'ai' as const,
+          actionKey: 'skill:agi',
+          targetId: 'primary',
+          reason: '电击是已确认弱点。',
+          confidence: 84,
+        };
+      }),
+    };
+    const shadow = { judgeShadowTalk: vi.fn() };
+    const h = harness(() => shadow, () => advisor);
+    h.dispatch({
+      source: UMBRA_AI_SOURCE,
+      type: 'advise-battle',
+      id: 'advisor-1',
+      input: {
+        round: 1,
+        actor: { id: 'hero', name: '主角' },
+        actions: [{ actionKey: 'skill:agi', type: 'skill', label: '吉欧' }],
+      },
+    });
+    await flush();
+    expect(shadow.judgeShadowTalk).not.toHaveBeenCalled();
+    expect(advisor.adviseBattle).toHaveBeenCalledOnce();
+    expect(h.posted.some(message => message.type === 'advise-battle-status')).toBe(true);
+    expect(h.posted[h.posted.length - 1]).toMatchObject({
+      type: 'advise-battle-result',
+      id: 'advisor-1',
+      ok: true,
+      value: { actionKey: 'skill:agi', targetId: 'primary' },
+    });
     h.cleanup();
   });
 });

@@ -5,6 +5,13 @@ body[data-fighting=true] #content{max-width:none;padding:0 4.5vw 20px}
 body[data-fighting=true] .masthead{position:relative;z-index:4;max-width:none;padding-left:4.5vw;padding-right:4.5vw}
 body[data-fighting=true] .ghost-word{display:none}
 .combat-top{position:relative;z-index:5;margin:0 0 6px}.combat-top p{font-size:12px;font-weight:900;letter-spacing:.06em}.combat-top .back-button{background:#071844d9;clip-path:var(--slant)}
+.combat-top .battle-advisor-trigger{position:absolute;right:0;top:38px;z-index:24;display:flex;align-items:center;gap:7px;min-height:36px;padding:7px 11px;border:0;background:#071844ee;color:#fff;clip-path:var(--slant);font-size:12px;font-weight:900;cursor:pointer;box-shadow:4px 4px 0 #e8449144}
+.combat-top .battle-advisor-trigger small{display:block;margin-top:1px;color:var(--yellow);font-size:8px;letter-spacing:.18em}
+.combat-top .battle-advisor-trigger svg{width:17px;height:17px;color:var(--cyan)}
+.combat-top .battle-advisor-trigger:hover:not(:disabled){background:var(--cyan);color:var(--ink)}
+.combat-top .battle-advisor-trigger:hover:not(:disabled) svg,.combat-top .battle-advisor-trigger:hover:not(:disabled) small{color:var(--ink)}
+.combat-top .battle-advisor-trigger:disabled{opacity:.42;cursor:not-allowed}
+@media(min-width:761px){.combat-top .battle-advisor-trigger{right:18px;top:74px}}
 .combat-poster{position:relative;min-height:670px;height:calc(100svh - 138px);isolation:isolate}
 .combat-word{position:absolute;z-index:-2;left:-5vw;top:-20px;writing-mode:vertical-rl;font:italic 900 clamp(120px,15vw,215px)/.82 'Noto Sans SC Black',Velvet,sans-serif;letter-spacing:-.04em;color:#071844a6;pointer-events:none}
 .combat-hero{position:absolute;z-index:-1;left:-7%;top:-5%;width:58%;height:108%;pointer-events:none;clip-path:polygon(0 0,100% 0,87% 100%,0 100%)}
@@ -52,6 +59,8 @@ body[data-fighting=true] .ghost-word{display:none}
 .combat-poster .allout-pick{position:absolute;top:72%;left:60%;width:36%;margin:0;z-index:4;clip-path:var(--slant);transform:rotate(-3deg);font-size:15px;min-height:45px}
 @media(max-width:1000px) and (min-width:761px){.combat-poster{height:650px}.combat-poster .enemy-name h1{font-size:19px}.combat-poster .enemy-name>span{font-size:12px}.combat-skill>span{font-size:22px}.combat-skill>strong{font-size:22px;padding-left:14px;padding-right:10px}.combat-poster .player-hud{gap:8px;padding-left:12px;padding-right:12px}.combat-poster .player-hud strong{font-size:25px}.combat-poster .player-tag{gap:4px}.combat-poster .player-tag b{font-size:20px}.combat-poster .player-hud em{display:none}.combat-poster .mask-switcher small{display:block;margin-left:0}}
 @media(max-width:760px){
+  .combat-top .battle-advisor-trigger{right:0;top:40px;min-height:34px;padding:6px 9px;font-size:11px}
+  .combat-top .battle-advisor-trigger svg{width:15px;height:15px}
   .room-nav{width:100%;max-width:100%;left:0;right:auto}.masthead{gap:8px}.brand span,.preview-badge{font-size:11px}.preview-badge{padding:5px 8px}.brand{font-size:14px}
   body[data-fighting=true] .masthead{padding:9px 16px;min-height:52px}body[data-fighting=true] #content{padding:0 0 14px}
   .combat-top{margin:0 16px 7px}.combat-top p{font-size:11px;letter-spacing:0}.combat-top .back-button{min-height:36px;padding:7px 10px}

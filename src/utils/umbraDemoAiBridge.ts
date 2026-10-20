@@ -4,12 +4,21 @@ import {
   type ShadowTalkAIBridge,
   type ShadowTalkInput,
 } from '@/utils/shadowTalkAI';
+import {
+  createBattleAdvisorBridge,
+  type BattleAdvisorBridge,
+  type BattleAdvisorInput,
+} from '@/utils/battleAdvisorAI';
 
 export const UMBRA_AI_SOURCE = 'maskaria-umbra-ai';
-const REQUEST = 'judge-shadow-talk';
-const CANCEL = 'judge-shadow-talk-cancel';
-const RESULT = 'judge-shadow-talk-result';
-const STATUS = 'judge-shadow-talk-status';
+const SHADOW_REQUEST = 'judge-shadow-talk';
+const SHADOW_CANCEL = 'judge-shadow-talk-cancel';
+const SHADOW_RESULT = 'judge-shadow-talk-result';
+const SHADOW_STATUS = 'judge-shadow-talk-status';
+const ADVISOR_REQUEST = 'advise-battle';
+const ADVISOR_CANCEL = 'advise-battle-cancel';
+const ADVISOR_RESULT = 'advise-battle-result';
+const ADVISOR_STATUS = 'advise-battle-status';
 
 interface BridgeMessage {
   source?: unknown;
@@ -28,13 +37,14 @@ interface AttachOptions {
   origin: string;
   target: () => Window | null;
   bridgeFactory?: () => ShadowTalkAIBridge | null;
+  advisorBridgeFactory?: () => BattleAdvisorBridge | null;
 }
 
 const validId = (value: unknown): value is string => (
   typeof value === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(value)
 );
 
-const payloadFits = (value: unknown): value is ShadowTalkInput => {
+const payloadFits = (value: unknown): value is ShadowTalkInput | BattleAdvisorInput => {
   try {
     return Boolean(value && typeof value === 'object' && JSON.stringify(value).length <= 12_000);
   } catch {
@@ -55,6 +65,7 @@ export function attachUmbraDemoAiBridge({
   origin,
   target,
   bridgeFactory = () => createShadowTalkBridge(() => useAppStore.getState().settings),
+  advisorBridgeFactory = () => createBattleAdvisorBridge(() => useAppStore.getState().settings),
 }: AttachOptions): () => void {
   const pending = new Map<string, AbortController>();
 
@@ -69,30 +80,48 @@ export function attachUmbraDemoAiBridge({
     const message = event.data as BridgeMessage | null;
     if (!message || message.source !== UMBRA_AI_SOURCE || !validId(message.id)) return;
     const id = message.id;
-    if (message.type === CANCEL) {
+    if (message.type === SHADOW_CANCEL || message.type === ADVISOR_CANCEL) {
       pending.get(id)?.abort();
       pending.delete(id);
       return;
     }
     const input = message.input;
-    if (message.type !== REQUEST || !payloadFits(input)) return;
+    if (
+      (message.type !== SHADOW_REQUEST && message.type !== ADVISOR_REQUEST)
+      || !payloadFits(input)
+    ) return;
     pending.get(id)?.abort();
     const controller = new AbortController();
     pending.set(id, controller);
+    const isAdvisor = message.type === ADVISOR_REQUEST;
+    const resultType = isAdvisor ? ADVISOR_RESULT : SHADOW_RESULT;
+    const statusType = isAdvisor ? ADVISOR_STATUS : SHADOW_STATUS;
     void (async () => {
+      if (isAdvisor) {
+        const bridge = advisorBridgeFactory();
+        if (!bridge) throw new Error('AI 尚未配置');
+        const value = await bridge.adviseBattle(input as BattleAdvisorInput, {
+          signal: controller.signal,
+          onStatus: status => {
+            if (!controller.signal.aborted) post({ type: statusType, id, status });
+          },
+        });
+        if (!controller.signal.aborted) post({ type: resultType, id, ok: true, value });
+        return;
+      }
       const bridge = bridgeFactory();
       if (!bridge) throw new Error('AI 尚未配置');
-      const value = await bridge.judgeShadowTalk(input, {
+      const value = await bridge.judgeShadowTalk(input as ShadowTalkInput, {
         signal: controller.signal,
         onStatus: status => {
-          if (!controller.signal.aborted) post({ type: STATUS, id, status });
+          if (!controller.signal.aborted) post({ type: statusType, id, status });
         },
       });
-      if (!controller.signal.aborted) post({ type: RESULT, id, ok: true, value });
+      if (!controller.signal.aborted) post({ type: resultType, id, ok: true, value });
     })().catch(error => {
       if (!controller.signal.aborted) {
         post({
-          type: RESULT,
+          type: resultType,
           id,
           ok: false,
           error: errorTextOf(error),

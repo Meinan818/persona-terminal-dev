@@ -23,7 +23,16 @@ import { arsenalEffects, relicList, RELICS, CHAINS } from './arsenal-effects.js'
 import { xpNeeded } from './persona-progress.js';
 import { createNpcTrust } from './npcs.js';
 import { createSliceFlow } from './night-slice-flow.js';
+import {
+  buildBattleAdvisorSnapshot,
+  installParentBattleAdvisorBridge,
+  installPreviewBattleAdvisorBridge,
+  requestBattleAdvice,
+} from './battle-advisor.js';
 installPreviewNegotiationBridge();
+const battleAiMode = new URLSearchParams(location.search).get('slice-ai');
+if (battleAiMode === 'preview') installPreviewBattleAdvisorBridge();
+else if (battleAiMode !== 'off') installParentBattleAdvisorBridge();
 syncUmbraTitle();
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -43,6 +52,7 @@ const state = {
   negotiation: null, enemyRage: 0, weaknessKnown: false, recruitedMasks: [], battleLoot: [],
   battle: null, battleView: null, targetId: 'primary', battleActionKey: '',
   battleEncounter: null, battleFloor: 4, battleReceipt: null, battleWon: false, partyVitals: {},
+  battleAdvice: null, battleAdviceBusy: false, battleAdviceStatus: '',
   showtimeCutIn: false,
   heroPersonaIds: [], personaRoster: [], activePersonaId: 'arsene',
   allyPersonaIds: ['cait-sith', 'agathion', 'kelpie'],
@@ -601,13 +611,108 @@ function currentEngineView() {
       available.find(action => action.type === 'skill' && !action.disabled)
       ?? available.find(action => action.type === 'basic' && !action.disabled)
       ?? available.find(action => !action.disabled)
-      ?? available[0],
+      ?? available[0]
+      ?? null,
     );
   }
   return view;
 }
 function selectedEngineAction(view = currentEngineView()) {
   return view?.actions?.find(action => battleActionKey(action) === state.battleActionKey) ?? null;
+}
+let battleAdviceRun = 0;
+let battleAdviceController = null;
+function battleAdviceModeLabel(mode) {
+  if (mode === 'preview') return '预览建议';
+  if (mode === 'offline') return '离线建议';
+  return '模型建议';
+}
+function cancelBattleAdvice({clear = true} = {}) {
+  battleAdviceRun += 1;
+  battleAdviceController?.abort();
+  battleAdviceController = null;
+  state.battleAdviceBusy = false;
+  state.battleAdviceStatus = '';
+  if (clear) state.battleAdvice = null;
+}
+function battleAdvisorPanelHtml(view = currentEngineView()) {
+  if (state.battleAdviceBusy) {
+    return `<div class="effect-receipt" role="status">${icon('eye')}<span>${esc(state.battleAdviceStatus || '导航员正在读取战场。')}<small>不会替你执行行动</small></span></div>`;
+  }
+  const advice = state.battleAdvice;
+  if (!advice) return '<p class="sheet-lede">当前没有建议。</p>';
+  const action = view?.actions?.find(item => battleActionKey(item) === advice.actionKey);
+  if (!action || action.disabled) {
+    return `<div class="effect-receipt">${icon('back')}<span>当前回合已无法使用${esc(action?.label ?? '该建议')}<small>局面已经变化，请重新请求建议。</small></span></div>`;
+  }
+  const target = view?.enemies?.find(item => item.id === advice.targetId)
+    ?? view?.party?.find(item => item.id === advice.targetId);
+  return `<div class="effect-receipt" data-advisor-mode="${esc(advice.mode)}">${icon('eye')}<span>${battleAdviceModeLabel(advice.mode)}<small>把握 ${Number(advice.confidence) || 0} / 100</small></span></div>
+    <p class="sheet-lede">${esc(advice.reason)}</p>
+    <div class="ally-picker">
+      <button data-battle-advice="apply"><span>${esc(action.label)}${target ? ` → ${esc(target.name)}` : ''}<small>只预填，不执行；仍需你确认</small></span>${icon('arrow')}</button>
+      <button data-battle-advice="close"><span>保持当前选择<small>关闭建议</small></span>${icon('back')}</button>
+    </div>`;
+}
+function updateBattleAdvisorSheet() {
+  const host = $('#battle-advisor-panel');
+  if (host) host.innerHTML = battleAdvisorPanelHtml();
+}
+function openBattleAdvisor() {
+  if (state.busy || !state.fighting || !state.battle || state.battle.phase !== 'party') return;
+  const view = currentEngineView();
+  const snapshot = buildBattleAdvisorSnapshot(view);
+  if (!snapshot?.actions?.length) {
+    notify('当前没有可供顾问判断的行动。');
+    return;
+  }
+  cancelBattleAdvice();
+  state.battleAdviceBusy = true;
+  state.battleAdviceStatus = '导航员正在读取战场。';
+  openSheet('AI 战术顾问', `<div id="battle-advisor-panel">${battleAdvisorPanelHtml(view)}</div>`);
+  const run = battleAdviceRun;
+  const controller = new AbortController();
+  battleAdviceController = controller;
+  void requestBattleAdvice(snapshot, {
+    signal: controller.signal,
+    onStatus: text => {
+      if (run !== battleAdviceRun) return;
+      state.battleAdviceStatus = text;
+      updateBattleAdvisorSheet();
+    },
+  }).then(advice => {
+    if (run !== battleAdviceRun) return;
+    state.battleAdvice = advice;
+    state.battleAdviceBusy = false;
+    state.battleAdviceStatus = '';
+    battleAdviceController = null;
+    updateBattleAdvisorSheet();
+  }).catch(error => {
+    if (run !== battleAdviceRun || error?.name === 'AbortError') return;
+    state.battleAdviceBusy = false;
+    state.battleAdviceStatus = '';
+    battleAdviceController = null;
+    notify('战斗顾问暂时不可用。');
+    updateBattleAdvisorSheet();
+  });
+}
+function applyBattleAdvisorAdvice() {
+  const advice = state.battleAdvice;
+  const view = currentEngineView();
+  const action = view?.actions?.find(item => battleActionKey(item) === advice?.actionKey);
+  if (!advice || !action || action.disabled) {
+    notify('局面已经变化，请重新请求建议。');
+    updateBattleAdvisorSheet();
+    return;
+  }
+  state.battleActionKey = advice.actionKey;
+  if (advice.targetId && view.enemies.some(enemy => enemy.id === advice.targetId && enemy.alive)) {
+    state.targetId = advice.targetId;
+  }
+  sheet.close();
+  render();
+  window.setTimeout(() => $('[data-action="execute"]')?.focus({preventScroll:true}), 80);
+  notify(`已预填「${action.label}」，仍需你确认执行。`);
 }
 function commandCost() {
   const action = selectedEngineAction();
@@ -1034,6 +1139,13 @@ function render({ focus = false } = {}) {
   });
   const overlay = sliceFlow.screen() ?? flows.screen();
   content.innerHTML = overlay ?? (state.fighting ? combat() : ({battle:home,tower,persona,arsenal}[state.room])());
+  if (state.fighting && !overlay) {
+    const top = $('.combat-top');
+    if (top && !top.querySelector('.battle-advisor-trigger')) {
+      const unavailable = state.busy || state.negotiation?.active || state.battle?.phase !== 'party';
+      top.insertAdjacentHTML('beforeend', `<button class="battle-advisor-trigger" data-action="battle-advisor" ${unavailable ? 'disabled' : ''}>${icon('eye')}<span>AI 顾问<small>NAVI</small></span></button>`);
+    }
+  }
   document.body.classList.toggle('p3-hold-up', Boolean(state.fighting && state.battle?.phase === 'holdUp' && !state.negotiation?.active));
   if (!state.fighting && !overlay && state.room === 'persona') appendPersonaSystems();
   if (!state.fighting && !overlay && state.room === 'battle') appendHomePartyLine();
@@ -1070,6 +1182,7 @@ addEventListener('hashchange', () => {
   window.scrollTo(0,scrolls.get(state.room) ?? 0);
 });
 function startBattle(origin = state.room,options={}) {
+  cancelBattleAdvice();
   clearSignatureFx();
   actionRun++;clearTimeout(enemyTimer);
   state.negotiation = createNegotiation();
@@ -1165,6 +1278,7 @@ function returnFromBattle() {
   window.scrollTo(0,scrolls.get(state.room) ?? 0);
 }
 function leaveBattle() {
+  cancelBattleAdvice();
   if(flows.rehearsal){flows.act('rehearsal-close');return;}
   if(state.busy) { notify('行动尚未结束，请稍候再返回。'); return; }
   if(state.finished) { returnFromBattle(); return; }
@@ -1327,6 +1441,7 @@ function performHoldUpAction(type, option) {
 }
 
 function execute(options = {}) {
+  cancelBattleAdvice();
   if (flows.rehearsal) return;
   if (state.busy || state.finished || !state.fighting || !state.battle) return;
   const view = currentEngineView();
@@ -1456,7 +1571,7 @@ function execute(options = {}) {
     }
   });
 }
-function goRoom(room){clearSignatureFx();actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.battle=null;state.battleView=null;state.battleActionKey='';state.battleReceipt=null;state.battleWon=false;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
+function goRoom(room){cancelBattleAdvice();clearSignatureFx();actionRun++;clearTimeout(enemyTimer);flows.resetView();state.fighting=false;state.finished=false;state.busy=false;state.turnPhase='player';state.negotiation=null;state.enemyRage=0;state.battle=null;state.battleView=null;state.battleActionKey='';state.battleReceipt=null;state.battleWon=false;state.room=room;history.replaceState(null,'',`#${room}`);render({focus:true});scrollTo(0,0);}
 loadP5State();
 const flows=createEncounterDirector({
   state,icon,render,reduced,transition,notify,mainButton,startBattle,execute,goRoom,returnFromBattle,persistP5State,
@@ -1525,10 +1640,10 @@ document.addEventListener('click',event=>{
   if(control.dataset.personaId){selectPersona(control.dataset.personaId);if(sheet.open)sheet.close();render({focus:true});return;}
   if(control.dataset.partySlot!==undefined){openPartyEditor(Number(control.dataset.partySlot));return;}
   if(control.dataset.allyId){const slot=Number(control.dataset.slot)||0;state.allyPersonaIds[slot]=control.dataset.allyId;persistP5State();openPartyEditor(slot);render();return;}
-  if(control.dataset.targetId){state.targetId=control.dataset.targetId;syncBattleUi();render();return;}
+  if(control.dataset.targetId){cancelBattleAdvice();state.targetId=control.dataset.targetId;syncBattleUi();render();return;}
   if(control.dataset.battleItem){useBattleItemAction(control.dataset.battleItem);return;}
   if(control.dataset.battleAction?.startsWith('items:')){openBattleItems();return;}
-  if(control.dataset.battleAction){if(state.busy)return;state.battleActionKey=control.dataset.battleAction;render();$(`[data-battle-action="${state.battleActionKey}"]`)?.focus({preventScroll:true});return;}
+  if(control.dataset.battleAction){if(state.busy)return;cancelBattleAdvice();state.battleActionKey=control.dataset.battleAction;render();$(`[data-battle-action="${state.battleActionKey}"]`)?.focus({preventScroll:true});return;}
   if(control.dataset.switchMask){state.battleActionKey=`switchMask:${control.dataset.switchMask}`;sheet.close();execute();return;}
   if(control.dataset.flow){flows.act(control.dataset.flow);return;}
   if(control.dataset.slice){sliceFlow.act(control.dataset.slice);return;}
@@ -1572,6 +1687,7 @@ document.addEventListener('click',event=>{
   else if(action==='start-negotiation')startNegotiationDemo();
   else if(action==='hold-up-negotiate')beginEngineNegotiation();
   else if(action==='open-battle-items')openBattleItems();
+  else if(action==='battle-advisor')openBattleAdvisor();
   else if(action==='negotiation-fight')closeNegotiation();
   else if(action==='negotiation-recruit')chooseNegotiationOutcome('recruit');
   else if(action==='negotiation-reward')chooseNegotiationOutcome('reward');
@@ -1590,8 +1706,16 @@ document.addEventListener('click',event=>{
     preparation.act('settings');
   }
 });
+sheet.addEventListener('click',event=>{
+  const control=event.target.closest?.('[data-battle-advice]');
+  if(!control)return;
+  event.preventDefault();
+  if(control.dataset.battleAdvice==='apply')applyBattleAdvisorAdvice();
+  else if(control.dataset.battleAdvice==='close')sheet.close();
+});
 sheet.addEventListener('click',event=>{if(event.target!==sheet)return;const r=sheet.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)sheet.close();});
 sheet.addEventListener('close',()=>{
+  cancelBattleAdvice();
   $('.settings-button').setAttribute('aria-expanded','false');
   const fallback=state.fighting?$('[data-action="choose-mask"]'):$(`.room-nav a[data-room="${state.room}"]`);
   if(!document.activeElement||document.activeElement===document.body)fallback?.focus({preventScroll:true});

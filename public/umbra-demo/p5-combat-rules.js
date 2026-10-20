@@ -272,6 +272,8 @@ export class P5Battle {
         label: item.name,
         detail: `${elementLabel(item.element)} · ${item.target === 'self' ? '自身' : item.target === 'ally' ? '我方' : item.target === 'allAllies' ? '全体我方' : item.target === 'allEnemies' ? '全体敌人' : '敌方'}${item.status ? ` · ${STATUS[item.status]?.label ?? item.status}` : ''}`,
         cost: item.sp,
+        element: item.element,
+        targetSide: ['self', 'ally', 'allAllies'].includes(item.target) ? 'ally' : 'enemy',
         disabled: actor.sp < item.sp
           || (
             item.power <= 0
@@ -292,16 +294,18 @@ export class P5Battle {
       label: '洞察',
       detail: '2 SP · 发现目标的一项未知耐性',
       cost: 2,
+      element: 'almighty',
+      targetSide: 'enemy',
       disabled: actor.sp < 2,
     });
-    actions.push({ type: 'basic', label: '普攻', detail: '物理 · 18', cost: 0 });
+    actions.push({ type: 'basic', label: '普攻', detail: '物理 · 18', cost: 0, element: 'phys', targetSide: 'enemy' });
     if (actor.isPlayer && actor.ammo > 0) {
-      actions.push({ type: 'gun', label: '手枪', detail: `枪击 · 26 · 弹药 ${actor.ammo}`, cost: 0 });
+      actions.push({ type: 'gun', label: '手枪', detail: `枪击 · 26 · 弹药 ${actor.ammo}`, cost: 0, element: 'gun', targetSide: 'enemy' });
     }
-    actions.push({ type: 'guard', label: '防御', detail: '本回合承伤减半', cost: 0 });
+    actions.push({ type: 'guard', label: '防御', detail: '本回合承伤减半', cost: 0, element: 'support', targetSide: 'self' });
     if (actor.isPlayer) {
       if (!this.showtimeUsed && this.round >= 2) {
-        actions.push({ type: 'showtime', label: 'SHOWTIME', detail: '双人合击 · 每战一次', cost: 0 });
+        actions.push({ type: 'showtime', label: 'SHOWTIME', detail: '双人合击 · 每战一次', cost: 0, element: 'almighty', targetSide: 'enemy' });
       }
       for (const [maskId, mask] of Object.entries(actor.masks)) {
         if (maskId === actor.activeMask) continue;
@@ -311,6 +315,8 @@ export class P5Battle {
           label: `换面具 · ${mask.name}`,
           detail: `${mask.elementLabel ?? elementLabel(mask.element)} · 消耗本回合行动`,
           cost: 0,
+          element: mask.element,
+          targetSide: 'self',
           disabled: actor.switched,
         });
       }
@@ -324,6 +330,8 @@ export class P5Battle {
           label: `接力 → ${target.name}`,
           detail: `BATON PASS · 伤害 +${Math.min(3, this.batonChain + 1) * 25}%`,
           cost: 0,
+          element: 'support',
+          targetSide: 'ally',
         });
       }
     }

@@ -2,6 +2,57 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 准备交接 · 2026-10-21 · 真机 COOP、PWA 与全量验收后
+
+### 接手第一入口
+
+- **用户决定**：用户明确要求“准备新对话交接”。本轮停止开发，只核现场、整理状态并做本地交接提交；不 Push、不部署、不重跑测试。
+- **现场**：`E:\MASKARIA`；分支 `codex/p5r-compendium-data`；交接前 HEAD `fad9dc9`；无 upstream；按本地 `origin/main` 计算领先 **204** 条，本条文档提交后为 **205** 条。
+- **运行现场**：5192、8080、5198 当前全部已停止。测试用 LAN 地址 `10.18.234.23` 仅是本轮当时现场，不代表下次 IP 不变。
+- **工作区遗留**：本轮没有未提交产品代码；既有无关 tracked 改动仍为 `ios/App/Podfile`、`outputs/battle-experience-v3/P5-P3-FUSION.md`。既有 untracked 仍为 `.cache/`、`.impeccable/`、`.rivet-config.json`、旧 `outputs/` 与 `public/umbra-demo-p3-v2/`。不得 stash/reset/restore/clean，也不得混入后续提交。
+
+### 本窗口已完成与验证
+
+- **AI LAB 夜层正式模型桥**：`682a808`。新增 `nightFloorAI.ts` 与父子消息通道，只传受限记录/公开资料；真实 BYOK 单次通过（DeepSeek，HTTP 200，1 次请求，4 房）记录在 `9639b12`。
+- **40F 全链路**：`4b401ba`。当前 `public/umbra-demo` 普通难度无跳关，8 战/112 行动/336 移动/10 补给；10/20/30F 安全屋、15F 刷新、两阶段 Boss、回城清理均通过，errors 0。
+- **COOP 并发缺陷**：`0afdbe8` + `6e14f4b`。好友申请/COOP 提议并发唯一键竞争原先误返 401；修复后 8/8 好友申请和 8/8 提议均 200，事件 1 创建/11 幂等，通知各 1 条；后端全量 **161/161**。
+- **PWA**：`493f896` + `2f2371e`。2.21 MB 图鉴改为首次使用时 runtime cache，不再进首装 precache；同时用 `navigateFallbackDenylist` 放行 `/umbra-demo/`，避免 SW 把 iframe HTML 兜底成主 App。Vite preview 断网仍读到完整 2,207,596 B，errors 0；前端全量 **62 文件 / 378 项**。
+- **天鹅绒**：全部 9 服务 × 粉/黄/红 × 390/1440 共 **54/54**，用户已两次明确“通过”，证据 `9142268`、`9eb7bb3`、`fad9dc9`。正式 App 父页面 → UMBRA iframe → 天鹅绒另验 4/4，图鉴/禁闭存档刷新恢复。
+- **真机 COOP**：用户在第二台物理设备上完成 A/B 好友申请、接受、COOP 提议/缔结、共享事件与断网恢复，回复“都成功”。API 复核双方 friendship 均为 `accepted`、同一 bond 均为 `linked`，B 有 `event_logged` 通知；测试使用的是本地隔离后端，不是生产云。
+
+### 关键证据
+
+- 真机 COOP：`.rivet/scratch/coop-phones-20261021/`（自动登录页、启动验证、`confirm.json`；token 只存在未跟踪临时页，不写入 STATE）。
+- 并发回归：`.rivet/scratch/coop-staging-resilience-20261021/report.json`、`pre-fix-race.json`。
+- AI LAB 真实 BYOK：`.rivet/scratch/umbra-floor-real-20261021/report.json`。
+- 40F：`.rivet/scratch/full-40f-20261021/report.json`。
+- PWA：`.rivet/scratch/pwa-compendium-20261021/report.json`。
+- 天鹅绒：`.rivet/scratch/velvet-visual-20261021/report.json` 与 6 张 contact sheet；正式父桥在 `.rivet/scratch/umbra-velvet-20261020/report.json`。
+
+### 待办与优先级
+
+1. **隔离 staging HTTPS 验收**：本轮真机走局域网 HTTP，不能验证公网弱网、TLS、真正 OS 通知权限、跨运营商/时钟差异。需要隔离 staging 和两台设备；不得连接正式用户数据。
+2. **安装包/PWA 发布验证**：重新构建含本轮 COOP/PWA 修复的安装包，验证旧 SW 升级、离线启动、UMBRA iframe、图鉴按需缓存；打包、部署和 Push 都需用户明确批准。
+3. **剩余真实操作**：处刑/电椅/禁闭/网络融合/技能卡等已经做视觉和既有业务验证，但没有逐个在真机走破坏性存档操作。
+4. **最终发布**：版本号、构建、签名、线上部署、发布后健康检查均未在本轮执行。
+
+### 下次启动命令
+
+- 隔离后端（`backend` 目录）：
+  `$env:SPRING_DATASOURCE_URL='jdbc:mysql://localhost:3306/persona_terminal_test?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai'`
+  `$env:APP_UPLOAD_DIR='target/test-uploads'`
+  `mvn -o "-Dmaven.repo.local=C:\Users\Lqx24\.m2\repository" spring-boot:run`
+- LAN 前端：先用 `Get-NetIPConfiguration` 重新取当前 WLAN IP，再设 `$env:VITE_API_URL='http://<当前IP>:8080'`，执行 `npx vite --host 0.0.0.0 --port 5192 --strictPort`。
+- 纯本地 UI：`npx vite --host 127.0.0.1 --port 5192 --strictPort`；生产 PWA 静态验证用 `npm run build` 后 `npx vite preview --host 127.0.0.1 --port 5198 --strictPort`。
+
+### 接手铁律与踩坑
+
+- 先读本节、项目 `AGENTS.md`、Git 状态和 diff；不得把本摘要替代现场核实。
+- `vite.config.ts` 改动会热重启开发服务；`.rivet/` 被 Vite watch 忽略，改验收页后需要重启 Vite 才能拿到新页面。
+- PWA 测试必须用全新浏览器 profile，避免旧 Service Worker 混淆；等待转场结束后再截图，P5 约 900ms，250ms 会拍到黑色转场残影。
+- COOP 真机测只用 `persona_terminal_test`；不要把生产 Key、JWT、密码或测试账号 token 写入 STATE/提交。
+- 本轮没有可获得的原生 `create_thread/handoff_thread` 工具，故未自动创建新聊天；用户在侧栏手动新建即可。本聊天完成尾提交后停止共享写入。
+
 ## 当前复看 · 2026-10-21 · 粉/黄/红天鹅绒三主题当前版
 
 - **用户决定**：PWA 修复后用户继续，未要求重做视觉；本轮仅复看粉（hamuko）、黄（p4）、红（p5）三套天鹅绒房间，不改布局、配色或素材。

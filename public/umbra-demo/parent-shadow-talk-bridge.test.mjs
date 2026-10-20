@@ -84,3 +84,36 @@ test('取消会向父应用发送 cancel 并立即结束等待', async t => {
   assert.equal(h.posted.at(-1)?.type, 'judge-shadow-talk-cancel');
   assert.equal(h.posted.at(-1)?.id, h.posted[0].id);
 });
+
+test('AI LAB 夜层使用独立请求并接收受限楼层', async t => {
+  const h = harness(t);
+  const statuses = [];
+  const pending = globalThis.MASKARIA_AI.planNightFloor(
+    { mode: 'record', record: '今天没敢在会上说自己的想法' },
+    { onStatus: text => statuses.push(text) },
+  );
+  assert.deepEqual(h.posted[0], {
+    source: SOURCE,
+    type: 'plan-night-floor',
+    id: h.posted[0].id,
+    input: { mode: 'record', record: '今天没敢在会上说自己的想法' },
+  });
+  h.receive({
+    type: 'plan-night-floor-status',
+    id: h.posted[0].id,
+    status: '夜层正在定形。',
+  });
+  h.receive({
+    type: 'plan-night-floor-result',
+    id: h.posted[0].id,
+    ok: true,
+    value: {
+      mode: 'ai',
+      origin: 'record',
+      title: '没说出口的那句话',
+      rooms: [],
+    },
+  });
+  assert.deepEqual(statuses, ['夜层正在定形。']);
+  assert.equal((await pending).title, '没说出口的那句话');
+});

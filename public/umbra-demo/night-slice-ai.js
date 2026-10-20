@@ -226,6 +226,10 @@ const PARENT_AI_REQUEST = 'judge-shadow-talk';
 const PARENT_AI_CANCEL = 'judge-shadow-talk-cancel';
 const PARENT_AI_RESULT = 'judge-shadow-talk-result';
 const PARENT_AI_STATUS = 'judge-shadow-talk-status';
+const PARENT_FLOOR_REQUEST = 'plan-night-floor';
+const PARENT_FLOOR_CANCEL = 'plan-night-floor-cancel';
+const PARENT_FLOOR_RESULT = 'plan-night-floor-result';
+const PARENT_FLOOR_STATUS = 'plan-night-floor-status';
 
 /**
  * 父应用持有真实 BYOK 配置与网络请求；iframe 只发送受限交涉快照。
@@ -236,7 +240,10 @@ export function installParentSliceBridge({
   origin = globalThis.location?.origin,
 } = {}) {
   if (!parent || parent === globalThis || !origin) return false;
-  if (typeof globalThis.MASKARIA_AI?.judgeShadowTalk === 'function') return false;
+  const previous = globalThis.MASKARIA_AI;
+  const hasShadow = typeof previous?.judgeShadowTalk === 'function';
+  const hasFloor = typeof previous?.planNightFloor === 'function';
+  if (hasShadow && hasFloor) return false;
   const pending = new Map();
   let sequence = 0;
 
@@ -252,12 +259,12 @@ export function installParentSliceBridge({
     if (!message || typeof message !== 'object' || message.source !== PARENT_AI_SOURCE) return;
     const item = typeof message.id === 'string' ? pending.get(message.id) : null;
     if (!item) return;
-    if (message.type === PARENT_AI_STATUS) {
+    if (message.type !== item.statusType && message.type !== item.resultType) return;
+    if (message.type === item.statusType) {
       const status = copyText(message.status, 120);
       if (status) item.onStatus?.(status);
       return;
     }
-    if (message.type !== PARENT_AI_RESULT) return;
     cleanup(item);
     if (message.ok) {
       item.resolve(message.value);
@@ -270,31 +277,60 @@ export function installParentSliceBridge({
   };
 
   globalThis.addEventListener?.('message', onMessage);
-  const previous = globalThis.MASKARIA_AI;
-  globalThis.MASKARIA_AI = {
-    ...(previous && typeof previous === 'object' ? previous : {}),
-    judgeShadowTalk(input, { signal, onStatus } = {}) {
-      return new Promise((resolve, reject) => {
-        if (signal?.aborted) {
-          reject(namedError('AbortError', 'aborted'));
-          return;
-        }
-        const id = `shadow-${Date.now().toString(36)}-${++sequence}`;
-        const onAbort = () => {
-          cleanup(pending.get(id));
-          parent.postMessage({ source: PARENT_AI_SOURCE, type: PARENT_AI_CANCEL, id }, origin);
-          reject(namedError('AbortError', 'aborted'));
-        };
-        pending.set(id, { id, resolve, reject, signal, onAbort, onStatus });
-        signal?.addEventListener('abort', onAbort, { once: true });
-        parent.postMessage({
-          source: PARENT_AI_SOURCE,
-          type: PARENT_AI_REQUEST,
-          id,
-          input,
-        }, origin);
+
+  const requestParent = (route, input = {}, { signal, onStatus } = {}) => (
+    new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(namedError('AbortError', 'aborted'));
+        return;
+      }
+      const id = `${route.prefix}-${Date.now().toString(36)}-${++sequence}`;
+      const onAbort = () => {
+        cleanup(pending.get(id));
+        parent.postMessage({ source: PARENT_AI_SOURCE, type: route.cancelType, id }, origin);
+        reject(namedError('AbortError', 'aborted'));
+      };
+      pending.set(id, {
+        id,
+        resolve,
+        reject,
+        signal,
+        onAbort,
+        onStatus,
+        resultType: route.resultType,
+        statusType: route.statusType,
       });
-    },
+      signal?.addEventListener('abort', onAbort, { once: true });
+      parent.postMessage({
+        source: PARENT_AI_SOURCE,
+        type: route.requestType,
+        id,
+        input,
+      }, origin);
+    })
+  );
+
+  const next = {
+    ...(previous && typeof previous === 'object' ? previous : {}),
   };
+  if (!hasShadow) {
+    next.judgeShadowTalk = (input, hooks = {}) => requestParent({
+      prefix: 'shadow',
+      requestType: PARENT_AI_REQUEST,
+      cancelType: PARENT_AI_CANCEL,
+      resultType: PARENT_AI_RESULT,
+      statusType: PARENT_AI_STATUS,
+    }, input, hooks);
+  }
+  if (!hasFloor) {
+    next.planNightFloor = (input, hooks = {}) => requestParent({
+      prefix: 'floor',
+      requestType: PARENT_FLOOR_REQUEST,
+      cancelType: PARENT_FLOOR_CANCEL,
+      resultType: PARENT_FLOOR_RESULT,
+      statusType: PARENT_FLOOR_STATUS,
+    }, input, hooks);
+  }
+  globalThis.MASKARIA_AI = next;
   return true;
 }

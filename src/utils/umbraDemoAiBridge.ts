@@ -9,6 +9,11 @@ import {
   type BattleAdvisorBridge,
   type BattleAdvisorInput,
 } from '@/utils/battleAdvisorAI';
+import {
+  createNightFloorBridge,
+  type NightFloorAIBridge,
+  type NightFloorInput,
+} from '@/utils/nightFloorAI';
 
 export const UMBRA_AI_SOURCE = 'maskaria-umbra-ai';
 const SHADOW_REQUEST = 'judge-shadow-talk';
@@ -19,6 +24,10 @@ const ADVISOR_REQUEST = 'advise-battle';
 const ADVISOR_CANCEL = 'advise-battle-cancel';
 const ADVISOR_RESULT = 'advise-battle-result';
 const ADVISOR_STATUS = 'advise-battle-status';
+const FLOOR_REQUEST = 'plan-night-floor';
+const FLOOR_CANCEL = 'plan-night-floor-cancel';
+const FLOOR_RESULT = 'plan-night-floor-result';
+const FLOOR_STATUS = 'plan-night-floor-status';
 
 interface BridgeMessage {
   source?: unknown;
@@ -38,13 +47,16 @@ interface AttachOptions {
   target: () => Window | null;
   bridgeFactory?: () => ShadowTalkAIBridge | null;
   advisorBridgeFactory?: () => BattleAdvisorBridge | null;
+  floorBridgeFactory?: () => NightFloorAIBridge | null;
 }
 
 const validId = (value: unknown): value is string => (
   typeof value === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(value)
 );
 
-const payloadFits = (value: unknown): value is ShadowTalkInput | BattleAdvisorInput => {
+const payloadFits = (
+  value: unknown,
+): value is ShadowTalkInput | BattleAdvisorInput | NightFloorInput => {
   try {
     return Boolean(value && typeof value === 'object' && JSON.stringify(value).length <= 12_000);
   } catch {
@@ -66,6 +78,7 @@ export function attachUmbraDemoAiBridge({
   target,
   bridgeFactory = () => createShadowTalkBridge(() => useAppStore.getState().settings),
   advisorBridgeFactory = () => createBattleAdvisorBridge(() => useAppStore.getState().settings),
+  floorBridgeFactory = () => createNightFloorBridge(() => useAppStore.getState().settings),
 }: AttachOptions): () => void {
   const pending = new Map<string, AbortController>();
 
@@ -80,27 +93,52 @@ export function attachUmbraDemoAiBridge({
     const message = event.data as BridgeMessage | null;
     if (!message || message.source !== UMBRA_AI_SOURCE || !validId(message.id)) return;
     const id = message.id;
-    if (message.type === SHADOW_CANCEL || message.type === ADVISOR_CANCEL) {
+    if (
+      message.type === SHADOW_CANCEL
+      || message.type === ADVISOR_CANCEL
+      || message.type === FLOOR_CANCEL
+    ) {
       pending.get(id)?.abort();
       pending.delete(id);
       return;
     }
     const input = message.input;
+    const isAdvisor = message.type === ADVISOR_REQUEST;
+    const isFloor = message.type === FLOOR_REQUEST;
     if (
-      (message.type !== SHADOW_REQUEST && message.type !== ADVISOR_REQUEST)
+      (message.type !== SHADOW_REQUEST && !isAdvisor && !isFloor)
       || !payloadFits(input)
     ) return;
     pending.get(id)?.abort();
     const controller = new AbortController();
     pending.set(id, controller);
-    const isAdvisor = message.type === ADVISOR_REQUEST;
-    const resultType = isAdvisor ? ADVISOR_RESULT : SHADOW_RESULT;
-    const statusType = isAdvisor ? ADVISOR_STATUS : SHADOW_STATUS;
+    const resultType = isAdvisor
+      ? ADVISOR_RESULT
+      : isFloor
+        ? FLOOR_RESULT
+        : SHADOW_RESULT;
+    const statusType = isAdvisor
+      ? ADVISOR_STATUS
+      : isFloor
+        ? FLOOR_STATUS
+        : SHADOW_STATUS;
     void (async () => {
       if (isAdvisor) {
         const bridge = advisorBridgeFactory();
         if (!bridge) throw new Error('AI 尚未配置');
         const value = await bridge.adviseBattle(input as BattleAdvisorInput, {
+          signal: controller.signal,
+          onStatus: status => {
+            if (!controller.signal.aborted) post({ type: statusType, id, status });
+          },
+        });
+        if (!controller.signal.aborted) post({ type: resultType, id, ok: true, value });
+        return;
+      }
+      if (isFloor) {
+        const bridge = floorBridgeFactory();
+        if (!bridge) throw new Error('AI 尚未配置');
+        const value = await bridge.planNightFloor(input as NightFloorInput, {
           signal: controller.signal,
           onStatus: status => {
             if (!controller.signal.aborted) post({ type: statusType, id, status });

@@ -2,12 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { attachUmbraDemoAiBridge, UMBRA_AI_SOURCE } from '@/utils/umbraDemoAiBridge';
 import type { ShadowTalkAIBridge } from '@/utils/shadowTalkAI';
 import type { BattleAdvisorBridge } from '@/utils/battleAdvisorAI';
+import type { NightFloorAIBridge } from '@/utils/nightFloorAI';
 
 type Listener = (event: MessageEvent) => void;
 
 function harness(
   bridgeFactory: () => ShadowTalkAIBridge | null,
   advisorBridgeFactory?: () => BattleAdvisorBridge | null,
+  floorBridgeFactory?: () => NightFloorAIBridge | null,
 ) {
   const listeners = new Set<Listener>();
   const posted: Array<Record<string, unknown>> = [];
@@ -34,6 +36,7 @@ function harness(
     target: () => frame as unknown as Window,
     bridgeFactory,
     advisorBridgeFactory,
+    floorBridgeFactory,
   });
   return { frame, posted, dispatch, cleanup, listeners };
 }
@@ -183,6 +186,43 @@ describe('UMBRA iframe AI bridge', () => {
       id: 'advisor-1',
       ok: true,
       value: { actionKey: 'skill:agi', targetId: 'primary' },
+    });
+    h.cleanup();
+  });
+
+  it('AI LAB 夜层使用独立消息并回传受限楼层', async () => {
+    const floor = {
+      planNightFloor: vi.fn(async (_input, hooks) => {
+        hooks?.onStatus?.('夜层正在定形。');
+        return {
+          mode: 'ai' as const,
+          origin: 'record' as const,
+          title: '没说出口的那句话',
+          theme: '会议室',
+          mood: '发闷',
+          memory: '你把它说完了。',
+          exitLine: '门外是白昼。',
+          rooms: [],
+        };
+      }),
+    };
+    const shadow = { judgeShadowTalk: vi.fn() };
+    const h = harness(() => shadow, () => null, () => floor);
+    h.dispatch({
+      source: UMBRA_AI_SOURCE,
+      type: 'plan-night-floor',
+      id: 'floor-1',
+      input: { mode: 'record', record: '今天没敢在会上说自己的想法' },
+    });
+    await flush();
+    expect(shadow.judgeShadowTalk).not.toHaveBeenCalled();
+    expect(floor.planNightFloor).toHaveBeenCalledOnce();
+    expect(h.posted.some(message => message.type === 'plan-night-floor-status')).toBe(true);
+    expect(h.posted[h.posted.length - 1]).toMatchObject({
+      type: 'plan-night-floor-result',
+      id: 'floor-1',
+      ok: true,
+      value: { mode: 'ai', title: '没说出口的那句话' },
     });
     h.cleanup();
   });

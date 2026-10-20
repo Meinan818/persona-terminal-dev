@@ -2,6 +2,45 @@
 
 最后更新：2026-10-20（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 准备交接 · 2026-10-20 · 联机接回与影子 AI 桥
+
+### 接手第一入口
+
+- **用户决定**：用户要求“先交接，我要开新对话了”。本轮停止功能开发；新聊天先完整读本文件、`AGENTS.md`、Git 状态和本节点，不重做已验收爬塔/天鹅绒/联机界面。
+- **现场**：分支 `codex/p5r-compendium-data`；业务 HEAD `cccf75f`（`feat(umbra): 接通真实AI影子交涉桥`）。当前分支无 upstream；按本地 `origin/main` 计算，交接文档提交前领先 **187** 条。本条文档尾提交后会再 +1。未 Push。
+- **本轮提交链**：`d3c3327` 在线 SP/组织奖励接入 UMBRA；`3331a98` 羁绊之影 Persona 与同调面具接回；`61a6f27` 联机统一验收记录；`cccf75f` R4 影子交涉父应用 AI 桥。最终业务状态以 `cccf75f` 为准。
+- **工作区遗留**：tracked 仅 `ios/App/Podfile`、`outputs/battle-experience-v3/P5-P3-FUSION.md`；untracked 为既有 `.cache/`、`.impeccable/`、`.rivet-config.json`、旧 `outputs/` 交付/恢复产物与 `public/umbra-demo-p3-v2/`。它们不属于本节点，不得 stash/reset/restore/clean，也不得混入下一次提交。
+- **运行现场**：`http://127.0.0.1:5192/` 为当前正式 App 与 `public/umbra-demo`；端口仍在则直接使用，先 HTTP 核验。`http://127.0.0.1:5196/` 是旧 `outputs/battle-experience-v3` 静态副本，**不要拿它验证当前 `public/umbra-demo` 修改**。
+
+### 已关闭与本轮成果
+
+- **四主题爬塔**：用户已验收四主题 3D 空间地板、首次加载兜底与返回主页；不要重做。
+- **天鹅绒**：用户已明确“验收通过”。真实浏览器验证图鉴登记、禁闭训练、正式存档写回与刷新恢复；蓝色主题实测，粉/黄/红视觉未重新验收。
+- **联机资源**：祈愿、羁绊之影、组织作战和满月团战的 SP/奖励统一优先写 `umbraProfile.economy.sp`；旧 `battleState` 只作迁移兜底。组织奖励 ID 幂等、旧档回填和 UMBRA 云冲突并集已实现。
+- **羁绊之影 Persona**：真实面板读取 UMBRA 当前 Persona/P5R 技能，不再依赖旧 AI Persona；P5R 元素稳定映射到旧联机五维页签。真实浏览器显示皮克希与吉欧，UMBRA SP 100→96。
+- **同调面具**：`profile.online.borrow` 与 Demo 原档双向保存；Demo 注册临时 Persona 进入名录、可出战、每周三场、同场只计一次。已用真实浏览器从 0 场打到 1 场并刷新恢复。
+- **R4 AI 桥**：父应用通过同源 `postMessage` 调用现有 BYOK `chatComplete`；子 iframe 不接触 Key。只传白名单交涉快照，模型只返回 `tone / quality / reply`。成功、坏 JSON 离线降级、取消、异源/异窗口/超长 payload 均有测试。
+- **模式标识**：真实模型显示“模型判定”，预览显示“预览判定”，无配置/失败显示“离线判定”；不再把 preview 混写为离线。
+
+### 验证与证据
+
+- `npm test`：60 文件、**366/366**；`npm run typecheck` exit0；`npm run build` exit0。本交接不重跑。
+- Node 桥测试：`node --test --test-reporter=tap .\public\umbra-demo\parent-shadow-talk-bridge.test.mjs`，2/2。本交接不重跑。
+- 联机证据：
+  - `.rivet/scratch/umbra-coop-modal-20261020/`
+  - `.rivet/scratch/umbra-borrow-sheet-20261020/`
+  - `.rivet/scratch/umbra-online-borrow-20261020/`
+- AI 证据：`.rivet/scratch/umbra-ai-live-20261020/report.json`、`success.png`、`bad.png`、`verify.mjs`。成功路径显示模型判定；坏返回显示离线判定；请求不含 Key/奖励字段；errors=[]。
+- 构建仍有既有动态导入、大 chunk 与两个 2.21 MB 图鉴不预缓存警告，不是本节点新增业务回归。
+
+### 未完成与下一优先级
+
+1. **真实 BYOK 验收未做**：本轮只用了本地合成 OpenAI 兼容响应，**没有产生真实模型费用**。下一聊天若继续 R4，必须先得到用户明确批准，再用现有配置发一次真实交涉，核对用户 provider、限流、回复质量与离线降级。不得自行读取/回显 Key，不得把合成结果写成真实模型验收。
+2. **战斗顾问未开始**：R4 真实调用通过后，再做只读战场快照、建议、一键预填、玩家确认；不做自动代打。
+3. **真实双账号 COOP 未做**：目前是合成 API/真实组件验证，生产账号并发、通知、权限与云往返仍需隔离测试账号。
+4. **独立后续项**：PWA 大文件预缓存/2.21 MB 图鉴体积；粉/黄/红天鹅绒视觉复看。
+- **本次交接提交**：只更新本交接记录，做本地文档提交；不 Push、不部署、不重跑测试，不继续写共享文件。
+
 ## 当前开发 · 2026-10-20 · R4 影子交涉 AI 桥完成
 
 - **用户决定**：联机接回后用户询问下一步，确认按建议推进 R4 影子自由交涉 AI 闭环，先做只读上下文、统一 provider、明确模式与失败降级。

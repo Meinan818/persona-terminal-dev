@@ -2,13 +2,44 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 准备交接 · 2026-10-21 · 服务器迁移与 Android 3.0.1 后
+
+### 接手第一入口
+
+- **用户决定**：用户要求准备新对话交接；当前停止开发，只核现场、整理接手入口并做本地收尾提交。没有新建原生聊天或自动化任务。
+- **Git 现场**：工作区 `E:\MASKARIA`；当前分支 `codex/p5r-compendium-data` 与本地 `main` 均为 `4e3a388`。远端 `origin/main` 已从 `f355a01` 快进并 Push 到 `4e3a388`；本交接文档提交将在 `4e3a388` 之后再形成一个本地提交并同步到 `main`，接手时以 `git rev-parse HEAD main origin/main` 三者为同一提交为准。
+- **正式运行现场**：新服务器 `150.158.174.9`，生产入口 `http://150.158.174.9/`；HTTPS 过渡入口 `https://spies-alliance-pty-shows.trycloudflare.com/`。`maskaria-backend`、MySQL、Caddy、`cloudflared-quick` 均为 active；公网仅 80，8080/8082/3306 外部不可达。
+- **旧服务器**：`192.144.227.216` 的 `maskaria-backend` 已停止并 disabled；网页 302 到新机，旧 `/api/` 返回 503。旧机、旧库和备份仍保留，是 3.0.1 真机验收前的短期回滚点，不要删除或关机。
+- **工作区遗留**：既有无关 tracked 改动 `ios/App/Podfile`、`outputs/battle-experience-v3/P5-P3-FUSION.md`；既有 untracked `.cache/`、`.impeccable/`、`.rivet-config.json`、旧 `outputs/`、`public/umbra-demo-p3-v2/`，以及本次失败尝试留下的 `deploy/staging/caddy.service.d.conf`。均未纳入提交；不要 stash/reset/restore/clean。
+
+### 已完成与验证
+
+- **服务器迁移**：生产库 24 表、Flyway V13、1 个账号、25 条 user_data、1 个机构成员；新旧全表 checksum 与规范化数据哈希一致，头像 1 个文件已迁。新 IP 和 HTTPS 过渡入口 Health 均 UP，真实 Chrome 可进入应用。
+- **Android 3.0.1**：`outputs/maskaria-3.0.1-release.apk`（70,133,077 B，SHA-256 `08C66C4C5BD20B1E795655AC57AB7281543290FA6A31ADC1F26B2F5B50EF5D5D`）和 AAB（69,952,275 B，SHA-256 `07021BF26B62063EA4129188027B87F13BBB0E7B95F5458CA09BF98B005A6D45`）。`versionCode 31 / versionName 3.0.1`；沿用原 Debug 证书 `a7f0f3d95edf9947dba5512b04b86fd0faf840236b1448b7412c8b5dbe1c0567`；包内只指向 `http://150.158.174.9`，无旧 IP/临时隧道。构建、sync、lintVital 成功；尚未真机安装。
+- **回归与主线**：前端全量 **63 文件 / 380 项**通过，typecheck exit0；平板地图点格跑多格的修复已由用户“验收通过”。本地 `main` 已包含完整功能历史并首次 Push 到 `4e3a388`；没有 force push。
+- **备份**：旧机最终库备份与 nginx 回滚配置在 `/home/ubuntu/maskaria-backups/migration-final-20261021-040450/`；新机迁移后备份在 `/home/ubuntu/maskaria-backups/post-migration-20261021-040622/`。本机 `E:\秘钥` 与新机 incoming 目录有 600 权限迁移中转文件，不能提交或外发。
+
+### 待办与优先级
+
+1. **Android 3.0.1 真机安装验收**：覆盖安装 APK，确认登录、云端 25 条数据、头像、记账、COOP、UMBRA 与主题。旧服务器在新包验收前保留。
+2. **稳定 HTTPS**：当前 Quick Tunnel 重启会换 URL，不适合作为永久正式地址；需要自有域名并切换 Caddy，或确认可靠 IP 证书方案。
+3. **旧服务器退役**：只有 3.0.1 真机通过且无客户端仍依赖旧 IP 后，才删除/关停旧机；先做最终数据核对和备份。
+4. **安装包分发**：下载通道仍关闭；若要公开发布，另行确认上传、版本说明和回滚。
+
+### 接手铁律
+
+- 先读本节、`AGENTS.md`、Git 状态和 diff，再核 `150.158.174.9` 服务与 `origin/main`；旧摘要和测试数字不能替代现场。
+- 不要动正式数据库或旧服务器回滚点，不要在 3.0.1 真机验收前删除旧机。
+- 不要读取/提交 `E:\秘钥`、`/etc/maskaria/backend.env`、新机 incoming 迁移文件；不要清理当前未跟踪遗留。
+- 新窗口没有自动化任务；需要自动续办时再按项目规则创建原生 heartbeat。
+
 ## 当前发布 · 2026-10-21 · Android 3.0.1 指向新服务器
 
 - **用户决定**：用户要求把服务器迁移作为大更新，版本使用 **3.0.1**；要求本地打包并准备合并回主线。
 - **产物**：`outputs/maskaria-3.0.1-release.apk`，**70,133,077 B**，SHA-256 `08C66C4C5BD20B1E795655AC57AB7281543290FA6A31ADC1F26B2F5B50EF5D5D`；AAB `outputs/maskaria-3.0.1-release.aab`，**69,952,275 B**，SHA-256 `07021BF26B62063EA4129188027B87F13BBB0E7B95F5458CA09BF98B005A6D45`。
 - **包核验**：aapt 为 `versionCode 31 / versionName 3.0.1`；签名证书 SHA-256 仍为 `a7f0f3d95edf9947dba5512b04b86fd0faf840236b1448b7412c8b5dbe1c0567`，可覆盖旧 Debug 签名包。APK 主入口 `index-tg-SS4Md.js` 含 `http://150.158.174.9`，不含旧 `192.144.227.216` 或 `trycloudflare.com`。
 - **验证与下载边界**：正式构建、Capacitor sync、Gradle release、lintVital 均成功；本轮没有真机安装验收，没有上传下载通道、没有 Push。中间的 2.8.15 构建产物被 3.0.1 取代，未删除。
-- **主线合并**：本地 `main` 原为 `caa3a67`，与功能分支分叉为 `0 落后 / 159 领先`，已无冲突快进到 3.0.1 发布提交 `af17db2`。本轮文档提交后再次快进，使 `main` 与最终 HEAD 一致；未 Push。
+- **主线合并**：本地 `main` 原为 `caa3a67`，与功能分支分叉为 `0 落后 / 159 领先`，已无冲突快进；用户随后批准 Push，`origin/main` 已推进到 `4e3a388`。
 
 ## 当前迁移 · 2026-10-21 · 正式服务切到新服务器
 

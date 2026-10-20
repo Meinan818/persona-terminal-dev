@@ -2,6 +2,14 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前发布 · 2026-10-21 · Android 3.0.1 指向新服务器
+
+- **用户决定**：用户要求把服务器迁移作为大更新，版本使用 **3.0.1**；要求本地打包并准备合并回主线。
+- **产物**：`outputs/maskaria-3.0.1-release.apk`，**70,133,077 B**，SHA-256 `08C66C4C5BD20B1E795655AC57AB7281543290FA6A31ADC1F26B2F5B50EF5D5D`；AAB `outputs/maskaria-3.0.1-release.aab`，**69,952,275 B**，SHA-256 `07021BF26B62063EA4129188027B87F13BBB0E7B95F5458CA09BF98B005A6D45`。
+- **包核验**：aapt 为 `versionCode 31 / versionName 3.0.1`；签名证书 SHA-256 仍为 `a7f0f3d95edf9947dba5512b04b86fd0faf840236b1448b7412c8b5dbe1c0567`，可覆盖旧 Debug 签名包。APK 主入口 `index-tg-SS4Md.js` 含 `http://150.158.174.9`，不含旧 `192.144.227.216` 或 `trycloudflare.com`。
+- **验证与下载边界**：正式构建、Capacitor sync、Gradle release、lintVital 均成功；本轮没有真机安装验收，没有上传下载通道、没有 Push。中间的 2.8.15 构建产物被 3.0.1 取代，未删除。
+- **主线合并**：本地 `main` 原为 `caa3a67`，与功能分支分叉为 `0 落后 / 159 领先`，已无冲突快进到 3.0.1 发布提交 `af17db2`。本轮文档提交后再次快进，使 `main` 与最终 HEAD 一致；未 Push。
+
 ## 当前迁移 · 2026-10-21 · 正式服务切到新服务器
 
 - **用户决定**：用户明确要求把正式服务迁到新服务器 `150.158.174.9`，旧服务器以后不常使用。新机从 staging 候选转为正式运行环境，旧机继续作为短期回滚点。
@@ -2247,6 +2255,7 @@
 |---|---|---|
 | 应用网页/PWA | `http://150.158.174.9/`，腾讯云 Caddy；正式目录 `/opt/maskaria/web/` | 2026-10-21 正式服务已迁至新机；同源 API、生产库 24 表/Flyway V13，健康检查 UP；HTTPS 过渡 `https://spies-alliance-pty-shows.trycloudflare.com/`，尚无稳定自有域名 |
 | 旧服务器迁移回退 | `http://192.144.227.216/` | 2026-10-21 起网页返回 302 到新机，旧 `/api/` 返回 503；后端已停止并取消自启，数据和配置保留作短期回滚 |
+| Android 3.0.1 本地包 | `outputs/maskaria-3.0.1-release.apk` / `.aab` | 指向新服务器；versionCode 31、原 Debug 证书，APK SHA-256 `08C66C4C5BD20B1E795655AC57AB7281543290FA6A31ADC1F26B2F5B50EF5D5D`；本地待安装验收，未上传下载通道 |
 | Java 后端 | 同主机 `/api/` 反代本机8080；`/opt/maskaria/backend/app.jar`，服务 `maskaria-backend` | 2026-10-18 SSH 核实并仅更新 OTP 四个类；新 JAR SHA-256 `d3d7db69f3ce2a63ce591f96cac60abeb06871a9e070e8aea7574877847989b9`，服务 active，健康与数据库 UP。未覆盖其它后端模块 |
 | 官网营销页 | `https://maskaria.pages.dev/`，Cloudflare Pages 项目 `maskaria`，发布分支 `main`；源码 `site/` | GET 200，标题 `MASKARIA 面具庭园 · 没人看见的也算数`。这是已部署网站，绝非仅有本地 demo |
 | 官网首次发布快照 | `https://2d5f4986.maskaria.pages.dev/` | 2026-10-14 原发布记录；本轮未检查此快照，不冒称最新部署ID |

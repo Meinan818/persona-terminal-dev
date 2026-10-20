@@ -1,0 +1,22 @@
+[Unit]
+Description=Cloudflare quick tunnel for MASKARIA staging
+Wants=network-online.target caddy.service
+After=network-online.target caddy.service
+
+[Service]
+Type=simple
+User=cloudflared
+Group=cloudflared
+Environment=HOME=/var/lib/cloudflared
+ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8082 --loglevel info
+Restart=always
+RestartSec=5s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/cloudflared
+
+[Install]
+WantedBy=multi-user.target

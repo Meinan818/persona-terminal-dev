@@ -2,6 +2,17 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前 staging · 2026-10-21 · 公网 HTTPS 隔离环境已可用
+
+- **用户决定**：用户提供了一个新的腾讯云免费试用服务器，使用公网 IP `150.158.174.9`、Ubuntu 24.04，要求继续完成 staging。没有使用正式应用服务器 `192.144.227.216`，没有连接正式数据库。
+- **当前地址**：`https://spies-alliance-pty-shows.trycloudflare.com`。这是 Cloudflare Quick Tunnel，服务端 `cloudflared-quick` 正在运行；不承诺长期地址，进程/服务重启后 URL 会变化。
+- **环境**：腾讯云 2 核 2G、50GB 磁盘、约 2GB Swap；独立 MySQL 库 `maskaria_staging`，应用使用专用系统用户 `maskaria`、随机数据库/JWT 凭据和 600 权限环境文件。后端 JVM 限制为 768MB；3306/8080 不向公网开放。
+- **部署内容**：提交 `3835767` 保存后端 systemd、Caddy、Cloudflare 隧道模板和浏览器验收脚本。服务器安装 Java 17、MySQL 8.0、Caddy、cloudflared；Flyway 已建 **24** 张表；前端产物已按当前隧道地址构建并核对。
+- **自动验证**：`scripts/staging-coop-smoke.mjs` 为 **8/8** 通过：TLSv1.3 受信任、证书有效期、HTTP 308 跳 HTTPS、服务器时钟差约 1 秒、数据库 UP、两账号好友、COOP、共享事件幂等和单条通知；20 个请求延迟 p50 **485ms**、p95 **854ms**。隔离 Chrome 390×844 已越过开场动画进入“第 1 步 · 共 7 步”页面，同源 `/api/health` 为 UP，console/page errors 与失败资源均为 0。证据在 `.rivet/scratch/staging-coop-live-20261021/report-final.json` 与 `.rivet/scratch/staging-browser-2026-10-20T19-04-03-547Z/`。
+- **失败保留**：最初尝试 `150-158-174-9.sslip.io`，Let’s Encrypt 回访时被腾讯云 DNSPod 未备案域名拦截页挡住；用户电脑开 VPN 不能改变证书机构回访路径。该失败不删除，当前改用不需域名/备案的 Quick Tunnel。
+- **未验收与边界**：两只物理手机、跨运营商、断网 15 秒恢复、后台 OS 通知仍未做，不能把 staging 标成最终通过。Quick Tunnel 无 uptime 保证；隧道换 URL 后，前端编译进产物的 API 地址也必须同步重建，否则页面能开但云端请求会失败。
+- **下一步/负责人**：由用户在两台手机分别使用不同账号，一台 Wi-Fi、一台蜂窝网络，完成好友申请/接受、COOP 提议/接受、共享事件、后台通知和弱网恢复。失败时保留页面提示、时间与设备网络状态；Codex 根据真机证据修复。
+
 ## 当前开发 · 2026-10-21 · 隔离 staging HTTPS 验收准备
 
 - **起因**：接手顶部交接后，从优先级 1“隔离 staging HTTPS 验收”继续；不改已验收 UI、玩法、PWA、天鹅绒或正式入口，不 Push、不部署、不打包。

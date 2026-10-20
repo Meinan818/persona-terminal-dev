@@ -2,6 +2,18 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前验收 · 2026-10-21 · AI LAB 夜层真实 BYOK 单次通过
+
+- **用户决定**：用户在 40F 长跑后回复“继续”，按优先级进入第 2 项；真实请求由用户在自己的 Edge、现有 `custom / deepseek-flash` 配置中手动点击发起。
+- **结果**：正式父应用桥与真实 AI LAB iframe UI 生成 1 层：标题“未说出口的那一页”，4 个房间，界面标记“模型夜层 · 已连接”。`result=ai_success`、`specMode=ai`。
+- **网络与费用边界**：只发送 **1 次** `POST https://api.deepseek.com/v1/chat/completions`，HTTP **200**，请求耗时 **5091 ms**，从点击到界面完成 **5762 ms**；没有重试、没有额外并发请求。本轮真实产生了这一次用户已授权的模型费用。
+- **凭据边界**：Codex 未读取、回显或写入 Key；报告只保存 provider、模型、脱敏 host/path、状态码、耗时、标题和房间数，不保存 Authorization、请求头或完整提示词。
+- **父子桥验证**：验收页复用了正式 `attachUmbraDemoAiBridge` 与真实 `/umbra-demo` iframe；在唯一一次真实请求前，另用本地合成 OpenAI 兼容响应跑通完整 UI，证明输入、计划、夜层渲染和报告链路。合成结果保存在 `smoke-report.json`、`smoke.json`、`smoke.png`。
+- **前置失败（均未产生模型费用）**：第一次验收页未等 iframe 白昼页就启用按钮，20 秒等待超时；第二次已进入白昼页，但父页面用父 realm 的 textarea setter/Event 修改 iframe，触发 `Illegal invocation`。两次均为验收探针问题，不是产品逻辑；改用 `frameReady` 门禁和 iframe 自己的原型/Event 后通过。原记录在 `preflight-failures.md`。
+- **证据**：`.rivet/scratch/umbra-floor-real-20261021/report.json`、`preflight-failures.md`、`smoke-report.json`、`smoke.json`、`smoke.png`、`probe.tsx`、`smoke.mjs`。未记录真实 Key 或完整响应正文中的敏感信息。
+- **边界**：本次证明当前用户 provider、真实网络、单次模型响应、父应用桥和 AI LAB 夜层 UI 可用；不证明生产并发、限流、长期额度、手机真机或其它 provider。模型生成的 HP/SP 展示值仍来自现有 Demo 初始资源，生成内容不修改战斗规则、奖励或存档。
+- **commit / Push**：本条仅为验收文档记录，随独立 docs 提交保存；未 Push、未部署、未打包。
+
 ## 当前验收 · 2026-10-21 · 当前 40F 普通难度真实 UI 无跳关通关
 
 - **用户决定**：用户在下一步优先级中回复“1”，选择完整 40F 普通难度长跑。本轮只做测试与验收，没有为了过关修改数值、奖励、概率、存档或界面。

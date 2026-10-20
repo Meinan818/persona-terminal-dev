@@ -10,7 +10,7 @@ import {
   seedDemoStorage,
 } from '@/umbra/demoBridge';
 import { createUmbraRunRecord } from '@/umbra/runtime';
-import { createFreshUmbraProfile } from '@/umbra/state';
+import { createFreshUmbraProfile, normalizeUmbraProfile } from '@/umbra/state';
 
 const now = new Date('2026-10-20T14:00:00.000Z');
 
@@ -116,5 +116,35 @@ describe('UMBRA Demo storage bridge', () => {
       [DEMO_STORAGE_KEYS.run]: '[]',
     });
     expect(readDemoLocalState(storage)).toEqual({ p5r: null, run: null, slice: null });
+  });
+
+  it('天鹅绒图鉴与 Persona 覆盖保存在正式原档并可重新写入 Demo', () => {
+    const profile = createFreshUmbraProfile(now);
+    const raw = {
+      money: 200,
+      compendium: {
+        entries: [{
+          id: 'arsene',
+          name: '亚森',
+          level: 2,
+          stats: { hp: 52, sp: 34, attack: 14, defense: 6 },
+          skills: ['eiha'],
+        }],
+      },
+      personaOverrides: {
+        arsene: {
+          level: 2,
+          stats: { hp: 52, sp: 34, attack: 14, defense: 6 },
+        },
+      },
+    };
+
+    const merged = mergeDemoP5rState(profile, raw, now);
+    expect(merged.demo?.p5r).toEqual(raw);
+    expect(normalizeUmbraProfile(merged).demo?.p5r).toEqual(raw);
+
+    const storage = createStorage();
+    expect(seedDemoStorage(storage, merged, null).p5r).toBe('profile');
+    expect(JSON.parse(storage.getItem(DEMO_STORAGE_KEYS.p5r) ?? '{}')).toEqual(raw);
   });
 });

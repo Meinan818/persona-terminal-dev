@@ -2,17 +2,21 @@
 
 最后更新：2026-10-20（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前开发 · 2026-10-20 · 联机资源接入 UMBRA
+## 当前开发 · 2026-10-20 · 联机接回完成，等待统一验收
 
-- **用户决定**：天鹅绒真实浏览器链路“验收通过”，下一步转入联机接回。本轮只做资源与数据边界，不重画社交界面、不登录真实账号、不连接生产数据。
-- **发现的断点**：祈愿、羁绊之影、组织作战、满月团战仍在直接读写旧 `battleState.sp`；新永久 SP 已在 `umbraProfile.economy.sp`。继续下去会造成界面、扣费、奖励和云同步各看一份数据。
-- **资源适配**：新增 `src/services/onlineResources.ts` 与 `src/umbra/online.ts`。在线 SP 收支、组织奖励幂等统一优先写 `umbraProfile`，只有迁移前旧档才回退 `battleState`；余额不足不扣款，奖励先记 ID 再发 SP。
-- **接入点**：祈愿收发、羁绊之影攻击/胜利/撤退、组织作战领奖、满月团战领奖与出手扣 SP 均已改走适配器；组织团战面板同步显示 UMBRA 当前 SP。
-- **存量回填**：`umbraProfile.social` 增加 `orgOpRewards`。已有 v3 资料会补齐字段，并从旧 `battleState` 只并集 `orgOpRewards` / `orgRaidRewards`，不恢复旧塔、旧战斗或旧楼层。UMBRA 单行云冲突仍以用户选择的 SP/装备为准，但两侧在线奖励去重 ID 会并集保留。
-- **验证**：新增在线资源纯规则、适配器、旧档回填和云冲突合并测试。`npm test` 57 文件 **354/354**，`npm run typecheck` exit0，`npm run build` exit0。构建仍有既有动态导入、大 chunk 与两个 2.21 MB 图鉴不预缓存警告。
-- **边界**：本轮不是完整联机迁移。`BorrowMaskSheet` / `borrowMask.ts` 仍借用旧 `BattleState.borrow`，羁绊之影战斗面板仍依赖旧 `persona` 的五维技能结构；新 UMBRA Persona 直接进入这两条链路尚未完成。没有真实账号、真实好友、生产云或双人联调证据。
-- **commit / Push**：本次资源适配、迁移、测试与本记录做本地提交；未 Push、未部署、未打包。工作区原有遗留项未纳入。
-- **下一步**：继续联机第二块，先把羁绊之影的攻击入口从旧 `persona` 模型适配到 UMBRA 当前 Persona，再接同调面具；真实账号往返放到合成后端与浏览器链路稳定之后。
+- **用户决定**：天鹅绒真实链路已“验收通过”；用户要求 Codex 继续做到最后，最后统一验收联机接回，不再中途逐项停问。
+- **SP 与奖励**：新增 `src/services/onlineResources.ts` 与 `src/umbra/online.ts`。祈愿、羁绊之影、组织作战、满月团战的 SP 收支统一优先写 `umbraProfile.economy.sp`，迁移前旧档才回退 `battleState`；组织奖励先记 ID 再发 SP，余额不足不扣款。
+- **存量与云冲突**：`umbraProfile.social` 增加 `orgOpRewards`，已有 v3 资料会补齐并从旧档并集回填。UMBRA 单行云冲突尊重用户选择的 SP/装备，同时并集两侧在线奖励 ID，换设备不会重复领。
+- **羁绊之影 Persona**：新增 `src/umbra/onlinePersona.ts`。真实的羁绊之影战斗面板不再依赖旧 AI Persona，而是读取 UMBRA 当前 Persona、P5R 技能和 `personaOverrides`；P5R 元素稳定映射到旧联机协议的五维页签，面板结构未重画。
+- **同调面具**：`BorrowMaskSheet` 与 `borrowMask.ts` 改读正式 `umbraProfile`。借用写入 `profile.online.borrow`，同时镜像到 Demo 原档；Demo 注册为不进入图鉴的临时 P5R Persona，可出现在名录、切换出战和真实战斗。每周三场、同一场只计一次、周键失效与用尽移除均已实现。
+- **自动回归**：在线 SP/奖励、旧档回填、云冲突合并、UMBRA Persona 适配、临时 Persona、借面具正式档与 Demo 镜像均补测试。`npm test` 59 文件 **362/362**，`npm run typecheck` exit0，`npm run build` exit0。构建仍有既有动态导入、大 chunk 与两个 2.21 MB 图鉴不预缓存警告。
+- **真实浏览器证据**：
+  - `.rivet/scratch/umbra-coop-modal-20261020/report.json`：真实 React 羁绊之影面板显示皮克希与吉欧，真实指针释放后 UMBRA SP 100→96，旧 Persona 不参与，390×844、Console errors=[]。
+  - `.rivet/scratch/umbra-borrow-sheet-20261020/report.json`：真实同调抽屉显示在线同伴的“旅人之面”，点击借用后正式 IndexedDB 写入 `online.borrow` 并同步 Demo 镜像，errors=[]。
+  - `.rivet/scratch/umbra-online-borrow-20261020/report.json`：同调 Persona 出现在 Demo 名录，可切为出战 Persona，首次行动后本周场次 0→1，刷新后仍恢复；390×844、errors=[]。
+- **边界**：这些是真实组件、真实浏览器存储与合成 COOP API/数据，不是实际双账号生产联调；未用真实好友、生产云端或第二台真实设备。联机服务器网络抖动、权限冲突和并发攻击仍需隔离测试账号另行验收。
+- **commit / Push**：联机资源、Persona/同调迁移、测试与本记录做本地提交；未 Push、未部署、未打包。原有工作区遗留项未纳入。
+- **结算状态**：功能实现与自动/真实浏览器验证已完成，等待用户统一验收。验收重点为羁绊之影面板更名技能、同调抽屉借用、Demo 名录/战斗/周场次以及刷新恢复，不要求重新验已通过的天鹅绒与爬塔。
 
 ## 当前开发 · 2026-10-20 · 天鹅绒真实接入链路通过
 

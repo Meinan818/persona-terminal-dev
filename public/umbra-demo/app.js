@@ -15,7 +15,7 @@ import {
   promoteBossPhase,
   syncAppState,
 } from './p5-battle-bridge.js';
-import { buildBattlePersona, ELEMENTS, setPersonaOverride } from './p5-combat-rules.js';
+import { buildBattlePersona, ELEMENTS, registerSyntheticPersona, setPersonaOverride } from './p5-combat-rules.js';
 import { clearSignatureFx, playAllOut, playStagger } from './p3-signature-fx.js';
 import { EQUIPMENT, equipmentBonuses, equipmentEffects, equipItem, unequipItem } from './equipment.js';
 import { inventoryEntries, equipmentSummary, slotLabel, useInventoryItem, sellInventoryItem, upgradeEquipment } from './inventory.js';
@@ -60,6 +60,8 @@ const state = {
   towerStratum: 'echo',
   npcTrust: createNpcTrust(),
   shadowTime: { days: [5, 6, 0], start: '20:00', end: '07:00' },
+  borrowedMask: null,
+  borrowedUsedThisBattle: false,
 };
 const scrolls = new Map();
 const masks = [
@@ -126,6 +128,93 @@ function ensurePersonaInRoster(personaId, attr = '名录') {
   return display;
 }
 
+const BORROWED_PERSONA_ID = '__online_borrow__';
+const BORROW_SP_COST = [8, 12, 18, 25, 35];
+
+function currentWeekKey(now = new Date()) {
+  const d = new Date(now);
+  const day = d.getDay();
+  d.setDate(d.getDate() - ((day + 6) % 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function borrowedSkill(entry, mult, index) {
+  const level = Math.max(1, Math.min(5, Math.round(Number(entry.level) || 1)));
+  const base = {
+    id: `online-borrow-${index}`,
+    name: entry.name,
+    element: 'almighty',
+    sourceElement: 'almighty',
+    sp: BORROW_SP_COST[level - 1],
+    power: Math.max(1, Math.round((Number(entry.power) || 1) * mult)),
+    description: '同调万能伤害，不参与自身面具的弱点与抗性。',
+  };
+  if (entry.type === 'heal') {
+    return { ...base, element: 'healing', target: 'ally', heal: true, power: Math.max(12, base.power) };
+  }
+  if (entry.type === 'buff') {
+    return { ...base, element: 'support', target: 'ally', attackUp: 1.5, power: 0 };
+  }
+  if (entry.type === 'charge') {
+    return { ...base, element: 'support', target: 'ally', attackUp: 2, power: 0 };
+  }
+  if (entry.type === 'attack_boost') {
+    return { ...base, element: 'support', target: 'ally', attackUp: 1.3, power: 0 };
+  }
+  if (entry.type === 'debuff') {
+    return { ...base, element: 'ailment', target: 'enemy', debuff: 'defense', power: 0 };
+  }
+  return { ...base, target: 'enemy' };
+}
+
+function applyBorrowedMask(raw) {
+  const borrow = raw && typeof raw === 'object' && typeof raw.weekKey === 'string' ? raw : null;
+  const snapshot = borrow?.mask?.persona;
+  const valid = borrow
+    && borrow.weekKey === currentWeekKey()
+    && Number(borrow.battles) < 3
+    && snapshot
+    && typeof snapshot.name === 'string'
+    && Array.isArray(snapshot.skills);
+  if (!valid) {
+    state.borrowedMask = null;
+    state.personaRoster = state.personaRoster.filter(id => id !== BORROWED_PERSONA_ID);
+    state.heroPersonaIds = state.heroPersonaIds.filter(id => id !== BORROWED_PERSONA_ID);
+    const index = masks.findIndex(mask => mask.id === BORROWED_PERSONA_ID);
+    if (index >= 0) masks.splice(index, 1);
+    if (state.activePersonaId === BORROWED_PERSONA_ID) state.activePersonaId = 'arsene';
+    return;
+  }
+  state.borrowedMask = {
+    weekKey: borrow.weekKey,
+    battles: Math.max(0, Math.round(Number(borrow.battles) || 0)),
+    mask: { ...borrow.mask, persona: { ...snapshot, skills: snapshot.skills.map(skill => ({ ...skill })) } },
+  };
+  const mult = Math.max(0.1, Number(borrow.mask.mult) || 1);
+  const level = Math.max(1, Math.min(99, Math.round(Number(snapshot.level) || 1)));
+  registerSyntheticPersona({
+    id: BORROWED_PERSONA_ID,
+    name: snapshot.name,
+    nameEn: 'BORROWED PERSONA',
+    arcana: 'fool',
+    level,
+    element: 'almighty',
+    elementLabel: '同调',
+    strength: level + 3,
+    magic: level + 3,
+    endurance: level + 2,
+    agility: level + 2,
+    luck: level,
+    maxHp: 48 + level * 4,
+    maxSp: 32 + level * 2,
+    attack: 8 + level * 2,
+    defense: 5 + level,
+    resistances: {},
+    skills: snapshot.skills.slice(0, 3).map((skill, index) => borrowedSkill(skill, mult, index)),
+  });
+  ensurePersonaInRoster(BORROWED_PERSONA_ID, '同调');
+}
+
 function persistP5State() {
   try {
     localStorage.setItem(P5_PREVIEW_KEY, JSON.stringify({
@@ -153,6 +242,7 @@ function persistP5State() {
       towerStratum: state.towerStratum,
       npcTrust: state.npcTrust,
       shadowTime: state.shadowTime,
+      borrowedMask: state.borrowedMask,
     }));
   } catch {}
 }
@@ -228,6 +318,7 @@ function loadP5State() {
         end: typeof saved.shadowTime.end === 'string' ? saved.shadowTime.end : '07:00',
       };
     }
+    applyBorrowedMask(saved.borrowedMask);
     if (saved.activePersonaId && selectPersona(saved.activePersonaId)) {
       state.activePersonaId = saved.activePersonaId;
     }
@@ -992,6 +1083,7 @@ function startBattle(origin = state.room,options={}) {
   state.command='skills';
   state.skill=0;
   state.weaknessKnown=false;
+  state.borrowedUsedThisBattle=false;
   state.battleEncounter=options.encounter??null;
   state.battleFloor=Number(options.floor)||4;
   state.battleReceipt=null;
@@ -1066,6 +1158,7 @@ function returnFromBattle() {
   state.battleReceipt=null;
   state.battleWon=false;
   state.room=state.origin;
+  if ((state.borrowedMask?.battles ?? 0) >= 3) applyBorrowedMask(null);
   history.replaceState(null,'',`#${state.room}`);
   transition(state.room==='tower'?'ASCEND':'SHADOW',clickOrigin);
   render({focus:true});
@@ -1260,6 +1353,20 @@ function execute(options = {}) {
   if (!result.ok) {
     notify(result.reason);
     return;
+  }
+  if (
+    view.actorIsPlayer
+    && action.type !== 'switchMask'
+    && state.activePersonaId === BORROWED_PERSONA_ID
+    && state.borrowedMask
+    && !state.borrowedUsedThisBattle
+  ) {
+    state.borrowedMask = {
+      ...state.borrowedMask,
+      battles: Math.max(0, Number(state.borrowedMask.battles) || 0) + 1,
+    };
+    state.borrowedUsedThisBattle = true;
+    persistP5State();
   }
   if (action.type === 'showtime') {
     state.showtimeCutIn = true;

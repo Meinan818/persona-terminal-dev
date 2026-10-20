@@ -37,6 +37,9 @@ export interface UmbraProfile {
     slice?: Record<string, unknown>;
     updatedAt?: string;
   };
+  online?: {
+    borrow?: NonNullable<BattleState['borrow']>;
+  };
 }
 
 export interface UmbraCombatState {
@@ -125,6 +128,19 @@ const normalizeSocial = (
   orgRaidRewards: uniqueStrings(social?.orgRaidRewards, 100),
 });
 
+const normalizeOnline = (
+  online: UmbraProfile['online'],
+): UmbraProfile['online'] => {
+  const borrow = online?.borrow;
+  if (
+    borrow
+    && typeof borrow.weekKey === 'string'
+    && Number.isFinite(Number(borrow.battles))
+    && (!borrow.mask || isRecord(borrow.mask))
+  ) return online;
+  return undefined;
+};
+
 const sameStrings = (left: unknown, right: string[]): boolean => (
   Array.isArray(left)
   && left.length === right.length
@@ -162,6 +178,7 @@ export function createDefaultUmbraCombat(): UmbraCombatState {
 export function normalizeUmbraProfile(profile: UmbraProfile): UmbraProfile {
   const demo = normalizeDemoArchive(profile.demo);
   const normalizedSocial = normalizeSocial(profile.social);
+  const online = normalizeOnline(profile.online);
   const social = sameStrings(profile.social?.orgOpRewards, normalizedSocial.orgOpRewards)
     && sameStrings(profile.social?.orgRaidRewards, normalizedSocial.orgRaidRewards)
     ? profile.social
@@ -172,12 +189,15 @@ export function normalizeUmbraProfile(profile: UmbraProfile): UmbraProfile {
     && profile.combat.equipment
     && Array.isArray(profile.combat.ownedEquipment)
     && profile.combat.battleItems
-  ) return demo === profile.demo && social === profile.social ? profile : { ...profile, demo, social };
+  ) return demo === profile.demo && social === profile.social && online === profile.online
+    ? profile
+    : { ...profile, demo, social, online };
   const defaults = createDefaultUmbraCombat();
   return {
     ...profile,
     schemaVersion: UMBRA_SCHEMA_VERSION,
     social,
+    online,
     economy: {
       ...profile.economy,
       money: finiteInt(profile.economy?.money, 1000),

@@ -12,6 +12,7 @@ import {
   buildPersonaLoadout,
   catalogPersonaChoices,
   recruitDataForPersona,
+  registerSyntheticPersona,
   setPersonaOverride,
 } from './p5r-battle-adapter.js';
 
@@ -842,4 +843,4 @@ export class P5Battle {
   }
 }
 
-export { buildBattlePersona, catalogPersonaChoices, setPersonaOverride };
+export { buildBattlePersona, catalogPersonaChoices, registerSyntheticPersona, setPersonaOverride };

@@ -3,6 +3,7 @@ import {
   buildBattlePersona,
   catalogPersonaChoices,
   createDefaultBattle,
+  registerSyntheticPersona,
 } from '@/umbra/engine/p5-combat-rules';
 
 const steady = () => 0.5;
@@ -15,6 +16,34 @@ describe('UMBRA formal P5 battle engine', () => {
     expect(arsene.id).toBe('arsene');
     expect(arsene.name).toBe('亚森');
     expect(arsene.skills.length).toBeGreaterThan(0);
+  });
+
+  it('联机同调可注册不进入图鉴的临时战斗 Persona', () => {
+    expect(registerSyntheticPersona({
+      id: '__online_test__',
+      name: '旅人之面',
+      level: 12,
+      element: 'almighty',
+      elementLabel: '同调',
+      maxHp: 96,
+      maxSp: 56,
+      attack: 32,
+      defense: 17,
+      resistances: {},
+      skills: [{
+        id: 'online-test-skill',
+        name: '星尘',
+        element: 'almighty',
+        sourceElement: 'almighty',
+        sp: 12,
+        power: 28,
+        target: 'enemy',
+      }],
+    })).toBe(true);
+    const persona: any = buildBattlePersona('__online_test__');
+    expect(persona.name).toBe('旅人之面');
+    expect(persona.skills[0].name).toBe('星尘');
+    expect(catalogPersonaChoices().some((item: any) => item.id === '__online_test__')).toBe(false);
   });
 
   it('默认战斗生成四人队伍和两名敌人', () => {

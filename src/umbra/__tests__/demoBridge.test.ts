@@ -147,4 +147,41 @@ describe('UMBRA Demo storage bridge', () => {
     expect(seedDemoStorage(storage, merged, null).p5r).toBe('profile');
     expect(JSON.parse(storage.getItem(DEMO_STORAGE_KEYS.p5r) ?? '{}')).toEqual(raw);
   });
+
+  it('同调面具在正式资料与 Demo 原档之间双向保持', () => {
+    const profile = createFreshUmbraProfile(now);
+    const borrowedMask = {
+      weekKey: '2026-10-19',
+      battles: 2,
+      mask: {
+        orgId: 'org-a',
+        orgName: '观测站',
+        ownerId: 'friend-a',
+        ownerCodename: '旅人',
+        persona: {
+          name: '旅人之面',
+          attribute: 'knowledge',
+          level: 12,
+          skills: [{ name: '星尘', type: 'damage', power: 24, level: 2 }],
+        },
+        mult: 1.2,
+        at: '2026-10-20T14:00:00.000Z',
+      },
+    };
+    const merged = mergeDemoP5rState(profile, {
+      money: 1000,
+      borrowedMask,
+    }, now);
+    expect(merged.online?.borrow).toEqual(borrowedMask);
+
+    const storage = createStorage();
+    seedDemoStorage(storage, merged, null);
+    expect(JSON.parse(storage.getItem(DEMO_STORAGE_KEYS.p5r) ?? '{}').borrowedMask).toEqual(borrowedMask);
+
+    const cleared = mergeDemoP5rState(merged, {
+      money: 1000,
+      borrowedMask: null,
+    }, now);
+    expect(cleared.online).toBeUndefined();
+  });
 });

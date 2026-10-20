@@ -1,6 +1,7 @@
 import { EQUIPMENT, equipmentBonuses } from '@/umbra/engine/equipment';
 import { createUmbraRunRecord } from '@/umbra/runtime';
 import type { UmbraProfile, UmbraRunRecord } from '@/umbra/state';
+import type { BattleState } from '@/types';
 
 const equipmentById = EQUIPMENT as Record<string, any>;
 
@@ -57,6 +58,17 @@ const recordOfLevels = (value: unknown): Record<string, number> | null => {
   return Object.fromEntries(entries);
 };
 
+const borrowedMaskOf = (value: unknown): NonNullable<BattleState['borrow']> | null => {
+  if (!isRecord(value) || typeof value.weekKey !== 'string') return null;
+  const battles = finiteInt(value.battles);
+  if (!value.mask || !isRecord(value.mask)) return { weekKey: value.weekKey, battles };
+  return {
+    weekKey: value.weekKey,
+    battles,
+    mask: cloneRecord(value.mask) as unknown as NonNullable<BattleState['borrow']>['mask'],
+  };
+};
+
 const stringList = (value: unknown): string[] | null => {
   if (!Array.isArray(value)) return null;
   return [...new Set(value.filter(item => typeof item === 'string').map(item => item.trim()).filter(Boolean))];
@@ -90,6 +102,7 @@ export function demoProfileSeed(profile: UmbraProfile): Record<string, unknown> 
     equipment: { ...profile.combat.equipment },
     ownedEquipment: [...profile.combat.ownedEquipment],
     equipmentLevels: { ...profile.combat.equipmentLevels },
+    borrowedMask: profile.online?.borrow ?? null,
   };
 }
 
@@ -117,6 +130,8 @@ export function mergeDemoP5rState(
   const levels = recordOfLevels(snapshot.equipmentLevels);
   const battleItems = recordOfNumbers(snapshot.battleItems);
   const materials = recordOfNumbers(snapshot.materials);
+  const hasBorrowedMask = Object.prototype.hasOwnProperty.call(snapshot, 'borrowedMask');
+  const borrowedMask = borrowedMaskOf(snapshot.borrowedMask);
   const nextEquipment = equipment ?? profile.combat.equipment;
   const nextLevels = levels ?? profile.combat.equipmentLevels;
   const nextRoster = roster?.length ? roster : profile.combat.heroPersonaIds;
@@ -153,6 +168,9 @@ export function mergeDemoP5rState(
       p5r: snapshot,
       updatedAt: new Date(now).toISOString(),
     },
+    online: hasBorrowedMask
+      ? (borrowedMask ? { ...profile.online, borrow: borrowedMask } : undefined)
+      : profile.online,
   };
 }
 

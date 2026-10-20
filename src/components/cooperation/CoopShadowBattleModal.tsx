@@ -21,6 +21,7 @@ import {
   ALL_OUT_COMBO,
 } from '@/services/coopShadows';
 import { readOnlineSp, spendOnlineSp } from '@/services/onlineResources';
+import { buildOnlinePersona } from '@/umbra/onlinePersona';
 import { sumDamagePlus } from '@/utils/confidantLevels';
 import { getUserId } from '@/services/velvetApi';
 import { archetypeById } from '@/constants/coopShadowPool';
@@ -61,7 +62,13 @@ const SKILL_TYPE_META: Record<PersonaSkill['type'], { label: string; color: stri
 const COMBO_THRESHOLD = ALL_OUT_COMBO;
 
 export function CoopShadowBattleModal({ isOpen, shadow: shadowProp, partnerName, onClose, onVictory }: Props) {
-  const persona = useAppStore(s => s.persona);
+  const legacyPersona = useAppStore(s => s.persona);
+  const umbraProfile = useAppStore(s => s.umbraProfile);
+  const persona = useMemo(
+    () => buildOnlinePersona(umbraProfile) ?? legacyPersona,
+    [umbraProfile, legacyPersona],
+  );
+  const usingUmbraPersona = Boolean(umbraProfile);
   const onlineReady = useAppStore(s => Boolean(s.umbraProfile || s.battleState));
   const onlineSp = useAppStore(s => s.umbraProfile?.economy.sp ?? s.battleState?.sp ?? 0);
   const attributes = useAppStore(s => s.attributes);
@@ -248,8 +255,8 @@ export function CoopShadowBattleModal({ isOpen, shadow: shadowProp, partnerName,
   const availableSkills: PersonaSkill[] = useMemo(() => {
     if (!persona) return [];
     const pool = persona.skills?.[selectedAttr] ?? [];
-    return pool.filter(s => s.level <= currentAttrLevel && s.type !== 'heal');
-  }, [persona, selectedAttr, currentAttrLevel]);
+    return pool.filter(s => (usingUmbraPersona || s.level <= currentAttrLevel) && s.type !== 'heal');
+  }, [persona, selectedAttr, currentAttrLevel, usingUmbraPersona]);
 
   // 与单人战一致的 damagePlus 加成（来自同伴 buff）
   const damagePlusMap = useMemo(() => sumDamagePlus(confidants), [confidants]);

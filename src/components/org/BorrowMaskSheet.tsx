@@ -41,10 +41,10 @@ export function BorrowMaskSheet({ view, member, open, onClose, onFlash }: {
   onFlash: (s: string) => void;
 }) {
   const tone = useOrgTone();
-  const bs = useAppStore(s => s.battleState);
+  const profile = useAppStore(s => s.umbraProfile);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const now = borrowNow(bs);
+  const now = borrowNow(profile?.online?.borrow ? { borrow: profile.online.borrow } : null);
   const level = orgLevelOfView(view);
   const masks = member ? shownPersonas(member.card).map(sanitizePersona).filter((p): p is OrgPersonaSnapshot => !!p) : [];
   const name = member ? displayCodename(member) : '';
@@ -146,7 +146,7 @@ export function BorrowMaskSheet({ view, member, open, onClose, onFlash }: {
             你现在同调着「{cur.persona.name}」（{cur.ownerCodename} 的）。{masks.some(same) ? '' : '借用这里的任何一张都会替换它。'}
           </p>
         )}
-        {!bs && <p className="text-[12px] font-bold leading-relaxed text-amber-600 dark:text-amber-400">你还没有自己的人格面具：先去UMBRA（幽影协议）唤醒一张，才能同调别人的。</p>}
+        {!profile && <p className="text-[12px] font-bold leading-relaxed text-amber-600 dark:text-amber-400">你还没有自己的人格面具：先去UMBRA（幽影协议）唤醒一张，才能同调别人的。</p>}
         {masks.length === 0 && <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400">Ta 没有展示面具。</p>}
 
         {masks.length > 0 && (
@@ -188,7 +188,7 @@ export function BorrowMaskSheet({ view, member, open, onClose, onFlash }: {
                       ))}
                       {p.skills.length === 0 && <li className="text-[12px] font-bold text-gray-500 dark:text-gray-400">这张面具还没有解锁的技能</li>}
                     </ul>
-                    <OrgButton tone={on ? 'ghost' : 'primary'} onClick={() => void take(p)} disabled={busy || !bs || on || !p.skills.length} className="mt-4 w-full">
+                    <OrgButton tone={on ? 'ghost' : 'primary'} onClick={() => void take(p)} disabled={busy || !profile || on || !p.skills.length} className="mt-4 w-full">
                       {on ? '已装备' : '借用'}
                     </OrgButton>
                   </div>

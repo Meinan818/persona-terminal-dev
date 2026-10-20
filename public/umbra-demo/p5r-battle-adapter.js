@@ -13,6 +13,7 @@
 import { P5R_SKILLS, P5R_PERSONA_BY_ID, getPersona, getSkill } from './p5r-compendium.js';
 
 const personaOverrides = new Map();
+const syntheticPersonas = new Map();
 
 export function setPersonaOverride(personaId, override) {
   if (!personaId) return;
@@ -25,6 +26,16 @@ export function setPersonaOverride(personaId, override) {
     stats: override.stats ? { ...override.stats } : undefined,
     skills: Array.isArray(override.skills) ? [...new Set(override.skills)] : undefined,
   });
+}
+
+/** 联机同调等外部来源的临时 Persona：仍是完整战斗演员，但不伪造图鉴条目。 */
+export function registerSyntheticPersona(definition) {
+  const id = typeof definition?.id === 'string' ? definition.id.trim() : '';
+  if (!id || !definition?.name || !Array.isArray(definition.skills)) return false;
+  syntheticPersonas.set(id, structuredClone
+    ? structuredClone(definition)
+    : JSON.parse(JSON.stringify(definition)));
+  return true;
 }
 
 export const P5_ELEMENTS = {
@@ -200,9 +211,30 @@ export function buildBattleSkill(skillName) {
 }
 
 export function buildBattlePersona(personaId, { level } = {}) {
+  const synthetic = syntheticPersonas.get(personaId);
   const persona = getPersona(personaId);
-  if (!persona) return null;
+  if (!persona && !synthetic) return null;
   const override = personaOverrides.get(personaId);
+  if (synthetic) {
+    const built = structuredClone
+      ? structuredClone(synthetic)
+      : JSON.parse(JSON.stringify(synthetic));
+    const currentLevel = Number.isFinite(level)
+      ? level
+      : Number.isFinite(override?.level)
+        ? override.level
+        : built.level;
+    built.level = Math.max(1, Math.round(Number(currentLevel) || 1));
+    if (override?.name) built.name = override.name;
+    const stats = override?.stats;
+    if (stats) {
+      if (Number.isFinite(stats.hp)) built.maxHp = stats.hp;
+      if (Number.isFinite(stats.sp)) built.maxSp = stats.sp;
+      if (Number.isFinite(stats.attack)) built.attack = stats.attack;
+      if (Number.isFinite(stats.defense)) built.defense = stats.defense;
+    }
+    return built;
+  }
   const requestedLevel = Number.isFinite(level) ? level : persona.level;
   const currentLevel = Math.max(1, Math.round(override?.level ?? requestedLevel));
   const unlocked = persona.skills.filter(

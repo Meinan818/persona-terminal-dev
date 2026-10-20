@@ -64,7 +64,7 @@ export function createTowerFlow(api){
       dropBonus:effects.drop,
     });
   }
-  const personaName=id=>getPersona(id)?.name??id;
+  const personaName=id=>getPersona(id)?.name??buildBattlePersona(id)?.name??id;
   const rosterIds=()=>[...new Set(state.personaRoster??[])].filter(id=>Boolean(getPersona(id)));
   const SHOP_STOCK=['painkiller','sportsDrink','energyDrink','revive'];
   const priceFor=(item,gear=false)=>{

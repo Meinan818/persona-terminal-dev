@@ -290,10 +290,10 @@ export function RaidSheet({ view, open, onClose, onFlash }: {
   const persona = useAppStore(s => s.persona);
   const attributes = useAppStore(s => s.attributes);
   const confidants = useAppStore(s => s.confidants);
-  const battleState = useAppStore(s => s.battleState);
+  const onlineReady = useAppStore(s => Boolean(s.umbraProfile || s.battleState));
+  const sp = useAppStore(s => s.umbraProfile?.economy.sp ?? s.battleState?.sp ?? 0);
   const myNames = useAppStore(s => s.settings.attributeNames) as Record<AttributeId, string>;
   const me = getUserId() ?? view.me.userId;
-  const sp = battleState?.sp ?? 0;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [hit, setHit] = useState<HitFx | null>(null);
@@ -429,7 +429,7 @@ export function RaidSheet({ view, open, onClose, onFlash }: {
             <section className="space-y-2.5" aria-label="今日的锋芒">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-[16px] font-black text-gray-900 dark:text-white" style={{ fontFamily: tone.channel === 'p5' ? P5_TITLE_FONT : tone.channel === 'p4' ? 'var(--p4-display-font, serif)' : undefined }}>今日的锋芒</h3>
-                <span className="shrink-0 px-2 py-[3px] text-[11px] font-black tabular-nums" style={{ background: 'rgba(250,204,21,0.18)', color: tone.channel === 'p4' ? '#131313' : '#b45309', ...chipShape(tone, 4) }} aria-label={`现在有 ${sp} SP`}>SP {battleState ? sp : '—'}</span>
+                <span className="shrink-0 px-2 py-[3px] text-[11px] font-black tabular-nums" style={{ background: 'rgba(250,204,21,0.18)', color: tone.channel === 'p4' ? '#131313' : '#b45309', ...chipShape(tone, 4) }} aria-label={`现在有 ${sp} SP`}>SP {onlineReady ? sp : '—'}</span>
               </div>
               {/* 面具：‹ 卡 ›，卡上横划也能切；下面一排五个点 */}
               <div className="flex items-center gap-2">
@@ -454,7 +454,7 @@ export function RaidSheet({ view, open, onClose, onFlash }: {
                 {picks.map((p, i) => {
                   const d = preview(p);
                   const open1 = expanded === p.key;
-                  const short = p.spCost > sp || (p.spCost > 0 && !battleState);
+                  const short = p.spCost > sp || (p.spCost > 0 && !onlineReady);
                   return (
                     <div key={p.key} role="listitem" style={{ background: open1 ? 'rgba(127,127,127,0.14)' : 'rgba(127,127,127,0.07)', ...shapeOf(tone, i + 5, 6, 12) }}>
                       <button
@@ -493,7 +493,7 @@ export function RaidSheet({ view, open, onClose, onFlash }: {
                   );
                 })}
               </div>
-              {!battleState && <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">UMBRA（幽影协议）还没开始，没有 SP：这次先用普攻。</p>}
+              {!onlineReady && <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">UMBRA（幽影协议）还没开始，没有 SP：这次先用普攻。</p>}
             </section>
           ) : (
             <Note tone={tone}>

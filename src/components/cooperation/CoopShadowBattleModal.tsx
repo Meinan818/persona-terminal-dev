@@ -20,6 +20,7 @@ import {
   hpFromAttackLog,
   ALL_OUT_COMBO,
 } from '@/services/coopShadows';
+import { readOnlineSp, spendOnlineSp } from '@/services/onlineResources';
 import { sumDamagePlus } from '@/utils/confidantLevels';
 import { getUserId } from '@/services/velvetApi';
 import { archetypeById } from '@/constants/coopShadowPool';
@@ -61,7 +62,8 @@ const COMBO_THRESHOLD = ALL_OUT_COMBO;
 
 export function CoopShadowBattleModal({ isOpen, shadow: shadowProp, partnerName, onClose, onVictory }: Props) {
   const persona = useAppStore(s => s.persona);
-  const battleState = useAppStore(s => s.battleState);
+  const onlineReady = useAppStore(s => Boolean(s.umbraProfile || s.battleState));
+  const onlineSp = useAppStore(s => s.umbraProfile?.economy.sp ?? s.battleState?.sp ?? 0);
   const attributes = useAppStore(s => s.attributes);
   const settings = useAppStore(s => s.settings);
   const confidants = useAppStore(s => s.confidants);
@@ -291,11 +293,11 @@ export function CoopShadowBattleModal({ isOpen, shadow: shadowProp, partnerName,
       setErr('月相攻击窗口已关闭（每日 18:00 – 次日 07:00 可战斗）');
       return;
     }
-    if (!battleState) {
+    if (!onlineReady) {
       setErr('请先在UMBRA（幽影协议）初始化你的战斗状态');
       return;
     }
-    if (battleState.sp < skill.spCost) {
+    if ((onlineSp || readOnlineSp()) < skill.spCost) {
       setErr(`SP 不足（需 ${skill.spCost}）`);
       return;
     }
@@ -327,10 +329,9 @@ export function CoopShadowBattleModal({ isOpen, shadow: shadowProp, partnerName,
       });
 
       // 联机模式玩家没有血条 —— 只扣 SP
-      await useAppStore.getState().saveBattleState({
-        ...battleState,
-        sp: battleState.sp - skill.spCost,
-      });
+      if (!await spendOnlineSp(skill.spCost)) {
+        throw new Error(`SP 不足（需 ${skill.spCost}）`);
+      }
 
       upsertCoopShadow(result.updatedShadow);
       setAttackLog(prev => [result.attack, ...prev]);
@@ -782,7 +783,7 @@ export function CoopShadowBattleModal({ isOpen, shadow: shadowProp, partnerName,
                     </div>
                   )}
                   {availableSkills.map(skill => {
-                    const affordable = (battleState?.sp ?? 0) >= skill.spCost;
+                    const affordable = onlineSp >= skill.spCost;
                     const typeMeta = SKILL_TYPE_META[skill.type];
                     const isExpanded = expandedSkill === skill.name;
                     // 是否造成伤害 —— 和服务层 isDamagingKind 保持一致

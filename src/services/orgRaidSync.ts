@@ -4,12 +4,12 @@
  *   · 三晚窗口里、这次满月还没开团 → 用确定 id 开团（首领 + 血量按这一刻的名册定，之后不变；两人同时开只留一条）；
  *   · 出手 / 总攻击：先拉一次最新的（别人刚打过、已经击退），再按规则算伤害写一条；撞了唯一索引 = 另一台设备打过了；
  *     出手按那一招的 SP 扣（普攻不扣）：先看够不够，写成功了才扣，另一台设备打过的不扣；
- *   · 击退了、我出过手 → 领奖（开团时据点 Lv.1 25 SP、每级 +5，岁时册印记；领过的记在战场状态里，换设备也不重复），弹一次庆祝卡。
+ *   · 击退了、我出过手 → 领奖（开团时据点 Lv.1 25 SP、每级 +5，岁时册印记；领过的记在 UMBRA 在线奖励里，换设备也不重复），弹一次庆祝卡。
  */
-import { useAppStore } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { db } from '@/db';
 import { getUserId } from './velvetApi';
+import { claimOnlineReward, hasOnlineResources, readOnlineSp, spendOnlineSp } from './onlineResources';
 import { OrgError, createRaid, createRaidHit, listOrgRaids } from './orgs';
 import {
   allOutDamage, avgLvOf, buildRaidBoss, fullMoonDayOf, myRaidOptions, raidHpOf, raidId, raidNow, raidSpOf, raidStateOf, strikeDamage,
@@ -69,19 +69,8 @@ export async function claimRaidRewards(view: OrgView): Promise<void> {
   for (const raid of view.raids) {
     const s = raidStateOf(raid, view.raidHits, view.org.tz);
     if (!s.defeated || !s.stats.has(me)) continue;
-    const st = useAppStore.getState();
-    const bs = st.battleState;
-    let sp = 0;
     const reward = raidSpOf(raid.boss.lv ?? 1);
-    if (bs && !(bs.orgRaidRewards ?? []).includes(raid.id)) {
-      await st.saveBattleState({
-        ...bs,
-        sp: bs.sp + reward,
-        totalSpEarned: bs.totalSpEarned + reward,
-        orgRaidRewards: [...(bs.orgRaidRewards ?? []), raid.id].slice(-100),
-      });
-      sp = reward;
-    }
+    const sp = await claimOnlineReward('orgRaid', raid.id, reward);
     // 岁时册：满月那天一枚（两个组织都击退也只一枚）
     const day = fullMoonDayOf(raid.slot, view.org.tz);
     try {
@@ -93,7 +82,7 @@ export async function claimRaidRewards(view: OrgView): Promise<void> {
     }
     const all = readJson<Record<string, string[]>>(WIN_KEY, {});
     const seen = new Set(all[me] ?? []);
-    if (seen.has(raid.id) || (!sp && bs)) continue;
+    if (seen.has(raid.id) || (!sp && hasOnlineResources())) continue;
     all[me] = [...seen, raid.id].slice(-50);
     writeJson(WIN_KEY, all);
     social().pushOrgCelebration({ kind: 'raid', raidId: raid.id, orgId: view.org.id, orgName: view.org.name, boss: raid.boss.name, sp, finisher: s.finisher === me, hitters: s.hitters.length });
@@ -159,7 +148,7 @@ export async function strikeFromUi(orgId: string, pick: { attr: AttributeId | nu
   const me = getUserId();
   if (!me) throw new OrgError('要先登录');
   const cost = Math.max(0, Math.round(pick.spCost ?? 0));
-  if (cost > 0 && (useAppStore.getState().battleState?.sp ?? 0) < cost) throw new OrgError(`SP 不够：这一招要 ${cost} SP`);
+  if (cost > 0 && readOnlineSp() < cost) throw new OrgError(`SP 不够：这一招要 ${cost} SP`);
   const { view, raid } = await freshRaid(orgId);
   const rn = raidNow(new Date(), view.org.tz);
   const opt = myRaidOptions(raidStateOf(raid, view.raidHits, view.org.tz), me, rn, view.members.length);
@@ -170,10 +159,8 @@ export async function strikeFromUi(orgId: string, pick: { attr: AttributeId | nu
   const { hit, dup } = await createRaidHit(raid, { kind: 'strike', night: rn.night!, attr: pick.attr ?? undefined, skill: pick.skill, damage: d.damage, weak: d.isWeak });
   // 写成功了才扣；撞了（另一台设备这一晚已经打过）不扣
   let spent = 0;
-  const bs = useAppStore.getState().battleState;
-  if (!dup && cost > 0 && bs) {
-    await useAppStore.getState().saveBattleState({ ...bs, sp: Math.max(0, bs.sp - cost) });
-    spent = cost;
+  if (!dup && cost > 0) {
+    if (await spendOnlineSp(cost)) spent = cost;
   }
   return afterHit(orgId, view, raid, hit, dup, me, { isWeak: d.isWeak, fullMoon: d.fullMoon, spent });
 }

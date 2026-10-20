@@ -12,6 +12,7 @@ import { useCloudSocialStore } from '@/store/cloudSocial';
 import { useCloudStore } from '@/store/cloud';
 import { db } from '@/db';
 import { getUserId } from './velvetApi';
+import { claimOnlineReward, hasOnlineResources } from './onlineResources';
 import {
   OrgError, cancelOperation, createCheckin, createOpCard, createOperation, deleteCheckin, listOrgBoard, listOrgLedger, listOrgOps,
 } from './orgs';
@@ -134,23 +135,12 @@ async function ensureOpCard(view: OrgView, p: OpProgress): Promise<OrgView> {
 
 const WIN_KEY = 'velvet.orgOpWins.v1';
 
-/** 我做完了的达成作战：+6 SP（领过的记在战场状态里，换设备也不重复）、在线同伴之间 +2 亲密度（固定事件 id），弹一次庆祝卡 */
+/** 我做完了的达成作战：+6 SP（领过的记在 UMBRA 在线奖励里，换设备也不重复）、在线同伴之间 +2 亲密度（固定事件 id），弹一次庆祝卡 */
 async function claimOpReward(view: OrgView, p: OpProgress, me: string): Promise<void> {
   const mine = p.rows.find(r => r.userId === me);
   const cardHasMe = opCardOf(view, p.op.id)?.opCard?.participants.some(x => x.userId === me);
   if (mine?.state !== 'done' && !cardHasMe) return;
-  const st = useAppStore.getState();
-  let sp = 0;
-  const bs = st.battleState;
-  if (bs && !(bs.orgOpRewards ?? []).includes(p.op.id)) {
-    await st.saveBattleState({
-      ...bs,
-      sp: bs.sp + ORG_OP_SP,
-      totalSpEarned: bs.totalSpEarned + ORG_OP_SP,
-      orgOpRewards: [...(bs.orgOpRewards ?? []), p.op.id].slice(-200),
-    });
-    sp = ORG_OP_SP;
-  }
+  const sp = await claimOnlineReward('orgOp', p.op.id, ORG_OP_SP);
   const partners: string[] = [];
   for (const r of p.rows) {
     if (r.userId === me || r.state !== 'done') continue;
@@ -169,7 +159,7 @@ async function claimOpReward(view: OrgView, p: OpProgress, me: string): Promise<
   // 庆祝卡：这台设备刚领到 SP（或者没有战场、这台设备还没弹过）才弹，每场一次
   const all = readJson<Record<string, string[]>>(WIN_KEY, {});
   const seen = new Set(all[me] ?? []);
-  if (seen.has(p.op.id) || (!sp && bs)) return;
+  if (seen.has(p.op.id) || (!sp && hasOnlineResources())) return;
   all[me] = [...seen, p.op.id].slice(-200);
   writeJson(WIN_KEY, all);
   social().pushOrgCelebration({ kind: 'op', opId: p.op.id, orgId: view.org.id, orgName: view.org.name, title: p.op.title, opKind: p.op.kind, sp, partners });

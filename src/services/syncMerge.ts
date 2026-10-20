@@ -127,6 +127,27 @@ function mergeBattleExtras(pick: Row, other: Row): Row {
   return { ...pick, ...(borrow ? { borrow } : {}), ...(rewards.length ? { orgOpRewards: rewards } : {}), ...(raidRewards.length ? { orgRaidRewards: raidRewards } : {}) };
 }
 
+function mergeUmbraOnlineExtras(pick: Row, other: Row): Row {
+  const pickSocial = pick.social && typeof pick.social === 'object' ? pick.social as Row : {};
+  const otherSocial = other.social && typeof other.social === 'object' ? other.social as Row : {};
+  const union = (left: unknown, right: unknown, limit: number): string[] => (
+    [...new Set([
+      ...(Array.isArray(left) ? left.filter((id): id is string => typeof id === 'string') : []),
+      ...(Array.isArray(right) ? right.filter((id): id is string => typeof id === 'string') : []),
+    ])].slice(-limit)
+  );
+  const orgOpRewards = union(pickSocial.orgOpRewards, otherSocial.orgOpRewards, 200);
+  const orgRaidRewards = union(pickSocial.orgRaidRewards, otherSocial.orgRaidRewards, 100);
+  return {
+    ...pick,
+    social: {
+      ...pickSocial,
+      orgOpRewards,
+      orgRaidRewards,
+    },
+  };
+}
+
 /** 样本标题：给界面看的一句 */
 export function rowTitle(table: string, row: Row): string {
   const pick = (...keys: string[]): string => {
@@ -186,7 +207,13 @@ export function mergeTable(table: string, localRows: Row[], cloudRows: Row[], op
       stats.conflict++;
       if (stats.samples.conflict.length < SAMPLE_MAX) stats.samples.conflict.push(rowTitle(table, l));
       const picked = resolveSpecial(table, l, c) ?? (opts.conflictWins === 'cloud' ? c : l);
-      rows.push(table === 'battleStates' ? mergeBattleExtras(picked, picked === l ? c : l) : picked);
+      rows.push(
+        table === 'battleStates'
+          ? mergeBattleExtras(picked, picked === l ? c : l)
+          : table === 'umbraProfiles'
+            ? mergeUmbraOnlineExtras(picked, picked === l ? c : l)
+            : picked,
+      );
     }
   }
   return { rows, stats };

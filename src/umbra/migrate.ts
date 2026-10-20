@@ -1,5 +1,6 @@
 import type { BattleState } from '@/types';
 import { db } from '@/db';
+import { backfillLegacyOnlineRewards } from '@/umbra/online';
 import {
   UMBRA_PROFILE_ID,
   createFreshUmbraProfile,
@@ -20,8 +21,9 @@ export async function ensureUmbraProfile(
   const existing = await db.umbraProfiles.get(UMBRA_PROFILE_ID);
   if (existing) {
     const normalized = normalizeUmbraProfile(existing);
-    if (normalized !== existing) await db.umbraProfiles.put(normalized);
-    return normalized;
+    const backfilled = backfillLegacyOnlineRewards(normalized, legacy).profile;
+    if (backfilled !== existing) await db.umbraProfiles.put(backfilled);
+    return backfilled;
   }
 
   const plan = planLegacyUmbraMigration(legacy, now);

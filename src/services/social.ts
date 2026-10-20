@@ -27,6 +27,7 @@ import { getOnlineCardFace, clearOnlineCardFace } from './onlineCardFace';
 import { syncPacts } from './pactSync';
 import { syncOrgs } from './orgSync';
 import { flushCoopEvents } from './coopEvents';
+import { grantOnlineSp, hasOnlineResources } from './onlineResources';
 import { interpretLockedArcana, type ConfidantMatchResult } from '@/utils/confidantAI';
 import type { CoopBond, CoopShadow, Friendship, NotificationEntry } from '@/types';
 
@@ -515,8 +516,8 @@ const consumeCoopEventNotifications = async (notifications: NotificationEntry[])
  *   - prayer_received   → +PRAYER_SP_GRANT (2) SP；本地若有 COOP 在线同伴 → intimacy +1
  *   - prayer_reciprocal → +RECIPROCAL_REFLECTION_SP (1) 反射 SP
  *
- * 亲密度不依赖 battleState；SP 必须有 battleState 才会兑换。
- * 没有 battleState 时会先应用亲密度并保留通知，下次战场就绪后再消费 SP。
+ * 亲密度不依赖战斗资源；SP 必须有 UMBRA（或迁移前旧档）才会兑换。
+ * 没有在线资源时会先应用亲密度并保留通知，下次战场就绪后再消费 SP。
  *
  * **SP at-most-once 保证**：先 markRead 成功，再给 SP。
  *   - 如果 markRead 抛错（网断 / PB 拒绝），这条通知本轮不处理；下次 loadSocial 会再来
@@ -534,7 +535,7 @@ const consumePrayerNotifications = async (notifications: NotificationEntry[]): P
   const social = useCloudSocialStore.getState();
   const receivedReadyForSp: NotificationEntry[] = [];
 
-  // 第一步：亲密度先独立结算，不再被 battleState 阻塞。
+  // 第一步：亲密度先独立结算，不再被战斗资源阻塞。
   // 通知暂时保持 unread；这样没有战斗状态时不会丢 SP，下一轮仍可继续结算。
   for (const n of unreadReceived) {
     const fromId = n.fromId;
@@ -577,10 +578,9 @@ const consumePrayerNotifications = async (notifications: NotificationEntry[]): P
     receivedReadyForSp.push(n);
   }
 
-  const battleState = useAppStore.getState().battleState;
-  if (!battleState) return;
+  if (!hasOnlineResources()) return;
 
-  // 第二步：有 battleState 时再 markRead；成功的才纳入 SP 结算集合。
+  // 第二步：有在线资源时再 markRead；成功的才纳入 SP 结算集合。
   const receivedMarked: NotificationEntry[] = [];
   const reciprocalMarked: NotificationEntry[] = [];
   for (const n of receivedReadyForSp) {
@@ -608,11 +608,7 @@ const consumePrayerNotifications = async (notifications: NotificationEntry[]): P
     + RECIPROCAL_REFLECTION_SP * reciprocalMarked.length;
   if (grant > 0) {
     try {
-      await useAppStore.getState().saveBattleState({
-        ...battleState,
-        sp: battleState.sp + grant,
-        totalSpEarned: battleState.totalSpEarned + grant,
-      });
+      await grantOnlineSp(grant);
     } catch (err) {
       console.warn('[velvet-social] award prayer SP failed', err);
       // 通知已标记已读，但 SP 写失败 —— 丢一次，不再补。可观察性交给日志。
@@ -801,19 +797,12 @@ async function claimVictoryReward(
     console.warn('[velvet-social] coop victory intimacy bump failed', err);
   }
 
-  // 4) SP。battleState 要读最新的：上面 addActivity 已经按记录发过 SP，拿函数开头的快照写回会把那份吞掉
+  // 4) SP。适配器每次读最新资源，避免把上面 addActivity 已发的 SP 覆盖掉
   const spGain = reward.sp;
-  const battleState = useAppStore.getState().battleState;
-  if (battleState) {
-    try {
-      await appStore.saveBattleState({
-        ...battleState,
-        sp: battleState.sp + spGain,
-        totalSpEarned: battleState.totalSpEarned + spGain,
-      });
-    } catch (err) {
-      console.warn('[velvet-social] coop victory SP grant failed', err);
-    }
+  try {
+    await grantOnlineSp(spGain);
+  } catch (err) {
+    console.warn('[velvet-social] coop victory SP grant failed', err);
   }
 }
 
@@ -850,18 +839,11 @@ async function claimRetreatReward(
     console.warn('[velvet-social] coop retreat intimacy bump failed', err);
   }
 
-  // 2) SP（读最新的 battleState）
-  const battleState = useAppStore.getState().battleState;
-  if (battleState) {
-    try {
-      await appStore.saveBattleState({
-        ...battleState,
-        sp: battleState.sp + REWARD_SP_RETREAT,
-        totalSpEarned: battleState.totalSpEarned + REWARD_SP_RETREAT,
-      });
-    } catch (err) {
-      console.warn('[velvet-social] coop retreat SP grant failed', err);
-    }
+  // 2) SP（适配器读取最新的 UMBRA / 旧档资源）
+  try {
+    await grantOnlineSp(REWARD_SP_RETREAT);
+  } catch (err) {
+    console.warn('[velvet-social] coop retreat SP grant failed', err);
   }
 }
 

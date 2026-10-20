@@ -6,6 +6,7 @@ import {
   UMBRA_SCHEMA_VERSION,
   createFreshUmbraProfile,
   equipUmbraItem,
+  normalizeUmbraProfile,
   planLegacyUmbraMigration,
   setUmbraActivePersona,
   useUmbraItem,
@@ -27,6 +28,7 @@ function legacyState(patch: Partial<BattleState> = {}): BattleState {
     shadowsDefeated: 12,
     lastBattleDate: '2026-10-18',
     maxStratumLevel: 3,
+    orgOpRewards: ['op-a', 'op-a', 'op-b'],
     orgRaidRewards: ['raid-a', 'raid-a', 'raid-b'],
     ...patch,
   };
@@ -38,7 +40,10 @@ describe('legacy UMBRA migration plan', () => {
     expect(plan?.profile.id).toBe(UMBRA_PROFILE_ID);
     expect(plan?.profile.schemaVersion).toBe(UMBRA_SCHEMA_VERSION);
     expect(plan?.profile.economy).toEqual({ sp: 41, totalSpEarned: 230, money: 1000 });
-    expect(plan?.profile.social.orgRaidRewards).toEqual(['raid-a', 'raid-b']);
+    expect(plan?.profile.social).toEqual({
+      orgOpRewards: ['op-a', 'op-b'],
+      orgRaidRewards: ['raid-a', 'raid-b'],
+    });
     expect(plan?.profile.legacySummary).toEqual({
       status: 'in_battle',
       shadowsDefeated: 12,
@@ -68,10 +73,14 @@ describe('legacy UMBRA migration plan', () => {
     const plan = planLegacyUmbraMigration(legacyState({
       sp: Number.NaN,
       totalSpEarned: -10,
+      orgOpRewards: [null, '  ', 'op-c'] as unknown as string[],
       orgRaidRewards: [null, '  ', 'raid-c'] as unknown as string[],
     }), now);
     expect(plan?.profile.economy).toEqual({ sp: 0, totalSpEarned: 0, money: 1000 });
-    expect(plan?.profile.social.orgRaidRewards).toEqual(['raid-c']);
+    expect(plan?.profile.social).toEqual({
+      orgOpRewards: ['op-c'],
+      orgRaidRewards: ['raid-c'],
+    });
   });
 
   it('没有旧战场时不伪造迁移资料', () => {
@@ -81,10 +90,24 @@ describe('legacy UMBRA migration plan', () => {
   it('新玩家生成干净的 UMBRA 永久资料', () => {
     const profile = createFreshUmbraProfile(now);
     expect(profile.economy).toEqual({ sp: 0, totalSpEarned: 0, money: 1000 });
+    expect(profile.social.orgOpRewards).toEqual([]);
     expect(profile.social.orgRaidRewards).toEqual([]);
     expect(profile.combat.activePersonaId).toBe('arsene');
     expect(profile.combat.hp).toBe(52);
     expect(profile.migration.source).toBe('fresh');
+  });
+
+  it('旧 v3 资料缺少作战奖励字段时会补齐且不丢原有奖励', () => {
+    const profile = createFreshUmbraProfile(now);
+    const legacyShape = {
+      ...profile,
+      social: { orgRaidRewards: ['raid-a'] },
+    } as unknown as typeof profile;
+    const normalized = normalizeUmbraProfile(legacyShape);
+    expect(normalized.social).toEqual({
+      orgOpRewards: [],
+      orgRaidRewards: ['raid-a'],
+    });
   });
 
   it('只能切换正式名录内的出战 Persona', () => {

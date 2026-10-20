@@ -17,6 +17,7 @@ export interface UmbraProfile {
     money: number;
   };
   social: {
+    orgOpRewards: string[];
     orgRaidRewards: string[];
   };
   combat: UmbraCombatState;
@@ -117,6 +118,19 @@ const normalizeDemoArchive = (
   };
 };
 
+const normalizeSocial = (
+  social: UmbraProfile['social'] | undefined,
+): UmbraProfile['social'] => ({
+  orgOpRewards: uniqueStrings(social?.orgOpRewards, 200),
+  orgRaidRewards: uniqueStrings(social?.orgRaidRewards, 100),
+});
+
+const sameStrings = (left: unknown, right: string[]): boolean => (
+  Array.isArray(left)
+  && left.length === right.length
+  && left.every((value, index) => value === right[index])
+);
+
 const cloneBattleState = (state: BattleState): BattleState => (
   typeof structuredClone === 'function'
     ? structuredClone(state)
@@ -147,17 +161,23 @@ export function createDefaultUmbraCombat(): UmbraCombatState {
 
 export function normalizeUmbraProfile(profile: UmbraProfile): UmbraProfile {
   const demo = normalizeDemoArchive(profile.demo);
+  const normalizedSocial = normalizeSocial(profile.social);
+  const social = sameStrings(profile.social?.orgOpRewards, normalizedSocial.orgOpRewards)
+    && sameStrings(profile.social?.orgRaidRewards, normalizedSocial.orgRaidRewards)
+    ? profile.social
+    : normalizedSocial;
   if (
     profile.schemaVersion === UMBRA_SCHEMA_VERSION
     && profile.combat
     && profile.combat.equipment
     && Array.isArray(profile.combat.ownedEquipment)
     && profile.combat.battleItems
-  ) return demo === profile.demo ? profile : { ...profile, demo };
+  ) return demo === profile.demo && social === profile.social ? profile : { ...profile, demo, social };
   const defaults = createDefaultUmbraCombat();
   return {
     ...profile,
     schemaVersion: UMBRA_SCHEMA_VERSION,
+    social,
     economy: {
       ...profile.economy,
       money: finiteInt(profile.economy?.money, 1000),
@@ -264,6 +284,7 @@ export function planLegacyUmbraMigration(
       updatedAt: capturedAt,
       economy: { sp, totalSpEarned, money: 1000 },
       social: {
+        orgOpRewards: uniqueStrings(legacy.orgOpRewards, 200),
         orgRaidRewards: uniqueStrings(legacy.orgRaidRewards),
       },
       combat: createDefaultUmbraCombat(),
@@ -296,7 +317,7 @@ export function createFreshUmbraProfile(now = new Date()): UmbraProfile {
     createdAt,
     updatedAt: createdAt,
     economy: { sp: 0, totalSpEarned: 0, money: 1000 },
-    social: { orgRaidRewards: [] },
+    social: { orgOpRewards: [], orgRaidRewards: [] },
     combat: createDefaultUmbraCombat(),
     migration: {
       source: 'fresh',

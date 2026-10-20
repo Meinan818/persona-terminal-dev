@@ -36,6 +36,7 @@ import { CoopVictoryScreen } from '@/components/cooperation/CoopVictoryScreen';
 import { MAJOR_ARCANA_IDS } from '@/utils/confidantLevels';
 import { sendPrayer, hasPrayedToday, hasBeenPrayedByToday } from '@/services/prayers';
 import { loadSocial } from '@/services/social';
+import { grantOnlineSp } from '@/services/onlineResources';
 import { nextPrayerStreak, prayerNarrative } from '@/utils/prayerStreak';
 import { playSound } from '@/utils/feedback';
 import type { CloudProfile, CoopBond, CoopShadow, Friendship } from '@/types';
@@ -55,7 +56,7 @@ const lsSetFlag = (key: string): void => {
 
 export function Cooperation() {
   const isP4 = useUiChannel() === 'p4';
-  const { confidants, counselArchives, getCounselCooldown, hasActiveCounsel, bumpConfidantIntimacy, updateConfidant, battleState, saveBattleState, settings, updateSettings } = useAppStore(useShallow(s => ({ confidants: s.confidants, counselArchives: s.counselArchives, getCounselCooldown: s.getCounselCooldown, hasActiveCounsel: s.hasActiveCounsel, bumpConfidantIntimacy: s.bumpConfidantIntimacy, updateConfidant: s.updateConfidant, battleState: s.battleState, saveBattleState: s.saveBattleState, settings: s.settings, updateSettings: s.updateSettings })));
+  const { confidants, counselArchives, getCounselCooldown, hasActiveCounsel, bumpConfidantIntimacy, updateConfidant, settings, updateSettings } = useAppStore(useShallow(s => ({ confidants: s.confidants, counselArchives: s.counselArchives, getCounselCooldown: s.getCounselCooldown, hasActiveCounsel: s.hasActiveCounsel, bumpConfidantIntimacy: s.bumpConfidantIntimacy, updateConfidant: s.updateConfidant, settings: s.settings, updateSettings: s.updateSettings })));
   // P9 专辑墙：视图偏好持久记忆（PRD §5.3），默认墙
   const viewMode = settings.confidantViewMode ?? 'wall';
   const cloudUser = useCloudStore(s => s.cloudUser);
@@ -212,17 +213,11 @@ export function Cooperation() {
       }
 
       // 发送方 SP：+2（送出）；若构成互祈再 +1 反射
-      if (battleState) {
-        const senderGrant = 2 + (reciprocal ? 1 : 0);
-        try {
-          await saveBattleState({
-            ...battleState,
-            sp: battleState.sp + senderGrant,
-            totalSpEarned: battleState.totalSpEarned + senderGrant,
-          });
-        } catch (err) {
-          console.warn('[cooperation] award sender prayer SP failed', err);
-        }
+      const senderGrant = 2 + (reciprocal ? 1 : 0);
+      try {
+        await grantOnlineSp(senderGrant);
+      } catch (err) {
+        console.warn('[cooperation] award sender prayer SP failed', err);
       }
 
       void loadSocial({ force: true });

@@ -31,6 +31,8 @@ vi.mock('@/services/userDataApi', () => ({
   updateProfile: h.updateProfile, clearAvatar: async () => {},
 }));
 import { pullAll, pushAll } from '../sync';
+import { createUmbraRunRecord } from '@/umbra/runtime';
+import { createFreshUmbraProfile, normalizeUmbraProfile } from '@/umbra/state';
 
 const row = (key: string, value: unknown, updated = '2026-10-13T10:00:00.000Z') => ({ id: key, key, value, updated, created: updated });
 const meta = (n: number, at = '2026-10-13T12:00:00.000Z') => row('_meta', { schema: 2, chunks: { activities: { n, at } } });
@@ -123,5 +125,103 @@ describe('云同步数据安全', () => {
     h.listRows.mockImplementation(async () => { h.me = 'test-b'; h.generation++; return []; });
     await expect(pushAll()).rejects.toThrow();
     expect(h.createRow).not.toHaveBeenCalled(); expect(h.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('UMBRA 正式资料与 Demo 行程经过推送、清空和拉取后保持完整', async () => {
+    const now = new Date('2026-10-20T14:00:00.000Z');
+    const profile = createFreshUmbraProfile(now);
+    const syncedProfile = {
+      ...profile,
+      updatedAt: new Date('2026-10-20T15:00:00.000Z'),
+      economy: { ...profile.economy, money: 4321, sp: 12, totalSpEarned: 18 },
+      combat: {
+        ...profile.combat,
+        activePersonaId: 'pixie',
+        heroPersonaIds: ['arsene', 'pixie', 'angel'],
+        allyPersonaIds: ['agathion', 'cait-sith', 'kelpie'],
+        equipment: { weapon: 'black-fang', armor: 'school-jacket', accessory: 'old-watch' },
+        equipmentLevels: { 'black-fang': 2 },
+        ownedEquipment: ['training-blade', 'school-jacket', 'old-watch', 'black-fang'],
+        battleItems: { painkiller: 3, sportsDrink: 2 },
+        materials: { emberShard: 4 },
+      },
+      demo: {
+        p5r: {
+          money: 4321,
+          activePersonaId: 'pixie',
+          personaRoster: ['arsene', 'pixie', 'angel'],
+          allyPersonaIds: ['agathion', 'cait-sith', 'kelpie'],
+          equipment: { weapon: 'black-fang', armor: 'school-jacket', accessory: 'old-watch' },
+          ownedEquipment: ['training-blade', 'school-jacket', 'old-watch', 'black-fang'],
+          equipmentLevels: { 'black-fang': 2 },
+          battleItems: { painkiller: 3, sportsDrink: 2 },
+          materials: { emberShard: 4 },
+          savedAt: '2026-10-20T14:30:00.000Z',
+        },
+        slice: {
+          record: { day: '2026-10-20' },
+          run: { active: true, floor: 3 },
+        },
+        updatedAt: '2026-10-20T14:30:00.000Z',
+      },
+    };
+    const run = createUmbraRunRecord('current', {
+      formalMap: { floor: 3, seed: 7 },
+      source: 'demo',
+      demoRun: {
+        journey: { active: true, floor: 3 },
+        startedAt: '2026-10-20T14:10:00.000Z',
+      },
+    }, now);
+    h.rows.set('umbraProfiles', [syncedProfile as unknown as Row]);
+    h.rows.set('umbraRuns', [run as unknown as Row]);
+
+    let recordSeq = 0;
+    const stamp = () => new Date(1_800_000_000_000 + (++recordSeq) * 1000).toISOString();
+    h.createRow.mockImplementation(async (key: string, value: unknown) => {
+      const record = { id: `cloud-${++recordSeq}`, key, value, updated: stamp(), created: stamp() };
+      h.records.push(record);
+      return record;
+    });
+    h.updateRow.mockImplementation(async (id: string, value: unknown) => {
+      const record = h.records.find(item => item.id === id);
+      if (!record) throw new Error(`missing cloud row ${id}`);
+      record.value = value;
+      record.updated = stamp();
+      return record;
+    });
+    h.deleteRow.mockImplementation(async (id: string) => {
+      h.records = h.records.filter(item => item.id !== id);
+    });
+
+    await pushAll({ force: true });
+    const compareTime = new Date('2026-10-20T16:00:00.000Z');
+    h.rows.set('umbraProfiles', [createFreshUmbraProfile(compareTime) as unknown as Row]);
+    h.rows.set('umbraRuns', []);
+
+    await pullAll();
+
+    const pulledProfile = h.rows.get('umbraProfiles')?.[0] as unknown as typeof syncedProfile;
+    const pulledRun = h.rows.get('umbraRuns')?.[0] as unknown as typeof run;
+    expect(pulledProfile.economy.money).toBe(4321);
+    expect(pulledProfile.combat.activePersonaId).toBe('pixie');
+    expect(pulledProfile.combat.allyPersonaIds).toEqual(['agathion', 'cait-sith', 'kelpie']);
+    expect(pulledProfile.combat.equipment.weapon).toBe('black-fang');
+    expect(pulledProfile.combat.battleItems).toEqual({ painkiller: 3, sportsDrink: 2 });
+    expect(pulledProfile.combat.materials).toEqual({ emberShard: 4 });
+    expect(pulledProfile.demo?.p5r).toMatchObject({
+      money: 4321,
+      activePersonaId: 'pixie',
+      equipment: { weapon: 'black-fang' },
+      savedAt: '2026-10-20T14:30:00.000Z',
+    });
+    expect(pulledProfile.demo?.slice).toEqual(syncedProfile.demo.slice);
+    expect(pulledProfile.demo?.updatedAt).toBe('2026-10-20T14:30:00.000Z');
+    expect(pulledProfile.createdAt).toBeInstanceOf(Date);
+    expect(pulledProfile.updatedAt).toBeInstanceOf(Date);
+    expect(pulledRun.payload.formalMap).toEqual({ floor: 3, seed: 7 });
+    expect(pulledRun.payload.demoRun).toEqual(run.payload.demoRun);
+    expect(pulledRun.updatedAt).toBeInstanceOf(Date);
+    expect(normalizeUmbraProfile(pulledProfile).demo?.updatedAt).toBe('2026-10-20T14:30:00.000Z');
   });
 });

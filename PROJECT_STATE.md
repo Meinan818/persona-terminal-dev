@@ -2,6 +2,18 @@
 
 最后更新：2026-10-20（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前开发 · 2026-10-20 · UMBRA 云同步隔离往返通过
+
+- **起因/授权**：四主题爬塔交接后，用户明确“听你的”，同意先做交接建议中的 UMBRA 云同步隔离往返，再继续天鹅绒与联机接入；没有授权真实账号、生产云端或 Push。
+- **复现的问题**：通用云同步日期恢复会把 UMBRA Demo 原档里普通 ISO JSON 字符串（如 `startedAt` / `savedAt`）改成 `Date`。数据序列化回本地大多仍能还原，但这不是无损往返，`normalizeUmbraProfile` 还会因此丢掉 `demo.updatedAt`。
+- **最小修复**：在 `src/services/sync.ts` 的 UMBRA 云行本地化边界单独恢复正式字段类型，只把 profile 的 `createdAt` / `updatedAt` / `migration.capturedAt` 和 run 的 `updatedAt` 转回 `Date`；Demo 原档与 run payload 保持 JSON 原始字符串。其他表继续走原有恢复规则。
+- **自动化回归**：新增 `syncSafety` 测试，真实执行“本地资料 → pushAll → 云端记录 → 另建初始档 → pullAll”，核对金币 4321、出战 Persona、同行 Persona、装备、强化、背包、素材、塔层、Demo p5r/slice/run、正式日期。`npm test` 54 文件 **344/344**，`npm run typecheck` exit0，`npm run build` exit0。
+- **隔离浏览器往返**：独立 headless Chrome 使用真实 IndexedDB/localStorage，配合成 HTTP 云服务，不调用真实账号或外部云。账号 A 上传后清空本机库，再登录 A 返回 `pulled` 并恢复 4321、`black-fang`、3 个止痛药、4 个 `emberShard`、3F 行程；Demo 三个 localStorage 键分别由 profile/run/profile 重新生成。切到账号 B 返回 `conflict`，B 云端为 **0 行**，没有接收 A 的本地数据。
+- **证据**：`.rivet/scratch/umbra-cloud-sync-20261020/report.json`，同目录 `verify.mjs` 可重复执行。报告明确标注 `synthetic HTTP service; no real account or external cloud request`。
+- **边界**：合成服务只验证客户端契约、账号隔离门禁和真实浏览器存储往返，不证明生产 Spring Boot 服务、鉴权、网络弱况和真实云账号已通过。真实线上账号往返仍需单独提供隔离测试账号/环境，不能拿正式用户数据代测。
+- **commit / Push**：本次同步修复、回归测试与本记录做本地提交；未 Push、未部署、未打手机包。工作区原有 30 个遗留项继续保留，不纳入本次提交。
+- **下一步**：云同步门槛已关闭，下一主线可回到天鹅绒与联机接回；开始前需明确先接哪一块，不能把同步合成验证写成生产云验收。
+
 ## 准备交接 · 2026-10-20 · 四主题空间爬塔验收关闭
 
 ### 接手第一入口

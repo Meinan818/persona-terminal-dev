@@ -593,6 +593,30 @@ const dateReviver = (key: string, value: unknown): unknown => {
   return value;
 };
 
+/**
+ * UMBRA 的演示原档和行程 payload 是外部 Demo 的 JSON 快照，里面的 ISO 字符串不能
+ * 跟着通用 reviver 变成 Date；只有 UMBRA 自己声明的正式时间字段需要恢复类型。
+ */
+const restoreUmbraCloudRow = (key: string, row: Row): Row => {
+  const plain = JSON.parse(JSON.stringify(row)) as Row;
+  const dateOf = (value: unknown): unknown => {
+    if (typeof value !== 'string' || !value) return value;
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? value : date;
+  };
+  if (key === 'umbraRuns') return { ...plain, updatedAt: dateOf(plain.updatedAt) };
+  if (key !== 'umbraProfiles') return plain;
+  const migration = isObject(plain.migration)
+    ? { ...plain.migration, capturedAt: dateOf(plain.migration.capturedAt) }
+    : plain.migration;
+  return {
+    ...plain,
+    createdAt: dateOf(plain.createdAt),
+    updatedAt: dateOf(plain.updatedAt),
+    ...(migration ? { migration } : {}),
+  };
+};
+
 /** 本地 Dexie 是否有数据（以 users 表是否有记录为准） */
 export const hasLocalData = async (): Promise<boolean> => {
   try {
@@ -897,6 +921,9 @@ async function localizeCloudRows(key: string, rows: Row[]): Promise<Row[] | null
   if (key === 'settings' && rows.length === 0) {
     console.warn('[velvet-sync] pull: 云端 settings 为空数组，跳过覆盖以保护本地设置');
     return null;
+  }
+  if (key === 'umbraProfiles' || key === 'umbraRuns') {
+    return rows.map(row => restoreUmbraCloudRow(key, row));
   }
   let toWrite = rows;
   if (key === 'confidantEvents') {

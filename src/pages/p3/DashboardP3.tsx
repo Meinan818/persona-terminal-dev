@@ -23,7 +23,7 @@ import { P3R, P3RPage, GhostWords, SectionMark, SlantButton, TitlePeriod, TitleT
 import { P3TaskRow } from '@/components/p3r-demo/P3TaskRow';
 import { P3StackCarousel } from '@/components/p3r-demo/P3StackCarousel';
 import { StarChartP3, type StarItem } from '@/components/p3r-demo/StarChartP3';
-import { TodoCompleteModal } from '@/components/TodoCompleteModal';
+import { BandCutInP3 } from '@/components/p3r-demo/P3BandCutIn';
 import { BattleDashboardWidget } from '@/components/BattleDashboardWidget';
 import { getAttributeLevelTitle, getMasteryTitle } from '@/utils/attributeLevelTitles';
 import { masteryOf } from '@/utils/levels';
@@ -988,7 +988,7 @@ export const DashboardP3 = () => {
 
         {/* ── 弹窗 / Toast 族（复用现有基座；P3R 弹窗形态属 modals 批次）── */}
 
-        <TodoCompleteModal
+        <BandCutInP3
           isOpen={!!completedTitle}
           onClose={() => {
             setCompletedTitle(null);

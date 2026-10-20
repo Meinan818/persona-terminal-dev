@@ -16,12 +16,11 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate as anima
 import { ModalPortal } from '@/components/ModalPortal';
 import { useBoldness } from '@/utils/boldness';
 import { useAppStore, toLocalDateKey } from '@/store';
-import { OrgOpTodoTag, PactTodoTag } from '@/components/cooperation/PactTag';
-import { DeadlineTag } from '@/components/todo/DeadlineTag';
 import { useSkyBadge } from '@/components/sky/useSkyBadge';
 import { WeatherGlyph } from '@/components/sky/WeatherGlyph';
 import type { AttributeId, CallingCard } from '@/types';
 import { P3R, P3RPage, GhostWords, SectionMark, SlantButton, TitlePeriod, TitleTri, slantClip } from '@/components/p3r/kit';
+import { P3TaskRow } from '@/components/p3r-demo/P3TaskRow';
 import { TodoCompleteModal } from '@/components/TodoCompleteModal';
 import { BattleDashboardWidget } from '@/components/BattleDashboardWidget';
 import { StackCarousel } from '@/components/StackCarousel';
@@ -435,6 +434,7 @@ export const DashboardP3 = () => {
   const [completedTitle, setCompletedTitle] = useState<string | null>(null);
   const [completedPoints, setCompletedPoints] = useState(1);
   const [unlockHint, setUnlockHint] = useState<{ achievements: number; skills: number }>({ achievements: 0, skills: 0 });
+  const [rowRipple, setRowRipple] = useState<string | null>(null);
   const [decayedAttrs, setDecayedAttrs] = useState<AttributeId[]>([]);
   // 五维点击波纹：状态放在维度区（不在会被旋转/淡出的星层内），才看得见
   const [starRipples, setStarRipples] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -814,12 +814,40 @@ export const DashboardP3 = () => {
                     const progress = getTodayTodoProgress(todo.id);
                     const attrName = settings.attributeNames[todo.attribute as keyof typeof settings.attributeNames];
                     const done = progress.isComplete;
+                    const deadlineDays = todo.deadline
+                      ? Math.round((new Date(todo.deadline + 'T00:00:00').getTime() - new Date(todayKey + 'T00:00:00').getTime()) / 86400000)
+                      : null;
+                    const tags: Array<{ label: string; tone: 'lilac' | 'rose' | 'coral' }> = [];
+                    if (todo.pact) tags.push({ label: `一起进步 · ${todo.pact.partnerName}`, tone: 'lilac' });
+                    if (todo.orgOp) tags.push({ label: `作战 · ${todo.orgOp.orgName}`, tone: 'rose' });
+                    if (deadlineDays !== null && !done) {
+                      tags.push({
+                        label: deadlineDays > 0 ? `剩 ${deadlineDays} 天` : deadlineDays === 0 ? '今天截止' : '已逾期',
+                        tone: deadlineDays <= 2 ? 'coral' : 'rose',
+                      });
+                    }
                     return (
-                      <button
+                      <P3TaskRow
                         key={todo.id}
-                        type="button"
-                        disabled={done}
-                        onClick={async () => {
+                        title={todo.title}
+                        done={done}
+                        important={!!todo.important}
+                        fateDrawn={todo.fateDrawnDate === todayKey}
+                        count={progress.count}
+                        target={progress.target}
+                        frequency={todo.frequency}
+                        points={todo.points}
+                        attributeLabel={attrName}
+                        extraBoosts={todo.extraBoosts?.map((boost) => ({
+                          label: settings.attributeNames[boost.attribute as keyof typeof settings.attributeNames],
+                          points: boost.points,
+                        })) ?? []}
+                        tags={tags}
+                        ripple={rowRipple?.startsWith(todo.id) ? rowRipple : null}
+                        onTap={() => {
+                          if (done) return;
+                          setRowRipple(todo.id + Date.now());
+                          void (async () => {
                           const result = await completeTodo(todo.id);
                           const updated = getTodayTodoProgress(todo.id);
                           if (updated.isComplete) {
@@ -829,45 +857,9 @@ export const DashboardP3 = () => {
                             setUnlockHint(result?.unlockHints ?? { achievements: 0, skills: 0 });
                             setModalBlocker(true);
                           }
+                          })();
                         }}
-                        className={`flex w-full items-center gap-3 px-1.5 py-2 text-left transition-colors ${done ? 'cursor-not-allowed opacity-55' : 'active:bg-[#e2f2fa]'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b57ff]`}
-                      >
-                        {/* 斜切勾选框（P3R：完成 = 亮青底白勾） */}
-                        <span aria-hidden className="relative h-[18px] w-[18px] shrink-0" style={{ clipPath: slantClip(4), background: done ? P3R.cyan : 'rgba(53,209,232,0.45)' }}>
-                          {!done && <span className="absolute inset-[2.5px]" style={{ clipPath: slantClip(3), background: P3R.panel }} />}
-                          {done && (
-                            <svg viewBox="0 0 12 12" className="absolute inset-0 m-auto h-3 w-3" fill="none">
-                              <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          )}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          {/* 第 14 批：允许折行——标记放不下就去第二行，不跟任务名挤成两个省略号（系统字号调很大时） */}
-                          <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-                            <span className="flex min-w-0 max-w-full items-center gap-1.5">
-                              {todo.important && <span aria-hidden className="h-2 w-2 shrink-0" style={{ background: P3R.magenta, clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} />}
-                              {todo.fateDrawnDate === todayKey && (
-                                <span className="shrink-0 text-[11px] font-black" style={{ color: P3R.blue }} title="今日抽签选中">✦</span>
-                              )}
-                              <span className={`min-w-0 truncate text-[15px] font-black ${done ? 'line-through' : ''}`} style={{ color: done ? P3R.grey : P3R.ink }}>
-                                {todo.title}
-                              </span>
-                            </span>
-                            <PactTodoTag todo={todo} />
-                            <OrgOpTodoTag todo={todo} />
-                            <DeadlineTag todo={todo} done={done} />
-                          </span>
-                          <span className="mt-0.5 block truncate text-[11px] font-semibold" style={{ color: P3R.grey }}>
-                            {attrName} +{todo.points}
-                            {todo.extraBoosts?.map((b, bi) => (
-                              <span key={bi}> · {settings.attributeNames[b.attribute as keyof typeof settings.attributeNames]} +{b.points}</span>
-                            ))}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-[12px] font-bold tabular-nums" style={{ color: done ? P3R.cyan : P3R.grey }}>
-                          {progress.count}/{progress.target}
-                        </span>
-                      </button>
+                      />
                     );
                   })}
                 </div>

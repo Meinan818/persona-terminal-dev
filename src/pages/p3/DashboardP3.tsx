@@ -21,9 +21,10 @@ import { WeatherGlyph } from '@/components/sky/WeatherGlyph';
 import type { AttributeId, CallingCard } from '@/types';
 import { P3R, P3RPage, GhostWords, SectionMark, SlantButton, TitlePeriod, TitleTri, slantClip } from '@/components/p3r/kit';
 import { P3TaskRow } from '@/components/p3r-demo/P3TaskRow';
+import { P3StackCarousel } from '@/components/p3r-demo/P3StackCarousel';
+import { StarChartP3, type StarItem } from '@/components/p3r-demo/StarChartP3';
 import { TodoCompleteModal } from '@/components/TodoCompleteModal';
 import { BattleDashboardWidget } from '@/components/BattleDashboardWidget';
-import { StackCarousel } from '@/components/StackCarousel';
 import { getAttributeLevelTitle, getMasteryTitle } from '@/utils/attributeLevelTitles';
 import { masteryOf } from '@/utils/levels';
 import { resolveLevelDifficulty } from '@/utils/levelDifficulty';
@@ -32,7 +33,6 @@ import { TAROT_BY_ID } from '@/constants/tarot';
 import { triggerNavFeedback, playSound } from '@/utils/feedback';
 import { BigDealHomeCard } from '@/components/bigdeal/BigDealHomeCard';
 import { BigDealPanel } from '@/components/bigdeal/BigDealPanel';
-import { StarChartP3, type StarItem } from '@/components/StarChartP3';
 import { OnThisDayGlyph, OnThisDaySlide, useOnThisDay } from '@/components/dashboard/OnThisDaySheet';
 import { SeasonStampBadge } from '@/components/dashboard/SeasonStampBadge';
 import { moonPhaseOf } from '@/utils/moonPhase';
@@ -380,23 +380,38 @@ const AttrDetailInline = ({ attrId, level: fallbackLevel, onBack }: { attrId: At
 };
 
 // ── P3R 仪式横条（今日仪式 StackCarousel 的统一卡形：浅青斜条 + 左标 + 副行 + ›）──
+export const WaveGlyph = ({ color = 'var(--p3r-magenta)' }: { color?: string }) => (
+  <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden>
+    <path d="M2 15c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M2 19.5c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M5 10.5c1-3.5 4-6 8-6 2.5 0 4.6 1 6 2.6-2.6-.4-4.8.9-5.3 3.4" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+export const MoonGlyph = () => (
+  <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden>
+    <path d="M20.5 15.2A9 9 0 1 1 9.2 3.8a7.2 7.2 0 0 0 11.3 11.4Z" fill="var(--p3r-gold)" />
+  </svg>
+);
+
 const RitualSlab = ({
   icon,
   title,
   sub,
   onClick,
   accent,
+  ariaLabel,
 }: {
   icon: ReactNode;
   title: ReactNode;
   sub?: ReactNode;
   onClick?: () => void;
   accent?: string;
+  ariaLabel?: string;
 }) => (
   <button
     type="button"
     onClick={onClick}
-    className="flex h-full min-h-[76px] w-full items-center gap-3 px-5 py-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b57ff]"
+    aria-label={ariaLabel}
+    className="flex h-full min-h-[76px] w-full items-center gap-3 px-5 py-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--p3r-blue)]"
     style={{ clipPath: slantClip(12), background: P3R.cyanPale }}
   >
     {/* 斜杠标签的斜度与卡片 slantClip(12) 的斜边锁定：atan(12/76) ≈ 9°（原 -20° 与卡不平行） */}
@@ -610,9 +625,9 @@ export const DashboardP3 = () => {
     ritualSlides.push(
       <div key="countercurrent" className="h-full [&>*]:h-full">
         <RitualSlab
-          icon="🌊"
+          icon={<WaveGlyph />}
           accent={P3R.magenta}
-          title={<span style={{ color: P3R.magenta }}>逆流预警</span>}
+          title={<span style={{ color: 'var(--p3r-coral-ink)' }}>逆流预警</span>}
           sub={`${countercurrentWarnings.map((id) => settings.attributeNames[id]).join('、')} 已连续3日无增长，明日将${countercurrentWarnings.length > 1 ? '各' : ''}扣减 1 点`}
         />
       </div>,
@@ -621,12 +636,7 @@ export const DashboardP3 = () => {
   ritualSlides.push(
     <div key="astrology" className="h-full [&>*]:h-full">
       <RitualSlab
-        icon={
-          <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden>
-            {/* 塔罗仪式卡的月亮：整站唯一一处暖黄，作为「今日星象」的记号色 */}
-            <path d="M20.5 15.2A9 9 0 1 1 9.2 3.8a7.2 7.2 0 0 0 11.3 11.4Z" fill={MOON_YELLOW} />
-          </svg>
-        }
+        icon={<MoonGlyph />}
         onClick={() => go('astrology')}
         title={drawn && drawnCard ? `${drawnCard.name} · ${drawn.orientation === 'upright' ? '正位' : '逆位'}` : '今日星象尚未展开'}
         sub={
@@ -885,9 +895,9 @@ export const DashboardP3 = () => {
           <SectionMark tri title="今日仪式" meta={<span className="text-[11px] font-bold" style={{ color: P3R.grey }}>滑动切换</span>} />
           <div className="mt-3">
             {/* 全局裁决（2026-07-12）：仪式卡撑满一屏 + 自动轮播（第二张不再探出一截） */}
-            <StackCarousel id="ritual-p3" page={ritualPage} itemWidthClass="w-full" autoPlayMs={6000}>
+            <P3StackCarousel page={ritualPage} autoPlayMs={6000}>
               {ritualSlides}
-            </StackCarousel>
+            </P3StackCarousel>
           </div>
         </section>
 

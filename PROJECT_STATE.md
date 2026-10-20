@@ -2,6 +2,19 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前开发 · 2026-10-21 · PWA 图鉴按需缓存与 UMBRA 子页面放行
+
+- **用户决定**：COOP 并发修复后用户继续，未要求新聊天或自动化；本轮继续处理独立质量项 PWA 大文件预缓存。
+- **图鉴缓存根因**：`public/umbra-demo/p5r-compendium-data.js` 为 **2,207,596 B**，超出 Workbox 默认预缓存上限，却两次出现在构建警告里；正式 Demo 首次打开图鉴时没有对应 runtime cache，离线复用也没有明确保证。
+- **图鉴改法**：`globIgnores` 排除所有 `p5r-compendium-data.js`，避免两份历史副本被安装期扫描；新增精确 runtime `CacheFirst`，只缓存正式 `/umbra-demo/p5r-compendium-data.js` 到 `umbra-compendium-v1`。源文件本身仍为 2.21 MB，但不再要求 PWA 首装下载。
+- **UMBRA 子页面根因/改法**：Workbox `NavigationRoute` 会把同源 iframe 的 `/umbra-demo/index.html` 导航兜底为主应用 `/index.html`，旧 PWA 缓存下会在 iframe 里再套主应用。现加 `navigateFallbackDenylist` 放行 `/umbra-demo/` 与历史 `/umbra-demo-p3-v2/` 路径；正常主应用导航不变。
+- **构建验证**：`npm run build` exit 0；原先两条 2.21 MB 图鉴未预缓存警告已消失。`dist/sw.js` 同时包含 `umbra-compendium-v1` 和 navigator denylist；图鉴只出现 1 次，位于 runtime 规则，不在 precache 清单。
+- **真实 PWA 验证（合成静态服务）**：Vite preview + 隔离 Chrome，Service Worker 激活并控制页面；AI LAB 白昼页正常加载。图鉴首次在线获取 **2,207,596 B**，进入 `umbra-compendium-v1`；precache 中没有该文件。随后 CDP 断网，再次读取仍为 **2,207,596 B**；runtime/Log errors 0，PWA 探针 **5/5**。
+- **自动回归**：`npm test` **62 文件 / 378 项全通过**；构建已包含 typecheck。
+- **证据**：`.rivet/scratch/pwa-compendium-20261021/report.json`、`verify.mjs`；构建输出与 `dist/sw.js` 在本轮现场核实。
+- **commit / Push**：源码提交 `493f896`（`fix(pwa): 按需缓存图鉴并放行UMBRA子页面`）；本条状态记录随独立 docs 提交保存。未 Push、未部署、未打包。
+- **边界**：本次验证的是 `dist` + `vite preview`，不是线上 PWA、iOS/Android 实机或已安装旧 SW 的升级迁移。线上部署后旧客户端仍需走现有 SW 更新提示并刷新，图鉴首次访问仍会下载约 2.21 MB。
+
 ## 当前开发 · 2026-10-21 · COOP 并发唯一键竞争修复
 
 - **用户决定**：真实 BYOK 通过后用户回复“继续”，按清单推进生产/真机 COOP；本机无 ADB/安卓设备，因此先把不需要外设的并发与重试风险在隔离后端跑实。

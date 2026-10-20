@@ -9,6 +9,7 @@
 - **环境**：腾讯云 2 核 2G、50GB 磁盘、约 2GB Swap；独立 MySQL 库 `maskaria_staging`，应用使用专用系统用户 `maskaria`、随机数据库/JWT 凭据和 600 权限环境文件。后端 JVM 限制为 768MB；3306/8080 不向公网开放。
 - **部署内容**：提交 `3835767` 保存后端 systemd、Caddy、Cloudflare 隧道模板和浏览器验收脚本。服务器安装 Java 17、MySQL 8.0、Caddy、cloudflared；Flyway 已建 **24** 张表；前端产物已按当前隧道地址构建并核对。
 - **自动验证**：`scripts/staging-coop-smoke.mjs` 为 **8/8** 通过：TLSv1.3 受信任、证书有效期、HTTP 308 跳 HTTPS、服务器时钟差约 1 秒、数据库 UP、两账号好友、COOP、共享事件幂等和单条通知；20 个请求延迟 p50 **485ms**、p95 **854ms**。隔离 Chrome 390×844 已越过开场动画进入“第 1 步 · 共 7 步”页面，同源 `/api/health` 为 UP，console/page errors 与失败资源均为 0。证据在 `.rivet/scratch/staging-coop-live-20261021/report-final.json` 与 `.rivet/scratch/staging-browser-2026-10-20T19-04-03-547Z/`。
+- **真机登录排查**：用户手机已经成功进入登录页。验证码路径当前返回 500，日志根因是 staging 未设置 `MAIL_USERNAME`/`MAIL_PASSWORD`，`OtpService` 收到的发件人地址为空；不是隧道或手机问题。已创建 A/B 两个仅用于隔离库、密码登录已验证的测试账号，凭据只放在本机 600 权限 `.rivet/scratch/staging-accounts-20261021.txt`，不写入 STATE/提交。真机验收先走登录页“密码”标签。
 - **失败保留**：最初尝试 `150-158-174-9.sslip.io`，Let’s Encrypt 回访时被腾讯云 DNSPod 未备案域名拦截页挡住；用户电脑开 VPN 不能改变证书机构回访路径。该失败不删除，当前改用不需域名/备案的 Quick Tunnel。
 - **未验收与边界**：两只物理手机、跨运营商、断网 15 秒恢复、后台 OS 通知仍未做，不能把 staging 标成最终通过。Quick Tunnel 无 uptime 保证；隧道换 URL 后，前端编译进产物的 API 地址也必须同步重建，否则页面能开但云端请求会失败。
 - **下一步/负责人**：由用户在两台手机分别使用不同账号，一台 Wi-Fi、一台蜂窝网络，完成好友申请/接受、COOP 提议/接受、共享事件、后台通知和弱网恢复。失败时保留页面提示、时间与设备网络状态；Codex 根据真机证据修复。

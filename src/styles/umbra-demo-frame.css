@@ -14,6 +14,69 @@
   background: transparent;
 }
 
+.umbra-demo-exit {
+  position: absolute;
+  left: max(12px, env(safe-area-inset-left));
+  top: max(12px, env(safe-area-inset-top));
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 66px;
+  min-height: 44px;
+  padding: 6px 10px 6px 7px;
+  border: 1px solid rgb(255 255 255 / .6);
+  background: rgb(3 12 38 / .82);
+  color: #fff;
+  font: 900 12px/1 Velvet, 'Microsoft YaHei', sans-serif;
+  cursor: pointer;
+  transition: transform 140ms ease-out, background-color 140ms ease-out, border-color 140ms ease-out;
+}
+
+.umbra-demo-exit svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.umbra-demo-exit:hover,
+.umbra-demo-exit:focus-visible {
+  transform: translateY(-2px);
+}
+
+.umbra-demo-exit:active {
+  transform: scale(.96);
+}
+
+.umbra-demo-frame[data-demo-theme='p3'] .umbra-demo-exit {
+  border-color: #d6ff8c;
+  background: rgb(2 10 6 / .88);
+  color: #d6ff8c;
+}
+
+.umbra-demo-frame[data-demo-theme='hamuko'] .umbra-demo-exit {
+  border-color: #ff76a8;
+  background: rgb(48 8 31 / .88);
+  color: #ffd1e3;
+}
+
+.umbra-demo-frame[data-demo-theme='p4'] .umbra-demo-exit {
+  border-color: #0e0d0a;
+  background: #ffe600;
+  color: #0e0d0a;
+}
+
+.umbra-demo-frame[data-demo-theme='p5'] .umbra-demo-exit {
+  border-color: #fff;
+  background: #e5191c;
+  color: #fff;
+}
+
 .umbra-demo-loading {
   position: absolute;
   inset: 0;

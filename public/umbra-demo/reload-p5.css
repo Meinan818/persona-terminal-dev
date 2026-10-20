@@ -2,7 +2,15 @@
    MASKARIA · P5R「怪盗」主题  reload-p5.css
    作用域：全部选择器以 html[data-theme=p5] 开头。只改视觉，不改 DOM / data-*。
    色：红 #e5191c / 黑 #0a0a0a / 白 #fff；天鹅绒房间单独走「蓝牢」。
+   Tower floor: preserve the authored collage shell and restore real depth.
+   The high-specificity selectors intentionally win over later flattening rules.
    ===================================================================== */
+html[data-theme=p5][data-theme][data-theme] .map-viewport{perspective:1300px!important;perspective-origin:50% 22%!important}
+html[data-theme=p5][data-theme][data-theme] .map-grid{transform:rotateX(38deg) rotateZ(-10deg) scale(.82)!important;transform-origin:50% 38%!important;transform-style:preserve-3d!important;animation:none!important}
+html[data-theme=p5][data-theme][data-theme] .map-cell{transform-style:preserve-3d!important;transform:translateZ(0)!important}
+html[data-theme=p5][data-theme][data-theme] button.map-cell:not(.is-current):is(:hover,:focus-visible){transform:translateZ(13px)!important;box-shadow:inset 0 0 0 3px #e5191c,8px 8px 0 #e5191c,0 20px 28px #0009!important}
+html[data-theme=p5][data-theme][data-theme] .map-cell.is-current{transform:translateZ(18px)!important;box-shadow:inset 0 0 0 4px #0a0a0a,8px 8px 0 #e5191c,0 20px 32px #0009!important}
+
 @import url('/fonts/noto-sc-black.v2.css');
 html[data-theme=p5]{
   --p5r:#e5191c;--p5r2:#ff2a2e;--p5rd:#8f0b0d;--p5k:#0a0a0a;--p5k2:#171717;--p5w:#fff;--p5paper:#f4f1ea;--p5g:#8c8c8c;

@@ -44,56 +44,75 @@ export function UmbraDemoFrame() {
     url.searchParams.delete('umbra');
     url.searchParams.delete('legacy');
     url.hash = '';
-    window.location.href = url.toString();
+    window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+    useAppStore.getState().setCurrentPage('dashboard');
+    window.scrollTo(0, 0);
   }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') exitDemo();
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [exitDemo]);
 
   useEffect(() => {
     let disposed = false;
-    let started = false;
+    let preparing = false;
     let unsubscribe = () => {};
+    const bridgeFallback = window.setTimeout(() => {
+      if (!disposed) setBridgeReady(true);
+    }, 1800);
 
     const prepare = async () => {
-      if (started) return;
-      const state = useAppStore.getState();
-      const currentProfile = state.umbraProfile;
-      const currentRun = state.umbraRun;
-      if (!currentProfile) return;
-      started = true;
+      if (preparing) return;
+      preparing = true;
+      try {
+        let state = useAppStore.getState();
+        if (!state.umbraProfile) {
+          await state.loadBattleData();
+          state = useAppStore.getState();
+        }
+        const currentProfile = state.umbraProfile;
+        const currentRun = state.umbraRun;
+        if (!currentProfile) {
+          window.clearTimeout(bridgeFallback);
+          if (!disposed) setBridgeReady(true);
+          return;
+        }
 
-      let nextProfile = currentProfile;
-      let nextRun = currentRun;
-      const local = readDemoLocalState(window.localStorage);
-      if (!currentProfile.demo?.p5r && local.p5r) {
-        nextProfile = mergeDemoP5rState(nextProfile, local.p5r);
-      }
-      if (!currentProfile.demo?.slice && local.slice) {
-        nextProfile = mergeDemoSliceState(nextProfile, local.slice);
-      }
-      if (!demoRunSeed(currentRun) && local.run) {
-        nextRun = mergeDemoRunState(currentRun, local.run);
-      }
+        let nextProfile = currentProfile;
+        let nextRun = currentRun;
+        const local = readDemoLocalState(window.localStorage);
+        if (!currentProfile.demo?.p5r && local.p5r) {
+          nextProfile = mergeDemoP5rState(nextProfile, local.p5r);
+        }
+        if (!currentProfile.demo?.slice && local.slice) {
+          nextProfile = mergeDemoSliceState(nextProfile, local.slice);
+        }
+        if (!demoRunSeed(currentRun) && local.run) {
+          nextRun = mergeDemoRunState(currentRun, local.run);
+        }
 
-      if (nextProfile !== currentProfile) await state.saveUmbraProfile(nextProfile);
-      if (nextRun !== currentRun && nextRun) await state.saveUmbraRun(nextRun);
+        if (nextProfile !== currentProfile) await state.saveUmbraProfile(nextProfile);
+        if (nextRun !== currentRun && nextRun) await state.saveUmbraRun(nextRun);
 
-      const latest = useAppStore.getState();
-      if (latest.umbraProfile) {
-        setSeedStatus(JSON.stringify(
-          seedDemoStorage(window.localStorage, latest.umbraProfile, latest.umbraRun),
-        ));
+        const latest = useAppStore.getState();
+        if (latest.umbraProfile) {
+          setSeedStatus(JSON.stringify(
+            seedDemoStorage(window.localStorage, latest.umbraProfile, latest.umbraRun),
+          ));
+        }
+        window.clearTimeout(bridgeFallback);
+        if (!disposed) setBridgeReady(true);
+      } finally {
+        preparing = false;
       }
-      if (!disposed) setBridgeReady(true);
     };
     const handleFailure = (error: unknown) => {
       console.warn('[umbra] demo initial sync failed', error);
+      window.clearTimeout(bridgeFallback);
       if (!disposed) setBridgeReady(true);
     };
     void prepare().catch(handleFailure);
@@ -105,9 +124,16 @@ export function UmbraDemoFrame() {
     });
     return () => {
       disposed = true;
+      window.clearTimeout(bridgeFallback);
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!bridgeReady || loaded) return;
+    const frameFallback = window.setTimeout(() => setLoaded(true), 1400);
+    return () => window.clearTimeout(frameFallback);
+  }, [bridgeReady, loaded]);
 
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
@@ -149,6 +175,18 @@ export function UmbraDemoFrame() {
       data-bridge-ready={bridgeReady ? 'true' : 'false'}
       data-bridge-seed={seedStatus}
     >
+      <button
+        type="button"
+        className="umbra-demo-exit"
+        onClick={exitDemo}
+        aria-label="返回 MASKARIA 主页"
+        title="返回主页（Esc）"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M15 18 9 12l6-6" />
+        </svg>
+        <span>主页</span>
+      </button>
       {!loaded && (
         <div className="umbra-demo-loading" role="status">
           <span>UMBRA</span>
@@ -164,8 +202,9 @@ export function UmbraDemoFrame() {
             setLoaded(true);
             frameRef.current?.contentDocument?.addEventListener('keydown', event => {
               if (event.key === 'Escape') exitDemo();
-            });
+            }, true);
           }}
+          onError={() => setLoaded(true)}
         />
       )}
     </div>,

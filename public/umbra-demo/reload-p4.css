@@ -1,5 +1,12 @@
 /* MASKARIA · P4G 午夜电视台主题（reload-p4.css）— 由 p4src/*.css 生成；全部选择器以 html[data-theme=p4] 开头 */
 @font-face{font-family:P4TvL;src:url('./assets/p4/fonts/bebas.woff2') format('woff2');font-display:swap}
+/* Spatial tower floor: keep the Midnight Channel shell and push its existing tiles into depth. */
+html[data-theme=p4][data-theme][data-theme] .map-viewport{perspective:1200px!important;perspective-origin:50% 26%!important}
+html[data-theme=p4][data-theme][data-theme] .map-grid{transform:rotateX(36deg) rotateZ(-8deg) scale(.83)!important;transform-origin:50% 40%!important;transform-style:preserve-3d!important}
+html[data-theme=p4][data-theme][data-theme] .map-cell{transform-style:preserve-3d!important;transform:translateZ(0)!important;box-shadow:0 7px 0 #8a6200,0 8px 0 2px #0e0d0a,0 18px 24px #0008!important}
+html[data-theme=p4][data-theme][data-theme] .map-cell.is-fog{box-shadow:0 5px 0 #26231a,0 6px 0 2px #0e0d0a,0 12px 18px #0007!important}
+html[data-theme=p4][data-theme][data-theme] button.map-cell:not(:disabled):is(:hover,:focus-visible){transform:translateZ(10px)!important;box-shadow:0 11px 0 #8a6200,0 13px 0 2px #0e0d0a,0 24px 30px #0009!important}
+html[data-theme=p4][data-theme][data-theme] .map-cell.is-current{transform:translateZ(12px)!important;box-shadow:0 0 0 3px #ffe600,0 8px 0 3px #e8203a,0 18px 28px #0008!important}
 @font-face{font-family:P4HandL;font-weight:700;src:url('./assets/p4/fonts/caveat-700.woff2') format('woff2');font-display:swap}
 /* ---- 10-global.css ---- */
 html[data-theme=p4]{--p4y:#ffe600;--p4y2:#ffd000;--p4o:#ff8a00;--p4k:#0e0d0a;--p4k2:#1a1812;--p4k3:#26231a;--p4w:#fffbe8;--p4r:#e8203a;--p4g:#bdb48a;

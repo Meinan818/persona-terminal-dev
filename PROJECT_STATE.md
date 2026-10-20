@@ -2,6 +2,22 @@
 
 最后更新：2026-10-20（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 准备交接 · 2026-10-20 · 四主题空间爬塔验收关闭
+
+### 接手第一入口
+
+- **用户决定**：用户明确“验收通过，准备交接”。本轮四主题爬塔空间化、首次进入加载兜底、幽影协议返回主页均已关闭验收，不再继续改功能。接手聊天先读本文件、项目 `AGENTS.md`、Git 状态和本节点，不要重做或重新设计已验收地图。
+- **现场**：分支 `codex/p5r-compendium-data`；HEAD `0eae033`（`feat(umbra-demo): 四主题空间爬塔与首进返回修复`）；当前分支没有 upstream 跟踪项，按本地 `origin/main` 为 `f355a01` 计算领先 **180** 条。未 Push。
+- **本轮提交链**：`7a08b60` 初次融合层（后已判定不符合用户风格并从入口摘除）、`88ddd48` 恢复原主题并修窄屏、`0eae033` 四主题空间爬塔与首进返回修复。最终有效状态以 `0eae033` 为准，不要恢复 `fusion.css/js` 的加载。
+- **工作区遗留**：共 30 个状态项，均非本轮待提交代码。tracked 遗留为 `ios/App/Podfile`、`outputs/battle-experience-v3/P5-P3-FUSION.md`；untracked 包括 `.cache/`、`.impeccable/`、`.rivet-config.json`、`outputs/` 下既有 Demo/ZIP/恢复产物、`public/umbra-demo-p3-v2/`、`src/utils/shadowTalkAI.ts` 及其测试。不得 stash/reset/checkout/clean，也不得混入下一次提交。
+- **本轮已验收**：四主题爬塔都使用各自主题的 3D 透视地板，不是平面 5×5；蓝、粉、P4、P5 分别保留原材质并使用不同倾角与格块厚度。560×659、390×844 下真实指针方向键均能从 `0,4` 移到 `1,4`，页面横向溢出为 0，Console errors=[]。证据：`.rivet/scratch/umbra-four-theme-regression-20261020/report.json` 与 `*-initial.png`。
+- **首进与返回**：`UmbraDemoFrame` 缺 profile 时会主动补读 `loadBattleData()`；桥接 1.8 秒、iframe 1.4 秒双级兜底，消除永久加载分支。全新浏览器正常路径实测 iframe 约 251ms 出现、loading 约 504ms 消失。幽影协议左上角提供主题化“主页”按钮，`Escape` 捕获返回；退出改为 `history.replaceState` + `setCurrentPage('dashboard')`，不刷新、不再出现启动对话。真实浏览器退出后 iframe 消失且首页内容立即恢复，errors=[]。证据：`.rivet/scratch/umbra-first-load-repro-20261020/report.json`。
+- **验证数字**：`npm test` 54 文件 **343/343**；`npm run typecheck` exit0；`npm run build` exit0。构建仍有既有动态导入、eval、大 chunk 和 2.21 MB 图鉴不预缓存警告，不是本轮回归。
+- **运行现场**：`http://127.0.0.1:5192/` 为应用入口，HTTP 200；`http://127.0.0.1:5196/?theme=p5&shadow=1&slice-ai=off#battle` 为隔离 Demo，HTTP 200。探针源码在 `.rivet/scratch/umbra-four-theme-regression.mjs`、`.rivet/scratch/umbra-first-load-repro.mjs`。
+- **动手铁律**：四主题视觉修改必须落各自 `reload-p3.css` / `reload-hamuko.css` / `reload-p4.css` / `reload-p5.css`，不要恢复通用 `fusion.*` 覆盖，也不要新增第二套 UI；保留 `data-room`、`data-tower`、`data-map-viewport` 等钩子。`PROJECT_STATE.md` 是唯一总日志。Push 必须先推荐并取得用户明确批准。
+- **下一步/负责人**：当前没有需要用户操作的验收项。下一次由用户提出新任务后，接手 Codex 再继续；若继续“爬塔”，先按真实浏览器四主题复看，不要从旧对话自行扩功能。潜在但未授权事项仍是云同步隔离往返、PWA 大文件预缓存和图鉴体积，不在本次交接范围。
+- **本次交接提交**：本条接手记录只做本地文档提交，不 Push、不部署、不重跑测试。
+
 ## 当前开发 · 2026-10-20 · 四主题空间爬塔与首进加载兜底
 
 - **用户反馈**：四个主题的爬塔仍是平面 5×5 点格子，明确不要继续用平面点点点；同时每个浏览器第一次从首页进入幽影协议会停在加载页。

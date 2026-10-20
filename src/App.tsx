@@ -26,6 +26,7 @@ import { isReloadNavigation } from '@/utils/navType';
 import { Dashboard } from '@/pages/Dashboard';
 // P3R（蓝主题）页面变体：p3-redraw 设计稿 1:1（channel==='p3' 时替换默认形态）
 const DashboardP3 = lazy(() => import('@/pages/p3/DashboardP3').then(m => ({ default: m.DashboardP3 })));
+const CallingCardsP3 = lazy(() => import('@/pages/p3/CallingCardsP3').then(m => ({ default: m.CallingCardsP3 })));
 // P5R（红主题）页面变体：P5UI 设计稿 1:1（channel==='p5' 时替换默认形态）
 const DashboardP5 = lazy(() => import('@/pages/p5/DashboardP5').then(m => ({ default: m.DashboardP5 })));
 import { useUiChannel } from '@/ui/useUiChannel';
@@ -745,6 +746,8 @@ function App() {
         return lazyPage(<Hideout />);
       case 'menu':
         return lazyPage(<Menu />);
+      case 'calling-cards':
+        return lazyPage(<CallingCardsP3 />);
       case 'account':
         return lazyPage(<Account />);
       case 'ledger':

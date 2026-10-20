@@ -199,7 +199,7 @@ const THEME_SWATCHES: { value: ThemeType; label: string; color?: string }[] = [
 
 export const Menu = () => {
   const umbraIdentity = useUmbraIdentity();
-  const { activities, achievements, skills, attributes, settings, user, setTheme, setCurrentPage } = useAppStore(useShallow(s => ({ activities: s.activities, achievements: s.achievements, skills: s.skills, attributes: s.attributes, settings: s.settings, user: s.user, setTheme: s.setTheme, setCurrentPage: s.setCurrentPage })));
+  const { activities, achievements, skills, attributes, callingCards, settings, user, setTheme, setCurrentPage } = useAppStore(useShallow(s => ({ activities: s.activities, achievements: s.achievements, skills: s.skills, attributes: s.attributes, callingCards: s.callingCards, settings: s.settings, user: s.user, setTheme: s.setTheme, setCurrentPage: s.setCurrentPage })));
   const bold = useBoldness();
   const isP4 = useUiChannel() === 'p4';
 
@@ -867,6 +867,19 @@ export const Menu = () => {
         aria: totalPendingUnlocks > 0 ? `成就·技能：${totalPendingUnlocks} 项待解锁` : '成就·技能',
       },
       { key: 'astrology', label: '占卜', icon: <MoonIcon />, onPress: () => setCurrentPage('astrology'), aria: '占卜' },
+      {
+        key: 'callingcards',
+        label: '宣告卡',
+        icon: (
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="miter" aria-hidden>
+            <path d="M3 6h18v12H3z" />
+            <path d="m3 6 9 7 9-7" />
+          </svg>
+        ),
+        onPress: () => setCurrentPage('calling-cards'),
+        extra: (sel) => <span className="shrink-0 text-[11px] font-bold" style={{ color: sel ? 'rgba(255,255,255,0.85)' : P3R.grey }}>进行中 {callingCards.filter((card) => !card.archived && !card.terminal).length}</span>,
+        aria: `宣告卡：${callingCards.filter((card) => !card.archived && !card.terminal).length} 张进行中`,
+      },
       ...(ledgerVisible ? [{ key: 'ledger', label: '记账', icon: <WalletIcon />, onPress: () => setCurrentPage('ledger'), aria: '记账' }] : []),
       { key: 'settings', label: '设置', icon: <GearIcon />, onPress: () => setCurrentPage('settings'), aria: '设置' },
       { key: 'about', label: '关于', icon: <InfoIcon />, onPress: () => setAboutOpen(true), aria: '关于', extra: () => updateDot },

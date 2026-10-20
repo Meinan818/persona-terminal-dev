@@ -2,6 +2,18 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前迁移 · 2026-10-21 · 正式服务切到新服务器
+
+- **用户决定**：用户明确要求把正式服务迁到新服务器 `150.158.174.9`，旧服务器以后不常使用。新机从 staging 候选转为正式运行环境，旧机继续作为短期回滚点。
+- **切换结果**：旧 `maskaria-backend` 已停止并取消开机自启；旧 IP 的网页入口返回 **302** 到 `http://150.158.174.9/`，旧 `/api/` 返回 **503 + 新地址**，不会把旧客户端 POST 误跳成 GET。旧 nginx 原配置备份在 `/home/ubuntu/maskaria-backups/migration-final-20261021-040450/nginx-maskaria-before-redirect.conf`。
+- **新正式入口**：`http://150.158.174.9/`。同源 HTTPS 过渡入口仍为 `https://spies-alliance-pty-shows.trycloudflare.com/`；两者使用同一份 Web、生产后端和 `persona_terminal` 数据库。
+- **数据迁移**：切换前停止旧后端并做最终 mysqldump。新库 Flyway V13、24 表、**1 个云端账号、25 条 user_data、1 个组织成员**；全表 checksum 集合 `eee3fb0c2368ed045ebba5de4dfb36bc96ff57c6c2624d2a35c436cc11685e20` 和规范化数据哈希 `43a7c1a8bd3d95f3c0bae558dc0fef214fb3f927622e3776181bc8f21b72ace8` 与旧库一致。头像上传 1 个文件已迁移。
+- **新机配置**：Ubuntu 24.04、Java 17、MySQL 8.0、Caddy；生产后端 JVM 上限 640MB，MySQL 关闭 performance_schema、连接数 32、buffer pool 128MB。切换后约 1065MB 可用内存、41GB 可用磁盘。
+- **部署与验证**：提交 `ba27a38` 增加同源 `/api` 构建、生产 Caddy/systemd/MySQL 模板和旧入口回退页。新 IP 首页 200、Health `{"status":"UP","db":"UP"}`；HTTPS 过渡入口真实 Chrome 390×844 可进入欢迎页，console/page errors 与失败资源均 0；前端全量 **63 文件 / 380 项**通过，typecheck exit0。公网仅开放 80，8080/8082/3306 均从外部不可达。
+- **备份**：旧机最终备份 `/home/ubuntu/maskaria-backups/migration-final-20261021-040450/persona_terminal.sql.gz`（SHA-256 `94b7adb56183c7981ef7db6c46136c44d6fbe052356d063e4a81ee49293cfbce`）；新机迁移后备份 `/home/ubuntu/maskaria-backups/post-migration-20261021-040622/persona_terminal.sql.gz`（SHA-256 `1bfaecc4db468afd325c77d52a1dc510a7b4473124ff98158e3a04af7f86b90f`）。敏感中转文件只保存在本机 `E:\秘钥` 与新机 600 权限 incoming 目录，不进入 Git。
+- **未完成与边界**：当前没有自有域名或稳定 IP 证书，新 IP 仍是 HTTP；Quick Tunnel 无长期可用性保证，不能当作永久正式 HTTPS。已安装的旧 Android 包仍写死旧 IP，会收到迁移 503，需要用新入口重新打包/安装；本次没有打包、Push 或关闭旧服务器。
+- **下一步/负责人**：用户先在新 IP 或 HTTPS 过渡入口确认登录与云端数据；随后由 Codex 构建指向新服务器的 Android 更新包。若需要永久 HTTPS，再准备自有域名并切换 Caddy；旧机在所有客户端迁移完成前不得删除数据。
+
 ## 当前修复 · 2026-10-21 · 平板点地图格自动跑多格
 
 - **起因与证据**：用户提供平板录屏，点击地图格子后角色沿折线跑了多个房间。真实浏览器在 1180×820 触摸模拟下复现：从 `(0,0)` 单击远处已探明格，单次点击走 5 格到 `(1,4)`，月光从剩余 12 步降到 7 步。
@@ -2233,7 +2245,8 @@
 
 | 对象 | 实际去向 | 现场证据与边界 |
 |---|---|---|
-| 应用网页/PWA | `http://192.144.227.216/`，腾讯云 nginx；正式目录 `/opt/maskaria/web/` | 2026-10-18 已部署最终 2.8.14；入口 `/assets/index-C2vKaV_T.js`，718 文件服务器哈希与本地一致，线上真实档案牌图/岁时入口通过；新版直达 `/?v=2.8.14`，回滚见 `/home/ubuntu/maskaria-backups/release-2.8.14-20261018-final/web-before.tgz`（原 2.8.13） |
+| 应用网页/PWA | `http://150.158.174.9/`，腾讯云 Caddy；正式目录 `/opt/maskaria/web/` | 2026-10-21 正式服务已迁至新机；同源 API、生产库 24 表/Flyway V13，健康检查 UP；HTTPS 过渡 `https://spies-alliance-pty-shows.trycloudflare.com/`，尚无稳定自有域名 |
+| 旧服务器迁移回退 | `http://192.144.227.216/` | 2026-10-21 起网页返回 302 到新机，旧 `/api/` 返回 503；后端已停止并取消自启，数据和配置保留作短期回滚 |
 | Java 后端 | 同主机 `/api/` 反代本机8080；`/opt/maskaria/backend/app.jar`，服务 `maskaria-backend` | 2026-10-18 SSH 核实并仅更新 OTP 四个类；新 JAR SHA-256 `d3d7db69f3ce2a63ce591f96cac60abeb06871a9e070e8aea7574877847989b9`，服务 active，健康与数据库 UP。未覆盖其它后端模块 |
 | 官网营销页 | `https://maskaria.pages.dev/`，Cloudflare Pages 项目 `maskaria`，发布分支 `main`；源码 `site/` | GET 200，标题 `MASKARIA 面具庭园 · 没人看见的也算数`。这是已部署网站，绝非仅有本地 demo |
 | 官网首次发布快照 | `https://2d5f4986.maskaria.pages.dev/` | 2026-10-14 原发布记录；本轮未检查此快照，不冒称最新部署ID |

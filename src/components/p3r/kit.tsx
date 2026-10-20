@@ -35,6 +35,7 @@ export const P3R = {
   cyanPale: 'var(--p3r-cyan-pale, #cfeaf6)',
   cyanFaint: 'var(--p3r-cyan-faint, #e2f2fa)',
   magenta: 'var(--p3r-magenta, #f0417f)',
+  onBlue: 'var(--p3r-on-blue, #ffffff)',
   bg: 'var(--p3r-bg, #eef5f9)',
   panel: 'var(--p3r-panel, #ffffff)',
   roseInk: 'var(--p3r-rose-ink, #1546e0)',
@@ -50,6 +51,8 @@ export const slantClip = (cut = 7, dir: 'lead' | 'tail' = 'lead') =>
   dir === 'lead'
     ? `polygon(${cut}px 0, 100% 0, calc(100% - ${cut}px) 100%, 0 100%)`
     : `polygon(0 0, calc(100% - ${cut}px) 0, 100% 100%, ${cut}px 100%)`;
+
+export const tickClip = 'polygon(30% 0, 100% 0, 70% 100%, 0 100%)';
 
 /**
  * 底部弹层顶缘 clip —— 极缓单斜（左低右高一条直线，约 2–2.5°）。

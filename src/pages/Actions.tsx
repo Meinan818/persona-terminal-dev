@@ -17,11 +17,12 @@ import { useAppStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { springSnappy, TAP } from '@/utils/motion';
 import { triggerNavFeedback } from '@/utils/feedback';
+import { useBoldness } from '@/utils/boldness';
 import { TodosView } from '@/pages/Todos';
 import { ActivitiesView } from '@/pages/Activities';
 import { useUiChannel } from '@/ui/useUiChannel';
 import { P4SkyCircle, P4_HEADER_BLEED } from '@/ui/p4Kit';
-import { P3R, P3RPage, GhostWords, slantClip } from '@/components/p3r/kit';
+import { P3R, P3RPage, GhostWords, slantClip, tickClip } from '@/components/p3r/kit';
 import { P5R, P5_TITLE_FONT, P5Star, P5Dots, P5Slab, P5RPage } from '@/components/p5r/kit';
 
 type ActionsSubTab = 'todos' | 'activities';
@@ -46,6 +47,7 @@ export const Actions = () => {
   const isP4 = channel === 'p4';
   // P3R（蓝主题）形态：水面壳 + 设计稿切换头（p3-actions-reference-v3）
   const p3 = channel === 'p3';
+  const anim = useBoldness();
 
   // ── legacy 路由归一 ──────────────────────────────────────────────────────
   // 旧调用点仍可能 setCurrentPage('todos'/'activities')（App 把这两个旧 id 也映射到本页）。
@@ -300,6 +302,52 @@ export const Actions = () => {
             ACTION&nbsp;&nbsp;PROGRAM
           </div>
         </div>
+      ) : p3 ? (
+        <>
+          <GhostWords words={['ACTION']} className="-left-3 -top-2" style={{ fontSize: 'min(22vw, 7rem)' }} />
+          <header className="relative mb-4 pt-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="font-cond text-[12px] tracking-[0.3em]" style={{ color: P3R.roseInk }}>CHECK STATUS</span>
+              <span aria-hidden className="h-px min-w-[12px] flex-1" style={{ background: P3R.ink, opacity: 0.25 }} />
+              <span className="font-cond text-[12px]" style={{ color: P3R.grey }}>
+                {TABS.find((tab) => tab.key === actionsSubTab)?.key === 'todos' ? 'QUEST' : 'LOG'}
+              </span>
+            </div>
+            <motion.div
+              role="tablist"
+              aria-label="行动子页切换"
+              drag={anim ? 'x' : false}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.15}
+              onDragEnd={handleDragEnd}
+              className="relative mt-2 inline-flex cursor-grab select-none items-center gap-1 active:cursor-grabbing"
+            >
+              {TABS.map((tab) => {
+                const active = actionsSubTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    id={`actions-tab-${tab.key}`}
+                    aria-selected={active}
+                    aria-controls={`actions-panel-${tab.key}`}
+                    onClick={() => switchTab(tab.key)}
+                    className="relative flex h-[46px] items-center px-6"
+                  >
+                    {active && (
+                      <motion.span layoutId="bk-actions-tab" aria-hidden className="absolute inset-0" transition={anim ? { type: 'spring', stiffness: 460, damping: 34 } : { duration: 0 }}>
+                        <span className="absolute inset-0" style={{ background: P3R.blue, clipPath: slantClip(12) }} />
+                        <span className="absolute bottom-0 right-2 h-[9px] w-[18px]" style={{ background: P3R.magenta, clipPath: tickClip }} />
+                      </motion.span>
+                    )}
+                    <span className="relative font-heavy leading-none" style={{ fontSize: active ? 26 : 22, color: active ? P3R.onBlue : P3R.ink, transition: anim ? 'font-size 160ms' : undefined }}>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </motion.div>
+          </header>
+        </>
       ) : (
       <div className="relative h-10 mb-5">
         <motion.div

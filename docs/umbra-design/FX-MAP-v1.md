@@ -34,7 +34,8 @@
 | 护盾击破（精英/BOSS） | 🆕 shield:break（层数） | 锁链碎裂 | 玻璃盾碎 | 电视屏裂 | 🆕 |
 | 敌人意图预告 | HUD 常驻（不进 Director） | 敌人头顶图标 | 同 | 同 | ✅ |
 | 敌方行动 | action（敌方，≤1.5s） | 敌人前冲+队伍卡抖动 | 同 | 同 | ✅ |
-| 必杀 HIGHLIGHT / SHOWTIME | highlight（short?） | 角色专属；两人组合= SHOWTIME（参考 docs/umbra-ref/videos/p5r-showtime） | Theurgy 专属演出 | 必杀（P4R 未公开，推演） | ✅ |
+| 单人必杀 HIGHLIGHT | highlight（kind=solo, actorId） | 角色专属 HIGHLIGHT 动画 | Theurgy 专属演出 | 必杀（P4R 未公开，推演） | ✅ |
+| **双人连携必杀** | highlight（kind=duo, pairId）→ duo.<pairId> | **SHOWTIME**：漫画分镜开场+两人合作大招+定格（参考 docs/umbra-ref/videos/p5r-showtime）| 合体魔法：两只面具重叠显形+合击 | 连携追击：两人漫画格合击 | 🔁（玩法统一：特定两人同队、连携槽满后随机提示，可跳过） |
 | 全员倒地 → HOLD UP | holdup | 包围剪影+三选项 | 包围+选项 | 包围+选项 | ✅ |
 | 总攻 | allout → allout.default + finishCard 按发起者 | 红底黑剪影斩击 → **发起者定格画+台词**（Panther OMG!/Queen JUSTICE HAS PREVAILED. 等） | 棋盘格地面 pose → **色块定格+台词+MASS DESTRUCTION** | 尘云+黄底漫画格定格 | ✅ |
 | 交涉开始/结果 | talk:start / talk:result | 剪报对话框 | 同风格 | 同 | ✅ |
@@ -53,3 +54,12 @@
 
 ## D. v1.3 契约要补的事件（8 个）
 baton、persona:switch、shield:break、levelup、card:pick、buff:grant、boss:phase、fusion:result。另外引擎原语补 summon（读 $actorPersona）、eyeStrip、onomatopoeia、glassShatter、checkerFloor、ringSplash。时长建议：baton 0.6s、persona:switch 0.5s、shield:break 0.5s（重叠层）、levelup 1.0s、card:pick 0.6s、buff:grant 0.8s、boss:phase 2.0s（可跳过）、fusion:result 3.0s（可跳过）。
+
+## E. 地图：规则一样，长相不一样
+节点类型、数量、岔路规则四皮完全相同（同一张种子地图）。每皮换：背景插画、路线样式、节点图标、小人移动动作、遇敌转场。
+| | P5R 红 | P3 蓝/粉 | P4 黄 |
+|---|---|---|---|
+| 场景 | 殿堂（城堡长廊/金库） | 塔耳塔洛斯塔层（蓝/粉月光地板） | 电视世界（黄雾、迷宫街） |
+| 路线 | 红色发光虚线+红色箭头 | 绿/蓝光走廊+楼梯 | 黄色雾中路标 |
+| 小人移动 | 怪盗翻越、贴墙掩护 | 持武器小跑 | 戴眼镜小跑 |
+| 节点图标 | 剪报风格图标 | 塔罗/月相图标 | 电视机图标 |

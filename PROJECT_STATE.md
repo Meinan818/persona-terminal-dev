@@ -2,6 +2,15 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 三主题成就图鉴与 Dashboard 残余 mock 收口
+
+- **用户决定**：四个主题完美接好之前不谈幽影协议。
+- **成就与图鉴 `526cda1`**：`astrologyData.ts` 新增 `useAchievementProgressMap`（与真实 Achievements 页同口径：连续天数/总点数/属性等级/任务完成/委托/影击败/周目标/羁绊等）、`useTarotCollectedMap`（真实 dailyDivinations + longReadings 推导）、`useSeasonCollectedMap`（真实 stamps 表）。三主题 Achievements 页的成就进度、塔罗图鉴计数、岁时册收录与两套翻面卡全部改用真实 hook；无数据时显示空态而非 mock 数字。
+- **Dashboard `fda2a35`**：三主题 `useHomeData` 增加真实今日塔罗、逆流预警、当前 Persona 名；Dashboard 今日星象卡与逆流卡改真实数据。蓝/粉 `SkyBadge` 与黄色 `DashHeader` 接入 `useSkyBadge`，天气模式读真实天气（未配置时显示去设置/设置错误，不再显示假温度）；真实天气模式写入 `settings.homeSkyMode`。
+- **验证**：两节点均 `tsc --noEmit` exit 0、全量 `vitest run` 68 文件/413 项通过、BUILD_EXIT=0（`codex-real-20261021.log` / `dashboard-real-remaining-20261021.log`）。
+- **提交**：`526cda1`（13 文件，113+/46-）、`fda2a35`（9 文件，95+/39-）。未 Push。
+- **下一任务**：四主题真实浏览器综合验收；红色 Dashboard/Menu/宣告卡/成就/统计逐页验证；Settings 少数无真实字段项单独登记。
+
 ## 已提交 · 2026-10-21 · 红色 retest5 三处 CSS 修复（UMBRA 延期）
 
 - **用户决定**：先收尾当前四主题工作，幽影协议 UMBRA 暂不接（不两头抓）。

@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：探索 run 已接 Director 事件；战斗节点输出 encounter 事件，非战斗节点输出 explore 事件。
+当前节点：探索 run 已接 Director 组合事件；战斗节点输出 `map:encounter` + `battle:start`（合计 ≤1.2s/精简 0.7s），非战斗节点输出对应 explore 事件。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -104,4 +104,4 @@
 
 ## 探索 Director
 
-- `src/umbra/rules/exploreRunDirector.ts`：按当前节点生成 Director 主线事件，战斗节点为 `map:encounter`，其余为 explore 事件。
+- `src/umbra/rules/exploreRunDirector.ts`：`directorEventsForExploreNode` 按当前节点生成 Director 事件序列；战斗节点为 `map:encounter`(main) + `battle:start`(overlap)，按 D-002 组合预算拆分，其余为 explore 事件。渲染层只需驱动返回的事件数组。

@@ -144,7 +144,7 @@ export function LedgerStats({ entries, forceEmpty, initialPeriod }: { entries: L
           </P4Card>
         </CollageItem>
       )}
-      <LedgerSettleSheetView open={settle} onClose={() => setSettle(false)} state={hasAny ? undefined : 'empty'} />
+      <LedgerSettleSheetView open={settle} onClose={() => setSettle(false)} state={hasAny ? undefined : 'empty'} initialPeriod={period} />
     </CollageStagger>
   );
 }

@@ -167,7 +167,7 @@ export function LedgerStats({ entries, forceEmpty, initialPeriod }: { entries: L
           </GlassSlab>
         </P3StaggerItem>
       )}
-      <LedgerSettleSheetView open={settle} onClose={() => setSettle(false)} state={hasAny ? undefined : 'empty'} />
+      <LedgerSettleSheetView open={settle} onClose={() => setSettle(false)} state={hasAny ? undefined : 'empty'} initialPeriod={period} />
     </P3Stagger>
   );
 }

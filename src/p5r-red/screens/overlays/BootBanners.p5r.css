@@ -1,0 +1,17 @@
+/* 启动横幅（BootBanners.p5r.tsx）：fixed 顶部居中，max-w 448 / calc(100% - 2rem)（同真实）；红主题撕纸条 */
+:root[data-ui-channel="p5"] .bb5 { position: fixed; left: 50%; top: calc(1rem + env(safe-area-inset-top)); z-index: 960; width: calc(100% - 2rem); max-width: 448px; }
+:root[data-ui-channel="p5"] .bb5-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 14px 14px 16px; color: var(--p5r-paper); }
+:root[data-ui-channel="p5"] .bb5-card.ink { --sh: var(--red); }
+:root[data-ui-channel="p5"] .bb5-card > .lyr.sh { background: var(--red); transform: translate(5px, 6px); }
+:root[data-ui-channel="p5"] .bb5-card.stale { color: #111; }
+:root[data-ui-channel="p5"] .bb5-card.stale > .lyr.sh { background: var(--red); }
+:root[data-ui-channel="p5"] .bb5-card.stale .bb5-m b { color: var(--red); }
+:root[data-ui-channel="p5"] .bb5-ic { flex: none; position: relative; font-size: 20px; line-height: 1.2; }
+:root[data-ui-channel="p5"] .bb5-m { position: relative; flex: 1; min-width: 0; font: 800 12px/1.6 var(--f-sans); }
+:root[data-ui-channel="p5"] .bb5-m b { display: block; margin-bottom: 2px; font: 900 13.5px/1.35 var(--f-title); }
+:root[data-ui-channel="p5"] .bb5-card.ink .bb5-m b { color: #fbf7ef; text-shadow: 1.5px 1.5px 0 var(--red); }
+:root[data-ui-channel="p5"] .bb5-m p { margin: 0; opacity: .92; overflow-wrap: anywhere; }
+:root[data-ui-channel="p5"] .bb5-copy { margin-top: 8px; padding: 7px 12px; font: 900 12px/1 var(--f-title); color: #111; background: var(--p5r-paper); box-shadow: 3px 3px 0 var(--red); transform: skewX(-8deg); }
+:root[data-ui-channel="p5"] .bb5-copy:active { transform: skewX(-8deg) translate(2px, 2px); box-shadow: 1px 1px 0 var(--red); }
+:root[data-ui-channel="p5"] .bb5-x { position: relative; flex: none; display: grid; place-items: center; width: 30px; height: 30px; background: rgba(242,233,218,.18); clip-path: polygon(12% 0, 100% 8%, 88% 100%, 0 90%); }
+:root[data-ui-channel="p5"] .bb5-card.stale .bb5-x { background: rgba(17,17,17,.14); }

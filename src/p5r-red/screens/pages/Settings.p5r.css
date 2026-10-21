@@ -1,0 +1,6 @@
+/* 设置页增量样式（类名前缀 st5-；分区 / 卡片样式全部来自 legacy/css/b.css 的 .ob-*） */
+:root[data-ui-channel="p5"] .st5 { position: relative; padding-bottom: 24px; }
+:root[data-ui-channel="p5"] .st5-body { margin-top: 14px; }
+:root[data-ui-channel="p5"] .st5 .ob-sec-h, :root[data-ui-channel="p5"] .st5 [id^="blk-"] { scroll-margin-top: 16px; }
+/* parity：全量面板 → 回到 v3 列表（同 pg-back 小号纸签） */
+:root[data-ui-channel="p5"] .st5-tolist { align-self: flex-start; margin: 0 0 4px; padding: 7px 14px; font: 900 13px/1 var(--f-title); color: var(--ink); background: var(--p5r-paper); border: 0; transform: rotate(-3deg); clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); box-shadow: inset 0 0 0 2px var(--ink); cursor: pointer; }

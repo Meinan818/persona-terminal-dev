@@ -1,0 +1,4 @@
+/* 返回键 Toast（GlobalToasts.p5r.tsx）：bottom-32 居中（同真实），墨底切角 + 红影 */
+:root[data-ui-channel="p5"] .gt5-back { position: fixed; left: 50%; bottom: calc(8rem + env(safe-area-inset-bottom)); z-index: 960; pointer-events: none; filter: drop-shadow(5px 5px 0 var(--red)); }
+:root[data-ui-channel="p5"] .gt5-back-in { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px 12px 16px; white-space: nowrap; font: 900 14px/1 var(--f-title); color: var(--p5r-paper); background: #111; clip-path: polygon(8px 0, 100% 3px, calc(100% - 8px) 100%, 0 calc(100% - 3px)); transform: rotate(-1.5deg); }
+:root[data-ui-channel="p5"] .gt5-back-in .oa-star { flex: none; }

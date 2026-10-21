@@ -1,0 +1,3 @@
+/* WelcomeModal 增量：赐福收尾的扩散圆（替代 v3 clip-path circle 动画；P0-14 只动 transform/opacity） */
+:root[data-ui-channel="p5"] .wel5-fin-c { position: absolute; width: 340vmax; height: 340vmax; border-radius: 50%; background: var(--p5r-bg-a); transform: translate(-50%, -50%) scale(0); will-change: transform; }
+:root[data-ui-channel="p5"] .oa-wel-fin-v { opacity: 0; }

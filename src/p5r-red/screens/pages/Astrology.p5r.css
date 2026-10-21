@@ -1,0 +1,7 @@
+/* parity 2026-10-21：v3 astro 舞台同心环（v3 写在 stage 里；React 舞台无额外层，挂在页内 fixed 底层）+ Tab 签 */
+:root[data-ui-channel="p5"] .astro5 { position: relative; }
+:root[data-ui-channel="p5"] .astro5 > *:not(.astro5-rings) { position: relative; z-index: 1; }
+:root[data-ui-channel="p5"] .astro5-rings { position: fixed !important; left: 50%; top: 46%; width: 560px; height: 560px; margin: -280px 0 0 -280px; z-index: 0; pointer-events: none; }
+@media (min-width: 1024px) and (orientation: landscape) { :root[data-ui-channel="p5"] .astro5-rings { width: 900px; height: 900px; margin: -450px 0 0 -450px; } }
+:root[data-ui-channel="p5"] .astro5-tabs { margin: 0 0 16px; }
+:root[data-ui-channel="p5"] .astro5 .as-acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }

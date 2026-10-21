@@ -1,0 +1,27 @@
+/* ═══ 低动效（DevCapsule / ?__motion=low → <html data-p5r-motion="low">）═══
+   v3 只在 @media (prefers-reduced-motion: reduce) 里停循环；demo 的低动效开关与系统 reduced-motion 等价（tokens/p5r.css），
+   这里把 legacy/css 里各段 reduced-motion 规则原样镜像到 [data-p5r-motion=low]，并兜底：CSS 动画一律 1ms 跑完一次 → 只留终态，循环静止。
+   （JS / WAAPI 动效各自用 isLowMotion() 处理；人格星象雷达旋转为规范例外，不走 CSS。） */
+:root[data-ui-channel="p5"][data-p5r-motion="low"] *, :root[data-ui-channel="p5"][data-p5r-motion="low"] *::before, :root[data-ui-channel="p5"][data-p5r-motion="low"] *::after {
+  animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important;
+}
+/* a.css */
+:root[data-ui-channel="p5"][data-p5r-motion="low"] .oa-layer *, :root[data-ui-channel="p5"][data-p5r-motion="low"] .oa-layer *::before, :root[data-ui-channel="p5"][data-p5r-motion="low"] .oa-layer *::after { transition-duration: 1ms !important; }
+:root[data-ui-channel="p5"][data-p5r-motion="low"] .oa-dml-i { animation: none !important; position: relative; left: auto; display: inline-block; margin: 6px; }
+/* b.css */
+:root[data-ui-channel="p5"][data-p5r-motion="low"] .ob-badge.busy i { animation: none; }
+:root[data-ui-channel="p5"][data-p5r-motion="low"] .ob-pn *, :root[data-ui-channel="p5"][data-p5r-motion="low"] .ob-dlg * { transition: none !important; }
+/* c.css：.oc-hero .bob 只在 no-preference 下浮动 */
+:root[data-ui-channel="p5"][data-p5r-motion="low"] .oc-hero .bob { animation: none !important; }
+/* d.css */
+:root[data-ui-channel="p5"][data-p5r-motion="low"] :is(.od-bar > i, .od-trend i, .od-fan.shuffle span, .od-shuf span, .od-dd-deck, .od-dd-card, .od-think-c svg, .od-think-c i, .od-dm span, .od-swapmk, .od-gl-s.on svg, .od-stampb.todo svg, .od-dots i) { animation: none !important; }
+:root[data-ui-channel="p5"][data-p5r-motion="low"] :is(.od-flip-in, .od-ql-track, .od-gl-ring > span) { transition: none !important; }
+/* org.p5.css */
+:root[data-ui-channel="p5"][data-p5r-motion="low"] :is(.og-lm.on .og-lm-f, .og-pulse i, .og-moon-d, .og-moon-h) { animation: none; }
+:root[data-ui-channel="p5"][data-p5r-motion="low"] :is(.og-wc, .og-wall-bg, .og-fv-card, .og-bt-b, .og-hi, .og-mt, .og-tag) { transition: none; }
+/* pages.css */
+:root[data-ui-channel="p5"][data-p5r-motion="low"] :is(.cp-wait, .cp-ostar.glow, .cp-pray.wait, .cp-tab.on > i:nth-child(2)) { animation: none; }
+/* 系统 reduced-motion：legacy 各段规则已生效，这里只补同一条兜底 */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ui-channel="p5"] *, :root[data-ui-channel="p5"] *::before, :root[data-ui-channel="p5"] *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; }
+}

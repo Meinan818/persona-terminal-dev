@@ -1,0 +1,154 @@
+/*  自动生成（scripts/integrate/prepare.mjs）：红频道内撤销 tailwind preflight，恢复浏览器默认样式（demo 像素依赖默认值）。不要手改。  */
+:where(:root[data-ui-channel="p5"]) *, :where(:root[data-ui-channel="p5"]) ::before, :where(:root[data-ui-channel="p5"]) ::after {
+    box-sizing: revert;
+    border-width: revert;
+    border-style: revert;
+    border-color: revert
+}
+:where(:root[data-ui-channel="p5"]) ::before, :where(:root[data-ui-channel="p5"]) ::after {
+    --tw-content: revert
+}
+html:where([data-ui-channel="p5"]) {
+    line-height: revert;
+    -webkit-text-size-adjust: revert;
+    -moz-tab-size: revert;
+    tab-size: revert;
+    font-family: revert;
+    font-feature-settings: revert;
+    font-variation-settings: revert;
+    -webkit-tap-highlight-color: revert
+}
+:where(:root[data-ui-channel="p5"]) body {
+    margin: revert;
+    line-height: revert
+}
+:where(:root[data-ui-channel="p5"]) hr {
+    height: revert;
+    color: revert;
+    border-top-width: revert
+}
+:where(:root[data-ui-channel="p5"]) abbr:where([title]) {
+    text-decoration: revert
+}
+:where(:root[data-ui-channel="p5"]) h1, :where(:root[data-ui-channel="p5"]) h2, :where(:root[data-ui-channel="p5"]) h3, :where(:root[data-ui-channel="p5"]) h4, :where(:root[data-ui-channel="p5"]) h5, :where(:root[data-ui-channel="p5"]) h6 {
+    font-size: revert;
+    font-weight: revert
+}
+:where(:root[data-ui-channel="p5"]) a {
+    color: revert;
+    text-decoration: revert
+}
+:where(:root[data-ui-channel="p5"]) b, :where(:root[data-ui-channel="p5"]) strong {
+    font-weight: revert
+}
+:where(:root[data-ui-channel="p5"]) code, :where(:root[data-ui-channel="p5"]) kbd, :where(:root[data-ui-channel="p5"]) samp, :where(:root[data-ui-channel="p5"]) pre {
+    font-family: revert;
+    font-feature-settings: revert;
+    font-variation-settings: revert;
+    font-size: revert
+}
+:where(:root[data-ui-channel="p5"]) small {
+    font-size: revert
+}
+:where(:root[data-ui-channel="p5"]) sub, :where(:root[data-ui-channel="p5"]) sup {
+    font-size: revert;
+    line-height: revert;
+    position: revert;
+    vertical-align: revert
+}
+:where(:root[data-ui-channel="p5"]) sub {
+    bottom: revert
+}
+:where(:root[data-ui-channel="p5"]) sup {
+    top: revert
+}
+:where(:root[data-ui-channel="p5"]) table {
+    text-indent: revert;
+    border-color: revert;
+    border-collapse: revert
+}
+:where(:root[data-ui-channel="p5"]) button, :where(:root[data-ui-channel="p5"]) input, :where(:root[data-ui-channel="p5"]) optgroup, :where(:root[data-ui-channel="p5"]) select, :where(:root[data-ui-channel="p5"]) textarea {
+    font-family: revert;
+    font-feature-settings: revert;
+    font-variation-settings: revert;
+    font-size: revert;
+    font-weight: revert;
+    line-height: revert;
+    letter-spacing: revert;
+    color: revert;
+    margin: revert;
+    padding: revert
+}
+:where(:root[data-ui-channel="p5"]) button, :where(:root[data-ui-channel="p5"]) select {
+    text-transform: revert
+}
+:where(:root[data-ui-channel="p5"]) button, :where(:root[data-ui-channel="p5"]) input:where([type='button']), :where(:root[data-ui-channel="p5"]) input:where([type='reset']), :where(:root[data-ui-channel="p5"]) input:where([type='submit']) {
+    -webkit-appearance: revert;
+    background-color: revert;
+    background-image: revert
+}
+:where(:root[data-ui-channel="p5"]) :-moz-focusring {
+    outline: revert
+}
+:where(:root[data-ui-channel="p5"]) :-moz-ui-invalid {
+    box-shadow: revert
+}
+:where(:root[data-ui-channel="p5"]) progress {
+    vertical-align: revert
+}
+:where(:root[data-ui-channel="p5"]) ::-webkit-inner-spin-button, :where(:root[data-ui-channel="p5"]) ::-webkit-outer-spin-button {
+    height: revert
+}
+:where(:root[data-ui-channel="p5"]) [type='search'] {
+    -webkit-appearance: revert;
+    outline-offset: revert
+}
+:where(:root[data-ui-channel="p5"]) ::-webkit-search-decoration {
+    -webkit-appearance: revert
+}
+:where(:root[data-ui-channel="p5"]) ::-webkit-file-upload-button {
+    -webkit-appearance: revert;
+    font: revert
+}
+:where(:root[data-ui-channel="p5"]) summary {
+    display: revert
+}
+:where(:root[data-ui-channel="p5"]) blockquote, :where(:root[data-ui-channel="p5"]) dl, :where(:root[data-ui-channel="p5"]) dd, :where(:root[data-ui-channel="p5"]) h1, :where(:root[data-ui-channel="p5"]) h2, :where(:root[data-ui-channel="p5"]) h3, :where(:root[data-ui-channel="p5"]) h4, :where(:root[data-ui-channel="p5"]) h5, :where(:root[data-ui-channel="p5"]) h6, :where(:root[data-ui-channel="p5"]) hr, :where(:root[data-ui-channel="p5"]) figure, :where(:root[data-ui-channel="p5"]) p, :where(:root[data-ui-channel="p5"]) pre {
+    margin: revert
+}
+:where(:root[data-ui-channel="p5"]) fieldset {
+    margin: revert;
+    padding: revert
+}
+:where(:root[data-ui-channel="p5"]) legend {
+    padding: revert
+}
+:where(:root[data-ui-channel="p5"]) ol, :where(:root[data-ui-channel="p5"]) ul, :where(:root[data-ui-channel="p5"]) menu {
+    list-style: revert;
+    margin: revert;
+    padding: revert
+}
+:where(:root[data-ui-channel="p5"]) dialog {
+    padding: revert
+}
+:where(:root[data-ui-channel="p5"]) textarea {
+    resize: revert
+}
+:where(:root[data-ui-channel="p5"]) input::placeholder, :where(:root[data-ui-channel="p5"]) textarea::placeholder {
+    opacity: revert;
+    color: revert
+}
+:where(:root[data-ui-channel="p5"]) button, :where(:root[data-ui-channel="p5"]) [role="button"] {
+    cursor: revert
+}
+:where(:root[data-ui-channel="p5"]) :disabled {
+    cursor: revert
+}
+:where(:root[data-ui-channel="p5"]) img, :where(:root[data-ui-channel="p5"]) svg, :where(:root[data-ui-channel="p5"]) video, :where(:root[data-ui-channel="p5"]) canvas, :where(:root[data-ui-channel="p5"]) audio, :where(:root[data-ui-channel="p5"]) iframe, :where(:root[data-ui-channel="p5"]) embed, :where(:root[data-ui-channel="p5"]) object {
+    display: revert;
+    vertical-align: revert
+}
+:where(:root[data-ui-channel="p5"]) img, :where(:root[data-ui-channel="p5"]) video {
+    max-width: revert;
+    height: revert
+}

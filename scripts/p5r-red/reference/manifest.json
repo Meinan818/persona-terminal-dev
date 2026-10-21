@@ -1,0 +1,429 @@
+{
+ "generated": "2026-10-21T01:28:14.216Z",
+ "source": "p5r-red-demo dist/index.html",
+ "fixedTime": "2026-10-21T10:30:00+08:00",
+ "timezoneId": "Asia/Shanghai",
+ "wait": 1600,
+ "shots": [
+  {
+   "name": "dashboard--390-day",
+   "title": "首页",
+   "route": "#/",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "dashboard--390-day.png",
+   "maxRatio": 0.012,
+   "why": "首页仪式轮播一行（今日星象条）与属性小签的文字栅格化逐次不同：demo dist 自比 0.00%~0.52%，演练 dev 0.49%~0.78%；计算样式逐元素一致（qa/jobs/styldiff.mjs），非样式差异"
+  },
+  {
+   "name": "actions-todos--390-day",
+   "title": "行动 · 任务",
+   "route": "#/p/actions?tab=todos",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "actions-todos--390-day.png"
+  },
+  {
+   "name": "actions-activities--390-day",
+   "title": "行动 · 记录",
+   "route": "#/p/actions?tab=activities",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "actions-activities--390-day.png"
+  },
+  {
+   "name": "callingcard--390-day",
+   "title": "宣告卡",
+   "route": "#/p/callingcard",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "callingcard--390-day.png"
+  },
+  {
+   "name": "cooperation--390-day",
+   "title": "羁绊",
+   "route": "#/p/cooperation",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "cooperation--390-day.png"
+  },
+  {
+   "name": "hideout--390-day",
+   "title": "据点",
+   "route": "#/p/hideout",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "hideout--390-day.png"
+  },
+  {
+   "name": "astrology--390-day",
+   "title": "星象",
+   "route": "#/p/astrology",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "astrology--390-day.png"
+  },
+  {
+   "name": "statistics--390-day",
+   "title": "统计",
+   "route": "#/p/statistics",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "statistics--390-day.png"
+  },
+  {
+   "name": "achievements--390-day",
+   "title": "成就 · 技能",
+   "route": "#/p/achievements",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "achievements--390-day.png"
+  },
+  {
+   "name": "ledger--390-day",
+   "title": "心相记账",
+   "route": "#/p/ledger",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ledger--390-day.png"
+  },
+  {
+   "name": "menu--390-day",
+   "title": "菜单",
+   "route": "#/p/menu",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "menu--390-day.png"
+  },
+  {
+   "name": "settings--390-day",
+   "title": "设置",
+   "route": "#/p/settings",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "settings--390-day.png"
+  },
+  {
+   "name": "account--390-day",
+   "title": "账号与数据",
+   "route": "#/p/account",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "account--390-day.png"
+  },
+  {
+   "name": "battle--390-day",
+   "title": "逆影战场（占位）",
+   "route": "#/p/battle",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "battle--390-day.png"
+  },
+  {
+   "name": "ov-bond-detail--390-day",
+   "title": "同伴详情",
+   "route": "#/overlay/bond-detail",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-bond-detail--390-day.png"
+  },
+  {
+   "name": "ov-calling-cutin--390-day",
+   "title": "宣告卡结算",
+   "route": "#/overlay/global-calling-card-cutin",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-calling-cutin--390-day.png"
+  },
+  {
+   "name": "ov-calling-editor--390-day",
+   "title": "宣告卡编辑器",
+   "route": "#/overlay/actions-calling-card-editor",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-calling-editor--390-day.png"
+  },
+  {
+   "name": "ov-levelup--390-day",
+   "title": "属性升级",
+   "route": "#/overlay/global-levelup",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-levelup--390-day.png"
+  },
+  {
+   "name": "ov-codex--390-day",
+   "title": "图鉴",
+   "route": "#/overlay/achv-codex",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-codex--390-day.png"
+  },
+  {
+   "name": "ov-about--390-day",
+   "title": "菜单 · 关于",
+   "route": "#/overlay/menu-about-sheet",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-about--390-day.png"
+  },
+  {
+   "name": "ov-wheel--390-day",
+   "title": "长按轮盘",
+   "route": "#/overlay/shell-radial-wheel",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-wheel--390-day.png"
+  },
+  {
+   "name": "ov-ledger-saved--390-day",
+   "title": "记账完成",
+   "route": "#/overlay/ledger-saved",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-ledger-saved--390-day.png"
+  },
+  {
+   "name": "ov-hideout-map--390-day",
+   "title": "据点地图",
+   "route": "#/overlay/hideout-map",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-hideout-map--390-day.png"
+  },
+  {
+   "name": "ov-rankup--390-day",
+   "title": "羁绊 RANK UP",
+   "route": "#/overlay/bond-rankup-cutin-p5",
+   "vp": "390x844",
+   "mode": "day",
+   "file": "ov-rankup--390-day.png"
+  },
+  {
+   "name": "dashboard--390-night",
+   "title": "首页",
+   "route": "#/",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "dashboard--390-night.png",
+   "maxRatio": 0.012,
+   "why": "首页仪式轮播一行（今日星象条）与属性小签的文字栅格化逐次不同：demo dist 自比 0.00%~0.52%，演练 dev 0.49%~0.78%；计算样式逐元素一致（qa/jobs/styldiff.mjs），非样式差异"
+  },
+  {
+   "name": "actions-todos--390-night",
+   "title": "行动 · 任务",
+   "route": "#/p/actions?tab=todos",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "actions-todos--390-night.png"
+  },
+  {
+   "name": "actions-activities--390-night",
+   "title": "行动 · 记录",
+   "route": "#/p/actions?tab=activities",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "actions-activities--390-night.png"
+  },
+  {
+   "name": "callingcard--390-night",
+   "title": "宣告卡",
+   "route": "#/p/callingcard",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "callingcard--390-night.png"
+  },
+  {
+   "name": "cooperation--390-night",
+   "title": "羁绊",
+   "route": "#/p/cooperation",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "cooperation--390-night.png"
+  },
+  {
+   "name": "hideout--390-night",
+   "title": "据点",
+   "route": "#/p/hideout",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "hideout--390-night.png"
+  },
+  {
+   "name": "astrology--390-night",
+   "title": "星象",
+   "route": "#/p/astrology",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "astrology--390-night.png"
+  },
+  {
+   "name": "statistics--390-night",
+   "title": "统计",
+   "route": "#/p/statistics",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "statistics--390-night.png"
+  },
+  {
+   "name": "achievements--390-night",
+   "title": "成就 · 技能",
+   "route": "#/p/achievements",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "achievements--390-night.png"
+  },
+  {
+   "name": "ledger--390-night",
+   "title": "心相记账",
+   "route": "#/p/ledger",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "ledger--390-night.png"
+  },
+  {
+   "name": "menu--390-night",
+   "title": "菜单",
+   "route": "#/p/menu",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "menu--390-night.png"
+  },
+  {
+   "name": "settings--390-night",
+   "title": "设置",
+   "route": "#/p/settings",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "settings--390-night.png"
+  },
+  {
+   "name": "account--390-night",
+   "title": "账号与数据",
+   "route": "#/p/account",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "account--390-night.png"
+  },
+  {
+   "name": "battle--390-night",
+   "title": "逆影战场（占位）",
+   "route": "#/p/battle",
+   "vp": "390x844",
+   "mode": "night",
+   "file": "battle--390-night.png"
+  },
+  {
+   "name": "dashboard--1440-day",
+   "title": "首页",
+   "route": "#/",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "dashboard--1440-day.png"
+  },
+  {
+   "name": "actions-todos--1440-day",
+   "title": "行动 · 任务",
+   "route": "#/p/actions?tab=todos",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "actions-todos--1440-day.png"
+  },
+  {
+   "name": "actions-activities--1440-day",
+   "title": "行动 · 记录",
+   "route": "#/p/actions?tab=activities",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "actions-activities--1440-day.png"
+  },
+  {
+   "name": "callingcard--1440-day",
+   "title": "宣告卡",
+   "route": "#/p/callingcard",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "callingcard--1440-day.png"
+  },
+  {
+   "name": "cooperation--1440-day",
+   "title": "羁绊",
+   "route": "#/p/cooperation",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "cooperation--1440-day.png"
+  },
+  {
+   "name": "hideout--1440-day",
+   "title": "据点",
+   "route": "#/p/hideout",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "hideout--1440-day.png"
+  },
+  {
+   "name": "astrology--1440-day",
+   "title": "星象",
+   "route": "#/p/astrology",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "astrology--1440-day.png"
+  },
+  {
+   "name": "statistics--1440-day",
+   "title": "统计",
+   "route": "#/p/statistics",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "statistics--1440-day.png"
+  },
+  {
+   "name": "achievements--1440-day",
+   "title": "成就 · 技能",
+   "route": "#/p/achievements",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "achievements--1440-day.png"
+  },
+  {
+   "name": "ledger--1440-day",
+   "title": "心相记账",
+   "route": "#/p/ledger",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "ledger--1440-day.png"
+  },
+  {
+   "name": "menu--1440-day",
+   "title": "菜单",
+   "route": "#/p/menu",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "menu--1440-day.png"
+  },
+  {
+   "name": "settings--1440-day",
+   "title": "设置",
+   "route": "#/p/settings",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "settings--1440-day.png"
+  },
+  {
+   "name": "account--1440-day",
+   "title": "账号与数据",
+   "route": "#/p/account",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "account--1440-day.png"
+  },
+  {
+   "name": "battle--1440-day",
+   "title": "逆影战场（占位）",
+   "route": "#/p/battle",
+   "vp": "1440x900",
+   "mode": "day",
+   "file": "battle--1440-day.png"
+  }
+ ]
+}

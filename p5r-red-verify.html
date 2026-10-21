@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- P5R 红频道 · mock 像素验收入口（只给 scripts/p5r-red/compare.mjs 用；留在仓库里不影响正式 index.html / 构建）。
+     head 与正式 index.html 保持同样的全局资源（layout-wide 首帧脚本、Noto Sans SC Black 分片样式），这样验收的是「真实环境」。不要改。 -->
+<html lang="zh-CN" data-ui-channel="p5" data-p5r-mode="day" data-p5r-motion="full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <script>
+      (function () {
+        try {
+          var d = document.documentElement, pref = null;
+          try { pref = localStorage.getItem('velvet:sidebarLayout.v1'); } catch (e) {}
+          var ipad = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+          var wide = pref === 'on' ? true : pref === 'off' ? false : !ipad;
+          if (wide) { d.classList.add('layout-wide'); }
+        } catch (e) { document.documentElement.classList.add('layout-wide'); }
+        try {
+          var q = (location.hash.split('?')[1] || '').match(/__mode=(day|night)/);
+          if (q) document.documentElement.setAttribute('data-p5r-mode', q[1]);
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="theme-color" content="#D7000F" />
+    <title>P5R red verify</title>
+    <link rel="stylesheet" href="/fonts/noto-sc-black.v2.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/p5r-red/verify-main.tsx"></script>
+  </body>
+</html>

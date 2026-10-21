@@ -1,0 +1,46 @@
+/* DashboardP5（React 版新增件，v3 语汇）：宣告卡提示条 ②③ 态 / 天空位天气态 / 岁时小签 / 今日仪式轮播 / 2×3 统计表格卡。
+   ①钉选态、任务纸卡、星象红幅、战场入口、人格星象沿用 legacy/css/home.css（v3 原样）。 */
+:root[data-ui-channel="p5"] .hm-cc { position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 14px 12px 16px; color: #111; }
+:root[data-ui-channel="p5"] .hm-cc::before { content: ''; position: absolute; inset: 0; z-index: 0; background: var(--p5r-paper); outline: 3px solid #111; outline-offset: -2px; box-shadow: 4px 5px 0 #111; clip-path: polygon(0 6%, 99% 0, 100% 92%, 1% 100%); }
+:root[data-ui-channel="p5"] .hm-cc > * { position: relative; z-index: 1; }
+:root[data-ui-channel="p5"] .hm-cc > button.hm-cc-go { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; text-align: left; font: 900 13px/1.35 var(--f-title); color: #111; }
+:root[data-ui-channel="p5"] .hm-cc-spark { flex: none; width: 14px; height: 14px; }
+:root[data-ui-channel="p5"] .hm-cc-go > span { min-width: 0; flex: 1; }
+:root[data-ui-channel="p5"] .hm-cc-go > em { flex: none; font: 900 18px/1 var(--f-title); font-style: normal; color: var(--red); }
+:root[data-ui-channel="p5"] .hm-cc-x { flex: none; width: 30px; height: 30px; display: grid; place-items: center; background: #111; color: var(--p5r-paper); font: 900 17px/1 var(--f-title); clip-path: polygon(14% 0, 100% 6%, 86% 100%, 0 92%); }
+:root[data-ui-channel="p5"] .hm-pin.nox .hm-pin-card { flex: 1; }
+:root[data-ui-channel="p5"] .hm-sky { flex: none; display: block; padding: 0; transition: transform .18s var(--exp); }
+:root[data-ui-channel="p5"] .hm-sky.flip { transform: scaleX(0); }
+:root[data-ui-channel="p5"] .hm-wx { width: 34px; height: 34px; display: block; }
+:root[data-ui-channel="p5"] .hm-season { flex: none; align-self: flex-end; margin: 0 0 4px 2px; padding: 3px 6px; font: 900 11px/1 var(--f-title); color: #111; background: var(--p5r-paper); outline: 2px solid #111; outline-offset: -1px; box-shadow: 2px 2px 0 var(--red); transform: rotate(-4deg); }
+:root[data-ui-channel="p5"] .hm-ritual > .p5-stack { margin-top: 2px; }
+:root[data-ui-channel="p5"] .hm-slab { min-height: 86px; margin: 0 !important; width: 100%; text-align: left; }
+:root[data-ui-channel="p5"] .hm-slab .hm-astro-txt { min-width: 0; flex: 1; }
+:root[data-ui-channel="p5"] .hm-slab .hm-astro-ico em { font-style: normal; font-size: 26px; line-height: 1; }
+:root[data-ui-channel="p5"] .hm-slab.cc { background: #8E0010; }
+:root[data-ui-channel="p5"] .hm-slab .hm-astro-txt b, :root[data-ui-channel="p5"] .hm-slab .hm-astro-txt small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ui-channel="p5"] .hm-bt.hm-slab { margin-top: 0; min-height: 86px; }
+:root[data-ui-channel="p5"] .hm-bt-tag.on { color: #111; background: #F2E9DA; animation: hm-breathe 1.6s ease-in-out infinite; }
+@keyframes hm-breathe { 50% { transform: rotate(-4deg) scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { :root[data-ui-channel="p5"] .hm-bt-tag.on { animation: none; } }
+:root[data-ui-channel="p5"][data-p5r-motion="low"] .hm-bt-tag.on { animation: none; }
+/* 2×3 统计表格卡（P0-06）：纸面 + 墨黑细线分格；数字 红 / 橙 / 墨 */
+:root[data-ui-channel="p5"] .hm-statgrid { position: relative; z-index: 1; background: var(--p5r-paper); outline: 4px solid #111; outline-offset: -2px; box-shadow: 7px 8px 0 #111; padding: 4px 8px; transform: rotate(.4deg); overflow: hidden; }
+:root[data-ui-channel="p5"] .hm-statgrid::before, :root[data-ui-channel="p5"] .hm-statgrid::after { content: ''; position: absolute; width: 84px; height: 84px; background: #dcd4c4; clip-path: polygon(50% 0, 61.2% 34.5%, 97.6% 34.5%, 68.2% 55.9%, 79.4% 90.5%, 50% 69.1%, 20.6% 90.5%, 31.8% 55.9%, 2.4% 34.5%, 38.8% 34.5%); pointer-events: none; }
+:root[data-ui-channel="p5"] .hm-statgrid::before { left: -20px; top: 10px; transform: rotate(-14deg); }
+:root[data-ui-channel="p5"] .hm-statgrid::after { right: -16px; top: 22px; width: 72px; height: 72px; transform: rotate(12deg); }
+:root[data-ui-channel="p5"] .hm-statgrid > div { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); }
+:root[data-ui-channel="p5"] .hm-statgrid .c { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 4px; }
+:root[data-ui-channel="p5"] .hm-statgrid .c:nth-child(3n+2), :root[data-ui-channel="p5"] .hm-statgrid .c:nth-child(3n+3) { border-left: 2px solid #111; }
+:root[data-ui-channel="p5"] .hm-statgrid .c:nth-child(n+4) { border-top: 2px solid #111; }
+:root[data-ui-channel="p5"] .hm-statgrid .c b { font: 900 27px/1 var(--f-title); font-variant-numeric: tabular-nums; }
+:root[data-ui-channel="p5"] .hm-statgrid .c span { font: 900 11.5px/1.2 var(--f-title); color: #111; text-align: center; }
+:root[data-ui-channel="p5"][data-p5r-mode="night"] .hm-statgrid { background: #e6dccb; }
+/* 临期 Toast（P1-20）与逆流侵蚀（P1-20）走 v3 语汇 */
+:root[data-ui-channel="p5"] .hm-urgent { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 12px); z-index: 900; display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 10px 20px; font: 900 14px/1 var(--f-title); color: #fff; background: var(--red); box-shadow: 4px 4px 0 #111; clip-path: polygon(8px 0, 100% 2px, calc(100% - 8px) 100%, 0 calc(100% - 2px)); transform: translateX(-50%); pointer-events: none; }
+:root[data-ui-channel="p5"] .hm-decay-card { position: relative; width: min(384px, 100%); padding: 26px 22px 22px; text-align: center; color: #111; }
+:root[data-ui-channel="p5"] .hm-decay-card h3 { margin: 0; font: 900 19px/1.3 var(--f-title); }
+:root[data-ui-channel="p5"] .hm-decay-card > p { margin: 4px 0 16px; font: 800 13px/1.5 var(--f-sans); color: #6b6862; }
+:root[data-ui-channel="p5"] .hm-decay-row { display: flex; justify-content: space-between; padding: 10px 16px; margin: 0 0 8px; background: #e3dccd; clip-path: polygon(0 6%, 100% 0, 99% 94%, 1% 100%); font: 900 14px/1 var(--f-title); }
+:root[data-ui-channel="p5"] .hm-decay-row em { font-style: normal; color: var(--red); }
+:root[data-ui-channel="p5"] .hm-decay-ok { width: 100%; margin-top: 10px; padding: 12px; font: 900 16px/1 var(--f-title); letter-spacing: .1em; color: #fff; background: var(--red); box-shadow: 4px 4px 0 #111; clip-path: polygon(4px 2px, 100% 0, calc(100% - 3px) 100%, 0 calc(100% - 3px)); }

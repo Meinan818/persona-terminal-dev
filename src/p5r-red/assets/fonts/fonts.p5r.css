@@ -1,0 +1,6 @@
+/* 由 scripts/subset-fonts.py 生成：Sans / Round 子集 @font-face（tokens/p5r.css @import）。SIL OFL 1.1，见 OFL.txt。 */
+@import url('./noto-sc-black.p5r.css');
+@font-face { font-family: 'Velvet Sans SC'; src: url('./p5r-sans-sc.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Velvet Sans SC'; src: url('./p5r-sans-sc-ext.woff2') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+7950; }
+@font-face { font-family: 'Velvet Sans SC'; src: url('./p5r-black-fill.woff2') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+3007; }
+@font-face { font-family: 'Velvet Round SC'; src: url('./p5r-round-sc.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }

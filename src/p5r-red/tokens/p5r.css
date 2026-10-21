@@ -1,0 +1,100 @@
+/* ═══════════════════════════════════════════════════════════════════
+   MASKARIA · P5R 豪华主题 demo — 设计 token（React 版：迁移自 /workspace/work/p5r/shared/tokens.css）
+   日/夜：<html data-p5r-mode="day|night">（src/lib/prefs.ts 写入）；低动效：<html data-p5r-motion="low"> 或 prefers-reduced-motion。
+   接入真实仓库时把 --p5r-* 改名为仓库前缀，[data-p5r-mode] 换成 app 的夜间开关选择器。
+   色值 / 描边 / 投影 / 网点规范：/workspace/work/p5redesign/assets/README.md（Theme Pack Vol.01）
+   动效曲线：/workspace/work/p5redesign/P5_MOTION_SPEC.md §0
+   ═══════════════════════════════════════════════════════════════════ */
+/* 字体：源码用字子集（scripts/collect-chars.py + scripts/subset-fonts.py 生成；SIL OFL 1.1，见 assets/fonts/OFL.txt） */
+@import url('../assets/fonts/fonts.p5r.css');
+
+:root[data-ui-channel="p5"] {
+  /* 色 —— 素材库统一规范（AI 出图已校色到这些值） */
+  --red: #D7000F;          /* 主红：横幅 / 选中 / CTA */
+  --red-deep: #8E0010;     /* 暗红：背景碎片 / 影 */
+  --red-hot: #ff1a2a;      /* 高光红（仅闪光层） */
+  --ink: #111111;          /* 墨黑：描边 / 硬影 / 舞台 */
+  --stage: #070707;        /* 舞台底 */
+  --paper: #F2E9DA;        /* 奶白纸 */
+  --paper-dim: #dcd4c4;
+  --white: #FBF7EF;
+  --grey: #6b6862;
+  --grey-light: #9b9791;
+  --yellow: #fbfe3c;       /* 羁绊升级黄数字（点缀） */
+  --cyan: #1cfeff;         /* 红青活高亮的青 */
+
+  /* 描边：8px @1024 长边 → 屏幕上 3px（卡）/ 2px（小件） */
+  --stroke: 3px;
+  --stroke-s: 2px;
+  /* 硬投影：墨黑 100%，无模糊，+1.2% / +1.4% */
+  --shadow: 5px 6px 0 var(--ink);
+  --shadow-s: 3px 4px 0 var(--ink);
+  --shadow-red: 5px 6px 0 var(--red);
+  --drop: drop-shadow(5px 6px 0 var(--ink));
+  --drop-s: drop-shadow(3px 4px 0 var(--ink));
+  /* 网点：16px 间距 45° 交错（素材 halftone_*，无缝） */
+  --dots-ink: url('../assets/kit/halftone_ink.webp');
+  --dots-red: url('../assets/kit/halftone_red.webp');
+  --paper-tex: url('../assets/kit/paper_cream.webp');
+  --grain: url('../assets/kit/grain.webp');
+  --shards: url('../assets/kit/shards_red.webp');
+
+  /* 字 */
+  --f-title: "Noto Sans SC Black", "Velvet Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --f-body: "Velvet Round SC", "Velvet Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --f-sans: "Velvet Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+
+  /* 曲线（MOTION_SPEC §0） */
+  --exp: cubic-bezier(.16,1,.3,1);
+  --over: cubic-bezier(.34,1.56,.64,1);
+  --slam: cubic-bezier(.15,.95,.1,1);
+  --ease2: cubic-bezier(.65,0,.2,1);
+  --panel-in: cubic-bezier(.2,.9,.2,1);
+
+  /* 布局 */
+  --side-w: 248px;
+  --nav-h: 76px;
+}
+
+/* ═══ 可接入变量（--p5r-*）：日间 / 夜间两套。只作用于红主题渲染 ═══ */
+:root[data-ui-channel="p5"], :root[data-ui-channel="p5"][data-p5r-mode="day"] {
+  --p5r-bg-a: #D7000F;        /* 放射线底 */
+  --p5r-bg-b: #B4000D;        /* 放射线暗条 */
+  --p5r-bg-wedge: #F2E9DA;    /* 奶白光楔 */
+  --p5r-bg-ink: #1a0204;      /* 极少墨色碎片 */
+  --p5r-bg-dot: #7a000b;      /* 网点 */
+  --p5r-bg-dot2: #F2E9DA;
+  --p5r-sil: #7d0610;         /* 剪影填充（暗红，不再用纯黑） */
+  --p5r-sil-rim: #F2E9DA;     /* 剪影描边 */
+  --p5r-paper: #F2E9DA;
+  --p5r-ink: #111111;
+  --p5r-red: #D7000F;
+  --p5r-card: #141414;        /* 墨卡 */
+  --p5r-card-fg: #F2E9DA;
+  --p5r-paper-fg: #111111;
+  --p5r-muted: #6b6862;
+  --p5r-radius: 0px;          /* P5R 全部硬边，无圆角 */
+  --p5r-shadow: 5px 6px 0 #111;
+  --p5r-shadow-s: 3px 4px 0 #111;
+  --p5r-dur-fast: 160ms;
+  --p5r-dur: 260ms;
+  --p5r-dur-slow: 540ms;
+  --stage: #D7000F;
+}
+:root[data-ui-channel="p5"][data-p5r-mode="night"] {
+  --p5r-bg-a: #6d0009;
+  --p5r-bg-b: #560007;
+  --p5r-bg-wedge: #c9bfae;
+  --p5r-bg-ink: #0b0102;
+  --p5r-bg-dot: #2c0003;
+  --p5r-bg-dot2: #a0001a;
+  --p5r-sil: #3a0207;
+  --p5r-sil-rim: #c9bfae;
+  --p5r-paper: #e6dccb;
+  --p5r-card: #0e0e0e;
+  --p5r-muted: #8f8a83;
+  --stage: #6d0009;
+}
+@media (prefers-reduced-motion: reduce) { :root[data-ui-channel="p5"] { --p5r-dur-fast: 0ms; --p5r-dur: 0ms; --p5r-dur-slow: 0ms; } }
+/* demo 低动效开关（DevCapsule / ?__motion=low）与系统 reduced-motion 等价 */
+:root[data-ui-channel="p5"][data-p5r-motion="low"] { --p5r-dur-fast: 0ms; --p5r-dur: 0ms; --p5r-dur-slow: 0ms; }

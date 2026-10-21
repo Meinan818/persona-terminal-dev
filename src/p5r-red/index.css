@@ -1,0 +1,24 @@
+/* 样式入口。顺序 = 原生 index.html 的 <link> 顺序（tokens → components → shell → home → todos → pages → org → a/b/c/d），
+   保证层叠与原生逐条一致。tailwind 只加 components/utilities（preflight 已关，见 tailwind.config.js）。 */
+@import './unpreflight.css'; /* 接入：撤销正式仓库 preflight（必须最先） */
+@import './tokens/p5r.css';
+@import './kit/kit.css';
+@import './shell/shell.css';
+@import './legacy/css/home.css';
+@import './legacy/css/todos.css';
+@import './legacy/css/pages.css';
+@import './legacy/css/org.p5.css';
+@import './legacy/css/a.css';
+@import './legacy/css/b.css';
+@import './legacy/css/c.css';
+@import './legacy/css/d.css';
+@import './shell/lowMotion.css'; /* 低动效：镜像 legacy 的 reduced-motion 规则（须在 legacy 之后） */
+/* 各屏幕自己的增量样式：在屏幕 TSX 里 import './Xxx.p5r.css'（类名用屏幕前缀，不要改上面的迁移文件） */
+
+
+
+/* React 版补丁：#root 不参与布局（原生 body 直接放 #stage-bg/#side/#view/#bnav） */
+:root[data-ui-channel="p5"] #root { display: contents; }
+
+/* 接入：demo 自己的 tailwind 工具类（预编译 + 作用域；正式仓库 tailwind 不认识 demo 的主题键） */
+@import './tailwind.p5r.generated.css';

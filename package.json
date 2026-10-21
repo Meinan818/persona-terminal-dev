@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "skin:check": "node scripts/skin-check.mjs",
     "cap:sync": "cap sync",
     "cap:open:android": "cap open android",
     "cap:run:android": "cap run android",

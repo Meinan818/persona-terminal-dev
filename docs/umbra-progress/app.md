@@ -38,3 +38,4 @@
 - Bridge 已接 Dexie：新增 `src/umbra/dexieBridge.ts`，把 `UmbraRuntimeBridge` 映射到现有 `saveUmbraProfile` / `saveUmbraRun`，checkpoint 幂等键写入 `run.payload.checkpoints`。
 - Director 纯调度核心已落：`src/umbra/director.ts` 支持倍速时长、主线/重叠层、输入缓冲保留最新 2 条、action key 幂等和 `env:change` 空闲接续。
 - 皮肤契约/注册表已落：`src/umbra/skins/contract.ts`、`src/umbra/skins/registry.ts`；安全区与虚拟横屏坐标变换在 `src/umbra/layout.ts`。
+- `skin:check` CLI 已落：`scripts/skin-check.mjs` + `npm run skin:check`，校验 pack schema、时长预算、source、字体 120KB 与 import 白名单。

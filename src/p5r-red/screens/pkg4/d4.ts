@@ -1,4 +1,4 @@
-// @ts-nocheck —— 逐字迁移自 v3 原生 overlays/d.js（D 组：行动 / 星象 / 图鉴 / 记账 段；命令式 DOM，类名 .od-*，样式 = legacy/css/d.css）。
+﻿// @ts-nocheck —— 逐字迁移自 v3 原生 overlays/d.js（D 组：行动 / 星象 / 图鉴 / 记账 段；命令式 DOM，类名 .od-*，样式 = legacy/css/d.css）。
 // 改动（按 FIXLIST / 真实源码）：
 //   · stage() 支持 inline（INLINE.host 设定时渲染进页面容器，不建全屏层）——星象三 Tab / 图鉴 Tab 用（P0-10 / P0-11）；
 //   · confirm() 改走 ConfirmDialog（kit P5Confirm，真实删除协议）；演示态条 ?__dev=0 隐藏；
@@ -7,6 +7,9 @@
 //   · 宣告卡编辑器 openCCEditor 增加 { card, onSaved } 参数（P0-07 行动页倒计时面复用）。
 import { P5 } from './p5';
 import { thinkingCircleHTML } from '@/p5r-red/fx/thinkingCircle';
+import { useAppStore, toLocalDateKey } from '@/store';
+import { buildOfflineDaily } from '@/utils/tarotOffline';
+import { TAROT_BY_ID as REAL_TAROT_BY_ID } from '@/constants/tarot';
 const U = P5.ui;
 const RM = () => P5.reduced();
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -609,6 +612,18 @@ let assetFormSequence = 0;
 
   /* ══════════════════ 星象 astrology/* ══════════════════ */
   const DRAW3 = [MAJ[17], MAJ[7], MAJ[18]];
+  const drawCandidates = () => {
+    const pool = [...MAJ];
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    return pool.slice(0, 3).map((c) => ({ c, rev: Math.random() < 0.3 }));
+  };
+  const dailyDoneReal = (picked: { c: { id: string; name: string; en: string }; rev: boolean }, narration: string, advice: string, fortune: string, offline: boolean, attribute: string, multiplier: number) => `<div class="od-dd-done"><figure class="od-dd-card ${picked.rev ? 'rev' : ''}">${tarotFace(picked.c, { w: 150, rev: picked.rev })}</figure><div class="od-dd-info">
+      <div class="od-nr" data-nr></div><small class="od-en">${picked.c.en}</small>${offline ? U.tag('离线', 'line') : ''}
+      <p class="od-dd-eff">⚡ <b>${AN(attribute)}</b> 加成 ×${multiplier} <small>今日该属性记录额外加成</small></p>
+      <blockquote class="od-dd-adv">${advice}</blockquote>
+      <p class="od-kws"></p>
+      <div class="od-dd-sec">${ttl('本牌含义')}<p>${narration.replace(/\n/g, '<br>')}</p></div>
+      <div class="od-dd-sec">${ttl('总体运势')}<b class="od-fortune">${fortune}</b></div><p class="od-note-c">每日一抽，明日再会。</p></div></div>`;
   const nameReveal = (el, name, rev) => {
     el.innerHTML = `<span class="od-nr-n">${[...name].map((ch) => `<span>${ch}</span>`).join('')}</span><em class="od-nr-o">${rev ? '逆位' : '正位'}</em>`;
     if (RM()) return;
@@ -624,31 +639,67 @@ let assetFormSequence = 0;
       <div class="od-dd-sec">${ttl('本牌含义')}<p>${rev ? '希望暂时被云遮住，但它没有离开。' : '黑夜里最亮的那颗星——方向正在变清楚。'}</p><p class="muted-d">反思：此刻你最想靠近的，是哪一盏灯？</p></div>
       <div class="od-dd-sec">${ttl('总体运势')}<b class="od-fortune">${rev ? '小吉' : '大吉'}</b></div><p class="od-note-c">每日一抽，明日再会。</p></div></div>`;
   function openDailyDraw(st0 = 'idle') {
+    let cands = drawCandidates();
+    let pickedIdx: number | null = null;
     stage({ title: '今日星象', en: 'DAILY DRAW', seed: 37, cls: 'od-astro', body: `${demoBar([['idle', '未抽'], ['noapi', '未配置 API'], ['done', '已抽过'], ['error', '解读失败'], ['resume', '上次未完成']], st0)}<div data-host></div>`, onMount(w) {
       const draw = stateful(w, [], st0, (st) => {
-        if (st === 'done') return dailyDone(DRAW3[0], false, false);
+        if (st === 'done') { const d = useAppStore.getState().dailyDivination; if (d) { const real = REAL_TAROT_BY_ID[d.cardId]; const mapped = MAJ.find((m) => m.en === real?.nameEn) ?? MAJ[17]; return dailyDoneReal({ c: mapped, rev: d.orientation === 'reversed' }, d.narration, d.advice, ({great:'大吉',good:'中吉',small:'小吉',bad:'凶'})[d.fortune ?? 'good'], d.source === 'offline', d.effect.attribute, d.effect.multiplier); } return dailyDone(cands[0].c, cands[0].rev, false); }
         if (st === 'error') return `${U.shp('div', { kind: 'torn', seed: 641, cls: 'od-dd-err' }, `<b class="od-cut-big">解读遇到了阻碍</b><p class="sh-p">上次的解读没能完成——这张牌已经为你留着，直接继续就好。</p><p class="muted-d">可重试 AI 或改用离线兜底</p><div class="sh-acts">${U.btn('使用离线兜底', { tone: 'ink', seed: 642, attrs: 'data-act="offline"' })}${U.btn('重试 AI 解读', { tone: 'red', size: 'lg', seed: 643, attrs: 'data-act="retry"' })}</div>`)}`;
         if (st === 'resume') return `${U.shp('div', { kind: 'torn', seed: 644, cls: 'od-dd-err' }, `<b class="od-cut-big">解读者正在落笔</b><p class="sh-p">上次的解读没写完，牌还是那张「星星 · 正位」。</p><div class="sh-acts">${U.btn('重新解读', { tone: 'ink', seed: 645, attrs: 'data-act="retry"' })}${U.btn('接着写', { tone: 'red', size: 'lg', seed: 646, attrs: 'data-act="retry"' })}</div>`)}`;
         return `<div class="od-dd-idle"><b class="od-cut-big">今日的星象正在汇聚</b><p>每日仅一次，慎重选择 · 正位 / 逆位皆有意义</p>${st === 'noapi' ? `<p class="od-warn">未配置 API — 选择任意卡牌将使用离线兜底</p>` : '<p class="muted-d">结合您近期的处境</p>'}<div class="od-dd-deck">${cardBack(130, 5)}</div>${U.btn('接入命运', { tone: 'red', size: 'lg', seed: 647, attrs: 'data-act="begin"' })}</div>`;
       }, (h, st) => {
         const nr = h.querySelector('[data-nr]'); if (nr) nameReveal(nr, '星星', false);
         h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
-          if (a === 'begin') runDraw(h, st === 'noapi');
-          if (a === 'retry') reading(h, false); if (a === 'offline') { h.innerHTML = dailyDone(DRAW3[0], false, true); nameReveal(h.querySelector('[data-nr]'), '星星', false); } });
+          if (a === 'begin') { cands = drawCandidates(); pickedIdx = null; runDraw(h, st === 'noapi'); }
+          if (a === 'retry') reading(h, false, pickedIdx ?? 0); if (a === 'offline') { showOffline(h, pickedIdx ?? 0); } });
       });
+      function showOffline(h, idx) {
+        const p = cands[idx]; if (!p) return;
+        const real = REAL_TAROT_BY_ID[MAJ_FILE[+p.c.id.slice(1)]];
+        if (!real) return;
+        const o = buildOfflineDaily(real, p.rev ? 'reversed' : 'upright');
+        const rev = p.rev;
+        h.innerHTML = dailyDoneReal(p, o.narration, o.advice, ({great:'大吉',good:'中吉',small:'小吉',bad:'凶'})[o.fortune], true, o.attribute, rev ? 1.2 : 1.5);
+        nameReveal(h.querySelector('[data-nr]'), p.c.name, rev);
+        void useAppStore.getState().saveDailyDivination({
+          id: 'dd-' + Date.now(), date: toLocalDateKey(), drawnFrom: cands.map((x) => MAJ_FILE[+x.c.id.slice(1)]),
+          pickedIndex: idx, cardId: MAJ_FILE[+p.c.id.slice(1)], orientation: rev ? 'reversed' : 'upright',
+          effect: { attribute: o.attribute, multiplier: rev ? 1.2 : 1.5 },
+          narration: o.narration, advice: o.advice, fortune: o.fortune, source: 'offline', createdAt: new Date(),
+        });
+      }
       function runDraw(h, offline) {
         h.innerHTML = `<p class="od-dd-ph">正在洗牌…</p>${shuffleHTML()}`; P5.sfx('tarot', .6);
         setTimeout(() => {
-          h.innerHTML = `<p class="od-dd-ph">从三张牌中选择一张</p><div class="od-dd-fan">${DRAW3.map((c, i) => `<button class="od-flip od-dd-pick" data-i="${i}" style="--r:${(i - 1) * 9}deg" aria-label="第 ${i + 1} 张"><span class="od-flip-in"><span class="od-flip-b">${cardBack(120, 70 + i)}</span><span class="od-flip-f">${tarotFace(c, { w: 120 })}</span></span></button>`).join('')}</div><p class="muted-d od-c">每日仅一次，慎重选择</p>`;
+          h.innerHTML = `<p class="od-dd-ph">从三张牌中选择一张</p><div class="od-dd-fan">${cands.map((x, i) => `<button class="od-flip od-dd-pick" data-i="${i}" style="--r:${(i - 1) * 9}deg" aria-label="第 ${i + 1} 张"><span class="od-flip-in"><span class="od-flip-b">${cardBack(120, 70 + i)}</span><span class="od-flip-f">${tarotFace(x.c, { w: 120, rev: x.rev })}</span></span></button>`).join('')}</div><p class="muted-d od-c">每日仅一次，慎重选择</p>`;
           const ps = h.querySelectorAll('.od-dd-pick'); ps.forEach((p, i) => p.animate([{ transform: 'translateY(-40vh) scale(.5)', opacity: 0 }, { transform: `rotate(${(i - 1) * 9}deg)`, opacity: 1 }], { duration: 480, delay: i * 110, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'backwards' }));
-          ps.forEach((p) => p.onclick = () => { if (h.querySelector('.od-flip-in.on')) return; P5.sfx('tarot', .6); h.querySelector('.od-dd-ph').textContent = '揭示命运…'; ps.forEach((o) => o !== p && o.animate([{ opacity: 1 }, { opacity: .15, transform: 'scale(.86)' }], { duration: 300, fill: 'forwards' })); p.querySelector('.od-flip-in').classList.add('on'); setTimeout(() => reading(h, offline), RM() ? 0 : 1100); });
+          ps.forEach((p) => p.onclick = () => { if (h.querySelector('.od-flip-in.on')) return; pickedIdx = +p.dataset.i; P5.sfx('tarot', .6); h.querySelector('.od-dd-ph').textContent = '揭示命运…'; ps.forEach((o) => o !== p && o.animate([{ opacity: 1 }, { opacity: .15, transform: 'scale(.86)' }], { duration: 300, fill: 'forwards' })); p.querySelector('.od-flip-in').classList.add('on'); setTimeout(() => reading(h, offline, pickedIdx ?? 0), RM() ? 0 : 1100); });
         }, RM() ? 0 : 1300);
       }
-      function reading(h, offline) {
-        if (offline) { h.innerHTML = dailyDone(DRAW3[0], false, true); nameReveal(h.querySelector('[data-nr]'), '星星', false); return; }
-        h.innerHTML = `<div class="od-dd-read"><figure>${tarotFace(DRAW3[0], { w: 120 })}</figure>${thinking('解读者正在思索', '离开这页也不会中断')}<p class="od-stream"></p></div>`;
-        const s = '星星正位。今天适合把一件拖了很久的小事做完……', el = h.querySelector('.od-stream'); let i = 0;
-        setTimeout(() => { h.querySelector('.od-think b').firstChild.textContent = '落笔中'; const t = setInterval(() => { el.textContent = s.slice(0, ++i); if (i >= s.length) { clearInterval(t); setTimeout(() => { h.innerHTML = dailyDone(DRAW3[0], false, false); nameReveal(h.querySelector('[data-nr]'), '星星', false); P5.panelIn(h.querySelectorAll('.od-dd-info > *'), { stagger: .05 }); }, 500); } }, 50); }, 900);
+      function reading(h, offline, idx = 0) {
+        const p = cands[idx]; if (!p) return;
+        if (offline) { showOffline(h, idx); return; }
+        h.innerHTML = `<div class="od-dd-read"><figure>${tarotFace(p.c, { w: 120, rev: p.rev })}</figure>${thinking('解读者正在思索', '离开这页也不会中断')}<p class="od-stream"></p></div>`;
+        const real = REAL_TAROT_BY_ID[MAJ_FILE[+p.c.id.slice(1)]];
+        const o = buildOfflineDaily(real ?? REAL_TAROT_BY_ID['star'], p.rev ? 'reversed' : 'upright');
+        const s = o.narration, el = h.querySelector('.od-stream'); let i = 0;
+        setTimeout(() => { h.querySelector('.od-think b').firstChild.textContent = '落笔中';
+          const t = setInterval(() => { el.textContent = s.slice(0, ++i);
+            if (i >= s.length) { clearInterval(t);
+              setTimeout(() => {
+                h.innerHTML = dailyDoneReal(p, o.narration, o.advice, ({great:'大吉',good:'中吉',small:'小吉',bad:'凶'})[o.fortune], false, o.attribute, p.rev ? 1.2 : 1.5);
+                nameReveal(h.querySelector('[data-nr]'), p.c.name, p.rev);
+                P5.panelIn(h.querySelectorAll('.od-dd-info > *'), { stagger: .05 });
+                void useAppStore.getState().saveDailyDivination({
+                  id: 'dd-' + Date.now(), date: toLocalDateKey(), drawnFrom: cands.map((x) => MAJ_FILE[+x.c.id.slice(1)]),
+                  pickedIndex: idx, cardId: MAJ_FILE[+p.c.id.slice(1)], orientation: p.rev ? 'reversed' : 'upright',
+                  effect: { attribute: o.attribute, multiplier: p.rev ? 1.2 : 1.5 },
+                  narration: o.narration, advice: o.advice, fortune: o.fortune, source: 'offline', createdAt: new Date(),
+                });
+              }, 500);
+            }
+          }, 50);
+        }, 900);
       }
     } });
   }
@@ -680,10 +731,29 @@ let assetFormSequence = 0;
           <div class="p4-lr-err" data-err hidden><p class="od-warn" data-errmsg></p><div class="sh-acts od-c"><span data-trunc>${U.btn('接着写', { tone: 'red', size: 'sm', seed: 671, attrs: 'data-act="resume"' })}${U.btn('就用这些', { tone: 'paper', size: 'sm', seed: 670, attrs: 'data-act="done"' })}</span>${U.btn('返回抽卡重试', { tone: 'ink', size: 'sm', seed: 669, attrs: 'data-act="picking"' })}</div></div>
           <p class="muted-d od-c">离开这页也不会中断，回来接着看。</p>`;
         /* done / followerr */
-        return `${U.shp('section', { kind: 'torn', seed: 672, cls: 'od-lr-done' }, `<div class="od-lr-q"><small class="od-k">问</small><b>最近总是睡不好，是不是该换份工作？</b><span>${U.tag(PERIOD[per][0])}${U.tag(md(today), 'ink')}${U.tag('活跃', 'line')}</span></div>${lrSpread(per, per === 'longterm')}${lrText}
+        return `${U.shp('section', { kind: 'torn', seed: 672, cls: 'od-lr-done' }, `<div class="od-lr-q"><small class="od-k">问</small><b data-lr-q>最近总是睡不好，是不是该换份工作？</b><span>${U.tag(PERIOD[per][0])}${U.tag(md(today), 'ink')}${U.tag('活跃', 'line')}</span></div>${lrSpread(per, per === 'longterm')}${lrText}
           <div class="od-lr-follow"><button class="od-addline" data-act="follow">追问（仅一次） ▼</button><div class="od-lr-fbox" hidden><textarea class="inp" rows="2" placeholder="想对先前的解读再深入问什么？"></textarea><div class="sh-acts">${U.btn('收起', { tone: 'ink', size: 'sm', seed: 673, attrs: 'data-act="fold"' })}${U.btn('抽一张牌', { tone: 'red', seed: 674, attrs: 'data-act="fdraw"' })}</div></div></div>
           <div class="sh-acts">${U.btn('窥探命运', { tone: 'paper', size: 'sm', seed: 675, attrs: 'data-act="glimpse"' })}${U.btn('归档', { tone: 'ink', size: 'sm', seed: 676, attrs: 'data-act="arch"' })}${U.btn('删除', { tone: 'red', size: 'sm', seed: 677, attrs: 'data-act="del"' })}</div>`)}`;
       }, (h, st, draw) => {
+        if (st === 'done') {
+          const s = useAppStore.getState();
+          const latest = s.longReadings[0];
+          if (latest) {
+            const q = h.querySelector('[data-lr-q]'); if (q) q.textContent = latest.question;
+            const per0 = latest.period; if (PERIOD[per0]) per = per0;
+            const spread = h.querySelector('.od-lr-spread');
+            if (spread && latest.picked?.length) {
+              const hasBase = latest.picked.length === 4;
+              const body = latest.picked.slice(hasBase ? 1 : 0);
+              spread.innerHTML = `${hasBase ? `<figure class="base"><span>${tarotFace(MAJ[21], { w: 84 })}</span><figcaption>底色</figcaption></figure>` : ''}${body.map(([p, i]) => `<figure><span>${tarotFace(MAJ.find((m) => m.en === REAL_TAROT_BY_ID[p.cardId]?.nameEn) ?? MAJ[17], { w: 92, rev: p.orientation === 'reversed' })}</span><figcaption>${PERIOD[per0][3][i]} · ${REAL_TAROT_BY_ID[p.cardId]?.name ?? '?'}${p.orientation === 'reversed' ? ' 逆' : ''}</figcaption></figure>`).join('')}`;
+            }
+            const txt = h.querySelector('.od-lr-txt');
+            if (txt) {
+              const pos = latest.picked.length === 4 ? ['底色', ...PERIOD[per0][3]] : PERIOD[per0][3];
+              txt.innerHTML = latest.picked.map((p, i) => `<h4>${pos[i]} · ${REAL_TAROT_BY_ID[p.cardId]?.name ?? '?'}</h4><p>${(latest.content || '').replace(/\n/g, '<br>')}</p>`).join('') + `<p class="od-fortune-line">吉凶：<b class="od-fortune">—</b></p>`;
+            }
+          }
+        }
         if (st === 'reading' || st === 'stopped' || st === 'error') {
           const full = LR_STREAM, el = h.querySelector('[data-stream]'), th = h.querySelector('[data-think]'), live = h.querySelector('[data-live]'), er = h.querySelector('[data-err]');
           P5.panelIn(h.querySelectorAll('.od-lr-spread figure'), { stagger: .25, from: 'up' });

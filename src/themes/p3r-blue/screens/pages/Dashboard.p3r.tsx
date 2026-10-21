@@ -1,4 +1,4 @@
-import { usePinnedCallingCard } from '@blue/adapters/callingCards';
+﻿import { usePinnedCallingCard } from '@blue/adapters/callingCards';
 /**
  * Dashboard.p3r —— 首页（真实 src/pages/p3/DashboardP3.tsx，粉 = p3 频道）1:1 结构，P3R 蓝白重画。
  * 自上而下：幽灵字 PERSONA / TERMINAL + 竖排 WILD HEART → MASKARIA 大黑斜体 + 句点 + 底衬三角（沸腾）+ 三角蒙版染字 →
@@ -28,6 +28,10 @@ import {
   type BattleState, type BgAnimStyle, type WeatherState,
 } from '@blue/screens/pkg1/DashboardParts';
 import { BandCutInP3 } from '@blue/screens/overlays/TodoCompleteModal.p3r';
+import { LevelUpP3 } from '@blue/screens/overlays/LevelUpModal.p3r';
+import { AchievementUnlockP3 } from '@blue/screens/overlays/AchievementUnlockModal.p3r';
+import { SkillUnlockP3 } from '@blue/screens/overlays/SkillUnlockModal.p3r';
+import { useAppStore } from '@/store';
 import { SeasonStampChip } from '@blue/screens/overlays/SeasonStampBadge.p3r';
 import { OnThisDaySheetP3 } from '@blue/screens/overlays/OnThisDaySheet.p3r';
 import { DecayModal } from '@blue/screens/overlays/DashboardDecayModal.p3r';
@@ -69,17 +73,41 @@ export default function Dashboard({ params }: PageProps) {
   const completed = tickable.filter((t) => t.count >= t.target).length;
   const total = tickable.length;
   const [cutin, setCutin] = useState<null | { title: string; points: number; hint: boolean }>(null);
+  type Follow = { k: 'lv'; attr: AttributeId; lv: number; stars?: number } | { k: 'achv'; title: string } | { k: 'skill'; name: string };
+  const [queue, setQueue] = useState<Follow[]>([]);
+  const [pendingQ, setPendingQ] = useState<Follow[]>([]);
+  const headF = queue[0] ?? null;
+  const shiftQ = () => setQueue((q) => q.slice(1));
+  useEffect(() => {
+    if (cutin || !pendingQ.length) return;
+    const q = pendingQ;
+    setPendingQ([]);
+    const t = window.setTimeout(() => setQueue(q), 320);
+    return () => clearTimeout(t);
+  }, [cutin, pendingQ]);
   const [rowRipple, setRowRipple] = useState<string | null>(null);
   const [dealOpen, setDealOpen] = useState(false);
   const complete = (t: MockTodo) => {
     if (t.count >= t.target) return;
-    void homeOps.completeTodo(t.id);
+    const before = useAppStore.getState();
+    const achBefore = new Set(before.achievements.filter((x) => x.unlocked).map((x) => x.id));
+    const skillBefore = new Set(before.skills.filter((x) => x.unlocked).map((x) => x.id));
+    const lvBefore = new Map(before.attributes.map((x) => [x.id, x.level]));
+    void homeOps.completeTodo(t.id).then((result) => {
+      const s = useAppStore.getState();
+      const q: Follow[] = [];
+      s.attributes.filter((x) => (lvBefore.get(x.id) ?? x.level) < x.level).forEach((x) => q.push({ k: 'lv', attr: x.id, lv: x.level, stars: x.level >= MAX_LEVEL ? masteryOf(x.points)?.stars ?? 0 : 0 }));
+      s.achievements.filter((x) => x.unlocked && !achBefore.has(x.id)).forEach((x) => q.push({ k: 'achv', title: x.title }));
+      s.skills.filter((x) => x.unlocked && !skillBefore.has(x.id)).forEach((x) => q.push({ k: 'skill', name: x.name }));
+      setPendingQ(q);
+      setCutin((cur) => cur ? { ...cur, hint: (result?.unlockHints.achievements ?? 0) + (result?.unlockHints.skills ?? 0) > 0 || q.length > 0 } : cur);
+    });
     setRowRipple(t.id + Date.now());
     const next = { ...t, count: t.count + 1 };
     setTodos((ts) => ts.map((x) => (x.id === t.id ? next : x)));
     if (next.count >= next.target) {
       const pts = t.points + (t.extraBoosts?.reduce((s, b) => s + b.points, 0) ?? 0);
-      window.setTimeout(() => setCutin({ title: t.title, points: pts, hint: !!t.unlocks }), anim ? 260 : 0);
+      window.setTimeout(() => setCutin({ title: t.title, points: pts, hint: false }), anim ? 260 : 0);
     }
   };
 
@@ -320,6 +348,9 @@ export default function Dashboard({ params }: PageProps) {
       <h2 className="sr-only">汐见的面具庭园</h2>
 
       <BandCutInP3 isOpen={!!cutin} onClose={() => setCutin(null)} title={cutin?.title ?? ''} totalPoints={cutin?.points} unlockHint={cutin?.hint ? { achievements: 1, skills: 0 } : { achievements: 0, skills: 0 }} />
+      <LevelUpP3 isOpen={headF?.k === 'lv'} onClose={shiftQ} attributeName={headF?.k === 'lv' ? ATTR_NAMES[headF.attr] : ATTR_NAMES.knowledge} newLevel={headF?.k === 'lv' ? headF.lv : 1} masteryStars={headF?.k === 'lv' ? headF.stars : undefined} />
+      <AchievementUnlockP3 isOpen={headF?.k === 'achv'} onClose={shiftQ} achievementTitle={headF?.k === 'achv' ? headF.title : ''} />
+      <SkillUnlockP3 isOpen={headF?.k === 'skill'} onClose={shiftQ} skillName={headF?.k === 'skill' ? headF.name : ''} />
       <UrgentToast text={toast} />
       <DecayModal attrs={decayed} onClose={() => setDecayed([])} />
       <OnThisDaySheetP3 isOpen={otdOpen} onClose={() => setOtdOpen(false)} />

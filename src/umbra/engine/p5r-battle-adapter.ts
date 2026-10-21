@@ -11,6 +11,8 @@
  * - support/ailment effects are normalized to the demo's small effect whitelist
  */
 import { P5R_SKILLS, P5R_PERSONA_BY_ID, getPersona, getSkill } from './p5r-compendium.js';
+import { rosterAllowsPersona } from '../skins/registry';
+import type { UmbraSkinId } from '../skins/contract';
 
 const personaOverrides = new Map<string, any>();
 const syntheticPersonas = new Map<string, any>();
@@ -341,4 +343,9 @@ export function catalogPersonaChoices(): any[] {
       element: persona.elementLabel ?? persona.element,
     }))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name, 'zh-CN'));
+}
+
+export function catalogPersonaChoicesForSkin(skinId: UmbraSkinId): any[] {
+  return catalogPersonaChoices()
+    .filter(persona => rosterAllowsPersona(skinId, persona.id));
 }

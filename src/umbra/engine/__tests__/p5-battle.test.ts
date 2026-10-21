@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   buildBattlePersona,
   catalogPersonaChoices,
+  catalogPersonaChoicesForSkin,
   createDefaultBattle,
   registerSyntheticPersona,
 } from '@/umbra/engine/p5-combat-rules';
@@ -11,6 +12,8 @@ import {
 } from '@/umbra/engine/compendiumPreload';
 import { ensureCompendium } from '@/umbra/engine/p5r-compendium';
 import { generateEncounter } from '@/umbra/rules/encounter';
+import { registerSkin, unloadSkin } from '@/umbra/skins/registry';
+import type { UmbraSkinPack } from '@/umbra/skins/contract';
 
 const steady = () => 0.5;
 const createBattle = createDefaultBattle as any;
@@ -27,6 +30,22 @@ const spec = (id: string): any => ({
   personality: 'proud',
   recruitPersonaId: 'agathion',
   reward: { sp: 1, item: '阴影碎片' },
+});
+
+const skinPack = (): UmbraSkinPack => ({
+  id: 'p5r-red',
+  manifest: { assets: [] },
+  tokens: {},
+  recipes: [],
+  labels: {},
+  enemyLayouts: { 1: [], 2: [], 3: [], 4: [], 5: [] },
+  roster: {
+    heroPersona: 'arsene',
+    companions: ['ryuji'],
+    companionPersonas: { ryuji: 'pixie' },
+    excludedPersonas: ['izanagi'],
+  },
+  compendiumArt: { arsene: 'red-arsene.png' },
 });
 
 const driveBattle = (battle: any): string => {
@@ -94,6 +113,24 @@ describe('UMBRA formal P5 battle engine', () => {
     expect(snapshot.actor).toBe('你');
     expect(snapshot.persona).toBe('亚森');
     expect(snapshot.phase).toBe('party');
+  });
+
+  it('从 skin.roster 推导初始队伍，不写死默认角色 id', () => {
+    registerSkin('p5r-red', skinPack());
+    const battle: any = createBattle({ rng: steady, roster: skinPack().roster });
+    const snapshot = battle.snapshot();
+    expect(snapshot.party).toHaveLength(2);
+    expect(snapshot.persona).toBe('亚森');
+    expect(snapshot.actor).toBe('你');
+    unloadSkin('p5r-red');
+  });
+
+  it('图鉴选择按皮肤 roster 过滤 excludedPersonas', () => {
+    registerSkin('p5r-red', skinPack());
+    const ids = catalogPersonaChoicesForSkin('p5r-red').map((item: any) => item.id);
+    expect(ids).toContain('arsene');
+    expect(ids).not.toContain('izanagi');
+    unloadSkin('p5r-red');
   });
 
   it.each([1, 3, 5])('%i 只敌人能跑完整战斗流程', (count) => {

@@ -15,6 +15,7 @@ const pack = (): UmbraSkinPack => ({
   labels: {},
   enemyLayouts: { 1: [], 2: [], 3: [], 4: [], 5: [] },
   roster: {
+    heroPersona: 'orpheus',
     companions: ['yukari'],
     companionPersonas: { yukari: 'io' },
     excludedPersonas: ['izanagi'],

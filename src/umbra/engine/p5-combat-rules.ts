@@ -11,12 +11,15 @@ import {
   buildBattlePersona,
   buildPersonaLoadout,
   catalogPersonaChoices,
+  catalogPersonaChoicesForSkin,
   recruitDataForPersona,
   registerSyntheticPersona,
   setPersonaOverride,
 } from './p5r-battle-adapter.js';
 import { generateEncounter } from '../rules/encounter';
 import { BASIC_ATTACK_POWER } from '../rules/combatNumbers';
+import { partyFromRoster } from '../rules/rosterParty';
+import type { SkinRoster } from '../skins/contract';
 
 export const ELEMENTS = P5_ELEMENTS;
 export const STATUS = P5_STATUS;
@@ -150,15 +153,20 @@ export function createDefaultBattle({
   heroPersonaIds = DEFAULT_HERO_PERSONAS,
   activePersonaId,
   allyPersonaIds = DEFAULT_ALLY_PERSONAS,
+  roster,
   enemies: enemySpecs,
 }: {
   rng?: () => number;
   heroPersonaIds?: string[];
   activePersonaId?: string;
   allyPersonaIds?: string[];
+  roster?: SkinRoster;
   enemies?: AnyRecord[];
 } = {}): P5Battle {
-  const masks = buildPersonaLoadout(heroPersonaIds);
+  const party = roster
+    ? partyFromRoster(roster)
+    : { heroPersonaIds, allyPersonaIds };
+  const masks = buildPersonaLoadout(party.heroPersonaIds);
   const maskIds = Object.keys(masks);
   if (!maskIds.length) throw new Error('至少需要一张有效的 Persona。');
   const activeMask: string = masks[activePersonaId as string]
@@ -184,7 +192,7 @@ export function createDefaultBattle({
     masks,
   };
 
-  const allies = allyPersonaIds
+  const allies = party.allyPersonaIds
     .map(id => buildBattlePersona(id))
     .filter(Boolean)
     .map(makePartyMember);
@@ -867,4 +875,10 @@ export class P5Battle {
   }
 }
 
-export { buildBattlePersona, catalogPersonaChoices, registerSyntheticPersona, setPersonaOverride };
+export {
+  buildBattlePersona,
+  catalogPersonaChoices,
+  catalogPersonaChoicesForSkin,
+  registerSyntheticPersona,
+  setPersonaOverride,
+};

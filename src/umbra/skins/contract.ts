@@ -47,6 +47,7 @@ export interface EnemyLayout {
 export type EnemyLayoutMap = Record<1 | 2 | 3 | 4 | 5, EnemyLayout[]>;
 
 export interface SkinRoster {
+  heroPersona: string;
   companions: string[];
   companionPersonas: Record<string, string>;
   excludedPersonas: string[];

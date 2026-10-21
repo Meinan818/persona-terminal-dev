@@ -64,7 +64,9 @@
 
 ## D-005 · 主题归属
 
-- `UmbraSkinPack` 增加 `roster` 与 `compendiumArt`；注册表提供 `rosterAllowsPersona` / `companionPersonaFor`，禁止写死角色 id。
+- `SkinRoster` 增加 `heroPersona`（主角初始面具）；`rules/rosterParty.partyFromRoster` 从 roster 推导主角与同伴面具，规则层不写死角色 id。
+- `createDefaultBattle` 接受可选 `roster`，拿到皮肤包时从 `partyFromRoster` 建队；`catalogPersonaChoicesForSkin(skinId)` 按 `excludedPersonas` 过滤图鉴选择。
+- 注册表提供 `rosterAllowsPersona` / `companionPersonaFor`。
 
 ## D-007 · 据点商店
 
@@ -108,7 +110,6 @@
 
 ## 待接 · D-005 皮肤 roster 接线
 
-- 机制已就绪：`UmbraSkinPack.roster`（`companions` / `companionPersonas` / `excludedPersonas`）、`registry.rosterAllowsPersona` / `companionPersonaFor`、`themeLoader.skinIdForTheme`。
-- 尚未接入编队/战斗/合成：`p5-combat-rules.createDefaultBattle` 仍回退到写死的 `DEFAULT_HERO_PERSONAS=['arsene', ...]` / `DEFAULT_ALLY_PERSONAS=['silky', ...]`；`catalogPersonaChoices` 与合成仍返回共享 P5R 全量，不按皮肤过滤 `excludedPersonas` 和同伴专属面具。
-- 阻塞原因：`src/umbra/skins/` 下还没有四份 `skins/<id>/index.ts` 皮肤包；`SkinRoster` 也缺「主角初始/觉醒面具」字段（红=Arsène、蓝粉=Orpheus、黄=Izanagi，属于皮肤内容），无法从 roster 推导主角队伍。需要主题方提供四皮 roster 内容，或主策划拍板主角初始面具的归属字段。
-- 处理：不擅自写死各皮同伴名单或主角初始面具，避免与主题方内容冲突；等皮肤包内容或 D-005 契约补充后再接。
+- 机制已就绪：`SkinRoster`（`heroPersona` / `companions` / `companionPersonas` / `excludedPersonas`）、`partyFromRoster`、`catalogPersonaChoicesForSkin`、`createDefaultBattle` 的 roster 建队。
+- 剩余内容依赖主题方：`src/umbra/skins/` 下还没有四份 `skins/<id>/index.ts` 皮肤包（各皮主角初始面具、同伴名单、同伴专属面具、`excludedPersonas`、`compendiumArt`）。
+- 处理：机制已可接入；等四皮皮肤包提供实际 roster 内容后，切皮建队与图鉴过滤即生效，不再写死角色 id。App 侧不擅自写死各皮同伴名单。

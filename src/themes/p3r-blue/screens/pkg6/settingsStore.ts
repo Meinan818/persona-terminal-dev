@@ -76,7 +76,12 @@ function pushToRealStore(p: Partial<MockSettings>) {
     set('summaryModel', p.summaryModel); set('navigatorModel', p.navigatorModel);
     set('visionModel', p.visionModel); set('audioModel', p.audioModel); set('assistantModel', p.assistantModel);
     set('tarotDailyDeliberate', p.tarotDeliberate); set('summaryDeliberate', p.summaryDeliberate);
-    set('summaryAutoWrite', p.autoSummary); set('countercurrentEnabled', p.countercurrentEnabled);
+    set('summaryAutoWrite', p.autoSummary);
+    if (p.summaryPresets !== undefined) set('summaryPromptPresets', p.summaryPresets);
+    set('summaryActivePresetId', p.summaryPresetId);
+    set('navigatorImmersive', p.realisticTyping);
+    set('navigatorPresetId', p.activePersona);
+    set('countercurrentEnabled', p.countercurrentEnabled);
     set('ledgerEnabled', p.ledgerEnabled); set('currency', p.currency);
     set('spendEvalEnabled', p.spendEvalEnabled); set('ledgerPayCycleEnabled', p.ledgerPayCycleEnabled);
     set('ledgerResetDay', p.ledgerResetDay);
@@ -129,6 +134,10 @@ export function hydrateFromRealStore() {
         tarotDeliberate: s.tarotDailyDeliberate ?? state.tarotDeliberate,
         summaryDeliberate: s.summaryDeliberate ?? state.summaryDeliberate,
         autoSummary: s.summaryAutoWrite ?? state.autoSummary,
+        summaryPresets: s.summaryPromptPresets ?? state.summaryPresets,
+        summaryPresetId: s.summaryActivePresetId ?? state.summaryPresetId,
+        realisticTyping: s.navigatorImmersive ?? state.realisticTyping,
+        activePersona: s.navigatorPresetId ?? state.activePersona,
         countercurrentEnabled: s.countercurrentEnabled ?? state.countercurrentEnabled,
         ledgerEnabled: s.ledgerEnabled ?? state.ledgerEnabled,
         currency: s.currency ?? state.currency,

@@ -2,6 +2,17 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 红色 retest5 三处 CSS 修复（UMBRA 延期）
+
+- **用户决定**：先收尾当前四主题工作，幽影协议 UMBRA 暂不接（不两头抓）。
+- **来源**：`D:\下载\互传\新P5\p5r-red-demo.zip` 的 `integration/src/p5r-red/`。只替换用户指定的 3 个文件，未重接整套红色包。
+- **改动**：`pkg5.p5r.css` 横屏 FAB 媒体查询加 `min-width:700px`；`home.css` 装饰面具加 `pointer-events:none`；`NavigatorWindow.p5r.css` 矮视口人格菜单限高可滚。三文件 SHA256 与包内新版本逐字节一致（9293be…/8b6c32…/c8a31d…）。
+- **核对**：`p5r-red-demo.zip` 的 511 个 `integration/src/p5r-red` 文件与仓库对比，除本分支已完成的真实数据接入文件外无其它意外差异；3 个 CSS 已同步。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`red-css-retest5-20261021.log`）。
+- **提交**：`772d3ca`（3 文件，5+/2-）。未 Push。
+- **UMBRA 包评估（未安装）**：`D:\下载\互传\新P5\umbra-red-pkg`；`MANIFEST.sha256` 915 项 0 不一致/0 缺失；仓库 `public/umbra-demo` 与包目标基线 7c88082 逐字节一致（100 文件）；映射已就绪（red→p5、pink→hamuko、yellow→p4）。安装需用 `tools/install-into-repo.sh`，只写 3 个产物 + `public/umbra-demo/red/**`；`red/assets/official` 为 ATLUS/SEGA 版权素材，仅私有仓库。已知 base 下塔回顾 TypeError、性能 298ms>250ms 等遗留。恢复时先完整重读 `UMBRA-HANDOFF.md`，再逐步执行 1–15。
+- **记忆**：已写 `C:\Users\Lqx24\.codex\memories\extensions\ad_hoc\notes\2026-10-21T2246-umbra-deferred-theme-first.md`，记录延期决定与恢复门禁。
+
 ## 已提交 · 2026-10-21 · 蓝粉 Dashboard 真实升级与解锁演出
 
 - **范围**：蓝/粉 `Dashboard.p3r.tsx` 新增与黄色同构的真实演出队列：完成待办前后 diff `achievements` / `skills` / `attributes`，真实升级走 `LevelUpP3`（真实属性名/等级/精通星）、成就走 `AchievementUnlockP3`（真实标题）、技能走 `SkillUnlockP3`（真实名称）。完成贴纸关闭与异步结果竞态用 `pendingQ` 立即排队修复。

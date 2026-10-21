@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 红色 Astrology 真实数据接入
+
+- **范围**：红色 Astrology 页面 `Astrology.p5r.tsx` 的 `Archive` 组件从真实 `longReadings` 取（`loadLongReadings` + `sweepExpiredReadings`）；`d4.ts` 的 `openDailyDraw` 重写候选生成（`drawCandidates()` 从真实 22 张大阿卡纳抽）、完成/离线走 `buildOfflineDaily` + `saveDailyDivination`、`openLongReading` done 态从 `latest` 取真实 `question`/`picked`/`content`。`DRAW3` 恢复保留（export 依赖）。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`red-astro-20261021.log`）；隔离浏览器红色探针 5/5：红色档案页加载、真实占卜进入档案、不残留演示问题、0 页面异常、0 模型请求。截图在 `.theme-compare/red-astro-20261021/first/`。
+- **提交**：`d5def89`（2 文件，99+/17-）。未 Push。
+- **下一步**：继续接三主题 Hideout / Account / Settings / Achievements；或红色 FateGlimpse（窥探命运）数据源。
+
 ## 已提交 · 2026-10-21 · 三主题 Astrology 真实数据接入
 
 - **用户授权**：用户要求把四个主题完整真实接入，不是模仿。本轮先收尾四主题 Cooperation，再从下一页 Astrology 开始逐页接入。

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 统计页（真实 src/pages/Statistics.tsx）—— P4G「Status」版式：
  *   成长轨迹（累计点数曲线，电视屏）→ 六格大数字 → 属性趋势（近7天/近30天/全部 + 图例开关）→ 属性分布（Status 行）
  * 路由：#/p/statistics；?state=empty 数据不足
@@ -12,7 +12,7 @@ import { CollageStagger, CollageItem } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
-import { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, type StatActivity } from '@yellow/adapters/pkg4-stats';
+import { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, type StatActivity, useStatActivities } from '@yellow/adapters/pkg4-stats';
 import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@yellow/adapters/pkg4-tarot';
 import { PkgHeader, DevStrip, Kicker, StateFade } from '@yellow/screens/pkg4/ui';
 
@@ -34,7 +34,8 @@ function streaks(days: string[]) {
 export default function Statistics({ params }: PageProps) {
   const [mode, setMode] = useState(params.get('state') === 'empty' ? 'empty' : 'data');
   const [range, setRange] = useState<Range>('30');
-  const acts: StatActivity[] = mode === 'empty' ? [] : ACTIVITIES;
+  const realActs = useStatActivities();
+  const acts: StatActivity[] = mode === 'empty' ? [] : (realActs.length ? realActs : ACTIVITIES);
 
   const totals = useMemo(() => ATTR_IDS.map((id) => ({ id, total: acts.reduce((s, a) => s + (a.pts[id] ?? 0), 0) })), [acts]);
   const totalPoints = totals.reduce((s, t) => s + t.total, 0);

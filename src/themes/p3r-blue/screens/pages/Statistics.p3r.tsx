@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 统计页（真实 src/pages/Statistics.tsx 的 p3 分支「p3-statistics-reference-v2」，蓝白重画）
  *   P3PageHeader ticks「统计」+ 命运轨迹斜纹 · GhostWords TRACE →
  *   成长轨迹（白大斜卡 + 出血蓝斜体大数字 + 累计曲线描线）→ 六格窄卡（左缘蓝竖斜片 + 大斜体数字）→
@@ -13,7 +13,7 @@ import { P3R, P3PageHeader, GhostWords, SectionMark, P3Empty, slantClip } from '
 import { PageEnter } from '@blue/fx';
 import { useLowMotion } from '@blue/lib/prefs';
 import { navigate } from '@blue/shell/shellBus';
-import { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, type StatActivity } from '@blue/adapters/pkg4-stats';
+import { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, type StatActivity, useStatActivities } from '@blue/adapters/pkg4-stats';
 import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@blue/adapters/pkg4-tarot';
 import { DevStrip, StateFade } from '@blue/screens/pkg4/ui';
 
@@ -37,7 +37,8 @@ export default function Statistics({ params }: PageProps) {
   const low = useLowMotion();
   const [mode, setMode] = useState(params.get('state') === 'empty' ? 'empty' : 'data');
   const [range, setRange] = useState<Range>('30');
-  const acts: StatActivity[] = mode === 'empty' ? [] : ACTIVITIES;
+  const realActs = useStatActivities();
+  const acts: StatActivity[] = mode === 'empty' ? [] : (realActs.length ? realActs : ACTIVITIES);
   const totals = useMemo(() => ATTR_IDS.map((id) => ({ id, total: acts.reduce((s, a) => s + (a.pts[id] ?? 0), 0) })), [acts]);
   const totalPoints = totals.reduce((s, t) => s + t.total, 0);
   const uniqueDays = new Set(acts.map((a) => a.date)).size;

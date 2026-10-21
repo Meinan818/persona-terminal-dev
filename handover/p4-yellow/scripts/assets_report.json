@@ -1,0 +1,137 @@
+{
+ "report": {
+  "bg-battle.webp": {
+   "w": 2240,
+   "h": 950,
+   "kb": 117.7,
+   "q": 78
+  },
+  "bg-map.webp": {
+   "w": 2240,
+   "h": 950,
+   "kb": 96.4,
+   "q": 78
+  },
+  "bg-hub.webp": {
+   "w": 2240,
+   "h": 897,
+   "kb": 194.4,
+   "q": 46
+  },
+  "atlas-portraits.webp": {
+   "w": 2048,
+   "h": 1024,
+   "kb": 148.8,
+   "q": 80
+  },
+  "cutin-hero.webp": {
+   "w": 1280,
+   "h": 320,
+   "kb": 69.0,
+   "q": 80
+  },
+  "allout-finish.webp": {
+   "w": 1280,
+   "h": 720,
+   "kb": 194.7,
+   "q": 72
+  },
+  "highlight-hero.webp": {
+   "w": 1280,
+   "h": 720,
+   "kb": 181.2,
+   "q": 80
+  },
+  "enemy-calm-pesce.webp": {
+   "w": 560,
+   "h": 351,
+   "kb": 36.9,
+   "q": 80
+  },
+  "atlas-hud.webp": {
+   "w": 1024,
+   "h": 1024,
+   "kb": 92.2,
+   "q": 82
+  }
+ },
+ "portraits": {
+  "hero": {
+   "size": [
+    369,
+    640
+   ],
+   "kb_est": 30.0
+  },
+  "yosuke": {
+   "size": [
+    487,
+    640
+   ],
+   "kb_est": 31.8
+  },
+  "chie": {
+   "size": [
+    349,
+    640
+   ],
+   "kb_est": 39.3
+  },
+  "yukiko": {
+   "size": [
+    411,
+    640
+   ],
+   "kb_est": 50.6
+  }
+ },
+ "portFrames": [
+  "unit.hero.body",
+  "unit.hero.head",
+  "unit.yosuke.body",
+  "unit.yosuke.head",
+  "unit.chie.body",
+  "unit.chie.head",
+  "unit.yukiko.body",
+  "unit.yukiko.head"
+ ],
+ "hudFrames": [
+  "fx.tvstatic.0",
+  "fx.tvstatic.1",
+  "fx.block",
+  "fx.block.ink",
+  "fx.star",
+  "fx.star.white",
+  "fx.dust",
+  "fx.streak",
+  "fx.spark",
+  "fx.square",
+  "fx.daisy.white",
+  "fx.daisy.yellow",
+  "hud.cmd.main",
+  "hud.cmd.main.on",
+  "hud.cmd.sub",
+  "hud.cmd.sub.on",
+  "hud.datePlate",
+  "hud.weather.clear",
+  "hud.weather.cloudy",
+  "hud.weather.rain",
+  "hud.weather.storm",
+  "hud.weather.snow",
+  "hud.weather.fog",
+  "hud.weather.unknown",
+  "hud.enemy.weak",
+  "hud.enemy.shield",
+  "fx.bolt",
+  "fx.slashArc",
+  "fx.tvMask"
+ ],
+ "portAtlas": [
+  2048,
+  1024
+ ],
+ "hudAtlas": [
+  1024,
+  1024
+ ]
+}

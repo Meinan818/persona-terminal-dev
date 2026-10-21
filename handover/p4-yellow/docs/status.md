@@ -1,0 +1,14 @@
+# skin-p4-yellow 断点
+- 10-22 02:00 开工。未开始任何步骤。worktree $P/work/wt/p4-yellow
+- 素材: 已生成 gen/gen-bg-{battle,map,hub}-wide.png 于 work/p4y/gen
+- 02:04 主策划：GitHub 已连，每步 commit 后 `GIT_TERMINAL_PROMPT=0 git push origin feat/umbra-skin-p4-yellow`（credentials github），不 force。
+- 方案：首包5图 bg.battle(2240宽,gen) / atlas.portraits(官方 hero-portrait,party-1..3 拆 body+head) / cutin.hero(官方hero-cutin) / allout.finish.default(官方渲染合成黄底漫画多格) / atlas.hud(程序绘制)。延迟：bg.map, bg.hub(gen), highlight.hero(合成), enemy.calm-pesce(official)。字体 display=NotoSerifSC-Black 子集(/workspace/pkcache-umbra/fontsrc), number=Bebas 子集(/opt/deckbuild/fonts)。构建脚本 work/p4y/build_assets.py
+- labels.json 已写（步②提前，字体子集依赖）
+- 02:25 ① 完成 commit fffa16c（本地）。push 失败：credentials github 未注入 git（"could not read Username"；API 也 401/403），已试 helper 假凭据→Invalid token。不再重试，回报主策划。
+- 提交身份：git -c user.name=umbra-p4-yellow-ai -c user.email=p4-yellow-ai@umbra.local（不改 config）
+- 下一步 ②：tokens/slots/templates/ui.css（labels 已写）
+- 02:40 ② 完成 commit 8a1e418（本地）；下一步 ③ recipes/index.ts/skin-lint
+- 02:55 ③ 进行：skin-lint.mjs 已写 work/umbra/tools/；recipes 生成脚本 work/p4y/build_recipes.py
+- 03:10 ③ 完成 commit aa6a16d（本地）。三步全部完成：fffa16c / 8a1e418 / aa6a16d。push 再试仍失败（无凭据）。
+- 生成脚本：work/p4y/build_assets.py、build_manifest.py、build_recipes.py；lint：node work/umbra/tools/skin-lint.mjs <skinDir>
+- 待办：等 Q1–Q9 答复；引擎/skin:check 交付后做 §7.3 第 6 步（截图 56 张、实测时长）与第 7 步 DONE.md

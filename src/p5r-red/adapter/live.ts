@@ -306,6 +306,7 @@ export function syncLiveDataNow(s: S = useAppStore.getState()) {
   fill(SKILLS, s.skills.map(skillPkg5));
   // 羁绊（离线 + 在线同伴，未归档）
   fill(D.confidants, s.confidants.filter((c) => !c.archivedAt).map(confidantMock));
+  void import('@/p5r-red/screens/pkg3/oc').then(({ OC }) => OC.refreshConfidants?.()).catch(() => {});
   // 兼容原 FLOW 读点；真实记账页的完整周期数据由 ledgerLiveBridge 提供。
   const month = today.slice(0, 7);
   fill(FLOW as ReturnType<typeof ledgerRow>[], s.ledgerEntries.filter((e) => e.date.startsWith(month)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(ledgerRow));

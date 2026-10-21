@@ -1,6 +1,10 @@
 // @ts-nocheck —— 逐字迁移自 v3 原生 overlays/c.js（命令式 DOM，类名 .oc-*，样式 = legacy/css/c.css）。见 ./p5.ts 垫片说明。
 import { P5 } from './p5';
 import { RANKS } from '@/p5r-red/mock/data';
+import { useAppStore } from '@/store';
+import { matchConfidant } from '@/utils/confidantAI';
+import { evaluateInteraction } from '@/utils/confidantAI';
+import { aiConfigured } from '@/utils/aiClient';
 /* ═══════════════════════════════════════════════════════════════════
    overlays/c.js — C 组「羁绊」全部弹层 / 演出（红主题 P5R 版）
    对应仓库 src/components/cooperation/*（红主题：*P5.tsx / confidantP5Fx.tsx / confidantP5Scenery.tsx /
@@ -32,18 +36,23 @@ export const OC: any = {};
     HERMIT: { attr: 'dexterity', pts: 100, base: 96, next: 110, charges: 0, interp: '正位 · 从房间里走出来的那一步，你也在场。', advice: '耐心比热情更重要。' },
     EMPRESS: { attr: 'kindness', pts: 22, base: 21, next: 33, charges: 1, interp: '正位 · 丰饶与照料。Ta 的温柔需要被回应。', advice: '去屋顶菜园帮 Ta 浇一次水。' },
   };
-  const CF = P5.D.confidants.map((c, i) => {
-    const t = T[c.arcana] || TAROT[i], x = EXTRA[c.arcana] || EXTRA.CHARIOT;
-    return {
-      id: 'cf' + i, name: c.name, arcanaId: t.id, card: t, intimacy: c.rank, description: c.desc, orientation: i === 3 ? 'reversed' : 'upright',
-      aiInterpretation: x.interp, aiAdvice: x.advice, skillAttribute: x.attr, intimacyPoints: x.pts, base: x.base, next: x.next, starShiftCharges: x.charges,
-      source: x.online ? 'online' : 'offline', linkedProfile: x.online || null, decayEnabled: i % 2 === 0, archivedAt: null,
-      buffs: BUFFS.filter((b) => b[0] <= c.rank).map(([lv, t1, d]) => ({ id: 'b' + lv, unlockAtLevel: lv, title: t1, description: d.replace('%A', P5.ATTR[x.attr].name) })),
-      memorials: x.online ? [{ shadowName: '嫉妒之影 · 双面镜', weak: 'kindness', date: '2026-10-11', contribution: 58 }, { shadowName: '怠惰之影 · 沉睡钟', weak: 'guts', date: '2026-09-27', contribution: 44 }] : [],
-    };
-  });
+  const buildCF = () => {
+    const liveConfidants = useAppStore.getState().confidants.filter((c) => !c.archivedAt);
+    return P5.D.confidants.map((c, i) => {
+      const t = T[c.arcana] || TAROT[i], x = EXTRA[c.arcana] || EXTRA.CHARIOT;
+      const live = liveConfidants[i];
+      return {
+        id: live?.id || 'cf' + i, realId: live?.id, name: c.name, arcanaId: live?.arcanaId || t.id, card: t, intimacy: c.rank, description: c.desc, orientation: live?.orientation || (i === 3 ? 'reversed' : 'upright'),
+        aiInterpretation: live?.aiInterpretation || x.interp, aiAdvice: live?.aiAdvice || x.advice, skillAttribute: live?.skillAttribute || x.attr, intimacyPoints: live?.intimacyPoints ?? x.pts, base: x.base, next: x.next, starShiftCharges: live?.starShiftCharges ?? x.charges,
+        source: live?.source || (x.online ? 'online' : 'offline'), linkedProfile: live?.linkedProfile || x.online || null, decayEnabled: live?.decayEnabled ?? (i % 2 === 0), archivedAt: live?.archivedAt || null,
+        buffs: BUFFS.filter((b) => b[0] <= c.rank).map(([lv, t1, d]) => ({ id: 'b' + lv, unlockAtLevel: lv, title: t1, description: d.replace('%A', P5.ATTR[x.attr].name) })),
+        memorials: live?.coopMemorials?.map((m) => ({ shadowName: m.shadowName, weak: m.weaknessAttribute, date: String(m.defeatedAt).slice(0, 10), contribution: 0 })) || (x.online ? [{ shadowName: '嫉妒之影 · 双面镜', weak: 'kindness', date: '2026-10-11', contribution: 58 }, { shadowName: '怠惰之影 · 沉睡钟', weak: 'guts', date: '2026-09-27', contribution: 44 }] : []),
+      };
+    });
+  };
+  const CF = buildCF();
   OC.CF = CF;
-  const EVENTS = [
+  const DEMO_EVENTS = [
     { date: '10-20', type: 'conversation', delta: 2, userInput: '下午一起去了涩谷的拉面店，Ta 说想重新回田径部看看。', narrative: '战车正位：被搁置的目标重新亮起，你是那个陪 Ta 回头看的人。', advice: '下次陪 Ta 去操场跑一圈。' },
     { date: '10-17', type: 'level_up', delta: 0, narrative: '羁绊等级提升至 Lv.6 · 知己' },
     { date: '10-15', type: 'conversation', delta: 1, userInput: '帮 Ta 补了数学作业。', narrative: '默默的照顾也算一种前进。', advice: '' },
@@ -442,6 +451,17 @@ export const OC: any = {};
   function detail(cf = CF[0], { readonly = false, shadow } = {}) {
     let tab = 'info', expanded = -1;
     const online = cf.source === 'online', isMax = cf.intimacy >= 10;
+    const events = cf.realId ? useAppStore.getState().confidantEvents
+      .filter((e) => e.confidantId === cf.realId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map((e) => ({
+        date: String(e.date).slice(5),
+        type: e.type,
+        delta: e.delta,
+        userInput: e.userInput,
+        narrative: e.narrative,
+        advice: e.advice,
+      })) : DEMO_EVENTS;
     const pct = isMax ? 100 : Math.round(((cf.intimacyPoints - cf.base) / (cf.next - cf.base)) * 100);
     shadow = shadow !== undefined ? shadow : online ? { identified: true, hp: 62 } : null;
     const headHTML = () => `
@@ -466,7 +486,7 @@ export const OC: any = {};
         (online && cf.memorials.length ? `<button type="button" class="dt-mem" data-a="memorial"><span class="ic">◈</span><span><b>共战纪念</b><small>${cf.memorials.length} 次共同封印羁绊之影</small></span><em>›</em></button>` : '');
       if (tab === 'abilities') return (cf.buffs.length ? cf.buffs.map((b) => `<div class="dt-buff"><span class="tag">Lv.${b.unlockAtLevel}</span><b>${b.title}</b><p>${b.description}</p></div>`).join('') : `<p class="oc-empty">亲密度到 Lv.2 将解锁日常加成。</p>`) +
         (isMax ? '' : `<div class="dt-next"><span>即将解锁</span><p>${nextHint(cf.intimacy)}</p></div>`);
-      return EVENTS.length ? `<ol class="dt-tl">${EVENTS.map((e, i) => { const conv = e.type === 'conversation', has = conv && (e.narrative || e.advice); return `<li><div class="m"><span>${e.date}</span><em>${EV_LBL[e.type]}</em>${e.delta ? `<i class="${e.delta > 0 ? 'up' : 'dn'}">${e.delta > 0 ? '+' + e.delta : e.delta}</i>` : ''}${has ? `<button type="button" data-a="exp" data-v="${i}">${expanded === i ? '收起 ▲' : '查看解读 ▼'}</button>` : ''}</div><p>${esc(conv ? e.userInput : e.narrative)}</p>${has && expanded === i ? `<div class="dt-rd"><span>解读</span><p>${e.narrative}</p>${e.advice ? `<span>未来</span><p>${e.advice}</p>` : ''}</div>` : ''}</li>`; }).join('')}</ol>` : `<p class="oc-empty">还没有记录</p>`;
+      return events.length ? `<ol class="dt-tl">${events.map((e, i) => { const conv = e.type === 'conversation', has = conv && (e.narrative || e.advice); return `<li><div class="m"><span>${e.date}</span><em>${EV_LBL[e.type] || '互动'}</em>${e.delta ? `<i class="${e.delta > 0 ? 'up' : 'dn'}">${e.delta > 0 ? '+' + e.delta : e.delta}</i>` : ''}${has ? `<button type="button" data-a="exp" data-v="${i}">${expanded === i ? '收起 ▲' : '查看解读 ▼'}</button>` : ''}</div><p>${esc(conv ? e.userInput : e.narrative)}</p>${has && expanded === i ? `<div class="dt-rd"><span>解读</span><p>${e.narrative}</p>${e.advice ? `<span>未来</span><p>${e.advice}</p>` : ''}</div>` : ''}</li>`; }).join('')}</ol>` : `<p class="oc-empty">还没有记录</p>`;
     };
     const decayText = () => online ? (cf.decayEnabled ? '逆流 · 双方同意，3 天无互动 −1/天' : '逆流未开启') : cf.decayEnabled ? '逆流 · 3 天无互动 −1/天' : '逆流未开启';
     const actsHTML = () => cf.archivedAt ? `<div class="dt-acts">${U.btn('恢复关系', { tone: 'paper', seed: 121, attrs: 'data-a="archive"' })}${U.btn('彻底删除', { tone: 'red', seed: 122, attrs: 'data-a="del"' })}<p class="oc-note">归档后能力暂停生效，但历史记录仍会保留</p></div>` : `<div class="dt-acts">
@@ -492,10 +512,10 @@ export const OC: any = {};
         interact: () => interaction(cf),
         pact: () => pactPanelModal(cf.linkedProfile.nickname, 'active'),
         shift: (t, e) => { const og = originOf(e, t); sweep('STAR SHIFT', () => starShift(cf), og, 1); },
-        archive: (t, e, api) => { cf.archivedAt = cf.archivedAt ? null : '2026-10-20'; P5.toast(cf.archivedAt ? '已暂时归档' : '已恢复关系'); api.set(headHTML(), null, false); pane(false); },
-        del: () => confirmDlg({ eyebrow: 'DANGER', title: `确认彻底删除 ${cf.name}？`, text: '此操作不可撤销', list: ['这位同伴的档案、亲密度、能力解锁将一并被抹去', '所有互动记录与星移痕迹也会被清空', 'Ta 所占用的塔罗大阿卡纳将被释放，可重新分配给新的同伴', '如果只是暂时不想看见 Ta，建议使用「暂时归档」'], ok: '确认删除', onOk: () => { d.close(); P5.toast('已删除'); } }),
+        archive: async (t, e, api) => { if (!cf.realId) return; if (cf.archivedAt) await useAppStore.getState().unarchiveConfidant(cf.realId); else await useAppStore.getState().archiveConfidant(cf.realId); cf.archivedAt = cf.archivedAt ? null : '2026-10-20'; P5.toast(cf.archivedAt ? '已暂时归档' : '已恢复关系'); api.set(headHTML(), null, false); pane(false); },
+        del: () => confirmDlg({ eyebrow: 'DANGER', title: `确认彻底删除 ${cf.name}？`, text: '此操作不可撤销', list: ['这位同伴的档案、亲密度、能力解锁将一并被抹去', '所有互动记录与星移痕迹也会被清空', 'Ta 所占用的塔罗大阿卡纳将被释放，可重新分配给新的同伴', '如果只是暂时不想看见 Ta，建议使用「暂时归档」'], ok: '确认删除', onOk: async () => { if (cf.realId) await useAppStore.getState().deleteConfidant(cf.realId); d.close(); P5.toast('已删除'); } }),
         sever: () => confirmDlg({ eyebrow: 'SEVER COOP', title: `解除与 ${cf.linkedProfile.nickname} 的 COOP 契约`, text: '解除后，本端的同伴卡会自动归档；对方下次同步时，那边的卡也会归档。<br>7 天内无法再次缔结 COOP。已积累的羁绊与历史会保留在归档里。', ok: '确认解除', onOk: () => P5.toast('已解除 COOP · 同伴卡已归档') }),
-        decay: (t) => { cf.decayEnabled = !cf.decayEnabled; t.classList.toggle('on', cf.decayEnabled); t.setAttribute('aria-pressed', cf.decayEnabled); t.previousElementSibling.textContent = decayText(); },
+        decay: (t) => { cf.decayEnabled = !cf.decayEnabled; if (cf.realId) void useAppStore.getState().updateConfidant(cf.realId, { decayEnabled: cf.decayEnabled }); t.classList.toggle('on', cf.decayEnabled); t.setAttribute('aria-pressed', cf.decayEnabled); t.previousElementSibling.textContent = decayText(); },
       },
     });
     const pane = (anim = true) => { const p = d.dlg.querySelector('.dt-pane'); p.innerHTML = paneHTML(); if (anim) P5.panelIn(p.children, { from: 'right', stagger: .04 }); };
@@ -518,16 +538,16 @@ export const OC: any = {};
   /* ══════════ ConfidantInteractionModal —— 今日互动（input → thinking → result(+0..+5) → done；error） ══════════ */
   const DELTA_L = { 0: '波澜未起', 1: '日常维系', 2: '稳稳升温', 3: '明显推进', 4: '深度共享', 5: '关键节点' };
   function interaction(cf = CF[0], { stage = 'input', alreadyToday = false, onlineNoLogin = false } = {}) {
-    let st = stage, text = '', sync = true, attr = cf.skillAttribute, pts = 2, delta = 3; const ai = 3;
+    let st = stage, text = '', sync = true, attr = cf.skillAttribute, pts = 2, delta = 1, evaluation = null;
     const sync3 = (hint) => `${chk(sync, '同步到「记录」（带「同伴」标签）', hint, 'sync')}${sync ? `<div class="oc-sub2"><span class="oc-k">选择加点属性（可不选）</span>${attrChips(attr)}<div class="it-pts"><span>加点</span>${[1, 2, 3].map((n) => `<button type="button" data-a="pts" data-v="${n}" aria-pressed="${pts === n}">+${n}</button>`).join('')}</div></div>` : ''}`;
     const view = () => {
       if (st === 'input') return [`${alreadyToday ? note('今天已经记录过和 Ta 的互动了。同一天反复加点容易失真，明天再来吧。', 'warn') : ''}${onlineNoLogin ? note('这是一位在线同伴 —— 需要登录云端后才能让 AI 读懂你们之间的互动。<span> 当前会退回到通用模板记录，不会调 AI。</span>', 'warn') : ''}
         <label class="fld"><span>今天和 Ta 做了什么？发生了什么？</span><textarea class="inp" rows="4" data-in="t" placeholder="可以很具体——一起吃了什么饭、聊了什么话题、Ta 说了一句让你印象深刻的话…… 也可以写下一点感受。">${esc(text)}</textarea></label>
         ${sync3('会在记录列表里生成一条专属条目；可选择将这次相处经验换算为某一属性的加点（最多 +3）。')}<p class="oc-err" hidden></p>`, U.btn('解读这一段', { tone: 'red', size: 'lg', seed: 131, attrs: `data-a="eval" ${alreadyToday ? 'disabled' : ''}` })];
       if (st === 'thinking') return [`<div class="it-think"><div class="it-orb">${U.star('var(--red)', 'var(--ink)', 1.4)}</div><p>水晶球散发出了淡蓝色的微光……</p></div>`, ''];
-      if (st === 'result') return [`${sec('解读', '<p>战车正位：被搁置的目标重新亮起。你陪 Ta 回头看了一眼，这件事对 Ta 很重要。</p>')}${sec('未来', '<p>下次陪 Ta 去操场跑一圈，不用说太多。</p>')}
-        <div class="oc-sec"><div class="it-dh"><span class="oc-k">建议加点（可调整）</span><b>${cf.intimacy < 10 ? `+${delta} · ${DELTA_L[delta]}` : '已达圆满'}</b></div><div class="it-deltas">${[0, 1, 2, 3, 4, 5].map((n) => `<button type="button" data-a="delta" data-v="${n}" aria-pressed="${delta === n}">+${n}${n === ai ? '<small>AI 荐</small>' : ''}</button>`).join('')}</div><p class="oc-note">${LBL[cf.intimacy]}（当前） → Lv.${cf.intimacy} + ${delta} 点</p></div>
-        ${sync3('勾选后可选任一属性加 1–3 点，确认时会有音符弹起～')}${note('· 本次为离线评估 ·', 'c')}`, U.btn('修改描述', { tone: 'paper', seed: 132, attrs: 'data-a="edit"' }) + U.btn('就这样记下', { tone: 'red', size: 'lg', seed: 133, attrs: 'data-a="ok"' })];
+      if (st === 'result') return [`${sec('解读', `<p>${esc(evaluation?.narrative || '')}</p>`)}${sec('未来', `<p>${esc(evaluation?.advice || '')}</p>`)}
+        <div class="oc-sec"><div class="it-dh"><span class="oc-k">建议加点（可调整）</span><b>${cf.intimacy < 10 ? `+${delta} · ${DELTA_L[delta]}` : '已达圆满'}</b></div><div class="it-deltas">${[0, 1, 2, 3, 4, 5].map((n) => `<button type="button" data-a="delta" data-v="${n}" aria-pressed="${delta === n}">+${n}${n === evaluation?.delta ? '<small>AI 荐</small>' : ''}</button>`).join('')}</div><p class="oc-note">${LBL[cf.intimacy]}（当前） → Lv.${cf.intimacy} + ${delta} 点</p></div>
+        ${sync3('勾选后可选任一属性加 1–3 点，确认时会有音符弹起～')}${evaluation?.source !== 'ai' ? note('· 本次为离线评估 ·', 'c') : ''}`, U.btn('修改描述', { tone: 'paper', seed: 132, attrs: 'data-a="edit"' }) + U.btn('就这样记下', { tone: 'red', size: 'lg', seed: 133, attrs: 'data-a="ok"' })];
       if (st === 'done') return [`<div class="it-done"><div class="it-check">✓<i></i></div><p>今日的这一页被写进了你们的故事里</p>${sync && attr ? `<small>♪ ${P5.ATTR[attr].name} +${pts}</small>` : ''}</div>`, ''];
       return [`<div class="it-done"><div class="it-cloud">☁</div><p>AI 判断失败：网络超时</p></div>`, U.btn('返回重试', { tone: 'paper', seed: 134, attrs: 'data-a="edit"' })];
     };
@@ -539,9 +559,31 @@ export const OC: any = {};
       on: {
         sync: () => { sync = !sync; draw(false); }, attr: (t) => { attr = attr === t.dataset.v ? null : t.dataset.v; draw(false); }, pts: (t) => { pts = +t.dataset.v; press(t); },
         delta: (t) => { delta = +t.dataset.v; draw(false); },
-        eval: () => { if (text.trim().length < 4) { const e = d.body.querySelector('.oc-err'); e.hidden = false; e.textContent = '请再多描述一点，星象才能照见'; return; } go('thinking'); setTimeout(() => st === 'thinking' && go('result'), 1500); },
+        eval: async () => { if (text.trim().length < 4) { const e = d.body.querySelector('.oc-err'); e.hidden = false; e.textContent = '请再多描述一点，星象才能照见'; return; } go('thinking'); try {
+          const s = useAppStore.getState();
+          const live = s.confidants.find((c2) => c2.id === cf.realId);
+          if (!live) throw new Error('同伴档案已不存在');
+          evaluation = await evaluateInteraction({
+            settings: s.settings, confidantName: live.name, arcanaName: cf.card.cn,
+            orientation: live.orientation, currentLevel: live.intimacy, description: text.trim(),
+            relationshipSummary: live.description,
+            recentUserInputs: s.confidantEvents.filter((e2) => e2.confidantId === live.id && e2.type === 'conversation' && e2.userInput).slice(0, 2).map((e2) => ({ date: e2.date, text: e2.userInput })),
+          }, undefined, live.source !== 'online' || !!s.user);
+          delta = evaluation.delta;
+          go('result');
+        } catch { go('error'); } },
         edit: () => go('input'),
-        ok: () => { go('done'); if (sync && attr) P5.toast(`♪ ${P5.ATTR[attr].name} +${pts}`); const lvUp = delta > 0 && cf.intimacy < 10; /* demo：有加点即演示升级 */ cf.intimacyPoints += delta; if (lvUp) setTimeout(() => { d.close(); rankUp(cf, { oldLevel: cf.intimacy, newLevel: Math.min(10, cf.intimacy + 1) }); }, 1300); },
+        ok: async () => { if (!evaluation) return; try {
+          const s = useAppStore.getState();
+          const live = s.confidants.find((c2) => c2.id === cf.realId);
+          if (!live) throw new Error('同伴档案已不存在');
+          await s.recordConfidantInteraction({ id: live.id, description: text.trim(), delta, narrative: evaluation.narrative, advice: evaluation.advice, createActivity: sync, activityAttribute: sync && attr ? attr : undefined, activityPoints: sync && attr ? pts : 0 });
+          const after = useAppStore.getState().confidants.find((c2) => c2.id === live.id);
+          cf.intimacy = after?.intimacy ?? cf.intimacy;
+          cf.intimacyPoints = after?.intimacyPoints ?? cf.intimacyPoints + delta;
+          go('done'); if (sync && attr) P5.toast(`♪ ${P5.ATTR[attr].name} +${pts}`);
+          if (after && after.intimacy > live.intimacy) setTimeout(() => { d.close(); rankUp(cf, { oldLevel: live.intimacy, newLevel: after.intimacy }); }, 1300);
+        } catch (error) { P5.toast(error instanceof Error ? error.message : '保存失败'); } },
       } });
     draw(false);
     return d;
@@ -550,6 +592,13 @@ export const OC: any = {};
 
   /* ══════════ ArcanaPickerForm —— 选牌（22 张，占用不可选）/ 正逆位 / 期望等级 / 加成属性 / 留言 / 不使用 AI ══════════ */
   const TAKEN = new Set(CF.map((c) => c.arcanaId));
+  OC.refreshConfidants = () => {
+    const next = buildCF();
+    CF.splice(0, CF.length, ...next);
+    TAKEN.clear();
+    next.forEach((c) => TAKEN.add(c.arcanaId));
+    OC.CF = CF;
+  };
   function pickerHTML(v, { hint, messagePlaceholder } = {}) {
     const sel = v.arcanaId ? T[v.arcanaId] : null;
     return `<div class="ap">
@@ -592,7 +641,8 @@ export const OC: any = {};
   /* ══════════ ConfidantCreateModal —— 结识一位同伴（basic → description → trait×4 → matching → result；error） ══════════ */
   function createModal({ stage = 'basic', noAi = true } = {}) {
     let st = stage, step = 0; const ans = []; const v = { name: '', desc: '', decay: false, level: 4 };
-    const res = T.STAR;
+    let res = T.STAR;
+    let matchResult = null;
     const view = () => {
       if (st === 'basic') return [`<div class="cr-modes"><button type="button" class="cr-mode on" data-a="offline"><b>离线同伴</b><small>本地塔罗匹配<br>身边的人 / 自己的关系</small></button><button type="button" class="cr-mode hot" data-a="online"><b>在线同伴</b><small>按 UserID 邀请<br>缔结双向羁绊</small><em>›</em></button></div>
         <label class="fld"><span>Ta 的名字 / 称呼</span><input class="inp" data-in="name" maxlength="20" placeholder="朋友、家人、老师、恋人……" value="${esc(v.name)}"></label>
@@ -602,7 +652,7 @@ export const OC: any = {};
       if (st === 'matching') return [matchingHTML(), ''];
       if (st === 'result') return [`<div class="cr-res">${cardHTML(res, compact() ? 110 : 130, { cls: 'cr-card' })}<div><b class="cr-n">《${res.cn}》正位</b><small>${res.no} · ${res.en}</small><span class="tag">星象建议 Lv.3 · ${LBL[3]}</span></div></div>
         <div class="oc-sec"><div class="it-dh"><span class="oc-k">当前亲密度（由你决定）</span><b>Lv.${v.level} · ${LBL[v.level]}</b></div>${lvPicker(v.level)}<p class="oc-note">AI 只给参考，最终等级由你判断。不同等级会立即解锁对应的日常/战斗能力。</p></div>
-        ${sec('为什么是这张牌', '<p>星星正位：在你不安的时候，Ta 是那盏不灭的灯。你们的关系安静、长久，带着希望。</p>')}${sec('未来', '<p>别只在低谷时找 Ta，把好消息也第一个告诉 Ta。</p>')}${note('· 本次为离线匹配 ·', 'c')}`, U.btn('回去改一改', { tone: 'paper', seed: 153, attrs: 'data-a="redo"' }) + U.btn('就是 Ta 了', { tone: 'red', size: 'lg', seed: 154, attrs: 'data-a="ok"' })];
+        ${sec('为什么是这张牌', `<p>${esc(matchResult?.interpretation || '')}</p>`)}${sec('未来', `<p>${esc(matchResult?.advice || '')}</p>`)}${matchResult?.source !== 'ai' ? note('· 本次为离线匹配 ·', 'c') : ''}`, U.btn('回去改一改', { tone: 'paper', seed: 153, attrs: 'data-a="redo"' }) + U.btn('就是 Ta 了', { tone: 'red', size: 'lg', seed: 154, attrs: 'data-a="ok"' })];
       return [`<div class="it-done"><div class="it-cloud">☁</div><p>未能找到合适的阿卡纳，请调整描述后再试</p></div>`, U.btn('返回修改', { tone: 'paper', seed: 155, attrs: 'data-a="totrait"' })];
     };
     const title = () => st === 'result' ? '塔罗的回响' : '结识一位同伴';
@@ -626,10 +676,52 @@ export const OC: any = {};
         decay: (t) => { v.decay = !v.decay; t.setAttribute('aria-pressed', v.decay); },
         n1: () => { if (!v.name.trim()) return err('请先告诉我 Ta 叫什么名字'); go('description'); },
         n2: () => { if (v.desc.trim().length < 6) return err('请用至少几个字描述 Ta，让塔罗有内容可参考'); step = 0; go('trait'); },
-        trait: (t) => { ans[step] = t.dataset.v; press(t); setTimeout(() => { if (step < 3) { step++; draw(); } else { go('matching'); setTimeout(() => st === 'matching' && go('result'), 1800); } }, 220); },
+        trait: (t) => { ans[step] = t.dataset.v; press(t); setTimeout(async () => { if (step < 3) { step++; draw(); } else {
+          go('matching');
+          try {
+            const settings = useAppStore.getState().settings;
+            matchResult = await matchConfidant({
+              settings,
+              name: v.name.trim(),
+              description: v.desc.trim(),
+              takenArcanaIds: [...TAKEN],
+              traits: TRAITS.map((q, i) => ({ question: q[0], answer: ans[i] || '' })),
+            });
+            res = TAROT.find((t2) => t2.id === matchResult.arcanaId) || T.STAR;
+            v.level = Math.max(1, Math.min(10, matchResult.initialIntimacy + 1));
+            go('result');
+          } catch {
+            go('error');
+          }
+        } }, 220); },
         tprev: () => { step--; draw(); }, lv: (t) => { v.level = +t.dataset.v; draw(false); },
         redo: () => go('description'), totrait: () => { step = 0; go('trait'); },
-        ok: () => { d.close(); P5.toast(`已缔结：${v.name || '新的同伴'} ·《${res.cn}》`); },
+        ok: async () => {
+          if (!matchResult) return;
+          try {
+            const created = await useAppStore.getState().addConfidant({
+              name: v.name.trim(), description: v.desc.trim(), match: matchResult,
+              source: 'offline', initialLevel: v.level,
+            });
+            if (v.decay) await useAppStore.getState().updateConfidant(created.id, { decayEnabled: true });
+            TAKEN.add(created.arcanaId);
+            const card = TAROT.find((t2) => t2.id === created.arcanaId) || T.STAR;
+            CF.push({
+              id: created.id, realId: created.id, name: created.name, arcanaId: created.arcanaId, card,
+              intimacy: created.intimacy, description: created.description, orientation: created.orientation,
+              aiInterpretation: created.aiInterpretation, aiAdvice: created.aiAdvice,
+              skillAttribute: created.skillAttribute, intimacyPoints: created.intimacyPoints,
+              starShiftCharges: created.starShiftCharges ?? 0, source: created.source,
+              linkedProfile: created.linkedProfile || null, decayEnabled: created.decayEnabled,
+              archivedAt: created.archivedAt || null, buffs: created.buffs || [], memorials: [],
+            });
+            P5.rerender?.();
+            d.close();
+            P5.toast(`已缔结：${created.name} ·《${res.cn}》`);
+          } catch (error) {
+            P5.toast(error instanceof Error ? error.message : '保存失败');
+          }
+        },
       } });
     d.dlg.querySelector('.oc-ttl h3').insertAdjacentHTML('afterend', '<span class="cr-tiles" role="heading" aria-level="2"></span>');
     d.dlg.querySelector('.oc-ttl h3').classList.add('sr');

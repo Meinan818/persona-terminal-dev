@@ -2,7 +2,23 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前开发 · 2026-10-21 · 黄粉蓝预算、对账、资产与统计收口
+## 接手第一入口 · 2026-10-21 · 三主题记账收口后交接
+
+- **本次状态**：用户明确“压缩完准备交接吧”，立即暂停业务开发，仅核现场、保留草稿、更新本入口并作本地文档尾提交；不重跑测试/构建、不Push。尾提交后源聊天停止共享文件写入，接手先只读，待用户明确恢复后再续办。本次未创建接续聊天或自动化，不把普通摘要转述当作已核实的runtime compact计数；本入口不声称已完成原生自动迁移。
+- **Git现场**：目录 `E:\MASKARIA`，分支 `feat/theme-kit-integration`；收尾前HEAD `8db71ea50bae533a9da82a370d2f0abcafee7c30`，消息 `feat(theme-kit): 补齐三主题预算对账资产与统计接线`。相对本地 `origin/main@7c88082db5d0f5487e0c35d8f972632f435f2e19` 0落后/20领先；本次仅提交本STATE后应21领先，尾提交SHA以 `git log -1` 为准，其父提交必须是8db71ea。没有查询远端最新状态，未Push。收尾前tracked工作区及暂存区均干净。
+- **已完成并保存**：8db71ea共27路径，原18个黄粉蓝预算/对账/资产/统计WIP已全部正式纳入，不再是待提交遗留；另有3个资产抽屉、3个标签组件、共用操作模块及7项集成测试、本STATE。预算/挑战/重置日、真实对账、资产全操作及月份统计已接本地store，失败保留输入并可重试。对账任一笔失败整批回滚；预算与settings仍是两次顺序写入，不宣称跨表原子性。透明遮罩与粉蓝返回空白的根因，是共享高亮presence登记拖住外层退出；只在原高亮外包无DOM的AnimatePresence，未改原布局、class/style及动画参数。中途Sheet强制清理方案已撤回，最终Sheet基座无改动。
+- **已验证证据（开发阶段，交接只读核对）**：`.theme-compare/ledger-controls-resume/tests-verified.log` 全量 **67文件/410项通过**；`.rivet/scratch/theme-kit-integration/three-theme-ledger-controls-isolated-presence.log` **110.0秒、BUILD_EXIT=0**。`isolated-presence/{yellow,pink,blue}/report.json` 各24项，`extra/{yellow,pink,blue}/report.json` 各8项，合计 **96项**，本次逐份核pass=true、errors=[]。覆盖真实IndexedDB、失败回滚/重试、同名资产、刷新、挑战锁定、初始和后续对账、历史月份、负净值与键盘关闭。隔离浏览器合成数据，无收费模型调用或真实账本操作。
+- **视觉/验收**：`protection-isolated-presence.json` 比对起点1464文件，仅24个相关既有产品文件变化，红色与根store等保留；标签/class/style及原动画参数保护结果详见下一节。`visual-aligned/` 有手机390×844/桌面1440×900、日夜、资产与统计共24张稳定截图，开发阶段抽看6张。黄粉蓝本节点尚待用户体验，不把自动检查算用户验收；红色资产/统计/本地结算此前已明确验收（e1fd152功能、b1bd85d反馈），不要重复改版或重复要求验收。
+- **唯一新草稿，未完成**：`src/themes/ledgerSettlement.ts` 是8db71ea后新增的untracked文件，未接入任何三主题UI、未测试、未类型检查、未构建，不能宣称三主题本地结算已完成，也不纳入本次文档提交。已原样复制到 `.rivet/scratch/theme-kit-integration/handoff-20261021-three-theme-settlement.unverified.ts`，两份SHA-256均 `1f27af80c38e6188bd4eb15663bb41c86771c381065d9228f5e21d9dd2cfdfd8`；保留源文件和备份，不覆盖任何其它材料。它暂含自然月/周本地汇总、离线回顾、串行领奖及hook；仅是待审草稿。
+- **草稿必须先核的问题**：React StrictMode重挂effect可能第一次实际领奖、结果被取消，第二次返回已领false，造成奖励横幅丢失；需按同次请求去重/共享结果，不能重复发奖。根store既有领奖action先发SP再写settings的失败原子性未改，不能承诺所有奖励失败均安全重试。当前回顾强调“本地账目回顾（未调用 AI）”；导入现有结算工具会带入AI模块，但不得调用收费生成函数。历史月周锚点/未来范围、空态、读取失败及异步旧范围覆盖也须验证。
+- **恢复后唯一下一任务（Codex）**：先只读核本入口、AGENTS、HEAD、草稿哈希与未提交归属；用户恢复后先审草稿并用隔离浏览器留存原结算演示数字的修前证据，再给黄粉蓝 `screens/pkg5/LedgerStats.tsx` 传真实所选月份、三套 `screens/overlays/LedgerSettleSheet.{p4g,p3r}.tsx` 接共用本地结算。真实日期、收支/类目/极值/预算、空态和下一期限制按实际数据；奖励只显示既有action实际发放结果，无战场不假显示+10SP。可选initialPeriod未提供时保留原mock/phase/fail路径；粉蓝IgorReading可加localText，复用原AIText展示done状态，明确本地回顾，不模拟联网AI。完成有意义的集成测试、真实交互及构建/保护后另作独立功能提交。
+- **复用参考**：`src/utils/ledgerSettlement.ts`（buildSettlementData/offlineSettlement/settleRange/shiftSettleAnchor）、旧 `src/components/ledger/LedgerStats.tsx`、红色 `src/p5r-red/adapter/live.ts` 结算桥仅读参考；不要导入红色适配器以免触发其模块连接副作用。三主题结算尚硬编码月4555.5/7300、周276.5/800及2026年10月日期、固定奖励横幅；粉蓝IgorReading的useAIStream只是演示动画，不代表真实AI。保留CSS、DOM外观及已验收红色，不改根store、原demo或比较阈值。
+- **遗留归属与铁律**：原WIP补丁 `.rivet/scratch/theme-kit-integration/handoff-20261021-ledger-wip.patch` 保留，但原18文件已经进8db71ea，绝不再次apply。其它既有untracked（.cache、.impeccable、.rivet-config.json、demo、deliverables、outputs、public演示素材、src演示组件及deploy/staging/caddy.service.d.conf等）保持原样，不清理、不搬移、不整目录add。不读/提交敏感文件，不stash/reset/restore/clean；不收费调用、不Push/部署/打包、不操作真实用户数据或擅改视觉。票据识别、其它页面写回等仍未接，不声称整套项目完成。
+- **服务与命令**：交接实核 `http://127.0.0.1:5173/` 监听127.0.0.1、PID28888，接手必须重核，不按旧PID停止进程。启动在根目录用 `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173 --strictPort`。PowerShell；TEMP/TMP=`E:\MASKARIA\.cache`，npm缓存=`E:\CODEX\.cache\npm`，PLAYWRIGHT_BROWSERS_PATH=`E:\CODEX\.cache\ms-playwright`；复用系统Chrome及demo/p4g-yellow的Playwright，不安装全局依赖、不在C盘写工作材料。
+- **验证入口/踩坑**：恢复后相关测试 `node node_modules/vitest/vitest.mjs run src/themes/__tests__/ledgerOperations.test.ts --reporter=dot`，全量移除文件参数。构建用 `node .rivet/scratch/theme-kit-integration/build.mjs <新的英文标签>`，等BUILD_EXIT，不因慢而重复启动。既有浏览器探针位于同scratch的 `ledger-controls-resume-20261021.mjs`、`ledger-controls-extra-20261021.mjs`、`ledger-controls-visual-20261021.mjs`，保护脚本 `protect-ledger-controls-20261021.mjs`；先读参数/输出防覆盖原证据，再为新结算节点适配。状态控件role=tab；黄删除role=option、粉蓝role=menuitem；黄对账按钮精确“✿ 对账”。不要强制点击或用async predicate交给现版waitForFunction；数据库数组不保证插入顺序，按稳定ID核对；截图等动效和toast结束。所有旧失败报告保留。
+- **本次回执**：交接入口与备份完成后只提交本STATE；草稿不提交，未Push、未部署、未创建自动化或接续聊天。最终尾提交及源码哈希核对后源停止共享写入；本次无需用户执行开发操作。下一位接手者先只读核现场，恢复后继续三主题本地结算，不重复apply旧补丁或重画已验收界面。
+
+## 已提交 · 2026-10-21 · 黄粉蓝预算、对账、资产与统计收口
 
 - **当前授权**：用户在红色资产/统计/本地结算验收通过后明确“下一步，不用停”，恢复原18个黄粉蓝记账WIP的完整验证与独立提交。保留已验收红色界面，不Push、部署、打包、收费调用或操作用户真实账本；按既有主线继续，不逐节点索要普通技术确认。
 - **现场与归属**：分支 `feat/theme-kit-integration`，本节点起点 `b1bd85d`。原18个WIP现在纳入本节点；旧备份 `.rivet/scratch/theme-kit-integration/handoff-20261021-ledger-wip.patch` 保留，不再次apply。另补3个资产抽屉的异步操作契约、3个标签组件的退出登记隔离，以及共用 `src/themes/ledgerOperations.ts` 和7项集成测试；连同本STATE，共27路径独立本地保存。其它untracked不纳入。最终SHA以本地git log为准；本节点未查询远端、未Push。

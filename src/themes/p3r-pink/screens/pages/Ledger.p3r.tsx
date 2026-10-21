@@ -75,7 +75,7 @@ export default function Ledger({ tab, params }: PageProps) {
 
   const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !e.date.startsWith(CURRENT_MONTH)) : entries;
   const needsSetup = state === 'first';
-  const hasBudget = state !== 'first';
+  const hasBudget = params.has('state') ? state !== 'first' : LEDGER_BUDGET.monthlyLimit > 0;
   const lim = state === 'over' ? 4000 : LEDGER_BUDGET.monthlyLimit;
   const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
   const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
@@ -281,11 +281,11 @@ export default function Ledger({ tab, params }: PageProps) {
                   })}
                 </P3StaggerItem>
               ) : (
-                <P3StaggerItem><LedgerStats entries={list} forceEmpty={state === 'empty'} /></P3StaggerItem>
+                <P3StaggerItem><LedgerStats entries={list} forceEmpty={state === 'empty'} initialPeriod={listMonth} /></P3StaggerItem>
               )}
             </P3Stagger>
           ) : (
-            <AssetBoard empty={state === 'first'} />
+            <AssetBoard empty={params.has('state') && state === 'first'} />
           )}
         </motion.div>
       </AnimatePresence>

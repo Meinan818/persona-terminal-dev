@@ -74,7 +74,7 @@ export default function Ledger({ tab, params }: PageProps) {
 
   const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !e.date.startsWith(CURRENT_MONTH)) : entries;
   const needsSetup = list.length === 0;
-  const hasBudget = state !== 'first';
+  const hasBudget = params.has('state') ? state !== 'first' : LEDGER_BUDGET.monthlyLimit > 0;
   const lim = LEDGER_BUDGET.monthlyLimit;
   const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
   const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
@@ -293,11 +293,11 @@ export default function Ledger({ tab, params }: PageProps) {
               })}
             </CollageItem>
           ) : (
-            <CollageItem><LedgerStats entries={list} forceEmpty={state === 'empty'} /></CollageItem>
+            <CollageItem><LedgerStats entries={list} forceEmpty={state === 'empty'} initialPeriod={listMonth} /></CollageItem>
           )}
         </CollageStagger>
       ) : (
-        <AssetBoard empty={state === 'first'} />
+        <AssetBoard empty={params.has('state') && state === 'first'} />
       )}
 
       {import.meta.env.DEV && location.search.includes('__dev=1') && <DevStateBar value={state} onChange={setState} items={[{ id: 'normal', label: '正常' }, { id: 'first', label: '首次未设余额' }, { id: 'empty', label: '本月空' }, { id: 'loading', label: '读取中' }]} />}

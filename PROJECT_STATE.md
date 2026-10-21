@@ -2,7 +2,21 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前开发 · 2026-10-21 · 红色资产、统计和本地结算接线
+## 当前开发 · 2026-10-21 · 黄粉蓝预算、对账、资产与统计收口
+
+- **当前授权**：用户在红色资产/统计/本地结算验收通过后明确“下一步，不用停”，恢复原18个黄粉蓝记账WIP的完整验证与独立提交。保留已验收红色界面，不Push、部署、打包、收费调用或操作用户真实账本；按既有主线继续，不逐节点索要普通技术确认。
+- **现场与归属**：分支 `feat/theme-kit-integration`，本节点起点 `b1bd85d`。原18个WIP现在纳入本节点；旧备份 `.rivet/scratch/theme-kit-integration/handoff-20261021-ledger-wip.patch` 保留，不再次apply。另补3个资产抽屉的异步操作契约、3个标签组件的退出登记隔离，以及共用 `src/themes/ledgerOperations.ts` 和7项集成测试；连同本STATE，共27路径独立本地保存。其它untracked不纳入。最终SHA以本地git log为准；本节点未查询远端、未Push。
+- **真实修前失败**：`.theme-compare/ledger-controls-resume/before/report.json` reproduced=true：资产写库失败，表单仍关闭并提示“已登记”，数据库0件；原pageerror为synthetic asset failure。代码另将无流水的新用户资产强制置空。现已等待真实落库才关闭/成功提示，失败保留输入；资产和费用提交以同步ref防双击，状态修改不在React状态更新器内触发写库，资产按真实ID操作。
+- **预算与对账**：真实预算、挑战修改次数、重置日、对账次数读既有store；预算/对账异常恢复可重试。挑战满2次后仍可改花费上限和重置日，保留原目标；预算操作串行，同值重试不多扣次数。多账户对账复用现有action并置于真实IndexedDB事务，任一笔失败整批回滚、重载内存，初始余额不占轮数，后续每次多账户提交只算一轮。预算与settings仍为两次顺序写入，不宣称跨表原子保存；第二步失败时明确失败、保留表单，重试不会再次消耗挑战次数。
+- **资产与统计**：资产新增/状态/附加费用增删/删除真实持久化；空流水也能显示资产。负余额和负净值保留符号、已售出资产不计固定总值、存款只从流动资产拆分。统计用真实月份、历史预算与当期挑战，跟随流水所选月份；6期趋势来自实际流水、adjust不计收支。保持既有自然月统计口径，不扩成三主题发薪日周期界面已完成。
+- **退出阻断根因与最小修复**：先复现状态标签切换后Esc关闭资产详情，画面消失但透明遮罩挡点击；粉蓝从统计切回资产也会旧页面淡出后一直空白。事件诊断证明Esc已到window且没有被吞，CDP确认关闭后监听已释放；无状态切换的对照能正常结束。共享高亮节点的presence登记拖住外层退出。最终仅在 `P4SegmentTabs/P3Segment` 的原高亮节点外加无DOM的AnimatePresence边界，原布局、class/style、span的initial/animate/exit/transition参数均保留。中间尝试的Sheet退出强制清理已撤回，最终P4Sheet和粉蓝overlays基座无差异；没有强制点击、删动画或改阈值制造通过。
+- **验证 · 本节点实跑**：新增 `src/themes/__tests__/ledgerOperations.test.ts` 7项通过；最终 `node node_modules/vitest/vitest.mjs run --reporter=dot` **67文件/410项通过**，日志 `.theme-compare/ledger-controls-resume/tests-verified.log`。最终 `npm run build`（含tsc）见 `.rivet/scratch/theme-kit-integration/three-theme-ledger-controls-isolated-presence.log`，**110.0秒、BUILD_EXIT=0**。仍为本机开发后端构建，不作为正式手机包发布。
+- **真实浏览器 · 96项**：`isolated-presence/{yellow,pink,blue}/report.json` 每套24项；`extra/{yellow,pink,blue}/report.json` 每套8项，均pass=true、errors=[]。包括真实IndexedDB第二笔写入失败整批回滚、预算/设置/资产/费用/删除失败重试、同名资产、刷新、挑战锁定、初始及3轮对账、上月统计、重置日3号、负净值、已售资产、原日期及流水关联保留、Esc及关闭按钮后下一表单仍可操作。使用隔离浏览器与合成数据；主流程核无收费模型请求，不接触用户真实账本。上述证据统一位于 `.theme-compare/ledger-controls-resume/`。
+- **视觉与边界**：`protection-isolated-presence.json` 对本节点起点1464个文件核字节哈希；仅24个获准三主题既有文件变化，红色/根store/其它文件不变。AST核原渲染标签、class/style及原动画参数均不变（忽略新加且不产生DOM的AnimatePresence边界）。`visual-aligned/` 生成手机390×844/桌面1440×900、日夜、资产与统计共24张稳定截图，已抽看6张，报告3个统计→资产检查通过、errors=[]；本节点仍待用户本人体验，不将自动检查说成用户验收。早期截图含toast/转场或统计尚在首屏下方，原件保留，稳定对齐帧另拍。
+- **失败原件保留**：首轮测试的fake DB把toArray返回数组与内存共用，导致回滚重试预期600实得1100；只改fixture返回副本以符合真实IndexedDB，未改业务迎合测试。初轮类型检查暴露afterEach返回VitestUtils和reconcile结果缺可选reason类型，已修正。探针曾把状态tab误当button、粉蓝删除menuitem误当button、黄色“FIRST STEP”说明误匹配对账按钮；按实际角色/精确名称修脚本。所有first/stable-tabs/settled-keyboard/event-diagnostic/exit-cleanup/stable-menuitem等原失败报告保留。最初保护脚本对二进制按UTF-8解码后算哈希造成假警报，只修为按原字节比较，原protection.json亦保留。
+- **运行与唯一下一任务**：实际App仍在 `http://127.0.0.1:5173/`，本节点实查PID28888；跨节点须重核。TEMP/TMP用 `E:\MASKARIA\.cache`，npm/Playwright复用E盘缓存。用户体验入口：菜单切黄/粉/蓝→记账→编辑预算/对账/资产/统计。Codex在保存本节点后继续核三主题结算入口；它们仍显示演示数字/模拟AI文案，尚未接真实本地结算，不能称三主题记账全部完成。票据识别、收费AI和其它页面写回继续未接；本次无需用户执行开发命令。
+
+## 已验收 · 2026-10-21 · 红色资产、统计和本地结算接线
 
 ### 当前入口与范围
 

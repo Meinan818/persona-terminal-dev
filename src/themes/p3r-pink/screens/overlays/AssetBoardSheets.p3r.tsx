@@ -4,7 +4,7 @@
  *   AssetDetailSheet「<资产名>」：总价 + 购入 · 日期 / 状态切换 / 附加费用列表（删除）+ 新增「名称」「金额」「加」/ 删除这件资产 → 确认框
  * default = 登记资产；DetailOverlay = 资产详情（overlays.pkg5 用 .then 取命名导出）。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import type { LedgerAsset } from '@/types';
 import { P3Sheet, P3Button, P3Input, P3Segment, P3R, slantClip, IconClose, useToast } from '@pink/kit';
@@ -14,8 +14,10 @@ import { ASSET_CATEGORIES, ASSET_STATUS, CNY, LEDGER_ASSETS, P5_TODAY, assetCat,
 
 const STATUSES = ['inuse', 'idle', 'soldout'] as const;
 
-export function AssetAddSheetView({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave?: (a: LedgerAsset) => void }) {
+export function AssetAddSheetView({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave?: (a: LedgerAsset) => void | Promise<unknown> }) {
   const toast = useToast();
+  const saving = useRef(false);
+  const [busy, setBusy] = useState(false);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('digital');
   const [price, setPrice] = useState('');
@@ -25,7 +27,7 @@ export function AssetAddSheetView({ open, onClose, onSave }: { open: boolean; on
   const canSave = !!name.trim() && Number(price) > 0;
   return (
     <P3Sheet open={open} onClose={onClose} title="登记资产" en="REGISTER"
-      footer={<P3Button block size="lg" corner disabled={!canSave} onClick={() => { const a: LedgerAsset = { id: `as_${Date.now()}`, name: name.trim(), category, price: Number(price), purchaseDate: date, status, createdAt: new Date() }; onClose(); if (onSave) onSave(a); else toast.success(`已登记：${a.name}`); }}>保存</P3Button>}>
+      footer={<P3Button block size="lg" corner disabled={busy || !canSave || !Number.isFinite(Number(price))} onClick={async () => { if (saving.current) return; saving.current = true; setBusy(true); try { const a: LedgerAsset = { id: `as_${Date.now()}`, name: name.trim(), category, price: Number(price), purchaseDate: date, status, createdAt: new Date() }; if (onSave) await onSave(a); else toast.success(`已登记：${a.name}`); onClose(); } catch { toast('资产保存失败，请重试'); } finally { saving.current = false; setBusy(false); } }}>保存</P3Button>}>
       <div className="flex min-w-0 flex-col gap-4 pt-1">
         <P3Input value={name} onChange={(e) => setName(e.target.value)} placeholder="名称（如 索尼相机）" aria-label="名称" autoFocus />
         <div className="flex min-w-0 flex-col gap-2">
@@ -47,13 +49,21 @@ export function AssetAddSheetView({ open, onClose, onSave }: { open: boolean; on
   );
 }
 
-export function AssetDetailSheetView({ asset: initial, open, onClose, onChange, onDelete, confirmOpen }: { asset: LedgerAsset | null; open: boolean; onClose: () => void; onChange?: (a: LedgerAsset) => void; onDelete?: (id: string) => void; confirmOpen?: boolean }) {
+export function AssetDetailSheetView({ asset: initial, open, onClose, onChange, onDelete, confirmOpen }: { asset: LedgerAsset | null; open: boolean; onClose: () => void; onChange?: (a: LedgerAsset) => void | Promise<unknown>; onDelete?: (id: string) => void | Promise<unknown>; confirmOpen?: boolean }) {
   const [asset, setAsset] = useState<LedgerAsset | null>(initial);
   const [n, setN] = useState('');
   const [amt, setAmt] = useState('');
   const [confirm, setConfirm] = useState(!!confirmOpen);
   useEffect(() => { setAsset(initial); setN(''); setAmt(''); }, [initial, open]);
-  const patch = (p: Partial<LedgerAsset>) => setAsset((a) => { if (!a) return a; const next = { ...a, ...p }; onChange?.(next); return next; });
+  const toast = useToast();
+  const saving = useRef(false);
+  const patch = async (p: Partial<LedgerAsset>) => {
+    if (!asset || saving.current) return false;
+    saving.current = true;
+    try { const next = { ...asset, ...p }; await onChange?.(next); setAsset(next); return true; }
+    catch { toast('资产修改失败，请重试'); return false; }
+    finally { saving.current = false; }
+  };
   if (!asset) return null;
   const addOns = asset.addOns ?? [];
   return (
@@ -84,13 +94,13 @@ export function AssetDetailSheetView({ asset: initial, open, onClose, onChange, 
             <div className="flex min-w-0 gap-2">
               <span className="min-w-0 flex-1"><P3Input value={n} onChange={(e) => setN(e.target.value)} placeholder="名称" aria-label="附加费用名称" /></span>
               <span className="w-24 shrink-0"><P3Input type="number" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="金额" aria-label="附加费用金额" /></span>
-              <span className="shrink-0"><P3Button tone="ink" disabled={!n.trim() || !(Number(amt) > 0)} onClick={() => { patch({ addOns: [...addOns, { name: n.trim(), amount: Number(amt) }] }); setN(''); setAmt(''); }}>加</P3Button></span>
+              <span className="shrink-0"><P3Button tone="ink" disabled={!n.trim() || !(Number(amt) > 0)} onClick={async () => { if (await patch({ addOns: [...addOns, { name: n.trim(), amount: Number(amt) }] })) { setN(''); setAmt(''); } }}>加</P3Button></span>
             </div>
           </div>
           <P3Button tone="danger" block onClick={() => setConfirm(true)}>删除这件资产</P3Button>
         </div>
       </P3Sheet>
-      <AssetDeleteConfirmView open={confirm} onClose={() => setConfirm(false)} name={asset.name} onConfirm={() => { onDelete?.(asset.id); onClose(); }} />
+      <AssetDeleteConfirmView open={confirm} onClose={() => setConfirm(false)} name={asset.name} onConfirm={async () => { if (saving.current) return; saving.current = true; try { await onDelete?.(asset.id); onClose(); } catch { toast('资产删除失败，请重试'); } finally { saving.current = false; } }} />
     </>
   );
 }

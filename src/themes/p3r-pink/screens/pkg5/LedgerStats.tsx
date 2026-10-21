@@ -11,16 +11,17 @@ import { P3Stagger, P3StaggerItem } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
 import { BarRow, GlassSlab, MiniHead, MonthNav, Ring, TrophyGlyph } from './ui';
 import { LedgerSettleSheetView } from '@pink/screens/overlays/LedgerSettleSheet.p3r';
-import { CNY, LEDGER_BUDGET, catMeta, fmtMoney, fmtSigned, monthLabel, shiftMonth } from '@pink/adapters/pkg5';
+import { CNY, catMeta, fmtMoney, fmtSigned, monthLabel, shiftMonth, useLedgerData, ledgerOps } from '@pink/adapters/pkg5';
 import type { LedgerEntry, LedgerExpenseType } from '@/types';
 
 export const OrbGlyph = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden fill="currentColor" className="shrink-0"><circle cx="12" cy="10" r="7.5" opacity="0.9" /><path d="M5 20h14l-2-3H7z" /><path d="M9 7.5a3.5 3.5 0 0 1 3-2" stroke="var(--p3r-panel)" strokeWidth="1.6" fill="none" /></svg>
 );
 
-export function LedgerStats({ entries, forceEmpty }: { entries: LedgerEntry[]; forceEmpty?: boolean }) {
+export function LedgerStats({ entries, forceEmpty, initialPeriod }: { entries: LedgerEntry[]; forceEmpty?: boolean; initialPeriod?: string }) {
+  const { CURRENT_MONTH } = useLedgerData();
   const anim = useBoldness();
-  const [period, setPeriod] = useState('2026-10');
+  const [period, setPeriod] = useState(initialPeriod ?? CURRENT_MONTH);
   const [settle, setSettle] = useState(false);
   const inP = entries.filter((e) => e.date.startsWith(period) && !forceEmpty);
   const exp = inP.filter((e) => e.direction === 'expense');
@@ -31,16 +32,17 @@ export function LedgerStats({ entries, forceEmpty }: { entries: LedgerEntry[]; f
   const byCat = Object.entries(exp.reduce<Record<string, number>>((m, e) => { m[e.type ?? 'other'] = (m[e.type ?? 'other'] ?? 0) + e.amount; return m; }, {})).sort((a, b) => b[1] - a[1]) as [LedgerExpenseType, number][];
   const byCh = Object.entries(exp.reduce<Record<string, number>>((m, e) => { const k = e.channel ?? '未填'; m[k] = (m[k] ?? 0) + e.amount; return m; }, {})).sort((a, b) => b[1] - a[1]);
   const labor = inc.filter((e) => e.incomeType === 'labor').reduce((s, e) => s + e.amount, 0);
-  const budget = period === '2026-10' ? LEDGER_BUDGET.monthlyLimit : 0;
+  const selectedBudget = ledgerOps.budgetFor(period);
+  const budget = selectedBudget?.monthlyLimit ?? 0;
   const over = totalExpense > budget;
   const progress = budget ? totalExpense / budget : 0;
   const momPct = prevExpense > 0 ? ((totalExpense - prevExpense) / prevExpense) * 100 : null;
-  const trend = [-5, -4, -3, -2, -1, 0].map((d) => { const m = shiftMonth(period, d); const v = d === 0 ? totalExpense : d === -1 ? prevExpense : [1820, 2410, 2960, 2205][d + 5] ?? 0; return { m, v }; });
+  const trend = [-5, -4, -3, -2, -1, 0].map((d) => { const m = shiftMonth(period, d); const v = entries.filter(e => e.direction === 'expense' && e.date.startsWith(m)).reduce((sum, e) => sum + e.amount, 0); return { m, v }; });
   const maxTrend = Math.max(1, ...trend.map((t) => t.v));
   const hasAny = totalExpense > 0 || totalIncome > 0;
   return (
     <P3Stagger className="flex min-w-0 flex-col gap-4">
-      <P3StaggerItem><MonthNav label={monthLabel(period)} onPrev={() => setPeriod((p) => shiftMonth(p, -1))} onNext={() => setPeriod((p) => shiftMonth(p, 1))} nextDisabled={period >= '2026-10'} /></P3StaggerItem>
+      <P3StaggerItem><MonthNav label={monthLabel(period)} onPrev={() => setPeriod((p) => shiftMonth(p, -1))} onNext={() => setPeriod((p) => shiftMonth(p, 1))} nextDisabled={period >= CURRENT_MONTH} /></P3StaggerItem>
       <P3StaggerItem>
         <GlassSlab cut={16}>
           <div className="px-6 py-4">
@@ -70,9 +72,9 @@ export function LedgerStats({ entries, forceEmpty }: { entries: LedgerEntry[]; f
               <div className="relative h-[11px] w-full overflow-hidden" style={{ background: 'var(--p3r-track)', clipPath: slantClip(3) }}>
                 <motion.div className="absolute inset-y-0 left-0 w-full origin-left" style={{ background: over ? P3R.magenta : `linear-gradient(90deg, ${P3R.blue}, ${P3R.cyan})` }} initial={anim ? { scaleX: 0 } : false} animate={{ scaleX: Math.min(1, progress) }} transition={{ type: 'spring', stiffness: 110, damping: 20 }} />
               </div>
-              {LEDGER_BUDGET.savingsGoal > 0 && (
+              {(selectedBudget?.savingsGoal ?? 0) > 0 && (
                 <div className="mt-3 flex items-baseline justify-between border-t-2 border-dotted pt-2 text-[13px] font-black" style={{ borderColor: 'rgb(var(--p3r-cyan-rgb) / 0.6)', color: P3R.ink }}>
-                  <span><TrophyGlyph /> 省钱挑战 · 想省</span><span className="font-cond text-[16px]" style={{ color: P3R.roseInk }}>{CNY}{fmtMoney(LEDGER_BUDGET.savingsGoal)}</span>
+                  <span><TrophyGlyph /> 省钱挑战 · 想省</span><span className="font-cond text-[16px]" style={{ color: P3R.roseInk }}>{CNY}{fmtMoney((selectedBudget?.savingsGoal ?? 0))}</span>
                 </div>
               )}
             </div>

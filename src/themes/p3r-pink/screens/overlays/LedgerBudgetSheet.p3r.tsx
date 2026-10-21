@@ -7,10 +7,13 @@ import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Sheet, P3Button, P3Stepper, P3R, useToast } from '@pink/kit';
 import { FLabel, MoneyBox, NoteBox, TrophyGlyph } from '@pink/screens/pkg5/ui';
-import { CNY, LEDGER_BUDGET, LEDGER_RESET_DAY, fmtMoney, fmtPlain, monthLabel } from '@pink/adapters/pkg5';
+import { CNY, fmtMoney, fmtPlain, monthLabel, useLedgerData, ledgerOps } from '@pink/adapters/pkg5';
 
 export function LedgerBudgetSheetView({ open, onClose, newCycle, locked: forceLocked, days = 31, onSaved }: { open: boolean; onClose: () => void; newCycle?: boolean; locked?: boolean; days?: number; onSaved?: (monthly: number) => void }) {
+  const { LEDGER_BUDGET, LEDGER_RESET_DAY } = useLedgerData();
   const toast = useToast();
+  const saving = useRef(false);
+  const [busy, setBusy] = useState(false);
   const current = LEDGER_BUDGET.monthlyLimit;
   const editsLeft = forceLocked ? 0 : Math.max(0, 2 - LEDGER_BUDGET.savingsGoalEdits);
   const [monthly, setMonthly] = useState('');
@@ -18,15 +21,16 @@ export function LedgerBudgetSheetView({ open, onClose, newCycle, locked: forceLo
   const [savings, setSavings] = useState('');
   const [challenge, setChallenge] = useState(false);
   const [resetDay, setResetDay] = useState(LEDGER_RESET_DAY);
+  useEffect(() => { if (open) setResetDay(LEDGER_RESET_DAY); }, [open, LEDGER_RESET_DAY]);
   const fromDaily = useRef<string | null>(null);
   const dailyOf = (m: string) => { const n = Number(m); return n > 0 ? fmtPlain(n / days) : ''; };
-  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(LEDGER_BUDGET.savingsGoal)); setChallenge(!newCycle); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(LEDGER_BUDGET.savingsGoal)); setChallenge(!newCycle); } }, [open, current, LEDGER_BUDGET.savingsGoal]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (fromDaily.current === monthly) { fromDaily.current = null; return; } setDaily(dailyOf(monthly)); }, [monthly]); // eslint-disable-line react-hooks/exhaustive-deps
   const m = Number(monthly);
   const locked = editsLeft <= 0;
   return (
     <P3Sheet open={open} onClose={onClose} title={newCycle ? '新的一程 · 立个目标' : '本月预算'} en={newCycle ? 'NEW CYCLE' : 'BUDGET'}
-      footer={<P3Button block size="lg" corner disabled={!(m > 0)} onClick={() => { onClose(); if (onSaved) onSaved(m); else toast.success(`预算已定：${CNY}${fmtMoney(m)}`); }}>{newCycle ? '就这么定' : '保存'}</P3Button>}>
+      footer={<P3Button block size="lg" corner disabled={busy || !Number.isFinite(m) || !(m > 0)} onClick={async () => { if (saving.current) return; saving.current = true; setBusy(true); try { await ledgerOps.saveBudget(m, challenge ? Number(savings) || 0 : undefined, resetDay, newCycle); onClose(); if (onSaved) onSaved(m); else toast.success(`预算已定：${CNY}${fmtMoney(m)}`); } catch { toast('预算保存失败，请重试'); } finally { saving.current = false; setBusy(false); } }}>{newCycle ? '就这么定' : '保存'}</P3Button>}>
       <div className="flex min-w-0 flex-col gap-4 pt-1">
         <NoteBox>
           {newCycle ? '新的一程开始了——给自己定个花费节奏，和一个想攒下的小目标。' : '设一个本月的花费上限——它是你的纪律线，不影响总余额。'}

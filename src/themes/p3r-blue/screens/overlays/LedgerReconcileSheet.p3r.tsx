@@ -4,14 +4,19 @@
  *   就这么记（N 个账户）/ 填一个账户的余额 / 校准 N 个账户 / 改了哪个账户就校准哪个 / 本月对账已用完 / 账本还在读取… / 记录中…
  * 路由：?variant=initial（开局，不占轮数）| used（本月对账已用完）| loading（账本还在读取…）
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3R, slantClip, useToast } from '@blue/kit';
-import { CNY, LEDGER_ACCOUNTS, fmtMoney, fmtPlain, fmtSigned, roundMoney, sanitizeMoneyInput, type P5Account } from '@blue/adapters/pkg5';
+import { CNY, fmtMoney, fmtPlain, fmtSigned, roundMoney, sanitizeMoneyInput, type P5Account, useLedgerData, ledgerOps } from '@blue/adapters/pkg5';
 import { NoteBox } from '@blue/screens/pkg5/ui';
 
-export function LedgerReconcileSheetView({ open, onClose, initial, remaining = 2, ready = true, accounts = LEDGER_ACCOUNTS, onSaved }: { open: boolean; onClose: () => void; initial?: boolean; remaining?: number; ready?: boolean; accounts?: P5Account[]; onSaved?: () => void }) {
+export function LedgerReconcileSheetView({ open, onClose, initial, remaining, ready, accounts: providedAccounts, onSaved }: { open: boolean; onClose: () => void; initial?: boolean; remaining?: number; ready?: boolean; accounts?: P5Account[]; onSaved?: () => void }) {
+  const { LEDGER_ACCOUNTS, LEDGER_LOADED, ADJUST_LEFT } = useLedgerData();
+  const accounts = providedAccounts ?? LEDGER_ACCOUNTS;
+  remaining ??= ADJUST_LEFT;
+  ready ??= LEDGER_LOADED;
   const toast = useToast();
+  const saving = useRef(false);
   const [vals, setVals] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (open) { setVals({}); setBusy(false); } }, [open]);
@@ -22,7 +27,7 @@ export function LedgerReconcileSheetView({ open, onClose, initial, remaining = 2
   const balanceText = (a: P5Account) => (a.isDebt && a.balance < 0 ? `欠 ${CNY}${fmtMoney(-a.balance)}` : fmtSigned(a.balance));
   return (
     <P3Sheet open={open} onClose={onClose} title={initial ? '设置当前余额' : '余额对账'} en={initial ? 'OPENING' : 'RECONCILE'} size="tall" busy={busy}
-      footer={<P3Button block size="lg" corner disabled={!canSave && !busy} busy={busy} busyText="记录中…" onClick={() => { setBusy(true); window.setTimeout(() => { onClose(); if (onSaved) onSaved(); else toast.success(initial ? '余额已记下' : `已校准 ${changed.length} 个账户`); }, 520); }}>{label}</P3Button>}>
+      footer={<P3Button block size="lg" corner disabled={!canSave && !busy} busy={busy} busyText="记录中…" onClick={() => { if (saving.current || !canSave) return; saving.current = true; setBusy(true); window.setTimeout(async () => { try { const result = await ledgerOps.reconcile(changed.map(a => ({ account: a.unassigned ? null : a.name, target: roundMoney(Number(vals[a.name])) }))); if (!result.ok) { setBusy(false); toast(result.reason || '对账失败'); return; } onClose(); if (onSaved) onSaved(); else toast.success(initial ? '余额已记下' : `已校准 ${changed.length} 个账户`); } catch (error) { toast(error instanceof Error ? error.message : '对账失败，请重试'); } finally { saving.current = false; setBusy(false); } }, 520); }}>{label}</P3Button>}>
       <div className="flex min-w-0 flex-col gap-3 pt-1">
         <NoteBox>
           {initial

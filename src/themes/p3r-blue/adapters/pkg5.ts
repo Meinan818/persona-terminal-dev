@@ -15,7 +15,7 @@ export const daysAgoKey = (n: number) => { const d = new Date(); d.setDate(d.get
 
 // B 类：用户数据 → hook，返回值的键名 = 原 mock 导出名
 export function useLedgerData() {
-  const { entries, budgets, loaded } = useAppStore(useShallow((s) => ({ entries: s.ledgerEntries, budgets: s.budgets, loaded: s.ledgerLoaded })));
+  const { entries, budgets, loaded, assets, settings } = useAppStore(useShallow((s) => ({ entries: s.ledgerEntries, budgets: s.budgets, loaded: s.ledgerLoaded, assets: s.assets, settings: s.settings })));
   useEffect(() => { if (!loaded) void useAppStore.getState().loadLedger(); }, [loaded]);
   const getAccountBalances = useAppStore((s) => s.getAccountBalances);
   const getSavings = useAppStore((s) => s.getSavings);
@@ -31,16 +31,15 @@ export function useLedgerData() {
       P5_TODAY: today,
       CURRENT_MONTH: today.slice(0, 7),
       LEDGER_LOADED: loaded,
+      LEDGER_ASSETS: assets,
+      LEDGER_RESET_DAY: settings.ledgerResetDay ?? 1,
+      ADJUST_LEFT: Math.max(0, 3 - useAppStore.getState().getAdjustCountThisMonth()),
     };
-  }, [entries, budgets, loaded, getAccountBalances, getSavings, getBudget]);
+  }, [entries, budgets, loaded, assets, settings, getAccountBalances, getSavings, getBudget]);
 }
 
 // C 类：操作
-type AddInput = Parameters<ReturnType<typeof useAppStore.getState>['addLedgerEntry']>[0];
-export const ledgerOps = {
-  remove: (id: string) => useAppStore.getState().deleteLedgerEntry(id),
-  add: (input: AddInput) => useAppStore.getState().addLedgerEntry(input),
-};
+export { ledgerOps } from '@/themes/ledgerOperations';
 
 // mock 的 P5_TODAY 固定为 2026-10-20（模块顶层被 LedgerEntrySheet 的 emptyDraft 等使用，不能走 hook）→ 同名常量覆盖成真实今天
 export const P5_TODAY = toLocalDateKey();

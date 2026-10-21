@@ -1,0 +1,278 @@
+{
+ "id": "allout.default",
+ "event": "allout",
+ "duration": 3400,
+ "hitMarks": [
+  400,
+  610,
+  820,
+  1030,
+  1240,
+  1450,
+  1660,
+  1870,
+  2100
+ ],
+ "assets": [
+  "allout.finish.default",
+  "ui.slab",
+  "fx.dot",
+  "fx.spark",
+  "fx.shard.0",
+  "fx.shard.1",
+  "fx.shard.2"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 3200,
+   "prim": "dim",
+   "args": {
+    "color": "#0a1f7a",
+    "alpha": 0.5
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "allout.start"
+   }
+  },
+  {
+   "at": 0,
+   "dur": 420,
+   "prim": "slashPanels",
+   "layer": "allout",
+   "args": {
+    "colors": [
+     "#ffffff",
+     "@color.secondary",
+     "@color.primary"
+    ],
+    "angle": -0.21,
+    "stagger": 60,
+    "dir": "left"
+   },
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 0,
+   "dur": 700,
+   "prim": "title",
+   "layer": "allout",
+   "ease": "outBack",
+   "args": {
+    "text": "label.allout",
+    "font": "@font.display",
+    "size": 120,
+    "pos": {
+     "x": 640,
+     "y": 170
+    },
+    "rot": -0.21
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 300,
+   "dur": 1700,
+   "prim": "silhouetteDash",
+   "layer": "allout",
+   "args": {
+    "units": "$party",
+    "count": 8,
+    "interval": 200,
+    "path": "L-R"
+   },
+   "minimal": {
+    "args": {
+     "units": "$party",
+     "count": 3,
+     "interval": 200
+    }
+   }
+  },
+  {
+   "at": 400,
+   "dur": 150,
+   "prim": "slashLine",
+   "layer": "allout",
+   "args": {
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -200
+    },
+    "rot": -0.21,
+    "len": 760,
+    "width": 14
+   },
+   "repeatEvery": 210,
+   "times": 8
+  },
+  {
+   "at": 400,
+   "prim": "particles",
+   "layer": "allout",
+   "args": {
+    "count": 60,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -200
+    },
+    "speed": 1100,
+    "spread": 6.28,
+    "life": 450,
+    "frames": [
+     "fx.shard.0",
+     "fx.shard.1",
+     "fx.shard.2",
+     "fx.spark"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.secondary"
+    ]
+   },
+   "repeatEvery": 210,
+   "times": 8
+  },
+  {
+   "at": 400,
+   "prim": "particles",
+   "layer": "allout",
+   "args": {
+    "count": 28,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -80
+    },
+    "speed": 260,
+    "spread": 3.14,
+    "dir": -1.57,
+    "life": 600,
+    "frames": [
+     "fx.dot"
+    ],
+    "colors": [
+     "#cfeaf6",
+     "#8fa3c8"
+    ]
+   },
+   "repeatEvery": 420,
+   "times": 4
+  },
+  {
+   "at": 400,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.light"
+   },
+   "repeatEvery": 210,
+   "times": 8
+  },
+  {
+   "at": 2100,
+   "dur": 150,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.85
+   }
+  },
+  {
+   "at": 2100,
+   "prim": "hitStop",
+   "args": {
+    "ms": 90
+   }
+  },
+  {
+   "at": 2100,
+   "dur": 450,
+   "prim": "shockwave",
+   "args": {
+    "center": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -200
+    },
+    "amp": 50,
+    "wavelength": 180,
+    "speed": 900,
+    "radius": 640
+   }
+  },
+  {
+   "at": 2100,
+   "prim": "sfx",
+   "args": {
+    "id": "allout.finish"
+   }
+  },
+  {
+   "at": 2100,
+   "dur": 960,
+   "prim": "finishCard",
+   "layer": "allout",
+   "ease": "outCubic",
+   "args": {
+    "artId": "allout.finish.default",
+    "shape": [
+     -760,
+     -330,
+     700,
+     -400,
+     760,
+     330,
+     -700,
+     400
+    ],
+    "enterFrom": "right",
+    "zoom": 1.03
+   }
+  },
+  {
+   "at": 2300,
+   "dur": 760,
+   "prim": "freezeFrame",
+   "args": {
+    "ms": 760,
+    "keepRendering": true
+   }
+  },
+  {
+   "at": 2300,
+   "dur": 760,
+   "prim": "totalDamage",
+   "layer": "allout",
+   "ease": "outBack",
+   "args": {
+    "label": "label.totalDamage",
+    "pos": {
+     "x": 300,
+     "y": 520
+    },
+    "plate": "ui.slab"
+   }
+  },
+  {
+   "at": 3160,
+   "dur": 200,
+   "prim": "tween",
+   "args": {
+    "target": "#layer.allout",
+    "to": {
+     "alpha": 0
+    }
+   }
+  }
+ ]
+}

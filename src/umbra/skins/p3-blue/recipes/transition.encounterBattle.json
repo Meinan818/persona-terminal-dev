@@ -1,0 +1,125 @@
+{
+ "id": "transition.encounterBattle",
+ "event": "map:encounter",
+ "merges": [
+  "battle:start"
+ ],
+ "duration": 1150,
+ "assets": [
+  "fx.tarot",
+  "fx.wipe.crescent"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "encounter.touch"
+   }
+  },
+  {
+   "at": 0,
+   "dur": 120,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.6
+   }
+  },
+  {
+   "at": 0,
+   "dur": 300,
+   "prim": "dim",
+   "args": {
+    "color": "#0a1f7a",
+    "alpha": 0.4
+   }
+  },
+  {
+   "at": 0,
+   "dur": 300,
+   "prim": "speedLines",
+   "args": {
+    "count": 30,
+    "dir": -0.21,
+    "colors": [
+     "#ffffff",
+     "@color.secondary"
+    ],
+    "scrollSpeed": 2400
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 280,
+   "prim": "sfx",
+   "args": {
+    "id": "encounter"
+   }
+  },
+  {
+   "at": 280,
+   "prim": "vibrate",
+   "args": {
+    "ms": 30
+   }
+  },
+  {
+   "at": 280,
+   "dur": 480,
+   "prim": "slashPanels",
+   "layer": "trans",
+   "ease": "outQuart",
+   "args": {
+    "colors": [
+     "#0a1f7a",
+     "@color.primary",
+     "@color.secondary",
+     "#ffffff"
+    ],
+    "angle": -0.21,
+    "stagger": 60,
+    "dir": "left"
+   },
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 540,
+   "dur": 420,
+   "prim": "cardShatter",
+   "layer": "trans",
+   "args": {
+    "cardArt": "fx.tarot",
+    "pieces": 20,
+    "dir": "out"
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 700,
+   "dur": 440,
+   "prim": "maskWipe",
+   "layer": "trans",
+   "ease": "inOutCubic",
+   "args": {
+    "shape": "fx.wipe.crescent",
+    "from": {
+     "scale": 0.1,
+     "x": 640,
+     "y": 360
+    },
+    "to": {
+     "scale": 7,
+     "x": 640,
+     "y": 360
+    },
+    "invert": true
+   },
+   "minimal": {
+    "dur": 250
+   }
+  }
+ ]
+}

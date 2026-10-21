@@ -1,0 +1,114 @@
+{
+ "id": "holdup",
+ "event": "holdup",
+ "duration": 980,
+ "assets": [
+  "fx.dot"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 980,
+   "prim": "dim",
+   "args": {
+    "color": "#0a1f7a",
+    "alpha": 0.5
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "holdup"
+   }
+  },
+  {
+   "at": 0,
+   "dur": 380,
+   "prim": "slashPanels",
+   "layer": "trans",
+   "args": {
+    "colors": [
+     "#0a1f7a",
+     "@color.primary",
+     "#ffffff"
+    ],
+    "angle": -0.21,
+    "stagger": 60,
+    "dir": "right"
+   },
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 200,
+   "dur": 700,
+   "prim": "radialBurst",
+   "layer": "fx",
+   "args": {
+    "rays": 12,
+    "colors": [
+     "@color.primary",
+     "@color.secondary"
+    ],
+    "spin": 0.4
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 220,
+   "dur": 560,
+   "prim": "title",
+   "layer": "hud",
+   "ease": "outBack",
+   "args": {
+    "text": "label.holdup",
+    "font": "@font.display",
+    "size": 96,
+    "pos": {
+     "x": 640,
+     "y": 190
+    },
+    "rot": -0.21
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 300,
+   "prim": "particles",
+   "layer": "fx",
+   "args": {
+    "count": 40,
+    "at": {
+     "x": 640,
+     "y": 360
+    },
+    "speed": 300,
+    "spread": 6.28,
+    "life": 500,
+    "frames": [
+     "fx.dot"
+    ],
+    "colors": [
+     "#cfeaf6",
+     "#ffffff"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 780,
+   "dur": 180,
+   "prim": "tween",
+   "args": {
+    "target": "#layer.fx",
+    "to": {
+     "alpha": 0
+    }
+   }
+  }
+ ]
+}

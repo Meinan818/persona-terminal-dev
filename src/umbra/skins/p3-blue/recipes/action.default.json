@@ -1,0 +1,179 @@
+{
+ "id": "action.default",
+ "event": "action",
+ "duration": 940,
+ "hitMarks": [
+  300
+ ],
+ "assets": [
+  "fx.shard.0",
+  "fx.shard.1",
+  "fx.shard.2",
+  "fx.spark"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 220,
+   "prim": "afterimage",
+   "ease": "inCubic",
+   "args": {
+    "actor": "$actor",
+    "to": {
+     "x": "$target",
+     "y": "$target",
+     "dx": -150
+    },
+    "n": 2,
+    "tints": [
+     "#ffffff",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "swing"
+   }
+  },
+  {
+   "at": 240,
+   "dur": 140,
+   "prim": "slashLine",
+   "layer": "fx",
+   "args": {
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -200
+    },
+    "rot": -0.6,
+    "len": 520,
+    "width": 18
+   }
+  },
+  {
+   "at": 300,
+   "prim": "hitStop",
+   "args": {
+    "ms": 70
+   }
+  },
+  {
+   "at": 300,
+   "dur": 280,
+   "prim": "shake",
+   "args": {
+    "px": 12
+   }
+  },
+  {
+   "at": 300,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$target",
+    "ms": 50
+   }
+  },
+  {
+   "at": 300,
+   "prim": "squashHit",
+   "args": {
+    "target": "$target",
+    "squash": 0.2,
+    "push": 22,
+    "recoverMs": 280
+   }
+  },
+  {
+   "at": 300,
+   "prim": "particles",
+   "layer": "fx",
+   "args": {
+    "count": 80,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -200
+    },
+    "speed": 1300,
+    "spread": 6.28,
+    "life": 480,
+    "size": 10,
+    "frames": [
+     "fx.shard.0",
+     "fx.shard.1",
+     "fx.shard.2",
+     "fx.spark"
+    ],
+    "colors": [
+     "#ffffff",
+     "#cfeaf6",
+     "@color.secondary"
+    ]
+   },
+   "minimal": {
+    "args": {
+     "count": 40,
+     "at": {
+      "x": "$target",
+      "y": "$target",
+      "dy": -200
+     },
+     "life": 480,
+     "frames": [
+      "fx.shard.0",
+      "fx.shard.1",
+      "fx.shard.2"
+     ]
+    }
+   }
+  },
+  {
+   "at": 300,
+   "dur": 600,
+   "prim": "damageNumber",
+   "layer": "dmg",
+   "args": {
+    "font": "@font.number",
+    "big": false
+   }
+  },
+  {
+   "at": 300,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.light"
+   }
+  },
+  {
+   "at": 300,
+   "dur": 600,
+   "prim": "tag",
+   "layer": "dmg",
+   "args": {
+    "kind": "WEAK",
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -300
+    }
+   }
+  },
+  {
+   "at": 440,
+   "dur": 300,
+   "prim": "tween",
+   "ease": "outCubic",
+   "args": {
+    "target": "$actor",
+    "to": {
+     "x": "home",
+     "y": "home"
+    }
+   }
+  }
+ ]
+}

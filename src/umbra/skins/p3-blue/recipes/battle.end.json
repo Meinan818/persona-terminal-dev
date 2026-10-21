@@ -1,0 +1,118 @@
+{
+ "id": "battle.end",
+ "event": "battle:end",
+ "duration": 1400,
+ "assets": [
+  "fx.tarot",
+  "fx.dot",
+  "fx.spark"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 1400,
+   "prim": "dim",
+   "args": {
+    "color": "#0a1f7a",
+    "alpha": 0.55
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "battle.end"
+   }
+  },
+  {
+   "at": 0,
+   "dur": 520,
+   "prim": "slashPanels",
+   "layer": "trans",
+   "args": {
+    "colors": [
+     "#ffffff",
+     "@color.secondary",
+     "@color.primary",
+     "#0a1f7a"
+    ],
+    "angle": -0.21,
+    "stagger": 60,
+    "dir": "left"
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 200,
+   "dur": 480,
+   "prim": "cardFlip",
+   "layer": "hud",
+   "args": {
+    "cardArt": {
+     "front": "fx.tarot",
+     "back": "fx.tarot"
+    },
+    "axis": "y",
+    "flips": 1
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 300,
+   "dur": 700,
+   "prim": "title",
+   "layer": "hud",
+   "ease": "outBack",
+   "args": {
+    "text": "label.result",
+    "font": "@font.number",
+    "size": 110,
+    "pos": {
+     "x": 900,
+     "y": 200
+    },
+    "rot": -0.21
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 400,
+   "prim": "particles",
+   "layer": "hud",
+   "args": {
+    "count": 60,
+    "at": {
+     "x": 900,
+     "y": 220
+    },
+    "speed": 240,
+    "spread": 6.28,
+    "life": 800,
+    "frames": [
+     "fx.dot",
+     "fx.spark"
+    ],
+    "colors": [
+     "#cfeaf6",
+     "#ffffff"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 1150,
+   "dur": 200,
+   "prim": "tween",
+   "args": {
+    "target": "#layer.trans",
+    "to": {
+     "alpha": 0
+    }
+   }
+  }
+ ]
+}

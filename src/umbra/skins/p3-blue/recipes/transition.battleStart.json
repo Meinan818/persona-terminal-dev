@@ -1,0 +1,110 @@
+{
+ "id": "transition.battleStart",
+ "event": "battle:start",
+ "duration": 860,
+ "assets": [
+  "fx.tarot",
+  "fx.wipe.crescent",
+  "fx.shard.0",
+  "fx.shard.1",
+  "fx.shard.2"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "encounter"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "vibrate",
+   "args": {
+    "ms": 30
+   }
+  },
+  {
+   "at": 0,
+   "dur": 480,
+   "prim": "slashPanels",
+   "layer": "trans",
+   "ease": "outQuart",
+   "args": {
+    "colors": [
+     "#0a1f7a",
+     "@color.primary",
+     "@color.secondary",
+     "#ffffff"
+    ],
+    "angle": -0.21,
+    "stagger": 60,
+    "dir": "left"
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 260,
+   "dur": 420,
+   "prim": "cardShatter",
+   "layer": "trans",
+   "args": {
+    "cardArt": "fx.tarot",
+    "pieces": 20,
+    "dir": "out"
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 260,
+   "prim": "particles",
+   "layer": "trans",
+   "args": {
+    "count": 40,
+    "at": {
+     "x": 640,
+     "y": 360
+    },
+    "speed": 900,
+    "spread": 6.28,
+    "life": 500,
+    "frames": [
+     "fx.shard.0",
+     "fx.shard.1",
+     "fx.shard.2"
+    ],
+    "colors": [
+     "#ffffff",
+     "#cfeaf6"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 420,
+   "dur": 440,
+   "prim": "maskWipe",
+   "layer": "trans",
+   "ease": "inOutCubic",
+   "args": {
+    "shape": "fx.wipe.crescent",
+    "from": {
+     "scale": 0.1,
+     "x": 640,
+     "y": 360
+    },
+    "to": {
+     "scale": 7,
+     "x": 640,
+     "y": 360
+    },
+    "invert": true
+   },
+   "minimal": {
+    "dur": 300
+   }
+  }
+ ]
+}

@@ -50,5 +50,6 @@
   "label.turn.enemy": "ENEMY",
   "skill.agi.name": "Agi",
   "skill.megidolaon.name": "Megidolaon",
-  "skill.cadenza.name": "Cadenza"
+  "skill.cadenza.name": "Cadenza",
+  "skill.bash.name": "Bash"
 }

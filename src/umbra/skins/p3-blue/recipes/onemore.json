@@ -1,0 +1,82 @@
+{
+ "id": "onemore",
+ "event": "onemore",
+ "duration": 440,
+ "assets": [
+  "cutin.hero",
+  "fx.streak"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 420,
+   "prim": "banner",
+   "layer": "cutin",
+   "ease": "outQuart",
+   "args": {
+    "text": "label.onemore",
+    "shape": [
+     -1300,
+     -280,
+     1300,
+     -250,
+     1300,
+     -110,
+     -1300,
+     -80
+    ],
+    "enterFrom": "right",
+    "artId": "cutin.hero"
+   },
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "onemore"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "layer": "cutin",
+   "args": {
+    "count": 30,
+    "at": {
+     "x": 1280,
+     "y": 180
+    },
+    "dir": 3.14,
+    "spread": 0.3,
+    "speed": 1800,
+    "life": 380,
+    "frames": [
+     "fx.streak"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.secondary"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 60,
+   "dur": 160,
+   "prim": "slashLine",
+   "layer": "cutin",
+   "args": {
+    "pos": {
+     "x": 640,
+     "y": 190
+    },
+    "rot": -0.21,
+    "len": 1400,
+    "width": 10
+   }
+  }
+ ]
+}

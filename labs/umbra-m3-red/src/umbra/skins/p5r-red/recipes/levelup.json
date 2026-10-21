@@ -1,0 +1,65 @@
+{
+ "id": "levelup",
+ "event": "levelup",
+ "duration": 900,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "dur": 90,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.4
+   }
+  },
+  {
+   "at": 0,
+   "prim": "title",
+   "dur": 780,
+   "args": {
+    "text": "result.levelup",
+    "size": 120,
+    "pos": {
+     "x": 640,
+     "y": 320
+    },
+    "rot": -0.1,
+    "invert": [
+     0,
+     6
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "args": {
+    "count": 80,
+    "at": {
+     "x": 640,
+     "y": 320
+    },
+    "speed": 1100,
+    "life": 600,
+    "gravity": 200,
+    "frames": [
+     "star",
+     "shard"
+    ],
+    "colors": [
+     "#ffe14a",
+     "#ffffff",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "levelup"
+   }
+  }
+ ]
+}

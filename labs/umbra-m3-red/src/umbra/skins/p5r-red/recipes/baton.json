@@ -1,0 +1,23 @@
+{
+ "id": "baton",
+ "event": "baton",
+ "duration": 540,
+ "assets": [
+  "char.$actor"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "batonPass",
+   "dur": 540,
+   "args": {}
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "baton"
+   }
+  }
+ ]
+}

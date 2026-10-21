@@ -1,6 +1,8 @@
 // 场上单位：MeshPlane 常驻呼吸/摆动（meshIdle §1.5）、受击压扁、倒地姿态（portraitDown 的持久状态）。
 import { Container, Graphics, MeshPlane, Mesh, Texture } from 'pixi.js';
 
+export interface Pose { lean: number; crouch: number; twist: number; raise: number; dx: number; dy: number }
+export const POSE0: Pose = { lean: 0, crouch: 0, twist: 0, raise: 0, dx: 0, dy: 0 };
 export interface MeshIdleCfg { breath: number; period: number; swayPx: number; swayZone: string | number[][] }
 export interface UnitNode {
   id: string; side: 'ally' | 'enemy';
@@ -8,6 +10,8 @@ export interface UnitNode {
   home: { x: number; y: number }; h: number; s: number; facing: 1 | -1;
   idle: MeshIdleCfg; base: Float32Array; weights: Float32Array; phase: number;
   down: boolean; downT: number; stars: Container; reticle?: Container;
+  /** 2D 骨骼式姿态（网格变形参数，pose 原语按缓动连续插值；0 = 待机） */
+  pose: Pose; arm: Float32Array;
   headY: number;   // 头顶（相对 root，设计像素，负数）
   hitY: number;    // 命中点
 }
@@ -21,7 +25,7 @@ function inPoly(x: number, y: number, p: number[]) {
   return c;
 }
 
-export function makeUnit(id: string, side: 'ally' | 'enemy', tex: Texture, x: number, y: number, h: number, facing: 1 | -1, idle: MeshIdleCfg, phase: number, grid: [number, number]) {
+export function makeUnit(id: string, side: 'ally' | 'enemy', tex: Texture, x: number, y: number, h: number, facing: 1 | -1, idle: MeshIdleCfg, phase: number, grid: [number, number], armZone?: number[]) {
   const mesh = new MeshPlane({ texture: tex, verticesX: grid[0], verticesY: grid[1] });
   const shade = new Mesh({ geometry: mesh.geometry, texture: tex });
   shade.tint = 0x000000; shade.alpha = side === 'enemy' ? 0.85 : 0.6; shade.position.set(side === 'enemy' ? 5 : -4, 3);
@@ -47,7 +51,14 @@ export function makeUnit(id: string, side: 'ally' | 'enemy', tex: Texture, x: nu
     if (typeof idle.swayZone === 'string') weights[i] = idle.swayZone === 'all' ? Math.max(0, 1 - v) ** 2 : 0;
     else weights[i] = idle.swayZone.some((p) => inPoly(px, py, p)) ? Math.max(0, 1 - v) ** 1.5 : 0;
   }
-  const u: UnitNode = { id, side, root, body, hit, mesh, shade, tex, home: { x, y }, h, s, facing, idle, base, weights, phase, down: false, downT: 0, stars,
+  // 手臂区（皮肤给多边形；默认取画面右上 45%×60% 区域，按到肩部的距离衰减）—— raise 姿态只抬这一块
+  const arm = new Float32Array(base.length / 2);
+  for (let i = 0; i < arm.length; i++) {
+    const px = base[i * 2], py = base[i * 2 + 1], u0 = px / tex.width, v = py / tex.height;
+    if (armZone) arm[i] = inPoly(px, py, armZone) ? 1 : 0;
+    else arm[i] = Math.max(0, Math.min(1, (u0 - 0.5) / 0.35)) * Math.max(0, Math.min(1, (0.62 - v) / 0.3));
+  }
+  const u: UnitNode = { id, side, root, body, hit, mesh, shade, tex, home: { x, y }, h, s, facing, idle, base, weights, phase, down: false, downT: 0, stars, pose: { ...POSE0 }, arm,
     headY: -h - 20, hitY: -h * 0.55 };
   return u;
 }
@@ -58,13 +69,19 @@ export function updateUnit(u: UnitNode, t: number, dt: number) {
   const w = (t / u.idle.period) * Math.PI * 2 + u.phase;
   const br = 1 + u.idle.breath * Math.sin(w);
   const sway = u.idle.swayPx / u.s;   // design px → texture px
+  const P = u.pose, lean = P.lean / u.s * u.facing, rise = P.raise / u.s, cr = 1 - P.crouch, tw = P.twist;
   for (let i = 0, k = 0; i < d.length; i += 2, k++) {
-    const x = b[i], y = b[i + 1], v = y / H;
-    const ny = H - (H - y) * br;
-    const sw = sway * Math.sin(w * 1.35 + v * 3.2) * u.weights[k];
-    d[i] = W / 2 + (x - W / 2) * (1 - (br - 1) * 0.5 * (1 - v)) + sw; d[i + 1] = ny;
+    const x = b[i], y = b[i + 1], v = y / H, up = 1 - v;
+    const ny = H - (H - y) * br * cr;
+    const sw = sway * Math.sin(w * 1.35 + v * 3.2) * u.weights[k] * (1 + Math.abs(P.lean) / 40);   // 动作时衣摆/头发摆幅加大
+    const a = u.arm[k];
+    d[i] = W / 2 + (x - W / 2) * (1 - (br - 1) * 0.5 * up) * (1 - tw * up) * (1 + P.crouch * 0.4 * v) + sw + lean * up ** 1.3 + a * rise * 0.35 * u.facing;
+    d[i + 1] = ny - a * rise;
   }
   buf.update();
+  // 敌人待机浮动/微抖（原作 Shadow 悬浮感）；姿态位移
+  const bob = u.side === 'enemy' && !u.down ? Math.sin(w * 1.7) * 7 + Math.sin(t / 97) * 0.8 : 0;
+  u.body.pivot.x = -P.dx; u.body.pivot.y = -(P.dy + bob);
   if (u.down) {
     u.downT += dt;
     u.stars.children.forEach((s, i) => { const a = u.downT / 260 + (i * Math.PI * 2) / 3; s.position.set(Math.cos(a) * 46, -u.h * 0.32 + Math.sin(a) * 12); s.rotation = a; });

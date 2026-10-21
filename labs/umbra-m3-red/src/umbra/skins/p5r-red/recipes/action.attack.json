@@ -4,13 +4,11 @@
  "match": {
   "skillId": "attack"
  },
- "duration": 960,
+ "duration": 1100,
  "hitMarks": [
-  420
+  440
  ],
- "assets": [
-  "ally.joker.back"
- ],
+ "assets": [],
  "tracks": [
   {
    "at": 0,
@@ -20,8 +18,47 @@
    }
   },
   {
-   "at": 80,
+   "at": 0,
+   "prim": "pose",
+   "dur": 940,
+   "args": {
+    "target": "$actor",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.1,
+      "pose": "windup",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.32,
+      "pose": "dash",
+      "ease": "inCubic"
+     },
+     {
+      "at": 0.48,
+      "pose": "slash",
+      "ease": "outBack"
+     },
+     {
+      "at": 0.72,
+      "pose": "slash"
+     },
+     {
+      "at": 1,
+      "pose": "idle",
+      "ease": "inOutCubic"
+     }
+    ]
+   }
+  },
+  {
+   "at": 100,
    "prim": "afterimage",
+   "dur": 300,
    "args": {
     "actor": "$actor",
     "to": {
@@ -37,48 +74,46 @@
      "@color.primary",
      "#ffffff"
     ]
-   },
-   "dur": 300,
-   "ease": "inCubic"
+   }
   },
   {
-   "at": 380,
+   "at": 400,
    "prim": "slashLine",
+   "dur": 140,
    "args": {
     "len": 560,
     "width": 18,
     "rot": -0.7,
     "jitter": 30
-   },
-   "dur": 140
+   }
   },
   {
-   "at": 420,
+   "at": 440,
    "prim": "slashLine",
+   "dur": 140,
    "args": {
     "len": 520,
     "width": 14,
     "rot": 0.55,
     "jitter": 30
-   },
-   "dur": 140
+   }
   },
   {
-   "at": 420,
+   "at": 440,
    "prim": "hitStop",
    "args": {
-    "ms": 60
+    "ms": 50
    }
   },
   {
-   "at": 420,
+   "at": 440,
    "prim": "shake",
    "args": {
-    "px": 12
+    "px": 14
    }
   },
   {
-   "at": 420,
+   "at": 440,
    "prim": "flashSprite",
    "args": {
     "target": "$targets",
@@ -86,73 +121,102 @@
    }
   },
   {
-   "at": 420,
+   "at": 440,
    "prim": "squashHit",
    "args": {
     "target": "$targets",
     "squash": 0.2,
-    "push": 22,
-    "recoverMs": 300
+    "push": 24,
+    "recoverMs": 320
    }
   },
   {
-   "at": 420,
-   "prim": "rgbSplit",
+   "at": 440,
+   "prim": "pose",
+   "dur": 420,
    "args": {
-    "offset": 6
-   },
-   "dur": 90
-  },
-  {
-   "at": 420,
-   "prim": "particles",
-   "args": {
-    "count": 120,
-    "at": {
-     "x": "$target",
-     "y": "$target"
-    },
-    "speed": 1100,
-    "life": 480,
-    "frames": [
-     "shard",
-     "spark",
-     "star"
-    ],
-    "colors": [
-     "#ffffff",
-     "@color.primary",
-     "#0a0a0a"
+    "target": "$targets",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.25,
+      "pose": "recoil",
+      "ease": "outCubic"
+     },
+     {
+      "at": 1,
+      "pose": "idle",
+      "ease": "outElastic"
+     }
     ]
    }
   },
   {
-   "at": 420,
-   "prim": "damageNumber",
+   "at": 440,
+   "prim": "rgbSplit",
+   "dur": 90,
    "args": {
-    "font": "@font.number",
-    "big": false
-   },
-   "dur": 520
-  },
-  {
-   "at": 420,
-   "prim": "tag",
-   "args": {
-    "kind": "auto"
-   },
-   "dur": 520
-  },
-  {
-   "at": 420,
-   "prim": "sfx",
-   "args": {
-    "id": "hit"
+    "offset": 9
    }
   },
   {
-   "at": 580,
+   "at": 440,
+   "prim": "particles",
+   "args": {
+    "count": 260,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 1400,
+    "life": 560,
+    "frames": [
+     "shard",
+     "spark",
+     "star",
+     "shard",
+     "star"
+    ],
+    "colors": [
+     "#ffffff",
+     "#e5191c",
+     "#0a0a0a",
+     "#f08a1c"
+    ],
+    "gravity": 900
+   }
+  },
+  {
+   "at": 440,
+   "prim": "damageNumber",
+   "dur": 560,
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 440,
+   "prim": "tag",
+   "dur": 560,
+   "args": {
+    "kind": "auto"
+   }
+  },
+  {
+   "at": 440,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.heavy"
+   }
+  },
+  {
+   "at": 600,
    "prim": "tween",
+   "dur": 320,
    "args": {
     "target": "$actor",
     "to": {
@@ -160,9 +224,7 @@
      "y": "home",
      "scale": 1
     }
-   },
-   "dur": 320,
-   "ease": "outCubic"
+   }
   }
  ]
 }

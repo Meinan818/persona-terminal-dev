@@ -4,7 +4,7 @@
  "version": "0.1.0",
  "type": "module",
  "scripts": {
-  "prep": "python3 tools/subset_fonts.py && python3 tools/build_manifest.py",
+  "prep": "PYTHONPATH=/workspace/work/pyf-brotli python3 tools/subset_fonts.py && python3 tools/build_manifest.py",
   "build": "python3 tools/build_manifest.py && tsc --noEmit && vite build",
   "check": "tsc --noEmit"
  },

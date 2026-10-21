@@ -14,6 +14,7 @@ export type Vec = { x: number | Ref; y: number | Ref; dx?: number; dy?: number }
 export type EventName =
   | 'scene:enter' | 'scene:leave' | 'battle:start' | 'turn:start'
   | 'action' | 'unit:down' | 'onemore' | 'highlight' | 'holdup'
+  | 'baton' | 'levelup'   // v1.3 提案（FX-MAP 🆕）：接力交接、升级卡
   | 'allout' | 'talk:start' | 'talk:result' | 'battle:end'
   | 'map:move' | 'map:encounter' | 'ui:open' | 'ui:close'
   | 'env:change';
@@ -24,7 +25,10 @@ export type PrimitiveName =
   | 'damageNumber' | 'tag' | 'shockwave' | 'rgbSplit'
   | 'cutin' | 'speedLines' | 'banner' | 'silhouetteDash' | 'freezeFrame' | 'finishCard' | 'totalDamage'
   | 'slashPanels' | 'maskWipe' | 'blockPush' | 'tvStatic' | 'glassShatter' | 'cardFlip' | 'cardShatter' | 'dateFlip' | 'bakedSwap'
-  | 'portraitDown' | 'skinFilter';
+  | 'portraitDown' | 'skinFilter'
+  // M3 第二阶段新增（v1.3 提案）：人格面具召唤、场上显形、技能名牌、2D 骨骼姿态；P3/P4 原语
+  | 'summon' | 'personaShow' | 'nameplate' | 'pose' | 'batonPass' | 'showtimeLogo'
+  | 'eyeStrip' | 'onomatopoeia' | 'checkerFloor' | 'ringSplash';
 
 export interface Track {
   at: Ms;
@@ -43,6 +47,7 @@ export interface Recipe {
   event: EventName;
   match?: {
     skillId?: string; element?: string; actorId?: string; partySize?: number; kind?: 'phys' | 'magic' | 'heal' | 'buff';
+    summon?: 'full' | 'quick';  // M3 第二阶段提案：同场首次召唤完整版 / 之后快速版（宿主按「该角色本场是否已召唤」传入）
     side?: 'ally' | 'enemy';   // v1.2-M3 提案：区分我方/敌方 action（§3 两档上限）。见 M3-RED-REPORT「契约提案」
     env?: Partial<Pick<Env, 'weather' | 'moonPhase' | 'darkHour' | 'weekday'>>;
   };

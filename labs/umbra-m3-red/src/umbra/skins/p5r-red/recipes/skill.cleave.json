@@ -2,104 +2,96 @@
  "id": "skill.cleave",
  "event": "action",
  "match": {
-  "skillId": "cleave"
+  "skillId": "cleave",
+  "summon": "full"
  },
- "duration": 1500,
+ "duration": 1700,
  "hitMarks": [
-  740
- ],
- "create": [
-  {
-   "name": "cut",
-   "asset": "cutin.joker",
-   "layer": "cutin"
-  }
+  1120
  ],
  "assets": [
-  "cutin.joker",
-  "ally.joker.back"
+  "char.$actor",
+  "persona.$actor"
  ],
  "tracks": [
   {
    "at": 0,
-   "prim": "dim",
-   "args": {
-    "color": "#000",
-    "alpha": 0.45
-   },
-   "dur": 560
-  },
-  {
-   "at": 0,
-   "prim": "cutin",
-   "args": {
-    "bandAngle": -0.14,
-    "speedLines": {
-     "layers": 2,
-     "count": 46
-    },
-    "panels": [
-     {
-      "shape": [
-       -1300,
-       -120,
-       1300,
-       -150,
-       1300,
-       120,
-       -1300,
-       150
-      ],
-      "art": "cutin.joker",
-      "enterFrom": "left"
-     }
-    ],
-    "nameplate": {
-     "text": "skill.cleave.name",
-     "font": "@font.display",
-     "color": "#f08a1c"
-    }
-   },
-   "dur": 560,
-   "ease": "outCubic",
-   "minimal": {
-    "dur": 250
-   }
-  },
-  {
-   "at": 0,
-   "prim": "particles",
-   "args": {
-    "count": 40,
-    "life": 500,
-    "at": {
-     "x": "$screen",
-     "y": 330
-    },
-    "dir": 0,
-    "spread": 0.5,
-    "speed": 1600,
-    "gravity": 0,
-    "frames": [
-     "streak"
-    ],
-    "colors": [
-     "#ffffff",
-     "@color.primary"
-    ]
-   },
-   "minimal": "skip"
+   "prim": "summon",
+   "dur": 820,
+   "args": {}
   },
   {
    "at": 0,
    "prim": "sfx",
    "args": {
-    "id": "cutin"
+    "id": "persona"
    }
   },
   {
-   "at": 520,
+   "at": 0,
+   "prim": "pose",
+   "dur": 1660,
+   "args": {
+    "target": "$actor",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.05788235294117647,
+      "pose": "windup",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.14470588235294118,
+      "pose": "grab",
+      "ease": "inOutCubic"
+     },
+     {
+      "at": 0.23152941176470587,
+      "pose": "rip",
+      "ease": "outBack"
+     },
+     {
+      "at": 0.6235294117647059,
+      "pose": "cast",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.8588235294117647,
+      "pose": "cast"
+     },
+     {
+      "at": 1,
+      "pose": "settle",
+      "ease": "inOutCubic"
+     }
+    ]
+   }
+  },
+  {
+   "at": 740,
+   "prim": "personaShow",
+   "dur": 620,
+   "args": {
+    "dx": -130,
+    "dy": -30,
+    "scale": 0.95
+   }
+  },
+  {
+   "at": 820,
+   "prim": "nameplate",
+   "dur": 760,
+   "args": {
+    "element": "phys"
+   }
+  },
+  {
+   "at": 860,
    "prim": "afterimage",
+   "dur": 240,
    "args": {
     "actor": "$actor",
     "to": {
@@ -110,62 +102,35 @@
     },
     "n": 3,
     "scaleTo": 0.62
-   },
-   "dur": 220,
-   "ease": "inCubic"
+   }
   },
   {
-   "at": 720,
+   "at": 1120,
    "prim": "slashLine",
+   "dur": 150,
    "args": {
     "len": 760,
     "width": 22,
     "rot": -0.75,
     "jitter": 20
-   },
-   "dur": 160
+   }
   },
   {
-   "at": 760,
-   "prim": "slashLine",
-   "args": {
-    "len": 700,
-    "width": 18,
-    "rot": 0.6,
-    "jitter": 20
-   },
-   "dur": 160
-  },
-  {
-   "at": 1000,
-   "prim": "tween",
-   "args": {
-    "target": "$actor",
-    "to": {
-     "x": "home",
-     "y": "home",
-     "scale": 1
-    }
-   },
-   "dur": 360,
-   "ease": "outCubic"
-  },
-  {
-   "at": 740,
+   "at": 1120,
    "prim": "hitStop",
    "args": {
     "ms": 70
    }
   },
   {
-   "at": 740,
+   "at": 1120,
    "prim": "shake",
    "args": {
     "px": 22
    }
   },
   {
-   "at": 740,
+   "at": 1120,
    "prim": "flashSprite",
    "args": {
     "target": "$targets",
@@ -173,83 +138,133 @@
    }
   },
   {
-   "at": 740,
+   "at": 1120,
    "prim": "squashHit",
    "args": {
     "target": "$targets",
-    "squash": 0.22,
-    "push": 26,
+    "squash": 0.2,
+    "push": 24,
     "recoverMs": 320
    }
   },
   {
-   "at": 740,
-   "prim": "rgbSplit",
+   "at": 1120,
+   "prim": "pose",
+   "dur": 420,
    "args": {
-    "offset": 10
-   },
-   "dur": 90
+    "target": "$targets",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.25,
+      "pose": "recoil",
+      "ease": "outCubic"
+     },
+     {
+      "at": 1,
+      "pose": "idle",
+      "ease": "outElastic"
+     }
+    ]
+   }
   },
   {
-   "at": 890,
+   "at": 1120,
+   "prim": "rgbSplit",
+   "dur": 90,
+   "args": {
+    "offset": 9
+   }
+  },
+  {
+   "at": 1120,
+   "prim": "particles",
+   "args": {
+    "count": 260,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 1400,
+    "life": 560,
+    "frames": [
+     "shard",
+     "spark",
+     "star",
+     "shard",
+     "star"
+    ],
+    "colors": [
+     "#ffffff",
+     "#e5191c",
+     "#0a0a0a",
+     "#f08a1c"
+    ],
+    "gravity": 900
+   }
+  },
+  {
+   "at": 1120,
+   "prim": "damageNumber",
+   "dur": 560,
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 1120,
+   "prim": "tag",
+   "dur": 560,
+   "args": {
+    "kind": "auto"
+   }
+  },
+  {
+   "at": 1120,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.heavy"
+   }
+  },
+  {
+   "at": 1160,
+   "prim": "slashLine",
+   "dur": 150,
+   "args": {
+    "len": 700,
+    "width": 18,
+    "rot": 0.6,
+    "jitter": 20
+   }
+  },
+  {
+   "at": 1270,
    "prim": "shockwave",
+   "dur": 300,
    "args": {
     "center": {
      "x": "$target",
      "y": "$target"
     },
-    "amp": 46
+    "amp": 42
    },
-   "dur": 520
+   "minimal": "skip"
   },
   {
-   "at": 740,
-   "prim": "particles",
+   "at": 1380,
+   "prim": "tween",
+   "dur": 300,
    "args": {
-    "count": 300,
-    "at": {
-     "x": "$target",
-     "y": "$target"
-    },
-    "speed": 1500,
-    "life": 700,
-    "frames": [
-     "disc",
-     "shard",
-     "shard",
-     "streak",
-     "star"
-    ],
-    "colors": [
-     "#ffffff",
-     "#f08a1c",
-     "@color.primary",
-     "#0a0a0a"
-    ]
-   }
-  },
-  {
-   "at": 740,
-   "prim": "damageNumber",
-   "args": {
-    "font": "@font.number",
-    "big": true
-   },
-   "dur": 700
-  },
-  {
-   "at": 740,
-   "prim": "tag",
-   "args": {
-    "kind": "auto"
-   },
-   "dur": 700
-  },
-  {
-   "at": 740,
-   "prim": "sfx",
-   "args": {
-    "id": "hit.heavy"
+    "target": "$actor",
+    "to": {
+     "x": "home",
+     "y": "home",
+     "scale": 1
+    }
    }
   }
  ]

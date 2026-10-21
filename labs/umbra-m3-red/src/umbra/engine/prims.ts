@@ -6,6 +6,7 @@ import { Clip, ease } from './timeline';
 import { ransom, txt, plate } from './text';
 import { setDownPose, UnitNode } from './units';
 import { DW, DH } from './stage';
+import { summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLogo } from './summon';
 
 export interface RunCtx {
   eng: Engine; owner: number; ev: EventName; payload: any; level: 'full' | 'standard' | 'minimal';
@@ -272,14 +273,15 @@ function buildCutin(eng: Engine, art: Texture) {
 }
 const cutin: Prim = (t, rc) => {
   const a = A(t), eng = rc.eng, dur = Math.min(560, t.dur ?? 560);
-  const panel = (a.panels ?? [])[0] ?? {}; const art = eng.tex[panel.art ?? 'cutin.joker'];
-  const c = eng.getFix('cutin:' + (panel.art ?? 'cutin.joker'), () => buildCutin(eng, art), eng.st.layers.cutin);
+  const panel = (a.panels ?? [])[0] ?? {}; const artId = eng.resolve(panel.art ?? 'char.$actor#cutin', rc.payload);
+  const cdir = panel.enterFrom === 'right' ? -1 : 1; const art = eng.frames[artId] ?? eng.tex[artId]; if (!art) { eng.errors.push('cutin art missing ' + artId); return null; }
+  const c = eng.getFix('cutin:' + artId, () => buildCutin(eng, art), eng.st.layers.cutin);
   const band = c.getChildByLabel('band') as Container, nm = c.getChildByLabel('name') as Container;
   const lines = (band.children[2] as Container).children[2] as Container; const spr = (band.children[2] as Container).children[1] as Sprite;
   const sl = (a.speedLines?.count ?? 46) / 46 * eng.tierK; lines.children.forEach((g: any, i: number) => (g.visible = i === 0 || sl > 0.7));
   return { t0: t.at, dur, ease: ease.linear,
     begin() {
-      rc.temps.add(c); c.visible = true; band.rotation = a.bandAngle ?? -0.14; band.position.set(-1500, 330); band.scale.set(1, 0.2);
+      rc.temps.add(c); c.visible = true; c.parent?.addChild(c); band.rotation = a.bandAngle ?? -0.14; band.position.set(640 - cdir * 2140, a.y ?? 330); band.scale.set(1, 0.2);
       nm.removeChildren().forEach((x) => x.destroy({ children: true }));
       if (a.nameplate) {
         const label = eng.label(a.nameplate.text);
@@ -293,7 +295,7 @@ const cutin: Prim = (t, rc) => {
     tick(p) {
       const ms = p * dur;
       const kin = Math.min(1, ms / 150), kout = Math.max(0, (ms - (dur - 120)) / 120);
-      band.x = -1500 + 2140 * ease.outCubic(kin) + 1800 * ease.inCubic(kout);
+      band.x = 640 + cdir * (-2140 * (1 - ease.outCubic(kin)) + 1800 * ease.inCubic(kout));
       band.scale.y = 0.2 + 0.8 * ease.outBack(Math.min(1, ms / 120)) - 0.8 * kout;
       spr.x = 140 - 180 * p;
       lines.children[0].x = -2800 * ((p * 2.6) % 1); if (lines.children[1]) lines.children[1].x = -2800 * ((p * 3.4 + 0.5) % 1);
@@ -357,7 +359,7 @@ const silhouetteDash: Prim = (t, rc) => {
   return { t0: t.at, dur,
     begin() {
       for (let i = 0; i < count; i++) {
-        const tex = eng.frames[`atlas.party#${ids[i % ids.length]}`] ?? eng.frames['atlas.party#joker'];
+        const tex = eng.frames[`char.${ids[i % ids.length]}#body`] ?? eng.frames['char.joker#body'] ?? Texture.WHITE;
         const c = tmp(rc, new Container());
         const rim = new Sprite(tex); rim.anchor.set(0.5); rim.tint = 0xe5191c; rim.position.set(6, 4);
         const s = new Sprite(tex); s.anchor.set(0.5); s.tint = 0x0a0a0a;
@@ -391,7 +393,9 @@ function buildFinish(eng: Engine, art: Texture, shape: number[]) {
 const finishCard: Prim = (t, rc) => {
   const a = A(t), eng = rc.eng, dur = Math.min(1000, t.dur ?? 970);
   const shape = a.shape ?? [-760, -330, 700, -400, 760, 330, -700, 400];
-  const c = eng.getFix('finish:' + (a.artId ?? 'allout.finish.default'), () => buildFinish(eng, eng.tex[a.artId ?? 'allout.finish.default'], shape), eng.st.layers.allout);
+  const fid = eng.resolve(a.artId ?? 'allout.finish.default', rc.payload); const ftex = eng.tex[fid];
+  if (!ftex) { eng.errors.push('finishCard art missing ' + fid); return null; }
+  const c = eng.getFix('finish:' + fid, () => buildFinish(eng, ftex, shape), eng.st.layers.allout);
   const spr = (c.children[1] as Container).children[0] as Sprite, base = (c as any).baseScale as number;
   const from = a.enterFrom === 'left' ? -1 : 1, slide = Math.min(200, a.slideMs ?? 170);
   rc.finishCard = c;
@@ -471,4 +475,5 @@ export const PRIMS: Partial<Record<string, Prim>> = {
   tween, show: showHide(true), hide: showHide(false), sfx, vibrate, title, dim, radialBurst,
   hitStop, shake, flashSprite, flashScreen, squashHit, particles, afterimage, slashLine, damageNumber, tag, shockwave, rgbSplit,
   cutin, speedLines, banner, silhouetteDash, freezeFrame, finishCard, totalDamage, slashPanels, maskWipe, bakedSwap, portraitDown,
+  summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLogo,
 };

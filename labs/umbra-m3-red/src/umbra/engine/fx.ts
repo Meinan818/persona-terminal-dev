@@ -27,10 +27,12 @@ export class Fx {
   get filterCount() { return this.active.size; }
   hitStop(ms: number) { this.hitstop = Math.max(this.hitstop, ms); }
   shake(px: number) { this.shakeAmp = Math.max(this.shakeAmp, Math.min(24, px)); }
-  private setF(f: any, on: boolean) {
-    if (on) this.active.add(f); else this.active.delete(f);
-    this.st.world.filters = this.active.size ? [...this.active] : (null as any);
-  }
+  private skinF = new Set<any>();
+  get skinFilterCount() { return this.skinF.size; }
+  private apply() { const all = [...this.skinF, ...this.active]; this.st.world.filters = all.length ? all : (null as any); }
+  private setF(f: any, on: boolean) { if (on) this.active.add(f); else this.active.delete(f); this.apply(); }
+  /** 皮肤滤镜名额（manifest.filters 申报，同屏 ≤1） */
+  setSkin(f: any, on: boolean) { if (on) { this.skinF.clear(); this.skinF.add(f); } else this.skinF.delete(f); this.apply(); }
   /** §1.2：rgbSplit 与 shockwave 起点 <150ms 时，后来的推迟到前一个开始后 150ms */
   private stagger(kind: 'shock' | 'rgb', run: () => void, owner: number) {
     const other = kind === 'shock' ? this.lastStart.rgb : this.lastStart.shock;
@@ -83,6 +85,7 @@ export class Fx {
     this.pending = owner === undefined ? [] : this.pending.filter((p) => p.owner !== owner);
     if (full) {
       this.shockLeft = 0; this.rgbLeft = 0; this.setF(this.shock, false); this.setF(this.rgb, false);
+      this.skinF.clear(); this.apply();
       this.hitstop = 0; this.frozen = 0; this.flashLeft = 0; this.flash.visible = false;
     }
   }

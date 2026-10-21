@@ -6,6 +6,8 @@ export const CAPS: Record<string, [number, number]> = {
   'battle:start': [900, 350], 'turn:start': [300, 100], 'action': [1800, 600], 'action:enemy': [1500, 500],
   'unit:down': [500, 200], 'onemore': [450, 250], 'highlight': [3500, 1200], 'holdup': [1000, 400], 'allout': [3500, 1200],
   'talk:start': [800, 300], 'talk:result': [1200, 400], 'battle:end': [1500, 500], 'scene:enter': [600, 250], 'scene:leave': [600, 250],
+  // M3 第二阶段 v1.3 提案（FX-MAP 🆕）：baton 0.6s、levelup 1.0s
+  'baton': [600, 250], 'levelup': [1000, 400],
   'map:move': [800, 300], 'map:encounter': [900, 350], 'env:change': [600, 250], 'ui:open': [280, 150], 'ui:close': [280, 150],
 };
 export const capKey = (ev: EventName, side?: string) => (ev === 'action' && side === 'enemy' ? 'action:enemy' : ev);
@@ -16,12 +18,14 @@ const PRIM_MAX: Partial<Record<PrimitiveName, number>> = {
   damageNumber: 1100, tag: 920, shockwave: 520, rgbSplit: 150, cutin: 560, banner: 450, silhouetteDash: 1800, freezeFrame: 800,
   finishCard: 1000, totalDamage: 800, slashPanels: 900, maskWipe: 900, blockPush: 900, tvStatic: 600, glassShatter: 700,
   cardFlip: 500, cardShatter: 600, dateFlip: 900, bakedSwap: 400, portraitDown: 600, squashHit: 370,
+  summon: 900, personaShow: 1100, batonPass: 800, showtimeLogo: 900, nameplate: 1200, pose: 1800, skinFilter: 1200,
 };
 export const IMPLEMENTED = new Set<PrimitiveName>([
   'tween', 'show', 'hide', 'sfx', 'vibrate', 'title', 'dim', 'radialBurst', 'hitStop', 'shake', 'flashSprite', 'flashScreen', 'squashHit',
   'particles', 'afterimage', 'slashLine', 'damageNumber', 'tag', 'shockwave', 'rgbSplit', 'cutin', 'speedLines', 'banner', 'silhouetteDash',
   'freezeFrame', 'finishCard', 'totalDamage', 'slashPanels', 'portraitDown', 'maskWipe', 'bakedSwap',
-]);
+  'summon', 'personaShow', 'nameplate', 'pose', 'skinFilter', 'batonPass', 'showtimeLogo',
+] as PrimitiveName[]);
 
 export function expand(r: Recipe): Track[] {
   const out: Track[] = [];
@@ -72,7 +76,7 @@ export function validate(r: Recipe): Issue[] {
   return is;
 }
 
-export interface MatchQuery { skillId?: string; element?: string; actorId?: string; partySize?: number; kind?: string; side?: string }
+export interface MatchQuery { summon?: string; skillId?: string; element?: string; actorId?: string; partySize?: number; kind?: string; side?: string }
 export function select(recipes: Recipe[], ev: EventName, q: MatchQuery): Recipe | undefined {
   let best: Recipe | undefined, bestScore = -1;
   for (const r of recipes) {

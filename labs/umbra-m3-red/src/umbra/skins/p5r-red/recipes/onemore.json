@@ -1,44 +1,81 @@
 {
  "id": "onemore",
  "event": "onemore",
- "duration": 420,
- "assets": [],
+ "duration": 440,
+ "assets": [
+  "char.$actor"
+ ],
  "tracks": [
   {
    "at": 0,
-   "prim": "dim",
+   "prim": "skinFilter",
+   "dur": 440,
    "args": {
-    "color": "#000",
-    "alpha": 0.5,
-    "hold": false
-   },
-   "dur": 420,
-   "layer": "dmg"
-  },
-  {
-   "at": 0,
-   "prim": "flashScreen",
-   "args": {
-    "color": "#ffffff",
-    "alpha": 0.5
-   },
-   "dur": 90
-  },
-  {
-   "at": 0,
-   "prim": "banner",
-   "args": {
-    "text": "label.onemore",
-    "shape": "onemore",
-    "enterFrom": "right"
-   },
-   "dur": 420,
-   "minimal": {
-    "dur": 250
+    "kind": "desaturate",
+    "amount": 1
    }
   },
   {
    "at": 0,
+   "prim": "dim",
+   "dur": 440,
+   "args": {
+    "color": "#000",
+    "alpha": 0.22,
+    "hold": false
+   }
+  },
+  {
+   "at": 0,
+   "prim": "cutin",
+   "dur": 300,
+   "ease": "outCubic",
+   "args": {
+    "bandAngle": -0.14,
+    "speedLines": {
+     "layers": 2,
+     "count": 46
+    },
+    "panels": [
+     {
+      "shape": [],
+      "art": "char.$actor#cutin",
+      "enterFrom": "left"
+     }
+    ]
+   },
+   "minimal": {
+    "dur": 160
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "cutin"
+   }
+  },
+  {
+   "at": 150,
+   "prim": "flashScreen",
+   "dur": 90,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.45
+   }
+  },
+  {
+   "at": 150,
+   "prim": "banner",
+   "dur": 290,
+   "args": {
+    "text": "label.onemore",
+    "shape": "onemore",
+    "enterFrom": "right"
+   }
+  },
+  {
+   "at": 150,
    "prim": "particles",
    "args": {
     "count": 40,
@@ -47,7 +84,7 @@
      "y": 330
     },
     "speed": 1300,
-    "life": 380,
+    "life": 280,
     "gravity": 0,
     "frames": [
      "star",
@@ -55,13 +92,14 @@
     ],
     "colors": [
      "#ffffff",
-     "@color.primary"
+     "@color.primary",
+     "#0a0a0a"
     ]
    },
    "minimal": "skip"
   },
   {
-   "at": 0,
+   "at": 150,
    "prim": "sfx",
    "args": {
     "id": "onemore"

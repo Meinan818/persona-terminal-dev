@@ -3,7 +3,7 @@
  "event": "holdup",
  "duration": 950,
  "assets": [
-  "atlas.party"
+  "char.$party"
  ],
  "tracks": [
   {

@@ -1,0 +1,153 @@
+{
+ "id": "skill.dia.q",
+ "event": "action",
+ "match": {
+  "skillId": "dia",
+  "summon": "quick"
+ },
+ "duration": 1320,
+ "hitMarks": [
+  740
+ ],
+ "assets": [
+  "char.$actor",
+  "persona.$actor"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "summon",
+   "dur": 440,
+   "args": {}
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "persona"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "pose",
+   "dur": 1280,
+   "args": {
+    "target": "$actor",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.04,
+      "pose": "windup",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.1,
+      "pose": "grab",
+      "ease": "inOutCubic"
+     },
+     {
+      "at": 0.16,
+      "pose": "rip",
+      "ease": "outBack"
+     },
+     {
+      "at": 0.5151515151515151,
+      "pose": "cast",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.8181818181818182,
+      "pose": "cast"
+     },
+     {
+      "at": 1,
+      "pose": "settle",
+      "ease": "inOutCubic"
+     }
+    ]
+   }
+  },
+  {
+   "at": 360,
+   "prim": "personaShow",
+   "dur": 760,
+   "args": {
+    "dx": -130,
+    "dy": -30,
+    "scale": 0.95
+   }
+  },
+  {
+   "at": 440,
+   "prim": "nameplate",
+   "dur": 760,
+   "args": {
+    "element": "heal"
+   }
+  },
+  {
+   "at": 540,
+   "prim": "particles",
+   "args": {
+    "count": 120,
+    "at": {
+     "x": "$actor",
+     "y": "$actor",
+     "dy": 60
+    },
+    "speed": 360,
+    "dir": -1.5708,
+    "spread": 1.0,
+    "gravity": -500,
+    "life": 620,
+    "frames": [
+     "disc",
+     "star"
+    ],
+    "colors": [
+     "#ffffff",
+     "#37e15a",
+     "#b9ffc9"
+    ]
+   }
+  },
+  {
+   "at": 600,
+   "prim": "radialBurst",
+   "dur": 500,
+   "layer": "fx",
+   "args": {
+    "rays": 12,
+    "colors": [
+     "#37e15a",
+     "#ffffff"
+    ],
+    "spin": 0.4,
+    "alpha": 0.3,
+    "center": {
+     "x": "$actor",
+     "y": "$actor"
+    }
+   }
+  },
+  {
+   "at": 740,
+   "prim": "damageNumber",
+   "dur": 560,
+   "args": {
+    "font": "@font.number",
+    "big": false
+   }
+  },
+  {
+   "at": 740,
+   "prim": "sfx",
+   "args": {
+    "id": "heal"
+   }
+  }
+ ]
+}

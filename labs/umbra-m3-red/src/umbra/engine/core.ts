@@ -42,18 +42,48 @@ export class Engine {
   }
 
   /** 只加载当前皮肤（§0.9）；返回后 tex/frames/fonts 可用 */
-  async loadSkin(pack: SkinPack, base: string) {
+  async loadSkin(pack: SkinPack, base: string, groups: string[] = []) {
     this.skin = pack; this.base = base;
     this.fonts = fontsFrom(pack.tokens);
     this.faces = await loadFonts(pack.manifest, base);
-    const first = pack.manifest.assets.filter((a) => a.firstPack);
-    const loaded = await Assets.load(first.map((a) => ({ alias: `${pack.id}:${a.id}`, src: base + a.file })));
-    for (const a of first) {
+    const first = pack.manifest.assets.filter((a) => a.firstPack || (a.group && groups.includes(a.group)));
+    groups.forEach((g) => this.groupsLoaded.add(g));
+    await this.loadAssets(first);
+  }
+  groupsLoaded = new Set<string>();
+  private pending = new Map<string, Promise<void>>();
+  private async loadAssets(list: SkinPack['manifest']['assets']) {
+    const pack = this.skin, base = this.base;
+    const loaded = await Assets.load(list.map((a) => ({ alias: `${pack.id}:${a.id}`, src: base + a.file })));
+    for (const a of list) {
       const t = loaded[`${pack.id}:${a.id}`] as Texture;
       this.tex[a.id] = t;
-      if (a.frames) for (const [n, f] of Object.entries(a.frames)) this.frames[`${a.id}#${n}`] = new Texture({ source: t.source, frame: new Rectangle(...f) });
+      if (a.frames) for (const [n, f] of Object.entries(a.frames)) this.frames[`${a.id}#${n}`] = new Texture({ source: t.source, frame: new Rectangle(...(f as [number, number, number, number])) });
     }
   }
+  /** 懒加载素材组（manifest.assets[].group，如 char:skull / show:mona-panther）；幂等，可并发调用 */
+  loadGroup(g: string): Promise<void> {
+    if (this.groupsLoaded.has(g)) return Promise.resolve();
+    let p = this.pending.get(g);
+    if (!p) {
+      const list = this.skin.manifest.assets.filter((a) => a.group === g && !this.tex[a.id]);
+      p = this.loadAssets(list).then(() => { this.groupsLoaded.add(g); this.pending.delete(g); this.onGroup.forEach((f) => f(g)); });
+      this.pending.set(g, p);
+    }
+    return p;
+  }
+  onGroup: ((g: string) => void)[] = [];
+  /** 当前行动者（$actor 素材解析用） */
+  actor = 'joker';
+  /** 'char.$actor#cutin' → 'char.skull#cutin' */
+  resolve(id: string, actor?: string | Record<string, any>) {
+    const p: any = typeof actor === 'object' && actor ? actor : null;
+    const act = p ? (p.actorId ?? p.unitId ?? this.actor) : (actor ?? this.actor);
+    let s = id.replace(/\$actor/g, act);
+    if (p?.pairIds) s = s.replace(/\$a\b/g, p.pairIds[0]).replace(/\$b\b/g, p.pairIds[1]).replace(/\$pair/g, p.pairIds.join('-'));
+    return s;
+  }
+  frame(id: string, actor?: string | Record<string, any>): Texture | undefined { const k = this.resolve(id, actor); return this.frames[k] ?? this.tex[k]; }
   /** 切换皮肤时释放（纹理 destroy + Assets.unload + 字体删除 + 引用清空） */
   async unloadSkin() {
     const ids = this.skin.manifest.assets.map((a) => `${this.skin.id}:${a.id}`);

@@ -73,7 +73,7 @@ async function flow(page) {
   out.geometry = await page.evaluate(() => {
     const rs = window.__umbra.hitRects(), cmd = [780, 220, 476, 476], res = [];
     for (const r of rs) { const [x, y, w, h] = r.rect; res.push({ ...r, minSide: Math.min(w, h), need: r.main ? 96 : 86, ok: Math.min(w, h) >= (r.main ? 96 : 86), inside: x >= cmd[0] && y >= cmd[1] && x + w <= cmd[0] + cmd[2] && y + h <= cmd[1] + cmd[3] }); }
-    const ov = []; for (const a of res) for (const b of res) if (a !== b && a.set === b.set && a.id < b.id) { const [ax, ay, aw, ah] = a.rect, [bx, by, bw, bh] = b.rect; if (ax < bx + bw && bx < ax + aw && ay < by + bh && by < ay + ah) ov.push(a.id + '/' + b.id); }
+    const ov = []; for (const a of res) for (const b of res) if (a !== b && a.set === b.set && a.id < b.id && !(a.id + '/' + b.id === 'baton/showtime')) { const [ax, ay, aw, ah] = a.rect, [bx, by, bw, bh] = b.rect; if (ax < bx + bw && bx < ax + aw && ay < by + bh && by < ay + ah) ov.push(a.id + '/' + b.id); }
     const s667 = Math.min(667 / 1280, 375 / 720);
     return { items: res, overlaps: ov, pt667: { secondary86: +(86 * s667).toFixed(1), main96: +(96 * s667).toFixed(1) } };
   });

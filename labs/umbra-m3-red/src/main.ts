@@ -6,12 +6,13 @@ import { Engine, Director, P5Hud, validate, makeUnit, Particles, Fx, Quality, TI
 import type { PartyState, EnemyState, ListRow } from './umbra/engine';
 import type { EventName } from './umbra/skins/_contract';
 import './umbra/skins/p5r-red/index';   // 宿主选择当前皮肤（契约：宿主按主题只 import 当前皮肤包；皮肤自身不得做副作用 import）
-import { Battle, SKILLS, PERSONA_SKILLS } from './game/battle';
+import { Battle, SKILLS, DEFAULT_PARTY } from './game/battle';
 
 const qs = new URLSearchParams(location.search);
 const DEMO = qs.get('demo') === '1';
 const SKIN = qs.get('umbra') ?? 'p5r-red';
 const DPR = window.devicePixelRatio || 1;
+const PARTY = (qs.get('party') ?? '').split(',').filter(Boolean).length ? qs.get('party')!.split(',').filter(Boolean) : DEFAULT_PARTY;
 const INIT_Q = (qs.get('q') as any) || 'high';
 const MAXDT = qs.has('maxdt') ? +qs.get('maxdt')! : 100;
 const RES = qs.has('res') ? +qs.get('res')! : (INIT_Q === 'high' ? Math.min(DPR, 2) : INIT_Q === 'mid' ? Math.min(DPR, 1.5) : 1);
@@ -25,7 +26,7 @@ await eng.st.init(document.getElementById('app')!, RES);
 const pack = UMBRA.getSkin(SKIN)!;
 // ui.css（只作用于 .umbra-skin-<id>；引擎注入，皮肤不做网络请求）
 const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = `skins/${SKIN}/ui.css`; document.head.appendChild(css);
-await eng.loadSkin(pack, `skins/${SKIN}/`);
+await eng.loadSkin(pack, `skins/${SKIN}/`, ['head:joker', 'head:oracle', 'back:joker', ...PARTY.map((p) => 'head:' + p)]);
 for (const r of pack.recipes) M.issues.push(...validate(r));
 const quality = new Quality(INIT_Q, qs.get('auto') !== '0');
 eng.tier = quality.tier;
@@ -36,14 +37,24 @@ quality.onChange = (t) => { eng.tier = t; eng.ps.cap = TIERS[t].cap; };
 
 // ---------------------------------------------------------------- scene
 const slots = pack.slots as any;
+const roster = (pack as any).roster as { lead: string; navigator: string; default: string[]; chars: Record<string, { field: { h: number; dy: number } }>; showtime: string[][] };
 const bgDef = slots['scene.battle.bg'];
 const bg = new Sprite(eng.tex[bgDef.asset]); bg.anchor.set(0.5); bg.position.set(bgDef.cx, 360); bg.scale.set(1.03);
 eng.bgSprite = bg; eng.st.layers.bg.addChild(bg);
 const pos = slots['scene.battle.positions'];
 const grid = TIERS[eng.tier].mesh;
-const jk = makeUnit('joker', 'ally', eng.tex['ally.joker.back'], pos.joker.x, pos.joker.y, pos.joker.h, pos.joker.facing, slots['unit.joker.portrait'].meshIdle, 0, grid);
-jk.hitY = -pos.joker.h * 0.62;
-eng.units.set('joker', jk); eng.st.layers.ally.addChild(jk.root);
+/** 场上我方：当前行动者的背影（原作镜头在行动者身后）；名单里每人一个网格单位，按需创建 */
+function ensureUnit(id: string) {
+  if (eng.units.has(id)) return eng.units.get(id)!;
+  const tex = eng.tex['back.' + id]; if (!tex) return null;
+  const f = roster.chars[id]?.field ?? { h: 430, dy: 0 };
+  const idle = slots[`unit.${id}.portrait`]?.meshIdle ?? { breath: 0.012, period: 2800, swayPx: 8, swayZone: 'all' };
+  const u = makeUnit(id, 'ally', tex, pos.joker.x, pos.joker.y + f.dy, f.h, pos.joker.facing, idle, 0.4, grid);
+  u.hitY = -f.h * 0.62; u.root.visible = false;
+  eng.units.set(id, u); eng.st.layers.ally.addChild(u.root);
+  return u;
+}
+ensureUnit(roster.lead)!.root.visible = true;
 ['noisy', 'echo'].forEach((id, i) => {
   const p = pos.enemies[i];
   const u = makeUnit(id, 'enemy', eng.tex['enemy.' + id], p.x, p.y, p.h, 1, slots[`unit.${id}.portrait`].meshIdle, i * 1.7 + 0.6, grid);
@@ -53,68 +64,140 @@ eng.units.set('joker', jk); eng.st.layers.ally.addChild(jk.root);
 const dir = new Director(eng);
 const hud = new P5Hud(eng);
 dir.onMainChange.push((b) => hud.setBusy(b));
-const B = new Battle();
+const B = new Battle(PARTY);
+hud.setPartyIds(B.party);
 let target = 'noisy';
 let auto = false;
+/** 当前队伍的角色素材懒加载（背影/cut-in/召唤/人格面具）；非当前队员不进首包 */
+const loadParty = () => Promise.all(B.party.flatMap((id) => [eng.loadGroup('back:' + id), eng.loadGroup('char:' + id), eng.loadGroup('head:' + id)])).then(() => { B.party.forEach(ensureUnit); hud.refreshHeads(); });
+eng.onGroup.push(() => hud.refreshHeads());
+
+// 行动者切换：旧背影侧滑淡出、新背影侧滑进入（220ms 缓动，非硬切）
+let swap: { from?: string; to: string; t: number } | null = null;
+function setActor(id: string, instant = false) {
+  const prev = eng.actor; eng.actor = id;
+  const nu = ensureUnit(id);
+  if (!nu) return;
+  if (prev === id || instant) { for (const u of eng.units.values()) if (u.side === 'ally') u.root.visible = u.id === id; nu.root.x = nu.home.x; nu.root.alpha = 1; return; }
+  swap = { from: prev, to: id, t: 0 }; nu.root.visible = true; nu.root.alpha = 0;
+}
+function tickSwap(dt: number) {
+  if (!swap) return; swap.t += dt; const k = Math.min(1, swap.t / 220), e = 1 - Math.pow(1 - k, 3);
+  const o = swap.from ? eng.units.get(swap.from) : undefined, n = eng.units.get(swap.to)!;
+  if (o && o !== n) { o.root.x = o.home.x + 180 * e; o.root.alpha = 1 - e; }
+  n.root.x = n.home.x - 160 * (1 - e); n.root.alpha = e;
+  if (k >= 1) { if (o && o !== n) { o.root.visible = false; o.root.x = o.home.x; o.root.alpha = 1; } swap = null; }
+}
 
 // ---------------------------------------------------------------- HUD sync
 const L = (k: string) => eng.label(k);
+function partyStates(): PartyState[] { return B.party.map((id) => { const u = B.u(id); return { id, name: L(u.name), hp: u.hp, hpMax: u.hpMax, sp: u.sp, spMax: u.spMax, active: id === B.actor, baton: id === B.actor ? B.baton : 0 } as PartyState; }); }
 function syncHud() {
-  const party: PartyState[] = B.party.map((id) => { const u = B.u(id); return { id, name: L(u.name), hp: u.hp, hpMax: u.hpMax, sp: u.sp, spMax: u.spMax, active: id === 'joker' }; });
-  hud.updateParty(party);
+  hud.setPartyIds(B.party);
+  hud.updateParty(partyStates());
   const es: EnemyState[] = B.enemies.map((id) => { const u = B.u(id); return { id, name: L(u.name), hp: u.hp, hpMax: u.hpMax, lv: u.lv, known: u.known, weak: u.weak.filter((w) => u.known.includes(w)), down: u.down, alive: u.hp > 0 }; });
   hud.updateEnemies(es);
   if (B.u(target).hp <= 0) target = B.alive(B.enemies)[0] ?? target;
   hud.setTarget(target);
   const t = B.u(target);
-  hud.setStrip({ lv: t.lv, name: L(t.name), weak: t.weak.filter((w) => t.known.includes(w)), known: t.known.length > 0, turn: B.turn, order: ['joker', 'agathion', 'caitsith', 'kelpie', ...B.alive(B.enemies)] });
-  hud.oneMore = B.oneMore;
+  const order = [...B.alive(B.party).filter((i) => !B.acted.has(i)), ...B.alive(B.enemies)];
+  hud.setStrip({ lv: t.lv, name: L(t.name), weak: t.weak.filter((w) => t.known.includes(w)), known: t.known.length > 0, turn: B.turn, order });
+  hud.oneMore = B.oneMore; hud.canBaton = B.batonTargets().length > 0;
+  const st = B.showtimeFor(roster.showtime); hud.showtime = st ? st.join('-') : '';
 }
 const play = (ev: EventName, payload: unknown, q: any = {}) => { M.phase = ev + (q.skillId ? ':' + q.skillId : ''); return dir.play(ev, payload, q).then((r) => { M.phase = 'idle'; return r; }); };
+const syncHudParty = () => hud.updateParty(partyStates());
 
 // ---------------------------------------------------------------- flow
 async function startBattle() {
-  B.reset(); target = 'noisy';
-  for (const u of eng.units.values()) { u.down = false; u.stars.visible = false; u.body.rotation = 0; u.body.x = 0; u.body.y = 0; u.body.scale.set(1); u.root.visible = true; u.root.alpha = 1; }
+  B.reset(); target = 'noisy'; setActor(B.actor, true);
+  for (const u of eng.units.values()) { u.down = false; u.stars.visible = false; u.body.rotation = 0; u.body.x = 0; u.body.y = 0; u.body.scale.set(1); if (u.side === 'enemy') { u.root.visible = true; } u.root.alpha = 1; }
   hud.setHoldRing(false); hud.setMode('hidden'); syncHud(); hud.navi('navi.idle');
+  const ld = loadParty();
   await play('battle:start', { enemyIds: B.enemies });
+  await ld;
   playerTurn();
 }
+function naviTurn() { const n = L('navi.turn').replace('{name}', L('unit.' + B.actor)); hud.naviText.text = n; }
 function playerTurn() {
   syncHud();
-  hud.navi(B.oneMore ? 'navi.onemore' : 'navi.idle');
+  if (B.oneMore) hud.navi('navi.onemore'); else if (hud.showtime) hud.navi('navi.showtime'); else if (B.actor === roster.lead) hud.navi('navi.idle'); else naviTurn();
   hud.setMode('command');
+  if (auto) autoStep();
 }
 async function afterAction(r: ReturnType<Battle['act']>) {
   syncHud();
   if (r.newDown.length) play('unit:down', { unitIds: r.newDown, side: 'enemy' });   // 重叠层，不阻塞主线
   if (r.won) return victory(false);
   if (r.oneMore) {
-    await play('onemore', { unitId: 'joker' });
+    await play('onemore', { unitId: B.actor, actorId: B.actor });
     if (r.holdUp) return holdUp();
     return playerTurn();
   }
-  return enemyTurn();
+  return nextTurn();
+}
+async function nextTurn() {
+  const n = B.nextActor();
+  if (!n) return enemyTurn();
+  setActor(n);
+  await play('turn:start', { unitId: n });
+  playerTurn();
 }
 async function doSkill(skillId: string) {
   if (!B.canUse(skillId)) return;
   hud.setMode('hidden');
+  const summon = B.summonVer();
+  await eng.loadGroup('char:' + B.actor);
   const r = B.act(skillId, target);                    // 1) 规则先提交
   syncHudParty();
-  await play('action', r.payload, { skillId, side: 'ally' });   // 2) 再演出
+  await play('action', r.payload, { skillId, side: 'ally', summon });   // 2) 再演出
   await afterAction(r);
 }
-function syncHudParty() { hud.updateParty(B.party.map((id) => { const u = B.u(id); return { id, name: id, hp: u.hp, hpMax: u.hpMax, sp: u.sp, spMax: u.spMax, active: id === 'joker' }; })); }
+async function doBaton(to: string) {
+  hud.partyPick = []; hud.setMode('hidden');
+  const p = B.batonTo(to); if (!p) return playerTurn();
+  await Promise.all([eng.loadGroup('char:' + to), eng.loadGroup('back:' + to)]);
+  await play('baton', p, {});
+  setActor(to);
+  playerTurn();
+}
+async function doShowtime() {
+  const pair = hud.showtime.split('-'); if (pair.length !== 2) return;
+  hud.setMode('hidden');
+  await Promise.all([eng.loadGroup('show:' + pair.join('-')), ...pair.map((i) => eng.loadGroup('char:' + i))]);
+  const r = B.showtime(pair);
+  hud.navi('navi.showtime');
+  await play('highlight', r.payload, {});
+  syncHud();
+  if (r.won) { for (const id of B.enemies) eng.units.get(id)!.root.visible = false; return victory(true); }
+  return nextTurn();
+}
+async function doSwitch(inn: string) {
+  // ORDER→SWITCH：先选后备（列表），再选要换下的队员（点队伍卡）
+  hud.navi('navi.switch'); hud.partyPick = B.party.slice(1); hud.setPickWord('list.switch'); hud.setMode('pick'); syncHudParty();
+  hud.onParty = async (out) => {
+    hud.partyPick = [];
+    const r = B.switchMember(out, inn); if (!r) return playerTurn();
+    await Promise.all([eng.loadGroup('head:' + inn), eng.loadGroup('back:' + inn), eng.loadGroup('char:' + inn)]);
+    ensureUnit(inn);
+    if (eng.actor === out) setActor(inn);
+    playerTurn();
+  };
+}
 async function enemyTurn() {
   hud.setMode('hidden'); B.oneMore = false; hud.oneMore = false;
   hud.navi('navi.enemy');
   const acts = B.enemyTurn();
+  setActor(B.actor);
   for (const a of acts) {
     if (a.kind === 'getup') { const u = eng.units.get(a.payload.unitIds[0])!; u.down = false; u.stars.visible = false; u.body.rotation = 0; u.body.x = 0; u.body.y = 0; u.body.scale.set(1); syncHud(); continue; }
+    // 被打的队员：镜头给到他（显示其背影），再演出
+    const tid = a.payload.targetIds[0]; if (eng.units.has(tid) || eng.tex['back.' + tid]) setActor(tid, true);
     syncHudParty();
     await play('action', a.payload, { side: 'enemy', skillId: a.payload.skillId });
   }
-  await play('turn:start', { unitId: 'joker' });
+  setActor(B.actor, true);
+  await play('turn:start', { unitId: B.actor });
   playerTurn();
 }
 async function holdUp() {
@@ -136,7 +219,8 @@ async function victory(bonus: boolean) {
   hud.setMode('hidden'); hud.navi('navi.win');
   const rw = B.rewards(bonus);
   await play('battle:end', rw);
-  hud.showResult({ exp: rw.exp, money: rw.money, items: rw.drops.map((d) => ({ name: d.name, n: d.n })), bonus });
+  hud.showResult({ exp: rw.exp, money: rw.money, items: rw.drops.map((d) => ({ name: d.name, n: d.n })), bonus, levelUps: rw.levelUps } as any);
+  if (rw.levelUps.length) { await new Promise((r) => setTimeout(r, 1200)); if (hud.getMode() === 'result') await play('levelup', { unitIds: rw.levelUps.map((l) => l.id), stats: rw.levelUps }); }
 }
 async function talk() {
   hud.setMode('talk'); hud.setHoldRing(true, B.alive(B.enemies), B.party);
@@ -159,11 +243,14 @@ hud.onCommand = (id) => {
   const m = hud.getMode();
   if (m === 'command') {
     if (id === 'attack' || id === 'gun') dir.input(`${B.id}:${B.turn}:${B.seq}:${id}`, () => doSkill(id));
-    else if (id === 'persona') { hud.openList('persona', PERSONA_SKILLS.map((s) => skillRow(s)), 'Arsene'); hud.setMode('list'); listKind = 'persona'; }
+    else if (id === 'persona') { hud.openList('persona', B.skillsOf(B.actor).map((s) => skillRow(s)), L('persona.' + B.actor)); hud.setMode('list'); listKind = 'persona'; }
     else if (id === 'item') { hud.openList('item', B.items.map((i) => ({ id: i.id, name: L(i.name), desc: L(i.desc), cost: '×' + i.n, costKind: 'n', element: 'item', disabled: i.n <= 0 } as ListRow)), 'BAG'); hud.setMode('list'); listKind = 'item'; }
-    else if (id === 'order') { hud.openList('order', ['analysis', 'tactics', 'escape'].map((o) => ({ id: o, name: L(`order.${o}.name`), desc: L(`order.${o}.desc`), element: 'order', disabled: o !== 'analysis' } as ListRow)), 'TACTICS'); hud.setMode('list'); listKind = 'order'; }
-    else if (id === 'guard') { hud.setMode('hidden'); const p = B.guard(); play('action', p, { skillId: 'guard' }).then(() => enemyTurn()); }
-    else if (id === 'baton') hud.navi('cmd.baton.sub');
+    else if (id === 'order') { hud.openList('order', ['analysis', 'switch', 'tactics', 'escape'].map((o) => ({ id: o, name: L(`order.${o}.name`), desc: L(`order.${o}.desc`), element: 'order', disabled: o !== 'analysis' && o !== 'switch' } as ListRow)), 'TACTICS'); hud.setMode('list'); listKind = 'order'; }
+    else if (id === 'guard') { hud.setMode('hidden'); const p = B.guard(); play('action', p, { skillId: 'guard' }).then(() => nextTurn()); }
+    else if (id === 'baton') { hud.navi('navi.baton'); hud.partyPick = B.batonTargets(); hud.setPickWord('label.baton'); hud.setMode('pick'); syncHudParty(); hud.onParty = (to) => doBaton(to); }
+    else if (id === 'showtime') doShowtime();
+  } else if (m === 'pick') {
+    if (id === 'back') { hud.partyPick = []; playerTurn(); }
   } else if (m === 'holdup') {
     if (id === 'allout') allOut();
     else if (id === 'talk') talk();
@@ -176,10 +263,14 @@ function skillRow(id: string): ListRow {
   return { id, name: L(s.name), desc: L(s.desc), cost: s.costKind === 'sp' ? `${s.cost}SP` : `${s.cost}HP`, costKind: s.costKind, element: s.element, disabled: !B.canUse(id) };
 }
 hud.onRow = (id) => {
-  if (id === 'back') { hud.setMode('command'); return; }
+  if (id === 'back') { if (listKind === 'switch') { hud.openList('order', ['analysis', 'switch', 'tactics', 'escape'].map((o) => ({ id: o, name: L(`order.${o}.name`), desc: L(`order.${o}.desc`), element: 'order', disabled: o !== 'analysis' && o !== 'switch' } as ListRow)), 'TACTICS'); listKind = 'order'; return; } hud.setMode('command'); return; }
   if (listKind === 'persona') doSkill(id);
-  else if (listKind === 'item') { hud.setMode('hidden'); const p = B.useItem(id); syncHudParty(); play('action', p, { skillId: 'item' }).then(() => enemyTurn()); }
+  else if (listKind === 'item') { hud.setMode('hidden'); const p = B.useItem(id); syncHudParty(); play('action', p, { skillId: 'item' }).then(() => nextTurn()); }
   else if (listKind === 'order' && id === 'analysis') { B.analyze(); syncHud(); hud.navi('navi.weak'); hud.setMode('command'); }
+  else if (listKind === 'order' && id === 'switch') {
+    B.bench.forEach((b) => eng.loadGroup('head:' + b));
+    hud.openList('switch', B.bench.map((b) => ({ id: b, name: L('unit.' + b), desc: `${L('persona.' + b)} · Lv${B.u(b).lv}  HP ${B.u(b).hp}/${B.u(b).hpMax}  SP ${B.u(b).sp}/${B.u(b).spMax}`, element: 'order', icon: `head.${b}#ink` } as ListRow)), L('list.switch')); listKind = 'switch';
+  } else if (listKind === 'switch') doSwitch(id);
 };
 hud.onEnemy = (id) => { if (B.u(id).hp > 0 && (hud.getMode() === 'command' || hud.getMode() === 'list')) { target = id; syncHud(); } };
 hud.onSystem = (id) => {
@@ -212,8 +303,8 @@ async function prewarm() {
 function rehearse() {
   // 在真实画布、真实尺寸上快进：技能 + 总攻 + 开战转场 + 1 MORE + HOLD UP。单次 >1.5s 放弃并标记冷启动。
   const fake = { actorId: 'joker', skillId: 'eiha', targetIds: ['noisy'], hits: [{ targetId: 'noisy', dmg: 1, weak: true, crit: false, miss: false, resist: 'none', element: 'curse', down: false }] };
-  const list: [EventName, any, any][] = [['action', fake, { skillId: 'eiha' }], ['allout', { partyIds: B.party, finisherId: 'joker', total: 1, hits: fake.hits, targetIds: ['noisy'] }, {}],
-    ['battle:start', {}, {}], ['onemore', {}, {}], ['holdup', { enemyIds: ['noisy'] }, {}], ['action', { ...fake, skillId: 'attack' }, { skillId: 'attack' }], ['battle:end', {}, {}]];
+  const list: [EventName, any, any][] = [['action', fake, { skillId: 'eiha', summon: 'full' }], ['allout', { partyIds: B.party, finisherId: 'joker', total: 1, hits: fake.hits, targetIds: ['noisy'] }, {}],
+    ['battle:start', {}, {}], ['onemore', {}, {}], ['holdup', { enemyIds: ['noisy'] }, {}], ['action', { ...fake, skillId: 'attack' }, { skillId: 'attack' }], ['action', { actorId: 'joker', skillId: 'guard', targetIds: ['joker'], hits: [] }, { skillId: 'guard' }], ['battle:end', {}, {}], ['levelup', {}, {}]];
   for (const [ev, p, q] of list) {
     const r0 = performance.now(); let n = 0;
     dir.play(ev, p, q);
@@ -226,7 +317,7 @@ function rehearse() {
   }
   dir.reset(); dir.log.length = 0; eng.ps.kill(); eng.sfxLog.length = 0;
   hud.showResult({ exp: 1, money: 1, items: [], bonus: true }); hud.update(1000); eng.st.app.renderer.render({ container: eng.st.app.stage });
-  hud.openList('persona', PERSONA_SKILLS.map((s) => skillRow(s)), 'Arsene'); hud.setMode('list'); hud.update(300); eng.st.app.renderer.render({ container: eng.st.app.stage });
+  hud.openList('persona', B.skillsOf('joker').map((s) => skillRow(s)), L('persona.joker')); hud.setMode('list'); hud.update(300); eng.st.app.renderer.render({ container: eng.st.app.stage });
   hud.setMode('hidden'); dir.seen.clear();
   for (const u of eng.units.values()) { u.down = false; u.stars.visible = false; u.body.rotation = 0; u.body.x = 0; u.body.y = 0; u.body.scale.set(1); }
 }
@@ -259,6 +350,7 @@ eng.st.app.ticker.add(() => {
     rdt = 0; m.wall = 0;
   }
   const wdt = dir.update(rdt);
+  tickSwap(rdt);
   eng.updateWorld(wdt);
   hud.update(rdt);
   quality.sample(raw, now, paused || document.hidden);
@@ -274,24 +366,36 @@ M.phase = 'idle';
 // ---------------------------------------------------------------- auto / demo
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const untilMode = async (m: string, max = 20000) => { const s = performance.now(); while (hud.getMode() !== m || dir.busy) { await wait(40); if (performance.now() - s > max) return false; } return true; };
+/** 找一手能打中未倒地敌人弱点的技能（AUTO / demo 共用；只看已提交规则数据） */
+function pickMove(actor = B.actor): { skill: string; target: string } | null {
+  for (const e of B.alive(B.enemies)) {
+    const u = B.u(e); if (u.down) continue;
+    for (const sk of [...B.skillsOf(actor), 'attack']) { const s = SKILLS[sk]; if ((s.kind === 'magic' || s.kind === 'phys') && u.weak.includes(s.element) && B.canUse(sk, actor)) return { skill: sk, target: e }; }
+  }
+  return null;
+}
 async function autoStep() {
-  // AUTO：打弱点（已知弱点优先），全倒则总攻
   await wait(300);
   if (!auto || hud.getMode() !== 'command' || dir.busy) return;
-  const n = B.u('noisy'), e = B.u('echo');
-  if (n.hp > 0 && !n.down) { target = 'noisy'; await doSkill('eiha'); } else if (e.hp > 0 && !e.down) { target = 'echo'; await doSkill('attack'); } else await doSkill('attack');
+  if (B.oneMore && B.batonTargets().length) { const to = B.batonTargets().find((t) => pickMove(t)); if (to && !pickMove()) { await doBaton(to); return; } }
+  const m = pickMove(); target = m?.target ?? B.alive(B.enemies)[0]; await doSkill(m?.skill ?? 'attack');
 }
 async function demo() {
   for (;;) {
-    await untilMode('command'); await wait(1100);
-    hud.onEnemy('noisy'); hud.onCommand('persona'); await wait(1000);
-    hud.tapRow(0); await wait(250); hud.tapRow(0);
-    await untilMode('command'); await wait(900);
-    hud.onEnemy('echo'); await wait(300); hud.onCommand('attack');
-    await untilMode('holdup'); await wait(1100);
-    hud.onCommand('allout');
-    await untilMode('result'); await wait(2600);
-    hud.onCommand('next');
+    await untilMode('command'); await wait(1000);
+    if (B.won) { await wait(500); continue; }
+    if (B.oneMore && B.batonTargets().length) {
+      const to = B.batonTargets().find((t) => pickMove(t));
+      if (to) { hud.onCommand('baton'); await wait(700); hud.onParty(to); continue; }
+    }
+    const m = pickMove();
+    if (m && m.skill !== 'attack') {
+      hud.onEnemy(m.target); hud.onCommand('persona'); await wait(900);
+      const i = B.skillsOf(B.actor).indexOf(m.skill); hud.tapRow(i); await wait(250); hud.tapRow(i);
+    } else { if (m) hud.onEnemy(m.target); await wait(300); hud.onCommand('attack'); }
+    await wait(200);
+    if (hud.getMode() === 'holdup' || (await untilMode('holdup', 1)) ) { /* fallthrough */ }
+    if (B.allDown && !B.won) { await untilMode('holdup'); await wait(1100); hud.onCommand('allout'); await untilMode('result'); await wait(2600); hud.onCommand('next'); }
   }
 }
 startBattle();
@@ -301,7 +405,7 @@ if (DEMO) demo();
 (window as any).__umbra = {
   eng, dir, hud, B, quality,
   get busy() { return dir.busy; }, get mode() { return hud.getMode(); }, get ev() { return dir.main?.ev ?? ''; }, get showT() { return dir.main?.tl.t ?? -1; },
-  cmd: (id: string) => hud.onCommand(id), row: (i: number) => hud.tapRow(i), enemy: (id: string) => hud.onEnemy(id),
+  cmd: (id: string) => hud.onCommand(id), party: (id: string) => hud.onParty(id), setTarget: (id: string) => { target = id; syncHud(); }, row: (i: number) => hud.tapRow(i), enemy: (id: string) => hud.onEnemy(id),
   freezeOn(ev: string, t: number) { testFreeze = { ev, t }; }, release() { testFreeze = null; },
   screenToDesign: (x: number, y: number) => eng.st.screenToDesign(x, y), designToScreen: (x: number, y: number) => eng.st.designToScreen(x, y),
   hitRects: () => hud.hitRects(), vis: () => eng.st.vis, safe: () => eng.st.safe,

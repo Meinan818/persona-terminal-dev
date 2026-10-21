@@ -4,4 +4,4 @@
 - 报告：M3-RED-REPORT.md；截图 shots/（contact 拼图、compare 对比）
 - App 接入时按契约把 engine 演出原语与 skins 目录并入正式 src/umbra/，不要与规则层文件混名。
 - 黄蓝粉照 src/umbra/skins/p5r-red 的结构做。
-- 已知待修：队伍卡同伴头像误用了人格面具剪影，应为龙司/摩尔加纳/杏（第二阶段修）。
+- 第二阶段：队伍名单驱动（`?party=queen,fox,noir` 换队，默认龙司/摩尔加纳/杏）、四人行动、人格面具召唤、BATON PASS、SWITCH、SHOWTIME、1 MORE 去色、LEVEL UP。见报告「第二阶段」。

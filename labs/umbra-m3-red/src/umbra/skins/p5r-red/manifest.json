@@ -10,15 +10,6 @@
    "note": "generate_image：P5R 风格宫殿大厅全景，2260 宽出血"
   },
   {
-   "id": "ally.joker.back",
-   "file": "assets/ally.joker.back.webp",
-   "w": 557,
-   "h": 640,
-   "firstPack": true,
-   "source": "generated",
-   "note": "generate_image 背影（参考官方 Joker 立绘）；原作无背影素材"
-  },
-  {
    "id": "enemy.noisy",
    "file": "assets/enemy.noisy.webp",
    "w": 427,
@@ -37,15 +28,6 @@
    "note": "P5R Mokoi 图鉴抠图（包 F）；本作名「游荡回声」"
   },
   {
-   "id": "cutin.joker",
-   "file": "assets/cutin.joker.webp",
-   "w": 1280,
-   "h": 320,
-   "firstPack": true,
-   "source": "official",
-   "note": "Fandom Joker FinishingTouch 面部横条"
-  },
-  {
    "id": "allout.finish.default",
    "file": "assets/allout.finish.default.webp",
    "w": 1280,
@@ -55,84 +37,6 @@
    "note": "Fandom Joker FinishingTouch（THE SHOW'S OVER）"
   },
   {
-   "id": "atlas.party",
-   "file": "assets/atlas.party.webp",
-   "w": 1024,
-   "h": 320,
-   "firstPack": true,
-   "source": "official",
-   "frames": {
-    "joker": [
-     3,
-     0,
-     250,
-     276
-    ],
-    "agathion": [
-     259,
-     0,
-     250,
-     294
-    ],
-    "caitsith": [
-     540,
-     0,
-     200,
-     310
-    ],
-    "kelpie": [
-     771,
-     0,
-     250,
-     182
-    ]
-   },
-   "atlas": "atlas.party",
-   "note": "官方立绘/图鉴抠图拼图集"
-  },
-  {
-   "id": "atlas.hud",
-   "file": "assets/atlas.hud.webp",
-   "w": 640,
-   "h": 128,
-   "firstPack": true,
-   "source": "official",
-   "frames": {
-    "joker": [
-     0,
-     0,
-     128,
-     128
-    ],
-    "agathion": [
-     128,
-     0,
-     128,
-     128
-    ],
-    "caitsith": [
-     256,
-     0,
-     128,
-     128
-    ],
-    "kelpie": [
-     384,
-     0,
-     128,
-     128
-    ],
-    "navi": [
-     512,
-     0,
-     128,
-     128
-    ]
-   },
-   "atlas": "atlas.hud",
-   "note": "HUD 头像：官方立绘局部按 P5R 黑白墨线头像处理；navi 头像为包 F 伪官方（generated）"
-  },
-  {
    "id": "result.hero.grey",
    "file": "assets/result.hero.grey.webp",
    "w": 580,
@@ -140,9 +44,922 @@
    "firstPack": true,
    "source": "official",
    "note": "官方 Joker 立绘去色（原作 RESULT 灰度角色）"
+  },
+  {
+   "id": "head.joker",
+   "file": "assets/head.joker.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:joker",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.joker",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:P5 Hero Masked Portrait.png — https://megamitensei.fandom.com/wiki/File%3AP5_Hero_Masked_Portrait.png"
+  },
+  {
+   "id": "char.joker",
+   "file": "assets/char.joker.webp",
+   "w": 1280,
+   "h": 1120,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:joker",
+   "frames": {
+    "cutin": [
+     0,
+     0,
+     1280,
+     320
+    ],
+    "bust": [
+     0,
+     320,
+     400,
+     400
+    ],
+    "mask": [
+     800,
+     320,
+     184,
+     116
+    ],
+    "maskAt": [
+     94,
+     108,
+     184,
+     116
+    ],
+    "body": [
+     0,
+     720,
+     300,
+     331
+    ]
+   },
+   "atlas": "char.joker",
+   "note": "cutin ← 官方素材包 F：hero-cutin.webp；bust/mask ← File:P5 Hero Masked Portrait.png — https://megamitensei.fandom.com/wiki/File%3AP5_Hero_Masked_Portrait.png；nomask ← -；body ← 官方素材包 F：hero.webp"
+  },
+  {
+   "id": "back.joker",
+   "file": "assets/back.joker.webp",
+   "w": 557,
+   "h": 640,
+   "firstPack": false,
+   "source": "official",
+   "group": "back:joker",
+   "note": "generate_image 背影（参考官方 Joker 立绘）"
+  },
+  {
+   "id": "persona.joker",
+   "file": "assets/persona.joker.webp",
+   "w": 632,
+   "h": 612,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:joker",
+   "note": "人格面具 ← File:Arsene.png — https://megamitensei.fandom.com/wiki/File%3AArsene.png；蓝焰描边/辉光离线烘焙"
+  },
+  {
+   "id": "head.skull",
+   "file": "assets/head.skull.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:skull",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.skull",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:P5 portrait of Ryuji's phantom thief outfit.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Ryuji%27s_phantom_thief_outfit.png"
+  },
+  {
+   "id": "char.skull",
+   "file": "assets/char.skull.webp",
+   "w": 1280,
+   "h": 1120,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:skull",
+   "frames": {
+    "cutin": [
+     0,
+     0,
+     1280,
+     320
+    ],
+    "bust": [
+     0,
+     320,
+     400,
+     400
+    ],
+    "nomask": [
+     400,
+     320,
+     400,
+     400
+    ],
+    "mask": [
+     800,
+     320,
+     232,
+     198
+    ],
+    "maskAt": [
+     144,
+     106,
+     232,
+     198
+    ],
+    "body": [
+     0,
+     720,
+     300,
+     360
+    ]
+   },
+   "atlas": "char.skull",
+   "note": "cutin ← File:Ryuji cut-in.png — https://megamitensei.fandom.com/wiki/File%3ARyuji_cut-in.png；bust/mask ← File:P5 portrait of Ryuji's phantom thief outfit.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Ryuji%27s_phantom_thief_outfit.png；nomask ← File:P5 portrait of Ryuji's phantom thief outfit without mask.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Ryuji%27s_phantom_thief_outfit_without_mask.png；body ← File:P5 Ryuji Sakomoto, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Ryuji_Sakomoto%2C_Phantom_Thief.png"
+  },
+  {
+   "id": "back.skull",
+   "file": "assets/back.skull.webp",
+   "w": 359,
+   "h": 640,
+   "firstPack": false,
+   "source": "generated",
+   "group": "back:skull",
+   "note": "generate_image 伪官方背影（参考 File:P5 Ryuji Sakomoto, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Ryuji_Sakomoto%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图"
+  },
+  {
+   "id": "persona.skull",
+   "file": "assets/persona.skull.webp",
+   "w": 632,
+   "h": 594,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:skull",
+   "note": "人格面具 ← File:P5S CaptainKidd.png — https://megamitensei.fandom.com/wiki/File%3AP5S_CaptainKidd.png（P5S 官方渲染图，同一人格面具）；蓝焰描边/辉光离线烘焙"
+  },
+  {
+   "id": "head.mona",
+   "file": "assets/head.mona.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:mona",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.mona",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:P5 portrait of Morgana.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Morgana.png"
+  },
+  {
+   "id": "char.mona",
+   "file": "assets/char.mona.webp",
+   "w": 1280,
+   "h": 1120,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:mona",
+   "frames": {
+    "cutin": [
+     0,
+     0,
+     1280,
+     320
+    ],
+    "bust": [
+     0,
+     320,
+     400,
+     400
+    ],
+    "body": [
+     0,
+     720,
+     300,
+     357
+    ]
+   },
+   "atlas": "char.mona",
+   "note": "cutin ← File:P5 CutIn Morgana Serious.png — https://megamitensei.fandom.com/wiki/File%3AP5_CutIn_Morgana_Serious.png（对话 cut-in 裁眼部横条）；bust/mask ← File:P5 portrait of Morgana.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Morgana.png；nomask ← -；body ← File:P5S Morgana2.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Morgana2.png"
+  },
+  {
+   "id": "back.mona",
+   "file": "assets/back.mona.webp",
+   "w": 508,
+   "h": 640,
+   "firstPack": false,
+   "source": "generated",
+   "group": "back:mona",
+   "note": "generate_image 伪官方背影（参考 File:P5S Morgana2.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Morgana2.png）；原作为 3D 模型、无 2D 背影图"
+  },
+  {
+   "id": "persona.mona",
+   "file": "assets/persona.mona.webp",
+   "w": 632,
+   "h": 526,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:mona",
+   "note": "人格面具 ← File:P5S Zorro.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Zorro.png（P5S 官方渲染图，同一人格面具）；蓝焰描边/辉光离线烘焙"
+  },
+  {
+   "id": "head.panther",
+   "file": "assets/head.panther.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:panther",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.panther",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:P5 portrait of Anne Takamaki's Phantom Thief outfit.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Anne_Takamaki%27s_Phantom_Thief_outfit.png"
+  },
+  {
+   "id": "char.panther",
+   "file": "assets/char.panther.webp",
+   "w": 1280,
+   "h": 1120,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:panther",
+   "frames": {
+    "cutin": [
+     0,
+     0,
+     1280,
+     320
+    ],
+    "bust": [
+     0,
+     320,
+     400,
+     400
+    ],
+    "nomask": [
+     400,
+     320,
+     400,
+     400
+    ],
+    "mask": [
+     800,
+     320,
+     184,
+     161
+    ],
+    "maskAt": [
+     72,
+     34,
+     184,
+     161
+    ],
+    "body": [
+     0,
+     720,
+     300,
+     277
+    ]
+   },
+   "atlas": "char.panther",
+   "note": "cutin ← File:Anne cut-in.png — https://megamitensei.fandom.com/wiki/File%3AAnne_cut-in.png；bust/mask ← File:P5 portrait of Anne Takamaki's Phantom Thief outfit.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Anne_Takamaki%27s_Phantom_Thief_outfit.png；nomask ← File:P5 portrait of Anne Takamaki's Phantom Thief outfit without mask.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Anne_Takamaki%27s_Phantom_Thief_outfit_without_mask.png；body ← File:P5S Ann.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Ann.png"
+  },
+  {
+   "id": "back.panther",
+   "file": "assets/back.panther.webp",
+   "w": 640,
+   "h": 590,
+   "firstPack": false,
+   "source": "generated",
+   "group": "back:panther",
+   "note": "generate_image 伪官方背影（参考 File:P5S Ann.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Ann.png）；原作为 3D 模型、无 2D 背影图"
+  },
+  {
+   "id": "persona.panther",
+   "file": "assets/persona.panther.webp",
+   "w": 632,
+   "h": 532,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:panther",
+   "note": "人格面具 ← File:P5S Carmen.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Carmen.png（P5S 官方渲染图，同一人格面具）；蓝焰描边/辉光离线烘焙"
+  },
+  {
+   "id": "head.fox",
+   "file": "assets/head.fox.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:fox",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.fox",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:P5 portrait of Yusuke Kitagawa's phantom thief outfit.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Yusuke_Kitagawa%27s_phantom_thief_outfit.png"
+  },
+  {
+   "id": "char.fox",
+   "file": "assets/char.fox.webp",
+   "w": 1280,
+   "h": 1120,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:fox",
+   "frames": {
+    "cutin": [
+     0,
+     0,
+     1280,
+     320
+    ],
+    "bust": [
+     0,
+     320,
+     400,
+     400
+    ],
+    "nomask": [
+     400,
+     320,
+     400,
+     400
+    ],
+    "mask": [
+     800,
+     320,
+     208,
+     255
+    ],
+    "maskAt": [
+     120,
+     24,
+     208,
+     255
+    ],
+    "body": [
+     0,
+     720,
+     265,
+     400
+    ]
+   },
+   "atlas": "char.fox",
+   "note": "cutin ← File:Yusuke cut-in.png — https://megamitensei.fandom.com/wiki/File%3AYusuke_cut-in.png；bust/mask ← File:P5 portrait of Yusuke Kitagawa's phantom thief outfit.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Yusuke_Kitagawa%27s_phantom_thief_outfit.png；nomask ← File:P5 portrait of Yusuke Kitagawa's phantom thief outfit without mask.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Yusuke_Kitagawa%27s_phantom_thief_outfit_without_mask.png；body ← File:P5 Yusuke Kitagawa, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Yusuke_Kitagawa%2C_Phantom_Thief.png"
+  },
+  {
+   "id": "back.fox",
+   "file": "assets/back.fox.webp",
+   "w": 424,
+   "h": 640,
+   "firstPack": false,
+   "source": "generated",
+   "group": "back:fox",
+   "note": "generate_image 伪官方背影（参考 File:P5 Yusuke Kitagawa, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Yusuke_Kitagawa%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图"
+  },
+  {
+   "id": "persona.fox",
+   "file": "assets/persona.fox.webp",
+   "w": 632,
+   "h": 573,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:fox",
+   "note": "人格面具 ← File:P5-Goemon.png — https://megamitensei.fandom.com/wiki/File%3AP5-Goemon.png；蓝焰描边/辉光离线烘焙"
+  },
+  {
+   "id": "head.queen",
+   "file": "assets/head.queen.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:queen",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.queen",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:P5 portrait of Makoto Nijima's phantom thief outift.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Makoto_Nijima%27s_phantom_thief_outift.png"
+  },
+  {
+   "id": "char.queen",
+   "file": "assets/char.queen.webp",
+   "w": 1280,
+   "h": 1120,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:queen",
+   "frames": {
+    "cutin": [
+     0,
+     0,
+     1280,
+     320
+    ],
+    "bust": [
+     0,
+     320,
+     400,
+     400
+    ],
+    "nomask": [
+     400,
+     320,
+     400,
+     400
+    ],
+    "mask": [
+     800,
+     320,
+     198,
+     136
+    ],
+    "maskAt": [
+     70,
+     136,
+     198,
+     136
+    ],
+    "body": [
+     0,
+     720,
+     269,
+     400
+    ]
+   },
+   "atlas": "char.queen",
+   "note": "cutin ← File:Makoto-cutin.png — https://megamitensei.fandom.com/wiki/File%3AMakoto-cutin.png；bust/mask ← File:P5 portrait of Makoto Nijima's phantom thief outift.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Makoto_Nijima%27s_phantom_thief_outift.png；nomask ← File:P5 portrait of Makoto Nijima's phantom thief outift without mask.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Makoto_Nijima%27s_phantom_thief_outift_without_mask.png；body ← File:P5 Makoto Nijima, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Makoto_Nijima%2C_Phantom_Thief.png"
+  },
+  {
+   "id": "back.queen",
+   "file": "assets/back.queen.webp",
+   "w": 442,
+   "h": 640,
+   "firstPack": false,
+   "source": "generated",
+   "group": "back:queen",
+   "note": "generate_image 伪官方背影（参考 File:P5 Makoto Nijima, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Makoto_Nijima%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图"
+  },
+  {
+   "id": "persona.queen",
+   "file": "assets/persona.queen.webp",
+   "w": 632,
+   "h": 471,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:queen",
+   "note": "人格面具 ← File:P5 Johanna.png — https://megamitensei.fandom.com/wiki/File%3AP5_Johanna.png；蓝焰描边/辉光离线烘焙"
+  },
+  {
+   "id": "head.noir",
+   "file": "assets/head.noir.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:noir",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.noir",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:P5 portrait of Haru Okumura's phantom thief outfit.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Haru_Okumura%27s_phantom_thief_outfit.png"
+  },
+  {
+   "id": "char.noir",
+   "file": "assets/char.noir.webp",
+   "w": 1280,
+   "h": 1120,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:noir",
+   "frames": {
+    "cutin": [
+     0,
+     0,
+     1280,
+     320
+    ],
+    "bust": [
+     0,
+     320,
+     400,
+     400
+    ],
+    "nomask": [
+     400,
+     320,
+     400,
+     400
+    ],
+    "mask": [
+     800,
+     320,
+     256,
+     76
+    ],
+    "maskAt": [
+     66,
+     200,
+     256,
+     76
+    ],
+    "body": [
+     0,
+     720,
+     300,
+     353
+    ]
+   },
+   "atlas": "char.noir",
+   "note": "cutin ← File:Haru cut-in.png — https://megamitensei.fandom.com/wiki/File%3AHaru_cut-in.png；bust/mask ← File:P5 portrait of Haru Okumura's phantom thief outfit.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Haru_Okumura%27s_phantom_thief_outfit.png；nomask ← File:P5 portrait of Haru Okumura's phantom thief outfit without mask.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Haru_Okumura%27s_phantom_thief_outfit_without_mask.png；body ← File:P5 Haru Okumura, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Haru_Okumura%2C_Phantom_Thief.png"
+  },
+  {
+   "id": "back.noir",
+   "file": "assets/back.noir.webp",
+   "w": 544,
+   "h": 640,
+   "firstPack": false,
+   "source": "generated",
+   "group": "back:noir",
+   "note": "generate_image 伪官方背影（参考 File:P5 Haru Okumura, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Haru_Okumura%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图"
+  },
+  {
+   "id": "persona.noir",
+   "file": "assets/persona.noir.webp",
+   "w": 632,
+   "h": 587,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:noir",
+   "note": "人格面具 ← File:P5S Milady.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Milady.png（P5S 官方渲染图，同一人格面具）；蓝焰描边/辉光离线烘焙"
+  },
+  {
+   "id": "head.crow",
+   "file": "assets/head.crow.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:crow",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.crow",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:Goro-black-mask-portrait.png — https://megamitensei.fandom.com/wiki/File%3AGoro-black-mask-portrait.png"
+  },
+  {
+   "id": "char.crow",
+   "file": "assets/char.crow.webp",
+   "w": 1280,
+   "h": 1120,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:crow",
+   "frames": {
+    "cutin": [
+     0,
+     0,
+     1280,
+     320
+    ],
+    "bust": [
+     0,
+     320,
+     400,
+     400
+    ],
+    "mask": [
+     800,
+     320,
+     272,
+     270
+    ],
+    "maskAt": [
+     80,
+     24,
+     272,
+     270
+    ],
+    "body": [
+     0,
+     720,
+     117,
+     400
+    ]
+   },
+   "atlas": "char.crow",
+   "note": "cutin ← File:P5 Goro cut-in.png — https://megamitensei.fandom.com/wiki/File%3AP5_Goro_cut-in.png；bust/mask ← File:Goro-black-mask-portrait.png — https://megamitensei.fandom.com/wiki/File%3AGoro-black-mask-portrait.png；nomask ← -；body ← File:P5 Goro Akechi.png — https://megamitensei.fandom.com/wiki/File%3AP5_Goro_Akechi.png"
+  },
+  {
+   "id": "back.crow",
+   "file": "assets/back.crow.webp",
+   "w": 187,
+   "h": 640,
+   "firstPack": false,
+   "source": "generated",
+   "group": "back:crow",
+   "note": "generate_image 伪官方背影（参考 File:P5 Goro Akechi.png — https://megamitensei.fandom.com/wiki/File%3AP5_Goro_Akechi.png）；原作为 3D 模型、无 2D 背影图"
+  },
+  {
+   "id": "persona.crow",
+   "file": "assets/persona.crow.webp",
+   "w": 632,
+   "h": 561,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:crow",
+   "note": "人格面具 ← File:Robin Hood P5R.png — https://megamitensei.fandom.com/wiki/File%3ARobin_Hood_P5R.png；蓝焰描边/辉光离线烘焙"
+  },
+  {
+   "id": "head.violet",
+   "file": "assets/head.violet.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:violet",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.violet",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:P5R Portrait Violet Serious.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Portrait_Violet_Serious.png"
+  },
+  {
+   "id": "char.violet",
+   "file": "assets/char.violet.webp",
+   "w": 1280,
+   "h": 1120,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:violet",
+   "frames": {
+    "cutin": [
+     0,
+     0,
+     1280,
+     320
+    ],
+    "bust": [
+     0,
+     320,
+     400,
+     400
+    ],
+    "nomask": [
+     400,
+     320,
+     400,
+     400
+    ],
+    "mask": [
+     800,
+     320,
+     176,
+     92
+    ],
+    "maskAt": [
+     72,
+     180,
+     176,
+     92
+    ],
+    "body": [
+     0,
+     720,
+     243,
+     400
+    ]
+   },
+   "atlas": "char.violet",
+   "note": "cutin ← File:Sumire Cut-In.png — https://megamitensei.fandom.com/wiki/File%3ASumire_Cut-In.png；bust/mask ← File:P5R Portrait Violet Serious.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Portrait_Violet_Serious.png；nomask ← File:P5R Portrait Violet Maskless Serious.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Portrait_Violet_Maskless_Serious.png；body ← File:P5R Kasumi Render.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Kasumi_Render.png"
+  },
+  {
+   "id": "back.violet",
+   "file": "assets/back.violet.webp",
+   "w": 640,
+   "h": 605,
+   "firstPack": false,
+   "source": "generated",
+   "group": "back:violet",
+   "note": "generate_image 伪官方背影（参考 File:P5R Kasumi Render.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Kasumi_Render.png）；原作为 3D 模型、无 2D 背影图"
+  },
+  {
+   "id": "persona.violet",
+   "file": "assets/persona.violet.webp",
+   "w": 452,
+   "h": 632,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:violet",
+   "note": "人格面具 ← File:P5R ConceptArt Cendrillon.png — https://megamitensei.fandom.com/wiki/File%3AP5R_ConceptArt_Cendrillon.png（P5R 官方概念设定图左半，白底抠图）；蓝焰描边/辉光离线烘焙"
+  },
+  {
+   "id": "head.oracle",
+   "file": "assets/head.oracle.webp",
+   "w": 320,
+   "h": 160,
+   "firstPack": false,
+   "source": "official",
+   "group": "head:oracle",
+   "frames": {
+    "ink": [
+     0,
+     0,
+     160,
+     160
+    ],
+    "color": [
+     160,
+     0,
+     160,
+     160
+    ]
+   },
+   "atlas": "head.oracle",
+   "note": "HUD 头像（黑白墨线 + 彩色）← File:P5 portrait of Futaba Sakura's phantom thief outfit.png — https://megamitensei.fandom.com/wiki/File%3AP5_portrait_of_Futaba_Sakura%27s_phantom_thief_outfit.png"
+  },
+  {
+   "id": "cutin.oracle",
+   "file": "assets/cutin.oracle.webp",
+   "w": 1280,
+   "h": 320,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:oracle",
+   "note": "导航 cut-in ← File:P5 Futaba cut-in.png — https://megamitensei.fandom.com/wiki/File%3AP5_Futaba_cut-in.png"
+  },
+  {
+   "id": "show.mona-panther",
+   "file": "assets/show.mona-panther.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "show:mona-panther",
+   "note": "SHOWTIME 定格画 ← File:P5R Showtime MorganaAnn.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Showtime_MorganaAnn.png"
+  },
+  {
+   "id": "show.skull-fox",
+   "file": "assets/show.skull-fox.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "show:skull-fox",
+   "note": "SHOWTIME 定格画 ← File:P5R Showtime RyujiYusuke.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Showtime_RyujiYusuke.png"
+  },
+  {
+   "id": "show.joker-crow",
+   "file": "assets/show.joker-crow.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "show:joker-crow",
+   "note": "SHOWTIME 定格画 ← File:P5R Showtime JokerAkechi.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Showtime_JokerAkechi.png"
+  },
+  {
+   "id": "show.joker-violet",
+   "file": "assets/show.joker-violet.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "show:joker-violet",
+   "note": "SHOWTIME 定格画 ← File:P5R Showtime JokerKasumi.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Showtime_JokerKasumi.png"
+  },
+  {
+   "id": "show.queen-noir",
+   "file": "assets/show.queen-noir.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "show:queen-noir",
+   "note": "SHOWTIME 定格画 ← File:P5R Showtime MakotoHaru.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Showtime_MakotoHaru.png"
+  },
+  {
+   "id": "show.mona-noir",
+   "file": "assets/show.mona-noir.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "show:mona-noir",
+   "note": "SHOWTIME 定格画 ← File:P5R Showtime MorganaHaru.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Showtime_MorganaHaru.png"
   }
  ],
- "filters": [],
+ "filters": [
+  "ColorMatrix"
+ ],
  "fonts": [
   {
    "family": "R5 Num",
@@ -161,26 +978,26 @@
   {
    "family": "R5 CJK",
    "file": "assets/fonts/r5-cjk-0.woff2",
-   "chars": "·—…、。「」一下不与两个中了交亮人从伤伴作你使倒先入全具再决出击别力动口只可合同名咒回场声复它害对小异弱影得御态思怨总恢成战手打技持接攻放敌斗方时明是有来板枪查次气法涉点物用白的看离等练继续能行训谁起路过返这逃道避那量针间防降面！（），：？～",
+   "chars": "·—…、。「」一上下不与两个中了交亮人从会伤伴作你使倒先入全具再冰决出击切别到力动升原口只可合同名后员和咒回图场声备复它定害对小异弱强影得御念态思怨总恢成战手打技持换接提攻放敌斗方时明是替有条来板枪查核次气法消涉火点物生用电疾白的看真祝福离等练结给继续耗背能行训记设谁起路过返这逃道避那部量针间队防降面风！（），：；？～",
    "role": "display",
    "pack": "first",
-   "unicodeRange": "U+B7,U+2014,U+2026,U+3001,U+3002,U+300C,U+300D,U+4E00,U+4E0B,U+4E0D,U+4E0E,U+4E24,U+4E2A,U+4E2D,U+4E86,U+4EA4,U+4EAE,U+4EBA,U+4ECE,U+4F24,U+4F34,U+4F5C,U+4F60,U+4F7F,U+5012,U+5148,U+5165,U+5168,U+5177,U+518D,U+51B3,U+51FA,U+51FB,U+522B,U+529B,U+52A8,U+53E3,U+53EA,U+53EF,U+5408,U+540C,U+540D,U+5492,U+56DE,U+573A,U+58F0,U+590D,U+5B83,U+5BB3,U+5BF9,U+5C0F,U+5F02,U+5F31,U+5F71,U+5F97,U+5FA1,U+6001,U+601D,U+6028,U+603B,U+6062,U+6210,U+6218,U+624B,U+6253,U+6280,U+6301,U+63A5,U+653B,U+653E,U+654C,U+6597,U+65B9,U+65F6,U+660E,U+662F,U+6709,U+6765,U+677F,U+67AA,U+67E5,U+6B21,U+6C14,U+6CD5,U+6D89,U+70B9,U+7269,U+7528,U+767D,U+7684,U+770B,U+79BB,U+7B49,U+7EC3,U+7EE7,U+7EED,U+80FD,U+884C,U+8BAD,U+8C01,U+8D77,U+8DEF,U+8FC7,U+8FD4,U+8FD9,U+9003,U+9053,U+907F,U+90A3,U+91CF,U+9488,U+95F4,U+9632,U+964D,U+9762,U+FF01,U+FF08,U+FF09,U+FF0C,U+FF1A,U+FF1F,U+FF5E"
+   "unicodeRange": "U+B7,U+2014,U+2026,U+3001,U+3002,U+300C,U+300D,U+4E00,U+4E0A,U+4E0B,U+4E0D,U+4E0E,U+4E24,U+4E2A,U+4E2D,U+4E86,U+4EA4,U+4EAE,U+4EBA,U+4ECE,U+4F1A,U+4F24,U+4F34,U+4F5C,U+4F60,U+4F7F,U+5012,U+5148,U+5165,U+5168,U+5177,U+518D,U+51B0,U+51B3,U+51FA,U+51FB,U+5207,U+522B,U+5230,U+529B,U+52A8,U+5347,U+539F,U+53E3,U+53EA,U+53EF,U+5408,U+540C,U+540D,U+540E,U+5458,U+548C,U+5492,U+56DE,U+56FE,U+573A,U+58F0,U+5907,U+590D,U+5B83,U+5B9A,U+5BB3,U+5BF9,U+5C0F,U+5F02,U+5F31,U+5F3A,U+5F71,U+5F97,U+5FA1,U+5FF5,U+6001,U+601D,U+6028,U+603B,U+6062,U+6210,U+6218,U+624B,U+6253,U+6280,U+6301,U+6362,U+63A5,U+63D0,U+653B,U+653E,U+654C,U+6597,U+65B9,U+65F6,U+660E,U+662F,U+66FF,U+6709,U+6761,U+6765,U+677F,U+67AA,U+67E5,U+6838,U+6B21,U+6C14,U+6CD5,U+6D88,U+6D89,U+706B,U+70B9,U+7269,U+751F,U+7528,U+7535,U+75BE,U+767D,U+7684,U+770B,U+771F,U+795D,U+798F,U+79BB,U+7B49,U+7EC3,U+7ED3,U+7ED9,U+7EE7,U+7EED,U+8017,U+80CC,U+80FD,U+884C,U+8BAD,U+8BB0,U+8BBE,U+8C01,U+8D77,U+8DEF,U+8FC7,U+8FD4,U+8FD9,U+9003,U+9053,U+907F,U+90A3,U+90E8,U+91CF,U+9488,U+95F4,U+961F,U+9632,U+964D,U+9762,U+98CE,U+FF01,U+FF08,U+FF09,U+FF0C,U+FF1A,U+FF1B,U+FF1F,U+FF5E"
   },
   {
    "family": "R5 CJK",
    "file": "assets/fonts/r5-cjk-1.woff2",
-   "chars": "么什令低信变听告命射就属心性想我把指改无状率理界相级要解预默",
+   "chars": "为么什令低信变听告命射少就属心性想我把指改无概横热状率理界相眼级缺要解话轮顶预默",
    "role": "display",
    "pack": "first",
-   "unicodeRange": "U+4E48,U+4EC0,U+4EE4,U+4F4E,U+4FE1,U+53D8,U+542C,U+544A,U+547D,U+5C04,U+5C31,U+5C5E,U+5FC3,U+6027,U+60F3,U+6211,U+628A,U+6307,U+6539,U+65E0,U+72B6,U+7387,U+7406,U+754C,U+76F8,U+7EA7,U+8981,U+89E3,U+9884,U+9ED8"
+   "unicodeRange": "U+4E3A,U+4E48,U+4EC0,U+4EE4,U+4F4E,U+4FE1,U+53D8,U+542C,U+544A,U+547D,U+5C04,U+5C11,U+5C31,U+5C5E,U+5FC3,U+6027,U+60F3,U+6211,U+628A,U+6307,U+6539,U+65E0,U+6982,U+6A2A,U+70ED,U+72B6,U+7387,U+7406,U+754C,U+76F8,U+773C,U+7EA7,U+7F3A,U+8981,U+89E3,U+8BDD,U+8F6E,U+9876,U+9884,U+9ED8"
   },
   {
    "family": "R5 CJK",
    "file": "assets/fonts/r5-cjk-2.woff2",
-   "chars": "们假噪怪找沉游漂盗聒跑近造",
+   "chars": "们假召唤噪怪找染沉渲游漂盗聒裁跑近造",
    "role": "display",
    "pack": "first",
-   "unicodeRange": "U+4EEC,U+5047,U+566A,U+602A,U+627E,U+6C89,U+6E38,U+6F02,U+76D7,U+8052,U+8DD1,U+8FD1,U+9020"
+   "unicodeRange": "U+4EEC,U+5047,U+53EC,U+5524,U+566A,U+602A,U+627E,U+67D3,U+6C89,U+6E32,U+6E38,U+6F02,U+76D7,U+8052,U+88C1,U+8DD1,U+8FD1,U+9020"
   },
   {
    "family": "R5 CJK",
@@ -193,10 +1010,10 @@
   {
    "family": "R5 CJK",
    "file": "assets/fonts/r5-cjk-4.woff2",
-   "chars": "哼委干械汝",
+   "chars": "哼委官干械棒汝炎",
    "role": "display",
    "pack": "first",
-   "unicodeRange": "U+54FC,U+59D4,U+5E72,U+68B0,U+6C5D"
+   "unicodeRange": "U+54FC,U+59D4,U+5B98,U+5E72,U+68B0,U+68D2,U+6C5D,U+708E"
   },
   {
    "family": "R5 CJK",

@@ -6,6 +6,8 @@ export interface ManifestAsset {
   source: 'official' | 'generated'; note?: string;
   /** 图集帧：name → [x,y,w,h]（M3 提案字段，图集素材才有） */
   frames?: Record<string, [number, number, number, number]>;
+  /** 懒加载分组（M3 第二阶段提案）：head:<角色> 随队伍进首包；char:<角色>/show:<组合> 按需加载 */
+  group?: string;
 }
 export interface Manifest {
   assets: ManifestAsset[];
@@ -36,7 +38,7 @@ export interface CommandItem {
   invert?: number[];          // 反色字母下标（剪报字）
   hit: Rect;
   main?: boolean;
-  when?: 'onemore';           // 只在 1 MORE 后出现（原作 BATON PASS）
+  when?: 'onemore' | 'showtime';   // onemore：1 MORE 后出现（原作 BATON PASS）；showtime：组合合击可用时（M3 第二阶段）
 }
 export interface CommandSet { hub: { x: number; y: number }; items: CommandItem[] }
 

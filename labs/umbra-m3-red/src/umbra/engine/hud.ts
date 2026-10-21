@@ -6,10 +6,10 @@ import type { Engine } from './core';
 import { ransom, txt, plate, hex } from './text';
 import { ease } from './timeline';
 
-export interface PartyState { id: string; name: string; hp: number; hpMax: number; sp: number; spMax: number; active?: boolean }
+export interface PartyState { id: string; name: string; hp: number; hpMax: number; sp: number; spMax: number; active?: boolean; baton?: number }
 export interface EnemyState { id: string; name: string; hp: number; hpMax: number; lv: number; known: string[]; weak: string[]; down: boolean; alive: boolean }
-export interface ListRow { id: string; name: string; desc: string; cost?: string; costKind?: 'sp' | 'hp' | 'n'; element?: string; disabled?: boolean }
-export interface ResultData { exp: number; money: number; items: { name: string; n: number }[]; bonus: boolean }
+export interface ListRow { id: string; name: string; desc: string; cost?: string; costKind?: 'sp' | 'hp' | 'n'; element?: string; disabled?: boolean; icon?: string }
+export interface ResultData { exp: number; money: number; items: { name: string; n: number }[]; bonus: boolean; levelUps?: { id: string; from: number; to: number; hp: number; sp: number }[] }
 
 const ELEM: Record<string, [number, string]> = {
   phys: [0xf08a1c, 'slash'], gun: [0x9a9a9a, 'bullet'], curse: [0x7a2bd6, 'curse'], bless: [0xffe14a, 'bless'], fire: [0xff4b1f, 'flame'],
@@ -51,6 +51,8 @@ export class P5Hud {
   private mode = 'hidden';
   private openT = 0;
   oneMore = false;
+  canBaton = true;
+  showtime = '';
   busy = false;
   party = new Container(); partyCards = new Map<string, { c: Container; hp: Graphics; sp: Graphics; hpT: Text; spT: Text; st: PartyState; shown: { hp: number; sp: number }; shake: number; base: { x: number; y: number } }>();
   order = new Container(); top = new Container(); sys = new Container(); over = new Container(); list = new Container(); result = new Container(); holdLogo = new Container();
@@ -75,7 +77,7 @@ export class P5Hud {
     L.addChild(this.over, this.reticle, this.party, this.order, this.top, this.sys, this.list, this.holdLogo, this.result);
     const slots = eng.skin.slots;
     for (const [name, set] of Object.entries(slots['hud.command'].sets)) this.buildSet(name, set as CommandSet);
-    this.buildParty(); this.buildTop(); this.buildSystem(); this.buildReticle(); this.buildHoldLogo();
+    this.buildParty(); this.buildTop(); this.buildSystem(); this.buildReticle(); this.buildHoldLogo(); this.buildPickHint();
     this.list.visible = false; this.result.visible = false; this.holdLogo.visible = false;
     this.debugHits = new URLSearchParams(location.search).get('hit') === '1';
     if (this.debugHits) this.drawDebug();
@@ -154,6 +156,7 @@ export class P5Hud {
     this.holdLogo.visible = m === 'holdup';
     this.order.visible = m === 'command' || m === 'list';
     this.party.visible = m !== 'result';
+    this.pickHint.visible = m === 'pick';
     this.top.visible = m !== 'result';
     this.over.visible = m !== 'result';
     this.reticle.visible = m === 'command' || m === 'list';
@@ -164,31 +167,49 @@ export class P5Hud {
   setBusy(b: boolean) { this.busy = b; }
 
   // ------------------------------------------------------------------ party cards
-  private buildParty() {
+  partyIds: string[] = [];
+  onParty: (id: string) => void = () => {};
+  partyPick: string[] = [];          // BATON PASS / SWITCH 选择时可点的卡
+  private buildParty() { this.setPartyIds(this.eng.skin.slots['hud.party'].units.filter((u) => u !== '$party')); }
+  /** 队伍卡由名单数据驱动（主角 + 3 名同伴，可换） */
+  setPartyIds(ids: string[]) {
+    if (ids.join() === this.partyIds.join()) return;
+    this.partyIds = ids.slice();
+    this.party.removeChildren().forEach((c) => c.destroy({ children: true })); this.partyCards.clear();
     const sl = this.eng.skin.slots['hud.party'];
     const [x0, y0] = sl.rect; const { w, h, gap, rot } = sl.card;
-    sl.units.forEach((id, i) => {
+    ids.forEach((id, i) => {
       const c = new Container(); c.position.set(x0 + 8 + i * (w + gap), y0 + 18); c.rotation = rot;
+      const sel = new Graphics().poly([-8, -10, w + 18, -14, w + 8, h + 8, -18, h + 12]).fill(hex(this.C.primary)).stroke({ color: 0xffffff, width: 3 }); sel.label = 'sel'; sel.visible = false;
       const bg = plate(w, h, { fill: 0x0a0a0a, stroke: 0xffffff, sw: 2.5, skew: 12, shadow: 0x0a0a0a, sx: 4, sy: 4 }); bg.label = 'bg';
-      const head = new Sprite(this.eng.frames[`atlas.hud#${id}`] ?? Texture.WHITE); head.anchor.set(0.5, 1); head.scale.set(0.62); head.position.set(30, h - 2);
-      const hpL = txt('HP', 13, { font: this.eng.fonts.display, fill: 0xffffff }); hpL.position.set(66, 8);
+      const head = new Sprite(this.eng.frames[`head.${id}#ink`] ?? Texture.EMPTY); head.anchor.set(0.5, 1); head.scale.set(0.56); head.position.set(34, h + 4); head.label = 'head';
+      const hpL = txt('HP', 13, { font: this.eng.fonts.display, fill: 0xffffff }); hpL.position.set(70, 8);
       const spL = txt('SP', 13, { font: this.eng.fonts.display, fill: 0xffffff }); spL.position.set(66, 38);
       const hpT = txt('0', 28, { font: this.eng.fonts.number, fill: hex(this.C.hp), fontStyle: 'italic' }); hpT.anchor.set(1, 0); hpT.position.set(w - 14, 0);
       const spT = txt('0', 28, { font: this.eng.fonts.number, fill: hex(this.C.sp), fontStyle: 'italic' }); spT.anchor.set(1, 0); spT.position.set(w - 18, 30);
+      const bt = txt('', 16, { font: this.eng.fonts.display, fill: 0xffffff, stroke: { color: 0x0a0a0a, width: 4 } }); bt.label = 'baton'; bt.position.set(4, -22);
       const hp = new Graphics(), sp = new Graphics();
-      c.addChild(bg, hp, sp, head, hpL, spL, hpT, spT);
+      c.addChild(sel, bg, hp, sp, head, hpL, spL, hpT, spT, bt);
+      const hb = this.hitBox([-10, -14, w + 20, Math.max(86, h + 26)], () => { if (this.partyPick.includes(id)) this.onParty(id); });
+      c.addChild(hb);
       this.party.addChild(c);
-      this.partyCards.set(id, { c, hp, sp, hpT, spT, st: { id, name: id, hp: 1, hpMax: 1, sp: 1, spMax: 1 }, shown: { hp: 1, sp: 1 }, shake: 0, base: { x: c.x, y: c.y } });
+      this.partyCards.set(id, { c, hp, sp, hpT, spT, st: { id, name: id, hp: 1, hpMax: 1, sp: 1, spMax: 1 }, shown: { hp: -1, sp: -1 }, shake: 0, base: { x: c.x, y: c.y } });
     });
   }
+  /** 懒加载的头像到了以后补上 */
+  refreshHeads() { for (const [id, pc] of this.partyCards) { const h = pc.c.getChildByLabel('head') as Sprite; const t = this.eng.frames[`head.${id}#ink`]; if (h && t && h.texture !== t) h.texture = t; } }
   updateParty(states: PartyState[]) {
     for (const s of states) {
       const pc = this.partyCards.get(s.id); if (!pc) continue;
       if (s.hp < pc.st.hp) pc.shake = 260;
       pc.st = { ...s };
-      const bg = pc.c.getChildByLabel('bg') as Graphics;
-      bg.tint = s.active ? hex(this.C.primary) : 0xffffff;
-      pc.c.y = pc.base.y - (s.active ? 10 : 0);
+      if (pc.shown.hp < 0) pc.shown = { hp: s.hp, sp: s.sp };
+      const bg = pc.c.getChildByLabel('bg') as Graphics, sel = pc.c.getChildByLabel('sel') as Graphics;
+      bg.tint = s.active ? hex(this.C.primary) : 0xffffff; sel.visible = !!s.active;
+      pc.c.scale.set(s.active ? 1.1 : 1);
+      pc.c.y = pc.base.y - (s.active ? 14 : 0);
+      (pc.c.getChildByLabel('baton') as Text).text = (s as any).baton ? `BATON ×${(s as any).baton}` : '';
+      pc.c.alpha = this.partyPick.length && !this.partyPick.includes(s.id) ? 0.45 : 1;
     }
   }
   private drawParty(dt: number) {
@@ -197,8 +218,10 @@ export class P5Hud {
       const k = Math.min(1, dt / 110);
       pc.shown.hp += (pc.st.hp - pc.shown.hp) * k; pc.shown.sp += (pc.st.sp - pc.shown.sp) * k;
       if (Math.abs(pc.st.hp - pc.shown.hp) < 0.5) pc.shown.hp = pc.st.hp; if (Math.abs(pc.st.sp - pc.shown.sp) < 0.5) pc.shown.sp = pc.st.sp;
-      pc.hpT.text = String(Math.round(pc.shown.hp)); pc.spT.text = String(Math.round(pc.shown.sp));
+      const hs = String(Math.round(pc.shown.hp)), ss = String(Math.round(pc.shown.sp));
+      if (pc.hpT.text !== hs) pc.hpT.text = hs; if (pc.spT.text !== ss) pc.spT.text = ss;
       const bw = w - 78, r1 = Math.max(0, pc.shown.hp / pc.st.hpMax), r2 = Math.max(0, pc.shown.sp / pc.st.spMax);
+      const key = `${r1.toFixed(3)}|${r2.toFixed(3)}`; if ((pc as any).barKey === key && pc.shake <= 0) continue; (pc as any).barKey = key;
       pc.hp.clear().poly([64, 30, 64 + bw, 29, 62 + bw, 34, 62, 35]).fill(0x333333).poly([64, 30, 64 + bw * r1, 29.5, 62 + bw * r1, 34, 62, 35]).fill(hex(this.C.hp));
       pc.sp.clear().poly([60, 62, 60 + bw, 61, 58 + bw, 66, 58, 67]).fill(0x333333).poly([60, 62, 60 + bw * r2, 61.5, 58 + bw * r2, 66, 58, 67]).fill(hex(this.C.sp));
       if (pc.shake > 0) { pc.shake -= dt; pc.c.x = pc.base.x + (Math.random() - 0.5) * 10 * (pc.shake / 260); } else pc.c.x = pc.base.x;
@@ -214,7 +237,7 @@ export class P5Hud {
     // navigator bubble
     const [tx, ty, tw, th] = this.eng.skin.slots['hud.topInfo'].rect;
     const b = new Graphics().poly([tx + 10, ty + 6, tx + tw - 70, ty, tx + tw - 80, ty + th - 14, tx + tw - 100, ty + th - 14, tx + tw - 118, ty + th + 8, tx + tw - 130, ty + th - 12, tx, ty + th - 6]).fill(0xffffff).stroke({ color: 0x0a0a0a, width: 4 });
-    const head = new Sprite(this.eng.frames['atlas.hud#navi'] ?? Texture.WHITE); head.anchor.set(0.5, 1); head.scale.set(0.72); head.position.set(tx + tw - 34, ty + th + 4);
+    const head = new Sprite(this.eng.frames['head.oracle#color'] ?? Texture.EMPTY); head.anchor.set(0.5, 1); head.scale.set(0.6); head.position.set(tx + tw - 34, ty + th + 4);
     const hb = new Graphics().circle(tx + tw - 34, ty + th / 2 + 2, 40).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 3 });
     const m = new Graphics().circle(tx + tw - 34, ty + th / 2 + 2, 37).fill(0xffffff); head.mask = m;
     this.naviText = txt('', 20, { font: this.eng.fonts.body, fill: 0x0a0a0a, fontWeight: '700', wordWrap: true, wordWrapWidth: tw - 150, breakWords: true, lineHeight: 28 });
@@ -244,7 +267,7 @@ export class P5Hud {
     o.order.slice(0, 6).forEach((id, i) => {
       const x = 104 + i * 40, g = new Graphics().poly([x, 0, x + 34, -2, x + 30, 24, x - 4, 26]).fill(i === 0 ? 0xffffff : 0x0a0a0a).stroke({ color: 0xffffff, width: 2 });
       ch.addChild(g);
-      const tex = eng.frames[`atlas.hud#${id}`];
+      const tex = eng.frames[`head.${id}#ink`];
       if (tex) { const sp = new Sprite(tex); sp.width = sp.height = 30; sp.position.set(x, -4); ch.addChild(sp); }
       else { const e = txt(id === 'noisy' ? '聒' : '游', 16, { font: eng.fonts.display, fill: i === 0 ? 0x0a0a0a : hex(this.C.primary) }); e.anchor.set(0.5); e.position.set(x + 15, 12); ch.addChild(e); }
     });
@@ -304,13 +327,13 @@ export class P5Hud {
   }
 
   // ------------------------------------------------------------------ list (skills / items / order)
-  openList(kind: 'persona' | 'item' | 'order', rows: ListRow[], sub: string) {
+  openList(kind: string, rows: ListRow[], sub: string) {
     const eng = this.eng, sl = eng.skin.slots['hud.command'].list;
     this.list.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.listRows = [];
     // title: PERSONA 剪报字 + 面具名斜条
     const [tx, ty, tw] = sl.title;
-    const tt = ransom(this.lab('list.' + kind), 62, eng.fonts.display, { invert: kind === 'persona' ? [0, 5] : [0], seed: 31, stroke: 7 });
+    const tt = ransom(this.lab('list.' + kind), kind === 'switch' ? 56 : 62, eng.fonts.display, { invert: kind === 'persona' ? [0, 5] : [0], seed: 31, stroke: 7 });
     const tb = tt.getLocalBounds(); tt.position.set(tx + 10 - tb.x, ty + 36); tt.rotation = -0.06;
     const nb = new Graphics().poly([tx + tb.width + 30, ty + 26, tx + tw, ty + 18, tx + tw - 10, ty + 66, tx + tb.width + 22, ty + 72]).fill(hex(this.C.primary)).stroke({ color: 0x0a0a0a, width: 3 });
     const nt = txt(sub, 34, { font: eng.fonts.display, fill: 0xffffff, stroke: { color: 0x0a0a0a, width: 5 } }); nt.position.set(tx + tb.width + 44, ty + 26);
@@ -328,7 +351,9 @@ export class P5Hud {
       const c = new Container(); const y = ry + i * rh;
       const w = rw - 18 - ((i * 37) % 3) * 14;   // 锯齿右缘
       const bg = new Graphics();
-      const ic = elemIcon(row.element ?? 'almighty', 20); ic.position.set(rx + 40, y + rh / 2);
+      let ic: Container = elemIcon(row.element ?? 'almighty', 20);
+      if (row.icon && eng.frames[row.icon]) { const sp = new Sprite(eng.frames[row.icon]); sp.anchor.set(0.5); sp.scale.set(0.42); ic = sp; }
+      ic.position.set(rx + 40, y + rh / 2);
       const name = txt(row.name, 40, { font: eng.fonts.display, fill: row.disabled ? 0x777777 : 0xffffff }); name.anchor.set(0, 0.5); name.position.set(rx + 72, y + rh / 2);
       c.addChild(bg, ic, name);
       if (row.cost) {
@@ -365,6 +390,16 @@ export class P5Hud {
 
   // ------------------------------------------------------------------ hold up
   private holdRing = new Container();
+  pickHint = new Container();
+  private buildPickHint() {
+    const sl = this.eng.skin.slots['hud.party']; const [x, y, w] = sl.rect;
+    const t = ransom(this.lab('label.baton'), 40, this.eng.fonts.display, { invert: [0], seed: 8, stroke: 5 }); const b = t.getLocalBounds();
+    t.position.set(x + 10 - b.x, y - 70); t.rotation = -0.05; t.label = 'word';
+    const arrow = new Graphics(); for (let i = 0; i < 4; i++) arrow.poly([x + 60 + i * (w / 4), y - 14, x + 84 + i * (w / 4), y - 14, x + 72 + i * (w / 4), y + 2]).fill(hex(this.C.primary)).stroke({ color: 0xffffff, width: 2 });
+    this.pickHint.addChild(arrow, t); this.pickHint.visible = false; this.eng.st.layers.hud.addChild(this.pickHint);
+  }
+  setPickWord(k: string) { const old = this.pickHint.getChildByLabel('word'); old?.destroy({ children: true }); const sl = this.eng.skin.slots['hud.party']; const [x, y] = sl.rect;
+    const t = ransom(this.lab(k), 40, this.eng.fonts.display, { invert: [0], seed: 8, stroke: 5 }); const b = t.getLocalBounds(); t.position.set(x + 10 - b.x, y - 70); t.rotation = -0.05; t.label = 'word'; this.pickHint.addChild(t); }
   private buildHoldLogo() {
     const t = ransom(this.lab('label.holdup'), 64, this.eng.fonts.display, { invert: [0, 5], seed: 4, stroke: 7 });
     const b = t.getLocalBounds(); t.position.set(40 - b.x, 60); t.rotation = -0.08;
@@ -378,7 +413,7 @@ export class P5Hud {
     const cx = es.reduce((a, u) => a + u.home.x, 0) / Math.max(1, es.length), cy = es.reduce((a, u) => a + u.home.y, 0) / Math.max(1, es.length);
     const spots = [[-300, 30, 0.8], [300, 40, 0.82], [-170, 150, 0.95], [190, 160, 0.98]];
     party.forEach((id, i) => {
-      const tex = this.eng.frames[`atlas.party#${id}`]; if (!tex) return;
+      const tex = this.eng.frames[`char.${id}#body`]; if (!tex) return;
       const s = new Sprite(tex); s.anchor.set(0.5, 1); s.tint = hex(this.C.primary); s.alpha = 0.92;
       const [dx, dy, sc] = spots[i % 4]; s.position.set(cx + dx, cy + dy); s.scale.set((dx < 0 ? 1 : -1) * sc, sc);
       const o = new Sprite(tex); o.anchor.set(0.5, 1); o.tint = 0x0a0a0a; o.position.set(s.x + 6, s.y + 4); o.scale.copyFrom(s.scale);
@@ -422,8 +457,21 @@ export class P5Hud {
     const title = ransom(this.lab('result.title'), 70, eng.fonts.display, { invert: [0, 3], seed: 2, stroke: 7 }); title.position.set(60, 90); title.rotation = -0.08;
     R.addChild(title); this.resultAnim.blocks.push(title);
     this.resultAnim.blocks.forEach((b) => ((b as any).bx = b.x));
+    // LEVEL UP 卡（原作：结算后逐人弹出；这里在 RESULT 计数结束后从右侧甩入）
+    this.levelCards = [];
+    (d.levelUps ?? []).forEach((lu, i) => {
+      const c = new Container(); c.position.set(1270, 150 + i * 118); c.rotation = -0.05;
+      c.addChild(new Graphics().poly([-430, -46, 20, -60, 10, 58, -440, 66]).fill(0xe5191c).stroke({ color: 0x0a0a0a, width: 5 }).poly([-424, -38, -300, -42, -310, 56, -432, 58]).fill(0x0a0a0a));
+      const hd = new Sprite(eng.frames[`head.${lu.id}#color`] ?? Texture.EMPTY); hd.anchor.set(0.5, 1); hd.scale.set(0.7); hd.position.set(-366, 60); c.addChild(hd);
+      const lw = ransom(this.lab('result.levelup'), 44, eng.fonts.display, { invert: [0, 6], seed: 13 + i, stroke: 6 }); const lb = lw.getLocalBounds(); lw.position.set(-290 - lb.x, -48 - lb.y); c.addChild(lw);
+      const nm = txt(this.lab('unit.' + lu.id), 22, { font: eng.fonts.display, fill: 0x0a0a0a }); nm.position.set(-288, 14); c.addChild(nm);
+      const lv = txt(`Lv ${lu.from} ▶ ${lu.to}`, 30, { font: eng.fonts.number, fill: 0xffffff, fontStyle: 'italic', stroke: { color: 0x0a0a0a, width: 5 } }); lv.position.set(-180, 8); c.addChild(lv);
+      const st = txt(`HP+${lu.hp}  SP+${lu.sp}`, 20, { font: eng.fonts.number, fill: 0xffe14a, stroke: { color: 0x0a0a0a, width: 4 } }); st.position.set(-286, 40); c.addChild(st);
+      c.visible = false; R.addChild(c); this.levelCards.push(c);
+    });
     this.setMode('result');
   }
+  levelCards: Container[] = [];
   private sticker(s: string) {
     const c = new Container(); const t = txt(s, 46, { font: this.eng.fonts.display, fill: 0x0a0a0a }); t.anchor.set(0.5);
     const w = t.width + 30; c.addChild(new Graphics().poly([-w / 2, -30, w / 2, -38, w / 2 - 6, 30, -w / 2 - 6, 36]).fill(0xffe14a).stroke({ color: 0x0a0a0a, width: 5 }), t); c.rotation = -0.14; return c;
@@ -438,7 +486,7 @@ export class P5Hud {
       const set = this.eng.skin.slots['hud.command'].sets[name] as CommandSet;
       s.c.alpha = this.busy ? 0 : 1;
       s.items.forEach((it, i) => {
-        const vis = !it.def.when || (it.def.when === 'onemore' && this.oneMore);
+        const vis = !it.def.when || (it.def.when === 'onemore' && this.oneMore && this.canBaton) || ((it.def.when as string) === 'showtime' && !!this.showtime && !(this.oneMore && this.canBaton));
         it.node.visible = vis; it.hit.eventMode = vis && !this.busy ? 'static' : 'none';
         const k = ease.outBack(Math.min(1, Math.max(0, (this.openT - i * 22) / 180)));
         const b = (it.node as any).base;
@@ -477,6 +525,7 @@ export class P5Hud {
     // result count-up + block slide
     if (this.result.visible && this.resultAnim.data) {
       const A = this.resultAnim; A.t += dt;
+      this.levelCards.forEach((c, i) => { const k = ease.outBack(Math.min(1, Math.max(0, (A.t - 1250 - i * 120) / 240))); c.visible = k > 0; c.x = 1270 + (1 - k) * 520; });
       A.blocks.forEach((b, i) => { const k = ease.outCubic(Math.min(1, Math.max(0, (A.t - i * 80) / 220))); b.x = (b as any).bx - (1 - k) * 600; b.alpha = k; });
       A.nums.forEach((n) => { const k = Math.min(1, Math.max(0, (A.t - 200) / 900)); n.t.text = n.fmt(Math.round(n.v * ease.outCubic(k))); });
     }

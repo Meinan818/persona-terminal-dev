@@ -35,6 +35,27 @@
       "when": "onemore"
      },
      {
+      "id": "showtime",
+      "label": "cmd.showtime",
+      "x": 900,
+      "y": 280,
+      "rot": 0.3,
+      "size": 40,
+      "hit": [
+       780,
+       236,
+       230,
+       86
+      ],
+      "sub": "cmd.showtime.sub",
+      "key": "r2",
+      "invert": [
+       0,
+       4
+      ],
+      "when": "showtime"
+     },
+     {
       "id": "persona",
       "label": "cmd.persona",
       "x": 895,
@@ -283,10 +304,7 @@
    "rot": -0.035
   },
   "units": [
-   "joker",
-   "agathion",
-   "caitsith",
-   "kelpie"
+   "$party"
   ]
  },
  "hud.order": {

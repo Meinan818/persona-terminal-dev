@@ -22,7 +22,7 @@
  ],
  "assets": [
   "allout.finish.default",
-  "atlas.party"
+  "char.$party"
  ],
  "tracks": [
   {

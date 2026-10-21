@@ -15,6 +15,7 @@ import {
   registerSyntheticPersona,
   setPersonaOverride,
 } from './p5r-battle-adapter.js';
+import { generateEncounter } from '../rules/encounter';
 
 export const ELEMENTS = P5_ELEMENTS;
 export const STATUS = P5_STATUS;
@@ -187,34 +188,7 @@ export function createDefaultBattle({
     .filter(Boolean)
     .map(makePartyMember);
 
-  const enemies = (enemySpecs ?? [
-    {
-      id: 'a',
-      name: '诡辩之影',
-      maxHp: 72,
-      attack: 18,
-      defense: 6,
-      element: 'phys',
-      weakness: 'electric',
-      resist: 'curse',
-      personality: 'proud',
-      recruitPersonaId: 'agathion',
-      reward: { sp: 30, item: '诡辩的碎片' },
-    },
-    {
-      id: 'b',
-      name: '刻薄之影',
-      maxHp: 64,
-      attack: 16,
-      defense: 5,
-      element: 'curse',
-      weakness: 'bless',
-      resist: 'fire',
-      personality: 'greedy',
-      recruitPersonaId: 'angel',
-      reward: { sp: 24, item: '刻薄的碎片' },
-    },
-  ]).map(makeEnemy);
+  const enemies = (enemySpecs ?? generateEncounter({ rng })).map(makeEnemy);
 
   return new P5Battle({ rng, party: [hero, ...allies], enemies });
 }

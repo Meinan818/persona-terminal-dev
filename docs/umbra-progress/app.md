@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：主题动态加载器 `skins/themeLoader.ts` 完成；全量 UMBRA 测试 16 文件 / 79 项通过，tsc exit 0。
+当前节点：D-004 遇敌 1–5 只 + 画质自动降档完成；p5-battle 8 项 / quality 3 项通过，tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -48,3 +48,8 @@
 - 新增 `rules/explore`：P5T 式 Q 版格子关卡、走位、掩体、巡逻视线、背后偷袭、宝箱机关交涉点；必战守门阴影 + 1 场精英 + BOSS。
 - 事件清单按 FX-MAP §F：`explore:move` / `explore:cover` / `explore:spotted` / `explore:interact`，复用现有 `map:encounter(ambush)`。
 - 规则层与战斗规则分开，不影响已完成的战斗/图鉴/存档；四皮同规则不同画面。
+
+## D-004 · 后续任务
+
+- `rules/encounter` 按楼层/警戒度生成 1–5 只；`createDefaultBattle` 默认不再写死两只。
+- 战斗、HOLD UP、总攻、交涉、意图遍历 `enemies` 数组；补 1/3/5 只完整流程测试。

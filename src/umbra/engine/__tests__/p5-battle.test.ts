@@ -10,9 +10,36 @@ import {
   compendiumSkillIds,
 } from '@/umbra/engine/compendiumPreload';
 import { ensureCompendium } from '@/umbra/engine/p5r-compendium';
+import { generateEncounter } from '@/umbra/rules/encounter';
 
 const steady = () => 0.5;
 const createBattle = createDefaultBattle as any;
+
+const spec = (id: string): any => ({
+  id,
+  name: `测试阴影 ${id}`,
+  maxHp: 1,
+  attack: 1,
+  defense: 0,
+  element: 'phys',
+  weakness: 'fire',
+  resist: 'curse',
+  personality: 'proud',
+  recruitPersonaId: 'agathion',
+  reward: { sp: 1, item: '阴影碎片' },
+});
+
+const driveBattle = (battle: any): string => {
+  let guard = 0;
+  while (!['victory', 'defeat', 'result'].includes(battle.phase) && guard < 200) {
+    guard += 1;
+    if (battle.phase === 'holdUp') battle.holdUp({ type: 'continue' });
+    else if (battle.phase === 'negotiation') battle.chooseResult('reward');
+    else if (battle.phase === 'result') break;
+    else battle.act({ type: 'basic', targetId: battle.aliveEnemies?.[0]?.id });
+  }
+  return battle.phase;
+};
 
 beforeAll(async () => {
   await ensureCompendium({
@@ -62,16 +89,28 @@ describe('UMBRA formal P5 battle engine', () => {
     const battle: any = createBattle({ rng: steady });
     const snapshot = battle.snapshot();
     expect(snapshot.party).toHaveLength(4);
-    expect(snapshot.enemies).toHaveLength(2);
+    expect(snapshot.enemies.length).toBeGreaterThanOrEqual(1);
+    expect(snapshot.enemies.length).toBeLessThanOrEqual(4);
     expect(snapshot.actor).toBe('你');
     expect(snapshot.persona).toBe('亚森');
     expect(snapshot.phase).toBe('party');
   });
 
+  it.each([1, 3, 5])('%i 只敌人能跑完整战斗流程', (count) => {
+    const enemies = Array.from({ length: count }, (_, index) => spec(`e${index + 1}`));
+    const battle: any = createBattle({ rng: steady, enemies });
+    const phase = driveBattle(battle);
+    expect(['victory', 'result']).toContain(phase);
+  });
+
   it('电击弱点触发倒地、发现弱点和 1 MORE', () => {
-    const battle: any = createBattle({ rng: steady, activePersonaId: 'pixie' });
-    expect(battle.act({ type: 'skill', id: 'Zio', targetId: 'a' }).ok).toBe(true);
-    const enemy = battle.enemies.find((item: any) => item.id === 'a');
+    const battle: any = createBattle({
+      rng: steady,
+      activePersonaId: 'pixie',
+      enemies: [{ ...spec('e1'), weakness: 'electric', maxHp: 100 }],
+    });
+    const enemy = battle.aliveEnemies[0];
+    expect(battle.act({ type: 'skill', id: 'Zio', targetId: enemy.id }).ok).toBe(true);
     expect(enemy.down).toBe(true);
     expect(enemy.knownAffinities.electric).toBe('weak');
     expect(battle.extraId).toBe('hero');

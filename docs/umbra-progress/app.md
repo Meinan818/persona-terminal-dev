@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：探索局外规则完成（守门阴影 + 最少 4 战离场）；测试通过，tsc exit 0。
+当前节点：全量常规测试 83 文件 / 461 项通过；tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 

@@ -31,7 +31,45 @@
    }
   },
   {
-   "at": 40,
+   "at": 0,
+   "dur": 920,
+   "prim": "camera",
+   "args": {
+    "focus": "$enemies",
+    "keys": [
+     {
+      "at": 0,
+      "x": -150,
+      "y": -40,
+      "zoom": 0.32,
+      "rot": 0.1
+     },
+     {
+      "at": 0.55,
+      "x": -30,
+      "y": -8,
+      "zoom": 0.12,
+      "rot": 0.025,
+      "ease": "outCubic"
+     },
+     {
+      "at": 1,
+      "ease": "inOutCubic"
+     }
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 0,
+   "dur": 900,
+   "prim": "holdupRing",
+   "args": {
+    "orbit": 1.2
+   }
+  },
+  {
+   "at": 160,
    "prim": "banner",
    "args": {
     "text": "label.holdup",
@@ -45,10 +83,10 @@
    }
   },
   {
-   "at": 40,
+   "at": 160,
    "prim": "particles",
    "args": {
-    "count": 50,
+    "count": 70,
     "at": {
      "x": 640,
      "y": 320
@@ -67,19 +105,7 @@
    "minimal": "skip"
   },
   {
-   "at": 420,
-   "prim": "silhouetteDash",
-   "args": {
-    "units": "$party",
-    "count": 4,
-    "interval": 160,
-    "path": "L<->R"
-   },
-   "dur": 520,
-   "minimal": "skip"
-  },
-  {
-   "at": 500,
+   "at": 300,
    "prim": "shake",
    "args": {
     "px": 6

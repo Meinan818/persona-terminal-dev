@@ -81,6 +81,39 @@
    }
   },
   {
+   "at": 780,
+   "prim": "camera",
+   "dur": 840,
+   "args": {
+    "focus": "$target",
+    "keys": [
+     {
+      "at": 0
+     },
+     {
+      "at": 0.3,
+      "x": -70,
+      "y": -10,
+      "zoom": 0.15,
+      "rot": 0.018,
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.62,
+      "x": -50,
+      "y": -6,
+      "zoom": 0.11,
+      "rot": 0.01
+     },
+     {
+      "at": 1,
+      "ease": "inOutCubic"
+     }
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
    "at": 820,
    "prim": "nameplate",
    "dur": 760,

@@ -30,7 +30,9 @@ export type PrimitiveName =
   | 'summon' | 'personaShow' | 'nameplate' | 'pose' | 'batonPass' | 'showtimeLogo'
   | 'eyeStrip' | 'onomatopoeia' | 'checkerFloor' | 'ringSplash'
   // M3 第四阶段（v1.3 提案）：SHOWTIME 四段、开战扯面具
-  | 'comicPanels' | 'duoEntrance' | 'duoStrike' | 'duoTitle' | 'maskRip';
+  | 'comicPanels' | 'duoEntrance' | 'duoStrike' | 'duoTitle' | 'maskRip'
+  // M3 第五阶段（v1.3 提案）：伪 3D 镜头、HOLD UP 包围
+  | 'camera' | 'holdupRing';
 
 export interface Track {
   at: Ms;

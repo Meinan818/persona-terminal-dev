@@ -126,6 +126,7 @@ export class Director {
     eng.ps.kill(run.owner);
     eng.fx.clear(run.owner, run.lane === 'main');
     for (const u of run.rc.touched) { u.root.position.set(u.home.x, u.home.y); u.root.scale.set(1); u.root.alpha = 1; u.hit.scale.set(1); u.hit.x = 0; u.mesh.filters = null as any; }
+    if (run.lane === 'main' && skipped) eng.cam.snap();
     if (run.lane === 'main') { eng.st.layers.allout.alpha = 1; eng.st.layers.cutin.alpha = 1; }
     run.forced = forced; run.skipped = run.skipped || skipped;
     const res: RunResult = { ev: run.ev, recipe: run.recipe.id, duration: run.recipe.duration, wallMs: Math.round(run.wall), capMs: Math.round(run.capMs), forced, skipped: run.skipped, speed: this.speed, level: run.rc.level };

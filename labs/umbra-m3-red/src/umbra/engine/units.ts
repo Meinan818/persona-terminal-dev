@@ -12,6 +12,7 @@ export interface UnitNode {
   down: boolean; downT: number; stars: Container; reticle?: Container;
   /** 2D 骨骼式姿态（网格变形参数，pose 原语按缓动连续插值；0 = 待机） */
   pose: Pose; arm: Float32Array;
+  rim?: Mesh<any, any>;
   headY: number;   // 头顶（相对 root，设计像素，负数）
   hitY: number;    // 命中点
 }
@@ -32,7 +33,10 @@ export function makeUnit(id: string, side: 'ally' | 'enemy', tex: Texture, x: nu
   const s = h / tex.height;
   const inner = new Container();
   if (side === 'enemy') { const rim = new Mesh({ geometry: mesh.geometry, texture: tex }); rim.tint = 0xff1a2a; rim.alpha = 0.95; rim.position.set(-4 / (h / tex.height), -3 / (h / tex.height)); rim.blendMode = 'add'; inner.addChild(rim); }
+  let rimA: Mesh<any, any> | undefined;
+  if (side === 'ally') { rimA = new Mesh({ geometry: mesh.geometry, texture: tex }); rimA.tint = 0xff2a36; rimA.alpha = 0.3; rimA.blendMode = 'add'; inner.addChild(rimA); }
   inner.addChild(shade, mesh);
+  if (rimA) { inner.removeChild(rimA); inner.addChildAt(rimA, 0); }
   inner.scale.set(s * facing, s); inner.position.set((-tex.width * s * facing) / 2, -tex.height * s);
   const hit = new Container(); hit.addChild(inner);
   const body = new Container(); body.addChild(hit);
@@ -62,11 +66,11 @@ export function makeUnit(id: string, side: 'ally' | 'enemy', tex: Texture, x: nu
     else arm[i] = Math.max(0, Math.min(1, (u0 - 0.5) / 0.35)) * Math.max(0, Math.min(1, (0.62 - v) / 0.3));
   }
   const u: UnitNode = { id, side, root, body, hit, mesh, shade, tex, home: { x, y }, h, s, facing, idle, base, weights, phase, down: false, downT: 0, stars, pose: { ...POSE0 }, arm,
-    headY: -h - 20, hitY: -h * 0.55 };
+    headY: -h - 20, hitY: -h * 0.55, rim: rimA };
   return u;
 }
 
-export function updateUnit(u: UnitNode, t: number, dt: number) {
+export function updateUnit(u: UnitNode, t: number, dt: number, camX = 0) {
   const buf = u.mesh.geometry.getBuffer('aPosition');
   const d = buf.data as Float32Array, b = u.base, W = u.tex.width, H = u.tex.height;
   const w = (t / u.idle.period) * Math.PI * 2 + u.phase;
@@ -85,6 +89,11 @@ export function updateUnit(u: UnitNode, t: number, dt: number) {
   // 敌人待机浮动/微抖（原作 Shadow 悬浮感）；姿态位移
   const bob = u.side === 'enemy' && !u.down ? Math.sin(w * 1.7) * 7 + Math.sin(t / 97) * 0.8 : 0;
   u.body.pivot.x = -P.dx; u.body.pivot.y = -(P.dy + bob);
+  // 伪 3D：镜头环绕时人物按透视微倾（脚下不动、头部随视角偏），轮廓光方向随镜头转（光源固定在敌方一侧）、强度随呼吸起伏
+  if (u.side === 'ally') {
+    u.root.skew.x = -camX * 0.0011;
+    if (u.rim) { const sc = 1 / u.s; u.rim.position.set((5 + camX * 0.12) * sc * u.facing, (-3 - Math.abs(camX) * 0.03) * sc); u.rim.alpha = 0.26 + 0.1 * Math.sin(w * 0.5) + Math.abs(P.lean) / 160; }
+  } else u.root.skew.x = camX * 0.0003;
   if (u.down) {
     u.downT += dt;
     u.stars.children.forEach((s, i) => { const a = u.downT / 260 + (i * Math.PI * 2) / 3; s.position.set(Math.cos(a) * 46, -u.h * 0.32 + Math.sin(a) * 12); s.rotation = a; });

@@ -57,6 +57,10 @@ def skill(sid, el, kind, ver):
             {'at': (S + 640) / dur, 'pose': 'cast'}, {'at': 1, 'pose': 'settle', 'ease': 'inOutCubic'}]}},
         {'at': S - 80, 'prim': 'personaShow', 'dur': 760 if kind in ('magic', 'heal') else 620, 'args': {'dx': -130, 'dy': -30, 'scale': 0.95}},
         {'at': S, 'prim': 'nameplate', 'dur': CAST - 120, 'args': {'element': el}},
+        # 第五阶段：施法镜头 —— 从行动者背后推向目标、轻微滚转，命中后回落（伪 3D：背景/敌人/前景按景深视差）
+        {'at': S - 40, 'prim': 'camera', 'dur': CAST - 40, 'args': {'focus': '$target' if kind != 'buff' and kind != 'heal' else '$actor', 'keys': [
+            {'at': 0}, {'at': 0.3, 'x': -70 if kind not in ('buff', 'heal') else 40, 'y': -10, 'zoom': 0.15, 'rot': 0.018, 'ease': 'outCubic'},
+            {'at': 0.62, 'x': -50 if kind not in ('buff', 'heal') else 30, 'y': -6, 'zoom': 0.11, 'rot': 0.01}, {'at': 1, 'ease': 'inOutCubic'}]}, 'minimal': 'skip'},
     ]
     if kind == 'magic':
         h = S + 300
@@ -110,6 +114,8 @@ out['action.attack'] = {'id': 'action.attack', 'event': 'action', 'match': {'ski
     {'at': 0, 'prim': 'pose', 'dur': 940, 'args': {'target': '$actor', 'keys': [{'at': 0, 'pose': 'idle'}, {'at': 0.1, 'pose': 'windup', 'ease': 'outCubic'},
         {'at': 0.32, 'pose': 'dash', 'ease': 'inCubic'}, {'at': 0.48, 'pose': 'slash', 'ease': 'outBack'}, {'at': 0.72, 'pose': 'slash'}, {'at': 1, 'pose': 'idle', 'ease': 'inOutCubic'}]}},
     {'at': 100, 'prim': 'afterimage', 'dur': 300, 'args': {'actor': '$actor', 'to': {'x': '$target', 'y': '$target', 'dx': 150, 'dy': 40}, 'n': 3, 'scaleTo': 0.62, 'tints': ['#ffffff', '@color.primary', '#ffffff']}},
+    {'at': 0, 'prim': 'camera', 'dur': 1000, 'args': {'focus': '$target', 'keys': [{'at': 0}, {'at': 0.12, 'x': 30, 'zoom': 0.04, 'ease': 'outCubic'},
+        {'at': 0.42, 'x': -90, 'y': -10, 'zoom': 0.2, 'rot': -0.022, 'ease': 'inCubic'}, {'at': 0.7, 'x': -70, 'y': -6, 'zoom': 0.16, 'rot': -0.012}, {'at': 1, 'ease': 'inOutCubic'}]}, 'minimal': 'skip'},
     {'at': 400, 'prim': 'slashLine', 'dur': 140, 'args': {'len': 560, 'width': 18, 'rot': -0.7, 'jitter': 30}},
     {'at': 440, 'prim': 'slashLine', 'dur': 140, 'args': {'len': 520, 'width': 14, 'rot': 0.55, 'jitter': 30}},
 ] + [x for x in hitpack(440, 'phys', heavy=False) if x['prim'] != 'shockwave'] + [
@@ -143,6 +149,9 @@ out['highlight.showtime'] = {'id': 'highlight.showtime', 'event': 'highlight', '
     {'at': 960, 'prim': 'flashScreen', 'dur': 90, 'args': {'color': '#ffffff', 'alpha': 0.5}},
     {'at': 1840, 'prim': 'dim', 'dur': 700, 'args': {'color': '#000', 'alpha': 0.45, 'hold': False}},
     {'at': 1840, 'prim': 'duoStrike', 'dur': 620, 'args': {}},
+    # 第五阶段：合击镜头 —— 回到战场时从敌群上方斜俯推入，命中帧（p≈0.45）猛推 + 反向滚转，随后缓推进定格画
+    {'at': 1840, 'prim': 'camera', 'dur': 620, 'args': {'focus': '$target', 'keys': [{'at': 0, 'x': 120, 'y': -60, 'zoom': 0.3, 'rot': -0.06},
+        {'at': 0.44, 'x': 0, 'y': 0, 'zoom': 0.06, 'rot': 0.0, 'ease': 'outCubic'}, {'at': 0.5, 'zoom': 0.24, 'rot': 0.04, 'ease': 'outQuart'}, {'at': 1, 'zoom': 0.14, 'rot': 0.02, 'ease': 'outCubic'}]}, 'minimal': 'skip'},
     {'at': 2120, 'prim': 'hitStop', 'args': {'ms': 70}},
     {'at': 2120, 'prim': 'shake', 'args': {'px': 24}},
     {'at': 2120, 'prim': 'flashScreen', 'dur': 100, 'args': {'color': '#ffffff', 'alpha': 0.42}},

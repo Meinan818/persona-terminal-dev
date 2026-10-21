@@ -55,6 +55,48 @@
    }
   },
   {
+   "at": 0,
+   "dur": 1060,
+   "prim": "camera",
+   "args": {
+    "focus": "$actor",
+    "keys": [
+     {
+      "at": 0
+     },
+     {
+      "at": 0.3,
+      "x": -40,
+      "y": -10,
+      "zoom": 0.12,
+      "rot": -0.015,
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.42,
+      "x": 120,
+      "y": 10,
+      "zoom": 0.1,
+      "rot": 0.02,
+      "ease": "inCubic"
+     },
+     {
+      "at": 0.6,
+      "x": 110,
+      "y": 10,
+      "zoom": 0.14,
+      "rot": 0.02,
+      "ease": "outQuart"
+     },
+     {
+      "at": 1,
+      "ease": "inOutCubic"
+     }
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
    "at": 120,
    "prim": "afterimage",
    "args": {

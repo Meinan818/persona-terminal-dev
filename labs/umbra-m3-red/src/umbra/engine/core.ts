@@ -8,9 +8,12 @@ import { UnitNode, updateUnit } from './units';
 import { fontsFrom, Fonts, loadFonts, unloadFonts, hex } from './text';
 import { TIERS, TierName } from './quality';
 import { AudioBus } from './audio';
+import { Camera } from './camera';
 
 export class Engine {
   st = new Stage();
+  /** 伪 3D 镜头（图层视差 + 待机环绕 + camera 原语） */
+  cam = new Camera(this.st);
   fx!: Fx;
   ps!: Particles;
   skin!: SkinPack;
@@ -107,7 +110,8 @@ export class Engine {
 
   updateWorld(wdt: number) {
     this.idleT += wdt;
-    for (const u of this.units.values()) updateUnit(u, this.idleT, wdt);
+    this.cam.update(this.idleT, wdt);
+    for (const u of this.units.values()) updateUnit(u, this.idleT, wdt, this.cam.idleX);
     this.ps.update(wdt);
   }
 }

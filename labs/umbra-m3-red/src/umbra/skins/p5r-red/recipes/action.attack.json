@@ -56,6 +56,45 @@
    }
   },
   {
+   "at": 0,
+   "prim": "camera",
+   "dur": 1000,
+   "args": {
+    "focus": "$target",
+    "keys": [
+     {
+      "at": 0
+     },
+     {
+      "at": 0.12,
+      "x": 30,
+      "zoom": 0.04,
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.42,
+      "x": -90,
+      "y": -10,
+      "zoom": 0.2,
+      "rot": -0.022,
+      "ease": "inCubic"
+     },
+     {
+      "at": 0.7,
+      "x": -70,
+      "y": -6,
+      "zoom": 0.16,
+      "rot": -0.012
+     },
+     {
+      "at": 1,
+      "ease": "inOutCubic"
+     }
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
    "at": 100,
    "prim": "afterimage",
    "dur": 300,

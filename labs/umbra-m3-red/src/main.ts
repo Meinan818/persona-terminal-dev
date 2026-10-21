@@ -40,7 +40,7 @@ quality.onChange = (t) => { eng.tier = t; eng.ps.cap = TIERS[t].cap; };
 const slots = pack.slots as any;
 const roster = (pack as any).roster as { lead: string; navigator: string; default: string[]; chars: Record<string, { field: { h: number; dy: number } }>; showtime: string[][] };
 const bgDef = slots['scene.battle.bg'];
-const bg = new Sprite(eng.tex[bgDef.asset]); bg.anchor.set(0.5); bg.position.set(bgDef.cx, 360); bg.scale.set(1.03);
+const bg = new Sprite(eng.tex[bgDef.asset]); bg.anchor.set(0.5); bg.position.set(bgDef.cx, 360); bg.scale.set(1.1);   // 1.1：给镜头环绕/拉远留边
 eng.bgSprite = bg; eng.st.layers.bg.addChild(bg);
 const pos = slots['scene.battle.positions'];
 const grid = TIERS[eng.tier].mesh;
@@ -209,7 +209,7 @@ async function enemyTurn() {
 async function holdUp() {
   syncHud(); hud.navi(B.alive(B.enemies).length === 1 ? 'navi.holdup.one' : 'navi.holdup');   // 单敌用单数「它」
   eng.audio.bgm('holdup'); eng.audio.voiceLine(B.actor, 'holdup');
-  await play('holdup', { enemyIds: B.alive(B.enemies) });
+  await play('holdup', { enemyIds: B.alive(B.enemies), partyIds: B.party });
   hud.setHoldRing(true, B.alive(B.enemies), B.party);
   hud.setMode('holdup');
 }
@@ -312,7 +312,7 @@ function rehearse() {
   // 在真实画布、真实尺寸上快进：技能 + 总攻 + 开战转场 + 1 MORE + HOLD UP。单次 >1.5s 放弃并标记冷启动。
   const fake = { actorId: 'joker', skillId: 'eiha', targetIds: [B.enemies[0]], hits: [{ targetId: B.enemies[0], dmg: 1, weak: true, crit: false, miss: false, resist: 'none', element: 'curse', down: false }] };
   const list: [EventName, any, any][] = [['action', fake, { skillId: 'eiha', summon: 'full' }], ['allout', { partyIds: B.party, finisherId: 'joker', total: 1, hits: fake.hits, targetIds: [B.enemies[0]] }, {}],
-    ['battle:start', {}, {}], ['onemore', {}, {}], ['holdup', { enemyIds: [B.enemies[0]] }, {}], ['action', { ...fake, skillId: 'attack' }, { skillId: 'attack' }], ['action', { actorId: 'joker', skillId: 'guard', targetIds: ['joker'], hits: [] }, { skillId: 'guard' }], ['battle:end', {}, {}], ['levelup', {}, {}]];
+    ['battle:start', {}, {}], ['onemore', {}, {}], ['holdup', { enemyIds: [B.enemies[0]], partyIds: B.party }, {}], ['action', { ...fake, skillId: 'attack' }, { skillId: 'attack' }], ['action', { actorId: 'joker', skillId: 'guard', targetIds: ['joker'], hits: [] }, { skillId: 'guard' }], ['battle:end', {}, {}], ['levelup', {}, {}]];
   for (const [ev, p, q] of list) {
     const r0 = performance.now(); let n = 0;
     dir.play(ev, p, q);

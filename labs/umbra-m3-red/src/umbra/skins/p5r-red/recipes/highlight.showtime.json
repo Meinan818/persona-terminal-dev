@@ -63,6 +63,44 @@
    "args": {}
   },
   {
+   "at": 1840,
+   "prim": "camera",
+   "dur": 620,
+   "args": {
+    "focus": "$target",
+    "keys": [
+     {
+      "at": 0,
+      "x": 120,
+      "y": -60,
+      "zoom": 0.3,
+      "rot": -0.06
+     },
+     {
+      "at": 0.44,
+      "x": 0,
+      "y": 0,
+      "zoom": 0.06,
+      "rot": 0.0,
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.5,
+      "zoom": 0.24,
+      "rot": 0.04,
+      "ease": "outQuart"
+     },
+     {
+      "at": 1,
+      "zoom": 0.14,
+      "rot": 0.02,
+      "ease": "outCubic"
+     }
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
    "at": 2120,
    "prim": "hitStop",
    "args": {

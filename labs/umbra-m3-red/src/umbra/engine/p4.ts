@@ -131,6 +131,12 @@ export const duoEntrance: Prim = (t, rc) => {
       shB.position.set(B1.x + 14, B1.y + 6); shB.scale.copyFrom(B1.scale); shB.skew.copyFrom(B1.skew); shB.alpha = 0.5 * B1.alpha;
       tagA.position.set(90 + 60 * (1 - seg(ms, 240, 340)), 610); tagA.alpha = seg(ms, 240, 320) * (1 - out); tagA.rotation = -0.1;
       tagB.position.set(880 - 60 * (1 - seg(ms, 370, 470)), 130); tagB.alpha = seg(ms, 370, 450) * (1 - out); tagB.rotation = -0.1;
+      // 第五阶段镜头（P5X 式手持感）：跟 A 落地 → 甩到 B → 拉回双人构图 → 蓄力推近 → 冲出时猛推 + 滚转
+      const pB = ease.inOutCubic(seg(ms, 230, 400)), pC = ease.inOutCubic(seg(ms, 430, 600));
+      const focus = 390 + (890 - 390) * pB + (640 - 890) * pC * pB;
+      const zoom = 1.16 - 0.1 * pC + 0.08 * crouch + 0.22 * out + Math.sin(ms / 90) * 0.004;
+      c.pivot.set(640 + (focus - 640) * 0.4, 360 - 20 * crouch); c.position.set(640, 360);
+      c.scale.set(zoom); c.rotation = 0.02 * (1 - pB) - 0.015 * pB * (1 - pC) + 0.03 * out;
     },
     end() { kill(rc, c); } };
 };
@@ -175,7 +181,9 @@ export const duoTitle: Prim = (t, rc) => {
   const c = mk(rc, 'allout');
   const barW = 1500;
   const bar = new Graphics().poly([-barW / 2, -58, barW / 2, -84, barW / 2, 58, -barW / 2, 84]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 6 });
-  const title = ransom(`${code(a)} × ${code(b)}`, 88, eng.fonts.display, { invert: [0, code(a).length + 3], seed: 31, stroke: 8 });
+  // 每对专属标题接口：labels['showtime.title.<a>-<b>'] 存在就用（原作每组有自己的主题名），否则「A × B」
+  const own = eng.skin.labels[`showtime.title.${a}-${b}`];
+  const title = ransom(own ?? `${code(a)} × ${code(b)}`, 88, eng.fonts.display, { invert: [0, code(a).length + 3], seed: 31, stroke: 8 });
   const tb = title.getLocalBounds(); title.pivot.set(tb.x + tb.width / 2, tb.y + tb.height / 2);
   const stamp = new Container();
   const st = ransom(eng.label('label.highlight'), 70, eng.fonts.display, { invert: [1, 4, 7], seed: 44, stroke: 7 });

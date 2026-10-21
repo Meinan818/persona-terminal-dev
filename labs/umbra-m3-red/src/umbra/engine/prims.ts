@@ -9,6 +9,7 @@ import { DW, DH } from './stage';
 import { summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLogo } from './summon';
 import { blockPush, tvStatic, glassShatter, cardFlip, cardShatter, dateFlip, eyeStrip, onomatopoeia, checkerFloor, ringSplash } from './prims2';
 import { comicPanels, duoEntrance, duoStrike, duoTitle, maskRip } from './p4';
+import { camera, holdupRing } from './p5';
 
 export interface RunCtx {
   eng: Engine; owner: number; ev: EventName; payload: any; level: 'full' | 'standard' | 'minimal';
@@ -479,5 +480,5 @@ export const PRIMS: Partial<Record<string, Prim>> = {
   cutin, speedLines, banner, silhouetteDash, freezeFrame, finishCard, totalDamage, slashPanels, maskWipe, bakedSwap, portraitDown,
   summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLogo,
   blockPush, tvStatic, glassShatter, cardFlip, cardShatter, dateFlip, eyeStrip, onomatopoeia, checkerFloor, ringSplash,
-  comicPanels, duoEntrance, duoStrike, duoTitle, maskRip,
+  comicPanels, duoEntrance, duoStrike, duoTitle, maskRip, camera, holdupRing,
 };

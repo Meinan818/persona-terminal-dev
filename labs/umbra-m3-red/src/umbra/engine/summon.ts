@@ -77,8 +77,12 @@ export const summon: Prim = (t, rc) => {
   const flash = new Graphics().rect(v.l - 40, v.t - 40, v.r - v.l + 80, v.b - v.t + 80).fill(0xbfe6ff);
   const lines = new Graphics();
   for (let i = 0; i < 26; i++) { const y = -360 + R() * 720, x = R() * 1400 - 700, len = 200 + R() * 500; lines.poly([x, y - 2, x + len, y, x, y + 2]).fill({ color: 0x9fdcff, alpha: 0.35 + R() * 0.4 }); }
-  c.addChild(bg, rays, lines); if (pm) c.addChild(pm.m); c.addChild(bust, flash);
+  // 第五阶段：镜头（推近面具 → 扯下时顿一下 → 蓝焰爆开猛拉远、低角度仰拍人格面具在身后升起 → 缓推）
+  const camC = new Container(); if (pm) camC.addChild(pm.m); camC.addChild(bust);
+  c.addChild(bg, rays, lines, camC, flash);
   const quick = dur < 600;
+  const mx = bx + pc0.x * S, my = by + pc0.y * S;          // 面具在设计坐标中的位置（推近焦点）
+  const px0 = bx + 230, py0 = by - 110;                     // 人格面具胸口（拉远后的构图中心）
   return { t0: t.at, dur, ease: ease.linear,
     begin() { c.visible = true; c.alpha = 1; rays.position.set(bx, by - 40); lines.position.set(DW / 2, 360); },
     tick(p, dt) {
@@ -119,6 +123,24 @@ export const summon: Prim = (t, rc) => {
         pm.m.alpha = kp * fade; pm.flutter(T, 0.6 + 0.6 * kp);
       }
       c.alpha = 1 - seg(f, 0.9, 1);
+      // 镜头：kIn 推近（手扣面具）/ kOut 拉远（蓝焰爆开）/ 末段缓推；焦点从面具移到人格面具；拉远瞬间低角度微滚
+      const q = quick ? 0.8 : 1;
+      const kIn = ease.inOutCubic(seg(f, 0.06 * q, 0.4 * q)), kOut = ease.outCubic(seg(f, 0.42 * q, 0.62 * q)), kDr = seg(f, 0.62 * q, 1);
+      const zoom = 1 + 0.5 * kIn - 0.72 * kOut + 0.06 * kDr;
+      const fx0 = mx + (px0 - mx) * kOut, fy0 = my + (py0 - my) * kOut;
+      const pull = Math.max(kIn, kOut);                    // 焦点拉向画面中心的程度
+      const jolt = Math.sin(seg(f, 0.4 * q, 0.5 * q) * Math.PI) * 0.035;
+      camC.pivot.set(fx0, fy0);
+      camC.position.set(fx0 + (DW / 2 - fx0) * pull * 0.9, fy0 + (360 - fy0) * pull * 0.8);
+      camC.scale.set(zoom); camC.rotation = jolt - 0.035 * kOut * (1 - kDr * 0.5);
+      rays.scale.set(1 + 0.25 * kIn - 0.2 * kOut);
+      if (pm) {   // 人格面具：显形前是蓝色剪影，随显形褪成本色；体量放大到压过人物（原作仰拍构图）
+        const kc = seg(f, quick ? 0.4 : 0.5, quick ? 0.75 : 0.8);
+        const lerpC = (a1: number, b1: number) => Math.round(a1 + (b1 - a1) * kc);
+        pm.m.tint = (lerpC(0x3a, 0xff) << 16) | (lerpC(0x7c, 0xff) << 8) | lerpC(0xff, 0xff);
+        const kp = ease.outCubic(seg(f, quick ? 0.36 : 0.44, quick ? 0.8 : 0.84));
+        pm.m.position.set(bx + 330, by + 560 + 300 * (1 - kp)); pm.m.scale.set(1.35 + 0.45 * kp);
+      }
     },
     end() { c.destroy({ children: true }); rc.temps.delete(c); } };
 };

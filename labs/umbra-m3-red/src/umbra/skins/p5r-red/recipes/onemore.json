@@ -1,0 +1,71 @@
+{
+ "id": "onemore",
+ "event": "onemore",
+ "duration": 420,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "dim",
+   "args": {
+    "color": "#000",
+    "alpha": 0.5,
+    "hold": false
+   },
+   "dur": 420,
+   "layer": "dmg"
+  },
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.5
+   },
+   "dur": 90
+  },
+  {
+   "at": 0,
+   "prim": "banner",
+   "args": {
+    "text": "label.onemore",
+    "shape": "onemore",
+    "enterFrom": "right"
+   },
+   "dur": 420,
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "args": {
+    "count": 40,
+    "at": {
+     "x": 640,
+     "y": 330
+    },
+    "speed": 1300,
+    "life": 380,
+    "gravity": 0,
+    "frames": [
+     "star",
+     "shard"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "onemore"
+   }
+  }
+ ]
+}

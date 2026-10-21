@@ -1,0 +1,155 @@
+{
+ "id": "action.gun",
+ "event": "action",
+ "match": {
+  "skillId": "gun"
+ },
+ "duration": 900,
+ "hitMarks": [
+  300
+ ],
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "gun"
+   }
+  },
+  {
+   "at": 60,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.25
+   },
+   "dur": 60
+  },
+  {
+   "at": 80,
+   "prim": "particles",
+   "args": {
+    "count": 30,
+    "at": {
+     "x": "$actor",
+     "y": "$actor",
+     "dx": -120,
+     "dy": -60
+    },
+    "speed": 900,
+    "dir": 3.14,
+    "spread": 0.5,
+    "gravity": 0,
+    "life": 220,
+    "frames": [
+     "spark",
+     "streak"
+    ],
+    "colors": [
+     "#ffe14a",
+     "#ffffff"
+    ]
+   }
+  },
+  {
+   "at": 240,
+   "prim": "slashLine",
+   "args": {
+    "len": 420,
+    "width": 6,
+    "rot": 0.1,
+    "jitter": 40
+   },
+   "dur": 120
+  },
+  {
+   "at": 300,
+   "prim": "slashLine",
+   "args": {
+    "len": 420,
+    "width": 6,
+    "rot": -0.12,
+    "jitter": 40
+   },
+   "dur": 120
+  },
+  {
+   "at": 300,
+   "prim": "hitStop",
+   "args": {
+    "ms": 40
+   }
+  },
+  {
+   "at": 300,
+   "prim": "shake",
+   "args": {
+    "px": 8
+   }
+  },
+  {
+   "at": 300,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$targets",
+    "ms": 40
+   }
+  },
+  {
+   "at": 300,
+   "prim": "squashHit",
+   "args": {
+    "target": "$targets",
+    "squash": 0.14,
+    "push": 14,
+    "recoverMs": 260
+   }
+  },
+  {
+   "at": 300,
+   "prim": "particles",
+   "args": {
+    "count": 70,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 900,
+    "life": 420,
+    "frames": [
+     "spark",
+     "shard"
+    ],
+    "colors": [
+     "#ffe14a",
+     "#ffffff",
+     "#0a0a0a"
+    ]
+   }
+  },
+  {
+   "at": 300,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number"
+   },
+   "dur": 520
+  },
+  {
+   "at": 300,
+   "prim": "tag",
+   "args": {
+    "kind": "auto"
+   },
+   "dur": 520
+  },
+  {
+   "at": 300,
+   "prim": "sfx",
+   "args": {
+    "id": "hit"
+   }
+  }
+ ]
+}

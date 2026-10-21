@@ -1,0 +1,12 @@
+/* p5r-red · 交涉 DOM 模板样式（只作用于 .umbra-skin-p5r-red；只用 transform/opacity 动效；静态 clip-path 允许 v1.2） */
+.umbra-skin-p5r-red .talk { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; pointer-events: auto; font-family: 'R5 CJK', system-ui, sans-serif; color: #fff; }
+.umbra-skin-p5r-red .talk-head { position: absolute; left: 60px; top: 120px; display: flex; gap: 16px; align-items: center; transform: rotate(-4deg); }
+.umbra-skin-p5r-red .talk-name { background: #0a0a0a; border: 3px solid #fff; padding: 8px 28px 8px 20px; font-size: 34px; clip-path: polygon(4% 0, 100% 0, 96% 100%, 0 100%); }
+.umbra-skin-p5r-red .talk-odds { background: #e5191c; padding: 6px 18px; font: 28px 'R5 Num', sans-serif; font-style: italic; clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%); }
+.umbra-skin-p5r-red .talk-portrait { position: absolute; left: 140px; top: 190px; width: 300px; height: 380px; object-fit: contain; }
+.umbra-skin-p5r-red .talk-line { position: absolute; left: 380px; top: 200px; width: 420px; min-height: 96px; margin: 0; padding: 22px 30px; background: #0a0a0a; border: 4px solid #fff; font-size: 28px; line-height: 1.35; transform: rotate(-3deg); clip-path: polygon(0 6%, 100% 0, 97% 100%, 3% 94%); }
+.umbra-skin-p5r-red .talk-choices { position: absolute; left: 780px; top: 300px; width: 476px; margin: 0; padding: 0; list-style: none; }
+.umbra-skin-p5r-red .talk-choices li { margin: 0 0 6px; }
+.umbra-skin-p5r-red .talk-choice { width: 100%; min-height: 96px; border: 0; background: #fff; color: #0a0a0a; font: 30px 'R5 CJK', sans-serif; text-align: left; padding: 0 34px; clip-path: polygon(3% 0, 100% 6%, 97% 100%, 0 92%); transform: rotate(-3deg); transition: transform .12s; cursor: pointer; }
+.umbra-skin-p5r-red .talk-choice:active, .umbra-skin-p5r-red .talk-choice:hover { background: #e5191c; color: #fff; transform: rotate(-3deg) scale(1.03); }
+.umbra-skin-p5r-red .talk-status { position: absolute; left: 400px; top: 330px; font-size: 22px; opacity: .8; }

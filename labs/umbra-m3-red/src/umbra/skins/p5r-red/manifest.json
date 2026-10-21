@@ -1,0 +1,210 @@
+{
+ "assets": [
+  {
+   "id": "bg.battle.castle",
+   "file": "assets/bg.battle.castle.webp",
+   "w": 2260,
+   "h": 960,
+   "firstPack": true,
+   "source": "generated",
+   "note": "generate_image：P5R 风格宫殿大厅全景，2260 宽出血"
+  },
+  {
+   "id": "ally.joker.back",
+   "file": "assets/ally.joker.back.webp",
+   "w": 557,
+   "h": 640,
+   "firstPack": true,
+   "source": "generated",
+   "note": "generate_image 背影（参考官方 Joker 立绘）；原作无背影素材"
+  },
+  {
+   "id": "enemy.noisy",
+   "file": "assets/enemy.noisy.webp",
+   "w": 427,
+   "h": 560,
+   "firstPack": true,
+   "source": "official",
+   "note": "P5R Incubus 图鉴抠图（包 F）；本作名「聒噪假面」"
+  },
+  {
+   "id": "enemy.echo",
+   "file": "assets/enemy.echo.webp",
+   "w": 193,
+   "h": 480,
+   "firstPack": true,
+   "source": "official",
+   "note": "P5R Mokoi 图鉴抠图（包 F）；本作名「游荡回声」"
+  },
+  {
+   "id": "cutin.joker",
+   "file": "assets/cutin.joker.webp",
+   "w": 1280,
+   "h": 320,
+   "firstPack": true,
+   "source": "official",
+   "note": "Fandom Joker FinishingTouch 面部横条"
+  },
+  {
+   "id": "allout.finish.default",
+   "file": "assets/allout.finish.default.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": true,
+   "source": "official",
+   "note": "Fandom Joker FinishingTouch（THE SHOW'S OVER）"
+  },
+  {
+   "id": "atlas.party",
+   "file": "assets/atlas.party.webp",
+   "w": 1024,
+   "h": 320,
+   "firstPack": true,
+   "source": "official",
+   "frames": {
+    "joker": [
+     3,
+     0,
+     250,
+     276
+    ],
+    "agathion": [
+     259,
+     0,
+     250,
+     294
+    ],
+    "caitsith": [
+     540,
+     0,
+     200,
+     310
+    ],
+    "kelpie": [
+     771,
+     0,
+     250,
+     182
+    ]
+   },
+   "atlas": "atlas.party",
+   "note": "官方立绘/图鉴抠图拼图集"
+  },
+  {
+   "id": "atlas.hud",
+   "file": "assets/atlas.hud.webp",
+   "w": 640,
+   "h": 128,
+   "firstPack": true,
+   "source": "official",
+   "frames": {
+    "joker": [
+     0,
+     0,
+     128,
+     128
+    ],
+    "agathion": [
+     128,
+     0,
+     128,
+     128
+    ],
+    "caitsith": [
+     256,
+     0,
+     128,
+     128
+    ],
+    "kelpie": [
+     384,
+     0,
+     128,
+     128
+    ],
+    "navi": [
+     512,
+     0,
+     128,
+     128
+    ]
+   },
+   "atlas": "atlas.hud",
+   "note": "HUD 头像：官方立绘局部按 P5R 黑白墨线头像处理；navi 头像为包 F 伪官方（generated）"
+  },
+  {
+   "id": "result.hero.grey",
+   "file": "assets/result.hero.grey.webp",
+   "w": 580,
+   "h": 640,
+   "firstPack": true,
+   "source": "official",
+   "note": "官方 Joker 立绘去色（原作 RESULT 灰度角色）"
+  }
+ ],
+ "filters": [],
+ "fonts": [
+  {
+   "family": "R5 Num",
+   "file": "assets/fonts/r5-num.woff2",
+   "chars": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~¥°·×÷–—‘’“”…€",
+   "role": "number",
+   "pack": "first"
+  },
+  {
+   "family": "R5 Latin Display",
+   "file": "assets/fonts/r5-latin-display.woff2",
+   "chars": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~¥°·×÷–—‘’“”…€",
+   "role": "display",
+   "pack": "first"
+  },
+  {
+   "family": "R5 CJK",
+   "file": "assets/fonts/r5-cjk-0.woff2",
+   "chars": "·—…、。「」一下不与两个中了交亮人从伤伴作你使倒先入全具再决出击别力动口只可合同名咒回场声复它害对小异弱影得御态思怨总恢成战手打技持接攻放敌斗方时明是有来板枪查次气法涉点物用白的看离等练继续能行训谁起路过返这逃道避那量针间防降面！（），：？～",
+   "role": "display",
+   "pack": "first",
+   "unicodeRange": "U+B7,U+2014,U+2026,U+3001,U+3002,U+300C,U+300D,U+4E00,U+4E0B,U+4E0D,U+4E0E,U+4E24,U+4E2A,U+4E2D,U+4E86,U+4EA4,U+4EAE,U+4EBA,U+4ECE,U+4F24,U+4F34,U+4F5C,U+4F60,U+4F7F,U+5012,U+5148,U+5165,U+5168,U+5177,U+518D,U+51B3,U+51FA,U+51FB,U+522B,U+529B,U+52A8,U+53E3,U+53EA,U+53EF,U+5408,U+540C,U+540D,U+5492,U+56DE,U+573A,U+58F0,U+590D,U+5B83,U+5BB3,U+5BF9,U+5C0F,U+5F02,U+5F31,U+5F71,U+5F97,U+5FA1,U+6001,U+601D,U+6028,U+603B,U+6062,U+6210,U+6218,U+624B,U+6253,U+6280,U+6301,U+63A5,U+653B,U+653E,U+654C,U+6597,U+65B9,U+65F6,U+660E,U+662F,U+6709,U+6765,U+677F,U+67AA,U+67E5,U+6B21,U+6C14,U+6CD5,U+6D89,U+70B9,U+7269,U+7528,U+767D,U+7684,U+770B,U+79BB,U+7B49,U+7EC3,U+7EE7,U+7EED,U+80FD,U+884C,U+8BAD,U+8C01,U+8D77,U+8DEF,U+8FC7,U+8FD4,U+8FD9,U+9003,U+9053,U+907F,U+90A3,U+91CF,U+9488,U+95F4,U+9632,U+964D,U+9762,U+FF01,U+FF08,U+FF09,U+FF0C,U+FF1A,U+FF1F,U+FF5E"
+  },
+  {
+   "family": "R5 CJK",
+   "file": "assets/fonts/r5-cjk-1.woff2",
+   "chars": "么什令低信变听告命射就属心性想我把指改无状率理界相级要解预默",
+   "role": "display",
+   "pack": "first",
+   "unicodeRange": "U+4E48,U+4EC0,U+4EE4,U+4F4E,U+4FE1,U+53D8,U+542C,U+544A,U+547D,U+5C04,U+5C31,U+5C5E,U+5FC3,U+6027,U+60F3,U+6211,U+628A,U+6307,U+6539,U+65E0,U+72B6,U+7387,U+7406,U+754C,U+76F8,U+7EA7,U+8981,U+89E3,U+9884,U+9ED8"
+  },
+  {
+   "family": "R5 CJK",
+   "file": "assets/fonts/r5-cjk-2.woff2",
+   "chars": "们假噪怪找沉游漂盗聒跑近造",
+   "role": "display",
+   "pack": "first",
+   "unicodeRange": "U+4EEC,U+5047,U+566A,U+602A,U+627E,U+6C89,U+6E38,U+6F02,U+76D7,U+8052,U+8DD1,U+8FD1,U+9020"
+  },
+  {
+   "family": "R5 CJK",
+   "file": "assets/fonts/r5-cjk-3.woff2",
+   "chars": "吧怕托考荡",
+   "role": "display",
+   "pack": "first",
+   "unicodeRange": "U+5427,U+6015,U+6258,U+8003,U+8361"
+  },
+  {
+   "family": "R5 CJK",
+   "file": "assets/fonts/r5-cjk-4.woff2",
+   "chars": "哼委干械汝",
+   "role": "display",
+   "pack": "first",
+   "unicodeRange": "U+54FC,U+59D4,U+5E72,U+68B0,U+6C5D"
+  },
+  {
+   "family": "R5 CJK",
+   "file": "assets/fonts/r5-cjk-6.woff2",
+   "chars": "举",
+   "role": "display",
+   "pack": "first",
+   "unicodeRange": "U+4E3E"
+  }
+ ]
+}

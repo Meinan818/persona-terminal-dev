@@ -1,0 +1,99 @@
+{
+ "id": "skill.sukunda",
+ "event": "action",
+ "match": {
+  "skillId": "sukunda"
+ },
+ "duration": 1200,
+ "hitMarks": [
+  700
+ ],
+ "assets": [
+  "cutin.joker"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "dim",
+   "args": {
+    "color": "#000",
+    "alpha": 0.4
+   },
+   "dur": 560
+  },
+  {
+   "at": 0,
+   "prim": "cutin",
+   "args": {
+    "bandAngle": -0.14,
+    "speedLines": {
+     "layers": 1,
+     "count": 30
+    },
+    "panels": [
+     {
+      "shape": [],
+      "art": "cutin.joker",
+      "enterFrom": "left"
+     }
+    ],
+    "nameplate": {
+     "text": "skill.sukunda.name",
+     "font": "@font.display",
+     "color": "#2fb35a"
+    }
+   },
+   "dur": 560,
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 600,
+   "prim": "particles",
+   "args": {
+    "count": 90,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 300,
+    "dir": 1.5708,
+    "spread": 0.8,
+    "gravity": 300,
+    "life": 580,
+    "frames": [
+     "streak",
+     "disc"
+    ],
+    "colors": [
+     "#2fb35a",
+     "#ffffff"
+    ]
+   }
+  },
+  {
+   "at": 700,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$targets",
+    "ms": 40
+   }
+  },
+  {
+   "at": 700,
+   "prim": "tag",
+   "args": {
+    "kind": "auto"
+   },
+   "dur": 450
+  },
+  {
+   "at": 700,
+   "prim": "sfx",
+   "args": {
+    "id": "debuff"
+   }
+  }
+ ]
+}

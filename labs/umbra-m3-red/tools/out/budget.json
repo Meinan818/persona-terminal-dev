@@ -1,0 +1,67 @@
+{
+ "codeKB": 222.0,
+ "imagesKB": 431.4,
+ "images": 9,
+ "fontsKB": 50.3,
+ "dataKB": 8.7,
+ "uiCssKB": 0.8,
+ "skinShareKB": 491.2,
+ "firstPackKB": 703.7,
+ "perImage": {
+  "bg.battle.castle": [
+   2260,
+   960,
+   72.4,
+   "generated"
+  ],
+  "ally.joker.back": [
+   557,
+   640,
+   53.5,
+   "generated"
+  ],
+  "enemy.noisy": [
+   427,
+   560,
+   32.9,
+   "official"
+  ],
+  "enemy.echo": [
+   193,
+   480,
+   14.6,
+   "official"
+  ],
+  "cutin.joker": [
+   1280,
+   320,
+   49.1,
+   "official"
+  ],
+  "allout.finish.default": [
+   1280,
+   720,
+   118.8,
+   "official"
+  ],
+  "atlas.party": [
+   1024,
+   320,
+   42.4,
+   "official"
+  ],
+  "atlas.hud": [
+   640,
+   128,
+   19.5,
+   "official"
+  ],
+  "result.hero.grey": [
+   580,
+   640,
+   28.2,
+   "official"
+  ]
+ },
+ "texMB": 19.0
+}

@@ -1,0 +1,89 @@
+{
+ "id": "holdup",
+ "event": "holdup",
+ "duration": 950,
+ "assets": [
+  "atlas.party"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "dim",
+   "args": {
+    "color": "#000",
+    "alpha": 0.5
+   },
+   "dur": 950,
+   "layer": "dmg"
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "holdup"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "vibrate",
+   "args": {
+    "ms": 25
+   }
+  },
+  {
+   "at": 40,
+   "prim": "banner",
+   "args": {
+    "text": "label.holdup",
+    "shape": "holdup",
+    "enterFrom": "left",
+    "y": 300
+   },
+   "dur": 450,
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 40,
+   "prim": "particles",
+   "args": {
+    "count": 50,
+    "at": {
+     "x": 640,
+     "y": 320
+    },
+    "speed": 1200,
+    "life": 520,
+    "gravity": 0,
+    "frames": [
+     "shard"
+    ],
+    "colors": [
+     "#37d6e8",
+     "#ffffff"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 420,
+   "prim": "silhouetteDash",
+   "args": {
+    "units": "$party",
+    "count": 4,
+    "interval": 160,
+    "path": "L<->R"
+   },
+   "dur": 520,
+   "minimal": "skip"
+  },
+  {
+   "at": 500,
+   "prim": "shake",
+   "args": {
+    "px": 6
+   }
+  }
+ ]
+}

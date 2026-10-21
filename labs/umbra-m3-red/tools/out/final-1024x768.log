@@ -1,0 +1,9 @@
+[37.0s] ready
+[39.4s] shot idle
+[41.1s] shot skilllist
+[44.4s] shot cutin
+[49.0s] shot onemore
+[54.8s] shot holdup
+[66.0s] shot allout
+[73.8s] shot result
+[73.8s] {"errors":["[.WebGL-0x1400dc8c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"],"counts":{"particles":0,"filters":0,"cutin":0,"allout":0,"trans":0,"dmg":0,"fx":1},"engErr":["dropText unit.down","dropText unit.down"],"issues":[]}

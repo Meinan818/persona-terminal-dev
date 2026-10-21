@@ -1,0 +1,60 @@
+{
+ "id": "talk.result",
+ "event": "talk:result",
+ "duration": 1000,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#37d6e8",
+    "alpha": 0.5
+   },
+   "dur": 150
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "args": {
+    "count": 90,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 420,
+    "dir": -1.5708,
+    "spread": 1.2,
+    "gravity": -500,
+    "life": 700,
+    "frames": [
+     "disc",
+     "star"
+    ],
+    "colors": [
+     "#37d6e8",
+     "#1f3fbf",
+     "#ffffff"
+    ]
+   }
+  },
+  {
+   "at": 100,
+   "prim": "title",
+   "args": {
+    "text": "talk.get",
+    "font": "@font.display",
+    "size": 110,
+    "pos": {
+     "x": 640,
+     "y": 300
+    },
+    "rot": -0.1,
+    "invert": [
+     0
+    ]
+   },
+   "dur": 700
+  }
+ ]
+}

@@ -1,0 +1,30 @@
+// p5r-red 皮肤包：只做组装与注册（契约 §0.1：无演出代码、无动态 import、无副作用 import）。
+import { UMBRA } from '../../engine';
+import type { SkinPack, Recipe } from '../_contract';
+import manifest from './manifest.json';
+import tokens from './tokens.json';
+import slots from './slots.json';
+import labels from './labels.json';
+import templates from './templates.json';
+import r0 from './recipes/action.attack.json';
+import r1 from './recipes/action.enemy.json';
+import r2 from './recipes/action.guard.json';
+import r3 from './recipes/action.gun.json';
+import r4 from './recipes/action.item.json';
+import r5 from './recipes/allout.default.json';
+import r6 from './recipes/battle.end.json';
+import r7 from './recipes/holdup.json';
+import r8 from './recipes/onemore.json';
+import r9 from './recipes/skill.cleave.json';
+import r10 from './recipes/skill.eiha.json';
+import r11 from './recipes/skill.sukunda.json';
+import r12 from './recipes/talk.result.json';
+import r13 from './recipes/talk.start.json';
+import r14 from './recipes/transition.battleStart.json';
+import r15 from './recipes/turn.start.json';
+import r16 from './recipes/unit.down.json';
+
+const recipes = [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, ] as unknown as Recipe[];
+const pack = { id: 'p5r-red', manifest, tokens, slots, labels, templates, recipes } as unknown as SkinPack;
+UMBRA.registerSkin('p5r-red', pack);
+export default pack;

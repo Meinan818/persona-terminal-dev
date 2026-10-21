@@ -1,0 +1,154 @@
+{
+ "info": {
+  "M": {
+   "boot": 11084,
+   "prewarm": 9432,
+   "rehearse": [
+    "action:eiha renders=47 ms=287",
+    "allout renders=90 ms=266",
+    "battle:start renders=26 ms=12",
+    "onemore renders=13 ms=16",
+    "holdup renders=28 ms=29",
+    "action:attack renders=30 ms=20",
+    "battle:end renders=39 ms=32"
+   ],
+   "cold": false,
+   "errors": [],
+   "issues": []
+  },
+  "timing": [
+   {
+    "ev": "battle:start",
+    "recipe": "transition.battleStart",
+    "duration": 860,
+    "wallMs": 870,
+    "capMs": 900,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "action",
+    "recipe": "skill.eiha",
+    "duration": 1500,
+    "wallMs": 1389,
+    "capMs": 1800,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 383,
+    "capMs": 450,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 680,
+    "capMs": 500,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "action",
+    "recipe": "action.attack",
+    "duration": 960,
+    "wallMs": 1385,
+    "capMs": 1800,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 780,
+    "capMs": 450,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 780,
+    "capMs": 500,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "holdup",
+    "recipe": "holdup",
+    "duration": 950,
+    "wallMs": 1103,
+    "capMs": 1000,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "allout",
+    "recipe": "allout.default",
+    "duration": 3060,
+    "wallMs": 800,
+    "capMs": 3500,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "battle:end",
+    "recipe": "battle.end",
+    "duration": 1300,
+    "wallMs": 1631,
+    "capMs": 1500,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   }
+  ],
+  "counts": {
+   "particles": 0,
+   "filters": 0,
+   "cutin": 0,
+   "allout": 0,
+   "trans": 0,
+   "dmg": 0,
+   "fx": 1
+  },
+  "vis": {
+   "l": 0,
+   "t": 0,
+   "r": 1280,
+   "b": 720
+  },
+  "sfx": 18,
+  "engErr": [
+   "dropText unit.down"
+  ]
+ },
+ "errors": [
+  "[.WebGL-0x3c001c3e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+ ]
+}

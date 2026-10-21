@@ -1,0 +1,65 @@
+{
+ "id": "battle.end",
+ "event": "battle:end",
+ "duration": 1300,
+ "assets": [
+  "result.hero.grey"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.7
+   },
+   "dur": 150
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "victory"
+   }
+  },
+  {
+   "at": 100,
+   "prim": "slashPanels",
+   "args": {
+    "colors": [
+     "#0a0a0a",
+     "@color.primary",
+     "#2a2a2a"
+    ],
+    "angle": 0.5,
+    "stagger": 80,
+    "dir": "ltr"
+   },
+   "dur": 900,
+   "minimal": {
+    "dur": 350
+   }
+  },
+  {
+   "at": 300,
+   "prim": "title",
+   "args": {
+    "text": "result.title",
+    "font": "@font.display",
+    "size": 150,
+    "pos": {
+     "x": 640,
+     "y": 360
+    },
+    "rot": -0.12,
+    "invert": [
+     0,
+     3
+    ]
+   },
+   "dur": 600,
+   "layer": "trans",
+   "minimal": "skip"
+  }
+ ]
+}

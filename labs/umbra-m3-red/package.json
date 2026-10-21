@@ -1,0 +1,20 @@
+{
+ "name": "umbra-m3-red",
+ "private": true,
+ "version": "0.1.0",
+ "type": "module",
+ "scripts": {
+  "prep": "python3 tools/subset_fonts.py && python3 tools/build_manifest.py",
+  "build": "python3 tools/build_manifest.py && tsc --noEmit && vite build",
+  "check": "tsc --noEmit"
+ },
+ "dependencies": {
+  "pixi.js": "8.22.0",
+  "pixi-filters": "6.1.5"
+ },
+ "devDependencies": {
+  "typescript": "~5.6.3",
+  "vite": "^6.4.0",
+  "playwright-core": "1.64.1"
+ }
+}

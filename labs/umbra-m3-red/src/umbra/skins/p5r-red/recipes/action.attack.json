@@ -1,0 +1,168 @@
+{
+ "id": "action.attack",
+ "event": "action",
+ "match": {
+  "skillId": "attack"
+ },
+ "duration": 960,
+ "hitMarks": [
+  420
+ ],
+ "assets": [
+  "ally.joker.back"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "swing"
+   }
+  },
+  {
+   "at": 80,
+   "prim": "afterimage",
+   "args": {
+    "actor": "$actor",
+    "to": {
+     "x": "$target",
+     "y": "$target",
+     "dx": 150,
+     "dy": 40
+    },
+    "n": 3,
+    "scaleTo": 0.62,
+    "tints": [
+     "#ffffff",
+     "@color.primary",
+     "#ffffff"
+    ]
+   },
+   "dur": 300,
+   "ease": "inCubic"
+  },
+  {
+   "at": 380,
+   "prim": "slashLine",
+   "args": {
+    "len": 560,
+    "width": 18,
+    "rot": -0.7,
+    "jitter": 30
+   },
+   "dur": 140
+  },
+  {
+   "at": 420,
+   "prim": "slashLine",
+   "args": {
+    "len": 520,
+    "width": 14,
+    "rot": 0.55,
+    "jitter": 30
+   },
+   "dur": 140
+  },
+  {
+   "at": 420,
+   "prim": "hitStop",
+   "args": {
+    "ms": 60
+   }
+  },
+  {
+   "at": 420,
+   "prim": "shake",
+   "args": {
+    "px": 12
+   }
+  },
+  {
+   "at": 420,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$targets",
+    "ms": 50
+   }
+  },
+  {
+   "at": 420,
+   "prim": "squashHit",
+   "args": {
+    "target": "$targets",
+    "squash": 0.2,
+    "push": 22,
+    "recoverMs": 300
+   }
+  },
+  {
+   "at": 420,
+   "prim": "rgbSplit",
+   "args": {
+    "offset": 6
+   },
+   "dur": 90
+  },
+  {
+   "at": 420,
+   "prim": "particles",
+   "args": {
+    "count": 120,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 1100,
+    "life": 480,
+    "frames": [
+     "shard",
+     "spark",
+     "star"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "#0a0a0a"
+    ]
+   }
+  },
+  {
+   "at": 420,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "big": false
+   },
+   "dur": 520
+  },
+  {
+   "at": 420,
+   "prim": "tag",
+   "args": {
+    "kind": "auto"
+   },
+   "dur": 520
+  },
+  {
+   "at": 420,
+   "prim": "sfx",
+   "args": {
+    "id": "hit"
+   }
+  },
+  {
+   "at": 580,
+   "prim": "tween",
+   "args": {
+    "target": "$actor",
+    "to": {
+     "x": "home",
+     "y": "home",
+     "scale": 1
+    }
+   },
+   "dur": 320,
+   "ease": "outCubic"
+  }
+ ]
+}

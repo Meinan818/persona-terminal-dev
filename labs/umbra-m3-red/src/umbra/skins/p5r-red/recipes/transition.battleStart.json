@@ -1,0 +1,110 @@
+{
+ "id": "transition.battleStart",
+ "event": "battle:start",
+ "duration": 860,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "battle.start"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "vibrate",
+   "args": {
+    "ms": 30
+   }
+  },
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "args": {
+    "colors": [
+     "#0a0a0a",
+     "@color.primary",
+     "@color.paper"
+    ],
+    "angle": 0.35,
+    "stagger": 70,
+    "dir": "rtl"
+   },
+   "dur": 820,
+   "minimal": {
+    "dur": 340,
+    "args": {
+     "colors": [
+      "#0a0a0a"
+     ]
+    }
+   }
+  },
+  {
+   "at": 160,
+   "prim": "maskWipe",
+   "args": {
+    "shape": [
+     0.0,
+     -100.0,
+     24.7,
+     -34.0,
+     95.1,
+     -30.9,
+     39.9,
+     13.0,
+     58.8,
+     80.9,
+     0.0,
+     42.0,
+     -58.8,
+     80.9,
+     -39.9,
+     13.0,
+     -95.1,
+     -30.9,
+     -24.7,
+     -34.0
+    ],
+    "color": "@color.primary",
+    "from": {
+     "scale": 0
+    },
+    "to": {
+     "scale": 13
+    },
+    "spin": 0.7
+   },
+   "dur": 300,
+   "ease": "inCubic",
+   "layer": "trans",
+   "minimal": "skip"
+  },
+  {
+   "at": 170,
+   "prim": "particles",
+   "args": {
+    "count": 70,
+    "at": {
+     "x": 640,
+     "y": 360
+    },
+    "speed": 1500,
+    "life": 520,
+    "frames": [
+     "shard",
+     "shard",
+     "star"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "#0a0a0a"
+    ],
+    "gravity": 0
+   },
+   "minimal": "skip"
+  }
+ ]
+}

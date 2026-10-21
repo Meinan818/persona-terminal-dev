@@ -2,6 +2,15 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 四主题 40 页面烟测与 Cooperation 空值修复
+
+- **用户决定**：红色幽影打回重做，暂不接；四个主题完美接好后再谈。
+- **整体烟测**：新增 `four-theme-smoke-20261021.mjs`，四主题各 10 个页面（Dashboard/Actions/Cooperation/Astrology/Ledger/Hideout/Account/Settings/Achievements/Statistics），共 **40/40 页面非空可达、pageerror 0、模型请求 0**。报告 `.theme-compare/four-theme-smoke-20261021/report.json`。
+- **发现并修复的真实回归**：粉/蓝 Cooperation 进入时报 `Cannot read properties of null (reading 'coopMemorials')`。根因 `MemorialSheet` 在 `isOpen=false` 时也先读取 `confidant.coopMemorials`，而 `confidant` 可为 null。三主题 `CoopMemorialPanel` 改为接受 `Confidant | null` 并在空值时直接返回，不再崩溃。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`coop-memorial-null-20261021.log`）。
+- **提交**：`42eba4b`（3 文件，6+/3-）。未 Push。
+- **状态**：四主题页面级整体验收通过；未接幽影协议，`public/umbra-demo` 未动。
+
 ## 已提交 · 2026-10-21 · Summary 预设与 Navigator 设置真实映射
 
 - **范围**：三主题 `settingsStore` 补齐真实 Settings 字段映射：`summaryPresets` ↔ `summaryPromptPresets`、`summaryPresetId` ↔ `summaryActivePresetId`、`realisticTyping` ↔ `navigatorImmersive`、`activePersona` ↔ `navigatorPresetId`。hydrate 读真实值，pushToRealStore 写回真实值。

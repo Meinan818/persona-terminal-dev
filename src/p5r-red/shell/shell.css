@@ -1,0 +1,139 @@
+/* ⚠ 自动迁移自 /workspace/work/p5r/shared/shell.css（像素级等价：只改了 data-mode→data-p5r-mode 与素材相对路径）。
+   不要改设计；新样式写到各自屏幕的 .css 里。 */
+/* ═══════════════════════════════════════════════════════════════════
+   demo 外壳：手机竖屏（底栏）/ 电脑横屏（P5R 暂停菜单式侧栏 + 舞台左右延展）
+   横屏判定：(min-width:1024px) and (orientation:landscape) —— 单独构图，不是放大
+   ═══════════════════════════════════════════════════════════════════ */
+:root[data-ui-channel="p5"] body { overflow-x: hidden; }
+:root[data-ui-channel="p5"] #stage-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--stage); }
+:root[data-ui-channel="p5"] #stage-bg .grain { position: absolute; inset: 0; background: var(--grain) 0 0/360px; mix-blend-mode: overlay; opacity: .1; }
+:root[data-ui-channel="p5"] #stage-bg > * { position: absolute; }
+:root[data-ui-channel="p5"] #view { position: relative; z-index: 2; min-height: 100vh; }
+:root[data-ui-channel="p5"] .page { position: relative; min-height: 100vh; padding: 14px 16px calc(var(--nav-h) + 40px); }
+:root[data-ui-channel="p5"] .page.flush { padding: 0 0 calc(var(--nav-h) + 10px); }
+:root[data-ui-channel="p5"] #fx-layer { position: fixed; inset: 0; z-index: 700; pointer-events: none; overflow: hidden; }
+:root[data-ui-channel="p5"] .fx-slash { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 38%, rgba(242,233,218,0) 42%, rgba(242,233,218,.85) 46%, #D7000F 48.5%, rgba(215,0,15,0) 53%, transparent 58%); background-size: 260% 100%; }
+:root[data-ui-channel="p5"] .fx-star { width: 100%; height: 100%; }
+
+/* 面具眨眼 */
+:root[data-ui-channel="p5"] .mask5 { position: relative; display: inline-block; filter: drop-shadow(3px 4px 0 #111); pointer-events: none; }
+:root[data-ui-channel="p5"] .mask5 > img { position: absolute; inset: 0; width: 100%; height: 100%; }
+:root[data-ui-channel="p5"] .mask5 > .ec { opacity: 0; }
+:root[data-ui-channel="p5"] .mask5.shut > .eo { opacity: 0; }
+:root[data-ui-channel="p5"] .mask5.shut > .ec { opacity: 1; }
+
+/* ── 手机底栏（概念图切片 nav0..4 + 中央面具六角键；704 坐标系等比缩放） ── */
+:root[data-ui-channel="p5"] #bnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 600; height: calc(100vw * 128 / 704); max-height: 92px; pointer-events: none; }
+:root[data-ui-channel="p5"] #bnav .nav-box { position: absolute; left: 50%; bottom: 0; width: 704px; height: 128px; transform-origin: bottom center; pointer-events: none; }
+:root[data-ui-channel="p5"] #bnav .nb { position: absolute; pointer-events: auto; transition: transform .12s var(--exp); }
+:root[data-ui-channel="p5"] #bnav .nb:active { transform: scale(.93); }
+:root[data-ui-channel="p5"] #bnav .nb.hex:active { transform: scale(.9); }
+:root[data-ui-channel="p5"] #bnav .nb img { width: 100%; height: 100%; }
+:root[data-ui-channel="p5"] #bnav .nb .lbl { position: absolute; left: 0; right: 0; bottom: -2px; text-align: center; font: 900 0px/1 var(--f-title); }
+
+/* ── 横屏侧栏：P5R 暂停菜单（斜排大字条目、选中红板 + 红青活高亮） ── */
+:root[data-ui-channel="p5"] #side { display: none; }
+@media (min-width: 1024px) and (orientation: landscape) {
+  :root[data-ui-channel="p5"] #bnav { display: none; }
+  :root[data-ui-channel="p5"] #side { display: block; position: fixed; left: 0; top: 0; bottom: 0; width: var(--side-w); z-index: 600; overflow: hidden; }
+  :root[data-ui-channel="p5"] #side .side-bg { position: absolute; inset: 0; background: var(--ink); clip-path: polygon(0 0, 100% 0, 86% 100%, 0 100%); }
+  :root[data-ui-channel="p5"] #side .side-bg::after { content: ''; position: absolute; inset: 0; background: var(--dots-red) 0 0/72px; opacity: .25; -webkit-mask-image: linear-gradient(180deg, transparent 40%, #000); mask-image: linear-gradient(180deg, transparent 40%, #000); }
+  :root[data-ui-channel="p5"] #side .side-edge { position: absolute; top: 0; bottom: 0; right: 0; width: 34px; background: var(--red); clip-path: polygon(70% 0, 100% 0, 30% 100%, 0 100%); }
+  :root[data-ui-channel="p5"] #side .logo { position: relative; padding: 26px 0 0 18px; }
+  :root[data-ui-channel="p5"] #side .logo .sub { display: inline-block; margin: 8px 0 0 6px; padding: 4px 10px; font: 900 13px/1 var(--f-title); color: var(--paper); background: var(--red); transform: rotate(-3deg); box-shadow: 3px 3px 0 #000; }
+  :root[data-ui-channel="p5"] #side ul { list-style: none; margin: 34px 0 0; padding: 0; position: relative; }
+  :root[data-ui-channel="p5"] #side li { margin: 2px 0; transform: rotate(-4deg); transform-origin: left; }
+  :root[data-ui-channel="p5"] #side .si { position: relative; display: flex; align-items: center; gap: 12px; width: 92%; padding: 11px 18px 11px 22px; font: 900 22px/1 var(--f-title); color: var(--paper); text-align: left; letter-spacing: .04em; transition: transform .2s var(--exp), color .15s; }
+  :root[data-ui-channel="p5"] #side li:nth-child(2n) .si { margin-left: 10px; }
+  :root[data-ui-channel="p5"] #side .si small { font: 900 10px/1 var(--f-title); letter-spacing: .2em; color: var(--grey-light); margin-left: auto; }
+  :root[data-ui-channel="p5"] #side .si:hover { transform: translateX(8px) scale(1.04); }
+  :root[data-ui-channel="p5"] #side .si.on { color: var(--ink); }
+  :root[data-ui-channel="p5"] #side .si .hl { position: absolute; inset: 0; z-index: -1; opacity: 0; }
+  :root[data-ui-channel="p5"] #side .si.on .hl, :root[data-ui-channel="p5"] #side .si:hover .hl { opacity: 1; }
+  :root[data-ui-channel="p5"] #side .si .hl svg { width: 100%; height: 100%; overflow: visible; }
+  :root[data-ui-channel="p5"] #side .si.on small { color: var(--ink); }
+  :root[data-ui-channel="p5"] #side .si:hover:not(.on) { color: var(--white); }
+  :root[data-ui-channel="p5"] #side .foot { position: absolute; left: 18px; bottom: 18px; font: 900 10px/1.5 var(--f-title); color: var(--grey); letter-spacing: .14em; }
+  :root[data-ui-channel="p5"] #view { margin-left: var(--side-w); }
+  :root[data-ui-channel="p5"] #stage-bg { left: calc(var(--side-w) - 40px); }
+  :root[data-ui-channel="p5"] .page { padding: 26px 40px 60px 44px; }
+  :root[data-ui-channel="p5"] .page.flush { padding: 0; }
+}
+
+/* 设置：demo 开关（右上角小钮，手机/横屏都在） */
+:root[data-ui-channel="p5"] #demo-ctl { position: fixed; right: 8px; top: 8px; z-index: 650; display: flex; gap: 6px; flex-direction: row-reverse; }
+:root[data-ui-channel="p5"] #demo-ctl:not(.open) button:not([data-k="gear"]) { display: none; }
+:root[data-ui-channel="p5"] #demo-ctl button { padding: 6px 9px; font: 900 10px/1 var(--f-title); color: var(--paper); background: rgba(17,17,17,.85); box-shadow: inset 0 0 0 1.5px var(--paper); clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%); }
+
+/* 矢量舞台 */
+:root[data-ui-channel="p5"] #stage-bg .stg-bg svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+:root[data-ui-channel="p5"] #stage-bg .stg-sil { position: absolute; }
+:root[data-ui-channel="p5"] #stage-bg .stg-sil svg { overflow: visible; }
+:root[data-ui-channel="p5"] .sil { overflow: visible; }
+
+/* 隐藏索引页 */
+:root[data-ui-channel="p5"] .ix { max-width: 980px; margin: 0 auto; }
+:root[data-ui-channel="p5"] .ix-sum { font: 900 13px/1.5 var(--f-title); color: var(--p5r-paper); background: var(--p5r-card); padding: 8px 12px; margin: 10px 0 18px; box-shadow: var(--p5r-shadow-s); }
+:root[data-ui-channel="p5"] .ix-sum a { color: #ffd2d2; text-decoration: underline; }
+:root[data-ui-channel="p5"] .ix-g { margin: 0 0 22px; }
+:root[data-ui-channel="p5"] .ix-g h2 { display: inline-block; font: 900 16px/1 var(--f-title); color: var(--p5r-ink); background: var(--p5r-paper); padding: 6px 12px; transform: rotate(-2deg); box-shadow: 3px 3px 0 var(--p5r-ink); margin: 0 0 8px; }
+:root[data-ui-channel="p5"] .ix-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 12px; margin: 4px 0; background: var(--p5r-card); color: var(--p5r-card-fg); clip-path: polygon(0 0, 100% 0, 99% 100%, 0 100%); font: 800 13px/1.3 var(--f-sans); }
+:root[data-ui-channel="p5"] .ix-row b { font: 900 15px/1.2 var(--f-title); min-width: 9em; }
+:root[data-ui-channel="p5"] .ix-row span { flex: 1; min-width: 0; color: #b9b3aa; font-size: 11.5px; overflow-wrap: anywhere; }
+:root[data-ui-channel="p5"] .ix-st { font-style: normal; font: 900 11px/1 var(--f-title); padding: 4px 7px; background: var(--red); color: #fff; white-space: nowrap; }
+:root[data-ui-channel="p5"] .ix-st.skip { background: #555; } :root[data-ui-channel="p5"] .ix-st.wip { background: #a86b00; }
+:root[data-ui-channel="p5"] .ix-row:active { transform: translate(2px, 2px); }
+
+/* ── 矢量底栏 v2 ── */
+:root[data-ui-channel="p5"] #bnav { height: var(--nav-h); max-height: none; pointer-events: none; }
+:root[data-ui-channel="p5"] #bnav::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 64%; background: #111; clip-path: polygon(0 18%, 100% 0, 100% 100%, 0 100%); }
+:root[data-ui-channel="p5"] #bnav::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 9px; background: var(--red); }
+:root[data-ui-channel="p5"] .bn2 { position: absolute; left: 0; right: 0; bottom: 8px; height: 62px; display: grid; grid-template-columns: 1fr 1fr 1.18fr 1fr 1fr; align-items: end; gap: 5px; padding: 0 6px calc(env(safe-area-inset-bottom) * .5); max-width: 560px; margin: 0 auto; pointer-events: auto; }
+:root[data-ui-channel="p5"] .bn2-b { position: relative; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--paper); color: #111; outline: 3px solid #111; outline-offset: -1px; box-shadow: 3px 4px 0 var(--red); transform: rotate(var(--rt)); transition: transform .14s var(--exp); }
+:root[data-ui-channel="p5"] .bn2-b svg { width: 24px; height: 24px; }
+:root[data-ui-channel="p5"] .bn2-b span { font: 900 10.5px/1 var(--f-title); letter-spacing: .1em; }
+:root[data-ui-channel="p5"] .bn2-b.on { background: var(--red); color: #fff; box-shadow: 3px 4px 0 #111; transform: rotate(var(--rt)) translateY(-5px) scale(1.05); }
+:root[data-ui-channel="p5"] .bn2-b.on svg { filter: drop-shadow(1.5px 1.5px 0 #111); }
+:root[data-ui-channel="p5"] .bn2-b:active { transform: rotate(var(--rt)) scale(.93); }
+:root[data-ui-channel="p5"] .bn2-hex { position: relative; height: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: -4px; }
+:root[data-ui-channel="p5"] .bn2-hexbg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(3px 4px 0 var(--paper)); }
+:root[data-ui-channel="p5"] .bn2-hex svg:not(.bn2-hexbg) { position: relative; width: 50px; height: 32px; }
+:root[data-ui-channel="p5"] .bn2-hex span { position: relative; font: 900 10px/1 var(--f-title); color: #fff; letter-spacing: .12em; margin-top: 2px; }
+:root[data-ui-channel="p5"] .bn2-hex:active, :root[data-ui-channel="p5"] .bn2-hex.pressing { transform: scale(.92); transition: transform .5s linear; }
+:root[data-ui-channel="p5"] { --nav-h: 82px; }
+:root[data-ui-channel="p5"] .bn2 { z-index: 1; }
+:root[data-ui-channel="p5"] a { text-decoration: none; color: inherit; }
+@media (min-width: 1024px) and (orientation: landscape) { :root[data-ui-channel="p5"] #side .side-bg { background: linear-gradient(170deg, #141414 0 45%, #4a040b 100%); } }
+/* 手机横屏（如 844×390）：保留左侧栏（与 app 一致），内容仍用竖屏单列构图并居中滚动 */
+@media (min-width: 700px) and (max-width: 1023px) and (orientation: landscape) {
+  :root[data-ui-channel="p5"] { --side-w: 168px; }
+  :root[data-ui-channel="p5"] #bnav { display: none; }
+  :root[data-ui-channel="p5"] #side { display: block; position: fixed; left: 0; top: 0; bottom: 0; width: var(--side-w); z-index: 600; overflow: hidden; }
+  :root[data-ui-channel="p5"] #side .side-bg { position: absolute; inset: 0; background: linear-gradient(170deg, #141414 0 45%, #4a040b 100%); clip-path: polygon(0 0, 100% 0, 86% 100%, 0 100%); }
+  :root[data-ui-channel="p5"] #side .side-edge { position: absolute; top: 0; bottom: 0; right: 0; width: 24px; background: var(--red); clip-path: polygon(70% 0, 100% 0, 30% 100%, 0 100%); }
+  :root[data-ui-channel="p5"] #side .logo { position: relative; padding: 10px 0 0 12px; transform: scale(.62); transform-origin: 0 0; height: 50px; }
+  :root[data-ui-channel="p5"] #side .logo .sub { display: none; }
+  :root[data-ui-channel="p5"] #side ul { list-style: none; margin: 4px 0 0; padding: 0; position: relative; }
+  :root[data-ui-channel="p5"] #side li { transform: rotate(-4deg); transform-origin: left; }
+  :root[data-ui-channel="p5"] #side .si { position: relative; display: flex; align-items: center; width: 88%; padding: 7px 12px 7px 16px; font: 900 17px/1 var(--f-title); color: var(--paper); }
+  :root[data-ui-channel="p5"] #side li:nth-child(2n) .si { margin-left: 8px; }
+  :root[data-ui-channel="p5"] #side .si small, :root[data-ui-channel="p5"] #side .foot { display: none; }
+  :root[data-ui-channel="p5"] #side .si.on { color: var(--ink); }
+  :root[data-ui-channel="p5"] #side .si .hl { position: absolute; inset: 0; z-index: -1; opacity: 0; }
+  :root[data-ui-channel="p5"] #side .si.on .hl { opacity: 1; }
+  :root[data-ui-channel="p5"] #side .si .hl svg { width: 100%; height: 100%; overflow: visible; }
+  :root[data-ui-channel="p5"] #view { margin-left: var(--side-w); }
+  :root[data-ui-channel="p5"] #view .page { max-width: 600px; margin: 0 auto; padding-bottom: 30px; }
+  :root[data-ui-channel="p5"] #view .page.flush { padding-bottom: 20px; }
+  :root[data-ui-channel="p5"] .home2, :root[data-ui-channel="p5"] .mn2 { padding-bottom: 30px !important; }
+  :root[data-ui-channel="p5"] #stage-bg { left: calc(var(--side-w) - 30px); }
+}
+
+/* ═══ React 版补丁 ═══ */
+/* DevCapsule「侧栏」关：横屏也用底栏（真实设置项 sidebar=false） */
+:root[data-ui-channel="p5"].p5r-nosidebar #side { display: none !important; }
+:root[data-ui-channel="p5"].p5r-nosidebar #bnav { display: block !important; }
+:root[data-ui-channel="p5"].p5r-nosidebar #view { margin-left: 0 !important; }
+:root[data-ui-channel="p5"].p5r-nosidebar #stage-bg { left: 0 !important; }
+/* 出血兜底（真实 App <main> overflow-x:clip）：页面装饰可上探 / 侧探，但不撑出横向滚动 */
+:root[data-ui-channel="p5"] #view { overflow-x: clip; }

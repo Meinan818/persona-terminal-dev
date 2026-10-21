@@ -1,0 +1,10 @@
+/* SplashScreen 增量（P0-14 / FIXLIST 六：只动 transform / opacity）。
+   v3 .oa-sp-red 用 clip-path 过渡斜扫、.oa-sp-bolt 用 clip-path inset 关键帧揭示；这里保持最终形状（静态 clip-path），
+   改为整块平移 / 沿揭示方向缩放 + 淡入，视觉节奏同 v3。 */
+:root[data-ui-channel="p5"] .oa-splash.sp5r .oa-sp-red { clip-path: polygon(0 0, 120% 0, 100% 100%, 0 100%); transform: translateX(-112%); transition: transform .3s cubic-bezier(.22,1,.36,1); }
+:root[data-ui-channel="p5"] .oa-splash.sp5r.p1 .oa-sp-red { transform: none; }
+:root[data-ui-channel="p5"] .oa-splash.sp5r .oa-sp-bolt.kr { transform-origin: 0 50%; --sp-from: scaleX(0); }
+:root[data-ui-channel="p5"] .oa-splash.sp5r .oa-sp-bolt.kb { transform-origin: 50% 0; --sp-from: scaleY(0); }
+:root[data-ui-channel="p5"] .oa-splash.sp5r .oa-sp-bolt.kt { transform-origin: 50% 100%; --sp-from: scaleY(0); }
+:root[data-ui-channel="p5"] .oa-splash.sp5r.p1 .oa-sp-bolt { animation: oa5-bolt .5s var(--d) cubic-bezier(.22,1,.36,1) both; }
+@keyframes oa5-bolt { from { opacity: 1; transform: var(--sp-from); } to { opacity: 1; transform: none; } }

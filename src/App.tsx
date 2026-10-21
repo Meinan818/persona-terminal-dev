@@ -74,6 +74,7 @@ import { TransitionLayer } from '@/components/transition/HeavyTransition';
 import { consumePendingCircleReveal, consumeCurtainMidpoint } from '@/ui/transitionDirector';
 import { P4StageDecor } from '@/ui/p4Kit';
 import { bgAnimStyles } from '@/ui/bgAnim';
+import RedChannelRoot from '@/p5r-red/RedChannelRoot';
 
 /**
  * 「加载中」页（第 12 轮）：初始化实测 0.03～0.14s，平时根本来不及看见；只有初始化比开屏动画还慢
@@ -697,6 +698,7 @@ function App() {
       </div>
     );
   }
+  if ((uiChannel as string) === 'p5') return <RedChannelRoot battle={<BattleArena />} />;
 
   const bgAnimOn = bgAnimStyleList.length > 0;
   // 背景图开着：三个频道的页面壳都要给它让位，擦除垫底层也要把它复刻一份

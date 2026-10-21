@@ -1,0 +1,82 @@
+/* pkg3 增量样式（羁绊 / 据点）。迁移样式在 legacy/css（pages.css .cp- / org.p5.css .og- / c.css .oc- / d.css .od-），这里只放 React 版新增件，类名 pk3- / cp-nfx 前缀。
+   动效只动 transform / opacity；低动效档（[data-p5r-motion=low] / prefers-reduced-motion）静止。 */
+
+/* ── 羁绊页头右侧：已缔结计数（真实 p5：黑底斜切 + 纸色外圈 + 白字 + 白星） ── */
+:root[data-ui-channel="p5"] .pk3-cnt { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: #050505; color: #fff; clip-path: polygon(6px 0, 100% 2px, calc(100% - 5px) 100%, 0 calc(100% - 3px)); box-shadow: 0 0 0 2px #f0e9df; }
+:root[data-ui-channel="p5"] .pk3-cnt b { font: 900 14px/1 var(--f-title); font-variant-numeric: tabular-nums; }
+:root[data-ui-channel="p5"] .pk3-cnt-s { width: 13px; height: 13px; }
+
+/* ── ✧ 同伴系统菜单（真实 Cooperation.tsx menuOpen：纸底 + 两层不规则黑描边，打开翻猩红） ── */
+:root[data-ui-channel="p5"] .pk3-menu-a { position: relative; }
+:root[data-ui-channel="p5"] .pk3-mt { position: relative; width: 36px; height: 36px; display: grid; place-items: center; color: #050505; font: 900 15px/1 var(--f-title); background: none; border: 0; cursor: pointer; }
+:root[data-ui-channel="p5"] .pk3-mt > i { position: absolute; inset: 0; pointer-events: none; }
+:root[data-ui-channel="p5"] .pk3-mt > .l1 { transform: translate(2.5px, 3px); background: #050505; clip-path: polygon(2px 1px, calc(100% - 1px) 3px, calc(100% - 3px) calc(100% - 1px), 1px calc(100% - 3px)); }
+:root[data-ui-channel="p5"] .pk3-mt > .l2 { background: #050505; clip-path: polygon(1.5px 2.5px, calc(100% - 2px) .5px, calc(100% - .5px) calc(100% - 2.5px), .5px calc(100% - 1px)); }
+:root[data-ui-channel="p5"] .pk3-mt > .l3 { inset: 2.5px; background: #f0e9df; clip-path: polygon(1px .5px, calc(100% - .5px) 1.5px, calc(100% - 1.5px) calc(100% - .5px), .5px calc(100% - 1.5px)); }
+:root[data-ui-channel="p5"] .pk3-mt > span { position: relative; }
+:root[data-ui-channel="p5"] .pk3-mt.on { color: #f0e9df; }
+:root[data-ui-channel="p5"] .pk3-mt.on > .l3 { background: #c00008; }
+:root[data-ui-channel="p5"] .pk3-mt:active { transform: translate(2px, 2px); }
+:root[data-ui-channel="p5"] .pk3-mt-dot { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #f43f5e; box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(0,0,0,.4); }
+/* 下拉 = 真实 .p5-menu-surface：黑纸卡 + 纸色描边 + 硬影；hover 猩红 */
+:root[data-ui-channel="p5"] .pk3-menu { position: absolute; right: 0; top: 44px; z-index: 30; width: 224px; overflow: hidden; background: #0d0d0b; border: 2px solid #050505; border-radius: 3px; box-shadow: 0 0 0 2px #f0e9df, 6px 7px 0 rgba(0,0,0,.85); transform-origin: top right; }
+:root[data-ui-channel="p5"] .pk3-mi { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-align: left; color: #f0e9df; background: none; border: 0; border-top: 1px solid rgba(240,233,223,.14); cursor: pointer; font: 700 12px/1.3 var(--f-body); }
+:root[data-ui-channel="p5"] .pk3-mi:first-child { border-top: 0; }
+:root[data-ui-channel="p5"] .pk3-mi:hover:not(:disabled), :root[data-ui-channel="p5"] .pk3-mi:focus-visible { background: #c00008; color: #fff; outline: none; }
+:root[data-ui-channel="p5"] .pk3-mi > i { position: relative; width: 18px; font-style: normal; font-size: 16px; text-align: center; color: #f0e9df; }
+:root[data-ui-channel="p5"] .pk3-mi > i.nb em { position: absolute; top: -6px; right: -8px; min-width: 14px; height: 14px; padding: 0 2px; border-radius: 7px; display: grid; place-items: center; background: #f43f5e; color: #fff; font: 900 9px/1 var(--f-title); font-style: normal; }
+:root[data-ui-channel="p5"] .pk3-mi > span { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+:root[data-ui-channel="p5"] .pk3-mi b { font-weight: 800; }
+:root[data-ui-channel="p5"] .pk3-mi small { font-size: 10px; font-weight: 500; color: rgba(240,233,223,.55); }
+:root[data-ui-channel="p5"] .pk3-mi:hover:not(:disabled) small { color: rgba(255,255,255,.8); }
+:root[data-ui-channel="p5"] .pk3-mi:disabled { opacity: .4; cursor: default; }
+
+/* ── 关于同伴系统（就地展开） ── */
+:root[data-ui-channel="p5"] .pk3-info { position: relative; margin: -8px 0 16px; padding: 14px 16px; background: var(--p5r-paper); color: #111; clip-path: polygon(0 4px, 100% 0, calc(100% - 4px) 100%, 2px calc(100% - 3px)); box-shadow: inset 0 0 0 2px #111; }
+:root[data-ui-channel="p5"] .pk3-info p { margin: 0; font: 700 13px/1.65 var(--f-body); }
+:root[data-ui-channel="p5"] .pk3-info small { display: block; margin-top: 8px; font: 600 11px/1.6 var(--f-body); color: #4a4640; }
+:root[data-ui-channel="p5"] .pk3-info[hidden] { display: none; }
+
+/* ── ConfidantNameFx（红频道）：waiting = 高光窗横扫（窗与内文反向位移，只动 transform）；max = 猩红 + 三颗上浮粒子 ── */
+:root[data-ui-channel="p5"] .cp-nfx { position: relative; display: inline-flex; min-width: 0; max-width: 100%; --nf-hi: #c00008; }
+:root[data-ui-channel="p5"] .cp-li-n b.cp-nfx { overflow: visible; }
+:root[data-ui-channel="p5"] .cp-nfx .nf-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui-channel="p5"] .cp-nfx.max .nf-t { color: #d90008; }
+:root[data-ui-channel="p5"] .cp-nfx .nf-hl { position: absolute; left: 0; top: 0; bottom: 0; width: 45%; overflow: hidden; pointer-events: none; animation: nf-win 2.6s linear infinite; }
+:root[data-ui-channel="p5"] .cp-nfx .nf-hi { position: absolute; left: 0; top: 0; width: calc(100% / .45); white-space: nowrap; color: var(--nf-hi); animation: nf-txt 2.6s linear infinite; }
+@keyframes nf-win { from { transform: translateX(-100%); } to { transform: translateX(222%); } }
+@keyframes nf-txt { from { transform: translateX(45%); } to { transform: translateX(-100%); } }
+:root[data-ui-channel="p5"] .cp-nfx .nf-sp { position: absolute; right: -6px; top: -4px; width: 12px; height: 12px; pointer-events: none; }
+:root[data-ui-channel="p5"] .cp-nfx .nf-sp i { position: absolute; bottom: 0; width: 2.5px; height: 2.5px; border-radius: 50%; background: #d90008; box-shadow: 0 0 4px #d90008; opacity: 0; animation: nf-spark 2.2s ease-in-out infinite; }
+:root[data-ui-channel="p5"] .cp-nfx .nf-sp i:nth-child(1) { left: 0; }
+:root[data-ui-channel="p5"] .cp-nfx .nf-sp i:nth-child(2) { left: 4px; animation-delay: .55s; }
+:root[data-ui-channel="p5"] .cp-nfx .nf-sp i:nth-child(3) { left: 8px; animation-delay: 1.1s; }
+@keyframes nf-spark { 0%, 100% { opacity: 0; transform: translateY(0) scale(.6); } 45% { opacity: 1; transform: translateY(-7px) scale(1); } }
+:root[data-ui-channel="p5"][data-p5r-motion='low'] .cp-nfx .nf-hl, :root[data-ui-channel="p5"][data-p5r-motion='low'] .cp-nfx .nf-sp { display: none; }
+@media (prefers-reduced-motion: reduce) { :root[data-ui-channel="p5"] .cp-nfx .nf-hl, :root[data-ui-channel="p5"] .cp-nfx .nf-sp { display: none; } }
+
+/* 名字特效演示弹层（黑底条，同列表条目字号） */
+:root[data-ui-channel="p5"] .pk3-nfx-demo { display: flex; flex-direction: column; gap: 10px; }
+:root[data-ui-channel="p5"] .pk3-nfx-row { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: #111; color: #f2e9da; box-shadow: 4px 5px 0 var(--red); }
+:root[data-ui-channel="p5"] .pk3-nfx-row .cp-nfx { --nf-hi: #ff8a8a; }
+:root[data-ui-channel="p5"] .pk3-nfx-row .cp-nfx:not(.max) .nf-t { color: #f2e9da; }
+:root[data-ui-channel="p5"] .pk3-nfx-row small { font: 700 11px/1.3 var(--f-body); color: rgba(242,233,218,.7); }
+
+/* ── 据点：加载中 / 分区拉取失败（真实文案） ── */
+:root[data-ui-channel="p5"] .pk3-loading { display: block; }
+:root[data-ui-channel="p5"] .pk3-fail { margin: 0; font-weight: 800; }
+
+/* 祈愿特效 · 矮横屏（844×390 等）：v3 的星 + 文案按宽度定尺寸，高度不足时底行「送给 X · 双方 +2 SP」被裁。
+   只在矮视口按高度收星与文案位移，竖屏 / 桌面观感不变。 */
+@media (max-height: 520px) {
+  :root[data-ui-channel="p5"] .oc-pray .pr-star { width: min(56vw, 260px, 46vh); margin: calc(min(56vw, 260px, 46vh) / -2) 0 0 calc(min(56vw, 260px, 46vh) / -2); }
+  :root[data-ui-channel="p5"] .oc-pray .pr-txt { top: calc(44% + min(32vw, 150px, 26vh)); }
+}
+
+/* 塔罗牌面接素材槽（用户决定 2026-10-21：羁绊 / 据点的矢量塔罗改读 slots/tarot/p5，同名覆盖即换真图）。
+   框架不变：.oc-tc 外框（宽 / 100:156 / 硬投影）、.og-face / .cp-li-face 尺寸与投影原样，只把牌面换成图。 */
+:root[data-ui-channel="p5"] .oc-tc .oc-tc-img, :root[data-ui-channel="p5"] .oc-hero .art .oc-tc-img { display: block; width: 100%; height: 100%; object-fit: cover; }
+:root[data-ui-channel="p5"] img.og-face, :root[data-ui-channel="p5"] img.cp-li-face { object-fit: cover; background: #111; box-shadow: inset 0 0 0 2px #111; }
+:root[data-ui-channel="p5"] img.og-face { box-sizing: border-box; border: 2px solid #111; }
+:root[data-ui-channel="p5"] img.cp-li-face { box-sizing: border-box; border: 2px solid #111; }
+:root[data-ui-channel="p5"] .tr-art .tr-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

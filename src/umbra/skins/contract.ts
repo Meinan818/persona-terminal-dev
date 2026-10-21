@@ -37,6 +37,15 @@ export interface UmbraManifestAsset {
   source: 'official' | 'generated';
 }
 
+export interface EnemyLayout {
+  x: number;
+  y: number;
+  scale: number;
+  layer: string;
+}
+
+export type EnemyLayoutMap = Record<1 | 2 | 3 | 4 | 5, EnemyLayout[]>;
+
 export interface UmbraSkinPack {
   id: UmbraSkinId;
   manifest: {
@@ -47,4 +56,5 @@ export interface UmbraSkinPack {
   tokens: Record<string, string>;
   recipes: UmbraRecipe[];
   labels: Record<string, string>;
+  enemyLayouts: EnemyLayoutMap;
 }

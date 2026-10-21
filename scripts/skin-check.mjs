@@ -24,6 +24,11 @@ if (pack.id !== SKIN_ID) fail(`pack.id 与皮肤目录不一致：${pack.id} / $
 if (pack.handlers) fail('皮肤包禁止 handlers 字段');
 if (!Array.isArray(pack.manifest?.assets)) fail('manifest.assets 必须是数组');
 if (!Array.isArray(pack.recipes)) fail('recipes 必须是数组');
+for (const count of [1, 2, 3, 4, 5]) {
+  if (!Array.isArray(pack.enemyLayouts?.[count])) {
+    fail(`enemyLayouts 缺少 ${count} 只敌人站位`);
+  }
+}
 
 for (const asset of pack.manifest.assets) {
   if (asset.source !== 'official' && asset.source !== 'generated') {

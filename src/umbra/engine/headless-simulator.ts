@@ -89,10 +89,6 @@ function pickAction(battle: any, policy: BattlePolicy, rng: () => number): Recor
     const baton = (battle.actions ?? []).find((item: any) => item.type === 'batonPass');
     if (baton) return baton;
 
-    const heavyIntent = target.intent && (target.intent.power ?? 0) >= 24;
-    if (heavyIntent && (battle.actions ?? []).some((item: any) => item.type === 'guard')) {
-      return { type: 'guard' };
-    }
     return { type: 'basic', targetId: target.id };
   }
 
@@ -134,7 +130,11 @@ export function runHeadlessBattle(options: HeadlessBattleOptions): HeadlessBattl
   while (!terminalPhase(battle.phase) && guard < maxRounds && actionCount < maxActions) {
     const action = pickAction(battle, policy, rng);
     if (!action) break;
-    const response = battle.act(action);
+    let response: any;
+    if (battle.phase === 'holdUp') response = battle.holdUp(action);
+    else if (battle.phase === 'negotiation') response = battle.chooseResult('reward');
+    else if (battle.phase === 'result') break;
+    else response = battle.act(action);
     actionCount += 1;
     actions.push(response?.ok ? String(action.type ?? 'unknown') : `invalid:${action.type ?? 'unknown'}`);
     if (!response?.ok) guard += 1;

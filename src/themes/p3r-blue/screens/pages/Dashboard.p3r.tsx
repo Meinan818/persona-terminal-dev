@@ -53,7 +53,7 @@ export const HomeBrandTitle = ({ play = true }: { play?: boolean }) => (
 
 export default function Dashboard({ params }: PageProps) {
   const { pinned: realPinned, unpinned: realUnpinned } = usePinnedCallingCard();
-  const { ATTR_NAMES, MOCK_ATTRS, MOCK_STATS, MOCK_TODOS } = useHomeData();
+  const { ATTR_NAMES, MOCK_ATTRS, MOCK_STATS, MOCK_TODOS, MOCK_DIVINATION, MOCK_COUNTERCURRENT, MOCK_PERSONA_NAME } = useHomeData();
   const anim = useBoldness();
   const q = (k: string) => params.get(k);
   const now = useMemo(() => new Date(), []);
@@ -135,7 +135,7 @@ export default function Dashboard({ params }: PageProps) {
   const warnings = ccOn ? MOCK_COUNTERCURRENT : [];
 
   // ── 今日仪式 ──
-  const drawn = q('drawn') === '1';
+  const drawn = !!MOCK_DIVINATION;
   const battleOn = q('battleOn') !== '0';
   const otdOn = q('otd') !== '0';
   const [otdOpen, setOtdOpen] = useState(false);
@@ -150,8 +150,8 @@ export default function Dashboard({ params }: PageProps) {
   }
   slideKeys.push('astrology');
   slides.push(<RitualSlab key="astro" icon={<MoonGlyph />} onClick={() => navigate('astrology')}
-    title={drawn ? `${MOCK_DIVINATION.name} · ${MOCK_DIVINATION.orientation === 'upright' ? '正位' : '逆位'}` : '今日星象尚未展开'}
-    sub={drawn ? `${ATTR_NAMES[MOCK_DIVINATION.attribute]} × ${MOCK_DIVINATION.multiplier}${MOCK_DIVINATION.advice ? ` · ${MOCK_DIVINATION.advice}` : ''}` : '点击进入星象，从三张塔罗中抽取一张'} />);
+    title={drawn ? `${MOCK_DIVINATION?.name ?? ''} · ${MOCK_DIVINATION?.orientation === 'upright' ? '正位' : '逆位'}` : '今日星象尚未展开'}
+    sub={drawn && MOCK_DIVINATION ? `${ATTR_NAMES[MOCK_DIVINATION.attribute]} × ${MOCK_DIVINATION.multiplier}${MOCK_DIVINATION.advice ? ` · ${MOCK_DIVINATION.advice}` : ''}` : '点击进入星象，从三张塔罗中抽取一张'} />);
   if (battleOn) {
     slideKeys.push('battle');
     slides.push(<BattleSlab key="battle" state={(q('battle') as BattleState) || 'fight'} shadowTime={q('shadow') === '1'} persona={MOCK_PERSONA_NAME} onClick={() => navigate('battle')} />);

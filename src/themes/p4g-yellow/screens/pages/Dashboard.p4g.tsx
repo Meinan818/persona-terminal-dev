@@ -60,7 +60,7 @@ const seed = Math.random();
 const pick = (a: string[]) => a[Math.floor(seed * a.length)];
 
 export default function Dashboard({ params }: PageProps) {
-  const { ATTR_NAMES, MOCK_ACHIEVEMENTS, MOCK_ATTRIBUTES, MOCK_STATS, MOCK_TODOS, MOCK_USER_NAME } = useHomeData();
+  const { ATTR_NAMES, MOCK_ACHIEVEMENTS, MOCK_ATTRIBUTES, MOCK_STATS, MOCK_TODOS, MOCK_USER_NAME, MOCK_DIVINATION, MOCK_COUNTERCURRENT } = useHomeData();
   const state = params.get('state');
   const [sky, setSky] = useState<'moon' | 'weather'>(params.get('sky') === 'weather' ? 'weather' : 'moon');
   const wx = (params.get('wx') as SkyWx) || 'ok';
@@ -126,8 +126,8 @@ export default function Dashboard({ params }: PageProps) {
 
   const ccOn = params.get('cc') !== '0';
   const slides: RitualSlide[] = [];
-  if (ccOn) slides.push({ key: 'countercurrent', node: <CountercurrentSlide attrs={['guts', 'kindness']} /> });
-  slides.push({ key: 'astrology', node: <AstrologySlide drawn={params.get('astro') === 'drawn'} /> });
+  if (ccOn && MOCK_COUNTERCURRENT.length) slides.push({ key: 'countercurrent', node: <CountercurrentSlide attrs={MOCK_COUNTERCURRENT} /> });
+  slides.push({ key: 'astrology', node: <AstrologySlide drawn={!!MOCK_DIVINATION} /> });
   slides.push({ key: 'battle', node: <BattleSlide inShadow awakened /> });
   slides.push({ key: 'onthisday', node: <OnThisDaySlide onOpen={() => setOtdOpen(true)} /> });
   const slideParam = params.get('slide');

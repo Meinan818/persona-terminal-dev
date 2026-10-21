@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type ReactNode, type MouseEvent as RME } f
 import type { AttributeId } from '@/types';
 import { P4Outline, WeatherIcon, WEATHER_LABEL, WEEK_EN, periodOf, IconClose, IconChevron, type P4Weather } from '@yellow/kit';
 import { useLowMotion } from '@yellow/lib/prefs';
+import { useSkyBadge } from '@/components/sky/useSkyBadge';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
@@ -56,6 +57,18 @@ export function SkyRing({ mode, onToggle, weather, wx, temp }: { mode: 'moon' | 
 /** 首页页头：TODAY'S SHOW 眉标 + MASKARIA 描边巨标 + 岁时小签 | 大号 P4G 日期 + 天气 HUD */
 export function DashHeader({ weather, sky, setSky, wx, temp }: { weather: P4Weather; sky: 'moon' | 'weather'; setSky: (s: 'moon' | 'weather') => void; wx: SkyWx; temp: number }) {
   const low = useLowMotion();
+  const live = useSkyBadge();
+  const liveState: SkyWx = !live.ready ? 'unset' : live.loading ? 'loading' : live.error ? (live.errorKind === 'config' ? 'config' : 'error') : 'ok';
+  const state = wx === 'ok' ? liveState : wx;
+  const icon = live.weather?.icon ?? '';
+  const p4Weather: P4Weather = wx !== 'ok' || !live.weather ? weather
+    : icon.includes('thunder') ? 'thunder'
+      : icon.includes('rain') ? 'rain'
+        : icon.includes('snow') ? 'snow'
+          : icon === 'fog' ? 'fog'
+            : icon.includes('cloud') || icon === 'partly' || icon === 'overcast' ? 'cloudy'
+              : icon.includes('clear-night') ? 'night' : 'sunny';
+  const realTemp = wx === 'ok' && live.weather ? live.weather.temp : temp;
   const d = new Date();
   const wk = d.getDay();
   const p = periodOf(d);
@@ -75,7 +88,7 @@ export function DashHeader({ weather, sky, setSky, wx, temp }: { weather: P4Weat
             <SeasonStamp collected={false} pop="below" />
           </div>
         </div>
-        <SkyRing mode={sky} onToggle={() => setSky(sky === 'moon' ? 'weather' : 'moon')} weather={weather} wx={wx} temp={temp} />
+        <SkyRing mode={live.mode} onToggle={live.toggle} weather={p4Weather} wx={state} temp={realTemp} />
       </div>
       {/* 大号日期条（P4G 日历 HUD）*/}
       <motion.div className="relative mt-3 flex min-w-0 flex-wrap items-end gap-x-3 gap-y-1"
@@ -92,7 +105,7 @@ export function DashHeader({ weather, sky, setSky, wx, temp }: { weather: P4Weat
         </span>
         <span className="mb-1.5 flex min-w-0 flex-col items-start">
           <P4Outline size="clamp(16px,4.6vw,22px)" stroke={4} italic>{p.en}</P4Outline>
-          <span className="font-display text-meta font-bold text-[color:var(--p4g-on-stage)]">{p.zh} · {WEATHER_LABEL[weather]}</span>
+          <span className="font-display text-meta font-bold text-[color:var(--p4g-on-stage)]">{p.zh} · {WEATHER_LABEL[p4Weather]}</span>
         </span>
       </motion.div>
     </header>

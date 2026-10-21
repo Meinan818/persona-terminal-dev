@@ -186,6 +186,8 @@
 @keyframes nvw-wipeMask{0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(-30deg)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(6deg)}60%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.4) rotate(10deg)}}
 :root[data-ui-channel="p5"] .nvw .nv-menu-veil{position:fixed;inset:0;z-index:20}
 :root[data-ui-channel="p5"] .nvw .nv-persona-menu{position:absolute;left:12px;top:100%;margin-top:14px;z-index:21;width:276px}
+/* retest5 10-21：矮视口（667×375 / 844×390）人格菜单底部工具被输入坞盖住且无法滚动 → 限高可滚 */
+@media (max-height:600px){:root[data-ui-channel="p5"] .nvw .nv-persona-menu{max-height:calc(100dvh - 206px);overflow-y:auto;overscroll-behavior:contain;padding:0 8px 8px 0;width:284px;scrollbar-width:none}:root[data-ui-channel="p5"] .nvw .nv-persona-menu::-webkit-scrollbar{display:none}}
 :root[data-ui-channel="p5"] .nvw .nv-persona-menu .nv-lab{display:inline-block;margin-bottom:6px;padding:3px 12px;font-size:12px;font-weight:900;background:var(--red);color:#fff;transform:rotate(-3deg);box-shadow:3px 3px 0 var(--ink)}
 :root[data-ui-channel="p5"] .nvw .nv-pm-item{position:relative;display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:6px 14px 6px 8px;font-size:14px;font-weight:900;color:var(--paper);text-align:left;filter:drop-shadow(4px 4px 0 var(--red))}
 :root[data-ui-channel="p5"] .nvw .nv-pm-item::before{content:"";position:absolute;inset:0;background:var(--paper);clip-path:polygon(10px 0,100% 3px,calc(100% - 8px) 100%,0 calc(100% - 3px))}

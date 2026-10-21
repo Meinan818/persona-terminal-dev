@@ -304,7 +304,8 @@
 :root[data-ui-channel="p5"] .st5-dist { margin-bottom: 10px; }
 :root[data-ui-channel="p5"] .st5-dist > .plate { align-self: flex-start; margin-bottom: 6px; }
 @media (min-width: 1024px) and (orientation: landscape) { :root[data-ui-channel="p5"] .st5-kpi { grid-template-columns: 1fr 1fr 1fr; } }
-@media (orientation: landscape) and (max-height: 560px) { :root[data-ui-channel="p5"] .act5-fab { right: 24px; bottom: 20px; } }
+/* retest5 10-21：<700 宽横屏（如 667×375）仍有底栏，FAB 不能落到 20px 被底栏盖住 → 同 v3 .cp-fab 只在侧栏档生效 */
+@media (min-width: 700px) and (orientation: landscape) and (max-height: 560px) { :root[data-ui-channel="p5"] .act5-fab { right: 24px; bottom: 20px; } }
 /* parity 2026-10-21：v3 技能列表末尾「+ 添加技能」 */
 :root[data-ui-channel="p5"] .ach5-addsk { margin-top: 14px; }
 :root[data-ui-channel="p5"] .ach5p .ach5-ctl { margin-top: -6px; }

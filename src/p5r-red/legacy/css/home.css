@@ -101,7 +101,7 @@
 
 /* 面具与剪影行 */
 :root[data-ui-channel="p5"] .hm-maskrow { position: relative; height: 70px; display: flex; justify-content: center; align-items: center; margin: 4px 0 -8px !important; }
-:root[data-ui-channel="p5"] .hm-mask { filter: drop-shadow(3px 4px 0 #111); transform: rotate(-4deg); }
+:root[data-ui-channel="p5"] .hm-mask { filter: drop-shadow(3px 4px 0 #111); transform: rotate(-4deg); pointer-events: none; } /* retest5 10-21：装饰面具（aria-hidden）的盒子不再挡住上方仪式卡轮播圆点 */
 :root[data-ui-channel="p5"] .hm-mask-eye { transform-origin: center; transform-box: fill-box; }
 :root[data-ui-channel="p5"] .hm-sil2 { position: absolute; bottom: -6px; height: 88px; }
 :root[data-ui-channel="p5"] .hm-sil2 svg { height: 100%; overflow: visible; }

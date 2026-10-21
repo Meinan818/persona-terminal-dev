@@ -1,0 +1,458 @@
+{
+ "assets": [
+  {
+   "id": "bg.battle",
+   "file": "assets/bg-battle.webp",
+   "w": 2240,
+   "h": 950,
+   "firstPack": true,
+   "source": "generated",
+   "note": "generate_image（P3R 画风，2026-10-22 生成，原图 work/p3b-gen/）：塔尔塔罗斯 Thebel 战斗场，出血 2240×950 覆盖 21:9 与 4:3"
+  },
+  {
+   "id": "bg.battle.darkhour",
+   "file": "assets/bg-battle-darkhour.webp",
+   "w": 2240,
+   "h": 950,
+   "firstPack": false,
+   "source": "generated",
+   "note": "bg.battle 预烘焙影时间：绿调 + 血月（静态位图，bakedSwap 用）"
+  },
+  {
+   "id": "bg.hub.night",
+   "file": "assets/bg-hub-night.webp",
+   "w": 2240,
+   "h": 950,
+   "firstPack": false,
+   "source": "generated",
+   "note": "generate_image（P3R 画风，2026-10-22 生成，原图 work/p3b-gen/）：巌户台/港岛夜景屋顶，出血 2240×950"
+  },
+  {
+   "id": "bg.hub.darkhour",
+   "file": "assets/bg-hub-darkhour.webp",
+   "w": 2240,
+   "h": 950,
+   "firstPack": false,
+   "source": "generated",
+   "note": "bg.hub.night 预烘焙影时间：绿调 + 血月"
+  },
+  {
+   "id": "bg.map.tile",
+   "file": "assets/bg-map-tile.webp",
+   "w": 512,
+   "h": 512,
+   "firstPack": false,
+   "source": "generated",
+   "note": "可平铺 512²（由 bg.battle 地面镜像拼接，无缝），塔层地图底"
+  },
+  {
+   "id": "bg.map.tile.darkhour",
+   "file": "assets/bg-map-tile-darkhour.webp",
+   "w": 512,
+   "h": 512,
+   "firstPack": false,
+   "source": "generated",
+   "note": "bg.map.tile 预烘焙影时间绿调"
+  },
+  {
+   "id": "cutin.hero",
+   "file": "assets/cutin-hero.webp",
+   "w": 1280,
+   "h": 320,
+   "firstPack": true,
+   "source": "official",
+   "note": "主角 cut-in 眼部横条；源 https://megamitensei.fandom.com/wiki/File:P3_Protag_Reload.png（P3R 官方立绘裁切）"
+  },
+  {
+   "id": "allout.finish.default",
+   "file": "assets/allout-finish.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": true,
+   "source": "generated",
+   "note": "generate_image（P3R 画风，2026-10-22 生成，原图 work/p3b-gen/）：P3R「Finishing Touch」式总攻定格画（青底主角），参照 https://megamitensei.fandom.com/wiki/File:P3RE_FinishingTouch_Protagonist.gif 构图；左 1/3 留给总伤害"
+  },
+  {
+   "id": "highlight.hero",
+   "file": "assets/highlight-hero.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "generated",
+   "note": "generate_image（P3R 画风，2026-10-22 生成，原图 work/p3b-gen/）：主角 + 俄耳甫斯 Theurgy 定格画（延迟包：必杀）"
+  },
+  {
+   "id": "persona.orpheus",
+   "file": "assets/persona-orpheus.webp",
+   "w": 384,
+   "h": 640,
+   "firstPack": true,
+   "source": "official",
+   "note": "召唤 Persona 俄耳甫斯；源 https://static.wikia.nocookie.net/megamitensei/images/c/c6/Orpheus_P3R.jpg（P3R 图鉴，rembg 抠图，复用 personas/p3r/full/orpheus.webp）"
+  },
+  {
+   "id": "persona.apsaras",
+   "file": "assets/persona-apsaras.webp",
+   "w": 403,
+   "h": 640,
+   "firstPack": false,
+   "source": "official",
+   "note": "Cadenza 搭档 Persona 飞天；源 personas/p3r/full/apsaras.webp（P3R 图鉴 Apsaras_P3R.jpg）"
+  },
+  {
+   "id": "atlas.portraits",
+   "file": "assets/atlas-portraits.webp",
+   "w": 1934,
+   "h": 624,
+   "firstPack": true,
+   "source": "official",
+   "note": "我方 4 人立绘图集（每人 head/body 两层，帧坐标 assets/atlas-portraits.json）。hero 源 https://megamitensei.fandom.com/wiki/File:P3_Protag_Reload.png 上半身；yukari/junpei/akihiko 源 https://megamitensei.fandom.com/wiki/File:P3RE_Portrait_{Yukari,Junpei,Akihiko}.png"
+  },
+  {
+   "id": "unit.hero.head",
+   "file": "assets/atlas-portraits.webp",
+   "w": 500,
+   "h": 291,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits",
+   "note": "图集帧 unit.hero.head"
+  },
+  {
+   "id": "unit.hero.body",
+   "file": "assets/atlas-portraits.webp",
+   "w": 500,
+   "h": 329,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits",
+   "note": "图集帧 unit.hero.body"
+  },
+  {
+   "id": "unit.yukari.head",
+   "file": "assets/atlas-portraits.webp",
+   "w": 430,
+   "h": 353,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits",
+   "note": "图集帧 unit.yukari.head"
+  },
+  {
+   "id": "unit.yukari.body",
+   "file": "assets/atlas-portraits.webp",
+   "w": 430,
+   "h": 267,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits",
+   "note": "图集帧 unit.yukari.body"
+  },
+  {
+   "id": "unit.junpei.head",
+   "file": "assets/atlas-portraits.webp",
+   "w": 500,
+   "h": 341,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits",
+   "note": "图集帧 unit.junpei.head"
+  },
+  {
+   "id": "unit.junpei.body",
+   "file": "assets/atlas-portraits.webp",
+   "w": 500,
+   "h": 279,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits",
+   "note": "图集帧 unit.junpei.body"
+  },
+  {
+   "id": "unit.akihiko.head",
+   "file": "assets/atlas-portraits.webp",
+   "w": 494,
+   "h": 347,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits",
+   "note": "图集帧 unit.akihiko.head"
+  },
+  {
+   "id": "unit.akihiko.body",
+   "file": "assets/atlas-portraits.webp",
+   "w": 494,
+   "h": 273,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits",
+   "note": "图集帧 unit.akihiko.body"
+  },
+  {
+   "id": "atlas.hud",
+   "file": "assets/atlas-hud.webp",
+   "w": 1024,
+   "h": 1024,
+   "firstPack": true,
+   "source": "generated",
+   "note": "HUD/FX 图集：程序绘制矢量小件（光标、月相 0–7、刀口、斜条、粒子帧、maskWipe 剪影）+ 塔罗卡（复用 assets/p3/official/tarot-back.png，generate_image 类官方）；帧坐标 assets/atlas-hud.json"
+  },
+  {
+   "id": "ui.cursor",
+   "file": "assets/atlas-hud.webp",
+   "w": 120,
+   "h": 80,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.cursor"
+  },
+  {
+   "id": "ui.moon.0",
+   "file": "assets/atlas-hud.webp",
+   "w": 96,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.moon.0"
+  },
+  {
+   "id": "ui.moon.1",
+   "file": "assets/atlas-hud.webp",
+   "w": 96,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.moon.1"
+  },
+  {
+   "id": "ui.moon.2",
+   "file": "assets/atlas-hud.webp",
+   "w": 96,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.moon.2"
+  },
+  {
+   "id": "ui.moon.3",
+   "file": "assets/atlas-hud.webp",
+   "w": 96,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.moon.3"
+  },
+  {
+   "id": "ui.moon.4",
+   "file": "assets/atlas-hud.webp",
+   "w": 96,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.moon.4"
+  },
+  {
+   "id": "ui.moon.5",
+   "file": "assets/atlas-hud.webp",
+   "w": 96,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.moon.5"
+  },
+  {
+   "id": "ui.moon.6",
+   "file": "assets/atlas-hud.webp",
+   "w": 96,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.moon.6"
+  },
+  {
+   "id": "ui.moon.7",
+   "file": "assets/atlas-hud.webp",
+   "w": 96,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.moon.7"
+  },
+  {
+   "id": "ui.notch",
+   "file": "assets/atlas-hud.webp",
+   "w": 64,
+   "h": 24,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.notch"
+  },
+  {
+   "id": "ui.slab",
+   "file": "assets/atlas-hud.webp",
+   "w": 256,
+   "h": 64,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.slab"
+  },
+  {
+   "id": "ui.command.row",
+   "file": "assets/atlas-hud.webp",
+   "w": 476,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.command.row"
+  },
+  {
+   "id": "fx.streak",
+   "file": "assets/atlas-hud.webp",
+   "w": 96,
+   "h": 10,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.streak"
+  },
+  {
+   "id": "fx.shard.0",
+   "file": "assets/atlas-hud.webp",
+   "w": 64,
+   "h": 64,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.shard.0"
+  },
+  {
+   "id": "fx.shard.1",
+   "file": "assets/atlas-hud.webp",
+   "w": 64,
+   "h": 64,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.shard.1"
+  },
+  {
+   "id": "fx.shard.2",
+   "file": "assets/atlas-hud.webp",
+   "w": 64,
+   "h": 64,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.shard.2"
+  },
+  {
+   "id": "fx.spark",
+   "file": "assets/atlas-hud.webp",
+   "w": 32,
+   "h": 32,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.spark"
+  },
+  {
+   "id": "fx.dot",
+   "file": "assets/atlas-hud.webp",
+   "w": 16,
+   "h": 16,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.dot"
+  },
+  {
+   "id": "fx.wipe.crescent",
+   "file": "assets/atlas-hud.webp",
+   "w": 384,
+   "h": 384,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.wipe.crescent"
+  },
+  {
+   "id": "fx.wipe.blade",
+   "file": "assets/atlas-hud.webp",
+   "w": 384,
+   "h": 384,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.wipe.blade"
+  },
+  {
+   "id": "fx.tarot",
+   "file": "assets/atlas-hud.webp",
+   "w": 200,
+   "h": 300,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.tarot"
+  },
+  {
+   "id": "fx.evoker.ring",
+   "file": "assets/atlas-hud.webp",
+   "w": 128,
+   "h": 128,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 fx.evoker.ring"
+  },
+  {
+   "id": "ui.tag.plate",
+   "file": "assets/atlas-hud.webp",
+   "w": 220,
+   "h": 72,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.tag.plate"
+  },
+  {
+   "id": "ui.shield.pip",
+   "file": "assets/atlas-hud.webp",
+   "w": 28,
+   "h": 28,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud",
+   "note": "图集帧 ui.shield.pip"
+  }
+ ],
+ "filters": [],
+ "fonts": [
+  {
+   "family": "P3B Display",
+   "file": "assets/fonts/p3b-display.woff2",
+   "chars": "一三上下不中二亏五交伤倒偷先全六具凸击利制功发召员周唤四地塔多委害尔层峨弦影御思总成战托技攀攻斯新日时更月术束残涉满灭牌率登盈眉第级结罗考胜能被袭超跑送逃遇道遭间防阶",
+   "role": "display",
+   "pack": "first"
+  },
+  {
+   "family": "P3B Number",
+   "file": "assets/fonts/p3b-number.woff2",
+   "chars": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~×·…%",
+   "role": "number",
+   "pack": "first"
+  }
+ ]
+}

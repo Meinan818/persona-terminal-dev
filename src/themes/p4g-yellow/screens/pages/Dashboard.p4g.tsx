@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Dashboard.p4g —— 首页（真实 src/pages/Dashboard.tsx 的 P4 分支），只换 P4G 渲染，控件/入口一个不少：
  *   页头：TODAY'S SHOW 眉标、MASKARIA 大标题、岁时小签（气泡）、天空角标（月相 ⇄ 天气，翻牌）、大号日期+星期+时段+天气 HUD
  *   问候题板：时段问候（称呼缺省「朋友」）+ 副句；钉选宣告卡横条 / 占位（✕ 不再提示）/「你有 N 张倒计时未钉到主页」；今日进度 N/M
@@ -35,6 +35,7 @@ import { OnThisDaySheetP4G } from '@yellow/screens/overlays/OnThisDaySheet.p4g';
 import { DecayModalP4G } from '@yellow/screens/overlays/DashboardDecayModal.p4g';
 import { UrgentToastP4G, urgentText } from '@yellow/screens/overlays/DashboardToasts.p4g';
 import { ATTR_IDS, levelTitle, masteryOf, masteryTitle, useHomeData, homeOps } from '@yellow/adapters/pkg1';
+import { useAppStore } from '@/store';
 
 const GREETINGS: Record<string, string[]> = {
   dawn: ['n，新的一天开始了', 'n，晨光已到，起身了', 'n，早安，今天也要加油', 'n，清晨的空气真好'],
@@ -72,18 +73,20 @@ export default function Dashboard({ params }: PageProps) {
   const [completed, setCompleted] = useState<{ title: string; pts: number; hint?: { achievements: number; skills: number } } | null>(null);
   /* 真实入口：完成任务 → 今日完成 → （关掉后）按顺序接 属性升级 / 精通提升 → 成就 / 技能解锁 → 愿望进度 → 组织庆祝（真实 App 顶层队列，一次一张）。
      demo 按任务演示：t1 升级+成就、t2 精通+技能、t4 愿望 +3%、t5 组织作战达成、t6 愿望持平。 */
-  type Follow = { k: 'lv'; attr: AttributeId; lv: number; stars?: number } | { k: 'achv' } | { k: 'skill' } | { k: 'wish'; flat?: boolean } | { k: 'org' };
-  const FOLLOW: Record<string, Follow[]> = {
-    t1: [{ k: 'lv', attr: 'guts', lv: 4 }, { k: 'achv' }],
-    t2: [{ k: 'lv', attr: 'knowledge', lv: 10, stars: 2 }, { k: 'skill' }],
-    t4: [{ k: 'wish' }],
-    t5: [{ k: 'org' }],
-    t6: [{ k: 'wish', flat: true }],
-  };
+  type Follow = { k: 'lv'; attr: AttributeId; lv: number; stars?: number } | { k: 'achv'; title: string } | { k: 'skill'; name: string } | { k: 'wish'; flat?: boolean } | { k: 'org' };
+
   const [queue, setQueue] = useState<Follow[]>([]);
   const [pendingQ, setPendingQ] = useState<Follow[]>([]);
   const headF = queue[0] ?? null;
   const shiftQ = () => setQueue((q) => q.slice(1));
+  // 完成弹窗可能先自动关闭、异步结果后到：pendingQ 一到且弹窗已关就立刻排队，避免演出丢失
+  useEffect(() => {
+    if (completed || !pendingQ.length) return;
+    const q = pendingQ;
+    setPendingQ([]);
+    const t = window.setTimeout(() => setQueue(q), 320);
+    return () => clearTimeout(t);
+  }, [completed, pendingQ]);
   const [otdOpen, setOtdOpen] = useState(false);
   const [dealOpen, setDealOpen] = useState(false);
   const [decay, setDecay] = useState(params.get('decay') === '1');
@@ -134,14 +137,25 @@ export default function Dashboard({ params }: PageProps) {
     const t = todos.find((x) => x.id === id)!;
     const tg = target(t);
     if ((counts[id] ?? 0) >= tg) return;
-    void homeOps.completeTodo(id);
+    const before = useAppStore.getState();
+    const achBefore = new Set(before.achievements.filter((a) => a.unlocked).map((a) => a.id));
+    const skillBefore = new Set(before.skills.filter((s) => s.unlocked).map((s) => s.id));
+    const lvBefore = new Map(before.attributes.map((a) => [a.id, a.level]));
+    void homeOps.completeTodo(id).then((result) => {
+      const s = useAppStore.getState();
+      const newAch = s.achievements.filter((a) => a.unlocked && !achBefore.has(a.id));
+      const newSkills = s.skills.filter((x) => x.unlocked && !skillBefore.has(x.id));
+      const lvUps = s.attributes.filter((a) => (lvBefore.get(a.id) ?? a.level) < a.level);
+      const q: Follow[] = [];
+      lvUps.forEach((a) => q.push({ k: 'lv', attr: a.id, lv: a.level, stars: a.level >= 10 ? masteryOf(a.points)?.stars ?? 0 : 0 }));
+      newAch.forEach((a) => q.push({ k: 'achv', title: a.title }));
+      newSkills.forEach((x) => q.push({ k: 'skill', name: x.name }));
+      const pts = t.points + (t.extraBoosts?.reduce((sum, b) => sum + b.points, 0) ?? 0);
+      setCompleted({ title: t.title, pts, hint: result?.unlockHints });
+      setPendingQ(q);
+    });
     const next = Math.min(tg, (counts[id] ?? 0) + 1);
     setCounts((c) => ({ ...c, [id]: next }));
-    if (next >= tg) {
-      const pts = t.points + (t.extraBoosts?.reduce((s, b) => s + b.points, 0) ?? 0);
-      setCompleted({ title: t.title, pts, hint: t.id === 't1' ? { achievements: 1, skills: 0 } : t.id === 't2' ? { achievements: 0, skills: 1 } : undefined });
-      setPendingQ(import.meta.env.DEV && location.search.includes('__dev=1') ? FOLLOW[t.id] ?? [] : []);
-    }
   };
 
   if (state === 'loading') return <div className="flex min-h-[60vh] items-center justify-center"><P4Loading label="信号接收中" /></div>;
@@ -207,10 +221,10 @@ export default function Dashboard({ params }: PageProps) {
         </CollageStagger>
       </div>
 
-      <TodoCompleteP4G open={!!completed} onClose={() => { setCompleted(null); if (pendingQ.length) { const q = pendingQ; setPendingQ([]); window.setTimeout(() => setQueue(q), 320); } }} title={completed?.title ?? ''} totalPoints={completed?.pts ?? 0} unlockHint={completed?.hint} />
+      <TodoCompleteP4G open={!!completed} onClose={() => setCompleted(null)} title={completed?.title ?? ''} totalPoints={completed?.pts ?? 0} unlockHint={completed?.hint} />
       <LevelUpP4G open={headF?.k === 'lv'} onClose={shiftQ} attributeName={headF?.k === 'lv' ? ATTR_NAMES[headF.attr] : undefined} newLevel={headF?.k === 'lv' ? headF.lv : 5} masteryStars={headF?.k === 'lv' ? headF.stars : undefined} />
-      <AchievementUnlockP4G open={headF?.k === 'achv'} onClose={shiftQ} achievementTitle="晨光跑者" />
-      <SkillUnlockP4G open={headF?.k === 'skill'} onClose={shiftQ} />
+      <AchievementUnlockP4G open={headF?.k === 'achv'} onClose={shiftQ} achievementTitle={headF?.k === 'achv' ? headF.title : ''} />
+      <SkillUnlockP4G open={headF?.k === 'skill'} onClose={shiftQ} skillName={headF?.k === 'skill' ? headF.name : undefined} />
       <WishProgressView payload={headF?.k === 'wish' ? { title: '一年读完 24 本书', pct: headF.flat ? 58 : 61, delta: headF.flat ? 0 : 3, times: 18 } : null} onClose={shiftQ} />
       <OrgCelebration head={headF?.k === 'org' ? DEMO_CELEB.op : null} onClose={shiftQ} />
       <OnThisDaySheetP4G open={otdOpen} onClose={() => setOtdOpen(false)} />

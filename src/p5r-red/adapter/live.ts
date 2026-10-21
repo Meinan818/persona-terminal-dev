@@ -1,6 +1,6 @@
 /**
- * 数据适配层 adapter/live.ts —— 红频道与正式仓库之间唯一的连接点，也是整个 src/p5r-red/ 里【唯一允许修改】的文件
- * （同目录 README.md 是它的说明书 + 映射表）。别的文件一个字节都不要改，改了 check-copy 会失败。
+ * 数据适配层 adapter/live.ts —— 红频道与正式仓库之间的数据和操作连接点。
+ * 原包默认只许改adapter；用户批准的记账及资产/统计逻辑例外范围见 PROJECT_STATE.md，原校验脚本保留。
  *
  * 做法：红频道的页面全部读 demo 的 mock 对象（src/p5r-red/mock/data.ts 的 D、mock/pkg5-data.ts 的数组、记账 FLOW）。
  * 这里把真实 store（useAppStore）的字段【原地写进】这些对象（只改内容，不换引用），然后通知 RedChannelCore 重渲染。
@@ -9,16 +9,18 @@
  *   · useLiveFlags()     夜间（settings.darkMode）与低动效（!useBoldness()）
  * 规则：
  *   1. 真实数据为空就写空数组 / 0（不要回填 mock，给真实用户看假数据是事故）。
- *   2. 用户批准的记账例外：通过 ledgerLiveBridge 调用既有本地记账 action；其它页面仍只读。
+ *   2. 用户批准的记账、资产和统计例外通过操作桥调用既有本地 action；不扩大到其它页面。
  *   3. 字段对不上时只改这里的映射函数，不要去改页面。
  */
 import { useAppStore, toLocalDateKey } from '@/store';
 import { db } from '@/db';
-import { cycleRangeForKey, incomeTypeFromSource, ledgerCycle, roundMoney, shiftMonth } from '@/utils/ledgerFormat';
+import { catMeta, cycleRangeForKey, incomeTypeFromSource, ledgerCycle, roundMoney, shiftMonth } from '@/utils/ledgerFormat';
+import { buildSettlementData, offlineSettlement, type SettleScope } from '@/utils/ledgerSettlement';
+import { connectLedgerDetails } from '@/p5r-red/screens/pkg4/d4';
 import { useBoldness } from '@/utils/boldness';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
 import { TAROT_BY_ID } from '@/constants/tarot';
-import type { Activity, Achievement, AttributeId, CallingCard, Confidant, LedgerEntry, Skill, Todo } from '@/types';
+import type { Activity, Achievement, AttributeId, CallingCard, Confidant, LedgerAsset, LedgerEntry, Skill, Todo } from '@/types';
 import { D, type AttrId, type MockCallingCard, type MockConfidant, type MockTodo } from '@/p5r-red/mock/data';
 import { ACTIVITIES, CALLING_ARCHIVED, CALLING_CARDS, ACHIEVEMENTS, SKILLS, type MockAch, type MockActivity, type MockCC, type MockSkill, type CondType } from '@/p5r-red/mock/pkg5-data';
 import { FLOW, connectLedgerLive, type LedgerLiveBridge, type LiveLedgerRow } from '@/p5r-red/screens/pkg4/ledger4';
@@ -188,6 +190,93 @@ export const ledgerLiveBridge: LedgerLiveBridge = {
   },
 };
 connectLedgerLive(ledgerLiveBridge);
+
+type DetailMode = 'month' | 'period';
+type AssetDraft = Pick<LedgerAsset, 'name' | 'price' | 'addOns'>;
+const detailWatch: (keyof S)[] = ['ledgerEntries', 'assets', 'budgets', 'ledgerLoaded', 'settings'];
+const detailRange = (offset = 0, mode: DetailMode = 'period') => {
+  const s = useAppStore.getState(), today = toLocalDateKey();
+  const payCycle = mode === 'period' && !!s.settings.ledgerPayCycleEnabled;
+  const resetDay = s.settings.ledgerResetDay ?? 1;
+  const period = shiftMonth(ledgerCycle(payCycle, resetDay, today).key, Math.min(0, Math.trunc(offset)));
+  const range = cycleRangeForKey(payCycle, resetDay, period);
+  return { s, today, period, range, cycle: { payCycle, resetDay } };
+};
+const detailColors = ['#D7000F', '#111', '#8E0010', '#6b6862', '#b9b2a6'];
+const assetRequests = new Map<string, Promise<LedgerAsset>>();
+let rewardQueue: Promise<unknown> = Promise.resolve();
+export const ledgerDetailsBridge = {
+  ready: ensureLedger,
+  amount: ledgerLiveBridge.amount,
+  subscribe(cb: () => void) {
+    return useAppStore.subscribe((s, previous) => { if (detailWatch.some(key => s[key] !== previous[key])) cb(); });
+  },
+  stats(offset = 0, mode: DetailMode = 'period') {
+    const { s, period, range, cycle } = detailRange(offset, mode);
+    const entries = s.ledgerLoaded ? s.ledgerEntries : [];
+    const inRange = (p: string) => { const [a, b] = cycleRangeForKey(cycle.payCycle, cycle.resetDay, p); return entries.filter(e => e.date >= a && e.date <= b); };
+    const rows = inRange(period), expenses = rows.filter(e => e.direction === 'expense'), incomes = rows.filter(e => e.direction === 'income');
+    const sum = (xs: LedgerEntry[]) => roundMoney(xs.reduce((n, e) => n + e.amount, 0));
+    const groups = new Map<string, number>();
+    const channels = new Map<string, number>();
+    for (const e of expenses) { const key = e.type ?? 'other'; groups.set(key, (groups.get(key) ?? 0) + e.amount); const ch = e.channel || '未填'; channels.set(ch, (channels.get(ch) ?? 0) + e.amount); }
+    const previous = inRange(shiftMonth(period, -1)).filter(e => e.direction === 'expense');
+    const ex = sum(expenses), inc = sum(incomes), budget = s.ledgerLoaded ? s.getBudget(period) : undefined;
+    const cats = [...groups].sort((a, b) => b[1] - a[1]).map(([key, value], i) => {
+      const before = sum(previous.filter(e => (e.type ?? 'other') === key));
+      return { name: catMeta(key as LedgerEntry['type']).label, value: roundMoney(value), color: detailColors[i % detailColors.length], change: before > 0 ? (value - before) / before * 100 : null };
+    });
+    const trend = Array.from({ length: 6 }, (_, i) => { const p = shiftMonth(period, i - 5); return { label: `${Number(p.slice(5))}月`, value: sum(inRange(p).filter(e => e.direction === 'expense')) }; });
+    const labor = sum(incomes.filter(e => e.incomeType === 'labor'));
+    return { ready: s.ledgerLoaded, period, range, ex, inc, budget: budget?.monthlyLimit, savings: budget?.savingsGoal, cats, channels: [...channels].sort((a, b) => b[1] - a[1]).map(([name, value], i) => ({ name, value: roundMoney(value), color: detailColors[i % detailColors.length] })), trend, labor, other: roundMoney(inc - labor) };
+  },
+  assets() {
+    const s = useAppStore.getState(), ready = s.ledgerLoaded;
+    const assets = ready ? s.assets : [], total = ready ? s.getTotalBalance() : 0;
+    const fixed = ready ? roundMoney(s.getFixedAssetTotal()) : 0, savings = ready ? s.getSavings() : 0;
+    const deposit = Math.max(0, Math.min(savings, total));
+    return { ready, assets, liquid: roundMoney(total - deposit), deposit, fixed, savings, net: roundMoney(total + fixed) };
+  },
+  async saveAsset(draft: AssetDraft, id?: string, requestId?: string): Promise<LedgerAsset> {
+    const existing = requestId ? assetRequests.get(requestId) : undefined; if (existing) return existing;
+    const operation = (async () => {
+      await ensureLedger();
+      const name = draft.name.trim(), price = draft.price;
+      const addOns = (draft.addOns ?? []).map(a => ({ name: a.name.trim(), amount: a.amount }));
+      if (!name || !Number.isFinite(price) || price < 0 || addOns.some(a => !a.name || !Number.isFinite(a.amount) || a.amount < 0)) throw new Error('请填写有效名称和金额');
+      const patch = { name, price: roundMoney(price), addOns: addOns.map(a => ({ ...a, amount: roundMoney(a.amount) })) };
+      const s = useAppStore.getState();
+      if (id) {
+        const asset = s.assets.find(a => a.id === id); if (!asset) throw new Error('这件资产已不存在');
+        await s.updateAsset(id, patch); return { ...asset, ...patch };
+      }
+      return s.addAsset({ ...patch, category: 'other', purchaseDate: toLocalDateKey(), status: 'inuse' });
+    })();
+    if (requestId) {
+      assetRequests.set(requestId, operation);
+      operation.catch(() => { assetRequests.delete(requestId); });
+      if (assetRequests.size > 100) { const key = assetRequests.keys().next().value; if (key) assetRequests.get(key)?.then(() => assetRequests.delete(key), () => {}); }
+    }
+    return operation;
+  },
+  async deleteAsset(id: string) { await ensureLedger(); await useAppStore.getState().deleteAsset(id); },
+  async settlement(scope: SettleScope, offset = 0, mode: DetailMode = 'period') {
+    await ensureLedger();
+    const { s, today, period, range, cycle } = detailRange(offset, mode);
+    const anchor = offset === 0 ? today : range[1];
+    const data = buildSettlementData(s.ledgerEntries, scope, anchor, s.getBudget(period)?.monthlyLimit, s.settings.currency, cycle);
+    let bonus = false, challenge: number | null = null;
+    if (scope === 'month' && (mode === 'period' || !s.settings.ledgerPayCycleEnabled)) {
+      const claim = rewardQueue.then(async () => {
+        bonus = await useAppStore.getState().claimLedgerBudgetBonus(period);
+        challenge = await useAppStore.getState().claimLedgerChallengeBonus(period);
+      });
+      rewardQueue = claim.catch(() => {}); await claim;
+    }
+    return { data, result: offlineSettlement(data), bonus, challenge };
+  },
+};
+connectLedgerDetails(ledgerDetailsBridge);
 
 /** 把 store 当前状态写进全部 mock 对象 */
 export function syncLiveDataNow(s: S = useAppStore.getState()) {

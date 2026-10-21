@@ -64,7 +64,7 @@ export function applyLedgerParams(q) {
   const s = q.get('state'); L.empty = s === 'empty' || s === 'first'; L.first = s === 'first'; L.over = s === 'over'; L.budget = s !== 'nobudget' && s !== 'first';
   L.rows = L.empty ? [] : FLOW.map((r) => ({ ...r }));
   L.ocr = q.get('ocr') || 'ok';
-  if (liveLedger) { L.month = 0; syncLedger(); }
+  if (liveLedger) { if (L.view !== 'stats') L.month = 0; syncLedger(); }
 }
 const sums = () => { const state = liveState(); if (state) return { ex: state.ex, inc: state.inc }; const ex = L.rows.filter((r) => r.dir === 'expense').reduce((a, r) => a + r.amount, 0) + (L.empty ? 0 : 1361) + (L.over ? 1400 : 0), inc = L.rows.filter((r) => r.dir === 'income').reduce((a, r) => a + r.amount, 0) + (L.empty ? 0 : 2900); return { ex, inc }; };
 
@@ -108,7 +108,7 @@ export function ledgerMount(root) {
   const host = () => root.querySelector('[data-vhost]');
   const drawView = () => {
     const h = host();
-    if (L.view === 'stats') { INLINE.host = h; OD.openLedgerStats(L.empty ? 'empty' : L.over ? 'over' : 'data'); INLINE.host = null; return; }
+    if (L.view === 'stats') { INLINE.host = h; OD.openLedgerStats(L.empty ? 'empty' : L.over ? 'over' : 'data', L.month); INLINE.host = null; return; }
     h.innerHTML = monthNav() + flowList(); bindRows(); P5.panelIn(h.querySelectorAll('.led-row'), { from: 'right', stagger: .04 });
   };
   const drawBal = () => { const b = root.querySelector('.led-bal'); b.innerHTML = balCard(); };

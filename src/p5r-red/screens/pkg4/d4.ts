@@ -17,6 +17,18 @@ const AN = (k) => P5.ATTR[k].name;
 /** inline 模式：设 INLINE.host 后调用 openX()，stage() 渲染进该容器（页面内 Tab）；INLINE.onClose = 舞台 close 时回调 */
 export const INLINE: any = { host: null, onClose: null };
 export const YR: any = { show: null };
+type LedgerDetailsBridge = typeof import('@/p5r-red/adapter/live').ledgerDetailsBridge;
+let detailLedger: LedgerDetailsBridge | undefined;
+export function connectLedgerDetails(bridge: LedgerDetailsBridge) { detailLedger = bridge; }
+// 命令式区块随容器退出释放订阅，不重建正在编辑的表单。
+function watchLedgerDetails(root, draw) {
+  if (!detailLedger) return;
+  const off = detailLedger.subscribe(() => { if (root.isConnected) draw(); });
+  const observer = new MutationObserver(() => { if (!root.isConnected) { off(); observer.disconnect(); } });
+  observer.observe(document.body, { childList: true, subtree: true });
+  detailLedger.ready().then(() => { if (root.isConnected) draw(); }).catch(() => P5.toast('账目读取失败，请重试'));
+}
+let assetFormSequence = 0;
   /* ═════════ 通用件 ═════════ */
   /** 段落标题（墨楔 + 红影） */
   const ttl = (t, en = '') => `<div class="od-ttl"><b>${t}</b>${en ? `<small>${en}</small>` : ''}</div>`;
@@ -822,53 +834,75 @@ export const YR: any = { show: null };
   /* ══════════════════ 记账 ledger/LedgerStats · AssetBoard · Donut ══════════════════ */
   const CAT = [['餐饮', 1240, '#D7000F'], ['交通', 210, '#111'], ['学习', 460, '#8E0010'], ['娱乐', 320, '#6b6862'], ['日用', 180, '#b9b2a6']];
   const yen = (n) => '¥' + n.toLocaleString();
-  function openLedgerStats(st0 = 'data') {
+  function openLedgerStats(st0 = 'data', offset = 0) {
     stage({ title: '收支统计', en: 'STATS', seed: 91, cls: 'od-led', body: `${demoBar([['data', '有记录'], ['over', '超预算'], ['empty', '空']], st0)}<div data-host></div>`, onMount(w) {
-      stateful(w, [], st0, (st) => { if (st === 'empty') return `<div class="od-empty"><b>这个月还没有记录。</b><p>记一笔之后，这里会出现类目、趋势和伊戈尔的提点。</p></div>`;
-        const ex = st === 'over' ? 2860 : 2410, inc = 3200, bud = 2600;
-        return `<div class="od-ls-top">${seg([['month', '本月收支'], ['period', '本期收支']], 'month')}${U.btn('🔮 让伊戈尔结算（周 / 月）', { tone: 'red', size: 'sm', seed: 831, attrs: 'data-act="settle"' })}</div>
+      let mode = 'period', events;
+      const draw = stateful(w, [], st0, (st) => { const live = detailLedger?.stats(offset, mode); if (live ? live.ex === 0 && live.inc === 0 : st === 'empty') return `<div class="od-empty"><b>这个月还没有记录。</b><p>记一笔之后，这里会出现类目、趋势和伊戈尔的提点。</p></div>`;
+        const ex = live ? live.ex : st === 'over' ? 2860 : 2410, inc = live ? live.inc : 3200, bud = live ? live.budget ?? 0 : 2600;
+        const overBudget = (!live || live.budget != null) && ex > bud;
+        const cats = live ? live.cats.map(c => [c.name, c.value, c.color, c.change]) : CAT;
+        return `<div class="od-ls-top">${seg([['month', '本月收支'], ['period', '本期收支']], detailLedger ? mode : 'month')}${U.btn('🔮 让伊戈尔结算（周 / 月）', { tone: 'red', size: 'sm', seed: 831, attrs: 'data-act="settle"' })}</div>
           <div class="od-ls-kpi">${[['支出', ex, ''], ['收入', inc, 'in'], ['结余', inc - ex, inc - ex >= 0 ? 'in' : '']].map(([k, v, c], i) => U.shp('div', { kind: 'cut', seed: 832 + i, tone: i === 0 ? 'red' : 'ink', cls: 'od-kpi' }, `<small>${k}</small><b class="${c}">${yen(v)}</b>`)).join('')}</div>
-          ${U.shp('div', { kind: 'torn', seed: 836, cls: 'od-ls-bud' }, `<div class="od-ls-bh"><b>本月预算 ${yen(bud)}</b><span>已花 <b>${yen(ex)}</b> · ${ex > bud ? `<em class="od-err">超 ${yen(ex - bud)}</em>` : `剩 ${yen(bud - ex)}`}</span></div>${bar(ex / bud * 100, ex > bud ? 'over' : '')}<p class="muted-d">🏆 省钱挑战 · 想省 ¥300 · 进度 ${ex > bud ? '0' : '62'}%</p>`)}
-          <div class="od-ls-grid">${U.shp('div', { kind: 'torn', seed: 837, cls: 'od-ls-c' }, `${ttl('支出类目')}<div class="od-ls-dn">${donut(CAT.map(([, v, c]) => ({ value: v, color: c })), CAT.reduce((a, c) => a + c[1], 0), { inner: `<small>本月支出</small><b>${yen(ex)}</b>` })}<ul class="od-lg">${CAT.map(([n, v, c]) => `<li><i style="background:${c}"></i>${n}<b>${yen(v)}</b></li>`).join('')}</ul></div>`)}
-            ${U.shp('div', { kind: 'torn', seed: 838, cls: 'od-ls-c' }, `${ttl('环比上月')}<div class="od-mom">${CAT.slice(0, 4).map(([n, v], i) => { const d = [12, -8, 30, -15][i]; return `<span><b>${n}</b><em class="${d > 0 ? 'up' : 'dn'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}%</em></span>`; }).join('')}</div>${ttl('月度支出趋势')}<div class="od-trend">${[1980, 2300, 2050, 2700, 2210, ex].map((v, i) => `<span><i style="height:${v / 30}%"></i><small>${(today.getMonth() - 4 + i + 12) % 12 || 12}月</small></span>`).join('')}</div>`)}
-            ${U.shp('div', { kind: 'torn', seed: 839, cls: 'od-ls-c' }, `${ttl('支付渠道')}<div class="od-ls-dn">${donut([{ value: 1400, color: '#D7000F' }, { value: 760, color: '#111' }, { value: 250, color: '#b9b2a6' }], 2410, { size: 110, inner: '<small>3 种</small>' })}<ul class="od-lg"><li><i style="background:#D7000F"></i>微信<b>¥1,400</b></li><li><i style="background:#111"></i>支付宝<b>¥760</b></li><li><i style="background:#b9b2a6"></i>银行卡<b>¥250</b></li></ul></div>`)}
-            ${U.shp('div', { kind: 'torn', seed: 840, cls: 'od-ls-c' }, `${ttl('收入构成')}<div class="od-inc"><span><b>劳动所得</b>${bar(84)}<em>¥2,700</em></span><span><b>其它收入</b>${bar(16)}<em>¥500</em></span></div><p class="muted-d">劳动所得 · 记账 +10 SP · 每日封顶 +2</p>`)}</div>`; },
-      (h) => h.addEventListener('click', (e) => { if (e.target.closest('[data-act="settle"]')) openSettle(); }));
+          ${U.shp('div', { kind: 'torn', seed: 836, cls: 'od-ls-bud' }, `<div class="od-ls-bh"><b>${live && live.budget == null ? '本月未设预算' : `本月预算 ${yen(bud)}`}</b><span>已花 <b>${yen(ex)}</b> · ${live && live.budget == null ? '未设预算' : overBudget ? `<em class="od-err">超 ${yen(ex - bud)}</em>` : `剩 ${yen(bud - ex)}`}</span></div>${bar(bud > 0 ? ex / bud * 100 : 0, overBudget ? 'over' : '')}<p class="muted-d">🏆 省钱挑战 · 想省 ${live ? live.savings == null ? '未设定' : yen(live.savings) : '¥300'} · 进度 ${live ? live.savings > 0 ? Math.round(Math.max(0, Math.min(100, (bud - ex) / live.savings * 100))) : 0 : ex > bud ? '0' : '62'}%</p>`)}
+          <div class="od-ls-grid">${U.shp('div', { kind: 'torn', seed: 837, cls: 'od-ls-c' }, `${ttl('支出类目')}<div class="od-ls-dn">${donut(cats.map(([, v, c]) => ({ value: v, color: c })), cats.reduce((a, c) => a + c[1], 0), { inner: `<small>本月支出</small><b>${yen(ex)}</b>` })}<ul class="od-lg">${cats.map(([n, v, c]) => `<li><i style="background:${c}"></i>${n}<b>${yen(v)}</b></li>`).join('')}</ul></div>`)}
+            ${U.shp('div', { kind: 'torn', seed: 838, cls: 'od-ls-c' }, `${ttl('环比上月')}<div class="od-mom">${cats.slice(0, 4).map(([n, v], i) => { const d = live ? cats[i][3] : [12, -8, 30, -15][i]; return `<span><b>${n}</b><em class="${d > 0 ? 'up' : 'dn'}">${d == null ? '暂无对比' : `${d > 0 ? '▲' : '▼'} ${Math.abs(Math.round(d))}%`}</em></span>`; }).join('')}</div>${ttl('月度支出趋势')}<div class="od-trend">${(live ? live.trend.map(t => t.value) : [1980, 2300, 2050, 2700, 2210, ex]).map((v, i) => `<span><i style="height:${live ? v / Math.max(1, ...live.trend.map(t => t.value)) * 100 : v / 30}%"></i><small>${live ? live.trend[i].label : `${(today.getMonth() - 4 + i + 12) % 12 || 12}月`}</small></span>`).join('')}</div>`)}
+            ${U.shp('div', { kind: 'torn', seed: 839, cls: 'od-ls-c' }, `${ttl('支付渠道')}<div class="od-ls-dn">${donut(live ? live.channels : [{ value: 1400, color: '#D7000F' }, { value: 760, color: '#111' }, { value: 250, color: '#b9b2a6' }], live ? ex : 2410, { size: 110, inner: `<small>${live ? live.channels.length : 3} 种</small>` })}<ul class="od-lg">${(live ? live.channels : [{name:'微信',value:1400,color:'#D7000F'},{name:'支付宝',value:760,color:'#111'},{name:'银行卡',value:250,color:'#b9b2a6'}]).map(c => `<li><i style="background:${c.color}"></i>${esc(c.name)}<b>${yen(c.value)}</b></li>`).join('')}</ul></div>`)}
+            ${U.shp('div', { kind: 'torn', seed: 840, cls: 'od-ls-c' }, `${ttl('收入构成')}<div class="od-inc"><span><b>劳动所得</b>${bar(live ? inc > 0 ? live.labor / inc * 100 : 0 : 84)}<em>${live ? yen(live.labor) : '¥2,700'}</em></span><span><b>其它收入</b>${bar(live ? inc > 0 ? live.other / inc * 100 : 0 : 16)}<em>${live ? yen(live.other) : '¥500'}</em></span></div><p class="muted-d">劳动所得 · 记账 +10 SP · 每日封顶 +2</p>`)}</div>`; },
+      (h) => { events?.abort(); events = new AbortController(); h.querySelector('.od-ls-top .seg')?.addEventListener('pick', e => { mode = e.detail; draw(st0); }, {signal:events.signal}); h.addEventListener('click', (e) => { if (e.target.closest('[data-act="settle"]')) openSettle(offset, mode); }, {signal:events.signal}); });
+      watchLedgerDetails(w, () => draw(st0, false));
       growDonuts(w);
     } });
   }
   const growDonuts = (root) => { if (RM()) return; root.querySelectorAll('.od-donut > svg').forEach((c, i) => c.animate([{ transform: 'scale(.6) rotate(-60deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, delay: 150 + i * 60, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' })); };
-  function openSettle() {
+  function openSettle(offset = 0, mode = 'period') {
     sheet('心相结算', `${seg([['month', '按月'], ['week', '按周']], 'month', 'data-p')}<div data-body></div>`, (sh) => {
-      const draw = (p) => { const b = sh.querySelector('[data-body]'); b.innerHTML = `<div class="od-c">${thinking('伊戈尔正凝视着你的账目……')}</div>`;
-        setTimeout(() => { b.innerHTML = `${p === 'month' ? `<p class="od-sp">🎉 本月不超预算 · +10 SP</p>` : ''}<div class="od-ls-kpi sm">${[['支出', p === 'month' ? 2410 : 560], ['收入', p === 'month' ? 3200 : 300], ['结余', p === 'month' ? 790 : -260]].map(([k, v]) => `<div class="q-row"><span class="q-k">${k}</span><b>${yen(v)}</b></div>`).join('')}</div>
-          <div class="od-settle">${[['最贵一笔', '二手书 · ¥245'], ['花最多的一天', '10月6日 · ¥388'], ['花最少的一天', '10月14日 · ¥6'], ['预期', `¥${p === 'month' ? '2,600' : '600'} · 省 ¥${p === 'month' ? 190 : 40}`], [`共 ${p === 'month' ? 20 : 7} 天`, `日均消费 ¥${p === 'month' ? 120 : 80}`]].map(([k, v]) => `<div class="od-os-row"><span class="od-k">${k}</span><b>${v}</b></div>`).join('')}</div>
-          ${U.shp('div', { kind: 'quad', seed: 841, tone: 'ink', cls: 'od-igor' }, `<b>伊戈尔的提点</b><p>「吃饭花得最多，这无可厚非。但那本二手书……客人，知识是不会打折的，可你的钱包会。」</p>`)}`; P5.panelIn(b.children, { stagger: .06 }); }, RM() ? 0 : 900); };
+      let sequence = 0;
+      const draw = (p) => { const b = sh.querySelector('[data-body]'); const current = ++sequence; b.innerHTML = detailLedger ? '正在读取本地账目…' : `<div class="od-c">${thinking('伊戈尔正凝视着你的账目……')}</div>`;
+        const show = (live) => { if (!sh.isConnected || current !== sequence) return; const d = live?.data; b.innerHTML = `${live ? live.bonus || live.challenge !== null ? `<p class="od-sp">🎉 ${live.bonus ? '预算达标 · +10 SP' : ''}${live.challenge !== null ? ' 省钱挑战达成 · +10 SP' : ''}</p>` : '' : p === 'month' ? `<p class="od-sp">🎉 本月不超预算 · +10 SP</p>` : ''}<div class="od-ls-kpi sm">${[['支出', live ? d.totalExpense : p === 'month' ? 2410 : 560], ['收入', live ? d.totalIncome : p === 'month' ? 3200 : 300], ['结余', live ? d.totalIncome - d.totalExpense : p === 'month' ? 790 : -260]].map(([k, v]) => `<div class="q-row"><span class="q-k">${k}</span><b>${yen(v)}</b></div>`).join('')}</div>
+          <div class="od-settle">${(live ? [['最贵一笔', d.extremes.priciestEntry ? `${d.extremes.priciestEntry.note} · ${yen(d.extremes.priciestEntry.amount)}` : '暂无'], ['花最多的一天', d.extremes.priciestDay ? `${d.extremes.priciestDay.date} · ${yen(d.extremes.priciestDay.amount)}` : '暂无'], ['花最少的一天', d.extremes.cheapestDay ? `${d.extremes.cheapestDay.date} · ${yen(d.extremes.cheapestDay.amount)}` : '暂无'], ['预期', d.periodBudget == null ? '未设预算' : `${yen(d.periodBudget)} · 省 ${yen(d.periodBudget - d.totalExpense)}`], [`共 ${d.days} 天`, `日均消费 ${yen(Math.round(d.actualDailyAvg * 100) / 100)}`]] : [['最贵一笔', '二手书 · ¥245'], ['花最多的一天', '10月6日 · ¥388'], ['花最少的一天', '10月14日 · ¥6'], ['预期', `¥${p === 'month' ? '2,600' : '600'} · 省 ¥${p === 'month' ? 190 : 40}`], [`共 ${p === 'month' ? 20 : 7} 天`, `日均消费 ¥${p === 'month' ? 120 : 80}`]]).map(([k, v]) => `<div class="od-os-row"><span class="od-k">${k}</span><b>${esc(v)}</b></div>`).join('')}</div>
+          ${U.shp('div', { kind: 'quad', seed: 841, tone: 'ink', cls: 'od-igor' }, `<b>伊戈尔的提点</b><p>${live ? esc(`本地账目回顾（未调用 AI） · ${d.label}。${live.result.reflection.replace(/\*\*/g, '')} ${live.result.advice.join('；')}`) : '「吃饭花得最多，这无可厚非。但那本二手书……客人，知识是不会打折的，可你的钱包会。」'}</p>`)}`; P5.panelIn(b.children, { stagger: .06 }); }; if (detailLedger) detailLedger.settlement(p, offset, mode).then(show).catch(() => { if (sh.isConnected && current === sequence) { b.textContent = '本地结算读取失败，切换周期可重试'; P5.toast('结算失败，请重试'); } }); else setTimeout(() => show(null), RM() ? 0 : 900); };
       sh.querySelector('[data-p]').addEventListener('pick', (e) => draw(e.detail)); draw('month');
     }, 93);
   }
   function openAssetBoard(st0 = 'data') {
     stage({ title: '资产板', en: 'ASSETS', seed: 95, cls: 'od-led', body: `${demoBar([['data', '有资产'], ['empty', '无固定资产']], st0)}<div data-host></div>`, onMount(w) {
-      stateful(w, [], st0, (st) => { const fixed = st === 'empty' ? [] : [['索尼相机 A7C', 9800, 2], ['雅马哈电钢琴', 4200, 0], ['iPad Air', 4400, 1]], fx = fixed.reduce((a, f) => a + f[1], 0), liq = 3268, dep = 12000;
-        return `<div class="od-ab-top">${donut([{ value: liq, color: '#D7000F' }, { value: dep, color: '#111' }, { value: fx || 1, color: fx ? '#8E0010' : 'transparent' }], liq + dep + fx, { size: P5.isWide() ? 200 : 168, sw: 14, inner: `<small>总财富</small><b>${yen(liq + dep + fx)}</b>` })}
+      let snapshot, events;
+      const draw = stateful(w, [], st0, (st) => { const live = detailLedger?.assets(); snapshot = live; const fixed = live ? live.assets.map(a => [a.name, a.price + (a.addOns ?? []).reduce((n, x) => n + x.amount, 0), a.addOns?.length ?? 0]) : st === 'empty' ? [] : [['索尼相机 A7C', 9800, 2], ['雅马哈电钢琴', 4200, 0], ['iPad Air', 4400, 1]], fx = live ? live.fixed : fixed.reduce((a, f) => a + f[1], 0), liq = live ? live.liquid : 3268, dep = live ? live.deposit : 12000;
+        return `<div class="od-ab-top">${donut([{ value: Math.max(0, liq), color: '#D7000F' }, { value: dep, color: '#111' }, { value: fx || 1, color: fx ? '#8E0010' : 'transparent' }], Math.max(0, liq + dep + fx), { size: P5.isWide() ? 200 : 168, sw: 14, inner: `<small>总财富</small><b>${yen(liq + dep + fx)}</b>` })}
             <ul class="od-lg big"><li><i style="background:#D7000F"></i>流动资产<b>${yen(liq)}</b></li><li><i style="background:#111"></i>存款<b>${yen(dep)}</b></li><li><i style="background:#8E0010"></i>固定资产<b>${yen(fx)}</b></li></ul></div>
-          ${U.shp('div', { kind: 'cut', seed: 851, tone: 'ink', cls: 'od-ab-save' }, `<small>自律攒下 · 历月预算结余累积</small><b>¥2,140</b>`)}
-          <section>${ttl('存款')}<button class="od-addline" data-act="dep">收起存款条目 ▲</button><div class="od-ab-dep">${[['招行定期', 8000], ['余额宝', 4000]].map(([n, v]) => `<div class="od-os-row"><span>${n}</span><b>${yen(v)}</b></div>`).join('')}</div></section>
-          <section>${ttl('固定资产')}${fixed.length ? fixed.map(([n, v, a], i) => `<div class="od-ab-fx" data-i="${i}"><i class="req-bg"></i><b>${n}</b><small>${a ? ` · +${a} 附加` : ''}</small><em>${yen(v)}</em><button class="od-del" data-act="del" aria-label="删除这件资产">✕</button></div>`).join('') : `<div class="od-empty"><b>还没有登记的固定资产。</b><p>把买过的设备 / 乐器登记进来，看看钱变成了什么。</p></div>`}
+          ${U.shp('div', { kind: 'cut', seed: 851, tone: 'ink', cls: 'od-ab-save' }, `<small>自律攒下 · 历月预算结余累积</small><b>${live ? yen(live.savings) : '¥2,140'}</b>`)}
+          <section>${ttl('存款')}<button class="od-addline" data-act="dep">收起存款条目 ▲</button><div class="od-ab-dep">${(live ? live.deposit > 0 ? [['预算结余', live.deposit]] : [] : [['招行定期', 8000], ['余额宝', 4000]]).map(([n, v]) => `<div class="od-os-row"><span>${n}</span><b>${yen(v)}</b></div>`).join('')}</div></section>
+          <section>${ttl('固定资产')}${fixed.length ? fixed.map(([n, v, a], i) => `<div class="od-ab-fx" data-i="${i}"><i class="req-bg"></i><b>${esc(n)}</b><small>${a ? ` · +${a} 附加` : ''}</small><em>${yen(v)}</em><button class="od-del" data-act="del" aria-label="删除这件资产">✕</button></div>`).join('') : `<div class="od-empty"><b>还没有登记的固定资产。</b><p>把买过的设备 / 乐器登记进来，看看钱变成了什么。</p></div>`}
             <button class="od-addline" data-act="add">＋ 登记一件资产</button></section>`; },
-      (h) => h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) { const r = e.target.closest('.od-ab-fx'); if (r) assetForm(r.querySelector('b').textContent); return; } const a = b.dataset.act;
+      (h) => { events?.abort(); events = new AbortController(); h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) { const r = e.target.closest('.od-ab-fx'); if (r) assetForm(detailLedger ? snapshot.assets[+r.dataset.i]?.id : r.querySelector('b').textContent); return; } const a = b.dataset.act;
         if (a === 'dep') { const d = h.querySelector('.od-ab-dep'); d.hidden = !d.hidden; b.textContent = d.hidden ? '展开存款条目 ▼' : '收起存款条目 ▲'; }
-        if (a === 'add') assetForm(); if (a === 'del') { e.stopPropagation(); const r = b.closest('.od-ab-fx'); confirm('删除这件资产？', `「${r.querySelector('b').textContent}」和它的附加费用会一起删除。`, '删除', () => r.remove()); } }));
+        if (a === 'add') assetForm(); if (a === 'del') { e.stopPropagation(); const r = b.closest('.od-ab-fx'); confirm('删除这件资产？', `「${r.querySelector('b').textContent}」和它的附加费用会一起删除。`, '删除', async () => { if (!detailLedger) return r.remove(); if (r._deleting) return; r._deleting = true; try { await detailLedger.deleteAsset(snapshot.assets[+r.dataset.i].id); P5.toast('已删除'); } catch { P5.toast('删除失败，请重试'); } finally { r._deleting = false; } }); } }, {signal:events.signal}); });
+      watchLedgerDetails(w, () => draw(st0, false));
       growDonuts(w);
     } });
   }
   function assetForm(name) {
-    const addon = (n = '', v = '') => `<div class="od-addon"><input class="inp" placeholder="名称" value="${n}" aria-label="名称"><input class="inp" type="number" placeholder="金额" value="${v}" aria-label="金额"><button class="od-del" data-act="rm" aria-label="删除附加费用">✕</button></div>`;
-    sheet(name ? '资产' : '登记资产', `<label class="fld"><span>名称</span><input class="inp" placeholder="名称（如 索尼相机）" value="${name || ''}"></label><label class="fld"><span>购入价</span><input class="inp" type="number" placeholder="购入价" value="${name ? 9800 : ''}"></label>
-      <div class="fld"><span>附加费用</span><p class="muted-d">如手机壳、配件、维修费…</p><div data-addons>${name ? addon('镜头', 1600) + addon('相机包', 280) : ''}</div><div class="od-addon">${'<input class="inp" placeholder="名称" aria-label="新附加费用名称"><input class="inp" type="number" placeholder="金额" aria-label="新附加费用金额">'}${U.btn('加', { tone: 'ink', size: 'sm', seed: 861, attrs: 'data-act="addon"' })}</div></div>
+    const live = detailLedger; const asset = live && name ? live.assets().assets.find(a => a.id === name) : undefined;
+    if (live && name && !asset) { P5.toast('这件资产已不存在，请从资产列表重试'); return; }
+    if (asset) name = asset.name;
+    const requestId = `red-asset-${Date.now()}-${++assetFormSequence}`;
+    const addon = (n = '', v = '') => `<div class="od-addon"><input class="inp" placeholder="名称" value="${esc(n)}" aria-label="名称"><input class="inp" type="number" placeholder="金额" value="${v}" aria-label="金额"><button class="od-del" data-act="rm" aria-label="删除附加费用">✕</button></div>`;
+    sheet(name ? '资产' : '登记资产', `<label class="fld"><span>名称</span><input class="inp" placeholder="名称（如 索尼相机）" value="${esc(name || '')}"></label><label class="fld"><span>购入价</span><input class="inp" type="number" placeholder="购入价" value="${live ? asset?.price ?? '' : name ? 9800 : ''}"></label>
+      <div class="fld"><span>附加费用</span><p class="muted-d">如手机壳、配件、维修费…</p><div data-addons>${live ? (asset?.addOns ?? []).map(a => addon(a.name, a.amount)).join('') : name ? addon('镜头', 1600) + addon('相机包', 280) : ''}</div><div class="od-addon">${'<input class="inp" placeholder="名称" aria-label="新附加费用名称"><input class="inp" type="number" placeholder="金额" aria-label="新附加费用金额">'}${U.btn('加', { tone: 'ink', size: 'sm', seed: 861, attrs: 'data-act="addon"' })}</div></div>
       <div class="sh-acts">${name ? U.btn('删除这件资产', { tone: 'paper', seed: 862, attrs: 'data-act="del"' }) : ''}${U.btn(name ? '保存' : '登记资产', { tone: 'red', size: 'lg', seed: 863, attrs: 'data-ok' })}</div>`, (sh, close) => {
-      sh.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act; if (a === 'rm') b.closest('.od-addon').remove(); if (a === 'addon') { const [n, v] = b.closest('.od-addon').querySelectorAll('input'); sh.querySelector('[data-addons]').insertAdjacentHTML('beforeend', addon(esc(n.value || '附加'), v.value || 0)); n.value = v.value = ''; } if (a === 'del') { close(); confirm('删除这件资产？', '它和它的附加费用会一起删除。', '删除', () => P5.toast('已删除')); } });
-      sh.querySelector('[data-ok]').onclick = () => { close(); P5.toast('已保存'); };
+      sh.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act; if (a === 'rm') b.closest('.od-addon').remove(); if (a === 'addon') { const [n, v] = b.closest('.od-addon').querySelectorAll('input'); sh.querySelector('[data-addons]').insertAdjacentHTML('beforeend', addon(n.value || '附加', v.value || 0)); n.value = v.value = ''; } if (a === 'del' && live) { confirm('删除这件资产？', '它和它的附加费用会一起删除。', '删除', async () => { const save = sh.querySelector('[data-ok]'); if (save.disabled) return; save.disabled = true; try { await live.deleteAsset(asset.id); close(); P5.toast('已删除'); } catch { P5.toast('删除失败，请重试'); } finally { save.disabled = false; } }); return; } if (a === 'del') { close(); confirm('删除这件资产？', '它和它的附加费用会一起删除。', '删除', () => P5.toast('已删除')); } });
+      sh.querySelector('[data-ok]').onclick = async (e) => {
+        if (!live) { close(); P5.toast('已保存'); return; }
+        const button = e.currentTarget; if (button.disabled) return;
+        const inputs = sh.querySelectorAll('input');
+        const addOns = Array.from(sh.querySelectorAll('[data-addons] .od-addon')).map(row => { const [n, v] = row.querySelectorAll('input'); return {name:n.value, amount:live.amount(v.value)}; });
+        const pending = sh.querySelector('[data-act="addon"]').closest('.od-addon').querySelectorAll('input');
+        if (pending[0].value.trim() || pending[1].value.trim()) addOns.push({name:pending[0].value, amount:live.amount(pending[1].value)});
+        button.disabled = true;
+        try { await live.saveAsset({name:inputs[0].value, price:live.amount(inputs[1].value), addOns}, asset?.id, requestId); if (sh.isConnected) close(); P5.toast('已保存'); }
+        catch { if (sh.isConnected) P5.toast('保存失败，请检查名称和金额后重试'); }
+        finally { button.disabled = false; }
+      };
     }, 97);
   }
   function openDonut() {

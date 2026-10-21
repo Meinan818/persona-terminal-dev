@@ -19,6 +19,7 @@ vi.mock('@/db', () => ({ db: {
   },
 } }));
 vi.mock('@/p5r-red/screens/pkg4/ledger4', () => ({ FLOW: [], connectLedgerLive: vi.fn() }));
+vi.mock('@/p5r-red/screens/pkg4/d4', () => ({ connectLedgerDetails: vi.fn() }));
 import { useAppStore, toLocalDateKey } from '@/store';
 import { ledgerLiveBridge as bridge } from '@/p5r-red/adapter/live';
 

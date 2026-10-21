@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：`rules/explore` 守卫视线与巡逻完成；全量 UMBRA 测试 16 文件 / 79 项通过，tsc exit 0。
+当前节点：主题动态加载器 `skins/themeLoader.ts` 完成；全量 UMBRA 测试 16 文件 / 79 项通过，tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 

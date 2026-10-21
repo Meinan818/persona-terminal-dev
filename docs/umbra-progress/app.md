@@ -18,10 +18,10 @@
 
 ## 验收结果
 
-- `node node_modules/vitest/vitest.mjs run src/umbra/engine/__tests__/headless-simulator.test.ts --reporter=dot`：4/4 通过。
-- `node node_modules/vitest/vitest.mjs run src/umbra --reporter=dot`：10 文件 / 54 项通过。
-- `node node_modules/vitest/vitest.mjs run src/umbra --reporter=dot`：11 文件 / 60 项通过（含 runtimeBridge 6 项）。
+- `node node_modules/vitest/vitest.mjs run src/umbra --reporter=dot`：31 文件 / 120 项通过。
+- 全仓 `node node_modules/vitest/vitest.mjs run --reporter=dot`：90 文件 / 481 项通过。
 - `npx tsc --noEmit`：exit 0。
+- `npm run build`：`✓ built in 29.52s`，PWA 生成成功（exit 0）。
 
 ## 下一步
 

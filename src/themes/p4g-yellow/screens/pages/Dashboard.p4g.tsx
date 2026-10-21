@@ -34,7 +34,7 @@ import { OrgCelebration, DEMO_CELEB } from '@yellow/screens/overlays/OrgCelebrat
 import { OnThisDaySheetP4G } from '@yellow/screens/overlays/OnThisDaySheet.p4g';
 import { DecayModalP4G } from '@yellow/screens/overlays/DashboardDecayModal.p4g';
 import { UrgentToastP4G, urgentText } from '@yellow/screens/overlays/DashboardToasts.p4g';
-import { ATTR_IDS, ATTR_NAMES, MOCK_ACHIEVEMENTS, MOCK_ATTRIBUTES, MOCK_STATS, MOCK_TODOS, MOCK_USER_NAME, levelTitle, masteryOf, masteryTitle } from '@yellow/adapters/pkg1';
+import { ATTR_IDS, levelTitle, masteryOf, masteryTitle, useHomeData, homeOps } from '@yellow/adapters/pkg1';
 
 const GREETINGS: Record<string, string[]> = {
   dawn: ['n，新的一天开始了', 'n，晨光已到，起身了', 'n，早安，今天也要加油', 'n，清晨的空气真好'],
@@ -59,6 +59,7 @@ const seed = Math.random();
 const pick = (a: string[]) => a[Math.floor(seed * a.length)];
 
 export default function Dashboard({ params }: PageProps) {
+  const { ATTR_NAMES, MOCK_ACHIEVEMENTS, MOCK_ATTRIBUTES, MOCK_STATS, MOCK_TODOS, MOCK_USER_NAME } = useHomeData();
   const state = params.get('state');
   const [sky, setSky] = useState<'moon' | 'weather'>(params.get('sky') === 'weather' ? 'weather' : 'moon');
   const wx = (params.get('wx') as SkyWx) || 'ok';
@@ -66,6 +67,7 @@ export default function Dashboard({ params }: PageProps) {
   const greet = (params.get('greet') as GreetMode) || 'card';
   const empty = state === 'empty';
   const [counts, setCounts] = useState<Record<string, number>>(() => Object.fromEntries(MOCK_TODOS.map((t) => [t.id, t._count])));
+  useEffect(() => { setCounts(Object.fromEntries(MOCK_TODOS.map((t) => [t.id, t._count]))); }, [MOCK_TODOS]);
   const [selected, setSelected] = useState<AttributeId | null>((params.get('attr') as AttributeId) || null);
   const [completed, setCompleted] = useState<{ title: string; pts: number; hint?: { achievements: number; skills: number } } | null>(null);
   /* 真实入口：完成任务 → 今日完成 → （关掉后）按顺序接 属性升级 / 精通提升 → 成就 / 技能解锁 → 愿望进度 → 组织庆祝（真实 App 顶层队列，一次一张）。
@@ -115,7 +117,7 @@ export default function Dashboard({ params }: PageProps) {
   const starItems: StarItem[] = useMemo(() => MOCK_ATTRIBUTES.map((a) => {
     const stars = a.level >= 10 ? masteryOf(a.points)?.stars ?? 0 : 0;
     return { id: a.id, name: ATTR_NAMES[a.id], level: a.level, maxLevel: a.levelThresholds.length || 5, stars, points: a.points, title: stars > 0 ? masteryTitle(a.id, stars) : levelTitle(a.id, a.level) };
-  }), []);
+  }), [MOCK_ATTRIBUTES, ATTR_NAMES]);
   const totalPoints = MOCK_ATTRIBUTES.reduce((s, a) => s + a.points, 0);
   const totalLevel = MOCK_ATTRIBUTES.reduce((s, a) => s + a.level, 0);
 
@@ -131,12 +133,14 @@ export default function Dashboard({ params }: PageProps) {
   const tick = (id: string) => {
     const t = todos.find((x) => x.id === id)!;
     const tg = target(t);
+    if ((counts[id] ?? 0) >= tg) return;
+    void homeOps.completeTodo(id);
     const next = Math.min(tg, (counts[id] ?? 0) + 1);
     setCounts((c) => ({ ...c, [id]: next }));
     if (next >= tg) {
       const pts = t.points + (t.extraBoosts?.reduce((s, b) => s + b.points, 0) ?? 0);
       setCompleted({ title: t.title, pts, hint: t.id === 't1' ? { achievements: 1, skills: 0 } : t.id === 't2' ? { achievements: 0, skills: 1 } : undefined });
-      setPendingQ(FOLLOW[t.id] ?? []);
+      setPendingQ(import.meta.env.DEV && location.search.includes('__dev=1') ? FOLLOW[t.id] ?? [] : []);
     }
   };
 

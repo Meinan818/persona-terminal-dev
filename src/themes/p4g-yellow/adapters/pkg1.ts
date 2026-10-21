@@ -7,3 +7,23 @@
 export * from '../mock/pkg1';
 
 // ───── 真实数据覆盖区（按 INTEGRATE-THEMES.md 第 6 步填写）─────
+
+import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { useAppStore } from '@/store';
+import type { AttributeId } from '@/types';
+
+export function useHomeData() {
+  const { user, attributes, achievements, todos, activities, attributeNames, todoCompletions } = useAppStore(useShallow((s) => ({ user: s.user, attributes: s.attributes, achievements: s.achievements, todos: s.todos, activities: s.activities, attributeNames: s.settings.attributeNames, todoCompletions: s.todoCompletions })));
+  const getTodayTodoProgress = useAppStore((s) => s.getTodayTodoProgress);
+  return useMemo(() => ({
+    MOCK_USER_NAME: user?.name ?? '',
+    MOCK_ATTRIBUTES: attributes,
+    MOCK_ACHIEVEMENTS: achievements,
+    MOCK_TODOS: todos.filter((t) => t.isActive && !t.archivedAt).map((t) => ({ ...t, _count: getTodayTodoProgress(t.id).count })),
+    MOCK_STATS: { totalActivities: activities.length, uniqueDays: new Set(activities.map((a) => new Date(a.date).toDateString())).size },
+    ATTR_NAMES: { ...attributeNames } as Record<AttributeId, string>,
+  }), [user, attributes, achievements, todos, activities, attributeNames, todoCompletions, getTodayTodoProgress]);
+}
+
+export const homeOps = { completeTodo: (id: string) => useAppStore.getState().completeTodo(id) };

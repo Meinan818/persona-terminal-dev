@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：D-006 sim:balance 初步建立并调参；常规测试 12 项通过、tsc exit 0。
+当前节点：D-006 sim:balance 已建立并调参中；常规全量 78 文件 / 452 项通过，tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 

@@ -25,19 +25,24 @@ export function simulateBalance(options: SimulateBalanceOptions = {}): BalanceTa
 
   for (const tier of BALANCE_TIERS) {
     table[tier] = { basic: null, weakness: null, advanced: null, random: null } as any;
-    for (const bot of BALANCE_BOTS) {
+    for (let index = 0; index < iterations; index += 1) {
+      const enemySpecs = createBalanceEnemies(
+        tier,
+        seedBase + BALANCE_TIERS.indexOf(tier) * 10000 + index,
+        floor,
+      );
+      for (const bot of BALANCE_BOTS) {
       let wins = 0;
-      for (let index = 0; index < iterations; index += 1) {
         const seed = seedBase + BALANCE_TIERS.indexOf(tier) * 10000 + BALANCE_BOTS.indexOf(bot) * 1000 + index;
         const result = runHeadlessBattle({
           seed,
           policy: bot,
-          enemySpecs: createBalanceEnemies(tier, seed, floor),
+          enemySpecs,
           activePersonaId: 'pixie',
         });
         if (result.victory) wins += 1;
+        table[tier][bot] = ((table[tier][bot] as number) ?? 0) + (result.victory ? 1 / iterations : 0);
       }
-      table[tier][bot] = wins / iterations;
     }
   }
 

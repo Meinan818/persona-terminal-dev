@@ -79,16 +79,6 @@ function pickAction(battle: any, policy: BattlePolicy, rng: () => number): Recor
       && actor.sp >= (item.sp ?? 0)
     ));
     if (weakSkill) return { type: 'skill', id: weakSkill.id, targetId: target.id };
-
-    const switchAction = (battle.actions ?? []).find((item: any) => (
-      item.type === 'switchMask'
-      && actor.masks?.[item.id]?.skills?.some((skill: any) => skill.element === target.weakness)
-    ));
-    if (switchAction) return switchAction;
-
-    const baton = (battle.actions ?? []).find((item: any) => item.type === 'batonPass');
-    if (baton) return baton;
-
     return { type: 'basic', targetId: target.id };
   }
 

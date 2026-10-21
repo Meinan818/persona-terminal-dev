@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：D-005 roster 归属完成；D-007 四类商店规则完成；D-006 继续调参。
+当前节点：D-005/D-007 完成；D-006 已改为同敌人公平种子，advanced 仍需真实 BATON/意图收益才能拉开。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -59,6 +59,7 @@
 - 已建立 `npm run sim:balance`、`src/umbra/balance`、`docs/umbra-progress/balance.md`。
 - 首次 500 局小样本胜率表已写入 `docs/umbra-progress/balance.md`；当前普攻杂兵/精英仍偏高、弱点打法偏低，继续调 `rules/combatNumbers.ts` 与 `balanceData.ts`。
 - 100 局当前表：basic 35/0/0，weakness 89/80/11，advanced 94/14/3；目标尚未全达标，重点还差 elite/boss 的 advanced。
+- 100 局公平敌人表：basic 35/0/0，weakness 89/76/14，advanced 88/77/10；advanced 与 weakness 已同构，需补真实加成机制再重跑。
 
 ## D-005 · 主题归属
 

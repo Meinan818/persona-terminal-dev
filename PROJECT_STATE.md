@@ -2,6 +2,14 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 三主题 Settings 真实写回
+
+- **范围**：三主题 `settingsStore` 的 `updateSettings` 增加 `pushToRealStore`：页面改动先更新本地 mock，再按字段映射写回真实 `useAppStore.settings`（`updateSettings`）与 `setTheme`。覆盖音效/BGM、天气、AI provider/key/baseUrl/模型、深思熟虑、自动总结、逆流、记账、属性名/阈值/难度/称号、关键词、战场、通知、自定义主题/音效/塔罗、背景。`hydrateFromRealStore` 期间用 `hydrating` 旗标抑制回写，避免循环。天气城市仅在同名时保留真实经纬度，否则不伪造坐标。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`settings-writeback-20261021.log`）；三主题真实浏览器探针各 6/6 共 18/18：设置页加载、真实 store 写入静音、IndexedDB 持久化、刷新后保持、0 页面异常、0 模型请求。报告在 `.theme-compare/settings-writeback-20261021/{yellow,pink,blue}/first/`。
+- **提交**：`7eea01c`（3 文件，162+/3-）。未 Push。
+- **遗留**：`weatherCity` 坐标、`summaryPersonas/presets`、`realisticTyping/activePersona` 尚无一一对应的真实字段，保持本地 mock；后续单独设计落库口径。
+- **下一步**：全局演出 / 红色 Statistics；或补更多页面真实浏览器验证。
+
 ## 已提交 · 2026-10-21 · 三主题 Settings 真实设置数据
 
 - **范围**：三主题 `settingsStore.ts` 新增 `hydrateFromRealStore()`，页面挂载时把真实 `useAppStore.settings` 原地合入 mock store：音效/BGM、天气（`weatherApiKey`/`weatherApiHost`/`weatherCity`）、AI（`summaryApiProvider`/`summaryApiKey`/`summaryModel`/`navigatorModel`/`visionModel`/`audioModel`/`assistantModel`）、深思熟虑（`tarotDailyDeliberate`/`summaryDeliberate`）、自动总结（`summaryAutoWrite`）、逆流、记账（`ledgerEnabled`/`currency`/`spendEvalEnabled`/`ledgerPayCycleEnabled`/`ledgerResetDay`）、属性名、阈值、难度（`levelDifficulty`）、称号（`attributeLevelTitles`）、关键词规则、通知（`notificationsEnabled`/`notificationSlots`）、自定义主题（`customThemeColor`/`customSoundScheme`/`customTarotSet`）、背景（`backgroundAnimation`/`backgroundImage`/`backgroundOpacity`/`backgroundOrientation`）。三主题 `Settings` 页面挂载时调 `hydrateFromRealStore()`。

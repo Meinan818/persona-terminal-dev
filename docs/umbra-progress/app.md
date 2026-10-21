@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：新增 UmbraCoordinator 集成 Director/质量/输入；测试 3 项通过，tsc exit 0。
+当前节点：全量 UMBRA 测试 19 文件 / 89 项通过；tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 

@@ -36,3 +36,4 @@
 - 图鉴体积：索引 151,002 B，最大单分片 gzip 8,926 B（上限 120KB）。
 - 全量 `src/umbra`：12 文件 / 63 项通过。
 - Bridge 已接 Dexie：新增 `src/umbra/dexieBridge.ts`，把 `UmbraRuntimeBridge` 映射到现有 `saveUmbraProfile` / `saveUmbraRun`，checkpoint 幂等键写入 `run.payload.checkpoints`。
+- Director 纯调度核心已落：`src/umbra/director.ts` 支持倍速时长、主线/重叠层、输入缓冲保留最新 2 条、action key 幂等和 `env:change` 空闲接续。

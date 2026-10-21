@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：探索关卡规划器完成；每局最少 4 战，含精英/守门阴影/BOSS，测试通过。
+当前节点：探索规划器已接遭遇生成；战斗节点生成 1–5 只敌人，非战斗节点不生成。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -93,3 +93,7 @@
 ## 探索关卡规划器
 
 - `src/umbra/rules/explorePlanner.ts`：按种子生成节点序，保证 1 精英 + 1 守门阴影 + 1 BOSS，战斗数 ≥4。
+
+## 探索遭遇生成
+
+- `src/umbra/rules/exploreEncounter.ts`：把规划节点映射为 `generateEncounter`，战斗节点生成 1–5 只，非战斗节点返回 null。

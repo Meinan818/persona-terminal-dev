@@ -42,7 +42,58 @@ let state: MockSettings = {
 };
 
 const ls = new Set<() => void>();
-export const updateSettings = (p: Partial<MockSettings>) => { state = { ...state, ...p }; ls.forEach((l) => l()); };
+let hydrating = false;
+
+/** 把 mock 设置字段映射回真实 Settings 并落库（主题单独走 setTheme） */
+function pushToRealStore(p: Partial<MockSettings>) {
+  if (hydrating) return;
+  void import('@/store').then(({ useAppStore }) => {
+    const st = useAppStore.getState();
+    const patch: Record<string, unknown> = {};
+    const set = (k: string, v: unknown) => { if (v !== undefined) patch[k] = v; };
+    if (p.theme !== undefined) void st.setTheme(p.theme);
+    set('soundMuted', p.soundMuted); set('soundVolume', p.soundVolume);
+    set('bgmEnabled', p.bgmEnabled); set('bgmVolume', p.bgmVolume);
+    set('bgmBattleTrackId', p.bgmBattle); set('bgmBossTrackId', p.bgmBoss); set('bgmTowerTrackId', p.bgmTower);
+    if (p.bgmHome !== undefined) set('bgmHomeTrackIds', p.bgmHome);
+    set('weatherProvider', p.weatherProvider); set('weatherApiKey', p.weatherKey); set('weatherApiHost', p.weatherHost);
+    if (p.weatherCity !== undefined) {
+      const cur = st.settings.weatherCity;
+      if (p.weatherCity && cur && cur.name === p.weatherCity.name) set('weatherCity', cur);
+      else if (p.weatherCity === undefined) set('weatherCity', undefined);
+    }
+    if (p.provider !== undefined) {
+      const map: Record<string, string> = { openai: 'openai', deepseek: 'deepseek', kimi: 'kimi', qwen: 'qwen', gemini: 'gemini', minimax: 'minimax', custom: 'custom' };
+      set('summaryApiProvider', map[p.provider] ?? p.provider);
+    }
+    if (p.keys !== undefined) { const pv = p.provider ?? state.provider; set('summaryApiKey', p.keys[pv]); }
+    set('customProviderName', p.customName); set('customProviderProtocol', p.customProtocol); set('customProviderPreset', p.customPreset);
+    set('summaryApiBaseUrl', p.baseUrl);
+    set('summaryModel', p.summaryModel); set('navigatorModel', p.navigatorModel);
+    set('visionModel', p.visionModel); set('audioModel', p.audioModel); set('assistantModel', p.assistantModel);
+    set('tarotDailyDeliberate', p.tarotDeliberate); set('summaryDeliberate', p.summaryDeliberate);
+    set('summaryAutoWrite', p.autoSummary); set('countercurrentEnabled', p.countercurrentEnabled);
+    set('ledgerEnabled', p.ledgerEnabled); set('currency', p.currency);
+    set('spendEvalEnabled', p.spendEvalEnabled); set('ledgerPayCycleEnabled', p.ledgerPayCycleEnabled);
+    set('ledgerResetDay', p.ledgerResetDay);
+    if (p.attributeNames !== undefined) set('attributeNames', p.attributeNames);
+    if (p.levelThresholds !== undefined) set('levelThresholds', p.levelThresholds);
+    set('levelDifficulty', p.difficulty);
+    if (p.levelTitles !== undefined) set('attributeLevelTitles', p.levelTitles);
+    if (p.keywordRules !== undefined) set('keywordRules', p.keywordRules);
+    set('lifeQuestAiCard', p.lifeQuestAiCard); set('battleEnabled', p.battleEnabled);
+    set('notificationsEnabled', p.notificationsEnabled);
+    if (p.notifSlots !== undefined) set('notificationSlots', p.notifSlots);
+    set('notifAIVoice', p.notifAiCopy); set('navigatorPushEnabled', p.notifProactive);
+    set('wishAgentProposals', p.wishProposal);
+    set('customThemeColor', p.customThemeColor); set('customSoundScheme', p.customSoundScheme); set('customTarotSet', p.customTarotSet);
+    if (p.backgroundAnimation !== undefined) set('backgroundAnimation', p.backgroundAnimation);
+    set('backgroundImage', p.backgroundImage); set('backgroundOpacity', p.backgroundOpacity); set('backgroundOrientation', p.backgroundOrientation);
+    if (Object.keys(patch).length) void st.updateSettings(patch as never);
+  }).catch(() => { /* 真实 store 未就绪时静默 */ });
+}
+
+export const updateSettings = (p: Partial<MockSettings>) => { state = { ...state, ...p }; ls.forEach((l) => l()); pushToRealStore(p); };
 const sub = (f: () => void) => { ls.add(f); return () => { ls.delete(f); }; };
 export const getSettings = () => state;
 
@@ -54,6 +105,7 @@ export function hydrateFromRealStore() {
     void import('@/store').then(({ useAppStore }) => {
       const s = useAppStore.getState().settings;
       if (!s) return;
+      hydrating = true;
       updateSettings({
         soundMuted: s.soundMuted ?? state.soundMuted,
         soundVolume: s.soundVolume ?? state.soundVolume,
@@ -94,6 +146,7 @@ export function hydrateFromRealStore() {
         backgroundOpacity: s.backgroundOpacity ?? state.backgroundOpacity,
         backgroundOrientation: s.backgroundOrientation ?? state.backgroundOrientation,
       });
+      hydrating = false;
     });
   } catch { /* 静默 */ }
 }

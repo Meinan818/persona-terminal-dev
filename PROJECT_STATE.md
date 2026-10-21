@@ -2,6 +2,15 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 三主题 Astrology 真实数据接入
+
+- **用户授权**：用户要求把四个主题完整真实接入，不是模仿。本轮先收尾四主题 Cooperation，再从下一页 Astrology 开始逐页接入。
+- **范围**：三主题（黄/粉/蓝）Astrology 页面 + DailyDraw + LongReading + FateGlimpse 弹层。新建共用模块 `src/themes/astrologyData.ts`，暴露 `useAstrologyData` / `useDailyReadiness` / `useFateWindow`。
+- **实现**：页面挂载时调 `loadDailyDivination` / `loadLongReadings` / `sweepExpiredReadings`；`readings` 从真实 `longReadings` 取；归档/删除/追问/保存走 `archiveLongReading` / `deleteLongReading` / `saveLongReading`；候选牌从真实 `MAJOR` 抽（`drawRandom(3)`）；`finish()` 走 `buildOfflineDaily` + `saveDailyDivination`；中长期占卜 `reveal()` 走 `startLongJob` 真实 AI 任务（`useTarotJobs`），完成态从 `job.result` 取，错误/截断走 job 状态；七日连星 `FateGlimpseSection` 从 `useFateWindow` 取 `days` 和 `lastGlimpse`；窥探命运弹层 `GlimpseRitual` 同样从 `useFateWindow` 取。红色 Astrology 独立架构，暂不混入 theme-kit。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`astrology-real-20261021.log`）。未跑真实浏览器交互探针（本轮无费用调用、未接真实 AI 后端），相关浏览器验证待下轮。
+- **提交**：`acba127`（15 文件，292+/93-）。未 Push。
+- **下一步**：继续接红色 Astrology 独立层；或先给三主题 Astrology 跑真实浏览器交互探针。
+
 ## 已提交 · 2026-10-21 · 四主题 Cooperation 真实接线
 
 - **用户决定**：用户明确要求红色 P5R 一并纳入四主题。全量测试 68 文件/413 项通过，构建 BUILD_EXIT=0。已分两个 commit 提交：三主题 d3d5d7c（18 文件）+ 红色 5c7ed5a（2 文件）。接手唯一下一任务已执行完毕，下一步继续 Astrology。上一条“四个主题”，并纠正不得把红色混进黄粉蓝的 theme-kit 适配层。随后要求进入准备交接：暂停开发，收干净，写接手第一入口，本地提交，不 Push。

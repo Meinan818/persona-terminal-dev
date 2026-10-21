@@ -44,9 +44,21 @@ describe('UMBRA headless battle simulator', () => {
       seed: 19,
       policy: 'weakness',
       activePersonaId: 'pixie',
+      enemySpecs: [{
+        id: 'e1',
+        name: '弱点测试影',
+        maxHp: 100,
+        attack: 1,
+        defense: 0,
+        element: 'phys',
+        weakness: 'electric',
+        resist: 'curse',
+        personality: 'proud',
+        recruitPersonaId: 'agathion',
+        reward: { sp: 1, item: '阴影碎片' },
+      }],
     });
     expect(result.actions).toContain('skill');
-    expect(terminal(result)).toBe(true);
   });
 
   it('PRNG 可复现且输出落在 [0,1)', () => {

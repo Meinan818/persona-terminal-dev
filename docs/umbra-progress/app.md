@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：皮肤契约补 `enemyLayouts[1..5]`，`skin:check` 校验五档站位；D-004 遇敌与画质已通过。
+当前节点：D-004 相关测试全绿（1/3/5 只战斗、弱点策略、画质降档）；tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 

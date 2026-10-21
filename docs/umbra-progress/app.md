@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：探索 run 已接 Director 组合事件；战斗节点输出 `map:encounter` + `battle:start`（合计 ≤1.2s/精简 0.7s），非战斗节点输出对应 explore 事件。
+当前节点：App 侧任务清单已全部完成并验证（Bridge/Director/动态皮肤/安全区/skin:check/@ts-nocheck/rules:explore/D-004/D-005/D-006/D-007）。D-005 的 roster 机制已就绪，只等主题方四份 `skins/<id>/index.ts` 皮肤包到位后切皮生效。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 

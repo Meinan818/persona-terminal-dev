@@ -9,7 +9,7 @@ import type { AttributeId, LedgerExpenseType, SpendWorth } from '@/types';
 import { P4Sheet, P4Button, P4Input, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { P5Label, P5Pick, TagPicker, DateQuickPicker } from '@yellow/screens/pkg5/ui';
-import { ATTR_IDS, ATTR_NAMES, CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, fmtMoney, incomeTypeFromSource, isGrowthCategory, moneyFromInput, sanitizeMoneyInput } from '@yellow/adapters/pkg5';
+import { ATTR_IDS, ATTR_NAMES, CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, fmtMoney, incomeTypeFromSource, isGrowthCategory, moneyFromInput, sanitizeMoneyInput, ledgerOps } from '@yellow/adapters/pkg5';
 
 export interface EntryDraft {
   direction: 'expense' | 'income'; amount: string; type: LedgerExpenseType; incomeSource: string; category: string; channel: string; note: string; date: string;
@@ -35,6 +35,7 @@ export function LedgerEntrySheetView({ open, onClose, initial, hint, spendEval =
     if (!amt || saving) return;
     setSaving(true);
     window.setTimeout(() => {
+      void ledgerOps.add({ direction: d.direction, amount: amt, note: d.note.trim() || undefined, date: d.date, source: 'manual', type: d.direction === 'expense' ? d.type : undefined, category: d.category.trim() || undefined, channel: d.channel.trim() || undefined, attribute: d.attribute, evalWorth: d.evalWorth, incomeType: d.direction === 'income' ? incomeTypeFromSource(d.incomeSource) : undefined });
       const label = d.note.trim() || (d.direction === 'income' ? d.incomeSource.trim() : d.category.trim() || d.channel.trim()) || (d.direction === 'expense' ? '支出' : '收入');
       const s = `${d.direction === 'expense' ? '−' : '+'}${CNY}${fmtMoney(amt)} · ${label}`;
       onClose();

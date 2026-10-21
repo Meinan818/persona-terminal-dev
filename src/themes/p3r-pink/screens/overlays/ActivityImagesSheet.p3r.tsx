@@ -4,45 +4,67 @@
  * ?state=empty 空态；?state=full 已满（6 张）。
  */
 import { useEffect, useState } from 'react';
+import type { ActivityImage } from '@/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Sheet, P3Empty, P3R, slantClip, IconPlus, IconTrash } from '@pink/kit';
-import { MAX_IMAGES_PER_ACTIVITY, SPARE_IMAGES } from '@pink/adapters/pkg2';
+import { MAX_IMAGES_PER_ACTIVITY } from '@pink/adapters/pkg2';
+import { addActivityImages, prepareActivityImage, removeActivityImage } from '@/utils/activityImages';
 import { Photo } from '@pink/screens/pkg2/common';
 import ImageLightbox from './ImageLightbox.p3r';
 
-export default function ActivityImagesSheet({ open, onClose, params, title, images: init, onChange }: OverlayProps & { title?: string; images?: string[]; onChange?: (imgs: string[]) => void }) {
-  const [imgs, setImgs] = useState<string[]>([]);
+const pickFiles = () => new Promise<File[]>((resolve) => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.onchange = () => resolve(Array.from(input.files ?? []));
+  input.click();
+});
+
+export default function ActivityImagesSheet({ open, onClose, params, title, images = [], activityId, onChange }: OverlayProps & { title?: string; images?: ActivityImage[]; activityId?: string; onChange?: (imgs: ActivityImage[]) => void }) {
   const [confirm, setConfirm] = useState<number | null>(null);
   const [lb, setLb] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
-  const st = params?.get('state');
-  useEffect(() => { if (open) { setImgs(init ?? (st === 'empty' ? [] : st === 'full' ? ['bailu.webp', 'chunfen.webp', 'dongzhi.webp', 'chushu.webp', 'dashu.webp', 'daxue.webp'] : ['bailu.webp', 'chunfen.webp'])); setHint(null); setConfirm(null); } }, [open]); // eslint-disable-line
-  const update = (v: string[]) => { setImgs(v); onChange?.(v); };
-  const room = MAX_IMAGES_PER_ACTIVITY - imgs.length;
-  const add = () => {
+  useEffect(() => { if (open) { setHint(null); setConfirm(null); } }, [open]);
+  const room = MAX_IMAGES_PER_ACTIVITY - images.length;
+  const add = async () => {
     if (room <= 0) { setHint('已经满了'); return; }
+    if (!activityId) { setHint('这条演示记录没有真实记录 ID，无法写入图片'); return; }
+    const files = await pickFiles();
+    if (!files.length) return;
     setBusy(true);
-    window.setTimeout(() => {
+    try {
+      const prepared = await Promise.all(files.slice(0, room).map(prepareActivityImage));
+      const added = await addActivityImages(activityId, prepared);
+      onChange?.([...images, ...added]);
+      setHint(files.length > room ? `每条记录最多 ${MAX_IMAGES_PER_ACTIVITY} 张，多出的没有加` : null);
+    } catch (error) {
+      setHint(error instanceof Error ? error.message : '图片处理失败');
+    } finally {
       setBusy(false);
-      const want = SPARE_IMAGES.slice(0, 3);
-      const take = want.slice(0, room);
-      setHint(want.length > take.length ? `每条记录最多 ${MAX_IMAGES_PER_ACTIVITY} 张，多出的没有加` : null);
-      update([...imgs, ...take]);
-    }, 500);
+    }
   };
+  const removeAt = async (index: number) => {
+    const row = images[index];
+    if (!row) return;
+    await removeActivityImage(row.id);
+    onChange?.(images.filter((_, i) => i !== index));
+    setConfirm(null);
+  };
+  const urls = images.map((row) => row.thumbDataUrl);
   return (
     <>
       <P3Sheet open={open} onClose={onClose} title={title ?? '记录图片'} en="PHOTOS">
-        {imgs.length === 0 && <P3Empty ghost="PHOTO" text="这条记录还没有图片" sub="图片只存在本机，不上云，可在「账号与数据」单独导出图片包。" />}
+        {images.length === 0 && <P3Empty ghost="PHOTO" text="这条记录还没有图片" sub="图片只存在本机，不上云，可在「账号与数据」单独导出图片包。" />}
         <div className="grid grid-cols-3 gap-2.5">
-          {imgs.map((src, i) => (
-            <div key={`${src}-${i}`} className="relative aspect-square min-w-0 overflow-hidden" style={{ clipPath: slantClip(8), background: P3R.ink }}>
-              <button type="button" onClick={() => setLb(i)} className="block h-full w-full" aria-label={`查看第 ${i + 1} 张`}><Photo src={src} /></button>
+          {images.map((image, i) => (
+            <div key={image.id} className="relative aspect-square min-w-0 overflow-hidden" style={{ clipPath: slantClip(8), background: P3R.ink }}>
+              <button type="button" onClick={() => setLb(i)} className="block h-full w-full" aria-label={`查看第 ${i + 1} 张`}><Photo src={image.thumbDataUrl} /></button>
               <span className="pointer-events-none absolute left-0 top-0 px-2 font-cond text-[12px]" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(4) }}>{String(i + 1).padStart(2, '0')}</span>
               {confirm === i ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12px] font-black" style={{ background: 'rgba(27,8,22,0.82)' }}>
-                  <button type="button" onClick={() => { update(imgs.filter((_, j) => j !== i)); setConfirm(null); }} className="px-4 py-1" style={{ background: P3R.magenta, color: '#fff', clipPath: slantClip(5) }}>删除</button>
+                  <button type="button" onClick={() => void removeAt(i)} className="px-4 py-1" style={{ background: P3R.magenta, color: '#fff', clipPath: slantClip(5) }}>删除</button>
                   <button type="button" onClick={() => setConfirm(null)} className="px-4 py-1" style={{ background: 'var(--p3r-cream)', color: 'var(--p3r-mulberry)', clipPath: slantClip(5) }}>取消</button>
                 </div>
               ) : (
@@ -62,9 +84,9 @@ export default function ActivityImagesSheet({ open, onClose, params, title, imag
           )}
         </div>
         {hint && <p className="mt-3 text-center text-[12px] font-black" style={{ color: 'var(--p3r-coral-ink)' }}>{hint}</p>}
-        {imgs.length > 0 && <p className="mt-3 text-center text-[11px]" style={{ color: P3R.grey }}>每条记录最多 {MAX_IMAGES_PER_ACTIVITY} 张 · 图片只存在本机</p>}
+        {images.length > 0 && <p className="mt-3 text-center text-[11px]" style={{ color: P3R.grey }}>每条记录最多 {MAX_IMAGES_PER_ACTIVITY} 张 · 图片只存在本机</p>}
       </P3Sheet>
-      <ImageLightbox open={lb !== null} onClose={() => setLb(null)} images={imgs} index={lb ?? 0} onDelete={(i) => update(imgs.filter((_, j) => j !== i))} />
+      <ImageLightbox open={lb !== null} onClose={() => setLb(null)} images={urls} index={lb ?? 0} onDelete={(i) => void removeAt(i)} />
     </>
   );
 }

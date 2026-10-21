@@ -11,33 +11,42 @@ import type { OverlayProps } from '@pink/registry/types';
 import { Portal, useEscape, P3R, slantClip } from '@pink/kit';
 import { PetalBurst } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
-import { WISHES, WISH_TIMES } from '@pink/adapters/pkg2';
+import { actionsOps, useActionsData } from '@pink/adapters/pkg2';
 
 const HOLD_MS = 1100;
 const CLIP = 'polygon(0 3%, 100% 0, 100% 97%, 0 100%)';
 export default function WishFulfillDialog({ open, onClose, params, wish, onFulfilled }: OverlayProps & { wish?: Wish | null; onFulfilled?: (id: string) => void }) {
   const anim = useBoldness();
+  const { WISHES, WISH_TIMES } = useActionsData();
   const w = wish ?? WISHES[0];
   const stage = params?.get('stage');
   const times = WISH_TIMES[w.id] ?? 0;
   const [pressing, setPressing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ title: string; timesLogged: number; archivedTodos: number } | null>(stage === 'done' ? { title: w.title, timesLogged: times, archivedTodos: 2 } : null);
+  const [result, setResult] = useState<{ title: string; timesLogged: number; archivedTodos: number } | null>(null);
   const timer = useRef(0);
   const auto = useRef<number[]>([]);
   useEscape(open && !busy, onClose);
   useEffect(() => { if (open && stage !== 'done') { setResult(null); setBusy(false); setPressing(false); } }, [open]); // eslint-disable-line
   useEffect(() => () => { clearTimeout(timer.current); auto.current.forEach(clearTimeout); }, []);
-  const fire = () => {
+  const fire = async () => {
     setPressing(false); setBusy(true);
-    window.setTimeout(() => { setResult({ title: w.title, timesLogged: times, archivedTodos: 2 }); setBusy(false); onFulfilled?.(w.id); }, 380);
+    try {
+      const payload = await actionsOps.fulfillWish(w.id);
+      if (payload) {
+        setResult(payload);
+        onFulfilled?.(w.id);
+      }
+    } finally {
+      setBusy(false);
+    }
   };
-  const down = () => { if (busy || result) return; setPressing(true); timer.current = window.setTimeout(fire, anim ? HOLD_MS : 300); };
+  const down = () => { if (busy || result) return; setPressing(true); timer.current = window.setTimeout(() => void fire(), anim ? HOLD_MS : 300); };
   const up = () => { if (!pressing) return; clearTimeout(timer.current); setPressing(false); };
   // 演出直达：?stage=hold → 自动走一遍「按住 → 收束 → 结算」
   useEffect(() => {
     if (!open || stage !== 'hold' || params?.get('auto') === '0') return;
-    auto.current.push(window.setTimeout(() => { setPressing(true); auto.current.push(window.setTimeout(fire, anim ? HOLD_MS : 300)); }, 600));
+    auto.current.push(window.setTimeout(() => { setPressing(true); auto.current.push(window.setTimeout(() => void fire(), anim ? HOLD_MS : 300)); }, 600));
   }, [open]); // eslint-disable-line
   return (
     <Portal>

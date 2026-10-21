@@ -11,15 +11,16 @@ import type { AttributeId } from '@/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, useEscape, useScrollLock, P3Button, ShatteredStar, P3R, slantClip, tickClip, SelectWedge } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { ATTR_EN, ATTR_IDS, ATTR_NAMES } from '@pink/adapters/pkg2';
+import { ATTR_EN, ATTR_IDS, useActionsData } from '@pink/adapters/pkg2';
 import ClaimedModal from './ClaimedModal.p3r';
 
-const LV: Record<AttributeId, number> = { knowledge: 4, guts: 3, dexterity: 2, kindness: 2, charm: 1 };
-export const rewardPts = (a: AttributeId) => (LV[a] >= 3 ? 7 : 5);
+export const rewardPts = (a: AttributeId, levels: Partial<Record<AttributeId, number>> = {}) => ((levels[a] ?? 1) >= 3 ? 7 : 5);
 const CONF_C = ['var(--p3r-blue)', 'var(--p3r-cyan)', 'var(--p3r-magenta)', 'var(--p3r-gold)', 'var(--pk-petal-a)', 'var(--p3r-cream)'];
 
 export default function CelebrationModal({ open, onClose, params, onClaim }: OverlayProps & { onClaim?: (a: AttributeId, pts: number) => void }) {
   const anim = useBoldness();
+  const { ATTR_NAMES, attributes, WEEK_RANGE } = useActionsData();
+  const levels = Object.fromEntries(attributes.map((a) => [a.id, a.level])) as Partial<Record<AttributeId, number>>;
   const [sel, setSel] = useState<AttributeId | null>((params?.get('pick') as AttributeId) || null);
   const [claimed, setClaimed] = useState<{ attrName: string; pts: number } | null>(null);
   useScrollLock(open && !claimed);
@@ -29,7 +30,7 @@ export default function CelebrationModal({ open, onClose, params, onClaim }: Ove
   })), []);
   const claim = () => {
     if (!sel) return;
-    const pts = rewardPts(sel);
+    const pts = rewardPts(sel, levels);
     onClaim?.(sel, pts);
     setClaimed({ attrName: ATTR_NAMES[sel], pts });
   };
@@ -62,7 +63,7 @@ export default function CelebrationModal({ open, onClose, params, onClaim }: Ove
                   <div className="relative flex items-center gap-2 px-6 py-3" style={{ background: P3R.ink }}>
                     <span aria-hidden className="h-[14px] w-[10px]" style={{ background: P3R.gold, clipPath: tickClip }} />
                     <span className="font-cond text-[12px] tracking-[0.3em]" style={{ color: 'var(--p3r-on-ink)' }}>WEEKLY GOAL</span>
-                    <span className="ml-auto font-cond text-[11px]" style={{ color: P3R.blue }}>10/19 – 10/25</span>
+                    <span className="ml-auto font-cond text-[11px]" style={{ color: P3R.blue }}>{WEEK_RANGE.days[0].slice(5).replace('-', '/')} – {WEEK_RANGE.days[6].slice(5).replace('-', '/')}</span>
                   </div>
                   <div className="px-6 pb-6 pt-4">
                     <div className="text-center">
@@ -81,7 +82,7 @@ export default function CelebrationModal({ open, onClose, params, onClaim }: Ove
                             {on && <SelectWedge className="-left-1 -right-2 inset-y-0" />}
                             <span className="relative min-w-0 flex-1 truncate font-heavy text-[17px]" style={{ color: on ? 'var(--p3r-mulberry)' : P3R.ink }}>{ATTR_NAMES[a]}</span>
                             <span className="relative hidden shrink-0 font-cond text-[11px] min-[380px]:inline" style={{ color: on ? 'var(--p3r-mulberry)' : P3R.grey }}>{ATTR_EN[a]}</span>
-                            <span className="relative shrink-0 font-cond text-[16px] tabular" style={{ color: on ? 'var(--p3r-mulberry)' : P3R.roseInk }}>+{rewardPts(a)} 点</span>
+                            <span className="relative shrink-0 font-cond text-[16px] tabular" style={{ color: on ? 'var(--p3r-mulberry)' : P3R.roseInk }}>+{rewardPts(a, levels)} 点</span>
                           </button>
                         );
                       })}

@@ -14,7 +14,7 @@ import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3ConfigRow, P3Field, P3Input, P3OnOff, P3Sheet, P3Stepper, useToast, P3R, slantClip, SelectWedge, IconChevronDown, IconMinus, IconPlus, IconTrash, Glyph } from '@blue/kit';
 import { AIThinking } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
-import { ATTR_IDS, ATTR_NAMES, TODOS } from '@blue/adapters/pkg2';
+import { ATTR_IDS, useActionsData, actionsOps } from '@blue/adapters/pkg2';
 import { WEEK_LABELS } from '@blue/screens/pkg2/common';
 import { WishMountPicker } from './ActivityRecordSheet.p3r';
 import TodosScheduleImport from './TodosScheduleImport.p3r';
@@ -24,15 +24,18 @@ export interface TodoForm { title: string; mode: Mode; targetCount: number; isLo
 const empty = (): TodoForm => ({ title: '', mode: 'single', targetCount: 3, isLongTerm: false, attribute: 'knowledge', points: 1, extraBoosts: [], important: false, repeatDaily: false, deadline: '', weekdays: [], isActive: true, startDate: '', steps: [], currentState: '' });
 const fromTodo = (t: Todo): TodoForm => ({ ...empty(), title: t.title, mode: t.isBigDeal ? 'big' : (t.frequency as Mode), targetCount: t.targetCount ?? 3, isLongTerm: !!t.isLongTerm, attribute: t.attribute, points: t.points, extraBoosts: t.extraBoosts ?? [], important: !!t.important, repeatDaily: !!t.repeatDaily, deadline: t.deadline ?? '', weekdays: t.weekdays ?? [], isActive: t.isActive, startDate: t.startDate ?? '', steps: t.steps ?? [], currentState: t.currentState ?? '', wishId: t.wishId });
 
-const AttrPick = ({ value, onChange, disabled }: { value: AttributeId; onChange: (a: AttributeId) => void; disabled?: (a: AttributeId) => boolean }) => (
-  <div className="flex flex-wrap gap-1.5">
-    {ATTR_IDS.map((a) => {
-      const on = value === a;
-      return <button key={a} type="button" disabled={disabled?.(a)} onClick={() => onChange(a)} aria-pressed={on} className="px-3 py-1.5 text-[12px] font-black disabled:opacity-30"
-        style={{ clipPath: slantClip(6), background: on ? P3R.blue : P3R.cyanFaint, color: on ? P3R.onBlue : P3R.ink }}>{ATTR_NAMES[a]}</button>;
-    })}
-  </div>
-);
+const AttrPick = ({ value, onChange, disabled }: { value: AttributeId; onChange: (a: AttributeId) => void; disabled?: (a: AttributeId) => boolean }) => {
+  const { ATTR_NAMES } = useActionsData();
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {ATTR_IDS.map((a) => {
+        const on = value === a;
+        return <button key={a} type="button" disabled={disabled?.(a)} onClick={() => onChange(a)} aria-pressed={on} className="px-3 py-1.5 text-[12px] font-black disabled:opacity-30"
+          style={{ clipPath: slantClip(6), background: on ? P3R.blue : P3R.cyanFaint, color: on ? P3R.onBlue : P3R.ink }}>{ATTR_NAMES[a]}</button>;
+      })}
+    </div>
+  );
+};
 const DateRow = ({ label, hint, value, onChange, id }: { label: ReactNode; hint?: ReactNode; value: string; onChange: (v: string) => void; id: string }) => (
   <P3Field label={label} hint={hint}>
     <span className="flex min-w-0 items-center gap-2">
@@ -45,8 +48,9 @@ const DateRow = ({ label, hint, value, onChange, id }: { label: ReactNode; hint?
 export default function TodoFormSheet({ open, onClose, params, todo, onSave }: OverlayProps & { todo?: Todo | null; onSave?: (f: TodoForm, id?: string) => void }) {
   const toast = useToast();
   const anim = useBoldness();
+  const { ATTR_NAMES, TODOS } = useActionsData();
   const v = params?.get('variant');
-  const editing = todo ?? (v === 'edit' ? TODOS[0] : v === 'big' ? TODOS.find((t) => t.isBigDeal)! : v === 'pact' ? TODOS.find((t) => t.pact)! : null);
+  const editing = todo ?? (v === 'edit' ? TODOS[0] ?? null : v === 'big' ? TODOS.find((t) => t.isBigDeal) ?? null : v === 'pact' ? TODOS.find((t) => t.pact) ?? null : null);
   const [f, setF] = useState<TodoForm>(empty());
   const [more, setMore] = useState(params?.get('more') === '1');
   const [aiBusy, setAiBusy] = useState(false);
@@ -55,18 +59,23 @@ export default function TodoFormSheet({ open, onClose, params, todo, onSave }: O
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [schedule, setSchedule] = useState(false);
   const set = (p: Partial<TodoForm>) => setF((cur) => ({ ...cur, ...p }));
-  const aiSplit = (title = f.title) => {
+  const aiSplit = async (title = f.title) => {
     setAiBusy(true); setAiError(null);
-    window.setTimeout(() => {
-      setAiBusy(false);
+    try {
       if (!title.trim()) { setAiError('这次没拆出能用的小步。换个说法，或手写一条吧'); return; }
-      setF((cur) => ({ ...cur, steps: [...cur.steps, ...['列出要做的所有事', '先做最小的那一件', '给自己留一天缓冲'].map((t, i) => ({ id: `ai${Date.now()}${i}`, title: t, source: 'ai' as const }))] }));
-    }, 2400);
+      const list = await actionsOps.decomposeDraftAI(title, f.currentState, f.steps.map((s) => s.title));
+      if (!list.length) { setAiError('这次没拆出能用的小步。换个说法，或手写一条吧'); return; }
+      setF((cur) => ({ ...cur, steps: [...cur.steps, ...list.map((t, i) => ({ id: `ai${Date.now()}${i}`, title: t, source: 'ai' as const }))] }));
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'AI 没接通，手写一条也行');
+    } finally {
+      setAiBusy(false);
+    }
   };
   useEffect(() => {
     if (!open) return;
     setF(editing ? fromTodo(editing) : empty()); setMore(params?.get('more') === '1'); setAiError(null);
-    if (params?.get('step') === 'ai') { setF({ ...empty(), mode: 'big', title: '期末考试' }); aiSplit('期末考试'); }
+    if (params?.get('step') === 'ai') void aiSplit('');
   }, [open]); // eslint-disable-line
   const linked = !!(editing?.pact || editing?.orgOp);
   const used = new Set<string>([f.attribute, ...f.extraBoosts.map((b) => b.attribute)]);
@@ -136,7 +145,7 @@ export default function TodoFormSheet({ open, onClose, params, todo, onSave }: O
               <P3Input placeholder="一个够得着的小步…" value={stepDraft} onChange={(e) => setStepDraft(e.target.value)} aria-label="子步" />
               <div className="grid grid-cols-2 gap-2">
                 <P3Button tone="soft" disabled={!stepDraft.trim()} onClick={() => { set({ steps: [...f.steps, { id: `m${Date.now()}`, title: stepDraft.trim(), source: 'manual' }] }); setStepDraft(''); }}>+ 手写一步</P3Button>
-                <P3Button tone="ink" busy={aiBusy} busyText="正在拆…" onClick={() => aiSplit()}>✦ AI 帮我拆</P3Button>
+                <P3Button tone="ink" busy={aiBusy} busyText="正在拆…" onClick={() => void aiSplit()}>✦ AI 帮我拆</P3Button>
               </div>
               {aiBusy && <AIThinking label="正在拆这件大事…" sub="读标题和「现在到哪一步了」" />}
               {aiError && <p className="text-[12px] font-black" style={{ color: 'var(--p3r-coral-ink)' }}>{aiError}</p>}

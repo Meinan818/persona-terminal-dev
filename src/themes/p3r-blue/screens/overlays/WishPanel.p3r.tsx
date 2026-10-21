@@ -11,13 +11,14 @@ import type { TodoStep, Wish } from '@/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3ConfigRow, P3Field, P3Gauge, P3Input, P3OnOff, P3Sheet, P3Tag, P3R, slantClip } from '@blue/kit';
 import { AIThinking } from '@blue/fx';
-import { WISHES, WISH_TIMES } from '@blue/adapters/pkg2';
+import { useActionsData, actionsOps } from '@blue/adapters/pkg2';
 import { MiniHead, Ring } from '@blue/screens/pkg2/common';
 import { StepList } from '@blue/screens/pkg2/StepList';
 
 const distance = (p: number) => (p >= 90 ? '几乎到了' : p >= 70 ? '看得见了' : p >= 45 ? '走到一半' : p >= 20 ? '起步了' : '刚上路');
 
 export default function WishPanel({ open, onClose, params, wish, onChange }: OverlayProps & { wish?: Wish | null; onChange?: (w: Wish) => void }) {
+  const { WISHES, WISH_TIMES } = useActionsData();
   const st = params?.get('state');
   const base = wish ?? (st === 'fresh' ? WISHES[2] : WISHES[0]);
   const [w, setW] = useState<Wish>(base);
@@ -27,15 +28,38 @@ export default function WishPanel({ open, onClose, params, wish, onChange }: Ove
   const [notice, setNotice] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [auto, setAuto] = useState(true);
-  const upd = (p: Partial<Wish>) => { setW((cur) => { const n = { ...cur, ...p }; onChange?.(n); return n; }); };
+  const upd = (p: Partial<Wish>) => { setW((cur) => { const n = { ...cur, ...p }; onChange?.(n); void actionsOps.saveWish(n); return n; }); };
   const steps = w.steps ?? [];
   const done = steps.filter((s) => s.done).length;
   const times = WISH_TIMES[w.id] ?? 0;
   const evaluated = typeof w.progressPct === 'number';
   const pct = w.progressPct ?? 0;
-  const evaluate = () => { setEvalBusy(true); setNotice(null); window.setTimeout(() => { setEvalBusy(false); const np = Math.min(99, pct + (evaluated ? 4 : 12)); setNotice(`${np}%（+${np - pct}）· 你这周多读了两本，节奏回来了`); upd({ progressPct: np, progressSource: 'ai' }); }, 2400); };
-  const aiSplit = () => { setAiBusy(true); window.setTimeout(() => { setAiBusy(false); const add: TodoStep[] = [{ id: `a${Date.now()}`, title: '列一张下个月想读的书单', source: 'ai' }, { id: `b${Date.now()}`, title: '周末去旧书店逛一次', source: 'ai' }]; upd({ steps: [...steps, ...add] }); setNotice(`AI 拆了 ${add.length} 条——不合适的直接删`); }, 1800); };
-  useEffect(() => { if (open) { setW(base); setNotice(null); setManual(st === 'manual'); if (st === 'evaluating') evaluate(); } }, [open]); // eslint-disable-line
+  const evaluate = async () => {
+    setEvalBusy(true); setNotice(null);
+    try {
+      const result = await actionsOps.evaluateWishProgress(w.id);
+      if (!result) { setNotice('这条愿望已经了结了'); return; }
+      setW((cur) => ({ ...cur, progressPct: result.pct, progressSource: result.source }));
+      setNotice(result.source === 'local' ? `按子步与记录估了个数：${result.pct}%（配好 AI 会更准）` : `${result.pct}%${result.delta ? `（${result.delta > 0 ? '+' : ''}${result.delta}）` : '（和上次一样）'}`);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : '评估失败');
+    } finally {
+      setEvalBusy(false);
+    }
+  };
+  const aiSplit = async () => {
+    setAiBusy(true);
+    try {
+      const list = await actionsOps.decomposeWishStepsAI(w.id);
+      for (const title of list) await actionsOps.addWishStep(w.id, title, 'ai');
+      setNotice(list.length ? `AI 拆了 ${list.length} 条——不合适的直接删` : 'AI 这次没拆出新步。手写一条也行');
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'AI 没接通，手写一条也行');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+  useEffect(() => { if (open) { setW(base); setNotice(null); setManual(st === 'manual'); if (st === 'evaluating') void evaluate(); } }, [open]); // eslint-disable-line
   return (
     <P3Sheet open={open} onClose={onClose} title={w.title} en="WISH" size="tall">
       <div className="space-y-4">
@@ -51,7 +75,7 @@ export default function WishPanel({ open, onClose, params, wish, onChange }: Ove
           </div>
         </div>
         <div className="flex gap-2">
-          <P3Button block tone="ink" busy={evalBusy} busyText="评估中…" onClick={evaluate}>{evaluated ? '↻ 重新评估距离' : '✦ 评估一次距离'}</P3Button>
+          <P3Button block tone="ink" busy={evalBusy} busyText="评估中…" onClick={() => void evaluate()}>{evaluated ? '↻ 重新评估距离' : '✦ 评估一次距离'}</P3Button>
           <P3Button className="shrink-0 whitespace-nowrap" tone={manual ? 'primary' : 'soft'} onClick={() => setManual((v) => !v)}>手动设定</P3Button>
         </div>
         {evalBusy && <AIThinking label="正在估算你离它还有多远…" sub="读你挂上来的记录和「现在走到哪了」" />}
@@ -67,12 +91,12 @@ export default function WishPanel({ open, onClose, params, wish, onChange }: Ove
         <section className="space-y-2">
           <MiniHead title="子任务" en="STEPS" right={steps.length ? <span className="font-cond text-[13px]" style={{ color: P3R.roseInk }}>{done}/{steps.length}</span> : undefined} />
           {steps.length === 0 ? <p className="py-2 text-center text-[13px]" style={{ color: P3R.grey }}>还没有子任务——先拆一个够得着的</p>
-            : <StepList steps={steps} delLabel="删除子任务" onToggle={(i) => upd({ steps: steps.map((x, j) => (j === i ? { ...x, done: !x.done } : x)) })} onDelete={(i) => upd({ steps: steps.filter((_, j) => j !== i) })} />}
+            : <StepList steps={steps} delLabel="删除子任务" onToggle={(i) => { const step = steps[i]; upd({ steps: steps.map((x, j) => (j === i ? { ...x, done: !x.done } : x)) }); void actionsOps.toggleWishStep(w.id, step.id); }} onDelete={(i) => { const step = steps[i]; upd({ steps: steps.filter((_, j) => j !== i) }); void actionsOps.removeWishStep(w.id, step.id); }} />}
           <div className="flex min-w-0 gap-2">
             <div className="min-w-0 flex-1"><P3Input placeholder="拆一个够得着的小步…" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="新的子任务" /></div>
-            <P3Button disabled={!draft.trim()} onClick={() => { upd({ steps: [...steps, { id: `m${Date.now()}`, title: draft.trim(), source: 'manual' }] }); setDraft(''); }}>添加</P3Button>
+            <P3Button disabled={!draft.trim()} onClick={() => { const title = draft.trim(); upd({ steps: [...steps, { id: `m${Date.now()}`, title, source: 'manual' }] }); void actionsOps.addWishStep(w.id, title); setDraft(''); }}>添加</P3Button>
           </div>
-          <P3Button block tone="outline" busy={aiBusy} busyText="正在拆…" onClick={aiSplit}>✦ AI 拆下一组</P3Button>
+          <P3Button block tone="outline" busy={aiBusy} busyText="正在拆…" onClick={() => void aiSplit()}>✦ AI 拆下一组</P3Button>
         </section>
         <P3ConfigRow label="完成任务后自动重估" hint="挂到愿望的记录一落，就重算距离并弹一张卡（作用于所有愿望）"><P3OnOff value={auto} onChange={setAuto} ariaLabel="完成任务后自动重估愿望进度" /></P3ConfigRow>
         <p className="text-[12px]" style={{ color: P3R.grey }}>愿望的子任务勾掉<b style={{ color: P3R.ink }}>不加点</b>——它只是把路标出来。要拿点数，去今日任务建一条挂到这个愿望上。</p>

@@ -11,68 +11,74 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Loading, P3Progress, P3Sheet, P3Tag, useToast, P3R, slantClip, IconBack, IconChevron, IconClose } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { ATTR_NAMES, LIFE_QUESTS, QUESTS, QUEST_TITLES } from '@pink/adapters/pkg2';
+import { useActionsData } from '@pink/adapters/pkg2';
+import { useQuestBoard, useLifeQuests } from '@/components/quests/QuestBoardSheet';
+import { useAppStore } from '@/store';
+import { questHint, questTitle } from '@/utils/questBoard';
 import { MiniHead } from '@pink/screens/pkg2/common';
 
 export default function QuestBoardSheet({ open, onClose, params }: OverlayProps) {
   const low = !useBoldness();
   const toast = useToast();
   const st = params?.get('state');
-  const [loading, setLoading] = useState(st === 'loading');
+  const board = useQuestBoard();
+  const life = useLifeQuests(open);
+  const { ATTR_NAMES } = useActionsData();
   const [idx, setIdx] = useState(0);
-  const [status, setStatus] = useState<Record<string, 'new' | 'added' | 'done'>>({ lq3: 'done' });
-  const [rerolls, setRerolls] = useState(2);
-  const [batch, setBatch] = useState(0);
-  const [quests, setQuests] = useState(QUESTS);
-  const [swapUsed, setSwapUsed] = useState(false);
   const [notice, setNotice] = useState(true);
   const [flash, setFlash] = useState<Record<string, number>>({});
-  useEffect(() => { if (open && st === 'loading') { setLoading(true); const t = window.setTimeout(() => setLoading(false), 1600); return () => clearTimeout(t); } }, [open, st]);
-  const life = LIFE_QUESTS.map((q) => ({ ...q, title: batch ? `${q.title}（新）` : q.title }));
-  const cur = life[idx];
-  const curSt = status[cur.id] ?? 'new';
-  const go = (d: number) => setIdx((i) => Math.max(0, Math.min(life.length - 1, i + d)));
-  const claimedTotal = 7 + quests.filter((q) => q.claimedAt).length - 1;
-  const allClaimed = quests.every((q) => q.claimedAt || q.autoClaimed);
-  const locked = st === 'locked';
+  useEffect(() => { if (open) void useAppStore.getState().refreshQuests(); }, [open]);
+  const lifeItems = life.items;
+  const cur = lifeItems[idx];
+  const curSt = cur ? life.statusOf(cur) : 'new';
+  const go = (d: number) => setIdx((i) => Math.max(0, Math.min(lifeItems.length - 1, i + d)));
+  const claimedTotal = board.claimedTotal;
+  const allClaimed = board.items.length > 0 && board.items.every((item) => item.claimed || item.quest.autoClaimed);
+  const locked = !board.unlocked || st === 'locked';
+  const swapUsed = board.items.some((item) => item.quest.swapped);
+  const loading = st === 'loading' || life.waiting || !board.loaded || !cur;
+  const weekStart = board.range.start.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+  const weekEndDate = new Date(board.range.end);
+  weekEndDate.setDate(weekEndDate.getDate() - 1);
+  const weekEnd = weekEndDate.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
   return (
     <P3Sheet open={open} onClose={onClose} title="委托板" en="QUEST BOARD" size="tall">
       {/* 今日委托 */}
       <MiniHead title="今日委托" en="DAILY" />
-      <div className="mb-2 mt-1 text-[12px] font-bold" style={{ color: P3R.grey }}>{life.some((q) => q.ai) ? '三张题库 + 一张 AI 写的' : '每天三张 · 左右滑着挑'}</div>
+      <div className="mb-2 mt-1 text-[12px] font-bold" style={{ color: P3R.grey }}>{lifeItems.some((q) => q.ai) ? '三张题库 + 一张 AI 写的' : '每天三张 · 左右滑着挑'}</div>
       {loading ? <P3Loading block rows={2} text="正在按你的属性准备今日委托…" /> : (
         <>
           <div className="relative flex min-w-0 items-center gap-2">
             <button type="button" aria-label="上一张" disabled={idx === 0} onClick={() => go(-1)} className="flex h-12 w-8 shrink-0 items-center justify-center disabled:opacity-30" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(6) }}><IconBack size={14} /></button>
             <div className="relative min-w-0 flex-1 overflow-hidden">
               <AnimatePresence mode="wait" initial={false}>
-                <motion.div key={cur.id + batch} drag={low ? false : 'x'} dragConstraints={{ left: 0, right: 0 }} dragElastic={0.4}
+                <motion.div key={cur.key} drag={low ? false : 'x'} dragConstraints={{ left: 0, right: 0 }} dragElastic={0.4}
                   onDragEnd={(_: unknown, info: PanInfo) => { if (info.offset.x < -50) go(1); else if (info.offset.x > 50) go(-1); }}
                   initial={low ? { opacity: 0 } : { opacity: 0, x: 40, rotate: 2 }} animate={{ opacity: 1, x: 0, rotate: 0 }} exit={low ? { opacity: 0 } : { opacity: 0, x: -40 }} transition={{ duration: 0.18 }}
                   className="relative cursor-grab overflow-hidden p-4 pl-5 active:cursor-grabbing" style={{ background: 'var(--p3r-sheet-grad)', clipPath: slantClip(14), boxShadow: 'inset 0 0 0 2px rgb(var(--p3r-blue-rgb) / 0.35)' }}>
                   <span aria-hidden className="absolute left-0 top-0 h-full w-[5px]" style={{ background: P3R.blue }} /><span aria-hidden className="pointer-events-none absolute -right-2 -top-3 font-cond text-[64px] leading-none" style={{ color: 'var(--p3r-ghost)' }}>QUEST</span>
                   <div className="flex items-center gap-2">
-                    <P3Tag tone="ink">{ATTR_NAMES[cur.attr]}</P3Tag>
+                    <P3Tag tone="ink">{ATTR_NAMES[cur.attribute]}</P3Tag>
                     {cur.ai && <P3Tag tone="lilac">✦ AI</P3Tag>}
-                    <span className="ml-auto font-cond text-[14px]" style={{ color: P3R.roseInk }}>{String(idx + 1).padStart(2, '0')}/{String(life.length).padStart(2, '0')}</span>
+                    <span className="ml-auto font-cond text-[14px]" style={{ color: P3R.roseInk }}>{String(idx + 1).padStart(2, '0')}/{String(lifeItems.length).padStart(2, '0')}</span>
                   </div>
                   <div className="relative mt-2 break-words font-heavy text-[19px] leading-snug" style={{ color: P3R.ink }}>{cur.title}</div>
-                  <div className="mt-1 text-[12px]" style={{ color: P3R.inkSoft }}>{cur.desc}</div>
+                  <div className="mt-1 text-[12px]" style={{ color: P3R.inkSoft }}>{cur.hint}</div>
                   <div className="mt-3">
-                    {curSt === 'new' ? <P3Button block corner onClick={() => { setStatus((s) => ({ ...s, [cur.id]: 'added' })); toast.success('已加入今日任务'); }}>加入今日任务</P3Button>
+                    {curSt === 'new' ? <P3Button block corner onClick={() => { void life.add(cur).then(() => toast.success('已加入今日任务')); }}>加入今日任务</P3Button>
                       : <div className="py-2 text-center text-[15px] font-black" style={{ color: P3R.roseInk }}>{curSt === 'done' ? '✓ 已完成' : '✓ 已加入今日任务'}</div>}
                   </div>
                 </motion.div>
               </AnimatePresence>
             </div>
-            <button type="button" aria-label="下一张" disabled={idx === life.length - 1} onClick={() => go(1)} className="flex h-12 w-8 shrink-0 items-center justify-center disabled:opacity-30" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(6) }}><IconChevron size={14} /></button>
+            <button type="button" aria-label="下一张" disabled={idx === lifeItems.length - 1} onClick={() => go(1)} className="flex h-12 w-8 shrink-0 items-center justify-center disabled:opacity-30" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(6) }}><IconChevron size={14} /></button>
           </div>
           <div className="mt-2 flex justify-center gap-1.5">
-            {life.map((q, i) => { const s = status[q.id] ?? 'new'; return <button key={q.id} type="button" aria-label={`第 ${i + 1} 张${s !== 'new' ? '（已加入）' : ''}`} onClick={() => setIdx(i)} className="h-[7px] transition-all" style={{ width: i === idx ? 24 : 10, background: i === idx ? P3R.blue : s !== 'new' ? P3R.cyan : 'var(--p3r-track)', clipPath: slantClip(3) }} />; })}
+            {lifeItems.map((q, i) => { const s = life.statusOf(q); return <button key={q.key} type="button" aria-label={`第 ${i + 1} 张${s !== 'new' ? '（已加入）' : ''}`} onClick={() => setIdx(i)} className="h-[7px] transition-all" style={{ width: i === idx ? 24 : 10, background: i === idx ? P3R.blue : s !== 'new' ? P3R.cyan : 'var(--p3r-track)', clipPath: slantClip(3) }} />; })}
           </div>
           <div className="mt-2 text-center">
-            <button type="button" disabled={rerolls <= 0} onClick={() => { setRerolls((r) => r - 1); setBatch((b) => b + 1); setIdx(0); setStatus({}); }} className="text-[13px] font-black underline decoration-2 underline-offset-4 disabled:no-underline disabled:opacity-50" style={{ color: P3R.roseInk }}>
-              {rerolls <= 0 ? '今天换不了了，明天再来' : rerolls < 3 ? `换一批（今天剩 ${rerolls} 次）` : '换一批'}
+            <button type="button" disabled={life.rerollsLeft <= 0} onClick={() => { life.reroll(); setIdx(0); }} className="text-[13px] font-black underline decoration-2 underline-offset-4 disabled:no-underline disabled:opacity-50" style={{ color: P3R.roseInk }}>
+              {life.rerollsLeft <= 0 ? '今天换不了了，明天再来' : life.rerollsLeft < 3 ? `换一批（今天剩 ${life.rerollsLeft} 次）` : '换一批'}
             </button>
           </div>
         </>
@@ -85,21 +91,22 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
       ) : (
         <>
           <div className="mt-2 flex items-baseline justify-between gap-2 text-[12px] font-bold" style={{ color: P3R.grey }}>
-            <span className="min-w-0 truncate">本周 10/19 – 10/25 · 周一刷新</span>
+            <span className="min-w-0 truncate">本周 {weekStart} – {weekEnd} · 周一刷新</span>
             <span className="shrink-0 font-cond text-[13px]">累计领取 {claimedTotal} 次</span>
           </div>
           <AnimatePresence>
-            {notice && (
+            {notice && life.attrNote && (
               <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-2 flex items-start gap-2 px-4 py-2 text-[12px] font-bold" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(8) }}>
-                <span className="min-w-0 flex-1">有几项属性名是你自己起的，题库对不上就先不出这几类；配好 AI 服务后会自动对好。</span>
+                <span className="min-w-0 flex-1">{life.attrNote}</span>
                 <button type="button" onClick={() => setNotice(false)} aria-label="知道了" className="shrink-0 font-black" style={{ color: P3R.blue }}>知道了 <IconClose size={10} className="inline" /></button>
               </motion.div>
             )}
           </AnimatePresence>
           <div className="mt-3 grid grid-cols-1 gap-2.5">
-            {quests.map((q) => {
-              const meta = QUEST_TITLES[q.id] ?? { title: '记 3 条「温柔」', desc: '换来的一张', progress: 0 };
-              const done = meta.progress >= q.target;
+            {board.items.map((item) => {
+              const q = item.quest;
+              const meta = { title: questTitle(q, ATTR_NAMES), desc: questHint(q), progress: item.progress };
+              const done = item.done;
               const claimed = !!q.claimedAt || !!q.autoClaimed;
               return (
                 <div key={q.id} className="relative min-w-0 overflow-hidden px-4 py-3" style={{ background: claimed ? 'var(--p3r-row-alt)' : P3R.panel, clipPath: slantClip(12) }}>
@@ -117,9 +124,9 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {claimed ? <span className="text-[13px] font-black" style={{ color: P3R.roseInk }}>✓ 已领取</span>
-                        : done ? <P3Button size="sm" corner onClick={() => { setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, claimedAt: '2026-10-20' } : x))); setFlash((f) => ({ ...f, [q.id]: q.rewardSp })); }}>领取</P3Button>
+                        : done ? <P3Button size="sm" corner onClick={() => { void useAppStore.getState().claimQuest(q.id).then((result) => { if (result.ok) setFlash((f) => ({ ...f, [q.id]: result.sp })); }); }}>领取</P3Button>
                           : <span className="font-cond text-[15px]" style={{ color: P3R.ink }}>{meta.progress}/{q.target}</span>}
-                      {!swapUsed && !done && !claimed && <button type="button" onClick={() => { setSwapUsed(true); setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, id: `${x.id}-s`, swapped: true, templateId: 'important_2' } : x))); }} className="text-[11px] font-black underline" style={{ color: P3R.grey }}>换一张</button>}
+                      {!swapUsed && !done && !claimed && <button type="button" onClick={() => { void useAppStore.getState().swapQuest(q.id).then((result) => { if (!result.ok && result.reason) toast.error(result.reason); }); }} className="text-[11px] font-black underline" style={{ color: P3R.grey }}>换一张</button>}
                     </div>
                   </div>
                   <P3Progress className="mt-2" value={Math.min(meta.progress, q.target)} max={q.target} variant="segments" />

@@ -13,7 +13,8 @@ import { useMemo, useState } from 'react';
 import type { Activity, AttributeId } from '@/types';
 import { P3Button, P3ConfigRow, P3Empty, P3Input, P3OnOff, P3Select, P3Segment, P3Tag, useToast, P3R, slantClip, tickClip, IconSearch, IconChevronDown, IconBack, IconChevron, Glyph } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { ACTIVITIES, ACTIVITY_IMAGES, ATTR_IDS, ATTR_NAMES, BIGDEAL_STEP_LOG, TODAY, TODAY_KEY, dayKey } from '@pink/adapters/pkg2';
+import { ATTR_IDS, actionsOps, dayKey, useActionsData } from '@pink/adapters/pkg2';
+import { addActivityImages, removeActivityImage } from '@/utils/activityImages';
 import { Butterfly, Dot, Photo, SlantChip, SlantFab, fmtTime, qp, setHashParam, sumPts, useLongPress } from '@pink/screens/pkg2/common';
 import ActivityRecordSheet, { type RecordSavePayload } from '@pink/screens/overlays/ActivityRecordSheet.p3r';
 import ActivitiesRecordMenu from '@pink/screens/overlays/ActivitiesRecordMenu.p3r';
@@ -38,12 +39,21 @@ const ACCENT: Record<Accent, string> = {
   card: 'var(--p3r-blue-deep)', bigdeal: 'var(--p3r-ink)', todo: 'var(--p3r-cyan)', important: 'var(--p3r-blue)', default: 'rgb(var(--p3r-cyan-rgb) / 0.45)',
 };
 
-function RecordCard({ a, images, onMenu, onImage, expanded, onToggleDeal }: { a: Activity; images: string[]; onMenu: () => void; onImage: (i: number) => void; expanded: boolean; onToggleDeal: () => void }) {
+function RecordCard({ a, images, attrNames, stepLog, onMenu, onImage, expanded, onToggleDeal }: {
+  a: Activity;
+  images: string[];
+  attrNames: Record<AttributeId, string>;
+  stepLog: Record<string, { title: string; date: Date }[]>;
+  onMenu: () => void;
+  onImage: (i: number) => void;
+  expanded: boolean;
+  onToggleDeal: () => void;
+}) {
   const anim = useBoldness();
   const lp = useLongPress(onMenu);
   const acc = accentOf(a);
   const pts = Object.entries(a.pointsAwarded).filter(([, v]) => v > 0) as [AttributeId, number][];
-  const steps = a.bigDealId ? BIGDEAL_STEP_LOG[a.bigDealId] : undefined;
+  const steps = a.bigDealId ? stepLog[a.bigDealId] : undefined;
   const sel = lp.pressing;
   const ink = sel ? 'var(--p3r-on-ink)' : P3R.ink;
   return (
@@ -91,7 +101,7 @@ function RecordCard({ a, images, onMenu, onImage, expanded, onToggleDeal }: { a:
             {acc === 'achievement' && <P3Tag tone="gold"><Glyph name="trophy" /> 成就解锁</P3Tag>}
             {acc === 'card' && <P3Tag tone="rose">✦ 倒计时</P3Tag>}
             {a.important && acc !== 'shadow' && <P3Tag tone="gold"><Glyph name="star" /> 重要</P3Tag>}
-            {pts.map(([k, v]) => <span key={k} className="inline-flex shrink-0 items-center px-1.5 font-cond text-[12px]" style={{ color: sel ? ink : P3R.roseInk }}>{ATTR_NAMES[k]} +{v}</span>)}
+            {pts.map(([k, v]) => <span key={k} className="inline-flex shrink-0 items-center px-1.5 font-cond text-[12px]" style={{ color: sel ? ink : P3R.roseInk }}>{attrNames[k]} +{v}</span>)}
             <span className="ml-auto flex shrink-0 items-center gap-1.5 font-cond text-[12px]" style={{ color: sel ? ink : P3R.grey }}>
               {a.weather?.text && <span>{a.weather.text}</span>}{fmtTime(a.date)}
             </span>
@@ -102,7 +112,7 @@ function RecordCard({ a, images, onMenu, onImage, expanded, onToggleDeal }: { a:
   );
 }
 
-function Calendar({ year, month, onMonth, selected, onSelect, onPicker, marks, showImportant }: { year: number; month: number; onMonth: (d: number) => void; selected: string | null; onSelect: (k: string | null) => void; onPicker: () => void; marks: Map<string, { n: number; imp: boolean }>; showImportant: boolean }) {
+function Calendar({ year, month, todayKey, onMonth, selected, onSelect, onPicker, marks, showImportant }: { year: number; month: number; todayKey: string; onMonth: (d: number) => void; selected: string | null; onSelect: (k: string | null) => void; onPicker: () => void; marks: Map<string, { n: number; imp: boolean }>; showImportant: boolean }) {
   const first = new Date(year, month, 1).getDay();
   const days = new Date(year, month + 1, 0).getDate();
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
@@ -125,7 +135,7 @@ function Calendar({ year, month, onMonth, selected, onSelect, onPicker, marks, s
             const k = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const m = marks.get(k);
             const sel = selected === k;
-            const today = k === TODAY_KEY;
+            const today = k === todayKey;
             return (
               <button key={i} type="button" onClick={() => onSelect(sel ? null : k)} aria-pressed={sel} aria-label={`${month + 1}月${d}日${m ? `，${m.n} 条记录` : ''}${today ? '（今天）' : ''}`}
                 className="relative flex h-11 min-w-0 flex-col items-center justify-center min-[400px]:h-12">
@@ -145,10 +155,21 @@ function Calendar({ year, month, onMonth, selected, onSelect, onPicker, marks, s
 export function ActivitiesView({ params }: { params: URLSearchParams }) {
   const toast = useToast();
   const anim = useBoldness();
+  const {
+    ACTIVITIES,
+    ACTIVITY_IMAGES,
+    ACTIVITY_IMAGE_ROWS,
+    BIGDEAL_STEP_LOG,
+    ATTR_NAMES,
+    TODAY,
+    TODAY_KEY,
+    WISH_PROGRESS_CUT,
+  } = useActionsData();
   const st = qp(params, 'state');
   const op = qp(params, 'open');
-  const [list, setList] = useState<Activity[]>(st === 'empty' ? [] : ACTIVITIES);
-  const [imgMap, setImgMap] = useState<Record<string, string[]>>(st === 'empty' ? {} : ACTIVITY_IMAGES);
+  const list = st === 'empty' ? [] : ACTIVITIES;
+  const imgMap = st === 'empty' ? {} : ACTIVITY_IMAGES;
+  const imageRows = st === 'empty' ? {} : ACTIVITY_IMAGE_ROWS;
   const [q, setQ] = useState('');
   const [showCal, setShowCal] = useState(qp(params, 'view') === 'calendar');
   const [showFilter, setShowFilter] = useState(qp(params, 'view') === 'filter' || st === 'nomatch');
@@ -157,21 +178,21 @@ export function ActivitiesView({ params }: { params: URLSearchParams }) {
   const [fy, setFy] = useState('all');
   const [fm, setFm] = useState('all');
   const [onlyImp, setOnlyImp] = useState(false);
-  const [calY, setCalY] = useState(2026);
-  const [calM, setCalM] = useState(9);
-  const [calSel, setCalSel] = useState<string | null>(qp(params, 'view') === 'calendar' ? '2026-10-18' : null);
+  const now = new Date(TODAY);
+  const [calY, setCalY] = useState(now.getFullYear());
+  const [calM, setCalM] = useState(now.getMonth());
+  const [calSel, setCalSel] = useState<string | null>(qp(params, 'view') === 'calendar' ? TODAY_KEY : null);
   const [calImp, setCalImp] = useState(true);
   const [picker, setPicker] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(['2025']));
-  const [deals, setDeals] = useState<Set<string>>(new Set(['bd0']));
+  const [deals, setDeals] = useState<Set<string>>(new Set());
   const [sheet, setSheet] = useState<false | { backdate: string | null }>(op === 'record' ? { backdate: null } : false);
-  const [menuId, setMenuId] = useState<string | null>(op === 'menu' ? 'a1' : null);
+  const [menuId, setMenuId] = useState<string | null>(op === 'menu' ? list[0]?.id ?? null : null);
   const [delId, setDelId] = useState<string | null>(null);
   const [imgsId, setImgsId] = useState<string | null>(null);
   const [shareId, setShareId] = useState<string | null>(null);
   const [lb, setLb] = useState<{ id: string; i: number } | null>(null);
   const [saved, setSaved] = useState<RecordSavePayload | null>(null);
-  const [wishCut, setWishCut] = useState(false);
   const [summary, setSummary] = useState(op === 'summary');
   const sumState = qp(params, 'summary');
 
@@ -200,17 +221,20 @@ export function ActivitiesView({ params }: { params: URLSearchParams }) {
   const dayList = calSel ? list.filter((a) => dayKey(a.date) === calSel) : [];
   const dayLabel = (d: Date) => { const k = dayKey(d); return k === TODAY_KEY ? '今天' : k === dayKey(new Date(TODAY.getTime() - 86400000)) ? '昨天' : `${d.getMonth() + 1}/${d.getDate()} 周${WEEKDAYS[d.getDay()]}`; };
 
-  const onSave = (p: RecordSavePayload) => {
-    const d = p.backdate ? new Date(`${p.backdate}T21:00:00`) : new Date(TODAY);
-    const a: Activity = { id: `n${Date.now()}`, userId: 'u1', date: d, description: p.description, pointsAwarded: p.points, method: 'local', important: p.important, weather: { icon: 'rain', text: '小雨' }, wishId: p.wishId, backfilled: !!p.backdate };
-    setList((l) => [a, ...l]);
-    if (p.images.length) setImgMap((m) => ({ ...m, [a.id]: p.images }));
+  const onSave = async (p: RecordSavePayload) => {
+    const d = p.backdate ? new Date(`${p.backdate}T12:00:00`) : new Date(TODAY);
+    const result = await actionsOps.addActivity(p.description, p.points, 'local', {
+      important: p.important,
+      date: d,
+      wishId: p.wishId,
+    });
+    if (p.images.length && result.activityId) await addActivityImages(result.activityId, p.images);
     setSaved(p);
   };
   const menuAct = list.find((a) => a.id === menuId);
   const delAct = list.find((a) => a.id === delId);
   const card = (a: Activity) => (
-    <RecordCard key={a.id} a={a} images={imgMap[a.id] ?? []} onMenu={() => setMenuId(a.id)} onImage={(i) => setLb({ id: a.id, i })}
+    <RecordCard key={a.id} a={a} images={imgMap[a.id] ?? []} attrNames={ATTR_NAMES} stepLog={BIGDEAL_STEP_LOG} onMenu={() => setMenuId(a.id)} onImage={(i) => setLb({ id: a.id, i })}
       expanded={!!a.bigDealId && deals.has(a.bigDealId)} onToggleDeal={() => a.bigDealId && setDeals((s) => toggleSet(s, a.bigDealId!))} />
   );
   const sectionLabel = (t: string) => <p className="mb-1.5 text-[12px] font-black" style={{ color: P3R.grey }}>{t}</p>;
@@ -265,7 +289,7 @@ export function ActivitiesView({ params }: { params: URLSearchParams }) {
 
       {showCal && (
         <div className="mb-5 mt-3 space-y-3">
-          <Calendar year={calY} month={calM} selected={calSel} onSelect={setCalSel} onPicker={() => setPicker(true)} marks={marks} showImportant={calImp}
+          <Calendar year={calY} month={calM} todayKey={TODAY_KEY} selected={calSel} onSelect={setCalSel} onPicker={() => setPicker(true)} marks={marks} showImportant={calImp}
             onMonth={(d) => { const m = calM + d; setCalY(calY + Math.floor(m / 12)); setCalM(((m % 12) + 12) % 12); }} />
           {calSel && (
             <div className="space-y-1.5">
@@ -338,16 +362,15 @@ export function ActivitiesView({ params }: { params: URLSearchParams }) {
       <SlantFab label={isPast ? '补录历史记录' : '添加记录'} text={isPast ? '补录' : '记录'} tone={isPast ? 'coral' : 'rose'} onClick={() => setSheet({ backdate: isPast ? calSel : null })} />
 
       <ActivityRecordSheet open={!!sheet} onClose={() => setSheet(false)} backdate={sheet ? sheet.backdate : null} onSave={onSave} />
-      <SaveSuccessModal open={!!saved} onClose={() => { const w = saved?.wishId; setSaved(null); if (w) setWishCut(true); }} description={saved?.description} totalPoints={saved ? sumPts(saved.points) : 0} unlock={!!saved && sumPts(saved.points) >= 5} />
-      <WishProgressCutIn open={wishCut} onClose={() => setWishCut(false)} params={new URLSearchParams('delta=6')} />
+      <SaveSuccessModal open={!!saved} onClose={() => setSaved(null)} description={saved?.description} totalPoints={saved ? sumPts(saved.points) : 0} unlock={!!saved && sumPts(saved.points) >= 5} />
+      <WishProgressCutIn open={!!WISH_PROGRESS_CUT} onClose={() => actionsOps.clearWishProgressCut()} />
       <ActivitiesRecordMenu open={!!menuId} onClose={() => setMenuId(null)} title={menuAct ? (menuAct.description.length > 24 ? `${menuAct.description.slice(0, 24)}…` : menuAct.description) : undefined}
         onAction={(id) => { const t = menuId; if (id === 'share') setShareId(t); if (id === 'images') setImgsId(t); if (id === 'delete') setDelId(t); }} />
       <ActivitiesDeleteConfirm open={!!delId} onClose={() => setDelId(null)} description={delAct?.description}
-        onDelete={(rb) => { setList((l) => l.filter((a) => a.id !== delId)); toast.success(rb ? '已删除并回档' : '已删除条目'); }} />
-      <ActivityImagesSheet open={!!imgsId} onClose={() => setImgsId(null)} images={imgsId ? imgMap[imgsId] ?? [] : []}
-        onChange={(v) => imgsId && setImgMap((m) => ({ ...m, [imgsId]: v }))} />
+        onDelete={(rb) => { const id = delId; setDelId(null); if (!id) return; void actionsOps.deleteActivity(id, rb).then(() => toast.success(rb ? '已删除并回档' : '已删除条目')); }} />
+      <ActivityImagesSheet open={!!imgsId} onClose={() => setImgsId(null)} activityId={imgsId ?? undefined} images={imgsId ? imageRows[imgsId] ?? [] : []} />
       <ImageLightbox open={!!lb} onClose={() => setLb(null)} images={lb ? imgMap[lb.id] : []} index={lb?.i ?? 0}
-        onDelete={(i) => lb && setImgMap((m) => ({ ...m, [lb.id]: (m[lb.id] ?? []).filter((_, j) => j !== i) }))} />
+        onDelete={(i) => { const row = lb ? imageRows[lb.id]?.[i] : undefined; if (row) void removeActivityImage(row.id); }} />
       <ShareToOrgSheet open={!!shareId} onClose={() => setShareId(null)} activity={list.find((a) => a.id === shareId)} />
       <SummaryModal open={summary} onClose={() => setSummary(false)} params={new URLSearchParams(sumState === 'draft' ? 'view=preview' : sumState === 'running' ? 'state=busy' : '')} />
       <ActivitiesCalendarPicker open={picker} onClose={() => setPicker(false)} year={calY} month={calM} showImportant={calImp} onJump={(y, m) => { setCalY(y); setCalM(m); }} onToggleImportant={setCalImp} />

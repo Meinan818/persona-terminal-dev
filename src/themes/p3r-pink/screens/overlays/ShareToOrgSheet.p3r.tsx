@@ -4,31 +4,62 @@
  * 主按钮「分享到据点」（分享中… / 今天的 3 条用完了）→ 成功「分享好了」+「好」「去公告板看看」。
  * ?step=done 直接看成功态；?state=quota 选中余量 0 的据点。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Activity } from '@/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Field, P3Input, P3Sheet, P3Tag, ShatteredStar, P3R, slantClip, SelectWedge } from '@pink/kit';
 import { navigate } from '@pink/shell/shellBus';
-import { ACTIVITIES, ATTR_NAMES, ORGS } from '@pink/adapters/pkg2';
+import { useActionsData } from '@pink/adapters/pkg2';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { getUserId } from '@/services/velvetApi';
+import { refreshBoard, shareActivity } from '@/services/orgSync';
+import { ORG_POSTS_PER_DAY, defaultShareText, myPostsToday } from '@/utils/orgLogic';
 
 export default function ShareToOrgSheet({ open, onClose, params, activity }: OverlayProps & { activity?: Activity }) {
-  const act = activity ?? ACTIVITIES[0];
-  const [org, setOrg] = useState(ORGS[0].id);
+  const { ACTIVITIES, ATTR_NAMES } = useActionsData();
+  const orgViews = useCloudSocialStore((s) => s.orgs);
+  const ORGS = useMemo(() => orgViews.map((v) => ({
+    id: v.org.id,
+    name: v.org.name,
+    left: Math.max(0, ORG_POSTS_PER_DAY - myPostsToday(v.posts, getUserId() ?? '')),
+  })), [orgViews]);
+  const act = activity ?? ACTIVITIES[0] ?? null;
+  const [org, setOrg] = useState<string | null>(ORGS[0]?.id ?? null);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
-  useEffect(() => { if (open) { setText(params?.get('state') === 'quota' ? '' : ''); setOrg(params?.get('state') === 'quota' ? ORGS[1].id : ORGS[0].id); setDone(params?.get('step') === 'done' ? ORGS[0].name : null); } }, [open]); // eslint-disable-line
-  const view = ORGS.find((o) => o.id === org)!;
-  const left = view.left;
-  const gained = Object.entries(act.pointsAwarded).filter(([, v]) => v > 0);
-  const submit = () => { if (!text.trim() || left <= 0) return; setBusy(true); window.setTimeout(() => { setBusy(false); setDone(view.name); }, 800); };
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    setOrg(ORGS[0]?.id ?? null);
+    setText(act ? defaultShareText(act.description) : '');
+    setError(null);
+    setDone(params?.get('step') === 'done' ? ORGS[0]?.name ?? null : null);
+    for (const o of orgViews) void refreshBoard(o.org.id);
+  }, [open, act?.id]); // eslint-disable-line
+  const view = ORGS.find((o) => o.id === org) ?? ORGS[0];
+  const left = view?.left ?? 0;
+  const gained = Object.entries(act?.pointsAwarded ?? {}).filter(([, v]) => v > 0);
+  const submit = async () => {
+    if (!act || !view || !text.trim() || left <= 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await shareActivity(view.id, act, text);
+      setDone(view.name);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '分享失败，请稍后重试');
+    } finally {
+      setBusy(false);
+    }
+  };
   const footer = done ? (
     <div className="flex gap-3">
       <P3Button tone="soft" onClick={onClose}>好</P3Button>
       <P3Button block corner onClick={() => { onClose(); navigate('hideout', undefined, { params: { tab: 'board' } }); }}>去公告板看看</P3Button>
     </div>
   ) : (
-    <P3Button block size="lg" corner onClick={submit} disabled={!text.trim() || left <= 0} busy={busy} busyText="分享中…">{left <= 0 ? '今天的 3 条用完了' : '分享到据点'}</P3Button>
+    <P3Button block size="lg" corner onClick={() => void submit()} disabled={busy || !act || !view || !text.trim() || left <= 0} busy={busy} busyText="分享中…">{left <= 0 ? '今天的 3 条用完了' : '分享到据点'}</P3Button>
   );
   return (
     <P3Sheet open={open} onClose={onClose} title={done ? '分享好了' : '分享到据点'} en="SHARE" footer={footer} busy={busy}>
@@ -68,7 +99,8 @@ export default function ShareToOrgSheet({ open, onClose, params, activity }: Ove
               </div>
             </div>
           </div>
-          <p className="text-[12px]" style={{ color: left > 0 ? P3R.grey : 'var(--p3r-coral-ink)' }}>只分享这一句和加点，不带记录原文。{left > 0 ? `今天还能在「${view.name}」分享 ${left} 条。` : `今天在「${view.name}」已经分享了 3 条，明天再来。`}</p>
+          <p className="text-[12px]" style={{ color: left > 0 ? P3R.grey : 'var(--p3r-coral-ink)' }}>只分享这一句和加点，不带记录原文。{view ? left > 0 ? `今天还能在「${view.name}」分享 ${left} 条。` : `今天在「${view.name}」已经分享了 3 条，明天再来。` : '还没有加入据点。'}</p>
+          {error && <p className="text-[12px] font-black" style={{ color: 'var(--p3r-coral-ink)' }}>{error}</p>}
         </div>
       )}
     </P3Sheet>

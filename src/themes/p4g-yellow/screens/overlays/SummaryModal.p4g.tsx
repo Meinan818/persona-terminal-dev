@@ -7,23 +7,43 @@
  * 视图切换：同页横推 + 跳台噪点 1 帧。重新生成（草稿未归档）→ SummaryModalRegenConfirm。年度总结「✦ 重温开场」→ YearRecapStage。
  */
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
+import type { PeriodSummary } from '@/types';
 import { P4Button, P4Sheet, P4Switch, P4Input, P4EmptyState, useToast, IconBack, IconChevron } from '@yellow/kit';
 import { ChannelNoise } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import { SUMMARIES, SUMMARY_BODY, SUMMARY_PRESETS, type MockSummary } from '@yellow/adapters/pkg2';
+import { useShallow } from 'zustand/react/shallow';
+import { useAppStore, toLocalDateKey, DEFAULT_SUMMARY_PROMPT_PRESETS } from '@/store';
+import { aiConfigured, chatStream } from '@/utils/aiClient';
+import { followUpsOf, parseSummaryResult, SUMMARY_FOLLOWUP_LIMIT, SUMMARY_FOLLOWUP_MAX_TOKENS } from '@/utils/summaryAI';
+import {
+  attachDraftFollowUp, cancelSummaryJob, continueSummaryJob, isSummaryJobRunning,
+  markSummaryJobSaved, resolveKeyFor, restoreSummaryDraft, startSummaryJob, useSummaryJobs,
+} from '@/utils/summaryJobs';
+import { useActionsData, type MockSummary } from '@yellow/adapters/pkg2';
 import SummaryModalRegenConfirm from './SummaryModalRegenConfirm.p4g';
 import YearRecapStage from './YearRecapStage.p4g';
 
 type View = 'generate' | 'result' | 'archive' | 'view';
 type JobStatus = 'preparing' | 'thinking' | 'streaming' | 'done' | 'error';
-interface Job { status: JobStatus; text: string; period: 'week' | 'month' | 'year'; label: string; truncated?: boolean; continues: number; saved?: boolean; followUps: { q: string; a: string }[] }
+interface Job { status: JobStatus; text: string; period: 'week' | 'month' | 'year'; label: string; truncated?: boolean; continues: number; saved?: boolean; followUps: { q: string; a: string }[]; totalPoints: number; activityCount: number }
 
 const fmtR = (s: Date, e: Date) => `${s.getFullYear()}年 ${s.getMonth() + 1}/${s.getDate()} ~ ${e.getMonth() + 1}/${e.getDate()}`;
-const weekRange = (off: number) => { const s = new Date(2026, 9, 19 + off * 7); const e = new Date(2026, 9, 25 + off * 7); return { s, e }; };
-const monthRange = (off: number) => { const s = new Date(2026, 9 + off, 1); const e = new Date(2026, 10 + off, 0); return { s, e }; };
+const weekRange = (off: number) => {
+  const s = new Date();
+  s.setDate(s.getDate() - ((s.getDay() + 6) % 7) + off * 7);
+  const e = new Date(s);
+  e.setDate(s.getDate() + 6);
+  return { s, e };
+};
+const monthRange = (off: number) => {
+  const now = new Date();
+  const s = new Date(now.getFullYear(), now.getMonth() + off, 1);
+  const e = new Date(now.getFullYear(), now.getMonth() + off + 1, 0);
+  return { s, e };
+};
 
 function Stats({ items }: { items: { label: string; value: string }[] }) {
   return (
@@ -95,6 +115,20 @@ function ThinkingDial({ label }: { label: string }) {
 }
 
 export default function SummaryModal({ open, onClose, params }: OverlayProps) {
+  const { SUMMARIES, SUMMARY_PRESETS } = useActionsData();
+  const {
+    settings, summaries, saveSummary, deleteSummary, loadSummaries, updateSettings, markSummaryViewed, getSummaryLabel,
+  } = useAppStore(useShallow((s) => ({
+    settings: s.settings,
+    summaries: s.summaries,
+    saveSummary: s.saveSummary,
+    deleteSummary: s.deleteSummary,
+    loadSummaries: s.loadSummaries,
+    updateSettings: s.updateSettings,
+    markSummaryViewed: s.markSummaryViewed,
+    getSummaryLabel: s.getSummaryLabel,
+  })));
+  const rootJob = useSummaryJobs((s) => s.job);
   const toast = useToast();
   const low = useLowMotion();
   const pv = params?.get('view');
@@ -103,59 +137,136 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const [view, setViewRaw] = useState<View>(initialView);
   const [noise, setNoise] = useState(false);
   const setView = (v: View) => { setViewRaw(v); if (!low) setNoise(true); };
-  const noKey = st === 'nokey';
+  const noKey = st === 'nokey' || !aiConfigured(settings);
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('week');
   const [off, setOff] = useState(0);
   const [preset, setPreset] = useState(0);
-  const [auto, setAuto] = useState(true);
-  const [special, setSpecial] = useState(false);
+  const [auto, setAuto] = useState(settings.summaryAutoWrite !== false);
+  const [special, setSpecial] = useState(settings.summaryIncludeSpecial === true);
   const [archive, setArchive] = useState<MockSummary[]>(st === 'empty' ? [] : SUMMARIES);
-  const [selected, setSelected] = useState<MockSummary | null>(pv === 'detail' ? SUMMARIES[0] : null);
+  const [selected, setSelected] = useState<MockSummary | null>(null);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [regen, setRegen] = useState(false);
   const [recap, setRecap] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [detailFU, setDetailFU] = useState<{ q: string; a: string }[]>([{ q: '下周具体可以怎么提升魅力？', a: '挑一个你本来就会去的场合，比如社团例会，主动先开口一次。记下来，就是一条魅力。' }]);
-  const timers = useRef<number[]>([]);
-  const clearT = () => { timers.current.forEach(clearTimeout); timers.current = []; };
-  const [job, setJob] = useState<Job | null>(() => {
-    if (st === 'none') return null;
-    if (st === 'busy') return { status: 'preparing', text: '', period: 'week', label: '10月第4周', continues: 0, followUps: [] };
-    if (st === 'error') return { status: 'error', text: '', period: 'week', label: '10月第4周', continues: 0, followUps: [] };
-    if (pv === 'preview' || st === 'truncated') return { status: 'done', text: st === 'truncated' ? SUMMARY_BODY.slice(0, 140) : SUMMARY_BODY, period: 'week', label: '10月第4周', truncated: st === 'truncated', continues: 0, followUps: [] };
-    return null;
-  });
-  useEffect(() => () => clearT(), []);
+  const [detailFU, setDetailFU] = useState<{ q: string; a: string }[]>([]);
+  const [job, setJob] = useState<Job | null>(null);
+  const presets = settings.summaryPromptPresets ?? DEFAULT_SUMMARY_PROMPT_PRESETS;
+  const now = new Date();
+  const range = period === 'week' ? weekRange(off) : period === 'month' ? monthRange(off) : { s: new Date(now.getFullYear(), 0, 1), e: new Date(now.getFullYear(), 11, 31) };
+  const label = getSummaryLabel(period, toLocalDateKey(range.s));
 
-  const range = period === 'week' ? weekRange(off) : period === 'month' ? monthRange(off) : { s: new Date(2026, 0, 1), e: new Date(2026, 11, 31) };
-  const label = period === 'year' ? '2026 年度总结' : period === 'week' ? `10月第${4 + off}周` : `${range.s.getMonth() + 1}月`;
-
-  const stream = (base: Job) => {
-    clearT();
-    setJob({ ...base, status: 'preparing', text: '' });
-    timers.current.push(window.setTimeout(() => setJob((j) => j && { ...j, status: 'thinking' }), 900));
-    timers.current.push(window.setTimeout(() => setJob((j) => j && { ...j, status: 'streaming' }), 2400));
-    const step = 14;
-    for (let k = 1; k * step <= SUMMARY_BODY.length + step; k++) {
-      timers.current.push(window.setTimeout(() => setJob((j) => j && { ...j, text: SUMMARY_BODY.slice(0, k * step) }), 2400 + k * 70));
+  useEffect(() => { setArchive(st === 'empty' ? [] : SUMMARIES); }, [SUMMARIES, st]);
+  useEffect(() => {
+    const idx = presets.findIndex((p) => p.id === settings.summaryActivePresetId);
+    setPreset(idx >= 0 ? idx : 0);
+  }, [presets, settings.summaryActivePresetId]);
+  useEffect(() => {
+    setAuto(settings.summaryAutoWrite !== false);
+    setSpecial(settings.summaryIncludeSpecial === true);
+  }, [settings.summaryAutoWrite, settings.summaryIncludeSpecial]);
+  useEffect(() => {
+    if (!rootJob) { setJob(null); return; }
+    setJob({
+      status: rootJob.status,
+      text: rootJob.text,
+      period: rootJob.period,
+      label: rootJob.req?.periodLabel ?? rootJob.draft?.label ?? getSummaryLabel(rootJob.period, rootJob.startDate),
+      truncated: rootJob.truncated,
+      continues: rootJob.continues,
+      saved: false,
+      followUps: rootJob.draft ? followUpsOf(rootJob.draft).map((f) => ({ q: f.question, a: f.answer })) : [],
+      totalPoints: rootJob.draft?.totalPoints ?? rootJob.req?.totalPoints ?? 0,
+      activityCount: rootJob.draft?.activityCount ?? rootJob.req?.activityCount ?? 0,
+    });
+  }, [rootJob, getSummaryLabel]);
+  useEffect(() => {
+    if (!open) return;
+    void loadSummaries();
+    if (!rootJob && restoreSummaryDraft()) setView('result');
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (open && pv === 'detail' && !selected && archive[0]) {
+      const source = summaries.find((x) => x.id === archive[0].id);
+      setSelected(archive[0]);
+      setDetailFU(source ? followUpsOf(source).map((f) => ({ q: f.question, a: f.answer })) : []);
     }
-    timers.current.push(window.setTimeout(() => setJob((j) => j && { ...j, status: 'done', text: SUMMARY_BODY }), 2400 + (SUMMARY_BODY.length / step + 2) * 70));
-  };
-  // ?state=busy：进来就开始跑
-  useEffect(() => { if (open && st === 'busy') stream({ status: 'preparing', text: '', period: 'week', label: '10月第4周', continues: 0, followUps: [] }); }, [open]); // eslint-disable-line
+  }, [open, pv, archive, selected, summaries]);
 
-  const running = !!job && job.status !== 'done' && job.status !== 'error';
-  const generate = () => { setView('result'); stream({ status: 'preparing', text: '', period, label, continues: 0, followUps: [] }); };
-  const stop = () => { clearT(); setJob((j) => j && { ...j, status: 'done', truncated: true }); };
+  const running = isSummaryJobRunning(rootJob);
+  const generate = async () => {
+    setView('result');
+    await updateSettings({ summaryActivePresetId: presets[preset]?.id ?? presets[0]?.id });
+    startSummaryJob({
+      settings: useAppStore.getState().settings,
+      period,
+      startDate: toLocalDateKey(range.s),
+      endDate: toLocalDateKey(range.e),
+    });
+  };
+  const stop = () => {
+    cancelSummaryJob();
+    setJob(null);
+  };
   const regenerate = () => { if (job && job.status === 'done' && !job.saved) setRegen(true); else generate(); };
-  const save = () => {
-    if (!job) return;
+  const save = async () => {
+    if (!job || !rootJob?.draft) return;
     setSaving(true);
-    setTimeout(() => {
+    try {
+      await saveSummary(rootJob.draft);
+      markSummaryJobSaved();
+      setJob(null);
+      toast.success('已归档保存');
+      setView('archive');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '保存失败，请重试');
+    } finally {
       setSaving(false);
-      setArchive((a) => [{ id: `sm${Date.now()}`, period: job.period, label: job.label, startDate: '2026-10-19', endDate: '2026-10-25', totalPoints: 13, activityCount: 9, promptPresetName: SUMMARY_PRESETS[preset], viewed: true, createdAt: new Date(), followUps: job.followUps.length, body: job.text }, ...a]);
-      setJob(null); toast.success('已归档保存'); setView('archive');
-    }, 600);
+    }
+  };
+  const persistedSelected = selected ? summaries.find((s) => s.id === selected.id) ?? null : null;
+  const annualSummary = archive.find((s) => s.period === 'year' && s.startDate.startsWith(String(now.getFullYear())));
+  const openArchived = (s: MockSummary) => {
+    const source = summaries.find((x) => x.id === s.id);
+    setSelected(s.viewed ? s : { ...s, viewed: true });
+    setDetailFU(source ? followUpsOf(source).map((f) => ({ q: f.question, a: f.answer })) : []);
+    void markSummaryViewed(s.id);
+    setView('view');
+  };
+  const appendFollowUp = async (question: string, archived?: PeriodSummary | null) => {
+    const draftContext = rootJob?.draft?.reqContext;
+    const base = archived
+      ? archived.reqContext
+        ? { ...archived.reqContext, apiKey: resolveKeyFor(settings, archived.reqContext.provider) }
+        : null
+      : rootJob?.req ?? (draftContext ? { ...draftContext, apiKey: resolveKeyFor(settings, draftContext.provider) } : null);
+    const apiKey = base?.apiKey;
+    if (!base || !apiKey) throw new Error('当前没有可用的 API Key，无法追问');
+    const previous = archived ? followUpsOf(archived) : rootJob?.draft ? followUpsOf(rootJob.draft) : [];
+    const messages = [
+      ...base.messages,
+      { role: 'assistant' as const, content: archived?.content ?? rootJob?.text ?? '' },
+      ...previous.flatMap((f) => [
+        { role: 'user' as const, content: f.question },
+        { role: 'assistant' as const, content: f.answer },
+      ]),
+      { role: 'user' as const, content: question },
+    ];
+    let answer = '';
+    for await (const chunk of chatStream({ ...base, apiKey }, messages, {
+      temperature: 0.7,
+      maxTokens: SUMMARY_FOLLOWUP_MAX_TOKENS,
+    })) answer += chunk;
+    const content = parseSummaryResult(answer).content.trim();
+    if (!content) throw new Error('这次没有拿到有效回答');
+    const followUp = { question, answer: content, createdAt: new Date() };
+    if (archived) {
+      await saveSummary({ ...archived, followUp: undefined, followUps: [...previous, followUp] });
+      setDetailFU((rows) => [...rows, { q: question, a: content }]);
+    } else {
+      attachDraftFollowUp(followUp);
+      setJob((j) => j && { ...j, followUps: [...j.followUps, { q: question, a: content }] });
+    }
   };
 
   const headerTitle = useMemo(() => {
@@ -171,11 +282,11 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   }, [view, job, selected]);
 
   const footer: ReactNode = view === 'generate' ? (
-    <P4Button block size="lg" disabled={noKey || running} onClick={generate}>🦋 生成总结</P4Button>
+    <P4Button block size="lg" disabled={noKey || running} onClick={() => void generate()}>🦋 生成总结</P4Button>
   ) : view === 'result' && job ? (
     <div className="flex gap-3">
       {running ? <P4Button variant="secondary" block size="lg" onClick={stop}>停止</P4Button> : <P4Button variant="secondary" block size="lg" onClick={regenerate}>重新生成</P4Button>}
-      <P4Button block size="lg" disabled={running || job.status !== 'done' || saving} onClick={save}>{running ? '生成中…' : saving ? '保存中…' : '归档保存'}</P4Button>
+      <P4Button block size="lg" disabled={running || job.status !== 'done' || saving || !rootJob?.draft} onClick={() => void save()}>{running ? '生成中…' : saving ? '保存中…' : '归档保存'}</P4Button>
     </div>
   ) : view === 'result' ? (
     <P4Button block size="lg" onClick={() => setView('generate')}>生成新总结</P4Button>
@@ -208,7 +319,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                   </div>
                 )}
                 {archive.some((s) => !s.viewed) && (() => { const f = archive.find((s) => !s.viewed)!; return (
-                  <button type="button" onClick={() => { setSelected(f); setArchive((a) => a.map((s) => (s.id === f.id ? { ...s, viewed: true } : s))); setView('view'); }}
+                   <button type="button" onClick={() => openArchived(f)}
                     className="flex w-full min-w-0 items-center gap-3 rounded-sm border-3 border-p4g-black bg-p4g-yellow px-3 py-2.5 text-left text-p4g-black shadow-hard">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-p4g-red" aria-label="未读" />
                     <span className="min-w-0 flex-1"><span className="block truncate font-display text-body font-bold">「{f.label}」写好了</span><span className="block truncate text-cap">{f.autoWritten ? '按你的设置在后台写好的，' : ''}还没看过</span></span>
@@ -218,9 +329,9 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                 <button type="button" onClick={() => setPeriod('year')} aria-pressed={period === 'year'}
                   className={cx('relative w-full min-w-0 overflow-hidden rounded-sm border-3 p-3 text-left shadow-hard', period === 'year' ? 'border-p4g-black bg-p4g-black text-p4g-yellow night:border-p4g-yellow' : 'border-p4g-line bg-p4g-surface text-p4g-ink')}>
                   <div aria-hidden className="absolute -right-6 -top-6 h-20 w-20 rotate-12 opacity-60 p4g-candy" />
-                  <div className="relative flex items-center gap-2"><span className="font-display text-lead font-bold">2026年 年度总结</span>{period === 'year' && <span className="rounded-xs bg-p4g-orange px-1.5 font-display text-2xs font-bold text-p4g-black">已选</span>}</div>
+                  <div className="relative flex items-center gap-2"><span className="font-display text-lead font-bold">{now.getFullYear()}年 年度总结</span>{period === 'year' && <span className="rounded-xs bg-p4g-orange px-1.5 font-display text-2xs font-bold text-p4g-black">已选</span>}</div>
                   <div className="relative mt-1 text-meta opacity-85">成功的更生 — 回顾这一年全部成长历程</div>
-                  <div className="relative mt-1.5 flex items-center justify-between gap-2 text-cap opacity-80"><span className="min-w-0 truncate">2026/1/2 写过一份，再生成会另存一份</span><span role="link" tabIndex={0} onClick={(e) => { e.stopPropagation(); setSelected(SUMMARIES[2]); setView('view'); }} className="shrink-0 font-bold">查看 ›</span></div>
+                  <div className="relative mt-1.5 flex items-center justify-between gap-2 text-cap opacity-80"><span className="min-w-0 truncate">{annualSummary ? `${annualSummary.startDate} ~ ${annualSummary.endDate} 已有归档，再生成会另存一份` : '今年还没有年度总结'}</span>{annualSummary && <span role="link" tabIndex={0} onClick={(e) => { e.stopPropagation(); openArchived(annualSummary); }} className="shrink-0 font-bold">查看 ›</span>}</div>
                 </button>
                 <section>
                   <div className="mb-2 font-display text-cap font-bold uppercase tracking-[0.2em] text-p4g-ink-soft">选择时间范围</div>
@@ -248,14 +359,14 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                   <div className="mb-1 font-display text-cap font-bold uppercase tracking-[0.2em] text-p4g-ink-soft">自动撰写</div>
                   <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1"><div className="font-display text-meta font-bold text-p4g-ink">自动撰写上一期总结</div><p className="mt-0.5 text-cap text-p4g-ink-soft">新的一周、一个月第一次打开时，上一期还没写就在后台写好，写完提醒你一次。用当前选的风格。</p></div>
-                    <P4Switch checked={auto} onChange={setAuto} aria-label="自动撰写上一期总结" size="sm" />
+                    <P4Switch checked={auto} onChange={(v) => { setAuto(v); void updateSettings({ summaryAutoWrite: v }); }} aria-label="自动撰写上一期总结" size="sm" />
                   </div>
                 </section>
                 <section className="rounded-sm border-3 border-p4g-line bg-p4g-surface p-3">
                   <div className="mb-1 font-display text-cap font-bold uppercase tracking-[0.2em] text-p4g-ink-soft">统计口径</div>
                   <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1"><div className="font-display text-meta font-bold text-p4g-ink">同时统计"特殊条目"</div><p className="mt-0.5 text-cap text-p4g-ink-soft">包括：逆影战场击破、本周目标、逆流、升级 / 成就 / 技能解锁 等。<br />同伴（带"同伴"标签的条目）始终会被统计。</p></div>
-                    <P4Switch checked={special} onChange={setSpecial} aria-label='同时统计"特殊条目"' size="sm" />
+                    <P4Switch checked={special} onChange={(v) => { setSpecial(v); void updateSettings({ summaryIncludeSpecial: v }); }} aria-label='同时统计"特殊条目"' size="sm" />
                   </div>
                 </section>
               </>
@@ -263,11 +374,11 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
 
             {view === 'result' && job && (
               <>
-                <Stats items={[{ label: '总加点', value: job.status === 'preparing' ? '…' : '+13' }, { label: '记录数', value: job.status === 'preparing' ? '…' : '9' }, { label: '风格', value: SUMMARY_PRESETS[preset] }]} />
+                <Stats items={[{ label: '总加点', value: job.status === 'preparing' ? '…' : `+${job.totalPoints}` }, { label: '记录数', value: job.status === 'preparing' ? '…' : String(job.activityCount) }, { label: '风格', value: SUMMARY_PRESETS[preset] ?? '' }]} />
                 {job.status === 'preparing' && <div className="flex items-center justify-center gap-2 py-8 font-display text-body font-bold text-p4g-ink"><motion.span animate={low ? undefined : { rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} className="inline-block">◌</motion.span>正在整理这一期的简报…</div>}
                 {job.status === 'thinking' && <ThinkingDial label="正在读你的记录" />}
                 {job.period === 'year' && job.status === 'done' && <P4Button block variant="black" onClick={() => setRecap(true)}>✦ 重温开场</P4Button>}
-                {(job.status === 'streaming' || job.status === 'done') && <Body text={job.text} streaming={job.status === 'streaming'} annual={job.period === 'year' ? 2026 : undefined} />}
+                {(job.status === 'streaming' || job.status === 'done') && <Body text={job.text} streaming={job.status === 'streaming'} annual={job.period === 'year' ? now.getFullYear() : undefined} />}
                 {job.status === 'error' && (
                   <div className="space-y-2 rounded-sm border-3 border-p4g-black bg-p4g-danger p-3 text-[color:var(--p4g-danger-ink)] shadow-hard-sm">
                     <div className="whitespace-pre-line text-body font-bold">{'网络请求失败：无法连接到 API 服务。\n若在浏览器中使用，部分 API 可能因跨域（CORS）限制无法直接访问，建议在 Android 客户端或支持 CORS 的接口下使用此功能。'}</div>
@@ -277,12 +388,13 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                 {job.status === 'done' && job.truncated && (
                   <div className="flex items-center gap-3 rounded-sm border-3 border-p4g-black bg-p4g-yellow p-3 text-p4g-black shadow-hard-sm">
                     <div className="min-w-0 flex-1 text-meta leading-relaxed">{job.continues >= 3 ? '已经续写了三次，剩下的就这样吧；可以直接归档，或者重新生成。' : '这封信写到一半断了（输出被截断或连接中途断开）。可以让它从断处接着写。'}</div>
-                    {job.continues < 3 && <P4Button size="sm" variant="black" onClick={() => setJob((j) => j && { ...j, text: SUMMARY_BODY, truncated: false, continues: j.continues + 1 })}>接着写</P4Button>}
+                    {job.continues < 3 && <P4Button size="sm" variant="black" onClick={() => continueSummaryJob(settings)}>接着写</P4Button>}
                   </div>
                 )}
                 {job.status === 'done' && !job.truncated && (
-                  <FollowUps items={job.followUps} remaining={3 - job.followUps.length} question="这周哪一件事，是你原本以为自己做不到的？"
-                    onSend={(q) => setJob((j) => j && { ...j, followUps: [...j.followUps, { q, a: '听起来那一刻你比自己想的更有胆量。把它记成一条，下周的总结会接着它往下写。' }] })} />
+                  <FollowUps items={job.followUps} remaining={SUMMARY_FOLLOWUP_LIMIT - job.followUps.length} question={rootJob?.draft?.question}
+                    disabled={!aiConfigured(settings) ? 'nokey' : !rootJob?.draft?.reqContext && !rootJob?.req ? 'legacy' : null}
+                    onSend={(q) => { void appendFollowUp(q).catch((e) => toast.error(e instanceof Error ? e.message : '追问失败')); }} />
                 )}
               </>
             )}
@@ -304,9 +416,9 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                         <div className="flex flex-wrap gap-x-2 text-2xs text-p4g-ink-soft"><span>+{s.totalPoints} 点</span><span>{s.activityCount} 条记录</span>{s.followUps > 0 && <span>追问 {s.followUps}</span>}</div>
                       </div>
                       <div className="flex shrink-0 flex-col gap-1">
-                        <P4Button size="sm" onClick={() => { setSelected(s); setArchive((a) => a.map((x) => (x.id === s.id ? { ...x, viewed: true } : x))); setView('view'); }}>查看</P4Button>
+                        <P4Button size="sm" onClick={() => openArchived(s)}>查看</P4Button>
                         {confirmDel === s.id
-                          ? <P4Button size="sm" variant="danger" onClick={() => { setArchive((a) => a.filter((x) => x.id !== s.id)); setConfirmDel(null); }}>确认</P4Button>
+                          ? <P4Button size="sm" variant="danger" onClick={async () => { await deleteSummary(s.id); setArchive((a) => a.filter((x) => x.id !== s.id)); setConfirmDel(null); }}>确认</P4Button>
                           : <P4Button size="sm" variant="ghost" onClick={() => setConfirmDel(s.id)}>删除</P4Button>}
                       </div>
                     </div>
@@ -322,8 +434,8 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                 {selected.period === 'year' && <P4Button block variant="black" onClick={() => setRecap(true)}>✦ 重温开场</P4Button>}
                 <Body text={selected.body} annual={selected.period === 'year' ? 2025 : undefined} />
                 <FollowUps items={detailFU} remaining={3 - detailFU.length}
-                  disabled={(params?.get('followup') as 'nokey' | 'legacy' | 'used' | null) ?? (selected.id === 'sm2' ? 'legacy' : null)}
-                  onSend={(q) => setDetailFU((f) => [...f, { q, a: '把这个问题拆成一件今天就能做的小事——比如十分钟。做完了记一条。' }])} />
+                  disabled={(params?.get('followup') as 'nokey' | 'legacy' | 'used' | null) ?? (!aiConfigured(settings) ? 'nokey' : !persistedSelected?.reqContext ? 'legacy' : detailFU.length >= SUMMARY_FOLLOWUP_LIMIT ? 'used' : null)}
+                  onSend={(q) => { void appendFollowUp(q, persistedSelected).catch((e) => toast.error(e instanceof Error ? e.message : '追问失败')); }} />
               </>
             )}
           </motion.div>

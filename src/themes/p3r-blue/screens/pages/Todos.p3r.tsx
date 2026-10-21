@@ -9,12 +9,12 @@
  * 查询参数：pane=wish；deck=weekly|cards；goal=none|progress|done|claimed；state=empty。
  */
 import { AnimatePresence, motion } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Todo, Wish } from '@/types';
 import { BigSlantTitle, GhostWords, P3Button, P3Input, P3Progress, P3Tag, IconEdit, IconTrash, IconRefresh, IconMore, IconPlus, useToast, P3R, slantClip, tickClip, Glyph } from '@blue/kit';
 import { P3Stagger, P3StaggerItem } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
-import { ATTR_NAMES, TODAY, TODAY_DONE, TODAY_KEY, TODOS, TODO_PROGRESS, WISHES, WISH_TIMES } from '@blue/adapters/pkg2';
+import { useActionsData, actionsOps } from '@blue/adapters/pkg2';
 import { Dot, MiniHead, Ring, SlantFab, WEEK_LABELS, daysBetween, qp, setHashParam, useLongPress } from '@blue/screens/pkg2/common';
 import { GoalDeck } from '@blue/screens/pkg2/GoalDeck';
 import TodoFormSheet, { type TodoForm } from '@blue/screens/overlays/TodoFormSheet.p3r';
@@ -33,6 +33,7 @@ const ArchiveIcon = ({ size = 14 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinejoin="round" aria-hidden><path d="M3 4h18v5H3zM5 9v11h14V9M10 13h4" /></svg>
 );
 function DeadlineTag({ t, done }: { t: Todo; done?: boolean }) {
+  const { TODAY_KEY } = useActionsData();
   if (!t.deadline || done) return null;
   const d = daysBetween(TODAY_KEY, t.deadline);
   const text = d > 0 ? `剩 ${d} 天` : d === 0 ? '今天截止' : `逾期 ${-d} 天`;
@@ -60,6 +61,7 @@ const EmptySlab = ({ text, ghost = 'EMPTY', action }: { text: string; ghost?: st
 
 /** p3 ListCard 行版任务卡（ActiveTodoCard / PendingWeekdayTodoCard） */
 function TodoRow({ t, onMenu, onArchive, onDelete, pending }: { t: Todo; onMenu: () => void; onArchive?: () => void; onDelete?: () => void; pending?: boolean }) {
+  const { ATTR_NAMES, TODO_PROGRESS, TODAY_KEY } = useActionsData();
   const anim = useBoldness();
   const lp = useLongPress(onMenu);
   const count = TODO_PROGRESS[t.id] ?? 0;
@@ -108,6 +110,7 @@ function TodoRow({ t, onMenu, onArchive, onDelete, pending }: { t: Todo; onMenu:
 
 /** BIG DEAL 聚合卡（BigDealHomeCard p3：墨色斜切 + 目标弧 + 蓝进度） */
 function BigDealCard({ t, onOpen, onMenu }: { t: Todo; onOpen: () => void; onMenu: () => void }) {
+  const { TODAY_KEY } = useActionsData();
   const steps = t.steps ?? [];
   const done = steps.filter((s) => s.done).length;
   const next = steps.find((s) => !s.done);
@@ -136,6 +139,7 @@ function BigDealCard({ t, onOpen, onMenu }: { t: Todo; onOpen: () => void; onMen
 
 /** 愿望面板（WishBoard p3） */
 function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview, onCompose }: { wishes: Wish[]; setWishes: (f: (w: Wish[]) => Wish[]) => void; onOpen: (w: Wish) => void; onFulfill: (w: Wish) => void; tokens: number; pendingReview: number; onCompose: () => void }) {
+  const { WISH_TIMES } = useActionsData();
   const toast = useToast();
   const anim = useBoldness();
   const [menu, setMenu] = useState<string | null>(null);
@@ -173,8 +177,8 @@ function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview
                       setMenu(null);
                       if (id === 'split') onOpen(w);
                       if (id === 'fulfill') onFulfill(w);
-                      if (id === 'archive') { setWishes((l) => l.map((x) => (x.id === w.id ? { ...x, status: 'archived', archivedAt: new Date() } : x))); toast('已收起'); }
-                      if (id === 'delete') { setWishes((l) => l.filter((x) => x.id !== w.id)); toast('已删除'); }
+                      if (id === 'archive') { setWishes((l) => l.map((x) => (x.id === w.id ? { ...x, status: 'archived', archivedAt: new Date() } : x))); void actionsOps.setWishStatus(w.id, 'archived'); toast('已收起'); }
+                      if (id === 'delete') { setWishes((l) => l.filter((x) => x.id !== w.id)); void actionsOps.deleteWish(w.id); toast('已删除'); }
                     }} className="block w-full px-5 py-2 text-left text-[14px] font-black" style={{ color: id === 'delete' ? P3R.magenta : 'var(--p3r-on-ink)' }}>{label}</button>
                   ))}
                 </motion.div>
@@ -186,7 +190,7 @@ function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview
       {adding ? (
         <div className="flex min-w-0 gap-2 pt-1">
           <div className="min-w-0 flex-1"><P3Input autoFocus placeholder="想实现的事…" aria-label="愿望标题" value={draft} onChange={(e) => setDraft(e.target.value)} /></div>
-          <P3Button disabled={!draft.trim()} onClick={() => { setWishes((l) => [{ id: `w${Date.now()}`, title: draft.trim(), status: 'active', source: 'manual', createdAt: new Date() }, ...l]); setDraft(''); setAdding(false); }}>记下</P3Button>
+          <P3Button disabled={!draft.trim()} onClick={() => { const title = draft.trim(); void actionsOps.addWish(title); setDraft(''); setAdding(false); }}>记下</P3Button>
         </div>
       ) : (
         <button type="button" onClick={() => setAdding(true)} className="block h-11 w-full text-center text-[14px] font-black" style={{ clipPath: slantClip(9), boxShadow: 'inset 0 0 0 2px rgb(var(--p3r-blue-rgb) / 0.4)', color: P3R.roseInk }}>＋ 记下一个愿望</button>
@@ -198,6 +202,7 @@ function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview
 export function TodosView({ params }: { params: URLSearchParams }) {
   const toast = useToast();
   const anim = useBoldness();
+  const { TODOS, WISHES, TODAY_DONE, TODAY_KEY, TODAY, WEEKLY_GOAL, ATTR_NAMES } = useActionsData();
   const empty = qp(params, 'state') === 'empty';
   const [todos, setTodos] = useState<Todo[]>(empty ? [] : TODOS);
   const [wishes, setWishes] = useState<Wish[]>(empty ? [] : WISHES);
@@ -215,6 +220,9 @@ export function TodosView({ params }: { params: URLSearchParams }) {
   const [fulfill, setFulfill] = useState<Wish | null>(null);
   const [compose, setCompose] = useState(false);
   const isWish = pane === 'wish';
+  useEffect(() => { if (!empty) setTodos(TODOS.map((t) => ({ ...t }))); }, [TODOS, empty]);
+  useEffect(() => { if (!empty) setWishes(WISHES.map((w) => ({ ...w }))); }, [WISHES, empty]);
+  useEffect(() => { if (!empty) setDoneToday(new Set(TODAY_DONE)); }, [TODAY_DONE, empty]);
 
   const pendingDate = todos.filter((t) => t.isActive && !t.completedAt && ((t.startDate && t.startDate > TODAY_KEY) || (t.weekdays?.length && !t.weekdays.includes(TODAY.getDay()))));
   const active = todos.filter((t) => t.isActive && !t.completedAt && !t.archivedAt && !pendingDate.includes(t));
@@ -234,8 +242,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
 
   const saveForm = (f: TodoForm, id?: string) => {
     const patch: Partial<Todo> = { title: f.title, attribute: f.attribute, points: f.points, frequency: f.mode === 'count' ? 'count' : 'single', targetCount: f.targetCount, important: f.important, repeatDaily: f.repeatDaily, isLongTerm: f.isLongTerm, isBigDeal: f.mode === 'big', steps: f.mode === 'big' ? f.steps : undefined, deadline: f.deadline || undefined, weekdays: f.weekdays, isActive: f.isActive, startDate: f.startDate || undefined, extraBoosts: f.extraBoosts, currentState: f.currentState || undefined, wishId: f.wishId };
-    if (id) setTodos((l) => l.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-    else setTodos((l) => [{ id: `t${Date.now()}`, createdAt: new Date(), ...patch } as Todo, ...l]);
+    void actionsOps.saveTodo(f, id);
   };
 
   return (
@@ -255,15 +262,15 @@ export function TodosView({ params }: { params: URLSearchParams }) {
               <span className="relative min-w-0 truncate text-[14px] font-black" style={{ color: P3R.ink }}><span className="min-[400px]:hidden">让命运替你挑一件</span><span className="hidden min-[400px]:inline">不知道做什么好？命运会替你选择</span></span>
             </button>
             <div className="relative shrink-0">
-              <button type="button" onClick={() => setQuest(true)} aria-label="委托板，1 张可领取" className="flex h-full items-center gap-1 px-4 text-[14px] font-black" style={{ clipPath: slantClip(10), background: P3R.panelGlass, color: P3R.ink }}><Glyph name="scroll" /><span>委托</span></button>
-              <Dot n={1} />
+              <button type="button" onClick={() => setQuest(true)} aria-label="委托板" className="flex h-full items-center gap-1 px-4 text-[14px] font-black" style={{ clipPath: slantClip(10), background: P3R.panelGlass, color: P3R.ink }}><Glyph name="scroll" /><span>委托</span></button>
+              <Dot />
             </div>
           </div>
         )}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={pane} initial={anim ? { opacity: 0, x: 24 } : { opacity: 0 }} animate={{ opacity: 1, x: 0 }} exit={anim ? { opacity: 0, x: -24 } : { opacity: 0 }} transition={{ duration: 0.18 }} className="relative min-w-0">
             {isWish ? (
-              <WishBoard wishes={wishes} setWishes={setWishes} onOpen={setWishPanel} onFulfill={setFulfill} tokens={empty ? 0 : 2} pendingReview={empty ? 0 : 1} onCompose={() => setCompose(true)} />
+              <WishBoard wishes={wishes} setWishes={setWishes} onOpen={setWishPanel} onFulfill={setFulfill} tokens={0} pendingReview={0} onCompose={() => setCompose(true)} />
             ) : active.length === 0 ? (
               <EmptySlab ghost="PLAN" text="还没有任务，添加一个开始吧" action={<P3Button corner onClick={() => setForm({ todo: null })}>添加任务</P3Button>} />
             ) : (
@@ -271,7 +278,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
                 {active.map((t) => (
                   <P3StaggerItem key={t.id}>
                     {t.isBigDeal ? <BigDealCard t={t} onOpen={() => setDeal(t)} onMenu={() => setMenuId(t.id)} />
-                      : <TodoRow t={t} onMenu={() => setMenuId(t.id)} onArchive={() => { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); toast('已归档（不启用）'); }} />}
+                      : <TodoRow t={t} onMenu={() => setMenuId(t.id)} onArchive={() => { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); void actionsOps.updateTodo(t.id, { isActive: false }); toast('已归档（不启用）'); }} />}
                   </P3StaggerItem>
                 ))}
               </P3Stagger>
@@ -287,7 +294,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
             <div className="space-y-3">
               {pendingDate.length > 0 && (
                 <div>{subLabel('未到日期')}
-                  <div className="space-y-1.5">{pendingDate.map((t) => <TodoRow key={t.id} t={t} pending onMenu={() => setMenuId(t.id)} onArchive={() => setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x)))} onDelete={() => setDelId(t.id)} />)}</div>
+                  <div className="space-y-1.5">{pendingDate.map((t) => <TodoRow key={t.id} t={t} pending onMenu={() => setMenuId(t.id)} onArchive={() => { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); void actionsOps.updateTodo(t.id, { isActive: false }); }} onDelete={() => setDelId(t.id)} />)}</div>
                 </div>
               )}
               {inactive.length > 0 && (
@@ -298,7 +305,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
                         <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-black" style={{ color: P3R.ink, opacity: 0.7 }}>{t.title}</span><span className="text-[11px]" style={{ color: P3R.grey }}>{ATTR_NAMES[t.attribute]} +{t.points} · {freqLabel(t)}</span></span>
                         <IconBtn title="编辑" onClick={() => setForm({ todo: t })}><IconEdit size={13} /></IconBtn>
                         <IconBtn title="删除" tone="danger" onClick={() => setDelId(t.id)}><IconTrash size={13} /></IconBtn>
-                        <IconBtn title="恢复（重置为未完成）" onClick={() => setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: true, archivedAt: undefined } : x)))}><IconRefresh size={13} /></IconBtn>
+                        <IconBtn title="恢复（重置为未完成）" onClick={() => { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: true, archivedAt: undefined } : x))); void actionsOps.updateTodo(t.id, { isActive: true, archivedAt: undefined }); }}><IconRefresh size={13} /></IconBtn>
                       </div>
                     ))}
                   </div>
@@ -319,7 +326,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
                             {today ? <span className="text-[11px] font-black" style={{ color: P3R.roseInk }}>✓ 今日已完成</span> : <span className="text-[11px]" style={{ color: P3R.grey }}>✓ {t.completedAt!.getMonth() + 1}月{t.completedAt!.getDate()}日完成</span>}
                           </span>
                           <IconBtn title="删除" tone="danger" onClick={() => setDelId(t.id)}><IconTrash size={13} /></IconBtn>
-                          {today && <IconBtn title="撤销今日完成（同时回退点数和记录）" onClick={() => { setDoneToday((s) => { const n = new Set(s); n.delete(t.id); return n; }); setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, completedAt: undefined, archivedAt: undefined } : x))); toast('已撤销今日完成'); }}><IconRefresh size={13} /></IconBtn>}
+                          {today && <IconBtn title="撤销今日完成（同时回退点数和记录）" onClick={() => { setDoneToday((s) => { const n = new Set(s); n.delete(t.id); return n; }); setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, completedAt: undefined, archivedAt: undefined } : x))); void actionsOps.undoTodayTodoCompletion(t.id); toast('已撤销今日完成'); }}><IconRefresh size={13} /></IconBtn>}
                           <IconBtn title="按此配置新建任务" onClick={() => setForm({ todo: { ...t, id: '', completedAt: undefined } as Todo })}><IconPlus size={13} /></IconBtn>
                         </div>
                       );
@@ -331,7 +338,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
               {goneWishes.map((w) => (
                 <div key={w.id} className={archRow} style={{ clipPath: slantClip(9), background: 'var(--p3r-row-alt)' }}>
                   <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-black" style={{ color: P3R.ink }}>{w.title}</span><P3Tag tone={w.fulfilledAt ? 'rose' : 'outline'}>{w.fulfilledAt ? '✦ 愿望 · 已实现' : '✦ 愿望 · 已收起'}</P3Tag></span>
-                  <P3Button size="sm" tone="soft" onClick={() => setWishes((l) => l.map((x) => (x.id === w.id ? { ...x, status: 'active', fulfilledAt: undefined, archivedAt: undefined } : x)))}>恢复</P3Button>
+                  <P3Button size="sm" tone="soft" onClick={() => { setWishes((l) => l.map((x) => (x.id === w.id ? { ...x, status: 'active', fulfilledAt: undefined, archivedAt: undefined } : x))); void actionsOps.setWishStatus(w.id, 'active'); }}>恢复</P3Button>
                 </div>
               ))}
             </div>
@@ -343,10 +350,10 @@ export function TodosView({ params }: { params: URLSearchParams }) {
 
       <TodoFormSheet open={!!form} onClose={() => setForm(false)} todo={form ? (form.todo?.id ? form.todo : null) : null} onSave={saveForm} />
       <TodosItemMenu open={!!menuTodo} onClose={() => setMenuId(null)} todo={menuTodo}
-        onAction={(a) => { const t = menuTodo!; if (a === 'edit') setForm({ todo: t }); if (a === 'archive') { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); toast('已归档'); } if (a === 'delete') setDelId(t.id); }} />
-      <TodosDeleteConfirm open={!!delTodo} onClose={() => setDelId(null)} title={delTodo?.title} onConfirm={() => { setTodos((l) => l.filter((x) => x.id !== delId)); toast.success('已删除'); }} />
-      <TodosWishAddSheet open={wishAdd} onClose={() => setWishAdd(false)} onAdd={(title) => setWishes((l) => [{ id: `w${Date.now()}`, title, status: 'active', source: 'manual', createdAt: new Date() }, ...l])} />
-      <FateDrawSheet open={fate} onClose={() => setFate(false)} onGo={(kind, title) => { if (kind === 'quest') setQuest(true); else { setTodos((l) => [{ id: `f${Date.now()}`, title, attribute: 'knowledge', points: 1, frequency: 'single', isActive: true, createdAt: new Date(), fateDrawnDate: TODAY_KEY } as Todo, ...l]); toast.success('接住了 · ✦ 签'); } }} />
+        onAction={(a) => { const t = menuTodo!; if (a === 'edit') setForm({ todo: t }); if (a === 'archive') { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); void actionsOps.updateTodo(t.id, { isActive: false }); toast('已归档'); } if (a === 'delete') setDelId(t.id); }} />
+      <TodosDeleteConfirm open={!!delTodo} onClose={() => setDelId(null)} title={delTodo?.title} onConfirm={() => { if (delId) void actionsOps.deleteTodo(delId); toast.success('已删除'); }} />
+      <TodosWishAddSheet open={wishAdd} onClose={() => setWishAdd(false)} onAdd={(title) => { void actionsOps.addWish(title); }} />
+      <FateDrawSheet open={fate} onClose={() => setFate(false)} onGo={(kind, title) => { if (kind === 'quest') setQuest(true); else toast.success(`已接住「${title}」 · ✦ 签`); }} />
       <QuestBoardSheet open={quest} onClose={() => setQuest(false)} />
       <BigDealPanel open={!!deal} onClose={() => setDeal(null)} todo={deal} onChange={(n) => setTodos((l) => l.map((x) => (x.id === n.id ? n : x)))} />
       <WishPanel open={!!wishPanel} onClose={() => setWishPanel(null)} wish={wishPanel} onChange={(n) => setWishes((l) => l.map((x) => (x.id === n.id ? n : x)))} />

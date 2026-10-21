@@ -7,28 +7,41 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, IconPlus, IconTrash } from '@yellow/kit';
 import { p4gAsset } from '@yellow/lib/asset';
-import { MAX_IMAGES_PER_ACTIVITY } from '@yellow/adapters/pkg2';
+import { actionsOps, MAX_IMAGES_PER_ACTIVITY } from '@yellow/adapters/pkg2';
+import { prepareActivityImage } from '@/utils/activityImages';
 import ImageLightbox from './ImageLightbox.p4g';
 
-export default function ActivityImagesSheet({ open, onClose, params, title, images: init, onChange }: OverlayProps & { title?: string; images?: string[]; onChange?: (imgs: string[]) => void }) {
+export default function ActivityImagesSheet({ open, onClose, params, title, activityId, images: init, onChange }: OverlayProps & { title?: string; activityId?: string; images?: string[]; onChange?: () => void }) {
   const [imgs, setImgs] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<number | null>(null);
   const [lb, setLb] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
-  useEffect(() => { if (open) { setImgs(init ?? (params?.get('state') === 'empty' ? [] : ['town-day.webp', 'town-night.webp'])); setHint(null); setConfirm(null); } }, [open]); // eslint-disable-line
-  const update = (v: string[]) => { setImgs(v); onChange?.(v); };
+  useEffect(() => { if (open) { setImgs(init ?? []); setHint(null); setConfirm(null); } }, [open, init]); // eslint-disable-line
+  const update = (v: string[]) => { setImgs(v); onChange?.(); };
   const room = MAX_IMAGES_PER_ACTIVITY - imgs.length;
   const add = () => {
     if (room <= 0) { setHint('已经满了'); return; }
-    setBusy(true);
-    setTimeout(() => {
-      setBusy(false);
-      const want = ['tv-world-fog.webp', 'menu-squares.webp', 'town-day-wide.webp'];
-      const take = want.slice(0, room);
-      if (want.length > take.length) setHint(`每条记录最多 ${MAX_IMAGES_PER_ACTIVITY} 张，多出的没有加`); else setHint(null);
-      update([...imgs, ...take]);
-    }, 500);
+    if (!activityId) { setHint('记录尚未保存，暂时不能添加图片'); return; }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = room > 1;
+    input.onchange = async () => {
+      const files = [...(input.files ?? [])];
+      if (!files.length) return;
+      setBusy(true);
+      try {
+        const prepared = await Promise.all(files.map((file) => prepareActivityImage(file)));
+        await actionsOps.addActivityImages(activityId, prepared);
+        onChange?.();
+      } catch (e) {
+        setHint(e instanceof Error ? e.message : '图片添加失败');
+      } finally {
+        setBusy(false);
+      }
+    };
+    input.click();
   };
   return (
     <>
@@ -42,7 +55,7 @@ export default function ActivityImagesSheet({ open, onClose, params, title, imag
               <span className="pointer-events-none absolute left-0 top-0 bg-p4g-yellow px-1 p4g-num text-2xs text-p4g-black">{String(i + 1).padStart(2, '0')}</span>
               {confirm === i ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/80 text-meta font-bold">
-                  <button type="button" onClick={() => { update(imgs.filter((_, j) => j !== i)); setConfirm(null); }} className="rounded-xs bg-p4g-danger px-3 py-1 text-[color:var(--p4g-danger-ink)]">删除</button>
+                  <button type="button" onClick={async () => { if (activityId) await actionsOps.removeActivityImageAt(activityId, i); update(imgs.filter((_, j) => j !== i)); setConfirm(null); }} className="rounded-xs bg-p4g-danger px-3 py-1 text-[color:var(--p4g-danger-ink)]">删除</button>
                   <button type="button" onClick={() => setConfirm(null)} className="rounded-xs bg-white px-3 py-1 text-p4g-black">取消</button>
                 </div>
               ) : (
@@ -60,7 +73,7 @@ export default function ActivityImagesSheet({ open, onClose, params, title, imag
         {hint && <p className="mt-3 text-center text-meta font-bold text-p4g-danger">{hint}</p>}
         {imgs.length === 0 && <p className="mt-3 text-center text-meta text-p4g-ink-soft">这条记录还没有图片。图片只存在本机，不上云，可在「账号与数据」单独导出图片包。</p>}
       </P4Sheet>
-      <ImageLightbox open={lb !== null} onClose={() => setLb(null)} images={imgs} index={lb ?? 0} onDelete={(i) => update(imgs.filter((_, j) => j !== i))} />
+      <ImageLightbox open={lb !== null} onClose={() => setLb(null)} images={imgs} index={lb ?? 0} onDelete={async (i) => { if (activityId) await actionsOps.removeActivityImageAt(activityId, i); update(imgs.filter((_, j) => j !== i)); }} />
     </>
   );
 }

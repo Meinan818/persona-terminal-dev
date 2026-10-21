@@ -6,11 +6,12 @@ import { useEffect, useState } from 'react';
 import type { AttributeId } from '@/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Sheet, IconCheck, useToast } from '@yellow/kit';
-import { ATTR_IDS, ATTR_NAMES, SCHEDULE_ITEMS } from '@yellow/adapters/pkg2';
+import { ATTR_IDS, SCHEDULE_ITEMS, useActionAttributes } from '@yellow/adapters/pkg2';
 import { WEEK_LABELS } from '@yellow/screens/pkg2/common';
 import { cx } from '@yellow/lib/cx';
 
 export default function TodosScheduleImport({ open, onClose, onImport }: OverlayProps & { onImport?: (n: number) => void }) {
+  const { ATTR_NAMES } = useActionAttributes();
   const toast = useToast();
   const [rows, setRows] = useState(SCHEDULE_ITEMS);
   const [attr, setAttr] = useState<AttributeId>('knowledge');

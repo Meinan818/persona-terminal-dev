@@ -9,18 +9,18 @@ import { useCallingCardData, callingCardOps, updateCard, cardProgress } from '@b
  * 状态改写自黄色版 screens/pkg2/GoalDeck.tsx（复制，不 import）。
  */
 import { AnimatePresence, motion } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AttributeId, CallingCard } from '@/types';
 import { P3ActionSheet, P3Button, P3Progress, P3Segment, P3Tag, useToast, P3R, slantClip, tickClip, IconMore, IconClose, IconChevron, Glyph } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
-import { ATTR_NAMES, CALLING_CARDS, TODAY_KEY, TODOS, WEEKLY_GOAL } from '@blue/adapters/pkg2';
+import { useActionsData, actionsOps } from '@blue/adapters/pkg2';
 import { daysBetween, setHashParam, toneBg, useLongPress } from './common';
 import GoalSetupForm, { type GoalItem } from '@blue/screens/overlays/GoalSetupForm.p3r';
 import CelebrationModal from '@blue/screens/overlays/CelebrationModal.p3r';
 import CallingCardEditor from '@blue/screens/overlays/CallingCardEditor.p3r';
 import CallingCardSectionDeleteConfirm from '@blue/screens/overlays/CallingCardSectionDeleteConfirm.p3r';
 
-const goalText = (g: GoalItem) => {
+const goalText = (g: GoalItem, ATTR_NAMES: Record<AttributeId, string>) => {
   const n = g.attribute ? ATTR_NAMES[g.attribute] : '';
   switch (g.type) {
     case 'activity_count': return `完成 ${g.target} 次${n}活动`;
@@ -33,10 +33,11 @@ export type GoalState = 'none' | 'progress' | 'done' | 'claimed';
 
 export function WeeklyGoalSection({ initial }: { initial: GoalState }) {
   const toast = useToast();
+  const { WEEKLY_GOAL, WEEK_RANGE, ATTR_NAMES } = useActionsData();
   const [goal, setGoal] = useState<{ items: GoalItem[]; reward: string; completed: boolean; rewardAttr?: AttributeId; rewardPoints?: number } | null>(
     initial === 'none' ? null : {
-      items: (WEEKLY_GOAL.goals as GoalItem[]).map((g) => (initial === 'progress' ? g : { ...g, current: g.target })),
-      reward: WEEKLY_GOAL.reward, completed: initial === 'claimed', rewardAttr: initial === 'claimed' ? 'knowledge' : undefined, rewardPoints: initial === 'claimed' ? 7 : undefined,
+      items: (WEEKLY_GOAL?.goals as GoalItem[] | undefined)?.map((g) => (initial === 'progress' ? g : { ...g, current: g.target })) ?? [],
+      reward: WEEKLY_GOAL?.reward ?? '', completed: initial === 'claimed' || !!WEEKLY_GOAL?.completed, rewardAttr: initial === 'claimed' ? WEEKLY_GOAL?.rewardAttribute : undefined, rewardPoints: initial === 'claimed' ? WEEKLY_GOAL?.rewardPoints : undefined,
     });
   const [setup, setSetup] = useState<false | 'new' | 'edit'>(false);
   const [menu, setMenu] = useState(false);
@@ -44,6 +45,16 @@ export function WeeklyGoalSection({ initial }: { initial: GoalState }) {
   const lp = useLongPress(() => setMenu(true));
   const allDone = !!goal && goal.items.every((g) => g.current >= g.target);
   const sel = lp.pressing;
+  useEffect(() => {
+    if (!WEEKLY_GOAL) { setGoal(null); return; }
+    setGoal((cur) => ({
+      items: WEEKLY_GOAL.goals as GoalItem[],
+      reward: WEEKLY_GOAL.reward,
+      completed: !!WEEKLY_GOAL.completed,
+      rewardAttr: WEEKLY_GOAL.rewardAttribute,
+      rewardPoints: WEEKLY_GOAL.rewardPoints,
+    }));
+  }, [WEEKLY_GOAL, initial]);
 
   if (!goal) {
     return (
@@ -51,7 +62,19 @@ export function WeeklyGoalSection({ initial }: { initial: GoalState }) {
         <button type="button" onClick={() => setSetup('new')} className="flex h-16 w-full items-center justify-center gap-2 text-[16px] font-black" style={{ clipPath: slantClip(12), background: 'transparent', boxShadow: 'inset 0 0 0 2px rgb(var(--p3r-blue-rgb) / 0.45)', color: P3R.roseInk }}>
           + 设定本周目标
         </button>
-        <GoalSetupForm open={!!setup} onClose={() => setSetup(false)} onSubmit={(items, reward) => setGoal({ items: items.map((i) => ({ ...i, current: 0 })), reward, completed: false })} />
+        <GoalSetupForm open={!!setup} onClose={() => setSetup(false)} onSubmit={(items, reward) => {
+          const next: import('@/types').WeeklyGoal = {
+            id: WEEKLY_GOAL?.id ?? `wg-${Date.now()}`,
+            weekStart: WEEKLY_GOAL?.weekStart ?? WEEK_RANGE.weekStart,
+            weekEnd: WEEKLY_GOAL?.weekEnd ?? WEEK_RANGE.weekEnd,
+            goals: items.map((i) => ({ ...i, current: 0 })),
+            reward,
+            completed: false,
+            createdAt: WEEKLY_GOAL?.createdAt ?? new Date(),
+          };
+          setGoal({ items: next.goals.map((i) => ({ ...i, current: 0 })), reward, completed: false });
+          void actionsOps.saveWeeklyGoal(next);
+        }} />
       </>
     );
   }
@@ -61,7 +84,7 @@ export function WeeklyGoalSection({ initial }: { initial: GoalState }) {
         <div className="relative px-4 py-3 transition-colors" style={{ clipPath: slantClip(12), background: sel ? P3R.ink : P3R.panel }}>
           <div className="flex items-center gap-2">
             <span className="font-heavy text-[16px]" style={{ color: sel ? 'var(--p3r-on-ink)' : P3R.ink }}>本周目标</span>
-            <span className="font-cond text-[12px]" style={{ color: sel ? 'var(--p3r-on-ink)' : P3R.grey }}>{WEEKLY_GOAL.weekStart.slice(5).replace('-', '/')}–{WEEKLY_GOAL.weekEnd.slice(5).replace('-', '/')}</span>
+            <span className="font-cond text-[12px]" style={{ color: sel ? 'var(--p3r-on-ink)' : P3R.grey }}>{WEEKLY_GOAL?.weekStart.slice(5).replace('-', '/') ?? '本周'}–{WEEKLY_GOAL?.weekEnd.slice(5).replace('-', '/') ?? '周末'}</span>
             <span className="flex-1" />
             {goal.completed && <P3Tag tone="gold">已完成</P3Tag>}
           </div>
@@ -69,7 +92,7 @@ export function WeeklyGoalSection({ initial }: { initial: GoalState }) {
             {goal.items.map((g, i) => (
               <div key={i} className="min-w-0">
                 <div className="mb-1 flex items-baseline justify-between gap-2">
-                  <span className="min-w-0 truncate text-[14px] font-bold" style={{ color: sel ? 'var(--p3r-on-ink)' : P3R.ink }}>{goalText(g)}</span>
+                  <span className="min-w-0 truncate text-[14px] font-bold" style={{ color: sel ? 'var(--p3r-on-ink)' : P3R.ink }}>{goalText(g, ATTR_NAMES)}</span>
                   <span className="shrink-0 font-cond text-[14px]" style={{ color: sel ? 'var(--p3r-on-ink)' : g.current >= g.target ? P3R.roseInk : P3R.ink }}>{Math.min(g.current, g.target)}/{g.target}</span>
                 </div>
                 <P3Progress variant="segments" value={Math.round((Math.min(g.current, g.target) / g.target) * Math.min(g.target, 12))} max={Math.min(g.target, 12)} color={g.current >= g.target ? P3R.blue : P3R.cyan} />
@@ -88,10 +111,21 @@ export function WeeklyGoalSection({ initial }: { initial: GoalState }) {
       </div>
       <P3ActionSheet open={menu} onClose={() => setMenu(false)} title="本周目标"
         actions={[{ id: 'edit', label: '修改选项' }, { id: 'reset', label: goal.completed ? '删除本周目标记录' : '重置本周目标', tone: 'danger' }]}
-        onSelect={(id) => { if (id === 'edit') setSetup('edit'); else { setGoal(null); toast(goal.completed ? '已删除本周目标记录' : '已重置本周目标'); } }} />
+        onSelect={(id) => { if (id === 'edit') setSetup('edit'); else { if (WEEKLY_GOAL) void actionsOps.deleteWeeklyGoal(WEEKLY_GOAL.id); setGoal(null); toast(goal.completed ? '已删除本周目标记录' : '已重置本周目标'); } }} />
       <GoalSetupForm open={!!setup} onClose={() => setSetup(false)} initial={setup === 'edit' ? goal.items : undefined} initialReward={goal.reward}
-        onSubmit={(items, reward) => setGoal((g) => g && { ...g, items: items.map((it) => ({ ...it, current: g.items.find((x) => x.type === it.type)?.current ?? 0 })), reward })} />
-      <CelebrationModal open={cel} onClose={() => setCel(false)} onClaim={(a, pts) => setGoal((g) => g && { ...g, completed: true, rewardAttr: a, rewardPoints: pts })} />
+        onSubmit={(items, reward) => {
+          setGoal((g) => {
+            if (!g || !WEEKLY_GOAL) return g;
+            const next: import('@/types').WeeklyGoal = {
+              ...WEEKLY_GOAL,
+              goals: items.map((it) => ({ ...it, current: g.items.find((x) => x.type === it.type)?.current ?? 0 })),
+              reward,
+            };
+            void actionsOps.saveWeeklyGoal(next);
+            return { ...g, items: next.goals, reward };
+          });
+        }} />
+      <CelebrationModal open={cel} onClose={() => setCel(false)} onClaim={(a, pts) => { if (WEEKLY_GOAL) void actionsOps.completeWeeklyGoal(WEEKLY_GOAL.id, a); setGoal((g) => g && { ...g, completed: true, rewardAttr: a, rewardPoints: pts }); }} />
     </>
   );
 }

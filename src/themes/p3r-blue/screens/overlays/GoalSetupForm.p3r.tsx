@@ -10,7 +10,7 @@ import type { AttributeId } from '@/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3Field, P3Input, P3Sheet, P3Stepper, useToast, P3R, slantClip, SelectWedge, IconCheck, IconPlus } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
-import { ATTR_IDS, ATTR_NAMES, WEEKLY_GOAL } from '@blue/adapters/pkg2';
+import { ATTR_IDS, useActionsData } from '@blue/adapters/pkg2';
 
 type GT = 'activity_count' | 'todo_count' | 'attr_points' | 'total_points';
 export interface GoalItem { type: GT; attribute?: AttributeId; target: number; current: number }
@@ -22,14 +22,15 @@ const ALL: GT[] = ['activity_count', 'todo_count', 'attr_points', 'total_points'
 export default function GoalSetupForm({ open, onClose, params, initial, initialReward, onSubmit }: OverlayProps & { initial?: GoalItem[]; initialReward?: string; onSubmit?: (items: GoalItem[], reward: string) => void }) {
   const toast = useToast();
   const anim = useBoldness();
+  const { WEEKLY_GOAL, WEEK_RANGE, ATTR_NAMES } = useActionsData();
   const edit = params?.get('variant') === 'edit';
   const [items, setItems] = useState<Record<GT, GoalItem>>(() => Object.fromEntries(ALL.map((t) => [t, { type: t, attribute: t === 'activity_count' || t === 'attr_points' ? 'knowledge' : undefined, target: DEF[t], current: 0 }])) as Record<GT, GoalItem>);
   const [sel, setSel] = useState<Set<GT>>(new Set());
   const [reward, setReward] = useState('');
   useEffect(() => {
     if (!open) return;
-    const init = initial ?? (edit ? (WEEKLY_GOAL.goals as GoalItem[]) : undefined);
-    if (init) { setSel(new Set(init.map((g) => g.type))); setItems((p) => { const n = { ...p }; init.forEach((g) => { n[g.type] = { ...g }; }); return n; }); setReward(initialReward ?? (edit ? WEEKLY_GOAL.reward : '')); }
+    const init = initial ?? (edit ? (WEEKLY_GOAL?.goals as GoalItem[] | undefined) : undefined);
+    if (init) { setSel(new Set(init.map((g) => g.type))); setItems((p) => { const n = { ...p }; init.forEach((g) => { n[g.type] = { ...g }; }); return n; }); setReward(initialReward ?? (edit ? WEEKLY_GOAL?.reward ?? '' : '')); }
     else { setSel(new Set()); setReward(''); }
   }, [open]); // eslint-disable-line
   const toggle = (t: GT) => setSel((s) => { const n = new Set(s); if (n.has(t)) n.delete(t); else n.add(t); return n; });
@@ -38,7 +39,7 @@ export default function GoalSetupForm({ open, onClose, params, initial, initialR
   return (
     <P3Sheet open={open} onClose={onClose} title="设定本周目标" en="WEEKLY GOAL" size="tall"
       footer={<div className="flex gap-3"><P3Button tone="soft" block onClick={onClose}>取消</P3Button><P3Button block corner disabled={!ok} onClick={submit}>确认（{sel.size} 项）</P3Button></div>}>
-      <p className="mb-3 font-cond text-[13px]" style={{ color: P3R.grey }}>{WEEKLY_GOAL.weekStart} ~ {WEEKLY_GOAL.weekEnd}　<span className="font-body font-bold" style={{ color: ok ? P3R.grey : 'var(--p3r-coral-ink)' }}>· 至少选择 2 项</span></p>
+      <p className="mb-3 font-cond text-[13px]" style={{ color: P3R.grey }}>{WEEKLY_GOAL?.weekStart ?? WEEK_RANGE.weekStart} ~ {WEEKLY_GOAL?.weekEnd ?? WEEK_RANGE.weekEnd}　<span className="font-body font-bold" style={{ color: ok ? P3R.grey : 'var(--p3r-coral-ink)' }}>· 至少选择 2 项</span></p>
       <div className="mb-2 text-[13px] font-black" style={{ color: P3R.ink }}>目标</div>
       <div className="grid grid-cols-1 gap-2">
         {ALL.map((t) => {

@@ -7,3 +7,5 @@
 export * from '../mock/pkg5-callingcards';
 
 // ───── 真实数据覆盖区（按 INTEGRATE-THEMES.md 第 6 步填写）─────
+
+export { CC_TODAY, ccDaysLeft, ccProgress } from './callingCards';

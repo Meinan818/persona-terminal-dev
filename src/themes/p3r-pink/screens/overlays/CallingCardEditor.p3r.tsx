@@ -9,7 +9,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { CallingCard, CallingCardTone } from '@/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Check, P3ConfigRow, P3Input, P3OnOff, P3Segment, P3Sheet, useToast, P3R, slantClip, tickClip, Glyph } from '@pink/kit';
-import { CALLING_CARDS, TODAY_KEY, TODOS } from '@pink/adapters/pkg2';
+import { TODAY_KEY, useCallingCardData, futureDate } from '@pink/adapters/callingCards';
 import { daysBetween, toneBg } from '@pink/screens/pkg2/common';
 
 const ICONS = ['✦', '◆', '★', '❖', '◈', '✧', '♥', '☾'];
@@ -23,6 +23,7 @@ const Section = ({ label, children }: { label: ReactNode; children: ReactNode })
 );
 
 export default function CallingCardEditor({ open, onClose, params, initialCard, onSave }: OverlayProps & { initialCard?: CallingCard | null; onSave?: (c: CallingCard) => void }) {
+  const { CALLING_CARDS, TODOS } = useCallingCardData();
   const toast = useToast();
   const init = initialCard ?? (params?.get('variant') === 'edit' ? CALLING_CARDS[0] : null);
   const invalid = params?.get('state') === 'invalid';
@@ -30,7 +31,7 @@ export default function CallingCardEditor({ open, onClose, params, initialCard, 
   const [title, setTitle] = useState('');
   const [sub, setSub] = useState('');
   const [start, setStart] = useState(TODAY_KEY);
-  const [target, setTarget] = useState('2026-11-20');
+  const [target, setTarget] = useState(futureDate());
   const [linked, setLinked] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [tone, setTone] = useState<CallingCardTone>('lines');
@@ -39,8 +40,8 @@ export default function CallingCardEditor({ open, onClose, params, initialCard, 
   useEffect(() => {
     if (!open) return;
     setMode(init?.mode ?? 'deadline'); setTitle(init?.title ?? ''); setSub(init?.subtitle ?? ''); setStart(init?.startDate ?? TODAY_KEY);
-    setTarget(invalid ? '2026-10-12' : init?.targetDate ?? '2026-11-20'); if (invalid) setTitle('期末考试'); setLinked(init?.linkedTodoIds ?? []); setTone(init?.tone ?? 'lines'); setIcon(init?.icon ?? '✦'); setPinned(init?.pinned ?? false); setPage(0);
-  }, [open]); // eslint-disable-line
+    setTarget(invalid ? futureDate(-1) : init?.targetDate ?? futureDate()); if (invalid) setTitle('期末考试'); setLinked(init?.linkedTodoIds ?? []); setTone(init?.tone ?? 'lines'); setIcon(init?.icon ?? '✦'); setPinned(init?.pinned ?? false); setPage(0);
+  }, [open, initialCard]); // eslint-disable-line
   const active = TODOS.filter((t) => t.isActive && !t.completedAt && !t.archivedAt);
   const pages = Math.max(1, Math.ceil(active.length / PER));
   const pageTodos = active.slice(page * PER, (page + 1) * PER);

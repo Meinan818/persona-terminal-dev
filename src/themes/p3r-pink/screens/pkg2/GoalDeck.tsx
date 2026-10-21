@@ -1,3 +1,4 @@
+import { useCallingCardData, callingCardOps, updateCard, cardProgress } from '@pink/adapters/callingCards';
 /**
  * 任务子页顶部目标区（真实 weeklyGoal/GoalDeck + WeeklyGoalSection + callingCard/CallingCardSection + CallingCardCard，p3 形态）。
  *   GoalDeck：「目标」「本周推进和重要倒计时」+ 切换「本周目标」「倒计时」（P3Segment 玫红斜块）。
@@ -95,18 +96,6 @@ export function WeeklyGoalSection({ initial }: { initial: GoalState }) {
   );
 }
 
-function cardProgress(c: CallingCard) {
-  const isToday = c.targetDate === TODAY_KEY;
-  const daysLeft = c.targetDate ? daysBetween(TODAY_KEY, c.targetDate) : undefined;
-  const datePct = c.targetDate ? Math.max(0, Math.min(100, (daysBetween(c.startDate, TODAY_KEY) / Math.max(1, daysBetween(c.startDate, c.targetDate))) * 100)) : 0;
-  const linked = (c.linkedTodoIds ?? []).map((id) => TODOS.find((t) => t.id === id)).filter(Boolean);
-  const todosDone = linked.filter((t) => t!.completedAt || (t!.isBigDeal && (t!.steps ?? []).every((s) => s.done))).length;
-  const todoPct = linked.length ? (todosDone / linked.length) * 100 : 0;
-  const overall = Math.round(c.mode === 'deadline' ? datePct : c.mode === 'todos' ? todoPct : Math.max(datePct, todoPct));
-  const summary = c.archived ? (c.archiveReason === 'auto_todos' ? '已达成' : c.archiveReason === 'auto_date' ? '已至期' : '已收存')
-    : c.mode === 'todos' ? `已完成 ${todosDone}/${linked.length} 项` : isToday ? '就是今天' : daysLeft !== undefined ? `还剩 ${daysLeft} 天` : '';
-  return { overall, summary, daysLeft };
-}
 
 /** 宣告卡（CallingCardCard p3）：玫红斜切卡 + 纹理 + 白字；归档态 = 浅面淡出 */
 function CardRow({ c, onMenu }: { c: CallingCard; onMenu: () => void }) {
@@ -138,7 +127,8 @@ function CardRow({ c, onMenu }: { c: CallingCard; onMenu: () => void }) {
 export function CallingCardSection({ empty }: { empty?: boolean }) {
   const toast = useToast();
   const anim = useBoldness();
-  const [cards, setCards] = useState<CallingCard[]>(empty ? [] : CALLING_CARDS);
+  const { CALLING_CARDS: realCards } = useCallingCardData();
+  const cards = empty ? [] : realCards;
   const [menu, setMenu] = useState<CallingCard | null>(null);
   const [confirmDel, setConfirmDel] = useState(false);
   const [del, setDel] = useState<CallingCard | null>(null);
@@ -147,7 +137,7 @@ export function CallingCardSection({ empty }: { empty?: boolean }) {
   const [hint, setHint] = useState(true);
   const active = cards.filter((c) => !c.archived);
   const archived = cards.filter((c) => c.archived);
-  const upd = (id: string, p: Partial<CallingCard>) => setCards((l) => l.map((c) => (c.id === id ? { ...c, ...p } : p.pinned ? { ...c, pinned: false } : c)));
+  const upd = updateCard;
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -197,9 +187,9 @@ export function CallingCardSection({ empty }: { empty?: boolean }) {
           if (id === 'unarchive') upd(c.id, { archived: false, archiveReason: undefined });
           if (id === 'delete') setDel(c);
         }} />
-      <CallingCardSectionDeleteConfirm open={!!del} onClose={() => setDel(null)} title={del?.title} onConfirm={() => { setCards((l) => l.filter((c) => c.id !== del?.id)); toast.success('已删除'); }} />
+      <CallingCardSectionDeleteConfirm open={!!del} onClose={() => setDel(null)} title={del?.title} onConfirm={() => { del && void callingCardOps.remove(del.id); toast.success('已删除'); }} />
       <CallingCardEditor open={!!editor} onClose={() => setEditor(false)} initialCard={editor ? editor.card : null}
-        onSave={(c) => setCards((l) => { const exists = l.some((x) => x.id === c.id); const base = c.pinned ? l.map((x) => ({ ...x, pinned: false })) : l; return exists ? base.map((x) => (x.id === c.id ? { ...x, ...c } : x)) : [c, ...base]; })} />
+        onSave={(c) => void callingCardOps.save(c)} />
     </div>
   );
 }

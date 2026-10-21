@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 三主题 Account 云端用户与真实五维
+
+- **范围**：三主题 `Account` 页面：`uid` 优先取 `cloud.cloudUser?.username`；`CLOUD_USER.email` 显示云端邮箱；`TOTAL_LEVEL` 取 `cloudUser.total_lv`；`TOTAL_POINTS` 取 `realAttrs` 累加；`ATTRIBUTES.map` 用真实五维（无建档时回 mock）。备份导出的 `attributes` 仍用 mock 常量（真实备份走 sync 服务，本页只是展示）。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`account-real-20261021.log`）。未跑真实浏览器（登录态需云端后端）。
+- **提交**：`d34a040`（3 文件，30+/21-）。未 Push。
+- **下一步**：Settings / Achievements / Statistics / 全局演出。
+
 ## 已提交 · 2026-10-21 · 三主题云端账号与五维数据源
 
 - **范围**：`useCloudStore` 接进三主题 `pkg5` 适配器，新增 `useCloudUser`（`cloudUser`/`cloudEnabled`/`lastSyncAt`/`syncStatus`/`signedIn`）与 `useRealAttributes`（真实五维）。`useOrgView` 已在前一节点接入。页面仍走 mock 常量，下一轮把 Account 页接 `useCloudUser` 判登录态、接 `useRealAttributes` 判点数。

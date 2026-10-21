@@ -1,3 +1,4 @@
+import { usePinnedCallingCard } from '@yellow/adapters/callingCards';
 /**
  * 首页（Dashboard · P4）分块：页头 HUD / 问候题板 / 今日任务 / 今日仪式 / 四格统计。
  * 逻辑与文案来自真实 src/pages/Dashboard.tsx 的 isP4 分支，只换 P4G 渲染。
@@ -101,11 +102,14 @@ export function DashHeader({ weather, sky, setSky, wx, temp }: { weather: P4Weat
 // ───────────────────────────── 问候题板 ─────────────────────────────
 export type GreetMode = 'card' | 'empty' | 'unpinned';
 
-export function GreetingPlate({ subtext, greeting, mode, completed, total, unpinnedCount = 2 }: { subtext: string; greeting: string; mode: GreetMode; completed: number; total: number; unpinnedCount?: number }) {
+export function GreetingPlate({ subtext, greeting, mode: requestedMode, completed, total, unpinnedCount: _demoUnpinned = 2 }: { subtext: string; greeting: string; mode: GreetMode; completed: number; total: number; unpinnedCount?: number }) {
+  const { pinned, unpinned: unpinnedCount, progress } = usePinnedCallingCard();
+  const mode = requestedMode === 'card' ? pinned ? 'card' : unpinnedCount ? 'unpinned' : 'empty' : requestedMode;
+  const callingCardProgress = { overall: progress };
   const low = useLowMotion();
   const [hintHidden, setHintHidden] = useState(false);
-  const jump = () => { try { sessionStorage.setItem('velvet:todos-goal-panel', 'countdown'); } catch { /* ignore */ } navigate('actions', 'todos'); };
-  const cc = MOCK_CALLING_CARD as unknown as { title: string; targetDate: string };
+  const jump = () => { try { sessionStorage.setItem('velvet:todos-goal-panel', 'countdown'); } catch { /* ignore */ } navigate('actions', 'todos', { params: { deck: 'cards' } }); };
+  const cc = { title: pinned?.title ?? '', targetDate: pinned?.targetDate ?? todayKey };
   const daysLeft = Math.max(0, Math.round((new Date(cc.targetDate + 'T00:00:00').getTime() - new Date(todayKey + 'T00:00:00').getTime()) / 86400000));
   const summary = daysLeft === 0 ? '就是今天' : `还剩 ${daysLeft} 天`;
   return (

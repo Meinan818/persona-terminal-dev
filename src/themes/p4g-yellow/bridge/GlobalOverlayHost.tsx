@@ -1,8 +1,25 @@
-/**
- * 全局弹层宿主：真实 App.tsx 顶层由 store 状态触发的弹层/演出（升级、成就、技能、愿望进度、宣告卡结算、
- * BIG DEAL 收官、组织庆祝、羁绊升级、星移、同步冲突…）在这里改挂 demo 版本。
- * 按 INTEGRATE-THEMES.md 第 7 步的表逐个填写；未填的演出在主题下不会出现（=漏演出，验收不通过）。
- */
+/** 全局弹层宿主（黄）。排队规则照旧 App.tsx：升级 > 成就 > 技能；modalBlocker 时都不弹。 */
+import { useAppStore } from '@/store';
+import { ACHIEVEMENT_UNLOCK_LINES } from '@/constants';
+import { LevelUpP4G } from '@yellow/screens/overlays/LevelUpModal.p4g';
+import { AchievementUnlockP4G } from '@yellow/screens/overlays/AchievementUnlockModal.p4g';
+import { SkillUnlockP4G } from '@yellow/screens/overlays/SkillUnlockModal.p4g';
+
 export function GlobalOverlayHost() {
-  return null;
+  const levelUp = useAppStore((s) => s.levelUpNotification);
+  const ach = useAppStore((s) => s.achievementNotification);
+  const skill = useAppStore((s) => s.skillNotification);
+  const blocker = useAppStore((s) => s.modalBlocker);
+  const setLevelUp = useAppStore((s) => s.setLevelUpNotification);
+  const setAch = useAppStore((s) => s.setAchievementNotification);
+  const setSkill = useAppStore((s) => s.setSkillNotification);
+  const achLines = ach ? ACHIEVEMENT_UNLOCK_LINES[ach.id] : undefined;
+  return (
+    <>
+      <LevelUpP4G open={!!levelUp && !blocker} onClose={() => setLevelUp(null)} attributeName={levelUp?.displayName} newLevel={levelUp?.level} masteryStars={levelUp?.masteryStars} />
+      <AchievementUnlockP4G open={!!ach && !blocker && !levelUp} onClose={() => setAch(null)} achievementTitle={ach?.title} {...(achLines ? { message: achLines.join('') } : {})} />
+      <SkillUnlockP4G open={!!skill && !blocker && !levelUp && !ach} onClose={() => setSkill(null)} skillName={skill?.name} />
+      {/* 其余照上表逐个加 */}
+    </>
+  );
 }

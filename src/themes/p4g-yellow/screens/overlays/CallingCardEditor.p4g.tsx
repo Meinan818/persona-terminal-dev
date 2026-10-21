@@ -7,7 +7,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { CallingCard, CallingCardTone } from '@/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Input, P4Sheet, P4Switch, IconCheck, useToast } from '@yellow/kit';
-import { CALLING_CARDS, TODOS, TODAY_KEY } from '@yellow/adapters/pkg2';
+import { TODAY_KEY, useCallingCardData, futureDate } from '@yellow/adapters/callingCards';
 import { daysBetween } from '@yellow/screens/pkg2/common';
 import { toneBg } from '@yellow/screens/pkg2/tones';
 import { cx } from '@yellow/lib/cx';
@@ -20,13 +20,14 @@ const Section = ({ label, children }: { label: ReactNode; children: ReactNode })
 );
 
 export default function CallingCardEditor({ open, onClose, params, initialCard, onSave }: OverlayProps & { initialCard?: CallingCard | null; onSave?: (c: CallingCard) => void }) {
+  const { CALLING_CARDS, TODOS } = useCallingCardData();
   const toast = useToast();
   const init = initialCard ?? (params?.get('variant') === 'edit' ? CALLING_CARDS[0] : null);
   const [mode, setMode] = useState<CallingCard['mode']>('deadline');
   const [title, setTitle] = useState('');
   const [sub, setSub] = useState('');
   const [start, setStart] = useState(TODAY_KEY);
-  const [target, setTarget] = useState('2026-11-20');
+  const [target, setTarget] = useState(futureDate());
   const [linked, setLinked] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [tone, setTone] = useState<CallingCardTone>('lines');
@@ -35,8 +36,8 @@ export default function CallingCardEditor({ open, onClose, params, initialCard, 
   useEffect(() => {
     if (!open) return;
     setMode(init?.mode ?? 'deadline'); setTitle(init?.title ?? ''); setSub(init?.subtitle ?? ''); setStart(init?.startDate ?? TODAY_KEY);
-    setTarget(init?.targetDate ?? '2026-11-20'); setLinked(init?.linkedTodoIds ?? []); setTone(init?.tone ?? 'lines'); setIcon(init?.icon ?? '✦'); setPinned(init?.pinned ?? false); setPage(0);
-  }, [open]); // eslint-disable-line
+    setTarget(init?.targetDate ?? futureDate()); setLinked(init?.linkedTodoIds ?? []); setTone(init?.tone ?? 'lines'); setIcon(init?.icon ?? '✦'); setPinned(init?.pinned ?? false); setPage(0);
+  }, [open, initialCard]); // eslint-disable-line
   const active = TODOS.filter((t) => t.isActive && !t.completedAt && !t.archivedAt);
   const pages = Math.max(1, Math.ceil(active.length / PER));
   const pageTodos = active.slice(page * PER, (page + 1) * PER);

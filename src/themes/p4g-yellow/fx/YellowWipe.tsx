@@ -35,6 +35,7 @@ export function YellowWipe({ active, onCovered, onDone, direction = 'left' }: Ye
         if (cancelled) return;
         cb.current.onCovered?.();
         await new Promise((r) => setTimeout(r, 60));
+        if (cancelled) return;
         ctl2.set({ x: `${-120 * sign}%` });
         await ctl.start({ x: `${-110 * sign}%`, transition: { duration: 0.26, ease: [0.7, 0, 0.3, 1] } });
       }

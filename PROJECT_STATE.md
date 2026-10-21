@@ -2,6 +2,14 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 三主题天气搜索取数真实化 + 红色页面验收
+
+- **Settings 天气 `8d8d557`**：三主题 `settingsStore` 的 `weatherCity` 扩展为含 `id/lat/lon`；`hydrateFromRealStore` 从真实 `settings.weatherCity` 带入经纬度；`pushToRealStore` 在选择真实城市时写回 `{id,name,lat,lon}`。三主题 `WeatherBlock` 的城市搜索改走真实 `searchCity`，测试取数改走真实 `fetchWeatherNow`，不再用 `CITIES` 假列表和 600ms 假成功。
+- **红色页面浏览器验收**：新增 `red-pages-real-20261021.mjs`，真实写入记录/待办/自定义成就/宣告卡后逐页验证：宣告卡页显示「红色宣告探针」、记录页显示「红色记录探针」、成就页显示「红色成就探针」、统计页 KPI 显示累计 3 点/1 天/最长 1/日均 3.0；0 页面异常、0 模型请求。报告 `.theme-compare/red-pages-real-20261021/first/report.json`。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`weather-real-20261021.log`）。
+- **提交**：`8d8d557`（6 文件，89+/44-）。未 Push。
+- **剩余产品级缺口（非主题接线）**：Settings 的总结人格/自定义总结预设、拟真输入等仍无真实 Settings 字段；当前 Persona 由 UMBRA profile 驱动，Settings 的 activePersona 仍为本地 mock。需要产品决定后再扩真实字段，不擅自改可见 UI。
+
 ## 已提交 · 2026-10-21 · 三主题成就图鉴与 Dashboard 残余 mock 收口
 
 - **用户决定**：四个主题完美接好之前不谈幽影协议。

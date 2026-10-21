@@ -5,7 +5,8 @@
 ## 1. 先读（定稿，可直接照做）
 1. docs/umbra-design/GDD-v1.md — 策划案（§15/§16 为最新修订）
 2. docs/umbra-design/CONTRACT-v1.2.md — 引擎/皮肤契约（开工版，以文末「v1.2 修订」为准）
-3. docs/umbra-decisions.md — 主策划已拍板的决定（D-001 起，新在上）
+3. docs/umbra-design/FX-MAP-v1.md — 玩法↔演出一一对应表（每个玩法触发什么事件、四皮各演什么）
+4. docs/umbra-decisions.md — 主策划已拍板的决定（D-001 起，新在上）
 
 ## 2. 按身份读任务书
 - App 接入方：docs/umbra-design/TASK-APP-v1.2.md；进度 docs/umbra-progress/app.md；分支 feat/umbra-app-m2

@@ -2,6 +2,18 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 准备交接 · 2026-10-21 · 四主题 Cooperation 真实接线待提交收尾
+
+- **用户决定**：用户明确要求红色 P5R 一并纳入“四个主题”，并纠正不得把红色混进黄粉蓝的 theme-kit 适配层。随后要求进入准备交接：暂停开发，收干净，写接手第一入口，本地提交，不 Push。
+- **当前现场**：`E:\MASKARIA`，分支 `feat/theme-kit-integration`，起点 `b87f8a3`。未提交功能改动 19 个产品文件：黄/粉/蓝 `adapters/pkg3.ts`、Cooperation 页、创建/互动/通知弹层，以及红主题 `src/p5r-red/adapter/live.ts` 和 `src/p5r-red/screens/pkg3/oc.ts`。另有共用未跟踪 `src/themes/cooperationData.ts` 与浏览器探针 `.rivet/scratch/theme-kit-integration/cooperation-four-themes-20261021.mjs`。相对本地 `origin/main@7c88082` 为 0 落后 / 26 领先；未 Push、未部署、未打包。
+- **已完成待提交**：黄粉蓝 Cooperation 主页从 demo 常量切到真实 store / `useCloudSocialStore` / 祈愿服务；真实同伴、离线在线归档筛选、真实通知未读、据点冲突提示、真实周目标与页面动态数据已接。创建同伴改走 `matchConfidant` + `addConfidant`；今日互动改走 `evaluateInteraction` + `recordConfidantInteraction`；通知改用 `useCooperationData()` 的 `useCloudSocialStore` 数据，读/删/全部已读调 `markNotificationRead` / `removeNotification`。红色 P5R 按独立 `OC` 命令式层接入：`CF` 由真实 `useAppStore().confidants` 构建、`OC.refreshConfidants` 由 live 同步、创建与互动写真实 store、详情历史读真实 `confidantEvents`、归档/恢复/删除/逆流走现有 action；未改 `P5.D` 结构、CSS、DOM 类名或动画，不导入 theme-kit 适配层。
+- **验证 · 已实跑**：`npm run typecheck` exit 0。隔离浏览器 `cooperation-four-themes-20261021.mjs` 四主题各 6/6，合计 24/24 通过：真实同伴进入羁绊页、不残留演示同伴、互动解读结果卡、互动写入真实 store 与事件记录、无收费模型请求、页面异常 0。通过报告在 `.theme-compare/cooperation-four-themes-20261021/{yellow,pink,blue,red}/`；红为 `attempt6`，黄为 `attempt3`。四张完成态截图已目视，黄色弹层标题因真名过长会截断，已改为短标题“今日互动”，名字保留在卡片内。
+- **本节点边界**：还没跑全量测试和正式构建；Cooperation 的创建页像素/语义、详情、愿望、COOP 提议/接受、祈愿特效、羁绊之影、共战结算、谏言归档、通知动作的完整端到端还没全部验证；红色 `OC.refreshConfidants` 只按 live 订阅刷新，页面局部状态的边角可能还需实测。因此本批改动不能称为四主题 Cooperation 全部完成。
+- **接手唯一下一任务（Codex）**：先只读本入口、`AGENTS.md`、Git diff 与报告原件；恢复后第一件事是跑 `node node_modules/vitest/vitest.mjs run --reporter=dot` 和 `node .rivet/scratch/theme-kit-integration/build.mjs cooperation-handoff-20261021`。两者通过后按功能提交：`src/themes/cooperationData.ts` + 三主题 pkg3/页面/弹层为黄粉蓝提交，`src/p5r-red/*` 独立为红色提交。若测试/构建失败，先修当前差异，不重写、不清工作区、不动 demo 原件。然后再补完整端到端，暂缓不收敛部分单独记录。Push 须用户单独批准。
+- **运行现场与命令**：本地 dev server `http://127.0.0.1:5173/` 监听 `127.0.0.1`，当前 PID `7384`；接手必须重核，不按旧 PID 停。PowerShell 缓存：`TEMP/TMP=E:\MASKARIA\.cache`，npm/Playwright 用 E 盘缓存；浏览器探针用系统 Chrome。本对话前面误建的 `E:\MASKARIA-p5r-handoff` 与 `E:\MASKARIA-p5r-package` 已移入 `E:\MASKARIA\.cache\discarded-p5r-handoff-20261021` / `discarded-p5r-package-20261021`，未清理；接手可按需核查后处理，不自动删。
+- **遗留归属与铁律**：既有 untracked `.cache/`、`.impeccable/`、`.rivet-config.json`、`demo/`、`deliverables/`、`outputs/`、`public/` 演示素材、演示组件、`tools/codex-thread-control/`、`deploy/staging/caddy.service.d.conf` 全部保持原样，不整目录 add、不清理、不搬移。不读/提交敏感文件；不 stash/reset/restore/clean；不改 CSS/token/demo 原件；不收费 AI；不 Push/部署/打包。用户反复强调四主题要完整真实接入、动画和功能不丢，且红色架构必须独立处理；接手不得再重复导入、克隆或把红色塞进三主题适配层。
+- **本次无需用户操作**。接手者先只读核对，不因未完成而掩盖；恢复开发由用户明确说继续后执行。
+
 ## 已提交 · 2026-10-21 · 三主题行动页真实数据接入
 
 - **当前现场**：分支 `feat/theme-kit-integration`，本节点起点 `0a2e8e5`，功能提交 `643e197` `feat(theme-kit): 接入三主题行动页真实数据`，共 57 路径。未 Push、未部署、未打包；相对本地 `origin/main@7c88082` 仍为本地领先。

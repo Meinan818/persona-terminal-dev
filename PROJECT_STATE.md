@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 三主题 Achievements 真实成就数据
+
+- **范围**：`astrologyData.ts` 新增 `useRealCodex`（`achievements` / `skills` / `todoCompletions` / `battleState` / `weeklyGoals` / `confidants`）与 `useCodexCollections`（`useTarotCollection` + `useSeasonCollection`，读真实 `dailyDivinations` / `longReadings` / `stamps` 表）。三主题 `Achievements` 页 `AchievementsTab` 的 `list` 初始值从真实 `realCodex.achievements` 取，无建档回 mock。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`achievements-real-20261021.log`）。
+- **提交**：`154e874`（7 文件，33+/9-）。未 Push。
+- **下一步**：Statistics / 全局演出 / Settings / 或逐项浏览器验证。
+
 ## 已提交 · 2026-10-21 · 三主题 Account 云端用户与真实五维
 
 - **范围**：三主题 `Account` 页面：`uid` 优先取 `cloud.cloudUser?.username`；`CLOUD_USER.email` 显示云端邮箱；`TOTAL_LEVEL` 取 `cloudUser.total_lv`；`TOTAL_POINTS` 取 `realAttrs` 累加；`ATTRIBUTES.map` 用真实五维（无建档时回 mock）。备份导出的 `attributes` 仍用 mock 常量（真实备份走 sync 服务，本页只是展示）。

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
+import { useCloudStore } from '@/store/cloud';
 import { loadSocial } from '@/services/social';
 import type { DailyDivination, FateGlimpse, LongReading } from '@/types';
 
@@ -70,6 +71,11 @@ export function useOrgView() {
   const { orgs, orgsLoaded, setOrgs } = useCloudSocialStore(useShallow((s) => ({ orgs: s.orgs, orgsLoaded: s.orgsLoaded, setOrgs: s.setOrgs })));
   useEffect(() => { void loadSocial(); }, []);
   return { orgs, orgsLoaded, setOrgs };
+}
+
+export function useCloudUser() {
+  const { cloudUser, cloudEnabled, lastSyncAt, syncStatus } = useCloudStore(useShallow((s) => ({ cloudUser: s.cloudUser, cloudEnabled: s.cloudEnabled, lastSyncAt: s.lastSyncAt, syncStatus: s.syncStatus })));
+  return { cloudUser, cloudEnabled, lastSyncAt, syncStatus, signedIn: !!cloudUser };
 }
 
 export type { DailyDivination, FateGlimpse, LongReading };

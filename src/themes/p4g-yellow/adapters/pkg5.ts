@@ -1,10 +1,17 @@
-export * from '../mock/pkg5';
+﻿export * from '../mock/pkg5';
 
 // ───── 真实数据覆盖区（按 INTEGRATE-THEMES.md 第 6 步填写）─────
+export { useCloudUser } from '@/themes/astrologyData';
+
+/** 真实五维：从 store 读，用户未建档时空数组 */
+export function useRealAttributes() {
+  const attributes = useAppStore((s) => s.attributes);
+  return useMemo(() => attributes as Attribute[], [attributes]);
+}
 import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
-import type { LedgerEntry } from '@/types';
+import type { LedgerEntry, Attribute } from '@/types';
 
 // A 类：只转发纯计算/格式化函数（真实仓库同名、同签名、同返回结构）
 // catMeta / INCOME_META 不转发：真实版返回结构不同（没有 demo 用的 color 字段），图标/颜色属于设计，保留 demo 版

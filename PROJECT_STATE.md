@@ -5,7 +5,7 @@
 ## 自动化续办 · 2026-10-21 · 三主题真实结算已提交
 
 - **用户授权**：用户明确要求进入自动化模式，项目全权负责，持续完成黄/粉/蓝三套 demo 的 100% 真实接入，视觉与元素不得改动；用户明确停止前不暂停。当前聊天发生一次实际 compact，本记录计数=1，继续开发，不执行第二次交接。
-- **原生工具边界**：当前工具列表没有 `automation_update`、`create_thread`、`handoff_thread` 等原生自动化/接续工具；未虚报已建立 heartbeat 或新聊天。按用户“没有新对话就自己找办法”的要求，继续当前聊天并使用可用子代理并行审计，不等工具。
+- **原生工具边界与解法**：桌面会话没有直接暴露 `automation_update`、`create_thread`、`handoff_thread`，但本机 Codex CLI 支持原生 `codex exec fork`。已从源会话 `01a15cf7-dff1-78c3-ab8d-dfc00bfaa91d` fork 出新持久会话 **`01a15d29-1b8e-7461-a02c-cc59bd006697`**，并直接发送完整自动化接手提示；新会话已开始执行。源会话此后停止共享写入，只保留必要协调。
 - **本节点提交**：`eb78567` `feat(theme-kit): 接入三主题真实本地结算`。只含共用 `src/themes/ledgerSettlement.ts`、3 套 `LedgerStats`、3 套 `LedgerSettleSheet` 和新增结算测试；根 store、红色适配器、CSS、demo 原件均未改。
 - **实现**：所选真实月份传入结算；月/周范围、收支、类目、极值、预算、日均和空态来自本地 store；未传 `initialPeriod` 的 OverlayHarness 仍保留原 mock/phase/fail 路径。粉蓝 `IgorReading` 用 `localText` 直接展示“本地账目回顾（未调用 AI）”，不发起模型请求。奖励横幅只显示既有 store action 的真实返回值，无战场不假显示 +10SP；同一结算 key 的在途领奖 Promise 共享，避免 StrictMode 第一次实际领奖、第二次返回已领取 false 导致横幅丢失。
 - **验证**：相关测试 2 文件/10 项通过；全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **68 文件/413 项通过**；`tsc --noEmit` exit0；正式构建日志 `.rivet/scratch/theme-kit-integration/settlement-20261021.log`，**97.8 秒、BUILD_EXIT=0**。隔离浏览器 `ledger-settlement-20261021.mjs` 三主题各 **10/10**，共 30 项，真实上月数字、类目/极值、无演示硬编码、无战场不假发奖、周范围、真实领奖横幅且 action 仅一次、空态、无模型请求、0 页面异常；稳定截图在 `.theme-compare/ledger-settlement-20261021/{yellow,pink,blue}/`。

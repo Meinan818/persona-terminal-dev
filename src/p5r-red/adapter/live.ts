@@ -9,17 +9,19 @@
  *   · useLiveFlags()     夜间（settings.darkMode）与低动效（!useBoldness()）
  * 规则：
  *   1. 真实数据为空就写空数组 / 0（不要回填 mock，给真实用户看假数据是事故）。
- *   2. 只读 store，不写 store；红频道里的按钮目前只改页面本地状态（纯视觉 demo），写回业务见 README「未接」。
+ *   2. 用户批准的记账例外：通过 ledgerLiveBridge 调用既有本地记账 action；其它页面仍只读。
  *   3. 字段对不上时只改这里的映射函数，不要去改页面。
  */
-import { useAppStore } from '@/store';
+import { useAppStore, toLocalDateKey } from '@/store';
+import { db } from '@/db';
+import { cycleRangeForKey, incomeTypeFromSource, ledgerCycle, roundMoney, shiftMonth } from '@/utils/ledgerFormat';
 import { useBoldness } from '@/utils/boldness';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import type { Activity, Achievement, AttributeId, CallingCard, Confidant, LedgerEntry, Skill, Todo } from '@/types';
 import { D, type AttrId, type MockCallingCard, type MockConfidant, type MockTodo } from '@/p5r-red/mock/data';
 import { ACTIVITIES, CALLING_ARCHIVED, CALLING_CARDS, ACHIEVEMENTS, SKILLS, type MockAch, type MockActivity, type MockCC, type MockSkill, type CondType } from '@/p5r-red/mock/pkg5-data';
-import { FLOW } from '@/p5r-red/screens/pkg4/ledger4';
+import { FLOW, connectLedgerLive, type LedgerLiveBridge, type LiveLedgerRow } from '@/p5r-red/screens/pkg4/ledger4';
 
 type S = ReturnType<typeof useAppStore.getState>;
 const ATTRS: AttrId[] = ['knowledge', 'guts', 'dexterity', 'kindness', 'charm'];
@@ -83,8 +85,109 @@ function skillPkg5(k: Skill): MockSkill {
   return { id: k.id, name: k.name, description: k.description, requiredAttribute: k.requiredAttribute as AttrId, requiredLevel: k.requiredLevel, bonusMultiplier: k.bonusMultiplier ?? 1, unlocked: k.unlocked };
 }
 function ledgerRow(e: LedgerEntry) {
-  return { note: e.note || e.category || (e.direction === 'income' ? '收入' : '支出'), amount: e.amount, dir: e.direction === 'income' ? 'income' : 'expense', ch: e.channel || '', d: daysAgo(e.date) };
+  return { id: e.id, date: e.date, note: e.note || e.category || (e.direction === 'income' ? '收入' : e.direction === 'adjust' ? '余额对账' : '支出'), amount: e.amount, dir: e.direction, ch: e.channel || '', cat: e.category, labor: e.incomeType === 'labor', grantedSp: e.reward?.sp ?? 0, d: daysAgo(e.date) };
 }
+
+let loadingLedger: Promise<void> | undefined;
+const ensureLedger = async () => {
+  if (useAppStore.getState().ledgerLoaded) return;
+  if (!loadingLedger) loadingLedger = useAppStore.getState().loadLedger().finally(() => { loadingLedger = undefined; });
+  await loadingLedger;
+};
+const ledgerWatch: (keyof S)[] = ['ledgerEntries', 'budgets', 'ledgerLoaded', 'settings'];
+type EntryInput = Parameters<S['addLedgerEntry']>[0];
+const expenseTypes: Record<string, NonNullable<LedgerEntry['type']>> = { 餐饮: 'food', 交通: 'transport', 学习: 'study', 提升: 'study', 娱乐: 'fun', 日用: 'shopping', 购物: 'shopping', 居住: 'home', 其它: 'other' };
+const requests = new Map<string, Promise<{ rows: LiveLedgerRow[]; warning?: string }>>();
+export const ledgerLiveBridge: LedgerLiveBridge = {
+  ready: ensureLedger,
+  amount(raw, negative = false) {
+    const value = String(raw ?? '').trim().replace(/[，,。]/g, '.');
+    if (!new RegExp(`^${negative ? '-?' : ''}(?:\\d+(?:\\.\\d*)?|\\.\\d+)$`).test(value)) return NaN;
+    const n = Number(value); return Number.isFinite(n) ? roundMoney(n) : NaN;
+  },
+  snapshot(month = 0) {
+    const s = useAppStore.getState(), today = toLocalDateKey();
+    const cycle = ledgerCycle(!!s.settings.ledgerPayCycleEnabled, s.settings.ledgerResetDay ?? 1, today);
+    const period = shiftMonth(cycle.key, Math.min(0, month));
+    const [start, end] = cycleRangeForKey(!!s.settings.ledgerPayCycleEnabled, s.settings.ledgerResetDay ?? 1, period);
+    const entries = s.ledgerLoaded ? s.ledgerEntries : [];
+    const budget = s.ledgerLoaded ? s.getBudget(period) : undefined;
+    const rows = entries.filter(e => e.date >= start && e.date <= end).sort((a, b) => b.date.localeCompare(a.date) || +new Date(b.createdAt) - +new Date(a.createdAt)).map(ledgerRow);
+    const chart = Array.from({ length: 9 }, (_, i) => {
+      const date = new Date(`${today}T00:00:00`); date.setDate(date.getDate() - (8 - i));
+      const key = toLocalDateKey(date);
+      return roundMoney(entries.filter(e => e.direction === 'expense' && e.date === key).reduce((sum, e) => sum + e.amount, 0));
+    });
+    return {
+      ready: s.ledgerLoaded, today, period, rows, first: s.ledgerLoaded && entries.length === 0,
+      total: s.ledgerLoaded ? s.getTotalBalance() : 0,
+      ex: s.ledgerLoaded ? s.getPeriodExpense(period) : 0, inc: s.ledgerLoaded ? s.getPeriodIncome(period) : 0,
+      limit: budget?.monthlyLimit, savings: budget?.savingsGoal, savingsEdits: budget?.savingsGoalEdits ?? 0,
+      resetDay: s.settings.ledgerResetDay ?? 1,
+      daysLeft: Math.max(1, Math.round((+new Date(`${end}T00:00:00`) - +new Date(`${today}T00:00:00`)) / 864e5) + 1),
+      chart, remaining: Math.max(0, 3 - s.getAdjustCountThisMonth()),
+      accounts: s.getAccountBalances().map(a => ({ name: a.name, bal: a.balance, debt: a.isDebt, unassigned: a.unassigned })),
+    };
+  },
+  subscribe(cb) {
+    return useAppStore.subscribe((s, previous) => { if (ledgerWatch.some(key => s[key] !== previous[key])) cb(); });
+  },
+  async save(rows, requestId) {
+    const existing = requests.get(requestId); if (existing) return existing;
+    const operation = (async () => {
+      await ensureLedger();
+      if (!rows.length || !requestId) throw new Error('没有可保存的流水');
+      const inputs: EntryInput[] = rows.map(row => {
+        const date = row.date ?? toLocalDateKey();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || toLocalDateKey(new Date(`${date}T00:00:00`)) !== date) throw new Error('日期无效');
+        if (!Number.isFinite(row.amount) || roundMoney(row.amount) <= 0 || !['income', 'expense'].includes(row.dir)) throw new Error('金额无效');
+        return {
+          direction: row.dir as 'income' | 'expense', amount: roundMoney(row.amount), date, source: 'manual', note: row.note,
+          channel: row.ch?.trim() || undefined,
+          ...(row.dir === 'income' ? { incomeType: row.labor === undefined ? incomeTypeFromSource(row.incomeSource) : row.labor ? 'labor' as const : 'other' as const, category: row.incomeSource } : { type: expenseTypes[row.cat ?? ''] ?? 'other', category: row.subcategory || row.cat, evalWorth: row.worth === '值得' ? 'worth' as const : row.worth === '不值' ? 'notWorth' as const : undefined }),
+        };
+      });
+      const created: LedgerEntry[] = [];
+      try {
+        await db.transaction('rw', db.ledgerEntries, async () => {
+          for (const input of inputs) created.push(await useAppStore.getState().addLedgerEntry(input));
+        });
+      } catch (error) { await useAppStore.getState().loadLedger(); throw error; }
+      let warning: string | undefined;
+      for (const entry of created) {
+        try { await useAppStore.getState().rewardForLedgerEntry(entry, { evalWorth: entry.evalWorth }); }
+        catch { warning = '流水已保存，奖励处理未完成'; }
+      }
+      return { rows: created.map(entry => ledgerRow(useAppStore.getState().ledgerEntries.find(e => e.id === entry.id) ?? entry)), warning };
+    })();
+    requests.set(requestId, operation);
+    operation.catch(() => { requests.delete(requestId); });
+    // 已关闭表单的请求只需保留少量，防止长期使用累积。
+    if (requests.size > 100) { const key = requests.keys().next().value; if (key) requests.get(key)?.then(() => requests.delete(key), () => {}); }
+    return operation;
+  },
+  async remove(id) { await ensureLedger(); await useAppStore.getState().deleteLedgerEntry(id); },
+  async budget({ period, limit, savings, resetDay }) {
+    await ensureLedger();
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period) || !Number.isFinite(limit) || limit <= 0 || (savings !== undefined && (!Number.isFinite(savings) || savings < 0)) || !Number.isInteger(resetDay) || resetDay < 1 || resetDay > 28) throw new Error('预算输入无效');
+    const s = useAppStore.getState(), current = s.getBudget(period);
+    const changed = savings !== current?.savingsGoal;
+    if (changed && (current?.savingsGoalEdits ?? 0) >= 2) throw new Error('本月修改次数已用完');
+    await s.setBudget(period, { monthlyLimit: roundMoney(limit), carriedFrom: undefined, ...(changed ? { savingsGoal: savings === undefined ? undefined : roundMoney(savings), savingsGoalEdits: (current?.savingsGoalEdits ?? 0) + 1 } : {}) });
+    if (resetDay !== useAppStore.getState().settings.ledgerResetDay) await useAppStore.getState().updateSettings({ ledgerResetDay: resetDay });
+  },
+  async reconcile(targets) {
+    await ensureLedger();
+    if (!targets.length || targets.some(t => !Number.isFinite(t.target))) throw new Error('余额输入无效');
+    try {
+      await db.transaction('rw', db.ledgerEntries, async () => {
+        const result = await useAppStore.getState().adjustAccountBalances(targets);
+        if (!result.ok) throw new Error(result.reason ?? '对账失败');
+      });
+    } catch (error) { await useAppStore.getState().loadLedger(); throw error; }
+  },
+};
+connectLedgerLive(ledgerLiveBridge);
 
 /** 把 store 当前状态写进全部 mock 对象 */
 export function syncLiveDataNow(s: S = useAppStore.getState()) {
@@ -114,7 +217,7 @@ export function syncLiveDataNow(s: S = useAppStore.getState()) {
   fill(SKILLS, s.skills.map(skillPkg5));
   // 羁绊（离线 + 在线同伴，未归档）
   fill(D.confidants, s.confidants.filter((c) => !c.archivedAt).map(confidantMock));
-  // 记账：本月流水（页面合计里的固定基数见 README「未接」）
+  // 兼容原 FLOW 读点；真实记账页的完整周期数据由 ledgerLiveBridge 提供。
   const month = today.slice(0, 7);
   fill(FLOW as ReturnType<typeof ledgerRow>[], s.ledgerEntries.filter((e) => e.date.startsWith(month)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(ledgerRow));
 }

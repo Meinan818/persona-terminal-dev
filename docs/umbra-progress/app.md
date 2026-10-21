@@ -40,3 +40,9 @@
 - Director 纯调度核心已落：`src/umbra/director.ts` 支持倍速时长、主线/重叠层、输入缓冲保留最新 2 条、action key 幂等和 `env:change` 空闲接续。
 - 皮肤契约/注册表已落：`src/umbra/skins/contract.ts`、`src/umbra/skins/registry.ts`；安全区与虚拟横屏坐标变换在 `src/umbra/layout.ts`。
 - `skin:check` CLI 已落：`scripts/skin-check.mjs` + `npm run skin:check`，校验 pack schema、时长预算、source、字体 120KB 与 import 白名单。
+
+## D-003 · 后续任务
+
+- 新增 `rules/explore`：P5T 式 Q 版格子关卡、走位、掩体、巡逻视线、背后偷袭、宝箱机关交涉点；必战守门阴影 + 1 场精英 + BOSS。
+- 事件清单按 FX-MAP §F：`explore:move` / `explore:cover` / `explore:spotted` / `explore:interact`，复用现有 `map:encounter(ambush)`。
+- 规则层与战斗规则分开，不影响已完成的战斗/图鉴/存档；四皮同规则不同画面。

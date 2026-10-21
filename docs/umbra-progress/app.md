@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：D-005 roster/compendiumArt 契约与读取函数完成；D-006 调参中，常规全量通过。
+当前节点：D-005 roster 归属完成；D-007 四类商店规则完成；D-006 继续调参。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -63,3 +63,7 @@
 ## D-005 · 主题归属
 
 - `UmbraSkinPack` 增加 `roster` 与 `compendiumArt`；注册表提供 `rosterAllowsPersona` / `companionPersonaFor`，禁止写死角色 id。
+
+## D-007 · 据点商店
+
+- `src/umbra/rules/shop.ts`：四类店固定 id（weapon/item/clinic/velvet），货币只用 ¥ / 素材 / 心之力；价格、库存、档位由数据表驱动。

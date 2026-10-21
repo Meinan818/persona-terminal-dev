@@ -35,3 +35,4 @@
 - 按 D-002 完成图鉴分片：`scripts/generate-compendium-chunks.mjs` 生成 24 个 Persona 分片、16 个技能分片和索引；运行时 `compendiumPreload.ts` 支持异步预载、并发去重与同步读取，`getPersona/getSkill` 签名不变。
 - 图鉴体积：索引 151,002 B，最大单分片 gzip 8,926 B（上限 120KB）。
 - 全量 `src/umbra`：12 文件 / 63 项通过。
+- Bridge 已接 Dexie：新增 `src/umbra/dexieBridge.ts`，把 `UmbraRuntimeBridge` 映射到现有 `saveUmbraProfile` / `saveUmbraRun`，checkpoint 幂等键写入 `run.payload.checkpoints`。

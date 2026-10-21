@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：全量常规测试 83 文件 / 461 项通过；tsc exit 0。
+当前节点：探索执行器接口 `exploreRuntime` 完成；测试通过，tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -85,3 +85,7 @@
 ## 探索局外规则
 
 - `src/umbra/rules/exploreSession.ts`：记录 mob/elite/guardian/boss 战果，出口需守门阴影已败且累计 ≥4 场。
+
+## 探索执行器接口
+
+- `src/umbra/rules/exploreRuntime.ts`：把探索移动结果与 Director 事件合并返回，供关卡执行器直接调用。

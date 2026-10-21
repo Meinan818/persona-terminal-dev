@@ -9,7 +9,8 @@ import { PK3_CONFIDANTS } from '@yellow/adapters/pkg3';
 
 const ATTR_ICON: Record<string, string> = { knowledge: '📘', guts: '🔥', dexterity: '🎯', kindness: '🌿', charm: '✨' };
 
-export function MemorialSheet({ isOpen, onClose, confidant, empty }: { isOpen: boolean; onClose: () => void; confidant: Confidant; empty?: boolean }) {
+export function MemorialSheet({ isOpen, onClose, confidant, empty }: { isOpen: boolean; onClose: () => void; confidant: Confidant | null; empty?: boolean }) {
+  if (!confidant) return null;
   const list = empty ? [] : [...(confidant.coopMemorials ?? []), {
     shadowId: 'coop:rain', shadowName: '雨夜之影', weaknessAttribute: 'kindness' as const, defeatedAt: '2026-09-14T22:30:00+08:00', winners: [], myDamage: 210, totalDamage: 520,
   }].sort((a, b) => new Date(b.defeatedAt).getTime() - new Date(a.defeatedAt).getTime());

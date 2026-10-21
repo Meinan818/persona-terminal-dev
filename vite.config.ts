@@ -191,6 +191,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@blue': path.resolve(__dirname, './src/themes/p3r-blue'),
+      '@pink': path.resolve(__dirname, './src/themes/p3r-pink'),
+      '@yellow': path.resolve(__dirname, './src/themes/p4g-yellow'),
     },
   },
   // 只扫描应用入口：仓库内另有 Android 生成页、历史构建与素材预览，
@@ -201,6 +204,7 @@ export default defineConfig({
     // 新增浏览器 CJS 依赖时要同步此表；原生/构建 CLI 不进入浏览器预构建。
     noDiscovery: true,
     include: [
+      'framer-motion', 'react-router-dom',
       'react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'motion/react',
       'gsap', 'gsap/DrawSVGPlugin', 'gsap/SplitText', 'gsap/MorphSVGPlugin', '@gsap/react',
       'dexie', 'dexie-react-hooks', 'zustand', 'zustand/react/shallow', 'dompurify', 'recharts', 'uuid',

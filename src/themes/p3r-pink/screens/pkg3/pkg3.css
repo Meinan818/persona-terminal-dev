@@ -1,0 +1,36 @@
+/* 工作包 3 私有样式（羁绊）。动效只动 transform / opacity；低动效两路收口。 */
+@keyframes pk3-twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.82); } }
+.pk3-twinkle { animation: pk3-twinkle 1.6s ease-in-out infinite; }
+@keyframes pk3-pulse { 0%, 100% { opacity: 0; } 50% { opacity: 0.35; } }
+.pk3-pulse { animation: pk3-pulse 1.4s ease-in-out infinite; }
+@keyframes pk3-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.pk3-bob { animation: pk3-bob 2.4s ease-in-out infinite; }
+@keyframes pk3-namefx { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.pk3-namefx { animation: pk3-namefx 1.2s ease-in-out infinite; }
+/* ConfidantNameFx（真实 vr-name-flow / vr-name-spark） */
+@keyframes pk3-name-flow { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+@keyframes pk3-name-spark { 0%,100% { opacity: 0; transform: translateY(0) scale(0.6); } 45% { opacity: 1; transform: translateY(-7px) scale(1); } }
+.pk3-name-spark { animation: pk3-name-spark 2.2s ease-in-out infinite; }
+@keyframes pk3-spin { to { transform: rotate(360deg); } }
+.pk3-spin { display: inline-block; animation: pk3-spin 3s linear infinite; }
+.pk3-spin-fast { display: inline-block; animation: pk3-spin 1s linear infinite; }
+@keyframes pk3-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+.pk3-shake { animation: pk3-shake 0.42s ease-out both; }
+@keyframes pk3-rise { from { transform: translate(0, 0); } to { transform: translate(var(--dx, 0), -115vh); } }
+.pk3-bub { animation: pk3-rise var(--dur, 8s) linear infinite; }
+@keyframes pk3-wave1 { to { transform: translate(4%, 3%) scale(1.06); } }
+@keyframes pk3-wave2 { to { transform: translate(-4%, 2%) scale(1.08); } }
+.pk3-wave1 { animation: pk3-wave1 9s ease-in-out infinite alternate; }
+.pk3-wave2 { animation: pk3-wave2 11s ease-in-out infinite alternate; }
+@keyframes pk3-shaft { to { opacity: 0.4; transform: skewX(-22deg) translateX(3vw); } }
+.pk3-shaft { animation: pk3-shaft 7s ease-in-out infinite alternate; }
+
+/* 3D 卡墙 */
+.pk3-3d { perspective: 1100px; }
+.pk3-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pk3-twinkle, .pk3-pulse, .pk3-bob, .pk3-namefx, .pk3-spin, .pk3-spin-fast, .pk3-shake, .pk3-bub, .pk3-wave1, .pk3-wave2, .pk3-shaft, .pk3-name-spark { animation: none !important; }
+}
+:root[data-boldness="0"] :is(.pk3-twinkle, .pk3-pulse, .pk3-bob, .pk3-namefx, .pk3-spin, .pk3-spin-fast, .pk3-shake, .pk3-bub, .pk3-wave1, .pk3-wave2, .pk3-shaft, .pk3-name-spark) { animation: none !important; }
+:root[data-boldness="0"] .pk3-bub { display: none; }

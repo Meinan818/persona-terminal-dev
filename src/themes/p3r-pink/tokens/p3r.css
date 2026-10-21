@@ -1,0 +1,299 @@
+/* 自动生成：scripts/gen-tokens.py —— 不要手改，改脚本里的 PALETTE 后重新运行。
+ * 粉白 P3R 变量（日 :root[data-theme="pink"] / 夜 :root.dark[data-theme="pink"]），与真实 src/index.css 粉段同名。
+ * 接入：本文件两块可整体替换真实粉段（见 HANDOFF §1）；夜间块需排在 :root.dark[data-ui-channel="p3"] 之后。 */
+
+/* ── 与日夜无关的尺度（不随主题）── */
+:root {
+  --p3r-font-cond: 'P3R Cond', 'Velvet Sans SC', 'P3R Glyph', 'PingFang SC', sans-serif;
+  --p3r-font-heavy: 'Velvet Sans SC', 'P3R Glyph', 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+  --p3r-font-body: 'Velvet Sans SC', 'P3R Glyph', 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+
+  --p3r-cut-xs: 4px;   /* slantClip 刀口 */
+  --p3r-cut-sm: 7px;
+  --p3r-cut: 10px;
+  --p3r-cut-lg: 16px;
+  --p3r-chamfer: 14px; /* chamferClip 切角 */
+
+  --p3r-dur-instant: 80ms;
+  --p3r-dur-fast: 160ms;
+  --p3r-dur-base: 260ms;
+  --p3r-dur-slow: 420ms;
+  --p3r-ease-snap: cubic-bezier(0.22, 0.9, 0.3, 1);
+  --p3r-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --p3r-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+
+  /* z-index（与真实 src/utils/zIndex.ts 对齐，外加 demo 专属层） */
+  --p3r-z-base: 0;
+  --p3r-z-decor: 1;
+  --p3r-z-content: 10;
+  --p3r-z-nav: 40;
+  --p3r-z-sheet: 50;
+  --p3r-z-confirm: 60;
+  --p3r-z-celebration: 90;
+  --p3r-z-cutin: 120;
+  --p3r-z-system: 150;
+  --p3r-z-toast: 230;
+  --p3r-z-transition: 300;
+  --p3r-z-dev: 400;
+
+  --p3r-nav-h: 64px;
+  --p3r-sidebar-w: 240px;
+  --p3r-page-max: 960px;
+}
+:root[data-boldness="0"] { --p3r-dur-fast: 0ms; --p3r-dur-base: 0ms; --p3r-dur-slow: 0ms; }
+
+:root[data-theme="pink"] {
+  --p3r-blue: #e64a84;  /* 樱玫红：CTA / 选中 / 大数字（原亮蓝） */
+  --p3r-blue-rgb: 230 74 132;
+  --p3r-blue-deep: #b8336c;  /* 覆盆子：深强调（原深蓝） */
+  --p3r-blue-deep-rgb: 184 51 108;
+  --p3r-ink: #3b1531;  /* 莓紫墨：标题正文（夜翻暖白） */
+  --p3r-ink-rgb: 59 21 49;
+  --p3r-ink-soft: #7b4f6c;  /* 次要字 */
+  --p3r-ink-soft-rgb: 123 79 108;
+  --p3r-grey: #ad8aa1;  /* 弱化字 / 占位 */
+  --p3r-grey-rgb: 173 138 161;
+  --p3r-cyan: #b48be6;  /* 淡藕紫：信号 / 进度 / 勾选（原青） */
+  --p3r-cyan-rgb: 180 139 230;
+  --p3r-cyan-pale: #fbe2ec;  /* 淡樱粉面（原浅青面） */
+  --p3r-cyan-pale-rgb: 251 226 236;
+  --p3r-cyan-faint: #fff0f5;  /* 更浅的樱粉面 */
+  --p3r-cyan-faint-rgb: 255 240 245;
+  --p3r-magenta: #ff7a5c;  /* 珊瑚橙：危险 / 句点刀口 / 临期 */
+  --p3r-magenta-rgb: 255 122 92;
+  --p3r-bg: #fff5f7;  /* 奶油粉舞台底 */
+  --p3r-bg-rgb: 255 245 247;
+  --p3r-panel: #fffdfc;  /* 奶油白面板 */
+  --p3r-panel-rgb: 255 253 252;
+  --p3r-track: #f6dde8;  /* 进度轨 */
+  --p3r-track-rgb: 246 221 232;
+  --p3r-chip: #fbe6ef;  /* 标签底 */
+  --p3r-chip-rgb: 251 230 239;
+  --p3r-claim: #fff1dd;  /* 领取 / 奖励底 */
+  --p3r-claim-rgb: 255 241 221;
+  --p3r-blessing-ink: #c9772a;  /* 赐福金字 */
+  --p3r-blessing-ink-rgb: 201 119 42;
+  --p3r-skill-locked: #fff4f8;  /* 未解锁技能底 */
+  --p3r-skill-locked-rgb: 255 244 248;
+  --p3r-skill-badge: #dcbccd;  /* 未解锁徽 */
+  --p3r-skill-badge-rgb: 220 188 205;
+  --p3r-wheel-bar: #fffdfc;  /* 轮盘竖条面 */
+  --p3r-wheel-bar-rgb: 255 253 252;
+  --p3r-ph: #c19aae;  /* 输入占位字 */
+  --p3r-ph-rgb: 193 154 174;
+  --p3r-rose-ink: #c2306a;  /* 小字号玫红（白底对比 ≥4.5） */
+  --p3r-rose-ink-rgb: 194 48 106;
+  --p3r-lilac-ink: #7d4fc0;  /* 小字号藕紫 */
+  --p3r-lilac-ink-rgb: 125 79 192;
+  --p3r-coral-ink: #d24a2c;  /* 小字号珊瑚（危险说明文字） */
+  --p3r-coral-ink-rgb: 210 74 44;
+  --p3r-on-blue: #ffffff;  /* 玫红块上的字（夜间玫红变亮 → 深字） */
+  --p3r-on-blue-rgb: 255 255 255;
+  --p3r-on-ink: #fffdfc;  /* 墨色块上的字 */
+  --p3r-on-ink-rgb: 255 253 252;
+  --p3r-mulberry: #2a0d22;  /* 固定莓紫（光标楔上的字 / 硬影），不随日夜 */
+  --p3r-mulberry-rgb: 42 13 34;
+  --p3r-cream: #fffdfc;  /* 固定奶油白，不随日夜 */
+  --p3r-cream-rgb: 255 253 252;
+  --p3r-gold: #ffd36b;  /* 星 / 稀有 */
+  --p3r-gold-rgb: 255 211 107;
+  --p3r-amber: #ffb36b;  /* 缎带 / warning（原 #f5a623） */
+  --p3r-amber-rgb: 255 179 107;
+  --p3r-mint: #5cc79a;  /* 收入 / 正向（记账专用，非青色） */
+  --p3r-mint-rgb: 92 199 154;
+
+  --p3r-panel-glass: rgba(255, 253, 252, 0.93);
+  --p3r-ghost: rgba(230, 74, 132, 0.11);
+  --p3r-veil-grad: linear-gradient(180deg, rgba(255, 245, 247, 0.28) 0%, rgba(255, 245, 247, 0.76) 58%, rgba(255, 245, 247, 0.94) 100%);
+  --p3r-wash: 251 226 236;
+  --p3r-row: rgba(255, 253, 252, 0.92);
+  --p3r-row-alt: rgba(255, 240, 245, 0.95);
+  --p3r-blank: rgba(255, 240, 245, 0.6);
+  --p3r-chip-stripe: rgba(255, 255, 255, 0.55);
+  --p3r-skill-ready: rgba(230, 74, 132, 0.08);
+  --p3r-star-ring-pale: rgb(255, 241, 247);
+  --p3r-star-ring-deep: rgb(242, 172, 203);
+  --p3r-statstrip: rgba(251, 226, 236, 0.78);
+  --p3r-statstrip-div: rgba(255, 255, 255, 0.75);
+  --p3r-bar-ghost: rgba(230, 74, 132, 0.15);
+  --p3r-velvet: rgba(230, 74, 132, 0.55);
+  --p3r-sheet-grad: linear-gradient(178deg, #fffdfc 0%, #fff3f7 60%, #fde7f0 100%);
+  --p3r-field: rgba(251, 226, 236, 0.5);
+  --p3r-field-focus: rgba(251, 226, 236, 0.78);
+  --p3r-wheel-scrim-a: rgba(59, 21, 49, 0.30);
+  --p3r-wheel-scrim-b: rgba(42, 13, 34, 0.86);
+  --p3r-scrim: rgba(59, 21, 49, 0.42);
+  --p3r-shadow: 0 14px 30px rgba(184, 51, 108, 0.10);
+  --p3r-shadow-lg: 0 18px 44px rgba(230, 74, 132, 0.18);
+  --p3r-hard: 5px 5px 0 rgba(59, 21, 49, 0.9);
+  --p3r-slab-back: color-mix(in srgb, var(--p3r-cyan) 55%, transparent);
+  --p3r-on-stage: var(--p3r-ink);
+
+  /* 导航 / 黑猫窗（真实 Navigation、navigator/p3Kit 读这些） */
+  --p3-blue: #e64a84;
+  --p3-cyan: #b48be6;
+  --p3-cat: #3b1531;
+  --p3nav-root: linear-gradient(168deg, #fff8fa 0%, #fdebf2 52%, #f9d9e7 100%);
+  --p3nav-cat-bub: linear-gradient(315deg, #ff7a5c 13px, #fbe2ec 13px);
+  --p3nav-slab: linear-gradient(180deg, rgba(180, 139, 230, 0.16) 0%, rgba(230, 74, 132, 0.28) 100%);
+  --p3nav-water-filter: none;
+
+  /* p3 频道 --ui-*（真实 p3 段 --ui-accent:#00d8ff 青 / --ui-bg:#001c7a 深蓝会串进粉室，必须覆盖） */
+  --ui-bg: #fff5f7;
+  --ui-surface: #fffdfc;
+  --ui-surface-ink: #3b1531;
+  --ui-paper: #fffdfc;
+  --ui-ink: #3b1531;
+  --ui-muted: #ad8aa1;
+  --ui-accent: #e64a84;
+  --ui-accent-2: #ffb36b;
+  --ui-danger: #ff7a5c;
+  --ui-line: rgba(230, 74, 132, 0.55);
+  --ui-shadow-hard: 4px 4px 0 #3b1531;
+  --color-primary: #e64a84;
+  --color-primary-rgb: 230 74 132;
+  --color-secondary: #f28ab0;
+
+  /* 粉专属装饰（--pk-*，蓝主题不读） */
+  --pk-stage-img-opacity: 0.55;
+  --pk-band: linear-gradient(100deg, #f06b9b 0%, #e64a84 48%, #ef7aa6 100%);
+  --pk-band-edge: rgba(255, 255, 255, 0.65);
+  --pk-grid: rgba(230, 74, 132, 0.20);
+  --pk-globe: rgba(184, 51, 108, 0.42);
+  --pk-globe-land: rgba(184, 51, 108, 0.30);
+  --pk-petal-a: #f7a9c4;
+  --pk-petal-b: #fbd0de;
+  --pk-glint: rgba(255, 255, 255, 0.95);
+  --pk-holo: linear-gradient(135deg, #ffd1e2 0%, #e8d6ff 34%, #ffe3cf 66%, #ffc4da 100%);
+  --pk-title: #3b1531;
+  --pk-title-mask: #b8336c;
+  --pk-focus: #e64a84;
+
+  color-scheme: light;
+  accent-color: #e64a84;
+  caret-color: #e64a84;
+}
+
+:root.dark[data-theme="pink"] {
+  --p3r-blue: #ff6fa3;
+  --p3r-blue-rgb: 255 111 163;
+  --p3r-blue-deep: #ff9cc4;
+  --p3r-blue-deep-rgb: 255 156 196;
+  --p3r-ink: #ffeef5;
+  --p3r-ink-rgb: 255 238 245;
+  --p3r-ink-soft: #dcb3c9;
+  --p3r-ink-soft-rgb: 220 179 201;
+  --p3r-grey: #a87f96;
+  --p3r-grey-rgb: 168 127 150;
+  --p3r-cyan: #c9a6ff;
+  --p3r-cyan-rgb: 201 166 255;
+  --p3r-cyan-pale: #3e1833;
+  --p3r-cyan-pale-rgb: 62 24 51;
+  --p3r-cyan-faint: #301328;
+  --p3r-cyan-faint-rgb: 48 19 40;
+  --p3r-magenta: #ff8d6b;
+  --p3r-magenta-rgb: 255 141 107;
+  --p3r-bg: #1b0a17;
+  --p3r-bg-rgb: 27 10 23;
+  --p3r-panel: #2a1124;
+  --p3r-panel-rgb: 42 17 36;
+  --p3r-track: #4a2140;
+  --p3r-track-rgb: 74 33 64;
+  --p3r-chip: #3e1833;
+  --p3r-chip-rgb: 62 24 51;
+  --p3r-claim: #45301a;
+  --p3r-claim-rgb: 69 48 26;
+  --p3r-blessing-ink: #ffc98a;
+  --p3r-blessing-ink-rgb: 255 201 138;
+  --p3r-skill-locked: #33142c;
+  --p3r-skill-locked-rgb: 51 20 44;
+  --p3r-skill-badge: #5c3050;
+  --p3r-skill-badge-rgb: 92 48 80;
+  --p3r-wheel-bar: #35162e;
+  --p3r-wheel-bar-rgb: 53 22 46;
+  --p3r-ph: #9c6d88;
+  --p3r-ph-rgb: 156 109 136;
+  --p3r-rose-ink: #ff8cb8;
+  --p3r-rose-ink-rgb: 255 140 184;
+  --p3r-lilac-ink: #d9c2ff;
+  --p3r-lilac-ink-rgb: 217 194 255;
+  --p3r-coral-ink: #ffab8f;
+  --p3r-coral-ink-rgb: 255 171 143;
+  --p3r-on-blue: #2a0d22;
+  --p3r-on-blue-rgb: 42 13 34;
+  --p3r-on-ink: #2a0d22;
+  --p3r-on-ink-rgb: 42 13 34;
+  --p3r-mulberry: #2a0d22;
+  --p3r-mulberry-rgb: 42 13 34;
+  --p3r-cream: #fffdfc;
+  --p3r-cream-rgb: 255 253 252;
+  --p3r-gold: #ffd36b;
+  --p3r-gold-rgb: 255 211 107;
+  --p3r-amber: #ffb36b;
+  --p3r-amber-rgb: 255 179 107;
+  --p3r-mint: #7ee0b5;
+  --p3r-mint-rgb: 126 224 181;
+
+  --p3r-panel-glass: rgba(42, 17, 36, 0.94);
+  --p3r-ghost: rgba(255, 111, 163, 0.12);
+  --p3r-veil-grad: linear-gradient(180deg, rgba(27, 10, 23, 0.30) 0%, rgba(27, 10, 23, 0.80) 58%, rgba(27, 10, 23, 0.95) 100%);
+  --p3r-wash: 62 24 51;
+  --p3r-row: rgba(42, 17, 36, 0.92);
+  --p3r-row-alt: rgba(35, 13, 30, 0.95);
+  --p3r-blank: rgba(42, 17, 36, 0.6);
+  --p3r-chip-stripe: rgba(255, 255, 255, 0.07);
+  --p3r-skill-ready: rgba(255, 111, 163, 0.14);
+  --p3r-star-ring-pale: #4a2140;
+  --p3r-star-ring-deep: #1f0b1a;
+  --p3r-statstrip: rgba(42, 17, 36, 0.9);
+  --p3r-statstrip-div: rgba(255, 238, 245, 0.14);
+  --p3r-bar-ghost: rgba(255, 111, 163, 0.2);
+  --p3r-velvet: rgba(255, 111, 163, 0.5);
+  --p3r-sheet-grad: linear-gradient(178deg, #2e1328 0%, #260f21 60%, #1b0a17 100%);
+  --p3r-field: rgba(201, 166, 255, 0.10);
+  --p3r-field-focus: rgba(201, 166, 255, 0.16);
+  --p3r-wheel-scrim-a: rgba(12, 3, 10, 0.40);
+  --p3r-wheel-scrim-b: rgba(8, 2, 7, 0.92);
+  --p3r-scrim: rgba(12, 3, 10, 0.6);
+  --p3r-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+  --p3r-shadow-lg: 0 18px 44px rgba(255, 111, 163, 0.20);
+  --p3r-hard: 5px 5px 0 rgba(255, 111, 163, 0.55);
+
+  --p3-blue: #ff6fa3;
+  --p3-cyan: #c9a6ff;
+  --p3-cat: #ffb3cf;
+  --p3nav-root: linear-gradient(168deg, #2a1124 0%, #200c1c 52%, #170815 100%);
+  --p3nav-cat-bub: linear-gradient(315deg, #ff8d6b 13px, #3e1833 13px);
+  --p3nav-slab: linear-gradient(180deg, rgba(201, 166, 255, 0.08) 0%, rgba(255, 111, 163, 0.18) 100%);
+  --p3nav-water-filter: none;
+
+  --ui-bg: #1b0a17;
+  --ui-surface: #2a1124;
+  --ui-surface-ink: #ffeef5;
+  --ui-paper: #2a1124;
+  --ui-ink: #ffeef5;
+  --ui-muted: #a87f96;
+  --ui-accent: #ff6fa3;
+  --ui-line: rgba(255, 111, 163, 0.45);
+  --color-primary: #ff6fa3;
+  --color-primary-rgb: 255 111 163;
+  --color-secondary: #ff9cc4;
+
+  --pk-stage-img-opacity: 0.9;
+  --pk-band: linear-gradient(100deg, #b8336c 0%, #d9437c 50%, #a52d63 100%);
+  --pk-band-edge: rgba(255, 179, 207, 0.45);
+  --pk-grid: rgba(255, 111, 163, 0.16);
+  --pk-globe: rgba(255, 156, 196, 0.42);
+  --pk-globe-land: rgba(255, 156, 196, 0.28);
+  --pk-petal-a: #ff8fb8;
+  --pk-petal-b: #ffc4d9;
+  --pk-glint: rgba(255, 220, 235, 0.9);
+  --pk-holo: linear-gradient(135deg, #7a2a5c 0%, #5b3a8c 34%, #8a4a3a 66%, #7a2a5c 100%);
+  --pk-title: #ffeef5;
+  --pk-title-mask: #ff9cc4;
+  --pk-focus: #ff6fa3;
+
+  color-scheme: dark;
+  accent-color: #ff6fa3;
+  caret-color: #ff6fa3;
+}

@@ -1,0 +1,148 @@
+@config "../../../tailwind.p3r-pink.config.js";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── 字体 ──────────────────────────────────────────────────────────────────
+   西文：P3R 的「超粗 · 窄体 · 斜体」大写（RANK / SOCIAL STATS / LB·RB）→ OFL Barlow Condensed 800 Italic / 600。
+   中文：Velvet Sans SC（Noto Sans SC 可变字重子集）——构建前由 scripts/subset-fonts.py 按全部源码文字重新裁剪，
+         生成 src/assets/fonts/p3r-sc.woff2（新增文案后 npm run build 会自动重裁，不会再回退系统字体）。 */
+@font-face {
+  font-family: 'P3R Cond';
+  src: url('./assets/fonts/barlow-condensed-800-italic.woff2') format('woff2');
+  font-weight: 800; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'P3R Cond';
+  src: url('./assets/fonts/barlow-condensed-600.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Velvet Sans SC';
+  src: url('./assets/fonts/p3r-sc.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: block;
+}
+
+/* 单色符号兜底（▶◀✦◈⋯⇄✓✕☾♪…，Velvet 源字体没有的符号；DejaVu Sans Bold 子集，scripts/subset-fonts.py 生成）——
+   排在 Velvet 之后、系统字体之前：离线 / 任何系统都不会回退成彩色 emoji（带蓝像素）。 */
+@font-face {
+  font-family: 'P3R Glyph';
+  src: url('./assets/fonts/p3r-glyph.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: block;
+}
+
+html, body { margin: 0; background: var(--p3r-bg); }
+body {
+  font-family: var(--p3r-font-body);
+  color: var(--p3r-ink);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button { -webkit-tap-highlight-color: transparent; }
+
+@layer utilities {
+  /* 西文窄斜体（数字 / 英文签 / LB·RB） */
+  .font-cond { font-family: var(--p3r-font-cond); font-style: italic; font-weight: 800; letter-spacing: -0.01em; }
+  .font-cond-up { font-family: var(--p3r-font-cond); font-weight: 600; letter-spacing: 0.04em; }
+  /* 中文粗斜：Velvet Sans SC 900 + 斜体 + 收字距（P3R 中文菜单字） */
+  .font-heavy { font-family: var(--p3r-font-heavy); font-weight: 900; font-style: italic; letter-spacing: -0.04em; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .p3r-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .p3r-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .p3r-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  /* 描边空心字（幽灵大字 WEEKDAY / 竖排角色名） */
+  .p3r-outline-text { color: transparent; -webkit-text-stroke: 1.5px var(--p3r-ghost); }
+}
+
+/* ── 舞台（P3RPage 粉分支）────────────────────────────────────────────── */
+.pk-stage { position: fixed; inset: 0; z-index: 0; background: var(--p3r-bg); overflow: hidden; pointer-events: none; }
+.pk-stage-img { position: absolute; inset: 0; background-size: cover; background-position: center top; opacity: var(--pk-stage-img-opacity); }
+.pk-stage-veil { position: absolute; inset: 0; background: var(--p3r-veil-grad); }
+
+/* 樱瓣：小、稀、只走 transform / opacity */
+.pk-petal { position: absolute; top: -24px; width: 9px; height: 11px; will-change: transform; animation: pk-fall var(--d, 14s) linear var(--delay, 0s) infinite; }
+.pk-petal > i { display: block; width: 100%; height: 100%; animation: pk-sway calc(var(--d, 14s) / 3.5) ease-in-out infinite alternate; }
+@keyframes pk-fall { 0% { transform: translate3d(0, -4vh, 0); opacity: 0; } 8% { opacity: 0.9; } 85% { opacity: 0.8; } 100% { transform: translate3d(var(--x, -40px), 108vh, 0); opacity: 0; } }
+@keyframes pk-sway { 0% { transform: translateX(-8px) rotate(-30deg); } 100% { transform: translateX(10px) rotate(70deg); } }
+
+/* 线框地球自转（经线 scaleX 余弦）+ 大陆平移 */
+.pk-meridian { transform-box: fill-box; transform-origin: center; animation: pk-mer 24s cubic-bezier(.37,0,.63,1) infinite; }
+@keyframes pk-mer { 0% { transform: scaleX(1); } 25% { transform: scaleX(0.02); } 50% { transform: scaleX(-1); } 75% { transform: scaleX(-0.02); } 100% { transform: scaleX(1); } }
+.pk-land { animation: pk-land 48s linear infinite; }
+@keyframes pk-land { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.pk-glint { animation: pk-glint 6s ease-in-out infinite; }
+@keyframes pk-glint { 0%, 100% { opacity: 0.25; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1); } }
+
+/* 光标楔（P3R 暂停菜单光标）：活的锯齿楔 + 白色错位分身（steps 抖动） */
+.pk-wedge-jit { animation: pk-jit 0.9s steps(3, end) infinite; transform-origin: 30% 50%; }
+@keyframes pk-jit { 0% { transform: rotate(-7deg) skewX(-14deg); } 33% { transform: rotate(-6deg) skewX(-12deg) translateY(-1px); } 66% { transform: rotate(-7.5deg) skewX(-15deg) translateX(1px); } }
+
+/* 句点 / 按钮角眨眼（真实 index.css 同名关键帧） */
+@keyframes p3-dot-blink { 0%, 90% { opacity: 1; transform: translateX(0); } 94% { opacity: 0.25; transform: translateX(1.5px); } 97%, 100% { opacity: 1; transform: translateX(0); } }
+.p3-dot-blink { animation: p3-dot-blink 5.2s linear 1.2s infinite; }
+@keyframes p3-corner-blink { 0%, 88% { opacity: 1; } 93% { opacity: 0.3; } 100% { opacity: 1; } }
+.p3-corner-blink { animation: p3-corner-blink 4.6s linear infinite; }
+@keyframes p3-shard-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.p3-shard-float { animation: p3-shard-float 3.4s ease-in-out infinite; }
+@keyframes pk-spin { to { transform: rotate(360deg); } }
+.pk-spin { animation: pk-spin 1.1s linear infinite; }
+@keyframes pk-chev { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+.pk-chev { animation: pk-chev 1.1s ease-in-out infinite; }
+@keyframes pk-caret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+.pk-caret { animation: pk-caret 0.9s steps(1) infinite; }
+@keyframes pk-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.pk-shimmer { animation: pk-shimmer 1.4s ease-in-out infinite; }
+@keyframes pk-think { 0%, 100% { transform: translateY(0) scale(0.7); opacity: 0.35; } 50% { transform: translateY(-4px) scale(1); opacity: 1; } }
+.pk-think > i { display: inline-block; animation: pk-think 1s ease-in-out infinite; }
+.pk-think > i:nth-child(2) { animation-delay: 0.15s; }
+.pk-think > i:nth-child(3) { animation-delay: 0.3s; }
+
+/* 剧情台词框（P3R 台词框）：圆润不规则底 + 发光描边（静态阴影，无模糊滤镜） */
+.pk-dialog-shape { border-radius: 46% 54% 42% 58% / 60% 48% 52% 40%; }
+
+/* ── 低动效：系统 prefers-reduced-motion + data-boldness="0"（真实 useBoldness 同口径）两路收口 ── */
+@media (prefers-reduced-motion: reduce) {
+  .pk-petal, .pk-meridian, .pk-land, .pk-glint, .pk-wedge-jit, .p3-dot-blink, .p3-corner-blink, .p3-shard-float, .pk-chev, .pk-shimmer, .pk-think > i { animation: none !important; }
+  .pk-petal { display: none; }
+}
+:root[data-boldness="0"] :is(.pk-petal, .pk-meridian, .pk-land, .pk-glint, .pk-wedge-jit, .p3-dot-blink, .p3-corner-blink, .p3-shard-float, .pk-chev, .pk-shimmer, .pk-think > i) { animation: none !important; }
+:root[data-boldness="0"] .pk-petal { display: none; }
+
+/* ── 粉 · 全局「无蓝」兜底（与真实粉段同口径）── */
+:root[data-theme="pink"] ::selection { background: rgba(230, 74, 132, 0.24); color: inherit; }
+:root.dark[data-theme="pink"] ::selection { background: rgba(255, 111, 163, 0.32); }
+:where(:root[data-theme="pink"]) * { scrollbar-color: rgba(230, 74, 132, 0.35) transparent; --tw-ring-color: rgba(230, 74, 132, 0.5); }
+:root[data-theme="pink"] ::-webkit-scrollbar-thumb { background: rgba(230, 74, 132, 0.35); }
+:root[data-theme="pink"] :focus-visible { outline-color: var(--pk-focus); }
+/* 大号透明输入（金额 / 标题 / 搜索等 bg-transparent 的 input / textarea）：不画外框（外框会被父级斜切裁掉、压住大字），
+   改为底缘玫红内描边；文字输入的焦点本身由光标表达，键盘用户仍能看到底缘条。 */
+:root[data-theme="pink"] :is(input, textarea):is(.bg-transparent, [class*="bg-transparent"]):focus-visible,
+:root[data-theme="pink"] :is(input, textarea)[data-p3-bare]:focus-visible { outline: none; box-shadow: inset 0 -3px 0 var(--pk-focus); }
+:root[data-theme="pink"] :is(input[type="checkbox"], input[type="radio"], input[type="range"], progress) { accent-color: var(--p3r-blue); }
+:root[data-theme="pink"] input:-webkit-autofill { -webkit-box-shadow: 0 0 0 40px var(--p3r-panel) inset; -webkit-text-fill-color: var(--p3r-ink); }
+:root[data-theme="pink"] ::placeholder { color: var(--p3r-ph); }
+
+/* 粉专属素材挂点（url 不进变量：var 里相对 url 在不同引擎解析基准不一致） */
+:root[data-theme="pink"] :is(.pk-stage-img, .pk-water-img) { background-image: url('./assets/pink/pink-dusk-day.webp'); }
+:root.dark[data-theme="pink"] :is(.pk-stage-img, .pk-water-img) { background-image: url('./assets/pink/pink-dusk-night.webp'); }
+
+/* 外壳 water 转场：新页同原点圆形揭示（真实 App.tsx REVEAL_MS 540） */
+@keyframes pk-shell-rv-a { from { clip-path: circle(0px at var(--rv-x) var(--rv-y)); } to { clip-path: circle(var(--rv-r) at var(--rv-x) var(--rv-y)); } }
+@keyframes pk-shell-rv-b { from { clip-path: circle(0px at var(--rv-x) var(--rv-y)); } to { clip-path: circle(var(--rv-r) at var(--rv-x) var(--rv-y)); } }
+
+/* .p3-dayface：横贯斜带 cut-in（今日完成 / 记录成功 / 记账完成）夜间也用日间浅面板。
+   与真实 src/index.css 粉段同口径：只拉回底色与正文墨色，强调色（玫红 / 藕紫）保持夜间值。 */
+:root.dark[data-theme="pink"] .p3-dayface {
+  --p3r-sheet-grad: linear-gradient(178deg, #fffafc 0%, #fdf1f7 60%, #fbe6f0 100%);
+  --p3r-ink: #2b0a1c;
+  --p3r-ink-rgb: 43 10 28;
+  --p3r-ink-soft: #6d4a5c;
+  --p3r-ink-soft-rgb: 109 74 92;
+  --p3r-panel: #fffdfc;
+  --p3r-panel-rgb: 255 253 252;
+  color: var(--p3r-ink);
+}

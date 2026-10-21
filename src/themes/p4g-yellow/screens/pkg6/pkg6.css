@@ -1,0 +1,59 @@
+/* P6 私有样式：P4G Config 滑杆、对话气泡尾巴、Config 页头条纹。只用 --p4g-* token。 */
+.p6-range { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; }
+.p6-range:focus { outline: none; }
+.p6-range::-webkit-slider-runnable-track { height: 10px; border-radius: 999px; background: linear-gradient(90deg, var(--p4g-orange) 0 var(--p6-fill, 50%), var(--p4g-black) var(--p6-fill, 50%) 100%); border: 2px solid var(--p4g-black); }
+.p6-range::-moz-range-track { height: 10px; border-radius: 999px; background: var(--p4g-black); border: 2px solid var(--p4g-black); }
+.p6-range::-moz-range-progress { height: 10px; border-radius: 999px; background: var(--p4g-orange); }
+.p6-range::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 999px; background: var(--p4g-white); border: 5px solid var(--p4g-black); box-shadow: 0 0 0 2px var(--p4g-white); transition: transform var(--p4g-dur-instant) var(--p4g-ease-snap); }
+.p6-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 999px; background: var(--p4g-white); border: 5px solid var(--p4g-black); }
+.p6-range:active::-webkit-slider-thumb { transform: scale(1.15); }
+.p6-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--p4g-yellow-hi), 0 0 0 5px var(--p4g-black); }
+[data-p4g-mode='night'] .p6-range::-webkit-slider-runnable-track { border-color: var(--p4g-yellow); background: linear-gradient(90deg, var(--p4g-yellow) 0 var(--p6-fill, 50%), var(--p4g-black) var(--p6-fill, 50%) 100%); }
+[data-p4g-mode='night'] .p6-range::-webkit-slider-thumb { border-color: var(--p4g-yellow); background: var(--p4g-black); box-shadow: 0 0 0 2px var(--p4g-black); }
+
+/* Config 页头条纹：P4G 「Config」底带（灰/白/黄/紫 横线） */
+.p6-config-band {
+  background:
+    linear-gradient(180deg,
+      transparent 0 14%, rgb(var(--p4g-white-rgb) / 0.9) 14% 22%, transparent 22% 30%,
+      rgb(var(--p4g-purple-rgb) / 0.85) 30% 33%, transparent 33% 52%,
+      rgb(var(--p4g-white-rgb) / 0.95) 52% 66%, rgb(var(--p4g-orange-rgb) / 0.9) 66% 70%,
+      transparent 70% 80%, rgb(var(--p4g-purple-rgb) / 0.9) 80% 86%, rgb(var(--p4g-white-rgb) / 0.8) 86% 92%, transparent 92%);
+}
+[data-p4g-mode='night'] .p6-config-band {
+  background:
+    linear-gradient(180deg,
+      transparent 0 14%, rgb(var(--p4g-yellow-rgb) / 0.25) 14% 22%, transparent 22% 30%,
+      rgb(var(--p4g-purple-rgb) / 0.8) 30% 33%, transparent 33% 52%,
+      rgb(var(--p4g-yellow-rgb) / 0.16) 52% 66%, rgb(var(--p4g-orange-rgb) / 0.9) 66% 70%,
+      transparent 70% 80%, rgb(var(--p4g-purple-rgb) / 0.8) 80% 86%, rgb(var(--p4g-yellow-rgb) / 0.2) 86% 92%, transparent 92%);
+}
+
+/* 设置页 Config 背景的黄色方块阵（左上） */
+.p6-squares {
+  background-image:
+    linear-gradient(90deg, rgb(var(--p4g-yellow-hi-rgb) / 0.55) 0 78%, transparent 78%),
+    linear-gradient(180deg, rgb(var(--p4g-yellow-hi-rgb) / 0.55) 0 70%, transparent 70%);
+  background-size: 62px 26px;
+  background-blend-mode: multiply;
+}
+
+/* P4G 消息框「下一页」橙色圆点指示（静态 / 低动效不闪） */
+@keyframes p6-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0.25; } }
+.p6-next-dot { animation: p6-blink 1s steps(1) infinite; }
+[data-p4g-motion='low'] .p6-next-dot { animation: none; }
+
+/* 输入中三点 */
+@keyframes p6-typing { 0%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-4px); opacity: 1; } }
+.p6-typing > i { display: inline-block; width: 7px; height: 7px; border-radius: 999px; background: currentColor; animation: p6-typing 0.9s infinite; }
+.p6-typing > i:nth-child(2) { animation-delay: 0.15s; }
+.p6-typing > i:nth-child(3) { animation-delay: 0.3s; }
+[data-p4g-motion='low'] .p6-typing > i { animation: none; opacity: 0.8; }
+
+/* 录音脉冲 */
+@keyframes p6-rec { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(1.8); opacity: 0; } }
+.p6-rec-ring { animation: p6-rec 1.1s ease-out infinite; }
+[data-p4g-motion='low'] .p6-rec-ring { animation: none; opacity: 0.4; }
+
+.p6-noscroll { scrollbar-width: none; }
+.p6-noscroll::-webkit-scrollbar { display: none; }

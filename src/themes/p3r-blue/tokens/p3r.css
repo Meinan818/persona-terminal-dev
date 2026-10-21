@@ -1,0 +1,355 @@
+/* 自动生成：work/blue/gen-tokens-blue.py（草案）—— 改色改脚本里的 PALETTE / BK_* 后重新运行。
+ * 蓝白 P3R 变量：日 :root[data-theme="blue"]（白 / 冷白纸面 + P3R 蓝），夜 :root.dark[data-theme="blue"]（影时间：深蓝 + 绿）。
+ * 变量名与粉版 src/tokens/p3r.css 一一对应；--bk-* 为蓝专属母题层（粉版 --pk-* 已全部改名）。
+ * 日值 = 真实 src 的蓝 fallback；夜值 = 真实 src :root.dark[data-ui-channel="p3"]；唯一偏离：magenta → 臂章红 #e8283c。 */
+
+/* ── 与日夜无关的尺度（与粉版完全一致，不随主题）── */
+:root {
+  --p3r-font-cond: 'P3R Cond', 'Velvet Sans SC', 'P3R Glyph', 'PingFang SC', sans-serif;
+  --p3r-font-heavy: 'Velvet Sans SC', 'P3R Glyph', 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+  --p3r-font-body: 'Velvet Sans SC', 'P3R Glyph', 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+
+  --p3r-cut-xs: 4px;
+  --p3r-cut-sm: 7px;
+  --p3r-cut: 10px;
+  --p3r-cut-lg: 16px;
+  --p3r-chamfer: 14px;
+
+  --p3r-dur-instant: 80ms;
+  --p3r-dur-fast: 160ms;
+  --p3r-dur-base: 260ms;
+  --p3r-dur-slow: 420ms;
+  --p3r-ease-snap: cubic-bezier(0.22, 0.9, 0.3, 1);
+  --p3r-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --p3r-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  /* 蓝专属节奏：原作菜单开场是 50ms/帧的手绘遮罩序列（3 帧 @60fps），用 steps() 复现 */
+  --bk-frame: 50ms;
+  --bk-ease-sink: cubic-bezier(0.33, 0, 0.15, 1);   /* 「下沉」：慢入快稳，菜单人物下坠 / 页面沉入 */
+
+  --p3r-z-base: 0;
+  --p3r-z-decor: 1;
+  --p3r-z-content: 10;
+  --p3r-z-nav: 40;
+  --p3r-z-sheet: 50;
+  --p3r-z-confirm: 60;
+  --p3r-z-celebration: 90;
+  --p3r-z-cutin: 120;
+  --p3r-z-system: 150;
+  --p3r-z-toast: 230;
+  --p3r-z-transition: 300;
+  --p3r-z-dev: 400;
+
+  --p3r-nav-h: 64px;
+  --p3r-sidebar-w: 240px;
+  --p3r-page-max: 960px;
+}
+:root[data-boldness="0"] { --p3r-dur-fast: 0ms; --p3r-dur-base: 0ms; --p3r-dur-slow: 0ms; --bk-frame: 0ms; }
+
+:root[data-theme="blue"] {
+  --p3r-blue: #1b57ff;  /* P3R 蓝：CTA / 选中 / 大数字（夜 = 影时间绿） */
+  --p3r-blue-rgb: 27 87 255;
+  --p3r-blue-deep: #0a3bd6;  /* 深蓝：深强调 */
+  --p3r-blue-deep-rgb: 10 59 214;
+  --p3r-ink: #0a1230;  /* 深蓝墨：标题正文（夜翻冷白） */
+  --p3r-ink-rgb: 10 18 48;
+  --p3r-ink-soft: #3d4a66;  /* 次要字 */
+  --p3r-ink-soft-rgb: 61 74 102;
+  --p3r-grey: #8a97ad;  /* 弱化字 / 占位 */
+  --p3r-grey-rgb: 138 151 173;
+  --p3r-cyan: #35d1e8;  /* 亮青：信号 / 进度 / 勾选 */
+  --p3r-cyan-rgb: 53 209 232;
+  --p3r-cyan-pale: #cfeaf6;  /* 浅青面 */
+  --p3r-cyan-pale-rgb: 207 234 246;
+  --p3r-cyan-faint: #e2f2fa;  /* 更浅的青白面 */
+  --p3r-cyan-faint-rgb: 226 242 250;
+  --p3r-magenta: #e8283c;  /* P3R 臂章红：危险 / 句点刀口 / 临期（src #f0417f → 改红，见文件头） */
+  --p3r-magenta-rgb: 232 40 60;
+  --p3r-bg: #eef5f9;  /* 冷白水面舞台底 */
+  --p3r-bg-rgb: 238 245 249;
+  --p3r-panel: #ffffff;  /* 纯白面板 */
+  --p3r-panel-rgb: 255 255 255;
+  --p3r-track: #e4eef5;  /* 进度轨 */
+  --p3r-track-rgb: 228 238 245;
+  --p3r-chip: #ddeef7;  /* 标签底 */
+  --p3r-chip-rgb: 221 238 247;
+  --p3r-claim: #fff6dc;  /* 领取 / 奖励底（琥珀纸） */
+  --p3r-claim-rgb: 255 246 220;
+  --p3r-blessing-ink: #c07f00;  /* 赐福金字 */
+  --p3r-blessing-ink-rgb: 192 127 0;
+  --p3r-skill-locked: #f2f7fb;  /* 未解锁技能底 */
+  --p3r-skill-locked-rgb: 242 247 251;
+  --p3r-skill-badge: #b9c6d4;  /* 未解锁徽 */
+  --p3r-skill-badge-rgb: 185 198 212;
+  --p3r-wheel-bar: #ffffff;  /* 轮盘竖条面 */
+  --p3r-wheel-bar-rgb: 255 255 255;
+  --p3r-ph: #8fa8bd;  /* 输入占位字 */
+  --p3r-ph-rgb: 143 168 189;
+  --p3r-rose-ink: #1546e0;  /* 【语义=accent-ink】小字号强调蓝（白底对比 ≥4.5） */
+  --p3r-rose-ink-rgb: 21 70 224;
+  --p3r-lilac-ink: #0b7d96;  /* 【语义=signal-ink】小字号青（亮青直接做字对比不够） */
+  --p3r-lilac-ink-rgb: 11 125 150;
+  --p3r-coral-ink: #c8102e;  /* 【语义=danger-ink】小字号红（危险说明文字） */
+  --p3r-coral-ink-rgb: 200 16 46;
+  --p3r-on-blue: #ffffff;  /* 蓝块上的字（夜间绿块 → 深字） */
+  --p3r-on-blue-rgb: 255 255 255;
+  --p3r-on-ink: #ffffff;  /* 墨色块上的字 */
+  --p3r-on-ink-rgb: 255 255 255;
+  --p3r-mulberry: #0a1230;  /* 【语义=fixed-ink】固定深蓝墨（光标楔上的字 / 硬影），不随日夜 */
+  --p3r-mulberry-rgb: 10 18 48;
+  --p3r-cream: #ffffff;  /* 【语义=fixed-paper】固定纯白，不随日夜 */
+  --p3r-cream-rgb: 255 255 255;
+  --p3r-gold: #ffd53a;  /* 星 / 稀有 / RANK UP 数字高亮 */
+  --p3r-gold-rgb: 255 213 58;
+  --p3r-amber: #f5a623;  /* 缎带 / warning */
+  --p3r-amber-rgb: 245 166 35;
+  --p3r-mint: #1fae6a;  /* 收入 / 正向（记账专用） */
+  --p3r-mint-rgb: 31 174 106;
+
+  --p3r-panel-glass: rgba(255, 255, 255, 0.93);
+  --p3r-ghost: rgba(147, 190, 222, 0.30);
+  --p3r-veil-grad: linear-gradient(180deg, rgba(238, 245, 249, 0.35) 0%, rgba(238, 245, 249, 0.82) 58%, rgba(238, 245, 249, 0.95) 100%);
+  --p3r-wash: 207 234 246;
+  --p3r-row: rgba(255, 255, 255, 0.92);
+  --p3r-row-alt: rgba(232, 245, 251, 0.95);
+  --p3r-blank: rgba(226, 243, 250, 0.6);
+  --p3r-chip-stripe: rgba(255, 255, 255, 0.5);
+  --p3r-skill-ready: rgba(27, 87, 255, 0.08);
+  --p3r-star-ring-pale: rgb(233, 247, 252);
+  --p3r-star-ring-deep: rgb(124, 201, 234);
+  --p3r-statstrip: rgba(207, 234, 246, 0.75);
+  --p3r-statstrip-div: rgba(255, 255, 255, 0.7);
+  --p3r-bar-ghost: rgba(27, 87, 255, 0.16);
+  --p3r-velvet: rgba(43, 104, 255, 0.62);
+  --p3r-sheet-grad: linear-gradient(178deg, #fbfdff 0%, #f0f8fc 60%, #e6f3fa 100%);
+  --p3r-field: rgba(207, 234, 246, 0.35);
+  --p3r-field-focus: rgba(207, 234, 246, 0.5);
+  --p3r-wheel-scrim-a: rgba(10, 18, 48, 0.30);
+  --p3r-wheel-scrim-b: rgba(5, 7, 30, 0.86);
+  --p3r-scrim: rgba(8, 12, 26, 0.42);  /* 偏中性：红元素被压暗后不偏玫红 */
+  --p3r-shadow: 0 14px 30px rgba(38, 96, 140, 0.10);
+  --p3r-shadow-lg: 0 18px 44px rgba(27, 87, 255, 0.18);
+  --p3r-hard: 5px 5px 0 rgba(10, 18, 48, 0.9);
+  --p3r-slab-back: color-mix(in srgb, var(--p3r-cyan) 55%, transparent);
+  --p3r-on-stage: var(--p3r-ink);
+  /* 语义别名（新代码用这些；旧名保留以便 fork 零改动） */
+  --p3r-accent-ink: var(--p3r-rose-ink);
+  --p3r-signal-ink: var(--p3r-lilac-ink);
+  --p3r-danger-ink: var(--p3r-coral-ink);
+  --p3r-fixed-ink: var(--p3r-mulberry);
+  --p3r-fixed-paper: var(--p3r-cream);
+
+  /* 导航 / 黑猫窗（src Navigation、navigator/p3Kit 的 fallback 值） */
+  --p3-blue: #0b5cff;
+  --p3-cyan: #20cfe8;
+  --p3-cat: #0a1230;
+  --p3nav-root: linear-gradient(168deg, #f2f9fd 0%, #e6f3fa 52%, #cfeaf6 100%);
+  --p3nav-cat-bub: linear-gradient(315deg, #35d1e8 13px, #c9e9f6 13px);
+  --p3nav-slab: linear-gradient(180deg, rgba(53, 209, 232, 0.28) 0%, rgba(127, 216, 238, 0.5) 100%);
+  --p3nav-water-filter: none;
+
+  /* p3 频道 --ui-*：保持 src 原值（index.css:663）。demo 内无消费者（粉版 grep 为 0），不会把深蓝铺进日间大面；
+     若后续包引用 --ui-bg，请改用 --p3r-bg。 */
+  --ui-bg: #001c7a;
+  --ui-surface: #05070d;
+  --ui-surface-ink: #f6fbff;
+  --ui-paper: #f6fbff;
+  --ui-ink: #f6fbff;
+  --ui-muted: #8da0b8;
+  --ui-accent: #00d8ff;
+  --ui-accent-2: #f5d84a;
+  --ui-danger: #e8283c;  /* src #ff3daa（蓝）→ 红，同 --p3r-magenta 理由 */
+  --ui-line: rgba(0, 216, 255, 0.65);
+  --ui-shadow-hard: 4px 4px 0 #05070d;
+  --color-primary: #3B82F6;   /* src :root 缺省（蓝主题不覆盖 --color-primary） */
+  --color-primary-rgb: 59 130 246;
+  --color-secondary: #60A5FA;
+
+  /* 母题装饰层（由粉版 --pk-* 垫片改名而来，值为蓝白；fork 第 4 步已全部改引用 --bk-*）；
+     第 3 步换母题层时逐个删除（DIFFERENTIATION.md §4）。 */
+  --bk-band: linear-gradient(100deg, #1b57ff 0%, #0a3bd6 52%, #1233cc 100%);
+  --bk-band-edge: rgba(255, 255, 255, 0.7);
+  --bk-grid: rgba(27, 87, 255, 0.16);
+  --bk-globe: rgba(10, 59, 214, 0.38);
+  --bk-globe-land: rgba(10, 59, 214, 0.26);
+  --bk-bubble-a: #7fd8ff;  /* 深色块上的浅强调字 / 粒子 */
+  --bk-bubble-b: #bfeaff;
+  --bk-glint: rgba(255, 255, 255, 0.95);
+  --bk-holo: linear-gradient(135deg, #e6f6ff 0%, #cfeaf6 40%, #ffffff 70%, #d8f4fb 100%);
+  --bk-title: #0a1230;
+  --bk-title-mask: #0a3bd6;
+  --bk-focus: #1b57ff;
+
+  color-scheme: light;
+  accent-color: #1b57ff;
+  caret-color: #1b57ff;
+
+  /* 蓝专属母题层 --bk-*（粉版 --pk-* 的对位；DIFFERENTIATION.md） */
+  --bk-abyss-1: #0a1a8c;
+  --bk-abyss-2: #050776;
+  --bk-abyss-3: #010058;
+  --bk-sea-1: #38d0ff;
+  --bk-sea-2: #1d6dff;
+  --bk-sea-3: #1233cc;
+  --bk-sea-4: #0a1a8c;
+  --bk-sky: #1ccefe;
+  --bk-moon: #f4fbff;
+  --bk-darkhour: #3ecf8e;
+  --bk-darkhour-glow: rgba(62, 207, 142, 0.45);
+  --bk-caustic: rgba(255, 255, 255, 0.55);
+  --bk-bubble: rgba(255, 255, 255, 0.7);
+  --bk-shard: rgba(207, 234, 246, 0.85);
+  --bk-shard-edge: rgba(255, 255, 255, 0.95);
+  --bk-red: #e8283c;
+  --bk-danger-wash: #e9edf5;  /* 危险提示底：冷灰（红 alpha 叠白=粉白、叠群青=紫，均违反蓝版禁色；危险语义靠红字 / 红刻度） */
+  --bk-stage-img-opacity: 0.3;
+}
+
+:root.dark[data-theme="blue"] {
+  --p3r-blue: #3ecf8e;
+  --p3r-blue-rgb: 62 207 142;
+  --p3r-blue-deep: #2aa974;
+  --p3r-blue-deep-rgb: 42 169 116;
+  --p3r-ink: #e9f6f1;
+  --p3r-ink-rgb: 233 246 241;
+  --p3r-ink-soft: #b9cfdc;
+  --p3r-ink-soft-rgb: 185 207 220;
+  --p3r-grey: #7e94ab;
+  --p3r-grey-rgb: 126 148 171;
+  --p3r-cyan: #35e0b8;
+  --p3r-cyan-rgb: 53 224 184;
+  --p3r-cyan-pale: #12382f;
+  --p3r-cyan-pale-rgb: 18 56 47;
+  --p3r-cyan-faint: #0d2b26;
+  --p3r-cyan-faint-rgb: 13 43 38;
+  --p3r-magenta: #ff4a5c;
+  --p3r-magenta-rgb: 255 74 92;
+  --p3r-bg: #081226;
+  --p3r-bg-rgb: 8 18 38;
+  --p3r-panel: #10203f;
+  --p3r-panel-rgb: 16 32 63;
+  --p3r-track: #24395f;
+  --p3r-track-rgb: 36 57 95;
+  --p3r-chip: #1a2d55;
+  --p3r-chip-rgb: 26 45 85;
+  --p3r-claim: #453a10;
+  --p3r-claim-rgb: 69 58 16;
+  --p3r-blessing-ink: #f5c76b;
+  --p3r-blessing-ink-rgb: 245 199 107;
+  --p3r-skill-locked: #16294a;
+  --p3r-skill-locked-rgb: 22 41 74;
+  --p3r-skill-badge: #2c4262;
+  --p3r-skill-badge-rgb: 44 66 98;
+  --p3r-wheel-bar: #1a2f5c;
+  --p3r-wheel-bar-rgb: 26 47 92;
+  --p3r-ph: #5e7d99;
+  --p3r-ph-rgb: 94 125 153;
+  --p3r-rose-ink: #6fe3b0;
+  --p3r-rose-ink-rgb: 111 227 176;
+  --p3r-lilac-ink: #7ff0d4;
+  --p3r-lilac-ink-rgb: 127 240 212;
+  --p3r-coral-ink: #ff6670;
+  --p3r-coral-ink-rgb: 255 102 112;
+  --p3r-on-blue: #04210f;
+  --p3r-on-blue-rgb: 4 33 15;
+  --p3r-on-ink: #081226;
+  --p3r-on-ink-rgb: 8 18 38;
+  --p3r-mulberry: #0a1230;
+  --p3r-mulberry-rgb: 10 18 48;
+  --p3r-cream: #ffffff;
+  --p3r-cream-rgb: 255 255 255;
+  --p3r-gold: #ffd53a;
+  --p3r-gold-rgb: 255 213 58;
+  --p3r-amber: #f5c76b;
+  --p3r-amber-rgb: 245 199 107;
+  --p3r-mint: #7ee0b5;
+  --p3r-mint-rgb: 126 224 181;
+
+  --p3r-panel-glass: rgba(16, 32, 63, 0.94);
+  --p3r-ghost: rgba(62, 207, 142, 0.13);
+  --p3r-veil-grad: linear-gradient(180deg, rgba(8, 18, 38, 0.5) 0%, rgba(8, 18, 38, 0.85) 58%, rgba(8, 18, 38, 0.96) 100%);
+  --p3r-wash: 24 48 90;
+  --p3r-row: rgba(16, 32, 63, 0.92);
+  --p3r-row-alt: rgba(13, 27, 54, 0.95);
+  --p3r-blank: rgba(16, 32, 63, 0.6);
+  --p3r-chip-stripe: rgba(255, 255, 255, 0.07);
+  --p3r-skill-ready: rgba(62, 207, 142, 0.14);
+  --p3r-star-ring-pale: #24406e;
+  --p3r-star-ring-deep: #0b1730;
+  --p3r-statstrip: rgba(16, 32, 63, 0.9);
+  --p3r-statstrip-div: rgba(233, 246, 241, 0.14);
+  --p3r-bar-ghost: rgba(62, 207, 142, 0.2);
+  --p3r-velvet: rgba(62, 207, 142, 0.5);
+  --p3r-sheet-grad: linear-gradient(178deg, #0d1b36 0%, #0a1530 60%, #081226 100%);
+  --p3r-field: rgba(53, 224, 184, 0.10);
+  --p3r-field-focus: rgba(53, 224, 184, 0.16);
+  --p3r-wheel-scrim-a: rgba(2, 6, 16, 0.40);
+  --p3r-wheel-scrim-b: rgba(2, 6, 16, 0.92);
+  --p3r-scrim: rgba(2, 6, 16, 0.6);
+  --p3r-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+  --p3r-shadow-lg: 0 18px 44px rgba(62, 207, 142, 0.20);
+  --p3r-hard: 5px 5px 0 rgba(62, 207, 142, 0.5);
+
+  --p3-blue: #3ecf8e;
+  --p3-cyan: #35e0b8;
+  --p3-cat: #8fc7ff;   /* src：底导黑猫夜间 → 浅蓝（用户点名） */
+  --p3nav-root: linear-gradient(168deg, #0a1a36 0%, #081226 52%, #060d1e 100%);
+  --p3nav-cat-bub: linear-gradient(315deg, #35e0b8 13px, #14294a 13px);
+  --p3nav-slab: linear-gradient(180deg, rgba(53, 224, 184, 0.08) 0%, rgba(53, 224, 184, 0.18) 100%);
+  --p3nav-water-filter: brightness(0.34) saturate(0.72);
+
+  --ui-bg: #081226;
+  --ui-surface: #10203f;
+  --ui-surface-ink: #e9f6f1;
+  --ui-paper: #10203f;
+  --ui-ink: #e9f6f1;
+  --ui-muted: #7e94ab;
+  --ui-accent: #3ecf8e;
+  --color-primary: #3ecf8e;
+  --color-primary-rgb: 62 207 142;
+  --color-secondary: #6fe3b0;
+
+  --bk-band: linear-gradient(100deg, #0a1a8c 0%, #1233cc 50%, #050776 100%);
+  --bk-band-edge: rgba(126, 240, 200, 0.45);
+  --bk-grid: rgba(62, 207, 142, 0.14);
+  --bk-globe: rgba(111, 227, 176, 0.38);
+  --bk-globe-land: rgba(111, 227, 176, 0.24);
+  --bk-bubble-a: #8ff0c8;
+  --bk-bubble-b: #5fe3bf;
+  --bk-glint: rgba(201, 255, 228, 0.85);
+  --bk-holo: linear-gradient(135deg, #0d2b26 0%, #12382f 40%, #10203f 70%, #0d2b26 100%);
+  --bk-title: #e9f6f1;
+  --bk-title-mask: #6fe3b0;
+  --bk-focus: #3ecf8e;
+
+  color-scheme: dark;
+  accent-color: #3ecf8e;
+  caret-color: #3ecf8e;
+
+  /* 蓝专属母题层 --bk-*（粉版 --pk-* 的对位；DIFFERENTIATION.md） */
+  --bk-abyss-1: #0a1a8c;
+  --bk-abyss-2: #050776;
+  --bk-abyss-3: #010058;
+  --bk-sea-1: #38d0ff;
+  --bk-sea-2: #1d6dff;
+  --bk-sea-3: #1233cc;
+  --bk-sea-4: #0a1a8c;
+  --bk-sky: #1ccefe;
+  --bk-moon: #c9ffe4;
+  --bk-darkhour: #3ecf8e;
+  --bk-darkhour-glow: rgba(62, 207, 142, 0.45);
+  --bk-caustic: rgba(53, 224, 184, 0.22);
+  --bk-bubble: rgba(201, 255, 228, 0.35);
+  --bk-shard: rgba(18, 56, 47, 0.85);
+  --bk-shard-edge: rgba(126, 240, 200, 0.8);
+  --bk-red: #e8283c;
+  --bk-danger-wash: rgb(255 255 255 / 0.07);  /* 夜：中性亮雾（红 alpha 叠深蓝会混成紫） */
+  --bk-stage-img-opacity: 0.18;
+}
+
+/* src index.css:1475 —— BandCutInP3 等挂 .p3-dayface：夜间仍用日间白面板与深蓝墨，强调色跟夜间（影时间绿） */
+:root.dark[data-theme="blue"] .p3-dayface {
+  --bk-danger-wash: #e9edf5;
+  --p3r-sheet-grad: linear-gradient(172deg, #ffffff 0%, #f2f9fd 70%, #e8f4fa 100%);
+  --p3r-ink: #0a1230;
+  --p3r-ink-soft: #3d4a66;
+}

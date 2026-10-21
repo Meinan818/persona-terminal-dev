@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, useSyncExternalStore, lazy, Suspense } from 'react';
+import { KitHost, kitThemeOf, useKitReloadGuard } from '@/themes/KitHost';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useAppStore, toLocalDateKey } from '@/store';
@@ -202,6 +203,7 @@ function App() {
    * 这两个对象在各自被写时才触发，这是应该的。
    */
   const currentPage = useAppStore(s => s.currentPage);
+  useKitReloadGuard(useAppStore(s => s.user?.theme));
   const initializeApp = useAppStore(s => s.initializeApp);
   const user = useAppStore(s => s.user);
   const settings = useAppStore(s => s.settings);
@@ -756,6 +758,9 @@ function App() {
         return <Dashboard />;
     }
   };
+
+  const kitTheme = kitThemeOf(user?.theme);
+  if (user && kitTheme) return <KitHost theme={kitTheme} />;
 
   return (
     // 红频道（P5）不响应夜间：这层局部 dark 作用域与 <html> 的 .dark 同一口径闸门

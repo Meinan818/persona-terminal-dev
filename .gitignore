@@ -138,3 +138,6 @@ outputs/_recon/
 # 换新版本时把新包覆盖进来即可（仓库只跟源码走）。
 site/download/*.apk
 
+# 主题对比截图输出
+.theme-compare/
+

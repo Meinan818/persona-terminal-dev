@@ -1,0 +1,458 @@
+/* ════════════════════════════════════════════════════════════════════════════
+ * P4G Yellow —— 设计 token（唯一真源）
+ *
+ * 版式/配色以《Persona 4 Golden》实机界面为参照 1:1 还原（参考截图存于
+ * web/downloads/p4g-ref/：暂停菜单彩虹竖条、S.Link 列表、Status 黄底、消息框）：
+ *   · 舞台：柠檬黄 #FFE500 + 浅黄圆角方块像素阵（Status / Rank Up 背景）
+ *   · 列表行：黄 → 浅黄渐变条，左侧方框图标，橙色标签（白字），橙色 Rank 字；
+ *     选中行 = 整条反黑白字、标签反白黑字
+ *   · 彩虹糖条：白/红/橙/黄/绿/青竖条（暂停菜单），斜向彩条（Rank Up）
+ *   · 标题：白字粗黑描边（S.Link / Status），几何无衬线（Avant Garde 系）
+ *   · 日期：黑色圆角胶囊 + 宽字距白字 "04/15 FRI"，下方白字黑描边时段，
+ *     右上角黄色同心弧 + 黄圆天气徽
+ *   · 消息框：半透明暗棕面 + 黄/橙偏移底板；选项高亮 = 橙色圆头条
+ *
+ * 规则：组件里**不写死颜色**，一律 var(--p4g-*) 或 tailwind 的 p4g-* 色名。
+ * 日/夜两套：[data-p4g-mode="day"|"night"]（挂在 <html>）。
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 字体（全部本地打包，离线可用）──────────────────────────────────────────
+ * Latin：TeX Gyre Adventor（ITC Avant Garde Gothic 的自由克隆，GUST Font License）
+ *        —— P4G 英文 UI 的 "Skill / Item / Equip / S.Link / Rank 8" 即 Avant Garde 系。
+ * CJK 标题：Velvet Round SC（寒蝉全圆体子集，OFL）—— 对应 P4G 日文 UI 的 Fontworks「スキップ」
+ *        （圆头黑体、略宽）。正文：Velvet Sans SC（Noto Sans SC 子集，OFL）。
+ * 官方字体插槽：public/assets/p4g/official/font-latin.woff2 / font-cjk.woff2 存在时，
+ *        由 src/lib/slots.ts 运行时注入 'P4G Official Latin' / 'P4G Official CJK'，排在栈首。 */
+@font-face {
+  font-family: 'P4G Adventor';
+  src: url('../assets/fonts/adventor-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'P4G Adventor';
+  src: url('../assets/fonts/adventor-bold.woff2') format('woff2');
+  font-weight: 600 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'P4G Adventor';
+  src: url('../assets/fonts/adventor-bolditalic.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Velvet Round SC';
+  src: url('../assets/fonts/velvet-round-sc.v4.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Velvet Sans SC';
+  src: url('../assets/fonts/velvet-sans-sc.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── 不随日夜变化的基础量 ─────────────────────────────────────────────────── */
+:root {
+  /* 固定色板（实机取样，RGB 三元组：tailwind 透明度修饰符要用） */
+  --p4g-yellow-rgb: 255 229 0;        /* 舞台黄 */
+  --p4g-yellow-hi-rgb: 255 242 42;    /* Rank Up 背景那种偏绿高亮黄 */
+  --p4g-yellow-pale-rgb: 255 246 168; /* 列表行渐变尾 / 浅黄面 */
+  --p4g-cream-rgb: 255 251 222;       /* 奶油纸 */
+  --p4g-black-rgb: 17 17 17;
+  --p4g-white-rgb: 255 255 255;
+  --p4g-orange-rgb: 240 122 26;       /* 进度条 / 装饰橙 */
+  --p4g-orange-deep-rgb: 196 82 8;    /* 标签橙（白字 AA）/ Rank 字 */
+  --p4g-red-rgb: 226 35 26;
+  --p4g-green-rgb: 92 197 49;         /* S.Link 分隔线绿 */
+  --p4g-cyan-rgb: 51 194 238;
+  --p4g-purple-rgb: 138 90 200;
+  --p4g-blue-rgb: 18 92 150;          /* Rank Up / Lv 蓝圆（固定，不随日夜） */
+  --p4g-maroon-rgb: 107 26 16;        /* 彩条外缘深红棕 */
+  --p4g-brown-rgb: 46 38 18;          /* 消息框暗棕 */
+  --p4g-hp-rgb: 255 236 140;          /* HP 条（奶黄）*/
+  --p4g-sp-rgb: 120 214 74;           /* SP 条（绿）*/
+
+  --p4g-yellow: rgb(var(--p4g-yellow-rgb));
+  --p4g-yellow-hi: rgb(var(--p4g-yellow-hi-rgb));
+  --p4g-yellow-pale: rgb(var(--p4g-yellow-pale-rgb));
+  --p4g-cream: rgb(var(--p4g-cream-rgb));
+  --p4g-black: rgb(var(--p4g-black-rgb));
+  --p4g-white: rgb(var(--p4g-white-rgb));
+  --p4g-orange: rgb(var(--p4g-orange-rgb));
+  --p4g-orange-deep: rgb(var(--p4g-orange-deep-rgb));
+  --p4g-red: rgb(var(--p4g-red-rgb));
+  --p4g-green: rgb(var(--p4g-green-rgb));
+  --p4g-cyan: rgb(var(--p4g-cyan-rgb));
+  --p4g-purple: rgb(var(--p4g-purple-rgb));
+  --p4g-blue: rgb(var(--p4g-blue-rgb));
+  --p4g-danger-on-msg: #ff8a7a;       /* 消息框（暗棕底）上的危险字色，日夜同值 */
+  --p4g-maroon: rgb(var(--p4g-maroon-rgb));
+  --p4g-brown: rgb(var(--p4g-brown-rgb));
+
+  /* 暂停菜单彩虹竖条（从左到右，实机取样顺序）*/
+  --p4g-candy: linear-gradient(90deg,
+    #fff 0 3%, #e2231a 3% 7%, #fff 7% 8%, #f39800 8% 15%, #ffe100 15% 30%,
+    #f39800 30% 34%, #9bcb3c 34% 38%, #3cb04a 38% 42%, #ffe100 42% 52%,
+    #f39800 52% 60%, #e2231a 60% 66%, #f39800 66% 72%, #ffe100 72% 80%,
+    #9bcb3c 80% 84%, #33c2ee 84% 90%, #fff 90% 93%, #e2231a 93% 97%, #fff 97% 100%);
+  /* S.Link 页头横向彩条（自上而下）*/
+  --p4g-candy-h: linear-gradient(180deg,
+    #f39800 0 14%, #fff 14% 22%, #3cb04a 22% 32%, #e2231a 32% 46%, #fff 46% 52%,
+    #8a5ac8 52% 62%, #f39800 62% 78%, #e2231a 78% 90%, #ffe100 90% 100%);
+  /* Rank Up 斜彩带（内层到外层）*/
+  --p4g-ribbon: linear-gradient(180deg,
+    #6b1a10 0 6%, #fff 6% 16%, #ffe100 16% 30%, #f39800 30% 44%, #9bcb3c 44% 56%,
+    #fff 56% 64%, #33c2ee 64% 76%, #3cb04a 76% 88%, #6b1a10 88% 100%);
+  /* 黄黑警示条纹 */
+  --p4g-hazard: repeating-linear-gradient(-45deg, var(--p4g-black) 0 10px, var(--p4g-yellow) 10px 20px);
+
+  /* 描边宽度 */
+  --p4g-stroke-hair: 1px;
+  --p4g-stroke-thin: 2px;
+  --p4g-stroke: 3px;
+  --p4g-stroke-bold: 4px;
+  --p4g-text-outline: 2px;      /* 白字黑描边标题的描边 */
+  --p4g-text-outline-lg: 5px;
+
+  /* 圆角：P4G 整体硬朗——标签/方块 2~4px，日期条与选项高亮是圆头胶囊 */
+  --p4g-radius-0: 0px;
+  --p4g-radius-xs: 2px;
+  --p4g-radius-sm: 3px;
+  --p4g-radius-md: 4px;
+  --p4g-radius-lg: 8px;
+  --p4g-radius-pill: 999px;
+
+  /* 斜切 */
+  --p4g-slant: -8deg;           /* 斜体块 skewX */
+  --p4g-slant-soft: -4deg;
+  --p4g-cut: 12px;              /* 斜切角尺寸 */
+  --p4g-cut-sm: 8px;
+  --p4g-tilt: -2deg;            /* 拼贴块微倾 */
+
+  /* 动效时长 & 缓动（P4G 菜单节奏：快进、硬停，几乎无回弹）*/
+  --p4g-dur-instant: 80ms;
+  --p4g-dur-fast: 140ms;
+  --p4g-dur-base: 220ms;
+  --p4g-dur-slow: 360ms;
+  --p4g-dur-tv: 420ms;          /* 电视开关机 */
+  --p4g-dur-wipe: 520ms;        /* 黄方块推屏 */
+  --p4g-stagger: 40ms;          /* 拼贴分层入场间隔 */
+  --p4g-ease-snap: cubic-bezier(0.2, 0.9, 0.1, 1);
+  --p4g-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --p4g-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --p4g-ease-tv: cubic-bezier(0.7, 0, 0.3, 1);
+
+  /* z-index 层级（与真实 src/utils/zIndex.ts 对齐，外加 demo 专属层）*/
+  --p4g-z-base: 0;
+  --p4g-z-decor: 1;
+  --p4g-z-content: 10;
+  --p4g-z-nav: 40;
+  --p4g-z-sheet: 50;
+  --p4g-z-confirm: 60;
+  --p4g-z-celebration: 90;
+  --p4g-z-cutin: 120;
+  --p4g-z-system: 150;
+  --p4g-z-toast: 230;
+  --p4g-z-transition: 300;
+  --p4g-z-scanline: 320;
+  --p4g-z-dev: 400;
+
+  /* 字体栈 */
+  --p4g-font-display: 'P4G Official Latin', 'P4G Adventor', 'P4G Official CJK', 'Velvet Round SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --p4g-font-body: 'P4G Official Latin', 'P4G Adventor', 'Velvet Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --p4g-font-num: 'P4G Official Latin', 'P4G Adventor', 'Velvet Sans SC', sans-serif;
+
+  /* 版心 */
+  --p4g-nav-h: 64px;
+  --p4g-sidebar-w: 240px;
+  --p4g-page-max: 960px;
+}
+
+/* ── 日间：黄舞台 ─────────────────────────────────────────────────────────── */
+:root,
+[data-p4g-mode='day'] {
+  color-scheme: light;
+  --p4g-stage-rgb: 255 229 0;
+  --p4g-stage: rgb(var(--p4g-stage-rgb));
+  /* 方块像素阵：浅黄圆角方块（实机 Status / Rank Up 背景）*/
+  --p4g-stage-block: rgba(255, 255, 255, 0.42);
+  --p4g-surface-rgb: 255 244 150;     /* 列表行 / 卡片面 */
+  --p4g-surface: rgb(var(--p4g-surface-rgb));
+  --p4g-surface-grad: linear-gradient(90deg, #f7dd1f 0%, #fbec74 48%, #fff4a8 100%);
+  --p4g-surface-2-rgb: 255 251 222;   /* 奶油纸（表单/长文）*/
+  --p4g-surface-2: rgb(var(--p4g-surface-2-rgb));
+  --p4g-ink-rgb: 26 18 6;
+  --p4g-ink: rgb(var(--p4g-ink-rgb));
+  --p4g-ink-soft-rgb: 92 66 10;       /* 次要字（≥4.5:1 on surface）*/
+  --p4g-ink-soft: rgb(var(--p4g-ink-soft-rgb));
+  --p4g-muted-rgb: 120 96 30;         /* 占位/禁用（≥3:1）*/
+  --p4g-muted: rgb(var(--p4g-muted-rgb));
+  --p4g-on-stage: #111111;
+  --p4g-line-rgb: 17 17 17;
+  --p4g-line: rgb(var(--p4g-line-rgb));
+  --p4g-line-soft: rgba(17, 17, 17, 0.22);
+  --p4g-shadow-color: #111111;
+  --p4g-accent-rgb: 255 229 0;
+  --p4g-accent: rgb(var(--p4g-accent-rgb));
+  --p4g-accent-ink: #111111;
+  --p4g-tag-rgb: 196 82 8;            /* 橙标签（白字 4.6:1）*/
+  --p4g-tag: rgb(var(--p4g-tag-rgb));
+  --p4g-tag-ink: #ffffff;
+  --p4g-rank: #b04606;                /* "Rank 8" 橙字 */
+  --p4g-select-rgb: 17 17 17;         /* 选中行：反黑 */
+  --p4g-select: rgb(var(--p4g-select-rgb));
+  --p4g-select-ink: #ffffff;
+  --p4g-msg-rgb: 46 38 18;            /* 消息框 */
+  --p4g-msg: rgba(46, 38, 18, 0.94);
+  --p4g-msg-ink: #fff8dc;
+  --p4g-msg-plate: #ffe500;           /* 消息框偏移底板 */
+  --p4g-msg-plate-2: #f39800;
+  --p4g-danger-rgb: 214 30 22;
+  --p4g-danger: rgb(var(--p4g-danger-rgb));
+  --p4g-danger-ink: #ffffff;
+  --p4g-success-rgb: 28 110 20;
+  --p4g-success: rgb(var(--p4g-success-rgb));
+  --p4g-info-rgb: 18 92 150;
+  --p4g-info: rgb(var(--p4g-info-rgb));
+  --p4g-warn-rgb: 196 82 8;
+  --p4g-warn: rgb(var(--p4g-warn-rgb));
+  /* 语义色块上的字色（日：深色块配白字；夜：亮色块配黑字 —— 夜间亮绿/亮蓝上白字对比度不够） */
+  --p4g-success-ink-rgb: 255 255 255;
+  --p4g-success-ink: rgb(var(--p4g-success-ink-rgb));
+  --p4g-info-ink-rgb: 255 255 255;
+  --p4g-info-ink: rgb(var(--p4g-info-ink-rgb));
+  --p4g-warn-ink-rgb: 255 255 255;
+  --p4g-warn-ink: rgb(var(--p4g-warn-ink-rgb));
+  --p4g-title-fill: #ffffff;          /* 白字黑描边标题 */
+  --p4g-title-stroke: #111111;
+  --p4g-scrim: rgba(17, 17, 17, 0.62);
+  --p4g-focus: #111111;
+  --p4g-separator-a: #5cc531;         /* 行分隔线：绿 */
+  --p4g-separator-b: #f07a1a;         /* 行分隔线：橙 */
+  --p4g-date-bg: #111111;
+  --p4g-date-ink: #ffffff;
+  --p4g-noise-opacity: 0.18;
+}
+
+/* ── 夜间：午夜频道（关掉的电视黑 + 黄线框 + 暗棕消息框）──────────────────
+ * 对比度核对（WCAG AA）：ink #FFF4C8 on surface #2A2410 ≈ 13:1；ink-soft #E0CF8E ≈ 9:1；
+ * muted #B9A866 ≈ 6:1；tag-ink #111 on tag #F39A2E ≈ 8:1；select-ink #111 on #FFE500 ≈ 15:1。 */
+[data-p4g-mode='night'] {
+  color-scheme: dark;
+  --p4g-stage-rgb: 16 14 10;
+  --p4g-stage: rgb(var(--p4g-stage-rgb));
+  --p4g-stage-block: rgba(255, 229, 0, 0.055);
+  --p4g-surface-rgb: 42 36 16;
+  --p4g-surface: rgb(var(--p4g-surface-rgb));
+  --p4g-surface-grad: linear-gradient(90deg, #3a3112 0%, #2c2611 55%, #241f0e 100%);
+  --p4g-surface-2-rgb: 30 26 13;
+  --p4g-surface-2: rgb(var(--p4g-surface-2-rgb));
+  --p4g-ink-rgb: 255 244 200;
+  --p4g-ink: rgb(var(--p4g-ink-rgb));
+  --p4g-ink-soft-rgb: 224 207 142;
+  --p4g-ink-soft: rgb(var(--p4g-ink-soft-rgb));
+  --p4g-muted-rgb: 185 168 102;
+  --p4g-muted: rgb(var(--p4g-muted-rgb));
+  --p4g-on-stage: #fff4c8;
+  --p4g-line-rgb: 255 229 0;
+  --p4g-line: rgb(var(--p4g-line-rgb));
+  --p4g-line-soft: rgba(255, 229, 0, 0.26);
+  --p4g-shadow-color: #c45208;        /* 夜里硬投影 = 橙底板（黑影在黑底上看不见）*/
+  --p4g-accent-rgb: 255 229 0;
+  --p4g-accent: rgb(var(--p4g-accent-rgb));
+  --p4g-accent-ink: #111111;
+  --p4g-tag-rgb: 243 154 46;
+  --p4g-tag: rgb(var(--p4g-tag-rgb));
+  --p4g-tag-ink: #111111;
+  --p4g-rank: #ffb54a;
+  --p4g-select-rgb: 255 229 0;        /* 选中行：反黄黑字 */
+  --p4g-select: rgb(var(--p4g-select-rgb));
+  --p4g-select-ink: #111111;
+  --p4g-msg-rgb: 34 29 14;
+  --p4g-msg: rgba(34, 29, 14, 0.96);
+  --p4g-msg-ink: #fff4c8;
+  --p4g-msg-plate: #ffe500;
+  --p4g-msg-plate-2: #c45208;
+  --p4g-danger-rgb: 255 104 90;
+  --p4g-danger: rgb(var(--p4g-danger-rgb));
+  --p4g-danger-ink: #111111;
+  --p4g-success-rgb: 132 222 92;
+  --p4g-success: rgb(var(--p4g-success-rgb));
+  --p4g-info-rgb: 110 200 245;
+  --p4g-info: rgb(var(--p4g-info-rgb));
+  --p4g-warn-rgb: 255 181 74;
+  --p4g-warn: rgb(var(--p4g-warn-rgb));
+  --p4g-success-ink-rgb: 17 17 17;
+  --p4g-success-ink: rgb(var(--p4g-success-ink-rgb));
+  --p4g-info-ink-rgb: 17 17 17;
+  --p4g-info-ink: rgb(var(--p4g-info-ink-rgb));
+  --p4g-warn-ink-rgb: 17 17 17;
+  --p4g-warn-ink: rgb(var(--p4g-warn-ink-rgb));
+  --p4g-title-fill: #ffe500;
+  --p4g-title-stroke: #111111;
+  --p4g-scrim: rgba(0, 0, 0, 0.72);
+  --p4g-focus: #ffe500;
+  --p4g-separator-a: #5cc531;
+  --p4g-separator-b: #c45208;
+  --p4g-date-bg: #ffe500;
+  --p4g-date-ink: #111111;
+  --p4g-noise-opacity: 0.22;
+}
+
+/* ── 低动效：App 内档位 或 系统 prefers-reduced-motion ───────────────────────
+ * 时长归零 → 位移/缩放动效瞬时完成；fx 组件自身也读 useLowMotion() 改为纯淡入。 */
+[data-p4g-motion='low'] {
+  --p4g-dur-instant: 0ms;
+  --p4g-dur-fast: 0ms;
+  --p4g-dur-base: 0ms;
+  --p4g-dur-slow: 0ms;
+  --p4g-dur-tv: 0ms;
+  --p4g-dur-wipe: 0ms;
+  --p4g-stagger: 0ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --p4g-dur-instant: 0ms;
+    --p4g-dur-fast: 0ms;
+    --p4g-dur-base: 0ms;
+    --p4g-dur-slow: 0ms;
+    --p4g-dur-tv: 0ms;
+    --p4g-dur-wipe: 0ms;
+    --p4g-stagger: 0ms;
+  }
+}
+[data-p4g-motion='low'] *,
+[data-p4g-motion='low'] *::before,
+[data-p4g-motion='low'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ════════════════════════════ 全局基础 ════════════════════════════════════ */
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--p4g-stage);
+  color: var(--p4g-on-stage);
+  font-family: var(--p4g-font-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--p4g-focus); outline-offset: 2px; }
+
+/* ════════════════════════════ 工具类 ══════════════════════════════════════ */
+
+/* 舞台：黄底 + 浅黄圆角方块像素阵（实机 Status/Rank Up 背景）。SVG 平铺，零 JS。 */
+.p4g-stage {
+  background-color: var(--p4g-stage);
+  background-image: var(--p4g-stage-pattern);
+  background-size: 360px 360px;
+}
+:root, [data-p4g-mode='day'] {
+  --p4g-stage-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cg fill='%23fff' %3E%3Crect x='8' y='10' width='38' height='28' rx='6' opacity='.5'/%3E%3Crect x='52' y='10' width='38' height='28' rx='6' opacity='.35'/%3E%3Crect x='52' y='44' width='38' height='28' rx='6' opacity='.55'/%3E%3Crect x='140' y='78' width='38' height='28' rx='6' opacity='.4'/%3E%3Crect x='184' y='78' width='38' height='28' rx='6' opacity='.6'/%3E%3Crect x='228' y='78' width='38' height='28' rx='6' opacity='.35'/%3E%3Crect x='272' y='10' width='38' height='28' rx='6' opacity='.45'/%3E%3Crect x='316' y='44' width='38' height='28' rx='6' opacity='.3'/%3E%3Crect x='8' y='180' width='38' height='28' rx='6' opacity='.38'/%3E%3Crect x='96' y='214' width='38' height='28' rx='6' opacity='.55'/%3E%3Crect x='140' y='214' width='38' height='28' rx='6' opacity='.35'/%3E%3Crect x='96' y='248' width='38' height='28' rx='6' opacity='.3'/%3E%3Crect x='272' y='180' width='38' height='28' rx='6' opacity='.5'/%3E%3Crect x='316' y='180' width='38' height='28' rx='6' opacity='.62'/%3E%3Crect x='316' y='214' width='38' height='28' rx='6' opacity='.35'/%3E%3Crect x='228' y='300' width='38' height='28' rx='6' opacity='.45'/%3E%3Crect x='52' y='316' width='38' height='28' rx='6' opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
+}
+[data-p4g-mode='night'] {
+  --p4g-stage-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cg fill='%23ffe500' %3E%3Crect x='8' y='10' width='38' height='28' rx='6' opacity='.06'/%3E%3Crect x='52' y='10' width='38' height='28' rx='6' opacity='.04'/%3E%3Crect x='52' y='44' width='38' height='28' rx='6' opacity='.07'/%3E%3Crect x='140' y='78' width='38' height='28' rx='6' opacity='.05'/%3E%3Crect x='184' y='78' width='38' height='28' rx='6' opacity='.08'/%3E%3Crect x='272' y='10' width='38' height='28' rx='6' opacity='.05'/%3E%3Crect x='8' y='180' width='38' height='28' rx='6' opacity='.05'/%3E%3Crect x='96' y='214' width='38' height='28' rx='6' opacity='.07'/%3E%3Crect x='140' y='214' width='38' height='28' rx='6' opacity='.04'/%3E%3Crect x='272' y='180' width='38' height='28' rx='6' opacity='.06'/%3E%3Crect x='316' y='180' width='38' height='28' rx='6' opacity='.08'/%3E%3Crect x='228' y='300' width='38' height='28' rx='6' opacity='.05'/%3E%3Crect x='52' y='316' width='38' height='28' rx='6' opacity='.05'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* 白字粗黑描边（S.Link / Status 式标题）。用多重 text-shadow：任何浏览器都稳，
+   比 paint-order 兼容好；大标题请用 <P4Outline> 组件（双层渲染，描边更厚更圆）。 */
+.p4g-outline {
+  color: var(--p4g-title-fill);
+  text-shadow:
+    2px 0 0 var(--p4g-title-stroke), -2px 0 0 var(--p4g-title-stroke),
+    0 2px 0 var(--p4g-title-stroke), 0 -2px 0 var(--p4g-title-stroke),
+    1.5px 1.5px 0 var(--p4g-title-stroke), -1.5px 1.5px 0 var(--p4g-title-stroke),
+    1.5px -1.5px 0 var(--p4g-title-stroke), -1.5px -1.5px 0 var(--p4g-title-stroke);
+}
+/* 小号白字黑描边（"Evening" / 底部提示 "View which Social Link?"）*/
+.p4g-outline-sm {
+  color: #fff;
+  text-shadow:
+    1.2px 0 0 #111, -1.2px 0 0 #111, 0 1.2px 0 #111, 0 -1.2px 0 #111,
+    1px 1px 0 #111, -1px 1px 0 #111, 1px -1px 0 #111, -1px -1px 0 #111;
+}
+
+.p4g-display { font-family: var(--p4g-font-display); font-weight: 700; letter-spacing: -0.01em; }
+.p4g-num { font-family: var(--p4g-font-num); font-weight: 700; font-style: italic; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.p4g-num-upright { font-family: var(--p4g-font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
+/* 日期条的宽字距 "04/15 FRI" */
+.p4g-date-type { font-family: var(--p4g-font-num); font-weight: 700; letter-spacing: 0.22em; font-variant-numeric: tabular-nums; }
+
+.p4g-candy { background: var(--p4g-candy); }
+.p4g-candy-h { background: var(--p4g-candy-h); }
+.p4g-ribbon { background: var(--p4g-ribbon); }
+.p4g-hazard { background: var(--p4g-hazard); }
+
+/* 斜切角：右下/左上切角（clip-path，配合外层描边层使用见 P4Card）*/
+.p4g-cut-br { clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--p4g-cut)), calc(100% - var(--p4g-cut)) 100%, 0 100%); }
+.p4g-cut-tl { clip-path: polygon(var(--p4g-cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--p4g-cut)); }
+.p4g-cut-both { clip-path: polygon(var(--p4g-cut) 0, 100% 0, 100% calc(100% - var(--p4g-cut)), calc(100% - var(--p4g-cut)) 100%, 0 100%, 0 var(--p4g-cut)); }
+
+/* 硬阴影（无 blur）*/
+.p4g-shadow { box-shadow: 4px 4px 0 var(--p4g-shadow-color); }
+.p4g-shadow-sm { box-shadow: 2px 2px 0 var(--p4g-shadow-color); }
+.p4g-shadow-lg { box-shadow: 6px 6px 0 var(--p4g-shadow-color); }
+
+/* 按下位移（按钮）*/
+.p4g-press { transition: transform var(--p4g-dur-instant) var(--p4g-ease-snap), box-shadow var(--p4g-dur-instant) var(--p4g-ease-snap); }
+.p4g-press:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--p4g-shadow-color) !important; }
+
+/* 文本防溢出 */
+.p4g-clamp-1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.p4g-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-width: 0; }
+.p4g-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-width: 0; }
+
+/* 滚动条隐藏（横滑 Tab 用）*/
+.p4g-noscroll { scrollbar-width: none; }
+.p4g-noscroll::-webkit-scrollbar { display: none; }
+
+/* ── CRT 扫描线（全局开关 data-p4g-scanlines="on|off"；纯 CSS 渐变，零重绘）── */
+.p4g-scanlines {
+  position: fixed; inset: 0; pointer-events: none; z-index: var(--p4g-z-scanline);
+  background: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,0.055) 2px 3px);
+}
+[data-p4g-mode='night'] .p4g-scanlines {
+  background: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,0.22) 2px 3px);
+}
+[data-p4g-scanlines='off'] .p4g-scanlines { display: none; }
+
+/* ── 关键帧（只动 transform / opacity）── */
+@keyframes p4g-static-shift {
+  0% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(-6%, 4%, 0); }
+  50% { transform: translate3d(4%, -6%, 0); }
+  75% { transform: translate3d(-3%, -2%, 0); }
+  100% { transform: translate3d(5%, 3%, 0); }
+}
+@keyframes p4g-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes p4g-spin { to { transform: rotate(360deg); } }
+@keyframes p4g-drift-x { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
+@keyframes p4g-rain { from { transform: translate3d(0, -50%, 0); } to { transform: translate3d(-8%, 0, 0); } }
+@keyframes p4g-glitch {
+  0%, 100% { transform: translate3d(0,0,0); }
+  20% { transform: translate3d(-3px, 1px, 0); }
+  40% { transform: translate3d(3px, -1px, 0); }
+  60% { transform: translate3d(-2px, 0, 0); }
+  80% { transform: translate3d(2px, 1px, 0); }
+}
+@keyframes p4g-bob { 0%, 100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(0,-3px,0); } }
+@keyframes p4g-speed { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-25%,0,0) scale(1); } }

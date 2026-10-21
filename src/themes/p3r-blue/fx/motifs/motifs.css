@@ -1,0 +1,60 @@
+/*
+ * 蓝白母题层 · 关键帧与低动效收口（只用 --p3r-* / --bk-* 变量；只动 transform / opacity / clip-path）。
+ * fork：整份并入 repo/demo/p3r-blue/src/index.css（或在 main.tsx import），类名统一 bk- 前缀，不与 kit 冲突。
+ */
+
+/* ── B3 焦散：多帧轮换，steps 跳帧（不插值） ── */
+@keyframes bk-frame-4 { 0% { opacity: 1; } 25%, 100% { opacity: 0; } }
+.bk-caustic-frame { position: absolute; inset: -6%; opacity: 0; animation: bk-frame-4 var(--bk-cycle, 2s) steps(1, end) infinite; will-change: opacity; }
+
+/* ── B3 气泡上浮：steps 跳帧上升 + 轻微左右摆 ── */
+@keyframes bk-rise { 0% { transform: translate3d(0, 0, 0); opacity: 0; } 8% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translate3d(var(--bx, 0px), calc(-1 * var(--rise, 110vh)), 0); opacity: 0; } }
+.bk-bubble { position: absolute; bottom: -24px; will-change: transform, opacity; animation: bk-rise var(--d, 9s) steps(var(--steps, 36), end) var(--delay, 0s) infinite; }
+.bk-bubble[data-smooth] { animation-timing-function: linear; }
+
+/* ── B6 均衡条：每根高度按 steps 跳 ── */
+@keyframes bk-eq { 0% { transform: scaleY(0.25); } 20% { transform: scaleY(0.9); } 40% { transform: scaleY(0.45); } 60% { transform: scaleY(1); } 80% { transform: scaleY(0.35); } 100% { transform: scaleY(0.7); } }
+.bk-eq > i { display: block; transform-origin: 50% 100%; animation: bk-eq var(--d, 0.9s) steps(1, end) var(--delay, 0s) infinite alternate; }
+.bk-eq[data-paused] > i { animation-play-state: paused; }
+
+/* ── B6 正在播放跑马灯 ── */
+@keyframes bk-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.bk-marquee { display: inline-flex; white-space: nowrap; animation: bk-marquee var(--d, 12s) linear infinite; }
+
+/* ── B1 月相加载：8 帧 50ms 步进（由 JS 换帧；这里只给满月光晕呼吸） ── */
+@keyframes bk-halo { 0%, 100% { opacity: 0.55; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.04); } }
+.bk-halo { animation: bk-halo 5s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+
+/* ── B8 双三角光标：空闲抽动（steps 跳一下再回位） ── */
+@keyframes bk-twitch { 0%, 86%, 100% { transform: translate(0, 0) rotate(0); } 88% { transform: translate(2px, -1px) rotate(-3deg); } 91% { transform: translate(-1px, 1px) rotate(2deg); } 94% { transform: translate(0, 0) rotate(0); } }
+.bk-twitch { animation: bk-twitch var(--d, 3.2s) steps(1, end) var(--delay, 0s) infinite; transform-origin: 20% 60%; }
+
+/* ── B2 影时间：绿光晕水洼的低频明灭 ── */
+@keyframes bk-pool { 0%, 100% { opacity: 0.6; transform: scale(1, 1); } 50% { opacity: 1; transform: scale(1.06, 1.1); } }
+.bk-pool { animation: bk-pool var(--d, 6s) steps(6, end) var(--delay, 0s) infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes bk-grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-3%, 2%); } 50% { transform: translate(2%, -3%); } 75% { transform: translate(-2%, -1%); } 100% { transform: translate(0, 0); } }
+.bk-grain { animation: bk-grain 1s steps(4, end) infinite; }
+
+/* ── B5 塔：顶部信标闪烁 ── */
+@keyframes bk-beacon { 0%, 70%, 100% { opacity: 0.25; } 75%, 90% { opacity: 1; } }
+.bk-beacon { animation: bk-beacon 3.6s steps(1, end) infinite; }
+
+/* ── 斜切条带：慢速平移（稀少的“横扫光片”） ── */
+@keyframes bk-glint-sweep { 0%, 70% { transform: translateX(-120%) skewX(-24deg); } 100% { transform: translateX(320%) skewX(-24deg); } }
+.bk-glint-sweep { animation: bk-glint-sweep 7s cubic-bezier(0.7, 0, 0.3, 1) infinite; }
+
+/* ── 低动效收口（系统 + App 开关同口径） ── */
+@media (prefers-reduced-motion: reduce) {
+  .bk-caustic-frame, .bk-eq > i, .bk-marquee, .bk-halo, .bk-twitch, .bk-pool, .bk-grain, .bk-beacon, .bk-glint-sweep { animation: none !important; }
+  .bk-caustic-frame:first-child { opacity: 1; }
+  .bk-bubble { display: none; }
+}
+:root[data-boldness="0"] :is(.bk-caustic-frame, .bk-eq > i, .bk-marquee, .bk-halo, .bk-twitch, .bk-pool, .bk-grain, .bk-beacon, .bk-glint-sweep) { animation: none !important; }
+:root[data-boldness="0"] .bk-caustic-frame:first-child { opacity: 1; }
+:root[data-boldness="0"] .bk-bubble { display: none; }
+
+/* 空态涟漪（蓝白：水面上一圈涟漪，步进外扩 —— 原作水纹跳帧） */
+.bk-ripple { transform-box: fill-box; transform-origin: center; animation: bk-ripple 1.8s steps(6, end) infinite; }
+@keyframes bk-ripple { 0% { transform: scale(0.7); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .bk-ripple { animation: none !important; } }
+:root[data-boldness="0"] .bk-ripple { animation: none !important; }

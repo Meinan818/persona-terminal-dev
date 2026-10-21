@@ -549,7 +549,7 @@
    这里按频道一刀切收编标题语义元素；`.p4-serif` 给非标题语义但视觉上是标题的
    元素（大字数值、切换头词条等）留手动入口。
    注意只管字体，不动字重字号——各处标题的字阶已按设计稿定过。 */
-:root[data-ui-channel="p4"] :is(h1, h2, h3, h4, .p4-serif) {
+:root[data-ui-channel="p4"]:not([data-kit]) :is(h1, h2, h3, h4, .p4-serif) {
   font-family: var(--p4-display-font, serif);
 }
 
@@ -557,9 +557,9 @@
    旧弹窗表单遍布 bg-gray-50/100 + border-gray-200 的后台灰件；P4 定稿是奶油面无描边。
    逐调用点改动太散且与并行会话冲突面大，这里按「频道 × 弹窗容器」两级选择器毯式收编：
    仅 data-ui-channel="p4" + [role=dialog|alertdialog] 内生效，其他频道零影响。 */
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) textarea,
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) select {
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) textarea,
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) select {
   background-color: var(--ui-paper) !important;
   border-color: transparent !important;
   border-radius: 14px !important;
@@ -567,47 +567,47 @@
   font-weight: 600;
 }
 /* 弹窗内灰系文字 → 黑（分级透明度保留层级） */
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-700,
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-800 {
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-700,
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-800 {
   color: #131313 !important;
 }
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-500,
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-600 {
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-500,
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-600 {
   color: rgba(19, 19, 19, 0.72) !important;
 }
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-400 {
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-400 {
   color: rgba(19, 19, 19, 0.55) !important;
 }
 /* 弹窗内灰面块（选项行/芯片/分组）→ 奶油纸 */
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .bg-gray-50,
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .bg-gray-100 {
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .bg-gray-50,
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .bg-gray-100 {
   background-color: var(--ui-paper) !important;
 }
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .border-gray-100,
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .border-gray-200,
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .border-gray-300 {
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .border-gray-100,
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .border-gray-200,
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .border-gray-300 {
   border-color: rgba(19, 19, 19, 0.12) !important;
 }
 /* 弹窗主操作（bg-primary 系旧按钮）→ 设计稿蓝确认钮 */
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) button.bg-primary {
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) button.bg-primary {
   background-color: var(--ui-accent) !important;
   border-radius: 16px !important;
   font-weight: 900;
 }
 /* P4 庆祝贴纸（CelebrationCutIn）：调用方 children 里的白系文字在橙圆上翻黑，
    text-yellow-200（新等级高亮）转蓝强调 —— 免改四个庆祝弹窗调用点 */
-:root[data-ui-channel="p4"] .p4-cutin :is(.text-white, [class*="text-white/"]) {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-cutin :is(.text-white, [class*="text-white/"]) {
   color: #131313 !important;
 }
-:root[data-ui-channel="p4"] .p4-cutin .text-yellow-200 {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-cutin .text-yellow-200 {
   color: var(--ui-accent) !important;
 }
 
 /* 白卡（含 dark 变体）→ 奶油纸；滑杆/复选强调色 → 黑 */
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .bg-white {
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .bg-white {
   background-color: var(--ui-paper) !important;
 }
-:root[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(input[type="range"], input[type="checkbox"], input[type="radio"]) {
+:root[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(input[type="range"], input[type="checkbox"], input[type="radio"]) {
   accent-color: #131313;
 }
 
@@ -753,22 +753,22 @@
 }
 /* 粉 · 写死蓝字面量的兜底重映射：P3 组件里仍有一批 Tailwind 任意值类
    （text-[#1b57ff] 之类）够不着变量——按类名逐条改指变量族。
-   值全部走 var()，所以夜间自动跟着 :root.dark[data-theme="pink"] 变，无需再写一份。 */
+   值全部走 var()，所以夜间自动跟着 :root.dark[data-theme="pink"]:not([data-kit]) 变，无需再写一份。 */
 :root[data-theme="pink"] [class*="text-[#1b57ff]"] { color: var(--p3r-blue) !important; }
-:root[data-theme="pink"] [class*="text-[#0a3bd6]"] { color: var(--p3r-blue-deep) !important; }
-:root[data-theme="pink"] [class*="text-[#0a1230]"] { color: var(--p3r-ink) !important; }
-:root[data-theme="pink"] [class*="text-[#35d1e8]"] { color: var(--p3r-cyan) !important; }
-:root[data-theme="pink"] [class*="text-[#3c69c9]"] { color: var(--p3r-blue-deep) !important; }
-:root[data-theme="pink"] [class*="text-[#f0417f]"] { color: var(--p3r-magenta) !important; }
-:root[data-theme="pink"] [class*="bg-[#1b57ff]"] { background-color: var(--p3r-blue) !important; }
-:root[data-theme="pink"] [class*="bg-[#35d1e8]"] { background-color: var(--p3r-cyan) !important; }
-:root[data-theme="pink"] [class*="bg-[#cfeaf6]"] { background-color: var(--p3r-cyan-pale) !important; }
-:root[data-theme="pink"] [class*="hover:bg-[#e2f2fa]"]:hover { background-color: var(--p3r-cyan-faint) !important; }
-:root[data-theme="pink"] [class*="active:bg-[#e2f2fa]"]:active { background-color: var(--p3r-cyan-faint) !important; }
-:root[data-theme="pink"] [class*="border-[#35d1e8]"] { border-color: var(--p3r-cyan) !important; }
-:root[data-theme="pink"] [class*="placeholder:text-[#9ab4c9]"]::placeholder { color: var(--p3r-ph) !important; }
-:root[data-theme="pink"] [class*="ring-[#1b57ff]"] { --tw-ring-color: var(--p3r-blue) !important; }
-:root[data-theme="pink"] [class*="ring-[#f0417f]"] { --tw-ring-color: var(--p3r-magenta) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="text-[#0a3bd6]"] { color: var(--p3r-blue-deep) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="text-[#0a1230]"] { color: var(--p3r-ink) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="text-[#35d1e8]"] { color: var(--p3r-cyan) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="text-[#3c69c9]"] { color: var(--p3r-blue-deep) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="text-[#f0417f]"] { color: var(--p3r-magenta) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="bg-[#1b57ff]"] { background-color: var(--p3r-blue) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="bg-[#35d1e8]"] { background-color: var(--p3r-cyan) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="bg-[#cfeaf6]"] { background-color: var(--p3r-cyan-pale) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="hover:bg-[#e2f2fa]"]:hover { background-color: var(--p3r-cyan-faint) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="active:bg-[#e2f2fa]"]:active { background-color: var(--p3r-cyan-faint) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="border-[#35d1e8]"] { border-color: var(--p3r-cyan) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="placeholder:text-[#9ab4c9]"]::placeholder { color: var(--p3r-ph) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="ring-[#1b57ff]"] { --tw-ring-color: var(--p3r-blue) !important; }
+:root[data-theme="pink"]:not([data-kit]) [class*="ring-[#f0417f]"] { --tw-ring-color: var(--p3r-magenta) !important; }
 
 /* iOS PWA 安全区背景色 — 防止顶部/底部出现白色/黑色条带
    html.dark 由 App.tsx 在 darkMode 变化时同步写入 */
@@ -1176,13 +1176,13 @@ html[data-ios-standalone="true"] {
 /* ── P4 亮黄舞台上的灰系小字（.p4-onbright）────────────────────────────────
    纯黄底 #ffd900 上，text-gray-400 的对比度只有 ~1.9:1，text-gray-500 也才 3.4:1。
    翻成墨色的浓淡三档，保住层级的同时把对比度拉回可读。 */
-:root[data-ui-channel="p4"] .p4-onbright :is(.text-gray-400, .dark\:text-gray-400, .dark\:text-gray-500) {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-onbright :is(.text-gray-400, .dark\:text-gray-400, .dark\:text-gray-500) {
   color: rgba(19, 19, 19, 0.6) !important;
 }
-:root[data-ui-channel="p4"] .p4-onbright :is(.text-gray-500, .text-gray-600, .dark\:text-gray-300) {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-onbright :is(.text-gray-500, .text-gray-600, .dark\:text-gray-300) {
   color: rgba(19, 19, 19, 0.74) !important;
 }
-:root[data-ui-channel="p4"] .p4-onbright :is(.text-gray-700, .text-gray-800, .text-gray-900, .dark\:text-white) {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-onbright :is(.text-gray-700, .text-gray-800, .text-gray-900, .dark\:text-white) {
   color: #131313 !important;
 }
 
@@ -1296,20 +1296,20 @@ html[data-ios-standalone="true"] {
    [class*=] 按字面匹配 Tailwind 任意值类名。 */
 /* 行动域列表卡（ListCard 的 .p4-card 钩子）：黄舞台上纯白卡底发冷（用户反馈
    「白色底不符合黄色主题」），白天翻成奶油浅黄；夜间跟纸面 token 走紫。 */
-:root[data-ui-channel="p4"] .p4-card {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-card {
   background-color: #fff9e3 !important;
   border-color: rgba(19, 19, 19, 0.10) !important;
 }
-:root.dark[data-ui-channel="p4"] .p4-card {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) .p4-card {
   background-color: var(--ui-paper, #33205f) !important;
   border-color: var(--ui-line, #47327c) !important;
 }
 
-:root.dark[data-ui-channel="p4"] [class*="text-[#131313]"] { color: #f3ecff !important; }
-:root.dark[data-ui-channel="p4"] [class*="bg-[#fff6d0]"] { background-color: #3a2a68 !important; }
-:root.dark[data-ui-channel="p4"] [class*="bg-[#fff6d0]"] :is([class*="text-[#131313]"]) { color: #f3ecff !important; }
-:root.dark[data-ui-channel="p4"] [class*="border-[#131313]"] { border-color: rgba(243,236,255,0.4) !important; }
-:root.dark[data-ui-channel="p4"] [class*="bg-[#131313]"] { background-color: #150b33 !important; }
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="text-[#131313]"] { color: #f3ecff !important; }
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="bg-[#fff6d0]"] { background-color: #3a2a68 !important; }
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="bg-[#fff6d0]"] :is([class*="text-[#131313]"]) { color: #f3ecff !important; }
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="border-[#131313]"] { border-color: rgba(243,236,255,0.4) !important; }
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="bg-[#131313]"] { background-color: #150b33 !important; }
 /* 夜间 · 蓝频道补漏：--color-primary 是 store 往 :root 内联写的（主题主色），
    内联普通声明干不过样式表 !important——借此在夜间把旧蓝体系（底导航高亮、
    text-primary/bg-primary 族）整体翻到浅绿强调。 */
@@ -1320,16 +1320,16 @@ html[data-ios-standalone="true"] {
 }
 /* 夜间 · 黄频道补漏：半透明白面（bg-white/70 一族）压在紫舞台上泛灰紫，
    上面的浅字直接没了对比——统一翻成深紫半透明面。 */
-:root.dark[data-ui-channel="p4"] :is([class*="bg-white/"], .bg-white) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([class*="bg-white/"], .bg-white) {
   background-color: rgba(27, 15, 58, 0.78) !important;
 }
-:root.dark[data-ui-channel="p4"] [class*="text-[#a35a00]"] { color: #f5c76b !important; }
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="text-[#a35a00]"] { color: #f5c76b !important; }
 /* 夜间 · 黄频道：text-primary 一族还是白天的暗琥珀 #F59E0B——压在紫面上 11px 小字看着发棕发暗
    （用户上报：总结「归档 / 查看」、名片状态胶囊、总点数）。翻成与 text-[#a35a00] 同一支的柔金，
    半透明底 / 描边跟着翻；实色 bg-primary 不动（上面压的是白字，翻亮就不可读了）。 */
-:root.dark[data-ui-channel="p4"] .text-primary { color: #f5c76b !important; }
-:root.dark[data-ui-channel="p4"] [class*="bg-primary/"] { background-color: rgba(245, 199, 107, 0.16) !important; }
-:root.dark[data-ui-channel="p4"] [class*="border-primary/"] { border-color: rgba(245, 199, 107, 0.4) !important; }
+:root.dark[data-ui-channel="p4"]:not([data-kit]) .text-primary { color: #f5c76b !important; }
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="bg-primary/"] { background-color: rgba(245, 199, 107, 0.16) !important; }
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="border-primary/"] { border-color: rgba(245, 199, 107, 0.4) !important; }
 :root.dark[data-ui-channel="p3"] {
   --p3r-row: rgba(16, 32, 63, 0.92);
   --p3r-row-alt: rgba(13, 27, 54, 0.95);
@@ -1378,35 +1378,35 @@ html[data-ios-standalone="true"] {
 
 /* ── 蓝 · 旧工具类毯式翻色（表单/设置/战场/目标·倒计时/技能等未换壳页面）──
    同时压过 bg-white 与它的 dark:bg-gray-* 变体：中性灰在深蓝世界里发闷，统一进靛蓝阶。 */
-:root.dark[data-ui-channel="p3"] :is(.bg-white, [class*="dark:bg-gray-900"]) {
+:root.dark[data-ui-channel="p3"]:not([data-kit]) :is(.bg-white, [class*="dark:bg-gray-900"]) {
   background-color: var(--p3r-panel, #10203f) !important;
 }
-:root.dark[data-ui-channel="p3"] :is(.bg-gray-50, .bg-gray-100, [class*="dark:bg-gray-800"]) {
+:root.dark[data-ui-channel="p3"]:not([data-kit]) :is(.bg-gray-50, .bg-gray-100, [class*="dark:bg-gray-800"]) {
   background-color: #182b52 !important;
 }
-:root.dark[data-ui-channel="p3"] .bg-gray-200 {
+:root.dark[data-ui-channel="p3"]:not([data-kit]) .bg-gray-200 {
   background-color: #24395f !important;
 }
-:root.dark[data-ui-channel="p3"] :is(.text-gray-900, .text-gray-800, .text-gray-700, .text-black) {
+:root.dark[data-ui-channel="p3"]:not([data-kit]) :is(.text-gray-900, .text-gray-800, .text-gray-700, .text-black) {
   color: #e9f6f1 !important;
 }
-:root.dark[data-ui-channel="p3"] :is(.text-gray-600, .text-gray-500) {
+:root.dark[data-ui-channel="p3"]:not([data-kit]) :is(.text-gray-600, .text-gray-500) {
   color: #9fb6c8 !important;
 }
-:root.dark[data-ui-channel="p3"] .text-gray-400 {
+:root.dark[data-ui-channel="p3"]:not([data-kit]) .text-gray-400 {
   color: #7e94ab !important;
 }
-:root.dark[data-ui-channel="p3"] :is(.border-gray-100, .border-gray-200, .border-gray-300, [class*="dark:border-gray-800"], [class*="dark:border-gray-700"]) {
+:root.dark[data-ui-channel="p3"]:not([data-kit]) :is(.border-gray-100, .border-gray-200, .border-gray-300, [class*="dark:border-gray-800"], [class*="dark:border-gray-700"]) {
   border-color: #24395f !important;
 }
 /* p3 页面手写的任意值类 */
-:root.dark[data-ui-channel="p3"] [class*="text-[#0a1230]"] { color: #e9f6f1 !important; }
-:root.dark[data-ui-channel="p3"] [class*="text-[#1b57ff]"] { color: #3ecf8e !important; }
-:root.dark[data-ui-channel="p3"] [class*="text-[#0a3bd6]"] { color: #6fe3b0 !important; }
-:root.dark[data-ui-channel="p3"] [class*="bg-[#1b57ff]"] { background-color: #2aa974 !important; }
-:root.dark[data-ui-channel="p3"] [class*="bg-[#cfeaf6]"] { background-color: #12382f !important; }
-:root.dark[data-ui-channel="p3"] [class*="active:bg-[#e2f2fa]"]:active { background-color: #1a2d55 !important; }
-:root.dark[data-ui-channel="p3"] [class*="placeholder:text-[#9ab4c9]"]::placeholder { color: #5e7d99 !important; }
+:root.dark[data-ui-channel="p3"]:not([data-kit]) [class*="text-[#0a1230]"] { color: #e9f6f1 !important; }
+:root.dark[data-ui-channel="p3"]:not([data-kit]) [class*="text-[#1b57ff]"] { color: #3ecf8e !important; }
+:root.dark[data-ui-channel="p3"]:not([data-kit]) [class*="text-[#0a3bd6]"] { color: #6fe3b0 !important; }
+:root.dark[data-ui-channel="p3"]:not([data-kit]) [class*="bg-[#1b57ff]"] { background-color: #2aa974 !important; }
+:root.dark[data-ui-channel="p3"]:not([data-kit]) [class*="bg-[#cfeaf6]"] { background-color: #12382f !important; }
+:root.dark[data-ui-channel="p3"]:not([data-kit]) [class*="active:bg-[#e2f2fa]"]:active { background-color: #1a2d55 !important; }
+:root.dark[data-ui-channel="p3"]:not([data-kit]) [class*="placeholder:text-[#9ab4c9]"]::placeholder { color: #5e7d99 !important; }
 
 /* ── 粉 · 夜间（FS2.1）──────────────────────────────────────────────────
    粉走 p3 频道，夜间会先吃到上面那套「深海靛蓝 + 青绿」；这里整体旋成
@@ -1457,14 +1457,14 @@ html[data-ios-standalone="true"] {
    与 p3 版同特异度，靠源码顺序压过。
    ⚠️ 写死蓝字面量的那批（text-[#1b57ff] 等）不在这里重复——
    上面的粉块已按类名改指 var()，变量在本块里已翻成夜色，自动跟随。 */
-:root.dark[data-theme="pink"] :is(.bg-gray-50, .bg-gray-100, [class*="dark:bg-gray-800"]) {
+:root.dark[data-theme="pink"]:not([data-kit]) :is(.bg-gray-50, .bg-gray-100, [class*="dark:bg-gray-800"]) {
   background-color: #33142a !important;
 }
-:root.dark[data-theme="pink"] .bg-gray-200 { background-color: #4a2038 !important; }
-:root.dark[data-theme="pink"] :is(.text-gray-900, .text-gray-800, .text-gray-700, .text-black) { color: #ffeaf4 !important; }
-:root.dark[data-theme="pink"] :is(.text-gray-600, .text-gray-500) { color: #c89fb4 !important; }
-:root.dark[data-theme="pink"] .text-gray-400 { color: #a3798d !important; }
-:root.dark[data-theme="pink"] :is(.border-gray-100, .border-gray-200, .border-gray-300, [class*="dark:border-gray-800"], [class*="dark:border-gray-700"]) {
+:root.dark[data-theme="pink"]:not([data-kit]) .bg-gray-200 { background-color: #4a2038 !important; }
+:root.dark[data-theme="pink"]:not([data-kit]) :is(.text-gray-900, .text-gray-800, .text-gray-700, .text-black) { color: #ffeaf4 !important; }
+:root.dark[data-theme="pink"]:not([data-kit]) :is(.text-gray-600, .text-gray-500) { color: #c89fb4 !important; }
+:root.dark[data-theme="pink"]:not([data-kit]) .text-gray-400 { color: #a3798d !important; }
+:root.dark[data-theme="pink"]:not([data-kit]) :is(.border-gray-100, .border-gray-200, .border-gray-300, [class*="dark:border-gray-800"], [class*="dark:border-gray-700"]) {
   border-color: #4a2038 !important;
 }
 
@@ -1472,12 +1472,12 @@ html[data-ios-standalone="true"] {
    横贯斜带 cut-in（今日完成 / 记录成功 / 记账完成，BandCutInP3）挂 .p3-dayface：
    底色与正文墨色拉回日间值，--p3r-blue / --p3r-cyan 这些强调色不动——夜间照样是浅绿（粉是夜玫瑰）。
    粉那条必须排在后面：两条特异度相同，靠源码顺序。 */
-:root.dark[data-ui-channel="p3"] .p3-dayface {
+:root.dark[data-ui-channel="p3"]:not([data-kit]) .p3-dayface {
   --p3r-sheet-grad: linear-gradient(172deg, #ffffff 0%, #f2f9fd 70%, #e8f4fa 100%);
   --p3r-ink: #0a1230;
   --p3r-ink-soft: #3d4a66;
 }
-:root.dark[data-theme="pink"] .p3-dayface {
+:root.dark[data-theme="pink"]:not([data-kit]) .p3-dayface {
   --p3r-sheet-grad: linear-gradient(178deg, #fffafc 0%, #fdf1f7 60%, #fbe6f0 100%);
   --p3r-ink: #2b0a1c;
   --p3r-ink-soft: #6d4a5c;
@@ -1500,68 +1500,68 @@ html[data-ios-standalone="true"] {
 }
 
 /* ── 黄 · 页面级灰系文字/面块翻浅紫（第一轮只盖了弹窗内）── */
-:root.dark[data-ui-channel="p4"] :is(.text-gray-900, .text-gray-800, .text-gray-700) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is(.text-gray-900, .text-gray-800, .text-gray-700) {
   color: #f3ecff !important;
 }
-:root.dark[data-ui-channel="p4"] :is(.text-gray-600, .text-gray-500) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is(.text-gray-600, .text-gray-500) {
   color: rgba(243, 236, 255, 0.75) !important;
 }
-:root.dark[data-ui-channel="p4"] .text-gray-400 {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) .text-gray-400 {
   color: rgba(243, 236, 255, 0.55) !important;
 }
-:root.dark[data-ui-channel="p4"] :is(.bg-gray-50, .bg-gray-100) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is(.bg-gray-50, .bg-gray-100) {
   background-color: #3a2a68 !important;
 }
-:root.dark[data-ui-channel="p4"] :is([class*="dark:bg-gray-900"], [class*="dark:bg-gray-800"]) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([class*="dark:bg-gray-900"], [class*="dark:bg-gray-800"]) {
   background-color: var(--ui-surface, #2f1c5c) !important;
 }
-:root.dark[data-ui-channel="p4"] :is(.border-gray-100, .border-gray-200, .border-gray-300, [class*="dark:border-gray-800"], [class*="dark:border-gray-700"]) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is(.border-gray-100, .border-gray-200, .border-gray-300, [class*="dark:border-gray-800"], [class*="dark:border-gray-700"]) {
   border-color: var(--ui-line, #47327c) !important;
 }
 /* 带透明度修饰的墨字（done 行删除线等）：夜间转半透明浅紫——
    必须排在 [class*="text-[#131313]"] 基础翻色之后（同权重，后者胜） */
-:root.dark[data-ui-channel="p4"] [class*="text-[#131313]/"] {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="text-[#131313]/"] {
   color: rgba(243, 236, 255, 0.55) !important;
 }
 /* 笔记本横格线等手写墨色 rgba 边框类 */
-:root.dark[data-ui-channel="p4"] [class*="border-[rgba(19,19,19"] {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="border-[rgba(19,19,19"] {
   border-color: var(--p4-rule, rgba(243, 236, 255, 0.22)) !important;
 }
 /* 墨色占位符（黑猫聊天输入等）：深纸面上 40% 墨直接隐身 */
-:root.dark[data-ui-channel="p4"] [class*="placeholder:text-[#131313]"]::placeholder {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) [class*="placeholder:text-[#131313]"]::placeholder {
   color: rgba(243, 236, 255, 0.4) !important;
 }
 
 /* ── 黄 · 弹窗表单皮的墨字面量补翻（第一轮皮写死 #131313）── */
-:root.dark[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
-:root.dark[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) textarea,
-:root.dark[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) select {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) textarea,
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) select {
   color: #f3ecff !important;
 }
-:root.dark[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(.text-gray-700, .text-gray-800) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(.text-gray-700, .text-gray-800) {
   color: #f3ecff !important;
 }
-:root.dark[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(.text-gray-500, .text-gray-600) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(.text-gray-500, .text-gray-600) {
   color: rgba(243, 236, 255, 0.72) !important;
 }
-:root.dark[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-400 {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) .text-gray-400 {
   color: rgba(243, 236, 255, 0.55) !important;
 }
-:root.dark[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(.border-gray-100, .border-gray-200, .border-gray-300) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(.border-gray-100, .border-gray-200, .border-gray-300) {
   border-color: rgba(243, 236, 255, 0.16) !important;
 }
-:root.dark[data-ui-channel="p4"] :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(input[type="range"], input[type="checkbox"], input[type="radio"]) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) :is([role="dialog"], [role="alertdialog"], .p4-reskin) :is(input[type="range"], input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--ui-bg, #ffd900);
 }
 
 /* ── 黄 · 亮黄件上的灰字补丁（.p4-onbright）在紫底夜间反转成浅字 ── */
-:root.dark[data-ui-channel="p4"] .p4-onbright :is(.text-gray-400, .dark\:text-gray-400, .dark\:text-gray-500) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) .p4-onbright :is(.text-gray-400, .dark\:text-gray-400, .dark\:text-gray-500) {
   color: rgba(243, 236, 255, 0.6) !important;
 }
-:root.dark[data-ui-channel="p4"] .p4-onbright :is(.text-gray-500, .text-gray-600, .dark\:text-gray-300) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) .p4-onbright :is(.text-gray-500, .text-gray-600, .dark\:text-gray-300) {
   color: rgba(243, 236, 255, 0.78) !important;
 }
-:root.dark[data-ui-channel="p4"] .p4-onbright :is(.text-gray-700, .text-gray-800, .text-gray-900, .dark\:text-white) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) .p4-onbright :is(.text-gray-700, .text-gray-800, .text-gray-900, .dark\:text-white) {
   color: #f3ecff !important;
 }
 
@@ -1569,11 +1569,11 @@ html[data-ios-standalone="true"] {
    权重 (0,5,0) 高过上面所有毯式规则，顺序无关恒胜。
    第二个选择器盖"类挂在载体自己身上"的场景（如任务页抽签纸条：按钮本体既是
    .p4-onlight 又是 text-[#131313]，后代选择器够不着它自己）。 */
-:root.dark[data-ui-channel="p4"] .p4-onlight :is([class*="text-[#131313]"], .text-gray-900, .text-gray-800, .text-gray-700, .dark\:text-white, .dark\:text-gray-100),
-:root.dark[data-ui-channel="p4"] .p4-onlight:is([class*="text-[#131313]"], .text-gray-900, .text-gray-800, .text-gray-700) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) .p4-onlight :is([class*="text-[#131313]"], .text-gray-900, .text-gray-800, .text-gray-700, .dark\:text-white, .dark\:text-gray-100),
+:root.dark[data-ui-channel="p4"]:not([data-kit]) .p4-onlight:is([class*="text-[#131313]"], .text-gray-900, .text-gray-800, .text-gray-700) {
   color: #131313 !important;
 }
-:root.dark[data-ui-channel="p4"] .p4-onlight :is(.text-gray-400, .text-gray-500, .text-gray-600, .dark\:text-gray-400, .dark\:text-gray-500, [class*="text-[#131313]/"]) {
+:root.dark[data-ui-channel="p4"]:not([data-kit]) .p4-onlight :is(.text-gray-400, .text-gray-500, .text-gray-600, .dark\:text-gray-400, .dark\:text-gray-500, [class*="text-[#131313]/"]) {
   color: rgba(19, 19, 19, 0.66) !important;
 }
 
@@ -1611,59 +1611,59 @@ html[data-ios-standalone="true"] {
 }
 
 /* P4：奶油纸卡 */
-:root[data-ui-channel="p4"] .p4-menu-surface {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-menu-surface {
   background: #fdf6e3;
   border: 2px solid #131313;
   border-radius: 10px;
   box-shadow: 0 3px 0 rgba(19, 19, 19, 0.3);
 }
-:root[data-ui-channel="p4"] .p4-menu-item {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-menu-item {
   color: #131313 !important;
   border-top: 1px solid rgba(19, 19, 19, 0.14) !important;
 }
-:root[data-ui-channel="p4"] .p4-menu-item:first-child {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-menu-item:first-child {
   border-top: none !important;
 }
-:root[data-ui-channel="p4"] .p4-menu-item:hover:not(:disabled) {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-menu-item:hover:not(:disabled) {
   background: #131313 !important;
   color: #f9a11b !important;
 }
-:root[data-ui-channel="p4"] .p4-menu-item .p4-menu-sub {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-menu-item .p4-menu-sub {
   color: rgba(19, 19, 19, 0.6) !important;
 }
-:root[data-ui-channel="p4"] .p4-menu-item:hover:not(:disabled) .p4-menu-sub {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-menu-item:hover:not(:disabled) .p4-menu-sub {
   color: rgba(249, 161, 27, 0.85) !important;
 }
-:root[data-ui-channel="p4"] .p4-menu-item .p4-menu-icon {
+:root[data-ui-channel="p4"]:not([data-kit]) .p4-menu-item .p4-menu-icon {
   color: #131313;
 }
 
 /* P3：深蓝斜切卡 */
-:root[data-ui-channel="p3"] .p3-menu-surface {
+:root[data-ui-channel="p3"]:not([data-kit]) .p3-menu-surface {
   background: #0a0e1a;
   border: 1px solid rgba(0, 216, 255, 0.45);
   border-radius: 2px;
   clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   box-shadow: 3px 3px 0 rgba(5, 7, 13, 0.6);
 }
-:root[data-ui-channel="p3"] .p3-menu-item {
+:root[data-ui-channel="p3"]:not([data-kit]) .p3-menu-item {
   color: rgba(235, 240, 255, 0.92) !important;
   border-top: 1px solid rgba(0, 216, 255, 0.18) !important;
 }
-:root[data-ui-channel="p3"] .p3-menu-item:first-child {
+:root[data-ui-channel="p3"]:not([data-kit]) .p3-menu-item:first-child {
   border-top: none !important;
 }
-:root[data-ui-channel="p3"] .p3-menu-item:hover:not(:disabled) {
+:root[data-ui-channel="p3"]:not([data-kit]) .p3-menu-item:hover:not(:disabled) {
   background: #1b57ff !important;
   color: #ffffff !important;
 }
-:root[data-ui-channel="p3"] .p3-menu-item .p3-menu-sub {
+:root[data-ui-channel="p3"]:not([data-kit]) .p3-menu-item .p3-menu-sub {
   color: rgba(235, 240, 255, 0.5) !important;
 }
-:root[data-ui-channel="p3"] .p3-menu-item:hover:not(:disabled) .p3-menu-sub {
+:root[data-ui-channel="p3"]:not([data-kit]) .p3-menu-item:hover:not(:disabled) .p3-menu-sub {
   color: rgba(255, 255, 255, 0.8) !important;
 }
-:root[data-ui-channel="p3"] .p3-menu-item .p3-menu-icon {
+:root[data-ui-channel="p3"]:not([data-kit]) .p3-menu-item .p3-menu-icon {
   color: rgba(0, 216, 255, 0.9);
 }
 
@@ -1750,24 +1750,24 @@ html[data-ios-standalone="true"] {
    过渡（用户追加："非线性、先快后慢"）：easeOutExpo 曲线，但只发给**没有**
    transition-* 类的按钮——带类的按钮其 transition-all/colors 自会兜住位移过渡，
    毯式 transition 会砸掉它们的既有过渡属性表，不能碰。 */
-[data-ui-channel='p3'] :is(button, [role='button']):not([class*='transition']),
-[data-ui-channel='p4'] :is(button, [role='button']):not([class*='transition']) {
+[data-ui-channel='p3']:not([data-kit]) :is(button, [role='button']):not([class*='transition']),
+[data-ui-channel='p4']:not([data-kit]) :is(button, [role='button']):not([class*='transition']) {
   transition:
     translate 0.22s cubic-bezier(0.16, 1, 0.3, 1),
     rotate 0.22s cubic-bezier(0.16, 1, 0.3, 1),
     filter 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
-[data-ui-channel='p3'] :is(button, [role='button']):not(:disabled):active {
+[data-ui-channel='p3']:not([data-kit]) :is(button, [role='button']):not(:disabled):active {
   translate: 1px 2px; /* 顺着 P3R 斜轴方向「按进水面」 */
   filter: brightness(0.93) saturate(1.15);
 }
-[data-ui-channel='p4'] :is(button, [role='button']):not(:disabled):active {
+[data-ui-channel='p4']:not([data-kit]) :is(button, [role='button']):not(:disabled):active {
   translate: 0 2px;
   rotate: -0.7deg; /* 贴纸被按歪一瞬 */
   filter: brightness(1.07) contrast(1.05); /* 特摄闪光感：按下瞬间提亮 */
 }
 /* D0（校直模式）：位移反馈保留（交互反馈非装饰动效），但斜轴归零口径下撤掉旋转 */
-:root[data-boldness='0'] [data-ui-channel='p4'] :is(button, [role='button']):active {
+:root[data-boldness='0'] [data-ui-channel='p4']:not([data-kit]) :is(button, [role='button']):active {
   rotate: none;
 }
 
@@ -1959,19 +1959,19 @@ html[data-ios-standalone="true"] {
 }
 :root[data-ui-channel="p5"] .md-hr { border-top: 2px solid #050505; }
 /* P3：蓝描边，表头浅蓝 */
-:root[data-ui-channel="p3"] .md-table th {
+:root[data-ui-channel="p3"]:not([data-kit]) .md-table th {
   background: rgba(27, 87, 255, 0.12);
   color: var(--p3r-ink, #0a1230);
   border-color: rgba(27, 87, 255, 0.28);
 }
-:root[data-ui-channel="p3"] .md-table td { border-color: rgba(27, 87, 255, 0.18); }
+:root[data-ui-channel="p3"]:not([data-kit]) .md-table td { border-color: rgba(27, 87, 255, 0.18); }
 /* P4：奶油表头 + 黑描边 */
-:root[data-ui-channel="p4"] .md-table th {
+:root[data-ui-channel="p4"]:not([data-kit]) .md-table th {
   background: #fff1a8;
   color: #131313;
   border-color: #131313;
 }
-:root[data-ui-channel="p4"] .md-table td { border-color: rgba(19, 19, 19, 0.35); }
+:root[data-ui-channel="p4"]:not([data-kit]) .md-table td { border-color: rgba(19, 19, 19, 0.35); }
 
 /* ── 记录输入框内的附件条（v2.7.0.6）───────────────────────────────────────
    「读图代打字 / 附一张图」两枚小按钮做进输入框最下方（用户口径：视觉统一）。

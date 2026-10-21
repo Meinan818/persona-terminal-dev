@@ -1,0 +1,35 @@
+/** 工作包 3 的弹窗 / 演出登记（只由工作包 3 修改）。key = INVENTORY 路由 #/overlay/<key> 的 key。 */
+import type { OverlayRegistry } from './types';
+
+const P = 'page:cooperation';
+export const overlays: OverlayRegistry = {
+  'bond-menu': { title: '同伴系统菜单', load: () => import('@blue/screens/overlays/CooperationMenu.p3r'), backdrop: P },
+  'bond-create': { title: '结识一位同伴', load: () => import('@blue/screens/overlays/ConfidantCreateModal.p3r'), backdrop: P },
+  'bond-detail': { title: '同伴详情', load: () => import('@blue/screens/overlays/ConfidantDetailModal.p3r'), backdrop: P },
+  'bond-delete-confirm': { title: '彻底删除同伴确认', load: () => import('@blue/screens/overlays/ConfidantDetailModal.p3r').then((m) => ({ default: m.DeleteConfirmDemo })), backdrop: P },
+  'bond-unbind-confirm': { title: '解除 COOP 确认', load: () => import('@blue/screens/overlays/ConfidantDetailModal.p3r').then((m) => ({ default: m.UnbindConfirmDemo })), backdrop: P },
+  'bond-sync-avatar-confirm': { title: '同步换成卡面？', load: () => import('@blue/screens/overlays/ConfidantDetailModalAvatarConfirm.p3r'), backdrop: P },
+  'bond-interaction': { title: '今日互动', load: () => import('@blue/screens/overlays/ConfidantInteractionModal.p3r'), backdrop: P },
+  'bond-memorial': { title: '共战纪念', load: () => import('@blue/screens/overlays/CoopMemorialPanel.p3r'), backdrop: P },
+  'bond-pact-panel': { title: '一起进步面板', load: () => import('@blue/screens/overlays/PactPanel.p3r'), backdrop: P },
+  'bond-pact-create': { title: '发起一起进步', load: () => import('@blue/screens/overlays/PactModals.p3r'), backdrop: P },
+  'bond-pact-respond': { title: '回应一起进步邀请', load: () => import('@blue/screens/overlays/PactModals.p3r').then((m) => ({ default: m.PactRespondDemo })), backdrop: P },
+  'bond-counsel-chat': { title: '谏言对话', load: () => import('@blue/screens/overlays/CounselChatModal.p3r'), backdrop: P },
+  'bond-counsel-archive': { title: '谏言归档库', load: () => import('@blue/screens/overlays/CounselArchiveModal.p3r'), backdrop: P },
+  'bond-notifications': { title: '通知面板', load: () => import('@blue/screens/overlays/NotificationsPanel.p3r'), backdrop: P },
+  'bond-add-online': { title: '邀请在线同伴', load: () => import('@blue/screens/overlays/AddOnlineConfidantModal.p3r'), backdrop: P },
+  'bond-online-profile': { title: '在线同伴名片', load: () => import('@blue/screens/overlays/OnlineConfidantProfileCard.p3r'), backdrop: P },
+  'bond-coop-propose': { title: '发起 COOP 提议', load: () => import('@blue/screens/overlays/CoopProposeModal.p3r'), backdrop: P },
+  'bond-coop-accept': { title: '响应 COOP 提议', load: () => import('@blue/screens/overlays/CoopAcceptModal.p3r'), backdrop: P },
+  'bond-coop-ai-match': { title: '星象匹配', load: () => import('@blue/screens/overlays/CoopAiMatchModal.p3r'), backdrop: P },
+  'bond-prayer-fx': { title: '祈愿特效', load: () => import('@blue/screens/overlays/PrayerEffectOverlay.p3r'), backdrop: P },
+  'bond-shadow-battle': { title: '羁绊之影共斗', load: () => import('@blue/screens/overlays/CoopShadowBattleModal.p3r'), backdrop: P },
+  'bond-allout': { title: '总攻击演出', load: () => import('@blue/screens/overlays/AllOutOverlay.p3r'), backdrop: P },
+  'bond-victory': { title: '共战结算', load: () => import('@blue/screens/overlays/CoopVictoryScreen.p3r'), backdrop: P },
+  'bond-rankup-cutin': { title: '羁绊 RANK UP 演出', load: () => import('@blue/screens/overlays/ConfidantRankUpCutIn.p3r'), fullscreen: true },
+  'bond-rankup-chain': { title: '升级链一镜到底', load: () => import('@blue/screens/overlays/ConfidantRankUpCutIn.p3r').then((m) => ({ default: m.RankUpChainOverlay })), fullscreen: true },
+  'bond-celebrate': { title: '升级恭喜页', load: () => import('@blue/screens/overlays/ConfidantCelebrateScreen.p3r'), fullscreen: true },
+  'bond-starshift': { title: '星移', load: () => import('@blue/screens/overlays/ConfidantStarShiftModal.p3r'), backdrop: P },
+  'bond-wall-spin': { title: '专辑墙翻牌水波', load: () => import('@blue/screens/overlays/WallSpinBackdrop.p3r'), fullscreen: true },
+  'bond-namefx': { title: '羁绊名字演出 ConfidantNameFx', load: () => import('@blue/screens/overlays/ConfidantNameFx.p3r'), backdrop: 'page:cooperation' },
+};

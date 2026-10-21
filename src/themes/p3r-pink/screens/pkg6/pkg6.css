@@ -1,0 +1,65 @@
+/* P6 私有样式（粉白 P3R）：CONFIG 行聚焦翻墨、‹值›分段、ON·OFF、按下回弹、气泡、录音脉冲。只用 --p3r-* / --pk-* 变量。 */
+.p6-press { transition: transform var(--p3r-dur-instant) var(--p3r-ease-snap); }
+.p6-press:active:not(:disabled) { transform: scale(0.96); }
+:root[data-boldness="0"] .p6-press:active { transform: none; }
+
+/* CONFIG 行：常态樱粉行面；悬停 / 聚焦 / active = 墨色斜行 + 光标楔（P3R 当前项） */
+.p6-row .p6-row-bg { background: var(--p3r-row); transition: background var(--p3r-dur-fast); }
+.p6-row .p6-row-label { color: var(--p3r-ink); transition: color var(--p3r-dur-fast), padding var(--p3r-dur-fast); }
+.p6-row .p6-row-hint { color: var(--p3r-grey); }
+.p6-row .p6-row-ctl { color: var(--p3r-ink); }
+.p6-row .p6-row-wedge { opacity: 0; transform: translateX(-6px); transition: opacity var(--p3r-dur-fast), transform var(--p3r-dur-fast); }
+.p6-row:not(.p6-row-below):hover .p6-row-bg, .p6-row:not(.p6-row-below):focus-within .p6-row-bg, .p6-row.p6-row-active .p6-row-bg { background: var(--p3r-ink); }
+.p6-row:not(.p6-row-below):hover .p6-row-label, .p6-row:not(.p6-row-below):focus-within .p6-row-label, .p6-row.p6-row-active .p6-row-label { color: var(--p3r-on-ink); padding-left: 14px; }
+.p6-row:not(.p6-row-below):hover .p6-row-hint, .p6-row:not(.p6-row-below):focus-within .p6-row-hint, .p6-row.p6-row-active .p6-row-hint { color: color-mix(in srgb, var(--p3r-on-ink) 72%, transparent); padding-left: 14px; }
+.p6-row:not(.p6-row-below):hover .p6-row-ctl, .p6-row:not(.p6-row-below):focus-within .p6-row-ctl, .p6-row.p6-row-active .p6-row-ctl { color: var(--p3r-on-ink); }
+.p6-row:hover .p6-row-wedge, .p6-row:focus-within .p6-row-wedge, .p6-row.p6-row-active .p6-row-wedge { opacity: 1; transform: none; }
+/* below 行（带展开内容）：只亮左楔，不整行翻墨，保证展开区可读 */
+.p6-row.p6-row-below .p6-row-bg { background: var(--p3r-panel-glass); }
+
+/* ‹值› 分段 */
+.p6-seg { color: var(--p3r-ink-soft); }
+.p6-seg .p6-seg-bg { background: transparent; box-shadow: inset 0 0 0 1.5px rgb(var(--p3r-cyan-rgb) / 0.55); }
+.p6-seg:hover .p6-seg-bg { background: rgb(var(--p3r-cyan-rgb) / 0.16); }
+.p6-seg.p6-seg-on { color: var(--p3r-on-blue); }
+.p6-seg.p6-seg-on .p6-seg-bg { background: var(--p3r-blue); box-shadow: none; }
+.p6-row:not(.p6-row-below):hover .p6-seg:not(.p6-seg-on), .p6-row:not(.p6-row-below):focus-within .p6-seg:not(.p6-seg-on) { color: color-mix(in srgb, var(--p3r-on-ink) 75%, transparent); }
+
+/* ON · OFF */
+.p6-onoff { color: var(--p3r-grey); }
+.p6-onoff-on { color: var(--p3r-on-blue); }
+.p6-onoff-on .p6-onoff-bg { background: var(--p3r-blue); }
+.p6-onoff-off { color: var(--p3r-on-ink); }
+.p6-onoff-off .p6-onoff-bg { background: var(--p3r-ink-soft); }
+.p6-row:not(.p6-row-below):hover .p6-onoff:not(.p6-onoff-on):not(.p6-onoff-off), .p6-row:not(.p6-row-below):focus-within .p6-onoff:not(.p6-onoff-on):not(.p6-onoff-off) { color: color-mix(in srgb, var(--p3r-on-ink) 55%, transparent); }
+.p6-row:not(.p6-row-below):hover .p6-onoff-off .p6-onoff-bg, .p6-row:not(.p6-row-below):focus-within .p6-onoff-off .p6-onoff-bg { background: var(--p3r-grey); }
+
+/* 斜纹色带（替代 P4G candy 条）：玫红 / 藕紫 / 珊瑚 斜纹 */
+.p6-candy { background: repeating-linear-gradient(-55deg, var(--p3r-blue) 0 14px, var(--p3r-cyan) 14px 22px, var(--p3r-cyan-pale) 22px 30px); }
+.p6-scan { background: repeating-linear-gradient(0deg, rgb(var(--p3r-panel-rgb) / 0.18) 0 2px, transparent 2px 4px); }
+
+/* 输入中三片 */
+@keyframes p6-typing { 0%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-4px); opacity: 1; } }
+.p6-typing > i { display: inline-block; width: 8px; height: 10px; clip-path: polygon(30% 0, 100% 0, 70% 100%, 0 100%); background: currentColor; animation: p6-typing 0.9s infinite; }
+.p6-typing > i:nth-child(2) { animation-delay: 0.15s; }
+.p6-typing > i:nth-child(3) { animation-delay: 0.3s; }
+:root[data-boldness="0"] .p6-typing > i { animation: none; opacity: 0.8; }
+
+/* 录音脉冲（同心斜方） */
+@keyframes p6-rec { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(1.8); opacity: 0; } }
+.p6-rec-ring { animation: p6-rec 1.1s ease-out infinite; }
+:root[data-boldness="0"] .p6-rec-ring { animation: none; opacity: 0.4; }
+
+/* 系统框「下一页」▼ 闪烁 */
+@keyframes p6-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0.25; } }
+.p6-next-dot { animation: p6-blink 1s steps(1) infinite; }
+:root[data-boldness="0"] .p6-next-dot { animation: none; }
+
+.p6-noscroll { scrollbar-width: none; }
+.p6-noscroll::-webkit-scrollbar { display: none; }
+
+/* 粉白 P3R 水面纹（替代 P4G 雪花噪点）：细斜线 + 横向水纹，静态 */
+.p6-water { background-image: repeating-linear-gradient(-62deg, rgb(var(--p3r-blue-rgb) / 0.10) 0 1px, transparent 1px 9px), repeating-linear-gradient(0deg, rgb(var(--p3r-cyan-rgb) / 0.08) 0 1px, transparent 1px 7px); }
+@keyframes p6-drift { from { transform: translateX(0); } to { transform: translateX(-36px); } }
+.p6-drift { animation: p6-drift 6s linear infinite; }
+:root[data-boldness="0"] .p6-drift { animation: none; }

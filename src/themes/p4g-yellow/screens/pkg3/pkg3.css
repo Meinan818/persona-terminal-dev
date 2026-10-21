@@ -1,0 +1,76 @@
+/* pkg3 私有样式：只动 transform / opacity；颜色一律走 --p4g-* token。 */
+
+/* ── Rank Up 舞台：黄底圆角方块阵 + 交叉斜彩带（P4G Social Link Rank Up 1:1）── */
+.pk3-rank-stage {
+  background-color: var(--p4g-yellow-hi);
+  background-image: var(--p4g-stage-pattern);
+  background-size: 300px 300px;
+}
+[data-p4g-mode='night'] .pk3-rank-stage { background-color: var(--p4g-yellow-hi); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cg fill='%23fff'%3E%3Crect x='8' y='10' width='38' height='28' rx='6' opacity='.5'/%3E%3Crect x='52' y='44' width='38' height='28' rx='6' opacity='.55'/%3E%3Crect x='140' y='78' width='38' height='28' rx='6' opacity='.4'/%3E%3Crect x='184' y='78' width='38' height='28' rx='6' opacity='.6'/%3E%3Crect x='96' y='214' width='38' height='28' rx='6' opacity='.55'/%3E%3Crect x='228' y='160' width='38' height='28' rx='6' opacity='.45'/%3E%3C/g%3E%3C/svg%3E"); }
+.pk3-ribbon {
+  position: absolute; left: -30%; width: 160%; height: 64px;
+  background: var(--p4g-ribbon);
+  transform-origin: center;
+}
+.pk3-ribbon.a { top: 38%; transform: rotate(28deg); }
+.pk3-ribbon.b { top: 54%; transform: rotate(-26deg); }
+
+/* 斜彩带入场：沿自身长轴推进 */
+@keyframes pk3-ribbon-in-a { from { transform: rotate(28deg) translateX(-70%); } to { transform: rotate(28deg) translateX(0); } }
+@keyframes pk3-ribbon-in-b { from { transform: rotate(-26deg) translateX(70%); } to { transform: rotate(-26deg) translateX(0); } }
+.pk3-ribbon.a.run { animation: pk3-ribbon-in-a 520ms cubic-bezier(.16,1,.3,1) both; }
+.pk3-ribbon.b.run { animation: pk3-ribbon-in-b 520ms 80ms cubic-bezier(.16,1,.3,1) both; }
+
+/* 方块阵慢漂（舞台底） */
+@keyframes pk3-drift { from { transform: translate3d(0,0,0); } to { transform: translate3d(-300px,0,0); } }
+.pk3-drift { position: absolute; inset: 0 -300px 0 0; animation: pk3-drift 18s linear infinite; }
+
+/* 雪花噪点抖动（steps，只动 transform） */
+@keyframes pk3-static { 0% { transform: translate3d(0,0,0); } 25% { transform: translate3d(-40px,22px,0); } 50% { transform: translate3d(18px,-30px,0); } 75% { transform: translate3d(-12px,-8px,0); } 100% { transform: translate3d(30px,16px,0); } }
+.pk3-static { position: absolute; inset: -60px; background-repeat: repeat; background-size: 256px; animation: pk3-static 260ms steps(4) infinite; }
+
+/* 卡牌持续高光扫过 */
+@keyframes pk3-glint { from { transform: translateX(-130%) skewX(-18deg); } to { transform: translateX(230%) skewX(-18deg); } }
+.pk3-glint { position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, rgb(var(--p4g-white-rgb) / .65), transparent); animation: pk3-glint 2.4s 1.2s ease-in-out infinite; }
+
+/* 四角星闪 */
+@keyframes pk3-twinkle { 0%, 100% { transform: scale(.4) rotate(0); opacity: 0; } 40% { transform: scale(1) rotate(25deg); opacity: 1; } 70% { transform: scale(.8) rotate(40deg); opacity: .8; } }
+.pk3-twinkle { animation: pk3-twinkle 1.6s ease-in-out infinite; }
+
+/* 待回应的祈愿按钮脉冲 */
+@keyframes pk3-pulse { 0%, 100% { opacity: .15; } 50% { opacity: .55; } }
+.pk3-pulse { animation: pk3-pulse 1.6s ease-in-out infinite; }
+@keyframes pk3-spin { to { transform: rotate(360deg); } }
+.pk3-spin { animation: pk3-spin .9s linear infinite; display: inline-block; }
+
+/* 名字待回应闪烁 */
+@keyframes pk3-namefx { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.pk3-namefx { animation: pk3-namefx 1.4s ease-in-out infinite; }
+/* ConfidantNameFx p4 分支（真实 vr-name-flow / vr-name-spark） */
+@keyframes pk3-name-flow { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+@keyframes pk3-name-spark { 0%,100% { opacity: 0; transform: translateY(0) scale(0.6); } 45% { opacity: 1; transform: translateY(-7px) scale(1); } }
+.pk3-name-spark { animation: pk3-name-spark 2.2s ease-in-out infinite; }
+
+/* 浮动 */
+@keyframes pk3-bob { 0%, 100% { transform: translate3d(0,0,0) rotate(-1deg); } 50% { transform: translate3d(0,-6px,0) rotate(1deg); } }
+.pk3-bob { animation: pk3-bob 3.2s ease-in-out infinite; }
+
+/* 3D 牌 */
+.pk3-3d { perspective: 1100px; }
+.pk3-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+
+/* CRT 收束线 */
+@keyframes pk3-scan { from { transform: translate3d(0,-100%,0); } to { transform: translate3d(0,100%,0); } }
+.pk3-scanline { animation: pk3-scan 2.6s linear infinite; }
+
+/* 低动效：全部停 */
+[data-p4g-motion='low'] .pk3-drift, [data-p4g-motion='low'] .pk3-static, [data-p4g-motion='low'] .pk3-glint,
+[data-p4g-motion='low'] .pk3-twinkle, [data-p4g-motion='low'] .pk3-pulse, [data-p4g-motion='low'] .pk3-bob,
+[data-p4g-motion='low'] .pk3-namefx, [data-p4g-motion='low'] .pk3-scanline, [data-p4g-motion='low'] .pk3-ribbon.run { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .pk3-drift, .pk3-static, .pk3-glint, .pk3-twinkle, .pk3-pulse, .pk3-bob, .pk3-namefx, .pk3-scanline, .pk3-ribbon.run { animation: none !important; }
+}
+
+/* 隐藏横向滚动条 */
+.pk3-noscroll { scrollbar-width: none; }
+.pk3-noscroll::-webkit-scrollbar { display: none; }

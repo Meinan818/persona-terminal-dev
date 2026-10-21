@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：`rules/explore` 纯规则骨架完成，测试 4 项通过。
+当前节点：`rules/explore` 增加守卫视线与巡逻，测试 6 项通过。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 

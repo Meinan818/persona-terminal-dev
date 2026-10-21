@@ -158,3 +158,42 @@ export function canBackstab(state: ExploreState, enemyId: string): boolean {
   const delta = DELTA[state.player.facing];
   return state.player.x + delta.x === enemy.x && state.player.y + delta.y === enemy.y;
 }
+
+export function guardCanSee(state: ExploreState, enemyId: string, range = 4): boolean {
+  const enemy = state.enemies.find(item => item.id === enemyId);
+  if (!enemy || enemy.aware) return false;
+  const delta = DELTA[enemy.facing];
+  let x = enemy.x + delta.x;
+  let y = enemy.y + delta.y;
+  for (let step = 0; step < range; step += 1) {
+    if (!inBounds(state, x, y)) return false;
+    const cell = cellAt(state, x, y);
+    if (!cell || cell.blocked) return false;
+    if (x === state.player.x && y === state.player.y) return true;
+    x += delta.x;
+    y += delta.y;
+  }
+  return false;
+}
+
+const PATROL_ORDER: ExploreDirection[] = ['up', 'right', 'down', 'left'];
+
+export function patrolExplore(state: ExploreState, enemyId: string): ExploreState {
+  const enemy = state.enemies.find(item => item.id === enemyId);
+  if (!enemy) return state;
+  const index = PATROL_ORDER.indexOf(enemy.facing);
+  const direction = PATROL_ORDER[(index + 1) % PATROL_ORDER.length];
+  const delta = DELTA[direction];
+  const next = { x: enemy.x + delta.x, y: enemy.y + delta.y };
+  const cell = cellAt(state, next.x, next.y);
+  if (!cell || cell.blocked) {
+    return {
+      ...state,
+      enemies: state.enemies.map(item => item.id === enemyId ? { ...item, facing: direction } : item),
+    };
+  }
+  return {
+    ...state,
+    enemies: state.enemies.map(item => item.id === enemyId ? { ...item, x: next.x, y: next.y, facing: direction } : item),
+  };
+}

@@ -4,9 +4,11 @@ import {
   canBackstab,
   coverExplore,
   createExploreState,
+  guardCanSee,
   interactExplore,
   moveExplore,
   setExploreCell,
+  patrolExplore,
   spotExplore,
 } from '@/umbra/rules/explore';
 
@@ -51,5 +53,36 @@ describe('UMBRA explore rules', () => {
     const result = interactExplore(state);
     expect(result.ok).toBe(true);
     expect(result.type).toBe('chest');
+  });
+
+  it('守卫沿朝向看到同线玩家，玩家贴墙或离开视野则看不到', () => {
+    let state = createExploreState(5, 5);
+    state = addExploreEnemy(state, {
+      id: 'guard',
+      x: 2,
+      y: 2,
+      facing: 'up',
+      covered: false,
+      aware: false,
+    });
+    state = { ...state, player: { ...state.player, x: 2, y: 0 } };
+    expect(guardCanSee(state, 'guard')).toBe(true);
+    state = setExploreCell(state, 2, 1, { type: 'wall', blocked: true });
+    expect(guardCanSee(state, 'guard')).toBe(false);
+  });
+
+  it('巡逻按顺序转身并在空地上前进一步', () => {
+    let state = createExploreState(3, 3);
+    state = addExploreEnemy(state, {
+      id: 'guard',
+      x: 1,
+      y: 1,
+      facing: 'up',
+      covered: false,
+      aware: false,
+    });
+    const next = patrolExplore(state, 'guard');
+    const guard = next.enemies.find(item => item.id === 'guard');
+    expect(guard).toMatchObject({ x: 2, y: 1, facing: 'right' });
   });
 });

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 塔罗翻面卡（真实 src/components/codex/TarotFlipView.tsx + FlipCardView.tsx）→ 蓝白 P3R。
  * 「X · 图鉴」；正面牌图（蓝塔罗：public/assets/tarot/p3 78 张原画，大阿卡纳按罗马数取图）；
  * 背面牌名 / 英文 / 罗马数字 / 正位·逆位关键词与牌意 / 正位·逆位「首次 日期 · N 次 / 尚未抽到」；提示「点一下或左右拖动翻面 · 背面是牌意」。
@@ -9,7 +9,7 @@ import { TarotFace as KitTarotFace, P3R, slantClip } from '@blue/kit';
 import { tarotAsset } from '@blue/lib/asset';
 import { FlipBackPanel, FlipCardView } from './FlipCardView.p3r';
 import { P5_MAJOR, P5_MINOR, type P5TarotCard } from '@blue/adapters/pkg5-tarot';
-import { TAROT_COLLECTED } from '@blue/adapters/pkg5';
+import { useTarotCollectedMap } from '@blue/adapters/pkg5';
 
 const SUIT: Record<string, { name: string; glyph: string }> = { wands: { name: '权杖', glyph: '✦' }, cups: { name: '圣杯', glyph: '◆' }, swords: { name: '宝剑', glyph: '✧' }, pentacles: { name: '星币', glyph: '❖' } };
 export const suitOf = (s?: string) => (s ? SUIT[s] : null);
@@ -24,8 +24,9 @@ export function TarotFace({ card, width, dim }: { card: P5TarotCard; width: numb
 }
 
 export function TarotFlipViewView({ card, open, onClose, intro }: { card: P5TarotCard | null; open: boolean; onClose: () => void; intro?: boolean }) {
+  const tarotMap = useTarotCollectedMap();
   if (!card) return null;
-  const e = TAROT_COLLECTED[card.id];
+  const e = tarotMap[card.id];
   const up = !!e?.upright.count;
   const rev = !!e?.reversed.count;
   return (

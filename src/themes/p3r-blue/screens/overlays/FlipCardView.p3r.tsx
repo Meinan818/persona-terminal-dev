@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 图鉴共用的放大 + 翻面页（真实 src/components/codex/FlipCardView.tsx）+ 岁时卡（SeasonCard.tsx）→ 蓝白 P3R。
  * 深蓝幕 + 左上蓝斜标签「X · 图鉴 / 岁时册」+ 右上斜切关闭；卡入场 scale .92 + 斜向位移 springSoft（damping28/stiffness300）；
  * 点一下或横向拖过 90px 翻面，拖动时牌跟手转（rotateY，只动 transform）。intro=true（演出版）：蓝斜带横扫 0–0.7s →
@@ -12,7 +12,7 @@ import { Portal, IconClose, useEscape, useScrollLock, P3R, slantClip, tickClip, 
 import { useBoldness } from '@blue/lib/prefs';
 import { seasonAsset } from '@blue/lib/asset';
 import { P5_SEASON_PAGES, type P5SeasonMark } from '@blue/adapters/pkg5-season';
-import { P5_TODAY, SEASON_COLLECTED } from '@blue/adapters/pkg5';
+import { P5_TODAY, useSeasonCollectedMap } from '@blue/adapters/pkg5';
 
 export function FlipCardView({ open, onClose, label, resetKey, front, back, hint = '点一下或左右拖动翻面', footer, intro }: {
   open: boolean; onClose: () => void; label: string; resetKey?: string; front: (w: number, h: number) => ReactNode; back: (w: number, h: number) => ReactNode; hint?: string; footer?: ReactNode; intro?: boolean;
@@ -115,8 +115,9 @@ export function SeasonCard({ mark, collected, className, eager }: { mark: P5Seas
 }
 
 export function SeasonFlipView({ mark, open, onClose, collectedOverride }: { mark: P5SeasonMark | null; open: boolean; onClose: () => void; collectedOverride?: boolean }) {
+  const seasonMap = useSeasonCollectedMap();
   if (!mark) return null;
-  const collected = collectedOverride ?? !!SEASON_COLLECTED[mark.date];
+  const collected = collectedOverride ?? !!seasonMap[mark.date];
   const isToday = mark.date === P5_TODAY;
   const future = mark.date > P5_TODAY;
   return (
@@ -129,7 +130,7 @@ export function SeasonFlipView({ mark, open, onClose, collectedOverride }: { mar
           <div className="mt-1 text-[11px] font-bold tracking-[0.2em]" style={{ color: P3R.grey }}>{mark.en.toUpperCase()}</div>
           <p className="mt-4 text-[14px] leading-relaxed">{mark.note}</p>
           <div className="mt-5 px-3 py-2 text-[12px] font-black" style={{ clipPath: slantClip(6), background: collected ? P3R.blue : 'var(--p3r-row)', color: collected ? P3R.onBlue : P3R.inkSoft }}>
-            {collected ? `已收录 · ${SEASON_COLLECTED[mark.date] ?? mark.date}` : isToday ? '今天记一条，就收进岁时册' : future ? `${mark.date.slice(5).replace('-', '月')}日到来 · 当天记一条就收` : '那天没有记录，这一枚空着了'}
+            {collected ? `已收录 · ${seasonMap[mark.date] ?? mark.date}` : isToday ? '今天记一条，就收进岁时册' : future ? `${mark.date.slice(5).replace('-', '月')}日到来 · 当天记一条就收` : '那天没有记录，这一枚空着了'}
           </div>
         </FlipBackPanel>
       )} />

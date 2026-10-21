@@ -2,10 +2,14 @@ import { useMemo } from 'react';
 import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
+import { db } from '@/db';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { useCloudStore } from '@/store/cloud';
 import { loadSocial } from '@/services/social';
 import { useTarotCollection, useSeasonCollection, type TarotEntry } from '@/components/codex/codexData';
+import { calcMaxStreak, daysSinceFirstRecord, streakDates } from '@/utils/streak';
+import type { Achievement } from '@/types';
 import type { DailyDivination, FateGlimpse, LongReading } from '@/types';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -91,6 +95,51 @@ export function useRealCodex() {
     battleState: s.battleState, weeklyGoals: s.weeklyGoals, confidants: s.confidants,
   })));
   return { achievements, skills, todoCompletions, battleState, weeklyGoals, confidants };
+}
+
+export function useAchievementProgressMap() {
+  const { achievements, attributes, activities, todoCompletions, battleState, weeklyGoals, confidants } = useAppStore(useShallow((s) => ({
+    achievements: s.achievements, attributes: s.attributes, activities: s.activities,
+    todoCompletions: s.todoCompletions, battleState: s.battleState, weeklyGoals: s.weeklyGoals, confidants: s.confidants,
+  })));
+  const questsClaimed = useLiveQuery(() => db.quests.filter((q) => !!q.claimedAt).count(), []) ?? 0;
+  return useMemo(() => {
+    const out: Record<string, number> = {};
+    const dates = streakDates(activities);
+    for (const a of achievements) {
+      const c = a.condition;
+      let value = 0;
+      switch (c.type) {
+        case 'quests_claimed': value = questsClaimed; break;
+        case 'consecutive_days': value = calcMaxStreak(dates); break;
+        case 'days_since_first_record': value = daysSinceFirstRecord(dates); break;
+        case 'total_points': value = attributes.reduce((sum, x) => sum + x.points, 0); break;
+        case 'attribute_level': value = attributes.find((x) => x.id === c.attribute)?.level ?? 0; break;
+        case 'keyword_match': value = c.currentProgress || 0; break;
+        case 'all_attributes_max': value = attributes.filter((x) => x.level >= c.value).length; break;
+        case 'todo_completions': value = todoCompletions.reduce((sum, x) => sum + x.count, 0); break;
+        case 'shadow_defeats': value = battleState?.defeatedShadowLog?.length ?? 0; break;
+        case 'battle_feat': value = c.feat && (battleState?.battleFeats ?? []).includes(c.feat) ? 1 : 0; break;
+        case 'weekly_goal_completions': value = weeklyGoals.filter((g) => g.completed).length; break;
+        case 'confidants_at_level': value = confidants.filter((x) => !x.archivedAt && x.intimacy >= (c.minLevel ?? 1)).length; break;
+        default: value = 0;
+      }
+      out[a.id] = Math.min(value, c.value);
+    }
+    return out;
+  }, [achievements, attributes, activities, todoCompletions, battleState, weeklyGoals, confidants, questsClaimed]);
+}
+
+export function useTarotCollectedMap() {
+  const tarot = useTarotCollection();
+  return useMemo(() => Object.fromEntries(
+    [...tarot.entries.entries()].map(([id, e]) => [id, { upright: { ...e.upright }, reversed: { ...e.reversed } }]),
+  ), [tarot.entries]);
+}
+
+export function useSeasonCollectedMap() {
+  const season = useSeasonCollection();
+  return useMemo(() => Object.fromEntries(season.stamps.map((s) => [s.date, s.collectedAt])), [season.stamps]);
 }
 
 export type { TarotEntry };

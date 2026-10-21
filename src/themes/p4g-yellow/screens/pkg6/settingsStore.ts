@@ -1,4 +1,4 @@
-/**
+﻿/**
  * P6 私有：设置页的本地假 store（模拟真实 useAppStore.settings + updateSettings）。
  * 设置页各分组、助手面板、模型抽屉共享同一份，刷新页面复原。
  */
@@ -45,6 +45,56 @@ const ls = new Set<() => void>();
 export const updateSettings = (p: Partial<MockSettings>) => { state = { ...state, ...p }; ls.forEach((l) => l()); };
 const sub = (f: () => void) => { ls.add(f); return () => { ls.delete(f); }; };
 export const getSettings = () => state;
+
+/** 真实数据覆盖：页面加载时把真实 useAppStore.settings 原地合入 mock store */
+export function hydrateFromRealStore() {
+  try {
+    void import('@/store').then(({ useAppStore }) => {
+      const s = useAppStore.getState().settings;
+      if (!s) return;
+      updateSettings({
+        soundMuted: s.soundMuted ?? state.soundMuted,
+        soundVolume: s.soundVolume ?? state.soundVolume,
+        bgmEnabled: s.bgmEnabled ?? state.bgmEnabled,
+        bgmVolume: s.bgmVolume ?? state.bgmVolume,
+        weatherProvider: s.weatherProvider ?? state.weatherProvider,
+        weatherKey: s.weatherApiKey ?? state.weatherKey,
+        weatherHost: s.weatherApiHost ?? state.weatherHost,
+        weatherCity: s.weatherCity ? { name: s.weatherCity.name, adm: '' } : state.weatherCity,
+        provider: (s.summaryApiProvider as ProviderId) ?? state.provider,
+        keys: { ...state.keys, ...(s.summaryApiKey ? { [s.summaryApiProvider ?? 'deepseek']: s.summaryApiKey } : {}) },
+        summaryModel: s.summaryModel ?? state.summaryModel,
+        navigatorModel: s.navigatorModel ?? state.navigatorModel,
+        visionModel: s.visionModel ?? state.visionModel,
+        audioModel: s.audioModel ?? state.audioModel,
+        assistantModel: s.assistantModel ?? state.assistantModel,
+        tarotDeliberate: s.tarotDailyDeliberate ?? state.tarotDeliberate,
+        summaryDeliberate: s.summaryDeliberate ?? state.summaryDeliberate,
+        autoSummary: s.summaryAutoWrite ?? state.autoSummary,
+        countercurrentEnabled: s.countercurrentEnabled ?? state.countercurrentEnabled,
+        ledgerEnabled: s.ledgerEnabled ?? state.ledgerEnabled,
+        currency: s.currency ?? state.currency,
+        spendEvalEnabled: s.spendEvalEnabled ?? state.spendEvalEnabled,
+        ledgerPayCycleEnabled: s.ledgerPayCycleEnabled ?? state.ledgerPayCycleEnabled,
+        ledgerResetDay: s.ledgerResetDay ?? state.ledgerResetDay,
+        attributeNames: { ...state.attributeNames, ...(s.attributeNames ?? {}) },
+        levelThresholds: s.levelThresholds ?? state.levelThresholds,
+        difficulty: s.levelDifficulty ?? state.difficulty,
+        levelTitles: (s.attributeLevelTitles as unknown as MockSettings['levelTitles']) ?? state.levelTitles,
+        keywordRules: s.keywordRules ?? state.keywordRules,
+        notificationsEnabled: s.notificationsEnabled ?? state.notificationsEnabled,
+        notifSlots: s.notificationSlots ?? state.notifSlots,
+        customThemeColor: s.customThemeColor ?? state.customThemeColor,
+        customSoundScheme: s.customSoundScheme ?? state.customSoundScheme,
+        customTarotSet: s.customTarotSet ?? state.customTarotSet,
+        backgroundAnimation: s.backgroundAnimation ?? state.backgroundAnimation,
+        backgroundImage: s.backgroundImage ?? state.backgroundImage,
+        backgroundOpacity: s.backgroundOpacity ?? state.backgroundOpacity,
+        backgroundOrientation: s.backgroundOrientation ?? state.backgroundOrientation,
+      });
+    });
+  } catch { /* 静默：真实 store 未就绪时保持 mock */ }
+}
 export const useSettings = () => useSyncExternalStore(sub, getSettings, getSettings);
 export const attrLabel = (s: MockSettings, id: AttributeId) => s.attributeNames[id] || ATTRS.find((a) => a.id === id)!.defaultLabel;
 export const activePreset = (s: MockSettings) => s.personas.find((p) => p.id === s.activePersona) ?? s.personas[0];

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 设置页（真实 src/pages/Settings.tsx · p3 分支「p3-settings 设计稿」）粉白 P3R 版：
  *   页头 = 幽灵字 CONFIG / SYSTEM + P3PageHeader「设置」(ticks, 返回 → 菜单) + 9 枚藕紫斜片刻度；
  *   分组 = 斜切 panelGlass 手风琴（玫红图标 + 16px 超粗标题 + ▲▼ 三角），同一时间只开一组（与真实一致）；
@@ -20,6 +20,7 @@ import { PersonalizeSection } from '@pink/screens/pkg6/settings/PersonalizeSecti
 import { NavigatorSection } from '@pink/screens/pkg6/settings/NavigatorSection';
 import { NotificationSection } from '@pink/screens/pkg6/settings/NotificationSection';
 import '@pink/screens/pkg6/pkg6.css';
+import { hydrateFromRealStore } from '@pink/screens/pkg6/settingsStore';
 
 type SectionId = 'theme' | 'ai' | 'summary' | 'personalize' | 'navigator' | 'notifications';
 const ic = (d: string) => () => <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>;
@@ -35,6 +36,7 @@ const SEC_CLIP = 'polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%)';
 
 export default function Settings({ tab, params }: PageProps) {
   const low = useLowMotion();
+  useEffect(() => { hydrateFromRealStore(); }, []);
   const block = params.get('block') ?? undefined;
   const initial = (SECTIONS.some((s) => s.id === tab) ? tab : 'theme') as SectionId;
   const [active, setActive] = useState<SectionId | null>(initial);

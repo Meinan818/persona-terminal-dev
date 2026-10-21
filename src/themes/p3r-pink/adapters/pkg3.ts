@@ -7,3 +7,25 @@
 export * from '../mock/pkg3';
 
 // ───── 真实数据覆盖区（按 INTEGRATE-THEMES.md 第 6 步填写）─────
+export {
+  PK3_BATTLE_LOG,
+  PK3_CONFIDANTS,
+  PK3_COUNSEL_ARCHIVES,
+  PK3_FRIENDS,
+  PK3_INTERACTION_AI,
+  PK3_MATERIALIZE_BLOCKERS,
+  PK3_NOTIFS,
+  PK3_NOTIF_TITLE,
+  PK3_PACTS,
+  PK3_PERSONAS,
+  PK3_PROFILES,
+  PK3_SHADOW,
+  PK3_STARSHIFT,
+  PK3_TODAY,
+  pk3Events,
+  shadowForConfidant,
+  useCooperationData,
+  type CooperationFriend,
+  type Pk3Notif,
+  type Pk3NotifType,
+} from '@/themes/cooperationData';

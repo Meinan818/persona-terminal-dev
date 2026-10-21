@@ -16,7 +16,7 @@ const STARS = Array.from({ length: 18 }, (_, i) => ({ x: (i * 53) % 100, y: (i *
 export default function WallSpinBackdrop({ open, onClose }: OverlayProps) {
   const bold = useBoldness();
   if (!open) return null;
-  const friends: FriendItem[] = PK3_FRIENDS.map((f) => ({ kind: 'friend', ...f }));
+  const friends: FriendItem[] = PK3_FRIENDS;
   const noop = () => {};
   return (
     <Portal>

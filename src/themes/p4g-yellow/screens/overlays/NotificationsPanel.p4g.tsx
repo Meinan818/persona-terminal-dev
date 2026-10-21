@@ -4,14 +4,19 @@
  * #/overlay/bond-notifications?state=empty|loading
  */
 import { useEffect, useRef, useState } from 'react';
+import { useAppStore } from '@/store';
+import { useCloudSocialStore } from '@/store/cloudSocial';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4ActionSheet, P4Button, P4Loading, P4Sheet, P4Switch, showToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
-import { PK3_NOTIFS, PK3_NOTIF_TITLE, type Pk3Notif } from '@yellow/adapters/pkg3';
+import { PK3_NOTIF_TITLE, useCooperationData, type Pk3Notif } from '@yellow/adapters/pkg3';
 import { Sparkle } from '@yellow/screens/pkg3/ui';
 
 export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, onOpenPactRespond }: { isOpen: boolean; onClose: () => void; state?: 'empty' | 'loading' | null; onOpenCoopAccept?: () => void; onOpenPactRespond?: () => void }) {
-  const [list, setList] = useState<Pk3Notif[]>(state === 'empty' ? [] : PK3_NOTIFS);
+  const data = useCooperationData();
+  const markPersistedRead = useCloudSocialStore((store) => store.markNotificationRead);
+  const removePersistedNotification = useCloudSocialStore((store) => store.removeNotification);
+  const [list, setList] = useState<Pk3Notif[]>(state === 'empty' ? [] : data.notifications);
   const [loading, setLoading] = useState(state === 'loading');
   const [hideBattle, setHideBattle] = useState(false);
   const [multi, setMulti] = useState(false);
@@ -20,12 +25,12 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
   const [working, setWorking] = useState<string | null>(null);
   const [handled, setHandled] = useState<Record<string, string>>({});
   const press = useRef<number | null>(null);
-  useEffect(() => { if (isOpen) { setList(state === 'empty' ? [] : PK3_NOTIFS); setLoading(state === 'loading'); setMulti(false); setSel(new Set()); } }, [isOpen, state]);
+  useEffect(() => { if (isOpen) { setList(state === 'empty' ? [] : data.notifications); setLoading(state === 'loading'); setMulti(false); setSel(new Set()); } }, [isOpen, state, data.notifications]);
   const unread = list.filter((n) => !n.read).length;
   const vis = list.filter((n) => !(hideBattle && n.battle));
   const fresh = vis.filter((n) => !n.read); const old = vis.filter((n) => n.read);
-  const markRead = (id: string) => setList((l) => l.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  const del = (ids: string[]) => setList((l) => l.filter((n) => !ids.includes(n.id)));
+  const markRead = (id: string) => { setList((l) => l.map((n) => (n.id === id ? { ...n, read: true } : n))); void markPersistedRead(id); };
+  const del = (ids: string[]) => { setList((l) => l.filter((n) => !ids.includes(n.id))); ids.forEach((id) => void removePersistedNotification(id)); };
   const act = (n: Pk3Notif, k: string, done: string, after?: () => void) => { setWorking(`${n.id}:${k}`); window.setTimeout(() => { setWorking(null); setHandled((h) => ({ ...h, [n.id]: done })); markRead(n.id); after?.(); }, 600); };
   const toggleSel = (id: string) => setSel((s) => { const x = new Set(s); if (x.has(id)) x.delete(id); else x.add(id); return x; });
 
@@ -76,7 +81,7 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
               <div className="flex items-center gap-1.5 font-display text-h2 font-bold"><Sparkle size={18} className="text-p4g-orange" />通知</div>
               <div className="text-meta text-p4g-ink-soft">{unread > 0 ? `${unread} 条未读` : '没有新消息'}</div>
             </div>
-            <P4Button size="sm" variant="secondary" disabled={unread === 0} onClick={() => setList((l) => l.map((n) => ({ ...n, read: true })))}>全部已读</P4Button>
+            <P4Button size="sm" variant="secondary" disabled={unread === 0} onClick={() => { list.filter((n) => !n.read).forEach((n) => void markPersistedRead(n.id)); setList((l) => l.map((n) => ({ ...n, read: true }))); }}>全部已读</P4Button>
             <button type="button" aria-label="关闭" onClick={onClose} className="p4g-press flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border-3 border-p4g-line bg-p4g-yellow font-bold text-p4g-black shadow-hard-sm">✕</button>
           </div>
           <div className="mt-3 flex items-center justify-between gap-3 rounded-sm bg-p4g-surface px-3 py-2 text-meta">

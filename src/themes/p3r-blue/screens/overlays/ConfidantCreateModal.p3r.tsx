@@ -4,7 +4,11 @@
  * AI：matching = useAIStream 思考约 2.4s；result 的「为什么是这张牌」逐字输出（可 SKIP / 截断续写）；失败 → error（返回修改 / 重试）；未配密钥 → 离线匹配提示。
  * 入口：同伴页右下 + FAB / 卡墙空白牌 / 空状态「邀请第一位同伴」；「在线同伴」卡 → 邀请在线同伴。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { useAppStore } from '@/store';
+import { aiConfigured } from '@/utils/aiClient';
+import { matchConfidant, type ConfidantMatchResult } from '@/utils/confidantAI';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3Field, P3Input, P3OnOff, P3R, P3Sheet, P3Textarea, slantClip, tickClip } from '@blue/kit';
 import { AIText, useAIStream, type AIFail } from '@blue/fx';
@@ -12,15 +16,17 @@ import { INTIMACY_LABELS, MAJOR_ARCANA_IDS, TAROT_BY_ID, TRAIT_QUESTIONS } from 
 import { LevelGrid, MatchingSpinner, MiniLabel, Panel, Sparkle, Tarot, TraitQuiz } from '@blue/screens/pkg3/ui';
 
 type Stage = 'basic' | 'description' | 'trait' | 'matching' | 'result' | 'error';
-export interface CreateResult { name: string; arcanaId: string; orientation: 'upright' | 'reversed'; level: number; description: string; decay: boolean }
-
-const MATCH = { arcanaId: 'magician', orientation: 'upright' as const, initialIntimacy: 4,
-  interpretation: '魔术师正位：他手里永远握着下一个点子。你们的关系靠「一起折腾」点燃——那些看似胡闹的计划，其实是他表达在乎的方式。',
-  advice: '下次他提出离谱的点子，先说「好啊」，再一起想怎么让它成真。' };
+export interface CreateResult { id: string; name: string; arcanaId: string; orientation: 'upright' | 'reversed'; level: number; description: string; decay: boolean }
 
 export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline, initialStage = 'basic', remaining = 15, fail }: {
-  isOpen: boolean; onClose: () => void; onCreated?: (r: CreateResult) => void; onPickOnline?: () => void; initialStage?: Stage; remaining?: number; fail?: AIFail;
+  isOpen: boolean; onClose: () => void; onCreated?: (id: string) => void; onPickOnline?: () => void; initialStage?: Stage; remaining?: number; fail?: AIFail;
 }) {
+  const { settings, confidants, addConfidant, updateConfidant } = useAppStore(useShallow((store) => ({
+    settings: store.settings,
+    confidants: store.confidants,
+    addConfidant: store.addConfidant,
+    updateConfidant: store.updateConfidant,
+  })));
   const [stage, setStage] = useState<Stage>(initialStage);
   const [kind, setKind] = useState<'offline' | 'online'>('offline');
   const [name, setName] = useState(initialStage === 'basic' ? '' : '友近');
@@ -29,11 +35,20 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
   const [traitStep, setTraitStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>(initialStage === 'trait' ? [] : TRAIT_QUESTIONS.map((q) => q.options[1]));
   const [err, setErr] = useState<string | null>(null);
-  const [picked, setPicked] = useState(MATCH.initialIntimacy);
+  const [picked, setPicked] = useState(1);
+  const [match, setMatch] = useState<ConfidantMatchResult | null>(null);
+  const takenIds = useMemo(() => confidants.filter((c) => !c.archivedAt).map((c) => c.arcanaId), [confidants]);
+  const left = remaining ?? MAJOR_ARCANA_IDS.length - takenIds.length;
   const aiFail: AIFail = initialStage === 'error' && !fail ? 'error' : fail;
-  const ai = useAIStream({ text: MATCH.interpretation, fail: aiFail, initialPhase: initialStage === 'matching' ? 'thinking' : initialStage === 'result' ? 'streaming' : initialStage === 'error' ? 'error' : 'idle', failAt: initialStage === 'result' ? 0.08 : 0.45 });
-  const offline = aiFail === 'nokey' || aiFail === 'offline';
-  useEffect(() => { if (isOpen) { setStage(initialStage); setTraitStep(0); } }, [isOpen, initialStage]);
+  const ai = useAIStream({ text: match?.interpretation ?? '', fail: aiFail, initialPhase: initialStage === 'matching' ? 'thinking' : initialStage === 'result' ? 'streaming' : initialStage === 'error' ? 'error' : 'idle', failAt: initialStage === 'result' ? 0.08 : 0.45 });
+  const offline = !aiConfigured(settings);
+  useEffect(() => {
+    if (!isOpen) return;
+    setStage(initialStage);
+    setTraitStep(0);
+    setMatch(null);
+    setPicked(1);
+  }, [isOpen, initialStage]);
   // AI 相位 → 阶段
   useEffect(() => {
     if (stage !== 'matching') return;
@@ -51,18 +66,47 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
   const nextBasic = () => {
     if (kind === 'online') { onPickOnline?.(); return; }
     if (!name.trim()) return setErr('请先告诉我 Ta 叫什么名字');
-    if (remaining <= 0) return setErr('22 张大阿卡纳都已占用，请先归档一位同伴再添加');
+    if (left <= 0) return setErr('22 张大阿卡纳都已占用，请先归档一位同伴再添加');
     setErr(null); setStage('description');
   };
   const nextDesc = () => { if (desc.trim().length < 4) return setErr('请用至少几个字描述 Ta，让塔罗有内容可参考'); setErr(null); setStage('trait'); setTraitStep(0); };
+  const startMatch = async (nextAnswers: string[]) => {
+    setErr(null);
+    setStage('matching');
+    try {
+      let result: ConfidantMatchResult | null = null;
+      const traits = TRAIT_QUESTIONS.map((q, i) => ({ question: q.question, answer: nextAnswers[i] ?? '' }));
+      for (let i = 0; i < 3; i += 1) {
+        const candidate = await matchConfidant({
+          settings,
+          name: name.trim(),
+          description: desc.trim(),
+          takenArcanaIds: takenIds,
+          traits,
+        });
+        if (!takenIds.includes(candidate.arcanaId)) {
+          result = candidate;
+          break;
+        }
+      }
+      if (!result) throw new Error('未能找到合适的阿卡纳，请调整描述后再试');
+      setMatch(result);
+      setPicked(Math.max(1, result.initialIntimacy));
+      setStage('result');
+      window.setTimeout(() => { ai.reset(); ai.start(); }, 0);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : '匹配失败');
+      setStage('error');
+    }
+  };
   const answer = (v: string) => {
     const a = [...answers]; a[traitStep] = v; setAnswers(a);
     if (traitStep < TRAIT_QUESTIONS.length - 1) window.setTimeout(() => setTraitStep(traitStep + 1), 160);
-    else window.setTimeout(() => { setStage('matching'); ai.start(); }, 200);
+    else window.setTimeout(() => { void startMatch(a); }, 200);
   };
   const title = stage === 'result' ? '塔罗的回响' : '结识一位同伴';
   const step = stage === 'basic' ? 0 : stage === 'description' ? 1 : stage === 'trait' ? 2 : 3;
-  const card = TAROT_BY_ID[MATCH.arcanaId];
+  const card = match ? TAROT_BY_ID[match.arcanaId] : null;
 
   return (
     <P3Sheet open={isOpen} onClose={onClose} title={title} en="NEW LINK" size="tall" busy={stage === 'matching'}
@@ -71,7 +115,18 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
         : stage === 'result' ? (
           <div className="grid grid-cols-2 gap-3">
             <P3Button tone="soft" block onClick={back}>回去改一改</P3Button>
-            <P3Button block corner disabled={ai.phase === 'streaming' || ai.phase === 'thinking'} onClick={() => { onCreated?.({ name: name || '友近', arcanaId: MATCH.arcanaId, orientation: MATCH.orientation, level: picked, description: desc, decay }); onClose(); }}>就是 Ta 了</P3Button>
+            <P3Button block corner disabled={!match || ai.phase === 'streaming' || ai.phase === 'thinking'} onClick={async () => {
+              if (!match) return;
+              try {
+                const created = await addConfidant({ name: name.trim(), description: desc.trim(), match, source: 'offline', initialLevel: picked });
+                if (decay) await updateConfidant(created.id, { decayEnabled: true });
+                onCreated?.(created.id);
+                onClose();
+              } catch (error) {
+                setErr(error instanceof Error ? error.message : '保存失败');
+                setStage('error');
+              }
+            }}>就是 Ta 了</P3Button>
           </div>
         ) : stage === 'error' ? (
           <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block onClick={() => { setStage('trait'); setTraitStep(TRAIT_QUESTIONS.length - 1); }}>返回修改</P3Button><P3Button block onClick={() => { setStage('matching'); ai.retry(); }}>重新匹配</P3Button></div>
@@ -83,7 +138,7 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
           </button>
         )}
         <div className="flex min-w-0 flex-1 gap-1" aria-hidden>{[0, 1, 2, 3].map((i) => <span key={i} className="h-[7px] min-w-0 flex-1" style={{ clipPath: slantClip(3), background: i <= step ? P3R.blue : 'var(--p3r-track)' }} />)}</div>
-        <span className="shrink-0 px-2 py-0.5 font-cond text-[12px]" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(5) }}>ARCANA {remaining} / {MAJOR_ARCANA_IDS.length}</span>
+        <span className="shrink-0 px-2 py-0.5 font-cond text-[12px]" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(5) }}>ARCANA {left} / {MAJOR_ARCANA_IDS.length}</span>
       </div>
 
       {stage === 'basic' && (
@@ -128,11 +183,11 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
         <div className="grid grid-cols-1 gap-4">
           <div className="relative flex min-w-0 items-center gap-4 overflow-hidden px-4 py-3" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(14) }}>
             <span aria-hidden className="pointer-events-none absolute -right-2 -top-3 font-cond text-[72px] leading-none opacity-20">{card?.roman}</span>
-            <Tarot arcanaId={MATCH.arcanaId} width={80} />
+            <Tarot arcanaId={match?.arcanaId ?? 'fool'} width={80} />
             <div className="relative min-w-0">
               <div className="font-cond text-[12px] tracking-[0.2em] opacity-85">ARCANA MATCHED</div>
               <div className="font-heavy text-[clamp(22px,6vw,28px)] leading-tight">《{card?.name}》正位</div>
-              <div className="mt-1 text-[13px] font-black">星象建议 Lv.{MATCH.initialIntimacy} · {INTIMACY_LABELS[MATCH.initialIntimacy]}</div>
+              <div className="mt-1 text-[13px] font-black">星象建议 Lv.{match?.initialIntimacy ?? 1} · {INTIMACY_LABELS[match?.initialIntimacy ?? 1]}</div>
             </div>
           </div>
           <Panel>
@@ -149,7 +204,7 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
           {(ai.phase === 'done' || ai.phase === 'idle') && (
             <div className="relative px-4 py-3" style={{ background: 'var(--p3r-mulberry)', color: 'var(--p3r-cream)', clipPath: slantClip(12) }}>
               <div className="mb-1 font-cond text-[12px] tracking-[0.2em]" style={{ color: 'var(--bk-bubble-a)' }}>FUTURE · 未来</div>
-              <p className="text-[14px] leading-relaxed">{MATCH.advice}</p>
+              <p className="text-[14px] leading-relaxed">{match?.advice ?? ''}</p>
             </div>
           )}
           {offline && <div className="text-center text-[12px]" style={{ color: P3R.grey }}>· 本次为离线匹配 ·</div>}

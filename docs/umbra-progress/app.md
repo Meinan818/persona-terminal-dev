@@ -105,3 +105,10 @@
 ## 探索 Director
 
 - `src/umbra/rules/exploreRunDirector.ts`：`directorEventsForExploreNode` 按当前节点生成 Director 事件序列；战斗节点为 `map:encounter`(main) + `battle:start`(overlap)，按 D-002 组合预算拆分，其余为 explore 事件。渲染层只需驱动返回的事件数组。
+
+## 待接 · D-005 皮肤 roster 接线
+
+- 机制已就绪：`UmbraSkinPack.roster`（`companions` / `companionPersonas` / `excludedPersonas`）、`registry.rosterAllowsPersona` / `companionPersonaFor`、`themeLoader.skinIdForTheme`。
+- 尚未接入编队/战斗/合成：`p5-combat-rules.createDefaultBattle` 仍回退到写死的 `DEFAULT_HERO_PERSONAS=['arsene', ...]` / `DEFAULT_ALLY_PERSONAS=['silky', ...]`；`catalogPersonaChoices` 与合成仍返回共享 P5R 全量，不按皮肤过滤 `excludedPersonas` 和同伴专属面具。
+- 阻塞原因：`src/umbra/skins/` 下还没有四份 `skins/<id>/index.ts` 皮肤包；`SkinRoster` 也缺「主角初始/觉醒面具」字段（红=Arsène、蓝粉=Orpheus、黄=Izanagi，属于皮肤内容），无法从 roster 推导主角队伍。需要主题方提供四皮 roster 内容，或主策划拍板主角初始面具的归属字段。
+- 处理：不擅自写死各皮同伴名单或主角初始面具，避免与主题方内容冲突；等皮肤包内容或 D-005 契约补充后再接。

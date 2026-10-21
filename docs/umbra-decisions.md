@@ -7,7 +7,8 @@
 - 每皮一张曲目表（场景 → 原作曲目）：据点、委托板、探索、普通战斗、先手战、被偷袭、精英、BOSS 一/二阶段、胜利、结算、天鹅绒、各商店、HOLD UP、总攻收尾。例：红=Last Surprise / Beneath the Mask / Rivers in the Desert / Life Will Change / Aria of the Soul；蓝粉=Mass Destruction / It's Going Down Now / Iwatodai Dorm / Full Moon Full Life；黄=Reach Out to the Truth / Time to Make History / Your Affection / I'll Face Myself。
 - 工程：Opus/AAC 流式加载，不进皮肤首包；每曲标循环点（无缝循环）；响度统一 −16 LUFS；音效池按 recipe 事件触发（FX-MAP 每个事件可挂 sfx 字段）；战斗→胜利交叉淡化 ≤300ms；静音/音量三档（BGM/SE/语音）。
 - 手机：首次交互后才解锁 AudioContext；切后台自动暂停。
-- 切歌规则按原作（用户 04:51「就和原著一样」）：先按原作的情境规则选曲——先手/被偷袭换战斗曲（P3R 先手 It's Going Down Now）、发出预告信后换曲（P5R 据点 Beneath the Mask 雨天/白天版本、预告信后 Life Will Change）、BOSS 二阶段换曲、昼夜/天气换据点曲（P4 雨天）、P5R 特定剧情后战斗曲可换 Take Over。只有同一情境下有多首时才在池里随机。
+- 切歌规则按原作（用户 04:51「就和原著一样」）：先按原作的情境规则选曲——先手/被偷袭换战斗曲（P3R 先手 It's Going Down Now）、发出预告信后换曲（P5R 据点 Beneath the Mask 雨天/白天版本、预告信后 Life Will Change）、BOSS 二阶段换曲、昼夜/天气换据点曲（P4 雨天）、P5R Take Over=我方先手战曲（可设置改回 Last Surprise）、P4G 普通战 Time To Make History/先手 Reach Out to the Truth。只有同一情境下有多首时才在池里随机。
+- 音频目录（05:02 自定，取代上文 assets/official/audio）：skins/<id>/audio/{bgm,se,voice}/ + playlist.json + sfx.json；私有仓库音频照常提交。全量清单见 docs/umbra-design/AUDIO-MAP-v1.md。
 - 曲目池（用户 04:51）：每个场景是一个曲目池而不是单曲，每皮每场景可挂多首，进场时随机抽（不连续重复同一首），可在设置里锁定某首或关闭某首。用户之后会补充自选曲目，加歌只需往 skins/<id>/audio/playlist.json 加一行（场景、文件、循环点）。
 - 详细曲目表与音效清单写进 SYSTEMS-AUDIT-v1 必补第 16 项实现时补全。
 

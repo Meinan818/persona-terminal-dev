@@ -3,6 +3,7 @@
 用法：每条玩法 = 一个规则事件 → 一个 recipe id → 四皮各自的样子。规则只发事件，皮肤只管怎么演（契约 v1.2 §3）。
 「状态」：✅契约已有 / 🆕 v1.3 要新增 / 🔁 已有事件内的分支（看 payload 选 recipe）。
 时长上限见契约 §3；P3 系 = 蓝 p3-blue 与粉 p3r-pink（同结构，粉换女主与配色）。
+更新 10-22 04:55：并入 SYSTEMS-AUDIT-v1 §5 的 11 条事件 + D-006/D-007/D-008 涉及事件（见 §G、§H），每个事件可挂 sfx 字段，BGM 用 bgm:cue 切换。
 
 ## A. 进入与地图（潜入 8–12 分钟主循环）
 | 玩法 | 事件 → recipe | P5R 红 | P3 系 蓝/粉 | P4 黄 | 状态 |
@@ -40,7 +41,7 @@
 | 总攻 | allout → allout.default + finishCard 按发起者 | 红底黑剪影斩击 → **发起者定格画+台词**（Panther OMG!/Queen JUSTICE HAS PREVAILED. 等） | 棋盘格地面 pose → **色块定格+台词+MASS DESTRUCTION** | 尘云+黄底漫画格定格 | ✅ |
 | 交涉开始/结果 | talk:start / talk:result | 剪报对话框 | 同风格 | 同 | ✅ |
 | 战斗结算 | battle:end | RESULT 红黑斜卡计数 | 蓝色结算 | 黄色结算 | ✅ |
-| 升级 | 🆕 levelup（unitId, stats） | LEVEL UP 卡+五维加点闪 | 同风格 | 同 | 🆕 |
+| 升级（D-006：出战 4 人全额经验，替补 50%） | 🆕 levelup（unitId, statsDelta） | LEVEL UP 卡+五维加点闪 | 同风格 | 同 | 🆕 |
 
 ## C. 局内成长与局外
 | 玩法 | 事件 → recipe | 演出 | 状态 |
@@ -52,7 +53,7 @@
 | 委托板、天鹅绒、合成、图鉴、设置 | ui:open/close（DOM，不进 Director） | 各皮斜切 clip-path ≤280ms | ✅ |
 | 合成成功 | 🆕 fusion:result | 断头台/电椅（P5R）合成演出、新面具显形 | 🆕 |
 
-## D. v1.3 契约要补的事件（8 个）
+## D. v1.3 契约要补的事件（第一批 8 个；第二批见 §G）
 baton、persona:switch、shield:break、levelup、card:pick、buff:grant、boss:phase、fusion:result。另外引擎原语补 summon（读 $actorPersona）、eyeStrip、onomatopoeia、glassShatter、checkerFloor、ringSplash。时长建议：baton 0.6s、persona:switch 0.5s、shield:break 0.5s（重叠层）、levelup 1.0s、card:pick 0.6s、buff:grant 0.8s、boss:phase 2.0s（可跳过）、fusion:result 3.0s（可跳过）。
 
 ## E. 地图：规则一样，长相不一样
@@ -72,3 +73,67 @@ baton、persona:switch、shield:break、levelup、card:pick、buff:grant、boss:
 | 被发现 | explore:spotted | 「！」红闪+警戒度跳 | 影子转头蓝闪 | 电视雪花闪 | 🆕 待实现 |
 | 背后接近 | map:encounter(ambush) | 扯面具先手 | 击打影子先手 | 先手 | ✅ 事件已有 |
 | 开宝箱/机关/交涉点 | explore:interact | 剪报弹出 | 塔罗弹出 | 电视弹出 | 🆕 待实现 |
+
+## G. v1.3 第二批事件（SYSTEMS-AUDIT-v1 §5 + D-006/D-007/D-008）
+列：玩法 → 事件(payload) → recipe 名 → 时长上限 → 四皮演出差异 → sfx/bgm。全部 🆕（v1.3 提案），皮肤未实现走引擎默认演出（红色样板通用版）。
+
+### G1. 据点、商店、天鹅绒、日程
+| 玩法 | 事件(payload) | recipe | 时长上限 | P5R 红 | P3 系 蓝/粉 | P4 黄 | sfx / bgm | 来源 |
+|---|---|---|---|---|---|---|---|---|
+| 进店 | shop:enter（shopId, skinShopId, firstVisitToday） | shop.enter.<skinShopId>.full / .short | 完整 1.2s / 简短 0.5s | 红黑斜切擦除+店招剪影落定（Untouchable/武见内科/药妆店/天鹅绒监狱铁栏锁链） | 蓝色水面/玻璃横扫+店牌（黑泽巡警/青髭药局/眞宵堂/天鹅绒电梯上升） | 电视雪花/方块推屏+黄底店名卡（大太良/四六商店/天鹅绒轿车雾中车厢） | sfx：se.shop.door + voice.<店主>.hello；bgm：bgm:cue shop.<skinShopId> | §5 / D-007 |
+| 离店 | shop:exit（shopId, purchased） | shop.exit.<skinShopId> | 0.6s | 反向擦除+店主离店台词 | 反向横扫 | 反向推屏 | sfx：se.shop.exit + voice.<店主>.bye（purchased 分两句）；bgm：bgm:cue hub | §5 / D-007 |
+| 合成警报 | velvet:alarm（—） | velvet.alarm | 0.8s | 监狱门闪红+锁链抖 | 电梯门闪红 | 轿车门闪红 | sfx：se.velvet.alarm；bgm 不切 | §5 / §4.4 |
+| 合成事故 | fusion:accident（resultId） | fusion.accident（插在 fusion:result 前） | 1.0s | 断头台/电椅失控火花 | 电梯灯闪、塔罗乱洗 | 轿车颠簸、雾涌 | sfx：se.fusion.accident | §5 / §4.4 |
+| 发出预告信 | callingcard:send（targetId） | callingcard.send | 3.0s 可跳过 | 红黑预告信飞出钉墙 | 满月告示 | 午夜频道雪花画面 | sfx：se.callingcard；bgm：下一局潜入 bgm:cue explore.callingcard | §5 / §4.9 |
+| 羁绊升级 | bond:rankup（unitId, rank, unlocked[]） | bond.rankup | 1.5s 可跳过 | RANK UP 阿尔卡纳卡翻转 | 塔罗牌浮现+升级字 | 塔罗牌+RANK UP | sfx：se.bond.rankup | D-006 第 3 层（推导） |
+| 成就 | achievement:unlock（id） | —（DOM 角标，不进 Director） | — | 红黑角标 | 蓝色角标 | 黄底角标 | sfx：se.achievement | §5 / §4.12 |
+
+### G2. 战斗追加
+| 玩法 | 事件(payload) | recipe | 时长上限 | P5R 红 | P3 系 蓝/粉 | P4 黄 | sfx / bgm | 来源 |
+|---|---|---|---|---|---|---|---|---|
+| 换人 SWITCH | party:switch（outId, inId） | party.switch | 0.5s | 剪影交换 | 召唤器举起交接 | 塔罗换卡 | sfx：se.party.switch + voice.<inId>.switchIn | §5 / §4.7 |
+| 羁绊协助（追击/挡刀/硬撑/治异常/扶起） | bond:assist（kind, unitId） | bond.assist.<kind> | 0.8s | 漫画格 | 塔罗闪 | 黄底漫画格 | sfx：voice.<unitId>.assist.<kind> + se.bond.assist | §5 / §4.6 / D-006 |
+| 异常附加 | ailment:apply（unitId, status） | ailment.apply.<status> | 0.4s（重叠层） | 头顶图标+红黑短特效 | 头顶图标+蓝色短特效 | 头顶图标+黄色短特效 | sfx：se.ailment.<status> | §5 |
+| 异常解除 | ailment:cure（unitId, status） | ailment.cure | 0.4s（重叠层） | 图标碎掉 | 图标淡出 | 图标弹走 | sfx：se.ailment.cure | §5 |
+| 逃跑 | escape（result） | escape.success / escape.fail | 0.6s | 烟雾闪退 / 被拦回 | 跑出画面 / 被拦回 | 跑出画面 / 被拦回 | sfx：se.escape.<result>；成功后 bgm:cue 回探索曲 | §5 / §4.8 |
+| 面具升级学技能 | persona:levelup（personaId, newLevel, learned[]） | persona.levelup | 0.8s | 面具卡亮+新技能字 | 同风格（蓝） | 同风格（黄） | sfx：se.persona.levelup | D-006 第 2 层（推导） |
+| 角色升级 | levelup（unitId, statsDelta） | levelup | 1.0s | 见 §B | 见 §B | 见 §B | sfx：se.levelup + voice.<unitId>.levelup | D-006（§B 已列） |
+
+### G3. 探索追加
+| 玩法 | 事件(payload) | recipe | 时长上限 | P5R 红 | P3 系 蓝/粉 | P4 黄 | sfx / bgm | 来源 |
+|---|---|---|---|---|---|---|---|---|
+| 第三只眼 / 探知 / 侦测 | explore:scan（—） | explore.scan | 起效 0.4s，显示 ≤2s（显示段不阻塞） | 画面去色+敌人红光、视线锥 | 风花「探知」绿色扫描波 | 久慈川「侦测」黄色雷达波纹 | sfx：se.explore.scan + voice.navi.scan | §5 / §4.9 |
+
+### G4. 音乐
+| 玩法 | 事件(payload) | recipe | 时长上限 | 四皮差异 | sfx / bgm | 来源 |
+|---|---|---|---|---|---|---|
+| 切换 BGM | bgm:cue（cueId, crossfadeMs?, loop?；cueId=null 为停） | 无（音频总线，不占 Director 时钟） | 交叉淡化：战斗→胜利 ≤300ms，其余 ≤1000ms | cueId 共用，每皮曲目表映射到原作曲（D-008） | bgm 本身 | D-008 |
+cueId 固定名单：hub、requests、explore、explore.callingcard、battle.normal、battle.ambush、battle.ambushed、battle.elite、boss.p1、boss.p2、victory、result、velvet、shop.<skinShopId>、holdup、allout.finish。
+
+## H. sfx / bgm 挂法（D-008）
+- 每个事件、每个 recipe 可挂 `sfx` 字段：`[{ id, at(ms), bus: "se" | "voice" }]`，id 指向 skins/<id>/assets/official/audio/ 下音效池；Director 按 recipe 时间轴触发，停帧期间不推进。皮肤没写 → 用下表默认 sfx。
+- 场景切换类事件可挂 `bgm` 字段（等价于同时发 bgm:cue）。
+- 三档音量（BGM / SE / 语音）；首次交互后才解锁 AudioContext；切后台暂停。
+
+| 已有事件 | 默认 sfx | bgm 动作 |
+|---|---|---|
+| scene:enter / scene:leave | se.scene.enter / se.scene.leave | bgm:cue explore / hub |
+| map:encounter | se.encounter.<normal/ambush/ambushed> | bgm:cue battle.normal / battle.ambush / battle.ambushed（精英 battle.elite、BOSS boss.p1） |
+| battle:start | se.transition.battle | — |
+| turn:start | se.turn | — |
+| action | se.hit.<属性>、se.crit、se.weak、se.miss；voice.<actorId>.skill | — |
+| unit:down | se.down | — |
+| onemore | se.onemore + voice.<actorId>.onemore | — |
+| baton | se.baton + voice.<toId>.baton | — |
+| persona:switch | se.persona.switch | — |
+| shield:break | se.shield.break | — |
+| highlight | voice.<actorId>.highlight | 可选 bgm 插曲 |
+| holdup | se.holdup | bgm:cue holdup |
+| allout | se.allout + voice.<发起者>.finish | bgm:cue allout.finish |
+| talk:start / talk:result | se.talk / se.talk.<success/fail> | — |
+| battle:end | se.result | bgm:cue victory（≤300ms）→ result |
+| boss:phase | se.boss.phase | bgm:cue boss.p2 |
+| card:pick / buff:grant | se.card.flip / se.buff | — |
+| fusion:result | se.fusion | （在天鹅绒 bgm 内） |
+| ui:open / ui:close | se.ui.open / se.ui.close | 天鹅绒 bgm:cue velvet |
+| explore:move / cover / spotted / interact | se.step / se.cover / se.spotted / se.interact | — |

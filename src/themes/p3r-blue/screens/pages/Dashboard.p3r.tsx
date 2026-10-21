@@ -20,10 +20,7 @@ import { BlueHeroDecor } from '@blue/fx';
 import DateRollCutIn from '@blue/screens/overlays/DateRollCutIn.p3r';
 import { useBoldness } from '@blue/lib/prefs';
 import { navigate } from '@blue/shell/shellBus';
-import {
-  ATTR_IDS, ATTR_NAMES, BIG_DEAL_DONE, BIG_DEAL_EMPTY, MAX_LEVEL, MOCK_ATTRS, MOCK_CALLING_CARD, MOCK_CALLING_CARD_FAR, MOCK_COUNTERCURRENT, MOCK_DECAYED, MOCK_DIVINATION,
-  MOCK_PERSONA_NAME, MOCK_STATS, MOCK_TODOS, MOCK_UNPINNED_COUNT, SUBTEXTS, daysUntil, levelTitle, masteryOf, masteryTitle, onThisDaySub, slotOf, todayKey, type MockTodo,
-} from '@blue/adapters/pkg1';
+import { ATTR_IDS, BIG_DEAL_DONE, BIG_DEAL_EMPTY, MAX_LEVEL, MOCK_CALLING_CARD, MOCK_CALLING_CARD_FAR, MOCK_COUNTERCURRENT, MOCK_DECAYED, MOCK_DIVINATION, MOCK_PERSONA_NAME, MOCK_UNPINNED_COUNT, SUBTEXTS, daysUntil, levelTitle, masteryOf, masteryTitle, onThisDaySub, slotOf, todayKey, type MockTodo, useHomeData, homeOps } from '@blue/adapters/pkg1';
 import { StarChartP3, type StarItem } from '@blue/screens/pkg1/StarChart';
 import {
   AttrDetailInline, BattleSlab, BgAnimLayer, BigDealHomeCard, HourglassGlyph, MoonGlyph, OverlayByKey, RitualSlab, SkyBadge, StackCarousel, TitleTriWobble, TRI_MASK_URI, WaveGlyph,
@@ -50,6 +47,7 @@ export const HomeBrandTitle = ({ play = true }: { play?: boolean }) => (
 );
 
 export default function Dashboard({ params }: PageProps) {
+  const { ATTR_NAMES, MOCK_ATTRS, MOCK_STATS, MOCK_TODOS } = useHomeData();
   const anim = useBoldness();
   const q = (k: string) => params.get(k);
   const now = useMemo(() => new Date(), []);
@@ -64,6 +62,7 @@ export default function Dashboard({ params }: PageProps) {
     if (dealVariant === 'done') base[0] = { ...BIG_DEAL_DONE };
     return base;
   });
+  useEffect(() => { if (q('state') !== 'empty' && !dealVariant) setTodos(MOCK_TODOS.map(t => ({ ...t }))); }, [MOCK_TODOS]);
   const tickable = todos.filter((t) => !t.isBigDeal);
   const completed = tickable.filter((t) => t.count >= t.target).length;
   const total = tickable.length;
@@ -72,6 +71,7 @@ export default function Dashboard({ params }: PageProps) {
   const [dealOpen, setDealOpen] = useState(false);
   const complete = (t: MockTodo) => {
     if (t.count >= t.target) return;
+    void homeOps.completeTodo(t.id);
     setRowRipple(t.id + Date.now());
     const next = { ...t, count: t.count + 1 };
     setTodos((ts) => ts.map((x) => (x.id === t.id ? next : x)));
@@ -138,7 +138,7 @@ export default function Dashboard({ params }: PageProps) {
     const a = MOCK_ATTRS.find((x) => x.id === id)!;
     const stars = a.level >= MAX_LEVEL ? masteryOf(a.points)?.stars ?? 0 : 0;
     return { id, name: a.name, level: a.level, maxLevel: MAX_LEVEL, stars, title: stars > 0 ? masteryTitle(id, stars) : levelTitle(id, a.level) };
-  }), []);
+  }), [MOCK_ATTRS]);
   const attrParam = q('attr') as AttributeId | null;
   const [dossier, setDossier] = useState<AttributeId | null>(attrParam && ATTR_IDS.includes(attrParam) ? attrParam : null);
   const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -148,7 +148,7 @@ export default function Dashboard({ params }: PageProps) {
   const stats = useMemo(() => ({
     totalPoints: MOCK_ATTRS.reduce((s, a) => s + a.points, 0),
     totalLevel: MOCK_ATTRS.reduce((s, a) => s + a.level, 0),
-  }), []);
+  }), [MOCK_ATTRS]);
 
   // ── 区块直达滚动 ──
   const refs = { tasks: useRef<HTMLElement>(null), ritual: useRef<HTMLElement>(null), persona: useRef<HTMLElement>(null), greet: useRef<HTMLDivElement>(null) };
@@ -328,6 +328,7 @@ export default function Dashboard({ params }: PageProps) {
 
 /** 任务行：斜切勾选框（完成 = 青底白勾）· 重要三角 · ✦今日抽签 · 一起进步 / 组织作战 / 截止标签 · 属性 +N · 计数 n/target · 完成波纹 */
 const TaskRow = ({ t, onTap, ripple }: { t: MockTodo; onTap: () => void; ripple: string | null }) => {
+  const { ATTR_NAMES } = useHomeData();
   const done = t.count >= t.target;
   const dl = t.deadline ? daysUntil(t.deadline) : null;
   const tag = (txt: string, tone: 'lilac' | 'rose' | 'coral') => (

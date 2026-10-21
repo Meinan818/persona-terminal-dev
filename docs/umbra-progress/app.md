@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：D-006 sim:balance 2000 局正式门禁通过；常规全量 80 文件 / 457 项通过，tsc exit 0。
+当前节点：遭遇预载 `preloadEncounter` 接通 D-002；encounter 测试 2 项通过，tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -69,3 +69,7 @@
 ## D-007 · 据点商店
 
 - `src/umbra/rules/shop.ts`：四类店固定 id（weapon/item/clinic/velvet），货币只用 ¥ / 素材 / 心之力；价格、库存、档位由数据表驱动。
+
+## 遭遇预载
+
+- `encounterPersonaIds` + `preloadEncounter`：从遭遇规格提取唯一 Persona，在 `map:encounter` 演出预算内调用 `ensureCompendium`。

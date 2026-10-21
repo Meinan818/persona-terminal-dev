@@ -84,3 +84,7 @@ export function generateEncounter(options: EncounterOptions = {}): EncounterEnem
   const count = roll < 0.12 ? 4 : roll < 0.5 ? 3 : roll < 0.85 ? 2 : 1;
   return Array.from({ length: count }, (_, index) => makeEnemySpec(`mob-${index + 1}`, floor, rng));
 }
+
+export function encounterPersonaIds(specs: EncounterEnemySpec[]): string[] {
+  return [...new Set(specs.map(spec => spec.recruitPersonaId).filter(Boolean))];
+}

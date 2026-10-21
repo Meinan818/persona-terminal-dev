@@ -1,0 +1,71 @@
+{
+ "id": "onemore",
+ "event": "onemore",
+ "duration": 440,
+ "assets": [
+  "mask.ribbon",
+  "fx.petal.a",
+  "fx.petal.b"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 380,
+   "prim": "banner",
+   "layer": "cutin",
+   "ease": "outBack",
+   "minimal": {
+    "dur": 250
+   },
+   "args": {
+    "text": "label.onemore",
+    "shape": [
+     -700,
+     -70,
+     700,
+     -100,
+     700,
+     70,
+     -700,
+     100
+    ],
+    "enterFrom": "right",
+    "artId": "mask.ribbon"
+   }
+  },
+  {
+   "at": 40,
+   "prim": "particles",
+   "minimal": "skip",
+   "args": {
+    "count": 40,
+    "at": {
+     "x": 900,
+     "y": 300
+    },
+    "speed": 800,
+    "spread": 1.4,
+    "dir": 3.4,
+    "life": 320,
+    "size": 1.0,
+    "gravity": 200,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "onemore"
+   }
+  }
+ ]
+}

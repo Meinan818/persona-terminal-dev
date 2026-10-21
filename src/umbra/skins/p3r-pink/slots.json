@@ -7,7 +7,6 @@
    "h": 86
   },
   "style": "petalChain",
-  "atlas": "atlas.hud",
   "frames": {
    "avatar": "hud.avatar.{unitId}",
    "marker": "fx.petal.a"
@@ -101,7 +100,6 @@
   "cardW": 150,
   "gap": 12,
   "slant": 0.21,
-  "atlas": "atlas.hud",
   "frames": {
    "avatar": "hud.avatar.{unitId}"
   },
@@ -127,21 +125,21 @@
    "bar": "hud.cmdBar",
    "cursor": "hud.cursor"
   },
+  "note": "P3R 斜列：每行向左下错 20px；主 96 / 次 86；第 6 项起收进「更多」（cmd.more 与 cmd.4 同行）",
   "items": [
    {
     "id": "cmd.0",
-    "role": "primary",
     "rect": {
      "x": 860,
      "y": 220,
      "w": 396,
      "h": 96
     },
-    "label": "cmd.skill"
+    "label": "cmd.skill",
+    "primary": true
    },
    {
     "id": "cmd.1",
-    "role": "secondary",
     "rect": {
      "x": 840,
      "y": 325,
@@ -152,7 +150,6 @@
    },
    {
     "id": "cmd.2",
-    "role": "secondary",
     "rect": {
      "x": 820,
      "y": 420,
@@ -163,7 +160,6 @@
    },
    {
     "id": "cmd.3",
-    "role": "secondary",
     "rect": {
      "x": 800,
      "y": 515,
@@ -174,7 +170,6 @@
    },
    {
     "id": "cmd.4",
-    "role": "secondary",
     "rect": {
      "x": 780,
      "y": 610,
@@ -182,21 +177,30 @@
      "h": 86
     },
     "label": "cmd.tactics"
-   },
-   {
-    "id": "cmd.more",
-    "role": "secondary",
-    "rect": {
-     "x": 1080,
-     "y": 610,
-     "w": 176,
-     "h": 86
-    },
-    "label": "label.more"
    }
   ],
-  "overflow": "cmd.more",
-  "note": "P3R 斜列：每行向左下错 20px；主 96 / 次 86；第 6 项起收进「更多」（cmd.more 与 cmd.4 同行）"
+  "more": {
+   "id": "cmd.more",
+   "rect": {
+    "x": 1080,
+    "y": 610,
+    "w": 176,
+    "h": 86
+   },
+   "label": "label.more",
+   "menu": {
+    "rect": {
+     "x": 780,
+     "y": 220,
+     "w": 476,
+     "h": 476
+    },
+    "itemW": 228,
+    "itemH": 86,
+    "columns": 2,
+    "note": "「更多」展开：同区域内双列，每项 228×86"
+   }
+  }
  },
  "hud.intent": {
   "follow": "enemy",
@@ -269,7 +273,7 @@
   "note": "结算/升级不放人脸：只用缎带结 hud.bow + 数字排版"
  },
  "unit.hamuko.portrait": {
-  "atlas": "atlas.portraits",
+  "atlas": "atlas.hamuko",
   "layers": [
    "body",
    "head"
@@ -314,7 +318,11 @@
      305
     ]
    ]
-  }
+  },
+  "size": [
+   500,
+   640
+  ]
  },
  "unit.yukari.portrait": {
   "atlas": "atlas.portraits",
@@ -352,7 +360,11 @@
      390
     ]
    ]
-  }
+  },
+  "size": [
+   444,
+   640
+  ]
  },
  "unit.junpei.portrait": {
   "atlas": "atlas.portraits",
@@ -369,7 +381,11 @@
    "period": 3300,
    "swayPx": 3,
    "swayZone": "head"
-  }
+  },
+  "size": [
+   560,
+   640
+  ]
  },
  "unit.akihiko.portrait": {
   "atlas": "atlas.portraits",
@@ -399,10 +415,14 @@
      170
     ]
    ]
-  }
+  },
+  "size": [
+   511,
+   640
+  ]
  },
  "unit.hamuko.actor": {
-  "atlas": "atlas.portraits",
+  "atlas": "atlas.hamuko",
   "frames": {
    "idle": "ally.hamuko.full",
    "evoke": "ally.hamuko.evoke"

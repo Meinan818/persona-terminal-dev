@@ -1,0 +1,159 @@
+{
+ "id": "highlight.hamuko.short",
+ "event": "highlight",
+ "match": {
+  "actorId": "hamuko"
+ },
+ "duration": 1150,
+ "hitMarks": [
+  620
+ ],
+ "assets": [
+  "highlight.hamuko",
+  "fx.petal.a",
+  "fx.petal.b",
+  "fx.petal.c"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 100,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.6
+   }
+  },
+  {
+   "at": 0,
+   "dur": 560,
+   "prim": "finishCard",
+   "layer": "allout",
+   "ease": "outCubic",
+   "args": {
+    "artId": "highlight.hamuko",
+    "shape": [
+     -760,
+     -330,
+     700,
+     -400,
+     760,
+     330,
+     -700,
+     400
+    ],
+    "enterFrom": "right",
+    "zoom": 1.02
+   }
+  },
+  {
+   "at": 0,
+   "dur": 420,
+   "prim": "title",
+   "minimal": {
+    "dur": 300
+   },
+   "args": {
+    "text": "label.theurgy.short",
+    "font": "@font.display",
+    "size": 96,
+    "pos": {
+     "x": 640,
+     "y": 150
+    },
+    "rot": 0.21
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "theurgy.start"
+   }
+  },
+  {
+   "at": 560,
+   "dur": 120,
+   "prim": "tween",
+   "args": {
+    "target": "#layer.allout",
+    "to": {
+     "alpha": 0
+    }
+   }
+  },
+  {
+   "at": 620,
+   "prim": "hitStop",
+   "args": {
+    "ms": 70
+   }
+  },
+  {
+   "at": 620,
+   "prim": "shake",
+   "args": {
+    "px": 20
+   }
+  },
+  {
+   "at": 620,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$targets",
+    "ms": 50
+   }
+  },
+  {
+   "at": 620,
+   "dur": 90,
+   "prim": "rgbSplit",
+   "args": {
+    "offset": 8
+   }
+  },
+  {
+   "at": 620,
+   "prim": "particles",
+   "args": {
+    "count": 200,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "speed": 1500,
+    "spread": 3.1,
+    "dir": 0,
+    "life": 460,
+    "size": 1.0,
+    "gravity": 260,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b",
+     "fx.petal.c"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 620,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 620,
+   "prim": "sfx",
+   "args": {
+    "id": "theurgy.hit"
+   }
+  }
+ ]
+}

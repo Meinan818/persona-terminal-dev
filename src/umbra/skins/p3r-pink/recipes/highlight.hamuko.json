@@ -1,0 +1,434 @@
+{
+ "id": "highlight.hamuko",
+ "event": "highlight",
+ "match": {
+  "actorId": "hamuko"
+ },
+ "duration": 3460,
+ "hitMarks": [
+  2600
+ ],
+ "create": [
+  {
+   "name": "evk",
+   "asset": "ally.hamuko.evoke",
+   "layer": "ally",
+   "anchor": [
+    0.5,
+    1
+   ]
+  }
+ ],
+ "assets": [
+  "highlight.hamuko",
+  "cutin.hamuko",
+  "ally.hamuko.evoke",
+  "mask.petal",
+  "fx.shard",
+  "fx.petal.a",
+  "fx.petal.b",
+  "fx.petal.c",
+  "fx.sparkle",
+  "fx.streak"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 300,
+   "prim": "dim",
+   "args": {
+    "color": "#2a0b1f",
+    "alpha": 0.55
+   }
+  },
+  {
+   "at": 0,
+   "dur": 420,
+   "prim": "maskWipe",
+   "layer": "trans",
+   "ease": "outCubic",
+   "minimal": "skip",
+   "args": {
+    "shape": "mask.petal",
+    "from": {
+     "x": 640,
+     "y": 360,
+     "scale": 7.2,
+     "rotation": 0.35
+    },
+    "to": {
+     "x": 640,
+     "y": 360,
+     "scale": 0.6,
+     "rotation": -0.3
+    },
+    "invert": true,
+    "color": "@color.primary"
+   }
+  },
+  {
+   "at": 120,
+   "dur": 700,
+   "prim": "title",
+   "ease": "outBack",
+   "minimal": {
+    "dur": 300
+   },
+   "args": {
+    "text": "label.highlight",
+    "font": "@font.display",
+    "size": 128,
+    "pos": {
+     "x": 640,
+     "y": 160
+    },
+    "rot": 0.21
+   }
+  },
+  {
+   "at": 120,
+   "prim": "sfx",
+   "args": {
+    "id": "theurgy.start"
+   }
+  },
+  {
+   "at": 320,
+   "dur": 520,
+   "prim": "cutin",
+   "layer": "cutin",
+   "ease": "outBack",
+   "minimal": {
+    "dur": 250
+   },
+   "args": {
+    "bandAngle": 0.21,
+    "speedLines": {
+     "layers": 2,
+     "count": 36
+    },
+    "panels": [
+     {
+      "shape": [
+       -1300,
+       -150,
+       1300,
+       -110,
+       1300,
+       150,
+       -1300,
+       110
+      ],
+      "art": "cutin.hamuko",
+      "enterFrom": "right"
+     }
+    ],
+    "nameplate": {
+     "text": "skill.theurgy.hamuko.name",
+     "font": "@font.display"
+    }
+   }
+  },
+  {
+   "at": 860,
+   "prim": "hide",
+   "args": {
+    "target": "$actor"
+   }
+  },
+  {
+   "at": 860,
+   "prim": "show",
+   "args": {
+    "target": "#evk"
+   }
+  },
+  {
+   "at": 860,
+   "dur": 180,
+   "prim": "tween",
+   "ease": "outCubic",
+   "args": {
+    "target": "#evk",
+    "from": {
+     "x": "$actor",
+     "y": "$actor",
+     "alpha": 0,
+     "scale": 0.96
+    },
+    "to": {
+     "x": "$actor",
+     "y": "$actor",
+     "alpha": 1,
+     "scale": 1
+    }
+   }
+  },
+  {
+   "at": 900,
+   "prim": "sfx",
+   "args": {
+    "id": "evoker.raise"
+   }
+  },
+  {
+   "at": 1100,
+   "dur": 520,
+   "prim": "glassShatter",
+   "layer": "ally",
+   "minimal": {
+    "dur": 300
+   },
+   "args": {
+    "snapshot": "target",
+    "target": "#evk",
+    "shards": 34,
+    "impact": {
+     "x": "#evk",
+     "y": "#evk",
+     "dx": -40,
+     "dy": -560
+    },
+    "fallMs": 460
+   }
+  },
+  {
+   "at": 1100,
+   "prim": "sfx",
+   "args": {
+    "id": "evoker.shatter"
+   }
+  },
+  {
+   "at": 1100,
+   "prim": "hide",
+   "args": {
+    "target": "#evk"
+   }
+  },
+  {
+   "at": 1120,
+   "prim": "particles",
+   "minimal": "skip",
+   "args": {
+    "count": 50,
+    "at": {
+     "x": "$actor",
+     "y": "$actor",
+     "dy": -560
+    },
+    "speed": 600,
+    "spread": 3.1,
+    "dir": 0,
+    "life": 500,
+    "size": 1.0,
+    "gravity": 500,
+    "frames": [
+     "fx.shard",
+     "fx.petal.a"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 1620,
+   "prim": "show",
+   "args": {
+    "target": "$actor"
+   }
+  },
+  {
+   "at": 1500,
+   "dur": 1000,
+   "prim": "finishCard",
+   "layer": "allout",
+   "ease": "outCubic",
+   "args": {
+    "artId": "highlight.hamuko",
+    "shape": [
+     -760,
+     -330,
+     700,
+     -400,
+     760,
+     330,
+     -700,
+     400
+    ],
+    "enterFrom": "right",
+    "zoom": 1.04
+   }
+  },
+  {
+   "at": 1700,
+   "dur": 700,
+   "prim": "freezeFrame",
+   "args": {
+    "ms": 700,
+    "keepRendering": true
+   }
+  },
+  {
+   "at": 1500,
+   "dur": 1600,
+   "prim": "radialBurst",
+   "layer": "fx",
+   "args": {
+    "rays": 24,
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.secondary"
+    ],
+    "spin": 0.8
+   }
+  },
+  {
+   "at": 2400,
+   "prim": "particles",
+   "args": {
+    "count": 120,
+    "at": {
+     "x": 1320,
+     "y": 360
+    },
+    "speed": 1800,
+    "spread": 0.4,
+    "dir": 3.14,
+    "life": 500,
+    "size": 1.0,
+    "gravity": 0,
+    "frames": [
+     "fx.streak",
+     "fx.petal.a"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 2600,
+   "prim": "hitStop",
+   "args": {
+    "ms": 90
+   }
+  },
+  {
+   "at": 2600,
+   "prim": "shake",
+   "args": {
+    "px": 24
+   }
+  },
+  {
+   "at": 2600,
+   "dur": 160,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.85
+   }
+  },
+  {
+   "at": 2600,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$targets",
+    "ms": 60
+   }
+  },
+  {
+   "at": 2600,
+   "prim": "squashHit",
+   "args": {
+    "target": "$targets",
+    "squash": 0.22,
+    "push": 30,
+    "recoverMs": 320
+   }
+  },
+  {
+   "at": 2600,
+   "dur": 120,
+   "prim": "rgbSplit",
+   "args": {
+    "offset": 10
+   }
+  },
+  {
+   "at": 2750,
+   "dur": 500,
+   "prim": "shockwave",
+   "args": {
+    "center": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "amp": 60,
+    "wavelength": 220,
+    "speed": 1200,
+    "radius": 700
+   }
+  },
+  {
+   "at": 2600,
+   "prim": "particles",
+   "args": {
+    "count": 300,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "speed": 1700,
+    "spread": 3.1,
+    "dir": 0,
+    "life": 700,
+    "size": 1.0,
+    "gravity": 260,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b",
+     "fx.petal.c"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 2600,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 2600,
+   "prim": "sfx",
+   "args": {
+    "id": "theurgy.hit"
+   }
+  },
+  {
+   "at": 3300,
+   "dur": 160,
+   "prim": "tween",
+   "args": {
+    "target": "#layer.allout",
+    "to": {
+     "alpha": 0
+    }
+   }
+  }
+ ]
+}

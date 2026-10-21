@@ -1,0 +1,171 @@
+{
+ "id": "holdup",
+ "event": "holdup",
+ "duration": 980,
+ "assets": [
+  "mask.ribbon",
+  "mask.petal",
+  "fx.petal.a",
+  "fx.petal.b",
+  "fx.petal.c",
+  "hud.bow"
+ ],
+ "create": [
+  {
+   "name": "bow",
+   "asset": "hud.bow",
+   "layer": "hud",
+   "anchor": [
+    0.5,
+    0.5
+   ]
+  }
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 260,
+   "prim": "dim",
+   "args": {
+    "color": "#2a0b1f",
+    "alpha": 0.5
+   }
+  },
+  {
+   "at": 0,
+   "dur": 360,
+   "prim": "maskWipe",
+   "layer": "trans",
+   "ease": "outCubic",
+   "minimal": {
+    "dur": 250
+   },
+   "args": {
+    "shape": "mask.ribbon",
+    "from": {
+     "x": 1600,
+     "y": 360,
+     "scale": 1.3,
+     "rotation": 0.21
+    },
+    "to": {
+     "x": 640,
+     "y": 360,
+     "scale": 1.3,
+     "rotation": 0.21
+    },
+    "color": "@color.primary"
+   }
+  },
+  {
+   "at": 120,
+   "prim": "particles",
+   "minimal": "skip",
+   "args": {
+    "count": 120,
+    "at": {
+     "x": "$targets",
+     "y": "$targets",
+     "dy": -200
+    },
+    "speed": 420,
+    "spread": 3.1,
+    "dir": 0,
+    "life": 640,
+    "size": 1.0,
+    "gravity": 0,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b",
+     "fx.petal.c"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 200,
+   "dur": 600,
+   "prim": "title",
+   "ease": "outBack",
+   "minimal": {
+    "dur": 300
+   },
+   "args": {
+    "text": "label.holdup",
+    "font": "@font.display",
+    "size": 112,
+    "pos": {
+     "x": 640,
+     "y": 170
+    },
+    "rot": 0.21
+   }
+  },
+  {
+   "at": 260,
+   "prim": "show",
+   "args": {
+    "target": "#bow"
+   }
+  },
+  {
+   "at": 260,
+   "dur": 260,
+   "prim": "tween",
+   "ease": "outElastic",
+   "args": {
+    "target": "#bow",
+    "from": {
+     "x": 640,
+     "y": 500,
+     "scale": 0.2,
+     "alpha": 0
+    },
+    "to": {
+     "x": 640,
+     "y": 500,
+     "scale": 1,
+     "alpha": 1
+    }
+   }
+  },
+  {
+   "at": 420,
+   "dur": 420,
+   "prim": "title",
+   "minimal": "skip",
+   "args": {
+    "text": "label.chance",
+    "font": "@font.display",
+    "size": 54,
+    "pos": {
+     "x": 640,
+     "y": 500
+    },
+    "rot": 0.21
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "holdup"
+   }
+  },
+  {
+   "at": 820,
+   "dur": 150,
+   "prim": "tween",
+   "args": {
+    "target": "#bow",
+    "to": {
+     "alpha": 0
+    }
+   }
+  }
+ ]
+}

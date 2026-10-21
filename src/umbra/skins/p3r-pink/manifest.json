@@ -1,35 +1,71 @@
 {
  "assets": [
   {
-   "id": "atlas.portraits",
-   "file": "assets/atlas.portraits.webp",
-   "w": 2048,
-   "h": 1288,
+   "id": "atlas.hamuko",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 1092,
+   "h": 648,
    "firstPack": true,
    "source": "generated",
-   "note": "图集容器（混合）：hamuko 3 帧 generated，yukari/junpei/akihiko 6 帧 official（P3RE Portrait），逐帧 source 见帧条目；帧坐标 assets/atlas.portraits.json"
+   "note": "图集容器；帧坐标 assets/atlas.hamuko.json（Pixi spritesheet 格式）"
   },
   {
    "id": "ally.hamuko.head",
-   "file": "assets/atlas.portraits.json#ally.hamuko.head",
+   "file": "assets/atlas.hamuko.webp",
    "w": 500,
    "h": 405,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.portraits"
+   "atlas": "atlas.hamuko"
   },
   {
    "id": "ally.hamuko.body",
-   "file": "assets/atlas.portraits.json#ally.hamuko.body",
+   "file": "assets/atlas.hamuko.webp",
    "w": 500,
    "h": 235,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.portraits"
+   "atlas": "atlas.hamuko"
+  },
+  {
+   "id": "ally.hamuko.full",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 199,
+   "h": 640,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hamuko"
+  },
+  {
+   "id": "ally.hamuko.evoke",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 258,
+   "h": 640,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hamuko"
+  },
+  {
+   "id": "hud.avatar.hamuko",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 128,
+   "h": 128,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hamuko"
+  },
+  {
+   "id": "atlas.portraits",
+   "file": "assets/atlas.portraits.webp",
+   "w": 1520,
+   "h": 776,
+   "firstPack": true,
+   "source": "official",
+   "note": "图集容器；帧坐标 assets/atlas.portraits.json（Pixi spritesheet 格式）"
   },
   {
    "id": "ally.yukari.head",
-   "file": "assets/atlas.portraits.json#ally.yukari.head",
+   "file": "assets/atlas.portraits.webp",
    "w": 444,
    "h": 395,
    "firstPack": true,
@@ -38,7 +74,7 @@
   },
   {
    "id": "ally.yukari.body",
-   "file": "assets/atlas.portraits.json#ally.yukari.body",
+   "file": "assets/atlas.portraits.webp",
    "w": 444,
    "h": 245,
    "firstPack": true,
@@ -46,8 +82,17 @@
    "atlas": "atlas.portraits"
   },
   {
+   "id": "hud.avatar.yukari",
+   "file": "assets/atlas.portraits.webp",
+   "w": 128,
+   "h": 128,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
    "id": "ally.junpei.head",
-   "file": "assets/atlas.portraits.json#ally.junpei.head",
+   "file": "assets/atlas.portraits.webp",
    "w": 560,
    "h": 405,
    "firstPack": true,
@@ -56,7 +101,7 @@
   },
   {
    "id": "ally.junpei.body",
-   "file": "assets/atlas.portraits.json#ally.junpei.body",
+   "file": "assets/atlas.portraits.webp",
    "w": 560,
    "h": 235,
    "firstPack": true,
@@ -64,8 +109,17 @@
    "atlas": "atlas.portraits"
   },
   {
+   "id": "hud.avatar.junpei",
+   "file": "assets/atlas.portraits.webp",
+   "w": 128,
+   "h": 128,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
    "id": "ally.akihiko.head",
-   "file": "assets/atlas.portraits.json#ally.akihiko.head",
+   "file": "assets/atlas.portraits.webp",
    "w": 511,
    "h": 395,
    "firstPack": true,
@@ -74,7 +128,7 @@
   },
   {
    "id": "ally.akihiko.body",
-   "file": "assets/atlas.portraits.json#ally.akihiko.body",
+   "file": "assets/atlas.portraits.webp",
    "w": 511,
    "h": 245,
    "firstPack": true,
@@ -82,177 +136,121 @@
    "atlas": "atlas.portraits"
   },
   {
-   "id": "ally.hamuko.full",
-   "file": "assets/atlas.portraits.json#ally.hamuko.full",
-   "w": 199,
-   "h": 640,
+   "id": "hud.avatar.akihiko",
+   "file": "assets/atlas.portraits.webp",
+   "w": 128,
+   "h": 128,
    "firstPack": true,
-   "source": "generated",
-   "atlas": "atlas.portraits"
-  },
-  {
-   "id": "ally.hamuko.evoke",
-   "file": "assets/atlas.portraits.json#ally.hamuko.evoke",
-   "w": 258,
-   "h": 640,
-   "firstPack": true,
-   "source": "generated",
+   "source": "official",
    "atlas": "atlas.portraits"
   },
   {
    "id": "atlas.hud",
    "file": "assets/atlas.hud.webp",
    "w": 1024,
-   "h": 1024,
+   "h": 840,
    "firstPack": true,
    "source": "generated",
-   "note": "图集容器（混合）：头像 4 帧（hamuko generated / 3 人 official 裁切），其余为程序绘制的粒子/光标/遮罩；逐帧 source 见帧条目"
-  },
-  {
-   "id": "hud.avatar.hamuko",
-   "file": "assets/atlas.hud.json#hud.avatar.hamuko",
-   "w": 128,
-   "h": 128,
-   "firstPack": true,
-   "source": "generated",
-   "atlas": "atlas.hud"
-  },
-  {
-   "id": "hud.avatar.yukari",
-   "file": "assets/atlas.hud.json#hud.avatar.yukari",
-   "w": 128,
-   "h": 128,
-   "firstPack": true,
-   "source": "official",
-   "atlas": "atlas.hud"
-  },
-  {
-   "id": "hud.avatar.junpei",
-   "file": "assets/atlas.hud.json#hud.avatar.junpei",
-   "w": 128,
-   "h": 128,
-   "firstPack": true,
-   "source": "official",
-   "atlas": "atlas.hud"
-  },
-  {
-   "id": "hud.avatar.akihiko",
-   "file": "assets/atlas.hud.json#hud.avatar.akihiko",
-   "w": 128,
-   "h": 128,
-   "firstPack": true,
-   "source": "official",
-   "atlas": "atlas.hud"
+   "note": "图集容器；全部为程序绘制的粒子/光标/遮罩（非 AI、非官方，按 generated 记）；帧坐标 assets/atlas.hud.json"
   },
   {
    "id": "fx.petal.a",
-   "file": "assets/atlas.hud.json#fx.petal.a",
+   "file": "assets/atlas.hud.webp",
    "w": 48,
    "h": 48,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "fx.petal.b",
-   "file": "assets/atlas.hud.json#fx.petal.b",
+   "file": "assets/atlas.hud.webp",
    "w": 48,
    "h": 48,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "fx.petal.c",
-   "file": "assets/atlas.hud.json#fx.petal.c",
+   "file": "assets/atlas.hud.webp",
    "w": 32,
    "h": 32,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "fx.streak",
-   "file": "assets/atlas.hud.json#fx.streak",
+   "file": "assets/atlas.hud.webp",
    "w": 256,
    "h": 16,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "fx.sparkle",
-   "file": "assets/atlas.hud.json#fx.sparkle",
+   "file": "assets/atlas.hud.webp",
    "w": 48,
    "h": 48,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "fx.shard",
-   "file": "assets/atlas.hud.json#fx.shard",
+   "file": "assets/atlas.hud.webp",
    "w": 40,
    "h": 56,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "hud.cursor",
-   "file": "assets/atlas.hud.json#hud.cursor",
+   "file": "assets/atlas.hud.webp",
    "w": 120,
    "h": 96,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "hud.cmdBar",
-   "file": "assets/atlas.hud.json#hud.cmdBar",
+   "file": "assets/atlas.hud.webp",
    "w": 360,
    "h": 96,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "mask.petal",
-   "file": "assets/atlas.hud.json#mask.petal",
+   "file": "assets/atlas.hud.webp",
    "w": 512,
    "h": 512,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "hud.bow",
-   "file": "assets/atlas.hud.json#hud.bow",
+   "file": "assets/atlas.hud.webp",
    "w": 200,
    "h": 120,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "hud.diamond",
-   "file": "assets/atlas.hud.json#hud.diamond",
+   "file": "assets/atlas.hud.webp",
    "w": 64,
    "h": 64,
    "firstPack": true,
    "source": "generated",
-   "atlas": "atlas.hud",
-   "note": "程序绘制（非 AI、非官方），按 generated 记"
+   "atlas": "atlas.hud"
   },
   {
    "id": "mask.ribbon",

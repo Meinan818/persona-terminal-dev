@@ -1,0 +1,146 @@
+{
+ "id": "battle.end",
+ "event": "battle:end",
+ "duration": 1400,
+ "assets": [
+  "mask.ribbon",
+  "hud.bow",
+  "fx.petal.a",
+  "fx.petal.b",
+  "fx.petal.c"
+ ],
+ "create": [
+  {
+   "name": "bow",
+   "asset": "hud.bow",
+   "layer": "hud",
+   "anchor": [
+    0.5,
+    0.5
+   ]
+  }
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 420,
+   "prim": "maskWipe",
+   "layer": "trans",
+   "ease": "outCubic",
+   "minimal": {
+    "dur": 300
+   },
+   "args": {
+    "shape": "mask.ribbon",
+    "from": {
+     "x": -1500,
+     "y": 380,
+     "scale": 1.5,
+     "rotation": -0.21
+    },
+    "to": {
+     "x": 640,
+     "y": 380,
+     "scale": 1.5,
+     "rotation": -0.21
+    },
+    "color": "@color.paper"
+   }
+  },
+  {
+   "at": 200,
+   "dur": 700,
+   "prim": "title",
+   "ease": "outBack",
+   "minimal": {
+    "dur": 300
+   },
+   "args": {
+    "text": "label.result",
+    "font": "@font.display",
+    "size": 140,
+    "pos": {
+     "x": 600,
+     "y": 330
+    },
+    "rot": 0.21
+   }
+  },
+  {
+   "at": 380,
+   "prim": "show",
+   "args": {
+    "target": "#bow"
+   }
+  },
+  {
+   "at": 380,
+   "dur": 300,
+   "prim": "tween",
+   "ease": "outElastic",
+   "args": {
+    "target": "#bow",
+    "from": {
+     "x": 900,
+     "y": 160,
+     "scale": 0.2,
+     "rotation": -0.6,
+     "alpha": 0
+    },
+    "to": {
+     "x": 900,
+     "y": 160,
+     "scale": 1,
+     "rotation": 0.21,
+     "alpha": 1
+    }
+   }
+  },
+  {
+   "at": 300,
+   "prim": "particles",
+   "minimal": "skip",
+   "args": {
+    "count": 90,
+    "at": {
+     "x": 640,
+     "y": -20
+    },
+    "speed": 200,
+    "spread": 1.2,
+    "dir": 1.57,
+    "life": 800,
+    "size": 1.0,
+    "gravity": 120,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b",
+     "fx.petal.c"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "victory"
+   }
+  },
+  {
+   "at": 1180,
+   "dur": 200,
+   "prim": "tween",
+   "args": {
+    "target": "#bow",
+    "to": {
+     "alpha": 0
+    }
+   }
+  }
+ ]
+}

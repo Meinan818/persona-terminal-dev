@@ -1,4 +1,4 @@
-/* p3r-pink · 交涉模板 + DOM 过渡。只在 .umbra-skin-p3r-pink 下；动效只用 transform/opacity（ui:open/close 单面板可加 clip-path ≤280ms，v1.2-1）。无 @import、无 url()。 */
+/* p3r-pink · 交涉模板 + DOM 过渡。只在 .umbra-skin-p3r-pink 下；动效只用 transform/opacity（ui:open/close 单面板可加 clip-path ≤280ms，v1.2-1）。不引外部样式表、不引外链图。 */
 .umbra-skin-p3r-pink {
   --pk-rose: #e64a84; --pk-rose-deep: #b8336c; --pk-ink: #3b1531; --pk-paper: #fffdfc;
   --pk-sakura: #fbe2ec; --pk-amber: #ffb36b; --pk-berry: #2a0b1f;

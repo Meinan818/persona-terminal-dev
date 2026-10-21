@@ -1,0 +1,73 @@
+{
+ "id": "unit.down",
+ "event": "unit:down",
+ "duration": 480,
+ "assets": [
+  "fx.petal.a",
+  "fx.petal.b",
+  "fx.shard"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 420,
+   "prim": "portraitDown",
+   "minimal": {
+    "dur": 200
+   },
+   "args": {
+    "unit": "$targets",
+    "style": "shatter"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "args": {
+    "count": 80,
+    "at": {
+     "x": "$targets",
+     "y": "$targets",
+     "dy": -200
+    },
+    "speed": 700,
+    "spread": 3.1,
+    "dir": 0,
+    "life": 420,
+    "size": 1.0,
+    "gravity": 600,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b",
+     "fx.shard"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.resist"
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "dur": 420,
+   "prim": "tag",
+   "minimal": "skip",
+   "args": {
+    "kind": "DOWN",
+    "pos": {
+     "x": "$targets",
+     "y": "$targets",
+     "dy": -320
+    }
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "down"
+   }
+  }
+ ]
+}

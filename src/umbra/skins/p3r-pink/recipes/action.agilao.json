@@ -1,0 +1,364 @@
+{
+ "id": "action.agilao",
+ "event": "action",
+ "match": {
+  "skillId": "agilao",
+  "actorId": "hamuko"
+ },
+ "duration": 1780,
+ "hitMarks": [
+  1180
+ ],
+ "create": [
+  {
+   "name": "evk",
+   "asset": "ally.hamuko.evoke",
+   "layer": "ally",
+   "anchor": [
+    0.5,
+    1
+   ]
+  }
+ ],
+ "assets": [
+  "cutin.hamuko",
+  "ally.hamuko.evoke",
+  "fx.shard",
+  "fx.petal.a",
+  "fx.petal.b",
+  "fx.petal.c",
+  "fx.streak",
+  "fx.sparkle"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 160,
+   "prim": "dim",
+   "args": {
+    "color": "#2a0b1f",
+    "alpha": 0.4
+   }
+  },
+  {
+   "at": 0,
+   "dur": 520,
+   "prim": "cutin",
+   "layer": "cutin",
+   "ease": "outBack",
+   "minimal": {
+    "dur": 250
+   },
+   "args": {
+    "bandAngle": 0.21,
+    "speedLines": {
+     "layers": 2,
+     "count": 36
+    },
+    "panels": [
+     {
+      "shape": [
+       -1300,
+       -150,
+       1300,
+       -110,
+       1300,
+       150,
+       -1300,
+       110
+      ],
+      "art": "cutin.hamuko",
+      "enterFrom": "right"
+     }
+    ],
+    "nameplate": {
+     "text": "skill.agilao.name",
+     "font": "@font.display"
+    }
+   }
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "minimal": "skip",
+   "args": {
+    "count": 36,
+    "at": {
+     "x": 640,
+     "y": 360
+    },
+    "speed": 1400,
+    "spread": 0.4,
+    "dir": 3.14,
+    "life": 480,
+    "size": 1.0,
+    "gravity": 0,
+    "frames": [
+     "fx.streak",
+     "fx.petal.a"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "cutin"
+   }
+  },
+  {
+   "at": 400,
+   "prim": "hide",
+   "args": {
+    "target": "$actor"
+   }
+  },
+  {
+   "at": 400,
+   "prim": "show",
+   "args": {
+    "target": "#evk"
+   }
+  },
+  {
+   "at": 400,
+   "dur": 180,
+   "prim": "tween",
+   "ease": "outCubic",
+   "args": {
+    "target": "#evk",
+    "from": {
+     "x": "$actor",
+     "y": "$actor",
+     "alpha": 0,
+     "scale": 0.96
+    },
+    "to": {
+     "x": "$actor",
+     "y": "$actor",
+     "alpha": 1,
+     "scale": 1
+    }
+   }
+  },
+  {
+   "at": 440,
+   "prim": "sfx",
+   "args": {
+    "id": "evoker.raise"
+   }
+  },
+  {
+   "at": 640,
+   "dur": 520,
+   "prim": "glassShatter",
+   "layer": "ally",
+   "minimal": {
+    "dur": 300
+   },
+   "args": {
+    "snapshot": "target",
+    "target": "#evk",
+    "shards": 34,
+    "impact": {
+     "x": "#evk",
+     "y": "#evk",
+     "dx": -40,
+     "dy": -560
+    },
+    "fallMs": 460
+   }
+  },
+  {
+   "at": 640,
+   "prim": "sfx",
+   "args": {
+    "id": "evoker.shatter"
+   }
+  },
+  {
+   "at": 640,
+   "prim": "hide",
+   "args": {
+    "target": "#evk"
+   }
+  },
+  {
+   "at": 660,
+   "prim": "particles",
+   "minimal": "skip",
+   "args": {
+    "count": 50,
+    "at": {
+     "x": "$actor",
+     "y": "$actor",
+     "dy": -560
+    },
+    "speed": 600,
+    "spread": 3.1,
+    "dir": 0,
+    "life": 500,
+    "size": 1.0,
+    "gravity": 500,
+    "frames": [
+     "fx.shard",
+     "fx.petal.a"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 1160,
+   "prim": "show",
+   "args": {
+    "target": "$actor"
+   }
+  },
+  {
+   "at": 1000,
+   "prim": "particles",
+   "args": {
+    "count": 120,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "speed": 600,
+    "spread": 0.9,
+    "dir": -1.57,
+    "life": 520,
+    "size": 1.0,
+    "gravity": -200,
+    "frames": [
+     "fx.sparkle",
+     "fx.petal.b"
+    ],
+    "colors": [
+     "#ffd0a0",
+     "@color.accent",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 1180,
+   "prim": "hitStop",
+   "args": {
+    "ms": 80
+   }
+  },
+  {
+   "at": 1180,
+   "prim": "shake",
+   "args": {
+    "px": 18
+   }
+  },
+  {
+   "at": 1180,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$target",
+    "ms": 50
+   }
+  },
+  {
+   "at": 1180,
+   "prim": "squashHit",
+   "args": {
+    "target": "$target",
+    "squash": 0.22,
+    "push": 26,
+    "recoverMs": 320
+   }
+  },
+  {
+   "at": 1180,
+   "dur": 90,
+   "prim": "rgbSplit",
+   "args": {
+    "offset": 9
+   }
+  },
+  {
+   "at": 1330,
+   "dur": 440,
+   "prim": "shockwave",
+   "args": {
+    "center": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "amp": 46,
+    "wavelength": 180,
+    "speed": 1000,
+    "radius": 560
+   }
+  },
+  {
+   "at": 1180,
+   "prim": "particles",
+   "args": {
+    "count": 220,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "speed": 1500,
+    "spread": 3.1,
+    "dir": 0,
+    "life": 580,
+    "size": 1.0,
+    "gravity": 250,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b",
+     "fx.petal.c"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.accent",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 1180,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 1180,
+   "dur": 520,
+   "prim": "tag",
+   "args": {
+    "kind": "$hit",
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -330
+    }
+   }
+  },
+  {
+   "at": 1180,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.fire"
+   }
+  }
+ ]
+}

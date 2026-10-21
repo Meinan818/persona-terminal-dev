@@ -1,0 +1,290 @@
+{
+ "id": "allout.default",
+ "event": "allout",
+ "duration": 3300,
+ "hitMarks": [
+  420,
+  620,
+  820,
+  1020,
+  1220,
+  1420,
+  1620,
+  1820,
+  2280
+ ],
+ "create": [
+  {
+   "name": "fin",
+   "asset": "allout.finish.default",
+   "layer": "allout"
+  }
+ ],
+ "assets": [
+  "allout.finish.default",
+  "fx.petal.a",
+  "fx.petal.b",
+  "fx.petal.c",
+  "fx.streak",
+  "fx.sparkle",
+  "hud.avatar.hamuko",
+  "hud.avatar.yukari",
+  "hud.avatar.junpei",
+  "hud.avatar.akihiko"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 120,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.7
+   }
+  },
+  {
+   "at": 0,
+   "dur": 220,
+   "prim": "dim",
+   "args": {
+    "color": "#fbe2ec",
+    "alpha": 0.45
+   }
+  },
+  {
+   "at": 0,
+   "dur": 640,
+   "prim": "title",
+   "ease": "outBack",
+   "minimal": {
+    "dur": 300
+   },
+   "args": {
+    "text": "label.allout",
+    "font": "@font.display",
+    "size": 116,
+    "pos": {
+     "x": 640,
+     "y": 150
+    },
+    "rot": 0.21
+   }
+  },
+  {
+   "at": 0,
+   "dur": 2100,
+   "prim": "speedLines",
+   "layer": "fx",
+   "args": {
+    "count": 40,
+    "dir": 0.21,
+    "colors": [
+     "#ffffff",
+     "@color.secondary"
+    ],
+    "scrollSpeed": 2200
+   }
+  },
+  {
+   "at": 300,
+   "dur": 1700,
+   "prim": "silhouetteDash",
+   "minimal": {
+    "args": {
+     "units": "$party",
+     "count": 3,
+     "interval": 200,
+     "path": "R2L"
+    }
+   },
+   "args": {
+    "units": "$party",
+    "count": 8,
+    "interval": 200,
+    "path": "R2L"
+   }
+  },
+  {
+   "at": 420,
+   "dur": 150,
+   "prim": "slashLine",
+   "layer": "fx",
+   "repeatEvery": 200,
+   "times": 8,
+   "args": {
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "rot": -0.21,
+    "len": 800,
+    "width": 12
+   }
+  },
+  {
+   "at": 420,
+   "prim": "particles",
+   "repeatEvery": 200,
+   "times": 8,
+   "args": {
+    "count": 60,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "speed": 1100,
+    "spread": 3.1,
+    "dir": 0,
+    "life": 520,
+    "size": 1.0,
+    "gravity": 300,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b",
+     "fx.petal.c"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 420,
+   "prim": "sfx",
+   "repeatEvery": 200,
+   "times": 8,
+   "args": {
+    "id": "allout.hit"
+   }
+  },
+  {
+   "at": 2280,
+   "dur": 160,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.9
+   }
+  },
+  {
+   "at": 2280,
+   "dur": 500,
+   "prim": "shockwave",
+   "args": {
+    "center": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "amp": 56,
+    "wavelength": 200,
+    "speed": 1100,
+    "radius": 640
+   }
+  },
+  {
+   "at": 2280,
+   "prim": "particles",
+   "args": {
+    "count": 240,
+    "at": {
+     "x": -40,
+     "y": 680
+    },
+    "speed": 1600,
+    "spread": 0.5,
+    "dir": -0.55,
+    "life": 700,
+    "size": 1.0,
+    "gravity": -60,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b",
+     "fx.petal.c"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.secondary",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 2280,
+   "dur": 980,
+   "prim": "finishCard",
+   "layer": "allout",
+   "ease": "outCubic",
+   "args": {
+    "artId": "allout.finish.default",
+    "shape": [
+     -700,
+     -400,
+     760,
+     -330,
+     700,
+     400,
+     -760,
+     330
+    ],
+    "enterFrom": "left",
+    "zoom": 1.03
+   }
+  },
+  {
+   "at": 2460,
+   "dur": 760,
+   "prim": "freezeFrame",
+   "args": {
+    "ms": 760,
+    "keepRendering": true
+   }
+  },
+  {
+   "at": 2460,
+   "dur": 760,
+   "prim": "totalDamage",
+   "ease": "outBack",
+   "args": {
+    "label": "label.totalDamage",
+    "plate": [
+     -300,
+     -60,
+     320,
+     -80,
+     300,
+     60,
+     -320,
+     80
+    ],
+    "pos": {
+     "x": 420,
+     "y": 470
+    },
+    "font": "@font.number"
+   }
+  },
+  {
+   "at": 2280,
+   "prim": "sfx",
+   "args": {
+    "id": "allout.finish"
+   }
+  },
+  {
+   "at": 3100,
+   "dur": 200,
+   "prim": "tween",
+   "args": {
+    "target": "#layer.allout",
+    "to": {
+     "alpha": 0
+    }
+   }
+  }
+ ]
+}

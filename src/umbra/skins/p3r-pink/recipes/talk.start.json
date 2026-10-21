@@ -1,0 +1,68 @@
+{
+ "id": "talk.start",
+ "event": "talk:start",
+ "duration": 600,
+ "assets": [
+  "mask.ribbon",
+  "fx.petal.a"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 320,
+   "prim": "maskWipe",
+   "layer": "trans",
+   "ease": "outBack",
+   "minimal": {
+    "dur": 200
+   },
+   "args": {
+    "shape": "mask.ribbon",
+    "from": {
+     "x": 1500,
+     "y": 200,
+     "scale": 1.2
+    },
+    "to": {
+     "x": 640,
+     "y": 200,
+     "scale": 1.2
+    },
+    "color": "@color.paper"
+   }
+  },
+  {
+   "at": 80,
+   "prim": "particles",
+   "minimal": "skip",
+   "args": {
+    "count": 30,
+    "at": {
+     "x": 900,
+     "y": 200
+    },
+    "speed": 500,
+    "spread": 1.2,
+    "dir": 3.3,
+    "life": 400,
+    "size": 1.0,
+    "gravity": 200,
+    "frames": [
+     "fx.petal.a"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "talk.start"
+   }
+  }
+ ]
+}

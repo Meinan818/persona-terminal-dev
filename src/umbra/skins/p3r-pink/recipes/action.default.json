@@ -1,0 +1,151 @@
+{
+ "id": "action.default",
+ "event": "action",
+ "duration": 900,
+ "hitMarks": [
+  420
+ ],
+ "assets": [
+  "fx.petal.a",
+  "fx.petal.b",
+  "fx.petal.c",
+  "fx.streak"
+ ],
+ "tracks": [
+  {
+   "at": 160,
+   "dur": 260,
+   "prim": "afterimage",
+   "ease": "inCubic",
+   "args": {
+    "actor": "$actor",
+    "to": {
+     "x": "$target",
+     "y": "$target",
+     "dx": -150
+    },
+    "n": 2,
+    "tints": [
+     "#ffffff",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 400,
+   "dur": 140,
+   "prim": "slashLine",
+   "layer": "fx",
+   "args": {
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "rot": 0.21,
+    "len": 520,
+    "width": 14
+   }
+  },
+  {
+   "at": 420,
+   "prim": "hitStop",
+   "args": {
+    "ms": 60
+   }
+  },
+  {
+   "at": 420,
+   "prim": "shake",
+   "args": {
+    "px": 12
+   }
+  },
+  {
+   "at": 420,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$target",
+    "ms": 50
+   }
+  },
+  {
+   "at": 420,
+   "prim": "squashHit",
+   "args": {
+    "target": "$target",
+    "squash": 0.16,
+    "push": 18,
+    "recoverMs": 260
+   }
+  },
+  {
+   "at": 420,
+   "prim": "particles",
+   "args": {
+    "count": 70,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "speed": 1000,
+    "spread": 1.6,
+    "dir": -0.3,
+    "life": 420,
+    "size": 1.0,
+    "gravity": 400,
+    "frames": [
+     "fx.petal.a",
+     "fx.petal.b",
+     "fx.petal.c"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "@color.secondary"
+    ]
+   }
+  },
+  {
+   "at": 420,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number"
+   }
+  },
+  {
+   "at": 420,
+   "dur": 420,
+   "prim": "tag",
+   "args": {
+    "kind": "$hit",
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -320
+    }
+   }
+  },
+  {
+   "at": 420,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.light"
+   }
+  },
+  {
+   "at": 540,
+   "dur": 300,
+   "prim": "tween",
+   "ease": "outCubic",
+   "args": {
+    "target": "$actor",
+    "to": {
+     "x": "home",
+     "y": "home"
+    }
+   }
+  }
+ ]
+}

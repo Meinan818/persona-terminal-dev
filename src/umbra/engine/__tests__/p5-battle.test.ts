@@ -7,10 +7,14 @@ import {
   registerSyntheticPersona,
 } from '@/umbra/engine/p5-combat-rules';
 import {
+  ensureCompendium,
+  fusionResult,
+  fusionResultForSkin,
+} from '@/umbra/engine/p5r-compendium';
+import {
   compendiumPersonaIds,
   compendiumSkillIds,
 } from '@/umbra/engine/compendiumPreload';
-import { ensureCompendium } from '@/umbra/engine/p5r-compendium';
 import { generateEncounter } from '@/umbra/rules/encounter';
 import { registerSkin, unloadSkin } from '@/umbra/skins/registry';
 import type { UmbraSkinPack } from '@/umbra/skins/contract';
@@ -131,6 +135,39 @@ describe('UMBRA formal P5 battle engine', () => {
     expect(ids).toContain('arsene');
     expect(ids).not.toContain('izanagi');
     unloadSkin('p5r-red');
+  });
+
+  it('合成结果按皮肤 roster 过滤 excludedPersonas', () => {
+    const choices = catalogPersonaChoices();
+    const source = choices[0];
+    let result: any = null;
+    let other: any = null;
+    for (const candidate of choices) {
+      const fused: any = fusionResult(source.id, candidate.id);
+      if (fused) {
+        result = fused;
+        other = candidate;
+        break;
+      }
+    }
+    expect(result).not.toBeNull();
+    registerSkin('p3-blue', {
+      id: 'p3-blue',
+      manifest: { assets: [] },
+      tokens: {},
+      recipes: [],
+      labels: {},
+      enemyLayouts: { 1: [], 2: [], 3: [], 4: [], 5: [] },
+      roster: {
+        heroPersona: 'orpheus',
+        companions: [],
+        companionPersonas: {},
+        excludedPersonas: [result.id],
+      },
+      compendiumArt: {},
+    });
+    expect(fusionResultForSkin(source.id, other.id, 'p3-blue')).toBeNull();
+    unloadSkin('p3-blue');
   });
 
   it.each([1, 3, 5])('%i 只敌人能跑完整战斗流程', (count) => {

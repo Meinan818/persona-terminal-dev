@@ -66,6 +66,7 @@
 
 - `SkinRoster` 增加 `heroPersona`（主角初始面具）；`rules/rosterParty.partyFromRoster` 从 roster 推导主角与同伴面具，规则层不写死角色 id。
 - `createDefaultBattle` 接受可选 `roster`，拿到皮肤包时从 `partyFromRoster` 建队；`catalogPersonaChoicesForSkin(skinId)` 按 `excludedPersonas` 过滤图鉴选择。
+- 合成结果按皮肤过滤：`resolveFusionForSkin` / `fusionResultForSkin` 会拒绝落在 `excludedPersonas` 的结果。
 - 注册表提供 `rosterAllowsPersona` / `companionPersonaFor`。
 
 ## D-007 · 据点商店
@@ -110,6 +111,6 @@
 
 ## 待接 · D-005 皮肤 roster 接线
 
-- 机制已就绪：`SkinRoster`（`heroPersona` / `companions` / `companionPersonas` / `excludedPersonas`）、`partyFromRoster`、`catalogPersonaChoicesForSkin`、`createDefaultBattle` 的 roster 建队。
+- 机制已就绪：`SkinRoster`（`heroPersona` / `companions` / `companionPersonas` / `excludedPersonas`）、`partyFromRoster`、`catalogPersonaChoicesForSkin`、`fusionResultForSkin`、`createDefaultBattle` 的 roster 建队。
 - 剩余内容依赖主题方：`src/umbra/skins/` 下还没有四份 `skins/<id>/index.ts` 皮肤包（各皮主角初始面具、同伴名单、同伴专属面具、`excludedPersonas`、`compendiumArt`）。
 - 处理：机制已可接入；等四皮皮肤包提供实际 roster 内容后，切皮建队与图鉴过滤即生效，不再写死角色 id。App 侧不擅自写死各皮同伴名单。

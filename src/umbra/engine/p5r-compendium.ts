@@ -23,6 +23,8 @@ import {
   P5R_SPECIAL_FUSIONS,
   ensureCompendium as ensureCompendiumRaw,
 } from './compendiumPreload';
+import { rosterAllowsPersona } from '../skins/registry';
+import type { UmbraSkinId } from '../skins/contract';
 
 export {
   P5R_COMPENDIUM_META,
@@ -218,6 +220,26 @@ export function fusionResult(
   options: { allowDlc?: boolean } = {},
 ): any {
   return resolveFusion(aId, bId, options)?.result ?? null;
+}
+
+export function resolveFusionForSkin(
+  aId: string,
+  bId: string,
+  skinId: UmbraSkinId,
+  options: { allowDlc?: boolean } = {},
+): any {
+  const resolved = resolveFusion(aId, bId, options);
+  if (!resolved?.result) return null;
+  return rosterAllowsPersona(skinId, resolved.result.id) ? resolved : null;
+}
+
+export function fusionResultForSkin(
+  aId: string,
+  bId: string,
+  skinId: UmbraSkinId,
+  options: { allowDlc?: boolean } = {},
+): any {
+  return resolveFusionForSkin(aId, bId, skinId, options)?.result ?? null;
 }
 
 export function recipesForTarget(targetId: string): any[] {

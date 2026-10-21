@@ -3,6 +3,7 @@ import {
   type BattlePolicy,
 } from '@/umbra/engine/headless-simulator';
 import {
+  ADVANCED_BONUS_BY_TIER,
   BALANCE_BOTS,
   BALANCE_ITERATIONS,
   BALANCE_TIERS,
@@ -39,6 +40,7 @@ export function simulateBalance(options: SimulateBalanceOptions = {}): BalanceTa
           policy: bot,
           enemySpecs,
           activePersonaId: 'pixie',
+          advancedBonus: bot === 'advanced' ? ADVANCED_BONUS_BY_TIER[tier] : undefined,
         });
         if (result.victory) wins += 1;
         table[tier][bot] = ((table[tier][bot] as number) ?? 0) + (result.victory ? 1 / iterations : 0);

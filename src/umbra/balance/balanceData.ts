@@ -30,6 +30,11 @@ export const BALANCE_TARGETS: Record<BalanceTier, Record<Exclude<BattlePolicy, '
 };
 
 export const BALANCE_ITERATIONS = 2000;
+export const ADVANCED_BONUS_BY_TIER: Record<BalanceTier, number> = {
+  mob: 1.4,
+  elite: 1.6,
+  boss: 2.5,
+};
 
 export interface BalanceTableData {
   floor: number;

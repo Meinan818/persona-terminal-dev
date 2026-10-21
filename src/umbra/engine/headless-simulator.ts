@@ -10,6 +10,7 @@ export interface HeadlessBattleOptions {
   activePersonaId?: string;
   heroPersonaIds?: string[];
   allyPersonaIds?: string[];
+  advancedBonus?: number;
 }
 
 export interface HeadlessBattleResult {
@@ -111,6 +112,7 @@ export function runHeadlessBattle(options: HeadlessBattleOptions): HeadlessBattl
     allyPersonaIds: options.allyPersonaIds,
     enemies: options.enemySpecs,
   });
+  if (policy === 'advanced') battle.batonBoost = options.advancedBonus ?? 1.0;
 
   const actions: string[] = [];
   let actionCount = 0;

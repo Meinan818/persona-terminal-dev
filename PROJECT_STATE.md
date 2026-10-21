@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 黄色 Dashboard 真实升级与解锁演出
+
+- **范围**：黄色 `Dashboard.p4g.tsx` 的完成待办演出队列不再用 `FOLLOW` 演示表与硬编码成就「晨光跑者」。`tick` 在 `completeTodo` 前后 diff 真实 store 的 `achievements` / `skills` / `attributes` 等级，按真实新解锁与升级生成队列；升级演出带真实属性名/等级/精通星数，成就/技能演出带真实标题/名称。修复完成弹窗 3.2 秒自动关闭早于异步结果导致演出丢失的竞态：`pendingQ` 在弹窗已关时立即排队。`WishProgress` / `OrgCelebration` 仍保留组件但真实流程不再推入，避免假愿望/假组织内容。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`dashboard-fx-real-20261021.log`）；真实浏览器探针通过：完成真实待办 → 属性 `knowledge` Lv.1→2 → 出现真实「LEVEL UP / 恭喜升级」演出 → 0 页面异常、0 模型请求。报告在 `.theme-compare/dashboard-fx-real-20261021/first/`。
+- **提交**：`f7b6c63`（1 文件，32+/18-）。未 Push。
+- **下一步**：蓝/粉 Dashboard 尚无演出队列，补同构真实升级/解锁演出；或继续其余全局演出。
+
 ## 已提交 · 2026-10-21 · 红色 Statistics 真实活动数据
 
 - **范围**：红色 `Statistics.p5r.tsx` 去掉 14 天硬编码曲线、记录天数 42、最长连续 12、日均 4.2 与 mock 成就/技能计数。改为从真实 `activities` 按日汇总（`pointsAwarded` 求和）生成 7/30/全部曲线（按窗口最大值归一化到 0–9），`totalPoints` 用真实 `attributes`，记录天数用真实活跃日集合，最长连续用 `calcMaxStreak(streakDates(activities))`，日均用真实总点数/记录天数，成就/技能计数用真实 `achievements`/`skills`。无记录时趋势图走空态。

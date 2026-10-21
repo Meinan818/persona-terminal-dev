@@ -36,7 +36,7 @@ if (set === 'all' || set === 'main') {
   for (const [t, n] of [[90, 'a-in'], [230, 'b-grab'], [330, 'c-rip'], [420, 'd-flame'], [600, 'e-rise'], [760, 'f-full'], [1050, 'g-cast'], [1230, 'h-hit']]) {
     await freeze('action', t); await shot(`03-summon-${n}`, 120);
   }
-  await rel(); await freeze('onemore', 210); await shot('04-onemore', 120); await rel();
+  await rel(); await freeze('onemore', 280); await shot('04-onemore', 120); await rel();
   await idle();
   await page.evaluate(() => window.__umbra.cmd('baton')); await shot('05-baton-pick');
   await page.evaluate(() => { window.__umbra.freezeOn('baton', 300); window.__umbra.party('skull'); });
@@ -74,6 +74,18 @@ if (set === 'all' || set === 'showtime') {
   });
   for (const [t, n] of [[350, 'a-logo'], [1000, 'b-cutins'], [1750, 'c-card'], [2700, 'd-total']]) { await freeze('highlight', t); await shot(`15-showtime-${n}`, 120); }
   await rel();
+  out.engErr.push(...(await page.evaluate(() => window.__umbra.eng.errors)));
+  await ctx.close();
+}
+if (set === 'all' || set === 'extra') {
+  for (const n of [1, 3, 5]) { const { ctx, shot } = await open('enemies=' + n); await shot(`16-enemies-${n}`, 600); await ctx.close(); }
+  const { page, ctx, shot, freeze, rel } = await open();
+  await page.evaluate(async () => { await window.__umbra.eng.loadGroup('char:joker'); window.__umbra.hud.setMode('hidden'); });
+  for (const [id, frames] of [['demo.p3.crit', [[300, 'eyestrip'], [900, 'glass']]], ['demo.p3.finish', [[500, 'checker'], [1400, 'ring']]], ['demo.p4.prims', [[350, 'block'], [900, 'static'], [1360, 'cardflip'], [1800, 'cardshatter'], [2500, 'dateflip']]]]) {
+    await page.evaluate(([i, t]) => { window.__umbra.freezeOn('highlight', t); window.__umbra.demoFx(i); }, [id, frames[0][0]]);
+    for (const [t, n] of frames) { await freeze('highlight', t); await shot(`17-${id}-${n}`, 120); }
+    await rel(); await page.waitForFunction(() => !window.__umbra.busy, null, { timeout: 20000 });
+  }
   out.engErr.push(...(await page.evaluate(() => window.__umbra.eng.errors)));
   await ctx.close();
 }

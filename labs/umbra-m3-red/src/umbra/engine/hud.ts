@@ -7,7 +7,7 @@ import { ransom, txt, plate, hex } from './text';
 import { ease } from './timeline';
 
 export interface PartyState { id: string; name: string; hp: number; hpMax: number; sp: number; spMax: number; active?: boolean; baton?: number }
-export interface EnemyState { id: string; name: string; hp: number; hpMax: number; lv: number; known: string[]; weak: string[]; down: boolean; alive: boolean }
+export interface EnemyState { id: string; name: string; compact?: boolean; hp: number; hpMax: number; lv: number; known: string[]; weak: string[]; down: boolean; alive: boolean }
 export interface ListRow { id: string; name: string; desc: string; cost?: string; costKind?: 'sp' | 'hp' | 'n'; element?: string; disabled?: boolean; icon?: string }
 export interface ResultData { exp: number; money: number; items: { name: string; n: number }[]; bonus: boolean; levelUps?: { id: string; from: number; to: number; hp: number; sp: number }[] }
 
@@ -94,16 +94,19 @@ export class P5Hud {
     const eng = this.eng, c = new Container(); c.visible = false;
     const burst = new Container();
     if (name !== 'result') {
-      // P5R 指令簇背后的红色锯齿放射 + 黑色碎片
-      const g = new Graphics(); const hub = set.hub; let s = 3; const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
-      for (const it of set.items) {
-        const dx = it.x - hub.x, dy = it.y - hub.y, len = Math.hypot(dx, dy) + 120, a = Math.atan2(dy, dx);
-        const w = 26 + rnd() * 18, nx = -Math.sin(a), ny = Math.cos(a);
-        g.poly([hub.x + nx * w * 0.3, hub.y + ny * w * 0.3, hub.x + Math.cos(a) * len + nx * w, hub.y + Math.sin(a) * len + ny * w,
-          hub.x + Math.cos(a) * (len + 50), hub.y + Math.sin(a) * (len + 50), hub.x + Math.cos(a) * len - nx * w * 0.6, hub.y + Math.sin(a) * len - ny * w * 0.6]).fill({ color: hex(this.C.primary), alpha: 0.9 });
-      }
-      for (let i = 0; i < 9; i++) { const a = rnd() * 6.28, d = 60 + rnd() * 120, x = hub.x + Math.cos(a) * d, y = hub.y + Math.sin(a) * d, k = 14 + rnd() * 22; g.poly([x, y, x + k * 2, y - k * 0.5, x + k * 0.5, y + k]).fill(0x0a0a0a); }
-      burst.addChild(g);
+      // P5R 指令簇背后的放射状红色锯齿星芒：长刺指向每个标签，短刺填充其间；黑色内星 + 黑描边（不再是零散碎片）
+      const hub = set.hub; const targets = set.items.filter((it) => !it.when).map((it) => Math.atan2(it.y - hub.y, it.x - hub.x));
+      const star = (inner: number, outerFn: (a: number, i: number) => number, n: number, rot = 0) => {
+        const pts: number[] = [];
+        for (let i = 0; i < n * 2; i++) { const a = rot + (i / (n * 2)) * Math.PI * 2; const r = i % 2 ? inner * (0.9 + ((i * 37) % 5) * 0.04) : outerFn(a, i); pts.push(hub.x + Math.cos(a) * r, hub.y + Math.sin(a) * r * 0.92); }
+        return pts;
+      };
+      const reach = (a: number) => { let best = 0; for (const t of targets) { const d = Math.abs(Math.atan2(Math.sin(a - t), Math.cos(a - t))); best = Math.max(best, Math.max(0, 1 - d / 0.22)); } return best; };
+      const g = new Graphics();
+      g.poly(star(70, (a, i) => 120 + reach(a) * 160 + ((i * 53) % 7) * 6, 26, 0.05)).fill(hex(this.C.primary)).stroke({ color: 0x0a0a0a, width: 5, join: 'miter' });
+      g.poly(star(46, (a, i) => 84 + reach(a) * 70 + ((i * 29) % 5) * 5, 26, 0.17)).fill(0x0a0a0a);
+      g.poly(star(26, (_a, i) => 48 + ((i * 17) % 4) * 6, 14, 0.3)).fill(hex(this.C.primary));
+      burst.addChild(g); burst.pivot.set(hub.x, hub.y); burst.position.set(hub.x, hub.y);
     }
     c.addChild(burst);
     const items: { def: CommandItem; node: Container; hit: Container; ph: number }[] = [];
@@ -119,30 +122,30 @@ export class P5Hud {
   }
   private buildItem(it: CommandItem) {
     const eng = this.eng, node = new Container();
-    const word = ransom(this.lab(it.label), it.size, eng.fonts.display, { invert: it.invert, seed: it.label.length * 7 + it.size, stroke: Math.max(4, it.size * 0.1) });
+    // 剪报字：逐字母大小/角度错落 + 指定字母黑白反色；描边统一 6
+    const word = ransom(this.lab(it.label), it.size, eng.fonts.display, { invert: it.invert, seed: it.label.length * 7 + it.size, stroke: 6 });
     const b = word.getLocalBounds();
     word.pivot.set(b.x + b.width / 2, b.y + b.height / 2);
-    // 红色楔形底（原作每个标签下的红块）+ 黑色牌
-    const w = b.width + 34, h = it.size * 0.95;
-    const back = new Graphics().poly([-w / 2 - 10, -h / 2 + 4, w / 2 + 16, -h / 2 - 6, w / 2 + 6, h / 2 + 6, -w / 2 - 18, h / 2 + 10]).fill(it.main ? hex(this.C.primary) : 0x0a0a0a).stroke({ color: 0xffffff, width: it.main ? 0 : 3 });
-    if (it.main) back.poly([-w / 2 - 4, -h / 2 + 10, w / 2 + 8, -h / 2 + 2, w / 2, h / 2, -w / 2 - 12, h / 2 + 4]).stroke({ color: 0x0a0a0a, width: 4 });
+    const w = b.width + 30, h = it.size * 0.92;
+    const back = new Graphics().poly([-w / 2 - 8, -h / 2 + 4, w / 2 + 14, -h / 2 - 5, w / 2 + 6, h / 2 + 5, -w / 2 - 16, h / 2 + 8]).fill(it.main ? hex(this.C.primary) : 0x0a0a0a).stroke({ color: 0xffffff, width: 3, join: 'miter' });
     node.addChild(back, word);
     if (it.key) {
-      const k = keyIcon(it.key, it.main ? 20 : 16); k.g.position.set(-w / 2 - 20, -h * 0.05);
+      const k = keyIcon(it.key, it.main ? 19 : 15); k.g.position.set(-w / 2 - 22, 0);
       node.addChild(k.g);
-      if (k.label) { const kt = txt(k.label, 14, { font: eng.fonts.display, fill: 0xffffff }); kt.anchor.set(0.5); kt.position.copyFrom(k.g.position); node.addChild(kt); }
+      if (k.label) { const kt = txt(k.label, 13, { font: eng.fonts.display, fill: 0xffffff }); kt.anchor.set(0.5); kt.position.copyFrom(k.g.position); node.addChild(kt); }
     }
     if (it.sub) {
-      const st = txt(this.lab(it.sub), Math.max(15, it.size * 0.3), { font: eng.fonts.body, fill: 0xffffff, fontWeight: '700' });
+      // 中文小字：在大字牌下方、避开按键图标，黑底白描边小牌；与下一行留 ≥8px
+      const st = txt(this.lab(it.sub), 14, { font: eng.fonts.body, fill: 0xffffff, fontWeight: '700', letterSpacing: 1 });
       st.anchor.set(0, 0.5);
-      const sw = st.width + 18, sh = st.height + 4;
-      const sp = new Graphics().poly([0, 0, sw, -2, sw - 6, sh, -4, sh + 2]).fill(0x0a0a0a);
-      const sc = new Container(); sc.addChild(sp, st); st.position.set(9, sh / 2);
-      sc.position.set(-w / 2 + 6, h / 2 + 2);
+      const sw = st.width + 14, sh = 20;
+      const sp = new Graphics().poly([0, 0, sw, -1, sw - 5, sh, -4, sh + 1]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 1.5 });
+      const sc = new Container(); sc.addChild(sp, st); st.position.set(7, sh / 2);
+      sc.position.set(-w / 2 + 2, h / 2 + 7);
       node.addChild(sc);
     }
     node.position.set(it.x, it.y); node.rotation = it.rot;
-    (node as any).base = { x: it.x, y: it.y };
+    (node as any).base = { x: it.x, y: it.y, r: it.rot };
     return node;
   }
   private press(n: Container) { (n as any).pressed = true; n.scale.set(this.eng.skin.tokens.motion.press); setTimeout(() => { (n as any).pressed = false; }, 90); }
@@ -236,7 +239,7 @@ export class P5Hud {
     this.order.addChild(this.orderStrip, this.orderChips);
     // navigator bubble
     const [tx, ty, tw, th] = this.eng.skin.slots['hud.topInfo'].rect;
-    const b = new Graphics().poly([tx + 10, ty + 6, tx + tw - 70, ty, tx + tw - 80, ty + th - 14, tx + tw - 100, ty + th - 14, tx + tw - 118, ty + th + 8, tx + tw - 130, ty + th - 12, tx, ty + th - 6]).fill(0xffffff).stroke({ color: 0x0a0a0a, width: 4 });
+    const b = new Graphics().poly([tx + 10, ty + 6, tx + tw - 70, ty, tx + tw - 80, ty + th - 14, tx + tw - 100, ty + th - 14, tx + tw - 118, ty + th + 8, tx + tw - 130, ty + th - 12, tx, ty + th - 6]).fill(0xffffff).stroke({ color: 0x0a0a0a, width: 3, join: 'miter' });
     const head = new Sprite(this.eng.frames['head.oracle#color'] ?? Texture.EMPTY); head.anchor.set(0.5, 1); head.scale.set(0.6); head.position.set(tx + tw - 34, ty + th + 4);
     const hb = new Graphics().circle(tx + tw - 34, ty + th / 2 + 2, 40).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 3 });
     const m = new Graphics().circle(tx + tw - 34, ty + th / 2 + 2, 37).fill(0xffffff); head.mask = m;
@@ -246,38 +249,50 @@ export class P5Hud {
     void w;
   }
   navi(key: string) { this.naviText.text = this.lab(key); }
-  setStrip(o: { lv: number; name: string; weak: string[]; known: boolean; turn: number; order: string[]; enemyTurn?: boolean }) {
+  private stripKey = '';
+  private static ELEMS = ['phys', 'gun', 'fire', 'ice', 'elec', 'wind', 'psy', 'nuke', 'bless', 'curse'];
+  setStrip(o: { lv: number; name: string; weak: string[]; known: boolean; turn: number; order: string[]; enemyTurn?: boolean; knownEls?: string[] }) {
+    const key = JSON.stringify(o); if (key === this.stripKey) return; this.stripKey = key;   // 文字复用：状态没变不重建（待机长帧修复）
     const eng = this.eng; const s = this.orderStrip; s.removeChildren().forEach((c) => c.destroy({ children: true }));
-    const w = 470;
-    s.addChild(new Graphics().poly([0, 10, w, 0, w - 14, 56, -10, 62]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 3 }));
-    const lvb = new Graphics().poly([8, 14, 74, 12, 68, 54, 2, 56]).fill(hex(this.C.primary));
-    const lv = txt('Lv', 16, { font: eng.fonts.display, fill: 0xffffff }); lv.position.set(12, 15);
-    const lvn = txt(String(o.lv), 30, { font: eng.fonts.number, fill: 0xffffff, fontStyle: 'italic' }); lvn.position.set(34, 16);
-    const nm = txt(o.name.split('').join(' '), 30, { font: eng.fonts.display, fill: 0xffffff }); nm.position.set(88, 14);
+    const w = 476;
+    // 原作目标名牌：黑底斜条 + 红色 Lv 块 + 名字；下方一排属性相性格（已知弱点=属性图标+WK，未知=灰底「?」）
+    s.addChild(new Graphics().poly([0, 8, w, 0, w - 12, 50, -8, 56]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 3, join: 'miter' }));
+    const lvb = new Graphics().poly([6, 12, 70, 10, 65, 47, 1, 49]).fill(hex(this.C.primary));
+    const lv = txt('Lv', 15, { font: eng.fonts.display, fill: 0xffffff }); lv.position.set(10, 14);
+    const lvn = txt(String(o.lv), 28, { font: eng.fonts.number, fill: 0xffffff, fontStyle: 'italic' }); lvn.position.set(31, 12);
+    const nm = txt(o.name, 28, { font: eng.fonts.display, fill: 0xffffff, letterSpacing: 4 }); nm.position.set(84, 12);
     s.addChild(lvb, lv, lvn, nm);
-    let ix = 100 + nm.width;
-    for (const e of o.weak) { const ic = elemIcon(e, 14); ic.position.set(ix, 34); s.addChild(ic); const wk = txt('WEAK', 12, { font: eng.fonts.display, fill: hex(this.C.primary) }); wk.anchor.set(0.5, 0); wk.position.set(ix, 48); s.addChild(wk); ix += 40; }
-    if (!o.known) { const q = txt('?', 26, { font: eng.fonts.display, fill: 0x888888 }); q.position.set(ix - 8, 16); s.addChild(q); }
-    // 行动顺序（原创补充：P5X 式）
+    const row = new Container(); row.position.set(86, 62);
+    const kn = new Set(o.knownEls ?? []);
+    P5Hud.ELEMS.forEach((e, i) => {
+      const x = i * 30, isW = o.weak.includes(e), isK = kn.has(e) || isW;
+      const cell = new Graphics().poly([x - 13, -12, x + 15, -13, x + 13, 13, x - 15, 14]).fill(isW ? hex(this.C.primary) : 0x1a1a1a).stroke({ color: 0xffffff, width: 1.5 });
+      row.addChild(cell);
+      if (isK) { const ic = elemIcon(e, 9); ic.position.set(x, 0); row.addChild(ic); }
+      else { const q = txt('?', 16, { font: eng.fonts.display, fill: 0x8a8a8a }); q.anchor.set(0.5); q.position.set(x, 0); row.addChild(q); }
+      if (isW) { const wk = txt('WK', 10, { font: eng.fonts.display, fill: 0xffffff, stroke: { color: 0x0a0a0a, width: 3 } }); wk.anchor.set(0.5, 0); wk.position.set(x, 12); row.addChild(wk); }
+    });
+    s.addChild(row);
+    // 回合标签 + 行动顺序（原创补充：P5X 式），放在相性格左侧下方，统一 2px 白描边
     const ch = this.orderChips; ch.removeChildren().forEach((c) => c.destroy({ children: true }));
-    const tb = new Graphics().poly([0, 0, 92, -3, 86, 22, -4, 25]).fill(o.enemyTurn ? 0xffffff : hex(this.C.primary));
-    this.turnText = txt(`${o.enemyTurn ? 'ENEMY' : 'TURN'} ${String(o.turn).padStart(2, '0')}`, 18, { font: eng.fonts.display, fill: o.enemyTurn ? 0x0a0a0a : 0xffffff });
-    this.turnText.position.set(8, 1);
+    const tb = new Graphics().poly([0, 0, 78, -2, 73, 22, -4, 24]).fill(o.enemyTurn ? 0xffffff : hex(this.C.primary)).stroke({ color: 0x0a0a0a, width: 2 });
+    this.turnText = txt(`${o.enemyTurn ? 'ENEMY' : 'TURN'} ${String(o.turn).padStart(2, '0')}`, 16, { font: eng.fonts.display, fill: o.enemyTurn ? 0x0a0a0a : 0xffffff });
+    this.turnText.position.set(7, 2);
     ch.addChild(tb, this.turnText);
-    o.order.slice(0, 6).forEach((id, i) => {
-      const x = 104 + i * 40, g = new Graphics().poly([x, 0, x + 34, -2, x + 30, 24, x - 4, 26]).fill(i === 0 ? 0xffffff : 0x0a0a0a).stroke({ color: 0xffffff, width: 2 });
+    o.order.slice(0, 7).forEach((id, i) => {
+      const x = 90 + i * 34, g = new Graphics().poly([x, 0, x + 30, -2, x + 27, 23, x - 3, 24]).fill(i === 0 ? hex(this.C.primary) : 0x0a0a0a).stroke({ color: 0xffffff, width: 2 });
       ch.addChild(g);
       const tex = eng.frames[`head.${id}#ink`];
-      if (tex) { const sp = new Sprite(tex); sp.width = sp.height = 30; sp.position.set(x, -4); ch.addChild(sp); }
-      else { const e = txt(id === 'noisy' ? '聒' : '游', 16, { font: eng.fonts.display, fill: i === 0 ? 0x0a0a0a : hex(this.C.primary) }); e.anchor.set(0.5); e.position.set(x + 15, 12); ch.addChild(e); }
+      if (tex) { const sp = new Sprite(tex); sp.width = sp.height = 28; sp.position.set(x, -5); ch.addChild(sp); }
+      else { const e = txt(id.startsWith('noisy') ? '聒' : '游', 15, { font: eng.fonts.display, fill: 0xffffff }); e.anchor.set(0.5); e.position.set(x + 13, 11); ch.addChild(e); }
     });
-    ch.position.set(6, 70);
+    ch.position.set(0, 96);
   }
   private buildSystem() {
     for (const b of this.eng.skin.slots['hud.system'].buttons) {
       const [x, y, w, h] = b.hit, cx = x + w / 2, cy = y + 34;
-      const g = new Graphics().poly([cx - 34, cy - 22, cx + 36, cy - 26, cx + 32, cy + 22, cx - 38, cy + 26]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 2.5 });
-      const t = txt(this.lab(b.label), 22, { font: this.eng.fonts.display, fill: 0xffffff }); t.anchor.set(0.5); t.position.set(cx, cy);
+      const g = new Graphics().poly([cx - 34, cy - 22, cx + 36, cy - 26, cx + 32, cy + 22, cx - 38, cy + 26]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 3, join: 'miter' });
+      const t = txt(this.lab(b.label), 22, { font: this.eng.fonts.display, fill: 0xffffff, letterSpacing: 1 }); t.anchor.set(0.5); t.position.set(cx, cy + 1);
       t.label = 'sys.' + b.id;
       this.sys.addChild(g, t, this.hitBox(b.hit, () => this.onSystem(b.id)));
     }
@@ -310,16 +325,17 @@ export class P5Hud {
         u.root.hitArea = new Rectangle(-Math.max(70, u.tex.width * u.s * 0.45), -u.h, Math.max(140, u.tex.width * u.s * 0.9), u.h + 20);
         u.root.on('pointertap', () => this.onEnemy(e.id));
       }
+      const ek = JSON.stringify(e) + this.targetId; if ((c as any).key === ek) continue; (c as any).key = ek;
       c.removeChildren().forEach((x) => x.destroy({ children: true }));
-      c.visible = e.alive;
-      const nm = txt(e.name, 20, { font: this.eng.fonts.display, fill: 0xffffff });
+      c.visible = e.alive && e.id !== this.targetId;   // 原作：选中目标的名字只在左上名牌条显示
+      const nm = txt(e.name, e.compact ? 15 : 20, { font: this.eng.fonts.display, fill: 0xffffff });
       const w = nm.width + 26;
       const bg = new Graphics().poly([0, 2, w, 0, w - 8, 28, -6, 30]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 2 });
       nm.position.set(10, 3);
       c.addChild(bg, nm);
       let ix = w + 18;
       for (const k of e.known) { const ic = elemIcon(k, 12); ic.position.set(ix, 15); c.addChild(ic); if (e.weak.includes(k)) { const wk = txt('WK', 11, { font: this.eng.fonts.display, fill: 0xffffff, stroke: { color: hex(this.C.primary), width: 4 } }); wk.anchor.set(0.5); wk.position.set(ix, 32); c.addChild(wk); } ix += 30; }
-      const hpw = 110, r = Math.max(0, e.hp / e.hpMax);
+      const hpw = e.compact ? 80 : 110, r = Math.max(0, e.hp / e.hpMax);
       c.addChild(new Graphics().poly([0, 36, hpw, 35, hpw - 3, 42, -3, 43]).fill(0x0a0a0a).poly([0, 36, hpw * r, 35.5, hpw * r - 3, 42, -3, 43]).fill(hex(this.C.primary)));
       c.position.set(u.home.x - w / 2, u.home.y + u.headY + this.eng.skin.slots['hud.enemyOver'].dy - 30);
       (c as any).hpR = r;
@@ -412,10 +428,17 @@ export class P5Hud {
     const es = enemyIds.map((i) => this.eng.units.get(i)!).filter(Boolean);
     const cx = es.reduce((a, u) => a + u.home.x, 0) / Math.max(1, es.length), cy = es.reduce((a, u) => a + u.home.y, 0) / Math.max(1, es.length);
     const spots = [[-300, 30, 0.8], [300, 40, 0.82], [-170, 150, 0.95], [190, 160, 0.98]];
+    const v = this.eng.st.vis, pb = this.party.getLocalBounds(), partyTop = Math.min(this.eng.skin.slots['hud.party'].rect[1], (pb.height > 0 ? this.party.y + pb.y : 1e9));   // 实际卡片包围（当前行动者卡上浮+倾斜）
+    const cmdX = Math.min(...this.eng.skin.slots['hud.command'].sets.holdup.items.map((it: any) => it.hit[0]));
+    const span = es.length ? Math.max(...es.map((u) => u.home.x)) - Math.min(...es.map((u) => u.home.x)) : 0;
+    const spread = Math.max(1, (span / 2 + 170) / 300);   // 敌群越宽，包围越开
     party.forEach((id, i) => {
       const tex = this.eng.frames[`char.${id}#body`]; if (!tex) return;
       const s = new Sprite(tex); s.anchor.set(0.5, 1); s.tint = hex(this.C.primary); s.alpha = 0.92;
-      const [dx, dy, sc] = spots[i % 4]; s.position.set(cx + dx, cy + dy); s.scale.set((dx < 0 ? 1 : -1) * sc, sc);
+      const [dx, dy, sc] = spots[i % 4]; s.scale.set((dx < 0 ? 1 : -1) * sc, sc);
+      // 遍历敌人数组后夹紧：脚底不压队伍卡顶边，左右不出可视区、不压 HOLD UP 指令盘（1..5 只敌人都成立）
+      const hw = Math.abs(s.width) / 2, x0 = Math.max(v.l + 8, 0) + hw, x1 = cmdX - 12 - hw;
+      s.position.set(Math.min(Math.max(cx + dx * spread, x0), Math.max(x0, x1)), Math.min(cy + dy, partyTop - 10));
       const o = new Sprite(tex); o.anchor.set(0.5, 1); o.tint = 0x0a0a0a; o.position.set(s.x + 6, s.y + 4); o.scale.copyFrom(s.scale);
       this.holdRing.addChild(o, s);
     });
@@ -491,10 +514,13 @@ export class P5Hud {
         const k = ease.outBack(Math.min(1, Math.max(0, (this.openT - i * 22) / 180)));
         const b = (it.node as any).base;
         it.node.x = set.hub.x + (b.x - set.hub.x) * k; it.node.y = set.hub.y + (b.y - set.hub.y) * k;
-        if (!(it.node as any).pressed) it.node.scale.set((0.4 + 0.6 * k) * (1 + 0.012 * Math.sin(this.t / 420 + it.ph)));
+        if (!(it.node as any).pressed) it.node.scale.set((0.4 + 0.6 * k) * (1 + 0.014 * Math.sin(this.t / 520 + it.ph)));
+        it.node.rotation = b.r + 0.012 * Math.sin(this.t / 700 + it.ph * 1.3);
+        it.node.y += 2.2 * Math.sin(this.t / 610 + it.ph);
       });
       s.burst.alpha = Math.min(1, this.openT / 160);
-      s.burst.scale.set(1);
+      const kb = ease.outBack(Math.min(1, this.openT / 200));
+      s.burst.scale.set(kb * (1 + 0.02 * Math.sin(this.t / 480))); s.burst.rotation = 0.018 * Math.sin(this.t / 900);
     }
     if (this.list.visible) { const k = Math.min(1, this.openT / 200); this.list.x = 1018 + (1 - ease.outBack(k)) * 260; this.list.alpha = this.busy ? 0 : k; }
     this.drawParty(dt);

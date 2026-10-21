@@ -25,9 +25,10 @@ PAIRS = [('1-idle', 'battle/cmd-menu-xbox.jpg', 'idle', 'P5R command menu (refs/
          ('3-cutin', 'guidb/gui-26513.jpg', 'cutin', 'P5R cut-in (G26513)'),
          ('4-onemore', 'frames/gs50/t_09-32.jpg', 'onemore', 'P5R 1 MORE (V:gs50 @09:32)'),
          ('5-holdup', 'frames/gs50/t_01-00.jpg', 'holdup', 'P5R HOLD UP (V:gs50 @01:00)'),
-         ('7-result', 'guidb/gui-26519.jpg', 'result', 'P5R RESULT (G26519)')]
+         ('7-result', 'guidb/gui-26519.jpg', 'result', 'P5R RESULT (G26519)'),
+         ('@shots2/844x390-03-summon-f-full', 'frames/takeover/t_01-20.jpg', 'summon', 'P5R Persona summon (takeover @01:20)')]
 for st, ref, name, label in PAIRS:
-    a = Image.open(f'{S}/844x390-{st}.png').convert('RGB'); b = Image.open(REF + ref).convert('RGB')
+    a = Image.open(R + '/shots2/' + st.split('/', 1)[1] + '.png' if st.startswith('@') else f'{S}/844x390-{st}.png').convert('RGB'); b = Image.open(REF + ref).convert('RGB')
     H = 520; a = a.resize((int(a.width * H / a.height), H), Image.LANCZOS); b = b.resize((int(b.width * H / b.height), H), Image.LANCZOS)
     c = Image.new('RGB', (a.width + b.width + 18, H + 50), (10, 10, 10)); c.paste(a, (0, 50)); c.paste(b, (a.width + 18, 50))
     d = ImageDraw.Draw(c); d.text((10, 10), 'UMBRA M3 (844x390)', font=FNT, fill=(255, 255, 255)); d.text((a.width + 28, 10), label, font=FNT, fill=(255, 220, 80))

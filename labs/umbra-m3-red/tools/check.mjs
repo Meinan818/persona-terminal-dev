@@ -52,6 +52,11 @@ async function flow(page) {
     log('timing ' + tag);
   }
   await page.evaluate(() => { window.__umbra.dir.speed = 1; window.__umbra.dir.forceMinimal = false; });
+  // 待机帧时间：指令轮静置 6s（HUD 只在变化时重建后，待机不该再有 40ms+ 尖峰）
+  await page.evaluate(() => window.__umbra.resetFrames()); await page.waitForTimeout(6000);
+  out.idle = await page.evaluate(() => { const f = window.__M.frames.filter((x) => x.ph === 'idle'); const c = f.map((x) => x.cpu).sort((a, b) => a - b), d = f.map((x) => x.dt).sort((a, b) => a - b);
+    const q = (a, p) => a[Math.min(a.length - 1, Math.floor(a.length * p))]; return { n: f.length, cpuMed: +q(c, 0.5).toFixed(2), cpuP95: +q(c, 0.95).toFixed(2), cpuMax: +c[c.length - 1].toFixed(2), over16: c.filter((x) => x > 16.7).length, dtMed: +q(d, 0.5).toFixed(1) }; });
+  log('idle ' + JSON.stringify(out.idle));
   out.clean = await page.evaluate(() => window.__umbra.counts());
   // payload 冻结：演出拿到的 payload 不可写
   out.freeze = await page.evaluate(() => { const d = window.__umbra.dir; let r = 'no-run';
@@ -107,5 +112,19 @@ async function flow(page) {
 fs.writeFileSync('tools/out/check.json', JSON.stringify(out, null, 1));
 const bad = [];
 for (const [k, list] of Object.entries(out.timing)) for (const r of list) if (r.forced || r.wallMs > r.capMs) bad.push(`${k} ${r.recipe} ${r.wallMs}/${r.capMs}${r.forced ? ' FORCED' : ''}`);
+// 第二阶段硬指标：1 MORE 完整档 ≤450ms、跳过闪白 ≤150ms、Guard/Attack 完整档 duration ≤ 3× 极简档上限
+const full = out.timing['x1-full'] ?? [], mini = out.timing['x1-minimal'] ?? [];
+const capOf = (list, id) => (list.find((r) => r.recipe === id) || {}).capMs;
+const gates = {
+  onemoreFullMaxWall: Math.max(...full.filter((r) => r.recipe === 'onemore').map((r) => r.wallMs)),
+  onemoreOk: full.filter((r) => r.recipe === 'onemore').every((r) => r.wallMs <= 450),
+  skipFlashMs: out.skip.flashMs, skipOk: out.skip.flashMs <= 150,
+  guard: { dur: (full.find((r) => r.recipe === 'action.guard') || {}).duration, minCap: capOf(mini, 'action.guard') },
+  attack: { dur: (full.find((r) => r.recipe === 'action.attack') || {}).duration, minCap: capOf(mini, 'action.attack') },
+};
+gates.guard.ok = gates.guard.dur <= 3 * gates.guard.minCap; gates.attack.ok = gates.attack.dur <= 3 * gates.attack.minCap;
+gates.idle = out.idle;
+out.gates = gates; fs.writeFileSync('tools/out/check.json', JSON.stringify(out, null, 1));
+log('GATES ' + JSON.stringify(gates));
 log(JSON.stringify({ overCap: bad, geometryBad: out.geometry.items.filter((i) => !i.ok || !i.inside).map((i) => i.id), overlaps: out.geometry.overlaps, portrait: out.portrait.map((p) => p.id + ':' + p.ok), skip: out.skip, freeze: out.freeze, buffer: out.buffer, clean: out.clean, errors: out.errors.slice(0, 5) }));
 await browser.close();

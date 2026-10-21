@@ -33,5 +33,5 @@ for d in ['/workspace/work/umbra-next/m3/shots', '/workspace/work/umbra-next/m3/
         if im.width > 1600: im.thumbnail((1600, 1600))
         im.save(os.path.join(D, n + '.jpg'), quality=80)
 PY
-mkdir -p "$DST/shots/clips"; cp -f $SRC/shots/clips/*.gif $SRC/shots/clips/*.mp4 "$DST/shots/clips/" 2>/dev/null || true
+mkdir -p "$DST/shots/clips"; rm -f "$DST/shots/clips/"*.gif; cp -f $SRC/shots/clips/*.mp4 "$DST/shots/clips/" 2>/dev/null || true   # 仓库只放 mp4（gif 共 9 MB 留在本地）
 du -sh "$DST"

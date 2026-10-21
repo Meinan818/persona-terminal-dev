@@ -119,7 +119,7 @@
    "w": 557,
    "h": 640,
    "firstPack": false,
-   "source": "official",
+   "source": "generated",
    "group": "back:joker",
    "note": "generate_image 背影（参考官方 Joker 立绘）"
   },
@@ -955,6 +955,86 @@
    "source": "official",
    "group": "show:mona-noir",
    "note": "SHOWTIME 定格画 ← File:P5R Showtime MorganaHaru.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Showtime_MorganaHaru.png"
+  },
+  {
+   "id": "finish.skull",
+   "file": "assets/finish.skull.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:skull",
+   "note": "总攻定格画（Finishing Touch 末帧，480×270 放大）← File:Ryuji's Finsihing Touch.gif — https://megamitensei.fandom.com/wiki/File%3ARyuji%27s_Finsihing_Touch.gif"
+  },
+  {
+   "id": "finish.mona",
+   "file": "assets/finish.mona.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:mona",
+   "note": "总攻定格画（Finishing Touch 末帧，678×382 放大）← File:Morgana's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AMorgana%27s_Finishing_Touch.gif"
+  },
+  {
+   "id": "finish.panther",
+   "file": "assets/finish.panther.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:panther",
+   "note": "总攻定格画（Finishing Touch 末帧，480×270 放大）← File:Ann's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AAnn%27s_Finishing_Touch.gif"
+  },
+  {
+   "id": "finish.fox",
+   "file": "assets/finish.fox.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:fox",
+   "note": "总攻定格画（Finishing Touch 末帧，678×382 放大）← File:Yusuke's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AYusuke%27s_Finishing_Touch.gif"
+  },
+  {
+   "id": "finish.queen",
+   "file": "assets/finish.queen.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:queen",
+   "note": "总攻定格画（Finishing Touch 末帧，600×338 放大）← File:Makoto's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AMakoto%27s_Finishing_Touch.gif"
+  },
+  {
+   "id": "finish.noir",
+   "file": "assets/finish.noir.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:noir",
+   "note": "总攻定格画（Finishing Touch 末帧，595×335 放大）← File:Haru's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AHaru%27s_Finishing_Touch.gif"
+  },
+  {
+   "id": "finish.crow",
+   "file": "assets/finish.crow.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:crow",
+   "note": "总攻定格画（Finishing Touch 末帧，678×382 放大）← File:Crow Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3ACrow_Finishing_Touch.gif"
+  },
+  {
+   "id": "finish.violet",
+   "file": "assets/finish.violet.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:violet",
+   "note": "总攻定格画（Finishing Touch 末帧，678×382 放大）← File:Kasumi Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AKasumi_Finishing_Touch.gif"
   }
  ],
  "filters": [
@@ -978,10 +1058,10 @@
   {
    "family": "R5 CJK",
    "file": "assets/fonts/r5-cjk-0.woff2",
-   "chars": "·—…、。「」一上下不与两个中了交亮人从会伤伴作你使倒先入全具再冰决出击切别到力动升原口只可合同名后员和咒回图场声备复它定害对小异弱强影得御念态思怨总恢成战手打技持换接提攻放敌斗方时明是替有条来板枪查核次气法消涉火点物生用电疾白的看真祝福离等练结给继续耗背能行训记设谁起路过返这逃道避那部量针间队防降面风！（），：；？～",
+   "chars": "·—…、。「」一三上下不与两个中了五交亮人从会伤伴作你使倒先入全具再冰决出击切别到力动升原口只可合同名后员和咒四回图场声备复它定害对小异弱强影得御念态思怨总恢成战手打技持换接提攻放敌斗方时明是替有条来板枪查核次气法消涉火点物生用电疾白的看真祝福离等练结给继续耗背能行训记设谁起路过返这逃道避那部量针间队防降面风！（），：；？～",
    "role": "display",
    "pack": "first",
-   "unicodeRange": "U+B7,U+2014,U+2026,U+3001,U+3002,U+300C,U+300D,U+4E00,U+4E0A,U+4E0B,U+4E0D,U+4E0E,U+4E24,U+4E2A,U+4E2D,U+4E86,U+4EA4,U+4EAE,U+4EBA,U+4ECE,U+4F1A,U+4F24,U+4F34,U+4F5C,U+4F60,U+4F7F,U+5012,U+5148,U+5165,U+5168,U+5177,U+518D,U+51B0,U+51B3,U+51FA,U+51FB,U+5207,U+522B,U+5230,U+529B,U+52A8,U+5347,U+539F,U+53E3,U+53EA,U+53EF,U+5408,U+540C,U+540D,U+540E,U+5458,U+548C,U+5492,U+56DE,U+56FE,U+573A,U+58F0,U+5907,U+590D,U+5B83,U+5B9A,U+5BB3,U+5BF9,U+5C0F,U+5F02,U+5F31,U+5F3A,U+5F71,U+5F97,U+5FA1,U+5FF5,U+6001,U+601D,U+6028,U+603B,U+6062,U+6210,U+6218,U+624B,U+6253,U+6280,U+6301,U+6362,U+63A5,U+63D0,U+653B,U+653E,U+654C,U+6597,U+65B9,U+65F6,U+660E,U+662F,U+66FF,U+6709,U+6761,U+6765,U+677F,U+67AA,U+67E5,U+6838,U+6B21,U+6C14,U+6CD5,U+6D88,U+6D89,U+706B,U+70B9,U+7269,U+751F,U+7528,U+7535,U+75BE,U+767D,U+7684,U+770B,U+771F,U+795D,U+798F,U+79BB,U+7B49,U+7EC3,U+7ED3,U+7ED9,U+7EE7,U+7EED,U+8017,U+80CC,U+80FD,U+884C,U+8BAD,U+8BB0,U+8BBE,U+8C01,U+8D77,U+8DEF,U+8FC7,U+8FD4,U+8FD9,U+9003,U+9053,U+907F,U+90A3,U+90E8,U+91CF,U+9488,U+95F4,U+961F,U+9632,U+964D,U+9762,U+98CE,U+FF01,U+FF08,U+FF09,U+FF0C,U+FF1A,U+FF1B,U+FF1F,U+FF5E"
+   "unicodeRange": "U+B7,U+2014,U+2026,U+3001,U+3002,U+300C,U+300D,U+4E00,U+4E09,U+4E0A,U+4E0B,U+4E0D,U+4E0E,U+4E24,U+4E2A,U+4E2D,U+4E86,U+4E94,U+4EA4,U+4EAE,U+4EBA,U+4ECE,U+4F1A,U+4F24,U+4F34,U+4F5C,U+4F60,U+4F7F,U+5012,U+5148,U+5165,U+5168,U+5177,U+518D,U+51B0,U+51B3,U+51FA,U+51FB,U+5207,U+522B,U+5230,U+529B,U+52A8,U+5347,U+539F,U+53E3,U+53EA,U+53EF,U+5408,U+540C,U+540D,U+540E,U+5458,U+548C,U+5492,U+56DB,U+56DE,U+56FE,U+573A,U+58F0,U+5907,U+590D,U+5B83,U+5B9A,U+5BB3,U+5BF9,U+5C0F,U+5F02,U+5F31,U+5F3A,U+5F71,U+5F97,U+5FA1,U+5FF5,U+6001,U+601D,U+6028,U+603B,U+6062,U+6210,U+6218,U+624B,U+6253,U+6280,U+6301,U+6362,U+63A5,U+63D0,U+653B,U+653E,U+654C,U+6597,U+65B9,U+65F6,U+660E,U+662F,U+66FF,U+6709,U+6761,U+6765,U+677F,U+67AA,U+67E5,U+6838,U+6B21,U+6C14,U+6CD5,U+6D88,U+6D89,U+706B,U+70B9,U+7269,U+751F,U+7528,U+7535,U+75BE,U+767D,U+7684,U+770B,U+771F,U+795D,U+798F,U+79BB,U+7B49,U+7EC3,U+7ED3,U+7ED9,U+7EE7,U+7EED,U+8017,U+80CC,U+80FD,U+884C,U+8BAD,U+8BB0,U+8BBE,U+8C01,U+8D77,U+8DEF,U+8FC7,U+8FD4,U+8FD9,U+9003,U+9053,U+907F,U+90A3,U+90E8,U+91CF,U+9488,U+95F4,U+961F,U+9632,U+964D,U+9762,U+98CE,U+FF01,U+FF08,U+FF09,U+FF0C,U+FF1A,U+FF1B,U+FF1F,U+FF5E"
   },
   {
    "family": "R5 CJK",
@@ -1022,6 +1102,14 @@
    "role": "display",
    "pack": "first",
    "unicodeRange": "U+4E3E"
+  },
+  {
+   "family": "R5 CJK",
+   "file": "assets/fonts/r5-cjk-synth.woff2",
+   "chars": "咔潜",
+   "role": "display",
+   "pack": "first",
+   "unicodeRange": "U+5494,U+6F5C"
   }
  ]
 }

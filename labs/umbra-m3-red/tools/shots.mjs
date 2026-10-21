@@ -29,8 +29,9 @@ await shot(2, 'skilllist');
 await page.evaluate(() => { window.__umbra.freezeOn('action', 300); window.__umbra.row(0); });
 await until(() => window.__umbra.ev === 'action' && window.__umbra.showT >= 299);
 await shot(3, 'cutin');
-await page.evaluate(() => { window.__umbra.release(); window.__umbra.freezeOn('onemore', 200); });
-await until(() => window.__umbra.ev === 'onemore' && window.__umbra.showT >= 199);
+await page.evaluate(() => { window.__umbra.release(); window.__umbra.freezeOn('onemore', 280); });
+await until(() => window.__umbra.ev === 'onemore' && window.__umbra.showT >= 279);
+await page.waitForFunction(() => !window.__umbra.eng.fx.flash.visible, null, { timeout: 3000 }).catch(() => page.evaluate(() => { window.__umbra.eng.fx.flash.visible = false; }));  // 慢帧下定格与闪白同帧触发时闪白不再衰减；按时间轴 t=280 时闪白（140–210）早已结束   // 闪白结束后再拍（软件光栅慢帧会把闪白峰值帧留在截图里）
 await shot(4, 'onemore');
 await page.evaluate(() => window.__umbra.release());
 await until(() => window.__umbra.mode === 'command' && !window.__umbra.busy);

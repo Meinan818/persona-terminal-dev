@@ -7,6 +7,7 @@ import { ransom, txt, plate } from './text';
 import { setDownPose, UnitNode } from './units';
 import { DW, DH } from './stage';
 import { summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLogo } from './summon';
+import { blockPush, tvStatic, glassShatter, cardFlip, cardShatter, dateFlip, eyeStrip, onomatopoeia, checkerFloor, ringSplash } from './prims2';
 
 export interface RunCtx {
   eng: Engine; owner: number; ev: EventName; payload: any; level: 'full' | 'standard' | 'minimal';
@@ -393,7 +394,7 @@ function buildFinish(eng: Engine, art: Texture, shape: number[]) {
 const finishCard: Prim = (t, rc) => {
   const a = A(t), eng = rc.eng, dur = Math.min(1000, t.dur ?? 970);
   const shape = a.shape ?? [-760, -330, 700, -400, 760, 330, -700, 400];
-  const fid = eng.resolve(a.artId ?? 'allout.finish.default', rc.payload); const ftex = eng.tex[fid];
+  let fid = eng.resolve(a.artId ?? 'allout.finish.default', rc.payload); if (!eng.tex[fid] && a.fallback) fid = a.fallback; const ftex = eng.tex[fid];
   if (!ftex) { eng.errors.push('finishCard art missing ' + fid); return null; }
   const c = eng.getFix('finish:' + fid, () => buildFinish(eng, ftex, shape), eng.st.layers.allout);
   const spr = (c.children[1] as Container).children[0] as Sprite, base = (c as any).baseScale as number;
@@ -476,4 +477,5 @@ export const PRIMS: Partial<Record<string, Prim>> = {
   hitStop, shake, flashSprite, flashScreen, squashHit, particles, afterimage, slashLine, damageNumber, tag, shockwave, rgbSplit,
   cutin, speedLines, banner, silhouetteDash, freezeFrame, finishCard, totalDamage, slashPanels, maskWipe, bakedSwap, portraitDown,
   summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLogo,
+  blockPush, tvStatic, glassShatter, cardFlip, cardShatter, dateFlip, eyeStrip, onomatopoeia, checkerFloor, ringSplash,
 };

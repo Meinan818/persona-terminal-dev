@@ -1,0 +1,159 @@
+{
+ "errors": [],
+ "engErr": [
+  "summon: char.joker not loaded",
+  "cutin art missing char.joker#cutin",
+  "dropText unit.down",
+  "dropText unit.down"
+ ],
+ "timing": [
+  {
+   "ev": "battle:start",
+   "recipe": "transition.battleStart",
+   "duration": 860,
+   "wallMs": 868,
+   "capMs": 900,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "action",
+   "recipe": "skill.eiha",
+   "duration": 1700,
+   "wallMs": 660,
+   "capMs": 1800,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "onemore",
+   "recipe": "onemore",
+   "duration": 420,
+   "wallMs": 354,
+   "capMs": 450,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "unit:down",
+   "recipe": "unit.down",
+   "duration": 460,
+   "wallMs": 509,
+   "capMs": 500,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "baton",
+   "recipe": "baton",
+   "duration": 540,
+   "wallMs": 310,
+   "capMs": 600,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "action",
+   "recipe": "skill.lunge",
+   "duration": 1700,
+   "wallMs": 1422,
+   "capMs": 1800,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "onemore",
+   "recipe": "onemore",
+   "duration": 420,
+   "wallMs": 800,
+   "capMs": 450,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "unit:down",
+   "recipe": "unit.down",
+   "duration": 460,
+   "wallMs": 800,
+   "capMs": 500,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "holdup",
+   "recipe": "holdup",
+   "duration": 950,
+   "wallMs": 1200,
+   "capMs": 1000,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "allout",
+   "recipe": "allout.default",
+   "duration": 3060,
+   "wallMs": 588,
+   "capMs": 3500,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "battle:end",
+   "recipe": "battle.end",
+   "duration": 1300,
+   "wallMs": 1600,
+   "capMs": 1500,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  },
+  {
+   "ev": "levelup",
+   "recipe": "levelup",
+   "duration": 900,
+   "wallMs": 1200,
+   "capMs": 1000,
+   "forced": false,
+   "skipped": false,
+   "speed": 1,
+   "level": "full"
+  }
+ ],
+ "issues": [
+  {
+   "recipe": "onemore",
+   "level": "error",
+   "msg": "particles@150 life 280 超出 duration"
+  }
+ ],
+ "counts": {
+  "particles": 0,
+  "filters": 0,
+  "cutin": 0,
+  "allout": 0,
+  "trans": 0,
+  "dmg": 0,
+  "fx": 1
+ }
+}

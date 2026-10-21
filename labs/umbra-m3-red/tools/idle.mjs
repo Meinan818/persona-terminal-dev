@@ -1,0 +1,10 @@
+import { chromium } from 'playwright-core';
+const [W,H,q,name]=process.argv.slice(2);
+const browser = await chromium.launch({ executablePath: '/workspace/work/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux-arm64/chrome-headless-shell', args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--enable-webgl'] });
+const page = await (await browser.newContext({ viewport: { width: +W, height: +H }, deviceScaleFactor: 2 })).newPage();
+page.on('pageerror', (e) => console.log('ERR', String(e)));
+await page.goto('http://127.0.0.1:8766/?auto=0&' + (q||''), { waitUntil: 'load' });
+await page.waitForFunction(() => window.__umbra && window.__umbra.mode === 'command' && !window.__umbra.busy, null, { timeout: 90000 });
+await page.waitForTimeout(800);
+await page.screenshot({ path: name });
+await browser.close();

@@ -12,6 +12,7 @@ const qs = new URLSearchParams(location.search);
 const DEMO = qs.get('demo') === '1';
 const SKIN = qs.get('umbra') ?? 'p5r-red';
 const DPR = window.devicePixelRatio || 1;
+const ENEMIES = Math.max(1, Math.min(5, +(qs.get('enemies') ?? 2) || 2));
 const PARTY = (qs.get('party') ?? '').split(',').filter(Boolean).length ? qs.get('party')!.split(',').filter(Boolean) : DEFAULT_PARTY;
 const INIT_Q = (qs.get('q') as any) || 'high';
 const MAXDT = qs.has('maxdt') ? +qs.get('maxdt')! : 100;
@@ -55,18 +56,21 @@ function ensureUnit(id: string) {
   return u;
 }
 ensureUnit(roster.lead)!.root.visible = true;
-['noisy', 'echo'].forEach((id, i) => {
-  const p = pos.enemies[i];
-  const u = makeUnit(id, 'enemy', eng.tex['enemy.' + id], p.x, p.y, p.h, 1, slots[`unit.${id}.portrait`].meshIdle, i * 1.7 + 0.6, grid);
-  eng.units.set(id, u); eng.st.layers.enemy.addChild(u.root);
-});
 
 const dir = new Director(eng);
 const hud = new P5Hud(eng);
 dir.onMainChange.push((b) => hud.setBusy(b));
-const B = new Battle(PARTY);
+const B = new Battle(PARTY, ENEMIES);
 hud.setPartyIds(B.party);
-let target = 'noisy';
+// D-004：敌人按数组建单位，站位读皮肤 enemyLayouts[n]
+const lay = slots['scene.battle.enemyLayouts'][String(B.enemies.length)] ?? pos.enemies;
+B.enemies.forEach((id, i) => {
+  const ty = B.enemyType.get(id)!, p = lay[i];
+  const u = makeUnit(id, 'enemy', eng.tex['enemy.' + ty], p.x, p.y, p.h, 1, slots[`unit.${ty}.portrait`].meshIdle, i * 1.7 + 0.6, grid);
+  eng.units.set(id, u); eng.st.layers.enemy.addChild(u.root);
+});
+const eName = (id: string) => L(B.u(id).name) + (B.u(id).suffix ?? '');
+let target = B.enemies[0];
 let auto = false;
 /** 当前队伍的角色素材懒加载（背影/cut-in/召唤/人格面具）；非当前队员不进首包 */
 const loadParty = () => Promise.all(B.party.flatMap((id) => [eng.loadGroup('back:' + id), eng.loadGroup('char:' + id), eng.loadGroup('head:' + id)])).then(() => { B.party.forEach(ensureUnit); hud.refreshHeads(); });
@@ -95,13 +99,13 @@ function partyStates(): PartyState[] { return B.party.map((id) => { const u = B.
 function syncHud() {
   hud.setPartyIds(B.party);
   hud.updateParty(partyStates());
-  const es: EnemyState[] = B.enemies.map((id) => { const u = B.u(id); return { id, name: L(u.name), hp: u.hp, hpMax: u.hpMax, lv: u.lv, known: u.known, weak: u.weak.filter((w) => u.known.includes(w)), down: u.down, alive: u.hp > 0 }; });
-  hud.updateEnemies(es);
+  const es: EnemyState[] = B.enemies.map((id) => { const u = B.u(id); return { id, name: eName(id), compact: B.enemies.length >= 4, hp: u.hp, hpMax: u.hpMax, lv: u.lv, known: u.known, weak: u.weak.filter((w) => u.known.includes(w)), down: u.down, alive: u.hp > 0 }; });
   if (B.u(target).hp <= 0) target = B.alive(B.enemies)[0] ?? target;
   hud.setTarget(target);
+  hud.updateEnemies(es);
   const t = B.u(target);
   const order = [...B.alive(B.party).filter((i) => !B.acted.has(i)), ...B.alive(B.enemies)];
-  hud.setStrip({ lv: t.lv, name: L(t.name), weak: t.weak.filter((w) => t.known.includes(w)), known: t.known.length > 0, turn: B.turn, order });
+  hud.setStrip({ lv: t.lv, name: eName(target), weak: t.weak.filter((w) => t.known.includes(w)), known: t.known.length > 0, turn: B.turn, order, knownEls: t.known });
   hud.oneMore = B.oneMore; hud.canBaton = B.batonTargets().length > 0;
   const st = B.showtimeFor(roster.showtime); hud.showtime = st ? st.join('-') : '';
 }
@@ -110,9 +114,9 @@ const syncHudParty = () => hud.updateParty(partyStates());
 
 // ---------------------------------------------------------------- flow
 async function startBattle() {
-  B.reset(); target = 'noisy'; setActor(B.actor, true);
+  B.reset(); target = B.enemies[0]; setActor(B.actor, true);
   for (const u of eng.units.values()) { u.down = false; u.stars.visible = false; u.body.rotation = 0; u.body.x = 0; u.body.y = 0; u.body.scale.set(1); if (u.side === 'enemy') { u.root.visible = true; } u.root.alpha = 1; }
-  hud.setHoldRing(false); hud.setMode('hidden'); syncHud(); hud.navi('navi.idle');
+  hud.setHoldRing(false); hud.setMode('hidden'); syncHud(); hud.naviText.text = '';
   const ld = loadParty();
   await play('battle:start', { enemyIds: B.enemies });
   await ld;
@@ -121,7 +125,7 @@ async function startBattle() {
 function naviTurn() { const n = L('navi.turn').replace('{name}', L('unit.' + B.actor)); hud.naviText.text = n; }
 function playerTurn() {
   syncHud();
-  if (B.oneMore) hud.navi('navi.onemore'); else if (hud.showtime) hud.navi('navi.showtime'); else if (B.actor === roster.lead) hud.navi('navi.idle'); else naviTurn();
+  if (B.oneMore) hud.navi('navi.onemore'); else if (hud.showtime) hud.navi('navi.showtime'); else if (B.actor === roster.lead) hud.naviText.text = L('navi.idle').replace('{n}', L('num.cn')[B.alive(B.enemies).length - 1] ?? String(B.alive(B.enemies).length)); else naviTurn();
   hud.setMode('command');
   if (auto) autoStep();
 }
@@ -225,7 +229,7 @@ async function victory(bonus: boolean) {
 async function talk() {
   hud.setMode('talk'); hud.setHoldRing(true, B.alive(B.enemies), B.party);
   await play('talk:start', { enemyId: target });
-  const view = mountTalk(eng.st.dom, SKIN, pack.templates?.talk, { enemyName: L(B.u(target).name), odds: '68%' });
+  const view = mountTalk(eng.st.dom, SKIN, pack.templates?.talk, { enemyName: eName(target), odds: '68%' });
   await view.setLine(L('talk.line.0'));
   view.setChoices([L('talk.choice.0'), L('talk.choice.1'), L('talk.choice.2')], async (i) => {
     const ok = B.talkResolve(i);
@@ -302,9 +306,9 @@ async function prewarm() {
 }
 function rehearse() {
   // 在真实画布、真实尺寸上快进：技能 + 总攻 + 开战转场 + 1 MORE + HOLD UP。单次 >1.5s 放弃并标记冷启动。
-  const fake = { actorId: 'joker', skillId: 'eiha', targetIds: ['noisy'], hits: [{ targetId: 'noisy', dmg: 1, weak: true, crit: false, miss: false, resist: 'none', element: 'curse', down: false }] };
-  const list: [EventName, any, any][] = [['action', fake, { skillId: 'eiha', summon: 'full' }], ['allout', { partyIds: B.party, finisherId: 'joker', total: 1, hits: fake.hits, targetIds: ['noisy'] }, {}],
-    ['battle:start', {}, {}], ['onemore', {}, {}], ['holdup', { enemyIds: ['noisy'] }, {}], ['action', { ...fake, skillId: 'attack' }, { skillId: 'attack' }], ['action', { actorId: 'joker', skillId: 'guard', targetIds: ['joker'], hits: [] }, { skillId: 'guard' }], ['battle:end', {}, {}], ['levelup', {}, {}]];
+  const fake = { actorId: 'joker', skillId: 'eiha', targetIds: [B.enemies[0]], hits: [{ targetId: B.enemies[0], dmg: 1, weak: true, crit: false, miss: false, resist: 'none', element: 'curse', down: false }] };
+  const list: [EventName, any, any][] = [['action', fake, { skillId: 'eiha', summon: 'full' }], ['allout', { partyIds: B.party, finisherId: 'joker', total: 1, hits: fake.hits, targetIds: [B.enemies[0]] }, {}],
+    ['battle:start', {}, {}], ['onemore', {}, {}], ['holdup', { enemyIds: [B.enemies[0]] }, {}], ['action', { ...fake, skillId: 'attack' }, { skillId: 'attack' }], ['action', { actorId: 'joker', skillId: 'guard', targetIds: ['joker'], hits: [] }, { skillId: 'guard' }], ['battle:end', {}, {}], ['levelup', {}, {}]];
   for (const [ev, p, q] of list) {
     const r0 = performance.now(); let n = 0;
     dir.play(ev, p, q);
@@ -316,6 +320,7 @@ function rehearse() {
     M.rehearse.push(`${ev}${q.skillId ? ':' + q.skillId : ''} renders=${n} ms=${Math.round(performance.now() - r0)}`);
   }
   dir.reset(); dir.log.length = 0; eng.ps.kill(); eng.sfxLog.length = 0;
+  M.rehearseErr = eng.errors.splice(0);   // 预演期队员素材尚未懒加载完（char:* 缺图）属预期，单独记录，不混进实战错误
   hud.showResult({ exp: 1, money: 1, items: [], bonus: true }); hud.update(1000); eng.st.app.renderer.render({ container: eng.st.app.stage });
   hud.openList('persona', B.skillsOf('joker').map((s) => skillRow(s)), L('persona.joker')); hud.setMode('list'); hud.update(300); eng.st.app.renderer.render({ container: eng.st.app.stage });
   hud.setMode('hidden'); dir.seen.clear();
@@ -405,9 +410,13 @@ if (DEMO) demo();
 (window as any).__umbra = {
   eng, dir, hud, B, quality,
   get busy() { return dir.busy; }, get mode() { return hud.getMode(); }, get ev() { return dir.main?.ev ?? ''; }, get showT() { return dir.main?.tl.t ?? -1; },
+  demoFx: (id: string, actor = 'joker') => dir.play('highlight', { actorId: actor, targetIds: B.enemies.slice() }, { skillId: id }),
   cmd: (id: string) => hud.onCommand(id), party: (id: string) => hud.onParty(id), setTarget: (id: string) => { target = id; syncHud(); }, row: (i: number) => hud.tapRow(i), enemy: (id: string) => hud.onEnemy(id),
   freezeOn(ev: string, t: number) { testFreeze = { ev, t }; }, release() { testFreeze = null; },
   screenToDesign: (x: number, y: number) => eng.st.screenToDesign(x, y), designToScreen: (x: number, y: number) => eng.st.designToScreen(x, y),
+  /** 测试用：全体倒地直接进 HOLD UP（敌人数量 1..5 的布局检查） */
+  forceHoldup: () => { for (const id of B.alive(B.enemies)) { B.u(id).down = true; const u = eng.units.get(id); if (u) u.down = true; } return holdUp(); },
+  enemyAct: () => enemyTurn(),
   hitRects: () => hud.hitRects(), vis: () => eng.st.vis, safe: () => eng.st.safe,
   timing: () => dir.log, stopMeasure() { measuring = false; }, resetFrames() { M.frames.length = 0; },
   /** 测试用：演出中连点 */

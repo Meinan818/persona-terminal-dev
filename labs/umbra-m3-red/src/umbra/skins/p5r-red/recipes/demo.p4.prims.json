@@ -1,0 +1,46 @@
+{
+ "id": "demo.p4.prims",
+ "event": "highlight",
+ "match": {
+  "skillId": "demo.p4.prims"
+ },
+ "duration": 3000,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "blockPush",
+   "dur": 700,
+   "args": {
+    "colors": [
+     "#ffe14a",
+     "#0a0a0a"
+    ]
+   }
+  },
+  {
+   "at": 700,
+   "prim": "tvStatic",
+   "dur": 450,
+   "args": {}
+  },
+  {
+   "at": 1150,
+   "prim": "cardFlip",
+   "dur": 420,
+   "args": {}
+  },
+  {
+   "at": 1600,
+   "prim": "cardShatter",
+   "dur": 520,
+   "args": {}
+  },
+  {
+   "at": 2150,
+   "prim": "dateFlip",
+   "dur": 800,
+   "args": {}
+  }
+ ]
+}

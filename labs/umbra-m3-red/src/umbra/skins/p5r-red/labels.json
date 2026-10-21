@@ -64,7 +64,7 @@
  "unit.joker": "JOKER",
  "enemy.noisy": "聒噪假面",
  "enemy.echo": "游荡回声",
- "navi.idle": "敌人有两只。先找出它们的弱点！",
+ "navi.idle": "敌人有{n}只。先找出它们的弱点！",
  "navi.onemore": "打中弱点了！再来一次！",
  "navi.holdup": "全倒了！一口气解决它们吧！",
  "navi.weak": "就是那个！它怕这个属性！",
@@ -152,5 +152,9 @@
  "cmd.showtime": "SHOWTIME",
  "cmd.showtime.sub": "合击",
  "result.levelup.sub": "能力提升！",
- "result.next": "NEXT EXP"
+ "result.next": "NEXT EXP",
+ "num.cn": "一两三四五",
+ "sfx.kacha": "咔",
+ "label.massDestruction": "MASS DESTRUCTION",
+ "label.finish": "DONE AND DUSTED."
 }

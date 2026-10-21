@@ -174,3 +174,30 @@ for k, pair in [('show.morganaann', 'mona-panther'), ('show.ryujiyusuke', 'skull
     save(im, f'show.{pair}', q=76, group=f'show:{pair}', note='SHOWTIME 定格画 ← ' + src(k))
 json.dump(rows, open(os.path.join(ROOT, 'work', 'party-assets.json'), 'w'), ensure_ascii=False, indent=1)
 print('total KB', round(sum(r['kb'] for r in rows), 1))
+
+# ---------------------------------------------------------------- 景深：背景压暗 + 轻微模糊 + 红色暗角（离线烘焙，运行时零滤镜）
+bg = Image.open(G + 'bg-castle.png').convert('RGB')
+bg = bg.resize((2260, int(bg.height * 2260 / bg.width)), Image.LANCZOS)
+c = Image.new('RGB', (2260, 960), (10, 4, 6)); c.paste(bg, (0, 1))
+c = c.filter(ImageFilter.GaussianBlur(2.2))
+c = ImageEnhance.Brightness(c).enhance(0.66); c = ImageEnhance.Contrast(c).enhance(1.08)
+w, h = c.size; vig = Image.new('L', (w // 8, h // 8), 0); dv = ImageDraw.Draw(vig)
+for i in range(40):
+    k = i / 40; dv.ellipse((int(w / 8 * (0.5 - 0.62 + 0.3 * k)), int(h / 8 * (0.5 - 0.75 + 0.35 * k)), int(w / 8 * (0.5 + 0.62 - 0.3 * k)), int(h / 8 * (0.5 + 0.75 - 0.35 * k))), fill=int(255 * k))
+vig = vig.resize((w, h), Image.BILINEAR).filter(ImageFilter.GaussianBlur(30))
+red = Image.new('RGB', (w, h), (70, 0, 6))
+c = Image.composite(c, red, vig)
+c.save(os.path.join(D, 'bg.battle.castle.webp'), 'WEBP', quality=58, method=6)
+print('bg.battle.castle (depth bake)', round(os.path.getsize(os.path.join(D, 'bg.battle.castle.webp')) / 1024, 1), 'KB')
+
+# ---------------------------------------------------------------- 总攻收尾定格画（按发起者）：官方 Finishing Touch 动图末帧（无水印），含原作台词
+FT = os.path.join(ROOT, 'work', 'party-src', 'ft') + '/'
+FTS = json.load(open(FT + 'sources.json'))
+for cid in ['skull', 'mona', 'panther', 'fox', 'queen', 'noir', 'crow', 'violet']:
+    im = Image.open(FT + cid + '.gif'); im.seek(im.n_frames - 1)
+    fr = im.convert('RGB').resize((1280, 720), Image.LANCZOS).filter(ImageFilter.UnsharpMask(2, 80, 2))
+    p = os.path.join(D, f'finish.{cid}.webp'); fr.save(p, 'WEBP', quality=80, method=6)
+    rows.append(dict(id=f'finish.{cid}', file=f'assets/finish.{cid}.webp', w=1280, h=720, firstPack=False, source='official', group=f'char:{cid}',
+                     note=f"总攻定格画（Finishing Touch 末帧，{FTS[cid]['w']}×{FTS[cid]['h']} 放大）← {FTS[cid]['title']} — {FTS[cid]['page']}", kb=round(os.path.getsize(p) / 1024, 1)))
+    print('finish.' + cid, rows[-1]['kb'], 'KB')
+json.dump(rows, open(os.path.join(ROOT, 'work', 'party-assets.json'), 'w'), ensure_ascii=False, indent=1)

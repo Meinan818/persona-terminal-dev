@@ -28,6 +28,12 @@ for i, c in enumerate(chunks):
     ur = ','.join('U+%X' % ord(ch) for ch in have)
     rows.append(dict(family='R5 CJK', file='assets/fonts/' + name, chars=''.join(have), role='display', pack='first', unicodeRange=ur,
                      kb=round(os.path.getsize(os.path.join(OUT, name)) / 1024, 1)))
+# 标题字体缺字 → 同字体部件合成（synth_glyphs.py），保持笔画风格一致
+if left:
+    import sys; sys.path.insert(0, os.path.dirname(__file__))
+    from synth_glyphs import synth
+    row, left = synth(sorted(left), OUT)
+    if row: rows.append(row); print('synth', row['chars'], row['kb'], 'KB')
 # body fallback chunks (chars not in title font)
 if left:
     for i, c in enumerate(sorted(glob.glob(F + 'r5-body-sc-*.woff2'))):

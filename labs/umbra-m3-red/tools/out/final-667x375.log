@@ -1,9 +1,9 @@
-[60.3s] ready
-[63.2s] shot idle
-[67.2s] shot skilllist
-[71.1s] shot cutin
-[77.6s] shot onemore
-[90.1s] shot holdup
-[99.5s] shot allout
-[112.1s] shot result
-[112.1s] {"errors":["[.WebGL-0x440096ac00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"],"counts":{"particles":0,"filters":0,"cutin":0,"allout":0,"trans":0,"dmg":0,"fx":1},"engErr":["dropText unit.down","dropText unit.down"],"issues":[]}
+[44.5s] ready
+[48.3s] shot idle
+[50.6s] shot skilllist
+[55.0s] shot cutin
+[61.4s] shot onemore
+[67.2s] shot holdup
+[76.2s] shot allout
+[84.7s] shot result
+[84.7s] {"errors":["[.WebGL-0x4c00969a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"],"counts":{"particles":0,"filters":0,"cutin":0,"allout":0,"trans":0,"dmg":0,"fx":1},"engErr":["summon: char.joker not loaded","cutin art missing char.joker#cutin","dropText unit.down","dropText unit.down"],"issues":[{"recipe":"onemore","level":"error","msg":"particles@150 life 280 超出 duration"}]}

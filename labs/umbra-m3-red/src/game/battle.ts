@@ -5,7 +5,7 @@
 import type { HitResult } from '../umbra/skins/_contract';
 
 export interface Unit { id: string; name: string; side: 'ally' | 'enemy'; lv: number; hp: number; hpMax: number; sp: number; spMax: number;
-  weak: string[]; known: string[]; down: boolean; guard: boolean; atk: number; exp: number }
+  weak: string[]; known: string[]; down: boolean; guard: boolean; atk: number; exp: number; suffix?: string }
 export interface Skill { id: string; name: string; element: string; kind: 'phys' | 'magic' | 'buff' | 'debuff' | 'heal' | 'gun'; power: number; cost: number; costKind: 'sp' | 'hp' | 'n'; desc: string }
 
 const S = (id: string, element: string, kind: Skill['kind'], power: number, cost: number, costKind: Skill['costKind']): Skill =>
@@ -54,7 +54,14 @@ export class Battle {
   private keys = new Set<string>();
   private seed = 20261022;
   items = ITEMS.map((i) => ({ ...i }));
-  constructor(members: string[] = DEFAULT_PARTY) { this.setRoster(members); this.reset(); }
+  enemyType = new Map<string, string>();
+  constructor(members: string[] = DEFAULT_PARTY, enemyCount = 2) { this.setRoster(members); this.setEnemies(enemyCount); this.reset(); }
+  /** D-004：敌人数量 1–5，不写死；两种 Shadow 轮换，同种重复时按原作加 A/B/C 后缀 */
+  setEnemies(n: number) {
+    n = Math.max(1, Math.min(5, Math.round(n) || 2));
+    const types = ['noisy', 'echo']; this.enemies = []; this.enemyType.clear();
+    for (let i = 0; i < n; i++) { const t = types[i % 2], k = Math.floor(i / 2); const id = k ? `${t}${k + 1}` : t; this.enemies.push(id); this.enemyType.set(id, t); }
+  }
   setRoster(members: string[]) {
     const ok = members.filter((m) => ROSTER[m] && m !== LEAD).slice(0, 3);
     while (ok.length < 3) { const f = DEFAULT_PARTY.find((d) => !ok.includes(d)) ?? Object.keys(ROSTER).find((k) => k !== LEAD && !ok.includes(k))!; ok.push(f); }
@@ -66,8 +73,15 @@ export class Battle {
     this.id++; this.units.clear(); this.turn = 1; this.seq = 0; this.oneMore = false; this.seed = 20261022; this.items = ITEMS.map((i) => ({ ...i }));
     this.actor = LEAD; this.acted.clear(); this.baton = 0; this.showtimeUsed.clear(); this.summoned.clear();
     for (const [id, r] of Object.entries(ROSTER)) this.units.set(id, { id, name: 'unit.' + id, side: 'ally', lv: r.lv, hp: r.hp, hpMax: r.hp, sp: r.sp, spMax: r.sp, weak: [], known: [], down: false, guard: false, atk: 0, exp: 0 });
-    this.units.set('noisy', { id: 'noisy', name: 'enemy.noisy', side: 'enemy', lv: 9, hp: 620, hpMax: 620, sp: 0, spMax: 0, weak: ['curse', 'elec', 'fire', 'psy'], known: [], down: false, guard: false, atk: 58, exp: 0 });
-    this.units.set('echo', { id: 'echo', name: 'enemy.echo', side: 'enemy', lv: 8, hp: 560, hpMax: 560, sp: 0, spMax: 0, weak: ['phys', 'wind', 'ice', 'nuke', 'bless'], known: [], down: false, guard: false, atk: 52, exp: 0 });
+    const T: Record<string, { lv: number; hp: number; weak: string[]; atk: number }> = {
+      noisy: { lv: 9, hp: 620, weak: ['curse', 'elec', 'fire', 'psy'], atk: 58 }, echo: { lv: 8, hp: 560, weak: ['phys', 'wind', 'ice', 'nuke', 'bless'], atk: 52 } };
+    const cnt = new Map<string, number>(); this.enemies.forEach((id) => { const t = this.enemyType.get(id)!; cnt.set(t, (cnt.get(t) ?? 0) + 1); });
+    const seen = new Map<string, number>();
+    for (const id of this.enemies) {
+      const t = this.enemyType.get(id)!, d = T[t]; const k = (seen.get(t) ?? 0); seen.set(t, k + 1);
+      const suffix = (cnt.get(t) ?? 1) > 1 ? ' ' + 'ABCDE'[k] : '';
+      this.units.set(id, { id, name: 'enemy.' + t, side: 'enemy', lv: d.lv, hp: d.hp, hpMax: d.hp, sp: 0, spMax: 0, weak: d.weak.slice(), known: [], down: false, guard: false, atk: d.atk, exp: 0, suffix } as Unit);
+    }
   }
   u(id: string) { return this.units.get(id)!; }
   alive(ids: string[]) { return ids.filter((i) => this.u(i).hp > 0); }

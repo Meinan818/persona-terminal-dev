@@ -1,7 +1,7 @@
 {
  "id": "onemore",
  "event": "onemore",
- "duration": 440,
+ "duration": 420,
  "assets": [
   "char.$actor"
  ],
@@ -9,7 +9,7 @@
   {
    "at": 0,
    "prim": "skinFilter",
-   "dur": 440,
+   "dur": 420,
    "args": {
     "kind": "desaturate",
     "amount": 1
@@ -18,7 +18,7 @@
   {
    "at": 0,
    "prim": "dim",
-   "dur": 440,
+   "dur": 420,
    "args": {
     "color": "#000",
     "alpha": 0.22,
@@ -58,16 +58,16 @@
   {
    "at": 150,
    "prim": "flashScreen",
-   "dur": 90,
+   "dur": 70,
    "args": {
     "color": "#ffffff",
-    "alpha": 0.45
+    "alpha": 0.3
    }
   },
   {
-   "at": 150,
+   "at": 140,
    "prim": "banner",
-   "dur": 290,
+   "dur": 280,
    "args": {
     "text": "label.onemore",
     "shape": "onemore",
@@ -84,7 +84,7 @@
      "y": 330
     },
     "speed": 1300,
-    "life": 280,
+    "life": 260,
     "gravity": 0,
     "frames": [
      "star",

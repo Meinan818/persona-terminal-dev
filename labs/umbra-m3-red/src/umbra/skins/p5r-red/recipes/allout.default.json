@@ -226,7 +226,7 @@
    "at": 2050,
    "prim": "finishCard",
    "args": {
-    "artId": "allout.finish.default",
+    "artId": "finish.$finisher",
     "shape": [
      -760,
      -330,
@@ -238,7 +238,8 @@
      400
     ],
     "enterFrom": "right",
-    "zoom": 1.04
+    "zoom": 1.04,
+    "fallback": "allout.finish.default"
    },
    "dur": 970,
    "ease": "outCubic"

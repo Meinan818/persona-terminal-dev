@@ -80,6 +80,7 @@ export class Engine {
     const p: any = typeof actor === 'object' && actor ? actor : null;
     const act = p ? (p.actorId ?? p.unitId ?? this.actor) : (actor ?? this.actor);
     let s = id.replace(/\$actor/g, act);
+    if (p?.finisherId) s = s.replace(/\$finisher/g, p.finisherId === 'joker' ? '__default' : p.finisherId);
     if (p?.pairIds) s = s.replace(/\$a\b/g, p.pairIds[0]).replace(/\$b\b/g, p.pairIds[1]).replace(/\$pair/g, p.pairIds.join('-'));
     return s;
   }

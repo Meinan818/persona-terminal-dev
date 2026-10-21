@@ -117,13 +117,13 @@ out['action.attack'] = {'id': 'action.attack', 'event': 'action', 'match': {'ski
 ], key=lambda t: t['at'])}
 
 # 1 MORE：去色定格（皮肤滤镜 ColorMatrix）+ 行动者眼部横条 cut-in（原作对齐：倒地瞬间）+ 1 MORE 横幅
-out['onemore'] = {'id': 'onemore', 'event': 'onemore', 'duration': 440, 'assets': ['char.$actor'], 'tracks': [
-    {'at': 0, 'prim': 'skinFilter', 'dur': 440, 'args': {'kind': 'desaturate', 'amount': 1}},
-    {'at': 0, 'prim': 'dim', 'dur': 440, 'args': {'color': '#000', 'alpha': 0.22, 'hold': False}},
+out['onemore'] = {'id': 'onemore', 'event': 'onemore', 'duration': 420, 'assets': ['char.$actor'], 'tracks': [
+    {'at': 0, 'prim': 'skinFilter', 'dur': 420, 'args': {'kind': 'desaturate', 'amount': 1}},
+    {'at': 0, 'prim': 'dim', 'dur': 420, 'args': {'color': '#000', 'alpha': 0.22, 'hold': False}},
     {'at': 0, 'prim': 'cutin', 'dur': 300, 'ease': 'outCubic', 'args': {'bandAngle': -0.14, 'speedLines': {'layers': 2, 'count': 46}, 'panels': [{'shape': [], 'art': 'char.$actor#cutin', 'enterFrom': 'left'}]}, 'minimal': {'dur': 160}},
     {'at': 0, 'prim': 'sfx', 'args': {'id': 'cutin'}},
     {'at': 150, 'prim': 'flashScreen', 'dur': 90, 'args': {'color': '#ffffff', 'alpha': 0.45}},
-    {'at': 150, 'prim': 'banner', 'dur': 290, 'args': {'text': 'label.onemore', 'shape': 'onemore', 'enterFrom': 'right'}},
+    {'at': 140, 'prim': 'banner', 'dur': 280, 'args': {'text': 'label.onemore', 'shape': 'onemore', 'enterFrom': 'right'}},
     {'at': 150, 'prim': 'particles', 'args': {'count': 40, 'at': {'x': 640, 'y': 330}, 'speed': 1300, 'life': 280, 'gravity': 0, 'frames': ['star', 'shard'], 'colors': ['#ffffff', '@color.primary', '#0a0a0a']}, 'minimal': 'skip'},
     {'at': 150, 'prim': 'sfx', 'args': {'id': 'onemore'}},
 ]}
@@ -155,6 +155,23 @@ out['levelup'] = {'id': 'levelup', 'event': 'levelup', 'duration': 900, 'assets'
     {'at': 0, 'prim': 'title', 'dur': 780, 'args': {'text': 'result.levelup', 'size': 120, 'pos': {'x': 640, 'y': 320}, 'rot': -0.1, 'invert': [0, 6]}},
     {'at': 0, 'prim': 'particles', 'args': {'count': 80, 'at': {'x': 640, 'y': 320}, 'speed': 1100, 'life': 600, 'gravity': 200, 'frames': ['star', 'shard'], 'colors': ['#ffe14a', '#ffffff', '@color.primary']}},
     {'at': 0, 'prim': 'sfx', 'args': {'id': 'levelup'}},
+]}
+# P3/P4 原语最小演示（红色皮不在流程里用；__umbra.demoFx(id) 触发）。挂在 highlight 事件（3.5s 上限），P3 暴击眼部横条按更正挂「暴击」演示
+out['demo.p3.crit'] = {'id': 'demo.p3.crit', 'event': 'highlight', 'match': {'skillId': 'demo.p3.crit'}, 'duration': 1300, 'assets': [], 'tracks': [
+    {'at': 0, 'prim': 'eyeStrip', 'dur': 600, 'args': {'art': 'char.$actor#cutin', 'figure': 'char.$actor#body', 'color': '#0b2a6b'}},
+    {'at': 120, 'prim': 'onomatopoeia', 'dur': 480, 'args': {'text': 'sfx.kacha', 'x': 1010, 'y': 330}},
+    {'at': 650, 'prim': 'glassShatter', 'dur': 600, 'args': {'art': 'persona.$actor'}},
+]}
+out['demo.p3.finish'] = {'id': 'demo.p3.finish', 'event': 'highlight', 'match': {'skillId': 'demo.p3.finish'}, 'duration': 1850, 'assets': [], 'tracks': [
+    {'at': 0, 'prim': 'checkerFloor', 'dur': 900, 'args': {}},
+    {'at': 900, 'prim': 'ringSplash', 'dur': 900, 'args': {'art': 'char.$actor#body', 'text': 'label.finish', 'color': '#e83a8a'}},
+]}
+out['demo.p4.prims'] = {'id': 'demo.p4.prims', 'event': 'highlight', 'match': {'skillId': 'demo.p4.prims'}, 'duration': 3000, 'assets': [], 'tracks': [
+    {'at': 0, 'prim': 'blockPush', 'dur': 700, 'args': {'colors': ['#ffe14a', '#0a0a0a']}},
+    {'at': 700, 'prim': 'tvStatic', 'dur': 450, 'args': {}},
+    {'at': 1150, 'prim': 'cardFlip', 'dur': 420, 'args': {}},
+    {'at': 1600, 'prim': 'cardShatter', 'dur': 520, 'args': {}},
+    {'at': 2150, 'prim': 'dateFlip', 'dur': 800, 'args': {}},
 ]}
 for name in ['action.baton.json']:
     try: os.remove(os.path.join(D, name))

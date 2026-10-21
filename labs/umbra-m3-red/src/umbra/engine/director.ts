@@ -112,7 +112,7 @@ export class Director {
       // 推进到定格画已滑入的时刻，再停留 150ms
       const target = fcT.at + 200;
       if (m.tl.t < target) m.tl.update(target - m.tl.t);
-      m.flash = 150;
+      m.flash = 120;
       return;
     }
     this.finishRun(m, false, true);

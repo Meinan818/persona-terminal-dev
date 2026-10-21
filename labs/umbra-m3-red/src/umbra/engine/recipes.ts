@@ -18,13 +18,14 @@ const PRIM_MAX: Partial<Record<PrimitiveName, number>> = {
   damageNumber: 1100, tag: 920, shockwave: 520, rgbSplit: 150, cutin: 560, banner: 450, silhouetteDash: 1800, freezeFrame: 800,
   finishCard: 1000, totalDamage: 800, slashPanels: 900, maskWipe: 900, blockPush: 900, tvStatic: 600, glassShatter: 700,
   cardFlip: 500, cardShatter: 600, dateFlip: 900, bakedSwap: 400, portraitDown: 600, squashHit: 370,
-  summon: 900, personaShow: 1100, batonPass: 800, showtimeLogo: 900, nameplate: 1200, pose: 1800, skinFilter: 1200,
+  summon: 900, personaShow: 1100, eyeStrip: 700, onomatopoeia: 600, checkerFloor: 1200, ringSplash: 1000, batonPass: 800, showtimeLogo: 900, nameplate: 1200, pose: 1800, skinFilter: 1200,
 };
 export const IMPLEMENTED = new Set<PrimitiveName>([
   'tween', 'show', 'hide', 'sfx', 'vibrate', 'title', 'dim', 'radialBurst', 'hitStop', 'shake', 'flashSprite', 'flashScreen', 'squashHit',
   'particles', 'afterimage', 'slashLine', 'damageNumber', 'tag', 'shockwave', 'rgbSplit', 'cutin', 'speedLines', 'banner', 'silhouetteDash',
   'freezeFrame', 'finishCard', 'totalDamage', 'slashPanels', 'portraitDown', 'maskWipe', 'bakedSwap',
   'summon', 'personaShow', 'nameplate', 'pose', 'skinFilter', 'batonPass', 'showtimeLogo',
+  'blockPush', 'tvStatic', 'glassShatter', 'cardFlip', 'cardShatter', 'dateFlip', 'eyeStrip', 'onomatopoeia', 'checkerFloor', 'ringSplash',
 ] as PrimitiveName[]);
 
 export function expand(r: Recipe): Track[] {

@@ -1,4 +1,3 @@
-// @ts-nocheck -- 从已通过 234 项 Demo 测试的装备模块机械迁移；类型收口随 U2 后续节点完成。
 /**
  * 逆影战场装备唯一目录：武器 / 防具 / 饰品。
  *
@@ -14,7 +13,34 @@
  * - ambushGuard：免疫警戒先制
  */
 
-const fx = (overrides = {}) => ({
+type EquipmentEffects = {
+  crit: number;
+  steps: number;
+  securityGuard: number;
+  money: number;
+  chest: number;
+  drop: number;
+  heal: number;
+  ambushGuard: boolean;
+};
+
+type EquipmentItem = {
+  id: string;
+  slot: 'weapon' | 'armor' | 'accessory';
+  tier: number;
+  name: string;
+  price: number;
+  sell: number;
+  attack: number;
+  defense: number;
+  hp: number;
+  sp: number;
+  desc: string;
+  effects: EquipmentEffects;
+  unique?: string;
+};
+
+const fx = (overrides: Partial<EquipmentEffects> = {}): EquipmentEffects => ({
   crit: 0,
   steps: 0,
   securityGuard: 0,
@@ -26,7 +52,7 @@ const fx = (overrides = {}) => ({
   ...overrides,
 });
 
-export const EQUIPMENT = {
+export const EQUIPMENT: Record<string, EquipmentItem> = {
   'training-blade': {
     id: 'training-blade', slot: 'weapon', tier: 0, name: '训练用短刀', price: 0, sell: 0,
     attack: 2, defense: 0, hp: 0, sp: 0,
@@ -119,12 +145,17 @@ export const EQUIPMENT = {
   },
 };
 
-export const SLOT_LABELS = { weapon: '武器', armor: '防具', accessory: '饰品' };
+export const SLOT_LABELS: Record<string, string> = { weapon: '武器', armor: '防具', accessory: '饰品' };
 export const MAX_EQUIP_LEVEL = 5;
 
-const levelOf = (levels, id) => Math.max(0, Math.min(MAX_EQUIP_LEVEL, Number(levels?.[id]) || 0));
+const levelOf = (levels: Record<string, any>, id: string): number => (
+  Math.max(0, Math.min(MAX_EQUIP_LEVEL, Number(levels?.[id]) || 0))
+);
 
-export function equipmentBonuses(equipment = {}, levels = {}) {
+export function equipmentBonuses(
+  equipment: Record<string, any> = {},
+  levels: Record<string, any> = {},
+): { attack: number; defense: number; hp: number; sp: number } {
   const total = { attack: 0, defense: 0, hp: 0, sp: 0 };
   for (const itemId of Object.values(equipment)) {
     const item = EQUIPMENT[itemId];
@@ -138,7 +169,10 @@ export function equipmentBonuses(equipment = {}, levels = {}) {
   return total;
 }
 
-export function equipmentEffects(equipment = {}, levels = {}) {
+export function equipmentEffects(
+  equipment: Record<string, any> = {},
+  levels: Record<string, any> = {},
+): EquipmentEffects {
   const total = {
     crit: 0, steps: 0, securityGuard: 0, money: 0, chest: 0, drop: 0, heal: 0, ambushGuard: false,
   };
@@ -146,7 +180,7 @@ export function equipmentEffects(equipment = {}, levels = {}) {
     const item = EQUIPMENT[itemId];
     if (!item) continue;
     const effects = item.effects ?? {};
-    for (const key of ['crit', 'steps', 'securityGuard', 'money', 'chest', 'drop', 'heal']) {
+    for (const key of ['crit', 'steps', 'securityGuard', 'money', 'chest', 'drop', 'heal'] as const) {
       total[key] += Number(effects[key]) || 0;
     }
     total.ambushGuard = total.ambushGuard || Boolean(effects.ambushGuard);
@@ -154,26 +188,51 @@ export function equipmentEffects(equipment = {}, levels = {}) {
   return total;
 }
 
-export function equipItem(equipment, owned, itemId) {
+export function equipItem(
+  equipment: Record<string, any>,
+  owned: string[],
+  itemId: string,
+): {
+  ok: boolean;
+  reason?: string;
+  equipment?: { weapon: string | null; armor: string | null; accessory: string | null };
+  item?: EquipmentItem;
+} {
   const item = EQUIPMENT[itemId];
   if (!item) return { ok: false, reason: '没有这件装备。' };
   if (!Array.isArray(owned) || !owned.includes(itemId)) return { ok: false, reason: '还没有获得这件装备。' };
-  return { ok: true, equipment: { ...equipment, [item.slot]: itemId }, item };
+  return {
+    ok: true,
+    equipment: {
+      ...equipment,
+      [item.slot]: itemId,
+    } as { weapon: string | null; armor: string | null; accessory: string | null },
+    item,
+  };
 }
 
-export function unequipItem(equipment, slot) {
+export function unequipItem(
+  equipment: Record<string, any>,
+  slot: string,
+): { ok: boolean; reason?: string; equipment?: Record<string, any> } {
   if (!SLOT_LABELS[slot]) return { ok: false, reason: '没有这个装备位。' };
   return { ok: true, equipment: { ...equipment, [slot]: null } };
 }
 
-export function equipmentRows(equipment = {}, levels = {}) {
+export function equipmentRows(
+  equipment: Record<string, any> = {},
+  levels: Record<string, any> = {},
+): any[] {
   return Object.keys(SLOT_LABELS).map(slot => {
     const item = equipment[slot] ? EQUIPMENT[equipment[slot]] ?? null : null;
     return { slot, label: SLOT_LABELS[slot], item, level: item ? levelOf(levels, item.id) : 0 };
   });
 }
 
-export function upgradeCost(item, level = 0) {
+export function upgradeCost(
+  item: EquipmentItem | null | undefined,
+  level = 0,
+): { money: number; stones: number } {
   const base = Math.max(1200, Number(item?.price) || 1800);
   return {
     money: Math.round(base * 0.28 * (level + 1)),
@@ -181,6 +240,6 @@ export function upgradeCost(item, level = 0) {
   };
 }
 
-export function equipmentSellPrice(item) {
+export function equipmentSellPrice(item: EquipmentItem | null | undefined): number {
   return Math.max(0, Number(item?.sell) || Math.round((Number(item?.price) || 0) * 0.4));
 }

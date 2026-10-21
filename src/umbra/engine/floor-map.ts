@@ -1,4 +1,3 @@
-// @ts-nocheck -- 从已通过 234 项 Demo 测试的纯规则模块机械迁移；类型收口随 U2 后续节点完成。
 /**
  * 逆影战场 · 房间地图探索底层。
  *
@@ -14,20 +13,22 @@
 import { DUNGEON_FLOORS } from './tower-layout.js';
 import { chestTierForFloor } from './loot-rules.js';
 
+type AnyRecord = Record<string, any>;
+
 export const FLOOR_WIDTH = 5;
 export const FLOOR_HEIGHT = 5;
 export const FLOOR_TIME = 16;
 
-const DIRECTIONS = {
+const DIRECTIONS: Record<string, { x: number; y: number }> = {
   up: { x: 0, y: -1 },
   down: { x: 0, y: 1 },
   left: { x: -1, y: 0 },
   right: { x: 1, y: 0 },
 };
 
-const keyOf = (x, y) => `${x},${y}`;
+const keyOf = (x: number, y: number): string => `${x},${y}`;
 
-function seededRandom(seed) {
+function seededRandom(seed: number): () => number {
   let value = seed >>> 0;
   return () => {
     value += 0x6D2B79F5;
@@ -38,7 +39,7 @@ function seededRandom(seed) {
   };
 }
 
-function makeRoom(x, y, type = 'empty') {
+function makeRoom(x: number, y: number, type = 'empty'): AnyRecord {
   return {
     id: keyOf(x, y),
     x,
@@ -50,20 +51,34 @@ function makeRoom(x, y, type = 'empty') {
   };
 }
 
-function inBounds(x, y, width, height) {
+function inBounds(x: number, y: number, width: number, height: number): boolean {
   return x >= 0 && y >= 0 && x < width && y < height;
 }
 
-function reveal(state, x, y) {
+function reveal(state: AnyRecord, x: number, y: number): void {
   for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
     const room = state.map.rooms[keyOf(x + dx, y + dy)];
     if (room) room.revealed = true;
   }
 }
 
-export function createFloorMap({ floor = 1, maxFloor = DUNGEON_FLOORS, stratum = 'echo', seed = floor * 7919, width = FLOOR_WIDTH, height = FLOOR_HEIGHT } = {}) {
+export function createFloorMap({
+  floor = 1,
+  maxFloor = DUNGEON_FLOORS,
+  stratum = 'echo',
+  seed = floor * 7919,
+  width = FLOOR_WIDTH,
+  height = FLOOR_HEIGHT,
+}: {
+  floor?: number;
+  maxFloor?: number;
+  stratum?: string;
+  seed?: number;
+  width?: number;
+  height?: number;
+} = {}): AnyRecord {
   const rng = seededRandom(seed);
-  const rooms = {};
+  const rooms: Record<string, AnyRecord> = {};
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) rooms[keyOf(x, y)] = makeRoom(x, y);
   }
@@ -85,9 +100,9 @@ export function createFloorMap({ floor = 1, maxFloor = DUNGEON_FLOORS, stratum =
   const sideRooms = Object.values(rooms)
     .filter(room => !pathIds.has(room.id))
     .sort((a, b) => a.y - b.y || a.x - b.x);
-  const usedSide = new Set();
-  const placeSide = () => {
-    const candidates = sideRooms.filter(room => !usedSide.has(room.id));
+  const usedSide = new Set<string>();
+  const placeSide = (): AnyRecord | null => {
+    const candidates = sideRooms.filter((room: AnyRecord) => !usedSide.has(room.id));
     if (!candidates.length) return null;
     const room = candidates[Math.floor(rng() * candidates.length)];
     usedSide.add(room.id);
@@ -121,7 +136,7 @@ export function createFloorMap({ floor = 1, maxFloor = DUNGEON_FLOORS, stratum =
     safeRoom.cleared = true;
   }
 
-  const chestKind = () => {
+  const chestKind = (): string => {
     if (floor >= 30 && rng() < 0.18) return 'trapped';
     return ['wood', 'silver', 'gold'][chestTier - 1];
   };
@@ -174,7 +189,14 @@ export function createFloorMap({ floor = 1, maxFloor = DUNGEON_FLOORS, stratum =
   };
 }
 
-export function createExplorationState(map, { maxTime = FLOOR_TIME, security = 0, keys = 0 } = {}) {
+export function createExplorationState(
+  map: AnyRecord,
+  {
+    maxTime = FLOOR_TIME,
+    security = 0,
+    keys = 0,
+  }: { maxTime?: number; security?: number; keys?: number } = {},
+): AnyRecord {
   const state = {
     map,
     player: { ...map.start },
@@ -196,12 +218,12 @@ export function createExplorationState(map, { maxTime = FLOOR_TIME, security = 0
   return state;
 }
 
-function bumpSecurity(state, amount) {
+function bumpSecurity(state: AnyRecord, amount: number): void {
   state.security = Math.max(0, Math.min(100, state.security + amount));
   if (state.security >= 100) state.alert = true;
 }
 
-export function move(state, direction) {
+export function move(state: AnyRecord, direction: string): AnyRecord {
   if (!state || state.ended) return { ok: false, reason: '探索已经结束。' };
   if (state.time <= 0) {
     state.ended = 'timeout';
@@ -247,7 +269,7 @@ export function move(state, direction) {
   return { ok: true, room };
 }
 
-export function listen(state) {
+export function listen(state: AnyRecord): AnyRecord {
   if (!state || state.ended) return { ok: false, reason: '探索已经结束。' };
   if (state.time <= 0) return { ok: false, reason: '这一层的月光已经用完了。' };
   state.time = Math.max(0, state.time - 1);
@@ -262,7 +284,10 @@ export function listen(state) {
   return { ok: true, time: state.time, security: state.security };
 }
 
-export function resolveEncounter(state, { won = false } = {}) {
+export function resolveEncounter(
+  state: AnyRecord,
+  { won = false }: { won?: boolean } = {},
+): AnyRecord {
   const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
   if (!room || !['guardian', 'shadow'].includes(room.type)) {
     return { ok: false, reason: '这里没有遭遇。' };
@@ -280,7 +305,7 @@ export function resolveEncounter(state, { won = false } = {}) {
   return { ok: true, won: true, guardianDefeated: state.guardianDefeated };
 }
 
-export function unlockExitWithKey(state) {
+export function unlockExitWithKey(state: AnyRecord): boolean {
   const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
   if (!room || room.type !== 'exit' || state.exitUnlocked) return false;
   if (state.keys <= 0) return false;
@@ -289,7 +314,7 @@ export function unlockExitWithKey(state) {
   return true;
 }
 
-export function takeKey(state) {
+export function takeKey(state: AnyRecord): boolean {
   const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
   if (!room || room.type !== 'key' || room.cleared) return false;
   room.cleared = true;
@@ -297,7 +322,10 @@ export function takeKey(state) {
   return true;
 }
 
-export function openChest(state, { inspect = false } = {}) {
+export function openChest(
+  state: AnyRecord,
+  { inspect = false }: { inspect?: boolean } = {},
+): AnyRecord {
   const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
   if (!room || room.type !== 'chest' || room.cleared) return { ok: false, reason: '这里没有可开的月匣。' };
   if (inspect) {
@@ -314,7 +342,7 @@ export function openChest(state, { inspect = false } = {}) {
   };
 }
 
-export function disarmTrap(state) {
+export function disarmTrap(state: AnyRecord): boolean {
   const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
   if (!room || room.type !== 'trap' || room.cleared) return false;
   room.cleared = true;
@@ -322,7 +350,7 @@ export function disarmTrap(state) {
   return true;
 }
 
-export function triggerTrap(state) {
+export function triggerTrap(state: AnyRecord): boolean {
   const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
   if (!room || room.type !== 'trap' || room.cleared) return false;
   room.cleared = true;
@@ -330,7 +358,7 @@ export function triggerTrap(state) {
   return true;
 }
 
-export function restInSafeRoom(state) {
+export function restInSafeRoom(state: AnyRecord): boolean {
   const room = state.map.rooms[keyOf(state.player.x, state.player.y)];
   if (!room || room.type !== 'safe' || room.rested) return false;
   if (state.map.rooms[state.map.guardianId]?.blockBoss && !state.guardianDefeated) return false;
@@ -340,14 +368,15 @@ export function restInSafeRoom(state) {
   return true;
 }
 
-export function roomAt(state, x, y) {
+export function roomAt(state: AnyRecord, x: number, y: number): AnyRecord | null {
   return state.map.rooms[keyOf(x, y)] ?? null;
 }
 
-export function currentRoom(state) {
+export function currentRoom(state: AnyRecord): AnyRecord | null {
   return roomAt(state, state.player.x, state.player.y);
 }
 
-export function visibleRooms(state) {
-  return Object.values(state.map.rooms).filter(room => room.revealed);
+export function visibleRooms(state: AnyRecord): AnyRecord[] {
+  return (Object.values(state.map.rooms) as AnyRecord[])
+    .filter((room: AnyRecord) => room.revealed);
 }

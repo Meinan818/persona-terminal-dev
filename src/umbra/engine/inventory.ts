@@ -1,4 +1,3 @@
-// @ts-nocheck -- 从已通过 234 项 Demo 测试的背包模块机械迁移；类型收口随 U2 后续节点完成。
 /**
  * 背包与装备实例：把战斗掉落、月匣、商店和强化真正写进同一份状态。
  *
@@ -18,7 +17,15 @@ import {
 } from './equipment.js';
 import { ITEM_DEFS } from './economy-rules.js';
 
-export function ensureInventory(state) {
+type AnyRecord = Record<string, any>;
+
+export interface InventoryEntries {
+  consumables: AnyRecord[];
+  materials: AnyRecord[];
+  equipment: AnyRecord[];
+}
+
+export function ensureInventory(state: AnyRecord): AnyRecord {
   if (!state.battleItems || typeof state.battleItems !== 'object') state.battleItems = {};
   if (!state.materials || typeof state.materials !== 'object') state.materials = {};
   if (!Array.isArray(state.ownedEquipment)) state.ownedEquipment = [];
@@ -26,16 +33,16 @@ export function ensureInventory(state) {
   return state;
 }
 
-export function itemLabel(id) {
+export function itemLabel(id: string): string {
   return EQUIPMENT[id]?.name ?? ITEM_DEFS[id]?.name ?? id;
 }
 
-export function itemKind(id) {
+export function itemKind(id: string): string {
   if (EQUIPMENT[id]) return 'equipment';
   return ITEM_DEFS[id]?.kind ?? 'unknown';
 }
 
-export function grantItem(state, id, qty = 1) {
+export function grantItem(state: AnyRecord, id: string, qty = 1): AnyRecord {
   ensureInventory(state);
   const count = Math.max(1, Math.floor(Number(qty) || 1));
   if (EQUIPMENT[id]) {
@@ -57,7 +64,7 @@ export function grantItem(state, id, qty = 1) {
   return { ok: true, kind: item.kind, id, label: item.name, qty: count };
 }
 
-export function grantLoot(state, loot = {}) {
+export function grantLoot(state: AnyRecord, loot: AnyRecord = {}): AnyRecord {
   ensureInventory(state);
   const lines = [];
   if (Number(loot.money) > 0) {
@@ -75,7 +82,7 @@ export function grantLoot(state, loot = {}) {
   return { lines, text: lines.join(' · ') };
 }
 
-export function sellInventoryItem(state, id, qty = 1) {
+export function sellInventoryItem(state: AnyRecord, id: string, qty = 1): AnyRecord {
   ensureInventory(state);
   const count = Math.max(1, Math.floor(Number(qty) || 1));
   if (EQUIPMENT[id]) {
@@ -83,7 +90,7 @@ export function sellInventoryItem(state, id, qty = 1) {
     if (!state.ownedEquipment.includes(id)) return { ok: false, reason: '还没有这件装备。' };
     if (state.equipment?.[item.slot] === id) return { ok: false, reason: '装备中的东西不能直接卖掉，先卸下。' };
     if (equipmentSellPrice(item) <= 0) return { ok: false, reason: '这件东西不能卖。' };
-    state.ownedEquipment = state.ownedEquipment.filter(owned => owned !== id);
+    state.ownedEquipment = state.ownedEquipment.filter((owned: string) => owned !== id);
     delete state.equipmentLevels[id];
     const gain = equipmentSellPrice(item);
     state.money = (Number(state.money) || 0) + gain;
@@ -101,7 +108,10 @@ export function sellInventoryItem(state, id, qty = 1) {
   return { ok: true, gain, label: item.name };
 }
 
-export function useInventoryItem(state, id) {
+export function useInventoryItem(
+  state: AnyRecord,
+  id: string,
+): { ok: boolean; reason?: string; kind?: string; amount?: number; label?: string } {
   ensureInventory(state);
   const item = ITEM_DEFS[id];
   const held = Number(state.battleItems[id]) || 0;
@@ -125,7 +135,7 @@ export function useInventoryItem(state, id) {
   return { ok: false, reason: '这个道具只能在战斗中使用。' };
 }
 
-export function upgradeEquipment(state, id) {
+export function upgradeEquipment(state: AnyRecord, id: string): AnyRecord {
   ensureInventory(state);
   const item = EQUIPMENT[id];
   if (!item) return { ok: false, reason: '没有这件装备。' };
@@ -144,7 +154,7 @@ export function upgradeEquipment(state, id) {
   return { ok: true, level: level + 1, cost, label: item.name };
 }
 
-export function inventoryEntries(state) {
+export function inventoryEntries(state: AnyRecord): InventoryEntries {
   ensureInventory(state);
   const consumables = Object.entries(state.battleItems)
     .map(([id, qty]) => ({ id, qty: Number(qty) || 0, item: ITEM_DEFS[id] }))
@@ -153,19 +163,19 @@ export function inventoryEntries(state) {
     .map(([id, qty]) => ({ id, qty: Number(qty) || 0, item: ITEM_DEFS[id] }))
     .filter(entry => entry.qty > 0);
   const equipment = state.ownedEquipment
-    .map(id => EQUIPMENT[id])
+    .map((id: string) => EQUIPMENT[id])
     .filter(Boolean)
-    .map(item => ({
+    .map((item: AnyRecord) => ({
       item,
       level: Math.max(0, Math.min(MAX_EQUIP_LEVEL, Number(state.equipmentLevels[item.id]) || 0)),
       equipped: state.equipment?.[item.slot] === item.id,
-      sell: equipmentSellPrice(item),
-      upgrade: upgradeCost(item, Number(state.equipmentLevels[item.id]) || 0),
+      sell: equipmentSellPrice(item as any),
+      upgrade: upgradeCost(item as any, Number(state.equipmentLevels[item.id]) || 0),
     }));
   return { consumables, materials, equipment };
 }
 
-export function equipmentSummary(item, level = 0) {
+export function equipmentSummary(item: AnyRecord | null | undefined, level = 0): string {
   if (!item) return '';
   const parts = [];
   if (item.attack) parts.push(`攻 +${Math.round(item.attack * (1 + level * 0.15))}`);
@@ -184,6 +194,6 @@ export function equipmentSummary(item, level = 0) {
   return parts.join(' · ');
 }
 
-export function slotLabel(slot) {
+export function slotLabel(slot: string): string {
   return SLOT_LABELS[slot] ?? slot;
 }

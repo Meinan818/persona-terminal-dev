@@ -247,7 +247,7 @@ export function equipUmbraItem(profile: UmbraProfile, itemId: string): UmbraProf
     ...profile,
     combat: {
       ...profile.combat,
-      equipment: result.equipment,
+      equipment: result.equipment ?? profile.combat.equipment,
     },
   });
 }

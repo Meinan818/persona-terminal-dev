@@ -112499,4 +112499,3 @@ export const P5R_INHERITANCE_CHART = {
     "owner": "almighty"
   }
 };
-// @ts-nocheck -- 从已通过 234 项 Demo 测试的 P5R 数据模块机械迁移；类型收口随 U2 后续节点完成。

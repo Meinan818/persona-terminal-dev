@@ -42,11 +42,13 @@ export function buyUmbraShopItem(
     log: [],
   };
   const result = buy(wallet, shopId, itemId, Math.max(1, Math.floor(Number(qty) || 1)));
-  if (!result.ok) return { ...result, profile };
+  if (!result.ok) return { ok: false, reason: result.reason ?? '购买失败。', profile };
   const split = splitInventory(wallet.inventory);
   const label = def?.name ?? itemId;
   return {
-    ...result,
+    ok: true,
+    reason: result.reason,
+    spent: result.spent,
     label,
     profile: {
       ...profile,

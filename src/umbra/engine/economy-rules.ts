@@ -1,4 +1,3 @@
-// @ts-nocheck -- 从已通过 234 项 Demo 测试的经济模块机械迁移；类型收口随 U2 后续节点完成。
 /**
  * P5 经济 / 商店 / 装备 / 宝箱规则切片（纯逻辑，无 UI）
  *
@@ -8,7 +7,10 @@
 
 import { EQUIPMENT } from './equipment.js';
 
-export const ITEM_DEFS = {
+type Rng = () => number;
+type AnyRecord = Record<string, any>;
+
+export const ITEM_DEFS: Record<string, AnyRecord> = {
   painkiller: { id: 'painkiller', name: '小瓶止痛药', kind: 'heal', hp: 40, price: 300, sell: 120, desc: '回响诊所的常备药。回复 40 HP。' },
   strongPainkiller: { id: 'strongPainkiller', name: '强效止痛药', kind: 'heal', hp: 100, price: 900, sell: 360, desc: '苦得让人清醒。回复 100 HP。' },
   revive: { id: 'revive', name: '复苏针', kind: 'revive', pct: 0.5, price: 1500, sell: 600, desc: '让倒下的同伴以 50% HP 回来。' },
@@ -33,7 +35,7 @@ export const ITEM_DEFS = {
 // 装备只认 equipment.js 一份目录，避免商店/宝箱/UI 三套 ID 漂移。
 export const EQUIPMENT_DEFS = EQUIPMENT;
 
-export const SHOP_DEFS = {
+export const SHOP_DEFS: Record<string, AnyRecord> = {
   clinic: {
     id: 'clinic',
     name: '回响诊所',
@@ -57,7 +59,7 @@ export const SHOP_DEFS = {
   },
 };
 
-export const CHEST_DEFS = {
+export const CHEST_DEFS: Record<string, AnyRecord> = {
   wood: { id: 'wood', name: '木箱', tier: 1, desc: '普通补给。钉子有点松。' },
   silver: { id: 'silver', name: '银箱', tier: 2, desc: '更稀有的补给。锁扣是银的。' },
   gold: { id: 'gold', name: '金箱', tier: 3, desc: '稀有装备。打开前先听一听。' },
@@ -65,7 +67,7 @@ export const CHEST_DEFS = {
   trapped: { id: 'trapped', name: '陷阱箱', tier: 2, trap: true, desc: '打开前最好先检查。' },
 };
 
-export const ELEMENT_LABELS = {
+export const ELEMENT_LABELS: Record<string, string> = {
   knowledge: '知识',
   guts: '勇气',
   dexterity: '灵巧',
@@ -73,9 +75,11 @@ export const ELEMENT_LABELS = {
   charm: '魅力',
 };
 
-const randomInt = (rng, min, max) => min + Math.floor(rng() * (max - min + 1));
+const randomInt = (rng: Rng, min: number, max: number): number => (
+  min + Math.floor(rng() * (max - min + 1))
+);
 
-export function createWallet(money = 8000) {
+export function createWallet(money = 8000): AnyRecord {
   return {
     money,
     heroHp: 120,
@@ -87,11 +91,16 @@ export function createWallet(money = 8000) {
   };
 }
 
-export function definitionOf(id) {
+export function definitionOf(id: string): AnyRecord | null {
   return ITEM_DEFS[id] ?? EQUIPMENT_DEFS[id] ?? null;
 }
 
-export function buy(wallet, shopId, id, qty = 1) {
+export function buy(
+  wallet: AnyRecord,
+  shopId: string,
+  id: string,
+  qty = 1,
+): AnyRecord {
   const shop = SHOP_DEFS[shopId];
   if (!shop) return { ok: false, reason: '没有这家店。' };
   if (!shop.stock.includes(id)) return { ok: false, reason: '这家店不卖这个。' };
@@ -109,12 +118,12 @@ export function buy(wallet, shopId, id, qty = 1) {
   return { ok: true, spent: total };
 }
 
-export function sell(wallet, id, qty = 1) {
+export function sell(wallet: AnyRecord, id: string, qty = 1): AnyRecord {
   const def = definitionOf(id);
   if (!def) return { ok: false, reason: '没有这个商品。' };
   if (EQUIPMENT_DEFS[id]) {
     if (!wallet.ownedEquipment.includes(id)) return { ok: false, reason: '还没有这件装备。' };
-    wallet.ownedEquipment = wallet.ownedEquipment.filter(owned => owned !== id);
+    wallet.ownedEquipment = wallet.ownedEquipment.filter((owned: string) => owned !== id);
     for (const [slot, equipped] of Object.entries(wallet.equipment)) {
       if (equipped === id) wallet.equipment[slot] = null;
     }
@@ -133,7 +142,7 @@ export function sell(wallet, id, qty = 1) {
   return { ok: true, gain };
 }
 
-export function equip(wallet, slot, id) {
+export function equip(wallet: AnyRecord, slot: string, id: string): AnyRecord {
   const def = EQUIPMENT_DEFS[id];
   if (!def || def.slot !== slot) return { ok: false, reason: '这件装备不对应这个栏位。' };
   if (!wallet.ownedEquipment.includes(id)) return { ok: false, reason: '还没有这件装备。' };
@@ -142,7 +151,7 @@ export function equip(wallet, slot, id) {
   return { ok: true };
 }
 
-export function statsOf(wallet) {
+export function statsOf(wallet: AnyRecord): { attack: number; defense: number } {
   const weapon = EQUIPMENT_DEFS[wallet.equipment.weapon];
   const armor = EQUIPMENT_DEFS[wallet.equipment.armor];
   const accessory = EQUIPMENT_DEFS[wallet.equipment.accessory];
@@ -152,8 +161,8 @@ export function statsOf(wallet) {
   };
 }
 
-function chestLoot(chest, rng) {
-  const loot = [];
+function chestLoot(chest: AnyRecord, rng: Rng): AnyRecord[] {
+  const loot: AnyRecord[] = [];
   if (chest.tier === 1) {
     loot.push({ type: 'money', amount: randomInt(rng, 300, 700) });
     loot.push(rng() < 0.5
@@ -179,7 +188,7 @@ function chestLoot(chest, rng) {
   return loot;
 }
 
-function grantLoot(wallet, loot) {
+function grantLoot(wallet: AnyRecord, loot: AnyRecord[]): void {
   for (const entry of loot) {
     if (entry.type === 'money') wallet.money += entry.amount;
     else if (entry.type === 'equipment') {
@@ -190,7 +199,15 @@ function grantLoot(wallet, loot) {
   }
 }
 
-export function openChest(wallet, chestId, { element, inspect = false, rng = Math.random } = {}) {
+export function openChest(
+  wallet: AnyRecord,
+  chestId: string,
+  {
+    element,
+    inspect = false,
+    rng = Math.random,
+  }: { element?: string; inspect?: boolean; rng?: Rng } = {},
+): AnyRecord {
   const chest = CHEST_DEFS[chestId];
   if (!chest) return { ok: false, reason: '没有这个宝箱。' };
   let damage = 0;

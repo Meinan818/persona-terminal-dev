@@ -1,0 +1,695 @@
+{
+ "_meta": {
+  "skin": "p3-blue",
+  "coords": "1280x720 设计像素，安全框内；贴边用 --umbra-safe-*",
+  "note": "P3R 语言：-12°（-0.21rad）斜置文字列表、白板+蓝底+臂章红刀口、月相"
+ },
+ "hud.order": {
+  "rect": {
+   "x": 24,
+   "y": 24,
+   "w": 496,
+   "h": 86
+  },
+  "style": "slantChips",
+  "chip": {
+   "w": 88,
+   "h": 56,
+   "gap": -10,
+   "skew": "@shape.panelSkew",
+   "activeScale": 1.18,
+   "src": "unit.<id>.head",
+   "crop": "face"
+  },
+  "cursor": "ui.cursor",
+  "maxChips": 6
+ },
+ "hud.system": {
+  "rect": {
+   "x": 1000,
+   "y": 24,
+   "w": 256,
+   "h": 66
+  },
+  "buttons": [
+   {
+    "id": "auto",
+    "label": "AUTO",
+    "rect": {
+     "x": 1000,
+     "y": 24,
+     "w": 126,
+     "h": 66
+    },
+    "hit": {
+     "x": 1000,
+     "y": 24,
+     "w": 126,
+     "h": 86
+    }
+   },
+   {
+    "id": "speed",
+    "label": "×",
+    "rect": {
+     "x": 1130,
+     "y": 24,
+     "w": 126,
+     "h": 66
+    },
+    "hit": {
+     "x": 1130,
+     "y": 24,
+     "w": 126,
+     "h": 86
+    }
+   }
+  ],
+  "note": "宽 256 放不下 3×86：PAUSE 移到 hud.topInfo 右端（待主策划确认）；命中区高 86 向下越出插槽 20（§0.7 硬规则优先，待确认）"
+ },
+ "hud.topInfo": {
+  "rect": {
+   "x": 520,
+   "y": 24,
+   "w": 480,
+   "h": 66
+  },
+  "items": [
+   {
+    "id": "moon",
+    "asset": "ui.moon.$env.moonPhase",
+    "rect": {
+     "x": 530,
+     "y": 24,
+     "w": 66,
+     "h": 66
+    },
+    "label": "label.moon.$env.moonPhase"
+   },
+   {
+    "id": "date",
+    "text": "$env.date",
+    "format": "M/D",
+    "font": "@font.number",
+    "size": 44,
+    "rect": {
+     "x": 604,
+     "y": 26,
+     "w": 150,
+     "h": 62
+    },
+    "rot": "@shape.slant"
+   },
+   {
+    "id": "weekday",
+    "text": "$env.weekday",
+    "format": "Ddd",
+    "font": "@font.number",
+    "size": 24,
+    "rect": {
+     "x": 752,
+     "y": 40,
+     "w": 70,
+     "h": 40
+    }
+   },
+   {
+    "id": "darkHour",
+    "when": "$env.darkHour",
+    "text": "label.darkHour",
+    "font": "@font.display",
+    "size": 26,
+    "color": "@color.hp",
+    "rect": {
+     "x": 824,
+     "y": 32,
+     "w": 86,
+     "h": 50
+    }
+   }
+  ],
+  "buttons": [
+   {
+    "id": "pause",
+    "label": "II",
+    "rect": {
+     "x": 914,
+     "y": 24,
+     "w": 86,
+     "h": 66
+    },
+    "hit": {
+     "x": 914,
+     "y": 24,
+     "w": 86,
+     "h": 86
+    }
+   }
+  ]
+ },
+ "hud.enemyOver": {
+  "follow": "enemy",
+  "anchor": [
+   0.5,
+   0
+  ],
+  "offset": {
+   "dx": 0,
+   "dy": -36
+  },
+  "size": {
+   "w": 220,
+   "h": 64
+  },
+  "parts": {
+   "name": {
+    "plate": "ui.tag.plate",
+    "font": "@font.body",
+    "size": 18,
+    "color": "@color.ink"
+   },
+   "hp": {
+    "h": 6,
+    "color": "@color.hp",
+    "back": "rgba(10,18,48,.6)"
+   },
+   "weak": {
+    "font": "@font.number",
+    "color": "@color.weak",
+    "showWhenKnown": true
+   },
+   "shield": {
+    "pip": "ui.shield.pip",
+    "max": 8
+   }
+  },
+  "note": "头顶信息不被演出遮挡：cut-in 带限 y≤330、finishCard 仅总攻定格"
+ },
+ "hud.party": {
+  "rect": {
+   "x": 24,
+   "y": 600,
+   "w": 636,
+   "h": 96
+  },
+  "style": "bar",
+  "cards": [
+   {
+    "x": 24,
+    "y": 600,
+    "w": 152,
+    "h": 96
+   },
+   {
+    "x": 184,
+    "y": 600,
+    "w": 152,
+    "h": 96
+   },
+   {
+    "x": 344,
+    "y": 600,
+    "w": 152,
+    "h": 96
+   },
+   {
+    "x": 504,
+    "y": 600,
+    "w": 152,
+    "h": 96
+   }
+  ],
+  "card": {
+   "face": "unit.<id>.head",
+   "faceCrop": "eyes",
+   "faceRect": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 96
+   },
+   "skew": "@shape.panelSkew",
+   "hp": {
+    "font": "@font.number",
+    "size": 34,
+    "color": "@color.hp",
+    "rot": "@shape.slant"
+   },
+   "sp": {
+    "font": "@font.number",
+    "size": 22,
+    "color": "@color.sp"
+   },
+   "bars": {
+    "h": 4,
+    "gap": 3
+   },
+   "activeEdge": "@color.secondary",
+   "theurgyReady": "@color.weak"
+  },
+  "interactive": false
+ },
+ "hud.command": {
+  "rect": {
+   "x": 780,
+   "y": 220,
+   "w": 476,
+   "h": 476
+  },
+  "shape": "list",
+  "layout": "fivePlusMore",
+  "items": [
+   {
+    "id": "attack",
+    "label": "label.command.attack",
+    "primary": true,
+    "rect": {
+     "x": 780,
+     "y": 220,
+     "w": 340,
+     "h": 96
+    },
+    "text": {
+     "font": "@font.display",
+     "size": 56,
+     "rot": "@shape.slant",
+     "align": "left",
+     "pad": 24
+    }
+   },
+   {
+    "id": "skill",
+    "label": "label.command.skill",
+    "primary": false,
+    "rect": {
+     "x": 800,
+     "y": 325,
+     "w": 340,
+     "h": 86
+    },
+    "text": {
+     "font": "@font.display",
+     "size": 44,
+     "rot": "@shape.slant",
+     "align": "left",
+     "pad": 24
+    }
+   },
+   {
+    "id": "persona",
+    "label": "label.command.persona",
+    "primary": false,
+    "rect": {
+     "x": 820,
+     "y": 420,
+     "w": 340,
+     "h": 86
+    },
+    "text": {
+     "font": "@font.display",
+     "size": 44,
+     "rot": "@shape.slant",
+     "align": "left",
+     "pad": 24
+    }
+   },
+   {
+    "id": "item",
+    "label": "label.command.item",
+    "primary": false,
+    "rect": {
+     "x": 840,
+     "y": 515,
+     "w": 340,
+     "h": 86
+    },
+    "text": {
+     "font": "@font.display",
+     "size": 44,
+     "rot": "@shape.slant",
+     "align": "left",
+     "pad": 24
+    }
+   },
+   {
+    "id": "guard",
+    "label": "label.command.guard",
+    "primary": false,
+    "rect": {
+     "x": 860,
+     "y": 610,
+     "w": 280,
+     "h": 86
+    },
+    "text": {
+     "font": "@font.display",
+     "size": 44,
+     "rot": "@shape.slant",
+     "align": "left",
+     "pad": 24
+    }
+   }
+  ],
+  "more": {
+   "id": "more",
+   "label": "label.more",
+   "rect": {
+    "x": 1150,
+    "y": 610,
+    "w": 106,
+    "h": 86
+   },
+   "menu": {
+    "rect": {
+     "x": 780,
+     "y": 220,
+     "w": 476,
+     "h": 476
+    },
+    "cols": 2,
+    "itemW": 232,
+    "itemH": 86,
+    "gap": [
+     12,
+     12
+    ],
+    "order": [
+     "tactics",
+     "escape",
+     "theurgy"
+    ]
+   }
+  },
+  "row": {
+   "asset": "ui.command.row",
+   "selected": {
+    "asset": "ui.command.row",
+    "cursor": "ui.cursor",
+    "dx": -36
+   },
+   "idle": {
+    "color": "@color.paper",
+    "alpha": 0.9,
+    "ink": "@color.ink"
+   }
+  },
+  "note": "P3R 斜列文字：每行随 -12° 斜率右移 20px；5 项（主 96 + 次 4×86，行距 9）+「更多」与第 5 行同带靠右；命中区不重叠"
+ },
+ "hud.intent": {
+  "follow": "enemy",
+  "anchor": [
+   0.5,
+   0
+  ],
+  "offset": {
+   "dx": 120,
+   "dy": -104
+  },
+  "size": {
+   "w": 150,
+   "h": 44
+  },
+  "style": "slab",
+  "icon": "ui.notch",
+  "font": "@font.body",
+  "color": "@color.accent"
+ },
+ "fx.banner": {
+  "rect": {
+   "x": 0,
+   "y": 90,
+   "w": 1280,
+   "h": 200
+  },
+  "shape": [
+   0,
+   150,
+   1280,
+   90,
+   1280,
+   250,
+   0,
+   290
+  ],
+  "art": "cutin.hero",
+  "text": {
+   "font": "@font.number",
+   "size": 110,
+   "rot": "@shape.slant"
+  },
+  "note": "1 MORE 横幅放上半屏，不挡指令区/队伍栏"
+ },
+ "fx.cutin": {
+  "band": {
+   "y": [
+    40,
+    330
+   ],
+   "angle": -0.14
+  },
+  "art": "cutin.hero",
+  "note": "cut-in 带限 y 40–330（避开 hud.command y≥220 的右侧主体由 bandAngle 抬高右端）"
+ },
+ "fx.allout": {
+  "finishCards": [
+   "allout.finish.default"
+  ],
+  "totalDamage": {
+   "pos": {
+    "x": 300,
+    "y": 520
+   },
+   "font": "@font.number"
+  },
+  "note": "定格画至少 1 张；左 1/3 留给总伤害"
+ },
+ "fx.transition": {
+  "battleStart": "transition.battleStart",
+  "wipe": [
+   "fx.wipe.crescent",
+   "fx.wipe.blade"
+  ],
+  "card": "fx.tarot"
+ },
+ "scene.battle.bg": {
+  "asset": "bg.battle",
+  "darkHour": "bg.battle.darkhour",
+  "size": [
+   2240,
+   950
+  ],
+  "anchor": [
+   0.5,
+   0.5
+  ],
+  "bleed": true
+ },
+ "scene.map.bg": {
+  "asset": "bg.map.tile",
+  "darkHour": "bg.map.tile.darkhour",
+  "tile": [
+   512,
+   512
+  ],
+  "repeat": "both"
+ },
+ "scene.hub.bg": {
+  "asset": "bg.hub.night",
+  "darkHour": "bg.hub.darkhour",
+  "size": [
+   2240,
+   950
+  ],
+  "anchor": [
+   0.5,
+   0.55
+  ],
+  "bleed": true
+ },
+ "scene.talk": {
+  "template": "talk",
+  "note": "见 templates.json；选项 ≤4 不滚动"
+ },
+ "scene.result": {
+  "faces": false,
+  "panel": {
+   "rect": {
+    "x": 660,
+    "y": 90,
+    "w": 560,
+    "h": 540
+   },
+   "skew": "@shape.panelSkew"
+  },
+  "title": "label.result",
+  "note": "结算不放人脸：只用月相/斜板/数字"
+ },
+ "scene.loading": {
+  "asset": "fx.wipe.crescent",
+  "moon": "ui.moon.$env.moonPhase",
+  "bg": "@color.ink"
+ },
+ "unit.hero.portrait": {
+  "atlas": "atlas.portraits",
+  "layers": [
+   "body",
+   "head"
+  ],
+  "frames": {
+   "body": "unit.hero.body",
+   "head": "unit.hero.head"
+  },
+  "size": [
+   500,
+   620
+  ],
+  "neckY": 291,
+  "meshIdle": {
+   "breath": 0.01,
+   "period": 3000,
+   "swayPx": 6,
+   "swayZone": [
+    [
+     40,
+     0,
+     319,
+     0,
+     319,
+     130,
+     40,
+     130
+    ]
+   ]
+  }
+ },
+ "unit.yukari.portrait": {
+  "atlas": "atlas.portraits",
+  "layers": [
+   "body",
+   "head"
+  ],
+  "frames": {
+   "body": "unit.yukari.body",
+   "head": "unit.yukari.head"
+  },
+  "size": [
+   430,
+   620
+  ],
+  "neckY": 353,
+  "meshIdle": {
+   "breath": 0.01,
+   "period": 2800,
+   "swayPx": 8,
+   "swayZone": [
+    [
+     8,
+     0,
+     341,
+     0,
+     341,
+     158,
+     8,
+     158
+    ]
+   ]
+  }
+ },
+ "unit.junpei.portrait": {
+  "atlas": "atlas.portraits",
+  "layers": [
+   "body",
+   "head"
+  ],
+  "frames": {
+   "body": "unit.junpei.body",
+   "head": "unit.junpei.head"
+  },
+  "size": [
+   500,
+   620
+  ],
+  "neckY": 341,
+  "meshIdle": {
+   "breath": 0.011,
+   "period": 2800,
+   "swayPx": 6,
+   "swayZone": [
+    [
+     195,
+     0,
+     476,
+     0,
+     476,
+     153,
+     195,
+     153
+    ]
+   ]
+  }
+ },
+ "unit.akihiko.portrait": {
+  "atlas": "atlas.portraits",
+  "layers": [
+   "body",
+   "head"
+  ],
+  "frames": {
+   "body": "unit.akihiko.body",
+   "head": "unit.akihiko.head"
+  },
+  "size": [
+   494,
+   620
+  ],
+  "neckY": 347,
+  "meshIdle": {
+   "breath": 0.01,
+   "period": 3000,
+   "swayPx": 6,
+   "swayZone": [
+    [
+     3,
+     0,
+     307,
+     0,
+     307,
+     156,
+     3,
+     156
+    ]
+   ]
+  }
+ },
+ "unit.hero.cutin": {
+  "asset": "cutin.hero",
+  "size": [
+   1280,
+   320
+  ]
+ },
+ "unit.hero.highlight": {
+  "asset": "highlight.hero",
+  "size": [
+   1280,
+   720
+  ],
+  "persona": [
+   "persona.orpheus",
+   "persona.apsaras"
+  ]
+ },
+ "unit.hero.summon": {
+  "persona": "persona.orpheus",
+  "note": "召唤：举 Evoker → 扣扳机前一帧 glassShatter，无特写"
+ },
+ "_party": {
+  "order": [
+   "hero",
+   "yukari",
+   "junpei",
+   "akihiko"
+  ],
+  "note": "规则层同伴 id 为 ally:<personaId>；按队伍栏位次映射到 yukari/junpei/akihiko（待主策划确认映射方式）"
+ }
+}

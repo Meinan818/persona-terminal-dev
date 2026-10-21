@@ -1,0 +1,10 @@
+{
+ "talk": {
+  "html": "<section class=\"p3b-talk\"><div class=\"p3b-talk-veil\"></div><header class=\"p3b-talk-head\"><span class=\"p3b-talk-tab\" data-slot=\"enemyName\"></span><span class=\"p3b-talk-odds\"><em>成功率</em><strong data-slot=\"odds\"></strong></span></header><img class=\"p3b-talk-face\" data-slot=\"enemyPortrait\" alt=\"\"><div class=\"p3b-talk-box\"><p class=\"p3b-talk-line\" data-slot=\"line\"></p><span class=\"p3b-talk-status\" data-slot=\"status\"></span></div><ul class=\"p3b-talk-choices\" data-slot=\"choices\"><li class=\"p3b-talk-row\"><button class=\"p3b-talk-choice\" data-slot=\"choice\"><span class=\"p3b-talk-cur\" data-asset=\"ui.cursor\"></span><span data-slot=\"choiceText\"></span></button></li></ul><footer class=\"p3b-talk-free\"><input class=\"p3b-talk-input\" data-slot=\"input\" maxlength=\"60\"><button class=\"p3b-talk-send\" data-slot=\"send\">发送</button></footer></section>",
+  "params": {
+   "styleId": "p3-blue",
+   "maxLineChars": 56,
+   "typingCps": 36
+  }
+ }
+}

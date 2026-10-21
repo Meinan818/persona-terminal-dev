@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：探索执行器接口补齐 move/cover/spotted/interact；测试 4 项通过，tsc exit 0。
+当前节点：探索关卡规划器完成；每局最少 4 战，含精英/守门阴影/BOSS，测试通过。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -89,3 +89,7 @@
 ## 探索执行器接口
 
 - `src/umbra/rules/exploreRuntime.ts`：覆盖移动、掩体、发现、交互四类探索动作并返回 Director 事件。
+
+## 探索关卡规划器
+
+- `src/umbra/rules/explorePlanner.ts`：按种子生成节点序，保证 1 精英 + 1 守门阴影 + 1 BOSS，战斗数 ≥4。

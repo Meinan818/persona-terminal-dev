@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 红色 Statistics 真实活动数据
+
+- **范围**：红色 `Statistics.p5r.tsx` 去掉 14 天硬编码曲线、记录天数 42、最长连续 12、日均 4.2 与 mock 成就/技能计数。改为从真实 `activities` 按日汇总（`pointsAwarded` 求和）生成 7/30/全部曲线（按窗口最大值归一化到 0–9），`totalPoints` 用真实 `attributes`，记录天数用真实活跃日集合，最长连续用 `calcMaxStreak(streakDates(activities))`，日均用真实总点数/记录天数，成就/技能计数用真实 `achievements`/`skills`。无记录时趋势图走空态。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`red-statistics-20261021.log`）。
+- **提交**：`95a7457`（1 文件，23+/9-）。未 Push。
+- **下一步**：红色 Statistics 浏览器验证；然后全局演出（Splash / CutIn / 转场）接真实事件。
+
 ## 已提交 · 2026-10-21 · 三主题 Settings 真实写回
 
 - **范围**：三主题 `settingsStore` 的 `updateSettings` 增加 `pushToRealStore`：页面改动先更新本地 mock，再按字段映射写回真实 `useAppStore.settings`（`updateSettings`）与 `setTheme`。覆盖音效/BGM、天气、AI provider/key/baseUrl/模型、深思熟虑、自动总结、逆流、记账、属性名/阈值/难度/称号、关键词、战场、通知、自定义主题/音效/塔罗、背景。`hydrateFromRealStore` 期间用 `hydrating` 旗标抑制回写，避免循环。天气城市仅在同名时保留真实经纬度，否则不伪造坐标。

@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { loadSocial } from '@/services/social';
 import type { DailyDivination, FateGlimpse, LongReading } from '@/types';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -62,6 +64,12 @@ export function useFateWindow() {
   }>({ days: [], complete: false, eligible: false, lastGlimpse: null });
   useEffect(() => { void getFateWindow().then(setData); }, [getFateWindow]);
   return data;
+}
+
+export function useOrgView() {
+  const { orgs, orgsLoaded, setOrgs } = useCloudSocialStore(useShallow((s) => ({ orgs: s.orgs, orgsLoaded: s.orgsLoaded, setOrgs: s.setOrgs })));
+  useEffect(() => { void loadSocial(); }, []);
+  return { orgs, orgsLoaded, setOrgs };
 }
 
 export type { DailyDivination, FateGlimpse, LongReading };

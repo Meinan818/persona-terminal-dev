@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：遭遇预载 `preloadEncounter` 接通 D-002；encounter 测试 2 项通过，tsc exit 0。
+当前节点：探索事件映射到 Director；`exploreEvents` 测试通过，tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -73,3 +73,7 @@
 ## 遭遇预载
 
 - `encounterPersonaIds` + `preloadEncounter`：从遭遇规格提取唯一 Persona，在 `map:encounter` 演出预算内调用 `ensureCompendium`。
+
+## 探索事件
+
+- `exploreDirectorEvent`：把 `explore:move/cover/spotted/interact` 映射为 Director 主线事件并按倍速缩放。

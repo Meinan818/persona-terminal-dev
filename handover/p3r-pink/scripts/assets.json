@@ -1,0 +1,403 @@
+{
+ "assets": [
+  {
+   "id": "atlas.hamuko",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 1092,
+   "h": 648,
+   "firstPack": true,
+   "source": "generated",
+   "note": "图集容器；帧坐标 assets/atlas.hamuko.json（Pixi spritesheet 格式）"
+  },
+  {
+   "id": "ally.hamuko.head",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 500,
+   "h": 405,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hamuko"
+  },
+  {
+   "id": "ally.hamuko.body",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 500,
+   "h": 235,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hamuko"
+  },
+  {
+   "id": "ally.hamuko.full",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 199,
+   "h": 640,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hamuko"
+  },
+  {
+   "id": "ally.hamuko.evoke",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 258,
+   "h": 640,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hamuko"
+  },
+  {
+   "id": "hud.avatar.hamuko",
+   "file": "assets/atlas.hamuko.webp",
+   "w": 128,
+   "h": 128,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hamuko"
+  },
+  {
+   "id": "atlas.portraits",
+   "file": "assets/atlas.portraits.webp",
+   "w": 1520,
+   "h": 776,
+   "firstPack": true,
+   "source": "official",
+   "note": "图集容器；帧坐标 assets/atlas.portraits.json（Pixi spritesheet 格式）"
+  },
+  {
+   "id": "ally.yukari.head",
+   "file": "assets/atlas.portraits.webp",
+   "w": 444,
+   "h": 395,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
+   "id": "ally.yukari.body",
+   "file": "assets/atlas.portraits.webp",
+   "w": 444,
+   "h": 245,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
+   "id": "hud.avatar.yukari",
+   "file": "assets/atlas.portraits.webp",
+   "w": 128,
+   "h": 128,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
+   "id": "ally.junpei.head",
+   "file": "assets/atlas.portraits.webp",
+   "w": 560,
+   "h": 405,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
+   "id": "ally.junpei.body",
+   "file": "assets/atlas.portraits.webp",
+   "w": 560,
+   "h": 235,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
+   "id": "hud.avatar.junpei",
+   "file": "assets/atlas.portraits.webp",
+   "w": 128,
+   "h": 128,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
+   "id": "ally.akihiko.head",
+   "file": "assets/atlas.portraits.webp",
+   "w": 511,
+   "h": 395,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
+   "id": "ally.akihiko.body",
+   "file": "assets/atlas.portraits.webp",
+   "w": 511,
+   "h": 245,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
+   "id": "hud.avatar.akihiko",
+   "file": "assets/atlas.portraits.webp",
+   "w": 128,
+   "h": 128,
+   "firstPack": true,
+   "source": "official",
+   "atlas": "atlas.portraits"
+  },
+  {
+   "id": "atlas.hud",
+   "file": "assets/atlas.hud.webp",
+   "w": 1024,
+   "h": 840,
+   "firstPack": true,
+   "source": "generated",
+   "note": "图集容器；全部为程序绘制的粒子/光标/遮罩（非 AI、非官方，按 generated 记）；帧坐标 assets/atlas.hud.json"
+  },
+  {
+   "id": "fx.petal.a",
+   "file": "assets/atlas.hud.webp",
+   "w": 48,
+   "h": 48,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "fx.petal.b",
+   "file": "assets/atlas.hud.webp",
+   "w": 48,
+   "h": 48,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "fx.petal.c",
+   "file": "assets/atlas.hud.webp",
+   "w": 32,
+   "h": 32,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "fx.streak",
+   "file": "assets/atlas.hud.webp",
+   "w": 256,
+   "h": 16,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "fx.sparkle",
+   "file": "assets/atlas.hud.webp",
+   "w": 48,
+   "h": 48,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "fx.shard",
+   "file": "assets/atlas.hud.webp",
+   "w": 40,
+   "h": 56,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "hud.cursor",
+   "file": "assets/atlas.hud.webp",
+   "w": 120,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "hud.cmdBar",
+   "file": "assets/atlas.hud.webp",
+   "w": 360,
+   "h": 96,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "mask.petal",
+   "file": "assets/atlas.hud.webp",
+   "w": 512,
+   "h": 512,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "hud.bow",
+   "file": "assets/atlas.hud.webp",
+   "w": 200,
+   "h": 120,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "hud.diamond",
+   "file": "assets/atlas.hud.webp",
+   "w": 64,
+   "h": 64,
+   "firstPack": true,
+   "source": "generated",
+   "atlas": "atlas.hud"
+  },
+  {
+   "id": "mask.ribbon",
+   "file": "assets/mask.ribbon.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": true,
+   "source": "generated",
+   "note": "程序绘制单色缎带剪影（maskWipe），非 AI、非官方，按 generated 记"
+  },
+  {
+   "id": "cutin.hamuko",
+   "file": "assets/cutin.hamuko.webp",
+   "w": 1280,
+   "h": 320,
+   "firstPack": true,
+   "source": "generated",
+   "note": "女主 cut-in 带（与立绘/总攻定格同一人物设定）"
+  },
+  {
+   "id": "allout.finish.default",
+   "file": "assets/allout.finish.default.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": true,
+   "source": "generated",
+   "note": "总攻定格画：粉白高光版式，右侧女主"
+  },
+  {
+   "id": "highlight.hamuko",
+   "file": "assets/highlight.hamuko.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "generated",
+   "note": "Theurgy 必杀定格画（延迟包）；背景蓝色已转玫红"
+  },
+  {
+   "id": "bg.battle",
+   "file": "assets/bg.battle.webp",
+   "w": 2240,
+   "h": 720,
+   "firstPack": true,
+   "source": "generated",
+   "note": "中段 1290 原图 + 两侧镜像出血，宽 2240"
+  },
+  {
+   "id": "bg.battle.darkhour",
+   "file": "assets/bg.battle.darkhour.webp",
+   "w": 2240,
+   "h": 720,
+   "firstPack": true,
+   "source": "generated",
+   "note": "bg.battle 的影时间预烘焙版（bakedSwap 用）"
+  },
+  {
+   "id": "bg.hub",
+   "file": "assets/bg.hub.webp",
+   "w": 2240,
+   "h": 720,
+   "firstPack": false,
+   "source": "generated",
+   "note": "中段 1290 原图 + 两侧镜像出血，宽 2240"
+  },
+  {
+   "id": "bg.hub.darkhour",
+   "file": "assets/bg.hub.darkhour.webp",
+   "w": 2240,
+   "h": 720,
+   "firstPack": false,
+   "source": "generated",
+   "note": "bg.hub 的影时间预烘焙版（bakedSwap 用）"
+  },
+  {
+   "id": "bg.map.tile",
+   "file": "assets/bg.map.tile.webp",
+   "w": 512,
+   "h": 512,
+   "firstPack": false,
+   "source": "generated",
+   "note": "可平铺地图底纹（满足出血：平铺）"
+  },
+  {
+   "id": "bg.map.tile.darkhour",
+   "file": "assets/bg.map.tile.darkhour.webp",
+   "w": 512,
+   "h": 512,
+   "firstPack": false,
+   "source": "generated",
+   "note": "bg.map.tile 影时间预烘焙版"
+  },
+  {
+   "id": "npc.theodore",
+   "file": "assets/npc.theodore.webp",
+   "w": 164,
+   "h": 640,
+   "firstPack": false,
+   "source": "generated",
+   "note": "天鹅绒看守提奥多亚（P3R 画风生成，P3R 无官方图），延迟包"
+  }
+ ],
+ "fonts": [
+  {
+   "family": "PinkP3RDisplay",
+   "file": "assets/fonts/display.woff2",
+   "chars": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~·×—–…★♥",
+   "role": "display",
+   "pack": "first"
+  },
+  {
+   "family": "PinkP3RNumber",
+   "file": "assets/fonts/number.woff2",
+   "chars": "0123456789,.+-%×x/: ",
+   "role": "number",
+   "pack": "first"
+  }
+ ],
+ "persons": {
+  "hamuko": {
+   "w": 500,
+   "h": 640,
+   "kb": 42.6
+  },
+  "hamuko.full": {
+   "w": 199,
+   "h": 640,
+   "kb": 25.9
+  },
+  "hamuko.evoke": {
+   "w": 258,
+   "h": 640,
+   "kb": 29.4
+  },
+  "yukari": {
+   "w": 444,
+   "h": 640,
+   "kb": 40.9
+  },
+  "junpei": {
+   "w": 560,
+   "h": 640,
+   "kb": 26.8
+  },
+  "akihiko": {
+   "w": 511,
+   "h": 640,
+   "kb": 30.2
+  }
+ }
+}

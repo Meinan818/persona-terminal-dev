@@ -1,4 +1,3 @@
-// @ts-nocheck -- 从已通过 234 项 Demo 测试的 P5R 战斗模块机械迁移；类型收口随 U2 后续节点完成。
 /**
  * P5 × P3 battle rules.
  *
@@ -20,22 +19,37 @@ import {
 export const ELEMENTS = P5_ELEMENTS;
 export const STATUS = P5_STATUS;
 
-const DEFAULT_HERO_PERSONAS = ['arsene', 'pixie', 'jack-o-lantern', 'angel'];
-const DEFAULT_ALLY_PERSONAS = ['silky', 'cait-sith', 'kelpie'];
+type AnyRecord = Record<string, any>;
+type Actor = AnyRecord;
+type Enemy = AnyRecord;
+type BattleAction = AnyRecord;
 
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-const roll = (rng, probability) => rng() < probability;
-const elementLabel = element => ELEMENTS[element]?.label ?? element;
-const affinityLabel = affinity => ({
+const ELEMENTS_BY_NAME = ELEMENTS as Record<string, any>;
+const STATUS_BY_NAME = STATUS as Record<string, any>;
+const AFFINITY_LABELS = {
   weak: '弱点',
   resist: '抗性',
   null: '无效',
   absorb: '吸收',
   repel: '反弹',
   normal: '普通',
-}[affinity] ?? affinity);
+} as const;
 
-const PERSONALITY_MODS = {
+const DEFAULT_HERO_PERSONAS = ['arsene', 'pixie', 'jack-o-lantern', 'angel'];
+const DEFAULT_ALLY_PERSONAS = ['silky', 'cait-sith', 'kelpie'];
+
+const clamp = (value: number, min: number, max: number): number => (
+  Math.max(min, Math.min(max, value))
+);
+const roll = (rng: () => number, probability: number): boolean => rng() < probability;
+const elementLabel = (element: string): string => (
+  ELEMENTS_BY_NAME[element]?.label ?? element
+);
+const affinityLabel = (affinity: string): string => (
+  (AFFINITY_LABELS as Record<string, string>)[affinity] ?? affinity
+);
+
+const PERSONALITY_MODS: Record<string, Record<string, number>> = {
   proud: { threaten: -20, flatter: 20, reason: 5, bribe: -5 },
   cowardly: { threaten: 25, flatter: 0, reason: 10, bribe: 10 },
   greedy: { threaten: -5, flatter: 5, reason: 0, bribe: 30 },
@@ -43,18 +57,18 @@ const PERSONALITY_MODS = {
   calm: { threaten: -10, flatter: 5, reason: 25, bribe: 5 },
 };
 
-function affinityOfPersona(persona, element) {
+function affinityOfPersona(persona: AnyRecord | null, element: string): string {
   const code = persona?.resistances?.[element] ?? '-';
-  return {
+  return ({
     wk: 'weak',
     rs: 'resist',
     nu: 'null',
     ab: 'absorb',
     rp: 'repel',
-  }[code] ?? 'normal';
+  } as Record<string, string>)[code] ?? 'normal';
 }
 
-function affinityOfEnemy(enemy, element) {
+function affinityOfEnemy(enemy: Enemy, element: string): string {
   if (enemy.affinities?.[element]) return enemy.affinities[element];
   if (enemy.weakness === element) return 'weak';
   if (enemy.resist === element) return 'resist';
@@ -64,20 +78,20 @@ function affinityOfEnemy(enemy, element) {
   return 'normal';
 }
 
-function personaFor(actor) {
+function personaFor(actor: Actor | null): AnyRecord | null {
   if (!actor) return null;
   if (actor.isPlayer) return actor.masks[actor.activeMask] ?? null;
   return actor.activePersona ?? null;
 }
 
-function actorSkills(actor) {
+function actorSkills(actor: Actor | null): any[] {
   if (!actor) return [];
   return actor.isPlayer
     ? actor.masks[actor.activeMask]?.skills ?? []
     : actor.skills ?? [];
 }
 
-function makePartyMember(persona) {
+function makePartyMember(persona: AnyRecord): Actor {
   return {
     id: `ally:${persona.id}`,
     name: persona.name,
@@ -97,7 +111,7 @@ function makePartyMember(persona) {
   };
 }
 
-function makeEnemy(spec) {
+function makeEnemy(spec: AnyRecord): Enemy {
   const maxHp = Number(spec.maxHp ?? spec.hp) || 60;
   return {
     id: spec.id,
@@ -117,7 +131,7 @@ function makeEnemy(spec) {
     statusTurns: 0,
     statusAppliedRound: 0,
     skills: (buildBattlePersona(spec.recruitPersonaId)?.skills ?? [])
-      .filter(item => (item.power ?? 0) > 0)
+      .filter((item: AnyRecord) => (item.power ?? 0) > 0)
       .slice(0, 3),
     down: false,
     personality: spec.personality ?? 'proud',
@@ -135,11 +149,19 @@ export function createDefaultBattle({
   activePersonaId,
   allyPersonaIds = DEFAULT_ALLY_PERSONAS,
   enemies: enemySpecs,
-} = {}) {
+}: {
+  rng?: () => number;
+  heroPersonaIds?: string[];
+  activePersonaId?: string;
+  allyPersonaIds?: string[];
+  enemies?: AnyRecord[];
+} = {}): P5Battle {
   const masks = buildPersonaLoadout(heroPersonaIds);
   const maskIds = Object.keys(masks);
   if (!maskIds.length) throw new Error('至少需要一张有效的 Persona。');
-  const activeMask = masks[activePersonaId] ? activePersonaId : maskIds[0];
+  const activeMask: string = masks[activePersonaId as string]
+    ? (activePersonaId as string)
+    : (maskIds[0] as string);
   const active = masks[activeMask];
   const hero = {
     id: 'hero',
@@ -161,7 +183,7 @@ export function createDefaultBattle({
   };
 
   const allies = allyPersonaIds
-    .map(buildBattlePersona)
+    .map(id => buildBattlePersona(id))
     .filter(Boolean)
     .map(makePartyMember);
 
@@ -198,7 +220,30 @@ export function createDefaultBattle({
 }
 
 export class P5Battle {
-  constructor({ rng = Math.random, party, enemies }) {
+  rng: () => number;
+  party: Actor[];
+  enemies: Enemy[];
+  round: number;
+  phase: string;
+  currentId: string;
+  extraId: string | null;
+  extraPending: boolean;
+  currentIsExtra: boolean;
+  batonChain: number;
+  batonBoost: number;
+  showtimeUsed: boolean;
+  result: AnyRecord | null;
+  log: string[];
+
+  constructor({
+    rng = Math.random,
+    party,
+    enemies,
+  }: {
+    rng?: () => number;
+    party: Actor[];
+    enemies: Enemy[];
+  }) {
     this.rng = rng;
     this.party = party;
     this.enemies = enemies;
@@ -217,9 +262,9 @@ export class P5Battle {
     this.prepareIntents();
   }
 
-  prepareIntents() {
-    this.enemies.forEach((enemy, index) => {
-      const options = (enemy.skills ?? []).filter(skill => (skill.power ?? 0) > 0);
+  prepareIntents(): void {
+    this.enemies.forEach((enemy: Enemy, index: number) => {
+      const options = (enemy.skills ?? []).filter((skill: AnyRecord) => (skill.power ?? 0) > 0);
       const skill = options.length ? options[(this.round + index) % options.length] : null;
       const element = skill?.element ?? enemy.element;
       enemy.intent = {
@@ -232,37 +277,37 @@ export class P5Battle {
     });
   }
 
-  push(text) {
+  push(text: string): void {
     this.log.push(text);
     if (this.log.length > 90) this.log.splice(0, this.log.length - 90);
   }
 
-  get actor() {
+  get actor(): Actor | null {
     return this.party.find(p => p.id === this.currentId && p.hp > 0) ?? null;
   }
 
-  get aliveParty() {
+  get aliveParty(): Actor[] {
     return this.party.filter(p => p.hp > 0);
   }
 
-  get aliveEnemies() {
+  get aliveEnemies(): Enemy[] {
     return this.enemies.filter(e => e.hp > 0);
   }
 
-  get allDown() {
+  get allDown(): boolean {
     const alive = this.aliveEnemies;
     return alive.length > 0 && alive.every(e => e.down);
   }
 
-  get currentPersona() {
+  get currentPersona(): AnyRecord | null {
     return personaFor(this.actor);
   }
 
-  get elementOf() {
+  get elementOf(): string {
     return this.currentPersona?.element ?? 'phys';
   }
 
-  get actions() {
+  get actions(): BattleAction[] {
     if (this.phase !== 'party' || !this.actor) return [];
     const actor = this.actor;
     const actions = [];
@@ -271,7 +316,7 @@ export class P5Battle {
         type: 'skill',
         id: item.id,
         label: item.name,
-        detail: `${elementLabel(item.element)} · ${item.target === 'self' ? '自身' : item.target === 'ally' ? '我方' : item.target === 'allAllies' ? '全体我方' : item.target === 'allEnemies' ? '全体敌人' : '敌方'}${item.status ? ` · ${STATUS[item.status]?.label ?? item.status}` : ''}`,
+        detail: `${elementLabel(item.element)} · ${item.target === 'self' ? '自身' : item.target === 'ally' ? '我方' : item.target === 'allAllies' ? '全体我方' : item.target === 'allEnemies' ? '全体敌人' : '敌方'}${item.status ? ` · ${STATUS_BY_NAME[item.status]?.label ?? item.status}` : ''}`,
         cost: item.sp,
         disabled: actor.sp < item.sp
           || (
@@ -304,7 +349,8 @@ export class P5Battle {
       if (!this.showtimeUsed && this.round >= 2) {
         actions.push({ type: 'showtime', label: 'SHOWTIME', detail: '双人合击 · 每战一次', cost: 0 });
       }
-      for (const [maskId, mask] of Object.entries(actor.masks)) {
+      for (const [maskId, maskValue] of Object.entries(actor.masks)) {
+        const mask = maskValue as AnyRecord;
         if (maskId === actor.activeMask) continue;
         actions.push({
           type: 'switchMask',
@@ -331,7 +377,7 @@ export class P5Battle {
     return actions;
   }
 
-  act(action) {
+  act(action: BattleAction): { ok: boolean; reason?: string; showtime?: boolean } {
     if (this.phase !== 'party' || !this.actor) return { ok: false, reason: '现在不是你的回合。' };
     const actor = this.actor;
     const isExtra = this.extraId === actor.id && this.extraPending;
@@ -449,7 +495,7 @@ export class P5Battle {
     return { ok: false, reason: '未知行动。' };
   }
 
-  useSkill(actor, item, action) {
+  useSkill(actor: Actor, item: AnyRecord, action: BattleAction): void {
     if (item.revive) {
       const target = this.party.find(member => member.hp <= 0);
       if (target) {
@@ -520,7 +566,7 @@ export class P5Battle {
     this.push(`${actor.name} 使用「${item.name}」，但没有可结算的效果。`);
   }
 
-  hitEnemy(actor, target, item) {
+  hitEnemy(actor: Actor, target: Enemy, item: AnyRecord): void {
     const affinity = item.ignoreAffinity ? 'normal' : affinityOfEnemy(target, item.element);
     const newAffinity = !item.ignoreAffinity && !target.knownAffinities[item.element];
     if (!item.ignoreAffinity && affinity !== 'normal') {
@@ -528,7 +574,7 @@ export class P5Battle {
     }
     const technical = Boolean(
       target.status
-      && STATUS[target.status]?.technicalWith?.includes(item.element),
+      && STATUS_BY_NAME[target.status]?.technicalWith?.includes(item.element),
     );
     const crit = !item.ignoreAffinity && roll(
       this.rng,
@@ -599,7 +645,7 @@ export class P5Battle {
       target.status = item.status;
       target.statusTurns = item.statusTurns ?? 3;
       target.statusAppliedRound = this.round;
-      this.push(`${target.name} 陷入【${STATUS[item.status]?.label ?? item.status}】。`);
+      this.push(`${target.name} 陷入【${STATUS_BY_NAME[item.status]?.label ?? item.status}】。`);
     }
     actor.attackUp = 0;
     this.batonBoost = 0;
@@ -620,7 +666,7 @@ export class P5Battle {
     }
   }
 
-  afterAction(actor) {
+  afterAction(actor: Actor): void {
     if (this.aliveEnemies.length === 0) {
       this.phase = 'victory';
       this.result = { type: 'victory' };
@@ -643,13 +689,13 @@ export class P5Battle {
     this.finishActor(actor);
   }
 
-  finishActor(actor) {
+  finishActor(actor: Actor): void {
     actor.acted = true;
     if (this.extraId === actor.id && !this.extraPending) this.extraId = null;
     this.advance();
   }
 
-  advance() {
+  advance(): void {
     if (this.phase !== 'party') return;
     if (this.extraId) {
       this.currentId = this.extraId;
@@ -664,7 +710,7 @@ export class P5Battle {
     this.enemyPhase();
   }
 
-  enemyPhase() {
+  enemyPhase(): void {
     for (const enemy of this.aliveEnemies) {
       if (enemy.down) {
         this.push(`${enemy.name} 倒在地上，跳过了行动。`);
@@ -672,7 +718,7 @@ export class P5Battle {
         continue;
       }
       if (enemy.status && ['sleep', 'freeze', 'shock', 'dizzy'].includes(enemy.status)) {
-        this.push(`${enemy.name} 因【${STATUS[enemy.status].label}】无法行动。`);
+        this.push(`${enemy.name} 因【${STATUS_BY_NAME[enemy.status].label}】无法行动。`);
       }
       const disabled = enemy.status && ['sleep', 'freeze', 'shock', 'dizzy'].includes(enemy.status);
       if (!disabled) {
@@ -704,7 +750,7 @@ export class P5Battle {
       if (enemy.status && enemy.statusAppliedRound !== this.round) {
         enemy.statusTurns = Math.max(0, enemy.statusTurns - 1);
         if (enemy.statusTurns === 0) {
-          this.push(`${enemy.name} 的【${STATUS[enemy.status]?.label ?? enemy.status}】解除了。`);
+          this.push(`${enemy.name} 的【${STATUS_BY_NAME[enemy.status]?.label ?? enemy.status}】解除了。`);
           enemy.status = null;
           enemy.statusAppliedRound = 0;
         }
@@ -737,7 +783,7 @@ export class P5Battle {
     this.push(`第 ${this.round} 回合。`);
   }
 
-  holdUp(action) {
+  holdUp(action: BattleAction): { ok: boolean; reason?: string } {
     if (this.phase !== 'holdUp') return { ok: false, reason: '现在不是 Hold Up。' };
     const actor = this.actor;
     if (action.type === 'allOut') {
@@ -758,12 +804,14 @@ export class P5Battle {
       return { ok: true };
     }
     if (action.type === 'negotiate') {
+      const actor = this.actor;
+      if (!actor) return { ok: false, reason: '现在没有可行动的角色。' };
       const enemy = this.enemies.find(e => e.id === action.enemyId && e.hp > 0);
       if (!enemy) return { ok: false, reason: '没有这个影子。' };
-      if (action.option === 'bribe' && this.actor.sp < 20) return { ok: false, reason: 'SP 不足 20。' };
+      if (action.option === 'bribe' && actor.sp < 20) return { ok: false, reason: 'SP 不足 20。' };
       const base = 50 + (PERSONALITY_MODS[enemy.personality]?.[action.option] ?? 0) + 10 + (enemy.hp / enemy.maxHp < 0.35 ? 5 : 0);
-      const finalChance = action.option === 'bribe' && this.actor.sp < 20 ? 0 : clamp(base, 10, 90);
-      if (action.option === 'bribe') this.actor.sp -= 20;
+      const finalChance = action.option === 'bribe' && actor.sp < 20 ? 0 : clamp(base, 10, 90);
+      if (action.option === 'bribe') actor.sp -= 20;
       const success = roll(this.rng, finalChance / 100);
       this.push(`交涉（${action.option}）：把握 ${finalChance}% → ${success ? '成功' : '失败'}。`);
       if (success) {
@@ -794,7 +842,7 @@ export class P5Battle {
     return { ok: false, reason: '未知 Hold Up 行动。' };
   }
 
-  chooseResult(type) {
+  chooseResult(type: string): { ok: boolean; reason?: string } {
     if (this.phase !== 'negotiation' || !this.result) return { ok: false, reason: '没有可领取的结果。' };
     const result = this.result;
     if (type === 'recruit') this.result = { type: 'recruited', ...result.recruit };
@@ -803,7 +851,7 @@ export class P5Battle {
     return { ok: true };
   }
 
-  snapshot() {
+  snapshot(): AnyRecord {
     return {
       phase: this.phase,
       round: this.round,

@@ -1,0 +1,10 @@
+{
+ "talk": {
+  "html": "<section class=\"p4tv\"><header class=\"p4tv-top\"><span class=\"p4tv-ch\">CH</span><span class=\"p4tv-name\" data-slot=\"enemyName\"></span><span class=\"p4tv-odds\" data-slot=\"odds\"></span></header><div class=\"p4tv-screen\"><img class=\"p4tv-face\" data-slot=\"enemyPortrait\" data-asset=\"enemy.calm-pesce\" alt=\"\"><p class=\"p4tv-line\" data-slot=\"line\"></p><span class=\"p4tv-status\" data-slot=\"status\"></span></div><ul class=\"p4tv-choices\" data-slot=\"choices\"><li class=\"p4tv-li\"><button class=\"p4tv-choice\" data-slot=\"choice\"><span class=\"p4tv-key\"></span><span data-slot=\"choiceText\"></span></button></li></ul><footer class=\"p4tv-foot\"><input class=\"p4tv-input\" data-slot=\"input\" maxlength=\"60\"><button class=\"p4tv-send\" data-slot=\"send\">▶</button></footer></section>",
+  "params": {
+   "styleId": "p4-tv",
+   "maxLineChars": 60,
+   "typingCps": 40
+  }
+ }
+}

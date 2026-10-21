@@ -1,0 +1,99 @@
+{
+  "hud.order": {
+    "rect": { "x": 24, "y": 24, "w": 496, "h": 86 },
+    "style": "tvChips",
+    "chip": { "w": 64, "h": 64, "gap": 8, "frame": "hud.cmd.sub", "activeFrame": "hud.cmd.sub.on", "faceFrom": "unit.<id>.head", "enemyTint": "#111111" },
+    "note": "P4G 无行动条，按 P4 电视方块做成黄黑方形头像块；当前行动者放大 1.1 并上浮 6"
+  },
+  "hud.system": {
+    "rect": { "x": 1000, "y": 24, "w": 256, "h": 66 },
+    "buttons": [
+      { "id": "auto", "label": "label.auto", "draw": { "x": 1000, "y": 24, "w": 80, "h": 66 }, "hit": { "x": 998, "y": 24, "w": 86, "h": 86 } },
+      { "id": "speed", "label": "label.speed", "draw": { "x": 1088, "y": 24, "w": 80, "h": 66 }, "hit": { "x": 1084, "y": 24, "w": 86, "h": 86 } },
+      { "id": "pause", "label": "label.pause", "draw": { "x": 1176, "y": 24, "w": 80, "h": 66 }, "hit": { "x": 1170, "y": 24, "w": 86, "h": 86 } }
+    ],
+    "frame": "hud.cmd.sub",
+    "note": "插槽范围 256×66 放不下 3 个 86×86 命中区：画面在范围内，命中区向下延到 y110、最左 x998（待主策划答复，见进度文件 Q1）"
+  },
+  "hud.topInfo": {
+    "rect": { "x": 760, "y": 24, "w": 240, "h": 66 },
+    "plate": "hud.datePlate",
+    "date": { "ref": "$env.date", "format": "M/D", "font": "@font.number", "size": 40, "pos": { "x": 800, "y": 57 }, "color": "@color.ink" },
+    "weekday": { "ref": "$env.weekday", "labelPrefix": "label.weekday.", "font": "@font.display", "size": 30, "pos": { "x": 900, "y": 57 }, "color": "@color.ink" },
+    "weather": { "ref": "$env.weather", "framePrefix": "hud.weather.", "fallback": { "storm": "rain" }, "pos": { "x": 966, "y": 57 }, "size": 52 },
+    "note": "P4 右上日历框：黄底黑字日期+曜日汉字+天气图标，只读 $env，不自行取系统时间"
+  },
+  "hud.enemyOver": {
+    "follow": "enemy", "offset": { "dx": 0, "dy": -36 },
+    "hpBar": { "w": 150, "h": 10, "color": "@color.hp", "back": "@color.ink", "stroke": "@stroke.thin" },
+    "weakIcon": "hud.enemy.weak", "shieldIcon": "hud.enemy.shield", "shieldMax": 6,
+    "name": { "font": "@font.display", "size": 22, "color": "@color.ink", "plate": "@color.primary" }
+  },
+  "hud.intent": {
+    "follow": "enemy", "offset": { "dx": 92, "dy": -70 },
+    "plate": { "shape": "speechBox", "fill": "@color.paper", "stroke": "@color.ink" },
+    "font": "@font.body", "size": 18, "maxW": 160
+  },
+  "hud.party": {
+    "rect": { "x": 24, "y": 600, "w": 636, "h": 96 },
+    "style": "card",
+    "card": { "w": 150, "h": 88, "gap": 12, "skew": "@shape.panelSkew", "fill": "@color.primary", "stroke": "@color.ink",
+              "face": { "from": "unit.<id>.head", "x": 4, "y": 4, "w": 60, "h": 60 },
+              "hp": { "x": 68, "y": 48, "w": 76, "h": 10, "color": "@color.hp" },
+              "sp": { "x": 68, "y": 64, "w": 76, "h": 8, "color": "@color.sp" },
+              "num": { "font": "@font.number", "size": 26 } },
+    "interactive": false
+  },
+  "hud.command": {
+    "rect": { "x": 780, "y": 220, "w": 476, "h": 476 },
+    "shape": "grid",
+    "layout": "fivePlusMore",
+    "items": [
+      { "id": "attack", "label": "label.attack", "primary": true, "rect": { "x": 1120, "y": 556, "w": 120, "h": 120 }, "frame": "hud.cmd.main", "activeFrame": "hud.cmd.main.on" },
+      { "id": "skill", "label": "label.skill", "rect": { "x": 996, "y": 572, "w": 104, "h": 104 }, "frame": "hud.cmd.sub", "activeFrame": "hud.cmd.sub.on" },
+      { "id": "guard", "label": "label.guard", "rect": { "x": 1012, "y": 452, "w": 104, "h": 104 }, "frame": "hud.cmd.sub", "activeFrame": "hud.cmd.sub.on" },
+      { "id": "persona", "label": "label.persona", "rect": { "x": 1136, "y": 432, "w": 104, "h": 104 }, "frame": "hud.cmd.sub", "activeFrame": "hud.cmd.sub.on" },
+      { "id": "item", "label": "label.item", "rect": { "x": 884, "y": 588, "w": 96, "h": 96 }, "frame": "hud.cmd.sub", "activeFrame": "hud.cmd.sub.on" }
+    ],
+    "more": { "id": "more", "label": "label.more", "rect": { "x": 1148, "y": 320, "w": 92, "h": 92 }, "frame": "hud.cmd.sub",
+              "overflowOrder": ["analyze", "tactics", "talk", "escape"],
+              "menu": { "rect": { "x": 800, "y": 236, "w": 336, "h": 200 }, "itemW": 160, "itemH": 88, "cols": 2 } },
+    "text": { "font": "@font.display", "size": 30, "color": "@color.ink", "align": "center", "pos": "bottom" },
+    "press": { "scale": "@motion.press", "fx": "fx.tvstatic.0", "fxAlpha": 0.35, "fxMs": 120 },
+    "note": "P4 电视方块：黄芯黑框方块阶梯排布，主按钮（攻击）在右下拇指位；第 6 项起进「更多」"
+  },
+  "fx.banner": { "style": "tvBand", "bandH": 150, "fill": "@color.primary", "ink": "@color.ink", "faceFrom": "unit.<id>.head" },
+  "fx.cutin": { "band": { "h": 320, "angle": -0.08 }, "art": "unit.<id>.cutin" },
+  "fx.allout": { "finishCards": [ { "asset": "allout.finish.default" } ], "dust": "fx.dust", "stars": ["fx.star", "fx.star.white"] },
+  "fx.transition": { "battleStart": "transition.battleStart", "encounterMerged": "transition.encounterBattle", "block": "fx.block", "static": ["fx.tvstatic.0", "fx.tvstatic.1"] },
+  "scene.battle.bg": { "asset": "bg.battle", "w": 2240, "h": 950, "anchor": [0.5, 0.55], "bleed": "wide+tall", "fillColor": "#1A1400" },
+  "scene.map.bg": { "asset": "bg.map", "w": 2240, "h": 950, "anchor": [0.5, 0.5], "bleed": "wide+tall", "fillColor": "#3A1A10" },
+  "scene.hub.bg": { "asset": "bg.hub", "w": 2240, "h": 897, "anchor": [0.5, 0.5], "bleed": "wide+tall", "fillColor": "#FFFBE6" },
+  "scene.talk": { "template": "talk", "styleId": "p4-tv" },
+  "scene.result": {
+    "style": "p4Report", "faces": false,
+    "plate": { "fill": "@color.primary", "stroke": "@color.ink", "skew": "@shape.panelSkew" },
+    "decor": ["fx.daisy.white", "fx.daisy.yellow", "fx.star"],
+    "note": "结算/升级不放人脸：黄底黑字报表 + 雏菊/星装饰，角色只出名字文字"
+  },
+  "scene.loading": { "fill": "@color.primary", "static": "fx.tvstatic.0", "mask": "fx.tvMask" },
+  "unit.hero.portrait": {
+    "atlas": "atlas.portraits", "layers": ["body", "head"], "frames": ["unit.hero.body", "unit.hero.head"], "size": [369, 640],
+    "meshIdle": { "breath": 0.01, "period": 3000, "swayPx": 6, "swayZone": [[88, 8, 210, 0, 228, 100, 120, 84, 84, 110]] }
+  },
+  "unit.yosuke.portrait": {
+    "atlas": "atlas.portraits", "layers": ["body", "head"], "frames": ["unit.yosuke.body", "unit.yosuke.head"], "size": [487, 640],
+    "meshIdle": { "breath": 0.011, "period": 2700, "swayPx": 7, "swayZone": [[180, 4, 332, 4, 348, 96, 174, 100]] }
+  },
+  "unit.chie.portrait": {
+    "atlas": "atlas.portraits", "layers": ["body", "head"], "frames": ["unit.chie.body", "unit.chie.head"], "size": [349, 640],
+    "meshIdle": { "breath": 0.012, "period": 2600, "swayPx": 6, "swayZone": [[100, 10, 255, 10, 262, 134, 95, 134]] }
+  },
+  "unit.yukiko.portrait": {
+    "atlas": "atlas.portraits", "layers": ["body", "head"], "frames": ["unit.yukiko.body", "unit.yukiko.head"], "size": [411, 640],
+    "meshIdle": { "breath": 0.009, "period": 3400, "swayPx": 9, "swayZone": [[20, 140, 130, 130, 120, 260, 10, 250], [300, 90, 411, 180, 400, 560, 300, 520]] }
+  },
+  "unit.hero.cutin": { "asset": "cutin.hero", "w": 1280, "h": 320 },
+  "unit.hero.highlight": { "asset": "highlight.hero", "w": 1280, "h": 720, "pack": "deferred" },
+  "enemy.calm-pesce": { "asset": "enemy.calm-pesce", "w": 560, "h": 351, "pack": "deferred" }
+}

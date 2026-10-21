@@ -2,10 +2,23 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 三主题行动页真实数据接入
+
+- **当前现场**：分支 `feat/theme-kit-integration`，本节点起点 `0a2e8e5`，功能提交 `643e197` `feat(theme-kit): 接入三主题行动页真实数据`，共 57 路径。未 Push、未部署、未打包；相对本地 `origin/main@7c88082` 仍为本地领先。
+- **范围**：黄/粉/蓝三套 `adapters/pkg2.ts` 及行动页、记录/任务页、目标/委托/抽签/大事/愿望/总结/分享等关联弹层接现有 store、IndexedDB 与后台服务。静态模块常量只保留常量或真实空态，不继续把 demo 对象当用户数据。
+- **真实数据结果**：记录、待办、愿望、周目标、委托、抽签、大事子步、总结归档/追问、图片、据点分享、任务完成与撤销均走现有业务 action；自定义五维名称贯穿页面与奖励。粉/蓝总结改接 `summaryJobs`，不再使用 kit 的演示流式状态或固定正文/统计。
+- **本次修复的断点**：接手时原 WIP 有 38 个 TypeScript 错误，主要是真实 `LifeQuest` 字段仍按 demo 的 `id/attr/desc` 读取、适配器漏 `TODAY/TODAY_KEY/WEEK_RANGE`、总结旧设置名与旧 AI 调用签名。另修粉/蓝在“账号没有 BIG DEAL”时关闭状态仍读取 `undefined.steps/clearedActivityId` 的运行时崩溃；用本地空对象兜底，不伪造任务。
+- **验证 · 程序**：`npm run typecheck` exit 0；全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **68 文件/413 项通过**；构建日志 `.rivet/scratch/theme-kit-integration/pkg2-actions-final-20261021.log`，**90.9 秒、BUILD_EXIT=0**。
+- **验证 · 真实浏览器**：`.rivet/scratch/theme-kit-integration/pkg2-actions-real-20261021.mjs` 在三主题各跑 **13/13**，合计 **39/39**。覆盖真实记录、自定义属性名、真实总结归档、真实待办、真实周目标进度、愿望挂载、界面新增待办落库、0 页面异常、0 模型请求。通过报告在 `.theme-compare/pkg2-actions-real-20261021/{yellow,pink,blue}/attempt3/report.json`；更早的探针/运行时失败原件分别保留在 `attempt1`、`attempt2` 和黄主题根目录，没有覆盖或删弱。
+- **视觉边界**：本轮没有改主题 CSS/token、红色主题、根 store、demo 原件或布局系统；变更集中在数据字段、真实回调与动态文案。三张 390×844 稳定截图已目视，周目标、待办、新增待办和底部导航无溢出/遮挡；自动截图不等于用户视觉验收。
+- **运行现场**：本地 dev server 当前由 `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173 --strictPort` 启动，入口 `http://127.0.0.1:5173/`；接手仍须重核监听和 PID，不按记录直接停进程。
+- **遗留与下一任务**：其它优先页面仍待逐页核对真实来源，顺序保持 Cooperation、Astrology、Hideout、Account、Settings、Achievements、全局 Statistics 与全局演出。课表/票据视觉识别、收费 AI 生成与正式打包不在本节点验证范围。下一步由 Codex 从 Cooperation 页面开始只读盘点 mock 与真实服务边界，再最小接线；Push 仍须用户单独批准。
+
 ## 自动化续办 · 2026-10-21 · 三主题真实结算已提交
 
 - **用户授权**：用户明确要求进入自动化模式，项目全权负责，持续完成黄/粉/蓝三套 demo 的 100% 真实接入，视觉与元素不得改动；用户明确停止前不暂停。当前聊天发生一次实际 compact，本记录计数=1，继续开发，不执行第二次交接。
 - **原生工具边界与解法**：桌面会话没有直接暴露 `automation_update`、`create_thread`、`handoff_thread`，但本机 Codex CLI 支持原生 `codex exec fork`。已从源会话 `01a15cf7-dff1-78c3-ab8d-dfc00bfaa91d` fork 出新持久会话 **`01a15d29-1b8e-7461-a02c-cc59bd006697`**，并直接发送完整自动化接手提示；新会话已开始执行。源会话此后停止共享写入，只保留必要协调。
+- **自建线程控制 MCP**：新增 `tools/codex-thread-control/server.mjs`，通过本机 Codex 原生 `exec/fork/queue/archive` 暴露 `create_thread`、`queue_thread`、`list_managed_threads`、`archive_thread`。已注册为全局 MCP `thread-control`（stdio，`node E:/MASKARIA/tools/codex-thread-control/server.mjs`），`codex mcp get thread-control` 核为 enabled。协议探针通过 initialize/tools-list/list-managed 三阶段；真实创建测试会话 `01a15d2d-dd09-7da2-a2c3-3dc9d7418dd8` 并收到 `THREAD_CONTROL_OK` 后已归档。该 MCP 会在之后新启动的 Codex 会话中自动加载，因此后续接续会话可直接创建/投递/归档对话，不再依赖桌面会话是否暴露 `create_thread`。
 - **本节点提交**：`eb78567` `feat(theme-kit): 接入三主题真实本地结算`。只含共用 `src/themes/ledgerSettlement.ts`、3 套 `LedgerStats`、3 套 `LedgerSettleSheet` 和新增结算测试；根 store、红色适配器、CSS、demo 原件均未改。
 - **实现**：所选真实月份传入结算；月/周范围、收支、类目、极值、预算、日均和空态来自本地 store；未传 `initialPeriod` 的 OverlayHarness 仍保留原 mock/phase/fail 路径。粉蓝 `IgorReading` 用 `localText` 直接展示“本地账目回顾（未调用 AI）”，不发起模型请求。奖励横幅只显示既有 store action 的真实返回值，无战场不假显示 +10SP；同一结算 key 的在途领奖 Promise 共享，避免 StrictMode 第一次实际领奖、第二次返回已领取 false 导致横幅丢失。
 - **验证**：相关测试 2 文件/10 项通过；全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **68 文件/413 项通过**；`tsc --noEmit` exit0；正式构建日志 `.rivet/scratch/theme-kit-integration/settlement-20261021.log`，**97.8 秒、BUILD_EXIT=0**。隔离浏览器 `ledger-settlement-20261021.mjs` 三主题各 **10/10**，共 30 项，真实上月数字、类目/极值、无演示硬编码、无战场不假发奖、周范围、真实领奖横幅且 action 仅一次、空态、无模型请求、0 页面异常；稳定截图在 `.theme-compare/ledger-settlement-20261021/{yellow,pink,blue}/`。

@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 蓝粉 Dashboard 真实升级与解锁演出
+
+- **范围**：蓝/粉 `Dashboard.p3r.tsx` 新增与黄色同构的真实演出队列：完成待办前后 diff `achievements` / `skills` / `attributes`，真实升级走 `LevelUpP3`（真实属性名/等级/精通星）、成就走 `AchievementUnlockP3`（真实标题）、技能走 `SkillUnlockP3`（真实名称）。完成贴纸关闭与异步结果竞态用 `pendingQ` 立即排队修复。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`blue-pink-dashboard-fx-20261021.log`）；真实浏览器探针蓝/粉各通过：完成真实待办 → `洞察` Lv.1→2 → 出现真实「LEVEL UP / 恭喜升级」演出 → 0 页面异常、0 模型请求。报告在 `.theme-compare/dashboard-fx-real-20261021/{pink,blue}/first/`。
+- **提交**：`e282f27`（2 文件，68+/6-）。未 Push。
+- **下一步**：红色 Dashboard 的演出触发点；或其余全局演出（Splash / CutIn / 转场）。
+
 ## 已提交 · 2026-10-21 · 黄色 Dashboard 真实升级与解锁演出
 
 - **范围**：黄色 `Dashboard.p4g.tsx` 的完成待办演出队列不再用 `FOLLOW` 演示表与硬编码成就「晨光跑者」。`tick` 在 `completeTodo` 前后 diff 真实 store 的 `achievements` / `skills` / `attributes` 等级，按真实新解锁与升级生成队列；升级演出带真实属性名/等级/精通星数，成就/技能演出带真实标题/名称。修复完成弹窗 3.2 秒自动关闭早于异步结果导致演出丢失的竞态：`pendingQ` 在弹窗已关时立即排队。`WishProgress` / `OrgCelebration` 仍保留组件但真实流程不再推入，避免假愿望/假组织内容。

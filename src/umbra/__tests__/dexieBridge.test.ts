@@ -1,4 +1,22 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/store', () => ({
+  useAppStore: {
+    getState: () => ({
+      settings: {
+        battleShadowTimeDays: [5, 6, 0],
+        battleShadowTimeStart: 20,
+        battleShadowTimeEnd: 7,
+      },
+      umbraProfile: null,
+      umbraRun: null,
+      saveUmbraProfile: vi.fn(),
+      saveUmbraRun: vi.fn(),
+      setCurrentPage: vi.fn(),
+    }),
+  },
+}));
+
 import {
   checkpointForRun,
   hasAppliedCheckpoint,

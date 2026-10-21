@@ -1,4 +1,3 @@
-// @ts-nocheck -- 从已通过 234 项 Demo 测试的 P5R 适配模块机械迁移；类型收口随 U2 后续节点完成。
 /**
  * P5R catalog -> battle actor adapter.
  *
@@ -13,10 +12,13 @@
  */
 import { P5R_SKILLS, P5R_PERSONA_BY_ID, getPersona, getSkill } from './p5r-compendium.js';
 
-const personaOverrides = new Map();
-const syntheticPersonas = new Map();
+const personaOverrides = new Map<string, any>();
+const syntheticPersonas = new Map<string, any>();
 
-export function setPersonaOverride(personaId, override) {
+export function setPersonaOverride(
+  personaId: string | null | undefined,
+  override: any,
+): void {
   if (!personaId) return;
   if (!override) {
     personaOverrides.delete(personaId);
@@ -30,7 +32,7 @@ export function setPersonaOverride(personaId, override) {
 }
 
 /** 联机同调等外部来源的临时 Persona：仍是完整战斗演员，但不伪造图鉴条目。 */
-export function registerSyntheticPersona(definition) {
+export function registerSyntheticPersona(definition: any): boolean {
   const id = typeof definition?.id === 'string' ? definition.id.trim() : '';
   if (!id || !definition?.name || !Array.isArray(definition.skills)) return false;
   syntheticPersonas.set(id, structuredClone
@@ -75,13 +77,13 @@ export const P5_STATUS = {
 const PASSIVE_ELEMENTS = new Set(['passive', 'trait']);
 const SUPPORT_ELEMENTS = new Set(['support', 'ailment', 'healing']);
 
-function normalizedCost(definition) {
+function normalizedCost(definition: any): number {
   const raw = Number(definition?.cost) || 0;
   if (raw <= 0) return 0;
   return raw >= 100 ? Math.round(raw / 100) : Math.round(raw);
 }
 
-function effectTier(effect) {
+function effectTier(effect: unknown): string {
   const text = String(effect ?? '').toLowerCase();
   if (text.includes('severe')) return 'severe';
   if (text.includes('heavy')) return 'heavy';
@@ -90,20 +92,20 @@ function effectTier(effect) {
   return 'medium';
 }
 
-function parsedPower(definition) {
+function parsedPower(definition: any): number {
   if (/instantly killing|instant death/i.test(definition.effect ?? '')) return 0;
   const tier = effectTier(definition.effect);
-  const base = { light: 24, medium: 36, heavy: 52, severe: 72 }[tier];
+  const base = { light: 24, medium: 36, heavy: 52, severe: 72 }[tier] ?? 0;
   const allFoes = /all foes|all enemies/i.test(definition.effect ?? '');
   return Math.max(1, Math.round(base * (allFoes ? 0.78 : 1)));
 }
 
-function parsedHeal(definition) {
+function parsedHeal(definition: any): number {
   const tier = effectTier(definition.effect);
-  return { light: 30, medium: 55, heavy: 85, severe: 120 }[tier];
+  return { light: 30, medium: 55, heavy: 85, severe: 120 }[tier] ?? 0;
 }
 
-function parsedInstantKillChance(definition) {
+function parsedInstantKillChance(definition: any): number | null {
   const text = String(definition.effect ?? '').toLowerCase();
   if (!/instantly killing|instant death/.test(text)) return null;
   if (text.includes('high')) return 0.5;
@@ -111,7 +113,7 @@ function parsedInstantKillChance(definition) {
   return 0.15;
 }
 
-function parsedStatus(definition) {
+function parsedStatus(definition: any): string | null {
   const text = `${definition.effect ?? ''} ${definition.name ?? ''} ${definition.nameZh ?? ''}`.toLowerCase();
   if (text.includes('burn') || text.includes('燃烧')) return 'burn';
   if (text.includes('freeze') || text.includes('冻结')) return 'freeze';
@@ -127,7 +129,7 @@ function parsedStatus(definition) {
   return null;
 }
 
-function parsedTarget(definition) {
+function parsedTarget(definition: any): string {
   const text = String(definition.effect ?? '');
   if (definition.element === 'healing') {
     return /party|all allies/i.test(text) ? 'allAllies' : 'ally';
@@ -138,7 +140,7 @@ function parsedTarget(definition) {
   return /all foes|all enemies/i.test(text) ? 'allEnemies' : 'enemy';
 }
 
-function supportEffect(definition) {
+function supportEffect(definition: any): Record<string, unknown> {
   const text = String(definition.effect ?? '').toLowerCase();
   if (definition.element === 'ailment') {
     return { status: parsedStatus(definition), ignoreAffinity: true };
@@ -180,16 +182,18 @@ function supportEffect(definition) {
   return { ignoreAffinity: true };
 }
 
-function activeElement(definition) {
+function activeElement(definition: any): string {
   if (SUPPORT_ELEMENTS.has(definition.element)) return 'almighty';
-  return P5_ELEMENTS[definition.element] ? definition.element : 'almighty';
+  return (P5_ELEMENTS as Record<string, any>)[definition.element]
+    ? definition.element
+    : 'almighty';
 }
 
-export function buildBattleSkill(skillName) {
+export function buildBattleSkill(skillName: string): any {
   const definition = getSkill(skillName);
   if (!definition || PASSIVE_ELEMENTS.has(definition.element)) return null;
   const status = parsedStatus(definition);
-  const base = {
+  const base: Record<string, any> = {
     id: definition.name,
     name: definition.nameZh ?? definition.name,
     element: activeElement(definition),
@@ -211,7 +215,10 @@ export function buildBattleSkill(skillName) {
   return { ...base, ...extra };
 }
 
-export function buildBattlePersona(personaId, { level } = {}) {
+export function buildBattlePersona(
+  personaId: string,
+  { level }: { level?: number } = {},
+): any {
   const synthetic = syntheticPersonas.get(personaId);
   const persona = getPersona(personaId);
   if (!persona && !synthetic) return null;
@@ -239,7 +246,7 @@ export function buildBattlePersona(personaId, { level } = {}) {
   const requestedLevel = Number.isFinite(level) ? level : persona.level;
   const currentLevel = Math.max(1, Math.round(override?.level ?? requestedLevel));
   const unlocked = persona.skills.filter(
-    skill => (persona.skillLevels[skill] ?? 0) <= currentLevel,
+    (skill: any) => (persona.skillLevels[skill] ?? 0) <= currentLevel,
   );
   const available = unlocked.length ? unlocked : persona.skills;
   const learned = Array.isArray(override?.skills) ? override.skills : [];
@@ -297,22 +304,25 @@ export function buildBattlePersona(personaId, { level } = {}) {
   return built;
 }
 
-export function recruitDataForPersona(personaId) {
+export function recruitDataForPersona(personaId: string): any {
   const persona = getPersona(personaId);
   if (!persona) return null;
   const skill = persona.skills
-    .map(skillName => P5R_SKILLS[skillName])
+    .map((skillName: any) => (P5R_SKILLS as Record<string, any>)[skillName])
     .find(Boolean);
   return {
     personaId: persona.id,
     name: persona.name,
     element: persona.elementLabel ?? persona.inherits,
     skillName: skill?.nameZh ?? skill?.name ?? persona.skills[0],
-    skillDesc: skill ? `图鉴技能：${skill.nameZh ?? skill.name}（${P5_ELEMENTS[skill.element]?.label ?? skill.element}）。` : '图鉴技能。',
+    skillDesc: skill ? `图鉴技能：${skill.nameZh ?? skill.name}（${(P5_ELEMENTS as Record<string, any>)[skill.element]?.label ?? skill.element}）。` : '图鉴技能。',
   };
 }
 
-export function buildPersonaLoadout(personaIds, options = {}) {
+export function buildPersonaLoadout(
+  personaIds: string[],
+  options: { level?: number } = {},
+): Record<string, any> {
   return Object.fromEntries(
     personaIds
       .map(id => buildBattlePersona(id, options))
@@ -321,7 +331,7 @@ export function buildPersonaLoadout(personaIds, options = {}) {
   );
 }
 
-export function catalogPersonaChoices() {
+export function catalogPersonaChoices(): any[] {
   return Object.values(P5R_PERSONA_BY_ID)
     .map(persona => ({
       id: persona.id,

@@ -1,13 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   mulberry32,
   runHeadlessBattle,
   type HeadlessBattleResult,
 } from '@/umbra/engine/headless-simulator';
+import {
+  compendiumPersonaIds,
+  compendiumSkillIds,
+} from '@/umbra/engine/compendiumPreload';
+import { ensureCompendium } from '@/umbra/engine/p5r-compendium';
 
 const terminal = (result: HeadlessBattleResult) => (
   result.victory || result.defeated
 );
+
+beforeAll(async () => {
+  await ensureCompendium({
+    personas: compendiumPersonaIds(),
+    skills: compendiumSkillIds(),
+  });
+});
 
 describe('UMBRA headless battle simulator', () => {
   it('同一随机种子产生完全一致的战斗轨迹', () => {

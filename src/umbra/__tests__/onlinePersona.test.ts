@@ -1,8 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { buildOnlinePersona, onlineAttributeForElement } from '@/umbra/onlinePersona';
 import { createFreshUmbraProfile } from '@/umbra/state';
+import {
+  compendiumPersonaIds,
+  compendiumSkillIds,
+} from '@/umbra/engine/compendiumPreload';
+import { ensureCompendium } from '@/umbra/engine/p5r-compendium';
 
 const now = new Date('2026-10-20T14:00:00.000Z');
+
+beforeAll(async () => {
+  await ensureCompendium({
+    personas: compendiumPersonaIds(),
+    skills: compendiumSkillIds(),
+  });
+});
 
 describe('UMBRA 联机 Persona 适配', () => {
   it('P5R 元素稳定映射到联机五维页签', () => {

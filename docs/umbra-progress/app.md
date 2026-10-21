@@ -31,3 +31,7 @@
 
 - **② 图鉴分片懒加载与同步接口冲突**：`getPersona(id)` / `getSkill(name)` 是同步纯函数，动态 `import()` 分片是异步。若启动只加载索引，未加载分片时同步查询无法阻塞等待，必须三选一：A) 接口改为异步或增加 `ensureCompendiumLoaded()` 预载；B) 保留同步接口但启动同步加载全部分片（体积拆分、不真懒加载）；C) 只把非查询的大表做异步预载，战斗 Persona/技能仍同步预载。答复前不复制数据、不改数据文件。
 - 当前契约冲突需主策划拍板：任务书既要求删除重复 JS，又要求旧 `umbra-demo` 入口保持可用到 M5。旧入口直接 import 这些 JS，直接删除会让回退入口失效；在明确“M5 前是否允许旧入口改用新引擎或只保留最后一版构建快照”之前，暂不删文件。
+
+- 按 D-002 完成图鉴分片：`scripts/generate-compendium-chunks.mjs` 生成 24 个 Persona 分片、16 个技能分片和索引；运行时 `compendiumPreload.ts` 支持异步预载、并发去重与同步读取，`getPersona/getSkill` 签名不变。
+- 图鉴体积：索引 151,002 B，最大单分片 gzip 8,926 B（上限 120KB）。
+- 全量 `src/umbra`：12 文件 / 63 项通过。

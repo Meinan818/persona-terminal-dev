@@ -1,13 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   buildBattlePersona,
   catalogPersonaChoices,
   createDefaultBattle,
   registerSyntheticPersona,
 } from '@/umbra/engine/p5-combat-rules';
+import {
+  compendiumPersonaIds,
+  compendiumSkillIds,
+} from '@/umbra/engine/compendiumPreload';
+import { ensureCompendium } from '@/umbra/engine/p5r-compendium';
 
 const steady = () => 0.5;
 const createBattle = createDefaultBattle as any;
+
+beforeAll(async () => {
+  await ensureCompendium({
+    personas: compendiumPersonaIds(),
+    skills: compendiumSkillIds(),
+  });
+});
 
 describe('UMBRA formal P5 battle engine', () => {
   it('P5R 图鉴与 Persona 战斗适配可用', () => {

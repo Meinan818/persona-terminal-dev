@@ -1,3 +1,5 @@
+import type { CallingCard } from '@/types';
+import { callingCardOps, cutInCard } from '@blue/adapters/callingCards';
 /**
  * 宣告卡结算屏（真实 src/components/callingCard/CallingCardCutIn.tsx · CUTIN_SKIN.p3「蓝 · 水下斜切」）：
  *   深靛底 + 青色径向冲击波 + 慢呼吸光晕 + 步进焦散（caustics，原作的水是跳帧的）+ 上浮气泡；
@@ -35,13 +37,13 @@ const S = {
 const STAMP_BG: Record<Reason, string> = { auto_todos: '#1b57ff', auto_date: '#e8283c', manual: '#0b7d96' };
 const BTN_CLIP = 'polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%)';
 
-export default function CallingCardCutIn({ open, onClose, params }: OverlayProps) {
+export default function CallingCardCutIn({ open, onClose, params, realCard }: OverlayProps & { realCard?: CallingCard | null }) {
   const low = useLowMotion();
   useScrollLock(open);
   useEscape(open, onClose);
   const r = params?.get('reason') ?? params?.get('variant');
   const reason: Reason = r === 'auto_date' || r === 'expired' ? 'auto_date' : r === 'manual' || r === 'archived' ? 'manual' : 'auto_todos';
-  const card = CARDS[reason];
+  const card = realCard ? cutInCard(realCard) : CARDS[reason];
   const [ledger, setLedger] = useState<'idle' | 'writing' | 'done'>('idle');
   const [landed, setLanded] = useState(false);
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function CallingCardCutIn({ open, onClose, params }: OverlayProps
 
               {/* ⑥ 操作按钮 + 落款 */}
               <motion.div className="mx-auto flex max-w-[280px] flex-col gap-2" initial={low ? { opacity: 0 } : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: d(1.4) }}>
-                <button type="button" disabled={ledger !== 'idle'} onClick={() => { setLedger('writing'); setTimeout(() => setLedger('done'), 900); }}
+                <button type="button" disabled={ledger !== 'idle'} onClick={() => { setLedger('writing'); setTimeout(async () => { if (realCard?.id) await callingCardOps.record(realCard?.id); setLedger('done'); }, 900); }}
                   className="p6-press w-full py-3 text-[14px] font-black italic text-white" style={{ background: ledger === 'done' ? S.btnDoneBg : S.btnBg, opacity: ledger === 'done' ? 0.85 : 1, clipPath: BTN_CLIP }}>
                   {ledger === 'done' ? '✓ 已留下记录' : ledger === 'writing' ? '正在落墨…' : '留下记录'}
                 </button>

@@ -1,3 +1,4 @@
+import { usePinnedCallingCard } from '@blue/adapters/callingCards';
 /**
  * Dashboard.p3r —— 首页（真实 src/pages/p3/DashboardP3.tsx，粉 = p3 频道）1:1 结构，P3R 蓝白重画。
  * 自上而下：幽灵字 PERSONA / TERMINAL + 竖排 WILD HEART → MASKARIA 大黑斜体 + 句点 + 底衬三角（沸腾）+ 三角蒙版染字 →
@@ -47,6 +48,7 @@ export const HomeBrandTitle = ({ play = true }: { play?: boolean }) => (
 );
 
 export default function Dashboard({ params }: PageProps) {
+  const { pinned: realPinned, unpinned: realUnpinned } = usePinnedCallingCard();
   const { ATTR_NAMES, MOCK_ATTRS, MOCK_STATS, MOCK_TODOS } = useHomeData();
   const anim = useBoldness();
   const q = (k: string) => params.get(k);
@@ -82,11 +84,11 @@ export default function Dashboard({ params }: PageProps) {
   };
 
   // ── 宣言卡三态 ──
-  const greet = q('greet') ?? 'card';
-  const pinned = greet === 'card' ? MOCK_CALLING_CARD : greet === 'far' ? MOCK_CALLING_CARD_FAR : greet === 'nodate' ? { ...MOCK_CALLING_CARD, targetDate: undefined } : null;
+  const greet = q('greet') ?? (realPinned ? 'card' : realUnpinned ? 'unpinned' : 'empty');
+  const pinned = greet === 'card' ? realPinned : greet === 'far' ? MOCK_CALLING_CARD_FAR : greet === 'nodate' ? { ...MOCK_CALLING_CARD, targetDate: undefined } : null;
   const daysLeft = pinned?.targetDate ? Math.max(0, daysUntil(pinned.targetDate)) : null;
   const [hintDismissed, setHintDismissed] = useState(false);
-  const jumpToCallingCard = () => navigate('actions', 'todos', { params: { panel: 'countdown' } });
+  const jumpToCallingCard = () => navigate('actions', 'todos', { params: { deck: 'cards' } });
 
   // 临期 Toast：≤3 天且 >0、每卡每天首次（localStorage 节流，同真实键名）
   const [toast, setToast] = useState<string | null>(null);
@@ -209,7 +211,7 @@ export default function Dashboard({ params }: PageProps) {
         ) : greet === 'unpinned' ? (
           <button type="button" onClick={jumpToCallingCard} className="mt-5 flex w-full items-center gap-2.5 px-5 py-2.5 text-left text-[12px] font-bold"
             style={{ clipPath: slantClip(8), background: P3R.cyanFaint, color: P3R.inkSoft }}>
-            <span className="min-w-0 flex-1 truncate">你有 {MOCK_UNPINNED_COUNT} 张倒计时未钉到主页</span><span aria-hidden style={{ color: P3R.blue }}>›</span>
+            <span className="min-w-0 flex-1 truncate">你有 {realUnpinned} 张倒计时未钉到主页</span><span aria-hidden style={{ color: P3R.blue }}>›</span>
           </button>
         ) : hintDismissed ? null : (
           <AnimatePresence>

@@ -7,3 +7,5 @@
 export * from '../mock/pkg2';
 
 // ───── 真实数据覆盖区（按 INTEGRATE-THEMES.md 第 6 步填写）─────
+
+export { TODAY_KEY } from './callingCards';

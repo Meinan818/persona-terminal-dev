@@ -12,6 +12,7 @@ import { initLayout } from '@blue/lib/layout';
 import { RouteBridge } from './bridge/RouteBridge';
 import { PrefsBridge } from './bridge/PrefsBridge';
 import { GlobalOverlayHost } from './bridge/GlobalOverlayHost';
+import { CallingCardOverlayHost } from './bridge/CallingCardOverlayHost';
 
 let inited = false;
 function initOnce() {
@@ -29,6 +30,7 @@ export default function ThemeApp() {
       <RouteBridge />
       <DemoApp />
       <GlobalOverlayHost />
+      <CallingCardOverlayHost />
     </>
   );
 }

@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · Summary 预设与 Navigator 设置真实映射
+
+- **范围**：三主题 `settingsStore` 补齐真实 Settings 字段映射：`summaryPresets` ↔ `summaryPromptPresets`、`summaryPresetId` ↔ `summaryActivePresetId`、`realisticTyping` ↔ `navigatorImmersive`、`activePersona` ↔ `navigatorPresetId`。hydrate 读真实值，pushToRealStore 写回真实值。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`settings-fields-real-20261021.log`）。
+- **提交**：`96aaacf`（3 文件，30+/3-）。未 Push。
+- **剩余唯一无真实字段项**：`summaryPersona`（总结署名/口吻的「熟悉的人」）正式 Settings 没有对应字段；保留本地 mock，未擅自新增产品字段或改可见 UI。
+
 ## 已提交 · 2026-10-21 · 三主题天气搜索取数真实化 + 红色页面验收
 
 - **Settings 天气 `8d8d557`**：三主题 `settingsStore` 的 `weatherCity` 扩展为含 `id/lat/lon`；`hydrateFromRealStore` 从真实 `settings.weatherCity` 带入经纬度；`pushToRealStore` 在选择真实城市时写回 `{id,name,lat,lon}`。三主题 `WeatherBlock` 的城市搜索改走真实 `searchCity`，测试取数改走真实 `fetchWeatherNow`，不再用 `CITIES` 假列表和 600ms 假成功。

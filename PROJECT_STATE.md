@@ -1,7 +1,20 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-22（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 接手第一入口 · 2026-10-22 · 四主题验收通过并已推送，等待重构方案
+
+- **本次是交接收尾**：用户明确说「新对话交接」。本聊天停止业务开发与业务文件写入，只做现场核对、写本入口和交接文档提交；不重跑测试/构建、不 Push、不合并 main、不改幽影协议。新对话先只读本入口、`AGENTS.md`、Git 状态与 diff，等用户明确说继续后再动代码。
+- **用户决定与当前阶段**：四个主题（黄/粉/蓝/红）人工验收已通过。App 之后可能大改：红色 demo 方正在策划重构方案，黄蓝粉 demo 方等待方案；本会话定位是仓库集成、真实数据接线与验收，不负责重新设计视觉。幽影协议（`public/umbra-demo`）已被用户打回重做，暂不接入。
+- **Git 现场**：`E:\MASKARIA`，分支 `feat/theme-kit-integration`，HEAD `4fa9e1eeba7cf7b5c22f927442642c0b274b5812`。远端 `origin/feat/theme-kit-integration` 已存在且 SHA 与本地一致；相对本地 `origin/main@7c88082` 为 0 落后 / 67 领先。远端：`git@github.com:Meinan818/persona-terminal-dev.git`；PR 入口 `https://github.com/Meinan818/persona-terminal-dev/pull/new/feat/theme-kit-integration`。`git status --porcelain --untracked-files=no` 为空；工作区只剩既有未跟踪材料（`.cache/`、`.impeccable/`、`.rivet-config.json`、`deliverables/`、`demo/`、`outputs/`、演示素材、`tools/codex-thread-control/`、`deploy/staging/caddy.service.d.conf` 等），全部保持原样。
+- **四主题已完成证据（开发阶段，交接不做重跑）**：四主题 4×10 页面烟测 **40/40** 可达、0 pageerror、0 模型请求（`.theme-compare/four-theme-smoke-20261021/report.json`）；最近一次全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **68 文件/413 项通过**；`tsc --noEmit` exit 0；多次构建 BUILD_EXIT=0（最近 `coop-memorial-null-20261021.log`、`weather-real-20261021.log`、`settings-fields-real-20261021.log`）。成交付节点：`526cda1` 成就进度/塔罗/岁时真实化，`fda2a35` Dashboard 星象/逆流/Persona/天气真实化，`8d8d557` 天气城市搜索与取数真实化，`96aaacf` Summary 预设/Navigator 设置真实映射，`42eba4b` 修复 Cooperation 共战纪念空同伴崩溃，`02d1b96` 四主题烟测记录。
+- **本轮也已完成**：红色 retest5 三个 CSS（`src/p5r-red/screens/pkg5.p5r.css`、`src/p5r-red/legacy/css/home.css`、`src/p5r-red/screens/overlays/NavigatorWindow.p5r.css`）已按 `p5r-red-demo.zip` 的 integration 版本替换，SHA256 与包内逐字节一致；只做了这三个小样式，没有重接整套红色包。
+- **已知唯一产品字段缺口**：主题 Settings 的 `summaryPersona`（总结署名口吻的「熟悉的人」）在正式 `Settings` 类型中没有对应字段，目前保留本地 mock；其余 Summary 预设、总结预设 id、拟真增强、当前 Navigator Persona、天气城市/经纬度均已接真实字段。新对话不要擅自新增产品字段或改可见 UI。
+- **接手指令**：现在没有已授权的开发任务。用户提供红色重构方案/接入契约并明确说继续后，第一步是只读方案 + 本入口 + `AGENTS.md` + Git 状态，先产出/核对接入契约（目录边界、主题入口、数据接口、禁区、验收标准），再按小节点实施。不要把「等方案」当成重新设计主题的授权。
+- **铁律**：不重做已验收四主题；不改 `main`；不接幽影协议；不 stash/reset/restore/clean；不整目录 add、不清理/搬移未跟踪材料；不读/提交 `.env`、凭据、token/secret；不收费 AI、不部署、不打正式包。Push 仍须用户单独明确批准。`red/assets/official/` 若将来接入，属于 ATLUS/SEGA 版权素材，只能留在私有仓库，不得公开发布/CDN。
+- **运行现场**：本地 dev server `http://127.0.0.1:5173/` 当前监听 `127.0.0.1`，PID `14672`；新对话须重核端口/PID，不按旧 PID 停进程。启动命令在根目录：`node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173 --strictPort`。PowerShell 缓存沿用 `TEMP/TMP=E:\MASKARIA\.cache`，npm/Playwright 用 E 盘缓存。
+- **相关记忆**：幽影协议延期/打回重做的备注在 `C:\Users\Lqx24\.codex\memories\extensions\ad_hoc\notes\2026-10-21T2246-umbra-deferred-theme-first.md`。
+- **本次回执**：交接入口完成后只提交本 STATE 文档；不 Push、不部署、不创建/迁移自动化。提交后本聊天停止共享文件写入；新对话只读核对后再继续。
 ## 已推送 · 2026-10-22 · feat/theme-kit-integration
 
 - **Push**：用户明确要求先把进度 Push 给其他 AI 查看。已推送分支 `feat/theme-kit-integration` 到 `origin`（`git@github.com:Meinan818/persona-terminal-dev.git`），远端新建同名分支，未动 `main`。

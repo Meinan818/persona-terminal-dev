@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已推送 · 2026-10-22 · feat/theme-kit-integration
+
+- **Push**：用户明确要求先把进度 Push 给其他 AI 查看。已推送分支 `feat/theme-kit-integration` 到 `origin`（`git@github.com:Meinan818/persona-terminal-dev.git`），远端新建同名分支，未动 `main`。
+- **核对**：推送前本地 HEAD `4ea195123055cfe08c1f558414ba873c239a24da`；推送后 `git ls-remote` 远端同分支 SHA 一致。相对 `origin/main@7c88082` 共 66 个提交、1983 路径；敏感文件扫描未发现凭据文件。
+- **影响**：只推送特性分支，不合并 main、不部署、不打正式包。远端可查看/开 PR：`https://github.com/Meinan818/persona-terminal-dev/pull/new/feat/theme-kit-integration`。
+- **当前状态**：四主题验收通过，等待红色 demo 方重构方案；幽影协议继续暂停。
+
 ## 已验收 · 2026-10-21 · 四主题整体验收通过，等待重构方案
 
 - **用户验收**：用户明确回复「验收通过」，四主题当前版本人工验收通过。

@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：皮肤动态 loader 自动注册完成；skin 测试 3 项通过，tsc exit 0。
+当前节点：探索局外规则完成（守门阴影 + 最少 4 战离场）；测试通过，tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -81,3 +81,7 @@
 ## 动态皮肤加载
 
 - `src/umbra/skins/loaders.ts`：按 `skins/<id>/index.ts` 自动注册皮肤 loader，`themeLoader` 启动时加载。
+
+## 探索局外规则
+
+- `src/umbra/rules/exploreSession.ts`：记录 mob/elite/guardian/boss 战果，出口需守门阴影已败且累计 ≥4 场。

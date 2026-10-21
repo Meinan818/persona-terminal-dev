@@ -425,12 +425,25 @@ const totalDamage: Prim = (t, rc) => {
 };
 
 // ------------------------------------------------------------------ transitions
+/** 第五阶段：开战斜切面板加 P5 印刷质感 —— 网点渐变 + 速度线 + 白色切边（原作面板不是纯色块） */
+function panelTexture(g: Graphics, col: number, i: number) {
+  const dark = col === 0x0a0a0a || ((col >> 16) & 255) < 40, paper = ((col >> 8) & 255) > 200;
+  const dot = dark ? 0xb3121a : paper ? 0xe5191c : 0x7a0a10;
+  let k = 0; const rnd = () => { k = (k * 9301 + 49297 + i * 131) % 233280; return k / 233280; };
+  for (let y = -260; y < 1000; y += 26) for (let x = ((y / 26) & 1) * 13; x < 1800; x += 26) {
+    const r = Math.max(0, 9 - Math.hypot(x - (i % 2 ? 1500 : 200), y - (i % 2 ? -100 : 900)) / 110);
+    if (r > 0.8) g.circle(x, y, r).fill({ color: dot, alpha: 0.85 });
+  }
+  for (let n = 0; n < 26; n++) { const y = -200 + rnd() * 1150, x = rnd() * 1500, len = 200 + rnd() * 600, th = 2 + rnd() * 7; g.poly([x, y - th / 2, x + len, y, x, y + th / 2]).fill({ color: dark ? 0xe5191c : 0x0a0a0a, alpha: 0.35 + rnd() * 0.4 }); }
+  g.rect(0, -1000, 10, 2700).fill({ color: 0xffffff, alpha: 0.95 });
+}
 const slashPanels: Prim = (t, rc) => {
   const a = A(t), eng = rc.eng, dur = Math.min(900, t.dur ?? 800);
   const cols = (rc.level === 'minimal' ? (a.colors ?? ['#000']).slice(0, 1) : (a.colors ?? ['#0a0a0a', '#e5191c', '#f4eedd']).slice(0, 4)).map((c: string) => eng.color(c));
   const stg = Math.max(50, a.stagger ?? 70), ang = a.angle ?? 0.35, dir = a.dir === 'ltr' ? 1 : -1;
   const L = layerOf(t, rc, 'trans');
-  const ps: Graphics[] = cols.map((col: number) => { const g = tmp(rc, new Graphics().poly([0, -1000, 2600, -1000, 2600, 1700, 0, 1700]).fill(col).stroke({ color: 0x0a0a0a, width: 12 })) as Graphics; g.skew.x = -ang; g.visible = false; L.addChild(g); return g; });
+  const ps: Graphics[] = cols.map((col: number, i: number) => { const g = tmp(rc, new Graphics().poly([0, -1000, 2600, -1000, 2600, 1700, 0, 1700]).fill(col).stroke({ color: 0x0a0a0a, width: 12 })) as Graphics; g.skew.x = -ang; g.visible = false;
+    if (a.texture && rc.level !== 'minimal') panelTexture(g, col, i); L.addChild(g); return g; });
   const vis = eng.st.vis, span = vis.r - vis.l + 3200;
   const inD = (dur - stg * (cols.length - 1)) * 0.45, outD = (dur - stg * (cols.length - 1)) * 0.45;
   return { t0: t.at, dur,

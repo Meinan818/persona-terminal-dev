@@ -55,7 +55,7 @@ if (sets.includes('holdup')) await step('holdup', async () => {
 if (sets.includes('start')) await step('start', async () => {
   const o = await open('prewarm=0'); await o.idle();
   await o.page.evaluate(() => { window.__umbra.hud.setMode('hidden'); window.__umbra.freezeOn('battle:start', 420); window.__umbra.dir.play('battle:start', { enemyIds: window.__umbra.B.enemies, leadId: 'joker' }, {}); });
-  for (const [t, n] of [[420, 'a-panels'], [560, 'b-panels'], [680, 'c-swoop'], [800, 'd-land']]) { await o.freeze('battle:start', t); await o.shot(`54-start-${n}`); }
+  for (const [t, n] of [[420, 'a-panels'], [580, 'b-eyes'], [680, 'c-swoop'], [800, 'd-land']]) { await o.freeze('battle:start', t); await o.shot(`54-start-${n}`); }
   await o.rel(); await done(o);
 });
 if (sets.includes('showtime')) await step('showtime', async () => {

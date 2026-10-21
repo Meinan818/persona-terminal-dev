@@ -44,9 +44,10 @@
     ],
     "angle": 0.35,
     "stagger": 70,
-    "dir": "rtl"
+    "dir": "rtl",
+    "texture": true
    },
-   "dur": 560,
+   "dur": 500,
    "minimal": {
     "at": 0,
     "dur": 820,
@@ -123,8 +124,23 @@
    "minimal": "skip"
   },
   {
-   "at": 560,
-   "dur": 300,
+   "at": 440,
+   "dur": 240,
+   "prim": "eyeStrip",
+   "args": {
+    "art": "char.$actor#cutin",
+    "color": "#0a0a0a",
+    "noPlate": true,
+    "y": 360,
+    "angle": -0.08,
+    "p5": true
+   },
+   "minimal": "skip",
+   "layer": "trans"
+  },
+  {
+   "at": 540,
+   "dur": 320,
    "prim": "camera",
    "args": {
     "focus": "$center",

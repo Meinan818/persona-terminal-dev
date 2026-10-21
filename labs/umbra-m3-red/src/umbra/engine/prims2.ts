@@ -118,13 +118,13 @@ export const eyeStrip: Prim = (t, rc) => {
   band.addChild(bg);
   const eyes = a.art ? eng.frame(a.art, rc.payload) : undefined;
   if (eyes) { const s = new Sprite(eyes); s.anchor.set(0.5); s.height = 230; s.scale.x = s.scale.y; s.alpha = 0.95; band.addChild(s); }
-  for (let i = 0; i < 24; i++) { const b = new Graphics().circle(0, 0, 4 + R() * 10).fill({ color: 0x9fdcff, alpha: 0.5 }); b.position.set(-700 + R() * 1400, -100 + R() * 200); band.addChild(b); }
+  for (let i = 0; i < (a.p5 ? 0 : 24); i++) { const b = new Graphics().circle(0, 0, 4 + R() * 10).fill({ color: 0x9fdcff, alpha: 0.5 }); b.position.set(-700 + R() * 1400, -100 + R() * 200); band.addChild(b); }
   const fig = a.figure ? eng.frame(a.figure, rc.payload) : undefined; let fs: Sprite | null = null;
   if (fig) { fs = new Sprite(fig); fs.anchor.set(0.5, 1); fs.height = 200; fs.scale.x = fs.scale.y; fs.position.set(a.figureX ?? 120, 110); band.addChild(fs); }
-  const ice = new Graphics(); for (let i = 0; i < 12; i++) { const x = (a.figureX ?? 120) + (R() - 0.5) * 160; ice.poly([x, 110, x + 8 + R() * 10, 110 - 20 - R() * 40, x + 20, 110]).fill({ color: 0xdff6ff, alpha: 0.9 }); } band.addChild(ice);
+  const ice = new Graphics(); for (let i = 0; i < (a.p5 ? 0 : 12); i++) { const x = (a.figureX ?? 120) + (R() - 0.5) * 160; ice.poly([x, 110, x + 8 + R() * 10, 110 - 20 - R() * 40, x + 20, 110]).fill({ color: 0xdff6ff, alpha: 0.9 }); } band.addChild(ice);
   const plate = new Container(); const nm = txt(eng.label(a.name ?? ('unit.' + (rc.payload?.actorId ?? ''))), 34, { font: eng.fonts.display, fill: 0xffffff });
   plate.addChild(new Graphics().poly([0, 0, nm.width + 60, -4, nm.width + 46, 50, -10, 54]).fill(col(rc, a.plate, '#1f3fbf')).stroke({ color: 0xffffff, width: 3 }), nm); nm.position.set(20, 6);
-  c.addChild(band, plate);
+  c.addChild(band); if (!a.noPlate) c.addChild(plate);
   return { t0: t.at, dur, begin() { c.visible = true; band.position.set(DW / 2, a.y ?? 330); band.rotation = a.angle ?? -0.06; plate.position.set(eng.st.safe.l + 30, eng.st.safe.t + 120); },
     tick(p) { const ms = p * dur, kin = ease.outCubic(clamp(ms / 140)), kout = ease.inCubic(clamp((ms - dur + 130) / 130)); band.scale.set(1, kin * (1 - kout) + 0.001); band.x = DW / 2 - 60 * p; plate.alpha = kin * (1 - kout); plate.x = eng.st.safe.l + 30 - 200 * (1 - kin); if (fs) fs.x = (a.figureX ?? 120) + 30 * p; },
     end() { kill(rc, c); } };

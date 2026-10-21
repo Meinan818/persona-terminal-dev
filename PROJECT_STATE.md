@@ -7,7 +7,8 @@
 ### 当前入口与范围
 
 - **用户恢复及具体授权**：新聊天先只读接手 `71bd465`，用户先说“继续”授权整理最小方案；提供 `.rivet/scratch/p5r-red-details-20261021/RED-DETAILS-PROPOSAL.md` 并明确3个产品文件后，用户再次“继续”。据此仅允许 `adapter/live.ts` 接既有本地业务、`screens/pkg4/d4.ts` 增加资产/统计/结算提供器和回调、`screens/pkg4/ledger4.ts` 传所选月份；另含必要adapter测试和本 STATE。不是通用UI修改授权，原18个三主题WIP、根store、CSS、参考图、校验器均不动。不Push、部署、打包或收费调用。
-- **Git现场与归属**：分支 `feat/theme-kit-integration`，本轮起点 `71bd4659be7955f984548eeb7f339945670c3521`，相对本地 `origin/main@7c88082` 0落后/17领先。完成后将上述3产品文件、既有 `adapter/__tests__/ledgerLive.test.ts` 的一行mock、新增 `ledgerDetails.test.ts`、本 STATE 共6路径独立本地提交，最终SHA以 git log -1 为准。原18文件及其它untracked不纳入；没有查询远端新状态。
+- **Git现场与归属**：分支 `feat/theme-kit-integration`，本轮起点 `71bd4659be7955f984548eeb7f339945670c3521`；功能已独立提交 `e1fd152`（`feat(theme-kit): 接入红色资产统计与本地结算`），含上述3产品文件、既有 `adapter/__tests__/ledgerLive.test.ts` 的一行mock、新增 `ledgerDetails.test.ts`、本 STATE 共6路径。功能提交相对本地 `origin/main@7c88082` 0落后/18领先，没有查询远端新状态。验收记录另作仅含本 STATE 的文档提交；原18文件及其它untracked不纳入，未Push。
+- **用户验收 · 2026-10-21**：用户明确回复“验收通过”，本节点红色资产、统计与本地结算已通过用户验收。保留已验收界面；本次仅记录反馈，不新增产品改动、不重跑测试或构建，也不自动开始下一节点。其它红色页面、收费AI与原18个三主题WIP不在本次验收范围。
 
 ### 实现与当前证据
 
@@ -16,14 +17,14 @@
 - **统计与结算**：真实收支、预算、类目、渠道、劳动收入、环比及6期趋势；adjust不计收支。流水所选上月传入统计；“本期”用既有发薪日周期，“本月”用自然月，未设预算不误报超支。周/月结算复用buildSettlementData和offlineSettlement，页面明确本地回顾，不调用generateSettlement、模型或云端。实际领取奖励才显示+SP，同周期请求串行；月度奖励仍由现有完整结束周期/达标/有战场规则判断。浏览器核无战场不假发奖；并发、反复打开及实际发放返回值由集成测试验证，未拿用户真实战场发奖测试。
 - **验证**：相关2文件/17项通过；最终全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **66文件/403项通过**，`tests-final.log`。隔离浏览器主报告 `stable-locators/report.json` **28项** pass=true、errors=[]，补充 `reviewed/report.json` **5项** pass=true、errors=[]，共 **33项浏览器检查**，含真实IndexedDB、刷新、保存/删除失败重试、同名资产、键盘、负余额、月份/周期、周/月结算与订阅释放。早期口头将主报告说成29项，此处按JSON纠正为28项。无收费模型请求，未动用户真实账本。
 - **构建**：首轮 `build.log` 因新增测试样例漏currency/createdAt报4条TS2741，补齐fixture元数据后 `theme-kit-integration/red-details-reviewed.log` BUILD_EXIT=0。之后截图发现本地Markdown回顾直接显示双星号，仅去掉本地展示文字中的加粗标记；最终 `npm run build`（含tsc）见同目录 `red-details-final.log`，95.3秒、**BUILD_EXIT=0**，并核构建JS已包含最终纯文本处理。`final-text-check.json` pass=true。本机开发后端构建，不作为正式手机包发布。
-- **视觉与遗留保护**：`protection.json` 比本轮起始692清单文件，**689一致，仅获准3产品文件变化**；d4原有函数中只有openLedgerStats/openSettle/openAssetBoard/assetForm四处变化。`mock-preservation.json` 7个原演示状态逐项对比基线DOM层级、class/style、文案完全一致；手机390×844和桌面1440×900日夜截图在reviewed，已抽看，用户尚未人工验收。初轮截图抓到转场遮罩，原图保留，稳定帧另拍；统计在手机仍沿用原长页的位置，不因接线重排。原18WIP与旧补丁逐字节一致，51,888 B、SHA-256 `e08565b099b16a2932c003f551418c1abd05883ef2c7c456babb13eb6cefc84a`。
+- **视觉与遗留保护**：`protection.json` 比本轮起始692清单文件，**689一致，仅获准3产品文件变化**；d4原有函数中只有openLedgerStats/openSettle/openAssetBoard/assetForm四处变化。`mock-preservation.json` 7个原演示状态逐项对比基线DOM层级、class/style、文案完全一致；手机390×844和桌面1440×900日夜截图在reviewed，已抽看；用户于2026-10-21明确验收通过本节点。初轮截图抓到转场遮罩，原图保留，稳定帧另拍；统计在手机仍沿用原长页的位置，不因接线重排。原18WIP与旧补丁逐字节一致，51,888 B、SHA-256 `e08565b099b16a2932c003f551418c1abd05883ef2c7c456babb13eb6cefc84a`。
 - **原校验边界**：未改 `scripts/p5r-red/check-copy.mjs`。本轮实跑仍exit1（`original-check-copy.log`），它会报告前轮已获准的2个主题按钮、ledger4和本轮d4等差异，以及共享工作区既有WIP；不能称原包check-copy通过。本轮以明确例外白名单、函数范围、其余文件哈希和mock DOM保护作为补充证据。原52张像素结果3/52及用户接受字体偏差仍保留，不虚报全过。
 - **探针失败保留**：浏览器前两轮把IndexedDB按主键排序的数组误当新增顺序，诊断报告显示按ID更新正确，只改脚本为按ID核对；下一轮遇相同失败toast暂时重叠的strict mode violation，只改定位为最后一条。`first/diagnostic/stable-ids`及对应log均保留；没有删断言或清场。订阅重绘的监听用AbortController释放，离页订阅实查回到0；异步结算按请求序号防旧结果覆盖新范围。
 
 ### 运行、体验与下一任务
 
 - **当前本地预览**：根目录 `http://127.0.0.1:5173/`，本轮PID28888、127.0.0.1监听；接手后须重核。命令 `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173 --strictPort`。TEMP/TMP使用 `E:\MASKARIA\.cache`，浏览器缓存 `E:\CODEX\.cache\ms-playwright`，npm缓存E盘；本轮脚本/报告均在 `.rivet/scratch/p5r-red-details-20261021/`。
-- **用户可体验**：菜单切红色→心相记账→资产→登记/编辑后刷新应保留；统计→本月/本期→心相结算→按周/按月应读真实账目，本地回顾不冒充AI。`p5r-red-verify.html`仍是mock，不能拿它验收真实持久化。功能数据已由本轮自动验证，手感和美观仍待用户判断。
+- **已验收路径**：菜单切红色→心相记账→资产→登记/编辑后刷新应保留；统计→本月/本期→心相结算→按周/按月应读真实账目，本地回顾不冒充AI。`p5r-red-verify.html`仍是mock，不能拿它验收真实持久化。功能数据已由开发轮自动验证，用户于2026-10-21明确回复“验收通过”，无需重复验收。
 - **唯一下一任务/负责人**：本节点结束后，由Codex按既有主线收口原18个黄粉蓝预算/对账/资产/统计WIP的完整验证与独立提交；本轮未动它们。真实票据识别、收费AI结算和其它红色页面写回继续未接，不扩成“红色整套已完成”。本次无Push、部署或安装包，用户无需执行开发命令。
 
 ## 历史交接 · 2026-10-21 · 红色记账落库与主题切换修复后

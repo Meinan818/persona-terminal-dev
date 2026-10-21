@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 三主题 Hideout 云端组织数据接入
+
+- **范围**：`useCloudSocialStore.orgs` 接进三主题 `pkg4-org` 适配器的 `buildView()`；新建 `useOrgView` hook 调 `loadSocial()` 触发首次同步。有云端组织时取第一个；无登录/无组织时回 mock 让页面走 signed-out/empty 态。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`hideout-real-20261021.log`）。未跑真实浏览器探针（需要云端后端），本轮只做静态接入。
+- **提交**：`1587fb1`（4 文件，53+/3-）。未 Push。
+- **下一步**：继续接 Account / Settings / Achievements。
+
 ## 已提交 · 2026-10-21 · 红色 Astrology 真实数据接入
 
 - **范围**：红色 Astrology 页面 `Astrology.p5r.tsx` 的 `Archive` 组件从真实 `longReadings` 取（`loadLongReadings` + `sweepExpiredReadings`）；`d4.ts` 的 `openDailyDraw` 重写候选生成（`drawCandidates()` 从真实 22 张大阿卡纳抽）、完成/离线走 `buildOfflineDaily` + `saveDailyDivination`、`openLongReading` done 态从 `latest` 取真实 `question`/`picked`/`content`。`DRAW3` 恢复保留（export 依赖）。

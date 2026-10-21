@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：探索规划器已接遭遇生成；战斗节点生成 1–5 只敌人，非战斗节点不生成。
+当前节点：探索 run 状态机完成；规划/遭遇/局外会话串成可推进流程。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -97,3 +97,7 @@
 ## 探索遭遇生成
 
 - `src/umbra/rules/exploreEncounter.ts`：把规划节点映射为 `generateEncounter`，战斗节点生成 1–5 只，非战斗节点返回 null。
+
+## 探索 Run
+
+- `src/umbra/rules/exploreRun.ts`：把规划、遭遇与局外会话串成 `index/session` 状态机，逐节点推进并判定离场。

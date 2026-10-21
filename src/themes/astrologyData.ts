@@ -5,6 +5,7 @@ import { useAppStore, toLocalDateKey } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { useCloudStore } from '@/store/cloud';
 import { loadSocial } from '@/services/social';
+import { useTarotCollection, useSeasonCollection, type TarotEntry } from '@/components/codex/codexData';
 import type { DailyDivination, FateGlimpse, LongReading } from '@/types';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -77,5 +78,21 @@ export function useCloudUser() {
   const { cloudUser, cloudEnabled, lastSyncAt, syncStatus } = useCloudStore(useShallow((s) => ({ cloudUser: s.cloudUser, cloudEnabled: s.cloudEnabled, lastSyncAt: s.lastSyncAt, syncStatus: s.syncStatus })));
   return { cloudUser, cloudEnabled, lastSyncAt, syncStatus, signedIn: !!cloudUser };
 }
+
+export function useCodexCollections() {
+  const tarot = useTarotCollection();
+  const season = useSeasonCollection();
+  return { tarot, season };
+}
+
+export function useRealCodex() {
+  const { achievements, skills, todoCompletions, battleState, weeklyGoals, confidants } = useAppStore(useShallow((s) => ({
+    achievements: s.achievements, skills: s.skills, todoCompletions: s.todoCompletions,
+    battleState: s.battleState, weeklyGoals: s.weeklyGoals, confidants: s.confidants,
+  })));
+  return { achievements, skills, todoCompletions, battleState, weeklyGoals, confidants };
+}
+
+export type { TarotEntry };
 
 export type { DailyDivination, FateGlimpse, LongReading };

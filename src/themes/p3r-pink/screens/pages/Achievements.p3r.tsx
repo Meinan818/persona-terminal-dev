@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 成就页（真实 src/pages/Achievements.tsx · p3 分支 + components/codex/**）粉白 P3R 重制。
  * 页头「成就·技能」+ LB/RB 斜块 Tab：成就 / 技能 / 图鉴（内容左右滑入 18px）。
  *  成就：筛选循环按钮（全部/未完成/已完成）+「添加成就」；成就斜卡（徽记·标题·描述·进度条·「已达成，点击解锁 ✨」·「解锁于…」玫红底·隐藏 ？？？·编辑铅笔 / 删除）；
@@ -24,6 +24,7 @@ import { TarotFace, TarotFlipViewView, suitOf } from '@pink/screens/overlays/Tar
 import { SeasonCard, SeasonFlipView } from '@pink/screens/overlays/FlipCardView.p3r';
 import { UnlockCutIn } from '@pink/screens/pkg5/UnlockCutIn';
 import { ACHIEVEMENTS, ATTRIBUTES, ATTR_IDS, ATTR_NAMES, HIDDEN_IDS, SEALED_IDS, SEASON_COLLECTED, SEASON_EXTRAS, SKILLS, SKILL_BONUS_MULT_CAP, TAROT_COLLECTED, achievementProgress } from '@pink/adapters/pkg5';
+import { useRealCodex, useCodexCollections } from '@pink/adapters/pkg5';
 import { P5_MAJOR, P5_MINOR, type P5TarotCard } from '@pink/adapters/pkg5-tarot';
 import { P5_SEASON_PAGES, type P5SeasonMark } from '@pink/adapters/pkg5-season';
 
@@ -89,7 +90,8 @@ function AchievementCard({ a, onUnlock, onEdit, onDelete, tiers, stamping }: { a
 function AchievementsTab({ empty, autoFx }: { empty: boolean; autoFx: boolean }) {
   const toast = useToast();
   const anim = useBoldness();
-  const [list, setList] = useState<Achievement[]>(empty ? [] : ACHIEVEMENTS);
+  const realCodex = useRealCodex();
+  const [list, setList] = useState<Achievement[]>(empty ? [] : (realCodex.achievements.length ? realCodex.achievements : ACHIEVEMENTS));
   const [filter, setFilter] = useState<Filter>('all');
   const [form, setForm] = useState<{ open: boolean; editing: Achievement | null }>({ open: false, editing: null });
   const [del, setDel] = useState<string | null>(null);

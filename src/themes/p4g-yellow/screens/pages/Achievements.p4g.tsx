@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 成就页（真实 src/pages/Achievements.tsx + components/codex/**）P4G 重制。
  * Tab：成就 / 技能 / 图鉴。
  *  成就：筛选（全部/未完成/已完成，点击循环）+ 添加成就；成就卡（图标·标题·描述·进度·「已达成，点击解锁 ✨」·解锁于·隐藏成就 ？？？·编辑/删除）；
@@ -24,6 +24,7 @@ import { SkillDeleteView } from '@yellow/screens/overlays/AchievementsSkillDelet
 import { TarotFace, TarotFlipViewView } from '@yellow/screens/overlays/TarotFlipView.p4g';
 import { SeasonCard, SeasonFlipView } from '@yellow/screens/overlays/FlipCardView.p4g';
 import { ACHIEVEMENTS, ATTRIBUTES, ATTR_IDS, ATTR_NAMES, HIDDEN_IDS, SEALED_IDS, SEASON_COLLECTED, SEASON_EXTRAS, SKILLS, SKILL_BONUS_MULT_CAP, TAROT_COLLECTED, achievementProgress } from '@yellow/adapters/pkg5';
+import { useRealCodex, useCodexCollections } from '@yellow/adapters/pkg5';
 import { P5_MAJOR, P5_MINOR, P5_SUIT_META, type P5TarotCard } from '@yellow/adapters/pkg5-tarot';
 import { P5_SEASON_PAGES, type P5SeasonMark } from '@yellow/adapters/pkg5-season';
 
@@ -78,7 +79,9 @@ function AchievementCard({ a, onUnlock, onEdit, onDelete, tiers }: { a: Achievem
 function AchievementsTab({ empty }: { empty: boolean }) {
   const toast = useToast();
   const low = useLowMotion();
-  const [list, setList] = useState<Achievement[]>(empty ? [] : ACHIEVEMENTS);
+  const realCodex = useRealCodex();
+  const collections = useCodexCollections();
+  const [list, setList] = useState<Achievement[]>(empty ? [] : (realCodex.achievements.length ? realCodex.achievements : ACHIEVEMENTS));
   const [filter, setFilter] = useState<Filter>('all');
   const [form, setForm] = useState<{ open: boolean; editing: Achievement | null }>({ open: false, editing: null });
   const [del, setDel] = useState<string | null>(null);

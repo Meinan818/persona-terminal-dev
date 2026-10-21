@@ -1,9 +1,10 @@
-/** 设置 · 天气（真实 components/settings/WeatherSettings.tsx） */
+﻿/** 设置 · 天气（真实 components/settings/WeatherSettings.tsx） */
 import { useEffect, useRef, useState } from 'react';
 import { CfgBlock, CfgBtn, CfgInput, CfgMsg, CfgSeg } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
 import { WeatherIcon } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
+import { fetchWeatherNow, searchCity, weatherConfigOf } from '@/utils/weather';
 
 const CITIES = [
   { name: '杭州', adm: '浙江省 · 杭州市' }, { name: '西湖', adm: '浙江省 · 杭州市' }, { name: '朝阳', adm: '北京市' }, { name: '朝阳', adm: '辽宁省 · 朝阳市' },
@@ -15,7 +16,7 @@ export function WeatherBlock({ highlight }: { highlight?: boolean }) {
   const [guideOpen, setGuideOpen] = useState(false);
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
-  const [results, setResults] = useState<typeof CITIES>([]);
+  const [results, setResults] = useState<Array<{ id?: string; name: string; adm?: string; lat: number; lon: number }>>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => { if (highlight) setTimeout(() => ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 350); }, [highlight]);
 
@@ -23,17 +24,27 @@ export function WeatherBlock({ highlight }: { highlight?: boolean }) {
   const missing = [qw && !s.weatherKey.trim() && 'API KEY', qw && !s.weatherHost.trim() && 'API Host', !s.weatherCity && '城市'].filter(Boolean) as string[];
   const ready = missing.length === 0;
   const canSearch = !qw || (s.weatherKey.trim() && s.weatherHost.trim());
-  const search = () => {
+  const weatherCfg = () => weatherConfigOf({ weatherProvider: s.weatherProvider, weatherApiKey: s.weatherKey, weatherApiHost: s.weatherHost, weatherCity: s.weatherCity as never });
+  const search = async () => {
     if (!q.trim()) return;
     setBusy(true); setMsg(null);
-    setTimeout(() => {
-      setBusy(false);
-      const list = CITIES.filter((c) => c.name.includes(q.trim()) || c.adm.includes(q.trim()));
-      setResults(list);
+    try {
+      const list = await searchCity(q, weatherCfg());
+      setResults(list as typeof results);
       if (!list.length) setMsg({ ok: false, text: '没找到这个地名，换个写法试试（区县名通常比街道名好用）' });
-    }, 500);
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : '城市检索失败' });
+    } finally { setBusy(false); }
   };
-  const test = () => { setBusy(true); setTimeout(() => { setBusy(false); setMsg({ ok: true, text: `✓ ${s.weatherCity?.name}　小雨 14°C　体感 12°C` }); }, 600); };
+  const test = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const w = await fetchWeatherNow(weatherCfg(), { force: true });
+      setMsg({ ok: true, text: `✓ ${s.weatherCity?.name ?? ''}　${w.text} ${w.temp}°C　体感 ${w.feelsLike}°` });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : '天气取不到' });
+    } finally { setBusy(false); }
+  };
 
   return (
     <div ref={ref} className={cx('scroll-mt-24', highlight && 'outline outline-4 outline-offset-4 outline-p4g-orange')}>
@@ -76,7 +87,7 @@ export function WeatherBlock({ highlight }: { highlight?: boolean }) {
         )}
         <div>
           <div className="mb-1 flex items-center justify-between gap-2"><span className="font-display text-meta font-bold">城市</span>
-            {s.weatherCity && <span className="flex min-w-0 items-center gap-2"><span className="truncate text-meta font-bold">📍 {s.weatherCity.name} · {s.weatherCity.adm}</span><CfgBtn onClick={() => updateSettings({ weatherCity: undefined })}>清除</CfgBtn></span>}</div>
+            {s.weatherCity && <span className="flex min-w-0 items-center gap-2"><span className="truncate text-meta font-bold">📍 {s.weatherCity.name}{s.weatherCity.adm ? ` · ${s.weatherCity.adm}` : ''}</span><CfgBtn onClick={() => updateSettings({ weatherCity: undefined })}>清除</CfgBtn></span>}</div>
           {canSearch ? (
             <>
               <div className="flex min-w-0 gap-2">
@@ -87,7 +98,7 @@ export function WeatherBlock({ highlight }: { highlight?: boolean }) {
                 <ul className="mt-2 grid grid-cols-1 gap-1">
                   {results.map((c, i) => (
                     <li key={i}><button type="button" onClick={() => { updateSettings({ weatherCity: c }); setResults([]); setQ(''); }} className="flex w-full min-w-0 items-center gap-2 rounded-[3px] bg-p4g-surface px-3 py-2 text-left hover:bg-p4g-select hover:text-[color:var(--p4g-select-ink)]">
-                      <span className="shrink-0 font-display text-body font-bold">{c.name}</span><span className="truncate text-meta opacity-75">{c.adm}</span></button></li>
+                      <span className="shrink-0 font-display text-body font-bold">{c.name}</span><span className="truncate text-meta opacity-75">{c.adm ?? `${c.lat.toFixed(3)}, ${c.lon.toFixed(3)}`}</span></button></li>
                   ))}
                 </ul>
               )}

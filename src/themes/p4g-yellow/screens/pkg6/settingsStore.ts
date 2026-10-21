@@ -10,7 +10,7 @@ export interface MockSettings {
   theme: ThemeType; customThemeColor: string; customSoundScheme: ThemeType; customTarotSet: 'p3' | 'p4' | 'p5';
   soundMuted: boolean; soundVolume: number; backgroundAnimation: string[]; splashStyle: string; splashSpeed: 'fast' | 'normal' | 'slow';
   backgroundImage?: string; backgroundOpacity: number; backgroundOrientation: 'landscape' | 'portrait';
-  weatherProvider: 'qweather' | 'openmeteo'; weatherKey: string; weatherHost: string; weatherCity?: { name: string; adm: string };
+  weatherProvider: 'qweather' | 'openmeteo'; weatherKey: string; weatherHost: string; weatherCity?: { id?: string; name: string; adm?: string; lat?: number; lon?: number };
   bgmEnabled: boolean; bgmVolume: number; bgmBattle: string; bgmBoss: string; bgmTower: string; bgmHome: Record<string, string>;
   provider: ProviderId; keys: Partial<Record<ProviderId, string>>; verified: Partial<Record<ProviderId, boolean>>; customName: string; customProtocol: 'openai' | 'anthropic'; customPreset: string; baseUrl: string;
   summaryModel: string; navigatorModel: string; visionModel: string; audioModel: string; assistantModel: string;
@@ -58,9 +58,13 @@ function pushToRealStore(p: Partial<MockSettings>) {
     if (p.bgmHome !== undefined) set('bgmHomeTrackIds', p.bgmHome);
     set('weatherProvider', p.weatherProvider); set('weatherApiKey', p.weatherKey); set('weatherApiHost', p.weatherHost);
     if (p.weatherCity !== undefined) {
-      const cur = st.settings.weatherCity;
-      if (p.weatherCity && cur && cur.name === p.weatherCity.name) set('weatherCity', cur);
-      else if (p.weatherCity === undefined) set('weatherCity', undefined);
+      if (!p.weatherCity) set('weatherCity', undefined);
+      else if (Number.isFinite(p.weatherCity.lat) && Number.isFinite(p.weatherCity.lon)) {
+        set('weatherCity', { id: p.weatherCity.id, name: p.weatherCity.name, lat: p.weatherCity.lat, lon: p.weatherCity.lon });
+      } else {
+        const cur = st.settings.weatherCity;
+        if (cur && cur.name === p.weatherCity.name) set('weatherCity', cur);
+      }
     }
     if (p.provider !== undefined) {
       const map: Record<string, string> = { openai: 'openai', deepseek: 'deepseek', kimi: 'kimi', qwen: 'qwen', gemini: 'gemini', minimax: 'minimax', custom: 'custom' };
@@ -112,7 +116,7 @@ export function hydrateFromRealStore() {
         weatherProvider: s.weatherProvider ?? state.weatherProvider,
         weatherKey: s.weatherApiKey ?? state.weatherKey,
         weatherHost: s.weatherApiHost ?? state.weatherHost,
-        weatherCity: s.weatherCity ? { name: s.weatherCity.name, adm: '' } : state.weatherCity,
+        weatherCity: s.weatherCity ? { id: s.weatherCity.id, name: s.weatherCity.name, adm: '', lat: s.weatherCity.lat, lon: s.weatherCity.lon } : state.weatherCity,
         provider: (s.summaryApiProvider as ProviderId) ?? state.provider,
         keys: { ...state.keys, ...(s.summaryApiKey ? { [s.summaryApiProvider ?? 'deepseek']: s.summaryApiKey } : {}) },
         summaryModel: s.summaryModel ?? state.summaryModel,

@@ -2,7 +2,33 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前开发 · 2026-10-21 · 红色记账基础读写真实落库
+## 准备交接 · 2026-10-21 · 红色记账落库与主题切换修复后
+
+### 接手第一入口
+
+- **本次是收尾**：用户报告“切换主题那里压根就切换不了，一直是蓝色”，本轮修复并自验后，用户明确“准备交接”。自此停止开发，只核已有证据、整理本入口并提交本轮已完成改动；不重跑测试/构建，不新开功能，不Push或部署。收尾完成后源聊天停止共享文件写入，需用户明确说继续再开发。本聊天未创建自动化或接续聊天，普通中断不计为compact。
+- **Git现场**：实际目录 `E:\MASKARIA`，分支 `feat/theme-kit-integration`；收尾前 HEAD `4a873a5a512727dfa363ab411dcd3bb092b6c7d4`（红色记账基础读写）。本地 `origin/main@7c88082db5d0f5487e0c35d8f972632f435f2e19`，当前0落后/16领先；本入口与已验证主题切换修复一起作一个本地尾提交，完成后应17领先，其父提交应为4a873a5，最终SHA以 git log -1 为准。没有查询远端新状态、没有Push。
+- **本次提交范围**：8个既有主题按钮文件（黄粉蓝各 `MenuThemeSheet.*.tsx`、`screens/pkg6/settings/ThemeSection.tsx`；红色 `MenuThemeSheet.p5r.tsx`、`SettingsBlocks.tsx`）、新增共用 `src/themes/themeSelection.ts` 和 `src/themes/__tests__/themeSelection.test.ts`，加本 STATE，共11路径。只修按钮读写与成功/失败提示，不改CSS、布局、主题色、图标或动画参数；未将18个旧记账WIP混入提交。
+- **原18个待续文件**：黄粉蓝各6个，仍为 `adapters/pkg5.ts`、`LedgerBudgetSheet.*.tsx`、`LedgerReconcileSheet.*.tsx`、`screens/pages/Ledger.*.tsx`、`screens/pkg5/AssetBoard.tsx`、`LedgerStats.tsx`。本轮按这18路径白名单比较其相对1e6a96e的binary diff，与原补丁逐字节相同；补丁51,888 B，SHA-256 `e08565b099b16a2932c003f551418c1abd05883ef2c7c456babb13eb6cefc84a`，路径 `.rivet/scratch/theme-kit-integration/handoff-20261021-ledger-wip.patch`。不要重复apply；之后不能用整个src/themes相对1e6的差异直接对这个旧补丁，因为本轮已有6个主题按钮文件在同目录改动。详细白名单与证据在下述preservation.json生成脚本。
+- **其它工作材料保留**：原 `.cache/`、`.impeccable/`、`.rivet-config.json`、`demo/`、`deliverables/`、旧outputs与素材/旧demo组件等 untracked 未清理、搬移或混入提交。本轮辅助脚本/日志位于 `.rivet/scratch/theme-switch-fix-20261021/`；此前红包、账本失败原件与测试档仍在对应scratch目录。不要stash/reset/restore/clean或整目录add。
+
+### 已完成、验证与边界
+
+- **红色接入与记账已提交**：四主题汇合 `d31cb10`（红色基线933b163、补音频bff9bcc）；红色记账基础读写 `4a873a5`。记账单笔/批量、删除、预算、对账、真实余额与流水已接本地存储；前轮64文件/389项、23项交互和构建通过，证据与限制见紧随本入口的历史开发节。财务三表仍只在本地，未加云同步或收费AI。
+- **主题问题修前复现**：从隔离新档默认蓝色，通过真实菜单按钮点“黄”，结果数据库theme=blue、内存theme=blue、data-kit=p3r-blue，只改了演示选中态；`before/report.json` pass=false、errors=[]。此前的四主题检查直接调用store切主题，证明了外壳而漏测可见入口，这是本次补上的覆盖。
+- **根因与修复**：黄粉蓝菜单调用演示setPresence，设置页调用演示updateSettings；红色两个色板也只改组件state。新增共用真实主题操作，统一调用现有useAppStore.setTheme，选中态读取真实user.theme；持久化失败保留原主题并显示已有toast。红色未加载正式用户时保留独立demo路径。现有KitHost整页刷新隔离主题CSS的逻辑未修改，红色记账和其它业务未动。
+- **当前真实按钮验证19项通过**：`menu-settled/report.json` 8项，菜单蓝→黄→粉→红→蓝、每次手动刷新仍保留；`settings-settled/report.json` 11项，设置蓝→红→粉→黄→蓝及刷新、注入db.users.update失败后主题/数据库不变、没有假选中色板、键盘Enter能切主题。两份pass=true、errors=[]；每次核store、IndexedDB、data-kit和频道，使用隔离浏览器而非用户当前聊天内嵌标签页，不曾改用户主题/账本。四色完整菜单截图在menu-settled已逐张抽看；用户本人尚未回复验收通过。
+- **测试与构建**：相关新增6项测试通过；本轮全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **65文件/395项通过**，`tests-final.log`；`npm run build`（含tsc）`build-final.log` BUILD_EXIT=0。交接阶段只读这些结果，没有重跑。构建仍是现有本机开发后端配置，不作正式手机包发布。
+- **视觉与WIP保护**：`preservation.json` 对8个既有组件逐个比较JSX标签序列和className/style，全部unchanged=true；原18记账WIP逐字节一致。只改变主题绑定和事件回调，未重画。原像素3/52与用户接受字体偏差的结论维持，本轮未改参考图、阈值、原烟测或比较器。
+- **失败证据保留**：菜单首次扩展探针把黄色菜单当成有“主题：当前…”aria-label，定位失败；核实其data-menu-key后只修辅助选择器。设置探针首次主动reload与主题自动reload相撞，报Not attached to an active page；改为等待performance.timeOrigin变化、document complete和目标菜单可见再取样，最终两份settled报告通过。原menu-fixed、settings-and-failure失败日志仍保留。初次菜单截图捕到启动背景，最终重拍四张已等完整菜单，不拿空背景冒充视觉证明。前轮原包smoke-live在合并壳下的ERR_ABORTED问题仍未修改，不能将本轮补充测试说成原脚本通过。
+
+### 运行、验收与唯一下一任务
+
+- **交接时监听已实查**：只有实际根目录App `http://127.0.0.1:5173/` 在127.0.0.1监听，PID5008；5180/5191/5192未监听。没有为交接重启或停止这些服务，PID跨窗口须重核。起App须在根目录运行 `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173 --strictPort`，TEMP/TMP用已有E盘cache，npm/Playwright复用E盘缓存；独立副本在.rivet内改源码必须重启服务，Vite忽略该目录监听。
+- **用户可验收路径**：刷新当前 `http://127.0.0.1:5173/#/p/menu` → 主题 → 黄/粉/红/蓝，应整套切换且刷新仍保留；设置→主题颜色的入口也已修。无需重建档案或清理浏览器数据。验收页p5r-red-verify.html仍是mock，不在那里测试真实记账或持久化。
+- **待续与下一任务**：接手者先只读本入口、AGENTS、Git、原18个WIP和本轮报告，不因接手自动开始业务写入。待用户明确恢复后，Codex按已有主线核红色资产/统计详情所需事件出口，提出最小接线范围再处理受保护文件；18个三主题记账WIP另按原规划待续。真实票据识别、其它红色写操作、其它设置字段仍未完成，不能把主题切换修复扩成设置页全部真实可用。自定义主题有单元检查沿用原neutral入口，本轮真实四色往返未覆盖自定义整页流程。无Push、部署、打包、收费调用；交接完成后源聊天停止共享写入。
+
+## 历史开发 · 2026-10-21 · 红色记账基础读写真实落库
 
 ### 接手第一入口
 

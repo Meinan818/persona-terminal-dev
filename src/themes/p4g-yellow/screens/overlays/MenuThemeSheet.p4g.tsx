@@ -7,12 +7,12 @@ import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
-import { setPresence, usePresence } from '@yellow/screens/pkg5/presence';
+import { selectAppTheme, useSelectedTheme } from '@/themes/themeSelection';
 import { THEME_SWATCHES } from '@yellow/adapters/pkg5';
 
 export function MenuThemeSheetView({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast();
-  const { theme } = usePresence();
+  const theme = useSelectedTheme('yellow');
   return (
     <P4Sheet open={open} onClose={onClose} title="主题" en="THEME">
       <div className="flex min-w-0 flex-col gap-4 pt-1">
@@ -21,7 +21,7 @@ export function MenuThemeSheetView({ open, onClose }: { open: boolean; onClose: 
           {THEME_SWATCHES.map((t) => {
             const on = theme === t.value;
             return (
-              <button key={t.value} type="button" aria-label={`切换主题：${t.label}`} aria-pressed={on} onClick={() => { setPresence({ theme: t.value }); toast(`已切换：${t.label}`); }} className="group flex min-w-0 flex-col items-center gap-1.5">
+              <button key={t.value} type="button" aria-label={`切换主题：${t.label}`} aria-pressed={on} onClick={async () => { try { await selectAppTheme(t.value); toast(`已切换：${t.label}`); } catch { toast('主题切换失败，请重试'); } }} className="group flex min-w-0 flex-col items-center gap-1.5">
                 <span className={cx('relative flex aspect-square w-full max-w-[64px] items-center justify-center rounded-sm border-3 transition-transform duration-fast', on ? 'border-p4g-black shadow-[4px_4px_0_var(--p4g-orange)] night:border-p4g-yellow' : 'border-p4g-line group-active:translate-y-[2px]')}
                   style={{ background: t.color ?? 'conic-gradient(#3B82F6, #F59E0B, #EF4444, #EC4899, #3B82F6)', transform: on ? 'rotate(-4deg)' : undefined }}>
                   {on && <span aria-hidden className="font-display text-h2 font-bold text-white" style={{ WebkitTextStroke: '2px var(--p4g-black)' }}>✓</span>}

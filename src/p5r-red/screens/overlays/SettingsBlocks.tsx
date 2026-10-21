@@ -5,6 +5,7 @@
  * 每个区块收 state（演示状态，路由 ?state= / ?wx= / ?bgm= / ?vol= 切换）。
  */
 import { useState, type ReactNode } from 'react';
+import { selectAppTheme, useSelectedTheme } from '@/themes/themeSelection';
 import { P5Tag } from '@/p5r-red/kit/P5Tag';
 import { toast } from '@/p5r-red/kit/P5Toast';
 import { P5Sil } from '@/p5r-red/fx/sil';
@@ -20,11 +21,12 @@ export const THR = [0, 10, 25, 45, 70, 100, 140];
 
 export function Swatches({ sel = 'red', sm }: { sel?: string; sm?: boolean }) {
   const [cur, setCur] = useState(sel);
+  const liveTheme = useSelectedTheme();
   return (
     <div className={`ob-swatches${sm ? ' sm' : ''}`}>
       {THEMES.map(([v, l, c], i) => (
-        <button key={v} type="button" className="ob-swatch" aria-label={`切换主题：${l}`} aria-pressed={v === cur} style={{ ['--sw' as string]: c, ['--i' as string]: i }}
-          onClick={() => { setCur(v); sfx('switch', 0.5); }}><span className="ob-swatch-c"><i>✓</i></span><b>{l}</b></button>
+        <button key={v} type="button" className="ob-swatch" aria-label={`切换主题：${l}`} aria-pressed={v === (liveTheme ?? cur)} style={{ ['--sw' as string]: c, ['--i' as string]: i }}
+          onClick={async () => { if (liveTheme) { try { await selectAppTheme(v); } catch { toast('主题切换失败，请重试'); return; } } setCur(v); sfx('switch', 0.5); }}><span className="ob-swatch-c"><i>✓</i></span><b>{l}</b></button>
       ))}
     </div>
   );

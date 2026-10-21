@@ -4,6 +4,7 @@ import {
   UMBRA_LEGACY_ARCHIVE_ID,
   UMBRA_PROFILE_ID,
   UMBRA_SCHEMA_VERSION,
+  createDefaultUmbraCombatForSkin,
   createFreshUmbraProfile,
   equipUmbraItem,
   normalizeUmbraProfile,
@@ -14,6 +15,8 @@ import {
 import { createUmbraRunRecord, isUmbraRunCompatible } from '@/umbra/runtime';
 import { createRuntimePayload, restoreExploration } from '@/umbra/run';
 import { buyUmbraShopItem } from '@/umbra/shop';
+import { registerSkin, unloadSkin } from '@/umbra/skins/registry';
+import type { UmbraSkinPack } from '@/umbra/skins/contract';
 
 const now = new Date('2026-10-19T12:00:00.000Z');
 
@@ -214,5 +217,38 @@ describe('UMBRA runtime map persistence', () => {
     expect(restoreExploration(null)).toBeNull();
     expect(restoreExploration({})).toBeNull();
     expect(restoreExploration({ map: {}, exploration: {} })).toBeNull();
+  });
+});
+
+describe('UMBRA default combat from skin roster', () => {
+  const pack = (): UmbraSkinPack => ({
+    id: 'p4-yellow',
+    manifest: { assets: [] },
+    tokens: {},
+    recipes: [],
+    labels: {},
+    enemyLayouts: { 1: [], 2: [], 3: [], 4: [], 5: [] },
+    roster: {
+      heroPersona: 'izanagi',
+      companions: ['yosuke', 'chie'],
+      companionPersonas: { yosuke: 'jiraiya', chie: 'tomoe' },
+      excludedPersonas: ['arsene'],
+    },
+    compendiumArt: {},
+  });
+
+  it('注册皮肤后从 roster 推导初始队伍', () => {
+    registerSkin('p4-yellow', pack());
+    const combat = createDefaultUmbraCombatForSkin('p4-yellow');
+    expect(combat.activePersonaId).toBe('izanagi');
+    expect(combat.heroPersonaIds).toEqual(['izanagi']);
+    expect(combat.allyPersonaIds).toEqual(['jiraiya', 'tomoe']);
+    unloadSkin('p4-yellow');
+  });
+
+  it('未注册皮肤时保留演示默认队伍', () => {
+    const combat = createDefaultUmbraCombatForSkin('p3-blue');
+    expect(combat.activePersonaId).toBe('arsene');
+    expect(combat.heroPersonaIds).toContain('arsene');
   });
 });

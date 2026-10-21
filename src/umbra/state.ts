@@ -1,6 +1,9 @@
 import type { BattleState } from '@/types';
 import { equipItem, equipmentBonuses } from '@/umbra/engine/equipment';
 import { useInventoryItem } from '@/umbra/engine/inventory';
+import { partyFromRoster } from './rules/rosterParty';
+import { getRegisteredSkin } from './skins/registry';
+import type { SkinRoster, UmbraSkinId } from './skins/contract';
 
 export const UMBRA_SCHEMA_VERSION = 3;
 export const UMBRA_PROFILE_ID = 'current' as const;
@@ -173,6 +176,21 @@ export function createDefaultUmbraCombat(): UmbraCombatState {
     materials: {},
     equipmentBonuses: { attack: 2, defense: 2, hp: 4, sp: 6 },
   };
+}
+
+export function createDefaultUmbraCombatFromRoster(roster: SkinRoster): UmbraCombatState {
+  const party = partyFromRoster(roster);
+  return {
+    ...createDefaultUmbraCombat(),
+    activePersonaId: party.heroPersonaIds[0] ?? '',
+    heroPersonaIds: party.heroPersonaIds,
+    allyPersonaIds: party.allyPersonaIds,
+  };
+}
+
+export function createDefaultUmbraCombatForSkin(skinId: UmbraSkinId): UmbraCombatState {
+  const roster = getRegisteredSkin(skinId)?.roster;
+  return roster ? createDefaultUmbraCombatFromRoster(roster) : createDefaultUmbraCombat();
 }
 
 export function normalizeUmbraProfile(profile: UmbraProfile): UmbraProfile {

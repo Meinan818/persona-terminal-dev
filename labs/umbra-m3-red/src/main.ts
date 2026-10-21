@@ -118,14 +118,15 @@ async function startBattle() {
   for (const u of eng.units.values()) { u.down = false; u.stars.visible = false; u.body.rotation = 0; u.body.x = 0; u.body.y = 0; u.body.scale.set(1); if (u.side === 'enemy') { u.root.visible = true; } u.root.alpha = 1; }
   hud.setHoldRing(false); hud.setMode('hidden'); syncHud(); hud.naviText.text = '';
   const ld = loadParty();
-  await play('battle:start', { enemyIds: B.enemies });
+  eng.audio.bgm('battle.normal');
+  await play('battle:start', { enemyIds: B.enemies, leadId: roster.lead });
   await ld;
   playerTurn();
 }
 function naviTurn() { const n = L('navi.turn').replace('{name}', L('unit.' + B.actor)); hud.naviText.text = n; }
 function playerTurn() {
   syncHud();
-  if (B.oneMore) hud.navi('navi.onemore'); else if (hud.showtime) hud.navi('navi.showtime'); else if (B.actor === roster.lead) hud.naviText.text = L('navi.idle').replace('{n}', L('num.cn')[B.alive(B.enemies).length - 1] ?? String(B.alive(B.enemies).length)); else naviTurn();
+  if (B.oneMore) hud.navi('navi.onemore'); else if (hud.showtime) hud.navi('navi.showtime'); else if (B.actor === roster.lead) hud.naviText.text = L(B.alive(B.enemies).length === 1 ? 'navi.idle.one' : 'navi.idle').replace('{n}', L('num.cn')[B.alive(B.enemies).length - 1] ?? String(B.alive(B.enemies).length)); else naviTurn();
   hud.setMode('command');
   if (auto) autoStep();
 }
@@ -134,6 +135,7 @@ async function afterAction(r: ReturnType<Battle['act']>) {
   if (r.newDown.length) play('unit:down', { unitIds: r.newDown, side: 'enemy' });   // 重叠层，不阻塞主线
   if (r.won) return victory(false);
   if (r.oneMore) {
+    eng.audio.voiceLine(B.actor, 'onemore');
     await play('onemore', { unitId: B.actor, actorId: B.actor });
     if (r.holdUp) return holdUp();
     return playerTurn();
@@ -170,7 +172,7 @@ async function doShowtime() {
   hud.setMode('hidden');
   await Promise.all([eng.loadGroup('show:' + pair.join('-')), ...pair.map((i) => eng.loadGroup('char:' + i))]);
   const r = B.showtime(pair);
-  hud.navi('navi.showtime');
+  hud.navi('navi.showtime'); eng.audio.voiceLine(pair[0], 'highlight');
   await play('highlight', r.payload, {});
   syncHud();
   if (r.won) { for (const id of B.enemies) eng.units.get(id)!.root.visible = false; return victory(true); }
@@ -198,14 +200,15 @@ async function enemyTurn() {
     // 被打的队员：镜头给到他（显示其背影），再演出
     const tid = a.payload.targetIds[0]; if (eng.units.has(tid) || eng.tex['back.' + tid]) setActor(tid, true);
     syncHudParty();
-    await play('action', a.payload, { side: 'enemy', skillId: a.payload.skillId });
+    await play('action', { ...a.payload, actorName: eName(a.payload.actorId) }, { side: 'enemy', skillId: a.payload.skillId });
   }
   setActor(B.actor, true);
   await play('turn:start', { unitId: B.actor });
   playerTurn();
 }
 async function holdUp() {
-  syncHud(); hud.navi('navi.holdup');
+  syncHud(); hud.navi(B.alive(B.enemies).length === 1 ? 'navi.holdup.one' : 'navi.holdup');   // 单敌用单数「它」
+  eng.audio.bgm('holdup'); eng.audio.voiceLine(B.actor, 'holdup');
   await play('holdup', { enemyIds: B.alive(B.enemies) });
   hud.setHoldRing(true, B.alive(B.enemies), B.party);
   hud.setMode('holdup');
@@ -222,6 +225,7 @@ async function allOut() {
 async function victory(bonus: boolean) {
   hud.setMode('hidden'); hud.navi('navi.win');
   const rw = B.rewards(bonus);
+  eng.audio.bgm('victory', {}, 300); eng.audio.voiceLine(B.actor, 'victory');
   await play('battle:end', rw);
   hud.showResult({ exp: rw.exp, money: rw.money, items: rw.drops.map((d) => ({ name: d.name, n: d.n })), bonus, levelUps: rw.levelUps } as any);
   if (rw.levelUps.length) { await new Promise((r) => setTimeout(r, 1200)); if (hud.getMode() === 'result') await play('levelup', { unitIds: rw.levelUps.map((l) => l.id), stats: rw.levelUps }); }
@@ -417,6 +421,15 @@ if (DEMO) demo();
   /** 测试用：全体倒地直接进 HOLD UP（敌人数量 1..5 的布局检查） */
   forceHoldup: () => { for (const id of B.alive(B.enemies)) { B.u(id).down = true; const u = eng.units.get(id); if (u) u.down = true; } return holdUp(); },
   enemyAct: () => enemyTurn(),
+  /** 测试用：强制 SHOWTIME（默认 Joker+Skull） */
+  showtime: async (a = 'joker', b = 'skull', freezeAt = 0) => {
+    await Promise.all([eng.loadGroup('show:' + a + '-' + b), eng.loadGroup('char:' + a), eng.loadGroup('char:' + b)]);
+    for (const id of B.alive(B.enemies)) B.u(id).hp = Math.max(B.u(id).hp, Math.round(B.u(id).hpMax * 0.6));
+    B.actor = a; const r = B.showtime([a, b]); hud.setMode('hidden');
+    if (freezeAt) testFreeze = { ev: 'highlight', t: freezeAt };
+    return play('highlight', r.payload, {});
+  },
+  audioLog: () => eng.audio.log,
   hitRects: () => hud.hitRects(), vis: () => eng.st.vis, safe: () => eng.st.safe,
   timing: () => dir.log, stopMeasure() { measuring = false; }, resetFrames() { M.frames.length = 0; },
   /** 测试用：演出中连点 */

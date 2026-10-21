@@ -1,35 +1,29 @@
 {
  "info": {
   "M": {
-   "boot": 12788,
-   "prewarm": 11320,
+   "boot": 12418,
+   "prewarm": 11124,
    "rehearse": [
-    "action:eiha renders=53 ms=227",
-    "allout renders=90 ms=227",
-    "battle:start renders=26 ms=18",
-    "onemore renders=13 ms=42",
-    "holdup renders=28 ms=37",
-    "action:attack renders=34 ms=21",
-    "action:guard renders=16 ms=23",
-    "battle:end renders=39 ms=22",
-    "levelup renders=27 ms=21"
+    "action:eiha renders=53 ms=181",
+    "allout renders=90 ms=171",
+    "battle:start renders=26 ms=136",
+    "onemore renders=13 ms=27",
+    "holdup renders=28 ms=50",
+    "action:attack renders=34 ms=34",
+    "action:guard renders=16 ms=30",
+    "battle:end renders=39 ms=27",
+    "levelup renders=27 ms=32"
    ],
    "cold": false,
    "errors": [],
-   "issues": [
-    {
-     "recipe": "onemore",
-     "level": "error",
-     "msg": "particles@150 life 280 超出 duration"
-    }
-   ]
+   "issues": []
   },
   "timing": [
    {
     "ev": "battle:start",
     "recipe": "transition.battleStart",
     "duration": 860,
-    "wallMs": 870,
+    "wallMs": 862,
     "capMs": 900,
     "forced": false,
     "skipped": false,
@@ -40,7 +34,7 @@
     "ev": "action",
     "recipe": "skill.eiha",
     "duration": 1700,
-    "wallMs": 1495,
+    "wallMs": 1748,
     "capMs": 1800,
     "forced": false,
     "skipped": false,
@@ -51,7 +45,7 @@
     "ev": "onemore",
     "recipe": "onemore",
     "duration": 420,
-    "wallMs": 361,
+    "wallMs": 172,
     "capMs": 450,
     "forced": false,
     "skipped": false,
@@ -62,7 +56,7 @@
     "ev": "unit:down",
     "recipe": "unit.down",
     "duration": 460,
-    "wallMs": 692,
+    "wallMs": 642,
     "capMs": 500,
     "forced": false,
     "skipped": false,
@@ -73,7 +67,7 @@
     "ev": "action",
     "recipe": "action.attack",
     "duration": 1100,
-    "wallMs": 1365,
+    "wallMs": 1525,
     "capMs": 1800,
     "forced": false,
     "skipped": false,
@@ -84,7 +78,7 @@
     "ev": "onemore",
     "recipe": "onemore",
     "duration": 420,
-    "wallMs": 718,
+    "wallMs": 533,
     "capMs": 450,
     "forced": false,
     "skipped": false,
@@ -95,7 +89,7 @@
     "ev": "unit:down",
     "recipe": "unit.down",
     "duration": 460,
-    "wallMs": 718,
+    "wallMs": 533,
     "capMs": 500,
     "forced": false,
     "skipped": false,
@@ -106,7 +100,7 @@
     "ev": "holdup",
     "recipe": "holdup",
     "duration": 950,
-    "wallMs": 971,
+    "wallMs": 1192,
     "capMs": 1000,
     "forced": false,
     "skipped": false,
@@ -117,7 +111,7 @@
     "ev": "allout",
     "recipe": "allout.default",
     "duration": 3060,
-    "wallMs": 546,
+    "wallMs": 800,
     "capMs": 3500,
     "forced": false,
     "skipped": false,
@@ -139,7 +133,7 @@
     "ev": "levelup",
     "recipe": "levelup",
     "duration": 900,
-    "wallMs": 1234,
+    "wallMs": 1200,
     "capMs": 1000,
     "forced": false,
     "skipped": false,
@@ -162,15 +156,13 @@
    "r": 1280,
    "b": 720
   },
-  "sfx": 21,
+  "sfx": 22,
   "engErr": [
-   "summon: char.joker not loaded",
-   "cutin art missing char.joker#cutin",
    "dropText unit.down"
   ]
  },
  "errors": [
-  "[.WebGL-0x3c00194a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
-  "[.WebGL-0x3c00194a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): Running out of reserved outsideRenderPass queueSerial. ending renderPass now."
+  "[.WebGL-0x4400cce600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+  "[.WebGL-0x4400cce600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): Running out of reserved outsideRenderPass queueSerial. ending renderPass now."
  ]
 }

@@ -286,3 +286,93 @@ TMO=420 tools/run.sh check                        # gates / idle / timing
 tools/run.sh enemies 1280 720 n=1 shots=1         # 1–5 只敌人布局重叠检查（每次一个 n，避免超时）
 python3 tools/budget.py && python3 tools/sheets.py
 ```
+
+---
+
+# 第四阶段（2026-10-22）：视觉还原推进
+
+> 目标：自评 6 → ≥9（画面/UI/演出/素材 ≥90% 像原作；演出首要参考 P5X、其次 P5R；不为流畅砍演出）。**结论先说：本批做完 5 项，自评 6 → 7。没到 9，原因见 §4.4。** 主要瓶颈是原作的 3D 镜头/模型（场上角色、召唤、SHOWTIME 主题场景）在 2D 素材下做不到「放在旁边分不出」，另外音频文件一个都还没有。
+
+## 4.1 本批改动（按收益排序）
+
+| # | 项 | 做了什么 | 素材来源 |
+|---|---|---|---|
+| 1 | **SHOWTIME 重做**（`highlight.showtime`，3360ms + 停帧 70） | 按双人连携结构拆成 4 个新原语：① `comicPanels` 漫画分格开场（0–1000：三格斜切漫画框依次拍入，格内是两人官方眼部特写、网点、速度线，代号剪报字 + 「&」，每次拍入 40ms 白闪，镜头推近，最后两格向外撕开）+ SHOWTIME 剪报字砸下；② `duoEntrance` 人物入场（960–1900：红色放射线舞台 + 黑白斜带，两人官方全身依次甩入、落地压缩回弹、代号名牌、呼吸，最后蓄力下蹲 → 冲出）；③ `duoStrike` 合击（1840–2460：回到战场，HUD 隐去，两人剪影从左右对冲交叉斩过敌群，X 形巨斩 + 星爆，命中 2120 带停帧/震屏/RGB 分离/粒子）；④ 定格画 + `duoTitle`（2380–3340：「A × B」剪报标题逐字砸下 + SHOWTIME 红印章 + TOTAL DAMAGE）。默认组合 **Joker + Skull**（roster.showtime 第一位），其余 6 组（原作组合）同一套结构自动套用 | 全身：官方立绘（Joker = 官方素材包 F hero.webp；其余 Fandom 官方渲染），每组一张 `duo.<pair>` 图集（描边离线烘焙）。**Joker×Skull 定格画 `show.joker-skull` 是伪官方合成（原作 P5R 没有这一组），manifest 标 generated、待替换**；其余 6 组仍是 P5R 官方 SHOWTIME 截图 |
+| 2 | **场上角色** | Noir、Crow 两张背影重新生成（原来 Noir 是侧身跳跃、Crow 太瘦），绿幕去溢色；9 张背影统一离线烘焙「3D 卡通模型」观感：外描边 + 左暗右亮 + 右侧（敌方向）红色轮廓光；敌方行动命中时被打队员走 `pose: recoil` 网格形变（后仰→回正），与已有的呼吸/摆动/出招（windup→dash→slash）形变连起来 | generate_image（伪官方，待替换）；官方没有 2D 背影 |
+| 3a | **开战扯面具** | 新原语 `maskRip`（0–520）：红手套从右下扑上、手指扣住阴影白面具右上缘 → 向右下猛扯（面具翻转压扁飞出）→ 黑底溅开暗红黏液铺满 → 接原来的三色斜切 + 十角星（顺延到 300–860）。极简档跳过扯面具，只保留斜切 | 程序绘制 |
+| 3b | **敌方回合左上行动名条** | `nameplate` 加 `side:'enemy'`：黑底红描边斜条 + 白色反向投影 + 属性圆标 + 技能名，上方红底小牌写出手敌人名（payload 带 `actorName`） | — |
+| 3c | **1 MORE 中灰** | `skinFilter` 新增 `grey`：去色 + 提亮 18% + 对比 −22%，去掉原来的额外压暗（dim 0.22）。5 尺寸截图世界是中灰而不是黑 | — |
+| 4a | **Queen / Violet 面具精确形状** | 不再用椭圆：同姿势官方「戴面具 / 不戴面具」两张立绘逐像素差分 ∩ 面具材质（低饱和金属灰 / 黑），取最大连通块；眼洞透空；Queen 被刘海遮住的上缘用凸包补齐并刷成面具本色。Noir 同法。扯面具时手改成指尖扣住面具右缘（不再整只手盖住面具），手套按角色配色 | 官方立绘（Fandom） |
+| 4b | **Mona 召唤** | 无面具可撕：原地转身一圈蓄力 → 蓝焰从脚下卷起成柱 → Zorro 升起（**此做法凭记忆，未逐帧对过原作录像，标「待核」**） | — |
+| 4c | **BATON 手套重画** | `glove2`：张开手掌（四指 + 拇指 + 掌 + 袖口 + 高光），按角色配色（Joker 红、Skull 黄、Panther 粉、Fox 蓝、Queen 黑、Noir 紫、Mona/Crow 白、Violet 深红）；星爆移到手套下层，相击时两手反弹 | 程序绘制 |
+| 4d | **总攻定格画高清** | 9 人全部换官方 Finishing Touch 高清 PNG（3000×1680）缩到 1280×720，不再用 GIF 末帧放大；原图存 `red/assets/official/finish-hd/` | Fandom（Joker/Ryuji/Ann/Yusuke/Makoto/Haru/Morgana/Akechi/Sumire FinishingTouch.png） |
+| 5a | **单敌台词** | n=1 时导航用单数：`navi.holdup.one`「倒下了！一口气解决它吧！」、`navi.idle.one`「敌人只有一只。先找出它的弱点！」 | — |
+| 5b | **音效占位接口** | 新 `engine/audio.ts`（`AudioBus`）：按 AUDIO-MAP §6 读 `skins/p5r-red/audio/{playlist,sfx,voice}.json`；recipe 里的短 sfx id 经 `sfx.json.alias` 映射到 `se.*`；BGM 按 condition 匹配键最多者胜、池内按权重随机不连续重复、交叉淡化、loop 点；语音 `voice/<unit>/<key>_<nn>.opus`。**只请求 `present.json` 里登记的文件**（build_manifest 扫 `m3/audio-local/{bgm,se,voice}/` 生成）→ 缺文件完全静默，不发 404；一个文件都没有时不建 AudioContext。已挂：开战 battle.normal、HOLD UP holdup、胜利 victory、1 MORE/HOLD UP/胜利/SHOWTIME 语音、全部 recipe sfx | 清单按 AUDIO-MAP §2.1（R24–R39 子集）、§3、§4.1；音频文件本身 0 个 |
+
+## 4.2 自检（不回退）
+
+| 项 | 结果 |
+|---|---|
+| `tools/check.mjs`（gates / idle / timing / 命中区 / 竖屏 / 跳过 / 冻结 / 缓冲 / 清场） | 全部通过：1 MORE 434ms ≤450；跳过闪现 134ms ≤150；Guard 520、Attack 1100；全部 recipe 0 超限 0 forced；待机主线程 P95 1.9ms、最大 5.8ms、>16.7ms 帧 0；0 页面错误 |
+| `tools/enemies.mjs` | 1280×720 n=1/3/5、844×390 n=1：**0 重叠**（含敌方回合新行动名条） |
+| 新增/改动演出墙钟（`tools/p4timing.mjs` → `tools/out/p4timing.json`） | SHOWTIME 3432/3500、1175/1200（极简）、579/600（2×）、368/400（3×）；开战 867/900、317/350、143/175、82/117；敌方行动 1150/1500、466/500、217/250、133/167。0 forced，0 校验 error |
+| 预算（`tools/out/budget.json`） | 首包 628 KB（≤1.5 MB）、皮肤份额 399 KB（≤1 MB）、首包图 11 张、最大单图 180 KB（≤200）、常驻纹理首包 16.8 MB / +默认队伍 58.3 MB（≤96）。高清总攻画只进各角色懒加载组 |
+
+## 4.3 逐项重新自评（10 分 = 截图放在原作旁边分不出；对照 `shots4/compare4-*.png`）
+
+| 项 | 二阶段 | 四阶段 | 对照原作说明差距 |
+|---|---|---|---|
+| SHOWTIME | 3 | **6** | 结构对了（分格开场 → 入场 → 合击 → 定格标题），节奏和 P5X 的漫画化演出接近。差距：原作 P5R 每组是**专属主题 3D 短片**（西部决斗、拉面、摔角擂台、教堂…，见 vidref f0071/f0267/f0393/f0617），镜头、场景、道具都不同；本作是一套 2D 通用模板。Joker×Skull 原作不存在，定格画是合成图 |
+| 场上角色 | 4 | **5** | 观感统一了（描边 + 红轮廓光），Noir/Crow 变成真背影，受击/出招/呼吸都有网格形变。差距：原作是 3D 模型 + 镜头环绕 + 逐帧动作，本作仍是生成图替身 + 2D 形变 |
+| 开战转场 | 5 | **6.5** | 有了扯面具 → 黏液 → 斜切。差距：原作是 3D 实拍（Joker 扑到阴影身上扯下），面具是具体阴影的面具；本作是程序绘制的通用面具 + 手套 |
+| 敌方回合 | 5 | **7** | 左上行动名条 + 敌人名 + 受击后仰齐了。差距：名条细节（字体比例、图标）未逐像素对齐 |
+| 1 MORE | 7 | **8** | 世界中灰对了。差距：停留 0.42s（契约上限 0.45s，原作约 0.6–0.8s） |
+| 人格面具召唤 | 5 | **6.5** | Queen/Violet/Noir 面具形状精确、眼洞透空，手指扣面具边缘；Mona 不撕面具。差距：原作 3D 镜头绕身；Mona 做法待对录像 |
+| BATON PASS | 5 | **6.5** | 手套有手形、按角色配色。差距：原作是两人手部特写实拍 + 加成文字条，本作是半身 + 矢量手 |
+| 总攻 + 收尾 | 8 | **9** | 收尾画换官方高清原图，清晰度与原作一致（原作台词字样就在原图里）。剪影斩击段仍是 2D |
+| 指令轮 / 队伍卡 / 技能列表 / RESULT / HOLD UP / cut-in | 7 / 7 / 7 / 7 / 6 / 8 | 不变 | 本批没动 |
+| **综合** | **≈6** | **≈7** | 静态 UI 7–8；演出 6–7；总攻收尾 9；SHOWTIME / 场上角色 / 3D 镜头类演出是剩余短板 |
+
+## 4.4 剩余缺口（为什么到不了 9）
+
+1. **3D 镜头/模型类**：场上角色、召唤、HOLD UP 环绕、开战扑击、SHOWTIME 主题场景，原作全是 3D 实时演出。2D 静态素材 + 网格形变最多到 6–7。要再往上，只能拿到原作的逐帧动画素材（或 3D 模型自渲染序列帧），这超出「官方 2D 素材」的范围，需要主策划决定。
+2. **场上背影**仍是 generate_image 替身（9 张，manifest 标 generated / 待替换）。官方没有 2D 背影图。
+3. **SHOWTIME**：原作 9 组每组专属场景；本作只有一套模板。Joker×Skull 原作不存在（P5R 双人 SHOWTIME 没有这组），定格画是合成。
+4. **音频**：接口、清单都在，文件 0 个（D-008：自行采集，不进公开构建）。演出没声音是「像不像」的一大块缺口。
+5. Mona 召唤做法未对录像核实；1 MORE 时长受契约上限。
+6. 「咔」「潜」仍是合成字形；真机 GPU 帧率仍未测。
+7. 同一处失败两次跳过的：无（Queen 面具上缘的刘海去除试了 4 版才过，最终用凸包 + 眼洞以上暗色刷面具本色）。
+
+## 4.5 素材
+
+| 文件 | 来源 | 状态 |
+|---|---|---|
+| `allout.finish.default` + `finish.<8人>` | Fandom 官方 Finishing Touch PNG 3000×1680 → 1280×720（q72–80，≤191 KB） | 官方 |
+| `duo.<7组>` | 官方立绘（hero.webp / Fandom 渲染），描边烘焙 | 官方 |
+| `show.joker-skull` | 官方立绘合成 | **伪官方·待替换** |
+| `back.noir` / `back.crow` | generate_image 重画（参考官方立绘） | 伪官方·待替换 |
+| 9 张 `back.*` | 统一卡通描边 + 红轮廓光（离线烘焙） | 伪官方·待替换 |
+| `char.queen/violet/noir` 的 mask 帧 | 官方戴/不戴面具立绘差分 | 官方 |
+| 音频 | 无 | 缺 |
+
+原图另存：`/workspace/work/umbra-red/red/assets/official/finish-hd/`（9 张）、`m3/work/party-src/p4/`（含 sources.json：每张 Fandom 页面 URL）。
+
+## 4.6 截图与录像
+
+- 5 尺寸 × 7 状态重拍：`shots/<尺寸>-*.png`、`shots/contact-*.png`、`shots/compare-*.png`；第二阶段全套 `shots2/`。
+- 第四阶段关键帧（5 尺寸）：`shots4/<尺寸>-{41-start-*,42-showtime-*,43-enemy-*,44-onemore,45-baton}.png`，召唤 `shots4/844x390-46-summon-{queen,violet,mona}-*.png`；拼图 `shots4/contact4-<尺寸>.png`；对比表 `shots4/compare4-{showtime-open,showtime-entrance,showtime-strike,showtime-title,onemore,baton,enemyturn,summon-queen}.png`（视频参考帧带水印，只作对照）。
+- clips（844×390，15fps，演出时钟逐帧推进）：`shots/clips/{showtime,summon-eiha,attack,allout,battlestart}.mp4`。
+
+## 4.7 复现
+
+```
+cd /workspace/work/umbra-next/m3
+pip install numpy scipy                                   # 面具差分
+ONLY=chars python3 tools/prep_party.py                    # 角色图集/背影（>1 分钟；ONLY=show|bg|finish 分段）
+python3 tools/gen_recipes.py && python3 tools/build_manifest.py
+flock /tmp/p5r-heavy.lock sh -c 'npx tsc --noEmit && npx vite build'
+sh tools/final4.sh                                        # 时长复测 → 5 尺寸截图 → 第四阶段关键帧 → clips（日志 tools/out/final4.log）
+TMO=420 tools/run.sh check; tools/run.sh enemies 1280 720 n=1 shots=1
+python3 tools/sheets.py && python3 tools/sheets4.py && python3 tools/budget.py
+# 音频：把文件按 AUDIO-MAP §6.1 命名放进 m3/audio-local/{bgm,se,voice}/，重跑 build_manifest 即生效（不进仓库）
+```

@@ -28,7 +28,9 @@ export type PrimitiveName =
   | 'portraitDown' | 'skinFilter'
   // M3 第二阶段新增（v1.3 提案）：人格面具召唤、场上显形、技能名牌、2D 骨骼姿态；P3/P4 原语
   | 'summon' | 'personaShow' | 'nameplate' | 'pose' | 'batonPass' | 'showtimeLogo'
-  | 'eyeStrip' | 'onomatopoeia' | 'checkerFloor' | 'ringSplash';
+  | 'eyeStrip' | 'onomatopoeia' | 'checkerFloor' | 'ringSplash'
+  // M3 第四阶段（v1.3 提案）：SHOWTIME 四段、开战扯面具
+  | 'comicPanels' | 'duoEntrance' | 'duoStrike' | 'duoTitle' | 'maskRip';
 
 export interface Track {
   at: Ms;

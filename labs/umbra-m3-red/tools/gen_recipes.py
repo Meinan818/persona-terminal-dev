@@ -118,13 +118,12 @@ out['action.attack'] = {'id': 'action.attack', 'event': 'action', 'match': {'ski
 
 # 1 MORE：去色定格（皮肤滤镜 ColorMatrix）+ 行动者眼部横条 cut-in（原作对齐：倒地瞬间）+ 1 MORE 横幅
 out['onemore'] = {'id': 'onemore', 'event': 'onemore', 'duration': 420, 'assets': ['char.$actor'], 'tracks': [
-    {'at': 0, 'prim': 'skinFilter', 'dur': 420, 'args': {'kind': 'desaturate', 'amount': 1}},
-    {'at': 0, 'prim': 'dim', 'dur': 420, 'args': {'color': '#000', 'alpha': 0.22, 'hold': False}},
+    {'at': 0, 'prim': 'skinFilter', 'dur': 420, 'args': {'kind': 'grey', 'amount': 1}},   # 第四阶段：原作中灰（去色 + 抬黑位压对比），不再额外压暗
     {'at': 0, 'prim': 'cutin', 'dur': 300, 'ease': 'outCubic', 'args': {'bandAngle': -0.14, 'speedLines': {'layers': 2, 'count': 46}, 'panels': [{'shape': [], 'art': 'char.$actor#cutin', 'enterFrom': 'left'}]}, 'minimal': {'dur': 160}},
     {'at': 0, 'prim': 'sfx', 'args': {'id': 'cutin'}},
     {'at': 150, 'prim': 'flashScreen', 'dur': 90, 'args': {'color': '#ffffff', 'alpha': 0.45}},
     {'at': 140, 'prim': 'banner', 'dur': 280, 'args': {'text': 'label.onemore', 'shape': 'onemore', 'enterFrom': 'right'}},
-    {'at': 150, 'prim': 'particles', 'args': {'count': 40, 'at': {'x': 640, 'y': 330}, 'speed': 1300, 'life': 280, 'gravity': 0, 'frames': ['star', 'shard'], 'colors': ['#ffffff', '@color.primary', '#0a0a0a']}, 'minimal': 'skip'},
+    {'at': 150, 'prim': 'particles', 'args': {'count': 40, 'at': {'x': 640, 'y': 330}, 'speed': 1300, 'life': 260, 'gravity': 0, 'frames': ['star', 'shard'], 'colors': ['#ffffff', '@color.primary', '#0a0a0a']}, 'minimal': 'skip'},
     {'at': 150, 'prim': 'sfx', 'args': {'id': 'onemore'}},
 ]}
 
@@ -135,18 +134,25 @@ out['baton'] = {'id': 'baton', 'event': 'baton', 'duration': 540, 'assets': ['ch
 ]}
 
 # SHOWTIME（highlight）：剪报 SHOWTIME 字 → 两人眼部横条接力 → 官方定格画 + 全体伤害 → TOTAL
-out['highlight.showtime'] = {'id': 'highlight.showtime', 'event': 'highlight', 'duration': 3300, 'hitMarks': [1900], 'assets': ['show.$pair'], 'tracks': sorted([
-    {'at': 0, 'prim': 'dim', 'dur': 3300, 'args': {'color': '#000', 'alpha': 0.7, 'hold': False}},
-    {'at': 0, 'prim': 'showtimeLogo', 'dur': 800, 'args': {}},
+out['highlight.showtime'] = {'id': 'highlight.showtime', 'event': 'highlight', 'duration': 3360, 'hitMarks': [2120], 'assets': ['show.$pair', 'duo.$pair', 'char.$a', 'char.$b'], 'tracks': sorted([
+    # 第四阶段：按原作双人连携结构重做 —— ① 漫画分格开场（0–1000）② 人物入场（960–1900）③ 合击（1840–2540，命中 2120）④ 定格画 + 标题（2380–3360；+ 停帧 70 ≈ 墙钟 3440 ≤ 3500，留一帧余量）
     {'at': 0, 'prim': 'sfx', 'args': {'id': 'showtime'}},
-    {'at': 700, 'prim': 'cutin', 'dur': 520, 'args': {'bandAngle': -0.18, 'speedLines': {'layers': 2, 'count': 46}, 'panels': [{'shape': [], 'art': 'char.$a#cutin', 'enterFrom': 'left'}], 'y': 230}},
-    {'at': 900, 'prim': 'cutin', 'dur': 520, 'args': {'bandAngle': 0.12, 'speedLines': {'layers': 1, 'count': 30}, 'panels': [{'shape': [], 'art': 'char.$b#cutin', 'enterFrom': 'right'}], 'y': 470}},
-    {'at': 1440, 'prim': 'finishCard', 'dur': 1000, 'args': {'artId': 'show.$pair', 'enterFrom': 'right', 'slideMs': 170, 'zoom': 1.04}},
-    {'at': 1640, 'prim': 'freezeFrame', 'dur': 600, 'args': {}},
-    {'at': 1900, 'prim': 'shake', 'args': {'px': 24}},
-    {'at': 1900, 'prim': 'flashSprite', 'args': {'target': '$targets', 'ms': 60}},
-    {'at': 2460, 'prim': 'particles', 'args': {'count': 300, 'at': {'x': '$target', 'y': '$target'}, 'speed': 1500, 'life': 640, 'frames': ['shard', 'star', 'streak'], 'colors': ['#ffffff', '@color.primary', '#0a0a0a']}},
-    {'at': 2460, 'prim': 'totalDamage', 'dur': 780, 'args': {'label': 'label.totalDamage', 'pos': {'x': 640, 'y': 380}}},
+    {'at': 0, 'prim': 'comicPanels', 'dur': 1000, 'args': {}},
+    {'at': 380, 'prim': 'showtimeLogo', 'dur': 620, 'args': {}},
+    {'at': 960, 'prim': 'duoEntrance', 'dur': 940, 'args': {}},
+    {'at': 960, 'prim': 'flashScreen', 'dur': 90, 'args': {'color': '#ffffff', 'alpha': 0.5}},
+    {'at': 1840, 'prim': 'dim', 'dur': 700, 'args': {'color': '#000', 'alpha': 0.45, 'hold': False}},
+    {'at': 1840, 'prim': 'duoStrike', 'dur': 620, 'args': {}},
+    {'at': 2120, 'prim': 'hitStop', 'args': {'ms': 70}},
+    {'at': 2120, 'prim': 'shake', 'args': {'px': 24}},
+    {'at': 2120, 'prim': 'flashScreen', 'dur': 100, 'args': {'color': '#ffffff', 'alpha': 0.42}},
+    {'at': 2120, 'prim': 'flashSprite', 'args': {'target': '$targets', 'ms': 60}},
+    {'at': 2120, 'prim': 'rgbSplit', 'dur': 120, 'args': {'offset': 10}},
+    {'at': 2130, 'prim': 'particles', 'args': {'count': 260, 'at': {'x': '$target', 'y': '$target'}, 'speed': 1500, 'life': 600, 'frames': ['shard', 'star', 'streak'], 'colors': ['#ffffff', '@color.primary', '#0a0a0a']}},
+    {'at': 2380, 'prim': 'finishCard', 'dur': 960, 'args': {'artId': 'show.$pair', 'enterFrom': 'right', 'slideMs': 150, 'zoom': 1.04}},
+    {'at': 2500, 'prim': 'freezeFrame', 'dur': 500, 'args': {}},
+    {'at': 2440, 'prim': 'duoTitle', 'dur': 900, 'args': {}},
+    {'at': 2700, 'prim': 'totalDamage', 'dur': 640, 'args': {'label': 'label.totalDamage', 'pos': {'x': 400, 'y': 190}}},
 ], key=lambda t: t['at'])}
 
 # LEVEL UP（🆕 levelup，FX-MAP 建议 1.0s）：剪报 LEVEL UP 字 + 星芒；能力卡由 HUD 结算页展示

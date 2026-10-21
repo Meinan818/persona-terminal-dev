@@ -8,6 +8,7 @@ import { setDownPose, UnitNode } from './units';
 import { DW, DH } from './stage';
 import { summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLogo } from './summon';
 import { blockPush, tvStatic, glassShatter, cardFlip, cardShatter, dateFlip, eyeStrip, onomatopoeia, checkerFloor, ringSplash } from './prims2';
+import { comicPanels, duoEntrance, duoStrike, duoTitle, maskRip } from './p4';
 
 export interface RunCtx {
   eng: Engine; owner: number; ev: EventName; payload: any; level: 'full' | 'standard' | 'minimal';
@@ -75,7 +76,7 @@ const tween: Prim = (t, rc) => {
     end() { if (a.target === '#layer.allout' || a.target === '#layer.cutin') nodes.forEach((n) => (n.alpha = 1)); } };
 };
 const showHide = (vis: boolean): Prim => (t, rc) => ({ t0: t.at, dur: 0, begin() { const a = A(t); const n = rc.eng.fix.get(String(a.target).replace('#', '')); if (n) n.visible = vis; } });
-const sfx: Prim = (t, rc) => ({ t0: t.at, dur: 0, begin() { rc.eng.sfxLog.push(String(A(t).id)); } });
+const sfx: Prim = (t, rc) => ({ t0: t.at, dur: 0, begin() { const id = String(A(t).id); rc.eng.sfxLog.push(id); rc.eng.audio.play(id); } });
 const vibrate: Prim = (t) => ({ t0: t.at, dur: 0, begin() { try { navigator.vibrate?.(Math.min(40, A(t).ms ?? 20)); } catch { /* */ } } });
 
 const dim: Prim = (t, rc) => {
@@ -478,4 +479,5 @@ export const PRIMS: Partial<Record<string, Prim>> = {
   cutin, speedLines, banner, silhouetteDash, freezeFrame, finishCard, totalDamage, slashPanels, maskWipe, bakedSwap, portraitDown,
   summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLogo,
   blockPush, tvStatic, glassShatter, cardFlip, cardShatter, dateFlip, eyeStrip, onomatopoeia, checkerFloor, ringSplash,
+  comicPanels, duoEntrance, duoStrike, duoTitle, maskRip,
 };

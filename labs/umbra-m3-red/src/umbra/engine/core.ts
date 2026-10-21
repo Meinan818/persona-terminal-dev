@@ -7,6 +7,7 @@ import { Particles } from './particles';
 import { UnitNode, updateUnit } from './units';
 import { fontsFrom, Fonts, loadFonts, unloadFonts, hex } from './text';
 import { TIERS, TierName } from './quality';
+import { AudioBus } from './audio';
 
 export class Engine {
   st = new Stage();
@@ -24,6 +25,8 @@ export class Engine {
   whiteFlash = new ColorMatrixFilter();
   bgSprite?: Sprite;
   sfxLog: string[] = [];
+  /** 音频占位接口（AUDIO-MAP §6；缺文件静默） */
+  audio = new AudioBus();
   errors: string[] = [];
   /** 固定件缓存（cut-in 带、横幅、定格画…），首次用时创建，之后复用 */
   fix = new Map<string, Container>();
@@ -46,6 +49,7 @@ export class Engine {
     this.skin = pack; this.base = base;
     this.fonts = fontsFrom(pack.tokens);
     this.faces = await loadFonts(pack.manifest, base);
+    void this.audio.init(base);
     const first = pack.manifest.assets.filter((a) => a.firstPack || (a.group && groups.includes(a.group)));
     groups.forEach((g) => this.groupsLoaded.add(g));
     await this.loadAssets(first);

@@ -28,15 +28,6 @@
    "note": "P5R Mokoi 图鉴抠图（包 F）；本作名「游荡回声」"
   },
   {
-   "id": "allout.finish.default",
-   "file": "assets/allout.finish.default.webp",
-   "w": 1280,
-   "h": 720,
-   "firstPack": true,
-   "source": "official",
-   "note": "Fandom Joker FinishingTouch（THE SHOW'S OVER）"
-  },
-  {
    "id": "result.hero.grey",
    "file": "assets/result.hero.grey.webp",
    "w": 580,
@@ -116,12 +107,12 @@
   {
    "id": "back.joker",
    "file": "assets/back.joker.webp",
-   "w": 557,
+   "w": 558,
    "h": 640,
    "firstPack": false,
    "source": "generated",
    "group": "back:joker",
-   "note": "generate_image 背影（参考官方 Joker 立绘）"
+   "note": "generate_image 背影（参考官方 Joker 立绘）；第四阶段统一 3D 卡通描边 + 右侧红色轮廓光（离线烘焙）；待替换"
   },
   {
    "id": "persona.joker",
@@ -210,12 +201,12 @@
   {
    "id": "back.skull",
    "file": "assets/back.skull.webp",
-   "w": 359,
+   "w": 362,
    "h": 640,
    "firstPack": false,
    "source": "generated",
    "group": "back:skull",
-   "note": "generate_image 伪官方背影（参考 File:P5 Ryuji Sakomoto, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Ryuji_Sakomoto%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图"
+   "note": "generate_image 伪官方背影（参考 File:P5 Ryuji Sakomoto, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Ryuji_Sakomoto%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图；第四阶段统一 3D 卡通描边 + 右侧红色轮廓光（离线烘焙）；待替换"
   },
   {
    "id": "persona.skull",
@@ -286,12 +277,12 @@
   {
    "id": "back.mona",
    "file": "assets/back.mona.webp",
-   "w": 508,
+   "w": 510,
    "h": 640,
    "firstPack": false,
    "source": "generated",
    "group": "back:mona",
-   "note": "generate_image 伪官方背影（参考 File:P5S Morgana2.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Morgana2.png）；原作为 3D 模型、无 2D 背影图"
+   "note": "generate_image 伪官方背影（参考 File:P5S Morgana2.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Morgana2.png）；原作为 3D 模型、无 2D 背影图；第四阶段统一 3D 卡通描边 + 右侧红色轮廓光（离线烘焙）；待替换"
   },
   {
    "id": "persona.mona",
@@ -381,11 +372,11 @@
    "id": "back.panther",
    "file": "assets/back.panther.webp",
    "w": 640,
-   "h": 590,
+   "h": 591,
    "firstPack": false,
    "source": "generated",
    "group": "back:panther",
-   "note": "generate_image 伪官方背影（参考 File:P5S Ann.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Ann.png）；原作为 3D 模型、无 2D 背影图"
+   "note": "generate_image 伪官方背影（参考 File:P5S Ann.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Ann.png）；原作为 3D 模型、无 2D 背影图；第四阶段统一 3D 卡通描边 + 右侧红色轮廓光（离线烘焙）；待替换"
   },
   {
    "id": "persona.panther",
@@ -474,12 +465,12 @@
   {
    "id": "back.fox",
    "file": "assets/back.fox.webp",
-   "w": 424,
+   "w": 426,
    "h": 640,
    "firstPack": false,
    "source": "generated",
    "group": "back:fox",
-   "note": "generate_image 伪官方背影（参考 File:P5 Yusuke Kitagawa, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Yusuke_Kitagawa%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图"
+   "note": "generate_image 伪官方背影（参考 File:P5 Yusuke Kitagawa, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Yusuke_Kitagawa%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图；第四阶段统一 3D 卡通描边 + 右侧红色轮廓光（离线烘焙）；待替换"
   },
   {
    "id": "persona.fox",
@@ -546,14 +537,14 @@
     "mask": [
      800,
      320,
-     198,
-     136
+     139,
+     113
     ],
     "maskAt": [
-     70,
-     136,
-     198,
-     136
+     76,
+     139,
+     139,
+     113
     ],
     "body": [
      0,
@@ -568,12 +559,12 @@
   {
    "id": "back.queen",
    "file": "assets/back.queen.webp",
-   "w": 442,
+   "w": 444,
    "h": 640,
    "firstPack": false,
    "source": "generated",
    "group": "back:queen",
-   "note": "generate_image 伪官方背影（参考 File:P5 Makoto Nijima, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Makoto_Nijima%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图"
+   "note": "generate_image 伪官方背影（参考 File:P5 Makoto Nijima, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Makoto_Nijima%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图；第四阶段统一 3D 卡通描边 + 右侧红色轮廓光（离线烘焙）；待替换"
   },
   {
    "id": "persona.queen",
@@ -640,14 +631,14 @@
     "mask": [
      800,
      320,
-     256,
-     76
+     110,
+     58
     ],
     "maskAt": [
-     66,
-     200,
-     256,
-     76
+     169,
+     205,
+     110,
+     58
     ],
     "body": [
      0,
@@ -662,12 +653,12 @@
   {
    "id": "back.noir",
    "file": "assets/back.noir.webp",
-   "w": 544,
+   "w": 309,
    "h": 640,
    "firstPack": false,
    "source": "generated",
    "group": "back:noir",
-   "note": "generate_image 伪官方背影（参考 File:P5 Haru Okumura, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Haru_Okumura%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图"
+   "note": "generate_image 伪官方背影（参考 File:P5 Haru Okumura, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Haru_Okumura%2C_Phantom_Thief.png）；原作为 3D 模型、无 2D 背影图；第四阶段统一 3D 卡通描边 + 右侧红色轮廓光（离线烘焙）；待替换"
   },
   {
    "id": "persona.noir",
@@ -750,12 +741,12 @@
   {
    "id": "back.crow",
    "file": "assets/back.crow.webp",
-   "w": 187,
+   "w": 399,
    "h": 640,
    "firstPack": false,
    "source": "generated",
    "group": "back:crow",
-   "note": "generate_image 伪官方背影（参考 File:P5 Goro Akechi.png — https://megamitensei.fandom.com/wiki/File%3AP5_Goro_Akechi.png）；原作为 3D 模型、无 2D 背影图"
+   "note": "generate_image 伪官方背影（参考 File:P5 Goro Akechi.png — https://megamitensei.fandom.com/wiki/File%3AP5_Goro_Akechi.png）；原作为 3D 模型、无 2D 背影图；第四阶段统一 3D 卡通描边 + 右侧红色轮廓光（离线烘焙）；待替换"
   },
   {
    "id": "persona.crow",
@@ -822,14 +813,14 @@
     "mask": [
      800,
      320,
-     176,
-     92
+     187,
+     153
     ],
     "maskAt": [
-     72,
-     180,
-     176,
-     92
+     65,
+     135,
+     187,
+     153
     ],
     "body": [
      0,
@@ -849,7 +840,7 @@
    "firstPack": false,
    "source": "generated",
    "group": "back:violet",
-   "note": "generate_image 伪官方背影（参考 File:P5R Kasumi Render.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Kasumi_Render.png）；原作为 3D 模型、无 2D 背影图"
+   "note": "generate_image 伪官方背影（参考 File:P5R Kasumi Render.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Kasumi_Render.png）；原作为 3D 模型、无 2D 背影图；第四阶段统一 3D 卡通描边 + 右侧红色轮廓光（离线烘焙）；待替换"
   },
   {
    "id": "persona.violet",
@@ -895,6 +886,95 @@
    "source": "official",
    "group": "char:oracle",
    "note": "导航 cut-in ← File:P5 Futaba cut-in.png — https://megamitensei.fandom.com/wiki/File%3AP5_Futaba_cut-in.png"
+  },
+  {
+   "id": "allout.finish.default",
+   "file": "assets/allout.finish.default.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": true,
+   "source": "official",
+   "note": "总攻定格画（官方 Finishing Touch 高清 3000×1680 缩到 1280×720，q80）← File:Joker FinishingTouch.png — https://megamitensei.fandom.com/wiki/File:Joker_FinishingTouch.png；原图存 red/assets/official/finish-hd/"
+  },
+  {
+   "id": "finish.skull",
+   "file": "assets/finish.skull.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:skull",
+   "note": "总攻定格画（官方 Finishing Touch 高清 3000×1680 缩到 1280×720，q80）← File:Ryuji FinishingTouch.png — https://megamitensei.fandom.com/wiki/File:Ryuji_FinishingTouch.png；原图存 red/assets/official/finish-hd/"
+  },
+  {
+   "id": "finish.mona",
+   "file": "assets/finish.mona.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:mona",
+   "note": "总攻定格画（官方 Finishing Touch 高清 3000×1680 缩到 1280×720，q76）← File:Morgana FinishingTouch.png — https://megamitensei.fandom.com/wiki/File:Morgana_FinishingTouch.png；原图存 red/assets/official/finish-hd/"
+  },
+  {
+   "id": "finish.panther",
+   "file": "assets/finish.panther.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:panther",
+   "note": "总攻定格画（官方 Finishing Touch 高清 3000×1680 缩到 1280×720，q80）← File:Ann FinishingTouch.png — https://megamitensei.fandom.com/wiki/File:Ann_FinishingTouch.png；原图存 red/assets/official/finish-hd/"
+  },
+  {
+   "id": "finish.fox",
+   "file": "assets/finish.fox.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:fox",
+   "note": "总攻定格画（官方 Finishing Touch 高清 3000×1680 缩到 1280×720，q80）← File:Yusuke FinishingTouch.png — https://megamitensei.fandom.com/wiki/File:Yusuke_FinishingTouch.png；原图存 red/assets/official/finish-hd/"
+  },
+  {
+   "id": "finish.queen",
+   "file": "assets/finish.queen.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:queen",
+   "note": "总攻定格画（官方 Finishing Touch 高清 3000×1680 缩到 1280×720，q80）← File:Makoto FinishingTouch.png — https://megamitensei.fandom.com/wiki/File:Makoto_FinishingTouch.png；原图存 red/assets/official/finish-hd/"
+  },
+  {
+   "id": "finish.noir",
+   "file": "assets/finish.noir.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:noir",
+   "note": "总攻定格画（官方 Finishing Touch 高清 3000×1680 缩到 1280×720，q80）← File:Haru FinishingTouch.png — https://megamitensei.fandom.com/wiki/File:Haru_FinishingTouch.png；原图存 red/assets/official/finish-hd/"
+  },
+  {
+   "id": "finish.crow",
+   "file": "assets/finish.crow.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:crow",
+   "note": "总攻定格画（官方 Finishing Touch 高清 3000×1680 缩到 1280×720，q72）← File:Akechi FinishingTouch.png — https://megamitensei.fandom.com/wiki/File:Akechi_FinishingTouch.png；原图存 red/assets/official/finish-hd/"
+  },
+  {
+   "id": "finish.violet",
+   "file": "assets/finish.violet.webp",
+   "w": 1280,
+   "h": 720,
+   "firstPack": false,
+   "source": "official",
+   "group": "char:violet",
+   "note": "总攻定格画（官方 Finishing Touch 高清 3000×1680 缩到 1280×720，q76）← File:Sumire FinishingTouch.png — https://megamitensei.fandom.com/wiki/File:Sumire_FinishingTouch.png；原图存 red/assets/official/finish-hd/"
   },
   {
    "id": "show.mona-panther",
@@ -957,84 +1037,189 @@
    "note": "SHOWTIME 定格画 ← File:P5R Showtime MorganaHaru.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Showtime_MorganaHaru.png"
   },
   {
-   "id": "finish.skull",
-   "file": "assets/finish.skull.webp",
+   "id": "show.joker-skull",
+   "file": "assets/show.joker-skull.webp",
    "w": 1280,
    "h": 720,
    "firstPack": false,
-   "source": "official",
-   "group": "char:skull",
-   "note": "总攻定格画（Finishing Touch 末帧，480×270 放大）← File:Ryuji's Finsihing Touch.gif — https://megamitensei.fandom.com/wiki/File%3ARyuji%27s_Finsihing_Touch.gif"
+   "source": "generated",
+   "group": "show:joker-skull",
+   "note": "SHOWTIME 定格画（伪官方·待替换）：P5R 原作无 Joker×Skull 组合；官方立绘合成 ← 官方素材包 F：hero.webp + File:P5 Ryuji Sakomoto, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Ryuji_Sakomoto%2C_Phantom_Thief.png"
   },
   {
-   "id": "finish.mona",
-   "file": "assets/finish.mona.webp",
-   "w": 1280,
-   "h": 720,
+   "id": "duo.joker-skull",
+   "file": "assets/duo.joker-skull.webp",
+   "w": 1107,
+   "h": 632,
    "firstPack": false,
    "source": "official",
-   "group": "char:mona",
-   "note": "总攻定格画（Finishing Touch 末帧，678×382 放大）← File:Morgana's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AMorgana%27s_Finishing_Touch.gif"
+   "group": "show:joker-skull",
+   "frames": {
+    "a": [
+     0,
+     0,
+     576,
+     632
+    ],
+    "b": [
+     576,
+     0,
+     531,
+     632
+    ]
+   },
+   "atlas": "duo.joker-skull",
+   "note": "SHOWTIME 人物入场全身（官方立绘，描边离线烘焙）← 官方素材包 F：hero.webp + File:P5 Ryuji Sakomoto, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Ryuji_Sakomoto%2C_Phantom_Thief.png"
   },
   {
-   "id": "finish.panther",
-   "file": "assets/finish.panther.webp",
-   "w": 1280,
-   "h": 720,
+   "id": "duo.mona-panther",
+   "file": "assets/duo.mona-panther.webp",
+   "w": 1128,
+   "h": 632,
    "firstPack": false,
    "source": "official",
-   "group": "char:panther",
-   "note": "总攻定格画（Finishing Touch 末帧，480×270 放大）← File:Ann's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AAnn%27s_Finishing_Touch.gif"
+   "group": "show:mona-panther",
+   "frames": {
+    "a": [
+     0,
+     0,
+     536,
+     632
+    ],
+    "b": [
+     536,
+     0,
+     592,
+     548
+    ]
+   },
+   "atlas": "duo.mona-panther",
+   "note": "SHOWTIME 人物入场全身（官方立绘，描边离线烘焙）← File:P5S Morgana2.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Morgana2.png + File:P5S Ann.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Ann.png"
   },
   {
-   "id": "finish.fox",
-   "file": "assets/finish.fox.webp",
-   "w": 1280,
-   "h": 720,
+   "id": "duo.skull-fox",
+   "file": "assets/duo.skull-fox.webp",
+   "w": 960,
+   "h": 632,
    "firstPack": false,
    "source": "official",
-   "group": "char:fox",
-   "note": "总攻定格画（Finishing Touch 末帧，678×382 放大）← File:Yusuke's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AYusuke%27s_Finishing_Touch.gif"
+   "group": "show:skull-fox",
+   "frames": {
+    "a": [
+     0,
+     0,
+     531,
+     632
+    ],
+    "b": [
+     531,
+     0,
+     429,
+     632
+    ]
+   },
+   "atlas": "duo.skull-fox",
+   "note": "SHOWTIME 人物入场全身（官方立绘，描边离线烘焙）← File:P5 Ryuji Sakomoto, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Ryuji_Sakomoto%2C_Phantom_Thief.png + File:P5 Yusuke Kitagawa, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Yusuke_Kitagawa%2C_Phantom_Thief.png"
   },
   {
-   "id": "finish.queen",
-   "file": "assets/finish.queen.webp",
-   "w": 1280,
-   "h": 720,
+   "id": "duo.joker-crow",
+   "file": "assets/duo.joker-crow.webp",
+   "w": 784,
+   "h": 632,
    "firstPack": false,
    "source": "official",
-   "group": "char:queen",
-   "note": "总攻定格画（Finishing Touch 末帧，600×338 放大）← File:Makoto's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AMakoto%27s_Finishing_Touch.gif"
+   "group": "show:joker-crow",
+   "frames": {
+    "a": [
+     0,
+     0,
+     576,
+     632
+    ],
+    "b": [
+     576,
+     0,
+     208,
+     632
+    ]
+   },
+   "atlas": "duo.joker-crow",
+   "note": "SHOWTIME 人物入场全身（官方立绘，描边离线烘焙）← 官方素材包 F：hero.webp + File:P5 Goro Akechi.png — https://megamitensei.fandom.com/wiki/File%3AP5_Goro_Akechi.png"
   },
   {
-   "id": "finish.noir",
-   "file": "assets/finish.noir.webp",
-   "w": 1280,
-   "h": 720,
+   "id": "duo.joker-violet",
+   "file": "assets/duo.joker-violet.webp",
+   "w": 973,
+   "h": 632,
    "firstPack": false,
    "source": "official",
-   "group": "char:noir",
-   "note": "总攻定格画（Finishing Touch 末帧，595×335 放大）← File:Haru's Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AHaru%27s_Finishing_Touch.gif"
+   "group": "show:joker-violet",
+   "frames": {
+    "a": [
+     0,
+     0,
+     576,
+     632
+    ],
+    "b": [
+     576,
+     0,
+     397,
+     632
+    ]
+   },
+   "atlas": "duo.joker-violet",
+   "note": "SHOWTIME 人物入场全身（官方立绘，描边离线烘焙）← 官方素材包 F：hero.webp + File:P5R Kasumi Render.png — https://megamitensei.fandom.com/wiki/File%3AP5R_Kasumi_Render.png"
   },
   {
-   "id": "finish.crow",
-   "file": "assets/finish.crow.webp",
-   "w": 1280,
-   "h": 720,
+   "id": "duo.queen-noir",
+   "file": "assets/duo.queen-noir.webp",
+   "w": 978,
+   "h": 632,
    "firstPack": false,
    "source": "official",
-   "group": "char:crow",
-   "note": "总攻定格画（Finishing Touch 末帧，678×382 放大）← File:Crow Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3ACrow_Finishing_Touch.gif"
+   "group": "show:queen-noir",
+   "frames": {
+    "a": [
+     0,
+     0,
+     436,
+     632
+    ],
+    "b": [
+     436,
+     0,
+     542,
+     632
+    ]
+   },
+   "atlas": "duo.queen-noir",
+   "note": "SHOWTIME 人物入场全身（官方立绘，描边离线烘焙）← File:P5 Makoto Nijima, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Makoto_Nijima%2C_Phantom_Thief.png + File:P5 Haru Okumura, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Haru_Okumura%2C_Phantom_Thief.png"
   },
   {
-   "id": "finish.violet",
-   "file": "assets/finish.violet.webp",
-   "w": 1280,
-   "h": 720,
+   "id": "duo.mona-noir",
+   "file": "assets/duo.mona-noir.webp",
+   "w": 1078,
+   "h": 632,
    "firstPack": false,
    "source": "official",
-   "group": "char:violet",
-   "note": "总攻定格画（Finishing Touch 末帧，678×382 放大）← File:Kasumi Finishing Touch.gif — https://megamitensei.fandom.com/wiki/File%3AKasumi_Finishing_Touch.gif"
+   "group": "show:mona-noir",
+   "frames": {
+    "a": [
+     0,
+     0,
+     536,
+     632
+    ],
+    "b": [
+     536,
+     0,
+     542,
+     632
+    ]
+   },
+   "atlas": "duo.mona-noir",
+   "note": "SHOWTIME 人物入场全身（官方立绘，描边离线烘焙）← File:P5S Morgana2.png — https://megamitensei.fandom.com/wiki/File%3AP5S_Morgana2.png + File:P5 Haru Okumura, Phantom Thief.png — https://megamitensei.fandom.com/wiki/File%3AP5_Haru_Okumura%2C_Phantom_Thief.png"
   }
  ],
  "filters": [

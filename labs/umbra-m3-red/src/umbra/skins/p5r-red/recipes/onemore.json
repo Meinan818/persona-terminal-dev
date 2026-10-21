@@ -11,18 +11,8 @@
    "prim": "skinFilter",
    "dur": 420,
    "args": {
-    "kind": "desaturate",
+    "kind": "grey",
     "amount": 1
-   }
-  },
-  {
-   "at": 0,
-   "prim": "dim",
-   "dur": 420,
-   "args": {
-    "color": "#000",
-    "alpha": 0.22,
-    "hold": false
    }
   },
   {
@@ -58,10 +48,10 @@
   {
    "at": 150,
    "prim": "flashScreen",
-   "dur": 70,
+   "dur": 90,
    "args": {
     "color": "#ffffff",
-    "alpha": 0.3
+    "alpha": 0.45
    }
   },
   {

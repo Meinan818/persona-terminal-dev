@@ -1,30 +1,17 @@
 {
  "id": "highlight.showtime",
  "event": "highlight",
- "duration": 3300,
+ "duration": 3360,
  "hitMarks": [
-  1900
+  2120
  ],
  "assets": [
-  "show.$pair"
+  "show.$pair",
+  "duo.$pair",
+  "char.$a",
+  "char.$b"
  ],
  "tracks": [
-  {
-   "at": 0,
-   "prim": "dim",
-   "dur": 3300,
-   "args": {
-    "color": "#000",
-    "alpha": 0.7,
-    "hold": false
-   }
-  },
-  {
-   "at": 0,
-   "prim": "showtimeLogo",
-   "dur": 800,
-   "args": {}
-  },
   {
    "at": 0,
    "prim": "sfx",
@@ -33,71 +20,73 @@
    }
   },
   {
-   "at": 700,
-   "prim": "cutin",
-   "dur": 520,
-   "args": {
-    "bandAngle": -0.18,
-    "speedLines": {
-     "layers": 2,
-     "count": 46
-    },
-    "panels": [
-     {
-      "shape": [],
-      "art": "char.$a#cutin",
-      "enterFrom": "left"
-     }
-    ],
-    "y": 230
-   }
-  },
-  {
-   "at": 900,
-   "prim": "cutin",
-   "dur": 520,
-   "args": {
-    "bandAngle": 0.12,
-    "speedLines": {
-     "layers": 1,
-     "count": 30
-    },
-    "panels": [
-     {
-      "shape": [],
-      "art": "char.$b#cutin",
-      "enterFrom": "right"
-     }
-    ],
-    "y": 470
-   }
-  },
-  {
-   "at": 1440,
-   "prim": "finishCard",
+   "at": 0,
+   "prim": "comicPanels",
    "dur": 1000,
-   "args": {
-    "artId": "show.$pair",
-    "enterFrom": "right",
-    "slideMs": 170,
-    "zoom": 1.04
-   }
-  },
-  {
-   "at": 1640,
-   "prim": "freezeFrame",
-   "dur": 600,
    "args": {}
   },
   {
-   "at": 1900,
+   "at": 380,
+   "prim": "showtimeLogo",
+   "dur": 620,
+   "args": {}
+  },
+  {
+   "at": 960,
+   "prim": "duoEntrance",
+   "dur": 940,
+   "args": {}
+  },
+  {
+   "at": 960,
+   "prim": "flashScreen",
+   "dur": 90,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.5
+   }
+  },
+  {
+   "at": 1840,
+   "prim": "dim",
+   "dur": 700,
+   "args": {
+    "color": "#000",
+    "alpha": 0.45,
+    "hold": false
+   }
+  },
+  {
+   "at": 1840,
+   "prim": "duoStrike",
+   "dur": 620,
+   "args": {}
+  },
+  {
+   "at": 2120,
+   "prim": "hitStop",
+   "args": {
+    "ms": 70
+   }
+  },
+  {
+   "at": 2120,
    "prim": "shake",
    "args": {
     "px": 24
    }
   },
   {
-   "at": 1900,
+   "at": 2120,
+   "prim": "flashScreen",
+   "dur": 100,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.42
+   }
+  },
+  {
+   "at": 2120,
    "prim": "flashSprite",
    "args": {
     "target": "$targets",
@@ -105,16 +94,24 @@
    }
   },
   {
-   "at": 2460,
+   "at": 2120,
+   "prim": "rgbSplit",
+   "dur": 120,
+   "args": {
+    "offset": 10
+   }
+  },
+  {
+   "at": 2130,
    "prim": "particles",
    "args": {
-    "count": 300,
+    "count": 260,
     "at": {
      "x": "$target",
      "y": "$target"
     },
     "speed": 1500,
-    "life": 640,
+    "life": 600,
     "frames": [
      "shard",
      "star",
@@ -128,14 +125,37 @@
    }
   },
   {
-   "at": 2460,
+   "at": 2380,
+   "prim": "finishCard",
+   "dur": 960,
+   "args": {
+    "artId": "show.$pair",
+    "enterFrom": "right",
+    "slideMs": 150,
+    "zoom": 1.04
+   }
+  },
+  {
+   "at": 2440,
+   "prim": "duoTitle",
+   "dur": 900,
+   "args": {}
+  },
+  {
+   "at": 2500,
+   "prim": "freezeFrame",
+   "dur": 500,
+   "args": {}
+  },
+  {
+   "at": 2700,
    "prim": "totalDamage",
-   "dur": 780,
+   "dur": 640,
    "args": {
     "label": "label.totalDamage",
     "pos": {
-     "x": 640,
-     "y": 380
+     "x": 400,
+     "y": 190
     }
    }
   }

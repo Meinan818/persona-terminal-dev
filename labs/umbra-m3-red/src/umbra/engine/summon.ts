@@ -7,6 +7,7 @@ import { Clip, ease } from './timeline';
 import { txt, plate, ransom } from './text';
 import type { UnitNode, Pose } from './units';
 import { DW } from './stage';
+import { glove2, GLOVE } from './p4';
 
 type Prim = (t: Track, rc: RunCtx) => Clip | Clip[] | null;
 const A = (t: Track) => t.args as any;
@@ -52,16 +53,6 @@ function drawFlames(g: Graphics, t: number, cx: number, cy: number, r: number, k
   layer(0x1238d8, 0.38 * k, 1.5, 0.2); layer(0x2f7bff, 0.45 * k, 1.15, 0.0); layer(0x8fd2ff, 0.32 * k, 0.8, 0.4); layer(0xe6f6ff, 0.22 * k, 0.5, 0.7);
 }
 
-/** 黑手套（原作：手按住面具 → 扯下）。扁平剪影 + 白描边，P5 平涂语言 */
-function glove() {
-  const g = new Graphics();
-  g.poly([0, 0, 40, -18, 78, -14, 96, 2, 92, 18, 70, 22, 74, 40, 54, 52, 26, 50, 4, 70, -60, 120, -110, 90, -40, 30])
-    .fill(0x0a0a0a).stroke({ color: 0xffffff, width: 4, join: 'round' });
-  g.poly([40, -18, 52, 6]).stroke({ color: 0x333333, width: 3 }); g.poly([60, -16, 70, 10]).stroke({ color: 0x333333, width: 3 });
-  g.poly([-60, 120, -110, 90, -120, 112, -74, 140]).fill(0xe5191c);   // 袖口红边
-  return g;
-}
-
 // ------------------------------------------------------------------ summon
 export const summon: Prim = (t, rc) => {
   const eng = rc.eng, a = A(t), dur = Math.min(900, t.dur ?? 820), id = actorOf(rc);
@@ -82,7 +73,7 @@ export const summon: Prim = (t, rc) => {
   const pc0 = fr ? { x: fr[0] + fr[2] / 2 - 200, y: fr[1] + fr[3] / 2 - 200 } : { x: 0, y: -40 };
   if (piece) { piece.anchor.set(0.5); piece.position.set(pc0.x, pc0.y); bust.addChild(piece); }
   const flames = new Graphics(); bust.addChild(flames);
-  const hand = glove(); hand.visible = !!piece; hand.scale.set(0.48); bust.addChild(hand);
+  const hand = glove2(GLOVE[id] ?? 0xe5191c); hand.scale.set(0.42); hand.visible = !!piece; bust.addChild(hand);
   const flash = new Graphics().rect(v.l - 40, v.t - 40, v.r - v.l + 80, v.b - v.t + 80).fill(0xbfe6ff);
   const lines = new Graphics();
   for (let i = 0; i < 26; i++) { const y = -360 + R() * 720, x = R() * 1400 - 700, len = 200 + R() * 500; lines.poly([x, y - 2, x + len, y, x, y + 2]).fill({ color: 0x9fdcff, alpha: 0.35 + R() * 0.4 }); }
@@ -102,17 +93,24 @@ export const summon: Prim = (t, rc) => {
       const kr = ease.inCubic(seg(f, quick ? 0.25 : 0.32, quick ? 0.42 : 0.48));    // 2 扯下
       bust.rotation = -0.05 * kh + 0.09 * kr - 0.04 * seg(f, 0.5, 0.9);
       if (piece) {
-        const hx0 = 150, hy0 = 260, hx1 = pc0.x + 20, hy1 = pc0.y + 20;
-        hand.position.set(hx0 + (hx1 - hx0) * kh + 420 * kr, hy0 + (hy1 - hy0) * kh - 260 * kr); hand.rotation = -0.3 + 0.5 * kh - 0.9 * kr;
+        const mw = fr ? fr[2] : 120, hx0 = 230, hy0 = 300, hx1 = pc0.x + mw * 0.42, hy1 = pc0.y + 30;   // 手指扣住面具右缘（不再整只手盖住面具）
+        hand.position.set(hx0 + (hx1 - hx0) * kh + 420 * kr, hy0 + (hy1 - hy0) * kh - 260 * kr); hand.rotation = -0.2 - 0.5 * kh - 0.6 * kr;
         hand.alpha = 1 - seg(f, 0.5, 0.6);
         piece.position.set(pc0.x + 420 * kr, pc0.y - 260 * kr); piece.rotation = 1.4 * kr; piece.scale.set(1 + 0.25 * kr);
         piece.alpha = 1 - seg(f, 0.5, 0.62);
+      }
+      if (!piece) {
+        // 无面具可撕（Mona）：原作做法是不扯面具 —— 原地转身一圈蓄力，蓝焰从脚下卷起成柱，召唤出人格面具（待对录像逐帧核对）
+        const ksp = ease.inOutCubic(seg(f, 0.06, quick ? 0.3 : 0.36));
+        bust.scale.x = bust.scale.y * Math.cos(ksp * Math.PI * 2); bust.rotation = 0;
+        bust.y += -26 * Math.sin(ksp * Math.PI);
       }
       if (nom) nom.alpha = f > (quick ? 0.33 : 0.4) ? 1 : 0;
       // 3 蓝焰从脸上爆出
       const kf = seg(f, quick ? 0.3 : 0.38, quick ? 0.5 : 0.56);
       const fade = 1 - seg(f, 0.82, 1);
-      drawFlames(flames, T, pc0.x, pc0.y + 10, 110, ease.outBack(kf) * fade * (nom || !piece ? 1 : 1.25), eng.tierK > 0.7 ? 14 : 9);
+      if (piece) drawFlames(flames, T, pc0.x, pc0.y + 10, 110, ease.outBack(kf) * fade * (nom ? 1 : 1.25), eng.tierK > 0.7 ? 14 : 9);
+      else drawFlames(flames, T, 0, 150 - 120 * ease.outCubic(kf), 90 + 90 * kf, ease.outBack(kf) * fade * 1.3, eng.tierK > 0.7 ? 16 : 10);   // 脚下起焰、上卷成柱
       flash.alpha = Math.max(0, 1 - Math.abs(f - (quick ? 0.36 : 0.42)) * 22) * 0.55 + Math.max(0, 1 - Math.abs(f - 0.9) * 25) * 0.35;
       // 4 人格面具在身后升起显形
       if (pm) {
@@ -153,11 +151,20 @@ export const nameplate: Prim = (t, rc) => {
   const eng = rc.eng, a = A(t), dur = Math.min(1200, t.dur ?? 800);
   const c = new Container(); rc.temps.add(c); eng.st.layers.cutin.addChild(c); c.visible = false;
   const label = eng.label(a.text ?? ('skill.' + (rc.payload?.skillId ?? '') + '.name'));
+  const enemy = a.side === 'enemy';
   const tx = txt(label, 40, { font: eng.font('@font.display'), fill: 0xffffff }); tx.anchor.set(0, 0.5); tx.position.set(70, 0);
-  const col = ELC[a.element ?? 'almighty'] ?? 0xcccccc;
+  const el = a.element ?? rc.payload?.hits?.[0]?.element ?? 'almighty';
+  const col = ELC[el] ?? 0xcccccc;
   const ico = new Graphics().circle(34, 0, 21).fill(0x0a0a0a).circle(34, 0, 17).fill(col).stroke({ color: 0xffffff, width: 3 });
-  const pl = plate(tx.width + 110, 60, { fill: 0x0a0a0a, stroke: 0xffffff, sw: 3, skew: 14, shadow: 0xe5191c }); pl.position.set(0, -30);
+  // 敌方行动：原作左上行动名条 = 黑底红描边斜条 + 红色投影，上方小号敌人名（红底白字剪报块）
+  const pl = plate(tx.width + 110, 60, enemy ? { fill: 0x0a0a0a, stroke: 0xe5191c, sw: 4, skew: 14, shadow: 0xffffff, sx: -6, sy: 6 } : { fill: 0x0a0a0a, stroke: 0xffffff, sw: 3, skew: 14, shadow: 0xe5191c }); pl.position.set(0, -30);
   c.addChild(pl, ico, tx);
+  if (enemy) {
+    const en: string = rc.payload?.actorName ?? '';
+    const nm = txt(en || eng.label('enemyTurn'), 22, { font: eng.font('@font.display'), fill: 0xffffff }); nm.anchor.set(0, 0.5);
+    const np = plate(nm.width + 34, 30, { fill: 0xe5191c, stroke: 0x0a0a0a, sw: 3, skew: 8 }); np.position.set(18, -66); nm.position.set(32, -51);
+    c.addChild(np, nm);
+  }
   return { t0: t.at, dur, tag: 'text',
     begin() { c.visible = true; c.position.set(eng.st.safe.l + 40, eng.st.safe.t + 150); c.rotation = -0.04; },
     tick(p) { const ms = p * dur; const k = ease.outCubic(clamp(ms / 140)); c.x = eng.st.safe.l + 40 - 300 * (1 - k); c.alpha = Math.min(k, clamp((dur - ms) / 120)); },
@@ -206,6 +213,7 @@ export const skinFilter: Prim = (t, rc) => {
       const ms = p * dur, k = Math.min(1, ms / 60, (dur - ms) / 90);
       cm!.reset();
       if ((a.kind ?? 'desaturate') === 'desaturate') { cm!.desaturate(); cm!.alpha = k * (a.amount ?? 1); cm!.contrast(0.25 * k, true); }
+      else if (a.kind === 'grey') { cm!.desaturate(); cm!.alpha = k * (a.amount ?? 1); cm!.brightness(1 + 0.18 * k, true); cm!.contrast(-0.22 * k, true); }   // 原作 1 MORE：世界变中灰（不是压黑）
       else if (a.kind === 'tint') { cm!.tint(eng.color(a.color ?? '#3f8bff'), false); cm!.alpha = k * (a.amount ?? 0.5); }
       else if (a.kind === 'sepia') { cm!.sepia(false); cm!.alpha = k; }
     },
@@ -225,13 +233,13 @@ export const batonPass: Prim = (t, rc) => {
   const L = new Container(), Rt = new Container();
   if (tf) { const s = new Sprite(tf); s.anchor.set(0.5); L.addChild(s); }
   if (tt) { const s = new Sprite(tt); s.anchor.set(0.5); s.scale.x = -1; Rt.addChild(s); }
-  const g1 = glove(), g2 = glove(); g2.scale.x = -1;
+  const g1 = glove2(GLOVE[from] ?? 0xe5191c, true), g2 = glove2(GLOVE[to] ?? 0xe5191c, true); g1.scale.set(1.15); g2.scale.set(-1.15, 1.15);   // 第四阶段：按角色手套配色的张开手掌（击掌）
   const star = new Graphics(); const pts: number[] = [];
   for (let i = 0; i < 20; i++) { const a = (i / 20) * Math.PI * 2, r = i % 2 ? 60 : 170; pts.push(Math.cos(a) * r, Math.sin(a) * r); }
   star.poly(pts).fill(0xffffff).stroke({ color: 0x0a0a0a, width: 6 });
   const word = ransom(eng.label('label.baton'), 96, eng.fonts.display, { invert: [0, 6], seed: 17, stroke: 9 });
   const wb = word.getLocalBounds(); word.pivot.set(wb.x + wb.width / 2, wb.y + wb.height / 2);
-  c.addChild(bg, L, Rt, g1, g2, star, word);
+  c.addChild(bg, L, Rt, star, g1, g2, word);   // 星爆在手套之下：击掌那一下看得到两只手
   return { t0: t.at, dur,
     begin() { c.visible = true; },
     tick(p) {
@@ -240,8 +248,9 @@ export const batonPass: Prim = (t, rc) => {
       L.position.set(330 - 600 * (1 - k) - 500 * out, 400); L.scale.set(1.25);
       Rt.position.set(960 + 600 * (1 - k) + 300 * clamp((ms - 380) / 300) * 0 , 400); Rt.scale.set(1.25 * (1 + 0.15 * clamp((ms - 380) / 300)));
       const kh = ease.inCubic(clamp((ms - 120) / 160));                // 两手相向 → 280ms 相击
-      g1.position.set(200 + 380 * kh, 420 - 60 * kh); g1.rotation = -0.5 + 0.4 * kh;
-      g2.position.set(1080 - 380 * kh, 420 - 60 * kh); g2.rotation = 0.5 - 0.4 * kh;
+      g1.position.set(160 + 400 * kh, 470 - 90 * kh); g1.rotation = 0.5 - 0.15 * kh;
+      g2.position.set(1120 - 400 * kh, 470 - 90 * kh); g2.rotation = -0.5 + 0.15 * kh;
+      const hit = clamp((ms - 280) / 120); g1.x -= 18 * Math.sin(hit * Math.PI); g2.x += 18 * Math.sin(hit * Math.PI);   // 相击反弹
       const ks = clamp((ms - 280) / 220);
       star.position.set(640, 360); star.visible = ms > 270; star.scale.set(0.3 + 1.2 * ease.outBack(clamp(ks * 2))); star.alpha = 1 - ks; star.rotation = ks * 0.6;
       word.position.set(640, 600); word.visible = ms > 300; word.scale.set(1.6 - 0.6 * ease.outBack(clamp((ms - 300) / 140))); word.rotation = -0.08;

@@ -156,5 +156,7 @@
  "num.cn": "一两三四五",
  "sfx.kacha": "咔",
  "label.massDestruction": "MASS DESTRUCTION",
- "label.finish": "DONE AND DUSTED."
+ "label.finish": "DONE AND DUSTED.",
+ "navi.holdup.one": "倒下了！一口气解决它吧！",
+ "navi.idle.one": "敌人只有一只。先找出它的弱点！"
 }

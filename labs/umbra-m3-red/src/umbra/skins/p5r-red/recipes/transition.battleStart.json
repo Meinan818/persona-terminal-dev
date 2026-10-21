@@ -6,6 +6,14 @@
  "tracks": [
   {
    "at": 0,
+   "prim": "maskRip",
+   "dur": 520,
+   "args": {},
+   "layer": "trans",
+   "minimal": "skip"
+  },
+  {
+   "at": 0,
    "prim": "sfx",
    "args": {
     "id": "battle.start"
@@ -19,7 +27,14 @@
    }
   },
   {
-   "at": 0,
+   "at": 150,
+   "prim": "sfx",
+   "args": {
+    "id": "maskrip"
+   }
+  },
+  {
+   "at": 300,
    "prim": "slashPanels",
    "args": {
     "colors": [
@@ -31,9 +46,10 @@
     "stagger": 70,
     "dir": "rtl"
    },
-   "dur": 820,
+   "dur": 560,
    "minimal": {
-    "dur": 340,
+    "at": 0,
+    "dur": 820,
     "args": {
      "colors": [
       "#0a0a0a"
@@ -42,7 +58,7 @@
    }
   },
   {
-   "at": 160,
+   "at": 420,
    "prim": "maskWipe",
    "args": {
     "shape": [
@@ -82,7 +98,7 @@
    "minimal": "skip"
   },
   {
-   "at": 170,
+   "at": 430,
    "prim": "particles",
    "args": {
     "count": 70,
@@ -91,7 +107,7 @@
      "y": 360
     },
     "speed": 1500,
-    "life": 520,
+    "life": 420,
     "frames": [
      "shard",
      "shard",

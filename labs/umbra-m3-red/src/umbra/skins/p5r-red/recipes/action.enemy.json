@@ -40,6 +40,21 @@
    }
   },
   {
+   "at": 0,
+   "prim": "nameplate",
+   "dur": 900,
+   "args": {
+    "side": "enemy"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "enemy.skill"
+   }
+  },
+  {
    "at": 120,
    "prim": "afterimage",
    "args": {
@@ -137,6 +152,34 @@
    "prim": "sfx",
    "args": {
     "id": "hit"
+   }
+  },
+  {
+   "at": 460,
+   "prim": "pose",
+   "dur": 520,
+   "args": {
+    "target": "$targets",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.18,
+      "pose": "recoil",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.45,
+      "pose": "recoil"
+     },
+     {
+      "at": 1,
+      "pose": "idle",
+      "ease": "inOutCubic"
+     }
+    ]
    }
   },
   {

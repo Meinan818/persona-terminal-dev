@@ -19,6 +19,7 @@ const PRIM_MAX: Partial<Record<PrimitiveName, number>> = {
   finishCard: 1000, totalDamage: 800, slashPanels: 900, maskWipe: 900, blockPush: 900, tvStatic: 600, glassShatter: 700,
   cardFlip: 500, cardShatter: 600, dateFlip: 900, bakedSwap: 400, portraitDown: 600, squashHit: 370,
   summon: 900, personaShow: 1100, eyeStrip: 700, onomatopoeia: 600, checkerFloor: 1200, ringSplash: 1000, batonPass: 800, showtimeLogo: 900, nameplate: 1200, pose: 1800, skinFilter: 1200,
+  comicPanels: 1100, duoEntrance: 1100, duoStrike: 900, duoTitle: 1100, maskRip: 700,
 };
 export const IMPLEMENTED = new Set<PrimitiveName>([
   'tween', 'show', 'hide', 'sfx', 'vibrate', 'title', 'dim', 'radialBurst', 'hitStop', 'shake', 'flashSprite', 'flashScreen', 'squashHit',
@@ -26,6 +27,7 @@ export const IMPLEMENTED = new Set<PrimitiveName>([
   'freezeFrame', 'finishCard', 'totalDamage', 'slashPanels', 'portraitDown', 'maskWipe', 'bakedSwap',
   'summon', 'personaShow', 'nameplate', 'pose', 'skinFilter', 'batonPass', 'showtimeLogo',
   'blockPush', 'tvStatic', 'glassShatter', 'cardFlip', 'cardShatter', 'dateFlip', 'eyeStrip', 'onomatopoeia', 'checkerFloor', 'ringSplash',
+  'comicPanels', 'duoEntrance', 'duoStrike', 'duoTitle', 'maskRip',
 ] as PrimitiveName[]);
 
 export function expand(r: Recipe): Track[] {

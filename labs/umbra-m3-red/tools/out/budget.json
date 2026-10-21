@@ -1,12 +1,12 @@
 {
- "codeKB": 242.8,
- "imagesKB": 325.3,
+ "codeKB": 249.0,
+ "imagesKB": 318.6,
  "images": 11,
  "fontsKB": 59.9,
- "dataKB": 16.0,
+ "dataKB": 19.2,
  "uiCssKB": 0.8,
- "skinShareKB": 402.1,
- "firstPackKB": 628.1,
+ "skinShareKB": 398.6,
+ "firstPackKB": 627.5,
  "perImage": {
   "bg.battle.castle": [
    2260,
@@ -26,12 +26,6 @@
    14.6,
    "official"
   ],
-  "allout.finish.default": [
-   1280,
-   720,
-   118.8,
-   "official"
-  ],
   "result.hero.grey": [
    580,
    640,
@@ -45,9 +39,9 @@
    "official"
   ],
   "back.joker": [
-   557,
+   558,
    640,
-   51.3,
+   40.0,
    "generated"
   ],
   "head.skull": [
@@ -73,6 +67,12 @@
    160,
    15.1,
    "official"
+  ],
+  "allout.finish.default": [
+   1280,
+   720,
+   123.4,
+   "official"
   ]
  },
  "texMB": 16.8,
@@ -81,8 +81,8 @@
   "mona",
   "panther"
  ],
- "postBootPartyKB": 1019.0,
- "postBootPartyTexMB": 58.2,
- "lazyOtherKB": 1803.6,
- "maxImageKB": 120.3
+ "postBootPartyKB": 1148.5,
+ "postBootPartyTexMB": 58.3,
+ "lazyOtherKB": 2573.9,
+ "maxImageKB": 179.8
 }

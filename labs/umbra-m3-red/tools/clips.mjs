@@ -3,7 +3,7 @@
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import { execSync } from 'node:child_process';
-const which = (process.argv[2] ?? 'summon,attack,allout').split(',');
+const which = (process.argv[2] ?? 'summon,attack,allout,showtime').split(',');
 const W = 844, H = 390, FPS = 15, STEP = 1000 / FPS, OUT = 'shots/clips';
 fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({
@@ -41,5 +41,13 @@ if (which.includes('attack')) await record('attack', () => { window.__umbra.enem
 if (which.includes('allout')) {
   await until(() => window.__umbra.mode === 'holdup' && !window.__umbra.busy);
   await record('allout', () => window.__umbra.cmd('allout'), [['allout', 3060]]);
+}
+if (which.includes('showtime')) {
+  await until(() => !window.__umbra.busy, null, 30000).catch(() => {});
+  await record('showtime', () => { window.__umbra.showtime('joker', 'skull'); }, [['highlight', 3360]]);
+}
+if (which.includes('start')) {
+  await until(() => !window.__umbra.busy, null, 30000).catch(() => {});
+  await record('battlestart', () => { window.__umbra.hud.setMode('hidden'); window.__umbra.dir.play('battle:start', { enemyIds: window.__umbra.B.enemies, leadId: 'joker' }, {}); }, [['battle:start', 860]]);
 }
 await browser.close();

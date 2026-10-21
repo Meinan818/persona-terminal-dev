@@ -17,6 +17,7 @@ for a in assets:
     row['note'] = note
     out.append(row)
 party = json.load(open(os.path.join(R, 'work/party-assets.json')))
+_pids = {a['id'] for a in party}; out = [r for r in out if r['id'] not in _pids]   # 第四阶段：同 id 以队伍素材（高清来源）为准
 for a in party:
     row = {k: a[k] for k in ['id', 'file', 'w', 'h', 'firstPack', 'source']}
     for k in ['group', 'frames', 'atlas']:
@@ -31,3 +32,19 @@ json.dump(man, open(os.path.join(SK, 'manifest.json'), 'w'), ensure_ascii=False,
 P = os.path.join(R, 'public/skins/p5r-red')
 shutil.rmtree(P, ignore_errors=True); shutil.copytree(os.path.join(SK, 'assets'), os.path.join(P, 'assets')); shutil.copy(os.path.join(SK, 'ui.css'), P)
 print('manifest assets', len(out), 'fonts', len(man['fonts']))
+
+# 第四阶段：音频占位（AUDIO-MAP-v1 §6）—— json 清单复制到 public/skins/p5r-red/audio/，扫 bgm/se/voice 实际放入的文件写 present.json（运行时只请求已登记文件 → 缺文件静默、无 404）
+A = os.path.join(SK, 'audio'); PA = os.path.join(P, 'audio')
+os.makedirs(PA, exist_ok=True)
+for n in ['sfx.json', 'playlist.json', 'voice.json']: shutil.copy(os.path.join(A, n), PA)
+present = []
+for sub in ['bgm', 'se', 'voice']:
+    d0 = os.path.join(R, 'audio-local', sub)            # 本地私有音频（不进仓库、不进公开构建）
+    if os.path.isdir(d0):
+        for dp, _, fs in os.walk(d0):
+            for f in fs:
+                if f.endswith(('.opus', '.m4a', '.ogg', '.mp3', '.wav')):
+                    rel = os.path.relpath(os.path.join(dp, f), os.path.join(R, 'audio-local'))
+                    os.makedirs(os.path.dirname(os.path.join(PA, rel)), exist_ok=True); shutil.copy(os.path.join(dp, f), os.path.join(PA, rel)); present.append(rel.replace(os.sep, '/'))
+json.dump({'files': sorted(present)}, open(os.path.join(PA, 'present.json'), 'w'))
+print('audio present', len(present))

@@ -6,7 +6,7 @@ DST=/workspace/work/repo-rw/wt-p5r-red/labs/umbra-m3-red
 python3 - <<'PY'
 import os, shutil
 S='/workspace/work/umbra-next/m3'; D='/workspace/work/repo-rw/wt-p5r-red/labs/umbra-m3-red'
-EX={'node_modules','dist','work','shots','shots2'}
+EX={'node_modules','dist','work','shots','shots2','shots4','audio-local'}
 keep={'README.md','shots'}
 for n in os.listdir(D):
     if n in keep: continue
@@ -25,10 +25,11 @@ python3 - <<'PY'
 from PIL import Image
 import glob, os
 D='/workspace/work/repo-rw/wt-p5r-red/labs/umbra-m3-red/shots'
-for d in ['/workspace/work/umbra-next/m3/shots', '/workspace/work/umbra-next/m3/shots2']:
+for d in ['/workspace/work/umbra-next/m3/shots', '/workspace/work/umbra-next/m3/shots2', '/workspace/work/umbra-next/m3/shots4']:
     for f in sorted(glob.glob(d + '/*.png')):
         n = os.path.basename(f)[:-4]
         if d.endswith('shots2'): n = 'p2-' + n
+        if d.endswith('shots4'): n = 'p4-' + n
         im = Image.open(f).convert('RGB')
         if im.width > 1600: im.thumbnail((1600, 1600))
         im.save(os.path.join(D, n + '.jpg'), quality=80)

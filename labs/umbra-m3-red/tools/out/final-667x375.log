@@ -1,9 +1,9 @@
-[44.5s] ready
-[48.3s] shot idle
-[50.6s] shot skilllist
-[55.0s] shot cutin
-[61.4s] shot onemore
-[67.2s] shot holdup
-[76.2s] shot allout
-[84.7s] shot result
-[84.7s] {"errors":["[.WebGL-0x4c00969a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"],"counts":{"particles":0,"filters":0,"cutin":0,"allout":0,"trans":0,"dmg":0,"fx":1},"engErr":["summon: char.joker not loaded","cutin art missing char.joker#cutin","dropText unit.down","dropText unit.down"],"issues":[{"recipe":"onemore","level":"error","msg":"particles@150 life 280 超出 duration"}]}
+[45.5s] ready
+[47.0s] shot idle
+[49.2s] shot skilllist
+[53.2s] shot cutin
+[59.4s] shot onemore
+[67.1s] shot holdup
+[75.5s] shot allout
+[83.5s] shot result
+[83.6s] {"errors":["[.WebGL-0x3c00e3b800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)","[.WebGL-0x3c00e3b800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): Running out of reserved outsideRenderPass queueSerial. ending renderPass now."],"counts":{"particles":0,"filters":0,"cutin":0,"allout":0,"trans":0,"dmg":0,"fx":1},"engErr":["dropText unit.down","dropText unit.down"],"issues":[]}

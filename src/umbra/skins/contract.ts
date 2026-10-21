@@ -46,6 +46,12 @@ export interface EnemyLayout {
 
 export type EnemyLayoutMap = Record<1 | 2 | 3 | 4 | 5, EnemyLayout[]>;
 
+export interface SkinRoster {
+  companions: string[];
+  companionPersonas: Record<string, string>;
+  excludedPersonas: string[];
+}
+
 export interface UmbraSkinPack {
   id: UmbraSkinId;
   manifest: {
@@ -57,4 +63,6 @@ export interface UmbraSkinPack {
   recipes: UmbraRecipe[];
   labels: Record<string, string>;
   enemyLayouts: EnemyLayoutMap;
+  roster: SkinRoster;
+  compendiumArt: Record<string, string>;
 }

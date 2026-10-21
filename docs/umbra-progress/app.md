@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：D-006 sim:balance 已建立并调参中；常规全量 78 文件 / 452 项通过，tsc exit 0。
+当前节点：D-005 roster/compendiumArt 契约与读取函数完成；D-006 调参中，常规全量通过。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -59,3 +59,7 @@
 - 已建立 `npm run sim:balance`、`src/umbra/balance`、`docs/umbra-progress/balance.md`。
 - 首次 500 局小样本胜率表已写入 `docs/umbra-progress/balance.md`；当前普攻杂兵/精英仍偏高、弱点打法偏低，继续调 `rules/combatNumbers.ts` 与 `balanceData.ts`。
 - 100 局当前表：basic 35/0/0，weakness 89/80/11，advanced 94/14/3；目标尚未全达标，重点还差 elite/boss 的 advanced。
+
+## D-005 · 主题归属
+
+- `UmbraSkinPack` 增加 `roster` 与 `compendiumArt`；注册表提供 `rosterAllowsPersona` / `companionPersonaFor`，禁止写死角色 id。

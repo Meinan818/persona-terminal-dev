@@ -35,3 +35,14 @@ export function unloadSkin(id: UmbraSkinId): void {
 export function disposeSkinLoader(id: UmbraSkinId): void {
   loaders.delete(id);
 }
+
+export function rosterAllowsPersona(skinId: UmbraSkinId, personaId: string): boolean {
+  const pack = packs.get(skinId);
+  if (!pack) return false;
+  return !pack.roster.excludedPersonas.includes(personaId);
+}
+
+export function companionPersonaFor(skinId: UmbraSkinId, companionId: string): string | null {
+  const pack = packs.get(skinId);
+  return pack?.roster.companionPersonas[companionId] ?? null;
+}

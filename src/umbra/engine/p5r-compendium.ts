@@ -1,4 +1,3 @@
-// @ts-nocheck -- 从已通过 234 项 Demo 测试的 P5R 图鉴模块机械迁移；类型收口随 U2 后续节点完成。
 /**
  * P5R compendium adapter and pure query logic.
  *
@@ -39,19 +38,23 @@ export {
 export const PERSONAS = P5R_PERSONA_BY_ID;
 export const SKILLS = P5R_SKILLS;
 
-const ARCANA_RESULTS = new Map();
+const SKILLS_BY_NAME = SKILLS as Record<string, any>;
+const PERSONA_BY_ID = P5R_PERSONA_BY_ID as Record<string, any>;
+const RARE_COMBOS = P5R_RARE_COMBOS as Record<string, number[] | undefined>;
+
+const ARCANA_RESULTS = new Map<string, string>();
 for (const combo of P5R_ARCANA_COMBOS) {
   ARCANA_RESULTS.set(`${combo.a}\u0000${combo.b}`, combo.result);
   ARCANA_RESULTS.set(`${combo.b}\u0000${combo.a}`, combo.result);
 }
 
-const SPECIAL_BY_SOURCE_KEY = new Map();
+const SPECIAL_BY_SOURCE_KEY = new Map<string, string>();
 for (const recipe of P5R_SPECIAL_FUSIONS) {
   if (!recipe.resultId || recipe.sources.some(source => !source)) continue;
   SPECIAL_BY_SOURCE_KEY.set(sortedKey(recipe.sources), recipe.resultId);
 }
 
-const PERSONAS_BY_ARCANA = new Map();
+const PERSONAS_BY_ARCANA = new Map<string, any[]>();
 for (const persona of P5R_PERSONAS) {
   const bucket = PERSONAS_BY_ARCANA.get(persona.arcana) ?? [];
   bucket.push(persona);
@@ -61,44 +64,53 @@ for (const bucket of PERSONAS_BY_ARCANA.values()) {
   bucket.sort((a, b) => a.level - b.level || a.nameEn.localeCompare(b.nameEn));
 }
 
-const RARE_INDEX = new Map(P5R_RARE_PERSONA_IDS.map((id, index) => [id, index]));
+const RARE_INDEX = new Map<string, number>(
+  P5R_RARE_PERSONA_IDS.map((id, index) => [id, index] as const),
+);
 
-function sortedKey(values) {
+function sortedKey(values: string[]): string {
   return [...values].sort().join('\u0000');
 }
 
-function allowsDlc(persona, allowDlc) {
+function allowsDlc(persona: any, allowDlc: boolean): boolean {
   return allowDlc || !persona.dlc;
 }
 
-export function getPersona(idOrName) {
+export function getPersona(idOrName: string | null | undefined): any {
   if (!idOrName) return null;
-  return P5R_PERSONA_BY_ID[idOrName]
+  return PERSONA_BY_ID[idOrName]
     ?? P5R_PERSONAS.find(
       persona => persona.nameEn === idOrName || persona.nameZh === idOrName,
     )
     ?? null;
 }
 
-export function getSkill(name) {
-  return SKILLS[name] ?? null;
+export function getSkill(name: string): any {
+  return SKILLS_BY_NAME[name] ?? null;
 }
 
-export function skillName(name) {
-  return SKILLS[name]?.name ?? name;
+export function skillName(name: string): string {
+  return SKILLS_BY_NAME[name]?.name ?? name;
 }
 
-export function specialFusionResult(sourceIds, { allowDlc = true } = {}) {
+export function specialFusionResult(
+  sourceIds: string[],
+  { allowDlc = true }: { allowDlc?: boolean } = {},
+): any {
   if (!Array.isArray(sourceIds) || sourceIds.length < 2) return null;
-  if (sourceIds.some(id => !P5R_PERSONA_BY_ID[id])) return null;
-  const result = P5R_PERSONA_BY_ID[SPECIAL_BY_SOURCE_KEY.get(sortedKey(sourceIds))];
+  if (sourceIds.some(id => !PERSONA_BY_ID[id])) return null;
+  const result = PERSONA_BY_ID[SPECIAL_BY_SOURCE_KEY.get(sortedKey(sourceIds)) ?? ''];
   return result && allowsDlc(result, allowDlc) ? result : null;
 }
 
-function rareFusion(rare, normal, { allowDlc = true } = {}) {
+function rareFusion(
+  rare: any,
+  normal: any,
+  { allowDlc = true }: { allowDlc?: boolean } = {},
+): any {
   const rareIndex = RARE_INDEX.get(rare.id);
   if (rareIndex == null) return null;
-  const modifiers = P5R_RARE_COMBOS[normal.arcana];
+  const modifiers = RARE_COMBOS[normal.arcana];
   if (!modifiers) return null;
   const pool = PERSONAS_BY_ARCANA.get(normal.arcana) ?? [];
   const mainIndex = pool.findIndex(persona => persona.id === normal.id);
@@ -112,7 +124,11 @@ function rareFusion(rare, normal, { allowDlc = true } = {}) {
   return candidate ?? null;
 }
 
-function normalFusion(a, b, { allowDlc = true } = {}) {
+function normalFusion(
+  a: any,
+  b: any,
+  { allowDlc = true }: { allowDlc?: boolean } = {},
+): any {
   if ((a.rare && !b.rare) || (b.rare && !a.rare)) return null;
   const targetArcana = ARCANA_RESULTS.get(`${a.arcana}\u0000${b.arcana}`);
   if (!targetArcana) return null;
@@ -132,7 +148,11 @@ function normalFusion(a, b, { allowDlc = true } = {}) {
   return pool.find(persona => persona.level >= targetLevel) ?? null;
 }
 
-export function resolveFusion(aId, bId, options = {}) {
+export function resolveFusion(
+  aId: string,
+  bId: string,
+  options: { allowDlc?: boolean } = {},
+): any {
   const a = getPersona(aId);
   const b = getPersona(bId);
   if (!a || !b || a.id === b.id) return null;
@@ -150,11 +170,15 @@ export function resolveFusion(aId, bId, options = {}) {
   return result ? { result, kind: 'normal', targetLevel } : null;
 }
 
-export function fusionResult(aId, bId, options = {}) {
+export function fusionResult(
+  aId: string,
+  bId: string,
+  options: { allowDlc?: boolean } = {},
+): any {
   return resolveFusion(aId, bId, options)?.result ?? null;
 }
 
-export function recipesForTarget(targetId) {
+export function recipesForTarget(targetId: string): any[] {
   const target = getPersona(targetId);
   if (!target) return [];
   return P5R_SPECIAL_FUSIONS
@@ -165,7 +189,7 @@ export function recipesForTarget(targetId) {
     }));
 }
 
-export function recruitCandidates(element, level = 1) {
+export function recruitCandidates(element: string | null, level = 1): any[] {
   return P5R_PERSONAS
     .filter(persona => {
       if (persona.special || persona.rare) return false;
@@ -179,8 +203,8 @@ export function recruitCandidates(element, level = 1) {
       || a.level - b.level);
 }
 
-export function validateP5RCompendium() {
-  const errors = [];
+export function validateP5RCompendium(): string[] {
+  const errors: string[] = [];
   const ids = new Set();
   const names = new Set();
   const arcana = new Set(P5R_PERSONAS.map(persona => persona.arcana));
@@ -198,7 +222,7 @@ export function validateP5RCompendium() {
       errors.push(`bad resistances: ${persona.id}`);
     }
     for (const [skill, level] of Object.entries(persona.skillLevels)) {
-      if (!SKILLS[skill]) errors.push(`missing skill ${skill} on ${persona.id}`);
+      if (!SKILLS_BY_NAME[skill]) errors.push(`missing skill ${skill} on ${persona.id}`);
       if (!Number.isInteger(level) || level < 0 || level > 99) {
         errors.push(`bad skill learn level ${persona.id}:${skill}`);
       }
@@ -210,23 +234,23 @@ export function validateP5RCompendium() {
     }
   }
   for (const recipe of P5R_SPECIAL_FUSIONS) {
-    if (!recipe.resultId || !P5R_PERSONA_BY_ID[recipe.resultId]) {
+    if (!recipe.resultId || !PERSONA_BY_ID[recipe.resultId]) {
       errors.push(`bad special result: ${recipe.result}`);
     }
     if (recipe.sources.length < 2) errors.push(`short special recipe: ${recipe.result}`);
     for (const source of recipe.sources) {
-      if (!source || !P5R_PERSONA_BY_ID[source]) {
+      if (!source || !PERSONA_BY_ID[source]) {
         errors.push(`bad special source on ${recipe.result}`);
       }
     }
   }
   for (const group of P5R_DLC_GROUPS) {
     for (const id of group.personaIds) {
-      if (!id || !P5R_PERSONA_BY_ID[id]) errors.push(`bad DLC persona: ${group.id}`);
+      if (!id || !PERSONA_BY_ID[id]) errors.push(`bad DLC persona: ${group.id}`);
     }
   }
   for (const [id, requirement] of Object.entries(P5R_CONFIDANT_REQUIREMENTS)) {
-    if (!P5R_PERSONA_BY_ID[id]) errors.push(`bad confidant persona: ${id}`);
+    if (!PERSONA_BY_ID[id]) errors.push(`bad confidant persona: ${id}`);
     if (!arcana.has(requirement.arcana)) errors.push(`bad confidant arcana: ${id}`);
   }
   return errors;

@@ -1,6 +1,7 @@
 import type { ThemeType } from '@/types';
 import type { UmbraSkinId, UmbraSkinPack } from './contract';
 import { loadSkin } from './registry';
+import './loaders';
 
 const skinModules = import.meta.glob<{ default: UmbraSkinPack }>('./*/index.ts');
 

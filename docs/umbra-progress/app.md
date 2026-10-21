@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：探索 run 状态机完成；规划/遭遇/局外会话串成可推进流程。
+当前节点：探索 run 已接 Director 事件；战斗节点输出 encounter 事件，非战斗节点输出 explore 事件。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 
@@ -101,3 +101,7 @@
 ## 探索 Run
 
 - `src/umbra/rules/exploreRun.ts`：把规划、遭遇与局外会话串成 `index/session` 状态机，逐节点推进并判定离场。
+
+## 探索 Director
+
+- `src/umbra/rules/exploreRunDirector.ts`：按当前节点生成 Director 主线事件，战斗节点为 `map:encounter`，其余为 explore 事件。

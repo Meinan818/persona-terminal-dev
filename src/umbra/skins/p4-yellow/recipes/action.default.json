@@ -1,0 +1,192 @@
+{
+ "id": "action.default",
+ "event": "action",
+ "duration": 960,
+ "hitMarks": [
+  380
+ ],
+ "assets": [
+  "fx.star",
+  "fx.spark",
+  "fx.square"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 260,
+   "prim": "afterimage",
+   "layer": "ally",
+   "ease": "inCubic",
+   "args": {
+    "actor": "$actor",
+    "to": {
+     "x": "$target",
+     "y": "$target",
+     "dx": -150
+    },
+    "n": 2,
+    "tints": [
+     "#ffffff",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "dash"
+   }
+  },
+  {
+   "at": 300,
+   "dur": 140,
+   "prim": "slashLine",
+   "layer": "fx",
+   "args": {
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "rot": -0.6,
+    "len": 520,
+    "width": 16
+   }
+  },
+  {
+   "at": 380,
+   "prim": "hitStop",
+   "args": {
+    "ms": 60
+   }
+  },
+  {
+   "at": 380,
+   "dur": 240,
+   "prim": "shake",
+   "args": {
+    "px": 12
+   }
+  },
+  {
+   "at": 380,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$target",
+    "ms": 50
+   }
+  },
+  {
+   "at": 380,
+   "prim": "squashHit",
+   "args": {
+    "target": "$target",
+    "squash": 0.14,
+    "push": 18,
+    "recoverMs": 220
+   }
+  },
+  {
+   "at": 380,
+   "prim": "particles",
+   "args": {
+    "count": 90,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "speed": 800,
+    "spread": 6.28,
+    "dir": 0,
+    "life": 420,
+    "size": [
+     10,
+     26
+    ],
+    "gravity": 900,
+    "frames": [
+     "fx.star",
+     "fx.spark",
+     "fx.square"
+    ],
+    "colors": [
+     "@color.primary",
+     "#ffffff",
+     "@color.ink"
+    ]
+   },
+   "minimal": {
+    "args": {
+     "count": 45,
+     "at": {
+      "x": "$target",
+      "y": "$target",
+      "dy": -230
+     },
+     "speed": 800,
+     "spread": 6.28,
+     "dir": 0,
+     "life": 300,
+     "size": [
+      10,
+      22
+     ],
+     "gravity": 900,
+     "frames": [
+      "fx.star",
+      "fx.spark"
+     ],
+     "colors": [
+      "@color.primary",
+      "#ffffff"
+     ]
+    }
+   }
+  },
+  {
+   "at": 380,
+   "dur": 560,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "big": false
+   }
+  },
+  {
+   "at": 380,
+   "dur": 520,
+   "prim": "tag",
+   "args": {
+    "kind": "WEAK",
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -330
+    }
+   }
+  },
+  {
+   "at": 380,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.light"
+   }
+  },
+  {
+   "at": 520,
+   "dur": 320,
+   "prim": "tween",
+   "layer": "ally",
+   "ease": "outCubic",
+   "args": {
+    "target": "$actor",
+    "to": {
+     "x": "home",
+     "y": "home"
+    }
+   }
+  }
+ ]
+}

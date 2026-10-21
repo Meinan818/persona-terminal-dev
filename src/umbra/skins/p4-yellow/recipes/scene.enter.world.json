@@ -1,0 +1,72 @@
+{
+ "id": "scene.enter.world",
+ "event": "scene:enter",
+ "duration": 600,
+ "assets": [
+  "fx.tvstatic.0",
+  "fx.tvstatic.1",
+  "hud.datePlate"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 260,
+   "prim": "tvStatic",
+   "layer": "trans",
+   "args": {
+    "intensity": 0.9,
+    "scanlines": true,
+    "rollPx": 30,
+    "frames": [
+     "fx.tvstatic.0",
+     "fx.tvstatic.1"
+    ]
+   },
+   "minimal": {
+    "dur": 120
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "tv.enter"
+   }
+  },
+  {
+   "at": 80,
+   "dur": 500,
+   "prim": "dateFlip",
+   "layer": "trans",
+   "ease": "outCubic",
+   "args": {
+    "from": "$env",
+    "to": "$env",
+    "pages": 1,
+    "plate": "hud.datePlate",
+    "weatherIcons": "hud.weather.",
+    "font": "@font.number"
+   },
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 200,
+   "dur": 380,
+   "prim": "title",
+   "layer": "trans",
+   "args": {
+    "text": "label.dive",
+    "font": "@font.display",
+    "size": 72,
+    "pos": {
+     "x": 640,
+     "y": 360
+    },
+    "rot": 0
+   },
+   "minimal": "skip"
+  }
+ ]
+}

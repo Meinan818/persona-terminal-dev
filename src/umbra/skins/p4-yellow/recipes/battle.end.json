@@ -1,0 +1,103 @@
+{
+ "id": "battle.end",
+ "event": "battle:end",
+ "duration": 1400,
+ "assets": [
+  "fx.tvstatic.0",
+  "fx.tvstatic.1",
+  "fx.block.ink",
+  "fx.daisy.white",
+  "fx.daisy.yellow",
+  "fx.star"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 220,
+   "prim": "tvStatic",
+   "layer": "trans",
+   "args": {
+    "intensity": 0.5,
+    "scanlines": true,
+    "rollPx": 16,
+    "frames": [
+     "fx.tvstatic.0",
+     "fx.tvstatic.1"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "battle.win"
+   }
+  },
+  {
+   "at": 150,
+   "dur": 600,
+   "prim": "blockPush",
+   "layer": "trans",
+   "ease": "outCubic",
+   "args": {
+    "cols": 8,
+    "rows": 5,
+    "order": "rowWave",
+    "art": "fx.block.ink",
+    "color": "@color.ink"
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 500,
+   "dur": 700,
+   "prim": "title",
+   "layer": "trans",
+   "ease": "outBack",
+   "args": {
+    "text": "label.victory",
+    "font": "@font.display",
+    "size": 120,
+    "pos": {
+     "x": 640,
+     "y": 330
+    },
+    "rot": -0.04
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 600,
+   "prim": "particles",
+   "args": {
+    "count": 60,
+    "at": {
+     "x": 640,
+     "y": 330
+    },
+    "speed": 900,
+    "spread": 6.28,
+    "life": 700,
+    "size": [
+     16,
+     40
+    ],
+    "gravity": 500,
+    "frames": [
+     "fx.daisy.white",
+     "fx.daisy.yellow",
+     "fx.star"
+    ],
+    "colors": [
+     "#ffffff"
+    ]
+   },
+   "minimal": "skip"
+  }
+ ]
+}

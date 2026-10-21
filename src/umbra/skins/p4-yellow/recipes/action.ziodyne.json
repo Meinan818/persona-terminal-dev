@@ -1,0 +1,334 @@
+{
+ "id": "action.ziodyne",
+ "event": "action",
+ "match": {
+  "skillId": "ziodyne",
+  "actorId": "hero"
+ },
+ "duration": 1600,
+ "hitMarks": [
+  780
+ ],
+ "create": [
+  {
+   "name": "bolt",
+   "asset": "fx.bolt",
+   "layer": "fx",
+   "anchor": [
+    0.5,
+    1.0
+   ]
+  }
+ ],
+ "assets": [
+  "cutin.hero",
+  "fx.bolt",
+  "fx.streak",
+  "fx.star",
+  "fx.spark",
+  "fx.square",
+  "fx.tvstatic.0",
+  "fx.tvstatic.1"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 200,
+   "prim": "dim",
+   "args": {
+    "color": "#000",
+    "alpha": 0.45
+   }
+  },
+  {
+   "at": 0,
+   "dur": 560,
+   "prim": "cutin",
+   "layer": "cutin",
+   "ease": "outCubic",
+   "args": {
+    "bandAngle": -0.08,
+    "speedLines": {
+     "layers": 2,
+     "count": 46
+    },
+    "panels": [
+     {
+      "shape": [
+       -1300,
+       -150,
+       1300,
+       -110,
+       1300,
+       150,
+       -1300,
+       110
+      ],
+      "art": "cutin.hero",
+      "enterFrom": "right",
+      "delay": 0
+     }
+    ],
+    "nameplate": {
+     "text": "skill.ziodyne.name",
+     "font": "@font.display"
+    }
+   },
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "cutin"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "args": {
+    "count": 40,
+    "life": 480,
+    "at": {
+     "x": "$screen",
+     "y": 360
+    },
+    "dir": 3.14,
+    "spread": 0.4,
+    "speed": 1400,
+    "size": [
+     6,
+     14
+    ],
+    "frames": [
+     "fx.streak"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 600,
+   "dur": 140,
+   "prim": "tvStatic",
+   "layer": "fx",
+   "args": {
+    "intensity": 0.35,
+    "scanlines": true,
+    "rollPx": 12,
+    "frames": [
+     "fx.tvstatic.0",
+     "fx.tvstatic.1"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 620,
+   "prim": "show",
+   "args": {
+    "target": "#bolt"
+   }
+  },
+  {
+   "at": 620,
+   "dur": 160,
+   "prim": "tween",
+   "layer": "fx",
+   "ease": "inCubic",
+   "args": {
+    "target": "#bolt",
+    "from": {
+     "x": "$target",
+     "y": -360,
+     "alpha": 1,
+     "scale": 1.2
+    },
+    "to": {
+     "x": "$target",
+     "y": "$target",
+     "scale": 1.0
+    }
+   }
+  },
+  {
+   "at": 780,
+   "dur": 120,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#FFF6B0",
+    "alpha": 0.7
+   }
+  },
+  {
+   "at": 780,
+   "dur": 90,
+   "prim": "rgbSplit",
+   "args": {
+    "offset": 8
+   }
+  },
+  {
+   "at": 780,
+   "prim": "hitStop",
+   "args": {
+    "ms": 70
+   }
+  },
+  {
+   "at": 780,
+   "dur": 300,
+   "prim": "shake",
+   "args": {
+    "px": 20
+   }
+  },
+  {
+   "at": 780,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$target",
+    "ms": 50
+   }
+  },
+  {
+   "at": 780,
+   "prim": "squashHit",
+   "args": {
+    "target": "$target",
+    "squash": 0.2,
+    "push": 22,
+    "recoverMs": 280
+   }
+  },
+  {
+   "at": 780,
+   "prim": "particles",
+   "args": {
+    "count": 260,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "speed": 1100,
+    "spread": 6.28,
+    "dir": 0,
+    "life": 640,
+    "size": [
+     10,
+     26
+    ],
+    "gravity": 900,
+    "frames": [
+     "fx.star",
+     "fx.spark",
+     "fx.square"
+    ],
+    "colors": [
+     "@color.primary",
+     "#ffffff",
+     "@color.ink"
+    ]
+   },
+   "minimal": {
+    "args": {
+     "count": 130,
+     "at": {
+      "x": "$target",
+      "y": "$target",
+      "dy": -230
+     },
+     "speed": 800,
+     "spread": 6.28,
+     "dir": 0,
+     "life": 300,
+     "size": [
+      10,
+      22
+     ],
+     "gravity": 900,
+     "frames": [
+      "fx.star",
+      "fx.spark"
+     ],
+     "colors": [
+      "@color.primary",
+      "#ffffff"
+     ]
+    }
+   }
+  },
+  {
+   "at": 780,
+   "dur": 700,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 780,
+   "dur": 520,
+   "prim": "tag",
+   "args": {
+    "kind": "WEAK",
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -330
+    }
+   }
+  },
+  {
+   "at": 780,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.elec"
+   }
+  },
+  {
+   "at": 800,
+   "dur": 260,
+   "prim": "tween",
+   "layer": "fx",
+   "ease": "outCubic",
+   "args": {
+    "target": "#bolt",
+    "to": {
+     "alpha": 0,
+     "scale": 1.1
+    }
+   }
+  },
+  {
+   "at": 930,
+   "dur": 460,
+   "prim": "shockwave",
+   "args": {
+    "center": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "amp": 44,
+    "wavelength": 160,
+    "speed": 900,
+    "radius": 520
+   }
+  },
+  {
+   "at": 1060,
+   "prim": "hide",
+   "args": {
+    "target": "#bolt"
+   }
+  }
+ ]
+}

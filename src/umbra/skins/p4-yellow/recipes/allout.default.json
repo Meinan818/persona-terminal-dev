@@ -1,0 +1,306 @@
+{
+ "id": "allout.default",
+ "event": "allout",
+ "duration": 3400,
+ "hitMarks": [
+  400,
+  610,
+  820,
+  1030,
+  1240,
+  1450,
+  1660,
+  1870,
+  2120
+ ],
+ "assets": [
+  "allout.finish.default",
+  "fx.dust",
+  "fx.star",
+  "fx.star.white",
+  "fx.spark",
+  "atlas.portraits"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 200,
+   "prim": "dim",
+   "args": {
+    "color": "#000",
+    "alpha": 0.5
+   }
+  },
+  {
+   "at": 0,
+   "dur": 2100,
+   "prim": "radialBurst",
+   "layer": "fx",
+   "args": {
+    "rays": 24,
+    "colors": [
+     "@color.primary",
+     "@color.ink"
+    ],
+    "spin": 0.9
+   }
+  },
+  {
+   "at": 0,
+   "dur": 640,
+   "prim": "title",
+   "layer": "allout",
+   "ease": "outBack",
+   "args": {
+    "text": "label.allout",
+    "font": "@font.display",
+    "size": 128,
+    "pos": {
+     "x": 640,
+     "y": 150
+    },
+    "rot": -0.08
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "allout.start"
+   }
+  },
+  {
+   "at": 300,
+   "dur": 1760,
+   "prim": "silhouetteDash",
+   "layer": "allout",
+   "args": {
+    "units": "$party",
+    "count": 8,
+    "interval": 210,
+    "path": "L2R"
+   },
+   "minimal": {
+    "args": {
+     "units": "$party",
+     "count": 3,
+     "interval": 210,
+     "path": "L2R"
+    }
+   }
+  },
+  {
+   "at": 400,
+   "prim": "particles",
+   "args": {
+    "count": 28,
+    "life": 560,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -180
+    },
+    "speed": 420,
+    "spread": 6.28,
+    "size": [
+     60,
+     130
+    ],
+    "gravity": -80,
+    "frames": [
+     "fx.dust"
+    ],
+    "colors": [
+     "#ffffff"
+    ]
+   },
+   "repeatEvery": 210,
+   "times": 8
+  },
+  {
+   "at": 400,
+   "prim": "particles",
+   "args": {
+    "count": 32,
+    "life": 520,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -260
+    },
+    "speed": 1000,
+    "spread": 6.28,
+    "size": [
+     14,
+     30
+    ],
+    "gravity": 600,
+    "frames": [
+     "fx.star",
+     "fx.star.white",
+     "fx.spark"
+    ],
+    "colors": [
+     "#ffffff"
+    ]
+   },
+   "repeatEvery": 210,
+   "times": 8,
+   "minimal": "skip"
+  },
+  {
+   "at": 400,
+   "dur": 150,
+   "prim": "slashLine",
+   "layer": "fx",
+   "args": {
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "rot": -0.5,
+    "len": 760,
+    "width": 14
+   },
+   "repeatEvery": 210,
+   "times": 8
+  },
+  {
+   "at": 400,
+   "prim": "sfx",
+   "args": {
+    "id": "allout.hit"
+   },
+   "repeatEvery": 420,
+   "times": 4
+  },
+  {
+   "at": 2120,
+   "dur": 150,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#FFE200",
+    "alpha": 0.85
+   }
+  },
+  {
+   "at": 2120,
+   "dur": 500,
+   "prim": "shockwave",
+   "args": {
+    "center": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "amp": 56,
+    "wavelength": 200,
+    "speed": 1100,
+    "radius": 640
+   }
+  },
+  {
+   "at": 2120,
+   "dur": 300,
+   "prim": "shake",
+   "args": {
+    "px": 18
+   }
+  },
+  {
+   "at": 2120,
+   "dur": 700,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 2120,
+   "prim": "sfx",
+   "args": {
+    "id": "allout.finish"
+   }
+  },
+  {
+   "at": 2120,
+   "dur": 980,
+   "prim": "finishCard",
+   "layer": "allout",
+   "ease": "outCubic",
+   "args": {
+    "artId": "allout.finish.default",
+    "shape": [
+     -700,
+     -380,
+     760,
+     -340,
+     700,
+     380,
+     -760,
+     340
+    ],
+    "enterFrom": "right",
+    "zoom": 1.03
+   },
+   "minimal": {
+    "dur": 500
+   }
+  },
+  {
+   "at": 2320,
+   "dur": 760,
+   "prim": "freezeFrame",
+   "args": {
+    "ms": 760,
+    "keepRendering": true
+   },
+   "minimal": {
+    "dur": 300,
+    "args": {
+     "ms": 300,
+     "keepRendering": true
+    }
+   }
+  },
+  {
+   "at": 2320,
+   "dur": 760,
+   "prim": "totalDamage",
+   "layer": "allout",
+   "ease": "outBack",
+   "args": {
+    "label": "label.totalDamage",
+    "plate": [
+     -230,
+     -46,
+     250,
+     -56,
+     230,
+     46,
+     -250,
+     56
+    ],
+    "font": "@font.number",
+    "pos": {
+     "x": 980,
+     "y": 610
+    }
+   }
+  },
+  {
+   "at": 3150,
+   "dur": 200,
+   "prim": "tween",
+   "layer": "allout",
+   "args": {
+    "target": "#layer.allout",
+    "to": {
+     "alpha": 0
+    }
+   }
+  }
+ ]
+}

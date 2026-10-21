@@ -1,0 +1,60 @@
+{
+ "id": "talk.start",
+ "event": "talk:start",
+ "duration": 760,
+ "assets": [
+  "fx.tvstatic.0",
+  "fx.tvstatic.1",
+  "fx.tvMask"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 300,
+   "prim": "tvStatic",
+   "layer": "trans",
+   "args": {
+    "intensity": 0.7,
+    "scanlines": true,
+    "rollPx": 20,
+    "frames": [
+     "fx.tvstatic.0",
+     "fx.tvstatic.1"
+    ]
+   },
+   "minimal": {
+    "dur": 150
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "tv.on"
+   }
+  },
+  {
+   "at": 150,
+   "dur": 560,
+   "prim": "maskWipe",
+   "layer": "trans",
+   "ease": "outCubic",
+   "args": {
+    "shape": "fx.tvMask",
+    "from": {
+     "scale": 0.05,
+     "x": 640,
+     "y": 360
+    },
+    "to": {
+     "scale": 6.0,
+     "x": 640,
+     "y": 360
+    }
+   },
+   "minimal": {
+    "dur": 250
+   }
+  }
+ ]
+}

@@ -1,0 +1,132 @@
+{
+ "id": "holdup",
+ "event": "holdup",
+ "duration": 940,
+ "assets": [
+  "fx.dust",
+  "fx.star",
+  "fx.star.white"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 900,
+   "prim": "dim",
+   "args": {
+    "color": "#1A1400",
+    "alpha": 0.4
+   }
+  },
+  {
+   "at": 0,
+   "dur": 880,
+   "prim": "radialBurst",
+   "layer": "fx",
+   "args": {
+    "rays": 18,
+    "colors": [
+     "@color.primary",
+     "@color.ink"
+    ],
+    "spin": 0.3
+   },
+   "minimal": {
+    "args": {
+     "rays": 18,
+     "colors": [
+      "@color.primary",
+      "@color.ink"
+     ],
+     "spin": 0
+    }
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "holdup"
+   }
+  },
+  {
+   "at": 80,
+   "dur": 700,
+   "prim": "title",
+   "layer": "cutin",
+   "ease": "outBack",
+   "args": {
+    "text": "label.holdup",
+    "font": "@font.display",
+    "size": 104,
+    "pos": {
+     "x": 640,
+     "y": 170
+    },
+    "rot": -0.06
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 120,
+   "prim": "particles",
+   "args": {
+    "count": 36,
+    "at": {
+     "x": "$targets",
+     "y": "$targets",
+     "dy": -120
+    },
+    "speed": 520,
+    "spread": 6.28,
+    "life": 600,
+    "size": [
+     40,
+     90
+    ],
+    "gravity": -120,
+    "frames": [
+     "fx.dust"
+    ],
+    "colors": [
+     "#ffffff"
+    ]
+   }
+  },
+  {
+   "at": 200,
+   "prim": "particles",
+   "args": {
+    "count": 30,
+    "at": {
+     "x": "$targets",
+     "y": "$targets",
+     "dy": -260
+    },
+    "speed": 900,
+    "spread": 6.28,
+    "life": 560,
+    "size": [
+     16,
+     30
+    ],
+    "frames": [
+     "fx.star",
+     "fx.star.white"
+    ],
+    "colors": [
+     "#ffffff"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 200,
+   "prim": "vibrate",
+   "args": {
+    "ms": 25
+   }
+  }
+ ]
+}

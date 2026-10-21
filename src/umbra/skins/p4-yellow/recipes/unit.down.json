@@ -1,0 +1,71 @@
+{
+ "id": "unit.down",
+ "event": "unit:down",
+ "duration": 480,
+ "assets": [
+  "fx.dust"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 440,
+   "prim": "portraitDown",
+   "ease": "inCubic",
+   "args": {
+    "unit": "$targets",
+    "style": "fall"
+   },
+   "minimal": {
+    "dur": 200
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "down"
+   }
+  },
+  {
+   "at": 60,
+   "dur": 400,
+   "prim": "tag",
+   "args": {
+    "kind": "DOWN",
+    "pos": {
+     "x": "$targets",
+     "y": "$targets",
+     "dy": -300
+    }
+   }
+  },
+  {
+   "at": 120,
+   "prim": "particles",
+   "args": {
+    "count": 24,
+    "at": {
+     "x": "$targets",
+     "y": "$targets",
+     "dy": -40
+    },
+    "speed": 360,
+    "spread": 3.14,
+    "dir": -1.57,
+    "life": 340,
+    "size": [
+     40,
+     80
+    ],
+    "gravity": -60,
+    "frames": [
+     "fx.dust"
+    ],
+    "colors": [
+     "#ffffff"
+    ]
+   },
+   "minimal": "skip"
+  }
+ ]
+}

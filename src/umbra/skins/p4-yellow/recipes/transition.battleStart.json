@@ -1,0 +1,78 @@
+{
+ "id": "transition.battleStart",
+ "event": "battle:start",
+ "duration": 880,
+ "assets": [
+  "fx.tvstatic.0",
+  "fx.tvstatic.1",
+  "fx.block"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 380,
+   "prim": "tvStatic",
+   "layer": "trans",
+   "args": {
+    "intensity": 0.85,
+    "scanlines": true,
+    "rollPx": 24,
+    "frames": [
+     "fx.tvstatic.0",
+     "fx.tvstatic.1"
+    ]
+   },
+   "minimal": {
+    "dur": 150
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "tv.static"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "vibrate",
+   "args": {
+    "ms": 30
+   }
+  },
+  {
+   "at": 120,
+   "dur": 90,
+   "prim": "flashScreen",
+   "layer": "trans",
+   "args": {
+    "color": "#FFE200",
+    "alpha": 0.5
+   }
+  },
+  {
+   "at": 300,
+   "dur": 560,
+   "prim": "blockPush",
+   "layer": "trans",
+   "ease": "inOutCubic",
+   "args": {
+    "cols": 8,
+    "rows": 5,
+    "order": "diagonal",
+    "art": "fx.block",
+    "color": "@color.primary"
+   },
+   "minimal": {
+    "dur": 200
+   }
+  },
+  {
+   "at": 300,
+   "prim": "sfx",
+   "args": {
+    "id": "block.push"
+   }
+  }
+ ]
+}

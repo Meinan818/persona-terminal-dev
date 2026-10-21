@@ -1,0 +1,53 @@
+{
+ "id": "scene.leave.world",
+ "event": "scene:leave",
+ "duration": 600,
+ "assets": [
+  "fx.block",
+  "hud.datePlate"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 360,
+   "prim": "blockPush",
+   "layer": "trans",
+   "args": {
+    "cols": 8,
+    "rows": 5,
+    "order": "random",
+    "seed": 4,
+    "art": "fx.block",
+    "color": "@color.primary"
+   },
+   "minimal": {
+    "dur": 200
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "tv.leave"
+   }
+  },
+  {
+   "at": 250,
+   "dur": 340,
+   "prim": "dateFlip",
+   "layer": "trans",
+   "ease": "outCubic",
+   "args": {
+    "from": "$env",
+    "to": "$env",
+    "pages": 1,
+    "plate": "hud.datePlate",
+    "weatherIcons": "hud.weather.",
+    "font": "@font.number"
+   },
+   "minimal": {
+    "dur": 250
+   }
+  }
+ ]
+}

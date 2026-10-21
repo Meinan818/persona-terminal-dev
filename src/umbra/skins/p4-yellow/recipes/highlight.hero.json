@@ -1,0 +1,415 @@
+{
+ "id": "highlight.hero",
+ "event": "highlight",
+ "match": {
+  "actorId": "hero"
+ },
+ "duration": 3300,
+ "hitMarks": [
+  1900
+ ],
+ "assets": [
+  "cutin.hero",
+  "highlight.hero",
+  "fx.tvMask",
+  "fx.tvstatic.0",
+  "fx.tvstatic.1",
+  "fx.streak",
+  "fx.spark",
+  "fx.star",
+  "fx.square"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 600,
+   "prim": "dim",
+   "args": {
+    "color": "#000",
+    "alpha": 0.6
+   }
+  },
+  {
+   "at": 0,
+   "dur": 260,
+   "prim": "tvStatic",
+   "layer": "cutin",
+   "args": {
+    "intensity": 0.6,
+    "scanlines": true,
+    "rollPx": 18,
+    "frames": [
+     "fx.tvstatic.0",
+     "fx.tvstatic.1"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "highlight.start"
+   }
+  },
+  {
+   "at": 200,
+   "dur": 560,
+   "prim": "cutin",
+   "layer": "cutin",
+   "ease": "outCubic",
+   "args": {
+    "bandAngle": -0.1,
+    "speedLines": {
+     "layers": 2,
+     "count": 46
+    },
+    "panels": [
+     {
+      "shape": [
+       -1300,
+       -160,
+       1300,
+       -120,
+       1300,
+       160,
+       -1300,
+       120
+      ],
+      "art": "cutin.hero",
+      "enterFrom": "right",
+      "delay": 0
+     }
+    ],
+    "nameplate": {
+     "text": "label.highlight",
+     "font": "@font.display"
+    }
+   },
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 800,
+   "dur": 520,
+   "prim": "maskWipe",
+   "layer": "trans",
+   "ease": "inCubic",
+   "args": {
+    "shape": "fx.tvMask",
+    "from": {
+     "scale": 0.05,
+     "x": 640,
+     "y": 360
+    },
+    "to": {
+     "scale": 6.5,
+     "x": 640,
+     "y": 360
+    }
+   }
+  },
+  {
+   "at": 800,
+   "dur": 1300,
+   "prim": "radialBurst",
+   "layer": "fx",
+   "args": {
+    "rays": 24,
+    "colors": [
+     "@color.primary",
+     "#ffffff"
+    ],
+    "spin": 1.2
+   }
+  },
+  {
+   "at": 900,
+   "dur": 760,
+   "prim": "title",
+   "layer": "cutin",
+   "ease": "outBack",
+   "args": {
+    "text": "skill.myriad-truths.name",
+    "font": "@font.display",
+    "size": 96,
+    "pos": {
+     "x": 640,
+     "y": 140
+    },
+    "rot": -0.05
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 1000,
+   "dur": 900,
+   "prim": "speedLines",
+   "layer": "fx",
+   "args": {
+    "count": 40,
+    "dir": 1.57,
+    "colors": [
+     "@color.primary",
+     "#ffffff"
+    ],
+    "scrollSpeed": 2400
+   }
+  },
+  {
+   "at": 1300,
+   "prim": "particles",
+   "args": {
+    "count": 160,
+    "at": {
+     "x": "$targets",
+     "y": -40
+    },
+    "dir": 1.57,
+    "spread": 0.3,
+    "speed": 1800,
+    "life": 520,
+    "size": [
+     8,
+     20
+    ],
+    "frames": [
+     "fx.streak",
+     "fx.spark"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary"
+    ]
+   },
+   "minimal": {
+    "args": {
+     "count": 60,
+     "at": {
+      "x": "$targets",
+      "y": -40
+     },
+     "dir": 1.57,
+     "spread": 0.3,
+     "speed": 1800,
+     "life": 320,
+     "frames": [
+      "fx.streak"
+     ],
+     "colors": [
+      "#ffffff"
+     ]
+    }
+   }
+  },
+  {
+   "at": 1900,
+   "dur": 160,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#FFFFFF",
+    "alpha": 0.85
+   }
+  },
+  {
+   "at": 1900,
+   "dur": 100,
+   "prim": "rgbSplit",
+   "args": {
+    "offset": 10
+   }
+  },
+  {
+   "at": 1900,
+   "prim": "hitStop",
+   "args": {
+    "ms": 70
+   }
+  },
+  {
+   "at": 1900,
+   "dur": 300,
+   "prim": "shake",
+   "args": {
+    "px": 24
+   }
+  },
+  {
+   "at": 1900,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$target",
+    "ms": 50
+   }
+  },
+  {
+   "at": 1900,
+   "prim": "squashHit",
+   "args": {
+    "target": "$target",
+    "squash": 0.2,
+    "push": 30,
+    "recoverMs": 280
+   }
+  },
+  {
+   "at": 1900,
+   "prim": "particles",
+   "args": {
+    "count": 300,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "speed": 1100,
+    "spread": 6.28,
+    "dir": 0,
+    "life": 700,
+    "size": [
+     10,
+     26
+    ],
+    "gravity": 900,
+    "frames": [
+     "fx.star",
+     "fx.spark",
+     "fx.square"
+    ],
+    "colors": [
+     "@color.primary",
+     "#ffffff",
+     "@color.ink"
+    ]
+   },
+   "minimal": {
+    "args": {
+     "count": 150,
+     "at": {
+      "x": "$target",
+      "y": "$target",
+      "dy": -230
+     },
+     "speed": 800,
+     "spread": 6.28,
+     "dir": 0,
+     "life": 300,
+     "size": [
+      10,
+      22
+     ],
+     "gravity": 900,
+     "frames": [
+      "fx.star",
+      "fx.spark"
+     ],
+     "colors": [
+      "@color.primary",
+      "#ffffff"
+     ]
+    }
+   }
+  },
+  {
+   "at": 1900,
+   "dur": 700,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 1900,
+   "dur": 520,
+   "prim": "tag",
+   "args": {
+    "kind": "WEAK",
+    "pos": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -330
+    }
+   }
+  },
+  {
+   "at": 1900,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.heavy"
+   }
+  },
+  {
+   "at": 2050,
+   "dur": 520,
+   "prim": "shockwave",
+   "args": {
+    "center": {
+     "x": "$target",
+     "y": "$target",
+     "dy": -230
+    },
+    "amp": 60,
+    "wavelength": 220,
+    "speed": 1200,
+    "radius": 680
+   }
+  },
+  {
+   "at": 2200,
+   "dur": 900,
+   "prim": "finishCard",
+   "layer": "allout",
+   "ease": "outCubic",
+   "args": {
+    "artId": "highlight.hero",
+    "shape": [
+     -760,
+     -330,
+     700,
+     -400,
+     760,
+     330,
+     -700,
+     400
+    ],
+    "enterFrom": "left",
+    "zoom": 1.04
+   },
+   "minimal": {
+    "dur": 300
+   }
+  },
+  {
+   "at": 2400,
+   "dur": 600,
+   "prim": "freezeFrame",
+   "args": {
+    "ms": 600,
+    "keepRendering": true
+   },
+   "minimal": {
+    "dur": 300,
+    "args": {
+     "ms": 300,
+     "keepRendering": true
+    }
+   }
+  },
+  {
+   "at": 3100,
+   "dur": 180,
+   "prim": "tween",
+   "layer": "allout",
+   "args": {
+    "target": "#layer.allout",
+    "to": {
+     "alpha": 0
+    }
+   }
+  }
+ ]
+}

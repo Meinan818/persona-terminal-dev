@@ -1,0 +1,73 @@
+{
+ "id": "onemore",
+ "event": "onemore",
+ "duration": 430,
+ "assets": [
+  "fx.star",
+  "fx.star.white"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "dur": 400,
+   "prim": "banner",
+   "layer": "cutin",
+   "ease": "outBack",
+   "args": {
+    "text": "label.onemore",
+    "shape": [
+     -1300,
+     -78,
+     1300,
+     -60,
+     1300,
+     78,
+     -1300,
+     60
+    ],
+    "enterFrom": "right",
+    "artId": "$actor",
+    "fill": "@color.primary",
+    "ink": "@color.ink",
+    "font": "@font.display"
+   },
+   "minimal": {
+    "dur": 250
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "onemore"
+   }
+  },
+  {
+   "at": 40,
+   "prim": "particles",
+   "args": {
+    "count": 24,
+    "at": {
+     "x": 900,
+     "y": 300
+    },
+    "speed": 700,
+    "spread": 1.2,
+    "dir": 3.14,
+    "life": 340,
+    "size": [
+     14,
+     28
+    ],
+    "frames": [
+     "fx.star",
+     "fx.star.white"
+    ],
+    "colors": [
+     "#ffffff"
+    ]
+   },
+   "minimal": "skip"
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+# skin-p3-blue status
+- 2026-10-22 01:59 开始。step0 读任务书。
+- 02:04 推送已开放：commit 后 GIT_TERMINAL_PROMPT=0 git push origin feat/umbra-skin-p3-blue（credentials github），不 force。
+- 素材源：web/downloads/p3-blue/ portrait-{Yukari,Junpei,Akihiko,Mitsuru}.png = P3RE Portrait（fandom 官方 bust-up）；主角 official/talk-portrait.png(P3REMC)；ft-protag.gif=P3RE FinishingTouch Protagonist 400x225（参考，总攻定格画需生成）。
+- 技能 id = 英文名（Agi / Megidolaon / Cadenza），普攻 basic-phys；主角 unit id 'hero'，同伴 ally:<persona>（映射待问）。
+- 02:2x ① 素材已出到 skin assets/（脚本 work/p3b-gen/build_assets.py 可复跑；生成原图 work/p3b-gen/*-src.png）；字体 p3b-number(Anton 5KB)+p3b-display(NotoSerifSC Black 子集 18KB)；labels.json 已写。下一步 manifest.json → commit 步骤①。
+- 取舍：hud.system 宽 256 放不下 3×86 → AUTO/SPEED 在 system、PAUSE 放 topInfo 右端（待问）；命中区高 86 超出 system y≤90（待问）。
+- step① commit f077189
+- 02:4x push 失败（同黄/粉：github 凭据未注入 git，helper 假凭据→Invalid token），不再重试，只本地 commit，回报。
+- step② commit 6e748fa（push 同样失败）
+- 03:3x 三步全部完成：① f077189 ② 6e748fa ③ cfa42f5（均本地，push 失败）。recipes 生成器 work/p3b-gen/recipes.py（改完重跑 + skin-lint）。待答 12 条见 docs/umbra-progress/p3-blue.md。下一步：等主策划答复 / 引擎 + skin:check。

@@ -1,6 +1,6 @@
 # App · UMBRA M2 进度
 
-当前节点：D-004 相关测试全绿（1/3/5 只战斗、弱点策略、画质降档）；tsc exit 0。
+当前节点：全量 UMBRA 测试 18 文件 / 86 项通过；tsc exit 0。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
 

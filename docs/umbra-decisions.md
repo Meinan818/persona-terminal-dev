@@ -2,6 +2,13 @@
 
 执行方遇到任务书没写到的取舍，以本文件为准。新在上。
 
+## D-008 音乐与音效用原作（10-22 04:52）
+- 用户确认：私人仓库、粉丝二创、不对外发布。BGM/音效/系统音/角色战斗语音按原作使用，放 skins/<id>/assets/official/audio/，不随任何公开构建发布。
+- 每皮一张曲目表（场景 → 原作曲目）：据点、委托板、探索、普通战斗、先手战、被偷袭、精英、BOSS 一/二阶段、胜利、结算、天鹅绒、各商店、HOLD UP、总攻收尾。例：红=Last Surprise / Beneath the Mask / Rivers in the Desert / Life Will Change / Aria of the Soul；蓝粉=Mass Destruction / It's Going Down Now / Iwatodai Dorm / Full Moon Full Life；黄=Reach Out to the Truth / Time to Make History / Your Affection / I'll Face Myself。
+- 工程：Opus/AAC 流式加载，不进皮肤首包；每曲标循环点（无缝循环）；响度统一 −16 LUFS；音效池按 recipe 事件触发（FX-MAP 每个事件可挂 sfx 字段）；战斗→胜利交叉淡化 ≤300ms；静音/音量三档（BGM/SE/语音）。
+- 手机：首次交互后才解锁 AudioContext；切后台自动暂停。
+- 详细曲目表与音效清单写进 SYSTEMS-AUDIT-v1 必补第 16 项实现时补全。
+
 ## D-007 据点商店：规则共用四类，店名/店主/画面按皮（10-22 04:42）
 - 四类店（规则 id 固定，数据表驱动）：
   1. 武器/防具店：主角与同伴的近战武器、枪、防具、饰品（装备是第六层成长，按委托档位解锁）。

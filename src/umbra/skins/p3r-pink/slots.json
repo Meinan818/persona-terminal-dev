@@ -1,0 +1,430 @@
+{
+ "hud.order": {
+  "rect": {
+   "x": 24,
+   "y": 24,
+   "w": 496,
+   "h": 86
+  },
+  "style": "petalChain",
+  "atlas": "atlas.hud",
+  "frames": {
+   "avatar": "hud.avatar.{unitId}",
+   "marker": "fx.petal.a"
+  },
+  "slant": 0.21,
+  "note": "行动顺序：樱瓣链，当前行动者放大 1.15、玫红底；只看不点"
+ },
+ "hud.system": {
+  "rect": {
+   "x": 1000,
+   "y": 24,
+   "w": 256,
+   "h": 86
+  },
+  "buttons": [
+   {
+    "id": "sys.auto",
+    "rect": {
+     "x": 1000,
+     "y": 24,
+     "w": 86,
+     "h": 86
+    }
+   },
+   {
+    "id": "sys.speed",
+    "rect": {
+     "x": 1085,
+     "y": 24,
+     "w": 86,
+     "h": 86
+    }
+   },
+   {
+    "id": "sys.pause",
+    "rect": {
+     "x": 1170,
+     "y": 24,
+     "w": 86,
+     "h": 86
+    }
+   }
+  ],
+  "style": "ribbonTab",
+  "note": "y 范围 24–90 只有 66 高，按 §0.7 命中区 ≥86 取 24–110（视觉 66，命中区向下延伸 20），见进度文件待答 5"
+ },
+ "hud.topInfo": {
+  "rect": {
+   "x": 520,
+   "y": 24,
+   "w": 480,
+   "h": 66
+  },
+  "style": "moonPhase",
+  "bind": {
+   "moon": "$env.moonPhase",
+   "darkHour": "$env.darkHour",
+   "date": "$env.date",
+   "weekday": "$env.weekday"
+  },
+  "note": "P3 月相 + 日期细线信息块；影时间时显示 label.darkHour"
+ },
+ "hud.enemyOver": {
+  "follow": "enemy",
+  "offset": {
+   "dx": 0,
+   "dy": -250
+  },
+  "style": "rosePlate",
+  "show": [
+   "name",
+   "hp",
+   "weak",
+   "shield"
+  ],
+  "atlas": "atlas.hud",
+  "frames": {
+   "weak": "hud.diamond"
+  },
+  "note": "敌名暗莓→玫红斜切条，不截断；HP 细斜条"
+ },
+ "hud.party": {
+  "rect": {
+   "x": 24,
+   "y": 600,
+   "w": 636,
+   "h": 96
+  },
+  "style": "card",
+  "cards": 4,
+  "cardW": 150,
+  "gap": 12,
+  "slant": 0.21,
+  "atlas": "atlas.hud",
+  "frames": {
+   "avatar": "hud.avatar.{unitId}"
+  },
+  "show": [
+   "avatar",
+   "hp",
+   "sp"
+  ],
+  "interactive": false
+ },
+ "hud.command": {
+  "rect": {
+   "x": 780,
+   "y": 220,
+   "w": 476,
+   "h": 476
+  },
+  "layout": "fivePlusMore",
+  "shape": "list",
+  "slant": 0.21,
+  "atlas": "atlas.hud",
+  "frames": {
+   "bar": "hud.cmdBar",
+   "cursor": "hud.cursor"
+  },
+  "items": [
+   {
+    "id": "cmd.0",
+    "role": "primary",
+    "rect": {
+     "x": 860,
+     "y": 220,
+     "w": 396,
+     "h": 96
+    },
+    "label": "cmd.skill"
+   },
+   {
+    "id": "cmd.1",
+    "role": "secondary",
+    "rect": {
+     "x": 840,
+     "y": 325,
+     "w": 400,
+     "h": 86
+    },
+    "label": "cmd.attack"
+   },
+   {
+    "id": "cmd.2",
+    "role": "secondary",
+    "rect": {
+     "x": 820,
+     "y": 420,
+     "w": 400,
+     "h": 86
+    },
+    "label": "cmd.item"
+   },
+   {
+    "id": "cmd.3",
+    "role": "secondary",
+    "rect": {
+     "x": 800,
+     "y": 515,
+     "w": 400,
+     "h": 86
+    },
+    "label": "cmd.guard"
+   },
+   {
+    "id": "cmd.4",
+    "role": "secondary",
+    "rect": {
+     "x": 780,
+     "y": 610,
+     "w": 290,
+     "h": 86
+    },
+    "label": "cmd.tactics"
+   },
+   {
+    "id": "cmd.more",
+    "role": "secondary",
+    "rect": {
+     "x": 1080,
+     "y": 610,
+     "w": 176,
+     "h": 86
+    },
+    "label": "label.more"
+   }
+  ],
+  "overflow": "cmd.more",
+  "note": "P3R 斜列：每行向左下错 20px；主 96 / 次 86；第 6 项起收进「更多」（cmd.more 与 cmd.4 同行）"
+ },
+ "hud.intent": {
+  "follow": "enemy",
+  "offset": {
+   "dx": 120,
+   "dy": -300
+  },
+  "style": "petalTag",
+  "note": "敌人意图小牌，pointer-events 无"
+ },
+ "fx.banner": {
+  "layer": "cutin",
+  "style": "ribbonBand",
+  "asset": "mask.ribbon"
+ },
+ "fx.cutin": {
+  "layer": "cutin",
+  "asset": "cutin.hamuko",
+  "bandAngle": 0.21
+ },
+ "fx.allout": {
+  "layer": "allout",
+  "finishCards": [
+   {
+    "asset": "allout.finish.default",
+    "match": {}
+   }
+  ]
+ },
+ "fx.transition": {
+  "layer": "trans",
+  "masks": [
+   "mask.petal",
+   "mask.ribbon"
+  ]
+ },
+ "scene.battle.bg": {
+  "asset": "bg.battle",
+  "darkHour": "bg.battle.darkhour",
+  "w": 2240,
+  "h": 720,
+  "anchor": [
+   0.5,
+   0.5
+  ]
+ },
+ "scene.hub.bg": {
+  "asset": "bg.hub",
+  "darkHour": "bg.hub.darkhour",
+  "w": 2240,
+  "h": 720,
+  "anchor": [
+   0.5,
+   0.5
+  ]
+ },
+ "scene.map.bg": {
+  "asset": "bg.map.tile",
+  "darkHour": "bg.map.tile.darkhour",
+  "tile": true,
+  "tileW": 512,
+  "tileH": 512
+ },
+ "scene.talk": {
+  "template": "talk"
+ },
+ "scene.result": {
+  "style": "rankRibbon",
+  "portrait": null,
+  "note": "结算/升级不放人脸：只用缎带结 hud.bow + 数字排版"
+ },
+ "unit.hamuko.portrait": {
+  "atlas": "atlas.portraits",
+  "layers": [
+   "body",
+   "head"
+  ],
+  "frames": {
+   "body": "ally.hamuko.body",
+   "head": "ally.hamuko.head"
+  },
+  "meshIdle": {
+   "breath": 0.011,
+   "period": 3000,
+   "swayPx": 7,
+   "swayZone": [
+    [
+     300,
+     160,
+     470,
+     170,
+     470,
+     350,
+     330,
+     360
+    ],
+    [
+     180,
+     0,
+     330,
+     0,
+     335,
+     60,
+     180,
+     60
+    ],
+    [
+     80,
+     130,
+     200,
+     120,
+     200,
+     300,
+     85,
+     305
+    ]
+   ]
+  }
+ },
+ "unit.yukari.portrait": {
+  "atlas": "atlas.portraits",
+  "layers": [
+   "body",
+   "head"
+  ],
+  "frames": {
+   "body": "ally.yukari.body",
+   "head": "ally.yukari.head"
+  },
+  "meshIdle": {
+   "breath": 0.011,
+   "period": 2900,
+   "swayPx": 7,
+   "swayZone": [
+    [
+     300,
+     100,
+     444,
+     180,
+     420,
+     260,
+     300,
+     240
+    ],
+    [
+     0,
+     260,
+     110,
+     240,
+     120,
+     380,
+     20,
+     390
+    ]
+   ]
+  }
+ },
+ "unit.junpei.portrait": {
+  "atlas": "atlas.portraits",
+  "layers": [
+   "body",
+   "head"
+  ],
+  "frames": {
+   "body": "ally.junpei.body",
+   "head": "ally.junpei.head"
+  },
+  "meshIdle": {
+   "breath": 0.01,
+   "period": 3300,
+   "swayPx": 3,
+   "swayZone": "head"
+  }
+ },
+ "unit.akihiko.portrait": {
+  "atlas": "atlas.portraits",
+  "layers": [
+   "body",
+   "head"
+  ],
+  "frames": {
+   "body": "ally.akihiko.body",
+   "head": "ally.akihiko.head"
+  },
+  "meshIdle": {
+   "breath": 0.009,
+   "period": 3400,
+   "swayPx": 5,
+   "swayZone": [
+    [
+     40,
+     30,
+     300,
+     0,
+     440,
+     120,
+     400,
+     170,
+     60,
+     170
+    ]
+   ]
+  }
+ },
+ "unit.hamuko.actor": {
+  "atlas": "atlas.portraits",
+  "frames": {
+   "idle": "ally.hamuko.full",
+   "evoke": "ally.hamuko.evoke"
+  },
+  "anchor": [
+   0.5,
+   1
+  ]
+ },
+ "unit.hamuko.cutin": {
+  "asset": "cutin.hamuko",
+  "w": 1280,
+  "h": 320
+ },
+ "unit.hamuko.highlight": {
+  "asset": "highlight.hamuko",
+  "w": 1280,
+  "h": 720,
+  "pack": "deferred"
+ },
+ "npc.theodore.portrait": {
+  "asset": "npc.theodore",
+  "pack": "deferred"
+ }
+}

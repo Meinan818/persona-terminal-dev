@@ -1,0 +1,10 @@
+{
+ "talk": {
+  "html": "<section class=\"pk-talk\"><div class=\"pk-talk__ribbon\"></div><header class=\"pk-talk__head\"><span class=\"pk-talk__name\" data-slot=\"enemyName\"></span><span class=\"pk-talk__odds\" data-slot=\"odds\"></span></header><img class=\"pk-talk__portrait\" data-slot=\"enemyPortrait\" alt=\"\"><div class=\"pk-talk__bubble\"><p class=\"pk-talk__line\" data-slot=\"line\"></p></div><ul class=\"pk-talk__choices\" data-slot=\"choices\"><li class=\"pk-talk__item\"><button class=\"pk-talk__choice\" data-slot=\"choice\"><span class=\"pk-talk__petal\"></span><span class=\"pk-talk__text\" data-slot=\"choiceText\"></span></button></li></ul><footer class=\"pk-talk__free\"><input class=\"pk-talk__input\" data-slot=\"input\" maxlength=\"60\"><button class=\"pk-talk__send\" data-slot=\"send\">▶</button></footer><span class=\"pk-talk__status\" data-slot=\"status\"></span></section>",
+  "params": {
+   "styleId": "p3r-pink-ribbon",
+   "maxLineChars": 60,
+   "typingCps": 42
+  }
+ }
+}

@@ -16,6 +16,7 @@ import {
   setPersonaOverride,
 } from './p5r-battle-adapter.js';
 import { generateEncounter } from '../rules/encounter';
+import { BASIC_ATTACK_POWER } from '../rules/combatNumbers';
 
 export const ELEMENTS = P5_ELEMENTS;
 export const STATUS = P5_STATUS;
@@ -450,7 +451,7 @@ export class P5Battle {
           id: 'basic',
           name: '普攻',
           element: 'phys',
-          power: 18,
+          power: BASIC_ATTACK_POWER,
         });
       }
       this.afterAction(actor);

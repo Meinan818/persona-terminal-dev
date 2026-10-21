@@ -53,3 +53,8 @@
 
 - `rules/encounter` 按楼层/警戒度生成 1–5 只；`createDefaultBattle` 默认不再写死两只。
 - 战斗、HOLD UP、总攻、交涉、意图遍历 `enemies` 数组；补 1/3/5 只完整流程测试。
+
+## D-006 · 平衡模拟
+
+- 已建立 `npm run sim:balance`、`src/umbra/balance`、`docs/umbra-progress/balance.md`。
+- 首次 500 局小样本胜率表已写入 `docs/umbra-progress/balance.md`；当前普攻杂兵/精英仍偏高、弱点打法偏低，继续调 `rules/combatNumbers.ts` 与 `balanceData.ts`。

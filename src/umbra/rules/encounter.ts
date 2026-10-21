@@ -1,4 +1,5 @@
 export type EncounterKind = 'mob' | 'elite' | 'boss';
+import { ENEMY_TIER_MULTIPLIERS, PHYS_RESIST_CHANCE } from './combatNumbers';
 
 export interface EncounterEnemySpec {
   id: string;
@@ -37,15 +38,17 @@ function makeEnemySpec(
 ): EncounterEnemySpec {
   const element = ELEMENT_POOL[Math.floor(rng() * ELEMENT_POOL.length)];
   const weakness = ELEMENT_POOL[Math.floor(rng() * ELEMENT_POOL.length)];
-  const resist = ELEMENT_POOL[Math.floor(rng() * ELEMENT_POOL.length)];
+  const resist = rng() < PHYS_RESIST_CHANCE
+    ? 'phys'
+    : ELEMENT_POOL[Math.floor(rng() * ELEMENT_POOL.length)];
   const level = clamp(floor + Math.floor(rng() * 3), 1, 99);
-  const power = elite ? 1.8 : boss ? 2.6 : 1;
+  const mult = ENEMY_TIER_MULTIPLIERS[boss ? 'boss' : elite ? 'elite' : 'mob'];
   return {
     id,
     name: boss ? `守门阴影 ${id}` : elite ? `精英阴影 ${id}` : `杂兵阴影 ${id}`,
-    maxHp: Math.max(40, Math.round(50 + level * 3 * power)),
-    attack: Math.round(14 + level * 1.5 * power),
-    defense: Math.round(4 + level * 0.6 * power),
+    maxHp: Math.max(40, Math.round((50 + level * 3) * mult.hp)),
+    attack: Math.round((14 + level * 1.5) * mult.attack),
+    defense: Math.round((4 + level * 0.6) * mult.defense),
     element,
     weakness,
     resist,

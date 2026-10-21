@@ -1,6 +1,6 @@
 import { createDefaultBattle } from './p5-combat-rules';
 
-export type BattlePolicy = 'basic' | 'weakness' | 'random';
+export type BattlePolicy = 'basic' | 'weakness' | 'advanced' | 'random';
 
 export interface HeadlessBattleOptions {
   seed: number;
@@ -50,7 +50,9 @@ const actorSkills = (battle: any): any[] => {
 };
 
 function pickAction(battle: any, policy: BattlePolicy, rng: () => number): Record<string, unknown> | null {
-  if (battle.phase === 'holdUp') return { type: 'continue' };
+  if (battle.phase === 'holdUp') {
+    return policy === 'basic' ? { type: 'continue' } : { type: 'allOut' };
+  }
   if (battle.phase !== 'party' || !battle.actor) return null;
 
   const enemies = battle.aliveEnemies ?? [];
@@ -65,6 +67,32 @@ function pickAction(battle: any, policy: BattlePolicy, rng: () => number): Recor
       && actor.sp >= (item.sp ?? 0)
     ));
     if (skill) return { type: 'skill', id: skill.id, targetId: target.id };
+    return { type: 'basic', targetId: target.id };
+  }
+
+  if (policy === 'advanced') {
+    const actor = battle.actor;
+    const skills = actorSkills(battle);
+    const weakSkill = skills.find((item: any) => (
+      item.element === target.weakness
+      && (item.power ?? 0) > 0
+      && actor.sp >= (item.sp ?? 0)
+    ));
+    if (weakSkill) return { type: 'skill', id: weakSkill.id, targetId: target.id };
+
+    const switchAction = (battle.actions ?? []).find((item: any) => (
+      item.type === 'switchMask'
+      && actor.masks?.[item.id]?.skills?.some((skill: any) => skill.element === target.weakness)
+    ));
+    if (switchAction) return switchAction;
+
+    const baton = (battle.actions ?? []).find((item: any) => item.type === 'batonPass');
+    if (baton) return baton;
+
+    const heavyIntent = target.intent && (target.intent.power ?? 0) >= 24;
+    if (heavyIntent && (battle.actions ?? []).some((item: any) => item.type === 'guard')) {
+      return { type: 'guard' };
+    }
     return { type: 'basic', targetId: target.id };
   }
 
@@ -101,8 +129,9 @@ export function runHeadlessBattle(options: HeadlessBattleOptions): HeadlessBattl
   const actions: string[] = [];
   let actionCount = 0;
   let guard = 0;
+  const maxActions = maxRounds * 20;
 
-  while (!terminalPhase(battle.phase) && guard < maxRounds) {
+  while (!terminalPhase(battle.phase) && guard < maxRounds && actionCount < maxActions) {
     const action = pickAction(battle, policy, rng);
     if (!action) break;
     const response = battle.act(action);

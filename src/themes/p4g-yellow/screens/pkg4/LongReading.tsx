@@ -10,7 +10,9 @@ import { CollageStagger, CollageItem } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
 import { TAROT_BY_ID, ORI_LABEL, PERIOD_LABELS, spreadPositionsFor, periodHasBase, BASE_POSITION, drawRandom, randomOri } from '@yellow/adapters/pkg4-tarot';
-import { LONG_STREAM_TEXT, TODAY, shiftKey } from '@yellow/adapters/pkg4-astro';
+import { LONG_STREAM_TEXT, TODAY, shiftKey, useAstrologyData } from '@yellow/adapters/pkg4-astro';
+import { useAppStore } from '@/store';
+import { startLongJob, useTarotJobs } from '@/utils/tarotJobs';
 import { TarotFace, TarotBack, FlipCard, Markdownish, ThinkingTV, useHold, useFakeProgress, useTypewriter, cardH } from './tarot';
 import { CardLabel, MsgBox, StateFade } from './ui';
 
@@ -23,6 +25,8 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
   initialStep?: LongStep; noApiKey: boolean; activeCount: number; resume?: boolean; onSaved: (r: LongReading) => void; onBack: () => void;
 }) {
   const low = useLowMotion();
+  const astro = useAstrologyData();
+  const job = useTarotJobs((s) => s.long);
   const [phase, setPhase] = useState<LongStep>(initialStep);
   const [question, setQuestion] = useState(initialStep === 'form' ? '' : '我最近对工作的方向感到迷茫，接下来该如何取舍？');
   const [period, setPeriod] = useState<LongReadingPeriod>(initialStep === 'base' ? 'longterm' : 'midterm');
@@ -53,17 +57,39 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
     if (picks.length !== 3) return;
     if (noApiKey) { setError('请先在「设置 → AI 服务」中配置 API 密钥。中长期占卜无法离线完成。'); return; }
     setPhase('revealing');
-    setTimeout(() => setPhase((p) => (p === 'revealing' ? 'reading' : p)), low ? 300 : 1500);
+    setTimeout(() => {
+      const picked: DrawnCard[] = [...(base ? [{ cardId: base.id, orientation: base.orientation }] : []), ...picks.map((i) => ({ cardId: cands[i].id, orientation: cands[i].orientation }))];
+      const settings = useAppStore.getState().settings;
+      startLongJob({
+        settings,
+        question: question.trim() || '（演示）',
+        period,
+        candidates: cands.map((c) => ({ cardId: c.id, orientation: c.orientation })),
+        pickedIndices: picks,
+        base: base ? { cardId: base.id, orientation: base.orientation } : undefined,
+      });
+      setPhase('reading');
+    }, low ? 300 : 1500);
   };
   const reading = phase === 'reading';
-  const prog = useFakeProgress(reading, 2400);
-  const tw = useTypewriter(LONG_STREAM_TEXT, reading && prog >= 1, 80);
+  const prog = useFakeProgress(reading && job?.status === 'thinking', 2400);
+  const text = reading ? (job?.text ?? '') : '';
+  const tw = { text, done: reading && job?.status === 'streaming' && !!text && job.truncated };
+  void tw;
   const accept = () => {
-    const picked: DrawnCard[] = [...(base ? [{ cardId: base.id, orientation: base.orientation }] : []), ...picks.map((i) => ({ cardId: cands[i].id, orientation: cands[i].orientation }))];
-    const r: LongReading = { id: `lr-${Date.now()}`, question: question.trim() || '（演示）', period, drawnFrom: cands.map((c) => c.id), picked, content: tw.text || LONG_STREAM_TEXT, followUps: [], archived: false, createdAt: new Date(), expiresAt: shiftKey(14) };
-    setSaved(r); onSaved(r); setPhase('done');
+    if (job?.status === 'done' && job.result) {
+      setSaved(job.result); onSaved(job.result); setPhase('done');
+    }
   };
-  useEffect(() => { if (reading && tw.done && prog >= 1 && !truncated) { const t = setTimeout(accept, 600); return () => clearTimeout(t); } }, [reading, tw.done, prog, truncated]); // eslint-disable-line
+  useEffect(() => {
+    if (reading && job?.status === 'done' && job.result && !saved) {
+      setSaved(job.result); onSaved(job.result); setPhase('done');
+    }
+    if (reading && job?.status === 'error') {
+      setError(job.error ?? '解读失败');
+      setPhase('revealing');
+    }
+  }, [job?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (phase === 'done' && saved) return <ReadingDetail reading={saved} canFollowUp onBack={onBack} onArchive={(a) => setSaved({ ...saved, archived: a })} onDelete={onBack} onFollowSaved={(f) => setSaved({ ...saved, followUps: [f] })} />;
 

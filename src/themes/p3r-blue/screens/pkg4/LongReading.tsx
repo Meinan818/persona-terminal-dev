@@ -11,7 +11,9 @@ import { P3R, P3Button, P3Tag, P3Textarea, P3Field, P3Empty, P3Dialog, P3ListRow
 import { useAIStream, AIText, type AIFail, type AIPhase } from '@blue/fx';
 import { useLowMotion } from '@blue/lib/prefs';
 import { TAROT_BY_ID, ORI_LABEL, PERIOD_LABELS, spreadPositionsFor, periodHasBase, BASE_POSITION, drawRandom } from '@blue/adapters/pkg4-tarot';
-import { LONG_STREAM_TEXT, TODAY, shiftKey } from '@blue/adapters/pkg4-astro';
+import { LONG_STREAM_TEXT, TODAY, shiftKey, useAstrologyData } from '@blue/adapters/pkg4-astro';
+import { useAppStore } from '@/store';
+import { startLongJob, useTarotJobs } from '@/utils/tarotJobs';
 import { Arcana, PinkBack, FlipCard, Markdownish, ThinkingCircle, useHold, useFakeProgress, cardH } from './tarot';
 import { PhaseTitle, HintStrip, ErrStrip, Label, SlantAction, StateFade } from './ui';
 
@@ -39,6 +41,8 @@ export function LongReadingFlow({ init, activeCount, onSaved, onBack }: { init: 
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(!!init.resume);
   const [saved, setSaved] = useState<LongReading | null>(null);
+  const astro = useAstrologyData();
+  const job = useTarotJobs((s) => s.long);
   const cap = !!init.cap || activeCount >= 2;
   const hasBase = periodHasBase(period);
   const positions = spreadPositionsFor(period, 3);
@@ -53,9 +57,12 @@ export function LongReadingFlow({ init, activeCount, onSaved, onBack }: { init: 
     const picked: DrawnCard[] = [...(base ? [{ cardId: base.id, orientation: base.orientation }] : []), ...picks.map((i) => ({ cardId: cands[i].id, orientation: cands[i].orientation }))];
     return { id: `lr-${Date.now()}`, question: question.trim() || DEMO_Q, period, drawnFrom: cands.map((c) => c.id), picked, content, followUps: [], archived: false, createdAt: new Date(), expiresAt: shiftKey(14) };
   };
-  const accept = (content = ai.full) => { const r = buildReading(content); setSaved(r); onSaved(r); setPhase('done'); };
+  const accept = (content = ai.full) => { const r = buildReading(content); void astro.saveLongReading(r); setSaved(r); onSaved(r); setPhase('done'); };
   // AI 完成 → 600ms 后存档并转详情（真实：job done → 写入 store → done）
-  useEffect(() => { if (phase === 'reading' && ai.phase === 'done' && init.step !== 'done') later(() => accept(), low ? 0 : 600); }, [ai.phase, phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (phase === 'reading' && job?.status === 'done' && job.result) { setSaved(job.result); onSaved(job.result); setPhase('done'); }
+    if (phase === 'reading' && job?.status === 'error') { setError(job.error ?? '解读失败'); setPhase('revealing'); }
+  }, [job?.status, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = () => {
     if (!question.trim() || cap || init.noApiKey) return;
@@ -73,7 +80,18 @@ export function LongReadingFlow({ init, activeCount, onSaved, onBack }: { init: 
     if (picks.length !== 3) return;
     if (init.noApiKey) { setError('请先在「设置 → AI 服务」中配置 API 密钥。中长期占卜无法离线完成。'); return; }
     setError(null); setPhase('revealing');
-    later(() => { setPhase((p) => (p === 'revealing' ? 'reading' : p)); ai.start(); }, low ? 300 : 1500);
+    later(() => {
+      const settings = useAppStore.getState().settings;
+      startLongJob({
+        settings,
+        question: question.trim() || DEMO_Q,
+        period,
+        candidates: cands.map((c) => ({ cardId: c.id, orientation: c.orientation })),
+        pickedIndices: picks,
+        base: base ? { cardId: base.id, orientation: base.orientation } : undefined,
+      });
+      setPhase('reading');
+    }, low ? 300 : 1500);
   };
   // 直达 revealing：自动按真实节奏进入 reading
   useEffect(() => { if (init.step === 'revealing') later(() => { setPhase((p) => (p === 'revealing' ? 'reading' : p)); ai.start(); }, low ? 300 : 1500); }, []); // eslint-disable-line react-hooks/exhaustive-deps

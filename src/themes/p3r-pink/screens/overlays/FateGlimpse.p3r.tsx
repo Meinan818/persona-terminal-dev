@@ -15,7 +15,7 @@ import { P3R, P3Sheet, P3Button, P3Tag, Portal, useEscape, useScrollLock, slantC
 import { useAIStream, AIText, PetalBurst, type AIFail, type AIPhase } from '@pink/fx';
 import { useLowMotion } from '@pink/lib/prefs';
 import { TAROT_BY_ID, ATTR_NAMES, FORTUNE_LABEL } from '@pink/adapters/pkg4-tarot';
-import { WINDOW_DAYS, LAST_GLIMPSE, WEEKDAY_CN } from '@pink/adapters/pkg4-astro';
+import { useFateWindow, WEEKDAY_CN } from '@pink/adapters/pkg4-astro';
 import { Arcana, PinkBack, ThinkingCircle, Markdownish, useHold, useFakeProgress, cardH } from '@pink/screens/pkg4/tarot';
 
 // ───────────────────────── 当日塔罗回看 ─────────────────────────
@@ -116,14 +116,19 @@ export function GlimpseRitual({ open, onClose, mode = 'new', initialStage, fail,
 }
 
 function RitualBody({ onClose, mode, initialStage, fail, autoHold, low, aiStart }: { onClose: () => void; mode: 'new' | 'review'; initialStage?: RitualStage; fail?: AIFail; autoHold?: boolean; low: boolean; aiStart?: AIPhase }) {
-  const glimpse = LAST_GLIMPSE;
-  const days = WINDOW_DAYS.map((d) => d.drawn!).filter(Boolean);
+  const fate = useFateWindow();
+  const glimpse = fate.lastGlimpse;
+  const days = fate.days.map((d) => d.drawn).filter((d): d is DailyDivination => !!d);
   const start: RitualStage = mode === 'review' ? 'revealed' : initialStage ?? 'gather';
   const [stage, setStage] = useState<RitualStage>(start);
   const [offline, setOffline] = useState(fail === 'offline');
   const [burst, setBurst] = useState(false);
   const aiInit: AIPhase = mode === 'review' ? 'done' : aiStart ?? 'idle';
-  const ai = useAIStream({ text: glimpse.summary, fail, failAt: 0.42, initialPhase: aiInit, cps: 36 });
+  const ai = useAIStream({ text: glimpse?.summary ?? '', fail, failAt: 0.42, initialPhase: aiInit, cps: 36 });
+  const verdict = glimpse?.verdict ?? '';
+  const summary = glimpse?.summary ?? '';
+  const outlook = glimpse?.outlook ?? '';
+  const advice = glimpse?.advice ?? '';
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
@@ -191,13 +196,13 @@ function RitualBody({ onClose, mode, initialStage, fail, autoHold, low, aiStart 
                 onAnimationComplete={() => { if (stage === 'flipping') setStage('revealed'); }}
                 style={{ transformStyle: 'preserve-3d', width: cw, height: cardH(cw) }}
                 className={stage === 'await' ? 'relative cursor-pointer touch-none select-none' : 'relative select-none'}>
-                {low ? (revealed ? <FateCardFace verdict={glimpse.verdict} width={cw} /> : <PinkBack width={cw} />) : (
+                {low ? (revealed ? <FateCardFace verdict={verdict} width={cw} /> : <PinkBack width={cw} />) : (
                   <>
                     <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden' }}>
                       <span aria-hidden className="absolute -inset-3 rounded-[18px]" style={{ background: 'rgba(255,111,163,0.35)', opacity: progress, transform: `scale(${0.92 + progress * 0.12})` }} />
                       <PinkBack width={cw} />
                     </div>
-                    <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}><FateCardFace verdict={revealed || stage === 'flipping' ? glimpse.verdict : null} width={cw} /></div>
+                    <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}><FateCardFace verdict={revealed || stage === 'flipping' ? verdict : null} width={cw} /></div>
                   </>
                 )}
               </motion.div>
@@ -240,9 +245,9 @@ function RitualBody({ onClose, mode, initialStage, fail, autoHold, low, aiStart 
               )}
               {done && (
                 <>
-                  <ReadingBlock label="总结" en="RETROSPECT" delay={0}>{glimpse.summary}</ReadingBlock>
-                  <ReadingBlock label="展望" en="OUTLOOK" delay={0.12}>{glimpse.outlook}</ReadingBlock>
-                  <ReadingBlock label="建议" en="GUIDANCE" delay={0.24}><div className="whitespace-pre-line">{glimpse.advice}</div></ReadingBlock>
+                  <ReadingBlock label="总结" en="RETROSPECT" delay={0}>{summary}</ReadingBlock>
+                  <ReadingBlock label="展望" en="OUTLOOK" delay={0.12}>{outlook}</ReadingBlock>
+                  <ReadingBlock label="建议" en="GUIDANCE" delay={0.24}><div className="whitespace-pre-line">{advice}</div></ReadingBlock>
                   <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: low ? 0 : 0.4 }} className="relative overflow-hidden px-5 py-3.5" style={{ background: 'linear-gradient(120deg, rgba(255,211,107,0.22), rgba(255,111,163,0.16))', clipPath: slantClip(14) }}>
                     <div className="flex items-center gap-2">
                       <span aria-hidden style={{ color: 'var(--p3r-gold)' }}>✦</span>
@@ -276,7 +281,8 @@ function SpreadCard({ d, index, charged, low }: { d: DailyDivination; index: num
 // ───────────────────────── Harness 默认导出 ─────────────────────────
 export function DayReview({ open, onClose, params }: OverlayProps) {
   const i = Number(params?.get('day') ?? 4);
-  const d = WINDOW_DAYS[Math.max(0, Math.min(6, Number.isFinite(i) ? i : 4))].drawn ?? WINDOW_DAYS[6].drawn;
+  const fate = useFateWindow();
+  const d = fate.days[Math.max(0, Math.min(6, Number.isFinite(i) ? i : 4))]?.drawn ?? fate.days[6]?.drawn ?? null;
   return <DayReviewSheet d={d} open={open} onClose={onClose} />;
 }
 

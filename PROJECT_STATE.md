@@ -2,6 +2,13 @@
 
 最后更新：2026-10-21（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 已提交 · 2026-10-21 · 三主题 Settings 真实设置数据
+
+- **范围**：三主题 `settingsStore.ts` 新增 `hydrateFromRealStore()`，页面挂载时把真实 `useAppStore.settings` 原地合入 mock store：音效/BGM、天气（`weatherApiKey`/`weatherApiHost`/`weatherCity`）、AI（`summaryApiProvider`/`summaryApiKey`/`summaryModel`/`navigatorModel`/`visionModel`/`audioModel`/`assistantModel`）、深思熟虑（`tarotDailyDeliberate`/`summaryDeliberate`）、自动总结（`summaryAutoWrite`）、逆流、记账（`ledgerEnabled`/`currency`/`spendEvalEnabled`/`ledgerPayCycleEnabled`/`ledgerResetDay`）、属性名、阈值、难度（`levelDifficulty`）、称号（`attributeLevelTitles`）、关键词规则、通知（`notificationsEnabled`/`notificationSlots`）、自定义主题（`customThemeColor`/`customSoundScheme`/`customTarotSet`）、背景（`backgroundAnimation`/`backgroundImage`/`backgroundOpacity`/`backgroundOrientation`）。三主题 `Settings` 页面挂载时调 `hydrateFromRealStore()`。
+- **验证**：`tsc --noEmit` exit 0；全量 `vitest run` 68 文件/413 项通过；构建 BUILD_EXIT=0（`settings-real-20261021.log`）。
+- **提交**：`ba58bf1`（6 文件，168+/6-）。未 Push。
+- **下一步**：全局演出 / 红色 Statistics；或补 Settings 浏览器验证。
+
 ## 已提交 · 2026-10-21 · 三主题 Statistics 真实活动数据
 
 - **范围**：三主题 `pkg4-stats` 适配器新增 `useStatActivities()`，从真实 `activities` 映射 `{ date, pts }`（`date` 取 ISO 日期、`pts` 取 `pointsAwarded`）。三主题 `Statistics` 页 `acts` 优先用真实 `realActs`，无建档回 mock。

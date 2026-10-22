@@ -11,6 +11,8 @@ import { PageTitle } from '@/components/PageTitle';
 import { BackButton } from '@/components/BackButton';
 import { ModalPortal } from '@/components/ModalPortal';
 import { useUiChannel } from '@/ui/useUiChannel';
+import AchievementsP4 from '@yellow/screens/pages/Achievements.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { P4Flower, P4Sparkle, P4ArcRings, P4SkyCircle, P4_HEADER_BLEED } from '@/ui/p4Kit';
 import { P3R, P3RPage, GhostWords, P3PageHeader, P3EmptySlab, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_TITLE_FONT, P5SubBar, P5Star, P5Dots, P5Slab, P5RPage } from '@/components/p5r/kit';
@@ -1717,6 +1719,8 @@ export const Achievements = () => {
     );
   }
   const p5 = channel === 'p5';
+
+  if (useUiChannel() === 'p4') return <P4Host><AchievementsP4 pageId="achievements" params={new URLSearchParams()} /></P4Host>;
 
   return (
     <P5RPage active={p5}>

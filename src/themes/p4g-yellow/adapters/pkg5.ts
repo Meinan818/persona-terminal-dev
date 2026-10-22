@@ -12,10 +12,10 @@ export function useRealAttributes() {
 import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
-import type { LedgerEntry, Attribute } from '@/types';
+import type { LedgerEntry, Attribute, AttributeId } from '@/types';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
 import type { User } from '@/types';
-import { useCloudUser } from '@/themes/astrologyData';
+import { useAchievementProgressMap, useCloudUser, useSeasonCollectedMap, useTarotCollectedMap } from '@/themes/astrologyData';
 
 export function useAccountData() {
   const attributes = useAppStore((s) => s.attributes);
@@ -33,6 +33,42 @@ export function useAccountData() {
     TOTAL_POINTS,
   }), [attributes, cloudUser, cloudEnabled, TOTAL_LEVEL, TOTAL_POINTS]);
 }
+
+export function useAchievementsData() {
+  const { achievements, skills, attributes } = useAppStore(useShallow((s) => ({
+    achievements: s.achievements,
+    skills: s.skills,
+    attributes: s.attributes,
+  })));
+  const names = useAppStore((s) => s.settings.attributeNames);
+  const progress = useAchievementProgressMap();
+  const tarot = useTarotCollectedMap();
+  const season = useSeasonCollectedMap();
+  return useMemo(() => ({
+    ACHIEVEMENTS: achievements,
+    SKILLS: skills,
+    ATTRIBUTES: attributes as Attribute[],
+    ATTR_NAMES: { ...names } as Record<AttributeId, string>,
+    achievementProgress: progress,
+    TAROT_COLLECTED: tarot,
+    SEASON_COLLECTED: season,
+  }), [achievements, skills, attributes, names, progress, tarot, season]);
+}
+
+type AchievementInput = Parameters<ReturnType<typeof useAppStore.getState>['addCustomAchievement']>[0];
+type SkillInput = Parameters<ReturnType<typeof useAppStore.getState>['addCustomSkill']>[0];
+
+export const achievementsOps = {
+  unlock: (id: string) => useAppStore.getState().unlockAchievement(id),
+  addAchievement: (a: AchievementInput) => useAppStore.getState().addCustomAchievement(a),
+  updateAchievement: (id: string, a: Partial<AchievementInput>) => useAppStore.getState().updateCustomAchievement(id, a),
+  removeAchievement: (id: string) => useAppStore.getState().deleteCustomAchievement(id),
+  addSkill: (s: SkillInput) => useAppStore.getState().addCustomSkill(s),
+  updateSkill: (id: string, s: Partial<SkillInput>) => useAppStore.getState().updateCustomSkill(id, s),
+  removeSkill: (id: string) => useAppStore.getState().deleteCustomSkill(id),
+  toggleSkill: (id: string) => useAppStore.getState().toggleSkillUnlock(id),
+  unlockSkill: (id: string) => useAppStore.getState().unlockSkill(id),
+};
 
 // A 类：只转发纯计算/格式化函数（真实仓库同名、同签名、同返回结构）
 // catMeta / INCOME_META 不转发：真实版返回结构不同（没有 demo 用的 color 字段），图标/颜色属于设计，保留 demo 版

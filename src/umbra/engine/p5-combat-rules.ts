@@ -783,8 +783,7 @@ export class P5Battle {
     const partyIds = this.aliveParty.map(member => member.id);
     const choice = action.type === 'allOut' ? 'allout'
       : action.type === 'negotiate' ? 'talk'
-        : action.type === 'continue' ? 'release'
-          : action.type;
+        : action.type;
 
     if (choice === 'allout') {
       this.emit('holdup:result', { choice: 'allout', enemyIds });
@@ -832,6 +831,13 @@ export class P5Battle {
       enemy.enraged = true;
       this.push(`${enemy.name} 被激怒了。`);
       this.phase = 'party';
+      if (actor) this.finishActor(actor);
+      return { ok: true };
+    }
+    if (choice === 'continue') {
+      for (const enemy of this.aliveEnemies) enemy.down = false;
+      this.phase = 'party';
+      this.push('你们没有理会它，继续战斗。');
       if (actor) this.finishActor(actor);
       return { ok: true };
     }

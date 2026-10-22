@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/store';
+import type { ThemeType } from '@/types';
 
 type PresenceLike = { name: string; avatar: string | null; theme: string };
 type SetPresence = (p: Partial<PresenceLike>) => void;
@@ -27,7 +28,10 @@ export function PresenceBridge({ presence, setPresence }: { presence: PresenceLi
     if ((presence.avatar ?? null) !== (user.avatarDataUrl ?? null)) {
       void store.updateUser({ avatarDataUrl: presence.avatar ?? undefined });
     }
-  }, [presence.name, presence.avatar, user?.name, user?.avatarDataUrl]);
+    if (presence.theme && presence.theme !== user.theme) {
+      void store.setTheme(presence.theme as ThemeType);
+    }
+  }, [presence.name, presence.avatar, presence.theme, user?.name, user?.avatarDataUrl, user?.theme]);
 
   return null;
 }

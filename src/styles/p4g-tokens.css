@@ -308,7 +308,7 @@
 
 /* ── 低动效：App 内档位 或 系统 prefers-reduced-motion ───────────────────────
  * 时长归零 → 位移/缩放动效瞬时完成；fx 组件自身也读 useLowMotion() 改为纯淡入。 */
-[data-p4g-motion='low'] {
+[data-p4g-motion='low'] [data-p4g-scope] {
   --p4g-dur-instant: 0ms;
   --p4g-dur-fast: 0ms;
   --p4g-dur-base: 0ms;
@@ -328,15 +328,16 @@
     --p4g-stagger: 0ms;
   }
 }
-[data-p4g-motion='low'] *,
-[data-p4g-motion='low'] *::before,
-[data-p4g-motion='low'] *::after {
+[data-p4g-motion='low'] [data-p4g-scope],
+[data-p4g-motion='low'] [data-p4g-scope] *,
+[data-p4g-motion='low'] [data-p4g-scope] *::before,
+[data-p4g-motion='low'] [data-p4g-scope] *::after {
   animation-duration: 0.001ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  [data-p4g-scope], [data-p4g-scope] *, [data-p4g-scope] *::before, [data-p4g-scope] *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
@@ -354,8 +355,8 @@
   -webkit-tap-highlight-color: transparent;
   overflow-x: hidden;
 }
-button { font: inherit; color: inherit; }
-:focus-visible { outline: 3px solid var(--p4g-focus); outline-offset: 2px; }
+[data-p4g-scope] button, button[data-p4g-scope] { font: inherit; color: inherit; }
+[data-p4g-scope] :focus-visible, [data-p4g-scope]:focus-visible { outline: 3px solid var(--p4g-focus); outline-offset: 2px; }
 
 /* ════════════════════════════ 工具类 ══════════════════════════════════════ */
 

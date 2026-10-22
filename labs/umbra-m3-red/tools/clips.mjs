@@ -14,7 +14,7 @@ const page = await (await browser.newContext({ viewport: { width: W, height: H }
 await page.goto('http://127.0.0.1:8766/?auto=0&maxdt=400', { waitUntil: 'load' });
 const until = (fn, arg, t = 60000) => page.waitForFunction(fn, arg, { timeout: t, polling: 50 });
 await until(() => window.__umbra && window.__umbra.mode === 'command' && !window.__umbra.busy);
-let n = 0; const tmp = '/tmp/umbra-clip'; 
+let n = 0; const tmp = '/workspace/work/umbra-next/m3/work/clip-tmp';   // /tmp 会被清空，帧缓存放工作区 
 async function record(name, start, evs) {
   fs.rmSync(tmp, { recursive: true, force: true }); fs.mkdirSync(tmp); n = 0;
   for (let i = 0; i < 8; i++) { await page.screenshot({ path: `${tmp}/${String(n++).padStart(4, '0')}.png` }); }   // 0.5s 待机（呼吸/摆动）
@@ -37,7 +37,7 @@ async function record(name, start, evs) {
 }
 if (which.includes('summon')) await record('summon-eiha', () => { window.__umbra.enemy('noisy'); window.__umbra.cmd('persona'); window.__umbra.row(0); window.__umbra.row(0); }, [['action', 1700], ['onemore', 440]]);
 await until(() => window.__umbra.mode === 'command' && !window.__umbra.busy);
-if (which.includes('attack')) await record('attack', () => { window.__umbra.enemy('echo'); window.__umbra.cmd('attack'); }, [['action', 1100], ['onemore', 440]]);
+if (which.includes('attack')) await record('attack', () => { window.__umbra.enemy('echo'); window.__umbra.cmd('attack'); }, [['action', 1100], ['holdup', 950]]);   // 第五阶段：普攻打倒最后一只 → HOLD UP 环绕镜头
 if (which.includes('allout')) {
   await until(() => window.__umbra.mode === 'holdup' && !window.__umbra.busy);
   await record('allout', () => window.__umbra.cmd('allout'), [['allout', 3060]]);

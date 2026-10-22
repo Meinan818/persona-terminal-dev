@@ -1,12 +1,12 @@
 {
- "codeKB": 249.0,
+ "codeKB": 252.1,
  "imagesKB": 318.6,
  "images": 11,
  "fontsKB": 59.9,
- "dataKB": 19.2,
+ "dataKB": 20.0,
  "uiCssKB": 0.8,
- "skinShareKB": 398.6,
- "firstPackKB": 627.5,
+ "skinShareKB": 399.3,
+ "firstPackKB": 630.7,
  "perImage": {
   "bg.battle.castle": [
    2260,

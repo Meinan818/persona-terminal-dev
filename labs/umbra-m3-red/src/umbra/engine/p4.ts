@@ -137,6 +137,7 @@ export const duoEntrance: Prim = (t, rc) => {
       const zoom = 1.16 - 0.1 * pC + 0.08 * crouch + 0.22 * out + Math.sin(ms / 90) * 0.004;
       c.pivot.set(640 + (focus - 640) * 0.4, 360 - 20 * crouch); c.position.set(640, 360);
       c.scale.set(zoom); c.rotation = 0.02 * (1 - pB) - 0.015 * pB * (1 - pC) + 0.03 * out;
+      tagA.x += c.pivot.x - 640; tagB.x += c.pivot.x - 640;   // 代号名牌不跟镜头平移出画（4:3 时左侧名牌会被裁）
     },
     end() { kill(rc, c); } };
 };

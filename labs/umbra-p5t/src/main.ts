@@ -1,9 +1,9 @@
 // 灰盒表现层：three.js 方块 + HTML HUD。只读 Battle 状态、只调用 Battle 指令、只消费事件。
 import * as THREE from 'three';
-import { Battle, testMap, key, eq } from './rules';
-import type { BattleEvent, SkillDef, Unit, Vec } from './rules';
+import { Battle, MAPS, key, eq, VOLTAGE_MAX } from './rules';
+import type { BattleEvent, SkillDef, Unit, Vec, StatusId } from './rules';
 
-type Mode = 'auto' | 'melee' | 'gun' | 'skill';
+type Mode = 'auto' | 'melee' | 'gun' | 'skill' | 'unique';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const canvas = $<HTMLCanvasElement>('#scene');
@@ -20,9 +20,17 @@ sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
 scene.add(sun);
 
-const COLORS: Record<string, number> = { joker: 0x1a1a1a, skull: 0xf2c200, panther: 0xe8335a };
-const TILE = 1;
+const COLORS: Record<string, number> = {
+  joker: 0x1a1a1a, skull: 0xf2c200, panther: 0xe8335a, mona: 0xf0f0f0, fox: 0x2f6bff, queen: 0x5b3aa8,
+  noir: 0x9a6b3a, erina: 0xff7a00, kasumi: 0xd8202f, toshiro: 0x6aa0a0,
+};
+const LEVEL = 0.6; // 每层高度
+const ST_NAME: Record<StatusId, string> = { burn: '灼烧', freeze: '冻结', shock: '感电', dizzy: '眩晕', despair: '绝望', forget: '遗忘', sleep: '睡眠' };
+const ST_SHORT: Record<StatusId, string> = { burn: '灼', freeze: '冻', shock: '电', dizzy: '晕', despair: '绝', forget: '忘', sleep: '睡' };
+const ACT_NAME = { melee: '近战', gun: '枪', skill: '技能' } as const;
 
+const params = new URLSearchParams(location.search);
+let mapIdx = Math.max(0, MAPS.findIndex((m) => m.id === params.get('map')));
 let battle: Battle;
 let world: THREE.Group;
 let overlay: THREE.Group;
@@ -40,7 +48,9 @@ let showThreat = false;
 let inspectEnemy: string | null = null;
 let busy = false;
 
-const w2v = (p: Vec, y = 0) => new THREE.Vector3(p.x * TILE, y, p.y * TILE);
+const gh = (p: Vec) => (battle ? battle.grid.h(p) * LEVEL : 0);
+const w2v = (p: Vec, y = 0) => new THREE.Vector3(p.x, y + gh(p), p.y);
+const std = (color: number, extra: Partial<THREE.MeshStandardMaterialParameters> = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
 
 function build() {
   if (world) scene.remove(world);
@@ -53,58 +63,107 @@ function build() {
   $('#labels').innerHTML = '';
   labelEl.clear();
   const m = battle.map;
-  const floorGeo = new THREE.BoxGeometry(0.96, 0.2, 0.96);
   for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) {
     const t = m.tiles[y][x];
+    const h = battle.grid.h({ x, y });
     const light = (x + y) % 2 === 0;
-    const mat = new THREE.MeshStandardMaterial({ color: t === 'exit' ? 0x2a6b3a : light ? 0x3b3b44 : 0x33333b, roughness: 0.9 });
-    const tile = new THREE.Mesh(floorGeo, mat);
-    tile.position.copy(w2v({ x, y }, -0.1));
-    tile.receiveShadow = true;
+    const colH = h > 0 ? (light ? 0x4a4656 : 0x423e4d) : light ? 0x3b3b44 : 0x33333b;
+    const top = 0.2 + h * LEVEL;
+    const tile = new THREE.Mesh(new THREE.BoxGeometry(0.96, top, 0.96), std(t === 'exit' ? 0x2a6b3a : colH, { roughness: 0.9 }));
+    tile.position.set(x, h * LEVEL - top / 2, y);
+    tile.receiveShadow = true; tile.castShadow = h > 0;
     tile.userData = { x, y };
     world.add(tile);
     tileMeshes.push(tile);
     if (t === 'wall' || t === 'half' || t === 'full') {
-      const h = t === 'wall' ? 1.6 : t === 'full' ? 1.1 : 0.5;
+      const bh = t === 'wall' ? 1.6 : t === 'full' ? 1.1 : 0.5;
       const col = t === 'wall' ? 0x55555f : t === 'full' ? 0x8a1f24 : 0xb5623a;
-      const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, h, 0.9), new THREE.MeshStandardMaterial({ color: col, roughness: 0.7 }));
-      b.position.copy(w2v({ x, y }, h / 2));
+      const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, bh, 0.9), std(col));
+      b.position.copy(w2v({ x, y }, bh / 2));
       b.castShadow = true; b.receiveShadow = true;
       b.userData = { x, y };
       world.add(b);
       tileMeshes.push(b);
     }
   }
-  for (const u of battle.units) {
+  // 梯子 / 跳台：竖直贴在高台侧壁上（两格交界处）
+  for (const l of battle.grid.links) {
+    const [lo, hi] = battle.grid.h(l.a) <= battle.grid.h(l.b) ? [l.a, l.b] : [l.b, l.a];
+    const y0 = battle.grid.h(lo) * LEVEL, y1 = battle.grid.h(hi) * LEVEL;
+    const len = Math.max(0.3, y1 - y0);
     const g = new THREE.Group();
-    const col = u.side === 'ally' ? COLORS[u.id] ?? 0xffffff : 0x7a0d18;
-    const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.5, emissive: u.side === 'enemy' ? 0x220000 : 0x000000 });
-    if (u.side === 'ally') {
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.55, 16), mat);
-      body.position.y = 0.3;
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), mat);
-      head.position.y = 0.75;
-      const mask = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.05), new THREE.MeshStandardMaterial({ color: u.id === 'joker' ? 0xffffff : 0x111111 }));
-      mask.position.set(0, 0.78, 0.18);
-      g.add(body, head, mask);
-    } else {
-      const body = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.9, 6), mat);
-      body.position.y = 0.45;
-      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.06), new THREE.MeshStandardMaterial({ color: 0xffd400, emissive: 0xffd400 }));
-      eye.position.set(0, 0.55, 0.2);
-      g.add(body, eye);
+    const mat = std(0xd8b060, { emissive: 0x221800 });
+    for (const off of [-0.2, 0.2]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, len + 0.25, 0.05), mat);
+      rail.position.set(off, len / 2, 0);
+      g.add(rail);
     }
-    g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.userData = { unit: u.id }; } });
-    g.position.copy(w2v(u.pos));
-    g.userData = { unit: u.id };
+    for (let i = 1; i <= 3; i++) {
+      const rung = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.04), mat);
+      rung.position.set(0, (len * i) / 4, 0);
+      g.add(rung);
+    }
+    g.position.set((lo.x * 0.62 + hi.x * 0.38), y0, (lo.y * 0.62 + hi.y * 0.38));
+    g.rotation.y = hi.x !== lo.x ? Math.PI / 2 : 0;
     world.add(g);
-    unitMesh.set(u.id, g);
-    const el = document.createElement('div');
-    el.className = `lbl ${u.side}`;
-    $('#labels').appendChild(el);
-    labelEl.set(u.id, el);
   }
+  for (const u of battle.units) addUnitMesh(u);
   fitCamera();
+}
+
+function addUnitMesh(u: Unit) {
+  const g = new THREE.Group();
+  if (u.prop) {
+    if (u.prop === 'barrel') {
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.6, 16), std(0xc0161c));
+      body.position.y = 0.3;
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.08, 16), std(0xffd400, { emissive: 0x332200 }));
+      band.position.y = 0.36;
+      g.add(body, band);
+    } else if (u.prop === 'box') {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), std(0x8a5a2b));
+      box.position.y = 0.4;
+      g.add(box);
+    } else {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.7, 0.3), std(0x777777));
+      post.position.y = 0.35;
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.4, 12, 1, true), std(0xdddddd, { side: THREE.DoubleSide }));
+      horn.position.set(0, 0.75, 0.1); horn.rotation.x = Math.PI / 2;
+      g.add(post, horn);
+    }
+  } else if (u.side === 'ally') {
+    const mat = std(COLORS[u.id] ?? 0xffffff, { roughness: 0.5 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.55, 16), mat);
+    body.position.y = 0.3;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), mat);
+    head.position.y = 0.75;
+    const mask = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.05), std(u.id === 'joker' ? 0xffffff : 0x111111));
+    mask.position.set(0, 0.78, 0.18);
+    g.add(body, head, mask);
+  } else {
+    const roleCol: Record<string, number> = { revenger: 0xb3127a, shielder: 0x1f4f9a, teleporter: 0x2aa198, launcher: 0x8a6b12, supporter: 0x2f9a3a };
+    const mat = std(roleCol[u.role ?? ''] ?? 0x7a0d18, { roughness: 0.5, emissive: 0x220000 });
+    const body = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.9, 6), mat);
+    body.position.y = 0.45;
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.06), std(0xffd400, { emissive: 0xffd400 }));
+    eye.position.set(0, 0.55, 0.2);
+    g.add(body, eye);
+    if (u.role === 'shielder') {
+      const sh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.08), std(0x8fb8ff, { emissive: 0x112244 }));
+      sh.position.set(0, 0.4, 0.38);
+      sh.name = 'shield';
+      g.add(sh);
+    }
+  }
+  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.userData = { unit: u.id }; } });
+  g.position.copy(w2v(u.pos));
+  g.userData = { unit: u.id };
+  world.add(g);
+  unitMesh.set(u.id, g);
+  const el = document.createElement('div');
+  el.className = `lbl ${u.side}`;
+  $('#labels').appendChild(el);
+  labelEl.set(u.id, el);
 }
 
 function fitCamera() {
@@ -112,19 +171,17 @@ function fitCamera() {
   renderer.setSize(w, h, false);
   const m = battle.map;
   const center = new THREE.Vector3((m.width - 1) / 2, 0, (m.height - 1) / 2);
-  // 斜 45° 俯视
   const dir = new THREE.Vector3(1, 1.25, 1).normalize();
   camera.position.copy(center).addScaledVector(dir, 30);
   camera.lookAt(center);
   camera.updateMatrixWorld();
-  // 求地图四角在相机空间的包围盒，自动缩放；留出左右 HUD 空间
   const pts = [[-0.5, -0.5], [m.width - 0.5, -0.5], [-0.5, m.height - 0.5], [m.width - 0.5, m.height - 0.5]]
-    .flatMap(([x, z]) => [new THREE.Vector3(x, 0, z), new THREE.Vector3(x, 1.2, z)]);
+    .flatMap(([x, z]) => [new THREE.Vector3(x, 0, z), new THREE.Vector3(x, 1.4, z)]);
   const inv = camera.matrixWorldInverse;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const p of pts) { const q = p.clone().applyMatrix4(inv); minX = Math.min(minX, q.x); maxX = Math.max(maxX, q.x); minY = Math.min(minY, q.y); maxY = Math.max(maxY, q.y); }
   const aspect = w / h;
-  const padX = 1.18 + (aspect > 1.6 ? 0.25 : 0.05), padY = 1.12;
+  const padX = 1.12 + (aspect > 1.6 ? 0.22 : 0.05), padY = 1.1;
   let halfW = ((maxX - minX) / 2) * padX, halfH = ((maxY - minY) / 2) * padY;
   if (halfW / halfH < aspect) halfW = halfH * aspect; else halfH = halfW / aspect;
   const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2 - halfH * 0.04;
@@ -132,7 +189,7 @@ function fitCamera() {
   camera.updateProjectionMatrix();
 }
 
-// ---------- 覆盖层（蓝格、红格、路线、三角） ----------
+// ---------- 覆盖层 ----------
 function clearOverlay() { while (overlay.children.length) overlay.remove(overlay.children[0]); }
 function tileQuad(p: Vec, color: number, opacity = 0.45, y = 0.02) {
   const q = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.92), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
@@ -150,8 +207,7 @@ function pathLine(path: Vec[]) {
   if (path.length < 2) return;
   const pts = path.map((p) => w2v(p, 0.08));
   const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.05);
-  const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, path.length * 8, 0.06, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  overlay.add(tube);
+  overlay.add(new THREE.Mesh(new THREE.TubeGeometry(curve, path.length * 8, 0.06, 6), new THREE.MeshBasicMaterial({ color: 0xffffff })));
   const end = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.3, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }));
   end.position.copy(w2v(path[path.length - 1], 0.35));
   end.rotation.x = Math.PI;
@@ -159,18 +215,18 @@ function pathLine(path: Vec[]) {
 }
 function triangleMesh(ids: string[], color = 0xffd400) {
   const ps = ids.map((id) => battle.unit(id).pos);
-  const geo = new THREE.BufferGeometry().setFromPoints(ps.map((p) => w2v(p, 0.05)));
+  const geo = new THREE.BufferGeometry().setFromPoints(ps.map((p) => new THREE.Vector3(p.x, 0.05 + Math.max(...ps.map(gh)), p.y)));
   geo.setIndex([0, 1, 2]);
   overlay.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false })));
-  const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ps.map((p) => w2v(p, 0.07))), new THREE.LineBasicMaterial({ color }));
-  overlay.add(line);
+  overlay.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ps.map((p) => w2v(p, 0.07))), new THREE.LineBasicMaterial({ color })));
 }
 
+const curSkill = (u: Unit): SkillDef | undefined => (mode === 'unique' ? u.unique : skillId ? u.skills.find((s) => s.id === skillId) : u.skills[0]);
 function attackFrom(u: Unit, from: Vec, t: Unit): { kind: 'melee' | 'gun' | 'skill'; skill?: SkillDef } | null {
-  const sk = skillId ? u.skills.find((s) => s.id === skillId) : u.skills[0];
+  const sk = curSkill(u);
   if (mode === 'melee') return battle.canMelee(u, t, from) ? { kind: 'melee' } : null;
   if (mode === 'gun') return battle.canShoot(u, t, from) ? { kind: 'gun' } : null;
-  if (mode === 'skill') return sk && battle.canSkill(u, sk, t, from) ? { kind: 'skill', skill: sk } : null;
+  if (mode === 'skill' || mode === 'unique') return sk && battle.canSkill(u, sk, t, from) ? { kind: 'skill', skill: sk } : null;
   if (battle.canMelee(u, t, from)) return { kind: 'melee' };
   if (battle.canShoot(u, t, from)) return { kind: 'gun' };
   return null;
@@ -187,8 +243,12 @@ function refreshOverlay() {
       if (it.targetId && inspectEnemy) ring(battle.unit(it.targetId).pos, 0xff2030);
     }
   }
+  for (const s of battle.speakerBans()) for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) {
+    const p = { x: s.pos.x + dx, y: s.pos.y + dy };
+    if (Math.abs(dx) + Math.abs(dy) <= 3 && battle.grid.inBounds(p)) tileQuad(p, 0xffd400, 0.12, 0.012);
+  }
   const pt = battle.pendingTriple;
-  if (pt) triangleMesh(battle.alive('ally').map((a) => a.id));
+  if (pt) triangleMesh(battle.mainAllies().map((a) => a.id));
   if (!selected) return;
   const u = battle.unit(selected);
   ring(u.pos, 0xffffff);
@@ -196,24 +256,37 @@ function refreshOverlay() {
   if (!eq(u.anchor, u.pos)) tileQuad(u.anchor, 0x2a8cff, 0.25);
   const from = previewTile ?? u.pos;
   if (previewTile) { pathLine(battle.pathFor(u, previewTile)); tileQuad(previewTile, 0xffffff, 0.55, 0.03); }
-  if (!u.acted) for (const e of battle.alive('enemy')) if (attackFrom(u, from, e)) ring(e.pos, previewTarget === e.id ? 0xffd400 : 0xe60012);
+  if (!u.acted) for (const e of battle.units) if (!e.ko && e.side !== 'ally' && e.prop !== 'speaker' && attackFrom(u, from, e)) ring(e.pos, previewTarget === e.id ? 0xffd400 : 0xe60012);
+  const sk = curSkill(u);
+  if ((mode === 'skill' || mode === 'unique') && sk && sk.kind !== 'attack') for (const a of battle.alive('ally')) if (battle.canSkill(u, sk, a, from)) ring(a.pos, previewTarget === a.id ? 0xffd400 : 0x2fd36b);
 }
 
 // ---------- HUD ----------
 function refreshHud() {
-  $('#turn').textContent = `TURN ${battle.turn}`;
+  $('#turn').textContent = `TURN ${battle.turn}${battle.map.turnLimit ? `/${battle.map.turnLimit}` : ''}`;
+  $('#objective').textContent = `目标：${battle.map.objective ?? '击败全部敌人'}`;
   const ph = $('#phase');
   ph.textContent = battle.phase === 'enemy' ? 'ENEMY PHASE' : battle.phase === 'player' ? 'PLAYER PHASE' : battle.phase.toUpperCase();
   ph.classList.toggle('enemy', battle.phase === 'enemy');
+  const vfull = battle.voltage >= VOLTAGE_MAX;
+  $('#volt').classList.toggle('full', vfull);
+  ($('#volt .vbar i') as HTMLElement).style.width = `${(100 * battle.voltage) / VOLTAGE_MAX}%`;
+  $('#volt-n').textContent = vfull ? 'MAX' : String(battle.voltage);
+  const bans = battle.speakerBans();
+  $('#ban').classList.toggle('hidden', !bans.length);
+  $('#ban').textContent = bans.length ? `喇叭禁止：${bans.map((b) => ACT_NAME[b.ban]).join('、')}（黄色范围内）` : '';
   const card = $('#unit-card');
   const u = selected ? battle.unit(selected) : inspectEnemy ? battle.unit(inspectEnemy) : null;
   if (u) {
     card.classList.remove('hidden');
-    const gun = u.gun ? `枪 ${u.gun.power}/${u.gun.range}格${Number.isFinite(u.ammo) ? ` 弹${u.ammo}` : ''}` : '';
-    const st = [u.oneMore ? '1 MORE' : '', u.acted ? '已行动' : '', u.downed ? '倒地' : '', battle.grid.hasAnyCover(u.pos) && !u.resistBroken ? '掩护中' : '', ...u.status.map((s) => s.id)].filter(Boolean).join(' · ');
-    card.innerHTML = `<div><div class="name">${u.name}</div>
+    const gun = u.gun ? `枪 ${u.gun.power}/${battle.gunRange(u)}格${u.gun.shape && u.gun.shape !== 'single' ? `(${u.gun.shape === 'aoe' ? '散射' : '爆炸'})` : ''}` : '';
+    const role = u.role ? ({ shooter: '射手', brute: '近战', revenger: '反击者', shielder: '盾兵', teleporter: '传送者', launcher: '投掷者', supporter: '支援者' } as Record<string, string>)[u.role] : '';
+    const st = [role, u.oneMore ? '1 MORE' : '', u.charged ? `CHARGE(${u.charge})` : '', u.acted ? '已行动' : '', u.downed ? '倒地' : '',
+      battle.hasResistance(u, { x: -99, y: -99 }, 'melee') ? '掩护中' : '', u.escort ? '护送对象' : '',
+      ...u.status.map((s) => ST_NAME[s.id]), ...u.buffs.map((b) => `${b.id}↑`)].filter(Boolean).join(' · ');
+    card.innerHTML = `<div><div class="name">${u.name} <small>高度${battle.grid.h(u.pos)}</small></div>
       <div>HP ${u.hp}/${u.maxHp}</div><div class="bar"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>
-      ${u.maxSp ? `<div>SP ${u.sp}/${u.maxSp}</div><div class="bar sp"><i style="width:${(100 * u.sp) / u.maxSp}%"></i></div>` : ''}
+      ${u.maxSp && u.side === 'ally' ? `<div>SP ${u.sp}/${u.maxSp}</div><div class="bar sp"><i style="width:${(100 * u.sp) / u.maxSp}%"></i></div>` : ''}
       <div>移动 ${battle.moveRange(u)} · 近战 ${u.melee} · ${gun}</div><div>${st}</div></div>`;
   } else card.classList.add('hidden');
   const sel = selected ? battle.unit(selected) : null;
@@ -222,28 +295,43 @@ function refreshHud() {
     b.classList.toggle('sel', a === mode);
     if (a === 'triple') b.classList.toggle('hidden', !battle.pendingTriple);
     else if (a === 'end') b.disabled = battle.phase !== 'player' || busy;
+    else if (a === 'unique') b.disabled = !sel || sel.acted || busy || battle.phase !== 'player' || !sel.unique || !vfull;
     else b.disabled = !sel || sel.acted || busy || battle.phase !== 'player';
   });
-  const sk = $('#skills');
+  const skEl = $('#skills');
   if (mode === 'skill' && sel) {
-    sk.classList.remove('hidden');
-    sk.innerHTML = sel.skills.map((s) => `<button data-skill="${s.id}" class="${s.id === skillId ? 'sel' : ''}" ${sel.sp < s.sp ? 'disabled' : ''}>${s.name} · SP${s.sp} · ${s.range}格${s.radius ? ` 范围${s.radius}` : ''}</button>`).join('');
-  } else sk.classList.add('hidden');
+    skEl.classList.remove('hidden');
+    skEl.innerHTML = sel.skills.map((s) => `<button data-skill="${s.id}" class="${s.id === skillId ? 'sel' : ''}" ${sel.sp < s.sp ? 'disabled' : ''}>${s.name} · SP${s.sp} · ${s.kind === 'attack' ? `${s.range}格${s.radius ? ` 范围${s.radius}` : ''}${s.effect ? ` · ${s.effect}` : ''}` : s.kind === 'heal' ? '回复' : '辅助'}</button>`).join('');
+  } else skEl.classList.add('hidden');
+  // Baton Pass
+  const bt = $('#baton');
+  const ko = battle.phase === 'player' && !busy ? battle.units.find((x) => x.side === 'ally' && x.ko && !x.escort) : undefined;
+  if (ko && battle.reserves.length && battle.batonLeft > 0) {
+    bt.classList.remove('hidden');
+    bt.innerHTML = `<div>${ko.name} 倒下 · BATON PASS（剩 ${battle.batonLeft === Infinity ? '∞' : battle.batonLeft} 次）</div>` +
+      battle.reserves.map((r) => `<button data-out="${ko.id}" data-in="${r.id}">换上 ${r.name}</button>`).join('');
+  } else bt.classList.add('hidden');
   // 预览卡
   const pv = $('#preview');
   if (busy) pv.classList.add('hidden');
   else if (sel && previewTarget) {
     const t = battle.unit(previewTarget);
     const from = previewTile ?? sel.pos;
-    const direct = attackFrom(sel, from, t);
-    const via = direct ? null : meleeViaMove(sel, t);
-    const at: { kind: 'melee' | 'gun' | 'skill'; skill?: SkillDef } | null = direct ?? (via ? { kind: 'melee' } : null);
-    if (at) {
-      const kind = at.kind;
-      const p = battle.previewDamage(sel, t, kind, at.skill, via ? via.via : from);
+    const sk = curSkill(sel);
+    if (t.side === 'ally' && sk && sk.kind !== 'attack') {
       pv.classList.remove('hidden');
-      pv.innerHTML = `${kind === 'melee' ? '近战' : kind === 'gun' ? '枪击' : at.skill!.name} → ${t.name}　伤害 ${p.amount}${p.miss ? '（全掩体挡住）' : p.resist ? '（掩护中·减伤）' : ''}<br/>${p.willDown ? '<span class="getem">GET EM!!</span>' : ''}　再点一次确认`;
-    } else pv.classList.add('hidden');
+      pv.innerHTML = `${sk.name} → ${t.name}　再点一次确认`;
+    } else {
+      const direct = attackFrom(sel, from, t);
+      const via = direct ? null : meleeViaMove(sel, t);
+      const at = direct ?? (via ? { kind: 'melee' as const } : null);
+      if (at) {
+        const p = battle.previewDamage(sel, t, at.kind, at.skill, via ? via.via : from);
+        const tName = at.kind === 'melee' ? '近战(击退4格)' : at.kind === 'gun' ? '枪击' : at.skill!.name;
+        pv.classList.remove('hidden');
+        pv.innerHTML = `${tName} → ${t.name}　伤害 ${p.amount}${p.miss ? '（被挡住）' : p.resist ? '（Resistance·减伤）' : ''}<br/>${p.willDown ? '<span class="getem">GET EM!!</span>' : ''}　再点一次确认`;
+      } else pv.classList.add('hidden');
+    }
   } else if (sel && previewTile) {
     pv.classList.remove('hidden');
     pv.innerHTML = '再点一次同一格确认移动';
@@ -261,18 +349,30 @@ function meleeViaMove(u: Unit, t: Unit): { kind: 'melee'; via: Vec } | null {
 function refreshLabels() {
   const w = window.innerWidth, h = window.innerHeight;
   for (const u of battle.units) {
-    const el = labelEl.get(u.id)!;
-    const g = unitMesh.get(u.id)!;
+    const el = labelEl.get(u.id);
+    const g = unitMesh.get(u.id);
+    if (!el || !g) continue;
     g.visible = !u.ko;
     if (u.ko) { el.style.display = 'none'; continue; }
+    const shield = g.getObjectByName('shield');
+    if (shield && u.facing) { g.rotation.y = Math.atan2(u.facing.x, u.facing.y); }
+    if (u.prop) { el.style.display = 'none'; continue; }
     const v = g.position.clone().add(new THREE.Vector3(0, 1.05, 0)).project(camera);
     el.style.display = '';
     el.style.left = `${((v.x + 1) / 2) * w}px`;
     el.style.top = `${((1 - v.y) / 2) * h}px`;
-    const res = battle.grid.hasAnyCover(u.pos) && !u.resistBroken && !u.status.length;
-    el.innerHTML = `${u.name.split(' ').pop()}${u.downed ? '<span class="tag down">DOWN</span>' : res ? '<span class="tag res">盾</span>' : ''}${u.oneMore ? '<span class="tag">1MORE</span>' : ''}<div class="hp"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>`;
-    g.rotation.z = u.downed ? 1.2 : 0;
-    g.position.y = u.downed ? 0.15 : 0;
+    const res = battle.hasResistance(u, { x: -99, y: -99 }, 'melee');
+    const tags = [
+      u.downed ? '<span class="tag down">DOWN</span>' : res ? '<span class="tag res">盾</span>' : '',
+      u.oneMore ? '<span class="tag">1MORE</span>' : '',
+      u.charged ? '<span class="tag chg">CHG</span>' : '',
+      ...u.status.map((s) => `<span class="tag st">${ST_SHORT[s.id]}</span>`),
+    ].join('');
+    el.innerHTML = `${u.name.split(' ').pop()}${tags}<div class="hp"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>`;
+    if (!busy) {
+      g.rotation.z = u.downed ? 1.2 : 0;
+      g.position.y = gh(u.pos) + (u.downed ? 0.15 : 0);
+    }
     g.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined; if (m && 'opacity' in m && u.side === 'ally') { m.transparent = true; m.opacity = u.acted && battle.phase === 'player' ? 0.55 : 1; } });
   }
 }
@@ -284,7 +384,6 @@ function banner(text: string, yellow = false) {
   const b = $('#banner');
   b.textContent = text;
   b.className = yellow ? 'yellow' : '';
-  void b.offsetWidth;
   b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
 }
 function toast(text: string) {
@@ -292,64 +391,125 @@ function toast(text: string) {
   t.textContent = text;
   t.classList.remove('hidden');
   clearTimeout((toast as unknown as { h: number }).h);
-  (toast as unknown as { h: number }).h = window.setTimeout(() => t.classList.add('hidden'), 1600);
+  (toast as unknown as { h: number }).h = window.setTimeout(() => t.classList.add('hidden'), 1800);
 }
-function popDamage(unitId: string, text: string) {
-  const g = unitMesh.get(unitId)!;
-  const v = g.position.clone().add(new THREE.Vector3(0, 1.2, 0)).project(camera);
+function popAt(pos: THREE.Vector3, text: string, cls = '') {
+  const v = pos.clone().add(new THREE.Vector3(0, 1.2, 0)).project(camera);
   const el = document.createElement('div');
-  el.className = 'dmg';
+  el.className = `dmg ${cls}`;
   el.textContent = text;
   el.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`;
   el.style.top = `${((1 - v.y) / 2) * window.innerHeight}px`;
   $('#labels').appendChild(el);
-  setTimeout(() => el.remove(), 950);
+  const rm = () => (document.body.classList.contains('frozen') ? setTimeout(rm, 200) : el.remove());
+  setTimeout(rm, 950);
+}
+function popDamage(unitId: string, text: string, cls = '') {
+  const g = unitMesh.get(unitId);
+  if (g) popAt(g.position, text, cls);
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-async function tweenPath(id: string, path: Vec[], msPerTile = 90) {
-  const g = unitMesh.get(id)!;
+async function tweenPath(id: string, path: Vec[], msPerTile = 90, arc = 0) {
+  const g = unitMesh.get(id);
+  if (!g) return;
   for (let i = 1; i < path.length; i++) {
     const a = w2v(path[i - 1]), b = w2v(path[i]);
+    const dur = msPerTile * Math.max(1, Math.abs(path[i].x - path[i - 1].x) + Math.abs(path[i].y - path[i - 1].y)) * (arc ? 0.6 : 1);
     const t0 = performance.now();
     await new Promise<void>((res) => {
       const step = () => {
-        const k = Math.min(1, (performance.now() - t0) / msPerTile);
+        const k = Math.min(1, (performance.now() - t0) / dur);
         g.position.lerpVectors(a, b, k);
+        if (arc) g.position.y += Math.sin(k * Math.PI) * arc;
         if (k < 1) requestAnimationFrame(step); else res();
       };
       step();
     });
   }
 }
+function flash(at: Vec, radius: number) {
+  const s = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffa020, transparent: true, opacity: 0.8 }));
+  s.position.copy(w2v(at, 0.4));
+  world.add(s);
+  const t0 = performance.now();
+  const step = () => {
+    if (document.body.classList.contains('frozen')) { requestAnimationFrame(step); return; }
+    const k = Math.min(1, (performance.now() - t0) / 420);
+    s.scale.setScalar(1 + k * radius * 2);
+    (s.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - k);
+    if (k < 1) requestAnimationFrame(step); else world.remove(s);
+  };
+  step();
+}
 
-const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? '1');
+const SPEED = Number(params.get('speed') ?? '1');
+const hook = { pauseOn: null as string | null, pauseDelay: 0, paused: false, released: false, resume() { hook.released = true; } };
 async function play(events: BattleEvent[]) {
   busy = true;
+  clearOverlay();
   refreshHud();
+  let rebuild = false;
   for (const e of events) {
+    let pausing = false;
+    if (hook.pauseOn === e.type) {
+      // 截图钩子：事件开始 pauseDelay 毫秒后冻结画面（CSS 动画与爆炸闪光），等 resume
+      hook.pauseOn = null;
+      pausing = true;
+      setTimeout(() => { document.body.classList.add('frozen'); hook.paused = true; }, hook.pauseDelay);
+    }
     switch (e.type) {
       case 'phaseStart':
         if (e.phase === 'enemy') { banner('ENEMY PHASE'); refreshHud(); await sleep(700 / SPEED); }
         if (e.phase === 'player' && e.turn > 1) { banner(`TURN ${e.turn}`); await sleep(500 / SPEED); }
         break;
       case 'move': await tweenPath(e.unitId, e.path.length ? e.path : [e.from, battle.unit(e.unitId).pos], 90 / SPEED); break;
-      case 'knockback': if (!e.blocked) await tweenPath(e.unitId, [e.from, e.to], 80 / SPEED); else popDamage(e.unitId, e.collidedWith ? '撞击!' : '挡住'); break;
-      case 'meleeStep': unitMesh.get(e.unitId)!.position.copy(w2v(e.to)); break;
-      case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(260 / SPEED); break;
-      case 'miss': popDamage(e.unitId, 'MISS'); await sleep(260 / SPEED); break;
+      case 'dash': popDamage(e.unitId, e.kind === 'ladder' ? 'DASH↕' : 'JUMP'); break;
+      case 'knockback':
+        if (!e.blocked || !eq(e.from, e.to)) await tweenPath(e.unitId, [e.from, e.to], 70 / SPEED, e.fly ? 1.2 : 0);
+        if (e.blocked) popDamage(e.unitId, e.collidedWith ? '撞击!' : '挡住');
+        break;
+      case 'pull': await tweenPath(e.unitId, e.path.length ? e.path : [e.from, e.to], 80 / SPEED); popDamage(e.unitId, e.effect === 'hypno' ? '催眠' : '漩涡'); break;
+      case 'dizzyMove': await tweenPath(e.unitId, [e.from, e.to], 90 / SPEED, 0.3); popDamage(e.unitId, '眩晕'); break;
+      case 'fall': popDamage(e.unitId, '坠落!', 'big'); await sleep(220 / SPEED); break;
+      case 'followUp': banner('FOLLOW UP!', true); toast(`${battle.unit(e.shooterId).name} 追击！${battle.unit(e.creditId).name} 获得 1 MORE`); await sleep(600 / SPEED); break;
+      case 'meleeStep': unitMesh.get(e.unitId)?.position.copy(w2v(e.to)); break;
+      case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); break;
+      case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
+      case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); break;
       case 'down': popDamage(e.unitId, 'DOWN!'); break;
       case 'oneMore': banner('1 MORE!'); await sleep(650 / SPEED); break;
       case 'tripleThreat': banner('TRIPLE THREAT', true); await sleep(900 / SPEED); break;
       case 'resistBroken': popDamage(e.unitId, '破防'); break;
-      case 'status': popDamage(e.unitId, e.status === 'burn' ? '灼烧' : e.status === 'shock' ? '感电' : '绝望'); break;
+      case 'status': popDamage(e.unitId, ST_NAME[e.status]); break;
+      case 'statusEnd': if (e.reason === 'damage') popDamage(e.unitId, `${ST_NAME[e.status]}解除`); break;
+      case 'buff': popDamage(e.unitId, e.buff === 'move' ? '移动↑' : e.buff === 'atk' ? '攻击↑' : '防御↑', 'heal'); break;
+      case 'charge': popDamage(e.unitId, 'CHARGE', 'heal'); break;
+      case 'chargeUsed': popDamage(e.unitId, 'CHARGE!'); break;
+      case 'uniqueSkill': banner(battle.unit(e.unitId).unique?.name ?? 'UNIQUE', true); await sleep(800 / SPEED); break;
+      case 'counter': popDamage(e.unitId, '反击!', 'big'); await tweenPath(e.unitId, [e.from, e.to], 60 / SPEED, 1); break;
+      case 'teleportSwap': popDamage(e.unitId, '换位!'); for (const id of [e.unitId, e.withId]) unitMesh.get(id)?.position.copy(w2v(battle.unit(id).pos)); break;
+      case 'throw': popDamage(e.unitId, '投掷!'); await tweenPath(e.targetId, [e.from, e.to], 70 / SPEED, 1.6); break;
+      case 'explode': flash(e.at, e.radius); popAt(w2v(e.at), 'BOOM!', 'big'); await sleep(300 / SPEED); break;
+      case 'penalty': popDamage(e.unitId, '违规!', 'big'); toast(`喇叭禁止「${ACT_NAME[e.action]}」→ 惩罚`); break;
+      case 'speakerBan': toast(`喇叭：本回合禁止「${e.bans.map((b) => ACT_NAME[b]).join('、')}」`); break;
+      case 'skipTurn': popDamage(e.unitId, ST_NAME[e.reason]); break;
       case 'ko': popDamage(e.unitId, 'KO'); await sleep(200 / SPEED); break;
+      case 'batonPassReady': toast(`${battle.unit(e.koId).name} 倒下：可 Baton Pass 换替补`); break;
+      case 'batonPass': rebuild = true; banner('BATON PASS', true); break;
       case 'error': toast(e.message); break;
       case 'result': showResult(e); break;
       default: break;
     }
     refreshLabels();
+    if (pausing) {
+      while (!hook.released) await sleep(20);
+      hook.released = false;
+      hook.paused = false;
+      document.body.classList.remove('frozen');
+    }
   }
-  for (const u of battle.units) unitMesh.get(u.id)!.position.copy(w2v(u.pos));
+  if (rebuild) build();
+  for (const u of battle.units) unitMesh.get(u.id)?.position.copy(w2v(u.pos));
   busy = false;
   if (selected && (battle.unit(selected).acted || battle.unit(selected).ko)) selected = null;
   if (battle.phase === 'player' && !selected) {
@@ -357,16 +517,16 @@ async function play(events: BattleEvent[]) {
     if (next) selected = next.id;
   }
   previewTile = null; previewTarget = null;
+  if (mode === 'unique') mode = 'auto';
   refreshAll();
 }
 
 function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
   const r = $('#result');
   r.classList.remove('hidden');
-  const c = e.crowns;
   const row = (ok: boolean, t: string) => `<div class="${ok ? 'ok' : 'ng'}">${ok ? '♛' : '♔'} ${t}</div>`;
-  r.innerHTML = `<h1>${e.outcome === 'won' ? 'MISSION CLEAR' : 'GAME OVER'}</h1>
-    <div class="crowns">${row(c.clear, '通关')}${row(c.withinTurns, `${battle.map.turnTarget} 回合内通关（用了 ${e.turn} 回合）`)}${row(c.noKo, '无人 KO')}</div>
+  r.innerHTML = `<h1>${e.outcome === 'won' ? 'MISSION CLEAR' : 'GAME OVER'}</h1>${e.reason ? `<div>${e.reason}</div>` : ''}
+    <div class="crowns">${e.crowns.items.map((i) => row(i.ok, i.label)).join('')}<div class="ng">用了 ${e.turn} 回合</div></div>
     <button class="small" id="again">再来一次</button>`;
   $('#again').onclick = restart;
 }
@@ -402,20 +562,30 @@ function onTap(h: { tile?: Vec; unit?: string }) {
   if (h.unit) {
     const u = battle.unit(h.unit);
     if (u.side === 'ally') {
+      // 回复/辅助技能：点友方作为目标
+      const s = selected ? battle.unit(selected) : null;
+      const sk = s ? curSkill(s) : undefined;
+      if (s && (mode === 'skill' || mode === 'unique') && sk && sk.kind !== 'attack' && battle.canSkill(s, sk, u, previewTile ?? s.pos)) {
+        if (previewTarget !== u.id) { previewTarget = u.id; return refreshAll(); }
+        const evs: BattleEvent[] = [];
+        if (previewTile && !eq(previewTile, s.pos)) evs.push(...battle.move(s.id, previewTile));
+        evs.push(...battle.skill(s.id, sk.id, u.id));
+        void play(evs);
+        return;
+      }
       if (selected === u.id && previewTile) { previewTile = null; previewTarget = null; }
       else if (!u.acted) { selected = u.id; inspectEnemy = null; previewTile = null; previewTarget = null; mode = 'auto'; skillId = null; }
-      else { toast(`${u.name} 已行动`); }
+      else toast(`${u.name} 已行动`);
       return refreshAll();
     }
-    // 敌人
+    if (u.prop === 'speaker') { toast('喇叭：在黄色范围内做被禁止的行动会受惩罚'); return; }
     if (!selected) { inspectEnemy = inspectEnemy === u.id ? null : u.id; return refreshAll(); }
     const s = battle.unit(selected);
     const from = previewTile ?? s.pos;
     const at = attackFrom(s, from, u);
     const via = !at ? meleeViaMove(s, u) : null;
-    if (!at && !via) { inspectEnemy = u.id; previewTarget = null; toast('打不到：换模式或先移动'); return refreshAll(); }
+    if (!at && !via) { inspectEnemy = u.prop ? null : u.id; previewTarget = null; toast('打不到：换模式或先移动'); return refreshAll(); }
     if (previewTarget !== u.id) { previewTarget = u.id; return refreshAll(); }
-    // 确认
     const evs: BattleEvent[] = [];
     const dest = via ? via.via : previewTile;
     if (dest && !eq(dest, s.pos)) evs.push(...battle.move(s.id, dest));
@@ -446,6 +616,16 @@ $('#actions').addEventListener('click', (ev) => {
   if (a === 'triple') { void play(battle.tripleThreat()); return; }
   if (!selected) return;
   if (a === 'wait') { const id = selected; selected = null; void play(battle.wait(id)); return; }
+  if (a === 'unique') {
+    const u = battle.unit(selected);
+    if (u.unique?.shape === 'self') {
+      const evs: BattleEvent[] = [];
+      if (previewTile && !eq(previewTile, u.pos)) evs.push(...battle.move(u.id, previewTile));
+      evs.push(...battle.unique(u.id));
+      void play(evs);
+      return;
+    }
+  }
   mode = mode === a ? 'auto' : (a as Mode);
   if (mode === 'skill') skillId = battle.unit(selected).skills[0]?.id ?? null;
   previewTarget = null;
@@ -458,13 +638,23 @@ $('#skills').addEventListener('click', (ev) => {
   previewTarget = null;
   refreshAll();
 });
+$('#baton').addEventListener('click', (ev) => {
+  const b = (ev.target as HTMLElement).closest('button');
+  if (!b || busy) return;
+  void play(battle.batonPass(b.dataset.out!, b.dataset.in!));
+});
 $('#btn-threat').addEventListener('click', () => { showThreat = !showThreat; $('#btn-threat').classList.toggle('on', showThreat); refreshAll(); });
+$('#btn-volt').addEventListener('click', () => { battle.voltage = VOLTAGE_MAX; refreshAll(); });
 $('#btn-restart').addEventListener('click', restart);
+const sel = $<HTMLSelectElement>('#map-select');
+sel.innerHTML = MAPS.map((m, i) => `<option value="${i}">${m.name}</option>`).join('');
+sel.value = String(mapIdx);
+sel.addEventListener('change', () => { mapIdx = Number(sel.value); restart(); });
 window.addEventListener('resize', () => { fitCamera(); refreshLabels(); });
 
 function restart() {
   $('#result').classList.add('hidden');
-  battle = new Battle(testMap());
+  battle = new Battle(MAPS[mapIdx].make());
   selected = null; previewTile = null; previewTarget = null; inspectEnemy = null; mode = 'auto';
   build();
   void play(battle.start());
@@ -485,8 +675,11 @@ window.__p5t = {
   get battle() { return battle; },
   get busy() { return busy; },
   setMode(m: Mode) { mode = m; refreshAll(); },
+  setSkill(id: string) { mode = 'skill'; skillId = id; refreshAll(); },
   tap: onTap,
   select(id: string) { onTap({ unit: id }); },
+  loadMap(i: number) { mapIdx = i; sel.value = String(i); restart(); },
+  hook,
   play,
   key,
 };

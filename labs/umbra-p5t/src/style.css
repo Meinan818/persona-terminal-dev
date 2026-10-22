@@ -63,3 +63,28 @@ button.small.on { background: #e60012; }
   #preview { top: auto; bottom: max(10px, env(safe-area-inset-bottom)); font-size: 12px; padding: 4px 12px; }
   #preview .getem { font-size: 15px; }
 }
+
+#volt { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 900; margin-top: 3px; }
+#volt .vbar { width: 90px; height: 7px; background: #333; border: 1px solid #fff; position: relative; }
+#volt .vbar i { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, #ffd400, #ff7a00); }
+#volt.full .vbar i { background: #ffd400; box-shadow: 0 0 8px #ffd400; }
+#volt.full span { color: #ffd400; }
+#ban { font-size: 11px; color: #ffd400; margin-top: 2px; }
+#map-select { font: inherit; font-size: 13px; font-weight: 700; color: #fff; background: #111; border: 2px solid #fff; padding: 6px 6px; transform: skewX(-8deg); }
+#actions .unique { background: #3a2a00; color: #ffd400; border-color: #ffd400; }
+#actions .triple { grid-column: span 3; height: 36px !important; }
+#baton { left: 50%; top: 64px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; background: #000d; border: 2px solid #ffd400; padding: 8px 12px; font-size: 13px; font-weight: 800; z-index: 7; }
+#baton button { padding: 6px 12px; font-weight: 800; transform: skewX(-8deg); background: #ffd400; color: #000; border-color: #000; }
+.lbl .tag.chg { background: #7af; color: #000; }
+.lbl .tag.st { background: #b06cff; color: #fff; }
+.dmg.heal { text-shadow: 2px 2px 0 #1a8f45; }
+.dmg.big { font-size: 26px; text-shadow: 3px 3px 0 #ffd400, -1px -1px 0 #000; }
+@media (max-height: 420px) {
+  #volt .vbar { width: 70px; }
+  #map-select { font-size: 11px; padding: 4px; }
+  #hud-tr button.small { padding: 6px 8px; font-size: 11px; }
+  #actions .triple { height: 30px !important; }
+  #skills { bottom: 140px; }
+}
+
+.frozen .dmg, .frozen #banner { animation-play-state: paused !important; }

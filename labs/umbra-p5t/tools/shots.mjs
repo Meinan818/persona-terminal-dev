@@ -16,25 +16,45 @@ async function open(page, u) {
 }
 const idle = (page) => page.waitForFunction(() => !window.__p5t.busy, null, { timeout: 15000 });
 
+const waitEvent = (page, pred, timeout = 15000) => page.waitForFunction(pred, null, { timeout, polling: 30 });
+const TUT = 2; // MAPS 里「教学·推落追击」的序号（下拉框第 2 项）
+
+// 844×390：教学图 Joker 在高台上近战，把掩体里的 Pixie 推下去 → 下方龙司 FOLLOW UP
 async function shot1() {
   const page = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
-  await open(page, url);
+  await open(page, url.replace('speed=4', 'speed=0.5').replace('?', `?map=tut-followup&`));
   await page.waitForFunction(() => window.__p5t && !window.__p5t.busy);
-  await page.evaluate(() => { const p = window.__p5t; p.select('joker'); p.tap({ tile: { x: 1, y: 3 } }); p.tap({ unit: 'mandrake' }); });
-  await page.waitForTimeout(300);
+  await page.evaluate(() => { const p = window.__p5t; p.hook.pauseOn = 'followUp'; p.hook.pauseDelay = 220; p.select('joker'); p.setMode('melee'); p.tap({ unit: 'pixie2' }); p.tap({ unit: 'pixie2' }); });
+  await waitEvent(page, () => window.__p5t.hook.paused);
   await page.screenshot({ path: out + 'p5t-844x390.png' });
+  await page.evaluate(() => window.__p5t.hook.resume());
+  await idle(page);
   await page.close();
 }
 
+// 1280×720：同一关先推落追击，再让杏打爆油桶（2 格内敌人被吹飞、失去 Resistance）
 async function shot2() {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-  await open(page, url.replace('speed=4', 'speed=0.6'));
+  await open(page, url.replace('speed=4', 'speed=0.6').replace('?', `?map=tut-followup&`));
   await page.waitForFunction(() => window.__p5t && !window.__p5t.busy);
-  // Joker 移到 (1,4) 射击空地上的 Mandrake → DOWN → 1 MORE
-  await page.evaluate(() => { const p = window.__p5t; p.select('joker'); p.tap({ unit: 'mandrake' }); p.tap({ unit: 'mandrake' }); });
-  await page.waitForTimeout(700);
-  await page.screenshot({ path: out + 'p5t-1280x720.png' });
+  await page.evaluate(() => { const p = window.__p5t; p.select('joker'); p.setMode('melee'); p.tap({ unit: 'pixie2' }); p.tap({ unit: 'pixie2' }); });
   await idle(page);
+  await page.evaluate(() => { const p = window.__p5t; p.hook.pauseOn = 'explode'; p.hook.pauseDelay = 160; p.select('panther'); p.setMode('gun'); p.tap({ unit: 'barrel2' }); p.tap({ unit: 'barrel2' }); });
+  await waitEvent(page, () => window.__p5t.hook.paused);
+  await page.screenshot({ path: out + 'p5t-1280x720.png' });
+  await page.evaluate(() => window.__p5t.hook.resume());
+  await idle(page);
+  await page.close();
+}
+
+// 特殊敌人图总览（盾兵/投掷者在高台/传送者/支援者/喇叭/木箱），点开敌方范围
+async function shot3() {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  await open(page, url.replace('?', `?map=test-02&`));
+  await page.waitForFunction(() => window.__p5t && !window.__p5t.busy);
+  await page.evaluate(() => { document.querySelector('#btn-threat').click(); window.__p5t.select('skull'); });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: out + 'p5t-specials-1280x720.png' });
   await page.close();
 }
 
@@ -50,12 +70,14 @@ async function fullPlay() {
     const step = await page.evaluate(() => {
       const p = window.__p5t, b = p.battle;
       if (b.pendingTriple) return { triple: true };
+      const ko = b.units.find((x) => x.side === 'ally' && x.ko && !x.escort);
+      if (ko && b.reserves.length && b.batonLeft > 0) return { baton: true };
       const u = b.alive('ally').find((a) => !a.acted);
       if (!u) return { end: true };
       let best = null;
       const dests = [u.pos, ...b.moveTiles(u)];
       for (const d of dests) for (const e of b.alive('enemy')) {
-        const opts = [['melee', b.canMelee(u, e, d), u.melee], ['gun', b.canShoot(u, e, d), u.gun.power]];
+        const opts = [['melee', b.canMelee(u, e, d), u.melee], ['gun', b.canShoot(u, e, d), u.gun ? u.gun.power : 0]];
         for (const [kind, ok, pw] of opts) {
           if (!ok) continue;
           const pv = b.previewDamage(u, e, kind, undefined, d);
@@ -72,6 +94,7 @@ async function fullPlay() {
     });
     const act = async (fn, arg) => { await page.evaluate(fn, arg); await idle(page); };
     if (step.triple) await act(() => document.querySelector('[data-act=triple]').click());
+    else if (step.baton) await act(() => document.querySelector('#baton button').click());
     else if (step.end) await act(() => document.querySelector('[data-act=end]').click());
     else if (step.wait) {
       await act((s) => { const p = window.__p5t; p.select(s.wait); if (s.dest) { p.tap({ tile: s.dest }); p.tap({ tile: s.dest }); } }, step);
@@ -92,5 +115,5 @@ async function fullPlay() {
   await page.close();
 }
 
-try { await shot1(); await shot2(); await fullPlay(); } finally { await browser.close(); server.httpServer.close(); }
+try { await shot1(); await shot2(); await shot3(); await fullPlay(); } finally { await browser.close(); server.httpServer.close(); }
 console.log('shots ->', out);

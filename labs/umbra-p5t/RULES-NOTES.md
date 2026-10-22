@@ -1,75 +1,116 @@
 # 幽影协议 P5T 规则原型 · 规则说明与「与原作差异清单」
 
-2026-10-22 · 分支 feat/umbra-p5t · labs/umbra-p5t
-规则层：`src/rules/`（纯 TypeScript，零 DOM、零画布，只发事件）；测试：`tests/rules.test.ts`（vitest 23 项）。
-目标：玩法还原度 >90%（用户硬性要求）。依据：下列公开攻略/百科（未拿到原作数据表），**数值全部是灰盒占位**。
+2026-10-22 · 分支 feat/umbra-p5t · labs/umbra-p5t · 第 1b 步（在 d4f07a0 基础上补机制）
+规则层：`src/rules/`（纯 TypeScript，零 DOM、零画布，只发事件）；测试：`tests/rules.test.ts`（vitest 59 项）。
+主策划决定（10-22）：掩体按原作（贴掩体即 Resistance，侧面也有；`coverModel:'directional'` 保留但默认关）；枪默认不限弹数（照原作）。
+标记约定：**[源]** = 有公开资料出处；**[PH]** = 原作数值/细节查不到的占位。
 
-## 资料来源
-- Twinfinite「How to Knock Down Enemies」：https://twinfinite.net/guides/how-to-knock-down-enemies-persona-5-tactica/
-- EarlyGame「One More And Triple Threat Explained」：https://earlygame.com/gaming/persona-5-tactica-one-more-triple-threat
-- DualShockers 战斗指南 / 新手技巧：https://www.dualshockers.com/persona-5-tactica-complete-combat-guide/ 、https://www.dualshockers.com/persona-5-tactica-beginner-tips-tricks/
-- Megami Tensei Wiki 效果表：https://megamitensei.fandom.com/wiki/List_of_Persona_5_Tactica_Effects
-- GameRant 打倒说明、Wikipedia 条目、GameFAQs 关卡奖励条件（Clear / Clear within N turns / No one KO'd）
-
-## 已实现的规则（按原作）
-| # | 规则 | 实现 |
+## 资料来源（本步逐条核实用）
+| 简称 | 链接 | 用到的内容 |
 |---|---|---|
-| 1 | 每人每回合 **移动一次 + 行动一次**（近战/枪/技能/待机）；我方阶段 → 敌方阶段交替 | `Battle.move/melee/shoot/skill/wait/endPlayerPhase`；全员行动完自动进敌方阶段 |
-| 2 | **行动前可在移动范围内反复改站位**（原作移动在行动前可撤回） | 范围从 `anchor`（本次行动起点）算 |
-| 3 | **掩体 = Resistance 状态**：紧贴掩体的单位不能被打倒、受伤降低；**与攻击方向无关**（原作：被包抄仍有 Resistance） | `coverModel: 'p5t'`（默认） |
-| 4 | **全掩体**：来自其正面的攻击完全落空 | 枪击正面打全掩体 → `miss`，0 伤害 |
-| 5 | 命中**无 Resistance** 的敌人 → **倒地 → 攻击者 1 More**（可**再移动 + 再行动**） | `afterHit` |
-| 6 | **1 More 可无限连锁**，只要每次打倒的是不同敌人；已倒地的敌人不会再被打倒；范围技打倒多个也只给 1 次 | 去掉了初版「每人每回合限 1 次」 |
-| 7 | **近战**：把敌人推出所在格、**攻击者占据其位置**、打破 Resistance；推向另一个单位时两者都失去 Resistance | `push` + `meleeStep`；被墙挡住则原地 |
-| 8 | **任何攻击技能都打破 Resistance**（本次不倒地，下一击即可打倒）；**技能无视墙体/障碍** | `breakResist`；`canSkill` 不查视线 |
-| 9 | 身上有异常状态的单位任何攻击都能打倒 | `hasResistance` 里 `status.length>0 → false` |
-| 10 | 元素异常：Agi=灼烧（轻微击退 + 下回合掉血），Zio=感电（下回合不能移动），Eiha=绝望（下回合不能移动，其移动力加给施法者下回合） | `status` + `immobile` + `pendingBonus` |
-| 11 | **Triple Threat**：有人持 1 More，且**三名我方围成的三角内至少有一个倒地敌人** → 可发动；**三角内所有敌人**受伤（无视 Resistance）；**用掉持有者的 1 More**；发动前可让未行动的队友走位调整三角 | `pendingTriple`（实时计算）+ `tripleThreat()` |
-| 12 | **敌人也会 1 More**：打倒空地上的我方后再走再打 | `enemyOneMore: true` |
-| 13 | 倒地单位在**己方下个阶段开始时起身**；被打破的 Resistance 也在那时恢复 | `beginSidePhase` |
-| 14 | 枪：有射程、要视线；**原作无弹数限制** | `gun.ammo` 缺省 = 无限；填数字即启用弹数（GDD 的选项） |
-| 15 | 技能消耗 **SP**；枪、近战不耗 SP；SP 战斗中**不自然回复**（原作只有 Invigorate 类被动才回） | `sp -= s.sp` |
-| 16 | 胜负：全灭 / 到达出口 / 击败指定目标；失败：我方全倒，或（剧情关）Joker 倒下；可设回合上限 | `MapDef.win` / `turnLimit` / `leaderKoLoses` |
-| 17 | 三项奖励（皇冠）：通关 / N 回合内通关 / 无人 KO | `crowns()` |
-| 18 | 敌人简单 AI：找最近的我方 → 选能打到它且贴掩体的落点 → 打；避免枪打全掩体正面 | `ai.ts` |
-| 19 | 敌人下回合范围：点敌人看红格（可走格 + 攻击格），右上「敌方范围」显示全部 | `computeIntents` |
+| Cogito | https://gamefaqs.gamespot.com/pc/409954-persona-5-tactica/faqs/81199 （GameFAQs《Persona 5 Tactica - Guide and FAQ》v1.0 2024-03-30） | AAA101 异常、AAA103 近战击退 4 格、AAA104 掩体（全掩体挡正面+侧面、减伤约 70%）、AAA106/107 1 More 与 Triple Threat、AAA108 Charge、AAA109 Voltage、AAA110 Dash、AAA111 高台/Follow-Up、AAA112 Baton Pass、AAA100 难度表、AAA115 敌人类型、地图物件（油桶/木箱/摄像头/开关）、关卡目标与奖励栏、角色 Lv19/21 数值表、Charge 技能表、「枪无弹数限制」 |
+| MTW-Effects | https://megamitensei.fandom.com/wiki/List_of_Persona_5_Tactica_Effects | 10 种效果（Burn/Freeze/Shock/Sweep/Hypno/Vortex/Dizzy/Despair/Forget/Sleep）的定义 |
+| MTW-Skills | https://megamitensei.fandom.com/wiki/List_of_Persona_5_Tactica_Skills | 技能 Power / SP / 范围描述 / Unique（Full Voltage）技能、Charge 被动描述、Follow-Up 被动 |
+| MTW-Voltage | https://megamitensei.fandom.com/wiki/Voltage | 共享槽、伤害造成/受到都涨、各角色 Unique 效果 |
+| MTW-FollowUp | https://megamitensei.fandom.com/wiki/Follow_Up | P5T Follow-Up：打落高处敌人进入下方队友射程 → 队友开枪追击、攻击者 1 More；Toshiro 无枪不能追击 |
+| MTW-BatonPass | https://megamitensei.fandom.com/wiki/Baton_Pass | P5T 的 Baton Pass = 倒下队员换替补；次数按难度（Safe 无限 / Easy·Normal 3 / Hard 2 / Merciless 1） |
+| MTW-Guard | https://megamitensei.fandom.com/wiki/Guard | P5T：回合结束时贴掩体获得 Guard；抵抗物理与枪、不能被打倒；被技能或近战命中后失去 |
+| MTW-Critical | https://megamitensei.fandom.com/wiki/Critical | P5T 取消弱点：空地被打 = Critical → 倒地 + 1 More |
+| MTW-P5T | https://megamitensei.fandom.com/wiki/Persona_5_Tactica | Gameplay：Charge「一回合没攻击也没用技能 → Charge，到下次攻击/技能前有小增益；1 More 也同样可触发」；Triple Threat 三角 |
+| altema | https://altema.jp/persona5t/kousyo | 高台：下方攻击会被 Guard 减伤；近战打落；落点有队友 → 追击 + 1MORE |
+| TheGamer | https://www.thegamer.com/persona-5-tactica-p5t-beginner-tips-getting-started-pro-tip/ | 梯子/跳台在移动范围内可用；从下往上打伤害降低 |
+| RPG Site | https://www.rpgsite.net/review/15107-persona-5-tactica-review | 更正：Triple Threat 没有距离限制 |
+| 旧版（1 步） | Twinfinite / EarlyGame / DualShockers / Kotaku / Polygon（见 git 历史 d4f07a0 的本文件） | 掩体被包抄仍有 Resistance、技能无视障碍、撞击双方失去 Resistance |
 
-## 与原作差异清单（不确定 / 有出入 / 未做）
-**A. 数值不确定（原作未公开，需对照正版数据或实机测）**
-1. Resistance 减伤倍率：暂定 ×0.5。
-2. Triple Threat 伤害：暂定「三人近战力之和 ×1.0」；原作是「全队合计伤害的一定比例」，比例未知。
-3. 灼烧掉血 5 点、灼烧击退 1 格、异常持续 1 回合：方向与持续正确，数值占位。
-4. 角色 HP/SP/移动/射程/攻击力、敌人数值：全部占位，不是原作数值。
-5. 伤害无随机浮动、无命中率（原作有暴击/命中细节，资料未写清）。
+> megatenwiki.com 被 Cloudflare 拦截，技能表改用其 Fandom 镜像（同一维基社区内容）。原始摘录存于工作区 web/notes（不进仓库）。
 
-**B. 规则理解有分歧（已按原作资料做，旧理解保留为开关）**
-6. 掩体方向：GDD 里写的「侧面才可倒地」与资料不符——资料明确「被包抄仍有 Resistance，只要贴着掩体」。默认按资料（`coverModel:'p5t'`），GDD 理解保留为 `coverModel:'directional'`，一行切换。
-7. 枪弹数：用户/GDD 要求「枪+弹数」，原作无弹数限制。默认无限，数据里写 `ammo` 即可启用。
+## 已实现的规则
+| # | 规则 | 依据 | 实现 |
+|---|---|---|---|
+| 1 | 每人每回合移动一次 + 行动一次；行动前可在范围内反复改站位；我方阶段 ↔ 敌方阶段 | 旧版 | `move/melee/shoot/skill/wait/endPlayerPhase`，`anchor` |
+| 2 | **掩体 = Resistance**：贴着任一掩体（半/全/墙/高台侧壁）就不能被打倒、伤害 ×0.7，与方向无关 | Cogito AAA104（「Basic cover 70% rough estimate」）、MTW-Guard、DualShockers | `hasResistance`；`RESIST_MULT=0.7` |
+| 3 | **全掩体（含墙）挡住来自正面和侧面的枪击**，只有背面能打中 | Cogito AAA104 | `grid.fullCoverBlocks` |
+| 4 | 空地被打 → 倒地 → 1 More（再移动 + 再行动），不同敌人可无限连锁；已倒地的不再给 | MTW-Critical、Cogito AAA106 | `markDowns` / `grantOneMore` |
+| 5 | **近战：击退 4 格**，攻击者站到对方原位，打破 Resistance；途中撞墙/掩体停下；撞到单位 → 双方失去 Resistance | Cogito AAA103、BBB200 | `doMelee` / `push(dist=4)` |
+| 6 | 任何攻击技能都打破 Resistance；技能无视墙体视线 | MTW-Guard、旧版 | `doSkill` |
+| 7 | **高低差**：地面有层高；不能直接走上/下高台，**梯子/跳台 = Dash**（在移动范围内）；高处单位抵抗来自低处的枪击 | Cogito AAA110/AAA111、TheGamer、altema | `MapDef.heights/links`、`grid.neighbors`、`dash` 事件 |
+| 8 | **推下高台**：击退/吹飞/投掷越过高台边缘 → 坠落（受伤），**落点在下方队友枪的射程内 → 队友 Follow-Up 开枪、目标倒地、攻击者 1 More**；每人每回合 Follow-Up 1 次（Follow-Up+ = 2，选项） | MTW-FollowUp、Cogito AAA111、altema | `afterLand` / `followUp`；`opts.followUps` |
+| 9 | 护送对象/无枪单位不能 Follow-Up | MTW-FollowUp（Toshiro） | `noFollowUp` |
+| 10 | **Charge**：一回合（或一次 1 More）里没攻击就结束 → Charge；到下次攻击/技能前生效后用掉。实现了原作全部 9 种 Charge 效果（Foresight/Spring Storm 射程+1、Clairvoyance +2、Phantom Step 移动+1、Lightning Speed +2、Ferocious Lion 击退+1、Over Powered ×1.2、Bullet Break 枪击无视掩体打倒、Essence of Sorcery 技能范围+1），每名角色配其免费的第一个 | MTW-P5T、Cogito AAA108 + Charge 技能表、MTW-Skills | `maybeCharge` / `chargeBonus` / `useCharge` |
+| 11 | **Voltage**：我方共享槽，造成或受到伤害都会涨；满了任一角色可用 Unique，不耗 SP、清空槽 | Cogito AAA109、MTW-Voltage | `voltage`、`unique()` |
+| 12 | Unique 技能：Phantom Judge（小范围、**掩体里也打倒**）、Brigantine Blitzkrieg（直线 + 感电）、Femme Fatale（范围伤害、**用完还能行动**）、Winds of Time（周围大范围吹飞）、Full Throttle（直线击退）、Noble Lady's Invitation（范围催眠拉向目标）、Pathway to the Ball（本回合移动 +99、还能行动） | MTW-Voltage / MTW-Skills | `UNIQUES` |
+| 13 | **全部 10 种效果**：灼烧（击退 1 格 + 20% MaxHP、不致死）、冻结（1 回合不能行动，受伤解除）、感电（1 回合不能移动）、吹飞（飞 4 格越过障碍，可飞下高台）、催眠（拉近 4 格、绕障碍）、漩涡（把范围内敌人拉向中心）、眩晕（随机移动、仍可攻击）、绝望（目标不能移动，施法者下次移动 +，目标越多越多）、遗忘（1 回合不能攻击）、睡眠（2 回合不能行动、受伤即醒、回合回复） | MTW-Effects、Cogito AAA101 | `STATUS_OF` / `push(fly)` / `pull` / `beginSidePhase` |
+| 14 | 身上有异常的单位任何攻击都能打倒 | 旧版（Twinfinite） | `hasResistance` |
+| 15 | 回复与辅助：Dia / Diamrita（解异常）/ Media（全体）；Tarukaja 攻↑、Rakukaja 防↑、Sukukaja 移动 +3 | MTW-Skills；Sukukaja +3 来自 Cogito AAA115 | `kind:'heal'/'buff'` |
+| 16 | **Triple Threat**：有人持 1 More、三名主力围成的三角里有倒地敌人 → 三角内所有敌人受伤（无视 Resistance）、用掉 1 More；**无距离限制**；**我方有除灼烧/绝望外的异常时不能发动**；伤害按三人近战+枪攻 | Cogito AAA107、RPG Site、MTW-P5T | `pendingTriple` / `tripleThreat` |
+| 17 | **特殊敌人（7 类）**：Shooter（只开枪、掩体间移动）；Revenger（被打后跳到攻击者身边近战反击）；Shielder（挡住正面所有攻击，只能从背面/侧面用枪打倒；近战/技能只伤不倒、会转向攻击者；不能被移动）；Teleporter（被打与攻击者换位）；Launcher（投掷身边的敌我单位或扔石头；不能被打倒；击退减半；被推下高台即死）；Supporter（回复/加速/攻击技能）；Loudspeaker（本回合禁止某类行动，范围内违规受罚） | Cogito AAA115 | `role` + `onHitReaction` / `heave` / `ai.ts` |
+| 18 | **地图物件**：油桶（被任何攻击/撞击引爆：2 格内全部吹飞、受伤、失去 Resistance，连锁）；木箱（全掩体，可被近战推飞） | Cogito Map objects | 中立单位 `prop:'barrel'/'box'/'speaker'` |
+| 19 | **关卡目标**：击败全部 / 击败指定（多个）目标 / 除某人外全灭（误伤即败）/ 到达出口（任一人、指定人、全员）/ 护送（护送对象倒下即败、不能攻击不能 Dash）/ 坚持 N 回合 / N 回合内完成（超限即败） | Cogito 关卡列表（M03/M08/M09/M14/M15、DLC13） | `WinCondition` / `turnLimit` / `escort` |
+| 20 | **奖励栏**：通关 / N 回合内通关 / 无人 KO / 击败全部敌人 / 我方受伤少于 N 次 | Cogito 关卡列表 | `BonusDef` / `crowns()` |
+| 21 | **Baton Pass**：队员倒下可换替补上场；次数按难度；全员（含替补）倒下才失败 | MTW-BatonPass、Cogito AAA112 | `batonPass()`；`leaderKoLoses` 默认改为 false |
+| 22 | **难度**：敌人 HP / 攻击倍率（Safety 50%/25% … Merciless 150%/150%）+ Baton Pass 次数 | Cogito AAA100 / AAA112 | `opts.difficulty` |
+| 23 | 敌人也会 1 More（打倒空地上的我方后再走再打） | 旧版 | `runEnemyTurn` |
+| 24 | 枪无弹数限制（`ammo` 缺省无限）；枪型 ST 单体 / AoE 散射 / EXP 爆炸（按角色表） | Cogito（「Gun does not have Ammo limit」、角色表 R AoE 列） | `gun.shape` |
 
-**C. 原作有、这一步没做（后续步骤）**
-8. 高低差、梯子、从高处推落 + 下方队友 **Follow-up** 追击（另一种拿 1 More 的方式）。
-9. **Baton Pass**（把 1 More 交给队友）——印象中原作有，资料本步未核实。
-10. 「不行动直接结束」的增益（原作：提前结束可在下回合获得增益；Erina 为 Charge）。目前「待机」无增益。
-11. Voltage 槽与 Unique Skill（如 Joker 的 Phantom Judge 无视掩体直接打倒）。
-12. 其余元素异常：Bufu 冻结、Garu 吹飞（越过障碍）、Psi 催眠、Frei 漩涡、Kouha 眩晕、Sleep、Forget。
-13. 特殊敌人：Revenger（回合开始自带 Resistance，被打后反击并失去 Resistance）等；爆炸桶。
-14. 部分角色枪可穿透打多个敌人；武器/副面具/技能树加成。
-15. 敌人倒地后起身时是否照常行动：目前照常行动（资料未写明）。
-16. 敌人连锁 1 More 设了上限 3 次防死循环（原作无此上限说明）。
-17. 「意图」只显示范围和预计目标；原作是点敌人看移动/攻击范围，没有明示目标——目标标注是我们加的辅助。
-18. 视线算法为格子 supercover 近似；全掩体若紧贴射手或目标则可探身射击（原作具体判定未知）。
-19. 近战推向墙/掩体时原作可能有额外伤害，目前只是不动。
+## 数值：哪些是原作公开数据，哪些是占位
+- **[源] 角色**：HP / SP / 移动 / 近战 / 枪攻 / 射程 / 枪型取 Cogito 角色表 Lv19（Joker/Mona/Ann/Ryuji/Haru/Erina）与 Lv21（Yusuke/Makoto/Kasumi）那一行；Toshiro（护送）85 HP / 6 移动（Cogito C109）。只有这一个等级的数据点，**没有成长曲线、副面具、武器加成**。
+- **[源] 技能 Power / SP**：MTW-Skills（Agi 45/14、Bufu 35/14、Zio 45/12、Garu 25/8、Psi 25/12、Frei 25/14、Kouha 40/12、Eiha 35/12、Partisan 25/12、Dia 65/10、Media 65/34、-kaja 12；Unique 初始级 Phantom Judge 41、Brigantine 41、Femme Fatale 58、Winds of Time 29、Full Throttle 30、Noble Lady 23）。
+- **[源] 规则数值**：Resistance ×0.7（Cogito 粗略实测）、近战击退 4、吹飞 4、催眠 4、灼烧 20% MaxHP 且不致死、油桶半径 2、Over Powered ×1.2、Sukukaja +3、睡眠 2 回合、难度表、Baton Pass 次数。
+- **[PH] 占位**：
+  1. 伤害公式：技能伤害 = Power × 0.45；回复 = Power × 0.5（原作公式未公开）。
+  2. 技能射程（单体 5 格、范围 4 格）、「small/medium/large/huge area」→ 半径 1/2/3/4；Unique 的射程/长度。
+  3. Triple Threat 倍率（三人近战+枪攻之和 × 0.5）。
+  4. Voltage 上限 100、增长 = 伤害 × 0.5。
+  5. 坠落伤害 10% MaxHP / 层；油桶伤害 20、吹飞 2 格；绝望每目标 +2 移动；-kaja 倍率与 3 回合；Revenger 反击跳跃 3 格；喇叭半径 3、惩罚 20% MaxHP；睡眠回复 10%。
+  6. **全部敌人数值**（HP、攻击、移动、射程）。
+  7. 技能分配给谁：Joker Eiha、Ryuji Zio、Ann Agi、Mona Garu、Yusuke Bufu、Makoto Frei、Haru Psi 按原作人格；Erina = Partisan、Kasumi = Kouha、各人的回复/辅助技能是灰盒示意（未核实初始技能）。
 
-## 玩法还原度自评：约 75%
-依据（按核心系统加权）：
-- 核心循环（移动+行动、阶段交替、行动前改站位）：≈95%
-- 掩体/Resistance/全掩体落空：≈90%（倍率未知）
-- 打倒 + 1 More 连锁：≈95%
-- 近战推出 + 占位 + 撞击：≈90%
-- Triple Threat（条件、范围、用掉 1 More、调站位）：≈90%（伤害比例未知）
-- 技能/异常：≈55%（只做了 3 种元素）
-- 敌人 AI 与敌方 1 More：≈65%（AI 简单）
-- 地形（高低差/推落/Follow-up/爆炸桶）：≈0%
-- 特殊敌人、Voltage/Unique、Baton Pass：≈0%
-→ 当前核心战斗规则 ≈90% 吻合；离整体 >90% 还差：高低差+Follow-up、Baton Pass、全部元素效果、Revenger 等特殊敌人、Voltage，以及用正版数据核对数值。
+## 与原作差异清单（仍不一致 / 未做）
+**A. 数值（见上「PH」）**——伤害公式、敌人数值、技能射程是最大缺口；需要正版实机测或数据表。
+
+**B. 机制细节有出入**
+1. Guard 的获得时机：原作是「回合结束时贴掩体」获得 Guard 状态；本原型是「被打的那一刻贴着掩体」实时判定（大多数情况结果相同；单位被吹飞离开掩体后立刻失去，原作可能还留着到被技能/近战命中）。
+2. Dash：原作 Dash 是单独一步（Stop & Go 可在 Dash 后 +1 移动、Kasumi 的 +99 移动在 Dash 后结束）；这里梯子/跳台只是路径里耗 1 格的边（Pathway 在 Dash 后取消已做）。跳台与梯子没区分。
+3. 跨高度近战：这里要求同一高度相邻才可近战（原作未查到明确说明）。「从上往下打伤害更高」（TheGamer）未实现；Broad Perspective（高处射击有几率打倒）未做。
+4. 坠落：只在击退到更低格时触发并停在落点；原作是否继续滑行、坠落是否必定倒地（无追击时）未知——这里无追击就不倒地。
+5. Revenger：这里「被打且没倒地」才反击、跳跃范围 3 格；原作触发条件与距离未写明。
+6. Launcher 投掷：AI 只做「把身边同伴扔到我方旁边 / 把身边我方扔走（可扔下高台）/ 扔石头」，最多扔 1 个（原作可扔 2 个）。
+7. Loudspeaker：禁止的行动按回合轮换、惩罚是掉血+破防（原作惩罚形式未写明）。
+8. Supporter AI 简化（回复 < 60% 的同伴 > 给近战同伴 Sukukaja > 攻击）。
+9. 眩晕的我方单位：阶段开始随机走一步后本回合不能自主移动（原作玩家侧表现未核实）。
+10. 漩涡/催眠的拉动路径是近似（最多 N 步、取离中心/施法者最近的可达格）。
+11. 撞击是否有额外伤害未知（这里没有）。
+12. 敌方 1 More 连锁上限 3 次（防死循环，原作无此说明）。
+13. 敌方意图只显示范围与预计目标（目标标注是我们加的辅助）。
+14. Baton Pass 的替补出现在倒下者的位置（或最近空格）——原作出现位置未核实；Safe 模式「全灭后全员复活继续」未做。
+15. AoE / EXP 枪的打击形状按「目标 + 周围 1 格」近似。
+
+**C. 原作有、本步没做**
+16. Unique：Yusuke「Like a Phantom」（召唤诱饵）、Erina「Flag of Freedom」（插旗破掩体/回复）、Akechi「Truth Seeker」（全员再行动一次）；Femme Fatale 没有真的召唤一个会走路的单位。
+17. 每人第二个 Charge 技能、技能树（GP）、副面具、武器、Peak Condition、等级成长。
+18. 被动/自动技能：Ambush、First Aid、Ailment Shield、Invigorate/Regenerate、Iron Body 等。
+19. 地图机关：开关/升降台/定时开关门、监视摄像头（踩到召唤敌人）、Flag of Control、Crystal of Rebirth、DLC 涂色。
+20. Toshiro 作为可战斗角色（Baywell 45、远程 Triple Threat）。
+21. 剧情关的中途事件（援军按回合出现、Boss 阶段）。
+
+## 玩法还原度自评：约 82%（机制面约 86%；未达 90%）
+按核心系统加权（权重/得分）：
+- 核心循环（移动+行动、阶段、行动前改站位）10 / 95%
+- 掩体 / Resistance / 全掩体正面+侧面 10 / 90%（Guard 获得时机近似）
+- 打倒 + 1 More 连锁 10 / 95%
+- 近战击退 4 格 / 占位 / 撞击 6 / 90%
+- Triple Threat（条件、无距离限制、异常限制）6 / 85%（倍率 PH）
+- 高低差 / Dash / 推落 / Follow-Up 8 / 80%（坠落伤害 PH、Dash 简化）
+- Charge（9 种效果全有）5 / 90%
+- Voltage / Unique（7/10 名角色）5 / 75%
+- 10 种元素效果 8 / 85%
+- 回复/辅助 3 / 75%
+- 特殊敌人 7 类 6 / 75%
+- 地图物件（油桶/木箱；机关未做）4 / 60%
+- 关卡目标 + 奖励栏 5 / 90%
+- Baton Pass / 难度 3 / 90%
+- 数值（角色真数据 1 个等级、技能 Power 真；伤害公式/敌人/射程 PH）7 / 40%
+- 敌人 AI（启发式，原作 AI 不明）4 / 65%
+→ 加权 ≈ 81.7%；去掉「数值」和「AI」两项只看机制 ≈ 85.7%。
+上一步 75% → 本步约 82%。离 90% 还差的主要是：**伤害公式与敌人数值（公开资料没有，需要正版实机测）**、地图机关、剩余 3 个 Unique、Dash/Guard 细节。
 视觉：灰盒方块，视觉还原度不在本步评估（第 2 步接 P5T 素材）。

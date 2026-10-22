@@ -3,7 +3,7 @@
 import type { EventName, Recipe, Track } from '../skins/_contract';
 import type { Engine } from './core';
 import { Timeline, Clip, report } from './timeline';
-import { CAPS, capKey, expand, select } from './recipes';
+import { CAPS, capKey, expand, select, PER_CELL, PER_CELL_MAX } from './recipes';
 import { PRIMS, RunCtx } from './prims';
 import { DEFAULT_RECIPES } from './defaults';
 
@@ -32,14 +32,17 @@ export class Director {
   level(): 'full' | 'standard' | 'minimal' { return this.forceMinimal || this.speed >= 2 ? 'minimal' : 'full'; }
 
   /** 播一个事件。payload 会被 structuredClone + 深冻结后交给 recipe（§0.11）。 */
-  play(ev: EventName, payload: unknown, q: { skillId?: string; side?: string; actorId?: string } = {}): Promise<RunResult> {
+  play(ev: EventName, payload: unknown, q: { skillId?: string; side?: string; actorId?: string; kind?: string; choice?: string; result?: string } = {}): Promise<RunResult> {
     const eng = this.eng;
     const recipes = [...eng.skin.recipes, ...DEFAULT_RECIPES];
     const recipe = select(recipes, ev, q) ?? select(DEFAULT_RECIPES, ev, {});
     const frozen = deepFreeze(structuredClone(payload ?? {}));
     const lane: 'main' | 'overlap' = ev === 'unit:down' ? 'overlap' : 'main';
     const level = this.level();
-    const cap = CAPS[capKey(ev, q.side)] ?? [1000, 400];
+    const cap0 = CAPS[capKey(ev, q.side)] ?? [1000, 400];
+    // 按格计的事件：上限 = 格数 × 单格上限（封顶 2.0s），recipe 写一格，时间轴按格数伸缩
+    const cells = PER_CELL.has(ev) ? Math.max(1, ((payload as any)?.path?.length as number) || 1) : 1;
+    const cap: [number, number] = cells > 1 ? [Math.min(PER_CELL_MAX, cap0[0] * cells), Math.min(PER_CELL_MAX, cap0[1] * cells)] : cap0;
     const capMs = (level === 'minimal' ? cap[1] : cap[0]) / this.speed;
     return new Promise<RunResult>((resolve) => {
       if (!recipe) { resolve({ ev, recipe: '-', duration: 0, wallMs: 0, capMs, forced: false, skipped: false, speed: this.speed, level }); return; }
@@ -51,12 +54,13 @@ export class Director {
       // minimal: compress to minimal cap
       let tracks = expand(recipe);
       let scale = 1;
+      if (cells > 1) scale = Math.min(cells, (PER_CELL_MAX - 100) / Math.max(1, recipe.duration));
       if (level === 'minimal') {
         tracks = tracks.filter((t) => t.minimal !== 'skip').map((t) => (typeof t.minimal === 'object' ? { ...t, ...t.minimal, args: { ...t.args, ...(t.minimal.args ?? {}) } } as Track : t));
         // 压到极简上限内：扣掉停帧（极简每次 30ms）和一帧余量，保证墙钟不触发强制推进
         const hs = tracks.filter((t) => t.prim === 'hitStop').length * 30;
-        const target = cap[1] - hs - 40 * this.speed;
-        if (recipe.duration > target) scale = target / recipe.duration;
+        const target = Math.max(cap[1] * 0.5, cap[1] - hs - 40 * this.speed);   // M4b：短上限 ×3 倍速时不压到 0
+        if (recipe.duration * scale > target) scale = target / recipe.duration;
       }
       const length = recipe.duration * scale;
       const tl = new Timeline(recipe.id, length);

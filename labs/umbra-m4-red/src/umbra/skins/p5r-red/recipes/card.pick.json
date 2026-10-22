@@ -1,0 +1,54 @@
+{
+ "id": "card.pick",
+ "event": "card:pick",
+ "duration": 550,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "dur": 120,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.5
+   }
+  },
+  {
+   "at": 0,
+   "prim": "radialBurst",
+   "dur": 530,
+   "args": {
+    "colors": [
+     "@color.primary",
+     "#0a0a0a"
+    ],
+    "rays": 16,
+    "alpha": 0.4,
+    "spin": 0.4,
+    "center": {
+     "x": 640,
+     "y": 380
+    }
+   }
+  },
+  {
+   "at": 30,
+   "prim": "title",
+   "dur": 500,
+   "layer": "trans",
+   "args": {
+    "text": "flow.card.title",
+    "size": 92,
+    "pos": {
+     "x": 640,
+     "y": 330
+    },
+    "rot": -0.08,
+    "invert": [
+     0,
+     3
+    ]
+   }
+  }
+ ]
+}

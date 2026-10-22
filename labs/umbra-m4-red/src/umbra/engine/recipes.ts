@@ -8,8 +8,17 @@ export const CAPS: Record<string, [number, number]> = {
   'talk:start': [800, 300], 'talk:result': [1200, 400], 'battle:end': [1500, 500], 'scene:enter': [600, 250], 'scene:leave': [600, 250],
   // M3 第二阶段 v1.3 提案（FX-MAP 🆕）：baton 0.6s、levelup 1.0s
   'baton': [600, 250], 'levelup': [1000, 400],
+  // v1.3 §3a/§3b/§3d/§3e（M4b 走 Director）。explore:move / explore:sneak 为「每格」上限，整条 = 格数 × 单格，封顶 2.0s（PER_CELL）
+  'explore:move': [250, 120], 'explore:sneak': [350, 150], 'explore:cover': [300, 150], 'explore:spotted': [500, 200], 'explore:interact': [400, 200],
+  'explore:exit': [800, 300], 'explore:scan': [400, 200], 'callingcard:send': [3000, 1000], 'boss:intro': [2000, 600], 'boss:phase': [2000, 600],
+  'card:pick': [600, 300], 'run:fail': [1500, 500], 'run:retreat': [1000, 400], 'escape': [600, 250], 'unit:revive': [600, 250],
   'map:move': [800, 300], 'map:encounter': [900, 350], 'env:change': [600, 250], 'ui:open': [280, 150], 'ui:close': [280, 150],
 };
+/** 按格计上限的事件（整条路径一个事件，封顶 2000ms） */
+export const PER_CELL = new Set<string>(['explore:move', 'explore:sneak']);
+export const PER_CELL_MAX = 2000;
+/** v1.3 §3g-3 可跳过名单 */
+export const SKIPPABLE = new Set<string>(['highlight', 'allout', 'boss:phase', 'boss:intro', 'fusion:result', 'callingcard:send', 'bond:rankup']);
 export const capKey = (ev: EventName, side?: string) => (ev === 'action' && side === 'enemy' ? 'action:enemy' : ev);
 
 /** §1 原语单项时长上限（用于校验） */
@@ -20,6 +29,7 @@ const PRIM_MAX: Partial<Record<PrimitiveName, number>> = {
   cardFlip: 500, cardShatter: 600, dateFlip: 900, bakedSwap: 400, portraitDown: 600, squashHit: 370,
   summon: 900, personaShow: 1100, eyeStrip: 700, onomatopoeia: 600, checkerFloor: 1200, ringSplash: 1000, batonPass: 800, showtimeLogo: 900, nameplate: 1200, pose: 1800, skinFilter: 1200,
   comicPanels: 1100, duoEntrance: 1100, duoStrike: 900, duoTitle: 1100, maskRip: 700, camera: 3500, holdupRing: 1000,
+  gridWalk: 2000, gridMark: 800, gridSquash: 800, gridProp: 800, gridShake: 600, gridScan: 400, sprite: 3000,
 };
 export const IMPLEMENTED = new Set<PrimitiveName>([
   'tween', 'show', 'hide', 'sfx', 'vibrate', 'title', 'dim', 'radialBurst', 'hitStop', 'shake', 'flashSprite', 'flashScreen', 'squashHit',
@@ -28,6 +38,7 @@ export const IMPLEMENTED = new Set<PrimitiveName>([
   'summon', 'personaShow', 'nameplate', 'pose', 'skinFilter', 'batonPass', 'showtimeLogo',
   'blockPush', 'tvStatic', 'glassShatter', 'cardFlip', 'cardShatter', 'dateFlip', 'eyeStrip', 'onomatopoeia', 'checkerFloor', 'ringSplash',
   'comicPanels', 'duoEntrance', 'duoStrike', 'duoTitle', 'maskRip', 'camera', 'holdupRing',
+  'gridWalk', 'gridMark', 'gridSquash', 'gridProp', 'gridShake', 'gridScan', 'sprite',
 ] as PrimitiveName[]);
 
 export function expand(r: Recipe): Track[] {
@@ -79,7 +90,7 @@ export function validate(r: Recipe): Issue[] {
   return is;
 }
 
-export interface MatchQuery { summon?: string; skillId?: string; element?: string; actorId?: string; partySize?: number; kind?: string; side?: string }
+export interface MatchQuery { choice?: string; result?: string; summon?: string; skillId?: string; element?: string; actorId?: string; partySize?: number; kind?: string; side?: string }
 export function select(recipes: Recipe[], ev: EventName, q: MatchQuery): Recipe | undefined {
   let best: Recipe | undefined, bestScore = -1;
   for (const r of recipes) {

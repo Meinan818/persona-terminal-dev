@@ -375,6 +375,9 @@ export class P5Hud {
       const hpw = e.compact ? 80 : 110, r = Math.max(0, e.hp / e.hpMax);
       c.addChild(new Graphics().poly([0, 36, hpw, 35, hpw - 3, 42, -3, 43]).fill(0x0a0a0a).poly([0, 36, hpw * r, 35.5, hpw * r - 3, 42, -3, 43]).fill(hex(this.C.primary)));
       c.position.set(u.home.x - w / 2, u.home.y + u.headY + this.eng.skin.slots['hud.enemyOver'].dy - 30);
+      // M4b 修（M3 遗留）：2 只敌人时左侧敌人头顶名牌会压住左上行动顺序条 → 与顺序条（槽位 + 装饰外缘 36）横向相交时下移到其下方
+      { const [ox, oy, ow, oh] = this.eng.skin.slots['hud.order'].rect as number[]; const bottom = oy + oh + 40; const cw = Math.max(w, ix - 12, hpw);
+        if (c.x < ox + ow + 10 && c.x + cw > ox - 10 && c.y < bottom) c.y = bottom; }
       (c as any).hpR = r;
     }
   }

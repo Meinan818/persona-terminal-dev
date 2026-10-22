@@ -160,3 +160,12 @@
 .umbra-skin-p5r-red .wipscr .msg { position: absolute; left: 560px; top: 220px; width: 600px; background: #f3efe6; color: #0a0a0a; padding: 24px 30px; font-size: 26px; transform: rotate(-2deg); line-height: 1.5; }
 .umbra-skin-p5r-red .wipscr .msg b { display: block; font-size: 44px; color: #e5191c; font-weight: normal; }
 @media (prefers-reduced-motion: reduce) { .umbra-skin-p5r-red * { animation-duration: .01s !important; animation-delay: 0s !important; } }
+/* M4b：撤退按钮（安全屋）/ 失败结算 */
+.umbra-skin-p5r-red .safe-row { left: 140px; width: 1000px; }
+.umbra-skin-p5r-red .safe-row .fl-btn.ghost { background: #1a1a1a; box-shadow: inset 0 0 0 3px #e5191c; flex: .8; }
+.umbra-skin-p5r-red .safe-row .fl-btn.ghost .en { font: 18px 'R5 CJK', sans-serif; color: #f4eedd; margin: 6px 0 0; }
+.umbra-skin-p5r-red .end-grid.fail > div:first-child span { color: #f4eedd; }
+.umbra-skin-p5r-red .end-grid.fail > div:nth-child(3) span { color: #888; text-decoration: line-through; }
+.umbra-skin-p5r-red .fl-btn.lock { opacity: .55; }
+.umbra-skin-p5r-red .fl-btn.lock .zh::after { content: ' LOCK'; font: 18px 'R5 Latin Display', sans-serif; color: #e5191c; }
+.umbra-skin-p5r-red .req .route { margin-top: 6px; font-size: 18px; color: #e5191c; }

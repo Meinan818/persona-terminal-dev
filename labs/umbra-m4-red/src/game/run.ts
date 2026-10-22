@@ -21,12 +21,17 @@ export class Save {
   party: string[] = [LEAD, ...DEFAULT_PARTY];
   members: Record<string, Member> = {};
   cleared: string[] = [];
+  /** D3：每个殿堂已确保路线的局数（普通局通关 +1；≥2 才能发预告信） */
+  routes: Record<string, number> = {};
   stats = { ...ECO.stats } as Record<string, number>;
   constructor() {
     for (const [id, r] of Object.entries(ROSTER)) this.members[id] = { id, lv: r.lv, hp: r.hp, hpMax: r.hp, sp: r.sp, spMax: r.sp, exp: 0 };
     try { const j = JSON.parse(localStorage.getItem('umbra.m4.save') ?? 'null'); if (j && j.v === 1) Object.assign(this, j.d); } catch { /* */ }
   }
-  persist() { try { localStorage.setItem('umbra.m4.save', JSON.stringify({ v: 1, d: { money: this.money, items: this.items, party: this.party, members: this.members, cleared: this.cleared } })); } catch { /* */ } }
+  persist() { try { localStorage.setItem('umbra.m4.save', JSON.stringify({ v: 1, d: { money: this.money, items: this.items, party: this.party, members: this.members, cleared: this.cleared, routes: this.routes } })); } catch { /* */ } }
+  /** D3：预告信解锁 = 该殿堂完成 2 局（确保路线）且统治者未被击破 */
+  ccNeed(reqId: string) { return Math.max(0, (REQ as any).callingCard.needRuns - (this.routes[reqId] ?? 0)); }
+  ccUnlocked(reqId: string) { return this.ccNeed(reqId) === 0 && !this.cleared.includes(reqId); }
   restAll() { for (const m of Object.values(this.members)) { m.hp = m.hpMax; m.sp = m.spMax; } }
 }
 
@@ -50,6 +55,7 @@ export class Run {
     // 按种子抽模板 + 镜像（GDD §20）。fork 节点在玩家选路时再定房间。
     for (const k of REQ.route) {
       if (k === 'gate') this.nodes.push({ kind: 'gate', room: { ...this.rng.pick((ROOMS as any).gate as Room[]), kind: 'gate' }, mirror: this.rng.next() < 0.5 });
+      else if (k === 'boss') { const b = ((ROOMS as any).boss as Record<string, Room>)[this.req.id] ?? Object.values((ROOMS as any).boss as Record<string, Room>)[0]; this.nodes.push({ kind: 'boss', room: { ...b, kind: 'boss' } }); }
       else this.nodes.push({ kind: k });
     }
     for (const id of save.party) this.startLv[id] = save.members[id].lv;
@@ -61,7 +67,30 @@ export class Run {
     this.forkChoice = c; const kind = (REQ.fork as any)[c] as string;
     this.node.room = { ...this.rng.pick((ROOMS as any)[kind] as Room[]), kind }; this.node.choice = c; this.node.mirror = false;
   }
-  enterNode() { const n = this.node; this.explore = n.room ? new Explore(n.room, !!n.mirror) : null; return this.explore; }
+  /** D3：发出预告信 → 终点为统治者（两阶段 + 宝物）；否则守卫 BOSS */
+  get ruler() { return this.callingCard; }
+  enterNode() {
+    const n = this.node; let room = n.room;
+    if (room && room.boss) room = { ...room, boss: { ...room.boss, enc: [this.ruler ? 'boss' : 'warden'] } };
+    this.explore = room ? new Explore(room, !!n.mirror) : null; return this.explore;
+  }
+  // ---- 失败 / 撤退 / 安全屋重试（GDD §四、SYSTEMS-AUDIT B11/B19）
+  safeIdx = -1; retryUsed = false; safeSnap: { alert: number; members: Record<string, { hp: number; sp: number }> } | null = null;
+  markSafe() { this.safeIdx = this.idx; this.safeSnap = { alert: this.alert, members: Object.fromEntries(this.save.party.map((id) => [id, { hp: this.save.members[id].hpMax, sp: this.save.members[id].spMax }])) }; }
+  get canRetry() { return this.safeIdx >= 0 && !this.retryUsed; }
+  /** 免费重试一次：回到安全屋后的下一个节点，队伍全恢复，警戒度回到进安全屋时 */
+  retryFromSafe() { this.retryUsed = true; this.save.restAll(); if (this.safeSnap) this.alert = this.safeSnap.alert; this.idx = this.safeIdx + 1; this.explore = null; }
+  failPreview() { const keepMoney = Math.floor(this.gain.money / 2); return { keepMoney, loseMoney: this.gain.money - keepMoney }; }
+  /** 失败结算：本局收获保留一半（金钱、道具向下取整；经验扣回一半，不降级），委托不算完成 */
+  failSettle() {
+    const lostMoney = this.gain.money - Math.floor(this.gain.money / 2); this.save.money = Math.max(0, this.save.money - lostMoney); this.gain.money -= lostMoney;
+    const items: Record<string, number> = {};
+    for (const [k, n] of Object.entries(this.gain.items)) { const lose = n - Math.floor(n / 2); this.save.items[k] = Math.max(0, (this.save.items[k] ?? 0) - lose); items[k] = n - lose; }
+    const lostExp = this.gain.exp - Math.floor(this.gain.exp / 2);
+    for (const id of this.save.party) { const m = this.save.members[id]; m.exp = Math.max(0, m.exp - lostExp); }
+    this.gain.exp -= lostExp; this.gain.items = items; this.save.persist();
+    return { money: this.gain.money, exp: this.gain.exp, items, lostMoney, lostExp };
+  }
   next() { this.idx++; this.explore = null; return this.node; }
   /** 心之卡：战后三选一（§17）。四系，同系 3 张触发套装 */
   cardOffer(rare = false): Card[] {
@@ -104,6 +133,12 @@ export class Run {
   }
   safeRest() { this.save.restAll(); return this.addAlert(ECO.alert.safe); }
   rank() { const s = (this.spotted === 0 ? 2 : this.spotted === 1 ? 1 : 0) + (this.alert < 40 ? 1 : 0) + (this.turns / Math.max(1, this.battles) <= 3 ? 1 : 0); return s >= 4 ? 'S' : s >= 2 ? 'A' : 'B'; }
-  finish() { const r = this.req.reward; this.save.money += r.money; this.gain.money += r.money; if (!this.save.cleared.includes(this.req.id)) this.save.cleared.push(this.req.id); this.save.persist(); }
+  /** 通关结算：普通局 = 确保路线 +1；预告信局击破统治者 = 委托完成（宝物） */
+  finish() {
+    const r = this.req.reward; this.save.money += r.money; this.gain.money += r.money;
+    if (this.ruler) { if (!this.save.cleared.includes(this.req.id)) this.save.cleared.push(this.req.id); }
+    else this.save.routes[this.req.id] = (this.save.routes[this.req.id] ?? 0) + 1;
+    this.save.persist();
+  }
 }
 export { REQ, ECO };

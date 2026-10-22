@@ -1,0 +1,113 @@
+{
+ "id": "callingcard.send",
+ "event": "callingcard:send",
+ "duration": 2850,
+ "assets": [
+  "callingcard"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.callingcard"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "dim",
+   "dur": 2850,
+   "layer": "cutin",
+   "args": {
+    "color": "#0a0a0a",
+    "alpha": 0.6,
+    "hold": true
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sprite",
+   "dur": 2850,
+   "layer": "cutin",
+   "ease": "inOutCubic",
+   "args": {
+    "asset": "callingcard",
+    "height": 560,
+    "moveMs": 1250,
+    "from": {
+     "x": 640,
+     "y": 370,
+     "scale": 1,
+     "rot": -0.04
+    },
+    "to": {
+     "x": 1010,
+     "y": 250,
+     "scale": 0.42,
+     "rot": 0.26
+    }
+   }
+  },
+  {
+   "at": 1150,
+   "prim": "flashScreen",
+   "dur": 160,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.6
+   }
+  },
+  {
+   "at": 1200,
+   "prim": "slashPanels",
+   "dur": 640,
+   "args": {
+    "colors": [
+     "@color.primary",
+     "#0a0a0a",
+     "#f4eedd"
+    ],
+    "stagger": 70,
+    "angle": 0.35
+   }
+  },
+  {
+   "at": 1650,
+   "prim": "title",
+   "dur": 800,
+   "layer": "trans",
+   "args": {
+    "text": "flow.cc.stamp",
+    "size": 104,
+    "pos": {
+     "x": 600,
+     "y": 420
+    },
+    "rot": -0.12,
+    "invert": [
+     0,
+     4,
+     9
+    ]
+   }
+  },
+  {
+   "at": 2350,
+   "prim": "title",
+   "dur": 480,
+   "layer": "trans",
+   "args": {
+    "text": "flow.cc.sent",
+    "size": 64,
+    "pos": {
+     "x": 640,
+     "y": 560
+    },
+    "rot": -0.06,
+    "invert": [
+     1
+    ]
+   }
+  }
+ ]
+}

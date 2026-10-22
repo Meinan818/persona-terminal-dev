@@ -1,0 +1,17 @@
+{
+ "id": "explore.sneak",
+ "event": "explore:sneak",
+ "duration": 330,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "gridWalk",
+   "dur": 320,
+   "args": {
+    "hop": 4,
+    "followHop": 3
+   }
+  }
+ ]
+}

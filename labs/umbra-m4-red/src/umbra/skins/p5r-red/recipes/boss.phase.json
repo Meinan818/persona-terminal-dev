@@ -1,0 +1,103 @@
+{
+ "id": "boss.phase",
+ "event": "boss:phase",
+ "duration": 1900,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.boss.phase"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "dur": 200,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.85
+   }
+  },
+  {
+   "at": 0,
+   "prim": "shake",
+   "args": {
+    "px": 18
+   }
+  },
+  {
+   "at": 80,
+   "prim": "radialBurst",
+   "dur": 1400,
+   "args": {
+    "colors": [
+     "@color.primary",
+     "#0a0a0a"
+    ],
+    "rays": 18,
+    "alpha": 0.55,
+    "spin": 0.5,
+    "center": {
+     "x": 760,
+     "y": 330
+    }
+   }
+  },
+  {
+   "at": 200,
+   "prim": "rgbSplit",
+   "dur": 150,
+   "args": {
+    "offset": 8
+   }
+  },
+  {
+   "at": 260,
+   "prim": "flashScreen",
+   "dur": 180,
+   "args": {
+    "color": "@color.primary",
+    "alpha": 0.55
+   }
+  },
+  {
+   "at": 480,
+   "prim": "title",
+   "dur": 700,
+   "layer": "trans",
+   "args": {
+    "text": "flow.boss.phase",
+    "size": 60,
+    "pos": {
+     "x": 640,
+     "y": 230
+    },
+    "rot": -0.08,
+    "invert": [
+     1
+    ]
+   }
+  },
+  {
+   "at": 700,
+   "prim": "title",
+   "dur": 800,
+   "layer": "trans",
+   "args": {
+    "text": "{bossName}",
+    "size": 110,
+    "pos": {
+     "x": 640,
+     "y": 360
+    },
+    "rot": -0.1,
+    "invert": [
+     0,
+     2
+    ]
+   }
+  }
+ ]
+}

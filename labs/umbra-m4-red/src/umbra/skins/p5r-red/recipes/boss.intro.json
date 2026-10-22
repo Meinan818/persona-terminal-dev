@@ -1,0 +1,104 @@
+{
+ "id": "boss.intro",
+ "event": "boss:intro",
+ "duration": 1880,
+ "assets": [
+  "enemy.boss1"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "dim",
+   "dur": 1880,
+   "layer": "cutin",
+   "args": {
+    "color": "#0a0a0a",
+    "alpha": 0.55,
+    "hold": true
+   }
+  },
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "dur": 700,
+   "args": {
+    "colors": [
+     "#0a0a0a",
+     "@color.primary",
+     "#0a0a0a"
+    ],
+    "stagger": 80,
+    "angle": 0.35
+   }
+  },
+  {
+   "at": 250,
+   "prim": "sprite",
+   "dur": 1630,
+   "layer": "cutin",
+   "args": {
+    "asset": "{tex}",
+    "height": 640,
+    "moveMs": 650,
+    "from": {
+     "x": 1250,
+     "y": 380,
+     "scale": 1.2,
+     "alpha": 0
+    },
+    "to": {
+     "x": 860,
+     "y": 390,
+     "scale": 1,
+     "alpha": 1
+    }
+   }
+  },
+  {
+   "at": 300,
+   "prim": "flashScreen",
+   "dur": 160,
+   "args": {
+    "color": "@color.primary",
+    "alpha": 0.5
+   }
+  },
+  {
+   "at": 650,
+   "prim": "title",
+   "dur": 800,
+   "layer": "trans",
+   "args": {
+    "text": "{bossRole}",
+    "size": 54,
+    "pos": {
+     "x": 420,
+     "y": 250
+    },
+    "rot": -0.1,
+    "invert": [
+     0
+    ]
+   }
+  },
+  {
+   "at": 950,
+   "prim": "title",
+   "dur": 800,
+   "layer": "trans",
+   "args": {
+    "text": "{bossLabel}",
+    "size": 120,
+    "pos": {
+     "x": 470,
+     "y": 380
+    },
+    "rot": -0.1,
+    "invert": [
+     0,
+     3
+    ]
+   }
+  }
+ ]
+}

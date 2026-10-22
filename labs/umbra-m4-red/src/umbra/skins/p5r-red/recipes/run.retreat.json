@@ -1,0 +1,41 @@
+{
+ "id": "run.retreat",
+ "event": "run:retreat",
+ "duration": 980,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "dur": 700,
+   "args": {
+    "colors": [
+     "#0a0a0a",
+     "#f4eedd",
+     "@color.primary"
+    ],
+    "stagger": 70,
+    "angle": -0.35,
+    "dir": "ltr"
+   }
+  },
+  {
+   "at": 250,
+   "prim": "title",
+   "dur": 700,
+   "layer": "trans",
+   "args": {
+    "text": "flow.retreat.title",
+    "size": 110,
+    "pos": {
+     "x": 640,
+     "y": 360
+    },
+    "rot": -0.1,
+    "invert": [
+     0
+    ]
+   }
+  }
+ ]
+}

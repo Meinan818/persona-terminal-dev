@@ -28,6 +28,23 @@ for i, c in enumerate(chunks):
     ur = ','.join('U+%X' % ord(ch) for ch in have)
     rows.append(dict(family='R5 CJK', file='assets/fonts/' + name, chars=''.join(have), role='display', pack='first', unicodeRange=ur,
                      kb=round(os.path.getsize(os.path.join(OUT, name)) / 1024, 1)))
+# M4b：标题字体分片缺字 → 从完整 Noto Sans SC（wght 900 实例 = R5 Title SC 同一字体）补子集（OFL 1.1，改名 R5 CJK）
+FULL = '/workspace/work/fonts-src/NotoSansSC-Black.ttf'
+if left and os.path.exists(FULL):
+    cm = TTFont(FULL).getBestCmap(); have = [ch for ch in sorted(left) if ord(ch) in cm]
+    if have:
+        left -= set(have); name = 'r5-cjk-fill.woff2'
+        opt = subset.Options(); opt.flavor = 'woff2'; opt.layout_features = ['*']; opt.name_IDs = ['*']
+        ft = TTFont(FULL); s2 = subset.Subsetter(opt); s2.populate(text=''.join(have)); s2.subset(ft)
+        for rec in ft['name'].names:
+            try:
+                v = rec.toUnicode()
+                if 'Noto' in v or 'Source' in v: rec.string = v.replace('Noto Sans SC', 'R5 CJK').replace('NotoSansSC', 'R5CJK').replace('Source', 'R5')
+            except Exception: pass
+        ft.flavor = 'woff2'; ft.save(os.path.join(OUT, name))
+        rows.append(dict(family='R5 CJK', file='assets/fonts/' + name, chars=''.join(have), role='display', pack='first', unicodeRange=','.join('U+%X' % ord(ch) for ch in have),
+                         kb=round(os.path.getsize(os.path.join(OUT, name)) / 1024, 1), note='补字：Noto Sans SC wght900 实例（R5 Title SC 同源），fonts-src 下载自 google/fonts ofl/notosanssc'))
+        print('fill', ''.join(have))
 # 标题字体缺字 → 同字体部件合成（synth_glyphs.py），保持笔画风格一致
 if left:
     import sys; sys.path.insert(0, os.path.dirname(__file__))

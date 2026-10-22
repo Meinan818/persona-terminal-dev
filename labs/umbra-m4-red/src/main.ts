@@ -125,14 +125,14 @@ const play = (ev: EventName, payload: unknown, q: any = {}) => { M.phase = ev + 
 const syncHudParty = () => hud.updateParty(partyStates());
 
 // ---------------------------------------------------------------- flow
-export interface BattleCfg { types: string[]; mode: 'preemptive' | 'normal' | 'ambushed'; carry: Record<string, Carry>; mods: BattleMods; party: string[]; callingCard?: boolean }
-export interface BattleOutcome { exp: number; money: number; drops: { id: string; n: number }[]; turns: number; carry: Record<string, Carry>; bonus: boolean }
+export interface BattleCfg { types: string[]; mode: 'preemptive' | 'normal' | 'ambushed'; carry: Record<string, Carry>; mods: BattleMods; party: string[]; callingCard?: boolean; optional?: boolean }
+export interface BattleOutcome { exp: number; money: number; drops: { id: string; n: number }[]; turns: number; carry: Record<string, Carry>; bonus: boolean; lost?: boolean; fled?: boolean }
 let cfg: BattleCfg | null = null;
 let onDone: ((o: BattleOutcome) => void) | null = null;
 let lastRw: any = null; let lastBonus = false;
 /** 流程宿主调用：按遭遇配置开一场战斗，RESULT 点 NEXT 后 resolve */
 async function runBattle(c: BattleCfg): Promise<BattleOutcome> {
-  cfg = c; B.mods = c.mods; B.carry = c.carry; B.setRoster(c.party.filter((x) => x !== roster.lead)); B.setEncounter(c.types); texOverride.clear();
+  cfg = c; dir.speed = battleSpeed; dir.forceMinimal = auto; B.mods = c.mods; B.carry = c.carry; B.setRoster(c.party.filter((x) => x !== roster.lead)); B.setEncounter(c.types); texOverride.clear();
   await Promise.all(c.types.map((t) => ETYPES[t]?.group ? eng.loadGroup(ETYPES[t].group!) : Promise.resolve()));
   setBattleVisible(true);
   return new Promise((res) => { onDone = res; startBattle(); });
@@ -235,7 +235,9 @@ async function enemyTurn() {
     const tid = a.payload.targetIds[0]; if (eng.units.has(tid) || eng.tex['back.' + tid]) setActor(tid, true);
     syncHudParty();
     await play('action', { ...a.payload, actorName: eName(a.payload.actorId) }, { side: 'enemy', skillId: a.payload.skillId });
+    if (a.payload.ko) { syncHudParty(); if (B.lost) return defeat(); hud.naviText.text = L('navi.ally.down').replace('{name}', L('unit.' + tid)); await wait(500); }
   }
+  if (B.lost) return defeat();
   setActor(B.actor, true);
   await play('turn:start', { unitId: B.actor });
   playerTurn();
@@ -246,7 +248,11 @@ async function bossPhase() {
   const ph = B.u(id).phase ?? 1; const d = ETYPES[B.enemyType.get(id)!]; const t = d?.phases?.[ph - 1]?.tex; if (t) texOverride.set(id, t);
   phaseSeen = B.phaseLog.length; M.phase = 'boss:phase'; hud.setMode('hidden');
   eng.audio.bgm('boss.p2', { tier: 'boss', phase: 2 });
-  await (window as any).__flowFx?.bossPhase?.(L('enemy.' + B.enemyType.get(id)), ph, () => { buildEnemies(); syncHud(); });
+  // M4b：boss:phase 走 recipe（boss.phase，2.0s 可跳过）；立绘换形态在白闪后（260ms）做，跳过/强制推进时补做
+  let swapped = false; const swap = () => { if (swapped) return; swapped = true; buildEnemies(); syncHud(); };
+  const tm = setTimeout(swap, 260 / dir.speed);
+  const r = await play('boss:phase', { bossId: id, phase: ph, bossName: L('enemy.' + B.enemyType.get(id)) });
+  clearTimeout(tm); swap(); (window as any).__flowTiming?.(r);
   M.phase = 'idle'; hud.navi('navi.bossphase');
 }
 async function holdUp() {
@@ -299,7 +305,7 @@ hud.onCommand = (id) => {
     if (id === 'attack' || id === 'gun') dir.input(`${B.id}:${B.turn}:${B.seq}:${id}`, () => doSkill(id));
     else if (id === 'persona') { hud.openList('persona', B.skillsOf(B.actor).map((s) => skillRow(s)), L('persona.' + B.actor)); hud.setMode('list'); listKind = 'persona'; }
     else if (id === 'item') { hud.openList('item', B.items.map((i) => ({ id: i.id, name: L(i.name), desc: L(i.desc), cost: '×' + i.n, costKind: 'n', element: 'item', disabled: i.n <= 0 } as ListRow)), 'BAG'); hud.setMode('list'); listKind = 'item'; }
-    else if (id === 'order') { hud.openList('order', ['analysis', 'switch', 'tactics', 'escape'].map((o) => ({ id: o, name: L(`order.${o}.name`), desc: L(`order.${o}.desc`), element: 'order', disabled: o !== 'analysis' && o !== 'switch' } as ListRow)), 'TACTICS'); hud.setMode('list'); listKind = 'order'; }
+    else if (id === 'order') { openOrder(); hud.setMode('list'); listKind = 'order'; }
     else if (id === 'guard') { hud.setMode('hidden'); const p = B.guard(); play('action', p, { skillId: 'guard' }).then(() => nextTurn()); }
     else if (id === 'baton') { hud.navi('navi.baton'); hud.partyPick = B.batonTargets(); hud.setPickWord('label.baton'); hud.setMode('pick'); syncHudParty(); hud.onParty = (to) => doBaton(to); }
     else if (id === 'showtime') doShowtime();
@@ -310,13 +316,34 @@ hud.onCommand = (id) => {
     else if ((id === 'talk' || id === 'release') && B.noTalk) hud.navi('navi.notalk');
     else if (id === 'talk') talk();
     else if (id === 'release') { hud.setMode('hidden'); hud.setHoldRing(false); B.release(); for (const i of B.enemies) eng.units.get(i)!.root.visible = false; victory(false); }
-  } else if (m === 'result' && id === 'next') {
-    if (cfg && onDone) { const carry: Record<string, Carry> = {}; for (const pid of B.party) { const u = B.u(pid); carry[pid] = { lv: u.lv, hp: u.hp, hpMax: u.hpMax, sp: u.sp, spMax: u.spMax, exp: u.exp }; }
-      const f = onDone; onDone = null; hud.setMode('hidden'); hud.setHoldRing(false); setBattleVisible(false); eng.audio.stopBgm(300);
-      f({ exp: lastRw?.exp ?? 0, money: lastRw?.money ?? 0, drops: (lastRw?.drops ?? []).map((d: any) => ({ id: d.id, n: d.n })), turns: B.turn, carry, bonus: lastBonus }); return; }
-    startBattle(); M.loops++; }
+  } else if (m === 'result' && id === 'next') finishBattle();
 };
 let listKind = 'persona';
+/** 战斗内倍速只作用于战斗；回到流程画面时 Director 恢复 1 倍速/完整级别 */
+let battleSpeed: 1 | 2 | 3 = 1;
+/** ORDER 列表：逃跑仅可选杂兵（B10），守门/精英/BOSS 灰掉并写「无法逃脱」 */
+function openOrder() { const opt = !!cfg?.optional; hud.openList('order', ['analysis', 'switch', 'tactics', 'escape'].map((o) => ({ id: o, name: L(`order.${o}.name`), desc: L(o === 'escape' && !opt ? 'order.escape.desc.no' : `order.${o}.desc`), element: 'order', disabled: o === 'tactics' || (o === 'escape' && !opt) } as ListRow)), 'TACTICS'); }
+/** 结束本场（交回流程宿主） */
+function finishBattle(extra: Partial<BattleOutcome> = {}) {
+  if (!(cfg && onDone)) { startBattle(); M.loops++; return; }
+  const carry: Record<string, Carry> = {}; for (const pid of B.party) { const u = B.u(pid); carry[pid] = { lv: u.lv, hp: u.hp, hpMax: u.hpMax, sp: u.sp, spMax: u.spMax, exp: u.exp }; }
+  const f = onDone; onDone = null; battleSpeed = dir.speed; dir.speed = 1; dir.forceMinimal = false; hud.setMode('hidden'); hud.setHoldRing(false); setBattleVisible(false); eng.audio.stopBgm(300);
+  f({ exp: extra.lost || extra.fled ? 0 : lastRw?.exp ?? 0, money: extra.lost || extra.fled ? 0 : lastRw?.money ?? 0, drops: extra.lost || extra.fled ? [] : (lastRw?.drops ?? []).map((d: any) => ({ id: d.id, n: d.n })), turns: B.turn, carry, bonus: lastBonus, ...extra });
+}
+/** 全灭（B19）：全员倒下才失败 → 交回流程（run:fail 由流程播） */
+async function defeat() {
+  hud.setMode('hidden'); hud.navi('navi.wipe'); M.phase = 'wipe'; lastRw = null; lastBonus = false;
+  await play('unit:down', { unitIds: B.party.slice(), side: 'ally' });
+  await wait(700);
+  finishBattle({ lost: true });
+}
+async function doEscape() {
+  hud.setMode('hidden');
+  const ok = B.escape(!!cfg?.optional);
+  await play('escape', { result: ok ? 'success' : 'fail' }, { result: ok ? 'success' : 'fail' });
+  if (ok) { for (const id of B.enemies) eng.units.get(id)!.root.visible = false; lastRw = null; lastBonus = false; return finishBattle({ fled: true }); }
+  hud.navi('navi.escape.ng'); return nextTurn();
+}
 /** M3 单场模式沿用的升级规则（阈值 1000） */
 function legacyLevelUps(exp: number) {
   const ups: { id: string; from: number; to: number; hp: number; sp: number }[] = [];
@@ -328,9 +355,10 @@ function skillRow(id: string): ListRow {
   return { id, name: L(s.name), desc: L(s.desc), cost: s.costKind === 'sp' ? `${s.cost}SP` : `${s.cost}HP`, costKind: s.costKind, element: s.element, disabled: !B.canUse(id) };
 }
 hud.onRow = (id) => {
-  if (id === 'back') { if (listKind === 'switch') { hud.openList('order', ['analysis', 'switch', 'tactics', 'escape'].map((o) => ({ id: o, name: L(`order.${o}.name`), desc: L(`order.${o}.desc`), element: 'order', disabled: o !== 'analysis' && o !== 'switch' } as ListRow)), 'TACTICS'); listKind = 'order'; return; } hud.setMode('command'); return; }
+  if (id === 'back') { if (listKind === 'switch') { openOrder(); listKind = 'order'; return; } hud.setMode('command'); return; }
   if (listKind === 'persona') doSkill(id);
   else if (listKind === 'item') { hud.setMode('hidden'); const p = B.useItem(id); syncHudParty(); play('action', p, { skillId: 'item' }).then(() => nextTurn()); }
+  else if (listKind === 'order' && id === 'escape') doEscape();
   else if (listKind === 'order' && id === 'analysis') { B.analyze(); syncHud(); hud.navi('navi.weak'); hud.setMode('command'); }
   else if (listKind === 'order' && id === 'switch') {
     B.bench.forEach((b) => eng.loadGroup('head:' + b));
@@ -465,7 +493,7 @@ async function demo() {
   }
 }
 if (STANDALONE) { startBattle(); if (DEMO) demo(); }
-else { setBattleVisible(false); hud.setMode('hidden'); startFlow({ eng, runBattle, L, M, qs }); }
+else { setBattleVisible(false); hud.setMode('hidden'); startFlow({ eng, dir, runBattle, L, M, qs }); }
 
 // ---------------------------------------------------------------- test hooks
 (window as any).__umbra = {

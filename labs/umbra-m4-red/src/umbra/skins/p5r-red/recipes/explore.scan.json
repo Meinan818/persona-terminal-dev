@@ -1,0 +1,25 @@
+{
+ "id": "explore.scan",
+ "event": "explore:scan",
+ "duration": 370,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.explore.scan"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "gridScan",
+   "dur": 360,
+   "args": {
+    "color": "@color.primary",
+    "radius": 900,
+    "show": 2000
+   }
+  }
+ ]
+}

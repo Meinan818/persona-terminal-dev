@@ -1,0 +1,40 @@
+{
+ "id": "map.encounter",
+ "event": "map:encounter",
+ "duration": 340,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "gridSquash",
+   "dur": 300,
+   "args": {
+    "at": "$target",
+    "grow": 0.6
+   },
+   "ease": "outCubic"
+  },
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "dur": 340,
+   "args": {
+    "colors": [
+     "@color.primary",
+     "#0a0a0a"
+    ],
+    "stagger": 60,
+    "angle": 0.35
+   }
+  },
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "dur": 120,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.35
+   }
+  }
+ ]
+}

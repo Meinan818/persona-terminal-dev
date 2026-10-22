@@ -1,0 +1,17 @@
+{
+ "id": "explore.move",
+ "event": "explore:move",
+ "duration": 230,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "gridWalk",
+   "dur": 220,
+   "args": {
+    "hop": 10,
+    "followHop": 6
+   }
+  }
+ ]
+}

@@ -34,5 +34,7 @@ save(fit(tight(Image.open(O + 'enemy-gatekeeper.webp').convert('RGBA')), (560, 5
 for n in ['doctor', 'military']:
     save(fit(tight(Image.open(O + f'npc-{n}.webp').convert('RGBA')), (420, 640)), 'npc.' + n, 'flow', 'pseudo-official', '店主占位（包 F 伪官方）')
 save(fit(tight(Image.open(O + 'velvet-twins.webp').convert('RGBA')), (520, 640)), 'npc.velvet', 'flow', 'official', '天鹅绒双子（合成入口占位）')
+K = '/workspace/work/umbra-red/red/assets/kit/'
+save(Image.open(K + 'card_emblem.webp').convert('RGBA'), 'callingcard', 'flow', 'generated', 'M4b 预告信卡面（red/assets/kit/card_emblem，生成素材，待替换官方）', 86)
 json.dump(out, open(os.path.join(R, 'work/assets-m4.json'), 'w'), ensure_ascii=False, indent=1)
 print(len(out), [(o['id'], o['w'], o['h']) for o in out])

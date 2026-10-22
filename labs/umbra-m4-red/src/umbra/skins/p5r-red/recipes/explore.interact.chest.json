@@ -1,0 +1,35 @@
+{
+ "id": "explore.interact.chest",
+ "event": "explore:interact",
+ "duration": 370,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.interact"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "gridProp",
+   "dur": 350,
+   "args": {}
+  },
+  {
+   "at": 110,
+   "prim": "gridMark",
+   "dur": 250,
+   "args": {
+    "kind": "star",
+    "at": "$cell",
+    "color": "#ffd34a",
+    "lift": 70
+   }
+  }
+ ],
+ "match": {
+  "kind": "chest"
+ }
+}

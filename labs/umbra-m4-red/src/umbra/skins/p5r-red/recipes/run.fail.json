@@ -1,0 +1,79 @@
+{
+ "id": "run.fail",
+ "event": "run:fail",
+ "duration": 1450,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "dim",
+   "dur": 1450,
+   "layer": "cutin",
+   "args": {
+    "color": "#0a0a0a",
+    "alpha": 0.7,
+    "hold": true
+   }
+  },
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "dur": 200,
+   "args": {
+    "color": "@color.primary",
+    "alpha": 0.6
+   }
+  },
+  {
+   "at": 100,
+   "prim": "slashPanels",
+   "dur": 800,
+   "args": {
+    "colors": [
+     "#0a0a0a",
+     "@color.primary",
+     "#0a0a0a"
+    ],
+    "stagger": 90,
+    "angle": 0.35
+   }
+  },
+  {
+   "at": 500,
+   "prim": "title",
+   "dur": 800,
+   "layer": "trans",
+   "args": {
+    "text": "flow.fail.title",
+    "size": 128,
+    "pos": {
+     "x": 640,
+     "y": 330
+    },
+    "rot": -0.1,
+    "invert": [
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "at": 900,
+   "prim": "title",
+   "dur": 520,
+   "layer": "trans",
+   "args": {
+    "text": "flow.fail.sub",
+    "size": 52,
+    "pos": {
+     "x": 640,
+     "y": 470
+    },
+    "rot": -0.05,
+    "invert": [
+     1
+    ]
+   }
+  }
+ ]
+}

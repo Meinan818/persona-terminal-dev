@@ -1,0 +1,38 @@
+{
+ "id": "escape.fail",
+ "event": "escape",
+ "duration": 500,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "dur": 120,
+   "args": {
+    "color": "@color.primary",
+    "alpha": 0.35
+   }
+  },
+  {
+   "at": 0,
+   "prim": "title",
+   "dur": 480,
+   "layer": "trans",
+   "args": {
+    "text": "flow.escape.ng",
+    "size": 84,
+    "pos": {
+     "x": 640,
+     "y": 360
+    },
+    "rot": -0.1,
+    "invert": [
+     1
+    ]
+   }
+  }
+ ],
+ "match": {
+  "result": "fail"
+ }
+}

@@ -10,6 +10,7 @@ import { summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLo
 import { blockPush, tvStatic, glassShatter, cardFlip, cardShatter, dateFlip, eyeStrip, onomatopoeia, checkerFloor, ringSplash } from './prims2';
 import { comicPanels, duoEntrance, duoStrike, duoTitle, maskRip } from './p4';
 import { camera, holdupRing } from './p5';
+import { GRID_PRIMS } from './grid';
 
 export interface RunCtx {
   eng: Engine; owner: number; ev: EventName; payload: any; level: 'full' | 'standard' | 'minimal';
@@ -92,7 +93,8 @@ const dim: Prim = (t, rc) => {
 
 const title: Prim = (t, rc) => {
   const a = A(t); if (isText(rc)) return null;
-  const text = rc.eng.label(a.text);
+  // M4b：文案可带 {payload 字段}（如 BOSS 名按遭遇），label 查不到的 {key} 按 payload 替换
+  const text = rc.eng.label(a.text).replace(/\{(\w+)\}/g, (_: string, k: string) => String(rc.payload?.[k] ?? ''));
   const c = tmp(rc, ransom(text, a.size ?? 96, rc.eng.font(a.font ?? '@font.display'), { invert: a.invert ?? [0], seed: text.length * 13 }));
   const b = c.getLocalBounds(); c.pivot.set(b.x + b.width / 2, b.y + b.height / 2);
   const L = layerOf(t, rc, 'cutin'); L.addChild(c); c.visible = false; const pos = vec(a.pos, rc, '$center'); const dur = t.dur ?? 600;
@@ -494,4 +496,5 @@ export const PRIMS: Partial<Record<string, Prim>> = {
   summon, personaShow, nameplate, pose, skinFilter, batonPass, showtimeLogo,
   blockPush, tvStatic, glassShatter, cardFlip, cardShatter, dateFlip, eyeStrip, onomatopoeia, checkerFloor, ringSplash,
   comicPanels, duoEntrance, duoStrike, duoTitle, maskRip, camera, holdupRing,
+  ...GRID_PRIMS,
 };

@@ -1,0 +1,50 @@
+{
+ "id": "explore.spotted",
+ "event": "explore:spotted",
+ "duration": 460,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.spotted"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "gridMark",
+   "dur": 440,
+   "args": {
+    "kind": "bang",
+    "at": "$target",
+    "color": "@color.primary"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "flashScreen",
+   "dur": 200,
+   "args": {
+    "color": "@color.primary",
+    "alpha": 0.45
+   }
+  },
+  {
+   "at": 0,
+   "prim": "gridShake",
+   "dur": 440,
+   "args": {
+    "px": 8
+   }
+  },
+  {
+   "at": 20,
+   "prim": "vibrate",
+   "args": {
+    "ms": 40
+   },
+   "minimal": "skip"
+  }
+ ]
+}

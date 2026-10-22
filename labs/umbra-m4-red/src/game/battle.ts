@@ -40,7 +40,7 @@ export const ROSTER: Record<string, { lv: number; hp: number; sp: number; skills
 };
 export const LEAD = 'joker';
 export const DEFAULT_PARTY = ['skull', 'mona', 'panther'];
-export const ITEMS = [{ id: 'medicine', name: 'item.medicine.name', desc: 'item.medicine.desc', n: 3 }, { id: 'snuff', name: 'item.snuff.name', desc: 'item.snuff.desc', n: 1 }];
+export const ITEMS = [{ id: 'medicine', name: 'item.medicine.name', desc: 'item.medicine.desc', n: 3 }, { id: 'snuff', name: 'item.snuff.name', desc: 'item.snuff.desc', n: 1 }, { id: 'bead', name: 'item.bead.name', desc: 'item.bead.desc', n: 1 }];
 
 export interface Commit { key: string; kind: string; payload: unknown }
 
@@ -105,6 +105,15 @@ export class Battle {
   alive(ids: string[]) { return ids.filter((i) => this.u(i).hp > 0); }
   get allDown() { return this.alive(this.enemies).every((i) => this.u(i).down); }
   get won() { return this.alive(this.enemies).length === 0; }
+  /** M4b（B19）：全员倒下才失败；主角倒下可被复活（返魂香） */
+  get lost() { return this.alive(this.party).length === 0; }
+  get downAllies() { return this.party.filter((i) => this.u(i).hp <= 0); }
+  /** 逃跑（B10）：仅可选杂兵；成功率 = 数据表（基础 0.55 + 每回合 0.1）；失败丢掉该角色行动 */
+  escape(optional: boolean) {
+    const ok = optional && this.rnd() < 0.55 + 0.1 * (this.turn - 1);
+    if (!ok) { this.acted.add(this.actor); this.oneMore = false; this.baton = 0; }
+    this.commit('escape', { result: ok ? 'success' : 'fail' }); return ok;
+  }
   skillsOf(id: string) { return ROSTER[id]?.skills ?? []; }
   private commit(kind: string, payload: unknown) {
     const key = `b${this.id}-${this.turn}-${++this.seq}`;
@@ -207,8 +216,11 @@ export class Battle {
     return { payload, won: this.won };
   }
   useItem(itemId: string) {
-    const it = this.items.find((i) => i.id === itemId)!, j = this.u(this.actor);
+    const it = this.items.find((i) => i.id === itemId)!; let j = this.u(this.actor);
     it.n--; let amt = 0;
+    if (itemId === 'bead') { j = this.u(this.downAllies[0] ?? this.actor); amt = j.hp > 0 ? 0 : Math.round(j.hpMax * 0.5); j.hp += amt; j.down = false;
+      const payload = { actorId: this.actor, skillId: 'item', targetIds: [j.id], hits: [{ targetId: j.id, dmg: amt, weak: false, crit: false, miss: false, resist: 'none', element: 'heal', down: false }], side: 'ally' as const, revive: j.id };
+      this.commit('item', payload); this.oneMore = false; this.acted.add(this.actor); this.baton = 0; return payload; }
     if (itemId === 'medicine') { amt = Math.min(100, j.hpMax - j.hp); j.hp += amt; } else { amt = Math.min(10, j.spMax - j.sp); j.sp += amt; }
     const payload = { actorId: this.actor, skillId: 'item', targetIds: [this.actor], hits: [{ targetId: this.actor, dmg: amt, weak: false, crit: false, miss: false, resist: 'none', element: 'heal', down: false }], side: 'ally' as const };
     this.commit('item', payload); this.oneMore = false; this.acted.add(this.actor); this.baton = 0;
@@ -223,17 +235,18 @@ export class Battle {
       const e = this.u(id);
       if (e.down) { e.down = false; acts.push({ kind: 'getup', payload: { unitIds: [id] } }); continue; }
       for (let n = 0; n < (e.acts ?? 1); n++) {
-      const al = this.alive(this.party);
+      const al = this.alive(this.party); if (!al.length) break;
       const tid = al[Math.floor(this.rnd() * al.length)];
       const t = this.u(tid);
       const dmg = Math.round(e.atk * (0.85 + this.rnd() * 0.3) * (t.guard ? 0.5 : 1));
-      t.hp = Math.max(1, t.hp - dmg);
-      const payload = { actorId: id, skillId: 'enemy.lunge', targetIds: [tid], hits: [{ targetId: tid, dmg, weak: false, crit: false, miss: false, resist: 'none', element: 'phys', down: false }], side: 'enemy' as const };
+      t.hp = Math.max(0, t.hp - dmg);   // M4b：去掉 1 HP 保底（B19 全灭失败）
+      const ko = t.hp <= 0;
+      const payload = { actorId: id, skillId: 'enemy.lunge', targetIds: [tid], hits: [{ targetId: tid, dmg, weak: false, crit: false, miss: false, resist: 'none', element: 'phys', down: ko }], side: 'enemy' as const, ko };
       this.commit('enemy', payload); acts.push({ kind: 'attack', payload });
       }
     }
     for (const p of this.party) this.u(p).guard = false;
-    this.turn++; this.acted.clear(); this.baton = 0; this.actor = LEAD;
+    this.turn++; this.acted.clear(); this.baton = 0; this.actor = this.alive(this.party)[0] ?? LEAD;
     return acts;
   }
   allOut() {

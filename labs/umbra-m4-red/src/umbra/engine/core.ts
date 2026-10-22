@@ -33,6 +33,8 @@ export class Engine {
   errors: string[] = [];
   /** 固定件缓存（cut-in 带、横幅、定格画…），首次用时创建，之后复用 */
   fix = new Map<string, Container>();
+  /** M4b：探索棋盘（宿主注册；格子层原语只读它） */
+  board: import('./grid').BoardAdapter | null = null;
 
   constructor() { this.whiteFlash.matrix = [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0]; }
 

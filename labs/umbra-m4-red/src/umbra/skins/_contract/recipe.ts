@@ -17,7 +17,10 @@ export type EventName =
   | 'baton' | 'levelup'   // v1.3 提案（FX-MAP 🆕）：接力交接、升级卡
   | 'allout' | 'talk:start' | 'talk:result' | 'battle:end'
   | 'map:move' | 'map:encounter' | 'ui:open' | 'ui:close'
-  | 'env:change';
+  | 'env:change'
+  // v1.3 §3a/§3b/§3d/§3e（M4 流程用到的子集）：探索、预告信、BOSS、心之卡、失败/撤退/逃跑
+  | 'explore:move' | 'explore:sneak' | 'explore:cover' | 'explore:spotted' | 'explore:interact' | 'explore:exit' | 'explore:scan'
+  | 'callingcard:send' | 'boss:intro' | 'boss:phase' | 'card:pick' | 'run:fail' | 'run:retreat' | 'escape' | 'unit:revive';
 
 export type PrimitiveName =
   | 'tween' | 'show' | 'hide' | 'sfx' | 'vibrate' | 'title' | 'dim' | 'radialBurst'
@@ -32,7 +35,9 @@ export type PrimitiveName =
   // M3 第四阶段（v1.3 提案）：SHOWTIME 四段、开战扯面具
   | 'comicPanels' | 'duoEntrance' | 'duoStrike' | 'duoTitle' | 'maskRip'
   // M3 第五阶段（v1.3 提案）：伪 3D 镜头、HOLD UP 包围
-  | 'camera' | 'holdupRing';
+  | 'camera' | 'holdupRing'
+  // M4b（v1.4 提案）：格子层原语（探索 Q 版棋盘；宿主注册 BoardAdapter，引擎原语只读它）+ 通用素材精灵
+  | 'gridWalk' | 'gridMark' | 'gridSquash' | 'gridProp' | 'gridShake' | 'gridScan' | 'sprite';
 
 export interface Track {
   at: Ms;
@@ -50,9 +55,11 @@ export interface Recipe {
   id: string;
   event: EventName;
   match?: {
-    skillId?: string; element?: string; actorId?: string; partySize?: number; kind?: 'phys' | 'magic' | 'heal' | 'buff';
+    skillId?: string; element?: string; actorId?: string; partySize?: number; kind?: 'phys' | 'magic' | 'heal' | 'buff' | 'chest' | 'device' | 'talk' | string;
     summon?: 'full' | 'quick';  // M3 第二阶段提案：同场首次召唤完整版 / 之后快速版（宿主按「该角色本场是否已召唤」传入）
-    side?: 'ally' | 'enemy';   // v1.2-M3 提案：区分我方/敌方 action（§3 两档上限）。见 M3-RED-REPORT「契约提案」
+    side?: 'ally' | 'enemy';
+    /** v1.3 §3f：explore:interact 的 kind（chest/device/talk）等；bond:assist 也用 kind */
+    choice?: string; result?: string; ok?: boolean;   // v1.2-M3 提案：区分我方/敌方 action（§3 两档上限）。见 M3-RED-REPORT「契约提案」
     env?: Partial<Pick<Env, 'weather' | 'moonPhase' | 'darkHour' | 'weekday'>>;
   };
   duration: Ms;

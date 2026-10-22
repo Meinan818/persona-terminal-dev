@@ -1,0 +1,35 @@
+{
+ "id": "explore.cover",
+ "event": "explore:cover",
+ "duration": 270,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.cover"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "gridSquash",
+   "dur": 260,
+   "args": {
+    "at": "$actor",
+    "amp": 0.18
+   }
+  },
+  {
+   "at": 0,
+   "prim": "gridMark",
+   "dur": 260,
+   "args": {
+    "kind": "cover",
+    "at": "$actor",
+    "color": "#6fd3ff",
+    "rise": 12
+   }
+  }
+ ]
+}

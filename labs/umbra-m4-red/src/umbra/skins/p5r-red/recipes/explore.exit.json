@@ -1,0 +1,38 @@
+{
+ "id": "explore.exit",
+ "event": "explore:exit",
+ "duration": 760,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.exit.open"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "gridProp",
+   "dur": 740,
+   "args": {}
+  },
+  {
+   "at": 0,
+   "prim": "gridMark",
+   "dur": 500,
+   "args": {
+    "kind": "cell",
+    "color": "@color.primary"
+   }
+  },
+  {
+   "at": 380,
+   "prim": "gridShake",
+   "dur": 300,
+   "args": {
+    "px": 5
+   }
+  }
+ ]
+}

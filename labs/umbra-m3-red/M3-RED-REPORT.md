@@ -444,3 +444,20 @@ TMO=600 tools/run.sh check; tools/run.sh enemies 1280 720 n=1   # n=3 / n=5 / 84
 - 自检：`tools/check.mjs` 全过（overCap/geometryBad/overlaps 全空，idle over16=0）；`tools/enemies.mjs` 844×390 / 667×375 / 1280×720 × 1/3/5 只敌人：0 重叠；新增后排遮挡比例（包围盒口径）844 ≤0.139、667 ≤0.143、1280 ≤0.138（阈值 0.6）。enemies.mjs 的包围量测改为只量本体 Sprite、前后排两容器都量。
 - 截图：`shots5/<尺寸>-53-holdup-{a,b,c,d}.png` 6 尺寸重拍（仓库 `labs/umbra-m3-red/shots/p5-*-53-holdup-*.jpg`）。
 - 复现：`npm run build && sh tools/final6.sh`（日志 tools/out/final6.log）。
+
+## D-010 场上队员换原作录像素材（10-22 12:17 用户拍板 → 12:45 暂停）
+
+**状态：未替换，场上仍是生成背影（manifest 标 generated）。** 12:45 主策划指示方向可能大改（参考是原作实时 3D 过场），停止逐帧动画扩做，只记录现状。
+
+已做：
+- D-010 写入集成分支 `docs/umbra-decisions.md`（350e798）。
+- 找到可用公开录像源：archive.org `Persona_5_Royal_PS4_RUS_LetsPlay`（PS4 1440p 采集，124 集，第三学期集数 111–121 含 Crow/Violet）。YouTube（IP 403）、B 站（412）在本环境都下不了。视频只在本地截帧，未入库（`/workspace/work/vidref-src/`）。
+- 录像里可用的「干净背影/战斗站姿」位置（集 113，秒）：Joker 背影 2001.7–2002.7、侧身待机 1984；Skull 背影 1998.8–1999.3 与 2001.7（**脚被右下队伍 HUD 挡住**）；Fox 背影 1622（左下有半透明叠层）。
+
+结论（为什么没继续）：
+1. 原作战斗镜头只在「指令菜单/选目标」时静止，此时行动者被指令轮盘压住，只有**非行动队员**是干净的，且常被 HUD、直播弹幕或火焰特效遮挡。
+2. 普攻、技能、召唤都是**切镜头的 3D 演出**（例：Skull 1979.5–1981 的 Harisen 是多机位特写），截出来的帧序列视角/比例每帧都变，无法做成同一侧视角的 spritesheet；受击帧几乎都被技能特效覆盖。
+3. 抠图：rembg isnet-anime 对暗色 3D 卡通人物遮罩失败（只剩 17×15 px），isnet-general-use 未跑完。
+4. 若要「真实动作」，可行路线是 3D 模型 + 固定机位渲染（或直接实时 3D），需要另行决定素材来源。
+
+场上 / 召唤自评：**不变（场上 6、召唤 7.5，D-010 未落地）**，距 9.0 合格线差距大；未做 compare-footage 对比图（无替换成品可比）。

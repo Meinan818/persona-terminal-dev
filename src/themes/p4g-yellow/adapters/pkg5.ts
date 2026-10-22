@@ -1,6 +1,7 @@
 ﻿export * from '../mock/pkg5';
 
 // ───── 真实数据覆盖区（按 INTEGRATE-THEMES.md 第 6 步填写）─────
+import { THEME_SWATCHES } from '../mock/pkg5';
 export { useCloudUser, useCodexCollections, useRealCodex, useAchievementProgressMap, useTarotCollectedMap, useSeasonCollectedMap } from '@/themes/astrologyData';
 
 /** 真实五维：从 store 读，用户未建档时空数组 */
@@ -12,6 +13,8 @@ import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
 import type { LedgerEntry, Attribute } from '@/types';
+import { calcCurrentStreak, streakDates } from '@/utils/streak';
+import type { User } from '@/types';
 
 // A 类：只转发纯计算/格式化函数（真实仓库同名、同签名、同返回结构）
 // catMeta / INCOME_META 不转发：真实版返回结构不同（没有 demo 用的 color 字段），图标/颜色属于设计，保留 demo 版
@@ -21,6 +24,18 @@ export { CATEGORY_KEYS, isGrowthCategory, fmtMoney, fmtPlain, roundMoney, saniti
 export const daysAgoKey = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return toLocalDateKey(d); };
 
 // B 类：用户数据 → hook，返回值的键名 = 原 mock 导出名
+/** 菜单 / 学生证：总等级、总点数、连续天数、当前用户。 */
+export function useMenuData() {
+  const { user, attributes, activities } = useAppStore(useShallow((s) => ({ user: s.user, attributes: s.attributes, activities: s.activities })));
+  return useMemo(() => ({
+    USER: (user ?? { id: '', name: '', createdAt: new Date(2025, 0, 1), theme: 'yellow' }) as User,
+    TOTAL_LEVEL: attributes.reduce((s, a) => s + a.level, 0),
+    TOTAL_POINTS: attributes.reduce((s, a) => s + a.points, 0),
+    CURRENT_STREAK: calcCurrentStreak(streakDates(activities), new Date()),
+    THEME_SWATCHES,
+  }), [user, attributes, activities]);
+}
+
 export function useLedgerData() {
   const { entries, budgets, loaded, assets, settings } = useAppStore(useShallow((s) => ({ entries: s.ledgerEntries, budgets: s.budgets, loaded: s.ledgerLoaded, assets: s.assets, settings: s.settings })));
   useEffect(() => { if (!loaded) void useAppStore.getState().loadLedger(); }, [loaded]);

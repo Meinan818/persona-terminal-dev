@@ -34,7 +34,8 @@ import { OrgCelebration, DEMO_CELEB } from '@yellow/screens/overlays/OrgCelebrat
 import { OnThisDaySheetP4G } from '@yellow/screens/overlays/OnThisDaySheet.p4g';
 import { DecayModalP4G } from '@yellow/screens/overlays/DashboardDecayModal.p4g';
 import { UrgentToastP4G, urgentText } from '@yellow/screens/overlays/DashboardToasts.p4g';
-import { ATTR_IDS, ATTR_NAMES, MOCK_ACHIEVEMENTS, MOCK_ATTRIBUTES, MOCK_STATS, MOCK_TODOS, MOCK_USER_NAME, levelTitle, masteryOf, masteryTitle } from '@yellow/mock/pkg1';
+import { ATTR_IDS, levelTitle, masteryOf, masteryTitle } from '@yellow/mock/pkg1';
+import { useHomeData } from '@yellow/adapters/pkg1';
 
 const GREETINGS: Record<string, string[]> = {
   dawn: ['n，新的一天开始了', 'n，晨光已到，起身了', 'n，早安，今天也要加油', 'n，清晨的空气真好'],
@@ -59,6 +60,7 @@ const seed = Math.random();
 const pick = (a: string[]) => a[Math.floor(seed * a.length)];
 
 export default function Dashboard({ params }: PageProps) {
+  const { ATTR_NAMES, MOCK_ACHIEVEMENTS, MOCK_ATTRIBUTES, MOCK_STATS, MOCK_TODOS, MOCK_USER_NAME } = useHomeData();
   const state = params.get('state');
   const [sky, setSky] = useState<'moon' | 'weather'>(params.get('sky') === 'weather' ? 'weather' : 'moon');
   const wx = (params.get('wx') as SkyWx) || 'ok';

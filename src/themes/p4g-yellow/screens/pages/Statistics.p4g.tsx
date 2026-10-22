@@ -12,7 +12,8 @@ import { CollageStagger, CollageItem } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
-import { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, type StatActivity } from '@yellow/mock/pkg4-stats';
+import type { StatActivity } from '@yellow/mock/pkg4-stats';
+import { useStatisticsData } from '@yellow/adapters/pkg4-stats';
 import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@yellow/mock/pkg4-tarot';
 import { PkgHeader, DevStrip, Kicker, StateFade } from '@yellow/screens/pkg4/ui';
 
@@ -32,6 +33,7 @@ function streaks(days: string[]) {
 }
 
 export default function Statistics({ params }: PageProps) {
+  const { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, ATTR_NAMES } = useStatisticsData();
   const [mode, setMode] = useState(params.get('state') === 'empty' ? 'empty' : 'data');
   const [range, setRange] = useState<Range>('30');
   const acts: StatActivity[] = mode === 'empty' ? [] : ACTIVITIES;
@@ -142,6 +144,7 @@ function GrowthTV({ data, total, records, top }: { data: { k: string; v: number 
 }
 
 function TrendChart({ data, range }: { data: [string, Record<AttributeId, number>][]; range: Range }) {
+  const { ATTR_NAMES } = useStatisticsData();
   const low = useLowMotion();
   const [on, setOn] = useState<Set<AttributeId>>(new Set(ATTR_IDS));
   const [hi, setHi] = useState<number | null>(null);
@@ -185,6 +188,7 @@ function TrendChart({ data, range }: { data: [string, Record<AttributeId, number
 
 /** Status 行：属性名（白字描边）+ Lv + pts 大数字 + 条 */
 function Distribution({ totals }: { totals: { id: AttributeId; total: number }[] }) {
+  const { ATTR_NAMES, ATTR_LEVELS } = useStatisticsData();
   const max = Math.max(1, ...totals.map((t) => t.total));
   return (
     <div className="overflow-hidden rounded-sm border-3 border-p4g-line" style={{ background: 'var(--p4g-surface-grad)' }}>

@@ -12,7 +12,7 @@ import { ChannelNoise, CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { navigate } from '@yellow/shell/shellBus';
-import { buildView, LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@yellow/mock/pkg4-org';
+import { buildView, LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@yellow/adapters/pkg4-org';
 import { DevStrip, StateFade } from '@yellow/screens/pkg4/ui';
 import { HideoutMap, RosterWall, SECTION_TITLE, type HideoutSection } from '@yellow/screens/pkg4/org/MapWall';
 import { MemberTile } from '@yellow/screens/pkg4/org/MemberCard';

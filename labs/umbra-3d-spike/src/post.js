@@ -45,7 +45,7 @@ export function lutToCube(fn = p5rGrade, N = 32) {
   return s;
 }
 
-const GradeShader = {
+export const GradeShader = {
   uniforms: {
     tDiffuse: { value: null }, lut: { value: null }, lutSize: { value: 32 }, lutMix: { value: 1 },
     res: { value: new THREE.Vector2(1, 1) }, vig: { value: 0.55 }, blurDir: { value: new THREE.Vector2(0, 0) },
@@ -81,16 +81,17 @@ const GradeShader = {
 };
 
 export class Post {
-  constructor(renderer, scene, camera, tier) {
+  // opt.lutFn：换调色函数（P3R 用冷青色）；opt.renderPass：自定义场景渲染 Pass（召唤演出要在 Bloom 前叠屏幕空间碎玻璃）
+  constructor(renderer, scene, camera, tier, opt = {}) {
     this.renderer = renderer; this.tier = tier;
     const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: tier.msaa });
     this.composer = new EffectComposer(renderer, rt);
-    this.render = new RenderPass(scene, camera);
+    this.render = opt.renderPass || new RenderPass(scene, camera);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), tier.bloomStrength, 0.5, 0.9);
     const bs = this.bloom.setSize.bind(this.bloom); this.bloom.setSize = (w, h) => bs(Math.max(32, w * tier.bloomScale * 2), Math.max(32, h * tier.bloomScale * 2));
     this.output = new OutputPass();
     this.grade = new ShaderPass(GradeShader);
-    this.grade.uniforms.lut.value = makeLUT();
+    this.grade.uniforms.lut.value = makeLUT(opt.lutFn || p5rGrade);
     for (const p of [this.render, this.bloom, this.output, this.grade]) this.composer.addPass(p);
   }
   setTier(tier) { this.tier = tier; this.bloom.strength = tier.bloomStrength; this.composer.renderTarget1.samples = tier.msaa; this.composer.renderTarget2.samples = tier.msaa; }
@@ -98,7 +99,7 @@ export class Post {
   frame(t, fx = {}) {
     const u = this.grade.uniforms; u.time.value = t;
     u.blurDir.value.set(fx.blurX || 0, fx.blurY || 0); u.flash.value = fx.flash || 0; if (fx.flashCol) u.flashCol.value.set(fx.flashCol);
-    u.vig.value = fx.vig ?? 0.68;
+    u.vig.value = fx.vig ?? 0.68; if (fx.ca !== undefined) u.ca.value = fx.ca;
     this.bloom.strength = this.tier.bloomStrength * (fx.bloomBoost || 1);
     this.composer.render();
   }

@@ -2,6 +2,9 @@
 import { useAppStore } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { ACHIEVEMENT_UNLOCK_LINES } from '@/constants';
+import { ConfidantRankUpCutIn, ConfidantStarShiftInvite } from '@/components/cooperation/ConfidantRankUpCutIn';
+import { SyncStatusBadge } from '@/components/auth/SyncStatusBadge';
+import { SyncMergeSheet } from '@/components/auth/SyncMergeSheet';
 import { LevelUpP3 } from '@pink/screens/overlays/LevelUpModal.p3r';
 import { AchievementUnlockP3 } from '@pink/screens/overlays/AchievementUnlockModal.p3r';
 import { SkillUnlockP3 } from '@pink/screens/overlays/SkillUnlockModal.p3r';
@@ -39,6 +42,10 @@ export function GlobalOverlayHost() {
       <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
         onConfirm={() => { if (wishProposal) void setWishProgress(wishProposal.wishId, wishProposal.toPct, { reason: wishProposal.reason }); setWishProposal(null); }} />
       <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} count={orphan?.count} bytes={orphan?.bytes} onConfirm={() => { void pruneOrphan(); dismissOrphan(); }} />
+      <ConfidantRankUpCutIn />
+      <ConfidantStarShiftInvite />
+      <SyncStatusBadge />
+      <SyncMergeSheet />
     </>
   );
 }

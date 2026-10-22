@@ -13,7 +13,8 @@ import { P3R, P3PageHeader, GhostWords, SectionMark, P3Empty, slantClip } from '
 import { PageEnter } from '@pink/fx';
 import { useLowMotion } from '@pink/lib/prefs';
 import { navigate } from '@pink/shell/shellBus';
-import { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, type StatActivity } from '@pink/mock/pkg4-stats';
+import { ATTR_LEVELS, type StatActivity } from '@pink/mock/pkg4-stats';
+import { useStatisticsData } from '@pink/adapters/pkg4-stats';
 import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@pink/mock/pkg4-tarot';
 import { DevStrip, StateFade } from '@pink/screens/pkg4/ui';
 
@@ -34,6 +35,7 @@ function streaks(days: string[]) {
 }
 
 export default function Statistics({ params }: PageProps) {
+  const { ACTIVITIES, ACHIEVEMENTS, SKILLS } = useStatisticsData();
   const low = useLowMotion();
   const [mode, setMode] = useState(params.get('state') === 'empty' ? 'empty' : 'data');
   const [range, setRange] = useState<Range>('30');

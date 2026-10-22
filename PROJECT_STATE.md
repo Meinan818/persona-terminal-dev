@@ -10,10 +10,11 @@
 - **黄色全局演出**：`a4607fc` 新增 `P4GlobalHost`，p4 频道改用 demo 的升级 / 成就 / 技能 / 愿望进度 / BIG DEAL 收官 / 宣告卡结算演出；旧 App 顶层同名弹层在 p4 下不再渲染，避免双弹。
 - **蓝/粉性能与设置**：`1927176` 把蓝/粉的波浪转场 `RippleIris` 三层整屏圆改为「固定小圆再 scale」，细环 `boxShadow` 改 `border`，白光片加 `willChange`，降低手机逐帧栅格化开销（视觉不变，待真机确认帧率）；`1e1a589` 把粉/蓝设置页的本地假 `settingsStore` 桥到真实 `settings + setTheme`（密钥类字段保持本地）。
 - **蓝/粉图鉴与成就**：`2187b93` 粉/蓝 `pkg5` 新增 `useCodexData()`（塔罗/岁时收藏接真实 `useTarotCollectedMap`/`useSeasonCollectedMap`）与 `useAchievementsData()`/`achievementsOps`；成就页、岁时翻面、塔罗翻面改读真实收藏，解锁/编辑/删除/赐福写真实 store。`pkg4-tarot`/`pkg5-tarot`/`pkg5-season` 的牌面文案与岁时表仍按设计保留 demo 文案（属设计内容，非用户数据）。
+- **长尾演出第 2a 步**：`b7ff604` 三套主题的全局宿主接入「组织庆祝」（黄 `OrgCelebration`，粉/蓝 `OrgCelebrationView`）与「BIG DEAL 收官」；黄的旧 App 顶层 `OrgCelebrationCutIn` 在 p4 下停用避免双弹。
 - **真实数据接线**：行动页 Activities/Todos 接 `useActionsData()` 并补 `useEffect` 同步；新增/编辑/归档/删除/撤销今日完成改调 `actionsOps`。羁绊页接 `useCooperationData()`（同伴/好友/通知/咨询档案/塔罗冲突/羁绊之影），新增/编辑/删除改调 `cooperationOps`。据点页走 `adapters/pkg4-org` 的真实 `buildView()`。统计页新增 `useStatisticsData()`（活动/属性等级/成就与技能解锁数/属性显示名）。设置页把 demo 的本地 `settingsStore` 改成真实 `settings + setTheme` 桥接（API Key / 和风 Key / BGM 曲目 / 人格 mock 保持本地，不读取真实密钥）；账号页新增 `useAccountData()`（真实云用户、五维、总等级/总点数），并按真实登录态推导 `signed-in / signed-out / unconfigured`；成就页新增 `useAchievementsData()`（真实成就/技能/属性名/进度 + 塔罗/岁时收藏），解锁、编辑、删除、赐福改调 `achievementsOps`；宣告卡总览页与行动页倒计时面共用 `useCallingCardData()` / `callingCardOps`，钉选、归档、删除、保存写真实 store。
-- **验证**：每页 `npx tsc --noEmit` 0 错误；`npm run build` 通过（最近 35.38s）；全量 `vitest` **68 文件 / 413 项通过**（2026-10-22 22:31 复跑）；`build:themes` 无 CSS 语法告警。
+- **验证**：每页 `npx tsc --noEmit` 0 错误；`npm run build` 通过（最近 35.87s）；全量 `vitest` **68 文件 / 413 项通过**（2026-10-22 22:38 复跑）；`build:themes` 无 CSS 语法告警。
 - **幽影协议影响**：未改 `src/umbra/**` 与 `public/umbra-demo`；`data-ui-channel` p3/p5/neutral 的三套皮肤、主题切换逻辑和旧页面 render 路径均未改。主题 CSS 只匹配 demo 渲染容器，主应用与幽影协议不再受 `.border`/`.rounded-*`/`body` 字体/低动效 `*` 规则影响。
-- **计划执行状态**：第 1 步「蓝/粉剩余图鉴数据」已完成；下一步第 2 步「长尾全局演出」（组织庆祝 / 羁绊升级链 / 回归面板 / 同步冲突 / PWA）。Astrology 的每日牌 AI 仍等用户决定；启动/欢迎引导按指南第二期、需用户确认；红色滚动/塔罗真图/DEV 泄漏需真机复现后定点修。
+- **计划执行状态**：第 1 步「蓝/粉剩余图鉴数据」已完成；第 2 步「长尾全局演出」已接组织庆祝 + BIG DEAL，还差羁绊升级链 / 回归面板 / 同步冲突与合并 / PWA 更新 / 孤儿图片提示 / 愿望提议。Astrology 的每日牌 AI 仍等用户决定；启动/欢迎引导按指南第二期、需用户确认；红色滚动/塔罗真图/DEV 泄漏需真机复现后定点修。
 - **已知功能缺口（接入中，非视觉）**：羁绊的祈愿/契约/谏言/共战、据点会议/团战、星象 AI 解读仍走 demo 本地模拟；羁绊菜单的 `cooldownDate` 仍写死 `10/22`；记录配图上传只更新本地预览，未写入图片库。后续逐项接真实 service。
 - **下一步**：按 HANDOFF §7 继续 Settings → Account → Astrology → Achievements，再补 CallingCardBoard 与状态页；每页保持 `tsc` + `build` + 全量测试，阶段结束更新本文件。
 

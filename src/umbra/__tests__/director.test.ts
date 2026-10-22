@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   Director,
+  isAClassEvent,
+  isSkippableEvent,
   capOf,
   clampEventDuration,
   encounterComboBudget,
@@ -16,6 +18,13 @@ const main = (durationMs: number, actionKey?: string): DirectorEvent => ({
   track: 'main',
   actionKey,
 });
+
+const ev = (
+  name: string,
+  durationMs: number,
+  track: DirectorEvent['track'] = 'main',
+  overlapPriority?: number,
+): DirectorEvent => ({ id: name, name, durationMs, track, overlapPriority });
 
 describe('UMBRA Director', () => {
   it('倍速按比例缩短演出上限', () => {
@@ -74,5 +83,41 @@ describe('UMBRA Director', () => {
         { prim: 'tween', dur: 400 },
       ],
     })).toBe(1090);
+  });
+
+  it('重叠层优先级：unit:down 播放中来更低优先级的 ailment 会被丢弃', () => {
+    const director = new Director();
+    expect(director.startOverlap(ev('unit:down', 500, 'overlap', 3), 0)).toBe(true);
+    expect(director.startOverlap(ev('ailment:apply', 400, 'overlap', 1), 0)).toBe(false);
+    expect(director.overlapEvent?.name).toBe('unit:down');
+  });
+
+  it('重叠层优先级：ailment 播放中来更高优先级的 unit:down 会清场接管', () => {
+    const director = new Director();
+    expect(director.startOverlap(ev('ailment:apply', 400, 'overlap', 1), 0)).toBe(true);
+    expect(director.startOverlap(ev('unit:down', 500, 'overlap', 3), 0)).toBe(true);
+    expect(director.overlapEvent?.name).toBe('unit:down');
+  });
+
+  it('A 类事件不进主线、重叠层或输入缓冲', () => {
+    expect(isAClassEvent('ui:cursor')).toBe(true);
+    expect(isSkippableEvent('boss:intro')).toBe(true);
+    const director = new Director();
+    for (let index = 0; index < 50; index += 1) {
+      expect(director.routeEvent(ev('ui:cursor', 0), 0)).toBe('a-class');
+    }
+    expect(director.mainEvent).toBeNull();
+    expect(director.overlapEvent).toBeNull();
+    expect(director.drainInput()).toEqual([]);
+  });
+
+  it('可跳过事件清场后主线与重叠层为空', () => {
+    const director = new Director();
+    director.startMain(ev('boss:intro', 2000), 0);
+    director.startOverlap(ev('unit:down', 500, 'overlap', 3), 0);
+    const result = director.skip(1200);
+    expect(result).toEqual({ clearedMain: true, clearedOverlap: true });
+    expect(director.mainEvent).toBeNull();
+    expect(director.overlapEvent).toBeNull();
   });
 });

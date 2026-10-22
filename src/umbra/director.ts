@@ -30,6 +30,31 @@ export const DIRECTOR_LIMITS: DirectorLimits = {
   encounterStartComboMinimal: 700,
 };
 
+export const OVERLAY_PRIO: Record<string, number> = {
+  'unit:down': 3,
+  'shield:break': 2,
+  'ailment:apply': 1,
+  'ailment:cure': 1,
+};
+
+export const A_CLASS = new Set([
+  'ui:cursor', 'ui:confirm', 'ui:cancel', 'ui:page', 'ui:error',
+  'item:get', 'money:get', 'shop:buy', 'skill:learn', 'unit:lowhp',
+  'intent:show', 'navi:scan', 'alert:change', 'achievement:unlock', 'bgm:cue',
+]);
+
+export const SKIPPABLE = new Set([
+  'highlight', 'allout', 'boss:phase', 'boss:intro', 'fusion:result', 'callingcard:send', 'bond:rankup',
+]);
+
+export function isAClassEvent(name: string): boolean {
+  return A_CLASS.has(name);
+}
+
+export function isSkippableEvent(name: string): boolean {
+  return SKIPPABLE.has(name);
+}
+
 export function scaledDuration(durationMs: number, speed: DirectorSpeed): number {
   return Math.max(1, Math.round(durationMs / speed));
 }
@@ -125,9 +150,31 @@ export class Director {
   }
 
   startOverlap(event: DirectorEvent, now: number): boolean {
+    if (this.overlap) {
+      const currentPriority = OVERLAY_PRIO[this.overlap.name] ?? 0;
+      const nextPriority = OVERLAY_PRIO[event.name] ?? 0;
+      if (nextPriority < currentPriority) return false;
+    }
     this.overlap = event;
     this.overlapEndsAt = now + event.durationMs;
     return true;
+  }
+
+  routeEvent(event: DirectorEvent, now: number): 'a-class' | 'main' | 'overlap' | 'busy' {
+    if (isAClassEvent(event.name)) return 'a-class';
+    if (event.track === 'overlap') return this.startOverlap(event, now) ? 'overlap' : 'busy';
+    return this.startMain(event, now) ? 'main' : 'busy';
+  }
+
+  skip(now: number): { clearedMain: boolean; clearedOverlap: boolean } {
+    const clearedMain = Boolean(this.main);
+    const clearedOverlap = Boolean(this.overlap);
+    this.main = null;
+    this.overlap = null;
+    this.pendingEnv = null;
+    this.mainEndsAt = now;
+    this.overlapEndsAt = now;
+    return { clearedMain, clearedOverlap };
   }
 
   queueEnv(event: DirectorEvent): void {

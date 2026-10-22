@@ -14,7 +14,7 @@ import { P4Badge, P4Button, P4EmptyState, P4Input, P4Progress, IconEdit, IconTra
 import { CollageItem, CollageStagger } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import { ATTR_NAMES, TODAY, TODAY_DONE, TODAY_KEY, TODOS, TODO_PROGRESS, WISHES, WISH_TIMES } from '@yellow/mock/pkg2';
+import { useActionsData } from '@yellow/adapters/pkg2';
 import { BlockHead, CountPill, Ring, StarFab, Tag, WEEK_LABELS, daysBetween, qp, setHashParam, useLongPress } from '@yellow/screens/pkg2/common';
 import { GoalDeck } from '@yellow/screens/pkg2/GoalDeck';
 import TodoFormSheet from '@yellow/screens/overlays/TodoFormSheet.p4g';
@@ -33,6 +33,7 @@ const ArchiveIcon = ({ size = 14 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinejoin="round" aria-hidden><path d="M3 4h18v5H3zM5 9v11h14V9M10 13h4" /></svg>
 );
 function DeadlineTag({ t, done }: { t: Todo; done?: boolean }) {
+  const { TODAY_KEY } = useActionsData();
   if (!t.deadline || done) return null;
   const d = daysBetween(TODAY_KEY, t.deadline);
   const text = d > 0 ? `剩 ${d} 天` : d === 0 ? '今天截止' : `逾期 ${-d} 天`;
@@ -45,6 +46,7 @@ const IconBtn = ({ title, onClick, children, tone }: { title: string; onClick: (
 
 /** S.Link 行版任务卡（ActiveTodoCard / PendingWeekdayTodoCard） */
 function TodoRow({ t, onMenu, onArchive, onDelete, pending }: { t: Todo; onMenu: () => void; onArchive?: () => void; onDelete?: () => void; pending?: boolean }) {
+  const { TODO_PROGRESS, ATTR_NAMES, TODAY_KEY } = useActionsData();
   const lp = useLongPress(onMenu);
   const count = TODO_PROGRESS[t.id] ?? 0;
   const target = t.frequency === 'count' ? t.targetCount ?? 1 : 1;
@@ -91,6 +93,7 @@ function TodoRow({ t, onMenu, onArchive, onDelete, pending }: { t: Todo; onMenu:
 
 /** BIG DEAL 聚合卡（BigDealHomeCard，P4） */
 function BigDealCard({ t, onOpen, onMenu }: { t: Todo; onOpen: () => void; onMenu: () => void }) {
+  const { TODAY_KEY } = useActionsData();
   const steps = t.steps ?? [];
   const done = steps.filter((s) => s.done).length;
   const next = steps.find((s) => !s.done);
@@ -117,6 +120,7 @@ function BigDealCard({ t, onOpen, onMenu }: { t: Todo; onOpen: () => void; onMen
 
 /** 愿望面板（WishBoard） */
 function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview, onCompose }: { wishes: Wish[]; setWishes: (f: (w: Wish[]) => Wish[]) => void; onOpen: (w: Wish) => void; onFulfill: (w: Wish) => void; tokens: number; pendingReview: number; onCompose: () => void }) {
+  const { WISH_TIMES } = useActionsData();
   const toast = useToast();
   const [menu, setMenu] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -175,6 +179,7 @@ function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview
 }
 
 export function TodosView({ params }: { params: URLSearchParams }) {
+  const { ATTR_NAMES, TODAY, TODAY_DONE, TODAY_KEY, TODOS, WISHES } = useActionsData();
   const toast = useToast();
   const low = useLowMotion();
   const empty = qp(params, 'state') === 'empty';

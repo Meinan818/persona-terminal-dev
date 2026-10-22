@@ -17,7 +17,8 @@ import { usePresence, presetOf, goalPct } from '@pink/screens/pkg5/presence';
 import { UserProfileCardView } from '@pink/screens/overlays/UserProfileCard.p3r';
 import { MenuThemeSheetView } from '@pink/screens/overlays/MenuThemeSheet.p3r';
 import { MenuAboutSheetView } from '@pink/screens/overlays/MenuAboutSheet.p3r';
-import { ACHIEVEMENTS, CURRENT_STREAK, THEME_SWATCHES, TOTAL_LEVEL, TOTAL_POINTS, achievementProgress } from '@pink/mock/pkg5';
+import { ACHIEVEMENTS, THEME_SWATCHES, achievementProgress } from '@pink/mock/pkg5';
+import { useMenuData } from '@pink/adapters/pkg5';
 
 const I = (d: ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="miter" aria-hidden>{d}</svg>;
 const ICONS: Record<string, ReactNode> = {
@@ -33,6 +34,7 @@ const ICONS: Record<string, ReactNode> = {
 };
 
 export default function Menu({ params }: PageProps) {
+  const { CURRENT_STREAK, TOTAL_LEVEL, TOTAL_POINTS } = useMenuData();
   const bold = useBoldness();
   const p = usePresence();
   const battleVisible = params.get('battle') !== '0';

@@ -4,6 +4,16 @@
 export { useCloudUser, useCodexCollections, useRealCodex, useAchievementProgressMap, useTarotCollectedMap, useSeasonCollectedMap } from '@/themes/astrologyData';
 
 /** 真实五维：从 store 读，用户未建档时空数组 */
+export function useMenuData() {
+  const { user, attributes, activities } = useAppStore(useShallow((s) => ({ user: s.user, attributes: s.attributes, activities: s.activities })));
+  return useMemo(() => ({
+    USER: (user ?? { id: '', name: '', createdAt: new Date(2025, 0, 1), theme: 'blue' }) as User,
+    TOTAL_LEVEL: attributes.reduce((s, a) => s + a.level, 0),
+    TOTAL_POINTS: attributes.reduce((s, a) => s + a.points, 0),
+    CURRENT_STREAK: calcCurrentStreak(streakDates(activities), new Date()),
+  }), [user, attributes, activities]);
+}
+
 export function useRealAttributes() {
   const attributes = useAppStore((s) => s.attributes);
   return useMemo(() => attributes as Attribute[], [attributes]);
@@ -11,8 +21,9 @@ export function useRealAttributes() {
 import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
-import type { LedgerEntry, Attribute, AttributeId } from '@/types';
+import type { LedgerEntry, Attribute, AttributeId, User } from '@/types';
 import { useAchievementProgressMap, useSeasonCollectedMap, useTarotCollectedMap } from '@/themes/astrologyData';
+import { calcCurrentStreak, streakDates } from '@/utils/streak';
 
 // A 类：只转发纯计算/格式化函数（真实仓库同名、同签名、同返回结构）
 // catMeta / INCOME_META 不转发：真实版返回结构不同（没有 demo 用的 color 字段），图标/颜色属于设计，保留 demo 版

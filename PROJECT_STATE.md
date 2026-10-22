@@ -11,6 +11,7 @@
 - **本批功能接线范围（截至 2:13）**：四套切主题 + CSS 渲染已通；记账（记一笔/删/定预算）三套接真；羁绊（建/改/删同伴）三套接真；任务（新增/编辑）三套接真；黄主题 11 页整体恢复读写。
 - **仍待接（下一批）**：任务完成/归档/删除、愿望/命运/委托、星象 AI、设置/账号/成就/统计部分字段、红主题的写回（红 demo 的 adapter 只读、写回需另接）、长按轮盘、记账批量/对账。
 - **本轮提交**：`5beee81` `8b16d7a` `34417c8` `b000b96` `6f854f3` `4cba0eb` `b65dc58`（均本地，未 push）。
+- **第二批接线（2:13 之后）**：`01b8bdf` 蓝粉任务归档/删除接真；`bbd8a3d` 三套设置页 settingsStore 从 1bc7928 恢复真实桥（主题/夜间等持久化，密钥仍留本地）。四套切主题 + 渲染 + 记账/羁绊/任务增删改/设置持久化均已接真；黄主题 11 页整体接真。
 
 - **根因（为什么之前没到 100%）**：接入时为了接真实数据，改了 demo 自己的页面源码（红改了 `Statistics.p5r.tsx`/`oc.ts`，黄/粉/蓝改了 `screens/pages/*`/`overlays/*`/`settingsStore.ts`），违反各 demo HANDOFF 的「整包原样拷入、只准改 adapter/bridge」。改 demo 页面 = 视觉漂移。用红自带的 `compare.mjs` 实测旧状态 `RESULT: FAIL 2/52`（ov-codex 差 28%）。
 - **demo 权威包**：`D:\下载\DEMO\p4g-yellow-demo.zip / p3r-blue-demo.zip / p3r-pink-demo.zip / p5r-red-demo.zip`（已解包到 `E:\MASKARIA\.cache\demo-packages\`）。红含 `integration/`（整包拷入 + compare.mjs + 52 张参考图 + check-copy.mjs）。

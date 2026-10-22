@@ -12,6 +12,7 @@ describe('UMBRA roster party', () => {
         morgana: 'zorro',
       },
       excludedPersonas: [],
+      showtime: [],
     });
     expect(party.heroPersonaIds).toEqual(['arsene']);
     expect(party.allyPersonaIds).toEqual(['captain-kidd', 'carmen', 'zorro']);
@@ -23,6 +24,7 @@ describe('UMBRA roster party', () => {
       companions: ['yukari', 'junpei', 'yukari'],
       companionPersonas: { yukari: 'io' },
       excludedPersonas: [],
+      showtime: [],
     });
     expect(party.heroPersonaIds).toEqual(['izanagi']);
     expect(party.allyPersonaIds).toEqual(['io']);

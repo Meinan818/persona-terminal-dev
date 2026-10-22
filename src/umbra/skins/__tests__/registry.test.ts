@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { UmbraSkinPack } from '../contract';
+import { makeTestSkinPack } from '../testFixtures';
 import {
   companionPersonaFor,
   registerSkin,
@@ -7,18 +7,13 @@ import {
   unloadSkin,
 } from '../registry';
 
-const pack = (): UmbraSkinPack => ({
-  id: 'p3-blue',
-  manifest: { assets: [] },
-  tokens: {},
-  recipes: [],
-  labels: {},
-  enemyLayouts: { 1: [], 2: [], 3: [], 4: [], 5: [] },
+const pack = () => makeTestSkinPack('p3-blue', {
   roster: {
     heroPersona: 'orpheus',
     companions: ['yukari'],
     companionPersonas: { yukari: 'io' },
     excludedPersonas: ['izanagi'],
+    showtime: [],
   },
   compendiumArt: { pixie: 'blue-pixie.png' },
 });

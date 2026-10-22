@@ -16,7 +16,7 @@ import { createUmbraRunRecord, isUmbraRunCompatible } from '@/umbra/runtime';
 import { createRuntimePayload, restoreExploration } from '@/umbra/run';
 import { buyUmbraShopItem } from '@/umbra/shop';
 import { registerSkin, unloadSkin } from '@/umbra/skins/registry';
-import type { UmbraSkinPack } from '@/umbra/skins/contract';
+import { makeTestSkinPack } from '@/umbra/skins/testFixtures';
 
 const now = new Date('2026-10-19T12:00:00.000Z');
 
@@ -221,20 +221,14 @@ describe('UMBRA runtime map persistence', () => {
 });
 
 describe('UMBRA default combat from skin roster', () => {
-  const pack = (): UmbraSkinPack => ({
-    id: 'p4-yellow',
-    manifest: { assets: [] },
-    tokens: {},
-    recipes: [],
-    labels: {},
-    enemyLayouts: { 1: [], 2: [], 3: [], 4: [], 5: [] },
+  const pack = () => makeTestSkinPack('p4-yellow', {
     roster: {
       heroPersona: 'izanagi',
       companions: ['yosuke', 'chie'],
       companionPersonas: { yosuke: 'jiraiya', chie: 'tomoe' },
       excludedPersonas: ['arsene'],
+      showtime: [],
     },
-    compendiumArt: {},
   });
 
   it('注册皮肤后从 roster 推导初始队伍', () => {

@@ -17,7 +17,7 @@ import {
 } from '@/umbra/engine/compendiumPreload';
 import { generateEncounter } from '@/umbra/rules/encounter';
 import { registerSkin, unloadSkin } from '@/umbra/skins/registry';
-import type { UmbraSkinPack } from '@/umbra/skins/contract';
+import { makeTestSkinPack } from '@/umbra/skins/testFixtures';
 
 const steady = () => 0.5;
 const createBattle = createDefaultBattle as any;
@@ -36,18 +36,13 @@ const spec = (id: string): any => ({
   reward: { sp: 1, item: '阴影碎片' },
 });
 
-const skinPack = (): UmbraSkinPack => ({
-  id: 'p5r-red',
-  manifest: { assets: [] },
-  tokens: {},
-  recipes: [],
-  labels: {},
-  enemyLayouts: { 1: [], 2: [], 3: [], 4: [], 5: [] },
+const skinPack = () => makeTestSkinPack('p5r-red', {
   roster: {
     heroPersona: 'arsene',
     companions: ['ryuji'],
     companionPersonas: { ryuji: 'pixie' },
     excludedPersonas: ['izanagi'],
+    showtime: [],
   },
   compendiumArt: { arsene: 'red-arsene.png' },
 });
@@ -151,21 +146,15 @@ describe('UMBRA formal P5 battle engine', () => {
       }
     }
     expect(result).not.toBeNull();
-    registerSkin('p3-blue', {
-      id: 'p3-blue',
-      manifest: { assets: [] },
-      tokens: {},
-      recipes: [],
-      labels: {},
-      enemyLayouts: { 1: [], 2: [], 3: [], 4: [], 5: [] },
+    registerSkin('p3-blue', makeTestSkinPack('p3-blue', {
       roster: {
         heroPersona: 'orpheus',
         companions: [],
         companionPersonas: {},
         excludedPersonas: [result.id],
+        showtime: [],
       },
-      compendiumArt: {},
-    });
+    }));
     expect(fusionResultForSkin(source.id, other.id, 'p3-blue')).toBeNull();
     unloadSkin('p3-blue');
   });

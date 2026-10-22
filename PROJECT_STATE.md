@@ -6,11 +6,11 @@
 
 - **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。`E:\MASKARIA` 主工作树与 `main` 未动；本分支全部为本地提交，未 Push、未合并。
 - **本阶段已完成**：样式隔离 `4bf52fb`（生成的 `p4g.css`/`p3r.css` 全部规则收进 `[data-p4g-scope]`/`[data-p3r-scope]`，日/夜、低动效、`prefers-reduced-motion`、`button`、`:focus-visible` 一并作用域化；demo 的 body Portal 由宿主补作用域，主应用与幽影协议不再被主题 utility 覆盖）。
-- **黄色整页替换**：Menu `fb77d63`、Dashboard `e3ae42e`、Todos `e361334`、Ledger `3642023`、Actions `1f84ad2`、Cooperation `45c0e16`、Hideout `2ceed93`、Statistics `ddb1b9a`。
-- **真实数据接线**：行动页 Activities/Todos 接 `useActionsData()` 并补 `useEffect` 同步；新增/编辑/归档/删除/撤销今日完成改调 `actionsOps`。羁绊页接 `useCooperationData()`（同伴/好友/通知/咨询档案/塔罗冲突/羁绊之影），新增/编辑/删除改调 `cooperationOps`。据点页走 `adapters/pkg4-org` 的真实 `buildView()`。统计页新增 `useStatisticsData()`（活动/属性等级/成就与技能解锁数/属性显示名）。
-- **验证**：每页 `npx tsc --noEmit` 0 错误；`npm run build` 通过（最近 36.95s）；全量 `vitest` **68 文件 / 413 项通过**；`build:themes` 无 CSS 语法告警。
+- **黄色整页替换**：Menu `fb77d63`、Dashboard `e3ae42e`、Todos `e361334`、Ledger `3642023`、Actions `1f84ad2`、Cooperation `45c0e16`、Hideout `2ceed93`、Statistics `ddb1b9a`、Settings `4b84297`、Account `28f2704`。
+- **真实数据接线**：行动页 Activities/Todos 接 `useActionsData()` 并补 `useEffect` 同步；新增/编辑/归档/删除/撤销今日完成改调 `actionsOps`。羁绊页接 `useCooperationData()`（同伴/好友/通知/咨询档案/塔罗冲突/羁绊之影），新增/编辑/删除改调 `cooperationOps`。据点页走 `adapters/pkg4-org` 的真实 `buildView()`。统计页新增 `useStatisticsData()`（活动/属性等级/成就与技能解锁数/属性显示名）。设置页把 demo 的本地 `settingsStore` 改成真实 `settings + setTheme` 桥接（API Key / 和风 Key / BGM 曲目 / 人格 mock 保持本地，不读取真实密钥）；账号页新增 `useAccountData()`（真实云用户、五维、总等级/总点数），并按真实登录态推导 `signed-in / signed-out / unconfigured`。
+- **验证**：每页 `npx tsc --noEmit` 0 错误；`npm run build` 通过（最近 35.89s）；全量 `vitest` **68 文件 / 413 项通过**（2026-10-22 20:52 复跑）；`build:themes` 无 CSS 语法告警。
 - **幽影协议影响**：未改 `src/umbra/**` 与 `public/umbra-demo`；`data-ui-channel` p3/p5/neutral 的三套皮肤、主题切换逻辑和旧页面 render 路径均未改。主题 CSS 只匹配 demo 渲染容器，主应用与幽影协议不再受 `.border`/`.rounded-*`/`body` 字体/低动效 `*` 规则影响。
-- **未完成**：Settings、Account、Astrology（需同时接 `DailyDraw` 的每日牌数据）、Achievements/图鉴（pkg5 塔罗/岁时收藏）、CallingCardBoard 新页、启动/空态/长尾弹窗；黄完成后按同一流程做粉、蓝，再复核红色滚动/塔罗真图/DEV 泄漏。
+- **未完成**：Astrology（需同时接 `DailyDraw` 的每日牌数据）、Achievements/图鉴（pkg5 塔罗/岁时收藏）、CallingCardBoard 新页、启动/空态/长尾弹窗；黄完成后按同一流程做粉、蓝，再复核红色滚动/塔罗真图/DEV 泄漏。
 - **已知功能缺口（接入中，非视觉）**：羁绊的祈愿/契约/谏言/共战、据点会议/团战、星象 AI 解读仍走 demo 本地模拟；羁绊菜单的 `cooldownDate` 仍写死 `10/22`；记录配图上传只更新本地预览，未写入图片库。后续逐项接真实 service。
 - **下一步**：按 HANDOFF §7 继续 Settings → Account → Astrology → Achievements，再补 CallingCardBoard 与状态页；每页保持 `tsc` + `build` + 全量测试，阶段结束更新本文件。
 

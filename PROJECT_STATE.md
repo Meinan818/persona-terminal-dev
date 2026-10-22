@@ -2,6 +2,15 @@
 
 最后更新：2026-10-23（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 接手第一入口 · 2026-10-23 · 自动化接续中（新会话从这里开始）
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，HEAD 见下方 git log。工作树只有两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。
+- **授权**：用户明确「自动化任务不能停」，要求按他的规则 + 当前修法一直干活；硬性要求 = **不准碰外观**（demo 的 JSX/className/style/动画/字体/素材不改），只改数据与回调，让四套主题完全融入 app。拿不准的自己替用户决定。星象 AI 接不接要等用户决定（涉及用户自己的 Key）。
+- **已完成**（详见下方「主题接入重做」各批）：四套切主题 + 渲染正常；黄 11 页全接真；粉/蓝已接菜单身份、账号、记账、羁绊、任务、设置、成就、图鉴、愿望/孤儿、统计（活动/成就/技能）；红读真实数据（adapter/live.ts）但写回未接。
+- **还差（按优先级）**：① 粉/蓝统计的 ATTR_NAMES/ATTR_LEVELS 雷达真实化（当前沿用 demo 静态，需给子组件传 props）；② 粉/蓝据点/行动记录读真实数据；③ 红主题写回（命令式 DOM 改本地状态、无事件出口，工作量最大）；④ 愿望/命运/委托；⑤ 长按轮盘不显示（需真机复现）；⑥ 记账批量/对账。
+- **验证命令**：`npx tsc --noEmit`、`npm run build`、`npx vitest run`（66 文件/396 项）。打包：`npm run build && npx cap sync android && cd android && gradlew.bat assembleDebug`，产物复制到 `E:\MASKARIA\outputs\maskaria-theme-debug.apk` 和 `D:\下载\互传\maskaria-theme-debug.apk`。
+- **红线**：不 push（Push 要用户批准）；不 commit 凭据；不改 `main` 与幽影协议 `src/umbra`、`public/umbra-demo`；不改外观；破坏性命令先说明。
+
 ## 主题接入重做 · 2026-10-23 · codex/theme-integrate（以 D:\下载\DEMO 为唯一标准）
 
 - **真机反馈修复（2026-10-23 凌晨）**：真机确认「红 100% 对位但按钮全假、切不了主题、黄全崩、粉蓝底栏缺半、记账存不住」。根因逐一定位并修：

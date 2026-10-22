@@ -335,11 +335,13 @@ function refreshHud() {
       battle.hasResistance(u, { x: -99, y: -99 }, 'melee') ? 'GUARD' : '', u.escort ? '护送对象' : '', u.decoy ? '诱饵' : '',
       u.role === 'revenger' ? (u.counterReady ? '反击待命' : '反击已用') : '', u.bossPhase ? `阶段${u.bossPhase}` : '',
       ...u.status.map((s) => ST_NAME[s.id]), ...u.buffs.map((b) => `${b.id}↑`)].filter(Boolean).join(' · ');
-    card.innerHTML = `<div><div class="name">${u.name} <small>高度${battle.grid.h(u.pos)}</small></div>
-      <div>HP ${u.hp}/${u.maxHp}</div><div class="bar"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>
-      ${u.maxSp && u.side === 'ally' ? `<div>SP ${u.sp}/${u.maxSp}</div><div class="bar sp"><i style="width:${(100 * u.sp) / u.maxSp}%"></i></div>` : ''}
-      <div>移动 ${battle.moveRange(u)} · 近战 ${u.melee} · ${gun}</div><div>${st}</div>
-      ${u.passives?.length ? `<div class="pas">被动：${u.passives.map((p) => PASSIVE_INFO[p].name).join('、')}</div>` : ''}
+    card.classList.toggle('enemy', u.side !== 'ally');
+    card.innerHTML = `<div><div class="name">${u.name} <small>高度${battle.grid.h(u.pos)}</small><b class="more-btn">${cardOpen ? '▲' : 'ⓘ'}</b></div>
+      <div class="vit"><span class="lab">HP</span><span class="num">${u.hp}<small>/${u.maxHp}</small></span><div class="bar"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div></div>
+      ${u.maxSp && u.side === 'ally' ? `<div class="vit"><span class="lab">SP</span><span class="num">${u.sp}<small>/${u.maxSp}</small></span><div class="bar sp"><i style="width:${(100 * u.sp) / u.maxSp}%"></i></div></div>` : ''}
+      ${st ? `<div class="st">${st}</div>` : ''}
+      <div class="more"><div>移动 ${battle.moveRange(u)} · 近战 ${u.melee} · ${gun}</div>
+      ${u.passives?.length ? `<div class="pas">被动：${u.passives.map((p) => PASSIVE_INFO[p].name).join('、')}</div>` : ''}</div>
       ${u.side === 'ally' && u.charges?.length && battle.phase === 'player' ? `<div class="chg">${u.charges.map((c) => `<button class="small${c === u.charge ? ' sel' : ''}" data-charge="${c}">${CHARGE_NAME[c] ?? c}</button>`).join('')}</div>` : ''}</div>`;
   } else card.classList.add('hidden');
   const sel = selected ? battle.unit(selected) : null;
@@ -709,7 +711,9 @@ $('#actions').addEventListener('click', (ev) => {
   previewTarget = null;
   refreshAll();
 });
+let cardOpen = false;
 $('#unit-card').addEventListener('click', (ev) => {
+  if ((ev.target as HTMLElement).closest('.name')) { cardOpen = !cardOpen; $('#unit-card').classList.toggle('open', cardOpen); refreshAll(); return; }
   const b = (ev.target as HTMLElement).closest('button');
   if (!b || busy || !selected || !b.dataset.charge) return;
   void play(battle.selectCharge(selected, b.dataset.charge as never));

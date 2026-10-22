@@ -146,7 +146,7 @@ async function shot5() {
   await page.waitForTimeout(1900); // 等确认提示的 toast 消失
   await page.evaluate(() => { const p = window.__p5t; p.select('crow'); });
   await page.waitForTimeout(300);
-  await page.screenshot({ path: out + 'p5t-1c-844x390.png' });
+  await page.screenshot({ path: out + (ONLY === 'ui' ? 'p5t-ui2-844x390.png' : 'p5t-1c-844x390.png') });
   const st = await page.evaluate(() => ({ decoys: window.__p5t.battle.units.filter((u) => u.decoy).length, flags: window.__p5t.battle.units.filter((u) => u.prop === 'flag').length }));
   console.log('RANGEC', JSON.stringify(st));
   await page.close();
@@ -154,7 +154,8 @@ async function shot5() {
 
 const ONLY = process.env.SHOTS;
 try {
-  if (ONLY === '1c') { await shot4(); await shot5(); await fullPlay(); }
+  if (ONLY === 'ui') { await shot5(); }
+  else if (ONLY === '1c') { await shot4(); await shot5(); await fullPlay(); }
   else { await shot1(); await shot2(); await shot3(); await shot4(); await shot5(); await fullPlay(); }
 } finally { await browser.close(); server.httpServer.close(); }
 console.log('shots ->', out);

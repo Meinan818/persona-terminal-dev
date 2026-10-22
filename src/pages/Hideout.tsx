@@ -14,6 +14,8 @@ import { useAppStore } from '@/store';
 import { useCloudStore } from '@/store/cloud';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { useUiChannel } from '@/ui/useUiChannel';
+import HideoutP4 from '@yellow/screens/pages/Hideout.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { P3R, P3RPage, GhostWords, SectionMark, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_TITLE_FONT, P5CollageTitle, P5RPage, P5Slab, P5SubBar, roughQuad } from '@/components/p5r/kit';
 import { P4SectionTitle, P4Sparkle } from '@/ui/p4Kit';
@@ -278,6 +280,8 @@ export function Hideout() {
       </>
     );
   })();
+
+  if (useUiChannel() === 'p4') return <P4Host><HideoutP4 pageId="hideout" tab={section} params={new URLSearchParams()} /></P4Host>;
 
   return (
     <P3RPage active={p3}>

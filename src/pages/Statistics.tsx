@@ -7,6 +7,8 @@ import { BackButton } from '@/components/BackButton';
 import { PageTitle } from '@/components/PageTitle';
 import { PagePlane, PlaneLevel } from '@/components/PagePlane';
 import { useUiChannel } from '@/ui/useUiChannel';
+import StatisticsP4 from '@yellow/screens/pages/Statistics.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { P3R, P3RPage, GhostWords, P3PageHeader, SectionMark, slantClip } from '@/components/p3r/kit';
 import {
   P5R, P5_FONT, roughQuad,
@@ -538,6 +540,8 @@ export const Statistics = () => {
   const topAttr = attrTotals.sort((a, b) => b.total - a.total)[0];
 
   const p5 = channel === 'p5';
+
+  if (useUiChannel() === 'p4') return <P4Host><StatisticsP4 pageId="statistics" params={new URLSearchParams()} /></P4Host>;
 
   return (
     <P3RPage active={p3}>

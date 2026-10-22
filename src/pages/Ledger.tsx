@@ -25,6 +25,8 @@ import { LedgerStats } from '@/components/ledger/LedgerStats';
 import { AssetBoard } from '@/components/ledger/AssetBoard';
 import { Donut } from '@/components/ledger/Donut';
 import { useUiChannel } from '@/ui/useUiChannel';
+import LedgerP4 from '@yellow/screens/pages/Ledger.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { P3R, P3RPage, GhostWords, P3PageHeader, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_FONT, roughQuad, roughSlant, starPts, P5Collage, P5SubBar, P5Star, P5Dots, P5Slab, P5RPage } from '@/components/p5r/kit';
 import { catMeta, CATEGORY_KEYS, isGrowthCategory, INCOME_META, sym, fmtMoney, fmtSigned, fmtPlain, roundMoney, sanitizeMoneyInput, moneyFromInput, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, incomeTypeFromSource, shiftMonth, weekdayCN, monthLabel, ledgerDateLabel, ledgerCycle, type AccountBalance } from '@/utils/ledgerFormat';
@@ -476,6 +478,8 @@ export const Ledger = () => {
   };
 
   const p5 = useUiChannel() === 'p5';
+
+  if (isP4) return <P4Host><LedgerP4 pageId="ledger" params={new URLSearchParams()} /></P4Host>;
 
   return (
     <P3RPage active={p3}>

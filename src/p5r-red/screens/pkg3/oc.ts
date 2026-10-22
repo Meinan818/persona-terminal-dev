@@ -1,6 +1,7 @@
 // @ts-nocheck —— 逐字迁移自 v3 原生 overlays/c.js（命令式 DOM，类名 .oc-*，样式 = legacy/css/c.css）。见 ./p5.ts 垫片说明。
 import { P5 } from './p5';
 import { RANKS } from '@/p5r-red/mock/data';
+import { useAppStore } from '@/store';
 /* ═══════════════════════════════════════════════════════════════════
    overlays/c.js — C 组「羁绊」全部弹层 / 演出（红主题 P5R 版）
    对应仓库 src/components/cooperation/*（红主题：*P5.tsx / confidantP5Fx.tsx / confidantP5Scenery.tsx /
@@ -35,7 +36,7 @@ export const OC: any = {};
   const CF = P5.D.confidants.map((c, i) => {
     const t = T[c.arcana] || TAROT[i], x = EXTRA[c.arcana] || EXTRA.CHARIOT;
     return {
-      id: 'cf' + i, name: c.name, arcanaId: t.id, card: t, intimacy: c.rank, description: c.desc, orientation: i === 3 ? 'reversed' : 'upright',
+      id: c.id || 'cf' + i, name: c.name, arcanaId: t.id, card: t, intimacy: c.rank, description: c.desc, orientation: i === 3 ? 'reversed' : 'upright',
       aiInterpretation: x.interp, aiAdvice: x.advice, skillAttribute: x.attr, intimacyPoints: x.pts, base: x.base, next: x.next, starShiftCharges: x.charges,
       source: x.online ? 'online' : 'offline', linkedProfile: x.online || null, decayEnabled: i % 2 === 0, archivedAt: null,
       buffs: BUFFS.filter((b) => b[0] <= c.rank).map(([lv, t1, d]) => ({ id: 'b' + lv, unlockAtLevel: lv, title: t1, description: d.replace('%A', P5.ATTR[x.attr].name) })),
@@ -541,7 +542,13 @@ export const OC: any = {};
         delta: (t) => { delta = +t.dataset.v; draw(false); },
         eval: () => { if (text.trim().length < 4) { const e = d.body.querySelector('.oc-err'); e.hidden = false; e.textContent = '请再多描述一点，星象才能照见'; return; } go('thinking'); setTimeout(() => st === 'thinking' && go('result'), 1500); },
         edit: () => go('input'),
-        ok: () => { go('done'); if (sync && attr) P5.toast(`♪ ${P5.ATTR[attr].name} +${pts}`); const lvUp = delta > 0 && cf.intimacy < 10; /* demo：有加点即演示升级 */ cf.intimacyPoints += delta; if (lvUp) setTimeout(() => { d.close(); rankUp(cf, { oldLevel: cf.intimacy, newLevel: Math.min(10, cf.intimacy + 1) }); }, 1300); },
+        ok: () => {
+          go('done'); if (sync && attr) P5.toast(`♪ ${P5.ATTR[attr].name} +${pts}`);
+          const lvUp = delta > 0 && cf.intimacy < 10; /* demo：有加点即演示升级 */
+          cf.intimacyPoints += delta;
+          void useAppStore.getState().recordConfidantInteraction({ id: cf.id, description: text.trim() || '与同伴的互动', delta, narrative: '今日与同伴的互动', createActivity: sync, activityAttribute: sync && attr ? attr : undefined, activityPoints: sync && attr ? pts : 0 }).catch(() => {});
+          if (lvUp) setTimeout(() => { d.close(); rankUp(cf, { oldLevel: cf.intimacy, newLevel: Math.min(10, cf.intimacy + 1) }); }, 1300);
+        },
       } });
     draw(false);
     return d;
@@ -629,7 +636,13 @@ export const OC: any = {};
         trait: (t) => { ans[step] = t.dataset.v; press(t); setTimeout(() => { if (step < 3) { step++; draw(); } else { go('matching'); setTimeout(() => st === 'matching' && go('result'), 1800); } }, 220); },
         tprev: () => { step--; draw(); }, lv: (t) => { v.level = +t.dataset.v; draw(false); },
         redo: () => go('description'), totrait: () => { step = 0; go('trait'); },
-        ok: () => { d.close(); P5.toast(`已缔结：${v.name || '新的同伴'} ·《${res.cn}》`); },
+        ok: () => {
+          d.close();
+          const arcanaId = TAROT_FILE[res.id] || res.id.toLowerCase();
+          void useAppStore.getState().addConfidant({ name: v.name || '新的同伴', description: v.desc, initialLevel: v.level, match: { arcanaId, orientation: 'upright', initialIntimacy: v.level, initialPoints: 0, interpretation: '星象翻出的倒影。', advice: '慢慢来，别急。', source: 'offline' } })
+            .then(() => P5.toast(`已缔结：${v.name || '新的同伴'} ·《${res.cn}》`))
+            .catch(() => P5.toast('这张阿卡纳已被另一位同伴占用'));
+        },
       } });
     d.dlg.querySelector('.oc-ttl h3').insertAdjacentHTML('afterend', '<span class="cr-tiles" role="heading" aria-level="2"></span>');
     d.dlg.querySelector('.oc-ttl h3').classList.add('sr');

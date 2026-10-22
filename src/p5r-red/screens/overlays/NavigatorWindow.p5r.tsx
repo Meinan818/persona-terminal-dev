@@ -21,6 +21,9 @@ import { ObCrop } from './ObKit';
 import { cx, CHARS, charOf, Avatar, ChatToasts, chatToast, ChatSheet, ChatStage, chatImg, anim, EASE_BACK, sleep, hhmm, pts, playMsg, ATTR_CN, type ChatChar } from './NavigatorChatKit';
 import { ActionFormSheet, KIND, previewLines, type Draft, type DraftKind } from './NavigatorActionForm.p5r';
 import { NotebookSheet } from './NavigatorNotebook.p5r';
+import { useAppStore, toLocalDateKey } from '@/store';
+import { D } from '@/p5r-red/mock/data';
+import type { Todo } from '@/types';
 
 /* ── 数据 ── */
 interface Msg { id: string; role: 'cat' | 'user' | 'summary' | 'card'; text?: string; img?: string; at: number; draft?: Draft; status?: 'pending' | 'done' | 'cancelled'; busy?: boolean; receipt?: string; fresh?: boolean; from?: DOMRect | null }
@@ -348,6 +351,36 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const confirmCard = async (m: Msg) => {
     patchMsg(m.id, { busy: true }); await sleep(500);
     const d = m.draft!;
+    const store = useAppStore.getState();
+    try {
+      if (d.kind === 'activity') {
+        await store.addActivity(String(d.text ?? '').trim() || '一件小事', d.points ?? {}, 'local', { important: !!d.important });
+      } else if (d.kind === 'todo') {
+        await store.addTodo({ title: d.title, attribute: d.attribute, points: d.points, frequency: 'single', repeatDaily: !!d.repeatDaily, isActive: true, deadline: d.deadline || undefined });
+      } else if (d.kind === 'ledger') {
+        await store.addLedgerEntry({ direction: d.direction === 'income' ? 'income' : 'expense', amount: Number(d.amount), type: d.direction === 'income' ? undefined : d.type, note: d.note || undefined, date: toLocalDateKey(), source: 'ai', channel: d.channel || undefined, incomeType: d.direction === 'income' ? d.incomeType : undefined });
+      } else if (d.kind === 'completeTodo') {
+        const todo = store.todos.find((t) => t.id === d.todoId) ?? store.todos.find((t) => t.title === d.todoTitle);
+        if (todo) await store.completeTodo(todo.id);
+      } else if (d.kind === 'bigdeal') {
+        const steps = (d.steps as string[]).filter((s) => s.trim()).map((title) => ({ id: crypto.randomUUID(), title, attribute: d.attribute, source: 'ai' as const }));
+        await store.addTodo({ title: d.title, attribute: d.attribute, points: d.points, frequency: 'single', repeatDaily: false, isActive: true, isBigDeal: true, steps });
+      } else if (d.kind === 'editTodo') {
+        const target = store.todos.find((t) => t.id === d.todoId) ?? store.todos.find((t) => t.title === d.todoTitle);
+        if (target) {
+          if (d.archive) await store.updateTodo(target.id, { isActive: false, archivedAt: new Date() });
+          else {
+            const updates: Partial<Todo> = {};
+            if (d.title !== undefined) updates.title = d.title;
+            if (d.attribute !== undefined) updates.attribute = d.attribute;
+            if (d.points !== undefined) updates.points = d.points;
+            if (d.repeatDaily !== undefined) updates.repeatDaily = d.repeatDaily;
+            if (d.deadline !== undefined) updates.deadline = d.deadline || undefined;
+            if (Object.keys(updates).length) await store.updateTodo(target.id, updates);
+          }
+        }
+      }
+    } catch { /* 写回失败仍保留原演出，避免打断对话 */ }
     const receipt = d.kind === 'todo' ? `记下了。${ATTR_CN[d.attribute]} +${d.points} 等你去拿。` : d.kind === 'ledger' ? '账记好了。' : d.kind === 'completeTodo' ? `「${d.todoTitle}」完成，干得漂亮。` : d.kind === 'bigdeal' ? '拆好了，先做第一步就行。' : d.kind === 'editTodo' ? (d.archive ? '收进归档了，想重启随时说。' : '改好了。') : '记录好了。';
     patchMsg(m.id, { busy: false, status: 'done', receipt }); playMsg('in');
   };
@@ -379,8 +412,8 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const sheetEl = sheet?.t === 'notebook' ? <NotebookSheet onClose={() => setSheet(null)} />
     : sheet?.t === 'picker' ? (
       <ChatSheet title="今天做到了哪件？" ghost="DONE" onClose={() => setSheet(null)}>
-        <div>{[{ t: '背 30 个单词', a: 'knowledge', p: 1, daily: true }, { t: '给妈妈打个电话', a: 'kindness', p: 2 }, { t: '晚饭后散步 20 分钟', a: 'guts', p: 1, daily: true }].map((x) => (
-          <button key={x.t} type="button" className={cx('todo-pick')} onClick={() => { setSheet(null); push({ id: nid(), role: 'card', draft: { kind: 'completeTodo', todoTitle: x.t }, status: 'pending', at: Date.now() }); }}><b>{x.t}</b><small>{ATTR_CN[x.a]} +{x.p}{x.daily ? ' · 每日' : ''}</small></button>
+        <div>{D.todos.map((x) => (
+          <button key={x.id} type="button" className={cx('todo-pick')} onClick={() => { setSheet(null); push({ id: nid(), role: 'card', draft: { kind: 'completeTodo', todoId: x.id, todoTitle: x.title }, status: 'pending', at: Date.now() }); }}><b>{x.title}</b><small>{ATTR_CN[x.attribute]} +{x.points}{x.repeatDaily ? ' · 每日' : ''}</small></button>
         ))}</div>
       </ChatSheet>
     ) : sheet?.t === 'form' ? (

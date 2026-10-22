@@ -13,6 +13,8 @@ import { P5 } from './p5';
 import { OD } from './d4';
 import { openTodoForm } from './todoform4';
 import { openOverlay } from '@/p5r-red/shell/shellBus';
+import { useAppStore } from '@/store';
+import { CALLING_ARCHIVED } from '@/p5r-red/mock/pkg5-data';
 const U = P5.ui;
 const WK = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'], WKC = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const slot = (h) => (h < 7 ? '清晨' : h < 12 ? '上午' : h < 13 ? '午休' : h < 16 ? '下午' : h < 19 ? '放学后' : '夜晚');
@@ -36,7 +38,7 @@ export function applyTodosParams(q) {
   st.archived = st.empty ? [] : clone(P5.D.archived);
   const cc = q.get('cc');
   st.cards = cc === 'empty' ? [] : clone(P5.D.callingCards);
-  st.archivedCards = cc === 'empty' ? [] : [{ id: 'cc9', title: '雅思报名', subtitle: '命运在此倾覆', mode: 'deadline', target: '2026-09-30', start: '2026-09-01', archived: true, result: '时之至' }];
+  st.archivedCards = cc === 'empty' ? [] : CALLING_ARCHIVED.map((c) => ({ id: c.id, title: c.title, subtitle: c.subtitle, mode: c.mode, target: c.targetDate, start: c.startDate, archived: true, result: c.archiveReason === 'auto_date' ? '时之至' : c.archiveReason === 'auto_todos' ? '达成' : '已收' }));
   st.arcOpen = cc === 'archived';
 }
 
@@ -132,7 +134,7 @@ export function todosMount(root, wide) {
   }, 1000);
   const bindRows = () => root.querySelectorAll('.req').forEach((r) => { if (r._lp) return; r._lp = 1; P5.longPress(r, () => {
     const t = st.todos.find((x) => x.id === r.dataset.id); if (!t) return; r.animate([{ transform: 'scale(.97)' }, { transform: 'none' }], { duration: 150 });
-    P5.actionSheet(t.title, [{ label: '编辑', onClick: () => openTodoForm({ todo: t }) }, { label: '归档', onClick: () => archiveRow(r) }, { label: '删除', tone: 'danger', onClick: () => confirmDel(t.title, () => { st.todos = st.todos.filter((x) => x !== t); r.remove(); }) }]);
+    P5.actionSheet(t.title, [{ label: '编辑', onClick: () => openTodoForm({ todo: t, onSaved: (d) => { Object.assign(t, d); void useAppStore.getState().updateTodo(t.id, { title: d.title, attribute: d.attribute, points: d.points, frequency: d.frequency, targetCount: d.targetCount, isBigDeal: d.isBigDeal, steps: d.steps, repeatDaily: d.repeatDaily, important: d.important, ...(d.deadline ? { deadline: d.deadline } : {}) }).catch(() => {}); redrawMain(); } }) }, { label: '归档', onClick: () => archiveRow(r) }, { label: '删除', tone: 'danger', onClick: () => confirmDel(t.title, () => { st.todos = st.todos.filter((x) => x !== t); r.remove(); void useAppStore.getState().deleteTodo(t.id).catch(() => {}); }) }]);
   }); });
   const bindArc = () => root.querySelectorAll('.p4-cc-arch').forEach((r) => { if (r._lp) return; r._lp = 1; P5.longPress(r, () => ccDelete(st.archivedCards[+r.dataset.i], true)); });
   bindRows(); bindArc(); bindWeekly(root);
@@ -143,22 +145,24 @@ export function todosMount(root, wide) {
   const ccSaved = (card, data) => {
     if (card) Object.assign(card, data); else st.cards.unshift({ id: 'cc' + Date.now(), start: new Date().toISOString().slice(0, 10), ...data });
     if (data.pinned) st.cards.forEach((c) => { if (c !== card && c.id !== (card || {}).id && c.title !== data.title) c.pinned = false; });
+    const next = { ...(card || {}), ...data, id: card ? card.id : crypto.randomUUID(), startDate: data.start || card?.start, targetDate: data.target || card?.target, tone: card?.tone || 'lines', icon: card?.icon || '★', pinned: !!data.pinned, archived: card?.archived || false };
+    void useAppStore.getState().saveCallingCard(next).catch(() => {});
     st.goal = 'countdown'; redrawGoal(0); redrawBubble();
   };
-  const ccDelete = (c, arch) => P5.confirmDlg({ title: `删除「${c.title}」？`, description: '归档的倒计时不可恢复。\n历史"留下记录"保留不动。', tone: 'danger', confirmText: '删除', cancelText: '取消', onConfirm: () => { if (arch) st.archivedCards = st.archivedCards.filter((x) => x !== c); else st.cards = st.cards.filter((x) => x !== c); redrawGoal(0); redrawBubble(); P5.toast('已删除'); } });
+  const ccDelete = (c, arch) => P5.confirmDlg({ title: `删除「${c.title}」？`, description: '归档的倒计时不可恢复。\n历史"留下记录"保留不动。', tone: 'danger', confirmText: '删除', cancelText: '取消', onConfirm: () => { if (arch) st.archivedCards = st.archivedCards.filter((x) => x !== c); else st.cards = st.cards.filter((x) => x !== c); void useAppStore.getState().deleteCallingCard(c.id).catch(() => {}); redrawGoal(0); redrawBubble(); P5.toast('已删除'); } });
   function ccMenu(i) {
     const c = st.cards[i];
     P5.actionSheet(c.title, [
-      { label: c.pinned ? '取消钉选' : '📌 钉到主页', onClick: () => { st.cards.forEach((x) => (x.pinned = x === c ? !c.pinned : false)); redrawGoal(0); redrawBubble(); P5.toast(c.pinned ? '已钉到主页' : '已取消钉选'); } },
+      { label: c.pinned ? '取消钉选' : '📌 钉到主页', onClick: () => { const was = c.pinned; st.cards.forEach((x) => (x.pinned = x === c ? !was : false)); void useAppStore.getState().pinCallingCard(was ? null : c.id).catch(() => {}); redrawGoal(0); redrawBubble(); P5.toast(was ? '已取消钉选' : '已钉到主页'); } },
       { label: '编辑', onClick: () => OD.openCCEditor(true, { card: c, onSaved: (d) => ccSaved(c, d) }) },
-      { label: '手动归档', onClick: () => { st.cards = st.cards.filter((x) => x !== c); st.archivedCards.unshift({ ...c, pinned: false, archived: true, result: '已收' }); st.arcOpen = true; redrawGoal(0); redrawBubble(); openOverlay('fx-calling-archived', { title: c.title }); } },
+      { label: '手动归档', onClick: () => { st.cards = st.cards.filter((x) => x !== c); st.archivedCards.unshift({ ...c, pinned: false, archived: true, result: '已收' }); void useAppStore.getState().archiveCallingCard(c.id).catch(() => {}); st.arcOpen = true; redrawGoal(0); redrawBubble(); openOverlay('fx-calling-archived', { title: c.title }); } },
       { label: '删除', tone: 'danger', onClick: () => ccDelete(c, false) },
     ]);
   }
   function arcMenu(i) {
     const c = st.archivedCards[i];
     P5.actionSheet(c.title, [
-      { label: '取消归档', onClick: () => { st.archivedCards = st.archivedCards.filter((x) => x !== c); st.cards.push({ ...c, archived: false }); redrawGoal(0); P5.toast('已取消归档'); } },
+      { label: '取消归档', onClick: () => { st.archivedCards = st.archivedCards.filter((x) => x !== c); st.cards.push({ ...c, archived: false }); void useAppStore.getState().unarchiveCallingCard(c.id).catch(() => {}); redrawGoal(0); P5.toast('已取消归档'); } },
       { label: '删除', tone: 'danger', onClick: () => ccDelete(c, true) },
     ]);
   }
@@ -169,7 +173,7 @@ export function todosMount(root, wide) {
     if (a === 'pane') { st.pane = st.pane === 'wish' ? 'todos' : 'wish'; const m = root.querySelector('.main5'); if (P5.reduced()) return redrawMain(); m.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-18px)' }], { duration: 120, fill: 'both' }).onfinish = redrawMain; }
     if (a === 'fate') return OD.openFateDraw();
     if (a === 'quest') return OD.openQuestBoard();
-    if (a === 'add') return st.pane === 'wish' ? wishSheet(() => redrawMain()) : openTodoForm({ onSaved: (t) => { st.todos.push(t); redrawMain(); } });
+    if (a === 'add') return st.pane === 'wish' ? wishSheet(() => redrawMain()) : openTodoForm({ onSaved: (t) => { st.todos.push(t); redrawMain(); void useAppStore.getState().addTodo({ title: t.title, attribute: t.attribute, points: t.points, frequency: t.frequency, targetCount: t.targetCount, repeatDaily: t.repeatDaily !== false, important: !!t.important, deadline: t.deadline, isActive: true, isBigDeal: !!t.isBigDeal, steps: t.steps }).then(() => { const real = useAppStore.getState().todos.find((x) => x.title === t.title && x.isActive && !x.archivedAt); if (real) t.id = real.id; }).catch(() => {}); } });
     if (a === 'archive') { e.stopPropagation(); return archiveRow(b.closest('.req')); }
     if (a === 'new-cc') { e.stopPropagation(); return OD.openCCEditor(false, { onSaved: (d) => ccSaved(null, d) }); }
     if (a === 'cc-menu') { e.stopPropagation(); return ccMenu(+b.dataset.i); }
@@ -230,7 +234,7 @@ function swapGoal(root, dir, after) {
   if (P5.reduced() || !dir) return put();
   body.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-18 * dir}px)` }], { duration: 120, fill: 'both' }).onfinish = put;
 }
-function archiveRow(r) { const go = () => { st.todos = st.todos.filter((x) => x.id !== r.dataset.id); r.remove(); P5.toast('已归档（不启用）'); }; if (P5.reduced()) return go(); r.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(-30px) rotate(-4deg) scale(.96)', opacity: 0 }], { duration: 260, easing: 'cubic-bezier(.6,0,.8,.4)', fill: 'both' }).onfinish = go; }
+function archiveRow(r) { const go = () => { const id = r.dataset.id; st.todos = st.todos.filter((x) => x.id !== id); r.remove(); void useAppStore.getState().updateTodo(id, { isActive: false }).catch(() => {}); P5.toast('已归档（不启用）'); }; if (P5.reduced()) return go(); r.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(-30px) rotate(-4deg) scale(.96)', opacity: 0 }], { duration: 260, easing: 'cubic-bezier(.6,0,.8,.4)', fill: 'both' }).onfinish = go; }
 /** 删除任务确认（真实 Todos.tsx 页面级 ConfirmDialog） */
 export function confirmDel(title, done) {
   return P5.confirmDlg({ title: '删除任务', description: `任务「${title}」将被永久删除，无法撤销。`, tone: 'danger', confirmText: '删除', cancelText: '取消', onConfirm: () => { done && done(); P5.toast('已删除'); } });

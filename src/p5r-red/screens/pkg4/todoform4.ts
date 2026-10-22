@@ -86,7 +86,12 @@ export function openTodoForm({ todo = null, mode: m0, ai = 'ok', sched = 'ok', v
         const v = title.value.trim();
         if (!v) { title.classList.add('p4-bad'); shake($('[data-f="title"]')); title.focus(); return; }
         close();
-        onSaved && onSaved({ id: 't' + Date.now(), title: v, attribute: attr, points: pts, frequency: mode === 'count' ? 'count' : 'single', targetCount: mode === 'count' ? cnt : undefined, repeatDaily: true, count: 0, target: mode === 'count' ? cnt : 1 });
+        const sws = sh.querySelectorAll('.more .tg .sw');
+        const repeatDaily = sws[0] ? sws[0].classList.contains('on') : true;
+        const important = sws[1] ? sws[1].classList.contains('on') : false;
+        const deadline = ((mode === 'big' ? sh.querySelector('.m-big input[type="date"]') : sh.querySelector('.more input[type="date"]'))?.value) || undefined;
+        const stepsOut = mode === 'big' ? steps.filter((s) => s.t.trim()).map((s, i) => ({ id: 's' + Date.now() + i, title: s.t.trim(), attribute: attr, source: 'manual' })) : undefined;
+        onSaved && onSaved({ id: 't' + Date.now(), title: v, attribute: attr, points: pts, frequency: mode === 'count' ? 'count' : 'single', targetCount: mode === 'count' ? cnt : undefined, repeatDaily, important, deadline, isBigDeal: mode === 'big', steps: stepsOut, count: 0, target: mode === 'count' ? cnt : 1 });
       };
       if (invalid) setTimeout(() => $('[data-ok]').click(), 400);
     } });

@@ -25,6 +25,7 @@ import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { ATTR, ATTR_ORDER, type AttrId } from '@/p5r-red/mock/data';
 import { ACTIVITIES, METHOD_FILTER_OPTIONS, localKey, type MethodFilter, type MockActivity } from '@/p5r-red/mock/pkg5-data';
 import { ActivityRecordSheet } from '@/p5r-red/screens/overlays/ActivityRecordSheet.p5r';
+import { useAppStore } from '@/store';
 import { ActivitiesRecordMenu } from '@/p5r-red/screens/overlays/ActivitiesRecordMenu.p5r';
 import { ActivitiesDeleteConfirm } from '@/p5r-red/screens/overlays/ActivitiesDeleteConfirm.p5r';
 import { OTD_VIEW } from '@/p5r-red/screens/overlays/OnThisDaySheet.p5r';
@@ -281,9 +282,24 @@ export default function Activities({ params, wide, tabs }: PageProps & { tabs?: 
         </button>
       </Portal>
       <ActivityRecordSheet open={!!sheet} onClose={() => setSheet(false)} backdate={sheet === 'backdate' ? backdate : null}
-        onSaved={(desc, pts, important) => setActs((p) => [{ id: `n${Date.now()}`, date: backdate ? `${backdate}T12:00:00` : new Date().toISOString(), description: desc || '一件小事', pointsAwarded: pts, method: 'local', important, backfilled: !!backdate }, ...p])} />
+        onSaved={(desc, pts, important) => {
+          const tempId = `n${Date.now()}`;
+          const text = desc || '一件小事';
+          const date = backdate ? new Date(`${backdate}T12:00:00`) : new Date();
+          setActs((p) => [{ id: tempId, date: date.toISOString(), description: text, pointsAwarded: pts, method: 'local', important, backfilled: !!backdate }, ...p]);
+          void useAppStore.getState().addActivity(text, pts, 'local', { important, date })
+            .then(({ activityId }) => { if (activityId) setActs((p) => p.map((a) => (a.id === tempId ? { ...a, id: activityId } : a))); })
+            .catch(() => {});
+        }} />
       <ActivitiesRecordMenu open={!!menu} onClose={() => setMenu(null)} desc={menu?.description ?? ''} onDelete={() => { const m = menu; setTimeout(() => setDel(m), 0); }} />
-      <ActivitiesDeleteConfirm open={!!del} onClose={() => setDel(null)} desc={del?.description ?? ''} onDelete={() => { const id = del?.id; setActs((p) => p.filter((a) => a.id !== id)); }} />
+      <ActivitiesDeleteConfirm open={!!del} onClose={() => setDel(null)} desc={del?.description ?? ''} onDelete={(rollback) => {
+        const id = del?.id;
+        if (!id) return;
+        setActs((p) => p.filter((a) => a.id !== id));
+        if (id.startsWith('n') || id.startsWith('otd-')) return;
+        const store = useAppStore.getState();
+        void (rollback ? store.deleteActivity(id) : store.deleteActivityRecordOnly(id)).catch(() => {});
+      }} />
     </div>
   );
 }

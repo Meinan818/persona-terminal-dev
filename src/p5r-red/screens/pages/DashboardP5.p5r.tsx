@@ -33,6 +33,8 @@ import { SeasonStampBadgeP5 } from '@/p5r-red/screens/overlays/SeasonStampBadge.
 import { OnThisDayGlyph, onThisDaySub, OTD_VIEW } from '@/p5r-red/screens/overlays/OnThisDaySheet.p5r';
 import { playQueue, type QueueStep } from '@/p5r-red/screens/overlays/cutins.p5r';
 import { BackToastP5, useBackToast } from '@/p5r-red/screens/overlays/GlobalToasts.p5r';
+import { useAppStore, toLocalDateKey } from '@/store';
+import { calcMaxStreak, streakDates } from '@/utils/streak';
 import './DashboardP5.p5r.css';
 
 const WD = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'], MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -242,13 +244,18 @@ function PersonaCard({ attr }: { attr?: AttrId }) {
 
 /** 2×3 统计表格卡（P0-06；真实 stats useMemo） */
 export function StatsTableP5() {
+  const attributes = useAppStore((s) => s.attributes);
+  const activities = useAppStore((s) => s.activities);
+  const achievements = useAppStore((s) => s.achievements);
+  const skills = useAppStore((s) => s.skills);
   const s = useMemo(() => {
-    const totalPoints = ATTR_ORDER.reduce((a, k) => a + D.attrs[k].pts, 0);
+    const totalPoints = attributes.reduce((a, x) => a + x.points, 0);
+    const days = new Set(activities.map((a) => toLocalDateKey(new Date(a.date))));
     return [
-      { v: totalPoints, label: '累计点数', c: 'var(--red)' }, { v: 12, label: '最长连续天', c: 'var(--red)' }, { v: 86, label: '总记录数', c: 'var(--red)' },
-      { v: 4, label: '成就已解锁', c: '#e06808' }, { v: 3, label: '技能已解锁', c: '#111' }, { v: 38, label: '记录天数', c: '#111' },
+      { v: totalPoints, label: '累计点数', c: 'var(--red)' }, { v: calcMaxStreak(streakDates(activities)), label: '最长连续天', c: 'var(--red)' }, { v: activities.length, label: '总记录数', c: 'var(--red)' },
+      { v: achievements.filter((a) => a.unlocked).length, label: '成就已解锁', c: '#e06808' }, { v: skills.filter((x) => x.unlocked).length, label: '技能已解锁', c: '#111' }, { v: days.size, label: '记录天数', c: '#111' },
     ];
-  }, []);
+  }, [attributes, activities, achievements, skills]);
   return (
     <div className="hm-statgrid hseg s6" id="sec-stats">
       <div>{s.map((x) => <div className="c" key={x.label}><b style={{ color: x.c }}>{x.v}</b><span>{x.label}</span></div>)}</div>
@@ -279,6 +286,8 @@ export default function DashboardP5({ wide, params }: PageProps) {
   const check = (t: MockTodo) => {
     if (t.count >= t.target) return;
     setTodos((ts) => ts.map((x) => (x.id === t.id ? { ...x, count: x.target } : x)));
+    const remaining = Math.max(1, t.target - t.count);
+    void (async () => { for (let i = 0; i < remaining; i++) await useAppStore.getState().completeTodo(t.id); })().catch(() => {});
     stopQ.current?.();
     stopQ.current = playQueue(homeQueue(t, params.get('fxq')));
   };

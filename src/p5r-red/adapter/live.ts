@@ -67,7 +67,7 @@ function ccPkg5(c: CallingCard, s: S): MockCC {
 }
 function confidantMock(c: Confidant): MockConfidant {
   const t = TAROT_BY_ID[c.arcanaId];
-  return { name: c.name, arcana: ARCANA_DEMO[c.arcanaId] ?? 'FOOL', arcanaCn: t?.name ?? '', no: t?.roman ?? '', rank: c.intimacy, desc: c.description };
+  return { id: c.id, name: c.name, arcana: ARCANA_DEMO[c.arcanaId] ?? 'FOOL', arcanaCn: t?.name ?? '', no: t?.roman ?? '', rank: c.intimacy, desc: c.description } as MockConfidant;
 }
 const CAT_OK = new Set(['achievement_unlock', 'skill_unlock', 'calling_card_clear', 'weekly_goal', 'confidant', 'shadow_defeat']);
 function activityPkg5(a: Activity): MockActivity {
@@ -83,8 +83,11 @@ function skillPkg5(k: Skill): MockSkill {
   return { id: k.id, name: k.name, description: k.description, requiredAttribute: k.requiredAttribute as AttrId, requiredLevel: k.requiredLevel, bonusMultiplier: k.bonusMultiplier ?? 1, unlocked: k.unlocked };
 }
 function ledgerRow(e: LedgerEntry) {
-  return { note: e.note || e.category || (e.direction === 'income' ? '收入' : '支出'), amount: e.amount, dir: e.direction === 'income' ? 'income' : 'expense', ch: e.channel || '', d: daysAgo(e.date) };
+  return { id: e.id, note: e.note || e.category || (e.direction === 'income' ? '收入' : '支出'), amount: e.amount, dir: e.direction === 'income' ? 'income' : 'expense', ch: e.channel || '', d: daysAgo(e.date) };
 }
+
+/** 记账页真实合计（页面在渲染时读，随 store 同步更新） */
+export const RED_LEDGER = { expense: 0, income: 0, total: 0, budget: null as number | null, savingsGoal: null as number | null, adjustCount: 0 };
 
 /** 把 store 当前状态写进全部 mock 对象 */
 export function syncLiveDataNow(s: S = useAppStore.getState()) {
@@ -117,12 +120,19 @@ export function syncLiveDataNow(s: S = useAppStore.getState()) {
   // 记账：本月流水（页面合计里的固定基数见 README「未接」）
   const month = today.slice(0, 7);
   fill(FLOW as ReturnType<typeof ledgerRow>[], s.ledgerEntries.filter((e) => e.date.startsWith(month)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(ledgerRow));
+  RED_LEDGER.expense = s.getPeriodExpense(month);
+  RED_LEDGER.income = s.getPeriodIncome(month);
+  RED_LEDGER.total = s.getTotalBalance();
+  const budget = s.getBudget(month);
+  RED_LEDGER.budget = budget?.monthlyLimit ?? null;
+  RED_LEDGER.savingsGoal = budget?.savingsGoal ?? null;
+  RED_LEDGER.adjustCount = s.getAdjustCountThisMonth();
 }
 
 /* ── 订阅：store 变 → 同步 → 通知重渲染 ── */
 let version = 0;
 const listeners = new Set<() => void>();
-const WATCH: (keyof S)[] = ['user', 'attributes', 'activities', 'achievements', 'skills', 'todos', 'todoCompletions', 'callingCards', 'weeklyGoals', 'wishes', 'confidants', 'ledgerEntries', 'settings'];
+const WATCH: (keyof S)[] = ['user', 'attributes', 'activities', 'achievements', 'skills', 'todos', 'todoCompletions', 'callingCards', 'weeklyGoals', 'wishes', 'confidants', 'ledgerEntries', 'budgets', 'settings'];
 export const LIVE = {
   start() {
     return useAppStore.subscribe((s, prev) => {

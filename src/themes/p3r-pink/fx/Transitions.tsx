@@ -41,12 +41,9 @@ export const RippleIris = ({ active, origin, onCovered, onDone }: FxProps & { or
   if (!active || !anim) return null;
   const o = origin ?? { x: window.innerWidth / 2, y: window.innerHeight - 40 };
   const R = Math.hypot(Math.max(o.x, window.innerWidth - o.x), Math.max(o.y, window.innerHeight - o.y)) + 20;
-  // 固定小圆再 scale：避免整屏大小的圆角层逐帧栅格化（手机卡顿主因），纯色放大视觉一致。
-  const SIZE = 200;
-  const finalScale = (R * 2) / SIZE;
   const disc = (bg: string, delay: number, extra?: ReactNode) => (
-    <motion.span className="absolute rounded-full" style={{ left: o.x - SIZE / 2, top: o.y - SIZE / 2, width: SIZE, height: SIZE, background: bg, willChange: 'transform' }}
-      initial={{ scale: 0.01 }} animate={{ scale: finalScale }} transition={{ duration: 0.42, delay, ease: [0.3, 0.7, 0.2, 1] }}>{extra}</motion.span>
+    <motion.span className="absolute rounded-full" style={{ left: o.x - R, top: o.y - R, width: R * 2, height: R * 2, background: bg }}
+      initial={{ scale: 0.02 }} animate={{ scale: 1 }} transition={{ duration: 0.42, delay, ease: [0.3, 0.7, 0.2, 1] }}>{extra}</motion.span>
   );
   return (
     <Portal>
@@ -56,9 +53,9 @@ export const RippleIris = ({ active, origin, onCovered, onDone }: FxProps & { or
         {disc(P3R.cyan, 0.07)}
         {disc('var(--p3r-bg)', 0.14)}
         {/* 光圈细环 + 白光片 */}
-        <motion.span className="absolute rounded-full" style={{ left: o.x - 60, top: o.y - 60, width: 120, height: 120, border: '3px solid var(--p3r-blue)', willChange: 'transform, opacity' }}
+        <motion.span className="absolute rounded-full" style={{ left: o.x - 60, top: o.y - 60, width: 120, height: 120, boxShadow: 'inset 0 0 0 3px var(--p3r-blue)' }}
           initial={{ scale: 0.2, opacity: 1 }} animate={{ scale: 6, opacity: 0 }} transition={{ duration: 0.7, delay: 0.1 }} />
-        <motion.span className="absolute inset-y-0 w-[30vw]" style={{ background: 'rgba(255,255,255,0.6)', skewX: -20, willChange: 'transform' }} initial={{ x: '-40vw' }} animate={{ x: '140vw' }} transition={{ duration: 0.6, delay: 0.25 }} />
+        <motion.span className="absolute inset-y-0 w-[30vw]" style={{ background: 'rgba(255,255,255,0.6)', skewX: -20 }} initial={{ x: '-40vw' }} animate={{ x: '140vw' }} transition={{ duration: 0.6, delay: 0.25 }} />
       </motion.div>
     </Portal>
   );

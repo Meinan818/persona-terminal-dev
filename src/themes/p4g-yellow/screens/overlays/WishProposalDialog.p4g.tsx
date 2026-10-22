@@ -6,14 +6,13 @@ import type { OverlayProps } from '@yellow/registry/types';
 import { P4Dialog, useToast } from '@yellow/kit';
 import { Ring } from '@yellow/screens/pkg2/common';
 
-export default function WishProposalDialog({ open, onClose, params, wishTitle, fromPct, toPct, reason, onConfirm }: OverlayProps & { wishTitle?: string; fromPct?: number; toPct?: number; reason?: string; onConfirm?: () => void }) {
+export default function WishProposalDialog({ open, onClose, params }: OverlayProps) {
   const toast = useToast();
-  const fresh = params?.get('variant') === 'new' || fromPct === undefined;
-  const from = fresh ? undefined : (fromPct ?? 58); const to = toPct ?? 70;
-  const name = wishTitle ?? '一年读完 24 本书';
+  const fresh = params?.get('variant') === 'new';
+  const from = fresh ? undefined : 58; const to = 70;
   return (
-    <P4Dialog open={open} onClose={onClose} speaker="助手" title="要更新这个愿望的进度吗？" message={`听你刚才说的，「${name}」好像比记录里更靠前了。${reason ? `\n${reason}` : ''}`}
-      confirmText="更新" cancelText="先不用" onConfirm={() => { if (onConfirm) onConfirm(); else toast.success(`已更新为 ${to}%`); }}>
+    <P4Dialog open={open} onClose={onClose} speaker="助手" title="要更新这个愿望的进度吗？" message="听你刚才说的，「一年读完 24 本书」好像比记录里更靠前了。"
+      confirmText="更新" cancelText="先不用" onConfirm={() => toast.success(`已更新为 ${to}%`)}>
       <div className="flex items-center gap-3 rounded-sm bg-p4g-yellow px-3 py-2 text-p4g-black">
         <Ring pct={to} size={48} stroke={6} />
         <span className="p4g-num text-h2">{typeof from === 'number' ? `${from}% → ${to}%` : `定为 ${to}%`}</span>

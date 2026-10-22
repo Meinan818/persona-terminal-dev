@@ -31,10 +31,8 @@ export function GlobalOverlayHost() {
   const shiftOrg = useCloudSocialStore((s) => s.shiftOrgCelebration);
   const wishProposal = useAppStore((s) => s.wishProposal);
   const setWishProposal = useAppStore((s) => s.setWishProposal);
-  const setWishProgress = useAppStore((s) => s.setWishProgress);
   const orphan = useAppStore((s) => s.orphanImagesPrompt);
   const dismissOrphan = useAppStore((s) => s.dismissOrphanImagesPrompt);
-  const pruneOrphan = useAppStore((s) => s.pruneOrphanImages);
   const achLines = ach ? ACHIEVEMENT_UNLOCK_LINES[ach.id] : undefined;
   const wishPayload = wishCut
     ? { title: wishCut.wishTitle, pct: wishCut.pct, delta: wishCut.delta, times: wishCut.times, source: wishCut.source === 'ai' ? 'ai' as const : 'local' as const, reason: wishCut.reason }
@@ -48,9 +46,8 @@ export function GlobalOverlayHost() {
       <BigDealClearCutIn open={!!bigDeal && !blocker} onClose={clearBigDeal} data={bigDeal ?? undefined} />
       <CallingCardCutIn open={!!cutCard && !blocker} onClose={() => { if (cutCard) void markShown(cutCard.id); }} params={new URLSearchParams()} card={cutCard ?? undefined} reason={cutCard?.archiveReason ?? 'manual'} />
       <OrgCelebration head={orgHead} onClose={shiftOrg} />
-      <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
-        onConfirm={() => { if (wishProposal) void setWishProgress(wishProposal.wishId, wishProposal.toPct, { reason: wishProposal.reason }); setWishProposal(null); }} />
-      <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} count={orphan?.count} bytes={orphan?.bytes} onConfirm={() => { void pruneOrphan(); dismissOrphan(); }} />
+      <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} />
+      <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} />
     </P4ToastProvider>
   );
 }

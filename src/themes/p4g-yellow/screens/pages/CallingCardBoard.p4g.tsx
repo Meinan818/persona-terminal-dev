@@ -14,10 +14,11 @@ import { P4Button, P4DataBlock, P4EmptyState, P4PageHeader, P4Section, useToast,
 import { CollageItem, CollageStagger } from '@yellow/fx';
 import { navigate } from '@yellow/shell/shellBus';
 import { cx } from '@yellow/lib/cx';
+import { TODAY_KEY } from '@yellow/mock/pkg2';
 import { daysBetween } from '@yellow/screens/pkg2/common';
 import { toneBg } from '@yellow/screens/pkg2/tones';
 import { cardProgress } from '@yellow/screens/pkg2/GoalDeck';
-import { TODAY_KEY, callingCardOps, updateCard, useCallingCardData } from '@yellow/adapters/callingCards';
+import { removeCard, saveCard, updateCard, useCallingCards } from '@yellow/screens/pkg2/callingCardStore';
 import CallingCardEditor from '@yellow/screens/overlays/CallingCardEditor.p4g';
 import CallingCardSectionDeleteConfirm from '@yellow/screens/overlays/CallingCardSectionDeleteConfirm.p4g';
 import CallingCardCutIn, { type Reason } from '@yellow/screens/overlays/CallingCardCutIn.p4g';
@@ -80,7 +81,7 @@ function CardTile({ c, onPin, onEdit, onArchive, onUnarchive, onDelete }: { c: C
 
 export default function CallingCardBoard({ params }: PageProps) {
   const toast = useToast();
-  const { CALLING_CARDS: shared } = useCallingCardData();
+  const [shared] = useCallingCards();
   const [demoEmpty, setDemoEmpty] = useState(params?.get('state') === 'empty');
   const cards = demoEmpty ? [] : shared;
   const [editor, setEditor] = useState<false | { card: CallingCard | null }>(false);
@@ -149,8 +150,8 @@ export default function CallingCardBoard({ params }: PageProps) {
           </>
         )}
       </div>
-      <CallingCardEditor open={!!editor} onClose={() => setEditor(false)} initialCard={editor ? editor.card : null} onSave={(c) => { void callingCardOps.save(c); setDemoEmpty(false); }} />
-      <CallingCardSectionDeleteConfirm open={!!del} onClose={() => setDel(null)} title={del?.title} onConfirm={() => { if (del) void callingCardOps.remove(del.id); toast.success('已删除'); }} />
+      <CallingCardEditor open={!!editor} onClose={() => setEditor(false)} initialCard={editor ? editor.card : null} onSave={(c) => { saveCard(c); setDemoEmpty(false); }} />
+      <CallingCardSectionDeleteConfirm open={!!del} onClose={() => setDel(null)} title={del?.title} onConfirm={() => { if (del) removeCard(del.id); toast.success('已删除'); }} />
       <CallingCardCutIn open={!!cut} onClose={() => setCut(null)} card={cut?.card} reason={cut?.reason} />
     </>
   );

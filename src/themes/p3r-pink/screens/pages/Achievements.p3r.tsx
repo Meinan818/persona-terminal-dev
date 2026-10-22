@@ -23,8 +23,7 @@ import { SkillDeleteView } from '@pink/screens/overlays/AchievementsSkillDeleteC
 import { TarotFace, TarotFlipViewView, suitOf } from '@pink/screens/overlays/TarotFlipView.p3r';
 import { SeasonCard, SeasonFlipView } from '@pink/screens/overlays/FlipCardView.p3r';
 import { UnlockCutIn } from '@pink/screens/pkg5/UnlockCutIn';
-import { ATTR_IDS, HIDDEN_IDS, SEALED_IDS, SEASON_EXTRAS, SKILL_BONUS_MULT_CAP } from '@pink/mock/pkg5';
-import { achievementsOps, useAchievementsData, useCodexData } from '@pink/adapters/pkg5';
+import { ACHIEVEMENTS, ATTRIBUTES, ATTR_IDS, ATTR_NAMES, HIDDEN_IDS, SEALED_IDS, SEASON_COLLECTED, SEASON_EXTRAS, SKILLS, SKILL_BONUS_MULT_CAP, TAROT_COLLECTED, achievementProgress } from '@pink/mock/pkg5';
 import { P5_MAJOR, P5_MINOR, type P5TarotCard } from '@pink/mock/pkg5-tarot';
 import { P5_SEASON_PAGES, type P5SeasonMark } from '@pink/mock/pkg5-season';
 
@@ -33,7 +32,6 @@ const CYCLE: Filter[] = ['all', 'locked', 'unlocked'];
 
 /* ───────── 成就 ───────── */
 function AchievementCard({ a, onUnlock, onEdit, onDelete, tiers, stamping }: { a: Achievement; onUnlock: () => void; onEdit: () => void; onDelete: () => void; tiers?: { count: number; idx: number; set: (i: number) => void }; stamping?: boolean }) {
-  const { achievementProgress } = useAchievementsData();
   const anim = useBoldness();
   const hidden = HIDDEN_IDS.has(a.id) && !a.unlocked;
   const face = hidden ? { title: '？？？', description: '隐藏成就', icon: '？' } : a;
@@ -91,9 +89,7 @@ function AchievementCard({ a, onUnlock, onEdit, onDelete, tiers, stamping }: { a
 function AchievementsTab({ empty, autoFx }: { empty: boolean; autoFx: boolean }) {
   const toast = useToast();
   const anim = useBoldness();
-  const { ACHIEVEMENTS } = useAchievementsData();
   const [list, setList] = useState<Achievement[]>(empty ? [] : ACHIEVEMENTS);
-  useEffect(() => { setList(empty ? [] : ACHIEVEMENTS); }, [ACHIEVEMENTS, empty]);
   const [filter, setFilter] = useState<Filter>('all');
   const [form, setForm] = useState<{ open: boolean; editing: Achievement | null }>({ open: false, editing: null });
   const [del, setDel] = useState<string | null>(null);
@@ -115,7 +111,7 @@ function AchievementsTab({ empty, autoFx }: { empty: boolean; autoFx: boolean })
   const unlock = (a: Achievement) => {
     if (stamping) return;
     setStamping(a.id);
-    window.setTimeout(() => { setStamping(null); setList((xs) => xs.map((x) => (x.id === a.id ? { ...x, unlocked: true, unlockedDate: new Date() } : x))); void achievementsOps.unlock(a.id); setCut(a); }, anim ? 620 : 0);
+    window.setTimeout(() => { setStamping(null); setList((xs) => xs.map((x) => (x.id === a.id ? { ...x, unlocked: true, unlockedDate: new Date(2026, 9, 20) } : x))); setCut(a); }, anim ? 620 : 0);
   };
   const fired = useRef(false);
   useEffect(() => {
@@ -126,14 +122,8 @@ function AchievementsTab({ empty, autoFx }: { empty: boolean; autoFx: boolean })
   }, [autoFx, empty]); // eslint-disable-line react-hooks/exhaustive-deps
   const saveForm = (f: AchForm) => {
     const cond = { type: f.type, value: f.value, attribute: f.type === 'attribute_level' ? f.attribute : undefined, keywords: f.type === 'keyword_match' ? f.keywords.split(/[,，]/).map((s) => s.trim()).filter(Boolean) : undefined } as Achievement['condition'];
-    if (form.editing) {
-      setList((xs) => xs.map((x) => (x.id === form.editing!.id ? { ...x, title: f.title, description: f.description, icon: f.icon, condition: cond } : x)));
-      void achievementsOps.updateAchievement(form.editing.id, { title: f.title, description: f.description, icon: f.icon, condition: cond });
-    } else {
-      const id = `custom_${Date.now()}`;
-      setList((xs) => [...xs, { id, title: f.title, description: f.description, icon: f.icon, unlocked: false, condition: cond }]);
-      void achievementsOps.addAchievement({ id, title: f.title, description: f.description, icon: f.icon, condition: cond });
-    }
+    if (form.editing) setList((xs) => xs.map((x) => (x.id === form.editing!.id ? { ...x, title: f.title, description: f.description, icon: f.icon, condition: cond } : x)));
+    else setList((xs) => [...xs, { id: `custom_${Date.now()}`, title: f.title, description: f.description, icon: f.icon, unlocked: false, condition: cond }]);
     toast.success(form.editing ? '成就已保存' : '成就已添加');
   };
   return (
@@ -167,7 +157,7 @@ function AchievementsTab({ empty, autoFx }: { empty: boolean; autoFx: boolean })
         </P3Stagger>
       )}
       <AchievementFormView open={form.open} editing={form.editing} onClose={() => setForm((f) => ({ ...f, open: false }))} onSave={saveForm} onDelete={() => { if (form.editing) { setDel(form.editing.id); setDelOpen(true); } }} />
-      <AchievementDeleteView open={delOpen} onClose={() => setDelOpen(false)} onConfirm={() => { if (del?.startsWith('custom_')) void achievementsOps.removeAchievement(del); setList((xs) => xs.filter((x) => x.id !== del)); toast('成就已删除'); }} />
+      <AchievementDeleteView open={delOpen} onClose={() => setDelOpen(false)} onConfirm={() => { setList((xs) => xs.filter((x) => x.id !== del)); toast('成就已删除'); }} />
       <UnlockCutIn open={!!cut} onClose={() => setCut(null)} icon={cut?.icon ?? '✦'} name={cut?.title ?? ''} sub={cut?.description} />
     </div>
   );
@@ -176,9 +166,7 @@ function AchievementsTab({ empty, autoFx }: { empty: boolean; autoFx: boolean })
 /* ───────── 技能 ───────── */
 function SkillsTab({ empty }: { empty: boolean }) {
   const toast = useToast();
-  const { SKILLS, ATTRIBUTES, ATTR_NAMES } = useAchievementsData();
   const [skills, setSkills] = useState<Skill[]>(empty ? [] : SKILLS);
-  useEffect(() => { setSkills(empty ? [] : SKILLS); }, [SKILLS, empty]);
   const [filter, setFilter] = useState<Filter>('all');
   const [form, setForm] = useState<{ open: boolean; editing: Skill | null }>({ open: false, editing: null });
   const [del, setDel] = useState<string | null>(null);
@@ -188,14 +176,8 @@ function SkillsTab({ empty }: { empty: boolean }) {
   const vis = skills.filter((s) => (filter === 'all' ? true : filter === 'unlocked' ? s.unlocked : !s.unlocked));
   const byAttr = ATTR_IDS.map((id) => ({ id, items: vis.filter((s) => s.requiredAttribute === id).sort((a, b) => a.requiredLevel - b.requiredLevel) })).filter((g) => g.items.length);
   const save = (v: SkillFormValue) => {
-    if (form.editing) {
-      setSkills((xs) => xs.map((x) => (x.id === form.editing!.id ? { ...x, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) } : x)));
-      void achievementsOps.updateSkill(form.editing.id, { ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) });
-    } else {
-      const id = `custom_${Date.now()}`;
-      setSkills((xs) => [...xs, { id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier), unlocked: false }]);
-      void achievementsOps.addSkill({ id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) });
-    }
+    if (form.editing) setSkills((xs) => xs.map((x) => (x.id === form.editing!.id ? { ...x, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) } : x)));
+    else setSkills((xs) => [...xs, { id: `custom_${Date.now()}`, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier), unlocked: false }]);
     toast.success(form.editing ? '技能已保存' : '技能已添加');
   };
   return (
@@ -239,8 +221,8 @@ function SkillsTab({ empty }: { empty: boolean }) {
                             <p className="truncate text-[12px]" style={{ color: P3R.grey }}>{s.description}</p>
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
-      {blessing && <P3OnOff value={s.unlocked} onChange={(v) => { setSkills((xs) => xs.map((x) => (x.id === s.id ? { ...x, unlocked: v } : x))); if (s.unlocked !== v) void achievementsOps.toggleSkill(s.id); }} ariaLabel={`赐福 ${s.name}`} />}
-      {can && <P3Button size="sm" corner onClick={() => { setSkills((xs) => xs.map((x) => (x.id === s.id ? { ...x, unlocked: true } : x))); void achievementsOps.unlockSkill(s.id); setCut(s); }}>解锁</P3Button>}
+                            {blessing && <P3OnOff value={s.unlocked} onChange={(v) => setSkills((xs) => xs.map((x) => (x.id === s.id ? { ...x, unlocked: v } : x)))} ariaLabel={`赐福 ${s.name}`} />}
+                            {can && <P3Button size="sm" corner onClick={() => { setSkills((xs) => xs.map((x) => (x.id === s.id ? { ...x, unlocked: true } : x))); setCut(s); }}>解锁</P3Button>}
                             {!blessing && (!s.unlocked || custom) && <button type="button" aria-label={`编辑技能 ${s.name}`} onClick={() => setForm({ open: true, editing: s })} className="flex h-8 w-8 items-center justify-center" style={{ clipPath: slantClip(4), background: 'var(--p3r-chip)', color: P3R.ink }}><IconEdit size={13} /></button>}
                             {!blessing && custom && !s.unlocked && <button type="button" aria-label={`删除技能 ${s.name}`} onClick={() => { setDel(s.id); setDelOpen(true); }} className="flex h-8 w-8 items-center justify-center" style={{ color: 'var(--p3r-coral-ink)' }}><IconTrash size={13} /></button>}
                           </div>
@@ -255,16 +237,15 @@ function SkillsTab({ empty }: { empty: boolean }) {
         </P3Stagger>
       )}
       <SkillFormView open={form.open} editing={form.editing} onClose={() => setForm((f) => ({ ...f, open: false }))} onSave={save} onDelete={() => { if (form.editing) { setDel(form.editing.id); setDelOpen(true); } }} />
-      <SkillDeleteView open={delOpen} onClose={() => setDelOpen(false)} onConfirm={() => { if (del?.startsWith('custom_')) void achievementsOps.removeSkill(del); setSkills((xs) => xs.filter((x) => x.id !== del)); toast('技能已删除'); }} />
+      <SkillDeleteView open={delOpen} onClose={() => setDelOpen(false)} onConfirm={() => { setSkills((xs) => xs.filter((x) => x.id !== del)); toast('技能已删除'); }} />
       <UnlockCutIn open={!!cut} onClose={() => setCut(null)} title="技能解锁！" eyebrow="SKILL" icon="✦" name={cut?.name ?? ''} sub={cut?.description} />
     </div>
   );
 }
 
 /* ───────── 图鉴 ───────── */
-const slots = (cards: P5TarotCard[], collected: Record<string, { upright: { count: number }; reversed: { count: number } }>) => cards.reduce((t, c) => t + (collected[c.id]?.upright.count ? 1 : 0) + (collected[c.id]?.reversed.count ? 1 : 0), 0);
+const slots = (cards: P5TarotCard[]) => cards.reduce((t, c) => t + (TAROT_COLLECTED[c.id]?.upright.count ? 1 : 0) + (TAROT_COLLECTED[c.id]?.reversed.count ? 1 : 0), 0);
 function TarotCell({ card, onOpen, empty }: { card: P5TarotCard; onOpen: (c: P5TarotCard) => void; empty: boolean }) {
-  const { TAROT_COLLECTED } = useCodexData();
   const e = empty ? undefined : TAROT_COLLECTED[card.id];
   const up = !!e?.upright.count; const rev = !!e?.reversed.count;
   return (
@@ -279,12 +260,11 @@ function TarotCell({ card, onOpen, empty }: { card: P5TarotCard; onOpen: (c: P5T
   );
 }
 function TarotBook({ empty }: { empty: boolean }) {
-  const { TAROT_COLLECTED } = useCodexData();
   const [open, setOpen] = useState<P5TarotCard | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const show = (c: P5TarotCard) => { setOpen(c); setIsOpen(true); };
-  const major = empty ? 0 : slots(P5_MAJOR, TAROT_COLLECTED);
-  const minor = empty ? 0 : slots(P5_MINOR, TAROT_COLLECTED);
+  const major = empty ? 0 : slots(P5_MAJOR);
+  const minor = empty ? 0 : slots(P5_MINOR);
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <section>
@@ -301,7 +281,7 @@ function TarotBook({ empty }: { empty: boolean }) {
               <div key={suit} className="min-w-0">
                 <div className="mb-2 flex items-baseline justify-between gap-2">
                   <h4 className="px-3 py-0.5 text-[14px] font-black" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(5) }}><span style={{ color: P3R.blue }}>{suitOf(suit)?.glyph}</span> {suitOf(suit)?.name}</h4>
-        <span className="font-cond text-[12px]" style={{ color: P3R.inkSoft }}>{empty ? 0 : slots(cards, TAROT_COLLECTED)} / 28</span>
+                  <span className="font-cond text-[12px]" style={{ color: P3R.inkSoft }}>{empty ? 0 : slots(cards)} / 28</span>
                 </div>
                 <div className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-7">{cards.map((c) => <TarotCell key={c.id} card={c} onOpen={show} empty={empty} />)}</div>
               </div>
@@ -314,7 +294,6 @@ function TarotBook({ empty }: { empty: boolean }) {
   );
 }
 function SeasonBook({ empty }: { empty: boolean }) {
-  const { SEASON_COLLECTED } = useCodexData();
   const [year, setYear] = useState(2026);
   const pages = P5_SEASON_PAGES[year];
   const all = pages.flatMap((p) => p.marks);
@@ -383,10 +362,9 @@ function CodexTab({ sub0, empty }: { sub0: string; empty: boolean }) {
 
 export default function Achievements({ tab, params }: PageProps) {
   const anim = useBoldness();
-  const { ACHIEVEMENTS, achievementProgress } = useAchievementsData();
   const [active, setActive] = useState(tab === 'skills' || tab === 'codex' ? tab : 'achievements');
   const empty = params.get('state') === 'empty';
-  const pending = useMemo(() => (empty ? 0 : ACHIEVEMENTS.filter((a) => !a.unlocked && (achievementProgress[a.id] ?? 0) >= a.condition.value && !HIDDEN_IDS.has(a.id)).length), [empty, ACHIEVEMENTS, achievementProgress]);
+  const pending = useMemo(() => (empty ? 0 : ACHIEVEMENTS.filter((a) => !a.unlocked && (achievementProgress[a.id] ?? 0) >= a.condition.value && !HIDDEN_IDS.has(a.id)).length), [empty]);
   const order = ['achievements', 'skills', 'codex'];
   const prev = useRef(active);
   const dir = order.indexOf(active) >= order.indexOf(prev.current) ? 1 : -1;

@@ -21,7 +21,7 @@ import { goalPct, presetOf, usePresence } from '@yellow/screens/pkg5/presence';
 import { UserProfileCardView } from '@yellow/screens/overlays/UserProfileCard.p4g';
 import { MenuThemeSheetView } from '@yellow/screens/overlays/MenuThemeSheet.p4g';
 import { MenuAboutSheetView } from '@yellow/screens/overlays/MenuAboutSheet.p4g';
-import { useMenuData } from '@yellow/adapters/pkg5';
+import { CURRENT_STREAK, THEME_SWATCHES, TOTAL_LEVEL, TOTAL_POINTS, USER } from '@yellow/mock/pkg5';
 
 interface Row { key: string; label: string; caption?: ReactNode; desc: string; badge?: ReactNode; big?: boolean; onPress: () => void }
 
@@ -30,7 +30,6 @@ const BARCODE = [3, 1, 2, 1, 3, 2, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 3];
 /** 学生证吊牌（P4PassStatus / P4PassGoal 同口径）*/
 function StudentPass({ onOpen, className }: { onOpen: () => void; className?: string }) {
   const p = usePresence();
-  const { USER, TOTAL_LEVEL, TOTAL_POINTS, CURRENT_STREAK } = useMenuData();
   const preset = presetOf(p.statusId);
   const pct = goalPct(p.goal);
   const low = useLowMotion();
@@ -81,7 +80,6 @@ function StudentPass({ onOpen, className }: { onOpen: () => void; className?: st
 
 export default function Menu(_: PageProps) {
   const low = useLowMotion();
-  const { CURRENT_STREAK, THEME_SWATCHES, TOTAL_LEVEL, TOTAL_POINTS } = useMenuData();
   const mode = useMode();
   const officialBand = useSlotExists('menu-bg');
   const [selected, setSelected] = useState('statistics');

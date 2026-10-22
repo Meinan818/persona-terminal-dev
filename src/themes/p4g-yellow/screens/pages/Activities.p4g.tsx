@@ -8,15 +8,14 @@
  * 查询参数：view=calendar|filter；state=empty（无记录）|nomatch（筛选无结果）；summary=running|draft（按钮文案）。
  */
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Activity, AttributeId } from '@real/types';
 import { P4Chip, P4EmptyState, P4Input, P4Select, P4Switch, P4Button, IconSearch, IconChevronDown, IconBack, IconChevron, WeatherIcon, type P4Weather, useToast } from '@yellow/kit';
 import { CollageItem, CollageStagger } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
-import { ATTR_IDS, dayKey } from '@yellow/mock/pkg2';
-import { actionsOps, useActionsData } from '@yellow/adapters/pkg2';
+import { ACTIVITIES, ACTIVITY_IMAGES, ATTR_IDS, ATTR_NAMES, BIGDEAL_STEP_LOG, TODAY, TODAY_KEY, dayKey } from '@yellow/mock/pkg2';
 import { StarFab, Tag, fmtTime, qp, setHashParam, useLongPress } from '@yellow/screens/pkg2/common';
 import ActivityRecordSheet, { type RecordSavePayload } from '@yellow/screens/overlays/ActivityRecordSheet.p4g';
 import ActivitiesRecordMenu from '@yellow/screens/overlays/ActivitiesRecordMenu.p4g';
@@ -45,7 +44,6 @@ const ACCENT_BAR: Record<Accent, string> = {
 const weatherKind = (icon?: string): P4Weather | null => (icon === 'rain' ? 'rain' : icon === 'cloudy' ? 'cloudy' : icon === 'sunny' ? 'sunny' : icon === 'snow' ? 'snow' : icon === 'fog' ? 'fog' : null);
 
 function RecordCard({ a, images, onMenu, onImage, expanded, onToggleDeal }: { a: Activity; images: string[]; onMenu: () => void; onImage: (i: number) => void; expanded: boolean; onToggleDeal: () => void }) {
-  const { ATTR_NAMES, BIGDEAL_STEP_LOG } = useActionsData();
   const lp = useLongPress(onMenu);
   const acc = accentOf(a);
   const pts = Object.entries(a.pointsAwarded).filter(([, v]) => v > 0) as [AttributeId, number][];
@@ -109,7 +107,6 @@ function RecordCard({ a, images, onMenu, onImage, expanded, onToggleDeal }: { a:
 }
 
 function Calendar({ year, month, onMonth, selected, onSelect, onPicker, marks, showImportant }: { year: number; month: number; onMonth: (d: number) => void; selected: string | null; onSelect: (k: string | null) => void; onPicker: () => void; marks: Map<string, { n: number; imp: boolean }>; showImportant: boolean }) {
-  const { TODAY_KEY } = useActionsData();
   const first = new Date(year, month, 1).getDay();
   const days = new Date(year, month + 1, 0).getDate();
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
@@ -147,13 +144,10 @@ function Calendar({ year, month, onMonth, selected, onSelect, onPicker, marks, s
 
 export function ActivitiesView({ params }: { params: URLSearchParams }) {
   const toast = useToast();
-  const { ACTIVITIES, ACTIVITY_IMAGES, ATTR_NAMES, TODAY, TODAY_KEY } = useActionsData();
   const low = useLowMotion();
   const st = qp(params, 'state');
   const [list, setList] = useState<Activity[]>(st === 'empty' ? [] : ACTIVITIES);
   const [imgMap, setImgMap] = useState<Record<string, string[]>>(st === 'empty' ? {} : ACTIVITY_IMAGES);
-  useEffect(() => { setList(st === 'empty' ? [] : ACTIVITIES); }, [ACTIVITIES, st]);
-  useEffect(() => { setImgMap(st === 'empty' ? {} : ACTIVITY_IMAGES); }, [ACTIVITY_IMAGES, st]);
   const [q, setQ] = useState('');
   const [showCal, setShowCal] = useState(qp(params, 'view') === 'calendar');
   const [showFilter, setShowFilter] = useState(qp(params, 'view') === 'filter' || st === 'nomatch');
@@ -212,7 +206,6 @@ export function ActivitiesView({ params }: { params: URLSearchParams }) {
     const a: Activity = { id: `n${Date.now()}`, userId: 'u1', date: d, description: p.description, pointsAwarded: p.points, method: 'local', important: p.important, weather: { icon: 'rain', text: '小雨' }, wishId: p.wishId };
     setList((l) => [a, ...l]);
     if (p.images.length) setImgMap((m) => ({ ...m, [a.id]: p.images }));
-    void actionsOps.addActivity(p.description, p.points, p.important, p.backdate ?? undefined, p.wishId);
     setSaved(p);
   };
   const menuAct = list.find((a) => a.id === menuId);
@@ -363,7 +356,7 @@ export function ActivitiesView({ params }: { params: URLSearchParams }) {
       <ActivitiesRecordMenu open={!!menuId} onClose={() => setMenuId(null)} title={menuAct ? (menuAct.description.length > 24 ? `${menuAct.description.slice(0, 24)}…` : menuAct.description) : undefined}
         onAction={(id) => { const t = menuId; if (id === 'share') setShareId(t); if (id === 'images') setImgsId(t); if (id === 'delete') setDelId(t); }} />
       <ActivitiesDeleteConfirm open={!!delId} onClose={() => setDelId(null)} description={delAct?.description}
-        onDelete={(rb) => { if (delId) void actionsOps.deleteActivity(delId, rb); setList((l) => l.filter((a) => a.id !== delId)); toast.success(rb ? '已删除并回档' : '已删除条目'); }} />
+        onDelete={(rb) => { setList((l) => l.filter((a) => a.id !== delId)); toast.success(rb ? '已删除并回档' : '已删除条目'); }} />
       <ActivityImagesSheet open={!!imgsId} onClose={() => setImgsId(null)} images={imgsId ? imgMap[imgsId] ?? [] : []}
         title={imgsId ? `图片 · ${(list.find((a) => a.id === imgsId)?.description ?? '').slice(0, 16)}` : undefined}
         onChange={(v) => imgsId && setImgMap((m) => ({ ...m, [imgsId]: v }))} />

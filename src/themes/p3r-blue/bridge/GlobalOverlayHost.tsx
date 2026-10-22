@@ -29,10 +29,8 @@ export function GlobalOverlayHost() {
   const shiftOrg = useCloudSocialStore((s) => s.shiftOrgCelebration);
   const wishProposal = useAppStore((s) => s.wishProposal);
   const setWishProposal = useAppStore((s) => s.setWishProposal);
-  const setWishProgress = useAppStore((s) => s.setWishProgress);
   const orphan = useAppStore((s) => s.orphanImagesPrompt);
   const dismissOrphan = useAppStore((s) => s.dismissOrphanImagesPrompt);
-  const pruneOrphan = useAppStore((s) => s.pruneOrphanImages);
   const lines = ach ? ACHIEVEMENT_UNLOCK_LINES[ach.id] : undefined;
   return (
     <P3ToastProvider>
@@ -41,9 +39,8 @@ export function GlobalOverlayHost() {
       <SkillUnlockP3 isOpen={!!skill && !blocker && !levelUp && !ach} onClose={() => setSkill(null)} skillName={skill?.name ?? ''} />
       <BigDealClearCutIn open={!!bigDeal && !blocker} onClose={clearBigDeal} params={new URLSearchParams()} data={bigDeal ?? undefined} />
       {orgHead && <OrgCelebrationView open={!blocker} onClose={shiftOrg} head={orgHead as Parameters<typeof OrgCelebrationView>[0]['head']} />}
-      <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
-        onConfirm={() => { if (wishProposal) void setWishProgress(wishProposal.wishId, wishProposal.toPct, { reason: wishProposal.reason }); setWishProposal(null); }} />
-      <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} count={orphan?.count} bytes={orphan?.bytes} onConfirm={() => { void pruneOrphan(); dismissOrphan(); }} />
+      <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} />
+      <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} />
       <ConfidantRankUpCutIn />
       <ConfidantStarShiftInvite />
       <SyncStatusBadge />

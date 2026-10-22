@@ -17,19 +17,16 @@ import { LoginModalView } from '@yellow/screens/overlays/LoginModal.p4g';
 import { AccountManagePanelView } from '@yellow/screens/overlays/AccountManagePanel.p4g';
 import { SyncPrivacySection } from '@yellow/screens/overlays/SyncPrivacyPanel.p4g';
 import { AccountConfirmView, type ConfirmKind } from '@yellow/screens/overlays/AccountConfirms.p4g';
-import { useAccountData } from '@yellow/adapters/pkg5';
+import { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS } from '@yellow/mock/pkg5';
 
 const Sub = ({ children }: { children: ReactNode }) => (
   <p className="mb-2 flex items-center gap-2 font-display text-body font-bold text-p4g-ink"><span aria-hidden className="h-4 w-2 -skew-x-12 bg-p4g-orange" />{children}</p>
 );
 
 export default function Account({ params }: PageProps) {
-  const { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS, SIGNED_IN, CLOUD_ENABLED } = useAccountData();
   const toast = useToast();
   const p = usePresence();
-  const derivedState = CLOUD_ENABLED ? (SIGNED_IN ? 'signed-in' : 'signed-out') : 'unconfigured';
-  const [state, setState] = useState(params.get('state') ?? derivedState);
-  useEffect(() => { if (!params.get('state')) setState(derivedState); }, [derivedState, params]);
+  const [state, setState] = useState(params.get('state') ?? 'signed-in');
   const [tip, setTip] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<null | 'ok' | 'err'>(null);
@@ -58,11 +55,11 @@ export default function Account({ params }: PageProps) {
   // 演示：带 ?state=（登录态）但没指定 ?sec= 时，直接滚到「云同步」节，让该状态出现在首屏
   const focus = sec ?? (params.get('state') ? 'cloud' : null);
   useEffect(() => { const el = focus === 'data' ? dataRef.current : focus === 'privacy' ? privRef.current : focus === 'cloud' ? cloudRef.current : null; if (el) window.setTimeout(() => el.scrollIntoView({ block: 'start' }), 350); }, [focus]);
-  useEffect(() => { setUid(state === 'no-uid' ? null : CLOUD_USER.username); }, [state, CLOUD_USER.username]);
+  useEffect(() => { setUid(state === 'no-uid' ? null : CLOUD_USER.username); }, [state]);
   const ask = (k: ConfirmKind) => { setConfirm(k); setConfirmOpen(true); };
   const signedIn = state === 'signed-in' || state === 'no-uid' || state === 'sync-error';
 
-  const download = () => { const blob = new Blob([JSON.stringify({ user: { name: p.name }, attributes: ATTRIBUTES }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); const name = `maskaria-backup-${new Date().toISOString().slice(0, 10)}.json`; a.href = url; a.download = name; a.click(); setLink({ name, size: `${Math.max(1, Math.round(blob.size / 1024))} KB` }); setTimeout(() => URL.revokeObjectURL(url), 2000); };
+  const download = () => { const blob = new Blob([JSON.stringify({ user: { name: p.name }, attributes: ATTRIBUTES }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'maskaria-backup-2026-10-20.json'; a.click(); setLink({ name: 'maskaria-backup-2026-10-20.json', size: '186 KB' }); setTimeout(() => URL.revokeObjectURL(url), 2000); };
   const copyJson = () => { const s = JSON.stringify({ user: { name: p.name } }); (navigator.clipboard?.writeText(s) ?? Promise.reject()).then(() => { setCopyState('ok'); setMsg('已复制到剪贴板（186 KB）'); }, () => { setCopyState('err'); setMsg('复制失败，请尝试下载'); }); setTimeout(() => setCopyState(null), 1800); };
   const readFile = (f: File) => { const r = new FileReader(); r.onload = () => { setImportJson(String(r.result).slice(0, 4000)); setFileLoaded(true); }; r.onerror = () => setMsg('读取备份文件失败'); r.readAsText(f); };
   const doImport = () => { setImporting(true); window.setTimeout(() => { setImporting(false); if (!importJson.trim().startsWith('{')) { setMsg('导入失败：不是有效的备份 JSON'); return; } setMsg('导入成功！数据已恢复。'); setImportJson(''); setFileLoaded(false); }, 900); };

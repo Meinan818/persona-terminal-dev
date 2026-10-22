@@ -23,7 +23,7 @@ import { Navigate } from 'react-router-dom';
 import { ARCANA_SHORT, ATTR_NAMES, INTIMACY_LABELS, MAJOR_ARCANA_IDS, MAX_INTIMACY, TAROT_BY_ID, levelProgress } from '@yellow/screens/pkg3/arcana';
 import { AsteriskFlower, NameFx, PactTag, PrayQuickButton, ShadowBadge, Sparkle, StatusTag, TarotCard, useCardBack } from '@yellow/screens/pkg3/ui';
 import { P4CinemaChain, type ChainPage, type RankUpNotice } from '@yellow/screens/pkg3/cinema';
-import { cooperationOps, useCooperationData } from '@yellow/adapters/pkg3';
+import { PK3_CONFIDANTS, PK3_COUNSEL_ARCHIVES, PK3_FRIENDS, PK3_MATERIALIZE_BLOCKERS, PK3_NOTIFS, PK3_SHADOW } from '@yellow/mock/pkg3';
 import { CooperationMenuPanel } from '@yellow/screens/overlays/CooperationMenu.p4g';
 import { ConfidantCreateSheet } from '@yellow/screens/overlays/ConfidantCreateModal.p4g';
 import { ConfidantDetailSheet } from '@yellow/screens/overlays/ConfidantDetailModal.p4g';
@@ -60,19 +60,16 @@ function Companions({ params }: { params: URLSearchParams }) {
   const low = useLowMotion();
   const demoState = params.get('state');
   const loggedIn = params.get('login') !== '0';
-  const { confidants: realConfidants, counselArchives, friends: realFriends, materializeBlockers, notifications, coopShadows } = useCooperationData();
-  const [confidants, setConfidants] = useState<Confidant[]>(demoState === 'empty' ? [] : realConfidants);
-  const [friends, setFriends] = useState<FriendItem[]>(demoState === 'empty' ? [] : realFriends.map((f) => ({ ...f })));
-  useEffect(() => { if (demoState !== 'empty') setConfidants(realConfidants); }, [realConfidants, demoState]);
-  useEffect(() => { if (demoState !== 'empty') setFriends(realFriends.map((f) => ({ ...f }))); }, [realFriends, demoState]);
+  const [confidants, setConfidants] = useState<Confidant[]>(demoState === 'empty' ? [] : PK3_CONFIDANTS);
+  const [friends, setFriends] = useState<FriendItem[]>(demoState === 'empty' ? [] : PK3_FRIENDS.map((f) => ({ kind: 'friend', ...f })));
   const [filter, setFilter] = useState<Filter>((params.get('filter') as Filter) || 'all');
   const [viewMode, setViewMode] = useState<ViewMode>((params.get('view') as ViewMode) || 'wall');
   const [loading, setLoading] = useState(demoState === 'loading');
   const [error, setError] = useState(demoState === 'error');
   const [menuOpen, setMenuOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const importantUnread = notifications.filter((n) => !n.read && n.type !== 'prayer_received').length;
+  const unreadCount = PK3_NOTIFS.filter((n) => !n.read).length;
+  const importantUnread = PK3_NOTIFS.filter((n) => !n.read && n.type !== 'prayer_received').length;
   const [ackedAt, setAckedAt] = useState<number | null>(null);
   const showDot = importantUnread > 0 && ackedAt !== importantUnread;
   // 弹窗
@@ -123,10 +120,7 @@ function Companions({ params }: { params: URLSearchParams }) {
   const friendPrayer = (f: FriendItem): PrayerState => ({ alreadyPrayed: f.prayed, waitingReciprocity: f.beenPrayedBy && !f.prayed, pending: prayerInFlight === f.id, onPray: () => pray(f.id, f.profile.nickname ?? '', f.beenPrayedBy, () => setFriends((l) => l.map((x) => (x.id === f.id ? { ...x, prayed: true } : x)))) });
 
   const detail = confidants.find((c) => c.id === detailId) ?? null;
-  const updateConfidant = (id: string, patch: Partial<Confidant>) => {
-    setConfidants((l) => l.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-    void cooperationOps.update(id, patch);
-  };
+  const updateConfidant = (id: string, patch: Partial<Confidant>) => setConfidants((l) => l.map((c) => (c.id === id ? { ...c, ...patch } : c)));
 
   if (loading) return <div className="py-16"><P4Loading label="信号接收中" /><div className="mt-4 flex justify-center"><P4Button size="sm" variant="secondary" onClick={() => setLoading(false)}>（演示）完成加载</P4Button></div></div>;
   if (error) return <div className="py-10"><P4ErrorState message="同伴数据没能读出来。" onRetry={() => setError(false)} /></div>;
@@ -153,7 +147,7 @@ function Companions({ params }: { params: URLSearchParams }) {
                 ✧
                 {showDot && <span aria-hidden className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-p4g-black bg-p4g-red" />}
               </button>
-              <CooperationMenuPanel open={menuOpen} onClose={() => setMenuOpen(false)} counselState={counselState} cooldownDate="10/22" archiveCount={counselArchives.length} loggedIn={loggedIn} unreadCount={unreadCount}
+              <CooperationMenuPanel open={menuOpen} onClose={() => setMenuOpen(false)} counselState={counselState} cooldownDate="10/22" archiveCount={PK3_COUNSEL_ARCHIVES.length} loggedIn={loggedIn} unreadCount={unreadCount}
                 onAbout={() => setInfoOpen((v) => !v)} onCounsel={() => setCounselOpen(true)} onArchive={() => setArchiveOpen(true)} onNotifications={() => setNotifOpen(true)} />
             </div>
           </div>
@@ -173,12 +167,12 @@ function Companions({ params }: { params: URLSearchParams }) {
       </AnimatePresence>
 
       {/* 塔罗冲突 */}
-      {materializeBlockers.length > 0 && demoState !== 'empty' && (
+      {PK3_MATERIALIZE_BLOCKERS.length > 0 && demoState !== 'empty' && (
         <div className="mb-4 flex min-w-0 items-start gap-2 rounded-sm border-3 border-p4g-black bg-p4g-orange px-3 py-2.5 text-meta text-p4g-black">
           <span className="mt-0.5 shrink-0">⚠️</span>
           <div className="min-w-0">
-            <div className="font-bold">有 {materializeBlockers.length} 位已缔结 COOP 的同伴因塔罗冲突未能生成本地卡片</div>
-            <div className="opacity-85">{materializeBlockers.map((b) => `@${b.otherName}`).join('、')} 想占用的塔罗已被其他活跃同伴使用。请先把冲突的同伴归档（或让对方改选塔罗），然后下次刷新会自动补齐。</div>
+            <div className="font-bold">有 {PK3_MATERIALIZE_BLOCKERS.length} 位已缔结 COOP 的同伴因塔罗冲突未能生成本地卡片</div>
+            <div className="opacity-85">{PK3_MATERIALIZE_BLOCKERS.map((b) => `@${b.otherName}`).join('、')} 想占用的塔罗已被其他活跃同伴使用。请先把冲突的同伴归档（或让对方改选塔罗），然后下次刷新会自动补齐。</div>
           </div>
         </div>
       )}
@@ -222,9 +216,9 @@ function Companions({ params }: { params: URLSearchParams }) {
 
       {/* ── 弹窗串联 ── */}
       <ConfidantCreateSheet isOpen={createOpen} onClose={() => setCreateOpen(false)} remaining={remaining} onPickOnline={() => { setCreateOpen(false); setAddOnlineOpen(true); }}
-        onCreated={(r) => { void cooperationOps.add({ name: r.name, description: r.description, match: { arcanaId: r.arcanaId, orientation: r.orientation, initialIntimacy: Math.min(3, r.level), initialPoints: [0, 4, 9, 16, 25, 36, 50, 70, 95, 125, 160][r.level] ?? 0, interpretation: '', advice: '', source: 'offline' }, source: 'offline', initialLevel: r.level }).then((c) => { if (r.decay) void cooperationOps.update(c.id, { decayEnabled: true }); setDetailId(c.id); }).catch(() => showToast('没能创建这段羁绊')); }} />
+        onCreated={(r) => { const id = `c-new-${Date.now()}`; setConfidants((l) => [{ ...PK3_CONFIDANTS[5], id, name: r.name, arcanaId: r.arcanaId, orientation: r.orientation, intimacy: r.level, intimacyPoints: [0, 4, 9, 16, 25, 36, 50, 70, 95, 125, 160][r.level], description: r.description, decayEnabled: r.decay, buffs: [], createdAt: new Date() }, ...l]); setDetailId(id); }} />
       <ConfidantDetailSheet isOpen={!!detail} onClose={() => setDetailId(null)} confidant={detail} loggedIn={loggedIn} hasShadow={detail?.id === 'c-chie'} interactedToday={!!(detail && interacted[detail.id])}
-        onUpdate={(p) => detail && updateConfidant(detail.id, p)} onDelete={() => { if (!detail) return; void cooperationOps.remove(detail.id); setConfidants((l) => l.filter((c) => c.id !== detail.id)); }}
+        onUpdate={(p) => detail && updateConfidant(detail.id, p)} onDelete={() => detail && setConfidants((l) => l.filter((c) => c.id !== detail.id))}
         onOpenCounsel={() => setCounselOpen(true)} onOpenInteraction={() => detail && setInteractionFor(detail)} onOpenPact={() => detail && setPactFor(detail)} onOpenMemorial={() => detail && setMemorialFor(detail)}
         onOpenStarShift={() => detail && setChain({ c: detail, notice: { oldLevel: detail.intimacy, newLevel: detail.intimacy, starShiftGained: false }, start: 'page3' })}
         onViewOnlineProfile={() => detail?.linkedProfile && setProfileCard(detail.linkedProfile)} onOpenCoopShadow={() => detail && setShadowBattle(detail.name)} />
@@ -265,7 +259,6 @@ function SLinkList({ confidants, friends, prayerFor, friendPrayer, loggedIn, onO
   confidants: Confidant[]; friends: FriendItem[]; prayerFor: (c: Confidant) => PrayerState | undefined; friendPrayer: (f: FriendItem) => PrayerState; loggedIn: boolean;
   onOpen: (c: Confidant) => void; onOpenFriend: (f: FriendItem) => void; onShadow: (c: Confidant) => void; onPrefer: (c: Confidant, tarot: boolean) => void;
 }) {
-  const { coopShadows } = useCooperationData();
   const rows: { k: string; f?: FriendItem; c?: Confidant }[] = [...friends.map((f) => ({ k: f.id, f })), ...confidants.map((c) => ({ k: c.id, c }))];
   const [sel, setSel] = useState(0);
   const [menu, setMenu] = useState<{ c: Confidant; x: number; y: number } | null>(null);
@@ -339,12 +332,7 @@ function SLinkList({ confidants, friends, prayerFor, friendPrayer, loggedIn, onO
                       <span className={cx('shrink-0 font-display text-lead font-bold italic leading-none', selected ? '' : 'text-[color:var(--p4g-rank)]')}>{c.intimacy >= MAX_INTIMACY ? 'Max' : `Rank ${c.intimacy}`}</span>
                       <span className={cx('min-w-0 truncate rounded-xs px-2 py-[3px] font-display text-meta font-bold leading-none', selected ? 'bg-[color:var(--p4g-select-ink)] text-[color:var(--p4g-select)]' : 'bg-p4g-tag text-[color:var(--p4g-tag-ink)]')}>{ARCANA_SHORT[c.arcanaId]} · {card?.name}</span>
                       {isOnline && <StatusTag tone="online">ONLINE</StatusTag>}
-                      {!archived && (() => {
-                        const sh = c.source === 'online' && c.linkedCloudUserId
-                          ? coopShadows.find((s) => s.status === 'active' && (s.userAId === c.linkedCloudUserId || s.userBId === c.linkedCloudUserId))
-                          : undefined;
-                        return sh ? <ShadowBadge identified={sh.identifiedByA && sh.identifiedByB} hpPct={Math.round((sh.hpCurrent / sh.hpMax) * 100)} onClick={() => onShadow(c)} /> : null;
-                      })()}
+                      {c.id === 'c-chie' && !archived && <ShadowBadge identified hpPct={Math.round((PK3_SHADOW.hpCurrent / PK3_SHADOW.hpMax) * 100)} onClick={() => onShadow(c)} />}
                       {c.decayEnabled && <StatusTag tone="decay">逆流</StatusTag>}
                       {archived && <StatusTag tone="archived">归档</StatusTag>}
                       {pr?.waitingReciprocity && !pr.alreadyPrayed && <StatusTag tone="waiting">待回应</StatusTag>}

@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build:themes": "node scripts/build-theme-css.mjs",
+    "prebuild": "node scripts/build-theme-css.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

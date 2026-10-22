@@ -4,6 +4,14 @@
 
 ## 主题接入重做 · 2026-10-23 · codex/theme-integrate（以 D:\下载\DEMO 为唯一标准）
 
+- **真机反馈修复（2026-10-23 凌晨）**：真机确认「红 100% 对位但按钮全假、切不了主题、黄全崩、粉蓝底栏缺半、记账存不住」。根因逐一定位并修：
+  - 主题 CSS 作用域失效：`8b16d7a` 生成的主题 Tailwind CSS 全在 `[data-*-scope]` 内，逐页 P4Host 时代由宿主挂属性、整包 ThemeApp 后没人挂 → KitHost 按主题在 `<html>` 挂 `data-p4g-scope`/`data-p3r-scope`；另 main.tsx 补引 `generated/p3r.css`（原来只引了 p4g.css，蓝/粉工具类整个缺失）。
+  - 切主题桥：`5beee81` 红 demo 的 `MenuThemeSheet` + 设置页 `Swatches` 原只「演示红不切换」，onClick 接回真实 `selectAppTheme`（只改回调）。
+  - 功能写回（用户「记账存不住/加同伴没成功/加任务没显示」）：`34417c8` 黄记账；`b000b96` 蓝粉记账；`6f854f3` 蓝粉羁绊（补 blue/pink `cooperationOps`）；`4cba0eb` 恢复黄 11 页接法；`b65dc58` 蓝粉任务新增/编辑。全部只改数据与回调，未动 JSX/样式。
+- **本批功能接线范围（截至 2:13）**：四套切主题 + CSS 渲染已通；记账（记一笔/删/定预算）三套接真；羁绊（建/改/删同伴）三套接真；任务（新增/编辑）三套接真；黄主题 11 页整体恢复读写。
+- **仍待接（下一批）**：任务完成/归档/删除、愿望/命运/委托、星象 AI、设置/账号/成就/统计部分字段、红主题的写回（红 demo 的 adapter 只读、写回需另接）、长按轮盘、记账批量/对账。
+- **本轮提交**：`5beee81` `8b16d7a` `34417c8` `b000b96` `6f854f3` `4cba0eb` `b65dc58`（均本地，未 push）。
+
 - **根因（为什么之前没到 100%）**：接入时为了接真实数据，改了 demo 自己的页面源码（红改了 `Statistics.p5r.tsx`/`oc.ts`，黄/粉/蓝改了 `screens/pages/*`/`overlays/*`/`settingsStore.ts`），违反各 demo HANDOFF 的「整包原样拷入、只准改 adapter/bridge」。改 demo 页面 = 视觉漂移。用红自带的 `compare.mjs` 实测旧状态 `RESULT: FAIL 2/52`（ov-codex 差 28%）。
 - **demo 权威包**：`D:\下载\DEMO\p4g-yellow-demo.zip / p3r-blue-demo.zip / p3r-pink-demo.zip / p5r-red-demo.zip`（已解包到 `E:\MASKARIA\.cache\demo-packages\`）。红含 `integration/`（整包拷入 + compare.mjs + 52 张参考图 + check-copy.mjs）。
 - **红整包重基线 `ec1e90d`**：`integration/` 整包覆盖 `src/p5r-red` + `public/slots` + `scripts/p5r-red` + `p5r-red-verify.html`；删两个依赖已移除 ledger 桥的旧测试。仓库与 demo 的 `src/p5r-red/` 现在 **0 文件差异**；`tsc` 0 错误；compare 从 2/52 升到 3/52（ov-codex 28%→0.99%、ov-rankup 15%→0.46% PASS、ov-bond-detail 13%→10%）。

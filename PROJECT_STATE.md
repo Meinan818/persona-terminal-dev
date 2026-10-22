@@ -1,6 +1,17 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-22（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-23（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+
+## 主题接入重做 · 2026-10-23 · codex/theme-integrate（以 D:\下载\DEMO 为唯一标准）
+
+- **根因（为什么之前没到 100%）**：接入时为了接真实数据，改了 demo 自己的页面源码（红改了 `Statistics.p5r.tsx`/`oc.ts`，黄/粉/蓝改了 `screens/pages/*`/`overlays/*`/`settingsStore.ts`），违反各 demo HANDOFF 的「整包原样拷入、只准改 adapter/bridge」。改 demo 页面 = 视觉漂移。用红自带的 `compare.mjs` 实测旧状态 `RESULT: FAIL 2/52`（ov-codex 差 28%）。
+- **demo 权威包**：`D:\下载\DEMO\p4g-yellow-demo.zip / p3r-blue-demo.zip / p3r-pink-demo.zip / p5r-red-demo.zip`（已解包到 `E:\MASKARIA\.cache\demo-packages\`）。红含 `integration/`（整包拷入 + compare.mjs + 52 张参考图 + check-copy.mjs）。
+- **红整包重基线 `ec1e90d`**：`integration/` 整包覆盖 `src/p5r-red` + `public/slots` + `scripts/p5r-red` + `p5r-red-verify.html`；删两个依赖已移除 ledger 桥的旧测试。仓库与 demo 的 `src/p5r-red/` 现在 **0 文件差异**；`tsc` 0 错误；compare 从 2/52 升到 3/52（ov-codex 28%→0.99%、ov-rankup 15%→0.46% PASS、ov-bond-detail 13%→10%）。
+- **黄/粉/蓝整包重基线 `47d6ef7`**：demo `src/` 整包覆盖回 `src/themes/<dir>/`（只做 `@/`→`@yellow|@blue|@pink/` 别名适配），字体/图片等二进制逐字节还原；`bridge/GlobalOverlayHost` 不再往 mock 弹层塞真实字段（愿望提议/孤儿配图保持 demo mock）。`tsc` 0 错误；烟测 30 路由 0 异常。
+- **黄色整包 + 切主题桥 `88b44fb`**：去掉 `kitThemeOf('yellow')` 的错误 `return null`（黄色改走完整 ThemeApp）；`PresenceBridge` 补 `theme` 写回真实 `setTheme`（菜单切主题生效）。
+- **仍待定位的系统性像素差**：红 compare 剩 ~2-5% 的系统性差，集中在带外壳页面（menu/dashboard/account），弹层普遍 <1%。疑似 `noto-sc-black.v2.css` 的 `font-display: optional` 冷启动弃用字体或全局 CSS 泄漏，需用「在 demo 自己的 dist 上跑同款 compare」二分环境 vs 集成；这是黄/粉/蓝共用根因，修好一套四套受益。
+- **下一步**：① 定位并修红剩余 ~2-5% 像素差到 52/52；② 给黄/粉/蓝建参考截图 + 同款对比脚本并逐张过；③ 真机验收四套 + 菜单切主题 + 音效 + 日夜/低动效/弱网。
+- **红线不变**：不 push；不 commit 凭据；不改 `main` 与幽影协议；demo 的 JSX/样式/动画/字体/素材一律不碰，只改 adapter/bridge。
 
 ## 主题接入进行中 · 2026-10-22 · codex/theme-integrate
 

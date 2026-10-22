@@ -1,8 +1,23 @@
 # App · UMBRA M2 进度
 
-当前节点：App 侧任务清单已全部完成并验证（Bridge/Director/动态皮肤/安全区/skin:check/@ts-nocheck/rules:explore/D-004/D-005/D-006/D-007）。D-005 的 roster 机制已就绪，只等主题方四份 `skins/<id>/index.ts` 皮肤包到位后切皮生效。
+当前节点：v1.3 已按 TASK-APP-v1.3.md 完成步 1–4（契约类型 49 事件/17 原语、时长上限表、Director 重叠/A 类/可跳过、HOLD UP 三选一事件序列）；步 5–7 待接，依赖皮肤包/音频与 GPU 视觉验收。
 
 分支：`feat/umbra-app-m2`（基于 `origin/feat/theme-kit-integration`）。
+
+## v1.3 进度（TASK-APP-v1.3.md）
+
+- 步 1 契约类型：`src/umbra/skins/_contract/{recipe,skin,index}.ts`，49 事件名（含 `holdup:result`）、53 原语（含 `camera`/`holdupRing`）、payload、`Recipe.sfx/bgm`、`match` 扩展、`ManifestAsset.group/frames`、`fonts.unicodeRange`、`roster.showtime`。旧 `contract.ts` 转为兼容层。
+- 步 2 时长上限：`director.ts` 的 `CAPS` / `capKey` / `capOf` / `wallMs`，含探索按格数与 2000ms 封顶、hitStop 计入墙钟。
+- 步 3 Director：重叠层优先级（unit:down > shield:break > ailment:*）、A 类旁路、可跳过名单、`skip` 清场。
+- 步 4 规则事件：`P5Battle.emit` + HOLD UP 三选一（allout/talk/release）→ `holdup → holdup:result → allout/talk:start/unit:flee+battle:end`，连点幂等，1/3/5 敌覆盖。
+
+验收：`tsc --noEmit` 0 错误；`src/umbra` 31 文件 / 132 项通过。
+
+## 待接（v1.3 步 5–7）
+
+- 步 5 引擎原语（17 个 Pixi 原语 + camera + holdupRing）：样板在 `origin/feat/umbra-skin-p5r-red:labs/umbra-m3-red/src/umbra/engine/`（16 文件），移植量大；本机无 GPU、红色皮肤包未进 `src/umbra/skins/`，无法按任务书截图验收。
+- 步 6 音频总线 + present.json + bgm:cue + 三档音量：依赖 `skins/<id>/audio/` 音频文件（D-008，尚未入库）。
+- 步 7 skin:check 新校验：可在皮肤包就位后补事件/原语名单、wallMs、labels、音频引用与 hud 命中区校验。
 
 ## 已完成
 

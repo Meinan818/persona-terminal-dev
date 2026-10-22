@@ -7,13 +7,26 @@
 //   · 宣告卡编辑器 openCCEditor 增加 { card, onSaved } 参数（P0-07 行动页倒计时面复用）。
 import { P5 } from './p5';
 import { thinkingCircleHTML } from '@/p5r-red/fx/thinkingCircle';
+import { useAppStore } from '@/store';
+import { db } from '@/db';
+import { useCloudStore } from '@/store/cloud';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { getAIConfig } from '@/utils/aiClient';
+import { questProgress, questTitle, weekRangeOf } from '@/utils/questBoard';
+import { getCurrentWeekRange } from '@/components/weeklyGoal/weeklyGoalShared';
+import { ensureLifeQuestDay, lifeContextNow, lifeDayKeyOf, lifeQuestsFor, normTitle, readLifeQuestDay, readLifeQuestLog, recordLifeQuestEvent, writeLifeQuestDay, LIFE_QUEST_COUNT, LIFE_QUEST_REROLLS } from '@/utils/lifeQuests';
+import { lifeAttrSigOf, resolveLifeAttrs } from '@/utils/lifeQuestAttrMap';
+import { lifeAttrMapStatus } from '@/utils/lifeQuestAI';
+import { v4 as uuidv4 } from 'uuid';
 const U = P5.ui;
 const RM = () => P5.reduced();
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const today = new Date();
 const md = (d) => `${d.getMonth() + 1}月${d.getDate()}日`;
+const mdKey = (k) => { const d = new Date(k + 'T00:00:00'); return Number.isNaN(+d) ? '' : md(d); };
 const addD = (n) => new Date(today.getTime() + n * 864e5);
 const AN = (k) => P5.ATTR[k].name;
+const dkey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 /** inline 模式：设 INLINE.host 后调用 openX()，stage() 渲染进该容器（页面内 Tab）；INLINE.onClose = 舞台 close 时回调 */
 export const INLINE: any = { host: null, onClose: null };
 export const YR: any = { show: null };
@@ -179,12 +192,25 @@ export const YR: any = { show: null };
       : `<text x="50" y="92" text-anchor="middle" font-family="Noto Sans SC Black, Velvet Sans SC, Noto Sans CJK SC, sans-serif" font-weight="900" font-size="46" fill="#8f877b">？</text><text x="50" y="124" text-anchor="middle" font-family="Noto Sans SC Black, Velvet Sans SC, Noto Sans CJK SC, sans-serif" font-weight="900" font-size="11" fill="#6b6862">${m.name}</text>`}</svg>`;
   }
 
-  /* 假数据（字段对齐 types：Wish / WeeklyGoal / BigDeal / LongReading / Org…） */
-  const WISHES = [
-    { id: 'w1', title: '去一次京都', progress: 34, evaluated: true, count: 6, subs: [{ t: '查好红叶季的机票价格', done: true }, { t: '每月存 800 元旅行基金', done: false }, { t: '学会 50 句日常日语', done: false }], status: '有了方向，钱在攒' },
-    { id: 'w2', title: '学会冲浪', progress: 0, evaluated: false, count: 0, subs: [], status: '' },
-    { id: 'w3', title: '写完一部短篇小说', progress: 72, evaluated: true, count: 14, subs: [{ t: '完成大纲', done: true }, { t: '写到第五章', done: true }, { t: '找两个朋友试读', done: false }], status: '第六章卡住了' },
-  ];
+  /* 愿望：字段对齐 types，内容来自真实 wishes；接不到的展示字段保持空态。 */
+  const WISHES: any[] = [];
+  function wishView(s, w) {
+    const ring = s.getWishRing(w.id);
+    return {
+      id: w.id,
+      title: w.title,
+      progress: ring.pct,
+      evaluated: ring.evaluated,
+      count: ring.times,
+      subs: (w.steps ?? []).map((step) => ({ t: step.title, done: !!step.done })),
+      status: w.currentState ?? '',
+      archived: 0,
+    };
+  }
+  function syncWishes() {
+    const s = useAppStore.getState();
+    WISHES.splice(0, WISHES.length, ...s.wishes.filter((w) => !w.archivedAt && !w.parentId && w.status === 'active').map((w) => wishView(s, w)));
+  }
   const BIG = { title: '准备雅思 7 分', days: 23, steps: [{ t: '做一套听力真题', done: true }, { t: '背完剑桥核心词 1–10', done: true }, { t: '每周两篇大作文', done: false }, { t: '约一次口语模考', done: false }], status: '听力稳了，写作还虚', pts: 2, sp: 30 };
   const ORG = { name: '夜读小队', motto: '一起熬过期末', code: 'MASK7Q2K', level: 3, emblem: '★', members: [['野鸡', '愚者', '0', true], ['坂本龙司', '战车', 'VII'], ['高卷杏', '恋人', 'VI'], ['新岛真', '女祭司', 'II'], ['佐仓双叶', '隐士', 'IX']] };
 
@@ -196,6 +222,7 @@ export const YR: any = { show: null };
     <span class="od-wish-m"><b>${w.title}</b><small>${wishSub(w)}</small></span>
     <button class="od-more" data-act="menu" aria-label="「${w.title}」的操作">⋯</button></div>`;
   function openWishBoard(st0 = 'list') {
+    syncWishes();
     stage({ title: '愿望', en: 'WISH', seed: 11, sil: 'point', body: `${demoBar([['list', '有愿望'], ['review', '弹幕窄条 / 在审'], ['empty', '空态']], st0)}
       <div class="od-wb-hd">${U.plate('愿望', { fs: 22, tag: 'button', attrs: 'data-act="swap" aria-label="愿望（点击切回今日任务）"', suffix: '<svg class="od-swapmk" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 2l5 4-5 4" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>' })}<small class="od-note-c">远处的灯 · 不进今日任务</small></div>
       ${U.shp('section', { kind: 'torn', seed: 411, tone: 'red', cls: 'od-wb' }, '<div data-host></div>')}`,
@@ -205,23 +232,26 @@ export const YR: any = { show: null };
           const list = st === 'empty' ? `<div class="od-empty"><b>还没有愿望。</b><p>写下一个远一点的——记录时把事挂上去，就能看见自己在靠近它。</p></div>` : WISHES.map(wishRow).join('');
           return `${strip}<div class="od-wish-list">${list}</div>
             <div class="od-wish-add"><button class="od-addline" data-act="add">＋ 记下一个愿望</button><div class="od-addbox" hidden><input class="inp" placeholder="想实现的事…" aria-label="愿望标题">${U.btn('记下', { tone: 'paper', seed: 412, attrs: 'data-act="save"' })}${U.btn('收起', { tone: 'ink', size: 'sm', seed: 413, attrs: 'data-act="fold"' })}</div></div>`;
-        }, (h) => h.addEventListener('click', (e) => {
+        }, (h, st, draw) => h.addEventListener('click', (e) => {
           const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act, row = b.closest('.od-wish'), wi = row ? WISHES[+row.dataset.i] : null;
-          if (a === 'panel') openWishPanel(wi);
-          if (a === 'menu') P5.actionSheet(wi.title, [{ label: '拆子任务', onClick: () => openWishPanel(wi) }, { label: '愿望已实现', onClick: () => openWishFulfill(wi) }, { label: '收起', onClick: () => { row.remove(); P5.toast('已收起 · 在 菜单 → 归档 里'); } }, { label: '删除', tone: 'danger', onClick: () => confirm('删除愿望', `「${wi.title}」和挂在它下面的进度记录会一起删掉。`, '删除', () => { row.remove(); P5.toast('已删除'); }) }]);
+          if (a === 'panel' && wi) openWishPanel(wi);
+          if (a === 'menu' && wi) P5.actionSheet(wi.title, [{ label: '拆子任务', onClick: () => openWishPanel(wi) }, { label: '愿望已实现', onClick: () => openWishFulfill(wi) }, { label: '收起', onClick: () => { void useAppStore.getState().setWishStatus(wi.id, 'archived').then(() => { row.remove(); P5.toast('已收起 · 在 菜单 → 归档 里'); }).catch(() => P5.toast('收起失败，请重试')); } }, { label: '删除', tone: 'danger', onClick: () => confirm('删除愿望', `「${wi.title}」和挂在它下面的进度记录会一起删掉。`, '删除', () => { void useAppStore.getState().deleteWish(wi.id).then(() => { row.remove(); P5.toast('已删除'); }).catch(() => P5.toast('删除失败，请重试')); }) }]);
           if (a === 'add') { b.hidden = true; const bx = h.querySelector('.od-addbox'); bx.hidden = false; bx.querySelector('input').focus(); }
           if (a === 'fold') { h.querySelector('.od-addbox').hidden = true; h.querySelector('[data-act="add"]').hidden = false; }
-          if (a === 'save') { const v = h.querySelector('.od-addbox input').value.trim() || '新的愿望'; const tmp = document.createElement('div'); tmp.innerHTML = wishRow({ title: esc(v), progress: 0, evaluated: false, count: 0, subs: [] }, WISHES.length); h.querySelector('.od-wish-list').appendChild(tmp.firstElementChild); P5.sfx('success'); P5.toast('愿望已记下'); }
+          if (a === 'save') { const v = h.querySelector('.od-addbox input').value.trim() || '新的愿望'; void useAppStore.getState().addWish({ title: v, source: 'manual' }).then(() => { syncWishes(); P5.sfx('success'); P5.toast('愿望已记下'); draw('list'); }).catch(() => P5.toast('记下失败，请重试')); }
           if (a === 'compose') sheet('写一句鼓励', `<p class="sh-p">先审后发 · 匿名。写一句话，送给同样在路上的人。</p><textarea class="inp" rows="3" maxlength="40" placeholder="写一句话，送给同样在路上的人"></textarea><div class="sh-acts">${U.btn('投稿', { tone: 'red', size: 'lg', seed: 414, attrs: 'data-ok' })}</div>`, (sh, c) => sh.querySelector('[data-ok]').onclick = () => { c(); P5.toast('已投稿，审核通过后会飘过别人的屏幕'); });
         }));
         w.querySelector('[data-act="swap"]').onclick = () => { close(); P5.toast('已切回今日任务'); };
       } });
   }
   function openWishPanel(w = WISHES[0], st0) {
+    syncWishes();
+    w = (w && WISHES.find((x) => x.id === w.id)) || WISHES[0];
+    if (!w) { P5.toast('还没有愿望'); return; }
     st0 = st0 || (w.evaluated ? 'eval' : 'none');
     sheet('愿望 · 进度', `${demoBar([['eval', '已评估'], ['none', '未评估'], ['done', '已了结']], st0)}<div data-host></div>`, (sh) => {
       stateful(sh, [], st0, (st) => {
-        const ev = st !== 'none', subs = st === 'none' ? [] : w.subs, p = w.progress || 38;
+        const ev = w.evaluated, subs = w.subs, p = w.progress ?? 38;
         if (st === 'done') return `<div class="od-wp-hd">${ring(100, { size: 88, color: 'var(--red)', track: '#cfc6b6', fg: 'var(--ink)' })}<div><b class="od-wp-t">${w.title}</b><p class="sh-p">这条愿望已经了结了</p></div></div>`;
         return `<div class="od-wp-hd">${ring(p, { size: 92, evaluated: ev, color: 'var(--red)', track: '#cfc6b6', fg: 'var(--ink)' })}<div><small class="od-k">${ev ? `离这个愿望 · ${p}%` : '还没评估过距离'}</small><b class="od-wp-t">${w.title}</b>${ev ? `<em class="od-tone">${tone(p)}</em>` : ''}<p class="muted-d">${wishSub(w).replace(/<\/?b>/g, '')}</p></div></div>
           <div class="od-row-acts">${U.btn(ev ? '重新评估距离' : '评估一次距离', { tone: 'red', size: 'sm', seed: 421, attrs: 'data-act="eval"' })}${U.btn('手动设定', { tone: 'ink', size: 'sm', seed: 422, attrs: 'data-act="manual"' })}</div>
@@ -230,36 +260,54 @@ export const YR: any = { show: null };
           <div class="fld"><span>子任务</span><div class="od-steps">${subs.length ? subs.map((s, i) => stepRow(s, i)).join('') : '<p class="muted-d od-empty-s">还没有子任务——先拆一个够得着的</p>'}</div></div>
           <div class="od-addrow"><input class="inp" placeholder="拆一个够得着的小步…" aria-label="新子任务">${U.btn('添加', { tone: 'ink', size: 'sm', seed: 424, attrs: 'data-act="addstep"' })}</div>
           <div class="od-row-acts">${U.btn('✦ 拆下一组', { tone: 'paper', size: 'sm', seed: 425, attrs: 'data-act="split"' })}</div>
-          <div class="tg"><b>完成任务后自动重估</b><small>挂到愿望的记录一落，就重算距离并弹一张卡（作用于所有愿望）。</small>${sw(true, 'aria-label="完成任务后自动重估愿望进度"')}</div>
+          <div class="tg"><b>完成任务后自动重估</b><small>挂到愿望的记录一落，就重算距离并弹一张卡（作用于所有愿望）。</small>${sw(useAppStore.getState().settings.wishAutoEvaluate !== false, 'aria-label="完成任务后自动重估愿望进度"')}</div>
           <p class="muted-d">愿望的子任务勾掉<b>不加点</b>——它只是把路标出来。要拿点数，去今日任务建一条挂到这个愿望上。</p>`;
-      }, (h) => {
-        bindSteps(h, false);
+      }, (h, st, draw) => {
+        const readReal = () => useAppStore.getState().wishes.find((x) => x.id === w.id);
+        const stepAt = (row) => { const idx = [...h.querySelectorAll('.od-step')].indexOf(row); return { idx, step: readReal()?.steps?.[idx] }; };
+        bindSteps(h, false, undefined, {
+          onToggle: (row) => {
+            const { step } = stepAt(row); if (!step) return;
+            void useAppStore.getState().toggleWishStep(w.id, step.id).then(() => { syncWishes(); const nw = WISHES.find((x) => x.id === w.id); if (nw) Object.assign(w, nw); }).catch(() => P5.toast('子任务更新失败'));
+          },
+          onDelete: (row) => {
+            const { step } = stepAt(row); if (!step) return;
+            void useAppStore.getState().removeWishStep(w.id, step.id).then(() => { syncWishes(); const nw = WISHES.find((x) => x.id === w.id); if (nw) Object.assign(w, nw); }).catch(() => P5.toast('子任务删除失败'));
+          },
+        });
         h.addEventListener('click', (e) => {
           const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
-          if (a === 'eval') { const s = b.querySelector('span'); s.textContent = '评估中…'; b.disabled = true; setTimeout(() => { s.textContent = '重新评估距离'; b.disabled = false; P5.toast('按子步与记录估了个数：38%（配好 AI 会更准）'); }, 900); }
+          if (a === 'eval') { const s = b.querySelector('span'); s.textContent = '评估中…'; b.disabled = true; void useAppStore.getState().evaluateWishProgress(w.id).then((r) => { syncWishes(); const nw = WISHES.find((x) => x.id === w.id); if (nw) Object.assign(w, nw); s.textContent = '重新评估距离'; b.disabled = false; P5.toast(r ? `离这个愿望 ${r.pct}%（${r.source === 'ai' ? 'AI' : '本地'}估算）` : '这条愿望现在不能评估'); draw(w.evaluated ? 'eval' : 'none'); }).catch(() => { s.textContent = '重新评估距离'; b.disabled = false; P5.toast('评估失败，请重试'); }); }
           if (a === 'manual') h.querySelector('.od-manual').hidden = false;
-          if (a === 'setp') { P5.toast('定为 ' + h.querySelector('.od-range').value + '%'); h.querySelector('.od-manual').hidden = true; }
+          if (a === 'setp') { const pct = +h.querySelector('.od-range').value; void useAppStore.getState().setWishProgress(w.id, pct, { source: 'manual' }).then(() => { syncWishes(); const nw = WISHES.find((x) => x.id === w.id); if (nw) Object.assign(w, nw); P5.toast('定为 ' + pct + '%'); h.querySelector('.od-manual').hidden = true; draw('eval'); }).catch(() => P5.toast('进度保存失败')); }
           if (a === 'split') { const s = b.querySelector('span'); s.textContent = '正在拆…'; setTimeout(() => { s.textContent = '✦ 拆下一组'; addSteps(h, ['周末去书店翻一本京都旅行书', '列一张想去的寺庙清单']); P5.toast('拆了 2 条——不合适的直接删'); }, 800); }
-          if (a === 'addstep') { const i = b.closest('.od-addrow').querySelector('input'); addSteps(h, [i.value.trim() || '新的一小步']); i.value = ''; }
+          if (a === 'addstep') { const i = b.closest('.od-addrow').querySelector('input'); const title = i.value.trim() || '新的一小步'; void useAppStore.getState().addWishStep(w.id, title).then(() => { syncWishes(); const nw = WISHES.find((x) => x.id === w.id); if (nw) Object.assign(w, nw); i.value = ''; draw(st); P5.toast('子任务已添加'); }).catch(() => P5.toast('子任务添加失败')); }
         });
+        const cur = h.querySelector('input[aria-label="愿望现状"]'); if (cur) cur.onchange = () => { const real = readReal(); if (real) void useAppStore.getState().saveWish({ ...real, currentState: cur.value.trim() }).then(() => { syncWishes(); const nw = WISHES.find((x) => x.id === w.id); if (nw) w.status = nw.status; }).catch(() => P5.toast('现状保存失败')); };
+        const auto = h.querySelector('.tg .sw'); if (auto) auto.addEventListener('click', () => { void useAppStore.getState().updateSettings({ wishAutoEvaluate: auto.classList.contains('on') }).catch(() => P5.toast('设置保存失败')); });
         const r = h.querySelector('.od-range'); if (r) r.oninput = () => h.querySelector('.od-range-v').textContent = r.value + '%';
       });
     }, 43);
   }
   const stepRow = (s, i, lock = false) => `<div class="od-step ${s.done ? 'done' : ''}" style="--i:${i}"><button class="od-ck" data-act="ck" ${lock ? 'disabled' : ''} aria-label="${s.done ? '撤销这一步' : '完成这一步'}">${s.done ? '✓' : ''}</button><b>${esc(s.t)}</b>${lock ? '' : '<button class="od-del" data-act="delstep" aria-label="删除子任务">✕</button>'}</div>`;
   function addSteps(h, arr) { const box = h.querySelector('.od-steps'); const e0 = box.querySelector('.od-empty-s'); e0 && e0.remove(); arr.forEach((t) => { const d = document.createElement('div'); d.innerHTML = stepRow({ t, done: false }, box.children.length); box.appendChild(d.firstElementChild); P5.panelIn([box.lastElementChild], { from: 'right' }); }); }
-  function bindSteps(h, award, onDone) {
+  function bindSteps(h, award, onDone, opts: any = {}) {
     h.addEventListener('click', (e) => {
       const b = e.target.closest('[data-act="ck"],[data-act="delstep"]'); if (!b) return; const row = b.closest('.od-step');
-      if (b.dataset.act === 'delstep') { row.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateX(-30px)' }], { duration: 200, fill: 'both' }).onfinish = () => row.remove(); return; }
+      if (b.dataset.act === 'delstep') { opts.onDelete?.(row); row.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateX(-30px)' }], { duration: 200, fill: 'both' }).onfinish = () => row.remove(); return; }
       const on = !row.classList.contains('done'); row.classList.toggle('done', on); b.textContent = on ? '✓' : ''; b.setAttribute('aria-label', on ? '撤销这一步' : '完成这一步');
       if (on) { b.animate([{ transform: 'scale(1.6) rotate(-20deg)' }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.34,1.56,.64,1)' }); onDone && onDone(row); }
+      opts.onToggle?.(row, on);
     });
   }
   function openWishFulfill(w = WISHES[0], done0 = false) {
+    syncWishes();
+    w = (w && WISHES.find((x) => x.id === w.id)) || WISHES[0];
+    if (!w) { P5.toast('还没有愿望'); return; }
+    let result: any = null;
     const v = document.createElement('div'); v.className = 'od-veil od-ful';
     const draw = (done) => v.innerHTML = U.shp('div', { kind: 'quad', seed: 431, cls: 'od-ful-card', attrs: 'role="dialog" aria-modal="true"' }, done
-      ? `<span class="od-stamp">夺回</span><b class="od-ful-t">${w.title}</b><p class="sh-p">这一路你为它记下了 <b>${w.count}</b> 次<br>同时收起了 <b>2</b> 条在途任务</p><div class="sh-acts">${U.btn('记录这一刻', { tone: 'red', size: 'lg', seed: 432, attrs: 'data-x' })}</div>`
+      ? `<span class="od-stamp">夺回</span><b class="od-ful-t">${w.title}</b><p class="sh-p">这一路你为它记下了 <b>${result?.timesLogged ?? w.count}</b> 次<br>同时收起了 <b>${result?.archivedTodos ?? 0}</b> 条在途任务</p><div class="sh-acts">${U.btn('记录这一刻', { tone: 'red', size: 'lg', seed: 432, attrs: 'data-x' })}</div>`
       : `<small class="od-k">愿望已实现？</small><b class="od-ful-t">${w.title}</b><p class="sh-p">你为它记下过 <b>${w.count}</b> 次。确认实现后，名下的子愿望与在途任务会一并收起。</p>
         <button class="od-hold" aria-label="长按确认实现"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(17,17,17,.2)" stroke-width="8"/><circle class="od-hold-p" cx="50" cy="50" r="44" fill="none" stroke="var(--red)" stroke-width="9" stroke-dasharray="0 277" transform="rotate(-90 50 50)"/></svg><span>长按确认实现</span></button>
         <div class="sh-acts">${U.btn('再等等', { tone: 'ink', seed: 433, attrs: 'data-x' })}</div>`);
@@ -270,7 +318,7 @@ export const YR: any = { show: null };
       const hold = v.querySelector('.od-hold'); if (!hold) return;
       const p = hold.querySelector('.od-hold-p'), lab = hold.querySelector('span'), card = v.querySelector('.od-ful-card'); let t0 = 0, raf = 0;
       const step = (now) => { const k = Math.min(1, (now - t0) / (RM() ? 300 : 1100)); p.setAttribute('stroke-dasharray', `${(277 * k).toFixed(1)} 277`); card.style.transform = `scale(${1 - k * .04})`; if (k < 1) raf = requestAnimationFrame(step); else fire(); };
-      const fire = () => { P5.sfx('fanfare', .5); card.style.transform = ''; if (!RM()) { const b = document.createElement('i'); b.className = 'od-ful-burst'; v.appendChild(b); b.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: 1 }, { transform: 'translate(-50%,-50%) scale(3)', opacity: 0 }], { duration: 700, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' }).onfinish = () => b.remove(); } draw(true); bind(); P5.slamTiles(v.querySelectorAll('.od-stamp'), 0); };
+      const fire = () => { P5.sfx('fanfare', .5); card.style.transform = ''; if (!RM()) { const b = document.createElement('i'); b.className = 'od-ful-burst'; v.appendChild(b); b.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: 1 }, { transform: 'translate(-50%,-50%) scale(3)', opacity: 0 }], { duration: 700, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' }).onfinish = () => b.remove(); } void useAppStore.getState().fulfillWish(w.id).then((r) => { result = r; syncWishes(); draw(true); bind(); P5.slamTiles(v.querySelectorAll('.od-stamp'), 0); }).catch(() => { P5.toast('实现失败，请重试'); draw(false); bind(); }); };
       hold.addEventListener('pointerdown', (e) => { e.preventDefault(); t0 = performance.now(); lab.textContent = '正在收束…'; raf = requestAnimationFrame(step); });
       ['pointerup', 'pointerleave', 'pointercancel'].forEach((k) => hold.addEventListener(k, () => { if (!raf) return; cancelAnimationFrame(raf); raf = 0; if (v.querySelector('.od-hold')) { p.setAttribute('stroke-dasharray', '0 277'); lab.textContent = '长按确认实现'; card.style.transform = ''; } }));
     };
@@ -291,7 +339,7 @@ export const YR: any = { show: null };
     sheet('记录活动 · 挂到愿望', `<label class="fld"><span>描述</span><input class="inp" value="查了京都红叶季的酒店"></label>${mountPicker()}<div class="sh-acts">${U.btn('记录', { tone: 'red', size: 'lg', seed: 451, attrs: 'data-ok' })}</div>
       <p class="muted-d">紧凑态（黑猫记录卡里）：</p>${mountPicker(true)}`, (sh, c) => { sh.addEventListener('click', (e) => { const b = e.target.closest('.od-mount .od-chip'); if (!b) return; const box = b.closest('.od-mount'); const on = !b.classList.contains('on'); box.querySelectorAll('.od-chip').forEach((x) => { x.classList.remove('on'); x.setAttribute('aria-pressed', false); x.textContent = x.textContent.replace(/^✓ /, ''); }); if (on) { b.classList.add('on'); b.setAttribute('aria-pressed', true); b.textContent = '✓ ' + b.textContent; } }); sh.querySelector('[data-ok]').onclick = () => { c(); P5.toast('已记录 · 已计入「去一次京都」'); }; });
   }
-  const mountPicker = (compact) => `<div class="od-mount ${compact ? 'cmp' : ''}">${compact ? '' : '<div class="od-mount-h"><b>挂到愿望</b><small>可不选；挂上后会计入那个愿望的进度</small></div>'}<div class="od-chips">${WISHES.map((w, i) => chip(w.title, i === 0, 'data-solo')).join('')}</div></div>`;
+  const mountPicker = (compact) => { syncWishes(); return `<div class="od-mount ${compact ? 'cmp' : ''}">${compact ? '' : '<div class="od-mount-h"><b>挂到愿望</b><small>可不选；挂上后会计入那个愿望的进度</small></div>'}<div class="od-chips">${WISHES.map((w, i) => chip(w.title, i === 0, 'data-solo')).join('')}</div></div>`; };
   function openRings() {
     sheet('环形件 WishRing · GoalArc', `<div class="od-ringgal">${[[34, true], [72, true], [0, false]].map(([p, e]) => `<figure>${ring(p, { size: 90, evaluated: e, track: '#cfc6b6', fg: 'var(--ink)' })}<figcaption>${e ? p + '% · ' + tone(p) : '未评估'}</figcaption></figure>`).join('')}</div>
       <div class="od-ringgal">${[[2, 4], [0, 3], [5, 5]].map(([d, t]) => `<figure>${arc(d, t)}<figcaption>GoalArc ${d}/${t}</figcaption></figure>`).join('')}</div><p class="muted-d">WishRing = 主观距离（整圆 + 百分号）；GoalArc = 客观计数（-4° 开口弧 270° + 里程表数字）。两者不互相替代。</p>`, (sh) => growRings(sh));
@@ -301,13 +349,31 @@ export const YR: any = { show: null };
   /* ══════════════════ 本周目标 weeklyGoal/* ══════════════════ */
   const GOALS = [{ k: 'activity', l: '完成 N 次活动', d: '完成指定属性的记录次数', attr: 'knowledge', n: 3, cur: 2 }, { k: 'todo', l: '完成 N 次任务', d: '完成任务的次数', n: 5, cur: 5 }, { k: 'attr', l: '获得 N 点属性', d: '获得指定属性的点数', attr: 'guts', n: 6, cur: 3 }, { k: 'total', l: '获得 N 点总点数', d: '所有属性的总获得点数', n: 20, cur: 14 }];
   const goalLabel = (g) => g.k === 'activity' ? `完成 ${g.n} 次${AN(g.attr)}活动` : g.k === 'todo' ? `完成 ${g.n} 次任务` : g.k === 'attr' ? `获得 ${g.n} 点${AN(g.attr)}` : `获得 ${g.n} 点总点数`;
+  const goalKindOf = (type) => type === 'activity_count' ? 'activity' : type === 'todo_count' ? 'todo' : type === 'attr_points' ? 'attr' : 'total';
+  const goalTypeOf = (k) => k === 'activity' ? 'activity_count' : k === 'todo' ? 'todo_count' : k === 'attr' ? 'attr_points' : 'total_points';
+  let CUR_GOAL: any = null;
+  let WEEK_ROWS: any[] = [];
+  function syncWeekly() {
+    const s = useAppStore.getState();
+    const { weekStart, weekEnd } = getCurrentWeekRange();
+    CUR_GOAL = s.weeklyGoals.find((g) => g.weekStart === weekStart && g.weekEnd === weekEnd) ?? null;
+    WEEK_ROWS = CUR_GOAL ? s.getWeeklyGoalProgress(CUR_GOAL).map((g) => ({ k: goalKindOf(g.type), attr: g.attribute, n: g.target, cur: g.current })) : [];
+  }
+  function resetWeeklyGoal() {
+    syncWeekly();
+    if (!CUR_GOAL) return Promise.resolve();
+    return useAppStore.getState().deleteWeeklyGoal(CUR_GOAL.id).then(() => syncWeekly());
+  }
   function weeklyCard(st) {
-    if (st === 'empty') return `<button class="od-goal-empty" data-act="setup">${U.shp('span', { kind: 'torn', seed: 461, cls: 'od-ge' }, `${U.star()}<b>设定本周目标</b>${U.star()}`)}</button>`;
-    const gs = st === 'done' || st === 'claimed' ? GOALS.slice(0, 3).map((g) => ({ ...g, cur: g.n })) : GOALS.slice(0, 3);
-    return U.shp('div', { kind: 'torn', seed: 462, cls: 'od-wg' }, `<div class="od-wg-hd">${U.plate('本周目标', { fs: 16 })}<span class="od-wg-wk">${md(addD(-((today.getDay() + 6) % 7)))} – ${md(addD(6 - (today.getDay() + 6) % 7))}</span><button class="od-more ink" data-act="opts" aria-label="修改选项">⋯</button></div>
+    syncWeekly();
+    if (!CUR_GOAL) return `<button class="od-goal-empty" data-act="setup">${U.shp('span', { kind: 'torn', seed: 461, cls: 'od-ge' }, `${U.star()}<b>设定本周目标</b>${U.star()}`)}</button>`;
+    const done = WEEK_ROWS.length > 0 && WEEK_ROWS.every((g) => g.cur >= g.n);
+    const view = CUR_GOAL.completed ? 'claimed' : done ? 'done' : 'progress';
+    const gs = WEEK_ROWS.slice(0, 3);
+    return U.shp('div', { kind: 'torn', seed: 462, cls: 'od-wg' }, `<div class="od-wg-hd">${U.plate('本周目标', { fs: 16 })}<span class="od-wg-wk">${mdKey(weekStart)} – ${mdKey(weekEnd)}</span><button class="od-more ink" data-act="opts" aria-label="修改选项">⋯</button></div>
       ${gs.map((g) => `<div class="od-wg-row ${g.cur >= g.n ? 'ok' : ''}"><span class="od-wg-st">${U.star(g.cur >= g.n ? 'var(--red)' : '#cfc6b6', 'var(--ink)')}</span><b>${goalLabel(g)}</b><em>${Math.min(g.cur, g.n)}/${g.n}</em>${bar(g.cur / g.n * 100)}</div>`).join('')}
-      <div class="od-wg-rw">奖励：<b>周末去看一场电影</b></div>
-      ${st === 'done' ? U.btn('目标达成！领取奖励', { tone: 'red', size: 'lg', seed: 463, attrs: 'data-act="claim"', cls: 'od-wide' }) : st === 'claimed' ? `<div class="od-wg-claimed">${U.tag('✓ 已获得')} <small>本周目标已完成，下周一再立新的</small></div>` : '<small class="muted-d">长按卡片：编辑 / 重置</small>'}`);
+      <div class="od-wg-rw">奖励：<b>${esc(CUR_GOAL.reward || '给自己一点奖励')}</b></div>
+      ${view === 'done' ? U.btn('目标达成！领取奖励', { tone: 'red', size: 'lg', seed: 463, attrs: 'data-act="claim"', cls: 'od-wide' }) : view === 'claimed' ? `<div class="od-wg-claimed">${U.tag('✓ 已获得')} <small>本周目标已完成，下周一再立新的</small></div>` : '<small class="muted-d">长按卡片：编辑 / 重置</small>'}`);
   }
   function openWeeklySection(st0 = 'progress') {
     stage({ title: '本周目标', en: 'WEEKLY', seed: 13, sil: 'crouch', body: `${demoBar([['empty', '未设定'], ['progress', '进行中'], ['done', '达成'], ['claimed', '已领取']], st0)}<div data-host></div>`, onMount(w) {
@@ -317,20 +383,24 @@ export const YR: any = { show: null };
       });
     } });
   }
-  const goalMenu = (draw) => P5.actionSheet('本周目标', [{ label: '修改选项', onClick: () => openGoalSetup() }, { label: '重置本周目标', onClick: () => confirm('重置本周目标', '本周的目标设定会清空，已获得的点数不受影响。', '重置', () => { draw && draw('empty'); P5.toast('已重置'); }) }, { label: '删除本周目标记录', tone: 'danger', onClick: () => confirm('删除本周目标记录', '松手删除记录…这条本周目标将被删除。', '删除', () => { draw && draw('empty'); P5.toast('已删除'); }) }]);
+  const goalMenu = (draw) => P5.actionSheet('本周目标', [{ label: '修改选项', onClick: () => openGoalSetup() }, { label: '重置本周目标', onClick: () => confirm('重置本周目标', '本周的目标设定会清空，已获得的点数不受影响。', '重置', () => { void resetWeeklyGoal().then(() => { draw && draw('empty'); P5.toast('已重置'); }).catch(() => P5.toast('重置失败')); }) }, { label: '删除本周目标记录', tone: 'danger', onClick: () => confirm('删除本周目标记录', '松手删除记录…这条本周目标将被删除。', '删除', () => { void resetWeeklyGoal().then(() => { draw && draw('empty'); P5.toast('已删除'); }).catch(() => P5.toast('删除失败')); }) }]);
   function openGoalSetup() {
-    const sel = new Set(['activity', 'todo']);
-    sheet('设定本周目标', `<p class="sh-p">至少选择 2 项</p><div class="od-gs">${GOALS.map((g) => `<div class="od-gs-row ${sel.has(g.k) ? 'on' : ''}" data-k="${g.k}"><span class="od-gs-stamp">${U.star('var(--red)', 'var(--ink)', 1.6)}</span>
+    syncWeekly();
+    const sel = new Set(CUR_GOAL ? CUR_GOAL.goals.map((g) => goalKindOf(g.type)) : ['activity', 'todo']);
+    const setup = GOALS.map((g) => { const old = CUR_GOAL?.goals.find((x) => goalKindOf(x.type) === g.k); return { ...g, n: old?.target ?? g.n, attr: old?.attribute ?? g.attr }; });
+    sheet('设定本周目标', `<p class="sh-p">至少选择 2 项</p><div class="od-gs">${setup.map((g) => `<div class="od-gs-row ${sel.has(g.k) ? 'on' : ''}" data-k="${g.k}"><span class="od-gs-stamp">${U.star('var(--red)', 'var(--ink)', 1.6)}</span>
         <button class="od-gs-head" data-act="tg" aria-expanded="${sel.has(g.k)}"><b>${g.l.replace('N', '<em>N</em>')}</b><small>${g.d}</small><span class="tag ${sel.has(g.k) ? '' : 'ink'}">${sel.has(g.k) ? '已选中' : '点击添加'}</span></button>
         <div class="od-gs-cfg" ${sel.has(g.k) ? '' : 'hidden'}><span class="od-k">目标</span>${g.attr ? seg(P5.ATTR_ORDER.map((a) => [a, AN(a)]), g.attr) : ''}${stepper(g.n)}</div></div>`).join('')}</div>
-      <label class="fld"><span>完成奖励（选填）</span><input class="inp" placeholder="给自己一个奖励吧…"></label>
+      <label class="fld"><span>完成奖励（选填）</span><input class="inp" placeholder="给自己一个奖励吧…" value="${esc(CUR_GOAL?.reward ?? '')}"></label>
       <div class="sh-acts">${U.btn('取消', { tone: 'ink', seed: 471, attrs: 'data-x' })}${U.btn(`确认（${sel.size} 项）`, { tone: 'red', size: 'lg', seed: 472, attrs: 'data-ok' })}</div>`, (sh, close) => {
       const ok = sh.querySelector('[data-ok]'), upd = () => { ok.querySelector('span').textContent = `确认（${sel.size} 项）`; ok.disabled = sel.size < 2; ok.classList.toggle('od-dis', sel.size < 2); };
       sh.querySelectorAll('[data-act="tg"]').forEach((b) => b.onclick = () => { const r = b.closest('.od-gs-row'), k = r.dataset.k, on = !sel.has(k); on ? sel.add(k) : sel.delete(k); r.classList.toggle('on', on); b.setAttribute('aria-expanded', on); r.querySelector('.od-gs-cfg').hidden = !on; const t = b.querySelector('.tag'); t.textContent = on ? '已选中' : '点击添加'; t.classList.toggle('ink', !on); upd(); });
-      sh.querySelector('[data-x]').onclick = close; ok.onclick = () => { if (sel.size < 2) return P5.toast('至少选择 2 项'); close(); P5.toast('本周目标已设定'); };
+      sh.querySelector('[data-x]').onclick = close; ok.onclick = () => { if (sel.size < 2) return P5.toast('至少选择 2 项'); const goals = [...sel].map((k) => { const row = sh.querySelector(`.od-gs-row[data-k="${k}"]`); const target = Math.max(1, +(row?.querySelector('.stepper b')?.textContent ?? 1)); const attr = row?.querySelector('.od-seg button[aria-pressed="true"]')?.dataset.v; const g = setup.find((x) => x.k === k); return { type: goalTypeOf(k), attribute: g?.attr ? (attr ?? g.attr) : undefined, target, current: 0 }; }); const { weekStart, weekEnd } = getCurrentWeekRange(); const reward = sh.querySelector('label.fld input.inp')?.value.trim() ?? ''; const goal = { ...(CUR_GOAL ?? {}), id: CUR_GOAL?.id ?? uuidv4(), weekStart, weekEnd, goals, reward, completed: CUR_GOAL?.completed ?? false, createdAt: CUR_GOAL?.createdAt ?? new Date() }; ok.disabled = true; void useAppStore.getState().saveWeeklyGoal(goal).then(() => { syncWeekly(); close(); P5.toast('本周目标已设定'); }).catch(() => { ok.disabled = false; P5.toast('保存失败，请重试'); }); };
     }, 47);
   }
+  let LAST_CLAIM = { name: '知识', pts: 5, reward: '' };
   function openCelebration(onClaim) {
+    syncWeekly();
     const card = P5.cutIn(`<div class="od-celeb">${U.shp('div', { kind: 'quad', seed: 481, cls: 'od-celeb-in' }, `${U.ransom('GOAL!', { h: 40, seed: 12 })}<b class="od-cut-big">本周目标达成！</b><p>选择这周最用力的方向，领取奖励</p>
       <div class="od-celeb-attrs">${P5.ATTR_ORDER.map((a, i) => `<button data-a="${a}" aria-pressed="${i === 0}"><b>${AN(a)}</b><small>${P5.ATTR[a].en}</small></button>`).join('')}</div>
       <div class="sh-acts">${U.btn('取消', { tone: 'ink', seed: 482, attrs: 'data-x' })}${U.btn('领取奖励 ✨', { tone: 'red', size: 'lg', seed: 483, attrs: 'data-ok' })}</div>`)}</div>`, { autoMs: 600000 });
@@ -339,10 +409,11 @@ export const YR: any = { show: null };
     const close = () => veil.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'both' }).onfinish = () => veil.remove();
     veil.addEventListener('click', (e) => { if (e.target.textContent === '✕' && e.target.tagName === 'BUTTON') close(); });
     card.querySelectorAll('[data-a]').forEach((b) => b.onclick = () => card.querySelectorAll('[data-a]').forEach((x) => x.setAttribute('aria-pressed', x === b)));
-    card.querySelector('[data-x]').onclick = close; card.querySelector('[data-ok]').onclick = () => { close(); onClaim ? onClaim() : openClaimed(); };
+    const finish = () => { close(); onClaim ? onClaim() : openClaimed(); };
+    card.querySelector('[data-x]').onclick = close; card.querySelector('[data-ok]').onclick = () => { const attr = card.querySelector('[data-a][aria-pressed="true"]')?.dataset.a ?? 'knowledge'; const s = useAppStore.getState(); const name = s.settings.attributeNames?.[attr] ?? AN(attr); const pts = (s.attributes.find((a) => a.id === attr)?.level ?? 1) >= 3 ? 7 : 5; LAST_CLAIM = { name, pts, reward: CUR_GOAL?.reward ?? '' }; const run = () => { syncWeekly(); finish(); }; if (CUR_GOAL && !CUR_GOAL.completed) void s.completeWeeklyGoal(CUR_GOAL.id, attr).then(run).catch(() => P5.toast('领取失败，请重试')); else run(); };
   }
   function openClaimed() {
-    const card = P5.cutIn(cutPanel('GET!', `<div class="od-cut-paper"><svg viewBox="0 0 100 100" width="80" aria-hidden="true"><polygon points="${P5.shape.starPts(50, 53, 46)}" fill="#F2E9DA" stroke="#111" stroke-width="3"/><text x="50" y="62" text-anchor="middle" font-family="Noto Sans SC Black, Velvet Sans SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="900" fill="#D7000F">+5</text></svg><div><b class="od-cut-big">奖励已领取！</b><p>知识 +5 · 周末去看一场电影</p></div></div>`, { seed: 14 }), { autoMs: 2600 });
+    const card = P5.cutIn(cutPanel('GET!', `<div class="od-cut-paper"><svg viewBox="0 0 100 100" width="80" aria-hidden="true"><polygon points="${P5.shape.starPts(50, 53, 46)}" fill="#F2E9DA" stroke="#111" stroke-width="3"/><text x="50" y="62" text-anchor="middle" font-family="Noto Sans SC Black, Velvet Sans SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="900" fill="#D7000F">+${LAST_CLAIM.pts}</text></svg><div><b class="od-cut-big">奖励已领取！</b><p>${LAST_CLAIM.name} +${LAST_CLAIM.pts} · ${esc(LAST_CLAIM.reward || '本周目标奖励')}</p></div></div>`, { seed: 14 }), { autoMs: 2600 });
     cutAnim(card);
   }
 
@@ -404,19 +475,24 @@ export const YR: any = { show: null };
   }
 
   /* ══════════════════ 命运抽签 fate/FateDrawSheet ══════════════════ */
-  const FATE_POOL = [
-    { src: 'todo', k: '今日待办', t: '读完《人间失格》第三章', why: '可能性的辉光折射出了新的方向' },
-    { src: 'wish', k: '愿望纸片', t: '学会 50 句日常日语', why: '接住就转正成今天的任务，纸片功成身退' },
-    { src: 'old', k: '旧日回响', t: '去河边散步半小时', why: '这两个月做过 4 次，上次是 9 天前，再做一次不需要勇气' },
-    { src: 'quest', k: '今日委托', t: '给很久没联系的朋友发条消息', why: '委托板今天给的新鲜事，接住就进今日任务' },
-  ];
+  const FATE_KIND = { todo: '今日待办', wish: '愿望纸片', history: '旧日回响', quest: '今日委托' };
+  const fateWhy = (c) => c.kind === 'history'
+    ? `这两个月做过 ${c.historyDays ?? 1} 次，上次是 ${c.lastDaysAgo ?? 1} 天前，再做一次不需要勇气`
+    : c.kind === 'wish' ? '接住就转正成今天的任务，纸片功成身退'
+      : c.kind === 'quest' ? '委托板今天给的新鲜事，接住就进今日任务'
+        : '今天还没做的一件，抽到就钉到今天';
+  function fateCandidates(src) {
+    return useAppStore.getState().getFateDrawPool().filter((c) => c.kind === 'todo' || (c.kind === 'wish' && src.wish) || (c.kind === 'history' && src.old) || (c.kind === 'quest' && src.quest));
+  }
+  const fateView = (c) => c ? { src: c.kind === 'history' ? 'old' : c.kind, k: FATE_KIND[c.kind], t: c.title, why: fateWhy(c), raw: c } : null;
   function openFateDraw(st0 = 'gate') {
     const src = { wish: true, old: true, quest: true };
-    const pool = () => Math.min(12, 3 + (src.wish ? 3 : 0) + (src.old ? 4 : 0) + (src.quest ? 2 : 0));
+    let drawn: any = null;
+    const pool = () => Math.min(12, fateCandidates(src).length);
     stage({ title: '命运抽签', en: 'FATE', seed: 23, cls: 'od-fate', body: `${demoBar([['gate', '闸门'], ['empty', '池空'], ['reveal', '揭示']], st0)}${danmaku(7, 5)}<div data-host></div>`, onMount(w, close) {
       const fan = (n) => `<div class="od-fan" aria-hidden="true">${Array.from({ length: n }, (_, i) => `<span style="--a:${((i - (n - 1) / 2) * (60 / Math.max(1, n))).toFixed(1)}deg">${cardBack(64, 30 + i)}</span>`).join('')}</div>`;
       const draw = stateful(w, [], st0, (st) => {
-        if (st === 'reveal') { const c = FATE_POOL[Math.floor(Math.random() * FATE_POOL.length)]; return `<div class="od-fate-rv"><div class="od-flip od-fate-card" data-src="${c.src}"><div class="od-flip-in on"><span class="od-flip-b">${cardBack(170, 9)}</span><span class="od-flip-f od-fate-f"><small class="tag">${c.k}</small><b>${c.t}</b><em>${c.why}</em><span class="od-fate-bonus">${U.star()}完成它会有额外奖励</span></span></div></div>
+        if (st === 'reveal') { const c = drawn ?? fateView(fateCandidates(src)[0]); if (!c) return '<p class="od-fate-empty">命运的力量正在苏醒…请多记录几条再来</p>'; return `<div class="od-fate-rv"><div class="od-flip od-fate-card" data-src="${c.src}"><div class="od-flip-in on"><span class="od-flip-b">${cardBack(170, 9)}</span><span class="od-flip-f od-fate-f"><small class="tag">${c.k}</small><b>${c.t}</b><em>${c.why}</em><span class="od-fate-bonus">${U.star()}完成它会有额外奖励</span></span></div></div>
           <div class="od-fate-acts">${U.btn('去完成', { tone: 'red', size: 'lg', seed: 521, attrs: 'data-act="go"' })}${U.btn('再想想', { tone: 'paper', seed: 522, attrs: 'data-act="later"' })}${c.src === 'old' ? U.btn('以后别抽这件', { tone: 'ink', size: 'sm', seed: 523, attrs: 'data-act="ban"' }) : ''}</div><p class="od-note">关闭会重新抽取其他的可能性</p></div>`; }
         const n = st === 'empty' ? 0 : pool();
         return `${U.shp('div', { kind: 'torn', seed: 524, cls: 'od-fate-gate' }, `<b class="od-cut-big">不知道做什么好？</b><p>命运会替你选择</p>
@@ -428,10 +504,10 @@ export const YR: any = { show: null };
         h.querySelectorAll('.sw[data-src]').forEach((s) => s.addEventListener('click', () => { src[s.dataset.src] = s.classList.contains('on'); const n = pool(); h.querySelector('.od-fate-n b').textContent = n; const f = h.querySelector('.od-fan'); if (f) f.outerHTML = fan(n); }));
         h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
           if (a === 'skip') close();
-          if (a === 'draw') { P5.sfx('tarot', .6); const f = h.querySelector('.od-fan'); if (RM()) return draw('reveal'); f.classList.add('shuffle'); b.disabled = true; setTimeout(() => draw('reveal'), 1000); }
-          if (a === 'go') { close(); P5.toast('已加入今日任务 ✦ 签'); }
+          if (a === 'draw') { P5.sfx('tarot', .6); const f = h.querySelector('.od-fan'); const pull = () => { const list = fateCandidates(src); if (!list.length) { P5.toast('池里暂时没有可抽的'); b.disabled = false; return; } void useAppStore.getState().drawFate(list).then((picked) => { drawn = fateView(picked); draw('reveal'); }).catch(() => { P5.toast('抽签失败，请重试'); b.disabled = false; }); }; if (RM()) return pull(); f.classList.add('shuffle'); b.disabled = true; setTimeout(pull, 1000); }
+          if (a === 'go' && drawn?.raw) { void useAppStore.getState().acceptFateDraw(drawn.raw).then(() => { close(); P5.toast('已加入今日任务 ✦ 签'); }).catch(() => P5.toast('加入失败，请重试')); }
           if (a === 'later') { close(); P5.toast('零惩罚 · 这件今天沉底'); }
-          if (a === 'ban') { close(); P5.toast('以后不会再抽到这件'); }
+          if (a === 'ban' && drawn?.raw) { void useAppStore.getState().muteFateHistory(drawn.raw).then(() => { close(); P5.toast('以后不会再抽到这件'); }).catch(() => P5.toast('设置保存失败')); }
         });
         const fc = h.querySelector('.od-fate-card .od-flip-in'); if (fc) { fc.classList.remove('on'); requestAnimationFrame(() => setTimeout(() => fc.classList.add('on'), RM() ? 0 : 200)); }
       });
@@ -439,32 +515,87 @@ export const YR: any = { show: null };
   }
 
   /* ══════════════════ 委托板 quests/QuestBoardSheet ══════════════════ */
-  const LIFE = [['knowledge', '读 10 页闲书', '题库'], ['kindness', '给家人发一张今天的照片', '题库'], ['dexterity', '把桌面收拾到能放下一杯水', '题库'], ['charm', '今天换一件平时不常穿的衣服', 'AI 写的']];
-  const WEEKQ = [{ t: '本周完成 10 件任务', g: '魅力 +4', n: 10, cur: 10, st: 'claim' }, { t: '本周记录 3 次运动', g: '胆量 +3', n: 3, cur: 1, st: 'doing', swap: true }, { t: '本周有 5 天写下记录', g: 'SP +20', n: 5, cur: 5, st: 'claimed', tag: '上周替你领的' }];
+  const LIFE: any[] = [];
+  const WEEKQ: any[] = [];
+  let LIFE_REROLLS = LIFE_QUEST_REROLLS;
+  const lifeSeed = (s) => s.user?.id ?? s.user?.name ?? 'me';
+  const addedToday = (s, q) => s.todos.find((t) => lifeDayKeyOf(t.createdAt) === dkey() && (t.lifeQuest === q.presetId || normTitle(t.title) === normTitle(q.title)));
+  function syncLifeQuests() {
+    const s = useAppStore.getState();
+    const todayKey = dkey();
+    const seedKey = lifeSeed(s);
+    const day = ensureLifeQuestDay({ todayKey, seedKey, activities: s.activities, todos: s.todos, completions: s.todoCompletions, settings: s.settings, waitForAttrMap: lifeAttrMapStatus(s.settings) === 'pending' }) ?? readLifeQuestDay();
+    LIFE_REROLLS = Math.max(0, LIFE_QUEST_REROLLS - (day?.reroll ?? 0));
+    LIFE.splice(0, LIFE.length, ...((day?.items ?? []).map((q) => {
+      const added = addedToday(s, q);
+      return {
+        a: q.attribute, t: q.title, k: q.ai ? 'AI 写的' : '题库', raw: { kind: 'quest', key: `quest:${q.presetId}`, title: q.title, presetId: q.presetId, attribute: q.attribute, points: q.points },
+        added: !!added, done: !!added && (!!added.completedAt || s.getTodayTodoProgress(added.id).isComplete),
+      };
+    })));
+  }
+  function rerollLifeQuests() {
+    if (LIFE_REROLLS <= 0) return false;
+    const s = useAppStore.getState();
+    const todayKey = dkey();
+    const seedKey = lifeSeed(s);
+    const current = readLifeQuestDay();
+    if (!current || current.date !== todayKey) return false;
+    const attrs = resolveLifeAttrs(s.settings);
+    const kept = current.items.filter((q) => addedToday(s, q));
+    const viewed = new Set(readLifeQuestLog(seedKey).days[todayKey]?.viewed ?? []);
+    const skipped = current.items.filter((q) => !addedToday(s, q) && viewed.has(q.presetId)).map((q) => q.presetId);
+    const log = skipped.length ? recordLifeQuestEvent(seedKey, todayKey, 'skipped', skipped) : readLifeQuestLog(seedKey);
+    const fresh = lifeQuestsFor({
+      dateKey: todayKey, seedKey, activities: s.activities, todos: s.todos, completions: s.todoCompletions, reroll: current.reroll + 1,
+      previousIds: current.items.map((q) => q.presetId), ctx: lifeContextNow(s.settings), log,
+      count: Math.max(0, LIFE_QUEST_COUNT - kept.length), avoidAttrs: new Set(kept.map((q) => q.attribute)), attrOf: attrs.attrOf,
+    }).filter((q) => !kept.some((k) => k.presetId === q.presetId));
+    const next = { date: todayKey, seed: seedKey, reroll: current.reroll + 1, attrSource: attrs.source, attrSig: lifeAttrSigOf(attrs), items: [...kept, ...fresh].slice(0, LIFE_QUEST_COUNT) };
+    recordLifeQuestEvent(seedKey, todayKey, 'shown', next.items.map((q) => q.presetId));
+    writeLifeQuestDay(next);
+    syncLifeQuests();
+    return true;
+  }
+  async function syncWeekQuests() {
+    const s = useAppStore.getState();
+    const range = weekRangeOf(new Date());
+    let rows = await db.quests.where('weekKey').equals(range.weekKey).sortBy('slot');
+    if (!rows.length) { await s.refreshQuests(); rows = await db.quests.where('weekKey').equals(range.weekKey).sortBy('slot'); }
+    const [divinations, images, ledger] = await Promise.all([db.dailyDivinations.toArray(), db.activityImages.where('createdAt').aboveOrEqual(range.start).toArray(), db.ledgerEntries.toArray()]);
+    const data = { activities: s.activities, todos: s.todos, completions: s.todoCompletions, summaries: s.summaries, battleState: s.battleState, pacts: useCloudSocialStore.getState().pacts, myId: useCloudStore.getState().cloudUser?.id, divinations, images, ledger, aiReady: !!getAIConfig(s.settings), now: new Date() };
+    const swapped = rows.some((q) => q.swapped);
+    WEEKQ.splice(0, WEEKQ.length, ...rows.map((q) => {
+      const progress = Math.min(questProgress(q, data, range), q.target);
+      return { id: q.id, t: questTitle(q, s.settings.attributeNames), g: `+${q.rewardSp} SP`, n: q.target, cur: progress, st: q.claimedAt ? 'claimed' : progress >= q.target ? 'claim' : 'doing', swap: !q.claimedAt && progress < q.target && !swapped, tag: q.autoClaimed ? '上周替你领的' : '' };
+    }));
+  }
   function openQuestBoard(st0 = 'normal') {
+    syncLifeQuests();
     sheet('委托板', `${demoBar([['normal', '正常'], ['loading', '准备中'], ['allclear', '全清'], ['wait', '本周未刷新']], st0)}<div data-host></div>`, (sh) => {
-      let li = 0, rer = 2;
+      let li = 0, weekLoaded = false;
       stateful(sh, [], st0, (st) => {
-        const life = st === 'loading' ? `<div class="od-ql-load">${thinking('正在按你的属性准备今日委托')}</div>` : `<div class="od-ql"><div class="od-ql-track">${LIFE.map(([a, t, k], i) => U.shp('div', { kind: 'quad', seed: 531 + i, cls: 'od-qcard', attrs: `data-i="${i}" style="--r:${[-1.6, 1.2, -.8, 1.8][i]}deg"` }, `<span class="od-qk">${k === 'AI 写的' ? '✦ AI 写的' : '今日委托'}</span><b>${t}</b>${U.tag(AN(a) + ' +2')}<span class="od-qc-act">${U.btn('加入今日任务', { tone: 'red', size: 'sm', seed: 540 + i, attrs: 'data-act="join"' })}</span>`)).join('')}</div>
+        const life = st === 'loading' ? `<div class="od-ql-load">${thinking('正在按你的属性准备今日委托')}</div>` : LIFE.length ? `<div class="od-ql"><div class="od-ql-track">${LIFE.map((q, i) => U.shp('div', { kind: 'quad', seed: 531 + i, cls: 'od-qcard', attrs: `data-i="${i}" style="--r:${[-1.6, 1.2, -.8, 1.8][i]}deg"` }, `<span class="od-qk">${q.k === 'AI 写的' ? '✦ AI 写的' : '今日委托'}</span><b>${q.t}</b>${U.tag(AN(q.a) + ' +' + q.raw.points)}<span class="od-qc-act">${q.added ? `<span class="tag ink">${q.done ? '✓ 已完成' : '✓ 已加入今日任务'}</span>` : U.btn('加入今日任务', { tone: 'red', size: 'sm', seed: 540 + i, attrs: 'data-act="join"' })}</span>`)).join('')}</div>
           <div class="od-ql-nav"><button data-act="prev" aria-label="上一张">‹</button><span class="od-dots2">${LIFE.map((_, i) => `<i class="${i === 0 ? 'on' : ''}" aria-label="第 ${i + 1} 张"></i>`).join('')}</span><button data-act="next" aria-label="下一张">›</button></div>
-          <div class="od-row-acts">${U.btn(`换一批（今天剩 ${rer} 次）`, { tone: 'ink', size: 'sm', seed: 546, attrs: 'data-act="reroll"' })}</div>
-          <p class="muted-d">有几项属性名是你自己起的，题库对不上就先不出这几类；配好 AI 服务后会自动对好。</p></div>`;
-        const weekly = st === 'wait' ? '<p class="sh-p">本周的委托还在路上，稍后再来。</p>' : `<div class="od-qw">${WEEKQ.map((q, i) => { const s = st === 'allclear' ? 'claimed' : q.st; return U.shp('div', { kind: 'torn', seed: 551 + i, cls: `od-qwc ${s}`, attrs: `style="--r:${[-1, 1.4, -.6][i]}deg"` }, `${q.tag && s === 'claimed' ? U.tag(q.tag, 'line') : ''}${i === 1 && st === 'swapped' ? U.tag('换来的', 'line') : ''}<b>${q.t}</b>${U.tag(q.g)}<span class="od-slant">${bar(Math.min(1, (s === 'claimed' ? q.n : q.cur) / q.n) * 100)}</span><em>${s === 'claimed' ? q.n : q.cur}/${q.n}</em>
-            <span class="od-qw-act">${s === 'claim' ? U.btn('领取', { tone: 'red', size: 'sm', seed: 560 + i, attrs: 'data-act="claim"' }) : s === 'claimed' ? '<span class="tag ink">✓ 已领取</span>' : q.swap ? U.btn('换一张', { tone: 'paper', size: 'sm', seed: 563, attrs: 'data-act="swap"' }) : ''}</span>`); }).join('')}</div>
+          <div class="od-row-acts">${U.btn(`换一批（今天剩 ${LIFE_REROLLS} 次）`, { tone: 'ink', size: 'sm', seed: 546, attrs: 'data-act="reroll"' })}</div>
+          <p class="muted-d">有几项属性名是你自己起的，题库对不上就先不出这几类；配好 AI 服务后会自动对好。</p></div>` : '<p class="od-fate-empty">今天暂时没有可出的委托，晚些再来。</p>';
+        const weekly = st === 'wait' || (!WEEKQ.length && st === 'normal') ? '<p class="sh-p">本周的委托还在路上，稍后再来。</p>' : `<div class="od-qw">${WEEKQ.map((q, i) => { const qs = st === 'allclear' ? 'claimed' : q.st; return U.shp('div', { kind: 'torn', seed: 551 + i, cls: `od-qwc ${qs}`, attrs: `style="--r:${[-1, 1.4, -.6][i]}deg"` }, `${q.tag && qs === 'claimed' ? U.tag(q.tag, 'line') : ''}${i === 1 && st === 'swapped' ? U.tag('换来的', 'line') : ''}<b>${q.t}</b>${U.tag(q.g)}<span class="od-slant">${bar(Math.min(1, (qs === 'claimed' ? q.n : q.cur) / q.n) * 100)}</span><em>${qs === 'claimed' ? q.n : q.cur}/${q.n}</em>
+            <span class="od-qw-act">${qs === 'claim' ? U.btn('领取', { tone: 'red', size: 'sm', seed: 560 + i, attrs: 'data-act="claim"' }) : qs === 'claimed' ? '<span class="tag ink">✓ 已领取</span>' : q.swap ? U.btn('换一张', { tone: 'paper', size: 'sm', seed: 563, attrs: 'data-act="swap"' }) : ''}</span>`); }).join('')}</div>
           <p class="muted-d">${st === 'allclear' ? '本周三张都收下了，岁时册里多了一枚「委托全清」。' : '不想做的那张可以「换一张」，每周一次 · 做完的委托要自己来领；上周没领的，下周一会替你领。'}</p>`;
         return `<div class="od-qnotice">本周刷出了新委托 ${U.btn('知道了', { tone: 'ink', size: 'sm', seed: 529, attrs: 'data-act="ack"' })}</div>
           <section>${ttl('今日委托', '每天三张 · 左右滑着挑 · 三张题库 + 一张 AI 写的')}${life}</section><section>${ttl('本周委托', 'WEEKLY · 每周一三张')}${weekly}</section>`;
-      }, (h) => {
-        const track = h.querySelector('.od-ql-track'); const go = (d) => { li = Math.max(0, Math.min(LIFE.length - 1, li + d)); track.style.transform = `translateX(${-li * 84}%)`; h.querySelectorAll('.od-dots2 i').forEach((x, i) => x.classList.toggle('on', i === li)); };
+      }, (h, st, draw) => {
+        const track = h.querySelector('.od-ql-track'); const go = (d) => { if (!track) return; li = Math.max(0, Math.min(LIFE.length - 1, li + d)); track.style.transform = `translateX(${-li * 84}%)`; h.querySelectorAll('.od-dots2 i').forEach((x, i) => x.classList.toggle('on', i === li)); };
         if (track) { let x0 = null; track.addEventListener('pointerdown', (e) => x0 = e.clientX); track.addEventListener('pointerup', (e) => { if (x0 != null && Math.abs(e.clientX - x0) > 40) go(e.clientX < x0 ? 1 : -1); x0 = null; }); }
         h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
           if (a === 'prev') go(-1); if (a === 'next') go(1);
-          if (a === 'join') { b.parentElement.innerHTML = '<span class="tag ink">✓ 已加入今日任务</span>'; P5.sfx('success'); h.querySelectorAll('.od-dots2 i')[li].classList.add('got'); }
-          if (a === 'reroll') { if (rer <= 0) return; rer--; b.querySelector('span').textContent = rer ? `换一批（今天剩 ${rer} 次）` : '今天换不了了，明天再来'; if (!rer) { b.disabled = true; b.classList.add('od-dis'); } P5.panelIn(h.querySelectorAll('.od-qcard'), { from: 'right' }); }
-          if (a === 'claim') { b.parentElement.innerHTML = '<span class="tag ink">✓ 已领取</span>'; b.closest && P5.sfx('success'); P5.toast('已收下 · 魅力 +4'); }
-          if (a === 'swap') { const c = b.closest('.od-qwc'); c.querySelector('b').textContent = '本周早睡 3 天'; c.insertAdjacentHTML('afterbegin', U.tag('换来的', 'line')); b.parentElement.innerHTML = ''; P5.toast('本周的「换一张」用过了，下周一再来'); }
+          if (a === 'join') { const idx = +b.closest('.od-qcard').dataset.i; const q = LIFE[idx]; if (!q || q.added) return; void useAppStore.getState().acceptFateDraw(q.raw).then(() => { q.added = true; b.parentElement.innerHTML = '<span class="tag ink">✓ 已加入今日任务</span>'; P5.sfx('success'); h.querySelectorAll('.od-dots2 i')[li]?.classList.add('got'); }).catch(() => P5.toast('加入失败，请重试')); }
+          if (a === 'reroll') { if (rerollLifeQuests()) { li = 0; P5.panelIn(h.querySelectorAll('.od-qcard'), { from: 'right' }); draw(st); } else P5.toast('今天换不了了，明天再来'); }
+          if (a === 'claim') { const idx = [...h.querySelectorAll('.od-qwc')].indexOf(b.closest('.od-qwc')); const q = WEEKQ[idx]; if (!q) return; void useAppStore.getState().claimQuest(q.id).then((r) => { if (!r.ok) return P5.toast('这张还没做完，或已经领过了'); b.parentElement.innerHTML = '<span class="tag ink">✓ 已领取</span>'; P5.sfx('success'); P5.toast(`已收下 · +${r.sp} SP`); void syncWeekQuests().then(() => draw(st)); }).catch(() => P5.toast('领取失败，请重试')); }
+          if (a === 'swap') { const idx = [...h.querySelectorAll('.od-qwc')].indexOf(b.closest('.od-qwc')); const q = WEEKQ[idx]; if (!q) return; void useAppStore.getState().swapQuest(q.id).then((r) => { if (!r.ok) return P5.toast(r.reason ?? '换不了'); P5.toast('已换一张，下周一再来'); void syncWeekQuests().then(() => draw(st)); }).catch(() => P5.toast('换一张失败，请重试')); }
           if (a === 'ack') b.closest('.od-qnotice').remove();
         });
+        if (!weekLoaded) { weekLoaded = true; void syncWeekQuests().then(() => { if (h.isConnected) draw(st); }).catch(() => P5.toast('周委托加载失败')); }
       });
     }, 51);
   }
@@ -877,4 +1008,4 @@ export const YR: any = { show: null };
 
 
 export const OD: any = { openDayReview, openWishBoard, openWishPanel, openWishFulfill, openWishProposal, openWishProgress, openWishMount, openRings, openWeeklySection, openGoalSetup, openCelebration, openClaimed, openBigHome, openBigPanel, openBigStep, openBigClear, openFateDraw, openQuestBoard, openReturn, openBackfill, openYearRecap, openFlipCard, openTarotFlip, openSeasonCard, openSeasonGallery, openCodex, openDailyDraw, openShuffle, openNameReveal, openThinking, openLongReading, openReadingArchive, openFateGlimpse, openCCCutIn, openCCEditor, openCCEmpty, openShareToOrg, openLedgerStats, openSettle, openAssetBoard, assetForm, openDonut,
-  tarotFace, cardBack, seasonFace, ring, arc, donut, thinking, danmaku, cutPanel, cutAnim, ttl, seg, sw, stepper, bar, chip, wire, demoBar, stateful, stage, sheet, confirm, ccLetter, MAJ, MIN, ALL, MARKS, WISHES, BIG, ORG, GOALS, goalLabel, weeklyCard, bigHome, mountPicker, growRings, growDonuts, DRAW3, LR_CARDS, PERIOD, shuffleHTML, nameReveal, dailyDone, CAT, yen };
+  tarotFace, cardBack, seasonFace, ring, arc, donut, thinking, danmaku, cutPanel, cutAnim, ttl, seg, sw, stepper, bar, chip, wire, demoBar, stateful, stage, sheet, confirm, ccLetter, MAJ, MIN, ALL, MARKS, WISHES, syncWishes, BIG, ORG, GOALS, goalLabel, weeklyCard, syncWeekly, resetWeeklyGoal, bigHome, mountPicker, growRings, growDonuts, DRAW3, LR_CARDS, PERIOD, shuffleHTML, nameReveal, dailyDone, CAT, yen };

@@ -94,8 +94,9 @@ const wishRow = (w, i) => `<div class="od-wish" data-i="${i}" style="--i:${i}"><
     <button class="od-wish-ring" data-act="w-panel" aria-label="打开「${w.title}」的进度面板">${OD.ring(w.progress, { size: 54, evaluated: w.evaluated, color: 'var(--red)', track: '#4a4440', fg: 'var(--paper)' })}</button>
     <span class="od-wish-m"><b>${w.title}</b><small>${w.count ? `已完成相关任务 <b>${w.count}</b> 次` : w.subs.length ? `子任务 ${w.subs.filter((s) => s.done).length}/${w.subs.length}` : '还没有记录挂到这里'}</small></span>
     <button class="od-more" data-act="w-menu" aria-label="「${w.title}」的操作">⋯</button></div>`;
-const wishPane = () => `<div class="wish5 od-wish-list">${OD.WISHES.map(wishRow).join('')}<p class="wish-note">它不会出现在今日任务里。记录时把事挂上去，你就能看见自己在靠近它。</p></div>`;
+const wishPane = () => { OD.syncWishes(); return `<div class="wish5 od-wish-list">${OD.WISHES.map(wishRow).join('')}<p class="wish-note">它不会出现在今日任务里。记录时把事挂上去，你就能看见自己在靠近它。</p></div>`; };
 const mainCard = () => {
+  OD.syncWishes();
   const ts = st.todos, wish = st.pane === 'wish';
   return `<section class="main5">
     <div class="main-hd">${U.plate(wish ? '愿望' : '今日任务', { fs: 22, tag: 'button', attrs: 'data-act="pane" aria-label="切换今日任务 / 愿望"', suffix: '<span class="swap">⇄</span>' })}
@@ -182,7 +183,7 @@ export function todosMount(root, wide) {
     if (a === 'arc-cc') return; // 归档卡不进编辑；长按 = 删除确认
     if (a === 'arc-toggle') { st.arcOpen = !st.arcOpen; b.setAttribute('aria-expanded', st.arcOpen); b.querySelector('i').style.transform = `rotate(${st.arcOpen ? 90 : 0}deg)`; const l = root.querySelector('.p4-cc-arc-l'); l.hidden = !st.arcOpen; if (st.arcOpen) P5.panelIn(l.children, { from: 'up' }); }
     if (a === 'w-panel') { const w = OD.WISHES[+b.closest('.od-wish').dataset.i]; return OD.openWishPanel(w); }
-    if (a === 'w-menu') { const row = b.closest('.od-wish'), w = OD.WISHES[+row.dataset.i]; return P5.actionSheet(w.title, [{ label: '拆子任务', onClick: () => OD.openWishPanel(w) }, { label: '愿望已实现', onClick: () => OD.openWishFulfill(w) }, { label: '收起', onClick: () => { row.remove(); P5.toast('已收起 · 在 菜单 → 归档 里'); } }, { label: '删除', tone: 'danger', onClick: () => OD.confirm('删除愿望', `「${w.title}」和挂在它下面的进度记录会一起删掉。`, '删除', () => { row.remove(); P5.toast('已删除'); }) }]); }
+    if (a === 'w-menu') { const row = b.closest('.od-wish'), w = OD.WISHES[+row.dataset.i]; if (!w) return; return P5.actionSheet(w.title, [{ label: '拆子任务', onClick: () => OD.openWishPanel(w) }, { label: '愿望已实现', onClick: () => OD.openWishFulfill(w) }, { label: '收起', onClick: () => { void useAppStore.getState().setWishStatus(w.id, 'archived').then(() => { row.remove(); P5.toast('已收起 · 在 菜单 → 归档 里'); }).catch(() => P5.toast('收起失败，请重试')); } }, { label: '删除', tone: 'danger', onClick: () => OD.confirm('删除愿望', `「${w.title}」和挂在它下面的进度记录会一起删掉。`, '删除', () => { void useAppStore.getState().deleteWish(w.id).then(() => { row.remove(); P5.toast('已删除'); }).catch(() => P5.toast('删除失败，请重试')); }) }]); }
     if (a === 'undo') P5.toast('已撤销今日完成，点数与记录已回退');
     if (a === 'restore') { const r = b.closest('.arch-row'); r.animate([{ transform: 'none' }, { transform: 'translateX(60px) rotate(3deg)', opacity: 0 }], { duration: 240, fill: 'both' }).onfinish = () => r.remove(); P5.toast('已恢复到今日任务'); }
     if (a === 'del') { const r = b.closest('.arch-row'); confirmDel(r.querySelector('b').textContent, () => r.remove()); }
@@ -203,7 +204,7 @@ const bdMenu = () => P5.actionSheet(OD.BIG.title, [{ label: '打开二级面板'
 function bindWeekly(root) {
   const body = root.querySelector('.goal-body[data-goal="weekly"]'); if (!body || body._w) return; body._w = 1;
   const redraw = (s) => { st.weekly = s; body.innerHTML = OD.weeklyCard(s); body._lp = 0; lp(); P5.panelIn(body.children, { from: 'up' }); };
-  const menu = () => P5.actionSheet('本周目标', [{ label: '修改选项', onClick: () => OD.openGoalSetup() }, { label: '重置本周目标', onClick: () => OD.confirm('重置本周目标', '本周的目标设定会清空，已获得的点数不受影响。', '重置', () => { redraw('empty'); P5.toast('已重置'); }) }, { label: '删除本周目标记录', tone: 'danger', onClick: () => OD.confirm('删除本周目标记录', '这条本周目标将被删除。', '删除', () => { redraw('empty'); P5.toast('已删除'); }) }]);
+  const menu = () => P5.actionSheet('本周目标', [{ label: '修改选项', onClick: () => OD.openGoalSetup() }, { label: '重置本周目标', onClick: () => OD.confirm('重置本周目标', '本周的目标设定会清空，已获得的点数不受影响。', '重置', () => { void OD.resetWeeklyGoal().then(() => { redraw('empty'); P5.toast('已重置'); }).catch(() => P5.toast('重置失败')); }) }, { label: '删除本周目标记录', tone: 'danger', onClick: () => OD.confirm('删除本周目标记录', '这条本周目标将被删除。', '删除', () => { void OD.resetWeeklyGoal().then(() => { redraw('empty'); P5.toast('已删除'); }).catch(() => P5.toast('删除失败')); }) }]);
   const lp = () => { const c = body.querySelector('.od-wg'); if (c && !body._lp) { body._lp = 1; P5.longPress(c, menu); } };
   lp();
   body.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act; if (a === 'setup') OD.openGoalSetup(); if (a === 'opts') menu(); if (a === 'claim') OD.openCelebration(() => { OD.openClaimed(); redraw('claimed'); }); });
@@ -243,7 +244,7 @@ export function confirmDel(title, done) {
 export function wishSheet(onSaved) {
   return P5.sheet('记下一个愿望', `<p class="sh-p">它不会出现在今日任务里。记录时把事挂上去，你就能看见自己在靠近它。</p><input class="inp" placeholder="想实现的事…" aria-label="愿望标题"><div class="sh-acts">${U.btn('记下', { tone: 'red', seed: 21, size: 'lg', attrs: 'data-ok' })}</div>`, { onMount: (sh, close) => {
     const i = sh.querySelector('input'), ok = sh.querySelector('[data-ok]');
-    ok.onclick = () => { const v = i.value.trim(); if (!v) { i.classList.add('p4-bad'); i.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 240 }); i.focus(); return; } OD.WISHES.push({ id: 'w' + Date.now(), title: v, progress: 0, evaluated: false, count: 0, subs: [], status: '' }); close(); P5.sfx('success'); P5.toast('愿望已记下'); onSaved && onSaved(); };
+    ok.onclick = () => { const v = i.value.trim(); if (!v) { i.classList.add('p4-bad'); i.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 240 }); i.focus(); return; } void useAppStore.getState().addWish({ title: v, source: 'manual' }).then(() => { close(); P5.sfx('success'); P5.toast('愿望已记下'); onSaved && onSaved(); }).catch(() => P5.toast('记下失败，请重试')); };
     i.oninput = () => i.classList.remove('p4-bad');
   } });
 }

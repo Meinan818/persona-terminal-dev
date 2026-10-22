@@ -30,6 +30,7 @@ const DashboardP3 = lazy(() => import('@/pages/p3/DashboardP3').then(m => ({ def
 // P5R（红主题）页面变体：P5UI 设计稿 1:1（channel==='p5' 时替换默认形态）
 const DashboardP5 = lazy(() => import('@/pages/p5/DashboardP5').then(m => ({ default: m.DashboardP5 })));
 import { useUiChannel } from '@/ui/useUiChannel';
+import { P4GlobalHost } from '@/themes/integration/P4GlobalHost';
 import { syncDarkClass, themeToChannel } from '@/ui/channel';
 import { getLayoutModeVersion, isPhoneLayout, subscribeLayoutMode } from '@/ui/layoutMode';
 const Achievements = lazy(() => import('@/pages/Achievements').then(m => ({ default: m.Achievements })));
@@ -988,7 +989,7 @@ function App() {
               </main>
 
                {/* 升级弹窗 */}
-               {levelUpNotification && !modalBlocker && (
+               {uiChannel !== 'p4' && levelUpNotification && !modalBlocker && (
                  <LevelUpModal
                    attributeName={levelUpNotification.displayName}
                    newLevel={levelUpNotification.level}
@@ -999,7 +1000,7 @@ function App() {
                )}
 
                {/* 成就解锁弹窗 */}
-               {achievementNotification && !modalBlocker && !levelUpNotification && (
+               {uiChannel !== 'p4' && achievementNotification && !modalBlocker && !levelUpNotification && (
                  <AchievementUnlockModal
                    achievementTitle={achievementNotification.title}
                    lines={ACHIEVEMENT_UNLOCK_LINES[achievementNotification.id]}
@@ -1009,7 +1010,7 @@ function App() {
                )}
 
                {/* 技能解锁弹窗 */}
-               {skillNotification && !modalBlocker && !levelUpNotification && !achievementNotification && (
+               {uiChannel !== 'p4' && skillNotification && !modalBlocker && !levelUpNotification && !achievementNotification && (
                  <SkillUnlockModal
                    skillName={skillNotification.name}
                    isOpen={!!skillNotification}
@@ -1026,6 +1027,7 @@ function App() {
                    用户刚更新完 App 却被告知有新版本、且实际跑的还是上一版 JS——
                    这条链在原生里只会添乱，安装包本来就是整包替换。 */}
                {!isNative() && <PWAUpdateToast />}
+               <P4GlobalHost />
             </>
           )}
 
@@ -1043,14 +1045,14 @@ function App() {
           <TransitionLayer />
           {/* 宣告 · 达成 全屏结算屏：放在 App 顶层是为了"完成最后一项 todo 时立即弹出"，
               即便用户当时不在 Dashboard 也能看到 */}
-          <GlobalCallingCardCutIn />
+          {uiChannel !== 'p4' && <GlobalCallingCardCutIn />}
           {/* BIG DEAL 收官结算屏（批4）：collapseBigDeal 落库后全局弹出，不依赖当前页面 */}
-          <BigDealClearCutIn />
+          {uiChannel !== 'p4' && <BigDealClearCutIn />}
           {/* 导入主备份后「记录已不存在的配图」询问窗：导入会切回首页，只能挂顶层 */}
           <OrphanImagesPrompt />
           {/* 愿望进度（PRD_V2.6 §8）：任务完成后的「又近了多少」弹窗 +
               黑猫在谈话里提议改数值的确认卡。两者都可能在任意页面触发，故挂顶层 */}
-          <WishProgressCutIn />
+          {uiChannel !== 'p4' && <WishProgressCutIn />}
           <WishProposalDialog />
           {/* 组织（第 8 轮）：作战达成 / 据点升级的庆祝卡——对账时在任意页面都可能发现，故挂顶层 */}
           <OrgCelebrationCutIn />

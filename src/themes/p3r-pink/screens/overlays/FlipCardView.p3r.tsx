@@ -12,7 +12,7 @@ import { Portal, IconClose, useEscape, useScrollLock, P3R, slantClip, tickClip, 
 import { useBoldness } from '@pink/lib/prefs';
 import { seasonAsset } from '@pink/lib/asset';
 import { P5_SEASON_PAGES, type P5SeasonMark } from '@pink/mock/pkg5-season';
-import { P5_TODAY, SEASON_COLLECTED } from '@pink/mock/pkg5';
+import { P5_TODAY, useCodexData } from '@pink/adapters/pkg5';
 
 export function FlipCardView({ open, onClose, label, resetKey, front, back, hint = '点一下或左右拖动翻面', footer, intro }: {
   open: boolean; onClose: () => void; label: string; resetKey?: string; front: (w: number, h: number) => ReactNode; back: (w: number, h: number) => ReactNode; hint?: string; footer?: ReactNode; intro?: boolean;
@@ -115,6 +115,7 @@ export function SeasonCard({ mark, collected, className, eager }: { mark: P5Seas
 }
 
 export function SeasonFlipView({ mark, open, onClose, collectedOverride }: { mark: P5SeasonMark | null; open: boolean; onClose: () => void; collectedOverride?: boolean }) {
+  const { SEASON_COLLECTED } = useCodexData();
   if (!mark) return null;
   const collected = collectedOverride ?? !!SEASON_COLLECTED[mark.date];
   const isToday = mark.date === P5_TODAY;

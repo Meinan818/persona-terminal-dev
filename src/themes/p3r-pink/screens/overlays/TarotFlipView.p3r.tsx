@@ -9,7 +9,7 @@ import { TarotFace as KitTarotFace, P3R, slantClip } from '@pink/kit';
 import { tarotAsset } from '@pink/lib/asset';
 import { FlipBackPanel, FlipCardView } from './FlipCardView.p3r';
 import { P5_MAJOR, P5_MINOR, type P5TarotCard } from '@pink/mock/pkg5-tarot';
-import { TAROT_COLLECTED } from '@pink/mock/pkg5';
+import { useCodexData } from '@pink/adapters/pkg5';
 
 const SUIT: Record<string, { name: string; glyph: string }> = { wands: { name: '权杖', glyph: '✦' }, cups: { name: '圣杯', glyph: '◆' }, swords: { name: '宝剑', glyph: '✧' }, pentacles: { name: '星币', glyph: '❖' } };
 export const suitOf = (s?: string) => (s ? SUIT[s] : null);
@@ -25,6 +25,7 @@ export function TarotFace({ card, width, dim }: { card: P5TarotCard; width: numb
 
 export function TarotFlipViewView({ card, open, onClose, intro }: { card: P5TarotCard | null; open: boolean; onClose: () => void; intro?: boolean }) {
   if (!card) return null;
+  const { TAROT_COLLECTED } = useCodexData();
   const e = TAROT_COLLECTED[card.id];
   const up = !!e?.upright.count;
   const rev = !!e?.reversed.count;

@@ -1,4 +1,6 @@
 import { useUmbraIdentity } from '@/ui/useUmbraIdentity';
+import MenuP4 from '@yellow/screens/pages/Menu.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 /**
  * 「菜单」页 —— P5 式对角断层宫格（UI_DESIGN_BOLD_V2.5.md §5「菜单」行）。
  *
@@ -1043,6 +1045,8 @@ export const Menu = () => {
       </P3RPage>
     );
   }
+
+  if (isP4) return <P4Host><MenuP4 pageId="menu" params={new URLSearchParams()} /></P4Host>;
 
   return (
     <motion.div

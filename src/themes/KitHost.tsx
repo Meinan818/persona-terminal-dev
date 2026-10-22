@@ -17,6 +17,7 @@ const KIT_NAME: Record<KitTheme, string> = { yellow: 'p4g-yellow', pink: 'p3r-pi
 
 export const kitThemeOf = (theme: ThemeType | undefined | null): KitTheme | null => {
   try { if (localStorage.getItem('kit:off') === '1') return null; } catch { /* ignore */ }
+  if (theme === 'yellow') return null;
   return theme && theme in LOADERS ? (theme as KitTheme) : null;
 };
 

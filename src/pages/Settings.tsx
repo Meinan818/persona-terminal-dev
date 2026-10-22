@@ -25,6 +25,8 @@ import NotificationSettings from '@/components/NotificationSettings';
 import { NavigatorSettings } from '@/components/navigator/NavigatorSettings';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useUiChannel } from '@/ui/useUiChannel';
+import SettingsP4 from '@yellow/screens/pages/Settings.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { getLayoutModeVersion, setSidebarEnabled, sidebarEnabled, sidebarSettingVisible, subscribeLayoutMode } from '@/ui/layoutMode';
 import { useBoldness } from '@/utils/boldness';
 import { P3R, P3RPage, GhostWords, P3PageHeader } from '@/components/p3r/kit';
@@ -878,6 +880,8 @@ export const Settings = () => {
     { id: 'navigator', label: '助手', Icon: DiamondMarkIcon },
     { id: 'notifications', label: '通知提醒', Icon: BellIcon }
   ];
+
+  if (useUiChannel() === 'p4') return <P4Host><SettingsP4 pageId="settings" params={new URLSearchParams()} /></P4Host>;
 
   return (
     <P3RPage active={p3}>

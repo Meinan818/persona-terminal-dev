@@ -131,3 +131,19 @@ button.small.on { background: #e60012; }
 @keyframes chIn { to { transform: rotate(var(--r)) scale(1); } }
 @keyframes bannerOut { 0%, 78% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(60px); } }
 @media (max-height: 420px) { #banner .c { font-size: calc(32px * var(--s)); } #banner .band { height: 48px; margin-top: -24px; } }
+
+/* 动作按钮 v2（Hark 美术）：P5 式错落斜块，英文角标 + 中文，大红「结束回合」 */
+#actions { gap: 4px 3px; transform: rotate(-4deg); transform-origin: right bottom; }
+#actions button { position: relative; border: none; background: #000; color: #fff; box-shadow: 3px 3px 0 #fff; clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%); padding-top: 8px; }
+#actions button::before { content: attr(data-en); position: absolute; left: 10px; top: 2px; font-size: 8px; letter-spacing: 1px; color: #e60012; font-weight: 900; }
+#actions button:nth-child(2) { transform: skewX(-8deg) translateY(-6px); }
+#actions button:nth-child(5) { transform: skewX(-8deg) translateY(-6px); }
+#actions button.sel { background: #e60012; color: #000; box-shadow: 3px 3px 0 #000; }
+#actions button.sel::before { color: #fff; }
+#actions button:disabled { opacity: .3; }
+#actions .unique { background: #1a1400; color: #ffd400; }
+#actions .unique::before { color: #ffd400; }
+#actions .end { background: #e60012; color: #fff; box-shadow: 3px 3px 0 #000; }
+#actions .end::before { color: #000; }
+#actions .triple { clip-path: none; }
+#actions .triple::before { content: none; }

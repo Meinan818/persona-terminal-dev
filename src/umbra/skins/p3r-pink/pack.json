@@ -1062,7 +1062,7 @@
     "skillId": "agilao",
     "actorId": "hamuko"
    },
-   "duration": 1780,
+   "duration": 1720,
    "hitMarks": [
     1180
    ],
@@ -1347,7 +1347,7 @@
     },
     {
      "at": 1330,
-     "dur": 440,
+     "dur": 380,
      "prim": "shockwave",
      "args": {
       "center": {
@@ -2702,7 +2702,7 @@
    "match": {
     "actorId": "hamuko"
    },
-   "duration": 3460,
+   "duration": 3410,
    "hitMarks": [
     2600
    ],
@@ -3118,7 +3118,7 @@
      }
     },
     {
-     "at": 3300,
+     "at": 3250,
      "dur": 160,
      "prim": "tween",
      "args": {

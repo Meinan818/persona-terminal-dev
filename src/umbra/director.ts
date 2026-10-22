@@ -58,6 +58,44 @@ export function encounterComboBudget(
   return Math.max(0, scaledDuration(budget, speed) - encounterMs);
 }
 
+export const CAPS: Record<string, [number, number]> = {
+  'battle:start': [900, 350], 'turn:start': [300, 100], 'action': [1800, 600], 'action:enemy': [1500, 500],
+  'unit:down': [500, 200], 'onemore': [450, 250], 'highlight': [3500, 1200], 'holdup': [1000, 400], 'allout': [3500, 1200],
+  'talk:start': [800, 300], 'talk:result': [1200, 400], 'battle:end': [1500, 500], 'scene:enter': [600, 250], 'scene:leave': [600, 250],
+  'map:move': [800, 300], 'map:encounter': [900, 350], 'env:change': [600, 250], 'ui:open': [280, 150], 'ui:close': [280, 150],
+  'baton': [600, 250], 'persona:switch': [500, 200], 'shield:break': [500, 200], 'levelup': [1000, 400], 'card:pick': [600, 300],
+  'buff:grant': [800, 300], 'boss:phase': [2000, 600], 'fusion:result': [3000, 1000],
+  'shop:enter:full': [1200, 300], 'shop:enter:short': [500, 300], 'shop:exit': [600, 250], 'party:switch': [500, 200],
+  'bond:assist': [800, 300], 'ailment:apply': [400, 150], 'ailment:cure': [400, 150], 'escape': [600, 250], 'velvet:alarm': [800, 300],
+  'fusion:accident': [1000, 400], 'callingcard:send': [3000, 1000], 'explore:scan': [400, 200], 'persona:levelup': [800, 300], 'bond:rankup': [1500, 500],
+  'holdup:result': [400, 150], 'explore:move:cell': [250, 120], 'explore:cover': [300, 150], 'explore:spotted': [500, 200], 'explore:interact': [400, 200],
+  'unit:spawn': [600, 250], 'unit:flee': [600, 250], 'unit:revive': [600, 250], 'explore:sneak:cell': [350, 150], 'explore:exit': [800, 300],
+  'boss:intro': [2000, 600], 'run:fail': [1500, 500], 'run:retreat': [1000, 400],
+};
+
+export const capKey = (ev: string, p: any): string => (
+  ev === 'action' && p?.side === 'enemy'
+    ? 'action:enemy'
+    : ev === 'shop:enter'
+      ? (p?.firstVisitToday ? 'shop:enter:full' : 'shop:enter:short')
+      : ev === 'explore:move' ? 'explore:move:cell' : ev === 'explore:sneak' ? 'explore:sneak:cell' : ev
+);
+
+export const capOf = (ev: string, p: any, minimal: boolean, speed: number): number => {
+  const [full, min] = CAPS[capKey(ev, p)] ?? [0, 0];
+  const cells = ev === 'explore:move' || ev === 'explore:sneak'
+    ? Math.max(1, (p?.path?.length ?? 2) - 1)
+    : 1;
+  const raw = (minimal ? min : full) * cells;
+  return (cells > 1 ? Math.min(2000, raw) : raw) / speed;
+};
+
+export const wallMs = (r: { duration: number; tracks: { prim: string; dur?: number; args?: any }[] }): number => (
+  r.duration + r.tracks
+    .filter(track => track.prim === 'hitStop')
+    .reduce((sum, track) => sum + (track.dur ?? track.args?.ms ?? 0), 0)
+);
+
 export class Director {
   private main: DirectorEvent | null = null;
   private mainEndsAt = 0;

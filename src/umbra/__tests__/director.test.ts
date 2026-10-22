@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   Director,
+  capOf,
   clampEventDuration,
   encounterComboBudget,
   scaledDuration,
+  wallMs,
   type DirectorEvent,
 } from '@/umbra/director';
 
@@ -52,5 +54,25 @@ describe('UMBRA Director', () => {
     expect(director.drainInput()).toEqual([]);
     director.pushInput('c', { target: 'c3' });
     expect(director.pushInput('c', { target: 'c4' })).toBeNull();
+  });
+
+  it('时长上限按事件与倍速取整', () => {
+    expect(capOf('action', { side: 'enemy' }, false, 1)).toBe(1500);
+    expect(capOf('onemore', {}, false, 2)).toBe(225);
+  });
+
+  it('探索移动上限按格数计算并封顶 2000ms', () => {
+    expect(capOf('explore:move', { path: [[0, 0], [1, 0], [2, 0]] }, false, 1)).toBe(500);
+    expect(capOf('explore:move', { path: Array(20).fill([0, 0]) }, false, 1)).toBe(2000);
+  });
+
+  it('wallMs 把 hitStop 停帧计入总墙钟时长', () => {
+    expect(wallMs({
+      duration: 1000,
+      tracks: [
+        { prim: 'hitStop', dur: 90 },
+        { prim: 'tween', dur: 400 },
+      ],
+    })).toBe(1090);
   });
 });

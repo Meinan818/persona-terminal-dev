@@ -115,5 +115,46 @@ async function fullPlay() {
   await page.close();
 }
 
-try { await shot1(); await shot2(); await shot3(); await fullPlay(); } finally { await browser.close(); server.httpServer.close(); }
+// 1c：机关图——龙司穿过开着的门 B 走进摄像头监视范围 → ALERT + 援军（门/开关/升降台/摄像头同屏）
+async function shot4() {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
+  await open(page, url.replace('speed=4', 'speed=1').replace('?', `?map=mech&`));
+  await page.waitForFunction(() => window.__p5t && !window.__p5t.busy);
+  await page.evaluate(() => { const p = window.__p5t; p.hook.pauseOn = 'reinforce'; p.hook.pauseDelay = 380; p.select('skull'); p.tap({ tile: { x: 6, y: 5 } }); p.tap({ tile: { x: 6, y: 5 } }); });
+  await waitEvent(page, () => window.__p5t.hook.paused);
+  await page.screenshot({ path: out + 'p5t-1c-1280x720.png' });
+  await page.evaluate(() => window.__p5t.hook.resume());
+  await idle(page);
+  const st = await page.evaluate(() => ({ enemies: window.__p5t.battle.alive('enemy').length, cams: [...window.__p5t.battle.rt.cameras] }));
+  console.log('MECH', JSON.stringify(st));
+  await page.close();
+}
+
+// 1c：靶场 C（844×390）——艾丽娜 Flag of Freedom 插旗（橙色范围）+ 祐介 Like a Phantom 两个诱饵，选中明智看第二 Charge / 被动
+async function shot5() {
+  const page = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
+  await open(page, url.replace('?', `?map=range-c&`));
+  await page.waitForFunction(() => window.__p5t && !window.__p5t.busy);
+  const tapUnique = async (id, tile) => {
+    await page.evaluate(([id, tile]) => { const p = window.__p5t; p.battle.voltage = 100; p.select(id); p.setMode('unique'); p.tap({ tile }); p.tap({ tile }); }, [id, tile]);
+    await idle(page);
+  };
+  await tapUnique('erina', { x: 5, y: 3 });
+  await tapUnique('fox', { x: 2, y: 4 });
+  await page.waitForTimeout(1900); // 等确认提示的 toast 消失
+  await page.evaluate(() => { const p = window.__p5t; p.select('crow'); });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: out + 'p5t-1c-844x390.png' });
+  const st = await page.evaluate(() => ({ decoys: window.__p5t.battle.units.filter((u) => u.decoy).length, flags: window.__p5t.battle.units.filter((u) => u.prop === 'flag').length }));
+  console.log('RANGEC', JSON.stringify(st));
+  await page.close();
+}
+
+const ONLY = process.env.SHOTS;
+try {
+  if (ONLY === '1c') { await shot4(); await shot5(); await fullPlay(); }
+  else { await shot1(); await shot2(); await shot3(); await shot4(); await shot5(); await fullPlay(); }
+} finally { await browser.close(); server.httpServer.close(); }
 console.log('shots ->', out);

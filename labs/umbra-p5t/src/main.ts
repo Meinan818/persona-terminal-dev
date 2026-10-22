@@ -1,6 +1,6 @@
 // 灰盒表现层：three.js 方块 + HTML HUD。只读 Battle 状态、只调用 Battle 指令、只消费事件。
 import * as THREE from 'three';
-import { Battle, MAPS, key, eq, VOLTAGE_MAX } from './rules';
+import { Battle, MAPS, key, eq, VOLTAGE_MAX, PASSIVE_INFO } from './rules';
 import type { BattleEvent, SkillDef, Unit, Vec, StatusId } from './rules';
 
 type Mode = 'auto' | 'melee' | 'gun' | 'skill' | 'unique';
@@ -22,8 +22,13 @@ scene.add(sun);
 
 const COLORS: Record<string, number> = {
   joker: 0x1a1a1a, skull: 0xf2c200, panther: 0xe8335a, mona: 0xf0f0f0, fox: 0x2f6bff, queen: 0x5b3aa8,
-  noir: 0x9a6b3a, erina: 0xff7a00, kasumi: 0xd8202f, toshiro: 0x6aa0a0,
+  noir: 0x9a6b3a, erina: 0xff7a00, kasumi: 0xd8202f, toshiro: 0x6aa0a0, crow: 0xe8e0d0,
 };
+const CHARGE_NAME: Record<string, string> = {
+  foresight: 'Foresight 射程+1', phantomStep: 'Phantom Step 移动+1', lightningSpeed: 'Lightning Speed 移动+2', ferociousLion: 'Ferocious Lion 击退+1',
+  overPowered: 'Over Powered 攻×1.2', bulletBreak: 'Bullet Break 枪击必倒', springStorm: 'Spring Storm 射程+1', clairvoyance: 'Clairvoyance 射程+2', essenceOfSorcery: 'Essence of Sorcery 技能范围+1',
+};
+const SWITCH_COL = { hold: 0x22d3ee, toggle: 0xd946ef, elevator: 0x22c55e } as const;
 const LEVEL = 0.6; // 每层高度
 const ST_NAME: Record<StatusId, string> = { burn: '灼烧', freeze: '冻结', shock: '感电', dizzy: '眩晕', despair: '绝望', forget: '遗忘', sleep: '睡眠' };
 const ST_SHORT: Record<StatusId, string> = { burn: '灼', freeze: '冻', shock: '电', dizzy: '晕', despair: '绝', forget: '忘', sleep: '睡' };
@@ -64,20 +69,30 @@ function build() {
   labelEl.clear();
   const m = battle.map;
   for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) {
-    const t = m.tiles[y][x];
+    const t = battle.grid.tile({ x, y });
     const h = battle.grid.h({ x, y });
+    const door = battle.map.doors?.find((d) => d.cells.some((c) => c.x === x && c.y === y));
+    const lift = battle.map.elevators?.some((e) => e.cells.some((c) => c.x === x && c.y === y));
     const light = (x + y) % 2 === 0;
     const colH = h > 0 ? (light ? 0x4a4656 : 0x423e4d) : light ? 0x3b3b44 : 0x33333b;
     const top = 0.2 + h * LEVEL;
-    const tile = new THREE.Mesh(new THREE.BoxGeometry(0.96, top, 0.96), std(t === 'exit' ? 0x2a6b3a : colH, { roughness: 0.9 }));
+    const tile = new THREE.Mesh(new THREE.BoxGeometry(0.96, top, 0.96), std(t === 'exit' ? 0x2a6b3a : lift ? 0x2f6b46 : colH, { roughness: 0.9 }));
     tile.position.set(x, h * LEVEL - top / 2, y);
     tile.receiveShadow = true; tile.castShadow = h > 0;
     tile.userData = { x, y };
     world.add(tile);
     tileMeshes.push(tile);
+    if (door && t !== 'wall') {
+      // 开着的门：只画门框
+      for (const off of [-0.42, 0.42]) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.4, 0.08), std(0x3a6bd8, { emissive: 0x0a1a40 }));
+        post.position.copy(w2v({ x, y }, 0.7)); post.position.x += off;
+        world.add(post);
+      }
+    }
     if (t === 'wall' || t === 'half' || t === 'full') {
       const bh = t === 'wall' ? 1.6 : t === 'full' ? 1.1 : 0.5;
-      const col = t === 'wall' ? 0x55555f : t === 'full' ? 0x8a1f24 : 0xb5623a;
+      const col = door ? 0x3a6bd8 : t === 'wall' ? 0x55555f : t === 'full' ? 0x8a1f24 : 0xb5623a;
       const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, bh, 0.9), std(col));
       b.position.copy(w2v({ x, y }, bh / 2));
       b.castShadow = true; b.receiveShadow = true;
@@ -107,6 +122,20 @@ function build() {
     g.rotation.y = hi.x !== lo.x ? Math.PI / 2 : 0;
     world.add(g);
   }
+  // 开关踏板 / 摄像头
+  for (const sw of battle.map.switches ?? []) {
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.38, 0.08, 20), std(SWITCH_COL[sw.kind], { emissive: SWITCH_COL[sw.kind], emissiveIntensity: 0.35 }));
+    pad.position.copy(w2v(sw.pos, 0.04));
+    world.add(pad);
+  }
+  for (const cam of battle.map.cameras ?? []) {
+    if (battle.rt.cameras.has(cam.id)) continue;
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.3, 0.12), std(0x444444));
+    post.position.copy(w2v(cam.pos, 0.65));
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.4), std(0x222222, { emissive: 0xff2020, emissiveIntensity: 0.4 }));
+    head.position.copy(w2v(cam.pos, 1.35));
+    world.add(post, head);
+  }
   for (const u of battle.units) addUnitMesh(u);
   fitCamera();
 }
@@ -120,6 +149,12 @@ function addUnitMesh(u: Unit) {
       const band = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.08, 16), std(0xffd400, { emissive: 0x332200 }));
       band.position.y = 0.36;
       g.add(body, band);
+    } else if (u.prop === 'flag') {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5, 8), std(0xdddddd));
+      pole.position.y = 0.75;
+      const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.36, 0.03), std(0xff7a00, { emissive: 0x401800 }));
+      cloth.position.set(0.3, 1.3, 0);
+      g.add(pole, cloth);
     } else if (u.prop === 'box') {
       const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), std(0x8a5a2b));
       box.position.y = 0.4;
@@ -132,7 +167,7 @@ function addUnitMesh(u: Unit) {
       g.add(post, horn);
     }
   } else if (u.side === 'ally') {
-    const mat = std(COLORS[u.id] ?? 0xffffff, { roughness: 0.5 });
+    const mat = std(u.decoy ? 0x9fd0ff : COLORS[u.id] ?? 0xffffff, { roughness: 0.5, transparent: !!u.decoy, opacity: u.decoy ? 0.55 : 1 });
     const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.55, 16), mat);
     body.position.y = 0.3;
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), mat);
@@ -221,6 +256,8 @@ function triangleMesh(ids: string[], color = 0xffd400) {
   overlay.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ps.map((p) => w2v(p, 0.07))), new THREE.LineBasicMaterial({ color })));
 }
 
+const tileUnique = (u: Unit) => !!u.unique && (!!u.unique.decoys || !!u.unique.flag);
+let uniqueTile: Vec | null = null;
 const curSkill = (u: Unit): SkillDef | undefined => (mode === 'unique' ? u.unique : skillId ? u.skills.find((s) => s.id === skillId) : u.skills[0]);
 function attackFrom(u: Unit, from: Vec, t: Unit): { kind: 'melee' | 'gun' | 'skill'; skill?: SkillDef } | null {
   const sk = curSkill(u);
@@ -247,10 +284,23 @@ function refreshOverlay() {
     const p = { x: s.pos.x + dx, y: s.pos.y + dy };
     if (Math.abs(dx) + Math.abs(dy) <= 3 && battle.grid.inBounds(p)) tileQuad(p, 0xffd400, 0.12, 0.012);
   }
+  for (const cam of battle.map.cameras ?? []) if (!battle.rt.cameras.has(cam.id)) for (const c of cam.cells) tileQuad(c, 0xffd400, 0.3, 0.014);
+  for (const f of battle.units) if (!f.ko && f.prop === 'flag') {
+    const r = f.aura ?? 3;
+    for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
+      const p = { x: f.pos.x + dx, y: f.pos.y + dy };
+      if (Math.abs(dx) + Math.abs(dy) <= r && battle.grid.inBounds(p)) tileQuad(p, 0xff7a00, 0.14, 0.013);
+    }
+  }
   const pt = battle.pendingTriple;
   if (pt) triangleMesh(battle.mainAllies().map((a) => a.id));
   if (!selected) return;
   const u = battle.unit(selected);
+  if (mode === 'unique' && tileUnique(u)) {
+    const from = previewTile ?? u.pos;
+    for (let y = 0; y < battle.map.height; y++) for (let x = 0; x < battle.map.width; x++) if (battle.canSkillAt(u, u.unique!, { x, y }, from)) tileQuad({ x, y }, 0xffd400, 0.18, 0.016);
+    if (uniqueTile) tileQuad(uniqueTile, 0xffd400, 0.6, 0.03);
+  }
   ring(u.pos, 0xffffff);
   for (const p of battle.moveTiles(u)) tileQuad(p, 0x2a8cff, 0.42);
   if (!eq(u.anchor, u.pos)) tileQuad(u.anchor, 0x2a8cff, 0.25);
@@ -281,13 +331,16 @@ function refreshHud() {
     card.classList.remove('hidden');
     const gun = u.gun ? `枪 ${u.gun.power}/${battle.gunRange(u)}格${u.gun.shape && u.gun.shape !== 'single' ? `(${u.gun.shape === 'aoe' ? '散射' : '爆炸'})` : ''}` : '';
     const role = u.role ? ({ shooter: '射手', brute: '近战', revenger: '反击者', shielder: '盾兵', teleporter: '传送者', launcher: '投掷者', supporter: '支援者' } as Record<string, string>)[u.role] : '';
-    const st = [role, u.oneMore ? '1 MORE' : '', u.charged ? `CHARGE(${u.charge})` : '', u.acted ? '已行动' : '', u.downed ? '倒地' : '',
-      battle.hasResistance(u, { x: -99, y: -99 }, 'melee') ? '掩护中' : '', u.escort ? '护送对象' : '',
+    const st = [role, u.oneMore ? '1 MORE' : '', u.charged ? `CHARGE(${u.charge})` : '', u.acted && !u.decoy ? '已行动' : '', u.downed ? '倒地' : '',
+      battle.hasResistance(u, { x: -99, y: -99 }, 'melee') ? 'GUARD' : '', u.escort ? '护送对象' : '', u.decoy ? '诱饵' : '',
+      u.role === 'revenger' ? (u.counterReady ? '反击待命' : '反击已用') : '', u.bossPhase ? `阶段${u.bossPhase}` : '',
       ...u.status.map((s) => ST_NAME[s.id]), ...u.buffs.map((b) => `${b.id}↑`)].filter(Boolean).join(' · ');
     card.innerHTML = `<div><div class="name">${u.name} <small>高度${battle.grid.h(u.pos)}</small></div>
       <div>HP ${u.hp}/${u.maxHp}</div><div class="bar"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>
       ${u.maxSp && u.side === 'ally' ? `<div>SP ${u.sp}/${u.maxSp}</div><div class="bar sp"><i style="width:${(100 * u.sp) / u.maxSp}%"></i></div>` : ''}
-      <div>移动 ${battle.moveRange(u)} · 近战 ${u.melee} · ${gun}</div><div>${st}</div></div>`;
+      <div>移动 ${battle.moveRange(u)} · 近战 ${u.melee} · ${gun}</div><div>${st}</div>
+      ${u.passives?.length ? `<div class="pas">被动：${u.passives.map((p) => PASSIVE_INFO[p].name).join('、')}</div>` : ''}
+      ${u.side === 'ally' && u.charges?.length && battle.phase === 'player' ? `<div class="chg">${u.charges.map((c) => `<button class="small${c === u.charge ? ' sel' : ''}" data-charge="${c}">${CHARGE_NAME[c] ?? c}</button>`).join('')}</div>` : ''}</div>`;
   } else card.classList.add('hidden');
   const sel = selected ? battle.unit(selected) : null;
   document.querySelectorAll<HTMLButtonElement>('#actions button').forEach((b) => {
@@ -497,6 +550,18 @@ async function play(events: BattleEvent[]) {
       case 'batonPassReady': toast(`${battle.unit(e.koId).name} 倒下：可 Baton Pass 换替补`); break;
       case 'batonPass': rebuild = true; banner('BATON PASS', true); break;
       case 'error': toast(e.message); break;
+      case 'message': toast(e.text); await sleep(300 / SPEED); break;
+      case 'guard': if (e.on) popDamage(e.unitId, 'GUARD', 'heal'); else if (battle.phase !== 'won') popDamage(e.unitId, '掩护消失'); break;
+      case 'door': build(); toast(`门 ${e.id} ${e.open ? '打开' : '关上'}`); break;
+      case 'elevator': build(); toast(`升降台${e.up ? '升起' : '降下'}`); break;
+      case 'switch': popDamage(e.unitId, '开关!'); break;
+      case 'alarm': banner('ALERT!', true); toast('被摄像头发现：敌方援军出现'); break;
+      case 'reinforce': build(); toast(`援军 ×${e.unitIds.length}`); await sleep(700 / SPEED); break;
+      case 'bossPhase': banner(`PHASE ${e.phase}`, true); await sleep(700 / SPEED); break;
+      case 'decoy': build(); popDamage(e.unitId, '诱饵'); await sleep(200 / SPEED); break;
+      case 'flagPlaced': build(); clearOverlay(); popDamage(e.unitId, 'FLAG!', 'big'); await sleep(300 / SPEED); break;
+      case 'passive': popDamage(e.unitId, PASSIVE_INFO[e.passive].name, 'heal'); await sleep(200 / SPEED); break;
+      case 'swap': popDamage(e.unitId, '换位!'); for (const id of [e.unitId, e.withId]) unitMesh.get(id)?.position.copy(w2v(battle.unit(id).pos)); break;
       case 'result': showResult(e); break;
       default: break;
     }
@@ -516,7 +581,7 @@ async function play(events: BattleEvent[]) {
     const next = battle.alive('ally').find((a) => a.oneMore) ?? null;
     if (next) selected = next.id;
   }
-  previewTile = null; previewTarget = null;
+  previewTile = null; previewTarget = null; uniqueTile = null;
   if (mode === 'unique') mode = 'auto';
   refreshAll();
 }
@@ -574,11 +639,13 @@ function onTap(h: { tile?: Vec; unit?: string }) {
         return;
       }
       if (selected === u.id && previewTile) { previewTile = null; previewTarget = null; }
+      else if (u.decoy) toast('诱饵：敌人会优先攻击它，被打一下就消失');
       else if (!u.acted) { selected = u.id; inspectEnemy = null; previewTile = null; previewTarget = null; mode = 'auto'; skillId = null; }
       else toast(`${u.name} 已行动`);
       return refreshAll();
     }
     if (u.prop === 'speaker') { toast('喇叭：在黄色范围内做被禁止的行动会受惩罚'); return; }
+    if (u.prop === 'flag') { toast('自由之旗：橙色范围内敌人没有掩护，我方回合结束回复'); return; }
     if (!selected) { inspectEnemy = inspectEnemy === u.id ? null : u.id; return refreshAll(); }
     const s = battle.unit(selected);
     const from = previewTile ?? s.pos;
@@ -593,6 +660,17 @@ function onTap(h: { tile?: Vec; unit?: string }) {
     if (kind === 'melee') evs.push(...battle.melee(s.id, u.id));
     else if (kind === 'gun') evs.push(...battle.shoot(s.id, u.id));
     else evs.push(...battle.skill(s.id, at!.skill!.id, u.id));
+    void play(evs);
+    return;
+  }
+  if (h.tile && selected && mode === 'unique' && tileUnique(battle.unit(selected))) {
+    const s = battle.unit(selected);
+    if (!battle.canSkillAt(s, s.unique!, h.tile, previewTile ?? s.pos)) { toast('超出射程'); return; }
+    if (!uniqueTile || !eq(uniqueTile, h.tile)) { uniqueTile = h.tile; toast('再点一次同一格确认'); return refreshAll(); }
+    const evs: BattleEvent[] = [];
+    if (previewTile && !eq(previewTile, s.pos)) evs.push(...battle.move(s.id, previewTile));
+    evs.push(...battle.uniqueAt(s.id, h.tile));
+    uniqueTile = null;
     void play(evs);
     return;
   }
@@ -630,6 +708,11 @@ $('#actions').addEventListener('click', (ev) => {
   if (mode === 'skill') skillId = battle.unit(selected).skills[0]?.id ?? null;
   previewTarget = null;
   refreshAll();
+});
+$('#unit-card').addEventListener('click', (ev) => {
+  const b = (ev.target as HTMLElement).closest('button');
+  if (!b || busy || !selected || !b.dataset.charge) return;
+  void play(battle.selectCharge(selected, b.dataset.charge as never));
 });
 $('#skills').addEventListener('click', (ev) => {
   const b = (ev.target as HTMLElement).closest('button');

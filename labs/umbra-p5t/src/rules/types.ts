@@ -47,8 +47,14 @@ export interface SkillDef {
   downThroughCover?: boolean;
   /** Femme Fatale / Like a Phantom / Pathway to the Ball：使用后还能再行动 */
   extraAction?: boolean;
-  /** Kasumi Pathway to the Ball：本回合移动力极大 */
+  /** Kasumi Pathway to the Ball：本回合移动力极大（Dash 后结束） */
   moveBoost?: number;
+  /** Yusuke Like a Phantom：召唤 N 个诱饵 */
+  decoys?: number;
+  /** Erina Flag of Freedom：在目标格插旗（破周围敌人掩体、回合结束回复周围我方） */
+  flag?: boolean;
+  /** Akechi Truth Seeker：其余我方再行动一次，之后 3 回合 Voltage 不涨 */
+  allyExtra?: boolean;
   /** Makoto Full Throttle：直线上所有单位击退（不附带异常） */
   knockAll?: boolean;
 }
@@ -56,10 +62,21 @@ export interface SkillDef {
 /** Charge（回合内没攻击 → 下次攻击前的小增益），按原作技能树第一个免费 Charge 技能 */
 export type ChargeId = 'foresight' | 'phantomStep' | 'lightningSpeed' | 'ferociousLion' | 'overPowered' | 'bulletBreak' | 'springStorm' | 'clairvoyance' | 'essenceOfSorcery';
 
+/**
+ * 被动 / 自动技能（ibunroku P5T 技能表 + Samurai Gamers 技能树；数值来自 ibunroku conditions 字段）。
+ * 只列实现了效果的；见 data.ts PASSIVES。
+ */
+export type PassiveId =
+  | 'followUpPlus' | 'stopAndGo' | 'hawkeye' | 'daredevil' | 'godLikeSpeed' | 'magicalMastery'
+  | 'ironcladGuard' | 'ironBody' | 'regenerate1' | 'invigorate1' | 'soulRepose' | 'endure' | 'trumpCard'
+  | 'broadPerspective' | 'luckyPunch' | 'comandante' | 'pedalToTheMetal' | 'neverSayDie'
+  | 'punisherOfReckless' | 'sharpEyedWildcat' | 'finishingBlow' | 'unstoppable' | 'breakAndRecovery'
+  | 'firstAid' | 'ailmentShield' | 'reverseTheScales';
+
 /** 敌人类型（Cogito AAA115 MECHANIC: ENEMY TYPES） */
 export type EnemyRole = 'shooter' | 'brute' | 'revenger' | 'shielder' | 'teleporter' | 'launcher' | 'supporter';
 /** 地图物件（以中立单位实现，可被攻击/推动） */
-export type PropKind = 'barrel' | 'box' | 'speaker';
+export type PropKind = 'barrel' | 'box' | 'speaker' | 'flag';
 /** 枪的打击方式：ST 单体 / AoE 散射 / EXP 爆炸（Cogito 角色表 R AoE 列） */
 export type GunShape = 'single' | 'aoe' | 'explode';
 
@@ -77,8 +94,20 @@ export interface UnitDef {
   skills: SkillDef[];
   /** Voltage 满时可用的专属技能 */
   unique?: SkillDef;
-  /** 第一个（免费）Charge 技能 */
+  /** 当前装备的 Charge 技能（缺省 = charges[0]） */
   charge?: ChargeId;
+  /** 原作每人两个 Charge 技能：[免费的第一个, 20 GP 的第二个]（出处见 data.ts） */
+  charges?: ChargeId[];
+  /** 被动技能（含角色专属被动） */
+  passives?: PassiveId[];
+  /** Like a Phantom 召唤的诱饵：不能行动，敌人优先攻击，被打一下就消失（PH） */
+  decoy?: boolean;
+  /** HP 不会低于此值（Boss 阶段锁血，由关卡事件解除） */
+  hpFloor?: number;
+  /** 插旗等光环物件的作用半径 */
+  aura?: number;
+  /** 召唤物/旗子的主人 */
+  ownerId?: string;
   /** 敌人用：AI 类型 */
   role?: EnemyRole;
   /** 兼容旧数据：'melee' = brute，'ranged' = shooter */
@@ -126,7 +155,53 @@ export interface Unit extends UnitDef {
   dashed: boolean;
   /** 是否为替补（Baton Pass 换上） */
   reserve?: boolean;
+  /**
+   * Guard（掩护状态）：原作在「回合结束时贴着掩体」才获得（Samurai Gamers Guard/Stage Objects Guide），
+   * 被近战/技能/撞击/爆炸打破或掩体消失时失去。
+   */
+  guard: boolean;
+  /** Revenger：本回合反击是否还没用（One More 表：「每回合刷新」） */
+  counterReady: boolean;
+  /** 本回合被攻击次数（Iron Body） */
+  hitsTaken: number;
+  /** 已用过的一次性被动（Endure / Trump Card） */
+  used: string[];
+  /** 本次行动中是否已经 Dash（Dash 后移动结束，Stop & Go +1） */
+  dashedAction: boolean;
+  /** Boss 阶段号（关卡事件 setUnit 用） */
+  bossPhase?: number;
 }
+
+// ---------- 地图机关（Samurai Gamers Stage Elements Guide / Cogito 关卡 / gameline） ----------
+/** 门：关着 = 墙（挡路、挡视线、算掩体）。everyTurns = 定时门（每 N 回合开关一次，Neoseeker M24/M25） */
+export interface DoorDef { id: string; cells: Vec[]; open: boolean; everyTurns?: number }
+/**
+ * 开关：hold = 踩着时门开、离开就关（gameline 2nd kingdom：「スイッチを踏んでいる間だけ扉が開き」）；
+ * toggle = 踩上去切换（Cogito：Pink Switch 开 1/3 号门、关 2/4 号门）；elevator = 切换升降台高低
+ */
+export interface SwitchDef { id: string; pos: Vec; kind: 'hold' | 'toggle' | 'elevator'; doors?: string[]; elevator?: string }
+/** 升降台：切换后整块格子的高度在 low/high 之间变化，上面的单位跟着走（gamecap 克エスト：升降台上下解除敌人 Guard） */
+export interface ElevatorDef { id: string; cells: Vec[]; low: number; high: number; up: boolean }
+/** 监视摄像头：我方踏入监视范围（cells）→ 警报 → 召唤援军（Samurai Gamers / Cogito / Too Much Gaming） */
+export interface CameraDef { id: string; pos: Vec; cells: Vec[]; spawn: { def: UnitDef; pos: Vec }[]; damage?: number }
+
+/** 关卡事件：中途援军、Boss 阶段、开门等（规则接口；原作具体剧本见 RULES-NOTES） */
+export type EventTrigger =
+  | { type: 'turn'; turn: number; phase?: 'player' | 'enemy' }
+  | { type: 'hpBelow'; unitId: string; ratio: number }
+  | { type: 'enemiesLeft'; n: number }
+  | { type: 'unitKo'; unitId: string }
+  | { type: 'reach'; pos: Vec; side?: 'ally' | 'enemy' }
+  | { type: 'flag'; flag: string };
+export type EventAction =
+  | { type: 'spawn'; units: { def: UnitDef; pos: Vec }[] }
+  | { type: 'message'; text: string }
+  | { type: 'setUnit'; unitId: string; patch: Partial<UnitDef>; healRatio?: number; bossPhase?: number }
+  | { type: 'door'; id: string; open: boolean }
+  | { type: 'setWin'; win: WinCondition; objective?: string }
+  | { type: 'setFlag'; flag: string }
+  | { type: 'end'; outcome: 'won' | 'lost'; reason?: string };
+export interface MapEvent { id: string; when: EventTrigger; do: EventAction[]; repeat?: boolean }
 
 export type WinCondition =
   | { type: 'defeatAll' }
@@ -166,6 +241,11 @@ export interface MapDef {
   /** 超过即失败（P5T 部分关有回合上限，如「Defeat all enemies within 10 Turns」）；缺省不限 */
   turnLimit?: number;
   bonus?: BonusDef[];
+  doors?: DoorDef[];
+  switches?: SwitchDef[];
+  elevators?: ElevatorDef[];
+  cameras?: CameraDef[];
+  events?: MapEvent[];
 }
 
 export type Difficulty = 'safety' | 'easy' | 'normal' | 'hard' | 'merciless';
@@ -188,8 +268,10 @@ export interface RuleOptions {
   charge?: boolean;
   /** Follow-Up（原作第 18 关解锁）。默认 true；每人每回合次数 */
   followUps?: number;
-  /** 随机种子（眩晕的随机移动用） */
+  /** 随机种子（眩晕的随机移动、Broad Perspective / Lucky Punch 的几率用） */
   seed?: number;
+  /** 敌方 1 More 连锁上限。原作无此上限（每次 1 More 都要打倒一个新的未倒地目标，天然有限）；默认 Infinity */
+  enemyChainCap?: number;
 }
 
 export type Phase = 'player' | 'enemy' | 'won' | 'lost';
@@ -245,7 +327,19 @@ export type BattleEvent =
   | { type: 'penalty'; unitId: string; speakerId: string; action: 'melee' | 'gun' | 'skill' }
   | { type: 'batonPassReady'; koId: string; reserves: string[]; left: number }
   | { type: 'batonPass'; outId: string; inId: string; at: Vec; left: number }
-  | { type: 'enemyThink'; enemyId: string; targetId: string | null; dest: Vec }
+  | { type: 'enemyThink'; enemyId: string; targetId: string | null; dest: Vec; plan?: string }
+  | { type: 'guard'; unitId: string; on: boolean }
+  | { type: 'door'; id: string; open: boolean }
+  | { type: 'elevator'; id: string; up: boolean; height: number }
+  | { type: 'switch'; id: string; unitId: string }
+  | { type: 'alarm'; cameraId: string; unitId: string }
+  | { type: 'reinforce'; unitIds: string[]; source: string }
+  | { type: 'message'; text: string }
+  | { type: 'bossPhase'; unitId: string; phase: number }
+  | { type: 'decoy'; unitId: string; ownerId: string; at: Vec }
+  | { type: 'flagPlaced'; unitId: string; ownerId: string; at: Vec }
+  | { type: 'passive'; unitId: string; passive: PassiveId }
+  | { type: 'swap'; unitId: string; withId: string }
   | { type: 'result'; outcome: 'won' | 'lost'; turn: number; crowns: CrownResult; reason?: string }
   | { type: 'error'; message: string };
 

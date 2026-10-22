@@ -88,3 +88,8 @@ button.small.on { background: #e60012; }
 }
 
 .frozen .dmg, .frozen #banner { animation-play-state: paused !important; }
+
+#unit-card .pas { color: #ffd400; font-size: 11px; }
+#unit-card .chg { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+#unit-card .chg button { font-size: 11px; padding: 3px 6px; }
+#unit-card .chg button.sel { background: #e60012; }

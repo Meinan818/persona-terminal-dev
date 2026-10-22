@@ -2,10 +2,11 @@
 // 规则依据与不确定处见 ../../RULES-NOTES.md（「PH」= 原作数值查不到的占位）
 import { Grid, DIRS, add, eq, key, manhattan, pathTo, pointInTriangle } from './grid';
 import type {
-  AttackKind, BattleEvent, BonusDef, BuffId, ChargeId, CoverLevel, CrownItem, CrownResult, DamageSource, Difficulty,
-  Effect, Intent, MapDef, Phase, RuleOptions, SkillDef, StatusId, Unit, UnitDef, Vec,
+  AttackKind, BattleEvent, BonusDef, BuffId, CameraDef, ChargeId, CoverLevel, CrownItem, CrownResult, DamageSource, Difficulty,
+  Effect, EventAction, Intent, MapDef, MapEvent, PassiveId, Phase, RuleOptions, SkillDef, StatusId, Unit, UnitDef, Vec,
 } from './types';
 import { runEnemyTurn, computeIntents } from './ai';
+import { decoyDef } from './data';
 
 // ---------- 规则常量 ----------
 /** Resistance（贴掩体 / 高台受下方枪击）伤害倍率：Cogito AAA104 实测「Basic cover 70% (rough estimate)」 */
@@ -43,8 +44,28 @@ export const BUFF_ATK = 1.25;
 export const BUFF_DEF = 0.8;
 export const BUFF_MOVE = 3;
 export const BUFF_TURNS = 3;
-/** Revenger 反击跳跃距离（PH） */
-export const REVENGER_LEAP = 3;
+/** Revenger 反击跳跃距离（PH；Gamer Guides：被击退后反击「多半只是跳回原位」→ 至少覆盖近战击退 4 格） */
+export const REVENGER_LEAP = 4;
+// ---------- 被动数值（ibunroku conditions 字段） ----------
+export const IRONCLAD_MULT = 0.6; // Ironclad Guard：掩体中再 -40%
+export const IRON_BODY_MULT = 0.8; // Iron Body：被打 2 次后 -20%
+export const REGEN_RATIO = 0.05; // Regenerate 1
+export const INVIG_RATIO = 0.05; // Invigorate 1
+export const SOUL_REPOSE_RATIO = 0.07; // Soul Repose
+export const TRUMP_HEAL_POWER = 80; // Trump Card：Power 80 回复
+export const TRUMP_MULT = 1.5; // Trump Card：下次攻击 ×1.5
+export const BROAD_CHANCE = 0.35; // Broad Perspective
+export const LUCKY_CHANCE = 0.25; // Lucky Punch
+export const PEDAL_MOVE = 2; // Pedal to the Metal
+export const DAREDEVIL_KNOCK = 2; // Daredevil
+export const DMG_UP_SMALL = 1.1; // Punisher of the Reckless / Sharp-Eyed Wildcat / Finishing Blow
+export const BREAK_RECOVERY_RATIO = 0.05; // Break & Recovery
+export const FIRST_AID_POWER = 65; // First Aid（PH：按 Dia 的 Power）
+export const FIRST_AID_RANGE = 3; // PH
+/** Flag of Freedom 回合结束回复比例（PH） */
+export const FLAG_HEAL_RATIO = 0.1;
+/** Truth Seeker 之后 Voltage 不涨的回合数（ibunroku：3 回合） */
+export const TRUTH_SEEKER_LOCK = 3;
 /** 喇叭作用半径与违规惩罚（PH） */
 export const SPEAKER_RADIUS = 3;
 export const SPEAKER_PENALTY = 0.2;
@@ -64,6 +85,7 @@ const STATUS_OF: Partial<Record<Effect, StatusId>> = { burn: 'burn', freeze: 'fr
 
 export interface TriplePending { attackerId: string; targetId: string; victims: string[] }
 export interface Hit { t: Unit; resist: boolean; missed?: boolean; forceDown?: boolean; noDown?: boolean }
+type Runtime = { doors: Map<string, boolean>; elevators: Map<string, boolean>; switchOcc: Map<string, string | null>; cameras: Set<string>; events: Set<string>; flags: Set<string> };
 type ActKind = 'melee' | 'gun' | 'skill';
 
 function mulberry32(seed: number) {
@@ -96,6 +118,18 @@ export class Battle {
   /** 本阶段不能攻击（遗忘） */
   noAttack = new Set<string>();
   private pendingBonus = new Map<string, number>();
+  /** 本回合谁打倒了谁（Triple Threat：只有打倒该敌人的那名角色能发动，Gamer Guides Triple Threat 页） */
+  downedBy = new Map<string, string>();
+  /** 本回合正处于 1 More 中的单位（Unstoppable / Reverse the Scales） */
+  inOneMore = new Set<string>();
+  /** 每回合一次的被动已用记录 `${id}:${passive}` */
+  private turnUsed = new Set<string>();
+  /** Truth Seeker：到这个回合（含）为止 Voltage 不涨 */
+  voltageLockUntil = 0;
+  /** 机关/事件运行时状态 */
+  rt: Runtime = { doors: new Map(), elevators: new Map(), switchOcc: new Map(), cameras: new Set(), events: new Set(), flags: new Set() };
+  private inEvents = false;
+  private seq = 0;
   private pathway = new Set<string>();
   /** 本次指令里要拿 1 More 的单位（Follow-Up 记功） */
   private credit = new Set<string>();
@@ -106,7 +140,7 @@ export class Battle {
   constructor(public readonly map: MapDef, opts: RuleOptions = {}) {
     this.opts = {
       coverModel: 'p5t', leaderKoLoses: false, enemyOneMore: true, difficulty: 'normal',
-      voltage: true, charge: true, followUps: 1, seed: 1, ...opts,
+      voltage: true, charge: true, followUps: 1, seed: 1, enemyChainCap: Infinity, ...opts,
     };
     this.grid = new Grid(map);
     this.rng = mulberry32(this.opts.seed);
@@ -118,6 +152,9 @@ export class Battle {
       const u = this.unitAt(p);
       return u?.prop === 'box' ? 2 : u?.prop === 'barrel' ? 1 : 0;
     };
+    for (const d of map.doors ?? []) { this.rt.doors.set(d.id, d.open); this.paintDoor(d.id); }
+    for (const e of map.elevators ?? []) { this.rt.elevators.set(e.id, e.up); this.paintElevator(e.id); }
+    for (const sw of map.switches ?? []) this.rt.switchOcc.set(sw.id, this.unitAt(sw.pos)?.id ?? null);
   }
 
   private makeUnit(def: UnitDef, pos: Vec): Unit {
@@ -139,10 +176,13 @@ export class Battle {
       hp: maxHp,
       sp: def.maxSp,
       ammo: def.gun ? def.gun.ammo ?? Infinity : 0,
-      moved: false, acted: false, downed: false, ko: false, oneMore: false, resistBroken: false,
+      moved: false, downed: false, ko: false, oneMore: false, resistBroken: false,
       bonusMove: 0, status: [], buffs: [], charged: false, attackedThisAction: false,
-      followUps: this.opts?.followUps ?? 1, dashed: false,
-    };
+      followUps: (this.opts?.followUps ?? 1) + (def.passives?.includes('followUpPlus') ? 1 : 0), dashed: false,
+      charge: def.charge ?? def.charges?.[0], charges: def.charges ? [...def.charges] : undefined, passives: def.passives ? [...def.passives] : [],
+      guard: false, counterReady: role === 'revenger', hitsTaken: 0, used: [], dashedAction: false,
+      acted: !!def.decoy,
+    } as Unit;
   }
 
   on(fn: (e: BattleEvent) => void) {
@@ -169,10 +209,11 @@ export class Battle {
   alive(side?: 'ally' | 'enemy' | 'neutral') {
     return this.units.filter((u) => !u.ko && (side ? u.side === side : u.side !== 'neutral'));
   }
-  /** 三名主力（不含护送对象），Triple Threat 与「全员倒下」用 */
+  /** 三名主力（不含护送对象与诱饵），Triple Threat 与「全员倒下」用 */
   mainAllies() {
-    return this.alive('ally').filter((u) => !u.escort);
+    return this.alive('ally').filter((u) => !u.escort && !u.decoy);
   }
+  has(u: Unit, p: PassiveId) { return !!u.passives?.includes(p); }
   unitAt(p: Vec) {
     return this.units.find((u) => !u.ko && eq(u.pos, p));
   }
@@ -200,11 +241,14 @@ export class Battle {
   }
   moveRange(u: Unit) {
     if (this.immobile.has(u.id) || this.noAction.has(u.id) || u.move === 0) return 0;
-    return u.move + u.bonusMove + (this.hasBuff(u, 'move') ? BUFF_MOVE : 0) + this.chargeBonus(u).move + (this.pathway.has(u.id) ? 99 : 0);
+    return u.move + u.bonusMove + (this.hasBuff(u, 'move') ? BUFF_MOVE : 0) + this.chargeBonus(u).move + (this.pathway.has(u.id) ? 99 : 0) +
+      (this.has(u, 'godLikeSpeed') ? 1 : 0) + (this.has(u, 'pedalToTheMetal') && u.hp >= u.maxHp ? PEDAL_MOVE : 0);
   }
-  gunRange(u: Unit) { return u.gun ? u.gun.range + this.chargeBonus(u).gunRange : 0; }
+  gunRange(u: Unit) { return u.gun ? u.gun.range + this.chargeBonus(u).gunRange + (this.has(u, 'hawkeye') ? 1 : 0) : 0; }
+  /** Dash 后还能走的格数（Stop & Go +1） */
+  afterDash(u: Unit) { return this.has(u, 'stopAndGo') ? 1 : 0; }
   private reach(u: Unit) {
-    return this.grid.reachable(u.anchor, this.moveRange(u), this.blockedFor(u), this.occupiedSet(u), !u.escort);
+    return this.grid.reachable(u.anchor, this.moveRange(u), this.blockedFor(u), this.occupiedSet(u), !u.escort, this.afterDash(u));
   }
   /** 可移动到的格（从本次行动起点算；行动前可反复改位置），不含当前所在格 */
   moveTiles(u: Unit): Vec[] {
@@ -224,11 +268,42 @@ export class Battle {
    * 被近战/技能/撞击/爆炸打破，或身上有异常 → 无 Resistance。
    */
   hasResistance(t: Unit, from: Vec, kind: AttackKind | ActKind = 'gun'): boolean {
-    if (t.side === 'neutral') return false;
+    if (t.side === 'neutral' || t.decoy) return false;
     if (t.resistBroken || t.status.length > 0) return false;
-    const cover = this.opts.coverModel === 'p5t' ? this.grid.hasAnyCover(t.pos) > 0 : this.grid.coverAgainst(t.pos, from) > 0;
+    // p5t：Guard 在「回合结束时贴掩体」获得（见 Unit.guard）；directional：GDD 草案的实时方向判定
+    const cover = this.opts.coverModel === 'p5t' ? t.guard : this.grid.coverAgainst(t.pos, from) > 0;
     if (cover) return true;
     return kind === 'gun' && this.grid.h(t.pos) > this.grid.h(from);
+  }
+  /** 此刻是否满足获得 Guard 的条件（贴掩体；Never Say Die + Charge 任何地方都算；插旗附近的敌人不能获得） */
+  coverNow(u: Unit): boolean {
+    if (u.side === 'neutral' || u.decoy || u.ko) return false;
+    if (u.side === 'enemy' && this.flagCovers(u.pos)) return false;
+    if (this.has(u, 'neverSayDie') && u.charged) return true;
+    return this.grid.hasAnyCover(u.pos) > 0;
+  }
+  private flagCovers(p: Vec) {
+    return this.units.some((f) => !f.ko && f.prop === 'flag' && manhattan(f.pos, p) <= (f.aura ?? 3));
+  }
+  /** 一方回合结束：贴掩体的获得 Guard（Samurai Gamers Guard Guide：End a character's turn while being covered），回合结束类被动 */
+  updateGuards(side: 'ally' | 'enemy') {
+    for (const u of this.alive(side)) {
+      if (u.decoy) continue;
+      const g = this.coverNow(u);
+      if (g !== u.guard) { u.guard = g; this.emit({ type: 'guard', unitId: u.id, on: g }); }
+      if (this.has(u, 'regenerate1') && u.hp < u.maxHp) this.healUnit(u, Math.max(1, Math.round(u.maxHp * REGEN_RATIO)));
+      if (this.has(u, 'invigorate1')) u.sp = Math.min(u.maxSp, u.sp + Math.max(1, Math.round(u.maxSp * INVIG_RATIO)));
+      if (this.has(u, 'soulRepose') && u.guard) u.sp = Math.min(u.maxSp, u.sp + Math.max(1, Math.round(u.maxSp * SOUL_REPOSE_RATIO)));
+    }
+  }
+  /** 掩体消失（被推走、门打开、升降台移动、插旗）→ 失去 Guard */
+  recheckGuards() {
+    for (const u of this.units) if (u.guard && !u.ko && !this.coverNow(u)) { u.guard = false; this.emit({ type: 'guard', unitId: u.id, on: false }); }
+  }
+  healUnit(u: Unit, amount: number) {
+    const amt = Math.max(0, Math.min(u.maxHp - u.hp, amount));
+    u.hp += amt;
+    this.emit({ type: 'heal', unitId: u.id, amount: amt, hpLeft: u.hp });
   }
   /** 显示用掩体等级 */
   coverOf(t: Unit, from: Vec): CoverLevel {
@@ -241,7 +316,7 @@ export class Battle {
     return (from.x - t.pos.x) * t.facing.x + (from.y - t.pos.y) * t.facing.y > 0;
   }
   private targetable(a: Unit, t: Unit) {
-    return !t.ko && a !== t && a.side !== t.side && t.prop !== 'speaker';
+    return !t.ko && a !== t && a.side !== t.side && t.prop !== 'speaker' && t.prop !== 'flag';
   }
   canMelee(a: Unit, t: Unit, from: Vec = a.pos) {
     return !a.escort && a.melee > 0 && this.targetable(a, t) && manhattan(from, t.pos) === 1 && this.grid.h(from) === this.grid.h(t.pos);
@@ -253,12 +328,21 @@ export class Battle {
   /** 技能无视墙体/障碍（原作：Skills bypass obstacles），只看射程与 SP；回复/辅助对友方 */
   canSkill(a: Unit, s: SkillDef, t: Unit, from: Vec = a.pos) {
     if (a.escort || t.ko) return false;
-    if (s.voltage ? this.voltage < VOLTAGE_MAX || !this.opts.voltage : a.sp < s.sp) return false;
+    if (s.voltage ? this.voltage < VOLTAGE_MAX || !this.opts.voltage : a.sp < this.spCost(a, s)) return false;
     const friendly = s.kind !== 'attack';
     if (friendly ? t.side !== a.side : !this.targetable(a, t)) return false;
     if (s.shape === 'self') return friendly ? true : manhattan(from, t.pos) <= (s.radius ?? 0) + this.chargeBonus(a).skillArea;
     if (s.shape === 'line') return manhattan(from, t.pos) <= (s.length ?? 1) && (from.x === t.pos.x || from.y === t.pos.y);
-    return manhattan(from, t.pos) <= s.range;
+    return manhattan(from, t.pos) <= this.skillRange(a, s);
+  }
+  skillRange(a: Unit, s: SkillDef) { return s.range + (this.has(a, 'magicalMastery') && s.range > 0 ? 1 : 0); }
+  /** Unstoppable：1 More 中攻击技能 SP 减半 */
+  spCost(a: Unit, s: SkillDef) { return s.kind === 'attack' && this.inOneMore.has(a.id) && this.has(a, 'unstoppable') ? Math.ceil(s.sp / 2) : s.sp; }
+  /** 以格子为目标的技能（Like a Phantom / Flag of Freedom） */
+  canSkillAt(a: Unit, s: SkillDef, p: Vec, from: Vec = a.pos) {
+    if (a.escort || a.decoy) return false;
+    if (s.voltage ? this.voltage < VOLTAGE_MAX || !this.opts.voltage : a.sp < s.sp) return false;
+    return this.grid.inBounds(p) && manhattan(from, p) <= this.skillRange(a, s);
   }
   /** 预估（UI 预览，「GET EM!!」提示 = willDown） */
   previewDamage(a: Unit, t: Unit, kind: ActKind, skill?: SkillDef, from: Vec = a.pos) {
@@ -266,17 +350,25 @@ export class Battle {
     const cb = this.chargeBonus(a);
     const miss = kind === 'gun' && (this.grid.fullCoverBlocks(t.pos, from) || this.shieldFront(t, from));
     const base = kind === 'melee' ? a.melee : kind === 'gun' ? a.gun!.power : Math.round(skill!.power * SKILL_SCALE);
-    const amount = miss ? 0 : this.calcDamage(a, t, base * cb.pow, resist);
+    // 近战伤害不受 Guard 减免（Samurai Gamers Guard Guide），仍不能打倒
+    const amount = miss ? 0 : this.calcDamage(a, t, base * cb.pow * this.trumpMult(a), kind === 'melee' ? false : resist);
     const forced = (kind === 'gun' && cb.bulletBreak) || !!skill?.downThroughCover;
-    const noDown = t.side === 'neutral' || t.role === 'launcher' || (t.role === 'shielder' && kind !== 'gun');
+    const noDown = t.side === 'neutral' || t.role === 'launcher' || (t.role === 'shielder' && kind !== 'gun') || (t.role === 'revenger' && t.counterReady);
     return { amount, cover: this.coverOf(t, from), resist, miss, willDown: !miss && (!resist || forced) && !t.downed && !noDown };
   }
+  private trumpMult(a: Unit) { return a.used.includes('trumpReady') ? TRUMP_MULT : 1; }
   private calcDamage(a: Unit | null, t: Unit, base: number, resist: boolean) {
     if (base <= 0) return 0;
     let d = base;
     if (a && this.hasBuff(a, 'atk')) d *= BUFF_ATK;
     if (this.hasBuff(t, 'def')) d *= BUFF_DEF;
-    if (resist) d *= RESIST_MULT;
+    if (a) {
+      if (this.has(a, 'punisherOfReckless') && !t.guard) d *= DMG_UP_SMALL;
+      if (this.has(a, 'sharpEyedWildcat') && t.guard) d *= DMG_UP_SMALL;
+      if (this.has(a, 'finishingBlow') && t.downed) d *= DMG_UP_SMALL;
+    }
+    if (this.has(t, 'ironBody') && t.hitsTaken >= 2) d *= IRON_BODY_MULT;
+    if (resist) { d *= RESIST_MULT; if (this.has(t, 'ironcladGuard') && t.guard) d *= IRONCLAD_MULT; }
     return Math.max(1, Math.round(d));
   }
   /** 三名我方围成的三角内的敌人（Triple Threat 无距离限制：RPG Site 评测更正） */
@@ -286,16 +378,23 @@ export class Battle {
     const [a, b, c] = allies.map((u) => u.pos);
     return this.alive('enemy').filter((e) => pointInTriangle(e.pos, a, b, c)).map((e) => e.id);
   }
-  /** 当前可否发动 Triple Threat：有人持 1 More，三角内有倒地敌人；我方有除灼烧/绝望外的异常则不行（Cogito AAA107） */
-  get pendingTriple(): TriplePending | null {
+  /**
+   * 当前可否发动 Triple Threat（Cogito AAA107 + Gamer Guides Triple Threat 页）：持 1 More 的角色，**它自己打倒的那个敌人**
+   * 在三名主力围成的三角里（别人打倒的不算）；我方有除灼烧/绝望外的异常则不行。护送对象可以发动但不构成三角。
+   */
+  get pendingTriple(): TriplePending | null { return this.tripleFor(); }
+  tripleFor(attackerId?: string): TriplePending | null {
     if (this.phase !== 'player') return null;
     const main = this.mainAllies();
     if (main.some((u) => u.status.some((s) => s.id !== 'burn' && s.id !== 'despair'))) return null;
-    const holder = this.alive('ally').find((a) => a.oneMore && !a.acted);
-    if (!holder) return null;
     const victims = this.triangleVictims();
-    const downed = victims.find((id) => this.unit(id).downed);
-    return downed ? { attackerId: holder.id, targetId: downed, victims } : null;
+    if (!victims.length) return null;
+    for (const holder of this.alive('ally')) {
+      if (!holder.oneMore || holder.acted || (attackerId && holder.id !== attackerId)) continue;
+      const mine = victims.find((id) => this.unit(id).downed && this.downedBy.get(id) === holder.id);
+      if (mine) return { attackerId: holder.id, targetId: mine, victims };
+    }
+    return null;
   }
   /** 喇叭当前禁止的行动 */
   speakerBans(): { id: string; pos: Vec; ban: ActKind }[] {
@@ -305,16 +404,36 @@ export class Battle {
 
   // ---------- 流程 ----------
   start(): BattleEvent[] {
+    // 开场：已经贴着掩体的单位视为上回合结束时就位 → 带 Guard
+    for (const u of this.units) if (!u.ko && u.side !== 'neutral') u.guard = this.coverNow(u);
     this.startPlayerPhase();
+    return this.flush();
+  }
+
+  /** 换装 Charge 技能（原作在技能树里二选一；这里只允许在还没 Charge 时切换） */
+  selectCharge(unitId: string, charge: ChargeId): BattleEvent[] {
+    const u = this.unit(unitId);
+    if (!u.charges?.includes(charge)) return this.err('这名角色没有这个 Charge 技能');
+    if (u.charged) return this.err('Charge 中不能换');
+    u.charge = charge;
+    this.emit({ type: 'message', text: `${u.name} 装备 Charge：${charge}` });
     return this.flush();
   }
 
   /** 一方阶段开始：起身、恢复 Resistance、异常/增益结算 */
   beginSidePhase(side: 'ally' | 'enemy') {
     this.pathway.clear();
+    this.inOneMore.clear();
+    if (side === 'ally') {
+      this.turnUsed.clear();
+      this.downedBy.clear();
+      // Revenger 的反击每回合刷新（Gamer Guides One More 表）
+      for (const e of this.alive('enemy')) if (e.role === 'revenger') e.counterReady = true;
+    }
+    for (const u of this.units) if (!u.ko) u.hitsTaken = 0;
     for (const u of this.alive(side)) {
-      u.moved = false; u.acted = false; u.oneMore = false; u.resistBroken = false; u.attackedThisAction = false; u.dashed = false;
-      u.followUps = this.opts.followUps;
+      u.moved = false; u.acted = !!u.decoy; u.oneMore = false; u.resistBroken = false; u.attackedThisAction = false; u.dashed = false; u.dashedAction = false;
+      u.followUps = this.opts.followUps + (this.has(u, 'followUpPlus') ? 1 : 0);
       u.anchor = { ...u.pos };
       u.bonusMove = this.pendingBonus.get(u.id) ?? 0;
       this.pendingBonus.delete(u.id);
@@ -369,6 +488,8 @@ export class Battle {
     const w = this.map.win;
     if (w.type === 'survive' && this.turn > w.turns) return this.finish('won');
     if (this.map.turnLimit && this.turn > this.map.turnLimit) return this.finish('lost', '超过回合上限');
+    // 定时门：每 everyTurns 回合开关一次（Neoseeker M24/M25「doors opening every other turn」）
+    for (const d of this.map.doors ?? []) if (d.everyTurns && this.turn > 1 && (this.turn - 1) % d.everyTurns === 0) this.setDoor(d.id, !this.rt.doors.get(d.id));
     this.beginSidePhase('ally');
     if (this.checkEnd()) return;
     for (const u of this.units) if (u.side === 'ally' && u.ko && !u.reserve) this.offerBaton(u);
@@ -382,6 +503,7 @@ export class Battle {
     if (u.ko) return '已倒下';
     if (needAction && u.acted) return '已行动';
     if (needAction && this.noAction.has(u.id)) return '冻结/睡眠中，不能行动';
+    if (u.decoy) return '诱饵不能行动';
     return null;
   }
   private attackGuard(u: Unit): string | null {
@@ -403,16 +525,26 @@ export class Battle {
     if (this.immobile.has(u.id)) return this.err('本回合不能移动');
     const path = this.pathFor(u, dest);
     if (!path.length) return this.err('到不了那里');
-    const from = { ...u.pos };
-    u.pos = { ...dest };
+    this.moveAlong(u, path);
     u.moved = !eq(dest, u.anchor);
-    this.emit({ type: 'move', unitId, path, from });
+    this.checkReach();
+    this.checkEnd();
+    return this.flush();
+  }
+
+  /** 沿路径移动（我方/敌方共用）：Dash 事件、摄像头、开关、出口 */
+  moveAlong(u: Unit, path: Vec[]) {
+    const from = { ...u.pos };
+    const dest = path[path.length - 1];
+    u.pos = { ...dest };
+    this.emit({ type: 'move', unitId: u.id, path, from });
+    u.dashedAction = false;
     for (let i = 1; i < path.length; i++) {
       const l = this.grid.linkBetween(path[i - 1], path[i]);
-      if (l) { u.dashed = true; this.emit({ type: 'dash', unitId, from: path[i - 1], to: path[i], kind: l.kind }); this.pathway.delete(u.id); }
+      if (l) { u.dashed = true; u.dashedAction = true; this.emit({ type: 'dash', unitId: u.id, from: path[i - 1], to: path[i], kind: l.kind }); this.pathway.delete(u.id); }
     }
-    this.checkReach();
-    return this.flush();
+    if (u.side === 'ally') this.checkCameras(u, path);
+    this.applyMechanisms();
   }
 
   melee(unitId: string, targetId: string): BattleEvent[] {
@@ -449,6 +581,20 @@ export class Battle {
     return this.flush();
   }
 
+  /** 以格子为目标的 Unique（Like a Phantom 放诱饵 / Flag of Freedom 插旗） */
+  uniqueAt(unitId: string, at: Vec): BattleEvent[] {
+    const u = this.unit(unitId);
+    const s = u.unique;
+    if (!s) return this.err('没有专属技能');
+    const g = this.guard(u) ?? (this.canSkillAt(u, s, at) ? null : 'Voltage 未满或超出射程');
+    if (g) return this.err(g);
+    this.beginAct(u, 'skill');
+    const hits = this.doSkill(u, s, at);
+    if (s.extraAction) { this.finishExtra(u); return this.flush(); }
+    this.finishAct(u, hits);
+    return this.flush();
+  }
+
   /** Unique（Voltage）技能：self 型无需目标 */
   unique(unitId: string, targetId?: string): BattleEvent[] {
     const u = this.unit(unitId);
@@ -477,6 +623,17 @@ export class Battle {
       if (!v.ko) this.breakResist(v);
     }
     if (!v.ko) this.afterLand(v, l, h0);
+    this.applyMechanisms();
+  }
+
+  /** 支援者：把我方一名单位与一名敌人换位（Cogito AAA115 Supporter：「swap the position of an ally with a random enemy」） */
+  swapUnits(by: Unit, a: Unit, b: Unit) {
+    const pa = { ...a.pos };
+    a.pos = { ...b.pos }; b.pos = pa;
+    this.emit({ type: 'swap', unitId: a.id, withId: b.id });
+    this.afterLand(a, null); this.afterLand(b, null);
+    this.applyMechanisms();
+    void by;
   }
 
   /** 待机：不攻击就结束 → Charge（Fandom P5T Gameplay / Cogito AAA108） */
@@ -493,9 +650,9 @@ export class Battle {
 
   /** 发动 Triple Threat：用掉持有者的 1 More；三角内所有敌人受伤（无视 Resistance） */
   tripleThreat(attackerId?: string): BattleEvent[] {
-    const p = this.pendingTriple;
-    if (!p) return this.err('现在不能总攻');
-    const attacker = this.unit(attackerId && this.unit(attackerId).oneMore ? attackerId : p.attackerId);
+    const p = this.tripleFor(attackerId) ?? (attackerId ? null : this.pendingTriple);
+    if (!p) return this.err('现在不能总攻（需要持 1 More 的角色把它自己打倒的敌人围进三角）');
+    const attacker = this.unit(p.attackerId);
     attacker.acted = true; attacker.oneMore = false; attacker.attackedThisAction = true;
     const allies = this.mainAllies();
     this.emit({ type: 'tripleThreat', attackerId: attacker.id, allies: allies.map((a) => a.id), victims: p.victims });
@@ -504,6 +661,8 @@ export class Battle {
       const v = this.unit(id);
       if (!v.ko) this.applyDamage(v, dmg, 0, false, 'triple', attacker);
     }
+    // Break & Recovery：总攻后全员回复
+    if (allies.some((a) => this.has(a, 'breakAndRecovery'))) for (const a of allies) this.healUnit(a, Math.round(a.maxHp * BREAK_RECOVERY_RATIO));
     if (!this.checkEnd()) this.autoEndIfDone();
     return this.flush();
   }
@@ -558,7 +717,10 @@ export class Battle {
     const c = this.activeCharge(u);
     if (c) { u.charged = false; this.emit({ type: 'chargeUsed', unitId: u.id, charge: c }); }
     u.attackedThisAction = true;
-    return cb;
+    // Trump Card 的「下次攻击 ×1.5」在这次攻击用掉；Daredevil 击退 +2
+    const pow = cb.pow * this.trumpMult(u);
+    u.used = u.used.filter((x) => x !== 'trumpReady');
+    return { ...cb, pow, knock: cb.knock + (this.has(u, 'daredevil') ? DAREDEVIL_KNOCK : 0) };
   }
   private maybeCharge(u: Unit) {
     if (!this.opts.charge || !u.charge || u.attackedThisAction || u.charged || u.ko || this.noAction.has(u.id) || u.side !== 'ally') return;
@@ -572,8 +734,12 @@ export class Battle {
     this.emit({ type: 'attack', kind: 'melee', attackerId: u.id, targetId: t.id });
     if (t.prop === 'barrel') { this.explode(t, u); return []; }
     const resist = this.hasResistance(t, u.pos, 'melee');
-    if (t.prop !== 'box') this.applyDamage(t, this.calcDamage(u, t, u.melee * cb.pow, resist), this.coverOf(t, u.pos), resist, 'melee', u);
-    const hit: Hit = { t, resist, noDown: t.role === 'shielder' || t.role === 'launcher' };
+    const noDown = t.role === 'shielder' || t.role === 'launcher' || (t.role === 'revenger' && t.counterReady);
+    // 近战伤害不受 Guard 减免（Samurai Gamers Guard Guide），但掩体中的目标不会被打倒
+    if (t.prop !== 'box') this.applyDamage(t, this.calcDamage(u, t, u.melee * cb.pow, false), this.coverOf(t, u.pos), resist, 'melee', u);
+    const lucky = this.has(u, 'luckyPunch') && this.rng() < LUCKY_CHANCE;
+    if (lucky) this.emit({ type: 'passive', unitId: u.id, passive: 'luckyPunch' });
+    const hit: Hit = { t, resist, noDown, forceDown: lucky };
     if (!t.ko) {
       const old = { ...t.pos };
       const moved = this.push(t, this.dirFrom(u.pos, t.pos), MELEE_KNOCKBACK + cb.knock, u, false);
@@ -599,9 +765,21 @@ export class Battle {
       if (this.grid.fullCoverBlocks(v.pos, u.pos)) { this.emit({ type: 'miss', unitId: v.id, reason: 'fullCover' }); hits.push({ t: v, resist: true, missed: true }); continue; }
       if (this.shieldFront(v, u.pos)) { this.emit({ type: 'miss', unitId: v.id, reason: 'shield' }); hits.push({ t: v, resist: true, missed: true }); continue; }
       const resist = this.hasResistance(v, u.pos, 'gun');
+      const noDown = v.role === 'launcher' || (v.role === 'revenger' && v.counterReady);
       this.applyDamage(v, this.calcDamage(u, v, u.gun!.power * cb.pow, resist), this.coverOf(v, u.pos), resist, 'gun', u);
-      hits.push({ t: v, resist, forceDown: cb.bulletBreak, noDown: v.role === 'launcher' });
+      // Broad Perspective：从高处射击有几率打倒
+      const broad = this.has(u, 'broadPerspective') && this.grid.h(u.pos) > this.grid.h(v.pos) && this.rng() < BROAD_CHANCE;
+      if (broad) this.emit({ type: 'passive', unitId: u.id, passive: 'broadPerspective' });
+      hits.push({ t: v, resist, forceDown: cb.bulletBreak || broad, noDown });
       if (!v.ko) this.onHitReaction(v, u);
+    }
+    // Reverse the Scales：1 More 中开枪 → 与目标换位，每回合一次
+    if (this.has(u, 'reverseTheScales') && this.inOneMore.has(u.id) && !t.ko && !u.ko && !t.prop && t.role !== 'shielder' && !this.turnUsed.has(`${u.id}:rts`)) {
+      this.turnUsed.add(`${u.id}:rts`);
+      this.emit({ type: 'passive', unitId: u.id, passive: 'reverseTheScales' });
+      const a = { ...u.pos }; u.pos = { ...t.pos }; t.pos = a;
+      this.emit({ type: 'swap', unitId: u.id, withId: t.id });
+      this.afterLand(u, null); this.afterLand(t, null);
     }
     return hits;
   }
@@ -613,7 +791,7 @@ export class Battle {
       this.voltage = 0;
       this.emit({ type: 'uniqueSkill', unitId: u.id, skillId: s.id });
       this.emit({ type: 'voltage', value: 0, max: VOLTAGE_MAX });
-    } else u.sp -= s.sp;
+    } else u.sp -= this.spCost(u, s);
     const primary = this.unitAt(center);
     this.emit({ type: 'attack', kind: s.voltage ? 'unique' : 'skill', attackerId: u.id, targetId: primary?.id ?? u.id, skillId: s.id });
     const area = (s.radius ?? 0) + (s.kind === 'attack' ? cb.skillArea : 0);
@@ -630,6 +808,17 @@ export class Battle {
             : tiles!.some((p) => eq(p, o.pos));
     if (s.kind !== 'attack') {
       if (s.moveBoost) { this.pathway.add(u.id); this.emit({ type: 'buff', unitId: u.id, buff: 'move', turns: 1 }); return []; }
+      if (s.decoys) { this.summonDecoys(u, center, s.decoys); return []; }
+      if (s.flag) { this.placeFlag(u, center, s.radius ?? 3); return []; }
+      if (s.allyExtra) {
+        for (const a of this.mainAllies()) if (a !== u && a.acted) {
+          a.acted = false; a.moved = false; a.anchor = { ...a.pos }; a.attackedThisAction = false;
+          this.emit({ type: 'oneMore', unitId: a.id });
+        }
+        this.voltageLockUntil = this.turn + TRUTH_SEEKER_LOCK - 1;
+        this.emit({ type: 'message', text: `其余队员可再行动一次；第 ${this.voltageLockUntil} 回合前 Voltage 不涨` });
+        return [];
+      }
       const targets = this.alive(u.side as 'ally' | 'enemy').filter(inShape);
       for (const o of targets) {
         if (s.kind === 'heal') {
@@ -658,7 +847,7 @@ export class Battle {
       if (o.prop === 'box') continue;
       const resist = this.hasResistance(o, u.pos, 'skill');
       this.applyDamage(o, this.calcDamage(u, o, base, resist), this.coverOf(o, u.pos), resist, s.voltage ? 'unique' : 'skill', u);
-      hits.push({ t: o, resist, forceDown: s.downThroughCover, noDown: o.role === 'shielder' || o.role === 'launcher' });
+      hits.push({ t: o, resist, forceDown: s.downThroughCover, noDown: o.role === 'shielder' || o.role === 'launcher' || (o.role === 'revenger' && o.counterReady) });
       if (o.ko) continue;
       this.breakResist(o); // 任何攻击技能都会打破 Resistance
       const st = s.effect ? STATUS_OF[s.effect] : undefined;
@@ -682,8 +871,35 @@ export class Battle {
     return hits;
   }
 
+  /** Like a Phantom：在目标格附近放诱饵（敌人优先攻击，被打一下消失） */
+  summonDecoys(owner: Unit, at: Vec, n: number) {
+    for (let i = 0; i < n; i++) {
+      const p = this.nearestFree(at);
+      if (!p) break;
+      const d = this.makeUnit({ ...decoyDef(`decoy${++this.seq}`), ownerId: owner.id }, p);
+      d.acted = true;
+      this.units.push(d);
+      this.emit({ type: 'decoy', unitId: d.id, ownerId: owner.id, at: p });
+    }
+  }
+  /** Flag of Freedom：插旗；旗子半径内敌人失去掩护且不能获得 Guard，我方回合结束回复 */
+  placeFlag(owner: Unit, at: Vec, radius: number) {
+    const p = this.unitAt(at) ? this.nearestFree(at) : at;
+    if (!p) return;
+    const f = this.makeUnit({ id: `flag${++this.seq}`, name: '自由之旗', side: 'neutral', prop: 'flag', maxHp: 999, maxSp: 0, move: 0, melee: 0, skills: [], aura: radius, ownerId: owner.id }, p);
+    this.units.push(f);
+    this.emit({ type: 'flagPlaced', unitId: f.id, ownerId: owner.id, at: p });
+    for (const e of this.alive('enemy')) if (manhattan(e.pos, p) <= radius) this.breakResist(e);
+    this.recheckGuards();
+  }
+
   addStatus(o: Unit, st: StatusId) {
     if (o.side === 'neutral') return;
+    // Ailment Shield：相邻队友自动解除异常，每回合一次
+    if (o.side === 'ally') {
+      const sh = this.alive('ally').find((a) => a !== o && this.has(a, 'ailmentShield') && manhattan(a.pos, o.pos) === 1 && !this.turnUsed.has(`${a.id}:as`));
+      if (sh) { this.turnUsed.add(`${sh.id}:as`); this.emit({ type: 'passive', unitId: sh.id, passive: 'ailmentShield' }); return; }
+    }
     o.status = o.status.filter((x) => x.id !== st);
     o.status.push({ id: st, turns: STATUS_TURNS[st] });
     this.emit({ type: 'status', unitId: o.id, status: st, turns: STATUS_TURNS[st] });
@@ -699,7 +915,15 @@ export class Battle {
       this.emit({ type: 'teleportSwap', unitId: t.id, withId: by.id });
       this.afterLand(by, null); this.afterLand(t, null);
     }
-    if (t.role === 'revenger' && !t.downed) {
+    // Revenger：每回合第一次被打就跳过去反击，然后失去 Resistance（Cogito AAA115 / Twinfinite / Gamer Guides One More 表）
+    if (t.role === 'revenger' && t.counterReady) {
+      t.counterReady = false;
+      this.counterAttack(t, by);
+      if (!t.ko) this.breakResist(t);
+    }
+  }
+  private counterAttack(t: Unit, by: Unit) {
+    {
       const spots = DIRS.map((d) => add(by.pos, d))
         .filter((p) => this.grid.walkable(p) && !this.unitAt(p) && this.grid.h(p) === this.grid.h(by.pos) && manhattan(p, t.pos) <= REVENGER_LEAP)
         .sort((a, b) => manhattan(a, t.pos) - manhattan(b, t.pos));
@@ -710,7 +934,7 @@ export class Battle {
       this.emit({ type: 'counter', unitId: t.id, targetId: by.id, from, to: spot });
       this.emit({ type: 'attack', kind: 'counter', attackerId: t.id, targetId: by.id });
       const resist = this.hasResistance(by, t.pos, 'melee');
-      this.applyDamage(by, this.calcDamage(t, by, t.melee, resist), this.coverOf(by, t.pos), resist, 'counter', t);
+      this.applyDamage(by, this.calcDamage(t, by, t.melee, false), this.coverOf(by, t.pos), resist, 'counter', t);
       if (!by.ko) {
         const old = { ...by.pos };
         if (this.push(by, this.dirFrom(t.pos, by.pos), MELEE_KNOCKBACK, t, false) && !this.unitAt(old)) {
@@ -737,7 +961,7 @@ export class Battle {
 
   /** 我方行动结算：倒地 → 1 More；Follow-Up 记功也给 1 More */
   private finishAct(u: Unit, hits: Hit[]) {
-    const downedAny = this.markDowns(hits);
+    const downedAny = this.markDowns(hits, u);
     const credited = this.credit.delete(u.id);
     u.acted = true;
     if (this.checkEnd()) return;
@@ -752,10 +976,11 @@ export class Battle {
   }
   grantOneMore(u: Unit) {
     u.oneMore = true;
-    u.acted = false; u.moved = false; u.attackedThisAction = false;
+    u.acted = false; u.moved = false; u.attackedThisAction = false; u.dashedAction = false;
     u.anchor = { ...u.pos };
-    // 绝望偷来的移动力在「下一次移动」生效（可以是这次 1 More）
-    u.bonusMove = this.pendingBonus.get(u.id) ?? 0;
+    this.inOneMore.add(u.id);
+    // 绝望偷来的移动力在「下一次移动」生效（可以是这次 1 More）；Comandante：1 More 时移动 +1
+    u.bonusMove = (this.pendingBonus.get(u.id) ?? 0) + (this.has(u, 'comandante') ? 1 : 0);
     this.pendingBonus.delete(u.id);
     this.emit({ type: 'oneMore', unitId: u.id });
   }
@@ -763,13 +988,16 @@ export class Battle {
    * 命中结算：没有 Resistance（或强制打倒）且未倒地的目标 → 倒地。返回是否打倒了任何目标。
    * 1 More 可无限连锁，只要每次打倒的是不同敌人；范围攻击打倒多个也只给一次 1 More。
    */
-  markDowns(hits: Hit[]): boolean {
+  markDowns(hits: Hit[], by?: Unit): boolean {
     let downedAny = false;
     for (const h of hits) {
-      if (h.missed || h.t.ko || h.t.downed || h.noDown || h.t.side === 'neutral') continue;
+      if (h.missed || h.t.ko || h.t.downed || h.t.side === 'neutral' || h.t.decoy) continue;
+      // forceDown（Phantom Judge / Bullet Break / Broad Perspective / Lucky Punch）无视掩体；Launcher 永远不能被打倒
+      if (h.noDown && !(h.forceDown && h.t.role !== 'launcher' && h.t.role !== 'shielder')) continue;
       if (h.resist && !h.forceDown) continue;
       h.t.downed = true;
       downedAny = true;
+      if (by) this.downedBy.set(h.t.id, by.id);
       this.emit({ type: 'down', unitId: h.t.id });
     }
     return downedAny;
@@ -846,8 +1074,10 @@ export class Battle {
     this.afterLand(t, by);
   }
 
-  /** 位置改变后：坠落伤害、Follow-Up、出口判定 */
+  /** 位置改变后：坠落伤害、Follow-Up、掩体变化、摄像头 */
   private afterLand(t: Unit, by: Unit | null, fromH = this.grid.h(t.pos)) {
+    if (t.guard && !this.coverNow(t)) { t.guard = false; this.emit({ type: 'guard', unitId: t.id, on: false }); }
+    if (t.side === 'ally' && !t.ko) this.checkCameras(t, [t.pos]);
     const h1 = this.grid.h(t.pos);
     if (h1 < fromH && !t.ko) {
       this.emit({ type: 'fall', unitId: t.id, from: t.pos, to: t.pos, height: fromH - h1 });
@@ -873,7 +1103,7 @@ export class Battle {
     this.emit({ type: 'followUp', shooterId: shooter.id, targetId: t.id, creditId: by.id });
     this.emit({ type: 'attack', kind: 'followUp', attackerId: shooter.id, targetId: t.id });
     this.applyDamage(t, this.calcDamage(shooter, t, shooter.gun!.power, false), 0, false, 'followUp', shooter);
-    if (!t.ko && !t.downed && t.role !== 'launcher') { t.downed = true; this.emit({ type: 'down', unitId: t.id }); }
+    if (!t.ko && !t.downed && t.role !== 'launcher') { t.downed = true; this.downedBy.set(t.id, by.id); this.emit({ type: 'down', unitId: t.id }); }
     this.credit.add(by.id);
   }
 
@@ -896,15 +1126,40 @@ export class Battle {
   }
 
   breakResist(u: Unit) {
-    if (u.resistBroken || u.ko || u.side === 'neutral') return;
+    if (u.ko || u.side === 'neutral') return;
+    if (u.guard) { u.guard = false; this.emit({ type: 'guard', unitId: u.id, on: false }); }
+    if (u.resistBroken) return;
     u.resistBroken = true;
     this.emit({ type: 'resistBroken', unitId: u.id });
   }
 
   applyDamage(t: Unit, amount: number, cover: CoverLevel, resist: boolean, source: DamageSource, by: Unit | null) {
-    t.hp = Math.max(0, t.hp - amount);
+    const before = t.hp;
+    t.hp = Math.max(t.hpFloor && t.hpFloor > 0 ? Math.min(t.hpFloor, before) : 0, t.hp - amount);
+    if (by && source !== 'status' && source !== 'penalty') t.hitsTaken++;
     this.emit({ type: 'damage', unitId: t.id, amount, cover, resist, hpLeft: t.hp, source });
+    if (t.decoy && amount > 0) {
+      t.hp = 0; t.ko = true;
+      this.emit({ type: 'ko', unitId: t.id });
+      return;
+    }
     if (t.side === 'ally' && amount > 0) this.hurtCount++;
+    // Endure：被打倒时以 1 HP 复活，每场一次
+    if (t.hp === 0 && this.has(t, 'endure') && !t.used.includes('endure')) {
+      t.used.push('endure'); t.hp = 1;
+      this.emit({ type: 'passive', unitId: t.id, passive: 'endure' });
+    }
+    // Trump Card：HP 跌破 50% → 回复并让下次攻击 ×1.5，每场一次
+    if (t.hp > 0 && before >= t.maxHp / 2 && t.hp < t.maxHp / 2 && this.has(t, 'trumpCard') && !t.used.includes('trumpCard')) {
+      t.used.push('trumpCard', 'trumpReady');
+      this.emit({ type: 'passive', unitId: t.id, passive: 'trumpCard' });
+      this.healUnit(t, Math.round(TRUMP_HEAL_POWER * HEAL_SCALE));
+    }
+    // First Aid：附近队友受伤时自动回复，每回合一次
+    if (t.side === 'ally' && t.hp > 0 && amount > 0) {
+      const fa = this.alive('ally').find((a) => a !== t && this.has(a, 'firstAid') && manhattan(a.pos, t.pos) <= FIRST_AID_RANGE && !this.turnUsed.has(`${a.id}:fa`));
+      if (fa) { this.turnUsed.add(`${fa.id}:fa`); this.emit({ type: 'passive', unitId: fa.id, passive: 'firstAid' }); this.healUnit(t, Math.round(FIRST_AID_POWER * HEAL_SCALE)); }
+    }
     // 受伤解除冻结/睡眠（Cogito AAA101）
     if (source !== 'status' && amount > 0) for (const id of ['freeze', 'sleep'] as const) {
       if (this.hasStatus(t, id)) {
@@ -914,13 +1169,13 @@ export class Battle {
       }
     }
     // Voltage：我方造成或受到伤害都会涨（Cogito AAA109）
-    if (this.opts.voltage && amount > 0 && (t.side === 'ally' || by?.side === 'ally') && this.voltage < VOLTAGE_MAX) {
+    if (this.opts.voltage && amount > 0 && (t.side === 'ally' || by?.side === 'ally') && this.voltage < VOLTAGE_MAX && this.turn > this.voltageLockUntil) {
       this.voltage = Math.min(VOLTAGE_MAX, this.voltage + Math.round(amount * VOLTAGE_RATE));
       this.emit({ type: 'voltage', value: this.voltage, max: VOLTAGE_MAX });
     }
     if (t.hp === 0 && !t.ko) {
       t.ko = true; t.downed = false;
-      if (t.side === 'ally') { this.everKo = true; this.offerBaton(t); }
+      if (t.side === 'ally' && !t.decoy) { this.everKo = true; this.offerBaton(t); }
       this.emit({ type: 'ko', unitId: t.id });
     }
   }
@@ -947,13 +1202,138 @@ export class Battle {
 
   private runEnemyPhase() {
     for (const a of this.alive('ally')) { if (!a.acted) this.maybeCharge(a); a.oneMore = false; }
+    // 我方回合结束：贴掩体 → Guard；回合结束类被动；旗子回复
+    this.updateGuards('ally');
+    for (const f of this.units) if (!f.ko && f.prop === 'flag') {
+      for (const a of this.alive('ally')) if (!a.decoy && manhattan(a.pos, f.pos) <= (f.aura ?? 3) && a.hp < a.maxHp) this.healUnit(a, Math.round(a.maxHp * FLAG_HEAL_RATIO));
+    }
     this.phase = 'enemy';
     this.emit({ type: 'phaseStart', phase: 'enemy', turn: this.turn });
     this.beginSidePhase('enemy');
     if (this.checkEnd()) return;
     runEnemyTurn(this);
     if (this.checkEnd()) return;
+    this.updateGuards('enemy');
     this.startPlayerPhase();
+  }
+
+  // ---------- 地图机关 ----------
+  private paintDoor(id: string) {
+    const d = this.map.doors?.find((x) => x.id === id);
+    if (!d) return;
+    const open = this.rt.doors.get(id);
+    for (const c of d.cells) { if (open) this.grid.tileOverride.delete(key(c)); else this.grid.tileOverride.set(key(c), 'wall'); }
+  }
+  private paintElevator(id: string) {
+    const e = this.map.elevators?.find((x) => x.id === id);
+    if (!e) return;
+    const h = this.rt.elevators.get(id) ? e.high : e.low;
+    for (const c of e.cells) this.grid.heightOverride.set(key(c), h);
+  }
+  doorOpen(id: string) { return !!this.rt.doors.get(id); }
+  /** 开/关门；门格上有单位时关不上 */
+  setDoor(id: string, open: boolean) {
+    const d = this.map.doors?.find((x) => x.id === id);
+    if (!d || this.rt.doors.get(id) === open) return;
+    if (!open && d.cells.some((c) => this.unitAt(c))) return;
+    this.rt.doors.set(id, open);
+    this.paintDoor(id);
+    this.emit({ type: 'door', id, open });
+    this.recheckGuards();
+  }
+  /** 升降台上下：上面的单位跟着走（不算坠落）；高度变化会让周围单位失去/改变掩体 */
+  setElevator(id: string, up: boolean) {
+    const e = this.map.elevators?.find((x) => x.id === id);
+    if (!e || this.rt.elevators.get(id) === up) return;
+    this.rt.elevators.set(id, up);
+    this.paintElevator(id);
+    this.emit({ type: 'elevator', id, up, height: up ? e.high : e.low });
+    this.recheckGuards();
+  }
+  /** 开关检测：hold = 有人踩着时开门、离开时关；toggle/elevator = 踩上去的那一刻切换 */
+  applyMechanisms() {
+    for (const sw of this.map.switches ?? []) {
+      const occ = this.units.find((u) => !u.ko && u.side !== 'neutral' && !u.decoy && eq(u.pos, sw.pos))?.id ?? null;
+      const prev = this.rt.switchOcc.get(sw.id) ?? null;
+      if (occ === prev) continue;
+      this.rt.switchOcc.set(sw.id, occ);
+      if (occ) this.emit({ type: 'switch', id: sw.id, unitId: occ });
+      if (sw.kind === 'hold') for (const d of sw.doors ?? []) this.setDoor(d, !!occ);
+      else if (occ && sw.kind === 'toggle') for (const d of sw.doors ?? []) this.setDoor(d, !this.rt.doors.get(d));
+      else if (occ && sw.kind === 'elevator' && sw.elevator) this.setElevator(sw.elevator, !this.rt.elevators.get(sw.elevator));
+    }
+  }
+  /** 我方单位经过/停在摄像头监视范围 → 警报、召唤援军（每台摄像头一次） */
+  checkCameras(u: Unit, path: Vec[]) {
+    if (u.decoy) return;
+    for (const cam of this.map.cameras ?? []) {
+      if (this.rt.cameras.has(cam.id)) continue;
+      if (path.some((p) => cam.cells.some((c) => eq(c, p)))) this.triggerCamera(cam, u);
+    }
+  }
+  private triggerCamera(cam: CameraDef, u: Unit) {
+    this.rt.cameras.add(cam.id);
+    this.emit({ type: 'alarm', cameraId: cam.id, unitId: u.id });
+    if (cam.damage) this.applyDamage(u, cam.damage, 0, false, 'penalty', null);
+    this.spawnUnits(cam.spawn, `camera:${cam.id}`);
+  }
+  spawnUnits(list: { def: UnitDef; pos: Vec }[], source: string) {
+    const ids: string[] = [];
+    for (const { def, pos } of list) {
+      const p = this.unitAt(pos) || !this.grid.walkable(pos) ? this.nearestFree(pos) : pos;
+      if (!p) continue;
+      const nu = this.makeUnit(def, p);
+      nu.guard = this.coverNow(nu);
+      this.units.push(nu);
+      ids.push(nu.id);
+    }
+    if (ids.length) this.emit({ type: 'reinforce', unitIds: ids, source });
+    if (this.phase === 'player') { this.intents = computeIntents(this); this.emit({ type: 'intents', intents: this.intents }); }
+  }
+
+  // ---------- 关卡事件（中途援军 / Boss 阶段 / 开门 / 改目标） ----------
+  private eventFires(ev: MapEvent): boolean {
+    const w = ev.when;
+    switch (w.type) {
+      case 'turn': return this.turn === w.turn && (!w.phase || w.phase === this.phase);
+      case 'hpBelow': { const u = this.units.find((x) => x.id === w.unitId); return !!u && !u.ko && u.hp <= u.maxHp * w.ratio; }
+      case 'enemiesLeft': return this.alive('enemy').length <= w.n;
+      case 'unitKo': return !!this.units.find((x) => x.id === w.unitId)?.ko;
+      case 'reach': return this.units.some((u) => !u.ko && u.side === (w.side ?? 'ally') && eq(u.pos, w.pos));
+      case 'flag': return this.rt.flags.has(w.flag);
+    }
+  }
+  runEvents() {
+    if (this.inEvents || !this.map.events?.length) return;
+    this.inEvents = true;
+    try {
+      for (let guard = 0; guard < 20; guard++) {
+        const ev = this.map.events.find((e) => !this.rt.events.has(e.id) && this.eventFires(e));
+        if (!ev) break;
+        if (!ev.repeat) this.rt.events.add(ev.id);
+        for (const a of ev.do) this.doEventAction(a);
+        if (ev.repeat) break;
+      }
+    } finally { this.inEvents = false; }
+  }
+  private doEventAction(a: EventAction) {
+    switch (a.type) {
+      case 'spawn': this.spawnUnits(a.units, 'event'); break;
+      case 'message': this.emit({ type: 'message', text: a.text }); break;
+      case 'door': this.setDoor(a.id, a.open); break;
+      case 'setFlag': this.rt.flags.add(a.flag); break;
+      case 'setWin': (this.map as MapDef).win = a.win; if (a.objective) (this.map as MapDef).objective = a.objective; break;
+      case 'end': this.finish(a.outcome, a.reason); break;
+      case 'setUnit': {
+        const u = this.units.find((x) => x.id === a.unitId);
+        if (!u || u.ko) break;
+        Object.assign(u, a.patch);
+        if (a.patch.role) u.counterReady = a.patch.role === 'revenger';
+        if (a.healRatio) this.healUnit(u, Math.round(u.maxHp * a.healRatio));
+        if (a.bossPhase) { u.bossPhase = a.bossPhase; this.emit({ type: 'bossPhase', unitId: u.id, phase: a.bossPhase }); }
+        break;
+      }
+    }
   }
 
   /** 到达出口判定 */
@@ -970,6 +1350,8 @@ export class Battle {
   /** 胜负判定；结束返回 true */
   checkEnd(): boolean {
     if (this.phase === 'won' || this.phase === 'lost') return true;
+    this.runEvents();
+    if ((this.phase as Phase) === 'won' || (this.phase as Phase) === 'lost') return true;
     if (this.units.some((u) => u.escort && u.ko)) { this.finish('lost', '护送对象倒下'); return true; }
     if (this.opts.leaderKoLoses && this.units.some((u) => u.isLeader && u.ko)) { this.finish('lost', 'Joker 倒下'); return true; }
     const canBaton = this.reserves.length > 0 && this.batonLeft > 0;

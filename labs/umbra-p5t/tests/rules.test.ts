@@ -23,6 +23,7 @@ const pick = <T extends BattleEvent['type']>(ev: BattleEvent[], t: T) => ev.filt
 const dmgOf = (ev: BattleEvent[], id?: string) => pick(ev, 'damage').filter((e) => !id || e.unitId === id);
 const sk = (o: Partial<SkillDef>): SkillDef => ({ id: 'test', name: 'test', kind: 'attack', power: 20, sp: 5, range: 6, shape: 'single', ...o });
 const v = (x: number, y: number): Vec => ({ x, y });
+const eq2 = (a: Vec, b: Vec) => a.x === b.x && a.y === b.y;
 
 // =====================================================================
 describe('掩体 / Resistance', () => {
@@ -115,10 +116,11 @@ describe('1 More 与回合', () => {
 
 // =====================================================================
 describe('近战（击退 4 格）', () => {
-  it('近战掩体里的敌人：减伤不倒地，击退 4 格、攻击者占据原位、打破 Resistance', () => {
+  it('近战掩体里的敌人：伤害不受 Guard 减免（Samurai Gamers Guard Guide）、不倒地，击退 4 格、攻击者占据原位、打破 Resistance', () => {
     const b = mk(['. . h . . . . . .', '. A 1 . . . . . .', '. . . . . B . . .'], { A: A('a'), B: A('b'), '1': E('e1') });
     const ev = b.melee('a', 'e1');
-    expect(dmgOf(ev)[0].amount).toBe(7);
+    expect(dmgOf(ev)[0].amount).toBe(10);
+    expect(dmgOf(ev)[0].resist).toBe(true);
     expect(types(ev)).toEqual(expect.arrayContaining(['knockback', 'meleeStep', 'resistBroken']));
     expect(types(ev)).not.toContain('down');
     expect(b.unit('e1').pos).toEqual(v(6, 1));
@@ -175,9 +177,14 @@ describe('高低差 / 推落 / Follow-Up', () => {
     expect(b0.grid.hasAnyCover(v(0, 0))).toBe(2);
     const links = [{ a: v(0, 1), b: v(1, 1), kind: 'ladder' as const }];
     const b = mk(rows, { A: A('a'), '1': E('far') }, { links }, {}, hs);
-    const ev = b.move('a', v(2, 0));
+    const ev = b.move('a', v(1, 1));
     expect(types(ev)).toContain('dash');
-    expect(b.unit('a').pos).toEqual(v(2, 0));
+    expect(b.unit('a').pos).toEqual(v(1, 1));
+    // Dash 后本次移动结束（Pathway「直到使用 Dash」/ Stop & Go「Dash 后 +1」）
+    expect(b.moveTiles(b.unit('a')).some((p) => eq2(p, v(2, 1)))).toBe(false);
+    const bs = mk(rows, { A: A('a', { passives: ['stopAndGo'] }), '1': E('far') }, { links }, {}, hs);
+    expect(bs.moveTiles(bs.unit('a')).some((p) => eq2(p, v(1, 0)))).toBe(true);
+    expect(bs.moveTiles(bs.unit('a')).some((p) => eq2(p, v(2, 0)))).toBe(false);
     const b2 = mk(rows, { A: A('a', { escort: true }), '1': E('far') }, { links }, {}, hs);
     expect(b2.moveTiles(b2.unit('a')).some((p) => b2.grid.h(p) === 1)).toBe(false);
   });

@@ -13,12 +13,16 @@ export const eq = (a: Vec, b: Vec) => a.x === b.x && a.y === b.y;
 export const manhattan = (a: Vec, b: Vec) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 export const add = (a: Vec, b: Vec, k = 1): Vec => ({ x: a.x + b.x * k, y: a.y + b.y * k });
 
-export interface ReachNode { pos: Vec; dist: number; prev: string | null; dash: boolean }
+export interface ReachNode { pos: Vec; dist: number; prev: string | null; dash: boolean; path?: Vec[]; dashed?: boolean }
 
 export class Grid {
   /** 由 Battle 注入：物件（木箱/油桶）提供的掩体 */
   coverHook: ((p: Vec) => CoverLevel) | null = null;
   readonly links: DashLink[];
+  /** 机关造成的动态地形（关着的门 = 墙） */
+  tileOverride = new Map<string, TileKind>();
+  /** 机关造成的动态高度（升降台） */
+  heightOverride = new Map<string, number>();
 
   constructor(public readonly map: Pick<MapDef, 'width' | 'height' | 'tiles' | 'heights' | 'links'>) {
     this.links = map.links ?? [];
@@ -28,11 +32,13 @@ export class Grid {
     return p.x >= 0 && p.y >= 0 && p.x < this.map.width && p.y < this.map.height;
   }
   tile(p: Vec): TileKind {
-    return this.inBounds(p) ? this.map.tiles[p.y][p.x] : 'wall';
+    if (!this.inBounds(p)) return 'wall';
+    return this.tileOverride.get(key(p)) ?? this.map.tiles[p.y][p.x];
   }
   /** 地面高度（层） */
   h(p: Vec): number {
-    return this.inBounds(p) ? this.map.heights?.[p.y]?.[p.x] ?? 0 : 0;
+    if (!this.inBounds(p)) return 0;
+    return this.heightOverride.get(key(p)) ?? this.map.heights?.[p.y]?.[p.x] ?? 0;
   }
   walkable(p: Vec) {
     const t = this.tile(p);
@@ -56,6 +62,15 @@ export class Grid {
     return this.h(c) === this.h(p) ? lv : 0;
   }
 
+  /**
+   * 梯子与跳台的区别（Samurai Gamers Stage Elements）：梯子「在高台下方，爬上去够到高处的敌人」= 连接不同高度；
+   * Dash 格（跳台）「从一个高处跳到另一个高处」= 连接两处都高于地面的格（高度可以相同），中间可隔空。
+   * 升降台改变高度后，不再满足条件的连接暂时不能用。
+   */
+  linkUsable(l: DashLink) {
+    const ha = this.h(l.a), hb = this.h(l.b);
+    return l.kind === 'ladder' ? ha !== hb : ha > 0 && hb > 0;
+  }
   /** 两格之间的 Dash 连接 */
   linkBetween(a: Vec, b: Vec): DashLink | undefined {
     return this.links.find((l) => (eq(l.a, a) && eq(l.b, b)) || (eq(l.a, b) && eq(l.b, a)));
@@ -68,8 +83,9 @@ export class Grid {
       if (this.walkable(n) && this.h(n) === this.h(p)) out.push({ pos: n, dash: false });
     }
     if (allowDash) for (const l of this.links) {
-      if (eq(l.a, p) && this.walkable(l.b)) out.push({ pos: l.b, dash: true });
-      else if (eq(l.b, p) && this.walkable(l.a)) out.push({ pos: l.a, dash: true });
+      const other = eq(l.a, p) ? l.b : eq(l.b, p) ? l.a : null;
+      if (!other || !this.walkable(other) || !this.linkUsable(l)) continue;
+      out.push({ pos: other, dash: true });
     }
     return out;
   }
@@ -134,21 +150,36 @@ export class Grid {
 
   /**
    * BFS 可达格（含高低差与 Dash）。blocked = 不能经过的格（敌方单位），occupied = 不能停留的格（所有单位）。
+   * Dash（梯子/跳台）：原作 Dash 后本次移动结束——Pathway to the Ball「无限移动直到使用 Dash」、
+   * Stop & Go「Dash 后移动 +1」（ibunroku / Samurai Gamers 技能表）→ Dash 之后只能再走 afterDash 格；一次移动只能 Dash 一次。
    */
-  reachable(start: Vec, move: number, blocked: Set<string>, occupied: Set<string>, allowDash = true) {
-    const out = new Map<string, ReachNode>();
-    out.set(key(start), { pos: start, dist: 0, prev: null, dash: false });
-    const q: Vec[] = [start];
+  reachable(start: Vec, move: number, blocked: Set<string>, occupied: Set<string>, allowDash = true, afterDash = 0) {
+    type S = { pos: Vec; dist: number; dashed: boolean; left: number; path: Vec[] };
+    const best = new Map<string, S>();
+    const seen = new Set<string>();
+    const q: S[] = [{ pos: start, dist: 0, dashed: false, left: move, path: [start] }];
+    seen.add(key(start) + '|0');
     while (q.length) {
       const cur = q.shift()!;
-      const cn = out.get(key(cur))!;
-      if (cn.dist >= move) continue;
-      for (const n of this.neighbors(cur, allowDash)) {
-        const k = key(n.pos);
-        if (out.has(k) || blocked.has(k)) continue;
-        out.set(k, { pos: n.pos, dist: cn.dist + 1, prev: key(cur), dash: n.dash });
-        q.push(n.pos);
+      const k = key(cur.pos);
+      const b = best.get(k);
+      if (!b || cur.dist < b.dist) best.set(k, cur);
+      if (cur.left <= 0) continue;
+      for (const n of this.neighbors(cur.pos, allowDash && !cur.dashed)) {
+        const nk = key(n.pos);
+        if (blocked.has(nk)) continue;
+        const dashed = cur.dashed || n.dash;
+        const left = n.dash ? Math.min(cur.left - 1, afterDash) : cur.left - 1;
+        const sk = nk + (dashed ? '|1' : '|0');
+        if (seen.has(sk)) continue;
+        seen.add(sk);
+        q.push({ pos: n.pos, dist: cur.dist + 1, dashed, left, path: [...cur.path, n.pos] });
       }
+    }
+    const out = new Map<string, ReachNode>();
+    for (const [k, st] of best) {
+      const prev = st.path.length > 1 ? key(st.path[st.path.length - 2]) : null;
+      out.set(k, { pos: st.pos, dist: st.dist, prev, dash: st.dashed, dashed: st.dashed, path: st.path });
     }
     for (const [k, n] of out) if (k !== key(start) && occupied.has(k)) n.dist = -1;
     return out;
@@ -156,7 +187,7 @@ export class Grid {
 
   /** 无步数上限的路径距离（AI 用），不可达返回 Infinity */
   pathDistance(a: Vec, b: Vec, blocked: Set<string>, allowDash = true): number {
-    const r = this.reachable(a, 999, blocked, new Set(), allowDash);
+    const r = this.reachable(a, 999, blocked, new Set(), allowDash, 999);
     const direct = r.get(key(b));
     if (direct) return direct.dist;
     let best = Infinity;
@@ -168,7 +199,9 @@ export class Grid {
   }
 }
 
-export function pathTo(reach: Map<string, { pos: Vec; prev: string | null }>, dest: Vec): Vec[] {
+export function pathTo(reach: Map<string, { pos: Vec; prev: string | null; path?: Vec[] }>, dest: Vec): Vec[] {
+  const direct = reach.get(key(dest));
+  if (direct?.path) return direct.path.map((p) => ({ ...p }));
   const path: Vec[] = [];
   let k: string | null = key(dest);
   while (k) {

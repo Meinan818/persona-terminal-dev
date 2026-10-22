@@ -3,7 +3,7 @@
 //  - 角色 HP/SP/移动/近战/枪攻/射程/枪型：GameFAQs Cogito《P5T Guide and FAQ》角色表（Lv19/21 行）——公开数据
 //  - 技能 Power/SP/效果/范围描述：Megami Tensei Wiki「List of Persona 5 Tactica Skills」——公开数据
 //  - 技能射程（格）、「小/中/大范围」换算成半径、敌人数值：查不到 → 占位（标 PH）
-import type { DashLink, MapDef, SkillDef, TileKind, UnitDef, Vec } from './types';
+import type { ChargeId, DashLink, MapDef, PassiveId, SkillDef, TileKind, UnitDef, Vec } from './types';
 
 // ---------- 技能（Power / SP 为原作公开数据；range/radius 为占位 PH） ----------
 const R_SINGLE = 5; // PH：单体技能射程
@@ -46,60 +46,126 @@ export const UNIQUES = {
   fullThrottle: { id: 'fullThrottle', name: 'Full Throttle', kind: 'attack', power: 30, sp: 0, voltage: true, range: 1, shape: 'line', length: 4, knockAll: true } as SkillDef,
   nobleLady: { id: 'nobleLady', name: "Noble Lady's Invitation", kind: 'attack', power: 23, sp: 0, voltage: true, range: 5, shape: 'area', radius: AREA.medium, effect: 'hypno' } as SkillDef,
   pathway: { id: 'pathway', name: 'Pathway to the Ball', kind: 'buff', power: 0, sp: 0, voltage: true, range: 0, shape: 'self', moveBoost: 99, extraAction: true } as SkillDef,
+  // Samurai Gamers Unique Skill Guide / ibunroku 技能表：「Summons 2 decoy units. Allows additional following action.」射程 PH
+  likeAPhantom: { id: 'likeAPhantom', name: 'Like a Phantom', kind: 'buff', power: 0, sp: 0, voltage: true, range: 5, shape: 'single', decoys: 2, extraAction: true } as SkillDef,
+  // 「Places flag that breaks Cover of nearby enemies and heals nearby allies at end of each turn.」射程/半径 PH
+  flagOfFreedom: { id: 'flagOfFreedom', name: 'Flag of Freedom', kind: 'buff', power: 0, sp: 0, voltage: true, range: 5, shape: 'single', radius: 3, flag: true } as SkillDef,
+  // 「Allies can take an additional action. After use, Voltage will not increase for 3 turns.」
+  truthSeeker: { id: 'truthSeeker', name: 'Truth Seeker', kind: 'buff', power: 0, sp: 0, voltage: true, range: 0, shape: 'self', allyExtra: true } as SkillDef,
 } satisfies Record<string, SkillDef>;
+
+/**
+ * 每人两个 Charge 技能 [免费, 20 GP]（Cogito：「Each Character has two Charge Skills」）。出处：
+ *  Joker Foresight/Phantom Step、Ann Phantom Step/Over Powered、Ryuji Ferocious Lion/Over Powered、Haru Lightning Speed/Spring Storm、
+ *  Makoto Phantom Step/Essence of Sorcery、Erina Bullet Break/Foresight —— GameFAQs 版块「Personal Character Grades」(80633069)；
+ *  Yusuke Ferocious Lion/Clairvoyance —— Gamer Guides「Best Skills for Yusuke」；Akechi Phantom Step/Essence of Sorcery、
+ *  Kasumi Phantom Step/Ferocious Lion —— Samurai Gamers 角色页技能树；Mona Lightning Speed/Essence of Sorcery —— Cogito 技能树摘录（角色对应为推断）。
+ */
+export const CHARGES: Record<string, ChargeId[]> = {
+  joker: ['foresight', 'phantomStep'], skull: ['ferociousLion', 'overPowered'], panther: ['phantomStep', 'overPowered'],
+  mona: ['lightningSpeed', 'essenceOfSorcery'], fox: ['ferociousLion', 'clairvoyance'], queen: ['phantomStep', 'essenceOfSorcery'],
+  noir: ['lightningSpeed', 'springStorm'], erina: ['bulletBreak', 'foresight'], kasumi: ['phantomStep', 'ferociousLion'],
+  crow: ['phantomStep', 'essenceOfSorcery'],
+};
+
+/**
+ * 被动技能说明（描述与数值：ibunroku「All Skills - Persona 5 Tactica」conditions 字段；归属：Samurai Gamers 技能树）。
+ * 角色专属被动按 ibunroku 技能 id 段推断归属（5xx=Joker、6xx=Mona、8xx=Ann、9xx=Yusuke、10xx=Makoto、12xx=Erina、15xx=Akechi），
+ * 与 GameFAQs「Personal Character Grades」的 Unique passive 一栏一致（Joker Trump Card、Ryuji Endure、Yusuke Broad Perspective、Makoto Pedal to the Metal、Erina Comandante）。
+ */
+export const PASSIVE_INFO: Record<PassiveId, { name: string; desc: string }> = {
+  followUpPlus: { name: 'Follow-Up+', desc: 'Follow-Up 每回合可触发 2 次' },
+  stopAndGo: { name: 'Stop & Go', desc: 'Dash 后移动 +1' },
+  hawkeye: { name: 'Hawkeye', desc: '枪射程 +1' },
+  daredevil: { name: 'Daredevil', desc: '击退距离 +2' },
+  godLikeSpeed: { name: 'God-Like Speed', desc: '移动 +1' },
+  magicalMastery: { name: 'Magical Mastery', desc: '技能射程 +1' },
+  ironcladGuard: { name: 'Ironclad Guard', desc: '在掩体中受到伤害再 -40%' },
+  ironBody: { name: 'Iron Body', desc: '同一回合被攻击 2 次后，本回合受到伤害 -20%' },
+  regenerate1: { name: 'Regenerate 1', desc: '回合结束回复 5% HP' },
+  invigorate1: { name: 'Invigorate 1', desc: '回合结束回复 5% SP' },
+  soulRepose: { name: 'Soul Repose', desc: '在掩体中（回合结束）回复 7% SP' },
+  endure: { name: 'Endure', desc: '被打倒时以 1 HP 复活，每场一次' },
+  trumpCard: { name: 'Trump Card', desc: 'HP 降到 50% 以下时回复（Power 80）且下次攻击 ×1.5，每场一次' },
+  broadPerspective: { name: 'Broad Perspective', desc: '从高处射击有 35% 几率打倒目标' },
+  luckyPunch: { name: 'Lucky Punch', desc: '近战有 25% 几率打倒目标' },
+  comandante: { name: 'Comandante', desc: '获得 1 More 时移动 +1' },
+  pedalToTheMetal: { name: 'Pedal to the Metal', desc: 'HP 满时移动 +2' },
+  neverSayDie: { name: 'Never Say Die', desc: 'Charge 中任何位置都视为在掩体中' },
+  punisherOfReckless: { name: 'Punisher of the Reckless', desc: '对不在掩体中的目标伤害 +10%' },
+  sharpEyedWildcat: { name: 'Sharp-Eyed Wildcat', desc: '对掩体中的目标伤害 +10%' },
+  finishingBlow: { name: 'Finishing Blow', desc: '对倒地目标伤害 +10%' },
+  unstoppable: { name: 'Unstoppable', desc: '获得 1 More 后攻击技能 SP 减半' },
+  breakAndRecovery: { name: 'Break & Recovery', desc: 'Triple Threat 后全员回复 5% HP' },
+  firstAid: { name: 'First Aid', desc: '附近（3 格内，PH）队友受伤时自动回复（Power 65，PH），每回合 1 次' },
+  ailmentShield: { name: 'Ailment Shield', desc: '相邻队友中异常时自动解除，每回合 1 次' },
+  reverseTheScales: { name: 'Reverse the Scales', desc: '1 More 中开枪时与目标换位，每回合 1 次' },
+};
 
 // ---------- 我方（Cogito 角色表 Lv19/21：HP SP MOV MEL RNG R 枪型） ----------
 export const JOKER: UnitDef = {
   id: 'joker', name: 'Joker', side: 'ally', isLeader: true,
   maxHp: 136, maxSp: 49, move: 6, melee: 21, gun: { power: 17, range: 8, shape: 'single' },
-  skills: [SKILLS.eiha], unique: UNIQUES.phantomJudge, charge: 'foresight',
+  skills: [SKILLS.eiha], unique: UNIQUES.phantomJudge, charges: CHARGES.joker, passives: ['trumpCard'],
 };
 export const SKULL: UnitDef = {
   id: 'skull', name: '龙司 Skull', side: 'ally',
   maxHp: 171, maxSp: 34, move: 6, melee: 28, gun: { power: 19, range: 5, shape: 'aoe' },
-  skills: [SKILLS.zio], unique: UNIQUES.brigantine, charge: 'ferociousLion',
+  skills: [SKILLS.zio], unique: UNIQUES.brigantine, charges: CHARGES.skull, passives: ['endure'],
 };
 export const PANTHER: UnitDef = {
   id: 'panther', name: '杏 Panther', side: 'ally',
   maxHp: 108, maxSp: 64, move: 5, melee: 13, gun: { power: 15, range: 7, shape: 'aoe' },
-  skills: [SKILLS.agi, SKILLS.maragi], unique: UNIQUES.femmeFatale, charge: 'phantomStep',
+  skills: [SKILLS.agi, SKILLS.maragi], unique: UNIQUES.femmeFatale, charges: CHARGES.panther, passives: ['unstoppable'],
 };
 export const MONA: UnitDef = {
   id: 'mona', name: '摩尔加纳 Mona', side: 'ally',
   maxHp: 101, maxSp: 58, move: 7, melee: 20, gun: { power: 14, range: 7, shape: 'single' },
-  skills: [SKILLS.garu, SKILLS.dia, SKILLS.media], unique: UNIQUES.windsOfTime, charge: 'lightningSpeed',
+  skills: [SKILLS.garu, SKILLS.dia, SKILLS.media], unique: UNIQUES.windsOfTime, charges: CHARGES.mona, passives: ['luckyPunch'],
 };
 export const FOX: UnitDef = {
   id: 'fox', name: '祐介 Fox', side: 'ally',
   maxHp: 128, maxSp: 43, move: 7, melee: 25, gun: { power: 15, range: 9, shape: 'single' },
-  skills: [SKILLS.bufu, SKILLS.rakukaja], charge: 'ferociousLion', // Like a Phantom（召唤诱饵）未做
+  skills: [SKILLS.bufu, SKILLS.rakukaja], unique: UNIQUES.likeAPhantom, charges: CHARGES.fox, passives: ['broadPerspective'],
 };
 export const QUEEN: UnitDef = {
   id: 'queen', name: '真 Queen', side: 'ally',
   maxHp: 156, maxSp: 52, move: 5, melee: 29, gun: { power: 20, range: 6, shape: 'single' },
-  skills: [SKILLS.frei, SKILLS.tarukaja], unique: UNIQUES.fullThrottle, charge: 'phantomStep',
+  skills: [SKILLS.frei, SKILLS.tarukaja], unique: UNIQUES.fullThrottle, charges: CHARGES.queen, passives: ['pedalToTheMetal'],
 };
 export const NOIR: UnitDef = {
   id: 'noir', name: '春 Noir', side: 'ally',
   maxHp: 121, maxSp: 47, move: 4, melee: 33, gun: { power: 23, range: 6, shape: 'explode' },
-  skills: [SKILLS.psi, SKILLS.diamrita], unique: UNIQUES.nobleLady, charge: 'lightningSpeed',
+  skills: [SKILLS.psi, SKILLS.diamrita], unique: UNIQUES.nobleLady, charges: CHARGES.noir,
 };
 export const ERINA: UnitDef = {
   id: 'erina', name: '艾丽娜 Erina', side: 'ally',
   maxHp: 178, maxSp: 65, move: 6, melee: 31, gun: { power: 20, range: 5, shape: 'aoe' },
-  skills: [SKILLS.partisan, SKILLS.sukukaja], charge: 'bulletBreak', // Flag of Freedom（插旗）未做
+  skills: [SKILLS.partisan, SKILLS.sukukaja], unique: UNIQUES.flagOfFreedom, charges: CHARGES.erina, passives: ['comandante'],
 };
 export const KASUMI: UnitDef = {
   id: 'kasumi', name: '霞 Kasumi', side: 'ally',
   maxHp: 111, maxSp: 42, move: 6, melee: 20, gun: { power: 16, range: 9, shape: 'single' },
-  skills: [SKILLS.kouha, SKILLS.dormina], unique: UNIQUES.pathway, charge: 'phantomStep',
+  skills: [SKILLS.kouha, SKILLS.dormina], unique: UNIQUES.pathway, charges: CHARGES.kasumi,
 };
+/**
+ * 明智 Crow（DLC）：初始技能 Megido、Charge Phantom Step / Essence of Sorcery、Unique Truth Seeker、被动 Reverse the Scales（Samurai Gamers 角色页 / ibunroku）。
+ * HP/SP/移动/近战/枪攻/射程全部 PH（公开资料没有找到 Akechi 的数值表）。
+ */
+export const CROW: UnitDef = {
+  id: 'crow', name: '明智 Crow', side: 'ally',
+  maxHp: 130, maxSp: 50, move: 6, melee: 24, gun: { power: 18, range: 7, shape: 'single' },
+  skills: [SKILLS.megido, SKILLS.tarukaja], unique: UNIQUES.truthSeeker, charges: CHARGES.crow, passives: ['reverseTheScales'],
+};
+/** Like a Phantom 的诱饵（HP/外观 PH） */
+export const decoyDef = (id: string): UnitDef => ({ id, name: '诱饵', side: 'ally', decoy: true, maxHp: 1, maxSp: 0, move: 0, melee: 0, skills: [], noFollowUp: true });
+
 /** 护送对象：Cogito C109「Toshiro has 85 HP 6 Move」，不能攻击、不能 Dash */
 export const TOSHIRO_ESCORT: UnitDef = {
   id: 'toshiro', name: '春日部 Toshiro', side: 'ally', escort: true, noFollowUp: true,
   maxHp: 85, maxSp: 0, move: 6, melee: 0, skills: [],
 };
-export const ROSTER: UnitDef[] = [JOKER, SKULL, PANTHER, MONA, FOX, QUEEN, NOIR, ERINA, KASUMI];
+export const ROSTER: UnitDef[] = [JOKER, SKULL, PANTHER, MONA, FOX, QUEEN, NOIR, ERINA, KASUMI, CROW];
 
 // ---------- 敌人（类型按 Cogito AAA115；数值全部 PH） ----------
 type EnemyOpts = Partial<UnitDef>;
@@ -110,7 +176,7 @@ export function enemy(id: string, name: string, role: UnitDef['role'], hp: numbe
   if (role === 'shooter') Object.assign(base, { move: 4, melee: 8, gun: { power: 14, range: 6 } });
   if (role === 'brute') Object.assign(base, { move: 5, melee: 18 });
   if (role === 'revenger') Object.assign(base, { move: 4, melee: 22 });
-  if (role === 'shielder') Object.assign(base, { move: 0, melee: 10, gun: { power: 14, range: 5 }, facing: { x: 0, y: 1 } });
+  if (role === 'shielder') Object.assign(base, { move: 3, melee: 10, gun: { power: 14, range: 5 }, facing: { x: 0, y: 1 } });
   if (role === 'teleporter') Object.assign(base, { move: 4, melee: 16, gun: { power: 12, range: 5 } });
   if (role === 'launcher') Object.assign(base, { move: 3, melee: 16, gun: { power: 18, range: 5 } }); // gun = Stone Throwing
   if (role === 'supporter') Object.assign(base, { move: 3, melee: 8, skills: [SKILLS.dia, SKILLS.sukukaja, SKILLS.zio] });
@@ -125,6 +191,7 @@ export const prop = (id: string, kind: 'barrel' | 'box' | 'speaker', o: Partial<
 
 // ---------- 地图解析 ----------
 const LEGEND: Record<string, TileKind> = { '.': 'floor', '#': 'wall', h: 'half', H: 'full', E: 'exit' };
+const jump = (ax: number, ay: number, bx: number, by: number): DashLink => ({ a: { x: ax, y: ay }, b: { x: bx, y: by }, kind: 'jump' });
 
 /**
  * 用字符画定义地图：. 地面 # 墙 h 半掩体 H 全掩体 E 出口；其余字符是单位占位（脚下为地面）。
@@ -307,6 +374,100 @@ function rangeMap(id: string, name: string, a: UnitDef, b: UnitDef, c: UnitDef):
 export const rangeMapA = () => rangeMap('range-a', '元素靶场 A（风/冰/核）', MONA, FOX, QUEEN);
 export const rangeMapB = () => rangeMap('range-b', '元素靶场 B（念/祝/遗忘）', NOIR, ERINA, KASUMI);
 
+export const rangeMapC = () => rangeMap('range-c', '元素靶场 C（祐介/艾丽娜/明智 Unique）', FOX, ERINA, CROW);
+
+/**
+ * 机关图（12×8）：踩着开门的开关（hold）、切换开关（toggle，开 A 关 B）、升降台（开关切换高低）、跳台（高台↔高台）、
+ * 监视摄像头（踏入黄色范围 → 警报 → 援军）、定时门（每 2 回合开关一次）。对应 Cogito/gameline/Neoseeker 的原作关卡结构。
+ */
+export function mechMap(): MapDef {
+  const rows = [
+    '. . . . . # . . . . 1 .',
+    '. . . . . # . . h . . .',
+    '. . . . . . . . . . . .',
+    '. . . . . # # # # . . .',
+    '. h . . . . . . . . 2 .',
+    '. . . . . # . . # . . .',
+    '. J . S . # . . . . 3 .',
+    '. . . P . # . . . . . .',
+  ];
+  const heights = [
+    '000000000000',
+    '000000000000',
+    '000000000000',
+    '000000000000',
+    '000000000000',
+    '220000000000',
+    '220000000000',
+    '000000000000',
+  ];
+  return {
+    id: 'mech', name: '测试图 · 机关（门/开关/升降台/摄像头/跳台）', objective: '击败全部敌人', turnTarget: 6,
+    ...parseMap(rows, {
+      J: JOKER, S: SKULL, P: PANTHER,
+      '1': enemy('m1', 'Musketeer', 'shooter', 60),
+      '2': enemy('m2', 'Grenadier', 'brute', 70),
+      '3': enemy('m3', 'Musketeer', 'shooter', 60),
+    }, heights),
+    links: [ladder(2, 6, 1, 6), jump(0, 5, 0, 4)],
+    doors: [
+      { id: 'A', cells: [{ x: 5, y: 2 }], open: false },
+      { id: 'B', cells: [{ x: 5, y: 4 }], open: true },
+      { id: 'T', cells: [{ x: 8, y: 4 }], open: true, everyTurns: 2 },
+    ],
+    switches: [
+      { id: 'sw-hold', pos: { x: 4, y: 1 }, kind: 'hold', doors: ['A'] },
+      { id: 'sw-toggle', pos: { x: 3, y: 4 }, kind: 'toggle', doors: ['A', 'B'] },
+      { id: 'sw-lift', pos: { x: 2, y: 7 }, kind: 'elevator', elevator: 'L' },
+    ],
+    elevators: [{ id: 'L', cells: [{ x: 0, y: 4 }, { x: 0, y: 3 }], low: 0, high: 2, up: false }],
+    cameras: [{
+      id: 'cam1', pos: { x: 6, y: 7 }, cells: [{ x: 6, y: 6 }, { x: 7, y: 6 }, { x: 6, y: 5 }, { x: 7, y: 5 }, { x: 7, y: 7 }],
+      spawn: [{ def: enemy('r1', '援军 Musketeer', 'shooter', 50), pos: { x: 10, y: 7 } }, { def: enemy('r2', '援军 Grenadier', 'brute', 60), pos: { x: 11, y: 5 } }],
+    }],
+    win: { type: 'defeatAll' },
+  };
+}
+
+/**
+ * Boss 图（11×8）：第 2 回合敌方援军；Boss HP 锁在 50%（hpFloor），打到 50% → 进入第 2 阶段（回复、换攻击方式、
+ * 召唤护卫、改目标为「击败 Boss」）。对应原作 Boss 关「阶段 1 → 阶段 2」结构（ESTNN Yoshiki 攻略 / Cogito Phase 1/2）。
+ */
+export function bossMap(): MapDef {
+  const rows = [
+    '. . . . . . . . . . .',
+    '. . h . . B . . h . .',
+    '. . . . . . . . . . .',
+    '. H . . . . . . . H .',
+    '. . . 1 . . . 2 . . .',
+    '. . . . . h . . . . .',
+    '. J . . . S . . . P .',
+    '. . . . . . . . . . .',
+  ];
+  return {
+    id: 'boss', name: '测试图 · Boss 阶段 + 援军', objective: '击败 Boss', turnTarget: 7,
+    ...parseMap(rows, {
+      J: JOKER, S: SKULL, P: PANTHER,
+      B: enemy('boss', 'Boss · Marie', 'shooter', 300, { hpFloor: 150, melee: 20, gun: { power: 18, range: 7 }, move: 3, isTarget: true }),
+      '1': enemy('g1', 'Musketeer', 'shooter', 60),
+      '2': enemy('g2', 'Musketeer', 'shooter', 60),
+    }),
+    reserves: [FOX, ERINA],
+    win: { type: 'defeatTarget', targetId: 'boss' },
+    events: [
+      { id: 'wave2', when: { type: 'turn', turn: 2, phase: 'enemy' }, do: [
+        { type: 'message', text: '敌方援军出现！' },
+        { type: 'spawn', units: [{ def: enemy('w1', '援军 Revenger', 'revenger', 90), pos: { x: 0, y: 0 } }, { def: enemy('w2', '援军 Supporter', 'supporter', 55), pos: { x: 10, y: 0 } }] },
+      ] },
+      { id: 'phase2', when: { type: 'hpBelow', unitId: 'boss', ratio: 0.5 }, do: [
+        { type: 'message', text: 'Boss 进入第 2 阶段！' },
+        { type: 'setUnit', unitId: 'boss', patch: { hpFloor: 0, role: 'brute', move: 5, melee: 30 }, healRatio: 0.2, bossPhase: 2 },
+        { type: 'spawn', units: [{ def: enemy('gd1', '护卫 Shielder', 'shielder', 70, { facing: { x: 0, y: 1 } }), pos: { x: 4, y: 0 } }, { def: enemy('gd2', '护卫 Shielder', 'shielder', 70, { facing: { x: 0, y: 1 } }), pos: { x: 6, y: 0 } }] },
+      ] },
+    ],
+  };
+}
+
 export const MAPS: { id: string; name: string; make: () => MapDef }[] = [
   { id: 'test-01', name: '综合测试图', make: testMap },
   { id: 'tut-followup', name: '教学·推落追击', make: followUpMap },
@@ -314,4 +475,7 @@ export const MAPS: { id: string; name: string; make: () => MapDef }[] = [
   { id: 'test-03', name: '护送', make: escortMap },
   { id: 'range-a', name: '靶场 A', make: rangeMapA },
   { id: 'range-b', name: '靶场 B', make: rangeMapB },
+  { id: 'range-c', name: '靶场 C（新 Unique）', make: rangeMapC },
+  { id: 'mech', name: '机关图', make: mechMap },
+  { id: 'boss', name: 'Boss/援军', make: bossMap },
 ];

@@ -1055,7 +1055,7 @@ function App() {
           {uiChannel !== 'p4' && <WishProgressCutIn />}
           <WishProposalDialog />
           {/* 组织（第 8 轮）：作战达成 / 据点升级的庆祝卡——对账时在任意页面都可能发现，故挂顶层 */}
-          <OrgCelebrationCutIn />
+          {uiChannel !== 'p4' && <OrgCelebrationCutIn />}
           {/* 羁绊升级演出（P3R）：升级当下逐条播放、停在确认态。
               常驻挂载（队列与 modalBlocker 的判断挪进组件内部）——这样开发预览入口
               在队列还空着时也能触发；有别的弹窗时它自己让位排队。 */}

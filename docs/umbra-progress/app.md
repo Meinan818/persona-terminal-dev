@@ -10,13 +10,14 @@
 - 步 2 时长上限：`director.ts` 的 `CAPS` / `capKey` / `capOf` / `wallMs`，含探索按格数与 2000ms 封顶、hitStop 计入墙钟。
 - 步 3 Director：重叠层优先级（unit:down > shield:break > ailment:*）、A 类旁路、可跳过名单、`skip` 清场。
 - 步 4 规则事件：`P5Battle.emit` + HOLD UP 三选一（allout/talk/release）→ `holdup → holdup:result → allout/talk:start/unit:flee+battle:end`，连点幂等，1/3/5 敌覆盖。
+- 步 6 音频核心：`src/umbra/audio/audioBus.ts`（缺文件静默、三档音量、解锁、voiceLine）+ `bgm.ts`（`bgm:cue` 条件键最多胜出、权重随机、noRepeat、prefs off/lock）。
 
 验收：`tsc --noEmit` 0 错误；`src/umbra` 31 文件 / 132 项通过。
 
 ## 待接（v1.3 步 5–7）
 
 - 步 5 引擎原语（17 个 Pixi 原语 + camera + holdupRing）：样板在 `origin/feat/umbra-skin-p5r-red:labs/umbra-m3-red/src/umbra/engine/`（16 文件），移植量大；本机无 GPU、红色皮肤包未进 `src/umbra/skins/`，无法按任务书截图验收。
-- 步 6 音频总线 + present.json + bgm:cue + 三档音量：依赖 `skins/<id>/audio/` 音频文件（D-008，尚未入库）。
+- 步 6 剩余：present.json 生成脚本、设置页三档音量写档、首包不含音频的构建排除，依赖 `skins/<id>/audio/` 音频文件（D-008，尚未入库）。
 - 步 7 skin:check 新校验：可在皮肤包就位后补事件/原语名单、wallMs、labels、音频引用与 hud 命中区校验。
 
 ## 已完成

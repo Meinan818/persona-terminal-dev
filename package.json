@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude src/umbra/balance/**",
     "skin:check": "node scripts/skin-check.mjs",
+  "present:gen": "node scripts/generate-present.mjs",
     "sim:balance": "node node_modules/vitest/vitest.mjs run src/umbra/balance/__tests__/simBalance.test.ts --reporter=dot",
     "cap:sync": "cap sync",
     "cap:open:android": "cap open android",

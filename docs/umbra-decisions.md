@@ -2,6 +2,14 @@
 
 执行方遇到任务书没写到的取舍，以本文件为准。新在上。
 
+## D-010 场上队员可用原作录像截帧抠图（10-22 12:17）
+- 用户拍板：红色皮（p5r-red）场上 9 个队员（背影/战斗站姿）允许从 P5R 原作战斗录像截帧、抠图替换生成图。私有仓库、仅内部使用，不随任何公开构建发布（同 D-008 口径）。
+- 素材来源优先级：docs/umbra-ref/videos/ 与本地 vidref → 公开 P5R 战斗录像（YouTube 等）。视频只本地截帧，**不入库**；入库的是抠好的 PNG/WebP 与来源标注（视频 URL + 时间码/帧号）。
+- 落盘：skins/p5r-red（样板为 labs/umbra-m3-red）red/assets/official/field-from-footage/，每张旁附 sources.json（id、来源、帧时间、处理步骤）。
+- 处理：抠图（rembg 或同类）→ 统一轮廓光与色调 → 替换 M3/M4 共用场上角色；保留呼吸/受击/出招形变与 camera 视差。截不到干净帧的队员保留生成图并在报告标注。
+- 同时截一段 P5R 召唤录像只作逐帧对照，用于校准 Mona/召唤时序，不入库。
+- 其他皮（蓝粉/黄/…）不自动套用；是否同样处理需另行决定。
+
 ## D-009 契约 v1.3 定稿（10-22 09:40）
 - 定稿 `umbra-design/CONTRACT-v1.3.md`（母本）+ `TASK-APP-v1.3.md` + `TASK-THEMES-v1.3.md`；对照表升 `FX-MAP-v1.1.md`。草案 CONTRACT-v1.3-DRAFT 作废（保留备查）。
 - 事件：新增 49 个事件名 = 第一批 8（FX-MAP §D）+ 第二批 15（含 bgm:cue；levelup 与第一批重复）+ 补漏 holdup:result + 探索 4（D-003，v1.2 漏列）+ 音频与零散 13 组 21 个名（AUDIO-MAP §5）。HOLD UP 正式为三选一（总攻/交涉/放过），v1.2「二选一」作废。

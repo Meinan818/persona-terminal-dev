@@ -2,6 +2,15 @@
 
 执行方遇到任务书没写到的取舍，以本文件为准。新在上。
 
+## D-009 契约 v1.3 定稿（10-22 09:40）
+- 定稿 `umbra-design/CONTRACT-v1.3.md`（母本）+ `TASK-APP-v1.3.md` + `TASK-THEMES-v1.3.md`；对照表升 `FX-MAP-v1.1.md`。草案 CONTRACT-v1.3-DRAFT 作废（保留备查）。
+- 事件：新增 49 个事件名 = 第一批 8（FX-MAP §D）+ 第二批 15（含 bgm:cue；levelup 与第一批重复）+ 补漏 holdup:result + 探索 4（D-003，v1.2 漏列）+ 音频与零散 13 组 21 个名（AUDIO-MAP §5）。HOLD UP 正式为三选一（总攻/交涉/放过），v1.2「二选一」作废。
+- 取舍：levelup 改为同一结算合并一个事件（unitIds[]，M3 实测逐人阻塞过长）；音频与零散事件分 D（进 Director）/ A（只走音频总线与 HUD，不进 Director）两类；重叠层成员扩为 unit:down > shield:break > ailment:*，仍只 1 个。
+- 原语：M3 红色样板实际用到的 17 个转正（含 camera 伪 3D 镜头、holdupRing 包围）；HOLD UP 终点站位由引擎统一计算（前排两翼、后排在敌群身后、不进指令区），皮肤不能改站位。
+- 音频：目录定为 skins/<id>/audio/{bgm,se,voice}/ + playlist.json / sfx.json / voice.json，present.json 由构建生成，缺文件静默不 404；私有仓库提交音频，公开构建排除（D-008 05:02 优先于 AUDIO-MAP §6.1 的 gitignore 建议）。
+- labels：新增必填 label.baton / label.battleStart / label.finish / result.levelup / tag.* 7 个等；可选 showtime.title.<a>-<b>（按 roster.showtime 顺序，缺省「A × B」）。
+- 不开：「指令区左下 + 队伍右下」第二套槽位、1 MORE 上限放宽，记入 v1.3 §10 风险。
+
 ## D-008 音乐与音效用原作（10-22 04:52）
 - 用户确认：私人仓库、粉丝二创、不对外发布。BGM/音效/系统音/角色战斗语音按原作使用，放 skins/<id>/assets/official/audio/，不随任何公开构建发布。
 - 每皮一张曲目表（场景 → 原作曲目）：据点、委托板、探索、普通战斗、先手战、被偷袭、精英、BOSS 一/二阶段、胜利、结算、天鹅绒、各商店、HOLD UP、总攻收尾。例：红=Last Surprise / Beneath the Mask / Rivers in the Desert / Life Will Change / Aria of the Soul；蓝粉=Mass Destruction / It's Going Down Now / Iwatodai Dorm / Full Moon Full Life；黄=Reach Out to the Truth / Time to Make History / Your Affection / I'll Face Myself。

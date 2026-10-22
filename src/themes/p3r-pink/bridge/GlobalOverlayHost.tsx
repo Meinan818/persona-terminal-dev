@@ -5,6 +5,7 @@ import { ACHIEVEMENT_UNLOCK_LINES } from '@/constants';
 import { ConfidantRankUpCutIn, ConfidantStarShiftInvite } from '@/components/cooperation/ConfidantRankUpCutIn';
 import { SyncStatusBadge } from '@/components/auth/SyncStatusBadge';
 import { SyncMergeSheet } from '@/components/auth/SyncMergeSheet';
+import { GlobalConflictDialog, GlobalDiffDialog } from '@/components/auth/GlobalSyncDialogs';
 import { LevelUpP3 } from '@pink/screens/overlays/LevelUpModal.p3r';
 import { AchievementUnlockP3 } from '@pink/screens/overlays/AchievementUnlockModal.p3r';
 import { SkillUnlockP3 } from '@pink/screens/overlays/SkillUnlockModal.p3r';
@@ -46,6 +47,8 @@ export function GlobalOverlayHost() {
       <ConfidantStarShiftInvite />
       <SyncStatusBadge />
       <SyncMergeSheet />
+      <GlobalConflictDialog />
+      <GlobalDiffDialog />
     </>
   );
 }

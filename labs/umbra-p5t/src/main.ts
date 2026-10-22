@@ -437,7 +437,12 @@ function refreshAll() { refreshOverlay(); refreshHud(); }
 // ---------- 事件动画 ----------
 function banner(text: string, yellow = false) {
   const b = $('#banner');
-  b.textContent = text;
+  // P5 式「勒索信」字块：每个字随机黑底/白底/红底、微旋转、大小不一，压在扫过的斜色带上
+  const pal = ['k', 'w', 'r', 'k', 'w'];
+  let seed = text.length * 7;
+  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  b.innerHTML = `<div class="band"></div><div class="word">${[...text].map((ch, i) => ch === ' ' ? '<i class="sp"></i>'
+    : `<span class="c ${pal[(i + Math.floor(rnd() * 3)) % pal.length]}" style="--r:${(rnd() * 16 - 8).toFixed(1)}deg;--s:${(0.85 + rnd() * 0.35).toFixed(2)};--d:${i * 22}ms">${ch}</span>`).join('')}</div>`;
   b.className = yellow ? 'yellow' : '';
   b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
 }
@@ -761,6 +766,7 @@ declare global { interface Window { __p5t: unknown } }
 window.__p5t = {
   get battle() { return battle; },
   get busy() { return busy; },
+  banner,
   setMode(m: Mode) { mode = m; refreshAll(); },
   setSkill(id: string) { mode = 'skill'; skillId = id; refreshAll(); },
   tap: onTap,

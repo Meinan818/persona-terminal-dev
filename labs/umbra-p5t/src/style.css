@@ -115,3 +115,19 @@ button.small.on { background: #e60012; }
   #unit-card .vit { grid-template-columns: 18px 54px 1fr; height: 13px; }
   #unit-card .vit .num { font-size: 11px; }
 }
+
+/* 演出：P5 勒索信切入横幅（Hark 美术） */
+#banner { text-shadow: none; transform: none; animation: bannerOut 1s ease-in both; top: 34%; }
+#banner .band { position: absolute; left: -10%; right: -10%; top: 50%; height: 64px; margin-top: -32px; background: #e60012; transform: rotate(-6deg) scaleX(0); transform-origin: center; animation: bandIn .22s cubic-bezier(.2,.9,.3,1) forwards; box-shadow: 0 6px 0 #000, 0 -6px 0 #000; }
+#banner.yellow .band { background: #ffd400; }
+#banner .word { position: relative; display: inline-flex; align-items: center; transform: rotate(-6deg); }
+#banner .c { display: inline-block; padding: 0 6px; margin: 0 1px; font-size: calc(44px * var(--s)); line-height: 1.12; font-weight: 900; transform: rotate(var(--r)) scale(0); animation: chIn .18s var(--d) cubic-bezier(.3,1.6,.5,1) forwards; }
+#banner .c.k { background: #000; color: #fff; }
+#banner .c.w { background: #fff; color: #000; border: 2px solid #000; }
+#banner .c.r { background: #000; color: #e60012; }
+#banner.yellow .c.r { color: #ffd400; }
+#banner .sp { width: 14px; }
+@keyframes bandIn { to { transform: rotate(-6deg) scaleX(1); } }
+@keyframes chIn { to { transform: rotate(var(--r)) scale(1); } }
+@keyframes bannerOut { 0%, 78% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(60px); } }
+@media (max-height: 420px) { #banner .c { font-size: calc(32px * var(--s)); } #banner .band { height: 48px; margin-top: -24px; } }

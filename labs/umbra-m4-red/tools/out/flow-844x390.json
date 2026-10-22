@@ -1,0 +1,439 @@
+{
+ "size": "844x390",
+ "fast": false,
+ "battles": 8,
+ "secs": 113.357,
+ "errors": [],
+ "steps": [
+  "8.1s hub",
+  "12.7s shot 01-hub",
+  "14.5s shot 02-board",
+  "17.2s shot 03-callingcard",
+  "20.3s shot 04-cc-send",
+  "22.6s explore",
+  "23.5s shot 05-explore-gate",
+  "23.5s tap [7,0] explore:gate",
+  "24.6s tap [7,0] explore:gate",
+  "25.8s battle #1",
+  "28.7s shot 06-battle",
+  "33.7s shot 07-result",
+  "35.3s shot 05-explore",
+  "35.3s tap [7,0] explore",
+  "36.4s tap [8,4] explore",
+  "37.5s tap [8,4] explore",
+  "38.7s tap [8,4] explore",
+  "39.8s battle #2",
+  "43.4s tap [8,4] explore",
+  "44.3s battle #3",
+  "49.7s shot 08-card",
+  "51.1s tap [8,5] explore",
+  "52.2s tap [8,5] explore",
+  "54.2s shot 05-fork",
+  "55.5s shot 05-explore-risk",
+  "55.5s tap [8,3] explore:risk",
+  "56.6s tap [8,4] explore:risk",
+  "57.7s tap [8,4] explore:risk",
+  "59.8s tap [8,4] explore",
+  "61.1s battle #4",
+  "64.8s tap [8,4] explore",
+  "65.4s battle #5",
+  "70.6s tap [8,5] explore",
+  "71.8s tap [8,5] explore",
+  "74.3s shot 05-safe",
+  "75.3s tap [1,1] explore:gate",
+  "76.4s tap [1,1] explore:gate",
+  "77.5s tap [1,1] explore:gate",
+  "78.8s tap [1,1] explore:gate",
+  "79.2s battle #6",
+  "82.4s tap [1,1] explore",
+  "83.5s tap [0,4] explore",
+  "84.6s battle #7",
+  "89.6s tap [0,5] explore",
+  "90.7s tap [0,5] explore",
+  "92.9s shot 09-boss-intro",
+  "94.4s battle #8",
+  "101.4s shot 09-boss-phase",
+  "110.5s shot 10-end",
+  "113.3s shot 11-hub-after"
+ ],
+ "ok": true,
+ "flowErrors": [],
+ "timings": [
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 1503
+  },
+  {
+   "ev": "callingcard:send",
+   "ms": 2901,
+   "cap": 3000
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 3958
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 7
+  },
+  {
+   "ev": "card:pick",
+   "ms": 560,
+   "cap": 600
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 0
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 2
+  },
+  {
+   "ev": "card:pick",
+   "ms": 560,
+   "cap": 600
+  },
+  {
+   "ev": "card:pick",
+   "ms": 560,
+   "cap": 600
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 0
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 2
+  },
+  {
+   "ev": "card:pick",
+   "ms": 560,
+   "cap": 600
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 1
+  },
+  {
+   "ev": "boss:intro",
+   "ms": 1900,
+   "cap": 2000
+  },
+  {
+   "ev": "boss:phase",
+   "ms": 1901,
+   "cap": 2000
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 5
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 0
+  }
+ ],
+ "fx": null,
+ "log": [
+  "bgm:cue hub.home",
+  "bgm:cue requests",
+  "bgm:cue hub.home",
+  "bgm:cue hub.home",
+  "bgm:cue explore",
+  "map:encounter patrol ambushed",
+  "bgm:cue explore",
+  "map:encounter patrol ambushed",
+  "bgm:cue explore",
+  "map:encounter gate preemptive",
+  "bgm:cue explore",
+  "bgm:cue explore",
+  "map:move fork",
+  "bgm:cue explore.risk",
+  "map:encounter patrol ambushed",
+  "bgm:cue explore.risk",
+  "map:encounter elite normal",
+  "bgm:cue explore.risk",
+  "bgm:cue explore.safe",
+  "bgm:cue explore",
+  "map:encounter patrol ambushed",
+  "bgm:cue explore",
+  "map:encounter gate preemptive",
+  "bgm:cue explore",
+  "bgm:cue boss.intro",
+  "item:get treasure",
+  "bgm:cue boss.defeat",
+  "bgm:cue result",
+  "bgm:cue hub.home"
+ ],
+ "save": {
+  "money": 45740,
+  "lv": [
+   [
+    "joker",
+    16
+   ],
+   [
+    "skull",
+    15
+   ],
+   [
+    "mona",
+    15
+   ],
+   [
+    "panther",
+    15
+   ]
+  ],
+  "cleared": [
+   "r2"
+  ]
+ },
+ "umbraErrors": [],
+ "audio": [
+  "se:se.hit.phys(silent)",
+  "se:se.intent(silent)",
+  "se:se.intent(silent)",
+  "se:se.hit.phys(silent)",
+  "se:se.turn(silent)",
+  "se:se.attack.slash(silent)",
+  "se:se.hit.phys(silent)",
+  "se:se.turn(silent)",
+  "se:se.summon(silent)",
+  "se:se.hit.elec(silent)",
+  "se:se.hit.phys(silent)",
+  "voice:skull.onemore(silent)",
+  "se:se.weak(silent)",
+  "se:se.onemore(silent)",
+  "se:se.down(silent)",
+  "bgm:holdup(silent)",
+  "voice:skull.holdup(silent)",
+  "se:se.holdup(silent)",
+  "se:se.allout(silent)",
+  "se:allout.hit(silent)",
+  "se:allout.hit(silent)",
+  "se:allout.hit(silent)",
+  "se:allout.hit(silent)",
+  "se:se.rank.stamp(silent)",
+  "se:se.intent(silent)",
+  "se:se.intent(silent)",
+  "se:se.hit.phys(silent)",
+  "se:se.intent(silent)",
+  "se:se.intent(silent)",
+  "se:se.hit.phys(silent)",
+  "se:se.turn(silent)",
+  "se:se.attack.slash(silent)",
+  "se:se.hit.phys(silent)",
+  "se:se.turn(silent)",
+  "se:se.summon(silent)",
+  "se:se.hit.elec(silent)",
+  "se:se.hit.phys(silent)",
+  "voice:skull.onemore(silent)",
+  "se:se.weak(silent)",
+  "se:se.onemore(silent)",
+  "se:se.down(silent)",
+  "bgm:holdup(silent)",
+  "voice:skull.holdup(silent)",
+  "se:se.holdup(silent)",
+  "se:se.allout(silent)",
+  "se:allout.hit(silent)",
+  "se:allout.hit(silent)",
+  "se:allout.hit(silent)",
+  "se:allout.hit(silent)",
+  "se:se.rank.stamp(silent)",
+  "bgm:victory(silent)",
+  "voice:skull.victory(silent)",
+  "se:se.result(silent)",
+  "se:se.levelup(silent)",
+  "bgm:boss.defeat(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:result(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:hub.home(silent)"
+ ],
+ "exLog": [
+  {
+   "ev": "explore:move",
+   "ms": 1395,
+   "cap": 1500
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 466,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 299,
+   "cap": 350
+  },
+  {
+   "ev": "explore:move",
+   "ms": 1996,
+   "cap": 2000
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 383,
+   "cap": 400
+  },
+  {
+   "ev": "explore:move",
+   "ms": 219,
+   "cap": 250
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 467,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 300,
+   "cap": 350
+  },
+  {
+   "ev": "explore:move",
+   "ms": 482,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 300,
+   "cap": 350
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 767,
+   "cap": 800
+  },
+  {
+   "ev": "explore:move",
+   "ms": 466,
+   "cap": 500
+  },
+  {
+   "ev": "explore:move",
+   "ms": 1991,
+   "cap": 2000
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 383,
+   "cap": 400
+  },
+  {
+   "ev": "explore:move",
+   "ms": 457,
+   "cap": 500
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 465,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 300,
+   "cap": 350
+  },
+  {
+   "ev": "explore:move",
+   "ms": 150,
+   "cap": 250
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 301,
+   "cap": 350
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 763,
+   "cap": 800
+  },
+  {
+   "ev": "explore:move",
+   "ms": 463,
+   "cap": 500
+  },
+  {
+   "ev": "explore:move",
+   "ms": 1856,
+   "cap": 2000
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 467,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 299,
+   "cap": 350
+  },
+  {
+   "ev": "explore:move",
+   "ms": 239,
+   "cap": 250
+  },
+  {
+   "ev": "explore:cover",
+   "ms": 284,
+   "cap": 300
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 383,
+   "cap": 400
+  },
+  {
+   "ev": "explore:move",
+   "ms": 456,
+   "cap": 500
+  },
+  {
+   "ev": "explore:cover",
+   "ms": 283,
+   "cap": 300
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 317,
+   "cap": 350
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 766,
+   "cap": 800
+  },
+  {
+   "ev": "explore:move",
+   "ms": 464,
+   "cap": 500
+  }
+ ]
+}

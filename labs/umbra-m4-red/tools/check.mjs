@@ -3,7 +3,7 @@
 // node tools/check.mjs   （res=0.25 去掉软件光栅瓶颈，帧间隔接近真实）
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
-const base = 'http://127.0.0.1:8766/';
+const base = 'http://127.0.0.1:8767/';
 const browser = await chromium.launch({
   executablePath: '/workspace/work/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux-arm64/chrome-headless-shell',
   args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'],
@@ -14,7 +14,7 @@ async function open(w, h, q = '') {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, hasTouch: true });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => out.errors.push(String(e)));
-  await page.goto(base + `?res=0.25&auto=0${q}`, { waitUntil: 'load' });
+  await page.goto(base + `?battle=1&res=0.25&auto=0${q}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__umbra && window.__umbra.mode === 'command' && !window.__umbra.busy, null, { timeout: 60000 });
   return { ctx, page };
 }

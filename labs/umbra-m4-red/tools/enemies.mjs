@@ -44,7 +44,7 @@ const MEASURE = () => {
 for (const n of NS) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
-  await page.goto(`http://127.0.0.1:8766/?res=0.5&auto=0&enemies=${n}`, { waitUntil: 'load' });
+  await page.goto(`http://127.0.0.1:8767/?battle=1&res=0.5&auto=0&enemies=${n}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__umbra && window.__umbra.mode === 'command' && !window.__umbra.busy, null, { timeout: 60000 });
   await page.waitForTimeout(400);
   const r = { target: [], holdup: null, enemyTurn: null, errs };
@@ -67,7 +67,7 @@ for (const n of NS) {
   // 敌方行动（敌人意图/行动横幅）：新页面，GUARD 后进入敌方回合
   const ctx2 = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   const p2 = await ctx2.newPage(); p2.on('pageerror', (e) => errs.push(String(e)));
-  await p2.goto(`http://127.0.0.1:8766/?res=0.5&auto=0&enemies=${n}`, { waitUntil: 'load' });
+  await p2.goto(`http://127.0.0.1:8767/?battle=1&res=0.5&auto=0&enemies=${n}`, { waitUntil: 'load' });
   await p2.waitForFunction(() => window.__umbra && window.__umbra.mode === 'command' && !window.__umbra.busy, null, { timeout: 60000 });
   await p2.evaluate(() => window.__umbra.enemyAct());
   await p2.waitForFunction(() => window.__umbra.ev === 'action', null, { timeout: 20000 }).catch(() => {});

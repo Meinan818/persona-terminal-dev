@@ -6,7 +6,7 @@ const [W, H, ...rest] = process.argv.slice(2);
 const opt = Object.fromEntries(rest.map((a) => [a.slice(0, a.indexOf('=')), a.slice(a.indexOf('=') + 1)]));
 const dpr = +(opt.dpr ?? 1), tag = opt.tag ?? `${W}x${H}`, dirOut = opt.out ?? 'shots';
 const want = (n) => !opt.states || opt.states.includes(String(n));
-const base = opt.base ?? 'http://127.0.0.1:8766/';
+const base = opt.base ?? 'http://127.0.0.1:8767/';
 const browser = await chromium.launch({
   executablePath: '/workspace/work/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux-arm64/chrome-headless-shell',
   args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'],
@@ -17,7 +17,7 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.text()); });
 const T0 = Date.now(); const log = (s) => console.log(`[${((Date.now() - T0) / 1000).toFixed(1)}s] ${s}`);
-await page.goto(base + `?maxdt=400&auto=0${opt.q ? '&' + opt.q : ''}`, { waitUntil: 'load' });
+await page.goto(base + `?battle=1&maxdt=400&auto=0${opt.q ? '&' + opt.q : ''}`, { waitUntil: 'load' });
 const until = (fn, arg, t = +(opt.wait ?? 90000)) => page.waitForFunction(fn, arg, { timeout: t, polling: 100 });
 await until(() => window.__umbra && window.__umbra.mode === 'command' && !window.__umbra.busy);
 log('ready');

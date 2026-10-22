@@ -33,11 +33,13 @@ export function startFlow(ctx: Ctx) {
   /** 可跳过的 DOM 演出：点击把剩余时间压到 ≤150ms */
   const skippable = (el: HTMLElement, ms: number) => new Promise<void>((res) => { let done = false; const end = () => { if (!done) { done = true; res(); } }; const tm = setTimeout(end, ms); el.addEventListener('pointerdown', () => { clearTimeout(tm); el.style.opacity = '0.6'; setTimeout(end, 120); }, { once: true }); });
   /** 转场：红黑三片斜切（≤0.65s），中点切内容 */
+  let midMs = 0;
   async function wipe(mid: () => void | Promise<void>) {
     await timed('scene:wipe', 700, async () => {
       const w = document.createElement('div'); w.className = 'wipe'; w.innerHTML = '<i></i><i></i><i></i>'; host.parentElement!.appendChild(w); w.classList.add('umbra-skin-p5r-red');
-      eng.audio.play('se.scene.enter'); await wait(300); await mid(); await wait(380); w.remove();
+      eng.audio.play('se.scene.enter'); await wait(300); const m0 = performance.now(); await mid(); midMs = performance.now() - m0; await wait(380); w.remove();
     });
+    const last = F.timings[F.timings.length - 1]; last.ms = Math.round(last.ms - midMs); last.build = Math.round(midMs);   // 墙钟只计转场本身；中点内容构建/加载另记 build
   }
   const toast = (s: string, red = false) => { const t = document.createElement('div'); t.className = 'toast' + (red ? ' red' : ''); t.textContent = s; host.appendChild(t); setTimeout(() => t.remove(), 1400); };
   const headImg = (id: string) => `<img src="${SK}head.${id}.webp" alt="">`;
@@ -203,7 +205,7 @@ export function startFlow(ctx: Ctx) {
     run.battles++; run.turns += out.turns;
     if (out.turns > ECO.alert.slowTurns) run.addAlert(ECO.alert.slowBattle * (out.turns - ECO.alert.slowTurns));
     layer.visible = true; host.style.display = '';
-    F.screen = 'explore'; if (view) bgm(run.forkChoice === 'risk' && run.node.kind === 'fork' ? 'explore.risk' : 'explore', run.callingCard ? { callingCard: true } : {});
+    F.screen = 'explore'; if (view && run.node.kind !== 'boss') bgm(run.forkChoice === 'risk' && run.node.kind === 'fork' ? 'explore.risk' : 'explore', run.callingCard ? { callingCard: true } : {});
     return out;
   }
   /** 测试用（?fastwin=1）：跳过战斗直接判胜（截图各尺寸流程画面用；完整流程自动化不用它） */

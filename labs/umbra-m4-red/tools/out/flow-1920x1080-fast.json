@@ -1,0 +1,431 @@
+{
+ "size": "1920x1080",
+ "fast": true,
+ "battles": 0,
+ "secs": 109.046,
+ "errors": [],
+ "steps": [
+  "11.2s hub",
+  "32.7s shot 01-hub",
+  "36.2s shot 02-board",
+  "40.4s shot 03-callingcard",
+  "44.9s shot 04-cc-send",
+  "47.0s explore",
+  "49.9s shot 05-explore-gate",
+  "49.9s tap [7,0] explore:gate",
+  "51.1s tap [7,0] explore:gate",
+  "55.6s shot 05-explore",
+  "55.6s tap [7,0] explore",
+  "56.7s tap [8,4] explore",
+  "57.8s tap [8,4] explore",
+  "58.9s tap [8,4] explore",
+  "60.3s tap [8,4] explore",
+  "64.0s shot 08-card",
+  "65.4s tap [8,5] explore",
+  "66.5s tap [8,5] explore",
+  "70.4s shot 05-fork",
+  "73.4s shot 05-explore-risk",
+  "73.4s tap [8,3] explore:risk",
+  "74.5s tap [8,4] explore:risk",
+  "75.6s tap [8,4] explore:risk",
+  "77.8s tap [8,4] explore",
+  "79.3s tap [8,4] explore",
+  "81.4s tap [8,5] explore",
+  "82.5s tap [8,5] explore",
+  "86.8s shot 05-safe",
+  "87.8s tap [1,1] explore:gate",
+  "88.9s tap [1,1] explore:gate",
+  "90.1s tap [1,1] explore:gate",
+  "91.2s tap [1,1] explore:gate",
+  "92.5s tap [1,1] explore",
+  "93.6s tap [0,4] explore",
+  "96.1s tap [0,5] explore",
+  "97.2s tap [0,5] explore",
+  "100.8s shot 09-boss-intro",
+  "105.0s shot 10-end",
+  "109.0s shot 11-hub-after"
+ ],
+ "ok": true,
+ "flowErrors": [],
+ "timings": [
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 3215
+  },
+  {
+   "ev": "callingcard:send",
+   "ms": 2902,
+   "cap": 3000
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 5516
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 19
+  },
+  {
+   "ev": "card:pick",
+   "ms": 560,
+   "cap": 600
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 1
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 2
+  },
+  {
+   "ev": "card:pick",
+   "ms": 560,
+   "cap": 600
+  },
+  {
+   "ev": "card:pick",
+   "ms": 560,
+   "cap": 600
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 0
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 7
+  },
+  {
+   "ev": "card:pick",
+   "ms": 563,
+   "cap": 600
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 1
+  },
+  {
+   "ev": "boss:intro",
+   "ms": 1900,
+   "cap": 2000
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 2
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 0
+  }
+ ],
+ "fx": null,
+ "log": [
+  "bgm:cue hub.home",
+  "bgm:cue requests",
+  "bgm:cue hub.home",
+  "bgm:cue hub.home",
+  "bgm:cue explore",
+  "map:encounter patrol ambushed",
+  "fastwin noisy",
+  "bgm:cue explore",
+  "map:encounter patrol ambushed",
+  "fastwin echo+noisy",
+  "bgm:cue explore",
+  "map:encounter gate preemptive",
+  "fastwin noisy+echo",
+  "bgm:cue explore",
+  "bgm:cue explore",
+  "map:move fork",
+  "bgm:cue explore.risk",
+  "map:encounter patrol ambushed",
+  "fastwin noisy+echo",
+  "bgm:cue explore.risk",
+  "map:encounter elite normal",
+  "fastwin elite+noisy",
+  "bgm:cue explore.risk",
+  "bgm:cue explore.safe",
+  "bgm:cue explore",
+  "map:encounter patrol ambushed",
+  "fastwin echo",
+  "bgm:cue explore",
+  "map:encounter gate preemptive",
+  "fastwin echo+noisy+echo",
+  "bgm:cue explore",
+  "bgm:cue boss.intro",
+  "fastwin boss",
+  "item:get treasure",
+  "bgm:cue boss.defeat",
+  "bgm:cue result",
+  "bgm:cue hub.home"
+ ],
+ "save": {
+  "money": 26700,
+  "lv": [
+   [
+    "joker",
+    13
+   ],
+   [
+    "skull",
+    13
+   ],
+   [
+    "mona",
+    13
+   ],
+   [
+    "panther",
+    13
+   ]
+  ],
+  "cleared": [
+   "r2"
+  ]
+ },
+ "umbraErrors": [],
+ "audio": [
+  "se:se.step(silent)",
+  "se:se.spotted(silent)",
+  "se:se.alert.up(silent)",
+  "bgm:explore(silent)",
+  "se:se.step(silent)",
+  "se:se.interact(silent)",
+  "se:se.step(silent)",
+  "se:se.spotted(silent)",
+  "se:se.alert.up(silent)",
+  "bgm:explore(silent)",
+  "se:se.step(silent)",
+  "bgm:explore(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.exit.open(silent)",
+  "se:se.step(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:explore(silent)",
+  "se:se.ui.confirm(silent)",
+  "bgm:explore.risk(silent)",
+  "se:se.scene.enter(silent)",
+  "se:se.step(silent)",
+  "se:se.interact(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.step(silent)",
+  "se:se.spotted(silent)",
+  "se:se.alert.up(silent)",
+  "bgm:explore.risk(silent)",
+  "se:se.step(silent)",
+  "bgm:explore.risk(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.exit.open(silent)",
+  "se:se.step(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:explore.safe(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:explore(silent)",
+  "se:se.step(silent)",
+  "se:se.spotted(silent)",
+  "se:se.alert.up(silent)",
+  "bgm:explore(silent)",
+  "se:se.step(silent)",
+  "se:se.cover(silent)",
+  "se:se.interact(silent)",
+  "se:se.step(silent)",
+  "se:se.cover(silent)",
+  "bgm:explore(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.exit.open(silent)",
+  "se:se.step(silent)",
+  "bgm:boss.intro(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:boss.defeat(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:result(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:hub.home(silent)"
+ ],
+ "exLog": [
+  {
+   "ev": "explore:move",
+   "ms": 1482,
+   "cap": 1500
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 493,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 396,
+   "cap": 350
+  },
+  {
+   "ev": "explore:move",
+   "ms": 2114,
+   "cap": 2000
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 428,
+   "cap": 400
+  },
+  {
+   "ev": "explore:move",
+   "ms": 337,
+   "cap": 250
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 520,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 321,
+   "cap": 350
+  },
+  {
+   "ev": "explore:move",
+   "ms": 520,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 325,
+   "cap": 350
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 785,
+   "cap": 800
+  },
+  {
+   "ev": "explore:move",
+   "ms": 624,
+   "cap": 500
+  },
+  {
+   "ev": "explore:move",
+   "ms": 2092,
+   "cap": 2000
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 392,
+   "cap": 400
+  },
+  {
+   "ev": "explore:move",
+   "ms": 455,
+   "cap": 500
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 470,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 370,
+   "cap": 350
+  },
+  {
+   "ev": "explore:move",
+   "ms": 251,
+   "cap": 250
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 325,
+   "cap": 350
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 816,
+   "cap": 800
+  },
+  {
+   "ev": "explore:move",
+   "ms": 723,
+   "cap": 500
+  },
+  {
+   "ev": "explore:move",
+   "ms": 2288,
+   "cap": 2000
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 464,
+   "cap": 500
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 395,
+   "cap": 350
+  },
+  {
+   "ev": "explore:move",
+   "ms": 240,
+   "cap": 250
+  },
+  {
+   "ev": "explore:cover",
+   "ms": 338,
+   "cap": 300
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 405,
+   "cap": 400
+  },
+  {
+   "ev": "explore:move",
+   "ms": 433,
+   "cap": 500
+  },
+  {
+   "ev": "explore:cover",
+   "ms": 280,
+   "cap": 300
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 333,
+   "cap": 350
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 776,
+   "cap": 800
+  },
+  {
+   "ev": "explore:move",
+   "ms": 563,
+   "cap": 500
+  }
+ ]
+}

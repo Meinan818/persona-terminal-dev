@@ -29,4 +29,21 @@ describe('UMBRA roster party', () => {
     expect(party.heroPersonaIds).toEqual(['izanagi']);
     expect(party.allyPersonaIds).toEqual(['io']);
   });
+
+  it('优先使用 roster.partyDefault 的初始三人', () => {
+    const party = partyFromRoster({
+      heroPersona: 'arsene',
+      companions: ['ryuji', 'ann', 'morgana', 'yusuke'],
+      companionPersonas: {
+        ryuji: 'captain-kidd',
+        ann: 'carmen',
+        morgana: 'zorro',
+        yusuke: 'goemon',
+      },
+      excludedPersonas: [],
+      showtime: [],
+      partyDefault: ['ryuji', 'ann', 'morgana'],
+    });
+    expect(party.allyPersonaIds).toEqual(['captain-kidd', 'carmen', 'zorro']);
+  });
 });

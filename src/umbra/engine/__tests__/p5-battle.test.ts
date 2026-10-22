@@ -132,6 +132,27 @@ describe('UMBRA formal P5 battle engine', () => {
     unloadSkin('p5r-red');
   });
 
+  it('同伴专属面具从数据表解析，不再被过滤', () => {
+    const io: any = buildBattlePersona('io');
+    expect(io).not.toBeNull();
+    expect(io.name).toBe('Io');
+
+    const battle: any = createBattle({
+      rng: steady,
+      roster: {
+        heroPersona: 'orpheus',
+        companions: ['yukari'],
+        companionPersonas: { yukari: 'io' },
+        excludedPersonas: [],
+        showtime: [],
+        partyDefault: ['yukari'],
+      },
+    });
+    const snapshot = battle.snapshot();
+    expect(snapshot.party).toHaveLength(2);
+    expect(snapshot.party[1].name).toBe('Io');
+  });
+
   it('图鉴选择按皮肤 roster 过滤 excludedPersonas', () => {
     registerSkin('p5r-red', skinPack());
     const ids = catalogPersonaChoicesForSkin('p5r-red').map((item: any) => item.id);

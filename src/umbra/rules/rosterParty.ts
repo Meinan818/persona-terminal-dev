@@ -13,7 +13,10 @@ export function partyFromRoster(roster: SkinRoster): RosterParty {
   const heroPersonaIds = roster.heroPersona?.trim()
     ? [roster.heroPersona.trim()]
     : [];
-  const allyPersonaIds = roster.companions
+  const party = roster.partyDefault?.length
+    ? roster.partyDefault
+    : roster.companions.slice(0, 3);
+  const allyPersonaIds = party
     .map(companionId => roster.companionPersonas[companionId])
     .filter((personaId): personaId is string => Boolean(personaId?.trim()))
     .map(personaId => personaId.trim());

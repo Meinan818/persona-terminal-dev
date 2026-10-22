@@ -20,6 +20,7 @@ import { generateEncounter } from '../rules/encounter';
 import { BASIC_ATTACK_POWER } from '../rules/combatNumbers';
 import { partyFromRoster } from '../rules/rosterParty';
 import type { SkinRoster } from '../skins/contract';
+import { registerCompanionPersonas } from './companionPersonas';
 
 export const ELEMENTS = P5_ELEMENTS;
 export const STATUS = P5_STATUS;
@@ -163,6 +164,7 @@ export function createDefaultBattle({
   roster?: SkinRoster;
   enemies?: AnyRecord[];
 } = {}): P5Battle {
+  registerCompanionPersonas();
   const party = roster
     ? partyFromRoster(roster)
     : { heroPersonaIds, allyPersonaIds };
@@ -193,7 +195,7 @@ export function createDefaultBattle({
   };
 
   const allies = party.allyPersonaIds
-    .map(id => buildBattlePersona(id))
+    .map(id => buildBattlePersona(id) ?? buildBattlePersona('pixie'))
     .filter(Boolean)
     .map(makePartyMember);
 

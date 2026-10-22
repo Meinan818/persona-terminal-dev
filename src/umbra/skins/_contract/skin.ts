@@ -94,6 +94,8 @@ export interface SkinRoster {
   companions: string[];
   companionPersonas: Record<string, string>;
   excludedPersonas: string[];
+  /** 原作的初始出战同伴（前 3 人）；未提供时回退 companions.slice(0, 3)。 */
+  partyDefault?: string[];
   /** 可组合 SHOWTIME/合体魔法的两人表（D-005，只写本作角色） */
   showtime: [string, string][];
 }

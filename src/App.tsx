@@ -1053,7 +1053,7 @@ function App() {
           {/* 愿望进度（PRD_V2.6 §8）：任务完成后的「又近了多少」弹窗 +
               黑猫在谈话里提议改数值的确认卡。两者都可能在任意页面触发，故挂顶层 */}
           {uiChannel !== 'p4' && <WishProgressCutIn />}
-          <WishProposalDialog />
+          {uiChannel !== 'p4' && <WishProposalDialog />}
           {/* 组织（第 8 轮）：作战达成 / 据点升级的庆祝卡——对账时在任意页面都可能发现，故挂顶层 */}
           {uiChannel !== 'p4' && <OrgCelebrationCutIn />}
           {/* 羁绊升级演出（P3R）：升级当下逐条播放、停在确认态。

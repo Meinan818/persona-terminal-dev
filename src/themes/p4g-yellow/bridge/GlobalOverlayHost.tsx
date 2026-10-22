@@ -9,6 +9,7 @@ import { WishProgressView } from '@yellow/screens/overlays/WishProgressCutIn.p4g
 import BigDealClearCutIn from '@yellow/screens/overlays/BigDealClearCutIn.p4g';
 import CallingCardCutIn from '@yellow/screens/overlays/CallingCardCutIn.p4g';
 import { OrgCelebration } from '@yellow/screens/overlays/OrgCelebrationCutIn.p4g';
+import WishProposalDialog from '@yellow/screens/overlays/WishProposalDialog.p4g';
 
 export function GlobalOverlayHost() {
   const levelUp = useAppStore((s) => s.levelUpNotification);
@@ -26,6 +27,9 @@ export function GlobalOverlayHost() {
   const markShown = useAppStore((s) => s.markCallingCardCutInShown);
   const orgHead = useCloudSocialStore((s) => s.orgCelebrations[0] ?? null);
   const shiftOrg = useCloudSocialStore((s) => s.shiftOrgCelebration);
+  const wishProposal = useAppStore((s) => s.wishProposal);
+  const setWishProposal = useAppStore((s) => s.setWishProposal);
+  const setWishProgress = useAppStore((s) => s.setWishProgress);
   const achLines = ach ? ACHIEVEMENT_UNLOCK_LINES[ach.id] : undefined;
   const wishPayload = wishCut
     ? { title: wishCut.wishTitle, pct: wishCut.pct, delta: wishCut.delta, times: wishCut.times, source: wishCut.source === 'ai' ? 'ai' as const : 'local' as const, reason: wishCut.reason }
@@ -39,6 +43,8 @@ export function GlobalOverlayHost() {
       <BigDealClearCutIn open={!!bigDeal && !blocker} onClose={clearBigDeal} data={bigDeal ?? undefined} />
       <CallingCardCutIn open={!!cutCard && !blocker} onClose={() => { if (cutCard) void markShown(cutCard.id); }} params={new URLSearchParams()} card={cutCard ?? undefined} reason={cutCard?.archiveReason ?? 'manual'} />
       <OrgCelebration head={orgHead} onClose={shiftOrg} />
+      <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
+        onConfirm={() => { if (wishProposal) void setWishProgress(wishProposal.wishId, wishProposal.toPct, { reason: wishProposal.reason }); setWishProposal(null); }} />
     </>
   );
 }

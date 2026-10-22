@@ -7,6 +7,7 @@ import { AchievementUnlockP3 } from '@blue/screens/overlays/AchievementUnlockMod
 import { SkillUnlockP3 } from '@blue/screens/overlays/SkillUnlockModal.p3r';
 import BigDealClearCutIn from '@blue/screens/overlays/BigDealClearCutIn.p3r';
 import { OrgCelebrationView } from '@blue/screens/overlays/OrgCelebrationCutIn.p3r';
+import WishProposalDialog from '@blue/screens/overlays/WishProposalDialog.p3r';
 
 export function GlobalOverlayHost() {
   const levelUp = useAppStore((s) => s.levelUpNotification);
@@ -20,6 +21,9 @@ export function GlobalOverlayHost() {
   const clearBigDeal = useAppStore((s) => s.clearBigDealClear);
   const orgHead = useCloudSocialStore((s) => s.orgCelebrations[0] ?? null);
   const shiftOrg = useCloudSocialStore((s) => s.shiftOrgCelebration);
+  const wishProposal = useAppStore((s) => s.wishProposal);
+  const setWishProposal = useAppStore((s) => s.setWishProposal);
+  const setWishProgress = useAppStore((s) => s.setWishProgress);
   const lines = ach ? ACHIEVEMENT_UNLOCK_LINES[ach.id] : undefined;
   return (
     <>
@@ -28,6 +32,8 @@ export function GlobalOverlayHost() {
       <SkillUnlockP3 isOpen={!!skill && !blocker && !levelUp && !ach} onClose={() => setSkill(null)} skillName={skill?.name ?? ''} />
       <BigDealClearCutIn open={!!bigDeal && !blocker} onClose={clearBigDeal} params={new URLSearchParams()} data={bigDeal ?? undefined} />
       <OrgCelebrationView open={!!orgHead && !blocker} onClose={shiftOrg} head={orgHead as Parameters<typeof OrgCelebrationView>[0]['head']} />
+      <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
+        onConfirm={() => { if (wishProposal) void setWishProgress(wishProposal.wishId, wishProposal.toPct, { reason: wishProposal.reason }); setWishProposal(null); }} />
     </>
   );
 }

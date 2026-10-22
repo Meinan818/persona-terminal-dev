@@ -342,11 +342,21 @@ function refreshHud() {
   $('#volt').classList.toggle('full', vfull);
   ($('#volt .vbar i') as HTMLElement).style.width = `${(100 * battle.voltage) / VOLTAGE_MAX}%`;
   $('#volt-n').textContent = vfull ? 'MAX' : String(battle.voltage);
+  // P5T 布局：右下 Voltage 星 + 队伍头像排（Hark 美术，依据 docs/design/P5T-UI-LAYOUT.md）
+  ($('#volt-star .star i') as HTMLElement).style.height = `${(100 * battle.voltage) / VOLTAGE_MAX}%`;
+  $('#volt-star').classList.toggle('full', vfull);
+  ($('#endbar button') as HTMLButtonElement).disabled = battle.phase !== 'player' || busy;
+  const allies = battle.units.filter((x) => x.side === 'ally' && !x.ko && !x.decoy && !x.prop);
+  $('#party').innerHTML = allies.map((a) => `<div class="pm${a.id === selected ? ' cur' : ''}${a.acted ? ' done' : ''}" data-uid="${a.id}">
+    <div class="face" style="--c:${'#' + (COLORS[a.id] ?? 0x888888).toString(16).padStart(6, '0')}">${(a.name.split(' ').pop() ?? a.name).slice(0, 1)}</div>
+    ${!a.acted && battle.phase === 'player' ? '<b class="act">ACTION</b>' : ''}
+    <div class="nums"><span class="hp"><small>HP</small>${a.hp}</span><span class="sp"><small>SP</small>${a.sp}</span></div>
+    </div>`).join('') + (() => { const a = selected ? battle.unit(selected) : null; return a && a.charges?.length && battle.phase === 'player' ? `<div class="chgs">${a.charges.map((c) => `<i data-charge="${c}" class="${c === a.charge ? 'sel' : ''}">CHARGE · ${CHARGE_NAME[c] ?? c}</i>`).join('')}</div>` : ''; })();
   const bans = battle.speakerBans();
   $('#ban').classList.toggle('hidden', !bans.length);
   $('#ban').textContent = bans.length ? `喇叭禁止：${bans.map((b) => ACT_NAME[b.ban]).join('、')}（黄色范围内）` : '';
   const card = $('#unit-card');
-  const u = selected ? battle.unit(selected) : inspectEnemy ? battle.unit(inspectEnemy) : null;
+  const u = inspectEnemy ? battle.unit(inspectEnemy) : null;
   if (u) {
     card.classList.remove('hidden');
     const gun = u.gun ? `枪 ${u.gun.power}/${battle.gunRange(u)}格${u.gun.shape && u.gun.shape !== 'single' ? `(${u.gun.shape === 'aoe' ? '散射' : '爆炸'})` : ''}` : '';
@@ -423,6 +433,16 @@ function meleeViaMove(u: Unit, t: Unit): { kind: 'melee'; via: Vec } | null {
 
 function refreshLabels() {
   const w = window.innerWidth, h = window.innerHeight;
+  const act = $('#actions');
+  const su = selected ? battle.unit(selected) : null;
+  const sg = su ? unitMesh.get(su.id) : null;
+  if (sg && battle.phase === 'player' && !busy) {
+    const v = sg.position.clone().add(new THREE.Vector3(0, 0.5, 0)).project(camera);
+    const sx = ((v.x + 1) / 2) * w, sy = ((1 - v.y) / 2) * h;
+    act.style.right = `${Math.max(8, w - sx + 34)}px`; act.style.left = 'auto';
+    act.style.top = `${Math.min(h - 200, Math.max(60, sy - 70))}px`; act.style.bottom = 'auto';
+    act.classList.remove('hidden');
+  } else act.classList.add('hidden');
   for (const u of battle.units) {
     const el = labelEl.get(u.id);
     const g = unitMesh.get(u.id);
@@ -733,6 +753,13 @@ function onTap(h: { tile?: Vec; unit?: string }) {
   refreshAll();
 }
 
+$('#endbar').addEventListener('click', () => { if (busy || battle.phase !== 'player') return; selected = null; void play(battle.endPlayerPhase()); });
+$('#party').addEventListener('click', (ev) => {
+  const c = (ev.target as HTMLElement).closest('[data-charge]') as HTMLElement | null;
+  if (c && selected && !busy) { void play(battle.selectCharge(selected, c.dataset.charge as never)); return; }
+  const p = (ev.target as HTMLElement).closest('[data-uid]') as HTMLElement | null;
+  if (p) onTap({ unit: p.dataset.uid! });
+});
 $('#actions').addEventListener('click', (ev) => {
   const b = (ev.target as HTMLElement).closest('button');
   if (!b || busy) return;

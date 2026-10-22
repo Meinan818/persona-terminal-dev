@@ -167,3 +167,81 @@ button.small.on { background: #e60012; }
 @keyframes stripIn { to { transform: rotate(-7deg) translateX(0); } }
 @keyframes skIn { to { transform: rotate(-7deg) scale(1); } }
 @media (max-height: 420px) { #summon .per { font-size: 32px; } #summon .sk { font-size: 18px; } #summon .who { font-size: 11px; } }
+
+/* ===== P5T 布局 v1（Hark，依据 docs/design/P5T-UI-LAYOUT.md）===== */
+/* 回合+目标：右上，黑签 TURN + 白斜框目标 */
+#hud-tl { left: auto; right: max(10px, env(safe-area-inset-right)); top: 8px; background: transparent; border: none; padding: 0; transform: none; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+#hud-tl > * { transform: none; }
+#turn { background: #000; color: #fff; font-size: 15px; padding: 1px 10px; transform: skewX(-12deg) translateX(-60%); margin-bottom: -4px; z-index: 1; position: relative; }
+#objective { background: #fff; color: #000; font-weight: 900; font-size: 13px; opacity: 1; padding: 6px 18px; border: 3px solid #000; box-shadow: 4px 4px 0 #000; transform: skewX(-12deg) rotate(-2deg); min-width: 230px; text-align: center; }
+#phase { background: #000; color: #fff; font-size: 10px; padding: 1px 10px; margin-top: 4px; transform: skewX(-12deg); }
+#hud-tl #volt { display: none; }
+#ban { background: #000; padding: 1px 8px; }
+/* 调试按钮：左上，弱化 */
+#hud-tr { right: auto; left: max(8px, env(safe-area-inset-left)); top: 8px; opacity: .55; transform: scale(.8); transform-origin: left top; }
+/* 指令：浮在当前角色左侧的斜签 */
+#actions { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; transform: none; bottom: auto; }
+#actions button, #actions button:nth-child(2), #actions button:nth-child(5) { transform: skewX(-14deg); width: auto; min-width: 92px; height: 30px; padding: 0 14px 0 26px; font-size: 14px; background: #000; color: #fff; border: 2px solid #e60012; box-shadow: none; clip-path: none; text-align: right; }
+#actions button::before { left: 6px; top: 50%; transform: translateY(-50%) skewX(14deg); font-size: 8px; color: #e60012; }
+#actions button:nth-child(odd) { margin-right: 10px; }
+#actions button.sel { background: #fff; color: #000; border-color: #000; }
+#actions button:disabled { display: none; }
+#actions .triple { min-width: 150px; }
+#skills { right: auto; left: 50%; bottom: 12px; transform: translateX(-50%); flex-direction: row; flex-wrap: wrap; justify-content: center; max-width: 70vw; }
+/* 右下：Voltage 星 */
+#volt-star { right: max(14px, env(safe-area-inset-right)); bottom: 92px; display: flex; align-items: center; gap: 0; }
+#volt-star span { order: -1; background: #000; color: #fff; font-size: 10px; font-weight: 900; padding: 1px 6px; transform: skewX(-12deg) translateX(8px); border: 1px solid #fff; }
+#volt-star .star { width: 58px; height: 58px; background: #000; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); position: relative; transform: rotate(8deg); filter: drop-shadow(0 0 0 #fff); }
+#volt-star .star i { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(0deg, #b38600, #ffd400); }
+#volt-star.full .star i { background: #ffd400; }
+#volt-star.full .star { animation: starPulse .8s ease-in-out infinite alternate; }
+@keyframes starPulse { to { transform: rotate(8deg) scale(1.08); } }
+/* 右下：队伍头像排 */
+#party { right: max(10px, env(safe-area-inset-right)); bottom: max(6px, env(safe-area-inset-bottom)); display: flex; align-items: flex-end; gap: 6px; }
+#party .pm { position: relative; width: 66px; cursor: pointer; text-align: center; }
+#party .pm.cur { width: 92px; }
+#party .pm.done { opacity: .55; }
+#party .face { margin: 0 auto; width: 46px; height: 46px; border-radius: 50%; background: var(--c); border: 3px solid #fff; box-shadow: 3px 3px 0 #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000; }
+#party .pm.cur .face { width: 62px; height: 62px; font-size: 28px; border-color: #e60012; }
+#party .act { position: absolute; right: -2px; top: 2px; background: #e60012; color: #fff; font-size: 8px; padding: 1px 4px; transform: rotate(-10deg); border: 1px solid #fff; }
+#party .nums { display: flex; justify-content: center; gap: 4px; font-weight: 900; font-size: 13px; margin-top: -4px; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000; font-style: italic; }
+#party .nums small { font-size: 7px; margin-right: 1px; }
+#party .hp { color: #fff; -webkit-text-stroke: .6px #ff4fa0; }
+#party .sp { color: #fff; -webkit-text-stroke: .6px #3ad6ff; }
+#party .pm.cur .nums { font-size: 16px; }
+#party .chg { position: absolute; bottom: 100%; right: 0; display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+#party .chg i { font-style: normal; font-size: 9px; background: #000; border: 1px solid #fff; padding: 1px 4px; white-space: nowrap; }
+#party .chg i.sel { background: #e60012; }
+/* 结束回合：左下 */
+#endbar { left: max(10px, env(safe-area-inset-left)); bottom: max(8px, env(safe-area-inset-bottom)); }
+#endbar button { position: relative; padding: 6px 16px 6px 30px; font-weight: 900; font-size: 13px; background: #e60012; border: 2px solid #fff; transform: skewX(-12deg); }
+#endbar button::before { content: attr(data-en); position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 8px; color: #000; }
+#endbar button:disabled { opacity: .35; }
+/* 敌方查看卡：左侧中部 */
+#unit-card { bottom: auto; top: 30%; }
+#baton { top: auto; bottom: 74px; left: auto; right: 260px; transform: skewX(-10deg); background: #fff; color: #000; border: 3px solid #000; }
+@media (max-height: 420px) {
+  #objective { font-size: 11px; padding: 4px 12px; min-width: 180px; }
+  #party .pm { width: 54px; } #party .pm.cur { width: 76px; }
+  #party .face { width: 38px; height: 38px; font-size: 16px; } #party .pm.cur .face { width: 50px; height: 50px; font-size: 22px; }
+  #volt-star { bottom: 78px; } #volt-star .star { width: 46px; height: 46px; }
+  #actions button, #actions button:nth-child(2), #actions button:nth-child(5) { height: 26px; font-size: 12px; min-width: 80px; }
+}
+/* v1.1 修重叠 */
+#party .pm { width: 64px; } #party .pm.cur { width: 84px; }
+#party .nums { flex-direction: column; gap: 0; line-height: 1.05; font-size: 11px; margin-top: -2px; }
+#party .pm.cur .nums { font-size: 13px; }
+#party .act { font-size: 7px; padding: 0 3px; right: 4px; top: 0; }
+#party .chg { bottom: 0; right: auto; left: auto; position: fixed; transform: translateX(-110%); margin: 0; }
+#volt-star { bottom: 118px; }
+#volt-star .star { overflow: hidden; }
+#actions button, #actions button:nth-child(2), #actions button:nth-child(5) { height: 26px; font-size: 12px; min-width: 84px; }
+@media (max-height: 420px) {
+  #party .pm { width: 56px; } #party .pm.cur { width: 72px; }
+  #party .nums { font-size: 10px; } #party .pm.cur .nums { font-size: 12px; }
+  #volt-star { bottom: 104px; }
+  #actions button, #actions button:nth-child(2), #actions button:nth-child(5) { height: 22px; font-size: 11px; min-width: 72px; padding: 0 10px 0 22px; }
+}
+#party .chgs { order: -1; display: flex; flex-direction: column; gap: 3px; margin-right: 6px; align-self: center; }
+#party .chgs i { font-style: normal; font-size: 9px; font-weight: 800; background: #000; border: 1px solid #fff; padding: 2px 6px; white-space: nowrap; transform: skewX(-12deg); cursor: pointer; }
+#party .chgs i.sel { background: #e60012; }

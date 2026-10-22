@@ -32,6 +32,8 @@ import { downloadBackup, copyBackupToClipboard, readBackupFile } from '@/service
 import { ImagesBackupBlock } from '@/components/settings/ImagesBackupBlock';
 import { isImagesBundleJson, importImagesBundle } from '@/utils/activityImages';
 import { useUiChannel } from '@/ui/useUiChannel';
+import AccountP4 from '@yellow/screens/pages/Account.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { P4Flower, P4Sparkle } from '@/ui/p4Kit';
 import { P3R, P3RPage, GhostWords, SectionMark, SlantButton, P3PageHeader, CodeChip, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_FONT, P5_TITLE_FONT, roughQuad, P5Panel, P5Collage, P5Rough, P5Star, P5Sparkle, P5Dots, P5Slab, P5RPage } from '@/components/p5r/kit';
@@ -971,6 +973,8 @@ export const Account = () => {
       </P3RPage>
     );
   }
+
+  if (useUiChannel() === 'p4') return <P4Host><AccountP4 pageId="account" params={new URLSearchParams()} /></P4Host>;
 
   return (
     <motion.div

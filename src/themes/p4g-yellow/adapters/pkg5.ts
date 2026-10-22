@@ -15,6 +15,24 @@ import { useAppStore, toLocalDateKey } from '@/store';
 import type { LedgerEntry, Attribute } from '@/types';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
 import type { User } from '@/types';
+import { useCloudUser } from '@/themes/astrologyData';
+
+export function useAccountData() {
+  const attributes = useAppStore((s) => s.attributes);
+  const { cloudUser, cloudEnabled } = useCloudUser();
+  const { TOTAL_LEVEL, TOTAL_POINTS } = useMenuData();
+  return useMemo(() => ({
+    ATTRIBUTES: attributes as Attribute[],
+    CLOUD_USER: {
+      username: String(cloudUser?.userId ?? ''),
+      email: String((cloudUser as unknown as { email?: string } | null)?.email ?? cloudUser?.nickname ?? ''),
+    },
+    SIGNED_IN: !!cloudUser,
+    CLOUD_ENABLED: !!cloudEnabled,
+    TOTAL_LEVEL,
+    TOTAL_POINTS,
+  }), [attributes, cloudUser, cloudEnabled, TOTAL_LEVEL, TOTAL_POINTS]);
+}
 
 // A 类：只转发纯计算/格式化函数（真实仓库同名、同签名、同返回结构）
 // catMeta / INCOME_META 不转发：真实版返回结构不同（没有 demo 用的 color 字段），图标/颜色属于设计，保留 demo 版

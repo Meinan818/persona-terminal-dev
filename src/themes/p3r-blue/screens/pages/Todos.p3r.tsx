@@ -9,12 +9,13 @@
  * 查询参数：pane=wish；deck=weekly|cards；goal=none|progress|done|claimed；state=empty。
  */
 import { AnimatePresence, motion } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Todo, Wish } from '@real/types';
 import { BigSlantTitle, GhostWords, P3Button, P3Input, P3Progress, P3Tag, IconEdit, IconTrash, IconRefresh, IconMore, IconPlus, useToast, P3R, slantClip, tickClip, Glyph } from '@blue/kit';
 import { P3Stagger, P3StaggerItem } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
 import { ATTR_NAMES, TODAY, TODAY_DONE, TODAY_KEY, TODOS, TODO_PROGRESS, WISHES, WISH_TIMES } from '@blue/mock/pkg2';
+import { actionsOps, useActionsData } from '@blue/adapters/pkg2';
 import { Dot, MiniHead, Ring, SlantFab, WEEK_LABELS, daysBetween, qp, setHashParam, useLongPress } from '@blue/screens/pkg2/common';
 import { GoalDeck } from '@blue/screens/pkg2/GoalDeck';
 import TodoFormSheet, { type TodoForm } from '@blue/screens/overlays/TodoFormSheet.p3r';
@@ -198,6 +199,7 @@ function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview
 export function TodosView({ params }: { params: URLSearchParams }) {
   const toast = useToast();
   const anim = useBoldness();
+  const { TODOS: realTODOS, WISHES: realWISHES, TODAY_DONE: realTODAY_DONE } = useActionsData();
   const empty = qp(params, 'state') === 'empty';
   const [todos, setTodos] = useState<Todo[]>(empty ? [] : TODOS);
   const [wishes, setWishes] = useState<Wish[]>(empty ? [] : WISHES);
@@ -216,6 +218,8 @@ export function TodosView({ params }: { params: URLSearchParams }) {
   const [compose, setCompose] = useState(false);
   const isWish = pane === 'wish';
 
+  useEffect(() => { setTodos(empty ? [] : realTODOS); setWishes(empty ? [] : realWISHES); setDoneToday(new Set(empty ? [] : realTODAY_DONE)); }, [realTODOS, realWISHES, realTODAY_DONE, empty]);
+
   const pendingDate = todos.filter((t) => t.isActive && !t.completedAt && ((t.startDate && t.startDate > TODAY_KEY) || (t.weekdays?.length && !t.weekdays.includes(TODAY.getDay()))));
   const active = todos.filter((t) => t.isActive && !t.completedAt && !t.archivedAt && !pendingDate.includes(t));
   const inactive = todos.filter((t) => !t.isActive && !t.completedAt);
@@ -233,9 +237,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
   const archRow = 'flex min-w-0 items-center gap-2 py-2 pl-4 pr-5';
 
   const saveForm = (f: TodoForm, id?: string) => {
-    const patch: Partial<Todo> = { title: f.title, attribute: f.attribute, points: f.points, frequency: f.mode === 'count' ? 'count' : 'single', targetCount: f.targetCount, important: f.important, repeatDaily: f.repeatDaily, isLongTerm: f.isLongTerm, isBigDeal: f.mode === 'big', steps: f.mode === 'big' ? f.steps : undefined, deadline: f.deadline || undefined, weekdays: f.weekdays, isActive: f.isActive, startDate: f.startDate || undefined, extraBoosts: f.extraBoosts, currentState: f.currentState || undefined, wishId: f.wishId };
-    if (id) setTodos((l) => l.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-    else setTodos((l) => [{ id: `t${Date.now()}`, createdAt: new Date(), ...patch } as Todo, ...l]);
+    void actionsOps.saveTodo(f, id);
   };
 
   return (

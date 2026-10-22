@@ -95,7 +95,7 @@
 :root[data-ui-channel="p5"] .bn2-b.on { background: var(--red); color: #fff; box-shadow: 3px 4px 0 #111; transform: rotate(var(--rt)) translateY(-5px) scale(1.05); }
 :root[data-ui-channel="p5"] .bn2-b.on svg { filter: drop-shadow(1.5px 1.5px 0 #111); }
 :root[data-ui-channel="p5"] .bn2-b:active { transform: rotate(var(--rt)) scale(.93); }
-:root[data-ui-channel="p5"] .bn2-hex { position: relative; height: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: -4px; }
+:root[data-ui-channel="p5"] .bn2-hex { position: relative; height: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: -4px; touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 :root[data-ui-channel="p5"] .bn2-hexbg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(3px 4px 0 var(--paper)); }
 :root[data-ui-channel="p5"] .bn2-hex svg:not(.bn2-hexbg) { position: relative; width: 50px; height: 32px; }
 :root[data-ui-channel="p5"] .bn2-hex span { position: relative; font: 900 10px/1 var(--f-title); color: #fff; letter-spacing: .12em; margin-top: 2px; }

@@ -51,11 +51,12 @@ const go = (id: string, e: MouseEvent) => {
 function HexKey() {
   const t = useRef(0), fired = useRef(false), ref = useRef<HTMLAnchorElement>(null);
   return (
-    <a ref={ref} className="bn2-hex" data-go="chat" href="#/p/dashboard" aria-label="助手（长按：快捷轮盘）"
+    <a ref={ref} className="bn2-hex" data-go="chat" role="button" tabIndex={0} aria-label="助手（长按：快捷轮盘）"
       onPointerDown={() => { fired.current = false; const r = ref.current!.getBoundingClientRect(); t.current = window.setTimeout(() => { fired.current = true; openWheel({ x: r.left + r.width / 2, y: r.top + r.height * 0.45 }, true); }, 500); }}
       onPointerUp={() => clearTimeout(t.current)} onPointerCancel={() => clearTimeout(t.current)}
       onClickCapture={(e) => { if (fired.current) { e.preventDefault(); e.stopPropagation(); fired.current = false; } }}
       onClick={(e) => { e.preventDefault(); sfx('nav'); openAssistant(); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sfx('nav'); openAssistant(); } }}
       onContextMenu={(e) => e.preventDefault()}>
       <svg className="bn2-hexbg" viewBox="0 0 100 90" aria-hidden="true"><polygon points="24,2 78,0 100,44 80,90 22,88 0,46" fill="#111" /><polygon points="27,8 74,6 93,44 76,83 25,82 7,46" fill="var(--red)" /></svg>
       <MaskIco /><span>助手</span>

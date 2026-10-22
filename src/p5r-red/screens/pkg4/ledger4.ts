@@ -101,8 +101,8 @@ export function ledgerMount(root) {
     const b = e.target.closest('[data-act]'); if (!b || !root.contains(b) || b.disabled) return; const a = b.dataset.act;
     if (a === 'bal') { L.bal = L.bal === 'month' ? 'total' : 'month'; drawBal(); }
     if (a === 'budget') openBudgetSheet({ mode: RED_LEDGER.budget != null ? 'edit' : 'first', onSaved: (v, sav) => { L.budget = true; void useAppStore.getState().setBudget(toLocalDateKey().slice(0, 7), { monthlyLimit: v, ...(sav != null ? { savingsGoal: sav } : {}) }).catch(() => {}); drawBal(); } });
-    if (a === 'reconcile') openReconcileSheet({});
-    if (a === 'setup') openReconcileSheet({ initial: true, onSaved: () => { L.first = false; root.querySelector('.p4-led-setup')?.remove(); } });
+    if (a === 'reconcile') openReconcileSheet({ remaining: RED_LEDGER.adjustCount >= 3 ? 0 : 3 - RED_LEDGER.adjustCount });
+    if (a === 'setup') openReconcileSheet({ initial: true, remaining: RED_LEDGER.adjustCount >= 3 ? 0 : 3 - RED_LEDGER.adjustCount, onSaved: () => { L.first = false; root.querySelector('.p4-led-setup')?.remove(); } });
     if (a === 'mon') { L.month = Math.min(0, L.month + +b.dataset.d); drawView(); }
     if (a === 'rec') {
       const txt = root.querySelector('[data-quick]').value.trim(), nums = txt.match(/\d+(\.\d+)?/g) || [];
@@ -236,11 +236,19 @@ export function openBudgetSheet({ mode = 'edit', locked = false, onSaved } = {})
 }
 
 /** 余额对账 / 设置当前余额（真实 Ledger.tsx#ReconcileSheet）：initial 首次；remaining 剩余轮数；fail 演示对账失败 */
-const ACCTS = [{ name: '支付宝', bal: 1268 }, { name: '微信', bal: 860 }, { name: '银行卡', bal: 2400 }, { name: '信用卡', bal: -1260, debt: true }, { name: '未分配', bal: 0, unassigned: true }];
+const ACCTS = [
+  { name: '支付宝', bal: 0 }, { name: '微信', bal: 0 }, { name: '银行卡', bal: 0 },
+  { name: '信用卡', bal: 0, debt: true }, { name: '未分配', bal: 0, unassigned: true },
+];
+function realAccounts() {
+  const rows = useAppStore.getState().getAccountBalances();
+  return ACCTS.map((a) => ({ ...a, bal: rows.find((r) => r.name === a.name)?.balance ?? 0, debt: rows.find((r) => r.name === a.name)?.isDebt ?? a.debt ?? false }));
+}
 export function openReconcileSheet({ initial = false, remaining = 2, fail = false, onSaved } = {}) {
   const vals = {};
+  const accounts = realAccounts();
   return P5.sheet(initial ? '设置当前余额' : '余额对账', `<p class="sh-p p4-rc-p">${initial ? '按账户填入你现在的余额（支付宝 / 微信 / 银行卡…，只填一个也行），之后随时可「对账」修正；这一次不占对账轮数。' : `把各账户校准到真实余额（打开支付宝 / 微信对一下）。一次提交算一轮，本月还可对账 <b>${Math.max(0, remaining)}</b> 轮。信用卡这类负债账户余额可以是负数。`}</p>
-    <div class="p4-rc">${ACCTS.filter((a) => !(initial && a.unassigned)).map((a) => `<div class="p4-rc-row"><span class="p4-rc-n"><b>${a.name}</b>${a.debt ? '<i class="tag">负债</i>' : ''}${a.unassigned ? '<i class="tag line">没填账户的流水</i>' : ''}<small>${initial ? '' : a.debt && a.bal < 0 ? `欠 ¥${fmt(-a.bal)}` : signed(a.bal)}</small></span><input class="inp" inputmode="decimal" data-a="${a.name}" placeholder="${a.debt ? (a.bal < 0 ? `-${fmt(-a.bal)}` : '0（欠款填负数）') : initial ? '0' : fmt(a.bal)}" aria-label="${a.name} 余额"></div>`).join('')}</div>
+    <div class="p4-rc">${accounts.filter((a) => !(initial && a.unassigned)).map((a) => `<div class="p4-rc-row"><span class="p4-rc-n"><b>${a.name}</b>${a.debt ? '<i class="tag">负债</i>' : ''}${a.unassigned ? '<i class="tag line">没填账户的流水</i>' : ''}<small>${initial ? '' : a.debt && a.bal < 0 ? `欠 ¥${fmt(-a.bal)}` : signed(a.bal)}</small></span><input class="inp" inputmode="decimal" data-a="${a.name}" placeholder="${a.debt ? (a.bal < 0 ? `-${fmt(-a.bal)}` : '0（欠款填负数）') : initial ? '0' : fmt(a.bal)}" aria-label="${a.name} 余额"></div>`).join('')}</div>
     <p class="od-err p4-rc-err" data-err hidden></p>
     <div class="sh-acts">${U.btn('', { tone: 'red', size: 'lg', seed: 341, attrs: 'data-ok' })}</div>`, { seed: 47, onMount: (sh, close) => {
     const ok = sh.querySelector('[data-ok]'), lab = ok.querySelector('span');
@@ -250,6 +258,12 @@ export function openReconcileSheet({ initial = false, remaining = 2, fail = fals
     sh.addEventListener('input', (e) => { const a = e.target.dataset.a; if (!a) return; e.target.value = e.target.value.replace(/[^\d.-]/g, ''); vals[a] = e.target.value; upd(); });
     upd();
     ok.onclick = () => { if (ok.disabled) return; lab.textContent = '记录中…'; ok.disabled = true; const er = sh.querySelector('[data-err]'); er.hidden = true;
-      setTimeout(() => { if (fail) { er.hidden = false; er.textContent = '对账失败'; ok.disabled = false; upd(); return; } close(); P5.toast(initial ? '余额已设置' : '已校准'); onSaved && onSaved(); }, P5.reduced() ? 0 : 700); };
+      setTimeout(() => { if (fail) { er.hidden = false; er.textContent = '对账失败'; ok.disabled = false; upd(); return; }
+        const targets = Object.entries(vals).map(([account, target]) => ({ account, target: Number(target) })).filter((t) => Number.isFinite(t.target));
+        void useAppStore.getState().adjustAccountBalances(targets).then((r) => {
+          if (!r.ok) { er.hidden = false; er.textContent = r.reason ?? '对账失败'; ok.disabled = false; upd(); return; }
+          close(); P5.toast(initial ? '余额已设置' : '已校准'); onSaved && onSaved();
+        }).catch(() => { er.hidden = false; er.textContent = '对账失败'; ok.disabled = false; upd(); });
+      }, P5.reduced() ? 0 : 700); };
   } });
 }

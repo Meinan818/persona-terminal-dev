@@ -13,7 +13,9 @@ import { P4ActionSheet, P4Button, P4Progress, P4SegmentTabs, IconMore, IconClose
 import { CollageItem, CollageStagger } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import { ATTR_NAMES, TODAY_KEY, TODOS, WEEKLY_GOAL } from '@yellow/mock/pkg2';
+import { actionsOps, useActionsData } from '@yellow/adapters/pkg2';
+import { weekRangeOf } from '@/utils/questBoard';
+import { v4 as uuidv4 } from 'uuid';
 import { daysBetween, setHashParam, useLongPress } from './common';
 import { toneBg } from './tones';
 import { useCallingCards } from './callingCardStore';
@@ -23,8 +25,8 @@ import ClaimedModal from '@yellow/screens/overlays/ClaimedModal.p4g';
 import CallingCardEditor from '@yellow/screens/overlays/CallingCardEditor.p4g';
 import CallingCardSectionDeleteConfirm from '@yellow/screens/overlays/CallingCardSectionDeleteConfirm.p4g';
 
-const goalText = (g: GoalItem) => {
-  const n = g.attribute ? ATTR_NAMES[g.attribute] : '';
+const goalText = (g: GoalItem, attrNames: ReturnType<typeof useActionsData>['ATTR_NAMES']) => {
+  const n = g.attribute ? attrNames[g.attribute] : '';
   switch (g.type) {
     case 'activity_count': return `完成 ${g.target} 次${n}活动`;
     case 'todo_count': return `完成 ${g.target} 次任务`;
@@ -35,11 +37,12 @@ const goalText = (g: GoalItem) => {
 
 export function WeeklyGoalSection({ initial }: { initial: 'none' | 'progress' | 'done' | 'claimed' }) {
   const toast = useToast();
-  const [goal, setGoal] = useState<{ items: GoalItem[]; reward: string; completed: boolean; rewardAttr?: AttributeId; rewardPoints?: number } | null>(
-    initial === 'none' ? null : {
-      items: (WEEKLY_GOAL.goals as GoalItem[]).map((g) => (initial === 'progress' ? g : { ...g, current: g.target })),
+  const { WEEKLY_GOAL, ATTR_NAMES } = useActionsData();
+  const [goal, setGoal] = useState<{ id: string; items: GoalItem[]; reward: string; completed: boolean; rewardAttr?: AttributeId; rewardPoints?: number } | null>(
+    initial === 'none' ? null : WEEKLY_GOAL ? {
+      id: WEEKLY_GOAL.id, items: (WEEKLY_GOAL.goals as GoalItem[]).map((g) => (initial === 'progress' ? g : { ...g, current: g.target })),
       reward: WEEKLY_GOAL.reward, completed: initial === 'claimed', rewardAttr: initial === 'claimed' ? 'knowledge' : undefined, rewardPoints: initial === 'claimed' ? 7 : undefined,
-    });
+    } : null);
   const [setup, setSetup] = useState<false | 'new' | 'edit'>(false);
   const [menu, setMenu] = useState(false);
   const [cel, setCel] = useState(false);
@@ -51,7 +54,7 @@ export function WeeklyGoalSection({ initial }: { initial: 'none' | 'progress' | 
     return (
       <>
         <button type="button" onClick={() => setSetup('new')} className="p4g-press flex h-16 w-full items-center justify-center gap-2 rounded-sm border-3 border-dashed border-p4g-line bg-p4g-surface font-display text-lead font-bold text-p4g-ink">+ 设定本周目标</button>
-        <GoalSetupForm open={!!setup} onClose={() => setSetup(false)} onSubmit={(items, reward) => setGoal({ items: items.map((i) => ({ ...i, current: 0 })), reward, completed: false })} />
+        <GoalSetupForm open={!!setup} onClose={() => setSetup(false)} onSubmit={(items, reward) => { const w = weekRangeOf(new Date()); void actionsOps.saveWeeklyGoal({ id: uuidv4(), weekStart: w.weekKey, weekEnd: w.days[6], goals: items, reward, completed: false, createdAt: new Date() }); }} />
       </>
     );
   }
@@ -60,14 +63,14 @@ export function WeeklyGoalSection({ initial }: { initial: 'none' | 'progress' | 
       <div {...lp.handlers} className={cx('relative min-w-0 select-none overflow-hidden rounded-sm border-3 border-p4g-black shadow-hard transition-colors night:border-p4g-yellow', lp.pressing ? 'bg-p4g-select text-[color:var(--p4g-select-ink)]' : 'bg-p4g-surface text-p4g-ink')}>
         <div className="flex items-center gap-2 border-b-3 border-p4g-black bg-p4g-yellow px-3 py-1.5 text-p4g-black night:border-p4g-yellow">
           <span className="font-display text-body font-bold">本周目标</span>
-          <span className="p4g-date-type text-2xs opacity-70">{WEEKLY_GOAL.weekStart.slice(5).replace('-', '/')}–{WEEKLY_GOAL.weekEnd.slice(5).replace('-', '/')}</span>
+          <span className="p4g-date-type text-2xs opacity-70">{WEEKLY_GOAL?.weekStart.slice(5).replace('-', '/')}–{WEEKLY_GOAL?.weekEnd.slice(5).replace('-', '/')}</span>
           <span className="flex-1" />
           {goal.completed && <span className="rounded-xs bg-p4g-green px-1.5 font-display text-2xs font-bold text-p4g-black">已完成</span>}
         </div>
         <div className="space-y-2.5 px-3 py-2.5">
           {goal.items.map((g, i) => (
             <div key={i} className="min-w-0">
-              <div className="mb-1 flex items-baseline justify-between gap-2"><span className="min-w-0 truncate font-display text-body font-bold">{goalText(g)}</span><span className="shrink-0 p4g-num text-meta">{Math.min(g.current, g.target)}/{g.target}</span></div>
+              <div className="mb-1 flex items-baseline justify-between gap-2"><span className="min-w-0 truncate font-display text-body font-bold">{goalText(g, ATTR_NAMES)}</span><span className="shrink-0 p4g-num text-meta">{Math.min(g.current, g.target)}/{g.target}</span></div>
               <P4Progress value={Math.min(g.current, g.target)} max={g.target} variant="segments" segments={Math.min(g.target, 12)} inverted={lp.pressing} />
             </div>
           ))}
@@ -79,16 +82,19 @@ export function WeeklyGoalSection({ initial }: { initial: 'none' | 'progress' | 
       </div>
       <P4ActionSheet open={menu} onClose={() => setMenu(false)} title="本周目标"
         actions={[{ id: 'edit', label: '修改选项' }, { id: 'reset', label: goal.completed ? '删除本周目标记录' : '重置本周目标', danger: true }]}
-        onAction={(id) => { setMenu(false); if (id === 'edit') setSetup('edit'); else { setGoal(null); toast(goal.completed ? '已删除本周目标记录' : '已重置本周目标'); } }} />
+        onAction={(id) => { setMenu(false); if (id === 'edit') setSetup('edit'); else { void actionsOps.deleteWeeklyGoal(goal.id); setGoal(null); toast(goal.completed ? '已删除本周目标记录' : '已重置本周目标'); } }} />
       <GoalSetupForm open={!!setup} onClose={() => setSetup(false)} initial={setup === 'edit' ? goal.items : undefined} initialReward={goal.reward}
-        onSubmit={(items, reward) => setGoal((g) => g && { ...g, items: items.map((it) => ({ ...it, current: g.items.find((x) => x.type === it.type)?.current ?? 0 })), reward })} />
-      <CelebrationModal open={cel} onClose={() => setCel(false)} onClaim={(a, pts) => { setGoal((g) => g && { ...g, completed: true, rewardAttr: a, rewardPoints: pts }); setClaimed({ attrName: ATTR_NAMES[a], pts }); }} />
+        onSubmit={(items, reward) => { void actionsOps.saveWeeklyGoal({ ...WEEKLY_GOAL!, goals: items, reward }); setGoal((g) => g && { ...g, items, reward }); }} />
+      <CelebrationModal open={cel} onClose={() => setCel(false)} onClaim={(a, pts) => { void actionsOps.completeWeeklyGoal(goal.id, a); setGoal((g) => g && { ...g, completed: true, rewardAttr: a, rewardPoints: pts }); setClaimed({ attrName: ATTR_NAMES[a], pts }); }} />
       <ClaimedModal open={!!claimed} onClose={() => setClaimed(null)} attrName={claimed?.attrName} pts={claimed?.pts} />
     </>
   );
 }
 
-export function cardProgress(c: CallingCard) {
+export function cardProgress(c: CallingCard, deps?: { TODAY_KEY?: string; TODOS?: ReturnType<typeof useActionsData>['TODOS'] }) {
+  const d = useActionsData();
+  const TODAY_KEY = deps?.TODAY_KEY ?? d.TODAY_KEY;
+  const TODOS = deps?.TODOS ?? d.TODOS;
   const isToday = c.targetDate === TODAY_KEY;
   const daysLeft = c.targetDate ? daysBetween(TODAY_KEY, c.targetDate) : undefined;
   const datePct = c.targetDate ? Math.max(0, Math.min(100, (daysBetween(c.startDate, TODAY_KEY) / Math.max(1, daysBetween(c.startDate, c.targetDate))) * 100)) : 0;
@@ -102,7 +108,8 @@ export function cardProgress(c: CallingCard) {
 }
 
 function CardRow({ c, onMenu }: { c: CallingCard; onMenu: () => void }) {
-  const { overall, summary } = cardProgress(c);
+  const { TODAY_KEY, TODOS } = useActionsData();
+  const { overall, summary } = cardProgress(c, { TODAY_KEY, TODOS });
   return (
     <div aria-label={`倒计时：${c.title}，${summary}，${overall}%`} className={cx('relative min-w-0 overflow-hidden rounded-sm border-3 border-p4g-black shadow-hard-sm night:border-p4g-yellow', c.archived ? 'bg-p4g-surface-2 opacity-80' : 'bg-p4g-yellow text-p4g-black')}
       style={{ backgroundImage: c.archived ? undefined : toneBg(c.tone) }}>

@@ -12,10 +12,16 @@ import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
 import type { Activity, ActivityImage, AttributeId, FateCandidate, PeriodSummary, Quest, Todo, Wish } from '@/types';
+import type { QuestData } from '@/utils/questBoard';
 import { DEFAULT_SUMMARY_PROMPT_PRESETS, summaryKindOf } from '@/utils/summaryAI';
-import { weekRangeOf } from '@/utils/questBoard';
+import { questHint, questProgress, questTitle, questBoardUnlocked, weekRangeOf } from '@/utils/questBoard';
 import { MAX_IMAGES_PER_ACTIVITY, loadActivityImageIndex, useActivityImageIndex } from '@/utils/activityImages';
 import { analyzeActivityAI } from '@/utils/activityAI';
+import { getAIConfig } from '@/utils/aiClient';
+import { db } from '@/db';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useCloudStore } from '@/store/cloud';
+import { useCloudSocialStore } from '@/store/cloudSocial';
 import type { MockSummary } from '../mock/pkg2';
 
 export { TODAY_KEY } from './callingCards';
@@ -109,7 +115,20 @@ export function useActionsData() {
   const getTodayTodoProgress = useAppStore((s) => s.getTodayTodoProgress);
   const getWishProgress = useAppStore((s) => s.getWishProgress);
   const getWeeklyGoalProgress = useAppStore((s) => s.getWeeklyGoalProgress);
+  const pacts = useCloudSocialStore((s) => s.pacts);
+  const myId = useCloudStore((s) => s.cloudUser?.id);
   const todayKey = toLocalDateKey();
+  const questsRows = useLiveQuery(() => db.quests.where('weekKey').equals(weekRangeOf(new Date()).weekKey).sortBy('slot'), [todayKey]);
+  const claimedTotal = useLiveQuery(() => db.quests.filter((q) => !!q.claimedAt).count(), []);
+  const questAux = useLiveQuery(async () => {
+    const [divinations, images, ledger] = await Promise.all([
+      db.dailyDivinations.toArray(),
+      db.activityImages.where('createdAt').aboveOrEqual(weekRangeOf(new Date()).start).toArray(),
+      db.ledgerEntries.toArray(),
+    ]);
+    return { divinations, images, ledger };
+  }, [todayKey]);
+  void analyzeActivityAI;
 
   useEffect(() => {
     const s = useAppStore.getState();
@@ -145,6 +164,18 @@ export function useActionsData() {
     const weeklyGoal = currentGoal
       ? { ...currentGoal, goals: getWeeklyGoalProgress(currentGoal) }
       : currentWeekGoal;
+    const quests = questsRows ?? [];
+    const questData: QuestData | null = questAux ? {
+      activities, todos, completions: todoCompletions, divinations: questAux.divinations,
+      images: questAux.images, summaries, ledger: questAux.ledger, pacts, myId,
+      battleState: useAppStore.getState().battleState,
+      aiReady: !!getAIConfig(useAppStore.getState().settings),
+      now: new Date(),
+    } : null;
+    const questTitles = questData ? Object.fromEntries(quests.map((q) => [q.id, {
+      title: questTitle(q, attrNames), desc: questHint(q),
+      progress: Math.min(questProgress(q, questData, currentWeek), q.target),
+    }])) : {};
 
     return {
       TODAY: new Date(`${todayKey}T12:00:00`),
@@ -160,6 +191,12 @@ export function useActionsData() {
       WISH_TIMES: wishTimes,
       WEEKLY_GOAL: weeklyGoal,
       WEEK_RANGE: currentWeek,
+      QUESTS: quests,
+      QUEST_TITLES: questTitles,
+      LIFE_QUESTS: quests.map((q) => ({ id: q.id, title: questTitle(q, attrNames), desc: questHint(q), attr: q.params?.attribute ?? 'knowledge', ai: false })),
+      QUEST_RANGE: currentWeek,
+      QUEST_UNLOCKED: questBoardUnlocked(activities, new Date()),
+      QUEST_CLAIMED_TOTAL: claimedTotal ?? 0,
       CALLING_CARDS: callingCards,
       SUMMARIES: summaries.map(toSummaryView),
       PERIOD_SUMMARIES: summaries,
@@ -168,8 +205,9 @@ export function useActionsData() {
       SETTINGS: settings,
       attributes,
       WISH_PROGRESS_CUT: wishProgressCut,
+      FATE_POOL: useAppStore.getState().getFateDrawPool(),
     };
-  }, [activities, todos, todoCompletions, wishes, weeklyGoals, summaries, callingCards, settings, attributes, imageRows, wishProgressCut, todayKey, getTodayTodoProgress, getWishProgress, getWeeklyGoalProgress]);
+  }, [activities, todos, todoCompletions, wishes, weeklyGoals, summaries, callingCards, settings, attributes, imageRows, wishProgressCut, todayKey, getTodayTodoProgress, getWishProgress, getWeeklyGoalProgress, questsRows, questAux, claimedTotal, pacts, myId]);
 }
 
 export function analyzeActivityLocally(description: string): Record<AttributeId, number> {
@@ -227,5 +265,8 @@ export const actionsOps = {
   deleteWeeklyGoal: (id: string) => useAppStore.getState().deleteWeeklyGoal(id),
   completeWeeklyGoal: (id: string, attribute: AttributeId) => useAppStore.getState().completeWeeklyGoal(id, attribute),
   updateSettings: (patch: Parameters<ReturnType<typeof useAppStore.getState>['updateSettings']>[0]) => useAppStore.getState().updateSettings(patch),
+  refreshQuests: () => useAppStore.getState().refreshQuests(),
+  claimQuest: (id: string) => useAppStore.getState().claimQuest(id),
+  swapQuest: (id: string) => useAppStore.getState().swapQuest(id),
   clearWishProgressCut: () => useAppStore.getState().clearWishProgressCut(),
 };

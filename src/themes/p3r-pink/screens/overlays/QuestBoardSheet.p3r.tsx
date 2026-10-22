@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Loading, P3Progress, P3Sheet, P3Tag, useToast, P3R, slantClip, IconBack, IconChevron, IconClose } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { ATTR_NAMES, LIFE_QUESTS, QUESTS, QUEST_TITLES } from '@pink/mock/pkg2';
+import { actionsOps, useActionsData } from '@pink/adapters/pkg2';
 import { MiniHead } from '@pink/screens/pkg2/common';
 
 export default function QuestBoardSheet({ open, onClose, params }: OverlayProps) {
@@ -20,7 +20,8 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
   const st = params?.get('state');
   const [loading, setLoading] = useState(st === 'loading');
   const [idx, setIdx] = useState(0);
-  const [status, setStatus] = useState<Record<string, 'new' | 'added' | 'done'>>({ lq3: 'done' });
+  const { QUESTS, QUEST_TITLES, LIFE_QUESTS, ATTR_NAMES, QUEST_RANGE, QUEST_UNLOCKED, QUEST_CLAIMED_TOTAL } = useActionsData();
+  const [status, setStatus] = useState<Record<string, 'new' | 'added' | 'done'>>({});
   const [rerolls, setRerolls] = useState(2);
   const [batch, setBatch] = useState(0);
   const [quests, setQuests] = useState(QUESTS);
@@ -28,13 +29,14 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
   const [notice, setNotice] = useState(true);
   const [flash, setFlash] = useState<Record<string, number>>({});
   useEffect(() => { if (open && st === 'loading') { setLoading(true); const t = window.setTimeout(() => setLoading(false), 1600); return () => clearTimeout(t); } }, [open, st]);
+  useEffect(() => { setQuests(QUESTS); }, [QUESTS]);
   const life = LIFE_QUESTS.map((q) => ({ ...q, title: batch ? `${q.title}（新）` : q.title }));
   const cur = life[idx];
   const curSt = status[cur.id] ?? 'new';
   const go = (d: number) => setIdx((i) => Math.max(0, Math.min(life.length - 1, i + d)));
-  const claimedTotal = 7 + quests.filter((q) => q.claimedAt).length - 1;
+  const claimedTotal = QUEST_CLAIMED_TOTAL;
   const allClaimed = quests.every((q) => q.claimedAt || q.autoClaimed);
-  const locked = st === 'locked';
+  const locked = st === 'locked' || !QUEST_UNLOCKED;
   return (
     <P3Sheet open={open} onClose={onClose} title="委托板" en="QUEST BOARD" size="tall">
       {/* 今日委托 */}
@@ -85,7 +87,7 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
       ) : (
         <>
           <div className="mt-2 flex items-baseline justify-between gap-2 text-[12px] font-bold" style={{ color: P3R.grey }}>
-            <span className="min-w-0 truncate">本周 10/19 – 10/25 · 周一刷新</span>
+            <span className="min-w-0 truncate">本周 {QUEST_RANGE?.weekKey.slice(5).replace('-', '/')} – {QUEST_RANGE?.days?.[6]?.slice(5).replace('-', '/')} · 周一刷新</span>
             <span className="shrink-0 font-cond text-[13px]">累计领取 {claimedTotal} 次</span>
           </div>
           <AnimatePresence>
@@ -117,9 +119,9 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {claimed ? <span className="text-[13px] font-black" style={{ color: P3R.roseInk }}>✓ 已领取</span>
-                        : done ? <P3Button size="sm" corner onClick={() => { setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, claimedAt: '2026-10-20' } : x))); setFlash((f) => ({ ...f, [q.id]: q.rewardSp })); }}>领取</P3Button>
+                        : done ? <P3Button size="sm" corner onClick={async () => { const r = await actionsOps.claimQuest(q.id); if (!r.ok) return; setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, claimedAt: new Date().toISOString().slice(0, 10) } : x))); setFlash((f) => ({ ...f, [q.id]: q.rewardSp })); }}>领取</P3Button>
                           : <span className="font-cond text-[15px]" style={{ color: P3R.ink }}>{meta.progress}/{q.target}</span>}
-                      {!swapUsed && !done && !claimed && <button type="button" onClick={() => { setSwapUsed(true); setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, id: `${x.id}-s`, swapped: true, templateId: 'important_2' } : x))); }} className="text-[11px] font-black underline" style={{ color: P3R.grey }}>换一张</button>}
+                      {!swapUsed && !done && !claimed && <button type="button" onClick={async () => { const r = await actionsOps.swapQuest(q.id); if (!r.ok) return; setSwapUsed(true); setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, id: `${x.id}-s`, swapped: true, templateId: 'important_2' } : x))); }} className="text-[11px] font-black underline" style={{ color: P3R.grey }}>换一张</button>}
                     </div>
                   </div>
                   <P3Progress className="mt-2" value={Math.min(meta.progress, q.target)} max={q.target} variant="segments" />

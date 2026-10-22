@@ -13,6 +13,8 @@ import type { OverlayProps } from '@blue/registry/types';
 import { Portal, useEscape, useScrollLock, useToast, P3R, slantClip } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
 import { DANMAKU } from '@blue/mock/pkg2';
+import { actionsOps, useActionsData } from '@blue/adapters/pkg2';
+import type { FateCandidate } from '@real/types';
 import { DanmakuLayer, DarkStage } from '@blue/screens/pkg2/cutins';
 
 type Kind = 'todo' | 'wish' | 'history' | 'quest';
@@ -23,14 +25,6 @@ const KIND_META: Record<Kind, { tag: string; hint: string }> = {
   history: { tag: '旧日回响', hint: '你做过的事，再做一次不需要勇气' },
   quest: { tag: '今日委托', hint: '委托板今天给的新鲜事，接住就进今日任务' },
 };
-const CANDS: { key: string; kind: Kind; title: string; hint?: string }[] = [
-  { key: 'c1', kind: 'todo', title: '背 30 个单词' },
-  { key: 'c2', kind: 'todo', title: '练字 20 分钟' },
-  { key: 'c3', kind: 'wish', title: '每晚睡前读 20 分钟' },
-  { key: 'c4', kind: 'history', title: '给家里打电话', hint: '这两个月做过 6 次，上次是 9 天前，再做一次不需要勇气' },
-  { key: 'c5', kind: 'quest', title: '去河堤散步 20 分钟' },
-  { key: 'c6', kind: 'history', title: '自己做一顿饭' },
-];
 const BACK_CLIP = 'polygon(6% 0, 100% 2%, 94% 100%, 0 98%)';
 const CardBack = ({ big }: { big?: boolean }) => (
   <div className="relative h-full w-full" style={{ clipPath: BACK_CLIP, background: 'linear-gradient(165deg, var(--p3r-blue) 0%, var(--p3r-blue-deep) 45%, #15203b 100%)' }}>
@@ -39,7 +33,7 @@ const CardBack = ({ big }: { big?: boolean }) => (
   </div>
 );
 
-export default function FateDrawSheet({ open, onClose, params, onGo }: OverlayProps & { onGo?: (kind: Kind, title: string) => void }) {
+export default function FateDrawSheet({ open, onClose, params, onGo }: OverlayProps & { onGo?: (kind: Kind, candidate: FateCandidate) => void | Promise<void> }) {
   const bold = useBoldness();
   const toast = useToast();
   const empty = params?.get('state') === 'empty';
@@ -47,13 +41,14 @@ export default function FateDrawSheet({ open, onClose, params, onGo }: OverlayPr
   const [sources, setSources] = useState<Record<Kind, boolean>>({ todo: true, wish: true, history: true, quest: true });
   const [banned, setBanned] = useState<string[]>([]);
   const [phase, setPhase] = useState<'gate' | 'spin' | 'reveal'>('gate');
-  const [picked, setPicked] = useState<(typeof CANDS)[number] | null>(null);
+  const [picked, setPicked] = useState<FateCandidate | null>(null);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
-  const pool = useMemo(() => (empty ? [] : CANDS.filter((c) => sources[c.kind] && !banned.includes(c.key))), [sources, banned, empty]);
-  const draw = (forced?: (typeof CANDS)[number]) => {
-    if (!pool.length) return;
+  const { FATE_POOL } = useActionsData();
+  const pool = useMemo(() => (empty ? [] : FATE_POOL.filter((c) => sources[c.kind] && !banned.includes(c.key))), [FATE_POOL, sources, banned, empty]);
+  const draw = (forced?: FateCandidate) => {
     const p = forced ?? pool[Math.floor(Math.random() * pool.length)];
+    if (!p) return;
     setPicked(p);
     if (!bold) { setPhase('reveal'); return; }
     setPhase('spin');
@@ -61,8 +56,8 @@ export default function FateDrawSheet({ open, onClose, params, onGo }: OverlayPr
   };
   useEffect(() => {
     if (!open) return;
-    if (step === 'reveal' && !empty) { setPicked(CANDS[3]); setPhase('reveal'); }
-    else if (step === 'spin' && !empty) { setPhase('gate'); timers.current.push(window.setTimeout(() => draw(CANDS[3]), 500)); }
+    if (step === 'reveal' && !empty) { setPicked(pool[3] ?? pool[0] ?? null); setPhase('reveal'); }
+    else if (step === 'spin' && !empty) { setPhase('gate'); timers.current.push(window.setTimeout(() => draw(pool[3] ?? pool[0]), 500)); }
     else { setPhase('gate'); setPicked(null); }
   }, [open]); // eslint-disable-line
   useScrollLock(open);
@@ -125,16 +120,16 @@ export default function FateDrawSheet({ open, onClose, params, onGo }: OverlayPr
                       {bold && <motion.span aria-hidden className="absolute inset-y-0 w-[30%]" style={{ background: 'rgba(255,255,255,0.7)', skewX: -20 }} initial={{ x: '-120%' }} animate={{ x: '420%' }} transition={{ duration: 0.6, delay: 0.3 }} />}
                       <span className="inline-block px-2.5 py-1 font-cond text-[11px] tracking-wide" style={{ background: P3R.blue, color: '#fff', clipPath: slantClip(6) }}>{KIND_META[picked.kind].tag}</span>
                       <h3 className="mt-3 break-words font-heavy text-[21px] leading-snug" style={{ color: 'var(--p3r-mulberry)' }}>{picked.title}</h3>
-                      <p className="mt-2.5 text-[12px] font-bold leading-relaxed" style={{ color: 'rgba(21,32,59,0.7)' }}>{picked.hint ?? KIND_META[picked.kind].hint}</p>
+                      <p className="mt-2.5 text-[12px] font-bold leading-relaxed" style={{ color: 'rgba(21,32,59,0.7)' }}>{KIND_META[picked.kind].hint}</p>
                       <p className="mt-1 text-[11px] font-black" style={{ color: '#335bb8' }}>完成它会有额外奖励</p>
                     </motion.div>
                     <div className="mx-auto mt-5 flex max-w-[300px] gap-2.5">
                       <button type="button" className="relative flex-1 py-3 text-[16px] font-black" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(10) }}
-                        onClick={() => { const p = picked; setPhase('gate'); setPicked(null); onClose(); if (onGo) onGo(p.kind, p.title); else toast.success('已加入今日任务 · ✦ 签'); }}>去完成</button>
+                        onClick={async () => { const p = picked; setPhase('gate'); setPicked(null); onClose(); await actionsOps.acceptFateDraw(p); if (onGo) onGo(p.kind, p); else toast.success('已加入今日任务 · ✦ 签'); }}>去完成</button>
                       <button type="button" onClick={close} className="px-5 py-3 text-[14px] font-black" style={{ background: 'var(--p3r-cream)', color: 'var(--p3r-mulberry)', clipPath: slantClip(10) }}>再想想</button>
                     </div>
                     {picked.kind === 'history' && (
-                      <button type="button" onClick={() => { setBanned((b) => [...b, picked.key]); toast('以后不会再抽到这件'); setPhase('gate'); setPicked(null); }} className="mt-3 text-[12px] font-bold underline underline-offset-2" style={{ color: 'rgba(236,247,255,0.6)' }}>以后别抽这件</button>
+                      <button type="button" onClick={() => { void actionsOps.muteFateHistory(picked); setBanned((b) => [...b, picked.key]); toast('以后不会再抽到这件'); setPhase('gate'); setPicked(null); }} className="mt-3 text-[12px] font-bold underline underline-offset-2" style={{ color: 'rgba(236,247,255,0.6)' }}>以后别抽这件</button>
                     )}
                     <p className="mt-3 text-[11px] font-bold" style={{ color: 'rgba(236,247,255,0.35)' }}>关闭会重新抽取其他的可能性</p>
                   </motion.div>

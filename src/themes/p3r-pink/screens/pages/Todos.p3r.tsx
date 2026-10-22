@@ -14,7 +14,6 @@ import type { Todo, Wish } from '@real/types';
 import { BigSlantTitle, GhostWords, P3Button, P3Input, P3Progress, P3Tag, IconEdit, IconTrash, IconRefresh, IconMore, IconPlus, useToast, P3R, slantClip, tickClip, Glyph } from '@pink/kit';
 import { P3Stagger, P3StaggerItem } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
-import { ATTR_NAMES, TODAY, TODAY_DONE, TODAY_KEY, TODOS, TODO_PROGRESS, WISHES, WISH_TIMES } from '@pink/mock/pkg2';
 import { actionsOps, useActionsData } from '@pink/adapters/pkg2';
 import { Dot, MiniHead, Ring, SlantFab, WEEK_LABELS, daysBetween, qp, setHashParam, useLongPress } from '@pink/screens/pkg2/common';
 import { GoalDeck } from '@pink/screens/pkg2/GoalDeck';
@@ -34,6 +33,7 @@ const ArchiveIcon = ({ size = 14 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinejoin="round" aria-hidden><path d="M3 4h18v5H3zM5 9v11h14V9M10 13h4" /></svg>
 );
 function DeadlineTag({ t, done }: { t: Todo; done?: boolean }) {
+  const { TODAY_KEY } = useActionsData();
   if (!t.deadline || done) return null;
   const d = daysBetween(TODAY_KEY, t.deadline);
   const text = d > 0 ? `剩 ${d} 天` : d === 0 ? '今天截止' : `逾期 ${-d} 天`;
@@ -63,6 +63,7 @@ const EmptySlab = ({ text, ghost = 'EMPTY', action }: { text: string; ghost?: st
 function TodoRow({ t, onMenu, onArchive, onDelete, pending }: { t: Todo; onMenu: () => void; onArchive?: () => void; onDelete?: () => void; pending?: boolean }) {
   const anim = useBoldness();
   const lp = useLongPress(onMenu);
+  const { TODAY_KEY, TODO_PROGRESS, ATTR_NAMES } = useActionsData();
   const count = TODO_PROGRESS[t.id] ?? 0;
   const target = t.frequency === 'count' ? t.targetCount ?? 1 : 1;
   const sel = lp.pressing;
@@ -109,6 +110,7 @@ function TodoRow({ t, onMenu, onArchive, onDelete, pending }: { t: Todo; onMenu:
 
 /** BIG DEAL 聚合卡（BigDealHomeCard p3：墨色斜切 + 目标弧 + 玫红进度） */
 function BigDealCard({ t, onOpen, onMenu }: { t: Todo; onOpen: () => void; onMenu: () => void }) {
+  const { TODAY_KEY } = useActionsData();
   const steps = t.steps ?? [];
   const done = steps.filter((s) => s.done).length;
   const next = steps.find((s) => !s.done);
@@ -137,6 +139,7 @@ function BigDealCard({ t, onOpen, onMenu }: { t: Todo; onOpen: () => void; onMen
 
 /** 愿望面板（WishBoard p3） */
 function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview, onCompose }: { wishes: Wish[]; setWishes: (f: (w: Wish[]) => Wish[]) => void; onOpen: (w: Wish) => void; onFulfill: (w: Wish) => void; tokens: number; pendingReview: number; onCompose: () => void }) {
+  const { WISH_TIMES } = useActionsData();
   const toast = useToast();
   const anim = useBoldness();
   const [menu, setMenu] = useState<string | null>(null);
@@ -187,7 +190,7 @@ function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview
       {adding ? (
         <div className="flex min-w-0 gap-2 pt-1">
           <div className="min-w-0 flex-1"><P3Input autoFocus placeholder="想实现的事…" aria-label="愿望标题" value={draft} onChange={(e) => setDraft(e.target.value)} /></div>
-          <P3Button disabled={!draft.trim()} onClick={() => { setWishes((l) => [{ id: `w${Date.now()}`, title: draft.trim(), status: 'active', source: 'manual', createdAt: new Date() }, ...l]); setDraft(''); setAdding(false); }}>记下</P3Button>
+          <P3Button disabled={!draft.trim()} onClick={() => { void actionsOps.addWish(draft.trim()); setDraft(''); setAdding(false); }}>记下</P3Button>
         </div>
       ) : (
         <button type="button" onClick={() => setAdding(true)} className="block h-11 w-full text-center text-[14px] font-black" style={{ clipPath: slantClip(9), boxShadow: 'inset 0 0 0 2px rgb(var(--p3r-blue-rgb) / 0.4)', color: P3R.roseInk }}>＋ 记下一个愿望</button>
@@ -199,12 +202,12 @@ function WishBoard({ wishes, setWishes, onOpen, onFulfill, tokens, pendingReview
 export function TodosView({ params }: { params: URLSearchParams }) {
   const toast = useToast();
   const anim = useBoldness();
-  const { TODOS: realTODOS, WISHES: realWISHES, TODAY_DONE: realTODAY_DONE } = useActionsData();
+  const { TODOS: realTODOS, WISHES: realWISHES, TODAY_DONE: realTODAY_DONE, TODAY, TODAY_KEY, ATTR_NAMES } = useActionsData();
   const empty = qp(params, 'state') === 'empty';
-  const [todos, setTodos] = useState<Todo[]>(empty ? [] : TODOS);
-  const [wishes, setWishes] = useState<Wish[]>(empty ? [] : WISHES);
+  const [todos, setTodos] = useState<Todo[]>(empty ? [] : realTODOS);
+  const [wishes, setWishes] = useState<Wish[]>(empty ? [] : realWISHES);
   const [pane, setPane] = useState<'todo' | 'wish'>(qp(params, 'pane') === 'wish' ? 'wish' : 'todo');
-  const [doneToday, setDoneToday] = useState(new Set(empty ? [] : TODAY_DONE));
+  const [doneToday, setDoneToday] = useState(new Set(empty ? [] : realTODAY_DONE));
   const [expandCompleted, setExpandCompleted] = useState(false);
   const [form, setForm] = useState<false | { todo: Todo | null }>(false);
   const [menuId, setMenuId] = useState<string | null>(null);
@@ -349,8 +352,8 @@ export function TodosView({ params }: { params: URLSearchParams }) {
       <TodosItemMenu open={!!menuTodo} onClose={() => setMenuId(null)} todo={menuTodo}
         onAction={(a) => { const t = menuTodo!; if (a === 'edit') setForm({ todo: t }); if (a === 'archive') { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); void actionsOps.updateTodo(t.id, { isActive: false }); toast('已归档'); } if (a === 'delete') setDelId(t.id); }} />
       <TodosDeleteConfirm open={!!delTodo} onClose={() => setDelId(null)} title={delTodo?.title} onConfirm={() => { setTodos((l) => l.filter((x) => x.id !== delId)); void actionsOps.deleteTodo(delId!); toast.success('已删除'); }} />
-      <TodosWishAddSheet open={wishAdd} onClose={() => setWishAdd(false)} onAdd={(title) => setWishes((l) => [{ id: `w${Date.now()}`, title, status: 'active', source: 'manual', createdAt: new Date() }, ...l])} />
-      <FateDrawSheet open={fate} onClose={() => setFate(false)} onGo={(kind, title) => { if (kind === 'quest') setQuest(true); else { setTodos((l) => [{ id: `f${Date.now()}`, title, attribute: 'knowledge', points: 1, frequency: 'single', isActive: true, createdAt: new Date(), fateDrawnDate: TODAY_KEY } as Todo, ...l]); toast.success('接住了 · ✦ 签'); } }} />
+      <TodosWishAddSheet open={wishAdd} onClose={() => setWishAdd(false)} onAdd={(title) => { void actionsOps.addWish(title); }} />
+      <FateDrawSheet open={fate} onClose={() => setFate(false)} onGo={async (kind, candidate) => { if (kind === 'quest') { setQuest(true); return; } await actionsOps.acceptFateDraw(candidate); toast.success('接住了 · ✦ 签'); }} />
       <QuestBoardSheet open={quest} onClose={() => setQuest(false)} />
       <BigDealPanel open={!!deal} onClose={() => setDeal(null)} todo={deal} onChange={(n) => setTodos((l) => l.map((x) => (x.id === n.id ? n : x)))} />
       <WishPanel open={!!wishPanel} onClose={() => setWishPanel(null)} wish={wishPanel} onChange={(n) => setWishes((l) => l.map((x) => (x.id === n.id ? n : x)))} />

@@ -11,7 +11,7 @@ import type { TodoStep, Wish } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3ConfigRow, P3Field, P3Gauge, P3Input, P3OnOff, P3Sheet, P3Tag, P3R, slantClip } from '@blue/kit';
 import { AIThinking } from '@blue/fx';
-import { WISHES, WISH_TIMES } from '@blue/mock/pkg2';
+import { useActionsData } from '@blue/adapters/pkg2';
 import { MiniHead, Ring } from '@blue/screens/pkg2/common';
 import { StepList } from '@blue/screens/pkg2/StepList';
 
@@ -19,6 +19,7 @@ const distance = (p: number) => (p >= 90 ? '几乎到了' : p >= 70 ? '看得见
 
 export default function WishPanel({ open, onClose, params, wish, onChange }: OverlayProps & { wish?: Wish | null; onChange?: (w: Wish) => void }) {
   const st = params?.get('state');
+  const { WISHES, WISH_TIMES } = useActionsData();
   const base = wish ?? (st === 'fresh' ? WISHES[2] : WISHES[0]);
   const [w, setW] = useState<Wish>(base);
   const [manual, setManual] = useState(st === 'manual');

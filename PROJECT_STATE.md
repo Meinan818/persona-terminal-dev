@@ -4,11 +4,12 @@
 
 ## 接手第一入口 · 2026-10-23 · 自动化接续中（新会话从这里开始）
 
-- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，本批功能提交 `5623790`；本文件的交接记录随后单独提交，最终 HEAD 以 `git log -1` 为准。工作树只余两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，本批功能提交 `5623790` + 本轮数据接线与对账写回；本文件的交接记录随后单独提交，最终 HEAD 以 `git log -1` 为准。工作树只余两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。
 - **压缩计数**：本聊天第 1、2 次实际 compact 均已登记，计数 = 2；已按约定停止业务代码与测试，只做交接收尾。新窗口从本入口继续，不重讲历史。
 - **授权**：用户明确「自动化任务不能停」，要求按他的规则 + 当前修法一直干活；硬性要求 = **不准碰外观**（demo 的 JSX/className/style/动画/字体/素材不改），只改数据与回调，让四套主题完全融入 app。拿不准的自己替用户决定。星象 AI 接不接要等用户决定（涉及用户自己的 Key）。
 - **已完成**（详见下方「主题接入重做」各批）：四套切主题 + 渲染正常；黄 11 页全接真；粉/蓝已接菜单身份、账号、记账、羁绊、任务、设置、成就、图鉴、愿望/孤儿、统计（活动/成就/技能/雷达）、据点、行动记录；红读真实数据并已接活动/任务/待办/宣告卡/记账合计与写回/首页统计/同伴互动；红愿望、命运抽签、今日/周委托、本周目标已接真实 store 读写（`33b9fa9` `c19108f` `69adae7` `5623790`）。
-- **还差（按优先级）**：① 红愿望/委托/周目标在浏览器或真机实测（本轮只有类型、构建、单测证据，未做用户验收）；② 长按轮盘不显示（需真机复现，查 `RadialWheelP5.p5r.tsx` 指针事件/挂载条件/portal 层级）；③ 记账批量/对账（红的 `openReconcileSheet` 仍用 mock 账户余额，store 已有 `adjustAccountBalances`/`adjustTotalBalance`/`getAdjustCountThisMonth`）；④ 粉/蓝/黄三主题愿望/命运/委托/周目标的 mock 残留排查；⑤ 更新已过时文档：`adapter/live.ts` 顶部“只读 store”注释、`adapter/README.md` §3/§4 仍把 `WISHES/FATE_POOL/WEEKQ/GOALS` 列为 mock；⑥ 打包并复制 APK。星象 AI 待用户决定（不先动）。
+- **还差（按优先级）**：① 红愿望/委托/周目标在浏览器或真机实测（本轮只有类型、构建、单测证据，未做用户验收）；② 长按轮盘不显示（需真机复现，查 `RadialWheelP5.p5r.tsx` 指针事件/挂载条件/portal 层级）。以下已收口：③ 红记账对账已接真实 `adjustAccountBalances`（多账户、每月 3 轮）；④ 黄/粉/蓝愿望/命运/委托/周目标 mock 残留已接真实 store；⑤ `adapter/live.ts` 注释与 `adapter/README.md` §3/§4 已更新；⑥ APK 已重打并复制到两处。星象 AI 待用户决定（不先动）。
+- **本轮改动**：红 `ledger4.ts` 对账写回（`realAccounts()` 读 `getAccountBalances()` + `adjustAccountBalances(targets)`）；黄/粉/蓝 `Todos` + `GoalDeck` + `FateDrawSheet` + `QuestBoardSheet` 数据源从 mock 换到 `useActionsData()` / `actionsOps`；粉/蓝 `WishPanel` / `WishFulfillDialog` / `WishMountPicker` / `ActivityRecordSheet` 愿望接真；粉/蓝 adapter `pkg2.ts` 补 quest/fate/weekly 的真实数据出口。只改数据与回调，零外观改动。
 - **验证**（2026-10-23 本轮实跑）：`npx tsc --noEmit` exit 0；`npm run build` exit 0；`npx vitest run` 66 文件 / 396 项全过。打包命令：`npm run build && npx cap sync android && cd android && gradlew.bat assembleDebug`，产物复制到 `E:\MASKARIA\outputs\maskaria-theme-debug.apk` 和 `D:\下载\互传\maskaria-theme-debug.apk`。
 - **红线**：不 push（Push 要用户批准）；不 commit 凭据；不改 `main` 与幽影协议 `src/umbra`、`public/umbra-demo`；不改外观；破坏性命令先说明。
 

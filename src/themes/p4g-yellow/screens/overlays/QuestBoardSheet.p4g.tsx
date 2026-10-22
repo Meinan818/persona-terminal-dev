@@ -11,7 +11,7 @@ import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Loading, P4Progress, P4Sheet, IconBack, IconChevron, IconClose, useToast } from '@yellow/kit';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import { ATTR_NAMES, LIFE_QUESTS, QUESTS, QUEST_TITLES } from '@yellow/mock/pkg2';
+import { actionsOps, useActionsData } from '@yellow/adapters/pkg2';
 import { BlockHead } from '@yellow/screens/pkg2/common';
 
 export default function QuestBoardSheet({ open, onClose, params }: OverlayProps) {
@@ -20,7 +20,8 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
   const st = params?.get('state');
   const [loading, setLoading] = useState(st === 'loading');
   const [idx, setIdx] = useState(0);
-  const [status, setStatus] = useState<Record<string, 'new' | 'added' | 'done'>>({ lq3: 'done' });
+  const { QUESTS, QUEST_TITLES, LIFE_QUESTS, ATTR_NAMES, QUEST_RANGE, QUEST_UNLOCKED, QUEST_CLAIMED_TOTAL } = useActionsData();
+  const [status, setStatus] = useState<Record<string, 'new' | 'added' | 'done'>>({});
   const [rerolls, setRerolls] = useState(2);
   const [batch, setBatch] = useState(0);
   const [quests, setQuests] = useState(QUESTS);
@@ -28,13 +29,14 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
   const [notice, setNotice] = useState(true);
   const [flash, setFlash] = useState<Record<string, number>>({});
   useEffect(() => { if (open && st === 'loading') { setLoading(true); const t = setTimeout(() => setLoading(false), 1600); return () => clearTimeout(t); } }, [open, st]);
+  useEffect(() => { setQuests(QUESTS); }, [QUESTS]);
   const life = LIFE_QUESTS.map((q) => ({ ...q, title: batch ? `${q.title}（新）` : q.title }));
   const cur = life[idx];
   const curSt = status[cur.id] ?? 'new';
   const go = (d: number) => setIdx((i) => Math.max(0, Math.min(life.length - 1, i + d)));
-  const claimedTotal = 7 + quests.filter((q) => q.claimedAt).length - 1;
+  const claimedTotal = QUEST_CLAIMED_TOTAL;
   const allClaimed = quests.every((q) => q.claimedAt || q.autoClaimed);
-  const locked = st === 'locked';
+  const locked = st === 'locked' || !QUEST_UNLOCKED;
   return (
     <P4Sheet open={open} onClose={onClose} title="委托板" en="QUEST BOARD" size="tall">
       {/* 今日委托 */}
@@ -85,7 +87,7 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
       ) : (
         <>
           <div className="flex items-baseline justify-between gap-2 text-meta font-bold text-p4g-ink-soft">
-            <span className="min-w-0 truncate">本周 10/19 – 10/25 · 周一刷新</span>
+            <span className="min-w-0 truncate">本周 {QUEST_RANGE?.weekKey.slice(5).replace('-', '/')} – {QUEST_RANGE?.days?.[6]?.slice(5).replace('-', '/')} · 周一刷新</span>
             <span className="shrink-0 p4g-num text-cap">累计领取 {claimedTotal} 次</span>
           </div>
           <AnimatePresence>
@@ -117,9 +119,9 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {claimed ? <span className="font-display text-meta font-black text-p4g-orange-deep night:text-p4g-orange">✓ 已领取</span>
-                        : done ? <P4Button size="sm" onClick={() => { setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, claimedAt: '2026-10-20' } : x))); setFlash((f) => ({ ...f, [q.id]: q.rewardSp })); }}>领取</P4Button>
+                        : done ? <P4Button size="sm" onClick={async () => { const r = await actionsOps.claimQuest(q.id); if (!r.ok) return; setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, claimedAt: new Date().toISOString().slice(0, 10) } : x))); setFlash((f) => ({ ...f, [q.id]: q.rewardSp })); }}>领取</P4Button>
                           : <span className="p4g-num text-meta text-p4g-ink">{meta.progress}/{q.target}</span>}
-                      {!swapUsed && !done && !claimed && <button type="button" onClick={() => { setSwapUsed(true); setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, id: `${x.id}-s`, swapped: true, templateId: 'important_2' } : x))); }} className="font-display text-cap font-bold text-p4g-ink-soft underline">换一张</button>}
+                      {!swapUsed && !done && !claimed && <button type="button" onClick={async () => { const r = await actionsOps.swapQuest(q.id); if (!r.ok) return; setSwapUsed(true); setQuests((l) => l.map((x) => (x.id === q.id ? { ...x, id: `${x.id}-s`, swapped: true, templateId: 'important_2' } : x))); }} className="font-display text-cap font-bold text-p4g-ink-soft underline">换一张</button>}
                     </div>
                   </div>
                   <P4Progress className="mt-2" value={Math.min(meta.progress, q.target)} max={q.target} variant="segments" segments={Math.min(q.target, 10)} />

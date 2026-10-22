@@ -9,7 +9,8 @@
  *   · useLiveFlags()     夜间（settings.darkMode）与低动效（!useBoldness()）
  * 规则：
  *   1. 真实数据为空就写空数组 / 0（不要回填 mock，给真实用户看假数据是事故）。
- *   2. 只读 store，不写 store；红频道里的按钮目前只改页面本地状态（纯视觉 demo），写回业务见 README「未接」。
+ *   2. 写回：任务 / 记账 / 愿望 / 宣告卡 / 据点 / 成就 / 据点 / 行动页均已接 store action。
+ *      仍有 mock 的：据点成员/动态/作战/好友、星象 AI 解读、同伴互动/通知/约定（§3 演示固定数据）。
  *   3. 字段对不上时只改这里的映射函数，不要去改页面。
  */
 import { useAppStore } from '@/store';

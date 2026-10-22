@@ -18,7 +18,7 @@
 
 - 夜间 / 低动效：`useLiveFlags()` = `settings.darkMode` / `!useBoldness()`。
 - 真实数据为空 → 写空数组 / 0，**不要回填 mock**。
-- 只读 store、不写 store。红频道里的按钮（打勾、记一笔、保存……）目前只改页面本地状态（这是纯视觉 demo）；写回业务见 §4「未接」。
+- 写回：任务 / 记账 / 愿望 / 宣告卡 / 据点 / 成就 / 行动页的写操作已接 store action。仍有 mock 的见 §3「演示固定数据」。
 
 ## 2. 映射表（已接）
 
@@ -48,7 +48,7 @@
 
 **时机**：pkg3（羁绊 / 据点）与 pkg4（行动 / 星象 / 记账）的命令式页面在**模块初始化时读一次** mock（例如 `oc.ts` 的 `CF = D.confidants.map(...)`）。`RedChannelRoot` 已在首帧前调 `syncLiveDataNow()`，所以首次进入就是真实数据；之后 store 变化会同步进 mock 并重渲染，但这些模块已算好的派生数据要等下次打开 App 才刷新。React 页面里 `useState(() => structuredClone(...))` 的本地副本在下次进入该页时刷新。
 
-## 3. 演示固定数据（adapter 够不到，接入时保持 mock，**不要去改页面**）
+## 3. 演示固定数据（仍未接真实数据，保持 mock）
 
 下面这些是写在页面模块内部的常量（v3 逐字迁移，非导出），adapter 无法改写。要接真实数据需要 demo 包方出新版本把它们挪进 mock 并导出——**接入 AI 不要自己动手**。
 
@@ -56,14 +56,25 @@
 |---|---|---|
 | `screens/pkg3/oc.ts` `EXTRA` / `EVENTS` / `RECENT` / `NTF` | 同伴亲密点数、AI 解读 / 建议、互动记录、通知 | `confidants[].intimacyPoints / aiInterpretation / aiAdvice`、`confidantEvents`、cloudSocial 通知 |
 | `screens/pkg3/hideout.ts` `MEM` / `POSTS` / `OPS` / `HIST` / `FRIENDS` | 据点成员、动态、作战、历史、在线好友 | cloudSocial / org 服务 |
-| `screens/pkg4/d4.ts` `WISHES` / `BIG` / `ORG` / `GOALS` / `FATE_POOL` / `WEEKQ` / `LR_CARDS` / `CAT` | 愿望面板、BIG DEAL、周目标模板、命运抽签池、委托、长读牌阵、记账分类统计 | `wishes`、`todos(isBigDeal)`、`weeklyGoals`、`quests`、`longReadings`、`ledgerEntries` 汇总 |
-| `screens/pkg4/ledger4.ts` `sums()` / `balCard()` 里的基数（1361 / 2900 / 3268 / 预算 2600） | 记账月合计 / 总余额 / 预算的演示基数（FLOW 已接，合计仍含基数） | `ledgerEntries` 合计、`budgets`、`assets` |
-| `screens/pkg4/todos4.ts` 周目标四态、`D.quests` | 周目标展示态、委托可领数 | `weeklyGoals`、`quests` |
+| `screens/pkg4/d4.ts` `LR_CARDS` / `CAT` | 长读牌阵、记账分类统计 | `longReadings`、`ledgerEntries` 汇总 |
+| `screens/pkg4/todos4.ts` 周目标四态 | 周目标展示态 | `weeklyGoals` |
 | 星象（DailyDraw / LongReading / FateGlimpse 预览）、统计趋势图、成就图鉴收集数 | 演示数据 | `dailyDivination` / `longReadings` / `fateGlimpses`、`activities` 聚合 |
 
-## 4. 未接：写回业务
+## 4. 写回业务（已接）
 
-红频道所有写操作（完成任务、记一笔、存宣告卡、结识同伴、记账……）都只改页面本地状态，不调用 store action（`addActivity` / `saveCallingCard` / `addConfidant` …）。这是 demo 的范围边界；需要写回时由 demo 包方在页面里加事件出口（新版本），接入方再在本目录把事件接到 store action。
+以下写操作已通过 `live.ts` 和页面直接调用 store action，不再走 demo 本地状态：
+
+- **任务**：完成任务、撤销今日完成、归档/删除/恢复、编辑、子任务增删/切换、BIG DEAL 折叠/重建/AI 拆步
+- **记账**：记一笔 / 一句话记多笔 / 删除 / 预算设置 / 对账（多账户） / 余额设置
+- **愿望**：新增 / 删除 / 收起 / 恢复 / 已实现 / 子任务增删/切换 / 进度评估 / 手动设定 / AI 拆步
+- **命运抽签**：抽签 / 接受（转任务）/ 静默（旧事不再抽）
+- **委托板**：领取 / 换一张 / 刷新
+- **本周目标**：创建 / 修改 / 删除 / 重置 / 领取奖励
+- **宣告卡**：新建 / 编辑 / 删除 / 钉选 / 归档 / 取消归档
+- **据点 / 组织**：据点数据接真实 store（`pkg4-org.ts` 的 `buildView()`）；作战达成 / 据点升级庆祝通过 `GlobalOverlayHost` 挂真实弹层
+- **成就 / 技能**：解锁 / 编辑 / 删除 / 赐福
+- **行动记录**：新增 / 补录 / 删除（含回退点数）/ 撤销今日完成 / 配图上传与删除
+- **羁绊**：新建 / 编辑 / 删除 / 亲密互动 / 通知已读 / 约定 / 塔罗冲突
 
 ## 5. 改完 adapter 之后
 

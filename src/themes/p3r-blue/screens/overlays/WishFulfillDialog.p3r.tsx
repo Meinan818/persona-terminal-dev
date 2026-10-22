@@ -11,12 +11,13 @@ import type { OverlayProps } from '@blue/registry/types';
 import { Portal, useEscape, P3R, slantClip } from '@blue/kit';
 import { BubbleBurst } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
-import { WISHES, WISH_TIMES } from '@blue/mock/pkg2';
+import { actionsOps, useActionsData } from '@blue/adapters/pkg2';
 
 const HOLD_MS = 1100;
 const CLIP = 'polygon(0 3%, 100% 0, 100% 97%, 0 100%)';
 export default function WishFulfillDialog({ open, onClose, params, wish, onFulfilled }: OverlayProps & { wish?: Wish | null; onFulfilled?: (id: string) => void }) {
   const anim = useBoldness();
+  const { WISHES, WISH_TIMES } = useActionsData();
   const w = wish ?? WISHES[0];
   const stage = params?.get('stage');
   const times = WISH_TIMES[w.id] ?? 0;
@@ -30,7 +31,7 @@ export default function WishFulfillDialog({ open, onClose, params, wish, onFulfi
   useEffect(() => () => { clearTimeout(timer.current); auto.current.forEach(clearTimeout); }, []);
   const fire = () => {
     setPressing(false); setBusy(true);
-    window.setTimeout(() => { setResult({ title: w.title, timesLogged: times, archivedTodos: 2 }); setBusy(false); onFulfilled?.(w.id); }, 380);
+    window.setTimeout(async () => { const r = await actionsOps.fulfillWish(w.id); setResult({ title: r?.title ?? w.title, timesLogged: r?.timesLogged ?? times, archivedTodos: r?.archivedTodos ?? 0 }); setBusy(false); onFulfilled?.(w.id); }, 380);
   };
   const down = () => { if (busy || result) return; setPressing(true); timer.current = window.setTimeout(fire, anim ? HOLD_MS : 300); };
   const up = () => { if (!pressing) return; clearTimeout(timer.current); setPressing(false); };

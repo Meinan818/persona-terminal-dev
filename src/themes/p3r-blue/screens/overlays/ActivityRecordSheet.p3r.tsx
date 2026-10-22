@@ -9,7 +9,8 @@ import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3Check, P3Sheet, P3Stepper, P3Textarea, useToast, P3R, slantClip, tickClip, IconClose } from '@blue/kit';
 import { AIThinking } from '@blue/fx';
-import { ATTR_IDS, ATTR_NAMES, KEYWORD_RESULT, SPARE_IMAGES, WISHES } from '@blue/mock/pkg2';
+import { ATTR_IDS, ATTR_NAMES, KEYWORD_RESULT, SPARE_IMAGES } from '@blue/mock/pkg2';
+import { useActionsData } from '@blue/adapters/pkg2';
 import { MiniHead, Photo } from '@blue/screens/pkg2/common';
 
 export interface RecordSavePayload { description: string; points: Record<AttributeId, number>; important: boolean; images: string[]; backdate?: string; wishId?: string }
@@ -24,6 +25,7 @@ const AttachChip = ({ icon, label, onClick, disabled, active }: { icon: string; 
 
 /** 挂到愿望（真实 WishMountPicker）：横滑斜切 chip，单选可取消 */
 export function WishMountPicker({ value, onChange, compact }: { value?: string; onChange: (id: string | undefined) => void; compact?: boolean }) {
+  const { WISHES } = useActionsData();
   const active = WISHES.filter((w) => w.status === 'active' && !w.parentId);
   if (!active.length) return null;
   return (

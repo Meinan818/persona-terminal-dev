@@ -8,7 +8,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3R, slantClip, tickClip } from '@blue/kit';
-import { WISHES } from '@blue/mock/pkg2';
+import { useActionsData } from '@blue/adapters/pkg2';
 import { MiniHead } from '@blue/screens/pkg2/common';
 import { WishMountPicker } from './ActivityRecordSheet.p3r';
 
@@ -26,6 +26,7 @@ function Host({ children, label, tone = 'panel' }: { children: ReactNode; label:
 }
 
 export default function WishMountPickerDemo({ open, onClose, params }: OverlayProps) {
+  const { WISHES } = useActionsData();
   const first = WISHES.find((w) => w.status === 'active' && !w.parentId)?.id;
   const init = params?.get('state') === 'selected' ? first : undefined;
   const [a, setA] = useState<string | undefined>(init);

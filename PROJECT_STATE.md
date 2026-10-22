@@ -2,14 +2,15 @@
 
 最后更新：2026-10-23（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 接手第一入口 · 2026-10-23 · 自动化任务收尾交接（新会话从这里开始）
+## 接手第一入口 · 2026-10-23 · 长按轮盘修复待真机复验（新会话从这里开始）
 
-- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，HEAD `cc09d39`（功能提交：愿望/命运/委托/周目标/对账接真 + adapter 文档更新）。工作树只余两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。
-- **压缩计数**：本聊天第 1、2 次实际 compact 均已登记，计数 = 2；已按约定停止业务代码与测试，只做交接收尾。新窗口从本入口继续，不重讲历史。
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，功能 HEAD `46f47cc`（长按轮盘触摸修复；本文件的状态提交随后生成，最终 HEAD 以 `git log -1` 为准）。工作树只余两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。
+- **压缩计数**：上一窗口第 1、2 次实际 compact 均已登记，计数 = 2 并完成交接；本窗口为接手后的新会话，实际 compact 计数 = 0。新 AI 接手后按用户新反馈继续修复，不重讲历史。
 - **授权**：用户明确「自动化任务不能停」，要求按他的规则 + 当前修法一直干活；硬性要求 = **不准碰外观**（demo 的 JSX/className/style/动画/字体/素材不改），只改数据与回调，让四套主题完全融入 app。拿不准的自己替用户决定。星象 AI 接不接要等用户决定（涉及用户自己的 Key）。
 - **已完成**（详见下方「主题接入重做」各批）：四套切主题 + 渲染正常；黄 11 页全接真；粉/蓝已接菜单身份、账号、记账、羁绊、任务、设置、成就、图鉴、愿望/孤儿、统计（活动/成就/技能/雷达）、据点、行动记录；红读真实数据并已接活动/任务/待办/宣告卡/记账合计与写回/首页统计/同伴互动；红愿望、命运抽签、今日/周委托、本周目标已接真实 store 读写（`33b9fa9` `c19108f` `69adae7` `5623790`）。
-- **还差（按优先级）**：① 红愿望/委托/周目标在浏览器或真机实测（本轮只有类型、构建、单测证据，未做用户验收）；② 长按轮盘不显示（需真机复现，查 `RadialWheelP5.p5r.tsx` 指针事件/挂载条件/portal 层级）。以下已收口：③ 红记账对账已接真实 `adjustAccountBalances`（多账户、每月 3 轮）；④ 黄/粉/蓝愿望/命运/委托/周目标 mock 残留已接真实 store；⑤ `adapter/live.ts` 注释与 `adapter/README.md` §3/§4 已更新；⑥ APK 已重打并复制到两处。星象 AI 待用户决定（不先动）。
-- **用户决定**：用户说「准备交接吧，我要把这个项目给新 AI 了」→ 进入交接收尾，停止业务代码，只做文档核验 + 最终提交 + 回执。新 AI 接手后先读本入口，然后按还差清单推进。
+- **还差（按优先级）**：① 红愿望/委托/周目标在浏览器或真机实测（本轮只有类型、构建、单测证据，未做用户验收）；② 长按轮盘安装新 APK 后真机复验（代码已修并完成触摸自动化验证，真机 WebView 尚未验收）。以下已收口：③ 红记账对账已接真实 `adjustAccountBalances`（多账户、每月 3 轮）；④ 黄/粉/蓝愿望/命运/委托/周目标 mock 残留已接真实 store；⑤ `adapter/live.ts` 注释与 `adapter/README.md` §3/§4 已更新；⑥ APK 已重打并复制到两处。星象 AI 待用户决定（不先动）。
+- **长按轮盘修复（2026-10-23 07:39，待真机复验）**：真机截图显示中间助手键被 Android 当链接长按并弹出「助手 / URL」预览；无头 Chrome 触摸复现同时确认，长按期间手指移动 24px 会触发 `pointercancel`，500ms 开轮盘计时器被清掉。`46f47cc` 去掉该键的 `href`、改为按钮语义并补键盘回调，`.bn2-hex` 增加 `touch-action:none` 等触摸交互约束；外观未改。Playwright 触摸回归：按住不动、上移、下滑、选中「羁绊」松开 4/4 均能显示轮盘，`pointercancel=0`，短按仍打开助手。`tsc --noEmit` exit 0；`vitest` 66 文件 / 396 项通过；`npm run build` 通过；Android `assembleDebug` 成功。新包 `E:\MASKARIA\outputs\maskaria-theme-wheel-fix-debug.apk` 与 `D:\下载\互传\maskaria-theme-wheel-fix-debug.apk`（111,145,862 B，SHA-256 `CD4F37F80B8F181DF7258A7F45FEBB9D95FB38400863642877506830B23B8F2C`）；真机安装后需确认长按不再出现灰色链接预览且轮盘可选项跳转。
+- **用户决定**：上一窗口按「准备交接吧，我要把这个项目给新 AI 了」完成交接收尾。本窗口接手后，用户用真机截图确认长按中间键只出现「助手 / URL」小标签，要求修复为显示轮盘；本轮据此恢复业务修改。
 - **本轮改动**：红 `ledger4.ts` 对账写回（`realAccounts()` 读 `getAccountBalances()` + `adjustAccountBalances(targets)`）；黄/粉/蓝 `Todos` + `GoalDeck` + `FateDrawSheet` + `QuestBoardSheet` 数据源从 mock 换到 `useActionsData()` / `actionsOps`；粉/蓝 `WishPanel` / `WishFulfillDialog` / `WishMountPicker` / `ActivityRecordSheet` 愿望接真；粉/蓝 adapter `pkg2.ts` 补 quest/fate/weekly 的真实数据出口。只改数据与回调，零外观改动。
 - **验证**（2026-10-23 本轮实跑）：`npx tsc --noEmit` exit 0；`npm run build` exit 0；`npx vitest run` 66 文件 / 396 项全过。打包命令：`npm run build && npx cap sync android && cd android && gradlew.bat assembleDebug`，产物复制到 `E:\MASKARIA\outputs\maskaria-theme-debug.apk` 和 `D:\下载\互传\maskaria-theme-debug.apk`（111.1MB，APK 内含本轮全部接线）。
 - **红线**：不 push（Push 要用户批准）；不 commit 凭据；不改 `main` 与幽影协议 `src/umbra`、`public/umbra-demo`；不改外观；破坏性命令先说明。

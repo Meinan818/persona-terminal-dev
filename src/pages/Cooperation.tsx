@@ -8,6 +8,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useCloudStore } from '@/store/cloud';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { useUiChannel } from '@/ui/useUiChannel';
+import CooperationP4 from '@yellow/screens/pages/Cooperation.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { P3R, P3RPage, GhostWords, SlantButton, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_FONT, P5Star, P5Dots, P5Slab, P5RPage, P5StarFab } from '@/components/p5r/kit';
 import { ConfidantCard } from '@/components/cooperation/ConfidantCard';
@@ -393,6 +395,8 @@ export function Cooperation() {
   const menuItemCls = menuChannel ? `${menuChannel}-menu-item` : '';
   const menuSubCls = menuChannel ? `${menuChannel}-menu-sub` : '';
   const menuIconCls = menuChannel ? `${menuChannel}-menu-icon` : '';
+
+  if (isP4) return <P4Host><CooperationP4 pageId="cooperation" params={new URLSearchParams(viewMode === 'list' ? { view: 'list' } : {})} /></P4Host>;
 
   return (
     <P3RPage active={p3}>

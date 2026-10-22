@@ -16,7 +16,7 @@ import { cx } from '@yellow/lib/cx';
 import { ATTR_NAMES, TODAY_KEY, TODOS, WEEKLY_GOAL } from '@yellow/mock/pkg2';
 import { daysBetween, setHashParam, useLongPress } from './common';
 import { toneBg } from './tones';
-import { useCallingCards } from './callingCardStore';
+import { callingCardOps, updateCard as updateCallingCard, useCallingCardData } from '@yellow/adapters/callingCards';
 import GoalSetupForm, { type GoalItem } from '@yellow/screens/overlays/GoalSetupForm.p4g';
 import CelebrationModal from '@yellow/screens/overlays/CelebrationModal.p4g';
 import ClaimedModal from '@yellow/screens/overlays/ClaimedModal.p4g';
@@ -128,10 +128,9 @@ export function CallingCardSection({ empty }: { empty?: boolean }) {
   const toast = useToast();
   const low = useLowMotion();
   // 与「宣告卡」总览页（#/p/callingcard）共用一份 store；?state=empty 演示时用本地空列表
-  const [shared, setShared] = useCallingCards();
-  const [local, setLocal] = useState<CallingCard[]>([]);
+  const { CALLING_CARDS: shared } = useCallingCardData();
+  const [local] = useState<CallingCard[]>([]);
   const cards = empty ? local : shared;
-  const setCards = (empty ? setLocal : setShared) as (f: (l: CallingCard[]) => CallingCard[]) => void;
   const [menu, setMenu] = useState<CallingCard | null>(null);
   const [confirmDel, setConfirmDel] = useState(false);
   const [del, setDel] = useState<CallingCard | null>(null);
@@ -140,7 +139,7 @@ export function CallingCardSection({ empty }: { empty?: boolean }) {
   const [hint, setHint] = useState(true);
   const active = cards.filter((c) => !c.archived);
   const archived = cards.filter((c) => c.archived);
-  const upd = (id: string, p: Partial<CallingCard>) => setCards((l) => l.map((c) => (c.id === id ? { ...c, ...p } : p.pinned ? { ...c, pinned: false } : c)));
+  const upd = (id: string, p: Partial<CallingCard>) => { void updateCallingCard(id, p); };
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -184,9 +183,9 @@ export function CallingCardSection({ empty }: { empty?: boolean }) {
           if (id === 'unarchive') upd(c.id, { archived: false, archiveReason: undefined });
           if (id === 'delete') setDel(c);
         }} />
-      <CallingCardSectionDeleteConfirm open={!!del} onClose={() => setDel(null)} title={del?.title} onConfirm={() => { setCards((l) => l.filter((c) => c.id !== del?.id)); toast.success('已删除'); }} />
+      <CallingCardSectionDeleteConfirm open={!!del} onClose={() => setDel(null)} title={del?.title} onConfirm={() => { if (del) void callingCardOps.remove(del.id); toast.success('已删除'); }} />
       <CallingCardEditor open={!!editor} onClose={() => setEditor(false)} initialCard={editor ? editor.card : null}
-        onSave={(c) => setCards((l) => { const exists = l.some((x) => x.id === c.id); const base = c.pinned ? l.map((x) => ({ ...x, pinned: false })) : l; return exists ? base.map((x) => (x.id === c.id ? { ...x, ...c } : x)) : [c, ...base]; })} />
+        onSave={(c) => { void callingCardOps.save(c); if (c.pinned) void callingCardOps.pin(c.id); }} />
     </div>
   );
 }

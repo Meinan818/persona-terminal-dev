@@ -33,6 +33,7 @@ import { useUiChannel } from '@/ui/useUiChannel';
 import { syncDarkClass, themeToChannel } from '@/ui/channel';
 import { getLayoutModeVersion, isPhoneLayout, subscribeLayoutMode } from '@/ui/layoutMode';
 const Achievements = lazy(() => import('@/pages/Achievements').then(m => ({ default: m.Achievements })));
+const CallingCardBoard = lazy(() => import('@/pages/CallingCardBoard').then(m => ({ default: m.CallingCardBoard })));
 const Statistics = lazy(() => import('@/pages/Statistics').then(m => ({ default: m.Statistics })));
 const Settings = lazy(() => import('@/pages/Settings').then(m => ({ default: m.Settings })));
 // 行动页（任务+记录合并，v2.5 五格 IA）；旧 'todos'/'activities' 路由也映射到它（见 renderPage）
@@ -735,6 +736,8 @@ function App() {
         return lazyPage(<Actions />);
       case 'achievements':
         return lazyPage(<Achievements />);
+      case 'callingcard':
+        return lazyPage(<CallingCardBoard />);
       case 'statistics':
         return lazyPage(<Statistics />);
       case 'settings':

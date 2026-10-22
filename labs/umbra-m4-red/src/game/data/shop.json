@@ -1,0 +1,609 @@
+{
+ "_note": "D-007 四类店（velvet 走合成画面）；价格/数值为 UMBRA 样板值；物品名沿用 P5R 英文原名。卖价 = 买价 ×sellRate（装备/消耗品），宝物按 treasure 表。",
+ "sellRate": 0.5,
+ "maxStack": 99,
+ "battleCarry": 10,
+ "equip": {
+  "rebel-knife": {
+   "slot": "melee",
+   "who": [
+    "joker"
+   ],
+   "price": 0,
+   "atk": 50,
+   "start": true
+  },
+  "kris": {
+   "slot": "melee",
+   "who": [
+    "joker"
+   ],
+   "price": 3600,
+   "atk": 68
+  },
+  "kopis": {
+   "slot": "melee",
+   "who": [
+    "joker"
+   ],
+   "price": 7800,
+   "atk": 86
+  },
+  "steel-pipe": {
+   "slot": "melee",
+   "who": [
+    "skull"
+   ],
+   "price": 0,
+   "atk": 52,
+   "start": true
+  },
+  "spiked-bat": {
+   "slot": "melee",
+   "who": [
+    "skull"
+   ],
+   "price": 4000,
+   "atk": 72
+  },
+  "scimitar": {
+   "slot": "melee",
+   "who": [
+    "mona"
+   ],
+   "price": 3400,
+   "atk": 64
+  },
+  "wire-whip": {
+   "slot": "melee",
+   "who": [
+    "panther"
+   ],
+   "price": 3400,
+   "atk": 62
+  },
+  "iai-katana": {
+   "slot": "melee",
+   "who": [
+    "fox"
+   ],
+   "price": 4200,
+   "atk": 74
+  },
+  "brass-knuckles": {
+   "slot": "melee",
+   "who": [
+    "queen"
+   ],
+   "price": 3800,
+   "atk": 70
+  },
+  "battle-axe": {
+   "slot": "melee",
+   "who": [
+    "noir"
+   ],
+   "price": 4400,
+   "atk": 78
+  },
+  "light-saber": {
+   "slot": "melee",
+   "who": [
+    "crow"
+   ],
+   "price": 4600,
+   "atk": 76
+  },
+  "rapier": {
+   "slot": "melee",
+   "who": [
+    "violet"
+   ],
+   "price": 4200,
+   "atk": 72
+  },
+  "start-melee-mona": {
+   "slot": "melee",
+   "who": [
+    "mona"
+   ],
+   "price": 0,
+   "atk": 48,
+   "start": true
+  },
+  "start-melee-panther": {
+   "slot": "melee",
+   "who": [
+    "panther"
+   ],
+   "price": 0,
+   "atk": 46,
+   "start": true
+  },
+  "start-melee-fox": {
+   "slot": "melee",
+   "who": [
+    "fox"
+   ],
+   "price": 0,
+   "atk": 50,
+   "start": true
+  },
+  "start-melee-queen": {
+   "slot": "melee",
+   "who": [
+    "queen"
+   ],
+   "price": 0,
+   "atk": 50,
+   "start": true
+  },
+  "start-melee-noir": {
+   "slot": "melee",
+   "who": [
+    "noir"
+   ],
+   "price": 0,
+   "atk": 54,
+   "start": true
+  },
+  "start-melee-crow": {
+   "slot": "melee",
+   "who": [
+    "crow"
+   ],
+   "price": 0,
+   "atk": 52,
+   "start": true
+  },
+  "start-melee-violet": {
+   "slot": "melee",
+   "who": [
+    "violet"
+   ],
+   "price": 0,
+   "atk": 50,
+   "start": true
+  },
+  "tkachev": {
+   "slot": "gun",
+   "who": [
+    "joker"
+   ],
+   "price": 0,
+   "atk": 40,
+   "start": true
+  },
+  "model-gun-m1": {
+   "slot": "gun",
+   "who": [
+    "joker"
+   ],
+   "price": 4200,
+   "atk": 58
+  },
+  "blunderbuss": {
+   "slot": "gun",
+   "who": [
+    "skull"
+   ],
+   "price": 4600,
+   "atk": 62
+  },
+  "wrist-rocket": {
+   "slot": "gun",
+   "who": [
+    "mona"
+   ],
+   "price": 3600,
+   "atk": 52
+  },
+  "mini-uzi": {
+   "slot": "gun",
+   "who": [
+    "panther"
+   ],
+   "price": 3800,
+   "atk": 50
+  },
+  "hunting-rifle": {
+   "slot": "gun",
+   "who": [
+    "fox"
+   ],
+   "price": 4400,
+   "atk": 60
+  },
+  "start-gun-skull": {
+   "slot": "gun",
+   "who": [
+    "skull"
+   ],
+   "price": 0,
+   "atk": 38,
+   "start": true
+  },
+  "start-gun-mona": {
+   "slot": "gun",
+   "who": [
+    "mona"
+   ],
+   "price": 0,
+   "atk": 38,
+   "start": true
+  },
+  "start-gun-panther": {
+   "slot": "gun",
+   "who": [
+    "panther"
+   ],
+   "price": 0,
+   "atk": 38,
+   "start": true
+  },
+  "start-gun-fox": {
+   "slot": "gun",
+   "who": [
+    "fox"
+   ],
+   "price": 0,
+   "atk": 38,
+   "start": true
+  },
+  "start-gun-queen": {
+   "slot": "gun",
+   "who": [
+    "queen"
+   ],
+   "price": 0,
+   "atk": 38,
+   "start": true
+  },
+  "start-gun-noir": {
+   "slot": "gun",
+   "who": [
+    "noir"
+   ],
+   "price": 0,
+   "atk": 38,
+   "start": true
+  },
+  "start-gun-crow": {
+   "slot": "gun",
+   "who": [
+    "crow"
+   ],
+   "price": 0,
+   "atk": 38,
+   "start": true
+  },
+  "start-gun-violet": {
+   "slot": "gun",
+   "who": [
+    "violet"
+   ],
+   "price": 0,
+   "atk": 38,
+   "start": true
+  },
+  "school-uniform": {
+   "slot": "armor",
+   "who": [
+    "joker",
+    "skull",
+    "fox",
+    "crow",
+    "panther",
+    "queen",
+    "noir",
+    "violet",
+    "mona"
+   ],
+   "price": 0,
+   "def": 20,
+   "start": true
+  },
+  "unisex-vest": {
+   "slot": "armor",
+   "who": [
+    "joker",
+    "skull",
+    "fox",
+    "crow",
+    "panther",
+    "queen",
+    "noir",
+    "violet"
+   ],
+   "price": 2600,
+   "def": 34
+  },
+  "tactical-vest": {
+   "slot": "armor",
+   "who": [
+    "joker",
+    "skull",
+    "fox",
+    "crow"
+   ],
+   "price": 5200,
+   "def": 48
+  },
+  "fighting-dress": {
+   "slot": "armor",
+   "who": [
+    "panther",
+    "queen",
+    "noir",
+    "violet"
+   ],
+   "price": 5200,
+   "def": 48
+  },
+  "cat-harness": {
+   "slot": "armor",
+   "who": [
+    "mona"
+   ],
+   "price": 3800,
+   "def": 42
+  },
+  "occult-mask": {
+   "slot": "acc",
+   "who": [
+    "joker",
+    "skull",
+    "fox",
+    "crow",
+    "panther",
+    "queen",
+    "noir",
+    "violet",
+    "mona"
+   ],
+   "price": 3000,
+   "mag": 0.06
+  },
+  "oil-pack": {
+   "slot": "acc",
+   "who": [
+    "joker",
+    "skull",
+    "fox",
+    "crow",
+    "panther",
+    "queen",
+    "noir",
+    "violet",
+    "mona"
+   ],
+   "price": 2000,
+   "hp": 30
+  },
+  "cooling-pack": {
+   "slot": "acc",
+   "who": [
+    "joker",
+    "skull",
+    "fox",
+    "crow",
+    "panther",
+    "queen",
+    "noir",
+    "violet",
+    "mona"
+   ],
+   "price": 2000,
+   "sp": 12
+  },
+  "portable-battery": {
+   "slot": "acc",
+   "who": [
+    "joker",
+    "skull",
+    "fox",
+    "crow",
+    "panther",
+    "queen",
+    "noir",
+    "violet",
+    "mona"
+   ],
+   "price": 2000,
+   "sp": 8,
+   "hp": 10
+  },
+  "well-fed-cape": {
+   "slot": "acc",
+   "who": [
+    "joker",
+    "skull",
+    "fox",
+    "crow",
+    "panther",
+    "queen",
+    "noir",
+    "violet",
+    "mona"
+   ],
+   "price": 12000,
+   "hp": 60
+  },
+  "calming-cape": {
+   "slot": "acc",
+   "who": [
+    "joker",
+    "skull",
+    "fox",
+    "crow",
+    "panther",
+    "queen",
+    "noir",
+    "violet",
+    "mona"
+   ],
+   "price": 12000,
+   "mag": 0.12
+  }
+ },
+ "consumable": {
+  "medicine": {
+   "price": 300,
+   "hp": 100
+  },
+  "snuff": {
+   "price": 1200,
+   "sp": 10
+  },
+  "bead": {
+   "price": 600,
+   "revive": 0.5
+  },
+  "recov-r-50": {
+   "price": 400,
+   "hp": 50
+  },
+  "recov-r-100": {
+   "price": 800,
+   "hp": 100
+  },
+  "takemedic": {
+   "price": 1600,
+   "hp": 200
+  },
+  "takemedic-all": {
+   "price": 950,
+   "hp": 50,
+   "all": true
+  },
+  "soul-drop": {
+   "price": 500,
+   "sp": 25
+  },
+  "energy-drink": {
+   "price": 1500,
+   "sp": 50
+  },
+  "revival-bead": {
+   "price": 1000,
+   "revive": 0.5
+  }
+ },
+ "treasure": {
+  "thin-copper": 20,
+  "hole-copper": 50,
+  "jade": 12000,
+  "distorted-crown": 15000
+ },
+ "shops": {
+  "untouchable": {
+   "kind": "weapon",
+   "keeper": "shop.iwai",
+   "theme": "green",
+   "name": "untouchable",
+   "menu": [
+    {
+     "id": "melee",
+     "items": [
+      "kris",
+      "kopis",
+      "spiked-bat",
+      "scimitar",
+      "wire-whip",
+      "iai-katana",
+      "brass-knuckles",
+      "battle-axe",
+      "light-saber",
+      "rapier"
+     ]
+    },
+    {
+     "id": "gun",
+     "items": [
+      "model-gun-m1",
+      "blunderbuss",
+      "wrist-rocket",
+      "mini-uzi",
+      "hunting-rifle"
+     ]
+    },
+    {
+     "id": "armor",
+     "items": [
+      "unisex-vest",
+      "tactical-vest",
+      "fighting-dress",
+      "cat-harness"
+     ]
+    },
+    {
+     "id": "acc",
+     "items": [
+      "occult-mask",
+      "oil-pack",
+      "cooling-pack",
+      "portable-battery",
+      "well-fed-cape",
+      "calming-cape"
+     ]
+    },
+    {
+     "id": "sell"
+    }
+   ]
+  },
+  "takemi": {
+   "kind": "hospital",
+   "keeper": "shop.takemi",
+   "theme": "blue",
+   "name": "takemi",
+   "menu": [
+    {
+     "id": "medicine",
+     "items": [
+      "recov-r-50",
+      "recov-r-100",
+      "takemedic",
+      "takemedic-all",
+      "soul-drop"
+     ]
+    }
+   ]
+  },
+  "drugstore": {
+   "kind": "item",
+   "keeper": "shop.vendor",
+   "theme": "mono",
+   "name": "drugstore",
+   "menu": [
+    {
+     "id": "item",
+     "items": [
+      "medicine",
+      "snuff",
+      "bead",
+      "revival-bead",
+      "energy-drink"
+     ]
+    },
+    {
+     "id": "sell"
+    }
+   ]
+  }
+ },
+ "eqScale": {
+  "melee": [
+   50,
+   300
+  ],
+  "gun": [
+   40,
+   300
+  ],
+  "def": [
+   20,
+   250
+  ]
+ }
+}

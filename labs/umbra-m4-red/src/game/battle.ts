@@ -4,11 +4,13 @@
 // ORDER→SWITCH 与后备交换；SHOWTIME 组合按名单数据判定。玩法按 GDD/契约，不照搬 P5R 数值。
 import type { HitResult } from '../umbra/skins/_contract';
 import EN from './data/enemies.json';
+import SHOP from './data/shop.json';
+const CONS = SHOP.consumable as Record<string, { price: number; hp?: number; sp?: number; revive?: number; all?: boolean }>;
 /** M4：敌人数据驱动（data/enemies.json）；ETYPES[type] = 规则数值 + 立绘 tex id */
 export const ETYPES = EN.types as Record<string, { lv: number; hp: number; atk: number; weak: string[]; exp: number; money: number; tex: string; group?: string; h?: number; tier?: string; noTalk?: boolean; phases?: { at: number; hp: number; atk: number; weak: string[]; tex: string; h?: number; actions?: number }[]; drop?: { id: string; rate: number } }>;
 export interface BattleMods { dmg: number; weakDmg: number; batonK: number; talk: number; enemyAtk: number; enemyHp: number; drop: number; boss: { hp: number; atk: number } }
 const NOMODS: BattleMods = { dmg: 1, weakDmg: 1, batonK: 1, talk: 0, enemyAtk: 1, enemyHp: 1, drop: 1, boss: { hp: 1, atk: 1 } };
-export interface Carry { lv: number; hp: number; hpMax: number; sp: number; spMax: number; exp: number }
+export interface Carry { lv: number; hp: number; hpMax: number; sp: number; spMax: number; exp: number; eq?: { phys: number; gun: number; mag: number; def: number; hp: number; sp: number } }
 
 export interface Unit { phase?: number; acts?: number; id: string; name: string; side: 'ally' | 'enemy'; lv: number; hp: number; hpMax: number; sp: number; spMax: number;
   weak: string[]; known: string[]; down: boolean; guard: boolean; atk: number; exp: number; suffix?: string }
@@ -63,6 +65,10 @@ export class Battle {
   enemyType = new Map<string, string>();
   mods: BattleMods = NOMODS;
   carry: Record<string, Carry> | null = null;
+  /** M5：背包（据点 Save.items 带入；null = M3 单场样板固定道具）与主角面具技能覆盖 */
+  bag: Record<string, number> | null = null;
+  skillOverride: Record<string, string[]> = {};
+  private eqOf(id: string) { return this.carry?.[id]?.eq; }
   phaseLog: { id: string; phase: number }[] = [];
   constructor(members: string[] = DEFAULT_PARTY, enemyCount = 2) { this.setRoster(members); this.setEnemies(enemyCount); this.reset(); }
   /** M4：按遭遇表设置敌人（1–5，D-004），同种重复加后缀 */
@@ -87,7 +93,8 @@ export class Battle {
   }
   rnd() { this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff; return this.seed / 0x7fffffff; }
   reset() {
-    this.id++; this.units.clear(); this.turn = 1; this.seq = 0; this.oneMore = false; this.seed = 20261022; this.items = ITEMS.map((i) => ({ ...i }));
+    this.id++; this.units.clear(); this.turn = 1; this.seq = 0; this.oneMore = false; this.seed = 20261022;
+    this.items = this.bag ? Object.keys(CONS).filter((k) => (this.bag![k] ?? 0) > 0).map((k) => ({ id: k, name: `item.${k}.name`, desc: `item.${k}.desc`, n: this.bag![k] })) : ITEMS.map((i) => ({ ...i }));
     this.actor = LEAD; this.acted.clear(); this.baton = 0; this.showtimeUsed.clear(); this.summoned.clear();
     for (const [id, r] of Object.entries(ROSTER)) this.units.set(id, { id, name: 'unit.' + id, side: 'ally', lv: r.lv, hp: r.hp, hpMax: r.hp, sp: r.sp, spMax: r.sp, weak: [], known: [], down: false, guard: false, atk: 0, exp: 0 });
     if (this.carry) for (const [id, c] of Object.entries(this.carry)) { const u = this.units.get(id); if (u) Object.assign(u, { lv: c.lv, hp: Math.max(1, c.hp), hpMax: c.hpMax, sp: c.sp, spMax: c.spMax, exp: c.exp }); }
@@ -114,7 +121,7 @@ export class Battle {
     if (!ok) { this.acted.add(this.actor); this.oneMore = false; this.baton = 0; }
     this.commit('escape', { result: ok ? 'success' : 'fail' }); return ok;
   }
-  skillsOf(id: string) { return ROSTER[id]?.skills ?? []; }
+  skillsOf(id: string) { return this.skillOverride[id] ?? ROSTER[id]?.skills ?? []; }
   private commit(kind: string, payload: unknown) {
     const key = `b${this.id}-${this.turn}-${++this.seq}`;
     if (this.keys.has(key)) return null;                   // 幂等：同一 key 只结算一次
@@ -147,7 +154,8 @@ export class Battle {
     } else {
       const t = this.u(targetId);
       const weak = t.weak.includes(s.element), crit = !weak && s.kind !== 'magic' && this.rnd() < 0.12;
-      const base = s.power * (1.6 + this.rnd() * 0.4) * (1 + 0.5 * this.baton * this.mods.batonK) * this.mods.dmg;
+      const q = this.eqOf(actor), eqK = 1 + (q ? (s.kind === 'phys' ? q.phys : s.kind === 'gun' ? q.gun : s.kind === 'magic' ? q.mag : 0) : 0);   // M5 装备修正
+      const base = s.power * (1.6 + this.rnd() * 0.4) * (1 + 0.5 * this.baton * this.mods.batonK) * this.mods.dmg * eqK;
       const dmg = Math.round(base * (weak ? 1.5 * this.mods.weakDmg : 1) * (crit ? 1.6 : 1) * (t.down ? 1.25 : 1));
       t.hp = Math.max(0, t.hp - dmg);
       if (t.hp <= 0 && this.nextPhase(t)) { hits.push({ targetId, dmg, weak, crit, miss: false, resist: 'none', element: s.element, down: false }); const payload = { actorId: actor, skillId, targetIds: targets, hits, side: 'ally' as const, baton: this.baton }; const key = this.commit('action', payload); this.oneMore = false; this.acted.add(actor); this.baton = 0; return { key, payload, newDown, oneMore: false, holdUp: false, won: false, phase: t.phase }; }
@@ -218,11 +226,14 @@ export class Battle {
   useItem(itemId: string) {
     const it = this.items.find((i) => i.id === itemId)!; let j = this.u(this.actor);
     it.n--; let amt = 0;
-    if (itemId === 'bead') { j = this.u(this.downAllies[0] ?? this.actor); amt = j.hp > 0 ? 0 : Math.round(j.hpMax * 0.5); j.hp += amt; j.down = false;
+    const fx = CONS[itemId] ?? (itemId === 'bead' ? { price: 0, revive: 0.5 } : itemId === 'medicine' ? { price: 0, hp: 100 } : { price: 0, sp: 10 });
+    if (fx.revive) { j = this.u(this.downAllies[0] ?? this.actor); amt = j.hp > 0 ? 0 : Math.round(j.hpMax * fx.revive); j.hp += amt; j.down = false;
       const payload = { actorId: this.actor, skillId: 'item', targetIds: [j.id], hits: [{ targetId: j.id, dmg: amt, weak: false, crit: false, miss: false, resist: 'none', element: 'heal', down: false }], side: 'ally' as const, revive: j.id };
       this.commit('item', payload); this.oneMore = false; this.acted.add(this.actor); this.baton = 0; return payload; }
-    if (itemId === 'medicine') { amt = Math.min(100, j.hpMax - j.hp); j.hp += amt; } else { amt = Math.min(10, j.spMax - j.sp); j.sp += amt; }
-    const payload = { actorId: this.actor, skillId: 'item', targetIds: [this.actor], hits: [{ targetId: this.actor, dmg: amt, weak: false, crit: false, miss: false, resist: 'none', element: 'heal', down: false }], side: 'ally' as const };
+    const tg = fx.all ? this.alive(this.party).map((i) => this.u(i)) : [j];
+    const hits = tg.map((u) => { const a = fx.hp ? Math.min(fx.hp, u.hpMax - u.hp) : Math.min(fx.sp ?? 0, u.spMax - u.sp); if (fx.hp) u.hp += a; else u.sp += a; amt += a;
+      return { targetId: u.id, dmg: a, weak: false, crit: false, miss: false, resist: 'none', element: 'heal', down: false }; });
+    const payload = { actorId: this.actor, skillId: 'item', targetIds: tg.map((u) => u.id), hits, side: 'ally' as const };
     this.commit('item', payload); this.oneMore = false; this.acted.add(this.actor); this.baton = 0;
     return payload;
   }
@@ -238,7 +249,7 @@ export class Battle {
       const al = this.alive(this.party); if (!al.length) break;
       const tid = al[Math.floor(this.rnd() * al.length)];
       const t = this.u(tid);
-      const dmg = Math.round(e.atk * (0.85 + this.rnd() * 0.3) * (t.guard ? 0.5 : 1));
+      const dmg = Math.round(e.atk * (0.85 + this.rnd() * 0.3) * (t.guard ? 0.5 : 1) * (1 - Math.min(0.5, this.eqOf(tid)?.def ?? 0)));
       t.hp = Math.max(0, t.hp - dmg);   // M4b：去掉 1 HP 保底（B19 全灭失败）
       const ko = t.hp <= 0;
       const payload = { actorId: id, skillId: 'enemy.lunge', targetIds: [tid], hits: [{ targetId: tid, dmg, weak: false, crit: false, miss: false, resist: 'none', element: 'phys', down: ko }], side: 'enemy' as const, ko };

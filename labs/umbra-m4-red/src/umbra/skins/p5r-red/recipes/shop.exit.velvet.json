@@ -1,0 +1,26 @@
+{
+ "id": "shop.exit.velvet",
+ "event": "shop:exit",
+ "duration": 560,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "dur": 540,
+   "args": {
+    "colors": [
+     "#0b1e6b",
+     "#1f3fbf",
+     "#0a0a0a"
+    ],
+    "stagger": 60,
+    "angle": -0.35,
+    "dir": "ltr"
+   }
+  }
+ ],
+ "match": {
+  "kind": "velvet"
+ }
+}

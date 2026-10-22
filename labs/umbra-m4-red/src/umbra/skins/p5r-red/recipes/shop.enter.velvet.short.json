@@ -1,0 +1,24 @@
+{
+ "id": "shop.enter.velvet.short",
+ "event": "shop:enter",
+ "duration": 480,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "dur": 460,
+   "args": {
+    "colors": [
+     "#0a0a0a",
+     "#1f3fbf"
+    ],
+    "stagger": 60,
+    "angle": 0.35
+   }
+  }
+ ],
+ "match": {
+  "kind": "velvet.short"
+ }
+}

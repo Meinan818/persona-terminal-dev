@@ -12,6 +12,8 @@ export const CAPS: Record<string, [number, number]> = {
   'explore:move': [250, 120], 'explore:sneak': [350, 150], 'explore:cover': [300, 150], 'explore:spotted': [500, 200], 'explore:interact': [400, 200],
   'explore:exit': [800, 300], 'explore:scan': [400, 200], 'callingcard:send': [3000, 1000], 'boss:intro': [2000, 600], 'boss:phase': [2000, 600],
   'card:pick': [600, 300], 'run:fail': [1500, 500], 'run:retreat': [1000, 400], 'escape': [600, 250], 'unit:revive': [600, 250],
+  // M5 §3b/§3a：进店 1.2s（当天首次；简短 0.5s）/ 离店 0.6s / 合成 3.0s（可跳过）
+  'shop:enter': [1200, 300], 'shop:exit': [600, 250], 'fusion:result': [3000, 1000],
   'map:move': [800, 300], 'map:encounter': [900, 350], 'env:change': [600, 250], 'ui:open': [280, 150], 'ui:close': [280, 150],
 };
 /** 按格计上限的事件（整条路径一个事件，封顶 2000ms） */

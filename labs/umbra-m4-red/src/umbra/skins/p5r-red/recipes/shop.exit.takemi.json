@@ -1,0 +1,51 @@
+{
+ "id": "shop.exit.takemi",
+ "event": "shop:exit",
+ "duration": 580,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.shop.exit"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "dur": 560,
+   "args": {
+    "colors": [
+     "#1f6bff",
+     "@color.primary",
+     "#0a0a0a"
+    ],
+    "stagger": 60,
+    "angle": -0.35,
+    "dir": "ltr"
+   }
+  },
+  {
+   "at": 120,
+   "prim": "title",
+   "dur": 440,
+   "layer": "trans",
+   "args": {
+    "text": "{bye}",
+    "size": 58,
+    "pos": {
+     "x": 640,
+     "y": 360
+    },
+    "rot": -0.08,
+    "invert": [
+     1
+    ]
+   }
+  }
+ ],
+ "match": {
+  "kind": "takemi"
+ }
+}

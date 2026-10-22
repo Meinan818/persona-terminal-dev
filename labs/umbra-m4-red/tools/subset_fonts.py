@@ -66,5 +66,11 @@ for f, fam, role in [('r5-latin-display.woff2', 'R5 Latin Display', 'display'), 
     cm = TTFont(F + f).getBestCmap()
     rows.insert(0, dict(family=fam, file='assets/fonts/' + f, chars=''.join(chr(c) for c in sorted(cm) if c < 0x3000), role=role, pack='first',
                         kb=round(os.path.getsize(F + f) / 1024, 1)))
+# M5：商店/天鹅绒列表正文拉丁字（商品名、面具名、技能名用 P5R 英文原名）→ R5 Body（R5 Body SC 0 片的 ASCII 子集，OFL）
+_lat = ''.join(chr(c) for c in range(0x20, 0x7f)) + '¥×·—–’‘“”…▲▼'
+_ft = TTFont(F + 'r5-body-sc-0.woff2'); _cm = _ft.getBestCmap(); _have = ''.join(ch for ch in _lat if ord(ch) in _cm)
+_o = subset.Options(); _o.flavor = 'woff2'; _o.layout_features = ['*']; _s = subset.Subsetter(_o); _s.populate(text=_have); _s.subset(_ft); _ft.flavor = 'woff2'
+_ft.save(os.path.join(OUT, 'r5-body-latin.woff2'))
+rows.append(dict(family='R5 Body', file='assets/fonts/r5-body-latin.woff2', chars=_have, role='body', pack='first', kb=round(os.path.getsize(os.path.join(OUT, 'r5-body-latin.woff2')) / 1024, 1)))
 json.dump(rows, open(os.path.join(ROOT, 'work/fonts.json'), 'w'), ensure_ascii=False, indent=1)
 print('fonts KB', round(sum(r['kb'] for r in rows), 1), [(r['file'], r['kb']) for r in rows])

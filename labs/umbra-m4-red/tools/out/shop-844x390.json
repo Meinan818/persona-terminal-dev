@@ -1,0 +1,178 @@
+{
+ "tapMiss": [],
+ "size": "844x390",
+ "secs": 74.644,
+ "errors": [],
+ "flowErrors": [],
+ "checks": [
+  [
+   "buy portable-battery",
+   true
+  ],
+  [
+   "equip joker acc",
+   true
+  ],
+  [
+   "buy+equip kris",
+   true
+  ],
+  [
+   "sell all treasure",
+   true
+  ],
+  [
+   "sell 1 medicine",
+   true
+  ],
+  [
+   "takemi buy x2",
+   true
+  ],
+  [
+   "drugstore bead",
+   true
+  ],
+  [
+   "cannot afford",
+   true
+  ],
+  [
+   "fusion consumed + result",
+   true
+  ],
+  [
+   "fusion skills = base+inherit",
+   true
+  ],
+  [
+   "compendium registered",
+   true
+  ],
+  [
+   "active persona follows result",
+   true
+  ],
+  [
+   "persist",
+   true
+  ]
+ ],
+ "timings": [
+  {
+   "ev": "shop:enter",
+   "ms": 1181,
+   "cap": 1200,
+   "recipe": "shop.enter.untouchable.full",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "shop:exit",
+   "ms": 583,
+   "cap": 600,
+   "recipe": "shop.exit.untouchable",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "shop:enter",
+   "ms": 1183,
+   "cap": 1200,
+   "recipe": "shop.enter.takemi.full",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "shop:exit",
+   "ms": 583,
+   "cap": 600,
+   "recipe": "shop.exit.takemi",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "shop:enter",
+   "ms": 1184,
+   "cap": 1200,
+   "recipe": "shop.enter.drugstore.full",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "shop:exit",
+   "ms": 583,
+   "cap": 600,
+   "recipe": "shop.exit.drugstore",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "shop:enter",
+   "ms": 1166,
+   "cap": 1200,
+   "recipe": "shop.enter.velvet.full",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "fusion:result",
+   "ms": 2966,
+   "cap": 3000,
+   "recipe": "fusion.result",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "fusion:result",
+   "ms": 2966,
+   "cap": 3000,
+   "recipe": "fusion.result",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "shop:exit",
+   "ms": 567,
+   "cap": 600,
+   "recipe": "shop.exit.velvet",
+   "forced": false,
+   "skipped": false
+  }
+ ],
+ "steps": [
+  "8.1s hub",
+  "14.7s shot 20-street",
+  "15.8s shot 21-enter-untouchable",
+  "17.6s shot 22-shop-home",
+  "18.9s shot 23-shop-acc",
+  "19.9s shot 24-shop-select",
+  "21.0s shot 25-shop-qty",
+  "22.3s shot 26-shop-equip",
+  "27.5s shot 27-shop-melee",
+  "30.1s shot 28-shop-melee-after",
+  "31.2s shot 29-shop-sell",
+  "32.6s shot 30-shop-sellqty",
+  "34.4s shot 31-shop-exit",
+  "37.4s shot 32-takemi",
+  "40.0s shot 33-takemi-qty",
+  "41.1s shot 34-takemi-after",
+  "44.5s shot 35-drug-home",
+  "45.4s shot 36-drug-list",
+  "48.1s shot 37-drug-poor",
+  "51.9s shot 38-hub-after-shop",
+  "53.1s shot 40-velvet-enter",
+  "54.6s shot 41-velvet-home",
+  "55.3s shot 42-velvet-method",
+  "56.2s shot 43-fusion-list1",
+  "57.0s shot 44-fusion-list2",
+  "57.8s shot 45-fusion-preview",
+  "57.8s preview {\"a\":\"pixie\",\"b\":\"jack-o-lantern\",\"result\":\"incubus\",\"lv\":5,\"base\":[\"Life Drain\",\"Dream Needle\"],\"inherit\":[\"Zio\",\"Agi\"],\"k\":2}",
+  "58.7s shot 46-fusion-inherit",
+  "60.7s shot 47-fusion-guillotine",
+  "62.3s shot 48-fusion-result",
+  "62.9s preview2 {\"a\":\"arsene\",\"b\":\"agathion\",\"result\":\"onmoraki\",\"lv\":12,\"base\":[\"Eiha\",\"Ice Wall\"],\"inherit\":[\"Sukunda\",\"Adverse Resolve\"],\"k\":2}",
+  "66.2s joker battle skills eiha,sukunda",
+  "68.0s shot 49-hub-after-velvet"
+ ]
+}

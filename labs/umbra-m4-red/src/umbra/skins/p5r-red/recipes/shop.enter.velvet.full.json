@@ -1,0 +1,51 @@
+{
+ "id": "shop.enter.velvet.full",
+ "event": "shop:enter",
+ "duration": 1150,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.shop.door"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "dur": 780,
+   "args": {
+    "colors": [
+     "#0a0a0a",
+     "#1f3fbf",
+     "#0b1e6b"
+    ],
+    "stagger": 80,
+    "angle": 0.35
+   }
+  },
+  {
+   "at": 300,
+   "prim": "title",
+   "dur": 820,
+   "layer": "trans",
+   "args": {
+    "text": "vel.title",
+    "size": 100,
+    "pos": {
+     "x": 640,
+     "y": 340
+    },
+    "rot": -0.1,
+    "invert": [
+     0,
+     2
+    ]
+   }
+  }
+ ],
+ "match": {
+  "kind": "velvet.full"
+ }
+}

@@ -1,0 +1,89 @@
+{
+ "id": "shop.enter.untouchable.full",
+ "event": "shop:enter",
+ "duration": 1180,
+ "assets": [
+  "shop.iwai"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.shop.door"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "dur": 760,
+   "args": {
+    "colors": [
+     "#0a0a0a",
+     "@color.primary",
+     "#3fbf2a"
+    ],
+    "stagger": 70,
+    "angle": 0.35
+   }
+  },
+  {
+   "at": 260,
+   "prim": "sprite",
+   "dur": 900,
+   "layer": "trans",
+   "ease": "outBack",
+   "args": {
+    "asset": "shop.iwai",
+    "height": 600,
+    "moveMs": 300,
+    "out": 220,
+    "from": {
+     "x": 1180,
+     "y": 420,
+     "scale": 1.25,
+     "rot": 0.12,
+     "alpha": 0
+    },
+    "to": {
+     "x": 960,
+     "y": 400,
+     "scale": 1,
+     "rot": 0,
+     "alpha": 1
+    }
+   }
+  },
+  {
+   "at": 320,
+   "prim": "title",
+   "dur": 800,
+   "layer": "trans",
+   "args": {
+    "text": "shop.title.untouchable",
+    "size": 92,
+    "pos": {
+     "x": 470,
+     "y": 330
+    },
+    "rot": -0.12,
+    "invert": [
+     0,
+     3
+    ]
+   }
+  },
+  {
+   "at": 300,
+   "prim": "flashScreen",
+   "dur": 120,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.35
+   }
+  }
+ ],
+ "match": {
+  "kind": "untouchable.full"
+ }
+}

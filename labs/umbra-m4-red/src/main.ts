@@ -125,14 +125,14 @@ const play = (ev: EventName, payload: unknown, q: any = {}) => { M.phase = ev + 
 const syncHudParty = () => hud.updateParty(partyStates());
 
 // ---------------------------------------------------------------- flow
-export interface BattleCfg { types: string[]; mode: 'preemptive' | 'normal' | 'ambushed'; carry: Record<string, Carry>; mods: BattleMods; party: string[]; callingCard?: boolean; optional?: boolean }
-export interface BattleOutcome { exp: number; money: number; drops: { id: string; n: number }[]; turns: number; carry: Record<string, Carry>; bonus: boolean; lost?: boolean; fled?: boolean }
+export interface BattleCfg { types: string[]; mode: 'preemptive' | 'normal' | 'ambushed'; carry: Record<string, Carry>; mods: BattleMods; party: string[]; callingCard?: boolean; optional?: boolean; bag?: Record<string, number>; jokerSkills?: string[]; jokerPersona?: string }
+export interface BattleOutcome { exp: number; money: number; drops: { id: string; n: number }[]; turns: number; carry: Record<string, Carry>; bonus: boolean; lost?: boolean; fled?: boolean; bag?: Record<string, number> }
 let cfg: BattleCfg | null = null;
 let onDone: ((o: BattleOutcome) => void) | null = null;
 let lastRw: any = null; let lastBonus = false;
 /** 流程宿主调用：按遭遇配置开一场战斗，RESULT 点 NEXT 后 resolve */
 async function runBattle(c: BattleCfg): Promise<BattleOutcome> {
-  cfg = c; dir.speed = battleSpeed; dir.forceMinimal = auto; B.mods = c.mods; B.carry = c.carry; B.setRoster(c.party.filter((x) => x !== roster.lead)); B.setEncounter(c.types); texOverride.clear();
+  cfg = c; dir.speed = battleSpeed; dir.forceMinimal = auto; B.mods = c.mods; B.carry = c.carry; B.bag = c.bag ?? null; B.skillOverride = c.jokerSkills ? { joker: c.jokerSkills } : {}; B.setRoster(c.party.filter((x) => x !== roster.lead)); B.setEncounter(c.types); texOverride.clear();
   await Promise.all(c.types.map((t) => ETYPES[t]?.group ? eng.loadGroup(ETYPES[t].group!) : Promise.resolve()));
   setBattleVisible(true);
   return new Promise((res) => { onDone = res; startBattle(); });
@@ -303,7 +303,7 @@ hud.onCommand = (id) => {
   const m = hud.getMode();
   if (m === 'command') {
     if (id === 'attack' || id === 'gun') dir.input(`${B.id}:${B.turn}:${B.seq}:${id}`, () => doSkill(id));
-    else if (id === 'persona') { hud.openList('persona', B.skillsOf(B.actor).map((s) => skillRow(s)), L('persona.' + B.actor)); hud.setMode('list'); listKind = 'persona'; }
+    else if (id === 'persona') { hud.openList('persona', B.skillsOf(B.actor).map((s) => skillRow(s)), B.actor === 'joker' && cfg?.jokerPersona ? cfg.jokerPersona : L('persona.' + B.actor)); hud.setMode('list'); listKind = 'persona'; }
     else if (id === 'item') { hud.openList('item', B.items.map((i) => ({ id: i.id, name: L(i.name), desc: L(i.desc), cost: '×' + i.n, costKind: 'n', element: 'item', disabled: i.n <= 0 } as ListRow)), 'BAG'); hud.setMode('list'); listKind = 'item'; }
     else if (id === 'order') { openOrder(); hud.setMode('list'); listKind = 'order'; }
     else if (id === 'guard') { hud.setMode('hidden'); const p = B.guard(); play('action', p, { skillId: 'guard' }).then(() => nextTurn()); }
@@ -328,7 +328,7 @@ function finishBattle(extra: Partial<BattleOutcome> = {}) {
   if (!(cfg && onDone)) { startBattle(); M.loops++; return; }
   const carry: Record<string, Carry> = {}; for (const pid of B.party) { const u = B.u(pid); carry[pid] = { lv: u.lv, hp: u.hp, hpMax: u.hpMax, sp: u.sp, spMax: u.spMax, exp: u.exp }; }
   const f = onDone; onDone = null; battleSpeed = dir.speed; dir.speed = 1; dir.forceMinimal = false; hud.setMode('hidden'); hud.setHoldRing(false); setBattleVisible(false); eng.audio.stopBgm(300);
-  f({ exp: extra.lost || extra.fled ? 0 : lastRw?.exp ?? 0, money: extra.lost || extra.fled ? 0 : lastRw?.money ?? 0, drops: extra.lost || extra.fled ? [] : (lastRw?.drops ?? []).map((d: any) => ({ id: d.id, n: d.n })), turns: B.turn, carry, bonus: lastBonus, ...extra });
+  f({ exp: extra.lost || extra.fled ? 0 : lastRw?.exp ?? 0, money: extra.lost || extra.fled ? 0 : lastRw?.money ?? 0, drops: extra.lost || extra.fled ? [] : (lastRw?.drops ?? []).map((d: any) => ({ id: d.id, n: d.n })), turns: B.turn, carry, bonus: lastBonus, bag: B.bag ? Object.fromEntries(B.items.map((i) => [i.id, i.n])) : undefined, ...extra });
 }
 /** 全灭（B19）：全员倒下才失败 → 交回流程（run:fail 由流程播） */
 async function defeat() {

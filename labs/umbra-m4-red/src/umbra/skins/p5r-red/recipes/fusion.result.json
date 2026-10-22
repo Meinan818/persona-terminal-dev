@@ -1,0 +1,189 @@
+{
+ "id": "fusion.result",
+ "event": "fusion:result",
+ "duration": 2950,
+ "assets": [
+  "fx.guillotine"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.fusion"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "dim",
+   "dur": 2950,
+   "layer": "cutin",
+   "args": {
+    "color": "#050b2e",
+    "alpha": 0.7,
+    "hold": true
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sprite",
+   "dur": 1150,
+   "layer": "cutin",
+   "ease": "outCubic",
+   "args": {
+    "asset": "comp.{a}.l",
+    "height": 420,
+    "moveMs": 700,
+    "out": 120,
+    "from": {
+     "x": 120,
+     "y": 380,
+     "scale": 0.9,
+     "rot": -0.12,
+     "alpha": 0
+    },
+    "to": {
+     "x": 470,
+     "y": 390,
+     "scale": 0.82,
+     "rot": -0.04,
+     "alpha": 1
+    }
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sprite",
+   "dur": 1150,
+   "layer": "cutin",
+   "ease": "outCubic",
+   "args": {
+    "asset": "comp.{b}.l",
+    "height": 420,
+    "moveMs": 700,
+    "out": 120,
+    "from": {
+     "x": 1160,
+     "y": 380,
+     "scale": 0.9,
+     "rot": 0.12,
+     "alpha": 0
+    },
+    "to": {
+     "x": 810,
+     "y": 390,
+     "scale": 0.82,
+     "rot": 0.04,
+     "alpha": 1
+    }
+   }
+  },
+  {
+   "at": 380,
+   "prim": "sprite",
+   "dur": 900,
+   "layer": "cutin",
+   "ease": "inCubic",
+   "args": {
+    "asset": "fx.guillotine",
+    "height": 640,
+    "moveMs": 520,
+    "out": 160,
+    "from": {
+     "x": 640,
+     "y": -260,
+     "scale": 1,
+     "rot": 0
+    },
+    "to": {
+     "x": 640,
+     "y": 370,
+     "scale": 1,
+     "rot": 0
+    }
+   }
+  },
+  {
+   "at": 900,
+   "prim": "shake",
+   "dur": 260,
+   "args": {
+    "px": 14
+   }
+  },
+  {
+   "at": 900,
+   "prim": "flashScreen",
+   "dur": 200,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.9
+   }
+  },
+  {
+   "at": 920,
+   "prim": "radialBurst",
+   "dur": 1300,
+   "args": {
+    "colors": [
+     "#1f3fbf",
+     "#ffffff",
+     "@color.primary"
+    ],
+    "rays": 18,
+    "alpha": 0.55,
+    "spin": 0.5,
+    "center": {
+     "x": 640,
+     "y": 380
+    }
+   }
+  },
+  {
+   "at": 1180,
+   "prim": "sprite",
+   "dur": 1760,
+   "layer": "cutin",
+   "ease": "outBack",
+   "args": {
+    "asset": "comp.{personaId}.l",
+    "height": 560,
+    "moveMs": 420,
+    "out": 200,
+    "from": {
+     "x": 640,
+     "y": 390,
+     "scale": 0.2,
+     "rot": 0.2,
+     "alpha": 0
+    },
+    "to": {
+     "x": 640,
+     "y": 380,
+     "scale": 1,
+     "rot": 0,
+     "alpha": 1
+    }
+   }
+  },
+  {
+   "at": 1650,
+   "prim": "title",
+   "dur": 1200,
+   "layer": "trans",
+   "args": {
+    "text": "{name}",
+    "size": 96,
+    "pos": {
+     "x": 640,
+     "y": 600
+    },
+    "rot": -0.07,
+    "invert": [
+     0,
+     3
+    ]
+   }
+  }
+ ]
+}

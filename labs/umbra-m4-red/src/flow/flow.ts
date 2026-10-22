@@ -10,6 +10,9 @@ import { Explore } from '../game/explore';
 import ROOMS from '../game/data/rooms.json';
 import type { BattleCfg, BattleOutcome } from '../main';
 import { ExploreView } from './exploreView';
+import { CONS } from '../game/shop';
+import { BY_ID } from '../game/fusion';
+import { shopFlow, velvetFlow } from './shopView';
 
 interface Ctx { eng: Engine; dir: Director; runBattle: (c: BattleCfg) => Promise<BattleOutcome>; L: (k: string) => string; M: any; qs: URLSearchParams }
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -54,6 +57,9 @@ export function startFlow(ctx: Ctx) {
   const headImg = (id: string) => `<img src="${SK}head.${id}.webp" alt="">`;
   const tapOnce = (root: HTMLElement) => new Promise<string>((res) => { root.querySelectorAll<HTMLElement>('[data-id]').forEach((b) => b.addEventListener('click', () => { ui('confirm'); res(b.dataset.id!); }, { once: true })); });
   let selected: string | null = null; let ccPlanned = false;
+  // M5 商店/天鹅绒画面共享的宿主能力
+  F.eng = eng;
+  const sx = { eng, L, fmt, ransom, esc, save, F, SK, host, screen, show, ui, bgm, toast, tapOnce, wipe, setHubBg, headImg, qs: ctx.qs };
 
   function setHubBg(id: string | null) { hubBg.visible = !!id; if (id && eng.tex[id]) { hubBg.texture = eng.tex[id]; hubBg.scale.set(Math.max(1280 / eng.tex[id].width, 960 / eng.tex[id].height) * 1.0); } }
 
@@ -96,14 +102,15 @@ export function startFlow(ctx: Ctx) {
       <div class="hub-title">${ransom(L('flow.hub.title'))}</div><div class="hub-sub">${L('flow.hub.sub')}</div>
       <div class="hub-req">${req ? `<b>${L('flow.hub.selected')}</b>　${L('req.' + req.id + '.place')} · ${L('flow.req.target')}「${L('req.' + req.id + '.boss')}」${ccPlanned ? '　<b>★ ' + L('flow.cc.sent') + '</b>' : ''}` : L('flow.hub.none')}</div>
       <div class="hub-menu">
-        ${btn('board', 'flow.menu.board', !selected)}${btn('card', 'flow.menu.card', !!selected && save.ccUnlocked(selected) && !ccPlanned, !!selected && !save.ccUnlocked(selected) ? 'lock' : '')}${btn('go', 'flow.menu.go', !!selected)}${btn('shop', 'flow.menu.shop', false, true)}${btn('velvet', 'flow.menu.velvet', false, true)}
+        ${btn('board', 'flow.menu.board', !selected)}${btn('card', 'flow.menu.card', !!selected && save.ccUnlocked(selected) && !ccPlanned, !!selected && !save.ccUnlocked(selected) ? 'lock' : '')}${btn('go', 'flow.menu.go', !!selected)}${btn('shop', 'flow.menu.shop')}${btn('velvet', 'flow.menu.velvet')}
       </div>
       <div class="hub-info"><div class="hub-card"><b>${L('flow.hub.money')}</b><span>¥${save.money.toLocaleString('en-US')}</span></div><div class="hub-card"><b>${L('flow.hub.cleared')}</b><span>${save.cleared.length}/3</span></div><div class="hub-party">${mem}</div></div>`);
     const id = await tapOnce(d);
     if (id === 'board') return wipeRet(() => board()).then(() => hub());
     if (id === 'card') { if (!selected) { toast(L('flow.need.req'), true); return hub(); } if (!save.ccUnlocked(selected)) { F.log.push('callingcard locked'); toast(save.cleared.includes(selected) ? L('flow.cc.done') : fmt('flow.cc.locked', { n: save.ccNeed(selected) }), true); return hub(); } return wipeRet(() => callingCard()).then(() => hub()); }
     if (id === 'go') { if (!selected) { toast(L('flow.need.req'), true); return hub(); } await infiltrate(selected); return hub(); }
-    if (id === 'shop' || id === 'velvet') return wipeRet(() => wip(id)).then(() => hub());
+    if (id === 'shop') { await shopFlow(sx); return hub(); }
+    if (id === 'velvet') { await velvetFlow(sx); return hub(); }
   }
   function btn(id: string, k: string, hot = false, wip: boolean | string = false) { return `<button class="fl-btn${hot ? ' hot' : ''}${wip === true ? ' wip' : wip ? ' ' + wip : ''}" data-id="${id}"><span class="zh">${L(k)}</span><span class="en">${L(k + '.en')}</span></button>`; }
   async function wip(id: string) {
@@ -275,14 +282,18 @@ export function startFlow(ctx: Ctx) {
       else exHud(run);
     } else if (e.kind === 'exit') return 'exit';
   }
-  function carry() { const c: Record<string, any> = {}; for (const id of save.party) { const m = save.members[id]; c[id] = { lv: m.lv, hp: m.hp, hpMax: m.hpMax, sp: m.sp, spMax: m.spMax, exp: m.exp }; } return c; }
+  // M5：装备修正随 carry 进战斗（饰品 HP/SP 加在上限上，回写时按差值扣回）
+  function carry() { const c: Record<string, any> = {}; for (const id of save.party) { const m = save.members[id], q = save.eqOf(id); c[id] = { lv: m.lv, hp: m.hp + q.hp, hpMax: m.hpMax + q.hp, sp: m.sp + q.sp, spMax: m.spMax + q.sp, exp: m.exp, eq: q }; } return c; }
+  const bagOf = () => Object.fromEntries(Object.entries(save.items).filter(([k, n]) => n > 0 && (CONS as any)[k]));
   async function fight(run: Run, types: string[], mode: 'preemptive' | 'normal' | 'ambushed', optional = false, isBoss = false): Promise<BattleOutcome> {
     F.screen = 'battle'; layer.visible = false; host.style.display = 'none';
     (window as any).__flowAward = (rw: any) => run.award(rw.exp, rw.money, rw.drops.map((d: any) => ({ id: d.id, n: d.n })));
     // 测试钩子：?wipe=boss → BOSS 战敌攻 ×30（自动化覆盖全灭失败分支，真战斗）；?fastwin=1 跳过战斗（wipe 指定的那场除外）
     const wipeT = ctx.qs.get('wipe'); const forceWipe = wipeT === 'all' || (wipeT === 'boss' && isBoss);
+    const bag0 = bagOf();
     const mods = run.mods(); if (forceWipe) { mods.enemyAtk *= 30; mods.enemyHp *= 20; mode = 'ambushed'; }
-    const out = ctx.qs.get('fastwin') === '1' && !forceWipe ? fakeWin(run, types) : await ctx.runBattle({ types, mode, carry: carry(), mods, party: save.party, callingCard: run.callingCard, optional });
+    const out = ctx.qs.get('fastwin') === '1' && !forceWipe ? fakeWin(run, types) : await ctx.runBattle({ types, mode, carry: carry(), mods, party: save.party, callingCard: run.callingCard, optional, bag: bag0, jokerSkills: save.jokerSkills(), jokerPersona: BY_ID[save.persona.id]?.en });
+    if (out.bag) for (const [k, n0] of Object.entries(bag0)) { const used = n0 - (out.bag[k] ?? 0); if (used > 0) { save.items[k] = Math.max(0, (save.items[k] ?? 0) - used); F.log.push(`bag ${k} -${used}`); } }
     for (const [id, c] of Object.entries(out.carry)) { const m = save.members[id]; m.hp = Math.min(m.hpMax, Math.max(out.lost ? 0 : 1, c.hp + (m.hpMax - c.hpMax))); m.sp = Math.min(m.spMax, c.sp + (m.spMax - c.spMax)); }
     run.battles++; run.turns += out.turns;
     if (out.turns > ECO.alert.slowTurns) run.addAlert(ECO.alert.slowBattle * (out.turns - ECO.alert.slowTurns));

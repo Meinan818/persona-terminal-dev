@@ -1,0 +1,31 @@
+{
+ "id": "shop.enter.takemi.short",
+ "event": "shop:enter",
+ "duration": 480,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "se.shop.door"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "slashPanels",
+   "dur": 460,
+   "args": {
+    "colors": [
+     "#0a0a0a",
+     "#1f6bff"
+    ],
+    "stagger": 60,
+    "angle": 0.35
+   }
+  }
+ ],
+ "match": {
+  "kind": "takemi.short"
+ }
+}

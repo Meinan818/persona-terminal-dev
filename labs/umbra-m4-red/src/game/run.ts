@@ -4,6 +4,8 @@ import REQ from './data/requests.json';
 import ECO from './data/economy.json';
 import { Explore, type Room } from './explore';
 import { ROSTER, LEAD, DEFAULT_PARTY } from './battle';
+import { startEquip, battleEq, type Slot } from './shop';
+import { START_STOCK, newOwned, battleSkills, type Owned } from './fusion';
 
 export interface Member { id: string; lv: number; hp: number; hpMax: number; sp: number; spMax: number; exp: number }
 export interface Card { id: string; series: 'atk' | 'weak' | 'baton' | 'talk'; rarity: 'normal' | 'rare' }
@@ -17,7 +19,12 @@ export const expNext = (lv: number) => ECO.exp.base + lv * ECO.exp.per;
 /** 跨局存档（据点）：队伍等级/经验、金钱、道具 */
 export class Save {
   money = 12000;
-  items: Record<string, number> = { medicine: 3, snuff: 1 };
+  items: Record<string, number> = { medicine: 3, snuff: 1, 'thin-copper': 6, 'hole-copper': 2, jade: 1 };
+  /** M5：装备（每人 近战/远程/防具/饰品）、主角面具库存/当前面具、图鉴登记 */
+  equip: Record<string, Record<Slot, string | null>> = {};
+  stock: Owned[] = START_STOCK.map((id) => newOwned(id, id === 'arsene' ? 12 : undefined));
+  activePersona = 0;
+  compendium: string[] = [...START_STOCK];
   party: string[] = [LEAD, ...DEFAULT_PARTY];
   members: Record<string, Member> = {};
   cleared: string[] = [];
@@ -25,13 +32,17 @@ export class Save {
   routes: Record<string, number> = {};
   stats = { ...ECO.stats } as Record<string, number>;
   constructor() {
-    for (const [id, r] of Object.entries(ROSTER)) this.members[id] = { id, lv: r.lv, hp: r.hp, hpMax: r.hp, sp: r.sp, spMax: r.sp, exp: 0 };
+    for (const [id, r] of Object.entries(ROSTER)) { this.members[id] = { id, lv: r.lv, hp: r.hp, hpMax: r.hp, sp: r.sp, spMax: r.sp, exp: 0 }; this.equip[id] = startEquip(id); }
     try { const j = JSON.parse(localStorage.getItem('umbra.m4.save') ?? 'null'); if (j && j.v === 1) Object.assign(this, j.d); } catch { /* */ }
   }
-  persist() { try { localStorage.setItem('umbra.m4.save', JSON.stringify({ v: 1, d: { money: this.money, items: this.items, party: this.party, members: this.members, cleared: this.cleared, routes: this.routes } })); } catch { /* */ } }
+  persist() { try { localStorage.setItem('umbra.m4.save', JSON.stringify({ v: 1, d: { money: this.money, items: this.items, party: this.party, members: this.members, cleared: this.cleared, routes: this.routes, equip: this.equip, stock: this.stock, activePersona: this.activePersona, compendium: this.compendium } })); } catch { /* */ } }
   /** D3：预告信解锁 = 该殿堂完成 2 局（确保路线）且统治者未被击破 */
   ccNeed(reqId: string) { return Math.max(0, (REQ as any).callingCard.needRuns - (this.routes[reqId] ?? 0)); }
   ccUnlocked(reqId: string) { return this.ccNeed(reqId) === 0 && !this.cleared.includes(reqId); }
+  /** 战斗携带：主角面具技能 + 每人装备修正 */
+  get persona() { return this.stock[this.activePersona] ?? this.stock[0]; }
+  jokerSkills() { return battleSkills(this.persona); }
+  eqOf(id: string) { return battleEq(this, id); }
   restAll() { for (const m of Object.values(this.members)) { m.hp = m.hpMax; m.sp = m.spMax; } }
 }
 

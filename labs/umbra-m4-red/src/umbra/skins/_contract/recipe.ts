@@ -20,7 +20,9 @@ export type EventName =
   | 'env:change'
   // v1.3 §3a/§3b/§3d/§3e（M4 流程用到的子集）：探索、预告信、BOSS、心之卡、失败/撤退/逃跑
   | 'explore:move' | 'explore:sneak' | 'explore:cover' | 'explore:spotted' | 'explore:interact' | 'explore:exit' | 'explore:scan'
-  | 'callingcard:send' | 'boss:intro' | 'boss:phase' | 'card:pick' | 'run:fail' | 'run:retreat' | 'escape' | 'unit:revive';
+  | 'callingcard:send' | 'boss:intro' | 'boss:phase' | 'card:pick' | 'run:fail' | 'run:retreat' | 'escape' | 'unit:revive'
+  // M5：据点商店进/离店（§3b）与天鹅绒合成（§3a）
+  | 'shop:enter' | 'shop:exit' | 'fusion:result';
 
 export type PrimitiveName =
   | 'tween' | 'show' | 'hide' | 'sfx' | 'vibrate' | 'title' | 'dim' | 'radialBurst'

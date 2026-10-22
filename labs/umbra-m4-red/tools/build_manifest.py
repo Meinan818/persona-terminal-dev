@@ -26,6 +26,8 @@ for a in party:
     out.append(row)
 m4 = json.load(open(os.path.join(R, 'work/assets-m4.json'))) if os.path.exists(os.path.join(R, 'work/assets-m4.json')) else []
 out = [r for r in out if r['id'] not in {a['id'] for a in m4}] + m4   # M4 流程素材
+m5 = json.load(open(os.path.join(R, 'work/assets-m5.json'))) if os.path.exists(os.path.join(R, 'work/assets-m5.json')) else []
+out = [r for r in out if r['id'] not in {a['id'] for a in m5}] + m5   # M5 商店/天鹅绒素材（comp/ 图鉴图不进 manifest，运行时按需加载，来源见 compendium.json）
 for d in DROP:
     try: os.remove(os.path.join(SK, 'assets', d + '.webp'))
     except FileNotFoundError: pass

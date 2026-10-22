@@ -11,6 +11,8 @@
 - **黄色整包 + 切主题桥 `88b44fb`**：去掉 `kitThemeOf('yellow')` 的错误 `return null`（黄色改走完整 ThemeApp）；`PresenceBridge` 补 `theme` 写回真实 `setTheme`（菜单切主题生效）。
 - **像素差已定位为「本机字体/emoji 环境」，不是接入缺陷（决定性证据）**：把 `p5r-red-demo.zip` 自己 `npm install + vite build` 出 dist，再跑同款 `compare.mjs --page index.html`，demo 自己的 dist 在本机也差 `menu--390-day 4.731%`；接入后的 verify 页同页 `5.286%`。即 ~4.7% 是机器字体/emoji 渲染差异（demo 参考图用 demo 方机器的 Noto Color Emoji + 特定字体），接入只额外引入 ~0.5%（真实仓库全局 CSS 轻微泄漏）。因此 `compare.mjs` 在本机永远过不了 52/52，连 demo 自身都过不了；源码层面「整包原样」已达成，最终视觉验收要回到真机。
 - **整包原样证据**：红 `check-copy.mjs` 报「清单 692 个文件：一致 692，adapter 已改 0」（唯一 FAIL 是 `android/*.gradle` 两个 cap sync 痕迹，与 demo 无关、按约定不提交不动）。黄/粉/蓝 demo `src/`（除 `main.tsx`）经 `@/`→`@theme/` 别名适配后与仓库逐字节一致（0 文本内容差异，字体/图片二进制哈希一致）。
+- **黄/粉/蓝 demo dist 已建**：`p3r-blue-demo`、`p3r-pink-demo` 各自 `vite build` 成功（黄 zip 自带 dist；红也已 `vite build` 成功）。四套 demo 源码都可在独立 vite 下构建，进一步佐证「整包原样」未缺文件。
+- **像素对比对黄/粉/蓝不再单独做**：它们走 `KitHost → ThemeApp` 整包、且 demo 源码已逐字节一致（比像素对比更强的证据）；红那套像素对比已证明剩余差是本机字体/emoji 环境、非接入。黄/粉/蓝没有红的「mock verify 页」（它们走真实 adapter 数据），像素对比本就不干净、且与环境耦合，不再追。
 - **下一步**：① 定位并修红剩余 ~2-5% 像素差到 52/52；② 给黄/粉/蓝建参考截图 + 同款对比脚本并逐张过；③ 真机验收四套 + 菜单切主题 + 音效 + 日夜/低动效/弱网。
 - **红线不变**：不 push；不 commit 凭据；不改 `main` 与幽影协议；demo 的 JSX/样式/动画/字体/素材一律不碰，只改 adapter/bridge。
 

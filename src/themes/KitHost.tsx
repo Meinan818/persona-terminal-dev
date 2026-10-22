@@ -14,6 +14,7 @@ const LOADERS = {
 } as const;
 export type KitTheme = keyof typeof LOADERS;
 const KIT_NAME: Record<KitTheme, string> = { yellow: 'p4g-yellow', pink: 'p3r-pink', blue: 'p3r-blue' };
+const SCOPE_ATTR: Record<KitTheme, string> = { yellow: 'data-p4g-scope', pink: 'data-p3r-scope', blue: 'data-p3r-scope' };
 
 export const kitThemeOf = (theme: ThemeType | undefined | null): KitTheme | null => {
   try { if (localStorage.getItem('kit:off') === '1') return null; } catch { /* ignore */ }
@@ -35,7 +36,13 @@ export function useKitReloadGuard(theme: ThemeType | undefined | null) {
 export function KitHost({ theme }: { theme: KitTheme }) {
   useLayoutEffect(() => {
     document.documentElement.setAttribute('data-kit', KIT_NAME[theme]);
-    return () => document.documentElement.removeAttribute('data-kit');
+    // 生成的主题 Tailwind CSS 全部作用域在 [data-*-scope] 内；整包渲染没有 P4Host 那层
+    // wrapper，改挂在 <html> 上（同一时刻只有一套主题在渲染，切主题时 reload 换属性）。
+    document.documentElement.setAttribute(SCOPE_ATTR[theme], '');
+    return () => {
+      document.documentElement.removeAttribute('data-kit');
+      document.documentElement.removeAttribute(SCOPE_ATTR[theme]);
+    };
   }, [theme]);
   const C = LOADERS[theme];
   return <Suspense fallback={null}><C /></Suspense>;

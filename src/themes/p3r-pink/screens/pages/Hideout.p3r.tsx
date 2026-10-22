@@ -14,7 +14,11 @@ import { P3R, P3Button, P3Empty, P3Loading, GhostWords, SectionMark, slantClip, 
 import { PageEnter, CutInSweep } from '@pink/fx';
 import { useLowMotion } from '@pink/lib/prefs';
 import { navigate } from '@pink/shell/shellBus';
-import { buildView, LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@pink/mock/pkg4-org';
+import { LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@pink/mock/pkg4-org';
+import { buildView, useOrgView } from '@pink/adapters/pkg4-org';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { refreshOrg, setMemberBlocked } from '@/services/orgSync';
+import { orgLevelOfView } from '@/utils/orgOps';
 import { DevStrip, StateFade } from '@pink/screens/pkg4/ui';
 import { HideoutMap, RosterWall, MemberTile, SECTION_TITLE, type HideoutSection } from '@pink/screens/pkg4/org/MapWall';
 import { BoardSection } from '@pink/screens/pkg4/org/Board';
@@ -44,8 +48,11 @@ export default function Hideout({ tab, params }: PageProps) {
   const [meeting, setMeeting] = useState<MeetMode>((['open', 'submitted', 'closed', 'tomorrow', 'empty'].includes(params.get('meeting') ?? '') ? params.get('meeting') : 'open') as MeetMode);
   const [section, setSection] = useState<HideoutSection>(SECTIONS.includes(tab as HideoutSection) ? (tab as HideoutSection) : 'roster');
   const [wall, setWall] = useState(params.get('view') === 'wall');
-  const [blocked, setBlocked] = useState<Set<string>>(new Set());
-  const base = useMemo(buildView, []);
+  const blockedList = useCloudSocialStore((s) => s.orgBlocked);
+  const blocked = useMemo(() => new Set(blockedList), [blockedList]);
+  const { orgs } = useOrgView();
+  const realView = orgs.length ? orgs[Math.min(orgIdx, orgs.length - 1)] : null;
+  const base = useMemo(() => realView ?? buildView(), [realView]);
   const op = params.get('open');
   const [flip, setFlip] = useState<OrgMember | null>(op === 'flip' ? base.members[1] : null);
   const [menuFor, setMenuFor] = useState<OrgMember | null>(op === 'menu' ? base.members[1] : null);
@@ -61,20 +68,27 @@ export default function Hideout({ tab, params }: PageProps) {
   const [seen, setSeen] = useState<Partial<Record<HideoutSection, boolean>>>({});
 
   const view: OrgView = useMemo(() => {
-    const leaderId = role === 'leader' ? base.me.userId : 'u2';
     const me = noCard ? { ...base.me, tarotId: undefined } : base.me;
     const members = base.members.map((m) => (m.id === me.id ? me : m));
+    if (realView) return { ...realView, me, members };
+    const leaderId = role === 'leader' ? base.me.userId : 'u2';
     return { ...base, org: { ...base.org, leaderId, ...(orgIdx === 1 ? { id: SECOND_ORG.id, name: SECOND_ORG.name, motto: '周末走远一点' } : {}) }, me, members };
-  }, [base, role, noCard, orgIdx]);
+  }, [base, realView, role, noCard, orgIdx]);
+  const orgLevel = useMemo(() => (realView ? orgLevelOfView(view) : LEVEL), [realView, view]);
   const leader = view.org.leaderId === view.me.userId;
   const members = view.members;
   const empty = Math.max(0, 7 - members.length);
 
   useEffect(() => { if (section !== 'roster') setSeen((s) => ({ ...s, [section]: true })); }, [section]);
   const pickSection = (s: HideoutSection) => { if (s === section) return; setSection(s); };
-  const refresh = () => { if (refreshing) return; setRefreshing(true); window.setTimeout(() => setRefreshing(false), 1100); };
+  const refresh = () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    if (realView) void refreshOrg(realView.org.id).finally(() => setRefreshing(false));
+    else window.setTimeout(() => setRefreshing(false), 1100);
+  };
   const invite = () => { void navigator.clipboard?.writeText?.(`来「${view.org.name}」一起吧：打开面具庭园 → 羁绊 → 点标题切到「组织」→ 输入邀请码 ${view.org.inviteCode}`).catch(() => {}); toast('邀请语已复制，发给朋友吧'); };
-  const toggleBlock = (uid: string) => setBlocked((b) => { const n = new Set(b); if (n.has(uid)) n.delete(uid); else n.add(uid); return n; });
+  const toggleBlock = (uid: string) => setMemberBlocked(uid, !blocked.has(uid));
   const stag = (i: number) => ({ initial: low ? { opacity: 0 } : { opacity: 0, x: -18 }, animate: { opacity: 1, x: 0 }, transition: { delay: low ? 0 : i * 0.05, duration: 0.24 } });
 
   const body = (() => {
@@ -92,7 +106,7 @@ export default function Hideout({ tab, params }: PageProps) {
     );
     return (
       <div className="space-y-5">
-        <motion.div {...stag(0)}><TitleBlock view={view} leader={leader} meetingDay={meeting === 'open' || meeting === 'submitted'} meetingDone={meeting === 'submitted'} /></motion.div>
+        <motion.div {...stag(0)}><TitleBlock view={view} leader={leader} level={orgLevel} meetingDay={meeting === 'open' || meeting === 'submitted'} meetingDone={meeting === 'submitted'} /></motion.div>
         {!view.me.tarotId && (
           <motion.div {...stag(1)} className="flex items-center gap-3 px-5 py-3" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(12) }}>
             <div className="min-w-0 flex-1 text-[12.5px] font-bold leading-relaxed">还没选代表牌：选一张，名册上才有你的牌面。</div>
@@ -100,7 +114,7 @@ export default function Hideout({ tab, params }: PageProps) {
           </motion.div>
         )}
         <motion.div {...stag(2)}>
-          <HideoutMap view={view} section={section} onSection={pickSection} blocked={blocked} onSeat={setFlip} level={LEVEL.level}
+          <HideoutMap view={view} section={section} onSection={pickSection} blocked={blocked} onSeat={setFlip} level={orgLevel.level}
             dots={{ board: section !== 'board' && !seen.board, meeting: meeting === 'open', ops: section !== 'ops' && !seen.ops }}
             raid={{ boss: RAID.boss.name, left: RAID.left / RAID.hpMax, defeated: false, dot: true }} onRaid={() => setRaidOpen(true)} />
           <div className="mt-3"><RaidBanner onOpen={() => setRaidOpen(true)} /></div>
@@ -232,11 +246,12 @@ function HeaderIcon({ label, onClick, children }: { label: string; onClick: () =
   return <button type="button" aria-label={label} title={label} onClick={onClick} className="flex h-10 w-10 items-center justify-center active:scale-95" style={{ background: P3R.panel, color: P3R.blueDeep, clipPath: slantClip(6), boxShadow: 'var(--p3r-shadow)' }}>{children}</button>;
 }
 
-function TitleBlock({ view, leader, meetingDay, meetingDone }: { view: OrgView; leader: boolean; meetingDay: boolean; meetingDone: boolean }) {
+function TitleBlock({ view, leader, level, meetingDay, meetingDone }: { view: OrgView; leader: boolean; level: { level: number; xp: number; floor: number; next: number | null; mult: number }; meetingDay: boolean; meetingDone: boolean }) {
   const [open, setOpen] = useState(false);
   const emb = ORG_EMBLEMS.find((e) => e.id === view.org.emblem);
-  const name = ORG_LEVEL_NAMES[LEVEL.level - 1];
-  const pct = (LEVEL.xp - LEVEL.floor) / (LEVEL.next - LEVEL.floor);
+  const name = ORG_LEVEL_NAMES[level.level - 1] ?? ORG_LEVEL_NAMES[0];
+  const pct = level.next === null ? 1 : (level.xp - level.floor) / Math.max(1, level.next - level.floor);
+  const tip = level.next === null ? '已满级' : `离 Lv.${level.level + 1} 还差 ${level.next - level.xp}`;
   return (
     <div className="relative min-w-0">
       <div className="flex min-w-0 items-center gap-3">
@@ -251,12 +266,12 @@ function TitleBlock({ view, leader, meetingDay, meetingDone }: { view: OrgView; 
         {leader ? <LeaderChip /> : <span>你是 {seatNo(view.me.seat)} 号成员</span>}
         {meetingDay && <span className="shrink-0 px-1.5 py-[1px] text-[10px] font-black" style={{ background: P3R.magenta, color: '#fff', clipPath: slantClip(3) }}>{meetingDone ? '会议日 ✓' : '会议日'}</span>}
       </div>
-      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={`据点 Lv.${LEVEL.level} ${name}，离 Lv.${LEVEL.level + 1} 还差 ${LEVEL.next - LEVEL.xp}，同调威力 ×${LEVEL.mult.toFixed(1)}`} className="mt-2.5 block w-full min-w-0 text-left">
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={`据点 Lv.${level.level} ${name}，${tip}，同调威力 ×${level.mult.toFixed(1)}`} className="mt-2.5 block w-full min-w-0 text-left">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="inline-flex shrink-0 items-center whitespace-nowrap px-2 py-[3px] text-[12px] font-black leading-none" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(4) }}>据点 Lv.{LEVEL.level}<span className="ml-1 opacity-85">· {name}</span></span>
+          <span className="inline-flex shrink-0 items-center whitespace-nowrap px-2 py-[3px] text-[12px] font-black leading-none" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(4) }}>据点 Lv.{level.level}<span className="ml-1 opacity-85">· {name}</span></span>
           <span className="h-[8px] min-w-0 flex-1 overflow-hidden" style={{ background: 'var(--p3r-track)', clipPath: slantClip(3) }}><span className="block h-full origin-left" style={{ background: P3R.blue, transform: `scaleX(${pct})` }} /></span>
         </div>
-        <div className="mt-1 text-[10.5px] font-bold" style={{ color: P3R.grey }}>同调威力 ×{LEVEL.mult.toFixed(1)} · 离 Lv.{LEVEL.level + 1} 还差 {LEVEL.next - LEVEL.xp} <span aria-hidden>{open ? '▴' : '▾'}</span></div>
+        <div className="mt-1 text-[10.5px] font-bold" style={{ color: P3R.grey }}>同调威力 ×{level.mult.toFixed(1)} · {tip} <span aria-hidden>{open ? '▴' : '▾'}</span></div>
       </button>
       {open && <p className="mt-1.5 px-4 py-2 text-[11px] font-bold leading-relaxed" style={{ background: 'var(--p3r-cyan-pale)', color: P3R.ink, clipPath: slantClip(8) }}>经验怎么来：周日会议上每个写了下周目标的人 +{ORG_XP_MEETING}；每个达成的目标或作战，每个参与者 +{ORG_XP_OP_SMALL}（作战 +{ORG_XP_OP_BIG}），每周最多算 {ORG_XP_OPS_PER_WEEK} 个；满月团战击退暗影，每个出过手的人 +{RAID_XP_PER_HITTER}。等级越高，队友同调走的面具在战场上越强（Lv.6 ×1.5），地图上的据点也会一点点长起来。</p>}
     </div>

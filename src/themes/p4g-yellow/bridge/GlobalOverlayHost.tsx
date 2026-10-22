@@ -2,6 +2,7 @@
 import { useAppStore } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { ACHIEVEMENT_UNLOCK_LINES } from '@/constants';
+import { P4ToastProvider } from '@yellow/kit';
 import { LevelUpP4G } from '@yellow/screens/overlays/LevelUpModal.p4g';
 import { AchievementUnlockP4G } from '@yellow/screens/overlays/AchievementUnlockModal.p4g';
 import { SkillUnlockP4G } from '@yellow/screens/overlays/SkillUnlockModal.p4g';
@@ -39,7 +40,7 @@ export function GlobalOverlayHost() {
     ? { title: wishCut.wishTitle, pct: wishCut.pct, delta: wishCut.delta, times: wishCut.times, source: wishCut.source === 'ai' ? 'ai' as const : 'local' as const, reason: wishCut.reason }
     : null;
   return (
-    <>
+    <P4ToastProvider>
       <LevelUpP4G open={!!levelUp && !blocker} onClose={() => setLevelUp(null)} attributeName={levelUp?.displayName} newLevel={levelUp?.level} masteryStars={levelUp?.masteryStars} />
       <AchievementUnlockP4G open={!!ach && !blocker && !levelUp} onClose={() => setAch(null)} achievementTitle={ach?.title} {...(achLines ? { message: achLines.join('') } : {})} />
       <SkillUnlockP4G open={!!skill && !blocker && !levelUp && !ach} onClose={() => setSkill(null)} skillName={skill?.name} />
@@ -50,6 +51,6 @@ export function GlobalOverlayHost() {
       <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
         onConfirm={() => { if (wishProposal) void setWishProgress(wishProposal.wishId, wishProposal.toPct, { reason: wishProposal.reason }); setWishProposal(null); }} />
       <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} count={orphan?.count} bytes={orphan?.bytes} onConfirm={() => { void pruneOrphan(); dismissOrphan(); }} />
-    </>
+    </P4ToastProvider>
   );
 }

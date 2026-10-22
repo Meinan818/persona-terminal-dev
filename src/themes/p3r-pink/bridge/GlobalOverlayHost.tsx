@@ -2,6 +2,7 @@
 import { useAppStore } from '@/store';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { ACHIEVEMENT_UNLOCK_LINES } from '@/constants';
+import { P3ToastProvider } from '@pink/kit';
 import { ConfidantRankUpCutIn, ConfidantStarShiftInvite } from '@/components/cooperation/ConfidantRankUpCutIn';
 import { SyncStatusBadge } from '@/components/auth/SyncStatusBadge';
 import { SyncMergeSheet } from '@/components/auth/SyncMergeSheet';
@@ -34,7 +35,7 @@ export function GlobalOverlayHost() {
   const pruneOrphan = useAppStore((s) => s.pruneOrphanImages);
   const lines = ach ? ACHIEVEMENT_UNLOCK_LINES[ach.id] : undefined;
   return (
-    <>
+    <P3ToastProvider>
       <LevelUpP3 isOpen={!!levelUp && !blocker} onClose={() => setLevelUp(null)} attributeName={levelUp?.displayName ?? ''} newLevel={levelUp?.level ?? 1} masteryStars={levelUp?.masteryStars} />
       <AchievementUnlockP3 isOpen={!!ach && !blocker && !levelUp} onClose={() => setAch(null)} achievementTitle={ach?.title ?? ''} {...(lines ? { lines } : {})} />
       <SkillUnlockP3 isOpen={!!skill && !blocker && !levelUp && !ach} onClose={() => setSkill(null)} skillName={skill?.name ?? ''} />
@@ -49,6 +50,6 @@ export function GlobalOverlayHost() {
       <SyncMergeSheet />
       <GlobalConflictDialog />
       <GlobalDiffDialog />
-    </>
+    </P3ToastProvider>
   );
 }

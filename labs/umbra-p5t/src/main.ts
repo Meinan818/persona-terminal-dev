@@ -463,7 +463,9 @@ function refreshLabels() {
       u.charged ? '<span class="tag chg">CHG</span>' : '',
       ...u.status.map((s) => `<span class="tag st">${ST_SHORT[s.id]}</span>`),
     ].join('');
-    el.innerHTML = `${u.name.split(' ').pop()}${tags}<div class="hp"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>`;
+    el.innerHTML = u.side === 'enemy'
+      ? `<div class="heart"><b>${u.hp}</b></div>${tags}` // P5T：敌人头顶心形 + HP 数字
+      : `${u.name.split(' ').pop()}${tags}<div class="hp"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>`;
     if (!busy) {
       g.rotation.z = u.downed ? 1.2 : 0;
       g.position.y = gh(u.pos) + (u.downed ? 0.15 : 0);

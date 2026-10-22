@@ -8,13 +8,13 @@
  * 查询参数：pane=wish；deck=weekly|cards；goal=none|progress|done|claimed；state=empty。
  */
 import { AnimatePresence, motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Todo, Wish } from '@real/types';
 import { P4Badge, P4Button, P4EmptyState, P4Input, P4Progress, IconEdit, IconTrash, IconRefresh, IconMore, IconPlus, useToast } from '@yellow/kit';
 import { CollageItem, CollageStagger } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import { useActionsData } from '@yellow/adapters/pkg2';
+import { actionsOps, useActionsData } from '@yellow/adapters/pkg2';
 import { BlockHead, CountPill, Ring, StarFab, Tag, WEEK_LABELS, daysBetween, qp, setHashParam, useLongPress } from '@yellow/screens/pkg2/common';
 import { GoalDeck } from '@yellow/screens/pkg2/GoalDeck';
 import TodoFormSheet from '@yellow/screens/overlays/TodoFormSheet.p4g';
@@ -185,6 +185,8 @@ export function TodosView({ params }: { params: URLSearchParams }) {
   const empty = qp(params, 'state') === 'empty';
   const [todos, setTodos] = useState<Todo[]>(empty ? [] : TODOS);
   const [wishes, setWishes] = useState<Wish[]>(empty ? [] : WISHES);
+  useEffect(() => { setTodos(empty ? [] : TODOS); }, [TODOS, empty]);
+  useEffect(() => { setWishes(empty ? [] : WISHES); }, [WISHES, empty]);
   const [pane, setPane] = useState<'todo' | 'wish'>(qp(params, 'pane') === 'wish' ? 'wish' : 'todo');
   const [doneToday, setDoneToday] = useState(new Set(empty ? [] : TODAY_DONE));
   const [expandCompleted, setExpandCompleted] = useState(false);
@@ -216,8 +218,13 @@ export function TodosView({ params }: { params: URLSearchParams }) {
 
   const saveForm = (f: { title: string; attribute: Todo['attribute']; points: number; mode: string; targetCount: number; important: boolean; repeatDaily: boolean; isLongTerm: boolean; steps: Todo['steps']; deadline: string; weekdays: number[]; isActive: boolean; startDate: string; extraBoosts: Todo['extraBoosts']; currentState: string; wishId?: string }, id?: string) => {
     const patch: Partial<Todo> = { title: f.title, attribute: f.attribute, points: f.points, frequency: f.mode === 'count' ? 'count' : 'single', targetCount: f.targetCount, important: f.important, repeatDaily: f.repeatDaily, isLongTerm: f.isLongTerm, isBigDeal: f.mode === 'big', steps: f.mode === 'big' ? f.steps : undefined, deadline: f.deadline || undefined, weekdays: f.weekdays, isActive: f.isActive, startDate: f.startDate || undefined, extraBoosts: f.extraBoosts, currentState: f.currentState || undefined, wishId: f.wishId };
-    if (id) setTodos((l) => l.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-    else setTodos((l) => [{ id: `t${Date.now()}`, createdAt: new Date(), ...patch } as Todo, ...l]);
+    if (id) {
+      setTodos((l) => l.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+      void actionsOps.updateTodo(id, patch);
+    } else {
+      setTodos((l) => [{ id: `t${Date.now()}`, createdAt: new Date(), ...patch } as Todo, ...l]);
+      void actionsOps.addTodo({ ...patch } as Parameters<typeof actionsOps.addTodo>[0]);
+    }
   };
 
   return (
@@ -252,7 +259,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
                 {active.map((t) => (
                   <CollageItem key={t.id}>
                     {t.isBigDeal ? <BigDealCard t={t} onOpen={() => setDeal(t)} onMenu={() => setMenuId(t.id)} />
-                      : <TodoRow t={t} onMenu={() => setMenuId(t.id)} onArchive={() => { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); toast('已归档（不启用）'); }} />}
+                      : <TodoRow t={t} onMenu={() => setMenuId(t.id)} onArchive={() => { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); void actionsOps.updateTodo(t.id, { isActive: false }); toast('已归档（不启用）'); }} />}
                   </CollageItem>
                 ))}
               </CollageStagger>
@@ -284,7 +291,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
                         <span className="min-w-0 flex-1"><span className="block truncate font-display text-body font-bold opacity-70">{t.title}</span><span className="text-2xs opacity-60">{ATTR_NAMES[t.attribute]} +{t.points} · {freqLabel(t)}</span></span>
                         <IconBtn title="编辑" onClick={() => setForm({ todo: t })}><IconEdit size={13} /></IconBtn>
                         <IconBtn title="删除" tone="danger" onClick={() => setDelId(t.id)}><IconTrash size={13} /></IconBtn>
-                        <IconBtn title="恢复（重置为未完成）" onClick={() => setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: true, archivedAt: undefined } : x)))}><IconRefresh size={13} /></IconBtn>
+                        <IconBtn title="恢复（重置为未完成）" onClick={() => { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: true, archivedAt: undefined } : x))); void actionsOps.updateTodo(t.id, { isActive: true, archivedAt: undefined }); }}><IconRefresh size={13} /></IconBtn>
                       </div>
                     ))}
                   </div>
@@ -306,7 +313,7 @@ export function TodosView({ params }: { params: URLSearchParams }) {
                             {today ? <Tag tone="green">✓ 今日已完成</Tag> : <span className="text-2xs opacity-70">✓ {t.completedAt!.getMonth() + 1}月{t.completedAt!.getDate()}日完成</span>}
                           </span>
                           <IconBtn title="删除" tone="danger" onClick={() => setDelId(t.id)}><IconTrash size={13} /></IconBtn>
-                          {today && <IconBtn title="撤销今日完成（同时回退点数和记录）" onClick={() => { setDoneToday((s) => { const n = new Set(s); n.delete(t.id); return n; }); setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, completedAt: undefined, archivedAt: undefined } : x))); toast('已撤销今日完成'); }}><IconRefresh size={13} /></IconBtn>}
+                          {today && <IconBtn title="撤销今日完成（同时回退点数和记录）" onClick={() => { setDoneToday((s) => { const n = new Set(s); n.delete(t.id); return n; }); setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, completedAt: undefined, archivedAt: undefined } : x))); void actionsOps.undoTodayTodoCompletion(t.id); toast('已撤销今日完成'); }}><IconRefresh size={13} /></IconBtn>}
                           <IconBtn title="按此配置新建任务" onClick={() => setForm({ todo: { ...t, id: '', completedAt: undefined } as Todo })}><IconPlus size={13} /></IconBtn>
                         </div>
                       );
@@ -330,8 +337,8 @@ export function TodosView({ params }: { params: URLSearchParams }) {
 
       <TodoFormSheet open={!!form} onClose={() => setForm(false)} todo={form ? (form.todo?.id ? form.todo : null) : null} onSave={saveForm} />
       <TodosItemMenu open={!!menuTodo} onClose={() => setMenuId(null)} todo={menuTodo}
-        onAction={(a) => { const t = menuTodo!; if (a === 'edit') setForm({ todo: t }); if (a === 'archive') { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); toast('已归档'); } if (a === 'delete') setDelId(t.id); }} />
-      <TodosDeleteConfirm open={!!delTodo} onClose={() => setDelId(null)} title={delTodo?.title} onConfirm={() => { setTodos((l) => l.filter((x) => x.id !== delId)); toast.success('已删除'); }} />
+        onAction={(a) => { const t = menuTodo!; if (a === 'edit') setForm({ todo: t }); if (a === 'archive') { setTodos((l) => l.map((x) => (x.id === t.id ? { ...x, isActive: false } : x))); void actionsOps.updateTodo(t.id, { isActive: false }); toast('已归档'); } if (a === 'delete') setDelId(t.id); }} />
+      <TodosDeleteConfirm open={!!delTodo} onClose={() => setDelId(null)} title={delTodo?.title} onConfirm={() => { if (delId) void actionsOps.deleteTodo(delId); setTodos((l) => l.filter((x) => x.id !== delId)); toast.success('已删除'); }} />
       <TodosWishAddSheet open={wishAdd} onClose={() => setWishAdd(false)} onAdd={(title) => setWishes((l) => [{ id: `w${Date.now()}`, title, status: 'active', source: 'manual', createdAt: new Date() }, ...l])} />
       <FateDrawSheet open={fate} onClose={() => setFate(false)} onGo={(kind, title) => { if (kind === 'quest') setQuest(true); else { setTodos((l) => [{ id: `f${Date.now()}`, title, attribute: 'knowledge', points: 1, frequency: 'single', isActive: true, createdAt: new Date(), fateDrawnDate: TODAY_KEY }, ...l]); toast.success('接住了 · ✦ 签'); } }} />
       <QuestBoardSheet open={quest} onClose={() => setQuest(false)} />

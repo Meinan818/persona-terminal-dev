@@ -59,6 +59,14 @@ const driveBattle = (battle: any): string => {
   return battle.phase;
 };
 
+const reachHoldUp = (battle: any): void => {
+  for (const enemy of battle.enemies) {
+    enemy.hp = Math.max(1, enemy.hp);
+    enemy.down = true;
+  }
+  battle.afterAction(battle.actor);
+};
+
 beforeAll(async () => {
   await ensureCompendium({
     personas: compendiumPersonaIds(),
@@ -164,6 +172,49 @@ describe('UMBRA formal P5 battle engine', () => {
     const battle: any = createBattle({ rng: steady, enemies });
     const phase = driveBattle(battle);
     expect(['victory', 'result']).toContain(phase);
+  });
+
+  it.each([1, 3, 5])('%i 只敌人 HOLD UP 后放过走完整事件序列', (count) => {
+    const enemies = Array.from({ length: count }, (_, index) => spec(`e${index + 1}`));
+    const battle: any = createBattle({ rng: steady, enemies });
+    reachHoldUp(battle);
+    expect(battle.phase).toBe('holdUp');
+    const holdup = battle.events.find((event: any) => event.name === 'holdup');
+    expect(holdup.payload.enemyIds).toHaveLength(count);
+
+    battle.holdUp({ type: 'release' });
+    const names = battle.events.map((event: any) => event.name);
+    expect(names).toContain('holdup:result');
+    expect(names).toContain('unit:flee');
+    expect(names).toContain('battle:end');
+    expect(battle.phase).toBe('victory');
+  });
+
+  it('HOLD UP 三选一：allout 与 talk 分别发对应事件', () => {
+    const alloutBattle: any = createBattle({ rng: steady, enemies: [spec('e1')] });
+    reachHoldUp(alloutBattle);
+    alloutBattle.holdUp({ type: 'allout' });
+    const alloutNames = alloutBattle.events.map((event: any) => event.name);
+    expect(alloutNames).toContain('holdup:result');
+    expect(alloutNames).toContain('allout');
+
+    const talkBattle: any = createBattle({ rng: steady, enemies: [spec('e1')] });
+    reachHoldUp(talkBattle);
+    const enemyId = talkBattle.aliveEnemies[0].id;
+    talkBattle.holdUp({ type: 'talk', enemyId, option: 'reason' });
+    const talkNames = talkBattle.events.map((event: any) => event.name);
+    expect(talkNames).toContain('holdup:result');
+    expect(talkNames).toContain('talk:start');
+  });
+
+  it('同一 holdup 连点放过只结算一次', () => {
+    const battle: any = createBattle({ rng: steady, enemies: [spec('e1')] });
+    reachHoldUp(battle);
+    expect(battle.holdUp({ type: 'release' }).ok).toBe(true);
+    expect(battle.holdUp({ type: 'release' }).ok).toBe(false);
+    expect(battle.holdUp({ type: 'release' }).ok).toBe(false);
+    expect(battle.events.filter((event: any) => event.name === 'holdup:result')).toHaveLength(1);
+    expect(battle.events.filter((event: any) => event.name === 'battle:end')).toHaveLength(1);
   });
 
   it('电击弱点触发倒地、发现弱点和 1 MORE', () => {

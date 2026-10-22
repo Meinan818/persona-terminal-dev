@@ -217,6 +217,7 @@ export class P5Battle {
   showtimeUsed: boolean;
   result: AnyRecord | null;
   log: string[];
+  events: { name: string; payload: Record<string, unknown> }[];
 
   constructor({
     rng = Math.random,
@@ -241,8 +242,13 @@ export class P5Battle {
     this.showtimeUsed = false;
     this.result = null;
     this.log = [];
+    this.events = [];
     this.push(`第 1 回合：${party.map(p => p.name).join(' / ')} vs ${enemies.map(e => e.name).join(' / ')}`);
     this.prepareIntents();
+  }
+
+  emit(name: string, payload: Record<string, unknown> = {}): void {
+    this.events.push({ name, payload });
   }
 
   prepareIntents(): void {
@@ -658,6 +664,10 @@ export class P5Battle {
     }
     if (this.allDown) {
       this.phase = 'holdUp';
+      this.emit('holdup', {
+        enemyIds: this.aliveEnemies.map(enemy => enemy.id),
+        partyIds: this.aliveParty.map(member => member.id),
+      });
       this.push('HOLD UP！所有影子都倒下了。');
       return;
     }
@@ -769,7 +779,16 @@ export class P5Battle {
   holdUp(action: BattleAction): { ok: boolean; reason?: string } {
     if (this.phase !== 'holdUp') return { ok: false, reason: '现在不是 Hold Up。' };
     const actor = this.actor;
-    if (action.type === 'allOut') {
+    const enemyIds = this.aliveEnemies.map(enemy => enemy.id);
+    const partyIds = this.aliveParty.map(member => member.id);
+    const choice = action.type === 'allOut' ? 'allout'
+      : action.type === 'negotiate' ? 'talk'
+        : action.type === 'continue' ? 'release'
+          : action.type;
+
+    if (choice === 'allout') {
+      this.emit('holdup:result', { choice: 'allout', enemyIds });
+      this.emit('allout', { partyIds, enemyIds });
       const power = 30 + this.aliveParty.length * 10;
       for (const enemy of this.aliveEnemies) {
         enemy.hp = Math.max(0, enemy.hp - power);
@@ -786,11 +805,12 @@ export class P5Battle {
       if (actor) this.finishActor(actor);
       return { ok: true };
     }
-    if (action.type === 'negotiate') {
-      const actor = this.actor;
+    if (choice === 'talk') {
       if (!actor) return { ok: false, reason: '现在没有可行动的角色。' };
       const enemy = this.enemies.find(e => e.id === action.enemyId && e.hp > 0);
       if (!enemy) return { ok: false, reason: '没有这个影子。' };
+      this.emit('holdup:result', { choice: 'talk', enemyIds });
+      this.emit('talk:start', { enemyId: enemy.id, enemyIds });
       if (action.option === 'bribe' && actor.sp < 20) return { ok: false, reason: 'SP 不足 20。' };
       const base = 50 + (PERSONALITY_MODS[enemy.personality]?.[action.option] ?? 0) + 10 + (enemy.hp / enemy.maxHp < 0.35 ? 5 : 0);
       const finalChance = action.option === 'bribe' && actor.sp < 20 ? 0 : clamp(base, 10, 90);
@@ -815,11 +835,13 @@ export class P5Battle {
       if (actor) this.finishActor(actor);
       return { ok: true };
     }
-    if (action.type === 'continue') {
-      for (const enemy of this.aliveEnemies) enemy.down = false;
-      this.phase = 'party';
-      this.push('你们没有理会它，继续战斗。');
-      if (actor) this.finishActor(actor);
+    if (choice === 'release') {
+      this.emit('holdup:result', { choice: 'release', enemyIds });
+      this.emit('unit:flee', { enemyIds });
+      this.emit('battle:end', { win: true, rank: 'hold-up', exp: 0, money: 0, drops: [] });
+      this.phase = 'victory';
+      this.result = { type: 'victory', released: true };
+      this.push('你放过了影子，战斗结束。');
       return { ok: true };
     }
     return { ok: false, reason: '未知 Hold Up 行动。' };

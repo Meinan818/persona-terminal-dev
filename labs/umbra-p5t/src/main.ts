@@ -1,6 +1,6 @@
 // 灰盒表现层：three.js 方块 + HTML HUD。只读 Battle 状态、只调用 Battle 指令、只消费事件。
 import * as THREE from 'three';
-import { Battle, MAPS, key, eq, VOLTAGE_MAX, PASSIVE_INFO } from './rules';
+import { Battle, MAPS, key, eq, VOLTAGE_MAX, PASSIVE_INFO, SKILLS, UNIQUES } from './rules';
 import type { BattleEvent, SkillDef, Unit, Vec, StatusId } from './rules';
 
 type Mode = 'auto' | 'melee' | 'gun' | 'skill' | 'unique';
@@ -435,6 +435,23 @@ function refreshLabels() {
 function refreshAll() { refreshOverlay(); refreshHud(); }
 
 // ---------- 事件动画 ----------
+// 召唤切入（Hark 演出）：P5 式——黑幕+蓝焰升腾+面具撕裂碎片+人格面具名+技能名。正版素材到后换角色切入立绘
+const PERSONA_NAME: Record<string, string> = { joker: 'ARSÈNE', skull: 'CAPTAIN KIDD', panther: 'CARMEN', mona: 'ZORRO', fox: 'GOEMON', queen: 'JOHANNA',
+  noir: 'MILADY', erina: 'CELESTINE', kasumi: 'CENDRILLON', crow: 'ROBIN HOOD', toshiro: 'PERSONA' };
+let lastSummon = '';
+async function summonCutIn(unitId: string, skillId: string) {
+  const sig = unitId + ':' + skillId + ':' + battle.turn;
+  if (sig === lastSummon) return; lastSummon = sig;
+  const u = battle.unit(unitId);
+  const sk = (SKILLS as Record<string, SkillDef>)[skillId] ?? (UNIQUES as Record<string, SkillDef>)[skillId];
+  const el = $('#summon');
+  const shards = Array.from({ length: 9 }, (_, i) => `<i class="sh" style="--a:${i * 40 + 10}deg;--d:${60 + (i % 3) * 30}px"></i>`).join('');
+  el.innerHTML = `<div class="flame"></div><div class="mask">${shards}</div><div class="strip"><div class="who">${u.name}</div><div class="per">${PERSONA_NAME[u.id] ?? 'PERSONA'}!</div></div><div class="sk">${sk?.name ?? skillId}</div>`;
+  el.classList.remove('hidden'); el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  await sleep(950 / SPEED);
+  el.classList.add('hidden');
+}
+
 function banner(text: string, yellow = false) {
   const b = $('#banner');
   // P5 式「勒索信」字块：每个字随机黑底/白底/红底、微旋转、大小不一，压在扫过的斜色带上
@@ -533,6 +550,7 @@ async function play(events: BattleEvent[]) {
       case 'fall': popDamage(e.unitId, '坠落!', 'big'); await sleep(220 / SPEED); break;
       case 'followUp': banner('FOLLOW UP!', true); toast(`${battle.unit(e.shooterId).name} 追击！${battle.unit(e.creditId).name} 获得 1 MORE`); await sleep(600 / SPEED); break;
       case 'meleeStep': unitMesh.get(e.unitId)?.position.copy(w2v(e.to)); break;
+      case 'attack': if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId); break;
       case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); break;
       case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
       case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); break;
@@ -767,6 +785,7 @@ window.__p5t = {
   get battle() { return battle; },
   get busy() { return busy; },
   banner,
+  summonCutIn,
   setMode(m: Mode) { mode = m; refreshAll(); },
   setSkill(id: string) { mode = 'skill'; skillId = id; refreshAll(); },
   tap: onTap,

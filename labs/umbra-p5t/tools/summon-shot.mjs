@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+import { preview } from 'vite';
+const server = await preview({ preview: { port: 4318, host: '127.0.0.1' } });
+const browser = await chromium.launch({ args: ['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'] });
+const page = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2 });
+await page.goto('http://127.0.0.1:4318/?speed=0.2&map=range-c'); await page.waitForFunction(() => window.__p5t && !window.__p5t.busy);
+await page.evaluate(() => document.fonts.ready);
+await page.evaluate(() => { const b=document.querySelector('#banner'); b.classList.remove('hidden'); });
+await page.evaluate(() => null);
+await page.evaluate(()=>{window.__p5t.summonCutIn('crow','phantomJudge');}); await page.waitForTimeout(600);
+await page.addStyleTag({ content: '#summon,#summon *{animation-play-state:paused!important}' });
+await page.screenshot({ path: process.cwd() + '/shots/p5t-summon-844x390.png' });
+await browser.close(); server.httpServer.close();

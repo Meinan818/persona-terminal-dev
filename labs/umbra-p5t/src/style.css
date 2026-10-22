@@ -147,3 +147,23 @@ button.small.on { background: #e60012; }
 #actions .end::before { color: #000; }
 #actions .triple { clip-path: none; }
 #actions .triple::before { content: none; }
+
+/* 召唤切入（Hark 演出） */
+#summon { position: absolute; inset: 0; z-index: 9; pointer-events: none; overflow: hidden; background: radial-gradient(ellipse at 30% 60%, #001a4dcc 0%, #000c 60%); animation: sumFade .95s linear both; }
+#summon .flame { position: absolute; left: 8%; bottom: -10%; width: 44%; height: 120%; background:
+  radial-gradient(ellipse 30% 40% at 50% 80%, #bff4ff 0%, #3ac8ff 25%, transparent 60%),
+  radial-gradient(ellipse 22% 55% at 35% 70%, #2a8cff 0%, transparent 70%),
+  radial-gradient(ellipse 22% 55% at 66% 72%, #1f6bff 0%, transparent 70%);
+  filter: blur(6px); mix-blend-mode: screen; animation: flame .95s ease-out both; transform-origin: bottom; }
+#summon .mask { position: absolute; left: 30%; top: 46%; width: 0; height: 0; }
+#summon .sh { position: absolute; width: 22px; height: 10px; background: #fff; clip-path: polygon(0 0, 100% 30%, 60% 100%); transform: rotate(var(--a)) translateX(0); animation: shard .5s .08s cubic-bezier(.2,.8,.3,1) both; box-shadow: 0 0 6px #fff; }
+#summon .strip { position: absolute; right: -6%; top: 26%; width: 74%; padding: 6px 15% 8px 60px; background: #000; border-top: 4px solid #e60012; border-bottom: 4px solid #e60012; transform: rotate(-7deg) translateX(110%); animation: stripIn .25s .05s cubic-bezier(.2,.9,.3,1) forwards; text-align: right; }
+#summon .who { font-size: 14px; font-weight: 800; color: #fff; letter-spacing: 2px; }
+#summon .per { font-size: 46px; font-weight: 900; font-style: italic; color: #fff; letter-spacing: 3px; text-shadow: 3px 3px 0 #e60012; line-height: 1; }
+#summon .sk { position: absolute; right: 6%; top: 58%; padding: 4px 18px; background: #fff; color: #000; font-size: 26px; font-weight: 900; transform: rotate(-7deg) scale(0); animation: skIn .2s .3s cubic-bezier(.3,1.6,.5,1) forwards; box-shadow: 5px 5px 0 #3ac8ff; }
+@keyframes sumFade { 0% { opacity: 0; } 8%, 85% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes flame { 0% { transform: scaleY(.1); opacity: 0; } 30% { transform: scaleY(1.05); opacity: 1; } 100% { transform: scaleY(1); opacity: .85; } }
+@keyframes shard { to { transform: rotate(var(--a)) translateX(var(--d)); opacity: 0; } }
+@keyframes stripIn { to { transform: rotate(-7deg) translateX(0); } }
+@keyframes skIn { to { transform: rotate(-7deg) scale(1); } }
+@media (max-height: 420px) { #summon .per { font-size: 32px; } #summon .sk { font-size: 18px; } #summon .who { font-size: 11px; } }

@@ -15,7 +15,8 @@ import { CollageItem, CollageStagger } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
-import { ACTIVITIES, ACTIVITY_IMAGES, ATTR_IDS, ATTR_NAMES, BIGDEAL_STEP_LOG, TODAY, TODAY_KEY, dayKey } from '@yellow/mock/pkg2';
+import { ATTR_IDS, dayKey } from '@yellow/mock/pkg2';
+import { useActionsData } from '@yellow/adapters/pkg2';
 import { StarFab, Tag, fmtTime, qp, setHashParam, useLongPress } from '@yellow/screens/pkg2/common';
 import ActivityRecordSheet, { type RecordSavePayload } from '@yellow/screens/overlays/ActivityRecordSheet.p4g';
 import ActivitiesRecordMenu from '@yellow/screens/overlays/ActivitiesRecordMenu.p4g';
@@ -44,6 +45,7 @@ const ACCENT_BAR: Record<Accent, string> = {
 const weatherKind = (icon?: string): P4Weather | null => (icon === 'rain' ? 'rain' : icon === 'cloudy' ? 'cloudy' : icon === 'sunny' ? 'sunny' : icon === 'snow' ? 'snow' : icon === 'fog' ? 'fog' : null);
 
 function RecordCard({ a, images, onMenu, onImage, expanded, onToggleDeal }: { a: Activity; images: string[]; onMenu: () => void; onImage: (i: number) => void; expanded: boolean; onToggleDeal: () => void }) {
+  const { ATTR_NAMES, BIGDEAL_STEP_LOG } = useActionsData();
   const lp = useLongPress(onMenu);
   const acc = accentOf(a);
   const pts = Object.entries(a.pointsAwarded).filter(([, v]) => v > 0) as [AttributeId, number][];
@@ -107,6 +109,7 @@ function RecordCard({ a, images, onMenu, onImage, expanded, onToggleDeal }: { a:
 }
 
 function Calendar({ year, month, onMonth, selected, onSelect, onPicker, marks, showImportant }: { year: number; month: number; onMonth: (d: number) => void; selected: string | null; onSelect: (k: string | null) => void; onPicker: () => void; marks: Map<string, { n: number; imp: boolean }>; showImportant: boolean }) {
+  const { TODAY_KEY } = useActionsData();
   const first = new Date(year, month, 1).getDay();
   const days = new Date(year, month + 1, 0).getDate();
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
@@ -144,6 +147,7 @@ function Calendar({ year, month, onMonth, selected, onSelect, onPicker, marks, s
 
 export function ActivitiesView({ params }: { params: URLSearchParams }) {
   const toast = useToast();
+  const { ACTIVITIES, ACTIVITY_IMAGES, ATTR_NAMES, TODAY, TODAY_KEY } = useActionsData();
   const low = useLowMotion();
   const st = qp(params, 'state');
   const [list, setList] = useState<Activity[]>(st === 'empty' ? [] : ACTIVITIES);

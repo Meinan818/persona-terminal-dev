@@ -20,6 +20,8 @@ import { triggerNavFeedback } from '@/utils/feedback';
 import { TodosView } from '@/pages/Todos';
 import { ActivitiesView } from '@/pages/Activities';
 import { useUiChannel } from '@/ui/useUiChannel';
+import ActionsP4 from '@yellow/screens/pages/Actions.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { P4SkyCircle, P4_HEADER_BLEED } from '@/ui/p4Kit';
 import { P3R, P3RPage, GhostWords, slantClip } from '@/components/p3r/kit';
 import { P5R, P5_TITLE_FONT, P5Star, P5Dots, P5Slab, P5RPage } from '@/components/p5r/kit';
@@ -57,6 +59,8 @@ export const Actions = () => {
       setCurrentPage('actions');
     }
   }, [currentPage, setActionsSubTab, setCurrentPage]);
+
+  if (isP4) return <P4Host><ActionsP4 pageId="actions" tab={actionsSubTab} params={new URLSearchParams()} /></P4Host>;
 
   /** 切换子页：仅在目标不同时生效（点击已激活词 / 横滑回弹不触发音效） */
   const switchTab = (tab: ActionsSubTab) => {

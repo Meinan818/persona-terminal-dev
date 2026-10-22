@@ -222,6 +222,26 @@ function fitCamera() {
   const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2 - halfH * 0.04;
   camera.left = cx - halfW; camera.right = cx + halfW; camera.top = cy + halfH; camera.bottom = cy - halfH;
   camera.updateProjectionMatrix();
+  camBase = { cx, cy, halfW, halfH };
+  camCur = { x: cx, y: cy, z: 1 }; camTgt = { x: cx, y: cy, z: 1 };
+}
+// 敌方回合镜头（Hark 演出）：P5T 敌人行动时镜头推近并跟随行动者，回到我方回合拉回全景
+let camBase = { cx: 0, cy: 0, halfW: 1, halfH: 1 };
+let camCur = { x: 0, y: 0, z: 1 }, camTgt = { x: 0, y: 0, z: 1 };
+function camFocus(p: Vec | null, zoom = 1.35) {
+  if (!p) { camTgt = { x: camBase.cx, y: camBase.cy, z: 1 }; return; }
+  const q = w2v(p).clone().applyMatrix4(camera.matrixWorldInverse);
+  const z = zoom, hw = camBase.halfW / z, hh = camBase.halfH / z;
+  const x = Math.min(camBase.cx + camBase.halfW - hw, Math.max(camBase.cx - camBase.halfW + hw, q.x));
+  const y = Math.min(camBase.cy + camBase.halfH - hh, Math.max(camBase.cy - camBase.halfH + hh, q.y));
+  camTgt = { x, y, z };
+}
+function camStep() {
+  const k = 0.12;
+  camCur.x += (camTgt.x - camCur.x) * k; camCur.y += (camTgt.y - camCur.y) * k; camCur.z += (camTgt.z - camCur.z) * k;
+  const hw = camBase.halfW / camCur.z, hh = camBase.halfH / camCur.z;
+  camera.left = camCur.x - hw; camera.right = camCur.x + hw; camera.top = camCur.y + hh; camera.bottom = camCur.y - hh;
+  camera.updateProjectionMatrix();
 }
 
 // ---------- 覆盖层 ----------
@@ -537,9 +557,10 @@ async function play(events: BattleEvent[]) {
     switch (e.type) {
       case 'phaseStart':
         if (e.phase === 'enemy') { banner('ENEMY PHASE'); refreshHud(); await sleep(700 / SPEED); }
+        if (e.phase === 'player') camFocus(null);
         if (e.phase === 'player' && e.turn > 1) { banner(`TURN ${e.turn}`); await sleep(500 / SPEED); }
         break;
-      case 'move': await tweenPath(e.unitId, e.path.length ? e.path : [e.from, battle.unit(e.unitId).pos], 90 / SPEED); break;
+      case 'move': if (battle.phase === 'enemy') { camFocus(e.path.length ? e.path[e.path.length - 1] : battle.unit(e.unitId).pos); await sleep(260 / SPEED); } await tweenPath(e.unitId, e.path.length ? e.path : [e.from, battle.unit(e.unitId).pos], 90 / SPEED); break;
       case 'dash': popDamage(e.unitId, e.kind === 'ladder' ? 'DASH↕' : 'JUMP'); break;
       case 'knockback':
         if (!e.blocked || !eq(e.from, e.to)) await tweenPath(e.unitId, [e.from, e.to], 70 / SPEED, e.fly ? 1.2 : 0);
@@ -550,7 +571,8 @@ async function play(events: BattleEvent[]) {
       case 'fall': popDamage(e.unitId, '坠落!', 'big'); await sleep(220 / SPEED); break;
       case 'followUp': banner('FOLLOW UP!', true); toast(`${battle.unit(e.shooterId).name} 追击！${battle.unit(e.creditId).name} 获得 1 MORE`); await sleep(600 / SPEED); break;
       case 'meleeStep': unitMesh.get(e.unitId)?.position.copy(w2v(e.to)); break;
-      case 'attack': if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId); break;
+      case 'attack': if (battle.phase === 'enemy') { camFocus(battle.unit(e.targetId).pos, 1.25); await sleep(200 / SPEED); }
+        if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId); break;
       case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); break;
       case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
       case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); break;
@@ -771,6 +793,7 @@ function restart() {
 }
 
 function loop() {
+  camStep();
   renderer.render(scene, camera);
   refreshLabels();
   requestAnimationFrame(loop);

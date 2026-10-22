@@ -5,6 +5,7 @@
  * demo 只做红主题：点其它色板只演示选中态 + 吐司，不切换。
  */
 import { useLayoutEffect, useRef, useState } from 'react';
+import { selectAppTheme, useSelectedTheme } from '@/themes/themeSelection';
 import type { OverlayProps } from '@/p5r-red/registry/types';
 import { P5Sheet } from '@/p5r-red/kit/P5Sheet';
 import { P5Button } from '@/p5r-red/kit/P5Button';
@@ -16,14 +17,16 @@ import { navigate } from '@/p5r-red/shell/shellBus';
 const THEMES: [string, string, string][] = [['blue', '蓝', '#3B82F6'], ['yellow', '黄', '#F59E0B'], ['red', '红', '#D7000F'], ['pink', '粉', '#EC4899'], ['custom', '自定义', 'conic-gradient(#3B82F6,#F59E0B,#EF4444,#EC4899,#3B82F6)']];
 
 export default function MenuThemeSheet({ open, onClose }: OverlayProps) {
-  const [sel, setSel] = useState('red');
+  const [sel, setSel] = useState<string>(useSelectedTheme('red') ?? 'red');
   const box = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (!open || !box.current || isLowMotion()) return;
     box.current.querySelectorAll('.ob-swatch').forEach((s, i) => s.animate([{ opacity: 0, transform: 'translateY(40px) rotate(-14deg) scale(1.3)' }, { opacity: 1, transform: 'none' }], { duration: 380, delay: 160 + i * 50, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'backwards' }));
   }, [open]);
-  const pick = (v: string, l: string, el: HTMLElement) => {
-    setSel(v); sfx('switch', 0.5); toast(`已切换主题：${l}（demo 仅演示红）`);
+  const pick = async (v: string, l: string, el: HTMLElement) => {
+    setSel(v);
+    try { await selectAppTheme(v); } catch { toast('主题切换失败，请重试'); return; }
+    sfx('switch', 0.5);
     if (!isLowMotion()) el.animate([{ transform: 'scale(1.25) rotate(-8deg)' }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.34,1.56,.64,1)' });
   };
   return (

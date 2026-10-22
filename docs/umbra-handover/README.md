@@ -10,6 +10,7 @@
 
 ## 2. 按身份读任务书
 - App 接入方：docs/umbra-design/TASK-APP-v1.2.md；进度 docs/umbra-progress/app.md；分支 feat/umbra-app-m2
+  - 四皮皮肤包 v1（可直接合并）：docs/umbra-handover/SKINS-V1.md；分支 feat/umbra-skins-v1
 - 主题皮肤方：docs/umbra-design/TASK-THEMES-v1.2.md
   - 黄 p4-yellow：docs/umbra-handover/p4-yellow.md；分支 feat/umbra-skin-p4-yellow
   - 蓝 p3-blue：docs/umbra-handover/p3-blue.md；分支 feat/umbra-skin-p3-blue

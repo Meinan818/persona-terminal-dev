@@ -50,7 +50,7 @@ function findBone(root, ...names) {
   return hit;
 }
 
-function applyToon(root, id, opt) {
+export function applyToon(root, id, opt) {
   const dir = `/models/${id}/`;
   const meshes = [];
   root.traverse((o) => { if (o.isMesh) meshes.push(o); });
@@ -63,9 +63,9 @@ function applyToon(root, id, opt) {
       let pair = (TEXMAP[id] || {})[key] || (TEXMAP[id] || {})[key.replace(/_png$/, '')];
       if (!pair && id === 'joker' && /hand|te/i.test(o.name + m.name)) pair = TEXMAP.joker['c0001_t01_hand02'];
       if (/outline/i.test(m.name)) return null;
-      const map = pair ? tex(dir + pair[0]) : (m.map && m.map.image ? m.map : null);
+      const map = pair ? tex(dir + pair[0]) : (m.map ? m.map : (opt.mapUrl ? tex(opt.mapUrl) : null));
       if (map && !pair) { map.colorSpace = THREE.SRGBColorSpace; }
-      const smap = pair && pair[1] ? tex(dir + pair[1]) : null;
+      const smap = pair && pair[1] ? tex(dir + pair[1]) : (opt.shadowMaps && opt.shadowMaps[m.name] ? tex(opt.shadowMaps[m.name]) : null);
       return toonMat({ map, smap, color: m.color ? m.color.getHex() : 0xffffff, shadeTint: opt.shadeTint || 0x7470a8, rim: opt.rim ?? 0.45, alphaTest: 0.4, side: THREE.DoubleSide });
     });
     if (nm.some((m) => !m)) { o.visible = false; continue; }

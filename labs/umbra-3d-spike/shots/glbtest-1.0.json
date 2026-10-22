@@ -1,0 +1,19 @@
+{
+ "tier": "low",
+ "anim": {
+  "joker": "procedural",
+  "skull": "procedural",
+  "jf": "procedural",
+  "jf2": "procedural",
+  "pyro": {
+   "idle": "dvl_mdl_jackolantern_idle_00",
+   "attack": "dvl_mdl_jackolantern_attack",
+   "skill": "dvl_mdl_jackolantern_skill",
+   "hit": "dvl_mdl_jackolantern_damage",
+   "down": "dvl_mdl_jackolantern_dead",
+   "dodge": null,
+   "summon": null
+  }
+ },
+ "render": "ok"
+}

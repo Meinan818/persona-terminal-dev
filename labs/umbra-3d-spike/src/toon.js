@@ -7,6 +7,9 @@ export const SHARED = {
   fogNear: { value: 14 },
   fogFar: { value: 46 },
   rimCol: { value: new THREE.Color(0x6fa8ff) },
+  exposure: { value: 0.84 },      // 角色整体曝光（场景偏暗，只让高光/边缘光/特效进 Bloom）
+  rimBoost: { value: 1.1 },      // 边缘光强度全局倍率（深色场景里勾出剪影）
+  outlineScale: { value: 1.25 }, // 描边粗细全局倍率（原作描边偏粗）
 };
 
 const VS = /* glsl */ `
@@ -30,7 +33,7 @@ const FS = /* glsl */ `
 uniform sampler2D map; uniform sampler2D smap; uniform float hasMap; uniform float hasS;
 uniform vec3 baseCol; uniform vec3 shadeTint; uniform vec3 lightDir; uniform vec3 rimCol; uniform float rimStr;
 uniform vec3 fogCol; uniform float fogNear; uniform float fogFar; uniform float alphaTest; uniform float flash; uniform vec3 flashCol;
-uniform float threshold; uniform float emissive;
+uniform float threshold; uniform float emissive; uniform float exposure; uniform float rimBoost;
 varying vec2 vUv; varying vec3 vN; varying vec3 vV;
 void main(){
   vec4 b = hasMap > 0.5 ? texture2D(map, vUv) : vec4(baseCol, 1.0);
@@ -41,8 +44,9 @@ void main(){
   float lit = smoothstep(threshold - 0.03, threshold + 0.03, ndl);
   vec3 c = mix(sc, b.rgb, lit);
   c = mix(c, b.rgb, emissive);
+  c *= exposure + emissive * 1.2;
   float fr = 1.0 - max(dot(n, normalize(vV)), 0.0);
-  c += rimCol * rimStr * smoothstep(0.62, 0.72, fr) * (0.35 + 0.65 * (1.0 - lit));
+  c += rimCol * rimStr * rimBoost * smoothstep(0.58, 0.8, fr) * (0.35 + 0.65 * (1.0 - lit));
   float fd = smoothstep(fogNear, fogFar, length(vV));
   c = mix(c, fogCol, fd);
   c = mix(c, flashCol, flash);
@@ -57,7 +61,7 @@ export function toonMat({ map = null, smap = null, color = 0xffffff, shadeTint =
       baseCol: { value: new THREE.Color(color) }, shadeTint: { value: new THREE.Color(shadeTint) },
       rimStr: { value: rim }, alphaTest: { value: alphaTest }, flash: { value: 0 }, flashCol: { value: new THREE.Color(0xffffff) },
       threshold: { value: threshold }, emissive: { value: emissive },
-      lightDir: SHARED.lightDir, fogCol: SHARED.fogCol, fogNear: SHARED.fogNear, fogFar: SHARED.fogFar, rimCol: SHARED.rimCol,
+      exposure: SHARED.exposure, rimBoost: SHARED.rimBoost, lightDir: SHARED.lightDir, fogCol: SHARED.fogCol, fogNear: SHARED.fogNear, fogFar: SHARED.fogFar, rimCol: SHARED.rimCol,
     },
     vertexShader: VS, fragmentShader: FS, side,
   });
@@ -68,7 +72,7 @@ export function toonMat({ map = null, smap = null, color = 0xffffff, shadeTint =
 const OVS = /* glsl */ `
 #include <common>
 #include <skinning_pars_vertex>
-uniform float width;
+uniform float width; uniform float outlineScale;
 varying float vD;
 void main(){
   #include <beginnormal_vertex>
@@ -78,7 +82,7 @@ void main(){
   #include <skinning_vertex>
   vec4 mv = modelViewMatrix * vec4(transformed, 1.0);
   vec3 n = normalize(normalMatrix * objectNormal);
-  mv.xyz += n * width * clamp(-mv.z, 1.0, 30.0) * 0.0018;
+  mv.xyz += n * width * outlineScale * clamp(-mv.z, 1.0, 30.0) * 0.0018;
   vD = -mv.z;
   gl_Position = projectionMatrix * mv;
 }`;
@@ -89,7 +93,7 @@ void main(){ vec3 c = mix(col, fogCol, smoothstep(fogNear, fogFar, vD) * 0.8); g
 }`;
 export function outlineMat(width = 1.0, col = 0x05040a) {
   return new THREE.ShaderMaterial({
-    uniforms: { width: { value: width }, col: { value: new THREE.Color(col) }, fogCol: SHARED.fogCol, fogNear: SHARED.fogNear, fogFar: SHARED.fogFar },
+    uniforms: { width: { value: width }, outlineScale: SHARED.outlineScale, col: { value: new THREE.Color(col) }, fogCol: SHARED.fogCol, fogNear: SHARED.fogNear, fogFar: SHARED.fogFar },
     vertexShader: OVS, fragmentShader: OFS, side: THREE.BackSide,
   });
 }

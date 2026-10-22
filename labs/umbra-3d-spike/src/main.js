@@ -3,28 +3,60 @@ import { SHARED } from './toon.js';
 import { buildArena, blobShadow } from './scene.js';
 import { loadDae, loadPyro, aim, twist } from './chars.js';
 import { Hud } from './hud.js';
+import { pickTier, TIERS, ORDER, Governor } from './tiers.js';
+import { Post } from './post.js';
+import { Director } from './camera.js';
+import { ActorAnim, MODELS, loadGlb, glbOverrides, segAt } from './anim.js';
 
 const P = new URLSearchParams(location.search);
 const SHOT = P.get('shot') || 'clip';
 const FIXED_T = P.has('t') ? +P.get('t') : null;
 const NOHUD = P.has('nohud');
+let tier = pickTier(P);
+
+// 雾色压暗（原作背景近黑藏青）
+SHARED.fogCol.value.set(0x050820); SHARED.fogNear.value = 12; SHARED.fogFar.value = 40;
 
 const app = document.getElementById('app');
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3)); // 按设备像素比渲染，不发糊
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 200);
-const arena = buildArena(scene);
+const arena = buildArena(scene, tier);
+const post = new Post(renderer, scene, camera, tier);
 const hud = new Hud(document.getElementById('hud'));
 
 function resize() {
-  const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w, h, false); renderer.domElement.style.width = w + 'px'; renderer.domElement.style.height = h + 'px';
-  camera.aspect = w / h; camera.updateProjectionMatrix(); hud.resize(w, h);
+  const w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, tier.dprCap);
+  renderer.setPixelRatio(dpr); renderer.setSize(w, h, false); renderer.domElement.style.width = w + 'px'; renderer.domElement.style.height = h + 'px';
+  camera.aspect = w / h; camera.updateProjectionMatrix(); hud.resize(w, h); post.setSize(w, h, dpr); arena.resize(w, h, dpr);
 }
 window.addEventListener('resize', resize);
+function setTier(t) { tier = t; post.setTier(t); arena.setTier(t); resize(); window.__tier = t.name; console.log('tier', t.name); }
+
+// —— 战斗事件时间轴（8 秒循环）。镜头、动作、HUD 都由这些事件驱动 ——
+const EVENTS = [
+  { t: 0.0, name: 'battle:start' },
+  { t: 2.6, name: 'turn:menu' },
+  { t: 4.7, name: 'cmd:confirm' },
+  { t: 5.0, name: 'attack:launch' },
+  { t: 5.85, name: 'attack:hit' },
+  { t: 6.9, name: 'attack:end' },
+];
+const SHOT_OFFSET = { idle: 0, menu: 2.6, attack: 5.0, wide: 6.9 };
+const HITSTOP = { t: 5.85, dur: 0.07 }; // 命中顿帧：角色动作时间冻结 70ms，镜头照常震
+const director = new Director(EVENTS);
+// 每个角色的语义动作轨（有真动作就播真动作，否则回落程序化姿态）
+const TRACKS = {
+  joker: [{ t: 0, role: 'idle' }, { t: 5.0, role: 'attack' }, { t: 7.3, role: 'idle' }],
+  skull: [{ t: 0, role: 'idle' }],
+  jf: [{ t: 0, role: 'idle' }, { t: 5.85, role: 'hit' }, { t: 6.5, role: 'idle' }],
+  jf2: [{ t: 0, role: 'idle' }],
+  pyro: [{ t: 0, role: 'idle' }],
+};
+// 动作接入自测：?animtest=1 让 Pyro Jack 依次播 idle → attack → hit（验证语义切换 + 交叉淡入）
+if (P.has('animtest')) TRACKS.pyro = [{ t: 0, role: 'idle' }, { t: 5.0, role: 'attack' }, { t: 6.5, role: 'hit' }];
 
 const W = (x, y, z) => new THREE.Vector3(x, y, z);
 const L = {}; // actors
@@ -36,10 +68,15 @@ const knife = new THREE.Group();
   knife.add(hilt);
   const guard = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.02), new THREE.MeshBasicMaterial({ color: 0x777777 })); guard.position.y = 0.045; knife.add(guard);
 }
-// 斩击弧
-const slash = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.25, 48, 1, 0, Math.PI * 1.2), new THREE.MeshBasicMaterial({ color: 0x38c8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false, fog: false }));
-const slash2 = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.1, 48, 1, 0, Math.PI * 1.2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false, fog: false }));
+// 斩击弧（HDR 颜色进 Bloom）
+const slash = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.25, 48, 1, 0, Math.PI * 1.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x38c8ff).multiplyScalar(1.15), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false, fog: false }));
+const slash2 = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.1, 48, 1, 0, Math.PI * 1.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffffff).multiplyScalar(1.3), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false, fog: false }));
 slash.scale.setScalar(0.75); slash2.scale.setScalar(0.75); scene.add(slash, slash2);
+// 命中火花（放射线）
+const spark = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.translate(128, 128);
+  for (let i = 0; i < 18; i++) { g.rotate(Math.PI * 2 / 18 + (i % 3) * 0.05); g.fillStyle = i % 2 ? '#fff' : '#9fe8ff'; g.beginPath(); g.moveTo(0, -4); g.lineTo(60 + (i * 37 % 60), 0); g.lineTo(0, 4); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: t, color: new THREE.Color(1, 1, 1).multiplyScalar(1.4), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); scene.add(m); return m; })();
 // 指令簇红色爆发底板：放进 3D，画在 Joker 身后（原作 Joker 压在爆发图案之上）
 const burst = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 420; const g = c.getContext('2d'); g.translate(256, 210);
   const star = (R, r, n, rot, col) => { g.fillStyle = col; g.beginPath(); for (let i = 0; i < n * 2; i++) { const a = rot + i / (n * 2) * Math.PI * 2; const rr = i % 2 ? r : R * (0.7 + 0.3 * Math.abs(Math.sin(i * 1.7))); g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.82); } g.closePath(); g.fill(); };
@@ -47,26 +84,32 @@ const burst = (() => { const c = document.createElement('canvas'); c.width = 512
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 1.9), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, fog: false })); m.visible = false; scene.add(m); return m; })();
 
+const OVR = glbOverrides(P);
+async function loadActor(id, fallback, opt) {
+  const url = OVR[id] || (MODELS[id] && MODELS[id].glb);
+  if (url) { try { return await loadGlb(id, url, opt); } catch (e) { console.warn('GLB 加载失败，回落', id, e.message); } }
+  return fallback();
+}
 async function load() {
   const [joker, skull, jf, jf2, pyro] = await Promise.all([
-    loadDae('joker', '/models/joker/joker.dae', { height: 1.72, outline: 0.9 }),
-    loadDae('skull', '/models/skull/skull.dae', { height: 1.74, outline: 0.9 }),
-    loadDae('jackfrost', '/models/jackfrost/jackfrost.dae', { yaw: -Math.PI / 2, height: 1.2, outline: 1.2, shadeTint: 0x8e9ae0, rim: 0.3 }),
-    loadDae('jackfrost', '/models/jackfrost/jackfrost.dae', { yaw: -Math.PI / 2, height: 0.95, outline: 1.2, shadeTint: 0x8e9ae0, rim: 0.3 }),
-    loadPyro({ height: 1.55 }),
+    loadActor('joker', () => loadDae('joker', '/models/joker/joker.dae', { height: 1.72, outline: 0.9 }), { height: 1.72, outline: 0.9 }),
+    loadActor('skull', () => loadDae('skull', '/models/skull/skull.dae', { height: 1.74, outline: 0.9 }), { height: 1.74, outline: 0.9 }),
+    loadActor('jackfrost', () => loadDae('jackfrost', '/models/jackfrost/jackfrost.dae', { yaw: -Math.PI / 2, height: 1.2, outline: 1.2, shadeTint: 0x8e9ae0, rim: 0.35 }), { yaw: -Math.PI / 2, height: 1.2, outline: 1.2, shadeTint: 0x8e9ae0, rim: 0.35 }),
+    loadDae('jackfrost', '/models/jackfrost/jackfrost.dae', { yaw: -Math.PI / 2, height: 0.95, outline: 1.2, shadeTint: 0x8e9ae0, rim: 0.35 }),
+    loadActor('pyrojack', async () => { const c = await loadPyro({ height: 1.55 }); c.anim = new ActorAnim(c.root, c.root.animations, 'test_pyro'); return c; }, { height: 1.55, outline: 1.1, clipKey: 'test_pyro', mapUrl: '/models/pyrojack/tex_dvl_mdl_jackolantern_alb.png', shadeTint: 0x6058a0 }),
   ]);
   Object.assign(L, { joker, skull, jf, jf2, pyro });
   for (const k of Object.keys(L)) { const c = L[k]; scene.add(c.holder); const s = blobShadow(k === 'pyro' ? 0.7 : 0.55); c.holder.add(s); }
   scene.add(knife);
-  pyro.mixer.clipAction(pyro.clips.idle_00).play();
-  // 站位（世界）：队伍 z>0，敌人 z<0
   joker.holder.position.set(-0.5, 0, 2.6); skull.holder.position.set(-1.6, 0, 1.0);
   jf.holder.position.set(2.9, 0, -0.6); jf2.holder.position.set(1.2, 0, -2.3); pyro.holder.position.set(4.8, 0, -1.9);
   face(joker, jf.holder.position); face(skull, jf.holder.position);
   face(jf, W(1.2, 0, 6)); face(jf2, W(0.5, 0, 6)); face(pyro, W(1.5, 0, 5));
-  window.__info = { bones: Object.fromEntries(Object.entries(L).map(([k, c]) => [k, c.rest.size])) };
+  window.__info = { tier: tier.name, anim: Object.fromEntries(Object.entries(L).map(([k, c]) => [k, c.anim ? c.anim.report() : 'procedural'])) };
 }
 function face(c, target) { const p = c.holder.position; c.holder.rotation.y = Math.atan2(target.x - p.x, target.z - p.z); }
+/** 有真动作就播（返回 true），没有就交给程序化姿态 */
+function playClip(c, key, TA) { if (!c.anim) return false; const s = segAt(TRACKS[key], TA); if (!c.anim.has(s.seg.role)) return false; c.anim.pose(s.seg, s.prev && c.anim.has(s.prev.role) ? s.prev : null, s.blend); return true; }
 
 // —— 程序化姿态（骨骼驱动；原作战斗动作 GAP 不在模型包里）——
 const ease = (x) => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
@@ -101,53 +144,39 @@ function humanPose(c, t, o = {}) {
   if (pel && o.bob) c.inner.position.y = c.baseY + o.bob;
 }
 
-// —— 镜头 ——
-const SHOTS = {
-  // 待机全景：低机位在队伍身后偏右，看向敌群（参考 f017）
-  idle: (t) => ({ pos: W(2.55 + Math.sin(t * 0.3) * 0.25, 0.62, 2.3), tgt: W(2.9, 0.95, -1.8), fov: 50 }),
-  // 指令菜单：Joker 背后偏左过肩（参考 f029）
-  menu: (t) => ({ pos: W(-0.4 - t * 0.04, 1.5, 5.95), tgt: W(1.8, 0.95, 0.4), fov: 52 }),
-  // 出招：侧后方看 Joker 冲向杰克霜精（参考 f033）
-  attack: (t) => ({ pos: W(-0.3, 1.3, 5.7), tgt: W(2.0, 0.9, 0.2), fov: 52 }),
-  lineup: () => ({ pos: W(0, 2.2, 9), tgt: W(0, 0.9, 0), fov: 50 }),
-};
 
-function stateAt(t) {
-  if (SHOT !== 'clip') return { shot: SHOT, lt: t };
-  if (t < 2.6) return { shot: 'idle', lt: t };
-  if (t < 5.0) return { shot: 'menu', lt: t - 2.6 };
-  return { shot: 'attack', lt: t - 5.0 };
-}
+function phaseAt(T) { return T < 2.6 ? 'idle' : T < 4.7 ? 'menu' : 'attack'; }
+function globalT(t) { return SHOT === 'clip' ? t : (SHOT_OFFSET[SHOT] || 0) + t; }
 
-const clock = { t0: performance.now() };
 let lastT = 0;
 function frame(t) {
-  const st = stateAt(t);
-  const dt = Math.max(0, Math.min(0.1, t - lastT)); lastT = t;
+  const T = globalT(t);
   const { joker, skull, jf, jf2, pyro } = L;
   if (!joker) return;
   if (joker.baseY === undefined) for (const c of Object.values(L)) c.baseY = c.inner.position.y;
-  // 攻击时间轴（attack 镜头内 lt）
-  const at = st.shot === 'attack' ? (SHOT === 'attack' && FIXED_T !== null ? FIXED_T : st.lt) : -1;
-  const lunge = at < 0 ? 0 : ease((at - 0.15) / 0.45) * (1 - ease((at - 2.0) / 0.6));
-  const swing = at < 0 ? 0 : ease((at - 0.55) / 0.22);
-  // Joker 位移
+  const TA = T - Math.min(Math.max(T - HITSTOP.t, 0), HITSTOP.dur); // 顿帧后的动作时间
+  const phase = phaseAt(T);
+  const at = T >= 4.7 ? TA - 5.0 : -1;
+  const atk = at >= 0 ? at : -1;
+  const lunge = atk < 0 ? 0 : ease((atk - 0.15) / 0.45) * (1 - ease((atk - 2.0) / 0.6));
+  const swing = atk < 0 ? 0 : ease((atk - 0.55) / 0.22);
   const home = W(-0.5, 0, 2.6), strike = W(0.4, 0, 1.9);
   joker.holder.position.lerpVectors(home, strike, lunge);
   face(joker, jf.holder.position);
-  const armsIdle = { R: [[-0.45, -0.75, 0.45], [-0.1, -0.35, 0.95]], L: [[0.42, -0.85, 0.2], [0.25, -0.75, 0.6]] };
-  const armsWind = { R: [[-0.85, 0.35, -0.35], [-0.6, 0.75, 0.1]], L: [[0.6, -0.45, 0.6], [0.3, -0.2, 0.95]] };
-  const armsFollow = { R: [[0.55, -0.35, 0.75], [0.85, -0.45, 0.25]], L: [[0.5, -0.8, -0.2], [0.3, -0.9, 0.2]] };
-  let arms = armsIdle;
-  if (at >= 0) {
-    const wnd = ease((at - 0.1) / 0.4);
-    const mix = (A, B, k) => ({ R: A.R.map((v, i) => v.map((x, j) => x + (B.R[i][j] - x) * k)), L: A.L.map((v, i) => v.map((x, j) => x + (B.L[i][j] - x) * k)) });
-    arms = swing > 0 ? mix(armsWind, armsFollow, swing) : mix(armsIdle, armsWind, wnd);
-    if (at > 2.0) arms = mix(armsFollow, armsIdle, ease((at - 2.0) / 0.6));
+  if (!playClip(joker, 'joker', TA)) {
+    const armsIdle = { R: [[-0.45, -0.75, 0.45], [-0.1, -0.35, 0.95]], L: [[0.42, -0.85, 0.2], [0.25, -0.75, 0.6]] };
+    const armsWind = { R: [[-0.85, 0.35, -0.35], [-0.6, 0.75, 0.1]], L: [[0.6, -0.45, 0.6], [0.3, -0.2, 0.95]] };
+    const armsFollow = { R: [[0.55, -0.35, 0.75], [0.85, -0.45, 0.25]], L: [[0.5, -0.8, -0.2], [0.3, -0.9, 0.2]] };
+    let arms = armsIdle;
+    if (atk >= 0) {
+      const wnd = ease((atk - 0.1) / 0.4);
+      const mix = (A, B, k) => ({ R: A.R.map((v, i) => v.map((x, j) => x + (B.R[i][j] - x) * k)), L: A.L.map((v, i) => v.map((x, j) => x + (B.L[i][j] - x) * k)) });
+      arms = swing > 0 ? mix(armsWind, armsFollow, swing) : mix(armsIdle, armsWind, wnd);
+      if (atk > 2.0) arms = mix(armsFollow, armsIdle, ease((atk - 2.0) / 0.6));
+    }
+    humanPose(joker, TA, { stance: 0.2, lean: 0.12 + lunge * 0.25, crouch: 0.4 + lunge * 0.4, lunge: lunge * 0.35, turn: atk >= 0 ? (-0.5 + swing * 1.0) * (1 - ease((atk - 2) / 0.6)) : -0.15, arms, lead: 'L' });
   }
-  humanPose(joker, t, { stance: 0.2, lean: 0.12 + lunge * 0.25, crouch: 0.4 + lunge * 0.4, lunge: lunge * 0.35, turn: at >= 0 ? (-0.5 + swing * 1.0) * (1 - ease((at - 2) / 0.6)) : -0.15, arms, lead: 'L' });
-  humanPose(skull, t, { ph: 1.3, stance: 0.24, lean: 0.06, crouch: 0.15, arms: { R: [[-0.3, -0.9, 0.3], [-0.05, -0.2, 1]], L: [[0.3, -0.9, 0.1], [0.2, -0.85, 0.4]] }, lead: 'R' });
-  // 刀：贴右手
+  if (!playClip(skull, 'skull', TA)) humanPose(skull, TA, { ph: 1.3, stance: 0.24, lean: 0.06, crouch: 0.15, arms: { R: [[-0.3, -0.9, 0.3], [-0.05, -0.2, 1]], L: [[0.3, -0.9, 0.1], [0.2, -0.85, 0.4]] }, lead: 'R' });
   const hand = joker.bone('hdR', 'Bip01 R Hand'), fa = joker.bone('faR', 'Bip01 R Forearm');
   if (hand && fa) {
     const hp = hand.getWorldPosition(new THREE.Vector3()), fp = fa.getWorldPosition(new THREE.Vector3());
@@ -155,49 +184,53 @@ function frame(t) {
     knife.position.copy(hp).addScaledVector(dir, 0.07);
     knife.quaternion.setFromUnitVectors(W(0, 1, 0), dir.clone().lerp(charDir(joker, 0, -0.3, 1).normalize(), 0.5).normalize());
   }
-  // 斩击弧
-  const so = at < 0 ? 0 : Math.max(0, 1 - Math.abs(at - 0.75) / 0.3);
+  const so = atk < 0 ? 0 : Math.max(0, 1 - Math.abs(atk - 0.75) / 0.3);
   slash.material.opacity = so * 0.9; slash2.material.opacity = so;
   slash.position.copy(joker.holder.position).add(W(0, 1.05, 0)); slash2.position.copy(slash.position);
   slash.rotation.set(-1.2, joker.holder.rotation.y, -0.6 - swing * 1.2); slash2.rotation.copy(slash.rotation);
-  // 敌人
-  const hit = at < 0 ? 0 : Math.max(0, 1 - Math.abs(at - 0.85) / 0.35);
-  for (const [c, ph] of [[jf, 0], [jf2, 1.7]]) {
+  const hit = atk < 0 ? 0 : Math.max(0, 1 - Math.abs(atk - 0.85) / 0.35);
+  for (const [c, ph, key] of [[jf, 0, 'jf'], [jf2, 1.7, 'jf2']]) {
+    if (playClip(c, key, TA)) continue;
     c.resetPose();
-    const bob = Math.abs(Math.sin(t * 3.2 + ph)) * 0.06;
+    const bob = Math.abs(Math.sin(TA * 3.2 + ph)) * 0.06;
     c.inner.position.y = c.baseY + bob;
-    const sw = Math.sin(t * 3.2 + ph) * 0.35;
+    const sw = Math.sin(TA * 3.2 + ph) * 0.35;
     const b = (k, n) => c.bone(k, n);
     aim(b('uaR', 'Bip01 R UpperArm'), b('faR', 'Bip01 R Forearm'), charDir(c, -0.8, 0.2 + sw, 0.3));
     aim(b('uaL', 'Bip01 L UpperArm'), b('faL', 'Bip01 L Forearm'), charDir(c, 0.8, 0.5 - sw, 0.2));
   }
   if (hit > 0) {
     jf.setFlash(hit * 0.8, 0xffffff);
-    jf.holder.position.set(2.9 + hit * 0.15, 0, -0.6 - hit * 0.2); jf.holder.rotation.z = 0;
+    jf.holder.position.set(2.9 + hit * 0.15, 0, -0.6 - hit * 0.2);
     twist(jf.bone('sp', 'Bip01 Spine'), charDir(jf, 1, 0, 0), -hit * 0.5);
   } else { jf.setFlash(0); jf.holder.position.set(2.9, 0, -0.6); }
-  pyro.mixer.setTime(t % pyro.clips.idle_00.duration);
-  burst.visible = st.shot === 'menu' && !NOHUD;
-  // 相机
-  const sh = SHOTS[st.shot](st.lt);
-  let pos = sh.pos, tgt = sh.tgt;
-  if (st.shot === 'attack') { const k = ease((at - 0.2) / 1.0); pos = pos.clone().lerp(W(0.1, 1.2, 4.9), k * 0.4); tgt = tgt.clone().lerp(W(2.4, 0.95, -0.4), k * 0.4); if (hit > 0) pos.x += Math.sin(t * 80) * 0.03 * hit; }
-  camera.position.copy(pos); camera.fov = sh.fov; camera.updateProjectionMatrix(); camera.lookAt(tgt);
-  camera.updateMatrixWorld();
-  if (burst.visible) { const k = Math.min(1, st.lt / 0.18); const jp = joker.holder.position; const away = jp.clone().sub(camera.position).setY(0).normalize(); burst.position.copy(jp).addScaledVector(away, 0.35).setY(0.95); burst.quaternion.copy(camera.quaternion); burst.scale.setScalar(0.5 + 0.5 * k); }
+  // 火花
+  const sk = atk < 0 ? 0 : Math.max(0, 1 - Math.abs(atk - 0.88) / 0.18);
+  spark.material.opacity = sk; spark.position.copy(jf.holder.position).add(W(-0.2, 0.75, 0.35)); spark.scale.setScalar(0.6 + (atk - 0.7) * 2.5);
+  if (!playClip(pyro, 'pyro', TA) && pyro.mixer) pyro.mixer.setTime(TA % 2);
+  burst.visible = phase === 'menu' && !NOHUD;
+  // 相机：事件编排
+  const fx = director.apply(camera, T, {});
+  if (burst.visible) { const lt = T - 2.6; const k = Math.min(1, lt / 0.18); const jp = joker.holder.position; const away = jp.clone().sub(camera.position).setY(0).normalize(); burst.position.copy(jp).addScaledVector(away, 0.35).setY(0.95); burst.quaternion.copy(camera.quaternion); burst.scale.setScalar(0.5 + 0.5 * k); }
+  spark.quaternion.copy(camera.quaternion);
   SHARED.lightDir.value.copy(W(-0.5, 0.9, 0.6)).normalize().transformDirection(camera.matrixWorldInverse);
-  arena.update(t);
-  renderer.render(scene, camera);
-  if (!NOHUD) hud.update(st.shot, st.lt, camera, { joker, jf, at, hit });
+  arena.update(T);
+  const hitFlash = T >= HITSTOP.t && T < HITSTOP.t + 0.06 ? 0.22 : 0;
+  post.frame(T, { blurX: fx.blurX, flash: hitFlash, flashCol: 0xffffff, bloomBoost: 1 + sk * 0.25 });
+  if (!NOHUD) hud.update(phase, phase === 'menu' ? T - 2.6 : T, camera, { joker, jf, at, hit });
+  lastT = T;
 }
 
 window.__render = (t) => frame(t);
+window.__setTier = (n) => setTier(TIERS[n]);
 load().then(async () => {
   resize();
   await document.fonts.ready;
-  await new Promise((r) => setTimeout(r, 1500)); // 贴图到位
-  if (FIXED_T !== null) { frame(FIXED_T); frame(FIXED_T); document.title = 'ready'; return; }
+  await new Promise((r) => setTimeout(r, 1500));
+  if (FIXED_T !== null) { const a = performance.now(); frame(FIXED_T); renderer.getContext().finish(); const b = performance.now(); frame(FIXED_T); renderer.getContext().finish(); console.log('frame ms', Math.round(b - a), Math.round(performance.now() - b)); window.__info.render = 'ok'; document.title = 'ready'; return; }
   document.title = 'ready';
-  const loop = () => { frame((performance.now() - clock.t0) / 1000 % 8); requestAnimationFrame(loop); };
+  const gov = new Governor(() => { const i = ORDER.indexOf(tier.name); if (i < ORDER.length - 1) setTier(TIERS[ORDER[i + 1]]); });
+  const t0 = performance.now(); let prev = t0;
+  const loop = () => { const now = performance.now(); gov.sample(now - prev); prev = now; frame((now - t0) / 1000 % 8); requestAnimationFrame(loop); };
   loop();
 }).catch((e) => { console.error(e); document.title = 'ready'; });

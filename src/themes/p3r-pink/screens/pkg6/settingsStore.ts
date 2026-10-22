@@ -1,9 +1,11 @@
 /**
- * P6 私有：设置页的本地假 store（模拟真实 useAppStore.settings + updateSettings）。
- * 设置页各分组、助手面板、模型抽屉共享同一份，刷新页面复原。
+ * P6 私有：设置页的 store。
+ * demo 版是纯本地假 store；接入后这里桥到真实 useAppStore.settings + setTheme。
+ * 安全边界：API Key / 验证状态 / 和风 Key 一律留在本地，不读取、不显示、不写回真实 settings。
  */
-import { useSyncExternalStore } from 'react';
-import type { AttributeId, KeywordRule, NotifSlot, SummaryPromptPreset, ThemeType } from '@real/types';
+import { useMemo, useSyncExternalStore } from 'react';
+import { useAppStore } from '@/store';
+import type { AttributeId, KeywordRule, NotifSlot, Settings, SummaryPromptPreset, ThemeType } from '@real/types';
 import { ATTRS, DEFAULT_LEVEL_TITLES, KEYWORD_RULES, LEVEL_PRESETS, NOTIF_SLOTS, PERSONAS, SUMMARY_PRESETS, type ProviderId } from '@pink/mock/pkg6';
 
 export interface MockSettings {
@@ -24,7 +26,7 @@ export interface MockSettings {
 }
 
 const names = Object.fromEntries(ATTRS.map((a) => [a.id, ''])) as Record<AttributeId, string>;
-let state: MockSettings = {
+const DEFAULTS: MockSettings = {
   theme: 'pink', customThemeColor: '#e64a84', customSoundScheme: 'pink', customTarotSet: 'p3',
   soundMuted: false, soundVolume: 80, backgroundAnimation: ['particles'], splashStyle: 'p3', splashSpeed: 'normal',
   backgroundImage: undefined, backgroundOpacity: 0.3, backgroundOrientation: 'landscape',
@@ -41,10 +43,113 @@ let state: MockSettings = {
   notificationsEnabled: true, notifPermission: false, notifAiCopy: true, notifProactive: false, notifSlots: NOTIF_SLOTS,
 };
 
-const ls = new Set<() => void>();
-export const updateSettings = (p: Partial<MockSettings>) => { state = { ...state, ...p }; ls.forEach((l) => l()); };
-const sub = (f: () => void) => { ls.add(f); return () => { ls.delete(f); }; };
-export const getSettings = () => state;
-export const useSettings = () => useSyncExternalStore(sub, getSettings, getSettings);
+const TO_REAL: Record<string, keyof Settings> = {
+  customThemeColor: 'customThemeColor', customSoundScheme: 'customSoundScheme', customTarotSet: 'customTarotSet',
+  backgroundImage: 'backgroundImage', backgroundOpacity: 'backgroundOpacity', backgroundOrientation: 'backgroundOrientation',
+  backgroundAnimation: 'backgroundAnimation', splashStyle: 'splashStyle',
+  soundMuted: 'soundMuted', soundVolume: 'soundVolume',
+  attributeNames: 'attributeNames', levelThresholds: 'levelThresholds', levelTitles: 'attributeLevelTitles',
+  difficulty: 'levelDifficulty', keywordRules: 'keywordRules', lifeQuestAiCard: 'lifeQuestAiCard', battleEnabled: 'battleEnabled',
+  countercurrentEnabled: 'countercurrentEnabled', ledgerEnabled: 'ledgerEnabled', currency: 'currency',
+  spendEvalEnabled: 'spendEvalEnabled', ledgerPayCycleEnabled: 'ledgerPayCycleEnabled', ledgerResetDay: 'ledgerResetDay',
+  summaryModel: 'summaryModel', navigatorModel: 'navigatorModel', assistantModel: 'assistantModel',
+  tarotDeliberate: 'tarotDailyDeliberate', summaryDeliberate: 'summaryDeliberate',
+  summaryPresets: 'summaryPromptPresets', summaryPresetId: 'summaryActivePresetId', autoSummary: 'summaryAutoWrite',
+  provider: 'summaryApiProvider', customName: 'customProviderName', customProtocol: 'customProviderProtocol',
+  customPreset: 'customProviderPreset', baseUrl: 'summaryApiBaseUrl',
+  realisticTyping: 'navigatorImmersive', wishProposal: 'wishAgentProposals', proactive: 'navigatorPushEnabled',
+  activePersona: 'navigatorPresetId',
+  notificationsEnabled: 'notificationsEnabled', notifAiCopy: 'notifAIVoice', notifProactive: 'navigatorPushEnabled',
+  notifSlots: 'notificationSlots',
+};
+
+let local: Partial<MockSettings> = {};
+const listeners = new Set<() => void>();
+const sub = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
+const getLocal = () => local;
+const useLocal = () => useSyncExternalStore(sub, getLocal, getLocal);
+
+function merge(real: Settings | undefined, theme: ThemeType | undefined, l: Partial<MockSettings>): MockSettings {
+  const r = real;
+  return {
+    ...DEFAULTS,
+    theme: theme ?? DEFAULTS.theme,
+    customThemeColor: r?.customThemeColor ?? DEFAULTS.customThemeColor,
+    customSoundScheme: r?.customSoundScheme ?? DEFAULTS.customSoundScheme,
+    customTarotSet: r?.customTarotSet ?? DEFAULTS.customTarotSet,
+    backgroundImage: r?.backgroundImage ?? DEFAULTS.backgroundImage,
+    backgroundOpacity: r?.backgroundOpacity ?? DEFAULTS.backgroundOpacity,
+    backgroundOrientation: r?.backgroundOrientation ?? DEFAULTS.backgroundOrientation,
+    backgroundAnimation: r?.backgroundAnimation ?? DEFAULTS.backgroundAnimation,
+    splashStyle: r?.splashStyle ?? DEFAULTS.splashStyle,
+    soundMuted: r?.soundMuted ?? DEFAULTS.soundMuted,
+    soundVolume: r?.soundVolume ?? DEFAULTS.soundVolume,
+    attributeNames: (r?.attributeNames as Record<AttributeId, string>) ?? DEFAULTS.attributeNames,
+    levelThresholds: r?.levelThresholds ?? DEFAULTS.levelThresholds,
+    levelTitles: (r?.attributeLevelTitles as Record<AttributeId, string[]>) ?? DEFAULTS.levelTitles,
+    difficulty: r?.levelDifficulty ?? DEFAULTS.difficulty,
+    keywordRules: r?.keywordRules ?? DEFAULTS.keywordRules,
+    lifeQuestAiCard: r?.lifeQuestAiCard ?? DEFAULTS.lifeQuestAiCard,
+    battleEnabled: r?.battleEnabled ?? DEFAULTS.battleEnabled,
+    countercurrentEnabled: r?.countercurrentEnabled ?? DEFAULTS.countercurrentEnabled,
+    ledgerEnabled: r?.ledgerEnabled ?? DEFAULTS.ledgerEnabled,
+    currency: r?.currency ?? DEFAULTS.currency,
+    spendEvalEnabled: r?.spendEvalEnabled ?? DEFAULTS.spendEvalEnabled,
+    ledgerPayCycleEnabled: r?.ledgerPayCycleEnabled ?? DEFAULTS.ledgerPayCycleEnabled,
+    ledgerResetDay: r?.ledgerResetDay ?? DEFAULTS.ledgerResetDay,
+    summaryModel: r?.summaryModel ?? DEFAULTS.summaryModel,
+    navigatorModel: r?.navigatorModel ?? DEFAULTS.navigatorModel,
+    assistantModel: r?.assistantModel ?? DEFAULTS.assistantModel,
+    tarotDeliberate: r?.tarotDailyDeliberate ?? DEFAULTS.tarotDeliberate,
+    summaryDeliberate: r?.summaryDeliberate ?? DEFAULTS.summaryDeliberate,
+    summaryPresets: r?.summaryPromptPresets ?? DEFAULTS.summaryPresets,
+    summaryPresetId: r?.summaryActivePresetId ?? DEFAULTS.summaryPresetId,
+    autoSummary: r?.summaryAutoWrite ?? DEFAULTS.autoSummary,
+    provider: (r?.summaryApiProvider as ProviderId) ?? DEFAULTS.provider,
+    customName: r?.customProviderName ?? DEFAULTS.customName,
+    customProtocol: r?.customProviderProtocol ?? DEFAULTS.customProtocol,
+    customPreset: r?.customProviderPreset ?? DEFAULTS.customPreset,
+    baseUrl: r?.summaryApiBaseUrl ?? DEFAULTS.baseUrl,
+    realisticTyping: r?.navigatorImmersive ?? DEFAULTS.realisticTyping,
+    wishProposal: r?.wishAgentProposals ?? DEFAULTS.wishProposal,
+    proactive: r?.navigatorPushEnabled ?? DEFAULTS.proactive,
+    activePersona: r?.navigatorPresetId ?? DEFAULTS.activePersona,
+    notificationsEnabled: r?.notificationsEnabled ?? DEFAULTS.notificationsEnabled,
+    notifAiCopy: r?.notifAIVoice ?? DEFAULTS.notifAiCopy,
+    notifSlots: r?.notificationSlots ?? DEFAULTS.notifSlots,
+    hasPresetNameBackup: !!r?.aiPresetNameBackup,
+    ...l,
+  };
+}
+
+export const getSettings = () => {
+  const st = useAppStore.getState();
+  return merge(st.settings, st.user?.theme, local);
+};
+
+export const useSettings = () => {
+  const real = useAppStore((s) => s.settings);
+  const theme = useAppStore((s) => s.user?.theme);
+  const l = useLocal();
+  return useMemo(() => merge(real, theme, l), [real, theme, l]);
+};
+
+export const updateSettings = (p: Partial<MockSettings>) => {
+  const realPatch: Partial<Settings> = {};
+  const localPatch: Partial<MockSettings> = {};
+  for (const [k, v] of Object.entries(p)) {
+    if (k === 'theme') continue;
+    const rk = TO_REAL[k];
+    if (rk) (realPatch as Record<string, unknown>)[rk] = v;
+    else localPatch[k as keyof MockSettings] = v as never;
+  }
+  if (Object.keys(localPatch).length) {
+    local = { ...local, ...localPatch };
+    listeners.forEach((fn) => fn());
+  }
+  if (p.theme) void useAppStore.getState().setTheme(p.theme);
+  if (Object.keys(realPatch).length) void useAppStore.getState().updateSettings(realPatch);
+};
+
 export const attrLabel = (s: MockSettings, id: AttributeId) => s.attributeNames[id] || ATTRS.find((a) => a.id === id)!.defaultLabel;
 export const activePreset = (s: MockSettings) => s.personas.find((p) => p.id === s.activePersona) ?? s.personas[0];

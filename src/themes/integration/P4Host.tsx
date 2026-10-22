@@ -7,6 +7,7 @@ import { PrefsBridge } from '@yellow/bridge/PrefsBridge';
 import { RouteBridge } from '@yellow/bridge/RouteBridge';
 import { setPresence, usePresence } from '@yellow/screens/pkg5/presence';
 import { PresenceBridge } from './PresenceBridge';
+import { P4ToastProvider } from '@yellow/kit';
 
 function PresenceSync() {
   const presence = usePresence();
@@ -49,10 +50,12 @@ export function P4Host({ children }: { children: ReactNode }) {
   usePortalScope();
   return (
     <div data-p4g-scope="" style={{ display: 'contents' }}>
-      <PrefsBridge />
-      <RouteBridge />
-      <PresenceSync />
-      {children}
+      <P4ToastProvider>
+        <PrefsBridge />
+        <RouteBridge />
+        <PresenceSync />
+        {children}
+      </P4ToastProvider>
     </div>
   );
 }

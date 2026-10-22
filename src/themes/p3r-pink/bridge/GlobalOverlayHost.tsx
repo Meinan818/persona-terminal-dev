@@ -40,7 +40,7 @@ export function GlobalOverlayHost() {
       <AchievementUnlockP3 isOpen={!!ach && !blocker && !levelUp} onClose={() => setAch(null)} achievementTitle={ach?.title ?? ''} {...(lines ? { lines } : {})} />
       <SkillUnlockP3 isOpen={!!skill && !blocker && !levelUp && !ach} onClose={() => setSkill(null)} skillName={skill?.name ?? ''} />
       <BigDealClearCutIn open={!!bigDeal && !blocker} onClose={clearBigDeal} params={new URLSearchParams()} data={bigDeal ?? undefined} />
-      <OrgCelebrationView open={!!orgHead && !blocker} onClose={shiftOrg} head={orgHead as Parameters<typeof OrgCelebrationView>[0]['head']} />
+      {orgHead && <OrgCelebrationView open={!blocker} onClose={shiftOrg} head={orgHead as Parameters<typeof OrgCelebrationView>[0]['head']} />}
       <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
         onConfirm={() => { if (wishProposal) void setWishProgress(wishProposal.wishId, wishProposal.toPct, { reason: wishProposal.reason }); setWishProposal(null); }} />
       <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} count={orphan?.count} bytes={orphan?.bytes} onConfirm={() => { void pruneOrphan(); dismissOrphan(); }} />

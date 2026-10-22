@@ -250,6 +250,8 @@ export class P5Hud {
       pc.c.y = pc.base.y - (s.active ? 14 : 0);
       (pc.c.getChildByLabel('baton') as Text).text = (s as any).baton ? `BATON ×${(s as any).baton}` : '';
       pc.c.alpha = this.partyPick.length && !this.partyPick.includes(s.id) ? 0.45 : 1;
+      // M4b（B19）：倒下的队员卡变灰（可被返魂香复活）
+      bg.tint = s.hp <= 0 ? 0x555555 : bg.tint; if (s.hp <= 0) pc.c.alpha = Math.min(pc.c.alpha, 0.6);
     }
   }
   private drawParty(dt: number) {

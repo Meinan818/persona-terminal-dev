@@ -1,0 +1,556 @@
+{
+ "size": "844x390",
+ "fast": true,
+ "wipe": null,
+ "retreat": true,
+ "retried": 0,
+ "endScreen": "failend",
+ "battles": 0,
+ "secs": 47.823,
+ "errors": [],
+ "steps": [
+  "8.1s hub",
+  "12.6s shot 01-hub",
+  "14.4s shot 02-board",
+  "17.4s shot 03-cc-locked",
+  "17.4s callingcard locked (D3)",
+  "20.0s explore",
+  "20.9s shot 05-explore-gate",
+  "20.9s tap [7,1] explore:gate",
+  "22.0s tap [7,1] explore:gate",
+  "23.3s tap [7,1] explore:gate",
+  "24.4s tap [8,4] explore:gate",
+  "26.2s shot 08-card",
+  "28.7s shot 05-explore",
+  "28.7s tap [8,5] explore",
+  "30.8s shot 05-fork",
+  "31.8s shot 05-explore-risk",
+  "31.8s tap [0,5] explore:risk",
+  "32.9s tap [7,5] explore:risk",
+  "35.1s tap [7,5] explore",
+  "36.2s tap [7,5] explore",
+  "38.5s tap [8,5] explore",
+  "39.6s tap [8,5] explore",
+  "41.9s shot 05-safe",
+  "45.3s shot 13-failend",
+  "47.8s shot 11-hub-after"
+ ],
+ "ok": true,
+ "flowErrors": [],
+ "timings": [
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 1506
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 3
+  },
+  {
+   "ev": "explore:move",
+   "ms": 1849,
+   "cap": 2000,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 467,
+   "cap": 500,
+   "recipe": "explore.spotted",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 233,
+   "cap": 250,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:cover",
+   "ms": 284,
+   "cap": 300,
+   "recipe": "explore.cover",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 383,
+   "cap": 400,
+   "recipe": "explore.interact.chest",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 463,
+   "cap": 500,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:cover",
+   "ms": 283,
+   "cap": 300,
+   "recipe": "explore.cover",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 350,
+   "cap": 900,
+   "recipe": "map.encounter",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "card:pick",
+   "ms": 550,
+   "cap": 600,
+   "recipe": "card.pick",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 775,
+   "cap": 800,
+   "recipe": "explore.exit",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 470,
+   "cap": 500,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 683,
+   "cap": 700,
+   "build": 1
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 7
+  },
+  {
+   "ev": "explore:move",
+   "ms": 933,
+   "cap": 1000,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 383,
+   "cap": 400,
+   "recipe": "explore.interact.chest",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "card:pick",
+   "ms": 550,
+   "cap": 600,
+   "recipe": "card.pick",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 1617,
+   "cap": 1750,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 350,
+   "cap": 900,
+   "recipe": "map.encounter",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "card:pick",
+   "ms": 550,
+   "cap": 600,
+   "recipe": "card.pick",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 767,
+   "cap": 800,
+   "recipe": "explore.exit",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 467,
+   "cap": 500,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 0
+  },
+  {
+   "ev": "run:retreat",
+   "ms": 983,
+   "cap": 1000,
+   "recipe": "run.retreat",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 683,
+   "cap": 700,
+   "build": 1
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 683,
+   "cap": 700,
+   "build": 0
+  }
+ ],
+ "fx": null,
+ "log": [
+  "bgm:cue hub.home",
+  "prewarm explore 3745ms {\"load\":37,\"build\":1507,\"upload.tex\":2036,\"upload.board\":150,\"render\":16}",
+  "bgm:cue requests",
+  "bgm:cue hub.home",
+  "callingcard locked",
+  "bgm:cue hub.home",
+  "bgm:cue explore",
+  "alert:change 20",
+  "map:encounter gate preemptive",
+  "fastwin echo+noisy+echo",
+  "bgm:cue explore",
+  "bgm:cue explore",
+  "map:move fork",
+  "bgm:cue explore.risk",
+  "map:encounter elite normal",
+  "fastwin elite+noisy+echo",
+  "bgm:cue explore.risk",
+  "bgm:cue explore.safe",
+  "bgm:cue explore.escape",
+  "bgm:cue hub.home"
+ ],
+ "save": {
+  "money": 14500,
+  "lv": [
+   [
+    "joker",
+    12
+   ],
+   [
+    "skull",
+    11
+   ],
+   [
+    "mona",
+    11
+   ],
+   [
+    "panther",
+    11
+   ]
+  ],
+  "cleared": []
+ },
+ "umbraErrors": [],
+ "audio": [
+  "se:allout.hit(silent)",
+  "se:allout.hit(silent)",
+  "se:se.rank.stamp(silent)",
+  "se:se.battle.start(silent)",
+  "se:se.battle.start(silent)",
+  "se:se.weak(silent)",
+  "se:se.onemore(silent)",
+  "se:se.holdup(silent)",
+  "se:se.attack.slash(silent)",
+  "se:se.hit.phys(silent)",
+  "se:se.guard(silent)",
+  "se:se.result(silent)",
+  "se:se.levelup(silent)",
+  "bgm:hub.home(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:requests(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.ui.confirm(silent)",
+  "bgm:hub.home(silent)",
+  "se:se.ui.confirm(silent)",
+  "bgm:hub.home(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:explore(silent)",
+  "se:se.step(silent)",
+  "se:se.spotted(silent)",
+  "se:se.alert.up(silent)",
+  "se:se.step(silent)",
+  "se:se.cover(silent)",
+  "se:se.interact(silent)",
+  "se:se.item.get(silent)",
+  "se:se.step(silent)",
+  "se:se.cover(silent)",
+  "bgm:explore(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.exit.open(silent)",
+  "se:se.step(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:explore(silent)",
+  "se:se.ui.confirm(silent)",
+  "bgm:explore.risk(silent)",
+  "se:se.scene.enter(silent)",
+  "se:se.step(silent)",
+  "se:se.interact(silent)",
+  "se:se.money.get(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.step(silent)",
+  "bgm:explore.risk(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.exit.open(silent)",
+  "se:se.step(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:explore.safe(silent)",
+  "se:se.ui.confirm(silent)",
+  "bgm:explore.escape(silent)",
+  "se:se.scene.enter(silent)",
+  "se:se.ui.confirm(silent)",
+  "se:se.scene.enter(silent)",
+  "bgm:hub.home(silent)"
+ ],
+ "exLog": [
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 1506
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 681,
+   "cap": 700,
+   "build": 3
+  },
+  {
+   "ev": "explore:move",
+   "ms": 1849,
+   "cap": 2000,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:spotted",
+   "ms": 467,
+   "cap": 500,
+   "recipe": "explore.spotted",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 233,
+   "cap": 250,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:cover",
+   "ms": 284,
+   "cap": 300,
+   "recipe": "explore.cover",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 383,
+   "cap": 400,
+   "recipe": "explore.interact.chest",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 463,
+   "cap": 500,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:cover",
+   "ms": 283,
+   "cap": 300,
+   "recipe": "explore.cover",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 350,
+   "cap": 900,
+   "recipe": "map.encounter",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "card:pick",
+   "ms": 550,
+   "cap": 600,
+   "recipe": "card.pick",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 775,
+   "cap": 800,
+   "recipe": "explore.exit",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 470,
+   "cap": 500,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 683,
+   "cap": 700,
+   "build": 1
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 7
+  },
+  {
+   "ev": "explore:move",
+   "ms": 933,
+   "cap": 1000,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:interact",
+   "ms": 383,
+   "cap": 400,
+   "recipe": "explore.interact.chest",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "card:pick",
+   "ms": 550,
+   "cap": 600,
+   "recipe": "card.pick",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 1617,
+   "cap": 1750,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "map:encounter",
+   "ms": 350,
+   "cap": 900,
+   "recipe": "map.encounter",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "card:pick",
+   "ms": 550,
+   "cap": 600,
+   "recipe": "card.pick",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:exit",
+   "ms": 767,
+   "cap": 800,
+   "recipe": "explore.exit",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "explore:move",
+   "ms": 467,
+   "cap": 500,
+   "recipe": "explore.move",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 680,
+   "cap": 700,
+   "build": 0
+  },
+  {
+   "ev": "run:retreat",
+   "ms": 983,
+   "cap": 1000,
+   "recipe": "run.retreat",
+   "forced": false,
+   "skipped": false
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 683,
+   "cap": 700,
+   "build": 1
+  },
+  {
+   "ev": "scene:wipe",
+   "ms": 683,
+   "cap": 700,
+   "build": 0
+  }
+ ]
+}

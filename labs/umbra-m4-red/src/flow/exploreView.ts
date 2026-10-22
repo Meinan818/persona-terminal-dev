@@ -42,7 +42,9 @@ export class ExploreView {
     this.diamond(g, x, y, h).fill(top).stroke({ color: edge, width: 2, alpha: 0.9 });
     (g as any).zIndex = (x + y) * 10 + 5; return g;
   }
+  buildSteps: Record<string, number> = {};
   build(ex: Explore) {
+    let tk = performance.now(); const lap = (k: string) => { const n = performance.now(); this.buildSteps[k] = Math.round(n - tk); tk = n; };
     this.ex = ex; [this.tiles, this.cones, this.marks, this.units, this.fx, this.bfx].forEach((c) => c.removeChildren().forEach((k) => k.destroy({ children: true })));
     this.foeS.clear(); this.chestS = []; this.hiddenS = [];
     // 居中：菱形包围盒中心对齐 (640, 400)
@@ -59,7 +61,7 @@ export class ExploreView {
     const rim = new Graphics();
     for (let x = 0; x < ex.W; x++) { const p = this.iso(x, ex.H - 1); rim.poly([p.x - TW / 2, p.y, p.x, p.y + TH / 2, p.x, p.y + TH / 2 + 22, p.x - TW / 2, p.y + 22]).fill(0x14020a); }
     for (let y = 0; y < ex.H; y++) { const p = this.iso(ex.W - 1, y); rim.poly([p.x + TW / 2, p.y, p.x, p.y + TH / 2, p.x, p.y + TH / 2 + 22, p.x + TW / 2, p.y + 22]).fill(0x2a050a); }
-    this.tiles.addChild(rim, floor);
+    this.tiles.addChild(rim, floor); lap('floor');
     // 出口（红色铁栅）
     const e = this.iso(ex.exit[0], ex.exit[1]);
     const ef = new Graphics(); this.diamond(ef, ex.exit[0], ex.exit[1]).fill({ color: RED, alpha: 0.55 }).stroke({ color: 0xffffff, width: 3 });
@@ -73,10 +75,11 @@ export class ExploreView {
       if (t === 'C') { const b = this.block(x, y, COVER, 0x5a3a2a, 0x3a2418, 0x2a1810, 0xffffff); const p = this.iso(x, y); b.poly([p.x - 10, p.y - COVER - 4, p.x, p.y - COVER - 14, p.x + 10, p.y - COVER - 4]).stroke({ color: 0x6fd3ff, width: 3 }); this.units.addChild(b); }
       if (t === 'H') { const g = this.block(x, y, WALL, 0x1a1214, 0x0d0809, 0x2a1a1c); const p = this.iso(x, y); g.moveTo(p.x - 18, p.y - 30).lineTo(p.x - 4, p.y - 12).lineTo(p.x - 12, p.y + 2).lineTo(p.x + 6, p.y + 16).stroke({ color: 0xffd34a, width: 3, alpha: 0.85 }); this.units.addChild(g); this.hiddenS.push({ at: [x, y], g }); }
     }
+    lap('walls');
     for (const c of ex.chests) { const g = this.chest(c.at); this.chestS.push({ at: c.at, g }); }
-    for (const f of ex.foes) this.foeS.set(f.id, this.foe(f));
+    for (const f of ex.foes) this.foeS.set(f.id, this.foe(f)); lap('foes');
     this.lead = this.chibi('chibi.joker', 128); this.follow = this.party.slice(1, 4).map((id) => this.chibi('chibi.' + id, id === 'mona' ? 84 : 110)).filter(Boolean) as Sprite[];
-    this.placeParty(); this.drawCones();
+    lap('party'); this.placeParty(); this.drawCones(); lap('cones');
   }
   chibi(id: string, h: number) {
     const tx = this.tex[id] ?? this.tex['chibi.joker']; const s = new Sprite(tx); s.anchor.set(0.5, 0.94); s.scale.set(h / tx.height);

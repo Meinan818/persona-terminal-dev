@@ -70,7 +70,7 @@ export function startFlow(ctx: Ctx) {
       await yieldIdle();
       if (!view) { view = new ExploreView(eng.tex, save.party); layer.addChild(view.root); view.root.label = 'explore'; view.root.visible = false; }
       const v = view; const sample = (ROOMS as any).boss.r1;
-      v.build(new Explore({ ...sample, kind: 'boss' })); lap('build');
+      v.build(new Explore({ ...sample, kind: 'boss' })); lap('build'); F.buildSteps = { ...v.buildSteps };
       await yieldIdle();
       // 纹理逐张上传（每张之间让出主线程），再上传棋盘 Graphics
       const texs = ['chibi.joker', 'chibi.skull', 'chibi.mona', 'chibi.panther', 'chibi.guard', 'chibi.elite', 'enemy.boss1', 'enemy.boss2', 'enemy.elite', 'bg.explore.palace', 'callingcard'].map((k) => eng.tex[k]).filter(Boolean);
@@ -88,7 +88,7 @@ export function startFlow(ctx: Ctx) {
   const idle = (f: () => void) => ((window as any).requestIdleCallback ? (window as any).requestIdleCallback(f, { timeout: 1500 }) : setTimeout(f, 400));
   // ================================================================ HUB
   async function hub(): Promise<void> {
-    idle(() => { prewarmExplore(); });
+    if (ctx.qs.get('prewarmex') !== '0') idle(() => { prewarmExplore(); });
     F.screen = 'hub'; setHubBg('bg.hideout'); bgm('hub.home');
     const req = selected ? REQ.requests.find((r) => r.id === selected)! : null;
     const mem = save.party.map((id) => `<div class="hub-mem">${headImg(id)}<em>Lv${save.members[id].lv}</em></div>`).join('');
@@ -100,10 +100,10 @@ export function startFlow(ctx: Ctx) {
       </div>
       <div class="hub-info"><div class="hub-card"><b>${L('flow.hub.money')}</b><span>¥${save.money.toLocaleString('en-US')}</span></div><div class="hub-card"><b>${L('flow.hub.cleared')}</b><span>${save.cleared.length}/3</span></div><div class="hub-party">${mem}</div></div>`);
     const id = await tapOnce(d);
-    if (id === 'board') return wipe(() => board()).then(() => hub());
-    if (id === 'card') { if (!selected) { toast(L('flow.need.req'), true); return hub(); } if (!save.ccUnlocked(selected)) { F.log.push('callingcard locked'); toast(save.cleared.includes(selected) ? L('flow.cc.done') : fmt('flow.cc.locked', { n: save.ccNeed(selected) }), true); return hub(); } return wipe(() => callingCard()).then(() => hub()); }
+    if (id === 'board') return wipeRet(() => board()).then(() => hub());
+    if (id === 'card') { if (!selected) { toast(L('flow.need.req'), true); return hub(); } if (!save.ccUnlocked(selected)) { F.log.push('callingcard locked'); toast(save.cleared.includes(selected) ? L('flow.cc.done') : fmt('flow.cc.locked', { n: save.ccNeed(selected) }), true); return hub(); } return wipeRet(() => callingCard()).then(() => hub()); }
     if (id === 'go') { if (!selected) { toast(L('flow.need.req'), true); return hub(); } await infiltrate(selected); return hub(); }
-    if (id === 'shop' || id === 'velvet') return wipe(() => wip(id)).then(() => hub());
+    if (id === 'shop' || id === 'velvet') return wipeRet(() => wip(id)).then(() => hub());
   }
   function btn(id: string, k: string, hot = false, wip: boolean | string = false) { return `<button class="fl-btn${hot ? ' hot' : ''}${wip === true ? ' wip' : wip ? ' ' + wip : ''}" data-id="${id}"><span class="zh">${L(k)}</span><span class="en">${L(k + '.en')}</span></button>`; }
   async function wip(id: string) {
@@ -281,7 +281,7 @@ export function startFlow(ctx: Ctx) {
     (window as any).__flowAward = (rw: any) => run.award(rw.exp, rw.money, rw.drops.map((d: any) => ({ id: d.id, n: d.n })));
     // 测试钩子：?wipe=boss → BOSS 战敌攻 ×30（自动化覆盖全灭失败分支，真战斗）；?fastwin=1 跳过战斗（wipe 指定的那场除外）
     const wipeT = ctx.qs.get('wipe'); const forceWipe = wipeT === 'all' || (wipeT === 'boss' && isBoss);
-    const mods = run.mods(); if (forceWipe) { mods.enemyAtk *= 30; mode = 'ambushed'; }
+    const mods = run.mods(); if (forceWipe) { mods.enemyAtk *= 30; mods.enemyHp *= 20; mode = 'ambushed'; }
     const out = ctx.qs.get('fastwin') === '1' && !forceWipe ? fakeWin(run, types) : await ctx.runBattle({ types, mode, carry: carry(), mods, party: save.party, callingCard: run.callingCard, optional });
     for (const [id, c] of Object.entries(out.carry)) { const m = save.members[id]; m.hp = Math.min(m.hpMax, Math.max(out.lost ? 0 : 1, c.hp + (m.hpMax - c.hpMax))); m.sp = Math.min(m.spMax, c.sp + (m.spMax - c.spMax)); }
     run.battles++; run.turns += out.turns;

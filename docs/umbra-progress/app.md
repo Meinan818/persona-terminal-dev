@@ -12,6 +12,7 @@
 - 步 4 规则事件：`P5Battle.emit` + HOLD UP 三选一（allout/talk/release）→ `holdup → holdup:result → allout/talk:start/unit:flee+battle:end`，连点幂等，1/3/5 敌覆盖。
 - 步 6 音频核心：`src/umbra/audio/audioBus.ts`（缺文件静默、三档音量、解锁、voiceLine）+ `bgm.ts`（`bgm:cue` 条件键最多胜出、权重随机、noRepeat、prefs off/lock）。
 - 步 6 present.json：`scripts/generate-present.mjs` + `npm run present:gen` 扫描 `skins/<id>/audio/{bgm,se,voice}/` 生成实际文件清单；`present.json` 已 gitignore（构建产物不入库）。
+- 步 6 三档音量 UI：`src/components/AudioVolumeGroup.tsx`（BGM/音效/语音，沿用 SoundVolumeRow 样式，松手写档），`Settings.voiceVolume` 新增字段并接入设置页「颜色与声音」。
 
 ## 皮肤包 v1 合并与接线
 
@@ -27,7 +28,7 @@
 ## 待接（v1.3 步 5–7）
 
 - 步 5 引擎原语（17 个 Pixi 原语 + camera + holdupRing）：样板在 `origin/feat/umbra-skin-p5r-red:labs/umbra-m3-red/src/umbra/engine/`（16 文件），移植量大；本机无 GPU、红色皮肤包未进 `src/umbra/skins/`，无法按任务书截图验收。
-- 步 6 剩余：设置页三档音量写档、首包不含音频的构建排除，依赖 `skins/<id>/audio/` 音频文件（D-008，尚未入库）。
+- 步 6 剩余：首包不含音频的构建排除，依赖 `skins/<id>/audio/` 音频文件（D-008，尚未入库）。
 - 步 7 skin:check 新校验：可在皮肤包就位后补事件/原语名单、wallMs、labels、音频引用与 hud 命中区校验。
 - 步 7 剩余：仅 hud.system 新范围（次要）。
 

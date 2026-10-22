@@ -423,8 +423,9 @@ python3 tools/sheets.py && python3 tools/sheets4.py && python3 tools/budget.py
 
 ## 5.5 截图与录像
 
+- 拼图：`shots5/contact5-<尺寸>.png`、`shots5/contact5-summon-844x390.png`。
 - 第五阶段关键帧：`shots5/<尺寸>-{51-idle-a,51-idle-b,53-holdup-*,54-start-*,55-showtime-*}.png`（844×390 / 667×375 / 1024×768 / 1180×820 / 1280×720 / 1920×1080），召唤 `shots5/844x390-52-summon-{queen,violet,mona}-{a-push,b-rip,c-burst,d-reveal,e-cast}.png`。
-- clips（844×390，15fps）：`shots/clips/{summon-eiha,attack(含 HOLD UP),showtime,battlestart}.mp4`。
+- clips（844×390，15fps，本批全部重录）：`shots/clips/{summon-eiha,attack(含 HOLD UP 环绕),showtime,battlestart}.mp4`（allout 沿用第四阶段）。注：中途沙箱重启清空 /tmp，clips 帧缓存已改到 `work/clip-tmp`。
 
 ## 5.6 复现
 

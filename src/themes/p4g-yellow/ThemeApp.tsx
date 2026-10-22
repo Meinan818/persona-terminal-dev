@@ -13,6 +13,8 @@ import { RouteBridge } from './bridge/RouteBridge';
 import { PrefsBridge } from './bridge/PrefsBridge';
 import { GlobalOverlayHost } from './bridge/GlobalOverlayHost';
 import { CallingCardOverlayHost } from './bridge/CallingCardOverlayHost';
+import { usePresence, setPresence } from '@yellow/screens/pkg5/presence';
+import { PresenceBridge } from '@/themes/integration/PresenceBridge';
 
 let inited = false;
 function initOnce() {
@@ -29,9 +31,15 @@ export default function ThemeApp() {
     <>
       <PrefsBridge />
       <RouteBridge />
+      <PresenceSync />
       <DemoApp />
       <GlobalOverlayHost />
       <CallingCardOverlayHost />
     </>
   );
+}
+
+function PresenceSync() {
+  const presence = usePresence();
+  return <PresenceBridge presence={presence} setPresence={setPresence} />;
 }

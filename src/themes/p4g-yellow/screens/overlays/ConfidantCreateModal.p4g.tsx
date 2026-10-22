@@ -2,11 +2,7 @@
  * 结识一位同伴（真实 ConfidantCreateModal）：basic → description → trait(4 问) → matching → result / error。
  * 路由 #/overlay/bond-create?step=basic|description|trait|matching|result|error
  */
-import { useEffect, useMemo, useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import { useAppStore } from '@/store';
-import { aiConfigured } from '@/utils/aiClient';
-import { matchConfidant, type ConfidantMatchResult } from '@/utils/confidantAI';
+import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Input, P4Sheet, P4Switch, P4Textarea, P4Outline } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
@@ -17,15 +13,9 @@ type Stage = 'basic' | 'description' | 'trait' | 'matching' | 'result' | 'error'
 
 export interface CreateResult { name: string; arcanaId: string; orientation: 'upright' | 'reversed'; level: number; description: string; decay: boolean }
 
-export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline, initialStage = 'basic', remaining = 15 }: {
-  isOpen: boolean; onClose: () => void; onCreated?: (id: string) => void; onPickOnline?: () => void; initialStage?: Stage; remaining?: number;
+export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline, initialStage = 'basic', remaining = 15, aiConfigured = false }: {
+  isOpen: boolean; onClose: () => void; onCreated?: (r: CreateResult) => void; onPickOnline?: () => void; initialStage?: Stage; remaining?: number; aiConfigured?: boolean;
 }) {
-  const { settings, confidants, addConfidant, updateConfidant } = useAppStore(useShallow((store) => ({
-    settings: store.settings,
-    confidants: store.confidants,
-    addConfidant: store.addConfidant,
-    updateConfidant: store.updateConfidant,
-  })));
   const [stage, setStage] = useState<Stage>(initialStage);
   const [name, setName] = useState(initialStage === 'basic' ? '' : '花村');
   const [decay, setDecay] = useState(false);
@@ -33,17 +23,14 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
   const [traitStep, setTraitStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(initialStage === 'error' ? '未能找到合适的阿卡纳，请调整描述后再试' : null);
-  const [picked, setPicked] = useState(1);
-  const [match, setMatch] = useState<ConfidantMatchResult | null>(null);
-  const takenIds = useMemo(() => confidants.filter((c) => !c.archivedAt).map((c) => c.arcanaId), [confidants]);
-  const left = remaining ?? MAJOR_ARCANA_IDS.length - takenIds.length;
+  const [picked, setPicked] = useState(4);
+  const match = { arcanaId: 'magician', orientation: 'upright' as 'upright' | 'reversed', initialIntimacy: 4, interpretation: '魔术师正位：他手里永远握着下一个点子。你们的关系靠「一起折腾」点燃——那些看似胡闹的计划，其实是他表达在乎的方式。', advice: '下次他提出离谱的点子，先说「好啊」，再一起想怎么让它成真。' };
+  useEffect(() => { if (isOpen) { setStage(initialStage); setTraitStep(0); } }, [isOpen, initialStage]);
   useEffect(() => {
-    if (!isOpen) return;
-    setStage(initialStage);
-    setTraitStep(0);
-    setMatch(null);
-    setPicked(1);
-  }, [isOpen, initialStage]);
+    if (stage !== 'matching') return;
+    const t = window.setTimeout(() => setStage('result'), 1800);
+    return () => clearTimeout(t);
+  }, [stage]);
 
   const back = () => {
     if (stage === 'description') setStage('basic');
@@ -53,68 +40,28 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
   };
   const nextBasic = () => {
     if (!name.trim()) return setErr('请先告诉我 Ta 叫什么名字');
-    if (left <= 0) return setErr('22 张大阿卡纳都已占用，请先归档一位同伴再添加');
+    if (remaining <= 0) return setErr('22 张大阿卡纳都已占用，请先归档一位同伴再添加');
     setErr(null); setStage('description');
   };
   const nextDesc = () => {
     if (desc.trim().length < 4) return setErr('请用至少几个字描述 Ta，让塔罗有内容可参考');
     setErr(null); setStage('trait'); setTraitStep(0);
   };
-  const startMatch = async (nextAnswers: string[]) => {
-    setErr(null);
-    setStage('matching');
-    try {
-      let result: ConfidantMatchResult | null = null;
-      const traits = TRAIT_QUESTIONS.map((q, i) => ({ question: q.question, answer: nextAnswers[i] ?? '' }));
-      for (let i = 0; i < 3; i += 1) {
-        const candidate = await matchConfidant({
-          settings,
-          name: name.trim(),
-          description: desc.trim(),
-          takenArcanaIds: takenIds,
-          traits,
-        });
-        if (!takenIds.includes(candidate.arcanaId)) {
-          result = candidate;
-          break;
-        }
-      }
-      if (!result) throw new Error('未能找到合适的阿卡纳，请调整描述后再试');
-      setMatch(result);
-      setPicked(Math.max(1, result.initialIntimacy));
-      setStage('result');
-    } catch (error) {
-      setErr(error instanceof Error ? error.message : '匹配失败');
-      setStage('error');
-    }
-  };
   const answer = (v: string) => {
     const a = [...answers]; a[traitStep] = v; setAnswers(a);
     if (traitStep < TRAIT_QUESTIONS.length - 1) window.setTimeout(() => setTraitStep(traitStep + 1), 160);
-    else window.setTimeout(() => { void startMatch(a); }, 200);
+    else window.setTimeout(() => setStage('matching'), 200);
   };
   const title = stage === 'result' ? '塔罗的回响' : '结识一位同伴';
   const step = stage === 'basic' ? 0 : stage === 'description' ? 1 : stage === 'trait' ? 2 : 3;
-  const card = match ? TAROT_BY_ID[match.arcanaId] : null;
-  const hasApiKey = aiConfigured(settings);
+  const card = TAROT_BY_ID[match.arcanaId];
 
   return (
     <P4Sheet open={isOpen} onClose={onClose} title={title} en="NEW S.LINK" size="tall" dismissible={stage !== 'matching'}
       footer={stage === 'basic' ? <P4Button block size="lg" onClick={nextBasic}>下一步</P4Button>
         : stage === 'description' ? <P4Button block size="lg" onClick={nextDesc}>下一步（还有 4 个小问题）</P4Button>
         : stage === 'result' ? (
-          <div className="flex gap-3"><P4Button variant="secondary" block onClick={() => { setStage('trait'); setTraitStep(TRAIT_QUESTIONS.length - 1); }}>回去改一改</P4Button><P4Button block disabled={!match} onClick={async () => {
-            if (!match) return;
-            try {
-              const created = await addConfidant({ name: name.trim(), description: desc.trim(), match, source: 'offline', initialLevel: picked });
-              if (decay) await updateConfidant(created.id, { decayEnabled: true });
-              onCreated?.(created.id);
-              onClose();
-            } catch (error) {
-              setErr(error instanceof Error ? error.message : '保存失败');
-              setStage('error');
-            }
-          }}>就是 Ta 了</P4Button></div>
+          <div className="flex gap-3"><P4Button variant="secondary" block onClick={() => { setStage('trait'); setTraitStep(TRAIT_QUESTIONS.length - 1); }}>回去改一改</P4Button><P4Button block onClick={() => { onCreated?.({ name: name || '花村', arcanaId: match.arcanaId, orientation: match.orientation, level: picked, description: desc, decay }); onClose(); }}>就是 Ta 了</P4Button></div>
         ) : stage === 'error' ? <P4Button block variant="secondary" onClick={() => setStage('trait')}>返回修改</P4Button> : undefined}
     >
       <div className="mb-3 flex items-center gap-2">
@@ -122,7 +69,7 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
           <button type="button" aria-label="返回上一步" onClick={back} className="p4g-press flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border-3 border-p4g-line bg-p4g-surface font-bold">‹</button>
         )}
         <div className="flex flex-1 gap-1" aria-hidden>{[0, 1, 2, 3].map((i) => <span key={i} className={cx('h-2 flex-1 -skew-x-12', i <= step ? 'bg-p4g-orange' : 'bg-[color:var(--p4g-line-soft)]')} />)}</div>
-        <span className="shrink-0 rounded-[2px] bg-p4g-black px-2 py-0.5 p4g-num text-cap text-p4g-yellow">剩余阿卡纳：{left} / {MAJOR_ARCANA_IDS.length}</span>
+        <span className="shrink-0 rounded-[2px] bg-p4g-black px-2 py-0.5 p4g-num text-cap text-p4g-yellow">剩余阿卡纳：{remaining} / {MAJOR_ARCANA_IDS.length}</span>
       </div>
 
       {stage === 'basic' && (
@@ -142,7 +89,7 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
             <div className="min-w-0 flex-1"><div className="font-display text-body font-bold">开启「逆流」模式</div><div className="text-cap text-p4g-ink-soft">连续 3 天无互动，亲密度每日 -1。</div></div>
             <P4Switch checked={decay} onChange={setDecay} aria-label="开启「逆流」模式" />
           </div>
-          {!hasApiKey && <p className="rounded-sm border-2 border-dashed border-p4g-line px-3 py-2 text-cap text-p4g-ink-soft">未配置 AI API，将使用离线模式进行匹配</p>}
+          {!aiConfigured && <p className="rounded-sm border-2 border-dashed border-p4g-line px-3 py-2 text-cap text-p4g-ink-soft">未配置 AI API，将使用离线模式进行匹配</p>}
         </div>
       )}
 
@@ -160,10 +107,10 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
       {stage === 'result' && (
         <div className="grid grid-cols-1 gap-4">
           <div className="flex min-w-0 items-center gap-4 rounded-sm border-3 border-p4g-black bg-p4g-yellow p-3 text-p4g-black">
-            <TarotCard arcanaId={match?.arcanaId ?? 'fool'} orientation={match?.orientation ?? 'upright'} width={88} />
+            <TarotCard arcanaId={match.arcanaId} orientation={match.orientation} width={88} />
             <div className="min-w-0">
-              <P4Outline size="clamp(22px,6vw,30px)" stroke={5} className="max-w-full">《{card?.name}》{match?.orientation === 'reversed' ? '逆位' : '正位'}</P4Outline>
-              <div className="mt-1 font-display text-meta font-bold">星象建议 Lv.{match?.initialIntimacy ?? 1} · {INTIMACY_LABELS[match?.initialIntimacy ?? 1]}</div>
+              <P4Outline size="clamp(22px,6vw,30px)" stroke={5} className="max-w-full">《{card?.name}》{match.orientation === 'reversed' ? '逆位' : '正位'}</P4Outline>
+              <div className="mt-1 font-display text-meta font-bold">星象建议 Lv.{match.initialIntimacy} · {INTIMACY_LABELS[match.initialIntimacy]}</div>
             </div>
           </div>
           <div className="rounded-sm border-3 border-p4g-line bg-p4g-surface p-3">
@@ -171,9 +118,9 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
             <LevelGrid value={picked} onChange={setPicked} />
             <p className="mt-2 text-2xs text-p4g-ink-soft">AI 只给参考，最终等级由你判断。不同等级会立即解锁对应的日常/战斗能力。</p>
           </div>
-          <div className="rounded-sm border-3 border-p4g-line bg-p4g-surface-2 p-3"><MiniLabel>为什么是这张牌</MiniLabel><p className="text-body leading-relaxed">{match?.interpretation ?? ''}</p></div>
-          <div className="rounded-sm border-3 border-p4g-black bg-[color:var(--p4g-msg)] p-3 text-[color:var(--p4g-msg-ink)]"><div className="mb-1 font-display text-cap font-bold tracking-[0.18em] text-p4g-yellow">未来</div><p className="text-body leading-relaxed">{match?.advice ?? ''}</p></div>
-          {!hasApiKey && <div className="text-center text-cap text-p4g-ink-soft">· 本次为离线匹配 ·</div>}
+          <div className="rounded-sm border-3 border-p4g-line bg-p4g-surface-2 p-3"><MiniLabel>为什么是这张牌</MiniLabel><p className="text-body leading-relaxed">{match.interpretation}</p></div>
+          <div className="rounded-sm border-3 border-p4g-black bg-[color:var(--p4g-msg)] p-3 text-[color:var(--p4g-msg-ink)]"><div className="mb-1 font-display text-cap font-bold tracking-[0.18em] text-p4g-yellow">未来</div><p className="text-body leading-relaxed">{match.advice}</p></div>
+          {!aiConfigured && <div className="text-center text-cap text-p4g-ink-soft">· 本次为离线匹配 ·</div>}
         </div>
       )}
 

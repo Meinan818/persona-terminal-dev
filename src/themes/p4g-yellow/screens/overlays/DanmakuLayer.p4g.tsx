@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, Portal } from '@yellow/kit';
 import { NoiseLayer } from '@yellow/fx';
-import { DANMAKU } from '@yellow/adapters/pkg2';
+import { DANMAKU } from '@yellow/mock/pkg2';
 import { DanmakuStrip } from '@yellow/screens/pkg2/Danmaku';
 
 export default function DanmakuLayer({ open, onClose }: OverlayProps) {

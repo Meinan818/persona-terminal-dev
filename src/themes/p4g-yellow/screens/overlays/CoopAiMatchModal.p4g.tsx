@@ -3,7 +3,7 @@
  * #/overlay/bond-coop-ai-match?step=description|trait|matching|result|error&ai=0
  */
 import { useEffect, useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Outline, P4Sheet, P4Textarea } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';

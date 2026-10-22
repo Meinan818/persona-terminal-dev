@@ -1,5 +1,5 @@
 /* 工作包 4 · 大阿卡纳 22 张牌义（由真实 src/constants/tarot.ts 的 MAJOR_ARCANA 抽取，文案原样）。 */
-import type { AttributeId, Fortune, LongReadingPeriod, TarotOrientation } from '@/types';
+import type { AttributeId, Fortune, LongReadingPeriod, TarotOrientation } from '@real/types';
 import { asset } from '@yellow/lib/asset';
 
 export interface P4Meaning { keywords: string[]; meaning: string; reflection: string }

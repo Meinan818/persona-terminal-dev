@@ -2,8 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CfgBlock, CfgBtn, CfgInput, CfgList, CfgRow, CfgSeg, CfgSelect, CfgSlider, CfgSubhead, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
-import { selectAppTheme, useSelectedTheme } from '@/themes/themeSelection';
-import { BG_ANIMS, SPLASH_STYLES, THEMES } from '@yellow/adapters/pkg6';
+import { BG_ANIMS, SPLASH_STYLES, THEMES } from '@yellow/mock/pkg6';
 import { setPrefs, usePrefs } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
@@ -29,7 +28,6 @@ const PIPE = ['音效通道：Web Audio 缓冲（音量可调）', '音效通道
 
 export function ThemeSection({ focusBlock }: { focusBlock?: string }) {
   const s = useSettings();
-  const theme = useSelectedTheme('yellow');
   const prefs = usePrefs();
   const toast = useToast();
   const [draft, setDraft] = useState(s.customThemeColor);
@@ -46,10 +44,10 @@ export function ThemeSection({ focusBlock }: { focusBlock?: string }) {
         <CfgRow label="主题颜色" hint="选择你喜欢的主题颜色">
           <div role="radiogroup" aria-label="主题颜色" className="grid w-full max-w-[420px] grid-cols-5 gap-1.5">
             {THEMES.map((t) => {
-              const on = theme === t.value;
+              const on = s.theme === t.value;
               const color = t.value === 'custom' ? s.customThemeColor : t.color;
               return (
-                <button key={t.value} type="button" role="radio" aria-checked={on} onClick={() => { void selectAppTheme(t.value).catch(() => toast('主题切换失败，请重试')); }}
+                <button key={t.value} type="button" role="radio" aria-checked={on} onClick={() => updateSettings({ theme: t.value })}
                   className={cx('p4g-press relative flex min-w-0 flex-col items-center gap-1 rounded-[4px] border-2 py-2 transition-colors',
                     on ? 'border-p4g-black bg-p4g-yellow text-p4g-black shadow-hard-sm night:border-p4g-yellow' : 'border-transparent')}>
                   <span className="relative"><Flower size={32} color={on ? 'var(--p4g-white)' : color} />{on && <Sparkle className="absolute -right-3 -top-1.5" />}</span>
@@ -59,7 +57,7 @@ export function ThemeSection({ focusBlock }: { focusBlock?: string }) {
             })}
           </div>
         </CfgRow>
-        {theme === 'custom' && (
+        {s.theme === 'custom' && (
           <>
             <CfgRow label="自定义颜色" hint="输入 HEX 色值或使用色盘选取" htmlFor="p6-hex">
               <div className="flex w-full min-w-0 items-center gap-2">

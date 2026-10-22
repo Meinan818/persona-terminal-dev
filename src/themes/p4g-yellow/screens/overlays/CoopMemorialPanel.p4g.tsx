@@ -1,16 +1,15 @@
 /**
  * 共战纪念（真实 CoopMemorialPanel）：与某位在线同伴共击暗影的全部图章。?state=empty 看空态。
  */
-import type { Confidant } from '@/types';
+import type { Confidant } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet } from '@yellow/kit';
 import { ATTR_NAMES } from '@yellow/screens/pkg3/arcana';
-import { PK3_CONFIDANTS } from '@yellow/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@yellow/mock/pkg3';
 
 const ATTR_ICON: Record<string, string> = { knowledge: '📘', guts: '🔥', dexterity: '🎯', kindness: '🌿', charm: '✨' };
 
-export function MemorialSheet({ isOpen, onClose, confidant, empty }: { isOpen: boolean; onClose: () => void; confidant: Confidant | null; empty?: boolean }) {
-  if (!confidant) return null;
+export function MemorialSheet({ isOpen, onClose, confidant, empty }: { isOpen: boolean; onClose: () => void; confidant: Confidant; empty?: boolean }) {
   const list = empty ? [] : [...(confidant.coopMemorials ?? []), {
     shadowId: 'coop:rain', shadowName: '雨夜之影', weaknessAttribute: 'kindness' as const, defeatedAt: '2026-09-14T22:30:00+08:00', winners: [], myDamage: 210, totalDamage: 520,
   }].sort((a, b) => new Date(b.defeatedAt).getTime() - new Date(a.defeatedAt).getTime());

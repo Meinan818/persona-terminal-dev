@@ -5,13 +5,13 @@
  */
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import type { OrgMember, OrgView } from '@/types';
+import type { OrgMember, OrgView } from '@real/types';
 import { cx } from '@yellow/lib/cx';
 import { p4gAsset } from '@yellow/lib/asset';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { P4Badge, P4Button } from '@yellow/kit';
-import { tarotImg } from '@yellow/adapters/pkg4-tarot';
-import { LEVEL, ORG_LEVEL_NAMES } from '@yellow/adapters/pkg4-org';
+import { tarotImg } from '@yellow/mock/pkg4-tarot';
+import { LEVEL, ORG_LEVEL_NAMES } from '@yellow/mock/pkg4-org';
 import { HonorChip, MemberThumb, memberFacts, seatNo } from './common';
 import { MemberCardBack, MemberCardFront } from './MemberCard';
 import { Coverflow } from './Coverflow';

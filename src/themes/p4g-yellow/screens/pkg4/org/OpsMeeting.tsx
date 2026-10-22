@@ -1,13 +1,13 @@
 /** 真实：src/components/org/OpsSection.tsx（作战）+ src/components/org/MeetingSection.tsx（周日会议） */
 import { useState } from 'react';
-import type { OrgOperation, OrgView } from '@/types';
+import type { OrgOperation, OrgView } from '@real/types';
 import { P4Button, P4Card, P4Input, P4Progress, P4Loading, useToast } from '@yellow/kit';
 import { CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
-import { ATTR_NAMES } from '@yellow/adapters/pkg4-tarot';
-import { OP_HISTORY, OP_KIND_LABEL, OP_STATE, OPS, RESULT_LABEL, POSTS } from '@yellow/adapters/pkg4-org';
-import { shiftKey, TODAY } from '@yellow/adapters/pkg4-astro';
+import { ATTR_NAMES } from '@yellow/mock/pkg4-tarot';
+import { OP_HISTORY, OP_KIND_LABEL, OP_STATE, OPS, RESULT_LABEL, POSTS } from '@yellow/mock/pkg4-org';
+import { shiftKey, TODAY } from '@yellow/mock/pkg4-astro';
 import { OpsDialogs, type OpsStep } from '@yellow/screens/overlays/OpsDialogs.p4g';
 import { OpCreate } from '@yellow/screens/overlays/OpCreateSheet.p4g';
 import { MeChip, displayCodename } from './common';

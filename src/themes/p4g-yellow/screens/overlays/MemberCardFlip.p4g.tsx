@@ -5,12 +5,12 @@
  */
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import type { OrgMember, OrgView } from '@/types';
+import type { OrgMember, OrgView } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { Portal, useEscape, useScrollLock, P4Button, IconClose, P4Outline } from '@yellow/kit';
 import { TVFlash, tvPowerVariants } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { buildView, MEMBERS } from '@yellow/adapters/pkg4-org';
+import { buildView, MEMBERS } from '@yellow/mock/pkg4-org';
 import { MemberCardBack, MemberCardFront } from '@yellow/screens/pkg4/org/MemberCard';
 import { displayCodename } from '@yellow/screens/pkg4/org/common';
 

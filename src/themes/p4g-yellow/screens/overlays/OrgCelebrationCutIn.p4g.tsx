@@ -6,7 +6,7 @@
  */
 import type { OverlayProps } from '@yellow/registry/types';
 import { CelebrationCutInP4G } from './CelebrationCutIn.p4g';
-import { ORG } from '@yellow/adapters/pkg4-org';
+import { ORG } from '@yellow/mock/pkg4-org';
 
 export type OrgCeleb =
   | { kind: 'level'; orgName: string; level: number; levelName?: string; mult: number }

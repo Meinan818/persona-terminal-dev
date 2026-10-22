@@ -7,7 +7,7 @@ import { useRef } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Chip } from '@yellow/kit';
 import { navigate } from '@yellow/shell/shellBus';
-import { ATTR_NAMES, MOCK_ON_THIS_DAY } from '@yellow/adapters/pkg1';
+import { ATTR_NAMES, MOCK_ON_THIS_DAY } from '@yellow/mock/pkg1';
 
 export function OnThisDaySheetP4G({ open, onClose }: OverlayProps) {
   const v = MOCK_ON_THIS_DAY;

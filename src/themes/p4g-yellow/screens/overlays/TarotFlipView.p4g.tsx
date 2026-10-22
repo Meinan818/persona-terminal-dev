@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 塔罗翻面卡（真实 src/components/codex/TarotFlipView.tsx）：「X · 图鉴」；正面牌图，背面牌名 / 英文 / 罗马数字 / 正位·逆位关键词与牌意
  * / 正位·逆位「首次 日期 · N 次 / 尚未抽到」；提示「点一下或左右拖动翻面 · 背面是牌意」。?card=<id>
  * 牌面：大阿卡纳用 public/assets/tarot/p4/<id>.webp（P4 包已拷入；缺失时 P4G 生成式牌面兜底），小阿卡纳用生成式牌面。
@@ -8,8 +8,8 @@ import { asset } from '@yellow/lib/asset';
 import { useImageOk } from '@yellow/lib/slots';
 import { cx } from '@yellow/lib/cx';
 import { FlipBackPanel, FlipCardView } from './FlipCardView.p4g';
-import { P5_MAJOR, P5_MINOR, P5_SUIT_META, type P5TarotCard } from '@yellow/adapters/pkg5-tarot';
-import { useTarotCollectedMap } from '@yellow/adapters/pkg5';
+import { P5_MAJOR, P5_MINOR, P5_SUIT_META, type P5TarotCard } from '@yellow/mock/pkg5-tarot';
+import { TAROT_COLLECTED } from '@yellow/mock/pkg5';
 
 /** 牌面：有图用图，否则 P4G 风格生成牌面（黄底黑框 + 巨号罗马数字 + 名字条）*/
 export function TarotFace({ card, dim, className }: { card: P5TarotCard; dim?: boolean; className?: string }) {
@@ -32,9 +32,8 @@ export function TarotFace({ card, dim, className }: { card: P5TarotCard; dim?: b
 }
 
 export function TarotFlipViewView({ card, open, onClose }: { card: P5TarotCard | null; open: boolean; onClose: () => void }) {
-  const tarotMap = useTarotCollectedMap();
   if (!card) return null;
-  const e = tarotMap[card.id];
+  const e = TAROT_COLLECTED[card.id];
   const up = !!e?.upright.count;
   const rev = !!e?.reversed.count;
   return (

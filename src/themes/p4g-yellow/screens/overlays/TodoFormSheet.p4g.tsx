@@ -8,10 +8,10 @@
  * ?variant=edit 编辑；?variant=big 大事；?variant=pact 约定待办。
  */
 import { useEffect, useState } from 'react';
-import type { AttributeId, Todo, TodoStep } from '@/types';
+import type { AttributeId, Todo, TodoStep } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Input, P4Sheet, P4Stepper, P4Switch, IconChevronDown, IconMinus, IconPlus, IconTrash, useToast } from '@yellow/kit';
-import { ATTR_IDS, actionsOps, useActionAttributes, useActionsData } from '@yellow/adapters/pkg2';
+import { ATTR_IDS, ATTR_NAMES, TODOS } from '@yellow/mock/pkg2';
 import { WEEK_LABELS } from '@yellow/screens/pkg2/common';
 import { cx } from '@yellow/lib/cx';
 import { WishMountPicker } from './ActivityRecordSheet.p4g';
@@ -28,18 +28,14 @@ const Row = ({ title, desc, children, tone }: { title: string; desc?: string; ch
     <div className="shrink-0">{children}</div>
   </div>
 );
-const AttrPick = ({ value, onChange, disabled }: { value: AttributeId; onChange: (a: AttributeId) => void; disabled?: (a: AttributeId) => boolean }) => {
-  const { ATTR_NAMES } = useActionAttributes();
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {ATTR_IDS.map((a) => <button key={a} type="button" disabled={disabled?.(a)} onClick={() => onChange(a)} aria-pressed={value === a}
-        className={cx('rounded-xs border-thin px-2.5 py-1 font-display text-meta font-bold disabled:opacity-30', value === a ? 'border-p4g-black bg-p4g-tag text-[color:var(--p4g-tag-ink)] shadow-hard-sm' : 'border-p4g-line bg-p4g-surface text-p4g-ink')}>{ATTR_NAMES[a]}</button>)}
-    </div>
-  );
-};
+const AttrPick = ({ value, onChange, disabled }: { value: AttributeId; onChange: (a: AttributeId) => void; disabled?: (a: AttributeId) => boolean }) => (
+  <div className="flex flex-wrap gap-1.5">
+    {ATTR_IDS.map((a) => <button key={a} type="button" disabled={disabled?.(a)} onClick={() => onChange(a)} aria-pressed={value === a}
+      className={cx('rounded-xs border-thin px-2.5 py-1 font-display text-meta font-bold disabled:opacity-30', value === a ? 'border-p4g-black bg-p4g-tag text-[color:var(--p4g-tag-ink)] shadow-hard-sm' : 'border-p4g-line bg-p4g-surface text-p4g-ink')}>{ATTR_NAMES[a]}</button>)}
+  </div>
+);
 
 export default function TodoFormSheet({ open, onClose, params, todo, onSave }: OverlayProps & { todo?: Todo | null; onSave?: (f: Form, id?: string) => void }) {
-  const { TODAY_KEY, TODOS } = useActionsData();
   const toast = useToast();
   const v = params?.get('variant');
   const editing = todo ?? (v === 'edit' ? TODOS[0] : v === 'big' ? TODOS.find((t) => t.isBigDeal)! : v === 'pact' ? TODOS.find((t) => t.pact)! : null);
@@ -57,30 +53,7 @@ export default function TodoFormSheet({ open, onClose, params, todo, onSave }: O
   const firstUnused = (ATTR_IDS.find((a) => !used.has(a)) ?? 'knowledge') as AttributeId;
   const canAddBoost = f.extraBoosts.length < 2 && used.size < ATTR_IDS.length;
   const save = () => { if (!f.title.trim()) { toast.error('先写一个标题'); return; } onSave ? onSave(f, editing?.id) : toast.success(editing ? '已保存' : '已添加'); onClose(); };
-  const aiSplit = async () => {
-    if (!f.title.trim()) { setAiError('先写一个标题再拆'); return; }
-    setAiBusy(true);
-    setAiError(null);
-    try {
-      const titles = await actionsOps.decomposeWishAI({
-        id: editing?.id ?? `draft-${Date.now()}`,
-        title: f.title.trim(),
-        currentState: f.currentState || undefined,
-        status: 'active',
-        source: 'manual',
-        createdAt: new Date(`${TODAY_KEY}T12:00:00`),
-      });
-      if (!titles.length) {
-        setAiError('这次没拆出能用的小步。换个说法，或手写一条吧');
-        return;
-      }
-      set({ steps: [...f.steps, ...titles.map((title, i) => ({ id: `ai${Date.now()}${i}`, title, source: 'ai' as const }))] });
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : 'AI 拆解失败，请稍后重试');
-    } finally {
-      setAiBusy(false);
-    }
-  };
+  const aiSplit = () => { setAiBusy(true); setAiError(null); setTimeout(() => { setAiBusy(false); if (!f.title.trim()) { setAiError('这次没拆出能用的小步。换个说法，或手写一条吧'); return; } set({ steps: [...f.steps, ...['列出要做的所有事', '先做最小的那一件', '给自己留一天缓冲'].map((t, i) => ({ id: `ai${Date.now()}${i}`, title: t, source: 'ai' as const }))] }); }, 900); };
 
   return (
     <>

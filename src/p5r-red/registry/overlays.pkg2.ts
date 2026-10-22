@@ -5,6 +5,7 @@
 import type { OverlayRegistry } from './types';
 
 const nav = () => import('@/p5r-red/screens/overlays/NavigatorWindow.p5r');
+const navReal = () => import('@/themes/integration/NavigatorBridge');
 const form = () => import('@/p5r-red/screens/overlays/NavigatorActionForm.p5r');
 const lvl = () => import('@/p5r-red/screens/overlays/SettingsLevelTitleModal.p5r');
 const login = () => import('@/p5r-red/screens/overlays/LoginModal.p5r');
@@ -12,7 +13,7 @@ const cc = () => import('@/p5r-red/screens/overlays/P5CallingCard.p5r');
 
 export const overlays: OverlayRegistry = {
   // ── 助手 ──
-  'assistant-window': { title: '助手对话窗（NavigatorWindow）', load: nav },
+  'assistant-window': { title: '助手对话窗（NavigatorWindow）', load: navReal },
   'assistant-persona-menu': { title: '助手 · 人格菜单', load: nav, params: { menu: 'persona' } },
   'assistant-action-card': { title: '助手 · 动作确认卡', load: nav, params: { demo: 'card' } },
   'assistant-form': { title: '助手表单（NavigatorActionForm）', load: form },

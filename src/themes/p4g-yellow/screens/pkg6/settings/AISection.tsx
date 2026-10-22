@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { CfgBtn, CfgInput, CfgList, CfgMsg, CfgRow, CfgSeg, CfgSubhead, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
-import { CUSTOM_PRESETS, PROVIDERS, type ProviderId } from '@yellow/adapters/pkg6';
+import { CUSTOM_PRESETS, PROVIDERS, type ProviderId } from '@yellow/mock/pkg6';
 import { ModelPicker, type ModelPickerMode } from '@yellow/screens/overlays/ModelPickerSheet.p4g';
 import { cx } from '@yellow/lib/cx';
 

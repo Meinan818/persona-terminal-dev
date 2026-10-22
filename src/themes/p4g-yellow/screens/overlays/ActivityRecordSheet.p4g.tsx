@@ -4,22 +4,19 @@
  *       挂到愿望（WishMountPicker）、调整点数 五维 Stepper（0–5）、保存记录。
  * ?variant=backdate 补录模式（带日期）；?step=analyzed 直接展示分析后状态。
  */
-import { useEffect, useState } from 'react';
-import type { AttributeId } from '@/types';
+import { useEffect, useRef, useState } from 'react';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Chip, P4Sheet, P4Stepper, P4Textarea, useToast, IconClose } from '@yellow/kit';
 import { p4gAsset } from '@yellow/lib/asset';
-import { analyzeActivityLocally, ATTR_IDS, useActionAttributes, useActionsData } from '@yellow/adapters/pkg2';
-import { prepareActivityImage, type PreparedImage } from '@/utils/activityImages';
-import { useAppStore } from '@/store';
+import { ATTR_IDS, ATTR_NAMES, KEYWORD_RESULT, WISHES } from '@yellow/mock/pkg2';
 import { cx } from '@yellow/lib/cx';
 
-export interface RecordSavePayload { description: string; points: Record<AttributeId, number>; important: boolean; images: PreparedImage[]; backdate?: string; wishId?: string }
+export interface RecordSavePayload { description: string; points: Record<AttributeId, number>; important: boolean; images: string[]; backdate?: string; wishId?: string }
 
 const zero = (): Record<AttributeId, number> => ({ knowledge: 0, guts: 0, dexterity: 0, kindness: 0, charm: 0 });
 
 export function WishMountPicker({ value, onChange, compact }: { value?: string; onChange: (id: string | undefined) => void; compact?: boolean }) {
-  const { WISHES } = useActionsData();
   const active = WISHES.filter((w) => w.status === 'active' && !w.parentId);
   if (!active.length) return null;
   return (
@@ -40,79 +37,57 @@ export function WishMountPicker({ value, onChange, compact }: { value?: string; 
 }
 
 export default function ActivityRecordSheet({ open, onClose, params, backdate, onSave }: OverlayProps & { backdate?: string | null; onSave?: (p: RecordSavePayload) => void }) {
-  const { TODAY_KEY } = useActionsData();
-  const { ATTR_NAMES } = useActionAttributes();
   const toast = useToast();
-  const bd = backdate ?? (params?.get('variant') === 'backdate' ? TODAY_KEY : null);
+  const bd = backdate ?? (params?.get('variant') === 'backdate' ? '2026-10-17' : null);
   const [desc, setDesc] = useState('');
   const [important, setImportant] = useState(false);
-  const [images, setImages] = useState<PreparedImage[]>([]);
+  const [images, setImages] = useState<string[]>([]);
   const [imgBusy, setImgBusy] = useState(false);
-  const [shotBusy] = useState(false);
+  const [shotBusy, setShotBusy] = useState(false);
   const [shotHint, setShotHint] = useState<string | null>(null);
+  const [shotOffer, setShotOffer] = useState<string | null>(null);
   const [shotCandidates, setShotCandidates] = useState<{ text: string; on: boolean }[] | null>(null);
   const [analyzed, setAnalyzed] = useState<Record<AttributeId, number> | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiReason, setAiReason] = useState<string | null>(null);
   const [wish, setWish] = useState<string | undefined>();
+  const timers = useRef<number[]>([]);
+  const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
   useEffect(() => {
     if (!open) return;
-    if (params?.get('step') === 'analyzed') {
-      const description = '在图书馆把第 4 章读完了，还帮同桌讲了两道题';
-      setDesc(description);
-      setAnalyzed(analyzeActivityLocally(description));
-    }
+    if (params?.get('step') === 'analyzed') { setDesc('在图书馆把第 4 章读完了，还帮同桌讲了两道题'); setAnalyzed({ ...KEYWORD_RESULT }); setImages(['town-day.webp']); }
   }, [open, params]);
 
-  const reset = () => { setDesc(''); setImportant(false); setImages([]); setAnalyzed(null); setAiReason(null); setShotHint(null); setShotCandidates(null); setWish(undefined); };
+  const reset = () => { setDesc(''); setImportant(false); setImages([]); setAnalyzed(null); setAiReason(null); setShotHint(null); setShotOffer(null); setShotCandidates(null); setWish(undefined); };
   const attach = () => {
     if (images.length >= 6) return;
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      setImgBusy(true);
-      try {
-        const prepared = await prepareActivityImage(file);
-        setImages((v) => [...v, prepared].slice(0, 3));
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : '图片处理失败');
-      } finally {
-        setImgBusy(false);
-      }
-    };
-    input.click();
+    setImgBusy(true);
+    later(() => { setImgBusy(false); setImages((v) => [...v, ['town-night.webp', 'tv-world-fog.webp', 'menu-squares.webp'][v.length % 3]]); }, 600);
   };
   const readShot = () => {
-    setShotHint('当前未配置图片识别服务，请手动描述这次完成的事');
+    setShotBusy(true); setShotHint(null);
+    later(() => {
+      setShotBusy(false);
+      setShotCandidates([{ text: '跑步 5.2 公里，配速 6\'10"', on: true }, { text: '拉伸 15 分钟', on: true }, { text: '喝水 2L', on: false }]);
+      setShotOffer('tv-world-fog.webp');
+      setDesc('跑步 5.2 公里，配速 6\'10"；拉伸 15 分钟');
+      setShotHint('已回填，点「分析」给分');
+    }, 900);
   };
-  const analyze = () => { setAnalyzed(analyzeActivityLocally(desc)); };
-  const ai = async () => {
+  const analyze = () => { setAnalyzed({ ...KEYWORD_RESULT }); };
+  const ai = () => {
     setAiBusy(true);
-    try {
-      const { analyzeActivityAI } = await import('@/utils/activityAI');
-      const result = await analyzeActivityAI(desc, useAppStore.getState().settings.attributeNames, useAppStore.getState().settings);
-      setAnalyzed(result.points);
-      setAiReason(result.reason || null);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'AI 分析失败');
-    } finally {
-      setAiBusy(false);
-    }
+    later(() => { setAiBusy(false); setAnalyzed({ knowledge: 2, guts: 1, dexterity: 0, kindness: 2, charm: 0 }); setAiReason('读书算知识；主动讲题是在照顾别人，给温柔；坚持去图书馆也要一点胆量。'); }, 1100);
   };
-  const save = async () => {
+  const save = () => {
     if (imgBusy) { toast('图片还在处理，稍等一下再保存'); return; }
     if (!desc.trim()) { toast.error('先写下你做了什么'); return; }
-    const p = analyzed ?? analyzeActivityLocally(desc);
-    try {
-      await onSave?.({ description: desc.trim(), points: p, important, images, backdate: bd ?? undefined, wishId: wish });
-      if (!onSave) toast.success('记录成功');
-      reset(); onClose();
-    } catch {
-      // 页面层保留表单与错误提示，允许直接重试。
-    }
+    const p = analyzed ?? { ...KEYWORD_RESULT };
+    onSave?.({ description: desc.trim(), points: p, important, images, backdate: bd ?? undefined, wishId: wish });
+    if (!onSave) toast.success('记录成功');
+    reset(); onClose();
   };
 
   return (
@@ -147,13 +122,16 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
       )}
       {images.length > 0 && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 p4g-noscroll">
-          {images.map((img, i) => (
+          {images.map((src, i) => (
             <div key={i} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xs border-3 border-p4g-black bg-p4g-black shadow-hard-sm night:border-p4g-yellow">
-              <img src={p4gAsset(img.thumbDataUrl)} alt="" className="h-full w-full object-cover" />
+              <img src={p4gAsset(src)} alt="" className="h-full w-full object-cover" />
               <button type="button" aria-label="移除这张图" onClick={() => setImages((v) => v.filter((_, j) => j !== i))} className="absolute right-0.5 top-0.5 flex h-6 w-6 items-center justify-center rounded-xs bg-p4g-black text-p4g-yellow"><IconClose size={11} /></button>
             </div>
           ))}
         </div>
+      )}
+      {shotOffer && !images.includes(shotOffer) && (
+        <button type="button" onClick={() => { setImages((v) => [...v, shotOffer]); setShotOffer(null); }} className="mt-2 font-display text-meta font-bold text-p4g-ink underline decoration-p4g-orange decoration-[3px] underline-offset-4">＋ 顺便把这张截图附上</button>
       )}
 
       {/* 分析按钮：双形态 */}

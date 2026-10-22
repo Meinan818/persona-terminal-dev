@@ -5,10 +5,10 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
-import type { NavigatorPreset } from '@/types';
+import type { NavigatorPreset } from '@real/types';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { CfgInput, CfgTextarea, CfgMsg } from '@yellow/screens/pkg6/cfg';
-import { GLYPH_PATHS, TONE_WORDS } from '@yellow/adapters/pkg6';
+import { GLYPH_PATHS, TONE_WORDS } from '@yellow/mock/pkg6';
 import { updateSettings, getSettings } from '@yellow/screens/pkg6/settingsStore';
 import { CropDialog } from './ImageCropDialog.p4g';
 import { P4Button, useToast } from '@yellow/kit';

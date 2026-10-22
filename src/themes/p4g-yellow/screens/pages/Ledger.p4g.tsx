@@ -4,9 +4,9 @@
  * → 编辑预算/设置预算 · 对账 → 一句话记多笔 + 记一笔 + 📷 拍小票 → 流水 / 统计。
  * 路由：?tab=book|assets &view=list|stats &state=first|empty|loading
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { PageProps } from '@yellow/registry/types';
-import type { LedgerEntry } from '@/types';
+import type { LedgerEntry } from '@real/types';
 import { P4PageHeader, P4Tabs, P4SegmentTabs, P4Card, P4List, P4Loading, P4Outline, useToast } from '@yellow/kit';
 import { CollageStagger, CollageItem, NoiseLayer } from '@yellow/fx';
 import { navigate } from '@yellow/shell/shellBus';
@@ -21,7 +21,7 @@ import { LedgerBudgetSheetView } from '@yellow/screens/overlays/LedgerBudgetShee
 import { LedgerReconcileSheetView } from '@yellow/screens/overlays/LedgerReconcileSheet.p4g';
 import { LedgerDeleteConfirmView } from '@yellow/screens/overlays/LedgerDeleteConfirm.p4g';
 import { LedgerSavedModalView } from '@yellow/screens/overlays/LedgerSavedModal.p4g';
-import { CNY, INCOME_META, catMeta, daysAgoKey, fmtMoney, fmtSigned, ledgerDateLabel, monthLabel, roundMoney, shiftMonth, weekdayCN, useLedgerData, ledgerOps } from '@yellow/adapters/pkg5';
+import { CNY, INCOME_META, LEDGER_ACCOUNTS, LEDGER_BUDGET, LEDGER_ENTRIES, LEDGER_SAVINGS, P5_TODAY, catMeta, daysAgoKey, fmtMoney, fmtSigned, ledgerDateLabel, monthLabel, roundMoney, shiftMonth, weekdayCN } from '@yellow/mock/pkg5';
 
 const WEEK_EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -47,17 +47,14 @@ function LedgerRow({ e, onClick }: { e: LedgerEntry; onClick: () => void }) {
 }
 
 export default function Ledger({ tab, params }: PageProps) {
-  const { LEDGER_ACCOUNTS, LEDGER_BUDGET, LEDGER_ENTRIES, LEDGER_SAVINGS, P5_TODAY, CURRENT_MONTH, LEDGER_LOADED } = useLedgerData();
-  const derivedState = !LEDGER_LOADED ? 'loading' : LEDGER_ENTRIES.length === 0 ? 'first' : 'normal';
   const toast = useToast();
   const low = useLowMotion();
-  const [state, setState] = useState(params.get('state') ?? derivedState);
-  useEffect(() => { if (!params.get('state')) setState(derivedState); }, [derivedState, params]);
+  const [state, setState] = useState(params.get('state') ?? 'normal');
   const [mode, setMode] = useState<'ledger' | 'assets'>(tab === 'assets' ? 'assets' : 'ledger');
   const [view, setView] = useState<'list' | 'stats'>(params.get('view') === 'stats' ? 'stats' : 'list');
-  const entries = LEDGER_ENTRIES;
+  const [entries, setEntries] = useState<LedgerEntry[]>(LEDGER_ENTRIES);
   const [balanceView, setBalanceView] = useState<'month' | 'total'>('month');
-  const [listMonth, setListMonth] = useState(CURRENT_MONTH);
+  const [listMonth, setListMonth] = useState('2026-10');
   const [nlText, setNlText] = useState('');
   const [nlBusy, setNlBusy] = useState(false);
   const [shotBusy, setShotBusy] = useState(false);
@@ -72,19 +69,19 @@ export default function Ledger({ tab, params }: PageProps) {
   const [saved, setSaved] = useState<string | null>(null);
   const shotRef = useRef<HTMLInputElement>(null);
 
-  const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !e.date.startsWith(CURRENT_MONTH)) : entries;
+  const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !e.date.startsWith('2026-10')) : entries;
   const needsSetup = list.length === 0;
-  const hasBudget = params.has('state') ? state !== 'first' : LEDGER_BUDGET.monthlyLimit > 0;
+  const hasBudget = state !== 'first';
   const lim = LEDGER_BUDGET.monthlyLimit;
-  const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
-  const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
+  const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && e.date.startsWith('2026-10')).reduce((s, e) => s + e.amount, 0));
+  const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && e.date.startsWith('2026-10')).reduce((s, e) => s + e.amount, 0));
   const total = needsSetup ? 0 : LEDGER_ACCOUNTS.reduce((s, a) => s + a.balance, 0);
   const budgetLeft = roundMoney(lim - monthExpense);
   const over = hasBudget && budgetLeft < 0;
   const remainingRatio = hasBudget && lim > 0 ? budgetLeft / lim : 1;
   const ringColor = !hasBudget ? 'var(--p4g-muted)' : over ? 'var(--p4g-danger)' : remainingRatio <= 0.2 ? 'var(--p4g-orange)' : 'var(--p4g-green)';
   const spentToday = list.filter((e) => e.direction === 'expense' && e.date === P5_TODAY).reduce((s, e) => s + e.amount, 0);
-  const daysLeft = new Date(Number(CURRENT_MONTH.slice(0, 4)), Number(CURRENT_MONTH.slice(5, 7)), 0).getDate() - new Date().getDate() + 1;
+  const daysLeft = 12;
   const base = roundMoney(lim - (monthExpense - spentToday));
   const todayLeft = hasBudget && base > 0 ? roundMoney(base / daysLeft - spentToday) : 0;
   const todayOver = hasBudget && base > 0 && todayLeft < 0;
@@ -125,7 +122,7 @@ export default function Ledger({ tab, params }: PageProps) {
   const onSaved = (s: string) => { setNlText(''); setSaved(s); };
 
   if (state === 'loading') {
-    return (<><P4PageHeader title="心相记账" en="LEDGER SHOW" onBack={() => navigate('menu')} hud={false} /><div className="flex min-h-[50vh] items-center justify-center"><P4Loading label="账本还在读取" /></div>{import.meta.env.DEV && location.search.includes('__dev=1') && <DevStateBar value={state} onChange={setState} items={[{ id: 'normal', label: '正常' }, { id: 'first', label: '首次未设余额' }, { id: 'empty', label: '本月空' }, { id: 'loading', label: '读取中' }]} />}</>);
+    return (<><P4PageHeader title="心相记账" en="LEDGER SHOW" onBack={() => navigate('menu')} hud={false} /><div className="flex min-h-[50vh] items-center justify-center"><P4Loading label="账本还在读取" /></div><DevStateBar value={state} onChange={setState} items={[{ id: 'normal', label: '正常' }, { id: 'first', label: '首次未设余额' }, { id: 'empty', label: '本月空' }, { id: 'loading', label: '读取中' }]} /></>);
   }
 
   return (
@@ -182,7 +179,7 @@ export default function Ledger({ tab, params }: PageProps) {
                   <div className="flex min-w-0 items-center gap-2">
                     <P4Outline size={22} stroke={4} fill="var(--p4g-yellow)" strokeColor="var(--p4g-black)" italic>{balanceView === 'month' ? 'MONTH' : 'TOTAL'}</P4Outline>
                     <span className="h-[3px] flex-1 bg-p4g-yellow/60" />
-                    <span className="shrink-0 rounded-pill bg-p4g-yellow px-2.5 py-0.5 p4g-date-type text-2xs text-p4g-black">{`${P5_TODAY.slice(5).replace('-', '/')} ${WEEK_EN[new Date().getDay()]}`}</span>
+                    <span className="shrink-0 rounded-pill bg-p4g-yellow px-2.5 py-0.5 p4g-date-type text-2xs text-p4g-black">10/20 TUE</span>
                   </div>
                   {balanceView === 'month' ? (
                     hasBudget ? (over ? (
@@ -267,7 +264,7 @@ export default function Ledger({ tab, params }: PageProps) {
           {view === 'list' ? (
             <CollageItem className="flex min-w-0 flex-col gap-4">
               <MonthNav label={monthLabel(listMonth)} sub={<>支出 <b className="p4g-num">{CNY}{fmtMoney(monthSum.exp)}</b>{monthSum.inc > 0 && <> · 收入 <b className="p4g-num">{CNY}{fmtMoney(monthSum.inc)}</b></>}</>}
-                onPrev={() => setListMonth((m) => shiftMonth(m, -1))} onNext={() => setListMonth((m) => shiftMonth(m, 1))} nextDisabled={listMonth >= CURRENT_MONTH} />
+                onPrev={() => setListMonth((m) => shiftMonth(m, -1))} onNext={() => setListMonth((m) => shiftMonth(m, 1))} nextDisabled={listMonth >= '2026-10'} />
               {grouped.length === 0 && (
                 <P4Card tone="msg" className="mx-auto w-full max-w-md">
                   <div className="flex flex-col items-center gap-2 py-4 text-center">
@@ -293,20 +290,20 @@ export default function Ledger({ tab, params }: PageProps) {
               })}
             </CollageItem>
           ) : (
-            <CollageItem><LedgerStats entries={list} forceEmpty={state === 'empty'} initialPeriod={listMonth} /></CollageItem>
+            <CollageItem><LedgerStats entries={list} forceEmpty={state === 'empty'} /></CollageItem>
           )}
         </CollageStagger>
       ) : (
-        <AssetBoard empty={params.has('state') && state === 'first'} />
+        <AssetBoard empty={state === 'first'} />
       )}
 
-      {import.meta.env.DEV && location.search.includes('__dev=1') && <DevStateBar value={state} onChange={setState} items={[{ id: 'normal', label: '正常' }, { id: 'first', label: '首次未设余额' }, { id: 'empty', label: '本月空' }, { id: 'loading', label: '读取中' }]} />}
+      <DevStateBar value={state} onChange={setState} items={[{ id: 'normal', label: '正常' }, { id: 'first', label: '首次未设余额' }, { id: 'empty', label: '本月空' }, { id: 'loading', label: '读取中' }]} />
 
       <LedgerEntrySheetView open={draftOpen} onClose={() => setDraftOpen(false)} initial={draft ?? undefined} hint={shotHint} onSaved={onSaved} />
       <LedgerBatchSheetView open={batchOpen} onClose={() => setBatchOpen(false)} initial={SAMPLE_BATCH} onSaved={onSaved} />
       <LedgerBudgetSheetView open={budgetOpen} onClose={() => setBudgetOpen(false)} onSaved={(m) => toast.success(`预算已定：${CNY}${fmtMoney(m)}`)} />
       <LedgerReconcileSheetView open={adjustOpen} onClose={() => setAdjustOpen(false)} initial={needsSetup} onSaved={() => { if (needsSetup) setState('normal'); toast.success(needsSetup ? '余额已记下' : '对账完成'); }} />
-      <LedgerDeleteConfirmView open={delOpen} target={del} onClose={() => setDelOpen(false)} onConfirm={() => { if (del) void ledgerOps.remove(del.id); toast('已删除这一笔'); }} />
+      <LedgerDeleteConfirmView open={delOpen} target={del} onClose={() => setDelOpen(false)} onConfirm={() => { if (del) setEntries((xs) => xs.filter((x) => x.id !== del.id)); toast('已删除这一笔'); }} />
       <LedgerSavedModalView open={!!saved} onClose={() => setSaved(null)} title={saved ?? ''} />
     </>
   );

@@ -17,7 +17,7 @@ import { useLowMotion } from '@yellow/lib/prefs';
 import { presetOf, goalPct, setPresence, statusAgeText, usePresence } from '@yellow/screens/pkg5/presence';
 import { p4gAsset } from '@yellow/lib/asset';
 import { CropDialog } from './ImageCropDialog.p4g';
-import { ATTRIBUTES, CALLING_CARDS, CLOUD_USER, LEVEL_MAX, STATUS_PRESETS, TOTAL_LEVEL, TOTAL_POINTS } from '@yellow/adapters/pkg5';
+import { ATTRIBUTES, CALLING_CARDS, CLOUD_USER, LEVEL_MAX, STATUS_PRESETS, TOTAL_LEVEL, TOTAL_POINTS } from '@yellow/mock/pkg5';
 
 type Panel = null | 'status' | 'goal';
 

@@ -4,11 +4,11 @@
  * 路由：#/overlay/hideout-settings-confirm?kind=rotate|kick|transfer|transfer-leave|leave|dissolve
  */
 import { useState } from 'react';
-import type { OrgMember } from '@/types';
+import type { OrgMember } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Dialog, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
-import { MEMBERS, ORG } from '@yellow/adapters/pkg4-org';
+import { MEMBERS, ORG } from '@yellow/mock/pkg4-org';
 import { displayCodename } from '@yellow/screens/pkg4/org/common';
 
 export type SettingsConfirm = { kind: 'rotate' } | { kind: 'kick'; member: OrgMember } | { kind: 'transfer'; member: OrgMember; leaving?: boolean } | { kind: 'leave' } | { kind: 'dissolve' };

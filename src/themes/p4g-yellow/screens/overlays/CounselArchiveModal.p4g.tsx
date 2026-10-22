@@ -2,10 +2,10 @@
  * 谏言归档库（真实 CounselArchiveModal）：摘要列表 + 删除确认；?state=empty 看空态。
  */
 import { useEffect, useState } from 'react';
-import type { CounselArchive } from '@/types';
+import type { CounselArchive } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Dialog, P4Sheet } from '@yellow/kit';
-import { PK3_CONFIDANTS, PK3_COUNSEL_ARCHIVES } from '@yellow/adapters/pkg3';
+import { PK3_CONFIDANTS, PK3_COUNSEL_ARCHIVES } from '@yellow/mock/pkg3';
 
 const fmt = (d: Date) => `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 

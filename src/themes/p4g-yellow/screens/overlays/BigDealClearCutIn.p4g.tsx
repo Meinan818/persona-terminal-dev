@@ -10,7 +10,7 @@ import { P4Button, P4Outline, P4Stripe, Portal, useEscape, useScrollLock } from 
 import { ScanlineOverlay } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
-import { DANMAKU } from '@yellow/adapters/pkg2';
+import { DANMAKU } from '@yellow/mock/pkg2';
 import { DanmakuStrip } from '@yellow/screens/pkg2/Danmaku';
 import DanmakuCompose from './DanmakuCompose.p4g';
 

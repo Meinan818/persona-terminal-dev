@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 图鉴共用的放大 + 翻面页（真实 src/components/codex/FlipCardView.tsx）+ 岁时卡（SeasonCard.tsx）。
  * P4G 版：黑幕 + 扫描线 + 电视开机弹出；点一下或横向拖过 90px 翻面，拖动时牌跟手转（只动 transform），右上「关闭」。
  * 默认导出 = 岁时翻面卡（achv-season-flip）：「X · 岁时册」卡面（收 朱印）/ 背面小注 + 收录状态。?mark=<key> ?collected=0
@@ -11,8 +11,8 @@ import { ScanlineOverlay } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { asset } from '@yellow/lib/asset';
 import { useImageOk } from '@yellow/lib/slots';
-import { P5_SEASON_PAGES, type P5SeasonMark } from '@yellow/adapters/pkg5-season';
-import { P5_TODAY, useSeasonCollectedMap } from '@yellow/adapters/pkg5';
+import { P5_SEASON_PAGES, type P5SeasonMark } from '@yellow/mock/pkg5-season';
+import { P5_TODAY, SEASON_COLLECTED } from '@yellow/mock/pkg5';
 
 export function FlipCardView({ open, onClose, label, resetKey, front, back, hint = '点一下或左右拖动翻面', footer }: {
   open: boolean; onClose: () => void; label: string; resetKey?: string; front: (w: number, h: number) => ReactNode; back: (w: number, h: number) => ReactNode; hint?: string; footer?: ReactNode;
@@ -93,9 +93,8 @@ export const seasonStatus = (m: P5SeasonMark, collectedAt?: string) =>
         : `${m.date.slice(5).replace('-', '/')} 那天记一条就能收`;
 
 export function SeasonFlipView({ mark, open, onClose }: { mark: P5SeasonMark | null; open: boolean; onClose: () => void }) {
-  const seasonMap = useSeasonCollectedMap();
   if (!mark) return null;
-  const at = seasonMap[mark.date];
+  const at = SEASON_COLLECTED[mark.date];
   return (
     <FlipCardView open={open} onClose={onClose} label={`${mark.name} · 岁时册`} resetKey={mark.key} hint="点一下或左右拖动翻面 · 背面是小注"
       front={() => <span className="block h-full w-full bg-p4g-cream"><SeasonCard mark={mark} collected={!!at} className="!h-full" /></span>}

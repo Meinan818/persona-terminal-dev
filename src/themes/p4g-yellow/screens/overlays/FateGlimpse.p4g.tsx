@@ -6,14 +6,14 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useState } from 'react';
-import type { DailyDivination, FateGlimpse } from '@/types';
+import type { DailyDivination, FateGlimpse } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Dialog, P4Button, P4Outline, Portal, useEscape, useScrollLock, IconClose } from '@yellow/kit';
 import { FogRain, TVFlash, tvPowerVariants } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import { TAROT_BY_ID, ORI_LABEL, ATTR_NAMES } from '@yellow/adapters/pkg4-tarot';
-import { WINDOW_DAYS, LAST_GLIMPSE, WEEKDAY_CN } from '@yellow/adapters/pkg4-astro';
+import { TAROT_BY_ID, ORI_LABEL, ATTR_NAMES } from '@yellow/mock/pkg4-tarot';
+import { WINDOW_DAYS, LAST_GLIMPSE, WEEKDAY_CN } from '@yellow/mock/pkg4-astro';
 import { TarotFace, TarotBack, Markdownish, ThinkingTV, useHold, useFakeProgress, useTypewriter, cardH } from '@yellow/screens/pkg4/tarot';
 import { MsgBox, Kicker } from '@yellow/screens/pkg4/ui';
 

@@ -17,14 +17,14 @@ import { useLowMotion, usePrefs } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
-import { ACTION_META, CHAT_CARD_DEMO, CHAT_SEED, PICKER_TODOS, type ChatMsg, type DraftKind } from '@yellow/adapters/pkg6';
+import { ACTION_META, CHAT_CARD_DEMO, CHAT_SEED, PICKER_TODOS, type ChatMsg, type DraftKind } from '@yellow/mock/pkg6';
 import { activePreset, attrLabel, updateSettings, useSettings } from '@yellow/screens/pkg6/settingsStore';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { ActionForm, emptyForm, type FormState } from './NavigatorActionForm.p4g';
 import { Notebook } from './NavigatorNotebook.p4g';
 import { CropDialog } from './ImageCropDialog.p4g';
 import { Glyph } from './NavigatorPersonaEditor.p4g';
-import '@yellow/screens/pkg6/pkg6.css';
+import '@/screens/pkg6/pkg6.css';
 
 type MicState = 'idle' | 'recording' | 'transcribing';
 type FormKind = Exclude<DraftKind, 'completeTodo'>;

@@ -3,15 +3,14 @@
  * 说明（带星期 → 按周重复；没有星期 → 每日；点数默认 +1）；「统一归入：」五维；条目逐条勾选（事项 / 星期 / 时间）；取消 / 导入 N 项。
  */
 import { useEffect, useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Sheet, IconCheck, useToast } from '@yellow/kit';
-import { ATTR_IDS, SCHEDULE_ITEMS, useActionAttributes } from '@yellow/adapters/pkg2';
+import { ATTR_IDS, ATTR_NAMES, SCHEDULE_ITEMS } from '@yellow/mock/pkg2';
 import { WEEK_LABELS } from '@yellow/screens/pkg2/common';
 import { cx } from '@yellow/lib/cx';
 
 export default function TodosScheduleImport({ open, onClose, onImport }: OverlayProps & { onImport?: (n: number) => void }) {
-  const { ATTR_NAMES } = useActionAttributes();
   const toast = useToast();
   const [rows, setRows] = useState(SCHEDULE_ITEMS);
   const [attr, setAttr] = useState<AttributeId>('knowledge');

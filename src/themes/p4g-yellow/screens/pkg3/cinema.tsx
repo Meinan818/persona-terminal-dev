@@ -13,7 +13,7 @@
  */
 import { AnimatePresence, LayoutGroup, animate, motion, useMotionValue, useTransform } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Confidant, ConfidantBuff } from '@/types';
+import type { Confidant, ConfidantBuff } from '@real/types';
 import { Portal, useScrollLock } from '@yellow/kit';
 import { P4Outline } from '@yellow/kit';
 import { useLowMotion } from '@yellow/lib/prefs';

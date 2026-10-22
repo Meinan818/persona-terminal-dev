@@ -12,7 +12,7 @@ import { navigate } from '@yellow/shell/shellBus';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { ChannelNoise } from '@yellow/fx';
 import { P4DateWeather } from '@yellow/kit';
-import { useActionsData } from '@yellow/adapters/pkg2';
+import { TODAY } from '@yellow/mock/pkg2';
 import { ActivitiesView } from './Activities.p4g';
 import { TodosView } from './Todos.p4g';
 
@@ -23,7 +23,6 @@ const TABS: { key: Sub; label: string; en: string }[] = [
 ];
 
 export default function Actions({ tab, params }: PageProps) {
-  const { TODAY } = useActionsData();
   const low = useLowMotion();
   const sub: Sub = tab === 'todos' ? 'todos' : 'activities';
   const prev = useRef<Sub>(sub);

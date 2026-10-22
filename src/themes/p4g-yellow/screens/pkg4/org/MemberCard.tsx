@@ -4,10 +4,10 @@
  *      成员牌正面 = 代表牌大图 + 名牌；背面 = 黑黄 Status 面（五维 / 面具 / 称号）
  */
 import { useState } from 'react';
-import type { OrgMember, OrgView } from '@/types';
+import type { OrgMember, OrgView } from '@real/types';
 import { cx } from '@yellow/lib/cx';
-import { tarotImg } from '@yellow/adapters/pkg4-tarot';
-import { TITLE_BOOK } from '@yellow/adapters/pkg4-org';
+import { tarotImg } from '@yellow/mock/pkg4-tarot';
+import { TITLE_BOOK } from '@yellow/mock/pkg4-org';
 import { HonorChip, LeaderChip, MeChip, MemberThumb, WeekDots, memberFacts, seatNo } from './common';
 
 const TYPE_LABEL: Record<string, string> = { damage: '伤害', crit: '暴击', buff: '增伤', debuff: '易伤', charge: '蓄力', heal: '回复', attack_boost: '攻击增益' };

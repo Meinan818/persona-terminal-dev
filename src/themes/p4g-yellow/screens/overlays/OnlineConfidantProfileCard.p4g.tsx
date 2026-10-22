@@ -4,13 +4,13 @@
  * #/overlay/bond-online-profile?coop=none|pending|incoming|cooldown|linked&prayed=1&login=0
  */
 import { useEffect, useState } from 'react';
-import type { CloudProfile } from '@/types';
+import type { CloudProfile } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Avatar, P4Button, P4Dialog, P4Sheet } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { ATTR_IDS, ATTR_NAMES } from '@yellow/screens/pkg3/arcana';
 import { Sparkle, StatusTag } from '@yellow/screens/pkg3/ui';
-import { PK3_PROFILES } from '@yellow/adapters/pkg3';
+import { PK3_PROFILES } from '@yellow/mock/pkg3';
 import { PactPanelBody } from './PactPanel.p4g';
 
 export type CoopStatus = 'none' | 'pending' | 'incoming' | 'cooldown_rejected' | 'cooldown_severed' | 'linked';

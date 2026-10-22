@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Input } from '@yellow/kit';
-import { CLOUD_USER } from '@yellow/adapters/pkg5';
+import { CLOUD_USER } from '@yellow/mock/pkg5';
 
 type View = 'home' | 'userid' | 'password_change' | 'password_reset';
 

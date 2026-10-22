@@ -8,13 +8,13 @@
  * 空态：NO SIGNAL「还没有宣告卡」+「✦ 立下约定」（?state=empty）。宽屏两列。接入时：真实无此页，需新增 currentPage 'callingcard' 与菜单条目（占卜之后）。
  */
 import { useState } from 'react';
-import type { CallingCard } from '@/types';
+import type { CallingCard } from '@real/types';
 import type { PageProps } from '@yellow/registry/types';
 import { P4Button, P4DataBlock, P4EmptyState, P4PageHeader, P4Section, useToast, IconClose } from '@yellow/kit';
 import { CollageItem, CollageStagger } from '@yellow/fx';
 import { navigate } from '@yellow/shell/shellBus';
 import { cx } from '@yellow/lib/cx';
-import { TODAY_KEY } from '@yellow/adapters/pkg2';
+import { TODAY_KEY } from '@yellow/mock/pkg2';
 import { daysBetween } from '@yellow/screens/pkg2/common';
 import { toneBg } from '@yellow/screens/pkg2/tones';
 import { cardProgress } from '@yellow/screens/pkg2/GoalDeck';

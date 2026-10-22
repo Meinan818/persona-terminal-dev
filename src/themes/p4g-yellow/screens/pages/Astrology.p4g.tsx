@@ -6,13 +6,13 @@
  *   archive：?state=empty，?detail=1（打开第一条详情）
  */
 import { useEffect, useState } from 'react';
-import type { LongReading } from '@/types';
+import type { LongReading } from '@real/types';
 import type { PageProps } from '@yellow/registry/types';
 import { P4Tabs } from '@yellow/kit';
 import { ChannelNoise } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { navigate } from '@yellow/shell/shellBus';
-import { useAstrologyData } from '@yellow/adapters/pkg4-astro';
+import { LONG_READINGS } from '@yellow/mock/pkg4-astro';
 import { PkgHeader, DevStrip, StateFade } from '@yellow/screens/pkg4/ui';
 import { DailyDraw, type DailyPhase } from '@yellow/screens/pkg4/DailyDraw';
 import { LongReadingFlow, ReadingArchive, ReadingDetail, type LongStep } from '@yellow/screens/pkg4/LongReading';
@@ -26,7 +26,6 @@ const DAILY_STATES: Record<string, { phase: DailyPhase; err?: 'resume' | 'trunca
 
 export default function Astrology({ tab: tabQ, params }: PageProps) {
   const low = useLowMotion();
-  const astro = useAstrologyData();
   const [tab, setTab] = useState<Tab>((['daily', 'long', 'archive'].includes(tabQ ?? '') ? tabQ : 'daily') as Tab);
   const qState = params.get('state') ?? '';
   const sec = params.get('sec');
@@ -34,16 +33,15 @@ export default function Astrology({ tab: tabQ, params }: PageProps) {
   const [dailyKey, setDailyKey] = useState<string>(tab === 'daily' && DAILY_STATES[qState] ? qState : 'intro');
   const [glimpse, setGlimpse] = useState<'eligible' | 'buff' | 'partial'>((params.get('glimpse') as 'buff') ?? 'eligible');
   const [longKey, setLongKey] = useState<string>(tab === 'long' ? (params.get('step') ?? qState) || 'form' : 'form');
-  const readings = astro.longReadings;
-  const [detail, setDetail] = useState<LongReading | null>(null);
-  useEffect(() => { void astro.loadDailyDivination(); void astro.loadLongReadings().then(() => astro.sweepExpiredReadings()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [readings, setReadings] = useState<LongReading[]>(tab === 'archive' && qState === 'empty' ? [] : LONG_READINGS);
+  const [detail, setDetail] = useState<LongReading | null>(tab === 'archive' && params.get('detail') ? LONG_READINGS[0] : null);
   const [noise, setNoise] = useState(false);
   useEffect(() => { if (sec === 'glimpse') setDailyKey('done'); }, [sec]);
   useEffect(() => { if (sec === 'glimpse') setTimeout(() => document.getElementById('fate-glimpse')?.scrollIntoView({ block: 'center' }), 400); }, [sec]);
 
   const switchTab = (t: string) => { if (t === tab) return; if (!low) setNoise(true); setTab(t as Tab); setDetail(null); };
   const ds = DAILY_STATES[dailyKey] ?? DAILY_STATES.intro;
-  const activeCount = astro.activeCount;
+  const activeCount = readings.filter((r) => !r.archived).length;
   const longStep = (['form', 'base', 'picking', 'reading'].includes(longKey) ? longKey : 'form') as LongStep;
 
   const tabs = [
@@ -66,13 +64,13 @@ export default function Astrology({ tab: tabQ, params }: PageProps) {
         )}
         {tab === 'long' && (
           <LongReadingFlow key={longKey} initialStep={longStep} noApiKey={longKey === 'noai'} activeCount={longKey === 'cap' ? 2 : Math.min(activeCount, 1)} resume={longKey === 'resume'}
-            onSaved={(r) => { void astro.saveLongReading(r); setDetail(r); }} onBack={() => switchTab('archive')} />
+            onSaved={(r) => setReadings((l) => [r, ...l])} onBack={() => switchTab('archive')} />
         )}
         {tab === 'archive' && detail && (
           <ReadingDetail reading={detail} canFollowUp onBack={() => setDetail(null)}
-            onArchive={(a) => { const r = { ...detail, archived: a }; setDetail(r); astro.archiveLongReading(detail.id, a); }}
-            onDelete={() => { astro.deleteLongReading(detail.id); setDetail(null); }}
-            onFollowSaved={(f) => { const r = { ...detail, followUps: [f] }; setDetail(r); void astro.saveLongReading(r); }} />
+            onArchive={(a) => { const r = { ...detail, archived: a }; setDetail(r); setReadings((l) => l.map((x) => (x.id === r.id ? r : x))); }}
+            onDelete={() => { setReadings((l) => l.filter((x) => x.id !== detail.id)); setDetail(null); }}
+            onFollowSaved={(f) => { const r = { ...detail, followUps: [f] }; setDetail(r); setReadings((l) => l.map((x) => (x.id === r.id ? r : x))); }} />
         )}
         {tab === 'archive' && !detail && <ReadingArchive readings={readings} onOpen={setDetail} />}
       </StateFade>
@@ -93,7 +91,7 @@ export default function Astrology({ tab: tabQ, params }: PageProps) {
         ]} />
       )}
       {tab === 'archive' && (
-          <DevStrip value={readings.length ? 'list' : 'empty'} onChange={() => { setDetail(null); }} items={[{ id: 'list', label: '有档案' }, { id: 'empty', label: '空' }]} />
+        <DevStrip value={readings.length ? 'list' : 'empty'} onChange={(v) => { setDetail(null); setReadings(v === 'empty' ? [] : LONG_READINGS); }} items={[{ id: 'list', label: '有档案' }, { id: 'empty', label: '空' }]} />
       )}
     </div>
   );

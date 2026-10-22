@@ -4,7 +4,7 @@
  * src/utils/ledgerFormat.ts、src/constants/index.ts、src/constants/profileStatus.ts。
  * 「今天」固定为 2026-10-20（与项目简报一致），截图稳定。
  */
-import type { LedgerEntry, LedgerExpenseType, LedgerAsset, Achievement, Skill, Attribute, AttributeId, User, ThemeType } from '@/types';
+import type { LedgerEntry, LedgerExpenseType, LedgerAsset, Achievement, Skill, Attribute, AttributeId, User, ThemeType } from '@real/types';
 
 export const P5_TODAY = '2026-10-20';
 export const CNY = '¥';

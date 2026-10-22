@@ -11,10 +11,7 @@ import { P4Button, P4Outline, Portal, useEscape, useScrollLock, useToast } from 
 import { NoiseLayer, TVFlash } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import type { FateCandidate } from '@/types';
-import { useShallow } from 'zustand/react/shallow';
-import { useAppStore } from '@/store';
-import { DANMAKU } from '@yellow/adapters/pkg2';
+import { DANMAKU } from '@yellow/mock/pkg2';
 import { DanmakuStrip } from '@yellow/screens/pkg2/Danmaku';
 
 type Kind = 'todo' | 'wish' | 'history' | 'quest';
@@ -25,6 +22,15 @@ const KIND_COPY: Record<Kind, { tag: string; hint: string }> = {
   history: { tag: '旧日回响', hint: '你做过的事，再做一次不需要勇气' },
   quest: { tag: '今日委托', hint: '委托板今天给的新鲜事，接住就进今日任务' },
 };
+const CANDS: { key: string; kind: Kind; title: string; hint?: string }[] = [
+  { key: 'c1', kind: 'todo', title: '背 30 个单词' },
+  { key: 'c2', kind: 'todo', title: '练字 20 分钟' },
+  { key: 'c3', kind: 'wish', title: '每晚睡前读 20 分钟' },
+  { key: 'c4', kind: 'history', title: '给家里打电话', hint: '这两个月做过 6 次，上次是 9 天前，再做一次不需要勇气' },
+  { key: 'c5', kind: 'quest', title: '去河堤散步 20 分钟' },
+  { key: 'c6', kind: 'history', title: '自己做一顿饭' },
+];
+
 const CardBack = ({ style, className }: { style?: React.CSSProperties; className?: string }) => (
   <div className={cx('absolute left-1/2 top-0 h-[150px] w-[100px] rounded-sm border-3 border-p4g-black bg-p4g-yellow shadow-hard', className)} style={style}>
     <div className="absolute inset-1.5 border-2 border-p4g-black" style={{ background: 'repeating-linear-gradient(45deg, rgba(0,0,0,.85) 0 6px, transparent 6px 12px)' }} />
@@ -33,48 +39,25 @@ const CardBack = ({ style, className }: { style?: React.CSSProperties; className
 );
 
 export default function FateDrawSheet({ open, onClose, params, onGo }: OverlayProps & { onGo?: (kind: Kind, title: string) => void }) {
-  const { getFateDrawPool, drawFate, acceptFateDraw, muteFateHistory } = useAppStore(useShallow((s) => ({
-    getFateDrawPool: s.getFateDrawPool,
-    drawFate: s.drawFate,
-    acceptFateDraw: s.acceptFateDraw,
-    muteFateHistory: s.muteFateHistory,
-  })));
   const low = useLowMotion();
   const toast = useToast();
   const empty = params?.get('state') === 'empty';
   const [sources, setSources] = useState<Record<Kind, boolean>>({ todo: true, wish: true, history: true, quest: true });
   const [banned, setBanned] = useState<string[]>([]);
   const [phase, setPhase] = useState<'gate' | 'spin' | 'reveal'>('gate');
-  const [picked, setPicked] = useState<FateCandidate | null>(null);
-  const [busy, setBusy] = useState(false);
-  const pool = useMemo(() => (empty ? [] : getFateDrawPool().filter((c) => sources[c.kind] && !banned.includes(c.key))), [sources, banned, empty, getFateDrawPool, phase]);
-  useEffect(() => {
-    if (!open) return;
-    if (params?.get('step') === 'reveal' && !empty) {
-      const first = getFateDrawPool()[0] ?? null;
-      setPicked(first);
-      setPhase(first ? 'reveal' : 'gate');
-    } else {
-      setPhase('gate');
-      setPicked(null);
-    }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [picked, setPicked] = useState<(typeof CANDS)[number] | null>(null);
+  const pool = useMemo(() => (empty ? [] : CANDS.filter((c) => sources[c.kind] && !banned.includes(c.key))), [sources, banned, empty]);
+  useEffect(() => { if (open) { if (params?.get('step') === 'reveal' && !empty) { setPicked(CANDS[3]); setPhase('reveal'); } else { setPhase('gate'); setPicked(null); } } }, [open]); // eslint-disable-line
   useScrollLock(open);
   const close = () => { if (phase === 'spin') return; onClose(); };
   useEscape(open, close);
-  const draw = async () => {
-    if (!pool.length || busy) return;
-    setBusy(true);
-    try {
-      const p = await drawFate(pool);
-      if (!p) return;
-      setPicked(p);
-      if (low) { setPhase('reveal'); return; }
-      setPhase('spin');
-      window.setTimeout(() => { setPhase('reveal'); setBusy(false); }, 1050);
-    } finally {
-      if (low) setBusy(false);
-    }
+  const draw = () => {
+    if (!pool.length) return;
+    const p = pool[Math.floor(Math.random() * pool.length)];
+    setPicked(p);
+    if (low) { setPhase('reveal'); return; }
+    setPhase('spin');
+    window.setTimeout(() => setPhase('reveal'), 1050);
   };
   return (
     <Portal>
@@ -123,33 +106,15 @@ export default function FateDrawSheet({ open, onClose, params, onGo }: OverlayPr
                         className="relative w-full max-w-[300px] border-[4px] border-p4g-black bg-p4g-cream px-5 pb-5 pt-4 text-p4g-black shadow-[8px_8px_0_var(--p4g-orange)]">
                         <span className="inline-block rounded-xs bg-p4g-black px-2 py-0.5 font-display text-meta font-bold text-p4g-yellow">{KIND_COPY[picked.kind].tag}</span>
                         <div className="mt-3 break-words font-display text-h2 font-black leading-snug">{picked.title}</div>
-                        <p className="mt-2 text-meta text-p4g-black/70">{picked.kind === 'history' && picked.historyDays && picked.lastDaysAgo !== undefined ? `这两个月做过 ${picked.historyDays} 次，上次是 ${picked.lastDaysAgo} 天前，再做一次不需要勇气` : KIND_COPY[picked.kind].hint}</p>
+                        <p className="mt-2 text-meta text-p4g-black/70">{picked.hint ?? KIND_COPY[picked.kind].hint}</p>
                         <TVFlash low={low} />
                       </motion.div>
                       <p className="mt-4 font-display text-body font-bold text-p4g-yellow">完成它会有额外奖励</p>
                       <div className="mt-3 flex w-full max-w-[320px] gap-3">
-                        <P4Button block size="lg" disabled={busy} onClick={async () => {
-                          if (busy) return;
-                          setBusy(true);
-                          try {
-                            await acceptFateDraw(picked);
-                            onClose();
-                            onGo?.(picked.kind, picked.title);
-                            toast.success('已加入今日任务 · ✦ 签');
-                          } catch (e) {
-                            toast.error(e instanceof Error ? e.message : '接住失败，请重试');
-                          } finally {
-                            setBusy(false);
-                          }
-                        }}>去完成</P4Button>
+                        <P4Button block size="lg" onClick={() => { onClose(); onGo ? onGo(picked.kind, picked.title) : toast.success('已加入今日任务 · ✦ 签'); }}>去完成</P4Button>
                         <P4Button block size="lg" variant="secondary" onClick={close}>再想想</P4Button>
                       </div>
-                      <button type="button" onClick={async () => {
-                        if (picked.kind === 'history') await muteFateHistory(picked);
-                        else setBanned((b) => [...b, picked.key]);
-                        toast('以后不会再抽到这件');
-                        setPhase('gate');
-                      }} className="mt-3 font-display text-meta font-bold text-white/60 underline underline-offset-4">以后别抽这件</button>
+                      <button type="button" onClick={() => { setBanned((b) => [...b, picked.key]); toast('以后不会再抽到这件'); setPhase('gate'); }} className="mt-3 font-display text-meta font-bold text-white/60 underline underline-offset-4">以后别抽这件</button>
                       <p className="mt-3 text-cap text-white/45">关闭会重新抽取其他的可能性</p>
                     </motion.div>
                   )}

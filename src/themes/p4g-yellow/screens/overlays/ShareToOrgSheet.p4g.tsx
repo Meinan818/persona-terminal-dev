@@ -3,55 +3,29 @@
  * 「分享到」组织选择、「说一句」、预览「大家会看到」、余量、主按钮「分享」（分享中… / 今天的 3 条用完了）
  * → 成功「分享好了」「已分享到「X」」+「好」「去公告板看看」。?step=done 直接看成功态。
  */
-import { useEffect, useMemo, useState } from 'react';
-import type { Activity } from '@/types';
+import { useEffect, useState } from 'react';
+import type { Activity } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Input, P4Sheet } from '@yellow/kit';
 import { navigate } from '@yellow/shell/shellBus';
-import { useActionsData } from '@yellow/adapters/pkg2';
-import { useCloudSocialStore } from '@/store/cloudSocial';
-import { getUserId } from '@/services/velvetApi';
-import { refreshBoard, shareActivity } from '@/services/orgSync';
-import { ORG_POSTS_PER_DAY, defaultShareText, myPostsToday } from '@/utils/orgLogic';
+import { ACTIVITIES, ATTR_NAMES, ORGS } from '@yellow/mock/pkg2';
 import { cx } from '@yellow/lib/cx';
 
 export default function ShareToOrgSheet({ open, onClose, params, activity }: OverlayProps & { activity?: Activity }) {
-  const { ACTIVITIES, ATTR_NAMES } = useActionsData();
-  const orgViews = useCloudSocialStore((s) => s.orgs);
-  const ORGS = useMemo(() => orgViews.map((v) => ({
-    id: v.org.id,
-    name: v.org.name,
-    left: Math.max(0, ORG_POSTS_PER_DAY - myPostsToday(v.posts, getUserId() ?? '')),
-  })), [orgViews]);
-  const act = activity ?? ACTIVITIES[0] ?? null;
-  const [org, setOrg] = useState<string | null>(ORGS[0]?.id ?? null);
+  const act = activity ?? ACTIVITIES[0];
+  const [org, setOrg] = useState(ORGS[0].id);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (!open) return;
-    setOrg(ORGS[0]?.id ?? null);
-    setText(act ? defaultShareText(act.description) : '');
-    setError(null);
-    setDone(params?.get('step') === 'done' ? ORGS[0]?.name ?? null : null);
-    for (const o of orgViews) void refreshBoard(o.org.id);
-  }, [open, act?.id]); // eslint-disable-line
-  const view = ORGS.find((o) => o.id === org) ?? ORGS[0];
-  const left = view?.left ?? 0;
-  const gained = Object.entries(act?.pointsAwarded ?? {}).filter(([, v]) => v > 0);
-  const submit = async () => {
-    if (!act || !view || !text.trim() || left <= 0) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await shareActivity(view.id, act, text);
-      setDone(view.name);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '分享失败，请稍后重试');
-    } finally {
-      setBusy(false);
-    }
+  useEffect(() => { if (open) { setText(''); setError(null); setDone(params?.get('step') === 'done' ? ORGS[0].name : null); } }, [open]); // eslint-disable-line
+  const view = ORGS.find((o) => o.id === org)!;
+  const left = view.left;
+  const gained = Object.entries(act.pointsAwarded).filter(([, v]) => v > 0);
+  const submit = () => {
+    if (!text.trim() || left <= 0) return;
+    setBusy(true); setError(null);
+    setTimeout(() => { setBusy(false); setDone(view.name); }, 700);
   };
   const footer = done ? (
     <div className="flex gap-3">
@@ -59,7 +33,7 @@ export default function ShareToOrgSheet({ open, onClose, params, activity }: Ove
       <P4Button block onClick={() => { onClose(); navigate('hideout', undefined, { params: { tab: 'board' } }); }}>去公告板看看</P4Button>
     </div>
   ) : (
-    <P4Button block size="lg" onClick={() => void submit()} disabled={busy || !act || !view || !text.trim() || left <= 0} busy={busy}>{busy ? '分享中…' : left <= 0 ? '今天的 3 条用完了' : '分享'}</P4Button>
+    <P4Button block size="lg" onClick={submit} disabled={busy || !text.trim() || left <= 0} busy={busy}>{busy ? '分享中…' : left <= 0 ? '今天的 3 条用完了' : '分享'}</P4Button>
   );
   return (
     <P4Sheet open={open} onClose={onClose} title={done ? '分享好了' : '分享到据点'} en="SHARE TO HIDEOUT" footer={footer}>
@@ -93,7 +67,7 @@ export default function ShareToOrgSheet({ open, onClose, params, activity }: Ove
               <div className="mt-2 flex flex-wrap gap-1.5">{gained.map(([a, v]) => <span key={a} className="rounded-xs bg-p4g-black px-1.5 font-display text-2xs font-bold text-p4g-yellow">{ATTR_NAMES[a as keyof typeof ATTR_NAMES]} +{v}</span>)}</div>
             </div>
           </div>
-          <p className="text-meta text-p4g-ink-soft">只分享这一句和加点，不带记录原文。{view ? left > 0 ? `今天还能在「${view.name}」分享 ${left} 条。` : `今天在「${view.name}」已经分享了 3 条，明天再来。` : '还没有加入据点。'}</p>
+          <p className="text-meta text-p4g-ink-soft">只分享这一句和加点，不带记录原文。{left > 0 ? `今天还能在「${view.name}」分享 ${left} 条。` : `今天在「${view.name}」已经分享了 3 条，明天再来。`}</p>
           {error && <p className="text-meta font-bold text-p4g-danger">{error}</p>}
         </div>
       )}

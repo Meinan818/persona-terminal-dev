@@ -6,13 +6,13 @@
  */
 import { motion, type PanInfo } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import type { OrgMember } from '@/types';
+import type { OrgMember } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Chip, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { ATTR_NAMES, ATTR_COLOR } from '@yellow/adapters/pkg4-tarot';
-import { BORROW_BATTLES_PER_WEEK, LEVEL, MEMBERS } from '@yellow/adapters/pkg4-org';
+import { ATTR_NAMES, ATTR_COLOR } from '@yellow/mock/pkg4-tarot';
+import { BORROW_BATTLES_PER_WEEK, LEVEL, MEMBERS } from '@yellow/mock/pkg4-org';
 import { displayCodename } from '@yellow/screens/pkg4/org/common';
 
 const TYPE_LABEL: Record<string, string> = { damage: '伤害', crit: '暴击', buff: '增伤', debuff: '易伤', charge: '蓄力', heal: '回复', attack_boost: '攻击增益' };

@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react';
 import { CfgBtn, CfgSelect, CfgSlider, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
-import { BGM_MAX_TRACKS, BGM_THEME_LABEL, BGM_TRACKS, type BgmTrack } from '@yellow/adapters/pkg6';
+import { BGM_MAX_TRACKS, BGM_THEME_LABEL, BGM_TRACKS, type BgmTrack } from '@yellow/mock/pkg6';
 import { BgmDeleteDialog } from '@yellow/screens/overlays/BgmSettingsDeleteConfirm.p4g';
 import { useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';

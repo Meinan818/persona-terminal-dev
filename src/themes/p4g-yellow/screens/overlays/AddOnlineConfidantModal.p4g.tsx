@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Avatar, P4Button, P4Input, P4Sheet, P4Textarea } from '@yellow/kit';
-import { PK3_PROFILES } from '@yellow/adapters/pkg3';
+import { PK3_PROFILES } from '@yellow/mock/pkg3';
 import { Sparkle } from '@yellow/screens/pkg3/ui';
 
 type Step = 'search' | 'found' | 'sent';

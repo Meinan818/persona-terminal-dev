@@ -1,5 +1,5 @@
 /** 倒计时卡纹理（斜纹 / 网格 / 点阵 / 纯色）→ CSS 背景，颜色统一走主题色（P4G：黄底黑纹） */
-import type { CallingCardTone } from '@/types';
+import type { CallingCardTone } from '@real/types';
 export const toneBg = (t: CallingCardTone | string, ink = 'rgba(17,17,17,.16)'): string => {
   switch (t) {
     case 'lines': return `repeating-linear-gradient(-45deg, ${ink} 0 6px, transparent 6px 14px)`;

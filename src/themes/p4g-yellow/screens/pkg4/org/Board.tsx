@@ -1,12 +1,12 @@
 /** 真实：src/components/org/BoardSection.tsx（公告板：筛选 / 动态卡 / 达成卡 / 团战战报 / 会议纪要 / 长按菜单） */
 import { useMemo, useRef, useState } from 'react';
-import type { OrgPost, OrgReactionTag, OrgView } from '@/types';
+import type { OrgPost, OrgReactionTag, OrgView } from '@real/types';
 import { P4Button, P4Card, useToast } from '@yellow/kit';
 import { CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
-import { ATTR_COLOR } from '@yellow/adapters/pkg4-tarot';
-import { MY_REACTIONS, REACTION_COUNTS, REACTIONS, RAID } from '@yellow/adapters/pkg4-org';
+import { ATTR_COLOR } from '@yellow/mock/pkg4-tarot';
+import { MY_REACTIONS, REACTION_COUNTS, REACTIONS, RAID } from '@yellow/mock/pkg4-org';
 import { BoardMenus } from '@yellow/screens/overlays/BoardMenus.p4g';
 import { MeChip, MemberThumb } from './common';
 

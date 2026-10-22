@@ -4,17 +4,17 @@
  * → ＋ 登记一件资产 → 按类目分组的固定资产（状态 · 日期 · +N 附加）→ 点开详情；空「还没有登记的固定资产…」
  */
 import { useMemo, useState } from 'react';
+import type { LedgerAsset } from '@real/types';
 import { P4Card, P4List, IconClose, useToast } from '@yellow/kit';
 import { CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { CardHead, Ring } from './ui';
 import { AssetAddSheetView, AssetDetailSheetView } from '@yellow/screens/overlays/AssetBoardSheets.p4g';
-import { ASSET_CATEGORIES, ASSET_STATUS, CNY, assetCat, assetTotal, fmtMoney, fmtSigned, useLedgerData, ledgerOps } from '@yellow/adapters/pkg5';
+import { ASSET_CATEGORIES, ASSET_STATUS, CNY, LEDGER_ACCOUNTS, LEDGER_ASSETS, LEDGER_SAVINGS, assetCat, assetTotal, fmtMoney, fmtSigned } from '@yellow/mock/pkg5';
 
 export function AssetBoard({ empty }: { empty?: boolean }) {
-  const { LEDGER_ACCOUNTS, LEDGER_ASSETS, LEDGER_SAVINGS } = useLedgerData();
   const toast = useToast();
-  const assets = empty ? [] : LEDGER_ASSETS;
+  const [assets, setAssets] = useState<LedgerAsset[]>(empty ? [] : LEDGER_ASSETS);
   const [savingsHidden, setSavingsHidden] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -109,8 +109,8 @@ export function AssetBoard({ empty }: { empty?: boolean }) {
           </P4List>
         </CollageItem>
       ))}
-      <AssetAddSheetView open={addOpen} onClose={() => setAddOpen(false)} onSave={async (a) => { await ledgerOps.addAsset(a); toast.success(`已登记：${a.name}`); }} />
-      <AssetDetailSheetView open={detailOpen && !!detail} asset={detail} onClose={() => setDetailOpen(false)} onChange={(a) => ledgerOps.updateAsset(a)} onDelete={async (id) => { await ledgerOps.removeAsset(id); toast('已删除'); }} />
+      <AssetAddSheetView open={addOpen} onClose={() => setAddOpen(false)} onSave={(a) => { setAssets((xs) => [a, ...xs]); toast.success(`已登记：${a.name}`); }} />
+      <AssetDetailSheetView open={detailOpen && !!detail} asset={detail} onClose={() => setDetailOpen(false)} onChange={(a) => setAssets((xs) => xs.map((x) => (x.id === a.id ? a : x)))} onDelete={(id) => { setAssets((xs) => xs.filter((x) => x.id !== id)); toast('已删除'); }} />
     </CollageStagger>
   );
 }

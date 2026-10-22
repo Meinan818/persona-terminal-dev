@@ -5,14 +5,14 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { OrgMember, OrgView } from '@/types';
+import type { OrgMember, OrgView } from '@real/types';
 import type { PageProps } from '@yellow/registry/types';
 import { P4Button, P4Card, P4Badge, P4Loading, P4EmptyState, P4Outline, useToast } from '@yellow/kit';
 import { ChannelNoise, CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { navigate } from '@yellow/shell/shellBus';
-import { buildView, LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@yellow/adapters/pkg4-org';
+import { buildView, LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@yellow/mock/pkg4-org';
 import { DevStrip, StateFade } from '@yellow/screens/pkg4/ui';
 import { HideoutMap, RosterWall, SECTION_TITLE, type HideoutSection } from '@yellow/screens/pkg4/org/MapWall';
 import { MemberTile } from '@yellow/screens/pkg4/org/MemberCard';

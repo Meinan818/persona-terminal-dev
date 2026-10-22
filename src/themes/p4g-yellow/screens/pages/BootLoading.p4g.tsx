@@ -16,7 +16,7 @@ import { NoiseLayer, SignalGlitch, ScanlineOverlay, TVFlash, tvPowerVariants } f
 import { useLowMotion } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
-import { MOCK_DIAG } from '@yellow/adapters/pkg1';
+import { MOCK_DIAG } from '@yellow/mock/pkg1';
 
 type S = 'loading' | 'stuck' | 'error' | 'crash' | 'chunk';
 const STATES: { id: S; label: string }[] = [

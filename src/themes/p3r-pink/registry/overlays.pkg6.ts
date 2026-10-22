@@ -4,7 +4,7 @@
  */
 import type { OverlayRegistry } from './types';
 
-const navWin = () => import('@pink/screens/overlays/NavigatorWindow.p3r');
+const navWin = () => import('@/themes/integration/NavigatorBridge');
 export const overlays: OverlayRegistry = {
   NavigatorWindow: { title: '助手对话窗', load: navWin, backdrop: 'page:dashboard' },
   'assistant-window': { title: '助手对话窗（NavigatorWindow）', load: navWin, backdrop: 'page:dashboard' },

@@ -5,21 +5,18 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import type { Wish } from '@/types';
+import type { Wish } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Outline, Portal, useEscape, useScrollLock } from '@yellow/kit';
 import { tvPowerVariants, TVFlash } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { actionsOps, useActionsData } from '@yellow/adapters/pkg2';
+import { WISHES, WISH_TIMES } from '@yellow/mock/pkg2';
 
 const HOLD = 1100;
-export default function WishFulfillDialog({ open, onClose, params, wish }: OverlayProps & { wish?: Wish | null; onFulfilled?: (id: string) => void }) {
-  const { WISHES, WISH_TIMES } = useActionsData();
+export default function WishFulfillDialog({ open, onClose, params, wish, onFulfilled }: OverlayProps & { wish?: Wish | null; onFulfilled?: (id: string) => void }) {
   const low = useLowMotion();
-  const w = (wish ? WISHES.find((x) => x.id === wish.id) ?? wish : WISHES[0]) ?? {
-    id: '', title: '', status: 'active' as const, source: 'manual' as const, createdAt: new Date(),
-  };
-  const times = w.id ? WISH_TIMES[w.id] ?? 0 : 0;
+  const w = wish ?? WISHES[0];
+  const times = WISH_TIMES[w.id] ?? 0;
   const [pressing, setPressing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ timesLogged: number; archivedTodos: number } | null>(null);
@@ -27,17 +24,7 @@ export default function WishFulfillDialog({ open, onClose, params, wish }: Overl
   useEffect(() => { if (open) { setResult(params?.get('step') === 'done' ? { timesLogged: times, archivedTodos: 1 } : null); setBusy(false); } }, [open]); // eslint-disable-line
   useScrollLock(open);
   useEscape(open, onClose);
-  const down = () => {
-    if (busy || !w.id) return;
-    setPressing(true);
-    t.current = window.setTimeout(() => {
-      setPressing(false);
-      setBusy(true);
-      void actionsOps.fulfillWish(w.id)
-        .then((payload) => setResult(payload ? { timesLogged: payload.timesLogged, archivedTodos: payload.archivedTodos } : { timesLogged: times, archivedTodos: 0 }))
-        .finally(() => setBusy(false));
-    }, low ? 300 : HOLD);
-  };
+  const down = () => { if (busy) return; setPressing(true); t.current = window.setTimeout(() => { setPressing(false); setBusy(true); window.setTimeout(() => { setBusy(false); setResult({ timesLogged: times, archivedTodos: 1 }); onFulfilled?.(w.id); }, 600); }, low ? 300 : HOLD); };
   const up = () => { clearTimeout(t.current); setPressing(false); };
   return (
     <Portal>

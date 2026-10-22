@@ -5,13 +5,13 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import type { OrgView } from '@/types';
+import type { OrgView } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Chip, P4Loading, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { ATTR_NAMES, ATTR_COLOR } from '@yellow/adapters/pkg4-tarot';
-import { buildView, RAID, RAID_MASKS, RAID_WEAK_MULT, RAID_FULL_MOON_MULT, RAID_XP_PER_HITTER } from '@yellow/adapters/pkg4-org';
+import { ATTR_NAMES, ATTR_COLOR } from '@yellow/mock/pkg4-tarot';
+import { buildView, RAID, RAID_MASKS, RAID_WEAK_MULT, RAID_FULL_MOON_MULT, RAID_XP_PER_HITTER } from '@yellow/mock/pkg4-org';
 import { displayCodename } from '@yellow/screens/pkg4/org/common';
 
 export type RaidDemo = 'open' | 'struck' | 'day' | 'defeated' | 'after' | 'nobattle' | 'loading' | 'failed';

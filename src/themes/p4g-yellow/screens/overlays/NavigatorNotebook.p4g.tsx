@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { CfgBtn, CfgInput, CfgTextarea } from '@yellow/screens/pkg6/cfg';
-import { NOTEBOOK } from '@yellow/adapters/pkg6';
+import { NOTEBOOK } from '@yellow/mock/pkg6';
 import { NotebookDeleteDialog } from './NavigatorNotebookConfirm.p4g';
 import { useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';

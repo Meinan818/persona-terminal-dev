@@ -10,7 +10,7 @@ import { useState, type ReactNode } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { Portal, P4Button, IconClose } from '@yellow/kit';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { MOCK_DIAG } from '@yellow/adapters/pkg1';
+import { MOCK_DIAG } from '@yellow/mock/pkg1';
 
 function Banner({ open, onClose, icon, title, children, tone = 'warn' }: { open: boolean; onClose: () => void; icon: string; title: string; children: ReactNode; tone?: 'warn' | 'info' }) {
   const low = useLowMotion();

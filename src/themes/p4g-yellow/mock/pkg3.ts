@@ -4,7 +4,7 @@
  */
 import type {
   AttributeId, CloudProfile, Confidant, ConfidantBuff, ConfidantEvent, CoopMemorialStamp, CounselArchive,
-} from '@/types';
+} from '@real/types';
 
 const d = (s: string) => new Date(s);
 const today = '2026-10-20';

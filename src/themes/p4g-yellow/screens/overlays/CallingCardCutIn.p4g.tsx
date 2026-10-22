@@ -1,4 +1,3 @@
-import { callingCardOps } from '@yellow/adapters/callingCards';
 /**
  * 宣告卡结算屏（真实 src/components/callingCard/CallingCardCutIn.tsx）。?variant=cleared|expired|archived
  * 「✦ CALLING CARD ✦」逐字入场 → 黑卡飞入（拼贴分层）→ 理由章 CLEARED / EXPIRED →
@@ -8,7 +7,7 @@ import { callingCardOps } from '@yellow/adapters/callingCards';
  */
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { CallingCard } from '@/types';
+import type { CallingCard } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { Portal, P4Outline, P4Stripe, useScrollLock } from '@yellow/kit';
 import { NoiseLayer } from '@yellow/fx';
@@ -20,7 +19,7 @@ export type Reason = 'auto_todos' | 'auto_date' | 'manual';
 const LETTERS = ['✦', ' ', 'C', 'A', 'L', 'L', 'I', 'N', 'G', ' ', 'C', 'A', 'R', 'D', ' ', '✦'];
 
 /** card / reason：宿主（行动·倒计时、宣告卡总览页）传入时用真实卡面；缺省用 demo 卡 */
-export default function CallingCardCutIn({ open, onClose, params, card, reason: reasonProp }: OverlayProps & { card?: Pick<CallingCard, 'title' | 'subtitle' | 'icon'> & Partial<Pick<CallingCard, 'id'>> | null; reason?: Reason }) {
+export default function CallingCardCutIn({ open, onClose, params, card, reason: reasonProp }: OverlayProps & { card?: Pick<CallingCard, 'title' | 'subtitle' | 'icon'> | null; reason?: Reason }) {
   const low = useLowMotion();
   useScrollLock(open);
   const v = params?.get('variant');
@@ -74,7 +73,7 @@ export default function CallingCardCutIn({ open, onClose, params, card, reason: 
                 </motion.div>
               </div>
               <motion.div className="mt-6 grid w-full grid-cols-1 gap-2" initial={low ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4, duration: 0.3 }}>
-                <P4Button block variant="secondary" disabled={ledger !== 'idle'} onClick={() => { setLedger('writing'); setTimeout(async () => { if (card?.id) await callingCardOps.record(card?.id); setLedger('done'); }, 900); }}>{ledger === 'done' ? '✓ 已留下记录' : ledger === 'writing' ? '正在落墨…' : '留下记录'}</P4Button>
+                <P4Button block variant="secondary" disabled={ledger !== 'idle'} onClick={() => { setLedger('writing'); setTimeout(() => setLedger('done'), 900); }}>{ledger === 'done' ? '✓ 已留下记录' : ledger === 'writing' ? '正在落墨…' : '留下记录'}</P4Button>
                 <P4Button block variant="black" size="lg" onClick={onClose}>收下卡片</P4Button>
               </motion.div>
             </div>

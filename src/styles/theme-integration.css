@@ -1,0 +1,19 @@
+/*
+ * 主题接入层覆盖。demo 文件保持原样，只在这里做应用级修正。
+ */
+
+/* 红频道的 #root 是 display:contents，改用 #view 作为滚动容器 */
+:root[data-ui-channel="p5"] #view {
+  height: 100dvh !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 正式包隐藏 demo 调试控件；开发模式保留 */
+html[data-prod="1"] #demo-ctl,
+html[data-prod="1"] [style*="--p3r-z-dev"],
+html[data-prod="1"] [style*="--p4g-z-dev"],
+html[data-prod="1"] .mt-8[style*="--p4g-line-soft"] {
+  display: none !important;
+}

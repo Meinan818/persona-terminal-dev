@@ -10,8 +10,8 @@ import { P4Sheet, P4Button, P4Input, P4Field, P4Outline, Portal, useToast } from
 import { CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { MAJOR, TAROT_BY_ID, tarotImg } from '@yellow/adapters/pkg4-tarot';
-import { ORG, ORG_CODENAME_MAX, ORG_EMBLEMS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_RULES } from '@yellow/adapters/pkg4-org';
+import { MAJOR, TAROT_BY_ID, tarotImg } from '@yellow/mock/pkg4-tarot';
+import { ORG, ORG_CODENAME_MAX, ORG_EMBLEMS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_RULES } from '@yellow/mock/pkg4-org';
 import { Coverflow } from '@yellow/screens/pkg4/org/Coverflow';
 
 export type OnbMode = 'create' | 'join' | 'card';

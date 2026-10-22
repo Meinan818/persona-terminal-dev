@@ -10,12 +10,12 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRef, type MouseEvent as RME } from 'react';
-import type { Achievement, Attribute, AttributeId } from '@/types';
+import type { Achievement, Attribute, AttributeId } from '@real/types';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
 import { P4Outline } from '@yellow/kit';
 import { Sparkle4, RippleLayer, useRipples } from './bits';
-import { ATTR_EN, LEVEL_THRESHOLDS, MASTERY_MAX_LEVEL, levelTitle, masteryOf, masteryTitle } from '@yellow/adapters/pkg1';
+import { ATTR_EN, LEVEL_THRESHOLDS, MASTERY_MAX_LEVEL, levelTitle, masteryOf, masteryTitle } from '@yellow/mock/pkg1';
 
 export interface StarItem { id: AttributeId; name: string; level: number; maxLevel: number; stars: number; points: number; title: string }
 

@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P6Dialog } from '@yellow/screens/pkg6/dialog';
-import { SYNC_DIFF, SYNC_TABLE_LABEL } from '@yellow/adapters/pkg6';
+import { SYNC_DIFF, SYNC_TABLE_LABEL } from '@yellow/mock/pkg6';
 import { P4Button, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 

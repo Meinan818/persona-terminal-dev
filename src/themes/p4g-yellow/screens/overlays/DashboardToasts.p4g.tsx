@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { Portal } from '@yellow/kit';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { MOCK_CALLING_CARD } from '@yellow/adapters/pkg1';
+import { MOCK_CALLING_CARD } from '@yellow/mock/pkg1';
 import { GlyphHourglass } from '@yellow/screens/pkg1/bits';
 
 export function UrgentToastP4G({ text, onDone }: { text: string | null; onDone: () => void }) {

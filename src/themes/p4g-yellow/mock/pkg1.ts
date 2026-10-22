@@ -6,7 +6,7 @@
  *   · 精通：满 10 级后每 500 点一颗星（src/utils/levels.ts#masteryOf，easy）
  *   · 称号 = DEFAULT_ATTRIBUTE_LEVEL_TITLES / MASTERY_TITLES（src/utils/attributeLevelTitles.ts）
  */
-import type { Achievement, Attribute, AttributeId, CallingCard, Todo } from '@/types';
+import type { Achievement, Attribute, AttributeId, CallingCard, Todo } from '@real/types';
 
 export const ATTR_IDS: AttributeId[] = ['knowledge', 'guts', 'dexterity', 'kindness', 'charm'];
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 设置页（真实 src/pages/Settings.tsx）—— P4G Golden「Config」画面 1:1：
  * 顶部 [Q] 主题 | AI 服务 | … [E] 标签条（快速跳转）+ 分组手风琴（点击展开/收起 ▲▼，同一时间只开一组，与真实一致）
  * + 浅黄横条设置行（聚焦整行反黑、取值青柠）+ 页底「账号与数据」入口 + 紫字「Config」条纹页头。
@@ -19,7 +19,6 @@ import { PersonalizeSection } from '@yellow/screens/pkg6/settings/PersonalizeSec
 import { NavigatorSection } from '@yellow/screens/pkg6/settings/NavigatorSection';
 import { NotificationSection } from '@yellow/screens/pkg6/settings/NotificationSection';
 import { cx } from '@yellow/lib/cx';
-import { hydrateFromRealStore } from '@yellow/screens/pkg6/settingsStore';
 
 type SectionId = 'theme' | 'ai' | 'summary' | 'personalize' | 'navigator' | 'notifications';
 const SECTIONS: { id: SectionId; label: string; en: string; icon: string }[] = [
@@ -33,7 +32,6 @@ const SECTIONS: { id: SectionId; label: string; en: string; icon: string }[] = [
 
 export default function Settings({ tab, params }: PageProps) {
   const low = useLowMotion();
-  useEffect(() => { hydrateFromRealStore(); }, []);
   const initial = (SECTIONS.some((s) => s.id === tab) ? tab : params.get('block') ? 'theme' : 'theme') as SectionId;
   const [active, setActive] = useState<SectionId | null>(initial);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});

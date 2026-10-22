@@ -7,11 +7,11 @@
 import { motion } from 'framer-motion';
 import type { OverlayProps } from '@yellow/registry/types';
 import { useLowMotion } from '@yellow/lib/prefs';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import { P4Outline } from '@yellow/kit';
 import { CelebrationStage } from '@yellow/screens/pkg1/CelebrationStage';
 import { Sparkle4 } from '@yellow/screens/pkg1/bits';
-import { ATTR_NAMES } from '@yellow/adapters/pkg1';
+import { ATTR_NAMES } from '@yellow/mock/pkg1';
 
 export interface LevelUpP4GProps extends OverlayProps { attributeName?: string; newLevel?: number; masteryStars?: number }
 

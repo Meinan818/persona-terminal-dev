@@ -21,7 +21,7 @@ import { goalPct, presetOf, usePresence } from '@yellow/screens/pkg5/presence';
 import { UserProfileCardView } from '@yellow/screens/overlays/UserProfileCard.p4g';
 import { MenuThemeSheetView } from '@yellow/screens/overlays/MenuThemeSheet.p4g';
 import { MenuAboutSheetView } from '@yellow/screens/overlays/MenuAboutSheet.p4g';
-import { CURRENT_STREAK, THEME_SWATCHES, TOTAL_LEVEL, TOTAL_POINTS, USER } from '@yellow/adapters/pkg5';
+import { CURRENT_STREAK, THEME_SWATCHES, TOTAL_LEVEL, TOTAL_POINTS, USER } from '@yellow/mock/pkg5';
 
 interface Row { key: string; label: string; caption?: ReactNode; desc: string; badge?: ReactNode; big?: boolean; onPress: () => void }
 

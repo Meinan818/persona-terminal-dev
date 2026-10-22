@@ -11,7 +11,7 @@ import { Portal, useEscape, useScrollLock, showToast } from '@yellow/kit';
 import { TVPowerOn } from '@yellow/fx';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
-import { PK3_CONFIDANTS } from '@yellow/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@yellow/mock/pkg3';
 import { TarotCard } from '@yellow/screens/pkg3/ui';
 
 type CState = 'intro' | 'live' | 'expired' | 'cooldown';

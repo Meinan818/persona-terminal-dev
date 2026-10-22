@@ -7,7 +7,7 @@ import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Stepper, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { P5Label } from '@yellow/screens/pkg5/ui';
-import { CNY, fmtMoney, fmtPlain, monthLabel, sanitizeMoneyInput, useLedgerData, ledgerOps } from '@yellow/adapters/pkg5';
+import { CNY, LEDGER_BUDGET, LEDGER_RESET_DAY, fmtMoney, fmtPlain, monthLabel, sanitizeMoneyInput } from '@yellow/mock/pkg5';
 
 function MoneyBox({ label, value, onChange, placeholder, accent, disabled }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; accent?: boolean; disabled?: boolean }) {
   return (
@@ -23,10 +23,7 @@ function MoneyBox({ label, value, onChange, placeholder, accent, disabled }: { l
 }
 
 export function LedgerBudgetSheetView({ open, onClose, newCycle, days = 31, onSaved }: { open: boolean; onClose: () => void; newCycle?: boolean; days?: number; onSaved?: (monthly: number) => void }) {
-  const { LEDGER_BUDGET, LEDGER_RESET_DAY } = useLedgerData();
   const toast = useToast();
-  const saving = useRef(false);
-  const [busy, setBusy] = useState(false);
   const current = LEDGER_BUDGET.monthlyLimit;
   const editsLeft = Math.max(0, 2 - LEDGER_BUDGET.savingsGoalEdits);
   const [monthly, setMonthly] = useState('');
@@ -34,16 +31,15 @@ export function LedgerBudgetSheetView({ open, onClose, newCycle, days = 31, onSa
   const [savings, setSavings] = useState('');
   const [challenge, setChallenge] = useState(false);
   const [resetDay, setResetDay] = useState(LEDGER_RESET_DAY);
-  useEffect(() => { if (open) setResetDay(LEDGER_RESET_DAY); }, [open, LEDGER_RESET_DAY]);
   const fromDaily = useRef<string | null>(null);
   const dailyOf = (m: string) => { const n = Number(m); return n > 0 ? fmtPlain(n / days) : ''; };
-  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(LEDGER_BUDGET.savingsGoal)); setChallenge(newCycle ? false : true); } }, [open, current, LEDGER_BUDGET.savingsGoal]); // eslint-disable-line
+  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(LEDGER_BUDGET.savingsGoal)); setChallenge(newCycle ? false : true); } }, [open]); // eslint-disable-line
   useEffect(() => { if (fromDaily.current === monthly) { fromDaily.current = null; return; } setDaily(dailyOf(monthly)); }, [monthly]); // eslint-disable-line
   const m = Number(monthly);
   const locked = editsLeft <= 0;
   return (
     <P4Sheet open={open} onClose={onClose} title={newCycle ? '新的一程 · 立个目标' : '本月预算'} en={newCycle ? 'NEW CYCLE' : 'BUDGET'}
-      footer={<P4Button block size="lg" disabled={busy || !Number.isFinite(m) || !(m > 0)} onClick={async () => { if (saving.current) return; saving.current = true; setBusy(true); try { await ledgerOps.saveBudget(m, challenge ? Number(savings) || 0 : undefined, resetDay, newCycle); onClose(); onSaved ? onSaved(m) : toast.success(`预算已定：${CNY}${fmtMoney(m)}`); } catch { toast('预算保存失败，请重试'); } finally { saving.current = false; setBusy(false); } }}>{newCycle ? '就这么定' : '保存'}</P4Button>}>
+      footer={<P4Button block size="lg" disabled={!(m > 0)} onClick={() => { onClose(); onSaved ? onSaved(m) : toast.success(`预算已定：${CNY}${fmtMoney(m)}`); }}>{newCycle ? '就这么定' : '保存'}</P4Button>}>
       <div className="flex min-w-0 flex-col gap-4 pt-1">
         <div className="relative min-w-0 rounded-sm border-3 border-p4g-black bg-[color:var(--p4g-msg)] px-4 py-3 text-body leading-relaxed text-[color:var(--p4g-msg-ink)] shadow-plate night:border-p4g-yellow">
           <span aria-hidden className="mr-1 text-p4g-yellow">&gt;</span>

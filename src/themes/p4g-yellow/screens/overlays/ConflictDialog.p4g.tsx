@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P6Dialog } from '@yellow/screens/pkg6/dialog';
-import { CONFLICT_ROWS } from '@yellow/adapters/pkg6';
+import { CONFLICT_ROWS } from '@yellow/mock/pkg6';
 import { useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 

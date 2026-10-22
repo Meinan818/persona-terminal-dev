@@ -4,10 +4,10 @@
  * 选中后展开：属性选择（活动次数、属性点数）+ 目标次数 Stepper；「完成奖励（选填）」；取消 / 确认（N 项）。
  */
 import { useEffect, useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Input, P4Sheet, P4Stepper, IconCheck, IconPlus, useToast } from '@yellow/kit';
-import { ATTR_IDS, useActionsData } from '@yellow/adapters/pkg2';
+import { ATTR_IDS, ATTR_NAMES, WEEKLY_GOAL } from '@yellow/mock/pkg2';
 import { cx } from '@yellow/lib/cx';
 
 type GT = 'activity_count' | 'todo_count' | 'attr_points' | 'total_points';
@@ -18,7 +18,6 @@ const DEF: Record<GT, number> = { activity_count: 6, todo_count: 10, attr_points
 const ALL: GT[] = ['activity_count', 'todo_count', 'attr_points', 'total_points'];
 
 export default function GoalSetupForm({ open, onClose, params, initial, initialReward, onSubmit }: OverlayProps & { initial?: GoalItem[]; initialReward?: string; onSubmit?: (items: GoalItem[], reward: string) => void }) {
-  const { ATTR_NAMES, WEEKLY_GOAL } = useActionsData();
   const toast = useToast();
   const edit = params?.get('variant') === 'edit';
   const [items, setItems] = useState<Record<GT, GoalItem>>(() => Object.fromEntries(ALL.map((t) => [t, { type: t, attribute: t === 'activity_count' || t === 'attr_points' ? 'knowledge' : undefined, target: DEF[t], current: 0 }])) as Record<GT, GoalItem>);

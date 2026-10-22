@@ -9,7 +9,7 @@ import { lazyOf } from '@yellow/shell/lazyRegistry';
 import { showToast } from '@yellow/kit';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import { MOCK_SEASON } from '@yellow/adapters/pkg1';
+import { MOCK_SEASON } from '@yellow/mock/pkg1';
 
 /** 当前路由查询参数（HashRouter 下 location.search）*/
 export function useQ(): URLSearchParams {

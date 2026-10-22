@@ -1,5 +1,5 @@
 /* 工作包 4 · 星象假数据（类型来自真实仓库）。日期以「今天」为锚动态生成。 */
-import type { DailyDivination, FateGlimpse, LongReading } from '@/types';
+import type { DailyDivination, FateGlimpse, LongReading } from '@real/types';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const dayKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

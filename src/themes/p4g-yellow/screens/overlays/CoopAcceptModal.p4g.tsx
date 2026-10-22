@@ -8,7 +8,7 @@ import { P4Button, P4Sheet, showToast } from '@yellow/kit';
 import { ATTR_NAMES, TAROT_BY_ID } from '@yellow/screens/pkg3/arcana';
 import { ArcanaPickerForm, type ArcanaPickValue } from '@yellow/screens/pkg3/ArcanaPickerForm';
 import { MatchingSpinner, MiniLabel, TarotCard } from '@yellow/screens/pkg3/ui';
-import { PK3_CONFIDANTS } from '@yellow/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@yellow/mock/pkg3';
 import { CoopAiMatchSheet } from './CoopAiMatchModal.p4g';
 import { ModeCards } from './CoopProposeModal.p4g';
 

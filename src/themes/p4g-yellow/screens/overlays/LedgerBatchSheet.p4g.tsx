@@ -4,11 +4,11 @@
  */
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
-import type { LedgerExpenseType } from '@/types';
+import type { LedgerExpenseType } from '@real/types';
 import { P4Sheet, P4Button, IconClose, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { P5Label, DateQuickPicker } from '@yellow/screens/pkg5/ui';
-import { CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, moneyFromInput, sanitizeMoneyInput } from '@yellow/adapters/pkg5';
+import { CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, moneyFromInput, sanitizeMoneyInput } from '@yellow/mock/pkg5';
 
 export interface BatchRow { direction: 'expense' | 'income'; amount: string; type: LedgerExpenseType; channel: string; incomeSource: string; note: string }
 export const emptyRow = (): BatchRow => ({ direction: 'expense', amount: '', type: 'food', channel: '微信', incomeSource: '', note: '' });

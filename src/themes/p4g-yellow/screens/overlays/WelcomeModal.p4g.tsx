@@ -10,7 +10,7 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { Portal, P4Outline, P4Button, P4Input, P4Textarea, SlotImg, useScrollLock, showToast } from '@yellow/kit';
 import { CollageStagger, CollageItem, NoiseLayer } from '@yellow/fx';
@@ -18,7 +18,7 @@ import { useLowMotion } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
 import { MoonGlyph, OverlayByKey, Sparkle4 } from '@yellow/screens/pkg1/bits';
-import { ATTR_IDS, MOON_NAMES, WELCOME_ATTR_PLACEHOLDERS, WELCOME_GUIDE, WELCOME_PRESETS } from '@yellow/adapters/pkg1';
+import { ATTR_IDS, MOON_NAMES, WELCOME_ATTR_PLACEHOLDERS, WELCOME_GUIDE, WELCOME_PRESETS } from '@yellow/mock/pkg1';
 
 type Step = 'welcome' | 'name' | 'preset' | 'customize' | 'done' | 'guide' | 'blessing' | 'import';
 const STEP_ORDER: Step[] = ['welcome', 'name', 'preset', 'customize', 'done', 'guide', 'blessing'];

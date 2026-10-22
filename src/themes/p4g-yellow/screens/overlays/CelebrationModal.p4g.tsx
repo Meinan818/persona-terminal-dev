@@ -5,12 +5,12 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Outline, P4Stripe, Portal, useEscape, useScrollLock } from '@yellow/kit';
 import { CollageItem, CollageStagger } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { ATTR_EN, ATTR_IDS, useActionAttributes, useActionsData } from '@yellow/adapters/pkg2';
+import { ATTR_EN, ATTR_IDS, ATTR_NAMES } from '@yellow/mock/pkg2';
 import { cx } from '@yellow/lib/cx';
 
 const BURST = Array.from({ length: 24 }, (_, i) => {
@@ -19,12 +19,10 @@ const BURST = Array.from({ length: 24 }, (_, i) => {
   return { x: Math.cos(a) * d, y: Math.sin(a) * d * 0.9 - 30, r: (i * 47) % 360, c: ['var(--p4g-yellow)', 'var(--p4g-orange)', 'var(--p4g-blue)', 'var(--p4g-green)', 'var(--p4g-cream)', 'var(--p4g-red)'][i % 6], s: 8 + (i % 4) * 3, star: i % 4 === 0, delay: 0.12 + (i % 6) * 0.03 };
 });
 
-export const rewardPts = (a: AttributeId, levels: Partial<Record<AttributeId, number>> = {}) => ((levels[a] ?? 1) >= 3 ? 7 : 5);
+const LV: Record<AttributeId, number> = { knowledge: 4, guts: 3, dexterity: 2, kindness: 2, charm: 1 };
+export const rewardPts = (a: AttributeId) => (LV[a] >= 3 ? 7 : 5);
 
 export default function CelebrationModal({ open, onClose, onClaim }: OverlayProps & { onClaim?: (a: AttributeId, pts: number) => void }) {
-  const { ATTR_NAMES } = useActionAttributes();
-  const { attributes } = useActionsData();
-  const levels = Object.fromEntries(attributes.map((a) => [a.id, a.level])) as Partial<Record<AttributeId, number>>;
   const low = useLowMotion();
   const [sel, setSel] = useState<AttributeId | null>(null);
   useScrollLock(open);
@@ -67,7 +65,7 @@ export default function CelebrationModal({ open, onClose, onClaim }: OverlayProp
                             className={cx('flex w-full min-w-0 items-center gap-3 border-3 border-p4g-black px-3 py-2 text-left transition-colors', on ? 'bg-p4g-black text-p4g-yellow' : 'bg-white text-p4g-black')}>
                             <span className={cx('h-5 w-5 shrink-0 border-3', on ? 'border-p4g-yellow bg-p4g-orange' : 'border-p4g-black')} />
                             <span className="min-w-0 flex-1"><span className="font-display text-lead font-bold">{ATTR_NAMES[a]}</span> <span className="font-display text-2xs font-bold italic tracking-wider opacity-70">{ATTR_EN[a]}</span></span>
-                            <span className="shrink-0 p4g-num text-h3">+{rewardPts(a, levels)} 点</span>
+                            <span className="shrink-0 p4g-num text-h3">+{rewardPts(a)} 点</span>
                           </button>
                         </CollageItem>
                       );
@@ -75,7 +73,7 @@ export default function CelebrationModal({ open, onClose, onClaim }: OverlayProp
                   </div>
                   <CollageItem className="mt-4 flex gap-3">
                     <P4Button variant="secondary" block onClick={onClose}>取消</P4Button>
-                    <P4Button variant="black" block disabled={!sel} onClick={() => { if (sel) { onClaim?.(sel, rewardPts(sel, levels)); onClose(); } }}>领取奖励 ✨</P4Button>
+                    <P4Button variant="black" block disabled={!sel} onClick={() => { if (sel) { onClaim?.(sel, rewardPts(sel)); onClose(); } }}>领取奖励 ✨</P4Button>
                   </CollageItem>
                 </CollageStagger>
               </div>

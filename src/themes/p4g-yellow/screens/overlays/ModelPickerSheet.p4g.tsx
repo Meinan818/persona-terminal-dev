@@ -7,7 +7,7 @@ import type { OverlayProps } from '@yellow/registry/types';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { CfgInput, CfgToggle, CfgBtn } from '@yellow/screens/pkg6/cfg';
 import { getSettings, updateSettings, useSettings, type MockSettings } from '@yellow/screens/pkg6/settingsStore';
-import { AGGREGATORS, MODEL_CATALOG, PROVIDERS, type ModelEntry } from '@yellow/adapters/pkg6';
+import { AGGREGATORS, MODEL_CATALOG, PROVIDERS, type ModelEntry } from '@yellow/mock/pkg6';
 import { cx } from '@yellow/lib/cx';
 
 export type ModelPickerMode = 'fast' | 'deliberate' | 'assistant' | 'vision' | 'audio';

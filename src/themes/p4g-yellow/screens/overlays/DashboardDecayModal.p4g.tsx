@@ -4,9 +4,9 @@
  * 转场：电视画面弹出（P4Dialog 的 tvPower），关闭收成光点。
  */
 import type { OverlayProps } from '@yellow/registry/types';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import { P4Dialog } from '@yellow/kit';
-import { ATTR_NAMES } from '@yellow/adapters/pkg1';
+import { ATTR_NAMES } from '@yellow/mock/pkg1';
 
 export function DecayModalP4G({ open, onClose, attrs = ['guts', 'kindness'] }: OverlayProps & { attrs?: AttributeId[] }) {
   return (

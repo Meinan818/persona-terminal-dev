@@ -6,12 +6,12 @@
  * 路由：#/overlay/hideout-settings?leader=0
  */
 import { useEffect, useState } from 'react';
-import type { OrgView } from '@/types';
+import type { OrgView } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Input, P4Switch, P4Section, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
-import { ATTR_NAMES } from '@yellow/adapters/pkg4-tarot';
-import { buildView, LEVEL, ORG_EMBLEMS, ORG_LEVEL_NAMES, ORG_MAX_SHOWN_MASKS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_PRIVACY_NOTE, ORG_RULES } from '@yellow/adapters/pkg4-org';
+import { ATTR_NAMES } from '@yellow/mock/pkg4-tarot';
+import { buildView, LEVEL, ORG_EMBLEMS, ORG_LEVEL_NAMES, ORG_MAX_SHOWN_MASKS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_PRIVACY_NOTE, ORG_RULES } from '@yellow/mock/pkg4-org';
 import { displayCodename, MemberThumb } from '@yellow/screens/pkg4/org/common';
 import { OrgSettingsConfirm, type SettingsConfirm } from './OrgSettingsSheetConfirm.p4g';
 

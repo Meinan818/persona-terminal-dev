@@ -194,6 +194,7 @@ export default defineConfig({
       '@blue': path.resolve(__dirname, './src/themes/p3r-blue'),
       '@pink': path.resolve(__dirname, './src/themes/p3r-pink'),
       '@yellow': path.resolve(__dirname, './src/themes/p4g-yellow'),
+      '@real': path.resolve(__dirname, './src'),
     },
   },
   // 只扫描应用入口：仓库内另有 Android 生成页、历史构建与素材预览，

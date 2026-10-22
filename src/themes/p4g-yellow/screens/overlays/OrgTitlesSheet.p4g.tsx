@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Input, P4Chip, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
-import { LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@yellow/adapters/pkg4-org';
+import { LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@yellow/mock/pkg4-org';
 
 interface Custom { id: string; name: string; cond: { type: CondType; value: number } }
 const clip = (v: string, n: number) => [...v].slice(0, n).join('');

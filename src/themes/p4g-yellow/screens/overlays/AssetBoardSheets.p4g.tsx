@@ -3,20 +3,18 @@
  *   AssetAddSheet「登记资产」：名称 / 类别 chips / 购入价 / 状态（在用·闲置·已出）/ 日期 → 保存
  *   AssetDetailSheet「<资产名>」：总价 + 购入 · 日期 / 状态切换 / 附加费用列表（删除）+ 新增「名称」「金额」「加」/ 删除这件资产 → 确认
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
-import type { LedgerAsset } from '@/types';
+import type { LedgerAsset } from '@real/types';
 import { P4Sheet, P4Button, P4Input, P4SegmentTabs, IconClose, useToast } from '@yellow/kit';
 import { P5Label, P5Pick } from '@yellow/screens/pkg5/ui';
 import { AssetDeleteConfirmView } from './AssetBoardDeleteConfirm.p4g';
-import { ASSET_CATEGORIES, ASSET_STATUS, CNY, LEDGER_ASSETS, P5_TODAY, assetCat, assetTotal, fmtMoney } from '@yellow/adapters/pkg5';
+import { ASSET_CATEGORIES, ASSET_STATUS, CNY, LEDGER_ASSETS, P5_TODAY, assetCat, assetTotal, fmtMoney } from '@yellow/mock/pkg5';
 
 const STATUSES = ['inuse', 'idle', 'soldout'] as const;
 
-export function AssetAddSheetView({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave?: (a: LedgerAsset) => void | Promise<unknown> }) {
+export function AssetAddSheetView({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave?: (a: LedgerAsset) => void }) {
   const toast = useToast();
-  const saving = useRef(false);
-  const [busy, setBusy] = useState(false);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('digital');
   const [price, setPrice] = useState('');
@@ -26,7 +24,7 @@ export function AssetAddSheetView({ open, onClose, onSave }: { open: boolean; on
   const canSave = name.trim() && Number(price) > 0;
   return (
     <P4Sheet open={open} onClose={onClose} title="登记资产" en="REGISTER ASSET"
-      footer={<P4Button block size="lg" disabled={busy || !canSave || !Number.isFinite(Number(price))} onClick={async () => { if (saving.current) return; saving.current = true; setBusy(true); try { const a: LedgerAsset = { id: `as_${Date.now()}`, name: name.trim(), category, price: Number(price), purchaseDate: date, status, createdAt: new Date() }; if (onSave) await onSave(a); else toast.success(`已登记：${a.name}`); onClose(); } catch { toast('资产保存失败，请重试'); } finally { saving.current = false; setBusy(false); } }}>保存</P4Button>}>
+      footer={<P4Button block size="lg" disabled={!canSave} onClick={() => { const a: LedgerAsset = { id: `as_${Date.now()}`, name: name.trim(), category, price: Number(price), purchaseDate: date, status, createdAt: new Date() }; onClose(); onSave ? onSave(a) : toast.success(`已登记：${a.name}`); }}>保存</P4Button>}>
       <div className="flex min-w-0 flex-col gap-4 pt-1">
         <P4Input value={name} onChange={(e) => setName(e.target.value)} placeholder="名称（如 索尼相机）" aria-label="名称" autoFocus />
         <div className="flex min-w-0 flex-wrap gap-1.5">
@@ -45,21 +43,13 @@ export function AssetAddSheetView({ open, onClose, onSave }: { open: boolean; on
   );
 }
 
-export function AssetDetailSheetView({ asset: initial, open, onClose, onChange, onDelete }: { asset: LedgerAsset | null; open: boolean; onClose: () => void; onChange?: (a: LedgerAsset) => void | Promise<unknown>; onDelete?: (id: string) => void | Promise<unknown> }) {
+export function AssetDetailSheetView({ asset: initial, open, onClose, onChange, onDelete }: { asset: LedgerAsset | null; open: boolean; onClose: () => void; onChange?: (a: LedgerAsset) => void; onDelete?: (id: string) => void }) {
   const [asset, setAsset] = useState<LedgerAsset | null>(initial);
   const [n, setN] = useState('');
   const [amt, setAmt] = useState('');
   const [confirm, setConfirm] = useState(false);
   useEffect(() => { setAsset(initial); setN(''); setAmt(''); }, [initial, open]);
-  const toast = useToast();
-  const saving = useRef(false);
-  const patch = async (p: Partial<LedgerAsset>) => {
-    if (!asset || saving.current) return false;
-    saving.current = true;
-    try { const next = { ...asset, ...p }; await onChange?.(next); setAsset(next); return true; }
-    catch { toast('资产修改失败，请重试'); return false; }
-    finally { saving.current = false; }
-  };
+  const patch = (p: Partial<LedgerAsset>) => setAsset((a) => { if (!a) return a; const next = { ...a, ...p }; onChange?.(next); return next; });
   if (!asset) return null;
   const addOns = asset.addOns ?? [];
   return (
@@ -90,13 +80,13 @@ export function AssetDetailSheetView({ asset: initial, open, onClose, onChange, 
             <div className="flex min-w-0 gap-2">
               <input value={n} onChange={(e) => setN(e.target.value)} placeholder="名称" aria-label="附加费用名称" className="h-11 min-w-0 flex-1 rounded-sm border-3 border-p4g-line bg-p4g-surface-2 px-3 text-body text-p4g-ink outline-none focus-visible:outline-none placeholder:text-p4g-muted" />
               <input type="number" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="金额" aria-label="附加费用金额" className="h-11 w-24 shrink-0 rounded-sm border-3 border-p4g-line bg-p4g-surface-2 px-3 p4g-num-upright text-body text-p4g-ink outline-none focus-visible:outline-none placeholder:text-p4g-muted" />
-              <P4Button variant="black" disabled={!n.trim() || !(Number(amt) > 0)} onClick={async () => { if (await patch({ addOns: [...addOns, { name: n.trim(), amount: Number(amt) }] })) { setN(''); setAmt(''); } }}>加</P4Button>
+              <P4Button variant="black" disabled={!n.trim() || !(Number(amt) > 0)} onClick={() => { patch({ addOns: [...addOns, { name: n.trim(), amount: Number(amt) }] }); setN(''); setAmt(''); }}>加</P4Button>
             </div>
           </div>
           <P4Button variant="danger" block onClick={() => setConfirm(true)}>删除这件资产</P4Button>
         </div>
       </P4Sheet>
-      <AssetDeleteConfirmView open={confirm} onClose={() => setConfirm(false)} name={asset.name} onConfirm={async () => { if (saving.current) return; saving.current = true; try { await onDelete?.(asset.id); onClose(); } catch { toast('资产删除失败，请重试'); } finally { saving.current = false; } }} />
+      <AssetDeleteConfirmView open={confirm} onClose={() => setConfirm(false)} name={asset.name} onConfirm={() => { onDelete?.(asset.id); onClose(); }} />
     </>
   );
 }

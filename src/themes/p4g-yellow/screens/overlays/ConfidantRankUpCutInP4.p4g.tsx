@@ -7,7 +7,7 @@
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4CinemaChain } from '@yellow/screens/pkg3/cinema';
 import { ATTR_NAMES } from '@yellow/screens/pkg3/arcana';
-import { PK3_CONFIDANTS } from '@yellow/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@yellow/mock/pkg3';
 
 export const demoNotice = (params?: URLSearchParams) => {
   const c = PK3_CONFIDANTS.find((x) => x.id === params?.get('id')) ?? PK3_CONFIDANTS[0];

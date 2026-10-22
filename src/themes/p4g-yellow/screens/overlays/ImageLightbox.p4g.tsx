@@ -12,15 +12,16 @@ import { useLowMotion } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
 
+const DEMO = ['town-day.webp', 'town-night.webp', 'tv-world-fog.webp'];
 export default function ImageLightbox({ open, onClose, images, index: idx0 = 0, caption, onDelete }: OverlayProps & { images?: string[]; index?: number; caption?: string; onDelete?: (i: number) => void }) {
   const low = useLowMotion();
   const toast = useToast();
-  const [list, setList] = useState<string[]>(images ?? []);
+  const [list, setList] = useState<string[]>(images ?? DEMO);
   const [i, setI] = useState(idx0);
   const [confirm, setConfirm] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (open) { setList(images ?? []); setI(idx0); setConfirm(false); setHint(null); } }, [open, images, idx0]);
+  useEffect(() => { if (open) { setList(images ?? DEMO); setI(idx0); setConfirm(false); setHint(null); } }, [open]); // eslint-disable-line
   useScrollLock(open);
   useEscape(open, onClose);
   const n = list.length;
@@ -34,17 +35,7 @@ export default function ImageLightbox({ open, onClose, images, index: idx0 = 0, 
   useEffect(() => { if (open && n === 0) onClose(); }, [n, open, onClose]);
   const src = list[i];
   const btn = 'p4g-press rounded-sm border-3 border-p4g-black px-3 py-1.5 font-display text-meta font-bold shadow-hard-sm disabled:opacity-50';
-  const save = () => {
-    if (!src) return;
-    setBusy(true);
-    const a = document.createElement('a');
-    a.href = src;
-    a.download = `maskaria-photo-${Date.now()}.jpg`;
-    a.click();
-    setBusy(false);
-    setHint('图片已下载');
-    toast.success('已下载');
-  };
+  const save = () => { setBusy(true); setTimeout(() => { setBusy(false); setHint('已保存到相册'); toast.success('已保存'); }, 500); };
   const del = () => {
     onDelete?.(i);
     setList((l) => l.filter((_, j) => j !== i));

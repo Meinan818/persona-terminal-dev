@@ -8,11 +8,11 @@
  * 「写好了」「取消」、关闭。外观：P4G 菜单式竖排幽灵字 + 黄色属性块。
  */
 import { useEffect, useState } from 'react';
-import type { AttributeId, LedgerExpenseType, LedgerIncomeType } from '@/types';
+import type { AttributeId, LedgerExpenseType, LedgerIncomeType } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { CfgInput } from '@yellow/screens/pkg6/cfg';
-import { ACTION_META, ATTRS, CATEGORY_META, INCOME_META, type DraftKind } from '@yellow/adapters/pkg6';
+import { ACTION_META, ATTRS, CATEGORY_META, INCOME_META, type DraftKind } from '@yellow/mock/pkg6';
 import { attrLabel, useSettings } from '@yellow/screens/pkg6/settingsStore';
 import { P4Button, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';

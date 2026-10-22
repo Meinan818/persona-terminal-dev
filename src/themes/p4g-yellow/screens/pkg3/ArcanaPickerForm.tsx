@@ -1,7 +1,7 @@
 /**
  * 手动挑塔罗表单（真实 ArcanaPickerForm）：22 张大阿卡纳格（已占用标「占」）+ 正/逆位 + 期望等级 + 能力加成属性 + 留言 + 不使用 AI 内容。
  */
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import { P4Textarea } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { ATTR_IDS, ATTR_NAMES, MAJOR_ARCANA, TAROT_BY_ID } from './arcana';

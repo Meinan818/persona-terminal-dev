@@ -8,11 +8,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Section, P4Sheet } from '@yellow/kit';
-import { useActionsData } from '@yellow/adapters/pkg2';
+import { WISHES } from '@yellow/mock/pkg2';
 import { WishMountPicker } from './ActivityRecordSheet.p4g';
 
 export default function WishMountPickerDemo({ open, onClose, params }: OverlayProps) {
-  const { WISHES } = useActionsData();
   const first = WISHES.find((w) => w.status === 'active' && !w.parentId)?.id;
   const init = params?.get('state') === 'selected' ? first : undefined;
   const [a, setA] = useState<string | undefined>(init);

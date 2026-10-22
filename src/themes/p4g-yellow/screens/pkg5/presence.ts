@@ -3,7 +3,7 @@
  * 菜单学生证与用户资料抽屉共享，useSyncExternalStore，无持久化。
  */
 import { useSyncExternalStore } from 'react';
-import { CALLING_CARDS, STATUS_PRESETS, USER } from '@yellow/adapters/pkg5';
+import { CALLING_CARDS, STATUS_PRESETS, USER } from '@yellow/mock/pkg5';
 
 export interface PresenceState {
   statusId: string | null;

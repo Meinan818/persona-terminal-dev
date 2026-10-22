@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
-import { ATTRS, NAME_MATCH } from '@yellow/adapters/pkg6';
+import { ATTRS, NAME_MATCH } from '@yellow/mock/pkg6';
 import { attrLabel, updateSettings, useSettings } from '@yellow/screens/pkg6/settingsStore';
 import { P4Button, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';

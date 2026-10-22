@@ -32,6 +32,9 @@
       ],
       "@blue/*": [
         "./src/themes/p3r-blue/*"
+      ],
+      "@real/*": [
+        "./src/*"
       ]
     }
   },

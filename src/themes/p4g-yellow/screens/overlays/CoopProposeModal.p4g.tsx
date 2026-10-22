@@ -7,7 +7,7 @@ import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Sheet } from '@yellow/kit';
 import { ArcanaPickerForm, type ArcanaPickValue } from '@yellow/screens/pkg3/ArcanaPickerForm';
 import { MatchingSpinner, Sparkle } from '@yellow/screens/pkg3/ui';
-import { PK3_CONFIDANTS } from '@yellow/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@yellow/mock/pkg3';
 import { CoopAiMatchSheet } from './CoopAiMatchModal.p4g';
 
 type Mode = 'choose' | 'manual' | 'ai' | 'sent';

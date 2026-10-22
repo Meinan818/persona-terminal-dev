@@ -5,13 +5,13 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Confidant } from '@/types';
+import type { Confidant } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Dialog, P4Outline, P4Progress, P4Sheet, P4Switch, P4Tabs, showToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { EVENT_LABEL, INTIMACY_LABELS, MAX_INTIMACY, TAROT_BY_ID, levelProgress, nextUnlockHint } from '@yellow/screens/pkg3/arcana';
 import { MiniLabel, PactTag, ShadowBadge, Sparkle, StatusTag, TarotCard } from '@yellow/screens/pkg3/ui';
-import { PK3_CONFIDANTS, PK3_SHADOW, pk3Events } from '@yellow/adapters/pkg3';
+import { PK3_CONFIDANTS, PK3_SHADOW, pk3Events } from '@yellow/mock/pkg3';
 import { AvatarSyncConfirm } from './ConfidantDetailModalAvatarConfirm.p4g';
 
 export type DetailTab = 'info' | 'abilities' | 'history';

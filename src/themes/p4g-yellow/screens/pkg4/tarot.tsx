@@ -9,11 +9,11 @@
  */
 import { motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import type { TarotOrientation } from '@/types';
+import type { TarotOrientation } from '@real/types';
 import { cx } from '@yellow/lib/cx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { NoiseLayer } from '@yellow/fx';
-import { TAROT_BY_ID, tarotImg } from '@yellow/adapters/pkg4-tarot';
+import { TAROT_BY_ID, tarotImg } from '@yellow/mock/pkg4-tarot';
 
 export const cardH = (w: number) => Math.round(w * 1.6);
 

@@ -5,14 +5,14 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState, type ReactNode } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { Portal, P4Outline, useEscape, useScrollLock } from '@yellow/kit';
 import { TVPowerOn, SignalGlitch } from '@yellow/fx';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
 import { ATTR_IDS, ATTR_NAMES } from '@yellow/screens/pkg3/arcana';
-import { PK3_BATTLE_LOG, PK3_PERSONAS, PK3_SHADOW, type Pk3BattleLog } from '@yellow/adapters/pkg3';
+import { PK3_BATTLE_LOG, PK3_PERSONAS, PK3_SHADOW, type Pk3BattleLog } from '@yellow/mock/pkg3';
 import { PK3_SHADOW_IMG, Sparkle } from '@yellow/screens/pkg3/ui';
 import { AllOut } from './AllOutOverlay.p4g';
 

@@ -10,7 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { CfgInput } from '@yellow/screens/pkg6/cfg';
-import { RETURN_PAYLOAD } from '@yellow/adapters/pkg6';
+import { RETURN_PAYLOAD } from '@yellow/mock/pkg6';
 import { ChannelNoise } from '@yellow/fx';
 import { P4Button, P4Outline, P4Stripe, Portal } from '@yellow/kit';
 import { useLowMotion } from '@yellow/lib/prefs';

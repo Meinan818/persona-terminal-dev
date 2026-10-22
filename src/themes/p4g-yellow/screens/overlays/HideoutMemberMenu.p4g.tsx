@@ -3,10 +3,10 @@
  * 自己：查看成员牌 / 修改我的牌；别人：查看成员牌 / 同调（有展示面具）/ 屏蔽此人（只在本机生效）·解除屏蔽 / 转让队长 / 请离…（队长）/ 取消
  * 路由：#/overlay/hideout-member-menu?m=0（自己）|1（别人，默认）&leader=0&blocked=1
  */
-import type { OrgMember } from '@/types';
+import type { OrgMember } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4ActionSheet, useToast } from '@yellow/kit';
-import { MEMBERS } from '@yellow/adapters/pkg4-org';
+import { MEMBERS } from '@yellow/mock/pkg4-org';
 import { displayCodename } from '@yellow/screens/pkg4/org/common';
 
 export type MemberMenuAction = 'view' | 'edit-card' | 'sync' | 'block' | 'leader';

@@ -3,7 +3,7 @@
  * #/overlay/bond-pact-create?state=sent ； #/overlay/bond-pact-respond?goal=different&state=expired|accepted|declined
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Input, P4Sheet } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';

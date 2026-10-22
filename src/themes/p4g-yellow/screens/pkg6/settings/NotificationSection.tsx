@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { CfgBtn, CfgInput, CfgList, CfgRow, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
-import { NOTIF_CONTENTS } from '@yellow/adapters/pkg6';
+import { NOTIF_CONTENTS } from '@yellow/mock/pkg6';
 import { cx } from '@yellow/lib/cx';
 
 export function NotificationSection() {

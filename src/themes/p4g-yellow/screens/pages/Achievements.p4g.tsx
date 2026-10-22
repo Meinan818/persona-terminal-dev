@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 成就页（真实 src/pages/Achievements.tsx + components/codex/**）P4G 重制。
  * Tab：成就 / 技能 / 图鉴。
  *  成就：筛选（全部/未完成/已完成，点击循环）+ 添加成就；成就卡（图标·标题·描述·进度·「已达成，点击解锁 ✨」·解锁于·隐藏成就 ？？？·编辑/删除）；
@@ -10,7 +10,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
 import type { PageProps } from '@yellow/registry/types';
-import type { Achievement, AttributeId, Skill } from '@/types';
+import type { Achievement, AttributeId, Skill } from '@real/types';
 import { P4PageHeader, P4Tabs, P4SegmentTabs, P4Button, P4Switch, P4Section, P4Progress, P4EmptyState, IconEdit, IconTrash, IconPlus, useToast } from '@yellow/kit';
 import { CollageStagger, CollageItem, CutInFrame } from '@yellow/fx';
 import { navigate } from '@yellow/shell/shellBus';
@@ -23,10 +23,9 @@ import { SkillFormView, effectText, type SkillFormValue } from '@yellow/screens/
 import { SkillDeleteView } from '@yellow/screens/overlays/AchievementsSkillDeleteConfirm.p4g';
 import { TarotFace, TarotFlipViewView } from '@yellow/screens/overlays/TarotFlipView.p4g';
 import { SeasonCard, SeasonFlipView } from '@yellow/screens/overlays/FlipCardView.p4g';
-import { ACHIEVEMENTS, ATTRIBUTES, ATTR_IDS, ATTR_NAMES, HIDDEN_IDS, SEALED_IDS, SEASON_COLLECTED, SEASON_EXTRAS, SKILLS, SKILL_BONUS_MULT_CAP, TAROT_COLLECTED, achievementProgress } from '@yellow/adapters/pkg5';
-import { useRealCodex, useCodexCollections, useAchievementProgressMap, useTarotCollectedMap, useSeasonCollectedMap } from '@yellow/adapters/pkg5';
-import { P5_MAJOR, P5_MINOR, P5_SUIT_META, type P5TarotCard } from '@yellow/adapters/pkg5-tarot';
-import { P5_SEASON_PAGES, type P5SeasonMark } from '@yellow/adapters/pkg5-season';
+import { ACHIEVEMENTS, ATTRIBUTES, ATTR_IDS, ATTR_NAMES, HIDDEN_IDS, SEALED_IDS, SEASON_COLLECTED, SEASON_EXTRAS, SKILLS, SKILL_BONUS_MULT_CAP, TAROT_COLLECTED, achievementProgress } from '@yellow/mock/pkg5';
+import { P5_MAJOR, P5_MINOR, P5_SUIT_META, type P5TarotCard } from '@yellow/mock/pkg5-tarot';
+import { P5_SEASON_PAGES, type P5SeasonMark } from '@yellow/mock/pkg5-season';
 
 type Filter = 'all' | 'locked' | 'unlocked';
 const CYCLE: Filter[] = ['all', 'locked', 'unlocked'];
@@ -34,10 +33,9 @@ const RIBBON = 'polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100
 
 /* ───────── 成就 ───────── */
 function AchievementCard({ a, onUnlock, onEdit, onDelete, tiers }: { a: Achievement; onUnlock: () => void; onEdit: () => void; onDelete: () => void; tiers?: { count: number; idx: number; set: (i: number) => void; dir: number } }) {
-  const progressMap = useAchievementProgressMap();
   const hidden = HIDDEN_IDS.has(a.id) && !a.unlocked;
   const face = hidden ? { title: '？？？', description: '隐藏成就', icon: '❔' } : a;
-  const progress = progressMap[a.id] ?? 0;
+  const progress = achievementProgress[a.id] ?? 0;
   const canUnlock = !a.unlocked && progress >= a.condition.value && !hidden;
   const sealed = SEALED_IDS.has(a.id);
   const custom = a.id.startsWith('custom_');
@@ -80,9 +78,7 @@ function AchievementCard({ a, onUnlock, onEdit, onDelete, tiers }: { a: Achievem
 function AchievementsTab({ empty }: { empty: boolean }) {
   const toast = useToast();
   const low = useLowMotion();
-  const realCodex = useRealCodex();
-  const collections = useCodexCollections();
-  const [list, setList] = useState<Achievement[]>(empty ? [] : (realCodex.achievements.length ? realCodex.achievements : ACHIEVEMENTS));
+  const [list, setList] = useState<Achievement[]>(empty ? [] : ACHIEVEMENTS);
   const [filter, setFilter] = useState<Filter>('all');
   const [form, setForm] = useState<{ open: boolean; editing: Achievement | null }>({ open: false, editing: null });
   const [del, setDel] = useState<string | null>(null);
@@ -220,8 +216,7 @@ function SkillsTab({ empty }: { empty: boolean }) {
 
 /* ───────── 图鉴 ───────── */
 function TarotCell({ card, onOpen }: { card: P5TarotCard; onOpen: (c: P5TarotCard) => void }) {
-  const tarotMap = useTarotCollectedMap();
-  const e = tarotMap[card.id];
+  const e = TAROT_COLLECTED[card.id];
   const up = !!e?.upright.count; const rev = !!e?.reversed.count;
   return (
     <button type="button" onClick={() => onOpen(card)} aria-label={`${card.name}${up || rev ? '' : '（未收录）'}`} className="group flex min-w-0 flex-col items-center gap-1 active:scale-95">
@@ -236,15 +231,14 @@ function TarotCell({ card, onOpen }: { card: P5TarotCard; onOpen: (c: P5TarotCar
     </button>
   );
 }
-const slots = (cards: P5TarotCard[], tarotMap: Record<string, { upright: { count: number }; reversed: { count: number } }>) => cards.reduce((t, c) => t + (tarotMap[c.id]?.upright.count ? 1 : 0) + (tarotMap[c.id]?.reversed.count ? 1 : 0), 0);
+const slots = (cards: P5TarotCard[]) => cards.reduce((t, c) => t + (TAROT_COLLECTED[c.id]?.upright.count ? 1 : 0) + (TAROT_COLLECTED[c.id]?.reversed.count ? 1 : 0), 0);
 
 function TarotBook({ empty }: { empty: boolean }) {
-  const tarotMap = useTarotCollectedMap();
   const [open, setOpen] = useState<P5TarotCard | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const show = (c: P5TarotCard) => { setOpen(c); setIsOpen(true); };
-  const major = empty ? 0 : slots(P5_MAJOR, tarotMap);
-  const minor = empty ? 0 : slots(P5_MINOR, tarotMap);
+  const major = empty ? 0 : slots(P5_MAJOR);
+  const minor = empty ? 0 : slots(P5_MINOR);
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <P4Section title="大阿卡纳" en="MAJOR ARCANA" action={<span className="p4g-num text-meta text-[color:var(--p4g-on-stage)]">{major} / 44 · 正逆各算一格</span>}>
@@ -259,7 +253,7 @@ function TarotBook({ empty }: { empty: boolean }) {
               <div key={suit} className="min-w-0">
                 <div className="mb-2 flex items-baseline justify-between gap-2">
                   <h4 className="rounded-xs bg-p4g-black px-2 py-0.5 font-display text-body font-bold text-p4g-yellow night:bg-p4g-yellow night:text-p4g-black">{P5_SUIT_META[suit].symbol} {P5_SUIT_META[suit].name}</h4>
-                  <span className="p4g-num text-2xs text-[color:var(--p4g-on-stage)]">{empty ? 0 : slots(cards, tarotMap)} / 28</span>
+                  <span className="p4g-num text-2xs text-[color:var(--p4g-on-stage)]">{empty ? 0 : slots(cards)} / 28</span>
                 </div>
                 <div className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-7">{cards.map((c) => <TarotCell key={c.id} card={c} onOpen={show} />)}</div>
               </div>
@@ -273,11 +267,10 @@ function TarotBook({ empty }: { empty: boolean }) {
 }
 
 function SeasonBook({ empty }: { empty: boolean }) {
-  const seasonMap = useSeasonCollectedMap();
   const [year, setYear] = useState(2026);
   const pages = P5_SEASON_PAGES[year];
   const all = pages.flatMap((p) => p.marks);
-  const isCol = (m: P5SeasonMark) => !empty && !!seasonMap[m.date];
+  const isCol = (m: P5SeasonMark) => !empty && !!SEASON_COLLECTED[m.date];
   const collected = all.filter(isCol).length;
   const [page, setPage] = useState(2);
   const pager = useRef<HTMLDivElement>(null);
@@ -343,9 +336,7 @@ export default function Achievements({ tab, params }: PageProps) {
   const [active, setActive] = useState(tab === 'skills' || tab === 'codex' ? tab : 'achievements');
   const [state, setState] = useState(params.get('state') ?? 'normal');
   const empty = state === 'empty';
-  const realCodex = useRealCodex();
-  const progressMap = useAchievementProgressMap();
-  const pending = useMemo(() => (empty ? 0 : (realCodex.achievements.length ? realCodex.achievements : ACHIEVEMENTS).filter((a) => !a.unlocked && (progressMap[a.id] ?? 0) >= a.condition.value && !HIDDEN_IDS.has(a.id)).length), [empty, realCodex.achievements, progressMap]);
+  const pending = useMemo(() => (empty ? 0 : ACHIEVEMENTS.filter((a) => !a.unlocked && (achievementProgress[a.id] ?? 0) >= a.condition.value && !HIDDEN_IDS.has(a.id)).length), [empty]);
   return (
     <>
       <P4PageHeader title="成就" en="TROPHIES" onBack={() => navigate('menu')} weather="sunny" />

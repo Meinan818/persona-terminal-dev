@@ -1,9 +1,9 @@
 /** 工作包 4 · 组织共用件（真实 orgUi.tsx / MemberCard.tsx 的 P4G 皮） */
 import type { ReactNode } from 'react';
-import type { OrgMember, OrgView } from '@/types';
+import type { OrgMember, OrgView } from '@real/types';
 import { cx } from '@yellow/lib/cx';
-import { TAROT_BY_ID, tarotImg } from '@yellow/adapters/pkg4-tarot';
-import { STATUS_PRESET, TITLE_BOOK } from '@yellow/adapters/pkg4-org';
+import { TAROT_BY_ID, tarotImg } from '@yellow/mock/pkg4-tarot';
+import { STATUS_PRESET, TITLE_BOOK } from '@yellow/mock/pkg4-org';
 
 export const seatNo = (n: number) => String(n).padStart(2, '0');
 export const displayCodename = (m: OrgMember) => m.codename || '无名';

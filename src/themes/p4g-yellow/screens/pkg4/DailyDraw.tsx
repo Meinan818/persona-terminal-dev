@@ -4,15 +4,13 @@
  */
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import type { DailyDivination, TarotOrientation } from '@/types';
+import type { DailyDivination, TarotOrientation } from '@real/types';
 import { P4Button, P4Card, P4Chip, P4Outline } from '@yellow/kit';
 import { CollageStagger, CollageItem } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import { TAROT_BY_ID, ORI_LABEL, ATTR_NAMES, FORTUNE_LABEL, drawRandom, randomOri } from '@yellow/adapters/pkg4-tarot';
-import { TODAY, WEEKDAY_CN, STREAM_TEXT, useAstrologyData, useFateWindow } from '@yellow/adapters/pkg4-astro';
-import { buildOfflineDaily } from '@/utils/tarotOffline';
-import { randomBonusMultiplier, TAROT_BY_ID as REAL_TAROT_BY_ID } from '@/constants/tarot';
+import { TAROT_BY_ID, ORI_LABEL, ATTR_NAMES, FORTUNE_LABEL, drawRandom, randomOri } from '@yellow/mock/pkg4-tarot';
+import { DAILY_TODAY, WINDOW_DAYS, WINDOW_DAYS_PARTIAL, LAST_GLIMPSE, STREAM_TEXT, TODAY, WEEKDAY_CN } from '@yellow/mock/pkg4-astro';
 import { TarotFace, TarotBack, FlipCard, Markdownish, ThinkingTV, useFakeProgress, useTypewriter, CardNameReveal } from './tarot';
 import { CardLabel, MsgBox, StateFade } from './ui';
 import { DayReviewDialog, GlimpseFlowOverlay } from '@yellow/screens/overlays/FateGlimpse.p4g';
@@ -24,14 +22,13 @@ const pickW = () => { const vw = typeof window === 'undefined' ? 390 : Math.min(
 
 export function DailyDraw({ initial, noApiKey, errorKind, glimpse }: { initial: DailyPhase; noApiKey: boolean; errorKind?: 'resume' | 'truncated' | 'fail'; glimpse: 'eligible' | 'buff' | 'partial' }) {
   const low = useLowMotion();
-  const astro = useAstrologyData();
   const [phase, setPhase] = useState<DailyPhase>(initial);
-  const [cands, setCands] = useState<Cand[]>(() => drawRandom(3).map((id) => ({ id, orientation: randomOri() })));
+  const [cands, setCands] = useState<Cand[]>(() => DAILY_TODAY.drawnFrom.map((id, i) => ({ id, orientation: i === 0 ? 'upright' : randomOri() })));
   const [picked, setPicked] = useState<number | null>(initial === 'intro' || initial === 'pick' ? null : 0);
-  const [result, setResult] = useState<DailyDivination | null>(initial === 'done' ? astro.dailyDivination : null);
+  const [result, setResult] = useState<DailyDivination | null>(initial === 'done' ? DAILY_TODAY : null);
   const [err, setErr] = useState<string | null>(errorKind === 'resume' ? '上次的解读没能完成——这张牌已经为你留着，直接继续就好。' : errorKind === 'fail' ? '解读失败：请求超时（30s）' : null);
   const [truncated, setTruncated] = useState(errorKind === 'truncated');
-  useEffect(() => { setPhase(initial); setPicked(initial === 'intro' || initial === 'pick' ? null : 0); setResult(initial === 'done' ? astro.dailyDivination : null); }, [initial]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPhase(initial); setPicked(initial === 'intro' || initial === 'pick' ? null : 0); setResult(initial === 'done' ? DAILY_TODAY : null); }, [initial]);
 
   // intro：洗牌（真实 ShuffleAnim duration=1800：前 70% 五张牌左右交错 0.9s×2 → 后 30% 收成一叠）→ 自动进入选牌
   const [shuf, setShuf] = useState<'shuffle' | 'stack'>('shuffle');
@@ -52,24 +49,13 @@ export function DailyDraw({ initial, noApiKey, errorKind, glimpse }: { initial: 
   const tw = useTypewriter(STREAM_TEXT, thinkingRun && prog >= 1, 60);
   useEffect(() => {
     if (phase === 'calling' && tw.done && prog >= 1) {
-      const t = setTimeout(() => finish(noApiKey), 500); return () => clearTimeout(t);
+      const t = setTimeout(() => finish(false), 500); return () => clearTimeout(t);
     }
-  }, [phase, tw.done, prog, noApiKey]); // eslint-disable-line
+  }, [phase, tw.done, prog]); // eslint-disable-line
 
   const finish = (offline: boolean) => {
     const c = cands[picked ?? 0];
-    const offlineResult = buildOfflineDaily(REAL_TAROT_BY_ID[c.id], c.orientation);
-    const narr = offline ? offlineResult.narration : STREAM_TEXT;
-    const adv = offline ? offlineResult.advice : (TAROT_BY_ID[c.id].advice?.[c.orientation] ?? offlineResult.advice);
-    const r: DailyDivination = {
-      id: `dd-${Date.now()}`, date: TODAY, drawnFrom: cands.map((x) => x.id), pickedIndex: picked ?? 0,
-      cardId: c.id, orientation: c.orientation,
-      effect: { attribute: offlineResult.attribute, multiplier: randomBonusMultiplier(c.orientation) },
-      narration: narr, advice: adv,
-      fortune: offlineResult.fortune, source: offline ? 'offline' : 'ai', createdAt: new Date(),
-    };
-    void astro.saveDailyDivination(r);
-    setResult(r);
+    setResult({ ...DAILY_TODAY, cardId: c.id, orientation: c.orientation, source: offline ? 'offline' : 'ai', narration: offline ? `${TAROT_BY_ID[c.id].name}${c.orientation === 'reversed' ? '逆位' : ''}：${TAROT_BY_ID[c.id][c.orientation].meaning}` : DAILY_TODAY.narration, advice: offline ? (TAROT_BY_ID[c.id].advice?.[c.orientation] ?? DAILY_TODAY.advice) : DAILY_TODAY.advice });
     setPhase('done');
   };
   const pick = (i: number, force = false) => {
@@ -246,10 +232,9 @@ function DailyResult({ d }: { d: DailyDivination }) {
 
 /** 七日连星：只在今日抽完之后出现 */
 export function FateGlimpseSection({ variant }: { variant: 'eligible' | 'buff' | 'partial' }) {
-  const fate = useFateWindow();
-  const days = fate.days;
+  const days = variant === 'partial' ? WINDOW_DAYS_PARTIAL : WINDOW_DAYS;
   const drawnCount = days.filter((d) => d.drawn).length;
-  const buff = fate.lastGlimpse;
+  const buff = variant === 'buff' ? LAST_GLIMPSE : null;
   const [ritual, setRitual] = useState<null | 'new' | 'review'>(null);
   const [detail, setDetail] = useState<DailyDivination | null>(null);
   const low = useLowMotion();
@@ -300,9 +285,7 @@ export function FateGlimpseSection({ variant }: { variant: 'eligible' | 'buff' |
           )}
         </div>
       </P4Card>
-      <GlimpseFlowOverlay open={!!ritual} onClose={() => setRitual(null)} mode={ritual ?? 'new'}
-        glimpse={fate.lastGlimpse ?? undefined}
-        days={fate.days.map((d) => d.drawn).filter((d): d is DailyDivination => !!d)} />
+      <GlimpseFlowOverlay open={!!ritual} onClose={() => setRitual(null)} mode={ritual ?? 'new'} />
       <DayReviewDialog d={detail} open={!!detail} onClose={() => setDetail(null)} />
     </div>
   );

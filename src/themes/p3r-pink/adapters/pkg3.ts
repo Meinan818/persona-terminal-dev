@@ -29,3 +29,14 @@ export {
   type Pk3Notif,
   type Pk3NotifType,
 } from '@/themes/cooperationData';
+
+import { useAppStore } from '@/store';
+import type { Confidant } from '@/types';
+
+export const cooperationOps = {
+  add: (args: Parameters<ReturnType<typeof useAppStore.getState>['addConfidant']>[0]) => useAppStore.getState().addConfidant(args),
+  update: (id: string, patch: Partial<Confidant>) => useAppStore.getState().updateConfidant(id, patch),
+  remove: (id: string) => useAppStore.getState().deleteConfidant(id),
+  archive: (id: string) => useAppStore.getState().archiveConfidant(id),
+  unarchive: (id: string) => useAppStore.getState().unarchiveConfidant(id),
+};

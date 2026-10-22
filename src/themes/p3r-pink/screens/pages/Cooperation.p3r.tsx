@@ -21,6 +21,7 @@ import { NameFx, OnlineStar, PactTag, PrayQuickButton, ShadowBadge, Sparkle, Sta
 import { AlbumWall, type FriendItem, type PrayerState } from '@pink/screens/pkg3/wall';
 import { RankUpChain, type RankUpNotice } from '@pink/screens/pkg3/rankup';
 import { PK3_CONFIDANTS, PK3_FRIENDS, PK3_MATERIALIZE_BLOCKERS, PK3_SHADOW } from '@pink/mock/pkg3';
+import { cooperationOps, useCooperationData } from '@pink/adapters/pkg3';
 import { CooperationMenuPanel } from '../overlays/CooperationMenu.p3r';
 import { ConfidantCreateSheet } from '../overlays/ConfidantCreateModal.p3r';
 import { ConfidantDetailSheet } from '../overlays/ConfidantDetailModal.p3r';
@@ -122,6 +123,7 @@ function ConfidantRow({ c, index, prayer, hasShadow, onOpen, onShadow }: { c: Co
 
 export default function Cooperation({ params }: PageProps) {
   const bold = useBoldness();
+  const { confidants: realConfidants } = useCooperationData();
   const state = params?.get('state');
   const [view, setView] = useState<'list' | 'wall'>((params?.get('view') as 'list' | 'wall') || 'wall');
   const [filter, setFilter] = useState<Filter>((params?.get('filter') as Filter) || 'all');
@@ -133,6 +135,8 @@ export default function Cooperation({ params }: PageProps) {
   const [ov, setOv] = useState<Ov>(null);
   const [selected, setSelected] = useState<Confidant | null>(null);
   const [friend, setFriend] = useState<FriendItem | null>(null);
+
+  useEffect(() => { setList(realConfidants); }, [realConfidants]);
   const [prayed, setPrayed] = useState<Record<string, boolean>>({ 'c-fuuka': true, 'fr-ken': true });
   const [pending, setPending] = useState<string | null>(null);
   const [fx, setFx] = useState<{ kind: PrayerEffectKind; name: string } | null>(null);
@@ -243,9 +247,9 @@ export default function Cooperation({ params }: PageProps) {
 
       {/* ── 弹窗接线 ── */}
       <ConfidantCreateSheet isOpen={ov === 'create'} onClose={close} remaining={remaining} onPickOnline={() => setOv('addOnline')}
-        onCreated={(r) => { setList((l) => [...l, { ...PK3_CONFIDANTS[3], id: `c-new-${Date.now()}`, name: r.name, arcanaId: r.arcanaId, orientation: r.orientation, intimacy: r.level, description: r.description, decayEnabled: r.decay, archivedAt: undefined, source: 'offline' }]); showToast(`${r.name} 已落座《${TAROT_BY_ID[r.arcanaId]?.name}》`); }} />
+        onCreated={(r) => { void cooperationOps.add({ name: r.name, description: r.description, match: { arcanaId: r.arcanaId, orientation: r.orientation, initialIntimacy: Math.min(3, r.level), initialPoints: [0, 4, 9, 16, 25, 36, 50, 70, 95, 125, 160][r.level] ?? 0, interpretation: '', advice: '', source: 'offline' }, source: 'offline', initialLevel: r.level }).then((c) => { if (r.decay) void cooperationOps.update(c.id, { decayEnabled: true }); showToast(`${r.name} 已落座《${TAROT_BY_ID[r.arcanaId]?.name}》`); }).catch(() => showToast('没能创建这段羁绊')); }} />
       <ConfidantDetailSheet isOpen={ov === 'detail'} onClose={close} confidant={sel} hasShadow={sel.id === 'c-yukari'}
-        onUpdate={(p) => setList((l) => l.map((c) => (c.id === sel.id ? { ...c, ...p } : c)))} onDelete={() => setList((l) => l.filter((c) => c.id !== sel.id))}
+        onUpdate={(p) => { void cooperationOps.update(sel.id, p); setList((l) => l.map((c) => (c.id === sel.id ? { ...c, ...p } : c))); }} onDelete={() => { void cooperationOps.remove(sel.id); setList((l) => l.filter((c) => c.id !== sel.id)); }}
         onOpenCounsel={() => setOv('counsel')} onOpenInteraction={() => setOv('interaction')} onOpenStarShift={() => setOv('starshift')} onOpenPact={() => setOv('pact')}
         onOpenMemorial={() => setOv('memorial')} onViewOnlineProfile={() => { setFriend({ kind: 'friend', id: sel.id, profile: sel.linkedProfile!, prayed: !!prayed[sel.id], beenPrayedBy: false }); setOv('profile'); }} onOpenCoopShadow={() => setOv('shadow')} />
       <InteractionSheet isOpen={ov === 'interaction'} onClose={close} confidant={sel}

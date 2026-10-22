@@ -74,6 +74,16 @@ const wallMs = (recipe) => recipe.duration + (recipe.tracks ?? [])
   .filter((track) => track.prim === 'hitStop')
   .reduce((sum, track) => sum + (track.dur ?? track.args?.ms ?? 0), 0);
 
+const audioDir = path.join(skinDir, 'audio');
+const sfxJson = fs.existsSync(path.join(audioDir, 'sfx.json'))
+  ? JSON.parse(fs.readFileSync(path.join(audioDir, 'sfx.json'), 'utf8'))
+  : null;
+const voiceJson = fs.existsSync(path.join(audioDir, 'voice.json'))
+  ? JSON.parse(fs.readFileSync(path.join(audioDir, 'voice.json'), 'utf8'))
+  : null;
+const sfxIds = new Set([...Object.keys(sfxJson?.se ?? {}), ...Object.keys(sfxJson?.alias ?? {})]);
+const warn = (message) => console.warn(`[skin:check][warn] ${message}`);
+
 for (const count of [1, 2, 3, 4, 5]) {
   if (!Array.isArray(pack.enemyLayouts?.[count])) {
     fail(`enemyLayouts 缺少 ${count} 只敌人站位`);
@@ -96,6 +106,25 @@ for (const recipe of pack.recipes) {
     if (track.at + (track.dur ?? 0) > recipe.duration) {
       fail(`track 超出 duration：${recipe.id}`);
     }
+    if (track.prim === 'camera' && Array.isArray(track.args?.keys)) {
+      let prev = -1;
+      for (const key of track.args.keys) {
+        if (!(key.at >= 0 && key.at <= 1)) fail(`camera.keys.at 越界：${recipe.id}`);
+        if (key.at < prev) fail(`camera.keys.at 未升序：${recipe.id}`);
+        prev = key.at;
+      }
+    }
+    if (track.prim === 'sfx') {
+      const id = track.args?.id;
+      const bus = track.args?.bus;
+      if (bus === 'voice') {
+        const unit = track.args?.unit ?? '$actor';
+        const key = track.args?.key;
+        if (key && !voiceJson?.voice?.[unit]?.[key]) warn(`voice 缺失：${unit}.${key}`);
+      } else if (id && !sfxIds.has(id)) {
+        warn(`sfx 缺失：${id}（${recipe.id}）`);
+      }
+    }
   }
   const cap = CAPS[capKey(
     recipe.event,
@@ -104,6 +133,15 @@ for (const recipe of pack.recipes) {
   )]?.[0];
   if (cap && wallMs(recipe) > cap) {
     fail(`recipe 墙钟超上限：${recipe.id}（${wallMs(recipe)}ms > ${cap}ms）`);
+  }
+  for (const step of recipe.sfx ?? []) {
+    if (step.bus === 'voice') {
+      if (step.key && !voiceJson?.voice?.[step.unit ?? '$actor']?.[step.key]) {
+        warn(`voice 缺失：${step.unit ?? '$actor'}.${step.key}`);
+      }
+    } else if (step.id && !sfxIds.has(step.id)) {
+      warn(`sfx 缺失：${step.id}（${recipe.id}）`);
+    }
   }
 }
 

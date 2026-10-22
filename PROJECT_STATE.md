@@ -4,11 +4,12 @@
 
 ## 接手第一入口 · 2026-10-23 · 自动化接续中（新会话从这里开始）
 
-- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，HEAD 见下方 git log。工作树只有两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，本批功能提交 `5623790`；本文件的交接记录随后单独提交，最终 HEAD 以 `git log -1` 为准。工作树只余两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。
+- **压缩计数**：本聊天第 1、2 次实际 compact 均已登记，计数 = 2；已按约定停止业务代码与测试，只做交接收尾。新窗口从本入口继续，不重讲历史。
 - **授权**：用户明确「自动化任务不能停」，要求按他的规则 + 当前修法一直干活；硬性要求 = **不准碰外观**（demo 的 JSX/className/style/动画/字体/素材不改），只改数据与回调，让四套主题完全融入 app。拿不准的自己替用户决定。星象 AI 接不接要等用户决定（涉及用户自己的 Key）。
-- **已完成**（详见下方「主题接入重做」各批）：四套切主题 + 渲染正常；黄 11 页全接真；粉/蓝已接菜单身份、账号、记账、羁绊、任务、设置、成就、图鉴、愿望/孤儿、统计（活动/成就/技能）；红读真实数据（adapter/live.ts）但写回未接。
-- **还差（按优先级）**：① 粉/蓝统计的 ATTR_NAMES/ATTR_LEVELS 雷达真实化（当前沿用 demo 静态，需给子组件传 props）；② 粉/蓝据点/行动记录读真实数据；③ 红主题写回（命令式 DOM 改本地状态、无事件出口，工作量最大）；④ 愿望/命运/委托；⑤ 长按轮盘不显示（需真机复现）；⑥ 记账批量/对账。
-- **验证命令**：`npx tsc --noEmit`、`npm run build`、`npx vitest run`（66 文件/396 项）。打包：`npm run build && npx cap sync android && cd android && gradlew.bat assembleDebug`，产物复制到 `E:\MASKARIA\outputs\maskaria-theme-debug.apk` 和 `D:\下载\互传\maskaria-theme-debug.apk`。
+- **已完成**（详见下方「主题接入重做」各批）：四套切主题 + 渲染正常；黄 11 页全接真；粉/蓝已接菜单身份、账号、记账、羁绊、任务、设置、成就、图鉴、愿望/孤儿、统计（活动/成就/技能/雷达）、据点、行动记录；红读真实数据并已接活动/任务/待办/宣告卡/记账合计与写回/首页统计/同伴互动；红愿望、命运抽签、今日/周委托、本周目标已接真实 store 读写（`33b9fa9` `c19108f` `69adae7` `5623790`）。
+- **还差（按优先级）**：① 红愿望/委托/周目标在浏览器或真机实测（本轮只有类型、构建、单测证据，未做用户验收）；② 长按轮盘不显示（需真机复现，查 `RadialWheelP5.p5r.tsx` 指针事件/挂载条件/portal 层级）；③ 记账批量/对账（红的 `openReconcileSheet` 仍用 mock 账户余额，store 已有 `adjustAccountBalances`/`adjustTotalBalance`/`getAdjustCountThisMonth`）；④ 粉/蓝/黄三主题愿望/命运/委托/周目标的 mock 残留排查；⑤ 更新已过时文档：`adapter/live.ts` 顶部“只读 store”注释、`adapter/README.md` §3/§4 仍把 `WISHES/FATE_POOL/WEEKQ/GOALS` 列为 mock；⑥ 打包并复制 APK。星象 AI 待用户决定（不先动）。
+- **验证**（2026-10-23 本轮实跑）：`npx tsc --noEmit` exit 0；`npm run build` exit 0；`npx vitest run` 66 文件 / 396 项全过。打包命令：`npm run build && npx cap sync android && cd android && gradlew.bat assembleDebug`，产物复制到 `E:\MASKARIA\outputs\maskaria-theme-debug.apk` 和 `D:\下载\互传\maskaria-theme-debug.apk`。
 - **红线**：不 push（Push 要用户批准）；不 commit 凭据；不改 `main` 与幽影协议 `src/umbra`、`public/umbra-demo`；不改外观；破坏性命令先说明。
 
 ## 主题接入重做 · 2026-10-23 · codex/theme-integrate（以 D:\下载\DEMO 为唯一标准）
@@ -24,6 +25,7 @@
 - **第三批接线（2:25 之后）**：`724e989` 三套恢复成就页 + 图鉴翻面（FlipCardView/TarotFlipView）读真实收藏，愿望提议/孤儿配图弹层 + GlobalOverlayHost 恢复真实载荷。粉/蓝已接：记账、羁绊、任务、设置、成就、图鉴、愿望/孤儿。
 - **第四批接线（2:34 之后）**：`afb954a` 蓝/粉菜单页新增 useMenuData（读真实 user/attributes/activities），等级/总点数/连续天数接真。粉/蓝菜单身份信息不再假。
 - **第五批接线（2:41 之后）**：`8d1debb` 蓝/粉账号页新增 useAccountData（读真实 cloudUser + 五维 + 等级/点数），账号卡片不再假用户名/邮箱。粉/蓝已接：菜单身份、账号、记账、羁绊、任务、设置、成就、图鉴、愿望/孤儿。
+- **第六批接线（本批，红主题）**：`5623790` 红愿望板/面板/实现流程、命运抽签、今日与周委托、本周目标全部改为真实 store 读写；保留 demo 的 JSX/样式/动画，只改数据来源与回调。愿望接 `getWishRing`/`addWish`/`setWishStatus`/`deleteWish`/`evaluateWishProgress`/`setWishProgress`/`addWishStep`/`toggleWishStep`/`removeWishStep`/`saveWish`/`fulfillWish`；命运接 `getFateDrawPool`/`drawFate`/`acceptFateDraw`/`muteFateHistory`；委托接 `ensureLifeQuestDay`/`lifeQuestsFor`/`writeLifeQuestDay` + `db.quests`/`questProgress`/`claimQuest`/`swapQuest`/`refreshQuests`；周目标接 `weeklyGoals`/`getWeeklyGoalProgress`/`saveWeeklyGoal`/`deleteWeeklyGoal`/`completeWeeklyGoal`。构建初报 `lifeAttrMapStatus`/`lifeAttrSigOf` 导入模块错误，已分别改到 `lifeQuestAI`/`lifeQuestAttrMap` 后通过。已知风险：`openQuestBoard` 的周委托用 `weekLoaded` 防重复、失败只 toast；`openGoalSetup` 的 stepper/seg 读取现有 DOM 选择器，均未改外观。
 
 - **根因（为什么之前没到 100%）**：接入时为了接真实数据，改了 demo 自己的页面源码（红改了 `Statistics.p5r.tsx`/`oc.ts`，黄/粉/蓝改了 `screens/pages/*`/`overlays/*`/`settingsStore.ts`），违反各 demo HANDOFF 的「整包原样拷入、只准改 adapter/bridge」。改 demo 页面 = 视觉漂移。用红自带的 `compare.mjs` 实测旧状态 `RESULT: FAIL 2/52`（ov-codex 差 28%）。
 - **demo 权威包**：`D:\下载\DEMO\p4g-yellow-demo.zip / p3r-blue-demo.zip / p3r-pink-demo.zip / p5r-red-demo.zip`（已解包到 `E:\MASKARIA\.cache\demo-packages\`）。红含 `integration/`（整包拷入 + compare.mjs + 52 张参考图 + check-copy.mjs）。

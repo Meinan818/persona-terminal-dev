@@ -6,7 +6,7 @@
  * → 流水 / 统计。状态机 / 假数据改写自黄色版 Ledger（只读参考）。
  * 路由：?tab=book|assets &view=list|stats &state=first|empty|loading|over
  */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { PageProps } from '@blue/registry/types';
 import type { LedgerEntry } from '@real/types';
@@ -23,7 +23,9 @@ import { LedgerBudgetSheetView } from '@blue/screens/overlays/LedgerBudgetSheet.
 import { LedgerReconcileSheetView } from '@blue/screens/overlays/LedgerReconcileSheet.p3r';
 import { LedgerDeleteConfirmView } from '@blue/screens/overlays/LedgerDeleteConfirm.p3r';
 import { LedgerSavedModalView } from '@blue/screens/overlays/LedgerSavedModal.p3r';
-import { CNY, INCOME_META, LEDGER_ACCOUNTS, LEDGER_BUDGET, LEDGER_ENTRIES, LEDGER_SAVINGS, P5_TODAY, catMeta, daysAgoKey, fmtMoney, fmtSigned, ledgerDateLabel, monthLabel, roundMoney, shiftMonth, weekdayCN } from '@blue/mock/pkg5';
+import { CNY, INCOME_META, catMeta, daysAgoKey, fmtMoney, fmtSigned, ledgerDateLabel, monthLabel, roundMoney, shiftMonth, weekdayCN } from '@blue/mock/pkg5';
+import { useLedgerData } from '@blue/adapters/pkg5';
+import { ledgerOps } from '@/themes/ledgerOperations';
 
 const WEEK_EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -50,12 +52,13 @@ function LedgerRow({ e, onClick, alt }: { e: LedgerEntry; onClick: () => void; a
 export default function Ledger({ tab, params }: PageProps) {
   const toast = useToast();
   const anim = useBoldness();
+  const { LEDGER_ACCOUNTS, LEDGER_BUDGET, LEDGER_ENTRIES, LEDGER_SAVINGS, P5_TODAY, CURRENT_MONTH, LEDGER_RESET_DAY } = useLedgerData();
   const [state, setState] = useState(params.get('state') ?? 'normal');
   const [mode, setMode] = useState<'ledger' | 'assets'>(tab === 'assets' ? 'assets' : 'ledger');
   const [view, setView] = useState<'list' | 'stats'>(params.get('view') === 'stats' ? 'stats' : 'list');
   const [entries, setEntries] = useState<LedgerEntry[]>(LEDGER_ENTRIES);
   const [balanceView, setBalanceView] = useState<'month' | 'total'>('month');
-  const [listMonth, setListMonth] = useState('2026-10');
+  const [listMonth, setListMonth] = useState(CURRENT_MONTH);
   const [nlText, setNlText] = useState('');
   const [nlBusy, setNlBusy] = useState(false);
   const [shotBusy, setShotBusy] = useState(false);
@@ -70,12 +73,14 @@ export default function Ledger({ tab, params }: PageProps) {
   const [saved, setSaved] = useState<string | null>(null);
   const shotRef = useRef<HTMLInputElement>(null);
 
-  const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !e.date.startsWith('2026-10')) : entries;
+  useEffect(() => { setEntries(LEDGER_ENTRIES); }, [LEDGER_ENTRIES]);
+
+  const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !e.date.startsWith(CURRENT_MONTH)) : entries;
   const needsSetup = state === 'first';
   const hasBudget = state !== 'first';
   const lim = state === 'over' ? 4000 : LEDGER_BUDGET.monthlyLimit;
-  const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && e.date.startsWith('2026-10')).reduce((s, e) => s + e.amount, 0));
-  const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && e.date.startsWith('2026-10')).reduce((s, e) => s + e.amount, 0));
+  const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
+  const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
   const total = needsSetup ? 0 : LEDGER_ACCOUNTS.reduce((s, a) => s + a.balance, 0);
   const budgetLeft = roundMoney(lim - monthExpense);
   const over = hasBudget && budgetLeft < 0;
@@ -254,7 +259,7 @@ export default function Ledger({ tab, params }: PageProps) {
               {view === 'list' ? (
                 <P3StaggerItem className="flex min-w-0 flex-col gap-4">
                   <MonthNav label={monthLabel(listMonth)} sub={<>支出 <b className="font-cond text-[14px]">{CNY}{fmtMoney(monthSum.exp)}</b>{monthSum.inc > 0 && <> · 收入 <b className="font-cond text-[14px]">{CNY}{fmtMoney(monthSum.inc)}</b></>}</>}
-                    onPrev={() => setListMonth((m) => shiftMonth(m, -1))} onNext={() => setListMonth((m) => shiftMonth(m, 1))} nextDisabled={listMonth >= '2026-10'} />
+                    onPrev={() => setListMonth((m) => shiftMonth(m, -1))} onNext={() => setListMonth((m) => shiftMonth(m, 1))} nextDisabled={listMonth >= CURRENT_MONTH} />
                   {grouped.length === 0 && (
                     <div className="relative mx-auto flex min-h-[150px] w-full max-w-md flex-col items-center justify-center gap-1.5 overflow-hidden px-6 py-6 text-center" style={{ clipPath: slantClip(26), background: 'rgb(var(--p3r-wash) / 0.72)' }}>
                       <span aria-hidden className="pointer-events-none absolute -top-2 left-3 font-cond text-[64px] leading-none" style={{ color: 'var(--p3r-ghost)' }}>EMPTY</span>
@@ -289,9 +294,9 @@ export default function Ledger({ tab, params }: PageProps) {
 
       <LedgerEntrySheetView open={draftOpen} onClose={() => setDraftOpen(false)} initial={draft ?? undefined} hint={shotHint} onSaved={onSaved} />
       <LedgerBatchSheetView open={batchOpen} onClose={() => setBatchOpen(false)} initial={SAMPLE_BATCH} onSaved={onSaved} />
-      <LedgerBudgetSheetView open={budgetOpen} onClose={() => setBudgetOpen(false)} onSaved={(m) => toast.success(`预算已定：${CNY}${fmtMoney(m)}`)} />
+      <LedgerBudgetSheetView open={budgetOpen} onClose={() => setBudgetOpen(false)} onSaved={(m) => ledgerOps.saveBudget(m, LEDGER_BUDGET.savingsGoal, LEDGER_RESET_DAY).then(() => toast.success(`预算已定：${CNY}${fmtMoney(m)}`)).catch((e) => toast(`预算失败：${(e as Error)?.message ?? '请重试'}`))} />
       <LedgerReconcileSheetView open={adjustOpen} onClose={() => setAdjustOpen(false)} initial={needsSetup} onSaved={() => { if (needsSetup) setState('normal'); toast.success(needsSetup ? '余额已记下' : '对账完成'); }} />
-      <LedgerDeleteConfirmView open={delOpen} target={del} onClose={() => setDelOpen(false)} onConfirm={() => { if (del) setEntries((xs) => xs.filter((x) => x.id !== del.id)); toast('已删除这一笔'); }} />
+      <LedgerDeleteConfirmView open={delOpen} target={del} onClose={() => setDelOpen(false)} onConfirm={() => { if (del) ledgerOps.remove(del.id).then(() => toast('已删除这一笔')).catch((e) => toast(`删除失败：${(e as Error)?.message ?? '请重试'}`)); }} />
       <LedgerSavedModalView open={!!saved} onClose={() => setSaved(null)} title={saved ?? ''} />
     </div>
   );

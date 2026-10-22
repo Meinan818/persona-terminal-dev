@@ -9,6 +9,7 @@ import type { AttributeId, LedgerExpenseType, SpendWorth } from '@real/types';
 import { P3Sheet, P3Button, P3Input, P3R, slantClip, useToast } from '@pink/kit';
 import { Chip, FLabel, TagPicker, DateQuickPicker, AmountInput, CatMark } from '@pink/screens/pkg5/ui';
 import { ATTR_IDS, ATTR_NAMES, CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, fmtMoney, incomeTypeFromSource, isGrowthCategory, moneyFromInput, sanitizeMoneyInput } from '@pink/mock/pkg5';
+import { ledgerOps } from '@/themes/ledgerOperations';
 
 export interface EntryDraft {
   direction: 'expense' | 'income'; amount: string; type: LedgerExpenseType; incomeSource: string; category: string; channel: string; note: string; date: string;
@@ -37,12 +38,27 @@ export function LedgerEntrySheetView({ open, onClose, initial, hint, spendEval =
   const save = () => {
     if (!amt || saving) return;
     setSaving(true);
-    window.setTimeout(() => {
-      const label = d.note.trim() || (d.direction === 'income' ? d.incomeSource.trim() : d.category.trim() || d.channel.trim()) || (d.direction === 'expense' ? '支出' : '收入');
-      const s = `${d.direction === 'expense' ? '−' : '+'}${CNY}${fmtMoney(amt)} · ${label}`;
+    const label = d.note.trim() || (d.direction === 'income' ? d.incomeSource.trim() : d.category.trim() || d.channel.trim()) || (d.direction === 'expense' ? '支出' : '收入');
+    const s = `${d.direction === 'expense' ? '−' : '+'}${CNY}${fmtMoney(amt)} · ${label}`;
+    ledgerOps.add({
+      direction: d.direction,
+      amount: amt,
+      type: d.direction === 'expense' ? d.type : undefined,
+      category: d.category || undefined,
+      channel: d.channel || undefined,
+      note: d.note || undefined,
+      date: d.date,
+      source: 'manual',
+      incomeType: d.direction === 'income' ? incomeTypeFromSource(d.incomeSource) : undefined,
+      ...(d.attribute ? { attribute: d.attribute } : {}),
+      ...(d.evalWorth ? { evalWorth: d.evalWorth } : {}),
+    }).then(() => {
       onClose();
       if (onSaved) onSaved(s); else toast.success(`记账完成 ${s}`);
-    }, 520);
+    }).catch((e) => {
+      setSaving(false);
+      toast.error(`记账失败：${(e as Error)?.message ?? '请重试'}`);
+    });
   };
   const add = (setter: (f: (x: string[]) => string[]) => void) => (v: string) => setter((xs) => (xs.includes(v) ? xs : [...xs, v]));
 

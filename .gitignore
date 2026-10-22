@@ -141,6 +141,4 @@ site/download/*.apk
 # 主题对比截图输出
 .theme-compare/
 
-# 主题独立 Tailwind CSS 构建产物
-src/styles/generated/
 

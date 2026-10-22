@@ -17,7 +17,7 @@ import { LoginModalView } from '@pink/screens/overlays/LoginModal.p3r';
 import { AccountManagePanelView } from '@pink/screens/overlays/AccountManagePanel.p3r';
 import { SyncPrivacySection } from '@pink/screens/overlays/SyncPrivacyPanel.p3r';
 import { AccountConfirmView, type ConfirmKind } from '@pink/screens/overlays/AccountConfirms.p3r';
-import { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS } from '@pink/mock/pkg5';
+import { useAccountData } from '@pink/adapters/pkg5';
 
 const Sub = ({ children, right }: { children: ReactNode; right?: ReactNode }) => (
   <div className="mb-2 flex min-w-0 items-center gap-2">
@@ -33,6 +33,7 @@ const Card = ({ children, tone }: { children: ReactNode; tone?: 'danger' }) => (
 );
 
 export default function Account({ params }: PageProps) {
+  const { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS } = useAccountData();
   const toast = useToast();
   const p = usePresence();
   const [state, setState] = useState(params.get('state') ?? 'signed-in');

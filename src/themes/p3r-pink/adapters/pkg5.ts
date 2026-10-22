@@ -14,6 +14,23 @@ export function useMenuData() {
   }), [user, attributes, activities]);
 }
 
+export function useAccountData() {
+  const attributes = useAppStore((s) => s.attributes);
+  const { cloudUser, cloudEnabled } = useCloudUser();
+  const { TOTAL_LEVEL, TOTAL_POINTS } = useMenuData();
+  return useMemo(() => ({
+    ATTRIBUTES: attributes as Attribute[],
+    CLOUD_USER: {
+      username: String(cloudUser?.userId ?? ''),
+      email: String((cloudUser as unknown as { email?: string } | null)?.email ?? cloudUser?.nickname ?? ''),
+    },
+    SIGNED_IN: !!cloudUser,
+    CLOUD_ENABLED: !!cloudEnabled,
+    TOTAL_LEVEL,
+    TOTAL_POINTS,
+  }), [attributes, cloudUser, cloudEnabled, TOTAL_LEVEL, TOTAL_POINTS]);
+}
+
 export function useRealAttributes() {
   const attributes = useAppStore((s) => s.attributes);
   return useMemo(() => attributes as Attribute[], [attributes]);
@@ -22,7 +39,7 @@ import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
 import type { LedgerEntry, Attribute, AttributeId, User } from '@/types';
-import { useAchievementProgressMap, useSeasonCollectedMap, useTarotCollectedMap } from '@/themes/astrologyData';
+import { useAchievementProgressMap, useCloudUser, useSeasonCollectedMap, useTarotCollectedMap } from '@/themes/astrologyData';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
 
 // A 类：只转发纯计算/格式化函数（真实仓库同名、同签名、同返回结构）

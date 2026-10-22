@@ -45,6 +45,16 @@ const PRIMITIVE_NAMES = new Set([
   'summon','personaShow','nameplate','pose','batonPass','showtimeLogo','eyeStrip','onomatopoeia','checkerFloor','ringSplash',
   'comicPanels','duoEntrance','duoStrike','duoTitle','maskRip','camera','holdupRing',
 ]);
+const PRIMITIVE_MAX = {
+  title: 800, radialBurst: 2200, hitStop: 90, shake: 400, flashSprite: 60, flashScreen: 200,
+  squashHit: 370, afterimage: 300, slashLine: 200, damageNumber: 1100, tag: 920, shockwave: 520,
+  rgbSplit: 150, cutin: 560, banner: 450, silhouetteDash: 1800, freezeFrame: 800, finishCard: 1000,
+  totalDamage: 800, slashPanels: 900, maskWipe: 900, blockPush: 900, tvStatic: 600, glassShatter: 700,
+  cardFlip: 500, cardShatter: 600, dateFlip: 900, bakedSwap: 400, portraitDown: 600,
+  summon: 900, personaShow: 1100, nameplate: 1200, pose: 1800, batonPass: 800, showtimeLogo: 900,
+  eyeStrip: 700, onomatopoeia: 600, checkerFloor: 1200, ringSplash: 1000, comicPanels: 1100,
+  duoEntrance: 1100, duoStrike: 900, duoTitle: 1100, maskRip: 700, camera: 3500, holdupRing: 1000,
+};
 const CAPS = {
   'battle:start': [900, 350], 'turn:start': [300, 100], 'action': [1800, 600], 'action:enemy': [1500, 500],
   'unit:down': [500, 200], 'onemore': [450, 250], 'highlight': [3500, 1200], 'holdup': [1000, 400], 'allout': [3500, 1200],
@@ -105,6 +115,10 @@ for (const recipe of pack.recipes) {
     if (!(track.at >= 0)) fail(`track at 非法：${recipe.id}`);
     if (track.at + (track.dur ?? 0) > recipe.duration) {
       fail(`track 超出 duration：${recipe.id}`);
+    }
+    const primMax = PRIMITIVE_MAX[track.prim];
+    if (primMax && Number.isFinite(track.dur) && track.dur > primMax) {
+      fail(`原语超单项上限：${track.prim}（${recipe.id}）${track.dur}ms > ${primMax}ms`);
     }
     if (track.prim === 'camera' && Array.isArray(track.args?.keys)) {
       let prev = -1;

@@ -24,7 +24,7 @@ import { ActionForm, emptyForm, type FormState } from './NavigatorActionForm.p4g
 import { Notebook } from './NavigatorNotebook.p4g';
 import { CropDialog } from './ImageCropDialog.p4g';
 import { Glyph } from './NavigatorPersonaEditor.p4g';
-import '@/screens/pkg6/pkg6.css';
+import '@yellow/screens/pkg6/pkg6.css';
 
 type MicState = 'idle' | 'recording' | 'transcribing';
 type FormKind = Exclude<DraftKind, 'completeTodo'>;

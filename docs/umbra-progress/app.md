@@ -12,7 +12,13 @@
 - 步 4 规则事件：`P5Battle.emit` + HOLD UP 三选一（allout/talk/release）→ `holdup → holdup:result → allout/talk:start/unit:flee+battle:end`，连点幂等，1/3/5 敌覆盖。
 - 步 6 音频核心：`src/umbra/audio/audioBus.ts`（缺文件静默、三档音量、解锁、voiceLine）+ `bgm.ts`（`bgm:cue` 条件键最多胜出、权重随机、noRepeat、prefs off/lock）。
 
-验收：`tsc --noEmit` 0 错误；`src/umbra` 31 文件 / 132 项通过。
+## 皮肤包 v1 合并与接线
+
+- 已合并 `origin/feat/umbra-skins-v1`（`01bf490`）：四皮 `src/umbra/skins/{p5r-red,p3-blue,p3r-pink,p4-yellow}/` + `tools/umbra-skins/build_packs.py` + `skinPacks.test.ts`。
+- 接线 1：`SkinRoster.partyDefault?` + `partyFromRoster` 优先读初始三人，回退 `companions.slice(0,3)`。
+- 接线 2：新增 `src/umbra/engine/companionPersonas.ts` 同伴专属面具数据表（captain-kidd/io/jiraiya 等 24 个），经 `registerSyntheticPersona` 注册，`buildBattlePersona` 不再过滤；`createDefaultBattle` 建队前注册。
+
+验收：`tsc --noEmit` 0 错误；`src/umbra` 34 文件 / 171 项通过；`npm run skin:check` 四皮全 OK。
 
 ## 待接（v1.3 步 5–7）
 

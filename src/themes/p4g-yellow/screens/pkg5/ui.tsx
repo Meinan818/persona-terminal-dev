@@ -138,6 +138,7 @@ export function BarRow({ label, amount, max, color = 'var(--p4g-orange)', right 
 
 /** Dev 状态切换条（页面内：空 / 首次 / 加载 / 报错 …）*/
 export function DevStateBar({ value, items, onChange }: { value: string; items: { id: string; label: string }[]; onChange: (id: string) => void }) {
+  if (!import.meta.env.DEV && new URLSearchParams(window.location.search).get('__dev') !== '1') return null;
   return (
     <div className="mt-8 flex min-w-0 flex-wrap items-center gap-1.5 border-t-2 border-dashed pt-3" style={{ borderColor: 'var(--p4g-line-soft)' }}>
       <span className="rounded-xs bg-p4g-black px-1.5 py-0.5 font-display text-2xs font-bold tracking-widest text-p4g-yellow night:bg-p4g-yellow night:text-p4g-black">DEV · 状态</span>

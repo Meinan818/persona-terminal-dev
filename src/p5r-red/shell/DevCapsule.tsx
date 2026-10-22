@@ -9,6 +9,8 @@ import { surprise } from '@/p5r-red/fx/surprise';
 export function DevCapsule() {
   const p = usePrefs();
   const [open, setOpen] = useState(false);
+  const devAllowed = import.meta.env.DEV || new URLSearchParams(window.location.search).get('__dev') === '1';
+  if (!devAllowed) return null;
   if (p.devHidden) {
     return <button type="button" aria-label="显示 DEMO 开关" onClick={() => setPrefs({ devHidden: false })}
       style={{ position: 'fixed', left: 0, top: '50%', width: 10, height: 44, marginTop: -22, zIndex: 650, background: 'rgba(17,17,17,.35)', boxShadow: 'inset -2px 0 0 #D7000F' }} />;

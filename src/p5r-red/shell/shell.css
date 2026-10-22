@@ -137,3 +137,5 @@
 :root[data-ui-channel="p5"].p5r-nosidebar #stage-bg { left: 0 !important; }
 /* 出血兜底（真实 App <main> overflow-x:clip）：页面装饰可上探 / 侧探，但不撑出横向滚动 */
 :root[data-ui-channel="p5"] #view { overflow-x: clip; }
+/* 主应用 #root 在红频道是 display:contents，改用 #view 作为滚动容器（修手机不能下滑） */
+:root[data-ui-channel="p5"] #view { height: 100dvh; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }

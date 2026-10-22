@@ -10,6 +10,8 @@ import { cx } from '@yellow/lib/cx';
 export function DevCapsule() {
   const p = usePrefs();
   const [open, setOpen] = useState(false);
+  const devAllowed = import.meta.env.DEV || new URLSearchParams(window.location.search).get('__dev') === '1';
+  if (!devAllowed) return null;
   if (p.devHidden) {
     return (
       <button type="button" aria-label="显示 Dev 胶囊" onClick={() => setPrefs({ devHidden: false })}

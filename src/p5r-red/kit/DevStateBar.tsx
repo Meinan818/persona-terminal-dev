@@ -9,6 +9,7 @@ import { pageHref } from '@/p5r-red/shell/shellBus';
 
 export function DevStateBar({ page, items }: { page: string; items: { label: string; q: string }[] }) {
   const p = usePrefs(); const loc = useLocation();
+  if (!import.meta.env.DEV && new URLSearchParams(window.location.search).get('__dev') !== '1') return null;
   if (p.devHidden) return null;
   const cur = loc.search.replace(/^\?/, '');
   return (

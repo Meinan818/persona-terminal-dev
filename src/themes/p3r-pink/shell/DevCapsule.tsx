@@ -10,6 +10,8 @@ import { slantClip } from '@pink/kit/base';
 export function DevCapsule() {
   const p = usePrefs();
   const [open, setOpen] = useState(false);
+  const devAllowed = import.meta.env.DEV || new URLSearchParams(window.location.search).get('__dev') === '1';
+  if (!devAllowed) return null;
   const z = { zIndex: 'var(--p3r-z-dev)' as unknown as number };
   if (p.devHidden) {
     return <button type="button" aria-label="显示 Dev 胶囊" onClick={() => setPrefs({ devHidden: false })} className="fixed left-0 top-1/2 h-10 w-1.5 -translate-y-1/2 hover:w-3" style={{ ...z, background: 'rgb(var(--p3r-blue-rgb) / 0.35)' }} />;

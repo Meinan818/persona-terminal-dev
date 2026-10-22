@@ -1,0 +1,19 @@
+{
+  "name": "umbra-p5t",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "shots": "node tools/shots.mjs"
+  },
+  "dependencies": { "three": "^0.170.0" },
+  "devDependencies": {
+    "@types/three": "^0.170.0",
+    "playwright": "1.64.1",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}

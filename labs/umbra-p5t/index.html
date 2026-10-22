@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<title>幽影协议 · P5T 规则原型（灰盒）</title>
+<link rel="stylesheet" href="/fonts-sc.css" />
+<link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+  <div id="labels"></div>
+  <div id="hud-tl" class="hud"><div id="turn">TURN 1</div><div id="objective">目标：击败全部敌人</div><div id="phase">PLAYER PHASE</div></div>
+  <div id="hud-tr" class="hud"><button id="btn-threat" class="small">敌方范围</button><button id="btn-restart" class="small">重来</button></div>
+  <div id="unit-card" class="hud hidden"></div>
+  <div id="preview" class="hud hidden"></div>
+  <div id="actions" class="hud">
+    <button data-act="melee">近战</button>
+    <button data-act="gun">枪</button>
+    <button data-act="skill">技能</button>
+    <button data-act="wait">待机</button>
+    <button data-act="triple" class="triple hidden">TRIPLE<br/>THREAT</button>
+    <button data-act="end" class="end">结束<br/>回合</button>
+  </div>
+  <div id="skills" class="hud hidden"></div>
+  <div id="banner" class="hidden"></div>
+  <div id="toast" class="hidden"></div>
+  <div id="result" class="hidden"></div>
+  <div id="rotate-hint">请横屏游玩</div>
+</div>
+<script type="module" src="./src/main.ts"></script>
+</body>
+</html>

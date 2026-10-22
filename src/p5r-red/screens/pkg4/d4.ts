@@ -138,6 +138,7 @@ let assetFormSequence = 0;
   const ALL = [...MAJ, ...MIN];
   const MAJ_FILE = ['fool', 'magician', 'high_priestess', 'empress', 'emperor', 'hierophant', 'lovers', 'chariot', 'strength', 'hermit', 'wheel_of_fortune', 'justice', 'hanged_man', 'death', 'temperance', 'devil', 'tower', 'star', 'moon', 'sun', 'judgement', 'world'];
   const tarotSlot = (c) => `slots/tarot/p5/${c.major ? MAJ_FILE[+c.id.slice(1)] : c.id.replace(/(\D+)(\d+)/, (_, s, n) => `${s}_${+n + 1}`)}.webp`;
+  const tarotArt = (c) => `tarot/p5/${c.major ? MAJ_FILE[+c.id.slice(1)] : c.id.replace(/(\D+)(\d+)/, (_, s, n) => `${s}_${+n + 1}`)}.webp`;
   const MEAN = { up: ['希望正在靠近', '把今天交给一件小而确定的事', '意志驱动前进', '先动起来，方向会在路上变清楚'], rev: ['迟疑与内耗', '暂停不是失败', '把模糊的事写下来，它就小了一半'] };
   const rng0 = P5.rng(77);
   const COL = new Map(ALL.map((c) => { const u = rng0() < (c.major ? .62 : .3), r = rng0() < (c.major ? .32 : .14); return [c.id, { up: u ? 1 + Math.floor(rng0() * 5) : 0, rev: r ? 1 + Math.floor(rng0() * 3) : 0, first: `2026-0${1 + Math.floor(rng0() * 9)}-1${Math.floor(rng0() * 9)}` }]; }));
@@ -145,7 +146,7 @@ let assetFormSequence = 0;
   /** 塔罗卡面 = 素材插槽 slots/tarot/p5/<真实文件名>.webp（默认图由 scripts/slots/gen-slots.mjs 生成：v3 红黑白 + shared/sil 剪影；
    *  与真实仓库 public/tarot/p5 同名 → 把真图按同路径同文件名放进 dist/slots/tarot/p5/ 即替换）。逆位 = 整张旋转 180°。 */
   function tarotFace(c, { rev = false, w = 120 } = {}) {
-    return `<img class="od-tf od-tf-img${rev ? ' rev' : ''}" src="${tarotSlot(c)}" width="${w}" height="${Math.round(w * 190 / 120)}" alt="${c.name}${rev ? ' 逆位' : ''}" draggable="false" decoding="async">`;
+    return `<img class="od-tf od-tf-img${rev ? ' rev' : ''}" src="${tarotArt(c)}" data-slot="${tarotSlot(c)}" onerror="this.onerror=null;this.src=this.dataset.slot" width="${w}" height="${Math.round(w * 190 / 120)}" alt="${c.name}${rev ? ' 逆位' : ''}" draggable="false" decoding="async">`;
   }
   /** 旧程序化卡面（保留作源码参考，运行时不再使用） */
   function tarotFaceSVG(c, { rev = false, w = 120 } = {}) {

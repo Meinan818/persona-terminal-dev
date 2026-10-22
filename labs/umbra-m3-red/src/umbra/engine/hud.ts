@@ -6,8 +6,43 @@ import type { Engine } from './core';
 import { ransom, txt, plate, hex } from './text';
 import { ease } from './timeline';
 
-/** HOLD UP 包围站位（相对敌群中心：dx, dy, 缩放）。前两人后排、后两人前排；p5.ts 的环绕镜头终点与此一致 */
+/** HOLD UP 包围站位（相对敌群中心：dx, dy, 缩放）。前两人后排、后两人前排。保留给旧调用；实际构图走 holdLayout */
 export const HOLD_SPOTS = [[-330, -10, 0.8], [330, 0, 0.82], [-210, 105, 0.97], [220, 115, 1.0]];
+export interface HoldSpot { id: string; x: number; y: number; sc: number; face: 1 | -1; back: boolean }
+/** HOLD UP 包围构图（hud.setHoldRing 与 p5.holdupRing 终点共用，交接无跳变）。
+ *  10-22 修：手机/横屏下后排两人被前排整个挡住。改为「前排守两翼、后排抬高缩小站内侧（敌群身后）」，
+ *  四人沿 [左边界, 指令区左缘−12] 依次排开，相邻人中心距 ≥ 0.62×两人半宽之和（只允许肩部轻叠）；放不下先整体缩小（≥0.8），
+ *  再压间距。脚底不压队伍卡顶边、右缘不进 HOLD UP 指令区。1..5 只敌人、1..4 名队员都成立。 */
+export function holdLayout(eng: Engine, enemyIds: string[], party: string[], partyTop: number): HoldSpot[] {
+  const es = enemyIds.map((i) => eng.units.get(i)!).filter(Boolean);
+  const cy = es.length ? es.reduce((a, u) => a + u.home.y, 0) / es.length : 520;
+  const cx = es.length ? es.reduce((a, u) => a + u.home.x, 0) / es.length : 520;
+  const v = eng.st.vis;
+  const items = (eng.skin.slots as any)['hud.command'].sets.holdup.items as any[];
+  const L = (v.l < 0 ? v.l * 0.5 : 0) + 8,   // 宽屏出血区用一半（避开刘海/圆角），16:9 时贴安全框
+    R = Math.min(...items.map((it) => it.hit[0])) - 12;
+  const ids = party.slice(0, 4);
+  // 槽位顺序（左→右）：前左、后左、后右、前右；队员 0/1 进后排（领队+二号站敌群身后），2/3 进前排两翼
+  const n = ids.length;
+  const order: { id: string; back: boolean }[] = n >= 4 ? [{ id: ids[2], back: false }, { id: ids[0], back: true }, { id: ids[1], back: true }, { id: ids[3], back: false }]
+    : n === 3 ? [{ id: ids[1], back: false }, { id: ids[0], back: true }, { id: ids[2], back: false }]
+    : ids.map((id) => ({ id, back: false }));
+  const base = (b: boolean) => (b ? 0.74 : 0.98);
+  const wOf = (id: string, sc: number) => { const t = eng.frames[`char.${id}#body`]; return (t ? t.width : 260) * sc; };
+  // 四人等分后人均可用宽度不足 0.55 个前排立绘宽时整体缩小（≥0.8）
+  const per = (R - L) / Math.max(1, order.length - 0.3), wMax = Math.max(...order.map((o) => wOf(o.id, base(o.back))));
+  const k = order.length > 2 ? Math.min(1, Math.max(0.8, per / (0.55 * wMax * 1.6))) : 1;
+  const out: HoldSpot[] = [];
+  // 两端前排贴边（立绘两侧透明边按 15% 计），后排在两翼之间等分站位：不靠立绘宽度估间距（武器/披风会把透明框撑宽）
+  const ws = order.map((o) => wOf(o.id, base(o.back) * k));
+  const x0 = L + ws[0] * 0.48, x1 = R - ws[ws.length - 1] * 0.5;   // 右翼整张立绘框不进指令区
+  const footFront = Math.min(cy + 110, partyTop - 10), footBack = Math.min(cy - 75, footFront - 120);
+  order.forEach((o, i) => {
+    const x = order.length > 1 ? x0 + (x1 - x0) * (i / (order.length - 1)) : (L + R) / 2;
+    out.push({ id: o.id, x, y: o.back ? footBack : footFront, sc: base(o.back) * k, face: (o.back ? x < cx : x < (L + R) / 2) ? 1 : -1, back: o.back });
+  });
+  return out;
+}
 export interface PartyState { id: string; name: string; hp: number; hpMax: number; sp: number; spMax: number; active?: boolean; baton?: number }
 export interface EnemyState { id: string; name: string; compact?: boolean; hp: number; hpMax: number; lv: number; known: string[]; weak: string[]; down: boolean; alive: boolean }
 export interface ListRow { id: string; name: string; desc: string; cost?: string; costKind?: 'sp' | 'hp' | 'n'; element?: string; disabled?: boolean; icon?: string }
@@ -408,6 +443,7 @@ export class P5Hud {
 
   // ------------------------------------------------------------------ hold up
   private holdRing = new Container();
+  private holdBack = new Container();
   pickHint = new Container();
   private buildPickHint() {
     const sl = this.eng.skin.slots['hud.party']; const [x, y, w] = sl.rect;
@@ -427,27 +463,22 @@ export class P5Hud {
   setHoldRing(on: boolean, enemyIds: string[] = [], party: string[] = []) {
     this.holdRing.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.holdRing.visible = on;
+    this.holdBack.removeChildren().forEach((c) => c.destroy({ children: true })); this.holdBack.visible = on;
     for (const u of this.eng.units.values()) if (u.side === 'ally') u.root.renderable = !on;   // 包围构图里队员都在敌群四周，场上背影让位
     if (!on) return;
-    const es = enemyIds.map((i) => this.eng.units.get(i)!).filter(Boolean);
-    const cx = es.reduce((a, u) => a + u.home.x, 0) / Math.max(1, es.length), cy = es.reduce((a, u) => a + u.home.y, 0) / Math.max(1, es.length);
-    const spots = HOLD_SPOTS;
-    const v = this.eng.st.vis, pb = this.party.getLocalBounds(), partyTop = Math.min(this.eng.skin.slots['hud.party'].rect[1], (pb.height > 0 ? this.party.y + pb.y : 1e9));   // 实际卡片包围（当前行动者卡上浮+倾斜）
-    const cmdX = Math.min(...this.eng.skin.slots['hud.command'].sets.holdup.items.map((it: any) => it.hit[0]));
-    const span = es.length ? Math.max(...es.map((u) => u.home.x)) - Math.min(...es.map((u) => u.home.x)) : 0;
-    const spread = Math.max(1, (span / 2 + 170) / 300);   // 敌群越宽，包围越开
-    party.forEach((id, i) => {
-      const tex = this.eng.frames[`char.${id}#body`]; if (!tex) return;
-      // 第五阶段：本色全身 + 黑投影 + 敌方向红轮廓光（原作 HOLD UP 是本色 3D 人物持枪包围）；后排压暗
-      const s = new Sprite(tex); s.anchor.set(0.5, 1); s.tint = spots[i % 4][1] < 60 ? 0x9e9e9e : 0xffffff;
-      const [dx, dy, sc] = spots[i % 4]; s.scale.set((dx < 0 ? 1 : -1) * sc, sc);
-      // 遍历敌人数组后夹紧：脚底不压队伍卡顶边，左右不出可视区、不压 HOLD UP 指令盘（1..5 只敌人都成立）
-      const hw = Math.abs(s.width) / 2, x0 = Math.max(v.l + 8, 0) + hw, x1 = cmdX - 12 - hw;
-      s.position.set(Math.min(Math.max(cx + dx * spread, x0), Math.max(x0, x1)), Math.min(cy + dy, partyTop - 10));
+    const pb = this.party.getLocalBounds(), partyTop = Math.min(this.eng.skin.slots['hud.party'].rect[1], (pb.height > 0 ? this.party.y + pb.y : 1e9));   // 实际卡片包围（当前行动者卡上浮+倾斜）
+    // 后排放进敌人层最底下（站在倒地敌群身后），前排在队伍层；两层都随镜头视差
+    const back = this.holdBack; back.zIndex = -1000; back.visible = true;
+    if (back.parent !== this.eng.st.layers.enemy) this.eng.st.layers.enemy.addChildAt(back, 0); else this.eng.st.layers.enemy.setChildIndex(back, 0);
+    for (const sp of holdLayout(this.eng, enemyIds, party, partyTop)) {
+      const tex = this.eng.frames[`char.${sp.id}#body`]; if (!tex) continue;
+      // 第五阶段：本色全身 + 黑投影 + 敌方向红轮廓光（原作 HOLD UP 是本色 3D 人物持枪包围）；后排略压暗
+      const s = new Sprite(tex); s.anchor.set(0.5, 1); s.tint = sp.back ? 0xc8c8c8 : 0xffffff;
+      s.scale.set(sp.face * sp.sc, sp.sc); s.position.set(sp.x, sp.y);
       const o = new Sprite(tex); o.anchor.set(0.5, 1); o.tint = 0x0a0a0a; o.position.set(s.x + 7, s.y + 4); o.scale.copyFrom(s.scale);
-      const rm = new Sprite(tex); rm.anchor.set(0.5, 1); rm.tint = hex(this.C.primary); rm.blendMode = 'add'; rm.position.set(s.x + (dx < 0 ? 4 : -4), s.y - 2); rm.scale.copyFrom(s.scale);
-      this.holdRing.addChild(o, rm, s);
-    });
+      const rm = new Sprite(tex); rm.anchor.set(0.5, 1); rm.tint = hex(this.C.primary); rm.blendMode = 'add'; rm.position.set(s.x + (sp.face > 0 ? 4 : -4), s.y - 2); rm.scale.copyFrom(s.scale);
+      (sp.back ? back : this.holdRing).addChild(o, rm, s);
+    }
   }
 
   // ------------------------------------------------------------------ result

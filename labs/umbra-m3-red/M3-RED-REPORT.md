@@ -436,3 +436,11 @@ flock /tmp/p5r-heavy.lock sh -c 'npx tsc --noEmit && npx vite build'
 sh tools/final5.sh                       # 6 尺寸关键帧 + 召唤 + clips（日志 tools/out/final5.log）
 TMO=600 tools/run.sh check; tools/run.sh enemies 1280 720 n=1   # n=3 / n=5 / 844 390 n=1 分开跑
 ```
+
+## 5.7 10-22 修复：手机尺寸 HOLD UP 菜单后排被挡
+
+- 问题：844×390、667×375（1280×720 同样）HOLD UP 菜单里后排两人（Joker、Skull）几乎被前排（Mona、Panther）整个挡住；右侧两人被指令区左缘夹紧后叠在一起。
+- 改法：`engine/hud.ts` 新增 `holdLayout()`，HUD 菜单静帧与 `holdupRing` 环绕终点共用（交接无跳变）。前排守左右两翼、后排抬高（脚底 cy−75）缩小（0.74）并放进敌人层底部（站在倒地敌群身后）；四人沿「可视区左缘（宽屏出血取一半）～ HOLD UP 指令区最左命中区 −12」等分站位，两翼整张立绘框都在可视区内、右翼不进指令区，脚底不压队伍卡；人均宽度不够时整体缩小（≥0.8）。后排压暗从 0.62 调到 0.78（菜单 0xc8）。
+- 自检：`tools/check.mjs` 全过（overCap/geometryBad/overlaps 全空，idle over16=0）；`tools/enemies.mjs` 844×390 / 667×375 / 1280×720 × 1/3/5 只敌人：0 重叠；新增后排遮挡比例（包围盒口径）844 ≤0.139、667 ≤0.143、1280 ≤0.138（阈值 0.6）。enemies.mjs 的包围量测改为只量本体 Sprite、前后排两容器都量。
+- 截图：`shots5/<尺寸>-53-holdup-{a,b,c,d}.png` 6 尺寸重拍（仓库 `labs/umbra-m3-red/shots/p5-*-53-holdup-*.jpg`）。
+- 复现：`npm run build && sh tools/final6.sh`（日志 tools/out/final6.log）。

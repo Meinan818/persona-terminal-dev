@@ -28,14 +28,18 @@ const MEASURE = () => {
   for (const id of u.B.enemies) { const un = eng.units.get(id); if (un && un.root.visible) things['enemy:' + id] = db(un.body ?? un.root); }
   for (const [id, c] of hud.overs) { const b = db(c); if (b && hud.over.visible) things['over:' + id] = b; }
   const r = db(hud.reticle); if (r && hud.reticle.alpha > 0) things.reticle = r;
-  hud.holdRing.children.forEach((c, i) => { const b = db(c); if (b && hud.holdRing.visible && i % 2 === 1) things['ring:' + (i >> 1)] = b; });
+  // 10-22：包围队员 = 每人 3 个 Sprite（投影/轮廓光/本体），前排在 holdRing、后排在 holdBack；只量本体
+  for (const [tag, C] of [['f', hud.holdRing], ['b', hud.holdBack]]) if (C && C.visible) C.children.forEach((c, i) => { const b = db(c); if (b && i % 3 === 2) things['ring:' + tag + (i / 3 | 0)] = b; });
   const ov = [];
   const inter = (a, b) => { const x = Math.max(a[0], b[0]), y = Math.max(a[1], b[1]), x2 = Math.min(a[0] + a[2], b[0] + b[2]), y2 = Math.min(a[1] + a[3], b[1] + b[3]); return x2 > x && y2 > y ? (x2 - x) * (y2 - y) : 0; };
   for (const [tk, tb] of Object.entries(things)) if (tb) for (const [hk, hb] of Object.entries(hudBoxes)) { const a = inter(tb, hb); if (a > 0) ov.push({ thing: tk, hud: hk, area: a, frac: +(a / (tb[2] * tb[3])).toFixed(3) }); }
   // 头顶名牌互相重叠
   const ok = Object.entries(things).filter(([k]) => k.startsWith('over:'));
   for (let i = 0; i < ok.length; i++) for (let j = i + 1; j < ok.length; j++) { const a = inter(ok[i][1], ok[j][1]); if (a > 0) ov.push({ thing: ok[i][0], hud: ok[j][0], area: a, frac: +(a / (ok[i][1][2] * ok[i][1][3])).toFixed(3) }); }
-  return { mode: u.mode, vis: eng.st.vis, hudBoxes, things, overlaps: ov };
+  // 后排被前排遮挡比例（包围盒口径，含立绘透明边，偏大；>0.6 记 occluded）
+  const occ = {}; const fr = Object.entries(things).filter(([k]) => k.startsWith('ring:f'));
+  for (const [k, b] of Object.entries(things).filter(([k]) => k.startsWith('ring:b'))) occ[k] = +Math.max(0, ...fr.map(([, f]) => inter(b, f) / (b[2] * b[3]))).toFixed(3);
+  return { mode: u.mode, vis: eng.st.vis, hudBoxes, things, overlaps: ov, occ };
 };
 for (const n of NS) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
@@ -72,7 +76,7 @@ for (const n of NS) {
   if (SHOTS) await p2.screenshot({ path: `shots2/${W}x${H}-21-n${n}-enemyturn.png` });
   await ctx2.close();
   out[n] = r;
-  const bad = [...r.target.flatMap((t) => t.overlaps.map((o) => `target(${t.id}) ${o.thing}×${o.hud} ${o.frac}`)), ...r.holdup.overlaps.map((o) => `holdup ${o.thing}×${o.hud} ${o.frac}`), ...r.enemyTurn.overlaps.map((o) => `enemyTurn ${o.thing}×${o.hud} ${o.frac}`)];
+  const bad = [...r.target.flatMap((t) => t.overlaps.map((o) => `target(${t.id}) ${o.thing}×${o.hud} ${o.frac}`)), ...r.holdup.overlaps.map((o) => `holdup ${o.thing}×${o.hud} ${o.frac}`), ...Object.entries(r.holdup.occ ?? {}).filter(([, f]) => f > 0.6).map(([k, f]) => `holdup occluded ${k} ${f}`), ...r.enemyTurn.overlaps.map((o) => `enemyTurn ${o.thing}×${o.hud} ${o.frac}`)];
   console.log(`n=${n}`, JSON.stringify([...new Set(bad)]), errs.slice(0, 3));
 }
 fs.writeFileSync(`tools/out/enemies-${W}x${H}.json`, JSON.stringify(out, null, 1));

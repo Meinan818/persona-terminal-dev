@@ -5,7 +5,7 @@ import type { RunCtx } from './prims';
 import { vec } from './prims';
 import { Clip, ease } from './timeline';
 import type { CamKey } from './camera';
-import { HOLD_SPOTS } from './hud';
+import { holdLayout } from './hud';
 
 type Prim = (t: Track, rc: RunCtx) => Clip | Clip[] | null;
 const A = (t: Track) => t.args as any;
@@ -54,25 +54,24 @@ export const holdupRing: Prim = (t, rc) => {
   const cx = es.length ? es.reduce((s, u) => s + u.home.x, 0) / es.length : 520, cy = es.length ? es.reduce((s, u) => s + u.home.y, 0) / es.length : 520;
   const span = es.length ? Math.max(...es.map((u) => u.home.x)) - Math.min(...es.map((u) => u.home.x)) : 0;
   const spread = Math.max(1, (span / 2 + 170) / 300);
-  const spots = HOLD_SPOTS;   // 与 hud.setHoldRing 一致
   const RX = 330 * spread, RY = 110, YC = 50;
   const partyTop = (eng.skin.slots as any)['hud.party'].rect[1] - 10;          // 包围椭圆（地面透视）
   const orbit = a.orbit ?? 1.2;
   const L = eng.st.layers.enemy;
-  const mem: { c: Container; u: number; v: number; sc: number; d: number }[] = [];
+  const mem: { c: Container; u: number; v: number; sc: number; d: number; back: boolean; fy: number }[] = [];
   let wasSort = false;
   return { t0: t.at, dur, ease: ease.linear,
     begin() {
       wasSort = L.sortableChildren; L.sortableChildren = true;
-      ids.forEach((id, i) => {
-        const tex = eng.frames[`char.${id}#body`]; if (!tex || tex === Texture.WHITE) return;
-        const [dx, dy, sc] = spots[i % 4];
+      // 终点 = holdLayout（与菜单静帧同一构图）；椭圆参数 (u,v) 由终点反推，环绕结束正好落位
+      holdLayout(eng, ids2, ids, partyTop + 10).forEach((sp, i) => {
+        const tex = eng.frames[`char.${sp.id}#body`]; if (!tex || tex === Texture.WHITE) return;
         const c = new Container(); rc.temps.add(c);
         const sh = new Sprite(tex); sh.anchor.set(0.5, 1); sh.tint = 0x0a0a0a; sh.position.set(7, 4);
-        const rim = new Sprite(tex); rim.anchor.set(0.5, 1); rim.tint = 0xff1a2a; rim.blendMode = 'add'; rim.position.set(dx < 0 ? 4 : -4, -2); rim.alpha = 0.9;
+        const rim = new Sprite(tex); rim.anchor.set(0.5, 1); rim.tint = 0xff1a2a; rim.blendMode = 'add'; rim.position.set(sp.face > 0 ? 4 : -4, -2); rim.alpha = 0.9;
         const s = new Sprite(tex); s.anchor.set(0.5, 1); s.label = 'body';
-        c.addChild(sh, rim, s); c.scale.set((dx < 0 ? 1 : -1) * sc, sc); c.visible = false; L.addChild(c);
-        mem.push({ c, u: (dx * spread) / RX, v: (dy - YC) / RY, sc, d: i * 0.07 });
+        c.addChild(sh, rim, s); c.scale.set(sp.face * sp.sc, sp.sc); c.visible = false; L.addChild(c);
+        mem.push({ c, u: (sp.x - cx) / RX, v: (sp.y - cy - YC) / RY, sc: sp.sc, d: i * 0.07, back: sp.back, fy: sp.y });
       });
     },
     tick(p) {
@@ -84,11 +83,11 @@ export const holdupRing: Prim = (t, rc) => {
         const kin = ease.outBack(clamp((p - m.d) / 0.28));
         const depth = 1 + 0.22 * (v - m.v);
         m.c.visible = p >= m.d;
-        m.c.position.set(cx + u * RX, Math.min(cy + YC + v * RY, partyTop) - 260 * (1 - kin));
+        m.c.position.set(cx + u * RX, Math.min(cy + YC + v * RY, Math.max(partyTop, m.fy)) - 260 * (1 - kin));
         const face = u < 0 ? 1 : -1;
         m.c.scale.set(face * m.sc * depth * (0.85 + 0.15 * kin), m.sc * depth * (1.1 - 0.1 * kin));
-        m.c.zIndex = v > -0.05 ? 50 + v * 10 : -50 + v * 10;
-        const dim = v < -0.05 ? 0.62 : 1, g = Math.round(255 * dim);
+        m.c.zIndex = m.back ? -1000 + v * 10 : 50 + v * 10;   // 后排始终在倒地敌群身后
+        const dim = m.back ? 0.78 : 1, g = Math.round(255 * dim);
         (m.c.getChildByLabel('body') as Sprite).tint = (g << 16) | (g << 8) | g;
         m.c.alpha = 1 - clamp((p - 0.9) / 0.1);
       }

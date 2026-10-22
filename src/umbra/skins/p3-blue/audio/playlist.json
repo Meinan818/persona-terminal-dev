@@ -1,0 +1,921 @@
+{
+ "skin": "p3-blue",
+ "version": 1,
+ "defaults": {
+  "crossfadeMs": 800,
+  "victoryCrossfadeMs": 300,
+  "noRepeat": true
+ },
+ "note": "由 docs/umbra-design/AUDIO-MAP-v1.md §2（B 表）生成；loopStart/loopEnd 0/0 = 待标；音频文件未入库（缺文件静默）。TODO",
+ "entries": [
+  {
+   "id": "blue.B1",
+   "scene": "title",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/title__the-voice-someone-calls.opus",
+     "title": "The Voice Someone Calls",
+     "source": "The Voice Someone Calls（P3 1-14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B2",
+   "scene": "title",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/title__brand-new-days-the-beginning.opus",
+     "title": "Brand New Days -The Beginning-",
+     "source": "Brand New Days -The Beginning-（FES 02）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "设置「FES 标题」"
+  },
+  {
+   "id": "blue.B3",
+   "scene": "title",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/title__soul-phrase-long-ver.opus",
+     "title": "Soul Phrase -long ver.-",
+     "source": "Soul Phrase -long ver.-（P3P 09）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": false,
+   "note": "设置「P3P 标题」"
+  },
+  {
+   "id": "blue.B5",
+   "scene": "loading",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/loading__the-voice-someone-calls.opus",
+     "title": "The Voice Someone Calls",
+     "source": "The Voice Someone Calls（P3 1-14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "加载 >1.5s"
+  },
+  {
+   "id": "blue.B6",
+   "scene": "hub",
+   "condition": {
+    "time": "day"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__want-to-be-close.opus",
+     "title": "Want To Be Close",
+     "source": "Want To Be Close（P3 1-05）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B7",
+   "scene": "hub",
+   "condition": {
+    "time": "day",
+    "season": "semester2"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__changing-seasons.opus",
+     "title": "Changing Seasons",
+     "source": "Changing Seasons（P3 2-01）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B8",
+   "scene": "hub",
+   "condition": {
+    "time": "day"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__time.opus",
+     "title": "Time",
+     "source": "Time（P3P 04）/ Sun（P3P 06）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/hub__sun.opus",
+     "title": "Sun",
+     "source": "Time（P3P 04）/ Sun（P3P 06）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B9",
+   "scene": "hub",
+   "condition": {
+    "time": "night"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__when-the-moon-reaches-for-the-stars.opus",
+     "title": "When the Moon Reaches for the Stars",
+     "source": "When the Moon Reaches for the Stars（P3 1-12）+ A Way of Life（P3P 02）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/hub__a-way-of-life.opus",
+     "title": "A Way of Life",
+     "source": "When the Moon Reaches for the Stars（P3 1-12）+ A Way of Life（P3P 02）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B10",
+   "scene": "hub",
+   "condition": {
+    "moon": "full"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__an-unpleasant-premonition.opus",
+     "title": "An Unpleasant Premonition",
+     "source": "An Unpleasant Premonition / 嫌な予感（P3 1-23）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B11",
+   "scene": "hub",
+   "condition": {
+    "env": "darkHour"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__fearful-experience.opus",
+     "title": "Fearful Experience",
+     "source": "Fearful Experience（P3 1-24）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B12",
+   "scene": "hub",
+   "condition": {
+    "unlock": "late"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__memories-of-the-city.opus",
+     "title": "Memories of the City",
+     "source": "Memories of the City / 街の記憶（P3 2-14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B13",
+   "scene": "hub.home",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/hub.home__iwatodai-dorm.opus",
+     "title": "Iwatodai Dorm",
+     "source": "Iwatodai Dorm / 巌戸台分寮（P3 1-13）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "宿舍"
+  },
+  {
+   "id": "blue.B14",
+   "scene": "hub.home",
+   "condition": {
+    "unlock": "late"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub.home__living-with-determination-iwatodai-dormitory-arr.opus",
+     "title": "Living With Determination -Iwatodai Dormitory Arrange-",
+     "source": "Living With Determination -Iwatodai Dormitory Arrange-（P3 2-16）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B15",
+   "scene": "requests",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/requests__afternoon-break.opus",
+     "title": "Afternoon Break",
+     "source": "Afternoon Break（P3 2-08）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B16",
+   "scene": "explore",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore__tartarus-0d01.opus",
+     "title": "tartarus_0d01",
+     "source": "tartarus_0d01（P3 1-15）/ 0d02（1-22）/ 0d03（1-29）/ 0d04（2-06）/ 0d05（2-10）/ 0d06（2-17）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__0d02.opus",
+     "title": "0d02",
+     "source": "tartarus_0d01（P3 1-15）/ 0d02（1-22）/ 0d03（1-29）/ 0d04（2-06）/ 0d05（2-10）/ 0d06（2-17）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__0d03.opus",
+     "title": "0d03",
+     "source": "tartarus_0d01（P3 1-15）/ 0d02（1-22）/ 0d03（1-29）/ 0d04（2-06）/ 0d05（2-10）/ 0d06（2-17）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__0d04.opus",
+     "title": "0d04",
+     "source": "tartarus_0d01（P3 1-15）/ 0d02（1-22）/ 0d03（1-29）/ 0d04（2-06）/ 0d05（2-10）/ 0d06（2-17）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__0d05.opus",
+     "title": "0d05",
+     "source": "tartarus_0d01（P3 1-15）/ 0d02（1-22）/ 0d03（1-29）/ 0d04（2-06）/ 0d05（2-10）/ 0d06（2-17）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__0d06.opus",
+     "title": "0d06",
+     "source": "tartarus_0d01（P3 1-15）/ 0d02（1-22）/ 0d03（1-29）/ 0d04（2-06）/ 0d05（2-10）/ 0d06（2-17）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "floorTier 1–6（塔耳塔洛斯区块）"
+  },
+  {
+   "id": "blue.B17",
+   "scene": "explore",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore__the-snow-queen.opus",
+     "title": "The Snow Queen",
+     "source": "The Snow Queen（FES 08）/ Maya Theme（FES 09）/ Persona（FES 13）/ Time Castle（FES 14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__maya-theme.opus",
+     "title": "Maya Theme",
+     "source": "The Snow Queen（FES 08）/ Maya Theme（FES 09）/ Persona（FES 13）/ Time Castle（FES 14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__persona.opus",
+     "title": "Persona",
+     "source": "The Snow Queen（FES 08）/ Maya Theme（FES 09）/ Persona（FES 13）/ Time Castle（FES 14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__time-castle.opus",
+     "title": "Time Castle",
+     "source": "The Snow Queen（FES 08）/ Maya Theme（FES 09）/ Persona（FES 13）/ Time Castle（FES 14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "FES 「塔内 BGM 选择」池（设置开，默认关）"
+  },
+  {
+   "id": "blue.B18",
+   "scene": "explore.risk",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore.risk__interstice-of-time.opus",
+     "title": "Interstice of Time",
+     "source": "Interstice of Time / 時の狭間（FES 06）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "Monad 门 / 风险岔路"
+  },
+  {
+   "id": "blue.B19",
+   "scene": "explore.callingcard",
+   "condition": {
+    "callingCard": true
+   },
+   "tracks": [
+    {
+     "file": "bgm/explore.callingcard__crisis.opus",
+     "title": "Crisis",
+     "source": "Crisis（P3 1-07）+ Calamity（P3 1-25）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore.callingcard__calamity.opus",
+     "title": "Calamity",
+     "source": "Crisis（P3 1-07）+ Calamity（P3 1-25）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B20",
+   "scene": "explore.safe",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore.safe__peace.opus",
+     "title": "Peace",
+     "source": "Peace / やすらぎ（P3 1-11）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "安全屋（塔内转送点）"
+  },
+  {
+   "id": "blue.B21",
+   "scene": "explore.escape",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore.escape__calamity.opus",
+     "title": "Calamity",
+     "source": "Calamity（P3 1-25）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "撤退"
+  },
+  {
+   "id": "blue.B22",
+   "scene": "battle.normal",
+   "condition": {
+    "encounter": "normal"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.normal__mass-destruction.opus",
+     "title": "Mass Destruction",
+     "source": "Mass Destruction（P3 1-16）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B23",
+   "scene": "battle.normal",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/battle.normal__wiping-all-out.opus",
+     "title": "Wiping All Out",
+     "source": "Wiping All Out（P3P 05）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "P3P 池（默认开，权重低）"
+  },
+  {
+   "id": "blue.B24",
+   "scene": "battle.normal",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/battle.normal__mass-destruction-p3fes-version.opus",
+     "title": "Mass Destruction -P3fes version-",
+     "source": "Mass Destruction -P3fes version-（FES 07）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "FES「The Answer」池（默认关）"
+  },
+  {
+   "id": "blue.B25",
+   "scene": "battle.ambush",
+   "condition": {
+    "encounter": "ambush"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.ambush__mass-destruction.opus",
+     "title": "Mass Destruction",
+     "source": "Mass Destruction（同 B22）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B26",
+   "scene": "battle.ambushed",
+   "condition": {
+    "encounter": "ambushed"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.ambushed__mass-destruction.opus",
+     "title": "Mass Destruction",
+     "source": "Mass Destruction（同 B22）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B27",
+   "scene": "battle.elite",
+   "condition": {
+    "tier": "elite"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.elite__master-of-tartarus.opus",
+     "title": "Master of Tartarus",
+     "source": "Master of Tartarus（P3 2-03）+ Danger Zone（P3P 08）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/battle.elite__danger-zone.opus",
+     "title": "Danger Zone",
+     "source": "Master of Tartarus（P3 2-03）+ Danger Zone（P3P 08）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B28",
+   "scene": "battle.elite",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/battle.elite__unavoidable-battle.opus",
+     "title": "Unavoidable Battle",
+     "source": "Unavoidable Battle / 避けられぬ戦い（P3 1-10）+ Heartful Cry（FES 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/battle.elite__heartful-cry.opus",
+     "title": "Heartful Cry",
+     "source": "Unavoidable Battle / 避けられぬ戦い（P3 1-10）+ Heartful Cry（FES 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "对手为劲敌型精英（可选）"
+  },
+  {
+   "id": "blue.B29",
+   "scene": "boss.intro",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/boss.intro__that-which-comes-from-the-darkness.opus",
+     "title": "That Which Comes From The Darkness",
+     "source": "That Which Comes From The Darkness / 暗闇より出でしもの（P3 2-18）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B34",
+   "scene": "boss.defeat",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/boss.defeat__peace.opus",
+     "title": "Peace",
+     "source": "Peace / やすらぎ（P3 1-11）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "blue.B37",
+   "scene": "highlight",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/highlight__the-path-is-open.opus",
+     "title": "The Path is Open",
+     "source": "The Path is Open（P3 1-31）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "面具进化 / 羁绊 MAX"
+  },
+  {
+   "id": "blue.B38",
+   "scene": "victory",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/victory__after-the-battle.opus",
+     "title": "After the Battle",
+     "source": "After the Battle / 戦いのあと（P3 1-17）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "胜利"
+  },
+  {
+   "id": "blue.B39",
+   "scene": "result",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/result__after-the-battle.opus",
+     "title": "After the Battle",
+     "source": "After the Battle（同上，循环段）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "局末评级"
+  },
+  {
+   "id": "blue.B40",
+   "scene": "gameover",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/gameover__the-path-was-closed.opus",
+     "title": "The Path Was Closed",
+     "source": "The Path Was Closed（P3 1-32）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "全灭"
+  },
+  {
+   "id": "blue.B41",
+   "scene": "velvet",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/velvet__aria-of-the-soul.opus",
+     "title": "Aria of the Soul",
+     "source": "Aria of the Soul / 全ての人の魂の詩（P3 1-02）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "天鹅绒电梯"
+  },
+  {
+   "id": "blue.B42",
+   "scene": "velvet",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/velvet__blues-in-velvet-room.opus",
+     "title": "Blues in Velvet Room",
+     "source": "Blues in Velvet Room（P3 2-26）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "设置「Blues」彩蛋（默认关）"
+  },
+  {
+   "id": "blue.B43",
+   "scene": "velvet.challenge",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/velvet.challenge__between-doors.opus",
+     "title": "Between Doors",
+     "source": "Between Doors / 扉の間（FES 10）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "天鹅绒试炼"
+  },
+  {
+   "id": "blue.B44",
+   "scene": "shop.kurosawa",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/shop.kurosawa__paulownia-mall.opus",
+     "title": "Paulownia Mall",
+     "source": "Paulownia Mall / ポロニアンモール（P3 1-21）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "警察署黑泽巡警"
+  },
+  {
+   "id": "blue.B45",
+   "scene": "shop.aohige",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/shop.aohige__paulownia-mall.opus",
+     "title": "Paulownia Mall",
+     "source": "Paulownia Mall（同上）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "青髭药局"
+  },
+  {
+   "id": "blue.B46",
+   "scene": "shop.shinshoudo",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/shop.shinshoudo__paulownia-mall.opus",
+     "title": "Paulownia Mall",
+     "source": "Paulownia Mall（同上）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "眞宵堂古董店"
+  },
+  {
+   "id": "blue.B48",
+   "scene": "bond",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/bond__joy.opus",
+     "title": "Joy",
+     "source": "Joy（P3 1-28）+ After School / 放課後（P3P 03）+ Tender Feeling（P3P 07）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/bond__after-school.opus",
+     "title": "After School",
+     "source": "Joy（P3 1-28）+ After School / 放課後（P3P 03）+ Tender Feeling（P3P 07）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/bond__tender-feeling.opus",
+     "title": "Tender Feeling",
+     "source": "Joy（P3 1-28）+ After School / 放課後（P3P 03）+ Tender Feeling（P3P 07）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "羁绊事件 / 升级"
+  },
+  {
+   "id": "blue.B49",
+   "scene": "bond",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/bond__the-power-of-the-heart.opus",
+     "title": "The Power of the Heart",
+     "source": "The Power of the Heart / 心の力（P3 2-13）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "羁绊首次建立"
+  }
+ ]
+}

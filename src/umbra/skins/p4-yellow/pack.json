@@ -1,0 +1,4109 @@
+{
+ "id": "p4-yellow",
+ "contract": "1.3",
+ "packVersion": 1,
+ "origin": {
+  "ref": "origin/feat/umbra-skin-p4-yellow",
+  "commit": "43cff77",
+  "path": "src/umbra/skins/p4-yellow"
+ },
+ "manifest": {
+  "assets": [
+   {
+    "id": "bg.battle",
+    "file": "assets/bg-battle.webp",
+    "w": 2240,
+    "h": 950,
+    "firstPack": true,
+    "source": "generated",
+    "note": "P4G 电视世界摄影棚黄雾战斗背景；generate_image（参照项目内 p4g-gen/tv-world-src.png）生成后放大到 2240 宽，含左右+上下出血"
+   },
+   {
+    "id": "cutin.hero",
+    "file": "assets/cutin-hero.webp",
+    "w": 1280,
+    "h": 320,
+    "firstPack": true,
+    "source": "official",
+    "note": "主角眼部 cut-in：官方 P4_Protagonist 渲染裁眼部（Megami Tensei Wiki 官方渲染（umbra-demo/assets/p4/ASSETS.md 有逐张来源页））；黄底速度条/网点为程序绘制"
+   },
+   {
+    "id": "allout.finish.default",
+    "file": "assets/allout-finish.webp",
+    "w": 1280,
+    "h": 720,
+    "firstPack": true,
+    "source": "official",
+    "note": "总攻定格画：黄/白底黑集中线漫画四格；人物为官方渲染（Yutransparent=P4U 鸣上悠、Yosuke_Hanamura、Chie_Satonaka、Yukiko_Amagi，Megami Tensei Wiki 官方渲染（umbra-demo/assets/p4/ASSETS.md 有逐张来源页）），格框/网点/集中线程序绘制；无文字"
+   },
+   {
+    "id": "atlas.portraits",
+    "file": "assets/atlas-portraits.webp",
+    "w": 2048,
+    "h": 1024,
+    "firstPack": true,
+    "source": "official",
+    "note": "我方 4 人立绘图集（帧表 assets/atlas-portraits.json，Pixi spritesheet 格式）；官方渲染 P4_Protagonist/Yosuke_Hanamura/Chie_Satonaka/Yukiko_Amagi，高 640，拆 body+head 两层"
+   },
+   {
+    "id": "atlas.hud",
+    "file": "assets/atlas-hud.webp",
+    "w": 1024,
+    "h": 1024,
+    "firstPack": true,
+    "source": "generated",
+    "note": "HUD/粒子/转场小件图集（帧表 assets/atlas-hud.json）；全部由 work/p4y/build_assets.py 程序绘制（非 AI、非官方）"
+   },
+   {
+    "id": "bg.map",
+    "file": "assets/bg-map.webp",
+    "w": 2240,
+    "h": 950,
+    "firstPack": false,
+    "source": "generated",
+    "note": "电视世界迷宫走廊（雪子城风）地图背景；generate_image 生成，2240 宽，延迟包"
+   },
+   {
+    "id": "bg.hub",
+    "file": "assets/bg-hub.webp",
+    "w": 2240,
+    "h": 897,
+    "firstPack": false,
+    "source": "generated",
+    "note": "稻羽商店街据点背景；generate_image（参照 p4g-gen/town-day-wide-src.png）生成，2240 宽，延迟包"
+   },
+   {
+    "id": "highlight.hero",
+    "file": "assets/highlight-hero.webp",
+    "w": 1280,
+    "h": 720,
+    "firstPack": false,
+    "source": "official",
+    "note": "主角必杀定格画：官方 IzanagiP4Full + Yutransparent 渲染（Megami Tensei Wiki 官方渲染（umbra-demo/assets/p4/ASSETS.md 有逐张来源页））合成，黄底集中线程序绘制；延迟包"
+   },
+   {
+    "id": "enemy.calm-pesce",
+    "file": "assets/enemy-calm-pesce.webp",
+    "w": 560,
+    "h": 351,
+    "firstPack": false,
+    "source": "official",
+    "note": "敌人 Calm Pesce 官方模型图（Megami Tensei Wiki 官方渲染（umbra-demo/assets/p4/ASSETS.md 有逐张来源页），File:Calm_Pesce.png）；延迟包"
+   },
+   {
+    "id": "unit.hero.body",
+    "file": "assets/atlas-portraits.webp",
+    "w": 369,
+    "h": 502,
+    "atlas": "atlas.portraits",
+    "firstPack": true,
+    "source": "official"
+   },
+   {
+    "id": "unit.hero.head",
+    "file": "assets/atlas-portraits.webp",
+    "w": 145,
+    "h": 148,
+    "atlas": "atlas.portraits",
+    "firstPack": true,
+    "source": "official"
+   },
+   {
+    "id": "unit.yosuke.body",
+    "file": "assets/atlas-portraits.webp",
+    "w": 487,
+    "h": 570,
+    "atlas": "atlas.portraits",
+    "firstPack": true,
+    "source": "official"
+   },
+   {
+    "id": "unit.yosuke.head",
+    "file": "assets/atlas-portraits.webp",
+    "w": 160,
+    "h": 156,
+    "atlas": "atlas.portraits",
+    "firstPack": true,
+    "source": "official"
+   },
+   {
+    "id": "unit.chie.body",
+    "file": "assets/atlas-portraits.webp",
+    "w": 349,
+    "h": 504,
+    "atlas": "atlas.portraits",
+    "firstPack": true,
+    "source": "official"
+   },
+   {
+    "id": "unit.chie.head",
+    "file": "assets/atlas-portraits.webp",
+    "w": 140,
+    "h": 146,
+    "atlas": "atlas.portraits",
+    "firstPack": true,
+    "source": "official"
+   },
+   {
+    "id": "unit.yukiko.body",
+    "file": "assets/atlas-portraits.webp",
+    "w": 411,
+    "h": 565,
+    "atlas": "atlas.portraits",
+    "firstPack": true,
+    "source": "official"
+   },
+   {
+    "id": "unit.yukiko.head",
+    "file": "assets/atlas-portraits.webp",
+    "w": 149,
+    "h": 142,
+    "atlas": "atlas.portraits",
+    "firstPack": true,
+    "source": "official"
+   },
+   {
+    "id": "fx.tvstatic.0",
+    "file": "assets/atlas-hud.webp",
+    "w": 256,
+    "h": 256,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.tvstatic.1",
+    "file": "assets/atlas-hud.webp",
+    "w": 256,
+    "h": 256,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.block",
+    "file": "assets/atlas-hud.webp",
+    "w": 128,
+    "h": 128,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.block.ink",
+    "file": "assets/atlas-hud.webp",
+    "w": 128,
+    "h": 128,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.star",
+    "file": "assets/atlas-hud.webp",
+    "w": 68,
+    "h": 68,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.star.white",
+    "file": "assets/atlas-hud.webp",
+    "w": 52,
+    "h": 52,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.dust",
+    "file": "assets/atlas-hud.webp",
+    "w": 160,
+    "h": 120,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.streak",
+    "file": "assets/atlas-hud.webp",
+    "w": 128,
+    "h": 12,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.spark",
+    "file": "assets/atlas-hud.webp",
+    "w": 32,
+    "h": 32,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.square",
+    "file": "assets/atlas-hud.webp",
+    "w": 20,
+    "h": 20,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.daisy.white",
+    "file": "assets/atlas-hud.webp",
+    "w": 64,
+    "h": 64,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.daisy.yellow",
+    "file": "assets/atlas-hud.webp",
+    "w": 64,
+    "h": 64,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.cmd.main",
+    "file": "assets/atlas-hud.webp",
+    "w": 112,
+    "h": 112,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.cmd.main.on",
+    "file": "assets/atlas-hud.webp",
+    "w": 112,
+    "h": 112,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.cmd.sub",
+    "file": "assets/atlas-hud.webp",
+    "w": 96,
+    "h": 96,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.cmd.sub.on",
+    "file": "assets/atlas-hud.webp",
+    "w": 96,
+    "h": 96,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.datePlate",
+    "file": "assets/atlas-hud.webp",
+    "w": 240,
+    "h": 66,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.weather.clear",
+    "file": "assets/atlas-hud.webp",
+    "w": 56,
+    "h": 56,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.weather.cloudy",
+    "file": "assets/atlas-hud.webp",
+    "w": 56,
+    "h": 56,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.weather.rain",
+    "file": "assets/atlas-hud.webp",
+    "w": 56,
+    "h": 56,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.weather.storm",
+    "file": "assets/atlas-hud.webp",
+    "w": 56,
+    "h": 56,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.weather.snow",
+    "file": "assets/atlas-hud.webp",
+    "w": 56,
+    "h": 56,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.weather.fog",
+    "file": "assets/atlas-hud.webp",
+    "w": 56,
+    "h": 56,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.weather.unknown",
+    "file": "assets/atlas-hud.webp",
+    "w": 56,
+    "h": 56,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.enemy.weak",
+    "file": "assets/atlas-hud.webp",
+    "w": 40,
+    "h": 40,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "hud.enemy.shield",
+    "file": "assets/atlas-hud.webp",
+    "w": 28,
+    "h": 32,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.bolt",
+    "file": "assets/atlas-hud.webp",
+    "w": 120,
+    "h": 360,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.slashArc",
+    "file": "assets/atlas-hud.webp",
+    "w": 360,
+    "h": 360,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "fx.tvMask",
+    "file": "assets/atlas-hud.webp",
+    "w": 256,
+    "h": 200,
+    "atlas": "atlas.hud",
+    "firstPack": true,
+    "source": "generated"
+   },
+   {
+    "id": "placeholder.head.kanji",
+    "file": "assets/placeholder/head.kanji.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:kanji",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   },
+   {
+    "id": "placeholder.head.teddie",
+    "file": "assets/placeholder/head.teddie.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:teddie",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   },
+   {
+    "id": "placeholder.head.naoto",
+    "file": "assets/placeholder/head.naoto.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:naoto",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   },
+   {
+    "id": "placeholder.head.rise",
+    "file": "assets/placeholder/head.rise.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:rise",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   }
+  ],
+  "filters": [],
+  "fonts": [
+   {
+    "family": "P4YDisplay",
+    "file": "assets/fonts/p4y-display.woff2",
+    "chars": "!%()+,-./0123456789:;?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz·×“”…、。「」世中之交人伤作倍停偷先全具击分利到制力包午协卡发员围土多夜委害御心必思总战托技搜攻日时晴暂更月木杀板析查格水涉火电界的等级考胜能袭视败超跑逃速道遭金队防阴雨雪雷雾面！（）：？",
+    "role": "display",
+    "pack": "first",
+    "bytes": 51760
+   },
+   {
+    "family": "P4YNumber",
+    "file": "assets/fonts/p4y-number.woff2",
+    "chars": "0123456789+-,.%:/×!ABCDEFGHIJKLMNOPQRSTUVWXYZ ",
+    "role": "number",
+    "pack": "first",
+    "bytes": 3724
+   }
+  ]
+ },
+ "tokens": {
+  "color.primary": "#FFE200",
+  "color.secondary": "#111111",
+  "color.ink": "#111111",
+  "color.paper": "#FFFBE6",
+  "color.accent": "#FF7A00",
+  "color.hp": "#9BE03C",
+  "color.sp": "#F05DA8",
+  "color.weak": "#FF7A00",
+  "color.crit": "#E8352B",
+  "color.resist": "#7FA6C8",
+  "color.shadow": "#3A3000",
+  "color.overlay": "#1A1400",
+  "font.display": "P4YDisplay, 'Noto Serif SC', serif",
+  "font.body": "system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif",
+  "font.number": "P4YNumber, 'Bebas Neue', 'Arial Narrow', sans-serif",
+  "stroke.thin": "3",
+  "stroke.bold": "8",
+  "shape.slant": "0",
+  "shape.radius": "10",
+  "shape.panelSkew": "-0.06",
+  "motion.uiOpen": "220",
+  "motion.uiClose": "180",
+  "motion.press": "0.92",
+  "ease.enter": "outCubic",
+  "ease.exit": "inCubic",
+  "ease.pop": "outBack",
+  "hud.commandShape": "grid",
+  "hud.commandLayout": "fivePlusMore",
+  "hud.partyStyle": "card"
+ },
+ "tokenTree": {
+  "color": {
+   "primary": "#FFE200",
+   "secondary": "#111111",
+   "ink": "#111111",
+   "paper": "#FFFBE6",
+   "accent": "#FF7A00",
+   "hp": "#9BE03C",
+   "sp": "#F05DA8",
+   "weak": "#FF7A00",
+   "crit": "#E8352B",
+   "resist": "#7FA6C8",
+   "shadow": "#3A3000",
+   "overlay": "#1A1400"
+  },
+  "font": {
+   "display": "P4YDisplay, 'Noto Serif SC', serif",
+   "body": "system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif",
+   "number": "P4YNumber, 'Bebas Neue', 'Arial Narrow', sans-serif"
+  },
+  "stroke": {
+   "thin": 3,
+   "bold": 8
+  },
+  "shape": {
+   "slant": 0,
+   "radius": 10,
+   "panelSkew": -0.06
+  },
+  "motion": {
+   "uiOpen": 220,
+   "uiClose": 180,
+   "press": 0.92
+  },
+  "ease": {
+   "enter": "outCubic",
+   "exit": "inCubic",
+   "pop": "outBack"
+  },
+  "hud": {
+   "commandShape": "grid",
+   "commandLayout": "fivePlusMore",
+   "partyStyle": "card"
+  }
+ },
+ "slots": {
+  "hud.order": {
+   "rect": {
+    "x": 24,
+    "y": 24,
+    "w": 496,
+    "h": 86
+   },
+   "style": "tvChips",
+   "chip": {
+    "w": 64,
+    "h": 64,
+    "gap": 8,
+    "frame": "hud.cmd.sub",
+    "activeFrame": "hud.cmd.sub.on",
+    "faceFrom": "unit.<id>.head",
+    "enemyTint": "#111111"
+   },
+   "note": "P4G 无行动条，按 P4 电视方块做成黄黑方形头像块；当前行动者放大 1.1 并上浮 6"
+  },
+  "hud.system": {
+   "rect": {
+    "x": 1000,
+    "y": 24,
+    "w": 256,
+    "h": 66
+   },
+   "buttons": [
+    {
+     "id": "auto",
+     "label": "label.auto",
+     "draw": {
+      "x": 1000,
+      "y": 24,
+      "w": 80,
+      "h": 66
+     },
+     "hit": {
+      "x": 998,
+      "y": 24,
+      "w": 86,
+      "h": 86
+     }
+    },
+    {
+     "id": "speed",
+     "label": "label.speed",
+     "draw": {
+      "x": 1088,
+      "y": 24,
+      "w": 80,
+      "h": 66
+     },
+     "hit": {
+      "x": 1084,
+      "y": 24,
+      "w": 86,
+      "h": 86
+     }
+    },
+    {
+     "id": "pause",
+     "label": "label.pause",
+     "draw": {
+      "x": 1176,
+      "y": 24,
+      "w": 80,
+      "h": 66
+     },
+     "hit": {
+      "x": 1170,
+      "y": 24,
+      "w": 86,
+      "h": 86
+     }
+    }
+   ],
+   "frame": "hud.cmd.sub",
+   "note": "插槽范围 256×66 放不下 3 个 86×86 命中区：画面在范围内，命中区向下延到 y110、最左 x998（待主策划答复，见进度文件 Q1）"
+  },
+  "hud.topInfo": {
+   "rect": {
+    "x": 760,
+    "y": 24,
+    "w": 240,
+    "h": 66
+   },
+   "plate": "hud.datePlate",
+   "date": {
+    "ref": "$env.date",
+    "format": "M/D",
+    "font": "@font.number",
+    "size": 40,
+    "pos": {
+     "x": 800,
+     "y": 57
+    },
+    "color": "@color.ink"
+   },
+   "weekday": {
+    "ref": "$env.weekday",
+    "labelPrefix": "label.weekday.",
+    "font": "@font.display",
+    "size": 30,
+    "pos": {
+     "x": 900,
+     "y": 57
+    },
+    "color": "@color.ink"
+   },
+   "weather": {
+    "ref": "$env.weather",
+    "framePrefix": "hud.weather.",
+    "fallback": {
+     "storm": "rain"
+    },
+    "pos": {
+     "x": 966,
+     "y": 57
+    },
+    "size": 52
+   },
+   "note": "P4 右上日历框：黄底黑字日期+曜日汉字+天气图标，只读 $env，不自行取系统时间"
+  },
+  "hud.enemyOver": {
+   "follow": "enemy",
+   "offset": {
+    "dx": 0,
+    "dy": -36
+   },
+   "hpBar": {
+    "w": 150,
+    "h": 10,
+    "color": "@color.hp",
+    "back": "@color.ink",
+    "stroke": "@stroke.thin"
+   },
+   "weakIcon": "hud.enemy.weak",
+   "shieldIcon": "hud.enemy.shield",
+   "shieldMax": 6,
+   "name": {
+    "font": "@font.display",
+    "size": 22,
+    "color": "@color.ink",
+    "plate": "@color.primary"
+   }
+  },
+  "hud.intent": {
+   "follow": "enemy",
+   "offset": {
+    "dx": 92,
+    "dy": -70
+   },
+   "plate": {
+    "shape": "speechBox",
+    "fill": "@color.paper",
+    "stroke": "@color.ink"
+   },
+   "font": "@font.body",
+   "size": 18,
+   "maxW": 160
+  },
+  "hud.party": {
+   "rect": {
+    "x": 24,
+    "y": 600,
+    "w": 636,
+    "h": 96
+   },
+   "style": "card",
+   "card": {
+    "w": 150,
+    "h": 88,
+    "gap": 12,
+    "skew": "@shape.panelSkew",
+    "fill": "@color.primary",
+    "stroke": "@color.ink",
+    "face": {
+     "from": "unit.<id>.head",
+     "x": 4,
+     "y": 4,
+     "w": 60,
+     "h": 60
+    },
+    "hp": {
+     "x": 68,
+     "y": 48,
+     "w": 76,
+     "h": 10,
+     "color": "@color.hp"
+    },
+    "sp": {
+     "x": 68,
+     "y": 64,
+     "w": 76,
+     "h": 8,
+     "color": "@color.sp"
+    },
+    "num": {
+     "font": "@font.number",
+     "size": 26
+    }
+   },
+   "interactive": false
+  },
+  "hud.command": {
+   "rect": {
+    "x": 780,
+    "y": 220,
+    "w": 476,
+    "h": 476
+   },
+   "shape": "grid",
+   "layout": "fivePlusMore",
+   "items": [
+    {
+     "id": "attack",
+     "label": "label.attack",
+     "primary": true,
+     "rect": {
+      "x": 1120,
+      "y": 556,
+      "w": 120,
+      "h": 120
+     },
+     "frame": "hud.cmd.main",
+     "activeFrame": "hud.cmd.main.on"
+    },
+    {
+     "id": "skill",
+     "label": "label.skill",
+     "rect": {
+      "x": 996,
+      "y": 572,
+      "w": 104,
+      "h": 104
+     },
+     "frame": "hud.cmd.sub",
+     "activeFrame": "hud.cmd.sub.on"
+    },
+    {
+     "id": "guard",
+     "label": "label.guard",
+     "rect": {
+      "x": 1012,
+      "y": 452,
+      "w": 104,
+      "h": 104
+     },
+     "frame": "hud.cmd.sub",
+     "activeFrame": "hud.cmd.sub.on"
+    },
+    {
+     "id": "persona",
+     "label": "label.persona",
+     "rect": {
+      "x": 1136,
+      "y": 432,
+      "w": 104,
+      "h": 104
+     },
+     "frame": "hud.cmd.sub",
+     "activeFrame": "hud.cmd.sub.on"
+    },
+    {
+     "id": "item",
+     "label": "label.item",
+     "rect": {
+      "x": 884,
+      "y": 588,
+      "w": 96,
+      "h": 96
+     },
+     "frame": "hud.cmd.sub",
+     "activeFrame": "hud.cmd.sub.on"
+    }
+   ],
+   "more": {
+    "id": "more",
+    "label": "label.more",
+    "rect": {
+     "x": 1148,
+     "y": 320,
+     "w": 92,
+     "h": 92
+    },
+    "frame": "hud.cmd.sub",
+    "overflowOrder": [
+     "analyze",
+     "tactics",
+     "talk",
+     "escape"
+    ],
+    "menu": {
+     "rect": {
+      "x": 800,
+      "y": 236,
+      "w": 336,
+      "h": 200
+     },
+     "itemW": 160,
+     "itemH": 88,
+     "cols": 2
+    }
+   },
+   "text": {
+    "font": "@font.display",
+    "size": 30,
+    "color": "@color.ink",
+    "align": "center",
+    "pos": "bottom"
+   },
+   "press": {
+    "scale": "@motion.press",
+    "fx": "fx.tvstatic.0",
+    "fxAlpha": 0.35,
+    "fxMs": 120
+   },
+   "note": "P4 电视方块：黄芯黑框方块阶梯排布，主按钮（攻击）在右下拇指位；第 6 项起进「更多」"
+  },
+  "fx.banner": {
+   "style": "tvBand",
+   "bandH": 150,
+   "fill": "@color.primary",
+   "ink": "@color.ink",
+   "faceFrom": "unit.<id>.head"
+  },
+  "fx.cutin": {
+   "band": {
+    "h": 320,
+    "angle": -0.08
+   },
+   "art": "unit.<id>.cutin"
+  },
+  "fx.allout": {
+   "finishCards": [
+    {
+     "asset": "allout.finish.default"
+    }
+   ],
+   "dust": "fx.dust",
+   "stars": [
+    "fx.star",
+    "fx.star.white"
+   ]
+  },
+  "fx.transition": {
+   "battleStart": "transition.battleStart",
+   "encounterMerged": "transition.encounterBattle",
+   "block": "fx.block",
+   "static": [
+    "fx.tvstatic.0",
+    "fx.tvstatic.1"
+   ]
+  },
+  "scene.battle.bg": {
+   "asset": "bg.battle",
+   "w": 2240,
+   "h": 950,
+   "anchor": [
+    0.5,
+    0.55
+   ],
+   "bleed": "wide+tall",
+   "fillColor": "#1A1400"
+  },
+  "scene.map.bg": {
+   "asset": "bg.map",
+   "w": 2240,
+   "h": 950,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "bleed": "wide+tall",
+   "fillColor": "#3A1A10"
+  },
+  "scene.hub.bg": {
+   "asset": "bg.hub",
+   "w": 2240,
+   "h": 897,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "bleed": "wide+tall",
+   "fillColor": "#FFFBE6"
+  },
+  "scene.talk": {
+   "template": "talk",
+   "styleId": "p4-tv"
+  },
+  "scene.result": {
+   "style": "p4Report",
+   "faces": false,
+   "plate": {
+    "fill": "@color.primary",
+    "stroke": "@color.ink",
+    "skew": "@shape.panelSkew"
+   },
+   "decor": [
+    "fx.daisy.white",
+    "fx.daisy.yellow",
+    "fx.star"
+   ],
+   "note": "结算/升级不放人脸：黄底黑字报表 + 雏菊/星装饰，角色只出名字文字"
+  },
+  "scene.loading": {
+   "fill": "@color.primary",
+   "static": "fx.tvstatic.0",
+   "mask": "fx.tvMask"
+  },
+  "unit.hero.portrait": {
+   "atlas": "atlas.portraits",
+   "layers": [
+    "body",
+    "head"
+   ],
+   "frames": [
+    "unit.hero.body",
+    "unit.hero.head"
+   ],
+   "size": [
+    369,
+    640
+   ],
+   "meshIdle": {
+    "breath": 0.01,
+    "period": 3000,
+    "swayPx": 6,
+    "swayZone": [
+     [
+      88,
+      8,
+      210,
+      0,
+      228,
+      100,
+      120,
+      84,
+      84,
+      110
+     ]
+    ]
+   }
+  },
+  "unit.yosuke.portrait": {
+   "atlas": "atlas.portraits",
+   "layers": [
+    "body",
+    "head"
+   ],
+   "frames": [
+    "unit.yosuke.body",
+    "unit.yosuke.head"
+   ],
+   "size": [
+    487,
+    640
+   ],
+   "meshIdle": {
+    "breath": 0.011,
+    "period": 2700,
+    "swayPx": 7,
+    "swayZone": [
+     [
+      180,
+      4,
+      332,
+      4,
+      348,
+      96,
+      174,
+      100
+     ]
+    ]
+   }
+  },
+  "unit.chie.portrait": {
+   "atlas": "atlas.portraits",
+   "layers": [
+    "body",
+    "head"
+   ],
+   "frames": [
+    "unit.chie.body",
+    "unit.chie.head"
+   ],
+   "size": [
+    349,
+    640
+   ],
+   "meshIdle": {
+    "breath": 0.012,
+    "period": 2600,
+    "swayPx": 6,
+    "swayZone": [
+     [
+      100,
+      10,
+      255,
+      10,
+      262,
+      134,
+      95,
+      134
+     ]
+    ]
+   }
+  },
+  "unit.yukiko.portrait": {
+   "atlas": "atlas.portraits",
+   "layers": [
+    "body",
+    "head"
+   ],
+   "frames": [
+    "unit.yukiko.body",
+    "unit.yukiko.head"
+   ],
+   "size": [
+    411,
+    640
+   ],
+   "meshIdle": {
+    "breath": 0.009,
+    "period": 3400,
+    "swayPx": 9,
+    "swayZone": [
+     [
+      20,
+      140,
+      130,
+      130,
+      120,
+      260,
+      10,
+      250
+     ],
+     [
+      300,
+      90,
+      411,
+      180,
+      400,
+      560,
+      300,
+      520
+     ]
+    ]
+   }
+  },
+  "unit.hero.cutin": {
+   "asset": "cutin.hero",
+   "w": 1280,
+   "h": 320
+  },
+  "unit.hero.highlight": {
+   "asset": "highlight.hero",
+   "w": 1280,
+   "h": 720,
+   "pack": "deferred"
+  },
+  "enemy.calm-pesce": {
+   "asset": "enemy.calm-pesce",
+   "w": 560,
+   "h": 351,
+   "pack": "deferred"
+  }
+ },
+ "templates": {
+  "talk": {
+   "html": "<section class=\"p4tv\"><header class=\"p4tv-top\"><span class=\"p4tv-ch\">CH</span><span class=\"p4tv-name\" data-slot=\"enemyName\"></span><span class=\"p4tv-odds\" data-slot=\"odds\"></span></header><div class=\"p4tv-screen\"><img class=\"p4tv-face\" data-slot=\"enemyPortrait\" data-asset=\"enemy.calm-pesce\" alt=\"\"><p class=\"p4tv-line\" data-slot=\"line\"></p><span class=\"p4tv-status\" data-slot=\"status\"></span></div><ul class=\"p4tv-choices\" data-slot=\"choices\"><li class=\"p4tv-li\"><button class=\"p4tv-choice\" data-slot=\"choice\"><span class=\"p4tv-key\"></span><span data-slot=\"choiceText\"></span></button></li></ul><footer class=\"p4tv-foot\"><input class=\"p4tv-input\" data-slot=\"input\" maxlength=\"60\"><button class=\"p4tv-send\" data-slot=\"send\">▶</button></footer></section>",
+   "params": {
+    "styleId": "p4-tv",
+    "maxLineChars": 60,
+    "typingCps": 40
+   }
+  }
+ },
+ "labels": {
+  "label.advantage": "先发制人",
+  "label.allout": "总攻击",
+  "label.ambush": "遭到偷袭",
+  "label.analyze": "分析",
+  "label.attack": "攻击",
+  "label.auto": "AUTO",
+  "label.baton": "BATON",
+  "label.battleStart": "BATTLE START",
+  "label.darkHour": "午夜电视",
+  "label.defeat": "战败",
+  "label.dive": "电视世界",
+  "label.down": "DOWN",
+  "label.escape": "逃跑",
+  "label.finish": "FINISH!",
+  "label.guard": "防御",
+  "label.heartCard": "心之卡",
+  "label.highlight": "必杀",
+  "label.highlight.teamUp": "协力必杀",
+  "label.holdup": "全员包围",
+  "label.item": "道具",
+  "label.more": "更多",
+  "label.onemore": "1 MORE",
+  "label.pause": "暂停",
+  "label.persona": "人格面具",
+  "label.rank": "搜查队等级",
+  "label.requestBoard": "委托板",
+  "label.result": "RESULT",
+  "label.skill": "技能",
+  "label.speed": "倍速",
+  "label.tactics": "作战",
+  "label.talk": "交涉",
+  "label.talk.thinking": "思考中…",
+  "label.talk.timeout": "超时",
+  "label.totalDamage": "总伤害",
+  "label.victory": "胜利",
+  "label.weather.clear": "晴",
+  "label.weather.cloudy": "阴",
+  "label.weather.fog": "雾",
+  "label.weather.rain": "雨",
+  "label.weather.snow": "雪",
+  "label.weather.storm": "雷雨",
+  "label.weather.unknown": "？",
+  "label.weekday.fri": "金",
+  "label.weekday.mon": "月",
+  "label.weekday.sat": "土",
+  "label.weekday.sun": "日",
+  "label.weekday.thu": "木",
+  "label.weekday.tue": "火",
+  "label.weekday.wed": "水",
+  "label.world": "电视中的世界",
+  "persona.chie": "巴御前",
+  "persona.hero": "伊邪那岐",
+  "persona.kanji": "建御雷",
+  "persona.naoto": "少名毗古那",
+  "persona.rise": "卑弥呼",
+  "persona.teddie": "金时童子",
+  "persona.yosuke": "自来也",
+  "persona.yukiko": "木花开耶",
+  "result.levelup": "LEVEL UP!",
+  "skill.brave-blade.name": "Brave Blade",
+  "skill.myriad-truths.name": "Myriad Truths",
+  "skill.ziodyne.name": "Ziodyne",
+  "tag.CRIT": "CRITICAL!",
+  "tag.DOWN": "DOWN",
+  "tag.MISS": "MISS",
+  "tag.NULL": "BLOCK",
+  "tag.REPEL": "REPEL",
+  "tag.RESIST": "RESIST",
+  "tag.WEAK": "WEAK!",
+  "unit.chie": "里中 千枝",
+  "unit.hero": "鸣上 悠",
+  "unit.kanji": "巽 完二",
+  "unit.naoto": "白钟 直斗",
+  "unit.rise": "久慈川 理世",
+  "unit.teddie": "克玛",
+  "unit.yosuke": "花村 阳介",
+  "unit.yukiko": "天城 雪子"
+ },
+ "recipes": [
+  {
+   "id": "action.brave-blade",
+   "event": "action",
+   "match": {
+    "skillId": "brave-blade",
+    "actorId": "hero"
+   },
+   "duration": 1500,
+   "hitMarks": [
+    780
+   ],
+   "create": [
+    {
+     "name": "arc",
+     "asset": "fx.slashArc",
+     "layer": "fx",
+     "anchor": [
+      0.5,
+      0.5
+     ]
+    }
+   ],
+   "assets": [
+    "cutin.hero",
+    "fx.slashArc",
+    "fx.star",
+    "fx.spark",
+    "fx.square"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 200,
+     "prim": "dim",
+     "args": {
+      "color": "#000",
+      "alpha": 0.45
+     }
+    },
+    {
+     "at": 0,
+     "dur": 540,
+     "prim": "cutin",
+     "layer": "cutin",
+     "ease": "outCubic",
+     "args": {
+      "bandAngle": 0.08,
+      "speedLines": {
+       "layers": 2,
+       "count": 46
+      },
+      "panels": [
+       {
+        "shape": [
+         -1300,
+         -110,
+         1300,
+         -150,
+         1300,
+         110,
+         -1300,
+         150
+        ],
+        "art": "cutin.hero",
+        "enterFrom": "left",
+        "delay": 0
+       }
+      ],
+      "nameplate": {
+       "text": "skill.brave-blade.name",
+       "font": "@font.display"
+      }
+     },
+     "minimal": {
+      "dur": 250
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "cutin"
+     }
+    },
+    {
+     "at": 500,
+     "dur": 240,
+     "prim": "afterimage",
+     "layer": "ally",
+     "ease": "inCubic",
+     "args": {
+      "actor": "$actor",
+      "to": {
+       "x": "$target",
+       "y": "$target",
+       "dx": -170
+      },
+      "n": 3,
+      "tints": [
+       "#ffffff",
+       "@color.primary",
+       "#ffffff"
+      ]
+     }
+    },
+    {
+     "at": 500,
+     "prim": "sfx",
+     "args": {
+      "id": "dash"
+     }
+    },
+    {
+     "at": 700,
+     "prim": "show",
+     "args": {
+      "target": "#arc"
+     }
+    },
+    {
+     "at": 700,
+     "dur": 180,
+     "prim": "tween",
+     "layer": "fx",
+     "ease": "outQuart",
+     "args": {
+      "target": "#arc",
+      "from": {
+       "x": "$target",
+       "y": "$target",
+       "alpha": 1,
+       "rotation": -1.2,
+       "scale": 0.8
+      },
+      "to": {
+       "rotation": 0.6,
+       "scale": 1.25
+      }
+     }
+    },
+    {
+     "at": 760,
+     "dur": 180,
+     "prim": "slashLine",
+     "layer": "fx",
+     "args": {
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "rot": -0.5,
+      "len": 900,
+      "width": 22
+     }
+    },
+    {
+     "at": 780,
+     "dur": 90,
+     "prim": "rgbSplit",
+     "args": {
+      "offset": 10
+     }
+    },
+    {
+     "at": 780,
+     "prim": "hitStop",
+     "args": {
+      "ms": 70
+     }
+    },
+    {
+     "at": 780,
+     "dur": 300,
+     "prim": "shake",
+     "args": {
+      "px": 22
+     }
+    },
+    {
+     "at": 780,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$target",
+      "ms": 50
+     }
+    },
+    {
+     "at": 780,
+     "prim": "squashHit",
+     "args": {
+      "target": "$target",
+      "squash": 0.2,
+      "push": 28,
+      "recoverMs": 280
+     }
+    },
+    {
+     "at": 780,
+     "prim": "particles",
+     "args": {
+      "count": 240,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1100,
+      "spread": 6.28,
+      "dir": 0,
+      "life": 620,
+      "size": [
+       10,
+       26
+      ],
+      "gravity": 900,
+      "frames": [
+       "fx.star",
+       "fx.spark",
+       "fx.square"
+      ],
+      "colors": [
+       "@color.primary",
+       "#ffffff",
+       "@color.ink"
+      ]
+     },
+     "minimal": {
+      "args": {
+       "count": 120,
+       "at": {
+        "x": "$target",
+        "y": "$target",
+        "dy": -230
+       },
+       "speed": 800,
+       "spread": 6.28,
+       "dir": 0,
+       "life": 300,
+       "size": [
+        10,
+        22
+       ],
+       "gravity": 900,
+       "frames": [
+        "fx.star",
+        "fx.spark"
+       ],
+       "colors": [
+        "@color.primary",
+        "#ffffff"
+       ]
+      }
+     }
+    },
+    {
+     "at": 780,
+     "dur": 700,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": true
+     }
+    },
+    {
+     "at": 780,
+     "dur": 520,
+     "prim": "tag",
+     "args": {
+      "kind": "CRIT",
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -330
+      }
+     }
+    },
+    {
+     "at": 780,
+     "prim": "sfx",
+     "args": {
+      "id": "hit.heavy"
+     }
+    },
+    {
+     "at": 880,
+     "dur": 160,
+     "prim": "tween",
+     "layer": "fx",
+     "args": {
+      "target": "#arc",
+      "to": {
+       "alpha": 0
+      }
+     }
+    },
+    {
+     "at": 900,
+     "dur": 360,
+     "prim": "tween",
+     "layer": "ally",
+     "ease": "outCubic",
+     "args": {
+      "target": "$actor",
+      "to": {
+       "x": "home",
+       "y": "home"
+      }
+     }
+    },
+    {
+     "at": 930,
+     "dur": 440,
+     "prim": "shockwave",
+     "args": {
+      "center": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "amp": 50,
+      "wavelength": 180,
+      "speed": 1000,
+      "radius": 560
+     }
+    },
+    {
+     "at": 1040,
+     "prim": "hide",
+     "args": {
+      "target": "#arc"
+     }
+    }
+   ]
+  },
+  {
+   "id": "action.default",
+   "event": "action",
+   "duration": 960,
+   "hitMarks": [
+    380
+   ],
+   "assets": [
+    "fx.star",
+    "fx.spark",
+    "fx.square"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 260,
+     "prim": "afterimage",
+     "layer": "ally",
+     "ease": "inCubic",
+     "args": {
+      "actor": "$actor",
+      "to": {
+       "x": "$target",
+       "y": "$target",
+       "dx": -150
+      },
+      "n": 2,
+      "tints": [
+       "#ffffff",
+       "@color.primary"
+      ]
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "dash"
+     }
+    },
+    {
+     "at": 300,
+     "dur": 140,
+     "prim": "slashLine",
+     "layer": "fx",
+     "args": {
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "rot": -0.6,
+      "len": 520,
+      "width": 16
+     }
+    },
+    {
+     "at": 380,
+     "prim": "hitStop",
+     "args": {
+      "ms": 60
+     }
+    },
+    {
+     "at": 380,
+     "dur": 240,
+     "prim": "shake",
+     "args": {
+      "px": 12
+     }
+    },
+    {
+     "at": 380,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$target",
+      "ms": 50
+     }
+    },
+    {
+     "at": 380,
+     "prim": "squashHit",
+     "args": {
+      "target": "$target",
+      "squash": 0.14,
+      "push": 18,
+      "recoverMs": 220
+     }
+    },
+    {
+     "at": 380,
+     "prim": "particles",
+     "args": {
+      "count": 90,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 800,
+      "spread": 6.28,
+      "dir": 0,
+      "life": 420,
+      "size": [
+       10,
+       26
+      ],
+      "gravity": 900,
+      "frames": [
+       "fx.star",
+       "fx.spark",
+       "fx.square"
+      ],
+      "colors": [
+       "@color.primary",
+       "#ffffff",
+       "@color.ink"
+      ]
+     },
+     "minimal": {
+      "args": {
+       "count": 45,
+       "at": {
+        "x": "$target",
+        "y": "$target",
+        "dy": -230
+       },
+       "speed": 800,
+       "spread": 6.28,
+       "dir": 0,
+       "life": 300,
+       "size": [
+        10,
+        22
+       ],
+       "gravity": 900,
+       "frames": [
+        "fx.star",
+        "fx.spark"
+       ],
+       "colors": [
+        "@color.primary",
+        "#ffffff"
+       ]
+      }
+     }
+    },
+    {
+     "at": 380,
+     "dur": 560,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": false
+     }
+    },
+    {
+     "at": 380,
+     "dur": 520,
+     "prim": "tag",
+     "args": {
+      "kind": "WEAK",
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -330
+      }
+     }
+    },
+    {
+     "at": 380,
+     "prim": "sfx",
+     "args": {
+      "id": "hit.light"
+     }
+    },
+    {
+     "at": 520,
+     "dur": 320,
+     "prim": "tween",
+     "layer": "ally",
+     "ease": "outCubic",
+     "args": {
+      "target": "$actor",
+      "to": {
+       "x": "home",
+       "y": "home"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "action.ziodyne",
+   "event": "action",
+   "match": {
+    "skillId": "ziodyne",
+    "actorId": "hero"
+   },
+   "duration": 1600,
+   "hitMarks": [
+    780
+   ],
+   "create": [
+    {
+     "name": "bolt",
+     "asset": "fx.bolt",
+     "layer": "fx",
+     "anchor": [
+      0.5,
+      1.0
+     ]
+    }
+   ],
+   "assets": [
+    "cutin.hero",
+    "fx.bolt",
+    "fx.streak",
+    "fx.star",
+    "fx.spark",
+    "fx.square",
+    "fx.tvstatic.0",
+    "fx.tvstatic.1"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 200,
+     "prim": "dim",
+     "args": {
+      "color": "#000",
+      "alpha": 0.45
+     }
+    },
+    {
+     "at": 0,
+     "dur": 560,
+     "prim": "cutin",
+     "layer": "cutin",
+     "ease": "outCubic",
+     "args": {
+      "bandAngle": -0.08,
+      "speedLines": {
+       "layers": 2,
+       "count": 46
+      },
+      "panels": [
+       {
+        "shape": [
+         -1300,
+         -150,
+         1300,
+         -110,
+         1300,
+         150,
+         -1300,
+         110
+        ],
+        "art": "cutin.hero",
+        "enterFrom": "right",
+        "delay": 0
+       }
+      ],
+      "nameplate": {
+       "text": "skill.ziodyne.name",
+       "font": "@font.display"
+      }
+     },
+     "minimal": {
+      "dur": 250
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "cutin"
+     }
+    },
+    {
+     "at": 0,
+     "prim": "particles",
+     "args": {
+      "count": 40,
+      "life": 480,
+      "at": {
+       "x": "$screen",
+       "y": 360
+      },
+      "dir": 3.14,
+      "spread": 0.4,
+      "speed": 1400,
+      "size": [
+       6,
+       14
+      ],
+      "frames": [
+       "fx.streak"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary"
+      ]
+     },
+     "minimal": "skip"
+    },
+    {
+     "at": 600,
+     "dur": 140,
+     "prim": "tvStatic",
+     "layer": "fx",
+     "args": {
+      "intensity": 0.35,
+      "scanlines": true,
+      "rollPx": 12,
+      "frames": [
+       "fx.tvstatic.0",
+       "fx.tvstatic.1"
+      ]
+     },
+     "minimal": "skip"
+    },
+    {
+     "at": 620,
+     "prim": "show",
+     "args": {
+      "target": "#bolt"
+     }
+    },
+    {
+     "at": 620,
+     "dur": 160,
+     "prim": "tween",
+     "layer": "fx",
+     "ease": "inCubic",
+     "args": {
+      "target": "#bolt",
+      "from": {
+       "x": "$target",
+       "y": -360,
+       "alpha": 1,
+       "scale": 1.2
+      },
+      "to": {
+       "x": "$target",
+       "y": "$target",
+       "scale": 1.0
+      }
+     }
+    },
+    {
+     "at": 780,
+     "dur": 120,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#FFF6B0",
+      "alpha": 0.7
+     }
+    },
+    {
+     "at": 780,
+     "dur": 90,
+     "prim": "rgbSplit",
+     "args": {
+      "offset": 8
+     }
+    },
+    {
+     "at": 780,
+     "prim": "hitStop",
+     "args": {
+      "ms": 70
+     }
+    },
+    {
+     "at": 780,
+     "dur": 300,
+     "prim": "shake",
+     "args": {
+      "px": 20
+     }
+    },
+    {
+     "at": 780,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$target",
+      "ms": 50
+     }
+    },
+    {
+     "at": 780,
+     "prim": "squashHit",
+     "args": {
+      "target": "$target",
+      "squash": 0.2,
+      "push": 22,
+      "recoverMs": 280
+     }
+    },
+    {
+     "at": 780,
+     "prim": "particles",
+     "args": {
+      "count": 260,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1100,
+      "spread": 6.28,
+      "dir": 0,
+      "life": 640,
+      "size": [
+       10,
+       26
+      ],
+      "gravity": 900,
+      "frames": [
+       "fx.star",
+       "fx.spark",
+       "fx.square"
+      ],
+      "colors": [
+       "@color.primary",
+       "#ffffff",
+       "@color.ink"
+      ]
+     },
+     "minimal": {
+      "args": {
+       "count": 130,
+       "at": {
+        "x": "$target",
+        "y": "$target",
+        "dy": -230
+       },
+       "speed": 800,
+       "spread": 6.28,
+       "dir": 0,
+       "life": 300,
+       "size": [
+        10,
+        22
+       ],
+       "gravity": 900,
+       "frames": [
+        "fx.star",
+        "fx.spark"
+       ],
+       "colors": [
+        "@color.primary",
+        "#ffffff"
+       ]
+      }
+     }
+    },
+    {
+     "at": 780,
+     "dur": 700,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": true
+     }
+    },
+    {
+     "at": 780,
+     "dur": 520,
+     "prim": "tag",
+     "args": {
+      "kind": "WEAK",
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -330
+      }
+     }
+    },
+    {
+     "at": 780,
+     "prim": "sfx",
+     "args": {
+      "id": "hit.elec"
+     }
+    },
+    {
+     "at": 800,
+     "dur": 260,
+     "prim": "tween",
+     "layer": "fx",
+     "ease": "outCubic",
+     "args": {
+      "target": "#bolt",
+      "to": {
+       "alpha": 0,
+       "scale": 1.1
+      }
+     }
+    },
+    {
+     "at": 930,
+     "dur": 460,
+     "prim": "shockwave",
+     "args": {
+      "center": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "amp": 44,
+      "wavelength": 160,
+      "speed": 900,
+      "radius": 520
+     }
+    },
+    {
+     "at": 1060,
+     "prim": "hide",
+     "args": {
+      "target": "#bolt"
+     }
+    }
+   ]
+  },
+  {
+   "id": "allout.default",
+   "event": "allout",
+   "duration": 3400,
+   "hitMarks": [
+    400,
+    610,
+    820,
+    1030,
+    1240,
+    1450,
+    1660,
+    1870,
+    2120
+   ],
+   "assets": [
+    "allout.finish.default",
+    "fx.dust",
+    "fx.star",
+    "fx.star.white",
+    "fx.spark",
+    "atlas.portraits"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 200,
+     "prim": "dim",
+     "args": {
+      "color": "#000",
+      "alpha": 0.5
+     }
+    },
+    {
+     "at": 0,
+     "dur": 2100,
+     "prim": "radialBurst",
+     "layer": "fx",
+     "args": {
+      "rays": 24,
+      "colors": [
+       "@color.primary",
+       "@color.ink"
+      ],
+      "spin": 0.9
+     }
+    },
+    {
+     "at": 0,
+     "dur": 640,
+     "prim": "title",
+     "layer": "allout",
+     "ease": "outBack",
+     "args": {
+      "text": "label.allout",
+      "font": "@font.display",
+      "size": 128,
+      "pos": {
+       "x": 640,
+       "y": 150
+      },
+      "rot": -0.08
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "allout.start"
+     }
+    },
+    {
+     "at": 300,
+     "dur": 1760,
+     "prim": "silhouetteDash",
+     "layer": "allout",
+     "args": {
+      "units": "$party",
+      "count": 8,
+      "interval": 210,
+      "path": "L2R"
+     },
+     "minimal": {
+      "args": {
+       "units": "$party",
+       "count": 3,
+       "interval": 210,
+       "path": "L2R"
+      }
+     }
+    },
+    {
+     "at": 400,
+     "prim": "particles",
+     "args": {
+      "count": 28,
+      "life": 560,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -180
+      },
+      "speed": 420,
+      "spread": 6.28,
+      "size": [
+       60,
+       130
+      ],
+      "gravity": -80,
+      "frames": [
+       "fx.dust"
+      ],
+      "colors": [
+       "#ffffff"
+      ]
+     },
+     "repeatEvery": 210,
+     "times": 8
+    },
+    {
+     "at": 400,
+     "prim": "particles",
+     "args": {
+      "count": 32,
+      "life": 520,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -260
+      },
+      "speed": 1000,
+      "spread": 6.28,
+      "size": [
+       14,
+       30
+      ],
+      "gravity": 600,
+      "frames": [
+       "fx.star",
+       "fx.star.white",
+       "fx.spark"
+      ],
+      "colors": [
+       "#ffffff"
+      ]
+     },
+     "repeatEvery": 210,
+     "times": 8,
+     "minimal": "skip"
+    },
+    {
+     "at": 400,
+     "dur": 150,
+     "prim": "slashLine",
+     "layer": "fx",
+     "args": {
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "rot": -0.5,
+      "len": 760,
+      "width": 14
+     },
+     "repeatEvery": 210,
+     "times": 8
+    },
+    {
+     "at": 400,
+     "prim": "sfx",
+     "args": {
+      "id": "allout.hit"
+     },
+     "repeatEvery": 420,
+     "times": 4
+    },
+    {
+     "at": 2120,
+     "dur": 150,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#FFE200",
+      "alpha": 0.85
+     }
+    },
+    {
+     "at": 2120,
+     "dur": 500,
+     "prim": "shockwave",
+     "args": {
+      "center": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "amp": 56,
+      "wavelength": 200,
+      "speed": 1100,
+      "radius": 640
+     }
+    },
+    {
+     "at": 2120,
+     "dur": 300,
+     "prim": "shake",
+     "args": {
+      "px": 18
+     }
+    },
+    {
+     "at": 2120,
+     "dur": 700,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": true
+     }
+    },
+    {
+     "at": 2120,
+     "prim": "sfx",
+     "args": {
+      "id": "allout.finish"
+     }
+    },
+    {
+     "at": 2120,
+     "dur": 980,
+     "prim": "finishCard",
+     "layer": "allout",
+     "ease": "outCubic",
+     "args": {
+      "artId": "allout.finish.default",
+      "shape": [
+       -700,
+       -380,
+       760,
+       -340,
+       700,
+       380,
+       -760,
+       340
+      ],
+      "enterFrom": "right",
+      "zoom": 1.03
+     },
+     "minimal": {
+      "dur": 500
+     }
+    },
+    {
+     "at": 2320,
+     "dur": 760,
+     "prim": "freezeFrame",
+     "args": {
+      "ms": 760,
+      "keepRendering": true
+     },
+     "minimal": {
+      "dur": 300,
+      "args": {
+       "ms": 300,
+       "keepRendering": true
+      }
+     }
+    },
+    {
+     "at": 2320,
+     "dur": 760,
+     "prim": "totalDamage",
+     "layer": "allout",
+     "ease": "outBack",
+     "args": {
+      "label": "label.totalDamage",
+      "plate": [
+       -230,
+       -46,
+       250,
+       -56,
+       230,
+       46,
+       -250,
+       56
+      ],
+      "font": "@font.number",
+      "pos": {
+       "x": 980,
+       "y": 610
+      }
+     }
+    },
+    {
+     "at": 3150,
+     "dur": 200,
+     "prim": "tween",
+     "layer": "allout",
+     "args": {
+      "target": "#layer.allout",
+      "to": {
+       "alpha": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "battle.end",
+   "event": "battle:end",
+   "duration": 1400,
+   "assets": [
+    "fx.tvstatic.0",
+    "fx.tvstatic.1",
+    "fx.block.ink",
+    "fx.daisy.white",
+    "fx.daisy.yellow",
+    "fx.star"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 220,
+     "prim": "tvStatic",
+     "layer": "trans",
+     "args": {
+      "intensity": 0.5,
+      "scanlines": true,
+      "rollPx": 16,
+      "frames": [
+       "fx.tvstatic.0",
+       "fx.tvstatic.1"
+      ]
+     },
+     "minimal": "skip"
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "battle.win"
+     }
+    },
+    {
+     "at": 150,
+     "dur": 600,
+     "prim": "blockPush",
+     "layer": "trans",
+     "ease": "outCubic",
+     "args": {
+      "cols": 8,
+      "rows": 5,
+      "order": "rowWave",
+      "art": "fx.block.ink",
+      "color": "@color.ink"
+     },
+     "minimal": {
+      "dur": 300
+     }
+    },
+    {
+     "at": 500,
+     "dur": 700,
+     "prim": "title",
+     "layer": "trans",
+     "ease": "outBack",
+     "args": {
+      "text": "label.victory",
+      "font": "@font.display",
+      "size": 120,
+      "pos": {
+       "x": 640,
+       "y": 330
+      },
+      "rot": -0.04
+     },
+     "minimal": {
+      "dur": 300
+     }
+    },
+    {
+     "at": 600,
+     "prim": "particles",
+     "args": {
+      "count": 60,
+      "at": {
+       "x": 640,
+       "y": 330
+      },
+      "speed": 900,
+      "spread": 6.28,
+      "life": 700,
+      "size": [
+       16,
+       40
+      ],
+      "gravity": 500,
+      "frames": [
+       "fx.daisy.white",
+       "fx.daisy.yellow",
+       "fx.star"
+      ],
+      "colors": [
+       "#ffffff"
+      ]
+     },
+     "minimal": "skip"
+    }
+   ]
+  },
+  {
+   "id": "env.date.flip",
+   "event": "env:change",
+   "duration": 600,
+   "assets": [
+    "hud.datePlate"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 600,
+     "prim": "dim",
+     "args": {
+      "color": "#000",
+      "alpha": 0.3
+     }
+    },
+    {
+     "at": 0,
+     "dur": 580,
+     "prim": "dateFlip",
+     "layer": "hud",
+     "ease": "inOutCubic",
+     "args": {
+      "from": "$prev",
+      "to": "$env",
+      "pages": 2,
+      "plate": "hud.datePlate",
+      "weatherIcons": "hud.weather.",
+      "font": "@font.number"
+     },
+     "minimal": {
+      "dur": 250,
+      "args": {
+       "from": "$prev",
+       "to": "$env",
+       "pages": 1
+      }
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "date.flip"
+     }
+    }
+   ]
+  },
+  {
+   "id": "highlight.hero",
+   "event": "highlight",
+   "match": {
+    "actorId": "hero"
+   },
+   "duration": 3300,
+   "hitMarks": [
+    1900
+   ],
+   "assets": [
+    "cutin.hero",
+    "highlight.hero",
+    "fx.tvMask",
+    "fx.tvstatic.0",
+    "fx.tvstatic.1",
+    "fx.streak",
+    "fx.spark",
+    "fx.star",
+    "fx.square"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 600,
+     "prim": "dim",
+     "args": {
+      "color": "#000",
+      "alpha": 0.6
+     }
+    },
+    {
+     "at": 0,
+     "dur": 260,
+     "prim": "tvStatic",
+     "layer": "cutin",
+     "args": {
+      "intensity": 0.6,
+      "scanlines": true,
+      "rollPx": 18,
+      "frames": [
+       "fx.tvstatic.0",
+       "fx.tvstatic.1"
+      ]
+     },
+     "minimal": "skip"
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "highlight.start"
+     }
+    },
+    {
+     "at": 200,
+     "dur": 560,
+     "prim": "cutin",
+     "layer": "cutin",
+     "ease": "outCubic",
+     "args": {
+      "bandAngle": -0.1,
+      "speedLines": {
+       "layers": 2,
+       "count": 46
+      },
+      "panels": [
+       {
+        "shape": [
+         -1300,
+         -160,
+         1300,
+         -120,
+         1300,
+         160,
+         -1300,
+         120
+        ],
+        "art": "cutin.hero",
+        "enterFrom": "right",
+        "delay": 0
+       }
+      ],
+      "nameplate": {
+       "text": "label.highlight",
+       "font": "@font.display"
+      }
+     },
+     "minimal": {
+      "dur": 250
+     }
+    },
+    {
+     "at": 800,
+     "dur": 520,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "inCubic",
+     "args": {
+      "shape": "fx.tvMask",
+      "from": {
+       "scale": 0.05,
+       "x": 640,
+       "y": 360
+      },
+      "to": {
+       "scale": 6.5,
+       "x": 640,
+       "y": 360
+      }
+     }
+    },
+    {
+     "at": 800,
+     "dur": 1300,
+     "prim": "radialBurst",
+     "layer": "fx",
+     "args": {
+      "rays": 24,
+      "colors": [
+       "@color.primary",
+       "#ffffff"
+      ],
+      "spin": 1.2
+     }
+    },
+    {
+     "at": 900,
+     "dur": 760,
+     "prim": "title",
+     "layer": "cutin",
+     "ease": "outBack",
+     "args": {
+      "text": "skill.myriad-truths.name",
+      "font": "@font.display",
+      "size": 96,
+      "pos": {
+       "x": 640,
+       "y": 140
+      },
+      "rot": -0.05
+     },
+     "minimal": {
+      "dur": 300
+     }
+    },
+    {
+     "at": 1000,
+     "dur": 900,
+     "prim": "speedLines",
+     "layer": "fx",
+     "args": {
+      "count": 40,
+      "dir": 1.57,
+      "colors": [
+       "@color.primary",
+       "#ffffff"
+      ],
+      "scrollSpeed": 2400
+     }
+    },
+    {
+     "at": 1300,
+     "prim": "particles",
+     "args": {
+      "count": 160,
+      "at": {
+       "x": "$targets",
+       "y": -40
+      },
+      "dir": 1.57,
+      "spread": 0.3,
+      "speed": 1800,
+      "life": 520,
+      "size": [
+       8,
+       20
+      ],
+      "frames": [
+       "fx.streak",
+       "fx.spark"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary"
+      ]
+     },
+     "minimal": {
+      "args": {
+       "count": 60,
+       "at": {
+        "x": "$targets",
+        "y": -40
+       },
+       "dir": 1.57,
+       "spread": 0.3,
+       "speed": 1800,
+       "life": 320,
+       "frames": [
+        "fx.streak"
+       ],
+       "colors": [
+        "#ffffff"
+       ]
+      }
+     }
+    },
+    {
+     "at": 1900,
+     "dur": 160,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#FFFFFF",
+      "alpha": 0.85
+     }
+    },
+    {
+     "at": 1900,
+     "dur": 100,
+     "prim": "rgbSplit",
+     "args": {
+      "offset": 10
+     }
+    },
+    {
+     "at": 1900,
+     "prim": "hitStop",
+     "args": {
+      "ms": 70
+     }
+    },
+    {
+     "at": 1900,
+     "dur": 300,
+     "prim": "shake",
+     "args": {
+      "px": 24
+     }
+    },
+    {
+     "at": 1900,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$target",
+      "ms": 50
+     }
+    },
+    {
+     "at": 1900,
+     "prim": "squashHit",
+     "args": {
+      "target": "$target",
+      "squash": 0.2,
+      "push": 30,
+      "recoverMs": 280
+     }
+    },
+    {
+     "at": 1900,
+     "prim": "particles",
+     "args": {
+      "count": 300,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1100,
+      "spread": 6.28,
+      "dir": 0,
+      "life": 700,
+      "size": [
+       10,
+       26
+      ],
+      "gravity": 900,
+      "frames": [
+       "fx.star",
+       "fx.spark",
+       "fx.square"
+      ],
+      "colors": [
+       "@color.primary",
+       "#ffffff",
+       "@color.ink"
+      ]
+     },
+     "minimal": {
+      "args": {
+       "count": 150,
+       "at": {
+        "x": "$target",
+        "y": "$target",
+        "dy": -230
+       },
+       "speed": 800,
+       "spread": 6.28,
+       "dir": 0,
+       "life": 300,
+       "size": [
+        10,
+        22
+       ],
+       "gravity": 900,
+       "frames": [
+        "fx.star",
+        "fx.spark"
+       ],
+       "colors": [
+        "@color.primary",
+        "#ffffff"
+       ]
+      }
+     }
+    },
+    {
+     "at": 1900,
+     "dur": 700,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": true
+     }
+    },
+    {
+     "at": 1900,
+     "dur": 520,
+     "prim": "tag",
+     "args": {
+      "kind": "WEAK",
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -330
+      }
+     }
+    },
+    {
+     "at": 1900,
+     "prim": "sfx",
+     "args": {
+      "id": "hit.heavy"
+     }
+    },
+    {
+     "at": 2050,
+     "dur": 520,
+     "prim": "shockwave",
+     "args": {
+      "center": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "amp": 60,
+      "wavelength": 220,
+      "speed": 1200,
+      "radius": 680
+     }
+    },
+    {
+     "at": 2200,
+     "dur": 900,
+     "prim": "finishCard",
+     "layer": "allout",
+     "ease": "outCubic",
+     "args": {
+      "artId": "highlight.hero",
+      "shape": [
+       -760,
+       -330,
+       700,
+       -400,
+       760,
+       330,
+       -700,
+       400
+      ],
+      "enterFrom": "left",
+      "zoom": 1.04
+     },
+     "minimal": {
+      "dur": 300
+     }
+    },
+    {
+     "at": 2400,
+     "dur": 600,
+     "prim": "freezeFrame",
+     "args": {
+      "ms": 600,
+      "keepRendering": true
+     },
+     "minimal": {
+      "dur": 300,
+      "args": {
+       "ms": 300,
+       "keepRendering": true
+      }
+     }
+    },
+    {
+     "at": 3100,
+     "dur": 180,
+     "prim": "tween",
+     "layer": "allout",
+     "args": {
+      "target": "#layer.allout",
+      "to": {
+       "alpha": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "highlight.hero.short",
+   "event": "highlight",
+   "match": {
+    "actorId": "hero"
+   },
+   "duration": 1180,
+   "hitMarks": [
+    420
+   ],
+   "assets": [
+    "cutin.hero",
+    "highlight.hero",
+    "fx.star",
+    "fx.spark",
+    "fx.square"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 300,
+     "prim": "dim",
+     "args": {
+      "color": "#000",
+      "alpha": 0.5
+     }
+    },
+    {
+     "at": 0,
+     "dur": 380,
+     "prim": "cutin",
+     "layer": "cutin",
+     "ease": "outCubic",
+     "args": {
+      "bandAngle": -0.1,
+      "speedLines": {
+       "layers": 1,
+       "count": 30
+      },
+      "panels": [
+       {
+        "shape": [
+         -1300,
+         -150,
+         1300,
+         -110,
+         1300,
+         150,
+         -1300,
+         110
+        ],
+        "art": "cutin.hero",
+        "enterFrom": "right",
+        "delay": 0
+       }
+      ],
+      "nameplate": {
+       "text": "label.highlight",
+       "font": "@font.display"
+      }
+     },
+     "minimal": {
+      "dur": 250
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "highlight.start"
+     }
+    },
+    {
+     "at": 420,
+     "dur": 120,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#FFFFFF",
+      "alpha": 0.8
+     }
+    },
+    {
+     "at": 420,
+     "dur": 90,
+     "prim": "rgbSplit",
+     "args": {
+      "offset": 8
+     }
+    },
+    {
+     "at": 420,
+     "prim": "hitStop",
+     "args": {
+      "ms": 70
+     }
+    },
+    {
+     "at": 420,
+     "dur": 300,
+     "prim": "shake",
+     "args": {
+      "px": 20
+     }
+    },
+    {
+     "at": 420,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$target",
+      "ms": 50
+     }
+    },
+    {
+     "at": 420,
+     "prim": "squashHit",
+     "args": {
+      "target": "$target",
+      "squash": 0.2,
+      "push": 26,
+      "recoverMs": 280
+     }
+    },
+    {
+     "at": 420,
+     "prim": "particles",
+     "args": {
+      "count": 200,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1100,
+      "spread": 6.28,
+      "dir": 0,
+      "life": 520,
+      "size": [
+       10,
+       26
+      ],
+      "gravity": 900,
+      "frames": [
+       "fx.star",
+       "fx.spark",
+       "fx.square"
+      ],
+      "colors": [
+       "@color.primary",
+       "#ffffff",
+       "@color.ink"
+      ]
+     },
+     "minimal": {
+      "args": {
+       "count": 100,
+       "at": {
+        "x": "$target",
+        "y": "$target",
+        "dy": -230
+       },
+       "speed": 800,
+       "spread": 6.28,
+       "dir": 0,
+       "life": 300,
+       "size": [
+        10,
+        22
+       ],
+       "gravity": 900,
+       "frames": [
+        "fx.star",
+        "fx.spark"
+       ],
+       "colors": [
+        "@color.primary",
+        "#ffffff"
+       ]
+      }
+     }
+    },
+    {
+     "at": 420,
+     "dur": 700,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": true
+     }
+    },
+    {
+     "at": 420,
+     "dur": 520,
+     "prim": "tag",
+     "args": {
+      "kind": "WEAK",
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -330
+      }
+     }
+    },
+    {
+     "at": 420,
+     "prim": "sfx",
+     "args": {
+      "id": "hit.heavy"
+     }
+    },
+    {
+     "at": 580,
+     "dur": 420,
+     "prim": "shockwave",
+     "args": {
+      "center": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "amp": 48,
+      "wavelength": 180,
+      "speed": 1100,
+      "radius": 560
+     }
+    },
+    {
+     "at": 600,
+     "dur": 500,
+     "prim": "finishCard",
+     "layer": "allout",
+     "ease": "outCubic",
+     "args": {
+      "artId": "highlight.hero",
+      "shape": [
+       -760,
+       -330,
+       700,
+       -400,
+       760,
+       330,
+       -700,
+       400
+      ],
+      "enterFrom": "left",
+      "zoom": 1.02
+     },
+     "minimal": {
+      "dur": 300
+     }
+    },
+    {
+     "at": 1040,
+     "dur": 130,
+     "prim": "tween",
+     "layer": "allout",
+     "args": {
+      "target": "#layer.allout",
+      "to": {
+       "alpha": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "holdup",
+   "event": "holdup",
+   "duration": 940,
+   "assets": [
+    "fx.dust",
+    "fx.star",
+    "fx.star.white"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 900,
+     "prim": "dim",
+     "args": {
+      "color": "#1A1400",
+      "alpha": 0.4
+     }
+    },
+    {
+     "at": 0,
+     "dur": 880,
+     "prim": "radialBurst",
+     "layer": "fx",
+     "args": {
+      "rays": 18,
+      "colors": [
+       "@color.primary",
+       "@color.ink"
+      ],
+      "spin": 0.3
+     },
+     "minimal": {
+      "args": {
+       "rays": 18,
+       "colors": [
+        "@color.primary",
+        "@color.ink"
+       ],
+       "spin": 0
+      }
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "holdup"
+     }
+    },
+    {
+     "at": 80,
+     "dur": 700,
+     "prim": "title",
+     "layer": "cutin",
+     "ease": "outBack",
+     "args": {
+      "text": "label.holdup",
+      "font": "@font.display",
+      "size": 104,
+      "pos": {
+       "x": 640,
+       "y": 170
+      },
+      "rot": -0.06
+     },
+     "minimal": {
+      "dur": 300
+     }
+    },
+    {
+     "at": 120,
+     "prim": "particles",
+     "args": {
+      "count": 36,
+      "at": {
+       "x": "$targets",
+       "y": "$targets",
+       "dy": -120
+      },
+      "speed": 520,
+      "spread": 6.28,
+      "life": 600,
+      "size": [
+       40,
+       90
+      ],
+      "gravity": -120,
+      "frames": [
+       "fx.dust"
+      ],
+      "colors": [
+       "#ffffff"
+      ]
+     }
+    },
+    {
+     "at": 200,
+     "prim": "particles",
+     "args": {
+      "count": 30,
+      "at": {
+       "x": "$targets",
+       "y": "$targets",
+       "dy": -260
+      },
+      "speed": 900,
+      "spread": 6.28,
+      "life": 560,
+      "size": [
+       16,
+       30
+      ],
+      "frames": [
+       "fx.star",
+       "fx.star.white"
+      ],
+      "colors": [
+       "#ffffff"
+      ]
+     },
+     "minimal": "skip"
+    },
+    {
+     "at": 200,
+     "prim": "vibrate",
+     "args": {
+      "ms": 25
+     }
+    }
+   ]
+  },
+  {
+   "id": "onemore",
+   "event": "onemore",
+   "duration": 430,
+   "assets": [
+    "fx.star",
+    "fx.star.white"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 400,
+     "prim": "banner",
+     "layer": "cutin",
+     "ease": "outBack",
+     "args": {
+      "text": "label.onemore",
+      "shape": [
+       -1300,
+       -78,
+       1300,
+       -60,
+       1300,
+       78,
+       -1300,
+       60
+      ],
+      "enterFrom": "right",
+      "artId": "$actor",
+      "fill": "@color.primary",
+      "ink": "@color.ink",
+      "font": "@font.display"
+     },
+     "minimal": {
+      "dur": 250
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "onemore"
+     }
+    },
+    {
+     "at": 40,
+     "prim": "particles",
+     "args": {
+      "count": 24,
+      "at": {
+       "x": 900,
+       "y": 300
+      },
+      "speed": 700,
+      "spread": 1.2,
+      "dir": 3.14,
+      "life": 340,
+      "size": [
+       14,
+       28
+      ],
+      "frames": [
+       "fx.star",
+       "fx.star.white"
+      ],
+      "colors": [
+       "#ffffff"
+      ]
+     },
+     "minimal": "skip"
+    }
+   ]
+  },
+  {
+   "id": "scene.enter.world",
+   "event": "scene:enter",
+   "duration": 600,
+   "assets": [
+    "fx.tvstatic.0",
+    "fx.tvstatic.1",
+    "hud.datePlate"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 260,
+     "prim": "tvStatic",
+     "layer": "trans",
+     "args": {
+      "intensity": 0.9,
+      "scanlines": true,
+      "rollPx": 30,
+      "frames": [
+       "fx.tvstatic.0",
+       "fx.tvstatic.1"
+      ]
+     },
+     "minimal": {
+      "dur": 120
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "tv.enter"
+     }
+    },
+    {
+     "at": 80,
+     "dur": 500,
+     "prim": "dateFlip",
+     "layer": "trans",
+     "ease": "outCubic",
+     "args": {
+      "from": "$env",
+      "to": "$env",
+      "pages": 1,
+      "plate": "hud.datePlate",
+      "weatherIcons": "hud.weather.",
+      "font": "@font.number"
+     },
+     "minimal": {
+      "dur": 250
+     }
+    },
+    {
+     "at": 200,
+     "dur": 380,
+     "prim": "title",
+     "layer": "trans",
+     "args": {
+      "text": "label.dive",
+      "font": "@font.display",
+      "size": 72,
+      "pos": {
+       "x": 640,
+       "y": 360
+      },
+      "rot": 0
+     },
+     "minimal": "skip"
+    }
+   ]
+  },
+  {
+   "id": "scene.leave.world",
+   "event": "scene:leave",
+   "duration": 600,
+   "assets": [
+    "fx.block",
+    "hud.datePlate"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 360,
+     "prim": "blockPush",
+     "layer": "trans",
+     "args": {
+      "cols": 8,
+      "rows": 5,
+      "order": "random",
+      "seed": 4,
+      "art": "fx.block",
+      "color": "@color.primary"
+     },
+     "minimal": {
+      "dur": 200
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "tv.leave"
+     }
+    },
+    {
+     "at": 250,
+     "dur": 340,
+     "prim": "dateFlip",
+     "layer": "trans",
+     "ease": "outCubic",
+     "args": {
+      "from": "$env",
+      "to": "$env",
+      "pages": 1,
+      "plate": "hud.datePlate",
+      "weatherIcons": "hud.weather.",
+      "font": "@font.number"
+     },
+     "minimal": {
+      "dur": 250
+     }
+    }
+   ]
+  },
+  {
+   "id": "talk.start",
+   "event": "talk:start",
+   "duration": 760,
+   "assets": [
+    "fx.tvstatic.0",
+    "fx.tvstatic.1",
+    "fx.tvMask"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 300,
+     "prim": "tvStatic",
+     "layer": "trans",
+     "args": {
+      "intensity": 0.7,
+      "scanlines": true,
+      "rollPx": 20,
+      "frames": [
+       "fx.tvstatic.0",
+       "fx.tvstatic.1"
+      ]
+     },
+     "minimal": {
+      "dur": 150
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "tv.on"
+     }
+    },
+    {
+     "at": 150,
+     "dur": 560,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "outCubic",
+     "args": {
+      "shape": "fx.tvMask",
+      "from": {
+       "scale": 0.05,
+       "x": 640,
+       "y": 360
+      },
+      "to": {
+       "scale": 6.0,
+       "x": 640,
+       "y": 360
+      }
+     },
+     "minimal": {
+      "dur": 250
+     }
+    }
+   ]
+  },
+  {
+   "id": "transition.battleStart",
+   "event": "battle:start",
+   "duration": 880,
+   "assets": [
+    "fx.tvstatic.0",
+    "fx.tvstatic.1",
+    "fx.block"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 380,
+     "prim": "tvStatic",
+     "layer": "trans",
+     "args": {
+      "intensity": 0.85,
+      "scanlines": true,
+      "rollPx": 24,
+      "frames": [
+       "fx.tvstatic.0",
+       "fx.tvstatic.1"
+      ]
+     },
+     "minimal": {
+      "dur": 150
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "tv.static"
+     }
+    },
+    {
+     "at": 0,
+     "prim": "vibrate",
+     "args": {
+      "ms": 30
+     }
+    },
+    {
+     "at": 120,
+     "dur": 90,
+     "prim": "flashScreen",
+     "layer": "trans",
+     "args": {
+      "color": "#FFE200",
+      "alpha": 0.5
+     }
+    },
+    {
+     "at": 300,
+     "dur": 560,
+     "prim": "blockPush",
+     "layer": "trans",
+     "ease": "inOutCubic",
+     "args": {
+      "cols": 8,
+      "rows": 5,
+      "order": "diagonal",
+      "art": "fx.block",
+      "color": "@color.primary"
+     },
+     "minimal": {
+      "dur": 200
+     }
+    },
+    {
+     "at": 300,
+     "prim": "sfx",
+     "args": {
+      "id": "block.push"
+     }
+    }
+   ]
+  },
+  {
+   "id": "transition.encounterBattle",
+   "event": "map:encounter",
+   "merges": [
+    "battle:start"
+   ],
+   "duration": 1150,
+   "assets": [
+    "fx.tvstatic.0",
+    "fx.tvstatic.1",
+    "fx.block"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 300,
+     "prim": "dim",
+     "layer": "trans",
+     "args": {
+      "color": "#1A1400",
+      "alpha": 0.4
+     }
+    },
+    {
+     "at": 0,
+     "dur": 450,
+     "prim": "tvStatic",
+     "layer": "trans",
+     "args": {
+      "intensity": 0.8,
+      "scanlines": true,
+      "rollPx": 24,
+      "frames": [
+       "fx.tvstatic.0",
+       "fx.tvstatic.1"
+      ]
+     },
+     "minimal": {
+      "dur": 200
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "tv.static"
+     }
+    },
+    {
+     "at": 0,
+     "prim": "vibrate",
+     "args": {
+      "ms": 30
+     }
+    },
+    {
+     "at": 350,
+     "dur": 780,
+     "prim": "blockPush",
+     "layer": "trans",
+     "ease": "inOutCubic",
+     "args": {
+      "cols": 8,
+      "rows": 5,
+      "order": "diagonal",
+      "art": "fx.block",
+      "color": "@color.primary"
+     },
+     "minimal": {
+      "dur": 300
+     }
+    },
+    {
+     "at": 350,
+     "prim": "sfx",
+     "args": {
+      "id": "block.push"
+     }
+    }
+   ]
+  },
+  {
+   "id": "unit.down",
+   "event": "unit:down",
+   "duration": 480,
+   "assets": [
+    "fx.dust"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 440,
+     "prim": "portraitDown",
+     "ease": "inCubic",
+     "args": {
+      "unit": "$targets",
+      "style": "fall"
+     },
+     "minimal": {
+      "dur": 200
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "down"
+     }
+    },
+    {
+     "at": 60,
+     "dur": 400,
+     "prim": "tag",
+     "args": {
+      "kind": "DOWN",
+      "pos": {
+       "x": "$targets",
+       "y": "$targets",
+       "dy": -300
+      }
+     }
+    },
+    {
+     "at": 120,
+     "prim": "particles",
+     "args": {
+      "count": 24,
+      "at": {
+       "x": "$targets",
+       "y": "$targets",
+       "dy": -40
+      },
+      "speed": 360,
+      "spread": 3.14,
+      "dir": -1.57,
+      "life": 340,
+      "size": [
+       40,
+       80
+      ],
+      "gravity": -60,
+      "frames": [
+       "fx.dust"
+      ],
+      "colors": [
+       "#ffffff"
+      ]
+     },
+     "minimal": "skip"
+    }
+   ]
+  }
+ ],
+ "enemyLayouts": {
+  "1": [
+   {
+    "x": 330,
+    "y": 560,
+    "scale": 1.0,
+    "layer": "enemy.0"
+   }
+  ],
+  "2": [
+   {
+    "x": 215,
+    "y": 548,
+    "scale": 0.971,
+    "layer": "enemy.0"
+   },
+   {
+    "x": 445,
+    "y": 566,
+    "scale": 0.824,
+    "layer": "enemy.1"
+   }
+  ],
+  "3": [
+   {
+    "x": 150,
+    "y": 540,
+    "scale": 0.853,
+    "layer": "enemy.1"
+   },
+   {
+    "x": 345,
+    "y": 566,
+    "scale": 0.794,
+    "layer": "enemy.2"
+   },
+   {
+    "x": 535,
+    "y": 530,
+    "scale": 0.735,
+    "layer": "enemy.0"
+   }
+  ],
+  "4": [
+   {
+    "x": 115,
+    "y": 536,
+    "scale": 0.765,
+    "layer": "enemy.1"
+   },
+   {
+    "x": 275,
+    "y": 566,
+    "scale": 0.735,
+    "layer": "enemy.3"
+   },
+   {
+    "x": 430,
+    "y": 530,
+    "scale": 0.706,
+    "layer": "enemy.0"
+   },
+   {
+    "x": 580,
+    "y": 560,
+    "scale": 0.676,
+    "layer": "enemy.2"
+   }
+  ],
+  "5": [
+   {
+    "x": 85,
+    "y": 530,
+    "scale": 0.691,
+    "layer": "enemy.2"
+   },
+   {
+    "x": 200,
+    "y": 566,
+    "scale": 0.662,
+    "layer": "enemy.4"
+   },
+   {
+    "x": 315,
+    "y": 520,
+    "scale": 0.624,
+    "layer": "enemy.1"
+   },
+   {
+    "x": 430,
+    "y": 562,
+    "scale": 0.632,
+    "layer": "enemy.3"
+   },
+   {
+    "x": 545,
+    "y": 515,
+    "scale": 0.588,
+    "layer": "enemy.0"
+   }
+  ]
+ },
+ "roster": {
+  "heroPersona": "izanagi",
+  "companions": [
+   "yosuke",
+   "chie",
+   "yukiko",
+   "kanji",
+   "teddie",
+   "naoto"
+  ],
+  "companionPersonas": {
+   "yosuke": "jiraiya",
+   "chie": "tomoe",
+   "yukiko": "konohana-sakuya",
+   "kanji": "take-mikazuchi",
+   "teddie": "kintoki-douji",
+   "naoto": "sukuna-hikona"
+  },
+  "excludedPersonas": [
+   "ariadne",
+   "ariadne-picaro",
+   "arsene",
+   "asterius",
+   "asterius-picaro",
+   "athena",
+   "athena-picaro",
+   "crystal-skull",
+   "emperors-amulet",
+   "hope-diamond",
+   "izanagi-no-okami-picaro",
+   "izanagi-picaro",
+   "kaguya-picaro",
+   "koh-i-noor",
+   "magatsu-izanagi-picaro",
+   "messiah",
+   "messiah-picaro",
+   "orichalcum",
+   "orlov",
+   "orpheus",
+   "orpheus-f",
+   "orpheus-f-picaro",
+   "orpheus-picaro",
+   "queens-necklace",
+   "raoul",
+   "regent",
+   "satanael",
+   "stone-of-scone",
+   "thanatos-picaro",
+   "tsukiyomi-picaro"
+  ],
+  "hero": "hero",
+  "navigator": "rise",
+  "navigatorPersona": "himiko",
+  "partyDefault": [
+   "yosuke",
+   "chie",
+   "yukiko"
+  ],
+  "members": {
+   "hero": {
+    "name": "鸣上 悠",
+    "persona": "izanagi",
+    "personaName": "伊邪那岐",
+    "personaAwakened": "izanagi-no-okami",
+    "portrait": "unit.hero.head",
+    "body": "unit.hero.body",
+    "role": "hero"
+   },
+   "yosuke": {
+    "name": "花村 阳介",
+    "persona": "jiraiya",
+    "personaName": "自来也",
+    "personaAwakened": "susano-o",
+    "portrait": "unit.yosuke.head",
+    "body": "unit.yosuke.body",
+    "role": "companion"
+   },
+   "chie": {
+    "name": "里中 千枝",
+    "persona": "tomoe",
+    "personaName": "巴御前",
+    "personaAwakened": "suzuka-gongen",
+    "portrait": "unit.chie.head",
+    "body": "unit.chie.body",
+    "role": "companion"
+   },
+   "yukiko": {
+    "name": "天城 雪子",
+    "persona": "konohana-sakuya",
+    "personaName": "木花开耶",
+    "personaAwakened": "amaterasu",
+    "portrait": "unit.yukiko.head",
+    "body": "unit.yukiko.body",
+    "role": "companion"
+   },
+   "kanji": {
+    "name": "巽 完二",
+    "persona": "take-mikazuchi",
+    "personaName": "建御雷",
+    "personaAwakened": "rokuten-maoh",
+    "portrait": "placeholder.head.kanji",
+    "body": null,
+    "role": "companion"
+   },
+   "teddie": {
+    "name": "克玛",
+    "persona": "kintoki-douji",
+    "personaName": "金时童子",
+    "personaAwakened": "kamui",
+    "portrait": "placeholder.head.teddie",
+    "body": null,
+    "role": "companion"
+   },
+   "naoto": {
+    "name": "白钟 直斗",
+    "persona": "sukuna-hikona",
+    "personaName": "少名毗古那",
+    "personaAwakened": "yamato-takeru",
+    "portrait": "placeholder.head.naoto",
+    "body": null,
+    "role": "companion"
+   },
+   "rise": {
+    "name": "久慈川 理世",
+    "persona": "himiko",
+    "personaName": "卑弥呼",
+    "personaAwakened": "kanzeon",
+    "portrait": "placeholder.head.rise",
+    "body": null,
+    "role": "navigator"
+   }
+  },
+  "showtime": []
+ },
+ "compendiumArt": {},
+ "audio": {
+  "dir": "audio",
+  "playlist": "audio/playlist.json",
+  "sfx": "audio/sfx.json",
+  "voice": "audio/voice.json",
+  "present": "audio/present.json（构建生成，未提交）"
+ },
+ "css": "ui.css",
+ "budget": {
+  "firstPackImageBytes": 637406,
+  "fontBytes": 55484,
+  "uiCssGzipBytes": 1163,
+  "packJsonGzipBytes": 11469,
+  "firstPackTotalBytes": 705522,
+  "limitBytes": 1048576
+ },
+ "todo": [
+  "头像缺失 → 占位 placeholder.head.kanji（巽 完二）",
+  "立绘/身体层缺失：kanji（巽 完二）— 引擎用通用剪影兜底",
+  "头像缺失 → 占位 placeholder.head.teddie（克玛）",
+  "立绘/身体层缺失：teddie（克玛）— 引擎用通用剪影兜底",
+  "头像缺失 → 占位 placeholder.head.naoto（白钟 直斗）",
+  "立绘/身体层缺失：naoto（白钟 直斗）— 引擎用通用剪影兜底",
+  "头像缺失 → 占位 placeholder.head.rise（久慈川 理世）",
+  "roster.showtime（双人合击表）未填：P3 系 / P4 无 SHOWTIME 素材，highlight duo 走引擎「A × B」兜底",
+  "compendiumArt 缺本作面具图（App 用共享图兜底）：izanagi, jiraiya, tomoe, konohana-sakuya, take-mikazuchi, kintoki-douji, sukuna-hikona, himiko",
+  "compendiumArt 仅覆盖队伍/已有面具；公共恶魔（Pixie 等）的本作图鉴图未做，App 用共享 P5R 图兜底",
+  "音频：playlist 由 AUDIO-MAP §2 自动生成（条件/循环点待人工校），sfx 沿用红色 se 表，voice 仅占位路径；音频文件未入库",
+  "enemyLayouts[1..5] 借用红色样板实测坐标（换算 scale=h/340），待本皮实机截图微调"
+ ]
+}

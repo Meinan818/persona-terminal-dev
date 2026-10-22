@@ -1,0 +1,4234 @@
+{
+ "id": "p3r-pink",
+ "contract": "1.3",
+ "packVersion": 1,
+ "origin": {
+  "ref": "origin/feat/umbra-skin-p3r-pink",
+  "commit": "5a4920d",
+  "path": "src/umbra/skins/p3r-pink"
+ },
+ "manifest": {
+  "assets": [
+   {
+    "id": "atlas.hamuko",
+    "file": "assets/atlas.hamuko.webp",
+    "w": 1092,
+    "h": 648,
+    "firstPack": true,
+    "source": "generated",
+    "note": "图集容器；帧坐标 assets/atlas.hamuko.json（Pixi spritesheet 格式）"
+   },
+   {
+    "id": "ally.hamuko.head",
+    "file": "assets/atlas.hamuko.webp",
+    "w": 500,
+    "h": 405,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hamuko"
+   },
+   {
+    "id": "ally.hamuko.body",
+    "file": "assets/atlas.hamuko.webp",
+    "w": 500,
+    "h": 235,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hamuko"
+   },
+   {
+    "id": "ally.hamuko.full",
+    "file": "assets/atlas.hamuko.webp",
+    "w": 199,
+    "h": 640,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hamuko"
+   },
+   {
+    "id": "ally.hamuko.evoke",
+    "file": "assets/atlas.hamuko.webp",
+    "w": 258,
+    "h": 640,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hamuko"
+   },
+   {
+    "id": "hud.avatar.hamuko",
+    "file": "assets/atlas.hamuko.webp",
+    "w": 128,
+    "h": 128,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hamuko"
+   },
+   {
+    "id": "atlas.portraits",
+    "file": "assets/atlas.portraits.webp",
+    "w": 1520,
+    "h": 776,
+    "firstPack": true,
+    "source": "official",
+    "note": "图集容器；帧坐标 assets/atlas.portraits.json（Pixi spritesheet 格式）"
+   },
+   {
+    "id": "ally.yukari.head",
+    "file": "assets/atlas.portraits.webp",
+    "w": 444,
+    "h": 395,
+    "firstPack": true,
+    "source": "official",
+    "atlas": "atlas.portraits"
+   },
+   {
+    "id": "ally.yukari.body",
+    "file": "assets/atlas.portraits.webp",
+    "w": 444,
+    "h": 245,
+    "firstPack": true,
+    "source": "official",
+    "atlas": "atlas.portraits"
+   },
+   {
+    "id": "hud.avatar.yukari",
+    "file": "assets/atlas.portraits.webp",
+    "w": 128,
+    "h": 128,
+    "firstPack": true,
+    "source": "official",
+    "atlas": "atlas.portraits"
+   },
+   {
+    "id": "ally.junpei.head",
+    "file": "assets/atlas.portraits.webp",
+    "w": 560,
+    "h": 405,
+    "firstPack": true,
+    "source": "official",
+    "atlas": "atlas.portraits"
+   },
+   {
+    "id": "ally.junpei.body",
+    "file": "assets/atlas.portraits.webp",
+    "w": 560,
+    "h": 235,
+    "firstPack": true,
+    "source": "official",
+    "atlas": "atlas.portraits"
+   },
+   {
+    "id": "hud.avatar.junpei",
+    "file": "assets/atlas.portraits.webp",
+    "w": 128,
+    "h": 128,
+    "firstPack": true,
+    "source": "official",
+    "atlas": "atlas.portraits"
+   },
+   {
+    "id": "ally.akihiko.head",
+    "file": "assets/atlas.portraits.webp",
+    "w": 511,
+    "h": 395,
+    "firstPack": true,
+    "source": "official",
+    "atlas": "atlas.portraits"
+   },
+   {
+    "id": "ally.akihiko.body",
+    "file": "assets/atlas.portraits.webp",
+    "w": 511,
+    "h": 245,
+    "firstPack": true,
+    "source": "official",
+    "atlas": "atlas.portraits"
+   },
+   {
+    "id": "hud.avatar.akihiko",
+    "file": "assets/atlas.portraits.webp",
+    "w": 128,
+    "h": 128,
+    "firstPack": true,
+    "source": "official",
+    "atlas": "atlas.portraits"
+   },
+   {
+    "id": "atlas.hud",
+    "file": "assets/atlas.hud.webp",
+    "w": 1024,
+    "h": 840,
+    "firstPack": true,
+    "source": "generated",
+    "note": "图集容器；全部为程序绘制的粒子/光标/遮罩（非 AI、非官方，按 generated 记）；帧坐标 assets/atlas.hud.json"
+   },
+   {
+    "id": "fx.petal.a",
+    "file": "assets/atlas.hud.webp",
+    "w": 48,
+    "h": 48,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "fx.petal.b",
+    "file": "assets/atlas.hud.webp",
+    "w": 48,
+    "h": 48,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "fx.petal.c",
+    "file": "assets/atlas.hud.webp",
+    "w": 32,
+    "h": 32,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "fx.streak",
+    "file": "assets/atlas.hud.webp",
+    "w": 256,
+    "h": 16,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "fx.sparkle",
+    "file": "assets/atlas.hud.webp",
+    "w": 48,
+    "h": 48,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "fx.shard",
+    "file": "assets/atlas.hud.webp",
+    "w": 40,
+    "h": 56,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "hud.cursor",
+    "file": "assets/atlas.hud.webp",
+    "w": 120,
+    "h": 96,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "hud.cmdBar",
+    "file": "assets/atlas.hud.webp",
+    "w": 360,
+    "h": 96,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "mask.petal",
+    "file": "assets/atlas.hud.webp",
+    "w": 512,
+    "h": 512,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "hud.bow",
+    "file": "assets/atlas.hud.webp",
+    "w": 200,
+    "h": 120,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "hud.diamond",
+    "file": "assets/atlas.hud.webp",
+    "w": 64,
+    "h": 64,
+    "firstPack": true,
+    "source": "generated",
+    "atlas": "atlas.hud"
+   },
+   {
+    "id": "mask.ribbon",
+    "file": "assets/mask.ribbon.webp",
+    "w": 1280,
+    "h": 720,
+    "firstPack": true,
+    "source": "generated",
+    "note": "程序绘制单色缎带剪影（maskWipe），非 AI、非官方，按 generated 记"
+   },
+   {
+    "id": "cutin.hamuko",
+    "file": "assets/cutin.hamuko.webp",
+    "w": 1280,
+    "h": 320,
+    "firstPack": true,
+    "source": "generated",
+    "note": "女主 cut-in 带（与立绘/总攻定格同一人物设定）"
+   },
+   {
+    "id": "allout.finish.default",
+    "file": "assets/allout.finish.default.webp",
+    "w": 1280,
+    "h": 720,
+    "firstPack": true,
+    "source": "generated",
+    "note": "总攻定格画：粉白高光版式，右侧女主"
+   },
+   {
+    "id": "highlight.hamuko",
+    "file": "assets/highlight.hamuko.webp",
+    "w": 1280,
+    "h": 720,
+    "firstPack": false,
+    "source": "generated",
+    "note": "Theurgy 必杀定格画（延迟包）；背景蓝色已转玫红"
+   },
+   {
+    "id": "bg.battle",
+    "file": "assets/bg.battle.webp",
+    "w": 2240,
+    "h": 720,
+    "firstPack": true,
+    "source": "generated",
+    "note": "中段 1290 原图 + 两侧镜像出血，宽 2240"
+   },
+   {
+    "id": "bg.battle.darkhour",
+    "file": "assets/bg.battle.darkhour.webp",
+    "w": 2240,
+    "h": 720,
+    "firstPack": true,
+    "source": "generated",
+    "note": "bg.battle 的影时间预烘焙版（bakedSwap 用）"
+   },
+   {
+    "id": "bg.hub",
+    "file": "assets/bg.hub.webp",
+    "w": 2240,
+    "h": 720,
+    "firstPack": false,
+    "source": "generated",
+    "note": "中段 1290 原图 + 两侧镜像出血，宽 2240"
+   },
+   {
+    "id": "bg.hub.darkhour",
+    "file": "assets/bg.hub.darkhour.webp",
+    "w": 2240,
+    "h": 720,
+    "firstPack": false,
+    "source": "generated",
+    "note": "bg.hub 的影时间预烘焙版（bakedSwap 用）"
+   },
+   {
+    "id": "bg.map.tile",
+    "file": "assets/bg.map.tile.webp",
+    "w": 512,
+    "h": 512,
+    "firstPack": false,
+    "source": "generated",
+    "note": "可平铺地图底纹（满足出血：平铺）"
+   },
+   {
+    "id": "bg.map.tile.darkhour",
+    "file": "assets/bg.map.tile.darkhour.webp",
+    "w": 512,
+    "h": 512,
+    "firstPack": false,
+    "source": "generated",
+    "note": "bg.map.tile 影时间预烘焙版"
+   },
+   {
+    "id": "npc.theodore",
+    "file": "assets/npc.theodore.webp",
+    "w": 164,
+    "h": 640,
+    "firstPack": false,
+    "source": "generated",
+    "note": "天鹅绒看守提奥多亚（P3R 画风生成，P3R 无官方图），延迟包"
+   },
+   {
+    "id": "placeholder.head.mitsuru",
+    "file": "assets/placeholder/head.mitsuru.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:mitsuru",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   },
+   {
+    "id": "placeholder.head.aigis",
+    "file": "assets/placeholder/head.aigis.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:aigis",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   },
+   {
+    "id": "placeholder.head.ken",
+    "file": "assets/placeholder/head.ken.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:ken",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   },
+   {
+    "id": "placeholder.head.koromaru",
+    "file": "assets/placeholder/head.koromaru.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:koromaru",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   },
+   {
+    "id": "placeholder.head.shinjiro",
+    "file": "assets/placeholder/head.shinjiro.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:shinjiro",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   },
+   {
+    "id": "placeholder.head.fuuka",
+    "file": "assets/placeholder/head.fuuka.webp",
+    "w": 160,
+    "h": 160,
+    "firstPack": false,
+    "source": "generated",
+    "group": "head:fuuka",
+    "note": "TODO 占位：程序绘制色块+id，待换本作官方头像"
+   }
+  ],
+  "filters": [
+   "ColorMatrix"
+  ],
+  "fonts": [
+   {
+    "family": "PinkP3RDisplay",
+    "file": "assets/fonts/display.woff2",
+    "chars": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~·×—–…★♥",
+    "role": "display",
+    "pack": "first",
+    "bytes": 12908
+   },
+   {
+    "family": "PinkP3RNumber",
+    "file": "assets/fonts/number.woff2",
+    "chars": "0123456789,.+-%×x/: ",
+    "role": "number",
+    "pack": "first",
+    "bytes": 5496
+   }
+  ]
+ },
+ "tokens": {
+  "color.primary": "#e64a84",
+  "color.secondary": "#fbe2ec",
+  "color.ink": "#3b1531",
+  "color.paper": "#fffdfc",
+  "color.accent": "#ffb36b",
+  "color.hp": "#9be36b",
+  "color.sp": "#c79bff",
+  "color.weak": "#ffd23f",
+  "color.crit": "#ffffff",
+  "color.resist": "#9a6f8a",
+  "color.shadow": "#2a0b1f",
+  "color.overlay": "rgba(59,21,49,0.55)",
+  "font.display": "PinkP3RDisplay",
+  "font.body": "system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif",
+  "font.number": "PinkP3RNumber",
+  "stroke.thin": "2",
+  "stroke.bold": "5",
+  "shape.slant": "0.21",
+  "shape.radius": "14",
+  "shape.panelSkew": "0.12",
+  "motion.uiOpen": "200",
+  "motion.uiClose": "160",
+  "motion.press": "0.92",
+  "ease.enter": "outBack",
+  "ease.exit": "inCubic",
+  "ease.pop": "outElastic",
+  "hud.commandShape": "list",
+  "hud.commandLayout": "fivePlusMore",
+  "hud.partyStyle": "card"
+ },
+ "tokenTree": {
+  "color": {
+   "primary": "#e64a84",
+   "secondary": "#fbe2ec",
+   "ink": "#3b1531",
+   "paper": "#fffdfc",
+   "accent": "#ffb36b",
+   "hp": "#9be36b",
+   "sp": "#c79bff",
+   "weak": "#ffd23f",
+   "crit": "#ffffff",
+   "resist": "#9a6f8a",
+   "shadow": "#2a0b1f",
+   "overlay": "rgba(59,21,49,0.55)"
+  },
+  "font": {
+   "display": "PinkP3RDisplay",
+   "body": "system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif",
+   "number": "PinkP3RNumber"
+  },
+  "stroke": {
+   "thin": 2,
+   "bold": 5
+  },
+  "shape": {
+   "slant": 0.21,
+   "radius": 14,
+   "panelSkew": 0.12
+  },
+  "motion": {
+   "uiOpen": 200,
+   "uiClose": 160,
+   "press": 0.92
+  },
+  "ease": {
+   "enter": "outBack",
+   "exit": "inCubic",
+   "pop": "outElastic"
+  },
+  "hud": {
+   "commandShape": "list",
+   "commandLayout": "fivePlusMore",
+   "partyStyle": "card"
+  }
+ },
+ "slots": {
+  "hud.order": {
+   "rect": {
+    "x": 24,
+    "y": 24,
+    "w": 496,
+    "h": 86
+   },
+   "style": "petalChain",
+   "frames": {
+    "avatar": "hud.avatar.{unitId}",
+    "marker": "fx.petal.a"
+   },
+   "slant": 0.21,
+   "note": "行动顺序：樱瓣链，当前行动者放大 1.15、玫红底；只看不点"
+  },
+  "hud.system": {
+   "rect": {
+    "x": 1000,
+    "y": 24,
+    "w": 256,
+    "h": 86
+   },
+   "buttons": [
+    {
+     "id": "sys.auto",
+     "rect": {
+      "x": 1000,
+      "y": 24,
+      "w": 86,
+      "h": 86
+     }
+    },
+    {
+     "id": "sys.speed",
+     "rect": {
+      "x": 1085,
+      "y": 24,
+      "w": 86,
+      "h": 86
+     }
+    },
+    {
+     "id": "sys.pause",
+     "rect": {
+      "x": 1170,
+      "y": 24,
+      "w": 86,
+      "h": 86
+     }
+    }
+   ],
+   "style": "ribbonTab",
+   "note": "y 范围 24–90 只有 66 高，按 §0.7 命中区 ≥86 取 24–110（视觉 66，命中区向下延伸 20），见进度文件待答 5"
+  },
+  "hud.topInfo": {
+   "rect": {
+    "x": 520,
+    "y": 24,
+    "w": 480,
+    "h": 66
+   },
+   "style": "moonPhase",
+   "bind": {
+    "moon": "$env.moonPhase",
+    "darkHour": "$env.darkHour",
+    "date": "$env.date",
+    "weekday": "$env.weekday"
+   },
+   "note": "P3 月相 + 日期细线信息块；影时间时显示 label.darkHour"
+  },
+  "hud.enemyOver": {
+   "follow": "enemy",
+   "offset": {
+    "dx": 0,
+    "dy": -250
+   },
+   "style": "rosePlate",
+   "show": [
+    "name",
+    "hp",
+    "weak",
+    "shield"
+   ],
+   "atlas": "atlas.hud",
+   "frames": {
+    "weak": "hud.diamond"
+   },
+   "note": "敌名暗莓→玫红斜切条，不截断；HP 细斜条"
+  },
+  "hud.party": {
+   "rect": {
+    "x": 24,
+    "y": 600,
+    "w": 636,
+    "h": 96
+   },
+   "style": "card",
+   "cards": 4,
+   "cardW": 150,
+   "gap": 12,
+   "slant": 0.21,
+   "frames": {
+    "avatar": "hud.avatar.{unitId}"
+   },
+   "show": [
+    "avatar",
+    "hp",
+    "sp"
+   ],
+   "interactive": false
+  },
+  "hud.command": {
+   "rect": {
+    "x": 780,
+    "y": 220,
+    "w": 476,
+    "h": 476
+   },
+   "layout": "fivePlusMore",
+   "shape": "list",
+   "slant": 0.21,
+   "atlas": "atlas.hud",
+   "frames": {
+    "bar": "hud.cmdBar",
+    "cursor": "hud.cursor"
+   },
+   "note": "P3R 斜列：每行向左下错 20px；主 96 / 次 86；第 6 项起收进「更多」（cmd.more 与 cmd.4 同行）",
+   "items": [
+    {
+     "id": "cmd.0",
+     "rect": {
+      "x": 860,
+      "y": 220,
+      "w": 396,
+      "h": 96
+     },
+     "label": "cmd.skill",
+     "primary": true
+    },
+    {
+     "id": "cmd.1",
+     "rect": {
+      "x": 840,
+      "y": 325,
+      "w": 400,
+      "h": 86
+     },
+     "label": "cmd.attack"
+    },
+    {
+     "id": "cmd.2",
+     "rect": {
+      "x": 820,
+      "y": 420,
+      "w": 400,
+      "h": 86
+     },
+     "label": "cmd.item"
+    },
+    {
+     "id": "cmd.3",
+     "rect": {
+      "x": 800,
+      "y": 515,
+      "w": 400,
+      "h": 86
+     },
+     "label": "cmd.guard"
+    },
+    {
+     "id": "cmd.4",
+     "rect": {
+      "x": 780,
+      "y": 610,
+      "w": 290,
+      "h": 86
+     },
+     "label": "cmd.tactics"
+    }
+   ],
+   "more": {
+    "id": "cmd.more",
+    "rect": {
+     "x": 1080,
+     "y": 610,
+     "w": 176,
+     "h": 86
+    },
+    "label": "label.more",
+    "menu": {
+     "rect": {
+      "x": 780,
+      "y": 220,
+      "w": 476,
+      "h": 476
+     },
+     "itemW": 228,
+     "itemH": 86,
+     "columns": 2,
+     "note": "「更多」展开：同区域内双列，每项 228×86"
+    }
+   }
+  },
+  "hud.intent": {
+   "follow": "enemy",
+   "offset": {
+    "dx": 120,
+    "dy": -300
+   },
+   "style": "petalTag",
+   "note": "敌人意图小牌，pointer-events 无"
+  },
+  "fx.banner": {
+   "layer": "cutin",
+   "style": "ribbonBand",
+   "asset": "mask.ribbon"
+  },
+  "fx.cutin": {
+   "layer": "cutin",
+   "asset": "cutin.hamuko",
+   "bandAngle": 0.21
+  },
+  "fx.allout": {
+   "layer": "allout",
+   "finishCards": [
+    {
+     "asset": "allout.finish.default",
+     "match": {}
+    }
+   ]
+  },
+  "fx.transition": {
+   "layer": "trans",
+   "masks": [
+    "mask.petal",
+    "mask.ribbon"
+   ]
+  },
+  "scene.battle.bg": {
+   "asset": "bg.battle",
+   "darkHour": "bg.battle.darkhour",
+   "w": 2240,
+   "h": 720,
+   "anchor": [
+    0.5,
+    0.5
+   ]
+  },
+  "scene.hub.bg": {
+   "asset": "bg.hub",
+   "darkHour": "bg.hub.darkhour",
+   "w": 2240,
+   "h": 720,
+   "anchor": [
+    0.5,
+    0.5
+   ]
+  },
+  "scene.map.bg": {
+   "asset": "bg.map.tile",
+   "darkHour": "bg.map.tile.darkhour",
+   "tile": true,
+   "tileW": 512,
+   "tileH": 512
+  },
+  "scene.talk": {
+   "template": "talk"
+  },
+  "scene.result": {
+   "style": "rankRibbon",
+   "portrait": null,
+   "note": "结算/升级不放人脸：只用缎带结 hud.bow + 数字排版"
+  },
+  "unit.hamuko.portrait": {
+   "atlas": "atlas.hamuko",
+   "layers": [
+    "body",
+    "head"
+   ],
+   "frames": {
+    "body": "ally.hamuko.body",
+    "head": "ally.hamuko.head"
+   },
+   "meshIdle": {
+    "breath": 0.011,
+    "period": 3000,
+    "swayPx": 7,
+    "swayZone": [
+     [
+      300,
+      160,
+      470,
+      170,
+      470,
+      350,
+      330,
+      360
+     ],
+     [
+      180,
+      0,
+      330,
+      0,
+      335,
+      60,
+      180,
+      60
+     ],
+     [
+      80,
+      130,
+      200,
+      120,
+      200,
+      300,
+      85,
+      305
+     ]
+    ]
+   },
+   "size": [
+    500,
+    640
+   ]
+  },
+  "unit.yukari.portrait": {
+   "atlas": "atlas.portraits",
+   "layers": [
+    "body",
+    "head"
+   ],
+   "frames": {
+    "body": "ally.yukari.body",
+    "head": "ally.yukari.head"
+   },
+   "meshIdle": {
+    "breath": 0.011,
+    "period": 2900,
+    "swayPx": 7,
+    "swayZone": [
+     [
+      300,
+      100,
+      444,
+      180,
+      420,
+      260,
+      300,
+      240
+     ],
+     [
+      0,
+      260,
+      110,
+      240,
+      120,
+      380,
+      20,
+      390
+     ]
+    ]
+   },
+   "size": [
+    444,
+    640
+   ]
+  },
+  "unit.junpei.portrait": {
+   "atlas": "atlas.portraits",
+   "layers": [
+    "body",
+    "head"
+   ],
+   "frames": {
+    "body": "ally.junpei.body",
+    "head": "ally.junpei.head"
+   },
+   "meshIdle": {
+    "breath": 0.01,
+    "period": 3300,
+    "swayPx": 3,
+    "swayZone": "head"
+   },
+   "size": [
+    560,
+    640
+   ]
+  },
+  "unit.akihiko.portrait": {
+   "atlas": "atlas.portraits",
+   "layers": [
+    "body",
+    "head"
+   ],
+   "frames": {
+    "body": "ally.akihiko.body",
+    "head": "ally.akihiko.head"
+   },
+   "meshIdle": {
+    "breath": 0.009,
+    "period": 3400,
+    "swayPx": 5,
+    "swayZone": [
+     [
+      40,
+      30,
+      300,
+      0,
+      440,
+      120,
+      400,
+      170,
+      60,
+      170
+     ]
+    ]
+   },
+   "size": [
+    511,
+    640
+   ]
+  },
+  "unit.hamuko.actor": {
+   "atlas": "atlas.hamuko",
+   "frames": {
+    "idle": "ally.hamuko.full",
+    "evoke": "ally.hamuko.evoke"
+   },
+   "anchor": [
+    0.5,
+    1
+   ]
+  },
+  "unit.hamuko.cutin": {
+   "asset": "cutin.hamuko",
+   "w": 1280,
+   "h": 320
+  },
+  "unit.hamuko.highlight": {
+   "asset": "highlight.hamuko",
+   "w": 1280,
+   "h": 720,
+   "pack": "deferred"
+  },
+  "npc.theodore.portrait": {
+   "asset": "npc.theodore",
+   "pack": "deferred"
+  }
+ },
+ "templates": {
+  "talk": {
+   "html": "<section class=\"pk-talk\"><div class=\"pk-talk__ribbon\"></div><header class=\"pk-talk__head\"><span class=\"pk-talk__name\" data-slot=\"enemyName\"></span><span class=\"pk-talk__odds\" data-slot=\"odds\"></span></header><img class=\"pk-talk__portrait\" data-slot=\"enemyPortrait\" alt=\"\"><div class=\"pk-talk__bubble\"><p class=\"pk-talk__line\" data-slot=\"line\"></p></div><ul class=\"pk-talk__choices\" data-slot=\"choices\"><li class=\"pk-talk__item\"><button class=\"pk-talk__choice\" data-slot=\"choice\"><span class=\"pk-talk__petal\"></span><span class=\"pk-talk__text\" data-slot=\"choiceText\"></span></button></li></ul><footer class=\"pk-talk__free\"><input class=\"pk-talk__input\" data-slot=\"input\" maxlength=\"60\"><button class=\"pk-talk__send\" data-slot=\"send\">▶</button></footer><span class=\"pk-talk__status\" data-slot=\"status\"></span></section>",
+   "params": {
+    "styleId": "p3r-pink-ribbon",
+    "maxLineChars": 60,
+    "typingCps": 42
+   }
+  }
+ },
+ "labels": {
+  "cmd.attack": "攻击",
+  "cmd.guard": "防御",
+  "cmd.item": "道具",
+  "cmd.rush": "RUSH",
+  "cmd.skill": "技能",
+  "cmd.tactics": "作战",
+  "label.allout": "ALL-OUT ATTACK",
+  "label.baton": "SHIFT",
+  "label.battleStart": "ENCOUNTER",
+  "label.chance": "CHANCE!",
+  "label.darkHour": "DARK HOUR",
+  "label.defeat": "DEFEAT",
+  "label.dive": "攀登塔层",
+  "label.down": "DOWN",
+  "label.enemyTurn": "ENEMY TURN",
+  "label.finish": "FINISHING TOUCH",
+  "label.fullMoon": "FULL MOON",
+  "label.heartCard": "塔罗卡",
+  "label.highlight": "THEURGY",
+  "label.holdup": "HOLD UP!",
+  "label.massDestruction": "MASS DESTRUCTION",
+  "label.more": "更多",
+  "label.newMoon": "NEW MOON",
+  "label.onemore": "1 MORE",
+  "label.persona": "PERSONA",
+  "label.rank": "S.E.E.S. 等级",
+  "label.requestBoard": "委托板",
+  "label.result": "RESULT",
+  "label.theurgy.short": "THEURGY",
+  "label.thinking": "思考中…",
+  "label.timeout": "超时",
+  "label.totalDamage": "TOTAL DAMAGE",
+  "label.velvet": "天鹅绒房间",
+  "label.victory": "VICTORY",
+  "label.world": "塔尔塔罗斯",
+  "label.yourTurn": "YOUR TURN",
+  "npc.theodore": "提奥多亚",
+  "npc.theodore.name": "提奥多亚",
+  "persona.aigis": "帕拉狄昂",
+  "persona.akihiko": "波吕丢刻斯",
+  "persona.fuuka": "卢基娅",
+  "persona.hamuko": "俄耳甫斯",
+  "persona.junpei": "赫尔墨斯",
+  "persona.ken": "涅墨西斯",
+  "persona.koromaru": "刻耳柏洛斯",
+  "persona.mitsuru": "彭忒西勒亚",
+  "persona.shinjiro": "卡斯托耳",
+  "persona.yukari": "伊奥",
+  "result.levelup": "LEVEL UP!",
+  "skill.agilao.name": "AGILAO",
+  "skill.cadenza.name": "CADENZA",
+  "skill.theurgy.hamuko.name": "ARMAGEDDON CHORUS",
+  "tag.CRIT": "CRITICAL",
+  "tag.DOWN": "DOWN",
+  "tag.MISS": "MISS",
+  "tag.NULL": "BLOCK",
+  "tag.REPEL": "REPEL",
+  "tag.RESIST": "RESIST",
+  "tag.WEAK": "WEAK",
+  "unit.aigis": "埃癸斯",
+  "unit.akihiko": "真田 明彦",
+  "unit.akihiko.name": "真田 明彦",
+  "unit.fuuka": "山岸 风花",
+  "unit.hamuko": "哈姆子",
+  "unit.hamuko.name": "哈姆子",
+  "unit.junpei": "伊织 顺平",
+  "unit.junpei.name": "伊织 顺平",
+  "unit.ken": "天田 乾",
+  "unit.koromaru": "虎狼丸",
+  "unit.mitsuru": "桐条 美鹤",
+  "unit.shinjiro": "荒垣 真次郎",
+  "unit.yukari": "岳羽 由加莉",
+  "unit.yukari.name": "岳羽 由加莉"
+ },
+ "recipes": [
+  {
+   "id": "action.agilao",
+   "event": "action",
+   "match": {
+    "skillId": "agilao",
+    "actorId": "hamuko"
+   },
+   "duration": 1780,
+   "hitMarks": [
+    1180
+   ],
+   "create": [
+    {
+     "name": "evk",
+     "asset": "ally.hamuko.evoke",
+     "layer": "ally",
+     "anchor": [
+      0.5,
+      1
+     ]
+    }
+   ],
+   "assets": [
+    "cutin.hamuko",
+    "ally.hamuko.evoke",
+    "fx.shard",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c",
+    "fx.streak",
+    "fx.sparkle"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 160,
+     "prim": "dim",
+     "args": {
+      "color": "#2a0b1f",
+      "alpha": 0.4
+     }
+    },
+    {
+     "at": 0,
+     "dur": 520,
+     "prim": "cutin",
+     "layer": "cutin",
+     "ease": "outBack",
+     "minimal": {
+      "dur": 250
+     },
+     "args": {
+      "bandAngle": 0.21,
+      "speedLines": {
+       "layers": 2,
+       "count": 36
+      },
+      "panels": [
+       {
+        "shape": [
+         -1300,
+         -150,
+         1300,
+         -110,
+         1300,
+         150,
+         -1300,
+         110
+        ],
+        "art": "cutin.hamuko",
+        "enterFrom": "right"
+       }
+      ],
+      "nameplate": {
+       "text": "skill.agilao.name",
+       "font": "@font.display"
+      }
+     }
+    },
+    {
+     "at": 0,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 36,
+      "at": {
+       "x": 640,
+       "y": 360
+      },
+      "speed": 1400,
+      "spread": 0.4,
+      "dir": 3.14,
+      "life": 480,
+      "size": 1.0,
+      "gravity": 0,
+      "frames": [
+       "fx.streak",
+       "fx.petal.a"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary"
+      ]
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "cutin"
+     }
+    },
+    {
+     "at": 400,
+     "prim": "hide",
+     "args": {
+      "target": "$actor"
+     }
+    },
+    {
+     "at": 400,
+     "prim": "show",
+     "args": {
+      "target": "#evk"
+     }
+    },
+    {
+     "at": 400,
+     "dur": 180,
+     "prim": "tween",
+     "ease": "outCubic",
+     "args": {
+      "target": "#evk",
+      "from": {
+       "x": "$actor",
+       "y": "$actor",
+       "alpha": 0,
+       "scale": 0.96
+      },
+      "to": {
+       "x": "$actor",
+       "y": "$actor",
+       "alpha": 1,
+       "scale": 1
+      }
+     }
+    },
+    {
+     "at": 440,
+     "prim": "sfx",
+     "args": {
+      "id": "evoker.raise"
+     }
+    },
+    {
+     "at": 640,
+     "dur": 520,
+     "prim": "glassShatter",
+     "layer": "ally",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "snapshot": "target",
+      "target": "#evk",
+      "shards": 34,
+      "impact": {
+       "x": "#evk",
+       "y": "#evk",
+       "dx": -40,
+       "dy": -560
+      },
+      "fallMs": 460
+     }
+    },
+    {
+     "at": 640,
+     "prim": "sfx",
+     "args": {
+      "id": "evoker.shatter"
+     }
+    },
+    {
+     "at": 640,
+     "prim": "hide",
+     "args": {
+      "target": "#evk"
+     }
+    },
+    {
+     "at": 660,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 50,
+      "at": {
+       "x": "$actor",
+       "y": "$actor",
+       "dy": -560
+      },
+      "speed": 600,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 500,
+      "size": 1.0,
+      "gravity": 500,
+      "frames": [
+       "fx.shard",
+       "fx.petal.a"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 1160,
+     "prim": "show",
+     "args": {
+      "target": "$actor"
+     }
+    },
+    {
+     "at": 1000,
+     "prim": "particles",
+     "args": {
+      "count": 120,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 600,
+      "spread": 0.9,
+      "dir": -1.57,
+      "life": 520,
+      "size": 1.0,
+      "gravity": -200,
+      "frames": [
+       "fx.sparkle",
+       "fx.petal.b"
+      ],
+      "colors": [
+       "#ffd0a0",
+       "@color.accent",
+       "@color.primary"
+      ]
+     }
+    },
+    {
+     "at": 1180,
+     "prim": "hitStop",
+     "args": {
+      "ms": 80
+     }
+    },
+    {
+     "at": 1180,
+     "prim": "shake",
+     "args": {
+      "px": 18
+     }
+    },
+    {
+     "at": 1180,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$target",
+      "ms": 50
+     }
+    },
+    {
+     "at": 1180,
+     "prim": "squashHit",
+     "args": {
+      "target": "$target",
+      "squash": 0.22,
+      "push": 26,
+      "recoverMs": 320
+     }
+    },
+    {
+     "at": 1180,
+     "dur": 90,
+     "prim": "rgbSplit",
+     "args": {
+      "offset": 9
+     }
+    },
+    {
+     "at": 1330,
+     "dur": 440,
+     "prim": "shockwave",
+     "args": {
+      "center": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "amp": 46,
+      "wavelength": 180,
+      "speed": 1000,
+      "radius": 560
+     }
+    },
+    {
+     "at": 1180,
+     "prim": "particles",
+     "args": {
+      "count": 220,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1500,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 580,
+      "size": 1.0,
+      "gravity": 250,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.accent",
+       "@color.primary"
+      ]
+     }
+    },
+    {
+     "at": 1180,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": true
+     }
+    },
+    {
+     "at": 1180,
+     "dur": 520,
+     "prim": "tag",
+     "args": {
+      "kind": "$hit",
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -330
+      }
+     }
+    },
+    {
+     "at": 1180,
+     "prim": "sfx",
+     "args": {
+      "id": "hit.fire"
+     }
+    }
+   ]
+  },
+  {
+   "id": "action.cadenza",
+   "event": "action",
+   "match": {
+    "skillId": "cadenza",
+    "actorId": "hamuko"
+   },
+   "duration": 1700,
+   "hitMarks": [
+    1150
+   ],
+   "create": [
+    {
+     "name": "evk",
+     "asset": "ally.hamuko.evoke",
+     "layer": "ally",
+     "anchor": [
+      0.5,
+      1
+     ]
+    }
+   ],
+   "assets": [
+    "cutin.hamuko",
+    "ally.hamuko.evoke",
+    "fx.shard",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c",
+    "fx.sparkle",
+    "hud.bow"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 160,
+     "prim": "dim",
+     "args": {
+      "color": "#fbe2ec",
+      "alpha": 0.25
+     }
+    },
+    {
+     "at": 0,
+     "dur": 520,
+     "prim": "cutin",
+     "layer": "cutin",
+     "ease": "outBack",
+     "minimal": {
+      "dur": 250
+     },
+     "args": {
+      "bandAngle": 0.21,
+      "speedLines": {
+       "layers": 2,
+       "count": 36
+      },
+      "panels": [
+       {
+        "shape": [
+         -1300,
+         -150,
+         1300,
+         -110,
+         1300,
+         150,
+         -1300,
+         110
+        ],
+        "art": "cutin.hamuko",
+        "enterFrom": "right"
+       }
+      ],
+      "nameplate": {
+       "text": "skill.cadenza.name",
+       "font": "@font.display"
+      }
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "cutin"
+     }
+    },
+    {
+     "at": 400,
+     "prim": "hide",
+     "args": {
+      "target": "$actor"
+     }
+    },
+    {
+     "at": 400,
+     "prim": "show",
+     "args": {
+      "target": "#evk"
+     }
+    },
+    {
+     "at": 400,
+     "dur": 180,
+     "prim": "tween",
+     "ease": "outCubic",
+     "args": {
+      "target": "#evk",
+      "from": {
+       "x": "$actor",
+       "y": "$actor",
+       "alpha": 0,
+       "scale": 0.96
+      },
+      "to": {
+       "x": "$actor",
+       "y": "$actor",
+       "alpha": 1,
+       "scale": 1
+      }
+     }
+    },
+    {
+     "at": 440,
+     "prim": "sfx",
+     "args": {
+      "id": "evoker.raise"
+     }
+    },
+    {
+     "at": 640,
+     "dur": 520,
+     "prim": "glassShatter",
+     "layer": "ally",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "snapshot": "target",
+      "target": "#evk",
+      "shards": 34,
+      "impact": {
+       "x": "#evk",
+       "y": "#evk",
+       "dx": -40,
+       "dy": -560
+      },
+      "fallMs": 460
+     }
+    },
+    {
+     "at": 640,
+     "prim": "sfx",
+     "args": {
+      "id": "evoker.shatter"
+     }
+    },
+    {
+     "at": 640,
+     "prim": "hide",
+     "args": {
+      "target": "#evk"
+     }
+    },
+    {
+     "at": 660,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 50,
+      "at": {
+       "x": "$actor",
+       "y": "$actor",
+       "dy": -560
+      },
+      "speed": 600,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 500,
+      "size": 1.0,
+      "gravity": 500,
+      "frames": [
+       "fx.shard",
+       "fx.petal.a"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 1160,
+     "prim": "show",
+     "args": {
+      "target": "$actor"
+     }
+    },
+    {
+     "at": 1000,
+     "dur": 600,
+     "prim": "radialBurst",
+     "layer": "fx",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "rays": 16,
+      "colors": [
+       "#ffffff",
+       "@color.secondary"
+      ],
+      "spin": 0.4
+     }
+    },
+    {
+     "at": 1000,
+     "prim": "particles",
+     "args": {
+      "count": 160,
+      "at": {
+       "x": "$party",
+       "y": "$party",
+       "dy": 40
+      },
+      "speed": 380,
+      "spread": 0.7,
+      "dir": -1.57,
+      "life": 640,
+      "size": 1.0,
+      "gravity": -120,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.sparkle"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.secondary",
+       "@color.primary"
+      ]
+     }
+    },
+    {
+     "at": 1150,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$party",
+      "ms": 50
+     }
+    },
+    {
+     "at": 1150,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number"
+     }
+    },
+    {
+     "at": 1150,
+     "prim": "sfx",
+     "args": {
+      "id": "heal"
+     }
+    }
+   ]
+  },
+  {
+   "id": "action.default",
+   "event": "action",
+   "duration": 900,
+   "hitMarks": [
+    420
+   ],
+   "assets": [
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c",
+    "fx.streak"
+   ],
+   "tracks": [
+    {
+     "at": 160,
+     "dur": 260,
+     "prim": "afterimage",
+     "ease": "inCubic",
+     "args": {
+      "actor": "$actor",
+      "to": {
+       "x": "$target",
+       "y": "$target",
+       "dx": -150
+      },
+      "n": 2,
+      "tints": [
+       "#ffffff",
+       "@color.primary"
+      ]
+     }
+    },
+    {
+     "at": 400,
+     "dur": 140,
+     "prim": "slashLine",
+     "layer": "fx",
+     "args": {
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "rot": 0.21,
+      "len": 520,
+      "width": 14
+     }
+    },
+    {
+     "at": 420,
+     "prim": "hitStop",
+     "args": {
+      "ms": 60
+     }
+    },
+    {
+     "at": 420,
+     "prim": "shake",
+     "args": {
+      "px": 12
+     }
+    },
+    {
+     "at": 420,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$target",
+      "ms": 50
+     }
+    },
+    {
+     "at": 420,
+     "prim": "squashHit",
+     "args": {
+      "target": "$target",
+      "squash": 0.16,
+      "push": 18,
+      "recoverMs": 260
+     }
+    },
+    {
+     "at": 420,
+     "prim": "particles",
+     "args": {
+      "count": 70,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1000,
+      "spread": 1.6,
+      "dir": -0.3,
+      "life": 420,
+      "size": 1.0,
+      "gravity": 400,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 420,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number"
+     }
+    },
+    {
+     "at": 420,
+     "dur": 420,
+     "prim": "tag",
+     "args": {
+      "kind": "$hit",
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -320
+      }
+     }
+    },
+    {
+     "at": 420,
+     "prim": "sfx",
+     "args": {
+      "id": "hit.light"
+     }
+    },
+    {
+     "at": 540,
+     "dur": 300,
+     "prim": "tween",
+     "ease": "outCubic",
+     "args": {
+      "target": "$actor",
+      "to": {
+       "x": "home",
+       "y": "home"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "action.persona.default",
+   "event": "action",
+   "match": {
+    "kind": "magic"
+   },
+   "duration": 1700,
+   "hitMarks": [
+    1100
+   ],
+   "create": [
+    {
+     "name": "evk",
+     "asset": "ally.hamuko.evoke",
+     "layer": "ally",
+     "anchor": [
+      0.5,
+      1
+     ]
+    }
+   ],
+   "assets": [
+    "ally.hamuko.evoke",
+    "fx.shard",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c",
+    "fx.sparkle"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "prim": "hide",
+     "args": {
+      "target": "$actor"
+     }
+    },
+    {
+     "at": 0,
+     "prim": "show",
+     "args": {
+      "target": "#evk"
+     }
+    },
+    {
+     "at": 0,
+     "dur": 180,
+     "prim": "tween",
+     "ease": "outCubic",
+     "args": {
+      "target": "#evk",
+      "from": {
+       "x": "$actor",
+       "y": "$actor",
+       "alpha": 0,
+       "scale": 0.96
+      },
+      "to": {
+       "x": "$actor",
+       "y": "$actor",
+       "alpha": 1,
+       "scale": 1
+      }
+     }
+    },
+    {
+     "at": 40,
+     "prim": "sfx",
+     "args": {
+      "id": "evoker.raise"
+     }
+    },
+    {
+     "at": 240,
+     "dur": 520,
+     "prim": "glassShatter",
+     "layer": "ally",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "snapshot": "target",
+      "target": "#evk",
+      "shards": 34,
+      "impact": {
+       "x": "#evk",
+       "y": "#evk",
+       "dx": -40,
+       "dy": -560
+      },
+      "fallMs": 460
+     }
+    },
+    {
+     "at": 240,
+     "prim": "sfx",
+     "args": {
+      "id": "evoker.shatter"
+     }
+    },
+    {
+     "at": 240,
+     "prim": "hide",
+     "args": {
+      "target": "#evk"
+     }
+    },
+    {
+     "at": 260,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 50,
+      "at": {
+       "x": "$actor",
+       "y": "$actor",
+       "dy": -560
+      },
+      "speed": 600,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 500,
+      "size": 1.0,
+      "gravity": 500,
+      "frames": [
+       "fx.shard",
+       "fx.petal.a"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 760,
+     "prim": "show",
+     "args": {
+      "target": "$actor"
+     }
+    },
+    {
+     "at": 780,
+     "dur": 320,
+     "prim": "speedLines",
+     "layer": "fx",
+     "minimal": "skip",
+     "args": {
+      "count": 30,
+      "dir": 0.21,
+      "colors": [
+       "#ffffff",
+       "@color.secondary"
+      ],
+      "scrollSpeed": 1800
+     }
+    },
+    {
+     "at": 900,
+     "prim": "particles",
+     "args": {
+      "count": 90,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 500,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 500,
+      "size": 1.0,
+      "gravity": 0,
+      "frames": [
+       "fx.sparkle",
+       "fx.petal.a"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.accent"
+      ]
+     }
+    },
+    {
+     "at": 1100,
+     "prim": "hitStop",
+     "args": {
+      "ms": 70
+     }
+    },
+    {
+     "at": 1100,
+     "prim": "shake",
+     "args": {
+      "px": 16
+     }
+    },
+    {
+     "at": 1100,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$target",
+      "ms": 50
+     }
+    },
+    {
+     "at": 1100,
+     "prim": "squashHit",
+     "args": {
+      "target": "$target",
+      "squash": 0.2,
+      "push": 22,
+      "recoverMs": 300
+     }
+    },
+    {
+     "at": 1100,
+     "dur": 90,
+     "prim": "rgbSplit",
+     "args": {
+      "offset": 8
+     }
+    },
+    {
+     "at": 1250,
+     "dur": 420,
+     "prim": "shockwave",
+     "args": {
+      "center": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "amp": 40,
+      "wavelength": 160,
+      "speed": 900,
+      "radius": 520
+     }
+    },
+    {
+     "at": 1100,
+     "prim": "particles",
+     "args": {
+      "count": 160,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1300,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 560,
+      "size": 1.0,
+      "gravity": 200,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 1100,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": true
+     }
+    },
+    {
+     "at": 1100,
+     "dur": 500,
+     "prim": "tag",
+     "args": {
+      "kind": "$hit",
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -330
+      }
+     }
+    },
+    {
+     "at": 1100,
+     "prim": "sfx",
+     "args": {
+      "id": "hit.magic"
+     }
+    }
+   ]
+  },
+  {
+   "id": "allout.default",
+   "event": "allout",
+   "duration": 3300,
+   "hitMarks": [
+    420,
+    620,
+    820,
+    1020,
+    1220,
+    1420,
+    1620,
+    1820,
+    2280
+   ],
+   "create": [
+    {
+     "name": "fin",
+     "asset": "allout.finish.default",
+     "layer": "allout"
+    }
+   ],
+   "assets": [
+    "allout.finish.default",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c",
+    "fx.streak",
+    "fx.sparkle",
+    "hud.avatar.hamuko",
+    "hud.avatar.yukari",
+    "hud.avatar.junpei",
+    "hud.avatar.akihiko"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 120,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#ffffff",
+      "alpha": 0.7
+     }
+    },
+    {
+     "at": 0,
+     "dur": 220,
+     "prim": "dim",
+     "args": {
+      "color": "#fbe2ec",
+      "alpha": 0.45
+     }
+    },
+    {
+     "at": 0,
+     "dur": 640,
+     "prim": "title",
+     "ease": "outBack",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "text": "label.allout",
+      "font": "@font.display",
+      "size": 116,
+      "pos": {
+       "x": 640,
+       "y": 150
+      },
+      "rot": 0.21
+     }
+    },
+    {
+     "at": 0,
+     "dur": 2100,
+     "prim": "speedLines",
+     "layer": "fx",
+     "args": {
+      "count": 40,
+      "dir": 0.21,
+      "colors": [
+       "#ffffff",
+       "@color.secondary"
+      ],
+      "scrollSpeed": 2200
+     }
+    },
+    {
+     "at": 300,
+     "dur": 1700,
+     "prim": "silhouetteDash",
+     "minimal": {
+      "args": {
+       "units": "$party",
+       "count": 3,
+       "interval": 200,
+       "path": "R2L"
+      }
+     },
+     "args": {
+      "units": "$party",
+      "count": 8,
+      "interval": 200,
+      "path": "R2L"
+     }
+    },
+    {
+     "at": 420,
+     "dur": 150,
+     "prim": "slashLine",
+     "layer": "fx",
+     "repeatEvery": 200,
+     "times": 8,
+     "args": {
+      "pos": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "rot": -0.21,
+      "len": 800,
+      "width": 12
+     }
+    },
+    {
+     "at": 420,
+     "prim": "particles",
+     "repeatEvery": 200,
+     "times": 8,
+     "args": {
+      "count": 60,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1100,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 520,
+      "size": 1.0,
+      "gravity": 300,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 420,
+     "prim": "sfx",
+     "repeatEvery": 200,
+     "times": 8,
+     "args": {
+      "id": "allout.hit"
+     }
+    },
+    {
+     "at": 2280,
+     "dur": 160,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#ffffff",
+      "alpha": 0.9
+     }
+    },
+    {
+     "at": 2280,
+     "dur": 500,
+     "prim": "shockwave",
+     "args": {
+      "center": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "amp": 56,
+      "wavelength": 200,
+      "speed": 1100,
+      "radius": 640
+     }
+    },
+    {
+     "at": 2280,
+     "prim": "particles",
+     "args": {
+      "count": 240,
+      "at": {
+       "x": -40,
+       "y": 680
+      },
+      "speed": 1600,
+      "spread": 0.5,
+      "dir": -0.55,
+      "life": 700,
+      "size": 1.0,
+      "gravity": -60,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.secondary",
+       "@color.primary"
+      ]
+     }
+    },
+    {
+     "at": 2280,
+     "dur": 980,
+     "prim": "finishCard",
+     "layer": "allout",
+     "ease": "outCubic",
+     "args": {
+      "artId": "allout.finish.default",
+      "shape": [
+       -700,
+       -400,
+       760,
+       -330,
+       700,
+       400,
+       -760,
+       330
+      ],
+      "enterFrom": "left",
+      "zoom": 1.03
+     }
+    },
+    {
+     "at": 2460,
+     "dur": 760,
+     "prim": "freezeFrame",
+     "args": {
+      "ms": 760,
+      "keepRendering": true
+     }
+    },
+    {
+     "at": 2460,
+     "dur": 760,
+     "prim": "totalDamage",
+     "ease": "outBack",
+     "args": {
+      "label": "label.totalDamage",
+      "plate": [
+       -300,
+       -60,
+       320,
+       -80,
+       300,
+       60,
+       -320,
+       80
+      ],
+      "pos": {
+       "x": 420,
+       "y": 470
+      },
+      "font": "@font.number"
+     }
+    },
+    {
+     "at": 2280,
+     "prim": "sfx",
+     "args": {
+      "id": "allout.finish"
+     }
+    },
+    {
+     "at": 3100,
+     "dur": 200,
+     "prim": "tween",
+     "args": {
+      "target": "#layer.allout",
+      "to": {
+       "alpha": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "battle.end",
+   "event": "battle:end",
+   "duration": 1400,
+   "assets": [
+    "mask.ribbon",
+    "hud.bow",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c"
+   ],
+   "create": [
+    {
+     "name": "bow",
+     "asset": "hud.bow",
+     "layer": "hud",
+     "anchor": [
+      0.5,
+      0.5
+     ]
+    }
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 420,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "outCubic",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "shape": "mask.ribbon",
+      "from": {
+       "x": -1500,
+       "y": 380,
+       "scale": 1.5,
+       "rotation": -0.21
+      },
+      "to": {
+       "x": 640,
+       "y": 380,
+       "scale": 1.5,
+       "rotation": -0.21
+      },
+      "color": "@color.paper"
+     }
+    },
+    {
+     "at": 200,
+     "dur": 700,
+     "prim": "title",
+     "ease": "outBack",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "text": "label.result",
+      "font": "@font.display",
+      "size": 140,
+      "pos": {
+       "x": 600,
+       "y": 330
+      },
+      "rot": 0.21
+     }
+    },
+    {
+     "at": 380,
+     "prim": "show",
+     "args": {
+      "target": "#bow"
+     }
+    },
+    {
+     "at": 380,
+     "dur": 300,
+     "prim": "tween",
+     "ease": "outElastic",
+     "args": {
+      "target": "#bow",
+      "from": {
+       "x": 900,
+       "y": 160,
+       "scale": 0.2,
+       "rotation": -0.6,
+       "alpha": 0
+      },
+      "to": {
+       "x": 900,
+       "y": 160,
+       "scale": 1,
+       "rotation": 0.21,
+       "alpha": 1
+      }
+     }
+    },
+    {
+     "at": 300,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 90,
+      "at": {
+       "x": 640,
+       "y": -20
+      },
+      "speed": 200,
+      "spread": 1.2,
+      "dir": 1.57,
+      "life": 800,
+      "size": 1.0,
+      "gravity": 120,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "victory"
+     }
+    },
+    {
+     "at": 1180,
+     "dur": 200,
+     "prim": "tween",
+     "args": {
+      "target": "#bow",
+      "to": {
+       "alpha": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "env.darkHour.enter",
+   "event": "env:change",
+   "match": {
+    "env": {
+     "darkHour": true
+    }
+   },
+   "duration": 600,
+   "assets": [
+    "bg.hub",
+    "bg.hub.darkhour",
+    "bg.battle",
+    "bg.battle.darkhour",
+    "fx.petal.a"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 600,
+     "prim": "dim",
+     "args": {
+      "color": "#0b2a14",
+      "alpha": 0.35
+     }
+    },
+    {
+     "at": 0,
+     "dur": 400,
+     "prim": "bakedSwap",
+     "args": {
+      "from": "bg.hub",
+      "to": "bg.hub.darkhour"
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "darkhour.enter"
+     }
+    },
+    {
+     "at": 0,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 30,
+      "at": {
+       "x": 640,
+       "y": 360
+      },
+      "speed": 120,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 560,
+      "size": 1.0,
+      "gravity": -40,
+      "frames": [
+       "fx.petal.a"
+      ],
+      "colors": [
+       "#3a5a3f",
+       "#7a1d4f"
+      ]
+     }
+    },
+    {
+     "at": 150,
+     "dur": 420,
+     "prim": "title",
+     "minimal": "skip",
+     "args": {
+      "text": "label.darkHour",
+      "font": "@font.display",
+      "size": 76,
+      "pos": {
+       "x": 640,
+       "y": 360
+      },
+      "rot": 0.21
+     }
+    }
+   ]
+  },
+  {
+   "id": "env.darkHour.leave",
+   "event": "env:change",
+   "match": {
+    "env": {
+     "darkHour": false
+    }
+   },
+   "duration": 450,
+   "assets": [
+    "bg.hub",
+    "bg.hub.darkhour"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 120,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#ffffff",
+      "alpha": 0.35
+     }
+    },
+    {
+     "at": 0,
+     "dur": 400,
+     "prim": "bakedSwap",
+     "args": {
+      "from": "bg.hub.darkhour",
+      "to": "bg.hub"
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "darkhour.leave"
+     }
+    }
+   ]
+  },
+  {
+   "id": "highlight.hamuko",
+   "event": "highlight",
+   "match": {
+    "actorId": "hamuko"
+   },
+   "duration": 3460,
+   "hitMarks": [
+    2600
+   ],
+   "create": [
+    {
+     "name": "evk",
+     "asset": "ally.hamuko.evoke",
+     "layer": "ally",
+     "anchor": [
+      0.5,
+      1
+     ]
+    }
+   ],
+   "assets": [
+    "highlight.hamuko",
+    "cutin.hamuko",
+    "ally.hamuko.evoke",
+    "mask.petal",
+    "fx.shard",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c",
+    "fx.sparkle",
+    "fx.streak"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 300,
+     "prim": "dim",
+     "args": {
+      "color": "#2a0b1f",
+      "alpha": 0.55
+     }
+    },
+    {
+     "at": 0,
+     "dur": 420,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "outCubic",
+     "minimal": "skip",
+     "args": {
+      "shape": "mask.petal",
+      "from": {
+       "x": 640,
+       "y": 360,
+       "scale": 7.2,
+       "rotation": 0.35
+      },
+      "to": {
+       "x": 640,
+       "y": 360,
+       "scale": 0.6,
+       "rotation": -0.3
+      },
+      "invert": true,
+      "color": "@color.primary"
+     }
+    },
+    {
+     "at": 120,
+     "dur": 700,
+     "prim": "title",
+     "ease": "outBack",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "text": "label.highlight",
+      "font": "@font.display",
+      "size": 128,
+      "pos": {
+       "x": 640,
+       "y": 160
+      },
+      "rot": 0.21
+     }
+    },
+    {
+     "at": 120,
+     "prim": "sfx",
+     "args": {
+      "id": "theurgy.start"
+     }
+    },
+    {
+     "at": 320,
+     "dur": 520,
+     "prim": "cutin",
+     "layer": "cutin",
+     "ease": "outBack",
+     "minimal": {
+      "dur": 250
+     },
+     "args": {
+      "bandAngle": 0.21,
+      "speedLines": {
+       "layers": 2,
+       "count": 36
+      },
+      "panels": [
+       {
+        "shape": [
+         -1300,
+         -150,
+         1300,
+         -110,
+         1300,
+         150,
+         -1300,
+         110
+        ],
+        "art": "cutin.hamuko",
+        "enterFrom": "right"
+       }
+      ],
+      "nameplate": {
+       "text": "skill.theurgy.hamuko.name",
+       "font": "@font.display"
+      }
+     }
+    },
+    {
+     "at": 860,
+     "prim": "hide",
+     "args": {
+      "target": "$actor"
+     }
+    },
+    {
+     "at": 860,
+     "prim": "show",
+     "args": {
+      "target": "#evk"
+     }
+    },
+    {
+     "at": 860,
+     "dur": 180,
+     "prim": "tween",
+     "ease": "outCubic",
+     "args": {
+      "target": "#evk",
+      "from": {
+       "x": "$actor",
+       "y": "$actor",
+       "alpha": 0,
+       "scale": 0.96
+      },
+      "to": {
+       "x": "$actor",
+       "y": "$actor",
+       "alpha": 1,
+       "scale": 1
+      }
+     }
+    },
+    {
+     "at": 900,
+     "prim": "sfx",
+     "args": {
+      "id": "evoker.raise"
+     }
+    },
+    {
+     "at": 1100,
+     "dur": 520,
+     "prim": "glassShatter",
+     "layer": "ally",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "snapshot": "target",
+      "target": "#evk",
+      "shards": 34,
+      "impact": {
+       "x": "#evk",
+       "y": "#evk",
+       "dx": -40,
+       "dy": -560
+      },
+      "fallMs": 460
+     }
+    },
+    {
+     "at": 1100,
+     "prim": "sfx",
+     "args": {
+      "id": "evoker.shatter"
+     }
+    },
+    {
+     "at": 1100,
+     "prim": "hide",
+     "args": {
+      "target": "#evk"
+     }
+    },
+    {
+     "at": 1120,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 50,
+      "at": {
+       "x": "$actor",
+       "y": "$actor",
+       "dy": -560
+      },
+      "speed": 600,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 500,
+      "size": 1.0,
+      "gravity": 500,
+      "frames": [
+       "fx.shard",
+       "fx.petal.a"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 1620,
+     "prim": "show",
+     "args": {
+      "target": "$actor"
+     }
+    },
+    {
+     "at": 1500,
+     "dur": 1000,
+     "prim": "finishCard",
+     "layer": "allout",
+     "ease": "outCubic",
+     "args": {
+      "artId": "highlight.hamuko",
+      "shape": [
+       -760,
+       -330,
+       700,
+       -400,
+       760,
+       330,
+       -700,
+       400
+      ],
+      "enterFrom": "right",
+      "zoom": 1.04
+     }
+    },
+    {
+     "at": 1700,
+     "dur": 700,
+     "prim": "freezeFrame",
+     "args": {
+      "ms": 700,
+      "keepRendering": true
+     }
+    },
+    {
+     "at": 1500,
+     "dur": 1600,
+     "prim": "radialBurst",
+     "layer": "fx",
+     "args": {
+      "rays": 24,
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ],
+      "spin": 0.8
+     }
+    },
+    {
+     "at": 2400,
+     "prim": "particles",
+     "args": {
+      "count": 120,
+      "at": {
+       "x": 1320,
+       "y": 360
+      },
+      "speed": 1800,
+      "spread": 0.4,
+      "dir": 3.14,
+      "life": 500,
+      "size": 1.0,
+      "gravity": 0,
+      "frames": [
+       "fx.streak",
+       "fx.petal.a"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary"
+      ]
+     }
+    },
+    {
+     "at": 2600,
+     "prim": "hitStop",
+     "args": {
+      "ms": 90
+     }
+    },
+    {
+     "at": 2600,
+     "prim": "shake",
+     "args": {
+      "px": 24
+     }
+    },
+    {
+     "at": 2600,
+     "dur": 160,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#ffffff",
+      "alpha": 0.85
+     }
+    },
+    {
+     "at": 2600,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$targets",
+      "ms": 60
+     }
+    },
+    {
+     "at": 2600,
+     "prim": "squashHit",
+     "args": {
+      "target": "$targets",
+      "squash": 0.22,
+      "push": 30,
+      "recoverMs": 320
+     }
+    },
+    {
+     "at": 2600,
+     "dur": 120,
+     "prim": "rgbSplit",
+     "args": {
+      "offset": 10
+     }
+    },
+    {
+     "at": 2750,
+     "dur": 500,
+     "prim": "shockwave",
+     "args": {
+      "center": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "amp": 60,
+      "wavelength": 220,
+      "speed": 1200,
+      "radius": 700
+     }
+    },
+    {
+     "at": 2600,
+     "prim": "particles",
+     "args": {
+      "count": 300,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1700,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 700,
+      "size": 1.0,
+      "gravity": 260,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 2600,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": true
+     }
+    },
+    {
+     "at": 2600,
+     "prim": "sfx",
+     "args": {
+      "id": "theurgy.hit"
+     }
+    },
+    {
+     "at": 3300,
+     "dur": 160,
+     "prim": "tween",
+     "args": {
+      "target": "#layer.allout",
+      "to": {
+       "alpha": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "highlight.hamuko.short",
+   "event": "highlight",
+   "match": {
+    "actorId": "hamuko"
+   },
+   "duration": 1150,
+   "hitMarks": [
+    620
+   ],
+   "assets": [
+    "highlight.hamuko",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 100,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#ffffff",
+      "alpha": 0.6
+     }
+    },
+    {
+     "at": 0,
+     "dur": 560,
+     "prim": "finishCard",
+     "layer": "allout",
+     "ease": "outCubic",
+     "args": {
+      "artId": "highlight.hamuko",
+      "shape": [
+       -760,
+       -330,
+       700,
+       -400,
+       760,
+       330,
+       -700,
+       400
+      ],
+      "enterFrom": "right",
+      "zoom": 1.02
+     }
+    },
+    {
+     "at": 0,
+     "dur": 420,
+     "prim": "title",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "text": "label.theurgy.short",
+      "font": "@font.display",
+      "size": 96,
+      "pos": {
+       "x": 640,
+       "y": 150
+      },
+      "rot": 0.21
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "theurgy.start"
+     }
+    },
+    {
+     "at": 560,
+     "dur": 120,
+     "prim": "tween",
+     "args": {
+      "target": "#layer.allout",
+      "to": {
+       "alpha": 0
+      }
+     }
+    },
+    {
+     "at": 620,
+     "prim": "hitStop",
+     "args": {
+      "ms": 70
+     }
+    },
+    {
+     "at": 620,
+     "prim": "shake",
+     "args": {
+      "px": 20
+     }
+    },
+    {
+     "at": 620,
+     "prim": "flashSprite",
+     "args": {
+      "target": "$targets",
+      "ms": 50
+     }
+    },
+    {
+     "at": 620,
+     "dur": 90,
+     "prim": "rgbSplit",
+     "args": {
+      "offset": 8
+     }
+    },
+    {
+     "at": 620,
+     "prim": "particles",
+     "args": {
+      "count": 200,
+      "at": {
+       "x": "$target",
+       "y": "$target",
+       "dy": -230
+      },
+      "speed": 1500,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 460,
+      "size": 1.0,
+      "gravity": 260,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 620,
+     "prim": "damageNumber",
+     "args": {
+      "font": "@font.number",
+      "big": true
+     }
+    },
+    {
+     "at": 620,
+     "prim": "sfx",
+     "args": {
+      "id": "theurgy.hit"
+     }
+    }
+   ]
+  },
+  {
+   "id": "holdup",
+   "event": "holdup",
+   "duration": 980,
+   "assets": [
+    "mask.ribbon",
+    "mask.petal",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c",
+    "hud.bow"
+   ],
+   "create": [
+    {
+     "name": "bow",
+     "asset": "hud.bow",
+     "layer": "hud",
+     "anchor": [
+      0.5,
+      0.5
+     ]
+    }
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 260,
+     "prim": "dim",
+     "args": {
+      "color": "#2a0b1f",
+      "alpha": 0.5
+     }
+    },
+    {
+     "at": 0,
+     "dur": 360,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "outCubic",
+     "minimal": {
+      "dur": 250
+     },
+     "args": {
+      "shape": "mask.ribbon",
+      "from": {
+       "x": 1600,
+       "y": 360,
+       "scale": 1.3,
+       "rotation": 0.21
+      },
+      "to": {
+       "x": 640,
+       "y": 360,
+       "scale": 1.3,
+       "rotation": 0.21
+      },
+      "color": "@color.primary"
+     }
+    },
+    {
+     "at": 120,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 120,
+      "at": {
+       "x": "$targets",
+       "y": "$targets",
+       "dy": -200
+      },
+      "speed": 420,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 640,
+      "size": 1.0,
+      "gravity": 0,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 200,
+     "dur": 600,
+     "prim": "title",
+     "ease": "outBack",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "text": "label.holdup",
+      "font": "@font.display",
+      "size": 112,
+      "pos": {
+       "x": 640,
+       "y": 170
+      },
+      "rot": 0.21
+     }
+    },
+    {
+     "at": 260,
+     "prim": "show",
+     "args": {
+      "target": "#bow"
+     }
+    },
+    {
+     "at": 260,
+     "dur": 260,
+     "prim": "tween",
+     "ease": "outElastic",
+     "args": {
+      "target": "#bow",
+      "from": {
+       "x": 640,
+       "y": 500,
+       "scale": 0.2,
+       "alpha": 0
+      },
+      "to": {
+       "x": 640,
+       "y": 500,
+       "scale": 1,
+       "alpha": 1
+      }
+     }
+    },
+    {
+     "at": 420,
+     "dur": 420,
+     "prim": "title",
+     "minimal": "skip",
+     "args": {
+      "text": "label.chance",
+      "font": "@font.display",
+      "size": 54,
+      "pos": {
+       "x": 640,
+       "y": 500
+      },
+      "rot": 0.21
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "holdup"
+     }
+    },
+    {
+     "at": 820,
+     "dur": 150,
+     "prim": "tween",
+     "args": {
+      "target": "#bow",
+      "to": {
+       "alpha": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "onemore",
+   "event": "onemore",
+   "duration": 440,
+   "assets": [
+    "mask.ribbon",
+    "fx.petal.a",
+    "fx.petal.b"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 380,
+     "prim": "banner",
+     "layer": "cutin",
+     "ease": "outBack",
+     "minimal": {
+      "dur": 250
+     },
+     "args": {
+      "text": "label.onemore",
+      "shape": [
+       -700,
+       -70,
+       700,
+       -100,
+       700,
+       70,
+       -700,
+       100
+      ],
+      "enterFrom": "right",
+      "artId": "mask.ribbon"
+     }
+    },
+    {
+     "at": 40,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 40,
+      "at": {
+       "x": 900,
+       "y": 300
+      },
+      "speed": 800,
+      "spread": 1.4,
+      "dir": 3.4,
+      "life": 320,
+      "size": 1.0,
+      "gravity": 200,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "onemore"
+     }
+    }
+   ]
+  },
+  {
+   "id": "talk.start",
+   "event": "talk:start",
+   "duration": 600,
+   "assets": [
+    "mask.ribbon",
+    "fx.petal.a"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 320,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "outBack",
+     "minimal": {
+      "dur": 200
+     },
+     "args": {
+      "shape": "mask.ribbon",
+      "from": {
+       "x": 1500,
+       "y": 200,
+       "scale": 1.2
+      },
+      "to": {
+       "x": 640,
+       "y": 200,
+       "scale": 1.2
+      },
+      "color": "@color.paper"
+     }
+    },
+    {
+     "at": 80,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 30,
+      "at": {
+       "x": 900,
+       "y": 200
+      },
+      "speed": 500,
+      "spread": 1.2,
+      "dir": 3.3,
+      "life": 400,
+      "size": 1.0,
+      "gravity": 200,
+      "frames": [
+       "fx.petal.a"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "talk.start"
+     }
+    }
+   ]
+  },
+  {
+   "id": "transition.battleStart",
+   "event": "battle:start",
+   "duration": 880,
+   "assets": [
+    "mask.petal",
+    "mask.ribbon",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "trans.petal"
+     }
+    },
+    {
+     "at": 0,
+     "dur": 480,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "inOutCubic",
+     "minimal": {
+      "dur": 350
+     },
+     "args": {
+      "shape": "mask.petal",
+      "from": {
+       "x": 640,
+       "y": 360,
+       "scale": 0.04,
+       "rotation": -0.7
+      },
+      "to": {
+       "x": 640,
+       "y": 360,
+       "scale": 7.2,
+       "rotation": 0.35
+      },
+      "color": "@color.primary"
+     }
+    },
+    {
+     "at": 60,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 110,
+      "at": {
+       "x": 640,
+       "y": 360
+      },
+      "speed": 900,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 620,
+      "size": 1.0,
+      "gravity": 120,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 340,
+     "dur": 110,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#ffffff",
+      "alpha": 0.5
+     }
+    },
+    {
+     "at": 380,
+     "dur": 480,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "outCubic",
+     "minimal": "skip",
+     "args": {
+      "shape": "mask.ribbon",
+      "from": {
+       "x": -1500,
+       "y": 360,
+       "scale": 1.6
+      },
+      "to": {
+       "x": 1500,
+       "y": 340,
+       "scale": 1.6
+      },
+      "invert": true,
+      "color": "@color.secondary"
+     }
+    },
+    {
+     "at": 380,
+     "prim": "sfx",
+     "args": {
+      "id": "trans.ribbon"
+     }
+    }
+   ]
+  },
+  {
+   "id": "transition.encounterBattle",
+   "event": "map:encounter",
+   "merges": [
+    "battle:start"
+   ],
+   "duration": 1150,
+   "assets": [
+    "mask.petal",
+    "mask.ribbon",
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.petal.c"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "encounter"
+     }
+    },
+    {
+     "at": 0,
+     "prim": "vibrate",
+     "args": {
+      "ms": 30
+     }
+    },
+    {
+     "at": 0,
+     "dur": 300,
+     "prim": "dim",
+     "args": {
+      "color": "#2a0b1f",
+      "alpha": 0.45
+     }
+    },
+    {
+     "at": 0,
+     "dur": 360,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "outCubic",
+     "minimal": "skip",
+     "args": {
+      "shape": "mask.ribbon",
+      "from": {
+       "x": 1500,
+       "y": 360,
+       "scale": 1.4
+      },
+      "to": {
+       "x": -200,
+       "y": 380,
+       "scale": 1.4
+      },
+      "color": "@color.primary"
+     }
+    },
+    {
+     "at": 300,
+     "dur": 480,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "inOutCubic",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "shape": "mask.petal",
+      "from": {
+       "x": 640,
+       "y": 360,
+       "scale": 0.04,
+       "rotation": -0.7
+      },
+      "to": {
+       "x": 640,
+       "y": 360,
+       "scale": 7.2,
+       "rotation": 0.35
+      },
+      "color": "@color.primary"
+     }
+    },
+    {
+     "at": 360,
+     "prim": "particles",
+     "minimal": "skip",
+     "args": {
+      "count": 110,
+      "at": {
+       "x": 640,
+       "y": 360
+      },
+      "speed": 900,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 620,
+      "size": 1.0,
+      "gravity": 120,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.petal.c"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.secondary"
+      ]
+     }
+    },
+    {
+     "at": 640,
+     "dur": 110,
+     "prim": "flashScreen",
+     "args": {
+      "color": "#ffffff",
+      "alpha": 0.5
+     }
+    },
+    {
+     "at": 670,
+     "dur": 460,
+     "prim": "maskWipe",
+     "layer": "trans",
+     "ease": "outCubic",
+     "minimal": {
+      "dur": 300
+     },
+     "args": {
+      "shape": "mask.ribbon",
+      "from": {
+       "x": -1500,
+       "y": 360,
+       "scale": 1.6
+      },
+      "to": {
+       "x": 1500,
+       "y": 340,
+       "scale": 1.6
+      },
+      "invert": true,
+      "color": "@color.secondary"
+     }
+    }
+   ]
+  },
+  {
+   "id": "unit.down",
+   "event": "unit:down",
+   "duration": 480,
+   "assets": [
+    "fx.petal.a",
+    "fx.petal.b",
+    "fx.shard"
+   ],
+   "tracks": [
+    {
+     "at": 0,
+     "dur": 420,
+     "prim": "portraitDown",
+     "minimal": {
+      "dur": 200
+     },
+     "args": {
+      "unit": "$targets",
+      "style": "shatter"
+     }
+    },
+    {
+     "at": 0,
+     "prim": "particles",
+     "args": {
+      "count": 80,
+      "at": {
+       "x": "$targets",
+       "y": "$targets",
+       "dy": -200
+      },
+      "speed": 700,
+      "spread": 3.1,
+      "dir": 0,
+      "life": 420,
+      "size": 1.0,
+      "gravity": 600,
+      "frames": [
+       "fx.petal.a",
+       "fx.petal.b",
+       "fx.shard"
+      ],
+      "colors": [
+       "#ffffff",
+       "@color.primary",
+       "@color.resist"
+      ]
+     }
+    },
+    {
+     "at": 0,
+     "dur": 420,
+     "prim": "tag",
+     "minimal": "skip",
+     "args": {
+      "kind": "DOWN",
+      "pos": {
+       "x": "$targets",
+       "y": "$targets",
+       "dy": -320
+      }
+     }
+    },
+    {
+     "at": 0,
+     "prim": "sfx",
+     "args": {
+      "id": "down"
+     }
+    }
+   ]
+  }
+ ],
+ "enemyLayouts": {
+  "1": [
+   {
+    "x": 330,
+    "y": 560,
+    "scale": 1.0,
+    "layer": "enemy.0"
+   }
+  ],
+  "2": [
+   {
+    "x": 215,
+    "y": 548,
+    "scale": 0.971,
+    "layer": "enemy.0"
+   },
+   {
+    "x": 445,
+    "y": 566,
+    "scale": 0.824,
+    "layer": "enemy.1"
+   }
+  ],
+  "3": [
+   {
+    "x": 150,
+    "y": 540,
+    "scale": 0.853,
+    "layer": "enemy.1"
+   },
+   {
+    "x": 345,
+    "y": 566,
+    "scale": 0.794,
+    "layer": "enemy.2"
+   },
+   {
+    "x": 535,
+    "y": 530,
+    "scale": 0.735,
+    "layer": "enemy.0"
+   }
+  ],
+  "4": [
+   {
+    "x": 115,
+    "y": 536,
+    "scale": 0.765,
+    "layer": "enemy.1"
+   },
+   {
+    "x": 275,
+    "y": 566,
+    "scale": 0.735,
+    "layer": "enemy.3"
+   },
+   {
+    "x": 430,
+    "y": 530,
+    "scale": 0.706,
+    "layer": "enemy.0"
+   },
+   {
+    "x": 580,
+    "y": 560,
+    "scale": 0.676,
+    "layer": "enemy.2"
+   }
+  ],
+  "5": [
+   {
+    "x": 85,
+    "y": 530,
+    "scale": 0.691,
+    "layer": "enemy.2"
+   },
+   {
+    "x": 200,
+    "y": 566,
+    "scale": 0.662,
+    "layer": "enemy.4"
+   },
+   {
+    "x": 315,
+    "y": 520,
+    "scale": 0.624,
+    "layer": "enemy.1"
+   },
+   {
+    "x": 430,
+    "y": 562,
+    "scale": 0.632,
+    "layer": "enemy.3"
+   },
+   {
+    "x": 545,
+    "y": 515,
+    "scale": 0.588,
+    "layer": "enemy.0"
+   }
+  ]
+ },
+ "roster": {
+  "heroPersona": "orpheus-f",
+  "companions": [
+   "yukari",
+   "junpei",
+   "akihiko",
+   "mitsuru",
+   "aigis",
+   "ken",
+   "koromaru",
+   "shinjiro"
+  ],
+  "companionPersonas": {
+   "yukari": "io",
+   "junpei": "hermes",
+   "akihiko": "polydeuces",
+   "mitsuru": "penthesilea",
+   "aigis": "palladion",
+   "ken": "nemesis",
+   "koromaru": "cerberus",
+   "shinjiro": "castor"
+  },
+  "excludedPersonas": [
+   "ariadne",
+   "ariadne-picaro",
+   "arsene",
+   "asterius",
+   "asterius-picaro",
+   "athena-picaro",
+   "crystal-skull",
+   "emperors-amulet",
+   "hope-diamond",
+   "izanagi",
+   "izanagi-no-okami",
+   "izanagi-no-okami-picaro",
+   "izanagi-picaro",
+   "kaguya",
+   "kaguya-picaro",
+   "koh-i-noor",
+   "magatsu-izanagi",
+   "magatsu-izanagi-picaro",
+   "messiah-picaro",
+   "orichalcum",
+   "orlov",
+   "orpheus",
+   "orpheus-f-picaro",
+   "orpheus-picaro",
+   "queens-necklace",
+   "raoul",
+   "regent",
+   "satanael",
+   "stone-of-scone",
+   "thanatos-picaro",
+   "tsukiyomi-picaro"
+  ],
+  "hero": "hamuko",
+  "navigator": "fuuka",
+  "navigatorPersona": "lucia",
+  "partyDefault": [
+   "yukari",
+   "junpei",
+   "akihiko"
+  ],
+  "members": {
+   "hamuko": {
+    "name": "哈姆子",
+    "persona": "orpheus-f",
+    "personaName": "俄耳甫斯",
+    "personaAwakened": "messiah",
+    "portrait": "ally.hamuko.head",
+    "body": "ally.hamuko.body",
+    "role": "hero"
+   },
+   "yukari": {
+    "name": "岳羽 由加莉",
+    "persona": "io",
+    "personaName": "伊奥",
+    "personaAwakened": "isis",
+    "portrait": "ally.yukari.head",
+    "body": "ally.yukari.body",
+    "role": "companion"
+   },
+   "junpei": {
+    "name": "伊织 顺平",
+    "persona": "hermes",
+    "personaName": "赫尔墨斯",
+    "personaAwakened": "trismegistus",
+    "portrait": "ally.junpei.head",
+    "body": "ally.junpei.body",
+    "role": "companion"
+   },
+   "akihiko": {
+    "name": "真田 明彦",
+    "persona": "polydeuces",
+    "personaName": "波吕丢刻斯",
+    "personaAwakened": "caesar",
+    "portrait": "ally.akihiko.head",
+    "body": "ally.akihiko.body",
+    "role": "companion"
+   },
+   "mitsuru": {
+    "name": "桐条 美鹤",
+    "persona": "penthesilea",
+    "personaName": "彭忒西勒亚",
+    "personaAwakened": "artemisia",
+    "portrait": "placeholder.head.mitsuru",
+    "body": null,
+    "role": "companion"
+   },
+   "aigis": {
+    "name": "埃癸斯",
+    "persona": "palladion",
+    "personaName": "帕拉狄昂",
+    "personaAwakened": "athena",
+    "portrait": "placeholder.head.aigis",
+    "body": null,
+    "role": "companion"
+   },
+   "ken": {
+    "name": "天田 乾",
+    "persona": "nemesis",
+    "personaName": "涅墨西斯",
+    "personaAwakened": "kala-nemi",
+    "portrait": "placeholder.head.ken",
+    "body": null,
+    "role": "companion"
+   },
+   "koromaru": {
+    "name": "虎狼丸",
+    "persona": "cerberus",
+    "personaName": "刻耳柏洛斯",
+    "personaAwakened": null,
+    "portrait": "placeholder.head.koromaru",
+    "body": null,
+    "role": "companion"
+   },
+   "shinjiro": {
+    "name": "荒垣 真次郎",
+    "persona": "castor",
+    "personaName": "卡斯托耳",
+    "personaAwakened": null,
+    "portrait": "placeholder.head.shinjiro",
+    "body": null,
+    "role": "companion"
+   },
+   "fuuka": {
+    "name": "山岸 风花",
+    "persona": "lucia",
+    "personaName": "卢基娅",
+    "personaAwakened": "juno",
+    "portrait": "placeholder.head.fuuka",
+    "body": null,
+    "role": "navigator"
+   }
+  },
+  "showtime": []
+ },
+ "compendiumArt": {},
+ "audio": {
+  "dir": "audio",
+  "playlist": "audio/playlist.json",
+  "sfx": "audio/sfx.json",
+  "voice": "audio/voice.json",
+  "present": "audio/present.json（构建生成，未提交）"
+ },
+ "css": "ui.css",
+ "budget": {
+  "firstPackImageBytes": 505464,
+  "fontBytes": 18404,
+  "uiCssGzipBytes": 1556,
+  "packJsonGzipBytes": 10775,
+  "firstPackTotalBytes": 536199,
+  "limitBytes": 1048576
+ },
+ "todo": [
+  "头像缺失 → 占位 placeholder.head.mitsuru（桐条 美鹤）",
+  "立绘/身体层缺失：mitsuru（桐条 美鹤）— 引擎用通用剪影兜底",
+  "头像缺失 → 占位 placeholder.head.aigis（埃癸斯）",
+  "立绘/身体层缺失：aigis（埃癸斯）— 引擎用通用剪影兜底",
+  "头像缺失 → 占位 placeholder.head.ken（天田 乾）",
+  "立绘/身体层缺失：ken（天田 乾）— 引擎用通用剪影兜底",
+  "头像缺失 → 占位 placeholder.head.koromaru（虎狼丸）",
+  "立绘/身体层缺失：koromaru（虎狼丸）— 引擎用通用剪影兜底",
+  "头像缺失 → 占位 placeholder.head.shinjiro（荒垣 真次郎）",
+  "立绘/身体层缺失：shinjiro（荒垣 真次郎）— 引擎用通用剪影兜底",
+  "头像缺失 → 占位 placeholder.head.fuuka（山岸 风花）",
+  "roster.showtime（双人合击表）未填：P3 系 / P4 无 SHOWTIME 素材，highlight duo 走引擎「A × B」兜底",
+  "compendiumArt 缺本作面具图（App 用共享图兜底）：orpheus-f, io, hermes, polydeuces, penthesilea, palladion, nemesis, cerberus, castor, lucia",
+  "compendiumArt 仅覆盖队伍/已有面具；公共恶魔（Pixie 等）的本作图鉴图未做，App 用共享 P5R 图兜底",
+  "音频：playlist 由 AUDIO-MAP §2 自动生成（条件/循环点待人工校），sfx 沿用红色 se 表，voice 仅占位路径；音频文件未入库",
+  "enemyLayouts[1..5] 借用红色样板实测坐标（换算 scale=h/340），待本皮实机截图微调"
+ ]
+}

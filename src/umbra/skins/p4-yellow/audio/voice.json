@@ -1,0 +1,273 @@
+{
+ "skin": "p4-yellow",
+ "version": 1,
+ "note": "AUDIO-MAP-v1 §4.1；voice/<unitId>/<key>_<nn>.opus；文件未入库（缺文件静默）。TODO",
+ "voice": {
+  "hero": {
+   "skill": [
+    "voice/hero/skill_01.opus"
+   ],
+   "attack": [
+    "voice/hero/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/hero/hurt_01.opus"
+   ],
+   "down": [
+    "voice/hero/down_01.opus"
+   ],
+   "onemore": [
+    "voice/hero/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/hero/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/hero/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/hero/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/hero/allout_01.opus"
+   ],
+   "finish": [
+    "voice/hero/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/hero/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/hero/victory_01.opus"
+   ]
+  },
+  "yosuke": {
+   "skill": [
+    "voice/yosuke/skill_01.opus"
+   ],
+   "attack": [
+    "voice/yosuke/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/yosuke/hurt_01.opus"
+   ],
+   "down": [
+    "voice/yosuke/down_01.opus"
+   ],
+   "onemore": [
+    "voice/yosuke/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/yosuke/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/yosuke/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/yosuke/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/yosuke/allout_01.opus"
+   ],
+   "finish": [
+    "voice/yosuke/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/yosuke/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/yosuke/victory_01.opus"
+   ]
+  },
+  "chie": {
+   "skill": [
+    "voice/chie/skill_01.opus"
+   ],
+   "attack": [
+    "voice/chie/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/chie/hurt_01.opus"
+   ],
+   "down": [
+    "voice/chie/down_01.opus"
+   ],
+   "onemore": [
+    "voice/chie/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/chie/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/chie/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/chie/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/chie/allout_01.opus"
+   ],
+   "finish": [
+    "voice/chie/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/chie/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/chie/victory_01.opus"
+   ]
+  },
+  "yukiko": {
+   "skill": [
+    "voice/yukiko/skill_01.opus"
+   ],
+   "attack": [
+    "voice/yukiko/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/yukiko/hurt_01.opus"
+   ],
+   "down": [
+    "voice/yukiko/down_01.opus"
+   ],
+   "onemore": [
+    "voice/yukiko/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/yukiko/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/yukiko/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/yukiko/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/yukiko/allout_01.opus"
+   ],
+   "finish": [
+    "voice/yukiko/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/yukiko/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/yukiko/victory_01.opus"
+   ]
+  },
+  "kanji": {
+   "skill": [
+    "voice/kanji/skill_01.opus"
+   ],
+   "attack": [
+    "voice/kanji/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/kanji/hurt_01.opus"
+   ],
+   "down": [
+    "voice/kanji/down_01.opus"
+   ],
+   "onemore": [
+    "voice/kanji/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/kanji/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/kanji/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/kanji/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/kanji/allout_01.opus"
+   ],
+   "finish": [
+    "voice/kanji/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/kanji/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/kanji/victory_01.opus"
+   ]
+  },
+  "teddie": {
+   "skill": [
+    "voice/teddie/skill_01.opus"
+   ],
+   "attack": [
+    "voice/teddie/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/teddie/hurt_01.opus"
+   ],
+   "down": [
+    "voice/teddie/down_01.opus"
+   ],
+   "onemore": [
+    "voice/teddie/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/teddie/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/teddie/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/teddie/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/teddie/allout_01.opus"
+   ],
+   "finish": [
+    "voice/teddie/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/teddie/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/teddie/victory_01.opus"
+   ]
+  },
+  "naoto": {
+   "skill": [
+    "voice/naoto/skill_01.opus"
+   ],
+   "attack": [
+    "voice/naoto/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/naoto/hurt_01.opus"
+   ],
+   "down": [
+    "voice/naoto/down_01.opus"
+   ],
+   "onemore": [
+    "voice/naoto/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/naoto/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/naoto/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/naoto/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/naoto/allout_01.opus"
+   ],
+   "finish": [
+    "voice/naoto/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/naoto/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/naoto/victory_01.opus"
+   ]
+  }
+ }
+}

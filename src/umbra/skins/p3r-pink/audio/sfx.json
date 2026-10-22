@@ -1,0 +1,343 @@
+{
+ "skin": "p3r-pink",
+ "version": 1,
+ "note": "SE 四皮同表（AUDIO-MAP-v1 §3），结构沿用红色样板；文件未入库，缺文件静默。TODO",
+ "alias": {
+  "swing": "se.attack.slash",
+  "hit": "se.hit.phys",
+  "hit.heavy": "se.hit.phys",
+  "gun": "se.gun",
+  "fire": "se.hit.fire",
+  "ice": "se.hit.ice",
+  "elec": "se.hit.elec",
+  "wind": "se.hit.wind",
+  "psy": "se.hit.psy",
+  "nuke": "se.hit.nuke",
+  "bless": "se.hit.bless",
+  "curse": "se.hit.curse",
+  "heal": "se.hit.heal",
+  "buff": "se.hit.buff",
+  "debuff": "se.hit.debuff",
+  "cutin": "se.weak",
+  "onemore": "se.onemore",
+  "down": "se.down",
+  "baton": "se.baton",
+  "holdup": "se.holdup",
+  "allout.start": "se.allout",
+  "allout.finish": "se.rank.stamp",
+  "showtime": "se.highlight.duo",
+  "persona": "se.summon",
+  "guard": "se.guard",
+  "turn": "se.turn",
+  "victory": "se.result",
+  "levelup": "se.levelup",
+  "talk": "se.talk",
+  "battle.start": "se.battle.start",
+  "enemy.charge": "se.intent",
+  "maskrip": "se.battle.start",
+  "enemy.skill": "se.intent"
+ },
+ "se": {
+  "se.allout": {
+   "files": [
+    "se/se.allout.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.attack.slash": {
+   "files": [
+    "se/se.attack.slash.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.baton": {
+   "files": [
+    "se/se.baton.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.battle.start": {
+   "files": [
+    "se/se.battle.start.opus"
+   ],
+   "gainDb": 0,
+   "basis": "borrowed"
+  },
+  "se.crit": {
+   "files": [
+    "se/se.crit.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.down": {
+   "files": [
+    "se/se.down.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.guard": {
+   "files": [
+    "se/se.guard.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.gun": {
+   "files": [
+    "se/se.gun.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.highlight.duo": {
+   "files": [
+    "se/se.highlight.duo.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.bless": {
+   "files": [
+    "se/se.hit.bless.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.buff": {
+   "files": [
+    "se/se.hit.buff.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.curse": {
+   "files": [
+    "se/se.hit.curse.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.debuff": {
+   "files": [
+    "se/se.hit.debuff.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.elec": {
+   "files": [
+    "se/se.hit.elec.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.fire": {
+   "files": [
+    "se/se.hit.fire.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.heal": {
+   "files": [
+    "se/se.hit.heal.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.ice": {
+   "files": [
+    "se/se.hit.ice.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.nuke": {
+   "files": [
+    "se/se.hit.nuke.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.phys": {
+   "files": [
+    "se/se.hit.phys.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.psy": {
+   "files": [
+    "se/se.hit.psy.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.hit.wind": {
+   "files": [
+    "se/se.hit.wind.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.holdup": {
+   "files": [
+    "se/se.holdup.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.intent": {
+   "files": [
+    "se/se.intent.opus"
+   ],
+   "gainDb": 0,
+   "basis": "borrowed"
+  },
+  "se.ko": {
+   "files": [
+    "se/se.ko.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.levelup": {
+   "files": [
+    "se/se.levelup.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.miss": {
+   "files": [
+    "se/se.miss.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.navi.scan": {
+   "files": [
+    "se/se.navi.scan.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.null": {
+   "files": [
+    "se/se.null.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.onemore": {
+   "files": [
+    "se/se.onemore.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.party.switch": {
+   "files": [
+    "se/se.party.switch.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.rank.stamp": {
+   "files": [
+    "se/se.rank.stamp.opus"
+   ],
+   "gainDb": 0,
+   "basis": "borrowed"
+  },
+  "se.repel": {
+   "files": [
+    "se/se.repel.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.resist": {
+   "files": [
+    "se/se.resist.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.result": {
+   "files": [
+    "se/se.result.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.summon": {
+   "files": [
+    "se/se.summon.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.talk": {
+   "files": [
+    "se/se.talk.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.talk.fail": {
+   "files": [
+    "se/se.talk.fail.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.talk.success": {
+   "files": [
+    "se/se.talk.success.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.turn": {
+   "files": [
+    "se/se.turn.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.ui.cancel": {
+   "files": [
+    "se/se.ui.cancel.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.ui.confirm": {
+   "files": [
+    "se/se.ui.confirm.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.ui.cursor": {
+   "files": [
+    "se/se.ui.cursor.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  },
+  "se.weak": {
+   "files": [
+    "se/se.weak.opus"
+   ],
+   "gainDb": 0,
+   "basis": "original"
+  }
+ }
+}

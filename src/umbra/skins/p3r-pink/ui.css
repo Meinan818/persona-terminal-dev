@@ -1,0 +1,72 @@
+/* p3r-pink · 交涉模板 + DOM 过渡。只在 .umbra-skin-p3r-pink 下；动效只用 transform/opacity（ui:open/close 单面板可加 clip-path ≤280ms，v1.2-1）。不引外部样式表、不引外链图。 */
+.umbra-skin-p3r-pink {
+  --pk-rose: #e64a84; --pk-rose-deep: #b8336c; --pk-ink: #3b1531; --pk-paper: #fffdfc;
+  --pk-sakura: #fbe2ec; --pk-amber: #ffb36b; --pk-berry: #2a0b1f;
+}
+.umbra-skin-p3r-pink .pk-talk {
+  position: absolute; left: var(--umbra-safe-x); top: var(--umbra-safe-y);
+  width: var(--umbra-safe-w); height: var(--umbra-safe-h);
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC', sans-serif; color: var(--pk-ink);
+  pointer-events: none;
+}
+.umbra-skin-p3r-pink .pk-talk__ribbon {
+  position: absolute; left: -4%; right: -4%; top: 6%; height: 20%;
+  background: linear-gradient(90deg, var(--pk-paper) 0 60%, var(--pk-sakura) 60% 100%);
+  clip-path: polygon(0 18%, 100% 0, 100% 72%, 0 100%);
+}
+.umbra-skin-p3r-pink .pk-talk__head {
+  position: absolute; left: 4%; top: 8%; display: flex; gap: 1.2em; align-items: baseline;
+  transform: rotate(-3deg); transform-origin: left center;
+}
+.umbra-skin-p3r-pink .pk-talk__name { font: italic 800 2.1em/1 PinkP3RDisplay, system-ui, sans-serif; color: var(--pk-rose-deep); }
+.umbra-skin-p3r-pink .pk-talk__odds { font: 800 1.4em/1 PinkP3RNumber, system-ui, sans-serif; color: var(--pk-rose); }
+.umbra-skin-p3r-pink .pk-talk__portrait {
+  position: absolute; right: 2%; top: 4%; height: 70%; width: auto; opacity: .96;
+  clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
+}
+.umbra-skin-p3r-pink .pk-talk__bubble {
+  position: absolute; left: 4%; top: 30%; width: 54%; padding: 1em 1.4em;
+  background: var(--pk-paper); border-left: 6px solid var(--pk-rose);
+  clip-path: polygon(0 0, 100% 0, 97% 100%, 0 100%);
+}
+.umbra-skin-p3r-pink .pk-talk__line { margin: 0; font-size: 1.15em; line-height: 1.5; }
+.umbra-skin-p3r-pink .pk-talk__choices {
+  position: absolute; left: 6%; top: 52%; width: 50%; margin: 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.umbra-skin-p3r-pink .pk-talk__item:nth-child(2) { transform: translateX(-18px); }
+.umbra-skin-p3r-pink .pk-talk__item:nth-child(3) { transform: translateX(-36px); }
+.umbra-skin-p3r-pink .pk-talk__item:nth-child(4) { transform: translateX(-54px); }
+.umbra-skin-p3r-pink .pk-talk__choice {
+  pointer-events: auto; display: flex; align-items: center; gap: .8em; width: 100%;
+  min-height: calc(86px * var(--umbra-scale, 1)); min-width: calc(86px * var(--umbra-scale, 1));
+  padding: 0 1.2em; border: 0; color: var(--pk-ink); background: var(--pk-paper);
+  font-family: inherit; font-weight: 700; font-size: 1.05em; line-height: 1.2; text-align: left;
+  clip-path: polygon(3% 0, 100% 0, 97% 100%, 0 100%);
+  transition: transform 120ms, opacity 120ms;
+}
+.umbra-skin-p3r-pink .pk-talk__choice:focus-visible,
+.umbra-skin-p3r-pink .pk-talk__choice:hover { background: var(--pk-rose); color: var(--pk-paper); transform: translateX(10px); }
+.umbra-skin-p3r-pink .pk-talk__choice:active { transform: translateX(10px) scale(.96); }
+.umbra-skin-p3r-pink .pk-talk__petal {
+  flex: none; width: .9em; height: 1.1em; background: var(--pk-rose);
+  clip-path: polygon(50% 100%, 0 45%, 18% 0, 50% 18%, 82% 0, 100% 45%);
+}
+.umbra-skin-p3r-pink .pk-talk__free {
+  position: absolute; left: 6%; bottom: 4%; width: 50%; display: flex; gap: 8px;
+}
+.umbra-skin-p3r-pink .pk-talk__input {
+  pointer-events: auto; flex: 1; min-height: calc(86px * var(--umbra-scale, 1)); padding: 0 1em;
+  border: 2px solid var(--pk-rose); background: var(--pk-paper); color: var(--pk-ink); font: inherit;
+}
+.umbra-skin-p3r-pink .pk-talk__send {
+  pointer-events: auto; flex: none; width: calc(96px * var(--umbra-scale, 1)); min-height: calc(96px * var(--umbra-scale, 1));
+  border: 0; background: var(--pk-rose); color: var(--pk-paper); font-family: inherit; font-weight: 800; font-size: 1.4em; line-height: 1;
+  clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
+}
+.umbra-skin-p3r-pink .pk-talk__status { position: absolute; left: 6%; top: 47%; font-size: .9em; color: var(--pk-rose-deep); }
+/* ui:open / ui:close：花瓣式轻快斜切展开（单面板、≤200ms） */
+.umbra-skin-p3r-pink [data-ui-state="opening"] { animation: pk-open 200ms cubic-bezier(.34,1.56,.64,1) both; }
+.umbra-skin-p3r-pink [data-ui-state="closing"] { animation: pk-close 160ms cubic-bezier(.32,0,.67,0) both; }
+@keyframes pk-open { from { opacity: 0; transform: translateX(24px) skewX(-6deg); clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); } to { opacity: 1; transform: none; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); } }
+@keyframes pk-close { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-16px); } }

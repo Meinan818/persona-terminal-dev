@@ -1,0 +1,164 @@
+{
+ "skin": "p5r-red",
+ "version": 1,
+ "defaults": {
+  "crossfadeMs": 800,
+  "victoryCrossfadeMs": 300,
+  "noRepeat": true
+ },
+ "note": "AUDIO-MAP-v1 §2.1 战斗相关子集（R24–R39）；loopStart/loopEnd 0/0 = 待标",
+ "entries": [
+  {
+   "id": "red.battle.normal",
+   "scene": "battle.normal",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/battle.normal__last-surprise.opus",
+     "title": "Last Surprise",
+     "source": "P5 OST 1-17",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "red.battle.ambush",
+   "scene": "battle.ambush",
+   "condition": {
+    "encounter": "ambush"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.ambush__take-over.opus",
+     "title": "Take Over",
+     "source": "P5R OST 1-03",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "red.battle.callingcard",
+   "scene": "battle.normal",
+   "condition": {
+    "callingCard": true
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.normal__life-will-change-inst.opus",
+     "title": "Life Will Change -instrumental version-",
+     "source": "P5 OST 1-24",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "red.battle.elite",
+   "scene": "battle.elite",
+   "condition": {
+    "tier": "elite"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.elite__keeper-of-lust.opus",
+     "title": "Keeper of Lust",
+     "source": "P5 OST 2-18",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "red.holdup",
+   "scene": "holdup",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/holdup__talk.opus",
+     "title": "Talk",
+     "source": "P5 OST 1-18",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "red.highlight",
+   "scene": "highlight",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/highlight__awakening.opus",
+     "title": "Awakening",
+     "source": "P5 OST 1-13",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": false,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "red.victory",
+   "scene": "victory",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/victory__triumph.opus",
+     "title": "Triumph",
+     "source": "P5 OST 1-19",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": false,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "red.boss.p1",
+   "scene": "boss.p1",
+   "condition": {
+    "tier": "boss"
+   },
+   "tracks": [
+    {
+     "file": "bgm/boss.p1__blooming-villain.opus",
+     "title": "Blooming Villain",
+     "source": "P5 OST 1-26",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  }
+ ]
+}

@@ -1,0 +1,349 @@
+{
+ "skin": "p3r-pink",
+ "version": 1,
+ "note": "AUDIO-MAP-v1 §4.1；voice/<unitId>/<key>_<nn>.opus；文件未入库（缺文件静默）。TODO",
+ "voice": {
+  "hamuko": {
+   "skill": [
+    "voice/hamuko/skill_01.opus"
+   ],
+   "attack": [
+    "voice/hamuko/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/hamuko/hurt_01.opus"
+   ],
+   "down": [
+    "voice/hamuko/down_01.opus"
+   ],
+   "onemore": [
+    "voice/hamuko/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/hamuko/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/hamuko/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/hamuko/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/hamuko/allout_01.opus"
+   ],
+   "finish": [
+    "voice/hamuko/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/hamuko/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/hamuko/victory_01.opus"
+   ]
+  },
+  "yukari": {
+   "skill": [
+    "voice/yukari/skill_01.opus"
+   ],
+   "attack": [
+    "voice/yukari/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/yukari/hurt_01.opus"
+   ],
+   "down": [
+    "voice/yukari/down_01.opus"
+   ],
+   "onemore": [
+    "voice/yukari/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/yukari/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/yukari/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/yukari/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/yukari/allout_01.opus"
+   ],
+   "finish": [
+    "voice/yukari/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/yukari/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/yukari/victory_01.opus"
+   ]
+  },
+  "junpei": {
+   "skill": [
+    "voice/junpei/skill_01.opus"
+   ],
+   "attack": [
+    "voice/junpei/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/junpei/hurt_01.opus"
+   ],
+   "down": [
+    "voice/junpei/down_01.opus"
+   ],
+   "onemore": [
+    "voice/junpei/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/junpei/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/junpei/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/junpei/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/junpei/allout_01.opus"
+   ],
+   "finish": [
+    "voice/junpei/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/junpei/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/junpei/victory_01.opus"
+   ]
+  },
+  "akihiko": {
+   "skill": [
+    "voice/akihiko/skill_01.opus"
+   ],
+   "attack": [
+    "voice/akihiko/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/akihiko/hurt_01.opus"
+   ],
+   "down": [
+    "voice/akihiko/down_01.opus"
+   ],
+   "onemore": [
+    "voice/akihiko/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/akihiko/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/akihiko/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/akihiko/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/akihiko/allout_01.opus"
+   ],
+   "finish": [
+    "voice/akihiko/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/akihiko/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/akihiko/victory_01.opus"
+   ]
+  },
+  "mitsuru": {
+   "skill": [
+    "voice/mitsuru/skill_01.opus"
+   ],
+   "attack": [
+    "voice/mitsuru/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/mitsuru/hurt_01.opus"
+   ],
+   "down": [
+    "voice/mitsuru/down_01.opus"
+   ],
+   "onemore": [
+    "voice/mitsuru/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/mitsuru/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/mitsuru/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/mitsuru/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/mitsuru/allout_01.opus"
+   ],
+   "finish": [
+    "voice/mitsuru/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/mitsuru/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/mitsuru/victory_01.opus"
+   ]
+  },
+  "aigis": {
+   "skill": [
+    "voice/aigis/skill_01.opus"
+   ],
+   "attack": [
+    "voice/aigis/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/aigis/hurt_01.opus"
+   ],
+   "down": [
+    "voice/aigis/down_01.opus"
+   ],
+   "onemore": [
+    "voice/aigis/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/aigis/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/aigis/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/aigis/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/aigis/allout_01.opus"
+   ],
+   "finish": [
+    "voice/aigis/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/aigis/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/aigis/victory_01.opus"
+   ]
+  },
+  "ken": {
+   "skill": [
+    "voice/ken/skill_01.opus"
+   ],
+   "attack": [
+    "voice/ken/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/ken/hurt_01.opus"
+   ],
+   "down": [
+    "voice/ken/down_01.opus"
+   ],
+   "onemore": [
+    "voice/ken/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/ken/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/ken/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/ken/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/ken/allout_01.opus"
+   ],
+   "finish": [
+    "voice/ken/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/ken/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/ken/victory_01.opus"
+   ]
+  },
+  "koromaru": {
+   "skill": [
+    "voice/koromaru/skill_01.opus"
+   ],
+   "attack": [
+    "voice/koromaru/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/koromaru/hurt_01.opus"
+   ],
+   "down": [
+    "voice/koromaru/down_01.opus"
+   ],
+   "onemore": [
+    "voice/koromaru/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/koromaru/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/koromaru/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/koromaru/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/koromaru/allout_01.opus"
+   ],
+   "finish": [
+    "voice/koromaru/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/koromaru/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/koromaru/victory_01.opus"
+   ]
+  },
+  "shinjiro": {
+   "skill": [
+    "voice/shinjiro/skill_01.opus"
+   ],
+   "attack": [
+    "voice/shinjiro/attack_01.opus"
+   ],
+   "hurt": [
+    "voice/shinjiro/hurt_01.opus"
+   ],
+   "down": [
+    "voice/shinjiro/down_01.opus"
+   ],
+   "onemore": [
+    "voice/shinjiro/onemore_01.opus"
+   ],
+   "baton.give": [
+    "voice/shinjiro/baton.give_01.opus"
+   ],
+   "baton.take": [
+    "voice/shinjiro/baton.take_01.opus"
+   ],
+   "holdup": [
+    "voice/shinjiro/holdup_01.opus"
+   ],
+   "allout": [
+    "voice/shinjiro/allout_01.opus"
+   ],
+   "finish": [
+    "voice/shinjiro/finish_01.opus"
+   ],
+   "highlight": [
+    "voice/shinjiro/highlight_01.opus"
+   ],
+   "victory": [
+    "voice/shinjiro/victory_01.opus"
+   ]
+  }
+ }
+}

@@ -1,0 +1,457 @@
+{
+ "skin": "p5r-red",
+ "version": 1,
+ "note": "AUDIO-MAP-v1 §4.1；voice/<unitId>/<key>_<nn>.opus",
+ "voice": {
+  "joker": {
+   "skill": [
+    "voice/joker/skill_01.opus",
+    "voice/joker/skill_02.opus"
+   ],
+   "attack": [
+    "voice/joker/attack_01.opus",
+    "voice/joker/attack_02.opus"
+   ],
+   "hurt": [
+    "voice/joker/hurt_01.opus",
+    "voice/joker/hurt_02.opus"
+   ],
+   "down": [
+    "voice/joker/down_01.opus",
+    "voice/joker/down_02.opus"
+   ],
+   "onemore": [
+    "voice/joker/onemore_01.opus",
+    "voice/joker/onemore_02.opus"
+   ],
+   "baton.give": [
+    "voice/joker/baton.give_01.opus",
+    "voice/joker/baton.give_02.opus"
+   ],
+   "baton.take": [
+    "voice/joker/baton.take_01.opus",
+    "voice/joker/baton.take_02.opus"
+   ],
+   "holdup": [
+    "voice/joker/holdup_01.opus",
+    "voice/joker/holdup_02.opus"
+   ],
+   "allout": [
+    "voice/joker/allout_01.opus",
+    "voice/joker/allout_02.opus"
+   ],
+   "finish": [
+    "voice/joker/finish_01.opus",
+    "voice/joker/finish_02.opus"
+   ],
+   "highlight": [
+    "voice/joker/highlight_01.opus",
+    "voice/joker/highlight_02.opus"
+   ],
+   "victory": [
+    "voice/joker/victory_01.opus",
+    "voice/joker/victory_02.opus"
+   ]
+  },
+  "skull": {
+   "skill": [
+    "voice/skull/skill_01.opus",
+    "voice/skull/skill_02.opus"
+   ],
+   "attack": [
+    "voice/skull/attack_01.opus",
+    "voice/skull/attack_02.opus"
+   ],
+   "hurt": [
+    "voice/skull/hurt_01.opus",
+    "voice/skull/hurt_02.opus"
+   ],
+   "down": [
+    "voice/skull/down_01.opus",
+    "voice/skull/down_02.opus"
+   ],
+   "onemore": [
+    "voice/skull/onemore_01.opus",
+    "voice/skull/onemore_02.opus"
+   ],
+   "baton.give": [
+    "voice/skull/baton.give_01.opus",
+    "voice/skull/baton.give_02.opus"
+   ],
+   "baton.take": [
+    "voice/skull/baton.take_01.opus",
+    "voice/skull/baton.take_02.opus"
+   ],
+   "holdup": [
+    "voice/skull/holdup_01.opus",
+    "voice/skull/holdup_02.opus"
+   ],
+   "allout": [
+    "voice/skull/allout_01.opus",
+    "voice/skull/allout_02.opus"
+   ],
+   "finish": [
+    "voice/skull/finish_01.opus",
+    "voice/skull/finish_02.opus"
+   ],
+   "highlight": [
+    "voice/skull/highlight_01.opus",
+    "voice/skull/highlight_02.opus"
+   ],
+   "victory": [
+    "voice/skull/victory_01.opus",
+    "voice/skull/victory_02.opus"
+   ]
+  },
+  "mona": {
+   "skill": [
+    "voice/mona/skill_01.opus",
+    "voice/mona/skill_02.opus"
+   ],
+   "attack": [
+    "voice/mona/attack_01.opus",
+    "voice/mona/attack_02.opus"
+   ],
+   "hurt": [
+    "voice/mona/hurt_01.opus",
+    "voice/mona/hurt_02.opus"
+   ],
+   "down": [
+    "voice/mona/down_01.opus",
+    "voice/mona/down_02.opus"
+   ],
+   "onemore": [
+    "voice/mona/onemore_01.opus",
+    "voice/mona/onemore_02.opus"
+   ],
+   "baton.give": [
+    "voice/mona/baton.give_01.opus",
+    "voice/mona/baton.give_02.opus"
+   ],
+   "baton.take": [
+    "voice/mona/baton.take_01.opus",
+    "voice/mona/baton.take_02.opus"
+   ],
+   "holdup": [
+    "voice/mona/holdup_01.opus",
+    "voice/mona/holdup_02.opus"
+   ],
+   "allout": [
+    "voice/mona/allout_01.opus",
+    "voice/mona/allout_02.opus"
+   ],
+   "finish": [
+    "voice/mona/finish_01.opus",
+    "voice/mona/finish_02.opus"
+   ],
+   "highlight": [
+    "voice/mona/highlight_01.opus",
+    "voice/mona/highlight_02.opus"
+   ],
+   "victory": [
+    "voice/mona/victory_01.opus",
+    "voice/mona/victory_02.opus"
+   ]
+  },
+  "panther": {
+   "skill": [
+    "voice/panther/skill_01.opus",
+    "voice/panther/skill_02.opus"
+   ],
+   "attack": [
+    "voice/panther/attack_01.opus",
+    "voice/panther/attack_02.opus"
+   ],
+   "hurt": [
+    "voice/panther/hurt_01.opus",
+    "voice/panther/hurt_02.opus"
+   ],
+   "down": [
+    "voice/panther/down_01.opus",
+    "voice/panther/down_02.opus"
+   ],
+   "onemore": [
+    "voice/panther/onemore_01.opus",
+    "voice/panther/onemore_02.opus"
+   ],
+   "baton.give": [
+    "voice/panther/baton.give_01.opus",
+    "voice/panther/baton.give_02.opus"
+   ],
+   "baton.take": [
+    "voice/panther/baton.take_01.opus",
+    "voice/panther/baton.take_02.opus"
+   ],
+   "holdup": [
+    "voice/panther/holdup_01.opus",
+    "voice/panther/holdup_02.opus"
+   ],
+   "allout": [
+    "voice/panther/allout_01.opus",
+    "voice/panther/allout_02.opus"
+   ],
+   "finish": [
+    "voice/panther/finish_01.opus",
+    "voice/panther/finish_02.opus"
+   ],
+   "highlight": [
+    "voice/panther/highlight_01.opus",
+    "voice/panther/highlight_02.opus"
+   ],
+   "victory": [
+    "voice/panther/victory_01.opus",
+    "voice/panther/victory_02.opus"
+   ]
+  },
+  "fox": {
+   "skill": [
+    "voice/fox/skill_01.opus",
+    "voice/fox/skill_02.opus"
+   ],
+   "attack": [
+    "voice/fox/attack_01.opus",
+    "voice/fox/attack_02.opus"
+   ],
+   "hurt": [
+    "voice/fox/hurt_01.opus",
+    "voice/fox/hurt_02.opus"
+   ],
+   "down": [
+    "voice/fox/down_01.opus",
+    "voice/fox/down_02.opus"
+   ],
+   "onemore": [
+    "voice/fox/onemore_01.opus",
+    "voice/fox/onemore_02.opus"
+   ],
+   "baton.give": [
+    "voice/fox/baton.give_01.opus",
+    "voice/fox/baton.give_02.opus"
+   ],
+   "baton.take": [
+    "voice/fox/baton.take_01.opus",
+    "voice/fox/baton.take_02.opus"
+   ],
+   "holdup": [
+    "voice/fox/holdup_01.opus",
+    "voice/fox/holdup_02.opus"
+   ],
+   "allout": [
+    "voice/fox/allout_01.opus",
+    "voice/fox/allout_02.opus"
+   ],
+   "finish": [
+    "voice/fox/finish_01.opus",
+    "voice/fox/finish_02.opus"
+   ],
+   "highlight": [
+    "voice/fox/highlight_01.opus",
+    "voice/fox/highlight_02.opus"
+   ],
+   "victory": [
+    "voice/fox/victory_01.opus",
+    "voice/fox/victory_02.opus"
+   ]
+  },
+  "queen": {
+   "skill": [
+    "voice/queen/skill_01.opus",
+    "voice/queen/skill_02.opus"
+   ],
+   "attack": [
+    "voice/queen/attack_01.opus",
+    "voice/queen/attack_02.opus"
+   ],
+   "hurt": [
+    "voice/queen/hurt_01.opus",
+    "voice/queen/hurt_02.opus"
+   ],
+   "down": [
+    "voice/queen/down_01.opus",
+    "voice/queen/down_02.opus"
+   ],
+   "onemore": [
+    "voice/queen/onemore_01.opus",
+    "voice/queen/onemore_02.opus"
+   ],
+   "baton.give": [
+    "voice/queen/baton.give_01.opus",
+    "voice/queen/baton.give_02.opus"
+   ],
+   "baton.take": [
+    "voice/queen/baton.take_01.opus",
+    "voice/queen/baton.take_02.opus"
+   ],
+   "holdup": [
+    "voice/queen/holdup_01.opus",
+    "voice/queen/holdup_02.opus"
+   ],
+   "allout": [
+    "voice/queen/allout_01.opus",
+    "voice/queen/allout_02.opus"
+   ],
+   "finish": [
+    "voice/queen/finish_01.opus",
+    "voice/queen/finish_02.opus"
+   ],
+   "highlight": [
+    "voice/queen/highlight_01.opus",
+    "voice/queen/highlight_02.opus"
+   ],
+   "victory": [
+    "voice/queen/victory_01.opus",
+    "voice/queen/victory_02.opus"
+   ]
+  },
+  "noir": {
+   "skill": [
+    "voice/noir/skill_01.opus",
+    "voice/noir/skill_02.opus"
+   ],
+   "attack": [
+    "voice/noir/attack_01.opus",
+    "voice/noir/attack_02.opus"
+   ],
+   "hurt": [
+    "voice/noir/hurt_01.opus",
+    "voice/noir/hurt_02.opus"
+   ],
+   "down": [
+    "voice/noir/down_01.opus",
+    "voice/noir/down_02.opus"
+   ],
+   "onemore": [
+    "voice/noir/onemore_01.opus",
+    "voice/noir/onemore_02.opus"
+   ],
+   "baton.give": [
+    "voice/noir/baton.give_01.opus",
+    "voice/noir/baton.give_02.opus"
+   ],
+   "baton.take": [
+    "voice/noir/baton.take_01.opus",
+    "voice/noir/baton.take_02.opus"
+   ],
+   "holdup": [
+    "voice/noir/holdup_01.opus",
+    "voice/noir/holdup_02.opus"
+   ],
+   "allout": [
+    "voice/noir/allout_01.opus",
+    "voice/noir/allout_02.opus"
+   ],
+   "finish": [
+    "voice/noir/finish_01.opus",
+    "voice/noir/finish_02.opus"
+   ],
+   "highlight": [
+    "voice/noir/highlight_01.opus",
+    "voice/noir/highlight_02.opus"
+   ],
+   "victory": [
+    "voice/noir/victory_01.opus",
+    "voice/noir/victory_02.opus"
+   ]
+  },
+  "crow": {
+   "skill": [
+    "voice/crow/skill_01.opus",
+    "voice/crow/skill_02.opus"
+   ],
+   "attack": [
+    "voice/crow/attack_01.opus",
+    "voice/crow/attack_02.opus"
+   ],
+   "hurt": [
+    "voice/crow/hurt_01.opus",
+    "voice/crow/hurt_02.opus"
+   ],
+   "down": [
+    "voice/crow/down_01.opus",
+    "voice/crow/down_02.opus"
+   ],
+   "onemore": [
+    "voice/crow/onemore_01.opus",
+    "voice/crow/onemore_02.opus"
+   ],
+   "baton.give": [
+    "voice/crow/baton.give_01.opus",
+    "voice/crow/baton.give_02.opus"
+   ],
+   "baton.take": [
+    "voice/crow/baton.take_01.opus",
+    "voice/crow/baton.take_02.opus"
+   ],
+   "holdup": [
+    "voice/crow/holdup_01.opus",
+    "voice/crow/holdup_02.opus"
+   ],
+   "allout": [
+    "voice/crow/allout_01.opus",
+    "voice/crow/allout_02.opus"
+   ],
+   "finish": [
+    "voice/crow/finish_01.opus",
+    "voice/crow/finish_02.opus"
+   ],
+   "highlight": [
+    "voice/crow/highlight_01.opus",
+    "voice/crow/highlight_02.opus"
+   ],
+   "victory": [
+    "voice/crow/victory_01.opus",
+    "voice/crow/victory_02.opus"
+   ]
+  },
+  "violet": {
+   "skill": [
+    "voice/violet/skill_01.opus",
+    "voice/violet/skill_02.opus"
+   ],
+   "attack": [
+    "voice/violet/attack_01.opus",
+    "voice/violet/attack_02.opus"
+   ],
+   "hurt": [
+    "voice/violet/hurt_01.opus",
+    "voice/violet/hurt_02.opus"
+   ],
+   "down": [
+    "voice/violet/down_01.opus",
+    "voice/violet/down_02.opus"
+   ],
+   "onemore": [
+    "voice/violet/onemore_01.opus",
+    "voice/violet/onemore_02.opus"
+   ],
+   "baton.give": [
+    "voice/violet/baton.give_01.opus",
+    "voice/violet/baton.give_02.opus"
+   ],
+   "baton.take": [
+    "voice/violet/baton.take_01.opus",
+    "voice/violet/baton.take_02.opus"
+   ],
+   "holdup": [
+    "voice/violet/holdup_01.opus",
+    "voice/violet/holdup_02.opus"
+   ],
+   "allout": [
+    "voice/violet/allout_01.opus",
+    "voice/violet/allout_02.opus"
+   ],
+   "finish": [
+    "voice/violet/finish_01.opus",
+    "voice/violet/finish_02.opus"
+   ],
+   "highlight": [
+    "voice/violet/highlight_01.opus",
+    "voice/violet/highlight_02.opus"
+   ],
+   "victory": [
+    "voice/violet/victory_01.opus",
+    "voice/violet/victory_02.opus"
+   ]
+  }
+ }
+}

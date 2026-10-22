@@ -1,0 +1,750 @@
+{
+ "skin": "p3r-pink",
+ "version": 1,
+ "defaults": {
+  "crossfadeMs": 800,
+  "victoryCrossfadeMs": 300,
+  "noRepeat": true
+ },
+ "note": "由 docs/umbra-design/AUDIO-MAP-v1.md §2（P 表）生成；loopStart/loopEnd 0/0 = 待标；音频文件未入库（缺文件静默）。TODO",
+ "entries": [
+  {
+   "id": "pink.P1",
+   "scene": "title",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/title__full-moon-full-life.opus",
+     "title": "Full Moon Full Life",
+     "source": "Full Moon Full Life（P3R 1-01）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P3",
+   "scene": "loading",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/loading__the-voice-someone-calls.opus",
+     "title": "The Voice Someone Calls (P3R ver.)",
+     "source": "The Voice Someone Calls (P3R ver.)（P3R 1-12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "加载 >1.5s"
+  },
+  {
+   "id": "pink.P4",
+   "scene": "hub",
+   "condition": {
+    "time": "day"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__want-to-be-close-reload.opus",
+     "title": "Want To Be Close -Reload-",
+     "source": "Want To Be Close -Reload-（P3R 1-04）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P5",
+   "scene": "hub",
+   "condition": {
+    "time": "day",
+    "season": "semester2"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__changing-seasons-reload.opus",
+     "title": "Changing Seasons -Reload-",
+     "source": "Changing Seasons -Reload-（P3R 2-01）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P6",
+   "scene": "hub",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/hub__when-the-moon-s-reaching-out-stars-reload.opus",
+     "title": "When The Moon's Reaching Out Stars -Reload-",
+     "source": "When The Moon's Reaching Out Stars -Reload-（P3R 1-10）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "港岛街区"
+  },
+  {
+   "id": "pink.P7",
+   "scene": "hub",
+   "condition": {
+    "time": "night"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__color-your-night.opus",
+     "title": "Color Your Night",
+     "source": "Color Your Night（P3R 1-16）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "unverified",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P8",
+   "scene": "hub",
+   "condition": {
+    "moon": "full"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__bad-feeling.opus",
+     "title": "Bad Feeling",
+     "source": "Bad Feeling / 嫌な予感 (P3R ver.)（P3R 1-22）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P9",
+   "scene": "hub",
+   "condition": {
+    "env": "darkHour"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__fearful-experience.opus",
+     "title": "Fearful Experience (P3R ver.)",
+     "source": "Fearful Experience (P3R ver.)（P3R 1-23）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P10",
+   "scene": "hub",
+   "condition": {
+    "unlock": "late"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__memories-of-the-city.opus",
+     "title": "Memories of the City (P3R ver.)",
+     "source": "Memories of the City (P3R ver.)（P3R 2-15）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P11",
+   "scene": "hub",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/hub__a-way-of-life.opus",
+     "title": "A Way of Life",
+     "source": "A Way of Life（P3P 02）/ Time（P3P 04）/ Sun（P3P 06）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/hub__time.opus",
+     "title": "Time",
+     "source": "A Way of Life（P3P 02）/ Time（P3P 04）/ Sun（P3P 06）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/hub__sun.opus",
+     "title": "Sun",
+     "source": "A Way of Life（P3P 02）/ Time（P3P 04）/ Sun（P3P 06）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": false,
+   "note": "女主皮彩蛋池（设置开，默认关）"
+  },
+  {
+   "id": "pink.P12",
+   "scene": "hub.home",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/hub.home__iwatodai-dorm-reload.opus",
+     "title": "Iwatodai Dorm -Reload-",
+     "source": "Iwatodai Dorm -Reload-（P3R 1-11）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "宿舍"
+  },
+  {
+   "id": "pink.P13",
+   "scene": "hub.home",
+   "condition": {
+    "unlock": "late"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub.home__living-with-determination-iwatodai-dorm-arrangem.opus",
+     "title": "Living With Determination -Iwatodai Dorm Arrangement- (P3R ver.)",
+     "source": "Living With Determination -Iwatodai Dorm Arrangement- (P3R ver.)（P3R 2-17）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P14",
+   "scene": "requests",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/requests__the-meaning-of-armbands.opus",
+     "title": "The Meaning of Armbands",
+     "source": "The Meaning of Armbands（P3R 1-20）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P15",
+   "scene": "explore",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore__tartarus-0d01-0d06.opus",
+     "title": "tartarus_0d01–0d06 (P3R ver.)",
+     "source": "tartarus_0d01–0d06 (P3R ver.)（P3R 1-13 / 1-21 / 1-28 / 2-06 / 2-10 / 2-18）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "floorTier 1–6"
+  },
+  {
+   "id": "pink.P16",
+   "scene": "explore",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore__the-snow-queen-reload.opus",
+     "title": "The Snow Queen -Reload-",
+     "source": "The Snow Queen -Reload-（P3R-EA 09）/ Maya's Theme -Reload-（P3R-EA 10）/ Persona -Reload-（P3R-EA 14）/ Time Castle -Reload-（P3R-EA 15）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__maya-s-theme-reload.opus",
+     "title": "Maya's Theme -Reload-",
+     "source": "The Snow Queen -Reload-（P3R-EA 09）/ Maya's Theme -Reload-（P3R-EA 10）/ Persona -Reload-（P3R-EA 14）/ Time Castle -Reload-（P3R-EA 15）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__persona-reload.opus",
+     "title": "Persona -Reload-",
+     "source": "The Snow Queen -Reload-（P3R-EA 09）/ Maya's Theme -Reload-（P3R-EA 10）/ Persona -Reload-（P3R-EA 14）/ Time Castle -Reload-（P3R-EA 15）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__time-castle-reload.opus",
+     "title": "Time Castle -Reload-",
+     "source": "The Snow Queen -Reload-（P3R-EA 09）/ Maya's Theme -Reload-（P3R-EA 10）/ Persona -Reload-（P3R-EA 14）/ Time Castle -Reload-（P3R-EA 15）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "Episode Aigis 池（设置开）"
+  },
+  {
+   "id": "pink.P17",
+   "scene": "explore.risk",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore.risk__interstice-of-time.opus",
+     "title": "Interstice of Time",
+     "source": "Interstice of Time（P3R-EA 06）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "Monad 门"
+  },
+  {
+   "id": "pink.P18",
+   "scene": "explore.callingcard",
+   "condition": {
+    "callingCard": true
+   },
+   "tracks": [
+    {
+     "file": "bgm/explore.callingcard__crisis.opus",
+     "title": "Crisis (P3R ver.)",
+     "source": "Crisis (P3R ver.)（P3R 1-06）+ Calamity (P3R ver.)（P3R 1-24）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore.callingcard__calamity.opus",
+     "title": "Calamity (P3R ver.)",
+     "source": "Crisis (P3R ver.)（P3R 1-06）+ Calamity (P3R ver.)（P3R 1-24）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P19",
+   "scene": "explore.safe",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore.safe__peace-reload.opus",
+     "title": "Peace -Reload-",
+     "source": "Peace -Reload-（P3R 1-09）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "安全屋"
+  },
+  {
+   "id": "pink.P20",
+   "scene": "explore.escape",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore.escape__calamity.opus",
+     "title": "Calamity (P3R ver.)",
+     "source": "Calamity (P3R ver.)（P3R 1-24）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "撤退"
+  },
+  {
+   "id": "pink.P21",
+   "scene": "battle.normal",
+   "condition": {
+    "encounter": "normal"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.normal__mass-destruction-reload.opus",
+     "title": "Mass Destruction -Reload-",
+     "source": "Mass Destruction -Reload-（P3R 1-14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P22",
+   "scene": "battle.ambush",
+   "condition": {
+    "encounter": "ambush"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.ambush__it-s-going-down-now.opus",
+     "title": "It's Going Down Now",
+     "source": "It's Going Down Now（P3R 1-30）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P23",
+   "scene": "battle.ambushed",
+   "condition": {
+    "encounter": "ambushed"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.ambushed__mass-destruction-reload.opus",
+     "title": "Mass Destruction -Reload-",
+     "source": "Mass Destruction -Reload-（P3R 1-14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P24",
+   "scene": "battle.normal",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/battle.normal__mass-destruction-p3fes-reload.opus",
+     "title": "Mass Destruction -P3fes Reload-",
+     "source": "Mass Destruction -P3fes Reload-（P3R-EA 08）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "Episode Aigis 池（默认关）"
+  },
+  {
+   "id": "pink.P25",
+   "scene": "battle.elite",
+   "condition": {
+    "tier": "elite"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.elite__master-of-tartarus-reload.opus",
+     "title": "Master of Tartarus -Reload-",
+     "source": "Master of Tartarus -Reload-（P3R 2-03）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P26",
+   "scene": "battle.elite",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/battle.elite__unavoidable-battle.opus",
+     "title": "Unavoidable Battle (P3R ver.)",
+     "source": "Unavoidable Battle (P3R ver.)（P3R 1-08）+ Heartful Cry（P3R-EA 13）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/battle.elite__heartful-cry.opus",
+     "title": "Heartful Cry",
+     "source": "Unavoidable Battle (P3R ver.)（P3R 1-08）+ Heartful Cry（P3R-EA 13）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "劲敌型（可选）"
+  },
+  {
+   "id": "pink.P27",
+   "scene": "boss.intro",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/boss.intro__what-lies-in-the-darkness.opus",
+     "title": "What Lies in the Darkness (P3R ver.)",
+     "source": "What Lies in the Darkness (P3R ver.)（P3R 2-19）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P32",
+   "scene": "boss.defeat",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/boss.defeat__peace-reload.opus",
+     "title": "Peace -Reload-",
+     "source": "Peace -Reload-（P3R 1-09）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "pink.P35",
+   "scene": "highlight",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/highlight__the-path-is-open.opus",
+     "title": "The Path is Open (P3R ver.)",
+     "source": "The Path is Open (P3R ver.)（P3R 1-31）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "面具进化 / 羁绊 MAX"
+  },
+  {
+   "id": "pink.P36",
+   "scene": "victory",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/victory__after-the-battle.opus",
+     "title": "After the Battle (P3R ver.)",
+     "source": "After the Battle (P3R ver.)（P3R 1-15）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "胜利"
+  },
+  {
+   "id": "pink.P37",
+   "scene": "result",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/result__after-the-battle.opus",
+     "title": "After the Battle (P3R ver.)",
+     "source": "After the Battle (P3R ver.)（循环段）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "局末评级"
+  },
+  {
+   "id": "pink.P38",
+   "scene": "gameover",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/gameover__the-path-was-closed.opus",
+     "title": "The Path Was Closed (P3R ver.)",
+     "source": "The Path Was Closed (P3R ver.)（P3R 1-32）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "全灭"
+  },
+  {
+   "id": "pink.P39",
+   "scene": "velvet",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/velvet__aria-of-the-soul.opus",
+     "title": "Aria of the Soul (P3R ver.)",
+     "source": "Aria of the Soul (P3R ver.)（P3R 1-02）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "天鹅绒"
+  },
+  {
+   "id": "pink.P40",
+   "scene": "velvet.challenge",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/velvet.challenge__between-doors.opus",
+     "title": "Between Doors",
+     "source": "Between Doors（P3R-EA 11）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "试炼"
+  },
+  {
+   "id": "pink.P43",
+   "scene": "bond",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/bond__joy.opus",
+     "title": "Joy (P3R ver.)",
+     "source": "Joy (P3R ver.)（P3R 1-27）+ Everyone loves 1989（P3R 1-26）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/bond__everyone-loves-1989.opus",
+     "title": "Everyone loves 1989",
+     "source": "Joy (P3R ver.)（P3R 1-27）+ Everyone loves 1989（P3R 1-26）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "羁绊事件"
+  },
+  {
+   "id": "pink.P44",
+   "scene": "bond",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/bond__strength-of-heart.opus",
+     "title": "Strength of Heart (P3R ver.)",
+     "source": "Strength of Heart (P3R ver.)（P3R 2-14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "羁绊首次建立"
+  }
+ ]
+}

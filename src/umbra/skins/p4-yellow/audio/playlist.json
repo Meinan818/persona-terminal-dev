@@ -1,0 +1,805 @@
+{
+ "skin": "p4-yellow",
+ "version": 1,
+ "defaults": {
+  "crossfadeMs": 800,
+  "victoryCrossfadeMs": 300,
+  "noRepeat": true
+ },
+ "note": "由 docs/umbra-design/AUDIO-MAP-v1.md §2（Y 表）生成；loopStart/loopEnd 0/0 = 待标；音频文件未入库（缺文件静默）。TODO",
+ "entries": [
+  {
+   "id": "yellow.Y1",
+   "scene": "title",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/title__glimpse-of-a-memory.opus",
+     "title": "Glimpse of a Memory",
+     "source": "Glimpse of a Memory / 記憶の片隅（P4 1-02）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y2",
+   "scene": "title",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/title__shadow-world.opus",
+     "title": "Shadow World",
+     "source": "Shadow World（P4G 01）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": false,
+   "note": "设置「Golden 片头」"
+  },
+  {
+   "id": "yellow.Y4",
+   "scene": "loading",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/loading__midnight-channel.opus",
+     "title": "Midnight Channel",
+     "source": "Midnight Channel / マヨナカテレビ（P4 1-07）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "加载 >1.5s"
+  },
+  {
+   "id": "yellow.Y5",
+   "scene": "hub",
+   "condition": {
+    "weather": "clear",
+    "time": "day"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__your-affection.opus",
+     "title": "Your Affection",
+     "source": "Your Affection（P4 1-08）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y6",
+   "scene": "hub",
+   "condition": {
+    "weather": "rain"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__heartbeat-heartbreak.opus",
+     "title": "Heartbeat, Heartbreak",
+     "source": "Heartbeat, Heartbreak（P4 2-04）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y7",
+   "scene": "hub",
+   "condition": {
+    "time": "night"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__a-sky-full-of-stars.opus",
+     "title": "A Sky Full Of Stars",
+     "source": "A Sky Full Of Stars（P4G 07）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y8",
+   "scene": "hub",
+   "condition": {
+    "weather": "snow"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__snowflakes.opus",
+     "title": "SNOWFLAKES",
+     "source": "SNOWFLAKES（P4G 10）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y9",
+   "scene": "hub",
+   "condition": {
+    "weather": "fog",
+    "callingCard": true
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub__omen.opus",
+     "title": "Omen",
+     "source": "Omen（P4 2-21）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y10",
+   "scene": "hub.home",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/hub.home__signs-of-love.opus",
+     "title": "Signs of Love",
+     "source": "Signs of Love（P4 1-06）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "堂岛家"
+  },
+  {
+   "id": "yellow.Y11",
+   "scene": "hub.home",
+   "condition": {
+    "unlock": "late"
+   },
+   "tracks": [
+    {
+     "file": "bgm/hub.home__alone.opus",
+     "title": "Alone",
+     "source": "Alone（P4 2-18）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y12",
+   "scene": "requests",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/requests__deduction.opus",
+     "title": "Deduction",
+     "source": "Deduction / 推理（P4 1-14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y13",
+   "scene": "explore",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore__studio-backlot.opus",
+     "title": "Studio Backlot",
+     "source": "Studio Backlot / Backside of the TV（P4 1-13）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__backside-of-the-tv.opus",
+     "title": "Backside of the TV",
+     "source": "Studio Backlot / Backside of the TV（P4 1-13）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "入口层 / floorTier 1"
+  },
+  {
+   "id": "yellow.Y14",
+   "scene": "explore",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore__castle.opus",
+     "title": "Castle",
+     "source": "Castle（P4 1-15）/ Sauna（P4 1-23）/ Theater·Striptease（P4 2-03）/ Game（P4 2-06）/ Secret Base（P4 2-16）/ Heaven（P4 2-17）/ Long Way（P4 2-20）/ Memories / 記憶（P4G 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__sauna.opus",
+     "title": "Sauna",
+     "source": "Castle（P4 1-15）/ Sauna（P4 1-23）/ Theater·Striptease（P4 2-03）/ Game（P4 2-06）/ Secret Base（P4 2-16）/ Heaven（P4 2-17）/ Long Way（P4 2-20）/ Memories / 記憶（P4G 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__theater-striptease.opus",
+     "title": "Theater·Striptease",
+     "source": "Castle（P4 1-15）/ Sauna（P4 1-23）/ Theater·Striptease（P4 2-03）/ Game（P4 2-06）/ Secret Base（P4 2-16）/ Heaven（P4 2-17）/ Long Way（P4 2-20）/ Memories / 記憶（P4G 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__game.opus",
+     "title": "Game",
+     "source": "Castle（P4 1-15）/ Sauna（P4 1-23）/ Theater·Striptease（P4 2-03）/ Game（P4 2-06）/ Secret Base（P4 2-16）/ Heaven（P4 2-17）/ Long Way（P4 2-20）/ Memories / 記憶（P4G 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__secret-base.opus",
+     "title": "Secret Base",
+     "source": "Castle（P4 1-15）/ Sauna（P4 1-23）/ Theater·Striptease（P4 2-03）/ Game（P4 2-06）/ Secret Base（P4 2-16）/ Heaven（P4 2-17）/ Long Way（P4 2-20）/ Memories / 記憶（P4G 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__heaven.opus",
+     "title": "Heaven",
+     "source": "Castle（P4 1-15）/ Sauna（P4 1-23）/ Theater·Striptease（P4 2-03）/ Game（P4 2-06）/ Secret Base（P4 2-16）/ Heaven（P4 2-17）/ Long Way（P4 2-20）/ Memories / 記憶（P4G 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__long-way.opus",
+     "title": "Long Way",
+     "source": "Castle（P4 1-15）/ Sauna（P4 1-23）/ Theater·Striptease（P4 2-03）/ Game（P4 2-06）/ Secret Base（P4 2-16）/ Heaven（P4 2-17）/ Long Way（P4 2-20）/ Memories / 記憶（P4G 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/explore__memories.opus",
+     "title": "Memories",
+     "source": "Castle（P4 1-15）/ Sauna（P4 1-23）/ Theater·Striptease（P4 2-03）/ Game（P4 2-06）/ Secret Base（P4 2-16）/ Heaven（P4 2-17）/ Long Way（P4 2-20）/ Memories / 記憶（P4G 12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "按周统治者轮换"
+  },
+  {
+   "id": "yellow.Y15",
+   "scene": "explore",
+   "condition": {
+    "floorTier": "6"
+   },
+   "tracks": [
+    {
+     "file": "bgm/explore__corridor.opus",
+     "title": "Corridor",
+     "source": "Corridor / 回廊（P4 2-22）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y16",
+   "scene": "explore.callingcard",
+   "condition": {
+    "callingCard": true
+   },
+   "tracks": [
+    {
+     "file": "bgm/explore.callingcard__border-of-insanity.opus",
+     "title": "Border of Insanity",
+     "source": "Border of Insanity / 狂気の境界線（P4 1-16）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y17",
+   "scene": "explore.risk",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore.risk__zone-time.opus",
+     "title": "Zone Time",
+     "source": "Zone Time（P4 2-07）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "风险岔路"
+  },
+  {
+   "id": "yellow.Y18",
+   "scene": "explore.safe",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore.safe__studio-backlot.opus",
+     "title": "Studio Backlot",
+     "source": "Studio Backlot（P4 1-13）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "安全屋"
+  },
+  {
+   "id": "yellow.Y19",
+   "scene": "explore.escape",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/explore.escape__zone-time.opus",
+     "title": "Zone Time",
+     "source": "Zone Time（P4 2-07）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "撤退"
+  },
+  {
+   "id": "yellow.Y20",
+   "scene": "battle.normal",
+   "condition": {
+    "encounter": "normal"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.normal__time-to-make-history.opus",
+     "title": "Time To Make History",
+     "source": "Time To Make History（P4G 02）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y21",
+   "scene": "battle.ambush",
+   "condition": {
+    "encounter": "ambush"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.ambush__reach-out-to-the-truth.opus",
+     "title": "Reach Out To The Truth",
+     "source": "Reach Out To The Truth（P4 1-25）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y22",
+   "scene": "battle.ambushed",
+   "condition": {
+    "encounter": "ambushed"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.ambushed__time-to-make-history.opus",
+     "title": "Time To Make History",
+     "source": "Time To Make History（P4G 02）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y23",
+   "scene": "battle.normal",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/battle.normal__reach-out-to-the-truth.opus",
+     "title": "Reach Out To The Truth",
+     "source": "Reach Out To The Truth（P4 1-25）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "设置「P4 原版战斗曲」"
+  },
+  {
+   "id": "yellow.Y24",
+   "scene": "battle.elite",
+   "condition": {
+    "tier": "elite"
+   },
+   "tracks": [
+    {
+     "file": "bgm/battle.elite__reach-out-to-the-truth-first-battle.opus",
+     "title": "Reach Out To The Truth -First Battle-",
+     "source": "Reach Out To The Truth -First Battle-（P4 1-11）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y25",
+   "scene": "boss.intro",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/boss.intro__who-s-there.opus",
+     "title": "Who's There?",
+     "source": "Who's There? / そこにいるのは誰?（P4 1-10）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y30",
+   "scene": "boss.defeat",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/boss.defeat__i-ll-face-myself.opus",
+     "title": "I'll Face Myself",
+     "source": "I'll Face Myself（P4 1-18）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true
+  },
+  {
+   "id": "yellow.Y33",
+   "scene": "highlight",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/highlight__awakening.opus",
+     "title": "Awakening",
+     "source": "Awakening / 覚醒（P4 1-24）+ The Path is Open (P4 ver.)（P4 2-13）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/highlight__the-path-is-open.opus",
+     "title": "The Path is Open (P4 ver.)",
+     "source": "Awakening / 覚醒（P4 1-24）+ The Path is Open (P4 ver.)（P4 2-13）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "觉醒 / 羁绊 MAX"
+  },
+  {
+   "id": "yellow.Y34",
+   "scene": "victory",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/victory__period.opus",
+     "title": "Period",
+     "source": "Period（P4 2-10）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "胜利"
+  },
+  {
+   "id": "yellow.Y35",
+   "scene": "result",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/result__period.opus",
+     "title": "Period",
+     "source": "Period（P4 2-10）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "结算 / 局末评级"
+  },
+  {
+   "id": "yellow.Y36",
+   "scene": "gameover",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/gameover__traumerei.opus",
+     "title": "Traumerei",
+     "source": "Traumerei / 夢想曲（P4 2-14）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "全灭"
+  },
+  {
+   "id": "yellow.Y37",
+   "scene": "velvet",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/velvet__welcome-to-the-limousine-aria-of-the-soul.opus",
+     "title": "Welcome to the Limousine（P4 1-03）→ Aria of the Soul",
+     "source": "Welcome to the Limousine（P4 1-03）→ Aria of the Soul（P4 1-04）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "进入（jingle）→ 常驻"
+  },
+  {
+   "id": "yellow.Y38",
+   "scene": "velvet",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/velvet__electronica-in-velvet-room.opus",
+     "title": "Electronica In Velvet Room",
+     "source": "Electronica In Velvet Room（P4 2-27）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": false,
+   "note": "彩蛋"
+  },
+  {
+   "id": "yellow.Y39",
+   "scene": "velvet.challenge",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/velvet.challenge__girl-of-the-hollow-forest.opus",
+     "title": "Girl of the Hollow Forest",
+     "source": "Girl of the Hollow Forest / 虚ろの森の少女（P4G 11）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "borrowed",
+   "enabledByDefault": true,
+   "note": "试炼"
+  },
+  {
+   "id": "yellow.Y40",
+   "scene": "shop.daidara",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/shop.daidara__how-much.opus",
+     "title": "How Much?",
+     "source": "How Much?（P4 2-15）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "大太良金属工艺"
+  },
+  {
+   "id": "yellow.Y41",
+   "scene": "shop.shiroku",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/shop.shiroku__how-much.opus",
+     "title": "How Much?",
+     "source": "How Much?（P4 2-15）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "四六商店"
+  },
+  {
+   "id": "yellow.Y42",
+   "scene": "shop.junes",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/shop.junes__junes-theme.opus",
+     "title": "Junes Theme",
+     "source": "Junes Theme / ジュネスのテーマ（P4 2-11）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "Junes"
+  },
+  {
+   "id": "yellow.Y43",
+   "scene": "bond",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/bond__like-a-dream-come-true.opus",
+     "title": "Like a Dream Come True",
+     "source": "Like a Dream Come True（P4 1-09）+ Smile（P4 1-12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    },
+    {
+     "file": "bgm/bond__smile.opus",
+     "title": "Smile",
+     "source": "Like a Dream Come True（P4 1-09）+ Smile（P4 1-12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "羁绊事件"
+  },
+  {
+   "id": "yellow.Y44",
+   "scene": "bond",
+   "condition": {},
+   "tracks": [
+    {
+     "file": "bgm/bond__strength-of-heart.opus",
+     "title": "Strength of Heart (P4 ver.)",
+     "source": "Strength of Heart (P4 ver.)（P4 2-12）",
+     "loopStart": 0,
+     "loopEnd": 0,
+     "weight": 1
+    }
+   ],
+   "loop": true,
+   "basis": "original",
+   "enabledByDefault": true,
+   "note": "羁绊首次建立"
+  }
+ ]
+}

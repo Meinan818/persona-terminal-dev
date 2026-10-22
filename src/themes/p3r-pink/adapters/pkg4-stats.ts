@@ -12,6 +12,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
 import type { StatActivity } from '../mock/pkg4-stats';
 import type { AttributeId } from '@/types';
+import { ATTR_LEVELS as MOCK_ATTR_LEVELS } from '../mock/pkg4-stats';
+import { ATTR_NAMES as MOCK_ATTR_NAMES } from '../mock/pkg4-tarot';
 
 /** 真实统计活动：从 store activities 映射 { date, pts } */
 export function useStatActivities(): StatActivity[] {
@@ -32,9 +34,9 @@ export function useStatisticsData() {
   })));
   return useMemo(() => ({
     ACTIVITIES: activities.map((a) => ({ date: toLocalDateKey(new Date(a.date)), pts: a.pointsAwarded })),
-    ATTR_LEVELS: Object.fromEntries(attributes.map((a) => [a.id, a.level])) as Record<AttributeId, number>,
+    ATTR_LEVELS: { ...MOCK_ATTR_LEVELS, ...Object.fromEntries(attributes.map((a) => [a.id, a.level])) } as Record<AttributeId, number>,
     ACHIEVEMENTS: { unlocked: achievements.filter((a) => a.unlocked).length, total: achievements.length },
     SKILLS: { unlocked: skills.filter((s) => s.unlocked).length, total: skills.length },
-    ATTR_NAMES: { ...attributeNames } as Record<AttributeId, string>,
+    ATTR_NAMES: { ...MOCK_ATTR_NAMES, ...attributeNames } as Record<AttributeId, string>,
   }), [activities, attributes, achievements, skills, attributeNames]);
 }

@@ -13,9 +13,9 @@ import { P3R, P3PageHeader, GhostWords, SectionMark, P3Empty, slantClip } from '
 import { PageEnter } from '@pink/fx';
 import { useLowMotion } from '@pink/lib/prefs';
 import { navigate } from '@pink/shell/shellBus';
-import { ATTR_LEVELS, type StatActivity } from '@pink/mock/pkg4-stats';
+import type { StatActivity } from '@pink/mock/pkg4-stats';
 import { useStatisticsData } from '@pink/adapters/pkg4-stats';
-import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@pink/mock/pkg4-tarot';
+import { ATTR_IDS, ATTR_COLOR } from '@pink/mock/pkg4-tarot';
 import { DevStrip, StateFade } from '@pink/screens/pkg4/ui';
 
 type Range = '7' | '30' | 'all';
@@ -35,7 +35,7 @@ function streaks(days: string[]) {
 }
 
 export default function Statistics({ params }: PageProps) {
-  const { ACTIVITIES, ACHIEVEMENTS, SKILLS } = useStatisticsData();
+  const { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, ATTR_NAMES } = useStatisticsData();
   const low = useLowMotion();
   const [mode, setMode] = useState(params.get('state') === 'empty' ? 'empty' : 'data');
   const [range, setRange] = useState<Range>('30');
@@ -105,11 +105,11 @@ export default function Statistics({ params }: PageProps) {
                   ))}
                 </div>
               </div>
-              <TrendChart key={range} data={trend} range={range} />
+              <TrendChart key={range} data={trend} range={range} names={ATTR_NAMES} />
             </motion.div>
             <motion.div {...enter(0.4)} className="p-5" style={card(20)}>
               <SectionMark title="属性分布" en="SOCIAL STATS" className="mb-4" />
-              <Distribution totals={totals} />
+              <Distribution totals={totals} levels={ATTR_LEVELS} names={ATTR_NAMES} />
             </motion.div>
           </div>
         </StateFade>
@@ -139,7 +139,7 @@ function GrowthCurve({ data, records, top }: { data: { k: string; v: number }[];
   );
 }
 
-function TrendChart({ data, range }: { data: [string, Record<AttributeId, number>][]; range: Range }) {
+function TrendChart({ data, range, names }: { data: [string, Record<AttributeId, number>][]; range: Range; names: Record<AttributeId, string> }) {
   const low = useLowMotion();
   const [on, setOn] = useState<Set<AttributeId>>(new Set(ATTR_IDS));
   const [hi, setHi] = useState<number | null>(null);
@@ -154,7 +154,7 @@ function TrendChart({ data, range }: { data: [string, Record<AttributeId, number
       <div className="flex flex-wrap gap-1.5">
         {ATTR_IDS.map((id) => (
           <button key={id} type="button" onClick={() => toggle(id)} aria-pressed={on.has(id)} className="inline-flex items-center gap-1 px-2 py-0.5 text-[12px] font-black" style={{ clipPath: slantClip(4), background: on.has(id) ? 'var(--p3r-chip)' : 'transparent', color: on.has(id) ? P3R.ink : P3R.grey, textDecoration: on.has(id) ? undefined : 'line-through' }}>
-            <span className="inline-block h-2.5 w-2.5" style={{ background: ATTR_COLOR[id], clipPath: slantClip(2) }} />{ATTR_NAMES[id]}
+            <span className="inline-block h-2.5 w-2.5" style={{ background: ATTR_COLOR[id], clipPath: slantClip(2) }} />{names[id]}
           </button>
         ))}
       </div>
@@ -172,7 +172,7 @@ function TrendChart({ data, range }: { data: [string, Record<AttributeId, number
         {hi !== null && data[hi] && (
           <div className={`pointer-events-none absolute top-2 min-w-[96px] px-2.5 py-1 ${hi > data.length / 2 ? 'left-3' : 'right-3'}`} style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(5) }}>
             <div className="font-cond text-[12px]" style={{ color: 'var(--p3r-cyan)' }}>{md(data[hi][0])}</div>
-            {ATTR_IDS.filter((id) => on.has(id)).map((id) => <div key={id} className="flex justify-between gap-3 text-[10.5px]"><span>{ATTR_NAMES[id]}</span><span className="font-cond">{data[hi][1][id]}</span></div>)}
+            {ATTR_IDS.filter((id) => on.has(id)).map((id) => <div key={id} className="flex justify-between gap-3 text-[10.5px]"><span>{names[id]}</span><span className="font-cond">{data[hi][1][id]}</span></div>)}
           </div>
         )}
         <div className="flex justify-between px-3 pb-1 text-[10.5px] font-bold" style={{ color: P3R.grey }}><span>{md(data[0][0])}</span><span>{md(data[data.length - 1][0])}</span></div>
@@ -182,14 +182,14 @@ function TrendChart({ data, range }: { data: [string, Record<AttributeId, number
 }
 
 /** SOCIAL STATS：五维叠圆（半径 ∝ 点数，五圆绕中心交叠，transform scale 入场）+ 分布行 */
-function Distribution({ totals }: { totals: { id: AttributeId; total: number }[] }) {
+function Distribution({ totals, levels, names }: { totals: { id: AttributeId; total: number }[]; levels: Record<AttributeId, number>; names: Record<AttributeId, string> }) {
   const low = useLowMotion();
   const max = Math.max(1, ...totals.map((t) => t.total));
   const sorted = [...totals].sort((a, b) => b.total - a.total);
   return (
     <div className="space-y-4">
       <div className="flex justify-center">
-        <svg viewBox="0 0 200 150" className="h-[150px] w-full max-w-[260px]" role="img" aria-label={`五维叠圆：${sorted.map((t) => `${ATTR_NAMES[t.id]} ${t.total}`).join('、')}`}>
+        <svg viewBox="0 0 200 150" className="h-[150px] w-full max-w-[260px]" role="img" aria-label={`五维叠圆：${sorted.map((t) => `${names[t.id]} ${t.total}`).join('、')}`}>
           {totals.map((t, i) => {
             const a = (-90 + i * 72) * (Math.PI / 180);
             const r = 18 + (t.total / max) * 30;
@@ -198,7 +198,7 @@ function Distribution({ totals }: { totals: { id: AttributeId; total: number }[]
               <g key={t.id}>
                 <motion.circle cx={cx} cy={cy} r={r} fill={ATTR_COLOR[t.id]} fillOpacity={0.42} stroke={ATTR_COLOR[t.id]} strokeWidth="1.5" style={{ transformOrigin: `${cx}px ${cy}px` }}
                   initial={low ? false : { scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 + i * 0.07, type: 'spring', stiffness: 220, damping: 18 }} />
-                <text x={100 + Math.cos(a) * 62} y={76 + Math.sin(a) * 62 + 4} textAnchor="middle" fontSize="10" fontWeight="900" style={{ fill: 'var(--p3r-ink)' }}>{ATTR_NAMES[t.id]}</text>
+                <text x={100 + Math.cos(a) * 62} y={76 + Math.sin(a) * 62 + 4} textAnchor="middle" fontSize="10" fontWeight="900" style={{ fill: 'var(--p3r-ink)' }}>{names[t.id]}</text>
               </g>
             );
           })}
@@ -208,8 +208,8 @@ function Distribution({ totals }: { totals: { id: AttributeId; total: number }[]
         {sorted.map((t) => (
           <div key={t.id} className="min-w-0">
             <div className="mb-1.5 flex min-w-0 items-baseline gap-2">
-              <span className="text-[14px] font-black" style={{ color: P3R.ink }}>{ATTR_NAMES[t.id]}</span>
-              <span className="font-cond text-[12px]" style={{ color: P3R.roseInk }}>Lv.{ATTR_LEVELS[t.id]}</span>
+              <span className="text-[14px] font-black" style={{ color: P3R.ink }}>{names[t.id]}</span>
+              <span className="font-cond text-[12px]" style={{ color: P3R.roseInk }}>Lv.{levels[t.id]}</span>
               <span className="ml-auto font-cond text-[20px] leading-none" style={{ color: P3R.blue }}>{t.total}<span className="ml-0.5 text-[10px] font-bold" style={{ color: P3R.grey }}>pts</span></span>
             </div>
             <div className="relative h-[8px] w-full" style={{ background: 'var(--p3r-track)', clipPath: slantClip(3) }}>

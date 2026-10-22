@@ -1,4 +1,4 @@
-﻿// @ts-nocheck —— 逐字迁移自 v3 原生 overlays/d.js（D 组：行动 / 星象 / 图鉴 / 记账 段；命令式 DOM，类名 .od-*，样式 = legacy/css/d.css）。
+// @ts-nocheck —— 逐字迁移自 v3 原生 overlays/d.js（D 组：行动 / 星象 / 图鉴 / 记账 段；命令式 DOM，类名 .od-*，样式 = legacy/css/d.css）。
 // 改动（按 FIXLIST / 真实源码）：
 //   · stage() 支持 inline（INLINE.host 设定时渲染进页面容器，不建全屏层）——星象三 Tab / 图鉴 Tab 用（P0-10 / P0-11）；
 //   · confirm() 改走 ConfirmDialog（kit P5Confirm，真实删除协议）；演示态条 ?__dev=0 隐藏；
@@ -7,9 +7,6 @@
 //   · 宣告卡编辑器 openCCEditor 增加 { card, onSaved } 参数（P0-07 行动页倒计时面复用）。
 import { P5 } from './p5';
 import { thinkingCircleHTML } from '@/p5r-red/fx/thinkingCircle';
-import { useAppStore, toLocalDateKey } from '@/store';
-import { buildOfflineDaily } from '@/utils/tarotOffline';
-import { TAROT_BY_ID as REAL_TAROT_BY_ID } from '@/constants/tarot';
 const U = P5.ui;
 const RM = () => P5.reduced();
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -20,18 +17,6 @@ const AN = (k) => P5.ATTR[k].name;
 /** inline 模式：设 INLINE.host 后调用 openX()，stage() 渲染进该容器（页面内 Tab）；INLINE.onClose = 舞台 close 时回调 */
 export const INLINE: any = { host: null, onClose: null };
 export const YR: any = { show: null };
-type LedgerDetailsBridge = typeof import('@/p5r-red/adapter/live').ledgerDetailsBridge;
-let detailLedger: LedgerDetailsBridge | undefined;
-export function connectLedgerDetails(bridge: LedgerDetailsBridge) { detailLedger = bridge; }
-// 命令式区块随容器退出释放订阅，不重建正在编辑的表单。
-function watchLedgerDetails(root, draw) {
-  if (!detailLedger) return;
-  const off = detailLedger.subscribe(() => { if (root.isConnected) draw(); });
-  const observer = new MutationObserver(() => { if (!root.isConnected) { off(); observer.disconnect(); } });
-  observer.observe(document.body, { childList: true, subtree: true });
-  detailLedger.ready().then(() => { if (root.isConnected) draw(); }).catch(() => P5.toast('账目读取失败，请重试'));
-}
-let assetFormSequence = 0;
   /* ═════════ 通用件 ═════════ */
   /** 段落标题（墨楔 + 红影） */
   const ttl = (t, en = '') => `<div class="od-ttl"><b>${t}</b>${en ? `<small>${en}</small>` : ''}</div>`;
@@ -612,18 +597,6 @@ let assetFormSequence = 0;
 
   /* ══════════════════ 星象 astrology/* ══════════════════ */
   const DRAW3 = [MAJ[17], MAJ[7], MAJ[18]];
-  const drawCandidates = () => {
-    const pool = [...MAJ];
-    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-    return pool.slice(0, 3).map((c) => ({ c, rev: Math.random() < 0.3 }));
-  };
-  const dailyDoneReal = (picked: { c: { id: string; name: string; en: string }; rev: boolean }, narration: string, advice: string, fortune: string, offline: boolean, attribute: string, multiplier: number) => `<div class="od-dd-done"><figure class="od-dd-card ${picked.rev ? 'rev' : ''}">${tarotFace(picked.c, { w: 150, rev: picked.rev })}</figure><div class="od-dd-info">
-      <div class="od-nr" data-nr></div><small class="od-en">${picked.c.en}</small>${offline ? U.tag('离线', 'line') : ''}
-      <p class="od-dd-eff">⚡ <b>${AN(attribute)}</b> 加成 ×${multiplier} <small>今日该属性记录额外加成</small></p>
-      <blockquote class="od-dd-adv">${advice}</blockquote>
-      <p class="od-kws"></p>
-      <div class="od-dd-sec">${ttl('本牌含义')}<p>${narration.replace(/\n/g, '<br>')}</p></div>
-      <div class="od-dd-sec">${ttl('总体运势')}<b class="od-fortune">${fortune}</b></div><p class="od-note-c">每日一抽，明日再会。</p></div></div>`;
   const nameReveal = (el, name, rev) => {
     el.innerHTML = `<span class="od-nr-n">${[...name].map((ch) => `<span>${ch}</span>`).join('')}</span><em class="od-nr-o">${rev ? '逆位' : '正位'}</em>`;
     if (RM()) return;
@@ -639,67 +612,31 @@ let assetFormSequence = 0;
       <div class="od-dd-sec">${ttl('本牌含义')}<p>${rev ? '希望暂时被云遮住，但它没有离开。' : '黑夜里最亮的那颗星——方向正在变清楚。'}</p><p class="muted-d">反思：此刻你最想靠近的，是哪一盏灯？</p></div>
       <div class="od-dd-sec">${ttl('总体运势')}<b class="od-fortune">${rev ? '小吉' : '大吉'}</b></div><p class="od-note-c">每日一抽，明日再会。</p></div></div>`;
   function openDailyDraw(st0 = 'idle') {
-    let cands = drawCandidates();
-    let pickedIdx: number | null = null;
     stage({ title: '今日星象', en: 'DAILY DRAW', seed: 37, cls: 'od-astro', body: `${demoBar([['idle', '未抽'], ['noapi', '未配置 API'], ['done', '已抽过'], ['error', '解读失败'], ['resume', '上次未完成']], st0)}<div data-host></div>`, onMount(w) {
       const draw = stateful(w, [], st0, (st) => {
-        if (st === 'done') { const d = useAppStore.getState().dailyDivination; if (d) { const real = REAL_TAROT_BY_ID[d.cardId]; const mapped = MAJ.find((m) => m.en === real?.nameEn) ?? MAJ[17]; return dailyDoneReal({ c: mapped, rev: d.orientation === 'reversed' }, d.narration, d.advice, ({great:'大吉',good:'中吉',small:'小吉',bad:'凶'})[d.fortune ?? 'good'], d.source === 'offline', d.effect.attribute, d.effect.multiplier); } return dailyDone(cands[0].c, cands[0].rev, false); }
+        if (st === 'done') return dailyDone(DRAW3[0], false, false);
         if (st === 'error') return `${U.shp('div', { kind: 'torn', seed: 641, cls: 'od-dd-err' }, `<b class="od-cut-big">解读遇到了阻碍</b><p class="sh-p">上次的解读没能完成——这张牌已经为你留着，直接继续就好。</p><p class="muted-d">可重试 AI 或改用离线兜底</p><div class="sh-acts">${U.btn('使用离线兜底', { tone: 'ink', seed: 642, attrs: 'data-act="offline"' })}${U.btn('重试 AI 解读', { tone: 'red', size: 'lg', seed: 643, attrs: 'data-act="retry"' })}</div>`)}`;
         if (st === 'resume') return `${U.shp('div', { kind: 'torn', seed: 644, cls: 'od-dd-err' }, `<b class="od-cut-big">解读者正在落笔</b><p class="sh-p">上次的解读没写完，牌还是那张「星星 · 正位」。</p><div class="sh-acts">${U.btn('重新解读', { tone: 'ink', seed: 645, attrs: 'data-act="retry"' })}${U.btn('接着写', { tone: 'red', size: 'lg', seed: 646, attrs: 'data-act="retry"' })}</div>`)}`;
         return `<div class="od-dd-idle"><b class="od-cut-big">今日的星象正在汇聚</b><p>每日仅一次，慎重选择 · 正位 / 逆位皆有意义</p>${st === 'noapi' ? `<p class="od-warn">未配置 API — 选择任意卡牌将使用离线兜底</p>` : '<p class="muted-d">结合您近期的处境</p>'}<div class="od-dd-deck">${cardBack(130, 5)}</div>${U.btn('接入命运', { tone: 'red', size: 'lg', seed: 647, attrs: 'data-act="begin"' })}</div>`;
       }, (h, st) => {
         const nr = h.querySelector('[data-nr]'); if (nr) nameReveal(nr, '星星', false);
         h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
-          if (a === 'begin') { cands = drawCandidates(); pickedIdx = null; runDraw(h, st === 'noapi'); }
-          if (a === 'retry') reading(h, false, pickedIdx ?? 0); if (a === 'offline') { showOffline(h, pickedIdx ?? 0); } });
+          if (a === 'begin') runDraw(h, st === 'noapi');
+          if (a === 'retry') reading(h, false); if (a === 'offline') { h.innerHTML = dailyDone(DRAW3[0], false, true); nameReveal(h.querySelector('[data-nr]'), '星星', false); } });
       });
-      function showOffline(h, idx) {
-        const p = cands[idx]; if (!p) return;
-        const real = REAL_TAROT_BY_ID[MAJ_FILE[+p.c.id.slice(1)]];
-        if (!real) return;
-        const o = buildOfflineDaily(real, p.rev ? 'reversed' : 'upright');
-        const rev = p.rev;
-        h.innerHTML = dailyDoneReal(p, o.narration, o.advice, ({great:'大吉',good:'中吉',small:'小吉',bad:'凶'})[o.fortune], true, o.attribute, rev ? 1.2 : 1.5);
-        nameReveal(h.querySelector('[data-nr]'), p.c.name, rev);
-        void useAppStore.getState().saveDailyDivination({
-          id: 'dd-' + Date.now(), date: toLocalDateKey(), drawnFrom: cands.map((x) => MAJ_FILE[+x.c.id.slice(1)]),
-          pickedIndex: idx, cardId: MAJ_FILE[+p.c.id.slice(1)], orientation: rev ? 'reversed' : 'upright',
-          effect: { attribute: o.attribute, multiplier: rev ? 1.2 : 1.5 },
-          narration: o.narration, advice: o.advice, fortune: o.fortune, source: 'offline', createdAt: new Date(),
-        });
-      }
       function runDraw(h, offline) {
         h.innerHTML = `<p class="od-dd-ph">正在洗牌…</p>${shuffleHTML()}`; P5.sfx('tarot', .6);
         setTimeout(() => {
-          h.innerHTML = `<p class="od-dd-ph">从三张牌中选择一张</p><div class="od-dd-fan">${cands.map((x, i) => `<button class="od-flip od-dd-pick" data-i="${i}" style="--r:${(i - 1) * 9}deg" aria-label="第 ${i + 1} 张"><span class="od-flip-in"><span class="od-flip-b">${cardBack(120, 70 + i)}</span><span class="od-flip-f">${tarotFace(x.c, { w: 120, rev: x.rev })}</span></span></button>`).join('')}</div><p class="muted-d od-c">每日仅一次，慎重选择</p>`;
+          h.innerHTML = `<p class="od-dd-ph">从三张牌中选择一张</p><div class="od-dd-fan">${DRAW3.map((c, i) => `<button class="od-flip od-dd-pick" data-i="${i}" style="--r:${(i - 1) * 9}deg" aria-label="第 ${i + 1} 张"><span class="od-flip-in"><span class="od-flip-b">${cardBack(120, 70 + i)}</span><span class="od-flip-f">${tarotFace(c, { w: 120 })}</span></span></button>`).join('')}</div><p class="muted-d od-c">每日仅一次，慎重选择</p>`;
           const ps = h.querySelectorAll('.od-dd-pick'); ps.forEach((p, i) => p.animate([{ transform: 'translateY(-40vh) scale(.5)', opacity: 0 }, { transform: `rotate(${(i - 1) * 9}deg)`, opacity: 1 }], { duration: 480, delay: i * 110, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'backwards' }));
-          ps.forEach((p) => p.onclick = () => { if (h.querySelector('.od-flip-in.on')) return; pickedIdx = +p.dataset.i; P5.sfx('tarot', .6); h.querySelector('.od-dd-ph').textContent = '揭示命运…'; ps.forEach((o) => o !== p && o.animate([{ opacity: 1 }, { opacity: .15, transform: 'scale(.86)' }], { duration: 300, fill: 'forwards' })); p.querySelector('.od-flip-in').classList.add('on'); setTimeout(() => reading(h, offline, pickedIdx ?? 0), RM() ? 0 : 1100); });
+          ps.forEach((p) => p.onclick = () => { if (h.querySelector('.od-flip-in.on')) return; P5.sfx('tarot', .6); h.querySelector('.od-dd-ph').textContent = '揭示命运…'; ps.forEach((o) => o !== p && o.animate([{ opacity: 1 }, { opacity: .15, transform: 'scale(.86)' }], { duration: 300, fill: 'forwards' })); p.querySelector('.od-flip-in').classList.add('on'); setTimeout(() => reading(h, offline), RM() ? 0 : 1100); });
         }, RM() ? 0 : 1300);
       }
-      function reading(h, offline, idx = 0) {
-        const p = cands[idx]; if (!p) return;
-        if (offline) { showOffline(h, idx); return; }
-        h.innerHTML = `<div class="od-dd-read"><figure>${tarotFace(p.c, { w: 120, rev: p.rev })}</figure>${thinking('解读者正在思索', '离开这页也不会中断')}<p class="od-stream"></p></div>`;
-        const real = REAL_TAROT_BY_ID[MAJ_FILE[+p.c.id.slice(1)]];
-        const o = buildOfflineDaily(real ?? REAL_TAROT_BY_ID['star'], p.rev ? 'reversed' : 'upright');
-        const s = o.narration, el = h.querySelector('.od-stream'); let i = 0;
-        setTimeout(() => { h.querySelector('.od-think b').firstChild.textContent = '落笔中';
-          const t = setInterval(() => { el.textContent = s.slice(0, ++i);
-            if (i >= s.length) { clearInterval(t);
-              setTimeout(() => {
-                h.innerHTML = dailyDoneReal(p, o.narration, o.advice, ({great:'大吉',good:'中吉',small:'小吉',bad:'凶'})[o.fortune], false, o.attribute, p.rev ? 1.2 : 1.5);
-                nameReveal(h.querySelector('[data-nr]'), p.c.name, p.rev);
-                P5.panelIn(h.querySelectorAll('.od-dd-info > *'), { stagger: .05 });
-                void useAppStore.getState().saveDailyDivination({
-                  id: 'dd-' + Date.now(), date: toLocalDateKey(), drawnFrom: cands.map((x) => MAJ_FILE[+x.c.id.slice(1)]),
-                  pickedIndex: idx, cardId: MAJ_FILE[+p.c.id.slice(1)], orientation: p.rev ? 'reversed' : 'upright',
-                  effect: { attribute: o.attribute, multiplier: p.rev ? 1.2 : 1.5 },
-                  narration: o.narration, advice: o.advice, fortune: o.fortune, source: 'offline', createdAt: new Date(),
-                });
-              }, 500);
-            }
-          }, 50);
-        }, 900);
+      function reading(h, offline) {
+        if (offline) { h.innerHTML = dailyDone(DRAW3[0], false, true); nameReveal(h.querySelector('[data-nr]'), '星星', false); return; }
+        h.innerHTML = `<div class="od-dd-read"><figure>${tarotFace(DRAW3[0], { w: 120 })}</figure>${thinking('解读者正在思索', '离开这页也不会中断')}<p class="od-stream"></p></div>`;
+        const s = '星星正位。今天适合把一件拖了很久的小事做完……', el = h.querySelector('.od-stream'); let i = 0;
+        setTimeout(() => { h.querySelector('.od-think b').firstChild.textContent = '落笔中'; const t = setInterval(() => { el.textContent = s.slice(0, ++i); if (i >= s.length) { clearInterval(t); setTimeout(() => { h.innerHTML = dailyDone(DRAW3[0], false, false); nameReveal(h.querySelector('[data-nr]'), '星星', false); P5.panelIn(h.querySelectorAll('.od-dd-info > *'), { stagger: .05 }); }, 500); } }, 50); }, 900);
       }
     } });
   }
@@ -731,29 +668,10 @@ let assetFormSequence = 0;
           <div class="p4-lr-err" data-err hidden><p class="od-warn" data-errmsg></p><div class="sh-acts od-c"><span data-trunc>${U.btn('接着写', { tone: 'red', size: 'sm', seed: 671, attrs: 'data-act="resume"' })}${U.btn('就用这些', { tone: 'paper', size: 'sm', seed: 670, attrs: 'data-act="done"' })}</span>${U.btn('返回抽卡重试', { tone: 'ink', size: 'sm', seed: 669, attrs: 'data-act="picking"' })}</div></div>
           <p class="muted-d od-c">离开这页也不会中断，回来接着看。</p>`;
         /* done / followerr */
-        return `${U.shp('section', { kind: 'torn', seed: 672, cls: 'od-lr-done' }, `<div class="od-lr-q"><small class="od-k">问</small><b data-lr-q>最近总是睡不好，是不是该换份工作？</b><span>${U.tag(PERIOD[per][0])}${U.tag(md(today), 'ink')}${U.tag('活跃', 'line')}</span></div>${lrSpread(per, per === 'longterm')}${lrText}
+        return `${U.shp('section', { kind: 'torn', seed: 672, cls: 'od-lr-done' }, `<div class="od-lr-q"><small class="od-k">问</small><b>最近总是睡不好，是不是该换份工作？</b><span>${U.tag(PERIOD[per][0])}${U.tag(md(today), 'ink')}${U.tag('活跃', 'line')}</span></div>${lrSpread(per, per === 'longterm')}${lrText}
           <div class="od-lr-follow"><button class="od-addline" data-act="follow">追问（仅一次） ▼</button><div class="od-lr-fbox" hidden><textarea class="inp" rows="2" placeholder="想对先前的解读再深入问什么？"></textarea><div class="sh-acts">${U.btn('收起', { tone: 'ink', size: 'sm', seed: 673, attrs: 'data-act="fold"' })}${U.btn('抽一张牌', { tone: 'red', seed: 674, attrs: 'data-act="fdraw"' })}</div></div></div>
           <div class="sh-acts">${U.btn('窥探命运', { tone: 'paper', size: 'sm', seed: 675, attrs: 'data-act="glimpse"' })}${U.btn('归档', { tone: 'ink', size: 'sm', seed: 676, attrs: 'data-act="arch"' })}${U.btn('删除', { tone: 'red', size: 'sm', seed: 677, attrs: 'data-act="del"' })}</div>`)}`;
       }, (h, st, draw) => {
-        if (st === 'done') {
-          const s = useAppStore.getState();
-          const latest = s.longReadings[0];
-          if (latest) {
-            const q = h.querySelector('[data-lr-q]'); if (q) q.textContent = latest.question;
-            const per0 = latest.period; if (PERIOD[per0]) per = per0;
-            const spread = h.querySelector('.od-lr-spread');
-            if (spread && latest.picked?.length) {
-              const hasBase = latest.picked.length === 4;
-              const body = latest.picked.slice(hasBase ? 1 : 0);
-              spread.innerHTML = `${hasBase ? `<figure class="base"><span>${tarotFace(MAJ[21], { w: 84 })}</span><figcaption>底色</figcaption></figure>` : ''}${body.map(([p, i]) => `<figure><span>${tarotFace(MAJ.find((m) => m.en === REAL_TAROT_BY_ID[p.cardId]?.nameEn) ?? MAJ[17], { w: 92, rev: p.orientation === 'reversed' })}</span><figcaption>${PERIOD[per0][3][i]} · ${REAL_TAROT_BY_ID[p.cardId]?.name ?? '?'}${p.orientation === 'reversed' ? ' 逆' : ''}</figcaption></figure>`).join('')}`;
-            }
-            const txt = h.querySelector('.od-lr-txt');
-            if (txt) {
-              const pos = latest.picked.length === 4 ? ['底色', ...PERIOD[per0][3]] : PERIOD[per0][3];
-              txt.innerHTML = latest.picked.map((p, i) => `<h4>${pos[i]} · ${REAL_TAROT_BY_ID[p.cardId]?.name ?? '?'}</h4><p>${(latest.content || '').replace(/\n/g, '<br>')}</p>`).join('') + `<p class="od-fortune-line">吉凶：<b class="od-fortune">—</b></p>`;
-            }
-          }
-        }
         if (st === 'reading' || st === 'stopped' || st === 'error') {
           const full = LR_STREAM, el = h.querySelector('[data-stream]'), th = h.querySelector('[data-think]'), live = h.querySelector('[data-live]'), er = h.querySelector('[data-err]');
           P5.panelIn(h.querySelectorAll('.od-lr-spread figure'), { stagger: .25, from: 'up' });
@@ -904,75 +822,53 @@ let assetFormSequence = 0;
   /* ══════════════════ 记账 ledger/LedgerStats · AssetBoard · Donut ══════════════════ */
   const CAT = [['餐饮', 1240, '#D7000F'], ['交通', 210, '#111'], ['学习', 460, '#8E0010'], ['娱乐', 320, '#6b6862'], ['日用', 180, '#b9b2a6']];
   const yen = (n) => '¥' + n.toLocaleString();
-  function openLedgerStats(st0 = 'data', offset = 0) {
+  function openLedgerStats(st0 = 'data') {
     stage({ title: '收支统计', en: 'STATS', seed: 91, cls: 'od-led', body: `${demoBar([['data', '有记录'], ['over', '超预算'], ['empty', '空']], st0)}<div data-host></div>`, onMount(w) {
-      let mode = 'period', events;
-      const draw = stateful(w, [], st0, (st) => { const live = detailLedger?.stats(offset, mode); if (live ? live.ex === 0 && live.inc === 0 : st === 'empty') return `<div class="od-empty"><b>这个月还没有记录。</b><p>记一笔之后，这里会出现类目、趋势和伊戈尔的提点。</p></div>`;
-        const ex = live ? live.ex : st === 'over' ? 2860 : 2410, inc = live ? live.inc : 3200, bud = live ? live.budget ?? 0 : 2600;
-        const overBudget = (!live || live.budget != null) && ex > bud;
-        const cats = live ? live.cats.map(c => [c.name, c.value, c.color, c.change]) : CAT;
-        return `<div class="od-ls-top">${seg([['month', '本月收支'], ['period', '本期收支']], detailLedger ? mode : 'month')}${U.btn('🔮 让伊戈尔结算（周 / 月）', { tone: 'red', size: 'sm', seed: 831, attrs: 'data-act="settle"' })}</div>
+      stateful(w, [], st0, (st) => { if (st === 'empty') return `<div class="od-empty"><b>这个月还没有记录。</b><p>记一笔之后，这里会出现类目、趋势和伊戈尔的提点。</p></div>`;
+        const ex = st === 'over' ? 2860 : 2410, inc = 3200, bud = 2600;
+        return `<div class="od-ls-top">${seg([['month', '本月收支'], ['period', '本期收支']], 'month')}${U.btn('🔮 让伊戈尔结算（周 / 月）', { tone: 'red', size: 'sm', seed: 831, attrs: 'data-act="settle"' })}</div>
           <div class="od-ls-kpi">${[['支出', ex, ''], ['收入', inc, 'in'], ['结余', inc - ex, inc - ex >= 0 ? 'in' : '']].map(([k, v, c], i) => U.shp('div', { kind: 'cut', seed: 832 + i, tone: i === 0 ? 'red' : 'ink', cls: 'od-kpi' }, `<small>${k}</small><b class="${c}">${yen(v)}</b>`)).join('')}</div>
-          ${U.shp('div', { kind: 'torn', seed: 836, cls: 'od-ls-bud' }, `<div class="od-ls-bh"><b>${live && live.budget == null ? '本月未设预算' : `本月预算 ${yen(bud)}`}</b><span>已花 <b>${yen(ex)}</b> · ${live && live.budget == null ? '未设预算' : overBudget ? `<em class="od-err">超 ${yen(ex - bud)}</em>` : `剩 ${yen(bud - ex)}`}</span></div>${bar(bud > 0 ? ex / bud * 100 : 0, overBudget ? 'over' : '')}<p class="muted-d">🏆 省钱挑战 · 想省 ${live ? live.savings == null ? '未设定' : yen(live.savings) : '¥300'} · 进度 ${live ? live.savings > 0 ? Math.round(Math.max(0, Math.min(100, (bud - ex) / live.savings * 100))) : 0 : ex > bud ? '0' : '62'}%</p>`)}
-          <div class="od-ls-grid">${U.shp('div', { kind: 'torn', seed: 837, cls: 'od-ls-c' }, `${ttl('支出类目')}<div class="od-ls-dn">${donut(cats.map(([, v, c]) => ({ value: v, color: c })), cats.reduce((a, c) => a + c[1], 0), { inner: `<small>本月支出</small><b>${yen(ex)}</b>` })}<ul class="od-lg">${cats.map(([n, v, c]) => `<li><i style="background:${c}"></i>${n}<b>${yen(v)}</b></li>`).join('')}</ul></div>`)}
-            ${U.shp('div', { kind: 'torn', seed: 838, cls: 'od-ls-c' }, `${ttl('环比上月')}<div class="od-mom">${cats.slice(0, 4).map(([n, v], i) => { const d = live ? cats[i][3] : [12, -8, 30, -15][i]; return `<span><b>${n}</b><em class="${d > 0 ? 'up' : 'dn'}">${d == null ? '暂无对比' : `${d > 0 ? '▲' : '▼'} ${Math.abs(Math.round(d))}%`}</em></span>`; }).join('')}</div>${ttl('月度支出趋势')}<div class="od-trend">${(live ? live.trend.map(t => t.value) : [1980, 2300, 2050, 2700, 2210, ex]).map((v, i) => `<span><i style="height:${live ? v / Math.max(1, ...live.trend.map(t => t.value)) * 100 : v / 30}%"></i><small>${live ? live.trend[i].label : `${(today.getMonth() - 4 + i + 12) % 12 || 12}月`}</small></span>`).join('')}</div>`)}
-            ${U.shp('div', { kind: 'torn', seed: 839, cls: 'od-ls-c' }, `${ttl('支付渠道')}<div class="od-ls-dn">${donut(live ? live.channels : [{ value: 1400, color: '#D7000F' }, { value: 760, color: '#111' }, { value: 250, color: '#b9b2a6' }], live ? ex : 2410, { size: 110, inner: `<small>${live ? live.channels.length : 3} 种</small>` })}<ul class="od-lg">${(live ? live.channels : [{name:'微信',value:1400,color:'#D7000F'},{name:'支付宝',value:760,color:'#111'},{name:'银行卡',value:250,color:'#b9b2a6'}]).map(c => `<li><i style="background:${c.color}"></i>${esc(c.name)}<b>${yen(c.value)}</b></li>`).join('')}</ul></div>`)}
-            ${U.shp('div', { kind: 'torn', seed: 840, cls: 'od-ls-c' }, `${ttl('收入构成')}<div class="od-inc"><span><b>劳动所得</b>${bar(live ? inc > 0 ? live.labor / inc * 100 : 0 : 84)}<em>${live ? yen(live.labor) : '¥2,700'}</em></span><span><b>其它收入</b>${bar(live ? inc > 0 ? live.other / inc * 100 : 0 : 16)}<em>${live ? yen(live.other) : '¥500'}</em></span></div><p class="muted-d">劳动所得 · 记账 +10 SP · 每日封顶 +2</p>`)}</div>`; },
-      (h) => { events?.abort(); events = new AbortController(); h.querySelector('.od-ls-top .seg')?.addEventListener('pick', e => { mode = e.detail; draw(st0); }, {signal:events.signal}); h.addEventListener('click', (e) => { if (e.target.closest('[data-act="settle"]')) openSettle(offset, mode); }, {signal:events.signal}); });
-      watchLedgerDetails(w, () => draw(st0, false));
+          ${U.shp('div', { kind: 'torn', seed: 836, cls: 'od-ls-bud' }, `<div class="od-ls-bh"><b>本月预算 ${yen(bud)}</b><span>已花 <b>${yen(ex)}</b> · ${ex > bud ? `<em class="od-err">超 ${yen(ex - bud)}</em>` : `剩 ${yen(bud - ex)}`}</span></div>${bar(ex / bud * 100, ex > bud ? 'over' : '')}<p class="muted-d">🏆 省钱挑战 · 想省 ¥300 · 进度 ${ex > bud ? '0' : '62'}%</p>`)}
+          <div class="od-ls-grid">${U.shp('div', { kind: 'torn', seed: 837, cls: 'od-ls-c' }, `${ttl('支出类目')}<div class="od-ls-dn">${donut(CAT.map(([, v, c]) => ({ value: v, color: c })), CAT.reduce((a, c) => a + c[1], 0), { inner: `<small>本月支出</small><b>${yen(ex)}</b>` })}<ul class="od-lg">${CAT.map(([n, v, c]) => `<li><i style="background:${c}"></i>${n}<b>${yen(v)}</b></li>`).join('')}</ul></div>`)}
+            ${U.shp('div', { kind: 'torn', seed: 838, cls: 'od-ls-c' }, `${ttl('环比上月')}<div class="od-mom">${CAT.slice(0, 4).map(([n, v], i) => { const d = [12, -8, 30, -15][i]; return `<span><b>${n}</b><em class="${d > 0 ? 'up' : 'dn'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}%</em></span>`; }).join('')}</div>${ttl('月度支出趋势')}<div class="od-trend">${[1980, 2300, 2050, 2700, 2210, ex].map((v, i) => `<span><i style="height:${v / 30}%"></i><small>${(today.getMonth() - 4 + i + 12) % 12 || 12}月</small></span>`).join('')}</div>`)}
+            ${U.shp('div', { kind: 'torn', seed: 839, cls: 'od-ls-c' }, `${ttl('支付渠道')}<div class="od-ls-dn">${donut([{ value: 1400, color: '#D7000F' }, { value: 760, color: '#111' }, { value: 250, color: '#b9b2a6' }], 2410, { size: 110, inner: '<small>3 种</small>' })}<ul class="od-lg"><li><i style="background:#D7000F"></i>微信<b>¥1,400</b></li><li><i style="background:#111"></i>支付宝<b>¥760</b></li><li><i style="background:#b9b2a6"></i>银行卡<b>¥250</b></li></ul></div>`)}
+            ${U.shp('div', { kind: 'torn', seed: 840, cls: 'od-ls-c' }, `${ttl('收入构成')}<div class="od-inc"><span><b>劳动所得</b>${bar(84)}<em>¥2,700</em></span><span><b>其它收入</b>${bar(16)}<em>¥500</em></span></div><p class="muted-d">劳动所得 · 记账 +10 SP · 每日封顶 +2</p>`)}</div>`; },
+      (h) => h.addEventListener('click', (e) => { if (e.target.closest('[data-act="settle"]')) openSettle(); }));
       growDonuts(w);
     } });
   }
   const growDonuts = (root) => { if (RM()) return; root.querySelectorAll('.od-donut > svg').forEach((c, i) => c.animate([{ transform: 'scale(.6) rotate(-60deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, delay: 150 + i * 60, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' })); };
-  function openSettle(offset = 0, mode = 'period') {
+  function openSettle() {
     sheet('心相结算', `${seg([['month', '按月'], ['week', '按周']], 'month', 'data-p')}<div data-body></div>`, (sh) => {
-      let sequence = 0;
-      const draw = (p) => { const b = sh.querySelector('[data-body]'); const current = ++sequence; b.innerHTML = detailLedger ? '正在读取本地账目…' : `<div class="od-c">${thinking('伊戈尔正凝视着你的账目……')}</div>`;
-        const show = (live) => { if (!sh.isConnected || current !== sequence) return; const d = live?.data; b.innerHTML = `${live ? live.bonus || live.challenge !== null ? `<p class="od-sp">🎉 ${live.bonus ? '预算达标 · +10 SP' : ''}${live.challenge !== null ? ' 省钱挑战达成 · +10 SP' : ''}</p>` : '' : p === 'month' ? `<p class="od-sp">🎉 本月不超预算 · +10 SP</p>` : ''}<div class="od-ls-kpi sm">${[['支出', live ? d.totalExpense : p === 'month' ? 2410 : 560], ['收入', live ? d.totalIncome : p === 'month' ? 3200 : 300], ['结余', live ? d.totalIncome - d.totalExpense : p === 'month' ? 790 : -260]].map(([k, v]) => `<div class="q-row"><span class="q-k">${k}</span><b>${yen(v)}</b></div>`).join('')}</div>
-          <div class="od-settle">${(live ? [['最贵一笔', d.extremes.priciestEntry ? `${d.extremes.priciestEntry.note} · ${yen(d.extremes.priciestEntry.amount)}` : '暂无'], ['花最多的一天', d.extremes.priciestDay ? `${d.extremes.priciestDay.date} · ${yen(d.extremes.priciestDay.amount)}` : '暂无'], ['花最少的一天', d.extremes.cheapestDay ? `${d.extremes.cheapestDay.date} · ${yen(d.extremes.cheapestDay.amount)}` : '暂无'], ['预期', d.periodBudget == null ? '未设预算' : `${yen(d.periodBudget)} · 省 ${yen(d.periodBudget - d.totalExpense)}`], [`共 ${d.days} 天`, `日均消费 ${yen(Math.round(d.actualDailyAvg * 100) / 100)}`]] : [['最贵一笔', '二手书 · ¥245'], ['花最多的一天', '10月6日 · ¥388'], ['花最少的一天', '10月14日 · ¥6'], ['预期', `¥${p === 'month' ? '2,600' : '600'} · 省 ¥${p === 'month' ? 190 : 40}`], [`共 ${p === 'month' ? 20 : 7} 天`, `日均消费 ¥${p === 'month' ? 120 : 80}`]]).map(([k, v]) => `<div class="od-os-row"><span class="od-k">${k}</span><b>${esc(v)}</b></div>`).join('')}</div>
-          ${U.shp('div', { kind: 'quad', seed: 841, tone: 'ink', cls: 'od-igor' }, `<b>伊戈尔的提点</b><p>${live ? esc(`本地账目回顾（未调用 AI） · ${d.label}。${live.result.reflection.replace(/\*\*/g, '')} ${live.result.advice.join('；')}`) : '「吃饭花得最多，这无可厚非。但那本二手书……客人，知识是不会打折的，可你的钱包会。」'}</p>`)}`; P5.panelIn(b.children, { stagger: .06 }); }; if (detailLedger) detailLedger.settlement(p, offset, mode).then(show).catch(() => { if (sh.isConnected && current === sequence) { b.textContent = '本地结算读取失败，切换周期可重试'; P5.toast('结算失败，请重试'); } }); else setTimeout(() => show(null), RM() ? 0 : 900); };
+      const draw = (p) => { const b = sh.querySelector('[data-body]'); b.innerHTML = `<div class="od-c">${thinking('伊戈尔正凝视着你的账目……')}</div>`;
+        setTimeout(() => { b.innerHTML = `${p === 'month' ? `<p class="od-sp">🎉 本月不超预算 · +10 SP</p>` : ''}<div class="od-ls-kpi sm">${[['支出', p === 'month' ? 2410 : 560], ['收入', p === 'month' ? 3200 : 300], ['结余', p === 'month' ? 790 : -260]].map(([k, v]) => `<div class="q-row"><span class="q-k">${k}</span><b>${yen(v)}</b></div>`).join('')}</div>
+          <div class="od-settle">${[['最贵一笔', '二手书 · ¥245'], ['花最多的一天', '10月6日 · ¥388'], ['花最少的一天', '10月14日 · ¥6'], ['预期', `¥${p === 'month' ? '2,600' : '600'} · 省 ¥${p === 'month' ? 190 : 40}`], [`共 ${p === 'month' ? 20 : 7} 天`, `日均消费 ¥${p === 'month' ? 120 : 80}`]].map(([k, v]) => `<div class="od-os-row"><span class="od-k">${k}</span><b>${v}</b></div>`).join('')}</div>
+          ${U.shp('div', { kind: 'quad', seed: 841, tone: 'ink', cls: 'od-igor' }, `<b>伊戈尔的提点</b><p>「吃饭花得最多，这无可厚非。但那本二手书……客人，知识是不会打折的，可你的钱包会。」</p>`)}`; P5.panelIn(b.children, { stagger: .06 }); }, RM() ? 0 : 900); };
       sh.querySelector('[data-p]').addEventListener('pick', (e) => draw(e.detail)); draw('month');
     }, 93);
   }
   function openAssetBoard(st0 = 'data') {
     stage({ title: '资产板', en: 'ASSETS', seed: 95, cls: 'od-led', body: `${demoBar([['data', '有资产'], ['empty', '无固定资产']], st0)}<div data-host></div>`, onMount(w) {
-      let snapshot, events;
-      const draw = stateful(w, [], st0, (st) => { const live = detailLedger?.assets(); snapshot = live; const fixed = live ? live.assets.map(a => [a.name, a.price + (a.addOns ?? []).reduce((n, x) => n + x.amount, 0), a.addOns?.length ?? 0]) : st === 'empty' ? [] : [['索尼相机 A7C', 9800, 2], ['雅马哈电钢琴', 4200, 0], ['iPad Air', 4400, 1]], fx = live ? live.fixed : fixed.reduce((a, f) => a + f[1], 0), liq = live ? live.liquid : 3268, dep = live ? live.deposit : 12000;
-        return `<div class="od-ab-top">${donut([{ value: Math.max(0, liq), color: '#D7000F' }, { value: dep, color: '#111' }, { value: fx || 1, color: fx ? '#8E0010' : 'transparent' }], Math.max(0, liq + dep + fx), { size: P5.isWide() ? 200 : 168, sw: 14, inner: `<small>总财富</small><b>${yen(liq + dep + fx)}</b>` })}
+      stateful(w, [], st0, (st) => { const fixed = st === 'empty' ? [] : [['索尼相机 A7C', 9800, 2], ['雅马哈电钢琴', 4200, 0], ['iPad Air', 4400, 1]], fx = fixed.reduce((a, f) => a + f[1], 0), liq = 3268, dep = 12000;
+        return `<div class="od-ab-top">${donut([{ value: liq, color: '#D7000F' }, { value: dep, color: '#111' }, { value: fx || 1, color: fx ? '#8E0010' : 'transparent' }], liq + dep + fx, { size: P5.isWide() ? 200 : 168, sw: 14, inner: `<small>总财富</small><b>${yen(liq + dep + fx)}</b>` })}
             <ul class="od-lg big"><li><i style="background:#D7000F"></i>流动资产<b>${yen(liq)}</b></li><li><i style="background:#111"></i>存款<b>${yen(dep)}</b></li><li><i style="background:#8E0010"></i>固定资产<b>${yen(fx)}</b></li></ul></div>
-          ${U.shp('div', { kind: 'cut', seed: 851, tone: 'ink', cls: 'od-ab-save' }, `<small>自律攒下 · 历月预算结余累积</small><b>${live ? yen(live.savings) : '¥2,140'}</b>`)}
-          <section>${ttl('存款')}<button class="od-addline" data-act="dep">收起存款条目 ▲</button><div class="od-ab-dep">${(live ? live.deposit > 0 ? [['预算结余', live.deposit]] : [] : [['招行定期', 8000], ['余额宝', 4000]]).map(([n, v]) => `<div class="od-os-row"><span>${n}</span><b>${yen(v)}</b></div>`).join('')}</div></section>
-          <section>${ttl('固定资产')}${fixed.length ? fixed.map(([n, v, a], i) => `<div class="od-ab-fx" data-i="${i}"><i class="req-bg"></i><b>${esc(n)}</b><small>${a ? ` · +${a} 附加` : ''}</small><em>${yen(v)}</em><button class="od-del" data-act="del" aria-label="删除这件资产">✕</button></div>`).join('') : `<div class="od-empty"><b>还没有登记的固定资产。</b><p>把买过的设备 / 乐器登记进来，看看钱变成了什么。</p></div>`}
+          ${U.shp('div', { kind: 'cut', seed: 851, tone: 'ink', cls: 'od-ab-save' }, `<small>自律攒下 · 历月预算结余累积</small><b>¥2,140</b>`)}
+          <section>${ttl('存款')}<button class="od-addline" data-act="dep">收起存款条目 ▲</button><div class="od-ab-dep">${[['招行定期', 8000], ['余额宝', 4000]].map(([n, v]) => `<div class="od-os-row"><span>${n}</span><b>${yen(v)}</b></div>`).join('')}</div></section>
+          <section>${ttl('固定资产')}${fixed.length ? fixed.map(([n, v, a], i) => `<div class="od-ab-fx" data-i="${i}"><i class="req-bg"></i><b>${n}</b><small>${a ? ` · +${a} 附加` : ''}</small><em>${yen(v)}</em><button class="od-del" data-act="del" aria-label="删除这件资产">✕</button></div>`).join('') : `<div class="od-empty"><b>还没有登记的固定资产。</b><p>把买过的设备 / 乐器登记进来，看看钱变成了什么。</p></div>`}
             <button class="od-addline" data-act="add">＋ 登记一件资产</button></section>`; },
-      (h) => { events?.abort(); events = new AbortController(); h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) { const r = e.target.closest('.od-ab-fx'); if (r) assetForm(detailLedger ? snapshot.assets[+r.dataset.i]?.id : r.querySelector('b').textContent); return; } const a = b.dataset.act;
+      (h) => h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) { const r = e.target.closest('.od-ab-fx'); if (r) assetForm(r.querySelector('b').textContent); return; } const a = b.dataset.act;
         if (a === 'dep') { const d = h.querySelector('.od-ab-dep'); d.hidden = !d.hidden; b.textContent = d.hidden ? '展开存款条目 ▼' : '收起存款条目 ▲'; }
-        if (a === 'add') assetForm(); if (a === 'del') { e.stopPropagation(); const r = b.closest('.od-ab-fx'); confirm('删除这件资产？', `「${r.querySelector('b').textContent}」和它的附加费用会一起删除。`, '删除', async () => { if (!detailLedger) return r.remove(); if (r._deleting) return; r._deleting = true; try { await detailLedger.deleteAsset(snapshot.assets[+r.dataset.i].id); P5.toast('已删除'); } catch { P5.toast('删除失败，请重试'); } finally { r._deleting = false; } }); } }, {signal:events.signal}); });
-      watchLedgerDetails(w, () => draw(st0, false));
+        if (a === 'add') assetForm(); if (a === 'del') { e.stopPropagation(); const r = b.closest('.od-ab-fx'); confirm('删除这件资产？', `「${r.querySelector('b').textContent}」和它的附加费用会一起删除。`, '删除', () => r.remove()); } }));
       growDonuts(w);
     } });
   }
   function assetForm(name) {
-    const live = detailLedger; const asset = live && name ? live.assets().assets.find(a => a.id === name) : undefined;
-    if (live && name && !asset) { P5.toast('这件资产已不存在，请从资产列表重试'); return; }
-    if (asset) name = asset.name;
-    const requestId = `red-asset-${Date.now()}-${++assetFormSequence}`;
-    const addon = (n = '', v = '') => `<div class="od-addon"><input class="inp" placeholder="名称" value="${esc(n)}" aria-label="名称"><input class="inp" type="number" placeholder="金额" value="${v}" aria-label="金额"><button class="od-del" data-act="rm" aria-label="删除附加费用">✕</button></div>`;
-    sheet(name ? '资产' : '登记资产', `<label class="fld"><span>名称</span><input class="inp" placeholder="名称（如 索尼相机）" value="${esc(name || '')}"></label><label class="fld"><span>购入价</span><input class="inp" type="number" placeholder="购入价" value="${live ? asset?.price ?? '' : name ? 9800 : ''}"></label>
-      <div class="fld"><span>附加费用</span><p class="muted-d">如手机壳、配件、维修费…</p><div data-addons>${live ? (asset?.addOns ?? []).map(a => addon(a.name, a.amount)).join('') : name ? addon('镜头', 1600) + addon('相机包', 280) : ''}</div><div class="od-addon">${'<input class="inp" placeholder="名称" aria-label="新附加费用名称"><input class="inp" type="number" placeholder="金额" aria-label="新附加费用金额">'}${U.btn('加', { tone: 'ink', size: 'sm', seed: 861, attrs: 'data-act="addon"' })}</div></div>
+    const addon = (n = '', v = '') => `<div class="od-addon"><input class="inp" placeholder="名称" value="${n}" aria-label="名称"><input class="inp" type="number" placeholder="金额" value="${v}" aria-label="金额"><button class="od-del" data-act="rm" aria-label="删除附加费用">✕</button></div>`;
+    sheet(name ? '资产' : '登记资产', `<label class="fld"><span>名称</span><input class="inp" placeholder="名称（如 索尼相机）" value="${name || ''}"></label><label class="fld"><span>购入价</span><input class="inp" type="number" placeholder="购入价" value="${name ? 9800 : ''}"></label>
+      <div class="fld"><span>附加费用</span><p class="muted-d">如手机壳、配件、维修费…</p><div data-addons>${name ? addon('镜头', 1600) + addon('相机包', 280) : ''}</div><div class="od-addon">${'<input class="inp" placeholder="名称" aria-label="新附加费用名称"><input class="inp" type="number" placeholder="金额" aria-label="新附加费用金额">'}${U.btn('加', { tone: 'ink', size: 'sm', seed: 861, attrs: 'data-act="addon"' })}</div></div>
       <div class="sh-acts">${name ? U.btn('删除这件资产', { tone: 'paper', seed: 862, attrs: 'data-act="del"' }) : ''}${U.btn(name ? '保存' : '登记资产', { tone: 'red', size: 'lg', seed: 863, attrs: 'data-ok' })}</div>`, (sh, close) => {
-      sh.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act; if (a === 'rm') b.closest('.od-addon').remove(); if (a === 'addon') { const [n, v] = b.closest('.od-addon').querySelectorAll('input'); sh.querySelector('[data-addons]').insertAdjacentHTML('beforeend', addon(n.value || '附加', v.value || 0)); n.value = v.value = ''; } if (a === 'del' && live) { confirm('删除这件资产？', '它和它的附加费用会一起删除。', '删除', async () => { const save = sh.querySelector('[data-ok]'); if (save.disabled) return; save.disabled = true; try { await live.deleteAsset(asset.id); close(); P5.toast('已删除'); } catch { P5.toast('删除失败，请重试'); } finally { save.disabled = false; } }); return; } if (a === 'del') { close(); confirm('删除这件资产？', '它和它的附加费用会一起删除。', '删除', () => P5.toast('已删除')); } });
-      sh.querySelector('[data-ok]').onclick = async (e) => {
-        if (!live) { close(); P5.toast('已保存'); return; }
-        const button = e.currentTarget; if (button.disabled) return;
-        const inputs = sh.querySelectorAll('input');
-        const addOns = Array.from(sh.querySelectorAll('[data-addons] .od-addon')).map(row => { const [n, v] = row.querySelectorAll('input'); return {name:n.value, amount:live.amount(v.value)}; });
-        const pending = sh.querySelector('[data-act="addon"]').closest('.od-addon').querySelectorAll('input');
-        if (pending[0].value.trim() || pending[1].value.trim()) addOns.push({name:pending[0].value, amount:live.amount(pending[1].value)});
-        button.disabled = true;
-        try { await live.saveAsset({name:inputs[0].value, price:live.amount(inputs[1].value), addOns}, asset?.id, requestId); if (sh.isConnected) close(); P5.toast('已保存'); }
-        catch { if (sh.isConnected) P5.toast('保存失败，请检查名称和金额后重试'); }
-        finally { button.disabled = false; }
-      };
+      sh.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act; if (a === 'rm') b.closest('.od-addon').remove(); if (a === 'addon') { const [n, v] = b.closest('.od-addon').querySelectorAll('input'); sh.querySelector('[data-addons]').insertAdjacentHTML('beforeend', addon(esc(n.value || '附加'), v.value || 0)); n.value = v.value = ''; } if (a === 'del') { close(); confirm('删除这件资产？', '它和它的附加费用会一起删除。', '删除', () => P5.toast('已删除')); } });
+      sh.querySelector('[data-ok]').onclick = () => { close(); P5.toast('已保存'); };
     }, 97);
   }
   function openDonut() {

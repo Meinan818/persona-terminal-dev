@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 统计 Statistics（真实 src/pages/Statistics.tsx 的 p5 分支）—— 版式 1:1 回到原生 v3 pages_b.js stats「SOCIAL STATS」（用户验收版）：
  *   页头 → ss-grid【左 ss-list 五维竖排（名 + 英文 + 等级称号 + 刻度 + 点数条 + 大号等级）｜右 ss-side：4 张 KPI（累计点数 / 记录天数 / 最长连续 / 日均点数）
  *   → 属性趋势（星点折线）→ 属性分布（五柱）→ 解锁签 + 命运轨迹 → / 成就 →】。
@@ -22,8 +22,7 @@ import { isLowMotion } from '@/p5r-red/lib/prefs';
 import { spring } from '@/p5r-red/fx/spring';
 import { panelIn } from '@/p5r-red/fx/motion';
 import { ATTR, ATTR_ORDER, D, RANKS } from '@/p5r-red/mock/data';
-import { useAppStore } from '@/store';
-import { calcMaxStreak, streakDates } from '@/utils/streak';
+import { ACHIEVEMENTS, SKILLS } from '@/p5r-red/mock/pkg5-data';
 import '../pkg5.p5r.css';
 
 type Range = '7' | '30' | 'all';
@@ -36,26 +35,13 @@ export default function Statistics({ params }: PageProps) {
   const empty = params.get('state') === 'empty';
   const root = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<Range>((params.get('range') as Range) || 'all'); // parity：默认「全部」= v3 的 14 点折线
-  // 真实数据：五维、活动、成就、技能
-  const activities = useAppStore((s) => s.activities);
-  const realAttrs = useAppStore((s) => s.attributes);
-  const realAchievements = useAppStore((s) => s.achievements);
-  const realSkills = useAppStore((s) => s.skills);
-  const perDay = new Map<string, number>();
-  for (const a of activities) {
-    const k = a.date instanceof Date ? a.date.toISOString().slice(0, 10) : String(a.date).slice(0, 10);
-    perDay.set(k, (perDay.get(k) ?? 0) + Object.values(a.pointsAwarded ?? {}).reduce((x, y) => x + (Number(y) || 0), 0));
-  }
-  const allDays = [...perDay.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v);
-  const ranged = range === '7' ? allDays.slice(-7) : range === '30' ? allDays.slice(-30) : allDays;
-  const maxDay = Math.max(1, ...ranged);
-  const days = ranged.map((v) => Math.round((v / maxDay) * 9));
-  const totalPoints = empty ? 0 : realAttrs.reduce((s, a) => s + a.points, 0);
-  const recordDays = empty ? 0 : perDay.size;
-  const maxStreak = empty ? 0 : calcMaxStreak(streakDates(activities));
-  const avg = recordDays ? (totalPoints / recordDays).toFixed(1) : '0';
-  const kpi: [string, string][] = empty ? [['累计点数', '0'], ['记录天数', '0'], ['最长连续', '0'], ['日均点数', '0']] : [['累计点数', String(totalPoints)], ['记录天数', String(recordDays)], ['最长连续', String(maxStreak)], ['日均点数', avg]];
-  const achN = empty ? 0 : realAchievements.filter((a) => a.unlocked).length, skN = empty ? 0 : realSkills.filter((s) => s.unlocked).length;
+  /** v3 days（14 天）；7天 = 后 7 个，全部 = 全 14 个（假数据） */
+  const ALL = [3, 5, 2, 6, 4, 7, 5, 8, 4, 6, 9, 5, 7, 6];
+  const days = range === '7' ? ALL.slice(-7) : ALL;
+  const totalPoints = empty ? 0 : ATTR_ORDER.reduce((s, k) => s + D.attrs[k].pts, 0);
+  // 数值与首页 2×3 表 / 菜单名片同源（用户决定：各页一致）：最长连续 12（首页表）
+  const kpi: [string, string][] = empty ? [['累计点数', '0'], ['记录天数', '0'], ['最长连续', '0'], ['日均点数', '0']] : [['累计点数', String(totalPoints)], ['记录天数', '42'], ['最长连续', '12'], ['日均点数', '4.2']];
+  const achN = empty ? 0 : ACHIEVEMENTS.filter((a) => a.unlocked).length, skN = empty ? 0 : SKILLS.filter((s) => s.unlocked).length;
   const step = 280 / Math.max(1, days.length - 1);
 
   useEffect(() => {

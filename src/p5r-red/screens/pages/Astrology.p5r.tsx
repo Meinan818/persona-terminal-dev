@@ -26,10 +26,9 @@ import { panelIn } from '@/p5r-red/fx/motion';
 import { DevStateBar } from '@/p5r-red/kit/DevStateBar';
 import { P5Empty } from '@/p5r-red/kit/P5States';
 import '@/p5r-red/screens/pkg4/pkg4.css';
-import { useAppStore } from '@/store';
-import { useEffect } from 'react';
 
 type Tab = 'daily' | 'long' | 'archive';
+const ROWS: [string, string, string, 'active' | 'archived'][] = [['最近总是睡不好，是不是该换份工作？', 'midterm', '10.18', 'active'], ['这学期能不能拿到奖学金？', 'longterm', '09.30', 'active'], ['周末的面试会顺利吗', 'recent', '09.02', 'archived'], ['要不要和老朋友和好', 'midterm', '07.11', 'archived']];
 
 function Inline({ play, dep }: { play: () => void; dep: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -37,26 +36,17 @@ function Inline({ play, dep }: { play: () => void; dep: string }) {
   return <div ref={ref} className="p4-astro-in" />;
 }
 
-function Archive({ empty, onOpen }: { empty: boolean; onOpen: (id?: string) => void }) {
-  const { longReadings } = useAppStore();
+function Archive({ empty, onOpen }: { empty: boolean; onOpen: () => void }) {
   const [t, setT] = useState<'active' | 'archived'>('active');
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { if (ref.current) return panelIn(ref.current.children, { from: 'right' }); }, [t]);
   if (empty) return <div className="p4-astro-empty"><P5Empty text="尚未有中长期占卜记录" hint="发起一次占卜后，此处会保留全部档案" seed={7} /></div>;
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const rows: Array<[string, string, string, 'active' | 'archived', string]> = longReadings.map((r) => [
-    r.question,
-    r.period,
-    new Date(r.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }).replace(/\//g, '.'),
-    (r.archived || r.expiresAt < todayKey) ? 'archived' : 'active',
-    r.id,
-  ]);
   return (
     <div className="p4-arch">
       <div className="seg od-seg">{(['active', 'archived'] as const).map((k) => <button key={k} type="button" aria-pressed={t === k} onClick={() => setT(k)}>{k === 'active' ? '活跃' : '已归档'}</button>)}</div>
       <div className="od-arch" ref={ref}>
-        {rows.filter((r) => r[3] === t).map(([q, p, d, , id], i) => (
-          <button key={id} className="od-arch-r" data-i={i} onClick={() => onOpen(id)}><i className="req-bg" />
+        {ROWS.filter((r) => r[3] === t).map(([q, p, d], i) => (
+          <button key={q} className="od-arch-r" data-i={i} onClick={onOpen}><i className="req-bg" />
             <span className="od-arch-cs" dangerouslySetInnerHTML={{ __html: OD.LR_CARDS.map(([c, r]: [unknown, boolean]) => OD.tarotFace(c, { w: 30, rev: r })).join('') }} />
             <span className="od-arch-m"><b>{q}</b><small>{OD.PERIOD[p][0]} · {d}{t === 'archived' ? ' · 已归档' : ''}</small></span><em>›</em>
           </button>
@@ -121,8 +111,6 @@ function FortuneTable({ onLong, onArchive }: { onLong: () => void; onArchive: ()
 }
 
 export default function Astrology({ params }: PageProps) {
-  const { longReadings, loadLongReadings, sweepExpiredReadings } = useAppStore();
-  useEffect(() => { void loadLongReadings().then(() => sweepExpiredReadings()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const t0 = params.get('tab') as Tab | null;
   const [tab, setTab] = useState<Tab>(t0 === 'long' || t0 === 'archive' ? t0 : 'daily');
   const [detail, setDetail] = useState(params.get('detail') === '1');
@@ -137,7 +125,7 @@ export default function Astrology({ params }: PageProps) {
     <div className="p4-astro astro5">
       <div className="astro-rings astro5-rings" aria-hidden="true" />
       <P5PageHeader ransom="FORTUNE" cn="今日星象" sub="从三张塔罗牌中抽取今日指引" seed={51} right={<P5Back to="dashboard" />} />
-      <div className="seg astro5-tabs" role="tablist">{([['daily', '今日塔罗'], ['long', '中长期占卜'], ['archive', `档案 ${st === 'empty' ? 0 : longReadings.length}`]] as [Tab, string][]).map(([k, l]) => (
+      <div className="seg astro5-tabs" role="tablist">{([['daily', '今日塔罗'], ['long', '中长期占卜'], ['archive', `档案 ${st === 'empty' ? 0 : ROWS.length}`]] as [Tab, string][]).map(([k, l]) => (
         <button key={k} type="button" role="tab" aria-pressed={tab === k} aria-selected={tab === k} onClick={() => switchTab(k)}>{l}</button>
       ))}</div>
       {tab === 'daily' && <>

@@ -10,6 +10,7 @@ import BigDealClearCutIn from '@yellow/screens/overlays/BigDealClearCutIn.p4g';
 import CallingCardCutIn from '@yellow/screens/overlays/CallingCardCutIn.p4g';
 import { OrgCelebration } from '@yellow/screens/overlays/OrgCelebrationCutIn.p4g';
 import WishProposalDialog from '@yellow/screens/overlays/WishProposalDialog.p4g';
+import OrphanImagesPrompt from '@yellow/screens/overlays/OrphanImagesPrompt.p4g';
 
 export function GlobalOverlayHost() {
   const levelUp = useAppStore((s) => s.levelUpNotification);
@@ -30,6 +31,9 @@ export function GlobalOverlayHost() {
   const wishProposal = useAppStore((s) => s.wishProposal);
   const setWishProposal = useAppStore((s) => s.setWishProposal);
   const setWishProgress = useAppStore((s) => s.setWishProgress);
+  const orphan = useAppStore((s) => s.orphanImagesPrompt);
+  const dismissOrphan = useAppStore((s) => s.dismissOrphanImagesPrompt);
+  const pruneOrphan = useAppStore((s) => s.pruneOrphanImages);
   const achLines = ach ? ACHIEVEMENT_UNLOCK_LINES[ach.id] : undefined;
   const wishPayload = wishCut
     ? { title: wishCut.wishTitle, pct: wishCut.pct, delta: wishCut.delta, times: wishCut.times, source: wishCut.source === 'ai' ? 'ai' as const : 'local' as const, reason: wishCut.reason }
@@ -45,6 +49,7 @@ export function GlobalOverlayHost() {
       <OrgCelebration head={orgHead} onClose={shiftOrg} />
       <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
         onConfirm={() => { if (wishProposal) void setWishProgress(wishProposal.wishId, wishProposal.toPct, { reason: wishProposal.reason }); setWishProposal(null); }} />
+      <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} count={orphan?.count} bytes={orphan?.bytes} onConfirm={() => { void pruneOrphan(); dismissOrphan(); }} />
     </>
   );
 }

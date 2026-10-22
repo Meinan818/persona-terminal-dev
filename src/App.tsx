@@ -1049,7 +1049,7 @@ function App() {
           {/* BIG DEAL 收官结算屏（批4）：collapseBigDeal 落库后全局弹出，不依赖当前页面 */}
           {uiChannel !== 'p4' && <BigDealClearCutIn />}
           {/* 导入主备份后「记录已不存在的配图」询问窗：导入会切回首页，只能挂顶层 */}
-          <OrphanImagesPrompt />
+          {uiChannel !== 'p4' && <OrphanImagesPrompt />}
           {/* 愿望进度（PRD_V2.6 §8）：任务完成后的「又近了多少」弹窗 +
               黑猫在谈话里提议改数值的确认卡。两者都可能在任意页面触发，故挂顶层 */}
           {uiChannel !== 'p4' && <WishProgressCutIn />}

@@ -31,6 +31,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SheetModal } from '@/components/SheetModal';
 import { ArchiveIcon, EditIcon, RestoreIcon, TrashIcon } from '@/components/icons';
 import { useUiChannel } from '@/ui/useUiChannel';
+import TodosP4 from '@yellow/screens/pages/Todos.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { P4CountPill, P4EmptyBloom, P4SectionTitle, P4Sparkle } from '@/ui/p4Kit';
 import { BigSlantTitle, GhostWords, P3EmptySlab, P3R, SlantButton } from '@/components/p3r/kit';
 import { roughQuad, P5Wedge, P5Chip, P5StarFab } from '@/components/p5r/kit';
@@ -617,6 +619,8 @@ export const TodosView = () => {
     }
     return '';
   };
+
+  if (isP4) return <P4Host><TodosP4 params={new URLSearchParams()} /></P4Host>;
 
   return (
     // 子视图化：页级 motion 容器（opacity 进出场）移交宿主 Actions 的 tabpanel 包装层，

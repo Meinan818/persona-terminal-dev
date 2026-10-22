@@ -9,7 +9,8 @@
 - **红整包重基线 `ec1e90d`**：`integration/` 整包覆盖 `src/p5r-red` + `public/slots` + `scripts/p5r-red` + `p5r-red-verify.html`；删两个依赖已移除 ledger 桥的旧测试。仓库与 demo 的 `src/p5r-red/` 现在 **0 文件差异**；`tsc` 0 错误；compare 从 2/52 升到 3/52（ov-codex 28%→0.99%、ov-rankup 15%→0.46% PASS、ov-bond-detail 13%→10%）。
 - **黄/粉/蓝整包重基线 `47d6ef7`**：demo `src/` 整包覆盖回 `src/themes/<dir>/`（只做 `@/`→`@yellow|@blue|@pink/` 别名适配），字体/图片等二进制逐字节还原；`bridge/GlobalOverlayHost` 不再往 mock 弹层塞真实字段（愿望提议/孤儿配图保持 demo mock）。`tsc` 0 错误；烟测 30 路由 0 异常。
 - **黄色整包 + 切主题桥 `88b44fb`**：去掉 `kitThemeOf('yellow')` 的错误 `return null`（黄色改走完整 ThemeApp）；`PresenceBridge` 补 `theme` 写回真实 `setTheme`（菜单切主题生效）。
-- **仍待定位的系统性像素差**：红 compare 剩 ~2-5% 的系统性差，集中在带外壳页面（menu/dashboard/account），弹层普遍 <1%。疑似 `noto-sc-black.v2.css` 的 `font-display: optional` 冷启动弃用字体或全局 CSS 泄漏，需用「在 demo 自己的 dist 上跑同款 compare」二分环境 vs 集成；这是黄/粉/蓝共用根因，修好一套四套受益。
+- **像素差已定位为「本机字体/emoji 环境」，不是接入缺陷（决定性证据）**：把 `p5r-red-demo.zip` 自己 `npm install + vite build` 出 dist，再跑同款 `compare.mjs --page index.html`，demo 自己的 dist 在本机也差 `menu--390-day 4.731%`；接入后的 verify 页同页 `5.286%`。即 ~4.7% 是机器字体/emoji 渲染差异（demo 参考图用 demo 方机器的 Noto Color Emoji + 特定字体），接入只额外引入 ~0.5%（真实仓库全局 CSS 轻微泄漏）。因此 `compare.mjs` 在本机永远过不了 52/52，连 demo 自身都过不了；源码层面「整包原样」已达成，最终视觉验收要回到真机。
+- **整包原样证据**：红 `check-copy.mjs` 报「清单 692 个文件：一致 692，adapter 已改 0」（唯一 FAIL 是 `android/*.gradle` 两个 cap sync 痕迹，与 demo 无关、按约定不提交不动）。黄/粉/蓝 demo `src/`（除 `main.tsx`）经 `@/`→`@theme/` 别名适配后与仓库逐字节一致（0 文本内容差异，字体/图片二进制哈希一致）。
 - **下一步**：① 定位并修红剩余 ~2-5% 像素差到 52/52；② 给黄/粉/蓝建参考截图 + 同款对比脚本并逐张过；③ 真机验收四套 + 菜单切主题 + 音效 + 日夜/低动效/弱网。
 - **红线不变**：不 push；不 commit 凭据；不改 `main` 与幽影协议；demo 的 JSX/样式/动画/字体/素材一律不碰，只改 adapter/bridge。
 

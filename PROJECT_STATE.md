@@ -13,6 +13,7 @@
 - **本轮提交**：`5beee81` `8b16d7a` `34417c8` `b000b96` `6f854f3` `4cba0eb` `b65dc58`（均本地，未 push）。
 - **第二批接线（2:13 之后）**：`01b8bdf` 蓝粉任务归档/删除接真；`bbd8a3d` 三套设置页 settingsStore 从 1bc7928 恢复真实桥（主题/夜间等持久化，密钥仍留本地）。四套切主题 + 渲染 + 记账/羁绊/任务增删改/设置持久化均已接真；黄主题 11 页整体接真。
 - **第三批接线（2:25 之后）**：`724e989` 三套恢复成就页 + 图鉴翻面（FlipCardView/TarotFlipView）读真实收藏，愿望提议/孤儿配图弹层 + GlobalOverlayHost 恢复真实载荷。粉/蓝已接：记账、羁绊、任务、设置、成就、图鉴、愿望/孤儿。
+- **第四批接线（2:34 之后）**：`afb954a` 蓝/粉菜单页新增 useMenuData（读真实 user/attributes/activities），等级/总点数/连续天数接真。粉/蓝菜单身份信息不再假。
 
 - **根因（为什么之前没到 100%）**：接入时为了接真实数据，改了 demo 自己的页面源码（红改了 `Statistics.p5r.tsx`/`oc.ts`，黄/粉/蓝改了 `screens/pages/*`/`overlays/*`/`settingsStore.ts`），违反各 demo HANDOFF 的「整包原样拷入、只准改 adapter/bridge」。改 demo 页面 = 视觉漂移。用红自带的 `compare.mjs` 实测旧状态 `RESULT: FAIL 2/52`（ov-codex 差 28%）。
 - **demo 权威包**：`D:\下载\DEMO\p4g-yellow-demo.zip / p3r-blue-demo.zip / p3r-pink-demo.zip / p5r-red-demo.zip`（已解包到 `E:\MASKARIA\.cache\demo-packages\`）。红含 `integration/`（整包拷入 + compare.mjs + 52 张参考图 + check-copy.mjs）。

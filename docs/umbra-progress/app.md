@@ -29,7 +29,7 @@
 - 步 5 引擎原语（17 个 Pixi 原语 + camera + holdupRing）：样板在 `origin/feat/umbra-skin-p5r-red:labs/umbra-m3-red/src/umbra/engine/`（16 文件），移植量大；本机无 GPU、红色皮肤包未进 `src/umbra/skins/`，无法按任务书截图验收。
 - 步 6 剩余：设置页三档音量写档、首包不含音频的构建排除，依赖 `skins/<id>/audio/` 音频文件（D-008，尚未入库）。
 - 步 7 skin:check 新校验：可在皮肤包就位后补事件/原语名单、wallMs、labels、音频引用与 hud 命中区校验。
-- 步 7 剩余：原语单项上限表、hud.system 新范围。
+- 步 7 剩余：仅 hud.system 新范围（次要）。
 
 ## 已完成
 

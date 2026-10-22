@@ -37,7 +37,7 @@ import {
 import { generatePresetNameMatches, type PresetNameMatchResult } from '@/utils/presetNameMatcher';
 import { P4Flower, P4Sparkle, P4SkyFan, P4ArcRings, P4_HEADER_BLEED } from '@/ui/p4Kit';
 import { downscaleDataUrl } from '@/utils/imageCrop';
-import { SoundVolumeRow } from '@/components/SoundVolumeRow';
+import { AudioVolumeGroup } from '@/components/AudioVolumeGroup';
 import { BgmSettings } from '@/components/BgmSettings';
 
 /** 五维属性的展示元数据（图标 + 主色 + 默认中文名），仅用于设置页 UI */
@@ -1228,8 +1228,8 @@ export const Settings = () => {
                       />
                     </div>
 
-                    {/* 音量大小滑块：仅非静音时显示（第 13 轮：草稿值 + 松手试听 + 通道小字，见 SoundVolumeRow） */}
-                    {!settings.soundMuted && <SoundVolumeRow p5={p5} />}
+                    {/* 三档音量：仅非静音时显示（沿用 SoundVolumeRow 样式：草稿值 + 松手落库） */}
+                    {!settings.soundMuted && <AudioVolumeGroup p5={p5} />}
 
                     {/* 夜间模式 */}
                     <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">

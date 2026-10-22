@@ -497,6 +497,7 @@ export interface Settings {
   backgroundOpacity?: number;
   soundMuted?: boolean;
   soundVolume?: number;     // 音量大小 0–100，默认 80
+  voiceVolume?: number;     // 语音音量 0–100，默认 70
   // ── 导入音乐（第 13 轮 B 组 2.8）：曲目本体在本机 bgmTracks 表（不上云不备份）；这几项按设备生效，上云剥掉 ──
   bgmEnabled?: boolean;                                  // 默认开（有曲目才有意义）
   bgmVolume?: number;                                    // 0–100，默认 60

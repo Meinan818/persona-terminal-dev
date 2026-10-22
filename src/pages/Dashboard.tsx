@@ -25,6 +25,8 @@ import { masteryOf } from '@/utils/levels';
 import { resolveLevelDifficulty } from '@/utils/levelDifficulty';
 import type { AttributeId, CallingCard } from '@/types';
 import { useUiChannel } from '@/ui/useUiChannel';
+import DashboardP4 from '@yellow/screens/pages/Dashboard.p4g';
+import { P4Host } from '@/themes/integration/P4Host';
 import { P4Flower, P4Sparkle, P4SkyCircle, P4_HEADER_BLEED } from '@/ui/p4Kit';
 import { FlowerChart } from '@/components/FlowerChart';
 import { AttrDetailInlineP4 } from '@/components/AttrDetailInlineP4';
@@ -871,6 +873,10 @@ export const Dashboard = () => {
         <OnThisDaySlide view={onThisDay} render={(p) => <OnThisDayNeutralCard {...p} />} />
       </div>
     );
+  }
+
+  if (useUiChannel() === 'p4') {
+    return <P4Host><DashboardP4 pageId="dashboard" params={new URLSearchParams()} /></P4Host>;
   }
 
   return (

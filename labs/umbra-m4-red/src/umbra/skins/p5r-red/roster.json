@@ -1,0 +1,100 @@
+{
+ "lead": "joker",
+ "navigator": "oracle",
+ "default": [
+  "skull",
+  "mona",
+  "panther"
+ ],
+ "chars": {
+  "joker": {
+   "field": {
+    "h": 430,
+    "dy": 0
+   }
+  },
+  "skull": {
+   "field": {
+    "h": 440,
+    "dy": 0
+   }
+  },
+  "mona": {
+   "field": {
+    "h": 300,
+    "dy": 0
+   }
+  },
+  "panther": {
+   "field": {
+    "h": 410,
+    "dy": 60
+   }
+  },
+  "fox": {
+   "field": {
+    "h": 440,
+    "dy": 0
+   }
+  },
+  "queen": {
+   "field": {
+    "h": 420,
+    "dy": 0
+   }
+  },
+  "noir": {
+   "field": {
+    "h": 410,
+    "dy": 0
+   }
+  },
+  "crow": {
+   "field": {
+    "h": 450,
+    "dy": 0
+   }
+  },
+  "violet": {
+   "field": {
+    "h": 400,
+    "dy": 0
+   }
+  }
+ },
+ "showtime": [
+  [
+   "joker",
+   "skull"
+  ],
+  [
+   "mona",
+   "panther"
+  ],
+  [
+   "skull",
+   "fox"
+  ],
+  [
+   "joker",
+   "crow"
+  ],
+  [
+   "joker",
+   "violet"
+  ],
+  [
+   "queen",
+   "noir"
+  ],
+  [
+   "mona",
+   "noir"
+  ]
+ ],
+ "gaps": {
+  "crow": "Loki 无官方渲染图（只记缺口，不顶替）；召唤用 Robin Hood",
+  "violet": "无 Cendrillon 官方渲染图，用 P5R 官方概念设定图；场上背影为生成图",
+  "mona": "原作无 Mona 战斗眼部横条官方图，用官方对话 cut-in 裁切"
+ }
+}

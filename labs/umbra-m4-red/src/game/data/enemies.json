@@ -1,0 +1,12 @@
+{
+ "_note": "M4 敌人数据（规则层，零文案：名字在皮肤 labels enemy.<id>）。数值为样板，sim:balance 未跑。",
+ "types": {
+  "noisy": { "lv": 9, "hp": 620, "atk": 58, "weak": ["curse", "elec", "fire", "psy"], "exp": 130, "money": 620, "tex": "enemy.noisy", "drop": { "id": "medicine", "rate": 0.25 } },
+  "echo": { "lv": 8, "hp": 560, "atk": 52, "weak": ["phys", "wind", "ice", "nuke", "bless"], "exp": 115, "money": 540, "tex": "enemy.echo", "drop": { "id": "snuff", "rate": 0.2 } },
+  "elite": { "lv": 13, "hp": 1500, "atk": 74, "weak": ["ice", "psy"], "exp": 620, "money": 2400, "tex": "enemy.elite", "group": "enemy:elite", "h": 420, "tier": "elite", "drop": { "id": "snuff", "rate": 1 } },
+  "boss": { "lv": 16, "hp": 1900, "atk": 82, "weak": ["fire", "bless"], "exp": 1500, "money": 8000, "tex": "enemy.boss1", "group": "enemy:boss", "h": 470, "tier": "boss", "noTalk": true,
+   "phases": [ { "at": 0, "hp": 2300, "atk": 96, "weak": ["elec", "nuke"], "tex": "enemy.boss2", "h": 500, "actions": 2 } ],
+   "drop": { "id": "medicine", "rate": 1 } }
+ },
+ "alertMax": { "atk": 1.3, "hp": 1.2, "drop": 2 }
+}

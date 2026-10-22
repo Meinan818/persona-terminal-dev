@@ -1,0 +1,58 @@
+{
+ "id": "action.guard",
+ "event": "action",
+ "match": {
+  "skillId": "guard"
+ },
+ "duration": 520,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "guard"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "title",
+   "args": {
+    "text": "cmd.guard",
+    "font": "@font.display",
+    "size": 90,
+    "pos": {
+     "x": 980,
+     "y": 330
+    },
+    "rot": -0.12,
+    "invert": [
+     0
+    ]
+   },
+   "dur": 500
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "args": {
+    "count": 40,
+    "at": {
+     "x": "$actor",
+     "y": "$actor"
+    },
+    "speed": 420,
+    "life": 420,
+    "gravity": 0,
+    "frames": [
+     "square",
+     "shard"
+    ],
+    "colors": [
+     "#37d6e8",
+     "#ffffff"
+    ]
+   }
+  }
+ ]
+}

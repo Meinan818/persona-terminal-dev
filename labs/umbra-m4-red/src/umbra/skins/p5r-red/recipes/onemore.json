@@ -1,0 +1,99 @@
+{
+ "id": "onemore",
+ "event": "onemore",
+ "duration": 420,
+ "assets": [
+  "char.$actor"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "skinFilter",
+   "dur": 420,
+   "args": {
+    "kind": "grey",
+    "amount": 1
+   }
+  },
+  {
+   "at": 0,
+   "prim": "cutin",
+   "dur": 300,
+   "ease": "outCubic",
+   "args": {
+    "bandAngle": -0.14,
+    "speedLines": {
+     "layers": 2,
+     "count": 46
+    },
+    "panels": [
+     {
+      "shape": [],
+      "art": "char.$actor#cutin",
+      "enterFrom": "left"
+     }
+    ]
+   },
+   "minimal": {
+    "dur": 160
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "cutin"
+   }
+  },
+  {
+   "at": 150,
+   "prim": "flashScreen",
+   "dur": 90,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.45
+   }
+  },
+  {
+   "at": 140,
+   "prim": "banner",
+   "dur": 280,
+   "args": {
+    "text": "label.onemore",
+    "shape": "onemore",
+    "enterFrom": "right"
+   }
+  },
+  {
+   "at": 150,
+   "prim": "particles",
+   "args": {
+    "count": 40,
+    "at": {
+     "x": 640,
+     "y": 330
+    },
+    "speed": 1300,
+    "life": 260,
+    "gravity": 0,
+    "frames": [
+     "star",
+     "shard"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "#0a0a0a"
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 150,
+   "prim": "sfx",
+   "args": {
+    "id": "onemore"
+   }
+  }
+ ]
+}

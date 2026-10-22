@@ -1,0 +1,39 @@
+{
+ "id": "talk.start",
+ "event": "talk:start",
+ "duration": 700,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "dim",
+   "args": {
+    "color": "#000",
+    "alpha": 0.55,
+    "hold": true
+   },
+   "dur": 700,
+   "layer": "dmg"
+  },
+  {
+   "at": 0,
+   "prim": "speedLines",
+   "args": {
+    "count": 30,
+    "colors": [
+     "#ffffff"
+    ],
+    "scrollSpeed": 2
+   },
+   "dur": 700,
+   "layer": "dmg"
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "talk"
+   }
+  }
+ ]
+}

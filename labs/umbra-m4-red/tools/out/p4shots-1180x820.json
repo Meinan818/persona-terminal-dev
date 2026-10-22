@@ -1,0 +1,28 @@
+{
+ "errors": [],
+ "engErr": [
+  "dropText unit.down"
+ ],
+ "audio": [
+  "bgm:battle.normal(silent)",
+  "se:se.battle.start(silent)",
+  "se:se.summon(silent)",
+  "se:se.hit.curse(silent)",
+  "se:se.hit.phys(silent)",
+  "se:se.allout(silent)",
+  "se:allout.hit(silent)",
+  "se:se.rank.stamp(silent)",
+  "se:se.weak(silent)",
+  "se:se.onemore(silent)",
+  "se:se.holdup(silent)",
+  "se:se.attack.slash(silent)",
+  "se:se.guard(silent)",
+  "se:se.result(silent)",
+  "se:se.levelup(silent)",
+  "se:se.highlight.duo(silent)",
+  "se:se.intent(silent)",
+  "voice:joker.onemore(silent)",
+  "se:se.down(silent)",
+  "se:se.baton(silent)"
+ ]
+}

@@ -1,0 +1,269 @@
+{
+ "id": "action.attack",
+ "event": "action",
+ "match": {
+  "skillId": "attack"
+ },
+ "duration": 1100,
+ "hitMarks": [
+  440
+ ],
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "swing"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "pose",
+   "dur": 940,
+   "args": {
+    "target": "$actor",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.1,
+      "pose": "windup",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.32,
+      "pose": "dash",
+      "ease": "inCubic"
+     },
+     {
+      "at": 0.48,
+      "pose": "slash",
+      "ease": "outBack"
+     },
+     {
+      "at": 0.72,
+      "pose": "slash"
+     },
+     {
+      "at": 1,
+      "pose": "idle",
+      "ease": "inOutCubic"
+     }
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "camera",
+   "dur": 1000,
+   "args": {
+    "focus": "$target",
+    "keys": [
+     {
+      "at": 0
+     },
+     {
+      "at": 0.12,
+      "x": 30,
+      "zoom": 0.04,
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.42,
+      "x": -90,
+      "y": -10,
+      "zoom": 0.2,
+      "rot": -0.022,
+      "ease": "inCubic"
+     },
+     {
+      "at": 0.7,
+      "x": -70,
+      "y": -6,
+      "zoom": 0.16,
+      "rot": -0.012
+     },
+     {
+      "at": 1,
+      "ease": "inOutCubic"
+     }
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 100,
+   "prim": "afterimage",
+   "dur": 300,
+   "args": {
+    "actor": "$actor",
+    "to": {
+     "x": "$target",
+     "y": "$target",
+     "dx": 150,
+     "dy": 40
+    },
+    "n": 3,
+    "scaleTo": 0.62,
+    "tints": [
+     "#ffffff",
+     "@color.primary",
+     "#ffffff"
+    ]
+   }
+  },
+  {
+   "at": 400,
+   "prim": "slashLine",
+   "dur": 140,
+   "args": {
+    "len": 560,
+    "width": 18,
+    "rot": -0.7,
+    "jitter": 30
+   }
+  },
+  {
+   "at": 440,
+   "prim": "slashLine",
+   "dur": 140,
+   "args": {
+    "len": 520,
+    "width": 14,
+    "rot": 0.55,
+    "jitter": 30
+   }
+  },
+  {
+   "at": 440,
+   "prim": "hitStop",
+   "args": {
+    "ms": 50
+   }
+  },
+  {
+   "at": 440,
+   "prim": "shake",
+   "args": {
+    "px": 14
+   }
+  },
+  {
+   "at": 440,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$targets",
+    "ms": 50
+   }
+  },
+  {
+   "at": 440,
+   "prim": "squashHit",
+   "args": {
+    "target": "$targets",
+    "squash": 0.2,
+    "push": 24,
+    "recoverMs": 320
+   }
+  },
+  {
+   "at": 440,
+   "prim": "pose",
+   "dur": 420,
+   "args": {
+    "target": "$targets",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.25,
+      "pose": "recoil",
+      "ease": "outCubic"
+     },
+     {
+      "at": 1,
+      "pose": "idle",
+      "ease": "outElastic"
+     }
+    ]
+   }
+  },
+  {
+   "at": 440,
+   "prim": "rgbSplit",
+   "dur": 90,
+   "args": {
+    "offset": 9
+   }
+  },
+  {
+   "at": 440,
+   "prim": "particles",
+   "args": {
+    "count": 260,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 1400,
+    "life": 560,
+    "frames": [
+     "shard",
+     "spark",
+     "star",
+     "shard",
+     "star"
+    ],
+    "colors": [
+     "#ffffff",
+     "#e5191c",
+     "#0a0a0a",
+     "#f08a1c"
+    ],
+    "gravity": 900
+   }
+  },
+  {
+   "at": 440,
+   "prim": "damageNumber",
+   "dur": 560,
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 440,
+   "prim": "tag",
+   "dur": 560,
+   "args": {
+    "kind": "auto"
+   }
+  },
+  {
+   "at": 440,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.heavy"
+   }
+  },
+  {
+   "at": 600,
+   "prim": "tween",
+   "dur": 320,
+   "args": {
+    "target": "$actor",
+    "to": {
+     "x": "home",
+     "y": "home",
+     "scale": 1
+    }
+   }
+  }
+ ]
+}

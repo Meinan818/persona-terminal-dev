@@ -1,0 +1,201 @@
+{
+ "id": "highlight.showtime",
+ "event": "highlight",
+ "duration": 3360,
+ "hitMarks": [
+  2120
+ ],
+ "assets": [
+  "show.$pair",
+  "duo.$pair",
+  "char.$a",
+  "char.$b"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "showtime"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "comicPanels",
+   "dur": 1000,
+   "args": {}
+  },
+  {
+   "at": 380,
+   "prim": "showtimeLogo",
+   "dur": 620,
+   "args": {}
+  },
+  {
+   "at": 960,
+   "prim": "duoEntrance",
+   "dur": 940,
+   "args": {}
+  },
+  {
+   "at": 960,
+   "prim": "flashScreen",
+   "dur": 90,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.5
+   }
+  },
+  {
+   "at": 1840,
+   "prim": "dim",
+   "dur": 700,
+   "args": {
+    "color": "#000",
+    "alpha": 0.45,
+    "hold": false
+   }
+  },
+  {
+   "at": 1840,
+   "prim": "duoStrike",
+   "dur": 620,
+   "args": {}
+  },
+  {
+   "at": 1840,
+   "prim": "camera",
+   "dur": 620,
+   "args": {
+    "focus": "$target",
+    "keys": [
+     {
+      "at": 0,
+      "x": 120,
+      "y": -60,
+      "zoom": 0.3,
+      "rot": -0.06
+     },
+     {
+      "at": 0.44,
+      "x": 0,
+      "y": 0,
+      "zoom": 0.06,
+      "rot": 0.0,
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.5,
+      "zoom": 0.24,
+      "rot": 0.04,
+      "ease": "outQuart"
+     },
+     {
+      "at": 1,
+      "zoom": 0.14,
+      "rot": 0.02,
+      "ease": "outCubic"
+     }
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 2120,
+   "prim": "hitStop",
+   "args": {
+    "ms": 70
+   }
+  },
+  {
+   "at": 2120,
+   "prim": "shake",
+   "args": {
+    "px": 24
+   }
+  },
+  {
+   "at": 2120,
+   "prim": "flashScreen",
+   "dur": 100,
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.42
+   }
+  },
+  {
+   "at": 2120,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$targets",
+    "ms": 60
+   }
+  },
+  {
+   "at": 2120,
+   "prim": "rgbSplit",
+   "dur": 120,
+   "args": {
+    "offset": 10
+   }
+  },
+  {
+   "at": 2130,
+   "prim": "particles",
+   "args": {
+    "count": 260,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 1500,
+    "life": 600,
+    "frames": [
+     "shard",
+     "star",
+     "streak"
+    ],
+    "colors": [
+     "#ffffff",
+     "@color.primary",
+     "#0a0a0a"
+    ]
+   }
+  },
+  {
+   "at": 2380,
+   "prim": "finishCard",
+   "dur": 960,
+   "args": {
+    "artId": "show.$pair",
+    "enterFrom": "right",
+    "slideMs": 150,
+    "zoom": 1.04
+   }
+  },
+  {
+   "at": 2440,
+   "prim": "duoTitle",
+   "dur": 900,
+   "args": {}
+  },
+  {
+   "at": 2500,
+   "prim": "freezeFrame",
+   "dur": 500,
+   "args": {}
+  },
+  {
+   "at": 2700,
+   "prim": "totalDamage",
+   "dur": 640,
+   "args": {
+    "label": "label.totalDamage",
+    "pos": {
+     "x": 400,
+     "y": 190
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+{
+ "_note": "成长样板（D-006 简版）：升到下一级所需经验 = base + lv × per；全队拿全额（替补未做）。五维为样板固定值（生活桥未接）。",
+ "exp": { "base": 260, "per": 50 },
+ "levelGain": { "hp": [22, 30], "sp": [9, 14] },
+ "stats": { "knowledge": 3, "guts": 2, "proficiency": 3, "kindness": 2, "charm": 2 },
+ "items": { "medicine": { "hp": 100 }, "snuff": { "sp": 10 } },
+ "alert": { "spotted": 20, "slowBattle": 5, "slowTurns": 3, "safe": -30 },
+ "cards": {
+  "atk": { "dmg": 0.05, "set": 0.15 }, "weak": { "weakDmg": 0.08, "set": 0.2 }, "baton": { "baton": 0, "set": 2 }, "talk": { "talk": 0.05, "set": 0.15 }
+ }
+}

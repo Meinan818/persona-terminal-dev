@@ -1,0 +1,39 @@
+{
+ "id": "demo.p3.crit",
+ "event": "highlight",
+ "match": {
+  "skillId": "demo.p3.crit"
+ },
+ "duration": 1300,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "eyeStrip",
+   "dur": 600,
+   "args": {
+    "art": "char.$actor#cutin",
+    "figure": "char.$actor#body",
+    "color": "#0b2a6b"
+   }
+  },
+  {
+   "at": 120,
+   "prim": "onomatopoeia",
+   "dur": 480,
+   "args": {
+    "text": "sfx.kacha",
+    "x": 1010,
+    "y": 330
+   }
+  },
+  {
+   "at": 650,
+   "prim": "glassShatter",
+   "dur": 600,
+   "args": {
+    "art": "persona.$actor"
+   }
+  }
+ ]
+}

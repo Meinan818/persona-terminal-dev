@@ -1,0 +1,540 @@
+{
+ "hud.command": {
+  "rect": [
+   780,
+   220,
+   476,
+   476
+  ],
+  "sets": {
+   "main": {
+    "hub": {
+     "x": 1060,
+     "y": 470
+    },
+    "items": [
+     {
+      "id": "baton",
+      "label": "cmd.baton",
+      "x": 900,
+      "y": 280,
+      "rot": 0.3,
+      "size": 40,
+      "hit": [
+       780,
+       236,
+       230,
+       86
+      ],
+      "sub": "cmd.baton.sub",
+      "key": "r2",
+      "invert": [
+       0,
+       6
+      ],
+      "when": "onemore"
+     },
+     {
+      "id": "showtime",
+      "label": "cmd.showtime",
+      "x": 900,
+      "y": 280,
+      "rot": 0.3,
+      "size": 40,
+      "hit": [
+       780,
+       236,
+       230,
+       86
+      ],
+      "sub": "cmd.showtime.sub",
+      "key": "r2",
+      "invert": [
+       0,
+       4
+      ],
+      "when": "showtime"
+     },
+     {
+      "id": "persona",
+      "label": "cmd.persona",
+      "x": 895,
+      "y": 370,
+      "rot": 0.16,
+      "size": 54,
+      "hit": [
+       780,
+       326,
+       230,
+       86
+      ],
+      "sub": "cmd.persona.sub",
+      "key": "triangle",
+      "invert": [
+       5
+      ]
+     },
+     {
+      "id": "guard",
+      "label": "cmd.guard",
+      "x": 880,
+      "y": 462,
+      "rot": -0.05,
+      "size": 50,
+      "hit": [
+       780,
+       416,
+       230,
+       86
+      ],
+      "sub": "cmd.guard.sub",
+      "key": "circle",
+      "invert": [
+       2
+      ]
+     },
+     {
+      "id": "attack",
+      "label": "cmd.attack",
+      "x": 885,
+      "y": 566,
+      "rot": -0.3,
+      "size": 68,
+      "hit": [
+       780,
+       506,
+       230,
+       120
+      ],
+      "sub": "cmd.attack.sub",
+      "key": "cross",
+      "main": true,
+      "invert": [
+       0
+      ]
+     },
+     {
+      "id": "order",
+      "label": "cmd.order",
+      "x": 1146,
+      "y": 268,
+      "rot": -0.3,
+      "size": 52,
+      "hit": [
+       1016,
+       226,
+       240,
+       86
+      ],
+      "sub": "cmd.order.sub",
+      "key": "l2",
+      "invert": [
+       3
+      ]
+     },
+     {
+      "id": "gun",
+      "label": "cmd.gun",
+      "x": 1168,
+      "y": 382,
+      "rot": 0.08,
+      "size": 58,
+      "hit": [
+       1016,
+       326,
+       240,
+       86
+      ],
+      "sub": "cmd.gun.sub",
+      "key": "r1",
+      "invert": [
+       1
+      ]
+     },
+     {
+      "id": "item",
+      "label": "cmd.item",
+      "x": 1140,
+      "y": 470,
+      "rot": 0.04,
+      "size": 52,
+      "hit": [
+       1016,
+       416,
+       240,
+       86
+      ],
+      "sub": "cmd.item.sub",
+      "key": "square",
+      "invert": [
+       2
+      ]
+     }
+    ]
+   },
+   "holdup": {
+    "hub": {
+     "x": 1060,
+     "y": 470
+    },
+    "items": [
+     {
+      "id": "allout",
+      "label": "cmd.allout",
+      "x": 1010,
+      "y": 500,
+      "rot": -0.12,
+      "size": 62,
+      "hit": [
+       780,
+       440,
+       476,
+       110
+      ],
+      "sub": "cmd.allout.sub",
+      "key": "cross",
+      "main": true,
+      "invert": [
+       0,
+       4
+      ]
+     },
+     {
+      "id": "talk",
+      "label": "cmd.talk",
+      "x": 885,
+      "y": 604,
+      "rot": -0.06,
+      "size": 50,
+      "hit": [
+       780,
+       556,
+       230,
+       96
+      ],
+      "sub": "cmd.talk.sub",
+      "key": "triangle",
+      "invert": [
+       1
+      ]
+     },
+     {
+      "id": "release",
+      "label": "cmd.release",
+      "x": 1132,
+      "y": 604,
+      "rot": -0.06,
+      "size": 44,
+      "hit": [
+       1016,
+       556,
+       240,
+       96
+      ],
+      "sub": "cmd.release.sub",
+      "key": "circle",
+      "invert": [
+       4
+      ]
+     }
+    ]
+   },
+   "result": {
+    "hub": {
+     "x": 1160,
+     "y": 640
+    },
+    "items": [
+     {
+      "id": "next",
+      "label": "cmd.next",
+      "x": 1165,
+      "y": 648,
+      "rot": -0.08,
+      "size": 56,
+      "hit": [
+       1066,
+       598,
+       190,
+       98
+      ],
+      "sub": "cmd.next.sub",
+      "key": "cross",
+      "main": true,
+      "invert": [
+       0
+      ]
+     }
+    ]
+   }
+  },
+  "list": {
+   "rect": [
+    780,
+    300,
+    476,
+    344
+   ],
+   "title": [
+    780,
+    132,
+    476,
+    74
+   ],
+   "rowH": 86,
+   "desc": [
+    780,
+    212,
+    476,
+    82
+   ]
+  }
+ },
+ "hud.party": {
+  "rect": [
+   24,
+   600,
+   636,
+   96
+  ],
+  "card": {
+   "w": 152,
+   "h": 74,
+   "gap": 7,
+   "rot": -0.035
+  },
+  "units": [
+   "$party"
+  ]
+ },
+ "hud.order": {
+  "rect": [
+   24,
+   24,
+   496,
+   86
+  ]
+ },
+ "hud.system": {
+  "rect": [
+   998,
+   24,
+   258,
+   86
+  ],
+  "buttons": [
+   {
+    "id": "auto",
+    "label": "sys.auto",
+    "hit": [
+     998,
+     24,
+     86,
+     86
+    ]
+   },
+   {
+    "id": "speed",
+    "label": "sys.speed",
+    "hit": [
+     1084,
+     24,
+     86,
+     86
+    ]
+   },
+   {
+    "id": "pause",
+    "label": "sys.pause",
+    "hit": [
+     1170,
+     24,
+     86,
+     86
+    ]
+   }
+  ]
+ },
+ "hud.topInfo": {
+  "rect": [
+   528,
+   24,
+   464,
+   86
+  ]
+ },
+ "hud.enemyOver": {
+  "dy": -24
+ },
+ "scene.battle.bg": {
+  "asset": "bg.battle.castle",
+  "w": 2260,
+  "h": 960,
+  "cx": 640,
+  "cy": 330
+ },
+ "scene.battle.positions": {
+  "joker": {
+   "x": 740,
+   "y": 706,
+   "h": 430,
+   "facing": -1
+  },
+  "enemies": [
+   {
+    "x": 215,
+    "y": 548,
+    "h": 330
+   },
+   {
+    "x": 445,
+    "y": 566,
+    "h": 280
+   }
+  ]
+ },
+ "unit.joker.portrait": {
+  "atlas": "ally.joker.back",
+  "layers": [
+   "body"
+  ],
+  "meshIdle": {
+   "breath": 0.01,
+   "period": 3000,
+   "swayPx": 9,
+   "swayZone": [
+    [
+     0,
+     225,
+     305,
+     235,
+     335,
+     475,
+     0,
+     490
+    ],
+    [
+     315,
+     0,
+     455,
+     0,
+     455,
+     95,
+     315,
+     95
+    ]
+   ]
+  }
+ },
+ "unit.noisy.portrait": {
+  "atlas": "enemy.noisy",
+  "layers": [
+   "body"
+  ],
+  "meshIdle": {
+   "breath": 0.012,
+   "period": 2600,
+   "swayPx": 8,
+   "swayZone": "all"
+  }
+ },
+ "unit.echo.portrait": {
+  "atlas": "enemy.echo",
+  "layers": [
+   "body"
+  ],
+  "meshIdle": {
+   "breath": 0.011,
+   "period": 2900,
+   "swayPx": 5,
+   "swayZone": "all"
+  }
+ },
+ "scene.battle.enemyLayouts": {
+  "1": [
+   {
+    "x": 330,
+    "y": 560,
+    "h": 340
+   }
+  ],
+  "2": [
+   {
+    "x": 215,
+    "y": 548,
+    "h": 330
+   },
+   {
+    "x": 445,
+    "y": 566,
+    "h": 280
+   }
+  ],
+  "3": [
+   {
+    "x": 150,
+    "y": 540,
+    "h": 290
+   },
+   {
+    "x": 345,
+    "y": 566,
+    "h": 270
+   },
+   {
+    "x": 535,
+    "y": 530,
+    "h": 250
+   }
+  ],
+  "4": [
+   {
+    "x": 115,
+    "y": 536,
+    "h": 260
+   },
+   {
+    "x": 275,
+    "y": 566,
+    "h": 250
+   },
+   {
+    "x": 430,
+    "y": 530,
+    "h": 240
+   },
+   {
+    "x": 580,
+    "y": 560,
+    "h": 230
+   }
+  ],
+  "5": [
+   {
+    "x": 85,
+    "y": 530,
+    "h": 235
+   },
+   {
+    "x": 200,
+    "y": 566,
+    "h": 225
+   },
+   {
+    "x": 315,
+    "y": 520,
+    "h": 212
+   },
+   {
+    "x": 430,
+    "y": 562,
+    "h": 215
+   },
+   {
+    "x": 545,
+    "y": 515,
+    "h": 200
+   }
+  ]
+ }
+}

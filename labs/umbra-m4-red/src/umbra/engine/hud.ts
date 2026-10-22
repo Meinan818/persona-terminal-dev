@@ -1,0 +1,611 @@
+// P5 HUD（引擎默认 HUD，形状/位置全部读皮肤 slots.json + tokens + labels；皮肤不写代码）。
+// 指令簇（原作放射布局）、队伍斜卡、左上名牌条（含行动顺序）、导航气泡、系统键、敌人头顶、技能列表、HOLD UP 选项、RESULT。
+import { Container, Graphics, Rectangle, Sprite, Text, Texture } from 'pixi.js';
+import type { CommandItem, CommandSet, Rect } from '../skins/_contract';
+import type { Engine } from './core';
+import { ransom, txt, plate, hex } from './text';
+import { ease } from './timeline';
+
+/** HOLD UP 包围站位（相对敌群中心：dx, dy, 缩放）。前两人后排、后两人前排。保留给旧调用；实际构图走 holdLayout */
+export const HOLD_SPOTS = [[-330, -10, 0.8], [330, 0, 0.82], [-210, 105, 0.97], [220, 115, 1.0]];
+export interface HoldSpot { id: string; x: number; y: number; sc: number; face: 1 | -1; back: boolean }
+/** HOLD UP 包围构图（hud.setHoldRing 与 p5.holdupRing 终点共用，交接无跳变）。
+ *  10-22 修：手机/横屏下后排两人被前排整个挡住。改为「前排守两翼、后排抬高缩小站内侧（敌群身后）」，
+ *  四人沿 [左边界, 指令区左缘−12] 依次排开，相邻人中心距 ≥ 0.62×两人半宽之和（只允许肩部轻叠）；放不下先整体缩小（≥0.8），
+ *  再压间距。脚底不压队伍卡顶边、右缘不进 HOLD UP 指令区。1..5 只敌人、1..4 名队员都成立。 */
+export function holdLayout(eng: Engine, enemyIds: string[], party: string[], partyTop: number): HoldSpot[] {
+  const es = enemyIds.map((i) => eng.units.get(i)!).filter(Boolean);
+  const cy = es.length ? es.reduce((a, u) => a + u.home.y, 0) / es.length : 520;
+  const cx = es.length ? es.reduce((a, u) => a + u.home.x, 0) / es.length : 520;
+  const v = eng.st.vis;
+  const items = (eng.skin.slots as any)['hud.command'].sets.holdup.items as any[];
+  const L = (v.l < 0 ? v.l * 0.5 : 0) + 8,   // 宽屏出血区用一半（避开刘海/圆角），16:9 时贴安全框
+    R = Math.min(...items.map((it) => it.hit[0])) - 12;
+  const ids = party.slice(0, 4);
+  // 槽位顺序（左→右）：前左、后左、后右、前右；队员 0/1 进后排（领队+二号站敌群身后），2/3 进前排两翼
+  const n = ids.length;
+  const order: { id: string; back: boolean }[] = n >= 4 ? [{ id: ids[2], back: false }, { id: ids[0], back: true }, { id: ids[1], back: true }, { id: ids[3], back: false }]
+    : n === 3 ? [{ id: ids[1], back: false }, { id: ids[0], back: true }, { id: ids[2], back: false }]
+    : ids.map((id) => ({ id, back: false }));
+  const base = (b: boolean) => (b ? 0.74 : 0.98);
+  const wOf = (id: string, sc: number) => { const t = eng.frames[`char.${id}#body`]; return (t ? t.width : 260) * sc; };
+  // 四人等分后人均可用宽度不足 0.55 个前排立绘宽时整体缩小（≥0.8）
+  const per = (R - L) / Math.max(1, order.length - 0.3), wMax = Math.max(...order.map((o) => wOf(o.id, base(o.back))));
+  const k = order.length > 2 ? Math.min(1, Math.max(0.8, per / (0.55 * wMax * 1.6))) : 1;
+  const out: HoldSpot[] = [];
+  // 两端前排贴边（立绘两侧透明边按 15% 计），后排在两翼之间等分站位：不靠立绘宽度估间距（武器/披风会把透明框撑宽）
+  const ws = order.map((o) => wOf(o.id, base(o.back) * k));
+  const x0 = L + ws[0] * 0.48, x1 = R - ws[ws.length - 1] * 0.5;   // 右翼整张立绘框不进指令区
+  const footFront = Math.min(cy + 110, partyTop - 10), footBack = Math.min(cy - 75, footFront - 120);
+  order.forEach((o, i) => {
+    const x = order.length > 1 ? x0 + (x1 - x0) * (i / (order.length - 1)) : (L + R) / 2;
+    out.push({ id: o.id, x, y: o.back ? footBack : footFront, sc: base(o.back) * k, face: (o.back ? x < cx : x < (L + R) / 2) ? 1 : -1, back: o.back });
+  });
+  return out;
+}
+export interface PartyState { id: string; name: string; hp: number; hpMax: number; sp: number; spMax: number; active?: boolean; baton?: number }
+export interface EnemyState { id: string; name: string; compact?: boolean; hp: number; hpMax: number; lv: number; known: string[]; weak: string[]; down: boolean; alive: boolean }
+export interface ListRow { id: string; name: string; desc: string; cost?: string; costKind?: 'sp' | 'hp' | 'n'; element?: string; disabled?: boolean; icon?: string }
+export interface ResultData { exp: number; money: number; items: { name: string; n: number }[]; bonus: boolean; levelUps?: { id: string; from: number; to: number; hp: number; sp: number }[] }
+
+const ELEM: Record<string, [number, string]> = {
+  phys: [0xf08a1c, 'slash'], gun: [0x9a9a9a, 'bullet'], curse: [0x7a2bd6, 'curse'], bless: [0xffe14a, 'bless'], fire: [0xff4b1f, 'flame'],
+  support: [0x2fb35a, 'up'], heal: [0x37e15a, 'plus'], item: [0xf4eedd, 'box'], order: [0x2a2a2a, 'flag'], back: [0x444444, 'back'], almighty: [0xcccccc, 'star'],
+};
+function elemIcon(kind: string, r = 18) {
+  const [col, glyph] = ELEM[kind] ?? ELEM.almighty;
+  const g = new Graphics().circle(0, 0, r + 3).fill(0x0a0a0a).circle(0, 0, r).fill(col);
+  const w = 0xffffff, k = r / 18;
+  if (glyph === 'slash') g.poly([-9 * k, 9 * k, 7 * k, -11 * k, 10 * k, -8 * k, -6 * k, 11 * k]).fill(w);
+  else if (glyph === 'curse') g.poly([0, -11 * k, 8 * k, 2 * k, 0, 11 * k, -8 * k, 2 * k]).fill(0x0a0a0a).circle(0, 1 * k, 4 * k).fill(0xe5191c);
+  else if (glyph === 'bullet') g.roundRect(-4 * k, -10 * k, 8 * k, 20 * k, 4 * k).fill(w);
+  else if (glyph === 'up') g.poly([0, -11 * k, 9 * k, 0, 3 * k, 0, 3 * k, 10 * k, -3 * k, 10 * k, -3 * k, 0, -9 * k, 0]).fill(w);
+  else if (glyph === 'plus') g.rect(-3 * k, -10 * k, 6 * k, 20 * k).fill(w).rect(-10 * k, -3 * k, 20 * k, 6 * k).fill(w);
+  else if (glyph === 'box') g.rect(-9 * k, -7 * k, 18 * k, 14 * k).fill(0xe5191c);
+  else if (glyph === 'back') g.poly([-10 * k, 0, 2 * k, -9 * k, 2 * k, 9 * k]).fill(w);
+  else if (glyph === 'flag') g.poly([-6 * k, -10 * k, 9 * k, -5 * k, -6 * k, 1 * k]).fill(w).rect(-8 * k, -10 * k, 3 * k, 20 * k).fill(w);
+  else g.poly([0, -10 * k, 3 * k, -3 * k, 10 * k, 0, 3 * k, 3 * k, 0, 10 * k, -3 * k, 3 * k, -10 * k, 0, -3 * k, -3 * k]).fill(w);
+  return g;
+}
+function keyIcon(key: string, r = 17) {
+  const g = new Graphics();
+  if (key.startsWith('r') || key.startsWith('l')) {
+    g.roundRect(-r * 1.25, -r * 0.8, r * 2.5, r * 1.6, r * 0.7).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 2.5 });
+    return { g, label: key.toUpperCase() };
+  }
+  g.circle(0, 0, r).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 2.5 });
+  const s = r * 0.5;
+  if (key === 'cross') g.poly([-s, -s * 0.7, -s * 0.7, -s, 0, -s * 0.3, s * 0.7, -s, s, -s * 0.7, s * 0.3, 0, s, s * 0.7, s * 0.7, s, 0, s * 0.3, -s * 0.7, s, -s, s * 0.7, -s * 0.3, 0]).fill(0x8ab4ff);
+  if (key === 'circle') g.circle(0, 0, s).stroke({ color: 0xff5a6e, width: 3.5 });
+  if (key === 'square') g.rect(-s * 0.85, -s * 0.85, s * 1.7, s * 1.7).stroke({ color: 0xff86d6, width: 3.5 });
+  if (key === 'triangle') g.poly([0, -s, s, s * 0.75, -s, s * 0.75]).stroke({ color: 0x3fe0b0, width: 3.5 });
+  return { g, label: '' };
+}
+
+export class P5Hud {
+  root = new Container();
+  private sets = new Map<string, { c: Container; items: { def: CommandItem; node: Container; hit: Container; ph: number }[]; burst: Container }>();
+  private mode = 'hidden';
+  private openT = 0;
+  oneMore = false;
+  canBaton = true;
+  showtime = '';
+  busy = false;
+  party = new Container(); partyCards = new Map<string, { c: Container; hp: Graphics; sp: Graphics; hpT: Text; spT: Text; st: PartyState; shown: { hp: number; sp: number }; shake: number; base: { x: number; y: number } }>();
+  order = new Container(); top = new Container(); sys = new Container(); over = new Container(); list = new Container(); result = new Container(); holdLogo = new Container();
+  overs = new Map<string, Container>();
+  reticle = new Container();
+  targetId = '';
+  naviText!: Text;
+  onCommand: (id: string) => void = () => {};
+  onRow: (id: string) => void = () => {};
+  onEnemy: (id: string) => void = () => {};
+  onSystem: (id: string) => void = () => {};
+  listRows: { row: ListRow; c: Container; bg: Graphics; w: number }[] = [];
+  listSel = 0;
+  private listDesc!: Text;
+  private listTitle = new Container();
+  private t = 0;
+  private resultAnim: { t: number; data?: ResultData; nums: { t: Text; v: number; fmt: (n: number) => string }[]; blocks: Container[] } = { t: 0, nums: [], blocks: [] };
+  debugHits = false;
+
+  constructor(private eng: Engine) {
+    const L = eng.st.layers.hud;
+    L.addChild(this.over, this.reticle, this.party, this.order, this.top, this.sys, this.list, this.holdLogo, this.result);
+    const slots = eng.skin.slots;
+    for (const [name, set] of Object.entries(slots['hud.command'].sets)) this.buildSet(name, set as CommandSet);
+    this.buildParty(); this.buildTop(); this.buildSystem(); this.buildReticle(); this.buildHoldLogo(); this.buildPickHint();
+    this.list.visible = false; this.result.visible = false; this.holdLogo.visible = false;
+    this.debugHits = new URLSearchParams(location.search).get('hit') === '1';
+    if (this.debugHits) this.drawDebug();
+  }
+  private get C() { return this.eng.skin.tokens.color; }
+  private lab(k: string) { return this.eng.label(k); }
+  private hitBox(r: Rect, on: () => void) {
+    const h = new Container(); h.eventMode = 'static'; h.cursor = 'pointer'; h.hitArea = new Rectangle(r[0], r[1], r[2], r[3]);
+    h.on('pointertap', on); return h;
+  }
+
+  // ------------------------------------------------------------------ command cluster
+  private buildSet(name: string, set: CommandSet) {
+    const eng = this.eng, c = new Container(); c.visible = false;
+    const burst = new Container();
+    if (name !== 'result') {
+      // P5R 指令簇背后的放射状红色锯齿星芒：长刺指向每个标签，短刺填充其间；黑色内星 + 黑描边（不再是零散碎片）
+      const hub = set.hub; const targets = set.items.filter((it) => !it.when).map((it) => Math.atan2(it.y - hub.y, it.x - hub.x));
+      const star = (inner: number, outerFn: (a: number, i: number) => number, n: number, rot = 0) => {
+        const pts: number[] = [];
+        for (let i = 0; i < n * 2; i++) { const a = rot + (i / (n * 2)) * Math.PI * 2; const r = i % 2 ? inner * (0.9 + ((i * 37) % 5) * 0.04) : outerFn(a, i); pts.push(hub.x + Math.cos(a) * r, hub.y + Math.sin(a) * r * 0.92); }
+        return pts;
+      };
+      const reach = (a: number) => { let best = 0; for (const t of targets) { const d = Math.abs(Math.atan2(Math.sin(a - t), Math.cos(a - t))); best = Math.max(best, Math.max(0, 1 - d / 0.22)); } return best; };
+      const g = new Graphics();
+      g.poly(star(70, (a, i) => 120 + reach(a) * 160 + ((i * 53) % 7) * 6, 26, 0.05)).fill(hex(this.C.primary)).stroke({ color: 0x0a0a0a, width: 5, join: 'miter' });
+      g.poly(star(46, (a, i) => 84 + reach(a) * 70 + ((i * 29) % 5) * 5, 26, 0.17)).fill(0x0a0a0a);
+      g.poly(star(26, (_a, i) => 48 + ((i * 17) % 4) * 6, 14, 0.3)).fill(hex(this.C.primary));
+      burst.addChild(g); burst.pivot.set(hub.x, hub.y); burst.position.set(hub.x, hub.y);
+    }
+    c.addChild(burst);
+    const items: { def: CommandItem; node: Container; hit: Container; ph: number }[] = [];
+    set.items.forEach((it, i) => {
+      const node = this.buildItem(it);
+      const hit = this.hitBox(it.hit, () => { if (this.mode === name || (name === 'main' && this.mode === 'command')) { this.press(node); this.onCommand(it.id); } });
+      c.addChild(node); c.addChild(hit);
+      items.push({ def: it, node, hit, ph: i * 0.9 });
+    });
+    void eng;
+    this.eng.st.layers.hud.addChildAt(c, 0);
+    this.sets.set(name, { c, items, burst });
+  }
+  private buildItem(it: CommandItem) {
+    const eng = this.eng, node = new Container();
+    // 剪报字：逐字母大小/角度错落 + 指定字母黑白反色；描边统一 6
+    const word = ransom(this.lab(it.label), it.size, eng.fonts.display, { invert: it.invert, seed: it.label.length * 7 + it.size, stroke: 6 });
+    const b = word.getLocalBounds();
+    word.pivot.set(b.x + b.width / 2, b.y + b.height / 2);
+    const w = b.width + 30, h = it.size * 0.92;
+    const back = new Graphics().poly([-w / 2 - 8, -h / 2 + 4, w / 2 + 14, -h / 2 - 5, w / 2 + 6, h / 2 + 5, -w / 2 - 16, h / 2 + 8]).fill(it.main ? hex(this.C.primary) : 0x0a0a0a).stroke({ color: 0xffffff, width: 3, join: 'miter' });
+    node.addChild(back, word);
+    if (it.key) {
+      const k = keyIcon(it.key, it.main ? 19 : 15); k.g.position.set(-w / 2 - 22, 0);
+      node.addChild(k.g);
+      if (k.label) { const kt = txt(k.label, 13, { font: eng.fonts.display, fill: 0xffffff }); kt.anchor.set(0.5); kt.position.copyFrom(k.g.position); node.addChild(kt); }
+    }
+    if (it.sub) {
+      // 中文小字：在大字牌下方、避开按键图标，黑底白描边小牌；与下一行留 ≥8px
+      const st = txt(this.lab(it.sub), 14, { font: eng.fonts.body, fill: 0xffffff, fontWeight: '700', letterSpacing: 1 });
+      st.anchor.set(0, 0.5);
+      const sw = st.width + 14, sh = 20;
+      const sp = new Graphics().poly([0, 0, sw, -1, sw - 5, sh, -4, sh + 1]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 1.5 });
+      const sc = new Container(); sc.addChild(sp, st); st.position.set(7, sh / 2);
+      sc.position.set(-w / 2 + 2, h / 2 + 7);
+      node.addChild(sc);
+    }
+    node.position.set(it.x, it.y); node.rotation = it.rot;
+    (node as any).base = { x: it.x, y: it.y, r: it.rot };
+    return node;
+  }
+  private press(n: Container) { (n as any).pressed = true; n.scale.set(this.eng.skin.tokens.motion.press); setTimeout(() => { (n as any).pressed = false; }, 90); }
+  /** ui:open/close 不进 Director：自身过渡 ≤280ms，可被打断，动画中可点 */
+  setMode(m: string) {
+    this.mode = m; this.openT = 0;
+    const show = (name: string, on: boolean) => { const s = this.sets.get(name); if (s) s.c.visible = on; };
+    show('main', m === 'command'); show('holdup', m === 'holdup'); show('result', m === 'result');
+    this.list.visible = m === 'list';
+    this.result.visible = m === 'result';
+    this.holdLogo.visible = m === 'holdup';
+    this.order.visible = m === 'command' || m === 'list';
+    this.party.visible = m !== 'result';
+    this.pickHint.visible = m === 'pick';
+    this.top.visible = m !== 'result';
+    this.over.visible = m !== 'result';
+    this.reticle.visible = m === 'command' || m === 'list';
+    const joker = this.eng.units.get('joker'); if (joker) joker.root.alpha = m === 'list' ? 0.55 : 1;
+    if (m === 'result') { this.resultAnim.t = 0; const rs = this.sets.get('result'); if (rs) this.eng.st.layers.hud.addChild(rs.c); }
+  }
+  getMode() { return this.mode; }
+  setBusy(b: boolean) { this.busy = b; }
+
+  // ------------------------------------------------------------------ party cards
+  partyIds: string[] = [];
+  onParty: (id: string) => void = () => {};
+  partyPick: string[] = [];          // BATON PASS / SWITCH 选择时可点的卡
+  private buildParty() { this.setPartyIds(this.eng.skin.slots['hud.party'].units.filter((u) => u !== '$party')); }
+  /** 队伍卡由名单数据驱动（主角 + 3 名同伴，可换） */
+  setPartyIds(ids: string[]) {
+    if (ids.join() === this.partyIds.join()) return;
+    this.partyIds = ids.slice();
+    this.party.removeChildren().forEach((c) => c.destroy({ children: true })); this.partyCards.clear();
+    const sl = this.eng.skin.slots['hud.party'];
+    const [x0, y0] = sl.rect; const { w, h, gap, rot } = sl.card;
+    ids.forEach((id, i) => {
+      const c = new Container(); c.position.set(x0 + 8 + i * (w + gap), y0 + 18); c.rotation = rot;
+      const sel = new Graphics().poly([-8, -10, w + 18, -14, w + 8, h + 8, -18, h + 12]).fill(hex(this.C.primary)).stroke({ color: 0xffffff, width: 3 }); sel.label = 'sel'; sel.visible = false;
+      const bg = plate(w, h, { fill: 0x0a0a0a, stroke: 0xffffff, sw: 2.5, skew: 12, shadow: 0x0a0a0a, sx: 4, sy: 4 }); bg.label = 'bg';
+      const head = new Sprite(this.eng.frames[`head.${id}#ink`] ?? Texture.EMPTY); head.anchor.set(0.5, 1); head.scale.set(0.56); head.position.set(34, h + 4); head.label = 'head';
+      const hpL = txt('HP', 13, { font: this.eng.fonts.display, fill: 0xffffff }); hpL.position.set(70, 8);
+      const spL = txt('SP', 13, { font: this.eng.fonts.display, fill: 0xffffff }); spL.position.set(66, 38);
+      const hpT = txt('0', 28, { font: this.eng.fonts.number, fill: hex(this.C.hp), fontStyle: 'italic' }); hpT.anchor.set(1, 0); hpT.position.set(w - 14, 0);
+      const spT = txt('0', 28, { font: this.eng.fonts.number, fill: hex(this.C.sp), fontStyle: 'italic' }); spT.anchor.set(1, 0); spT.position.set(w - 18, 30);
+      const bt = txt('', 16, { font: this.eng.fonts.display, fill: 0xffffff, stroke: { color: 0x0a0a0a, width: 4 } }); bt.label = 'baton'; bt.position.set(4, -22);
+      const hp = new Graphics(), sp = new Graphics();
+      c.addChild(sel, bg, hp, sp, head, hpL, spL, hpT, spT, bt);
+      const hb = this.hitBox([-10, -14, w + 20, Math.max(86, h + 26)], () => { if (this.partyPick.includes(id)) this.onParty(id); });
+      c.addChild(hb);
+      this.party.addChild(c);
+      this.partyCards.set(id, { c, hp, sp, hpT, spT, st: { id, name: id, hp: 1, hpMax: 1, sp: 1, spMax: 1 }, shown: { hp: -1, sp: -1 }, shake: 0, base: { x: c.x, y: c.y } });
+    });
+  }
+  /** 懒加载的头像到了以后补上 */
+  refreshHeads() { for (const [id, pc] of this.partyCards) { const h = pc.c.getChildByLabel('head') as Sprite; const t = this.eng.frames[`head.${id}#ink`]; if (h && t && h.texture !== t) h.texture = t; } }
+  updateParty(states: PartyState[]) {
+    for (const s of states) {
+      const pc = this.partyCards.get(s.id); if (!pc) continue;
+      if (s.hp < pc.st.hp) pc.shake = 260;
+      pc.st = { ...s };
+      if (pc.shown.hp < 0) pc.shown = { hp: s.hp, sp: s.sp };
+      const bg = pc.c.getChildByLabel('bg') as Graphics, sel = pc.c.getChildByLabel('sel') as Graphics;
+      bg.tint = s.active ? hex(this.C.primary) : 0xffffff; sel.visible = !!s.active;
+      pc.c.scale.set(s.active ? 1.1 : 1);
+      pc.c.y = pc.base.y - (s.active ? 14 : 0);
+      (pc.c.getChildByLabel('baton') as Text).text = (s as any).baton ? `BATON ×${(s as any).baton}` : '';
+      pc.c.alpha = this.partyPick.length && !this.partyPick.includes(s.id) ? 0.45 : 1;
+    }
+  }
+  private drawParty(dt: number) {
+    const w = this.eng.skin.slots['hud.party'].card.w;
+    for (const pc of this.partyCards.values()) {
+      const k = Math.min(1, dt / 110);
+      pc.shown.hp += (pc.st.hp - pc.shown.hp) * k; pc.shown.sp += (pc.st.sp - pc.shown.sp) * k;
+      if (Math.abs(pc.st.hp - pc.shown.hp) < 0.5) pc.shown.hp = pc.st.hp; if (Math.abs(pc.st.sp - pc.shown.sp) < 0.5) pc.shown.sp = pc.st.sp;
+      const hs = String(Math.round(pc.shown.hp)), ss = String(Math.round(pc.shown.sp));
+      if (pc.hpT.text !== hs) pc.hpT.text = hs; if (pc.spT.text !== ss) pc.spT.text = ss;
+      const bw = w - 78, r1 = Math.max(0, pc.shown.hp / pc.st.hpMax), r2 = Math.max(0, pc.shown.sp / pc.st.spMax);
+      const key = `${r1.toFixed(3)}|${r2.toFixed(3)}`; if ((pc as any).barKey === key && pc.shake <= 0) continue; (pc as any).barKey = key;
+      pc.hp.clear().poly([64, 30, 64 + bw, 29, 62 + bw, 34, 62, 35]).fill(0x333333).poly([64, 30, 64 + bw * r1, 29.5, 62 + bw * r1, 34, 62, 35]).fill(hex(this.C.hp));
+      pc.sp.clear().poly([60, 62, 60 + bw, 61, 58 + bw, 66, 58, 67]).fill(0x333333).poly([60, 62, 60 + bw * r2, 61.5, 58 + bw * r2, 66, 58, 67]).fill(hex(this.C.sp));
+      if (pc.shake > 0) { pc.shake -= dt; pc.c.x = pc.base.x + (Math.random() - 0.5) * 10 * (pc.shake / 260); } else pc.c.x = pc.base.x;
+    }
+  }
+
+  // ------------------------------------------------------------------ top-left strip / navigator / system
+  private orderStrip = new Container(); private orderChips = new Container(); private turnText!: Text;
+  private buildTop() {
+    const [x, y, w] = this.eng.skin.slots['hud.order'].rect;
+    this.order.position.set(x, y);
+    this.order.addChild(this.orderStrip, this.orderChips);
+    // navigator bubble
+    const [tx, ty, tw, th] = this.eng.skin.slots['hud.topInfo'].rect;
+    const b = new Graphics().poly([tx + 10, ty + 6, tx + tw - 70, ty, tx + tw - 80, ty + th - 14, tx + tw - 100, ty + th - 14, tx + tw - 118, ty + th + 8, tx + tw - 130, ty + th - 12, tx, ty + th - 6]).fill(0xffffff).stroke({ color: 0x0a0a0a, width: 3, join: 'miter' });
+    const head = new Sprite(this.eng.frames['head.oracle#color'] ?? Texture.EMPTY); head.anchor.set(0.5, 1); head.scale.set(0.6); head.position.set(tx + tw - 34, ty + th + 4);
+    const hb = new Graphics().circle(tx + tw - 34, ty + th / 2 + 2, 40).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 3 });
+    const m = new Graphics().circle(tx + tw - 34, ty + th / 2 + 2, 37).fill(0xffffff); head.mask = m;
+    this.naviText = txt('', 20, { font: this.eng.fonts.body, fill: 0x0a0a0a, fontWeight: '700', wordWrap: true, wordWrapWidth: tw - 150, breakWords: true, lineHeight: 28 });
+    this.naviText.position.set(tx + 22, ty + 14);
+    this.top.addChild(b, hb, head, m, this.naviText);
+    void w;
+  }
+  navi(key: string) { this.naviText.text = this.lab(key); }
+  private stripKey = '';
+  private static ELEMS = ['phys', 'gun', 'fire', 'ice', 'elec', 'wind', 'psy', 'nuke', 'bless', 'curse'];
+  setStrip(o: { lv: number; name: string; weak: string[]; known: boolean; turn: number; order: string[]; enemyTurn?: boolean; knownEls?: string[] }) {
+    const key = JSON.stringify(o); if (key === this.stripKey) return; this.stripKey = key;   // 文字复用：状态没变不重建（待机长帧修复）
+    const eng = this.eng; const s = this.orderStrip; s.removeChildren().forEach((c) => c.destroy({ children: true }));
+    const w = 476;
+    // 原作目标名牌：黑底斜条 + 红色 Lv 块 + 名字；下方一排属性相性格（已知弱点=属性图标+WK，未知=灰底「?」）
+    s.addChild(new Graphics().poly([0, 8, w, 0, w - 12, 50, -8, 56]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 3, join: 'miter' }));
+    const lvb = new Graphics().poly([6, 12, 70, 10, 65, 47, 1, 49]).fill(hex(this.C.primary));
+    const lv = txt('Lv', 15, { font: eng.fonts.display, fill: 0xffffff }); lv.position.set(10, 14);
+    const lvn = txt(String(o.lv), 28, { font: eng.fonts.number, fill: 0xffffff, fontStyle: 'italic' }); lvn.position.set(31, 12);
+    const nm = txt(o.name, 28, { font: eng.fonts.display, fill: 0xffffff, letterSpacing: 4 }); nm.position.set(84, 12);
+    s.addChild(lvb, lv, lvn, nm);
+    const row = new Container(); row.position.set(86, 62);
+    const kn = new Set(o.knownEls ?? []);
+    P5Hud.ELEMS.forEach((e, i) => {
+      const x = i * 30, isW = o.weak.includes(e), isK = kn.has(e) || isW;
+      const cell = new Graphics().poly([x - 13, -12, x + 15, -13, x + 13, 13, x - 15, 14]).fill(isW ? hex(this.C.primary) : 0x1a1a1a).stroke({ color: 0xffffff, width: 1.5 });
+      row.addChild(cell);
+      if (isK) { const ic = elemIcon(e, 9); ic.position.set(x, 0); row.addChild(ic); }
+      else { const q = txt('?', 16, { font: eng.fonts.display, fill: 0x8a8a8a }); q.anchor.set(0.5); q.position.set(x, 0); row.addChild(q); }
+      if (isW) { const wk = txt('WK', 10, { font: eng.fonts.display, fill: 0xffffff, stroke: { color: 0x0a0a0a, width: 3 } }); wk.anchor.set(0.5, 0); wk.position.set(x, 12); row.addChild(wk); }
+    });
+    s.addChild(row);
+    // 回合标签 + 行动顺序（原创补充：P5X 式），放在相性格左侧下方，统一 2px 白描边
+    const ch = this.orderChips; ch.removeChildren().forEach((c) => c.destroy({ children: true }));
+    const tb = new Graphics().poly([0, 0, 78, -2, 73, 22, -4, 24]).fill(o.enemyTurn ? 0xffffff : hex(this.C.primary)).stroke({ color: 0x0a0a0a, width: 2 });
+    this.turnText = txt(`${o.enemyTurn ? 'ENEMY' : 'TURN'} ${String(o.turn).padStart(2, '0')}`, 16, { font: eng.fonts.display, fill: o.enemyTurn ? 0x0a0a0a : 0xffffff });
+    this.turnText.position.set(7, 2);
+    ch.addChild(tb, this.turnText);
+    o.order.slice(0, 7).forEach((id, i) => {
+      const x = 90 + i * 34, g = new Graphics().poly([x, 0, x + 30, -2, x + 27, 23, x - 3, 24]).fill(i === 0 ? hex(this.C.primary) : 0x0a0a0a).stroke({ color: 0xffffff, width: 2 });
+      ch.addChild(g);
+      const tex = eng.frames[`head.${id}#ink`];
+      if (tex) { const sp = new Sprite(tex); sp.width = sp.height = 28; sp.position.set(x, -5); ch.addChild(sp); }
+      else { const e = txt(id.startsWith('noisy') ? '聒' : '游', 15, { font: eng.fonts.display, fill: 0xffffff }); e.anchor.set(0.5); e.position.set(x + 13, 11); ch.addChild(e); }
+    });
+    ch.position.set(0, 96);
+  }
+  private buildSystem() {
+    for (const b of this.eng.skin.slots['hud.system'].buttons) {
+      const [x, y, w, h] = b.hit, cx = x + w / 2, cy = y + 34;
+      const g = new Graphics().poly([cx - 34, cy - 22, cx + 36, cy - 26, cx + 32, cy + 22, cx - 38, cy + 26]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 3, join: 'miter' });
+      const t = txt(this.lab(b.label), 22, { font: this.eng.fonts.display, fill: 0xffffff, letterSpacing: 1 }); t.anchor.set(0.5); t.position.set(cx, cy + 1);
+      t.label = 'sys.' + b.id;
+      this.sys.addChild(g, t, this.hitBox(b.hit, () => this.onSystem(b.id)));
+    }
+  }
+  setSys(id: string, text: string, on: boolean) {
+    const t = this.sys.getChildByLabel('sys.' + id) as Text; if (t) { t.text = text; t.style.fill = on ? hex(this.C.primary) : 0xffffff; }
+  }
+
+  // ------------------------------------------------------------------ enemies over-head + target reticle
+  private buildReticle() {
+    const g = new Graphics(); const pts: number[] = [];
+    for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2, r = i % 2 ? 46 : 62; pts.push(Math.cos(a) * r, Math.sin(a) * r * 0.9); }
+    g.poly(pts).fill({ color: hex(this.C.primary), alpha: 0.95 }).stroke({ color: 0x0a0a0a, width: 3 });
+    g.circle(0, 0, 36).fill(0x0a0a0a);
+    const heart = new Graphics(); heart.label = 'heart';
+    const arrow = new Graphics().poly([-16, -100, 16, -100, 0, -76]).fill(hex(this.C.primary)).stroke({ color: 0xffffff, width: 3 });
+    this.reticle.addChild(g, heart, arrow);
+    this.reticle.visible = false; this.reticle.scale.set(0.8);
+  }
+  private heartPoly(s: number) { return [0, 18 * s, -22 * s, -2 * s, -22 * s, -14 * s, -12 * s, -22 * s, 0, -14 * s, 12 * s, -22 * s, 22 * s, -14 * s, 22 * s, -2 * s]; }
+  setTarget(id: string) { this.targetId = id; }
+  updateEnemies(es: EnemyState[]) {
+    for (const e of es) {
+      let c = this.overs.get(e.id);
+      const u = this.eng.units.get(e.id); if (!u) continue;
+      if (!c) {
+        c = new Container(); this.over.addChild(c); this.overs.set(e.id, c);
+        // tap target
+        u.root.eventMode = 'static'; u.root.cursor = 'pointer';
+        u.root.hitArea = new Rectangle(-Math.max(70, u.tex.width * u.s * 0.45), -u.h, Math.max(140, u.tex.width * u.s * 0.9), u.h + 20);
+        u.root.on('pointertap', () => this.onEnemy(e.id));
+      }
+      const ek = JSON.stringify(e) + this.targetId; if ((c as any).key === ek) continue; (c as any).key = ek;
+      c.removeChildren().forEach((x) => x.destroy({ children: true }));
+      c.visible = e.alive && e.id !== this.targetId;   // 原作：选中目标的名字只在左上名牌条显示
+      const nm = txt(e.name, e.compact ? 15 : 20, { font: this.eng.fonts.display, fill: 0xffffff });
+      const w = nm.width + 26;
+      const bg = new Graphics().poly([0, 2, w, 0, w - 8, 28, -6, 30]).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 2 });
+      nm.position.set(10, 3);
+      c.addChild(bg, nm);
+      let ix = w + 18;
+      for (const k of e.known) { const ic = elemIcon(k, 12); ic.position.set(ix, 15); c.addChild(ic); if (e.weak.includes(k)) { const wk = txt('WK', 11, { font: this.eng.fonts.display, fill: 0xffffff, stroke: { color: hex(this.C.primary), width: 4 } }); wk.anchor.set(0.5); wk.position.set(ix, 32); c.addChild(wk); } ix += 30; }
+      const hpw = e.compact ? 80 : 110, r = Math.max(0, e.hp / e.hpMax);
+      c.addChild(new Graphics().poly([0, 36, hpw, 35, hpw - 3, 42, -3, 43]).fill(0x0a0a0a).poly([0, 36, hpw * r, 35.5, hpw * r - 3, 42, -3, 43]).fill(hex(this.C.primary)));
+      c.position.set(u.home.x - w / 2, u.home.y + u.headY + this.eng.skin.slots['hud.enemyOver'].dy - 30);
+      (c as any).hpR = r;
+    }
+  }
+
+  // ------------------------------------------------------------------ list (skills / items / order)
+  openList(kind: string, rows: ListRow[], sub: string) {
+    const eng = this.eng, sl = eng.skin.slots['hud.command'].list;
+    this.list.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.listRows = [];
+    // title: PERSONA 剪报字 + 面具名斜条
+    const [tx, ty, tw] = sl.title;
+    const tt = ransom(this.lab('list.' + kind), kind === 'switch' ? 56 : 62, eng.fonts.display, { invert: kind === 'persona' ? [0, 5] : [0], seed: 31, stroke: 7 });
+    const tb = tt.getLocalBounds(); tt.position.set(tx + 10 - tb.x, ty + 36); tt.rotation = -0.06;
+    const nb = new Graphics().poly([tx + tb.width + 30, ty + 26, tx + tw, ty + 18, tx + tw - 10, ty + 66, tx + tb.width + 22, ty + 72]).fill(hex(this.C.primary)).stroke({ color: 0x0a0a0a, width: 3 });
+    const nt = txt(sub, 34, { font: eng.fonts.display, fill: 0xffffff, stroke: { color: 0x0a0a0a, width: 5 } }); nt.position.set(tx + tb.width + 44, ty + 26);
+    this.list.addChild(nb, tt, nt);
+    // desc
+    const [dx, dy, dw, dh] = sl.desc;
+    const db = new Graphics().poly([dx + 4, dy + 6, dx + dw, dy, dx + dw - 10, dy + dh, dx - 6, dy + dh - 4]).fill(0xf4eedd).stroke({ color: 0x0a0a0a, width: 4 });
+    this.listDesc = txt('', 22, { font: eng.fonts.body, fill: 0x0a0a0a, fontWeight: '700', wordWrap: true, wordWrapWidth: dw - 40, breakWords: true, lineHeight: 30 });
+    this.listDesc.position.set(dx + 18, dy + 14);
+    this.list.addChild(db, this.listDesc);
+    // rows (+ back)
+    const all = [...rows, { id: 'back', name: this.lab('cmd.back'), desc: '', element: 'back', cost: this.lab('cmd.back.sub') } as ListRow];
+    const [rx, ry, rw] = sl.rect; const rh = sl.rowH;
+    all.forEach((row, i) => {
+      const c = new Container(); const y = ry + i * rh;
+      const w = rw - 18 - ((i * 37) % 3) * 14;   // 锯齿右缘
+      const bg = new Graphics();
+      let ic: Container = elemIcon(row.element ?? 'almighty', 20);
+      if (row.icon && eng.frames[row.icon]) { const sp = new Sprite(eng.frames[row.icon]); sp.anchor.set(0.5); sp.scale.set(0.42); ic = sp; }
+      ic.position.set(rx + 40, y + rh / 2);
+      const name = txt(row.name, 40, { font: eng.fonts.display, fill: row.disabled ? 0x777777 : 0xffffff }); name.anchor.set(0, 0.5); name.position.set(rx + 72, y + rh / 2);
+      c.addChild(bg, ic, name);
+      if (row.cost) {
+        const col = row.costKind === 'sp' ? hex(this.C.sp) : row.costKind === 'hp' ? hex(this.C.hp) : 0xffffff;
+        const ct = txt(row.cost, row.id === 'back' ? 22 : 32, { font: row.id === 'back' ? eng.fonts.body : eng.fonts.number, fill: row.disabled ? 0x777777 : col, fontStyle: row.id === 'back' ? 'normal' : 'italic', fontWeight: '700' });
+        ct.anchor.set(1, 0.5); ct.position.set(rx + w - 30, y + rh / 2); c.addChild(ct);
+      }
+      c.addChild(this.hitBox([rx, y, rw, rh], () => this.tapRow(i)));
+      this.list.addChild(c);
+      this.listRows.push({ row, c, bg, w });
+    });
+    this.listSel = 0; this.paintRows();
+    this.list.pivot.set(1018, 470); this.list.position.set(1018, 470); this.list.rotation = -0.035;
+  }
+  private paintRows() {
+    const sl = this.eng.skin.slots['hud.command'].list; const [rx, ry] = sl.rect; const rh = sl.rowH;
+    this.listRows.forEach((r, i) => {
+      const y = ry + i * rh, sel = i === this.listSel, ext = sel ? 18 : 0;
+      r.bg.clear().poly([rx - ext, y + 10, rx + r.w + ext, y + 4, rx + r.w - 10 + ext, y + rh - 6, rx - 8 - ext, y + rh - 2]).fill(sel ? hex(this.C.primary) : 0x0a0a0a).stroke({ color: sel ? 0xffffff : 0x0a0a0a, width: sel ? 4 : 2 });
+      if (sel) r.bg.poly([rx - 34 - ext, y + rh / 2 - 12, rx - 12 - ext, y + rh / 2, rx - 34 - ext, y + rh / 2 + 12]).fill(0xffffff);
+      r.c.scale.set(1);
+    });
+    const row = this.listRows[this.listSel]?.row; if (row) this.listDesc.text = row.desc || this.lab('cmd.back.sub');
+  }
+  /** 第一次点选中（显示说明），再点同一行确认（触屏版的「○确认」） */
+  tapRow(i: number) {
+    if (this.mode !== 'list') return;
+    const r = this.listRows[i]; if (!r) return;
+    if (r.row.id === 'back') { this.onRow('back'); return; }
+    if (this.listSel !== i) { this.listSel = i; this.paintRows(); return; }
+    if (r.row.disabled) return;
+    this.onRow(r.row.id);
+  }
+
+  // ------------------------------------------------------------------ hold up
+  private holdRing = new Container();
+  private holdBack = new Container();
+  pickHint = new Container();
+  private buildPickHint() {
+    const sl = this.eng.skin.slots['hud.party']; const [x, y, w] = sl.rect;
+    const t = ransom(this.lab('label.baton'), 40, this.eng.fonts.display, { invert: [0], seed: 8, stroke: 5 }); const b = t.getLocalBounds();
+    t.position.set(x + 10 - b.x, y - 70); t.rotation = -0.05; t.label = 'word';
+    const arrow = new Graphics(); for (let i = 0; i < 4; i++) arrow.poly([x + 60 + i * (w / 4), y - 14, x + 84 + i * (w / 4), y - 14, x + 72 + i * (w / 4), y + 2]).fill(hex(this.C.primary)).stroke({ color: 0xffffff, width: 2 });
+    this.pickHint.addChild(arrow, t); this.pickHint.visible = false; this.eng.st.layers.hud.addChild(this.pickHint);
+  }
+  setPickWord(k: string) { const old = this.pickHint.getChildByLabel('word'); old?.destroy({ children: true }); const sl = this.eng.skin.slots['hud.party']; const [x, y] = sl.rect;
+    const t = ransom(this.lab(k), 40, this.eng.fonts.display, { invert: [0], seed: 8, stroke: 5 }); const b = t.getLocalBounds(); t.position.set(x + 10 - b.x, y - 70); t.rotation = -0.05; t.label = 'word'; this.pickHint.addChild(t); }
+  private buildHoldLogo() {
+    const t = ransom(this.lab('label.holdup'), 64, this.eng.fonts.display, { invert: [0, 5], seed: 4, stroke: 7 });
+    const b = t.getLocalBounds(); t.position.set(40 - b.x, 60); t.rotation = -0.08;
+    this.holdLogo.addChild(t);
+    this.eng.st.layers.ally.addChild(this.holdRing);
+  }
+  setHoldRing(on: boolean, enemyIds: string[] = [], party: string[] = []) {
+    this.holdRing.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.holdRing.visible = on;
+    this.holdBack.removeChildren().forEach((c) => c.destroy({ children: true })); this.holdBack.visible = on;
+    for (const u of this.eng.units.values()) if (u.side === 'ally') u.root.renderable = !on;   // 包围构图里队员都在敌群四周，场上背影让位
+    if (!on) return;
+    const pb = this.party.getLocalBounds(), partyTop = Math.min(this.eng.skin.slots['hud.party'].rect[1], (pb.height > 0 ? this.party.y + pb.y : 1e9));   // 实际卡片包围（当前行动者卡上浮+倾斜）
+    // 后排放进敌人层最底下（站在倒地敌群身后），前排在队伍层；两层都随镜头视差
+    const back = this.holdBack; back.zIndex = -1000; back.visible = true;
+    if (back.parent !== this.eng.st.layers.enemy) this.eng.st.layers.enemy.addChildAt(back, 0); else this.eng.st.layers.enemy.setChildIndex(back, 0);
+    for (const sp of holdLayout(this.eng, enemyIds, party, partyTop)) {
+      const tex = this.eng.frames[`char.${sp.id}#body`]; if (!tex) continue;
+      // 第五阶段：本色全身 + 黑投影 + 敌方向红轮廓光（原作 HOLD UP 是本色 3D 人物持枪包围）；后排略压暗
+      const s = new Sprite(tex); s.anchor.set(0.5, 1); s.tint = sp.back ? 0xc8c8c8 : 0xffffff;
+      s.scale.set(sp.face * sp.sc, sp.sc); s.position.set(sp.x, sp.y);
+      const o = new Sprite(tex); o.anchor.set(0.5, 1); o.tint = 0x0a0a0a; o.position.set(s.x + 7, s.y + 4); o.scale.copyFrom(s.scale);
+      const rm = new Sprite(tex); rm.anchor.set(0.5, 1); rm.tint = hex(this.C.primary); rm.blendMode = 'add'; rm.position.set(s.x + (sp.face > 0 ? 4 : -4), s.y - 2); rm.scale.copyFrom(s.scale);
+      (sp.back ? back : this.holdRing).addChild(o, rm, s);
+    }
+  }
+
+  // ------------------------------------------------------------------ result
+  showResult(d: ResultData) {
+    const eng = this.eng, R = this.result; R.removeChildren().forEach((c) => c.destroy({ children: true }));
+    const v = eng.st.vis;
+    const bg = new Graphics().rect(v.l - 20, v.t - 20, v.r - v.l + 40, v.b - v.t + 40).fill(0x3a3a3a);
+    for (let y = v.t; y < v.b; y += 18) for (let x = v.l + ((y / 18) % 2) * 9; x < v.r; x += 18) bg.circle(x, y, 2.2).fill({ color: 0x555555, alpha: 0.8 });
+    const art = new Sprite(eng.tex['result.hero.grey']); art.anchor.set(0.5, 1); art.scale.set(1.18); art.position.set(1010, 760);
+    // 红色闪电折线
+    const z = new Graphics().poly([v.l - 20, 560, 330, 470, 290, 540, 700, 330, 620, 420, 1060, 110, 1000, 230, v.r + 20, -40, v.r + 20, 40, 1080, 300, 1140, 220, 760, 520, 830, 450, 420, 650, 470, 600, v.l - 20, 720]).fill(0xb10f15).stroke({ color: 0x0a0a0a, width: 6 });
+    const z2 = new Graphics().poly([v.l - 20, 720, 400, 600, 360, 680, 820, 500, 760, 600, v.r + 20, 400, v.r + 20, 480, 900, 640, 940, 580, v.l - 20, v.b + 20]).fill(0x7a0a0e);
+    R.addChild(bg, art, z2, z);
+    this.resultAnim = { t: 0, data: d, nums: [], blocks: [] };
+    // EXP burst
+    const exp = new Container(); exp.position.set(460, 250);
+    const sp: number[] = []; for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2, r = i % 2 ? 70 : 128 + (i % 3) * 14; sp.push(Math.cos(a) * r * 1.4, Math.sin(a) * r * 0.75); }
+    exp.addChild(new Graphics().poly(sp).fill(0x0a0a0a).stroke({ color: 0xffffff, width: 4 }));
+    const en = txt('0', 76, { font: eng.fonts.number, fill: 0xffe14a, fontStyle: 'italic', stroke: { color: 0x0a0a0a, width: 6 } }); en.anchor.set(0.5); exp.addChild(en);
+    const el = txt(this.lab('result.exp'), 40, { font: eng.fonts.display, fill: 0xffe14a, stroke: { color: 0x0a0a0a, width: 6 } }); el.position.set(110, 30); el.rotation = 0.2; exp.addChild(el);
+    if (d.bonus) { const b = this.sticker(this.lab('result.bonus')); b.position.set(10, -120); exp.addChild(b); }
+    R.addChild(exp); this.resultAnim.nums.push({ t: en, v: d.exp, fmt: (n) => n.toLocaleString('en-US') }); this.resultAnim.blocks.push(exp);
+    // MONEY
+    const mo = new Container(); mo.position.set(820, 470);
+    mo.addChild(new Graphics().poly([-200, -50, 220, -80, 200, 60, -220, 80]).fill(0xb10f15).stroke({ color: 0x0a0a0a, width: 5 }));
+    const mn = txt('¥0', 72, { font: eng.fonts.number, fill: 0xffe14a, fontStyle: 'italic', stroke: { color: 0x0a0a0a, width: 6 } }); mn.anchor.set(0.5); mn.position.set(0, -6); mo.addChild(mn);
+    const ml = txt(this.lab('result.money'), 46, { font: eng.fonts.display, fill: 0xffe14a, stroke: { color: 0x0a0a0a, width: 6 } }); ml.position.set(-120, 46); ml.rotation = -0.08; mo.addChild(ml);
+    R.addChild(mo); this.resultAnim.nums.push({ t: mn, v: d.money, fmt: (n) => '¥' + n.toLocaleString('en-US') }); this.resultAnim.blocks.push(mo);
+    // ITEM
+    const itc = new Container(); itc.position.set(60, 470);
+    itc.addChild(new Graphics().poly([0, 0, 520, 30, 510, 110, -10, 80]).fill(0x0a0a0a).poly([10, 10, 505, 38, 497, 100, 2, 72]).fill(0x4a4a4a));
+    const names = d.items.length ? d.items.map((i) => `${i.name} ×${i.n}`).join('  ') : this.lab('result.none');
+    const itn = txt(names, d.items.length ? 34 : 46, { font: eng.fonts.display, fill: d.items.length ? 0xffffff : 0x9a9a9a }); itn.position.set(40, 28); itn.rotation = 0.05; itc.addChild(itn);
+    const itl = txt(this.lab('result.item'), 52, { font: eng.fonts.display, fill: 0xffffff, stroke: { color: 0x0a0a0a, width: 7 } }); itl.position.set(150, 110); itl.rotation = -0.06; itc.addChild(itl);
+    R.addChild(itc); this.resultAnim.blocks.push(itc);
+    const title = ransom(this.lab('result.title'), 70, eng.fonts.display, { invert: [0, 3], seed: 2, stroke: 7 }); title.position.set(60, 90); title.rotation = -0.08;
+    R.addChild(title); this.resultAnim.blocks.push(title);
+    this.resultAnim.blocks.forEach((b) => ((b as any).bx = b.x));
+    // LEVEL UP 卡（原作：结算后逐人弹出；这里在 RESULT 计数结束后从右侧甩入）
+    this.levelCards = [];
+    (d.levelUps ?? []).forEach((lu, i) => {
+      const c = new Container(); c.position.set(1270, 150 + i * 118); c.rotation = -0.05;
+      c.addChild(new Graphics().poly([-430, -46, 20, -60, 10, 58, -440, 66]).fill(0xe5191c).stroke({ color: 0x0a0a0a, width: 5 }).poly([-424, -38, -300, -42, -310, 56, -432, 58]).fill(0x0a0a0a));
+      const hd = new Sprite(eng.frames[`head.${lu.id}#color`] ?? Texture.EMPTY); hd.anchor.set(0.5, 1); hd.scale.set(0.7); hd.position.set(-366, 60); c.addChild(hd);
+      const lw = ransom(this.lab('result.levelup'), 44, eng.fonts.display, { invert: [0, 6], seed: 13 + i, stroke: 6 }); const lb = lw.getLocalBounds(); lw.position.set(-290 - lb.x, -48 - lb.y); c.addChild(lw);
+      const nm = txt(this.lab('unit.' + lu.id), 22, { font: eng.fonts.display, fill: 0x0a0a0a }); nm.position.set(-288, 14); c.addChild(nm);
+      const lv = txt(`Lv ${lu.from} ▶ ${lu.to}`, 30, { font: eng.fonts.number, fill: 0xffffff, fontStyle: 'italic', stroke: { color: 0x0a0a0a, width: 5 } }); lv.position.set(-180, 8); c.addChild(lv);
+      const st = txt(`HP+${lu.hp}  SP+${lu.sp}`, 20, { font: eng.fonts.number, fill: 0xffe14a, stroke: { color: 0x0a0a0a, width: 4 } }); st.position.set(-286, 40); c.addChild(st);
+      c.visible = false; R.addChild(c); this.levelCards.push(c);
+    });
+    this.setMode('result');
+  }
+  levelCards: Container[] = [];
+  private sticker(s: string) {
+    const c = new Container(); const t = txt(s, 46, { font: this.eng.fonts.display, fill: 0x0a0a0a }); t.anchor.set(0.5);
+    const w = t.width + 30; c.addChild(new Graphics().poly([-w / 2, -30, w / 2, -38, w / 2 - 6, 30, -w / 2 - 6, 36]).fill(0xffe14a).stroke({ color: 0x0a0a0a, width: 5 }), t); c.rotation = -0.14; return c;
+  }
+
+  // ------------------------------------------------------------------ per-frame
+  update(dt: number) {
+    this.t += dt; this.openT += dt;
+    // command sets: open pop from hub (≤220ms, staggered), idle breathing, hidden while busy
+    for (const [name, s] of this.sets) {
+      if (!s.c.visible) continue;
+      const set = this.eng.skin.slots['hud.command'].sets[name] as CommandSet;
+      s.c.alpha = this.busy ? 0 : 1;
+      s.items.forEach((it, i) => {
+        const vis = !it.def.when || (it.def.when === 'onemore' && this.oneMore && this.canBaton) || ((it.def.when as string) === 'showtime' && !!this.showtime && !(this.oneMore && this.canBaton));
+        it.node.visible = vis; it.hit.eventMode = vis && !this.busy ? 'static' : 'none';
+        const k = ease.outBack(Math.min(1, Math.max(0, (this.openT - i * 22) / 180)));
+        const b = (it.node as any).base;
+        it.node.x = set.hub.x + (b.x - set.hub.x) * k; it.node.y = set.hub.y + (b.y - set.hub.y) * k;
+        if (!(it.node as any).pressed) it.node.scale.set((0.4 + 0.6 * k) * (1 + 0.014 * Math.sin(this.t / 520 + it.ph)));
+        it.node.rotation = b.r + 0.012 * Math.sin(this.t / 700 + it.ph * 1.3);
+        it.node.y += 2.2 * Math.sin(this.t / 610 + it.ph);
+      });
+      s.burst.alpha = Math.min(1, this.openT / 160);
+      const kb = ease.outBack(Math.min(1, this.openT / 200));
+      s.burst.scale.set(kb * (1 + 0.02 * Math.sin(this.t / 480))); s.burst.rotation = 0.018 * Math.sin(this.t / 900);
+    }
+    if (this.list.visible) { const k = Math.min(1, this.openT / 200); this.list.x = 1018 + (1 - ease.outBack(k)) * 260; this.list.alpha = this.busy ? 0 : k; }
+    this.drawParty(dt);
+    // reticle on target
+    const u = this.eng.units.get(this.targetId);
+    if (u && this.reticle.visible && !this.busy) {
+      this.reticle.alpha = 1;
+      this.reticle.position.set(u.root.x, u.root.y + u.hitY + Math.sin(this.t / 160) * 5);
+      this.reticle.rotation = Math.sin(this.t / 600) * 0.05;
+      const r = (this.overs.get(this.targetId) as any)?.hpR ?? 1;
+      const h = this.reticle.getChildByLabel('heart') as Graphics;
+      if ((h as any).lastR !== r) {
+        (h as any).lastR = r;
+        // 心形 HP：深色心底 + 按 HP 比例的青色水位（用多边形与水平线求交，不用遮罩）
+        const hp = this.heartPoly(1.15), top = -25, bot = 21, lvl = bot - (bot - top) * r;
+        const clip: number[] = [];
+        for (let i = 0; i < hp.length; i += 2) {
+          const x1 = hp[i], y1 = hp[i + 1], x2 = hp[(i + 2) % hp.length], y2 = hp[(i + 3) % hp.length];
+          if (y1 >= lvl) clip.push(x1, y1);
+          if ((y1 - lvl) * (y2 - lvl) < 0) { const k = (lvl - y1) / (y2 - y1); clip.push(x1 + (x2 - x1) * k, lvl); }
+        }
+        h.clear().poly(hp).fill(0x222222);
+        if (clip.length >= 6) h.poly(clip).fill(0x37d6e8);
+        h.poly(hp).stroke({ color: 0xffffff, width: 3 });
+      }
+    } else this.reticle.alpha = 0;
+    this.over.alpha = this.busy ? 0.0 : 1;
+    // result count-up + block slide
+    if (this.result.visible && this.resultAnim.data) {
+      const A = this.resultAnim; A.t += dt;
+      this.levelCards.forEach((c, i) => { const k = ease.outBack(Math.min(1, Math.max(0, (A.t - 1250 - i * 120) / 240))); c.visible = k > 0; c.x = 1270 + (1 - k) * 520; });
+      A.blocks.forEach((b, i) => { const k = ease.outCubic(Math.min(1, Math.max(0, (A.t - i * 80) / 220))); b.x = (b as any).bx - (1 - k) * 600; b.alpha = k; });
+      A.nums.forEach((n) => { const k = Math.min(1, Math.max(0, (A.t - 200) / 900)); n.t.text = n.fmt(Math.round(n.v * ease.outCubic(k))); });
+    }
+  }
+  private drawDebug() {
+    const g = new Graphics();
+    for (const set of Object.values(this.eng.skin.slots['hud.command'].sets) as CommandSet[]) for (const it of set.items) g.rect(...it.hit).stroke({ color: 0x00ff00, width: 2 });
+    for (const b of this.eng.skin.slots['hud.system'].buttons) g.rect(...b.hit).stroke({ color: 0x00ffff, width: 2 });
+    const sl = this.eng.skin.slots['hud.command'];
+    g.rect(...sl.rect).stroke({ color: 0xffff00, width: 2 });
+    g.rect(0, 0, 1280, 720).stroke({ color: 0xff00ff, width: 3 });
+    this.eng.st.layers.hud.addChild(g);
+  }
+  /** 测试：所有命中区（设计坐标） */
+  hitRects() {
+    const out: { id: string; set: string; rect: Rect; main: boolean }[] = [];
+    for (const [n, set] of Object.entries(this.eng.skin.slots['hud.command'].sets) as [string, CommandSet][]) for (const it of set.items) out.push({ id: it.id, set: n, rect: it.hit, main: !!it.main });
+    return out;
+  }
+}

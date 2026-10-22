@@ -1,0 +1,139 @@
+{
+ "out": [
+  {
+   "speed": 1,
+   "minimal": false,
+   "log": [
+    {
+     "recipe": "highlight.showtime",
+     "dur": 3360,
+     "wall": 3432,
+     "cap": 3500,
+     "forced": false,
+     "level": "full",
+     "speed": 1
+    },
+    {
+     "recipe": "transition.battleStart",
+     "dur": 860,
+     "wall": 867,
+     "cap": 900,
+     "forced": false,
+     "level": "full",
+     "speed": 1
+    },
+    {
+     "recipe": "action.enemy",
+     "dur": 1100,
+     "wall": 1150,
+     "cap": 1500,
+     "forced": false,
+     "level": "full",
+     "speed": 1
+    }
+   ]
+  },
+  {
+   "speed": 1,
+   "minimal": true,
+   "log": [
+    {
+     "recipe": "highlight.showtime",
+     "dur": 3360,
+     "wall": 1175,
+     "cap": 1200,
+     "forced": false,
+     "level": "minimal",
+     "speed": 1
+    },
+    {
+     "recipe": "transition.battleStart",
+     "dur": 860,
+     "wall": 317,
+     "cap": 350,
+     "forced": false,
+     "level": "minimal",
+     "speed": 1
+    },
+    {
+     "recipe": "action.enemy",
+     "dur": 1100,
+     "wall": 466,
+     "cap": 500,
+     "forced": false,
+     "level": "minimal",
+     "speed": 1
+    }
+   ]
+  },
+  {
+   "speed": 2,
+   "minimal": true,
+   "log": [
+    {
+     "recipe": "highlight.showtime",
+     "dur": 3360,
+     "wall": 579,
+     "cap": 600,
+     "forced": false,
+     "level": "minimal",
+     "speed": 2
+    },
+    {
+     "recipe": "transition.battleStart",
+     "dur": 860,
+     "wall": 143,
+     "cap": 175,
+     "forced": false,
+     "level": "minimal",
+     "speed": 2
+    },
+    {
+     "recipe": "action.enemy",
+     "dur": 1100,
+     "wall": 217,
+     "cap": 250,
+     "forced": false,
+     "level": "minimal",
+     "speed": 2
+    }
+   ]
+  },
+  {
+   "speed": 3,
+   "minimal": true,
+   "log": [
+    {
+     "recipe": "highlight.showtime",
+     "dur": 3360,
+     "wall": 368,
+     "cap": 400,
+     "forced": false,
+     "level": "minimal",
+     "speed": 3
+    },
+    {
+     "recipe": "transition.battleStart",
+     "dur": 860,
+     "wall": 82,
+     "cap": 117,
+     "forced": false,
+     "level": "minimal",
+     "speed": 3
+    },
+    {
+     "recipe": "action.enemy",
+     "dur": 1100,
+     "wall": 133,
+     "cap": 167,
+     "forced": false,
+     "level": "minimal",
+     "speed": 3
+    }
+   ]
+  }
+ ],
+ "errs": [],
+ "issues": [],
+ "eng": []
+}

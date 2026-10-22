@@ -1,0 +1,11 @@
+{
+ "_note": "委托板（GDD §20 / SYSTEMS-AUDIT D2）：规则=种子+路线+奖励，文字在皮肤 labels req.<id>.*（AI 可覆盖文字，不碰规则）。theme 为主题标签，命名由皮肤按原作风格转写。",
+ "requests": [
+  { "id": "r1", "theme": "procrastination", "seed": 20261022, "stars": 2, "reward": { "money": 3000 } },
+  { "id": "r2", "theme": "sleep", "seed": 20261023, "stars": 3, "reward": { "money": 4500 } },
+  { "id": "r3", "theme": "gluttony", "seed": 20261024, "stars": 3, "reward": { "money": 5000 } }
+ ],
+ "route": ["gate", "fork", "safe", "gate", "boss"],
+ "fork": { "safe": "vault", "risk": "risk" },
+ "callingCard": { "bossHp": 1.15, "bossAtk": 1.1, "treasure": "crown" }
+}

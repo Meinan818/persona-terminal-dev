@@ -1,0 +1,10 @@
+{
+ "talk": {
+  "html": "<section class=\"talk\"><header class=\"talk-head\"><span class=\"talk-name\" data-slot=\"enemyName\"></span><span class=\"talk-odds\" data-slot=\"odds\"></span></header><img class=\"talk-portrait\" data-slot=\"enemyPortrait\" alt=\"\"><p class=\"talk-line\" data-slot=\"line\"></p><ul class=\"talk-choices\" data-slot=\"choices\"><li><button class=\"talk-choice\" data-slot=\"choice\"><span data-slot=\"choiceText\"></span></button></li></ul><span class=\"talk-status\" data-slot=\"status\"></span></section>",
+  "params": {
+   "styleId": "p5-holdup",
+   "maxLineChars": 40,
+   "typingCps": 40
+  }
+ }
+}

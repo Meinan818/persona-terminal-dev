@@ -1,0 +1,287 @@
+{
+ "id": "allout.default",
+ "event": "allout",
+ "duration": 3060,
+ "hitMarks": [
+  400,
+  610,
+  820,
+  1030,
+  1240,
+  1450,
+  1660,
+  1870,
+  2050
+ ],
+ "create": [
+  {
+   "name": "fin",
+   "asset": "allout.finish.default",
+   "layer": "allout"
+  }
+ ],
+ "assets": [
+  "allout.finish.default",
+  "char.$party"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "dim",
+   "args": {
+    "color": "#000",
+    "alpha": 0.6,
+    "hold": true
+   },
+   "dur": 2860,
+   "layer": "allout"
+  },
+  {
+   "at": 80,
+   "prim": "dim",
+   "args": {
+    "color": "@color.primary",
+    "alpha": 0.7,
+    "hold": true
+   },
+   "dur": 2780,
+   "layer": "allout"
+  },
+  {
+   "at": 0,
+   "prim": "radialBurst",
+   "args": {
+    "rays": 24,
+    "colors": [
+     "@color.primary",
+     "#ffffff"
+    ],
+    "spin": 0.9,
+    "alpha": 0.28
+   },
+   "dur": 2200
+  },
+  {
+   "at": 0,
+   "prim": "title",
+   "args": {
+    "text": "label.allout",
+    "font": "@font.display",
+    "size": 120,
+    "pos": {
+     "x": 640,
+     "y": 160
+    },
+    "rot": -0.1,
+    "invert": [
+     0,
+     4
+    ]
+   },
+   "dur": 660,
+   "ease": "outBack"
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "allout.start"
+   }
+  },
+  {
+   "at": 200,
+   "prim": "speedLines",
+   "args": {
+    "count": 40,
+    "colors": [
+     "#0a0a0a"
+    ],
+    "scrollSpeed": 3,
+    "dir": -0.35
+   },
+   "dur": 1850,
+   "minimal": "skip"
+  },
+  {
+   "at": 300,
+   "prim": "silhouetteDash",
+   "args": {
+    "units": "$party",
+    "count": 8,
+    "interval": 210
+   },
+   "dur": 1750,
+   "minimal": {
+    "args": {
+     "units": "$party",
+     "count": 3,
+     "interval": 210
+    }
+   }
+  },
+  {
+   "at": 400,
+   "dur": 160,
+   "prim": "slashLine",
+   "repeatEvery": 210,
+   "times": 8,
+   "args": {
+    "len": 840,
+    "width": 16
+   }
+  },
+  {
+   "at": 400,
+   "prim": "particles",
+   "repeatEvery": 210,
+   "times": 8,
+   "args": {
+    "count": 60,
+    "life": 600,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 1100,
+    "frames": [
+     "shard",
+     "star",
+     "ink"
+    ],
+    "colors": [
+     "#ffffff",
+     "#0a0a0a",
+     "#ffe14a"
+    ]
+   }
+  },
+  {
+   "at": 420,
+   "prim": "particles",
+   "repeatEvery": 420,
+   "times": 4,
+   "args": {
+    "count": 28,
+    "life": 880,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": 60
+    },
+    "speed": 180,
+    "gravity": -60,
+    "size": 3.2,
+    "grow": true,
+    "jitter": 260,
+    "frames": [
+     "smoke"
+    ],
+    "colors": [
+     "#0a0a0a",
+     "#2a2a2a",
+     "#ffffff"
+    ]
+   }
+  },
+  {
+   "at": 400,
+   "prim": "sfx",
+   "repeatEvery": 420,
+   "times": 4,
+   "args": {
+    "id": "allout.hit"
+   }
+  },
+  {
+   "at": 400,
+   "prim": "shake",
+   "repeatEvery": 420,
+   "times": 4,
+   "args": {
+    "px": 8
+   }
+  },
+  {
+   "at": 2050,
+   "prim": "flashScreen",
+   "args": {
+    "color": "#ffffff",
+    "alpha": 0.9
+   },
+   "dur": 160
+  },
+  {
+   "at": 2050,
+   "prim": "shockwave",
+   "args": {
+    "center": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "amp": 60
+   },
+   "dur": 520
+  },
+  {
+   "at": 2050,
+   "prim": "finishCard",
+   "args": {
+    "artId": "finish.$finisher",
+    "shape": [
+     -760,
+     -330,
+     700,
+     -400,
+     760,
+     330,
+     -700,
+     400
+    ],
+    "enterFrom": "right",
+    "zoom": 1.04,
+    "fallback": "allout.finish.default"
+   },
+   "dur": 970,
+   "ease": "outCubic"
+  },
+  {
+   "at": 2220,
+   "prim": "freezeFrame",
+   "args": {
+    "ms": 780
+   },
+   "dur": 780
+  },
+  {
+   "at": 2220,
+   "prim": "totalDamage",
+   "args": {
+    "label": "label.totalDamage",
+    "pos": {
+     "x": 760,
+     "y": 580
+    }
+   },
+   "dur": 780,
+   "ease": "outBack"
+  },
+  {
+   "at": 2050,
+   "prim": "sfx",
+   "args": {
+    "id": "allout.finish"
+   }
+  },
+  {
+   "at": 2860,
+   "prim": "tween",
+   "args": {
+    "target": "#layer.allout",
+    "to": {
+     "alpha": 0
+    }
+   },
+   "dur": 200
+  }
+ ]
+}

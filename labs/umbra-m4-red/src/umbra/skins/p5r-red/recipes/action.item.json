@@ -1,0 +1,55 @@
+{
+ "id": "action.item",
+ "event": "action",
+ "match": {
+  "skillId": "item"
+ },
+ "duration": 760,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "heal"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "args": {
+    "count": 80,
+    "at": {
+     "x": "$actor",
+     "y": "$actor",
+     "dy": 120
+    },
+    "speed": 360,
+    "dir": -1.5708,
+    "spread": 0.9,
+    "gravity": -500,
+    "life": 620,
+    "frames": [
+     "disc",
+     "star"
+    ],
+    "colors": [
+     "#37e15a",
+     "#ffffff",
+     "#b8ffcb"
+    ]
+   }
+  },
+  {
+   "at": 150,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "heal": true,
+    "hit": 0,
+    "dx": -40
+   },
+   "dur": 600
+  }
+ ]
+}

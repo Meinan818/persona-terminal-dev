@@ -1,0 +1,1137 @@
+{
+ "timing": {
+  "x1-full": [
+   {
+    "ev": "action",
+    "recipe": "action.guard",
+    "duration": 520,
+    "wallMs": 533,
+    "capMs": 1800,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "turn:start",
+    "recipe": "turn.start",
+    "duration": 240,
+    "wallMs": 250,
+    "capMs": 300,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "action",
+    "recipe": "skill.zio",
+    "duration": 1700,
+    "wallMs": 1783,
+    "capMs": 1800,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 433,
+    "capMs": 450,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 467,
+    "capMs": 500,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "action",
+    "recipe": "action.attack",
+    "duration": 1100,
+    "wallMs": 1166,
+    "capMs": 1800,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 434,
+    "capMs": 450,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 467,
+    "capMs": 500,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "holdup",
+    "recipe": "holdup",
+    "duration": 950,
+    "wallMs": 950,
+    "capMs": 1000,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "allout",
+    "recipe": "allout.default",
+    "duration": 3060,
+    "wallMs": 3067,
+    "capMs": 3500,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "battle:end",
+    "recipe": "battle.end",
+    "duration": 1300,
+    "wallMs": 1302,
+    "capMs": 1500,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   },
+   {
+    "ev": "battle:start",
+    "recipe": "transition.battleStart",
+    "duration": 860,
+    "wallMs": 866,
+    "capMs": 900,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "full"
+   }
+  ],
+  "x1-minimal": [
+   {
+    "ev": "action",
+    "recipe": "action.guard",
+    "duration": 520,
+    "wallMs": 524,
+    "capMs": 600,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "turn:start",
+    "recipe": "turn.start",
+    "duration": 240,
+    "wallMs": 67,
+    "capMs": 100,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "action",
+    "recipe": "skill.zio",
+    "duration": 1700,
+    "wallMs": 566,
+    "capMs": 600,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 167,
+    "capMs": 200,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 217,
+    "capMs": 250,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "action",
+    "recipe": "action.attack",
+    "duration": 1100,
+    "wallMs": 575,
+    "capMs": 600,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 167,
+    "capMs": 200,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 218,
+    "capMs": 250,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "holdup",
+    "recipe": "holdup",
+    "duration": 950,
+    "wallMs": 365,
+    "capMs": 400,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "allout",
+    "recipe": "allout.default",
+    "duration": 3060,
+    "wallMs": 1167,
+    "capMs": 1200,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "battle:end",
+    "recipe": "battle.end",
+    "duration": 1300,
+    "wallMs": 467,
+    "capMs": 500,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   },
+   {
+    "ev": "battle:start",
+    "recipe": "transition.battleStart",
+    "duration": 860,
+    "wallMs": 316,
+    "capMs": 350,
+    "forced": false,
+    "skipped": false,
+    "speed": 1,
+    "level": "minimal"
+   }
+  ],
+  "x2-minimal": [
+   {
+    "ev": "action",
+    "recipe": "action.guard",
+    "duration": 520,
+    "wallMs": 266,
+    "capMs": 300,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "turn:start",
+    "recipe": "turn.start",
+    "duration": 240,
+    "wallMs": 17,
+    "capMs": 50,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "action",
+    "recipe": "skill.zio",
+    "duration": 1700,
+    "wallMs": 267,
+    "capMs": 300,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 67,
+    "capMs": 100,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 100,
+    "capMs": 125,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "action",
+    "recipe": "action.attack",
+    "duration": 1100,
+    "wallMs": 267,
+    "capMs": 300,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 67,
+    "capMs": 100,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 100,
+    "capMs": 125,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "holdup",
+    "recipe": "holdup",
+    "duration": 950,
+    "wallMs": 167,
+    "capMs": 200,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "allout",
+    "recipe": "allout.default",
+    "duration": 3060,
+    "wallMs": 567,
+    "capMs": 600,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "battle:end",
+    "recipe": "battle.end",
+    "duration": 1300,
+    "wallMs": 217,
+    "capMs": 250,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   },
+   {
+    "ev": "battle:start",
+    "recipe": "transition.battleStart",
+    "duration": 860,
+    "wallMs": 150,
+    "capMs": 175,
+    "forced": false,
+    "skipped": false,
+    "speed": 2,
+    "level": "minimal"
+   }
+  ],
+  "x3-minimal": [
+   {
+    "ev": "action",
+    "recipe": "action.guard",
+    "duration": 520,
+    "wallMs": 165,
+    "capMs": 200,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "turn:start",
+    "recipe": "turn.start",
+    "duration": 240,
+    "wallMs": 17,
+    "capMs": 33,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "action",
+    "recipe": "skill.zio",
+    "duration": 1700,
+    "wallMs": 167,
+    "capMs": 200,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 33,
+    "capMs": 67,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 50,
+    "capMs": 83,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "action",
+    "recipe": "action.attack",
+    "duration": 1100,
+    "wallMs": 167,
+    "capMs": 200,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "unit:down",
+    "recipe": "unit.down",
+    "duration": 460,
+    "wallMs": 33,
+    "capMs": 67,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "onemore",
+    "recipe": "onemore",
+    "duration": 420,
+    "wallMs": 50,
+    "capMs": 83,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "holdup",
+    "recipe": "holdup",
+    "duration": 950,
+    "wallMs": 100,
+    "capMs": 133,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "allout",
+    "recipe": "allout.default",
+    "duration": 3060,
+    "wallMs": 367,
+    "capMs": 400,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "battle:end",
+    "recipe": "battle.end",
+    "duration": 1300,
+    "wallMs": 133,
+    "capMs": 167,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   },
+   {
+    "ev": "battle:start",
+    "recipe": "transition.battleStart",
+    "duration": 860,
+    "wallMs": 83,
+    "capMs": 117,
+    "forced": false,
+    "skipped": false,
+    "speed": 3,
+    "level": "minimal"
+   }
+  ]
+ },
+ "frames": {
+  "x1-full": {
+   "action": {
+    "n": 141,
+    "cpuMed": 0.8,
+    "cpuMax": 11.5,
+    "dtMed": 16.7,
+    "npMax": 411,
+    "filtMax": 1
+   },
+   "turn": {
+    "n": 15,
+    "cpuMed": 0.5,
+    "cpuMax": 4.1,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "idle": {
+    "n": 169,
+    "cpuMed": 0.6,
+    "cpuMax": 28.2,
+    "dtMed": 16.7,
+    "npMax": 260,
+    "filtMax": 1
+   },
+   "onemore": {
+    "n": 52,
+    "cpuMed": 0.8,
+    "cpuMax": 9.9,
+    "dtMed": 16.7,
+    "npMax": 70,
+    "filtMax": 0
+   },
+   "holdup": {
+    "n": 2,
+    "cpuMed": 3.9,
+    "cpuMax": 3.9,
+    "dtMed": 16.8,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "allout": {
+    "n": 184,
+    "cpuMed": 0.6,
+    "cpuMax": 14.1,
+    "dtMed": 16.7,
+    "npMax": 216,
+    "filtMax": 1
+   },
+   "battle": {
+    "n": 130,
+    "cpuMed": 0.5,
+    "cpuMax": 16.5,
+    "dtMed": 16.7,
+    "npMax": 70,
+    "filtMax": 0
+   }
+  },
+  "x1-minimal": {
+   "idle": {
+    "n": 53,
+    "cpuMed": 0.5,
+    "cpuMax": 39.5,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "action": {
+    "n": 93,
+    "cpuMed": 0.7,
+    "cpuMax": 11.1,
+    "dtMed": 16.7,
+    "npMax": 210,
+    "filtMax": 1
+   },
+   "turn": {
+    "n": 4,
+    "cpuMed": 0.7,
+    "cpuMax": 1.1,
+    "dtMed": 16.8,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "onemore": {
+    "n": 20,
+    "cpuMed": 0.6,
+    "cpuMax": 2.9,
+    "dtMed": 16.7,
+    "npMax": 15,
+    "filtMax": 0
+   },
+   "holdup": {
+    "n": 22,
+    "cpuMed": 0.4,
+    "cpuMax": 3.5,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "allout": {
+    "n": 70,
+    "cpuMed": 0.7,
+    "cpuMax": 18.4,
+    "dtMed": 16.7,
+    "npMax": 236,
+    "filtMax": 1
+   },
+   "battle": {
+    "n": 47,
+    "cpuMed": 0.4,
+    "cpuMax": 3.5,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   }
+  },
+  "x2-minimal": {
+   "action": {
+    "n": 48,
+    "cpuMed": 0.8,
+    "cpuMax": 11.2,
+    "dtMed": 16.7,
+    "npMax": 210,
+    "filtMax": 1
+   },
+   "turn": {
+    "n": 1,
+    "cpuMed": 2.7,
+    "cpuMax": 2.7,
+    "dtMed": 16.5,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "idle": {
+    "n": 50,
+    "cpuMed": 1.2,
+    "cpuMax": 27.1,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "onemore": {
+    "n": 8,
+    "cpuMed": 0.9,
+    "cpuMax": 2.1,
+    "dtMed": 16.7,
+    "npMax": 15,
+    "filtMax": 0
+   },
+   "holdup": {
+    "n": 10,
+    "cpuMed": 0.4,
+    "cpuMax": 3.1,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "allout": {
+    "n": 34,
+    "cpuMed": 0.8,
+    "cpuMax": 15.5,
+    "dtMed": 16.7,
+    "npMax": 237,
+    "filtMax": 1
+   },
+   "battle": {
+    "n": 22,
+    "cpuMed": 0.8,
+    "cpuMax": 3.8,
+    "dtMed": 16.6,
+    "npMax": 0,
+    "filtMax": 0
+   }
+  },
+  "x3-minimal": {
+   "action": {
+    "n": 30,
+    "cpuMed": 0.9,
+    "cpuMax": 11,
+    "dtMed": 16.6,
+    "npMax": 210,
+    "filtMax": 1
+   },
+   "turn": {
+    "n": 1,
+    "cpuMed": 0.7,
+    "cpuMax": 0.7,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "idle": {
+    "n": 49,
+    "cpuMed": 0.7,
+    "cpuMax": 20.1,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "onemore": {
+    "n": 4,
+    "cpuMed": 3.1,
+    "cpuMax": 4.3,
+    "dtMed": 16.6,
+    "npMax": 15,
+    "filtMax": 0
+   },
+   "holdup": {
+    "n": 6,
+    "cpuMed": 0.5,
+    "cpuMax": 7.1,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   },
+   "allout": {
+    "n": 22,
+    "cpuMed": 0.9,
+    "cpuMax": 14.4,
+    "dtMed": 16.7,
+    "npMax": 235,
+    "filtMax": 1
+   },
+   "battle": {
+    "n": 13,
+    "cpuMed": 0.5,
+    "cpuMax": 1.7,
+    "dtMed": 16.7,
+    "npMax": 0,
+    "filtMax": 0
+   }
+  }
+ },
+ "geometry": {
+  "items": [
+   {
+    "id": "baton",
+    "set": "main",
+    "rect": [
+     780,
+     236,
+     230,
+     86
+    ],
+    "main": false,
+    "minSide": 86,
+    "need": 86,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "showtime",
+    "set": "main",
+    "rect": [
+     780,
+     236,
+     230,
+     86
+    ],
+    "main": false,
+    "minSide": 86,
+    "need": 86,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "persona",
+    "set": "main",
+    "rect": [
+     780,
+     326,
+     230,
+     86
+    ],
+    "main": false,
+    "minSide": 86,
+    "need": 86,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "guard",
+    "set": "main",
+    "rect": [
+     780,
+     416,
+     230,
+     86
+    ],
+    "main": false,
+    "minSide": 86,
+    "need": 86,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "attack",
+    "set": "main",
+    "rect": [
+     780,
+     506,
+     230,
+     120
+    ],
+    "main": true,
+    "minSide": 120,
+    "need": 96,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "order",
+    "set": "main",
+    "rect": [
+     1016,
+     226,
+     240,
+     86
+    ],
+    "main": false,
+    "minSide": 86,
+    "need": 86,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "gun",
+    "set": "main",
+    "rect": [
+     1016,
+     326,
+     240,
+     86
+    ],
+    "main": false,
+    "minSide": 86,
+    "need": 86,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "item",
+    "set": "main",
+    "rect": [
+     1016,
+     416,
+     240,
+     86
+    ],
+    "main": false,
+    "minSide": 86,
+    "need": 86,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "allout",
+    "set": "holdup",
+    "rect": [
+     780,
+     440,
+     476,
+     110
+    ],
+    "main": true,
+    "minSide": 110,
+    "need": 96,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "talk",
+    "set": "holdup",
+    "rect": [
+     780,
+     556,
+     230,
+     96
+    ],
+    "main": false,
+    "minSide": 96,
+    "need": 86,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "release",
+    "set": "holdup",
+    "rect": [
+     1016,
+     556,
+     240,
+     96
+    ],
+    "main": false,
+    "minSide": 96,
+    "need": 86,
+    "ok": true,
+    "inside": true
+   },
+   {
+    "id": "next",
+    "set": "result",
+    "rect": [
+     1066,
+     598,
+     190,
+     98
+    ],
+    "main": true,
+    "minSide": 98,
+    "need": 96,
+    "ok": true,
+    "inside": true
+   }
+  ],
+  "overlaps": [],
+  "pt667": {
+   "secondary86": 44.8,
+   "main96": 50
+  }
+ },
+ "portrait": [
+  {
+   "id": "persona",
+   "screen": [
+    174.2,
+    616.9
+   ],
+   "designTarget": [
+    998,
+    400
+   ],
+   "mappedBack": [
+    998,
+    400
+   ],
+   "modeAfter": "list",
+   "ok": true
+  },
+  {
+   "id": "back",
+   "screen": [
+    64.8,
+    520
+   ],
+   "designTarget": [
+    820,
+    601
+   ],
+   "mappedBack": [
+    820,
+    601
+   ],
+   "modeAfter": "command",
+   "ok": true
+  },
+  {
+   "id": "order",
+   "screen": [
+    228.7,
+    750.8
+   ],
+   "designTarget": [
+    1244,
+    300
+   ],
+   "mappedBack": [
+    1244,
+    300
+   ],
+   "modeAfter": "list",
+   "ok": true
+  },
+  {
+   "id": "back",
+   "screen": [
+    64.8,
+    520
+   ],
+   "designTarget": [
+    820,
+    601
+   ],
+   "mappedBack": [
+    820,
+    601
+   ],
+   "modeAfter": "command",
+   "ok": true
+  },
+  {
+   "id": "item",
+   "screen": [
+    125.2,
+    750.8
+   ],
+   "designTarget": [
+    1244,
+    490
+   ],
+   "mappedBack": [
+    1244,
+    490
+   ],
+   "modeAfter": "list",
+   "ok": true
+  },
+  {
+   "id": "back",
+   "screen": [
+    64.8,
+    520
+   ],
+   "designTarget": [
+    820,
+    601
+   ],
+   "mappedBack": [
+    820,
+    601
+   ],
+   "modeAfter": "command",
+   "ok": true
+  }
+ ],
+ "skip": {
+  "finishVisibleDuringFlash": true,
+  "flashMs": 134,
+  "after": {
+   "particles": 0,
+   "filters": 0,
+   "cutin": 0,
+   "allout": 0,
+   "trans": 0,
+   "dmg": 0,
+   "fx": 1
+  },
+  "finishVisibleAfter": false
+ },
+ "freeze": {
+  "result": "ignored(frozen)",
+  "frozen": true
+ },
+ "buffer": {
+  "buffered": [
+   "k3",
+   "k4"
+  ],
+  "ranAfter": [
+   "k3",
+   "k4"
+  ]
+ },
+ "clean": {
+  "particles": 0,
+  "filters": 0,
+  "cutin": 0,
+  "allout": 0,
+  "trans": 0,
+  "dmg": 0,
+  "fx": 1
+ },
+ "errors": [],
+ "idle": {
+  "n": 361,
+  "cpuMed": 0.5,
+  "cpuP95": 1.9,
+  "cpuMax": 5.8,
+  "over16": 0,
+  "dtMed": 16.7
+ },
+ "gates": {
+  "onemoreFullMaxWall": 434,
+  "onemoreOk": true,
+  "skipFlashMs": 134,
+  "skipOk": true,
+  "guard": {
+   "dur": 520,
+   "minCap": 600,
+   "ok": true
+  },
+  "attack": {
+   "dur": 1100,
+   "minCap": 600,
+   "ok": true
+  },
+  "idle": {
+   "n": 361,
+   "cpuMed": 0.5,
+   "cpuP95": 1.9,
+   "cpuMax": 5.8,
+   "over16": 0,
+   "dtMed": 16.7
+  }
+ }
+}

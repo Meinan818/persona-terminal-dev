@@ -1,0 +1,242 @@
+{
+ "id": "action.enemy",
+ "event": "action",
+ "match": {
+  "side": "enemy"
+ },
+ "duration": 1100,
+ "hitMarks": [
+  460
+ ],
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "enemy.charge"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "args": {
+    "count": 40,
+    "at": {
+     "x": "$actor",
+     "y": "$actor"
+    },
+    "speed": 260,
+    "life": 380,
+    "gravity": -200,
+    "frames": [
+     "smoke",
+     "disc"
+    ],
+    "colors": [
+     "#e5191c",
+     "#0a0a0a"
+    ]
+   }
+  },
+  {
+   "at": 0,
+   "prim": "nameplate",
+   "dur": 900,
+   "args": {
+    "side": "enemy"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "enemy.skill"
+   }
+  },
+  {
+   "at": 0,
+   "dur": 1060,
+   "prim": "camera",
+   "args": {
+    "focus": "$actor",
+    "keys": [
+     {
+      "at": 0
+     },
+     {
+      "at": 0.3,
+      "x": -40,
+      "y": -10,
+      "zoom": 0.12,
+      "rot": -0.015,
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.42,
+      "x": 120,
+      "y": 10,
+      "zoom": 0.1,
+      "rot": 0.02,
+      "ease": "inCubic"
+     },
+     {
+      "at": 0.6,
+      "x": 110,
+      "y": 10,
+      "zoom": 0.14,
+      "rot": 0.02,
+      "ease": "outQuart"
+     },
+     {
+      "at": 1,
+      "ease": "inOutCubic"
+     }
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 120,
+   "prim": "afterimage",
+   "args": {
+    "actor": "$actor",
+    "to": {
+     "x": "$target",
+     "y": "$target",
+     "dx": -260,
+     "dy": -60
+    },
+    "n": 2,
+    "scaleTo": 1.25,
+    "tints": [
+     "#0a0a0a",
+     "@color.primary"
+    ]
+   },
+   "dur": 300,
+   "ease": "inCubic"
+  },
+  {
+   "at": 460,
+   "prim": "hitStop",
+   "args": {
+    "ms": 50
+   }
+  },
+  {
+   "at": 460,
+   "prim": "shake",
+   "args": {
+    "px": 16
+   }
+  },
+  {
+   "at": 460,
+   "prim": "flashScreen",
+   "args": {
+    "color": "@color.primary",
+    "alpha": 0.35
+   },
+   "dur": 120
+  },
+  {
+   "at": 460,
+   "prim": "squashHit",
+   "args": {
+    "target": "$targets",
+    "squash": 0.12,
+    "push": 18,
+    "recoverMs": 260
+   }
+  },
+  {
+   "at": 460,
+   "prim": "rgbSplit",
+   "args": {
+    "offset": 6
+   },
+   "dur": 80
+  },
+  {
+   "at": 460,
+   "prim": "particles",
+   "args": {
+    "count": 80,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 900,
+    "life": 420,
+    "frames": [
+     "shard",
+     "ink"
+    ],
+    "colors": [
+     "#ffffff",
+     "#0a0a0a",
+     "@color.primary"
+    ]
+   }
+  },
+  {
+   "at": 460,
+   "prim": "damageNumber",
+   "args": {
+    "font": "@font.number",
+    "dx": -160
+   },
+   "dur": 560
+  },
+  {
+   "at": 460,
+   "prim": "sfx",
+   "args": {
+    "id": "hit"
+   }
+  },
+  {
+   "at": 460,
+   "prim": "pose",
+   "dur": 520,
+   "args": {
+    "target": "$targets",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.18,
+      "pose": "recoil",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.45,
+      "pose": "recoil"
+     },
+     {
+      "at": 1,
+      "pose": "idle",
+      "ease": "inOutCubic"
+     }
+    ]
+   }
+  },
+  {
+   "at": 640,
+   "prim": "tween",
+   "args": {
+    "target": "$actor",
+    "to": {
+     "x": "home",
+     "y": "home",
+     "scale": 1
+    }
+   },
+   "dur": 360,
+   "ease": "outCubic"
+  }
+ ]
+}

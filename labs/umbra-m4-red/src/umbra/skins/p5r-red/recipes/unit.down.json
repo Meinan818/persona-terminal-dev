@@ -1,0 +1,54 @@
+{
+ "id": "unit.down",
+ "event": "unit:down",
+ "duration": 460,
+ "assets": [],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "portraitDown",
+   "args": {
+    "style": "fall"
+   },
+   "dur": 420
+  },
+  {
+   "at": 0,
+   "prim": "particles",
+   "args": {
+    "count": 30,
+    "at": {
+     "x": "$target",
+     "y": "$target",
+     "dy": 120
+    },
+    "speed": 260,
+    "life": 420,
+    "gravity": -120,
+    "frames": [
+     "smoke"
+    ],
+    "colors": [
+     "#ffffff",
+     "#bbbbbb"
+    ]
+   }
+  },
+  {
+   "at": 80,
+   "prim": "tag",
+   "args": {
+    "kind": "DOWN",
+    "unit": "$targets"
+   },
+   "dur": 360
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "down"
+   }
+  }
+ ]
+}

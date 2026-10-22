@@ -1,0 +1,162 @@
+/* p5r-red · 交涉 DOM 模板样式（只作用于 .umbra-skin-p5r-red；只用 transform/opacity 动效；静态 clip-path 允许 v1.2） */
+.umbra-skin-p5r-red .talk { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; pointer-events: auto; font-family: 'R5 CJK', system-ui, sans-serif; color: #fff; }
+.umbra-skin-p5r-red .talk-head { position: absolute; left: 60px; top: 120px; display: flex; gap: 16px; align-items: center; transform: rotate(-4deg); }
+.umbra-skin-p5r-red .talk-name { background: #0a0a0a; border: 3px solid #fff; padding: 8px 28px 8px 20px; font-size: 34px; clip-path: polygon(4% 0, 100% 0, 96% 100%, 0 100%); }
+.umbra-skin-p5r-red .talk-odds { background: #e5191c; padding: 6px 18px; font: 28px 'R5 Num', sans-serif; font-style: italic; clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%); }
+.umbra-skin-p5r-red .talk-portrait { position: absolute; left: 140px; top: 190px; width: 300px; height: 380px; object-fit: contain; }
+.umbra-skin-p5r-red .talk-line { position: absolute; left: 380px; top: 200px; width: 420px; min-height: 96px; margin: 0; padding: 22px 30px; background: #0a0a0a; border: 4px solid #fff; font-size: 28px; line-height: 1.35; transform: rotate(-3deg); clip-path: polygon(0 6%, 100% 0, 97% 100%, 3% 94%); }
+.umbra-skin-p5r-red .talk-choices { position: absolute; left: 780px; top: 300px; width: 476px; margin: 0; padding: 0; list-style: none; }
+.umbra-skin-p5r-red .talk-choices li { margin: 0 0 6px; }
+.umbra-skin-p5r-red .talk-choice { width: 100%; min-height: 96px; border: 0; background: #fff; color: #0a0a0a; font: 30px 'R5 CJK', sans-serif; text-align: left; padding: 0 34px; clip-path: polygon(3% 0, 100% 6%, 97% 100%, 0 92%); transform: rotate(-3deg); transition: transform .12s; cursor: pointer; }
+.umbra-skin-p5r-red .talk-choice:active, .umbra-skin-p5r-red .talk-choice:hover { background: #e5191c; color: #fff; transform: rotate(-3deg) scale(1.03); }
+.umbra-skin-p5r-red .talk-status { position: absolute; left: 400px; top: 330px; font-size: 22px; opacity: .8; }
+
+/* ===== M4 流程（据点/委托板/预告信/潜入 HUD/安全屋/BOSS 登场/心之卡/局末结算）。只用 transform/opacity 动效；静态 clip-path ===== */
+.umbra-skin-p5r-red.flow { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; pointer-events: none; font-family: 'R5 CJK', system-ui, sans-serif; color: #fff; }
+.umbra-skin-p5r-red .fl-screen { position: absolute; inset: 0; pointer-events: auto; }
+.umbra-skin-p5r-red .fl-screen.pass { pointer-events: none; }
+.umbra-skin-p5r-red .fl-screen.pass .fl-btn, .umbra-skin-p5r-red .fl-screen.pass .fl-hit { pointer-events: auto; }
+.umbra-skin-p5r-red .rn { display: inline-flex; gap: 2px; align-items: flex-end; }
+.umbra-skin-p5r-red .rn i { font-style: normal; display: inline-block; padding: 0 .08em; line-height: 1.05; background: #0a0a0a; color: #fff; border: 2px solid #fff; font-family: 'R5 Latin Display', 'R5 CJK', sans-serif; }
+.umbra-skin-p5r-red .rn i:nth-child(3n+1) { background: #fff; color: #0a0a0a; border-color: #0a0a0a; transform: rotate(-6deg) translateY(2px); }
+.umbra-skin-p5r-red .rn i:nth-child(4n+2) { background: #e5191c; transform: rotate(5deg); }
+.umbra-skin-p5r-red .rn i:nth-child(5n) { transform: rotate(-3deg) scale(1.12); }
+.umbra-skin-p5r-red .rn i.sp { background: none; border: 0; width: .35em; }
+/* hub */
+.umbra-skin-p5r-red .hub-title { position: absolute; left: 44px; top: 30px; transform: rotate(-5deg); font-size: 54px; }
+.umbra-skin-p5r-red .hub-sub { position: absolute; left: 70px; top: 112px; background: #e5191c; padding: 4px 22px; font-size: 22px; transform: rotate(-5deg); clip-path: polygon(3% 0, 100% 0, 97% 100%, 0 100%); }
+.umbra-skin-p5r-red .hub-menu { position: absolute; right: 40px; top: 70px; width: 470px; display: flex; flex-direction: column; gap: 4px; }
+.umbra-skin-p5r-red .fl-btn { position: relative; display: flex; align-items: center; gap: 14px; min-height: 88px; padding: 0 30px 0 26px; border: 0; background: #0a0a0a; color: #fff; font: inherit; cursor: pointer; clip-path: polygon(2% 0, 100% 6%, 97% 100%, 0 92%); transition: transform .12s; text-align: left; }
+.umbra-skin-p5r-red .fl-btn:nth-child(2n) { transform: translateX(-26px) rotate(1.5deg); }
+.umbra-skin-p5r-red .fl-btn:nth-child(2n+1) { transform: rotate(-2deg); }
+.umbra-skin-p5r-red .fl-btn .zh { font-size: 34px; }
+.umbra-skin-p5r-red .fl-btn .en { font: 22px 'R5 Latin Display', sans-serif; color: #e5191c; letter-spacing: 1px; margin-left: auto; }
+.umbra-skin-p5r-red .fl-btn.hot { background: #e5191c; }
+.umbra-skin-p5r-red .fl-btn.hot .en { color: #0a0a0a; }
+.umbra-skin-p5r-red .fl-btn.wip .zh::after { content: ' 占位'; font-size: 18px; color: #999; }
+.umbra-skin-p5r-red .fl-btn:active { transform: scale(.97) rotate(-2deg); background: #e5191c; }
+.umbra-skin-p5r-red .hub-info { position: absolute; left: 40px; bottom: 34px; display: flex; gap: 10px; align-items: flex-end; }
+.umbra-skin-p5r-red .hub-card { background: #0a0a0aE6; border: 3px solid #fff; padding: 10px 18px; transform: skewX(-8deg); }
+.umbra-skin-p5r-red .hub-card b { display: block; font-size: 18px; color: #e5191c; }
+.umbra-skin-p5r-red .hub-card span { font: 30px 'R5 Num', sans-serif; font-style: italic; }
+.umbra-skin-p5r-red .hub-party { display: flex; gap: 6px; }
+.umbra-skin-p5r-red .hub-mem { position: relative; width: 120px; height: 86px; background: #0a0a0a; border: 3px solid #fff; transform: skewX(-8deg); overflow: hidden; }
+.umbra-skin-p5r-red .hub-mem img { position: absolute; left: -10px; top: -6px; width: 140px; }
+.umbra-skin-p5r-red .hub-mem em { position: absolute; right: 4px; bottom: 0; font: italic 22px 'R5 Num', sans-serif; background: #e5191c; padding: 0 6px; }
+.umbra-skin-p5r-red .hub-req { position: absolute; left: 44px; top: 170px; width: 520px; background: #f3efe6; color: #0a0a0a; padding: 14px 22px; transform: rotate(-2deg); clip-path: polygon(0 0, 100% 4%, 98% 100%, 2% 96%); font-size: 22px; }
+.umbra-skin-p5r-red .hub-req b { color: #e5191c; }
+/* board */
+.umbra-skin-p5r-red .dim { position: absolute; inset: -400px; background: #000000B3; }
+.umbra-skin-p5r-red .board-title { position: absolute; left: 40px; top: 26px; font-size: 56px; transform: rotate(-4deg); }
+.umbra-skin-p5r-red .board-list { position: absolute; left: 40px; top: 118px; width: 1200px; display: flex; gap: 22px; }
+.umbra-skin-p5r-red .req { position: relative; flex: 1; min-height: 380px; background: #f3efe6; color: #0a0a0a; padding: 22px 24px 30px; clip-path: polygon(0 2%, 100% 0, 97% 100%, 3% 97%); cursor: pointer; transition: transform .15s; }
+.umbra-skin-p5r-red .req:nth-child(2) { transform: rotate(1.5deg) translateY(14px); }
+.umbra-skin-p5r-red .req:nth-child(odd) { transform: rotate(-1.5deg); }
+.umbra-skin-p5r-red .req.sel { background: #e5191c; color: #fff; }
+.umbra-skin-p5r-red .req h3 { margin: 0 0 10px; font-size: 30px; font-weight: normal; background: #0a0a0a; color: #fff; display: inline-block; padding: 4px 14px; transform: rotate(-2deg); }
+.umbra-skin-p5r-red .req dl { margin: 0; display: grid; grid-template-columns: 74px 1fr; gap: 6px 10px; font-size: 21px; }
+.umbra-skin-p5r-red .req dt { color: #e5191c; }
+.umbra-skin-p5r-red .req.sel dt { color: #0a0a0a; }
+.umbra-skin-p5r-red .req p { font-size: 20px; line-height: 1.45; margin: 14px 0 0; }
+.umbra-skin-p5r-red .req .stars { position: absolute; right: 22px; top: 22px; font: 28px 'R5 Num', sans-serif; color: #e5191c; }
+.umbra-skin-p5r-red .req.sel .stars { color: #fff; }
+.umbra-skin-p5r-red .req .done { position: absolute; right: 18px; bottom: 24px; border: 4px solid #e5191c; color: #e5191c; padding: 2px 10px; transform: rotate(-12deg); font-size: 22px; }
+.umbra-skin-p5r-red .fl-row { position: absolute; right: 40px; bottom: 28px; display: flex; gap: 14px; }
+.umbra-skin-p5r-red .fl-row .fl-btn { min-width: 220px; justify-content: center; }
+/* calling card */
+.umbra-skin-p5r-red .cc { position: absolute; left: 330px; top: 46px; width: 620px; height: 470px; background: #e5191c; color: #0a0a0a; transform: rotate(-3deg); clip-path: polygon(0 0, 100% 2%, 99% 100%, 1% 98%); padding: 34px 40px; box-sizing: border-box; }
+.umbra-skin-p5r-red .cc::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, #0000 0 18px, #00000014 18px 20px); }
+.umbra-skin-p5r-red .cc .logo { position: absolute; right: 30px; top: 26px; width: 92px; height: 92px; background: #0a0a0a; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.umbra-skin-p5r-red .cc .to { position: relative; font-size: 26px; margin: 20px 0 22px; }
+.umbra-skin-p5r-red .cc .body { position: relative; white-space: pre-line; font-size: 30px; line-height: 1.6; }
+.umbra-skin-p5r-red .cc .sign { position: absolute; right: 44px; bottom: 34px; font-size: 26px; }
+.umbra-skin-p5r-red .cc .rn { position: relative; font-size: 44px; }
+.umbra-skin-p5r-red .cc-eff { position: absolute; left: 330px; top: 540px; width: 620px; font-size: 21px; background: #0a0a0a; border: 3px solid #fff; padding: 8px 16px; transform: rotate(-1deg); }
+.umbra-skin-p5r-red .cc.fly { animation: ccfly 3s cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes ccfly { 0% { transform: translate(0,0) rotate(-3deg) scale(1); } 22% { transform: translate(0,-30px) rotate(-8deg) scale(1.06); } 50% { transform: translate(420px,-180px) rotate(28deg) scale(.42); } 62% { transform: translate(380px,-120px) rotate(-14deg) scale(.38); } 70%,100% { transform: translate(380px,-120px) rotate(-14deg) scale(.4); } }
+.umbra-skin-p5r-red .stamp { position: absolute; left: 0; right: 0; top: 520px; text-align: center; font-size: 60px; opacity: 0; animation: stamp .5s 2.1s forwards; }
+@keyframes stamp { from { opacity: 0; transform: scale(2.4) rotate(-10deg); } to { opacity: 1; transform: scale(1) rotate(-6deg); } }
+/* explore hud */
+.umbra-skin-p5r-red .ex-alert { position: absolute; left: 24px; top: 20px; width: 330px; height: 70px; transform: skewX(-12deg); background: #0a0a0a; border: 3px solid #fff; }
+.umbra-skin-p5r-red .ex-alert b { position: absolute; left: 12px; top: 6px; font-size: 20px; font-weight: normal; }
+.umbra-skin-p5r-red .ex-alert .bar { position: absolute; left: 12px; right: 74px; bottom: 10px; height: 18px; background: #3a3a3a; }
+.umbra-skin-p5r-red .ex-alert .bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #e5191c; transform-origin: 0 50%; transition: transform .35s; }
+.umbra-skin-p5r-red .ex-alert .pct { position: absolute; right: 8px; top: 8px; font: italic 40px 'R5 Num', sans-serif; color: #e5191c; }
+.umbra-skin-p5r-red .ex-alert.max { background: #e5191c; } .umbra-skin-p5r-red .ex-alert.max .pct { color: #fff; }
+.umbra-skin-p5r-red .ex-map { position: absolute; left: 380px; top: 22px; display: flex; gap: 0; align-items: center; }
+.umbra-skin-p5r-red .ex-map span { font-size: 18px; padding: 4px 12px; background: #0a0a0aCC; border: 2px solid #777; color: #aaa; transform: skewX(-12deg); margin-right: -2px; }
+.umbra-skin-p5r-red .ex-map span.done { color: #fff; border-color: #fff; }
+.umbra-skin-p5r-red .ex-map span.cur { background: #e5191c; color: #fff; border-color: #fff; transform: skewX(-12deg) scale(1.15); z-index: 1; }
+.umbra-skin-p5r-red .ex-scan { position: absolute; right: 24px; top: 20px; width: 150px; height: 96px; }
+.umbra-skin-p5r-red .ex-scan .fl-btn { width: 150px; min-height: 96px; justify-content: center; padding: 0; flex-direction: column; gap: 0; }
+.umbra-skin-p5r-red .ex-scan .fl-btn .zh { font-size: 24px; } .umbra-skin-p5r-red .ex-scan .fl-btn .en { margin: 0; font-size: 16px; }
+.umbra-skin-p5r-red .ex-scan .fl-btn.cool { opacity: .45; }
+.umbra-skin-p5r-red .ex-navi { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%) rotate(-1deg); display: flex; align-items: center; gap: 10px; max-width: 760px; }
+.umbra-skin-p5r-red .ex-navi img { width: 110px; height: 55px; object-fit: cover; border: 3px solid #fff; background: #0a0a0a; }
+.umbra-skin-p5r-red .ex-navi p { margin: 0; background: #fff; color: #0a0a0a; padding: 8px 20px; font-size: 22px; clip-path: polygon(3% 0, 100% 0, 98% 100%, 0 100%); }
+.umbra-skin-p5r-red .ex-party { position: absolute; left: 22px; bottom: 18px; display: flex; flex-direction: column; gap: 3px; }
+.umbra-skin-p5r-red .ex-party div { display: flex; align-items: center; gap: 6px; background: #0a0a0aD9; padding: 2px 10px 2px 2px; transform: skewX(-10deg); font: italic 18px 'R5 Num', sans-serif; }
+.umbra-skin-p5r-red .ex-party img { width: 56px; height: 28px; object-fit: cover; }
+.umbra-skin-p5r-red .ex-party .hp { color: #6cf06c; } .umbra-skin-p5r-red .ex-party .sp { color: #ff8ad8; }
+.umbra-skin-p5r-red .ex-cards { position: absolute; right: 24px; bottom: 20px; display: flex; gap: 4px; }
+.umbra-skin-p5r-red .ex-cards i { width: 34px; height: 50px; border: 2px solid #fff; background: #0a0a0a; transform: rotate(-6deg); font-style: normal; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.umbra-skin-p5r-red .ex-cards i.rare { background: #e5191c; }
+.umbra-skin-p5r-red .toast { position: absolute; left: 50%; top: 120px; transform: translateX(-50%) rotate(-3deg); background: #0a0a0a; border: 3px solid #fff; padding: 10px 28px; font-size: 28px; white-space: nowrap; animation: toast 1.4s forwards; }
+.umbra-skin-p5r-red .toast.red { background: #e5191c; }
+@keyframes toast { 0% { opacity: 0; transform: translateX(-50%) rotate(-3deg) scale(1.6); } 12% { opacity: 1; transform: translateX(-50%) rotate(-3deg) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) translateY(-20px) rotate(-3deg); } }
+/* fork / safe / cards / end */
+.umbra-skin-p5r-red .fork { position: absolute; left: 140px; top: 150px; width: 1000px; display: flex; gap: 40px; }
+.umbra-skin-p5r-red .fork .fl-btn { flex: 1; min-height: 300px; flex-direction: column; align-items: flex-start; justify-content: center; padding: 30px 40px; }
+.umbra-skin-p5r-red .fork .fl-btn .zh { font-size: 64px; } .umbra-skin-p5r-red .fork .fl-btn .en { margin: 10px 0 0; font-size: 22px; color: #ccc; font-family: 'R5 CJK', sans-serif; }
+.umbra-skin-p5r-red .fork .fl-btn.risk { background: #e5191c; } .umbra-skin-p5r-red .fork .fl-btn.risk .en { color: #fff; }
+.umbra-skin-p5r-red .big-title { position: absolute; left: 60px; top: 40px; font-size: 64px; transform: rotate(-5deg); }
+.umbra-skin-p5r-red .safe-word { position: absolute; left: 0; right: 0; top: 150px; text-align: center; font: 120px 'R5 Latin Display', sans-serif; color: #e5191c; text-shadow: 6px 6px 0 #0a0a0a; transform: rotate(-4deg); }
+.umbra-skin-p5r-red .safe-row { position: absolute; left: 240px; top: 360px; width: 800px; display: flex; gap: 30px; }
+.umbra-skin-p5r-red .safe-row .fl-btn { flex: 1; min-height: 130px; flex-direction: column; justify-content: center; align-items: flex-start; }
+.umbra-skin-p5r-red .safe-row .fl-btn .en { margin: 0; font-family: 'R5 CJK', sans-serif; font-size: 20px; color: #ccc; }
+.umbra-skin-p5r-red .cards { position: absolute; left: 150px; top: 150px; width: 980px; display: flex; gap: 40px; justify-content: center; }
+.umbra-skin-p5r-red .hcard { position: relative; width: 280px; height: 420px; background: #0a0a0a; border: 5px solid #fff; cursor: pointer; animation: cardin .6s backwards; padding: 0; color: #fff; font: inherit; }
+.umbra-skin-p5r-red .hcard:nth-child(2) { animation-delay: .08s; transform: translateY(20px); } .umbra-skin-p5r-red .hcard:nth-child(3) { animation-delay: .16s; }
+.umbra-skin-p5r-red .hcard .suit { position: absolute; left: 50%; top: 70px; width: 140px; height: 140px; margin-left: -70px; background: #e5191c; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.umbra-skin-p5r-red .hcard.s-weak .suit { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); } .umbra-skin-p5r-red .hcard.s-baton .suit { clip-path: polygon(0 35%, 60% 35%, 60% 10%, 100% 50%, 60% 90%, 60% 65%, 0 65%); } .umbra-skin-p5r-red .hcard.s-talk .suit { clip-path: polygon(0 0, 100% 0, 100% 70%, 40% 70%, 15% 100%, 20% 70%, 0 70%); }
+.umbra-skin-p5r-red .hcard h4 { position: absolute; left: 0; right: 0; top: 240px; margin: 0; font-size: 36px; font-weight: normal; }
+.umbra-skin-p5r-red .hcard p { position: absolute; left: 18px; right: 18px; top: 296px; margin: 0; font-size: 19px; line-height: 1.4; color: #ddd; }
+.umbra-skin-p5r-red .hcard.rare { background: #e5191c; } .umbra-skin-p5r-red .hcard.rare .suit { background: #0a0a0a; }
+.umbra-skin-p5r-red .hcard .rr { position: absolute; left: 10px; top: 10px; font-size: 16px; background: #fff; color: #e5191c; padding: 2px 8px; }
+.umbra-skin-p5r-red .hcard.picked { animation: cardpick .6s forwards; }
+@keyframes cardin { from { opacity: 0; transform: translateY(-260px) rotateY(90deg); } }
+@keyframes cardpick { 40% { transform: scale(1.12) rotate(-4deg); } 100% { transform: scale(.2) translate(1500px, 900px) rotate(40deg); opacity: 0; } }
+.umbra-skin-p5r-red .end-grid { position: absolute; left: 60px; top: 170px; width: 700px; display: flex; flex-direction: column; gap: 10px; }
+.umbra-skin-p5r-red .end-grid > div { display: flex; align-items: center; gap: 16px; background: #0a0a0aE6; border-left: 10px solid #e5191c; padding: 8px 20px; transform: skewX(-8deg); animation: slidein .4s backwards; font-size: 24px; }
+.umbra-skin-p5r-red .end-grid > div:nth-child(2) { animation-delay: .08s; } .umbra-skin-p5r-red .end-grid > div:nth-child(3) { animation-delay: .16s; } .umbra-skin-p5r-red .end-grid > div:nth-child(4) { animation-delay: .24s; } .umbra-skin-p5r-red .end-grid > div:nth-child(5) { animation-delay: .32s; } .umbra-skin-p5r-red .end-grid > div:nth-child(6) { animation-delay: .4s; }
+.umbra-skin-p5r-red .end-grid b { width: 150px; font-weight: normal; color: #e5191c; }
+.umbra-skin-p5r-red .end-grid span { font: italic 34px 'R5 Num', 'R5 CJK', sans-serif; }
+.umbra-skin-p5r-red .end-grid small { font-size: 20px; color: #ddd; }
+.umbra-skin-p5r-red .rank { position: absolute; right: 120px; top: 150px; width: 300px; height: 300px; background: #e5191c; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); display: flex; align-items: center; justify-content: center; font: 150px 'R5 Latin Display', sans-serif; color: #fff; animation: rankin .5s .5s backwards; }
+.umbra-skin-p5r-red .rank-l { position: absolute; right: 200px; top: 120px; font-size: 26px; transform: rotate(-6deg); }
+@keyframes rankin { from { transform: scale(3) rotate(-30deg); opacity: 0; } }
+@keyframes slidein { from { transform: translateX(-500px) skewX(-8deg); opacity: 0; } }
+/* boss intro / phase */
+.umbra-skin-p5r-red .bi { position: absolute; inset: -300px; background: #0a0a0a; overflow: hidden; }
+.umbra-skin-p5r-red .bi .slab { position: absolute; left: -10%; right: -10%; top: 46%; height: 300px; background: #e5191c; transform: rotate(-8deg); animation: slab .4s backwards; }
+.umbra-skin-p5r-red .bi img { position: absolute; left: 50%; top: 300px; height: 640px; margin-left: -60px; animation: bossin .7s .15s backwards; filter: drop-shadow(12px 0 0 #0a0a0a); }
+.umbra-skin-p5r-red .bi .who { position: absolute; left: 380px; top: 640px; font-size: 26px; transform: rotate(-8deg); animation: slidein .4s .4s backwards; }
+.umbra-skin-p5r-red .bi .nm { position: absolute; left: 360px; top: 690px; font-size: 92px; transform: rotate(-8deg); animation: slidein .45s .5s backwards; }
+@keyframes slab { from { transform: rotate(-8deg) scaleX(0); } }
+@keyframes bossin { from { transform: translateX(400px) scale(1.3); opacity: 0; } }
+.umbra-skin-p5r-red .bp { position: absolute; inset: -300px; pointer-events: auto; }
+.umbra-skin-p5r-red .bp .fl { position: absolute; inset: 0; background: #fff; animation: bpfl .5s forwards; }
+.umbra-skin-p5r-red .bp .band { position: absolute; left: -10%; right: -10%; top: 560px; height: 200px; background: #0a0a0a; transform: rotate(-6deg); animation: slab .3s .3s backwards; display: flex; align-items: center; justify-content: center; }
+.umbra-skin-p5r-red .bp .band .rn { font-size: 84px; }
+@keyframes bpfl { 0% { opacity: 1; background: #fff; } 40% { opacity: .9; background: #e5191c; } 100% { opacity: 0; } }
+/* transitions */
+.umbra-skin-p5r-red .wipe { position: absolute; inset: -400px; pointer-events: auto; }
+.umbra-skin-p5r-red .wipe i { position: absolute; left: -20%; width: 140%; height: 34%; transform: rotate(-12deg) translateX(-110%); animation: wipein .26s forwards, wipeout .26s .36s forwards; }
+.umbra-skin-p5r-red .wipe i:nth-child(1) { top: 0; background: #0a0a0a; } .umbra-skin-p5r-red .wipe i:nth-child(2) { top: 33%; background: #e5191c; animation-delay: .05s, .41s; } .umbra-skin-p5r-red .wipe i:nth-child(3) { top: 66%; background: #0a0a0a; animation-delay: .1s, .46s; }
+@keyframes wipein { to { transform: rotate(-12deg) translateX(0); } }
+@keyframes wipeout { from { transform: rotate(-12deg) translateX(0); } to { transform: rotate(-12deg) translateX(110%); } }
+.umbra-skin-p5r-red .wipscr { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; }
+.umbra-skin-p5r-red .wipscr img { position: absolute; left: 120px; bottom: -40px; height: 700px; }
+.umbra-skin-p5r-red .wipscr .msg { position: absolute; left: 560px; top: 220px; width: 600px; background: #f3efe6; color: #0a0a0a; padding: 24px 30px; font-size: 26px; transform: rotate(-2deg); line-height: 1.5; }
+.umbra-skin-p5r-red .wipscr .msg b { display: block; font-size: 44px; color: #e5191c; font-weight: normal; }
+@media (prefers-reduced-motion: reduce) { .umbra-skin-p5r-red * { animation-duration: .01s !important; animation-delay: 0s !important; } }

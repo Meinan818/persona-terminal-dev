@@ -1,0 +1,304 @@
+{
+ "id": "skill.cleave.q",
+ "event": "action",
+ "match": {
+  "skillId": "cleave",
+  "summon": "quick"
+ },
+ "duration": 1320,
+ "hitMarks": [
+  740
+ ],
+ "assets": [
+  "char.$actor",
+  "persona.$actor"
+ ],
+ "tracks": [
+  {
+   "at": 0,
+   "prim": "summon",
+   "dur": 440,
+   "args": {}
+  },
+  {
+   "at": 0,
+   "prim": "sfx",
+   "args": {
+    "id": "persona"
+   }
+  },
+  {
+   "at": 0,
+   "prim": "pose",
+   "dur": 1280,
+   "args": {
+    "target": "$actor",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.04,
+      "pose": "windup",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.1,
+      "pose": "grab",
+      "ease": "inOutCubic"
+     },
+     {
+      "at": 0.16,
+      "pose": "rip",
+      "ease": "outBack"
+     },
+     {
+      "at": 0.5151515151515151,
+      "pose": "cast",
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.8181818181818182,
+      "pose": "cast"
+     },
+     {
+      "at": 1,
+      "pose": "settle",
+      "ease": "inOutCubic"
+     }
+    ]
+   }
+  },
+  {
+   "at": 360,
+   "prim": "personaShow",
+   "dur": 620,
+   "args": {
+    "dx": -130,
+    "dy": -30,
+    "scale": 0.95
+   }
+  },
+  {
+   "at": 400,
+   "prim": "camera",
+   "dur": 840,
+   "args": {
+    "focus": "$target",
+    "keys": [
+     {
+      "at": 0
+     },
+     {
+      "at": 0.3,
+      "x": -70,
+      "y": -10,
+      "zoom": 0.15,
+      "rot": 0.018,
+      "ease": "outCubic"
+     },
+     {
+      "at": 0.62,
+      "x": -50,
+      "y": -6,
+      "zoom": 0.11,
+      "rot": 0.01
+     },
+     {
+      "at": 1,
+      "ease": "inOutCubic"
+     }
+    ]
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 440,
+   "prim": "nameplate",
+   "dur": 760,
+   "args": {
+    "element": "phys"
+   }
+  },
+  {
+   "at": 480,
+   "prim": "afterimage",
+   "dur": 240,
+   "args": {
+    "actor": "$actor",
+    "to": {
+     "x": "$target",
+     "y": "$target",
+     "dx": 150,
+     "dy": 40
+    },
+    "n": 3,
+    "scaleTo": 0.62
+   }
+  },
+  {
+   "at": 740,
+   "prim": "slashLine",
+   "dur": 150,
+   "args": {
+    "len": 760,
+    "width": 22,
+    "rot": -0.75,
+    "jitter": 20
+   }
+  },
+  {
+   "at": 740,
+   "prim": "hitStop",
+   "args": {
+    "ms": 70
+   }
+  },
+  {
+   "at": 740,
+   "prim": "shake",
+   "args": {
+    "px": 22
+   }
+  },
+  {
+   "at": 740,
+   "prim": "flashSprite",
+   "args": {
+    "target": "$targets",
+    "ms": 50
+   }
+  },
+  {
+   "at": 740,
+   "prim": "squashHit",
+   "args": {
+    "target": "$targets",
+    "squash": 0.2,
+    "push": 24,
+    "recoverMs": 320
+   }
+  },
+  {
+   "at": 740,
+   "prim": "pose",
+   "dur": 420,
+   "args": {
+    "target": "$targets",
+    "keys": [
+     {
+      "at": 0,
+      "pose": "idle"
+     },
+     {
+      "at": 0.25,
+      "pose": "recoil",
+      "ease": "outCubic"
+     },
+     {
+      "at": 1,
+      "pose": "idle",
+      "ease": "outElastic"
+     }
+    ]
+   }
+  },
+  {
+   "at": 740,
+   "prim": "rgbSplit",
+   "dur": 90,
+   "args": {
+    "offset": 9
+   }
+  },
+  {
+   "at": 740,
+   "prim": "particles",
+   "args": {
+    "count": 260,
+    "at": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "speed": 1400,
+    "life": 560,
+    "frames": [
+     "shard",
+     "spark",
+     "star",
+     "shard",
+     "star"
+    ],
+    "colors": [
+     "#ffffff",
+     "#e5191c",
+     "#0a0a0a",
+     "#f08a1c"
+    ],
+    "gravity": 900
+   }
+  },
+  {
+   "at": 740,
+   "prim": "damageNumber",
+   "dur": 560,
+   "args": {
+    "font": "@font.number",
+    "big": true
+   }
+  },
+  {
+   "at": 740,
+   "prim": "tag",
+   "dur": 560,
+   "args": {
+    "kind": "auto"
+   }
+  },
+  {
+   "at": 740,
+   "prim": "sfx",
+   "args": {
+    "id": "hit.heavy"
+   }
+  },
+  {
+   "at": 780,
+   "prim": "slashLine",
+   "dur": 150,
+   "args": {
+    "len": 700,
+    "width": 18,
+    "rot": 0.6,
+    "jitter": 20
+   }
+  },
+  {
+   "at": 890,
+   "prim": "shockwave",
+   "dur": 300,
+   "args": {
+    "center": {
+     "x": "$target",
+     "y": "$target"
+    },
+    "amp": 42
+   },
+   "minimal": "skip"
+  },
+  {
+   "at": 1000,
+   "prim": "tween",
+   "dur": 300,
+   "args": {
+    "target": "$actor",
+    "to": {
+     "x": "home",
+     "y": "home",
+     "scale": 1
+    }
+   }
+  }
+ ]
+}

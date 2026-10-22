@@ -7,15 +7,13 @@
  */
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { DailyDivination, TarotOrientation } from '@/types';
+import type { DailyDivination, TarotOrientation } from '@real/types';
 import { P3R, P3Speech, P3Tag, slantClip, tickClip } from '@blue/kit';
 import { useAIStream, AIText, type AIFail, type AIPhase } from '@blue/fx';
 import { useLowMotion } from '@blue/lib/prefs';
 import { useViewportWidth } from '@blue/lib/layout';
-import { TAROT_BY_ID, ORI_LABEL, ATTR_NAMES, FORTUNE_LABEL, drawRandom, randomOri } from '@blue/adapters/pkg4-tarot';
-import { TODAY, WEEKDAY_CN, STREAM_TEXT, useAstrologyData, useFateWindow } from '@blue/adapters/pkg4-astro';
-import { buildOfflineDaily } from '@/utils/tarotOffline';
-import { randomBonusMultiplier, TAROT_BY_ID as REAL_TAROT_BY_ID } from '@/constants/tarot';
+import { TAROT_BY_ID, ORI_LABEL, ATTR_NAMES, FORTUNE_LABEL } from '@blue/mock/pkg4-tarot';
+import { DAILY_TODAY, WINDOW_DAYS, WINDOW_DAYS_PARTIAL, LAST_GLIMPSE, STREAM_TEXT, TODAY, WEEKDAY_CN } from '@blue/mock/pkg4-astro';
 import { Arcana, PinkBack, FlipCard, ShuffleDeck, CardNameReveal, ThinkingCircle, Markdownish, useFakeProgress } from './tarot';
 import { PhaseTitle, HintStrip, ErrStrip, Label, SlantAction, StateFade } from './ui';
 import { DayReviewSheet, GlimpseRitual } from '@blue/screens/overlays/FateGlimpse.p3r';
@@ -33,16 +31,15 @@ export interface DailyInit {
   offline?: boolean;
 }
 
-const NARRATION = STREAM_TEXT;
+const NARRATION = DAILY_TODAY.narration;
 
 export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligible' | 'buff' | 'partial' }) {
   const low = useLowMotion();
   const vw = useViewportWidth();
-  const astro = useAstrologyData();
   const [phase, setPhase] = useState<DailyPhase>(init.phase);
-  const cands = useMemo<Cand[]>(() => drawRandom(3).map((id) => ({ id, orientation: randomOri() })), []);
+  const cands = useMemo<Cand[]>(() => DAILY_TODAY.drawnFrom.map((id, i) => ({ id, orientation: i === 1 ? 'reversed' : 'upright' })), []);
   const [picked, setPicked] = useState<number | null>(init.phase === 'intro' || init.phase === 'pick' ? null : 0);
-  const [result, setResult] = useState<DailyDivination | null>(init.phase === 'done' ? (init.offline ? offlineOf(cands[0]) : astro.dailyDivination) : null);
+  const [result, setResult] = useState<DailyDivination | null>(init.phase === 'done' ? (init.offline ? offlineOf(cands[0]) : DAILY_TODAY) : null);
   const [resumeMsg, setResumeMsg] = useState<string | null>(init.resume ? '上次的解读没能完成——这张牌已经为你留着，直接继续就好。' : null);
   const [aborted, setAborted] = useState(false);
   const ai = useAIStream({ text: NARRATION, fail: init.fail, initialPhase: init.phase === 'calling' || (init.phase === 'error' && !init.resume) ? (init.ai ?? 'thinking') : 'idle', thinkMs: 2400, cps: 30 });
@@ -60,16 +57,7 @@ export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligib
 
   const finish = (offline: boolean) => {
     const c = cands[picked ?? 0];
-    const offlineResult = buildOfflineDaily(REAL_TAROT_BY_ID[c.id], c.orientation);
-    const r: DailyDivination = offline ? offlineOf(c) : {
-      id: `dd-${Date.now()}`, date: TODAY, drawnFrom: cands.map((x) => x.id), pickedIndex: picked ?? 0,
-      cardId: c.id, orientation: c.orientation,
-      effect: { attribute: offlineResult.attribute, multiplier: randomBonusMultiplier(c.orientation) },
-      narration: NARRATION, advice: TAROT_BY_ID[c.id].advice?.[c.orientation] ?? offlineResult.advice,
-      fortune: offlineResult.fortune, source: 'ai', createdAt: new Date(),
-    };
-    void astro.saveDailyDivination(r);
-    setResult(r);
+    setResult(offline ? offlineOf(c) : { ...DAILY_TODAY, cardId: c.id, orientation: c.orientation });
     setPhase('done');
   };
   const pick = (i: number, useOffline = false, force = false) => {
@@ -166,13 +154,10 @@ export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligib
 
 function offlineOf(c: Cand): DailyDivination {
   const card = TAROT_BY_ID[c.id];
-  const offlineResult = buildOfflineDaily(REAL_TAROT_BY_ID[c.id], c.orientation);
   return {
-    id: `dd-off-${Date.now()}`, date: TODAY, drawnFrom: [c.id], pickedIndex: 0, cardId: c.id, orientation: c.orientation,
-    effect: { attribute: offlineResult.attribute, multiplier: randomBonusMultiplier(c.orientation) },
-    fortune: offlineResult.fortune, source: 'offline', createdAt: new Date(),
+    ...DAILY_TODAY, cardId: c.id, orientation: c.orientation, source: 'offline',
     narration: `**${card.name}${c.orientation === 'reversed' ? '（逆位）' : ''}**：${card[c.orientation].meaning}\n\n${card[c.orientation].reflection}`,
-    advice: card.advice?.[c.orientation] ?? offlineResult.advice,
+    advice: card.advice?.[c.orientation] ?? DAILY_TODAY.advice,
   };
 }
 
@@ -268,10 +253,9 @@ function DoneView({ d }: { d: DailyDivination }) {
 export function FateGlimpseSection({ variant }: { variant: 'eligible' | 'buff' | 'partial' }) {
   const low = useLowMotion();
   const vw = useViewportWidth();
-  const fate = useFateWindow();
-  const days = fate.days;
+  const days = variant === 'partial' ? WINDOW_DAYS_PARTIAL : WINDOW_DAYS;
   const drawnCount = days.filter((d) => d.drawn).length;
-  const buff = fate.lastGlimpse;
+  const buff = variant === 'buff' ? LAST_GLIMPSE : null;
   const [ritual, setRitual] = useState<null | 'new' | 'review'>(null);
   const [detail, setDetail] = useState<DailyDivination | null>(null);
   const slotW = Math.max(30, Math.min(46, Math.floor((Math.min(vw, 576) - 32 - 40 - 24) / 7)));

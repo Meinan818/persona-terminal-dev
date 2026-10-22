@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P6Dialog } from '@pink/screens/pkg6/dialog';
-import { CONFLICT_ROWS } from '@pink/adapters/pkg6';
+import { CONFLICT_ROWS } from '@pink/mock/pkg6';
 import { useToast } from '@pink/kit';
 import { cx } from '@pink/lib/cx';
 

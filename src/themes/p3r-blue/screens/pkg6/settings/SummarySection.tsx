@@ -1,9 +1,9 @@
 /** 设置 · AI 总结（真实 Settings.tsx section=summary）：路标 / 沟通风格 / 熟悉的人 / 内置·自定义风格 / 自动撰写 */
 import { useState } from 'react';
-import type { SummaryPromptPreset } from '@/types';
+import type { SummaryPromptPreset } from '@real/types';
 import { CfgBtn, CfgInput, CfgList, CfgRow, CfgSubhead, CfgTextarea, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
-import { SUMMARY_PERSONAS } from '@blue/adapters/pkg6';
+import { SUMMARY_PERSONAS } from '@blue/mock/pkg6';
 import { cx } from '@blue/lib/cx';
 
 export function SummarySection({ onJumpAI }: { onJumpAI: () => void }) {

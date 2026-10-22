@@ -5,10 +5,10 @@
  */
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
-import type { LedgerExpenseType } from '@/types';
+import type { LedgerExpenseType } from '@real/types';
 import { P3Sheet, P3Button, P3Select, P3R, slantClip, IconClose, useToast } from '@blue/kit';
 import { FLabel, DateQuickPicker } from '@blue/screens/pkg5/ui';
-import { CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, moneyFromInput, sanitizeMoneyInput } from '@blue/adapters/pkg5';
+import { CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, moneyFromInput, sanitizeMoneyInput } from '@blue/mock/pkg5';
 
 export interface BatchRow { direction: 'expense' | 'income'; amount: string; type: LedgerExpenseType; channel: string; incomeSource: string; note: string }
 export const emptyRow = (): BatchRow => ({ direction: 'expense', amount: '', type: 'food', channel: '微信', incomeSource: '', note: '' });

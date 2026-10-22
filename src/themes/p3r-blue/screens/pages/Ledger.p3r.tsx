@@ -6,10 +6,10 @@
  * → 流水 / 统计。状态机 / 假数据改写自黄色版 Ledger（只读参考）。
  * 路由：?tab=book|assets &view=list|stats &state=first|empty|loading|over
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { PageProps } from '@blue/registry/types';
-import type { LedgerEntry } from '@/types';
+import type { LedgerEntry } from '@real/types';
 import { P3PageHeader, P3Segment, P3R, slantClip, tickClip, useToast, Glyph } from '@blue/kit';
 import { P3Stagger, P3StaggerItem } from '@blue/fx';
 import { navigate } from '@blue/shell/shellBus';
@@ -23,7 +23,7 @@ import { LedgerBudgetSheetView } from '@blue/screens/overlays/LedgerBudgetSheet.
 import { LedgerReconcileSheetView } from '@blue/screens/overlays/LedgerReconcileSheet.p3r';
 import { LedgerDeleteConfirmView } from '@blue/screens/overlays/LedgerDeleteConfirm.p3r';
 import { LedgerSavedModalView } from '@blue/screens/overlays/LedgerSavedModal.p3r';
-import { CNY, INCOME_META, catMeta, daysAgoKey, fmtMoney, fmtSigned, ledgerDateLabel, monthLabel, roundMoney, shiftMonth, weekdayCN, useLedgerData, ledgerOps } from '@blue/adapters/pkg5';
+import { CNY, INCOME_META, LEDGER_ACCOUNTS, LEDGER_BUDGET, LEDGER_ENTRIES, LEDGER_SAVINGS, P5_TODAY, catMeta, daysAgoKey, fmtMoney, fmtSigned, ledgerDateLabel, monthLabel, roundMoney, shiftMonth, weekdayCN } from '@blue/mock/pkg5';
 
 const WEEK_EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -48,17 +48,14 @@ function LedgerRow({ e, onClick, alt }: { e: LedgerEntry; onClick: () => void; a
 }
 
 export default function Ledger({ tab, params }: PageProps) {
-  const { LEDGER_ACCOUNTS, LEDGER_BUDGET, LEDGER_ENTRIES, LEDGER_SAVINGS, P5_TODAY, CURRENT_MONTH, LEDGER_LOADED } = useLedgerData();
-  const derivedState = !LEDGER_LOADED ? 'loading' : LEDGER_ENTRIES.length === 0 ? 'first' : 'normal';
   const toast = useToast();
   const anim = useBoldness();
-  const [state, setState] = useState(params.get('state') ?? derivedState);
-  useEffect(() => { if (!params.get('state')) setState(derivedState); }, [derivedState, params]);
+  const [state, setState] = useState(params.get('state') ?? 'normal');
   const [mode, setMode] = useState<'ledger' | 'assets'>(tab === 'assets' ? 'assets' : 'ledger');
   const [view, setView] = useState<'list' | 'stats'>(params.get('view') === 'stats' ? 'stats' : 'list');
-  const entries = LEDGER_ENTRIES;
+  const [entries, setEntries] = useState<LedgerEntry[]>(LEDGER_ENTRIES);
   const [balanceView, setBalanceView] = useState<'month' | 'total'>('month');
-  const [listMonth, setListMonth] = useState(CURRENT_MONTH);
+  const [listMonth, setListMonth] = useState('2026-10');
   const [nlText, setNlText] = useState('');
   const [nlBusy, setNlBusy] = useState(false);
   const [shotBusy, setShotBusy] = useState(false);
@@ -73,17 +70,17 @@ export default function Ledger({ tab, params }: PageProps) {
   const [saved, setSaved] = useState<string | null>(null);
   const shotRef = useRef<HTMLInputElement>(null);
 
-  const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !e.date.startsWith(CURRENT_MONTH)) : entries;
+  const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !e.date.startsWith('2026-10')) : entries;
   const needsSetup = state === 'first';
-  const hasBudget = params.has('state') ? state !== 'first' : LEDGER_BUDGET.monthlyLimit > 0;
+  const hasBudget = state !== 'first';
   const lim = state === 'over' ? 4000 : LEDGER_BUDGET.monthlyLimit;
-  const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
-  const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
+  const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && e.date.startsWith('2026-10')).reduce((s, e) => s + e.amount, 0));
+  const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && e.date.startsWith('2026-10')).reduce((s, e) => s + e.amount, 0));
   const total = needsSetup ? 0 : LEDGER_ACCOUNTS.reduce((s, a) => s + a.balance, 0);
   const budgetLeft = roundMoney(lim - monthExpense);
   const over = hasBudget && budgetLeft < 0;
   const spentToday = list.filter((e) => e.direction === 'expense' && e.date === P5_TODAY).reduce((s, e) => s + e.amount, 0);
-  const daysLeft = new Date(Number(CURRENT_MONTH.slice(0, 4)), Number(CURRENT_MONTH.slice(5, 7)), 0).getDate() - new Date().getDate() + 1;
+  const daysLeft = 12;
   const base = roundMoney(lim - (monthExpense - spentToday));
   const todayLeft = hasBudget && base > 0 ? roundMoney(base / daysLeft - spentToday) : 0;
   const todayOver = hasBudget && base > 0 && todayLeft < 0;
@@ -257,7 +254,7 @@ export default function Ledger({ tab, params }: PageProps) {
               {view === 'list' ? (
                 <P3StaggerItem className="flex min-w-0 flex-col gap-4">
                   <MonthNav label={monthLabel(listMonth)} sub={<>支出 <b className="font-cond text-[14px]">{CNY}{fmtMoney(monthSum.exp)}</b>{monthSum.inc > 0 && <> · 收入 <b className="font-cond text-[14px]">{CNY}{fmtMoney(monthSum.inc)}</b></>}</>}
-                    onPrev={() => setListMonth((m) => shiftMonth(m, -1))} onNext={() => setListMonth((m) => shiftMonth(m, 1))} nextDisabled={listMonth >= CURRENT_MONTH} />
+                    onPrev={() => setListMonth((m) => shiftMonth(m, -1))} onNext={() => setListMonth((m) => shiftMonth(m, 1))} nextDisabled={listMonth >= '2026-10'} />
                   {grouped.length === 0 && (
                     <div className="relative mx-auto flex min-h-[150px] w-full max-w-md flex-col items-center justify-center gap-1.5 overflow-hidden px-6 py-6 text-center" style={{ clipPath: slantClip(26), background: 'rgb(var(--p3r-wash) / 0.72)' }}>
                       <span aria-hidden className="pointer-events-none absolute -top-2 left-3 font-cond text-[64px] leading-none" style={{ color: 'var(--p3r-ghost)' }}>EMPTY</span>
@@ -281,11 +278,11 @@ export default function Ledger({ tab, params }: PageProps) {
                   })}
                 </P3StaggerItem>
               ) : (
-                <P3StaggerItem><LedgerStats entries={list} forceEmpty={state === 'empty'} initialPeriod={listMonth} /></P3StaggerItem>
+                <P3StaggerItem><LedgerStats entries={list} forceEmpty={state === 'empty'} /></P3StaggerItem>
               )}
             </P3Stagger>
           ) : (
-            <AssetBoard empty={params.has('state') && state === 'first'} />
+            <AssetBoard empty={state === 'first'} />
           )}
         </motion.div>
       </AnimatePresence>
@@ -294,7 +291,7 @@ export default function Ledger({ tab, params }: PageProps) {
       <LedgerBatchSheetView open={batchOpen} onClose={() => setBatchOpen(false)} initial={SAMPLE_BATCH} onSaved={onSaved} />
       <LedgerBudgetSheetView open={budgetOpen} onClose={() => setBudgetOpen(false)} onSaved={(m) => toast.success(`预算已定：${CNY}${fmtMoney(m)}`)} />
       <LedgerReconcileSheetView open={adjustOpen} onClose={() => setAdjustOpen(false)} initial={needsSetup} onSaved={() => { if (needsSetup) setState('normal'); toast.success(needsSetup ? '余额已记下' : '对账完成'); }} />
-      <LedgerDeleteConfirmView open={delOpen} target={del} onClose={() => setDelOpen(false)} onConfirm={() => { if (del) void ledgerOps.remove(del.id); toast('已删除这一笔'); }} />
+      <LedgerDeleteConfirmView open={delOpen} target={del} onClose={() => setDelOpen(false)} onConfirm={() => { if (del) setEntries((xs) => xs.filter((x) => x.id !== del.id)); toast('已删除这一笔'); }} />
       <LedgerSavedModalView open={!!saved} onClose={() => setSaved(null)} title={saved ?? ''} />
     </div>
   );

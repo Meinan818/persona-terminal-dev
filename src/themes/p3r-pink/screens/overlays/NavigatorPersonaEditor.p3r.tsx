@@ -5,10 +5,10 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
-import type { NavigatorPreset } from '@/types';
+import type { NavigatorPreset } from '@real/types';
 import { P6Sheet } from '@pink/screens/pkg6/sheet';
 import { CfgInput, CfgTextarea, CfgMsg } from '@pink/screens/pkg6/cfg';
-import { GLYPH_PATHS, TONE_WORDS } from '@pink/adapters/pkg6';
+import { GLYPH_PATHS, TONE_WORDS } from '@pink/mock/pkg6';
 import { updateSettings, getSettings } from '@pink/screens/pkg6/settingsStore';
 import { CropDialog } from './ImageCropDialog.p3r';
 import { P3Button, useToast } from '@pink/kit';

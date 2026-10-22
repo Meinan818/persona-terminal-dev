@@ -12,14 +12,14 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { Confidant } from '@/types';
+import type { Confidant } from '@real/types';
 import { Portal, P3Button, P3R, slantClip } from '@blue/kit';
 import { useAIStream, type AIFail, type AIPhase } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
 import { navigate } from '@blue/shell/shellBus';
 import { ATTR_NAMES, INTIMACY_LABELS, TAROT_BY_ID } from './arcana';
 import { Tarot } from './ui';
-import { PK3_STARSHIFT, pk3Events } from '@blue/adapters/pkg3';
+import { PK3_STARSHIFT, pk3Events } from '@blue/mock/pkg3';
 import './rankup.css';
 
 export const EXP = 'cubic-bezier(.16,1,.3,1)';

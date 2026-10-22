@@ -17,7 +17,7 @@ import { usePresence, presetOf, goalPct } from '@blue/screens/pkg5/presence';
 import { UserProfileCardView } from '@blue/screens/overlays/UserProfileCard.p3r';
 import { MenuThemeSheetView } from '@blue/screens/overlays/MenuThemeSheet.p3r';
 import { MenuAboutSheetView } from '@blue/screens/overlays/MenuAboutSheet.p3r';
-import { ACHIEVEMENTS, CURRENT_STREAK, THEME_SWATCHES, TOTAL_LEVEL, TOTAL_POINTS, achievementProgress } from '@blue/adapters/pkg5';
+import { ACHIEVEMENTS, CURRENT_STREAK, THEME_SWATCHES, TOTAL_LEVEL, TOTAL_POINTS, achievementProgress } from '@blue/mock/pkg5';
 
 const I = (d: ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="miter" aria-hidden>{d}</svg>;
 const ICONS: Record<string, ReactNode> = {

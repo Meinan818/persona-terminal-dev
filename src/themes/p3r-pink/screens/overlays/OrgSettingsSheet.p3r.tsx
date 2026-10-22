@@ -6,11 +6,11 @@
  * 路由：#/overlay/hideout-settings?leader=0&edit=1
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import type { OrgView } from '@/types';
+import type { OrgView } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Sheet, P3Button, P3Input, P3OnOff, P3R, SectionMark, slantClip, chamferClip, useToast } from '@pink/kit';
-import { ATTR_NAMES } from '@pink/adapters/pkg4-tarot';
-import { buildView, LEVEL, ORG_EMBLEMS, ORG_LEVEL_NAMES, ORG_MAX_SHOWN_MASKS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_PRIVACY_NOTE, ORG_RULES } from '@pink/adapters/pkg4-org';
+import { ATTR_NAMES } from '@pink/mock/pkg4-tarot';
+import { buildView, LEVEL, ORG_EMBLEMS, ORG_LEVEL_NAMES, ORG_MAX_SHOWN_MASKS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_PRIVACY_NOTE, ORG_RULES } from '@pink/mock/pkg4-org';
 import { displayCodename, MemberThumb } from '@pink/screens/pkg4/org/common';
 import { OrgSettingsConfirm, type SettingsConfirm } from './OrgSettingsSheetConfirm.p3r';
 

@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P6Dialog } from '@blue/screens/pkg6/dialog';
-import { CONFLICT_ROWS } from '@blue/adapters/pkg6';
+import { CONFLICT_ROWS } from '@blue/mock/pkg6';
 import { useToast } from '@blue/kit';
 import { cx } from '@blue/lib/cx';
 

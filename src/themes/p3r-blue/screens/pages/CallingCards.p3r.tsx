@@ -1,4 +1,3 @@
-import { useCallingCardData, callingCardOps } from '@blue/adapters/callingCards';
 /**
  * 宣告卡总览页（用户追加：真实 app 暂无；参考红色 p5r-v3 #/callingcard，按蓝白 P3R 重画）。入口：菜单「宣告卡」（占卜之后）。
  * 页头「宣告卡 · CALLING CARD」+「＋ 新建」→ 分组：钉选 / 进行中 / 已收 / 过期（P3R 斜条节标 + 计数）→ 宣告卡斜卡（纹理底 + 图标斜块 +
@@ -11,7 +10,7 @@ import { useCallingCardData, callingCardOps } from '@blue/adapters/callingCards'
 import { Suspense, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { PageProps } from '@blue/registry/types';
-import type { CallingCard } from '@/types';
+import type { CallingCard } from '@real/types';
 import { OVERLAYS } from '@blue/registry/overlays';
 import { lazyOf } from '@blue/shell/lazyRegistry';
 import { P3PageHeader, P3Button, P3Dialog, P3Sheet, P3Input, P3Segment, P3OnOff, P3R, slantClip, tickClip, useToast, GhostWords } from '@blue/kit';
@@ -19,7 +18,7 @@ import { CutInSweep } from '@blue/fx';
 import { navigate } from '@blue/shell/shellBus';
 import { useBoldness } from '@blue/lib/prefs';
 import { FLabel, LoadingBlock } from '@blue/screens/pkg5/ui';
-import { CC_MODE_LABEL, CC_TODAY, ccDaysLeft, ccProgress } from '@blue/adapters/pkg5-callingcards';
+import { CC_CARDS, CC_LINKED, CC_MODE_LABEL, CC_TODAY, ccDaysLeft, ccProgress } from '@blue/mock/pkg5-callingcards';
 
 type Group = 'pinned' | 'active' | 'kept' | 'expired';
 const GROUPS: { id: Group; title: string; en: string }[] = [
@@ -33,7 +32,6 @@ const texture = (tone: CallingCard['tone']) => tone === 'grid'
     : tone === 'plain' ? 'none' : 'repeating-linear-gradient(-60deg, rgb(var(--p3r-blue-rgb) / 0.08) 0 6px, transparent 6px 16px)';
 
 function CardSlab({ c, i, onAct }: { c: CallingCard; i: number; onAct: (a: string) => void }) {
-  const { CC_LINKED } = useCallingCardData();
   const anim = useBoldness();
   const g = groupOf(c);
   const dead = g === 'kept' || g === 'expired';
@@ -96,9 +94,9 @@ function FallbackEditor({ open, onClose, initial, onSave }: { open: boolean; onC
   const [mode, setMode] = useState<CallingCard['mode']>('deadline');
   const [title, setTitle] = useState('');
   const [sub, setSub] = useState('');
-  const [date, setDate] = useState(CC_TODAY);
+  const [date, setDate] = useState('2026-12-31');
   const [pinned, setPinned] = useState(false);
-  useEffect(() => { if (open) { setMode(initial?.mode ?? 'deadline'); setTitle(initial?.title ?? ''); setSub(initial?.subtitle ?? ''); setDate(initial?.targetDate ?? CC_TODAY); setPinned(!!initial?.pinned); } }, [open, initial]);
+  useEffect(() => { if (open) { setMode(initial?.mode ?? 'deadline'); setTitle(initial?.title ?? ''); setSub(initial?.subtitle ?? ''); setDate(initial?.targetDate ?? '2026-12-31'); setPinned(!!initial?.pinned); } }, [open, initial]);
   const bad = mode !== 'todos' && date < CC_TODAY;
   return (
     <P3Sheet open={open} onClose={onClose} title={initial ? '编辑倒计时' : '新建倒计时'} en="CALLING CARD"
@@ -123,34 +121,33 @@ function FallbackEditor({ open, onClose, initial, onSave }: { open: boolean; onC
 }
 
 export default function CallingCards({ params }: PageProps) {
-  const { CC_CARDS } = useCallingCardData();
   const toast = useToast();
   const state = params.get('state');
   const openQ = params.get('open');
-  const cards = state === 'empty' ? [] : CC_CARDS;
+  const [cards, setCards] = useState<CallingCard[]>(state === 'empty' ? [] : CC_CARDS);
   const [editing, setEditing] = useState<{ open: boolean; card: CallingCard | null }>({ open: openQ === 'new' || openQ === 'edit', card: openQ === 'edit' ? CC_CARDS[1] : null });
   const [delTarget, setDelTarget] = useState<CallingCard | null>(openQ === 'delete' ? CC_CARDS[3] : null);
-  const [cutin, setCutin] = useState<CallingCard | null>(openQ === 'archive' ? CC_CARDS[0] ?? null : null);
+  const [cutin, setCutin] = useState(openQ === 'archive');
   const [sweep, setSweep] = useState(false);
   const grouped = useMemo(() => GROUPS.map((g) => ({ ...g, items: cards.filter((c) => groupOf(c) === g.id) })), [cards]);
 
   const editorEntry = OVERLAYS['actions-calling-card-editor'];
   const cutinEntry = OVERLAYS['global-calling-card-cutin'];
   const Editor = editorEntry ? (lazyOf(`overlay:actions-calling-card-editor`, editorEntry.load) as unknown as ComponentType<{ open: boolean; onClose: () => void; params?: URLSearchParams; initialCard?: CallingCard | null; onSave?: (c: CallingCard) => void }>) : null;
-  const CutIn = cutinEntry ? (lazyOf(`overlay:global-calling-card-cutin`, cutinEntry.load) as unknown as ComponentType<{ open: boolean; onClose: () => void; params?: URLSearchParams; realCard?: CallingCard | null }>) : null;
+  const CutIn = cutinEntry ? lazyOf(`overlay:global-calling-card-cutin`, cutinEntry.load) : null;
 
   const save = (c: CallingCard) => {
-    void callingCardOps.save(c);
+    setCards((xs) => { const rest = xs.filter((x) => x.id !== c.id).map((x) => (c.pinned ? { ...x, pinned: false } : x)); return [c, ...rest]; });
     setSweep(true);
   };
   const act = (c: CallingCard) => (a: string) => {
-    if (a === 'pin') { void callingCardOps.pin(c.pinned ? null : c.id); toast(c.pinned ? '已取消钉选' : '已钉到主页'); }
+    if (a === 'pin') { setCards((xs) => xs.map((x) => (x.id === c.id ? { ...x, pinned: !c.pinned } : c.pinned ? x : { ...x, pinned: false }))); toast(c.pinned ? '已取消钉选' : '已钉到主页'); }
     if (a === 'edit') setEditing({ open: true, card: c });
     if (a === 'delete') setDelTarget(c);
-    if (a === 'restore') { void callingCardOps.restore(c.id); toast('已恢复到进行中'); }
+    if (a === 'restore') { setCards((xs) => xs.map((x) => (x.id === c.id ? { ...x, archived: false, archiveReason: undefined, archivedAt: undefined } : x))); toast('已恢复到进行中'); }
     if (a === 'archive') {
-      void callingCardOps.archive(c.id);
-      if (cutinEntry) window.setTimeout(() => setCutin(c), 380); else toast.success('已收存');
+      setCards((xs) => xs.map((x) => (x.id === c.id ? { ...x, archived: true, pinned: false, archiveReason: 'manual', archivedAt: new Date(2026, 9, 20) } : x)));
+      if (cutinEntry) window.setTimeout(() => setCutin(true), 380); else toast.success('已收存');
     }
   };
 
@@ -200,8 +197,8 @@ export default function CallingCards({ params }: PageProps) {
       ) : <FallbackEditor open={editing.open} onClose={() => setEditing((e) => ({ ...e, open: false }))} initial={editing.card} onSave={save} />}
       <P3Dialog open={!!delTarget} onClose={() => setDelTarget(null)} tone="danger" variant="system" title="删除这张宣告卡？"
         description={delTarget ? `「${delTarget.title}」\n删除后不会出现在首页和档案里，此操作无法撤销。` : undefined} confirmText="删除" cancelText="取消"
-        onConfirm={() => { const t = delTarget; setDelTarget(null); if (t) { void callingCardOps.remove(t.id); toast('已删除'); } }} />
-      {CutIn && <Suspense fallback={null}><CutIn open={!!cutin} realCard={cutin} onClose={() => setCutin(null)} params={new URLSearchParams('reason=manual')} /></Suspense>}
+        onConfirm={() => { const t = delTarget; setDelTarget(null); if (t) { setCards((xs) => xs.filter((x) => x.id !== t.id)); toast('已删除'); } }} />
+      {CutIn && <Suspense fallback={null}><CutIn open={cutin} onClose={() => setCutin(false)} params={new URLSearchParams('reason=manual')} /></Suspense>}
       <CutInSweep active={sweep} text="CALLING" sub="预告已发出" onDone={() => setSweep(false)} />
     </div>
   );

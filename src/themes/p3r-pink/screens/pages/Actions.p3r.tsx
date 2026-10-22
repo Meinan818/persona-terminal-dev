@@ -7,7 +7,6 @@
  */
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
 import { useEffect, useRef } from 'react';
-import { useAppStore } from '@/store';
 import type { PageProps } from '@pink/registry/types';
 import { navigate } from '@pink/shell/shellBus';
 import { useBoldness } from '@pink/lib/prefs';
@@ -27,7 +26,6 @@ export default function Actions({ tab, params }: PageProps) {
   const prev = useRef<Sub>(sub);
   const dir = useRef(1);
   useEffect(() => { if (prev.current !== sub) { dir.current = sub === 'todos' ? 1 : -1; prev.current = sub; } }, [sub]);
-  useEffect(() => { if (useAppStore.getState().actionsSubTab !== sub) useAppStore.getState().setActionsSubTab(sub); }, [sub]);
   const switchTab = (k: Sub) => { if (k !== sub) { dir.current = k === 'todos' ? 1 : -1; navigate('actions', k, { transition: 'none', replace: true }); } };
   const onDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.x < -40) switchTab('todos');

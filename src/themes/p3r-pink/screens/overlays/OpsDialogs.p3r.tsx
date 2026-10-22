@@ -5,10 +5,10 @@
  * 路由：#/overlay/hideout-op-dialogs?step=menu|report|out|cancel
  */
 import { useEffect, useState } from 'react';
-import type { OrgOperation } from '@/types';
+import type { OrgOperation } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3ActionSheet, P3Dialog, useToast } from '@pink/kit';
-import { OPS, OP_KIND_LABEL, REPORT_REASONS } from '@pink/adapters/pkg4-org';
+import { OPS, OP_KIND_LABEL, REPORT_REASONS } from '@pink/mock/pkg4-org';
 
 export type OpsStep = 'menu' | 'report' | 'out' | 'cancel' | null;
 export function OpsDialogs({ op, step, onStep, blocked, onClose, onBlock, onReported, onConfirm }: { op: OrgOperation | null; step: OpsStep; onStep: (s: OpsStep) => void; blocked: boolean; onClose: () => void; onBlock: () => void; onReported: () => void; onConfirm: (kind: 'out' | 'cancel') => void }) {

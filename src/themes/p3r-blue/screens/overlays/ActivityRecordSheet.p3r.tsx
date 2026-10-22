@@ -5,11 +5,11 @@
  * 直达：?variant=backdate（补录：带日期）；?step=analyzed（分析后）；?step=reading（读图中）；?step=ai（AI 思考中）。
  */
 import { useEffect, useRef, useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3Check, P3Sheet, P3Stepper, P3Textarea, useToast, P3R, slantClip, tickClip, IconClose } from '@blue/kit';
 import { AIThinking } from '@blue/fx';
-import { ATTR_IDS, useActionsData, actionsOps } from '@blue/adapters/pkg2';
+import { ATTR_IDS, ATTR_NAMES, KEYWORD_RESULT, SPARE_IMAGES, WISHES } from '@blue/mock/pkg2';
 import { MiniHead, Photo } from '@blue/screens/pkg2/common';
 
 export interface RecordSavePayload { description: string; points: Record<AttributeId, number>; important: boolean; images: string[]; backdate?: string; wishId?: string }
@@ -24,7 +24,6 @@ const AttachChip = ({ icon, label, onClick, disabled, active }: { icon: string; 
 
 /** 挂到愿望（真实 WishMountPicker）：横滑斜切 chip，单选可取消 */
 export function WishMountPicker({ value, onChange, compact }: { value?: string; onChange: (id: string | undefined) => void; compact?: boolean }) {
-  const { WISHES } = useActionsData();
   const active = WISHES.filter((w) => w.status === 'active' && !w.parentId);
   if (!active.length) return null;
   return (
@@ -47,10 +46,7 @@ export function WishMountPicker({ value, onChange, compact }: { value?: string; 
 
 export default function ActivityRecordSheet({ open, onClose, params, backdate, onSave }: OverlayProps & { backdate?: string | null; onSave?: (p: RecordSavePayload) => void }) {
   const toast = useToast();
-  const { ATTR_NAMES, KEYWORD_RESULT, SPARE_IMAGES, TODAY_KEY } = useActionsData();
-  const threeDaysAgo = new Date(`${TODAY_KEY}T12:00:00`);
-  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-  const bd = backdate ?? (params?.get('variant') === 'backdate' ? threeDaysAgo.toISOString().slice(0, 10) : null);
+  const bd = backdate ?? (params?.get('variant') === 'backdate' ? '2026-10-17' : null);
   const [desc, setDesc] = useState('');
   const [important, setImportant] = useState(false);
   const [images, setImages] = useState<string[]>([]);
@@ -68,25 +64,23 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const readShot = () => {
-    toast('读图回填尚未接入现有图片识别服务');
+    setShotBusy(true); setShotHint(null);
+    later(() => {
+      setShotBusy(false);
+      setShotCandidates([{ text: '跑步 5.2 公里，配速 6\'10"', on: true }, { text: '拉伸 15 分钟', on: true }, { text: '喝水 2L', on: false }]);
+      setShotOffer('chushu.webp');
+      setDesc('跑步 5.2 公里，配速 6\'10"；拉伸 15 分钟');
+      setShotHint('已回填，勾掉不要的那几条，再点「分析关键词」给分');
+    }, 1300);
   };
-  const ai = async () => {
-    if (!desc.trim()) return;
+  const ai = () => {
     setAiBusy(true);
-    try {
-      const result = await actionsOps.analyzeTextAI(desc);
-      setAnalyzed({ ...KEYWORD_RESULT, ...result.points });
-      setAiReason(result.reason || null);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'AI 分析失败');
-    } finally {
-      setAiBusy(false);
-    }
+    later(() => { setAiBusy(false); setAnalyzed({ knowledge: 2, guts: 1, dexterity: 0, kindness: 2, charm: 0 }); setAiReason('读书算知识；主动给同桌讲题是在照顾别人，给温柔；坚持去图书馆也要一点胆量。'); }, 2400);
   };
   useEffect(() => {
     if (!open) return;
     const st = params?.get('step');
-    if (st === 'analyzed' || st === 'ai') { setAnalyzed({ ...KEYWORD_RESULT }); }
+    if (st === 'analyzed' || st === 'ai') { setDesc('在图书馆把第 4 章读完了，还帮同桌讲了两道题'); setAnalyzed({ ...KEYWORD_RESULT }); setImages(['bailu.webp']); }
     if (st === 'ai') ai();
     if (st === 'reading') readShot();
   }, [open]); // eslint-disable-line
@@ -94,7 +88,6 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
   const reset = () => { setDesc(''); setImportant(false); setImages([]); setAnalyzed(null); setAiReason(null); setShotHint(null); setShotOffer(null); setShotCandidates(null); setWish(undefined); };
   const attach = () => {
     if (images.length >= 6) { toast('每条记录最多 6 张'); return; }
-    if (!SPARE_IMAGES.length) { toast('这条路径尚未接入本地图片选择'); return; }
     setImgBusy(true);
     later(() => { setImgBusy(false); setImages((v) => [...v, SPARE_IMAGES[v.length % SPARE_IMAGES.length]]); }, 700);
   };
@@ -155,9 +148,9 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
 
       <div className="mt-4 flex justify-center">
         {!analyzed ? (
-          <P3Button tone="ink" size="lg" disabled={!desc.trim()} onClick={() => setAnalyzed(actionsOps.analyzeText(desc))} ariaLabel="分析关键词" className="px-10">分析关键词</P3Button>
+          <P3Button tone="ink" size="lg" disabled={!desc.trim()} onClick={() => setAnalyzed({ ...KEYWORD_RESULT })} ariaLabel="分析关键词" className="px-10">分析关键词</P3Button>
         ) : (
-          <P3Button tone="outline" size="lg" disabled={!desc.trim()} busy={aiBusy} busyText="⋯ AI 思考中" onClick={() => void ai()} ariaLabel="AI 分析" className="px-10">✦ AI 分析</P3Button>
+          <P3Button tone="outline" size="lg" disabled={!desc.trim()} busy={aiBusy} busyText="⋯ AI 思考中" onClick={ai} ariaLabel="AI 分析" className="px-10">✦ AI 分析</P3Button>
         )}
       </div>
       {aiReason && (

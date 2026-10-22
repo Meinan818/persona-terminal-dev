@@ -9,7 +9,7 @@ import type { OverlayProps } from '@blue/registry/types';
 import { P3Avatar, P3Button, P3Field, P3Input, P3R, P3Sheet, P3Textarea, slantClip, tickClip } from '@blue/kit';
 import { navigate } from '@blue/shell/shellBus';
 import { Sparkle } from '@blue/screens/pkg3/ui';
-import { PK3_PROFILES } from '@blue/adapters/pkg3';
+import { PK3_PROFILES } from '@blue/mock/pkg3';
 
 type Step = 'search' | 'found' | 'sent';
 const RE = /^[a-z0-9._-]{3,18}$/;

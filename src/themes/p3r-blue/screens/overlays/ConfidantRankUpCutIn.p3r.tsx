@@ -9,7 +9,7 @@
 import type { OverlayProps } from '@blue/registry/types';
 import type { AIFail } from '@blue/fx';
 import { RankUpChain, type ChainPage, type ShiftStage } from '@blue/screens/pkg3/rankup';
-import { PK3_CONFIDANTS } from '@blue/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@blue/mock/pkg3';
 
 export function demoNotice(params?: URLSearchParams) {
   const c = PK3_CONFIDANTS.find((x) => x.id === params?.get('id')) ?? PK3_CONFIDANTS[0];

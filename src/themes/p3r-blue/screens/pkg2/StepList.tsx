@@ -1,6 +1,6 @@
 /** 子步 / 子任务列表（大事面板 · 愿望面板共用）：P3R 斜行 + 编号 + 斜方勾 + 删除；完成态划线淡出。 */
 import { motion } from 'framer-motion';
-import type { TodoStep } from '@/types';
+import type { TodoStep } from '@real/types';
 import { P3R, slantClip, IconCheck, IconTrash } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
 

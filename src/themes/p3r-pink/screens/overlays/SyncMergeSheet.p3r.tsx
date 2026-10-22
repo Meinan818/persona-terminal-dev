@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P6Sheet } from '@pink/screens/pkg6/sheet';
 import { P3Button, P3Loading } from '@pink/kit';
-import { SYNC_MERGE, SYNC_TABLE_LABEL } from '@pink/adapters/pkg6';
+import { SYNC_MERGE, SYNC_TABLE_LABEL } from '@pink/mock/pkg6';
 import { cx } from '@pink/lib/cx';
 
 export default function SyncMergeSheet({ open, onClose, params }: OverlayProps) {

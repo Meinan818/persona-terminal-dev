@@ -8,14 +8,13 @@
  */
 import { animate, AnimatePresence, motion, useMotionValue, useTransform, type MotionValue } from 'framer-motion';
 import { Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import { useBoldness } from '@blue/lib/prefs';
-import { useSkyBadge } from '@/components/sky/useSkyBadge';
 import { P3R, slantClip, showToast } from '@blue/kit';
 import { OVERLAYS } from '@blue/registry/overlays';
 import { lazyOf } from '@blue/shell/lazyRegistry';
 import duskImg from '@blue/assets/blue/p3-water-wide.png';
-import { LEVEL_THRESHOLDS, MAX_LEVEL, MOCK_ATTRS, MOCK_WEATHER, levelTitle, masteryOf, masteryTitle, moonPhaseOf, relatedAchievements, daysUntil, type MockTodo } from '@blue/adapters/pkg1';
+import { LEVEL_THRESHOLDS, MAX_LEVEL, MOCK_ATTRS, MOCK_WEATHER, levelTitle, masteryOf, masteryTitle, moonPhaseOf, relatedAchievements, daysUntil, type MockTodo } from '@blue/mock/pkg1';
 import { TRI_CLIP, TRI_PATH } from './fxbits';
 
 /* ─────────── 天空位：月相 ⇄ 天气 ─────────── */
@@ -70,21 +69,15 @@ const WeatherGlyph = ({ kind }: { kind: 'cloud' | 'none' }) => (
 );
 export type WeatherState = 'ok' | 'unset' | 'config' | 'error' | 'loading';
 export const SkyBadge = ({ date, initial = 'moon', weather = 'ok' }: { date: Date; initial?: 'moon' | 'weather'; weather?: WeatherState }) => {
-  const live = useSkyBadge();
-  const mode = live.mode;
-  const toggle = live.toggle;
-  const liveState: WeatherState = !live.ready ? 'unset' : live.loading ? 'loading' : live.error ? (live.errorKind === 'config' ? 'config' : 'error') : 'ok';
-  const state = weather !== 'ok' ? weather : liveState;
-  const temp = live.weather?.temp ?? MOCK_WEATHER.temp;
-  const text = live.weather?.text ?? MOCK_WEATHER.text;
-  const feels = live.weather?.feelsLike ?? MOCK_WEATHER.feelsLike;
+  const [mode, setMode] = useState(initial);
+  const toggle = () => setMode((m) => (m === 'moon' ? 'weather' : 'moon'));
   if (mode === 'weather') {
-    const main = state === 'unset' ? '去设置天气' : state === 'config' ? '天气设置有误' : state === 'error' ? '天气取不到' : state === 'loading' ? '取数中…' : `${temp}°C ${text}`;
-    const sub = state === 'unset' || state === 'config' ? 'SET UP' : state === 'error' ? 'RETRY' : `FEELS ${state === 'loading' ? '--' : feels}°`;
+    const main = weather === 'unset' ? '去设置天气' : weather === 'config' ? '天气设置有误' : weather === 'error' ? '天气取不到' : weather === 'loading' ? '取数中…' : `${MOCK_WEATHER.temp}°C ${MOCK_WEATHER.text}`;
+    const sub = weather === 'unset' || weather === 'config' ? 'SET UP' : weather === 'error' ? 'RETRY' : `FEELS ${weather === 'loading' ? '--' : MOCK_WEATHER.feelsLike}°`;
     return (
       <button type="button" onClick={toggle} aria-label="天气（点击切回月相）" className="ml-0.5 flex min-w-0 items-center gap-2 text-left">
         <span className="relative flex h-11 w-12 shrink-0 items-center justify-center" style={{ background: P3R.cyanFaint, clipPath: slantClip(8) }}>
-          <WeatherGlyph kind={state === 'ok' || state === 'loading' ? 'cloud' : 'none'} />
+          <WeatherGlyph kind={weather === 'ok' || weather === 'loading' ? 'cloud' : 'none'} />
           <Corner />
         </span>
         <span className="flex min-w-0 flex-col gap-1 leading-none">

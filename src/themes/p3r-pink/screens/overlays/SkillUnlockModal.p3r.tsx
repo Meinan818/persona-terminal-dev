@@ -7,7 +7,7 @@
 import { motion } from 'framer-motion';
 import type { OverlayProps } from '@pink/registry/types';
 import { useBoldness } from '@pink/lib/prefs';
-import { MOCK_SKILL_UNLOCK } from '@pink/adapters/pkg1';
+import { MOCK_SKILL_UNLOCK } from '@pink/mock/pkg1';
 import { CelebrationCutInP3, BoltGlyph } from './CelebrationCutIn.p3r';
 
 export const SkillUnlockP3 = ({ isOpen, onClose, skillName }: { isOpen: boolean; onClose: () => void; skillName: string }) => {

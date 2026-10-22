@@ -2,7 +2,7 @@
  * 任务长按菜单（真实 src/pages/Todos.tsx ActionSheet）：
  * 普通：编辑 / 归档 / 删除 / 取消；约定或作战待办：编辑（属性 / 分值）/ 打开这个约定 · 打开这场作战 · 打开这个目标 / 删除 / 取消。?variant=pact|op
  */
-import type { Todo } from '@/types';
+import type { Todo } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3ActionSheet, useToast } from '@pink/kit';
 import { navigate } from '@pink/shell/shellBus';

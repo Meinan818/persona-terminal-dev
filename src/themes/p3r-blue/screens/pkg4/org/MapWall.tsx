@@ -5,12 +5,12 @@
  */
 import { motion } from 'framer-motion';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { OrgMember, OrgView } from '@/types';
+import type { OrgMember, OrgView } from '@real/types';
 import { P3R, P3Button, slantClip, chamferClip } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
 import { useViewportWidth } from '@blue/lib/layout';
 import { cx } from '@blue/lib/cx';
-import { ORG_EMBLEMS, TITLE_BOOK } from '@blue/adapters/pkg4-org';
+import { ORG_EMBLEMS, TITLE_BOOK } from '@blue/mock/pkg4-org';
 import { Arcana } from '../tarot';
 import { Coverflow, HonorChip, LeaderChip, MeChip, MemberThumb, WeekDots, memberFacts, seatNo, panel } from './common';
 

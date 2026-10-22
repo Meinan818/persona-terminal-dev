@@ -17,7 +17,7 @@ import { Chip } from '@pink/screens/pkg5/ui';
 import { presetOf, goalPct, setPresence, statusAgeText, usePresence } from '@pink/screens/pkg5/presence';
 import { CropDialog } from './ImageCropDialog.p3r';
 import { sampleImg } from '@pink/screens/pkg6/compat';
-import { ATTRIBUTES, CALLING_CARDS, CLOUD_USER, LEVEL_MAX, STATUS_PRESETS, TOTAL_LEVEL, TOTAL_POINTS } from '@pink/adapters/pkg5';
+import { ATTRIBUTES, CALLING_CARDS, CLOUD_USER, LEVEL_MAX, STATUS_PRESETS, TOTAL_LEVEL, TOTAL_POINTS } from '@pink/mock/pkg5';
 
 type Panel = null | 'status' | 'goal';
 

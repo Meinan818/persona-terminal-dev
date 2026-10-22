@@ -7,14 +7,14 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Confidant } from '@/types';
+import type { Confidant } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Dialog, P3LRTabs, P3OnOff, P3Progress, P3R, P3Sheet, SelectWedge, showToast, slantClip, tickClip } from '@pink/kit';
 import { cx } from '@pink/lib/cx';
 import { EVENT_LABEL, INTIMACY_LABELS, MAX_INTIMACY, TAROT_BY_ID, levelProgress, nextUnlockHint } from '@pink/screens/pkg3/arcana';
 import { MiniLabel, PactTag, ShadowBadge, Sparkle, StatusTag, Tarot } from '@pink/screens/pkg3/ui';
 import { CelebrateScreen } from '@pink/screens/pkg3/rankup';
-import { PK3_CONFIDANTS, PK3_SHADOW, pk3Events } from '@pink/adapters/pkg3';
+import { PK3_CONFIDANTS, PK3_SHADOW, pk3Events } from '@pink/mock/pkg3';
 import { AvatarSyncConfirm } from './ConfidantDetailModalAvatarConfirm.p3r';
 
 export type DetailTab = 'info' | 'abilities' | 'history';

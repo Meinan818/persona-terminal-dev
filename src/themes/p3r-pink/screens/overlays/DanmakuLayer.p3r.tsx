@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, useEscape, P3R, slantClip } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { DANMAKU } from '@pink/adapters/pkg2';
+import { DANMAKU } from '@pink/mock/pkg2';
 import { DanmakuLayer, DarkStage, type DanmakuItem } from '@pink/screens/pkg2/cutins';
 
 export default function DanmakuLayerOverlay({ open, onClose, params }: OverlayProps) {

@@ -2,7 +2,7 @@
  * 工作包 2（行动：记录 / 任务 / 愿望 / 大事 / 总结）假数据——改写自黄色版 src/mock/pkg2.ts（复制，不 import）。
  * 类型全部来自真实仓库（只 import type）。日期以 demo「今天」= 2026-10-20 为基准。
  */
-import type { Activity, AttributeId, CallingCard, Quest, Todo, WeeklyGoal, Wish } from '@/types';
+import type { Activity, AttributeId, CallingCard, Quest, Todo, WeeklyGoal, Wish } from '@real/types';
 
 export const TODAY = new Date(2026, 9, 20, 20, 42);
 export const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

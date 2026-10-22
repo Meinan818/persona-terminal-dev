@@ -1,5 +1,5 @@
 /* 工作包 4 · 组织据点假数据。组织 / 成员 / 动态 / 作战 用真实类型；团战、称号册等展示用的派生数据给成形值。 */
-import type { AttributeId, Org, OrgMember, OrgOperation, OrgPersonaSnapshot, OrgPost, OrgReactionTag, OrgView } from '@/types';
+import type { AttributeId, Org, OrgMember, OrgOperation, OrgPersonaSnapshot, OrgPost, OrgReactionTag, OrgView } from '@real/types';
 import { shiftKey, TODAY } from './pkg4-astro';
 
 export const ORG_NAME_MAX = 12, ORG_MOTTO_MAX = 30, ORG_CODENAME_MAX = 8, ORG_MAX_SHOWN_MASKS = 3, ORG_OP_TITLE_MAX = 20, ORG_OP_MIN_PEOPLE = 2;

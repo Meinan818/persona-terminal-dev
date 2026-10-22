@@ -1,12 +1,12 @@
 /** 真实：src/components/org/BoardSection.tsx（公告板：筛选 / 动态卡 / 达成卡 / 团战战报 / 会议纪要 / 长按菜单），蓝白 p3 皮 */
 import { motion } from 'framer-motion';
 import { useMemo, useRef, useState } from 'react';
-import type { OrgPost, OrgReactionTag, OrgView } from '@/types';
+import type { OrgPost, OrgReactionTag, OrgView } from '@real/types';
 import { P3R, P3Button, P3Empty, P3Error, P3SlantTabs, slantClip, useToast } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
 import { navigate } from '@blue/shell/shellBus';
-import { ATTR_COLOR } from '@blue/adapters/pkg4-tarot';
-import { MY_REACTIONS, REACTION_COUNTS, REACTIONS, RAID } from '@blue/adapters/pkg4-org';
+import { ATTR_COLOR } from '@blue/mock/pkg4-tarot';
+import { MY_REACTIONS, REACTION_COUNTS, REACTIONS, RAID } from '@blue/mock/pkg4-org';
 import { BoardMenus, type BoardStep } from '@blue/screens/overlays/BoardMenus.p3r';
 import { MeChip, MemberThumb, panel } from './common';
 

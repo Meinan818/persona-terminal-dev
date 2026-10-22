@@ -10,10 +10,10 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
-import type { Activity, AttributeId } from '@/types';
+import type { Activity, AttributeId } from '@real/types';
 import { P3Button, P3ConfigRow, P3Empty, P3Input, P3OnOff, P3Select, P3Segment, P3Tag, useToast, P3R, slantClip, tickClip, IconSearch, IconChevronDown, IconBack, IconChevron, Glyph } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
-import { ATTR_IDS, dayKey, useActionsData, actionsOps } from '@blue/adapters/pkg2';
+import { ACTIVITIES, ACTIVITY_IMAGES, ATTR_IDS, ATTR_NAMES, BIGDEAL_STEP_LOG, TODAY, TODAY_KEY, dayKey } from '@blue/mock/pkg2';
 import { Butterfly, Dot, Photo, SlantChip, SlantFab, fmtTime, qp, setHashParam, sumPts, useLongPress } from '@blue/screens/pkg2/common';
 import ActivityRecordSheet, { type RecordSavePayload } from '@blue/screens/overlays/ActivityRecordSheet.p3r';
 import ActivitiesRecordMenu from '@blue/screens/overlays/ActivitiesRecordMenu.p3r';
@@ -39,7 +39,6 @@ const ACCENT: Record<Accent, string> = {
 };
 
 function RecordCard({ a, images, onMenu, onImage, expanded, onToggleDeal }: { a: Activity; images: string[]; onMenu: () => void; onImage: (i: number) => void; expanded: boolean; onToggleDeal: () => void }) {
-  const { ATTR_NAMES, BIGDEAL_STEP_LOG } = useActionsData();
   const anim = useBoldness();
   const lp = useLongPress(onMenu);
   const acc = accentOf(a);
@@ -104,7 +103,6 @@ function RecordCard({ a, images, onMenu, onImage, expanded, onToggleDeal }: { a:
 }
 
 function Calendar({ year, month, onMonth, selected, onSelect, onPicker, marks, showImportant }: { year: number; month: number; onMonth: (d: number) => void; selected: string | null; onSelect: (k: string | null) => void; onPicker: () => void; marks: Map<string, { n: number; imp: boolean }>; showImportant: boolean }) {
-  const { TODAY_KEY } = useActionsData();
   const first = new Date(year, month, 1).getDay();
   const days = new Date(year, month + 1, 0).getDate();
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
@@ -147,11 +145,10 @@ function Calendar({ year, month, onMonth, selected, onSelect, onPicker, marks, s
 export function ActivitiesView({ params }: { params: URLSearchParams }) {
   const toast = useToast();
   const anim = useBoldness();
-  const { ACTIVITIES, ACTIVITY_IMAGES, ATTR_NAMES, BIGDEAL_STEP_LOG, TODAY, TODAY_KEY } = useActionsData();
   const st = qp(params, 'state');
   const op = qp(params, 'open');
-  const list = st === 'empty' ? [] : ACTIVITIES;
-  const imgMap = st === 'empty' ? {} : ACTIVITY_IMAGES;
+  const [list, setList] = useState<Activity[]>(st === 'empty' ? [] : ACTIVITIES);
+  const [imgMap, setImgMap] = useState<Record<string, string[]>>(st === 'empty' ? {} : ACTIVITY_IMAGES);
   const [q, setQ] = useState('');
   const [showCal, setShowCal] = useState(qp(params, 'view') === 'calendar');
   const [showFilter, setShowFilter] = useState(qp(params, 'view') === 'filter' || st === 'nomatch');
@@ -204,9 +201,11 @@ export function ActivitiesView({ params }: { params: URLSearchParams }) {
   const dayLabel = (d: Date) => { const k = dayKey(d); return k === TODAY_KEY ? '今天' : k === dayKey(new Date(TODAY.getTime() - 86400000)) ? '昨天' : `${d.getMonth() + 1}/${d.getDate()} 周${WEEKDAYS[d.getDay()]}`; };
 
   const onSave = (p: RecordSavePayload) => {
-    void actionsOps.addActivity(p)
-      .then(() => setSaved(p))
-      .catch((e) => toast.error(e instanceof Error ? e.message : '记录保存失败'));
+    const d = p.backdate ? new Date(`${p.backdate}T21:00:00`) : new Date(TODAY);
+    const a: Activity = { id: `n${Date.now()}`, userId: 'u1', date: d, description: p.description, pointsAwarded: p.points, method: 'local', important: p.important, weather: { icon: 'rain', text: '小雨' }, wishId: p.wishId, backfilled: !!p.backdate };
+    setList((l) => [a, ...l]);
+    if (p.images.length) setImgMap((m) => ({ ...m, [a.id]: p.images }));
+    setSaved(p);
   };
   const menuAct = list.find((a) => a.id === menuId);
   const delAct = list.find((a) => a.id === delId);
@@ -339,16 +338,16 @@ export function ActivitiesView({ params }: { params: URLSearchParams }) {
       <SlantFab label={isPast ? '补录历史记录' : '添加记录'} text={isPast ? '补录' : '记录'} tone={isPast ? 'coral' : 'rose'} onClick={() => setSheet({ backdate: isPast ? calSel : null })} />
 
       <ActivityRecordSheet open={!!sheet} onClose={() => setSheet(false)} backdate={sheet ? sheet.backdate : null} onSave={onSave} />
-      <SaveSuccessModal open={!!saved} onClose={() => setSaved(null)} description={saved?.description} totalPoints={saved ? sumPts(saved.points) : 0} unlock={!!saved && sumPts(saved.points) >= 5} />
+      <SaveSuccessModal open={!!saved} onClose={() => { const w = saved?.wishId; setSaved(null); if (w) setWishCut(true); }} description={saved?.description} totalPoints={saved ? sumPts(saved.points) : 0} unlock={!!saved && sumPts(saved.points) >= 5} />
       <WishProgressCutIn open={wishCut} onClose={() => setWishCut(false)} params={new URLSearchParams('delta=6')} />
       <ActivitiesRecordMenu open={!!menuId} onClose={() => setMenuId(null)} title={menuAct ? (menuAct.description.length > 24 ? `${menuAct.description.slice(0, 24)}…` : menuAct.description) : undefined}
         onAction={(id) => { const t = menuId; if (id === 'share') setShareId(t); if (id === 'images') setImgsId(t); if (id === 'delete') setDelId(t); }} />
       <ActivitiesDeleteConfirm open={!!delId} onClose={() => setDelId(null)} description={delAct?.description}
-        onDelete={(rb) => { if (delId) void (rb ? actionsOps.deleteActivity(delId) : actionsOps.deleteActivityRecordOnly(delId)); toast.success(rb ? '已删除并回档' : '已删除条目'); }} />
+        onDelete={(rb) => { setList((l) => l.filter((a) => a.id !== delId)); toast.success(rb ? '已删除并回档' : '已删除条目'); }} />
       <ActivityImagesSheet open={!!imgsId} onClose={() => setImgsId(null)} images={imgsId ? imgMap[imgsId] ?? [] : []}
-        onChange={() => toast('记录图片管理将在下一步接入')} />
+        onChange={(v) => imgsId && setImgMap((m) => ({ ...m, [imgsId]: v }))} />
       <ImageLightbox open={!!lb} onClose={() => setLb(null)} images={lb ? imgMap[lb.id] : []} index={lb?.i ?? 0}
-        onDelete={() => toast('记录图片管理将在下一步接入')} />
+        onDelete={(i) => lb && setImgMap((m) => ({ ...m, [lb.id]: (m[lb.id] ?? []).filter((_, j) => j !== i) }))} />
       <ShareToOrgSheet open={!!shareId} onClose={() => setShareId(null)} activity={list.find((a) => a.id === shareId)} />
       <SummaryModal open={summary} onClose={() => setSummary(false)} params={new URLSearchParams(sumState === 'draft' ? 'view=preview' : sumState === 'running' ? 'state=busy' : '')} />
       <ActivitiesCalendarPicker open={picker} onClose={() => setPicker(false)} year={calY} month={calM} showImportant={calImp} onJump={(y, m) => { setCalY(y); setCalM(m); }} onToggleImportant={setCalImp} />

@@ -4,7 +4,7 @@
  * 入口：发起 COOP / 响应 COOP 的「星象匹配」卡（叠在其上弹出，确认后自动提交）。
  */
 import { useEffect, useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Field, P3R, P3Sheet, P3Textarea, slantClip } from '@pink/kit';
 import { AIText, useAIStream, type AIFail } from '@pink/fx';

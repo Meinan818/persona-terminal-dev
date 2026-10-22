@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3R, slantClip } from '@pink/kit';
 import { useLowMotion } from '@pink/lib/prefs';
-import { TAROT_BY_ID } from '@pink/adapters/pkg4-tarot';
+import { TAROT_BY_ID } from '@pink/mock/pkg4-tarot';
 import { FxFrame } from '@pink/screens/pkg4/FxFrame';
 import { Arcana, PinkBack, FlipCard, CardNameReveal } from '@pink/screens/pkg4/tarot';
 

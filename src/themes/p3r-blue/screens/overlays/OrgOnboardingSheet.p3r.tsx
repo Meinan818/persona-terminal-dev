@@ -10,8 +10,8 @@ import { P3Sheet, P3Button, P3Input, P3Field, P3R, Portal, slantClip, chamferCli
 import { BubbleBurst } from '@blue/fx';
 import { useLowMotion } from '@blue/lib/prefs';
 import { useViewportWidth } from '@blue/lib/layout';
-import { MAJOR, TAROT_BY_ID } from '@blue/adapters/pkg4-tarot';
-import { ORG, ORG_CODENAME_MAX, ORG_EMBLEMS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_RULES } from '@blue/adapters/pkg4-org';
+import { MAJOR, TAROT_BY_ID } from '@blue/mock/pkg4-tarot';
+import { ORG, ORG_CODENAME_MAX, ORG_EMBLEMS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_RULES } from '@blue/mock/pkg4-org';
 import { Coverflow } from '@blue/screens/pkg4/org/common';
 import { Arcana } from '@blue/screens/pkg4/tarot';
 

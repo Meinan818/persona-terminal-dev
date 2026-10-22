@@ -3,7 +3,7 @@
  * 类型全部来自真实仓库（只 import type）。数值与文案贴近真实 App 口径；人物换成 P3R 语境（月光馆 / SEES）。
  * 改写自黄色版 src/mock/pkg3.ts（复制改写，未 import）。
  */
-import type { AttributeId, CloudProfile, Confidant, ConfidantBuff, ConfidantEvent, CoopMemorialStamp, CounselArchive } from '@/types';
+import type { AttributeId, CloudProfile, Confidant, ConfidantBuff, ConfidantEvent, CoopMemorialStamp, CounselArchive } from '@real/types';
 
 const d = (s: string) => new Date(s);
 export const PK3_TODAY = '2026-10-21';

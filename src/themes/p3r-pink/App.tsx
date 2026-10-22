@@ -18,8 +18,6 @@ import { DevCapsule } from '@pink/shell/DevCapsule';
 import { RadialWheelP3 } from '@pink/shell/RadialWheelP3.p3r';
 import { P3ToastProvider } from '@pink/kit';
 import { usePrefsEffect } from '@pink/lib/prefs';
-/** 调试路由（#/__index、#/__kit、#/overlay/:id）只在 npm run dev 或 URL 带 ?__kitdev=1 时挂载 */
-const KIT_DEV_ROUTES = import.meta.env.DEV || location.search.includes('__kitdev=1');
 
 function ShellPage() {
   const { pageId } = useParams();
@@ -37,9 +35,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<AppShell><PageHost forceId="dashboard" /></AppShell>} />
           <Route path="/p/:pageId" element={<ShellPage />} />
-          {KIT_DEV_ROUTES && <Route path="/overlay/:id" element={<OverlayHarness />} />}
-          {KIT_DEV_ROUTES && <Route path="/__index" element={<Bare><IndexPage /></Bare>} />}
-          {KIT_DEV_ROUTES && <Route path="/__kit" element={<Bare><KitShowcase /></Bare>} />}
+          <Route path="/overlay/:id" element={<OverlayHarness />} />
+          <Route path="/__index" element={<Bare><IndexPage /></Bare>} />
+          <Route path="/__kit" element={<Bare><KitShowcase /></Bare>} />
           <Route path="*" element={<AppShell><PageHost forceId="dashboard" /></AppShell>} />
         </Routes>
       </P3ToastProvider>

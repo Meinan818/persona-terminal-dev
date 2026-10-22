@@ -4,7 +4,7 @@
  */
 import type { OverlayRegistry } from './types';
 
-const navWin = () => import('@/themes/integration/NavigatorBridge');
+const navWin = () => import('@blue/screens/overlays/NavigatorWindow.p3r');
 const dateRoll = () => import('@blue/screens/overlays/DateRollCutIn.p3r');
 export const overlays: OverlayRegistry = {
   // ── 蓝白母题层新增演出（B7 日期推进 / B2 影时间切换 / B4 召唤）──

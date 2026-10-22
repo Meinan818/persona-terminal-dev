@@ -10,12 +10,12 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3R, SectionMark, TitlePeriod, TarotFace, slantClip, useScrollLock, showToast, P3Empty } from '@pink/kit';
 import { PinkStage } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
-import { ATTR_IDS, MOCK_USER_NAME, MOON_NAMES, SEVEN_THINGS, WELCOME_ATTR_PLACEHOLDERS, WELCOME_PRESETS } from '@pink/adapters/pkg1';
+import { ATTR_IDS, MOCK_USER_NAME, MOON_NAMES, SEVEN_THINGS, WELCOME_ATTR_PLACEHOLDERS, WELCOME_PRESETS } from '@pink/mock/pkg1';
 import { OverlayByKey } from '@pink/screens/pkg1/DashboardParts';
 
 type Step = 'welcome' | 'name' | 'preset' | 'customize' | 'done' | 'guide' | 'blessing' | 'import';

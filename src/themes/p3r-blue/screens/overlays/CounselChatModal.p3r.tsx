@@ -14,7 +14,7 @@ import { P3Button, P3Dialog, P3R, Portal, showToast, slantClip, tickClip, useEsc
 import { useAIStream, type AIFail } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
 import { cx } from '@blue/lib/cx';
-import { PK3_CONFIDANTS } from '@blue/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@blue/mock/pkg3';
 import { Tarot } from '@blue/screens/pkg3/ui';
 
 type CState = 'intro' | 'live' | 'expired' | 'cooldown';

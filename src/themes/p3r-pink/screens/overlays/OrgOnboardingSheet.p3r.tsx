@@ -10,8 +10,8 @@ import { P3Sheet, P3Button, P3Input, P3Field, P3R, Portal, slantClip, chamferCli
 import { PetalBurst } from '@pink/fx';
 import { useLowMotion } from '@pink/lib/prefs';
 import { useViewportWidth } from '@pink/lib/layout';
-import { MAJOR, TAROT_BY_ID } from '@pink/adapters/pkg4-tarot';
-import { ORG, ORG_CODENAME_MAX, ORG_EMBLEMS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_RULES } from '@pink/adapters/pkg4-org';
+import { MAJOR, TAROT_BY_ID } from '@pink/mock/pkg4-tarot';
+import { ORG, ORG_CODENAME_MAX, ORG_EMBLEMS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_RULES } from '@pink/mock/pkg4-org';
 import { Coverflow } from '@pink/screens/pkg4/org/common';
 import { Arcana } from '@pink/screens/pkg4/tarot';
 

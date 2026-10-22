@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@pink/registry/types';
 import { P6Sheet } from '@pink/screens/pkg6/sheet';
 import { CfgInput } from '@pink/screens/pkg6/cfg';
-import { RETURN_PAYLOAD } from '@pink/adapters/pkg6';
+import { RETURN_PAYLOAD } from '@pink/mock/pkg6';
 import { Portal, P3R, slantClip } from '@pink/kit';
 import { useLowMotion } from '@pink/lib/prefs';
 

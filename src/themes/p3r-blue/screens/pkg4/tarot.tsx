@@ -13,11 +13,11 @@
 import { motion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { shardsFor, TartarusCounter } from '@blue/fx/motifs';
-import type { TarotOrientation } from '@/types';
+import type { TarotOrientation } from '@real/types';
 import { ArcanaFace, PinkBack, P3R, slantClip, cardH } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
 import { cx } from '@blue/lib/cx';
-import { TAROT_BY_ID } from '@blue/adapters/pkg4-tarot';
+import { TAROT_BY_ID } from '@blue/mock/pkg4-tarot';
 
 /** 与 kit TarotFace 同比例（1.66），卡背 / 翻面容器一律用它，翻面不跳尺寸 */
 export { cardH } from '@blue/kit';

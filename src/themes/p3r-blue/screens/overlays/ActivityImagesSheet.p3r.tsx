@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Empty, P3R, slantClip, IconPlus, IconTrash } from '@blue/kit';
-import { MAX_IMAGES_PER_ACTIVITY, SPARE_IMAGES } from '@blue/adapters/pkg2';
+import { MAX_IMAGES_PER_ACTIVITY, SPARE_IMAGES } from '@blue/mock/pkg2';
 import { Photo } from '@blue/screens/pkg2/common';
 import ImageLightbox from './ImageLightbox.p3r';
 
@@ -17,12 +17,19 @@ export default function ActivityImagesSheet({ open, onClose, params, title, imag
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const st = params?.get('state');
-  useEffect(() => { if (open) { setImgs(init ?? []); setHint(null); setConfirm(null); } }, [open]); // eslint-disable-line
+  useEffect(() => { if (open) { setImgs(init ?? (st === 'empty' ? [] : st === 'full' ? ['bailu.webp', 'chunfen.webp', 'dongzhi.webp', 'chushu.webp', 'dashu.webp', 'daxue.webp'] : ['bailu.webp', 'chunfen.webp'])); setHint(null); setConfirm(null); } }, [open]); // eslint-disable-line
   const update = (v: string[]) => { setImgs(v); onChange?.(v); };
   const room = MAX_IMAGES_PER_ACTIVITY - imgs.length;
   const add = () => {
     if (room <= 0) { setHint('已经满了'); return; }
-    setHint('记录图片新增尚未接入本地文件选择');
+    setBusy(true);
+    window.setTimeout(() => {
+      setBusy(false);
+      const want = SPARE_IMAGES.slice(0, 3);
+      const take = want.slice(0, room);
+      setHint(want.length > take.length ? `每条记录最多 ${MAX_IMAGES_PER_ACTIVITY} 张，多出的没有加` : null);
+      update([...imgs, ...take]);
+    }, 500);
   };
   return (
     <>

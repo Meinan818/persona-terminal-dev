@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@blue/registry/types';
 import { P6Sheet } from '@blue/screens/pkg6/sheet';
 import { CfgInput } from '@blue/screens/pkg6/cfg';
-import { RETURN_PAYLOAD } from '@blue/adapters/pkg6';
+import { RETURN_PAYLOAD } from '@blue/mock/pkg6';
 import { Portal, P3R, slantClip } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
 

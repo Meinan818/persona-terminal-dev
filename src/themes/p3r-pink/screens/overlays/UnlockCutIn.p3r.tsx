@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
-import { MOCK_ACH_UNLOCK, MOCK_LEVELUP, MOCK_SKILL_UNLOCK } from '@pink/adapters/pkg1';
+import { MOCK_ACH_UNLOCK, MOCK_LEVELUP, MOCK_SKILL_UNLOCK } from '@pink/mock/pkg1';
 import { StageChip } from '@pink/screens/pkg1/fxbits';
 import { AchievementUnlockP3 } from './AchievementUnlockModal.p3r';
 import { SkillUnlockP3 } from './SkillUnlockModal.p3r';

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 账号与数据（真实 src/pages/Account.tsx · p3 分支「p3-account-reference-v2」+ components/settings/ImagesBackupBlock.tsx + auth/*）粉白 P3R 重制。
  * P3PageHeader「账号与数据」→ SectionMark「数据管理 · DATA」：提示条（可关）/ 备份导出（分享/下载备份 · 复制 JSON）/ 从备份恢复（粘贴 · 选文件 / 拖拽 · 确认导入）
  *   / 记录配图 · 单独备份（导出 / 导入图片包）/ 危险区域（重置所有数据）
@@ -17,8 +17,7 @@ import { LoginModalView } from '@pink/screens/overlays/LoginModal.p3r';
 import { AccountManagePanelView } from '@pink/screens/overlays/AccountManagePanel.p3r';
 import { SyncPrivacySection } from '@pink/screens/overlays/SyncPrivacyPanel.p3r';
 import { AccountConfirmView, type ConfirmKind } from '@pink/screens/overlays/AccountConfirms.p3r';
-import { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS } from '@pink/adapters/pkg5';
-import { useCloudUser, useRealAttributes } from '@pink/adapters/pkg5';
+import { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS } from '@pink/mock/pkg5';
 
 const Sub = ({ children, right }: { children: ReactNode; right?: ReactNode }) => (
   <div className="mb-2 flex min-w-0 items-center gap-2">
@@ -36,8 +35,6 @@ const Card = ({ children, tone }: { children: ReactNode; tone?: 'danger' }) => (
 export default function Account({ params }: PageProps) {
   const toast = useToast();
   const p = usePresence();
-  const cloud = useCloudUser();
-  const realAttrs = useRealAttributes();
   const [state, setState] = useState(params.get('state') ?? 'signed-in');
   const [tip, setTip] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
@@ -57,7 +54,7 @@ export default function Account({ params }: PageProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [login, setLogin] = useState(false);
   const [manage, setManage] = useState(false);
-  const [uid, setUid] = useState<string | null>(cloud.cloudUser?.username ?? CLOUD_USER.username);
+  const [uid, setUid] = useState<string | null>(CLOUD_USER.username);
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
   const dataRef = useRef<HTMLDivElement>(null);
@@ -66,7 +63,7 @@ export default function Account({ params }: PageProps) {
   const sec = params.get('sec');
   const focus = sec ?? (params.get('state') ? 'cloud' : null);
   useEffect(() => { const el = focus === 'data' ? dataRef.current : focus === 'privacy' ? privRef.current : focus === 'cloud' ? cloudRef.current : null; if (el) window.setTimeout(() => el.scrollIntoView({ block: 'start' }), 380); }, [focus]);
-  useEffect(() => { setUid(state === 'no-uid' ? null : cloud.cloudUser?.username ?? CLOUD_USER.username); }, [state, cloud.cloudUser?.username]);
+  useEffect(() => { setUid(state === 'no-uid' ? null : CLOUD_USER.username); }, [state]);
   const ask = (k: ConfirmKind) => { setConfirm(k); setConfirmOpen(true); };
   const signedIn = state === 'signed-in' || state === 'no-uid' || state === 'sync-error' || state === 'syncing';
   const download = () => {
@@ -178,7 +175,7 @@ export default function Account({ params }: PageProps) {
                             <span className="opacity-70">@</span><span className="truncate font-mono">{uid}</span><span className="shrink-0 text-[11px] opacity-80">{uidCopied ? '✓ 已复制' : '· 点击复制'}</span>
                           </button>
                         )}
-                        <div className="mt-0.5 truncate text-[11px] font-bold" style={{ color: P3R.grey }}>云端 · {cloud.cloudUser?.email ?? CLOUD_USER.email}</div>
+                        <div className="mt-0.5 truncate text-[11px] font-bold" style={{ color: P3R.grey }}>云端 · {CLOUD_USER.email}</div>
                       </div>
                       
                     </div>
@@ -192,7 +189,7 @@ export default function Account({ params }: PageProps) {
                       </div>
                     )}
                     <div className="relative flex min-w-0 items-center justify-between gap-2 px-6 pb-4 pt-3">
-                      <button type="button" aria-label="查看总点数" onClick={() => setPoints((v) => !v)} className="shrink-0 px-3 py-1 font-cond text-[14px]" style={{ clipPath: slantClip(5), background: P3R.blue, color: P3R.onBlue }}>LV {cloud.cloudUser?.total_lv ?? TOTAL_LEVEL} ▾</button>
+                      <button type="button" aria-label="查看总点数" onClick={() => setPoints((v) => !v)} className="shrink-0 px-3 py-1 font-cond text-[14px]" style={{ clipPath: slantClip(5), background: P3R.blue, color: P3R.onBlue }}>LV {TOTAL_LEVEL} ▾</button>
                       <span className="min-w-0 flex-1 truncate text-[12px] font-bold" style={{ color: P3R.grey }}>{syncing ? '同步中…' : lastSync ? `最近同步：${lastSync}` : '尚未同步'}</span>
                       <button type="button" aria-label="账号管理" title="账号管理" onClick={() => setManage(true)} className="relative flex h-9 shrink-0 items-center justify-center px-3 text-[12px] font-black active:scale-95" style={{ clipPath: slantClip(7), background: P3R.ink, color: 'var(--p3r-on-ink)' }}>
                         账号管理{!uid && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full" style={{ background: P3R.magenta }} />}
@@ -202,11 +199,11 @@ export default function Account({ params }: PageProps) {
                   {points && (
                     <div className="absolute left-4 top-[calc(100%-8px)] z-10 w-60 px-5 py-3" style={{ background: P3R.ink, clipPath: slantClip(10) }}>
                       <div className="mb-2 flex items-center justify-between">
-                        <div><div className="font-cond text-[10px] tracking-widest" style={{ color: 'var(--pk-petal-a)' }}>总点数</div><div className="font-cond text-[26px] leading-none" style={{ color: P3R.blue }}>{realAttrs.reduce((s, a) => s + a.points, 0) || TOTAL_POINTS}</div></div>
+                        <div><div className="font-cond text-[10px] tracking-widest" style={{ color: 'var(--pk-petal-a)' }}>总点数</div><div className="font-cond text-[26px] leading-none" style={{ color: P3R.blue }}>{TOTAL_POINTS}</div></div>
                         <button type="button" aria-label="关闭" onClick={() => setPoints(false)} className="p-1" style={{ color: 'var(--p3r-on-ink)' }}><IconClose size={14} /></button>
                       </div>
                       <div className="flex flex-col gap-1 border-t pt-1.5" style={{ borderColor: 'rgba(255,255,255,0.15)' }}>
-                        {(realAttrs.length ? realAttrs : ATTRIBUTES).map((a) => <div key={a.id} className="flex justify-between text-[12px]" style={{ color: 'var(--p3r-on-ink)' }}><span className="font-black">{a.displayName}</span><span className="font-cond text-[14px]">{a.points}<span className="ml-1 text-[10px] opacity-70">· Lv.{a.level}</span></span></div>)}
+                        {ATTRIBUTES.map((a) => <div key={a.id} className="flex justify-between text-[12px]" style={{ color: 'var(--p3r-on-ink)' }}><span className="font-black">{a.displayName}</span><span className="font-cond text-[14px]">{a.points}<span className="ml-1 text-[10px] opacity-70">· Lv.{a.level}</span></span></div>)}
                       </div>
                     </div>
                   )}

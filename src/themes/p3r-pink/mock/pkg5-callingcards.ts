@@ -1,5 +1,5 @@
 /** 工作包 5 · 宣告卡总览页假数据（用户追加页，真实 app 暂无）。类型 import type 自真实 CallingCard。「今天」= 2026-10-20。 */
-import type { CallingCard } from '@/types';
+import type { CallingCard } from '@real/types';
 
 const C = (p: Partial<CallingCard> & Pick<CallingCard, 'id' | 'title' | 'mode' | 'startDate'>): CallingCard => ({ tone: 'lines', pinned: false, archived: false, createdAt: new Date(2026, 8, 1), ...p } as CallingCard);
 

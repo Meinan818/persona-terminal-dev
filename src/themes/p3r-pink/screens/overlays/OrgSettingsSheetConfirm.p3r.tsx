@@ -4,10 +4,10 @@
  * 路由：#/overlay/hideout-settings-confirm?kind=rotate|kick|transfer|transfer-leave|leave|dissolve
  */
 import { useState } from 'react';
-import type { OrgMember } from '@/types';
+import type { OrgMember } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Dialog, P3Check, useToast } from '@pink/kit';
-import { MEMBERS, ORG } from '@pink/adapters/pkg4-org';
+import { MEMBERS, ORG } from '@pink/mock/pkg4-org';
 import { displayCodename } from '@pink/screens/pkg4/org/common';
 
 export type SettingsConfirm = { kind: 'rotate' } | { kind: 'kick'; member: OrgMember } | { kind: 'transfer'; member: OrgMember; leaving?: boolean } | { kind: 'leave' } | { kind: 'dissolve' };

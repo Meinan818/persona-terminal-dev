@@ -1,9 +1,9 @@
 /** 设置 · 体验个性化（真实 Settings.tsx section=personalize）：属性 / 记账 / 属性名称 / 等级需求 / 等级称号 / 今日委托 AI 卡 / 关键词规则 / 逆影战场 */
 import { useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import { CfgBtn, CfgInput, CfgList, CfgRow, CfgSeg, CfgSelect, CfgSubhead, CfgToggle } from '../cfg';
 import { attrLabel, updateSettings, useSettings } from '../settingsStore';
-import { ATTRS, DEFAULT_LEVEL_TITLES, LEVEL_PRESETS } from '@blue/adapters/pkg6';
+import { ATTRS, DEFAULT_LEVEL_TITLES, LEVEL_PRESETS } from '@blue/mock/pkg6';
 import { LevelTitleModal } from '@blue/screens/overlays/SettingsLevelTitleModal.p3r';
 import { NameMatchModal } from '@blue/screens/overlays/SettingsNameMatchModal.p3r';
 import { ThresholdDialog, type ThresholdKind } from '@blue/screens/overlays/SettingsThresholdConfirm.p3r';

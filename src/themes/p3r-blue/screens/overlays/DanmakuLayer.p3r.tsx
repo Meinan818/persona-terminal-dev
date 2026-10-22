@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@blue/registry/types';
 import { Portal, useEscape, P3R, slantClip } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
-import { DANMAKU } from '@blue/adapters/pkg2';
+import { DANMAKU } from '@blue/mock/pkg2';
 import { DanmakuLayer, DarkStage, type DanmakuItem } from '@blue/screens/pkg2/cutins';
 
 export default function DanmakuLayerOverlay({ open, onClose, params }: OverlayProps) {

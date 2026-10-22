@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { CfgBtn, CfgInput, CfgList, CfgMsg, CfgRow, CfgSeg, CfgSubhead, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
-import { CUSTOM_PRESETS, PROVIDERS, type ProviderId } from '@pink/adapters/pkg6';
+import { CUSTOM_PRESETS, PROVIDERS, type ProviderId } from '@pink/mock/pkg6';
 import { ModelPicker, type ModelPickerMode } from '@pink/screens/overlays/ModelPickerSheet.p3r';
 import { cx } from '@pink/lib/cx';
 

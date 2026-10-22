@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 统计页（真实 src/pages/Statistics.tsx 的 p3 分支「p3-statistics-reference-v2」，粉白重画）
  *   P3PageHeader ticks「统计」+ 命运轨迹斜纹 · GhostWords TRACE →
  *   成长轨迹（白大斜卡 + 出血玫红斜体大数字 + 累计曲线描线）→ 六格窄卡（左缘玫红竖斜片 + 大斜体数字）→
@@ -7,14 +7,14 @@
  */
 import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { PageProps } from '@pink/registry/types';
 import { P3R, P3PageHeader, GhostWords, SectionMark, P3Empty, slantClip } from '@pink/kit';
 import { PageEnter } from '@pink/fx';
 import { useLowMotion } from '@pink/lib/prefs';
 import { navigate } from '@pink/shell/shellBus';
-import { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, type StatActivity, useStatActivities } from '@pink/adapters/pkg4-stats';
-import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@pink/adapters/pkg4-tarot';
+import { ACTIVITIES, ATTR_LEVELS, ACHIEVEMENTS, SKILLS, type StatActivity } from '@pink/mock/pkg4-stats';
+import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@pink/mock/pkg4-tarot';
 import { DevStrip, StateFade } from '@pink/screens/pkg4/ui';
 
 type Range = '7' | '30' | 'all';
@@ -37,8 +37,7 @@ export default function Statistics({ params }: PageProps) {
   const low = useLowMotion();
   const [mode, setMode] = useState(params.get('state') === 'empty' ? 'empty' : 'data');
   const [range, setRange] = useState<Range>('30');
-  const realActs = useStatActivities();
-  const acts: StatActivity[] = mode === 'empty' ? [] : (realActs.length ? realActs : ACTIVITIES);
+  const acts: StatActivity[] = mode === 'empty' ? [] : ACTIVITIES;
   const totals = useMemo(() => ATTR_IDS.map((id) => ({ id, total: acts.reduce((s, a) => s + (a.pts[id] ?? 0), 0) })), [acts]);
   const totalPoints = totals.reduce((s, t) => s + t.total, 0);
   const uniqueDays = new Set(acts.map((a) => a.date)).size;

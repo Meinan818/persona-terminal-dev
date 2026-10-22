@@ -10,7 +10,7 @@ import type { OverlayProps } from '@pink/registry/types';
 import { P3Sheet, P3Button, P3Input, P3Field, P3R, slantClip } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
 import { NoteBox } from '@pink/screens/pkg5/ui';
-import { CLOUD_USER } from '@pink/adapters/pkg5';
+import { CLOUD_USER } from '@pink/mock/pkg5';
 
 type View = 'home' | 'userid' | 'password_change' | 'password_reset';
 const Box = ({ cap, children, badge }: { cap: string; children: ReactNode; badge?: ReactNode }) => (

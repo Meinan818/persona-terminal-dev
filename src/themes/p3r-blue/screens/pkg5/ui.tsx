@@ -8,8 +8,8 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 import { P3R, slantClip, tickClip } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
 import { cx } from '@blue/lib/cx';
-import { catMeta, daysAgoKey, P5_TODAY } from '@blue/adapters/pkg5';
-import type { LedgerExpenseType } from '@/types';
+import { catMeta, daysAgoKey, P5_TODAY } from '@blue/mock/pkg5';
+import type { LedgerExpenseType } from '@real/types';
 
 /** 斜切小片（臂章红 / 蓝签名件） */
 export const Tick = ({ color = P3R.magenta, w = 14, h = 6, className, style }: { color?: string; w?: number; h?: number; className?: string; style?: CSSProperties }) => (

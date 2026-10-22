@@ -5,7 +5,7 @@
  *   菜单：P3MenuList（暂停菜单级联 + 光标楔，↑↓ Enter）
  */
 import React, { useId, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, forwardRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useBoldness } from '@pink/lib/prefs';
 import { cx } from '@pink/lib/cx';
 import { P3R, SelectWedge, slantClip, tickClip } from './base';
@@ -112,7 +112,7 @@ export const P3Segment = ({ items, value, onChange, className }: { items: TabIte
         const on = it.id === value;
         return (
           <button key={it.id} type="button" role="tab" aria-selected={on} onClick={() => onChange(it.id)} className="relative min-w-0 py-2 text-[13px] font-black focus-visible:outline-none" style={{ color: on ? P3R.onBlue : P3R.inkSoft }}>
-            <AnimatePresence initial={false}>{on && <motion.span layoutId={`sg-${gid}`} aria-hidden className="absolute inset-0" style={{ background: P3R.blue, clipPath: slantClip(7) }} transition={{ type: 'spring', stiffness: 520, damping: 34 }} />}</AnimatePresence>
+            {on && <motion.span layoutId={`sg-${gid}`} aria-hidden className="absolute inset-0" style={{ background: P3R.blue, clipPath: slantClip(7) }} transition={{ type: 'spring', stiffness: 520, damping: 34 }} />}
             <span className="relative block truncate px-1">{it.label}</span>
           </button>
         );

@@ -13,5 +13,5 @@ export function CallingCardOverlayHost() {
   const card = cards.find(c => c.id === activeId) ?? null;
   useEffect(() => { if (!activeId && !blocked && pending) setActiveId(pending.id); }, [activeId, blocked, pending]);
   const close = async () => { if (activeId) await callingCardOps.markShown(activeId); setActiveId(null); };
-  return <CallingCardCutIn open={!!card && !blocked} onClose={() => { void close(); }} realCard={card} params={new URLSearchParams('reason=' + (card?.archiveReason ?? 'manual'))} />;
+  return <CallingCardCutIn open={!!card && !blocked} onClose={() => { void close(); }} params={new URLSearchParams('reason=' + (card?.archiveReason ?? 'manual'))} />;
 }

@@ -10,7 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, useEscape } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { MOCK_TODO_DONE } from '@pink/adapters/pkg1';
+import { MOCK_TODO_DONE } from '@pink/mock/pkg1';
 import { useAutoClose, ShatterCheckP3, TriBurst, MusicalNotes, TwinTicks, LILAC_MID, LILAC_PALE, cyanA, type BurstPiece } from '@pink/screens/pkg1/fxbits';
 
 const CHECK_BURST: BurstPiece[] = [

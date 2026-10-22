@@ -1,8 +1,8 @@
 /** 删除这一笔？（真实 src/pages/Ledger.tsx · ConfirmDialog tone=danger；description = 备注/收入/支出 · ¥金额）→ P3R 系统框 */
 import type { OverlayProps } from '@blue/registry/types';
-import type { LedgerEntry } from '@/types';
+import type { LedgerEntry } from '@real/types';
 import { P3Dialog } from '@blue/kit';
-import { CNY, LEDGER_ENTRIES, fmtMoney } from '@blue/adapters/pkg5';
+import { CNY, LEDGER_ENTRIES, fmtMoney } from '@blue/mock/pkg5';
 
 export function LedgerDeleteConfirmView({ target, open, onClose, onConfirm }: { target: LedgerEntry | null; open: boolean; onClose: () => void; onConfirm: () => void }) {
   return (

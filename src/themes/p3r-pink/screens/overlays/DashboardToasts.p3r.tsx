@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, P3R, slantClip } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { MOCK_CALLING_CARD } from '@pink/adapters/pkg1';
+import { MOCK_CALLING_CARD } from '@pink/mock/pkg1';
 import { HourglassGlyph } from '@pink/screens/pkg1/DashboardParts';
 
 export const UrgentToast = ({ text }: { text: string | null }) => {

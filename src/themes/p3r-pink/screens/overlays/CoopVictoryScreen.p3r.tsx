@@ -12,7 +12,7 @@ import { Portal, P3R, slantClip, tickClip } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
 import { ATTR_NAMES } from '@pink/screens/pkg3/arcana';
 import { Sparkle } from '@pink/screens/pkg3/ui';
-import { PK3_SHADOW } from '@pink/adapters/pkg3';
+import { PK3_SHADOW } from '@pink/mock/pkg3';
 
 const REWARD_SP_VICTORY = 10;
 const REWARD_SP_RETREAT = 3;

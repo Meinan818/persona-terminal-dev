@@ -3,10 +3,10 @@
  * 「确认刷新：X」「i / 5 · 已选 N 个属性」、上一个/下一个属性、圆点切换、「刷新这个属性」勾选、表格 等级/当前/建议、取消 / 应用 N 个（应用中）、关闭。
  */
 import { useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P6Sheet } from '@blue/screens/pkg6/sheet';
-import { ATTRS, DEFAULT_LEVEL_TITLES, SUGGESTED_LEVEL_TITLES } from '@blue/adapters/pkg6';
+import { ATTRS, DEFAULT_LEVEL_TITLES, SUGGESTED_LEVEL_TITLES } from '@blue/mock/pkg6';
 import { attrLabel, updateSettings, useSettings } from '@blue/screens/pkg6/settingsStore';
 import { P3Button, useToast } from '@blue/kit';
 import { cx } from '@blue/lib/cx';

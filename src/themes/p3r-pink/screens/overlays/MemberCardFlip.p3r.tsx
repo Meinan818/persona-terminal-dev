@@ -5,11 +5,11 @@
  */
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import type { OrgMember, OrgView } from '@/types';
+import type { OrgMember, OrgView } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, useEscape, useScrollLock, P3Button, P3R, slantClip } from '@pink/kit';
 import { useLowMotion } from '@pink/lib/prefs';
-import { buildView, MEMBERS } from '@pink/adapters/pkg4-org';
+import { buildView, MEMBERS } from '@pink/mock/pkg4-org';
 import { MemberCardBack, MemberCardFront } from '@pink/screens/pkg4/org/MapWall';
 import { displayCodename } from '@pink/screens/pkg4/org/common';
 

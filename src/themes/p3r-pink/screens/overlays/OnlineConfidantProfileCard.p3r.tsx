@@ -5,12 +5,12 @@
  * 入口：卡墙好友牌下滑 / 牌背 @UserID · 同伴详情 @UserID · 通知。
  */
 import { useEffect, useState } from 'react';
-import type { CloudProfile } from '@/types';
+import type { CloudProfile } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Avatar, P3Dialog, P3R, P3Sheet, showToast, slantClip, tickClip } from '@pink/kit';
 import { ATTR_IDS, ATTR_NAMES } from '@pink/screens/pkg3/arcana';
 import { Sparkle, StatusTag } from '@pink/screens/pkg3/ui';
-import { PK3_PROFILES } from '@pink/adapters/pkg3';
+import { PK3_PROFILES } from '@pink/mock/pkg3';
 import { PactPanelBody } from './PactPanel.p3r';
 import { PrayerEffect } from './PrayerEffectOverlay.p3r';
 

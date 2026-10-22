@@ -7,7 +7,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3Input, P3R, SectionMark, slantClip, useToast } from '@blue/kit';
-import { LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@blue/adapters/pkg4-org';
+import { LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@blue/mock/pkg4-org';
 
 interface Custom { id: string; name: string; cond: { type: CondType; value: number } }
 const clip = (v: string, n: number) => [...v].slice(0, n).join('');

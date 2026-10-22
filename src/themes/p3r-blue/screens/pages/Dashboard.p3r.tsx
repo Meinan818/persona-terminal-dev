@@ -1,4 +1,3 @@
-﻿import { usePinnedCallingCard } from '@blue/adapters/callingCards';
 /**
  * Dashboard.p3r —— 首页（真实 src/pages/p3/DashboardP3.tsx，粉 = p3 频道）1:1 结构，P3R 蓝白重画。
  * 自上而下：幽灵字 PERSONA / TERMINAL + 竖排 WILD HEART → MASKARIA 大黑斜体 + 句点 + 底衬三角（沸腾）+ 三角蒙版染字 →
@@ -14,24 +13,23 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { PageProps } from '@blue/registry/types';
 import { GhostWords, SectionMark, TitlePeriod, P3R, slantClip } from '@blue/kit';
 import { BlueHeroDecor } from '@blue/fx';
 import DateRollCutIn from '@blue/screens/overlays/DateRollCutIn.p3r';
 import { useBoldness } from '@blue/lib/prefs';
 import { navigate } from '@blue/shell/shellBus';
-import { ATTR_IDS, BIG_DEAL_DONE, BIG_DEAL_EMPTY, MAX_LEVEL, MOCK_CALLING_CARD, MOCK_CALLING_CARD_FAR, MOCK_COUNTERCURRENT, MOCK_DECAYED, MOCK_DIVINATION, MOCK_PERSONA_NAME, MOCK_UNPINNED_COUNT, SUBTEXTS, daysUntil, levelTitle, masteryOf, masteryTitle, onThisDaySub, slotOf, todayKey, type MockTodo, useHomeData, homeOps } from '@blue/adapters/pkg1';
+import {
+  ATTR_IDS, ATTR_NAMES, BIG_DEAL_DONE, BIG_DEAL_EMPTY, MAX_LEVEL, MOCK_ATTRS, MOCK_CALLING_CARD, MOCK_CALLING_CARD_FAR, MOCK_COUNTERCURRENT, MOCK_DECAYED, MOCK_DIVINATION,
+  MOCK_PERSONA_NAME, MOCK_STATS, MOCK_TODOS, MOCK_UNPINNED_COUNT, SUBTEXTS, daysUntil, levelTitle, masteryOf, masteryTitle, onThisDaySub, slotOf, todayKey, type MockTodo,
+} from '@blue/mock/pkg1';
 import { StarChartP3, type StarItem } from '@blue/screens/pkg1/StarChart';
 import {
   AttrDetailInline, BattleSlab, BgAnimLayer, BigDealHomeCard, HourglassGlyph, MoonGlyph, OverlayByKey, RitualSlab, SkyBadge, StackCarousel, TitleTriWobble, TRI_MASK_URI, WaveGlyph,
   type BattleState, type BgAnimStyle, type WeatherState,
 } from '@blue/screens/pkg1/DashboardParts';
 import { BandCutInP3 } from '@blue/screens/overlays/TodoCompleteModal.p3r';
-import { LevelUpP3 } from '@blue/screens/overlays/LevelUpModal.p3r';
-import { AchievementUnlockP3 } from '@blue/screens/overlays/AchievementUnlockModal.p3r';
-import { SkillUnlockP3 } from '@blue/screens/overlays/SkillUnlockModal.p3r';
-import { useAppStore } from '@/store';
 import { SeasonStampChip } from '@blue/screens/overlays/SeasonStampBadge.p3r';
 import { OnThisDaySheetP3 } from '@blue/screens/overlays/OnThisDaySheet.p3r';
 import { DecayModal } from '@blue/screens/overlays/DashboardDecayModal.p3r';
@@ -52,8 +50,6 @@ export const HomeBrandTitle = ({ play = true }: { play?: boolean }) => (
 );
 
 export default function Dashboard({ params }: PageProps) {
-  const { pinned: realPinned, unpinned: realUnpinned } = usePinnedCallingCard();
-  const { ATTR_NAMES, MOCK_ATTRS, MOCK_STATS, MOCK_TODOS, MOCK_DIVINATION, MOCK_COUNTERCURRENT, MOCK_PERSONA_NAME } = useHomeData();
   const anim = useBoldness();
   const q = (k: string) => params.get(k);
   const now = useMemo(() => new Date(), []);
@@ -68,55 +64,29 @@ export default function Dashboard({ params }: PageProps) {
     if (dealVariant === 'done') base[0] = { ...BIG_DEAL_DONE };
     return base;
   });
-  useEffect(() => { if (q('state') !== 'empty' && !dealVariant) setTodos(MOCK_TODOS.map(t => ({ ...t }))); }, [MOCK_TODOS]);
   const tickable = todos.filter((t) => !t.isBigDeal);
   const completed = tickable.filter((t) => t.count >= t.target).length;
   const total = tickable.length;
   const [cutin, setCutin] = useState<null | { title: string; points: number; hint: boolean }>(null);
-  type Follow = { k: 'lv'; attr: AttributeId; lv: number; stars?: number } | { k: 'achv'; title: string } | { k: 'skill'; name: string };
-  const [queue, setQueue] = useState<Follow[]>([]);
-  const [pendingQ, setPendingQ] = useState<Follow[]>([]);
-  const headF = queue[0] ?? null;
-  const shiftQ = () => setQueue((q) => q.slice(1));
-  useEffect(() => {
-    if (cutin || !pendingQ.length) return;
-    const q = pendingQ;
-    setPendingQ([]);
-    const t = window.setTimeout(() => setQueue(q), 320);
-    return () => clearTimeout(t);
-  }, [cutin, pendingQ]);
   const [rowRipple, setRowRipple] = useState<string | null>(null);
   const [dealOpen, setDealOpen] = useState(false);
   const complete = (t: MockTodo) => {
     if (t.count >= t.target) return;
-    const before = useAppStore.getState();
-    const achBefore = new Set(before.achievements.filter((x) => x.unlocked).map((x) => x.id));
-    const skillBefore = new Set(before.skills.filter((x) => x.unlocked).map((x) => x.id));
-    const lvBefore = new Map(before.attributes.map((x) => [x.id, x.level]));
-    void homeOps.completeTodo(t.id).then((result) => {
-      const s = useAppStore.getState();
-      const q: Follow[] = [];
-      s.attributes.filter((x) => (lvBefore.get(x.id) ?? x.level) < x.level).forEach((x) => q.push({ k: 'lv', attr: x.id, lv: x.level, stars: x.level >= MAX_LEVEL ? masteryOf(x.points)?.stars ?? 0 : 0 }));
-      s.achievements.filter((x) => x.unlocked && !achBefore.has(x.id)).forEach((x) => q.push({ k: 'achv', title: x.title }));
-      s.skills.filter((x) => x.unlocked && !skillBefore.has(x.id)).forEach((x) => q.push({ k: 'skill', name: x.name }));
-      setPendingQ(q);
-      setCutin((cur) => cur ? { ...cur, hint: (result?.unlockHints.achievements ?? 0) + (result?.unlockHints.skills ?? 0) > 0 || q.length > 0 } : cur);
-    });
     setRowRipple(t.id + Date.now());
     const next = { ...t, count: t.count + 1 };
     setTodos((ts) => ts.map((x) => (x.id === t.id ? next : x)));
     if (next.count >= next.target) {
       const pts = t.points + (t.extraBoosts?.reduce((s, b) => s + b.points, 0) ?? 0);
-      window.setTimeout(() => setCutin({ title: t.title, points: pts, hint: false }), anim ? 260 : 0);
+      window.setTimeout(() => setCutin({ title: t.title, points: pts, hint: !!t.unlocks }), anim ? 260 : 0);
     }
   };
 
   // ── 宣言卡三态 ──
-  const greet = q('greet') ?? (realPinned ? 'card' : realUnpinned ? 'unpinned' : 'empty');
-  const pinned = greet === 'card' ? realPinned : greet === 'far' ? MOCK_CALLING_CARD_FAR : greet === 'nodate' ? { ...MOCK_CALLING_CARD, targetDate: undefined } : null;
+  const greet = q('greet') ?? 'card';
+  const pinned = greet === 'card' ? MOCK_CALLING_CARD : greet === 'far' ? MOCK_CALLING_CARD_FAR : greet === 'nodate' ? { ...MOCK_CALLING_CARD, targetDate: undefined } : null;
   const daysLeft = pinned?.targetDate ? Math.max(0, daysUntil(pinned.targetDate)) : null;
   const [hintDismissed, setHintDismissed] = useState(false);
-  const jumpToCallingCard = () => navigate('actions', 'todos', { params: { deck: 'cards' } });
+  const jumpToCallingCard = () => navigate('actions', 'todos', { params: { panel: 'countdown' } });
 
   // 临期 Toast：≤3 天且 >0、每卡每天首次（localStorage 节流，同真实键名）
   const [toast, setToast] = useState<string | null>(null);
@@ -135,7 +105,7 @@ export default function Dashboard({ params }: PageProps) {
   const warnings = ccOn ? MOCK_COUNTERCURRENT : [];
 
   // ── 今日仪式 ──
-  const drawn = !!MOCK_DIVINATION;
+  const drawn = q('drawn') === '1';
   const battleOn = q('battleOn') !== '0';
   const otdOn = q('otd') !== '0';
   const [otdOpen, setOtdOpen] = useState(false);
@@ -150,8 +120,8 @@ export default function Dashboard({ params }: PageProps) {
   }
   slideKeys.push('astrology');
   slides.push(<RitualSlab key="astro" icon={<MoonGlyph />} onClick={() => navigate('astrology')}
-    title={drawn ? `${MOCK_DIVINATION?.name ?? ''} · ${MOCK_DIVINATION?.orientation === 'upright' ? '正位' : '逆位'}` : '今日星象尚未展开'}
-    sub={drawn && MOCK_DIVINATION ? `${ATTR_NAMES[MOCK_DIVINATION.attribute]} × ${MOCK_DIVINATION.multiplier}${MOCK_DIVINATION.advice ? ` · ${MOCK_DIVINATION.advice}` : ''}` : '点击进入星象，从三张塔罗中抽取一张'} />);
+    title={drawn ? `${MOCK_DIVINATION.name} · ${MOCK_DIVINATION.orientation === 'upright' ? '正位' : '逆位'}` : '今日星象尚未展开'}
+    sub={drawn ? `${ATTR_NAMES[MOCK_DIVINATION.attribute]} × ${MOCK_DIVINATION.multiplier}${MOCK_DIVINATION.advice ? ` · ${MOCK_DIVINATION.advice}` : ''}` : '点击进入星象，从三张塔罗中抽取一张'} />);
   if (battleOn) {
     slideKeys.push('battle');
     slides.push(<BattleSlab key="battle" state={(q('battle') as BattleState) || 'fight'} shadowTime={q('shadow') === '1'} persona={MOCK_PERSONA_NAME} onClick={() => navigate('battle')} />);
@@ -168,7 +138,7 @@ export default function Dashboard({ params }: PageProps) {
     const a = MOCK_ATTRS.find((x) => x.id === id)!;
     const stars = a.level >= MAX_LEVEL ? masteryOf(a.points)?.stars ?? 0 : 0;
     return { id, name: a.name, level: a.level, maxLevel: MAX_LEVEL, stars, title: stars > 0 ? masteryTitle(id, stars) : levelTitle(id, a.level) };
-  }), [MOCK_ATTRS]);
+  }), []);
   const attrParam = q('attr') as AttributeId | null;
   const [dossier, setDossier] = useState<AttributeId | null>(attrParam && ATTR_IDS.includes(attrParam) ? attrParam : null);
   const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -178,7 +148,7 @@ export default function Dashboard({ params }: PageProps) {
   const stats = useMemo(() => ({
     totalPoints: MOCK_ATTRS.reduce((s, a) => s + a.points, 0),
     totalLevel: MOCK_ATTRS.reduce((s, a) => s + a.level, 0),
-  }), [MOCK_ATTRS]);
+  }), []);
 
   // ── 区块直达滚动 ──
   const refs = { tasks: useRef<HTMLElement>(null), ritual: useRef<HTMLElement>(null), persona: useRef<HTMLElement>(null), greet: useRef<HTMLDivElement>(null) };
@@ -239,7 +209,7 @@ export default function Dashboard({ params }: PageProps) {
         ) : greet === 'unpinned' ? (
           <button type="button" onClick={jumpToCallingCard} className="mt-5 flex w-full items-center gap-2.5 px-5 py-2.5 text-left text-[12px] font-bold"
             style={{ clipPath: slantClip(8), background: P3R.cyanFaint, color: P3R.inkSoft }}>
-            <span className="min-w-0 flex-1 truncate">你有 {realUnpinned} 张倒计时未钉到主页</span><span aria-hidden style={{ color: P3R.blue }}>›</span>
+            <span className="min-w-0 flex-1 truncate">你有 {MOCK_UNPINNED_COUNT} 张倒计时未钉到主页</span><span aria-hidden style={{ color: P3R.blue }}>›</span>
           </button>
         ) : hintDismissed ? null : (
           <AnimatePresence>
@@ -348,9 +318,6 @@ export default function Dashboard({ params }: PageProps) {
       <h2 className="sr-only">汐见的面具庭园</h2>
 
       <BandCutInP3 isOpen={!!cutin} onClose={() => setCutin(null)} title={cutin?.title ?? ''} totalPoints={cutin?.points} unlockHint={cutin?.hint ? { achievements: 1, skills: 0 } : { achievements: 0, skills: 0 }} />
-      <LevelUpP3 isOpen={headF?.k === 'lv'} onClose={shiftQ} attributeName={headF?.k === 'lv' ? ATTR_NAMES[headF.attr] : ATTR_NAMES.knowledge} newLevel={headF?.k === 'lv' ? headF.lv : 1} masteryStars={headF?.k === 'lv' ? headF.stars : undefined} />
-      <AchievementUnlockP3 isOpen={headF?.k === 'achv'} onClose={shiftQ} achievementTitle={headF?.k === 'achv' ? headF.title : ''} />
-      <SkillUnlockP3 isOpen={headF?.k === 'skill'} onClose={shiftQ} skillName={headF?.k === 'skill' ? headF.name : ''} />
       <UrgentToast text={toast} />
       <DecayModal attrs={decayed} onClose={() => setDecayed([])} />
       <OnThisDaySheetP3 isOpen={otdOpen} onClose={() => setOtdOpen(false)} />
@@ -361,7 +328,6 @@ export default function Dashboard({ params }: PageProps) {
 
 /** 任务行：斜切勾选框（完成 = 青底白勾）· 重要三角 · ✦今日抽签 · 一起进步 / 组织作战 / 截止标签 · 属性 +N · 计数 n/target · 完成波纹 */
 const TaskRow = ({ t, onTap, ripple }: { t: MockTodo; onTap: () => void; ripple: string | null }) => {
-  const { ATTR_NAMES } = useHomeData();
   const done = t.count >= t.target;
   const dl = t.deadline ? daysUntil(t.deadline) : null;
   const tag = (txt: string, tone: 'lilac' | 'rose' | 'coral') => (

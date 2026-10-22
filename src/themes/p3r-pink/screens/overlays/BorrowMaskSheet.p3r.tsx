@@ -6,12 +6,12 @@
  */
 import { motion, type PanInfo } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import type { OrgMember } from '@/types';
+import type { OrgMember } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Sheet, P3Button, P3Tag, P3R, slantClip, useToast } from '@pink/kit';
 import { useLowMotion } from '@pink/lib/prefs';
-import { ATTR_NAMES, ATTR_COLOR } from '@pink/adapters/pkg4-tarot';
-import { BORROW_BATTLES_PER_WEEK, LEVEL, MEMBERS } from '@pink/adapters/pkg4-org';
+import { ATTR_NAMES, ATTR_COLOR } from '@pink/mock/pkg4-tarot';
+import { BORROW_BATTLES_PER_WEEK, LEVEL, MEMBERS } from '@pink/mock/pkg4-org';
 import { displayCodename } from '@pink/screens/pkg4/org/common';
 
 const TYPE_LABEL: Record<string, string> = { damage: '伤害', crit: '暴击', buff: '增伤', debuff: '易伤', charge: '蓄力', heal: '回复', attack_boost: '攻击增益' };

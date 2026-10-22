@@ -4,7 +4,7 @@
  *   #/overlay/bond-pact-respond  ?goal=different（不同目标：写自己的）&state=expired|accepted|declined
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3Input, P3R, P3Sheet, P3Stepper, slantClip, tickClip } from '@blue/kit';
 import { ATTR_IDS, ATTR_NAMES } from '@blue/screens/pkg3/arcana';

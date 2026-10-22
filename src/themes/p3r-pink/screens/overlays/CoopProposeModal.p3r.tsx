@@ -8,7 +8,7 @@ import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3R, P3Sheet, slantClip, tickClip } from '@pink/kit';
 import { ArcanaPickerForm, type ArcanaPickValue } from '@pink/screens/pkg3/ArcanaPickerForm';
 import { MatchingSpinner, Sparkle } from '@pink/screens/pkg3/ui';
-import { PK3_CONFIDANTS } from '@pink/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@pink/mock/pkg3';
 import { CoopAiMatchSheet } from './CoopAiMatchModal.p3r';
 
 type Mode = 'choose' | 'manual' | 'ai' | 'sent';

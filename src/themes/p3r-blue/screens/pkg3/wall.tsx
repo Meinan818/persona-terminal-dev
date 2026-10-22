@@ -11,7 +11,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
-import type { CloudProfile, Confidant } from '@/types';
+import type { CloudProfile, Confidant } from '@real/types';
 import { P3R, slantClip, tickClip } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
 import { ATTR_NAMES, MAX_INTIMACY, TAROT_BY_ID, levelProgress } from './arcana';

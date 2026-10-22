@@ -8,13 +8,13 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { OrgMember, OrgView } from '@/types';
+import type { OrgMember, OrgView } from '@real/types';
 import type { PageProps } from '@blue/registry/types';
 import { P3R, P3Button, P3Empty, P3Loading, GhostWords, SectionMark, slantClip, chamferClip, useToast } from '@blue/kit';
 import { PageEnter, CutInSweep } from '@blue/fx';
 import { useLowMotion } from '@blue/lib/prefs';
 import { navigate } from '@blue/shell/shellBus';
-import { buildView, LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@blue/adapters/pkg4-org';
+import { buildView, LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@blue/mock/pkg4-org';
 import { DevStrip, StateFade } from '@blue/screens/pkg4/ui';
 import { HideoutMap, RosterWall, MemberTile, SECTION_TITLE, type HideoutSection } from '@blue/screens/pkg4/org/MapWall';
 import { BoardSection } from '@blue/screens/pkg4/org/Board';

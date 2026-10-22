@@ -18,7 +18,7 @@ import { useAIStream, AIThinking, type AIFail, type AIPhase } from '@pink/fx';
 import { useLowMotion, usePrefs } from '@pink/lib/prefs';
 import { cx } from '@pink/lib/cx';
 import { navigate } from '@pink/shell/shellBus';
-import { ACTION_META, CHAT_CARD_DEMO, CHAT_SEED, PICKER_TODOS, type ChatMsg, type DraftKind } from '@pink/adapters/pkg6';
+import { ACTION_META, CHAT_CARD_DEMO, CHAT_SEED, PICKER_TODOS, type ChatMsg, type DraftKind } from '@pink/mock/pkg6';
 import { activePreset, attrLabel, updateSettings, useSettings } from '@pink/screens/pkg6/settingsStore';
 import { P6Sheet } from '@pink/screens/pkg6/sheet';
 import { DateHud, WaterLayer, popVariants, sampleImg } from '@pink/screens/pkg6/compat';

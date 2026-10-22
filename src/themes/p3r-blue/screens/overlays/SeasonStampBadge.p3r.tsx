@@ -10,7 +10,7 @@ import type { OverlayProps } from '@blue/registry/types';
 import { P3R, P3Tag } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
 import { seasonAsset } from '@blue/lib/asset';
-import { MOCK_SEASON } from '@blue/adapters/pkg1';
+import { MOCK_SEASON } from '@blue/mock/pkg1';
 
 export const SeasonStampChip = ({ collected, defaultOpen = false, pop = 'below', align = 'left', className = '' }: { collected: boolean; defaultOpen?: boolean; pop?: 'above' | 'below'; align?: 'left' | 'right'; className?: string }) => {
   const [open, setOpen] = useState(defaultOpen);

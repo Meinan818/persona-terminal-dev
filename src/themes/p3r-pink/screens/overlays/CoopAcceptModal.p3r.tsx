@@ -9,7 +9,7 @@ import { P3Button, P3R, P3Sheet, showToast, slantClip } from '@pink/kit';
 import { ATTR_NAMES, TAROT_BY_ID } from '@pink/screens/pkg3/arcana';
 import { ArcanaPickerForm, type ArcanaPickValue } from '@pink/screens/pkg3/ArcanaPickerForm';
 import { MatchingSpinner, MiniLabel, Tarot } from '@pink/screens/pkg3/ui';
-import { PK3_CONFIDANTS } from '@pink/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@pink/mock/pkg3';
 import { CoopAiMatchSheet } from './CoopAiMatchModal.p3r';
 import { BackLink, ModeCards } from './CoopProposeModal.p3r';
 

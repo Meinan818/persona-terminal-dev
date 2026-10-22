@@ -3,14 +3,13 @@
  *   #/overlay/bond-memorial   ?state=empty 空态
  * 入口：同伴详情 · 信息页「共战纪念」卡。
  */
-import type { Confidant } from '@/types';
+import type { Confidant } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3R, P3Sheet, P3Empty, slantClip } from '@blue/kit';
 import { ATTR_NAMES } from '@blue/screens/pkg3/arcana';
-import { PK3_CONFIDANTS } from '@blue/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@blue/mock/pkg3';
 
-export function MemorialSheet({ isOpen, onClose, confidant, empty }: { isOpen: boolean; onClose: () => void; confidant: Confidant | null; empty?: boolean }) {
-  if (!confidant) return null;
+export function MemorialSheet({ isOpen, onClose, confidant, empty }: { isOpen: boolean; onClose: () => void; confidant: Confidant; empty?: boolean }) {
   const list = empty ? [] : [...(confidant.coopMemorials ?? []), { shadowId: 'coop:rain', shadowName: '雨夜之影', weaknessAttribute: 'kindness' as const, defeatedAt: '2026-09-14T22:30:00+08:00', winners: [], myDamage: 210, totalDamage: 520 }]
     .sort((a, b) => new Date(b.defeatedAt).getTime() - new Date(a.defeatedAt).getTime());
   return (

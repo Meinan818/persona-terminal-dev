@@ -1,7 +1,7 @@
 /**
  * pkg3 · 塔罗 / 亲密度常量（逐字抄自真实 src/constants/tarot.ts 与 src/utils/confidantLevels.ts；demo 只能 import type，故复刻只读常量）。
  */
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 
 export interface ArcanaDef { id: string; number: number; roman: string; name: string; nameEn: string; attr: AttributeId }
 

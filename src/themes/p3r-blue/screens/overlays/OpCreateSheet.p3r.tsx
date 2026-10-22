@@ -5,12 +5,12 @@
  * 路由：#/overlay/hideout-op-create?kind=big&leader=0&ai=0
  */
 import { useEffect, useState } from 'react';
-import type { AttributeId, OrgOpKind, OrgView } from '@/types';
+import type { AttributeId, OrgOpKind, OrgView } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3Input, P3Field, P3R, slantClip, useToast } from '@blue/kit';
-import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@blue/adapters/pkg4-tarot';
-import { buildView, OP_KIND_LABEL, ORG_OP_MIN_PEOPLE, ORG_OP_TITLE_MAX } from '@blue/adapters/pkg4-org';
-import { shiftKey, TODAY } from '@blue/adapters/pkg4-astro';
+import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@blue/mock/pkg4-tarot';
+import { buildView, OP_KIND_LABEL, ORG_OP_MIN_PEOPLE, ORG_OP_TITLE_MAX } from '@blue/mock/pkg4-org';
+import { shiftKey, TODAY } from '@blue/mock/pkg4-astro';
 import { displayCodename, MemberThumb } from '@blue/screens/pkg4/org/common';
 
 const QUICK: Array<[string, number]> = [['今天', 0], ['3 天', 3], ['一周', 7], ['两周', 14], ['30 天', 30]];

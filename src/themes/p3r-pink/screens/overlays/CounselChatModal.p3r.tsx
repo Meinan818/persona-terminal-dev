@@ -13,7 +13,7 @@ import { P3Button, P3Dialog, P3R, Portal, showToast, slantClip, tickClip, useEsc
 import { useAIStream, type AIFail } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
 import { cx } from '@pink/lib/cx';
-import { PK3_CONFIDANTS } from '@pink/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@pink/mock/pkg3';
 import { Tarot } from '@pink/screens/pkg3/ui';
 
 type CState = 'intro' | 'live' | 'expired' | 'cooldown';

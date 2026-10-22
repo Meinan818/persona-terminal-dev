@@ -6,14 +6,14 @@
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3R, slantClip, SelectWedge, useToast } from '@blue/kit';
 import { navigate } from '@blue/shell/shellBus';
-import { selectAppTheme, useSelectedTheme } from '@/themes/themeSelection';
-import { THEME_SWATCHES } from '@blue/adapters/pkg5';
+import { setPresence, usePresence } from '@blue/screens/pkg5/presence';
+import { THEME_SWATCHES } from '@blue/mock/pkg5';
 
 const TAG: Record<string, string> = { blue: 'P3', yellow: 'P4G', red: 'P5R', pink: 'P3P' };
 
 export function MenuThemeSheetView({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast();
-  const theme = useSelectedTheme('blue');
+  const { theme } = usePresence();
   return (
     <P3Sheet open={open} onClose={onClose} title="主题" en="THEME">
       <div className="flex min-w-0 flex-col gap-4 pt-1">
@@ -22,7 +22,7 @@ export function MenuThemeSheetView({ open, onClose }: { open: boolean; onClose: 
           {THEME_SWATCHES.map((t) => {
             const on = theme === t.value;
             return (
-              <button key={t.value} type="button" aria-label={`切换主题：${t.label}`} aria-pressed={on} onClick={async () => { try { await selectAppTheme(t.value); toast(`已切换：${t.label}`); } catch { toast('主题切换失败，请重试'); } }} className="relative flex min-w-0 flex-col items-center gap-1.5 active:scale-95">
+              <button key={t.value} type="button" aria-label={`切换主题：${t.label}`} aria-pressed={on} onClick={() => { setPresence({ theme: t.value }); toast(`已切换：${t.label}`); }} className="relative flex min-w-0 flex-col items-center gap-1.5 active:scale-95">
                 <span className="relative flex aspect-square w-full max-w-[64px] items-center justify-center" style={{ transform: on ? 'rotate(-4deg)' : undefined }}>
                   {on && <span aria-hidden className="absolute -inset-[3px]" style={{ background: P3R.blue, clipPath: slantClip(10) }} />}
                   <span className="absolute inset-0" style={{ background: t.color ?? 'conic-gradient(#4a79e6, #F59E0B, #EF3043, #8bd4e6, #4a79e6)', clipPath: slantClip(9) }} />

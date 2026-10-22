@@ -4,10 +4,10 @@
  * 入口：同伴页 ✧ 菜单「谏言归档库」。
  */
 import { useEffect, useState } from 'react';
-import type { CounselArchive } from '@/types';
+import type { CounselArchive } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Dialog, P3Empty, P3R, P3Sheet, showToast, slantClip, tickClip } from '@blue/kit';
-import { PK3_CONFIDANTS, PK3_COUNSEL_ARCHIVES } from '@blue/adapters/pkg3';
+import { PK3_CONFIDANTS, PK3_COUNSEL_ARCHIVES } from '@blue/mock/pkg3';
 
 const fmt = (d: Date) => `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 

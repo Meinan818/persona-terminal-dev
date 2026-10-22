@@ -17,7 +17,7 @@ import { Chip } from '@blue/screens/pkg5/ui';
 import { presetOf, goalPct, setPresence, statusAgeText, usePresence } from '@blue/screens/pkg5/presence';
 import { CropDialog } from './ImageCropDialog.p3r';
 import { sampleImg } from '@blue/screens/pkg6/compat';
-import { ATTRIBUTES, CALLING_CARDS, CLOUD_USER, LEVEL_MAX, STATUS_PRESETS, TOTAL_LEVEL, TOTAL_POINTS } from '@blue/adapters/pkg5';
+import { ATTRIBUTES, CALLING_CARDS, CLOUD_USER, LEVEL_MAX, STATUS_PRESETS, TOTAL_LEVEL, TOTAL_POINTS } from '@blue/mock/pkg5';
 
 type Panel = null | 'status' | 'goal';
 

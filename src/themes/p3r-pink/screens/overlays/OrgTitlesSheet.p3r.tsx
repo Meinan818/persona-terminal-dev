@@ -7,7 +7,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Sheet, P3Button, P3Input, P3R, SectionMark, slantClip, useToast } from '@pink/kit';
-import { LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@pink/adapters/pkg4-org';
+import { LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@pink/mock/pkg4-org';
 
 interface Custom { id: string; name: string; cond: { type: CondType; value: number } }
 const clip = (v: string, n: number) => [...v].slice(0, n).join('');

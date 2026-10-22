@@ -7,7 +7,7 @@
 import type { OverlayProps } from '@blue/registry/types';
 import type { AIFail } from '@blue/fx';
 import { StarShiftModal, type ShiftStage } from '@blue/screens/pkg3/rankup';
-import { PK3_CONFIDANTS } from '@blue/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@blue/mock/pkg3';
 
 export default function ConfidantStarShiftModal({ open, onClose, params }: OverlayProps) {
   if (!open) return null;

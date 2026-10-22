@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P6Dialog } from '@blue/screens/pkg6/dialog';
-import { SYNC_DIFF, SYNC_TABLE_LABEL } from '@blue/adapters/pkg6';
+import { SYNC_DIFF, SYNC_TABLE_LABEL } from '@blue/mock/pkg6';
 import { P3Button, useToast } from '@blue/kit';
 import { cx } from '@blue/lib/cx';
 

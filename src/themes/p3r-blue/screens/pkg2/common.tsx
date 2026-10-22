@@ -82,9 +82,9 @@ export function Ring({ pct, size = 52, stroke = 5, label, dim, color, track, ink
   );
 }
 
-/** 记录配图：demo 文件名仍走蓝主题素材；真实 IndexedDB data/blob URL 原样加载。 */
+/** 记录配图（demo 用蓝主题岁时图；真实是本机 IndexedDB 缩略图）——斜切外框（真实 thumbFrame p3 = slantClip(5)） */
 export const Photo = ({ src, className, style, alt = '' }: { src: string; className?: string; style?: CSSProperties; alt?: string }) => (
-  <img src={/^(data:|blob:|https?:)/.test(src) ? src : seasonAsset(src)} alt={alt} draggable={false} className={cx('h-full w-full object-cover', className)} style={style} />
+  <img src={seasonAsset(src)} alt={alt} draggable={false} className={cx('h-full w-full object-cover', className)} style={style} />
 );
 
 /** 区块小节题（P3R：蓝小斜片 + 黑粗斜体 + 英文小签 + 右侧槽），比 kit SectionMark 轻（不带入场裁切，列表里用） */

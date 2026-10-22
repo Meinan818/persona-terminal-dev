@@ -1,5 +1,5 @@
 /* 工作包 4 · 统计页假数据：按 Statistics.tsx 的口径从「记录」现算。 */
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import { ATTR_IDS } from './pkg4-tarot';
 
 export interface StatActivity { date: string; pts: Partial<Record<AttributeId, number>> }

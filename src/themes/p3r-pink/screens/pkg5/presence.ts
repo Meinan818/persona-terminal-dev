@@ -3,7 +3,7 @@
  * 菜单 MEMBER PASS 与用户资料抽屉共享；useSyncExternalStore，无持久化。改写自黄色版 pkg5/presence.ts。
  */
 import { useSyncExternalStore } from 'react';
-import { CALLING_CARDS, STATUS_PRESETS, USER } from '@pink/adapters/pkg5';
+import { CALLING_CARDS, STATUS_PRESETS, USER } from '@pink/mock/pkg5';
 
 export interface PresenceState {
   statusId: string | null;

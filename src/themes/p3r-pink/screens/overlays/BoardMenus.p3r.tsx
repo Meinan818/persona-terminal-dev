@@ -4,10 +4,10 @@
  * 路由：#/overlay/hideout-board-menus?step=menu|report|delete&mine=1&leader=0
  */
 import { useEffect, useState } from 'react';
-import type { OrgPost } from '@/types';
+import type { OrgPost } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3ActionSheet, P3Dialog, useToast } from '@pink/kit';
-import { POSTS, REPORT_REASONS } from '@pink/adapters/pkg4-org';
+import { POSTS, REPORT_REASONS } from '@pink/mock/pkg4-org';
 
 export type BoardStep = 'menu' | 'report' | 'delete' | null;
 export function BoardMenus({ post, step, onStep, mine, leader, blocked, onClose, onBlock, onReported, onDeleted }: {

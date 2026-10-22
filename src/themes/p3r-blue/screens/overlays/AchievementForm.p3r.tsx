@@ -5,9 +5,9 @@
  */
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
-import type { Achievement, AttributeId } from '@/types';
+import type { Achievement, AttributeId } from '@real/types';
 import { P3Sheet, P3Input, P3Select, P3Button, P3Field, P3R, useToast } from '@blue/kit';
-import { ATTR_IDS, ATTR_NAMES, ACHIEVEMENTS } from '@blue/adapters/pkg5';
+import { ATTR_IDS, ATTR_NAMES, ACHIEVEMENTS } from '@blue/mock/pkg5';
 
 type CType = 'total_points' | 'consecutive_days' | 'attribute_level' | 'keyword_match' | 'todo_completions';
 export interface AchForm { title: string; description: string; icon: string; type: CType; value: number; attribute: AttributeId; keywords: string }

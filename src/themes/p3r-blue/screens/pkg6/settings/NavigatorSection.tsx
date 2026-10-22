@@ -1,6 +1,6 @@
 /** 设置 · 助手（真实 components/navigator/NavigatorSettings.tsx） */
 import { useState } from 'react';
-import type { NavigatorPreset } from '@/types';
+import type { NavigatorPreset } from '@real/types';
 import { CfgBtn, CfgList, CfgRow, CfgSubhead, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
 import { PersonaEditor, Glyph } from '@blue/screens/overlays/NavigatorPersonaEditor.p3r';

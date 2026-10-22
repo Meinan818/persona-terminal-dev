@@ -1,12 +1,12 @@
 /** 工作包 4 · 组织共用件（真实 orgUi.tsx / MemberCard.tsx 的 p3 皮，蓝白）+ 通用 Coverflow（真实 TarotCoverflow / RosterWall 手感） */
 import { motion } from 'framer-motion';
 import { useRef, type CSSProperties, type ReactNode } from 'react';
-import type { OrgMember, OrgView } from '@/types';
+import type { OrgMember, OrgView } from '@real/types';
 import { P3R, slantClip, chamferClip } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
 import { cx } from '@blue/lib/cx';
-import { TAROT_BY_ID } from '@blue/adapters/pkg4-tarot';
-import { STATUS_PRESET, TITLE_BOOK } from '@blue/adapters/pkg4-org';
+import { TAROT_BY_ID } from '@blue/mock/pkg4-tarot';
+import { STATUS_PRESET, TITLE_BOOK } from '@blue/mock/pkg4-org';
 import { Arcana } from '../tarot';
 
 export const seatNo = (n: number) => String(n).padStart(2, '0');

@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P6Sheet } from '@pink/screens/pkg6/sheet';
 import { CfgBtn, CfgInput, CfgTextarea } from '@pink/screens/pkg6/cfg';
-import { NOTEBOOK } from '@pink/adapters/pkg6';
+import { NOTEBOOK } from '@pink/mock/pkg6';
 import { NotebookDeleteDialog } from './NavigatorNotebookConfirm.p3r';
 import { useToast } from '@pink/kit';
 import { cx } from '@pink/lib/cx';

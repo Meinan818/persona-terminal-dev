@@ -10,7 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, useEscape } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { MOCK_ACH_UNLOCK } from '@pink/adapters/pkg1';
+import { MOCK_ACH_UNLOCK } from '@pink/mock/pkg1';
 import { useAutoClose, CrestP3, TriBurst, LILAC_MID, LILAC_PALE, cyanA, TRI_CLIP, type BurstPiece } from '@pink/screens/pkg1/fxbits';
 import UnlockChain from './UnlockCutIn.p3r';
 

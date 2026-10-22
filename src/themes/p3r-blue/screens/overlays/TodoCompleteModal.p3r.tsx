@@ -10,7 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@blue/registry/types';
 import { Portal, useEscape } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
-import { MOCK_TODO_DONE } from '@blue/adapters/pkg1';
+import { MOCK_TODO_DONE } from '@blue/mock/pkg1';
 import { useAutoClose, ShatterCheckP3, TriBurst, MusicalNotes, TwinTicks, LILAC_MID, LILAC_PALE, cyanA, type BurstPiece } from '@blue/screens/pkg1/fxbits';
 
 const CHECK_BURST: BurstPiece[] = [

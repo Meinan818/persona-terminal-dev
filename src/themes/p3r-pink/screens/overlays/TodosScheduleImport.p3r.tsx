@@ -3,10 +3,10 @@
  * 说明（带星期 → 按周重复；没有星期 → 每日；点数默认 +1）；「统一归入：」五维；条目逐条勾选（事项 / 星期 / 时间）；取消 / 导入 N 项。
  */
 import { useEffect, useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Check, P3Segment, P3Sheet, P3Tag, useToast, P3R, slantClip } from '@pink/kit';
-import { ATTR_IDS, ATTR_NAMES, SCHEDULE_ITEMS } from '@pink/adapters/pkg2';
+import { ATTR_IDS, ATTR_NAMES, SCHEDULE_ITEMS } from '@pink/mock/pkg2';
 import { WEEK_LABELS } from '@pink/screens/pkg2/common';
 
 export default function TodosScheduleImport({ open, onClose, onImport }: OverlayProps & { onImport?: (n: number) => void }) {

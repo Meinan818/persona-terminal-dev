@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 成就页（真实 src/pages/Achievements.tsx · p3 分支 + components/codex/**）粉白 P3R 重制。
  * 页头「成就·技能」+ LB/RB 斜块 Tab：成就 / 技能 / 图鉴（内容左右滑入 18px）。
  *  成就：筛选循环按钮（全部/未完成/已完成）+「添加成就」；成就斜卡（徽记·标题·描述·进度条·「已达成，点击解锁 ✨」·「解锁于…」玫红底·隐藏 ？？？·编辑铅笔 / 删除）；
@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
 import type { PageProps } from '@pink/registry/types';
-import type { Achievement, AttributeId, Skill } from '@/types';
+import type { Achievement, AttributeId, Skill } from '@real/types';
 import { P3PageHeader, P3LRTabs, P3Segment, P3Button, P3OnOff, P3Empty, P3Progress, SectionMark, P3R, slantClip, tickClip, IconEdit, IconTrash, IconPlus, useToast } from '@pink/kit';
 import { P3Stagger, P3StaggerItem } from '@pink/fx';
 import { navigate } from '@pink/shell/shellBus';
@@ -23,10 +23,9 @@ import { SkillDeleteView } from '@pink/screens/overlays/AchievementsSkillDeleteC
 import { TarotFace, TarotFlipViewView, suitOf } from '@pink/screens/overlays/TarotFlipView.p3r';
 import { SeasonCard, SeasonFlipView } from '@pink/screens/overlays/FlipCardView.p3r';
 import { UnlockCutIn } from '@pink/screens/pkg5/UnlockCutIn';
-import { ACHIEVEMENTS, ATTRIBUTES, ATTR_IDS, ATTR_NAMES, HIDDEN_IDS, SEALED_IDS, SEASON_COLLECTED, SEASON_EXTRAS, SKILLS, SKILL_BONUS_MULT_CAP, TAROT_COLLECTED, achievementProgress } from '@pink/adapters/pkg5';
-import { useRealCodex, useCodexCollections, useAchievementProgressMap, useTarotCollectedMap, useSeasonCollectedMap } from '@pink/adapters/pkg5';
-import { P5_MAJOR, P5_MINOR, type P5TarotCard } from '@pink/adapters/pkg5-tarot';
-import { P5_SEASON_PAGES, type P5SeasonMark } from '@pink/adapters/pkg5-season';
+import { ACHIEVEMENTS, ATTRIBUTES, ATTR_IDS, ATTR_NAMES, HIDDEN_IDS, SEALED_IDS, SEASON_COLLECTED, SEASON_EXTRAS, SKILLS, SKILL_BONUS_MULT_CAP, TAROT_COLLECTED, achievementProgress } from '@pink/mock/pkg5';
+import { P5_MAJOR, P5_MINOR, type P5TarotCard } from '@pink/mock/pkg5-tarot';
+import { P5_SEASON_PAGES, type P5SeasonMark } from '@pink/mock/pkg5-season';
 
 type Filter = 'all' | 'locked' | 'unlocked';
 const CYCLE: Filter[] = ['all', 'locked', 'unlocked'];
@@ -34,10 +33,9 @@ const CYCLE: Filter[] = ['all', 'locked', 'unlocked'];
 /* ───────── 成就 ───────── */
 function AchievementCard({ a, onUnlock, onEdit, onDelete, tiers, stamping }: { a: Achievement; onUnlock: () => void; onEdit: () => void; onDelete: () => void; tiers?: { count: number; idx: number; set: (i: number) => void }; stamping?: boolean }) {
   const anim = useBoldness();
-  const progressMap = useAchievementProgressMap();
   const hidden = HIDDEN_IDS.has(a.id) && !a.unlocked;
   const face = hidden ? { title: '？？？', description: '隐藏成就', icon: '？' } : a;
-  const progress = progressMap[a.id] ?? 0;
+  const progress = achievementProgress[a.id] ?? 0;
   const canUnlock = !a.unlocked && progress >= a.condition.value && !hidden;
   const sealed = SEALED_IDS.has(a.id);
   const custom = a.id.startsWith('custom_');
@@ -91,8 +89,7 @@ function AchievementCard({ a, onUnlock, onEdit, onDelete, tiers, stamping }: { a
 function AchievementsTab({ empty, autoFx }: { empty: boolean; autoFx: boolean }) {
   const toast = useToast();
   const anim = useBoldness();
-  const realCodex = useRealCodex();
-  const [list, setList] = useState<Achievement[]>(empty ? [] : (realCodex.achievements.length ? realCodex.achievements : ACHIEVEMENTS));
+  const [list, setList] = useState<Achievement[]>(empty ? [] : ACHIEVEMENTS);
   const [filter, setFilter] = useState<Filter>('all');
   const [form, setForm] = useState<{ open: boolean; editing: Achievement | null }>({ open: false, editing: null });
   const [del, setDel] = useState<string | null>(null);
@@ -247,7 +244,7 @@ function SkillsTab({ empty }: { empty: boolean }) {
 }
 
 /* ───────── 图鉴 ───────── */
-const slots = (cards: P5TarotCard[], tarotMap: Record<string, { upright: { count: number }; reversed: { count: number } }>) => cards.reduce((t, c) => t + (tarotMap[c.id]?.upright.count ? 1 : 0) + (tarotMap[c.id]?.reversed.count ? 1 : 0), 0);
+const slots = (cards: P5TarotCard[]) => cards.reduce((t, c) => t + (TAROT_COLLECTED[c.id]?.upright.count ? 1 : 0) + (TAROT_COLLECTED[c.id]?.reversed.count ? 1 : 0), 0);
 function TarotCell({ card, onOpen, empty }: { card: P5TarotCard; onOpen: (c: P5TarotCard) => void; empty: boolean }) {
   const e = empty ? undefined : TAROT_COLLECTED[card.id];
   const up = !!e?.upright.count; const rev = !!e?.reversed.count;
@@ -263,12 +260,11 @@ function TarotCell({ card, onOpen, empty }: { card: P5TarotCard; onOpen: (c: P5T
   );
 }
 function TarotBook({ empty }: { empty: boolean }) {
-  const tarotMap = useTarotCollectedMap();
   const [open, setOpen] = useState<P5TarotCard | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const show = (c: P5TarotCard) => { setOpen(c); setIsOpen(true); };
-  const major = empty ? 0 : slots(P5_MAJOR, tarotMap);
-  const minor = empty ? 0 : slots(P5_MINOR, tarotMap);
+  const major = empty ? 0 : slots(P5_MAJOR);
+  const minor = empty ? 0 : slots(P5_MINOR);
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <section>
@@ -285,7 +281,7 @@ function TarotBook({ empty }: { empty: boolean }) {
               <div key={suit} className="min-w-0">
                 <div className="mb-2 flex items-baseline justify-between gap-2">
                   <h4 className="px-3 py-0.5 text-[14px] font-black" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(5) }}><span style={{ color: P3R.blue }}>{suitOf(suit)?.glyph}</span> {suitOf(suit)?.name}</h4>
-                  <span className="font-cond text-[12px]" style={{ color: P3R.inkSoft }}>{empty ? 0 : slots(cards, tarotMap)} / 28</span>
+                  <span className="font-cond text-[12px]" style={{ color: P3R.inkSoft }}>{empty ? 0 : slots(cards)} / 28</span>
                 </div>
                 <div className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-7">{cards.map((c) => <TarotCell key={c.id} card={c} onOpen={show} empty={empty} />)}</div>
               </div>
@@ -298,11 +294,10 @@ function TarotBook({ empty }: { empty: boolean }) {
   );
 }
 function SeasonBook({ empty }: { empty: boolean }) {
-  const seasonMap = useSeasonCollectedMap();
   const [year, setYear] = useState(2026);
   const pages = P5_SEASON_PAGES[year];
   const all = pages.flatMap((p) => p.marks);
-  const isCol = (m: P5SeasonMark) => !empty && !!seasonMap[m.date];
+  const isCol = (m: P5SeasonMark) => !empty && !!SEASON_COLLECTED[m.date];
   const collected = all.filter(isCol).length;
   const [page, setPage] = useState(2);
   const pager = useRef<HTMLDivElement>(null);

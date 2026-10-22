@@ -14,7 +14,7 @@ import type { PageProps } from '@pink/registry/types';
 import { P3Button, P3R, slantClip, GhostWords, TitlePeriod } from '@pink/kit';
 import { PeriodMark } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
-import { MOCK_CRASH, MOCK_DIAG } from '@pink/adapters/pkg1';
+import { MOCK_CRASH, MOCK_DIAG } from '@pink/mock/pkg1';
 import { TRI_CLIP } from '@pink/screens/pkg1/fxbits';
 
 type BootState = 'loading' | 'stuck' | 'error' | 'crash' | 'chunk';

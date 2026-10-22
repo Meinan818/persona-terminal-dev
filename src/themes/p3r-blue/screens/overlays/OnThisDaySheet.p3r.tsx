@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3R, slantClip, P3Tag } from '@blue/kit';
 import { navigate } from '@blue/shell/shellBus';
-import { ATTR_NAMES, MOCK_ON_THIS_DAY, onThisDayLabel } from '@blue/adapters/pkg1';
+import { ATTR_NAMES, MOCK_ON_THIS_DAY, onThisDayLabel } from '@blue/mock/pkg1';
 
 export const OnThisDaySheetP3 = ({ isOpen, onClose, tarot = true, loading = false }: { isOpen: boolean; onClose: () => void; tarot?: boolean; loading?: boolean }) => {
   const v = MOCK_ON_THIS_DAY;

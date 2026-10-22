@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react';
 import { CfgBtn, CfgSelect, CfgSlider, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
-import { BGM_MAX_TRACKS, BGM_THEME_LABEL, BGM_TRACKS, type BgmTrack } from '@pink/adapters/pkg6';
+import { BGM_MAX_TRACKS, BGM_THEME_LABEL, BGM_TRACKS, type BgmTrack } from '@pink/mock/pkg6';
 import { BgmDeleteDialog } from '@pink/screens/overlays/BgmSettingsDeleteConfirm.p3r';
 import { useToast } from '@pink/kit';
 import { cx } from '@pink/lib/cx';

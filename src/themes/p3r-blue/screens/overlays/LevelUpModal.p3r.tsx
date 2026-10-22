@@ -12,7 +12,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@blue/registry/types';
 import { Portal, useEscape, ShatteredStar } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
-import { MOCK_LEVELUP, MAX_LEVEL } from '@blue/adapters/pkg1';
+import { MOCK_LEVELUP, MAX_LEVEL } from '@blue/mock/pkg1';
 import { useAutoClose, cyanA } from '@blue/screens/pkg1/fxbits';
 
 const SHARDS = Array.from({ length: 10 }, (_, i) => {

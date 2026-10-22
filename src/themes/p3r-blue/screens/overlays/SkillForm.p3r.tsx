@@ -4,10 +4,10 @@
  */
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
-import type { AttributeId, Skill } from '@/types';
+import type { AttributeId, Skill } from '@real/types';
 import { P3Sheet, P3Input, P3Select, P3Button, P3Stepper, P3Field, P3R, slantClip } from '@blue/kit';
 import { useToast } from '@blue/kit';
-import { ATTR_IDS, ATTR_NAMES, LEVEL_MAX, SKILLS } from '@blue/adapters/pkg5';
+import { ATTR_IDS, ATTR_NAMES, LEVEL_MAX, SKILLS } from '@blue/mock/pkg5';
 
 export interface SkillFormValue { name: string; requiredAttribute: AttributeId; requiredLevel: number; bonusMultiplier: number }
 export const effectText = (attr: AttributeId, m: number) => `${ATTR_NAMES[attr]}积累额外提升 ${Math.round((m - 1) * 100)}%`;

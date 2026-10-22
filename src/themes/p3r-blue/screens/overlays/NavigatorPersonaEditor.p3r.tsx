@@ -5,10 +5,10 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
-import type { NavigatorPreset } from '@/types';
+import type { NavigatorPreset } from '@real/types';
 import { P6Sheet } from '@blue/screens/pkg6/sheet';
 import { CfgInput, CfgTextarea, CfgMsg } from '@blue/screens/pkg6/cfg';
-import { GLYPH_PATHS, TONE_WORDS } from '@blue/adapters/pkg6';
+import { GLYPH_PATHS, TONE_WORDS } from '@blue/mock/pkg6';
 import { updateSettings, getSettings } from '@blue/screens/pkg6/settingsStore';
 import { CropDialog } from './ImageCropDialog.p3r';
 import { P3Button, useToast } from '@blue/kit';

@@ -11,7 +11,7 @@ import type { OverlayProps } from '@pink/registry/types';
 import { Portal, useEscape, P3R, slantClip } from '@pink/kit';
 import { PetalBurst } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
-import { DANMAKU } from '@pink/adapters/pkg2';
+import { DANMAKU } from '@pink/mock/pkg2';
 import { DanmakuLayer, DarkStage } from '@pink/screens/pkg2/cutins';
 import DanmakuCompose from './DanmakuCompose.p3r';
 

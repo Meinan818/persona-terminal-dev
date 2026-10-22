@@ -6,7 +6,7 @@
  *   · 问候副题池 / 时段 = DashboardP3 SUBTEXTS / getSlot
  * 类型只 import type。
  */
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 
 export const ATTR_IDS: AttributeId[] = ['knowledge', 'guts', 'dexterity', 'kindness', 'charm'];
 export const LEVEL_THRESHOLDS = [0, 40, 200, 350, 500, 750, 1000, 1300, 1650, 2100];

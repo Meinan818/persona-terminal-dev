@@ -9,8 +9,7 @@ import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Segment, P3Button, P3R, slantClip, P3Speech } from '@blue/kit';
 import { useAIStream, AIThinking, AIText, type AIFail, type AIPhase } from '@blue/fx';
 import { BarRow, MonthNav, TrophyGlyph } from '@blue/screens/pkg5/ui';
-import { CNY, SETTLE_ADVICE, SETTLE_REFLECTION, catMeta, fmtMoney, fmtSigned, ledgerDateLabel } from '@blue/adapters/pkg5';
-import { useLocalLedgerSettlement } from '@/themes/ledgerSettlement';
+import { CNY, SETTLE_ADVICE, SETTLE_REFLECTION, catMeta, fmtMoney, fmtSigned } from '@blue/mock/pkg5';
 
 const Stat = ({ label, main, sub, tone }: { label: string; main: string; sub?: string; tone?: 'up' | 'down' }) => (
   <div className="min-w-0 px-4 py-2.5" style={{ clipPath: slantClip(10), background: 'var(--p3r-row)' }}>
@@ -22,12 +21,9 @@ const Stat = ({ label, main, sub, tone }: { label: string; main: string; sub?: s
 
 const AI_TEXT = `${SETTLE_REFLECTION.replace(/\*\*/g, '')}\n\n伊戈尔的提点：\n${SETTLE_ADVICE.map((a) => `✦ ${a}`).join('\n')}`;
 
-function IgorReading({ fail, phase, k, localText }: { fail?: AIFail; phase?: AIPhase; k: string; localText?: string }) {
-  const ai = useAIStream({ text: localText ?? AI_TEXT, fail: localText ? undefined : fail, initialPhase: localText ? 'done' : phase ?? 'idle', auto: !localText && (!phase || phase === 'idle') });
+function IgorReading({ fail, phase, k }: { fail?: AIFail; phase?: AIPhase; k: string }) {
+  const ai = useAIStream({ text: AI_TEXT, fail, initialPhase: phase ?? 'idle', auto: !phase || phase === 'idle' });
   useEffect(() => () => ai.abort(), []); // eslint-disable-line react-hooks/exhaustive-deps
-  if (localText) {
-    return <P3Speech speaker="伊戈尔" more={false}><AIText ai={ai} className="text-[14px]" /></P3Speech>;
-  }
   if (ai.phase === 'idle' || ai.phase === 'thinking') {
     return <div className="flex justify-center py-6" key={k}><AIThinking label="伊戈尔正凝视着你的账目……" sub="THINKING · 心相结算" /></div>;
   }
@@ -67,34 +63,23 @@ function IgorReading({ fail, phase, k, localText }: { fail?: AIFail; phase?: AIP
   );
 }
 
-export function LedgerSettleSheetView({ open, onClose, state, fail, phase, initialPeriod }: { open: boolean; onClose: () => void; state?: string; fail?: AIFail; phase?: AIPhase; initialPeriod?: string }) {
+export function LedgerSettleSheetView({ open, onClose, state, fail, phase }: { open: boolean; onClose: () => void; state?: string; fail?: AIFail; phase?: AIPhase }) {
   const [scope, setScope] = useState<'month' | 'week'>('month');
   const [offset, setOffset] = useState(0);
-  const live = useLocalLedgerSettlement(open, initialPeriod, scope, offset);
-  const liveMode = Boolean(initialPeriod);
-  const forcedEmpty = state === 'empty';
-  const empty = forcedEmpty || (liveMode ? !live || live.empty : offset < -2);
-  const label = live?.data.label ?? (scope === 'month' ? `2026年${10 + offset}月` : offset === 0 ? '10/19 – 10/25' : `10/${19 + offset * 7} – 10/${25 + offset * 7}`);
-  const exp = live?.data.totalExpense ?? (scope === 'month' ? 4555.5 : 276.5);
-  const inc = live?.data.totalIncome ?? (scope === 'month' ? 7300 : 800);
-  const cats = live?.data.byCat.map(c => [c.key, c.amount] as const) ?? (scope === 'month' ? ([['shopping', 2399], ['home', 1800], ['food', 138.5], ['study', 129], ['fun', 45]] as const) : ([['study', 129], ['food', 102.5], ['fun', 45]] as const));
-  const priciestEntry = live?.data.extremes.priciestEntry;
-  const priciestDay = live?.data.extremes.priciestDay;
-  const cheapestDay = live?.data.extremes.cheapestDay;
-  const expected = live?.data.expectedDailyAvg;
-  const localText = live ? `${live.reflection}\n\n伊戈尔的提点：\n${live.advice.map((a) => `✦ ${a}`).join('\n')}` : undefined;
-  const loading = state === 'loading' || (liveMode && !!live?.loading);
+  const empty = state === 'empty' || offset < -2;
+  const label = scope === 'month' ? `2026年${10 + offset}月` : offset === 0 ? '10/19 – 10/25' : `10/${19 + offset * 7} – 10/${25 + offset * 7}`;
+  const exp = scope === 'month' ? 4555.5 : 276.5;
+  const inc = scope === 'month' ? 7300 : 800;
+  const cats = scope === 'month' ? ([['shopping', 2399], ['home', 1800], ['food', 138.5], ['study', 129], ['fun', 45]] as const) : ([['study', 129], ['food', 102.5], ['fun', 45]] as const);
   return (
     <P3Sheet open={open} onClose={onClose} title="心相结算" en="SETTLEMENT" size="tall">
       <div className="flex min-w-0 flex-col gap-3 pt-1">
         <P3Segment value={scope} onChange={(v) => { setScope(v as 'month' | 'week'); setOffset(0); }} items={[{ id: 'month', label: '按月' }, { id: 'week', label: '按周' }]} />
-        <MonthNav label={label} onPrev={() => setOffset((o) => o - 1)} onNext={() => setOffset((o) => o + 1)} nextDisabled={liveMode ? !live?.canNext : offset >= 0} />
-        {liveMode && live?.readError && <div role="alert" className="px-4 py-2 text-[12px] font-black" style={{ background: 'rgb(var(--p3r-magenta-rgb) / 0.12)', color: 'var(--p3r-coral-ink)', clipPath: slantClip(8) }}>{live.readError}</div>}
-        {loading && <div className="py-3 text-center text-[12px] font-bold" style={{ color: P3R.grey }}>正在读取本地账目……</div>}
-        {!empty && offset === 0 && scope === 'month' && (!liveMode || live?.bonus || live?.challenge != null) && (
+        <MonthNav label={label} onPrev={() => setOffset((o) => o - 1)} onNext={() => setOffset((o) => o + 1)} nextDisabled={offset >= 0} />
+        {!empty && offset === 0 && scope === 'month' && (
           <div className="flex flex-col gap-2">
-            {(liveMode ? live?.challenge != null : true) && <div className="px-4 py-2.5 text-center text-[14px] font-black" style={{ background: 'var(--p3r-claim)', color: 'var(--p3r-mulberry)', clipPath: slantClip(10) }}><TrophyGlyph /> 省钱挑战达成！省下 {CNY}{fmtMoney(liveMode ? live?.challenge ?? 0 : 520)} · +10 SP</div>}
-            {(liveMode ? live?.bonus : true) && <div className="relative px-4 py-2.5 text-center text-[14px] font-black" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(10) }}>✦ 本月不超预算 · +10 SP</div>}
+            <div className="px-4 py-2.5 text-center text-[14px] font-black" style={{ background: 'var(--p3r-claim)', color: 'var(--p3r-mulberry)', clipPath: slantClip(10) }}><TrophyGlyph /> 省钱挑战达成！省下 {CNY}520 · +10 SP</div>
+            <div className="relative px-4 py-2.5 text-center text-[14px] font-black" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(10) }}>✦ 本月不超预算 · +10 SP</div>
           </div>
         )}
         <div className="grid grid-cols-3 gap-2 text-center">
@@ -110,15 +95,15 @@ export function LedgerSettleSheetView({ open, onClose, state, fail, phase, initi
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <Stat label="最贵一笔" main={priciestEntry ? `${CNY}${fmtMoney(priciestEntry.amount)}` : liveMode ? '暂无' : `${CNY}2,399`} sub={priciestEntry?.note ?? (liveMode ? undefined : '降噪耳机')} />
-              <Stat label="花最多的一天" main={priciestDay ? `${CNY}${fmtMoney(priciestDay.amount)}` : liveMode ? '暂无' : `${CNY}2,399`} sub={priciestDay ? ledgerDateLabel(priciestDay.date) : liveMode ? undefined : '10月15日'} tone="up" />
-              <Stat label="花最少的一天" main={cheapestDay ? `${CNY}${fmtMoney(cheapestDay.amount)}` : liveMode ? '暂无' : `${CNY}6`} sub={cheapestDay ? ledgerDateLabel(cheapestDay.date) : liveMode ? undefined : '10月20日'} tone="down" />
-              <Stat label="日均消费" main={`${CNY}${fmtMoney(live?.data.actualDailyAvg ?? (scope === 'month' ? 227.8 : 39.5))}`} sub={scope === 'month' ? (expected != null ? `预期 ${CNY}${fmtMoney(expected)} · 共 ${live?.data.days ?? 20} 天` : '未设预算') : `共 ${live?.data.days ?? 7} 天`} tone={scope === 'month' && expected != null && (live?.data.actualDailyAvg ?? 0) > expected ? 'up' : undefined} />
+              <Stat label="最贵一笔" main={`${CNY}2,399`} sub="降噪耳机" />
+              <Stat label="花最多的一天" main={`${CNY}2,399`} sub="10月15日" tone="up" />
+              <Stat label="花最少的一天" main={`${CNY}6`} sub="10月20日" tone="down" />
+              <Stat label="日均消费" main={`${CNY}${scope === 'month' ? '227.8' : '39.5'}`} sub={scope === 'month' ? `预期 ${CNY}96.8 · 共 20 天` : '共 7 天'} tone={scope === 'month' ? 'up' : undefined} />
             </div>
             <div className="flex flex-col gap-2">
               {cats.map(([k, a]) => <BarRow key={k} label={catMeta(k).label} amount={a} max={cats[0][1]} color={catMeta(k).color} right={`${CNY}${fmtMoney(a)}`} />)}
             </div>
-            <IgorReading key={`${scope}-${offset}-${liveMode ? live?.data.rangeStart : 'mock'}`} k={`${scope}-${offset}`} fail={liveMode ? undefined : fail} phase={!liveMode && scope === 'month' && offset === 0 ? phase : undefined} localText={localText} />
+            <IgorReading key={`${scope}-${offset}`} k={`${scope}-${offset}`} fail={fail} phase={scope === 'month' && offset === 0 ? phase : undefined} />
           </>
         )}
       </div>

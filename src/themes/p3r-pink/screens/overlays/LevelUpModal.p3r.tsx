@@ -11,7 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, useEscape, ShatteredStar } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { MOCK_LEVELUP, MAX_LEVEL } from '@pink/adapters/pkg1';
+import { MOCK_LEVELUP, MAX_LEVEL } from '@pink/mock/pkg1';
 import { useAutoClose, cyanA } from '@pink/screens/pkg1/fxbits';
 
 export interface LevelUpProps { isOpen: boolean; onClose: () => void; attributeName: string; newLevel: number; masteryStars?: number; capped?: boolean }

@@ -5,11 +5,11 @@
  * 演示：?attrs=kindness,guts（默认两项）；?attrs=charm 单项。
  */
 import { AnimatePresence, motion } from 'framer-motion';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, P3Button, P3R, slantClip, useEscape } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { ATTR_NAMES, MOCK_DECAYED } from '@pink/adapters/pkg1';
+import { ATTR_NAMES, MOCK_DECAYED } from '@pink/mock/pkg1';
 import { WaveGlyph } from '@pink/screens/pkg1/DashboardParts';
 
 export const DecayModal = ({ attrs, onClose }: { attrs: AttributeId[]; onClose: () => void }) => {

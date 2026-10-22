@@ -7,7 +7,7 @@ import type { OverlayProps } from '@pink/registry/types';
 import { P6Sheet } from '@pink/screens/pkg6/sheet';
 import { CfgInput, CfgToggle, CfgBtn } from '@pink/screens/pkg6/cfg';
 import { getSettings, updateSettings, useSettings, type MockSettings } from '@pink/screens/pkg6/settingsStore';
-import { AGGREGATORS, MODEL_CATALOG, PROVIDERS, type ModelEntry } from '@pink/adapters/pkg6';
+import { AGGREGATORS, MODEL_CATALOG, PROVIDERS, type ModelEntry } from '@pink/mock/pkg6';
 import { cx } from '@pink/lib/cx';
 
 export type ModelPickerMode = 'fast' | 'deliberate' | 'assistant' | 'vision' | 'audio';

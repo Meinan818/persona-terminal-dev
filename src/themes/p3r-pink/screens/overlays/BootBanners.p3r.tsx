@@ -11,7 +11,7 @@ import { useState, type ReactNode } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, P3R, slantClip } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { MOCK_DIAG } from '@pink/adapters/pkg1';
+import { MOCK_DIAG } from '@pink/mock/pkg1';
 import { TRI_CLIP } from '@pink/screens/pkg1/fxbits';
 
 const Shell = ({ open, children, tone }: { open: boolean; children: ReactNode; tone: 'ink' | 'amber' }) => {

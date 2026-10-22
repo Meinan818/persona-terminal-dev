@@ -11,7 +11,7 @@ import type { OverlayProps } from '@blue/registry/types';
 import { Portal, useEscape, P3R, slantClip } from '@blue/kit';
 import { BubbleBurst } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
-import { DANMAKU } from '@blue/adapters/pkg2';
+import { DANMAKU } from '@blue/mock/pkg2';
 import { DanmakuLayer, DarkStage } from '@blue/screens/pkg2/cutins';
 import DanmakuCompose from './DanmakuCompose.p3r';
 

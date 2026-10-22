@@ -5,12 +5,12 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import type { OrgView } from '@/types';
+import type { OrgView } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3IconButton, P3Tag, P3Loading, P3R, slantClip, useToast } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
-import { ATTR_NAMES, ATTR_COLOR } from '@blue/adapters/pkg4-tarot';
-import { buildView, RAID, RAID_MASKS, RAID_WEAK_MULT, RAID_FULL_MOON_MULT, RAID_XP_PER_HITTER } from '@blue/adapters/pkg4-org';
+import { ATTR_NAMES, ATTR_COLOR } from '@blue/mock/pkg4-tarot';
+import { buildView, RAID, RAID_MASKS, RAID_WEAK_MULT, RAID_FULL_MOON_MULT, RAID_XP_PER_HITTER } from '@blue/mock/pkg4-org';
 import { displayCodename } from '@blue/screens/pkg4/org/common';
 
 export type RaidDemo = 'open' | 'struck' | 'day' | 'defeated' | 'after' | 'nobattle' | 'loading' | 'failed';

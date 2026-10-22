@@ -1,7 +1,7 @@
 /**
  * P6 工作包假数据：设置 / 助手 / 同步 / 全局基座。类型只 import type 自真实仓库。
  */
-import type { AttributeId, KeywordRule, NavigatorPreset, NotifContentType, NotifSlot, SummaryPromptPreset, ThemeType, LedgerExpenseType, LedgerIncomeType } from '@/types';
+import type { AttributeId, KeywordRule, NavigatorPreset, NotifContentType, NotifSlot, SummaryPromptPreset, ThemeType, LedgerExpenseType, LedgerIncomeType } from '@real/types';
 
 export const ATTRS: { id: AttributeId; icon: string; defaultLabel: string; en: string }[] = [
   { id: 'knowledge', icon: '知', defaultLabel: '知识', en: 'KNOWLEDGE' },

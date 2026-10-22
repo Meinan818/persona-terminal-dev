@@ -6,11 +6,11 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Field, P3Input, P3Sheet, P3Stepper, useToast, P3R, slantClip, SelectWedge, IconCheck, IconPlus } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
-import { ATTR_IDS, useActionsData } from '@pink/adapters/pkg2';
+import { ATTR_IDS, ATTR_NAMES, WEEKLY_GOAL } from '@pink/mock/pkg2';
 
 type GT = 'activity_count' | 'todo_count' | 'attr_points' | 'total_points';
 export interface GoalItem { type: GT; attribute?: AttributeId; target: number; current: number }
@@ -22,7 +22,6 @@ const ALL: GT[] = ['activity_count', 'todo_count', 'attr_points', 'total_points'
 export default function GoalSetupForm({ open, onClose, params, initial, initialReward, onSubmit }: OverlayProps & { initial?: GoalItem[]; initialReward?: string; onSubmit?: (items: GoalItem[], reward: string) => void }) {
   const toast = useToast();
   const anim = useBoldness();
-  const { WEEKLY_GOAL, ATTR_NAMES } = useActionsData();
   const edit = params?.get('variant') === 'edit';
   const [items, setItems] = useState<Record<GT, GoalItem>>(() => Object.fromEntries(ALL.map((t) => [t, { type: t, attribute: t === 'activity_count' || t === 'attr_points' ? 'knowledge' : undefined, target: DEF[t], current: 0 }])) as Record<GT, GoalItem>);
   const [sel, setSel] = useState<Set<GT>>(new Set());

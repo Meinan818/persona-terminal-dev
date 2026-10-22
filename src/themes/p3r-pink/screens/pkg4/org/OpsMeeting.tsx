@@ -1,13 +1,13 @@
 /** 真实：src/components/org/OpsSection.tsx（作战）+ src/components/org/MeetingSection.tsx（周日会议），粉白 p3 皮 */
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import type { OrgOperation, OrgView } from '@/types';
+import type { OrgOperation, OrgView } from '@real/types';
 import { P3R, P3Button, P3Input, P3Progress, P3Loading, P3Error, slantClip, useToast } from '@pink/kit';
 import { useLowMotion } from '@pink/lib/prefs';
 import { navigate } from '@pink/shell/shellBus';
-import { ATTR_NAMES } from '@pink/adapters/pkg4-tarot';
-import { OP_HISTORY, OP_KIND_LABEL, OP_STATE, OPS, RESULT_LABEL, POSTS } from '@pink/adapters/pkg4-org';
-import { shiftKey, TODAY } from '@pink/adapters/pkg4-astro';
+import { ATTR_NAMES } from '@pink/mock/pkg4-tarot';
+import { OP_HISTORY, OP_KIND_LABEL, OP_STATE, OPS, RESULT_LABEL, POSTS } from '@pink/mock/pkg4-org';
+import { shiftKey, TODAY } from '@pink/mock/pkg4-astro';
 import { OpsDialogs, type OpsStep } from '@pink/screens/overlays/OpsDialogs.p3r';
 import { OpCreate } from '@pink/screens/overlays/OpCreateSheet.p3r';
 import { MeChip, displayCodename, panel } from './common';

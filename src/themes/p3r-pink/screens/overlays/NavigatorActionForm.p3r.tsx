@@ -8,11 +8,11 @@
  * 「写好了」「取消」、关闭。外观：P3R 菜单式竖排幽灵字 + 黄色属性块。
  */
 import { useEffect, useState } from 'react';
-import type { AttributeId, LedgerExpenseType, LedgerIncomeType } from '@/types';
+import type { AttributeId, LedgerExpenseType, LedgerIncomeType } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P6Sheet } from '@pink/screens/pkg6/sheet';
 import { CfgInput } from '@pink/screens/pkg6/cfg';
-import { ACTION_META, ATTRS, CATEGORY_META, INCOME_META, type DraftKind } from '@pink/adapters/pkg6';
+import { ACTION_META, ATTRS, CATEGORY_META, INCOME_META, type DraftKind } from '@pink/mock/pkg6';
 import { attrLabel, useSettings } from '@pink/screens/pkg6/settingsStore';
 import { P3Button, useToast } from '@pink/kit';
 import { cx } from '@pink/lib/cx';

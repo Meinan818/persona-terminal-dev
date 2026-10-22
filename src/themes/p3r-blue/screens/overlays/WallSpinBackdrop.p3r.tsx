@@ -8,7 +8,7 @@ import type { OverlayProps } from '@blue/registry/types';
 import { P3R, Portal, slantClip } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
 import { AlbumWall, type FriendItem } from '@blue/screens/pkg3/wall';
-import { PK3_CONFIDANTS, PK3_FRIENDS } from '@blue/adapters/pkg3';
+import { PK3_CONFIDANTS, PK3_FRIENDS } from '@blue/mock/pkg3';
 import '@blue/screens/pkg3/pkg3.css';
 
 const STARS = Array.from({ length: 18 }, (_, i) => ({ x: (i * 53) % 100, y: (i * 37) % 70 + 6, s: 8 + (i % 4) * 4, d: (i % 6) * 0.4, rose: i % 3 !== 0 }));
@@ -16,7 +16,7 @@ const STARS = Array.from({ length: 18 }, (_, i) => ({ x: (i * 53) % 100, y: (i *
 export default function WallSpinBackdrop({ open, onClose }: OverlayProps) {
   const bold = useBoldness();
   if (!open) return null;
-  const friends: FriendItem[] = PK3_FRIENDS;
+  const friends: FriendItem[] = PK3_FRIENDS.map((f) => ({ kind: 'friend', ...f }));
   const noop = () => {};
   return (
     <Portal>

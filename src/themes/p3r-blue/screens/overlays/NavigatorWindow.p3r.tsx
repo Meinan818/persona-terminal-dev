@@ -18,7 +18,7 @@ import { useAIStream, AIThinking, type AIFail, type AIPhase } from '@blue/fx';
 import { useLowMotion, usePrefs } from '@blue/lib/prefs';
 import { cx } from '@blue/lib/cx';
 import { navigate } from '@blue/shell/shellBus';
-import { ACTION_META, CHAT_CARD_DEMO, CHAT_SEED, PICKER_TODOS, type ChatMsg, type DraftKind } from '@blue/adapters/pkg6';
+import { ACTION_META, CHAT_CARD_DEMO, CHAT_SEED, PICKER_TODOS, type ChatMsg, type DraftKind } from '@blue/mock/pkg6';
 import { activePreset, attrLabel, updateSettings, useSettings } from '@blue/screens/pkg6/settingsStore';
 import { P6Sheet } from '@blue/screens/pkg6/sheet';
 import { DateHud, WaterLayer, popVariants, sampleImg } from '@blue/screens/pkg6/compat';

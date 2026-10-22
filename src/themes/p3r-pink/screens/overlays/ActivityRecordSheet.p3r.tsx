@@ -4,27 +4,15 @@
  *       「分析关键词」→「✦ AI 分析」（⋯ AI 思考中）、挂愿望（可不选；挂上后会计入那个愿望的进度）、「关键词分析」+「调整点数」五维 Stepper、「保存记录」。
  * 直达：?variant=backdate（补录：带日期）；?step=analyzed（分析后）；?step=reading（读图中）；?step=ai（AI 思考中）。
  */
-import { useEffect, useState } from 'react';
-import type { AttributeId } from '@/types';
+import { useEffect, useRef, useState } from 'react';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Check, P3Sheet, P3Stepper, P3Textarea, useToast, P3R, slantClip, tickClip, IconClose } from '@pink/kit';
 import { AIThinking } from '@pink/fx';
-import { ATTR_IDS, KEYWORD_RESULT, analyzeActivity, analyzeActivityLocally, useActionsData } from '@pink/adapters/pkg2';
-import { MAX_IMAGES_PER_ACTIVITY, prepareActivityImage, type PreparedImage } from '@/utils/activityImages';
-import { extractActivitiesFromImage, type ActivityIntakeItem } from '@/utils/visionIntake';
-import { useAppStore } from '@/store';
+import { ATTR_IDS, ATTR_NAMES, KEYWORD_RESULT, SPARE_IMAGES, WISHES } from '@pink/mock/pkg2';
 import { MiniHead, Photo } from '@pink/screens/pkg2/common';
 
-export interface RecordSavePayload { description: string; points: Record<AttributeId, number>; important: boolean; images: PreparedImage[]; backdate?: string; wishId?: string }
-
-const pickFiles = (multiple = false, accept = 'image/*') => new Promise<File[]>((resolve) => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = accept;
-  input.multiple = multiple;
-  input.onchange = () => resolve(Array.from(input.files ?? []));
-  input.click();
-});
+export interface RecordSavePayload { description: string; points: Record<AttributeId, number>; important: boolean; images: string[]; backdate?: string; wishId?: string }
 
 /** 附件条小按钮（真实 AttachChip p3：斜切 6，active 玫红 / 否则 12% 玫红面） */
 const AttachChip = ({ icon, label, onClick, disabled, active }: { icon: string; label: string; onClick?: () => void; disabled?: boolean; active?: boolean }) => (
@@ -36,7 +24,6 @@ const AttachChip = ({ icon, label, onClick, disabled, active }: { icon: string; 
 
 /** 挂到愿望（真实 WishMountPicker）：横滑斜切 chip，单选可取消 */
 export function WishMountPicker({ value, onChange, compact }: { value?: string; onChange: (id: string | undefined) => void; compact?: boolean }) {
-  const { WISHES } = useActionsData();
   const active = WISHES.filter((w) => w.status === 'active' && !w.parentId);
   if (!active.length) return null;
   return (
@@ -59,77 +46,50 @@ export function WishMountPicker({ value, onChange, compact }: { value?: string; 
 
 export default function ActivityRecordSheet({ open, onClose, params, backdate, onSave }: OverlayProps & { backdate?: string | null; onSave?: (p: RecordSavePayload) => void }) {
   const toast = useToast();
-  const { ATTR_NAMES: realNames } = useActionsData();
-  const bd = backdate ?? (params?.get('variant') === 'backdate' ? new Date().toISOString().slice(0, 10) : null);
+  const bd = backdate ?? (params?.get('variant') === 'backdate' ? '2026-10-17' : null);
   const [desc, setDesc] = useState('');
   const [important, setImportant] = useState(false);
-  const [images, setImages] = useState<PreparedImage[]>([]);
+  const [images, setImages] = useState<string[]>([]);
   const [imgBusy, setImgBusy] = useState(false);
   const [shotBusy, setShotBusy] = useState(false);
   const [shotHint, setShotHint] = useState<string | null>(null);
-  const [shotOffer, setShotOffer] = useState<PreparedImage | null>(null);
-  const [shotCandidates, setShotCandidates] = useState<(ActivityIntakeItem & { on: boolean })[] | null>(null);
+  const [shotOffer, setShotOffer] = useState<string | null>(null);
+  const [shotCandidates, setShotCandidates] = useState<{ text: string; on: boolean }[] | null>(null);
   const [analyzed, setAnalyzed] = useState<Record<AttributeId, number> | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiReason, setAiReason] = useState<string | null>(null);
   const [wish, setWish] = useState<string | undefined>();
-  const readShot = async () => {
-    const [file] = await pickFiles(false);
-    if (!file) return;
+  const timers = useRef<number[]>([]);
+  const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  const readShot = () => {
     setShotBusy(true); setShotHint(null);
-    try {
-      const prepared = await prepareActivityImage(file);
-      const items = await extractActivitiesFromImage(prepared.dataUrl, useAppStore.getState().settings, realNames);
-      if (!items.length) {
-        setShotHint('这张截图里没读出可入档的事——换一张试试');
-        return;
-      }
-      setShotOffer(prepared);
-      setShotCandidates(items.map((item) => ({ ...item, on: true })));
-      setDesc(items.map((item) => item.text).join('；'));
-      setShotHint('已回填，勾掉不要的那几条，再点「分析关键词」给分');
-    } catch (error) {
-      setShotHint(error instanceof Error ? error.message : '读取失败，请换一张截图');
-    } finally {
+    later(() => {
       setShotBusy(false);
-    }
+      setShotCandidates([{ text: '跑步 5.2 公里，配速 6\'10"', on: true }, { text: '拉伸 15 分钟', on: true }, { text: '喝水 2L', on: false }]);
+      setShotOffer('chushu.webp');
+      setDesc('跑步 5.2 公里，配速 6\'10"；拉伸 15 分钟');
+      setShotHint('已回填，勾掉不要的那几条，再点「分析关键词」给分');
+    }, 1300);
   };
-  const ai = async () => {
+  const ai = () => {
     setAiBusy(true);
-    try {
-      const result = await analyzeActivity(desc);
-      setAnalyzed(result.points);
-      setAiReason(result.reason || null);
-    } catch (error) {
-      setAiReason(error instanceof Error ? error.message : 'AI 分析失败，请重试或手动调整点数');
-    } finally {
-      setAiBusy(false);
-    }
+    later(() => { setAiBusy(false); setAnalyzed({ knowledge: 2, guts: 1, dexterity: 0, kindness: 2, charm: 0 }); setAiReason('读书算知识；主动给同桌讲题是在照顾别人，给温柔；坚持去图书馆也要一点胆量。'); }, 2400);
   };
   useEffect(() => {
     if (!open) return;
     const st = params?.get('step');
-    if (st === 'analyzed' || st === 'ai') setAnalyzed({ ...KEYWORD_RESULT });
+    if (st === 'analyzed' || st === 'ai') { setDesc('在图书馆把第 4 章读完了，还帮同桌讲了两道题'); setAnalyzed({ ...KEYWORD_RESULT }); setImages(['bailu.webp']); }
     if (st === 'ai') ai();
     if (st === 'reading') readShot();
   }, [open]); // eslint-disable-line
 
   const reset = () => { setDesc(''); setImportant(false); setImages([]); setAnalyzed(null); setAiReason(null); setShotHint(null); setShotOffer(null); setShotCandidates(null); setWish(undefined); };
-  const attach = async () => {
-    if (images.length >= MAX_IMAGES_PER_ACTIVITY) { toast(`每条记录最多 ${MAX_IMAGES_PER_ACTIVITY} 张`); return; }
-    const files = await pickFiles(true);
-    if (!files.length) return;
+  const attach = () => {
+    if (images.length >= 6) { toast('每条记录最多 6 张'); return; }
     setImgBusy(true);
-    try {
-      const room = MAX_IMAGES_PER_ACTIVITY - images.length;
-      const prepared = await Promise.all(files.slice(0, room).map(prepareActivityImage));
-      setImages((current) => [...current, ...prepared].slice(0, MAX_IMAGES_PER_ACTIVITY));
-      if (files.length > room) toast(`每条记录最多 ${MAX_IMAGES_PER_ACTIVITY} 张，多出的没有加`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : '图片处理失败');
-    } finally {
-      setImgBusy(false);
-    }
+    later(() => { setImgBusy(false); setImages((v) => [...v, SPARE_IMAGES[v.length % SPARE_IMAGES.length]]); }, 700);
   };
   const save = () => {
     if (imgBusy) { toast('图片还在处理，稍等一下再保存'); return; }
@@ -168,20 +128,15 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
       {shotCandidates && (
         <div className="mt-2 space-y-1.5 px-4 py-2.5" style={{ background: P3R.cyanFaint, clipPath: slantClip(9) }}>
           {shotCandidates.map((c, i) => (
-            <P3Check key={i} checked={c.on} onChange={() => setShotCandidates((rows) => {
-              if (!rows) return rows;
-              const next = rows.map((r, j) => (j === i ? { ...r, on: !r.on } : r));
-              setDesc(next.filter((r) => r.on).map((r) => r.text).join('；'));
-              return next;
-            })} label={c.text} />
+            <P3Check key={i} checked={c.on} onChange={() => setShotCandidates((rows) => rows && rows.map((r, j) => (j === i ? { ...r, on: !r.on } : r)))} label={c.text} />
           ))}
         </div>
       )}
       {images.length > 0 && (
         <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
-          {images.map((img, i) => (
+          {images.map((src, i) => (
             <div key={i} className="relative h-20 w-20 shrink-0 overflow-hidden" style={{ clipPath: slantClip(7) }}>
-              <Photo src={img.thumbDataUrl} />
+              <Photo src={src} />
               <button type="button" aria-label="移除这张图" onClick={() => setImages((v) => v.filter((_, j) => j !== i))} className="absolute right-0.5 top-0.5 flex h-6 w-7 items-center justify-center" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(4) }}><IconClose size={11} /></button>
             </div>
           ))}
@@ -193,7 +148,7 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
 
       <div className="mt-4 flex justify-center">
         {!analyzed ? (
-          <P3Button tone="ink" size="lg" disabled={!desc.trim()} onClick={() => setAnalyzed(analyzeActivityLocally(desc))} ariaLabel="分析关键词" className="px-10">分析关键词</P3Button>
+          <P3Button tone="ink" size="lg" disabled={!desc.trim()} onClick={() => setAnalyzed({ ...KEYWORD_RESULT })} ariaLabel="分析关键词" className="px-10">分析关键词</P3Button>
         ) : (
           <P3Button tone="outline" size="lg" disabled={!desc.trim()} busy={aiBusy} busyText="⋯ AI 思考中" onClick={ai} ariaLabel="AI 分析" className="px-10">✦ AI 分析</P3Button>
         )}
@@ -211,7 +166,7 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
           <div className="grid grid-cols-1 gap-1.5">
             {ATTR_IDS.map((a) => (
               <div key={a} className="flex min-w-0 items-center justify-between gap-3 px-4 py-1.5" style={{ background: 'var(--p3r-row)', clipPath: slantClip(8) }}>
-                <span className="min-w-0 truncate text-[15px] font-black" style={{ color: P3R.ink }}>{realNames[a]}</span>
+                <span className="min-w-0 truncate text-[15px] font-black" style={{ color: P3R.ink }}>{ATTR_NAMES[a]}</span>
                 <P3Stepper value={analyzed[a]} min={0} max={5} onChange={(v) => setAnalyzed((p) => (p ? { ...p, [a]: v } : p))} />
               </div>
             ))}

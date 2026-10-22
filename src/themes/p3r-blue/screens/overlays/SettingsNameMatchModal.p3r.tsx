@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P6Sheet } from '@blue/screens/pkg6/sheet';
-import { ATTRS, NAME_MATCH } from '@blue/adapters/pkg6';
+import { ATTRS, NAME_MATCH } from '@blue/mock/pkg6';
 import { attrLabel, updateSettings, useSettings } from '@blue/screens/pkg6/settingsStore';
 import { P3Button, useToast } from '@blue/kit';
 import { cx } from '@blue/lib/cx';

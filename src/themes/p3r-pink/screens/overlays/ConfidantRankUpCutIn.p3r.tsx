@@ -9,7 +9,7 @@
 import type { OverlayProps } from '@pink/registry/types';
 import type { AIFail } from '@pink/fx';
 import { RankUpChain, type ChainPage, type ShiftStage } from '@pink/screens/pkg3/rankup';
-import { PK3_CONFIDANTS } from '@pink/adapters/pkg3';
+import { PK3_CONFIDANTS } from '@pink/mock/pkg3';
 
 export function demoNotice(params?: URLSearchParams) {
   const c = PK3_CONFIDANTS.find((x) => x.id === params?.get('id')) ?? PK3_CONFIDANTS[0];

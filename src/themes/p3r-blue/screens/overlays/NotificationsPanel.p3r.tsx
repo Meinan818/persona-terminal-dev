@@ -5,18 +5,13 @@
  * 入口：同伴页 ✧ 菜单「通知」（未登录禁用）。
  */
 import { useEffect, useRef, useState } from 'react';
-import { useAppStore } from '@/store';
-import { useCloudSocialStore } from '@/store/cloudSocial';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3ActionSheet, P3Button, P3Empty, P3Error, P3Loading, P3OnOff, P3R, P3Sheet, showToast, slantClip, tickClip } from '@blue/kit';
-import { PK3_NOTIF_TITLE, useCooperationData, type Pk3Notif } from '@blue/adapters/pkg3';
+import { PK3_NOTIFS, PK3_NOTIF_TITLE, type Pk3Notif } from '@blue/mock/pkg3';
 import { Sparkle } from '@blue/screens/pkg3/ui';
 
 export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, onOpenPactRespond }: { isOpen: boolean; onClose: () => void; state?: 'empty' | 'loading' | 'error' | null; onOpenCoopAccept?: () => void; onOpenPactRespond?: () => void }) {
-  const data = useCooperationData();
-  const markPersistedRead = useCloudSocialStore((store) => store.markNotificationRead);
-  const removePersistedNotification = useCloudSocialStore((store) => store.removeNotification);
-  const [list, setList] = useState<Pk3Notif[]>(state === 'empty' ? [] : data.notifications);
+  const [list, setList] = useState<Pk3Notif[]>(state === 'empty' ? [] : PK3_NOTIFS);
   const [loading, setLoading] = useState(state === 'loading');
   const [failed, setFailed] = useState(state === 'error');
   const [hideBattle, setHideBattle] = useState(false);
@@ -26,13 +21,13 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
   const [working, setWorking] = useState<string | null>(null);
   const [handled, setHandled] = useState<Record<string, string>>({});
   const press = useRef<number | null>(null);
-  useEffect(() => { if (isOpen) { setList(state === 'empty' ? [] : data.notifications); setLoading(state === 'loading'); setFailed(state === 'error'); setMulti(false); setSel(new Set()); } }, [isOpen, state, data.notifications]);
+  useEffect(() => { if (isOpen) { setList(state === 'empty' ? [] : PK3_NOTIFS); setLoading(state === 'loading'); setFailed(state === 'error'); setMulti(false); setSel(new Set()); } }, [isOpen, state]);
   useEffect(() => { if (!loading) return; const t = window.setTimeout(() => setLoading(false), 1600); return () => clearTimeout(t); }, [loading]);
   const unread = list.filter((n) => !n.read).length;
   const vis = list.filter((n) => !(hideBattle && n.battle));
   const fresh = vis.filter((n) => !n.read); const old = vis.filter((n) => n.read);
-  const markRead = (id: string) => { setList((l) => l.map((n) => (n.id === id ? { ...n, read: true } : n))); void markPersistedRead(id); };
-  const del = (ids: string[]) => { setList((l) => l.filter((n) => !ids.includes(n.id))); ids.forEach((id) => void removePersistedNotification(id)); };
+  const markRead = (id: string) => setList((l) => l.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const del = (ids: string[]) => setList((l) => l.filter((n) => !ids.includes(n.id)));
   const act = (n: Pk3Notif, k: string, done: string, after?: () => void) => { setWorking(`${n.id}:${k}`); window.setTimeout(() => { setWorking(null); setHandled((h) => ({ ...h, [n.id]: done })); markRead(n.id); after?.(); }, 600); };
   const toggleSel = (id: string) => setSel((s) => { const x = new Set(s); if (x.has(id)) x.delete(id); else x.add(id); return x; });
 
@@ -72,7 +67,7 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
   return (
     <>
       <P3Sheet open={isOpen} onClose={onClose} size="tall" title={<span className="inline-flex items-center gap-1.5"><Sparkle size={18} style={{ color: P3R.blue }} />通知</span>} en="NOTICE"
-        headerExtra={<P3Button size="sm" tone="soft" disabled={unread === 0 || loading} onClick={() => { list.filter((n) => !n.read).forEach((n) => void markPersistedRead(n.id)); setList((l) => l.map((n) => ({ ...n, read: true }))); }}>全部已读</P3Button>}
+        headerExtra={<P3Button size="sm" tone="soft" disabled={unread === 0 || loading} onClick={() => setList((l) => l.map((n) => ({ ...n, read: true })))}>全部已读</P3Button>}
         footer={multi ? (
           <div className="flex min-w-0 items-center gap-3">
             <span className="min-w-0 flex-1 truncate text-[14px] font-black">多选模式 · 已选 {sel.size} 条</span>

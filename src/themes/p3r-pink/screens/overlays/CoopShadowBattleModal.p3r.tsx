@@ -7,13 +7,13 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { Portal, P3R, P3Progress, slantClip, tickClip, useEscape, useScrollLock } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
 import { cx } from '@pink/lib/cx';
 import { ATTR_IDS, ATTR_NAMES } from '@pink/screens/pkg3/arcana';
-import { PK3_BATTLE_LOG, PK3_PERSONAS, PK3_SHADOW, type Pk3BattleLog } from '@pink/adapters/pkg3';
+import { PK3_BATTLE_LOG, PK3_PERSONAS, PK3_SHADOW, type Pk3BattleLog } from '@pink/mock/pkg3';
 import { Sparkle } from '@pink/screens/pkg3/ui';
 import { AllOut } from './AllOutOverlay.p3r';
 import { VictoryScreen } from './CoopVictoryScreen.p3r';

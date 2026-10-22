@@ -8,7 +8,7 @@
  */
 import { animate, motion, useMotionValue, useTransform, type MotionValue } from 'framer-motion';
 import { useEffect, useRef, useState, type MouseEvent as RMouseEvent } from 'react';
-import type { AttributeId } from '@/types';
+import type { AttributeId } from '@real/types';
 import { useBoldness } from '@pink/lib/prefs';
 
 const CX = 180, CY = 178, R = 150;

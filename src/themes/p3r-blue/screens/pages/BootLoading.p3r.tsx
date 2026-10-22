@@ -15,7 +15,7 @@ import type { PageProps } from '@blue/registry/types';
 import { P3Button, P3R, slantClip, GhostWords, TitlePeriod } from '@blue/kit';
 import { PeriodMark } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
-import { MOCK_CRASH, MOCK_DIAG } from '@blue/adapters/pkg1';
+import { MOCK_CRASH, MOCK_DIAG } from '@blue/mock/pkg1';
 import { TRI_CLIP } from '@blue/screens/pkg1/fxbits';
 
 type BootState = 'loading' | 'stuck' | 'error' | 'crash' | 'chunk';

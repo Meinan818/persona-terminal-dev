@@ -37,7 +37,7 @@ function attackRange(b: Battle, e: Unit) {
 }
 
 export function computeIntents(b: Battle): Intent[] {
-  return b.alive('enemy').map((e) => {
+  return b.alive('enemy').filter((e) => !b.isDormant(e)).map((e) => {
     const target = nearestFoe(b, e);
     const moveTiles = reachTiles(b, e);
     const threat = new Map<string, Vec>();
@@ -63,7 +63,7 @@ export function runEnemyTurn(b: Battle) {
   focus.set(b, new Map());
   for (const e of [...b.alive('enemy')]) {
     if (b.phase !== 'enemy') return;
-    if (e.ko || b.noAction.has(e.id)) continue;
+    if (e.ko || b.noAction.has(e.id) || b.isDormant(e)) continue;
     // 盾兵转向自己的目标
     if (e.role === 'shielder') {
       const t = nearestFoe(b, e);

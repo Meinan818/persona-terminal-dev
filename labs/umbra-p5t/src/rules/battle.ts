@@ -87,7 +87,7 @@ const STATUS_OF: Partial<Record<Effect, StatusId>> = { burn: 'burn', freeze: 'fr
 
 export interface TriplePending { attackerId: string; targetId: string; victims: string[] }
 export interface Hit { t: Unit; resist: boolean; missed?: boolean; forceDown?: boolean; noDown?: boolean }
-type Runtime = { doors: Map<string, boolean>; elevators: Map<string, boolean>; switchOcc: Map<string, string | null>; cameras: Set<string>; events: Set<string>; flags: Set<string> };
+type Runtime = { doors: Map<string, boolean>; elevators: Map<string, boolean>; switchOcc: Map<string, string | null>; cameras: Set<string>; events: Set<string>; flags: Set<string>; unlocked: Set<string>; chests: Set<string> };
 type ActKind = 'melee' | 'gun' | 'skill';
 
 function mulberry32(seed: number) {
@@ -129,7 +129,9 @@ export class Battle {
   /** Truth Seeker：到这个回合（含）为止 Voltage 不涨 */
   voltageLockUntil = 0;
   /** 机关/事件运行时状态 */
-  rt: Runtime = { doors: new Map(), elevators: new Map(), switchOcc: new Map(), cameras: new Set(), events: new Set(), flags: new Set() };
+  rt: Runtime = { doors: new Map(), elevators: new Map(), switchOcc: new Map(), cameras: new Set(), events: new Set(), flags: new Set(), unlocked: new Set(), chests: new Set() };
+  /** 宝箱奖励记账（LEVELS.md：reward 先记账） */
+  loot: Record<string, number> = {};
   private inEvents = false;
   private seq = 0;
   private pathway = new Set<string>();
@@ -154,6 +156,7 @@ export class Battle {
       const u = this.unitAt(p);
       return u?.prop === 'box' ? 2 : u?.prop === 'barrel' ? 1 : 0;
     };
+    for (const z of map.unlockedZones ?? (map.zones ? ['A'] : [])) this.rt.unlocked.add(z);
     for (const d of map.doors ?? []) { this.rt.doors.set(d.id, d.open); this.paintDoor(d.id); }
     for (const e of map.elevators ?? []) { this.rt.elevators.set(e.id, e.up); this.paintElevator(e.id); }
     for (const sw of map.switches ?? []) this.rt.switchOcc.set(sw.id, this.unitAt(sw.pos)?.id ?? null);
@@ -322,7 +325,7 @@ export class Battle {
     return (from.x - t.pos.x) * t.facing.x + (from.y - t.pos.y) * t.facing.y > 0;
   }
   private targetable(a: Unit, t: Unit) {
-    if (t.ko || a === t || a.side === t.side) return false;
+    if (t.ko || a === t || a.side === t.side || this.isDormant(t)) return false;
     if (t.prop === 'speaker' || t.prop === 'flag') return !!t.destructible && a.side === 'ally' && t.flagSide !== 'ally';
     return true;
   }
@@ -385,7 +388,7 @@ export class Battle {
     const allies = this.mainAllies();
     if (allies.length !== 3) return [];
     const [a, b, c] = allies.map((u) => u.pos);
-    return this.alive('enemy').filter((e) => pointInTriangle(e.pos, a, b, c)).map((e) => e.id);
+    return this.alive('enemy').filter((e) => !this.isDormant(e) && pointInTriangle(e.pos, a, b, c)).map((e) => e.id);
   }
   /**
    * 当前可否发动 Triple Threat（Cogito AAA107 + Gamer Guides Triple Threat 页）：持 1 More 的角色，**它自己打倒的那个敌人**
@@ -553,7 +556,7 @@ export class Battle {
       const l = this.grid.linkBetween(path[i - 1], path[i]);
       if (l) { u.dashed = true; u.dashedAction = true; this.emit({ type: 'dash', unitId: u.id, from: path[i - 1], to: path[i], kind: l.kind }); this.pathway.delete(u.id); }
     }
-    if (u.side === 'ally') this.checkCameras(u, path);
+    if (u.side === 'ally') { this.checkCameras(u, path); this.checkChests(u); }
     this.applyMechanisms();
   }
 
@@ -1293,13 +1296,58 @@ export class Battle {
     for (const { def, pos } of list) {
       const p = this.unitAt(pos) || !this.grid.walkable(pos) ? this.nearestFree(pos) : pos;
       if (!p) continue;
-      const nu = this.makeUnit(def, p);
+      let id = def.id, k = 1;
+      while (this.units.some((u) => u.id === id)) id = `${def.id}_${++k}`;
+      const nu = this.makeUnit({ ...def, id }, p);
       nu.guard = this.coverNow(nu);
       this.units.push(nu);
       ids.push(nu.id);
     }
     if (ids.length) this.emit({ type: 'reinforce', unitIds: ids, source });
     if (this.phase === 'player') { this.intents = computeIntents(this); this.emit({ type: 'intents', intents: this.intents }); }
+  }
+
+  // ---------- 区域解锁（Q6 / LEVELS.md） ----------
+  /** 格子所属区域字母（无区域系统 = null） */
+  zoneOf(p: Vec): string | null { return this.map.zones?.[p.y]?.[p.x] ?? null; }
+  zoneUnlocked(z: string) { return this.rt.unlocked.has(z); }
+  /** 未解锁区域的敌人：隐藏、不行动、不能被选为目标（仍计入全灭判定） */
+  isDormant(u: Unit): boolean {
+    return u.side === 'enemy' && !!u.zone && !!this.map.zones && !this.rt.unlocked.has(u.zone);
+  }
+  /** 画面是否应隐藏该单位（view 用） */
+  isHidden(u: Unit): boolean { return this.isDormant(u); }
+  unlockZone(z: string) {
+    if (this.rt.unlocked.has(z)) return;
+    this.rt.unlocked.add(z);
+    this.emit({ type: 'zoneUnlocked', zone: z });
+    this.onZoneUnlocked?.(z);
+    if (this.phase === 'player') { this.intents = computeIntents(this); this.emit({ type: 'intents', intents: this.intents }); }
+  }
+  /** AI 钩子（唤醒等），ai.ts 设置 */
+  onZoneUnlocked: ((z: string) => void) | null = null;
+  /** 当前可见（所在区域已解锁）且没被拿走的宝箱 */
+  visibleChests() {
+    return (this.map.chests ?? []).filter((c) => !this.rt.chests.has(c.id) && (!this.map.zones || this.rt.unlocked.has(this.zoneOf(c.pos) ?? '')));
+  }
+  /** 走上宝箱格 = 拿到（只有可见的宝箱） */
+  checkChests(u: Unit) {
+    if (u.side !== 'ally' || u.decoy || u.ko) return;
+    for (const c of this.visibleChests()) {
+      if (!eq(c.pos, u.pos)) continue;
+      this.rt.chests.add(c.id);
+      for (const [k, n] of Object.entries(c.reward)) this.loot[k] = (this.loot[k] ?? 0) + n;
+      this.emit({ type: 'chest', chestId: c.id, unitId: u.id, reward: { ...c.reward } });
+    }
+  }
+  /** 瞬移（事件 moveUnit）：格被占或不能站则找最近空格 */
+  teleport(u: Unit, pos: Vec) {
+    const p = (this.unitAt(pos) && this.unitAt(pos) !== u) || !this.grid.walkable(pos) ? this.nearestFree(pos) : pos;
+    if (!p) return;
+    const from = { ...u.pos };
+    u.pos = { ...p }; u.anchor = { ...p };
+    this.emit({ type: 'teleport', unitId: u.id, from, to: { ...p } });
+    this.recheckGuards();
   }
 
   // ---------- 关卡事件（中途援军 / Boss 阶段 / 开门 / 改目标） ----------
@@ -1312,6 +1360,12 @@ export class Battle {
       case 'unitKo': return !!this.units.find((x) => x.id === w.unitId)?.ko;
       case 'reach': return this.units.some((u) => !u.ko && u.side === (w.side ?? 'ally') && eq(u.pos, w.pos));
       case 'flag': return this.rt.flags.has(w.flag);
+      case 'doorOpened': return !!this.rt.doors.get(w.id);
+      case 'zoneCleared': return !this.units.some((u) => u.side === 'enemy' && !u.ko && u.zone === w.zone);
+      case 'enterZone': return this.units.some((u) => !u.ko && !u.decoy && u.side === (w.side ?? 'ally') && this.zoneOf(u.pos) === w.zone);
+      case 'everyTurns':
+        return this.turn >= w.n && this.turn % w.n === 0 && (!w.phase || w.phase === this.phase) &&
+          (!w.whileAlive || this.units.some((u) => u.id === w.whileAlive && !u.ko)) && (!w.flag || this.rt.flags.has(w.flag));
       default: return false;
     }
   }
@@ -1320,11 +1374,15 @@ export class Battle {
     this.inEvents = true;
     try {
       for (let guard = 0; guard < 20; guard++) {
-        const ev = this.map.events.find((e) => !this.rt.events.has(e.id) && this.eventFires(e));
+        const once = (e: MapEvent) => (e.when.type === 'everyTurns' ? `${e.id}@${this.turn}` : e.id);
+        const ev = this.map.events.find((e) => !this.rt.events.has(e.id) && !this.rt.events.has(once(e)) && this.eventFires(e));
         if (!ev) break;
         if (!ev.repeat) this.rt.events.add(ev.id);
+        else if (ev.when.type === 'everyTurns') this.rt.events.add(once(ev));
+        // 事件执行时自动 setFlag 自己的 id（LEVELS.md：everyTurns.flag 用）
+        this.rt.flags.add(ev.id);
         for (const a of ev.do) this.doEventAction(a);
-        if (ev.repeat) break;
+        if (ev.repeat && ev.when.type !== 'everyTurns') break;
       }
     } finally { this.inEvents = false; }
   }
@@ -1336,6 +1394,8 @@ export class Battle {
       case 'setFlag': this.rt.flags.add(a.flag); break;
       case 'setWin': (this.map as MapDef).win = a.win; if (a.objective) (this.map as MapDef).objective = a.objective; break;
       case 'end': this.finish(a.outcome, a.reason); break;
+      case 'unlockZone': this.unlockZone(a.zone); break;
+      case 'moveUnit': { const u = this.units.find((x) => x.id === a.unitId && !x.ko); if (u) this.teleport(u, a.pos); break; }
       case 'setUnit': {
         const u = this.units.find((x) => x.id === a.unitId);
         if (!u || u.ko) break;

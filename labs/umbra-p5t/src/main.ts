@@ -451,8 +451,9 @@ function refreshLabels() {
     const el = labelEl.get(u.id);
     const g = unitMesh.get(u.id);
     if (!el || !g) continue;
-    g.visible = !u.ko;
-    if (u.ko) { el.style.display = 'none'; continue; }
+    const hidden = battle.isHidden(u); // 未解锁区域的敌人不画（HARK-NOTES-ENGINE #8）
+    g.visible = !u.ko && !hidden;
+    if (u.ko || hidden) { el.style.display = 'none'; continue; }
     const shield = g.getObjectByName('shield');
     if (shield && u.facing) { g.rotation.y = Math.atan2(u.facing.x, u.facing.y); }
     if (u.prop) { el.style.display = 'none'; continue; }

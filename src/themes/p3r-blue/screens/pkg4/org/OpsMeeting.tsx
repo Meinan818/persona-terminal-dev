@@ -1,13 +1,16 @@
 /** 真实：src/components/org/OpsSection.tsx（作战）+ src/components/org/MeetingSection.tsx（周日会议），蓝白 p3 皮 */
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { OrgOperation, OrgView } from '@real/types';
 import { P3R, P3Button, P3Input, P3Progress, P3Loading, P3Error, slantClip, useToast } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
 import { navigate } from '@blue/shell/shellBus';
 import { ATTR_NAMES } from '@blue/mock/pkg4-tarot';
-import { OP_HISTORY, OP_KIND_LABEL, OP_STATE, OPS, RESULT_LABEL, POSTS } from '@blue/mock/pkg4-org';
-import { shiftKey, TODAY } from '@blue/mock/pkg4-astro';
+import { OP_KIND_LABEL, RESULT_LABEL } from '@blue/mock/pkg4-org';
+import { shiftKey, TODAY } from '@blue/adapters/pkg4-astro';
+import { activeOrgOps, buildOrgOpsState, endedOrgOps } from '@/themes/orgData';
+import { cancelOperation, createCheckin, saveMeeting } from '@/services/orgs';
+import { weekRangeOf } from '@/utils/questBoard';
 import { OpsDialogs, type OpsStep } from '@blue/screens/overlays/OpsDialogs.p3r';
 import { OpCreate } from '@blue/screens/overlays/OpCreateSheet.p3r';
 import { MeChip, displayCodename, panel } from './common';
@@ -19,12 +22,14 @@ export function OpsSection({ view, blocked, leader, state, onBlockToggle }: { vi
   const toast = useToast();
   const low = useLowMotion();
   const item = stag(low);
-  const [ops, setOps] = useState<OrgOperation[]>(OPS);
-  const [st, setSt] = useState(OP_STATE);
+  const [ops, setOps] = useState<OrgOperation[]>(() => activeOrgOps(view));
+  const [st, setSt] = useState(() => buildOrgOpsState(view));
   const [historyOpen, setHistoryOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [dlgOp, setDlgOp] = useState<OrgOperation | null>(null);
   const [step, setStep] = useState<OpsStep>(null);
+  const history = endedOrgOps(view, TODAY);
+  useEffect(() => { setOps(activeOrgOps(view)); setSt(buildOrgOpsState(view)); }, [view]);
   if (state === 'loading') return <P3Loading text="正在拉作战…" />;
   if (state === 'failed') return <P3Error title="作战暂时拉不到" text="作战暂时拉不到，稍后点右上角刷新再试。" />;
   const active = ops.filter((o) => o.status === 'active');
@@ -48,19 +53,19 @@ export function OpsSection({ view, blocked, leader, state, onBlockToggle }: { vi
         {active.map((op, i) => (
           <motion.div key={op.id} {...item(i)}>
             <OpCard view={view} op={op} states={st[op.id] ?? {}} leader={leader}
-              onWrite={(t) => { setSt((s) => ({ ...s, [op.id]: { ...s[op.id], [view.me.userId]: { ...s[op.id][view.me.userId], plan: t } } })); toast.success('写好了，任务里那条也跟着改了'); }}
+              onWrite={(t) => { void createCheckin(op, 'plan', { text: t }).then(() => { setSt((s) => ({ ...s, [op.id]: { ...s[op.id], [view.me.userId]: { ...s[op.id][view.me.userId], plan: t } } })); toast.success('写好了，任务里那条也跟着改了'); }).catch((error) => toast(error instanceof Error ? error.message : '没写进去，请重试')); }}
               onOut={() => { setDlgOp(op); setStep('out'); }} onCancel={() => { setDlgOp(op); setStep('cancel'); }} onMore={op.initiatorId !== view.me.userId ? () => { setDlgOp(op); setStep('menu'); } : undefined} />
           </motion.div>
         ))}
       </div>
       <div>
         <button type="button" onClick={() => setHistoryOpen((v) => !v)} aria-expanded={historyOpen} className="flex w-full items-center justify-between py-1">
-          <span className="text-[11px] font-black tracking-[0.12em]" style={{ color: P3R.grey }}>最近 30 天结束的 {OP_HISTORY.length} 项</span>
+          <span className="text-[11px] font-black tracking-[0.12em]" style={{ color: P3R.grey }}>最近 30 天结束的 {history.length} 项</span>
           <span className="text-[12px] font-black" style={{ color: P3R.roseInk }}>{historyOpen ? '收起' : '展开'}</span>
         </button>
         {historyOpen && (
           <div className="mt-1 space-y-1.5">
-            {OP_HISTORY.map((h) => (
+            {history.map((h) => (
               <div key={h.id} className="flex min-w-0 items-center gap-2 px-4 py-2" style={{ background: 'var(--p3r-row)', clipPath: slantClip(10) }}>
                 <span className="shrink-0 px-1.5 py-[2px] text-[10px] font-black" style={h.status === 'achieved' ? { background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(3) } : h.status === 'failed' ? { background: P3R.magenta, color: '#fff', clipPath: slantClip(3) } : { color: P3R.grey, boxShadow: 'inset 0 0 0 1px var(--p3r-track)' }}>{h.status === 'achieved' ? '达成' : h.status === 'failed' ? '未达成' : '已取消'}</span>
                 <span className="min-w-0 flex-1 truncate text-[13px] font-black" style={{ color: P3R.ink }}>{OP_KIND_LABEL[h.kind]} · {h.title}</span>
@@ -76,8 +81,8 @@ export function OpsSection({ view, blocked, leader, state, onBlockToggle }: { vi
         onReported={() => { setStep(null); toast.success('已举报，会在 2 天内处理'); }}
         onConfirm={(k) => {
           if (!dlgOp) return;
-          if (k === 'out') { setSt((s) => ({ ...s, [dlgOp.id]: { ...s[dlgOp.id], [view.me.userId]: { state: 'out' } } })); toast('这次不参加了，任务里那条已经收起来'); }
-          else { setOps((l) => l.map((o) => (o.id === dlgOp.id ? { ...o, status: 'cancelled' } : o))); toast(`${OP_KIND_LABEL[dlgOp.kind]}已取消`); }
+          if (k === 'out') { void createCheckin(dlgOp, 'out').then(() => { setSt((s) => ({ ...s, [dlgOp.id]: { ...s[dlgOp.id], [view.me.userId]: { state: 'out' } } })); toast('这次不参加了，任务里那条已经收起来'); }).catch(() => toast('没退出成功，请重试')); }
+          else { void cancelOperation(dlgOp.id).then(() => { setOps((l) => l.map((o) => (o.id === dlgOp.id ? { ...o, status: 'cancelled' } : o))); toast(`${OP_KIND_LABEL[dlgOp.kind]}已取消`); }).catch(() => toast('取消失败，请重试')); }
         }} />
     </div>
   );
@@ -158,12 +163,21 @@ export function MeetingSection({ view, mode }: { view: OrgView; mode: MeetMode }
   const [result, setResult] = useState<'done' | 'partial' | 'missed' | null>(null);
   const [goal, setGoal] = useState('');
   const [busy, setBusy] = useState(false);
-  const [mine, setMine] = useState<{ result: string; goal: string } | null>(mode === 'submitted' ? { result: 'done', goal: '每天背 30 个单词' } : null);
+  const [mine, setMine] = useState<{ result: string; goal: string } | null>(view.me.goal ? { result: view.me.result ?? 'done', goal: view.me.goal } : null);
+  useEffect(() => { setMine(view.me.goal ? { result: view.me.result ?? 'done', goal: view.me.goal } : null); }, [view.me.goal, view.me.result]);
   const open = mode === 'open' || mode === 'submitted';
   const wrote = !!mine;
-  const wroteCount = 2 + (wrote ? 1 : 0);
-  const submit = () => { setBusy(true); window.setTimeout(() => { setBusy(false); setMine({ result: result ?? 'done', goal }); setEditing(false); toast.success(wrote ? '改好了' : '交上去了，下周见'); }, 600); };
-  const minutes = POSTS.find((p) => p.kind === 'minutes')!.minutes!;
+  const currentWeek = weekRangeOf(new Date()).weekKey;
+  const nextWeek = weekRangeOf(new Date(Date.now() + 7 * 86_400_000)).weekKey;
+  const wroteCount = view.members.filter((member) => !!member.goal).length;
+  const submit = () => {
+    setBusy(true);
+    void saveMeeting(view.me.id, { week: currentWeek, nextWeek, result: result ?? 'done', goal })
+      .then(() => { setMine({ result: result ?? 'done', goal }); setEditing(false); toast.success(wrote ? '改好了' : '交上去了，下周见'); })
+      .catch((error) => toast(error instanceof Error ? error.message : '没交上去，请重试'))
+      .finally(() => setBusy(false));
+  };
+  const minutes = view.posts?.find((post) => post.kind === 'minutes')?.minutes ?? null;
   const others = view.members.filter((m) => m.userId !== view.me.userId && m.goal);
   return (
     <div className="space-y-3">
@@ -215,7 +229,7 @@ export function MeetingSection({ view, mode }: { view: OrgView; mode: MeetMode }
         <motion.div {...item(1)} className="px-5 py-3" style={panel(12)}>
           <div className="flex items-center gap-2"><span className="text-[14px] font-black" style={{ color: P3R.ink }}>点名</span><span className="ml-auto text-[11px] font-bold" style={{ color: P3R.grey }}>已写 {wroteCount} / {view.members.length}</span></div>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {view.members.map((m, i) => { const did = i === 0 ? wrote : i < 3; return <span key={m.id} className="px-1.5 py-0.5 text-[11px] font-black" style={did ? { background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(3) } : { color: P3R.grey, boxShadow: 'inset 0 0 0 1px var(--p3r-track)' }}>{did ? '✓ ' : ''}{displayCodename(m)}{i === 0 ? '（我）' : ''}</span>; })}
+            {view.members.map((m) => { const did = !!m.goal; return <span key={m.id} className="px-1.5 py-0.5 text-[11px] font-black" style={did ? { background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(3) } : { color: P3R.grey, boxShadow: 'inset 0 0 0 1px var(--p3r-track)' }}>{did ? '✓ ' : ''}{displayCodename(m)}{m.userId === view.me.userId ? '（我）' : ''}</span>; })}
           </div>
         </motion.div>
       )}
@@ -231,10 +245,12 @@ export function MeetingSection({ view, mode }: { view: OrgView; mode: MeetMode }
       </motion.div>
       <motion.div {...item(3)}>
         <div className="mb-2 text-[11px] font-black tracking-[0.12em]" style={{ color: P3R.grey }}>上一次的会议纪要</div>
-        <div className="px-5 py-3 text-[12.5px]" style={{ background: 'var(--p3r-cyan-pale)', color: P3R.ink, clipPath: slantClip(12) }}>
-          <div className="font-black">第 12 周 · <span className="font-cond text-[15px]" style={{ color: P3R.blue }}>{minutes.rate.done}/{minutes.rate.total}</span> 人做到了</div>
-          <div className="mt-1 text-[11px] font-bold" style={{ color: P3R.grey }}>称号：{minutes.titles.map((t) => `${t.codename}·${t.title}`).join('、')} · 缺席：{minutes.absent.map((a) => a.codename).join('、')}</div>
-        </div>
+        {minutes ? (
+          <div className="px-5 py-3 text-[12.5px]" style={{ background: 'var(--p3r-cyan-pale)', color: P3R.ink, clipPath: slantClip(12) }}>
+            <div className="font-black">{minutes.week} · <span className="font-cond text-[15px]" style={{ color: P3R.blue }}>{minutes.rate.done}/{minutes.rate.total}</span> 人做到了</div>
+            <div className="mt-1 text-[11px] font-bold" style={{ color: P3R.grey }}>称号：{minutes.titles.map((t) => `${t.codename}·${t.title}`).join('、') || '暂无'} · 缺席：{minutes.absent.map((a) => a.codename).join('、') || '无'}</div>
+          </div>
+        ) : <div className="text-[12px] font-bold" style={{ color: P3R.grey }}>还没有会议纪要。</div>}
       </motion.div>
     </div>
   );

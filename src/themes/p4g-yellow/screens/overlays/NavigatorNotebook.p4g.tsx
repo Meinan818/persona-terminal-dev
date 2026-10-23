@@ -4,16 +4,17 @@
  * 「零散记忆」列表（置顶 / 取消置顶、改 → 存、删）；空态。?state=empty
  * 外观：P4G 的「笔记本」（Persona 4 的 Notebook）—— 横格纸 + 黄色索引签 + 红色页边线。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { CfgBtn, CfgInput, CfgTextarea } from '@yellow/screens/pkg6/cfg';
-import { NOTEBOOK } from '@yellow/mock/pkg6';
+import { navigatorNotebookOps, useNavigatorNotebook } from '@yellow/adapters/pkg6';
 import { NotebookDeleteDialog } from './NavigatorNotebookConfirm.p4g';
 import { useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 
-type Promise_ = (typeof NOTEBOOK.promises)[number];
+type Promise_ = { id: string; topic: string; dueDate: string; when: string; state: string; phase: string };
+type Memo_ = { id: string; text: string; pinned: boolean; createdAt: string; importance: number; followUp?: string };
 const WHEN: Record<string, string> = { morning: '上午', day: '', evening: '晚上' };
 const statusOf = (p: Promise_) => p.state === 'asked' ? '问过了' : p.state === 'resolved' ? '你说过结果了' : p.state === 'expired' ? '没来得及问' : p.phase === 'today' ? '就是今天' : p.phase === 'due' ? '该问了' : p.phase === 'late' ? '没来得及问' : '还没到';
 
@@ -33,17 +34,20 @@ const Paper = ({ children, className }: { children: React.ReactNode; className?:
 
 export function Notebook({ open, onClose, empty }: { open: boolean; onClose: () => void; empty?: boolean }) {
   const toast = useToast();
-  const [profile, setProfile] = useState(empty ? '' : NOTEBOOK.profile);
+  const live = useNavigatorNotebook(open);
+  const realPromises = useMemo(() => live.promises.map((item) => ({ id: item.id, topic: item.promiseTopic ?? item.text, dueDate: item.dueDate ?? '', when: item.dueWhen ?? 'day', state: item.promiseState ?? 'waiting', phase: item.dueDate && item.dueDate < new Date().toISOString().slice(0, 10) ? 'late' : item.dueDate === new Date().toISOString().slice(0, 10) ? 'today' : 'future' })), [live.promises]);
+  const realMemos = useMemo(() => live.memos.map((item) => ({ id: item.id, text: item.text, pinned: !!item.pinned, createdAt: new Date(item.createdAt).toLocaleDateString('zh-CN'), importance: item.importance, followUp: item.followUp })), [live.memos]);
+  const [profile, setProfile] = useState(empty ? '' : live.profile);
   const [savedProfile, setSavedProfile] = useState(profile);
-  const [promises, setPromises] = useState(empty ? [] : NOTEBOOK.promises);
-  const [memos, setMemos] = useState(empty ? [] : NOTEBOOK.memos);
+  const [promises, setPromises] = useState<Promise_[]>(empty ? [] : realPromises);
+  const [memos, setMemos] = useState<Memo_[]>(empty ? [] : realMemos);
   const [dateEdit, setDateEdit] = useState<{ id: string; date: string } | null>(null);
   const [memoEdit, setMemoEdit] = useState<{ id: string; text: string } | null>(null);
   const [delMemo, setDelMemo] = useState<string | null>(null);
   const [delPromise, setDelPromise] = useState<string | null>(null);
-  useEffect(() => { if (open) { const p = empty ? '' : NOTEBOOK.profile; setProfile(p); setSavedProfile(p); setPromises(empty ? [] : NOTEBOOK.promises); setMemos(empty ? [] : NOTEBOOK.memos); } }, [open, empty]);
+  useEffect(() => { if (open) { const p = empty ? '' : live.profile; setProfile(p); setSavedProfile(p); setPromises(empty ? [] : realPromises); setMemos(empty ? [] : realMemos); } }, [open, empty, live.profile, realPromises, realMemos]);
   const dirty = profile !== savedProfile;
-  const commit = () => { if (dirty) { setSavedProfile(profile); toast.success('画像已保存'); } };
+  const commit = () => { if (dirty) { setSavedProfile(profile); void navigatorNotebookOps.saveProfile(profile).then(() => toast.success('画像已保存')).catch(() => toast('保存失败，请重试')); } };
 
   return (
     <>
@@ -76,7 +80,7 @@ export function Notebook({ open, onClose, empty }: { open: boolean; onClose: () 
                       {dateEdit?.id === m.id ? (
                         <span className="flex w-full min-w-0 items-center gap-1.5">
                           <CfgInput type="date" className="h-9" value={dateEdit.date} onChange={(e) => setDateEdit({ id: m.id, date: e.target.value })} aria-label={`「${m.topic}」改到哪天`} />
-                          <CfgBtn tone="primary" onClick={() => { setPromises(promises.map((p) => (p.id === m.id ? { ...p, dueDate: dateEdit.date } : p))); setDateEdit(null); }}>存</CfgBtn>
+                          <CfgBtn tone="primary" onClick={() => { void navigatorNotebookOps.updatePromiseDate(m.id, dateEdit.date, m.when as 'morning' | 'day' | 'evening').then(() => { setPromises(promises.map((p) => (p.id === m.id ? { ...p, dueDate: dateEdit.date } : p))); setDateEdit(null); }).catch(() => toast('改期失败，请重试')); }}>存</CfgBtn>
                           <CfgBtn onClick={() => setDateEdit(null)}>取消</CfgBtn>
                         </span>
                       ) : (
@@ -101,7 +105,7 @@ export function Notebook({ open, onClose, empty }: { open: boolean; onClose: () 
                     {memoEdit?.id === m.id ? (
                       <div className="flex min-w-0 gap-1.5">
                         <CfgInput className="h-9" value={memoEdit.text} onChange={(e) => setMemoEdit({ id: m.id, text: e.target.value })} aria-label="编辑记忆" />
-                        <CfgBtn tone="primary" onClick={() => { setMemos(memos.map((x) => (x.id === m.id ? { ...x, text: memoEdit.text } : x))); setMemoEdit(null); }}>存</CfgBtn>
+                        <CfgBtn tone="primary" onClick={() => { void navigatorNotebookOps.saveMemo(m.id, { text: memoEdit.text }).then(() => { setMemos(memos.map((x) => (x.id === m.id ? { ...x, text: memoEdit.text } : x))); setMemoEdit(null); }).catch(() => toast('保存失败，请重试')); }}>存</CfgBtn>
                         <CfgBtn onClick={() => setMemoEdit(null)}>取消</CfgBtn>
                       </div>
                     ) : (
@@ -111,7 +115,7 @@ export function Notebook({ open, onClose, empty }: { open: boolean; onClose: () 
                           <p className="mt-0.5 text-2xs opacity-70">{m.createdAt} · 重要度 {m.importance}{m.followUp ? ' · 有待追问话头' : ''}</p>
                         </div>
                         <div className="flex shrink-0 gap-0.5">
-                          <button type="button" onClick={() => setMemos(memos.map((x) => (x.id === m.id ? { ...x, pinned: !x.pinned } : x)))} aria-label={m.pinned ? '取消置顶' : '置顶'} className="rounded-[3px] px-1.5 py-0.5 text-meta font-bold">{m.pinned ? '取消置顶' : '置顶'}</button>
+                          <button type="button" onClick={() => { void navigatorNotebookOps.saveMemo(m.id, { pinned: !m.pinned, importance: m.pinned ? 3 : 5 }).then(() => setMemos(memos.map((x) => (x.id === m.id ? { ...x, pinned: !x.pinned } : x)))); }} aria-label={m.pinned ? '取消置顶' : '置顶'} className="rounded-[3px] px-1.5 py-0.5 text-meta font-bold">{m.pinned ? '取消置顶' : '置顶'}</button>
                           <button type="button" onClick={() => setMemoEdit({ id: m.id, text: m.text })} aria-label="编辑记忆" className="rounded-[3px] px-1.5 py-0.5 text-meta font-bold underline">改</button>
                           <button type="button" onClick={() => setDelMemo(m.id)} aria-label="删除记忆" className="rounded-[3px] px-1.5 py-0.5 text-meta font-bold text-p4g-danger">删</button>
                         </div>
@@ -124,8 +128,8 @@ export function Notebook({ open, onClose, empty }: { open: boolean; onClose: () 
           </section>
         </div>
       </P6Sheet>
-      <NotebookDeleteDialog kind="memo" open={!!delMemo} onClose={() => setDelMemo(null)} onConfirm={() => setMemos(memos.filter((x) => x.id !== delMemo))} />
-      <NotebookDeleteDialog kind="promise" open={!!delPromise} onClose={() => setDelPromise(null)} onConfirm={() => setPromises(promises.filter((x) => x.id !== delPromise))} />
+      <NotebookDeleteDialog kind="memo" open={!!delMemo} onClose={() => setDelMemo(null)} onConfirm={() => { const id = delMemo; setDelMemo(null); if (id) void navigatorNotebookOps.deleteMemo(id).then(() => setMemos((items) => items.filter((x) => x.id !== id))); }} />
+      <NotebookDeleteDialog kind="promise" open={!!delPromise} onClose={() => setDelPromise(null)} onConfirm={() => { const id = delPromise; setDelPromise(null); if (id) void navigatorNotebookOps.deletePromise(id).then(() => setPromises((items) => items.filter((x) => x.id !== id))); }} />
     </>
   );
 }

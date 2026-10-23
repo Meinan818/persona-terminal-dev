@@ -1,12 +1,14 @@
 /** 真实：src/components/org/BoardSection.tsx（公告板：筛选 / 动态卡 / 达成卡 / 团战战报 / 会议纪要 / 长按菜单），蓝白 p3 皮 */
 import { motion } from 'framer-motion';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { OrgPost, OrgReactionTag, OrgView } from '@real/types';
 import { P3R, P3Button, P3Empty, P3Error, P3SlantTabs, slantClip, useToast } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
 import { navigate } from '@blue/shell/shellBus';
 import { ATTR_COLOR } from '@blue/mock/pkg4-tarot';
-import { MY_REACTIONS, REACTION_COUNTS, REACTIONS, RAID } from '@blue/mock/pkg4-org';
+import { REACTIONS } from '@blue/mock/pkg4-org';
+import { orgRaidCardData, orgReactionData } from '@/themes/orgData';
+import { setReaction } from '@/services/orgs';
 import { BoardMenus, type BoardStep } from '@blue/screens/overlays/BoardMenus.p3r';
 import { MeChip, MemberThumb, panel } from './common';
 
@@ -29,16 +31,22 @@ export function BoardSection({ view, blocked, failed, empty, leader, onBlockTogg
   const low = useLowMotion();
   const [filter, setFilter] = useState<Filter>('all');
   const [posts, setPosts] = useState<OrgPost[]>(empty ? [] : view.posts ?? []);
-  const [mine, setMine] = useState<Record<string, OrgReactionTag[]>>(MY_REACTIONS);
+  const reactionData = useMemo(() => orgReactionData(view), [view]);
+  const [mine, setMine] = useState<Record<string, OrgReactionTag[]>>(reactionData.mine);
   const [menuFor, setMenuFor] = useState<OrgPost | null>(null);
   const [step, setStep] = useState<BoardStep>(null);
+  useEffect(() => { setPosts(empty ? [] : view.posts ?? []); }, [view.posts, empty]);
+  useEffect(() => { setMine(reactionData.mine); }, [reactionData]);
   const visible = posts.filter((p) => !blocked.has(p.userId));
   const blockedCount = posts.length - visible.length;
   const counts = { all: visible.length + 1, moment: visible.filter((p) => p.kind === 'moment').length, operation: visible.filter((p) => p.kind === 'operation').length + 1, minutes: visible.filter((p) => p.kind === 'minutes').length };
   const list = visible.filter((p) => filter === 'all' || p.kind === filter);
   const groups = useMemo(() => { const g: Array<{ label: string; items: OrgPost[] }> = []; list.forEach((p) => { const l = dayLabel(new Date(p.createdAt)); const last = g[g.length - 1]; if (last && last.label === l) last.items.push(p); else g.push({ label: l, items: [p] }); }); return g; }, [list]);
   if (failed) return <P3Error title="公告板还没拉到" text="公告板还没拉到，稍后点右上角刷新。" />;
-  const react = (pid: string, tag: OrgReactionTag) => setMine((m) => { const cur = m[pid] ?? []; return { ...m, [pid]: cur.includes(tag) ? cur.filter((x) => x !== tag) : [...cur, tag] }; });
+  const react = (pid: string, tag: OrgReactionTag) => {
+    const existing = (view.reactions ?? []).find((item) => item.postId === pid && item.userId === view.me.userId);
+    void setReaction(view.org.id, pid, tag, existing).then(() => setMine((m) => { const cur = m[pid] ?? []; return { ...m, [pid]: cur.includes(tag) ? cur.filter((x) => x !== tag) : [...cur, tag] }; })).catch(() => toast('没贴上，稍后再试'));
+  };
   const filters: Array<[Filter, string]> = [['all', '全部'], ['moment', '动态'], ['operation', '作战'], ['minutes', '纪要']];
   const item = (i: number) => ({ initial: low ? { opacity: 0 } : { opacity: 0, x: -18 }, animate: { opacity: 1, x: 0 }, transition: { delay: low ? 0 : i * 0.05, duration: 0.24 } });
   return (
@@ -55,7 +63,7 @@ export function BoardSection({ view, blocked, failed, empty, leader, onBlockTogg
             <motion.div key={g.label} {...item(gi + 1)}>
               <div className="mb-2 flex items-center gap-2"><span className="px-2.5 py-0.5 text-[12px] font-black" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(5) }}>{g.label}</span><span aria-hidden className="h-[2px] flex-1" style={{ background: 'var(--p3r-track)' }} /></div>
               <div className="space-y-2.5">
-                {g.items.map((p) => p.kind === 'moment' ? <MomentCard key={p.id} view={view} post={p} mine={mine[p.id] ?? []} onReact={(t) => react(p.id, t)} onMore={() => { setMenuFor(p); setStep('menu'); }} />
+                {g.items.map((p) => p.kind === 'moment' ? <MomentCard key={p.id} view={view} post={p} mine={mine[p.id] ?? []} baseMine={reactionData.mine[p.id] ?? []} counts={reactionData.counts[p.id] ?? {}} onReact={(t) => react(p.id, t)} onMore={() => { setMenuFor(p); setStep('menu'); }} />
                   : p.kind === 'operation' ? <OpCard key={p.id} post={p} onMore={() => { setMenuFor(p); setStep('menu'); }} />
                     : <MinutesCard key={p.id} post={p} />)}
               </div>
@@ -73,11 +81,10 @@ export function BoardSection({ view, blocked, failed, empty, leader, onBlockTogg
   );
 }
 
-function MomentCard({ view, post, mine, onReact, onMore }: { view: OrgView; post: OrgPost; mine: OrgReactionTag[]; onReact: (t: OrgReactionTag) => void; onMore: () => void }) {
+function MomentCard({ view, post, mine, baseMine, counts, onReact, onMore }: { view: OrgView; post: OrgPost; mine: OrgReactionTag[]; baseMine: OrgReactionTag[]; counts: Partial<Record<OrgReactionTag, number>>; onReact: (t: OrgReactionTag) => void; onMore: () => void }) {
   const author = view.members.find((m) => m.userId === post.userId);
   const lp = useLongPress(onMore);
   const s = post.snapshot;
-  const counts = REACTION_COUNTS[post.id] ?? {};
   const isMine = post.userId === view.me.userId;
   return (
     <div {...lp} className="relative min-w-0 select-none px-4 py-3" style={panel(12)}>
@@ -98,7 +105,7 @@ function MomentCard({ view, post, mine, onReact, onMore }: { view: OrgView; post
       )}
       <div className="mt-2 flex flex-wrap gap-1.5">
         {REACTIONS.map((r) => {
-          const on = mine.includes(r.id); const base = (MY_REACTIONS[post.id] ?? []).includes(r.id);
+          const on = mine.includes(r.id); const base = baseMine.includes(r.id);
           const n = (counts[r.id] ?? 0) + (on && !base ? 1 : 0) - (!on && base ? 1 : 0);
           return (
             <button key={r.id} type="button" onClick={() => onReact(r.id)} aria-pressed={on} aria-label={`${r.label}${n ? `，${n} 人` : ''}`} className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-black"
@@ -129,6 +136,8 @@ function OpCard({ post, onMore }: { post: OrgPost; onMore: () => void }) {
 }
 
 function RaidCard({ view }: { view: OrgView }) {
+  const RAID = orgRaidCardData(view);
+  if (!RAID) return null;
   const left = Math.round((RAID.left / RAID.hpMax) * 100);
   return (
     <div className="relative min-w-0 overflow-hidden px-4 py-3" style={{ background: '#0d162a', color: '#eef8ff', clipPath: slantClip(12) }}>

@@ -1,13 +1,16 @@
 /** 真实：src/components/org/OpsSection.tsx（作战）+ src/components/org/MeetingSection.tsx（周日会议） */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { OrgOperation, OrgView } from '@real/types';
 import { P4Button, P4Card, P4Input, P4Progress, P4Loading, useToast } from '@yellow/kit';
 import { CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
 import { ATTR_NAMES } from '@yellow/mock/pkg4-tarot';
-import { OP_HISTORY, OP_KIND_LABEL, OP_STATE, OPS, RESULT_LABEL, POSTS } from '@yellow/mock/pkg4-org';
-import { shiftKey, TODAY } from '@yellow/mock/pkg4-astro';
+import { OP_KIND_LABEL, RESULT_LABEL } from '@yellow/mock/pkg4-org';
+import { shiftKey, TODAY } from '@yellow/adapters/pkg4-astro';
+import { activeOrgOps, buildOrgOpsState, endedOrgOps } from '@/themes/orgData';
+import { cancelOperation, createCheckin, saveMeeting } from '@/services/orgs';
+import { weekRangeOf } from '@/utils/questBoard';
 import { OpsDialogs, type OpsStep } from '@yellow/screens/overlays/OpsDialogs.p4g';
 import { OpCreate } from '@yellow/screens/overlays/OpCreateSheet.p4g';
 import { MeChip, displayCodename } from './common';
@@ -16,12 +19,14 @@ const md = (k: string) => `${Number(k.slice(5, 7))}月${Number(k.slice(8, 10))}�
 
 export function OpsSection({ view, blocked, leader, state, onBlockToggle }: { view: OrgView; blocked: Set<string>; leader: boolean; state?: 'loading' | 'failed'; onBlockToggle: (uid: string) => void }) {
   const toast = useToast();
-  const [ops, setOps] = useState<OrgOperation[]>(OPS);
-  const [st, setSt] = useState(OP_STATE);
+  const [ops, setOps] = useState<OrgOperation[]>(() => activeOrgOps(view));
+  const [st, setSt] = useState(() => buildOrgOpsState(view));
   const [historyOpen, setHistoryOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [dlgOp, setDlgOp] = useState<OrgOperation | null>(null);
   const [step, setStep] = useState<OpsStep>(null);
+  const history = endedOrgOps(view, TODAY);
+  useEffect(() => { setOps(activeOrgOps(view)); setSt(buildOrgOpsState(view)); }, [view]);
   if (state) return <P4Card tone="paper">{state === 'loading' ? <div className="flex items-center gap-3"><P4Loading size="sm" label="正在拉作战" /></div> : <div className="text-body font-bold text-p4g-ink-soft">作战暂时拉不到，稍后点右上角刷新再试。</div>}</P4Card>;
   const active = ops.filter((o) => o.status === 'active');
   return (
@@ -44,19 +49,19 @@ export function OpsSection({ view, blocked, leader, state, onBlockToggle }: { vi
         {active.map((op) => (
           <CollageItem key={op.id}>
             <OpCard view={view} op={op} states={st[op.id] ?? {}} leader={leader}
-              onWrite={(t) => { setSt((s) => ({ ...s, [op.id]: { ...s[op.id], [view.me.userId]: { ...s[op.id][view.me.userId], plan: t } } })); toast.success('写好了，任务里那条也跟着改了'); }}
+              onWrite={(t) => { void createCheckin(op, 'plan', { text: t }).then(() => { setSt((s) => ({ ...s, [op.id]: { ...s[op.id], [view.me.userId]: { ...s[op.id][view.me.userId], plan: t } } })); toast.success('写好了，任务里那条也跟着改了'); }).catch((error) => toast(error instanceof Error ? error.message : '没写进去，请重试')); }}
               onOut={() => { setDlgOp(op); setStep('out'); }} onCancel={() => { setDlgOp(op); setStep('cancel'); }} onMore={op.initiatorId !== view.me.userId ? () => { setDlgOp(op); setStep('menu'); } : undefined} />
           </CollageItem>
         ))}
       </CollageStagger>
       <div>
         <button type="button" onClick={() => setHistoryOpen((v) => !v)} aria-expanded={historyOpen} className="flex w-full items-center justify-between py-1">
-          <span className="font-display text-2xs font-bold tracking-[0.2em] text-[color:var(--p4g-on-stage)] opacity-80">最近 30 天结束的 {OP_HISTORY.length} 项</span>
+          <span className="font-display text-2xs font-bold tracking-[0.2em] text-[color:var(--p4g-on-stage)] opacity-80">最近 30 天结束的 {history.length} 项</span>
           <span className="font-display text-meta font-bold text-[color:var(--p4g-on-stage)]">{historyOpen ? '收起' : '展开'}</span>
         </button>
         {historyOpen && (
           <div className="mt-1 space-y-1.5">
-            {OP_HISTORY.map((h) => (
+            {history.map((h) => (
               <div key={h.id} className="flex min-w-0 items-center gap-2 border-3 border-p4g-line px-3 py-2" style={{ background: 'var(--p4g-surface-grad)' }}>
                 <span className={cx('shrink-0 rounded-xs px-1.5 py-[2px] font-display text-2xs font-bold', h.status === 'achieved' ? 'bg-p4g-black text-p4g-yellow night:bg-p4g-yellow night:text-p4g-black' : h.status === 'failed' ? 'bg-p4g-danger text-[color:var(--p4g-danger-ink)]' : 'border-thin border-p4g-line text-p4g-ink-soft')}>{h.status === 'achieved' ? '达成' : h.status === 'failed' ? '未达成' : '已取消'}</span>
                 <span className="min-w-0 flex-1 truncate font-display text-body font-bold text-p4g-ink">{OP_KIND_LABEL[h.kind]} · {h.title}</span>
@@ -72,8 +77,8 @@ export function OpsSection({ view, blocked, leader, state, onBlockToggle }: { vi
         onReported={() => { setStep(null); toast.success('已举报，会在 2 天内处理'); }}
         onConfirm={(k) => {
           if (!dlgOp) return;
-          if (k === 'out') { setSt((s) => ({ ...s, [dlgOp.id]: { ...s[dlgOp.id], [view.me.userId]: { state: 'out' } } })); toast('这次不参加了，任务里那条已经收起来'); }
-          else { setOps((l) => l.map((o) => (o.id === dlgOp.id ? { ...o, status: 'cancelled' } : o))); toast(`${OP_KIND_LABEL[dlgOp.kind]}已取消`); }
+          if (k === 'out') { void createCheckin(dlgOp, 'out').then(() => { setSt((s) => ({ ...s, [dlgOp.id]: { ...s[dlgOp.id], [view.me.userId]: { state: 'out' } } })); toast('这次不参加了，任务里那条已经收起来'); }).catch(() => toast('没退出成功，请重试')); }
+          else { void cancelOperation(dlgOp.id).then(() => { setOps((l) => l.map((o) => (o.id === dlgOp.id ? { ...o, status: 'cancelled' } : o))); toast(`${OP_KIND_LABEL[dlgOp.kind]}已取消`); }).catch(() => toast('取消失败，请重试')); }
         }} />
     </div>
   );
@@ -154,12 +159,21 @@ export function MeetingSection({ view, mode: initMode }: { view: OrgView; mode: 
   const [result, setResult] = useState<'done' | 'partial' | 'missed' | null>(null);
   const [goal, setGoal] = useState('');
   const [busy, setBusy] = useState(false);
-  const [mine, setMine] = useState<{ result: string; goal: string } | null>(initMode === 'submitted' ? { result: 'done', goal: '每天背 30 个单词' } : null);
+  const [mine, setMine] = useState<{ result: string; goal: string } | null>(view.me.goal ? { result: view.me.result ?? 'done', goal: view.me.goal } : null);
+  useEffect(() => { setMine(view.me.goal ? { result: view.me.result ?? 'done', goal: view.me.goal } : null); }, [view.me.goal, view.me.result]);
   const open = mode === 'open' || mode === 'submitted';
   const wrote = !!mine;
-  const wroteCount = 2 + (wrote ? 1 : 0);
-  const submit = () => { setBusy(true); setTimeout(() => { setBusy(false); setMine({ result: result ?? 'done', goal }); setEditing(false); toast.success(wrote ? '改好了' : '交上去了，下周见'); }, 600); };
-  const minutes = POSTS.find((p) => p.kind === 'minutes')!.minutes!;
+  const currentWeek = weekRangeOf(new Date()).weekKey;
+  const nextWeek = weekRangeOf(new Date(Date.now() + 7 * 86_400_000)).weekKey;
+  const wroteCount = view.members.filter((member) => !!member.goal).length;
+  const submit = () => {
+    setBusy(true);
+    void saveMeeting(view.me.id, { week: currentWeek, nextWeek, result: result ?? 'done', goal })
+      .then(() => { setMine({ result: result ?? 'done', goal }); setEditing(false); toast.success(wrote ? '改好了' : '交上去了，下周见'); })
+      .catch((error) => toast(error instanceof Error ? error.message : '没交上去，请重试'))
+      .finally(() => setBusy(false));
+  };
+  const minutes = view.posts?.find((post) => post.kind === 'minutes')?.minutes ?? null;
   const others = view.members.filter((m) => m.userId !== view.me.userId && m.goal);
   return (
     <CollageStagger className="space-y-3">
@@ -216,7 +230,7 @@ export function MeetingSection({ view, mode: initMode }: { view: OrgView; mode: 
           <div className="border-3 border-p4g-line px-3 py-2.5" style={{ background: 'var(--p4g-surface-grad)' }}>
             <div className="flex items-center gap-2"><span className="font-display text-body font-bold text-p4g-ink">点名</span><span className="ml-auto p4g-num-upright text-2xs font-bold text-p4g-ink-soft">已写 {wroteCount} / {view.members.length}</span></div>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {view.members.map((m, i) => { const did = i === 0 ? wrote : i < 3; return <span key={m.id} className={cx('rounded-xs px-1.5 py-0.5 font-display text-2xs font-bold', did ? 'bg-p4g-black text-p4g-yellow night:bg-p4g-yellow night:text-p4g-black' : 'border-thin border-dashed border-p4g-line text-p4g-ink-soft')}>{did ? '✓ ' : ''}{displayCodename(m)}{i === 0 ? '（我）' : ''}</span>; })}
+              {view.members.map((m) => { const did = !!m.goal; return <span key={m.id} className={cx('rounded-xs px-1.5 py-0.5 font-display text-2xs font-bold', did ? 'bg-p4g-black text-p4g-yellow night:bg-p4g-yellow night:text-p4g-black' : 'border-thin border-dashed border-p4g-line text-p4g-ink-soft')}>{did ? '✓ ' : ''}{displayCodename(m)}{m.userId === view.me.userId ? '（我）' : ''}</span>; })}
             </div>
           </div>
         </CollageItem>
@@ -235,10 +249,12 @@ export function MeetingSection({ view, mode: initMode }: { view: OrgView; mode: 
       </CollageItem>
       <CollageItem>
         <div className="mb-2 font-display text-2xs font-bold tracking-[0.2em] text-[color:var(--p4g-on-stage)] opacity-80">上一次的会议纪要</div>
-        <div className="rounded-sm border-3 border-p4g-line bg-p4g-surface-2 px-3 py-2.5 text-meta text-p4g-ink">
-          <div className="font-display font-bold">第 12 周 · <span className="p4g-num-upright">{minutes.rate.done}/{minutes.rate.total}</span> 人做到了</div>
-          <div className="mt-1 text-2xs font-bold text-p4g-ink-soft">称号：{minutes.titles.map((t) => `${t.codename}·${t.title}`).join('、')} · 缺席：{minutes.absent.map((a) => a.codename).join('、')}</div>
-        </div>
+        {minutes ? (
+          <div className="rounded-sm border-3 border-p4g-line bg-p4g-surface-2 px-3 py-2.5 text-meta text-p4g-ink">
+            <div className="font-display font-bold">{minutes.week} · <span className="p4g-num-upright">{minutes.rate.done}/{minutes.rate.total}</span> 人做到了</div>
+            <div className="mt-1 text-2xs font-bold text-p4g-ink-soft">称号：{minutes.titles.map((t) => `${t.codename}·${t.title}`).join('、') || '暂无'} · 缺席：{minutes.absent.map((a) => a.codename).join('、') || '无'}</div>
+          </div>
+        ) : <div className="text-meta font-bold text-p4g-ink-soft">还没有会议纪要。</div>}
       </CollageItem>
     </CollageStagger>
   );

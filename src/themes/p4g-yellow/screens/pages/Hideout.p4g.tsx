@@ -26,6 +26,7 @@ import { RaidPanel, RaidBanner } from '@yellow/screens/overlays/RaidSheet.p4g';
 import { OrgTitles } from '@yellow/screens/overlays/OrgTitlesSheet.p4g';
 import { OrgSettings } from '@yellow/screens/overlays/OrgSettingsSheet.p4g';
 import { OrgOnboarding, type OnbMode } from '@yellow/screens/overlays/OrgOnboardingSheet.p4g';
+import { orgRaidCardData } from '@/themes/orgData';
 
 type PageState = 'ok' | 'signed-out' | 'loading' | 'empty' | 'error';
 const SECTIONS: HideoutSection[] = ['roster', 'board', 'meeting', 'ops'];
@@ -72,6 +73,11 @@ export default function Hideout({ tab, params }: PageProps) {
   const leader = view.org.leaderId === view.me.userId;
   const members = view.members;
   const empty = Math.max(0, 7 - members.length);
+  const raidCard = orgRaidCardData(view);
+  const orgChoices = realView
+    ? orgs.map((item) => ({ name: item.org.name, slot: item.me.slot, n: item.members.length, dot: false, meet: true }))
+    : [{ name: base.org.name, slot: 'own', n: base.members.length, dot: false, meet: true }, { name: SECOND_ORG.name, slot: SECOND_ORG.slot, n: SECOND_ORG.members, dot: true, meet: false }];
+  useEffect(() => { if (orgs.length > 1) setTwoOrgs(true); }, [orgs.length]);
 
   useEffect(() => { if (section !== 'roster') setSeen((s) => ({ ...s, [section]: true })); }, [section]);
   const pickSection = (s: HideoutSection) => { if (s === section) return; if (!low) setNoise(true); setSection(s); };
@@ -106,8 +112,8 @@ export default function Hideout({ tab, params }: PageProps) {
         <CollageItem>
           <HideoutMap view={view} section={section} onSection={pickSection} blocked={blocked} onSeat={setFlip}
             dots={{ board: section !== 'board' && !seen.board, meeting: meeting === 'open', ops: section !== 'ops' && !seen.ops }}
-            raid={{ boss: RAID.boss.name, left: RAID.left / RAID.hpMax, defeated: false, dot: true }} onRaid={() => setRaidOpen(true)} />
-          <div className="mt-3"><RaidBanner onOpen={() => setRaidOpen(true)} /></div>
+            raid={raidCard ? { boss: '满月团战', left: raidCard.left / raidCard.hpMax, defeated: raidCard.left <= 0, dot: true } : null} onRaid={() => setRaidOpen(true)} />
+          {raidCard && <div className="mt-3"><RaidBanner onOpen={() => setRaidOpen(true)} /></div>}
         </CollageItem>
         <CollageItem>
           <SectionTitle section={section} alt={section === 'roster' && wall} onTitle={section === 'roster' ? () => setWall((w) => !w) : undefined}

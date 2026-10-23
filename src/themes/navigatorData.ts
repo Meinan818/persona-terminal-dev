@@ -1,9 +1,14 @@
 import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useAppStore } from '@/store';
 import { useNavigatorStore } from '@/store/navigator';
 import { buildPreviewLines, executeDraft } from '@/utils/navigatorRegistry';
 import type { NavigatorDraft } from '@/utils/navigatorRegistry';
+import { db } from '@/db';
+import { getProfile, saveProfile } from '@/utils/navigatorMemory';
+import { deletePromise, listPromises, updatePromiseDate } from '@/utils/navigatorPromise';
+import type { NavigatorMemo } from '@/types';
 
 export interface ThemeChatMessage {
   id: string;
@@ -77,4 +82,25 @@ export const navigatorThemeOps = {
   updateCard: (id: string, patch: Parameters<ReturnType<typeof useNavigatorStore.getState>['updateCard']>[1]) => useNavigatorStore.getState().updateCard(id, patch),
   loadOlder: () => useNavigatorStore.getState().loadOlder(),
   executeDraft,
+};
+
+export function useNavigatorNotebook(open: boolean) {
+  const profile = useLiveQuery(async () => open ? getProfile() : '', [open]) ?? '';
+  const promises = useLiveQuery(async () => open ? listPromises() : [], [open]) ?? [];
+  const memos = useLiveQuery(
+    async () => open ? db.navigatorMemos.where('status').equals('active').reverse().sortBy('createdAt') : [],
+    [open],
+  ) ?? [];
+  return { profile, promises, memos };
+}
+
+export const navigatorNotebookOps = {
+  saveProfile,
+  updatePromiseDate,
+  deletePromise,
+  saveMemo: async (id: string, patch: Partial<NavigatorMemo>) => {
+    const memo = await db.navigatorMemos.get(id);
+    if (memo) await db.navigatorMemos.put({ ...memo, ...patch });
+  },
+  deleteMemo: (id: string) => db.navigatorMemos.delete(id),
 };

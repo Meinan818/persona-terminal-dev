@@ -31,6 +31,7 @@ import { RaidPanel, RaidBanner } from '@pink/screens/overlays/RaidSheet.p3r';
 import { OrgTitles } from '@pink/screens/overlays/OrgTitlesSheet.p3r';
 import { OrgSettings } from '@pink/screens/overlays/OrgSettingsSheet.p3r';
 import { OrgOnboarding, type OnbMode } from '@pink/screens/overlays/OrgOnboardingSheet.p3r';
+import { orgRaidCardData } from '@/themes/orgData';
 import { OpCreate } from '@pink/screens/overlays/OpCreateSheet.p3r';
 
 type PageState = 'ok' | 'signed-out' | 'loading' | 'empty' | 'error';
@@ -83,6 +84,11 @@ export default function Hideout({ tab, params }: PageProps) {
   const leader = view.org.leaderId === view.me.userId;
   const members = view.members;
   const empty = Math.max(0, 7 - members.length);
+  const raidCard = orgRaidCardData(view);
+  const orgChoices = realView
+    ? orgs.map((item) => ({ name: item.org.name, slot: item.me.slot, n: item.members.length, dot: false, meet: true }))
+    : [{ name: base.org.name, slot: 'own', n: base.members.length, dot: false, meet: true }, { name: SECOND_ORG.name, slot: SECOND_ORG.slot, n: SECOND_ORG.members, dot: true, meet: false }];
+  useEffect(() => { if (orgs.length > 1) setTwoOrgs(true); }, [orgs.length]);
 
   useEffect(() => { if (section !== 'roster') setSeen((s) => ({ ...s, [section]: true })); }, [section]);
   const pickSection = (s: HideoutSection) => { if (s === section) return; setSection(s); };
@@ -121,8 +127,8 @@ export default function Hideout({ tab, params }: PageProps) {
         <motion.div {...stag(2)}>
           <HideoutMap view={view} section={section} onSection={pickSection} blocked={blocked} onSeat={setFlip} level={orgLevel.level}
             dots={{ board: section !== 'board' && !seen.board, meeting: meeting === 'open', ops: section !== 'ops' && !seen.ops }}
-            raid={{ boss: RAID.boss.name, left: RAID.left / RAID.hpMax, defeated: false, dot: true }} onRaid={() => setRaidOpen(true)} />
-          <div className="mt-3"><RaidBanner onOpen={() => setRaidOpen(true)} /></div>
+            raid={raidCard ? { boss: '满月团战', left: raidCard.left / raidCard.hpMax, defeated: raidCard.left <= 0, dot: true } : undefined} onRaid={() => setRaidOpen(true)} />
+          {raidCard && <div className="mt-3"><RaidBanner onOpen={() => setRaidOpen(true)} /></div>}
         </motion.div>
         <motion.div {...stag(3)}>
           <div className="mb-3">
@@ -200,7 +206,7 @@ export default function Hideout({ tab, params }: PageProps) {
 
         {pstate === 'ok' && twoOrgs && (
           <div role="tablist" aria-label="我的组织" className="grid grid-cols-2 gap-2">
-            {[{ name: base.org.name, slot: 'own', n: base.members.length, dot: false, meet: true }, { name: SECOND_ORG.name, slot: SECOND_ORG.slot, n: SECOND_ORG.members, dot: true, meet: false }].map((o, i) => (
+            {orgChoices.map((o, i) => (
               <button key={o.name} type="button" role="tab" aria-selected={orgIdx === i} onClick={() => { if (orgIdx !== i) { setOrgIdx(i); setSweep(!low); } }} className="relative min-w-0 px-4 py-2 text-left" style={{ clipPath: slantClip(10), background: orgIdx === i ? P3R.blue : P3R.panel, color: orgIdx === i ? P3R.onBlue : P3R.ink }}>
                 <span className="block truncate text-[14px] font-black">{o.name}</span>
                 <span className="block truncate text-[10.5px] font-bold opacity-80">{o.slot === 'own' ? '我建的' : '我加入的'} · {o.n} / 7{o.meet ? ' · 会议日' : ''}</span>

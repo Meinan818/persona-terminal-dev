@@ -17,6 +17,7 @@ import type { Confidant, ConfidantBuff } from '@real/types';
 import { Portal, useScrollLock } from '@yellow/kit';
 import { P4Outline } from '@yellow/kit';
 import { useLowMotion } from '@yellow/lib/prefs';
+import { useStarShiftFlow } from '@/components/cooperation/useStarShiftFlow';
 import { p4gAsset } from '@yellow/lib/asset';
 import { useSlot } from '@yellow/lib/slots';
 import { useStaticBg } from '@yellow/fx';
@@ -347,22 +348,15 @@ function CollageSheet({ children }: { children: ReactNode }) {
 export type ShiftStage = 'input' | 'loading' | 'preview' | 'done' | 'error';
 export function StarShiftPage({ confidant, charges, initialStage = 'input', onClose, onApplied }: { confidant: Confidant; charges: number; initialStage?: ShiftStage; onClose: () => void; onApplied?: () => void }) {
   const card = TAROT_BY_ID[confidant.arcanaId];
-  const [stage, setStage] = useState<ShiftStage>(initialStage);
-  const [note, setNote] = useState('');
-  const recentActs = ['10/19 · 一起去河堤跑步，她说下周想去参加市里的比赛', '10/12 · 下雨天她把伞塞给我，自己淋着跑回家', '10/03 · 在逆影战场里用了「Ta 的慰藉」'];
-  const result = {
-    orientation: confidant.orientation === 'upright' ? 'reversed' as const : 'upright' as const,
-    description: '从后桌的玩伴变成了会互相交底的人。比赛前夜她第一次说「其实我也会怕」。',
-    interpretation: '战车逆位：冲劲没有消失，只是她终于肯把方向盘分你一半——这是信任，不是软弱。',
-    advice: '比赛那天别只喊加油，赛后陪她把紧张说完。',
-    change: '她开始愿意示弱了。你们的关系从「并肩」走向「托付」。',
-  };
-  useEffect(() => {
-    if (stage !== 'loading') return;
-    const t = window.setTimeout(() => setStage('preview'), 1600);
-    return () => clearTimeout(t);
-  }, [stage]);
-  const sub = stage === 'input' ? `《${card?.name ?? '塔罗'}》· 星移剪辑 · 余 ${charges}` : stage === 'loading' ? `《${card?.name ?? '塔罗'}》· 星象正在重写这段关系` : stage === 'preview' ? `《${card?.name ?? '塔罗'}》· 预览新的落墨` : `《${card?.name ?? '塔罗'}》· 本回放送完毕`;
+  const flow = useStarShiftFlow(true, confidant, onClose);
+  const stage: ShiftStage = flow.stage === 'thinking' ? 'loading' : flow.stage;
+  const note = flow.changeNote;
+  const currentCharges = flow.charges;
+  const recentActs = flow.recentActs.map((item) => `${item.date} · ${item.text.replace(/\n/g, ' / ')}`);
+  const result = flow.result ? { ...flow.result, change: flow.result.summary } : null;
+  const setStage = (next: ShiftStage) => flow.setStage(next === 'loading' ? 'thinking' : next);
+  useEffect(() => { if (flow.stage === 'done') onApplied?.(); }, [flow.stage]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sub = stage === 'input' ? `《${card?.name ?? '塔罗'}》· 星移剪辑 · 余 ${currentCharges}` : stage === 'loading' ? `《${card?.name ?? '塔罗'}》· 星象正在重写这段关系` : stage === 'preview' ? `《${card?.name ?? '塔罗'}》· 预览新的落墨` : `《${card?.name ?? '塔罗'}》· 本回放送完毕`;
   return (
     <div role="dialog" aria-modal="true" aria-label="星移剪辑" className="fixed inset-0 overflow-y-auto" style={{ zIndex: 'var(--p4g-z-cutin)' as unknown as number }}>
       <RankUpBackdrop run={false} className="fixed" />
@@ -370,7 +364,7 @@ export function StarShiftPage({ confidant, charges, initialStage = 'input', onCl
         <CollageSheet>
           <button className="p4g-press absolute right-3 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-sm border-3 border-p4g-black bg-p4g-cream font-bold text-p4g-black" type="button" data-sf-close aria-label="关闭" onClick={onClose}>✕</button>
           <div className="flex min-w-0 items-center gap-3 pr-12">
-            <Monitor arcanaId={confidant.arcanaId} orientation={stage === 'done' ? result.orientation : confidant.orientation} width={56} tag={stage === 'loading' ? 'TUNE' : 'REC'} />
+            <Monitor arcanaId={confidant.arcanaId} orientation={stage === 'done' && result ? result.orientation : confidant.orientation} width={56} tag={stage === 'loading' ? 'TUNE' : 'REC'} />
             <div className="min-w-0">
               <P4Outline size="clamp(26px, 7vw, 40px)" stroke={6} italic fill="var(--p4g-white)" strokeColor="var(--p4g-black)">STAR SHIFT</P4Outline>
               <span className="block truncate font-display text-meta font-bold text-p4g-black">{sub}</span>
@@ -380,7 +374,7 @@ export function StarShiftPage({ confidant, charges, initialStage = 'input', onCl
             {stage === 'input' && (
               <>
                 <label className="mb-1 block font-display text-meta font-bold" htmlFor="p4-sf-note">你觉得你们的关系发生了什么变化？（可不填）</label>
-                <textarea id="p4-sf-note" value={note} onChange={(e) => setNote(e.target.value)} rows={4} maxLength={300}
+                  <textarea id="p4-sf-note" value={note} onChange={(e) => flow.setChangeNote(e.target.value)} rows={4} maxLength={300}
                   placeholder="例如：最近几次见面 Ta 愿意和我谈更深入的事情了 / 吵了一架之后我们之间多了一份小心翼翼……"
                   className="w-full resize-none rounded-sm border-3 border-p4g-black bg-p4g-cream px-3 py-2 text-body text-p4g-black placeholder:text-p4g-black/45 focus:outline-none" />
                 <div className="mt-3 rounded-sm border-2 border-dashed border-p4g-black/50 bg-white/40 p-3">
@@ -388,7 +382,7 @@ export function StarShiftPage({ confidant, charges, initialStage = 'input', onCl
                   <ul className="mt-1 space-y-1 text-meta">{recentActs.map((a) => <li key={a} className="p4g-clamp-1">▸ {a}</li>)}</ul>
                 </div>
                 <div className="mt-4 flex justify-end">
-                  <button type="button" onClick={() => setStage('loading')} className="p4g-press rounded-full border-3 border-p4g-black bg-p4g-orange px-5 py-2.5 font-display text-body font-bold shadow-hard"><span>✦ 重剪本期（消耗 1 次）</span></button>
+                  <button type="button" disabled={currentCharges <= 0} onClick={() => { void flow.handleStartShift(); }} className="p4g-press rounded-full border-3 border-p4g-black bg-p4g-orange px-5 py-2.5 font-display text-body font-bold shadow-hard disabled:opacity-40"><span>✦ 重剪本期（消耗 1 次）</span></button>
                 </div>
               </>
             )}
@@ -399,7 +393,7 @@ export function StarShiftPage({ confidant, charges, initialStage = 'input', onCl
                 <p className="text-meta">星移会把最近的相处重新读一遍，再写下一版可能。</p>
               </div>
             )}
-            {stage === 'preview' && (
+            {stage === 'preview' && result && (
               <>
                 <div className="rounded-sm border-3 border-p4g-black bg-p4g-black p-3 text-white"><span className="font-display text-cap font-bold text-p4g-yellow">✦ 这次的变化</span><p className="mt-1 text-body">{result.change}</p></div>
                 {([['关系描述', confidant.description, result.description], ['解读', confidant.aiInterpretation, result.interpretation], ['未来', confidant.aiAdvice, result.advice]] as const).map(([t, o, n]) => (
@@ -413,9 +407,9 @@ export function StarShiftPage({ confidant, charges, initialStage = 'input', onCl
                 )}
                 <div className="mt-4 flex flex-wrap justify-end gap-3">
                   <button className="p4g-press rounded-full border-3 border-p4g-black bg-p4g-cream px-5 py-2.5 font-display text-body font-bold" type="button" onClick={() => setStage('input')}>再想想</button>
-                  <button className="p4g-press rounded-full border-3 border-p4g-black bg-p4g-orange px-5 py-2.5 font-display text-body font-bold shadow-hard" type="button" onClick={() => { setStage('done'); onApplied?.(); }}><span>收录本剪</span></button>
+                  <button className="p4g-press rounded-full border-3 border-p4g-black bg-p4g-orange px-5 py-2.5 font-display text-body font-bold shadow-hard" type="button" onClick={() => { void flow.handleConfirm(); }}><span>收录本剪</span></button>
                 </div>
-                <div className="mt-2 text-center text-cap">· 本次为离线星移 ·</div>
+                {result.source === 'offline' && <div className="mt-2 text-center text-cap">· 本次为离线星移 ·</div>}
               </>
             )}
             {stage === 'done' && (
@@ -427,7 +421,7 @@ export function StarShiftPage({ confidant, charges, initialStage = 'input', onCl
             )}
             {stage === 'error' && (
               <div className="py-6 text-center">
-                <p className="font-display text-body font-bold text-p4g-danger">星移没能完成，请稍后再试</p>
+                <p className="font-display text-body font-bold text-p4g-danger">{flow.err || '星移没能完成，请稍后再试'}</p>
                 <button className="p4g-press mt-3 rounded-full border-3 border-p4g-black bg-p4g-cream px-5 py-2 font-display text-body font-bold" type="button" onClick={() => setStage('input')}>返回重试</button>
               </div>
             )}

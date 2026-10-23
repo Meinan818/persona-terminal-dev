@@ -17,9 +17,9 @@ import { Portal, P3Button, P3R, slantClip } from '@pink/kit';
 import { useAIStream, type AIFail, type AIPhase } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
 import { navigate } from '@pink/shell/shellBus';
+import { useStarShiftFlow } from '@/components/cooperation/useStarShiftFlow';
 import { ATTR_NAMES, INTIMACY_LABELS, TAROT_BY_ID } from './arcana';
 import { Tarot } from './ui';
-import { PK3_STARSHIFT, pk3Events } from '@pink/mock/pkg3';
 import './rankup.css';
 
 export const EXP = 'cubic-bezier(.16,1,.3,1)';
@@ -240,38 +240,32 @@ export function CelebrateScreen({ confidant, level, charges, onClose, onUseStarS
 
 // ═════════════════════════ ③ 星移弹窗 ═════════════════════════
 const SEP = '\n¶\n';
-const SHIFT_TEXT = [PK3_STARSHIFT.summary, PK3_STARSHIFT.description, PK3_STARSHIFT.interpretation, PK3_STARSHIFT.advice].join(SEP);
 
 export function StarShiftModal({ confidant, charges, initialStage = 'input', fail, onClose, auto = false }: { confidant: Confidant; charges: number; initialStage?: ShiftStage; fail?: AIFail; onClose: () => void; auto?: boolean }) {
   const bold = useBoldness();
   const card = TAROT_BY_ID[confidant.arcanaId];
-  const initialPhase: AIPhase = initialStage === 'thinking' ? 'thinking' : initialStage === 'preview' ? (fail === 'truncate' ? 'truncated' : 'streaming') : initialStage === 'done' ? 'done' : initialStage === 'error' ? (fail === 'nokey' ? 'nokey' : 'error') : 'idle';
-  const ai = useAIStream({ text: SHIFT_TEXT, fail: initialStage === 'error' && !fail ? 'error' : fail, initialPhase, cps: 64, failAt: initialStage === 'preview' && !fail ? 0.06 : 0.45 });
-  const [stage, setStage] = useState<ShiftStage>(initialStage);
-  const [note, setNote] = useState(initialStage === 'input' ? '' : '最近她愿意和我谈她父亲的事了，也会在白天问我「今天还好吗」。');
-  const [saveErr, setSaveErr] = useState<string | null>(null);
-  const reversedNext = false;
-  const recentActs = useMemo(() => pk3Events(confidant.id).filter((e) => e.type === 'conversation').map((e) => ({ date: e.date, text: `事件：${e.userInput}${e.advice ? `\n当时的建议：${e.advice}` : ''}` }))
-    .concat([{ date: '2026/10/16', text: '事件：一起在巴黎咖啡复习到关门' }, { date: '2026/10/9', text: '事件：影时间后在月光馆屋顶聊到天亮' }]), [confidant.id]);
-
-  // AI 相位 → 星移阶段
+  const flow = useStarShiftFlow(true, confidant, onClose);
+  const stage = flow.stage;
+  const note = flow.changeNote;
+  const recentActs = flow.recentActs;
+  const currentCharges = flow.charges;
+  const [reading, setReading] = useState('');
+  const ai = useAIStream({ text: reading, initialPhase: 'idle', cps: 64, thinkMs: 0 });
   useEffect(() => {
-    if (stage === 'done' || stage === 'input') return;
-    if (ai.phase === 'thinking') setStage('thinking');
-    else if (ai.phase === 'streaming' || ai.phase === 'done' || ai.phase === 'truncated') setStage('preview');
-    else if (ai.phase === 'error' || ai.phase === 'nokey') setStage(ai.phase === 'error' && ai.progress > 0 && ai.progress < 1 ? 'preview' : 'error');
-  }, [ai.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!flow.result) return;
+    setReading([flow.result.summary, flow.result.description, flow.result.interpretation, flow.result.advice].join(SEP));
+    ai.start();
+  }, [flow.result]); // eslint-disable-line react-hooks/exhaustive-deps
+  const reversedNext = !!flow.result && flow.result.orientation !== confidant.orientation;
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && stage !== 'thinking') onClose(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [stage, onClose]);
-  // 完成：1.4s 自动关（真实 setTimeout 1400）
-  useEffect(() => { if (stage !== 'done') return; const t = window.setTimeout(onClose, 1400); return () => clearTimeout(t); }, [stage, onClose]);
   // 一镜到底：输入停 1s 自动落墨，预览写完停 1.2s 自动确认
-  useEffect(() => { if (!auto) return; if (stage === 'input') { const t = window.setTimeout(() => start(), 1000); return () => clearTimeout(t); } if (stage === 'preview' && ai.phase === 'done') { const t = window.setTimeout(() => setStage('done'), 1200); return () => clearTimeout(t); } }, [auto, stage, ai.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!auto) return; if (stage === 'input') { const t = window.setTimeout(() => { void flow.handleStartShift(); }, 1000); return () => clearTimeout(t); } if (stage === 'preview' && ai.phase === 'done') { const t = window.setTimeout(() => { void flow.handleConfirm(); }, 1200); return () => clearTimeout(t); } }, [auto, stage, ai.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const start = () => { if (charges <= 0) return; setSaveErr(null); setStage('thinking'); ai.start(); };
+  const start = () => { if (currentCharges <= 0) return; void flow.handleStartShift(); };
   const parts = ai.text.split(SEP);
   const [summary = '', desc = '', interp = '', advice = ''] = parts;
-  const streaming = ai.phase === 'streaming';
-  const errMsg = saveErr ?? (ai.phase === 'nokey' ? '尚未配置 AI 密钥' : ai.error?.code === 'offline' ? '当前离线：星移需要联网才能重新落墨' : ai.error?.message ?? '星移失败');
+  const streaming = ai.phase === 'thinking' || ai.phase === 'streaming';
+  const errMsg = flow.err;
 
   const Head = ({ subtitle, hideClose }: { subtitle?: string; hideClose?: boolean }) => (
     <div className="pk3-sf-head">
@@ -300,10 +294,10 @@ export function StarShiftModal({ confidant, charges, initialStage = 'input', fai
           <AnimatePresence mode="wait">
             {stage === 'input' && (
               <motion.div key="input" {...fade} className="pk3-sf-body">
-                <Head subtitle={`星移 · 余 ${charges}`} />
+                <Head subtitle={`星移 · 余 ${currentCharges}`} />
                 <label className="flex flex-col gap-1.5">
                   <span className="pk3-sf-sub">你觉得你们的关系发生了什么变化？（可不填）</span>
-                  <textarea className="w-full resize-none px-4 py-3 text-[14px] font-semibold leading-[1.7] outline-none" rows={5} maxLength={300} value={note} onChange={(e) => setNote(e.target.value)}
+                  <textarea className="w-full resize-none px-4 py-3 text-[14px] font-semibold leading-[1.7] outline-none" rows={5} maxLength={300} value={note} onChange={(e) => flow.setChangeNote(e.target.value)}
                     placeholder="例如：最近几次见面 Ta 愿意和我谈更深入的事情了 / 吵了一架之后我们之间多了一份小心翼翼……"
                     style={{ background: P3R.cyanFaint, color: P3R.ink, clipPath: slantClip(12) }} />
                   <span className="text-right text-[11px] font-bold" style={{ color: P3R.grey }}>{note.length} / 300</span>
@@ -314,9 +308,9 @@ export function StarShiftModal({ confidant, charges, initialStage = 'input', fai
                     {recentActs.map((a, i) => <div key={i} className="pk3-sf-row"><span className="d">{a.date}</span>{a.text}</div>)}
                   </div>
                 </div>
-                {charges <= 0 && <div className="pk3-sf-sub" style={{ color: P3R.magenta }}>星移次数已用完：下一次亲密度升级会再给一次。</div>}
+                {currentCharges <= 0 && <div className="pk3-sf-sub" style={{ color: P3R.magenta }}>星移次数已用完：下一次亲密度升级会再给一次。</div>}
                 <div className="pk3-sf-actions single">
-                  <button type="button" className="pk3-sf-btn main" onClick={start} disabled={charges <= 0}>✧ 重新落墨（消耗 1 次）</button>
+                  <button type="button" className="pk3-sf-btn main" onClick={start} disabled={currentCharges <= 0}>✧ 重新落墨（消耗 1 次）</button>
                 </div>
               </motion.div>
             )}
@@ -351,10 +345,10 @@ export function StarShiftModal({ confidant, charges, initialStage = 'input', fai
                   <div className="pk3-sf-box"><span className="k">推演被中断</span><small>可以从断点继续。</small><div className="mt-1"><P3Button size="sm" onClick={ai.resume}>继续 ›</P3Button></div></div>
                 )}
                 <div className="pk3-sf-actions">
-                  <button type="button" className="pk3-sf-btn ghost" onClick={() => { ai.abort(); setStage('input'); }}>再想想</button>
-                  <button type="button" className="pk3-sf-btn main" disabled={ai.phase !== 'done'} onClick={() => setStage('done')}>落墨</button>
+                  <button type="button" className="pk3-sf-btn ghost" onClick={() => { ai.abort(); flow.setStage('input'); }}>再想想</button>
+                  <button type="button" className="pk3-sf-btn main" disabled={ai.phase !== 'done'} onClick={() => { void flow.handleConfirm(); }}>落墨</button>
                 </div>
-                {fail === 'offline' && <div className="pk3-sf-sub text-center">· 本次为离线星移 ·</div>}
+                {flow.result?.source === 'offline' && <div className="pk3-sf-sub text-center">· 本次为离线星移 ·</div>}
               </motion.div>
             )}
             {stage === 'done' && (
@@ -362,7 +356,7 @@ export function StarShiftModal({ confidant, charges, initialStage = 'input', fai
                 <div className="py-6 text-center">
                   <motion.div className="pk3-sf-done" initial={bold ? { scale: 0 } : false} animate={{ scale: 1, rotate: bold ? [0, 15, 0] : 0 }} transition={{ type: 'spring', damping: 10, stiffness: 200 }}>✧</motion.div>
                   <p className="pk3-sf-sub mt-4">这一次的落墨已经收进档案</p>
-                  <p className="mt-1 font-cond text-[12px] tracking-wider" style={{ color: P3R.lilacInk }}>STAR SHIFT · 余 {Math.max(0, charges - 1)}</p>
+                  <p className="mt-1 font-cond text-[12px] tracking-wider" style={{ color: P3R.lilacInk }}>STAR SHIFT · 余 {Math.max(0, currentCharges)}</p>
                 </div>
               </motion.div>
             )}
@@ -373,16 +367,9 @@ export function StarShiftModal({ confidant, charges, initialStage = 'input', fai
                   <p className="pk3-sf-title mt-3">{errMsg || '出了点问题'}</p>
                   <p className="pk3-sf-sub">星移次数没有被扣掉。</p>
                 </div>
-                {ai.phase === 'nokey' ? (
-                  <div className="pk3-sf-actions">
-                    <button type="button" className="pk3-sf-btn ghost" onClick={() => { ai.abort(); setStage('input'); }}>返回</button>
-                    <button type="button" className="pk3-sf-btn main" onClick={() => { onClose(); navigate('settings', undefined, { params: { group: 'ai' } }); }}>去配置密钥</button>
-                  </div>
-                ) : (
-                  <div className="pk3-sf-actions single">
-                    <button type="button" className="pk3-sf-btn ghost" onClick={() => { ai.abort(); setStage('input'); }}>返回重试</button>
-                  </div>
-                )}
+                <div className="pk3-sf-actions single">
+                  <button type="button" className="pk3-sf-btn ghost" onClick={() => { ai.abort(); flow.setStage('input'); }}>返回重试</button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

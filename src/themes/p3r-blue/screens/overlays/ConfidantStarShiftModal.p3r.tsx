@@ -7,11 +7,14 @@
 import type { OverlayProps } from '@blue/registry/types';
 import type { AIFail } from '@blue/fx';
 import { StarShiftModal, type ShiftStage } from '@blue/screens/pkg3/rankup';
-import { PK3_CONFIDANTS } from '@blue/mock/pkg3';
+import { useCooperationData } from '@blue/adapters/pkg3';
+import { P3Sheet, P3R } from '@blue/kit';
 
 export default function ConfidantStarShiftModal({ open, onClose, params }: OverlayProps) {
+  const { confidants } = useCooperationData();
+  const c = confidants.find((x) => x.id === params?.get('id')) ?? confidants[0] ?? null;
   if (!open) return null;
-  const c = PK3_CONFIDANTS.find((x) => x.id === params?.get('id')) ?? PK3_CONFIDANTS[0];
+  if (!c) return <P3Sheet open={open} onClose={onClose} title="星移" en="STAR SHIFT"><div className="py-8 text-center text-[13px] font-bold" style={{ color: P3R.grey }}>还没有可以进行星移的同伴。</div></P3Sheet>;
   const stage = (params?.get('stage') as ShiftStage) || 'input';
   const charges = Number(params?.get('charges') ?? (c.starShiftCharges || 1));
   return <StarShiftModal confidant={c} charges={charges} initialStage={stage} fail={params?.get('fail') as AIFail} onClose={onClose} />;

@@ -11,8 +11,13 @@ import { P4Sheet, P4Button, P4Chip, P4Loading, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { ATTR_NAMES, ATTR_COLOR } from '@yellow/mock/pkg4-tarot';
-import { buildView, RAID, RAID_MASKS, RAID_WEAK_MULT, RAID_FULL_MOON_MULT, RAID_XP_PER_HITTER } from '@yellow/mock/pkg4-org';
+import { buildView, useOrgView } from '@yellow/adapters/pkg4-org';
 import { displayCodename } from '@yellow/screens/pkg4/org/common';
+import { buildRaidPanelData } from '@/themes/orgData';
+import { useAppStore } from '@/store';
+import { RAID_BASIC_POWER, RAID_FULL_MOON_MULT, RAID_WEAK_MULT, RAID_XP_PER_HITTER } from '@/utils/orgRaid';
+import { allOutFromUi, strikeFromUi } from '@/services/orgRaidSync';
+import { readOnlineSp } from '@/services/onlineResources';
 
 export type RaidDemo = 'open' | 'struck' | 'day' | 'defeated' | 'after' | 'nobattle' | 'loading' | 'failed';
 const NIGHT_NAME = ['前一晚', '满月夜', '后一晚'] as const;
@@ -33,36 +38,72 @@ function BossSilhouette({ hit }: { hit: boolean }) {
 
 export function RaidPanel({ view, open, onClose, demo = 'open', onFlash }: { view: OrgView; open: boolean; onClose: () => void; demo?: RaidDemo; onFlash: (s: string) => void }) {
   const low = useLowMotion();
-  const [left, setLeft] = useState(RAID.left);
+  const persona = useAppStore((state) => state.persona);
+  const panel = buildRaidPanelData(view);
+  const attrs = ['knowledge', 'guts', 'dexterity', 'kindness', 'charm'] as const;
+  const RAID_MASKS = attrs.map((attr) => ({
+    attr,
+    name: persona?.attributePersonas?.[attr]?.name ?? ATTR_NAMES[attr],
+    skills: [
+      { skill: '普攻', type: 'basic', power: RAID_BASIC_POWER, plus: 0, sp: 0 },
+      ...(persona?.skills?.[attr] ?? []).slice(0, 4).map((skill) => ({ skill: skill.name, type: skill.type, power: skill.power, plus: 0, sp: skill.spCost })),
+    ],
+  }));
+  const RAID = panel ? {
+    boss: panel.raid.boss,
+    hpMax: panel.raid.hpMax,
+    left: panel.state.left,
+    nights: panel.nights,
+    myNights: panel.myNights,
+    nightIndex: panel.current.nightIndex,
+    hitters: panel.hitters,
+    allOutNeed: panel.options.allOutNeed,
+    sp: readOnlineSp(),
+  } : null;
+  const [left, setLeft] = useState(panel?.state.left ?? 0);
   const [mask, setMask] = useState(0);
-  const [struck, setStruck] = useState<{ skill: string; damage: number } | null>(demo === 'struck' ? { skill: '雷光斩', damage: 24 } : null);
+  const [struck, setStruck] = useState<{ skill: string; damage: number } | null>(panel?.struckTonight ?? null);
   const [hit, setHit] = useState<null | { kind: 'strike' | 'allout'; weak: boolean; damage: number; defeated: boolean }>(null);
   const [rules, setRules] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [allOutUsed, setAllOutUsed] = useState(false);
-  useEffect(() => { if (open) { setLeft(demo === 'defeated' ? 0 : RAID.left); setStruck(demo === 'struck' ? { skill: '雷光斩', damage: 24 } : null); setAllOutUsed(false); } }, [open, demo]);
+  const [allOutUsed, setAllOutUsed] = useState(panel?.options.allOutUsed ?? false);
+  useEffect(() => { if (open && panel) { setLeft(panel.state.left); setStruck(panel.struckTonight); setAllOutUsed(panel.options.allOutUsed); } }, [open, demo, panel?.state.left, panel?.struckTonight, panel?.options.allOutUsed]);
   useEffect(() => { if (!hit) return; const t = setTimeout(() => setHit(null), low ? 600 : 1400); return () => clearTimeout(t); }, [hit, low]);
-  const defeated = left <= 0;
-  const night = demo !== 'day' && demo !== 'after';
-  const battle = demo !== 'nobattle';
+  if (!panel || !RAID) return (
+    <P4Sheet open={open} onClose={onClose} title="满月团战" en="FULL MOON RAID" size="tall">
+      <div className="py-8 text-center text-body font-bold text-p4g-ink-soft">当前没有真实团战。等下一次满月开团后再来。</div>
+    </P4Sheet>
+  );
+  const defeated = panel.state.defeated || left <= 0;
+  const night = panel.current.night !== null;
+  const battle = panel.current.phase === 'open';
   const sp = battle ? RAID.sp : 0;
   const m = RAID_MASKS[mask];
   const weak = RAID.boss.weak;
-  const canStrike = night && !struck && !defeated;
-  const allOutNeed = struck ? 0 : RAID.allOutNeed;
-  const canAllOut = !!struck && !allOutUsed && !defeated && allOutNeed === 0;
-  const allOutPreview = 64;
-  const reward = 25 + 5 * ((RAID.boss.lv ?? 1) - 1);
+  const canStrike = panel.options.canStrike && !defeated;
+  const allOutNeed = panel.options.allOutNeed;
+  const canAllOut = panel.options.canAllOut && !allOutUsed && !defeated;
+  const allOutPreview = panel.allOutPreview;
+  const reward = panel.reward;
   const dmg = (p: number, plus: number) => { const w = m.attr === weak; return { isWeak: w, damage: Math.round((p + plus) * (w ? RAID_WEAK_MULT : 1) * RAID_FULL_MOON_MULT) }; };
   const strike = (s: typeof m.skills[number]) => {
     setBusy(true);
-    setTimeout(() => {
-      const d = dmg(s.power, s.plus); const nl = Math.max(0, left - d.damage);
-      setLeft(nl); setStruck({ skill: s.skill, damage: d.damage }); setHit({ kind: 'strike', weak: d.isWeak, damage: d.damage, defeated: nl <= 0 }); setBusy(false);
-    }, 500);
+    void strikeFromUi(view.org.id, { attr: m.attr, power: s.power, plus: s.plus, skill: s.skill, spCost: s.sp }).then((result) => {
+      setLeft((value) => Math.max(0, value - result.damage));
+      setStruck({ skill: s.skill, damage: result.damage });
+      setHit({ kind: 'strike', weak: result.isWeak, damage: result.damage, defeated: result.defeated });
+      onFlash(`${s.skill} · ${result.damage}${result.isWeak ? '（打中弱点）' : ''}`);
+    }).catch((error) => onFlash(error instanceof Error ? error.message : '出手失败，请重试')).finally(() => setBusy(false));
   };
-  const allOut = () => { const nl = Math.max(0, left - allOutPreview); setLeft(nl); setAllOutUsed(true); setHit({ kind: 'allout', weak: false, damage: allOutPreview, defeated: nl <= 0 }); };
-  const status = demo === 'after' ? '这次团战已经结束' : defeated ? `${md(RAID.nights[1])} 满月` : night ? `${NIGHT_NAME[RAID.nightIndex]} · ${struck ? '今晚已出手' : '现在能出手'}` : '白天 · 18:00 开打';
+  const allOut = () => {
+    setBusy(true);
+    void allOutFromUi(view.org.id).then((result) => {
+      setLeft((value) => Math.max(0, value - result.damage));
+      setAllOutUsed(true);
+      setHit({ kind: 'allout', weak: false, damage: result.damage, defeated: result.defeated });
+    }).catch((error) => onFlash(error instanceof Error ? error.message : '总攻击失败，请重试')).finally(() => setBusy(false));
+  };
+  const status = panel.current.phase === 'after' || defeated ? '这次团战已经结束' : night ? `${NIGHT_NAME[Math.max(0, RAID.nightIndex)] ?? '今晚'} · ${struck ? '今晚已出手' : '现在能出手'}` : '白天 · 18:00 开打';
   const byUser = new Map(view.members.map((x) => [x.userId, x]));
 
   return (
@@ -199,9 +240,9 @@ export function RaidPanel({ view, open, onClose, demo = 'open', onFlash }: { vie
 
 /** 地图下方的团战横条 */
 export function RaidBanner({ onOpen, struck, data }: { onOpen: () => void; struck?: boolean; data?: { boss: string; left: number; hpMax: number } }) {
-  const boss = data?.boss ?? RAID.boss.name;
-  const left = data?.left ?? RAID.left;
-  const hpMax = data?.hpMax ?? RAID.hpMax;
+  const boss = data?.boss ?? '满月团战';
+  const left = data?.left ?? 0;
+  const hpMax = data?.hpMax ?? 1;
   const head = '满月团战';
   const line = `「${boss}」还剩 ${Math.round((left / hpMax) * 100)}%${struck ? ' · 今晚已出手' : ' · 今晚还没出手'}`;
   return (
@@ -218,5 +259,6 @@ export function RaidBanner({ onOpen, struck, data }: { onOpen: () => void; struc
 
 export default function RaidSheet({ open, onClose, params }: OverlayProps) {
   const toast = useToast();
-  return <RaidPanel view={buildView()} open={open} onClose={onClose} demo={(params?.get('state') as RaidDemo) ?? 'open'} onFlash={(s) => toast(s)} />;
+  const { orgs } = useOrgView();
+  return <RaidPanel view={orgs[0] ?? buildView()} open={open} onClose={onClose} demo={(params?.get('state') as RaidDemo) ?? 'open'} onFlash={(s) => toast(s)} />;
 }

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { OrgView } from '@/types';
-import { activeOrgOps, buildOrgOpsState, endedOrgOps, orgRaidCardData, orgReactionData } from '@/themes/orgData';
+import { activeOrgOps, buildOrgOpsState, buildRaidPanelData, endedOrgOps, orgRaidCardData, orgReactionData } from '@/themes/orgData';
+import { RAID_XP_PER_HITTER, raidNightsOf } from '@/utils/orgRaid';
 
 const view = {
   org: { id: 'org-1', tz: 'Asia/Shanghai' },
-  members: [{ id: 'm1', userId: 'me', codename: '我' }, { id: 'm2', userId: 'friend', codename: '友' }],
+  members: [{ id: 'm1', userId: 'me', codename: '我', card: {} }, { id: 'm2', userId: 'friend', codename: '友', card: {} }],
   me: { id: 'm1', userId: 'me' },
   ops: [
     { id: 'op-live', orgId: 'org-1', initiatorId: 'me', kind: 'big', attr: 'guts', title: '真实作战', deadline: '2026-10-30', participants: ['me', 'friend'], assignments: {}, status: 'active', createdAt: new Date(), updatedAt: new Date() },
@@ -65,5 +66,33 @@ describe('orgData', () => {
         { userId: 'friend', nights: 1, allout: false },
       ],
     }));
+  });
+
+  it('团战面板按真实窗口、出手与成员派生状态', () => {
+    const nights = raidNightsOf(21, 'Asia/Shanghai');
+    const at = new Date(`${nights[1]}T19:00:00+08:00`);
+    const panel = buildRaidPanelData({
+      ...view,
+      raidHits: (view.raidHits ?? []).map((hit) => ({ ...hit, night: nights[1], createdAt: at })),
+    }, at);
+
+    expect(panel).toEqual(expect.objectContaining({
+      nights,
+      reward: 25,
+      allOutPreview: 5,
+      struckTonight: { skill: '斩', damage: 30 },
+      myNights: [false, true, false],
+      hitters: [
+        { userId: 'me', nights: 1, allout: false },
+        { userId: 'friend', nights: 1, allout: false },
+      ],
+    }));
+    expect(panel?.state.left).toBe(50);
+    expect(panel?.options).toEqual(expect.objectContaining({
+      canStrike: false,
+      struckTonight: true,
+      allOutNeed: 2,
+    }));
+    expect(RAID_XP_PER_HITTER).toBe(3);
   });
 });

@@ -10,7 +10,7 @@ import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3IconButton, P3Tag, P3Loading, P3R, slantClip, useToast } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
 import { ATTR_NAMES, ATTR_COLOR } from '@blue/mock/pkg4-tarot';
-import { buildView } from '@blue/mock/pkg4-org';
+import { buildView, useOrgView } from '@blue/adapters/pkg4-org';
 import { displayCodename } from '@blue/screens/pkg4/org/common';
 import { buildRaidPanelData } from '@/themes/orgData';
 import { useAppStore } from '@/store';
@@ -257,5 +257,6 @@ export default function RaidSheet({ open, onClose, params }: OverlayProps) {
   const toast = useToast();
   const st = params?.get('state') as RaidDemo;
   const demo = (['open', 'struck', 'day', 'defeated', 'after', 'nobattle', 'loading', 'failed'] as RaidDemo[]).includes(st) ? st : 'open';
-  return <RaidPanel view={buildView()} open={open} onClose={onClose} demo={demo} onFlash={(s) => toast(s)} />;
+  const { orgs } = useOrgView();
+  return <RaidPanel view={orgs[0] ?? buildView()} open={open} onClose={onClose} demo={demo} onFlash={(s) => toast(s)} />;
 }

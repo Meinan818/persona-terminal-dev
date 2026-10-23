@@ -20,8 +20,7 @@ import { INTIMACY_LABELS, MAJOR_ARCANA_IDS, MAX_INTIMACY, TAROT_BY_ID, levelProg
 import { NameFx, OnlineStar, PactTag, PrayQuickButton, ShadowBadge, Sparkle, StatusTag, Tarot } from '@blue/screens/pkg3/ui';
 import { AlbumWall, type FriendItem, type PrayerState } from '@blue/screens/pkg3/wall';
 import { RankUpChain, type RankUpNotice } from '@blue/screens/pkg3/rankup';
-import { PK3_CONFIDANTS, PK3_FRIENDS, PK3_MATERIALIZE_BLOCKERS, PK3_SHADOW } from '@blue/mock/pkg3';
-import { cooperationOps, useCooperationData } from '@blue/adapters/pkg3';
+import { cooperationOps, shadowForConfidant, useCooperationData } from '@blue/adapters/pkg3';
 import { CooperationMenuPanel } from '../overlays/CooperationMenu.p3r';
 import { ConfidantCreateSheet } from '../overlays/ConfidantCreateModal.p3r';
 import { ConfidantDetailSheet } from '../overlays/ConfidantDetailModal.p3r';
@@ -81,7 +80,7 @@ const ViewToggle = ({ view, onChange }: { view: 'list' | 'wall'; onChange: (v: '
   </div>
 );
 
-function ConfidantRow({ c, index, prayer, hasShadow, onOpen, onShadow }: { c: Confidant; index: number; prayer?: PrayerState; hasShadow: boolean; onOpen: () => void; onShadow: () => void }) {
+function ConfidantRow({ c, index, prayer, shadow, onOpen, onShadow }: { c: Confidant; index: number; prayer?: PrayerState; shadow: ReturnType<typeof shadowForConfidant> | null; onOpen: () => void; onShadow: () => void }) {
   const bold = useBoldness();
   const card = TAROT_BY_ID[c.arcanaId]; const prog = levelProgress(c);
   const isOnline = c.source === 'online'; const archived = !!c.archivedAt; const isMax = c.intimacy >= MAX_INTIMACY;
@@ -98,7 +97,7 @@ function ConfidantRow({ c, index, prayer, hasShadow, onOpen, onShadow }: { c: Co
           {isOnline && <OnlineStar glow={waiting} />}
           <NameFx waiting={waiting} maxBond={isMax} className="min-w-0 max-w-full"><span className="block truncate font-heavy text-[18px] leading-tight" style={{ color: P3R.ink }}>{c.name}</span></NameFx>
           {isOnline && <StatusTag tone="online">ONLINE</StatusTag>}
-          {hasShadow && <ShadowBadge identified={PK3_SHADOW.identifiedByMe && PK3_SHADOW.identifiedByPartner} hpPct={Math.round((PK3_SHADOW.hpCurrent / PK3_SHADOW.hpMax) * 100)} onClick={onShadow} />}
+          {shadow && <ShadowBadge identified={shadow.identifiedByMe && shadow.identifiedByPartner} hpPct={Math.round((shadow.hpCurrent / shadow.hpMax) * 100)} onClick={onShadow} />}
           {c.decayEnabled && <StatusTag tone="decay">逆流</StatusTag>}
           {archived && <StatusTag tone="archived">归档</StatusTag>}
           {waiting && <StatusTag tone="waiting">待回应</StatusTag>}
@@ -123,11 +122,11 @@ function ConfidantRow({ c, index, prayer, hasShadow, onOpen, onShadow }: { c: Co
 
 export default function Cooperation({ params }: PageProps) {
   const bold = useBoldness();
-  const { confidants: realConfidants } = useCooperationData();
+  const { cloudUser, confidants: realConfidants, counselArchives, friends: realFriends, materializeBlockers, activeShadows, unreadCount, counselState } = useCooperationData();
   const state = params?.get('state');
   const [view, setView] = useState<'list' | 'wall'>((params?.get('view') as 'list' | 'wall') || 'wall');
   const [filter, setFilter] = useState<Filter>((params?.get('filter') as Filter) || 'all');
-  const [list, setList] = useState<Confidant[]>(state === 'empty' ? [] : PK3_CONFIDANTS);
+  const [list, setList] = useState<Confidant[]>(state === 'empty' ? [] : realConfidants);
   const [loading, setLoading] = useState(state === 'loading');
   const [failed, setFailed] = useState(state === 'error');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -136,16 +135,17 @@ export default function Cooperation({ params }: PageProps) {
   const [selected, setSelected] = useState<Confidant | null>(null);
   const [friend, setFriend] = useState<FriendItem | null>(null);
 
-  useEffect(() => { setList(realConfidants); }, [realConfidants]);
-  const [prayed, setPrayed] = useState<Record<string, boolean>>({ 'c-fuuka': true, 'fr-ken': true });
+  useEffect(() => { setList(state === 'empty' ? [] : realConfidants); }, [realConfidants, state]);
+  const [prayed, setPrayed] = useState<Record<string, boolean>>({});
   const [pending, setPending] = useState<string | null>(null);
   const [fx, setFx] = useState<{ kind: PrayerEffectKind; name: string } | null>(null);
   const [chain, setChain] = useState<{ c: Confidant; notice: RankUpNotice } | null>(null);
-  const [unread] = useState(4);
+  const unread = unreadCount;
   useEffect(() => { if (params?.get('tab') === 'org') navigate('hideout', undefined, { replace: true }); }, [params]);
   useEffect(() => { if (!loading) return; const t = window.setTimeout(() => setLoading(false), 1600); return () => clearTimeout(t); }, [loading]);
 
-  const friends: FriendItem[] = useMemo(() => (state === 'empty' ? [] : PK3_FRIENDS.map((f) => ({ kind: 'friend' as const, ...f, prayed: !!prayed[f.id] }))), [state, prayed]);
+  const friends: FriendItem[] = useMemo(() => (state === 'empty' ? [] : realFriends.map((f) => ({ ...f, prayed: f.prayed || !!prayed[f.id] }))), [state, realFriends, prayed]);
+  const shadow = useMemo(() => activeShadows[0] ? shadowForConfidant(activeShadows[0], cloudUser?.id) : null, [activeShadows, cloudUser?.id]);
   const active = list.filter((c) => !c.archivedAt);
   const counts: Record<Filter, number> = { all: active.length, online: active.filter((c) => c.source === 'online').length, offline: active.filter((c) => c.source !== 'online').length, archived: list.filter((c) => !!c.archivedAt).length };
   const shown = filter === 'all' ? active : filter === 'online' ? active.filter((c) => c.source === 'online') : filter === 'offline' ? active.filter((c) => c.source !== 'online') : list.filter((c) => !!c.archivedAt);
@@ -161,7 +161,7 @@ export default function Cooperation({ params }: PageProps) {
   const openDetail = (c: Confidant) => { setSelected(c); setOv('detail'); };
   const openFriend = (f: FriendItem) => { setFriend(f); setOv('profile'); };
   const close = () => setOv(null);
-  const sel = selected ?? list[0] ?? PK3_CONFIDANTS[0];
+  const sel = selected ?? list[0] ?? null;
 
   return (
     <div className="relative min-h-full min-w-0 overflow-x-clip pb-28">
@@ -181,7 +181,7 @@ export default function Cooperation({ params }: PageProps) {
               <button type="button" data-coop-menu-trigger aria-label="同伴系统菜单" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)} className="relative flex h-10 w-11 items-center justify-center text-[18px]" style={{ clipPath: slantClip(8), background: menuOpen ? P3R.blue : P3R.panel, color: menuOpen ? P3R.onBlue : P3R.roseInk, boxShadow: 'var(--p3r-shadow)' }}>
                 ✧{unread > 0 && <span aria-label={`${unread} 条未读`} className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full" style={{ background: P3R.magenta }} />}
               </button>
-              <CooperationMenuPanel open={menuOpen} onClose={() => setMenuOpen(false)} counselState="available" archiveCount={3} loggedIn unreadCount={unread}
+              <CooperationMenuPanel open={menuOpen} onClose={() => setMenuOpen(false)} counselState={counselState} archiveCount={counselArchives.length} loggedIn={!!cloudUser} unreadCount={unread}
                 onAbout={() => setInfoOpen((v) => !v)} onCounsel={() => setOv('counsel')} onArchive={() => setOv('archive')} onNotifications={() => setOv('notif')} />
             </div>
           } />
@@ -196,10 +196,10 @@ export default function Cooperation({ params }: PageProps) {
           )}
         </AnimatePresence>
 
-        {PK3_MATERIALIZE_BLOCKERS.length > 0 && state !== 'empty' && (
+        {materializeBlockers.length > 0 && state !== 'empty' && (
           <div className="mb-4 flex min-w-0 items-center gap-2 px-4 py-2 text-[12px] font-bold" style={{ background: P3R.cyanPale, color: P3R.ink, clipPath: slantClip(8) }}>
             <span aria-hidden className="h-[10px] w-[8px] shrink-0" style={{ background: P3R.magenta, clipPath: tickClip }} />
-            <span className="min-w-0 flex-1">@{PK3_MATERIALIZE_BLOCKERS[0].otherName} 已接受 COOP，但大阿卡纳已满：归档一位同伴后才能落座。</span>
+            <span className="min-w-0 flex-1">@{materializeBlockers[0].otherName} 已接受 COOP，但大阿卡纳已满：归档一位同伴后才能落座。</span>
             <button type="button" onClick={() => setFilter('archived')} className="shrink-0 font-black underline" style={{ color: P3R.roseInk }}>去归档</button>
           </div>
         )}
@@ -222,7 +222,7 @@ export default function Cooperation({ params }: PageProps) {
               action={filter === 'online' ? <button type="button" onClick={() => setOv('addOnline')} className="px-5 py-2.5 text-[14px] font-black" style={{ clipPath: slantClip(10), background: P3R.blue, color: P3R.onBlue }}>邀请在线同伴</button> : undefined} />
           ) : (
             <div className="grid grid-cols-1 gap-3 wide:grid-cols-2">
-              {shown.map((c, i) => <ConfidantRow key={c.id} c={c} index={i} prayer={prayerFor(c)} hasShadow={c.id === 'c-yukari'} onOpen={() => openDetail(c)} onShadow={() => { setSelected(c); setOv('shadow'); }} />)}
+              {shown.map((c, i) => <ConfidantRow key={c.id} c={c} index={i} prayer={prayerFor(c)} shadow={shadow && c.id === sel?.id ? shadow : null} onOpen={() => openDetail(c)} onShadow={() => { setSelected(c); setOv('shadow'); }} />)}
               {(filter === 'all' || filter === 'online') && friends.map((f) => (
                 <button key={f.id} type="button" onClick={() => openFriend(f)} className="relative flex min-w-0 items-center gap-3 px-4 py-3 text-left" style={{ background: P3R.cyanFaint, clipPath: slantClip(14) }}>
                   <span className="flex h-[60px] w-[38px] shrink-0 items-center justify-center font-cond text-[24px]" style={{ background: 'repeating-linear-gradient(-45deg, var(--p3r-cyan-pale) 0 6px, var(--p3r-panel) 6px 12px)', color: P3R.roseInk, clipPath: slantClip(5) }}>{(f.profile.nickname ?? '?')[0]}</span>
@@ -248,25 +248,25 @@ export default function Cooperation({ params }: PageProps) {
       {/* ── 弹窗接线 ── */}
       <ConfidantCreateSheet isOpen={ov === 'create'} onClose={close} remaining={remaining} onPickOnline={() => setOv('addOnline')}
         onCreated={(r) => { void cooperationOps.add({ name: r.name, description: r.description, match: { arcanaId: r.arcanaId, orientation: r.orientation, initialIntimacy: Math.min(3, r.level), initialPoints: [0, 4, 9, 16, 25, 36, 50, 70, 95, 125, 160][r.level] ?? 0, interpretation: '', advice: '', source: 'offline' }, source: 'offline', initialLevel: r.level }).then((c) => { if (r.decay) void cooperationOps.update(c.id, { decayEnabled: true }); showToast(`${r.name} 已落座《${TAROT_BY_ID[r.arcanaId]?.name}》`); }).catch(() => showToast('没能创建这段羁绊')); }} />
-      <ConfidantDetailSheet isOpen={ov === 'detail'} onClose={close} confidant={sel} hasShadow={sel.id === 'c-yukari'}
+      {sel && <ConfidantDetailSheet isOpen={ov === 'detail'} onClose={close} confidant={sel} hasShadow={!!shadow}
         onUpdate={(p) => { void cooperationOps.update(sel.id, p); setList((l) => l.map((c) => (c.id === sel.id ? { ...c, ...p } : c))); }} onDelete={() => { void cooperationOps.remove(sel.id); setList((l) => l.filter((c) => c.id !== sel.id)); }}
         onOpenCounsel={() => setOv('counsel')} onOpenInteraction={() => setOv('interaction')} onOpenStarShift={() => setOv('starshift')} onOpenPact={() => setOv('pact')}
-        onOpenMemorial={() => setOv('memorial')} onViewOnlineProfile={() => { setFriend({ kind: 'friend', id: sel.id, profile: sel.linkedProfile!, prayed: !!prayed[sel.id], beenPrayedBy: false }); setOv('profile'); }} onOpenCoopShadow={() => setOv('shadow')} />
-      <InteractionSheet isOpen={ov === 'interaction'} onClose={close} confidant={sel}
-        onSaved={(delta) => { if (delta >= 2 && sel.intimacy < MAX_INTIMACY) window.setTimeout(() => { setOv(null); setChain({ c: sel, notice: { oldLevel: sel.intimacy, newLevel: sel.intimacy + 1, starShiftGained: 1 } }); setList((l) => l.map((c) => (c.id === sel.id ? { ...c, intimacy: c.intimacy + 1 } : c))); }, 1200); }} />
-      <MemorialSheet isOpen={ov === 'memorial'} onClose={() => setOv('detail')} confidant={sel} />
-      <PactPanelModal open={ov === 'pact'} onClose={() => setOv('detail')} partnerName={sel.name} />
+        onOpenMemorial={() => setOv('memorial')} onViewOnlineProfile={() => { if (sel.linkedProfile) { setFriend({ kind: 'friend', id: sel.id, profile: sel.linkedProfile, prayed: !!prayed[sel.id], beenPrayedBy: false }); setOv('profile'); } }} onOpenCoopShadow={() => setOv('shadow')} />}
+      {sel && <InteractionSheet isOpen={ov === 'interaction'} onClose={close} confidant={sel}
+        onSaved={(delta) => { if (delta >= 2 && sel.intimacy < MAX_INTIMACY) window.setTimeout(() => { setOv(null); setChain({ c: sel, notice: { oldLevel: sel.intimacy, newLevel: sel.intimacy + 1, starShiftGained: 1 } }); setList((l) => l.map((c) => (c.id === sel.id ? { ...c, intimacy: c.intimacy + 1 } : c))); }, 1200); }} />}
+      {sel && <MemorialSheet isOpen={ov === 'memorial'} onClose={() => setOv('detail')} confidant={sel} />}
+      {sel && <PactPanelModal open={ov === 'pact'} onClose={() => setOv('detail')} partnerName={sel.name} />}
       <CounselChat isOpen={ov === 'counsel'} onClose={close} />
       <CounselArchiveSheet isOpen={ov === 'archive'} onClose={close} />
       <NotificationsSheet isOpen={ov === 'notif'} onClose={close} onOpenCoopAccept={() => setOv('accept')} onOpenPactRespond={() => setOv('pactRespond')} />
-      <PactRespondSheet isOpen={ov === 'pactRespond'} onClose={close} name="由加莉" />
+      <PactRespondSheet isOpen={ov === 'pactRespond'} onClose={close} name={friend?.profile.nickname ?? '对方'} />
       <AddOnlineSheet isOpen={ov === 'addOnline'} onClose={close} />
       {friend && <OnlineProfileSheet isOpen={ov === 'profile'} onClose={close} profile={friend.profile} initialCoop={friend.id.startsWith('c-') ? 'linked' : 'none'} initialPrayed={friend.prayed} onProposeCoop={() => setOv('propose')} onAcceptCoop={() => setOv('accept')} />}
-      <CoopProposeSheet isOpen={ov === 'propose'} onClose={close} targetName={friend?.profile.nickname ?? '顺平'} />
-      <CoopAcceptSheet isOpen={ov === 'accept'} onClose={close} proposerName="顺平" />
-      <ShadowBattle isOpen={ov === 'shadow'} onClose={close} partnerName={sel.name} onVictory={() => window.setTimeout(() => setOv('victory'), 300)} />
-      <VictoryScreen isOpen={ov === 'victory'} onClose={close} partnerName={sel.name} shadowName={PK3_SHADOW.name} />
-      {ov === 'starshift' && <StarShiftModal confidant={sel} charges={sel.starShiftCharges ?? 1} onClose={() => setOv('detail')} />}
+      <CoopProposeSheet isOpen={ov === 'propose'} onClose={close} targetName={friend?.profile.nickname ?? '对方'} />
+      <CoopAcceptSheet isOpen={ov === 'accept'} onClose={close} proposerName={friend?.profile.nickname ?? '对方'} />
+      {sel && <ShadowBattle isOpen={ov === 'shadow'} onClose={close} partnerName={sel.name} onVictory={() => window.setTimeout(() => setOv('victory'), 300)} />}
+      {sel && <VictoryScreen isOpen={ov === 'victory'} onClose={close} partnerName={sel.name} shadowName={shadow?.name ?? '羁绊之影'} />}
+      {ov === 'starshift' && sel && <StarShiftModal confidant={sel} charges={sel.starShiftCharges ?? 1} onClose={() => setOv('detail')} />}
       <PrayerEffect isOpen={!!fx} kind={fx?.kind ?? 'sent'} targetName={fx?.name ?? ''} onDismiss={() => setFx(null)} />
       {chain && <RankUpChain open onClose={() => setChain(null)} confidant={chain.c} notice={chain.notice} charges={(chain.c.starShiftCharges ?? 0) + 1} />}
     </div>

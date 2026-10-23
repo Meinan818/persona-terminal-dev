@@ -17,8 +17,9 @@ import { usePresence, presetOf, goalPct } from '@blue/screens/pkg5/presence';
 import { UserProfileCardView } from '@blue/screens/overlays/UserProfileCard.p3r';
 import { MenuThemeSheetView } from '@blue/screens/overlays/MenuThemeSheet.p3r';
 import { MenuAboutSheetView } from '@blue/screens/overlays/MenuAboutSheet.p3r';
-import { ACHIEVEMENTS, THEME_SWATCHES, achievementProgress } from '@blue/mock/pkg5';
-import { useMenuData } from '@blue/adapters/pkg5';
+import { THEME_SWATCHES } from '@blue/mock/pkg5';
+import { useAchievementsData, useMenuData } from '@blue/adapters/pkg5';
+import { useCallingCardData } from '@blue/adapters/callingCards';
 
 const I = (d: ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="miter" aria-hidden>{d}</svg>;
 const ICONS: Record<string, ReactNode> = {
@@ -35,6 +36,8 @@ const ICONS: Record<string, ReactNode> = {
 
 export default function Menu({ params }: PageProps) {
   const { CURRENT_STREAK, TOTAL_LEVEL, TOTAL_POINTS } = useMenuData();
+  const { ACHIEVEMENTS, achievementProgress } = useAchievementsData();
+  const { CALLING_CARDS } = useCallingCardData();
   const bold = useBoldness();
   const p = usePresence();
   const battleVisible = params.get('battle') !== '0';
@@ -47,7 +50,8 @@ export default function Menu({ params }: PageProps) {
   const [aboutOpen, setAboutOpen] = useState(sheet === 'about');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const press = useRef({ active: false, x: 0, y: 0, key: '' });
-  const pendingUnlocks = ACHIEVEMENTS.filter((a) => !a.unlocked && (achievementProgress[a.id] ?? 0) >= a.condition.value).length + 1;
+  const pendingUnlocks = ACHIEVEMENTS.filter((a) => !a.unlocked && (achievementProgress[a.id] ?? 0) >= a.condition.value).length;
+  const activeCallingCards = CALLING_CARDS.filter((card) => !card.archived).length;
   const themeLabel = THEME_SWATCHES.find((t) => t.value === p.theme)?.label ?? '粉';
   const preset = presetOf(p.statusId);
   const pct = goalPct(p.goal);
@@ -63,7 +67,7 @@ export default function Menu({ params }: PageProps) {
     { key: 'theme', label: '主题', onPress: () => setThemeOpen(true), extra: (sel) => <span className="shrink-0 text-[11px] font-bold" style={{ color: sel ? 'rgba(255,255,255,0.88)' : P3R.grey }}>当前 · {themeLabel}</span>, aria: `主题：当前 ${themeLabel}` },
     { key: 'achievements', label: '成就·技能', onPress: go('achievements'), extra: (sel) => pendingUnlocks > 0 ? <span className="shrink-0 px-2 py-0.5 text-[11px] font-black" style={{ clipPath: slantClip(5), background: sel ? 'var(--p3r-cream)' : P3R.magenta, color: sel ? '#c2410c' : '#fff' }}>{pendingUnlocks} 待解锁</span> : undefined, aria: pendingUnlocks > 0 ? `成就·技能：${pendingUnlocks} 项待解锁` : '成就·技能' },
     { key: 'astrology', label: '占卜', onPress: go('astrology'), aria: '占卜' },
-    { key: 'callingcards', label: '宣告卡', onPress: go('calling-cards'), extra: (sel) => <span className="shrink-0 text-[11px] font-bold" style={{ color: sel ? 'rgba(255,255,255,0.88)' : P3R.grey }}>进行中 3</span>, aria: '宣告卡：3 张进行中' },
+    { key: 'callingcards', label: '宣告卡', onPress: go('calling-cards'), extra: (sel) => <span className="shrink-0 text-[11px] font-bold" style={{ color: sel ? 'rgba(255,255,255,0.88)' : P3R.grey }}>进行中 {activeCallingCards}</span>, aria: `宣告卡：${activeCallingCards} 张进行中` },
     ...(ledgerVisible ? [{ key: 'ledger', label: '记账', onPress: go('ledger'), aria: '记账' }] : []),
     { key: 'settings', label: '设置', onPress: go('settings'), aria: '设置' },
     { key: 'about', label: '关于', onPress: () => setAboutOpen(true), aria: hasUpdate ? '关于：有新版本' : '关于', extra: () => hasUpdate ? <span aria-label="有新版本" className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: P3R.magenta, boxShadow: '0 0 0 2px rgba(255,255,255,0.6)' }} /> : undefined },

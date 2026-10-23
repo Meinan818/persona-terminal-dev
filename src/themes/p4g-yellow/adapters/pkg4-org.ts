@@ -12,11 +12,28 @@ export { useOrgView } from '@/themes/astrologyData';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import type { OrgView } from '@/types';
 
-/** 真实数据覆盖：有云端组织时取第一个；否则回 mock（页面继续走 signed-out / empty 态） */
+const emptyView = (): OrgView => {
+  const template = mockBuildView();
+  return {
+    ...template,
+    org: { ...template.org, id: '', name: '', motto: '', emblem: 'star', leaderId: '', inviteCode: '' },
+    members: [],
+    me: { ...template.me, id: '', orgId: '', userId: '', codename: '', slot: 'joined', seat: 0 },
+    posts: [],
+    reactions: [],
+    ops: [],
+    checkins: [],
+    ledger: [],
+    raids: [],
+    raidHits: [],
+  };
+};
+
+/** 真实数据覆盖：有云端组织时取第一个；没有组织时返回空视图，不回填演示数据。 */
 export function buildView(): OrgView {
   const first = useCloudSocialStore.getState().orgs[0];
   if (first) return first;
-  return mockBuildView();
+  return emptyView();
 }
 
 import * as mock from '../mock/pkg4-org';

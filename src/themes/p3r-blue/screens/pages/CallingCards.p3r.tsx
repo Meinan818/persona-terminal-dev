@@ -18,7 +18,8 @@ import { CutInSweep } from '@blue/fx';
 import { navigate } from '@blue/shell/shellBus';
 import { useBoldness } from '@blue/lib/prefs';
 import { FLabel, LoadingBlock } from '@blue/screens/pkg5/ui';
-import { CC_CARDS, CC_LINKED, CC_MODE_LABEL, CC_TODAY, ccDaysLeft, ccProgress } from '@blue/mock/pkg5-callingcards';
+import { CC_MODE_LABEL } from '@blue/mock/pkg5-callingcards';
+import { callingCardOps, CC_TODAY, ccDaysLeft, ccProgress, useCallingCardData } from '@blue/adapters/callingCards';
 
 type Group = 'pinned' | 'active' | 'kept' | 'expired';
 const GROUPS: { id: Group; title: string; en: string }[] = [
@@ -31,13 +32,13 @@ const texture = (tone: CallingCard['tone']) => tone === 'grid'
   : tone === 'dots' ? 'radial-gradient(rgb(var(--p3r-blue-rgb) / 0.16) 1.4px, transparent 1.6px) 0 0 / 12px 12px'
     : tone === 'plain' ? 'none' : 'repeating-linear-gradient(-60deg, rgb(var(--p3r-blue-rgb) / 0.08) 0 6px, transparent 6px 16px)';
 
-function CardSlab({ c, i, onAct }: { c: CallingCard; i: number; onAct: (a: string) => void }) {
+function CardSlab({ c, i, linked, onAct }: { c: CallingCard; i: number; linked?: { done: number; total: number }; onAct: (a: string) => void }) {
   const anim = useBoldness();
   const g = groupOf(c);
   const dead = g === 'kept' || g === 'expired';
   const left = ccDaysLeft(c.targetDate);
   const p = ccProgress(c);
-  const l = CC_LINKED[c.id];
+  const l = linked;
   const Act = ({ id, children, tone = 'glass' }: { id: string; children: ReactNode; tone?: 'glass' | 'ink' | 'coral' | 'rose' }) => (
     <button type="button" onClick={() => onAct(id)} className="shrink-0 px-3.5 py-1.5 text-[12px] font-black active:scale-95"
       style={{ clipPath: slantClip(6), background: tone === 'ink' ? P3R.ink : tone === 'coral' ? 'var(--bk-danger-wash)' : tone === 'rose' ? P3R.blue : 'var(--p3r-chip)', color: tone === 'ink' ? 'var(--p3r-on-ink)' : tone === 'coral' ? 'var(--p3r-coral-ink)' : tone === 'rose' ? P3R.onBlue : P3R.ink }}>{children}</button>
@@ -124,11 +125,13 @@ export default function CallingCards({ params }: PageProps) {
   const toast = useToast();
   const state = params.get('state');
   const openQ = params.get('open');
+  const { CC_CARDS, CC_LINKED } = useCallingCardData();
   const [cards, setCards] = useState<CallingCard[]>(state === 'empty' ? [] : CC_CARDS);
   const [editing, setEditing] = useState<{ open: boolean; card: CallingCard | null }>({ open: openQ === 'new' || openQ === 'edit', card: openQ === 'edit' ? CC_CARDS[1] : null });
   const [delTarget, setDelTarget] = useState<CallingCard | null>(openQ === 'delete' ? CC_CARDS[3] : null);
   const [cutin, setCutin] = useState(openQ === 'archive');
   const [sweep, setSweep] = useState(false);
+  useEffect(() => { setCards(state === 'empty' ? [] : CC_CARDS); }, [CC_CARDS, state]);
   const grouped = useMemo(() => GROUPS.map((g) => ({ ...g, items: cards.filter((c) => groupOf(c) === g.id) })), [cards]);
 
   const editorEntry = OVERLAYS['actions-calling-card-editor'];
@@ -137,16 +140,18 @@ export default function CallingCards({ params }: PageProps) {
   const CutIn = cutinEntry ? lazyOf(`overlay:global-calling-card-cutin`, cutinEntry.load) : null;
 
   const save = (c: CallingCard) => {
+    void callingCardOps.save(c);
     setCards((xs) => { const rest = xs.filter((x) => x.id !== c.id).map((x) => (c.pinned ? { ...x, pinned: false } : x)); return [c, ...rest]; });
     setSweep(true);
   };
   const act = (c: CallingCard) => (a: string) => {
-    if (a === 'pin') { setCards((xs) => xs.map((x) => (x.id === c.id ? { ...x, pinned: !c.pinned } : c.pinned ? x : { ...x, pinned: false }))); toast(c.pinned ? '已取消钉选' : '已钉到主页'); }
+    if (a === 'pin') { void callingCardOps.pin(c.pinned ? null : c.id); setCards((xs) => xs.map((x) => (x.id === c.id ? { ...x, pinned: !c.pinned } : c.pinned ? x : { ...x, pinned: false }))); toast(c.pinned ? '已取消钉选' : '已钉到主页'); }
     if (a === 'edit') setEditing({ open: true, card: c });
     if (a === 'delete') setDelTarget(c);
-    if (a === 'restore') { setCards((xs) => xs.map((x) => (x.id === c.id ? { ...x, archived: false, archiveReason: undefined, archivedAt: undefined } : x))); toast('已恢复到进行中'); }
+    if (a === 'restore') { void callingCardOps.restore(c.id); setCards((xs) => xs.map((x) => (x.id === c.id ? { ...x, archived: false, archiveReason: undefined, archivedAt: undefined } : x))); toast('已恢复到进行中'); }
     if (a === 'archive') {
-      setCards((xs) => xs.map((x) => (x.id === c.id ? { ...x, archived: true, pinned: false, archiveReason: 'manual', archivedAt: new Date(2026, 9, 20) } : x)));
+      void callingCardOps.archive(c.id);
+      setCards((xs) => xs.map((x) => (x.id === c.id ? { ...x, archived: true, pinned: false, archiveReason: 'manual', archivedAt: new Date() } : x)));
       if (cutinEntry) window.setTimeout(() => setCutin(true), 380); else toast.success('已收存');
     }
   };
@@ -181,7 +186,7 @@ export default function CallingCards({ params }: PageProps) {
               </div>
               <div className="grid min-w-0 grid-cols-1 gap-3 wide:grid-cols-2">
                 <AnimatePresence mode="popLayout">
-                  {g.items.map((c, i) => <CardSlab key={c.id} c={c} i={i} onAct={act(c)} />)}
+                  {g.items.map((c, i) => <CardSlab key={c.id} c={c} i={i} linked={CC_LINKED[c.id]} onAct={act(c)} />)}
                 </AnimatePresence>
               </div>
             </section>
@@ -197,7 +202,7 @@ export default function CallingCards({ params }: PageProps) {
       ) : <FallbackEditor open={editing.open} onClose={() => setEditing((e) => ({ ...e, open: false }))} initial={editing.card} onSave={save} />}
       <P3Dialog open={!!delTarget} onClose={() => setDelTarget(null)} tone="danger" variant="system" title="删除这张宣告卡？"
         description={delTarget ? `「${delTarget.title}」\n删除后不会出现在首页和档案里，此操作无法撤销。` : undefined} confirmText="删除" cancelText="取消"
-        onConfirm={() => { const t = delTarget; setDelTarget(null); if (t) { setCards((xs) => xs.filter((x) => x.id !== t.id)); toast('已删除'); } }} />
+        onConfirm={() => { const t = delTarget; setDelTarget(null); if (t) { void callingCardOps.remove(t.id); setCards((xs) => xs.filter((x) => x.id !== t.id)); toast('已删除'); } }} />
       {CutIn && <Suspense fallback={null}><CutIn open={cutin} onClose={() => setCutin(false)} params={new URLSearchParams('reason=manual')} /></Suspense>}
       <CutInSweep active={sweep} text="CALLING" sub="预告已发出" onDone={() => setSweep(false)} />
     </div>

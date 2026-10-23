@@ -2,6 +2,25 @@
 
 最后更新：2026-10-23（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 接手第一入口 · 2026-10-23 23:25 · r12 待真机验收（最新，先看这段）
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，HEAD `cddcb27`。工作树仍只余两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）+ 未跟踪的 `scripts/p5r-red/_tmp-compare-local.mjs`（本轮临时造的对比脚本副本，删除需用户确认）。全部本地提交，未 Push。
+- **用户明确的验收标准（2026-10-23 原话）**：「红色比较特殊，我想不改外观的情况下能正常使用 APP，不用假数据」「什么转场啊动画啊，功能啊，外观层面都不能丢」。**本轮红色全部改动只动数据取值与回调，DOM / className / style / 动画 / 转场一律未动**，并用像素对比自证（见下）。
+- **本轮五个提交**：
+  1. `47a09cb` 三主题（黄/粉/蓝）账号与登录去假数据：新增 `src/themes/accountAuth.ts` 接真实 auth API；修 `cloudUser.userId` 键名错（真实是 `username`）、蓝/粉账号页登录态写死 `signed-in`、`velvetApi` 英文错误文案、`VITE_PB_URL` → `VITE_API_URL`。
+  2. `c867c0f` 三主题记账预算与图鉴去假数据：新增 `src/themes/ledgerBudgetData.ts`；预算 / 省钱目标 / 统计月份 / 趋势 / 塔罗图鉴 / 岁时印记 / 成就技能表单属性名全部改真实 store。
+  3. `cdf77dc` 红色账号与记账去假数据：近 9 日柱状图、批量录入默认文本、账号管理弹层（真实 auth API）、UserID / 最近同步时间、删除云端数据真实调用、登录态真实派生、存档槽同步时间与记录天数。
+  4. `cddcb27` 红色同伴模块去假数据 + 修两个真实缺陷：`MockConfidant` 扩出真实字段（亲密点 / AI 解读 / 建议 / 技能属性 / 星移次数 / 来源 / 逆流 / 在线档案）；同伴时间线与星移参考记录改读 `store.confidantEvents`；邀请在线同伴改走真实 `searchUserByUserId` / `sendFriendRequest`；在线同伴资料卡改读真实 `linkedProfile`。**修掉的两个真缺陷**：① 空库时 `OC.CF` 为空数组 → 直达路由 `CF()[0..3]` 崩（`Cannot read properties of undefined`），已补空态占位 + `linkedProfile` 可选取值；② 亲密等级进度用了演示常量 `base=60 / next=75`，与真实累计点数口径不一致，显示成 **`-60 / 15`** 且「到 Lv.7 还差 75 点」里的等级与点数都是写死的 —— 改用 `utils/confidantLevels` 的真实阈值曲线（在线同伴走在线曲线），文案与进度条一并夹在 0–100 / 不出负数。
+  5. `28f7b09` docs(state) 记录 r11 交接。
+- **红色"外观零漂移"的可执行判据**：`node scripts/p5r-red/compare.mjs --base <dev>` 逐像素对比原 demo 截图。**本机跑它需改一处**：仓库版第 46 行硬编码 `chromium.launch()`，本机 playwright 的 headless shell 起不来（缺依赖，exitCode 3221225595）；改用系统 Chrome（`chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' })`）即可（本轮临时副本在 `scripts/p5r-red/_tmp-compare-local.mjs`，未提交）。本轮做过严格 A/B：另起 `git worktree` 检出改动前的 HEAD 跑一遍再跑改动后，**52 张里 47 张像素级完全一致（delta 0.00）**，只有账号页 / 记账页 / 同伴详情页的文字区变化（假文案换真值），轮盘 / 开屏 / 演出 / 羁绊 / 成就等页面零变化。
+- **`check-copy` 的现状（别误判）**：`node scripts/p5r-red/check-copy.mjs` 在本分支**一直是 FAIL**（20 处），不是本轮引入的。`src/p5r-red/adapter/README.md` 写"页面一个字节都不要改"，但前几轮为接真实数据已改了 15 个红色文件（`6f53099` `741136f` `69adae7` `cc09d39` 等），其中 `741136f` 是外观改动（红轮盘缩放系数改 `0.68`，是用户明确要求的轮盘尺寸）。本轮沿用该分支既有做法并用像素对比自证。
+- **重要口径澄清（用户提出，已按代码核实）**：原"完成条 → 属性升级 → 成就 → 技能"四连的表述**不对**。代码里成就与技能**不在完成链里**——达成只写进度，解锁演出只在成就页手动点「解锁」时各播一次；属性升级也只在真升级时出现。正确口径：完成条必现 → 属性升级仅在真升级时出现且排在完成条之后 → 完成条提示用真实 `unlockHints` → 成就 / 技能演出属成就页手动解锁。蓝/粉首页原先把 `unlockHint` 写死，已接真实 `result.unlockHints`，且 store 拒绝完成时不再弹假成功条。
+- **验证（2026-10-23 本轮实跑）**：`npx tsc --noEmit` exit 0；`npx vitest run` 68 文件 / 406 项通过（新增 `src/themes/__tests__/accountAuth.test.ts` 4 项）；`npm run build` 通过；Android `assembleDebug` 成功。浏览器真实路径探针（`E:\MASKARIA\.cache\probe-account-real.mjs`、`probe-ledger-real.mjs`、`probe-red-real.mjs`）：三主题账号管理假邮箱 / 假 UserID 命中 0、未登录明确显示"未登录"；三主题登录弹层拦截网络后确认发出真实 `POST /api/velvet/otp/request`、0 假成功、显示真实错误；三主题记账页显示真实预算 `¥2,345` 与真实省钱目标 `678`，mock 的 `6000` / `500` 均不出现；红色 5 页（记账 / 账号 / 首页 / 同伴详情 / 邀请在线同伴）0 假字符串、0 pageerror；造真实同伴（等级 6 / 累计点 55）后详情页显示「5 / 20（到 Lv.7 还差 15 点）」，无负数。
+- **本轮新包（待真机验收）**：`E:\MASKARIA\outputs\maskaria-theme-realdata-r12-20261023-debug.apk` 与 `D:\下载\互传\maskaria-theme-realdata-r12-20261023-debug.apk`（111,146,983 B，SHA-256 `69A84682AF5CC044554593E79464F6CAFE94F51292B9B251FB1288D50CF3F2CA`，两份哈希一致）。r10 / r11 已被 r12 取代，装 r12 即可。
+- **真机验收现状**：**本机没有安卓设备**（`adb devices` 空列表；PnP 里名为 "S21" 的 USB 设备是 `VID_0D8C` 音频芯片，不是手机；`E:\MASKARIA\.rivet\android-sdk` 无 emulator 二进制，`%USERPROFILE%\.android\avd` 无 AVD）。真机安装与观感一律由用户在手机上完成，AI 不得代为声称已验证。
+- **下一步**：① 用户用 r12 做真机验收（完成条顺序与属性升级时点、三主题谏言开始/离线回复/打断/归档、COOP 提议/接受与羁绊之影、记账批量录入/核对/真实账户/删除、AI 设置区无假 Key/假连接/假余额/假模型数量、中长期占卜未授权时明确显示"AI 等待确认"、红轮盘尺寸与闪烁、蓝/粉助手开关闪烁、红色同伴页显示）；② 红色剩余假数据仍在 `src/p5r-red/screens/pkg3/hideout.ts`（据点成员 MEM / 动态 POSTS / 作战 OPS / 历史 HIST / 在线好友 FRIENDS）与 `src/p5r-red/screens/pkg4/d4.ts`（长读牌阵 LR_CARDS / 记账分类统计 CAT）、`src/p5r-red/screens/pkg3/od.ts`（组织名册 ORG）—— 这些是函数内局部常量，**可以像本轮 oc.ts 那样在函数里读真实 store**，下一轮接着做；③ 主 App `src/pages/Account.tsx` 内的演示状态分支待扫；④ 星象 AI / 中长期 AI / 成长总结 AI / 助手自由对话 / 收费视觉识别仍等用户 Key 决策；⑤ 蓝色性能留到最后。
+- **红线（不变）**：不 Push（Push 须用户明确批准）；不改 `main` 与 `src/umbra`、`public/umbra-demo`；不改外观；不读/提交 `.env`、凭据、token/secret；不收费 AI、不部署；两个 `android/*.gradle` 不提交。
+
 ## 接手第一入口 · 2026-10-23 22:35 · r11 待真机验收（最新，先看这段）
 
 - **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，HEAD `cdf77dc`。工作树仍只余两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。

@@ -1,6 +1,6 @@
 // 灰盒表现层：three.js 方块 + HTML HUD。只读 Battle 状态、只调用 Battle 指令、只消费事件。
 import * as THREE from 'three';
-import { Battle, MAPS, key, eq, VOLTAGE_MAX, PASSIVE_INFO, SKILLS, UNIQUES } from './rules';
+import { Battle, MAPS, key, eq, VOLTAGE_MAX, PASSIVE_INFO, SKILLS, UNIQUES, parseMap, enemy, JOKER, SKULL, PANTHER } from './rules';
 import type { BattleEvent, SkillDef, Unit, Vec, StatusId, MapDef } from './rules';
 import { mountLevelSelect } from './game/levelSelect'; // Q12 关卡选择（最简按钮，Hark 美化）
 import { levelMap } from './game/levels';
@@ -10,6 +10,9 @@ import { MapObjects } from './view/mapObjects';
 import { makeFlag, makeSpeaker, waveFlag, pulseSpeaker } from './view/props';
 import { slashBanner, itemToast } from './fx/banners';
 import { updateObjectiveHud, mountCamButtons } from './ui/hud';
+import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cutins';
+import type { CutWho } from './fx/cutins';
+import { TripleFx } from './view/tripleFx';
 
 type Mode = 'auto' | 'melee' | 'gun' | 'skill' | 'unique';
 
@@ -35,6 +38,7 @@ const COLORS: Record<string, number> = {
   joker: 0x1a1a1a, skull: 0xf2c200, panther: 0xe8335a, mona: 0xf0f0f0, fox: 0x2f6bff, queen: 0x5b3aa8,
   noir: 0x9a6b3a, erina: 0xff7a00, kasumi: 0xd8202f, toshiro: 0x6aa0a0, crow: 0xe8e0d0,
 };
+const hexOf = (id: string) => '#' + (COLORS[id] ?? 0x888888).toString(16).padStart(6, '0');
 const CHARGE_NAME: Record<string, string> = {
   foresight: 'Foresight 射程+1', phantomStep: 'Phantom Step 移动+1', lightningSpeed: 'Lightning Speed 移动+2', ferociousLion: 'Ferocious Lion 击退+1',
   overPowered: 'Over Powered 攻×1.2', bulletBreak: 'Bullet Break 枪击必倒', springStorm: 'Spring Storm 射程+1', clairvoyance: 'Clairvoyance 射程+2', essenceOfSorcery: 'Essence of Sorcery 技能范围+1',
@@ -298,7 +302,7 @@ function refreshHud() {
   $('#volt-star').classList.toggle('full', vfull);
   ($('#endbar button') as HTMLButtonElement).disabled = battle.phase !== 'player' || busy;
   const allies = battle.units.filter((x) => x.side === 'ally' && !x.ko && !x.decoy && !x.prop);
-  $('#party').innerHTML = allies.map((a) => `<div class="pm${a.id === selected ? ' cur' : ''}${a.acted ? ' done' : ''}" data-uid="${a.id}">
+  $('#party').innerHTML = allies.map((a) => `<div class="pm${a.id === selected ? ' cur' : ''}${a.acted ? ' done' : ''}${a.oneMore && !a.acted && battle.phase === 'player' ? ' om' : ''}" data-uid="${a.id}">
     <div class="face" style="--c:${'#' + (COLORS[a.id] ?? 0x888888).toString(16).padStart(6, '0')}">${(a.name.split(' ').pop() ?? a.name).slice(0, 1)}</div>
     ${!a.acted && battle.phase === 'player' ? '<b class="act">ACTION</b>' : ''}
     <div class="nums"><span class="hp"><small>HP</small>${a.hp}</span><span class="sp"><small>SP</small>${a.sp}</span></div>
@@ -399,8 +403,9 @@ function refreshLabels() {
     const g = unitMesh.get(u.id);
     if (!el || !g) continue;
     const hidden = battle.isHidden(u); // 未解锁区域的敌人不画（HARK-NOTES-ENGINE #8）
-    g.visible = !u.ko && !hidden;
-    if (u.ko || hidden) { el.style.display = 'none'; continue; }
+    const gone = u.ko && !fxKeep.has(u.id); // 本批事件里还没播到 ko 的单位先留着（总攻/1 MORE 演出要看见它挨打）
+    g.visible = !gone && !hidden;
+    if (gone || hidden) { el.style.display = 'none'; continue; }
     const shield = g.getObjectByName('shield');
     if (shield && u.facing) { g.rotation.y = Math.atan2(u.facing.x, u.facing.y); }
     if (u.prop && u.prop !== 'flag' && u.prop !== 'speaker') { el.style.display = 'none'; continue; }
@@ -566,13 +571,19 @@ async function endAim(hold = 260) {
 }
 
 const SPEED = Number(params.get('speed') ?? '1');
+setFxSpeed(SPEED);
 const hook = { pauseOn: null as string | null, pauseDelay: 0, paused: false, released: false, resume() { hook.released = true; document.body.classList.remove('frozen'); } }; // 解冻立即生效：物件动画（扫开/开箱）在事件处理中被 await
 async function play(events: BattleEvent[]) {
   busy = true;
   clearOverlay();
   refreshHud();
   let rebuild = false;
-  for (const e of events) {
+  let sawDown = false; // 本次 1 MORE 之前是否有「打倒」（Truth Seeker 发的 1 MORE 不做切入）
+  const handled = new Set<BattleEvent>();
+  fxKeep.clear();
+  for (const e of events) if (e.type === 'ko') fxKeep.add(e.unitId);
+  for (const [ei, e] of events.entries()) {
+    if (handled.has(e)) continue;
     let pausing = false;
     if (hook.pauseOn === e.type) {
       // 截图钩子：事件开始 pauseDelay 毫秒后冻结画面（CSS 动画与爆炸闪光），等 resume
@@ -595,7 +606,7 @@ async function play(events: BattleEvent[]) {
       case 'pull': await tweenPath(e.unitId, e.path.length ? e.path : [e.from, e.to], 80 / SPEED); popDamage(e.unitId, e.effect === 'hypno' ? '催眠' : '漩涡'); break;
       case 'dizzyMove': await tweenPath(e.unitId, [e.from, e.to], 90 / SPEED, 0.3); popDamage(e.unitId, '眩晕'); break;
       case 'fall': popDamage(e.unitId, '坠落!', 'big'); await sleep(220 / SPEED); break;
-      case 'followUp': banner('FOLLOW UP!', true); toast(`${battle.unit(e.shooterId).name} 追击！${battle.unit(e.creditId).name} 获得 1 MORE`); await sleep(600 / SPEED); break;
+      case 'followUp': sawDown = true; banner('FOLLOW UP!', true); toast(`${battle.unit(e.shooterId).name} 追击！${battle.unit(e.creditId).name} 获得 1 MORE`); await sleep(600 / SPEED); break;
       case 'meleeStep': unitMesh.get(e.unitId)?.position.copy(w2v(e.to)); break;
       case 'attack': if (battle.phase === 'enemy') { camFocus(battle.unit(e.targetId).pos, 1.25); await sleep(200 / SPEED); }
         if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
@@ -604,9 +615,20 @@ async function play(events: BattleEvent[]) {
       case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); await endAim(); break;
       case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
       case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); await endAim(); break;
-      case 'down': popDamage(e.unitId, 'DOWN!'); break;
-      case 'oneMore': banner('1 MORE!'); await sleep(650 / SPEED); break;
-      case 'tripleThreat': banner('TRIPLE THREAT', true); await sleep(900 / SPEED); break;
+      case 'down': { popDamage(e.unitId, 'DOWN!'); sawDown = true; const g = unitMesh.get(e.unitId); if (g) { g.rotation.z = 1.2; g.position.y = gh(battle.unit(e.unitId).pos) + 0.15; } break; }
+      case 'oneMore': {
+        const u = battle.unit(e.unitId);
+        if (!sawDown || u.prop) { banner('1 MORE!'); await sleep(650 / SPEED); break; }
+        sawDown = false;
+        await oneMoreFx(u);
+        break;
+      }
+      case 'tripleThreat': {
+        const dmgs = events.slice(ei + 1).filter((x): x is Extract<BattleEvent, { type: 'damage' }> => x.type === 'damage' && x.source === 'triple');
+        for (const d of dmgs) handled.add(d);
+        await tripleFx(e, dmgs);
+        break;
+      }
       case 'resistBroken': popDamage(e.unitId, '破防'); break;
       case 'status': popDamage(e.unitId, ST_NAME[e.status]); break;
       case 'statusEnd': if (e.reason === 'damage') popDamage(e.unitId, `${ST_NAME[e.status]}解除`); break;
@@ -621,7 +643,7 @@ async function play(events: BattleEvent[]) {
       case 'penalty': popDamage(e.unitId, '违规!', 'big'); toast(`喇叭禁止「${ACT_NAME[e.action]}」→ 惩罚`); break;
       case 'speakerBan': toast(`喇叭：本回合禁止「${e.bans.map((b) => ACT_NAME[b]).join('、')}」`); break;
       case 'skipTurn': popDamage(e.unitId, ST_NAME[e.reason]); break;
-      case 'ko': popDamage(e.unitId, 'KO'); await sleep(200 / SPEED); break;
+      case 'ko': popDamage(e.unitId, 'KO'); await sleep(200 / SPEED); fxKeep.delete(e.unitId); break;
       case 'batonPassReady': toast(`${battle.unit(e.koId).name} 倒下：可 Baton Pass 换替补`); break;
       case 'batonPass': rebuild = true; banner('BATON PASS', true); break;
       case 'error': toast(e.message); break;
@@ -659,6 +681,7 @@ async function play(events: BattleEvent[]) {
     }
   }
   await endAim(0);
+  fxKeep.clear();
   if (rebuild) build();
   for (const u of battle.units) unitMesh.get(u.id)?.position.copy(w2v(u.pos));
   busy = false;
@@ -670,6 +693,44 @@ async function play(events: BattleEvent[]) {
   previewTile = null; previewTarget = null; uniqueTile = null;
   if (mode === 'unique') mode = 'auto';
   refreshAll();
+}
+
+// ---------- 1 MORE / Triple Threat 演出（Hark）：DOM 切入见 fx/cutins.ts，地图三角见 view/tripleFx.ts ----------
+const fxKeep = new Set<string>();
+const tfx = new TripleFx();
+scene.add(tfx.group);
+let freezeUntil = 0; // 顿帧：这之前不渲染新帧
+const UNIT_TAG: Record<string, string> = { joker: 'LEADER', skull: 'CAPTAIN KIDD', panther: 'CARMEN', mona: 'ZORRO', fox: 'GOEMON', queen: 'JOHANNA', noir: 'MILADY', erina: 'CELESTINE', kasumi: 'CENDRILLON', crow: 'ROBIN HOOD' };
+const cutWho = (u: Unit): CutWho => ({ id: u.id, name: u.name, side: u.side, color: u.side === 'enemy' ? '#7a0d18' : hexOf(u.id), tag: UNIT_TAG[u.id] });
+/** 1 MORE：顿帧 0.15s（画面去色）→ 镜头推近行动者 → 红黑斜切切入 + 「1 MORE!」→ 镜头回到原处；之后 HUD 显示可再行动 */
+async function oneMoreFx(u: Unit) {
+  const skip = new Skip();
+  refreshLabels();
+  freezeUntil = performance.now() + fxMs(150);
+  document.body.classList.add('hitstop');
+  await skip.wait(150);
+  document.body.classList.remove('hitstop');
+  freezeUntil = 0;
+  const saved = rig.saveTarget();
+  const g = unitMesh.get(u.id);
+  rig.focus(g ? g.position.clone() : w2v(u.pos), Math.min(rig.zMax, Math.max(rig.userZoom, rig.cur.zoom) * 1.5));
+  await oneMoreCutIn(cutWho(u), skip, () => rig.restoreTarget(saved));
+  rig.restoreTarget(saved);
+  refreshHud();
+}
+/** Triple Threat：三角红光 + 镜头框住三角 → 勒索信横幅 → 三人切入带 → 逐个命中 → FINISH 收尾（≤3.5s，点屏跳过） */
+async function tripleFx(e: Extract<BattleEvent, { type: 'tripleThreat' }>, dmgs: Extract<BattleEvent, { type: 'damage' }>[]) {
+  const allies = e.allies.map((id) => battle.unit(id));
+  const pos = (id: string) => unitMesh.get(id)?.position.clone() ?? w2v(battle.unit(id).pos);
+  const aPos = allies.map((a) => pos(a.id)), vPos = e.victims.map(pos);
+  const saved = rig.saveTarget();
+  clearOverlay();
+  await tripleThreatSeq(allies.map(cutWho), {
+    victims: dmgs.length,
+    showTriangle() { tfx.show(aPos, vPos, fxMs(380)); rig.fitPoints([...aPos, ...vPos], 2); },
+    hit(i) { const d = dmgs[i]; tfx.hit(pos(d.unitId)); popDamage(d.unitId, String(d.amount), 'tt'); },
+    done() { tfx.clear(); rig.restoreTarget(saved); },
+  }, new Skip());
 }
 
 /** 增援落地：从高空砸下 + 红色冲击环 */
@@ -868,6 +929,8 @@ function restart() {
 }
 
 function loop() {
+  if (performance.now() < freezeUntil) { requestAnimationFrame(loop); return; } // 1 MORE 顿帧
+  tfx.update();
   camStep();
   aimStep();
   mapObj.update();
@@ -902,4 +965,14 @@ window.__p5t = {
   hook,
   play,
   key,
+  /** 演出 demo（截图用）：'oneMore' = Joker 枪击打倒 e1；'triple' = 同局再发动总攻（三角内 e1/e2/e3，e4 在外） */
+  demo(kind: 'oneMore' | 'triple' = 'triple') {
+    const rows = ['. . . . . . . .', '. S . . . . P .', '. . . . . . . .', '. . . 1 2 . . .', '. . . . 3 . . .', '. . . . . . . .', '. . . J . . 4 .'];
+    const foe = (id: string, name: string, hp: number) => enemy(id, name, 'brute', hp, { move: 0 });
+    makeMap = () => ({ id: `demo-${kind}`, name: '演出 demo', turnTarget: 3, win: { type: 'defeatAll' },
+      ...parseMap(rows, { J: JOKER, S: SKULL, P: PANTHER, '1': foe('e1', 'Musketeer', 260), '2': foe('e2', 'Grenadier', 90), '3': foe('e3', 'Drummer', 260), '4': foe('e4', 'Musketeer', 260) }) });
+    restart();
+    return battle;
+  },
+  get fxKeep() { return fxKeep; },
 };

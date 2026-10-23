@@ -5,5 +5,6 @@
  * 规则：只在这里接 store / utils，不改 screens/ 里的 JSX、className、style、动画。
  */
 export * from '../mock/pkg6';
+export { navigatorThemeOps, useNavigatorThemeData } from '@/themes/navigatorData';
 
 // ───── 真实数据覆盖区（按 INTEGRATE-THEMES.md 第 6 步填写）─────

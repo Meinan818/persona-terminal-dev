@@ -21,9 +21,11 @@ import { LedgerBudgetSheetView } from '@yellow/screens/overlays/LedgerBudgetShee
 import { LedgerReconcileSheetView } from '@yellow/screens/overlays/LedgerReconcileSheet.p4g';
 import { LedgerDeleteConfirmView } from '@yellow/screens/overlays/LedgerDeleteConfirm.p4g';
 import { LedgerSavedModalView } from '@yellow/screens/overlays/LedgerSavedModal.p4g';
-import { CNY, INCOME_META, catMeta, daysAgoKey, fmtMoney, fmtSigned, ledgerDateLabel, monthLabel, roundMoney, shiftMonth, weekdayCN } from '@yellow/mock/pkg5';
-import { useLedgerData } from '@yellow/adapters/pkg5';
+import { CNY, INCOME_META, catMeta } from '@yellow/mock/pkg5';
+import { daysAgoKey, fmtMoney, fmtSigned, ledgerDateLabel, monthLabel, roundMoney, shiftMonth, weekdayCN, useLedgerData } from '@yellow/adapters/pkg5';
 import { ledgerOps } from '@/themes/ledgerOperations';
+import { readAsDataUrl, downscaleDataUrl } from '@/utils/imageCrop';
+import { recognizeText } from '@/utils/ocr';
 
 const WEEK_EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -50,7 +52,7 @@ function LedgerRow({ e, onClick }: { e: LedgerEntry; onClick: () => void }) {
 
 export default function Ledger({ tab, params }: PageProps) {
   const toast = useToast();
-  const { LEDGER_ACCOUNTS, LEDGER_BUDGET, LEDGER_ENTRIES, LEDGER_SAVINGS, P5_TODAY, CURRENT_MONTH, LEDGER_RESET_DAY } = useLedgerData();
+  const { LEDGER_ACCOUNTS, LEDGER_BUDGET, LEDGER_ENTRIES, LEDGER_SAVINGS, LEDGER_LOADED, HAS_BUDGET, P5_TODAY, CURRENT_MONTH, LEDGER_RESET_DAY, LEDGER_CYCLE, LEDGER_DAYS_LEFT } = useLedgerData();
   const low = useLowMotion();
   const [state, setState] = useState(params.get('state') ?? 'normal');
   const [mode, setMode] = useState<'ledger' | 'assets'>(tab === 'assets' ? 'assets' : 'ledger');
@@ -74,19 +76,20 @@ export default function Ledger({ tab, params }: PageProps) {
 
   useEffect(() => { setEntries(LEDGER_ENTRIES); }, [LEDGER_ENTRIES]);
 
-  const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !e.date.startsWith(CURRENT_MONTH)) : entries;
-  const needsSetup = list.length === 0;
-  const hasBudget = state !== 'first';
+  const inCycle = (date: string) => date >= LEDGER_CYCLE.start && date <= LEDGER_CYCLE.end;
+  const list = state === 'first' ? [] : state === 'empty' ? entries.filter((e) => !inCycle(e.date)) : entries;
+  const needsSetup = state === 'first' || (LEDGER_LOADED && entries.length === 0);
+  const hasBudget = state === 'first' ? false : HAS_BUDGET;
   const lim = LEDGER_BUDGET.monthlyLimit;
-  const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
-  const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && e.date.startsWith(CURRENT_MONTH)).reduce((s, e) => s + e.amount, 0));
+  const monthExpense = roundMoney(list.filter((e) => e.direction === 'expense' && inCycle(e.date)).reduce((s, e) => s + e.amount, 0));
+  const monthIncome = roundMoney(list.filter((e) => e.direction === 'income' && inCycle(e.date)).reduce((s, e) => s + e.amount, 0));
   const total = needsSetup ? 0 : LEDGER_ACCOUNTS.reduce((s, a) => s + a.balance, 0);
   const budgetLeft = roundMoney(lim - monthExpense);
   const over = hasBudget && budgetLeft < 0;
   const remainingRatio = hasBudget && lim > 0 ? budgetLeft / lim : 1;
   const ringColor = !hasBudget ? 'var(--p4g-muted)' : over ? 'var(--p4g-danger)' : remainingRatio <= 0.2 ? 'var(--p4g-orange)' : 'var(--p4g-green)';
   const spentToday = list.filter((e) => e.direction === 'expense' && e.date === P5_TODAY).reduce((s, e) => s + e.amount, 0);
-  const daysLeft = 12;
+  const daysLeft = LEDGER_DAYS_LEFT;
   const base = roundMoney(lim - (monthExpense - spentToday));
   const todayLeft = hasBudget && base > 0 ? roundMoney(base / daysLeft - spentToday) : 0;
   const todayOver = hasBudget && base > 0 && todayLeft < 0;
@@ -120,9 +123,27 @@ export default function Ledger({ tab, params }: PageProps) {
       else { const num = t.match(/\d+(\.\d+)?/); startDraft({ ...emptyDraft(), amount: num ? num[0] : '', note: t.replace(/\d+(\.\d+)?/, '').replace(/元|块/g, '').trim() }); }
     }, 650);
   };
-  const handleShot = () => {
+  const handleShot = async (file: File) => {
+    if (shotBusy) return;
     setShotBusy(true); setShotHint(null);
-    window.setTimeout(() => { setShotBusy(false); setShotHint('看图读的，核对一下金额'); startDraft({ ...emptyDraft(), amount: '36.5', note: '便利店', type: 'food' }); }, 1200);
+    try {
+      const dataUrl = await downscaleDataUrl(await readAsDataUrl(file));
+      const text = (await recognizeText(dataUrl))?.trim();
+      if (!text) {
+        setShotHint('本机没有读出小票文字，请手动填写');
+        startDraft(emptyDraft());
+        return;
+      }
+      const amount = text.match(/(?:¥|￥)?\s*(\d+(?:\.\d{1,2})?)/)?.[1];
+      const note = text.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !/^\d+(?:\.\d{1,2})?$/.test(line))?.slice(0, 40) ?? '';
+      setShotHint('本机识字完成，请核对金额和说明');
+      if (amount) startDraft({ ...emptyDraft(), amount, note });
+      else setNlText(text.slice(0, 100));
+    } catch {
+      setShotHint('图片读取失败，换一张或手动填写');
+    } finally {
+      setShotBusy(false);
+    }
   };
   const onSaved = (s: string) => { setNlText(''); setSaved(s); };
 
@@ -184,7 +205,9 @@ export default function Ledger({ tab, params }: PageProps) {
                   <div className="flex min-w-0 items-center gap-2">
                     <P4Outline size={22} stroke={4} fill="var(--p4g-yellow)" strokeColor="var(--p4g-black)" italic>{balanceView === 'month' ? 'MONTH' : 'TOTAL'}</P4Outline>
                     <span className="h-[3px] flex-1 bg-p4g-yellow/60" />
-                    <span className="shrink-0 rounded-pill bg-p4g-yellow px-2.5 py-0.5 p4g-date-type text-2xs text-p4g-black">10/20 TUE</span>
+                    <span className="shrink-0 rounded-pill bg-p4g-yellow px-2.5 py-0.5 p4g-date-type text-2xs text-p4g-black">
+                      {(() => { const [y, m, d] = P5_TODAY.split('-').map(Number); const date = new Date(y, m - 1, d); return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')} ${WEEK_EN[date.getDay()]}`; })()}
+                    </span>
                   </div>
                   {balanceView === 'month' ? (
                     hasBudget ? (over ? (
@@ -252,8 +275,8 @@ export default function Ledger({ tab, params }: PageProps) {
               </button>
             </div>
             <div className="mt-2 flex min-w-0 items-center gap-2">
-              <input ref={shotRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) handleShot(); }} />
-              <button type="button" onClick={() => { if (!shotBusy) handleShot(); }} onDoubleClick={() => shotRef.current?.click()} title="演示：单击模拟读图；双击打开真实相册选择" disabled={shotBusy}
+              <input ref={shotRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void handleShot(f); }} />
+              <button type="button" onClick={() => { if (!shotBusy) shotRef.current?.click(); }} title="打开相册识别小票" disabled={shotBusy}
                 className="p4g-press relative h-9 shrink-0 overflow-hidden rounded-xs border-thin border-dashed border-p4g-line bg-p4g-surface-2 px-3 font-display text-meta font-bold text-p4g-ink disabled:opacity-60">
                 {shotBusy && <NoiseLayer animate={!low} />}
                 <span className="relative">{shotBusy ? '读图中…' : '📷 拍小票'}</span>

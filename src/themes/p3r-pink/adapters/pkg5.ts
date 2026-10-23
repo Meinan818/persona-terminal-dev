@@ -42,6 +42,7 @@ import { useAppStore, toLocalDateKey } from '@/store';
 import type { LedgerEntry, Attribute, AttributeId, User } from '@/types';
 import { useAchievementProgressMap, useCloudUser, useSeasonCollectedMap, useTarotCollectedMap } from '@/themes/astrologyData';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
+import { ledgerCycle } from '@/utils/ledgerFormat';
 
 // A 类：只转发纯计算/格式化函数（真实仓库同名、同签名、同返回结构）
 // catMeta / INCOME_META 不转发：真实版返回结构不同（没有 demo 用的 color 字段），图标/颜色属于设计，保留 demo 版
@@ -59,7 +60,10 @@ export function useLedgerData() {
   const getBudget = useAppStore((s) => s.getBudget);
   return useMemo(() => {
     const today = toLocalDateKey();
-    const b = getBudget(today.slice(0, 7));
+    const cycle = ledgerCycle(settings.ledgerPayCycleEnabled === true, settings.ledgerResetDay ?? 1, today);
+    const b = getBudget(cycle.key);
+    const cdt = (key: string) => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d); };
+    const daysLeft = Math.max(1, Math.round((cdt(cycle.end).getTime() - cdt(today < cycle.end ? today : cycle.end).getTime()) / 86_400_000) + 1);
     return {
       LEDGER_ENTRIES: entries as LedgerEntry[],
       LEDGER_ACCOUNTS: getAccountBalances(),
@@ -67,7 +71,10 @@ export function useLedgerData() {
       LEDGER_SAVINGS: getSavings(),
       P5_TODAY: today,
       CURRENT_MONTH: today.slice(0, 7),
+      LEDGER_CYCLE: cycle,
+      LEDGER_DAYS_LEFT: daysLeft,
       LEDGER_LOADED: loaded,
+      HAS_BUDGET: b?.monthlyLimit != null,
       LEDGER_ASSETS: assets,
       LEDGER_RESET_DAY: settings.ledgerResetDay ?? 1,
       ADJUST_LEFT: Math.max(0, 3 - useAppStore.getState().getAdjustCountThisMonth()),

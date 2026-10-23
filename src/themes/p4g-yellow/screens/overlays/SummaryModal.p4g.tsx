@@ -13,7 +13,8 @@ import { P4Button, P4Sheet, P4Switch, P4Input, P4EmptyState, useToast, IconBack,
 import { ChannelNoise } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
-import { SUMMARIES, SUMMARY_BODY, SUMMARY_PRESETS, type MockSummary } from '@yellow/mock/pkg2';
+import { SUMMARY_BODY, type MockSummary } from '@yellow/adapters/pkg2';
+import { useActionsData } from '@yellow/adapters/pkg2';
 import SummaryModalRegenConfirm from './SummaryModalRegenConfirm.p4g';
 import YearRecapStage from './YearRecapStage.p4g';
 
@@ -95,6 +96,9 @@ function ThinkingDial({ label }: { label: string }) {
 }
 
 export default function SummaryModal({ open, onClose, params }: OverlayProps) {
+  const summaryData = useActionsData();
+  const realSummaries = summaryData.SUMMARIES;
+  const summaryPresets = summaryData.SUMMARY_PRESETS;
   const toast = useToast();
   const low = useLowMotion();
   const pv = params?.get('view');
@@ -109,13 +113,13 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const [preset, setPreset] = useState(0);
   const [auto, setAuto] = useState(true);
   const [special, setSpecial] = useState(false);
-  const [archive, setArchive] = useState<MockSummary[]>(st === 'empty' ? [] : SUMMARIES);
-  const [selected, setSelected] = useState<MockSummary | null>(pv === 'detail' ? SUMMARIES[0] : null);
+  const [archive, setArchive] = useState<MockSummary[]>(st === 'empty' ? [] : realSummaries);
+  const [selected, setSelected] = useState<MockSummary | null>(pv === 'detail' ? realSummaries[0] ?? null : null);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [regen, setRegen] = useState(false);
   const [recap, setRecap] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [detailFU, setDetailFU] = useState<{ q: string; a: string }[]>([{ q: '下周具体可以怎么提升魅力？', a: '挑一个你本来就会去的场合，比如社团例会，主动先开口一次。记下来，就是一条魅力。' }]);
+  const [detailFU, setDetailFU] = useState<{ q: string; a: string }[]>([]);
   const timers = useRef<number[]>([]);
   const clearT = () => { timers.current.forEach(clearTimeout); timers.current = []; };
   const [job, setJob] = useState<Job | null>(() => {
@@ -126,6 +130,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
     return null;
   });
   useEffect(() => () => clearT(), []);
+  useEffect(() => { if (st !== 'empty') setArchive(realSummaries); }, [realSummaries, st]);
 
   const range = period === 'week' ? weekRange(off) : period === 'month' ? monthRange(off) : { s: new Date(2026, 0, 1), e: new Date(2026, 11, 31) };
   const label = period === 'year' ? '2026 年度总结' : period === 'week' ? `10月第${4 + off}周` : `${range.s.getMonth() + 1}月`;
@@ -145,7 +150,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   useEffect(() => { if (open && st === 'busy') stream({ status: 'preparing', text: '', period: 'week', label: '10月第4周', continues: 0, followUps: [] }); }, [open]); // eslint-disable-line
 
   const running = !!job && job.status !== 'done' && job.status !== 'error';
-  const generate = () => { setView('result'); stream({ status: 'preparing', text: '', period, label, continues: 0, followUps: [] }); };
+  const generate = () => { toast.error('成长总结 AI 接入等待确认；本次不生成占位内容'); };
   const stop = () => { clearT(); setJob((j) => j && { ...j, status: 'done', truncated: true }); };
   const regenerate = () => { if (job && job.status === 'done' && !job.saved) setRegen(true); else generate(); };
   const save = () => {
@@ -153,7 +158,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      setArchive((a) => [{ id: `sm${Date.now()}`, period: job.period, label: job.label, startDate: '2026-10-19', endDate: '2026-10-25', totalPoints: 13, activityCount: 9, promptPresetName: SUMMARY_PRESETS[preset], viewed: true, createdAt: new Date(), followUps: job.followUps.length, body: job.text }, ...a]);
+      setArchive((a) => [{ id: `sm${Date.now()}`, period: job.period, label: job.label, startDate: '2026-10-19', endDate: '2026-10-25', totalPoints: 13, activityCount: 9, promptPresetName: summaryPresets[preset] ?? '', viewed: true, createdAt: new Date(), followUps: job.followUps.length, body: job.text } as MockSummary, ...a]);
       setJob(null); toast.success('已归档保存'); setView('archive');
     }, 600);
   };
@@ -220,7 +225,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                   <div aria-hidden className="absolute -right-6 -top-6 h-20 w-20 rotate-12 opacity-60 p4g-candy" />
                   <div className="relative flex items-center gap-2"><span className="font-display text-lead font-bold">2026年 年度总结</span>{period === 'year' && <span className="rounded-xs bg-p4g-orange px-1.5 font-display text-2xs font-bold text-p4g-black">已选</span>}</div>
                   <div className="relative mt-1 text-meta opacity-85">成功的更生 — 回顾这一年全部成长历程</div>
-                  <div className="relative mt-1.5 flex items-center justify-between gap-2 text-cap opacity-80"><span className="min-w-0 truncate">2026/1/2 写过一份，再生成会另存一份</span><span role="link" tabIndex={0} onClick={(e) => { e.stopPropagation(); setSelected(SUMMARIES[2]); setView('view'); }} className="shrink-0 font-bold">查看 ›</span></div>
+                  <div className="relative mt-1.5 flex items-center justify-between gap-2 text-cap opacity-80"><span className="min-w-0 truncate">{realSummaries.find((summary) => summary.period === 'year') ? `${new Date(realSummaries.find((summary) => summary.period === 'year')!.createdAt).toLocaleDateString('zh-CN')} 写过一份，再生成会另存一份` : '还没有写过年度总结'}</span><span role="link" tabIndex={0} onClick={(e) => { e.stopPropagation(); setSelected(realSummaries[0] ?? null); setView('view'); }} className="shrink-0 font-bold">查看 ›</span></div>
                 </button>
                 <section>
                   <div className="mb-2 font-display text-cap font-bold uppercase tracking-[0.2em] text-p4g-ink-soft">选择时间范围</div>
@@ -240,7 +245,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                 <section className="rounded-sm border-3 border-p4g-line bg-p4g-surface p-3">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="shrink-0 font-display text-meta font-bold text-p4g-ink">当前风格</span>
-                    <button type="button" onClick={() => setPreset((p) => (p + 1) % SUMMARY_PRESETS.length)} className="p4g-press min-w-0 truncate rounded-xs border-thin border-p4g-black bg-p4g-tag px-2 py-0.5 font-display text-meta font-bold text-[color:var(--p4g-tag-ink)]">{SUMMARY_PRESETS[preset]}</button>
+                    <button type="button" onClick={() => setPreset((p) => (p + 1) % Math.max(1, summaryPresets.length))} className="p4g-press min-w-0 truncate rounded-xs border-thin border-p4g-black bg-p4g-tag px-2 py-0.5 font-display text-meta font-bold text-[color:var(--p4g-tag-ink)]">{summaryPresets[preset] ?? '默认'}</button>
                   </div>
                   <p className="mt-1.5 text-cap text-p4g-ink-soft">点击切换；在设置「AI 总结」里可新增 / 编辑自定义风格</p>
                 </section>
@@ -263,7 +268,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
 
             {view === 'result' && job && (
               <>
-                <Stats items={[{ label: '总加点', value: job.status === 'preparing' ? '…' : '+13' }, { label: '记录数', value: job.status === 'preparing' ? '…' : '9' }, { label: '风格', value: SUMMARY_PRESETS[preset] }]} />
+                <Stats items={[{ label: '总加点', value: job.status === 'preparing' ? '…' : '+13' }, { label: '记录数', value: job.status === 'preparing' ? '…' : '9' }, { label: '风格', value: summaryPresets[preset] ?? '默认' }]} />
                 {job.status === 'preparing' && <div className="flex items-center justify-center gap-2 py-8 font-display text-body font-bold text-p4g-ink"><motion.span animate={low ? undefined : { rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} className="inline-block">◌</motion.span>正在整理这一期的简报…</div>}
                 {job.status === 'thinking' && <ThinkingDial label="正在读你的记录" />}
                 {job.period === 'year' && job.status === 'done' && <P4Button block variant="black" onClick={() => setRecap(true)}>✦ 重温开场</P4Button>}

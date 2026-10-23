@@ -18,7 +18,8 @@ import { useAIStream, AIThinking, type AIFail, type AIPhase } from '@pink/fx';
 import { useLowMotion, usePrefs } from '@pink/lib/prefs';
 import { cx } from '@pink/lib/cx';
 import { navigate } from '@pink/shell/shellBus';
-import { ACTION_META, CHAT_CARD_DEMO, CHAT_SEED, PICKER_TODOS, type ChatMsg, type DraftKind } from '@pink/mock/pkg6';
+import { ACTION_META, CHAT_CARD_DEMO, type ChatMsg, type DraftKind } from '@pink/mock/pkg6';
+import { navigatorThemeOps, useNavigatorThemeData } from '@pink/adapters/pkg6';
 import { activePreset, attrLabel, updateSettings, useSettings } from '@pink/screens/pkg6/settingsStore';
 import { P6Sheet } from '@pink/screens/pkg6/sheet';
 import { DateHud, WaterLayer, popVariants, sampleImg } from '@pink/screens/pkg6/compat';
@@ -109,11 +110,12 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const preset = activePreset(s);
   useScrollLock(open);
   const q = params ?? new URLSearchParams();
+  const { CHAT_MESSAGES, PICKER_TODOS } = useNavigatorThemeData();
   const qState = q.get('state');
   const aiDirect = (qState === 'offline' ? 'error' : AI_STATES.includes(qState as AIPhase) ? qState : null) as AIPhase | null;
   const failParam = (q.get('fail') as AIFail) ?? null;
   const [msgs, setMsgs] = useState<ChatMsg[]>(() => {
-    const base = q.get('demo') === 'card' ? [...CHAT_SEED.slice(3), ...CHAT_CARD_DEMO] : CHAT_SEED.slice(3);
+    const base: ChatMsg[] = q.get('demo') === 'card' ? [...CHAT_CARD_DEMO] : [...CHAT_MESSAGES];
     return aiDirect ? [...base, { id: 'tq', role: 'time', text: '今天 21:40' }, { id: 'uq', role: 'user', text: DEMO_Q }] : base;
   });
   const [older, setOlder] = useState(false);
@@ -135,6 +137,10 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const fileRef = useRef<HTMLInputElement>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
   const micStart = useRef<{ y: number; cancel: boolean } | null>(null);
+  useEffect(() => {
+    if (q.get('demo') === 'card') return;
+    setMsgs(CHAT_MESSAGES);
+  }, [CHAT_MESSAGES, q]);
 
   /* ── AI 回复（单条进行中的作业） ── */
   const [job, setJob] = useState<{ id: number; text: string; fail: AIFail; active: boolean }>(() => ({
@@ -177,27 +183,44 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const send = () => {
     const t = input.trim();
     if ((!t && !shot) || aiBusy) return;
-    const now = new Date();
-    const add: ChatMsg[] = [{ id: `t${Date.now()}`, role: 'time', text: `今天 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}` }];
-    if (shot) add.push({ id: `i${Date.now()}`, role: 'image', image: shot });
-    if (t) add.push({ id: `u${Date.now()}`, role: 'user', text: t });
-    setMsgs((m) => [...m, ...add]); setInput(''); setShot(null);
-    if (/卡住|不知道从哪|好难|拖延/.test(t)) { catSay('嗯……这件事听起来有点大。'); setTimeout(() => setStuck('ask'), 1300); return; }
+    navigatorThemeOps.pushUser(t, shot ?? undefined);
+    setInput(''); setShot(null);
+    if (/卡住|不知道从哪|好难|拖延/.test(t)) { navigatorThemeOps.pushCat('嗯……这件事听起来有点大。'); setTimeout(() => setStuck('ask'), 1300); return; }
     const money = t.match(/(\d+(?:\.\d+)?)\s*(块|元|¥)/) || t.match(/¥\s*(\d+(?:\.\d+)?)/);
     if (money) {
-      setTyping(true);
-      setTimeout(() => { setTyping(false); setMsgs((m) => [...m, { id: `k${Date.now()}`, role: 'card', draftKind: 'ledger', status: 'pending', lines: [`支出 ¥${money[1]}（餐饮）`, `备注：${t.replace(money[0], '').trim() || '—'}`] }]); }, 900);
+      navigatorThemeOps.pushCard({
+        kind: 'ledger',
+        direction: 'expense',
+        amount: Number(money[1]),
+        note: t.replace(money[0], '').trim(),
+        type: 'food',
+        incomeType: 'labor',
+        channel: '',
+      });
       return;
     }
-    askAI(t ? replyOf(preset.id) : '收到图片了。看起来像一张票据——要吾辈帮你记一笔账吗？');
+    navigatorThemeOps.pushCat('AI 对话接入等待确认；这条消息已经保存，尚未发起模型请求。');
   };
-  const confirmCard = (id: string) => {
+  const confirmCard = async (id: string) => {
     setBusyId(id);
-    setTimeout(() => {
-      setBusyId(null);
-      setMsgs((m) => m.map((x) => (x.id === id ? { ...x, status: 'done', receipt: x.draftKind === 'ledger' ? '记下了。本月还能花 ¥1,222。' : x.draftKind === 'bigdeal' ? '拆好了，第一步已经放进任务清单。' : '记下了，这次的成长吾辈都看见了。' } : x)));
+    const target = msgs.find((message) => message.id === id);
+    try {
+      if (!target?.draft) {
+        setMsgs((items) => items.map((item) => item.id === id ? { ...item, status: 'failed', receipt: '这张卡没有可执行的真实草稿，未写入任何数据。' } : item));
+        return;
+      }
+      const receipt = await navigatorThemeOps.executeDraft(target.draft);
+      navigatorThemeOps.updateCard(id, { cardStatus: 'done', receipt });
+      setMsgs((items) => items.map((item) => item.id === id ? { ...item, status: 'done', receipt } : item));
       toast.success('已记录');
-    }, 800);
+    } catch (error) {
+      const receipt = `执行失败：${error instanceof Error ? error.message : '请重试'}`;
+      navigatorThemeOps.updateCard(id, { cardStatus: 'pending', receipt });
+      setMsgs((items) => items.map((item) => item.id === id ? { ...item, status: 'failed', receipt } : item));
+      toast(receipt);
+    } finally {
+      setBusyId(null);
+    }
   };
   const openForm = (kind: DraftKind) => { if (kind === 'completeTodo') { setPicker(true); return; } setForm({ kind, open: true }); };
   const jump = (page: string, tab?: string) => { onClose(); setTimeout(() => navigate(page, tab, { transition: 'wave' }), 120); };
@@ -352,7 +375,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
               {/* 消息流 */}
               <div ref={listRef} className="relative z-[1] min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 pb-4 pt-2">
                 {!older && (
-                  <button type="button" onClick={() => { setOlder(true); setMsgs((m) => [...CHAT_SEED.slice(0, 3), ...m]); }} className="mx-auto block px-4 py-1 text-[11px] font-bold" style={{ background: 'var(--p3r-panel-glass)', color: P3R.inkSoft, clipPath: slantClip(5) }}>上拉查看更早的对话</button>
+                  <button type="button" onClick={() => { void navigatorThemeOps.loadOlder().then(setOlder); }} className="mx-auto block px-4 py-1 text-[11px] font-bold" style={{ background: 'var(--p3r-panel-glass)', color: P3R.inkSoft, clipPath: slantClip(5) }}>上拉查看更早的对话</button>
                 )}
                 {msgs.map((m, i) => {
                   if (m.role === 'divider') return <p key={m.id} className="flex items-center gap-2 text-[11px] font-bold" style={{ color: P3R.grey }}><span className="h-px flex-1" style={{ background: 'currentColor', opacity: 0.4 }} />早前的对话已收进记忆<span className="h-px flex-1" style={{ background: 'currentColor', opacity: 0.4 }} /></p>;
@@ -438,7 +461,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
         {qState === 'picker-empty' ? <div className="px-4 py-8 text-center text-[14px] font-bold" style={{ background: 'var(--p3r-row)', color: P3R.inkSoft, clipPath: slantClip(14) }}>今天没有待完成的任务——要么全清了，要么清单还空着。</div> : (
           <ul aria-label="选择要完成的任务" className="grid grid-cols-1 gap-[6px] pt-1">
             {PICKER_TODOS.map((t) => (
-              <li key={t.id}><button type="button" onClick={() => { setPicker(false); setMsgs((m) => [...m, { id: `k${Date.now()}`, role: 'card', draftKind: 'completeTodo', status: 'pending', lines: [`把「${t.title}」标记为完成`, '完成加点与反馈按任务设置发放'] }]); }}
+              <li key={t.id}><button type="button" onClick={() => { setPicker(false); navigatorThemeOps.pushCard({ kind: 'completeTodo', todoId: t.id, todoTitle: t.title }); }}
                 className="p6-row group relative flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left">
                 <span aria-hidden className="p6-row-bg absolute inset-0" style={{ clipPath: slantClip(10) }} />
                 <span aria-hidden className="p6-row-wedge pointer-events-none absolute -left-1.5 top-1/2 h-[24px] w-[22px] -translate-y-1/2"><SelectWedge className="inset-0" /></span>

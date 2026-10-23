@@ -15,7 +15,8 @@ import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3ConfigRow, P3Empty, P3Input, P3OnOff, P3Segment, P3Sheet, P3Tag, useToast, P3R, slantClip, tickClip, IconBack, IconChevron } from '@pink/kit';
 import { AIThinking, useAIStream, type AIFail, type AIPhase, type AIState } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
-import { SUMMARIES, SUMMARY_BODY, SUMMARY_PRESETS, type MockSummary } from '@pink/mock/pkg2';
+import { SUMMARY_BODY, type MockSummary } from '@pink/adapters/pkg2';
+import { useActionsData } from '@pink/adapters/pkg2';
 import { Butterfly, MiniHead } from '@pink/screens/pkg2/common';
 import SummaryModalRegenConfirm from './SummaryModalRegenConfirm.p3r';
 import YearRecapStage from './YearRecapStage.p3r';
@@ -113,6 +114,9 @@ function FollowUps({ items, remaining, question, disabled, onSend, pending }: { 
 }
 
 export default function SummaryModal({ open, onClose, params }: OverlayProps) {
+  const summaryData = useActionsData();
+  const realSummaries = summaryData.SUMMARIES;
+  const summaryPresets = summaryData.SUMMARY_PRESETS;
   const toast = useToast();
   const anim = useBoldness();
   const pv = params?.get('view');
@@ -130,13 +134,13 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const [preset, setPreset] = useState(0);
   const [auto, setAuto] = useState(true);
   const [special, setSpecial] = useState(false);
-  const [archive, setArchive] = useState<MockSummary[]>(st === 'empty' ? [] : SUMMARIES);
-  const [selected, setSelected] = useState<MockSummary | null>(pv === 'detail' ? SUMMARIES[0] : null);
+  const [archive, setArchive] = useState<MockSummary[]>(st === 'empty' ? [] : realSummaries);
+  const [selected, setSelected] = useState<MockSummary | null>(pv === 'detail' ? realSummaries[0] ?? null : null);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [regen, setRegen] = useState(false);
   const [recap, setRecap] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [detailFU, setDetailFU] = useState<{ q: string; a: string }[]>([{ q: '下周具体可以怎么提升魅力？', a: '挑一个你本来就会去的场合，比如社团例会，主动先开口一次。记下来，就是一条魅力。' }]);
+  const [detailFU, setDetailFU] = useState<{ q: string; a: string }[]>([]);
   const [job, setJob] = useState<Job | null>(() => (st === 'none' || (initialView !== 'result') ? null : { period: 'week', label: '10月第4周', continues: 0, followUps: [], preparing: st === 'busy' }));
   // 追问逐字
   const [fuQ, setFuQ] = useState<string | null>(fuParam === 'streaming' ? '这周最难的是周三，那天差点没去跑步' : null);
@@ -145,6 +149,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
     onDone: (a) => { const q = fuQRef.current; if (q) setJob((j) => j && { ...j, followUps: [...j.followUps, { q, a }] }); setFuQ(null); } });
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => { if (st !== 'empty') setArchive(realSummaries); }, [realSummaries, st]);
 
   const range = period === 'week' ? weekRange(off) : period === 'month' ? monthRange(off) : { s: new Date(2026, 0, 1), e: new Date(2026, 11, 31) };
   const label = period === 'year' ? '2026 年度总结' : period === 'week' ? `10月第${4 + off}周` : `${range.s.getMonth() + 1}月`;
@@ -161,8 +166,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const phase = job?.preparing ? 'preparing' : ai.phase;
   const running = !!job && (phase === 'preparing' || phase === 'thinking' || phase === 'streaming');
   const generate = () => {
-    if (noKey) { toast.error('未配置 AI API'); return; }
-    setView('result'); runJob({ period, label, continues: 0, followUps: [] });
+    toast.error('成长总结 AI 接入等待确认；本次不生成占位内容');
   };
   const stop = () => { timers.current.forEach(clearTimeout); if (job?.preparing) { setJob((j) => j && { ...j, preparing: false }); } ai.abort(); };
   const regenerate = () => { if (job && ai.phase === 'done' && !job.saved) setRegen(true); else generate(); };
@@ -171,7 +175,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
     setSaving(true);
     window.setTimeout(() => {
       setSaving(false);
-      setArchive((a) => [{ id: `sm${Date.now()}`, period: job.period, label: job.label, startDate: '2026-10-19', endDate: '2026-10-25', totalPoints: 13, activityCount: 9, promptPresetName: SUMMARY_PRESETS[preset], viewed: true, createdAt: new Date(), followUps: job.followUps.length, body: ai.text }, ...a]);
+      setArchive((a) => [{ id: `sm${Date.now()}`, period: job.period, label: job.label, startDate: '2026-10-19', endDate: '2026-10-25', totalPoints: 13, activityCount: 9, promptPresetName: summaryPresets[preset] ?? '', viewed: true, createdAt: new Date(), followUps: job.followUps.length, body: ai.text } as MockSummary, ...a]);
       setJob(null); ai.reset(); toast.success('已归档保存'); setView('archive');
     }, 700);
   };
@@ -229,8 +233,8 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                   <span aria-hidden className="pointer-events-none absolute -right-1 -top-3 font-cond text-[56px] leading-none" style={{ color: period === 'year' ? 'rgba(255,240,246,0.12)' : 'var(--p3r-ghost)' }}>2026</span>
                   <div className="relative flex items-center gap-2"><span className="font-heavy text-[17px]">2026年 年度总结</span>{period === 'year' && <P3Tag tone="rose">已选</P3Tag>}</div>
                   <div className="relative mt-1 text-[12px] opacity-85">成功的更生 — 回顾这一年全部成长历程</div>
-                  <div className="relative mt-1.5 flex items-center justify-between gap-2 text-[11px] opacity-80"><span className="min-w-0 truncate">2026/1/2 写过一份，再生成会另存一份</span>
-                    <span role="link" tabIndex={0} onClick={(e) => { e.stopPropagation(); setSelected(SUMMARIES[2]); setView('view'); }} className="shrink-0 font-black">查看 ›</span></div>
+                  <div className="relative mt-1.5 flex items-center justify-between gap-2 text-[11px] opacity-80"><span className="min-w-0 truncate">{realSummaries.find((summary) => summary.period === 'year') ? `${new Date(realSummaries.find((summary) => summary.period === 'year')!.createdAt).toLocaleDateString('zh-CN')} 写过一份，再生成会另存一份` : '还没有写过年度总结'}</span>
+                    <span role="link" tabIndex={0} onClick={(e) => { e.stopPropagation(); setSelected(realSummaries[0] ?? null); setView('view'); }} className="shrink-0 font-black">查看 ›</span></div>
                 </button>
                 <section className="space-y-2">
                   <MiniHead title="选择时间范围" en="PERIOD" />
@@ -246,7 +250,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                 <section className="space-y-1.5">
                   <MiniHead title="当前风格" en="STYLE" />
                   <div className="flex min-w-0 items-center gap-2">
-                    <button type="button" onClick={() => setPreset((p) => (p + 1) % SUMMARY_PRESETS.length)} className="min-w-0 truncate px-4 py-1.5 text-[13px] font-black" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(7) }}>‹ {SUMMARY_PRESETS[preset]} ›</button>
+                    <button type="button" onClick={() => setPreset((p) => (p + 1) % Math.max(1, summaryPresets.length))} className="min-w-0 truncate px-4 py-1.5 text-[13px] font-black" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(7) }}>‹ {summaryPresets[preset] ?? '默认'} ›</button>
                     <span className="min-w-0 truncate text-[11px]" style={{ color: P3R.grey }}>点击切换；在设置「AI 总结」里可新增 / 编辑</span>
                   </div>
                 </section>
@@ -263,7 +267,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
 
             {view === 'result' && job && (
               <>
-                <Stats items={[{ label: '总加点', value: phase === 'preparing' ? '…' : '+13' }, { label: '记录数', value: phase === 'preparing' ? '…' : '9' }, { label: '风格', value: SUMMARY_PRESETS[preset] }]} />
+                <Stats items={[{ label: '总加点', value: phase === 'preparing' ? '…' : '+13' }, { label: '记录数', value: phase === 'preparing' ? '…' : '9' }, { label: '风格', value: summaryPresets[preset] ?? '默认' }]} />
                 {phase === 'preparing' && <AIThinking className="py-6" label="正在整理简报…" sub="把这一期的记录、加点和同伴互动排好" ring={false} />}
                 {phase === 'thinking' && (
                   <div className="flex flex-col items-center gap-2 py-4">

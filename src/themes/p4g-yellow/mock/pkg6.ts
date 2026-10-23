@@ -2,6 +2,7 @@
  * P6 工作包假数据：设置 / 助手 / 同步 / 全局基座。类型只 import type 自真实仓库。
  */
 import type { AttributeId, KeywordRule, NavigatorPreset, NotifContentType, NotifSlot, SummaryPromptPreset, ThemeType, LedgerExpenseType, LedgerIncomeType } from '@real/types';
+import type { NavigatorDraft } from '@/utils/navigatorRegistry';
 
 export const ATTRS: { id: AttributeId; icon: string; defaultLabel: string; en: string }[] = [
   { id: 'knowledge', icon: '📘', defaultLabel: '知识', en: 'KNOWLEDGE' },
@@ -168,7 +169,7 @@ export const NOTIF_SLOTS: NotifSlot[] = [
 
 /** 助手对话 */
 export type ChatRole = 'cat' | 'user' | 'card' | 'divider' | 'time' | 'image';
-export interface ChatMsg { id: string; role: ChatRole; text?: string; draftKind?: DraftKind; lines?: string[]; status?: 'pending' | 'done' | 'cancelled' | 'failed'; receipt?: string; image?: string }
+export interface ChatMsg { id: string; role: ChatRole; text?: string; draftKind?: DraftKind; draft?: NavigatorDraft; lines?: string[]; status?: 'pending' | 'done' | 'cancelled' | 'failed'; receipt?: string; image?: string }
 export type DraftKind = 'activity' | 'todo' | 'ledger' | 'completeTodo' | 'editTodo' | 'bigdeal';
 export const ACTION_META: Record<DraftKind, { label: string; icon: string; en: string }> = {
   activity: { label: '记录活动', icon: '✍️', en: 'LOG' },

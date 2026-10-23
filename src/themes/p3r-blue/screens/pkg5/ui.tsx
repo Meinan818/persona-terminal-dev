@@ -8,7 +8,8 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 import { P3R, slantClip, tickClip } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
 import { cx } from '@blue/lib/cx';
-import { catMeta, daysAgoKey, P5_TODAY } from '@blue/mock/pkg5';
+import { catMeta } from '@blue/mock/pkg5';
+import { P5_TODAY, daysAgoKey } from '@blue/adapters/pkg5';
 import type { LedgerExpenseType } from '@real/types';
 
 /** 斜切小片（臂章红 / 蓝签名件） */

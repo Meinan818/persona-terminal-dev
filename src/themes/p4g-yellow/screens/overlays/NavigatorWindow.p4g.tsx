@@ -17,7 +17,8 @@ import { useLowMotion, usePrefs } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
-import { ACTION_META, CHAT_CARD_DEMO, CHAT_SEED, PICKER_TODOS, type ChatMsg, type DraftKind } from '@yellow/mock/pkg6';
+import { ACTION_META, CHAT_CARD_DEMO, type ChatMsg, type DraftKind } from '@yellow/mock/pkg6';
+import { navigatorThemeOps, useNavigatorThemeData } from '@yellow/adapters/pkg6';
 import { activePreset, attrLabel, updateSettings, useSettings } from '@yellow/screens/pkg6/settingsStore';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { ActionForm, emptyForm, type FormState } from './NavigatorActionForm.p4g';
@@ -93,8 +94,9 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const preset = activePreset(s);
   useScrollLock(open);
   const q = params ?? new URLSearchParams();
+  const { CHAT_MESSAGES, PICKER_TODOS } = useNavigatorThemeData();
   const qState = q.get('state');
-  const [msgs, setMsgs] = useState<ChatMsg[]>(() => q.get('demo') === 'card' ? [...CHAT_SEED.slice(3), ...CHAT_CARD_DEMO] : CHAT_SEED.slice(3));
+  const [msgs, setMsgs] = useState<ChatMsg[]>(() => q.get('demo') === 'card' ? [...CHAT_CARD_DEMO] : [...CHAT_MESSAGES]);
   const [older, setOlder] = useState(false);
   const [typing, setTyping] = useState(false);
   const [input, setInput] = useState('');
@@ -114,6 +116,10 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const avatarRef = useRef<HTMLInputElement>(null);
   const micStart = useRef<{ y: number; cancel: boolean } | null>(null);
   useEscape(open && !menu && !picker && !form.open && !notebook, onClose);
+  useEffect(() => {
+    if (q.get('demo') === 'card') return;
+    setMsgs(CHAT_MESSAGES);
+  }, [CHAT_MESSAGES, q]);
 
   useEffect(() => { if (open) setTimeout(() => listRef.current?.scrollTo({ top: 1e6 }), 60); }, [open, msgs.length, typing]);
   const isP = !!q.get('menu') || !!q.get('sheet');
@@ -130,27 +136,44 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const send = () => {
     const t = input.trim();
     if (!t && !shot) return;
-    const now = new Date();
-    const add: ChatMsg[] = [{ id: `t${Date.now()}`, role: 'time', text: `今天 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}` }];
-    if (shot) add.push({ id: `i${Date.now()}`, role: 'image', image: shot });
-    if (t) add.push({ id: `u${Date.now()}`, role: 'user', text: t });
-    setMsgs((m) => [...m, ...add]); setInput(''); setShot(null);
-    if (/卡住|不知道从哪|好难|拖延/.test(t)) { catSay('嗯……这件事听起来有点大。'); setTimeout(() => setStuck('ask'), 1300); return; }
+    navigatorThemeOps.pushUser(t, shot ?? undefined);
+    setInput(''); setShot(null);
+    if (/卡住|不知道从哪|好难|拖延/.test(t)) { navigatorThemeOps.pushCat('嗯……这件事听起来有点大。'); setTimeout(() => setStuck('ask'), 1300); return; }
     const money = t.match(/(\d+(?:\.\d+)?)\s*(块|元|¥)/) || t.match(/¥\s*(\d+(?:\.\d+)?)/);
     if (money) {
-      setTyping(true);
-      setTimeout(() => { setTyping(false); setMsgs((m) => [...m, { id: `k${Date.now()}`, role: 'card', draftKind: 'ledger', status: 'pending', lines: [`支出 ¥${money[1]}（🍜 餐饮）`, `备注：${t.replace(money[0], '').trim() || '—'}`] }]); }, 900);
+      navigatorThemeOps.pushCard({
+        kind: 'ledger',
+        direction: 'expense',
+        amount: Number(money[1]),
+        note: t.replace(money[0], '').trim(),
+        type: 'food',
+        incomeType: 'labor',
+        channel: '',
+      });
       return;
     }
-    catSay(preset.id === 'builtin-cat' ? '吾辈听着呢。要记成一条活动吗？点下面的「记录活动」就行。' : preset.id === 'builtin-bear' ? '熊听到了熊！要不要记下来熊？' : '收到。需要我帮你记下来吗？');
+    navigatorThemeOps.pushCat('AI 对话接入等待确认；这条消息已经保存，尚未发起模型请求。');
   };
-  const confirmCard = (id: string) => {
+  const confirmCard = async (id: string) => {
     setBusyId(id);
-    setTimeout(() => {
-      setBusyId(null);
-      setMsgs((m) => m.map((x) => (x.id === id ? { ...x, status: 'done', receipt: x.draftKind === 'ledger' ? '记下了。本月还能花 ¥1,222。' : x.draftKind === 'bigdeal' ? '拆好了，第一步已经放进任务清单。' : '记下了，这次的成长吾辈都看见了。' } : x)));
+    const target = msgs.find((message) => message.id === id);
+    try {
+      if (!target?.draft) {
+        setMsgs((items) => items.map((item) => item.id === id ? { ...item, status: 'failed', receipt: '这张卡没有可执行的真实草稿，未写入任何数据。' } : item));
+        return;
+      }
+      const receipt = await navigatorThemeOps.executeDraft(target.draft);
+      navigatorThemeOps.updateCard(id, { cardStatus: 'done', receipt });
+      setMsgs((items) => items.map((item) => item.id === id ? { ...item, status: 'done', receipt } : item));
       toast.success('已记录');
-    }, 800);
+    } catch (error) {
+      const receipt = `执行失败：${error instanceof Error ? error.message : '请重试'}`;
+      navigatorThemeOps.updateCard(id, { cardStatus: 'pending', receipt });
+      setMsgs((items) => items.map((item) => item.id === id ? { ...item, status: 'failed', receipt } : item));
+      toast(receipt);
+    } finally {
+      setBusyId(null);
+    }
   };
   const openForm = (kind: DraftKind) => { if (kind === 'completeTodo') { setPicker(true); return; } setForm({ kind, open: true }); };
   const jump = (page: string, tab?: string) => { onClose(); setTimeout(() => navigate(page, tab, { transition: 'noise' }), 120); };
@@ -248,7 +271,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
               {/* 消息流 */}
               <div ref={listRef} className="relative z-[1] min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 pb-4 pt-2">
                 {!older ? (
-                  <button type="button" onClick={() => { setOlder(true); setMsgs((m) => [...CHAT_SEED.slice(0, 3), ...m]); }} className="mx-auto block rounded-pill bg-p4g-black/60 px-3 py-1 text-cap font-bold text-p4g-white/80">上拉查看更早的对话</button>
+                  <button type="button" onClick={() => { void navigatorThemeOps.loadOlder().then(setOlder); }} className="mx-auto block rounded-pill bg-p4g-black/60 px-3 py-1 text-cap font-bold text-p4g-white/80">上拉查看更早的对话</button>
                 ) : null}
                 {msgs.map((m, i) => {
                   if (m.role === 'divider') return <p key={m.id} className="text-center text-cap font-bold text-p4g-white/60">—— 早前的对话已收进记忆 ——</p>;
@@ -333,7 +356,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
         {qState === 'picker-empty' ? <p className="rounded-[4px] border-2 border-dashed border-p4g-line/40 px-3 py-6 text-center text-body text-p4g-ink-soft">今天没有待完成的任务——要么全清了，要么清单还空着。</p> : (
           <ul aria-label="选择要完成的任务" className="grid grid-cols-1 gap-[6px] pt-1">
             {PICKER_TODOS.map((t) => (
-              <li key={t.id}><button type="button" onClick={() => { setPicker(false); setMsgs((m) => [...m, { id: `k${Date.now()}`, role: 'card', draftKind: 'completeTodo', status: 'pending', lines: [`把「${t.title}」标记为完成`, '完成加点与反馈按任务设置发放'] }]); }}
+              <li key={t.id}><button type="button" onClick={() => { setPicker(false); navigatorThemeOps.pushCard({ kind: 'completeTodo', todoId: t.id, todoTitle: t.title }); }}
                 className="group flex w-full min-w-0 items-center gap-3 rounded-[4px] bg-p4g-yellow-pale px-3 py-2.5 text-left text-p4g-black hover:bg-p4g-select hover:text-[color:var(--p4g-select-ink)] night:bg-p4g-surface night:text-p4g-ink">
                 <span aria-hidden className="h-0 w-0 shrink-0 border-y-[6px] border-l-[9px] border-y-transparent border-l-current opacity-0 group-hover:opacity-100" />
                 <span className="min-w-0 flex-1 truncate font-display text-body font-bold">{t.title}</span>

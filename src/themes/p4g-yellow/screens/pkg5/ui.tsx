@@ -6,7 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cx } from '@yellow/lib/cx';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { P5_TODAY, daysAgoKey } from '@yellow/mock/pkg5';
+import { P5_TODAY, daysAgoKey } from '@yellow/adapters/pkg5';
 
 
 /** 斜切小标签（字段名）：橙色斜块 + 粗体 */

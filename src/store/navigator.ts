@@ -118,6 +118,8 @@ interface NavigatorState {
   userSend: (text: string, imageDataUrl?: string) => void;
   /** 开窗问候：先 hydrate 当日会话，空会话才问候（跨天完整版走 AI + 超时落模板） */
   greet: () => void;
+  /** 只恢复当前“日期 × 人格”的已存会话，不触发问候或模型请求。 */
+  hydrateSession: () => Promise<void>;
   pushCat: (text: string) => void;
   pushUser: (text: string, imageDataUrl?: string) => void;
   pushCard: (draft: NavigatorDraft) => string;
@@ -649,6 +651,7 @@ export const useNavigatorStore = create<NavigatorState>((set, get) => {
 
     open: () => set({ isOpen: true }),
     close: () => set({ isOpen: false }),
+    hydrateSession,
 
     loadOlder: async () => {
       const { oldestLoadedDate, hasOlder } = get();

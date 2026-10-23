@@ -8,7 +8,7 @@ import type { OverlayProps } from '@pink/registry/types';
 import type { AttributeId, LedgerExpenseType, SpendWorth } from '@real/types';
 import { P3Sheet, P3Button, P3Input, P3R, slantClip, useToast } from '@pink/kit';
 import { Chip, FLabel, TagPicker, DateQuickPicker, AmountInput, CatMark } from '@pink/screens/pkg5/ui';
-import { ATTR_IDS, ATTR_NAMES, CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, fmtMoney, incomeTypeFromSource, isGrowthCategory, moneyFromInput, sanitizeMoneyInput } from '@pink/mock/pkg5';
+import { ATTR_IDS, ATTR_NAMES, CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, fmtMoney, incomeTypeFromSource, isGrowthCategory, moneyFromInput, sanitizeMoneyInput } from '@pink/adapters/pkg5';
 import { ledgerOps } from '@/themes/ledgerOperations';
 
 export interface EntryDraft {

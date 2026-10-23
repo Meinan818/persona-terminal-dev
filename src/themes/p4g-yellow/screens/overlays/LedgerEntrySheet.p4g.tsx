@@ -9,7 +9,7 @@ import type { AttributeId, LedgerExpenseType, SpendWorth } from '@real/types';
 import { P4Sheet, P4Button, P4Input, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { P5Label, P5Pick, TagPicker, DateQuickPicker } from '@yellow/screens/pkg5/ui';
-import { ATTR_IDS, ATTR_NAMES, CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, fmtMoney, incomeTypeFromSource, isGrowthCategory, moneyFromInput, sanitizeMoneyInput } from '@yellow/mock/pkg5';
+import { ATTR_IDS, ATTR_NAMES, CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, fmtMoney, incomeTypeFromSource, isGrowthCategory, moneyFromInput, sanitizeMoneyInput } from '@yellow/adapters/pkg5';
 import { ledgerOps } from '@/themes/ledgerOperations';
 
 export interface EntryDraft {

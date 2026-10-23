@@ -10,7 +10,7 @@ import type { LedgerAsset } from '@real/types';
 import { P3Sheet, P3Button, P3Input, P3Segment, P3R, slantClip, IconClose, useToast } from '@blue/kit';
 import { Chip, FLabel, AmountInput, CatMark } from '@blue/screens/pkg5/ui';
 import { AssetDeleteConfirmView } from './AssetBoardDeleteConfirm.p3r';
-import { ASSET_CATEGORIES, ASSET_STATUS, CNY, LEDGER_ASSETS, P5_TODAY, assetCat, assetTotal, fmtMoney } from '@blue/mock/pkg5';
+import { ASSET_CATEGORIES, ASSET_STATUS, CNY, P5_TODAY, assetCat, assetTotal, fmtMoney, useLedgerData } from '@blue/adapters/pkg5';
 
 const STATUSES = ['inuse', 'idle', 'soldout'] as const;
 
@@ -96,5 +96,5 @@ export function AssetDetailSheetView({ asset: initial, open, onClose, onChange, 
 }
 
 export function RegisterOverlay({ open, onClose }: OverlayProps) { return <AssetAddSheetView open={open} onClose={onClose} />; }
-export function DetailOverlay({ open, onClose }: OverlayProps) { return <AssetDetailSheetView open={open} onClose={onClose} asset={LEDGER_ASSETS[0]} />; }
+export function DetailOverlay({ open, onClose }: OverlayProps) { const { LEDGER_ASSETS } = useLedgerData(); return <AssetDetailSheetView open={open} onClose={onClose} asset={LEDGER_ASSETS[0] ?? null} />; }
 export default RegisterOverlay;

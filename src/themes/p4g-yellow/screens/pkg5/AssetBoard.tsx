@@ -3,24 +3,26 @@
  * 总财富环（流动资产 / 存款 / 固定资产）→ 存款条目（🐷 自律攒下 · 历月预算结余累积，× 收起 / 🐷 显示存款条目）
  * → ＋ 登记一件资产 → 按类目分组的固定资产（状态 · 日期 · +N 附加）→ 点开详情；空「还没有登记的固定资产…」
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { LedgerAsset } from '@real/types';
 import { P4Card, P4List, IconClose, useToast } from '@yellow/kit';
 import { CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { CardHead, Ring } from './ui';
 import { AssetAddSheetView, AssetDetailSheetView } from '@yellow/screens/overlays/AssetBoardSheets.p4g';
-import { ASSET_CATEGORIES, ASSET_STATUS, CNY, LEDGER_ACCOUNTS, LEDGER_ASSETS, LEDGER_SAVINGS, assetCat, assetTotal, fmtMoney, fmtSigned } from '@yellow/mock/pkg5';
+import { ASSET_CATEGORIES, ASSET_STATUS, CNY, assetCat, assetTotal, fmtMoney, fmtSigned, ledgerOps, useLedgerData } from '@yellow/adapters/pkg5';
 
 export function AssetBoard({ empty }: { empty?: boolean }) {
   const toast = useToast();
+  const { LEDGER_ACCOUNTS, LEDGER_ASSETS, LEDGER_SAVINGS } = useLedgerData();
   const [assets, setAssets] = useState<LedgerAsset[]>(empty ? [] : LEDGER_ASSETS);
   const [savingsHidden, setSavingsHidden] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const liquid = LEDGER_ACCOUNTS.reduce((s, a) => s + a.balance, 0);
-  const savingsAmt = Math.min(LEDGER_SAVINGS, liquid);
+  useEffect(() => { setAssets(empty ? [] : LEDGER_ASSETS); }, [LEDGER_ASSETS, empty]);
+  const liquid = empty ? 0 : LEDGER_ACCOUNTS.reduce((s, a) => s + a.balance, 0);
+  const savingsAmt = empty ? 0 : Math.min(LEDGER_SAVINGS, liquid);
   const savingsShown = !savingsHidden && savingsAmt > 0;
   const fixed = assets.filter((a) => a.status !== 'soldout').reduce((s, a) => s + assetTotal(a), 0);
   const liquidFree = liquid - (savingsShown ? savingsAmt : 0);
@@ -109,8 +111,8 @@ export function AssetBoard({ empty }: { empty?: boolean }) {
           </P4List>
         </CollageItem>
       ))}
-      <AssetAddSheetView open={addOpen} onClose={() => setAddOpen(false)} onSave={(a) => { setAssets((xs) => [a, ...xs]); toast.success(`已登记：${a.name}`); }} />
-      <AssetDetailSheetView open={detailOpen && !!detail} asset={detail} onClose={() => setDetailOpen(false)} onChange={(a) => setAssets((xs) => xs.map((x) => (x.id === a.id ? a : x)))} onDelete={(id) => { setAssets((xs) => xs.filter((x) => x.id !== id)); toast('已删除'); }} />
+      <AssetAddSheetView open={addOpen} onClose={() => setAddOpen(false)} onSave={(a) => { void ledgerOps.addAsset(a).then(() => toast.success(`已登记：${a.name}`)).catch((error) => toast.error(error instanceof Error ? error.message : '登记失败')); }} />
+      <AssetDetailSheetView open={detailOpen && !!detail} asset={detail} onClose={() => setDetailOpen(false)} onChange={(a) => { void ledgerOps.updateAsset(a).catch((error) => toast.error(error instanceof Error ? error.message : '保存失败')); }} onDelete={(id) => { void ledgerOps.removeAsset(id).then(() => toast('已删除')).catch((error) => toast.error(error instanceof Error ? error.message : '删除失败')); }} />
     </CollageStagger>
   );
 }

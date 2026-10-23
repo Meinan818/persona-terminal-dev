@@ -17,7 +17,9 @@ import { Chip } from '@blue/screens/pkg5/ui';
 import { presetOf, goalPct, setPresence, statusAgeText, usePresence } from '@blue/screens/pkg5/presence';
 import { CropDialog } from './ImageCropDialog.p3r';
 import { sampleImg } from '@blue/screens/pkg6/compat';
-import { ATTRIBUTES, CALLING_CARDS, CLOUD_USER, LEVEL_MAX, STATUS_PRESETS, TOTAL_LEVEL, TOTAL_POINTS } from '@blue/mock/pkg5';
+import { STATUS_PRESETS } from '@/constants/profileStatus';
+import { useAppStore } from '@/store';
+import { useCloudStore } from '@/store/cloud';
 
 type Panel = null | 'status' | 'goal';
 
@@ -25,6 +27,13 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
   const toast = useToast();
   const anim = useBoldness();
   const p = usePresence();
+  const attributes = useAppStore((state) => state.attributes);
+  const callingCards = useAppStore((state) => state.callingCards);
+  const cloudUser = useCloudStore((state) => state.cloudUser);
+  const totalPoints = attributes.reduce((sum, attribute) => sum + attribute.points, 0);
+  const totalLevel = cloudUser?.total_lv ?? attributes.reduce((sum, attribute) => sum + attribute.level, 0);
+  const levelMax = Math.max(6, ...attributes.map((attribute) => attribute.level));
+  const cardPct = (id: string) => Math.round(Math.max(0, Math.min(1, useAppStore.getState().getCallingCardProgress(id)?.overallProgress ?? 0)) * 100);
   const [panel, setPanel] = useState<Panel>(initialPanel);
   const [avatarMenu, setAvatarMenu] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -42,11 +51,11 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
   useEffect(() => { if (!open || !initialCrop) return; const t = window.setTimeout(() => setPending(initialCrop === 'error' ? { err: true } : { src: sampleImg('town-day.webp') }), 450); return () => window.clearTimeout(t); }, [open, initialCrop]);
   const preset = presetOf(p.statusId);
   const pct = goalPct(p.goal);
-  const cards = noCards ? [] : CALLING_CARDS;
+  const cards = noCards ? [] : callingCards.filter((card) => !card.archived);
   const toggle = (x: Exclude<Panel, null>) => setPanel((cur) => (cur === x ? null : x));
   const saveName = () => { const v = nameDraft.trim(); if (v) setPresence({ name: v }); setEditing(false); };
   const copy = () => {
-    if (!navigator.clipboard) setCopied('err'); else navigator.clipboard.writeText(CLOUD_USER.username).then(() => setCopied('ok'), () => setCopied('err'));
+    if (!navigator.clipboard) setCopied('err'); else navigator.clipboard.writeText(cloudUser?.username ?? p.name).then(() => setCopied('ok'), () => setCopied('err'));
     window.setTimeout(() => setCopied(null), 1500);
   };
   const pick = (f: File) => {
@@ -95,7 +104,7 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
                 )}
                 <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
                   <span className="relative inline-flex items-baseline gap-1 px-3 py-0.5" style={{ clipPath: slantClip(6), background: P3R.blue, color: P3R.onBlue }}>
-                    <span className="text-[10px] font-black opacity-85">LV</span><span className="font-cond text-[15px] leading-none">{TOTAL_LEVEL}</span>
+                    <span className="text-[10px] font-black opacity-85">LV</span><span className="font-cond text-[15px] leading-none">{totalLevel}</span>
                   </span>
                   {preset ? (
                     <button type="button" title="改状态" aria-expanded={panel === 'status'} onClick={() => toggle('status')} className="inline-flex min-w-0 max-w-full items-center gap-1 px-2.5 py-0.5 text-[12px] font-black" style={{ clipPath: slantClip(5), background: P3R.cyan, color: 'var(--p3r-mulberry)' }}>
@@ -106,10 +115,10 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
                 {cloud && (
                   <div className="mt-1.5 min-w-0 space-y-0.5">
                     <button type="button" title="点击复制 UserID" onClick={copy} className="flex max-w-full items-center gap-1 text-[12px] font-black" style={{ color: P3R.roseInk }}>
-                      <span className="opacity-70">@</span><span className="truncate font-mono">{CLOUD_USER.username}</span>
+                      <span className="opacity-70">@</span><span className="truncate font-mono">{cloudUser?.username ?? p.name}</span>
                       <span className="shrink-0 text-[11px]">{copied === 'ok' ? '已复制 ✓' : copied === 'err' ? '复制失败' : '· 点击复制'}</span>
                     </button>
-                    <div className="truncate text-[11px] font-bold" style={{ color: P3R.grey }}>云端 · {CLOUD_USER.email}</div>
+                    <div className="truncate text-[11px] font-bold" style={{ color: P3R.grey }}>云端 · {cloudUser?.email ?? '未登录'}</div>
                   </div>
                 )}
               </div>
@@ -177,7 +186,7 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
                                 {on ? <SelectWedge className="-left-1 -right-1 inset-y-0" /> : <span aria-hidden className="absolute inset-0" style={{ background: 'var(--p3r-chip)', clipPath: slantClip(8) }} />}
                                 <span aria-hidden className="relative font-heavy not-italic" style={{ color: on ? 'var(--p3r-mulberry)' : P3R.blue }}>{c.icon}</span>
                                 <span className="relative min-w-0 flex-1 truncate" style={{ color: on ? 'var(--p3r-mulberry)' : P3R.ink }}>{c.title}</span>
-                                <span className="relative shrink-0 font-cond text-[14px]" style={{ color: on ? 'var(--p3r-mulberry)' : P3R.grey }}>{c.pct}%</span>
+                                <span className="relative shrink-0 font-cond text-[14px]" style={{ color: on ? 'var(--p3r-mulberry)' : P3R.grey }}>{cardPct(c.id)}%</span>
                               </button>
                             );
                           })}
@@ -202,15 +211,15 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
 
         <div className="min-w-0" style={{ clipPath: slantClip(12), background: 'var(--p3r-row-alt)' }}>
           <button type="button" aria-expanded={attrsOpen} onClick={() => setAttrsOpen((v) => !v)} className="flex w-full min-w-0 items-center justify-between gap-2 py-2.5 pl-5 pr-5">
-            <span className="text-[14px] font-black" style={{ color: P3R.ink }}>总点数：<span className="font-cond text-[22px]" style={{ color: P3R.blue }}>{TOTAL_POINTS}</span></span>
-            <span className="flex shrink-0 items-center gap-1 text-[12px] font-black" style={{ color: P3R.grey }}><span>{TOTAL_LEVEL} 级累计</span><span>{attrsOpen ? '▲' : '▼'}</span></span>
+          <span className="text-[14px] font-black" style={{ color: P3R.ink }}>总点数：<span className="font-cond text-[22px]" style={{ color: P3R.blue }}>{totalPoints}</span></span>
+          <span className="flex shrink-0 items-center gap-1 text-[12px] font-black" style={{ color: P3R.grey }}><span>{totalLevel} 级累计</span><span>{attrsOpen ? '▲' : '▼'}</span></span>
           </button>
           {attrsOpen && (
             <div className="flex flex-col gap-1.5 px-5 pb-3">
-              {ATTRIBUTES.map((a) => (
+              {attributes.map((a) => (
                 <div key={a.id} className="flex min-w-0 items-center gap-2.5">
                   <span className="w-12 shrink-0 text-[13px] font-black" style={{ color: P3R.ink }}>{a.displayName}</span>
-                  <P3Progress className="min-w-0 flex-1" value={a.level} max={LEVEL_MAX} variant="segments" />
+                  <P3Progress className="min-w-0 flex-1" value={a.level} max={levelMax} variant="segments" />
                   <span className="w-10 shrink-0 text-right font-cond text-[14px]" style={{ color: P3R.ink }}>Lv.{a.level}</span>
                 </div>
               ))}

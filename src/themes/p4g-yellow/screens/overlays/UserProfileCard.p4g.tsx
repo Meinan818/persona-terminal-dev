@@ -17,7 +17,9 @@ import { useLowMotion } from '@yellow/lib/prefs';
 import { presetOf, goalPct, setPresence, statusAgeText, usePresence } from '@yellow/screens/pkg5/presence';
 import { p4gAsset } from '@yellow/lib/asset';
 import { CropDialog } from './ImageCropDialog.p4g';
-import { ATTRIBUTES, CALLING_CARDS, CLOUD_USER, LEVEL_MAX, STATUS_PRESETS, TOTAL_LEVEL, TOTAL_POINTS } from '@yellow/mock/pkg5';
+import { STATUS_PRESETS } from '@/constants/profileStatus';
+import { useAppStore } from '@/store';
+import { useCloudStore } from '@/store/cloud';
 
 type Panel = null | 'status' | 'goal';
 
@@ -25,6 +27,13 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
   const toast = useToast();
   const low = useLowMotion();
   const p = usePresence();
+  const attributes = useAppStore((state) => state.attributes);
+  const callingCards = useAppStore((state) => state.callingCards);
+  const cloudUser = useCloudStore((state) => state.cloudUser);
+  const totalPoints = attributes.reduce((sum, attribute) => sum + attribute.points, 0);
+  const totalLevel = cloudUser?.total_lv ?? attributes.reduce((sum, attribute) => sum + attribute.level, 0);
+  const levelMax = Math.max(6, ...attributes.map((attribute) => attribute.level));
+  const cardPct = (id: string) => Math.round(Math.max(0, Math.min(1, useAppStore.getState().getCallingCardProgress(id)?.overallProgress ?? 0)) * 100);
   const [panel, setPanel] = useState<Panel>(initialPanel);
   const [avatarMenu, setAvatarMenu] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -42,10 +51,10 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
   useEffect(() => { if (!open || !initialCrop) return; const t = window.setTimeout(() => setPending(initialCrop === 'error' ? { err: true } : { src: p4gAsset('town-day.webp') }), 450); return () => window.clearTimeout(t); }, [open, initialCrop]);
   const preset = presetOf(p.statusId);
   const pct = goalPct(p.goal);
-  const cards = noCards ? [] : CALLING_CARDS;
+  const cards = noCards ? [] : callingCards.filter((card) => !card.archived);
   const toggle = (x: Exclude<Panel, null>) => setPanel((cur) => (cur === x ? null : x));
   const saveName = () => { const v = nameDraft.trim(); if (v) setPresence({ name: v }); setEditing(false); };
-  const copy = () => { navigator.clipboard?.writeText(CLOUD_USER.username).then(() => setCopied('ok'), () => setCopied('err')); if (!navigator.clipboard) setCopied('err'); window.setTimeout(() => setCopied(null), 1500); };
+  const copy = () => { navigator.clipboard?.writeText(cloudUser?.username ?? p.name).then(() => setCopied('ok'), () => setCopied('err')); if (!navigator.clipboard) setCopied('err'); window.setTimeout(() => setCopied(null), 1500); };
   const pick = (f: File) => {
     if (!f.type.startsWith('image/')) { toast.error('请选择图片文件'); return; }
     setPending({ file: f });
@@ -105,7 +114,7 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
                 </div>
               )}
               <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
-                <span className="rounded-pill bg-p4g-black px-2 py-[3px] p4g-num text-meta leading-none text-white">LV {TOTAL_LEVEL}</span>
+                <span className="rounded-pill bg-p4g-black px-2 py-[3px] p4g-num text-meta leading-none text-white">LV {totalLevel}</span>
                 {preset ? (
                   <button type="button" title="改状态" aria-expanded={panel === 'status'} onClick={() => toggle('status')} className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-pill bg-p4g-orange px-2 py-[3px] font-display text-meta font-bold leading-none text-p4g-black">
                     <span aria-hidden>{preset.emoji}</span><span className="truncate">{preset.label}</span>
@@ -115,10 +124,10 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
               {cloud && (
                 <div className="mt-1.5 min-w-0 space-y-0.5">
                   <button type="button" title="点击复制 UserID" onClick={copy} className="flex max-w-full items-center gap-1 font-display text-meta font-bold text-[color:var(--p4g-orange-deep)]">
-                    <span className="opacity-70">@</span><span className="truncate font-mono">{CLOUD_USER.username}</span>
+                    <span className="opacity-70">@</span><span className="truncate font-mono">{cloudUser?.username ?? p.name}</span>
                     <span className="shrink-0 text-2xs">{copied === 'ok' ? '已复制 ✓' : copied === 'err' ? '复制失败' : '⧉'}</span>
                   </button>
-                  <div className="truncate text-2xs font-bold opacity-75">☁ {CLOUD_USER.email}</div>
+                  <div className="truncate text-2xs font-bold opacity-75">☁ {cloudUser?.email ?? '未登录'}</div>
                 </div>
               )}
             </div>
@@ -176,12 +185,12 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
                               <button key={c.id} type="button" aria-pressed={on} onClick={() => { setCardId(c.id); setErr(''); }}
                                 className={cx('relative flex w-full min-w-0 items-center gap-2 rounded-pill py-2 pl-7 pr-3 text-left font-display text-body font-bold', on ? 'bg-p4g-orange text-p4g-black' : 'bg-p4g-surface-2 text-p4g-ink')}>
                                 {on && <span aria-hidden className="absolute left-2.5 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[6px] border-l-[9px] border-y-transparent border-l-p4g-black" />}
-                                <span aria-hidden>{c.icon}</span><span className="min-w-0 flex-1 truncate">{c.title}</span><span className="shrink-0 p4g-num text-meta opacity-70">{c.pct}%</span>
+                                <span aria-hidden>{c.icon}</span><span className="min-w-0 flex-1 truncate">{c.title}</span><span className="shrink-0 p4g-num text-meta opacity-70">{cardPct(c.id)}%</span>
                               </button>
                             );
                           })}
                         </div>
-                        <P4Input wrapClassName="mt-2.5" label="对外显示为（可选：别人眼里你的目标叫什么）" value={alias} maxLength={24} onChange={(e) => { setAlias(e.target.value); setErr(''); }} placeholder={CALLING_CARDS.find((c) => c.id === cardId)?.title || '不写就用宣告卡的标题'} />
+              <P4Input wrapClassName="mt-2.5" label="对外显示为（可选：别人眼里你的目标叫什么）" value={alias} maxLength={24} onChange={(e) => { setAlias(e.target.value); setErr(''); }} placeholder={callingCards.find((c) => c.id === cardId)?.title || '不写就用宣告卡的标题'} />
                       </>
                     ) : <p className="text-meta leading-relaxed text-p4g-ink-soft">还没有进行中的宣告卡——先去首页立一张，再回来把它挂上名片。</p>}
                     {err && <p className="mt-2 text-meta font-bold text-p4g-danger">{err}</p>}
@@ -199,15 +208,15 @@ export function UserProfileCardView({ open, onClose, initialPanel = null, cloud 
 
         <div className="min-w-0 rounded-sm border-3 border-p4g-line bg-p4g-surface-2">
           <button type="button" aria-expanded={attrsOpen} onClick={() => setAttrsOpen((v) => !v)} className="flex w-full min-w-0 items-center justify-between gap-2 px-3 py-2.5">
-            <span className="font-display text-body font-bold text-p4g-ink">总点数：<span className="p4g-num text-h3 text-[color:var(--p4g-rank)]">{TOTAL_POINTS}</span></span>
-            <span className="flex shrink-0 items-center gap-1 font-display text-meta font-bold text-p4g-ink-soft"><span>{TOTAL_LEVEL} 级累计</span><span>{attrsOpen ? '▲' : '▼'}</span></span>
+          <span className="font-display text-body font-bold text-p4g-ink">总点数：<span className="p4g-num text-h3 text-[color:var(--p4g-rank)]">{totalPoints}</span></span>
+          <span className="flex shrink-0 items-center gap-1 font-display text-meta font-bold text-p4g-ink-soft"><span>{totalLevel} 级累计</span><span>{attrsOpen ? '▲' : '▼'}</span></span>
           </button>
           {attrsOpen && (
             <div className="flex flex-col gap-1.5 border-t-2 px-3 py-2.5" style={{ borderColor: 'var(--p4g-line-soft)' }}>
-              {ATTRIBUTES.map((a) => (
+            {attributes.map((a) => (
                 <div key={a.id} className="flex min-w-0 items-center gap-2.5">
                   <span className="w-12 shrink-0 font-display text-meta font-bold text-p4g-ink">{a.displayName}</span>
-                  <P4Progress className="min-w-0 flex-1" value={a.level} max={LEVEL_MAX} variant="segments" />
+                <P4Progress className="min-w-0 flex-1" value={a.level} max={levelMax} variant="segments" />
                   <span className="w-9 shrink-0 text-right p4g-num text-meta text-p4g-ink">Lv.{a.level}</span>
                 </div>
               ))}

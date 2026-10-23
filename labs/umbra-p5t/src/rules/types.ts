@@ -306,6 +306,8 @@ export interface RuleOptions {
   seed?: number;
   /** 敌方 1 More 连锁上限。原作无此上限（每次 1 More 都要打倒一个新的未倒地目标，天然有限）；默认 Infinity */
   enemyChainCap?: number;
+  /** 不靠梯子能直接走的高度差（0 或 1，缺省 0 = 原作只能走梯子换层）；2 层及以上永远不能直接走（Q7） */
+  maxStep?: number;
 }
 
 export type Phase = 'player' | 'enemy' | 'won' | 'lost';

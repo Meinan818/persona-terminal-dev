@@ -9,6 +9,8 @@ export const DIRS: Vec[] = [
 ];
 
 export const key = (p: Vec) => `${p.x},${p.y}`;
+/** Q7：低处不能越过 2 层——直接走的高度差上限 1（梯子/跳台不受限） */
+export const MAX_WALK_STEP = 1;
 export const eq = (a: Vec, b: Vec) => a.x === b.x && a.y === b.y;
 export const manhattan = (a: Vec, b: Vec) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 export const add = (a: Vec, b: Vec, k = 1): Vec => ({ x: a.x + b.x * k, y: a.y + b.y * k });
@@ -23,6 +25,11 @@ export class Grid {
   tileOverride = new Map<string, TileKind>();
   /** 机关造成的动态高度（升降台） */
   heightOverride = new Map<string, number>();
+  /**
+   * 不靠梯子能直接走上/走下的高度差（Q7）。缺省 0 = 原作做法：换层只能走梯子/跳台（Dash）。
+   * 无论设多少，2 层及以上的台阶都不能直接走（夹到 MAX_WALK_STEP）。
+   */
+  maxStep = 0;
 
   constructor(public readonly map: Pick<MapDef, 'width' | 'height' | 'tiles' | 'heights' | 'links'>) {
     this.links = map.links ?? [];
@@ -80,7 +87,7 @@ export class Grid {
     const out: { pos: Vec; dash: boolean }[] = [];
     for (const d of DIRS) {
       const n = add(p, d);
-      if (this.walkable(n) && this.h(n) === this.h(p)) out.push({ pos: n, dash: false });
+      if (this.walkable(n) && Math.abs(this.h(n) - this.h(p)) <= Math.min(this.maxStep, MAX_WALK_STEP)) out.push({ pos: n, dash: false });
     }
     if (allowDash) for (const l of this.links) {
       const other = eq(l.a, p) ? l.b : eq(l.b, p) ? l.a : null;
@@ -111,6 +118,8 @@ export class Grid {
    */
   fullCoverBlocks(target: Vec, from: Vec): boolean {
     if (eq(target, from)) return false;
+    // Q7 高处打低处命中+：从更高处射击越过目标同层的全掩体（不再落空；Resistance 照旧）
+    if (this.h(from) > this.h(target)) return false;
     for (const d of DIRS) {
       if (this.coverFor(target, add(target, d)) !== 2) continue;
       if ((from.x - target.x) * d.x + (from.y - target.y) * d.y >= 0) return true;

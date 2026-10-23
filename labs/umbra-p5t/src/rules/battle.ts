@@ -71,6 +71,8 @@ export const SPEAKER_RADIUS = 3;
 export const SPEAKER_PENALTY = 0.2;
 /** 睡眠中回合结束回复比例（PH） */
 export const SLEEP_REGEN = 0.1;
+/** Q7 高处命中加成（每层，PH） */
+export const HIGH_GROUND_HIT = 0.1;
 /** 敌方红旗光环：半径内敌人受到伤害 ×（PH，LEVELS.md「数值取数据表」，暂用 Rakukaja 同值） */
 export const ENEMY_FLAG_DEF = 0.8;
 /** 难度表（Cogito AAA100 EPOW/EHP；AAA112 Baton Pass 次数） */
@@ -144,9 +146,10 @@ export class Battle {
   constructor(public readonly map: MapDef, opts: RuleOptions = {}) {
     this.opts = {
       coverModel: 'p5t', leaderKoLoses: false, enemyOneMore: true, difficulty: 'normal',
-      voltage: true, charge: true, followUps: 1, seed: 1, enemyChainCap: Infinity, ...opts,
+      voltage: true, charge: true, followUps: 1, seed: 1, enemyChainCap: Infinity, maxStep: 0, ...opts,
     };
     this.grid = new Grid(map);
+    this.grid.maxStep = this.opts.maxStep;
     this.rng = mulberry32(this.opts.seed);
     const diff = DIFFICULTY[this.opts.difficulty];
     this.batonLeft = diff.baton;
@@ -313,6 +316,14 @@ export class Battle {
     const amt = Math.max(0, Math.min(u.maxHp - u.hp, amount));
     u.hp += amt;
     this.emit({ type: 'heal', unitId: u.id, amount: amt, hpLeft: u.hp });
+  }
+  /**
+   * Q7 高处打低处命中+：攻击者每高 1 层 +HIGH_GROUND_HIT（UI 预览用；规则上的效果 = 越过目标同层全掩体不落空，见 grid.fullCoverBlocks）。
+   * 本引擎没有命中率掷骰（P5T 枪击必中，只有全掩体/盾牌会落空），数值 PH 待 Hark 决定。
+   */
+  hitBonus(a: Unit | Vec, t: Unit | Vec): number {
+    const pa = 'pos' in a ? a.pos : a, pt = 'pos' in t ? t.pos : t;
+    return Math.max(0, this.grid.h(pa) - this.grid.h(pt)) * HIGH_GROUND_HIT;
   }
   /** 显示用掩体等级 */
   coverOf(t: Unit, from: Vec): CoverLevel {

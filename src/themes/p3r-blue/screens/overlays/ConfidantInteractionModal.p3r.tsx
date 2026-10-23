@@ -13,27 +13,37 @@ import { AIText, AIThinking, useAIStream, type AIFail } from '@blue/fx';
 import { navigate } from '@blue/shell/shellBus';
 import { ATTR_IDS, ATTR_NAMES, INTIMACY_LABELS, MAX_INTIMACY, TAROT_BY_ID } from '@blue/screens/pkg3/arcana';
 import { MiniLabel, Panel, Sparkle, Tarot } from '@blue/screens/pkg3/ui';
-import { PK3_CONFIDANTS, PK3_INTERACTION_AI } from '@blue/mock/pkg3';
+import { useCooperationData } from '@blue/adapters/pkg3';
+import { useAppStore, toLocalDateKey } from '@/store';
+import { evaluateInteraction, type InteractionEvalResult } from '@/utils/confidantAI';
 
 type Stage = 'input' | 'thinking' | 'result' | 'done' | 'error';
 const DELTA_LABELS: Record<number, string> = { 0: '波澜未起', 1: '日常维系', 2: '稳稳升温', 3: '明显推进', 4: '深度共享', 5: '关键节点' };
-const SAMPLE = '放学后一起去了长鸣神社的夏日祭，她把最后一个章鱼烧推给我，说下周比赛要我去加油。';
 
 export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'input', alreadyToday = false, loggedIn = true, fail, onSaved }: {
   isOpen: boolean; onClose: () => void; confidant: Confidant; initialStage?: Stage; alreadyToday?: boolean; loggedIn?: boolean; fail?: AIFail; onSaved?: (delta: number) => void;
 }) {
+  const { settings, cloudUser, confidantEvents } = useCooperationData();
+  const recordConfidantInteraction = useAppStore((state) => state.recordConfidantInteraction);
   const aiFail: AIFail = initialStage === 'error' && !fail ? 'error' : fail;
-  const ai = useAIStream({ text: PK3_INTERACTION_AI.interpretation, fail: aiFail, initialPhase: initialStage === 'thinking' ? 'thinking' : initialStage === 'result' ? 'streaming' : initialStage === 'error' ? 'error' : initialStage === 'done' ? 'done' : 'idle', failAt: initialStage === 'result' ? 0.1 : 0.45 });
+  const [reading, setReading] = useState('');
+  const [advice, setAdvice] = useState('');
+  const [evalResult, setEvalResult] = useState<InteractionEvalResult | null>(null);
+  const ai = useAIStream({ text: reading, fail: aiFail, initialPhase: 'idle', failAt: 0.45 });
   const [stage, setStage] = useState<Stage>(initialStage);
-  const [text, setText] = useState(initialStage === 'input' ? '' : SAMPLE);
+  const [text, setText] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [sync, setSync] = useState(initialStage === 'done');
   const [attr, setAttr] = useState<AttributeId | null>(initialStage === 'done' ? 'charm' : null);
   const [pts, setPts] = useState(1);
-  const [delta, setDelta] = useState(PK3_INTERACTION_AI.delta);
+  const [delta, setDelta] = useState(1);
   const card = TAROT_BY_ID[confidant.arcanaId];
   const templateOnly = confidant.source === 'online' && !loggedIn;
-  useEffect(() => { if (isOpen) setStage(initialStage); }, [isOpen, initialStage]);
+  const interactedToday = alreadyToday || confidant.lastInteractionDate === toLocalDateKey();
+  useEffect(() => { if (isOpen) { setStage(initialStage); setText(''); setErr(null); setReading(''); setAdvice(''); setEvalResult(null); setDelta(1); } }, [isOpen, initialStage]);
+  useEffect(() => {
+    if (stage === 'result' && reading && ai.phase === 'idle') ai.start();
+  }, [ai, reading, stage]);
   useEffect(() => {
     if (stage !== 'thinking') return;
     if (ai.phase === 'streaming' || ai.phase === 'done' || ai.phase === 'truncated') setStage('result');
@@ -44,16 +54,58 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
   const submit = () => {
     if (text.trim().length < 4) { setErr('请再多描述一点，星象才能照见'); return; }
     setErr(null); setStage('thinking');
-    if (templateOnly) { ai.skip(); return; }
-    ai.start();
+    const recentUserInputs = confidantEvents
+      .filter((event) => event.confidantId === confidant.id && event.type === 'conversation' && typeof event.userInput === 'string' && event.userInput.trim())
+      .slice(0, 2)
+      .map((event) => ({ date: event.date, text: String(event.userInput).trim() }));
+    const allowAI = confidant.source !== 'online' || !!cloudUser;
+    void evaluateInteraction({
+      settings,
+      confidantName: confidant.name,
+      arcanaName: card?.name ?? '塔罗',
+      orientation: confidant.orientation,
+      currentLevel: confidant.intimacy,
+      description: text.trim(),
+      relationshipSummary: confidant.description,
+      recentUserInputs,
+    }, undefined, allowAI).then((result) => {
+      setEvalResult(result);
+      setReading(result.narrative);
+      setAdvice(result.advice);
+      setDelta(result.delta);
+      setStage('result');
+    }).catch(() => {
+      setErr('解读失败，请稍后再试');
+      setStage('error');
+    });
   };
-  const offlineNote = aiFail === 'offline' || templateOnly;
-  const errText = ai.phase === 'nokey' ? '尚未配置 AI 密钥' : ai.error?.code === 'offline' ? '当前离线，AI 暂时读不到这段互动' : 'AI 判断失败';
+  const save = () => {
+    if (!evalResult) return;
+    setErr(null);
+    void recordConfidantInteraction({
+      id: confidant.id,
+      description: text.trim(),
+      delta,
+      narrative: evalResult.narrative,
+      advice: evalResult.advice,
+      createActivity: sync,
+      activityAttribute: sync && attr ? attr : undefined,
+      activityPoints: sync && attr ? pts : 0,
+    }).then(() => {
+      setStage('done');
+      onSaved?.(delta);
+    }).catch((error) => {
+      setErr(error instanceof Error ? error.message : '保存失败');
+      setStage('error');
+    });
+  };
+  const offlineNote = aiFail === 'offline' || templateOnly || evalResult?.source === 'offline';
+  const errText = err ?? (ai.phase === 'nokey' ? '尚未配置 AI 密钥' : ai.error?.code === 'offline' ? '当前离线，AI 暂时读不到这段互动' : 'AI 判断失败');
 
   return (
     <P3Sheet open={isOpen} onClose={onClose} title={`今日与 ${confidant.name} 的互动`} en="DAILY TALK" size="tall" busy={stage === 'thinking'}
-      footer={stage === 'input' ? <P3Button block size="lg" corner disabled={alreadyToday} onClick={submit} leading={<Sparkle size={15} />}>解读这一段</P3Button>
-        : stage === 'result' ? <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block onClick={() => { ai.abort(); setStage('input'); }}>修改描述</P3Button><P3Button block corner disabled={ai.phase === 'streaming'} onClick={() => { setStage('done'); onSaved?.(delta); }}>就这样记下</P3Button></div>
+      footer={stage === 'input' ? <P3Button block size="lg" corner disabled={interactedToday} onClick={submit} leading={<Sparkle size={15} />}>解读这一段</P3Button>
+        : stage === 'result' ? <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block onClick={() => { ai.abort(); setStage('input'); }}>修改描述</P3Button><P3Button block corner disabled={ai.phase === 'streaming'} onClick={save}>就这样记下</P3Button></div>
         : stage === 'done' ? <P3Button block size="lg" onClick={onClose}>好的</P3Button>
         : stage === 'error' ? (ai.phase === 'nokey'
           ? <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block onClick={() => setStage('input')}>返回</P3Button><P3Button block onClick={() => { onClose(); navigate('settings', undefined, { params: { group: 'ai' } }); }}>去配置密钥</P3Button></div>
@@ -66,13 +118,13 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
         </div>
         <div className="ml-auto flex shrink-0 gap-1" aria-hidden>{(['input', 'thinking', 'result', 'done'] as Stage[]).map((s, i) => <span key={s} className="h-[6px] w-5" style={{ clipPath: slantClip(3), background: ['input', 'thinking', 'result', 'done'].indexOf(stage === 'error' ? 'thinking' : stage) >= i ? P3R.blue : 'var(--p3r-track)' }} />)}</div>
       </div>
-      {alreadyToday && stage === 'input' && <div className="mb-3 px-4 py-3 text-[13px] font-black" style={{ background: P3R.magenta, color: '#fff', clipPath: slantClip(10) }}>今天已经记录过和 Ta 的互动了。同一天反复加点容易失真，明天再来吧。</div>}
+      {interactedToday && stage === 'input' && <div className="mb-3 px-4 py-3 text-[13px] font-black" style={{ background: P3R.magenta, color: '#fff', clipPath: slantClip(10) }}>今天已经记录过和 Ta 的互动了。同一天反复加点容易失真，明天再来吧。</div>}
       {templateOnly && stage === 'input' && <div className="mb-3 px-4 py-3 text-[12px]" style={{ background: P3R.cyanFaint, color: P3R.inkSoft, clipPath: slantClip(10) }}>这是一位在线同伴 —— 需要登录云端后才能让 AI 读懂你们之间的互动。<span style={{ color: P3R.grey }}> 当前会退回到通用模板记录，不会调 AI。</span></div>}
 
       {stage === 'input' && (
         <div className="grid grid-cols-1 gap-3">
           <P3Field label="今天和 Ta 做了什么？发生了什么？" error={err ?? undefined} count={`${text.length} / 600`}>
-            <P3Textarea rows={6} maxLength={600} value={text} onChange={(e) => setText(e.target.value)} disabled={alreadyToday} invalid={!!err}
+            <P3Textarea rows={6} maxLength={600} value={text} onChange={(e) => setText(e.target.value)} disabled={interactedToday} invalid={!!err}
               placeholder="可以很具体——一起吃了什么饭、聊了什么话题、Ta 说了一句让你印象深刻的话…… 也可以写下一次小小的矛盾。" />
           </P3Field>
           <Panel>
@@ -114,7 +166,7 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
           {ai.phase === 'done' && (
             <div className="relative px-5 py-3" style={{ background: 'var(--p3r-mulberry)', color: 'var(--p3r-cream)', clipPath: slantClip(12) }}>
               <div className="mb-1 font-cond text-[12px] tracking-[0.18em]" style={{ color: 'var(--bk-bubble-a)' }}>FUTURE · 未来</div>
-              <p className="text-[14px] leading-relaxed">{PK3_INTERACTION_AI.advice}</p>
+              <p className="text-[14px] leading-relaxed">{advice}</p>
             </div>
           )}
           <Panel>
@@ -123,11 +175,11 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
               {[0, 1, 2, 3, 4, 5].map((n) => (
                 <button key={n} type="button" aria-pressed={delta === n} onClick={() => setDelta(n)} className="relative h-11 min-w-0 font-cond text-[18px]"
                   style={{ clipPath: slantClip(6), background: delta === n ? P3R.ink : P3R.cyanFaint, color: delta === n ? 'var(--p3r-on-ink)' : P3R.ink }}>
-                  +{n}{n === PK3_INTERACTION_AI.delta && <span aria-hidden className="absolute bottom-0 right-1 h-[5px] w-[10px]" style={{ background: P3R.magenta, clipPath: tickClip }} />}
+                  +{n}{n === evalResult?.delta && <span aria-hidden className="absolute bottom-0 right-1 h-[5px] w-[10px]" style={{ background: P3R.magenta, clipPath: tickClip }} />}
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[12px]" style={{ color: P3R.grey }}><span style={{ color: 'var(--p3r-coral-ink)' }}>◆</span> AI 推荐 +{PK3_INTERACTION_AI.delta} · {INTIMACY_LABELS[confidant.intimacy]}（当前）{confidant.intimacy < MAX_INTIMACY ? ` → Lv.${confidant.intimacy} + ${delta} 点` : ''}</p>
+            <p className="mt-2 text-[12px]" style={{ color: P3R.grey }}><span style={{ color: 'var(--p3r-coral-ink)' }}>◆</span> AI 推荐 +{evalResult?.delta ?? 0} · {INTIMACY_LABELS[confidant.intimacy]}（当前）{confidant.intimacy < MAX_INTIMACY ? ` → Lv.${confidant.intimacy} + ${delta} 点` : ''}</p>
             {sync && <p className="mt-1 text-[11px]" style={{ color: P3R.grey }}>勾选后可选任一属性加 1–3 点，确认时会有音符弹起～</p>}
           </Panel>
           {offlineNote && <div className="text-center text-[11px]" style={{ color: P3R.grey }}>· 本次为离线评估 ·</div>}
@@ -154,5 +206,8 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
 }
 
 export default function ConfidantInteractionModal({ open, onClose, params }: OverlayProps) {
-  return <InteractionSheet isOpen={open} onClose={onClose} confidant={PK3_CONFIDANTS[0]} initialStage={(params?.get('stage') as Stage) || 'input'} alreadyToday={params?.get('today') === '1'} loggedIn={params?.get('login') !== '0'} fail={params?.get('fail') as AIFail} />;
+  const { confidants } = useCooperationData();
+  const confidant = confidants.find((item) => item.id === params?.get('id')) ?? confidants[0];
+  if (!confidant) return <P3Sheet open={open} onClose={onClose} title="今日互动" en="DAILY TALK"><div className="py-8 text-center text-[13px] font-bold" style={{ color: P3R.grey }}>还没有可以互动的同伴。</div></P3Sheet>;
+  return <InteractionSheet isOpen={open} onClose={onClose} confidant={confidant} initialStage={(params?.get('stage') as Stage) || 'input'} alreadyToday={params?.get('today') === '1'} loggedIn={params?.get('login') !== '0'} fail={params?.get('fail') as AIFail} />;
 }

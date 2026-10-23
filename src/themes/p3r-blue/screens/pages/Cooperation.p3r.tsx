@@ -21,6 +21,7 @@ import { NameFx, OnlineStar, PactTag, PrayQuickButton, ShadowBadge, Sparkle, Sta
 import { AlbumWall, type FriendItem, type PrayerState } from '@blue/screens/pkg3/wall';
 import { RankUpChain, type RankUpNotice } from '@blue/screens/pkg3/rankup';
 import { cooperationOps, shadowForConfidant, useCooperationData } from '@blue/adapters/pkg3';
+import { useAppStore } from '@/store';
 import { CooperationMenuPanel } from '../overlays/CooperationMenu.p3r';
 import { ConfidantCreateSheet } from '../overlays/ConfidantCreateModal.p3r';
 import { ConfidantDetailSheet } from '../overlays/ConfidantDetailModal.p3r';
@@ -248,12 +249,18 @@ export default function Cooperation({ params }: PageProps) {
       {/* ── 弹窗接线 ── */}
       <ConfidantCreateSheet isOpen={ov === 'create'} onClose={close} remaining={remaining} onPickOnline={() => setOv('addOnline')}
         onCreated={(r) => { void cooperationOps.add({ name: r.name, description: r.description, match: { arcanaId: r.arcanaId, orientation: r.orientation, initialIntimacy: Math.min(3, r.level), initialPoints: [0, 4, 9, 16, 25, 36, 50, 70, 95, 125, 160][r.level] ?? 0, interpretation: '', advice: '', source: 'offline' }, source: 'offline', initialLevel: r.level }).then((c) => { if (r.decay) void cooperationOps.update(c.id, { decayEnabled: true }); showToast(`${r.name} 已落座《${TAROT_BY_ID[r.arcanaId]?.name}》`); }).catch(() => showToast('没能创建这段羁绊')); }} />
-      {sel && <ConfidantDetailSheet isOpen={ov === 'detail'} onClose={close} confidant={sel} hasShadow={!!shadow}
+      {sel && <ConfidantDetailSheet isOpen={ov === 'detail'} onClose={close} confidant={sel} hasShadow={!!shadow} shadow={shadow}
         onUpdate={(p) => { void cooperationOps.update(sel.id, p); setList((l) => l.map((c) => (c.id === sel.id ? { ...c, ...p } : c))); }} onDelete={() => { void cooperationOps.remove(sel.id); setList((l) => l.filter((c) => c.id !== sel.id)); }}
         onOpenCounsel={() => setOv('counsel')} onOpenInteraction={() => setOv('interaction')} onOpenStarShift={() => setOv('starshift')} onOpenPact={() => setOv('pact')}
         onOpenMemorial={() => setOv('memorial')} onViewOnlineProfile={() => { if (sel.linkedProfile) { setFriend({ kind: 'friend', id: sel.id, profile: sel.linkedProfile, prayed: !!prayed[sel.id], beenPrayedBy: false }); setOv('profile'); } }} onOpenCoopShadow={() => setOv('shadow')} />}
       {sel && <InteractionSheet isOpen={ov === 'interaction'} onClose={close} confidant={sel}
-        onSaved={(delta) => { if (delta >= 2 && sel.intimacy < MAX_INTIMACY) window.setTimeout(() => { setOv(null); setChain({ c: sel, notice: { oldLevel: sel.intimacy, newLevel: sel.intimacy + 1, starShiftGained: 1 } }); setList((l) => l.map((c) => (c.id === sel.id ? { ...c, intimacy: c.intimacy + 1 } : c))); }, 1200); }} />}
+        onSaved={() => {
+          const old = sel;
+          const fresh = useAppStore.getState().confidants.find((c) => c.id === old.id);
+          if (!fresh) return;
+          setList((l) => l.map((c) => (c.id === fresh.id ? fresh : c)));
+          if (fresh.intimacy > old.intimacy) window.setTimeout(() => { setOv(null); setChain({ c: fresh, notice: { oldLevel: old.intimacy, newLevel: fresh.intimacy, starShiftGained: 1 } }); }, 1200);
+        }} />}
       {sel && <MemorialSheet isOpen={ov === 'memorial'} onClose={() => setOv('detail')} confidant={sel} />}
       {sel && <PactPanelModal open={ov === 'pact'} onClose={() => setOv('detail')} partnerName={sel.name} />}
       <CounselChat isOpen={ov === 'counsel'} onClose={close} />

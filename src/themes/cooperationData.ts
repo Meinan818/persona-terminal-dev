@@ -38,6 +38,8 @@ export interface Pk3Notif {
   ago: string;
   battle?: boolean;
   actions?: 'friend' | 'coop' | 'pact';
+  actionId?: string;
+  payload?: Record<string, unknown>;
 }
 
 export const PK3_NOTIF_TITLE: Record<Pk3NotifType, string> = {
@@ -145,7 +147,8 @@ function relativeAgo(date: Date): string {
 function notificationView(entry: NotificationEntry): Pk3Notif {
   const supported: Pk3NotifType[] = [
     'friend_request', 'friend_accepted', 'prayer_received', 'prayer_reciprocal', 'coop_proposal',
-    'coop_accepted', 'coop_shadow_spawned', 'coop_shadow_attacked', 'coop_shadow_defeated', 'system',
+    'coop_accepted', 'coop_shadow_spawned', 'coop_shadow_attacked', 'coop_shadow_defeated',
+    'pact_invite', 'pact_nudge', 'system',
   ];
   const type = supported.includes(entry.type as Pk3NotifType) ? entry.type as Pk3NotifType : 'system';
   const from = entry.fromProfile?.nickname || entry.fromProfile?.userId || '系统';
@@ -161,7 +164,15 @@ function notificationView(entry: NotificationEntry): Pk3Notif {
     read: entry.read,
     ago: relativeAgo(entry.createdAt),
     battle: type.startsWith('coop_shadow_'),
-    actions: type === 'friend_request' ? 'friend' : type === 'coop_proposal' ? 'coop' : undefined,
+    actions: type === 'friend_request' ? 'friend' : type === 'coop_proposal' ? 'coop' : type === 'pact_invite' ? 'pact' : undefined,
+    actionId: type === 'friend_request'
+      ? (typeof payload.friendship_id === 'string' ? payload.friendship_id : undefined)
+      : type === 'coop_proposal'
+        ? (typeof payload.coop_bond_id === 'string' ? payload.coop_bond_id : undefined)
+        : type === 'pact_invite'
+          ? (typeof payload.pact_id === 'string' ? payload.pact_id : undefined)
+          : undefined,
+    payload,
   };
 }
 
@@ -181,7 +192,7 @@ export function useCooperationData() {
   })));
   const cloudUser = useCloudStore((state) => state.cloudUser);
   const {
-    friendships, notifications, unreadCount, importantUnreadCount, todayPrayers,
+    friendships, notifications, unreadCount, importantUnreadCount, todayPrayers, loading, lastError,
     materializeBlockers, coopShadows,
   } = useCloudSocialStore(useShallow((state) => ({
     friendships: state.friendships,
@@ -189,6 +200,8 @@ export function useCooperationData() {
     unreadCount: state.unreadCount,
     importantUnreadCount: state.importantUnreadCount,
     todayPrayers: state.todayPrayers,
+    loading: state.loading,
+    lastError: state.lastError,
     materializeBlockers: state.materializeBlockers,
     coopShadows: state.coopShadows,
   })));
@@ -217,6 +230,9 @@ export function useCooperationData() {
     cloudUser,
     friends,
     notifications: notificationItems,
+    rawNotifications: notifications,
+    socialLoading: loading,
+    socialError: lastError,
     unreadCount,
     importantUnreadCount,
     todayPrayers,

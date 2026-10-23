@@ -4,30 +4,41 @@
  * #/overlay/bond-add-online?login=0 看未登录提示；?step=found|sent
  */
 import { useEffect, useState } from 'react';
+import type { CloudProfile } from '@/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Avatar, P4Button, P4Input, P4Sheet, P4Textarea } from '@yellow/kit';
-import { PK3_PROFILES } from '@yellow/mock/pkg3';
 import { Sparkle } from '@yellow/screens/pkg3/ui';
+import { searchUserByUserId, sendFriendRequest } from '@/services/friends';
 
 type Step = 'search' | 'found' | 'sent';
 const RE = /^[a-z0-9._-]{3,18}$/;
 
 export function AddOnlineSheet({ isOpen, onClose, loggedIn = true, initialStep = 'search' }: { isOpen: boolean; onClose: () => void; loggedIn?: boolean; initialStep?: Step }) {
   const [step, setStep] = useState<Step>(initialStep);
-  const [uid, setUid] = useState(initialStep === 'search' ? '' : 'risette');
+  const [uid, setUid] = useState('');
+  const [found, setFound] = useState<CloudProfile | null>(null);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { if (isOpen) { setStep(initialStep); setError(null); } }, [isOpen, initialStep]);
-  const found = Object.values(PK3_PROFILES).find((p) => p.userId === uid.trim().toLowerCase()) ?? PK3_PROFILES.rise;
+  useEffect(() => { if (isOpen) { setStep(initialStep); setError(null); setFound(null); } }, [isOpen, initialStep]);
   const search = () => {
     const v = uid.trim().toLowerCase();
     if (!RE.test(v)) return setError('UserID 应为 3-18 位小写字母 / 数字 / ._-');
     if (v === 'me' || v === 'myself') return setError('不能加自己为好友');
     setLoading(true); setError(null);
-    window.setTimeout(() => { setLoading(false); if (Object.values(PK3_PROFILES).some((p) => p.userId === v)) setStep('found'); else setError('没找到这个 UserID'); }, 600);
+    void searchUserByUserId(v).then((profile) => {
+      if (profile) { setFound(profile); setStep('found'); }
+      else setError('没找到这个 UserID');
+    }).catch((error) => setError(error instanceof Error ? error.message : '搜索失败，请稍后再试')).finally(() => setLoading(false));
   };
-  const send = () => { setLoading(true); window.setTimeout(() => { setLoading(false); setStep('sent'); }, 700); };
+  const send = () => {
+    if (!found) return;
+    setLoading(true);
+    void sendFriendRequest({ targetUserId: found.id, message: msg.trim() || undefined })
+      .then(() => setStep('sent'))
+      .catch((error) => setError(error instanceof Error ? error.message : '发送失败，请稍后再试'))
+      .finally(() => setLoading(false));
+  };
   return (
     <P4Sheet open={isOpen} onClose={onClose} title={<span className="inline-flex items-center gap-2"><Sparkle size={18} className="text-p4g-success" />邀请在线同伴</span>} en="ONLINE INVITE"
       footer={!loggedIn ? undefined : step === 'found' ? <div className="flex gap-3"><P4Button variant="secondary" block onClick={() => setStep('search')}>返回搜索</P4Button><P4Button block busy={loading} onClick={send}>{loading ? '发送中…' : '发送申请'}</P4Button></div>
@@ -43,7 +54,7 @@ export function AddOnlineSheet({ isOpen, onClose, loggedIn = true, initialStep =
           </div>
           <p className="mt-3 text-cap leading-relaxed text-p4g-ink-soft">UserID 是对方在注册时选的唯一标识（3-18 位小写字母/数字/._-），<br />不区分大小写，精确匹配后才能找到。</p>
         </div>
-      ) : step === 'found' ? (
+      ) : step === 'found' && found ? (
         <div className="grid grid-cols-1 gap-3">
           <div className="flex min-w-0 items-center gap-3 rounded-sm border-3 border-p4g-black bg-p4g-yellow p-3 text-p4g-black shadow-hard">
             <P4Avatar name={found.nickname} size={56} />

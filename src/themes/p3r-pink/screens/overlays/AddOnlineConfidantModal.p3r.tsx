@@ -5,31 +5,42 @@
  * 入口：结识同伴「在线同伴」卡 / 同伴页（在线筛选）。
  */
 import { useEffect, useState } from 'react';
+import type { CloudProfile } from '@/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Avatar, P3Button, P3Field, P3Input, P3R, P3Sheet, P3Textarea, slantClip, tickClip } from '@pink/kit';
 import { navigate } from '@pink/shell/shellBus';
 import { Sparkle } from '@pink/screens/pkg3/ui';
-import { PK3_PROFILES } from '@pink/mock/pkg3';
+import { searchUserByUserId, sendFriendRequest } from '@/services/friends';
 
 type Step = 'search' | 'found' | 'sent';
 const RE = /^[a-z0-9._-]{3,18}$/;
 
 export function AddOnlineSheet({ isOpen, onClose, loggedIn = true, initialStep = 'search' }: { isOpen: boolean; onClose: () => void; loggedIn?: boolean; initialStep?: Step }) {
   const [step, setStep] = useState<Step>(initialStep);
-  const [uid, setUid] = useState(initialStep === 'search' ? '' : 'fuuka.y');
+  const [uid, setUid] = useState('');
+  const [found, setFound] = useState<CloudProfile | null>(null);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { if (isOpen) { setStep(initialStep); setError(null); } }, [isOpen, initialStep]);
-  const found = Object.values(PK3_PROFILES).find((p) => p.userId === uid.trim().toLowerCase()) ?? PK3_PROFILES.fuuka;
+  useEffect(() => { if (isOpen) { setStep(initialStep); setError(null); setFound(null); } }, [isOpen, initialStep]);
   const search = () => {
     const v = uid.trim().toLowerCase();
     if (!RE.test(v)) return setError('UserID 应为 3-18 位小写字母 / 数字 / ._-');
     if (v === 'me' || v === 'myself') return setError('不能加自己为好友');
     setLoading(true); setError(null);
-    window.setTimeout(() => { setLoading(false); if (Object.values(PK3_PROFILES).some((p) => p.userId === v)) setStep('found'); else setError('没找到这个 UserID'); }, 600);
+    void searchUserByUserId(v).then((profile) => {
+      if (profile) { setFound(profile); setStep('found'); }
+      else setError('没找到这个 UserID');
+    }).catch((error) => setError(error instanceof Error ? error.message : '搜索失败，请稍后再试')).finally(() => setLoading(false));
   };
-  const send = () => { setLoading(true); window.setTimeout(() => { setLoading(false); setStep('sent'); }, 700); };
+  const send = () => {
+    if (!found) return;
+    setLoading(true);
+    void sendFriendRequest({ targetUserId: found.id, message: msg.trim() || undefined })
+      .then(() => setStep('sent'))
+      .catch((error) => setError(error instanceof Error ? error.message : '发送失败，请稍后再试'))
+      .finally(() => setLoading(false));
+  };
   return (
     <P3Sheet open={isOpen} onClose={onClose} busy={loading && step === 'found'} title={<span className="inline-flex items-center gap-2"><Sparkle size={18} style={{ color: P3R.cyan }} />邀请在线同伴</span>} en="ONLINE"
       footer={!loggedIn ? <P3Button block corner onClick={() => { onClose(); navigate('settings', undefined, { params: { group: 'account' } }); }}>去登录</P3Button>
@@ -46,7 +57,7 @@ export function AddOnlineSheet({ isOpen, onClose, loggedIn = true, initialStep =
           </div>
           <p className="mt-3 text-[12px] leading-relaxed" style={{ color: P3R.grey }}>UserID 是对方在注册时选的唯一标识（3-18 位小写字母/数字/._-），<br />不区分大小写，精确匹配后才能找到。</p>
         </div>
-      ) : step === 'found' ? (
+      ) : step === 'found' && found ? (
         <div className="grid grid-cols-1 gap-4">
           <div className="relative flex min-w-0 items-center gap-3 px-4 py-3" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(12) }}>
             <span aria-hidden className="absolute bottom-0 right-4 h-[6px] w-[14px]" style={{ background: P3R.magenta, clipPath: tickClip }} />

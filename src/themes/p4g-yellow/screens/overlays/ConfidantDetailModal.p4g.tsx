@@ -11,7 +11,7 @@ import { P4Button, P4Dialog, P4Outline, P4Progress, P4Sheet, P4Switch, P4Tabs, s
 import { cx } from '@yellow/lib/cx';
 import { EVENT_LABEL, INTIMACY_LABELS, MAX_INTIMACY, TAROT_BY_ID, levelProgress, nextUnlockHint } from '@yellow/screens/pkg3/arcana';
 import { MiniLabel, PactTag, ShadowBadge, Sparkle, StatusTag, TarotCard } from '@yellow/screens/pkg3/ui';
-import { PK3_CONFIDANTS, PK3_SHADOW, pk3Events } from '@yellow/mock/pkg3';
+import { cooperationOps, pk3Events, shadowForConfidant, useCooperationData } from '@yellow/adapters/pkg3';
 import { AvatarSyncConfirm } from './ConfidantDetailModalAvatarConfirm.p4g';
 
 export type DetailTab = 'info' | 'abilities' | 'history';
@@ -25,6 +25,7 @@ export interface DetailProps {
   initialDialog?: 'delete' | 'unbind' | 'avatar' | null;
   interactedToday?: boolean;
   hasShadow?: boolean;
+  shadow?: { identifiedByMe: boolean; identifiedByPartner: boolean; hpCurrent: number; hpMax: number } | null;
   onUpdate?: (patch: Partial<Confidant>) => void;
   onDelete?: () => void;
   onOpenCounsel?: () => void;
@@ -116,7 +117,7 @@ export function ConfidantDetailSheet(p: DetailProps) {
                 </div>
               )}
               {isOnline && <div className="mt-1 text-cap text-p4g-ink-soft">▸ 本周目标：备战市民运动会 · 跑步 12/20 km</div>}
-              {p.hasShadow && <div className="mt-1.5"><ShadowBadge identified={PK3_SHADOW.identifiedByMe && PK3_SHADOW.identifiedByPartner} hpPct={Math.round((PK3_SHADOW.hpCurrent / PK3_SHADOW.hpMax) * 100)} onClick={() => p.onOpenCoopShadow?.()} /></div>}
+              {p.hasShadow && p.shadow && <div className="mt-1.5"><ShadowBadge identified={p.shadow.identifiedByMe && p.shadow.identifiedByPartner} hpPct={Math.round((p.shadow.hpCurrent / p.shadow.hpMax) * 100)} onClick={() => p.onOpenCoopShadow?.()} /></div>}
             </div>
           </div>
 
@@ -302,9 +303,13 @@ function InfoBlock({ title, children, msg }: { title: string; children: ReactNod
 }
 
 export default function ConfidantDetailModal({ open, onClose, params }: OverlayProps) {
-  const c = PK3_CONFIDANTS.find((x) => x.id === params?.get('id')) ?? PK3_CONFIDANTS[0];
-  return <ConfidantDetailSheet isOpen={open} onClose={onClose} confidant={c} loggedIn={params?.get('login') !== '0'} hasShadow={c.id === 'c-chie'}
+  const { confidants, activeShadows, cloudUser } = useCooperationData();
+  const c = confidants.find((x) => x.id === params?.get('id')) ?? confidants[0] ?? null;
+  const shadow = activeShadows[0] ? shadowForConfidant(activeShadows[0], cloudUser?.id) : null;
+  if (!c) return <P4Sheet open={open} onClose={onClose} title="同伴详情" en="SOCIAL LINK"><div className="py-8 text-center text-meta text-p4g-ink-soft">还没有可以查看的同伴。</div></P4Sheet>;
+  return <ConfidantDetailSheet isOpen={open} onClose={onClose} confidant={c} loggedIn={params?.get('login') !== '0'} hasShadow={!!shadow} shadow={shadow}
     initialTab={(params?.get('tab') as DetailTab) || 'info'} initialDialog={(params?.get('dialog') as 'delete' | 'unbind' | 'avatar') || null}
+    onUpdate={(patch) => { void cooperationOps.update(c.id, patch); }} onDelete={() => { void cooperationOps.remove(c.id); }}
     onOpenCounsel={() => { window.location.hash = '#/overlay/bond-counsel-chat'; }} onOpenInteraction={() => { window.location.hash = '#/overlay/bond-interaction'; }}
     onOpenStarShift={() => { window.location.hash = '#/overlay/bond-starshift-p4'; }} onOpenPact={() => { window.location.hash = '#/overlay/bond-pact-panel'; }}
     onOpenMemorial={() => { window.location.hash = '#/overlay/bond-memorial'; }} onViewOnlineProfile={() => { window.location.hash = '#/overlay/bond-online-profile'; }}
@@ -313,9 +318,14 @@ export default function ConfidantDetailModal({ open, onClose, params }: OverlayP
 
 /** #/overlay/bond-delete-confirm：详情页上直接弹出删除确认 */
 export function DeleteConfirmDemo({ open, onClose }: OverlayProps) {
-  return <ConfidantDetailSheet isOpen confidant={PK3_CONFIDANTS[2]} onClose={onClose} initialDialog={open ? 'delete' : null} />;
+  const { confidants } = useCooperationData();
+  const c = confidants[2] ?? confidants[0] ?? null;
+  return <ConfidantDetailSheet isOpen={open} confidant={c} onClose={onClose} initialDialog={open ? 'delete' : null} onDelete={() => { if (c) void cooperationOps.remove(c.id); }} />;
 }
 /** #/overlay/bond-unbind-confirm：在线同伴详情 + 解除 COOP 确认 */
 export function UnbindConfirmDemo({ open, onClose }: OverlayProps) {
-  return <ConfidantDetailSheet isOpen confidant={PK3_CONFIDANTS[0]} onClose={onClose} hasShadow initialDialog={open ? 'unbind' : null} />;
+  const { confidants, activeShadows, cloudUser } = useCooperationData();
+  const c = confidants[0] ?? null;
+  const shadow = activeShadows[0] ? shadowForConfidant(activeShadows[0], cloudUser?.id) : null;
+  return <ConfidantDetailSheet isOpen={open} confidant={c} onClose={onClose} hasShadow={!!shadow} shadow={shadow} initialDialog={open ? 'unbind' : null} />;
 }

@@ -7,13 +7,22 @@
 import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3ActionSheet, P3Button, P3Empty, P3Error, P3Loading, P3OnOff, P3R, P3Sheet, showToast, slantClip, tickClip } from '@blue/kit';
-import { PK3_NOTIFS, PK3_NOTIF_TITLE, type Pk3Notif } from '@blue/mock/pkg3';
+import { PK3_NOTIF_TITLE, type Pk3Notif, useCooperationData } from '@blue/adapters/pkg3';
 import { Sparkle } from '@blue/screens/pkg3/ui';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { deleteNotification, markAllNotificationsRead, markNotificationRead } from '@/services/notifications';
+import { acceptFriendRequest, rejectFriendRequest } from '@/services/friends';
+import { rejectCoopBond } from '@/services/coopBonds';
+import { answerPact } from '@/services/pactSync';
+import { loadSocial } from '@/services/social';
 
 export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, onOpenPactRespond }: { isOpen: boolean; onClose: () => void; state?: 'empty' | 'loading' | 'error' | null; onOpenCoopAccept?: () => void; onOpenPactRespond?: () => void }) {
-  const [list, setList] = useState<Pk3Notif[]>(state === 'empty' ? [] : PK3_NOTIFS);
-  const [loading, setLoading] = useState(state === 'loading');
-  const [failed, setFailed] = useState(state === 'error');
+  const { notifications, rawNotifications, socialLoading, socialError, cloudUser } = useCooperationData();
+  const markReadLocal = useCloudSocialStore((s) => s.markNotificationRead);
+  const removeLocal = useCloudSocialStore((s) => s.removeNotification);
+  const list = state === 'empty' ? [] : notifications;
+  const loading = state === 'loading' || socialLoading;
+  const failed = state === 'error' || !!socialError;
   const [hideBattle, setHideBattle] = useState(false);
   const [multi, setMulti] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -21,14 +30,39 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
   const [working, setWorking] = useState<string | null>(null);
   const [handled, setHandled] = useState<Record<string, string>>({});
   const press = useRef<number | null>(null);
-  useEffect(() => { if (isOpen) { setList(state === 'empty' ? [] : PK3_NOTIFS); setLoading(state === 'loading'); setFailed(state === 'error'); setMulti(false); setSel(new Set()); } }, [isOpen, state]);
-  useEffect(() => { if (!loading) return; const t = window.setTimeout(() => setLoading(false), 1600); return () => clearTimeout(t); }, [loading]);
+  useEffect(() => { if (isOpen) { setMulti(false); setSel(new Set()); setHandled({}); if (cloudUser) void loadSocial({ force: true }); } }, [cloudUser?.id, isOpen]);
   const unread = list.filter((n) => !n.read).length;
   const vis = list.filter((n) => !(hideBattle && n.battle));
   const fresh = vis.filter((n) => !n.read); const old = vis.filter((n) => n.read);
-  const markRead = (id: string) => setList((l) => l.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  const del = (ids: string[]) => setList((l) => l.filter((n) => !ids.includes(n.id)));
-  const act = (n: Pk3Notif, k: string, done: string, after?: () => void) => { setWorking(`${n.id}:${k}`); window.setTimeout(() => { setWorking(null); setHandled((h) => ({ ...h, [n.id]: done })); markRead(n.id); after?.(); }, 600); };
+  const markRead = (id: string) => { markReadLocal(id); void markNotificationRead(id).catch((error) => console.warn('[themes] mark notification read failed', error)); };
+  const remove = (ids: string[]) => { for (const id of ids) removeLocal(id); void Promise.all(ids.map((id) => deleteNotification(id))).catch((error) => console.warn('[themes] delete notification failed', error)); };
+  const markAllRead = () => {
+    const unreadRaw = rawNotifications.filter((n) => !n.read);
+    void markAllNotificationsRead(unreadRaw).then(() => { for (const n of unreadRaw) markReadLocal(n.id); }).catch((error) => console.warn('[themes] mark all notifications failed', error));
+  };
+  const act = (n: Pk3Notif, k: string, done: string, after?: () => void) => {
+    setWorking(`${n.id}:${k}`);
+    void (async () => {
+      try {
+        if (n.actions === 'friend' && n.actionId) {
+          if (k === 'ok') await acceptFriendRequest(n.actionId); else await rejectFriendRequest(n.actionId);
+        } else if (n.actions === 'coop' && n.actionId && k === 'no') {
+          await rejectCoopBond(n.actionId);
+        } else if (n.actions === 'pact' && n.actionId && k === 'no') {
+          await answerPact(n.actionId, false);
+        }
+        await markNotificationRead(n.id);
+        markReadLocal(n.id);
+        setHandled((h) => ({ ...h, [n.id]: done }));
+        if (n.actions === 'friend') await loadSocial({ force: true });
+        after?.();
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : '处理失败');
+      } finally {
+        setWorking(null);
+      }
+    })();
+  };
   const toggleSel = (id: string) => setSel((s) => { const x = new Set(s); if (x.has(id)) x.delete(id); else x.add(id); return x; });
 
   const row = (n: Pk3Notif, i: number) => {
@@ -67,12 +101,12 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
   return (
     <>
       <P3Sheet open={isOpen} onClose={onClose} size="tall" title={<span className="inline-flex items-center gap-1.5"><Sparkle size={18} style={{ color: P3R.blue }} />通知</span>} en="NOTICE"
-        headerExtra={<P3Button size="sm" tone="soft" disabled={unread === 0 || loading} onClick={() => setList((l) => l.map((n) => ({ ...n, read: true })))}>全部已读</P3Button>}
+        headerExtra={<P3Button size="sm" tone="soft" disabled={unread === 0 || loading} onClick={markAllRead}>全部已读</P3Button>}
         footer={multi ? (
           <div className="flex min-w-0 items-center gap-3">
             <span className="min-w-0 flex-1 truncate text-[14px] font-black">多选模式 · 已选 {sel.size} 条</span>
             <P3Button size="sm" tone="soft" onClick={() => { setMulti(false); setSel(new Set()); }}>取消</P3Button>
-            <P3Button size="sm" tone="danger" disabled={sel.size === 0} ariaLabel="删除所选" onClick={() => { del([...sel]); setMulti(false); setSel(new Set()); showToast(`已删除 ${sel.size} 条`); }}>删除</P3Button>
+            <P3Button size="sm" tone="danger" disabled={sel.size === 0} ariaLabel="删除所选" onClick={() => { remove([...sel]); setMulti(false); setSel(new Set()); showToast(`已删除 ${sel.size} 条`); }}>删除</P3Button>
           </div>
         ) : <P3Button block tone="ink" onClick={onClose}>关闭</P3Button>}>
         <div aria-label="通知">
@@ -83,7 +117,7 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
           </div>
           <div className="mt-3 overflow-hidden" style={{ clipPath: slantClip(10), boxShadow: 'var(--p3r-shadow)' }}>
             {loading ? <div className="py-6" style={{ background: P3R.panel }}><P3Loading text="通知加载中…" rows={3} /></div>
-              : failed ? <div className="py-4" style={{ background: P3R.panel }}><P3Error title="通知没能拉下来" text="网络开小差了，稍后再试。" onRetry={() => { setFailed(false); setLoading(true); }} /></div>
+              : failed ? <div className="py-4" style={{ background: P3R.panel }}><P3Error title="通知没能拉下来" text="网络开小差了，稍后再试。" onRetry={() => { void loadSocial({ force: true }); }} /></div>
               : vis.length === 0 ? <div className="py-4" style={{ background: P3R.panel }}><P3Empty ghost="EMPTY" text="这里空无一物。" sub="好友申请、回应、祈愿都会在这里提醒你。" /></div>
               : (<>
                 {fresh.length > 0 && <Head label="新消息" en="NEW" />}
@@ -95,7 +129,7 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
         </div>
       </P3Sheet>
       <P3ActionSheet open={!!menuFor} onClose={() => setMenuFor(null)} title="这条通知" actions={[{ id: 'read', label: '标为已读' }, { id: 'del', label: '删除', tone: 'danger' }]}
-        onSelect={(id) => { if (!menuFor) return; if (id === 'read') markRead(menuFor); else { del([menuFor]); showToast('已删除'); } setMenuFor(null); }} />
+        onSelect={(id) => { if (!menuFor) return; if (id === 'read') markRead(menuFor); else { remove([menuFor]); showToast('已删除'); } setMenuFor(null); }} />
     </>
   );
 }

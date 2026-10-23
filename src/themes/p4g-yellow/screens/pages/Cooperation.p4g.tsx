@@ -23,7 +23,8 @@ import { Navigate } from 'react-router-dom';
 import { ARCANA_SHORT, ATTR_NAMES, INTIMACY_LABELS, MAJOR_ARCANA_IDS, MAX_INTIMACY, TAROT_BY_ID, levelProgress } from '@yellow/screens/pkg3/arcana';
 import { AsteriskFlower, NameFx, PactTag, PrayQuickButton, ShadowBadge, Sparkle, StatusTag, TarotCard, useCardBack } from '@yellow/screens/pkg3/ui';
 import { P4CinemaChain, type ChainPage, type RankUpNotice } from '@yellow/screens/pkg3/cinema';
-import { cooperationOps, useCooperationData } from '@yellow/adapters/pkg3';
+import { cooperationOps, shadowForConfidant, useCooperationData } from '@yellow/adapters/pkg3';
+import { useAppStore } from '@/store';
 import { CooperationMenuPanel } from '@yellow/screens/overlays/CooperationMenu.p4g';
 import { ConfidantCreateSheet } from '@yellow/screens/overlays/ConfidantCreateModal.p4g';
 import { ConfidantDetailSheet } from '@yellow/screens/overlays/ConfidantDetailModal.p4g';
@@ -60,7 +61,7 @@ function Companions({ params }: { params: URLSearchParams }) {
   const low = useLowMotion();
   const demoState = params.get('state');
   const loggedIn = params.get('login') !== '0';
-  const { confidants: realConfidants, counselArchives, friends: realFriends, materializeBlockers, notifications, coopShadows } = useCooperationData();
+  const { confidants: realConfidants, counselArchives, friends: realFriends, materializeBlockers, notifications, coopShadows, activeShadows, cloudUser } = useCooperationData();
   const [confidants, setConfidants] = useState<Confidant[]>(demoState === 'empty' ? [] : realConfidants);
   const [friends, setFriends] = useState<FriendItem[]>(demoState === 'empty' ? [] : realFriends.map((f) => ({ ...f })));
   useEffect(() => { if (demoState !== 'empty') setConfidants(realConfidants); }, [realConfidants, demoState]);
@@ -123,6 +124,11 @@ function Companions({ params }: { params: URLSearchParams }) {
   const friendPrayer = (f: FriendItem): PrayerState => ({ alreadyPrayed: f.prayed, waitingReciprocity: f.beenPrayedBy && !f.prayed, pending: prayerInFlight === f.id, onPray: () => pray(f.id, f.profile.nickname ?? '', f.beenPrayedBy, () => setFriends((l) => l.map((x) => (x.id === f.id ? { ...x, prayed: true } : x)))) });
 
   const detail = confidants.find((c) => c.id === detailId) ?? null;
+  const detailShadow = useMemo(() => {
+    if (!detail?.linkedCloudUserId) return null;
+    const active = activeShadows.find((s) => s.userAId === detail.linkedCloudUserId || s.userBId === detail.linkedCloudUserId);
+    return active ? shadowForConfidant(active, cloudUser?.id) : null;
+  }, [activeShadows, cloudUser?.id, detail?.linkedCloudUserId]);
   const updateConfidant = (id: string, patch: Partial<Confidant>) => {
     setConfidants((l) => l.map((c) => (c.id === id ? { ...c, ...patch } : c)));
     void cooperationOps.update(id, patch);
@@ -223,20 +229,25 @@ function Companions({ params }: { params: URLSearchParams }) {
       {/* ── 弹窗串联 ── */}
       <ConfidantCreateSheet isOpen={createOpen} onClose={() => setCreateOpen(false)} remaining={remaining} onPickOnline={() => { setCreateOpen(false); setAddOnlineOpen(true); }}
         onCreated={(r) => { void cooperationOps.add({ name: r.name, description: r.description, match: { arcanaId: r.arcanaId, orientation: r.orientation, initialIntimacy: Math.min(3, r.level), initialPoints: [0, 4, 9, 16, 25, 36, 50, 70, 95, 125, 160][r.level] ?? 0, interpretation: '', advice: '', source: 'offline' }, source: 'offline', initialLevel: r.level }).then((c) => { if (r.decay) void cooperationOps.update(c.id, { decayEnabled: true }); setDetailId(c.id); }).catch(() => showToast('没能创建这段羁绊')); }} />
-      <ConfidantDetailSheet isOpen={!!detail} onClose={() => setDetailId(null)} confidant={detail} loggedIn={loggedIn} hasShadow={detail?.id === 'c-chie'} interactedToday={!!(detail && interacted[detail.id])}
+      <ConfidantDetailSheet isOpen={!!detail} onClose={() => setDetailId(null)} confidant={detail} loggedIn={loggedIn} hasShadow={!!detailShadow} shadow={detailShadow} interactedToday={!!(detail && interacted[detail.id])}
         onUpdate={(p) => detail && updateConfidant(detail.id, p)} onDelete={() => { if (!detail) return; void cooperationOps.remove(detail.id); setConfidants((l) => l.filter((c) => c.id !== detail.id)); }}
         onOpenCounsel={() => setCounselOpen(true)} onOpenInteraction={() => detail && setInteractionFor(detail)} onOpenPact={() => detail && setPactFor(detail)} onOpenMemorial={() => detail && setMemorialFor(detail)}
         onOpenStarShift={() => detail && setChain({ c: detail, notice: { oldLevel: detail.intimacy, newLevel: detail.intimacy, starShiftGained: false }, start: 'page3' })}
         onViewOnlineProfile={() => detail?.linkedProfile && setProfileCard(detail.linkedProfile)} onOpenCoopShadow={() => detail && setShadowBattle(detail.name)} />
       {interactionFor && <InteractionSheet isOpen onClose={() => setInteractionFor(null)} confidant={interactionFor} loggedIn={loggedIn}
-        onSaved={(delta) => {
-          const c = interactionFor; setInteracted((m) => ({ ...m, [c.id]: true }));
-          const pts = c.intimacyPoints + delta; const th = levelProgress(c);
-          if (delta > 0 && c.intimacy < MAX_INTIMACY && pts >= th.next) {
-            const nc = { ...c, intimacy: c.intimacy + 1, intimacyPoints: pts, starShiftCharges: (c.starShiftCharges ?? 0) + 1 };
-            updateConfidant(c.id, nc);
-            window.setTimeout(() => { setInteractionFor(null); setDetailId(null); setChain({ c: nc, notice: { oldLevel: c.intimacy, newLevel: c.intimacy + 1, starShiftGained: true }, start: 'stage' }); }, 700);
-          } else updateConfidant(c.id, { intimacyPoints: pts });
+        onSaved={() => {
+          const old = interactionFor;
+          const fresh = useAppStore.getState().confidants.find((c) => c.id === old.id);
+          if (!fresh) return;
+          setInteracted((m) => ({ ...m, [fresh.id]: true }));
+          setConfidants((l) => l.map((c) => (c.id === fresh.id ? fresh : c)));
+          window.setTimeout(() => {
+            setInteractionFor(null);
+            if (fresh.intimacy > old.intimacy) {
+              setDetailId(null);
+              setChain({ c: fresh, notice: { oldLevel: old.intimacy, newLevel: fresh.intimacy, starShiftGained: true }, start: 'stage' });
+            }
+          }, 700);
         }} />}
       {memorialFor && <MemorialSheet isOpen onClose={() => setMemorialFor(null)} confidant={memorialFor} />}
       <PactPanelModal open={!!pactFor} onClose={() => setPactFor(null)} partnerName={pactFor?.name ?? ''} />

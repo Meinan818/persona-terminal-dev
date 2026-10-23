@@ -7,12 +7,21 @@ import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4ActionSheet, P4Button, P4Loading, P4Sheet, P4Switch, showToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
-import { PK3_NOTIFS, PK3_NOTIF_TITLE, type Pk3Notif } from '@yellow/mock/pkg3';
+import { PK3_NOTIF_TITLE, type Pk3Notif, useCooperationData } from '@yellow/adapters/pkg3';
 import { Sparkle } from '@yellow/screens/pkg3/ui';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { deleteNotification, markAllNotificationsRead, markNotificationRead } from '@/services/notifications';
+import { acceptFriendRequest, rejectFriendRequest } from '@/services/friends';
+import { rejectCoopBond } from '@/services/coopBonds';
+import { answerPact } from '@/services/pactSync';
+import { loadSocial } from '@/services/social';
 
 export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, onOpenPactRespond }: { isOpen: boolean; onClose: () => void; state?: 'empty' | 'loading' | null; onOpenCoopAccept?: () => void; onOpenPactRespond?: () => void }) {
-  const [list, setList] = useState<Pk3Notif[]>(state === 'empty' ? [] : PK3_NOTIFS);
-  const [loading, setLoading] = useState(state === 'loading');
+  const { notifications, rawNotifications, socialLoading, cloudUser } = useCooperationData();
+  const markReadLocal = useCloudSocialStore((s) => s.markNotificationRead);
+  const removeLocal = useCloudSocialStore((s) => s.removeNotification);
+  const list = state === 'empty' ? [] : notifications;
+  const loading = state === 'loading' || socialLoading;
   const [hideBattle, setHideBattle] = useState(false);
   const [multi, setMulti] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -20,13 +29,39 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
   const [working, setWorking] = useState<string | null>(null);
   const [handled, setHandled] = useState<Record<string, string>>({});
   const press = useRef<number | null>(null);
-  useEffect(() => { if (isOpen) { setList(state === 'empty' ? [] : PK3_NOTIFS); setLoading(state === 'loading'); setMulti(false); setSel(new Set()); } }, [isOpen, state]);
+  useEffect(() => { if (isOpen) { setMulti(false); setSel(new Set()); setHandled({}); if (cloudUser) void loadSocial({ force: true }); } }, [cloudUser?.id, isOpen]);
   const unread = list.filter((n) => !n.read).length;
   const vis = list.filter((n) => !(hideBattle && n.battle));
   const fresh = vis.filter((n) => !n.read); const old = vis.filter((n) => n.read);
-  const markRead = (id: string) => setList((l) => l.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  const del = (ids: string[]) => setList((l) => l.filter((n) => !ids.includes(n.id)));
-  const act = (n: Pk3Notif, k: string, done: string, after?: () => void) => { setWorking(`${n.id}:${k}`); window.setTimeout(() => { setWorking(null); setHandled((h) => ({ ...h, [n.id]: done })); markRead(n.id); after?.(); }, 600); };
+  const markRead = (id: string) => { markReadLocal(id); void markNotificationRead(id).catch((error) => console.warn('[themes] mark notification read failed', error)); };
+  const remove = (ids: string[]) => { for (const id of ids) removeLocal(id); void Promise.all(ids.map((id) => deleteNotification(id))).catch((error) => console.warn('[themes] delete notification failed', error)); };
+  const markAllRead = () => {
+    const unreadRaw = rawNotifications.filter((n) => !n.read);
+    void markAllNotificationsRead(unreadRaw).then(() => { for (const n of unreadRaw) markReadLocal(n.id); }).catch((error) => console.warn('[themes] mark all notifications failed', error));
+  };
+  const act = (n: Pk3Notif, k: string, done: string, after?: () => void) => {
+    setWorking(`${n.id}:${k}`);
+    void (async () => {
+      try {
+        if (n.actions === 'friend' && n.actionId) {
+          if (k === 'ok') await acceptFriendRequest(n.actionId); else await rejectFriendRequest(n.actionId);
+        } else if (n.actions === 'coop' && n.actionId && k === 'no') {
+          await rejectCoopBond(n.actionId);
+        } else if (n.actions === 'pact' && n.actionId && k === 'no') {
+          await answerPact(n.actionId, false);
+        }
+        await markNotificationRead(n.id);
+        markReadLocal(n.id);
+        setHandled((h) => ({ ...h, [n.id]: done }));
+        if (n.actions === 'friend') await loadSocial({ force: true });
+        after?.();
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : '处理失败');
+      } finally {
+        setWorking(null);
+      }
+    })();
+  };
   const toggleSel = (id: string) => setSel((s) => { const x = new Set(s); if (x.has(id)) x.delete(id); else x.add(id); return x; });
 
   const Row = ({ n }: { n: Pk3Notif }) => {
@@ -67,7 +102,7 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
           <div className="flex items-center gap-3">
             <span className="min-w-0 flex-1 font-display text-body font-bold">多选模式 · 已选 {sel.size} 条</span>
             <P4Button size="sm" variant="secondary" onClick={() => { setMulti(false); setSel(new Set()); }}>取消</P4Button>
-            <P4Button size="sm" variant="danger" disabled={sel.size === 0} aria-label="删除所选" title={`删除 ${sel.size} 条`} onClick={() => { del([...sel]); setMulti(false); setSel(new Set()); }}>删除</P4Button>
+            <P4Button size="sm" variant="danger" disabled={sel.size === 0} aria-label="删除所选" title={`删除 ${sel.size} 条`} onClick={() => { remove([...sel]); setMulti(false); setSel(new Set()); }}>删除</P4Button>
           </div>
         ) : undefined}>
         <div aria-label="通知" className="pt-3">
@@ -76,7 +111,7 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
               <div className="flex items-center gap-1.5 font-display text-h2 font-bold"><Sparkle size={18} className="text-p4g-orange" />通知</div>
               <div className="text-meta text-p4g-ink-soft">{unread > 0 ? `${unread} 条未读` : '没有新消息'}</div>
             </div>
-            <P4Button size="sm" variant="secondary" disabled={unread === 0} onClick={() => setList((l) => l.map((n) => ({ ...n, read: true })))}>全部已读</P4Button>
+            <P4Button size="sm" variant="secondary" disabled={unread === 0} onClick={markAllRead}>全部已读</P4Button>
             <button type="button" aria-label="关闭" onClick={onClose} className="p4g-press flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border-3 border-p4g-line bg-p4g-yellow font-bold text-p4g-black shadow-hard-sm">✕</button>
           </div>
           <div className="mt-3 flex items-center justify-between gap-3 rounded-sm bg-p4g-surface px-3 py-2 text-meta">
@@ -84,7 +119,7 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
             <span className="flex items-center gap-2 font-bold"><span>{hideBattle ? '已隐藏战斗消息' : '显示战斗消息'}</span><P4Switch size="sm" checked={!hideBattle} onChange={(v) => setHideBattle(!v)} aria-label="战斗消息" /></span>
           </div>
           <div className="mt-3 overflow-hidden rounded-sm border-3 border-p4g-line">
-            {loading ? <div className="py-8"><P4Loading size="sm" label="加载中…" /><button type="button" className="mx-auto mt-2 block text-2xs underline" onClick={() => setLoading(false)}>（演示：完成加载）</button></div>
+            {loading ? <div className="py-8"><P4Loading size="sm" label="加载中…" /></div>
               : vis.length === 0 ? (
                 <div className="bg-p4g-surface-2 py-12 text-center"><div className="mb-3 text-5xl text-p4g-ink/30">✦</div><p className="text-meta text-p4g-ink-soft">这里空无一物。<br />好友申请、回应、祈愿都会在这里提醒你。</p></div>
               ) : (
@@ -99,7 +134,7 @@ export function NotificationsSheet({ isOpen, onClose, state, onOpenCoopAccept, o
         </div>
       </P4Sheet>
       <P4ActionSheet open={!!menuFor} onClose={() => setMenuFor(null)} actions={[{ id: 'read', label: '标为已读' }, { id: 'del', label: '删除', danger: true }]}
-        onAction={(id) => { if (!menuFor) return; if (id === 'read') markRead(menuFor); else { del([menuFor]); showToast('已删除'); } setMenuFor(null); }} />
+        onAction={(id) => { if (!menuFor) return; if (id === 'read') markRead(menuFor); else { remove([menuFor]); showToast('已删除'); } setMenuFor(null); }} />
     </>
   );
 }

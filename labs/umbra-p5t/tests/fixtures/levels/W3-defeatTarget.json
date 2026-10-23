@@ -1,0 +1,64 @@
+{
+ "id": "W3-defeatTarget",
+ "name": "W3-defeatTarget",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "defeatTarget",
+  "targetId": "boss"
+ },
+ "objective": "W3-defeatTarget",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   0,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "boss",
+   "name": "boss",
+   "role": "brute",
+   "hp": 1,
+   "pos": [
+    0,
+    4
+   ],
+   "isTarget": true
+  },
+  {
+   "id": "e2",
+   "name": "e2",
+   "role": "brute",
+   "hp": 200,
+   "pos": [
+    7,
+    0
+   ]
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "........",
+  "........",
+  "........",
+  "########",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ]
+}

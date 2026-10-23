@@ -71,6 +71,8 @@ export const SPEAKER_RADIUS = 3;
 export const SPEAKER_PENALTY = 0.2;
 /** 睡眠中回合结束回复比例（PH） */
 export const SLEEP_REGEN = 0.1;
+/** 敌方红旗光环：半径内敌人受到伤害 ×（PH，LEVELS.md「数值取数据表」，暂用 Rakukaja 同值） */
+export const ENEMY_FLAG_DEF = 0.8;
 /** 难度表（Cogito AAA100 EPOW/EHP；AAA112 Baton Pass 次数） */
 export const DIFFICULTY: Record<Difficulty, { epow: number; ehp: number; baton: number }> = {
   safety: { epow: 0.25, ehp: 0.5, baton: Infinity },
@@ -282,8 +284,12 @@ export class Battle {
     if (this.has(u, 'neverSayDie') && u.charged) return true;
     return this.grid.hasAnyCover(u.pos) > 0;
   }
+  /** 敌方红旗光环（L07：半径 aura 内敌人防御+，数值 PH） */
+  enemyFlagAura(p: Vec) {
+    return this.units.some((f) => !f.ko && f.prop === 'flag' && f.flagSide === 'enemy' && manhattan(f.pos, p) <= (f.aura ?? 3));
+  }
   private flagCovers(p: Vec) {
-    return this.units.some((f) => !f.ko && f.prop === 'flag' && manhattan(f.pos, p) <= (f.aura ?? 3));
+    return this.units.some((f) => !f.ko && f.prop === 'flag' && f.flagSide !== 'enemy' && manhattan(f.pos, p) <= (f.aura ?? 3));
   }
   /** 一方回合结束：贴掩体的获得 Guard（Samurai Gamers Guard Guide：End a character's turn while being covered），回合结束类被动 */
   updateGuards(side: 'ally' | 'enemy') {
@@ -316,7 +322,9 @@ export class Battle {
     return (from.x - t.pos.x) * t.facing.x + (from.y - t.pos.y) * t.facing.y > 0;
   }
   private targetable(a: Unit, t: Unit) {
-    return !t.ko && a !== t && a.side !== t.side && t.prop !== 'speaker' && t.prop !== 'flag';
+    if (t.ko || a === t || a.side === t.side) return false;
+    if (t.prop === 'speaker' || t.prop === 'flag') return !!t.destructible && a.side === 'ally' && t.flagSide !== 'ally';
+    return true;
   }
   canMelee(a: Unit, t: Unit, from: Vec = a.pos) {
     return !a.escort && a.melee > 0 && this.targetable(a, t) && manhattan(from, t.pos) === 1 && this.grid.h(from) === this.grid.h(t.pos);
@@ -353,7 +361,7 @@ export class Battle {
     // 近战伤害不受 Guard 减免（Samurai Gamers Guard Guide），仍不能打倒
     const amount = miss ? 0 : this.calcDamage(a, t, base * cb.pow * this.trumpMult(a), kind === 'melee' ? false : resist);
     const forced = (kind === 'gun' && cb.bulletBreak) || !!skill?.downThroughCover;
-    const noDown = t.side === 'neutral' || t.role === 'launcher' || (t.role === 'shielder' && kind !== 'gun') || (t.role === 'revenger' && t.counterReady);
+    const noDown = t.side === 'neutral' || !!t.protected || t.role === 'launcher' || (t.role === 'shielder' && kind !== 'gun') || (t.role === 'revenger' && t.counterReady);
     return { amount, cover: this.coverOf(t, from), resist, miss, willDown: !miss && (!resist || forced) && !t.downed && !noDown };
   }
   private trumpMult(a: Unit) { return a.used.includes('trumpReady') ? TRUMP_MULT : 1; }
@@ -362,6 +370,7 @@ export class Battle {
     let d = base;
     if (a && this.hasBuff(a, 'atk')) d *= BUFF_ATK;
     if (this.hasBuff(t, 'def')) d *= BUFF_DEF;
+    if (t.side === 'enemy' && this.enemyFlagAura(t.pos)) d *= ENEMY_FLAG_DEF;
     if (a) {
       if (this.has(a, 'punisherOfReckless') && !t.guard) d *= DMG_UP_SMALL;
       if (this.has(a, 'sharpEyedWildcat') && t.guard) d *= DMG_UP_SMALL;
@@ -487,7 +496,8 @@ export class Battle {
     this.emit({ type: 'phaseStart', phase: 'player', turn: this.turn });
     const w = this.map.win;
     if (w.type === 'survive' && this.turn > w.turns) return this.finish('won');
-    if (this.map.turnLimit && this.turn > this.map.turnLimit) return this.finish('lost', '超过回合上限');
+    const lim = this.turnLimit();
+    if (lim && this.turn > lim) return this.finish('lost', '超过回合上限');
     // 定时门：每 everyTurns 回合开关一次（Neoseeker M24/M25「doors opening every other turn」）
     for (const d of this.map.doors ?? []) if (d.everyTurns && this.turn > 1 && (this.turn - 1) % d.everyTurns === 0) this.setDoor(d.id, !this.rt.doors.get(d.id));
     this.beginSidePhase('ally');
@@ -991,7 +1001,7 @@ export class Battle {
   markDowns(hits: Hit[], by?: Unit): boolean {
     let downedAny = false;
     for (const h of hits) {
-      if (h.missed || h.t.ko || h.t.downed || h.t.side === 'neutral' || h.t.decoy) continue;
+      if (h.missed || h.t.ko || h.t.downed || h.t.side === 'neutral' || h.t.decoy || h.t.protected) continue;
       // forceDown（Phantom Judge / Bullet Break / Broad Perspective / Lucky Punch）无视掩体；Launcher 永远不能被打倒
       if (h.noDown && !(h.forceDown && h.t.role !== 'launcher' && h.t.role !== 'shielder')) continue;
       if (h.resist && !h.forceDown) continue;
@@ -1135,7 +1145,8 @@ export class Battle {
 
   applyDamage(t: Unit, amount: number, cover: CoverLevel, resist: boolean, source: DamageSource, by: Unit | null) {
     const before = t.hp;
-    t.hp = Math.max(t.hpFloor && t.hpFloor > 0 ? Math.min(t.hpFloor, before) : 0, t.hp - amount);
+    const floor = Math.max(t.hpFloor && t.hpFloor > 0 ? t.hpFloor : 0, t.protected ? 1 : 0);
+    t.hp = Math.max(floor > 0 ? Math.min(floor, before) : 0, t.hp - amount);
     if (by && source !== 'status' && source !== 'penalty') t.hitsTaken++;
     this.emit({ type: 'damage', unitId: t.id, amount, cover, resist, hpLeft: t.hp, source });
     if (t.decoy && amount > 0) {
@@ -1204,7 +1215,7 @@ export class Battle {
     for (const a of this.alive('ally')) { if (!a.acted) this.maybeCharge(a); a.oneMore = false; }
     // 我方回合结束：贴掩体 → Guard；回合结束类被动；旗子回复
     this.updateGuards('ally');
-    for (const f of this.units) if (!f.ko && f.prop === 'flag') {
+    for (const f of this.units) if (!f.ko && f.prop === 'flag' && f.flagSide !== 'enemy') {
       for (const a of this.alive('ally')) if (!a.decoy && manhattan(a.pos, f.pos) <= (f.aura ?? 3) && a.hp < a.maxHp) this.healUnit(a, Math.round(a.maxHp * FLAG_HEAL_RATIO));
     }
     this.phase = 'enemy';
@@ -1337,6 +1348,12 @@ export class Battle {
     }
   }
 
+  /** 回合上限：map.turnLimit 与 lose[turnLimit] 取小 */
+  turnLimit(): number | undefined {
+    const ns = [this.map.turnLimit, ...(this.map.lose ?? []).map((l) => (l.type === 'turnLimit' ? l.n : undefined))].filter((n): n is number => !!n);
+    return ns.length ? Math.min(...ns) : undefined;
+  }
+
   /** 到达出口判定 */
   private checkReach() {
     const w = this.map.win;
@@ -1354,6 +1371,11 @@ export class Battle {
     this.runEvents();
     if ((this.phase as Phase) === 'won' || (this.phase as Phase) === 'lost') return true;
     if (this.units.some((u) => u.escort && u.ko)) { this.finish('lost', '护送对象倒下'); return true; }
+    for (const l of this.map.lose ?? []) {
+      if (l.type !== 'unitKo') continue;
+      const u = this.units.find((x) => x.id === l.unitId);
+      if (u?.ko) { this.finish('lost', `${u.name} 倒下`); return true; }
+    }
     if (this.opts.leaderKoLoses && this.units.some((u) => u.isLeader && u.ko)) { this.finish('lost', 'Joker 倒下'); return true; }
     const canBaton = this.reserves.length > 0 && this.batonLeft > 0;
     if (!this.mainAllies().length && !canBaton) { this.finish('lost', '全员倒下'); return true; }

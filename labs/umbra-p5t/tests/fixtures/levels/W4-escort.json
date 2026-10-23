@@ -1,0 +1,64 @@
+{
+ "id": "W4-escort",
+ "name": "W4-escort",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "reachExit",
+  "unitId": "toshiro"
+ },
+ "objective": "W4-escort",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   4,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  },
+  {
+   "type": "unitKo",
+   "unitId": "toshiro"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "e1",
+   "name": "e1",
+   "role": "brute",
+   "hp": 200,
+   "pos": [
+    7,
+    0
+   ]
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "........",
+  "........",
+  "########",
+  "........",
+  "........",
+  "E......."
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ],
+ "party_extra": [
+  [
+   "toshiro",
+   2,
+   5
+  ]
+ ]
+}

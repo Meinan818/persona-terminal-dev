@@ -1,0 +1,70 @@
+{
+ "id": "W7-defeatAllExcept",
+ "name": "W7-defeatAllExcept",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "defeatAllExcept",
+  "exceptIds": [
+   "ctrl"
+  ]
+ },
+ "objective": "W7-defeatAllExcept",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   0,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  },
+  {
+   "type": "unitKo",
+   "unitId": "ctrl"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "e1",
+   "name": "e1",
+   "role": "brute",
+   "hp": 1,
+   "pos": [
+    0,
+    4
+   ]
+  },
+  {
+   "id": "ctrl",
+   "name": "ctrl",
+   "role": "brute",
+   "hp": 50,
+   "pos": [
+    7,
+    3
+   ],
+   "protected": true
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "........",
+  "........",
+  "........",
+  "........",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ]
+}

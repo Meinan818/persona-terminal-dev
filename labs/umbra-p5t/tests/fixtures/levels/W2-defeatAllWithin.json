@@ -1,0 +1,57 @@
+{
+ "id": "W2-defeatAllWithin",
+ "name": "W2-defeatAllWithin",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "defeatAll"
+ },
+ "objective": "W2-defeatAllWithin",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   0,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  },
+  {
+   "type": "turnLimit",
+   "n": 2
+  }
+ ],
+ "enemies": [
+  {
+   "id": "e1",
+   "name": "e1",
+   "role": "shooter",
+   "hp": 200,
+   "pos": [
+    7,
+    0
+   ],
+   "gunRange": 1
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "........",
+  "........",
+  "########",
+  "........",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ]
+}

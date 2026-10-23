@@ -1,0 +1,52 @@
+{
+ "id": "W1-defeatAll",
+ "name": "W1-defeatAll",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "defeatAll"
+ },
+ "objective": "W1-defeatAll",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   0,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "e1",
+   "name": "e1",
+   "role": "brute",
+   "hp": 1,
+   "pos": [
+    0,
+    4
+   ]
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "........",
+  "........",
+  "........",
+  "........",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ]
+}

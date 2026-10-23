@@ -1,0 +1,64 @@
+{
+ "id": "X2-escortKo",
+ "name": "X2-escortKo",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "reachExit",
+  "unitId": "toshiro"
+ },
+ "objective": "X2-escortKo",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   7,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  },
+  {
+   "type": "unitKo",
+   "unitId": "toshiro"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "e1",
+   "name": "e1",
+   "role": "brute",
+   "hp": 500,
+   "pos": [
+    1,
+    5
+   ]
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "E.......",
+  "........",
+  "........",
+  "........",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ],
+ "party_extra": [
+  [
+   "toshiro",
+   0,
+   5
+  ]
+ ]
+}

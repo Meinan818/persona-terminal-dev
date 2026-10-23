@@ -1,0 +1,58 @@
+{
+ "id": "W4-reachExitAll",
+ "name": "W4-reachExitAll",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "reachExit",
+  "all": true
+ },
+ "objective": "W4-reachExitAll",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   0,
+   5
+  ],
+  [
+   "skull",
+   1,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "e1",
+   "name": "e1",
+   "role": "brute",
+   "hp": 200,
+   "pos": [
+    7,
+    0
+   ]
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "EE......",
+  "........",
+  "........",
+  "........",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ]
+}

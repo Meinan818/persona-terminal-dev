@@ -1,0 +1,66 @@
+{
+ "id": "W5-destroyFlag",
+ "name": "W5-destroyFlag",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "defeatTarget",
+  "targetIds": [
+   "flag"
+  ]
+ },
+ "objective": "W5-destroyFlag",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   0,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "e1",
+   "name": "e1",
+   "role": "brute",
+   "hp": 200,
+   "pos": [
+    7,
+    0
+   ]
+  }
+ ],
+ "props": [
+  {
+   "id": "flag",
+   "kind": "flag",
+   "pos": [
+    0,
+    3
+   ],
+   "hp": 1,
+   "aura": 3
+  }
+ ],
+ "tiles": [
+  "........",
+  "........",
+  "########",
+  "........",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ]
+}

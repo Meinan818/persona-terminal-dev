@@ -1,0 +1,53 @@
+{
+ "id": "W6-survive",
+ "name": "W6-survive",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "survive",
+  "turns": 2
+ },
+ "objective": "W6-survive",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   0,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "e1",
+   "name": "e1",
+   "role": "brute",
+   "hp": 200,
+   "pos": [
+    7,
+    0
+   ]
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "........",
+  "........",
+  "########",
+  "........",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ]
+}

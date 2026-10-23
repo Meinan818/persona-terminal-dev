@@ -1,0 +1,58 @@
+{
+ "id": "X3-turnLimit",
+ "name": "X3-turnLimit",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "defeatTarget",
+  "targetId": "boss"
+ },
+ "objective": "X3-turnLimit",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   0,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  },
+  {
+   "type": "turnLimit",
+   "n": 1
+  }
+ ],
+ "enemies": [
+  {
+   "id": "boss",
+   "name": "boss",
+   "role": "brute",
+   "hp": 200,
+   "pos": [
+    7,
+    0
+   ],
+   "isTarget": true
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "........",
+  "........",
+  "########",
+  "........",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ]
+}

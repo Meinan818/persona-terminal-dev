@@ -1,0 +1,69 @@
+{
+ "id": "X4-protectedKo",
+ "name": "X4-protectedKo",
+ "width": 8,
+ "height": 6,
+ "win": {
+  "type": "defeatAllExcept",
+  "exceptIds": [
+   "ctrl"
+  ]
+ },
+ "objective": "X4-protectedKo",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   0,
+   5
+  ]
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  },
+  {
+   "type": "unitKo",
+   "unitId": "ctrl"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "ctrl",
+   "name": "ctrl",
+   "role": "brute",
+   "hp": 1,
+   "pos": [
+    0,
+    4
+   ]
+  },
+  {
+   "id": "e2",
+   "name": "e2",
+   "role": "brute",
+   "hp": 200,
+   "pos": [
+    7,
+    0
+   ]
+  }
+ ],
+ "props": [],
+ "tiles": [
+  "........",
+  "........",
+  "........",
+  "########",
+  "........",
+  "........"
+ ],
+ "heights": [
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000",
+  "00000000"
+ ]
+}

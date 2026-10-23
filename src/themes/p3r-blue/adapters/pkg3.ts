@@ -25,6 +25,7 @@ export {
   pk3Events,
   shadowForConfidant,
   useCooperationData,
+  coopBondOps,
   type CooperationFriend,
   type Pk3Notif,
   type Pk3NotifType,
@@ -39,4 +40,11 @@ export const cooperationOps = {
   remove: (id: string) => useAppStore.getState().deleteConfidant(id),
   archive: (id: string) => useAppStore.getState().archiveConfidant(id),
   unarchive: (id: string) => useAppStore.getState().unarchiveConfidant(id),
+  startCounsel: (mentionedConfidantIds?: string[]) => useAppStore.getState().startCounselSession(mentionedConfidantIds),
+  appendCounsel: (message: Parameters<ReturnType<typeof useAppStore.getState>['appendCounselMessage']>[0]) => useAppStore.getState().appendCounselMessage(message),
+  archiveCounsel: (signal?: AbortSignal) => useAppStore.getState().archiveCounselSession(signal),
+  expireCounsel: () => useAppStore.getState().expireCounselIfNeeded(),
+  buildCounselContext: () => useAppStore.getState().buildCounselContext(),
 };
+
+export { counselHasKey, streamCounselReply } from '@/utils/counselAI';

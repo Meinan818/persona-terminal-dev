@@ -25,10 +25,10 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
 }) {
   const low = useLowMotion();
   const [phase, setPhase] = useState<LongStep>(initialStep);
-  const [question, setQuestion] = useState(initialStep === 'form' ? '' : '我最近对工作的方向感到迷茫，接下来该如何取舍？');
+  const [question, setQuestion] = useState('');
   const [period, setPeriod] = useState<LongReadingPeriod>(initialStep === 'base' ? 'longterm' : 'midterm');
   const [cands, setCands] = useState<Cand[]>(() => drawRandom(6).map((id) => ({ id, orientation: randomOri() })));
-  const [picks, setPicks] = useState<number[]>(initialStep === 'reading' || initialStep === 'revealing' ? [0, 2, 4] : []);
+  const [picks, setPicks] = useState<number[]>([]);
   const [base, setBase] = useState<Cand | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(!!resume);
@@ -80,9 +80,9 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
           {pending && (
             <MsgBox speaker="系统">
               <div className="font-display text-body font-bold text-p4g-yellow">上次的占卜没有生成完</div>
-              <div className="mt-1 text-meta opacity-85">「{'我最近对工作的方向感到迷茫…'}」· 一段时间</div>
+              <div className="mt-1 text-meta opacity-85">上次的牌阵仍然保留；AI 解读尚未接入。</div>
               <div className="mt-3 flex gap-2">
-                <P4Button size="sm" className="flex-1" onClick={() => { setPending(false); setQuestion('我最近对工作的方向感到迷茫，接下来该如何取舍？'); setError(AI_PENDING); }}>用同一副牌继续</P4Button>
+                <P4Button size="sm" className="flex-1" onClick={() => { setPending(false); setError(AI_PENDING); }}>用同一副牌继续</P4Button>
                 <P4Button size="sm" variant="secondary" onClick={() => setPending(false)}>放弃</P4Button>
               </div>
             </MsgBox>

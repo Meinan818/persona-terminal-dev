@@ -7,10 +7,10 @@
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3R, slantClip, useToast } from '@blue/kit';
-import { CNY, LEDGER_ACCOUNTS, fmtMoney, fmtPlain, fmtSigned, roundMoney, sanitizeMoneyInput, type P5Account } from '@blue/mock/pkg5';
+import { CNY, fmtMoney, fmtPlain, fmtSigned, roundMoney, sanitizeMoneyInput, type P5Account } from '@blue/mock/pkg5';
 import { NoteBox } from '@blue/screens/pkg5/ui';
 
-export function LedgerReconcileSheetView({ open, onClose, initial, remaining = 2, ready = true, accounts = LEDGER_ACCOUNTS, onSaved }: { open: boolean; onClose: () => void; initial?: boolean; remaining?: number; ready?: boolean; accounts?: P5Account[]; onSaved?: () => void }) {
+export function LedgerReconcileSheetView({ open, onClose, initial, remaining = 2, ready = true, accounts = [], onSaved }: { open: boolean; onClose: () => void; initial?: boolean; remaining?: number; ready?: boolean; accounts?: P5Account[]; onSaved?: () => void }) {
   const toast = useToast();
   const [vals, setVals] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);

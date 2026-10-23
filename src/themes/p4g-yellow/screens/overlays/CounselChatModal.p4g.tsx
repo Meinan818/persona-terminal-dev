@@ -11,24 +11,17 @@ import { Portal, useEscape, useScrollLock, showToast } from '@yellow/kit';
 import { TVPowerOn } from '@yellow/fx';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
-import { PK3_CONFIDANTS } from '@yellow/mock/pkg3';
+import { cooperationOps, counselHasKey, streamCounselReply, useCooperationData } from '@yellow/adapters/pkg3';
 import { TarotCard } from '@yellow/screens/pkg3/ui';
+import type { CounselMessage } from '@real/types';
 
 type CState = 'intro' | 'live' | 'expired' | 'cooldown';
-interface Msg { id: string; role: 'user' | 'assistant'; content: string; interrupted?: boolean; mentions?: string[] }
-
-const SEED: Msg[] = [
-  { id: 'm1', role: 'assistant', content: '你来了。今晚的雾很重——是什么压在你心上？' },
-  { id: 'm2', role: 'user', content: '@千枝 最近因为比赛的事，我们好像有点别扭。', mentions: ['c-chie'] },
-  { id: 'm3', role: 'assistant', content: '你说的「别扭」，是她先沉默，还是你先把担心说成了责备？' },
-];
-const REPLY = '担心和责备有时候长得很像。先把「我怕你受伤」说出来，比「你又逞强」更接近你真正想说的话。';
+const newId = () => globalThis.crypto?.randomUUID?.() ?? `counsel-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDialog = null, aiConfigured = true, netError = false, locked = false }: {
   isOpen: boolean; onClose: () => void; initialState?: CState; initialDialog?: 'leave' | 'archive' | null; aiConfigured?: boolean; netError?: boolean; locked?: boolean;
 }) {
-  const [state, setState] = useState<CState>(initialState);
-  const [msgs, setMsgs] = useState<Msg[]>(initialState === 'live' ? SEED : []);
+  const { settings, confidants, counselSession, counselCooldown } = useCooperationData();
   const [input, setInput] = useState('');
   const [replying, setReplying] = useState(false);
   const [typed, setTyped] = useState('');
@@ -36,41 +29,129 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
   const [archiveConfirm, setArchiveConfirm] = useState(initialDialog === 'archive');
   const [archiving, setArchiving] = useState(false);
   const [mentionOpen, setMentionOpen] = useState(false);
+  const [selectedMentions, setSelectedMentions] = useState<string[]>([]);
   const [connErr, setConnErr] = useState<string | null>(netError ? 'Failed to fetch' : null);
-  const [left, setLeft] = useState(52 * 60 + 18);
-  const timer = useRef<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const abortRef = useRef<AbortController | null>(null);
+  const runningRef = useRef<Promise<void> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const sessionExpired = !!counselSession && (counselSession.expired || now > new Date(counselSession.expiresAt).getTime());
+  const sessionLive = !!counselSession && !sessionExpired;
+  const previewState = initialState === 'expired' || initialState === 'cooldown' ? initialState : null;
+  const cooldownLocked = locked || counselCooldown.locked;
+  const state: CState = previewState ?? (sessionLive ? 'live' : cooldownLocked ? 'cooldown' : 'intro');
+  const msgs = counselSession?.messages ?? [];
+  const hasKey = counselHasKey(settings);
+  const left = sessionLive
+    ? Math.max(0, Math.floor((new Date(counselSession.expiresAt).getTime() - now) / 1000))
+    : 0;
   useScrollLock(isOpen);
-  useEffect(() => { if (isOpen) { setState(initialState); setMsgs(initialState === 'live' ? SEED : []); setExitOpen(initialDialog === 'leave'); setArchiveConfirm(initialDialog === 'archive'); } }, [isOpen, initialState, initialDialog]);
-  useEffect(() => { if (state !== 'live') return; const t = window.setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000); return () => clearInterval(t); }, [state]);
-  useEffect(() => { listRef.current?.scrollTo({ top: 1e6 }); }, [msgs, typed]);
-  const sessionLive = state === 'live';
+  useEffect(() => {
+    if (!isOpen) return;
+    setInput('');
+    setSelectedMentions([]);
+    setExitOpen(initialDialog === 'leave');
+    setArchiveConfirm(initialDialog === 'archive');
+    setConnErr(netError ? 'Failed to fetch' : null);
+  }, [isOpen, initialDialog, netError]);
+  useEffect(() => {
+    if (!isOpen || !sessionLive) return;
+    const tick = () => setNow(Date.now());
+    tick();
+    const clock = window.setInterval(tick, 1000);
+    return () => window.clearInterval(clock);
+  }, [isOpen, sessionLive, counselSession?.expiresAt]);
+  useEffect(() => {
+    if (isOpen && sessionExpired) void cooperationOps.expireCounsel();
+  }, [isOpen, sessionExpired]);
+  useEffect(() => { listRef.current?.scrollTo({ top: 1e6 }); }, [msgs.length, typed, replying]);
+  useEffect(() => () => abortRef.current?.abort(), []);
   const requestExit = () => (sessionLive && msgs.length > 0 ? setExitOpen(true) : onClose());
   useEscape(isOpen && !exitOpen && !archiveConfirm, requestExit);
 
-  const stream = () => {
-    setReplying(true); setTyped('');
-    let i = 0;
-    const tick = () => {
-      i += 2; setTyped(REPLY.slice(0, i));
-      if (i < REPLY.length) timer.current = window.setTimeout(tick, 40);
-      else { setMsgs((m) => [...m, { id: `a${Date.now()}`, role: 'assistant', content: REPLY }]); setTyped(''); setReplying(false); }
-    };
-    timer.current = window.setTimeout(tick, 600);
+  const runReply = async (greeting = false) => {
+    const ac = new AbortController();
+    abortRef.current = ac;
+    let full = '';
+    setTyped('');
+    setReplying(true);
+    const run = (async () => {
+      try {
+        for await (const chunk of streamCounselReply(cooperationOps.buildCounselContext(), ac.signal, {
+          greeting,
+          onFallback: (reason, err) => {
+            if (reason === 'connect-error') setConnErr(err?.message || '无法连接到 AI 服务');
+          },
+        })) {
+          full += chunk;
+          setTyped(full);
+        }
+      } catch (error) {
+        if (!(error instanceof Error && error.name === 'AbortError')) {
+          setConnErr(error instanceof Error ? error.message : 'Failed to fetch');
+        }
+      } finally {
+        if (full.trim()) {
+          await cooperationOps.appendCounsel({
+            id: newId(),
+            role: 'assistant',
+            content: full.trim(),
+            timestamp: new Date(),
+            ...(ac.signal.aborted ? { interrupted: true } : {}),
+          }).catch(() => {});
+        }
+        setTyped('');
+        setReplying(false);
+        if (abortRef.current === ac) abortRef.current = null;
+      }
+    })();
+    runningRef.current = run;
+    await run;
+    if (runningRef.current === run) runningRef.current = null;
   };
-  const interrupt = () => {
-    if (timer.current) clearTimeout(timer.current);
-    setMsgs((m) => [...m, { id: `a${Date.now()}`, role: 'assistant', content: typed || '……', interrupted: true }]);
-    setTyped(''); setReplying(false);
+  const interrupt = async () => {
+    abortRef.current?.abort();
+    await runningRef.current?.catch(() => {});
   };
-  const send = () => {
+  const send = async () => {
     if (!input.trim() || !sessionLive) return;
-    if (replying) interrupt();
-    setMsgs((m) => [...m, { id: `u${Date.now()}`, role: 'user', content: input.trim() }]);
-    setInput(''); stream();
+    const text = input.trim();
+    setInput('');
+    if (replying) await interrupt();
+    await cooperationOps.appendCounsel({
+      id: newId(),
+      role: 'user',
+      content: text,
+      timestamp: new Date(),
+      ...(selectedMentions.length ? { mentions: selectedMentions } : {}),
+    });
+    setSelectedMentions([]);
+    void runReply();
   };
-  const start = () => { setState('live'); setMsgs([{ id: 'm1', role: 'assistant', content: SEED[0].content }]); };
-  const doArchive = () => { setArchiving(true); window.setTimeout(() => { setArchiving(false); setExitOpen(false); setArchiveConfirm(false); showToast('已归档到谏言归档库'); onClose(); }, 900); };
+  const start = async () => {
+    if (cooldownLocked || replying) return;
+    try {
+      await cooperationOps.startCounsel(selectedMentions);
+      await runReply(true);
+    } catch (error) {
+      setConnErr(error instanceof Error ? error.message : '无法开始这次谈话');
+    }
+  };
+  const doArchive = async () => {
+    setArchiving(true);
+    try {
+      await interrupt();
+      await cooperationOps.archiveCounsel();
+      showToast('已归档到谏言归档库');
+      setExitOpen(false);
+      setArchiveConfirm(false);
+      onClose();
+    } catch (error) {
+      setConnErr(error instanceof Error ? error.message : '归档失败');
+    } finally {
+      setArchiving(false);
+    }
+  };
   const mm = String(Math.floor(left / 60)).padStart(2, '0'); const ss = String(left % 60).padStart(2, '0');
 
   return (
@@ -92,7 +173,7 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
                   <button type="button" onClick={requestExit} disabled={archiving} aria-label="关闭" className="p4g-press flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border-3 border-p4g-yellow bg-p4g-yellow font-bold text-p4g-black">✕</button>
                 </div>
                 <div aria-hidden className="h-[6px] shrink-0 p4g-candy" />
-                {!aiConfigured && <Banner tone="warn" text="尚未配置 AI 密钥。" sub="现在是简版离线回复；到「设置 → AI 服务」填入密钥后，残响才会真正用心听你说。" />}
+                {(!hasKey || !aiConfigured) && <Banner tone="warn" text="尚未配置 AI 密钥。" sub="现在是简版离线回复；到「设置 → AI 服务」填入密钥后，残响才会真正用心听你说。" />}
                 {connErr && <Banner tone="error" text="无法连接到 AI 服务。" sub="刚才这次临时退回了离线回复。网络恢复后再发一条试试。" detail={connErr} onClose={() => setConnErr(null)} />}
 
                 {/* 主体 */}
@@ -109,9 +190,9 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
                     <div className="flex h-full flex-col items-center justify-center text-center text-white">
                       <div className="mb-4 text-6xl text-p4g-yellow/40" aria-hidden>✧</div>
                       <h4 className="font-display text-h2 font-bold text-p4g-yellow">这次谈话已经过去了</h4>
-                      <p className="mt-2 text-body text-white/85">一小时的窗口已经合上，聊天记录随之散去。{locked ? <><br />这次的冷却会到 <b>10/22</b>，之后再来找残响。</> : <><br />想说的话还没说完，可以再开一次。</>}</p>
+                      <p className="mt-2 text-body text-white/85">一小时的窗口已经合上，聊天记录随之散去。{cooldownLocked ? <><br />这次的冷却会到 <b>{counselCooldown.nextAvailableDate || '—'}</b>，之后再来找残响。</> : <><br />想说的话还没说完，可以再开一次。</>}</p>
                       <div className="mt-6 flex gap-3">
-                        {!locked && <button type="button" onClick={start} className="p4g-press rounded-full border-3 border-p4g-black bg-p4g-yellow px-5 py-2.5 font-display font-bold text-p4g-black">再开一次</button>}
+                        {!cooldownLocked && <button type="button" onClick={start} className="p4g-press rounded-full border-3 border-p4g-black bg-p4g-yellow px-5 py-2.5 font-display font-bold text-p4g-black">再开一次</button>}
                         <button type="button" onClick={onClose} className="rounded-full border-3 border-white/40 px-5 py-2.5 font-display font-bold text-white">离开</button>
                       </div>
                     </div>
@@ -120,7 +201,7 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
                     <div className="flex h-full flex-col items-center justify-center text-center text-white">
                       <div className="mb-4 text-6xl text-p4g-yellow/40" aria-hidden>✧</div>
                       <h4 className="font-display text-h2 font-bold text-p4g-yellow">谏言冷却中</h4>
-                      <p className="mt-2 text-body text-white/85">每 3 天一次，留出余地给沉淀。<br />下一次可在 <b>10/22</b> 开启（还有 2 天）。</p>
+                      <p className="mt-2 text-body text-white/85">每 3 天一次，留出余地给沉淀。<br />下一次可在 <b>{counselCooldown.nextAvailableDate || '—'}</b> 开启（还有 {counselCooldown.daysLeft ?? 0} 天）。</p>
                       <button type="button" onClick={onClose} className="mt-6 rounded-full border-3 border-white/40 px-5 py-2.5 font-display font-bold text-white">先回到房间</button>
                     </div>
                   )}
@@ -146,10 +227,10 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
                       {mentionOpen && (
                         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-2 rounded-sm border-3 border-p4g-yellow bg-p4g-black p-2">
                           <div className="mb-1 flex items-center justify-between text-2xs"><span className="tracking-widest text-white/60">关心的人</span><button type="button" onClick={() => setMentionOpen(false)} className="font-bold text-p4g-yellow">收起</button></div>
-                          {PK3_CONFIDANTS.length === 0 ? <p className="py-3 text-center text-cap text-white/60">还没有登记过同伴。可以先在同伴页里新建一位。</p> : (
+                          {confidants.length === 0 ? <p className="py-3 text-center text-cap text-white/60">还没有登记过同伴。可以先在同伴页里新建一位。</p> : (
                             <div className="pk3-noscroll flex gap-2 overflow-x-auto">
-                              {PK3_CONFIDANTS.filter((c) => !c.archivedAt).map((c) => (
-                                <button key={c.id} type="button" onClick={() => { setInput((v) => `${v}@${c.name} `); setMentionOpen(false); }} className="flex shrink-0 flex-col items-center gap-1 rounded-sm px-1 py-1 hover:bg-white/10">
+                              {confidants.filter((c) => !c.archivedAt).map((c) => (
+                                <button key={c.id} type="button" onClick={() => { setInput((v) => `${v}@${c.name} `); setSelectedMentions((ids) => ids.includes(c.id) ? ids : [...ids, c.id]); setMentionOpen(false); }} className="flex shrink-0 flex-col items-center gap-1 rounded-sm px-1 py-1 hover:bg-white/10">
                                   <TarotCard arcanaId={c.arcanaId} width={34} labels={false} /><span className="max-w-[56px] truncate text-2xs font-bold text-white">{c.name}</span>
                                 </button>
                               ))}
@@ -203,7 +284,7 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
   );
 }
 
-function Bubble({ m }: { m: Msg }) {
+function Bubble({ m }: { m: CounselMessage }) {
   const isUser = m.role === 'user';
   return (
     <div className={cx('flex', isUser ? 'justify-end' : 'justify-start')}>

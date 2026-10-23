@@ -12,20 +12,15 @@ import { CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY,
 
 export interface BatchRow { direction: 'expense' | 'income'; amount: string; type: LedgerExpenseType; channel: string; incomeSource: string; note: string }
 export const emptyRow = (): BatchRow => ({ direction: 'expense', amount: '', type: 'food', channel: '微信', incomeSource: '', note: '' });
-export const SAMPLE_BATCH: BatchRow[] = [
-  { direction: 'expense', amount: '18', type: 'food', channel: '微信', incomeSource: '', note: '早饭' },
-  { direction: 'expense', amount: '45', type: 'fun', channel: '支付宝', incomeSource: '', note: '电影' },
-  { direction: 'income', amount: '200', type: 'other', channel: '微信', incomeSource: '红包', note: '奶奶的红包' },
-];
 
 const sel = 'h-9 min-w-0 flex-1 appearance-none truncate rounded-xs border-thin border-p4g-line bg-p4g-surface-2 px-2 font-display text-meta font-bold text-p4g-ink outline-none';
 
 export function LedgerBatchSheetView({ open, onClose, initial, onSaved }: { open: boolean; onClose: () => void; initial?: BatchRow[]; onSaved?: (summary: string) => void }) {
   const toast = useToast();
-  const [rows, setRows] = useState<BatchRow[]>(initial ?? SAMPLE_BATCH);
+  const [rows, setRows] = useState<BatchRow[]>(initial ?? [emptyRow()]);
   const [date, setDate] = useState(P5_TODAY);
   const [saving, setSaving] = useState(false);
-  useEffect(() => { if (open) { setRows(initial ?? SAMPLE_BATCH); setDate(P5_TODAY); setSaving(false); } }, [open]); // eslint-disable-line
+  useEffect(() => { if (open) { setRows(initial ?? [emptyRow()]); setDate(P5_TODAY); setSaving(false); } }, [open]); // eslint-disable-line
   const up = (i: number, p: Partial<BatchRow>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...p } : r)));
   const n = rows.filter((r) => moneyFromInput(r.amount) > 0).length;
   const save = () => {

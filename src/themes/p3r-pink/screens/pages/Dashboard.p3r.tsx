@@ -29,6 +29,7 @@ import {
   type BattleState, type BgAnimStyle, type WeatherState,
 } from '@pink/screens/pkg1/DashboardParts';
 import { BandCutInP3 } from '@pink/screens/overlays/TodoCompleteModal.p3r';
+import { useAppStore } from '@/store';
 import { SeasonStampChip } from '@pink/screens/overlays/SeasonStampBadge.p3r';
 import { OnThisDaySheetP3 } from '@pink/screens/overlays/OnThisDaySheet.p3r';
 import { DecayModal } from '@pink/screens/overlays/DashboardDecayModal.p3r';
@@ -86,18 +87,25 @@ export default function Dashboard({ params }: PageProps) {
   const completed = tickable.filter((t) => t.count >= t.target).length;
   const total = tickable.length;
   const [cutin, setCutin] = useState<null | { title: string; points: number; hint: boolean }>(null);
+  useEffect(() => () => useAppStore.getState().setModalBlocker(false), []);
   const [rowRipple, setRowRipple] = useState<string | null>(null);
   const [dealOpen, setDealOpen] = useState(false);
   const complete = (t: MockTodo) => {
     if (t.count >= t.target) return;
-    void homeOps.completeTodo(t.id);
     setRowRipple(t.id + Date.now());
     const next = { ...t, count: t.count + 1 };
     setTodos((ts) => ts.map((x) => (x.id === t.id ? next : x)));
-    if (next.count >= next.target) {
+    const willComplete = next.count >= next.target;
+    if (willComplete) {
+      useAppStore.getState().setModalBlocker(true);
       const pts = t.points + (t.extraBoosts?.reduce((s, b) => s + b.points, 0) ?? 0);
-      window.setTimeout(() => setCutin({ title: t.title, points: pts, hint: !!t.unlocks }), anim ? 260 : 0);
+      window.setTimeout(() => setCutin({ title: t.title, points: pts, hint: false }), anim ? 260 : 0);
     }
+    void homeOps.completeTodo(t.id).then((result) => {
+      if (!result && willComplete) useAppStore.getState().setModalBlocker(false);
+    }).catch(() => {
+      if (willComplete) useAppStore.getState().setModalBlocker(false);
+    });
   };
 
   // ── 宣言卡三态 ──
@@ -332,7 +340,7 @@ export default function Dashboard({ params }: PageProps) {
 
       <h2 className="sr-only">{MOCK_USER_NAME || 'MASKARIA'}的面具庭园</h2>
 
-      <BandCutInP3 isOpen={!!cutin} onClose={() => setCutin(null)} title={cutin?.title ?? ''} totalPoints={cutin?.points} unlockHint={cutin?.hint ? { achievements: 1, skills: 0 } : { achievements: 0, skills: 0 }} />
+      <BandCutInP3 isOpen={!!cutin} onClose={() => { setCutin(null); useAppStore.getState().setModalBlocker(false); }} title={cutin?.title ?? ''} totalPoints={cutin?.points} unlockHint={cutin?.hint ? { achievements: 1, skills: 0 } : { achievements: 0, skills: 0 }} />
       <UrgentToast text={toast} />
       <DecayModal attrs={decayed} onClose={() => setDecayed([])} />
       <OnThisDaySheetP3 isOpen={otdOpen} onClose={() => setOtdOpen(false)} />

@@ -16,7 +16,7 @@ import { DevStateBar, MonthNav, Ring } from '@yellow/screens/pkg5/ui';
 import { LedgerStats } from '@yellow/screens/pkg5/LedgerStats';
 import { AssetBoard } from '@yellow/screens/pkg5/AssetBoard';
 import { LedgerEntrySheetView, emptyDraft, type EntryDraft } from '@yellow/screens/overlays/LedgerEntrySheet.p4g';
-import { LedgerBatchSheetView, SAMPLE_BATCH } from '@yellow/screens/overlays/LedgerBatchSheet.p4g';
+import { LedgerBatchSheetView } from '@yellow/screens/overlays/LedgerBatchSheet.p4g';
 import { LedgerBudgetSheetView } from '@yellow/screens/overlays/LedgerBudgetSheet.p4g';
 import { LedgerReconcileSheetView } from '@yellow/screens/overlays/LedgerReconcileSheet.p4g';
 import { LedgerDeleteConfirmView } from '@yellow/screens/overlays/LedgerDeleteConfirm.p4g';
@@ -328,9 +328,9 @@ export default function Ledger({ tab, params }: PageProps) {
       <DevStateBar value={state} onChange={setState} items={[{ id: 'normal', label: '正常' }, { id: 'first', label: '首次未设余额' }, { id: 'empty', label: '本月空' }, { id: 'loading', label: '读取中' }]} />
 
       <LedgerEntrySheetView open={draftOpen} onClose={() => setDraftOpen(false)} initial={draft ?? undefined} hint={shotHint} onSaved={onSaved} />
-      <LedgerBatchSheetView open={batchOpen} onClose={() => setBatchOpen(false)} initial={SAMPLE_BATCH} onSaved={onSaved} />
+      <LedgerBatchSheetView open={batchOpen} onClose={() => setBatchOpen(false)} initial={[]} onSaved={onSaved} />
       <LedgerBudgetSheetView open={budgetOpen} onClose={() => setBudgetOpen(false)} onSaved={(m) => ledgerOps.saveBudget(m, LEDGER_BUDGET.savingsGoal, LEDGER_RESET_DAY).then(() => toast.success(`预算已定：${CNY}${fmtMoney(m)}`)).catch((e) => toast(`预算失败：${(e as Error)?.message ?? '请重试'}`))} />
-      <LedgerReconcileSheetView open={adjustOpen} onClose={() => setAdjustOpen(false)} initial={needsSetup} onSaved={() => { if (needsSetup) setState('normal'); toast.success(needsSetup ? '余额已记下' : '对账完成'); }} />
+      <LedgerReconcileSheetView open={adjustOpen} onClose={() => setAdjustOpen(false)} initial={needsSetup} accounts={LEDGER_ACCOUNTS} onSaved={() => { if (needsSetup) setState('normal'); toast.success(needsSetup ? '余额已记下' : '对账完成'); }} />
       <LedgerDeleteConfirmView open={delOpen} target={del} onClose={() => setDelOpen(false)} onConfirm={() => { if (del) ledgerOps.remove(del.id).then(() => toast('已删除这一笔')).catch((e) => toast(`删除失败：${(e as Error)?.message ?? '请重试'}`)); }} />
       <LedgerSavedModalView open={!!saved} onClose={() => setSaved(null)} title={saved ?? ''} />
     </>

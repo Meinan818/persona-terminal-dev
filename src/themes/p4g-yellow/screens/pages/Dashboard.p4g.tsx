@@ -26,16 +26,12 @@ import {
   type GreetMode, type SkyWx, type RitualSlide,
 } from '@yellow/screens/pkg1/DashboardParts';
 import { TodoCompleteP4G } from '@yellow/screens/overlays/TodoCompleteModal.p4g';
-import { LevelUpP4G } from '@yellow/screens/overlays/LevelUpModal.p4g';
-import { AchievementUnlockP4G } from '@yellow/screens/overlays/AchievementUnlockModal.p4g';
-import { SkillUnlockP4G } from '@yellow/screens/overlays/SkillUnlockModal.p4g';
-import { WishProgressView } from '@yellow/screens/overlays/WishProgressCutIn.p4g';
-import { OrgCelebration, DEMO_CELEB } from '@yellow/screens/overlays/OrgCelebrationCutIn.p4g';
 import { OnThisDaySheetP4G } from '@yellow/screens/overlays/OnThisDaySheet.p4g';
 import { DecayModalP4G } from '@yellow/screens/overlays/DashboardDecayModal.p4g';
 import { UrgentToastP4G, urgentText } from '@yellow/screens/overlays/DashboardToasts.p4g';
 import { ATTR_IDS, levelTitle, masteryOf, masteryTitle } from '@yellow/mock/pkg1';
-import { useHomeData } from '@/themes/homeData';
+import { homeOps, useHomeData } from '@/themes/homeData';
+import { useAppStore } from '@/store';
 
 const GREETINGS: Record<string, string[]> = {
   dawn: ['n，新的一天开始了', 'n，晨光已到，起身了', 'n，早安，今天也要加油', 'n，清晨的空气真好'],
@@ -70,20 +66,7 @@ export default function Dashboard({ params }: PageProps) {
   const [counts, setCounts] = useState<Record<string, number>>(() => Object.fromEntries(MOCK_TODOS.map((t) => [t.id, t._count])));
   const [selected, setSelected] = useState<AttributeId | null>((params.get('attr') as AttributeId) || null);
   const [completed, setCompleted] = useState<{ title: string; pts: number; hint?: { achievements: number; skills: number } } | null>(null);
-  /* 真实入口：完成任务 → 今日完成 → （关掉后）按顺序接 属性升级 / 精通提升 → 成就 / 技能解锁 → 愿望进度 → 组织庆祝（真实 App 顶层队列，一次一张）。
-     demo 按任务演示：t1 升级+成就、t2 精通+技能、t4 愿望 +3%、t5 组织作战达成、t6 愿望持平。 */
-  type Follow = { k: 'lv'; attr: AttributeId; lv: number; stars?: number } | { k: 'achv' } | { k: 'skill' } | { k: 'wish'; flat?: boolean } | { k: 'org' };
-  const FOLLOW: Record<string, Follow[]> = {
-    t1: [{ k: 'lv', attr: 'guts', lv: 4 }, { k: 'achv' }],
-    t2: [{ k: 'lv', attr: 'knowledge', lv: 10, stars: 2 }, { k: 'skill' }],
-    t4: [{ k: 'wish' }],
-    t5: [{ k: 'org' }],
-    t6: [{ k: 'wish', flat: true }],
-  };
-  const [queue, setQueue] = useState<Follow[]>([]);
-  const [pendingQ, setPendingQ] = useState<Follow[]>([]);
-  const headF = queue[0] ?? null;
-  const shiftQ = () => setQueue((q) => q.slice(1));
+  useEffect(() => () => useAppStore.getState().setModalBlocker(false), []);
   const [otdOpen, setOtdOpen] = useState(false);
   const [dealOpen, setDealOpen] = useState(false);
   const [decay, setDecay] = useState(params.get('decay') === '1');
@@ -133,13 +116,21 @@ export default function Dashboard({ params }: PageProps) {
   const tick = (id: string) => {
     const t = todos.find((x) => x.id === id)!;
     const tg = target(t);
+    if ((counts[id] ?? 0) >= tg) return;
     const next = Math.min(tg, (counts[id] ?? 0) + 1);
+    const willComplete = next >= tg;
+    if (willComplete) useAppStore.getState().setModalBlocker(true);
     setCounts((c) => ({ ...c, [id]: next }));
-    if (next >= tg) {
-      const pts = t.points + (t.extraBoosts?.reduce((s, b) => s + b.points, 0) ?? 0);
-      setCompleted({ title: t.title, pts, hint: t.id === 't1' ? { achievements: 1, skills: 0 } : t.id === 't2' ? { achievements: 0, skills: 1 } : undefined });
-      setPendingQ(FOLLOW[t.id] ?? []);
-    }
+    void homeOps.completeTodo(id).then((result) => {
+      if (!result) {
+        if (willComplete) useAppStore.getState().setModalBlocker(false);
+        return;
+      }
+      const pts = t.points + (t.extraBoosts?.reduce((sum, boost) => sum + boost.points, 0) ?? 0);
+      setCompleted({ title: t.title, pts, hint: result.unlockHints });
+    }).catch(() => {
+      if (willComplete) useAppStore.getState().setModalBlocker(false);
+    });
   };
 
   if (state === 'loading') return <div className="flex min-h-[60vh] items-center justify-center"><P4Loading label="信号接收中" /></div>;
@@ -205,12 +196,7 @@ export default function Dashboard({ params }: PageProps) {
         </CollageStagger>
       </div>
 
-      <TodoCompleteP4G open={!!completed} onClose={() => { setCompleted(null); if (pendingQ.length) { const q = pendingQ; setPendingQ([]); window.setTimeout(() => setQueue(q), 320); } }} title={completed?.title ?? ''} totalPoints={completed?.pts ?? 0} unlockHint={completed?.hint} />
-      <LevelUpP4G open={headF?.k === 'lv'} onClose={shiftQ} attributeName={headF?.k === 'lv' ? ATTR_NAMES[headF.attr] : undefined} newLevel={headF?.k === 'lv' ? headF.lv : 5} masteryStars={headF?.k === 'lv' ? headF.stars : undefined} />
-      <AchievementUnlockP4G open={headF?.k === 'achv'} onClose={shiftQ} achievementTitle="晨光跑者" />
-      <SkillUnlockP4G open={headF?.k === 'skill'} onClose={shiftQ} />
-      <WishProgressView payload={headF?.k === 'wish' ? { title: '一年读完 24 本书', pct: headF.flat ? 58 : 61, delta: headF.flat ? 0 : 3, times: 18 } : null} onClose={shiftQ} />
-      <OrgCelebration head={headF?.k === 'org' ? DEMO_CELEB.op : null} onClose={shiftQ} />
+      <TodoCompleteP4G open={!!completed} onClose={() => { setCompleted(null); useAppStore.getState().setModalBlocker(false); }} title={completed?.title ?? ''} totalPoints={completed?.pts ?? 0} unlockHint={completed?.hint} />
       <OnThisDaySheetP4G open={otdOpen} onClose={() => setOtdOpen(false)} />
       <DecayModalP4G open={decay} onClose={() => setDecay(false)} attrs={['guts', 'kindness']} />
       <UrgentToastP4G text={toast} onDone={() => setToast(null)} />

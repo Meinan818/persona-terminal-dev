@@ -19,12 +19,7 @@ export type LongStep = 'form' | 'base' | 'picking' | 'revealing' | 'reading' | '
 export type FollowPhase = 'form' | 'picking' | 'reading';
 interface Cand { id: string; orientation: TarotOrientation }
 const PERIODS: LongReadingPeriod[] = ['recent', 'midterm', 'longterm'];
-const DEMO_Q = '我最近对工作的方向感到迷茫，接下来该如何取舍？';
 const AI_PENDING = '星象 AI 接入等待确认；本次没有发起模型请求，也不会生成占位解读。';
-const FIXED6: Cand[] = [
-  { id: 'hermit', orientation: 'upright' }, { id: 'moon', orientation: 'upright' }, { id: 'tower', orientation: 'reversed' },
-  { id: 'sun', orientation: 'upright' }, { id: 'chariot', orientation: 'upright' }, { id: 'lovers', orientation: 'reversed' },
-];
 const sec = (style: React.CSSProperties = {}) => ({ background: P3R.panel, clipPath: slantClip(14), boxShadow: 'var(--p3r-shadow)', ...style });
 
 export interface LongInit { step: LongStep; ai?: AIPhase; fail?: AIFail; noApiKey?: boolean; cap?: boolean; resume?: boolean; follow?: FollowPhase; autoHold?: boolean }
@@ -32,10 +27,10 @@ export interface LongInit { step: LongStep; ai?: AIPhase; fail?: AIFail; noApiKe
 export function LongReadingFlow({ init, activeCount, onSaved, onBack }: { init: LongInit; activeCount: number; onSaved: (r: LongReading) => void; onBack: () => void }) {
   const low = useLowMotion();
   const [phase, setPhase] = useState<LongStep>(init.step === 'done' ? 'reading' : init.step);
-  const [question, setQuestion] = useState(init.step === 'form' ? '' : DEMO_Q);
+  const [question, setQuestion] = useState('');
   const [period, setPeriod] = useState<LongReadingPeriod>(init.step === 'base' ? 'longterm' : 'midterm');
-  const [cands, setCands] = useState<Cand[]>(FIXED6);
-  const [picks, setPicks] = useState<number[]>(init.step === 'reading' || init.step === 'revealing' || init.step === 'done' ? [0, 2, 4] : []);
+  const [cands, setCands] = useState<Cand[]>([]);
+  const [picks, setPicks] = useState<number[]>([]);
   const [base, setBase] = useState<Cand | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(!!init.resume);
@@ -52,7 +47,7 @@ export function LongReadingFlow({ init, activeCount, onSaved, onBack }: { init: 
 
   const buildReading = (content: string): LongReading => {
     const picked: DrawnCard[] = [...(base ? [{ cardId: base.id, orientation: base.orientation }] : []), ...picks.map((i) => ({ cardId: cands[i].id, orientation: cands[i].orientation }))];
-    return { id: `lr-${Date.now()}`, question: question.trim() || DEMO_Q, period, drawnFrom: cands.map((c) => c.id), picked, content, followUps: [], archived: false, createdAt: new Date(), expiresAt: shiftKey(14) };
+    return { id: `lr-${Date.now()}`, question: question.trim(), period, drawnFrom: cands.map((c) => c.id), picked, content, followUps: [], archived: false, createdAt: new Date(), expiresAt: shiftKey(14) };
   };
   const accept = (content = ai.full) => { if (!content.trim()) { setError(AI_PENDING); return; } const r = buildReading(content); setSaved(r); onSaved(r); setPhase('done'); };
 
@@ -93,7 +88,7 @@ export function LongReadingFlow({ init, activeCount, onSaved, onBack }: { init: 
               <Label en="RESUME">上次的占卜没有生成完</Label>
               <div className="text-[12.5px] font-bold" style={{ color: P3R.inkSoft }}>「我最近对工作的方向感到迷茫…」· 一段时间 · 同一副牌已经保存</div>
               <div className="mt-3 flex gap-2">
-                <SlantAction onClick={() => { setPending(false); setQuestion(DEMO_Q); setError(AI_PENDING); }}>用同一副牌继续</SlantAction>
+                <SlantAction onClick={() => { setPending(false); setError(AI_PENDING); }}>用同一副牌继续</SlantAction>
                 <SlantAction tone="soft" onClick={() => setPending(false)}>放弃</SlantAction>
               </div>
             </div>

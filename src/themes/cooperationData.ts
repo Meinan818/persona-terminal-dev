@@ -5,6 +5,8 @@ import { useCloudStore } from '@/store/cloud';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { loadSocial } from '@/services/social';
 import { hasBeenPrayedByToday, hasPrayedToday } from '@/services/prayers';
+import { acceptCoopBond, proposeCoopBond, rejectCoopBond, viewFromMySide, type AcceptCoopBondInput, type ProposeCoopBondInput } from '@/services/coopBonds';
+import { getUserId } from '@/services/velvetApi';
 import type {
   AttributeId,
   CloudProfile,
@@ -117,6 +119,29 @@ export const PK3_BATTLE_LOG: Array<{
 }> = [];
 export const PK3_STARSHIFT = { summary: '', description: '', interpretation: '', advice: '' };
 
+export const coopBondOps = {
+  currentUserId: () => getUserId(),
+  viewFromMySide,
+  propose: async (input: ProposeCoopBondInput) => {
+    const bond = await proposeCoopBond(input);
+    useCloudSocialStore.getState().addCoopBond(bond);
+    void loadSocial({ force: true });
+    return bond;
+  },
+  accept: async (input: AcceptCoopBondInput) => {
+    const bond = await acceptCoopBond(input);
+    useCloudSocialStore.getState().updateCoopBond(bond.id, bond);
+    void loadSocial({ force: true });
+    return bond;
+  },
+  reject: async (bondId: string) => {
+    const bond = await rejectCoopBond(bondId);
+    useCloudSocialStore.getState().updateCoopBond(bond.id, bond);
+    void loadSocial({ force: true });
+    return bond;
+  },
+};
+
 export function pk3Events(confidantId: string): ConfidantEvent[] {
   return useAppStore.getState().confidantEvents
     .filter((event) => event.confidantId === confidantId)
@@ -179,21 +204,28 @@ function notificationView(entry: NotificationEntry): Pk3Notif {
 export function useCooperationData() {
   const {
     confidants, confidantEvents, counselArchives, settings,
-    loadConfidants, loadCounsel, getCounselCooldown, hasActiveCounsel,
+    counselSession, loadConfidants, loadCounsel, getCounselCooldown, hasActiveCounsel,
+    startCounselSession, appendCounselMessage, archiveCounselSession, expireCounselIfNeeded, buildCounselContext,
   } = useAppStore(useShallow((state) => ({
     confidants: state.confidants,
     confidantEvents: state.confidantEvents,
     counselArchives: state.counselArchives,
     settings: state.settings,
+    counselSession: state.counselSession,
     loadConfidants: state.loadConfidants,
     loadCounsel: state.loadCounsel,
     getCounselCooldown: state.getCounselCooldown,
     hasActiveCounsel: state.hasActiveCounsel,
+    startCounselSession: state.startCounselSession,
+    appendCounselMessage: state.appendCounselMessage,
+    archiveCounselSession: state.archiveCounselSession,
+    expireCounselIfNeeded: state.expireCounselIfNeeded,
+    buildCounselContext: state.buildCounselContext,
   })));
   const cloudUser = useCloudStore((state) => state.cloudUser);
   const {
     friendships, notifications, unreadCount, importantUnreadCount, todayPrayers, loading, lastError,
-    materializeBlockers, coopShadows,
+    materializeBlockers, coopShadows, coopBonds,
   } = useCloudSocialStore(useShallow((state) => ({
     friendships: state.friendships,
     notifications: state.notifications,
@@ -204,6 +236,7 @@ export function useCooperationData() {
     lastError: state.lastError,
     materializeBlockers: state.materializeBlockers,
     coopShadows: state.coopShadows,
+    coopBonds: state.coopBonds,
   })));
 
   useEffect(() => {
@@ -226,6 +259,7 @@ export function useCooperationData() {
     confidants,
     confidantEvents,
     counselArchives,
+    counselSession,
     settings,
     cloudUser,
     friends,
@@ -238,8 +272,15 @@ export function useCooperationData() {
     todayPrayers,
     materializeBlockers,
     coopShadows,
+    coopBonds,
     activeShadows,
+    startCounselSession,
+    appendCounselMessage,
+    archiveCounselSession,
+    expireCounselIfNeeded,
+    buildCounselContext,
     counselState: hasActiveCounsel() ? 'active' as const : counselCooldown.locked ? 'cooldown' as const : 'available' as const,
+    counselCooldown,
     counselCooldownDate: counselCooldown.nextAvailableDate ?? '',
   };
 }

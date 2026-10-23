@@ -6,9 +6,9 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
-import { CNY, LEDGER_ACCOUNTS, fmtMoney, fmtPlain, fmtSigned, roundMoney, sanitizeMoneyInput, type P5Account } from '@yellow/mock/pkg5';
+import { CNY, fmtMoney, fmtPlain, fmtSigned, roundMoney, sanitizeMoneyInput, type P5Account } from '@yellow/mock/pkg5';
 
-export function LedgerReconcileSheetView({ open, onClose, initial, remaining = 2, ready = true, accounts = LEDGER_ACCOUNTS, onSaved }: { open: boolean; onClose: () => void; initial?: boolean; remaining?: number; ready?: boolean; accounts?: P5Account[]; onSaved?: () => void }) {
+export function LedgerReconcileSheetView({ open, onClose, initial, remaining = 2, ready = true, accounts = [], onSaved }: { open: boolean; onClose: () => void; initial?: boolean; remaining?: number; ready?: boolean; accounts?: P5Account[]; onSaved?: () => void }) {
   const toast = useToast();
   const [vals, setVals] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);

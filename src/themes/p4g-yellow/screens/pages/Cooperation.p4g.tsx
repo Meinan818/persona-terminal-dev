@@ -61,7 +61,7 @@ function Companions({ params }: { params: URLSearchParams }) {
   const low = useLowMotion();
   const demoState = params.get('state');
   const loggedIn = params.get('login') !== '0';
-  const { confidants: realConfidants, counselArchives, friends: realFriends, materializeBlockers, notifications, coopShadows, activeShadows, cloudUser } = useCooperationData();
+  const { confidants: realConfidants, counselArchives, friends: realFriends, materializeBlockers, notifications, coopShadows, activeShadows, coopBonds, cloudUser } = useCooperationData();
   const [confidants, setConfidants] = useState<Confidant[]>(demoState === 'empty' ? [] : realConfidants);
   const [friends, setFriends] = useState<FriendItem[]>(demoState === 'empty' ? [] : realFriends.map((f) => ({ ...f })));
   useEffect(() => { if (demoState !== 'empty') setConfidants(realConfidants); }, [realConfidants, demoState]);
@@ -86,6 +86,7 @@ function Companions({ params }: { params: URLSearchParams }) {
   const [profileCard, setProfileCard] = useState<CloudProfile | null>(null);
   const [proposeTarget, setProposeTarget] = useState<CloudProfile | null>(null);
   const [acceptOpen, setAcceptOpen] = useState(false);
+  const acceptBond = coopBonds.find((b) => b.status === 'pending') ?? null;
   const [pactRespondOpen, setPactRespondOpen] = useState(false);
   const [interactionFor, setInteractionFor] = useState<Confidant | null>(null);
   const [memorialFor, setMemorialFor] = useState<Confidant | null>(null);
@@ -258,11 +259,11 @@ function Companions({ params }: { params: URLSearchParams }) {
       {profileCard && <OnlineProfileSheet isOpen onClose={() => setProfileCard(null)} profile={profileCard} loggedIn={loggedIn}
         initialCoop={confidants.some((c) => c.linkedCloudUserId === profileCard.id) ? 'linked' : 'none'} initialPrayed={!!friends.find((f) => f.profile.id === profileCard.id)?.prayed}
         onProposeCoop={() => setProposeTarget(profileCard)} onAcceptCoop={() => setAcceptOpen(true)} onPray={() => setPrayerFx({ kind: 'sent', name: profileCard.nickname ?? '' })} />}
-      <CoopProposeSheet isOpen={!!proposeTarget} onClose={() => setProposeTarget(null)} targetName={proposeTarget?.nickname || proposeTarget?.userId || '未命名客人'} />
-      <CoopAcceptSheet isOpen={acceptOpen} onClose={() => setAcceptOpen(false)} proposerName="阿介" />
+      <CoopProposeSheet isOpen={!!proposeTarget} onClose={() => setProposeTarget(null)} target={proposeTarget} targetName={proposeTarget?.nickname || proposeTarget?.userId || '未命名客人'} />
+      <CoopAcceptSheet isOpen={acceptOpen} onClose={() => setAcceptOpen(false)} bond={acceptBond} />
       <PactRespondSheet isOpen={pactRespondOpen} onClose={() => setPactRespondOpen(false)} name="千枝" />
       <PrayerEffect isOpen={!!prayerFx} kind={prayerFx?.kind ?? 'sent'} targetName={prayerFx?.name ?? ''} onDismiss={() => setPrayerFx(null)} />
-      <ShadowBattle isOpen={!!shadowBattle} onClose={() => setShadowBattle(null)} partnerName={shadowBattle ?? ''} onVictory={() => { setShadowBattle(null); setVictory(true); }} />
+      <ShadowBattle isOpen={!!shadowBattle} onClose={() => setShadowBattle(null)} partnerName={shadowBattle ?? ''} shadow={activeShadows[0] ?? null} onVictory={() => { setShadowBattle(null); setVictory(true); }} />
       <VictoryScreen isOpen={victory} onClose={() => setVictory(false)} partnerName="千枝" shadowName="镜中之影" />
       <CropDialog open={!!crop} onClose={() => setCrop(null)} title={crop ? `裁切 ${crop.profile.nickname} 的卡面` : '裁切卡面'} aspect={1 / 1.6} src={p4gAsset('tv-mascot.webp')}
         onDone={(url) => { if (crop) setFriends((l) => l.map((x) => (x.id === crop.id ? { ...x, face: url } : x))); setCrop(null); showToast('卡面已更新'); }} />

@@ -5,6 +5,8 @@ import { updateSettings, useSettings } from '../settingsStore';
 import { CUSTOM_PRESETS, PROVIDERS, type ProviderId } from '@pink/mock/pkg6';
 import { ModelPicker, type ModelPickerMode } from '@pink/screens/overlays/ModelPickerSheet.p3r';
 import { cx } from '@pink/lib/cx';
+import { useAppStore } from '@/store';
+import { buildAIDiagnostics } from '@/utils/aiDiagnostics';
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'error';
 const pv = (id: ProviderId) => PROVIDERS.find((p) => p.id === id)!;
@@ -32,29 +34,27 @@ export function AISection() {
   const customMissing = isCustom ? [!s.baseUrl.trim() && '地址', !s.summaryModel.trim() && '模型'].filter(Boolean) as string[] : [];
 
   const switchPv = (id: ProviderId) => { updateSettings({ provider: id }); setKeyDraft(s.keys[id] ?? ''); setTest('idle'); setTestMsg(''); setSaved(false); };
-  const save = () => { updateSettings({ keys: { ...s.keys, [provider]: keyDraft } }); setSaved(true); };
+  const save = () => {
+    updateSettings({ keys: { ...s.keys, [provider]: keyDraft }, verified: { ...s.verified, [provider]: false } });
+    setTest('idle');
+    setTestMsg('');
+    setSaved(true);
+  };
   const runTest = () => {
     if (!keyDraft.trim()) { setTest('error'); setTestMsg('请先填写 API 密钥'); return; }
     if (isCustom && !s.baseUrl.trim()) { setTest('error'); setTestMsg('先填 API 地址（或点上面的预设）'); return; }
-    setTest('testing'); setTestMsg('');
-    setTimeout(() => {
-      if (keyDraft.includes('bad')) { setTest('error'); setTestMsg('401 Unauthorized：Key 不对或已过期'); return; }
-      setTest('ok'); updateSettings({ verified: { ...s.verified, [provider]: true } });
-      setTestMsg(`连接成功 · ${pv(provider).defaultModel || 'custom-model'} · 642 ms · 模型列表已更新（3 个）`);
-    }, 900);
+    setTest('error');
+    setTestMsg('真实连接测试尚未启用。当前不会把未验证的 Key 标记为“连接正常”。');
   };
   const tierTest = () => {
-    setTierTesting(true); setTierResults([]);
-    setTimeout(() => {
-      setTierTesting(false);
-      setTierResults([
-        { label: '快速响应', model: s.summaryModel || pv(provider).defaultModel, text: '✓ 通了 · 512 ms' },
-        { label: '深思熟虑', model: s.navigatorModel || '', text: s.navigatorModel ? '✓ 通了 · 2140 ms' : '跟随快速响应' },
-        { label: '助手', model: s.assistantModel, text: s.assistantModel ? '✓ 通了 · 1320 ms' : '跟随深思熟虑' },
-        { label: '视觉', model: s.visionModel, text: s.visionModel ? '✓ 通了 · 880 ms' : '未启用' },
-        { label: '听觉', model: s.audioModel, text: s.audioModel ? '要按住话筒说一句才测得了：在助手输入栏试' : '未启用' },
-      ]);
-    }, 1100);
+    setTierTesting(false);
+    setTierResults([
+      { label: '快速响应', model: s.summaryModel || pv(provider).defaultModel, text: '未执行 · 真实连接测试待启用' },
+      { label: '深思熟虑', model: s.navigatorModel || '', text: s.navigatorModel ? '未执行 · 真实连接测试待启用' : '跟随快速响应' },
+      { label: '助手', model: s.assistantModel, text: s.assistantModel ? '未执行 · 真实连接测试待启用' : '跟随深思熟虑' },
+      { label: '视觉', model: s.visionModel, text: s.visionModel ? '未执行 · 真实连接测试待启用' : '未启用' },
+      { label: '听觉', model: s.audioModel, text: s.audioModel ? '要按住话筒说一句才测得了：在助手输入栏试' : '未启用' },
+    ]);
   };
   const ModelBtn = ({ mode, value, fallback }: { mode: ModelPickerMode; value: string; fallback: string }) => (
     <button type="button" onClick={() => setPicker(mode)} className="flex w-full min-w-0 items-center gap-2 rounded-none border-2 border-p3r-lilac/50 bg-p3r-panel px-3 py-2 text-left text-p3r-ink">
@@ -81,8 +81,8 @@ export function AISection() {
       </button>
       {configured && provider === 'deepseek' && (
         <div className="flex min-w-0 items-center gap-2 rounded-none border-2 border-p3r-coral bg-[rgb(var(--p3r-magenta-rgb)/0.15)] px-3 py-2 text-meta font-bold">
-          <span className="min-w-0 flex-1">DeepSeek 账户余额只剩 ¥2.40，用完后 AI 功能会停下</span>
-          <a href="https://platform.deepseek.com/top_up" target="_blank" rel="noopener noreferrer" className="shrink-0 text-p3r-lilac-ink underline">去充值 ↗</a>
+          <span className="min-w-0 flex-1">当前不读取服务商余额；请到服务商后台确认额度和计费状态。</span>
+          <a href="https://platform.deepseek.com/top_up" target="_blank" rel="noopener noreferrer" className="shrink-0 text-p3r-lilac-ink underline">打开后台 ↗</a>
         </div>
       )}
       {expanded && (
@@ -154,9 +154,9 @@ export function AISection() {
         <div className="space-y-2">
           <div className="flex min-w-0 flex-wrap gap-2">
             <CfgBtn tone="primary" onClick={tierTest} disabled={tierTesting}>{tierTesting ? '逐档测试中…' : '逐档测一遍'}</CfgBtn>
-            <CfgBtn onClick={() => { setFetching(true); setTimeout(() => { setFetching(false); setFetchMsg('已更新：DeepSeek（3）、千问（7）'); }, 900); }} disabled={fetching}>{fetching ? '拉取中…' : '刷新全部模型列表'}</CfgBtn>
+            <CfgBtn onClick={() => { setFetching(false); setFetchMsg('模型列表刷新尚未启用；当前不会伪造模型数量。'); }} disabled={fetching}>{fetching ? '拉取中…' : '刷新全部模型列表'}</CfgBtn>
           </div>
-          {fetchMsg && <CfgMsg ok>{fetchMsg}</CfgMsg>}
+          {fetchMsg && <CfgMsg ok={false}>{fetchMsg}</CfgMsg>}
           {tierResults.length > 0 && (
             <ul className="grid grid-cols-1 gap-1 rounded-none bg-p3r-ink p-2 text-p3r-on-ink night:border-2">
               {tierResults.map((r) => <li key={r.label} className="flex min-w-0 gap-2 text-meta"><b className="w-[4.5em] shrink-0 text-p3r-rose">{r.label}</b><span className="min-w-0 truncate">{r.model && <span className="font-num opacity-75">{r.model} · </span>}{r.text}</span></li>)}
@@ -189,7 +189,7 @@ export function AISection() {
       {/* ── 诊断 ── */}
       <CfgList className="pt-2">
         <CfgRow inline label="复制 AI 诊断信息" hint="最近 20 次请求的成败、耗时和服务商，不含聊天内容和 Key。遇到连不上时复制给我们。">
-          <CfgBtn onClick={() => { void navigator.clipboard?.writeText('[maskaria ai diag] 20 req · ok 18 · fail 2').then(() => setDiag('ok'), () => setDiag('fail')); }}>{diag === 'ok' ? '已复制' : diag === 'fail' ? '复制失败' : '复制'}</CfgBtn>
+          <CfgBtn onClick={() => { void navigator.clipboard?.writeText(buildAIDiagnostics(useAppStore.getState().settings)).then(() => setDiag('ok'), () => setDiag('fail')); }}>{diag === 'ok' ? '已复制' : diag === 'fail' ? '复制失败' : '复制'}</CfgBtn>
         </CfgRow>
       </CfgList>
       <ModelPicker mode={pickerMode} open={!!picker} onClose={() => setPicker(null)} />

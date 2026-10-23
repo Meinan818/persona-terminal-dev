@@ -2,7 +2,7 @@
 import type { OverlayProps } from '@yellow/registry/types';
 import type { LedgerEntry } from '@real/types';
 import { P4Dialog } from '@yellow/kit';
-import { CNY, LEDGER_ENTRIES, fmtMoney } from '@yellow/mock/pkg5';
+import { CNY, fmtMoney } from '@yellow/mock/pkg5';
 
 export function LedgerDeleteConfirmView({ target, open, onClose, onConfirm }: { target: LedgerEntry | null; open: boolean; onClose: () => void; onConfirm: () => void }) {
   return (
@@ -13,5 +13,5 @@ export function LedgerDeleteConfirmView({ target, open, onClose, onConfirm }: { 
 }
 
 export default function LedgerDeleteConfirm({ open, onClose }: OverlayProps) {
-  return <LedgerDeleteConfirmView open={open} onClose={onClose} target={LEDGER_ENTRIES[2]} onConfirm={() => undefined} />;
+  return <LedgerDeleteConfirmView open={open} onClose={onClose} target={null} onConfirm={() => undefined} />;
 }

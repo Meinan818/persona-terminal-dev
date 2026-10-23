@@ -7,8 +7,9 @@ import type { OverlayProps } from '@yellow/registry/types';
 import { P4Button, P4Sheet } from '@yellow/kit';
 import { ArcanaPickerForm, type ArcanaPickValue } from '@yellow/screens/pkg3/ArcanaPickerForm';
 import { MatchingSpinner, Sparkle } from '@yellow/screens/pkg3/ui';
-import { PK3_CONFIDANTS } from '@yellow/mock/pkg3';
+import { coopBondOps, useCooperationData } from '@yellow/adapters/pkg3';
 import { CoopAiMatchSheet } from './CoopAiMatchModal.p4g';
+import type { CloudProfile } from '@real/types';
 
 type Mode = 'choose' | 'manual' | 'ai' | 'sent';
 
@@ -30,19 +31,42 @@ export function ModeCards({ targetName, onPick, accept }: { targetName: string; 
   );
 }
 
-export function CoopProposeSheet({ isOpen, onClose, targetName, initialMode = 'choose' }: { isOpen: boolean; onClose: () => void; targetName: string; initialMode?: Mode }) {
+export function CoopProposeSheet({ isOpen, onClose, targetName: legacyTargetName, target = null, initialMode = 'choose' }: { isOpen: boolean; onClose: () => void; targetName?: string; target?: CloudProfile | null; initialMode?: Mode }) {
+  const { confidants } = useCooperationData();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const [v, setV] = useState<ArcanaPickValue>({ arcanaId: 'magician', orientation: 'upright', level: 3, attr: 'dexterity', message: '', skipAi: false });
   useEffect(() => { if (isOpen) setMode(initialMode); }, [isOpen, initialMode]);
-  const taken = PK3_CONFIDANTS.filter((c) => !c.archivedAt).map((c) => c.arcanaId);
-  const submit = () => { setSubmitting(true); window.setTimeout(() => { setSubmitting(false); setMode('sent'); }, 700); };
+  const targetName = target?.nickname || target?.userId || legacyTargetName || '对方';
+  const taken = confidants.filter((c) => !c.archivedAt).map((c) => c.arcanaId);
+  const submit = async () => {
+    if (!target || submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await coopBondOps.propose({
+        targetUserId: target.id,
+        arcanaId: v.arcanaId,
+        orientation: v.orientation,
+        intimacyLevel: v.level,
+        skillAttribute: v.attr,
+        message: v.message,
+      });
+      setMode('sent');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '发送失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <>
       <P4Sheet open={isOpen} onClose={onClose} title={`和 ${targetName} 缔结契约`} en="COOP PROPOSAL" size="tall"
         footer={mode === 'manual' ? <div className="flex gap-3"><P4Button variant="secondary" block disabled={submitting} onClick={onClose}>再想想</P4Button><P4Button block busy={submitting} onClick={submit}>{submitting ? '发送中…' : '发出提议'}</P4Button></div>
           : mode === 'sent' ? <P4Button block onClick={onClose}>好的</P4Button> : undefined}>
         <p className="-mt-1 mb-3 text-meta text-p4g-ink-soft">挑一张塔罗代表 Ta 在你眼里的样子。Ta 接受后，你们的在线同伴卡会自动建立。</p>
+        {!target ? <p className="py-8 text-center text-meta font-bold text-p4g-ink-soft">还没有可邀请的在线好友。先在通知或在线同伴入口建立好友关系。</p> : <>
         {mode === 'choose' && <ModeCards targetName={targetName} onPick={setMode} />}
         {(mode === 'manual' || mode === 'ai') && <button type="button" onClick={() => setMode('choose')} className="mb-3 font-display text-meta font-bold text-p4g-ink-soft underline decoration-p4g-orange decoration-2 underline-offset-4">‹ 换一种方式</button>}
         {mode === 'manual' && <ArcanaPickerForm value={v} onChange={setV} taken={taken} hint="从下方 22 张大阿卡纳中挑一张" messagePlaceholder={`对 ${targetName} 说点什么（可选）`} />}
@@ -54,6 +78,8 @@ export function CoopProposeSheet({ isOpen, onClose, targetName, initialMode = 'c
             <p className="mt-1 text-meta text-p4g-ink-soft">{targetName} 收到后会挑一张自己的塔罗。<br />接受后，你们的在线同伴卡会自动建立。14 天未响应会自动过期。</p>
           </div>
         )}
+        {error && <p className="mt-3 text-meta font-bold text-p4g-danger">{error}</p>}
+        </>}
       </P4Sheet>
       <CoopAiMatchSheet isOpen={isOpen && mode === 'ai'} onClose={() => setMode((m) => (m === 'ai' ? 'choose' : m))} targetName={targetName} onConfirm={() => window.setTimeout(submit, 50)} />
     </>
@@ -62,5 +88,6 @@ export function CoopProposeSheet({ isOpen, onClose, targetName, initialMode = 'c
 
 export default function CoopProposeModal({ open, onClose, params }: OverlayProps) {
   const m = params?.get('state') === 'sent' ? 'sent' : (params?.get('via') as Mode) || 'choose';
-  return <CoopProposeSheet isOpen={open} onClose={onClose} targetName="阿介" initialMode={m} />;
+  const target = useCooperationData().friends[0]?.profile ?? null;
+  return <CoopProposeSheet isOpen={open} onClose={onClose} target={target} initialMode={m} />;
 }

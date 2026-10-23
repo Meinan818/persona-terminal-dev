@@ -123,7 +123,7 @@ function ConfidantRow({ c, index, prayer, shadow, onOpen, onShadow }: { c: Confi
 
 export default function Cooperation({ params }: PageProps) {
   const bold = useBoldness();
-  const { cloudUser, confidants: realConfidants, counselArchives, friends: realFriends, materializeBlockers, activeShadows, unreadCount, counselState } = useCooperationData();
+  const { cloudUser, confidants: realConfidants, counselArchives, friends: realFriends, materializeBlockers, activeShadows, coopBonds, unreadCount, counselState } = useCooperationData();
   const state = params?.get('state');
   const [view, setView] = useState<'list' | 'wall'>((params?.get('view') as 'list' | 'wall') || 'wall');
   const [filter, setFilter] = useState<Filter>((params?.get('filter') as Filter) || 'all');
@@ -147,6 +147,7 @@ export default function Cooperation({ params }: PageProps) {
 
   const friends: FriendItem[] = useMemo(() => (state === 'empty' ? [] : realFriends.map((f) => ({ ...f, prayed: f.prayed || !!prayed[f.id] }))), [state, realFriends, prayed]);
   const shadow = useMemo(() => activeShadows[0] ? shadowForConfidant(activeShadows[0], cloudUser?.id) : null, [activeShadows, cloudUser?.id]);
+  const acceptBond = useMemo(() => coopBonds.find((b) => b.status === 'pending' && (!friend || b.otherProfile?.id === friend.profile.id)) ?? coopBonds.find((b) => b.status === 'pending') ?? null, [coopBonds, friend]);
   const active = list.filter((c) => !c.archivedAt);
   const counts: Record<Filter, number> = { all: active.length, online: active.filter((c) => c.source === 'online').length, offline: active.filter((c) => c.source !== 'online').length, archived: list.filter((c) => !!c.archivedAt).length };
   const shown = filter === 'all' ? active : filter === 'online' ? active.filter((c) => c.source === 'online') : filter === 'offline' ? active.filter((c) => c.source !== 'online') : list.filter((c) => !!c.archivedAt);
@@ -269,9 +270,9 @@ export default function Cooperation({ params }: PageProps) {
       <PactRespondSheet isOpen={ov === 'pactRespond'} onClose={close} name={friend?.profile.nickname ?? '对方'} />
       <AddOnlineSheet isOpen={ov === 'addOnline'} onClose={close} />
       {friend && <OnlineProfileSheet isOpen={ov === 'profile'} onClose={close} profile={friend.profile} initialCoop={friend.id.startsWith('c-') ? 'linked' : 'none'} initialPrayed={friend.prayed} onProposeCoop={() => setOv('propose')} onAcceptCoop={() => setOv('accept')} />}
-      <CoopProposeSheet isOpen={ov === 'propose'} onClose={close} targetName={friend?.profile.nickname ?? '对方'} />
-      <CoopAcceptSheet isOpen={ov === 'accept'} onClose={close} proposerName={friend?.profile.nickname ?? '对方'} />
-      {sel && <ShadowBattle isOpen={ov === 'shadow'} onClose={close} partnerName={sel.name} onVictory={() => window.setTimeout(() => setOv('victory'), 300)} />}
+      <CoopProposeSheet isOpen={ov === 'propose'} onClose={close} target={friend?.profile ?? null} targetName={friend?.profile.nickname ?? friend?.profile.userId ?? '对方'} />
+      <CoopAcceptSheet isOpen={ov === 'accept'} onClose={close} bond={acceptBond} proposerName={friend?.profile.nickname ?? friend?.profile.userId ?? '对方'} />
+      {sel && <ShadowBattle isOpen={ov === 'shadow'} onClose={close} partnerName={sel.name} shadow={activeShadows[0] ?? null} onVictory={() => window.setTimeout(() => setOv('victory'), 300)} />}
       {sel && <VictoryScreen isOpen={ov === 'victory'} onClose={close} partnerName={sel.name} shadowName={shadow?.name ?? '羁绊之影'} />}
       {ov === 'starshift' && sel && <StarShiftModal confidant={sel} charges={sel.starShiftCharges ?? 1} onClose={() => setOv('detail')} />}
       <PrayerEffect isOpen={!!fx} kind={fx?.kind ?? 'sent'} targetName={fx?.name ?? ''} onDismiss={() => setFx(null)} />

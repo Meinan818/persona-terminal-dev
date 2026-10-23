@@ -4,10 +4,12 @@
  * 读不到 → 「—」未知 + 重试（?state=unknown）；建议；警示；「从云端下载并覆盖」「上传本地数据覆盖云端」「稍后再决定」。
  * 外观：P4G Status 对照表（两张拼贴卡并排，大号斜体数字）。
  */
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P6Dialog } from '@yellow/screens/pkg6/dialog';
-import { CONFLICT_ROWS } from '@yellow/mock/pkg6';
+import { computeSyncDiff } from '@/services/sync';
+import { useAppStore } from '@/store';
+import { useCloudStore } from '@/store/cloud';
 import { useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 
@@ -32,17 +34,29 @@ export default function ConflictDialog({ open, onClose, params }: OverlayProps) 
   const [unknown, setUnknown] = useState(params?.get('state') === 'unknown');
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<'pull' | 'push' | null>(null);
-  const local = CONFLICT_ROWS.map((r) => ({ label: r.label, v: r.local }));
-  const cloud = CONFLICT_ROWS.map((r) => ({ label: r.label, v: r.cloud }));
-  const lt = local.reduce((a, b) => a + b.v, 0), ct = cloud.reduce((a, b) => a + b.v, 0);
-  const run = (k: 'pull' | 'push') => { setBusy(k); setTimeout(() => { setBusy(null); toast.success(k === 'pull' ? '已从云端下载并覆盖' : '已上传本地数据覆盖云端'); onClose(); }, 1000); };
+  const [diff, setDiff] = useState<Awaited<ReturnType<typeof computeSyncDiff>>>(null);
+  const localName = useAppStore((state) => state.user?.name ?? '本机档案');
+  const cloudUser = useCloudStore((state) => state.cloudUser);
+  const cloudName = String(cloudUser?.nickname ?? cloudUser?.username ?? '云端档案');
+  const labels: Record<string, string> = { activities: '活动', todos: '任务', confidants: '同伴', summaries: '总结', dailyDivinations: '每日塔罗', longReadings: '中长期占卜' };
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    setUnknown(false);
+    void computeSyncDiff().then((next) => { setDiff(next); setUnknown(!next); }).catch(() => { setDiff(null); setUnknown(true); }).finally(() => setLoading(false));
+  }, [open]);
+  const rows = useMemo(() => Object.entries(labels).map(([key, label]) => ({ key, label, local: diff?.tables.find((item) => item.key === key)?.localCount ?? 0, cloud: diff?.tables.find((item) => item.key === key)?.cloudCount ?? 0 })), [diff]);
+  const local = rows.map((row) => ({ label: row.label, v: row.local }));
+  const cloud = rows.map((row) => ({ label: row.label, v: row.cloud }));
+  const lt = diff?.localTotal ?? 0, ct = diff?.cloudTotal ?? 0;
+  const run = (k: 'pull' | 'push') => { setBusy(k); toast.error('这里只做真实数据对比；覆盖操作请到「账号与数据」执行'); setBusy(null); };
   return (
     <P6Dialog open={open} onClose={onClose} wide speaker="云同步" icon="🏠" title="两个房间的档案" description="本机与云端都有档案。看一眼两边的大致情况，选择保留哪一份" busy={!!busy} busyText="处理中…" dismissible={false}
       choices={[{ id: 'pull', label: busy === 'pull' ? '处理中…' : '从云端下载并覆盖', hint: '保留云端档案 · 本机现有数据会被替换', primary: true }, { id: 'push', label: busy === 'push' ? '处理中…' : '上传本地数据覆盖云端', hint: '保留本机档案 · 云端现有数据会被替换' }, { id: 'later', label: '稍后再决定' }]}
       onChoice={(id) => (id === 'later' ? onClose() : run(id as 'pull' | 'push'))}>
       <div className="grid grid-cols-2 gap-2">
-        <Side title="本机" name="鸣上悠" rows={local} total={lt} latest="刚刚" loading={loading} unknown={unknown} tone="local" />
-        <Side title="云端" name="云端档案" rows={cloud} total={ct} latest="3 天前" loading={loading} unknown={unknown} tone="cloud" />
+        <Side title="本机" name={localName} rows={local} total={lt} latest={diff?.localLatest ? new Date(diff.localLatest).toLocaleString('zh-CN') : '—'} loading={loading} unknown={unknown} tone="local" />
+        <Side title="云端" name={cloudName} rows={cloud} total={ct} latest={diff?.cloudLatest ? new Date(diff.cloudLatest).toLocaleString('zh-CN') : '—'} loading={loading} unknown={unknown} tone="cloud" />
       </div>
       {unknown ? (
         <div className="mt-2 rounded-[4px] border-2 border-p4g-orange px-3 py-2 text-meta leading-relaxed">

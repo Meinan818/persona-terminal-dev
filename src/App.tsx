@@ -192,6 +192,13 @@ const isStandalonePwa = () => (
   || ('standalone' in window.navigator && (window.navigator as Navigator & { standalone?: boolean }).standalone === true)
 );
 
+const themeSplashStyle = (theme?: string): NonNullable<SplashScreenProps['splashStyle']> => {
+  if (theme === 'red' || theme === 'p5') return 'p5';
+  if (theme === 'yellow' || theme === 'p4') return 'p4';
+  if (theme === 'blue' || theme === 'pink' || theme === 'p3') return 'p3';
+  return 'velvet';
+};
+
 function App() {
   /**
    * 逐字段订阅（v2.6.5 性能整改 A2）。
@@ -262,10 +269,12 @@ function App() {
   // 快速预加载开屏动画设置，确保 splash 使用用户选中的样式
   useEffect(() => {
     bootStage('splash');
-    db.settings.get('default').then(s => {
-      if (s) setSplashPrefs({ splashStyle: s.splashStyle, splashSpeed: s.splashSpeed });
-      else setSplashPrefs({});
-    }).catch(() => setSplashPrefs({}));
+    Promise.all([db.settings.get('default'), db.users.toCollection().first()])
+      .then(([s, bootUser]) => setSplashPrefs({
+        splashStyle: s?.splashStyle ?? themeSplashStyle(bootUser?.theme),
+        splashSpeed: s?.splashSpeed,
+      }))
+      .catch(() => setSplashPrefs({ splashStyle: 'velvet' }));
   }, []);
 
   useEffect(() => {
@@ -989,7 +998,7 @@ function App() {
               </main>
 
                {/* 升级弹窗 */}
-               {uiChannel !== 'p4' && levelUpNotification && !modalBlocker && (
+              {uiChannel === 'neutral' && levelUpNotification && !modalBlocker && (
                  <LevelUpModal
                    attributeName={levelUpNotification.displayName}
                    newLevel={levelUpNotification.level}
@@ -1000,7 +1009,7 @@ function App() {
                )}
 
                {/* 成就解锁弹窗 */}
-               {uiChannel !== 'p4' && achievementNotification && !modalBlocker && !levelUpNotification && (
+              {uiChannel === 'neutral' && achievementNotification && !modalBlocker && !levelUpNotification && (
                  <AchievementUnlockModal
                    achievementTitle={achievementNotification.title}
                    lines={ACHIEVEMENT_UNLOCK_LINES[achievementNotification.id]}
@@ -1010,7 +1019,7 @@ function App() {
                )}
 
                {/* 技能解锁弹窗 */}
-               {uiChannel !== 'p4' && skillNotification && !modalBlocker && !levelUpNotification && !achievementNotification && (
+              {uiChannel === 'neutral' && skillNotification && !modalBlocker && !levelUpNotification && !achievementNotification && (
                  <SkillUnlockModal
                    skillName={skillNotification.name}
                    isOpen={!!skillNotification}

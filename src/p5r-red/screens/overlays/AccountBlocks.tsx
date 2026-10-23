@@ -10,6 +10,7 @@ import { toast } from '@/p5r-red/kit/P5Toast';
 import { P5Mask } from '@/p5r-red/kit/P5Mask';
 import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { ATTR_ORDER, D } from '@/p5r-red/mock/data';
+import { useAppStore } from '@/store';
 import { ObCard, ObRow, ObSw, ObMsg, ObNote, ObSub, ObLink, ObBtn, ObLi, BusyBtn, useMsgBox, ObConfirm, ObTa } from './ObKit';
 
 export const TOTAL = ATTR_ORDER.reduce((s, k) => s + D.attrs[k].pts, 0);
@@ -21,7 +22,7 @@ export function AccountConfirm({ kind, open, onClose, onDone }: { kind: AccountC
   const done = (m: string) => () => { toast(m); onDone?.(); };
   switch (kind) {
     case 'logout': return <ObConfirm open={open} onClose={onClose} title="退出登录？" desc="退出后此设备将停止同步，但本机数据不会被删除。下次登录同一账号可继续。" confirm="确认退出" busy="退出中…" onConfirm={done('已退出登录 · 本机数据仍在')} />;
-    case 'reset': return <ObConfirm open={open} onClose={onClose} title="确认重置数据" danger desc="此操作将删除所有用户数据，包括：" list={['所有行为记录', '所有成就进度', '所有技能解锁', '所有属性进度']} warn="此操作无法撤销！" confirm="确认重置" onConfirm={done('已重置所有数据')} />;
+    case 'reset': return <ObConfirm open={open} onClose={onClose} title="确认重置数据" danger desc="此操作将删除所有用户数据，包括：" list={['所有行为记录', '所有成就进度', '所有技能解锁', '所有属性进度']} warn="此操作无法撤销！" confirm="确认重置" onConfirm={() => { void useAppStore.getState().resetAllData().then(done('已清空所有数据')).catch(() => toast('重置失败，请重试')); }} />;
     case 'deleteCloud': return <ObConfirm open={open} onClose={onClose} title="永久删除云端账号？" danger desc="将删除：" list={['云端账号（邮箱 / UserID / 档案）', '云端同步的全部数据', '与好友的 COOP 关联']} warn="本机数据不受影响，仍完整保留在此设备上。" confirm="永久删除" busy="正在删除…" fail="注销失败：网络不可用，请稍后再试（再点一次演示成功）" failNow={() => { const f = delFailOnce; delFailOnce = !delFailOnce; return f; }} onConfirm={done('云端账号已永久删除')} />;
     default: return <ObConfirm open={open} onClose={onClose} title="从云端拉取数据？" desc={<>会用云端数据<b>覆盖本机</b>。如果本机有未同步的改动，请先点"立即同步到云端"。</>} confirm="确认拉取" busy="拉取中…" onConfirm={done('已从云端拉取')} />;
   }

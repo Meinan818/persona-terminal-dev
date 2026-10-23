@@ -18,6 +18,7 @@ import { AccountManagePanelView } from '@yellow/screens/overlays/AccountManagePa
 import { SyncPrivacySection } from '@yellow/screens/overlays/SyncPrivacyPanel.p4g';
 import { AccountConfirmView, type ConfirmKind } from '@yellow/screens/overlays/AccountConfirms.p4g';
 import { useAccountData } from '@yellow/adapters/pkg5';
+import { useAppStore } from '@/store';
 
 const Sub = ({ children }: { children: ReactNode }) => (
   <p className="mb-2 flex items-center gap-2 font-display text-body font-bold text-p4g-ink"><span aria-hidden className="h-4 w-2 -skew-x-12 bg-p4g-orange" />{children}</p>
@@ -26,6 +27,7 @@ const Sub = ({ children }: { children: ReactNode }) => (
 export default function Account({ params }: PageProps) {
   const { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS, SIGNED_IN, CLOUD_ENABLED } = useAccountData();
   const toast = useToast();
+  const resetAllData = useAppStore((s) => s.resetAllData);
   const p = usePresence();
   const derivedState = CLOUD_ENABLED ? (SIGNED_IN ? 'signed-in' : 'signed-out') : 'unconfigured';
   const [state, setState] = useState(params.get('state') ?? derivedState);
@@ -214,7 +216,14 @@ export default function Account({ params }: PageProps) {
 
       <DevStateBar value={state} onChange={setState} items={[{ id: 'signed-in', label: '已登录' }, { id: 'no-uid', label: '未设 UserID' }, { id: 'sync-error', label: '同步失败' }, { id: 'signed-out', label: '未登录' }, { id: 'expired', label: '登录已失效' }, { id: 'unconfigured', label: '未配置' }]} />
 
-      <AccountConfirmView kind={confirm} open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={(k) => { toast.success(({ reset: '数据已重置', pull: '已从云端拉取', logout: '已退出登录', delete: '云端账号已删除' })[k]); if (k === 'logout' || k === 'delete') setState('signed-out'); }} />
+      <AccountConfirmView kind={confirm} open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={(k) => {
+        if (k === 'reset') {
+          void resetAllData().then(() => toast.success('数据已清空')).catch(() => toast.error('重置失败，请重试'));
+          return;
+        }
+        toast.success(({ pull: '已从云端拉取', logout: '已退出登录', delete: '云端账号已删除' })[k]);
+        if (k === 'logout' || k === 'delete') setState('signed-out');
+      }} />
       <LoginModalView open={login} onClose={() => setLogin(false)} needConsent={state !== 'expired'} onLoggedIn={() => { setState('signed-in'); toast.success('欢迎回来'); }} />
       <AccountManagePanelView open={manage} onClose={() => setManage(false)} userId={uid} onUserIdChange={(v) => setUid(v)} />
     </>

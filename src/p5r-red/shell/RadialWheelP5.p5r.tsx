@@ -50,7 +50,8 @@ export function RadialWheelP5({ open, origin, hold, onClose, onNavigate, reduced
   const R = reduced || isLowMotion();
   const g = useMemo(() => {
     const ox = origin?.x ?? innerWidth / 2, oy = origin?.y ?? innerHeight - 46;
-    const K = 1.15, radius = Math.min(148, innerWidth / 2 - 46), DEAD = 48, SEG = 180 / WHEEL.length;
+    const K = Math.min(0.68, Math.max(0.5, innerWidth / 780));
+    const radius = Math.min(104, innerWidth / 2 - 40), DEAD = 40, SEG = 180 / WHEEL.length;
     return { ox, oy, K, radius, DEAD, SEG };
   }, [origin, open]); // eslint-disable-line react-hooks/exhaustive-deps
   const holdMode = hold ?? ptrDown;
@@ -70,16 +71,9 @@ export function RadialWheelP5({ open, origin, hold, onClose, onNavigate, reduced
     const onUp = (e: PointerEvent) => { if (holdMode) done(pick(e.clientX, e.clientY)); };
     const onCancel = () => onClose();
     const onTap = (e: MouseEvent) => { if (holdMode) return; if (R) { const b = (e.target as Element).closest<HTMLElement>('[data-id]'); onClose(); if (b) nav(b.dataset.id!); return; } done(pick(e.clientX, e.clientY)); };
-    // 红青活高亮
-    const live = window.setInterval(() => {
-      const h = el.querySelector('.oa-st.on .hl'); if (!h) return;
-      const r = (a: number, b: number) => (a + Math.random() * (b - a)).toFixed(1);
-      h.querySelector('.hr')!.setAttribute('points', `${r(0, 6)},${r(0, 10)} ${r(94, 100)},${r(0, 8)} ${r(90, 98)},${r(32, 40)} ${r(0, 5)},${r(30, 38)}`);
-      h.querySelector('.hc')!.setAttribute('points', `${r(2, 8)},${r(0, 8)} ${r(95, 100)},${r(0, 6)} ${r(88, 96)},${r(34, 40)} ${r(0, 6)},${r(34, 40)}`);
-    }, 130);
     addEventListener('pointermove', onMove); addEventListener('pointerup', onUp); addEventListener('pointercancel', onCancel);
     const tt = window.setTimeout(() => el.addEventListener('click', onTap), holdMode ? 0 : 60);
-    return () => { clearInterval(live); clearTimeout(tt); removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp); removeEventListener('pointercancel', onCancel); el.removeEventListener('click', onTap); };
+    return () => { clearTimeout(tt); removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp); removeEventListener('pointercancel', onCancel); el.removeEventListener('click', onTap); };
   }, [mounted, open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open || !mounted) return;

@@ -18,6 +18,7 @@ import { AccountManagePanelView } from '@blue/screens/overlays/AccountManagePane
 import { SyncPrivacySection } from '@blue/screens/overlays/SyncPrivacyPanel.p3r';
 import { AccountConfirmView, type ConfirmKind } from '@blue/screens/overlays/AccountConfirms.p3r';
 import { useAccountData } from '@blue/adapters/pkg5';
+import { useAppStore } from '@/store';
 
 const Sub = ({ children, right }: { children: ReactNode; right?: ReactNode }) => (
   <div className="mb-2 flex min-w-0 items-center gap-2">
@@ -35,6 +36,7 @@ const Card = ({ children, tone }: { children: ReactNode; tone?: 'danger' }) => (
 export default function Account({ params }: PageProps) {
   const { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS } = useAccountData();
   const toast = useToast();
+  const resetAllData = useAppStore((s) => s.resetAllData);
   const p = usePresence();
   const [state, setState] = useState(params.get('state') ?? 'signed-in');
   const [tip, setTip] = useState(true);
@@ -224,7 +226,15 @@ export default function Account({ params }: PageProps) {
         </P3StaggerItem>
       </P3Stagger>
 
-      <AccountConfirmView kind={confirm} open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={(k) => { toast.success(({ reset: '数据已重置', pull: '已从云端拉取', logout: '已退出登录', delete: '云端账号已删除' })[k]); if (k === 'logout' || k === 'delete') setState('signed-out'); if (k === 'pull') setLastSync('刚刚'); }} />
+      <AccountConfirmView kind={confirm} open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={(k) => {
+        if (k === 'reset') {
+          void resetAllData().then(() => toast.success('数据已清空')).catch(() => toast.error('重置失败，请重试'));
+          return;
+        }
+        toast.success(({ pull: '已从云端拉取', logout: '已退出登录', delete: '云端账号已删除' })[k]);
+        if (k === 'logout' || k === 'delete') setState('signed-out');
+        if (k === 'pull') setLastSync('刚刚');
+      }} />
       <LoginModalView open={login} onClose={() => setLogin(false)} needConsent={state !== 'expired'} onLoggedIn={() => { setState('signed-in'); toast.success('欢迎回来'); }} />
       <AccountManagePanelView open={manage} onClose={() => setManage(false)} userId={uid} onUserIdChange={(v) => setUid(v)} />
     </div>

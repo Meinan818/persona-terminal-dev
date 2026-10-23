@@ -14,6 +14,7 @@ import { GlobalOverlayHost } from './bridge/GlobalOverlayHost';
 import { CallingCardOverlayHost } from './bridge/CallingCardOverlayHost';
 import { usePresence, setPresence } from '@pink/screens/pkg5/presence';
 import { PresenceBridge } from '@/themes/integration/PresenceBridge';
+import { ThemeSfxBridge } from '@/ui/ThemeSfxBridge';
 
 let inited = false;
 function initOnce() {
@@ -31,6 +32,7 @@ export default function ThemeApp() {
       <RouteBridge />
       <PresenceSync />
       <DemoApp />
+      <ThemeSfxBridge />
       <GlobalOverlayHost />
       <CallingCardOverlayHost />
     </>

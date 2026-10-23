@@ -14,7 +14,8 @@ import { P3R, slantClip, showToast } from '@pink/kit';
 import { OVERLAYS } from '@pink/registry/overlays';
 import { lazyOf } from '@pink/shell/lazyRegistry';
 import duskImg from '@pink/assets/pink/pink-dusk-day.webp';
-import { LEVEL_THRESHOLDS, MAX_LEVEL, MOCK_ATTRS, MOCK_WEATHER, levelTitle, masteryOf, masteryTitle, moonPhaseOf, relatedAchievements, daysUntil, type MockTodo } from '@pink/mock/pkg1';
+import { LEVEL_THRESHOLDS, MAX_LEVEL, MOCK_WEATHER, levelTitle, masteryOf, masteryTitle, moonPhaseOf, daysUntil, type MockTodo } from '@pink/mock/pkg1';
+import { relatedAchievements, useHomeData } from '@/themes/homeData';
 import { TRI_CLIP, TRI_PATH } from './fxbits';
 
 /* ─────────── 天空位：月相 ⇄ 天气 ─────────── */
@@ -244,7 +245,8 @@ export const BigDealHomeCard = ({ todo, onOpen, highlight }: { todo: MockTodo; o
 
 /* ─────────── 原地属性详情 ─────────── */
 export const AttrDetailInline = ({ attrId, onBack }: { attrId: AttributeId; onBack: () => void }) => {
-  const attr = MOCK_ATTRS.find((a) => a.id === attrId)!;
+  const { MOCK_ATTRS } = useHomeData();
+  const attr = MOCK_ATTRS.find((a) => a.id === attrId) ?? { id: attrId, name: attrId, points: 0, level: 1 };
   const level = attr.level;
   const isMax = level >= MAX_LEVEL;
   const cur = level > 1 ? LEVEL_THRESHOLDS[level - 1] : 0;

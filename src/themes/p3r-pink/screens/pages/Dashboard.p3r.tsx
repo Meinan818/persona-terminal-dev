@@ -20,9 +20,9 @@ import { HomeHeroDecor } from '@pink/fx';
 import { useBoldness } from '@pink/lib/prefs';
 import { navigate } from '@pink/shell/shellBus';
 import {
-  ATTR_IDS, ATTR_NAMES, BIG_DEAL_DONE, BIG_DEAL_EMPTY, MAX_LEVEL, MOCK_ATTRS, MOCK_CALLING_CARD, MOCK_CALLING_CARD_FAR, MOCK_COUNTERCURRENT, MOCK_DECAYED, MOCK_DIVINATION,
-  MOCK_PERSONA_NAME, MOCK_STATS, MOCK_TODOS, MOCK_UNPINNED_COUNT, SUBTEXTS, daysUntil, levelTitle, masteryOf, masteryTitle, onThisDaySub, slotOf, todayKey, type MockTodo,
+  ATTR_IDS, BIG_DEAL_DONE, BIG_DEAL_EMPTY, MAX_LEVEL, SUBTEXTS, daysUntil, levelTitle, masteryOf, masteryTitle, slotOf, todayKey, type MockTodo,
 } from '@pink/mock/pkg1';
+import { homeOps, onThisDaySub, useHomeData } from '@/themes/homeData';
 import { StarChartP3, type StarItem } from '@pink/screens/pkg1/StarChart';
 import {
   AttrDetailInline, BattleSlab, BgAnimLayer, BigDealHomeCard, HourglassGlyph, MoonGlyph, OverlayByKey, RitualSlab, SkyBadge, StackCarousel, TitleTriWobble, TRI_MASK_URI, WaveGlyph,
@@ -53,16 +53,35 @@ export default function Dashboard({ params }: PageProps) {
   const q = (k: string) => params.get(k);
   const now = useMemo(() => new Date(), []);
   const subtext = useMemo(() => { const pool = SUBTEXTS[slotOf(now.getHours())]; return pool[Math.floor(Math.random() * pool.length)]; }, [now]);
+  const {
+    ATTR_NAMES,
+    MOCK_ATTRS,
+    MOCK_CALLING_CARD,
+    MOCK_CALLING_CARD_FAR,
+    MOCK_COUNTERCURRENT,
+    MOCK_DECAYED,
+    MOCK_DIVINATION,
+    MOCK_PERSONA_NAME,
+    MOCK_STATS,
+    MOCK_TODOS,
+    MOCK_UNPINNED_COUNT,
+    MOCK_USER_NAME,
+  } = useHomeData();
 
   // ── 今日任务 ──
   const dealVariant = q('deal');
-  const [todos, setTodos] = useState<MockTodo[]>(() => {
-    if (q('state') === 'empty') return [];
-    const base = MOCK_TODOS.map((t) => ({ ...t }));
-    if (dealVariant === 'empty') base[0] = { ...BIG_DEAL_EMPTY };
-    if (dealVariant === 'done') base[0] = { ...BIG_DEAL_DONE };
-    return base;
-  });
+  const emptyParam = q('state') === 'empty';
+  const [todos, setTodos] = useState<MockTodo[]>([]);
+  useEffect(() => {
+    if (emptyParam) {
+      setTodos([]);
+      return;
+    }
+    const base = MOCK_TODOS.map((t) => ({ ...t })) as unknown as MockTodo[];
+    if (dealVariant === 'empty') base[0] = { ...BIG_DEAL_EMPTY } as unknown as MockTodo;
+    if (dealVariant === 'done') base[0] = { ...BIG_DEAL_DONE } as unknown as MockTodo;
+    setTodos(base);
+  }, [MOCK_TODOS, dealVariant, emptyParam]);
   const tickable = todos.filter((t) => !t.isBigDeal);
   const completed = tickable.filter((t) => t.count >= t.target).length;
   const total = tickable.length;
@@ -71,6 +90,7 @@ export default function Dashboard({ params }: PageProps) {
   const [dealOpen, setDealOpen] = useState(false);
   const complete = (t: MockTodo) => {
     if (t.count >= t.target) return;
+    void homeOps.completeTodo(t.id);
     setRowRipple(t.id + Date.now());
     const next = { ...t, count: t.count + 1 };
     setTodos((ts) => ts.map((x) => (x.id === t.id ? next : x)));
@@ -81,8 +101,8 @@ export default function Dashboard({ params }: PageProps) {
   };
 
   // ── 宣言卡三态 ──
-  const greet = q('greet') ?? 'card';
-  const pinned = greet === 'card' ? MOCK_CALLING_CARD : greet === 'far' ? MOCK_CALLING_CARD_FAR : greet === 'nodate' ? { ...MOCK_CALLING_CARD, targetDate: undefined } : null;
+  const greet = (q('greet') as 'card' | 'far' | 'nodate' | 'unpinned' | 'empty' | null) ?? (MOCK_CALLING_CARD ? 'card' : MOCK_UNPINNED_COUNT > 0 ? 'unpinned' : 'empty');
+  const pinned = greet === 'card' ? MOCK_CALLING_CARD : greet === 'far' ? MOCK_CALLING_CARD_FAR : greet === 'nodate' && MOCK_CALLING_CARD ? { ...MOCK_CALLING_CARD, targetDate: undefined } : null;
   const daysLeft = pinned?.targetDate ? Math.max(0, daysUntil(pinned.targetDate)) : null;
   const [hintDismissed, setHintDismissed] = useState(false);
   const jumpToCallingCard = () => navigate('actions', 'todos', { params: { panel: 'countdown' } });
@@ -104,7 +124,8 @@ export default function Dashboard({ params }: PageProps) {
   const warnings = ccOn ? MOCK_COUNTERCURRENT : [];
 
   // ── 今日仪式 ──
-  const drawn = q('drawn') === '1';
+  const drawn = q('drawn') === '1' && !!MOCK_DIVINATION;
+  const divination = drawn ? MOCK_DIVINATION : null;
   const battleOn = q('battleOn') !== '0';
   const otdOn = q('otd') !== '0';
   const [otdOpen, setOtdOpen] = useState(false);
@@ -118,9 +139,9 @@ export default function Dashboard({ params }: PageProps) {
   }
   slideKeys.push('astrology');
   slides.push(<RitualSlab key="astro" icon={<MoonGlyph />} onClick={() => navigate('astrology')}
-    title={drawn ? `${MOCK_DIVINATION.name} · ${MOCK_DIVINATION.orientation === 'upright' ? '正位' : '逆位'}` : '今日星象尚未展开'}
-    sub={drawn ? `${ATTR_NAMES[MOCK_DIVINATION.attribute]} × ${MOCK_DIVINATION.multiplier}${MOCK_DIVINATION.advice ? ` · ${MOCK_DIVINATION.advice}` : ''}` : '点击进入星象，从三张塔罗中抽取一张'} />);
-  if (battleOn) {
+    title={divination ? `${divination.name} · ${divination.orientation === 'upright' ? '正位' : '逆位'}` : '今日星象尚未展开'}
+    sub={divination ? `${ATTR_NAMES[divination.attribute]} × ${divination.multiplier}${divination.advice ? ` · ${divination.advice}` : ''}` : '点击进入星象，从三张塔罗中抽取一张'} />);
+  if (battleOn && MOCK_PERSONA_NAME) {
     slideKeys.push('battle');
     slides.push(<BattleSlab key="battle" state={(q('battle') as BattleState) || 'fight'} shadowTime={q('shadow') === '1'} persona={MOCK_PERSONA_NAME} onClick={() => navigate('battle')} />);
   }
@@ -133,10 +154,10 @@ export default function Dashboard({ params }: PageProps) {
 
   // ── 人格指数 ──
   const starItems: StarItem[] = useMemo(() => ATTR_IDS.map((id) => {
-    const a = MOCK_ATTRS.find((x) => x.id === id)!;
+    const a = MOCK_ATTRS.find((x) => x.id === id) ?? { id, name: ATTR_NAMES[id], points: 0, level: 1 };
     const stars = a.level >= MAX_LEVEL ? masteryOf(a.points)?.stars ?? 0 : 0;
     return { id, name: a.name, level: a.level, maxLevel: MAX_LEVEL, stars, title: stars > 0 ? masteryTitle(id, stars) : levelTitle(id, a.level) };
-  }), []);
+  }), [MOCK_ATTRS, ATTR_NAMES]);
   const attrParam = q('attr') as AttributeId | null;
   const [dossier, setDossier] = useState<AttributeId | null>(attrParam && ATTR_IDS.includes(attrParam) ? attrParam : null);
   const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -146,7 +167,7 @@ export default function Dashboard({ params }: PageProps) {
   const stats = useMemo(() => ({
     totalPoints: MOCK_ATTRS.reduce((s, a) => s + a.points, 0),
     totalLevel: MOCK_ATTRS.reduce((s, a) => s + a.level, 0),
-  }), []);
+  }), [MOCK_ATTRS]);
 
   // ── 区块直达滚动 ──
   const refs = { tasks: useRef<HTMLElement>(null), ritual: useRef<HTMLElement>(null), persona: useRef<HTMLElement>(null), greet: useRef<HTMLDivElement>(null) };
@@ -309,7 +330,7 @@ export default function Dashboard({ params }: PageProps) {
         ))}
       </div>
 
-      <h2 className="sr-only">汐见的面具庭园</h2>
+      <h2 className="sr-only">{MOCK_USER_NAME || 'MASKARIA'}的面具庭园</h2>
 
       <BandCutInP3 isOpen={!!cutin} onClose={() => setCutin(null)} title={cutin?.title ?? ''} totalPoints={cutin?.points} unlockHint={cutin?.hint ? { achievements: 1, skills: 0 } : { achievements: 0, skills: 0 }} />
       <UrgentToast text={toast} />
@@ -322,6 +343,7 @@ export default function Dashboard({ params }: PageProps) {
 
 /** 任务行：斜切勾选框（完成 = 藕紫底白勾）· 重要三角 · ✦今日抽签 · 一起进步 / 组织作战 / 截止标签 · 属性 +N · 计数 n/target · 完成波纹 */
 const TaskRow = ({ t, onTap, ripple }: { t: MockTodo; onTap: () => void; ripple: string | null }) => {
+  const { ATTR_NAMES } = useHomeData();
   const done = t.count >= t.target;
   const dl = t.deadline ? daysUntil(t.deadline) : null;
   const tag = (txt: string, tone: 'lilac' | 'rose' | 'coral') => (

@@ -32,7 +32,7 @@ const DEFAULTS: MockSettings = {
   backgroundImage: undefined, backgroundOpacity: 0.3, backgroundOrientation: 'landscape',
   weatherProvider: 'qweather', weatherKey: '', weatherHost: '', weatherCity: undefined,
   bgmEnabled: true, bgmVolume: 60, bgmBattle: 't2', bgmBoss: '', bgmTower: '', bgmHome: { blue: 't1' },
-  provider: 'deepseek', keys: { deepseek: 'sk-••••••••••••3f9a', qwen: 'sk-••••••••a01c' }, verified: { deepseek: true }, customName: '', customProtocol: 'openai', customPreset: 'relay', baseUrl: '',
+  provider: 'deepseek', keys: {}, verified: {}, customName: '', customProtocol: 'openai', customPreset: 'relay', baseUrl: '',
   summaryModel: '', navigatorModel: 'deepseek-reasoner-v4', visionModel: 'deepseek-flash', audioModel: 'qwen3-asr-flash', assistantModel: '',
   tarotDeliberate: false, summaryDeliberate: true,
   summaryPersona: 'margaret', summaryPresets: SUMMARY_PRESETS, summaryPresetId: 'warm', autoSummary: true,

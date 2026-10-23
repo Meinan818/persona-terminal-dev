@@ -32,7 +32,7 @@ export const OTD_VIEW: OtdView = {
   ],
 };
 /** 卡片副标题：「记了 3 条 · 和室友去看了海」（真实 onThisDaySub，首条超 18 字截断加 …） */
-export function onThisDaySub(v: OtdView): string { const first = (v.items[0]?.description || '').replace(/\s+/g, ' ').trim(); return `记了 ${v.total} 条 · ${first.length > 18 ? `${first.slice(0, 18)}…` : first}`; }
+export function onThisDaySub(v: OtdView): string { const first = (v.items[0]?.description || '').replace(/\s+/g, ' ').trim(); return v.total === 0 || !first ? '去年今天还没有记录' : `记了 ${v.total} 条 · ${first.length > 18 ? `${first.slice(0, 18)}…` : first}`; }
 export const onThisDayLabel = (d: Date) => `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 · ${WEEKDAYS[d.getDay()]}`;
 /** 沙漏小图（真实 OnThisDayGlyph，P5 仪式卡图标位） */
 export const OnThisDayGlyph = ({ color = 'currentColor', size = 22 }: { color?: string; size?: number }) => (

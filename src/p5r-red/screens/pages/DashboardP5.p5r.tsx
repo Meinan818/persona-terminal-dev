@@ -280,16 +280,35 @@ export default function DashboardP5({ wide, params }: PageProps) {
   const countercurrent = st === 'countercurrent' || params.get('slide') === 'countercurrent';
   const season = params.get('season') === '1' ? '霜降' : SEASON[todayKey().slice(5)] ?? null;
   const [todos, setTodos] = useState<MockTodo[]>(() => (st === 'empty' ? [] : D.todos.map((t) => ({ ...t }))));
-  // 首页真实演出队列（FIXLIST 四 · 需特别处理末条）：勾完成 → TodoCompleteP5（有解锁时带提示）→ 属性升级 / 精通 → 成就 / 技能解锁
-  const stopQ = useRef<() => void>();
-  useEffect(() => () => stopQ.current?.(), []);
   const check = (t: MockTodo) => {
     if (t.count >= t.target) return;
-    setTodos((ts) => ts.map((x) => (x.id === t.id ? { ...x, count: x.target } : x)));
-    const remaining = Math.max(1, t.target - t.count);
-    void (async () => { for (let i = 0; i < remaining; i++) await useAppStore.getState().completeTodo(t.id); })().catch(() => {});
-    stopQ.current?.();
-    stopQ.current = playQueue(homeQueue(t, params.get('fxq')));
+    const finishes = t.count + 1 >= t.target;
+    setTodos((ts) => ts.map((x) => (x.id === t.id ? { ...x, count: x.count + 1 } : x)));
+    void useAppStore.getState().completeTodo(t.id).then(async (result) => {
+      if (!finishes) return;
+      if (!result) return;
+      const hints = result?.unlockHints;
+      await new Promise((resolve) => window.setTimeout(resolve, 650));
+      const state = useAppStore.getState();
+      const queue: QueueStep[] = [{
+        kind: 'todo', title: t.title,
+        points: t.points + (t.extra?.reduce((sum, boost) => sum + boost.points, 0) ?? 0),
+        unlock: !!((hints?.achievements ?? 0) + (hints?.skills ?? 0)),
+      }];
+      if (state.levelUpNotification) {
+        queue.push({ kind: 'level', attr: state.levelUpNotification.displayName, level: state.levelUpNotification.level, stars: state.levelUpNotification.masteryStars });
+        state.setLevelUpNotification(null);
+      }
+      if (state.achievementNotification) {
+        queue.push({ kind: 'achievement', name: state.achievementNotification.title });
+        state.setAchievementNotification(null);
+      }
+      if (state.skillNotification) {
+        queue.push({ kind: 'skill', name: state.skillNotification.name });
+        state.setSkillNotification(null);
+      }
+      playQueue(queue);
+    }).catch(() => {});
   };
   // 返回键 Toast（P1-19）：已在首页时按返回（demo：Esc，且没有弹层开着）→「再次点击回到现实」，2 秒内再按退出
   const back = useBackToast();

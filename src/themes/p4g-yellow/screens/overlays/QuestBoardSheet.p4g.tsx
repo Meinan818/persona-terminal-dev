@@ -31,8 +31,9 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
   useEffect(() => { if (open && st === 'loading') { setLoading(true); const t = setTimeout(() => setLoading(false), 1600); return () => clearTimeout(t); } }, [open, st]);
   useEffect(() => { setQuests(QUESTS); }, [QUESTS]);
   const life = LIFE_QUESTS.map((q) => ({ ...q, title: batch ? `${q.title}（新）` : q.title }));
-  const cur = life[idx];
-  const curSt = status[cur.id] ?? 'new';
+  useEffect(() => { setIdx((i) => Math.min(i, Math.max(0, life.length - 1))); }, [life.length]);
+  const cur = life[idx] ?? null;
+  const curSt = cur ? status[cur.id] ?? 'new' : 'new';
   const go = (d: number) => setIdx((i) => Math.max(0, Math.min(life.length - 1, i + d)));
   const claimedTotal = QUEST_CLAIMED_TOTAL;
   const allClaimed = quests.every((q) => q.claimedAt || q.autoClaimed);
@@ -42,7 +43,11 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
       {/* 今日委托 */}
       <BlockHead title="今日委托" en="DAILY" />
       <div className="-mt-1 mb-2 text-cap font-bold text-p4g-ink-soft">{life.some((q) => q.ai) ? '三张题库 + 一张 AI 写的' : '每天三张 · 左右滑着挑'}</div>
-      {loading ? <P4Loading label="正在按你的属性准备今日委托…" /> : (
+      {loading ? <P4Loading label="正在按你的属性准备今日委托…" /> : !cur ? (
+        <div className="rounded-sm border-3 border-p4g-line bg-p4g-surface px-3 py-4 text-center text-meta font-bold text-p4g-ink-soft">
+          今天暂时没有可出的委托，晚些再来。
+        </div>
+      ) : (
         <>
           <div className="relative flex min-w-0 items-center gap-2">
             <button type="button" aria-label="上一张" disabled={idx === 0} onClick={() => go(-1)} className="flex h-10 w-8 shrink-0 items-center justify-center rounded-xs bg-p4g-black text-p4g-yellow disabled:opacity-30 night:bg-p4g-yellow night:text-p4g-black"><IconBack size={14} /></button>

@@ -13,6 +13,7 @@ import { sfx } from '@/p5r-red/fx/sfx';
 import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { setPrefs, usePrefs } from '@/p5r-red/lib/prefs';
 import { RANKS, ATTR_ORDER, ATTR } from '@/p5r-red/mock/data';
+import { useAppStore } from '@/store';
 import { ObCard, ObRow, ObSw, ObSeg, ObInp, ObTa, ObSel, ObRange, ObMsg, ObChip, ObSub, ObNote, ObHint, ObLink, ObBtn, ObFold, ObLi, BusyBtn, useMsgBox, ObConfirm, ObCrop } from './ObKit';
 
 export const THEMES: [string, string, string][] = [['blue', '蓝', '#3B82F6'], ['yellow', '黄', '#F59E0B'], ['red', '红', '#D7000F'], ['pink', '粉', '#EC4899'], ['custom', '自定义', 'conic-gradient(#3B82F6,#F59E0B,#EF4444,#EC4899,#3B82F6)']];
@@ -159,12 +160,17 @@ export const AI_STATES: [string, string][] = [['ok', '已配好（收起）'], [
 const PROV: [string, string, string, number][] = [['openai', 'OpenAI', 'gpt-6-luna', 0], ['deepseek', 'DeepSeek', 'deepseek-flash', 2], ['kimi', 'Kimi', 'kimi-k3', 0], ['qwen', '千问', 'qwen-plus', 1], ['gemini', 'Gemini', 'gemini-3.5-flash-lite', 0], ['minimax', 'MiniMax', 'MiniMax-M3', 0], ['custom', '＋ 自定义', '', 0]];
 const CUSTOM_PRESETS: [string, string, string][] = [['siliconflow', '硅基流动', '国内可直连，开源模型多（DeepSeek / Qwen / GLM…）'], ['ark', '火山方舟', '豆包等；模型名填方舟里的模型 ID 或接入点 ID'], ['zhipu', '智谱', 'GLM 系列'], ['openrouter', 'OpenRouter', '一个 Key 用各家模型（国内网络可能不稳）'], ['anthropic', 'Anthropic', '官方 Claude（Anthropic 协议）'], ['relay', '中转站', '填中转站给的地址（一般以 /v1 结尾）；它若只给 Anthropic 格式的地址，协议选 Anthropic']];
 export function AISection({ state = 'ok' }: { state?: string }) {
-  const [prov, setProv] = useState('deepseek');
-  const [preset, setPreset] = useState('relay');
+  const settings = useAppStore((s) => s.settings);
+  const [prov, setProv] = useState<string>(settings.summaryApiProvider ?? 'deepseek');
+  const [preset, setPreset] = useState(settings.customProviderPreset ?? 'relay');
   const [testMsg, setTestMsg] = useMsgBox(state === 'tested' ? <ObMsg kind="ok">连接成功 · deepseek-flash · 412 ms · 模型列表已更新（9 个）</ObMsg> : state === 'testerr' ? <ObMsg kind="err">密钥里混进了 2 个看不见的空格 / 全角字符，已自动清理——测完记得点保存。{'\n'}401 Unauthorized</ObMsg> : null);
   const [tierRes, setTierRes] = useMsgBox();
-  const P = PROV.find((p) => p[0] === prov)!, custom = prov === 'custom', none = state === 'none';
-  const statusLine = none ? <span className="ob-warnc">未配置 —— 展开填写 API Key</span> : custom ? <span className="ob-warnc">自定义 · 还差地址和模型——展开填写</span> : <><span className={`ob-dot${P[3] === 2 ? ' on' : ''}`} /><b>{P[1]} · {P[3] === 2 ? '连接正常' : '待测试'}</b><small>共 2 家</small></>;
+  const profileOf = (id: string) => (settings.aiProfiles as Record<string, { key?: string; verifiedAt?: number } | undefined> | undefined)?.[id];
+  const currentProfile = profileOf(prov);
+  const hasKey = !!(currentProfile?.key || settings.summaryApiKey?.trim());
+  const P = PROV.find((p) => p[0] === prov)!, custom = prov === 'custom', none = state === 'none' || !hasKey;
+  const savedProviders = Object.values(settings.aiProfiles ?? {}).filter((profile) => !!profile?.key).length;
+  const statusLine = none ? <span className="ob-warnc">未配置 —— 展开填写 API Key</span> : custom ? <span className="ob-warnc">自定义 · 已存密钥，地址 / 模型可继续调整</span> : <><span className={`ob-dot${currentProfile?.verifiedAt || (prov === settings.summaryApiProvider && hasKey) ? ' on' : ''}`} /><b>{P[1]} · {currentProfile?.verifiedAt ? '连接正常' : '待测试'}</b><small>共 {savedProviders} 家</small></>;
   const tier = (icon: string, name: string, desc: string, val: string, ph: string, variant: string, extra?: ReactNode) => (
     <div className="ob-tier"><p className="ob-tier-h"><i>{icon}</i>{name}</p><p className="ob-hint">{desc}</p>
       <button type="button" className="ob-pick" onClick={() => openOverlay('settings-model-picker', { variant })}><span>{val}</span><b>选择模型 ›</b></button><ObInp ph={ph} aria={`${name} 模型名`} cls="ob-mono" />{extra}</div>
@@ -176,11 +182,15 @@ export function AISection({ state = 'ok' }: { state?: string }) {
         <ObFold title="连接" meta={statusLine} open={state !== 'ok' && state !== 'lowbal'}>
           {none && <div className="ob-onb"><b>还没有 API Key？</b><p>去 DeepSeek 注册一个，复制 Key 回来粘进下面的输入框就能用。国内可直连，按量计费，日常用量一个月通常也就几块钱。</p><ObBtn tone="ink" size="sm" seed={301} toastMsg="外链：platform.deepseek.com">打开 platform.deepseek.com ↗</ObBtn></div>}
           <ObSub>提供商</ObSub><p className="ob-hint">各家 Key 独立保存，点一下即切换</p>
-          <div className="ob-provs">{PROV.map(([id, l, m, s]) => (
+          <div className="ob-provs">{PROV.map(([id, l, m]) => {
+            const profile = profileOf(id);
+            const hasProviderKey = !!profile?.key || (id === settings.summaryApiProvider && !!settings.summaryApiKey);
+            return (
             <button key={id} type="button" className="ob-prov" aria-pressed={id === prov} onClick={() => { setProv(id); sfx('switch', 0.3); }}>
-              {s && !none ? <i className="ob-prov-ck" aria-label="已存 Key">✓</i> : null}{s === 2 && !none ? <i className="ob-dot on" aria-label="测过且成功" /> : null}
+              {hasProviderKey ? <i className="ob-prov-ck" aria-label="已存 Key">✓</i> : null}{profile?.verifiedAt ? <i className="ob-dot on" aria-label="测过且成功" /> : null}
               <b>{l}</b><small>{id === 'custom' ? '中转站 · 硅基流动 · 智谱 · OpenRouter · Anthropic…' : (id === 'qwen' ? '⚠ ' : '') + m}</small></button>
-          ))}</div>
+            );
+          })}</div>
           {custom && (
             <div className="ob-custom"><ObSub>接哪一家</ObSub>
               <div className="ob-chips">{CUSTOM_PRESETS.map(([id, n]) => <ObChip key={id} label={n} on={id === preset} noflip onClick={() => setPreset(id)} />)}</div>
@@ -190,7 +200,7 @@ export function AISection({ state = 'ok' }: { state?: string }) {
               <p className="ob-hint">绝大多数中转站和平台都是 OpenAI 兼容（/chat/completions）。</p></div>
           )}
           <div className="ob-keyhd"><ObSub>{custom ? '自定义' : P[1]} 的 API 密钥</ObSub><ObLink toastMsg="外链：服务商控制台">去申请 ↗</ObLink></div>
-          <div className="ob-keyrow"><ObInp ph="sk-…" val={none ? '' : 'sk-••••••••••••••••3f9a'} type="password" aria="API 密钥" cls="ob-mono" /><BusyBtn label={none ? '保存' : '✓ 已保存'} busy="保存中…" done="✓ 已保存" tone="ink" seed={302} /></div>
+          <div className="ob-keyrow"><ObInp ph="sk-…" val="" type="password" aria="API 密钥" cls="ob-mono" /><BusyBtn label={none ? '保存' : '✓ 已保存'} busy="保存中…" done="✓ 已保存" tone="ink" seed={302} /></div>
           <BusyBtn label={state === 'tested' ? '✓ 连接正常' : state === 'testerr' ? '× 连接失败' : '测试连接'} busy="测试中…" done="✓ 连接正常" seed={303} className="ob-wide" msg="连接成功 · deepseek-flash · 412 ms · 模型列表已更新（9 个）" fail="401 Unauthorized：Key 不对或已失效" failLabel="× 连接失败" to={setTestMsg} />
           <div className="ob-ai-test">{testMsg}</div>
           <ObNote>Key 保存在这台设备上，也会跟着本地备份走；默认不上云，在「账号与数据」的「云同步 · 数据类目选择」里打开「AI 模型 API」才会随同步上传。测试连接成功后这家会亮绿灯（换 Key 需重新测试）。</ObNote>

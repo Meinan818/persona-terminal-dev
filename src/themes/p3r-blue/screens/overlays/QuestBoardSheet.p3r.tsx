@@ -32,8 +32,9 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
   useEffect(() => { if (open && st === 'loading') { setLoading(true); const t = window.setTimeout(() => setLoading(false), 1600); return () => clearTimeout(t); } }, [open, st]);
   useEffect(() => { setQuests(QUESTS); }, [QUESTS]);
   const life = LIFE_QUESTS.map((q) => ({ ...q, title: batch ? `${q.title}（新）` : q.title }));
-  const cur = life[idx];
-  const curSt = status[cur.id] ?? 'new';
+  useEffect(() => { setIdx((i) => Math.min(i, Math.max(0, life.length - 1))); }, [life.length]);
+  const cur = life[idx] ?? null;
+  const curSt = cur ? status[cur.id] ?? 'new' : 'new';
   const go = (d: number) => setIdx((i) => Math.max(0, Math.min(life.length - 1, i + d)));
   const claimedTotal = QUEST_CLAIMED_TOTAL;
   const allClaimed = quests.every((q) => q.claimedAt || q.autoClaimed);
@@ -43,7 +44,11 @@ export default function QuestBoardSheet({ open, onClose, params }: OverlayProps)
       {/* 今日委托 */}
       <MiniHead title="今日委托" en="DAILY" />
       <div className="mb-2 mt-1 text-[12px] font-bold" style={{ color: P3R.grey }}>{life.some((q) => q.ai) ? '三张题库 + 一张 AI 写的' : '每天三张 · 左右滑着挑'}</div>
-      {loading ? <P3Loading block rows={2} text="正在按你的属性准备今日委托…" /> : (
+      {loading ? <P3Loading block rows={2} text="正在按你的属性准备今日委托…" /> : !cur ? (
+        <div className="mt-2 px-4 py-4 text-center text-[13px] font-bold" style={{ background: P3R.cyanFaint, color: P3R.inkSoft, clipPath: slantClip(10) }}>
+          今天暂时没有可出的委托，晚些再来。
+        </div>
+      ) : (
         <>
           <div className="relative flex min-w-0 items-center gap-2">
             <button type="button" aria-label="上一张" disabled={idx === 0} onClick={() => go(-1)} className="flex h-12 w-8 shrink-0 items-center justify-center disabled:opacity-30" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(6) }}><IconBack size={14} /></button>

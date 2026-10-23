@@ -14,6 +14,7 @@
  *   3. 字段对不上时只改这里的映射函数，不要去改页面。
  */
 import { useAppStore } from '@/store';
+import { OTD_VIEW } from '@/p5r-red/screens/overlays/OnThisDaySheet.p5r';
 import { useBoldness } from '@/utils/boldness';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
 import { TAROT_BY_ID } from '@/constants/tarot';
@@ -113,6 +114,22 @@ export function syncLiveDataNow(s: S = useAppStore.getState()) {
   const acts = [...s.activities].sort((a, b) => +new Date(b.date) - +new Date(a.date));
   fill(D.activities, acts.slice(0, 20).map((a) => ({ d: dayKey(a.date), desc: a.description, pts: pts(a.pointsAwarded) })));
   fill(ACTIVITIES, acts.slice(0, 200).map(activityPkg5));
+  const lastYear = new Date();
+  lastYear.setFullYear(lastYear.getFullYear() - 1);
+  const lastYearKey = dayKey(lastYear);
+  const onThisDay = acts.filter((activity) => dayKey(activity.date) === lastYearKey);
+  OTD_VIEW.date = lastYear;
+  OTD_VIEW.total = onThisDay.length;
+  OTD_VIEW.daysSince = 365;
+  OTD_VIEW.streakThen = 0;
+  OTD_VIEW.tarot = null;
+  OTD_VIEW.items.splice(0, OTD_VIEW.items.length, ...onThisDay.map((activity) => ({
+    id: activity.id,
+    time: new Date(activity.date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+    description: activity.description,
+    important: activity.important,
+    points: pts(activity.pointsAwarded),
+  })));
   // 成就 / 技能
   fill(ACHIEVEMENTS, s.achievements.map(achievementPkg5));
   fill(SKILLS, s.skills.map(skillPkg5));

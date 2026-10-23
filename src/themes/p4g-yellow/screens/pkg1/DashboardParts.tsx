@@ -10,8 +10,10 @@ import { useLowMotion } from '@yellow/lib/prefs';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
+import { toLocalDateKey, useAppStore } from '@/store';
 import { MoonGlyph, SeasonStamp, Sparkle4, SlantTag, RippleLayer, useRipples, GlyphWave, GlyphHourglass, GlyphStar, GlyphPin } from './bits';
-import { ATTR_NAMES, BIG_DEAL_STEPS, MOCK_CALLING_CARD, MOCK_DIVINATION, MOCK_ON_THIS_DAY, MOCK_PERSONA_NAME, callingCardProgress, moonPhaseOf, todayKey, type MockTodo } from '@yellow/mock/pkg1';
+import { ATTR_NAMES, BIG_DEAL_STEPS, moonPhaseOf, todayKey, type MockTodo } from '@yellow/mock/pkg1';
+import { useHomeData } from '@/themes/homeData';
 
 // ───────────────────────────── 页头 HUD ─────────────────────────────
 export type SkyWx = 'ok' | 'unset' | 'config' | 'error' | 'loading';
@@ -105,8 +107,14 @@ export function GreetingPlate({ subtext, greeting, mode, completed, total, unpin
   const low = useLowMotion();
   const [hintHidden, setHintHidden] = useState(false);
   const jump = () => { try { sessionStorage.setItem('velvet:todos-goal-panel', 'countdown'); } catch { /* ignore */ } navigate('actions', 'todos'); };
-  const cc = MOCK_CALLING_CARD as unknown as { title: string; targetDate: string };
-  const daysLeft = Math.max(0, Math.round((new Date(cc.targetDate + 'T00:00:00').getTime() - new Date(todayKey + 'T00:00:00').getTime()) / 86400000));
+  const cards = useAppStore((state) => state.callingCards);
+  const getCallingCardProgress = useAppStore((state) => state.getCallingCardProgress);
+  const activeCards = cards.filter((card) => !card.archived);
+  const cc = activeCards.find((card) => card.pinned) ?? null;
+  const actualUnpinned = activeCards.filter((card) => !card.pinned).length;
+  const actualMode: GreetMode = mode === 'card' && !cc ? actualUnpinned > 0 ? 'unpinned' : 'empty' : mode;
+  const progress = cc ? getCallingCardProgress(cc.id)?.overallProgress ?? 0 : 0;
+  const daysLeft = cc?.targetDate ? Math.max(0, Math.round((new Date(cc.targetDate + 'T00:00:00').getTime() - new Date(toLocalDateKey() + 'T00:00:00').getTime()) / 86400000)) : 0;
   const summary = daysLeft === 0 ? '就是今天' : `还剩 ${daysLeft} 天`;
   return (
     <motion.section className="relative min-w-0" initial={low ? { opacity: 0 } : { y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.24 }}>
@@ -119,29 +127,29 @@ export function GreetingPlate({ subtext, greeting, mode, completed, total, unpin
           <p className="mb-1 font-display text-meta font-bold text-p4g-yellow">{subtext}</p>
           <h2 className="font-display text-[clamp(20px,6vw,26px)] font-bold leading-tight text-p4g-cream">{greeting}<span aria-hidden className="ml-1 inline-block text-p4g-yellow" style={{ animation: low ? undefined : 'p4g-blink 1s steps(1) infinite' }}>▼</span></h2>
 
-          {mode === 'card' && (
-            <button type="button" onClick={jump} aria-label={`倒计时：${cc.title}，${summary}，${callingCardProgress.overall}%`}
+          {actualMode === 'card' && cc && (
+            <button type="button" onClick={jump} aria-label={`倒计时：${cc.title}，${summary}，${progress}%`}
               className="group mt-4 block w-full min-w-0 text-left">
               <span className="flex min-w-0 items-center gap-2 border-2 border-p4g-black bg-p4g-yellow px-2.5 py-1.5 text-p4g-black shadow-[3px_3px_0_var(--p4g-orange)]" style={{ clipPath: 'polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)' }}>
                 <GlyphHourglass size={16} />
                 <span className="min-w-0 flex-1 truncate font-display text-body font-bold">{cc.title}</span>
                 <span className="shrink-0 bg-p4g-black px-1.5 py-0.5 font-display text-cap font-bold text-p4g-yellow">{summary}</span>
-                <span className="shrink-0 pr-2 p4g-num text-meta">{callingCardProgress.overall}%</span>
+                <span className="shrink-0 pr-2 p4g-num text-meta">{progress}%</span>
               </span>
               <span className="mt-1.5 block h-[5px] w-full overflow-hidden rounded-pill bg-white/15">
-                <span className="block h-full w-full origin-left bg-gradient-to-r from-p4g-orange to-p4g-yellow" style={{ transform: `scaleX(${callingCardProgress.overall / 100})` }} />
+                <span className="block h-full w-full origin-left bg-gradient-to-r from-p4g-orange to-p4g-yellow" style={{ transform: `scaleX(${progress / 100})` }} />
               </span>
             </button>
           )}
-          {mode === 'empty' && !hintHidden && (
+          {actualMode === 'empty' && !hintHidden && (
             <div className="mt-4 flex min-w-0 items-center gap-2 border-2 border-dashed border-p4g-yellow/70 px-3 py-2 text-meta text-p4g-cream">
               <button type="button" onClick={jump} className="min-w-0 flex-1 text-left leading-snug">为重要的事写一张「宣告卡」，倒计时随时在此映入眼帘</button>
               <button type="button" aria-label="不再提示" onClick={() => setHintHidden(true)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xs bg-p4g-yellow text-p4g-black"><IconClose size={13} /></button>
             </div>
           )}
-          {mode === 'unpinned' && (
+          {actualMode === 'unpinned' && (
             <button type="button" onClick={jump} className="mt-4 flex w-full min-w-0 items-center gap-2 bg-white/10 px-3 py-2 text-left text-cap font-bold text-p4g-cream hover:bg-white/20">
-              <GlyphPin size={14} /><span className="min-w-0 flex-1 truncate">你有 {unpinnedCount} 张倒计时未钉到主页</span><span className="opacity-60">›</span>
+              <GlyphPin size={14} /><span className="min-w-0 flex-1 truncate">你有 {actualUnpinned || unpinnedCount} 张倒计时未钉到主页</span><span className="opacity-60">›</span>
             </button>
           )}
 
@@ -326,15 +334,18 @@ export const CountercurrentSlide = ({ attrs }: { attrs: AttributeId[] }) => (
   </SlideShell>
 );
 
-export const AstrologySlide = ({ drawn }: { drawn: boolean }) => (
-  <SlideShell onClick={() => navigate('astrology')} ariaLabel={drawn ? undefined : '今日星象尚未展开'}>
+export const AstrologySlide = ({ drawn }: { drawn: boolean }) => {
+  const { MOCK_DIVINATION } = useHomeData();
+  const hasDrawn = drawn && !!MOCK_DIVINATION;
+  return (
+  <SlideShell onClick={() => navigate('astrology')} ariaLabel={hasDrawn ? undefined : '今日星象尚未展开'}>
     {/* 塔罗牌面 */}
     <span aria-hidden className="relative flex h-[76px] w-[50px] shrink-0 items-center justify-center rounded-[4px] border-[3px] border-p4g-black bg-p4g-black shadow-[3px_3px_0_var(--p4g-orange)]">
       <span className="absolute inset-[3px] rounded-[2px] border border-p4g-yellow/60" />
-      {drawn ? <span className="font-display text-[22px] font-bold text-p4g-yellow" style={{ writingMode: 'vertical-rl' }}>{MOCK_DIVINATION.cardName}</span> : <Sparkle4 size={24} color="var(--p4g-yellow)" />}
+      {hasDrawn ? <span className="font-display text-[22px] font-bold text-p4g-yellow" style={{ writingMode: 'vertical-rl' }}>{MOCK_DIVINATION.cardName}</span> : <Sparkle4 size={24} color="var(--p4g-yellow)" />}
     </span>
     <span className="min-w-0 flex-1">
-      {drawn ? (
+      {hasDrawn ? (
         <>
           <span className="flex min-w-0 flex-wrap items-center gap-1.5">
             <span className="truncate font-display text-lead font-bold">{MOCK_DIVINATION.cardName} · {MOCK_DIVINATION.orientation === 'upright' ? '正位' : '逆位'}</span>
@@ -351,9 +362,13 @@ export const AstrologySlide = ({ drawn }: { drawn: boolean }) => (
     </span>
     <IconChevron size={16} className="mt-1 shrink-0" />
   </SlideShell>
-);
+  );
+};
 
-export const BattleSlide = ({ inShadow, awakened }: { inShadow: boolean; awakened: boolean }) => (
+export const BattleSlide = ({ inShadow, awakened }: { inShadow: boolean; awakened: boolean }) => {
+  const { MOCK_PERSONA_NAME } = useHomeData();
+  const hasPersona = awakened && !!MOCK_PERSONA_NAME;
+  return (
   <SlideShell tone="black" onClick={() => navigate('battle', undefined, { transition: 'noise' })} ariaLabel={inShadow ? '逆影战场：影时间进行中' : '逆影战场'}>
     <span aria-hidden className="absolute -right-6 -top-6 h-24 w-24 rounded-pill border-[10px] border-p4g-yellow/25" />
     <span className="min-w-0 flex-1">
@@ -363,14 +378,17 @@ export const BattleSlide = ({ inShadow, awakened }: { inShadow: boolean; awakene
         <span className="ml-auto shrink-0 p4g-num text-cap text-white/60">20:00 显形</span>
       </span>
       <span className="mt-2 flex min-w-0 items-center gap-1 font-display text-body font-bold">
-        {awakened ? (<><span className="min-w-0 truncate">{MOCK_PERSONA_NAME}</span><span className="shrink-0 text-white/75">· 区层显形 →</span></>) : <span className="truncate text-white/80">唤醒 Persona →</span>}
+        {hasPersona ? (<><span className="min-w-0 truncate">{MOCK_PERSONA_NAME}</span><span className="shrink-0 text-white/75">· 区层显形 →</span></>) : <span className="truncate text-white/80">唤醒 Persona →</span>}
       </span>
       <span className="mt-2 block h-[6px] w-full p4g-hazard opacity-80" />
     </span>
   </SlideShell>
-);
+  );
+};
 
-export const OnThisDaySlide = ({ onOpen }: { onOpen: () => void }) => (
+export const OnThisDaySlide = ({ onOpen }: { onOpen: () => void }) => {
+  const { MOCK_ON_THIS_DAY } = useHomeData();
+  return (
   <SlideShell onClick={onOpen}>
     <span aria-hidden className="relative flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-sm border-[3px] border-p4g-black bg-p4g-yellow leading-none text-p4g-black">
       <span className="font-display text-[9px] font-bold tracking-widest">-1 YEAR</span>
@@ -378,11 +396,12 @@ export const OnThisDaySlide = ({ onOpen }: { onOpen: () => void }) => (
     </span>
     <span className="min-w-0 flex-1">
       <span className="block font-display text-lead font-bold">一年前的今天</span>
-      <span className="mt-0.5 block p4g-clamp-2 text-meta text-p4g-ink-soft">记了 {MOCK_ON_THIS_DAY.total} 条 · {MOCK_ON_THIS_DAY.items[0].text}</span>
+      <span className="mt-0.5 block p4g-clamp-2 text-meta text-p4g-ink-soft">{MOCK_ON_THIS_DAY.total ? `记了 ${MOCK_ON_THIS_DAY.total} 条 · ${MOCK_ON_THIS_DAY.items[0].text}` : '去年今天还没有记录'}</span>
     </span>
     <IconChevron size={16} className="mt-1 shrink-0" />
   </SlideShell>
-);
+  );
+};
 
 // ───────────────────────────── 四格统计 ─────────────────────────────
 export function StatCircles({ items }: { items: { v: number; label: string; c: string }[] }) {

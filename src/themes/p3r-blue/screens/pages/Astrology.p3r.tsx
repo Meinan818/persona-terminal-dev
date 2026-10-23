@@ -15,7 +15,7 @@ import { P3PageHeader, GhostWords, P3R, slantClip } from '@blue/kit';
 import { PageEnter, type AIFail } from '@blue/fx';
 import { useLowMotion } from '@blue/lib/prefs';
 import { navigate } from '@blue/shell/shellBus';
-import { LONG_READINGS } from '@blue/mock/pkg4-astro';
+import { useAstrologyData } from '@blue/adapters/pkg4-astro';
 import { DevStrip, StateFade } from '@blue/screens/pkg4/ui';
 import { DailyDraw, type DailyInit } from '@blue/screens/pkg4/DailyDraw';
 import { LongReadingFlow, ReadingArchive, ReadingDetail, type LongInit, type FollowPhase } from '@blue/screens/pkg4/LongReading';
@@ -52,6 +52,7 @@ const LONG: Record<string, LongInit> = {
 
 export default function Astrology({ tab: tabQ, params }: PageProps) {
   const low = useLowMotion();
+  const astro = useAstrologyData();
   const [tab, setTab] = useState<Tab>((['daily', 'long', 'archive'].includes(tabQ ?? '') ? tabQ : 'daily') as Tab);
   const qState = params.get('state') ?? '';
   const qPhase = params.get('phase') ?? '';
@@ -64,8 +65,12 @@ export default function Astrology({ tab: tabQ, params }: PageProps) {
   const lk = params.get('step') || qState;
   const [longKey, setLongKey] = useState(tab === 'long' && LONG[lk] ? lk : 'form');
   const follow = (['form', 'picking', 'reading'].includes(params.get('follow') ?? '') ? params.get('follow') : undefined) as FollowPhase | undefined;
-  const [readings, setReadings] = useState<LongReading[]>(tab === 'archive' && qState === 'empty' ? [] : LONG_READINGS);
-  const [detail, setDetail] = useState<LongReading | null>(tab === 'archive' && params.get('detail') ? LONG_READINGS[0] : null);
+  const [readings, setReadings] = useState<LongReading[]>(tab === 'archive' && qState === 'empty' ? [] : astro.longReadings);
+  const [detail, setDetail] = useState<LongReading | null>(tab === 'archive' && params.get('detail') ? astro.longReadings[0] ?? null : null);
+
+  useEffect(() => {
+    if (qState !== 'empty') setReadings(astro.longReadings);
+  }, [astro.longReadings, qState]);
 
   useEffect(() => { if (sec === 'glimpse') { const t = window.setTimeout(() => document.getElementById('fate-glimpse')?.scrollIntoView({ block: 'center', behavior: low ? 'auto' : 'smooth' }), 900); return () => clearTimeout(t); } }, [sec, low]);
 
@@ -105,14 +110,14 @@ export default function Astrology({ tab: tabQ, params }: PageProps) {
           {tab === 'daily' && <div className="pb-4"><DailyDraw key={`d-${dailyKey}-${glimpse}`} init={di} glimpse={glimpse} /></div>}
           {tab === 'long' && (
             <div className="pb-4">
-              <LongReadingFlow key={`l-${longKey}-${follow ?? ''}`} init={li} activeCount={Math.min(activeCount, 1)} onSaved={(r) => setReadings((l) => [r, ...l])} onBack={() => switchTab('archive')} />
+              <LongReadingFlow key={`l-${longKey}-${follow ?? ''}`} init={li} activeCount={Math.min(activeCount, 1)} onSaved={(r) => { void astro.saveLongReading(r); setReadings((l) => [r, ...l]); }} onBack={() => switchTab('archive')} />
             </div>
           )}
           {tab === 'archive' && detail && (
             <ReadingDetail reading={detail} canFollowUp onBack={() => setDetail(null)}
-              onArchive={(a) => { const r = { ...detail, archived: a }; setDetail(r); setReadings((l) => l.map((x) => (x.id === r.id ? r : x))); }}
-              onDelete={() => { setReadings((l) => l.filter((x) => x.id !== detail.id)); setDetail(null); }}
-              onFollowSaved={(f) => { const r = { ...detail, followUps: [f] }; setDetail(r); setReadings((l) => l.map((x) => (x.id === r.id ? r : x))); }} />
+              onArchive={(a) => { void astro.archiveLongReading(detail.id, a); const r = { ...detail, archived: a }; setDetail(r); setReadings((l) => l.map((x) => (x.id === r.id ? r : x))); }}
+              onDelete={() => { void astro.deleteLongReading(detail.id); setReadings((l) => l.filter((x) => x.id !== detail.id)); setDetail(null); }}
+              onFollowSaved={(f) => { void astro.appendLongReadingFollowUp(detail.id, f); const r = { ...detail, followUps: [...(detail.followUps ?? []), f] }; setDetail(r); setReadings((l) => l.map((x) => (x.id === r.id ? r : x))); }} />
           )}
           {tab === 'archive' && !detail && <ReadingArchive readings={readings} onOpen={setDetail} />}
         </StateFade>
@@ -134,7 +139,7 @@ export default function Astrology({ tab: tabQ, params }: PageProps) {
           ]} />
         )}
         {tab === 'archive' && (
-          <DevStrip value={readings.length ? 'list' : 'empty'} onChange={(v) => { setDetail(null); setReadings(v === 'empty' ? [] : LONG_READINGS); }} items={[{ id: 'list', label: '有档案' }, { id: 'empty', label: '空' }]} />
+          <DevStrip value={readings.length ? 'list' : 'empty'} onChange={(v) => { setDetail(null); setReadings(v === 'empty' ? [] : astro.longReadings); }} items={[{ id: 'list', label: '有档案' }, { id: 'empty', label: '空' }]} />
         )}
       </div>
     </PageEnter>

@@ -18,7 +18,7 @@ import { UserProfileCardView } from '@blue/screens/overlays/UserProfileCard.p3r'
 import { MenuThemeSheetView } from '@blue/screens/overlays/MenuThemeSheet.p3r';
 import { MenuAboutSheetView } from '@blue/screens/overlays/MenuAboutSheet.p3r';
 import { THEME_SWATCHES } from '@blue/mock/pkg5';
-import { useAchievementsData, useMenuData } from '@blue/adapters/pkg5';
+import { useMenuData, useMenuRuntime } from '@blue/adapters/pkg5';
 import { useCallingCardData } from '@blue/adapters/callingCards';
 
 const I = (d: ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="miter" aria-hidden>{d}</svg>;
@@ -36,21 +36,21 @@ const ICONS: Record<string, ReactNode> = {
 
 export default function Menu({ params }: PageProps) {
   const { CURRENT_STREAK, TOTAL_LEVEL, TOTAL_POINTS } = useMenuData();
-  const { ACHIEVEMENTS, achievementProgress } = useAchievementsData();
+  const runtime = useMenuRuntime();
   const { CALLING_CARDS } = useCallingCardData();
   const bold = useBoldness();
   const p = usePresence();
-  const battleVisible = params.get('battle') !== '0';
-  const ledgerVisible = params.get('ledger') !== '0';
-  const hasUpdate = params.get('update') === '1';
-  const inShadowTime = params.get('shadow') !== '0';
+  const battleVisible = runtime.BATTLE_VISIBLE;
+  const ledgerVisible = runtime.LEDGER_VISIBLE;
+  const hasUpdate = runtime.HAS_UPDATE;
+  const inShadowTime = runtime.IN_SHADOW_TIME;
   const sheet = params.get('sheet');
   const [profileOpen, setProfileOpen] = useState(sheet === 'profile');
   const [themeOpen, setThemeOpen] = useState(sheet === 'theme');
   const [aboutOpen, setAboutOpen] = useState(sheet === 'about');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const press = useRef({ active: false, x: 0, y: 0, key: '' });
-  const pendingUnlocks = ACHIEVEMENTS.filter((a) => !a.unlocked && (achievementProgress[a.id] ?? 0) >= a.condition.value).length;
+  const pendingUnlocks = runtime.PENDING_UNLOCKS;
   const activeCallingCards = CALLING_CARDS.filter((card) => !card.archived).length;
   const themeLabel = THEME_SWATCHES.find((t) => t.value === p.theme)?.label ?? '粉';
   const preset = presetOf(p.statusId);

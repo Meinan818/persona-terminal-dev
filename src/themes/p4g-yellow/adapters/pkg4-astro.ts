@@ -6,5 +6,6 @@
  */
 export * from '../mock/pkg4-astro';
 export { useAstrologyData, useDailyReadiness, useFateWindow } from '@/themes/astrologyData';
+export { TODAY, WEEKDAY_CN, shiftKey } from '@/themes/astrologyData';
 
 // ───── 真实数据覆盖区（按 INTEGRATE-THEMES.md 第 6 步填写）─────

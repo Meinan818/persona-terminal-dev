@@ -24,11 +24,11 @@ export const shiftKey = (days: number) => { const d = new Date(); d.setDate(d.ge
 export const STREAM_TEXT = '星星落在你最近反复回看的那件事上——你以为它停滞了，其实它只是在雾里慢慢成形。今天适合把一句迟迟没说出口的感谢说出来；对方等的不是完美的措辞，而是你肯开口。';
 export const LONG_STREAM_TEXT = '### 现状 · 隐者\n你已经在独自想这件事很久了，提灯照见的不是答案，是你真正在意的那部分。\n\n### 阻碍 · 高塔（逆位）\n你害怕的「推倒重来」其实不会发生；真正拖住你的，是对一次小失误的反复回放。\n\n### 方向 · 战车\n两到四周内，选一条路然后全速前进。';
 
-export function useAstrologyData() {
+export function useAstrologyData(autoLoad = true) {
   const {
     dailyDivination, longReadings, fateGlimpses, settings,
     loadDailyDivination, loadLongReadings, sweepExpiredReadings,
-    saveDailyDivination, saveLongReading, archiveLongReading, deleteLongReading,
+    saveDailyDivination, saveLongReading, appendLongReadingFollowUp, archiveLongReading, deleteLongReading,
   } = useAppStore(useShallow((s) => ({
     dailyDivination: s.dailyDivination,
     longReadings: s.longReadings,
@@ -39,9 +39,15 @@ export function useAstrologyData() {
     sweepExpiredReadings: s.sweepExpiredReadings,
     saveDailyDivination: s.saveDailyDivination,
     saveLongReading: s.saveLongReading,
+    appendLongReadingFollowUp: s.appendLongReadingFollowUp,
     archiveLongReading: s.archiveLongReading,
     deleteLongReading: s.deleteLongReading,
   })));
+  useEffect(() => {
+    if (!autoLoad) return;
+    void loadDailyDivination();
+    void loadLongReadings().then(() => sweepExpiredReadings());
+  }, [autoLoad, loadDailyDivination, loadLongReadings, sweepExpiredReadings]);
 
   const activeCount = useMemo(() => longReadings.filter((r) => !r.archived && r.expiresAt >= TODAY).length, [longReadings]);
   const latestGlimpse = useMemo(() => fateGlimpses[0] ?? null, [fateGlimpses]);
@@ -49,7 +55,7 @@ export function useAstrologyData() {
   return {
     dailyDivination, longReadings, activeCount, latestGlimpse, settings,
     loadDailyDivination, loadLongReadings, sweepExpiredReadings,
-    saveDailyDivination, saveLongReading, archiveLongReading, deleteLongReading,
+    saveDailyDivination, saveLongReading, appendLongReadingFollowUp, archiveLongReading, deleteLongReading,
   };
 }
 
@@ -74,8 +80,9 @@ export function useFateWindow() {
 
 export function useOrgView() {
   const { orgs, orgsLoaded, setOrgs } = useCloudSocialStore(useShallow((s) => ({ orgs: s.orgs, orgsLoaded: s.orgsLoaded, setOrgs: s.setOrgs })));
+  const signedIn = useCloudStore((s) => !!s.cloudUser);
   useEffect(() => { void loadSocial(); }, []);
-  return { orgs, orgsLoaded, setOrgs };
+  return { orgs, orgsLoaded, setOrgs, signedIn };
 }
 
 export function useCloudUser() {

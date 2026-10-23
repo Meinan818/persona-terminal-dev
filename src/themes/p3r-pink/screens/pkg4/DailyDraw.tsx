@@ -13,7 +13,11 @@ import { useAIStream, AIText, type AIFail, type AIPhase } from '@pink/fx';
 import { useLowMotion } from '@pink/lib/prefs';
 import { useViewportWidth } from '@pink/lib/layout';
 import { TAROT_BY_ID, ORI_LABEL, ATTR_NAMES, FORTUNE_LABEL } from '@pink/mock/pkg4-tarot';
-import { DAILY_TODAY, WINDOW_DAYS, WINDOW_DAYS_PARTIAL, LAST_GLIMPSE, STREAM_TEXT, TODAY, WEEKDAY_CN } from '@pink/mock/pkg4-astro';
+import { useAstrologyData, useFateWindow, TODAY, WEEKDAY_CN, shiftKey } from '@pink/adapters/pkg4-astro';
+import { TAROT_BY_ID as REAL_TAROT_BY_ID, drawRandomCards, MAJOR_ARCANA, randomOrientation, randomBonusMultiplier } from '@/constants/tarot';
+import { buildOfflineDaily } from '@/utils/tarotOffline';
+import { aiConfigured } from '@/utils/aiClient';
+import { v4 as uuidv4 } from 'uuid';
 import { Arcana, PinkBack, FlipCard, ShuffleDeck, CardNameReveal, ThinkingCircle, Markdownish, useFakeProgress } from './tarot';
 import { PhaseTitle, HintStrip, ErrStrip, Label, SlantAction, StateFade } from './ui';
 import { DayReviewSheet, GlimpseRitual } from '@pink/screens/overlays/FateGlimpse.p3r';
@@ -31,51 +35,50 @@ export interface DailyInit {
   offline?: boolean;
 }
 
-const NARRATION = DAILY_TODAY.narration;
-
 export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligible' | 'buff' | 'partial' }) {
   const low = useLowMotion();
   const vw = useViewportWidth();
+  const astro = useAstrologyData(false);
+  const today = TODAY;
   const [phase, setPhase] = useState<DailyPhase>(init.phase);
-  const cands = useMemo<Cand[]>(() => DAILY_TODAY.drawnFrom.map((id, i) => ({ id, orientation: i === 1 ? 'reversed' : 'upright' })), []);
+  const cands = useMemo<Cand[]>(() => drawRandomCards(3, MAJOR_ARCANA).map((card) => ({ id: card.id, orientation: randomOrientation() })), []);
   const [picked, setPicked] = useState<number | null>(init.phase === 'intro' || init.phase === 'pick' ? null : 0);
-  const [result, setResult] = useState<DailyDivination | null>(init.phase === 'done' ? (init.offline ? offlineOf(cands[0]) : DAILY_TODAY) : null);
+  const [result, setResult] = useState<DailyDivination | null>(
+    astro.dailyDivination?.date === today ? astro.dailyDivination : init.phase === 'done' && init.offline ? offlineOf(cands[0]) : null,
+  );
   const [resumeMsg, setResumeMsg] = useState<string | null>(init.resume ? '上次的解读没能完成——这张牌已经为你留着，直接继续就好。' : null);
   const [aborted, setAborted] = useState(false);
-  const ai = useAIStream({ text: NARRATION, fail: init.fail, initialPhase: init.phase === 'calling' || (init.phase === 'error' && !init.resume) ? (init.ai ?? 'thinking') : 'idle', thinkMs: 2400, cps: 30 });
+  const noApiKey = init.noApiKey || !aiConfigured(astro.settings);
+  const ai = useAIStream({ text: '', fail: init.fail, initialPhase: 'idle', thinkMs: 0, cps: 30 });
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
 
-  // AI 状态 → 页面 phase（真实：任务出错 → error；完成 → store 写入后切 done）
   useEffect(() => {
-    if (phase !== 'calling' && phase !== 'error') return;
-    if (ai.phase === 'error' || ai.phase === 'truncated') setPhase('error');
-    if (ai.phase === 'thinking' || ai.phase === 'streaming') setPhase('calling');
-    if (ai.phase === 'done' && phase === 'calling') later(() => finish(false), low ? 0 : 500);
-  }, [ai.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (astro.dailyDivination?.date !== today) return;
+    setResult(astro.dailyDivination);
+    setPhase('done');
+  }, [astro.dailyDivination, today]);
 
   const finish = (offline: boolean) => {
     const c = cands[picked ?? 0];
-    setResult(offline ? offlineOf(c) : { ...DAILY_TODAY, cardId: c.id, orientation: c.orientation });
+    const next = offlineOf(c);
+    setResult(next);
+    void astro.saveDailyDivination(next);
     setPhase('done');
   };
   const pick = (i: number, useOffline = false, force = false) => {
     if (!force && phase !== 'pick') return;
     setPicked(i); setResumeMsg(null); setAborted(false);
     setPhase('flipping');
-    later(() => {
-      if (useOffline || init.noApiKey) { finish(true); return; }
-      setPhase('calling'); ai.start();
-    }, low ? 150 : 700);
+    later(() => finish(true), low ? 150 : 700);
   };
 
   // ?phase=flipping 直达 = 从翻牌阶段开播（真实：翻牌 700ms 后发起请求 → calling），而不是停在牌背
   useEffect(() => {
     if (init.phase !== 'flipping') return;
     later(() => {
-      if (init.noApiKey) { finish(true); return; }
-      setPhase('calling'); ai.start();
+      finish(true);
     }, low ? 150 : 700);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -89,7 +92,7 @@ export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligib
 
   return (
     <div className="space-y-5">
-      {init.noApiKey && (phase === 'intro' || phase === 'pick') && (
+      {noApiKey && (phase === 'intro' || phase === 'pick') && (
         <HintStrip>尚未配置 AI API。可前往「设置 → AI 服务」配置后获得定制解读；或以离线兜底文案完成今日抽卡——将使用牌面描述生成通用解读。</HintStrip>
       )}
       <StateFade k={phase}><PhaseTitle title={title} sub={sub} /></StateFade>
@@ -145,7 +148,7 @@ export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligib
         </div>
       )}
 
-      {phase === 'pick' && init.noApiKey && (
+      {phase === 'pick' && noApiKey && (
         <div className="text-center text-[12px] font-bold underline" style={{ color: P3R.grey }}>未配置 API — 选择任意卡牌将使用离线兜底</div>
       )}
     </div>
@@ -154,10 +157,20 @@ export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligib
 
 function offlineOf(c: Cand): DailyDivination {
   const card = TAROT_BY_ID[c.id];
+  const offline = buildOfflineDaily(REAL_TAROT_BY_ID[c.id], c.orientation);
   return {
-    ...DAILY_TODAY, cardId: c.id, orientation: c.orientation, source: 'offline',
-    narration: `**${card.name}${c.orientation === 'reversed' ? '（逆位）' : ''}**：${card[c.orientation].meaning}\n\n${card[c.orientation].reflection}`,
-    advice: card.advice?.[c.orientation] ?? DAILY_TODAY.advice,
+    id: uuidv4(),
+    date: TODAY,
+    drawnFrom: [c.id],
+    pickedIndex: 0,
+    cardId: c.id,
+    orientation: c.orientation,
+    effect: { attribute: offline.attribute, multiplier: randomBonusMultiplier(c.orientation) },
+    narration: offline.narration,
+    advice: offline.advice,
+    fortune: offline.fortune,
+    source: 'offline',
+    createdAt: new Date(),
   };
 }
 
@@ -250,12 +263,15 @@ function DoneView({ d }: { d: DailyDivination }) {
 }
 
 /* ───────────────────────── 七日连星（抽完今日才现身） ───────────────────────── */
-export function FateGlimpseSection({ variant }: { variant: 'eligible' | 'buff' | 'partial' }) {
+export function FateGlimpseSection({ variant: _variant }: { variant: 'eligible' | 'buff' | 'partial' }) {
   const low = useLowMotion();
   const vw = useViewportWidth();
-  const days = variant === 'partial' ? WINDOW_DAYS_PARTIAL : WINDOW_DAYS;
+  const fateWindow = useFateWindow();
+  const days = fateWindow.days.length
+    ? fateWindow.days
+    : Array.from({ length: 7 }, (_, i) => ({ date: shiftKey(i - 6), drawn: null as DailyDivination | null }));
   const drawnCount = days.filter((d) => d.drawn).length;
-  const buff = variant === 'buff' ? LAST_GLIMPSE : null;
+  const buff = fateWindow.lastGlimpse;
   const [ritual, setRitual] = useState<null | 'new' | 'review'>(null);
   const [detail, setDetail] = useState<DailyDivination | null>(null);
   const slotW = Math.max(30, Math.min(46, Math.floor((Math.min(vw, 576) - 32 - 40 - 24) / 7)));

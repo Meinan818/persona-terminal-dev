@@ -11,7 +11,7 @@ import { P3R, P3Button, P3Tag, P3Textarea, P3Field, P3Empty, P3Dialog, P3ListRow
 import { useAIStream, AIText, type AIFail, type AIPhase } from '@blue/fx';
 import { useLowMotion } from '@blue/lib/prefs';
 import { TAROT_BY_ID, ORI_LABEL, PERIOD_LABELS, spreadPositionsFor, periodHasBase, BASE_POSITION, drawRandom } from '@blue/mock/pkg4-tarot';
-import { LONG_STREAM_TEXT, TODAY, shiftKey } from '@blue/mock/pkg4-astro';
+import { TODAY, shiftKey } from '@blue/adapters/pkg4-astro';
 import { Arcana, PinkBack, FlipCard, Markdownish, ThinkingCircle, useHold, useFakeProgress, cardH } from './tarot';
 import { PhaseTitle, HintStrip, ErrStrip, Label, SlantAction, StateFade } from './ui';
 
@@ -20,6 +20,7 @@ export type FollowPhase = 'form' | 'picking' | 'reading';
 interface Cand { id: string; orientation: TarotOrientation }
 const PERIODS: LongReadingPeriod[] = ['recent', 'midterm', 'longterm'];
 const DEMO_Q = '我最近对工作的方向感到迷茫，接下来该如何取舍？';
+const AI_PENDING = '星象 AI 接入等待确认；本次没有发起模型请求，也不会生成占位解读。';
 const FIXED6: Cand[] = [
   { id: 'hermit', orientation: 'upright' }, { id: 'moon', orientation: 'upright' }, { id: 'tower', orientation: 'reversed' },
   { id: 'sun', orientation: 'upright' }, { id: 'chariot', orientation: 'upright' }, { id: 'lovers', orientation: 'reversed' },
@@ -47,15 +48,13 @@ export function LongReadingFlow({ init, activeCount, onSaved, onBack }: { init: 
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
 
   const aiStart: AIPhase = init.step === 'reading' || init.step === 'done' ? (init.ai ?? 'done') : 'idle';
-  const ai = useAIStream({ text: LONG_STREAM_TEXT, fail: init.fail, failAt: 0.5, initialPhase: aiStart, cps: 40 });
+  const ai = useAIStream({ text: '', fail: init.fail, failAt: 0.5, initialPhase: 'idle', cps: 40 });
 
   const buildReading = (content: string): LongReading => {
     const picked: DrawnCard[] = [...(base ? [{ cardId: base.id, orientation: base.orientation }] : []), ...picks.map((i) => ({ cardId: cands[i].id, orientation: cands[i].orientation }))];
     return { id: `lr-${Date.now()}`, question: question.trim() || DEMO_Q, period, drawnFrom: cands.map((c) => c.id), picked, content, followUps: [], archived: false, createdAt: new Date(), expiresAt: shiftKey(14) };
   };
-  const accept = (content = ai.full) => { const r = buildReading(content); setSaved(r); onSaved(r); setPhase('done'); };
-  // AI 完成 → 600ms 后存档并转详情（真实：job done → 写入 store → done）
-  useEffect(() => { if (phase === 'reading' && ai.phase === 'done' && init.step !== 'done') later(() => accept(), low ? 0 : 600); }, [ai.phase, phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  const accept = (content = ai.full) => { if (!content.trim()) { setError(AI_PENDING); return; } const r = buildReading(content); setSaved(r); onSaved(r); setPhase('done'); };
 
   const start = () => {
     if (!question.trim() || cap || init.noApiKey) return;
@@ -71,15 +70,14 @@ export function LongReadingFlow({ init, activeCount, onSaved, onBack }: { init: 
   };
   const reveal = () => {
     if (picks.length !== 3) return;
-    if (init.noApiKey) { setError('请先在「设置 → AI 服务」中配置 API 密钥。中长期占卜无法离线完成。'); return; }
-    setError(null); setPhase('revealing');
-    later(() => { setPhase((p) => (p === 'revealing' ? 'reading' : p)); ai.start(); }, low ? 300 : 1500);
+    setError(init.noApiKey ? '请先在「设置 → AI 服务」中配置 API 密钥。中长期占卜无法离线完成。' : AI_PENDING);
   };
-  // 直达 revealing：自动按真实节奏进入 reading
-  useEffect(() => { if (init.step === 'revealing') later(() => { setPhase((p) => (p === 'revealing' ? 'reading' : p)); ai.start(); }, low ? 300 : 1500); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 直达「解读与追问」：直接给已完成的详情
-  useEffect(() => { if (init.step === 'done' || (init.step === 'reading' && (init.ai ?? 'done') === 'done')) { const r = buildReading(LONG_STREAM_TEXT); setSaved(r); setPhase('done'); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (init.step === 'revealing' || init.step === 'done' || (init.step === 'reading' && (init.ai ?? 'done') === 'done')) {
+      setError(AI_PENDING);
+      setPhase('form');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (phase === 'done' && saved) return <ReadingDetail reading={saved} canFollowUp follow={init.follow} onBack={onBack} onArchive={(a) => setSaved({ ...saved, archived: a })} onDelete={onBack} onFollowSaved={(f) => setSaved({ ...saved, followUps: [f] })} />;
 
@@ -95,7 +93,7 @@ export function LongReadingFlow({ init, activeCount, onSaved, onBack }: { init: 
               <Label en="RESUME">上次的占卜没有生成完</Label>
               <div className="text-[12.5px] font-bold" style={{ color: P3R.inkSoft }}>「我最近对工作的方向感到迷茫…」· 一段时间 · 同一副牌已经保存</div>
               <div className="mt-3 flex gap-2">
-                <SlantAction onClick={() => { setPending(false); setQuestion(DEMO_Q); setPicks([0, 2, 4]); setPhase('reading'); ai.start(); }}>用同一副牌继续</SlantAction>
+                <SlantAction onClick={() => { setPending(false); setQuestion(DEMO_Q); setError(AI_PENDING); }}>用同一副牌继续</SlantAction>
                 <SlantAction tone="soft" onClick={() => setPending(false)}>放弃</SlantAction>
               </div>
             </div>
@@ -348,21 +346,11 @@ export function ReadingDetail({ reading, canFollowUp, follow, onBack, onArchive,
   );
 }
 
-const FOLLOW_TEXT = '节制说：稳不是退。你会在稳里慢慢调出自己想要的比例——只要别把「稳」当成「不再想」。接下来两周，先把每天的节奏固定下来，再决定要不要加码。';
 function FollowUpPanel({ initial, onClose, onSaved }: { initial: FollowPhase; onClose: () => void; onSaved: (f: LongReading['followUps'][number]) => void }) {
   const [phase, setPhase] = useState<FollowPhase | 'done'>(initial);
   const [q, setQ] = useState(initial === 'form' ? '' : '如果选了更稳的那条，会后悔吗？');
-  const cands = useMemo<Cand[]>(() => [{ id: 'temperance', orientation: 'upright' }, { id: 'devil', orientation: 'reversed' }, { id: 'empress', orientation: 'upright' }], []);
+  const cands = useMemo<Cand[]>(() => drawRandom(3).map((id, i) => ({ id, orientation: i === 1 ? 'reversed' : 'upright' })), []);
   const [idx, setIdx] = useState<number | null>(initial === 'reading' ? 0 : null);
-  const ai = useAIStream({ text: FOLLOW_TEXT, initialPhase: initial === 'reading' ? 'thinking' : 'idle', thinkMs: 1800, cps: 34 });
-  const prog = useFakeProgress(ai.phase === 'thinking', 1800);
-  useEffect(() => {
-    if (phase === 'reading' && ai.phase === 'done' && idx !== null) {
-      const c = cands[idx];
-      onSaved({ id: `fu-${Date.now()}`, question: q || '（追问）', drawnFrom: cands.map((x) => x.id), cardId: c.id, orientation: c.orientation, content: ai.full, createdAt: new Date() });
-      setPhase('done');
-    }
-  }, [ai.phase]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="px-5 py-4" style={sec({ background: 'var(--p3r-cyan-pale)' })}>
       <Label en="ONE MORE" right={phase !== 'done' && <button type="button" onClick={onClose} className="text-[12px] font-black underline" style={{ color: P3R.grey }}>收起</button>}>追问（仅一次）</Label>
@@ -375,15 +363,14 @@ function FollowUpPanel({ initial, onClose, onSaved }: { initial: FollowPhase; on
       {phase === 'picking' && (
         <div>
           <div className="mb-3 text-center font-heavy text-[15px]" style={{ color: P3R.blueDeep }}>从三张中选一张</div>
-          <div className="flex justify-center gap-3">{cands.map((_, i) => <motion.button key={`fc-${i}`} type="button" aria-label={`第 ${i + 1} 张`} onClick={() => { setIdx(i); setPhase('reading'); ai.start(); }} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} whileTap={{ scale: 0.96 }}><PinkBack width={72} /></motion.button>)}</div>
+          <div className="flex justify-center gap-3">{cands.map((_, i) => <motion.button key={`fc-${i}`} type="button" aria-label={`第 ${i + 1} 张`} onClick={() => { setIdx(i); setPhase('reading'); }} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} whileTap={{ scale: 0.96 }}><PinkBack width={72} /></motion.button>)}</div>
         </div>
       )}
       {(phase === 'reading' || phase === 'done') && idx !== null && (
         <div className="flex gap-3">
           <Arcana id={cands[idx].id} orientation={cands[idx].orientation} width={64} />
           <div className="min-w-0 flex-1">
-            {ai.phase === 'thinking' ? <ThinkingCircle variant="hexagram" progress={prog} size={96} label={prog < 0.6 ? '正在思索' : '正在回应'} showPercent /> : <AIText ai={ai} className="text-[14px]" />}
-            {ai.phase === 'error' && <div className="mt-2 text-[12px] font-black" style={{ color: 'var(--p3r-coral-ink)' }}>回应失败<button type="button" className="ml-3 underline" onClick={() => ai.retry()}>重试</button></div>}
+            <div className="text-[12.5px] font-bold leading-relaxed" style={{ color: P3R.inkSoft }}>{AI_PENDING}</div>
           </div>
         </div>
       )}

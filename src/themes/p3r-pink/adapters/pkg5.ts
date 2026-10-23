@@ -2,6 +2,7 @@
 
 // ───── 真实数据覆盖区（按 INTEGRATE-THEMES.md 第 6 步填写）─────
 export { useCloudUser, useCodexCollections, useRealCodex, useAchievementProgressMap, useTarotCollectedMap, useSeasonCollectedMap } from '@/themes/astrologyData';
+export { menuRuntimeOps, useMenuRuntime } from '@/themes/menuRuntime';
 
 /** 真实五维：从 store 读，用户未建档时空数组 */
 export function useMenuData() {

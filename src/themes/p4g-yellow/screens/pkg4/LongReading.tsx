@@ -10,7 +10,7 @@ import { CollageStagger, CollageItem } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
 import { TAROT_BY_ID, ORI_LABEL, PERIOD_LABELS, spreadPositionsFor, periodHasBase, BASE_POSITION, drawRandom, randomOri } from '@yellow/mock/pkg4-tarot';
-import { LONG_STREAM_TEXT, TODAY, shiftKey } from '@yellow/mock/pkg4-astro';
+import { TODAY, shiftKey } from '@yellow/adapters/pkg4-astro';
 import { TarotFace, TarotBack, FlipCard, Markdownish, ThinkingTV, useHold, useFakeProgress, useTypewriter, cardH } from './tarot';
 import { CardLabel, MsgBox, StateFade } from './ui';
 
@@ -18,6 +18,7 @@ export type LongStep = 'form' | 'base' | 'picking' | 'revealing' | 'reading' | '
 interface Cand { id: string; orientation: TarotOrientation }
 
 const PERIODS: LongReadingPeriod[] = ['recent', 'midterm', 'longterm'];
+const AI_PENDING = '星象 AI 接入等待确认；本次没有发起模型请求，也不会生成占位解读。';
 
 export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, resume, onSaved, onBack }: {
   initialStep?: LongStep; noApiKey: boolean; activeCount: number; resume?: boolean; onSaved: (r: LongReading) => void; onBack: () => void;
@@ -51,19 +52,24 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
   };
   const reveal = () => {
     if (picks.length !== 3) return;
-    if (noApiKey) { setError('请先在「设置 → AI 服务」中配置 API 密钥。中长期占卜无法离线完成。'); return; }
-    setPhase('revealing');
-    setTimeout(() => setPhase((p) => (p === 'revealing' ? 'reading' : p)), low ? 300 : 1500);
+    setError(noApiKey ? '请先在「设置 → AI 服务」中配置 API 密钥。中长期占卜无法离线完成。' : AI_PENDING);
   };
   const reading = phase === 'reading';
   const prog = useFakeProgress(reading, 2400);
-  const tw = useTypewriter(LONG_STREAM_TEXT, reading && prog >= 1, 80);
+  const tw = useTypewriter('', reading && prog >= 1, 80);
   const accept = () => {
+    if (!tw.text.trim()) { setError(AI_PENDING); return; }
     const picked: DrawnCard[] = [...(base ? [{ cardId: base.id, orientation: base.orientation }] : []), ...picks.map((i) => ({ cardId: cands[i].id, orientation: cands[i].orientation }))];
-    const r: LongReading = { id: `lr-${Date.now()}`, question: question.trim() || '（演示）', period, drawnFrom: cands.map((c) => c.id), picked, content: tw.text || LONG_STREAM_TEXT, followUps: [], archived: false, createdAt: new Date(), expiresAt: shiftKey(14) };
+    const r: LongReading = { id: `lr-${Date.now()}`, question: question.trim(), period, drawnFrom: cands.map((c) => c.id), picked, content: tw.text, followUps: [], archived: false, createdAt: new Date(), expiresAt: shiftKey(14) };
     setSaved(r); onSaved(r); setPhase('done');
   };
   useEffect(() => { if (reading && tw.done && prog >= 1 && !truncated) { const t = setTimeout(accept, 600); return () => clearTimeout(t); } }, [reading, tw.done, prog, truncated]); // eslint-disable-line
+  useEffect(() => {
+    if (initialStep === 'revealing' || initialStep === 'reading' || initialStep === 'done') {
+      setError(AI_PENDING);
+      setPhase('form');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (phase === 'done' && saved) return <ReadingDetail reading={saved} canFollowUp onBack={onBack} onArchive={(a) => setSaved({ ...saved, archived: a })} onDelete={onBack} onFollowSaved={(f) => setSaved({ ...saved, followUps: [f] })} />;
 
@@ -76,7 +82,7 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
               <div className="font-display text-body font-bold text-p4g-yellow">上次的占卜没有生成完</div>
               <div className="mt-1 text-meta opacity-85">「{'我最近对工作的方向感到迷茫…'}」· 一段时间</div>
               <div className="mt-3 flex gap-2">
-                <P4Button size="sm" className="flex-1" onClick={() => { setPending(false); setQuestion('我最近对工作的方向感到迷茫，接下来该如何取舍？'); setPicks([0, 2, 4]); setPhase('reading'); }}>用同一副牌继续</P4Button>
+                <P4Button size="sm" className="flex-1" onClick={() => { setPending(false); setQuestion('我最近对工作的方向感到迷茫，接下来该如何取舍？'); setError(AI_PENDING); }}>用同一副牌继续</P4Button>
                 <P4Button size="sm" variant="secondary" onClick={() => setPending(false)}>放弃</P4Button>
               </div>
             </MsgBox>
@@ -318,16 +324,6 @@ function FollowUpPanel({ onClose, onSaved }: { onClose: () => void; onSaved: (f:
   const [q, setQ] = useState('');
   const [cands, setCands] = useState<Cand[]>([]);
   const [idx, setIdx] = useState<number | null>(null);
-  const prog = useFakeProgress(phase === 'reading', 1800);
-  const text = '节制说：稳不是退。你会在稳里慢慢调出自己想要的比例——只要别把「稳」当成「不再想」。';
-  const tw = useTypewriter(text, phase === 'reading' && prog >= 1, 70);
-  useEffect(() => {
-    if (phase === 'reading' && tw.done && prog >= 1) {
-      const c = cands[idx ?? 0];
-      onSaved({ id: `fu-${Date.now()}`, question: q, drawnFrom: cands.map((x) => x.id), cardId: c.id, orientation: c.orientation, content: text, createdAt: new Date() });
-      setPhase('done');
-    }
-  }, [phase, tw.done, prog]); // eslint-disable-line
   return (
     <P4Card tone="surface" cut="br">
       <CardLabel en="ONE MORE" right={phase !== 'done' && <button type="button" onClick={onClose} className="font-display text-meta font-bold text-p4g-ink-soft underline">收起</button>}>追问（仅一次）</CardLabel>
@@ -347,15 +343,7 @@ function FollowUpPanel({ onClose, onSaved }: { onClose: () => void; onSaved: (f:
         <div className="flex gap-3">
           <TarotFace id={cands[idx].id} orientation={cands[idx].orientation} width={64} />
           <div className="min-w-0 flex-1">
-            {phase === 'reading' && prog < 1 && <ThinkingTV size={70} progress={prog} label={prog < 0.6 ? '正在思索' : '正在回应'} />}
-            {(phase !== 'reading' || prog >= 1) && <p className="text-body leading-relaxed text-p4g-ink">{phase === 'done' ? text : tw.text}</p>}
-            {phase === 'reading' && prog >= 1 && !tw.done && (
-              <div className="mt-2 flex flex-wrap gap-x-3 text-meta font-bold text-p4g-ink">
-                <button type="button" className="underline" onClick={() => setPhase('error')}>接着写</button>
-                <button type="button" className="underline" onClick={() => { setPhase('done'); onSaved({ id: `fu-${Date.now()}`, question: q, drawnFrom: [], cardId: cands[idx].id, orientation: cands[idx].orientation, content: tw.text, createdAt: new Date() }); }}>就用这些</button>
-              </div>
-            )}
-            {phase === 'error' && <div className="mt-2 text-meta font-bold text-p4g-danger">回应失败<button type="button" className="ml-3 underline" onClick={() => setPhase('reading')}>重试</button></div>}
+            <p className="text-body leading-relaxed text-p4g-ink">{AI_PENDING}</p>
           </div>
         </div>
       )}

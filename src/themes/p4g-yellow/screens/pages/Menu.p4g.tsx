@@ -21,7 +21,7 @@ import { goalPct, presetOf, usePresence } from '@yellow/screens/pkg5/presence';
 import { UserProfileCardView } from '@yellow/screens/overlays/UserProfileCard.p4g';
 import { MenuThemeSheetView } from '@yellow/screens/overlays/MenuThemeSheet.p4g';
 import { MenuAboutSheetView } from '@yellow/screens/overlays/MenuAboutSheet.p4g';
-import { useMenuData } from '@yellow/adapters/pkg5';
+import { useMenuData, useMenuRuntime } from '@yellow/adapters/pkg5';
 
 interface Row { key: string; label: string; caption?: ReactNode; desc: string; badge?: ReactNode; big?: boolean; onPress: () => void }
 
@@ -82,6 +82,7 @@ function StudentPass({ onOpen, className }: { onOpen: () => void; className?: st
 export default function Menu(_: PageProps) {
   const low = useLowMotion();
   const { CURRENT_STREAK, THEME_SWATCHES, TOTAL_LEVEL, TOTAL_POINTS } = useMenuData();
+  const runtime = useMenuRuntime();
   const mode = useMode();
   const officialBand = useSlotExists('menu-bg');
   const [selected, setSelected] = useState('statistics');
@@ -89,7 +90,20 @@ export default function Menu(_: PageProps) {
   const [themeOpen, setThemeOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [battleOpen, setBattleOpen] = useState(false);
-  const [dev, setDev] = useState({ battle: true, ledger: true, shadow: true, update: true, pending: 3 });
+  const [dev, setDev] = useState({
+    battle: runtime.BATTLE_VISIBLE,
+    ledger: runtime.LEDGER_VISIBLE,
+    shadow: runtime.IN_SHADOW_TIME,
+    update: runtime.HAS_UPDATE,
+    pending: runtime.PENDING_UNLOCKS,
+  });
+  useEffect(() => setDev({
+    battle: runtime.BATTLE_VISIBLE,
+    ledger: runtime.LEDGER_VISIBLE,
+    shadow: runtime.IN_SHADOW_TIME,
+    update: runtime.HAS_UPDATE,
+    pending: runtime.PENDING_UNLOCKS,
+  }), [runtime.BATTLE_VISIBLE, runtime.LEDGER_VISIBLE, runtime.IN_SHADOW_TIME, runtime.HAS_UPDATE, runtime.PENDING_UNLOCKS]);
   const { theme } = usePresence();
   const themeLabel = THEME_SWATCHES.find((t) => t.value === theme)?.label ?? '默认';
   const press = useRef({ active: false, key: '', x: 0, y: 0 });

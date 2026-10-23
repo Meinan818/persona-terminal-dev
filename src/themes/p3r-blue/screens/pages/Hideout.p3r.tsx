@@ -50,9 +50,14 @@ export default function Hideout({ tab, params }: PageProps) {
   const [wall, setWall] = useState(params.get('view') === 'wall');
   const blockedList = useCloudSocialStore((s) => s.orgBlocked);
   const blocked = useMemo(() => new Set(blockedList), [blockedList]);
-  const { orgs } = useOrgView();
+  const { orgs, orgsLoaded, signedIn } = useOrgView();
   const realView = orgs.length ? orgs[Math.min(orgIdx, orgs.length - 1)] : null;
   const base = useMemo(() => realView ?? buildView(), [realView]);
+  useEffect(() => {
+    if (params.get('state')) return;
+    if (!signedIn) setPstate('signed-out');
+    else if (orgsLoaded && !realView) setPstate('empty');
+  }, [orgsLoaded, realView, params, signedIn]);
   const op = params.get('open');
   const [flip, setFlip] = useState<OrgMember | null>(op === 'flip' ? base.members[1] : null);
   const [menuFor, setMenuFor] = useState<OrgMember | null>(op === 'menu' ? base.members[1] : null);

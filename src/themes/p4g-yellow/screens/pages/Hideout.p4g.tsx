@@ -12,7 +12,7 @@ import { ChannelNoise, CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { navigate } from '@yellow/shell/shellBus';
-import { buildView, LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@yellow/adapters/pkg4-org';
+import { buildView, useOrgView, LEVEL, ORG_LEVEL_NAMES, ORG_EMBLEMS, SECOND_ORG, ORG_XP_MEETING, ORG_XP_OP_SMALL, ORG_XP_OP_BIG, ORG_XP_OPS_PER_WEEK, RAID_XP_PER_HITTER, RAID } from '@yellow/adapters/pkg4-org';
 import { DevStrip, StateFade } from '@yellow/screens/pkg4/ui';
 import { HideoutMap, RosterWall, SECTION_TITLE, type HideoutSection } from '@yellow/screens/pkg4/org/MapWall';
 import { MemberTile } from '@yellow/screens/pkg4/org/MemberCard';
@@ -55,7 +55,14 @@ export default function Hideout({ tab, params }: PageProps) {
   const [noise, setNoise] = useState(false);
   const [seen, setSeen] = useState<Partial<Record<HideoutSection, boolean>>>({});
 
-  const base = useMemo(buildView, []);
+  const { orgs, orgsLoaded, signedIn } = useOrgView();
+  const realView = orgs.length ? orgs[Math.min(orgIdx, orgs.length - 1)] : null;
+  const base = useMemo(() => realView ?? buildView(), [realView]);
+  useEffect(() => {
+    if (params.get('state')) return;
+    if (!signedIn) setPstate('signed-out');
+    else if (orgsLoaded && !realView) setPstate('empty');
+  }, [orgsLoaded, realView, params, signedIn]);
   const view: OrgView = useMemo(() => {
     const leaderId = role === 'leader' ? base.me.userId : 'u2';
     const me = noCard ? { ...base.me, tarotId: undefined } : base.me;

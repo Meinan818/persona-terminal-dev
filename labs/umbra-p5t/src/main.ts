@@ -13,6 +13,9 @@ renderer.shadowMap.enabled = true;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x141418);
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+// 过肩瞄准镜头（P5T 开枪时切到射手肩后透视镜头，推近→开火→切回俯视）
+const aimCam = new THREE.PerspectiveCamera(44, 2, 0.05, 100);
+let viewCam: THREE.Camera = camera;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x302020, 1.4));
 const sun = new THREE.DirectionalLight(0xffffff, 1.6);
 sun.position.set(6, 12, 4);
@@ -437,7 +440,7 @@ function refreshLabels() {
   const su = selected ? battle.unit(selected) : null;
   const sg = su ? unitMesh.get(su.id) : null;
   if (sg && battle.phase === 'player' && !busy) {
-    const v = sg.position.clone().add(new THREE.Vector3(0, 0.5, 0)).project(camera);
+    const v = sg.position.clone().add(new THREE.Vector3(0, 0.5, 0)).project(viewCam);
     const sx = ((v.x + 1) / 2) * w, sy = ((1 - v.y) / 2) * h;
     act.style.right = `${Math.max(8, w - sx + 34)}px`; act.style.left = 'auto';
     act.style.top = `${Math.min(h - 200, Math.max(60, sy - 70))}px`; act.style.bottom = 'auto';
@@ -452,7 +455,7 @@ function refreshLabels() {
     const shield = g.getObjectByName('shield');
     if (shield && u.facing) { g.rotation.y = Math.atan2(u.facing.x, u.facing.y); }
     if (u.prop) { el.style.display = 'none'; continue; }
-    const v = g.position.clone().add(new THREE.Vector3(0, 1.05, 0)).project(camera);
+    const v = g.position.clone().add(new THREE.Vector3(0, 1.05, 0)).project(viewCam);
     el.style.display = '';
     el.style.left = `${((v.x + 1) / 2) * w}px`;
     el.style.top = `${((1 - v.y) / 2) * h}px`;
@@ -513,7 +516,7 @@ function toast(text: string) {
   (toast as unknown as { h: number }).h = window.setTimeout(() => t.classList.add('hidden'), 1800);
 }
 function popAt(pos: THREE.Vector3, text: string, cls = '') {
-  const v = pos.clone().add(new THREE.Vector3(0, 1.2, 0)).project(camera);
+  const v = pos.clone().add(new THREE.Vector3(0, 1.2, 0)).project(viewCam);
   const el = document.createElement('div');
   el.className = `dmg ${cls}`;
   el.textContent = text;
@@ -561,6 +564,48 @@ function flash(at: Vec, radius: number) {
   step();
 }
 
+let aimActive = false;
+let aimAnim: { t0: number; dur: number; from: THREE.Vector3; to: THREE.Vector3; look: THREE.Vector3; fov0: number; fov1: number } | null = null;
+/** 过肩瞄准：射手右肩后上方 → 目标胸口；450ms 推近 + FOV 收窄，叠准星/黑边（P5T 枪击机位） */
+async function aimShot(attackerId: string, targetId: string) {
+  const a = unitMesh.get(attackerId), t = unitMesh.get(targetId);
+  if (!a || !t) return;
+  const ap = a.position.clone(), tp = t.position.clone();
+  const dir = tp.clone().sub(ap); dir.y = 0;
+  if (dir.lengthSq() < 1e-4) return;
+  dir.normalize();
+  const right = new THREE.Vector3(-dir.z, 0, dir.x);
+  const look = tp.clone().add(new THREE.Vector3(0, 0.55, 0));
+  const from = ap.clone().addScaledVector(dir, -2.1).addScaledVector(right, 0.85).add(new THREE.Vector3(0, 1.55, 0));
+  const to = ap.clone().addScaledVector(dir, -1.05).addScaledVector(right, 0.5).add(new THREE.Vector3(0, 1.05, 0));
+  const el = canvas;
+  aimCam.aspect = el.clientWidth / Math.max(1, el.clientHeight);
+  aimCam.position.copy(from); aimCam.lookAt(look); aimCam.fov = 50; aimCam.updateProjectionMatrix();
+  aimAnim = { t0: performance.now(), dur: 450 / SPEED, from, to, look, fov0: 50, fov1: 34 };
+  viewCam = aimCam; aimActive = true; document.body.classList.add('aiming');
+  const ov = $('#aim'); ov.classList.remove('hidden', 'fire'); void ov.offsetWidth; ov.classList.add('on');
+  const r = ov.querySelector('.reticle') as HTMLElement | null;
+  if (r) { const v = look.clone().project(aimCam); r.style.left = `${(v.x + 1) * 50}%`; r.style.top = `${(1 - v.y) * 50}%`; }
+  await sleep(520 / SPEED);
+  ov.classList.add('fire');
+  await sleep(90 / SPEED);
+}
+function aimStep() {
+  if (!aimAnim) return;
+  const k = Math.min(1, (performance.now() - aimAnim.t0) / aimAnim.dur), e = 1 - Math.pow(1 - k, 3);
+  aimCam.position.lerpVectors(aimAnim.from, aimAnim.to, e);
+  aimCam.fov = aimAnim.fov0 + (aimAnim.fov1 - aimAnim.fov0) * e;
+  aimCam.lookAt(aimAnim.look); aimCam.updateProjectionMatrix();
+  const r = document.querySelector('#aim .reticle') as HTMLElement | null;
+  if (r) { const v = aimAnim.look.clone().project(aimCam); r.style.left = `${(v.x + 1) * 50}%`; r.style.top = `${(1 - v.y) * 50}%`; }
+}
+async function endAim(hold = 260) {
+  if (!aimActive) return;
+  await sleep(hold / SPEED);
+  aimActive = false; aimAnim = null; viewCam = camera; document.body.classList.remove('aiming');
+  const ov = $('#aim'); ov.classList.remove('on', 'fire'); ov.classList.add('hidden');
+}
+
 const SPEED = Number(params.get('speed') ?? '1');
 const hook = { pauseOn: null as string | null, pauseDelay: 0, paused: false, released: false, resume() { hook.released = true; } };
 async function play(events: BattleEvent[]) {
@@ -594,10 +639,12 @@ async function play(events: BattleEvent[]) {
       case 'followUp': banner('FOLLOW UP!', true); toast(`${battle.unit(e.shooterId).name} 追击！${battle.unit(e.creditId).name} 获得 1 MORE`); await sleep(600 / SPEED); break;
       case 'meleeStep': unitMesh.get(e.unitId)?.position.copy(w2v(e.to)); break;
       case 'attack': if (battle.phase === 'enemy') { camFocus(battle.unit(e.targetId).pos, 1.25); await sleep(200 / SPEED); }
-        if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId); break;
-      case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); break;
+        if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
+        if (e.kind === 'gun' && !params.has('noaim')) await aimShot(e.attackerId, e.targetId);
+        break;
+      case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); await endAim(); break;
       case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
-      case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); break;
+      case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); await endAim(); break;
       case 'down': popDamage(e.unitId, 'DOWN!'); break;
       case 'oneMore': banner('1 MORE!'); await sleep(650 / SPEED); break;
       case 'tripleThreat': banner('TRIPLE THREAT', true); await sleep(900 / SPEED); break;
@@ -642,6 +689,7 @@ async function play(events: BattleEvent[]) {
       document.body.classList.remove('frozen');
     }
   }
+  await endAim(0);
   if (rebuild) build();
   for (const u of battle.units) unitMesh.get(u.id)?.position.copy(w2v(u.pos));
   busy = false;
@@ -823,7 +871,8 @@ function restart() {
 
 function loop() {
   camStep();
-  renderer.render(scene, camera);
+  aimStep();
+  renderer.render(scene, viewCam);
   refreshLabels();
   requestAnimationFrame(loop);
 }

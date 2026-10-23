@@ -248,3 +248,22 @@ button.small.on { background: #e60012; }
 /* P5T 敌人头顶心形 HP */
 .lbl.enemy .heart { position: relative; width: 34px; height: 30px; margin: 0 auto; background: #2fd6c8; clip-path: path('M17 29 C 6 20, 0 14, 0 8 C 0 3, 4 0, 8.5 0 C 12 0, 15 2, 17 5 C 19 2, 22 0, 25.5 0 C 30 0, 34 3, 34 8 C 34 14, 28 20, 17 29 Z'); display: flex; align-items: center; justify-content: center; transform: rotate(-8deg); }
 .lbl.enemy .heart b { font-size: 13px; font-weight: 900; color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; margin-top: -4px; }
+
+/* 过肩瞄准（P5T 枪击）：上下斜黑边 + 红色准星收缩 + 开火白闪 */
+#aim { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: hidden; }
+#aim .bar { position: absolute; left: -10%; right: -10%; height: 15%; background: #000; transform: rotate(-3deg) translateY(var(--o)); transition: transform .22s cubic-bezier(.2,.9,.3,1); }
+#aim .bar.t { top: -4%; --o: -110%; border-bottom: 4px solid #e60012; }
+#aim .bar.b { bottom: -4%; --o: 110%; border-top: 4px solid #e60012; }
+#aim.on .bar { --o: 0%; }
+#aim .reticle { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border: 3px solid #e60012; border-radius: 50%; box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #000; transform: scale(2.2) rotate(-40deg); opacity: 0; transition: transform .45s cubic-bezier(.2,.9,.3,1), opacity .15s; }
+#aim.on .reticle { transform: scale(.55) rotate(0); opacity: 1; }
+#aim .reticle b { position: absolute; left: 50%; top: 50%; width: 26px; height: 4px; margin: -2px 0 0 -13px; background: #e60012; box-shadow: 0 0 0 2px #000; }
+#aim .reticle b:nth-child(1) { transform: translateX(-62px); } #aim .reticle b:nth-child(2) { transform: translateX(62px); }
+#aim .reticle b:nth-child(3) { transform: translateY(-62px) rotate(90deg); } #aim .reticle b:nth-child(4) { transform: translateY(62px) rotate(90deg); }
+#aim .aimtag { position: absolute; left: 6%; top: 17%; font: 900 30px/1 sans-serif; color: #fff; background: #e60012; padding: 2px 14px; transform: rotate(-8deg) translateX(-140%); box-shadow: 4px 4px 0 #000; transition: transform .25s .05s cubic-bezier(.2,.9,.3,1); }
+#aim.on .aimtag { transform: rotate(-8deg) translateX(0); }
+#aim.fire::after { content: ''; position: absolute; inset: 0; background: #fff; animation: aimFlash .18s ease-out both; }
+@keyframes aimFlash { from { opacity: .85; } to { opacity: 0; } }
+@media (max-height: 430px) { #aim .reticle { width: 90px; height: 90px; margin: -45px 0 0 -45px; } #aim .aimtag { font-size: 22px; } }
+body.aiming .hud, body.aiming #labels > :not(.dmg) { opacity: 0; transition: opacity .12s; }
+body.aiming #labels .dmg { font-size: 1.6em; }

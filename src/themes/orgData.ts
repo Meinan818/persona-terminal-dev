@@ -1,4 +1,5 @@
 import type { OrgOperation, OrgReactionTag, OrgView } from '@/types';
+import { allOutDamage, avgLvOf, myRaidOptions, raidNightsOf, raidNow, raidSpOf, raidStateOf } from '@/utils/orgRaid';
 
 export type OpsUiState = Record<string, Record<string, { state: string; plan?: string }>>;
 
@@ -80,5 +81,29 @@ export function orgRaidCardData(view: OrgView) {
     hpMax: raid.hpMax,
     nights: [day, day],
     hitters: [...byUser.values()].map((row) => ({ userId: row.userId, nights: row.nights.size, allout: row.allout })),
+  };
+}
+
+export function buildRaidPanelData(view: OrgView, now = new Date()) {
+  const current = raidNow(now, view.org.tz);
+  const raid = view.raids?.find((item) => item.slot === current.slot) ?? [...(view.raids ?? [])].sort((a, b) => b.slot - a.slot)[0];
+  if (!raid) return null;
+  const state = raidStateOf(raid, view.raidHits, view.org.tz);
+  const options = myRaidOptions(state, view.me.userId, current, view.members.length);
+  const my = state.stats.get(view.me.userId);
+  const myLast = [...state.valid].reverse().find((hit) => hit.userId === view.me.userId);
+  return {
+    current,
+    raid,
+    state,
+    options,
+    nights: raidNightsOf(raid.slot, view.org.tz),
+    reward: raidSpOf(raid.boss.lv ?? 1),
+    allOutPreview: allOutDamage(avgLvOf(view.members), state.strikes),
+    myNights: raidNightsOf(raid.slot, view.org.tz).map((night) => !!my?.nights.includes(night)),
+    struckTonight: options.struckTonight
+      ? { skill: myLast?.skill ?? '今晚已出手', damage: myLast?.damage ?? 0 }
+      : null,
+    hitters: [...state.stats.values()].map((row) => ({ userId: row.userId, nights: row.nights.length, allout: row.allout })),
   };
 }

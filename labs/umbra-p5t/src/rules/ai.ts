@@ -15,6 +15,8 @@ const PLAYER = 'ally' as const;
 
 /** 目标：诱饵优先（距离视为更近），其次最近、HP 低 */
 function nearestFoe(b: Battle, e: Unit): Unit | null {
+  // aiTarget：关卡指定的强制目标（LEVELS.md，如 toshiro）
+  if (e.aiTarget) { const t = b.alive(PLAYER).find((a) => a.id === e.aiTarget); if (t) return t; }
   let best: Unit | null = null, bd = Infinity;
   for (const a of b.alive(PLAYER)) {
     const d = b.grid.pathDistance(e.pos, a.pos, b.blockedFor(e));
@@ -28,7 +30,8 @@ function nearestFoe(b: Battle, e: Unit): Unit | null {
 
 function reachTiles(b: Battle, e: Unit): Vec[] {
   const r = b.grid.reachable(e.pos, b.moveRange(e), b.blockedFor(e), b.occupiedSet(e), true, b.afterDash(e));
-  return [...r.values()].filter((n) => n.dist >= 0).map((n) => n.pos);
+  // staysInZone：不离开该区域（LEVELS.md / ENEMY-AI.md）
+  return [...r.values()].filter((n) => n.dist >= 0 && (!e.staysInZone || b.zoneOf(n.pos) === e.staysInZone)).map((n) => n.pos);
 }
 
 function attackRange(b: Battle, e: Unit) {
@@ -130,7 +133,9 @@ function pushValue(b: Battle, t: Unit, d: Vec): number {
 function enemyAct(b: Battle, e: Unit): boolean {
   const target = nearestFoe(b, e);
   if (!target) return false;
-  const foes = b.alive(PLAYER);
+  // aiTarget 活着时只打它（LEVELS.md「AI 强制目标」）
+  const forced = e.aiTarget ? b.alive(PLAYER).find((a) => a.id === e.aiTarget) : undefined;
+  const foes = forced ? [forced] : b.alive(PLAYER);
   const canAttack = !b.noAttack.has(e.id);
   const hitBefore = focus.get(b) ?? new Map<string, number>();
   const plans: Plan[] = [];

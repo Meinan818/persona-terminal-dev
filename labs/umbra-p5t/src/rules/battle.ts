@@ -1388,8 +1388,9 @@ export class Battle {
         const once = (e: MapEvent) => (e.when.type === 'everyTurns' ? `${e.id}@${this.turn}` : e.id);
         const ev = this.map.events.find((e) => !this.rt.events.has(e.id) && !this.rt.events.has(once(e)) && this.eventFires(e));
         if (!ev) break;
-        if (!ev.repeat) this.rt.events.add(ev.id);
-        else if (ev.when.type === 'everyTurns') this.rt.events.add(once(ev));
+        // everyTurns 天然重复（每个满足的回合一次）；其余按 repeat
+        if (ev.when.type === 'everyTurns') this.rt.events.add(once(ev));
+        else if (!ev.repeat) this.rt.events.add(ev.id);
         // 事件执行时自动 setFlag 自己的 id（LEVELS.md：everyTurns.flag 用）
         this.rt.flags.add(ev.id);
         for (const a of ev.do) this.doEventAction(a);

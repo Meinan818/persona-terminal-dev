@@ -25,7 +25,8 @@ function goals(b: Battle, u: Unit, stepped: Set<string>): Vec[] {
   const out: Vec[] = [];
   const exits: Vec[] = [];
   for (let y = 0; y < b.map.height; y++) for (let x = 0; x < b.map.width; x++) if (b.grid.tile({ x, y }) === 'exit') exits.push({ x, y });
-  if (w.type === 'reachExit' && (w.all || w.unitId === u.id || u.escort)) return exits;
+  // 出口：在最前面；出口走不到时（门关着）路径距离是无穷，自然会先去开关/触发格
+  if (w.type === 'reachExit' && (w.all || w.unitId === u.id || u.escort)) out.push(...exits);
   for (const ev of b.map.events ?? []) {
     if (b.rt.events.has(ev.id)) continue;
     if (ev.when.type === 'reach' && (ev.when.side ?? 'ally') === 'ally') out.push(ev.when.pos);
@@ -42,7 +43,7 @@ function goals(b: Battle, u: Unit, stepped: Set<string>): Vec[] {
 }
 
 /** 往 goal 走：选能到的格里离 goal 路径最近的（不停在不想踩的开关上） */
-function stepToward(b: Battle, u: Unit, goalsList: Vec[], avoid: Set<string>): Vec | null {
+function stepToward(b: Battle, u: Unit, goalsList: Vec[], avoid: Set<string>, preferCover = true): Vec | null {
   if (!goalsList.length) return null;
   const tiles = [u.pos, ...b.moveTiles(u)];
   const blocked = b.blockedFor(u);
@@ -54,7 +55,8 @@ function stepToward(b: Battle, u: Unit, goalsList: Vec[], avoid: Set<string>): V
   }
   for (const t of tiles) {
     if (avoid.has(key(t)) && !goalsList.some((g) => same(g, t))) continue;
-    const d = dist.get(key(t)) ?? 1000 + Math.min(...goalsList.map((g) => manhattan(g, t)));
+    // 先比到目标的路径距离，同距才偏好掩体格
+    const d = (dist.get(key(t)) ?? 1000 + Math.min(...goalsList.map((g) => manhattan(g, t)))) * 10 + (preferCover && !b.grid.hasAnyCover(t) ? 1 : 0);
     if (d < bd) { bd = d; best = t; }
   }
   return best && !same(best, u.pos) ? best : null;
@@ -74,7 +76,19 @@ export function autoBattle(b: Battle, o: AutoOptions): Battle['phase'] {
   const maxSteps = o.maxSteps ?? 4000;
   while ((b.phase === 'player' || b.phase === 'enemy') && b.turn <= maxTurns && steps++ < maxSteps) {
     if (b.phase !== 'player') break;
-    if (o.mode === 'lose') { b.endPlayerPhase(); continue; }
+    if (o.mode === 'lose') {
+      const ko = b.units.find((u) => u.side === 'ally' && u.ko && !u.escort && !u.reserve && !batonTried.has(u.id));
+      if (ko && b.reserves.length && b.batonLeft > 0) { batonTried.add(ko.id); b.batonPass(ko.id, b.reserves[0].id); continue; }
+      // 输：不攻击，全员往最近的敌人走（没有可见敌人就去开区目标），让敌人打
+      for (const u of b.alive('ally')) {
+        if (b.phase !== 'player' || u.acted || u.moved || u.decoy) continue;
+        const vis = targets(b).filter((t) => t.side === 'enemy').map((t) => t.pos);
+        const dest = stepToward(b, u, vis.length ? vis : goals(b, u, stepped), new Set(), false);
+        if (dest) b.move(u.id, dest);
+      }
+      if (b.phase === 'player') b.endPlayerPhase();
+      continue;
+    }
     const ko = b.units.find((u) => u.side === 'ally' && u.ko && !u.escort && !u.reserve && !batonTried.has(u.id));
     if (ko && b.reserves.length && b.batonLeft > 0) {
       batonTried.add(ko.id);
@@ -107,7 +121,26 @@ export function autoBattle(b: Battle, o: AutoOptions): Battle['phase'] {
   return b.phase;
 }
 
+function tryHeal(b: Battle, u: Unit): boolean {
+  if (u.moved) return false;
+  for (const s of u.skills) {
+    if (s.kind !== 'heal' || u.sp < s.sp) continue;
+    const hurt = b.alive('ally').filter((a) => !a.decoy && a.hp < a.maxHp * 0.5).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0];
+    if (!hurt) return false;
+    const spots = [u.pos, ...b.moveTiles(u)].filter((p) => s.allAllies || s.shape === 'self' || manhattan(p, hurt.pos) <= b.skillRange(u, s))
+      .sort((p, q) => b.grid.hasAnyCover(q) - b.grid.hasAnyCover(p));
+    if (!spots.length) continue;
+    if (!same(spots[0], u.pos)) b.move(u.id, spots[0]);
+    if (b.phase !== 'player') return true;
+    b.skill(u.id, s.id, hurt.id);
+    if (b.phase === 'player' && !b.unit(u.id).acted && !b.unit(u.id).oneMore) b.wait(u.id);
+    return true;
+  }
+  return false;
+}
+
 function attackOrWait(b: Battle, u: Unit, stay: boolean, stepped = new Set<string>(), avoid = new Set<string>()) {
+  if (!stay && tryHeal(b, u)) return;
   let best: Choice | null = null;
   const dests = u.moved || stay ? [u.pos] : [u.pos, ...b.moveTiles(u).filter((p) => !avoid.has(key(p)))];
   const ts = targets(b);
@@ -122,7 +155,7 @@ function attackOrWait(b: Battle, u: Unit, stay: boolean, stepped = new Set<strin
       const pv = b.previewDamage(u, e, op.kind, op.skill ? u.skills.find((s) => s.id === op.skill) : undefined, d);
       if (pv.miss) continue;
       const kill = pv.amount >= e.hp ? 40 : 0;
-      const score = (pv.willDown ? 50 : 0) + kill + pv.amount - (op.kind === 'skill' ? 4 : 0) + b.grid.hasAnyCover(d) * 3 + (e.isTarget || e.prop === 'flag' ? 30 : 0);
+      const score = (pv.willDown ? 50 : 0) + kill + pv.amount - (op.kind === 'skill' ? 4 : 0) + b.grid.hasAnyCover(d) * 8 + (e.isTarget || e.prop === 'flag' ? 30 : 0);
       if (!best || score > best.score) best = { dest: same(d, u.pos) ? null : d, target: e.id, kind: op.kind, skill: op.skill, score };
     }
   }

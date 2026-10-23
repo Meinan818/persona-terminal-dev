@@ -2,7 +2,9 @@
 // 出处（详见 RULES-NOTES.md）：
 //  - 角色 HP/SP/移动/近战/枪攻/射程/枪型：GameFAQs Cogito《P5T Guide and FAQ》角色表（Lv19/21 行）——公开数据
 //  - 技能 Power/SP/效果/范围描述：Megami Tensei Wiki「List of Persona 5 Tactica Skills」——公开数据
-//  - 技能射程（格）、「小/中/大范围」换算成半径、敌人数值：查不到 → 占位（标 PH）
+//  - 技能 SP/Power/射程/范围：10-23 起按 P5T 数据表套用（p5tData.ts、docs/p5t-data-mapping.md；WxH→半径为 PH 换算）；下面字面值只是匹配不上时的后备
+//  - 敌人数值：查不到 → 占位（标 PH）
+import { applyP5tAll } from './p5tData';
 import type { ChargeId, DashLink, MapDef, PassiveId, SkillDef, TileKind, UnitDef, Vec } from './types';
 
 // ---------- 技能（Power / SP 为原作公开数据；range/radius 为占位 PH） ----------
@@ -16,7 +18,8 @@ const atk = (id: string, name: string, power: number, sp: number, effect: SkillD
   range: area ? R_AREA : R_SINGLE, shape: area ? 'area' : 'single', radius: area || undefined,
 });
 
-export const SKILLS = {
+/** 原值（P5T 表匹配不上时用）；导出的 SKILLS 已按 P5T 数据表套 sp/power/range/area（p5tData.ts，docs/p5t-data-mapping.md） */
+const RAW_SKILLS = {
   agi: atk('agi', 'Agi', 45, 14, 'burn', AREA.small), // Deals light damage in a small area. Inflicts Burn.
   maragi: atk('maragi', 'Maragi', 45, 24, 'burn', AREA.medium),
   bufu: atk('bufu', 'Bufu', 35, 14, 'freeze', AREA.small), // small area. Inflicts Freeze.
@@ -37,9 +40,10 @@ export const SKILLS = {
   rakukaja: { id: 'rakukaja', name: 'Rakukaja', kind: 'buff', power: 0, sp: 12, range: R_SINGLE, shape: 'single', buff: 'def' } as SkillDef,
   sukukaja: { id: 'sukukaja', name: 'Sukukaja', kind: 'buff', power: 0, sp: 12, range: R_SINGLE, shape: 'single', buff: 'move' } as SkillDef,
 } satisfies Record<string, SkillDef>;
+export const SKILLS = applyP5tAll(RAW_SKILLS);
 
 // ---------- Unique（Voltage）技能：Power 为原作初始级；射程/范围 PH ----------
-export const UNIQUES = {
+const RAW_UNIQUES = {
   phantomJudge: { id: 'phantomJudge', name: 'Phantom Judge', kind: 'attack', power: 41, sp: 0, voltage: true, range: 4, shape: 'area', radius: AREA.small, downThroughCover: true } as SkillDef,
   brigantine: { id: 'brigantine', name: 'Brigantine Blitzkrieg', kind: 'attack', power: 41, sp: 0, voltage: true, range: 1, shape: 'line', length: 5, effect: 'shock' } as SkillDef,
   femmeFatale: { id: 'femmeFatale', name: 'Femme Fatale', kind: 'attack', power: 58, sp: 0, voltage: true, range: 5, shape: 'area', radius: AREA.small, extraAction: true } as SkillDef,
@@ -54,6 +58,8 @@ export const UNIQUES = {
   // 「Allies can take an additional action. After use, Voltage will not increase for 3 turns.」
   truthSeeker: { id: 'truthSeeker', name: 'Truth Seeker', kind: 'buff', power: 0, sp: 0, voltage: true, range: 0, shape: 'self', allyExtra: true } as SkillDef,
 } satisfies Record<string, SkillDef>;
+/** Unique 只套 P5T 表的 power（sp 0 / Voltage、射程形状不换） */
+export const UNIQUES = applyP5tAll(RAW_UNIQUES);
 
 /**
  * 每人两个 Charge 技能 [免费, 20 GP]（Cogito：「Each Character has two Charge Skills」）。出处：

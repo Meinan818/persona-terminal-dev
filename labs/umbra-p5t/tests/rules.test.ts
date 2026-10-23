@@ -352,10 +352,11 @@ describe('元素效果（P5T 按效果分类）', () => {
   });
 
   it('Zio 感电：不能移动；Partisan 遗忘：不能攻击', () => {
-    const b = mk(['A . . . 1', 'B . . . .'], { A: A('a', { skills: [SKILLS.zio] }), B: A('b'), '1': E('e1', { move: 3, melee: 5 }) });
+    // P5T 表：Zio 射程 3（10-23 数据导入后），目标放在 3 格处
+    const b = mk(['A . . 1 .', 'B . . . .'], { A: A('a', { skills: [SKILLS.zio] }), B: A('b'), '1': E('e1', { move: 3, melee: 5 }) });
     b.skill('a', 'zio', 'e1');
     b.endPlayerPhase();
-    expect(b.unit('e1').pos).toEqual(v(4, 0));
+    expect(b.unit('e1').pos).toEqual(v(3, 0));
     const b2 = mk(['A 1 . .', 'B . . .'], { A: A('a', { skills: [SKILLS.partisan] }), B: A('b'), '1': E('e1', { melee: 30 }) });
     b2.skill('a', 'partisan', 'e1');
     const ev2 = b2.endPlayerPhase();
@@ -377,7 +378,8 @@ describe('元素效果（P5T 按效果分类）', () => {
   });
 
   it('Frei 漩涡：范围内的敌人被拉向中心', () => {
-    const b = mk(['. . . . . . .', '. . . 3 . . .', '. . . . . . .', '. . . 1 . 2 .', 'A . . . . . .', 'B . . . . . .'], { A: A('a', { skills: [SKILLS.frei] }), B: A('b'), '1': E('e1'), '2': E('e2'), '3': E('e3') });
+    // P5T 表：Frei 射程 3（10-23 数据导入后），A 站 (1,4)
+    const b = mk(['. . . . . . .', '. . . 3 . . .', '. . . . . . .', '. . . 1 . 2 .', '. A . . . . .', 'B . . . . . .'], { A: A('a', { skills: [SKILLS.frei] }), B: A('b'), '1': E('e1'), '2': E('e2'), '3': E('e3') });
     b.skill('a', 'frei', 'e1');
     expect(b.unit('e2').pos).toEqual(v(4, 3));
     expect(b.unit('e3').pos).toEqual(v(3, 2));

@@ -267,3 +267,68 @@ button.small.on { background: #e60012; }
 @media (max-height: 430px) { #aim .reticle { width: 90px; height: 90px; margin: -45px 0 0 -45px; } #aim .aimtag { font-size: 22px; } }
 body.aiming .hud, body.aiming #labels > :not(.dmg) { opacity: 0; transition: opacity .12s; }
 body.aiming #labels .dmg { font-size: 1.6em; }
+
+/* ===== P5T 目标框 v2（Hark）：TURN x/上限 黑签 + 白斜框胜利条件（点开 ▼ 看败北条件）+ 黑条剩余敌人 ===== */
+#turn { display: flex; align-items: baseline; gap: 3px; font-style: italic; padding: 1px 12px 2px; }
+#turn small { font-size: 9px; font-weight: 900; letter-spacing: 1px; opacity: .8; }
+#turn b { font-size: 19px; font-weight: 900; line-height: 1; }
+#turn.warn { background: #e60012; animation: turnWarn .7s ease-in-out infinite alternate; }
+@keyframes turnWarn { to { box-shadow: 0 0 0 2px #fff; } }
+#objective { display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left; pointer-events: auto; }
+#objective .lab { background: #e60012; color: #fff; font-size: 10px; padding: 1px 5px; transform: skewX(6deg); flex: none; }
+#objective .txt { flex: 1; text-align: center; }
+#objective .caret { font-style: normal; font-size: 9px; color: #e60012; flex: none; }
+#obj-foes { background: #000; color: #fff; font-size: 11px; font-weight: 900; padding: 1px 10px 1px 8px; margin-top: 3px; transform: skewX(-12deg); display: flex; align-items: center; gap: 4px; }
+#obj-foes .sk { width: 11px; height: 11px; background: #e60012; clip-path: polygon(50% 0, 100% 40%, 82% 100%, 18% 100%, 0 40%); display: inline-block; }
+#obj-foes em { font-style: normal; color: #e60012; }
+#obj-foes .crown { margin-left: 8px; color: #ffd400; font-size: 10px; }
+#obj-lose { background: #fff; color: #000; border: 3px solid #000; border-left: 6px solid #e60012; box-shadow: 4px 4px 0 #e60012; padding: 4px 12px 5px; margin-top: 6px; font-size: 11px; font-weight: 800; transform: skewX(-8deg); text-align: left; min-width: 170px; }
+#obj-lose .h { font-size: 9px; color: #e60012; letter-spacing: 1px; margin-bottom: 1px; }
+#hud-tl { pointer-events: none; }
+#hud-tl #objective, #hud-tl #obj-lose { pointer-events: auto; }
+
+/* 镜头旋转按钮：左下，结束回合上方（P5T 固定 90° 步进） */
+#camctl { left: max(10px, env(safe-area-inset-left)); bottom: calc(max(8px, env(safe-area-inset-bottom)) + 40px); display: flex; gap: 6px; }
+#camctl button { position: relative; width: 38px; height: 28px; background: #000; border: 2px solid #fff; transform: skewX(-12deg); display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: 2px 2px 0 #e60012; }
+#camctl button span { font-size: 16px; font-weight: 900; line-height: 1; transform: skewX(12deg); }
+#camctl button small { position: absolute; right: 2px; bottom: 0; font-size: 7px; color: #e60012; font-weight: 900; }
+#camctl button:active { background: #e60012; }
+body.aiming #camctl { opacity: 0; }
+
+/* 物件 HP：红旗 / 喇叭 */
+.lbl.prop { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; justify-content: center; width: 64px; }
+.lbl.prop .pn { background: #000; color: #fff; font-size: 9px; padding: 0 4px; transform: skewX(-12deg); border: 1px solid #e60012; }
+.lbl.prop b { font-size: 12px; font-style: italic; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000; }
+.lbl.prop .hp { width: 52px; flex-basis: 100%; height: 5px; margin: 0 auto; }
+.lbl.prop .hp i { background: #e60012; }
+
+/* ===== fx：增援斜切横幅（P5 红黑）===== */
+.fx-slash { position: absolute; inset: 0; z-index: 9; pointer-events: none; overflow: hidden; }
+.fx-slash > div[class^="sl-"]:not(.sl-txt) { position: absolute; left: -6%; right: -6%; top: 50%; transform-origin: center; }
+.fx-slash .sl-k { height: 120px; margin-top: -60px; background: #0d0d0f; transform: rotate(-9deg) translateX(110%); animation: slIn .22s cubic-bezier(.2,.9,.3,1) forwards; }
+.fx-slash .sl-r { height: 14px; margin-top: 52px; background: #e60012; transform: rotate(-9deg) translateX(-110%); animation: slIn .2s .06s cubic-bezier(.2,.9,.3,1) forwards; }
+.fx-slash .sl-w { height: 5px; margin-top: -66px; background: #fff; transform: rotate(-9deg) translateX(110%); animation: slIn .2s .1s cubic-bezier(.2,.9,.3,1) forwards; }
+.fx-slash .sl-txt { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%) rotate(-9deg); text-align: center; color: #fff; }
+.fx-slash .sl-txt b { display: block; font-size: 64px; font-weight: 900; letter-spacing: 10px; line-height: 1; }
+.fx-slash .sl-txt b i { display: inline-block; font-style: normal; text-shadow: 4px 4px 0 #e60012; transform: scale(2.4) rotate(-14deg); opacity: 0; animation: slChar .22s calc(.16s + var(--i) * .07s) cubic-bezier(.2,.9,.3,1.4) forwards; }
+.fx-slash .sl-txt b i:nth-child(2) { background: #e60012; color: #000; text-shadow: 3px 3px 0 #fff; padding: 0 6px; }
+.fx-slash .sl-txt small { display: inline-block; margin-top: 4px; background: #fff; color: #000; font-size: 13px; font-weight: 900; letter-spacing: 3px; padding: 1px 14px; transform: skewX(-14deg) translateX(-200%); animation: slIn .25s .3s cubic-bezier(.2,.9,.3,1) forwards; }
+@keyframes slIn { to { transform: rotate(-9deg) translateX(0); } }
+.fx-slash .sl-txt small { margin-top: 12px; }
+@keyframes slSmall { to { transform: skewX(-14deg) translateX(0); } }
+.fx-slash .sl-txt small { animation-name: slSmall; }
+@keyframes slChar { to { transform: scale(1) rotate(-4deg); opacity: 1; } }
+.fx-slash.out > * { transition: transform .25s cubic-bezier(.6,0,.9,.4), opacity .25s; opacity: 0; }
+.fx-slash.out .sl-k, .fx-slash.out .sl-r, .fx-slash.out .sl-w { transform: rotate(-9deg) translateX(-120%); opacity: 1; }
+.frozen .fx-slash * { animation-play-state: paused !important; }
+@media (max-height: 430px) { .fx-slash .sl-k { height: 92px; margin-top: -46px; } .fx-slash .sl-r { margin-top: 40px; } .fx-slash .sl-w { margin-top: -52px; } .fx-slash .sl-txt b { font-size: 48px; } }
+
+/* ===== fx：宝箱道具提示 ===== */
+.fx-item { position: absolute; left: 50%; top: 22%; z-index: 9; pointer-events: none; transform: translateX(-50%) skewX(-10deg); animation: itemIn .3s cubic-bezier(.2,.9,.3,1.3) both; text-align: center; }
+.fx-item .tag { display: inline-block; background: #e60012; color: #fff; font-weight: 900; font-size: 13px; letter-spacing: 2px; padding: 1px 12px; border: 2px solid #000; transform: rotate(-4deg) translateY(6px); position: relative; z-index: 1; }
+.fx-item .body { background: #fff; color: #000; border: 3px solid #000; box-shadow: 5px 5px 0 #000; padding: 8px 22px 6px; font-weight: 900; font-size: 18px; display: flex; gap: 14px; }
+.fx-item .body b { color: #e60012; font-style: italic; }
+.fx-item .who { background: #000; color: #fff; font-size: 10px; padding: 0 8px; display: inline-block; margin-top: 2px; }
+.fx-item.out { transition: transform .25s, opacity .25s; opacity: 0; transform: translateX(-30%) skewX(-10deg); }
+@keyframes itemIn { from { transform: translateX(-50%) skewX(-10deg) scale(1.8); opacity: 0; } }
+body.slashing #banner { opacity: 0 !important; }

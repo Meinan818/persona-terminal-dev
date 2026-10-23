@@ -3,6 +3,13 @@ import * as THREE from 'three';
 import { Battle, MAPS, key, eq, VOLTAGE_MAX, PASSIVE_INFO, SKILLS, UNIQUES } from './rules';
 import type { BattleEvent, SkillDef, Unit, Vec, StatusId, MapDef } from './rules';
 import { mountLevelSelect } from './game/levelSelect'; // Q12 关卡选择（最简按钮，Hark 美化）
+import { levelMap } from './game/levels';
+import { CameraRig } from './view/cameraRig';
+import { attachCameraInput } from './view/cameraInput';
+import { MapObjects } from './view/mapObjects';
+import { makeFlag, makeSpeaker, waveFlag, pulseSpeaker } from './view/props';
+import { slashBanner, itemToast } from './fx/banners';
+import { updateObjectiveHud, mountCamButtons } from './ui/hud';
 
 type Mode = 'auto' | 'melee' | 'gun' | 'skill' | 'unique';
 
@@ -86,14 +93,7 @@ function build() {
     tile.userData = { x, y };
     world.add(tile);
     tileMeshes.push(tile);
-    if (door && t !== 'wall') {
-      // 开着的门：只画门框
-      for (const off of [-0.42, 0.42]) {
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.4, 0.08), std(0x3a6bd8, { emissive: 0x0a1a40 }));
-        post.position.copy(w2v({ x, y }, 0.7)); post.position.x += off;
-        world.add(post);
-      }
-    }
+    if (door) continue; // 门（开/关）由 MapObjects 画门板 + 门框
     if (t === 'wall' || t === 'half' || t === 'full') {
       const bh = t === 'wall' ? 1.6 : t === 'full' ? 1.1 : 0.5;
       const col = door ? 0x3a6bd8 : t === 'wall' ? 0x55555f : t === 'full' ? 0x8a1f24 : 0xb5623a;
@@ -105,33 +105,7 @@ function build() {
       tileMeshes.push(b);
     }
   }
-  // 梯子 / 跳台：竖直贴在高台侧壁上（两格交界处）
-  for (const l of battle.grid.links) {
-    const [lo, hi] = battle.grid.h(l.a) <= battle.grid.h(l.b) ? [l.a, l.b] : [l.b, l.a];
-    const y0 = battle.grid.h(lo) * LEVEL, y1 = battle.grid.h(hi) * LEVEL;
-    const len = Math.max(0.3, y1 - y0);
-    const g = new THREE.Group();
-    const mat = std(0xd8b060, { emissive: 0x221800 });
-    for (const off of [-0.2, 0.2]) {
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, len + 0.25, 0.05), mat);
-      rail.position.set(off, len / 2, 0);
-      g.add(rail);
-    }
-    for (let i = 1; i <= 3; i++) {
-      const rung = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.04), mat);
-      rung.position.set(0, (len * i) / 4, 0);
-      g.add(rung);
-    }
-    g.position.set((lo.x * 0.62 + hi.x * 0.38), y0, (lo.y * 0.62 + hi.y * 0.38));
-    g.rotation.y = hi.x !== lo.x ? Math.PI / 2 : 0;
-    world.add(g);
-  }
-  // 开关踏板 / 摄像头
-  for (const sw of battle.map.switches ?? []) {
-    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.38, 0.08, 20), std(SWITCH_COL[sw.kind], { emissive: SWITCH_COL[sw.kind], emissiveIntensity: 0.35 }));
-    pad.position.copy(w2v(sw.pos, 0.04));
-    world.add(pad);
-  }
+  // 梯子 / 跳台、开关拉杆、宝箱、门、未解锁区域：见 view/mapObjects.ts
   for (const cam of battle.map.cameras ?? []) {
     if (battle.rt.cameras.has(cam.id)) continue;
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.3, 0.12), std(0x444444));
@@ -141,7 +115,9 @@ function build() {
     world.add(post, head);
   }
   for (const u of battle.units) addUnitMesh(u);
-  fitCamera();
+  mapObj.build(world, battle, tileMeshes);
+  fitCamera(!freshMap);
+  freshMap = false;
 }
 
 function addUnitMesh(u: Unit) {
@@ -154,21 +130,13 @@ function addUnitMesh(u: Unit) {
       band.position.y = 0.36;
       g.add(body, band);
     } else if (u.prop === 'flag') {
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5, 8), std(0xdddddd));
-      pole.position.y = 0.75;
-      const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.36, 0.03), std(0xff7a00, { emissive: 0x401800 }));
-      cloth.position.set(0.3, 1.3, 0);
-      g.add(pole, cloth);
+      makeFlag(g);
     } else if (u.prop === 'box') {
       const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), std(0x8a5a2b));
       box.position.y = 0.4;
       g.add(box);
     } else {
-      const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.7, 0.3), std(0x777777));
-      post.position.y = 0.35;
-      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.4, 12, 1, true), std(0xdddddd, { side: THREE.DoubleSide }));
-      horn.position.set(0, 0.75, 0.1); horn.rotation.x = Math.PI / 2;
-      g.add(post, horn);
+      makeSpeaker(g);
     }
   } else if (u.side === 'ally') {
     const mat = std(u.decoy ? 0x9fd0ff : COLORS[u.id] ?? 0xffffff, { roughness: 0.5, transparent: !!u.decoy, opacity: u.decoy ? 0.55 : 1 });
@@ -205,48 +173,28 @@ function addUnitMesh(u: Unit) {
   labelEl.set(u.id, el);
 }
 
-function fitCamera() {
+// P5T 镜头（Hark）：拖动平移 / 捏合·滚轮缩放 / 90° 步进旋转，见 view/cameraRig.ts
+const rig = new CameraRig(camera);
+const mapObj = new MapObjects({ w2v: (p, y = 0) => w2v(p, y), level: LEVEL });
+let freshMap = true;
+function fitCamera(keep = true) {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
   const m = battle.map;
-  const center = new THREE.Vector3((m.width - 1) / 2, 0, (m.height - 1) / 2);
-  const dir = new THREE.Vector3(1, 1.25, 1).normalize();
-  camera.position.copy(center).addScaledVector(dir, 30);
-  camera.lookAt(center);
-  camera.updateMatrixWorld();
-  const pts = [[-0.5, -0.5], [m.width - 0.5, -0.5], [-0.5, m.height - 0.5], [m.width - 0.5, m.height - 0.5]]
-    .flatMap(([x, z]) => [new THREE.Vector3(x, 0, z), new THREE.Vector3(x, 1.4, z)]);
-  const inv = camera.matrixWorldInverse;
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const p of pts) { const q = p.clone().applyMatrix4(inv); minX = Math.min(minX, q.x); maxX = Math.max(maxX, q.x); minY = Math.min(minY, q.y); maxY = Math.max(maxY, q.y); }
-  const aspect = w / h;
-  const padX = 1.12 + (aspect > 1.6 ? 0.22 : 0.05), padY = 1.1;
-  let halfW = ((maxX - minX) / 2) * padX, halfH = ((maxY - minY) / 2) * padY;
-  if (halfW / halfH < aspect) halfW = halfH * aspect; else halfH = halfW / aspect;
-  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2 - halfH * 0.04;
-  camera.left = cx - halfW; camera.right = cx + halfW; camera.top = cy + halfH; camera.bottom = cy - halfH;
-  camera.updateProjectionMatrix();
-  camBase = { cx, cy, halfW, halfH };
-  camCur = { x: cx, y: cy, z: 1 }; camTgt = { x: cx, y: cy, z: 1 };
+  let maxH = 0;
+  for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) maxH = Math.max(maxH, battle.grid.h({ x, y }));
+  rig.setMap({ width: m.width, height: m.height, maxY: 1.4 + maxH * LEVEL }, w / h, keep);
 }
-// 敌方回合镜头（Hark 演出）：P5T 敌人行动时镜头推近并跟随行动者，回到我方回合拉回全景
-let camBase = { cx: 0, cy: 0, halfW: 1, halfH: 1 };
-let camCur = { x: 0, y: 0, z: 1 }, camTgt = { x: 0, y: 0, z: 1 };
+/** 敌方回合镜头（Hark 演出）：推近并跟随行动者；null = 我方回合开始，对准当前可行动角色 */
 function camFocus(p: Vec | null, zoom = 1.35) {
-  if (!p) { camTgt = { x: camBase.cx, y: camBase.cy, z: 1 }; return; }
-  const q = w2v(p).clone().applyMatrix4(camera.matrixWorldInverse);
-  const z = zoom, hw = camBase.halfW / z, hh = camBase.halfH / z;
-  const x = Math.min(camBase.cx + camBase.halfW - hw, Math.max(camBase.cx - camBase.halfW + hw, q.x));
-  const y = Math.min(camBase.cy + camBase.halfH - hh, Math.max(camBase.cy - camBase.halfH + hh, q.y));
-  camTgt = { x, y, z };
+  if (!p) {
+    const a = (selected ? battle.unit(selected) : null) ?? battle.alive('ally').find((x) => !x.prop && !x.decoy && !x.acted);
+    rig.focus(a ? w2v(a.pos) : null);
+    return;
+  }
+  rig.focus(w2v(p), Math.max(rig.userZoom, zoom));
 }
-function camStep() {
-  const k = 0.12;
-  camCur.x += (camTgt.x - camCur.x) * k; camCur.y += (camTgt.y - camCur.y) * k; camCur.z += (camTgt.z - camCur.z) * k;
-  const hw = camBase.halfW / camCur.z, hh = camBase.halfH / camCur.z;
-  camera.left = camCur.x - hw; camera.right = camCur.x + hw; camera.top = camCur.y + hh; camera.bottom = camCur.y - hh;
-  camera.updateProjectionMatrix();
-}
+function camStep() { rig.update(); }
 
 // ---------- 覆盖层 ----------
 function clearOverlay() { while (overlay.children.length) overlay.remove(overlay.children[0]); }
@@ -337,8 +285,7 @@ function refreshOverlay() {
 
 // ---------- HUD ----------
 function refreshHud() {
-  $('#turn').textContent = `TURN ${battle.turn}${battle.map.turnLimit ? `/${battle.map.turnLimit}` : ''}`;
-  $('#objective').textContent = `目标：${battle.map.objective ?? '击败全部敌人'}`;
+  updateObjectiveHud(battle); // 右上目标框：胜利条件 + 回合 x/上限 + 剩余敌人，点开看败北条件
   const ph = $('#phase');
   ph.textContent = battle.phase === 'enemy' ? 'ENEMY PHASE' : battle.phase === 'player' ? 'PLAYER PHASE' : battle.phase.toUpperCase();
   ph.classList.toggle('enemy', battle.phase === 'enemy');
@@ -456,7 +403,17 @@ function refreshLabels() {
     if (u.ko || hidden) { el.style.display = 'none'; continue; }
     const shield = g.getObjectByName('shield');
     if (shield && u.facing) { g.rotation.y = Math.atan2(u.facing.x, u.facing.y); }
-    if (u.prop) { el.style.display = 'none'; continue; }
+    if (u.prop && u.prop !== 'flag' && u.prop !== 'speaker') { el.style.display = 'none'; continue; }
+    if (u.prop) {
+      // 红旗 / 喇叭：头顶 HP 条（可破坏物件）
+      const v = g.position.clone().add(new THREE.Vector3(0, u.prop === 'flag' ? 2.45 : 1.6, 0)).project(viewCam);
+      el.style.display = '';
+      el.style.left = `${((v.x + 1) / 2) * w}px`;
+      el.style.top = `${((1 - v.y) / 2) * h}px`;
+      el.className = `lbl prop ${u.prop}`;
+      el.innerHTML = `<span class="pn">${u.prop === 'flag' ? '敌旗' : '喇叭'}</span><b>${u.hp}</b><div class="hp"><i style="width:${(100 * u.hp) / Math.max(1, u.maxHp)}%"></i></div>`;
+      continue;
+    }
     const v = g.position.clone().add(new THREE.Vector3(0, 1.05, 0)).project(viewCam);
     el.style.display = '';
     el.style.left = `${((v.x + 1) / 2) * w}px`;
@@ -479,7 +436,7 @@ function refreshLabels() {
   }
 }
 
-function refreshAll() { refreshOverlay(); refreshHud(); }
+function refreshAll() { refreshOverlay(); refreshHud(); mapObj.refresh(); }
 
 // ---------- 事件动画 ----------
 // 召唤切入（Hark 演出）：P5 式——黑幕+蓝焰升腾+面具撕裂碎片+人格面具名+技能名。正版素材到后换角色切入立绘
@@ -609,7 +566,7 @@ async function endAim(hold = 260) {
 }
 
 const SPEED = Number(params.get('speed') ?? '1');
-const hook = { pauseOn: null as string | null, pauseDelay: 0, paused: false, released: false, resume() { hook.released = true; } };
+const hook = { pauseOn: null as string | null, pauseDelay: 0, paused: false, released: false, resume() { hook.released = true; document.body.classList.remove('frozen'); } }; // 解冻立即生效：物件动画（扫开/开箱）在事件处理中被 await
 async function play(events: BattleEvent[]) {
   busy = true;
   clearOverlay();
@@ -626,7 +583,7 @@ async function play(events: BattleEvent[]) {
     switch (e.type) {
       case 'phaseStart':
         if (e.phase === 'enemy') { banner('ENEMY PHASE'); refreshHud(); await sleep(700 / SPEED); }
-        if (e.phase === 'player') camFocus(null);
+        if (e.phase === 'player') camFocus(null); // 我方回合：镜头对准当前可行动角色
         if (e.phase === 'player' && e.turn > 1) { banner(`TURN ${e.turn}`); await sleep(500 / SPEED); }
         break;
       case 'move': if (battle.phase === 'enemy') { camFocus(e.path.length ? e.path[e.path.length - 1] : battle.unit(e.unitId).pos); await sleep(260 / SPEED); } await tweenPath(e.unitId, e.path.length ? e.path : [e.from, battle.unit(e.unitId).pos], 90 / SPEED); break;
@@ -670,11 +627,21 @@ async function play(events: BattleEvent[]) {
       case 'error': toast(e.message); break;
       case 'message': toast(e.text); await sleep(300 / SPEED); break;
       case 'guard': if (e.on) popDamage(e.unitId, 'GUARD', 'heal'); else if (battle.phase !== 'won') popDamage(e.unitId, '掩护消失'); break;
-      case 'door': build(); toast(`门 ${e.id} ${e.open ? '打开' : '关上'}`); break;
+      case 'door': toast(`门 ${e.id} ${e.open ? '打开' : '关上'}`); await mapObj.onEvent(e); break;
       case 'elevator': build(); toast(`升降台${e.up ? '升起' : '降下'}`); break;
-      case 'switch': popDamage(e.unitId, '开关!'); break;
+      case 'switch': popDamage(e.unitId, '开关!'); await mapObj.onEvent(e); break;
+      case 'chest': await mapObj.onEvent(e); itemToast(e.reward, battle.unit(e.unitId).name); await sleep(300 / SPEED); break;
+      case 'zoneUnlocked': { const c = zoneCenter(e.zone); if (c) camFocus(c, 1); toast('新区域解锁'); await mapObj.onEvent(e); break; }
       case 'alarm': banner('ALERT!', true); toast('被摄像头发现：敌方援军出现'); break;
-      case 'reinforce': build(); toast(`援军 ×${e.unitIds.length}`); await sleep(700 / SPEED); break;
+      case 'reinforce': {
+        build();
+        const ps = e.unitIds.map((id) => battle.unit(id)).filter((u) => !battle.isHidden(u)).map((u) => u.pos);
+        if (ps.length) camFocus({ x: Math.round(ps.reduce((s, p) => s + p.x, 0) / ps.length), y: Math.round(ps.reduce((s, p) => s + p.y, 0) / ps.length) }, 1.2);
+        for (const id of e.unitIds) { const g = unitMesh.get(id); if (g) g.position.y += 40; }
+        await slashBanner('增援', `REINFORCEMENTS ×${e.unitIds.length}`, 900 / SPEED);
+        await dropIn(e.unitIds);
+        break;
+      }
       case 'bossPhase': banner(`PHASE ${e.phase}`, true); await sleep(700 / SPEED); break;
       case 'decoy': build(); popDamage(e.unitId, '诱饵'); await sleep(200 / SPEED); break;
       case 'flagPlaced': build(); clearOverlay(); popDamage(e.unitId, 'FLAG!', 'big'); await sleep(300 / SPEED); break;
@@ -705,6 +672,36 @@ async function play(events: BattleEvent[]) {
   refreshAll();
 }
 
+/** 增援落地：从高空砸下 + 红色冲击环 */
+async function dropIn(ids: string[]) {
+  await Promise.all(ids.map((id, i) => new Promise<void>((res) => {
+    const g = unitMesh.get(id);
+    if (!g) return res();
+    const to = w2v(battle.unit(id).pos), from = to.clone().add(new THREE.Vector3(0, 6, 0));
+    g.position.copy(from);
+    const t0 = performance.now() + i * 120 / SPEED, dur = 380 / SPEED;
+    const step = () => {
+      const k = Math.max(0, Math.min(1, (performance.now() - t0) / dur));
+      g.position.lerpVectors(from, to, k * k);
+      if (k < 1) { requestAnimationFrame(step); return; }
+      const r = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 6), new THREE.MeshBasicMaterial({ color: 0xe60012, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+      r.rotation.x = -Math.PI / 2; r.position.copy(to).add(new THREE.Vector3(0, 0.05, 0));
+      world.add(r);
+      void mapObj.tween(360, (q) => { r.scale.setScalar(1 + q * 2.2); (r.material as THREE.MeshBasicMaterial).opacity = 1 - q; }, () => world.remove(r));
+      res();
+    };
+    step();
+  })));
+  await sleep(150 / SPEED);
+}
+function zoneCenter(z: string): Vec | null {
+  const zs = battle.map.zones;
+  if (!zs) return null;
+  let sx = 0, sy = 0, n = 0;
+  zs.forEach((row, y) => row.forEach((c, x) => { if (c === z) { sx += x; sy += y; n++; } }));
+  return n ? { x: Math.round(sx / n), y: Math.round(sy / n) } : null;
+}
+
 function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
   const r = $('#result');
   r.classList.remove('hidden');
@@ -733,13 +730,9 @@ function pick(ev: PointerEvent): { tile?: Vec; unit?: string } {
   return {};
 }
 
-let down: { x: number; y: number } | null = null;
-canvas.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY }; });
-canvas.addEventListener('pointerup', (e) => {
-  if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 12) return;
-  down = null;
-  onTap(pick(e));
-});
+// 单指拖 >8px = 平移镜头，否则 = 点击；捏合/滚轮缩放；双指扭转或 Q/E = 旋转 90°
+attachCameraInput(canvas, rig, (e) => onTap(pick(e)), () => !aimActive);
+mountCamButtons((d) => rig.rotate(d));
 
 function onTap(h: { tile?: Vec; unit?: string }) {
   if (busy || battle.phase !== 'player') return;
@@ -810,7 +803,7 @@ $('#party').addEventListener('click', (ev) => {
   const c = (ev.target as HTMLElement).closest('[data-charge]') as HTMLElement | null;
   if (c && selected && !busy) { void play(battle.selectCharge(selected, c.dataset.charge as never)); return; }
   const p = (ev.target as HTMLElement).closest('[data-uid]') as HTMLElement | null;
-  if (p) onTap({ unit: p.dataset.uid! });
+  if (p) { onTap({ unit: p.dataset.uid! }); const u = battle.unit(p.dataset.uid!); if (!rig.inView(w2v(u.pos))) camFocus(u.pos, rig.userZoom); }
 });
 $('#actions').addEventListener('click', (ev) => {
   const b = (ev.target as HTMLElement).closest('button');
@@ -863,11 +856,12 @@ sel.value = String(mapIdx);
 sel.addEventListener('change', () => { mapIdx = Number(sel.value); makeMap = () => MAPS[mapIdx].make(); restart(); });
 let makeMap: () => MapDef = () => MAPS[mapIdx].make();
 mountLevelSelect({ onPick: (make) => { makeMap = make; restart(); return battle; } });
-window.addEventListener('resize', () => { fitCamera(); refreshLabels(); });
+window.addEventListener('resize', () => { fitCamera(true); refreshLabels(); });
 
 function restart() {
   $('#result').classList.add('hidden');
   battle = new Battle(makeMap());
+  freshMap = true; mapObj.reset();
   selected = null; previewTile = null; previewTarget = null; inspectEnemy = null; mode = 'auto';
   build();
   void play(battle.start());
@@ -876,11 +870,15 @@ function restart() {
 function loop() {
   camStep();
   aimStep();
+  mapObj.update();
+  const t = performance.now() / 1000;
+  for (const u of battle.units) if (u.prop === 'flag' || u.prop === 'speaker') { const g = unitMesh.get(u.id); if (g) (u.prop === 'flag' ? waveFlag : pulseSpeaker)(g, t); }
   renderer.render(scene, viewCam);
   refreshLabels();
   requestAnimationFrame(loop);
 }
 
+if (params.get('level')) { const lv = params.get('level')!; makeMap = () => levelMap(lv); }
 restart();
 loop();
 
@@ -895,6 +893,11 @@ window.__p5t = {
   setSkill(id: string) { mode = 'skill'; skillId = id; refreshAll(); },
   tap: onTap,
   select(id: string) { onTap({ unit: id }); },
+  rig,
+  mapObj,
+  slashBanner,
+  /** 读 L01–L10 关卡 JSON 开局（截图/调试用） */
+  loadLevel(id: string) { makeMap = () => levelMap(id); restart(); },
   loadMap(i: number) { mapIdx = i; sel.value = String(i); makeMap = () => MAPS[mapIdx].make(); restart(); },
   hook,
   play,

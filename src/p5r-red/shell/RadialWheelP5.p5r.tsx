@@ -50,7 +50,7 @@ export function RadialWheelP5({ open, origin, hold, onClose, onNavigate, reduced
   const R = reduced || isLowMotion();
   const g = useMemo(() => {
     const ox = origin?.x ?? innerWidth / 2, oy = origin?.y ?? innerHeight - 46;
-    const K = Math.min(0.68, Math.max(0.5, innerWidth / 780));
+    const K = 0.68;
     const radius = Math.min(104, innerWidth / 2 - 40), DEAD = 40, SEG = 180 / WHEEL.length;
     return { ox, oy, K, radius, DEAD, SEG };
   }, [origin, open]); // eslint-disable-line react-hooks/exhaustive-deps

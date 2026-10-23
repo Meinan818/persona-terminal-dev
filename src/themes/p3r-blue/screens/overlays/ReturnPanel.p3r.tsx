@@ -13,15 +13,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@blue/registry/types';
 import { P6Sheet } from '@blue/screens/pkg6/sheet';
 import { CfgInput } from '@blue/screens/pkg6/cfg';
-import { RETURN_PAYLOAD } from '@blue/mock/pkg6';
 import { Portal, P3R, slantClip } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
+import { useAppStore } from '@/store';
 
 type Mode = 'welcome' | 'summary' | 'calendar';
 type Entry = { dateKey: string; text: string };
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 const RESTING = '那几天在休息';
-const SUGGEST = ['跑步', '读书', '加班', '自习', '做饭', '和朋友吃饭', '追剧', '练琴'];
 const OUTRO_MS = 2600;
 const starPts = (cx: number, cy: number, r: number) => Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + (i * Math.PI) / 5; const rr = i % 2 ? r * 0.45 : r; return `${cx + Math.cos(a) * rr},${cy + Math.sin(a) * rr}`; }).join(' ');
 
@@ -85,6 +84,8 @@ function Outro() {
 }
 
 function Backfill({ days, entries, onChange, onBack }: { days: string[]; entries: Entry[]; onChange: (e: Entry[]) => void; onBack: () => void }) {
+  const getBackfillSuggestions = useAppStore((state) => state.getBackfillSuggestions);
+  const suggestions = useMemo(() => getBackfillSuggestions(8).map((item) => item.text), [getBackfillSuggestions]);
   const [openDay, setOpenDay] = useState<string | null>(days[days.length - 1] ?? null);
   const [draft, setDraft] = useState('');
   const countOf = (k: string) => entries.filter((e) => e.dateKey === k).length;
@@ -119,7 +120,7 @@ function Backfill({ days, entries, onChange, onBack }: { days: string[]; entries
                   <button key={e.text} type="button" onClick={() => removeAt(openDay, e.text)} className="px-3 py-1 text-[11px] font-black" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(4) }}>{e.text} ×</button>
                 ))}</div>
               )}
-              <div className="flex flex-wrap gap-1.5">{SUGGEST.filter((s) => !entries.some((e) => e.dateKey === openDay && e.text === s)).map((s) => (
+              <div className="flex flex-wrap gap-1.5">{suggestions.filter((s) => !entries.some((e) => e.dateKey === openDay && e.text === s)).map((s) => (
                 <button key={s} type="button" onClick={() => add(openDay, s)} className="px-3 py-1 text-[11px] font-bold" style={{ color: P3R.inkSoft, boxShadow: 'inset 0 0 0 1.5px rgb(var(--p3r-cyan-rgb) / 0.6)', clipPath: slantClip(4) }}>＋ {s}</button>
               ))}</div>
               <div className="flex gap-1.5">
@@ -138,28 +139,42 @@ function Backfill({ days, entries, onChange, onBack }: { days: string[]; entries
 export default function ReturnPanel({ open, onClose, params }: OverlayProps) {
   const low = useLowMotion();
   const step = params?.get('step');
-  const tier = (params?.get('tier') as 'recent' | 'long') || RETURN_PAYLOAD.tier;
-  const p = { ...RETURN_PAYLOAD, tier, daysAway: tier === 'long' ? 46 : RETURN_PAYLOAD.daysAway };
-  const init: Mode = step === 'summary' ? 'summary' : step === 'backfill' && tier === 'recent' ? 'calendar' : 'welcome';
+  const p = useAppStore((state) => state.pendingReturnPayload);
+  const commitReturn = useAppStore((state) => state.commitReturn);
+  const clearPendingReturnPayload = useAppStore((state) => state.clearPendingReturnPayload);
+  const init: Mode = step === 'summary' ? 'summary' : step === 'backfill' && p?.tier === 'recent' ? 'calendar' : 'welcome';
   const [mode, setMode] = useState<Mode>(init);
   const [summary, setSummary] = useState('');
   const [entries, setEntries] = useState<Entry[]>([]);
   const [busy, setBusy] = useState(false);
   const [outro, setOutro] = useState(params?.get('outro') === '1');
   const [shown, setShown] = useState(open && params?.get('outro') !== '1');
-  useEffect(() => { if (open) { setMode(init); setEntries([]); setSummary(''); setBusy(false); setShown(params?.get('outro') !== '1'); } else setShown(false); }, [open, step]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!outro) return; const t = setTimeout(() => { setOutro(false); setShown(false); onClose(); }, OUTRO_MS); return () => clearTimeout(t); }, [outro]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { setMode(init); setEntries([]); setSummary(''); setBusy(false); setShown(params?.get('outro') !== '1'); } else setShown(false); }, [open, p?.tier, step]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!outro) return; const t = setTimeout(() => { setOutro(false); setShown(false); clearPendingReturnPayload(); onClose(); }, OUTRO_MS); return () => clearTimeout(t); }, [outro]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const days = useMemo(() => {
-    const start = new Date(`${p.lastSeenKey}T00:00:00`); const out: string[] = [];
-    for (let i = 1; i <= Math.min(p.daysAway - 1, 14); i++) { const d = new Date(start); d.setDate(start.getDate() + i); out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`); }
-    return out;
-  }, [p.lastSeenKey, p.daysAway]);
+    return p?.backfillDays.slice(0, 14) ?? [];
+  }, [p?.backfillDays]);
+
+  if (!p) return (
+    <>
+      {outro && <Portal><AnimatePresence><Outro key="outro" /></AnimatePresence></Portal>}
+      {!outro && (
+        <P6Sheet open={open && shown} onClose={onClose} position="center" title="欢迎回来" en="WELCOME BACK">
+          <div className="py-8 text-center text-[13px] font-bold" style={{ color: P3R.inkSoft }}>现在没有待处理的回归。</div>
+        </P6Sheet>
+      )}
+    </>
+  );
 
   const finish = () => {
-    if (busy) return;
+    if (!p || busy) return;
     setBusy(true);
-    setTimeout(() => { if (low) { setShown(false); onClose(); return; } setShown(false); setOutro(true); }, 420);
+    void commitReturn(p, entries, mode === 'summary' ? summary : undefined).then(() => {
+      if (low) { clearPendingReturnPayload(); setShown(false); onClose(); return; }
+      setShown(false);
+      setOutro(true);
+    }).catch(() => setBusy(false));
   };
   const lines = [[{ t: '你不在的 ' }, { t: `${p.daysAway} 天`, em: true }, { t: ' 里' }], [{ t: '流转的岁月并未削减你的勇气' }]];
   const footer = mode === 'welcome' ? (

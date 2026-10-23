@@ -10,11 +10,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { CfgInput } from '@yellow/screens/pkg6/cfg';
-import { RETURN_PAYLOAD } from '@yellow/mock/pkg6';
 import { ChannelNoise } from '@yellow/fx';
 import { P4Button, P4Outline, P4Stripe, Portal } from '@yellow/kit';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
+import { useAppStore } from '@/store';
+import type { BackfillEntry } from '@/types';
 
 type Mode = 'welcome' | 'summary' | 'calendar';
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
@@ -23,9 +24,10 @@ const RESTING = '那几天在休息';
 export default function ReturnPanel({ open, onClose, params }: OverlayProps) {
   const low = useLowMotion();
   const step = params?.get('step');
-  const tier = (params?.get('tier') as 'recent' | 'long') || RETURN_PAYLOAD.tier;
-  const p = { ...RETURN_PAYLOAD, tier, daysAway: tier === 'long' ? 46 : RETURN_PAYLOAD.daysAway };
-  const [mode, setMode] = useState<Mode>(step === 'summary' ? 'summary' : step === 'backfill' ? 'calendar' : 'welcome');
+  const p = useAppStore((state) => state.pendingReturnPayload);
+  const commitReturn = useAppStore((state) => state.commitReturn);
+  const clearPendingReturnPayload = useAppStore((state) => state.clearPendingReturnPayload);
+  const [mode, setMode] = useState<Mode>(step === 'summary' ? 'summary' : step === 'backfill' && p?.tier === 'recent' ? 'calendar' : 'welcome');
   const [summary, setSummary] = useState('');
   const [entries, setEntries] = useState<Record<string, string>>({});
   const [openDay, setOpenDay] = useState<string | null>(null);
@@ -33,17 +35,32 @@ export default function ReturnPanel({ open, onClose, params }: OverlayProps) {
   const [noise, setNoise] = useState(false);
   const [busy, setBusy] = useState(false);
   const [outro, setOutro] = useState(false);
-  useEffect(() => { if (open) { setMode(step === 'summary' ? 'summary' : step === 'backfill' ? 'calendar' : 'welcome'); setEntries({}); setSummary(''); setOpenDay(null); } }, [open, step]);
+  useEffect(() => { if (open) { setMode(step === 'summary' ? 'summary' : step === 'backfill' && p?.tier === 'recent' ? 'calendar' : 'welcome'); setEntries({}); setSummary(''); setOpenDay(null); } }, [open, p?.tier, step]);
   const go = (m: Mode) => { setNoise(true); setMode(m); };
 
   const days = useMemo(() => {
-    const start = new Date(`${p.lastSeenKey}T00:00:00`); const out: string[] = [];
-    for (let i = 1; i <= p.daysAway && i <= 14; i++) { const d = new Date(start); d.setDate(start.getDate() + i); out.push(d.toISOString().slice(0, 10)); }
-    return out;
-  }, [p.lastSeenKey, p.daysAway]);
-  const lead = new Date(`${days[0]}T00:00:00`).getDay();
+    return p?.backfillDays.slice(0, 14) ?? [];
+  }, [p?.backfillDays]);
 
-  const finish = () => { setBusy(true); setTimeout(() => { setBusy(false); onClose(); setOutro(true); setTimeout(() => setOutro(false), low ? 600 : 1500); }, 500); };
+  if (!p) return (
+    <P6Sheet open={open} onClose={onClose} title="欢迎回来" en="WELCOME BACK" size="tall">
+      <div className="py-8 text-center text-body font-bold text-p4g-ink-soft">现在没有待处理的回归。</div>
+    </P6Sheet>
+  );
+
+  const lead = days[0] ? new Date(`${days[0]}T00:00:00`).getDay() : 0;
+
+  const finish = () => {
+    if (busy) return;
+    setBusy(true);
+    const backfillEntries: BackfillEntry[] = Object.entries(entries).map(([dateKey, text]) => ({ dateKey, text }));
+    void commitReturn(p, backfillEntries, mode === 'summary' ? summary : undefined).then(() => {
+      setBusy(false);
+      onClose();
+      setOutro(true);
+      setTimeout(() => { setOutro(false); clearPendingReturnPayload(); }, low ? 600 : 1500);
+    }).catch(() => setBusy(false));
+  };
   const footer = mode === 'welcome'
     ? <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{p.tier === 'recent' && <P4Button block onClick={() => go('calendar')}>补记这几天</P4Button>}<P4Button block variant={p.tier === 'recent' ? 'secondary' : 'primary'} onClick={() => go('summary')}>用一句话概括</P4Button></div>
     : <P4Button block size="lg" variant="black" disabled={busy} onClick={finish}>{busy ? '…' : '我回来了'}</P4Button>;

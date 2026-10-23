@@ -15,7 +15,6 @@ const WelcomeModal = lazy(() => import('@/components/WelcomeModal').then(m => ({
 import { LevelUpModal } from '@/components/LevelUpModal';
 import { SplashScreen } from '@/components/SplashScreen';
 import type { SplashScreenProps } from '@/components/SplashScreen';
-import type { ReturnPayload } from '@/types';
 import { AchievementUnlockModal } from '@/components/AchievementUnlockModal';
 import { ACHIEVEMENT_UNLOCK_LINES } from '@/constants';
 import { SkillUnlockModal } from '@/components/SkillUnlockModal';
@@ -479,7 +478,7 @@ function App() {
       void sweepDanmakuApprovals();
       // 回归面板（§12）：也要挂在切回前台上——App 一直没被杀、只是在后台放了十天，
       // 这种情况冷启动那条 effect 永远不会再跑，只有这里能接住
-      void useAppStore.getState().markAppOpened().then(p => { if (p) setReturnPayload(p); });
+      void useAppStore.getState().markAppOpened();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -659,14 +658,11 @@ function App() {
   // 触发时机刻意压到「开屏结束 + 数据加载完 + 有档案」之后：
   // 这个面板要说的是"你不在的 N 天里，你的◯◯还是 Lv.X"，
   // 数据没就位就弹，那句话会变成一句空话。
-  const [returnPayload, setReturnPayload] = useState<ReturnPayload | null>(null);
+  const returnPayload = useAppStore((s) => s.pendingReturnPayload);
+  const clearPendingReturnPayload = useAppStore((s) => s.clearPendingReturnPayload);
   useEffect(() => {
     if (showSplash || isLoading || !user) return;
-    let cancelled = false;
-    void useAppStore.getState().markAppOpened().then(p => {
-      if (!cancelled && p) setReturnPayload(p);
-    });
-    return () => { cancelled = true; };
+    void useAppStore.getState().markAppOpened();
   }, [showSplash, isLoading, user]);
 
   // 背景动画是否开着——口径收在 ui/bgAnim.ts（含 P5 的"默认不开"闸）。
@@ -1079,7 +1075,7 @@ function App() {
           {/* 回归面板（PRD_V2.6 §12）：离开 ≥7 天后的第一次打开 */}
           {returnPayload && (
             <Suspense fallback={null}>
-              <ReturnPanel payload={returnPayload} onClose={() => setReturnPayload(null)} />
+              <ReturnPanel payload={returnPayload} onClose={clearPendingReturnPayload} />
             </Suspense>
           )}
         </div>

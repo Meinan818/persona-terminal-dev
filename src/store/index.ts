@@ -469,6 +469,9 @@ interface AppState {
   setWishProposal: (p: WishProposalPayload | null) => void;
 
   // ── 回归面板（PRD_V2.6 §12）──────────────────────────────
+  /** 本次会话待展示的真实回归载荷；顶层与主题弹层共用。 */
+  pendingReturnPayload: ReturnPayload | null;
+  clearPendingReturnPayload: () => void;
   /**
    * 记一次「打开过」。每次冷启动 / 切回前台调用。
    * 返回本次是否构成一次**回归**（离开 ≥ 7 天）及其载荷；不构成则返回 null。
@@ -1015,6 +1018,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   achievementNotification: null,
   skillNotification: null,
   modalBlocker: false,
+  pendingReturnPayload: null,
   persona: null,
   shadow: null,
   battleState: null,
@@ -2583,7 +2587,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       ? attrs.reduce((a, b) => (b.level > a.level ? b : a))
       : null;
 
-    return {
+    const payload: ReturnPayload = {
       daysAway,
       tier,
       returnCount: (s.settings.returnCount ?? 0) + 1,
@@ -2598,7 +2602,11 @@ export const useAppStore = create<AppState>((set, get) => ({
           }
         : null,
     };
+    set({ pendingReturnPayload: payload });
+    return payload;
   },
+
+  clearPendingReturnPayload: () => set({ pendingReturnPayload: null }),
 
   getBackfillSuggestions: (limit = 8) => {
     const since = Date.now() - 60 * 86400000;
@@ -3073,6 +3081,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       bigDealClear: null,
       wishProgressCut: null,
       wishProposal: null,
+      pendingReturnPayload: null,
       todos: [],
       todoCompletions: [],
       summaries: [],

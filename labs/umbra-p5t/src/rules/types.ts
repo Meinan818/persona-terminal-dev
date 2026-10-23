@@ -182,6 +182,10 @@ export interface Unit extends UnitDef {
   dashedAction: boolean;
   /** Boss 阶段号（关卡事件 setUnit 用） */
   bossPhase?: number;
+  /** 敌人 AI 状态：false = idle（未唤醒不行动），true = alert（ENEMY-AI.md §0.2，整局不回退） */
+  alert?: boolean;
+  /** 上一个打它的我方（revenger 下个敌方回合 +30） */
+  lastAttacker?: string;
 }
 
 // ---------- 地图机关（Samurai Gamers Stage Elements Guide / Cogito 关卡 / gameline） ----------

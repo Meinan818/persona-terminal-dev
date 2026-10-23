@@ -113,6 +113,7 @@ describe('敌人 AI', () => {
 
   it('射手没东西打时会停在掩体旁（回合结束拿 Guard），盾兵转向自己的目标', () => {
     const b = mk(['1 . . . . . . . . . . . . . A', '. . h . . . . . . . . . . . .'], { A: A('a', { gun: { power: 10, range: 3 } }), '1': E('e1', { role: 'shooter', gun: { power: 5, range: 3 }, move: 3 }) });
+    b.unit('e1').alert = true; // ENEMY-AI.md：敌人初始 idle，8 格外不会自己醒
     b.endPlayerPhase();
     expect(b.grid.hasAnyCover(b.unit('e1').pos)).toBeGreaterThan(0);
     expect(b.unit('e1').guard).toBe(true);

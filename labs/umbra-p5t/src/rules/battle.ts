@@ -5,7 +5,7 @@ import type {
   AttackKind, BattleEvent, BonusDef, BuffId, CameraDef, ChargeId, CoverLevel, CrownItem, CrownResult, DamageSource, Difficulty,
   Effect, EventAction, Intent, MapDef, MapEvent, PassiveId, Phase, RuleOptions, SkillDef, StatusId, Unit, UnitDef, Vec,
 } from './types';
-import { runEnemyTurn, computeIntents } from './ai';
+import { runEnemyTurn, computeIntents, wakeOnHit, wakeZone } from './ai';
 import { decoyDef } from './data';
 
 // ---------- 规则常量 ----------
@@ -189,7 +189,7 @@ export class Battle {
       followUps: (this.opts?.followUps ?? 1) + (def.passives?.includes('followUpPlus') ? 1 : 0), dashed: false,
       charge: def.charge ?? def.charges?.[0], charges: def.charges ? [...def.charges] : undefined, passives: def.passives ? [...def.passives] : [],
       guard: false, counterReady: role === 'revenger', hitsTaken: 0, used: [], dashedAction: false,
-      acted: !!def.decoy,
+      acted: !!def.decoy, alert: false,
     } as Unit;
   }
 
@@ -1162,6 +1162,7 @@ export class Battle {
     const floor = Math.max(t.hpFloor && t.hpFloor > 0 ? t.hpFloor : 0, t.protected ? 1 : 0);
     t.hp = Math.max(floor > 0 ? Math.min(floor, before) : 0, t.hp - amount);
     if (by && source !== 'status' && source !== 'penalty') t.hitsTaken++;
+    if (t.side === 'enemy' && source !== 'status' && source !== 'penalty') wakeOnHit(this, t, by);
     this.emit({ type: 'damage', unitId: t.id, amount, cover, resist, hpLeft: t.hp, source });
     if (t.decoy && amount > 0) {
       t.hp = 0; t.ko = true;
@@ -1311,6 +1312,7 @@ export class Battle {
       while (this.units.some((u) => u.id === id)) id = `${def.id}_${++k}`;
       const nu = this.makeUnit({ ...def, id }, p);
       nu.guard = this.coverNow(nu);
+      if (nu.side === 'enemy') nu.alert = true; // 增援刷出来直接 alert（ENEMY-AI.md §0.2）
       this.units.push(nu);
       ids.push(nu.id);
     }
@@ -1332,11 +1334,9 @@ export class Battle {
     if (this.rt.unlocked.has(z)) return;
     this.rt.unlocked.add(z);
     this.emit({ type: 'zoneUnlocked', zone: z });
-    this.onZoneUnlocked?.(z);
+    wakeZone(this, z);
     if (this.phase === 'player') { this.intents = computeIntents(this); this.emit({ type: 'intents', intents: this.intents }); }
   }
-  /** AI 钩子（唤醒等），ai.ts 设置 */
-  onZoneUnlocked: ((z: string) => void) | null = null;
   /** 当前可见（所在区域已解锁）且没被拿走的宝箱 */
   visibleChests() {
     return (this.map.chests ?? []).filter((c) => !this.rt.chests.has(c.id) && (!this.map.zones || this.rt.unlocked.has(this.zoneOf(c.pos) ?? '')));

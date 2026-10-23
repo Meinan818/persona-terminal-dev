@@ -513,6 +513,7 @@ describe('特殊敌人（Cogito AAA115）', () => {
   it('Supporter：给受伤的同伴回复', () => {
     const b = mk(['A . . . . . . . . . .', '. . . . . . . . 1 . S'], { A: A('a'), '1': E('e1'), S: E('s', { role: 'supporter', maxSp: 99, skills: [SKILLS.dia] }) });
     b.unit('e1').hp = 30;
+    b.unit('s').alert = true; // ENEMY-AI.md：敌人初始 idle，8 格外不会自己醒
     const ev = b.endPlayerPhase();
     expect(pick(ev, 'heal')[0].unitId).toBe('e1');
   });

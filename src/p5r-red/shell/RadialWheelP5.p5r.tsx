@@ -108,7 +108,7 @@ export function RadialWheelP5({ open, origin, hold, onClose, onNavigate, reduced
                   style={{ left: x, top: y, ['--w' as string]: `${W}px`, ['--h' as string]: `${H}px`, ['--tilt' as string]: `${tilt}deg`, ['--dx' as string]: `${ox - x}px`, ['--dy' as string]: `${oy - y}px`, ['--d' as string]: `${0.03 * i}s`, zIndex: 30 + i }}>
                   <div className="oa-st-in" style={{ width: W, height: H }}>
                     <i className="sd" style={{ clipPath: clip }} /><i className="rim" style={{ clipPath: clip }} /><i className="face" style={{ clipPath: clip }} />
-                    <i className="hl"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><polygon className="hr" points="2,6 98,0 94,38 0,34" fill="#ff0022" /><polygon className="hc" points="4,4 99,3 92,36 3,39" fill="#1cfeff" style={{ mixBlendMode: 'screen', opacity: 0.85 }} /><polygon points="3,5 97,2 93,36 2,35" fill="#F2E9DA" /></svg></i>
+                    <i className="hl"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><polygon className="hr" points="2,6 98,0 94,38 0,34" fill="#ff0022" /><polygon className="hc" points="4,4 99,3 92,36 3,39" fill="#1cfeff" style={{ opacity: 0.55 }} /><polygon points="3,5 97,2 93,36 2,35" fill="#F2E9DA" /></svg></i>
                     <div className="txt" style={{ clipPath: clip }}>
                       <div className="cn">{[...label].map((c, j) => jr(i * 13.7 + j * 31.9) < 0.36
                         ? <span key={j} className="rz" style={{ transform: `rotate(${((jr(i * 17.3 + j * 7.1) - 0.5) * 14).toFixed(1)}deg)`, clipPath: RCLIP[(i + j) % 3] }}>{c}</span>

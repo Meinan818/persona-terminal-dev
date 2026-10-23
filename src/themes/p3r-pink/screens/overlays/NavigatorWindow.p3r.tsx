@@ -303,10 +303,10 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
             <div className="absolute inset-0" style={{ background: 'var(--p3r-scrim)' }} onClick={onClose} />
             <motion.section role="dialog" aria-modal="true" aria-label="助手" variants={popVariants(low)} initial="off" animate="on" exit="off"
               className="relative flex h-full w-full min-w-0 flex-col overflow-hidden wide:max-w-[480px]"
-              style={{ background: 'linear-gradient(168deg, var(--p3r-bg) 0%, var(--p3r-cyan-faint) 52%, var(--p3r-cyan-pale) 100%)' }}>
+              style={{ background: 'linear-gradient(168deg, var(--p3r-bg) 0%, var(--p3r-cyan-faint) 52%, var(--p3r-cyan-pale) 100%)', isolation: 'isolate', transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}>
               {/* 舞台：樱色黄昏底图淡化 + 水纹 + 左缘玫红细带 */}
-              <img aria-hidden src={sampleImg(night ? 'night' : 'day')} alt="" className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%] w-full object-cover" style={{ opacity: night ? 0.35 : 0.28, maskImage: 'linear-gradient(to top, #000 30%, transparent)', WebkitMaskImage: 'linear-gradient(to top, #000 30%, transparent)' }} />
-              <WaterLayer opacity={0.7} drift />
+              <img aria-hidden src={sampleImg(night ? 'night' : 'day')} alt="" className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%] w-full object-cover" style={{ opacity: night ? 0.35 : 0.28, maskImage: 'linear-gradient(to top, #000 30%, transparent)', WebkitMaskImage: 'linear-gradient(to top, #000 30%, transparent)', transform: 'translateZ(0)' }} />
+              <WaterLayer opacity={0.7} />
               <span aria-hidden className="pointer-events-none absolute left-0 top-0 hidden h-full w-[5px] wide:block" style={{ background: P3R.blue }} />
               <span aria-hidden className="pointer-events-none absolute -right-6 top-[88px] select-none font-cond text-[86px] leading-none" style={{ color: 'var(--p3r-ghost)', transform: 'rotate(-12deg)' }}>NAVI</span>
 

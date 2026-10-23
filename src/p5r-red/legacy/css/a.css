@@ -539,7 +539,7 @@
 :root[data-ui-channel="p5"] .oa-st.on .face { background: var(--red); }
 :root[data-ui-channel="p5"] .oa-st.on .sd { background: #5c0208; }
 :root[data-ui-channel="p5"] .oa-st.on .hl { display: block; }
-:root[data-ui-channel="p5"] .oa-st.on .txt { mix-blend-mode: multiply; }
+:root[data-ui-channel="p5"] .oa-st.on .txt { isolation: isolate; }
 :root[data-ui-channel="p5"] .oa-st.on .cn span { color: #0d0d0d; text-shadow: none; }
 :root[data-ui-channel="p5"] .oa-st.on .en { color: rgba(13,13,13,.85); }
 :root[data-ui-channel="p5"] .oa-st.dim .oa-st-in { opacity: .75; transform: rotate(var(--tilt)) scale(.92); }

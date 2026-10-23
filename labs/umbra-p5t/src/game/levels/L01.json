@@ -8,7 +8,7 @@
   "type": "defeatAll"
  },
  "objective": "击败全部敌人",
- "turnTarget": 6,
+ "turnTarget": 3,
  "party": [
   [
    "joker",
@@ -54,7 +54,7 @@
  "enemies": [
   {
    "id": "e1",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -65,7 +65,7 @@
   },
   {
    "id": "e2",
-   "name": "Mandrake",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -76,7 +76,7 @@
   },
   {
    "id": "e3",
-   "name": "Jack-o'-Lantern",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -87,7 +87,7 @@
   },
   {
    "id": "e4",
-   "name": "Mandrake",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -98,7 +98,7 @@
   },
   {
    "id": "e5",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -152,7 +152,7 @@
      "units": [
       {
        "id": "r1",
-       "name": "Mandrake",
+       "name": "Grenadier",
        "role": "brute",
        "hp": "PH",
        "pos": [
@@ -162,7 +162,7 @@
       },
       {
        "id": "r2",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -186,10 +186,11 @@
   },
   {
    "type": "withinTurns",
-   "n": 6
+   "n": 3
   },
   {
-   "type": "noKo"
+   "type": "hurtFewerThan",
+   "n": 3
   }
  ],
  "intent": "教学：第1回合学走格子+掩体；e2 站空地→打倒→1 MORE；e3 躲全掩体→必须绕侧面；第3回合左右各来1个增援学「背后有人」。",

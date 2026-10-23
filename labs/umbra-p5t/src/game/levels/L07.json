@@ -97,7 +97,7 @@
  "enemies": [
   {
    "id": "s1",
-   "name": "盾兵 Archangel",
+   "name": "盾兵 Grenadier",
    "role": "shielder",
    "hp": "PH",
    "pos": [
@@ -112,7 +112,7 @@
   },
   {
    "id": "s2",
-   "name": "盾兵 Archangel",
+   "name": "盾兵 Grenadier",
    "role": "shielder",
    "hp": "PH",
    "pos": [
@@ -127,7 +127,7 @@
   },
   {
    "id": "a1",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -138,7 +138,7 @@
   },
   {
    "id": "a2",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -149,7 +149,7 @@
   },
   {
    "id": "a3",
-   "name": "Kelpie",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -160,7 +160,7 @@
   },
   {
    "id": "b1",
-   "name": "Jack-o'-Lantern",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -171,7 +171,7 @@
   },
   {
    "id": "b2",
-   "name": "Jack-o'-Lantern",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -182,7 +182,7 @@
   },
   {
    "id": "b3",
-   "name": "Nekomata",
+   "name": "Musketeer",
    "role": "teleporter",
    "hp": "PH",
    "pos": [
@@ -222,7 +222,7 @@
      "units": [
       {
        "id": "rN",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [

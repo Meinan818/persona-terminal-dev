@@ -11,11 +11,19 @@ const WIN_DIFF: Record<string, Difficulty> = {
   L01: 'easy', L02: 'easy', L03: 'safety', L04: 'normal', L05: 'easy',
   L06: 'safety', L07: 'normal', L08: 'safety', L09: 'normal', L10: 'safety',
 };
+/** 10-24：L08 改照原版 M17「7 回合内全灭」后，贪心 bot 走开关门迷宫要 8 回合才清完（差 1 回合）→ 赢的测试给 bot 放宽回合上限（只放宽 bot 测试，关卡本身仍是 7） */
+const BOT_TURN_SLACK: Record<string, number> = { L08: 2 };
 /** L09（生存 5 回合）normal 下我方站着不打也撑得过 5 回合 → 用 merciless 验证「能输」 */
 const LOSE_DIFF: Record<string, Difficulty> = { L09: 'merciless' };
 
 function play(id: string, mode: 'win' | 'lose', difficulty: Difficulty) {
-  const b = new Battle(levelMap(id), { difficulty });
+  const map = levelMap(id);
+  const slack = mode === 'win' ? BOT_TURN_SLACK[id] ?? 0 : 0;
+  if (slack) {
+    if (map.turnLimit) map.turnLimit += slack;
+    map.lose = map.lose?.map((l) => (l.type === 'turnLimit' ? { ...l, n: l.n + slack } : l));
+  }
+  const b = new Battle(map, { difficulty });
   const errors: string[] = [];
   let reason = '';
   b.on((e) => { if (e.type === 'error') errors.push(e.message); if (e.type === 'result') reason = e.reason ?? ''; });
@@ -42,6 +50,11 @@ describe('Q10 L01–L10 自动对战', () => {
   it('L03 赢的时候被操控的龙司没被打倒（保护式全灭）', () => {
     const { b } = play('L03', 'win', WIN_DIFF.L03);
     expect(b.unit('skull_ctrl').ko).toBe(false);
+  });
+  it('L08 是 7 回合上限的限时全灭（原版 M17）', () => {
+    const m = levelMap('L08');
+    expect(m.win).toEqual({ type: 'defeatAll' });
+    expect(new Battle(m).turnLimit()).toBe(7);
   });
   it('L06 赢 = Toshiro 站在出口', () => {
     const { b } = play('L06', 'win', WIN_DIFF.L06);

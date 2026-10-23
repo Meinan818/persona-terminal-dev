@@ -8,7 +8,7 @@
   "type": "defeatAll"
  },
  "objective": "击败全部敌人",
- "turnTarget": 10,
+ "turnTarget": 5,
  "party": [
   [
    "joker",
@@ -180,7 +180,7 @@
  "enemies": [
   {
    "id": "t1",
-   "name": "Jack-o'-Lantern 狙击",
+   "name": "Musketeer 狙击",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -192,7 +192,7 @@
   },
   {
    "id": "t2",
-   "name": "Jack-o'-Lantern 狙击",
+   "name": "Musketeer 狙击",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -204,7 +204,7 @@
   },
   {
    "id": "w1",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -215,7 +215,7 @@
   },
   {
    "id": "w2",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -226,7 +226,7 @@
   },
   {
    "id": "g1",
-   "name": "Kelpie",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -237,7 +237,7 @@
   },
   {
    "id": "g2",
-   "name": "Kelpie",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -248,7 +248,7 @@
   },
   {
    "id": "g3",
-   "name": "Agathion",
+   "name": "Drummer",
    "role": "supporter",
    "hp": "PH",
    "pos": [
@@ -259,7 +259,7 @@
   },
   {
    "id": "g4",
-   "name": "Onmoraki",
+   "name": "Grenadier",
    "role": "launcher",
    "hp": "PH",
    "pos": [
@@ -282,7 +282,7 @@
      "units": [
       {
        "id": "r1",
-       "name": "Bicorn",
+       "name": "Grenadier",
        "role": "revenger",
        "hp": "PH",
        "pos": [
@@ -292,7 +292,7 @@
       },
       {
        "id": "r2",
-       "name": "Bicorn",
+       "name": "Grenadier",
        "role": "revenger",
        "hp": "PH",
        "pos": [
@@ -302,7 +302,7 @@
       },
       {
        "id": "r3",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -326,13 +326,13 @@
   },
   {
    "type": "withinTurns",
-   "n": 10
+   "n": 5
   },
   {
    "type": "noKo"
   }
  ],
- "intent": "两座 2 层狙击塔压制中路；梯子爬上去=高打低；中间升降台 (9-10,9-10) 由 s1 升到 2 层可直接跳塔；木箱可打碎/推走；敌人剩 6 时城门援军。",
+ "intent": "照 P5T M5（全灭；原版 Musketeer×4 + 增援 Grenadier×1，首次出现反击型）。两座 2 层狙击塔压制中路；梯子爬上去=高打低；中间升降台 (9-10,9-10) 由 s1 升到 2 层可直接跳塔；木箱可打碎/推走；敌人剩 6 时城门援军。",
  "tiles": [
   "####################",
   "....................",

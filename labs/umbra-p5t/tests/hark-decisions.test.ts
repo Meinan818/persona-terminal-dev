@@ -72,8 +72,8 @@ describe('Hark 决定 #9 关卡喇叭 = 硬禁用技能', () => {
 });
 
 describe('Hark 决定 #1/#2 Boss HP 与 Zionga', () => {
-  it('L08 Boss 180；L10 Boss 阶段1 260（锁 130）', () => {
-    expect(new Battle(levelMap('L08')).unit('boss').maxHp).toBe(180);
+  it('L08 看守长回 PH（10-24 改照原版 M17 限时全灭，不再是 Boss）；L10 Boss 阶段1 260（锁 130）', () => {
+    expect(new Battle(levelMap('L08')).unit('boss').maxHp).toBeLessThan(180);
     const b = new Battle(levelMap('L10'));
     expect(b.unit('boss').maxHp).toBe(260);
     expect(b.unit('boss').hpFloor).toBe(130);

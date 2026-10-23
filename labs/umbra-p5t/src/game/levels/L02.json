@@ -8,7 +8,7 @@
   "type": "defeatAll"
  },
  "objective": "击败全部敌人",
- "turnTarget": 9,
+ "turnTarget": 3,
  "party": [
   [
    "joker",
@@ -94,7 +94,7 @@
  "enemies": [
   {
    "id": "a1",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -105,7 +105,7 @@
   },
   {
    "id": "a2",
-   "name": "Mandrake",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -116,7 +116,7 @@
   },
   {
    "id": "b1",
-   "name": "Kelpie",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -127,7 +127,7 @@
   },
   {
    "id": "b2",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -138,7 +138,7 @@
   },
   {
    "id": "b3",
-   "name": "Agathion",
+   "name": "Drummer",
    "role": "supporter",
    "hp": "PH",
    "pos": [
@@ -149,7 +149,7 @@
   },
   {
    "id": "c1",
-   "name": "Inugami",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -160,7 +160,7 @@
   },
   {
    "id": "c2",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -171,7 +171,7 @@
   },
   {
    "id": "c3",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -182,7 +182,7 @@
   },
   {
    "id": "c4",
-   "name": "卫兵队长 Bicorn",
+   "name": "卫兵队长 Grenadier",
    "role": "revenger",
    "hp": "PH",
    "pos": [
@@ -248,7 +248,7 @@
      "units": [
       {
        "id": "r1",
-       "name": "Kelpie",
+       "name": "Grenadier",
        "role": "brute",
        "hp": "PH",
        "pos": [
@@ -258,7 +258,7 @@
       },
       {
        "id": "r2",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -278,10 +278,11 @@
   },
   {
    "type": "withinTurns",
-   "n": 9
+   "n": 3
   },
   {
-   "type": "noKo"
+   "type": "hurtFewerThan",
+   "n": 3
   }
  ],
  "intent": "A 区练手；踩开关开 D1 进 B 区（宝箱+3 敌）；B 区清完 D2 自动开进 C 区（队长+3 敌），进 C 区背后来 2 援军。",

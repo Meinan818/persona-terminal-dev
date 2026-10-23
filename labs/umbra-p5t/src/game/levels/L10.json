@@ -8,7 +8,7 @@
   "type": "defeatTarget",
   "targetId": "boss"
  },
- "objective": "击败城主的影子",
+ "objective": "击败 Marie",
  "turnTarget": 12,
  "party": [
   [
@@ -121,7 +121,7 @@
  "enemies": [
   {
    "id": "boss",
-   "name": "城主的影子",
+   "name": "Marie",
    "role": "brute",
    "hp": 260,
    "pos": [
@@ -137,7 +137,7 @@
   },
   {
    "id": "k1",
-   "name": "侍卫 Archangel",
+   "name": "侍卫 Grenadier",
    "role": "shielder",
    "hp": "PH",
    "pos": [
@@ -152,7 +152,7 @@
   },
   {
    "id": "k2",
-   "name": "侍卫 Archangel",
+   "name": "侍卫 Grenadier",
    "role": "shielder",
    "hp": "PH",
    "pos": [
@@ -167,7 +167,7 @@
   },
   {
    "id": "k3",
-   "name": "Jack-o'-Lantern",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -178,7 +178,7 @@
   },
   {
    "id": "k4",
-   "name": "Jack-o'-Lantern",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -189,7 +189,7 @@
   },
   {
    "id": "k5",
-   "name": "Agathion",
+   "name": "Drummer",
    "role": "supporter",
    "hp": "PH",
    "pos": [
@@ -254,7 +254,7 @@
      "units": [
       {
        "id": "p1",
-       "name": "护卫 Archangel",
+       "name": "护卫 Grenadier",
        "role": "shielder",
        "hp": "PH",
        "pos": [
@@ -268,7 +268,7 @@
       },
       {
        "id": "p2",
-       "name": "护卫 Archangel",
+       "name": "护卫 Grenadier",
        "role": "shielder",
        "hp": "PH",
        "pos": [
@@ -282,7 +282,7 @@
       },
       {
        "id": "p3",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -292,7 +292,7 @@
       },
       {
        "id": "p4",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -308,7 +308,7 @@
       "type": "defeatTarget",
       "targetId": "boss"
      },
-     "objective": "击败城主"
+     "objective": "击败 Marie"
     }
    ],
    "repeat": false
@@ -327,7 +327,7 @@
      "units": [
       {
        "id": "sN",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -337,7 +337,7 @@
       },
       {
        "id": "sN",
-       "name": "Kelpie",
+       "name": "Grenadier",
        "role": "brute",
        "hp": "PH",
        "pos": [
@@ -354,16 +354,9 @@
  "bonus": [
   {
    "type": "clear"
-  },
-  {
-   "type": "withinTurns",
-   "n": 12
-  },
-  {
-   "type": "noKo"
   }
  ],
- "intent": "阶段1：Boss 坐王座（锁血 50%），两侧侍卫；打到 50% → 阶段2：Boss 回 20% 血、王座后门 D1/D2 打开露出 C 区阳台（高 1 层）、Boss 跳到阳台（阶段2 HP 200，PH-tuned）、召唤 4 个护卫、目标改为「击败城主」、Boss 获得全体技能。阶段2 Boss 每 3 回合召 2 个小兵。",
+ "intent": "照 P5T M22（Defeat Marie；原版只有 Marie×1，扔花束炸弹，可打回去让她 Down）。阶段1：Boss 坐王座（锁血 50%），两侧侍卫；打到 50% → 阶段2：Boss 回 20% 血、王座后门 D1/D2 打开露出 C 区阳台（高 1 层）、Boss 跳到阳台（阶段2 HP 200，PH-tuned）、召唤 4 个护卫、目标改为「击败城主」、Boss 获得全体技能。阶段2 Boss 每 3 回合召 2 个小兵。",
  "unlockedZones": [
   "A"
  ],

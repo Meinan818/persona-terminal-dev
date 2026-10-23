@@ -11,7 +11,7 @@
   ]
  },
  "objective": "击败全部敌人（不能击倒被操控的龙司）",
- "turnTarget": 9,
+ "turnTarget": 3,
  "party": [
   [
    "joker",
@@ -85,7 +85,7 @@
   },
   {
    "id": "a1",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -96,7 +96,7 @@
   },
   {
    "id": "a2",
-   "name": "Mandrake",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -107,7 +107,7 @@
   },
   {
    "id": "a3",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -118,7 +118,7 @@
   },
   {
    "id": "b1",
-   "name": "Jack-o'-Lantern",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -129,7 +129,7 @@
   },
   {
    "id": "b2",
-   "name": "Jack-o'-Lantern",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -140,7 +140,7 @@
   },
   {
    "id": "b3",
-   "name": "Kelpie",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -151,7 +151,7 @@
   },
   {
    "id": "b4",
-   "name": "Agathion",
+   "name": "Drummer",
    "role": "supporter",
    "hp": "PH",
    "pos": [
@@ -197,7 +197,7 @@
      "units": [
       {
        "id": "r1",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -207,7 +207,7 @@
       },
       {
        "id": "r2",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -227,10 +227,11 @@
   },
   {
    "type": "withinTurns",
-   "n": 9
+   "n": 3
   },
   {
-   "type": "noKo"
+   "type": "hurtFewerThan",
+   "n": 3
   }
  ],
  "intent": "照 P5T M3：龙司被洗脑在敌方，会主动来打你；打他只会扣血，HP 归 0=失败。走到桥头 (9,8) 开 B 区钟楼。",

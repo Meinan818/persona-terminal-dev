@@ -9,7 +9,7 @@
   "unitId": "toshiro"
  },
  "objective": "护送 Toshiro 到出口",
- "turnTarget": 10,
+ "turnTarget": 8,
  "party": [
   [
    "joker",
@@ -116,7 +116,7 @@
    "spawn": [
     {
      "id": "r1",
-     "name": "Kelpie",
+     "name": "Grenadier",
      "role": "brute",
      "hp": "PH",
      "pos": [
@@ -126,7 +126,7 @@
     },
     {
      "id": "r2",
-     "name": "Pixie",
+     "name": "Musketeer",
      "role": "shooter",
      "hp": "PH",
      "pos": [
@@ -142,7 +142,7 @@
  "enemies": [
   {
    "id": "a1",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -153,7 +153,7 @@
   },
   {
    "id": "a2",
-   "name": "Mandrake",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -164,7 +164,7 @@
   },
   {
    "id": "b1",
-   "name": "Kelpie",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -175,7 +175,7 @@
   },
   {
    "id": "b2",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -186,7 +186,7 @@
   },
   {
    "id": "b3",
-   "name": "Silky",
+   "name": "Drummer",
    "role": "supporter",
    "hp": "PH",
    "pos": [
@@ -197,7 +197,7 @@
   },
   {
    "id": "c1",
-   "name": "Inugami",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -208,7 +208,7 @@
   },
   {
    "id": "c2",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -219,7 +219,7 @@
   },
   {
    "id": "c3",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -275,7 +275,7 @@
      "units": [
       {
        "id": "r3",
-       "name": "Onmoraki",
+       "name": "Grenadier",
        "role": "launcher",
        "hp": "PH",
        "pos": [
@@ -286,7 +286,7 @@
       },
       {
        "id": "r4",
-       "name": "Bicorn",
+       "name": "Grenadier",
        "role": "revenger",
        "hp": "PH",
        "pos": [
@@ -307,13 +307,13 @@
   },
   {
    "type": "withinTurns",
-   "n": 10
+   "n": 8
   },
   {
-   "type": "noKo"
+   "type": "defeatAll"
   }
  ],
- "intent": "照 P5T M9：Toshiro 不能攻击，倒下即败；小巷三段；B 区监视摄像头踩到就来援军；第5回合敌人从屋顶直扑 Toshiro。",
+ "intent": "照 P5T M9（Have Toshiro reach the target；原版 Grenadier×1 + Musketeer×5，Toshiro 不能爬梯、要躲掩体）：Toshiro 不能攻击，倒下即败；小巷三段；B 区监视摄像头踩到就来援军；第5回合敌人从屋顶直扑 Toshiro。",
  "party_extra": [
   [
    "toshiro",

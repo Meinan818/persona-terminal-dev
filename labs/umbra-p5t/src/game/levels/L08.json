@@ -1,15 +1,14 @@
 {
  "id": "L08",
- "name": "城堡·中庭",
+ "name": "收容所·中庭",
  "scene": "castle_courtyard_night",
  "width": 20,
  "height": 16,
  "win": {
-  "type": "defeatTarget",
-  "targetId": "boss"
+  "type": "defeatAll"
  },
- "objective": "7 回合内击败近卫队长",
- "turnTarget": 6,
+ "objective": "7 回合内击败全部敌人",
+ "turnTarget": 5,
  "party": [
   [
    "joker",
@@ -129,62 +128,43 @@
  "enemies": [
   {
    "id": "a1",
-   "name": "Pixie",
+   "name": "Musketeer 狙击",
    "role": "shooter",
    "hp": "PH",
    "pos": [
     10,
     11
    ],
-   "zone": "A"
-  },
-  {
-   "id": "a2",
-   "name": "Mandrake",
-   "role": "brute",
-   "hp": "PH",
-   "pos": [
-    15,
-    13
-   ],
-   "zone": "A"
+   "zone": "A",
+   "gunRange": 7
   },
   {
    "id": "a3",
-   "name": "Pixie",
+   "name": "Musketeer 狙击",
    "role": "shooter",
    "hp": "PH",
    "pos": [
     17,
     10
    ],
-   "zone": "A"
-  },
-  {
-   "id": "b1",
-   "name": "Kelpie",
-   "role": "brute",
-   "hp": "PH",
-   "pos": [
-    3,
-    6
-   ],
-   "zone": "B"
+   "zone": "A",
+   "gunRange": 7
   },
   {
    "id": "b2",
-   "name": "Pixie",
+   "name": "Musketeer 狙击",
    "role": "shooter",
    "hp": "PH",
    "pos": [
     7,
     2
    ],
-   "zone": "B"
+   "zone": "B",
+   "gunRange": 7
   },
   {
    "id": "b3",
-   "name": "Silky",
+   "name": "Drummer",
    "role": "supporter",
    "hp": "PH",
    "pos": [
@@ -195,47 +175,28 @@
   },
   {
    "id": "boss",
-   "name": "近卫队长 Berith",
+   "name": "看守长 Grenadier",
    "role": "brute",
-   "hp": 180,
+   "hp": "PH",
    "pos": [
     18,
     1
    ],
    "zone": "C",
-   "isTarget": true,
-   "staysInZone": "C",
-   "phTuned": true
-  },
-  {
-   "id": "g1",
-   "name": "护卫 Archangel",
-   "role": "shielder",
-   "hp": "PH",
-   "pos": [
-    16,
-    3
-   ],
-   "zone": "C",
-   "facing": [
-    0,
-    1
-   ]
+   "isLeader": true,
+   "staysInZone": "C"
   },
   {
    "id": "g2",
-   "name": "护卫 Archangel",
-   "role": "shielder",
+   "name": "Musketeer 狙击",
+   "role": "shooter",
    "hp": "PH",
    "pos": [
     13,
     1
    ],
    "zone": "C",
-   "facing": [
-    -1,
-    0
-   ]
+   "gunRange": 7
   }
  ],
  "events": [
@@ -307,13 +268,13 @@
   },
   {
    "type": "withinTurns",
-   "n": 6
+   "n": 5
   },
   {
    "type": "noKo"
   }
  ],
- "intent": "粉红开关迷宫：s1 开 D1/D3 关 D2，s2 反之；Boss 在 C 区角落，有 2 护卫；Boss 不会离开 C 区；7 回合不打倒=失败。走对路线 4 回合到 Boss。",
+ "intent": "照 P5T M17 Detention Facility（Defeat all enemies within 7 turns；原版 Sniper×4 + Grenadier×1 + Drummer×1）。粉红开关迷宫：s1 开 D1/D3 关 D2，s2 反之；看守长 Grenadier（id 仍为 boss）在 C 区角落、狙击手护着、不离开 C 区；7 回合内没清光=失败。",
  "turnLimit": 7,
  "unlockedZones": [
   "A"

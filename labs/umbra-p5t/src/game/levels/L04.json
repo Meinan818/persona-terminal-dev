@@ -9,7 +9,7 @@
   "all": true
  },
  "objective": "全员抵达出口",
- "turnTarget": 9,
+ "turnTarget": 7,
  "party": [
   [
    "joker",
@@ -70,7 +70,7 @@
  "enemies": [
   {
    "id": "b1",
-   "name": "Kelpie",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -81,7 +81,7 @@
   },
   {
    "id": "b2",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -92,7 +92,7 @@
   },
   {
    "id": "b3",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -103,7 +103,7 @@
   },
   {
    "id": "c1",
-   "name": "Inugami",
+   "name": "Grenadier",
    "role": "brute",
    "hp": "PH",
    "pos": [
@@ -114,7 +114,7 @@
   },
   {
    "id": "c2",
-   "name": "Silky",
+   "name": "Drummer",
    "role": "supporter",
    "hp": "PH",
    "pos": [
@@ -125,7 +125,7 @@
   },
   {
    "id": "c3",
-   "name": "Pixie",
+   "name": "Musketeer",
    "role": "shooter",
    "hp": "PH",
    "pos": [
@@ -149,7 +149,7 @@
      "units": [
       {
        "id": "r1",
-       "name": "Bicorn",
+       "name": "Grenadier",
        "role": "revenger",
        "hp": "PH",
        "pos": [
@@ -159,7 +159,7 @@
       },
       {
        "id": "r2",
-       "name": "Bicorn",
+       "name": "Grenadier",
        "role": "revenger",
        "hp": "PH",
        "pos": [
@@ -185,7 +185,7 @@
      "units": [
       {
        "id": "r3",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -195,7 +195,7 @@
       },
       {
        "id": "r4",
-       "name": "Mandrake",
+       "name": "Grenadier",
        "role": "brute",
        "hp": "PH",
        "pos": [
@@ -205,7 +205,7 @@
       },
       {
        "id": "r5",
-       "name": "Pixie",
+       "name": "Musketeer",
        "role": "shooter",
        "hp": "PH",
        "pos": [
@@ -231,7 +231,7 @@
      "units": [
       {
        "id": "r6",
-       "name": "Kelpie",
+       "name": "Grenadier",
        "role": "brute",
        "hp": "PH",
        "pos": [
@@ -241,7 +241,7 @@
       },
       {
        "id": "r7",
-       "name": "Kelpie",
+       "name": "Grenadier",
        "role": "brute",
        "hp": "PH",
        "pos": [
@@ -275,13 +275,13 @@
   },
   {
    "type": "withinTurns",
-   "n": 9
+   "n": 7
   },
   {
    "type": "noKo"
   }
  ],
- "intent": "从右往左撤；后面第2/4/6回合追兵；中间开关 s1 开 D1（会被敌人占住）；C 区第6回合出口边埋伏2个。",
+ "intent": "照 P5T M4（全员抵达目标；原版 Musketeer×6，第3-4回合后方来援军，不必理会直接冲出口）。从右往左撤；后面第2/4/6回合追兵；中间开关 s1 开 D1（会被敌人占住）；C 区第6回合出口边埋伏2个。",
  "unlockedZones": [
   "A",
   "B"

@@ -9,11 +9,18 @@ import { CollageStagger, CollageItem } from '@yellow/fx';
 import { cx } from '@yellow/lib/cx';
 import { BarRow, CardHead, MonthNav, Ring } from './ui';
 import { LedgerSettleSheetView } from '@yellow/screens/overlays/LedgerSettleSheet.p4g';
-import { CNY, LEDGER_BUDGET, catMeta, fmtMoney, fmtSigned, monthLabel, shiftMonth } from '@yellow/mock/pkg5';
+import { CNY, catMeta, fmtMoney, fmtSigned, monthLabel, shiftMonth } from '@yellow/mock/pkg5';
+import { useMonthlyLedgerTotals, useRealLedgerBudget } from '@/themes/ledgerBudgetData';
+import { toLocalDateKey } from '@/store';
 import type { LedgerEntry, LedgerExpenseType } from '@real/types';
 
 export function LedgerStats({ entries, forceEmpty }: { entries: LedgerEntry[]; forceEmpty?: boolean }) {
-  const [period, setPeriod] = useState('2026-10');
+  // 统计月份从真实流水里取最近有记录的一个月（原来写死 '2026-10'）。
+  const monthlyTotals = useMonthlyLedgerTotals();
+  const realBudget = useRealLedgerBudget();
+  const latestMonth = monthlyTotals.length > 0 ? monthlyTotals[monthlyTotals.length - 1].month : toLocalDateKey().slice(0, 7);
+  const currentMonth = toLocalDateKey().slice(0, 7);
+  const [period, setPeriod] = useState(latestMonth);
   const [settle, setSettle] = useState(false);
   const inP = entries.filter((e) => e.date.startsWith(period) && !forceEmpty);
   const exp = inP.filter((e) => e.direction === 'expense');
@@ -24,17 +31,23 @@ export function LedgerStats({ entries, forceEmpty }: { entries: LedgerEntry[]; f
   const byCat = Object.entries(exp.reduce<Record<string, number>>((m, e) => { m[e.type ?? 'other'] = (m[e.type ?? 'other'] ?? 0) + e.amount; return m; }, {})).sort((a, b) => b[1] - a[1]) as [LedgerExpenseType, number][];
   const byCh = Object.entries(exp.reduce<Record<string, number>>((m, e) => { const k = e.channel ?? '未填'; m[k] = (m[k] ?? 0) + e.amount; return m; }, {})).sort((a, b) => b[1] - a[1]);
   const labor = inc.filter((e) => e.incomeType === 'labor').reduce((s, e) => s + e.amount, 0);
-  const budget = period === '2026-10' ? LEDGER_BUDGET.monthlyLimit : 0;
+  // 预算只对当前真实周期生效；翻到别的月份没有预算记录就不显示预算条。
+  const budget = period === latestMonth ? realBudget.monthlyLimit : 0;
   const over = totalExpense > budget;
   const progress = budget ? totalExpense / budget : 0;
   const momPct = prevExpense > 0 ? ((totalExpense - prevExpense) / prevExpense) * 100 : null;
-  const trend = [-5, -4, -3, -2, -1, 0].map((d) => { const m = shiftMonth(period, d); const v = d === 0 ? totalExpense : d === -1 ? prevExpense : [1820, 2410, 2960, 2205][d + 5] ?? 0; return { m, v }; });
+  // 趋势取真实月度汇总；没有记录的月份就是 0（原来用写死的 1820/2410/2960/2205）。
+  const trend = [-5, -4, -3, -2, -1, 0].map((d) => {
+    const m = shiftMonth(period, d);
+    const v = d === 0 ? totalExpense : d === -1 ? prevExpense : monthlyTotals.find((t) => t.month === m)?.expense ?? 0;
+    return { m, v };
+  });
   const maxTrend = Math.max(1, ...trend.map((t) => t.v));
   const hasAny = totalExpense > 0 || totalIncome > 0;
 
   return (
     <CollageStagger className="flex min-w-0 flex-col gap-4">
-      <CollageItem><MonthNav label={monthLabel(period)} onPrev={() => setPeriod((p) => shiftMonth(p, -1))} onNext={() => setPeriod((p) => shiftMonth(p, 1))} nextDisabled={period >= '2026-10'} /></CollageItem>
+      <CollageItem><MonthNav label={monthLabel(period)} onPrev={() => setPeriod((p) => shiftMonth(p, -1))} onNext={() => setPeriod((p) => shiftMonth(p, 1))} nextDisabled={period >= currentMonth} /></CollageItem>
       <CollageItem>
         <P4Card tone="paper" cut="br">
           <CardHead en="BALANCE">本月收支</CardHead>
@@ -59,9 +72,9 @@ export function LedgerStats({ entries, forceEmpty }: { entries: LedgerEntry[]; f
               <span className={cx('shrink-0 rounded-xs px-1.5 py-0.5 p4g-num', over ? 'bg-p4g-danger text-[color:var(--p4g-danger-ink)]' : 'bg-p4g-green text-p4g-black')}>{over ? `超 ${CNY}${fmtMoney(totalExpense - budget)}` : `剩 ${CNY}${fmtMoney(budget - totalExpense)}`}</span>
             </div>
             <P4Progress value={Math.min(1, progress) * 100} max={100} variant={over ? 'hp' : 'bar'} />
-            {LEDGER_BUDGET.savingsGoal > 0 && (
+            {realBudget.savingsGoal > 0 && (
               <div className="mt-3 flex items-baseline justify-between border-t-2 border-dashed pt-2 text-meta font-bold text-p4g-ink" style={{ borderColor: 'var(--p4g-line-soft)' }}>
-                <span>🏆 省钱挑战 · 想省</span><span className="p4g-num text-p4g-success">{CNY}{fmtMoney(LEDGER_BUDGET.savingsGoal)}</span>
+                <span>🏆 省钱挑战 · 想省</span><span className="p4g-num text-p4g-success">{CNY}{fmtMoney(realBudget.savingsGoal)}</span>
               </div>
             )}
           </P4Card>

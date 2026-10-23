@@ -6,13 +6,18 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import type { AttributeId, Skill } from '@real/types';
 import { P4Dialog, P4Input, P4Select, P4Button, P4Stepper, P4Slider, P4Field, useToast } from '@yellow/kit';
-import { ATTR_IDS, ATTR_NAMES, LEVEL_MAX, SKILLS } from '@yellow/mock/pkg5';
+import { ATTR_IDS, LEVEL_MAX } from '@yellow/mock/pkg5';
+import { useAppStore } from '@/store';
 
 export interface SkillFormValue { name: string; requiredAttribute: AttributeId; requiredLevel: number; bonusMultiplier: number }
-export const effectText = (attr: AttributeId, m: number) => `${ATTR_NAMES[attr]}积累额外提升 ${Math.round((m - 1) * 100)}%`;
+/** 技能效果描述。属性名取用户真实设置（可自定义），不是固定 demo 名。 */
+export const effectText = (attr: AttributeId, m: number, names?: Record<AttributeId, string>) =>
+  `${names?.[attr] ?? attr}积累额外提升 ${Math.round((m - 1) * 100)}%`;
 
 export function SkillFormView({ open, onClose, editing, onSave, onDelete }: { open: boolean; onClose: () => void; editing?: Skill | null; onSave?: (v: SkillFormValue) => void; onDelete?: () => void }) {
   const toast = useToast();
+  // 属性名取用户真实设置（可自定义），不是固定 demo 名。
+  const attrNames = useAppStore((s) => s.settings.attributeNames) as Record<AttributeId, string>;
   const [v, setV] = useState<SkillFormValue>({ name: '', requiredAttribute: 'knowledge', requiredLevel: 2, bonusMultiplier: 1.2 });
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { if (open) { setV(editing ? { name: editing.name, requiredAttribute: editing.requiredAttribute, requiredLevel: editing.requiredLevel, bonusMultiplier: editing.bonusMultiplier ?? 1.2 } : { name: '', requiredAttribute: 'knowledge', requiredLevel: 2, bonusMultiplier: 1.2 }); setErr(null); } }, [open, editing]);
@@ -25,9 +30,9 @@ export function SkillFormView({ open, onClose, editing, onSave, onDelete }: { op
     <P4Dialog open={open} onClose={onClose} title={editing ? '编辑技能' : '添加技能'} speaker="SKILL" actions="none" role="dialog">
       <div className="flex min-w-0 flex-col gap-3 rounded-sm bg-p4g-surface-2 p-3 text-p4g-ink">
         <P4Input label="技能名称" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="技能名称" />
-        <P4Field label="技能效果（自动生成）"><div className="rounded-sm border-3 border-dashed border-p4g-line px-3 py-2.5 font-display text-body font-bold text-[color:var(--p4g-rank)]">{effectText(v.requiredAttribute, v.bonusMultiplier)}</div></P4Field>
+        <P4Field label="技能效果（自动生成）"><div className="rounded-sm border-3 border-dashed border-p4g-line px-3 py-2.5 font-display text-body font-bold text-[color:var(--p4g-rank)]">{effectText(v.requiredAttribute, v.bonusMultiplier, attrNames)}</div></P4Field>
         <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-          <P4Select label="需求属性" value={v.requiredAttribute} onChange={(e) => setV({ ...v, requiredAttribute: e.target.value as AttributeId })} options={ATTR_IDS.map((id) => ({ value: id, label: ATTR_NAMES[id] }))} />
+          <P4Select label="需求属性" value={v.requiredAttribute} onChange={(e) => setV({ ...v, requiredAttribute: e.target.value as AttributeId })} options={ATTR_IDS.map((id) => ({ value: id, label: attrNames[id] }))} />
           <P4Field label={`需求等级（2–${LEVEL_MAX}）`}><P4Stepper value={v.requiredLevel} min={1} max={LEVEL_MAX} onChange={(n) => setV({ ...v, requiredLevel: n })} label="需求等级" /></P4Field>
         </div>
         <P4Field label="额外加成倍数（1.0–3.0）" counter={`×${v.bonusMultiplier.toFixed(1)}`}><P4Slider value={v.bonusMultiplier} min={1} max={3} step={0.1} onChange={(n: number) => setV({ ...v, bonusMultiplier: Math.round(n * 10) / 10 })} /></P4Field>
@@ -40,5 +45,7 @@ export function SkillFormView({ open, onClose, editing, onSave, onDelete }: { op
 }
 
 export default function SkillForm({ open, onClose, params }: OverlayProps) {
-  return <SkillFormView open={open} onClose={onClose} editing={(params?.get('variant') ?? params?.get('mode')) === 'edit' ? SKILLS.find((s) => s.id === 'custom_sk_sketch') : null} />;
+  // 编辑态取真实自定义技能（原来固定取 mock 的 custom_sk_sketch）。
+  const skills = useAppStore((s) => s.skills);
+  return <SkillFormView open={open} onClose={onClose} editing={(params?.get('variant') ?? params?.get('mode')) === 'edit' ? skills.find((s) => s.id.startsWith('custom_')) ?? null : null} />;
 }

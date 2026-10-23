@@ -23,7 +23,8 @@ import { SkillFormView, effectText, type SkillFormValue } from '@yellow/screens/
 import { SkillDeleteView } from '@yellow/screens/overlays/AchievementsSkillDeleteConfirm.p4g';
 import { TarotFace, TarotFlipViewView } from '@yellow/screens/overlays/TarotFlipView.p4g';
 import { SeasonCard, SeasonFlipView } from '@yellow/screens/overlays/FlipCardView.p4g';
-import { ATTR_IDS, HIDDEN_IDS, SEALED_IDS, SEASON_EXTRAS, SKILL_BONUS_MULT_CAP } from '@yellow/mock/pkg5';
+import { ATTR_IDS, HIDDEN_IDS, SEALED_IDS, SKILL_BONUS_MULT_CAP } from '@yellow/mock/pkg5';
+import { useSeasonExtras } from '@/themes/astrologyData';
 import { achievementsOps, useAchievementsData } from '@yellow/adapters/pkg5';
 import { P5_MAJOR, P5_MINOR, P5_SUIT_META, type P5TarotCard } from '@yellow/mock/pkg5-tarot';
 import { P5_SEASON_PAGES, type P5SeasonMark } from '@yellow/mock/pkg5-season';
@@ -161,12 +162,12 @@ function SkillsTab({ empty }: { empty: boolean }) {
   const byAttr = ATTR_IDS.map((id) => ({ id, items: vis.filter((s) => s.requiredAttribute === id).sort((a, b) => a.requiredLevel - b.requiredLevel) })).filter((g) => g.items.length);
   const save = (v: SkillFormValue) => {
     if (form.editing) {
-      setSkills((xs) => xs.map((x) => (x.id === form.editing!.id ? { ...x, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) } : x)));
-      void achievementsOps.updateSkill(form.editing.id, { ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) });
+      setSkills((xs) => xs.map((x) => (x.id === form.editing!.id ? { ...x, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier, ATTR_NAMES) } : x)));
+      void achievementsOps.updateSkill(form.editing.id, { ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier, ATTR_NAMES) });
     } else {
       const id = `custom_${Date.now()}`;
-      setSkills((xs) => [...xs, { id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier), unlocked: false }]);
-      void achievementsOps.addSkill({ id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) });
+      setSkills((xs) => [...xs, { id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier, ATTR_NAMES), unlocked: false }]);
+      void achievementsOps.addSkill({ id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier, ATTR_NAMES) });
     }
     toast.success(form.editing ? '技能已保存' : '技能已添加');
   };
@@ -300,6 +301,8 @@ function SeasonBook({ empty }: { empty: boolean }) {
   const goTo = (i: number) => { setPage(i); const el = pager.current; if (el) el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' }); };
   const onScroll = () => { const el = pager.current; if (!el) return; const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth)); if (i !== page) setPage(i); };
   const kindLabel: Record<string, string> = { moon: '满月', quest: '委托', raid: '团战' };
+  // 印记（满月 / 委托 / 团战）来自真实岁时印章表，不是演示常量。
+  const seasonExtras = useSeasonExtras();
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <P4Section title={`岁时 · ${year}`} en="SEASON BOOK" action={<span className="flex gap-1.5">{[2026, 2025].map((y) => <button key={y} type="button" onClick={() => { setYear(y); setPage(y === 2026 ? 2 : 0); setTimeout(() => goTo(y === 2026 ? 2 : 0), 0); }} className={cx('rounded-xs border-thin px-1.5 py-0.5 p4g-num text-2xs', y === year ? 'border-p4g-select bg-p4g-select text-[color:var(--p4g-select-ink)]' : 'border-p4g-line bg-p4g-surface-2 text-p4g-ink')}>{y}</button>)}</span>}>
@@ -333,9 +336,9 @@ function SeasonBook({ empty }: { empty: boolean }) {
         </div>
         <div className="mt-2 flex justify-center gap-1.5" aria-hidden>{pages.map((p, i) => <span key={p.key} className={cx('h-1.5 -skew-x-12 transition-all', i === page ? 'w-5 bg-p4g-orange' : 'w-2 bg-[color:var(--p4g-on-stage)] opacity-40')} />)}</div>
       </P4Section>
-      {!empty && SEASON_EXTRAS.length > 0 && (
-        <P4Section title="印记" en="STAMPS" action={<span className="p4g-num text-meta text-[color:var(--p4g-on-stage)]">{SEASON_EXTRAS.length} 枚</span>}>
-          <div className="flex flex-wrap gap-2">{SEASON_EXTRAS.map((s) => <span key={s.id} className="rounded-xs border-thin border-p4g-black bg-p4g-orange px-2 py-1 font-display text-meta font-bold text-p4g-black">{kindLabel[s.kind] ?? s.kind} · {s.name} · {s.date}</span>)}</div>
+      {!empty && seasonExtras.length > 0 && (
+        <P4Section title="印记" en="STAMPS" action={<span className="p4g-num text-meta text-[color:var(--p4g-on-stage)]">{seasonExtras.length} 枚</span>}>
+          <div className="flex flex-wrap gap-2">{seasonExtras.map((s) => <span key={s.id} className="rounded-xs border-thin border-p4g-black bg-p4g-orange px-2 py-1 font-display text-meta font-bold text-p4g-black">{kindLabel[s.kind] ?? s.kind} · {s.name} · {s.date}</span>)}</div>
         </P4Section>
       )}
       <SeasonFlipView mark={openMark} open={isOpen} onClose={() => setIsOpen(false)} />

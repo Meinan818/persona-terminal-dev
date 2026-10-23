@@ -7,20 +7,23 @@ import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Sheet, P3Button, P3Stepper, P3R, useToast } from '@pink/kit';
 import { FLabel, MoneyBox, NoteBox, TrophyGlyph } from '@pink/screens/pkg5/ui';
-import { CNY, LEDGER_BUDGET, LEDGER_RESET_DAY, fmtMoney, fmtPlain, monthLabel } from '@pink/mock/pkg5';
+import { CNY, fmtMoney, fmtPlain, monthLabel } from '@pink/mock/pkg5';
+import { useRealLedgerBudget } from '@/themes/ledgerBudgetData';
 
 export function LedgerBudgetSheetView({ open, onClose, newCycle, locked: forceLocked, days = 31, onSaved }: { open: boolean; onClose: () => void; newCycle?: boolean; locked?: boolean; days?: number; onSaved?: (monthly: number) => void }) {
   const toast = useToast();
-  const current = LEDGER_BUDGET.monthlyLimit;
-  const editsLeft = forceLocked ? 0 : Math.max(0, 2 - LEDGER_BUDGET.savingsGoalEdits);
+  // 预算 / 省钱目标 / 修改次数 / 重置日全部取真实 store，不再用演示常量 6000 / 500。
+  const budget = useRealLedgerBudget();
+  const current = budget.monthlyLimit;
+  const editsLeft = forceLocked ? 0 : Math.max(0, 2 - budget.savingsGoalEdits);
   const [monthly, setMonthly] = useState('');
   const [daily, setDaily] = useState('');
   const [savings, setSavings] = useState('');
   const [challenge, setChallenge] = useState(false);
-  const [resetDay, setResetDay] = useState(LEDGER_RESET_DAY);
+  const [resetDay, setResetDay] = useState(budget.resetDay);
   const fromDaily = useRef<string | null>(null);
   const dailyOf = (m: string) => { const n = Number(m); return n > 0 ? fmtPlain(n / days) : ''; };
-  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(LEDGER_BUDGET.savingsGoal)); setChallenge(!newCycle); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(budget.savingsGoal)); setChallenge(!newCycle); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (fromDaily.current === monthly) { fromDaily.current = null; return; } setDaily(dailyOf(monthly)); }, [monthly]); // eslint-disable-line react-hooks/exhaustive-deps
   const m = Number(monthly);
   const locked = editsLeft <= 0;
@@ -30,7 +33,7 @@ export function LedgerBudgetSheetView({ open, onClose, newCycle, locked: forceLo
       <div className="flex min-w-0 flex-col gap-4 pt-1">
         <NoteBox>
           {newCycle ? '新的一程开始了——给自己定个花费节奏，和一个想攒下的小目标。' : '设一个本月的花费上限——它是你的纪律线，不影响总余额。'}
-          {LEDGER_BUDGET.carriedFrom && <span className="mt-1 block text-[12px] font-bold" style={{ color: P3R.roseInk }}>花费目标沿用了上期（{monthLabel(LEDGER_BUDGET.carriedFrom)}）的 {CNY}{fmtMoney(current)}，可以直接改。</span>}
+          {budget.carriedFrom && <span className="mt-1 block text-[12px] font-bold" style={{ color: P3R.roseInk }}>花费目标沿用了上期（{monthLabel(budget.carriedFrom)}）的 {CNY}{fmtMoney(current)}，可以直接改。</span>}
         </NoteBox>
         <div className="flex min-w-0 flex-col gap-2">
           <FLabel aside={`改一个，另一个按 ${days} 天自动算`}>花费目标</FLabel>

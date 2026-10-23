@@ -12,7 +12,8 @@ import { useLowMotion } from '@yellow/lib/prefs';
 import { asset } from '@yellow/lib/asset';
 import { useImageOk } from '@yellow/lib/slots';
 import { P5_SEASON_PAGES, type P5SeasonMark } from '@yellow/mock/pkg5-season';
-import { P5_TODAY, SEASON_COLLECTED } from '@yellow/mock/pkg5';
+import { P5_TODAY } from '@yellow/mock/pkg5';
+import { useSeasonCollectedMap } from '@/themes/astrologyData';
 
 export function FlipCardView({ open, onClose, label, resetKey, front, back, hint = '点一下或左右拖动翻面', footer }: {
   open: boolean; onClose: () => void; label: string; resetKey?: string; front: (w: number, h: number) => ReactNode; back: (w: number, h: number) => ReactNode; hint?: string; footer?: ReactNode;
@@ -93,8 +94,10 @@ export const seasonStatus = (m: P5SeasonMark, collectedAt?: string) =>
         : `${m.date.slice(5).replace('-', '/')} 那天记一条就能收`;
 
 export function SeasonFlipView({ mark, open, onClose }: { mark: P5SeasonMark | null; open: boolean; onClose: () => void }) {
+  // 收录状态来自真实岁时印章表（stamps），不是演示常量。
+  const collected = useSeasonCollectedMap();
   if (!mark) return null;
-  const at = SEASON_COLLECTED[mark.date];
+  const at = collected[mark.date];
   return (
     <FlipCardView open={open} onClose={onClose} label={`${mark.name} · 岁时册`} resetKey={mark.key} hint="点一下或左右拖动翻面 · 背面是小注"
       front={() => <span className="block h-full w-full bg-p4g-cream"><SeasonCard mark={mark} collected={!!at} className="!h-full" /></span>}

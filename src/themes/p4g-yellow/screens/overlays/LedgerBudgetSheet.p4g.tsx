@@ -7,7 +7,8 @@ import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Stepper, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { P5Label } from '@yellow/screens/pkg5/ui';
-import { CNY, LEDGER_BUDGET, LEDGER_RESET_DAY, fmtMoney, fmtPlain, monthLabel, sanitizeMoneyInput } from '@yellow/mock/pkg5';
+import { CNY, fmtMoney, fmtPlain, monthLabel, sanitizeMoneyInput } from '@yellow/mock/pkg5';
+import { useRealLedgerBudget } from '@/themes/ledgerBudgetData';
 
 function MoneyBox({ label, value, onChange, placeholder, accent, disabled }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; accent?: boolean; disabled?: boolean }) {
   return (
@@ -24,16 +25,18 @@ function MoneyBox({ label, value, onChange, placeholder, accent, disabled }: { l
 
 export function LedgerBudgetSheetView({ open, onClose, newCycle, days = 31, onSaved }: { open: boolean; onClose: () => void; newCycle?: boolean; days?: number; onSaved?: (monthly: number) => void }) {
   const toast = useToast();
-  const current = LEDGER_BUDGET.monthlyLimit;
-  const editsLeft = Math.max(0, 2 - LEDGER_BUDGET.savingsGoalEdits);
+  // 预算 / 省钱目标 / 修改次数 / 重置日全部取真实 store，不再用演示常量 6000 / 500。
+  const budget = useRealLedgerBudget();
+  const current = budget.monthlyLimit;
+  const editsLeft = Math.max(0, 2 - budget.savingsGoalEdits);
   const [monthly, setMonthly] = useState('');
   const [daily, setDaily] = useState('');
   const [savings, setSavings] = useState('');
   const [challenge, setChallenge] = useState(false);
-  const [resetDay, setResetDay] = useState(LEDGER_RESET_DAY);
+  const [resetDay, setResetDay] = useState(budget.resetDay);
   const fromDaily = useRef<string | null>(null);
   const dailyOf = (m: string) => { const n = Number(m); return n > 0 ? fmtPlain(n / days) : ''; };
-  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(LEDGER_BUDGET.savingsGoal)); setChallenge(newCycle ? false : true); } }, [open]); // eslint-disable-line
+  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(budget.savingsGoal)); setChallenge(newCycle ? false : true); } }, [open]); // eslint-disable-line
   useEffect(() => { if (fromDaily.current === monthly) { fromDaily.current = null; return; } setDaily(dailyOf(monthly)); }, [monthly]); // eslint-disable-line
   const m = Number(monthly);
   const locked = editsLeft <= 0;
@@ -44,7 +47,7 @@ export function LedgerBudgetSheetView({ open, onClose, newCycle, days = 31, onSa
         <div className="relative min-w-0 rounded-sm border-3 border-p4g-black bg-[color:var(--p4g-msg)] px-4 py-3 text-body leading-relaxed text-[color:var(--p4g-msg-ink)] shadow-plate night:border-p4g-yellow">
           <span aria-hidden className="mr-1 text-p4g-yellow">&gt;</span>
           {newCycle ? '新的一程开始了——给自己定个花费节奏，和一个想攒下的小目标。' : '设一个本月的花费上限——它是你的纪律线，不影响总余额。'}
-          {LEDGER_BUDGET.carriedFrom && <span className="mt-1 block text-meta text-p4g-yellow">花费目标沿用了上期（{monthLabel(LEDGER_BUDGET.carriedFrom)}）的 {CNY}{fmtMoney(current)}，可以直接改。</span>}
+          {budget.carriedFrom && <span className="mt-1 block text-meta text-p4g-yellow">花费目标沿用了上期（{monthLabel(budget.carriedFrom)}）的 {CNY}{fmtMoney(current)}，可以直接改。</span>}
         </div>
         <div className="flex min-w-0 flex-col gap-2">
           <P5Label aside={`改一个，另一个按 ${days} 天自动算`}>花费目标</P5Label>

@@ -7,13 +7,18 @@ import type { OverlayProps } from '@blue/registry/types';
 import type { AttributeId, Skill } from '@real/types';
 import { P3Sheet, P3Input, P3Select, P3Button, P3Stepper, P3Field, P3R, slantClip } from '@blue/kit';
 import { useToast } from '@blue/kit';
-import { ATTR_IDS, ATTR_NAMES, LEVEL_MAX, SKILLS } from '@blue/mock/pkg5';
+import { ATTR_IDS, LEVEL_MAX } from '@blue/mock/pkg5';
+import { useAppStore } from '@/store';
 
 export interface SkillFormValue { name: string; requiredAttribute: AttributeId; requiredLevel: number; bonusMultiplier: number }
-export const effectText = (attr: AttributeId, m: number) => `${ATTR_NAMES[attr]}积累额外提升 ${Math.round((m - 1) * 100)}%`;
+/** 技能效果描述。属性名取用户真实设置（可自定义），不是固定 demo 名。 */
+export const effectText = (attr: AttributeId, m: number, names?: Record<AttributeId, string>) =>
+  `${names?.[attr] ?? attr}积累额外提升 ${Math.round((m - 1) * 100)}%`;
 
 export function SkillFormView({ open, onClose, editing, onSave, onDelete, initial }: { open: boolean; onClose: () => void; editing?: Skill | null; onSave?: (v: SkillFormValue) => void; onDelete?: () => void; initial?: Partial<SkillFormValue> }) {
   const toast = useToast();
+  // 属性名取用户真实设置（可自定义），不是固定 demo 名。
+  const attrNames = useAppStore((s) => s.settings.attributeNames) as Record<AttributeId, string>;
   const [v, setV] = useState<SkillFormValue>({ name: '', requiredAttribute: 'knowledge', requiredLevel: 2, bonusMultiplier: 1.2 });
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { if (open) { setV({ ...(editing ? { name: editing.name, requiredAttribute: editing.requiredAttribute, requiredLevel: editing.requiredLevel, bonusMultiplier: editing.bonusMultiplier ?? 1.2 } : { name: '', requiredAttribute: 'knowledge' as AttributeId, requiredLevel: 2, bonusMultiplier: 1.2 }), ...initial }); setErr(null); } }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -28,9 +33,9 @@ export function SkillFormView({ open, onClose, editing, onSave, onDelete, initia
       footer={<div className="flex flex-col gap-2"><div className="grid grid-cols-2 gap-2"><P3Button tone="soft" onClick={onClose}>取消</P3Button><P3Button corner onClick={submit}>{editing ? '保存' : '添加'}</P3Button></div>{editing && editing.id.startsWith('custom_') && <P3Button tone="danger" block onClick={() => { onClose(); onDelete?.(); }}>删除技能</P3Button>}</div>}>
       <div className="flex min-w-0 flex-col gap-3 pt-1">
         <P3Field label="技能名称"><P3Input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="技能名称" /></P3Field>
-        <P3Field label="技能效果（自动生成）"><div className="px-4 py-2.5 text-[14px] font-black" style={{ clipPath: slantClip(8), background: P3R.cyanPale, color: P3R.roseInk }}>{effectText(v.requiredAttribute, v.bonusMultiplier)}</div></P3Field>
+        <P3Field label="技能效果（自动生成）"><div className="px-4 py-2.5 text-[14px] font-black" style={{ clipPath: slantClip(8), background: P3R.cyanPale, color: P3R.roseInk }}>{effectText(v.requiredAttribute, v.bonusMultiplier, attrNames)}</div></P3Field>
         <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-          <P3Field label="需求属性"><P3Select value={v.requiredAttribute} onChange={(e) => setV({ ...v, requiredAttribute: e.target.value as AttributeId })}>{ATTR_IDS.map((id) => <option key={id} value={id}>{ATTR_NAMES[id]}</option>)}</P3Select></P3Field>
+          <P3Field label="需求属性"><P3Select value={v.requiredAttribute} onChange={(e) => setV({ ...v, requiredAttribute: e.target.value as AttributeId })}>{ATTR_IDS.map((id) => <option key={id} value={id}>{attrNames[id]}</option>)}</P3Select></P3Field>
           <P3Field label={`需求等级（2–${LEVEL_MAX}）`}><P3Stepper value={v.requiredLevel} min={1} max={LEVEL_MAX} unit="级" onChange={(n) => setV({ ...v, requiredLevel: n })} /></P3Field>
         </div>
         <P3Field label="额外加成倍数（1.0–3.0）" count={`×${v.bonusMultiplier.toFixed(1)}`}>
@@ -50,5 +55,7 @@ export function SkillFormView({ open, onClose, editing, onSave, onDelete, initia
 
 export default function SkillForm({ open, onClose, params }: OverlayProps) {
   const v = params?.get('variant') ?? params?.get('mode');
-  return <SkillFormView open={open} onClose={onClose} editing={v === 'edit' ? SKILLS.find((s) => s.id === 'custom_sk_sketch') ?? null : null} initial={v === 'invalid' ? { name: '速写之手', requiredLevel: 1 } : undefined} />;
+  // 编辑态取真实自定义技能（原来固定取 mock 的 custom_sk_sketch）。
+  const skills = useAppStore((s) => s.skills);
+  return <SkillFormView open={open} onClose={onClose} editing={v === 'edit' ? skills.find((s) => s.id.startsWith('custom_')) ?? null : null} initial={v === 'invalid' ? { name: '速写之手', requiredLevel: 1 } : undefined} />;
 }

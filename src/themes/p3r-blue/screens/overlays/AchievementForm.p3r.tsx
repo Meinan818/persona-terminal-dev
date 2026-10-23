@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import type { Achievement, AttributeId } from '@real/types';
 import { P3Sheet, P3Input, P3Select, P3Button, P3Field, P3R, useToast } from '@blue/kit';
-import { ATTR_IDS, ATTR_NAMES, ACHIEVEMENTS } from '@blue/mock/pkg5';
+import { ATTR_IDS } from '@blue/mock/pkg5';
+import { useAppStore } from '@/store';
 
 type CType = 'total_points' | 'consecutive_days' | 'attribute_level' | 'keyword_match' | 'todo_completions';
 export interface AchForm { title: string; description: string; icon: string; type: CType; value: number; attribute: AttributeId; keywords: string }
@@ -17,6 +18,8 @@ const fromAch = (a: Achievement): AchForm => ({ title: a.title, description: a.d
 
 export function AchievementFormView({ open, onClose, editing, onSave, onDelete, initial }: { open: boolean; onClose: () => void; editing?: Achievement | null; onSave?: (f: AchForm) => void; onDelete?: () => void; initial?: Partial<AchForm> }) {
   const toast = useToast();
+  // 属性名取真实设置（用户可改），不是 mock 的固定「知识 / 胆量…」。
+  const attrNames = useAppStore((s) => s.settings.attributeNames) as Record<AttributeId, string>;
   const [f, setF] = useState<AchForm>(blank);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { if (open) { setF({ ...(editing ? fromAch(editing) : blank), ...initial }); setErr(null); } }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -38,7 +41,7 @@ export function AchievementFormView({ open, onClose, editing, onSave, onDelete, 
           <P3Field label="条件类型"><P3Select aria-label="条件类型" value={f.type} onChange={(e) => set({ type: e.target.value as CType })}>{TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</P3Select></P3Field>
           <P3Field label="条件值" error={f.value <= 0 ? '成就条件值必须大于0' : undefined}><P3Input type="number" aria-label="条件值" value={String(f.value)} invalid={f.value <= 0} onChange={(e) => set({ value: Number(e.target.value) })} placeholder="条件值" /></P3Field>
         </div>
-        {f.type === 'attribute_level' && <P3Field label="选择属性"><P3Select aria-label="选择属性" value={f.attribute} onChange={(e) => set({ attribute: e.target.value as AttributeId })}>{ATTR_IDS.map((id) => <option key={id} value={id}>{ATTR_NAMES[id]}</option>)}</P3Select></P3Field>}
+        {f.type === 'attribute_level' && <P3Field label="选择属性"><P3Select aria-label="选择属性" value={f.attribute} onChange={(e) => set({ attribute: e.target.value as AttributeId })}>{ATTR_IDS.map((id) => <option key={id} value={id}>{attrNames?.[id] ?? id}</option>)}</P3Select></P3Field>}
         {f.type === 'keyword_match' && <P3Field label="关键字（用逗号分隔）"><P3Input value={f.keywords} onChange={(e) => set({ keywords: e.target.value })} placeholder="例如：阅读,学习,看书" /></P3Field>}
         {err && <p className="text-[12px] font-black" style={{ color: 'var(--p3r-coral-ink)' }}>{err}</p>}
       </div>
@@ -48,5 +51,15 @@ export function AchievementFormView({ open, onClose, editing, onSave, onDelete, 
 
 export default function AchievementForm({ open, onClose, params }: OverlayProps) {
   const v = params?.get('variant') ?? params?.get('mode');
-  return <AchievementFormView open={open} onClose={onClose} editing={v === 'edit' ? ACHIEVEMENTS.find((a) => a.id === 'custom_read') ?? null : null} initial={v === 'invalid' ? { title: '夜读者', description: '连续读书', icon: '☾', value: 0 } : undefined} />;
+  // 编辑态取真实自定义成就（原来固定取 mock 的 custom_read）。
+  const custom = useAppStore((s) => s.achievements);
+  const attrNames = useAppStore((s) => s.settings.attributeNames);
+  return (
+    <AchievementFormView
+      open={open}
+      onClose={onClose}
+      editing={v === 'edit' ? custom.find((a) => a.id.startsWith('custom_')) ?? null : null}
+      initial={v === 'invalid' ? { title: '夜读者', description: '连续读书', icon: '☾', value: 0 } : undefined}
+    />
+  );
 }

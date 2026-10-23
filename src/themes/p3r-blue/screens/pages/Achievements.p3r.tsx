@@ -23,7 +23,8 @@ import { SkillDeleteView } from '@blue/screens/overlays/AchievementsSkillDeleteC
 import { TarotFace, TarotFlipViewView, suitOf } from '@blue/screens/overlays/TarotFlipView.p3r';
 import { SeasonCard, SeasonFlipView } from '@blue/screens/overlays/FlipCardView.p3r';
 import { UnlockCutIn } from '@blue/screens/pkg5/UnlockCutIn';
-import { ATTR_IDS, HIDDEN_IDS, SEALED_IDS, SEASON_EXTRAS, SKILL_BONUS_MULT_CAP } from '@blue/mock/pkg5';
+import { ATTR_IDS, HIDDEN_IDS, SEALED_IDS, SKILL_BONUS_MULT_CAP } from '@blue/mock/pkg5';
+import { useSeasonExtras } from '@/themes/astrologyData';
 import { achievementsOps, useAchievementsData, useCodexData } from '@blue/adapters/pkg5';
 import { P5_MAJOR, P5_MINOR, type P5TarotCard } from '@blue/mock/pkg5-tarot';
 import { P5_SEASON_PAGES, type P5SeasonMark } from '@blue/mock/pkg5-season';
@@ -189,12 +190,12 @@ function SkillsTab({ empty }: { empty: boolean }) {
   const byAttr = ATTR_IDS.map((id) => ({ id, items: vis.filter((s) => s.requiredAttribute === id).sort((a, b) => a.requiredLevel - b.requiredLevel) })).filter((g) => g.items.length);
   const save = (v: SkillFormValue) => {
     if (form.editing) {
-      setSkills((xs) => xs.map((x) => (x.id === form.editing!.id ? { ...x, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) } : x)));
-      void achievementsOps.updateSkill(form.editing.id, { ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) });
+      setSkills((xs) => xs.map((x) => (x.id === form.editing!.id ? { ...x, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier, ATTR_NAMES) } : x)));
+      void achievementsOps.updateSkill(form.editing.id, { ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier, ATTR_NAMES) });
     } else {
       const id = `custom_${Date.now()}`;
-      setSkills((xs) => [...xs, { id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier), unlocked: false }]);
-      void achievementsOps.addSkill({ id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier) });
+      setSkills((xs) => [...xs, { id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier, ATTR_NAMES), unlocked: false }]);
+      void achievementsOps.addSkill({ id, ...v, description: effectText(v.requiredAttribute, v.bonusMultiplier, ATTR_NAMES) });
     }
     toast.success(form.editing ? '技能已保存' : '技能已添加');
   };
@@ -328,6 +329,8 @@ function SeasonBook({ empty }: { empty: boolean }) {
   useEffect(() => { const el = pager.current; if (el) el.scrollTo({ left: page * el.clientWidth }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const onScroll = () => { const el = pager.current; if (!el) return; const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth)); if (i !== page) setPage(i); };
   const kindLabel: Record<string, string> = { moon: '满月', quest: '委托', raid: '团战' };
+  // 印记（满月 / 委托 / 团战）来自真实岁时印章表，不是演示常量。
+  const seasonExtras = useSeasonExtras();
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <section>
@@ -361,10 +364,10 @@ function SeasonBook({ empty }: { empty: boolean }) {
         </div>
         <div className="mt-2 flex justify-center gap-1.5" aria-hidden>{pages.map((p, i) => <span key={p.key} className="h-1.5 transition-all" style={{ width: i === page ? 20 : 8, background: i === page ? P3R.blue : 'var(--p3r-track)', clipPath: 'polygon(30% 0, 100% 0, 70% 100%, 0 100%)' }} />)}</div>
       </section>
-      {!empty && SEASON_EXTRAS.length > 0 && (
+      {!empty && seasonExtras.length > 0 && (
         <section>
-          <SectionMark title="印记" en="STAMPS" className="mb-2" meta={<span className="font-cond text-[13px]" style={{ color: P3R.inkSoft }}>{SEASON_EXTRAS.length} 枚</span>} />
-          <div className="flex flex-wrap gap-2">{SEASON_EXTRAS.map((s, i) => <span key={s.id} className="px-3 py-1 text-[12px] font-black" style={{ clipPath: slantClip(5), background: i % 2 ? P3R.cyan : P3R.blue, color: i % 2 ? 'var(--p3r-mulberry)' : P3R.onBlue }}>{kindLabel[s.kind] ?? s.kind} · {s.name} · {s.date.slice(5)}</span>)}</div>
+          <SectionMark title="印记" en="STAMPS" className="mb-2" meta={<span className="font-cond text-[13px]" style={{ color: P3R.inkSoft }}>{seasonExtras.length} 枚</span>} />
+          <div className="flex flex-wrap gap-2">{seasonExtras.map((s, i) => <span key={s.id} className="px-3 py-1 text-[12px] font-black" style={{ clipPath: slantClip(5), background: i % 2 ? P3R.cyan : P3R.blue, color: i % 2 ? 'var(--p3r-mulberry)' : P3R.onBlue }}>{kindLabel[s.kind] ?? s.kind} · {s.name} · {s.date.slice(5)}</span>)}</div>
         </section>
       )}
       <SeasonFlipView mark={openMark} open={isOpen} onClose={() => setIsOpen(false)} />

@@ -149,6 +149,18 @@ export function useSeasonCollectedMap() {
   return useMemo(() => Object.fromEntries(season.stamps.map((s) => [s.date, s.collectedAt])), [season.stamps]);
 }
 
+/**
+ * 真实岁时印记（月相 / 委托 / 满月团战）。
+ * 主题包里原来用的是 mock 常量 SEASON_EXTRAS（固定 3 枚演示印记）。
+ */
+export function useSeasonExtras() {
+  const season = useSeasonCollection();
+  return useMemo(
+    () => season.extras.map((s) => ({ id: s.id, kind: s.kind, name: s.name, date: s.date })),
+    [season.extras],
+  );
+}
+
 export type { TarotEntry };
 
 export type { DailyDivination, FateGlimpse, LongReading };

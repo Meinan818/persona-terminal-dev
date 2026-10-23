@@ -9,7 +9,7 @@ import { useImageOk } from '@yellow/lib/slots';
 import { cx } from '@yellow/lib/cx';
 import { FlipBackPanel, FlipCardView } from './FlipCardView.p4g';
 import { P5_MAJOR, P5_MINOR, P5_SUIT_META, type P5TarotCard } from '@yellow/mock/pkg5-tarot';
-import { TAROT_COLLECTED } from '@yellow/mock/pkg5';
+import { useTarotCollectedMap } from '@/themes/astrologyData';
 
 /** 牌面：有图用图，否则 P4G 风格生成牌面（黄底黑框 + 巨号罗马数字 + 名字条）*/
 export function TarotFace({ card, dim, className }: { card: P5TarotCard; dim?: boolean; className?: string }) {
@@ -32,8 +32,10 @@ export function TarotFace({ card, dim, className }: { card: P5TarotCard; dim?: b
 }
 
 export function TarotFlipViewView({ card, open, onClose }: { card: P5TarotCard | null; open: boolean; onClose: () => void }) {
+  // 图鉴进度来自真实抽牌记录（dailyDivinations / longReadings），不是演示常量。
+  const collected = useTarotCollectedMap();
   if (!card) return null;
-  const e = TAROT_COLLECTED[card.id];
+  const e = collected[card.id];
   const up = !!e?.upright.count;
   const rev = !!e?.reversed.count;
   return (

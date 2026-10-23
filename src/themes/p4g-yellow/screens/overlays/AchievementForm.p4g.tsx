@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import type { Achievement, AttributeId } from '@real/types';
 import { P4Dialog, P4Input, P4Select, P4Button, useToast } from '@yellow/kit';
-import { ATTR_IDS, ATTR_NAMES, ACHIEVEMENTS } from '@yellow/mock/pkg5';
+import { ATTR_IDS } from '@yellow/mock/pkg5';
+import { useAppStore } from '@/store';
 
 type CType = 'total_points' | 'consecutive_days' | 'attribute_level' | 'keyword_match' | 'todo_completions';
 export interface AchForm { title: string; description: string; icon: string; type: CType; value: number; attribute: AttributeId; keywords: string }
@@ -16,6 +17,8 @@ const fromAch = (a: Achievement): AchForm => ({ title: a.title, description: a.d
 
 export function AchievementFormView({ open, onClose, editing, onSave, onDelete }: { open: boolean; onClose: () => void; editing?: Achievement | null; onSave?: (f: AchForm) => void; onDelete?: () => void }) {
   const toast = useToast();
+  // 属性名取真实设置（用户可改），不是 mock 的固定「知识 / 胆量…」。
+  const attrNames = useAppStore((s) => s.settings.attributeNames) as Record<AttributeId, string>;
   const [f, setF] = useState<AchForm>(blank);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { if (open) { setF(editing ? fromAch(editing) : blank); setErr(null); } }, [open, editing]);
@@ -36,7 +39,7 @@ export function AchievementFormView({ open, onClose, editing, onSave, onDelete }
           <P4Select aria-label="条件类型" value={f.type} onChange={(e) => set({ type: e.target.value as CType })} options={[{ value: 'total_points', label: '总点数' }, { value: 'consecutive_days', label: '连续天数' }, { value: 'attribute_level', label: '属性等级' }, { value: 'keyword_match', label: '关键字匹配' }, { value: 'todo_completions', label: '完成任务次数' }]} />
           <P4Input type="number" aria-label="条件值" value={String(f.value)} onChange={(e) => set({ value: Number(e.target.value) })} placeholder="条件值" error={f.value <= 0 ? '成就条件值必须大于0' : undefined} />
         </div>
-        {f.type === 'attribute_level' && <P4Select label="选择属性" value={f.attribute} onChange={(e) => set({ attribute: e.target.value as AttributeId })} options={ATTR_IDS.map((id) => ({ value: id, label: ATTR_NAMES[id] }))} />}
+        {f.type === 'attribute_level' && <P4Select label="选择属性" value={f.attribute} onChange={(e) => set({ attribute: e.target.value as AttributeId })} options={ATTR_IDS.map((id) => ({ value: id, label: attrNames[id] }))} />}
         {f.type === 'keyword_match' && <P4Input label="关键字（用逗号分隔）" value={f.keywords} onChange={(e) => set({ keywords: e.target.value })} placeholder="例如：阅读,学习,看书" />}
         {err && <p className="text-meta font-bold text-p4g-danger">{err}</p>}
       </div>
@@ -51,5 +54,7 @@ export function AchievementFormView({ open, onClose, editing, onSave, onDelete }
 
 export default function AchievementForm({ open, onClose, params }: OverlayProps) {
   const edit = (params?.get('variant') ?? params?.get('mode')) === 'edit';
-  return <AchievementFormView open={open} onClose={onClose} editing={edit ? ACHIEVEMENTS.find((a) => a.id === 'custom_read') : null} />;
+  // 编辑态取真实自定义成就（原来固定取 mock 的 custom_read）。
+  const custom = useAppStore((s) => s.achievements);
+  return <AchievementFormView open={open} onClose={onClose} editing={edit ? custom.find((a) => a.id.startsWith('custom_')) ?? null : null} />;
 }

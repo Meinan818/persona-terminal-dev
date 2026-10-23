@@ -181,6 +181,23 @@ export class CameraRig {
     this.tgt.zoom = zoom ?? this.userZoom;
     this.clamp(this.tgt);
   }
+  /** 框住一组世界点（Triple Threat 三角）：中心对准包围盒，倍率取刚好放下（pad = 留边比例），不改 userZoom */
+  fitPoints(ps: { x: number; y: number; z: number }[], pad = 1.5) {
+    if (!ps.length) return;
+    const f = this.fit(this.tgt.yaw);
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of ps) {
+      const v = this.viewOf(new THREE.Vector3(p.x, p.y, p.z), this.tgt.yaw);
+      minX = Math.min(minX, v.ox); maxX = Math.max(maxX, v.ox); minY = Math.min(minY, v.oy); maxY = Math.max(maxY, v.oy);
+    }
+    const ew = Math.max(1.5, (maxX - minX) / 2 * pad), eh = Math.max(1.2, (maxY - minY) / 2 * pad);
+    this.tgt.ox = (minX + maxX) / 2; this.tgt.oy = (minY + maxY) / 2 + eh * 0.12; // 略往上：下方留给切入带
+    this.tgt.zoom = Math.min(f.halfW / ew, f.halfH / eh);
+    this.clamp(this.tgt);
+  }
+  /** 存 / 取目标镜头（演出结束后回到演出前） */
+  saveTarget() { return { ...this.tgt }; }
+  restoreTarget(s: CamState) { this.tgt = { ...s, yaw: this.tgt.yaw }; this.clamp(this.tgt); }
   /** 世界点是否在当前画面里（留 margin 比例） */
   inView(p: THREE.Vector3, margin = 0.15) {
     const v = p.clone().project(this.cam);

@@ -20,6 +20,7 @@ import { toast } from '@/p5r-red/kit/P5Toast';
 import { P5Sil } from '@/p5r-red/fx/sil';
 import { panelIn } from '@/p5r-red/fx/motion';
 import { isLowMotion, usePrefs } from '@/p5r-red/lib/prefs';
+import { useAccountIdentity } from '@/themes/accountAuth';
 import { ATTR, ATTR_ORDER, D } from '@/p5r-red/mock/data';
 
 type PSt = 'hasav' | 'avatar' | 'name' | 'err' | 'noav';
@@ -122,6 +123,8 @@ export function ProfileCropDialog({ open, onClose }: { open: boolean; onClose: (
 }
 
 export default function UserProfileCard({ open, onClose, params }: OverlayProps) {
+  // UserID / 邮箱取真实登录态（原来写死 yeji_0610 / yeji.mask@example.com）。
+  const identity = useAccountIdentity();
   const st0 = (params?.get('state') as PSt) || 'hasav';
   const [st, setSt] = useState<PSt>(st0);
   const [pres, setPres] = useState(false);
@@ -169,8 +172,8 @@ export default function UserProfileCard({ open, onClose, params }: OverlayProps)
                 </div>
               ) : <div className="ob-namerow"><h3>{name}</h3><button type="button" className="ob-pen" aria-label="修改用户名" onClick={() => setSt('name')}>✎</button></div>}
               <div className="ob-lvrow"><P5Tag tone="ink">LV {lv}</P5Tag><div className="ob-pres"><button type="button" className="ob-pill" onClick={() => setPres(true)}>＋状态</button><button type="button" className="ob-pill" onClick={() => setPres(true)}>＋目标</button></div></div>
-              <button type="button" className="ob-uid" title="点击复制 UserID" onClick={() => setCopied(true)}>{copied ? '已复制 ✓' : <><span>@</span>yeji_0610</>}</button>
-              <small className="ob-mail">yeji.mask@example.com</small>
+              <button type="button" className="ob-uid" title="点击复制 UserID" onClick={() => setCopied(true)}>{copied ? '已复制 ✓' : <><span>@</span>{identity.username || '未登录'}</>}</button>
+              <small className="ob-mail">{identity.email || '未登录'}</small>
               {st === 'err' && <Msg kind="err">请选择图片文件</Msg>}
             </div>
             <div className="ob-prof-f">

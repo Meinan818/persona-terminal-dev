@@ -5,4 +5,5 @@
 import { v3Overlay } from '@/p5r-red/screens/pkg4/bridge';
 import { openBatchSheet } from '@/p5r-red/screens/pkg4/ledger4';
 
-export default v3Overlay(() => openBatchSheet({ text: '午饭拉面32 地铁4 奶茶18' }));
+// 批量录入的默认文本原来写死"午饭拉面32 地铁4 奶茶18"（演示数据），改为空由用户自己填。
+export default v3Overlay(() => openBatchSheet({ text: '' }));

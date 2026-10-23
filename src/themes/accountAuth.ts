@@ -29,6 +29,7 @@ import {
 export function useAccountIdentity() {
   const cloudUser = useCloudStore((s) => s.cloudUser);
   const cloudEnabled = useCloudStore((s) => s.cloudEnabled);
+  const lastSyncAt = useCloudStore((s) => s.lastSyncAt);
   return useMemo(() => {
     const raw = cloudUser as (Record<string, unknown> & { email?: string; username?: string | null; name?: string | null }) | null;
     return {
@@ -37,8 +38,13 @@ export function useAccountIdentity() {
       email: String(raw?.email ?? ''),
       username: String(raw?.username ?? ''),
       nickname: String(raw?.name ?? ''),
+      lastSyncAt,
+      /** 最近同步的显示文案；从未同步就是"从未同步"，不写"12 分钟前" */
+      lastSyncLabel: lastSyncAt
+        ? `最近同步：${new Date(lastSyncAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+        : '从未同步',
     };
-  }, [cloudUser, cloudEnabled]);
+  }, [cloudUser, cloudEnabled, lastSyncAt]);
 }
 
 export const accountAuthOps = {

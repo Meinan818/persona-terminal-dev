@@ -25,15 +25,27 @@ import { ATTR_ORDER, D } from '@/p5r-red/mock/data';
 import { panelIn } from '@/p5r-red/fx/motion';
 import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { CloudCard, DataCards, CLOUD_STATES, DATA_STATES } from '@/p5r-red/screens/overlays/AccountBlocks';
+import { useAccountIdentity } from '@/themes/accountAuth';
+import { useAppStore } from '@/store';
+import { streakDates } from '@/utils/streak';
 import './Settings.p5r.css';
 
 type Full = 'cloud' | 'data' | null;
 const TOTAL = ATTR_ORDER.reduce((s, k) => s + D.attrs[k].pts, 0);
-/** v3 存档槽原值 */
-const SLOTS: [string, string, string, string][] = [['云同步 · Cloud', '已登录 · 上次同步 10.20 16:02', '登录云端 / 从云端拉取', 'cloud'], ['本机存档', `总点数 ${TOTAL} · 记录 42 天`, '备份导出', 'local'], ['从备份恢复', '或拖拽 .json 到这里 · 背景图与 API Key 不会在备份中', '选择文件', 'restore']];
 const EXPORT_STEPS = ['idle', 'exporting', 'download', 'shared', 'copied', 'copyfail', 'exportfail'];
 export default function Account({ params }: PageProps) {
-  const state = params.get('state') ?? 'signed-in';
+  // 登录态从真实 cloudUser 派生；路由参数 ?state= 仍可覆盖（演示/验收用）。
+  const identity = useAccountIdentity();
+  const derivedState = identity.cloudEnabled ? (identity.signedIn ? 'signed-in' : 'signed-out') : 'unconf';
+  const state = params.get('state') ?? derivedState;
+  // 存档槽文案走真实值（原来写死"已登录 · 上次同步 10.20 16:02" / "记录 42 天"）。
+  const activities = useAppStore((s) => s.activities);
+  const activeDays = new Set(streakDates(activities)).size;
+  const SLOTS: [string, string, string, string][] = [
+    ['云同步 · Cloud', identity.signedIn ? identity.lastSyncLabel : '未登录', '登录云端 / 从云端拉取', 'cloud'],
+    ['本机存档', `总点数 ${TOTAL} · 记录 ${activeDays} 天`, '备份导出', 'local'],
+    ['从备份恢复', '或拖拽 .json 到这里 · 背景图与 API Key 不会在备份中', '选择文件', 'restore'],
+  ];
   const view = params.get('view');
   const step = params.get('step') ?? (view === 'restore' ? 'loaded' : 'idle');
   const sec = params.get('sec') ?? (view === 'export' ? 'data' : view === 'restore' ? 'restore' : null);

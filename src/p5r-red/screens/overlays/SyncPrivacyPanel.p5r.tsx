@@ -2,6 +2,12 @@
 import type { OverlayProps } from '@/p5r-red/registry/types';
 import { toast } from '@/p5r-red/kit/P5Toast';
 import { DeleteCloudDataConfirm } from './AccountBlocks';
+import { deleteAllCloudData } from '@/services/sync';
 export default function SyncPrivacyPanelConfirm({ open, onClose }: OverlayProps) {
-  return <DeleteCloudDataConfirm open={open} onClose={onClose} onDone={() => toast('已删除云端 1,284 条记录。本地数据未动。')} />;
+  // 真实删除云端数据并显示真实条数（原来写死"已删除云端 1,284 条记录"）。
+  return <DeleteCloudDataConfirm open={open} onClose={onClose} onDone={() => {
+    void deleteAllCloudData()
+      .then(({ deleted }) => toast(`已删除云端 ${deleted} 条记录。本地数据未动。`))
+      .catch((e) => toast(e instanceof Error ? e.message : '删除失败'));
+  }} />;
 }

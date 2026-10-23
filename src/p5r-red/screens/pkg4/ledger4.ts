@@ -12,6 +12,7 @@ import { OD, INLINE } from './d4';
 import { todoCompleteP5 } from '@/p5r-red/screens/overlays/cutins.p5r';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { RED_LEDGER } from '@/p5r-red/adapter/live';
+import { RED_LEDGER_BARS } from '@/p5r-red/adapter/live';
 const U = P5.ui;
 const fmt = (n) => Math.abs(n).toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 const yen = (n) => `¥${fmt(n)}`;
@@ -34,6 +35,8 @@ export const L = { view: 'list', bal: 'total', month: 0, empty: false, first: fa
 export function applyLedgerParams(q) {
   L.view = q.get('view') === 'stats' ? 'stats' : 'list'; L.bal = q.get('bal') === 'month' ? 'month' : 'total'; // parity：默认 = v3 总余额 L.month = 0;
   const s = q.get('state'); L.empty = s === 'empty' || s === 'first'; L.first = s === 'first'; L.over = s === 'over'; L.budget = s !== 'nobudget' && s !== 'first';
+  // 流水取真实 store（原来每次进页面都重置成 mock FLOW，真实记录因此看不见）。
+  // FLOW 仍由 adapter/live.ts 写入真实数据，这里只读它，不另造一份 mock。
   L.rows = L.empty ? [] : FLOW.map((r) => ({ ...r }));
   L.ocr = q.get('ocr') || 'ok';
 }
@@ -61,12 +64,16 @@ const flowList = () => {
 const monthNav = () => { const m = ((new Date().getMonth() + L.month) % 12 + 12) % 12 + 1; const { inc } = sums(); return `<div class="led-mon"><button data-act="mon" data-d="-1" aria-label="上个月">◀</button><b>${m} 月</b><small class="p4-mon-in"> · 收入 ${yen(L.month === 0 ? inc : 0)}</small><button data-act="mon" data-d="1" aria-label="下个月" ${L.month >= 0 ? 'disabled' : ''}>▶</button></div>`; };
 
 export function ledgerRender() {
-  const bars = L.empty ? [0, 0, 0, 0, 0, 0, 0, 0, 0] : [80, 30, 120, 60, 45, 150, 20, 70, 99];
+  // 近 9 日柱状图取真实流水（原来写死 [80,30,120,60,45,150,20,70,99]）。
+  // 高度按当天最大值归一到 100%，与 demo 原来的视觉上限一致（demo 最大 150 → 100%）。
+  const rawBars = L.empty ? [0, 0, 0, 0, 0, 0, 0, 0, 0] : RED_LEDGER_BARS;
+  const peak = Math.max(...rawBars, 0);
+  const bars = peak > 0 ? rawBars.map((v) => (v / peak) * 150) : rawBars;
   return `<div class="led5">
     ${L.first ? `<button class="p4-led-setup" data-act="setup"><i class="oa-r" aria-hidden="true"></i>${U.star('var(--red)', 'var(--ink)', 1.4, 'star p4-led-st')}<span><b>先设置你当前的余额</b><small>告诉我你现在大概有多少钱，记账才准——之后随时可「对账」修正。</small></span><em>›</em></button>` : ''}
     <div class="led-grid"><section class="led-a">
       <div class="led-bal">${balCard()}</div>
-      ${U.shp('div', { kind: 'torn', seed: 182, cls: 'led-in' }, `${U.plate('一句话记多笔', { fs: 15 })}<textarea class="inp" rows="2" data-quick placeholder="一句话记多笔；空着点 = 手动填">${L.empty ? '' : '午饭拉面32 地铁4'}</textarea><p class="p4-ocr-msg" data-ocrmsg hidden></p>
+      ${U.shp('div', { kind: 'torn', seed: 182, cls: 'led-in' }, `${U.plate('一句话记多笔', { fs: 15 })}<textarea class="inp" rows="2" data-quick placeholder="一句话记多笔；空着点 = 手动填"></textarea><p class="p4-ocr-msg" data-ocrmsg hidden></p>
         <div class="sh-acts" style="justify-content:space-between"><span class="p4-led-l">${U.btn('对账', { tone: 'ink', seed: 183, attrs: 'data-act="reconcile"' })}${L.ocr === 'novision' ? '' : U.btn('📷 拍小票', { tone: 'paper', size: 'sm', seed: 187, attrs: 'data-act="ocr"' })}</span>${U.btn('记一笔', { tone: 'red', size: 'lg', seed: 184, attrs: 'data-act="rec"' })}</div>`)}
       ${U.shp('div', { kind: 'torn', seed: 185, cls: 'led-chart' }, `${U.plate('近 9 日支出', { fs: 15 })}<div class="lc-bars" aria-label="近 9 日支出">${bars.map((v, i) => `<span><i style="height:${Math.max(2, v / 1.5)}%"></i><small>${new Date(Date.now() - (8 - i) * 864e5).getDate()}</small></span>`).join('')}</div>`)}
     </section><section class="led-b">
@@ -189,7 +196,7 @@ export function openEntrySheet({ text = '', hint = '', dir: d0 = 'expense', pars
 }
 
 /** 确认 N 笔（真实 Ledger.tsx batch SheetModal） */
-export function openBatchSheet({ text = '午饭拉面32 地铁4', hint = '', onSaved } = {}) {
+export function openBatchSheet({ text = '', hint = '', onSaved } = {}) {
   const rows = []; (text.match(/[^\d\s.]*\s*\d+(?:\.\d+)?/g) || []).forEach((seg) => { const p = parse(seg.trim()); rows.push({ dir: 'expense', cat: /地铁|公交|打车/.test(p.note) ? '交通' : '餐饮', amount: p.amount, ch: '微信', note: p.note }); });
   if (!rows.length) rows.push({ dir: 'expense', cat: '餐饮', amount: '', ch: '微信', note: '' });
   let close0;

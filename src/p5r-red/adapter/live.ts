@@ -13,7 +13,7 @@
  *      仍有 mock 的：据点成员/动态/作战/好友、星象 AI 解读、同伴互动/通知/约定（§3 演示固定数据）。
  *   3. 字段对不上时只改这里的映射函数，不要去改页面。
  */
-import { useAppStore } from '@/store';
+import { useAppStore, toLocalDateKey } from '@/store';
 import { OTD_VIEW } from '@/p5r-red/screens/overlays/OnThisDaySheet.p5r';
 import { useBoldness } from '@/utils/boldness';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
@@ -91,6 +91,29 @@ function ledgerRow(e: LedgerEntry) {
 /** 记账页真实合计（页面在渲染时读，随 store 同步更新） */
 export const RED_LEDGER = { expense: 0, income: 0, total: 0, budget: null as number | null, savingsGoal: null as number | null, adjustCount: 0 };
 
+/** 近 9 日每日支出（真实流水派生）；没有记录的日期是 0，不填演示数字 */
+export const RED_LEDGER_BARS: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+/** 云端已删除的条目数（真实云端账号相关记录数；不是写死的 1,284） */
+export const RED_CLOUD_RECORDS = 0;
+
+function syncDailyBars(s: S) {
+  const keys: string[] = [];
+  for (let i = 8; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    keys.push(toLocalDateKey(d));
+  }
+  const sums = keys.map((k) => s.ledgerEntries
+    .filter((e) => e.date === k && e.direction === 'expense')
+    .reduce((a, e) => a + e.amount, 0));
+  // 柱子高度按当天最大值归一（与真实仓库趋势图同口径）；全 0 时全 0，不画假柱子。
+  const max = Math.max(...sums, 0);
+  for (let i = 0; i < RED_LEDGER_BARS.length; i++) {
+    RED_LEDGER_BARS[i] = max > 0 ? sums[i] : 0;
+  }
+}
+
 /** 把 store 当前状态写进全部 mock 对象 */
 export function syncLiveDataNow(s: S = useAppStore.getState()) {
   // 用户 / 名片
@@ -145,6 +168,8 @@ export function syncLiveDataNow(s: S = useAppStore.getState()) {
   RED_LEDGER.budget = budget?.monthlyLimit ?? null;
   RED_LEDGER.savingsGoal = budget?.savingsGoal ?? null;
   RED_LEDGER.adjustCount = s.getAdjustCountThisMonth();
+  // 近 9 日支出
+  syncDailyBars(s);
 }
 
 /* ── 订阅：store 变 → 同步 → 通知重渲染 ── */

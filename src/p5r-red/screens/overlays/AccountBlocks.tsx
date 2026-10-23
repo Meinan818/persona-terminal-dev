@@ -11,6 +11,8 @@ import { P5Mask } from '@/p5r-red/kit/P5Mask';
 import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { ATTR_ORDER, D } from '@/p5r-red/mock/data';
 import { useAppStore } from '@/store';
+import { useAccountIdentity } from '@/themes/accountAuth';
+import { deleteAllCloudData } from '@/services/sync';
 import { ObCard, ObRow, ObSw, ObMsg, ObNote, ObSub, ObLink, ObBtn, ObLi, BusyBtn, useMsgBox, ObConfirm, ObTa } from './ObKit';
 
 export const TOTAL = ATTR_ORDER.reduce((s, k) => s + D.attrs[k].pts, 0);
@@ -58,7 +60,12 @@ export function PrivacyCard({ confirmOpen = false }: { confirmOpen?: boolean }) 
       ))}
       <ObNote>关闭某组后，这些表将仅保留在本地；推送 / 拉取都会跳过它们，登录其他设备时不会看到这些数据。</ObNote>
       <div className="ob-danger"><span className="ob-danger-h">危险区</span><ObBtn seed={251} onClick={() => setDlg(true)}>🗑 删除云端数据</ObBtn><small>仅删除云端存档，本地数据完整保留。下次同步前云端都会是空的。</small>{msg}</div>
-      <DeleteCloudDataConfirm open={dlg} onClose={() => setDlg(false)} onDone={() => setMsg(<ObMsg kind="ok">已删除云端 1,284 条记录。本地数据未动。</ObMsg>)} />
+      <DeleteCloudDataConfirm open={dlg} onClose={() => setDlg(false)} onDone={() => {
+        // 真实删除云端数据，并显示真实删除条数（原来写死"已删除云端 1,284 条记录"）。
+        void deleteAllCloudData()
+          .then(({ deleted }) => setMsg(<ObMsg kind="ok">已删除云端 {deleted} 条记录。本地数据未动。</ObMsg>))
+          .catch((e) => setMsg(<ObMsg kind="err">{e instanceof Error ? e.message : '删除失败'}</ObMsg>));
+      }} />
     </ObCard>
   );
 }
@@ -69,6 +76,9 @@ export function CloudCard({ state = 'signed-in' }: { state?: string }) {
   const [dlg, setDlg] = useState<AccountConfirmKind | null>(null);
   const [copied, setCopied] = useState(false);
   const [msg, setMsg] = useMsgBox(state === 'fail' ? <ObMsg kind="err">同步失败：Failed to fetch</ObMsg> : null);
+  // 邮箱 / UserID 取真实登录态（原来写死 yeji_0610 / yeji.mask@example.com）。
+  const identity = useAccountIdentity();
+  const uid = identity.username;
   if (state === 'unconf') return <ObCard title="云同步" en="CLOUD" seed={601} id="sec-cloud"><p className="ob-p">云同步功能未配置。如需启用，请在 <code>.env.local</code> 中设置 <code>VITE_API_URL</code>。</p></ObCard>;
   if (state === 'signed-out' || state === 'expired') return (
     <ObCard title="云同步" en="CLOUD" seed={603} id="sec-cloud">
@@ -85,8 +95,8 @@ export function CloudCard({ state = 'signed-in' }: { state?: string }) {
         <div className="ob-acc">
           <div className="ob-acc-av"><P5Mask w={54} tone="white" /></div>
           <div className="ob-acc-m"><b>{D.user.name}</b>
-            {!noid && <button type="button" className="ob-uid" title="点击复制" onClick={() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? '@yeji_0610 ✓ 已复制' : <><span>@</span>yeji_0610 <i>· 点击复制</i></>}</button>}
-            <small>{syncing ? '同步中…' : '最近同步：12 分钟前'}</small></div>
+            {!noid && <button type="button" className="ob-uid" title="点击复制" onClick={() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? `@${uid} ✓ 已复制` : <><span>@</span>{uid} <i>· 点击复制</i></>}</button>}
+            <small>{syncing ? '同步中…' : identity.lastSyncLabel}</small></div>
           <button type="button" className="ob-gear" aria-label="账号管理" title="账号管理" onClick={() => openOverlay('account-manage', { state: noid ? 'home-noid' : 'home' })}>⚙</button>
           <button type="button" className="ob-acc-pts" aria-label="查看总点数" onClick={() => toast(`总点数 ${TOTAL}`)}><small>总点数</small><b>{TOTAL}</b></button>
         </div>

@@ -69,7 +69,7 @@ export function CloudCard({ state = 'signed-in' }: { state?: string }) {
   const [dlg, setDlg] = useState<AccountConfirmKind | null>(null);
   const [copied, setCopied] = useState(false);
   const [msg, setMsg] = useMsgBox(state === 'fail' ? <ObMsg kind="err">同步失败：Failed to fetch</ObMsg> : null);
-  if (state === 'unconf') return <ObCard title="云同步" en="CLOUD" seed={601} id="sec-cloud"><p className="ob-p">云同步功能未配置。如需启用，请在 <code>.env.local</code> 中设置 <code>VITE_PB_URL</code>。</p></ObCard>;
+  if (state === 'unconf') return <ObCard title="云同步" en="CLOUD" seed={601} id="sec-cloud"><p className="ob-p">云同步功能未配置。如需启用，请在 <code>.env.local</code> 中设置 <code>VITE_API_URL</code>。</p></ObCard>;
   if (state === 'signed-out' || state === 'expired') return (
     <ObCard title="云同步" en="CLOUD" seed={603} id="sec-cloud">
       {state === 'expired' && <div className="ob-msg err"><b>云端登录已失效</b><br />本机数据仍在。重新登录即可继续同步。</div>}

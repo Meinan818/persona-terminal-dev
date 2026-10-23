@@ -58,10 +58,25 @@ export class VelvetApiError extends Error {
   status: number;
   body: unknown;
   constructor(status: number, body: unknown, message?: string) {
-    super(message ?? `velvet api error ${status}`);
+    super(message ?? friendlyErrorMessage(status));
     this.status = status;
     this.body = body;
   }
+}
+
+/**
+ * 后端没给可读文案时，按 HTTP 状态给一句中文兜底。
+ * 原来直接显示 "velvet api error 401"，用户看到的是英文内部串。
+ */
+function friendlyErrorMessage(status: number): string {
+  if (status === 400) return '请求内容有误，请检查后重试';
+  if (status === 401) return '登录已失效或凭证不正确，请重新登录';
+  if (status === 403) return '没有权限执行这个操作';
+  if (status === 404) return '找不到对应的账号或数据';
+  if (status === 409) return '该内容已被占用，请换一个';
+  if (status === 429) return '操作太频繁，请稍后再试';
+  if (status >= 500) return '服务器暂时出错，请稍后再试';
+  return `请求失败（${status}）`;
 }
 
 // ── 登录态（localStorage 持久化，行为对齐 pb.authStore） ─────

@@ -34,11 +34,14 @@ const Card = ({ children, tone }: { children: ReactNode; tone?: 'danger' }) => (
 );
 
 export default function Account({ params }: PageProps) {
-  const { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS } = useAccountData();
+  const { ATTRIBUTES, CLOUD_USER, TOTAL_LEVEL, TOTAL_POINTS, SIGNED_IN, CLOUD_ENABLED } = useAccountData();
   const toast = useToast();
   const resetAllData = useAppStore((s) => s.resetAllData);
   const p = usePresence();
-  const [state, setState] = useState(params.get('state') ?? 'signed-in');
+  // 登录态从真实 cloudUser 派生；路由参数 ?state= 仍可覆盖（演示/验收用）。
+  const derivedState = CLOUD_ENABLED ? (SIGNED_IN ? 'signed-in' : 'signed-out') : 'unconfigured';
+  const [state, setState] = useState(params.get('state') ?? derivedState);
+  useEffect(() => { if (!params.get('state')) setState(derivedState); }, [derivedState, params]);
   const [tip, setTip] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<null | 'ok' | 'err'>(null);
@@ -148,7 +151,7 @@ export default function Account({ params }: PageProps) {
           <div ref={cloudRef} className="scroll-mt-4">
             <SectionMark title="云同步" en="CLOUD" tri className="mb-3" />
             {state === 'unconfigured' ? (
-              <Card><p className="text-[14px] leading-relaxed" style={{ color: P3R.ink }}>云同步功能未配置。如需启用，请在 <code className="px-1.5 py-0.5 font-mono text-[12px]" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)' }}>.env.local</code> 中设置 <code className="px-1.5 py-0.5 font-mono text-[12px]" style={{ background: P3R.blue, color: P3R.onBlue }}>VITE_PB_URL</code>。</p></Card>
+              <Card><p className="text-[14px] leading-relaxed" style={{ color: P3R.ink }}>云同步功能未配置。如需启用，请在 <code className="px-1.5 py-0.5 font-mono text-[12px]" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)' }}>.env.local</code> 中设置 <code className="px-1.5 py-0.5 font-mono text-[12px]" style={{ background: P3R.blue, color: P3R.onBlue }}>VITE_API_URL</code>。</p></Card>
             ) : !signedIn ? (
               <div className="flex min-w-0 flex-col gap-3">
                 {state === 'expired' && (

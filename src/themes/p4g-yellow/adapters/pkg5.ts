@@ -26,7 +26,8 @@ export function useAccountData() {
   return useMemo(() => ({
     ATTRIBUTES: attributes as Attribute[],
     CLOUD_USER: {
-      username: String(cloudUser?.userId ?? ''),
+      // 后端档案里 UserID 的字段名是 username（VelvetRecord.username）；没有 userId 这个键。
+      username: String(cloudUser?.username ?? ''),
       email: String((cloudUser as unknown as { email?: string } | null)?.email ?? cloudUser?.nickname ?? ''),
     },
     SIGNED_IN: !!cloudUser,

@@ -86,7 +86,7 @@ export default function Dashboard({ params }: PageProps) {
   const tickable = todos.filter((t) => !t.isBigDeal);
   const completed = tickable.filter((t) => t.count >= t.target).length;
   const total = tickable.length;
-  const [cutin, setCutin] = useState<null | { title: string; points: number; hint: boolean }>(null);
+  const [cutin, setCutin] = useState<null | { title: string; points: number; hint: { achievements: number; skills: number } }>(null);
   useEffect(() => () => useAppStore.getState().setModalBlocker(false), []);
   const [rowRipple, setRowRipple] = useState<string | null>(null);
   const [dealOpen, setDealOpen] = useState(false);
@@ -98,13 +98,22 @@ export default function Dashboard({ params }: PageProps) {
     const willComplete = next.count >= next.target;
     if (willComplete) {
       useAppStore.getState().setModalBlocker(true);
-      const pts = t.points + (t.extraBoosts?.reduce((s, b) => s + b.points, 0) ?? 0);
-      window.setTimeout(() => setCutin({ title: t.title, points: pts, hint: false }), anim ? 260 : 0);
     }
     void homeOps.completeTodo(t.id).then((result) => {
-      if (!result && willComplete) useAppStore.getState().setModalBlocker(false);
+      if (!willComplete) return;
+      // store 拒绝这次完成（今日已完成 / 跨天 / 角色变化）→ 不弹完成条，回滚乐观计数。
+      // 计数任务未到目标时 store 同样返回 null，但那属于正常中途，不回滚。
+      if (!result) {
+        useAppStore.getState().setModalBlocker(false);
+        setTodos((ts) => ts.map((x) => (x.id === t.id ? { ...x, count: t.count } : x)));
+        return;
+      }
+      const pts = t.points + (t.extraBoosts?.reduce((s, b) => s + b.points, 0) ?? 0);
+      window.setTimeout(() => setCutin({ title: t.title, points: pts, hint: result.unlockHints }), anim ? 260 : 0);
     }).catch(() => {
-      if (willComplete) useAppStore.getState().setModalBlocker(false);
+      if (!willComplete) return;
+      useAppStore.getState().setModalBlocker(false);
+      setTodos((ts) => ts.map((x) => (x.id === t.id ? { ...x, count: t.count } : x)));
     });
   };
 
@@ -340,7 +349,7 @@ export default function Dashboard({ params }: PageProps) {
 
       <h2 className="sr-only">{MOCK_USER_NAME || 'MASKARIA'}的面具庭园</h2>
 
-      <BandCutInP3 isOpen={!!cutin} onClose={() => { setCutin(null); useAppStore.getState().setModalBlocker(false); }} title={cutin?.title ?? ''} totalPoints={cutin?.points} unlockHint={cutin?.hint ? { achievements: 1, skills: 0 } : { achievements: 0, skills: 0 }} />
+      <BandCutInP3 isOpen={!!cutin} onClose={() => { setCutin(null); useAppStore.getState().setModalBlocker(false); }} title={cutin?.title ?? ''} totalPoints={cutin?.points} unlockHint={cutin?.hint} />
       <UrgentToast text={toast} />
       <DecayModal attrs={decayed} onClose={() => setDecayed([])} />
       <OnThisDaySheetP3 isOpen={otdOpen} onClose={() => setOtdOpen(false)} />

@@ -136,7 +136,7 @@ export default function Account({ params }: PageProps) {
           <div ref={cloudRef} className="scroll-mt-4">
           <P4Section title="云同步" en="CLOUD">
             {state === 'unconfigured' ? (
-              <P4Card tone="paper"><p className="text-body text-p4g-ink">云同步功能未配置。如需启用，请在 <code className="rounded-xs bg-p4g-black px-1.5 py-0.5 font-mono text-meta text-p4g-yellow">.env.local</code> 中设置 <code className="rounded-xs bg-p4g-orange px-1.5 py-0.5 font-mono text-meta text-p4g-black">VITE_PB_URL</code>。</p></P4Card>
+              <P4Card tone="paper"><p className="text-body text-p4g-ink">云同步功能未配置。如需启用，请在 <code className="rounded-xs bg-p4g-black px-1.5 py-0.5 font-mono text-meta text-p4g-yellow">.env.local</code> 中设置 <code className="rounded-xs bg-p4g-orange px-1.5 py-0.5 font-mono text-meta text-p4g-black">VITE_API_URL</code>。</p></P4Card>
             ) : !signedIn ? (
               <div className="flex min-w-0 flex-col gap-3">
                 {state === 'expired' && (

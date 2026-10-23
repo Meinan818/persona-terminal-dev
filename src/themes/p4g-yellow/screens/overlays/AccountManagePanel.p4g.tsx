@@ -7,11 +7,14 @@
 import { useEffect, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Input } from '@yellow/kit';
-import { CLOUD_USER } from '@yellow/mock/pkg5';
+import { accountAuthOps, useAccountIdentity } from '@/themes/accountAuth';
 
 type View = 'home' | 'userid' | 'password_change' | 'password_reset';
 
-export function AccountManagePanelView({ open, onClose, initialView = 'home', userId: uid0 = CLOUD_USER.username, onUserIdChange }: { open: boolean; onClose: () => void; initialView?: View; userId?: string | null; onUserIdChange?: (v: string) => void }) {
+export function AccountManagePanelView({ open, onClose, initialView = 'home', userId, onUserIdChange }: { open: boolean; onClose: () => void; initialView?: View; userId?: string | null; onUserIdChange?: (v: string) => void }) {
+  const identity = useAccountIdentity();
+  const uid0 = userId ?? identity.username;
+  const email = identity.email;
   const [view, setView] = useState<View>(initialView);
   const [uid, setUid] = useState<string | null>(uid0);
   const [draft, setDraft] = useState('');
@@ -22,21 +25,45 @@ export function AccountManagePanelView({ open, onClose, initialView = 'home', us
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   useEffect(() => { if (open) { setView(initialView); setUid(uid0); setError(''); setInfo(''); } }, [open]); // eslint-disable-line
+  // 登录态晚于面板加载时，UserID 要跟着真实身份走，不留空。
+  useEffect(() => { if (open && userId === undefined) setUid(uid0); }, [open, uid0, userId]); // eslint-disable-line
   useEffect(() => { setError(''); setDraft(uid ?? ''); setOldPw(''); setPw1(''); setPw2(''); }, [view]); // eslint-disable-line
-  const fake = (fn: () => void) => { setLoading(true); window.setTimeout(() => { setLoading(false); fn(); }, 600); };
   const saveUid = () => {
     setError(''); setInfo('');
-    if (!/^[a-z0-9._-]{3,18}$/.test(draft.trim())) { setError('UserID 应为 3-18 位小写字母 / 数字 / ._-'); return; }
-    fake(() => { setInfo(uid ? 'UserID 已更新' : 'UserID 已设置。好友系统现在可用了'); setUid(draft.trim()); onUserIdChange?.(draft.trim()); setView('home'); });
+    if (!accountAuthOps.isValidUserId(draft.trim())) { setError('UserID 应为 3-18 位小写字母 / 数字 / ._-'); return; }
+    setLoading(true);
+    void accountAuthOps.setUserId(draft.trim()).then((saved) => {
+      setInfo(uid ? 'UserID 已更新' : 'UserID 已设置。好友系统现在可用了');
+      setUid(saved);
+      onUserIdChange?.(saved);
+      setView('home');
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '更新失败');
+    }).finally(() => setLoading(false));
   };
   const changePw = () => {
     setError(''); setInfo('');
     if (!oldPw) { setError('请输入当前密码'); return; }
     if (pw1.length < 8) { setError('新密码至少 8 位'); return; }
     if (pw1 !== pw2) { setError('两次输入的新密码不一致'); return; }
-    fake(() => { setInfo('密码已更新'); setView('home'); });
+    setLoading(true);
+    void accountAuthOps.changePassword(oldPw, pw1, pw2).then(() => {
+      setInfo('密码已更新');
+      setView('home');
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '修改失败');
+    }).finally(() => setLoading(false));
   };
-  const sendReset = () => fake(() => { setInfo(`重置密码链接已发到 ${CLOUD_USER.email}`); });
+  const sendReset = () => {
+    setError(''); setInfo('');
+    if (!email) { setError('没有绑定邮箱'); return; }
+    setLoading(true);
+    void accountAuthOps.sendPasswordReset(email).then(() => {
+      setInfo(`重置密码链接已发到 ${email}`);
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '发送失败');
+    }).finally(() => setLoading(false));
+  };
   const sub = view === 'home' ? '修改 UserID / 密码等账号信息' : view === 'userid' ? (uid ? '修改 UserID' : '设置 UserID') : view === 'password_change' ? '修改密码' : '邮件链接重置密码';
   const box = 'min-w-0 rounded-sm border-3 border-p4g-line px-3 py-2.5';
   const cap = 'mb-1 font-display text-2xs font-bold tracking-widest text-p4g-ink-soft';
@@ -50,7 +77,7 @@ export function AccountManagePanelView({ open, onClose, initialView = 'home', us
             <Msg />
             <div className={box} style={{ background: 'var(--p4g-surface-grad)' }}>
               <div className={cap}>邮箱</div>
-              <div className="truncate font-display text-body font-bold text-p4g-ink">{CLOUD_USER.email}</div>
+              <div className="truncate font-display text-body font-bold text-p4g-ink">{email || '未登录'}</div>
             </div>
             <div className={box} style={{ background: 'var(--p4g-surface-grad)' }}>
               <div className="flex min-w-0 items-center gap-1.5"><span className={cap}>UserID</span>{!uid && <span className="mb-1 rounded-xs bg-p4g-orange px-1 font-display text-2xs font-bold text-p4g-black">· 未设置</span>}</div>
@@ -91,7 +118,7 @@ export function AccountManagePanelView({ open, onClose, initialView = 'home', us
         {view === 'password_reset' && (
           <>
             <div className="rounded-sm border-3 border-p4g-black bg-[color:var(--p4g-msg)] px-4 py-3 text-body leading-relaxed text-[color:var(--p4g-msg-ink)] shadow-plate night:border-p4g-yellow">
-              <span className="mr-1 text-p4g-yellow">&gt;</span>点击下方按钮，我们会给 <b className="text-p4g-yellow">{CLOUD_USER.email || '你的邮箱'}</b> 发一条重置链接，在链接里设置新密码即可。
+              <span className="mr-1 text-p4g-yellow">&gt;</span>点击下方按钮，我们会给 <b className="text-p4g-yellow">{email || '你的邮箱'}</b> 发一条重置链接，在链接里设置新密码即可。
               <p className="mt-1 text-meta opacity-80">没登录过密码的老账号（OTP 注册），这是最稳的设密码方式。</p>
             </div>
             <Msg />
@@ -105,5 +132,5 @@ export function AccountManagePanelView({ open, onClose, initialView = 'home', us
 
 export default function AccountManagePanel({ open, onClose, params }: OverlayProps) {
   const v = params?.get('view') as View | null;
-  return <AccountManagePanelView open={open} onClose={onClose} initialView={v ?? 'home'} userId={params?.get('nouid') === '1' ? null : CLOUD_USER.username} />;
+  return <AccountManagePanelView open={open} onClose={onClose} initialView={v ?? 'home'} userId={params?.get('nouid') === '1' ? null : undefined} />;
 }

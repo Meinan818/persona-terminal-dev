@@ -739,7 +739,7 @@ export const Account = () => {
                     <path d="M24 38 V27 M24 27 l-5 5.5 M24 27 l5 5.5" stroke={P5R.red} strokeWidth="4.5" strokeLinecap="square" fill="none" />
                   </svg>
                   <p className="relative min-w-0 flex-1 text-[13.5px] font-black leading-relaxed" style={{ color: P5R.ink }}>
-                    云同步功能未配置。如需启用，请在 <Code5>.env.local</Code5> 中设置 <Code5>VITE_PB_URL</Code5>。
+                    云同步功能未配置。如需启用，请在 <Code5>.env.local</Code5> 中设置 <Code5>VITE_API_URL</Code5>。
                   </p>
                 </div>
               ) : !cloudUser ? (
@@ -937,7 +937,7 @@ export const Account = () => {
             {!cloudEnabled ? (
               <div className="px-5 py-4" style={{ clipPath: slantClip(12), background: P3R.cyanFaint }}>
                 <p className="text-[13px] font-semibold leading-relaxed" style={{ color: P3R.ink }}>
-                  云同步功能未配置。如需启用，请在 <CodeChip>.env.local</CodeChip> 中设置 <CodeChip tone="cyan">VITE_PB_URL</CodeChip>。
+                  云同步功能未配置。如需启用，请在 <CodeChip>.env.local</CodeChip> 中设置 <CodeChip tone="cyan">VITE_API_URL</CodeChip>。
                 </p>
               </div>
             ) : !cloudUser ? (
@@ -1221,7 +1221,7 @@ export const Account = () => {
             {!cloudEnabled ? (
               <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  云同步功能未配置。如需启用，请在 <code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs">.env.local</code> 中设置 <code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs">VITE_PB_URL</code>。
+                  云同步功能未配置。如需启用，请在 <code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs">.env.local</code> 中设置 <code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs">VITE_API_URL</code>。
                 </p>
               </div>
             ) : !cloudUser ? (

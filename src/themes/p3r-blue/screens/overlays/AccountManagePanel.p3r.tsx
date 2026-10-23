@@ -10,7 +10,7 @@ import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3Input, P3Field, P3R, slantClip } from '@blue/kit';
 import { useBoldness } from '@blue/lib/prefs';
 import { NoteBox } from '@blue/screens/pkg5/ui';
-import { CLOUD_USER } from '@blue/mock/pkg5';
+import { accountAuthOps, useAccountIdentity } from '@/themes/accountAuth';
 
 type View = 'home' | 'userid' | 'password_change' | 'password_reset';
 const Box = ({ cap, children, badge }: { cap: string; children: ReactNode; badge?: ReactNode }) => (
@@ -22,7 +22,10 @@ const Box = ({ cap, children, badge }: { cap: string; children: ReactNode; badge
 const MailGlyph = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden><path d="M3 5h18v14H3z" /><path d="m3 5 9 8 9-8" /></svg>;
 const KeyGlyph = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden><circle cx="8" cy="15" r="4" /><path d="M11 12 20 3M16 7l3 3" /></svg>;
 
-export function AccountManagePanelView({ open, onClose, initialView = 'home', userId: uid0 = CLOUD_USER.username, onUserIdChange }: { open: boolean; onClose: () => void; initialView?: View; userId?: string | null; onUserIdChange?: (v: string) => void }) {
+export function AccountManagePanelView({ open, onClose, initialView = 'home', userId, onUserIdChange }: { open: boolean; onClose: () => void; initialView?: View; userId?: string | null; onUserIdChange?: (v: string) => void }) {
+  const identity = useAccountIdentity();
+  const uid0 = userId ?? identity.username;
+  const email = identity.email;
   const anim = useBoldness();
   const [view, setView] = useState<View>(initialView);
   const [uid, setUid] = useState<string | null>(uid0);
@@ -34,21 +37,45 @@ export function AccountManagePanelView({ open, onClose, initialView = 'home', us
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   useEffect(() => { if (open) { setView(initialView); setUid(uid0); setError(''); setInfo(''); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 登录态晚于面板加载时，UserID 要跟着真实身份走，不留空。
+  useEffect(() => { if (open && userId === undefined) setUid(uid0); }, [open, uid0, userId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setError(''); setDraft(uid ?? ''); setOldPw(''); setPw1(''); setPw2(''); }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
-  const fake = (fn: () => void) => { setLoading(true); window.setTimeout(() => { setLoading(false); fn(); }, 700); };
   const saveUid = () => {
     setError(''); setInfo('');
-    if (!/^[a-z0-9._-]{3,18}$/.test(draft.trim())) { setError('UserID 应为 3-18 位小写字母 / 数字 / ._-'); return; }
-    fake(() => { setInfo(uid ? 'UserID 已更新' : 'UserID 已设置。好友系统现在可用了'); setUid(draft.trim()); onUserIdChange?.(draft.trim()); setView('home'); });
+    if (!accountAuthOps.isValidUserId(draft.trim())) { setError('UserID 应为 3-18 位小写字母 / 数字 / ._-'); return; }
+    setLoading(true);
+    void accountAuthOps.setUserId(draft.trim()).then((saved) => {
+      setInfo(uid ? 'UserID 已更新' : 'UserID 已设置。好友系统现在可用了');
+      setUid(saved);
+      onUserIdChange?.(saved);
+      setView('home');
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '更新失败');
+    }).finally(() => setLoading(false));
   };
   const changePw = () => {
     setError(''); setInfo('');
     if (!oldPw) { setError('请输入当前密码'); return; }
     if (pw1.length < 8) { setError('新密码至少 8 位'); return; }
     if (pw1 !== pw2) { setError('两次输入的新密码不一致'); return; }
-    fake(() => { setInfo('密码已更新'); setView('home'); });
+    setLoading(true);
+    void accountAuthOps.changePassword(oldPw, pw1, pw2).then(() => {
+      setInfo('密码已更新');
+      setView('home');
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '修改失败');
+    }).finally(() => setLoading(false));
   };
-  const sendReset = () => fake(() => { setInfo(`重置密码链接已发到 ${CLOUD_USER.email}`); });
+  const sendReset = () => {
+    setError(''); setInfo('');
+    if (!email) { setError('没有绑定邮箱'); return; }
+    setLoading(true);
+    void accountAuthOps.sendPasswordReset(email).then(() => {
+      setInfo(`重置密码链接已发到 ${email}`);
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '发送失败');
+    }).finally(() => setLoading(false));
+  };
   const Msg = () => (<>
     {error && <p role="alert" className="px-3 py-1.5 text-[12px] font-black" style={{ background: 'var(--bk-danger-wash)', color: 'var(--p3r-coral-ink)', clipPath: slantClip(6) }}>{error}</p>}
     {info && <p className="px-3 py-1.5 text-[12px] font-black" style={{ background: P3R.cyanPale, color: P3R.ink, clipPath: slantClip(6) }}>✓ {info}</p>}
@@ -61,7 +88,7 @@ export function AccountManagePanelView({ open, onClose, initialView = 'home', us
           {view === 'home' && (
             <>
               <Msg />
-              <Box cap="邮箱"><div className="truncate text-[15px] font-black" style={{ color: P3R.ink }}>{CLOUD_USER.email}</div></Box>
+              <Box cap="邮箱"><div className="truncate text-[15px] font-black" style={{ color: P3R.ink }}>{email || '未登录'}</div></Box>
               <Box cap="UserID" badge={!uid ? <span className="px-1.5 text-[10px] font-black text-white" style={{ background: P3R.magenta, clipPath: slantClip(3) }}>未设置</span> : undefined}>
                 <div className="flex min-w-0 items-center justify-between gap-2">
                   <span className="min-w-0 truncate font-mono text-[15px] font-bold" style={{ color: P3R.ink }}>{uid ? `@${uid}` : '还没设置'}</span>
@@ -99,8 +126,8 @@ export function AccountManagePanelView({ open, onClose, initialView = 'home', us
           )}
           {view === 'password_reset' && (
             <>
-              <NoteBox>点击下方按钮，我们会给 <b style={{ color: P3R.roseInk }}>{CLOUD_USER.email}</b> 发一条重置链接，在链接里设置新密码即可。<span className="mt-1 block text-[12px]" style={{ color: P3R.grey }}>没登录过密码的老账号（OTP 注册），这是最稳的设密码方式。</span></NoteBox>
-              <P3Field label="你的邮箱"><P3Input value={CLOUD_USER.email} readOnly /></P3Field>
+              <NoteBox>点击下方按钮，我们会给 <b style={{ color: P3R.roseInk }}>{email || '你的邮箱'}</b> 发一条重置链接，在链接里设置新密码即可。<span className="mt-1 block text-[12px]" style={{ color: P3R.grey }}>没登录过密码的老账号（OTP 注册），这是最稳的设密码方式。</span></NoteBox>
+              <P3Field label="你的邮箱"><P3Input value={email} readOnly /></P3Field>
               <Msg />
               <div className="grid grid-cols-2 gap-2"><P3Button tone="soft" onClick={() => setView('home')}>返回</P3Button><P3Button corner onClick={sendReset} busy={loading} busyText="发送中…">发送重置邮件</P3Button></div>
             </>
@@ -113,5 +140,5 @@ export function AccountManagePanelView({ open, onClose, initialView = 'home', us
 
 export default function AccountManagePanel({ open, onClose, params }: OverlayProps) {
   const v = params?.get('view') as View | null;
-  return <AccountManagePanelView open={open} onClose={onClose} initialView={v ?? 'home'} userId={params?.get('nouid') === '1' ? null : CLOUD_USER.username} />;
+  return <AccountManagePanelView open={open} onClose={onClose} initialView={v ?? 'home'} userId={params?.get('nouid') === '1' ? null : undefined} />;
 }

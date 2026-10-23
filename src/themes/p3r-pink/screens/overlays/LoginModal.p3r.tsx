@@ -12,6 +12,7 @@ import type { OverlayProps } from '@pink/registry/types';
 import { P3Segment, P3Button, P3R, slantClip, useToast } from '@pink/kit';
 import { SysModal } from '@pink/screens/pkg5/sysmodal';
 import { CloudConsentBody } from './CloudConsentNotice.p3r';
+import { accountAuthOps } from '@/themes/accountAuth';
 
 export interface LoginModalProps { open: boolean; onClose: () => void; origin?: 'account' | 'welcome'; needConsent?: boolean; initialMode?: 'otp' | 'password'; initialStep?: 'input' | 'code'; signup?: boolean; demoError?: boolean; onLoggedIn?: () => void }
 
@@ -28,6 +29,7 @@ export function LoginModalView({ open, onClose, origin = 'account', needConsent:
   const [identity, setIdentity] = useState(initialStep === 'code' ? 'minato.yuki@gekkoukan.jp' : '');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [otpId, setOtpId] = useState('');
   const [cooldown, setCooldown] = useState(initialStep === 'code' ? 42 : 0);
   const [signupInProgress, setSignup] = useState(signup);
   const [error, setError] = useState(demoError ? (initialMode === 'password' ? '用户名或密码不正确' : '验证码不正确或已过期') : '');
@@ -38,26 +40,68 @@ export function LoginModalView({ open, onClose, origin = 'account', needConsent:
   useEffect(() => { if (open) { setNeedConsent(needConsent0); setMode(initialMode); setStep(initialStep); setLoading(false); setTimeout(() => first.current?.focus(), 120); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!mounted.current) { mounted.current = true; return; } setError(''); setInfo(''); }, [mode]);
   useEffect(() => { if (cooldown <= 0) return; const t = setTimeout(() => setCooldown((c) => c - 1), 1000); return () => clearTimeout(t); }, [cooldown]);
-  const fake = (fn: () => void, ms = 800) => { setLoading(true); window.setTimeout(() => { setLoading(false); fn(); }, ms); };
   const sendOtp = () => {
     setError(''); setInfo('');
     if (cooldown > 0) { setError(`请稍后再试（还有 ${cooldown}s）`); return; }
     if (!identity.trim()) { setError('请输入 UserID 或邮箱'); return; }
-    fake(() => { const isNew = identity.includes('@') && identity.startsWith('new'); setSignup(isNew); setStep('code'); setCooldown(60); setInfo(isNew ? `新客人登记中 —— 验证码已发到 ${identity.trim().toLowerCase()}` : '验证码已发送'); });
+    setLoading(true);
+    void accountAuthOps.sendLoginCode(identity).then(({ otpId: id, wasSignup }) => {
+      setOtpId(id);
+      setSignup(wasSignup);
+      setStep('code');
+      setCooldown(60);
+      setInfo(wasSignup ? `新客人登记中 —— 验证码已发到 ${id}` : '验证码已发送');
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '发送失败，请稍后重试');
+    }).finally(() => setLoading(false));
   };
   const verify = () => {
     setError(''); setInfo('');
     if (code.trim().length < 4) { setError('请输入完整的验证码'); return; }
-    fake(() => { if (code === '000000') { setError('验证码不正确或已过期'); return; } onClose(); if (onLoggedIn) onLoggedIn(); else toast.success('欢迎回来'); });
+    setLoading(true);
+    void accountAuthOps.verifyLoginCode(otpId || identity.trim().toLowerCase(), code).then(() => {
+      onClose();
+      if (onLoggedIn) onLoggedIn(); else toast.success('欢迎回来');
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '验证码错误或已过期');
+    }).finally(() => setLoading(false));
   };
-  const resend = () => fake(() => { setCooldown(60); setInfo(signupInProgress ? '新客人登记验证码已重发' : '已重新发送'); }, 500);
+  const resend = () => {
+    setError(''); setInfo('');
+    if (cooldown > 0) return;
+    setLoading(true);
+    void accountAuthOps.sendLoginCode(identity).then(({ otpId: id, wasSignup }) => {
+      setOtpId(id);
+      setSignup(wasSignup);
+      setCode('');
+      setCooldown(60);
+      setInfo(wasSignup ? '新客人登记验证码已重发' : '已重新发送');
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '重发失败');
+    }).finally(() => setLoading(false));
+  };
   const pwLogin = () => {
     setError(''); setInfo('');
     if (!identity.trim()) { setError('请输入 UserID 或邮箱'); return; }
     if (!password) { setError('请输入密码'); return; }
-    fake(() => { if (password === 'wrong') { setError('用户名或密码不正确'); return; } onClose(); if (onLoggedIn) onLoggedIn(); else toast.success('欢迎回来'); });
+    setLoading(true);
+    void accountAuthOps.loginWithPassword(identity, password).then(() => {
+      onClose();
+      if (onLoggedIn) onLoggedIn(); else toast.success('欢迎回来');
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '登录失败');
+    }).finally(() => setLoading(false));
   };
-  const forgot = () => { setError(''); setInfo(''); if (!identity.trim()) { setError('请先填上邮箱或 UserID'); return; } fake(() => setInfo('重置密码链接已发送')); };
+  const forgot = () => {
+    setError(''); setInfo('');
+    if (!identity.trim()) { setError('请先填上邮箱或 UserID'); return; }
+    setLoading(true);
+    void accountAuthOps.sendPasswordReset(identity).then(() => {
+      setInfo('重置密码链接已发送');
+    }).catch((e) => {
+      setError(e instanceof Error ? e.message : '发送失败');
+    }).finally(() => setLoading(false));
+  };
   const title = needConsent ? '把数据交给云端之前' : origin === 'welcome' ? '欢迎归来，客人' : '登录MASKARIA';
   const subtitle = needConsent ? '几句实话，读完再决定' : '验证码最省心——没登记过的邮箱也能直接进';
   const Err = () => (error ? <p role="alert" className="flex items-start gap-1.5 px-3 py-1.5 text-[12px] font-black" style={{ background: 'rgb(var(--p3r-magenta-rgb) / 0.14)', color: 'var(--p3r-coral-ink)', clipPath: slantClip(6) }}><span aria-hidden>✕</span><span className="min-w-0">{error}</span></p> : null);

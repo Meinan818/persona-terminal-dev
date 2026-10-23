@@ -13,6 +13,8 @@ import { updateObjectiveHud, mountCamButtons } from './ui/hud';
 import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cutins';
 import type { CutWho } from './fx/cutins';
 import { TripleFx } from './view/tripleFx';
+import { computeForecast, forecastHtml } from './view/forecast';
+import type { Forecast } from './view/forecast';
 
 type Mode = 'auto' | 'melee' | 'gun' | 'skill' | 'unique';
 
@@ -232,6 +234,36 @@ function triangleMesh(ids: string[], color = 0xffd400) {
   overlay.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ps.map((p) => w2v(p, 0.07))), new THREE.LineBasicMaterial({ color })));
 }
 
+/** 击退预览：白色箭头 + 落点格（P5T 推人预测） */
+function pushArrow(a: Vec, b: Vec) {
+  tileQuad(b, 0xffffff, 0.55, 0.04);
+  const p0 = w2v(a, 0.12), p1 = w2v(b, 0.12);
+  const dir = p1.clone().sub(p0); const len = dir.length(); dir.normalize();
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, transparent: true });
+  const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, Math.max(0.01, len - 0.35)), mat);
+  shaft.position.copy(p0.clone().add(dir.clone().multiplyScalar((len - 0.35) / 2)));
+  shaft.lookAt(p1); shaft.renderOrder = 10;
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.4, 3), mat);
+  head.position.copy(p1.clone().sub(dir.clone().multiplyScalar(0.2)));
+  head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir); head.renderOrder = 10;
+  const outline = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, Math.max(0.01, len - 0.3)), new THREE.MeshBasicMaterial({ color: 0xe60012, depthTest: false, transparent: true }));
+  outline.position.copy(shaft.position); outline.position.y -= 0.01; outline.lookAt(p1.x, outline.position.y, p1.z); outline.renderOrder = 9;
+  overlay.add(outline, shaft, head);
+}
+
+/** 当前选中目标的攻击预测（只对敌方/可打物件；回复辅助不走这里） */
+function currentForecast(): Forecast | null {
+  if (!selected || !previewTarget || busy || battle.phase !== 'player') return null;
+  const s = battle.unit(selected), t = battle.unit(previewTarget);
+  if (s.acted || t.side === 'ally' || t.ko) return null;
+  const from = previewTile ?? s.pos;
+  const direct = attackFrom(s, from, t);
+  const via = direct ? null : meleeViaMove(s, t);
+  const at = direct ?? (via ? { kind: 'melee' as const } : null);
+  if (!at) return null;
+  return computeForecast(battle, s, t, at.kind, at.skill, via ? via.via : from);
+}
+
 const tileUnique = (u: Unit) => !!u.unique && (!!u.unique.decoys || !!u.unique.flag);
 let uniqueTile: Vec | null = null;
 const curSkill = (u: Unit): SkillDef | undefined => (mode === 'unique' ? u.unique : skillId ? u.skills.find((s) => s.id === skillId) : u.skills[0]);
@@ -283,6 +315,13 @@ function refreshOverlay() {
   const from = previewTile ?? u.pos;
   if (previewTile) { pathLine(battle.pathFor(u, previewTile)); tileQuad(previewTile, 0xffffff, 0.55, 0.03); }
   if (!u.acted) for (const e of battle.units) if (!e.ko && e.side !== 'ally' && e.prop !== 'speaker' && attackFrom(u, from, e)) ring(e.pos, previewTarget === e.id ? 0xffd400 : 0xe60012);
+  const fc = currentForecast();
+  if (fc) {
+    for (const p of fc.aoe) if (!eq(p, fc.target.pos)) tileQuad(p, 0xe60012, 0.38, 0.034);
+    tileQuad(fc.target.pos, 0xe60012, 0.75, 0.036);
+    if (fc.push && !eq(fc.push.to, fc.push.from)) pushArrow(fc.push.from, fc.push.to);
+    else if (fc.push) tileQuad(fc.push.from, 0xffffff, 0.3, 0.038);
+  }
   const sk = curSkill(u);
   if ((mode === 'skill' || mode === 'unique') && sk && sk.kind !== 'attack') for (const a of battle.alive('ally')) if (battle.canSkill(u, sk, a, from)) ring(a.pos, previewTarget === a.id ? 0xffd400 : 0x2fd36b);
 }
@@ -353,6 +392,8 @@ function refreshHud() {
   } else bt.classList.add('hidden');
   // 预览卡
   const pv = $('#preview');
+  const fcEl = $('#forecast');
+  fcEl.classList.add('hidden');
   if (busy) pv.classList.add('hidden');
   else if (sel && previewTarget) {
     const t = battle.unit(previewTarget);
@@ -365,7 +406,13 @@ function refreshHud() {
       const direct = attackFrom(sel, from, t);
       const via = direct ? null : meleeViaMove(sel, t);
       const at = direct ?? (via ? { kind: 'melee' as const } : null);
-      if (at) {
+      const fc = currentForecast();
+      if (fc) {
+        pv.classList.add('hidden');
+        fcEl.classList.remove('hidden');
+        fcEl.innerHTML = forecastHtml(fc, hexOf);
+        fcEl.classList.toggle('lethal', fc.lethal);
+      } else if (at) {
         const p = battle.previewDamage(sel, t, at.kind, at.skill, via ? via.via : from);
         const tName = at.kind === 'melee' ? '近战(击退4格)' : at.kind === 'gun' ? '枪击' : at.skill!.name;
         pv.classList.remove('hidden');
@@ -391,7 +438,17 @@ function refreshLabels() {
   const act = $('#actions');
   const su = selected ? battle.unit(selected) : null;
   const sg = su ? unitMesh.get(su.id) : null;
-  if (sg && battle.phase === 'player' && !busy) {
+  const fcEl = $('#forecast');
+  const fcOn = !fcEl.classList.contains('hidden');
+  if (fcOn && previewTarget) {
+    const tg = unitMesh.get(previewTarget);
+    if (tg) {
+      const v = tg.position.clone().project(viewCam);
+      const left = ((v.x + 1) / 2) * w > w * 0.5;
+      fcEl.classList.toggle('at-left', left); fcEl.classList.toggle('at-right', !left);
+    }
+  }
+  if (sg && battle.phase === 'player' && !busy && !fcOn) {
     const v = sg.position.clone().add(new THREE.Vector3(0, 0.5, 0)).project(viewCam);
     const sx = ((v.x + 1) / 2) * w, sy = ((1 - v.y) / 2) * h;
     act.style.right = `${Math.max(8, w - sx + 34)}px`; act.style.left = 'auto';
@@ -826,6 +883,17 @@ function onTap(h: { tile?: Vec; unit?: string }) {
     const via = !at ? meleeViaMove(s, u) : null;
     if (!at && !via) { inspectEnemy = u.prop ? null : u.id; previewTarget = null; toast('打不到：换模式或先移动'); return refreshAll(); }
     if (previewTarget !== u.id) { previewTarget = u.id; return refreshAll(); }
+    commitAttack(s, u);
+    return;
+  }
+  onTapTile(h);
+}
+/** 执行对敌攻击（第二次点目标 / 预测面板「确认」） */
+function commitAttack(s: Unit, u: Unit) {
+    const from = previewTile ?? s.pos;
+    const at = attackFrom(s, from, u);
+    const via = !at ? meleeViaMove(s, u) : null;
+    if (!at && !via) return;
     const evs: BattleEvent[] = [];
     const dest = via ? via.via : previewTile;
     if (dest && !eq(dest, s.pos)) evs.push(...battle.move(s.id, dest));
@@ -834,8 +902,8 @@ function onTap(h: { tile?: Vec; unit?: string }) {
     else if (kind === 'gun') evs.push(...battle.shoot(s.id, u.id));
     else evs.push(...battle.skill(s.id, at!.skill!.id, u.id));
     void play(evs);
-    return;
-  }
+}
+function onTapTile(h: { tile?: Vec; unit?: string }) {
   if (h.tile && selected && mode === 'unique' && tileUnique(battle.unit(selected))) {
     const s = battle.unit(selected);
     if (!battle.canSkillAt(s, s.unique!, h.tile, previewTile ?? s.pos)) { toast('超出射程'); return; }
@@ -911,6 +979,12 @@ $('#baton').addEventListener('click', (ev) => {
 $('#btn-threat').addEventListener('click', () => { showThreat = !showThreat; $('#btn-threat').classList.toggle('on', showThreat); refreshAll(); });
 $('#btn-volt').addEventListener('click', () => { battle.voltage = VOLTAGE_MAX; refreshAll(); });
 $('#btn-restart').addEventListener('click', restart);
+$('#forecast').addEventListener('click', (ev) => {
+  const b = (ev.target as HTMLElement).closest('button');
+  if (!b || busy || !selected || !previewTarget) return;
+  if (b.dataset.fc === 'cancel') { previewTarget = null; return refreshAll(); }
+  if (b.dataset.fc === 'ok') commitAttack(battle.unit(selected), battle.unit(previewTarget));
+});
 const sel = $<HTMLSelectElement>('#map-select');
 sel.innerHTML = MAPS.map((m, i) => `<option value="${i}">${m.name}</option>`).join('');
 sel.value = String(mapIdx);
@@ -975,4 +1049,20 @@ window.__p5t = {
     return battle;
   },
   get fxKeep() { return fxKeep; },
+  /** 攻击预测截图 demo：'gun' 半掩体+高处 / 'skill' 弱点 1 MORE / 'push' 近战推人 / 'lethal' 斩杀 */
+  forecastDemo(kind: 'gun' | 'skill' | 'push' | 'lethal') {
+    const foe = (id: string, name: string, hp: number) => enemy(id, name, 'brute', hp, { move: 0 });
+    const L: Record<string, { rows: string[]; heights?: string[] }> = {
+      gun: { rows: ['. . . . . . . .', '. . . 1 . . . .', '. . . h . . . .', '. . . . . . . .', '. . . . . . . .', '. . . J . . . .', '. . . . . . . .'],
+        heights: ['00000000', '00000000', '00000000', '00000000', '00011000', '00011000', '00011000'] },
+      skill: { rows: ['. . . . . . . .', '. . . . . . . .', '. . . 1 . 2 . .', '. . . . . . . .', '. . . . . . . .', '. . . P . . . .', '. . . . . . . .'] },
+      push: { rows: ['. . . . . . . .', '. . . . . . . .', '. . . . . . . .', '. . J 1 . . . .', '. . . . . . # .', '. . . . . . . .', '. . . . . . . .'] },
+      lethal: { rows: ['. . . . . . . .', '. . . . . . . .', '. . . 2 . . . .', '. . . 1 . . . .', '. . . . . . . .', '. . . S . . . .', '. . . . . . . .'] },
+    };
+    const d = L[kind];
+    const units = { J: JOKER, S: SKULL, P: PANTHER, '1': foe('e1', kind === 'lethal' ? 'Grenadier' : 'Musketeer', kind === 'lethal' ? 14 : 180), '2': foe('e2', 'Drummer', 180) };
+    makeMap = () => ({ id: `fc-${kind}`, name: '预测 demo', turnTarget: 3, win: { type: 'defeatAll' }, ...parseMap(d.rows, units, d.heights) });
+    restart();
+    return battle;
+  },
 };

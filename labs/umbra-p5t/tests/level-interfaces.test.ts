@@ -153,7 +153,7 @@ describe('Q9 props / chests', () => {
   it('flag：有 hp、有光环（半径内敌人受伤降低），我方能打、不给我方回血', () => {
     const { b } = go(base({ enemies: [{ id: 'e1', name: 'e', role: 'brute', hp: 200, pos: [6, 2] }], props: [{ id: 'flag', kind: 'flag', pos: [7, 2], hp: 'PH', aura: 3 }] }));
     const f = b.unit('flag');
-    expect(f.maxHp).toBe(100);
+    expect(f.maxHp).toBe(60); // Hark 10-23：旗子 PH-tuned 60
     expect(b.enemyFlagAura(b.unit('e1').pos)).toBe(true);
     expect(b.enemyFlagAura(b.unit('joker').pos)).toBe(false);
     expect(b.canShoot(b.unit('joker'), f)).toBe(true);

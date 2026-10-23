@@ -197,14 +197,15 @@
    "id": "boss",
    "name": "近卫队长 Berith",
    "role": "brute",
-   "hp": "PH",
+   "hp": 180,
    "pos": [
     18,
     1
    ],
    "zone": "C",
    "isTarget": true,
-   "staysInZone": "C"
+   "staysInZone": "C",
+   "phTuned": true
   },
   {
    "id": "g1",

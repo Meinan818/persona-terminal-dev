@@ -21,6 +21,7 @@ export const SKILLS = {
   maragi: atk('maragi', 'Maragi', 45, 24, 'burn', AREA.medium),
   bufu: atk('bufu', 'Bufu', 35, 14, 'freeze', AREA.small), // small area. Inflicts Freeze.
   zio: atk('zio', 'Zio', 45, 12, 'shock', 0), // Deals light damage. Inflicts Shock.
+  zionga: atk('zionga', 'Zionga', 90, 28, 'shock', 0), // P5T 数据表 40302：4-1x1 SP28 Power90（L10 阶段2 Boss，Hark 10-23 决定）
   garu: atk('garu', 'Garu', 25, 8, 'sweep', 0), // Deals light damage. Sweeps away target.
   psi: atk('psi', 'Psi', 25, 12, 'hypno', 0), // Deals light damage. Hypnotizes target.
   frei: atk('frei', 'Frei', 25, 14, 'vortex', AREA.medium), // medium area. Creates a Vortex.

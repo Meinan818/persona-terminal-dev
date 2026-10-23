@@ -6,9 +6,10 @@ import { autoBattle } from '../src/game/autoplay';
 import { Battle } from '../src/rules';
 import type { Difficulty } from '../src/rules';
 
+// 10-23：敌人推进（Hark #12）+ Boss PH-tuned HP 后，贪心 bot 在 L03/L08/L10 只赢得了 safety（bot 弱，不代表关卡难度）
 const WIN_DIFF: Record<string, Difficulty> = {
-  L01: 'easy', L02: 'easy', L03: 'easy', L04: 'normal', L05: 'easy',
-  L06: 'safety', L07: 'normal', L08: 'easy', L09: 'normal', L10: 'normal',
+  L01: 'easy', L02: 'easy', L03: 'safety', L04: 'normal', L05: 'easy',
+  L06: 'safety', L07: 'normal', L08: 'safety', L09: 'normal', L10: 'safety',
 };
 /** L09（生存 5 回合）normal 下我方站着不打也撑得过 5 回合 → 用 merciless 验证「能输」 */
 const LOSE_DIFF: Record<string, Difficulty> = { L09: 'merciless' };

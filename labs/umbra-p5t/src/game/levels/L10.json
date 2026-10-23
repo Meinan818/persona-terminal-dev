@@ -123,7 +123,7 @@
    "id": "boss",
    "name": "城主的影子",
    "role": "brute",
-   "hp": "PH",
+   "hp": 260,
    "pos": [
     10,
     5
@@ -132,6 +132,7 @@
    "isTarget": true,
    "hpFloor": 0.5,
    "bossPhase": 1,
+   "phTuned": true,
    "note": "阶段1 只近战+单体技能，数值 PH"
   },
   {
@@ -230,13 +231,15 @@
      "unitId": "boss",
      "patch": {
       "hpFloor": 0,
+      "maxHp": 200,
       "skills": [
        "maragi",
        "zionga"
       ]
      },
-     "healRatio": 0.2,
-     "bossPhase": 2
+     "healRatio": 1,
+     "bossPhase": 2,
+     "phTuned": true
     },
     {
      "type": "moveUnit",
@@ -360,7 +363,7 @@
    "type": "noKo"
   }
  ],
- "intent": "阶段1：Boss 坐王座（锁血 50%），两侧侍卫；打到 50% → 阶段2：Boss 回 20% 血、王座后门 D1/D2 打开露出 C 区阳台（高 1 层）、Boss 跳到阳台、召唤 4 个护卫、目标改为「击败城主」、Boss 获得全体技能。阶段2 Boss 每 3 回合召 2 个小兵。",
+ "intent": "阶段1：Boss 坐王座（锁血 50%），两侧侍卫；打到 50% → 阶段2：Boss 回 20% 血、王座后门 D1/D2 打开露出 C 区阳台（高 1 层）、Boss 跳到阳台（阶段2 HP 200，PH-tuned）、召唤 4 个护卫、目标改为「击败城主」、Boss 获得全体技能。阶段2 Boss 每 3 回合召 2 个小兵。",
  "unlockedZones": [
   "A"
  ],

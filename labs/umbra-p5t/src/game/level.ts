@@ -19,8 +19,10 @@ export interface LevelUnitJson {
   id: string; name: string; role: EnemyRole; hp: number | 'PH'; pos: XY; zone?: string;
   isLeader?: boolean; isTarget?: boolean; protected?: boolean; staysInZone?: string; aiTarget?: string;
   gunRange?: number; hpFloor?: number; bossPhase?: number; facing?: XY; note?: string;
+  /** Hark 调过的占位数值（PH-tuned，等正版数据再换） */
+  phTuned?: boolean;
 }
-export interface LevelPropJson { id: string; kind: 'box' | 'barrel' | 'speaker' | 'flag'; pos: XY; hp?: number | 'PH'; aura?: number; bans?: ('melee' | 'gun' | 'skill')[]; note?: string }
+export interface LevelPropJson { id: string; kind: 'box' | 'barrel' | 'speaker' | 'flag'; pos: XY; hp?: number | 'PH'; aura?: number; bans?: ('melee' | 'gun' | 'skill')[]; note?: string; phTuned?: boolean }
 export interface LevelEventJson { id: string; when: Record<string, unknown> & { type: string }; do: (Record<string, unknown> & { type: string })[]; repeat?: boolean }
 /** 队列 Q4 文字里的 reinforcements[{turn 或 trigger, units}]（现有 L01–L10 用 events 表达；这里也支持） */
 export interface ReinforcementJson { turn?: number; phase?: 'player' | 'enemy'; trigger?: Record<string, unknown> & { type: string }; units: LevelUnitJson[] }
@@ -48,7 +50,7 @@ export interface LevelJson {
 /** hp = "PH"：用 data.ts 现有地图里 enemy() 同 role 的默认 HP（Hark 拿到 p5t/0_list/data.md 正版数据后换数） */
 export const PH_HP: Record<EnemyRole, number> = { shooter: 60, brute: 70, revenger: 80, shielder: 70, teleporter: 60, launcher: 80, supporter: 55 };
 /** 物件 hp = "PH"（旗子/喇叭）：PH，待 Hark 给数 */
-export const PH_PROP_HP = { flag: 100, speaker: 30 } as const;
+export const PH_PROP_HP = { flag: 60, speaker: 30 } as const; // 10-23 Hark 决定（PH-tuned）；L07 JSON 已写明 60/30
 
 const PARTY: Record<string, UnitDef> = {
   joker: JOKER, skull: SKULL, panther: PANTHER, mona: MONA, fox: FOX, queen: QUEEN, noir: NOIR, erina: ERINA, kasumi: KASUMI, crow: CROW,
@@ -89,7 +91,7 @@ export function propDef(p: LevelPropJson): UnitDef {
     o.maxHp = p.hp === 'PH' || p.hp == null ? PH_PROP_HP.flag : p.hp;
   }
   if (p.kind === 'speaker') {
-    o.destructible = true; o.bans = p.bans;
+    o.destructible = true; o.bans = p.bans; o.hardBan = true; // 关卡喇叭 = 硬禁用（Hark 10-23）
     o.maxHp = p.hp === 'PH' || p.hp == null ? PH_PROP_HP.speaker : p.hp;
   }
   return prop(p.id, p.kind, o);

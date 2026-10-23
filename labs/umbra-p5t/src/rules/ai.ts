@@ -25,6 +25,9 @@ export const W = {
   bossLeash: 3, bossBuddy: 10, bossFleeBelow: 0.3, bossExposed: -50,
   // 0. 唤醒
   wakeDist: 8,
+  // 4. 推进（Hark 10-23 决定，HARK-NOTES-ENGINE #12）：本回合没有攻击选项 → 只移动方案 +0.3/朝最近可见我方缩短的路径步，
+  //    且加分后不超过「最好的掩体格方案」+1.0；staysInZone 照旧不出区（reachTiles 已过滤）
+  approachPerTile: 0.3, approachCoverCap: 1.0,
 } as const;
 
 // ---------- 唤醒（idle → alert，整局不回退） ----------
@@ -248,12 +251,15 @@ function enemyAct(b: Battle, e: Unit): boolean {
   const rush = e.protected && nearest ? b.grid.reachable(nearest.pos, 999, b.blockedFor(e), new Set(), true, 999) : null;
   let best: Plan | null = null;
   let heaveBest: Plan | null = null;
-  const consider = (p: Plan) => { if (!best || better(p, best)) best = p; };
+  let hadAttack = false;
+  const nonePlans: { pos: Vec; ps: number; dist: number }[] = [];
+  const consider = (p: Plan) => { if (p.kind !== 'none') { if (p.kind !== 'skill' || p.skill.kind === 'attack') hadAttack = true; } if (!best || better(p, best)) best = p; };
   const anyInRange = [...reach.values()].some(({ pos }) => foes.some((t) => b.canShoot(e, t, pos)));
   for (const { pos: m, dist } of reach.values()) {
     const ps = positionScore(b, e, m, anyInRange);
     const rushScore = rush ? -(rush.get(key(m))?.dist ?? 999) : 0;
     consider({ kind: 'none', pos: m, score: ps + rushScore, dist });
+    nonePlans.push({ pos: m, ps, dist });
     if (!canAttack) continue;
     for (const t of foes) {
       if (!gunOnly(e) && e.role !== 'launcher' && b.canMelee(e, t, m)) {
@@ -311,6 +317,26 @@ function enemyAct(b: Battle, e: Unit): boolean {
         const hp: Plan = { kind: 'heave', pos: m, throws: throws.slice(0, 2), score: ps + throws[0].score, dist };
         consider(hp);
         if (!heaveBest || better(hp, heaveBest)) heaveBest = hp;
+      }
+    }
+  }
+  // 推进（Hark 10-23）：没有任何攻击选项时，朝最近的可见我方走
+  if (!hadAttack && !e.protected) {
+    const seen = all.filter((a) => b.grid.lineOfSight(e.pos, a.pos));
+    seen.sort((p, q) => manhattan(e.pos, p.pos) - manhattan(e.pos, q.pos) || p.pos.x - q.pos.x || p.pos.y - q.pos.y);
+    const goal = seen[0];
+    if (goal) {
+      const field = b.grid.reachable(goal.pos, 999, b.blockedFor(e), new Set(), true, 999);
+      const d0 = field.get(key(e.pos))?.dist;
+      if (d0 != null && d0 >= 0) {
+        const coverPs = nonePlans.filter((n) => b.grid.hasAnyCover(n.pos) > 0).map((n) => n.ps);
+        const cap = coverPs.length ? Math.max(...coverPs) + W.approachCoverCap : Infinity;
+        for (const n of nonePlans) {
+          const d = field.get(key(n.pos))?.dist;
+          if (d == null || d < 0 || d >= d0) continue;
+          const score = Math.max(n.ps, Math.min(n.ps + (d0 - d) * W.approachPerTile, cap));
+          if (score > n.ps) consider({ kind: 'none', pos: n.pos, score, dist: n.dist });
+        }
       }
     }
   }

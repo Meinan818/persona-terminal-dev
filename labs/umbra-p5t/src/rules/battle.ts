@@ -175,6 +175,8 @@ export class Battle {
       ...def,
       role,
       maxHp,
+      // hpFloor（绝对值）跟着难度 HP 倍率缩放，否则 easy/safety 下锁血线 ≥ 50% 线、阶段 2 永远触发不了
+      hpFloor: isEnemy && def.hpFloor ? Math.floor(def.hpFloor * diff.ehp) : def.hpFloor,
       melee: def.melee ? scale(def.melee) : 0,
       gun: def.gun ? { ...def.gun, power: scale(def.gun.power) } : undefined,
       skills: def.skills.map((s) => ({ ...s, power: isEnemy && s.kind === 'attack' ? scale(s.power) : s.power })),
@@ -349,7 +351,7 @@ export class Battle {
   }
   /** 技能无视墙体/障碍（原作：Skills bypass obstacles），只看射程与 SP；回复/辅助对友方 */
   canSkill(a: Unit, s: SkillDef, t: Unit, from: Vec = a.pos) {
-    if (a.escort || t.ko) return false;
+    if (a.escort || t.ko || this.skillBanned(a, from)) return false;
     if (s.voltage ? this.voltage < VOLTAGE_MAX || !this.opts.voltage : a.sp < this.spCost(a, s)) return false;
     const friendly = s.kind !== 'attack';
     if (friendly ? t.side !== a.side : !this.targetable(a, t)) return false;
@@ -362,7 +364,7 @@ export class Battle {
   spCost(a: Unit, s: SkillDef) { return s.kind === 'attack' && this.inOneMore.has(a.id) && this.has(a, 'unstoppable') ? Math.ceil(s.sp / 2) : s.sp; }
   /** 以格子为目标的技能（Like a Phantom / Flag of Freedom） */
   canSkillAt(a: Unit, s: SkillDef, p: Vec, from: Vec = a.pos) {
-    if (a.escort || a.decoy) return false;
+    if (a.escort || a.decoy || this.skillBanned(a, from)) return false;
     if (s.voltage ? this.voltage < VOLTAGE_MAX || !this.opts.voltage : a.sp < s.sp) return false;
     return this.grid.inBounds(p) && manhattan(from, p) <= this.skillRange(a, s);
   }
@@ -418,6 +420,11 @@ export class Battle {
       if (mine) return { attackerId: holder.id, targetId: mine, victims };
     }
     return null;
+  }
+  /** 硬禁用喇叭（关卡 JSON，Hark 10-23 决定）：喇叭活着时，半径 SPEAKER_RADIUS 内的我方不能用技能（枪/近战照常） */
+  skillBanned(a: Unit, from: Vec = a.pos): boolean {
+    if (a.side !== 'ally') return false;
+    return this.alive('neutral').some((s) => s.prop === 'speaker' && s.hardBan && s.bans?.includes('skill') && manhattan(s.pos, from) <= SPEAKER_RADIUS);
   }
   /** 喇叭当前禁止的行动 */
   speakerBans(): { id: string; pos: Vec; ban: ActKind }[] {
@@ -728,6 +735,7 @@ export class Battle {
     u.oneMore = false;
     // 喇叭：在作用范围内做了被禁止的行动 → 惩罚（Cogito AAA115 Loudspeaker）
     for (const s of this.speakerBans()) {
+      if (this.unit(s.id).hardBan) continue; // 硬禁用喇叭不扣血（行动本来就做不了）
       if (s.ban === kind && manhattan(s.pos, u.pos) <= SPEAKER_RADIUS && u.side === 'ally') {
         this.emit({ type: 'penalty', unitId: u.id, speakerId: s.id, action: kind });
         this.applyDamage(u, Math.max(1, Math.round(u.maxHp * SPEAKER_PENALTY)), 0, false, 'penalty', null);
@@ -1412,6 +1420,7 @@ export class Battle {
         const u = this.units.find((x) => x.id === a.unitId);
         if (!u || u.ko) break;
         Object.assign(u, a.patch);
+        if (a.patch.maxHp && u.side === 'enemy') u.maxHp = Math.max(1, Math.round(a.patch.maxHp * DIFFICULTY[this.opts.difficulty].ehp)); // 阶段 2 新 HP 也按难度缩放
         if (a.patch.role) u.counterReady = a.patch.role === 'revenger';
         if (a.healRatio) this.healUnit(u, Math.round(u.maxHp * a.healRatio));
         if (a.bossPhase) { u.bossPhase = a.bossPhase; this.emit({ type: 'bossPhase', unitId: u.id, phase: a.bossPhase }); }

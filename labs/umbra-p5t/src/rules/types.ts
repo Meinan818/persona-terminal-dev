@@ -124,6 +124,8 @@ export interface UnitDef {
   facing?: Vec;
   /** 喇叭：禁止的行动种类 */
   bans?: ('melee' | 'gun' | 'skill')[];
+  /** 喇叭模式：true = 硬禁用（半径内我方不能做被禁行动；关卡 JSON 的喇叭，Hark 10-23 决定）；缺省 = Cogito 惩罚模型 */
+  hardBan?: boolean;
   /** 关卡区域（LEVELS.md：未解锁区域的敌人隐藏且不行动）；缺省 = 不属于任何区域（始终激活，增援即如此） */
   zone?: string;
   /** 受保护（L03 被操控的龙司）：打到 HP 1 停住不倒、不能被打倒（Down）、不给 1 MORE */

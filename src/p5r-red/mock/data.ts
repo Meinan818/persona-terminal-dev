@@ -25,7 +25,41 @@ export const RANKS: Record<AttrId, string[]> = {
 
 export interface MockTodo { id: string; title: string; attribute: AttrId; points: number; frequency: 'single' | 'count'; targetCount?: number; repeatDaily: boolean; important?: boolean; fate?: boolean; deadlineDays?: number; count: number; target: number; extra?: { attribute: AttrId; points: number }[] }
 export interface MockCallingCard { id: string; title: string; subtitle: string; mode: 'deadline' | 'both' | 'todos'; target: string; start: string; pinned?: boolean; todosDone?: number; todosTotal?: number }
-export interface MockConfidant { name: string; arcana: string; arcanaCn: string; no: string; rank: number; desc: string }
+export interface MockConfidant {
+  name: string; arcana: string; arcanaCn: string; no: string; rank: number; desc: string;
+  /** 真实同伴 id（页面按 id 取真实亲密点 / 解读 / 建议，不再按 arcana 查演示常量） */
+  id?: string;
+  /** 当前等级内的亲密点进度（真实） */
+  intimacyPoints?: number;
+  /** AI 解读（真实；没有就是空串，不填演示解读） */
+  aiInterpretation?: string;
+  /** AI 相处建议（真实；没有就是空串） */
+  aiAdvice?: string;
+  /** 能力 buff 指向的属性（真实） */
+  skillAttribute?: string;
+  /** 星移可用次数（真实） */
+  starShiftCharges?: number;
+  /** 在线绑定的对方云端档案（真实） */
+  linkedProfile?: {
+    userId?: string; nickname?: string; lv?: number;
+    /** 对方五维等级（真实） */
+    attributeLevels?: Record<string, number>;
+    /** 对方五维点数之和（真实） */
+    totalPoints?: number;
+    /** 对方已解锁成就 + 技能数（真实） */
+    unlockedCount?: number;
+    /** 对方难度档（真实） */
+    levelDifficulty?: string;
+    /** 名片目标快照（真实） */
+    goal?: { title?: string; subtitle?: string };
+    /** 最近一次拉到这份档案的时间（真实） */
+    lastSyncedAt?: string;
+  } | null;
+  /** 来源：离线自建 / 在线绑定（真实） */
+  source?: string;
+  /** 逆流开关（真实） */
+  decayEnabled?: boolean;
+}
 
 export const D = {
   user: { name: '野鸡', title: '面具庭园的主人', status: '专注中', joined: '2026.09.13' },

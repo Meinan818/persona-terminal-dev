@@ -69,7 +69,30 @@ function ccPkg5(c: CallingCard, s: S): MockCC {
 }
 function confidantMock(c: Confidant): MockConfidant {
   const t = TAROT_BY_ID[c.arcanaId];
-  return { id: c.id, name: c.name, arcana: ARCANA_DEMO[c.arcanaId] ?? 'FOOL', arcanaCn: t?.name ?? '', no: t?.roman ?? '', rank: c.intimacy, desc: c.description } as MockConfidant;
+  // 真实字段一并带出（页面按 id 取，不再按 arcana 查演示常量）。
+  const profile = c.linkedProfile as {
+    userId?: string; nickname?: string; lv?: number;
+    attributeLevels?: Record<string, number>; totalPoints?: number; unlockedCount?: number;
+    levelDifficulty?: string; goal?: { title?: string; subtitle?: string }; lastSyncedAt?: Date | string;
+  } | undefined;
+  return {
+    id: c.id, name: c.name, arcana: ARCANA_DEMO[c.arcanaId] ?? 'FOOL', arcanaCn: t?.name ?? '', no: t?.roman ?? '',
+    rank: c.intimacy, desc: c.description,
+    intimacyPoints: c.intimacyPoints ?? 0,
+    aiInterpretation: c.aiInterpretation ?? '',
+    aiAdvice: c.aiAdvice ?? '',
+    skillAttribute: c.skillAttribute,
+    starShiftCharges: c.starShiftCharges ?? 0,
+    linkedProfile: profile ? {
+      userId: profile.userId, nickname: profile.nickname, lv: profile.lv,
+      attributeLevels: profile.attributeLevels, totalPoints: profile.totalPoints,
+      unlockedCount: profile.unlockedCount, levelDifficulty: profile.levelDifficulty,
+      goal: profile.goal,
+      lastSyncedAt: profile.lastSyncedAt ? new Date(profile.lastSyncedAt).toISOString() : undefined,
+    } : null,
+    source: c.source,
+    decayEnabled: !!c.decayEnabled,
+  } as MockConfidant;
 }
 const CAT_OK = new Set(['achievement_unlock', 'skill_unlock', 'calling_card_clear', 'weekly_goal', 'confidant', 'shadow_defeat']);
 function activityPkg5(a: Activity): MockActivity {

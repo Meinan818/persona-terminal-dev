@@ -2,6 +2,8 @@
 import { P5 } from './p5';
 import { RANKS } from '@/p5r-red/mock/data';
 import { useAppStore } from '@/store';
+import { searchUserByUserId, sendFriendRequest } from '@/services/friends';
+import { thresholdsFor, levelBasePoints, MAX_INTIMACY } from '@/utils/confidantLevels';
 /* ═══════════════════════════════════════════════════════════════════
    overlays/c.js — C 组「羁绊」全部弹层 / 演出（红主题 P5R 版）
    对应仓库 src/components/cooperation/*（红主题：*P5.tsx / confidantP5Fx.tsx / confidantP5Scenery.tsx /
@@ -33,25 +35,46 @@ export const OC: any = {};
     HERMIT: { attr: 'dexterity', pts: 100, base: 96, next: 110, charges: 0, interp: '正位 · 从房间里走出来的那一步，你也在场。', advice: '耐心比热情更重要。' },
     EMPRESS: { attr: 'kindness', pts: 22, base: 21, next: 33, charges: 1, interp: '正位 · 丰饶与照料。Ta 的温柔需要被回应。', advice: '去屋顶菜园帮 Ta 浇一次水。' },
   };
-  const CF = P5.D.confidants.map((c, i) => {
+  const CF_REAL = P5.D.confidants.map((c, i) => {
     const t = T[c.arcana] || TAROT[i], x = EXTRA[c.arcana] || EXTRA.CHARIOT;
+    // 真实同伴数据优先：亲密点 / AI 解读 / 建议 / 技能属性 / 星移次数都来自 store。
+    // 没有真实值就用空值（不填演示解读），属性名仍用设计常量（塔罗对应属性）。
+    const realPts = c.intimacyPoints ?? 0;
+    const realAttr = c.skillAttribute || x.attr;
+    // 亲密点 base / next 用真实等级阈值曲线（在线同伴走在线曲线），不再用演示常量 60 / 75。
+    const th = thresholdsFor({ source: c.source });
+    const realBase = levelBasePoints(c.rank, th);
+    const realNext = c.rank >= MAX_INTIMACY ? th[MAX_INTIMACY] : th[Math.min(c.rank + 1, MAX_INTIMACY)];
     return {
       id: c.id || 'cf' + i, name: c.name, arcanaId: t.id, card: t, intimacy: c.rank, description: c.desc, orientation: i === 3 ? 'reversed' : 'upright',
-      aiInterpretation: x.interp, aiAdvice: x.advice, skillAttribute: x.attr, intimacyPoints: x.pts, base: x.base, next: x.next, starShiftCharges: x.charges,
-      source: x.online ? 'online' : 'offline', linkedProfile: x.online || null, decayEnabled: i % 2 === 0, archivedAt: null,
-      buffs: BUFFS.filter((b) => b[0] <= c.rank).map(([lv, t1, d]) => ({ id: 'b' + lv, unlockAtLevel: lv, title: t1, description: d.replace('%A', P5.ATTR[x.attr].name) })),
-      memorials: x.online ? [{ shadowName: '嫉妒之影 · 双面镜', weak: 'kindness', date: '2026-10-11', contribution: 58 }, { shadowName: '怠惰之影 · 沉睡钟', weak: 'guts', date: '2026-09-27', contribution: 44 }] : [],
+      aiInterpretation: c.aiInterpretation ?? '', aiAdvice: c.aiAdvice ?? '', skillAttribute: realAttr, intimacyPoints: realPts, base: realBase, next: realNext, starShiftCharges: c.starShiftCharges ?? 0,
+      source: c.source || (x.online ? 'online' : 'offline'), linkedProfile: c.linkedProfile || x.online || null, decayEnabled: c.decayEnabled ?? false, archivedAt: null,
+      buffs: BUFFS.filter((b) => b[0] <= c.rank).map(([lv, t1, d]) => ({ id: 'b' + lv, unlockAtLevel: lv, title: t1, description: d.replace('%A', P5.ATTR[realAttr].name) })),
+      memorials: [],
     };
   });
+  // 空库（还没有同伴）时补占位，保证直达路由 CF()[0..3] 不崩 —— 占位没有真实数据，
+ // 页面对它显示空态，而不是演示同伴。
+  const CF_PLACEHOLDER = {
+    id: 'cf-empty', name: '', arcanaId: 'FOOL', card: TAROT[0], intimacy: 0, description: '', orientation: 'upright',
+    aiInterpretation: '', aiAdvice: '', skillAttribute: 'guts', intimacyPoints: 0, base: 0, next: 1, starShiftCharges: 0,
+    source: 'offline', linkedProfile: null, decayEnabled: false, archivedAt: null, buffs: [], memorials: [],
+  };
+  const CF = CF_REAL.length >= 4 ? CF_REAL : [...CF_REAL, ...Array.from({ length: Math.max(0, 4 - CF_REAL.length) }, () => ({ ...CF_PLACEHOLDER, card: { ...CF_PLACEHOLDER.card } }))];
   OC.CF = CF;
-  const EVENTS = [
-    { date: '10-20', type: 'conversation', delta: 2, userInput: '下午一起去了涩谷的拉面店，Ta 说想重新回田径部看看。', narrative: '战车正位：被搁置的目标重新亮起，你是那个陪 Ta 回头看的人。', advice: '下次陪 Ta 去操场跑一圈。' },
-    { date: '10-17', type: 'level_up', delta: 0, narrative: '羁绊等级提升至 Lv.6 · 知己' },
-    { date: '10-15', type: 'conversation', delta: 1, userInput: '帮 Ta 补了数学作业。', narrative: '默默的照顾也算一种前进。', advice: '' },
-    { date: '10-09', type: 'buff_unlocked', delta: 0, narrative: '解锁「Ta 的慰藉」' },
-    { date: '10-03', type: 'decay', delta: -1, narrative: '3 天无互动，逆流 −1' },
-    { date: '09-12', type: 'created', delta: 0, narrative: '初识 · 塔罗选择了《战车》' },
-  ];
+  // 真实同伴互动记录（原来上面那组是演示数据）。按当前同伴从 store.confidantEvents 取。
+  const realEventsOf = (confidantId) => (useAppStore.getState().confidantEvents ?? [])
+    .filter((e) => !confidantId || e.confidantId === confidantId)
+    .slice()
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .map((e) => ({
+      date: e.date,
+      type: e.type,
+      delta: e.delta ?? 0,
+      userInput: e.userInput ?? '',
+      narrative: e.narrative ?? '',
+      advice: e.advice ?? '',
+    }));
   const EV_LBL = { created: '初识', intimacy_up: '增进', intimacy_down: '波折', level_up: '升级', buff_unlocked: '解锁能力', conversation: '互动', item_used: '战斗援助', archived: '归档', decay: '逆流', bound: '绑定', unbound: '解绑' };
 
   /* ══════════ 层栈：Esc 关最上层；z 自增 ══════════ */
@@ -377,7 +400,11 @@ export const OC: any = {};
   OC.celebrate = celebrate;
 
   /* ══════════ ConfidantStarShiftModalP5 —— 星移（input / thinking / preview / done / error；useStarShiftFlow 同口径） ══════════ */
-  const RECENT = [['10-20', '一起去涩谷吃拉面，Ta 说想回田径部看看'], ['10-15', '帮 Ta 补数学作业到很晚'], ['10-11', '在天台聊了很久以前的事'], ['10-06', '吵了一架，第二天 Ta 先发来消息']];
+  // 星移参考的"最近与 Ta 相关的记录"：取该同伴真实的互动事件（原来写死四条演示记录）。
+  const recentOf = (confidantId) => realEventsOf(confidantId)
+    .filter((e) => e.userInput)
+    .slice(0, 4)
+    .map((e) => [e.date.slice(5), e.userInput]);
   function starShift(cf = CF[0], { stage = 'input', offline = true } = {}) {
     const t = cf.card;
     let st = stage, note = '';
@@ -396,7 +423,7 @@ export const OC: any = {};
     const render = () => {
       let h = '';
       if (st === 'input') h = `${head(`星移 · 余 ${charges()}`)}<div class="sf-field"><label class="sf-label" for="oc-sf-in">你觉得你们的关系发生了什么变化？（可不填）</label><div class="sf-inw"><textarea id="oc-sf-in" rows="5" maxlength="300" placeholder="例如：最近几次见面 Ta 愿意和我谈更深入的事情了 / 吵了一架之后我们之间多了一份小心翼翼……">${esc(note)}</textarea></div><div class="sf-count"><b>${note.length}</b> / 300</div></div>
-        <div class="sf-box"><span class="k">最近 ${RECENT.length} 条与 Ta 相关的记录（一同纳入星象推演）</span><div class="sf-scroll">${RECENT.map(([d, x]) => `<div class="sf-row"><span class="d">${d}</span><span>${x}</span></div>`).join('')}</div></div>
+        <div class="sf-box"><span class="k">最近 ${recentOf(cf.id).length} 条与 Ta 相关的记录（一同纳入星象推演）</span><div class="sf-scroll">${recentOf(cf.id).map(([d, x]) => `<div class="sf-row"><span class="d">${d}</span><span>${x}</span></div>`).join('')}</div></div>
         <div class="sf-acts single"><button type="button" class="sf-btn main" data-a="start" ${charges() <= 0 ? 'disabled' : ''}>✧ 重新落墨（消耗 1 次）</button></div>`;
       if (st === 'thinking') h = `${head('星象正在重写这段关系', true)}<div class="sf-center sf-pad"><div class="sf-spin">✦</div><p class="sf-sub">星移中……</p></div>`;
       if (st === 'preview') h = `${head('预览新的落墨')}<div class="sf-box"><span class="k">✧ 这次的变化</span><small class="sf-strong">从「一起冲的伙伴」走向「会回头等对方的人」——你们开始照顾彼此的节奏。</small></div>
@@ -443,7 +470,8 @@ export const OC: any = {};
   function detail(cf = CF[0], { readonly = false, shadow } = {}) {
     let tab = 'info', expanded = -1;
     const online = cf.source === 'online', isMax = cf.intimacy >= 10;
-    const pct = isMax ? 100 : Math.round(((cf.intimacyPoints - cf.base) / (cf.next - cf.base)) * 100);
+    // 进度条百分比夹在 0–100（真实点数与阈值不同步时不越界）。
+    const pct = isMax ? 100 : Math.max(0, Math.min(100, Math.round(((cf.intimacyPoints - cf.base) / Math.max(1, cf.next - cf.base)) * 100)));
     shadow = shadow !== undefined ? shadow : online ? { identified: true, hp: 62 } : null;
     const headHTML = () => `
       <div class="dt-top">
@@ -452,12 +480,12 @@ export const OC: any = {};
           <b class="dt-name">${esc(cf.name)}</b>
           <span class="dt-arc">《${cf.card.cn}》${cf.orientation === 'reversed' ? '逆位' : '正位'} · ${cf.card.no} ${cf.card.en}</span>
           <button type="button" class="dt-lv" data-a="lvswap" title="点击切换：等级 / 状态">Lv.${cf.intimacy} · ${LBL[cf.intimacy]}</button>
-          ${online ? `<span class="dt-on">ONLINE · <button type="button" data-a="profile" title="点击查看 GUEST PROFILE">@${cf.linkedProfile.userId}</button></span><span class="dt-goal">◎ 目标：期末全科 A · 还剩 12 天</span>` : ''}
+          ${online ? `<span class="dt-on">ONLINE · <button type="button" data-a="profile" title="点击查看 GUEST PROFILE">@${cf.linkedProfile?.userId ?? ''}</button></span>${cf.linkedProfile?.goal?.title ? `<span class="dt-goal">◎ 目标：${esc(cf.linkedProfile.goal.title)}${cf.linkedProfile.goal.subtitle ? ` · ${esc(cf.linkedProfile.goal.subtitle)}` : ''}</span>` : ''}` : ''}
           ${shadow ? `<button type="button" class="dt-shadow ${shadow.identified ? 'id' : ''}" data-a="shadow" title="${shadow.identified ? `羁绊之影 · HP ${shadow.hp}%` : '羁绊之影 · 未识破'}">⚔ SHADOW <i>${shadow.identified ? shadow.hp + '%' : '未识破'}</i></button>` : ''}
         </div>
         ${online && readonly ? '' : `<button type="button" class="dt-counsel" data-a="counsel" aria-label="谏言 · 关于这段关系" title="谏言：关于这段关系">${U.star('var(--paper)', 'var(--ink)', 1.6)}<span>谏言</span></button>`}
       </div>
-      <div class="dt-prog"><div class="dt-pl"><span>羁绊等级</span><span>${isMax ? '已达圆满' : `${cf.intimacyPoints - cf.base} / ${cf.next - cf.base}（到 Lv.${cf.intimacy + 1} 还差 ${cf.next - cf.intimacyPoints} 点）`}</span></div>${stars10(cf.intimacy)}<div class="dt-bar"><i style="--p:${pct / 100}"></i></div></div>
+      <div class="dt-prog"><div class="dt-pl"><span>羁绊等级</span><span>${isMax ? '已达圆满' : `${Math.max(0, cf.intimacyPoints - cf.base)} / ${Math.max(1, cf.next - cf.base)}（到 Lv.${cf.intimacy + 1} 还差 ${Math.max(0, cf.next - cf.intimacyPoints)} 点）`}</span></div>${stars10(cf.intimacy)}<div class="dt-bar"><i style="--p:${pct / 100}"></i></div></div>
       ${readonly ? `<div class="oc-warn"><b>只读模式 · 未登录云端</b><span>这是一位在线同伴，任何编辑操作都需要登录后才能同步给对方 —— 暂时只能查看，登录后可恢复全部功能。</span></div>` : ''}
       <div class="oc-tabs" role="tablist">${[['info', '信息'], ['abilities', '能力'], ['history', '历史']].map(([k, l]) => `<button type="button" role="tab" data-a="tab" data-v="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
       <div class="dt-pane"></div>
@@ -467,14 +495,16 @@ export const OC: any = {};
         (online && cf.memorials.length ? `<button type="button" class="dt-mem" data-a="memorial"><span class="ic">◈</span><span><b>共战纪念</b><small>${cf.memorials.length} 次共同封印羁绊之影</small></span><em>›</em></button>` : '');
       if (tab === 'abilities') return (cf.buffs.length ? cf.buffs.map((b) => `<div class="dt-buff"><span class="tag">Lv.${b.unlockAtLevel}</span><b>${b.title}</b><p>${b.description}</p></div>`).join('') : `<p class="oc-empty">亲密度到 Lv.2 将解锁日常加成。</p>`) +
         (isMax ? '' : `<div class="dt-next"><span>即将解锁</span><p>${nextHint(cf.intimacy)}</p></div>`);
-      return EVENTS.length ? `<ol class="dt-tl">${EVENTS.map((e, i) => { const conv = e.type === 'conversation', has = conv && (e.narrative || e.advice); return `<li><div class="m"><span>${e.date}</span><em>${EV_LBL[e.type]}</em>${e.delta ? `<i class="${e.delta > 0 ? 'up' : 'dn'}">${e.delta > 0 ? '+' + e.delta : e.delta}</i>` : ''}${has ? `<button type="button" data-a="exp" data-v="${i}">${expanded === i ? '收起 ▲' : '查看解读 ▼'}</button>` : ''}</div><p>${esc(conv ? e.userInput : e.narrative)}</p>${has && expanded === i ? `<div class="dt-rd"><span>解读</span><p>${e.narrative}</p>${e.advice ? `<span>未来</span><p>${e.advice}</p>` : ''}</div>` : ''}</li>`; }).join('')}</ol>` : `<p class="oc-empty">还没有记录</p>`;
+      // 时间线用真实同伴互动记录；没有真实记录时不用演示数据。
+      const TL = realEventsOf(cf.id);
+      return TL.length ? `<ol class="dt-tl">${TL.map((e, i) => { const conv = e.type === 'conversation', has = conv && (e.narrative || e.advice); return `<li><div class="m"><span>${e.date}</span><em>${EV_LBL[e.type] ?? e.type}</em>${e.delta ? `<i class="${e.delta > 0 ? 'up' : 'dn'}">${e.delta > 0 ? '+' + e.delta : e.delta}</i>` : ''}${has ? `<button type="button" data-a="exp" data-v="${i}">${expanded === i ? '收起 ▲' : '查看解读 ▼'}</button>` : ''}</div><p>${esc(conv ? e.userInput : e.narrative)}</p>${has && expanded === i ? `<div class="dt-rd"><span>解读</span><p>${e.narrative}</p>${e.advice ? `<span>未来</span><p>${e.advice}</p>` : ''}</div>` : ''}</li>`; }).join('')}</ol>` : `<p class="oc-empty">还没有记录</p>`;
     };
     const decayText = () => online ? (cf.decayEnabled ? '逆流 · 双方同意，3 天无互动 −1/天' : '逆流未开启') : cf.decayEnabled ? '逆流 · 3 天无互动 −1/天' : '逆流未开启';
     const actsHTML = () => cf.archivedAt ? `<div class="dt-acts">${U.btn('恢复关系', { tone: 'paper', seed: 121, attrs: 'data-a="archive"' })}${U.btn('彻底删除', { tone: 'red', seed: 122, attrs: 'data-a="del"' })}<p class="oc-note">归档后能力暂停生效，但历史记录仍会保留</p></div>` : `<div class="dt-acts">
         <div class="dt-row1${online ? ' two' : ''}">${U.btn(isMax ? '已圆满 ✧' : '今日互动 · 由 AI 解读加点', { tone: 'red', size: 'lg', seed: 117, attrs: `data-a="interact" ${isMax ? 'disabled' : ''}` })}${online ? `<button type="button" class="dt-pact" data-a="pact"><b>立下约定</b><small>每日打卡 · 第 3 天 / 共 14 天</small></button>` : ''}</div>
         ${cf.starShiftCharges > 0 ? `<button type="button" class="dt-shift" data-a="shift"><span>✧ 星移</span><em>余 ${cf.starShiftCharges}</em><small>以当前状态重新落墨</small></button>` : ''}
         <div class="dt-row3">${U.btn('暂时归档', { tone: 'paper', seed: 118, attrs: 'data-a="archive"' })}${U.btn('彻底删除', { tone: 'ink', seed: 119, attrs: 'data-a="del"' })}</div>
-        ${online ? `<button type="button" class="dt-sever" data-a="sever">解除与 ${esc(cf.linkedProfile.nickname)} 的 COOP 契约</button>` : ''}
+        ${online ? `<button type="button" class="dt-sever" data-a="sever">解除与 ${esc(cf.linkedProfile?.nickname ?? '')} 的 COOP 契约</button>` : ''}
         <div class="dt-decay"><span>${decayText()}</span><button type="button" class="sw ${cf.decayEnabled ? 'on' : ''}" data-a="decay" aria-label="切换逆流" aria-pressed="${cf.decayEnabled}"></button></div></div>`;
     let lvAlt = false;
     const d = dialog({
@@ -486,16 +516,16 @@ export const OC: any = {};
         tab: (t) => { tab = t.dataset.v; d.dlg.querySelectorAll('.oc-tabs [data-a]').forEach((b) => b.setAttribute('aria-selected', b === t)); pane(); },
         exp: (t) => { expanded = expanded === +t.dataset.v ? -1 : +t.dataset.v; pane(false); },
         lvswap: (t) => { lvAlt = !lvAlt; t.textContent = lvAlt ? (online ? '◎ 状态：备考中' : `${cf.intimacyPoints} 点 · ${LBL[cf.intimacy]}`) : `Lv.${cf.intimacy} · ${LBL[cf.intimacy]}`; },
-        profile: () => profileCard(),
+        profile: () => profileCard(cf),
         shadow: () => shadowBattle(),
         counsel: () => counselChat({ mention: cf }),
         memorial: () => memorial(cf),
         interact: () => interaction(cf),
-        pact: () => pactPanelModal(cf.linkedProfile.nickname, 'active'),
+        pact: () => pactPanelModal(cf.linkedProfile?.nickname ?? '', 'active'),
         shift: (t, e) => { const og = originOf(e, t); sweep('STAR SHIFT', () => starShift(cf), og, 1); },
         archive: (t, e, api) => { cf.archivedAt = cf.archivedAt ? null : '2026-10-20'; P5.toast(cf.archivedAt ? '已暂时归档' : '已恢复关系'); api.set(headHTML(), null, false); pane(false); },
         del: () => confirmDlg({ eyebrow: 'DANGER', title: `确认彻底删除 ${cf.name}？`, text: '此操作不可撤销', list: ['这位同伴的档案、亲密度、能力解锁将一并被抹去', '所有互动记录与星移痕迹也会被清空', 'Ta 所占用的塔罗大阿卡纳将被释放，可重新分配给新的同伴', '如果只是暂时不想看见 Ta，建议使用「暂时归档」'], ok: '确认删除', onOk: () => { d.close(); P5.toast('已删除'); } }),
-        sever: () => confirmDlg({ eyebrow: 'SEVER COOP', title: `解除与 ${cf.linkedProfile.nickname} 的 COOP 契约`, text: '解除后，本端的同伴卡会自动归档；对方下次同步时，那边的卡也会归档。<br>7 天内无法再次缔结 COOP。已积累的羁绊与历史会保留在归档里。', ok: '确认解除', onOk: () => P5.toast('已解除 COOP · 同伴卡已归档') }),
+        sever: () => confirmDlg({ eyebrow: 'SEVER COOP', title: `解除与 ${cf.linkedProfile?.nickname ?? ''} 的 COOP 契约`, text: '解除后，本端的同伴卡会自动归档；对方下次同步时，那边的卡也会归档。<br>7 天内无法再次缔结 COOP。已积累的羁绊与历史会保留在归档里。', ok: '确认解除', onOk: () => P5.toast('已解除 COOP · 同伴卡已归档') }),
         decay: (t) => { cf.decayEnabled = !cf.decayEnabled; t.classList.toggle('on', cf.decayEnabled); t.setAttribute('aria-pressed', cf.decayEnabled); t.previousElementSibling.textContent = decayText(); },
       },
     });
@@ -727,7 +757,8 @@ export const OC: any = {};
   /* ══════════ AddOnlineConfidantModal —— 邀请在线同伴（未登录 / search / found / sent） ══════════ */
   function addOnline({ phase = 'search', loggedIn = true } = {}) {
     let ph = loggedIn ? phase : 'nologin', id = '', msg = '';
-    const found = { userId: 'queen_makoto', nickname: '新岛真', totalLv: 31 };
+    // 真实搜索结果（原来写死 queen_makoto / 新岛真 / LV31）。
+    const found = { userId: '', nickname: '', totalLv: 0, targetId: '' };
     const view = () => {
       if (ph === 'nologin') return [note('邀请在线同伴之前，请先在设置页登录云端账号。', 'warn'), U.btn('去登录', { tone: 'red', seed: 191, attrs: 'data-a="login"' })];
       if (ph === 'search') return [`<label class="fld"><span>对方的 UserID</span><div class="ao-row"><input class="inp" data-in="id" placeholder="alice_in_velvet" value="${esc(id)}" autocapitalize="off">${U.btn('搜索', { tone: 'red', seed: 192, attrs: 'data-a="search"' })}</div></label><p class="oc-err" hidden></p>${note('UserID 是对方在注册时选的唯一标识（3-18 位小写字母/数字/._-），<br>不区分大小写，精确匹配后才能找到。')}`, ''];
@@ -739,8 +770,33 @@ export const OC: any = {};
     const d = dialog({ eyebrow: 'ONLINE · INVITE', title: '邀请在线同伴', sub: '输入对方的 UserID 来发起好友申请', seed: 197,
       demo: [['search', '搜索'], ['found', '找到'], ['sent', '已送出'], ['nologin', '未登录']], demoCur: ph, onDemo: (k) => { ph = k; draw(); },
       on: { login: () => P5.toast('前往 设置 → 账号 登录'), back: () => { ph = 'search'; draw(); },
-        search: (t) => { const v = id.trim().toLowerCase(); if (!/^[a-z0-9._-]{3,18}$/.test(v)) return err('UserID 应为 3-18 位小写字母 / 数字 / ._-'); if (v === 'joker') return err('不能加自己为好友'); t.querySelector('span').textContent = '查找中…'; setTimeout(() => { if (v !== found.userId && v !== 'queen_makoto') { t.querySelector('span').textContent = '搜索'; return err('没找到这个 UserID（试试 queen_makoto）'); } ph = 'found'; draw(); }, 500); },
-        send: (t) => { t.querySelector('span').textContent = '发送中…'; setTimeout(() => { ph = 'sent'; draw(); }, 500); } } });
+        // 真实搜索：只认服务端查得到的 UserID（原来只认写死的 queen_makoto）。
+        search: (t) => {
+          const v = id.trim().toLowerCase();
+          if (!/^[a-z0-9._-]{3,18}$/.test(v)) return err('UserID 应为 3-18 位小写字母 / 数字 / ._-');
+          t.querySelector('span').textContent = '查找中…';
+          void searchUserByUserId(v).then((p) => {
+            t.querySelector('span').textContent = '搜索';
+            if (!p) return err('没找到这个 UserID');
+            found.userId = String(p.userId ?? v);
+            found.nickname = String(p.nickname ?? '');
+            found.totalLv = p.totalLv ?? 0;
+            found.targetId = String(p.id ?? '');
+            ph = 'found'; draw();
+          }).catch((e) => {
+            t.querySelector('span').textContent = '搜索';
+            err(e instanceof Error ? e.message : '查找失败，请稍后重试');
+          });
+        },
+        // 真实发送申请（原来只是 setTimeout 假装"已送出"）。
+        send: (t) => {
+          t.querySelector('span').textContent = '发送中…';
+          if (!found.targetId) { t.querySelector('span').textContent = '发送申请'; return err('没有可申请的对方'); }
+          void sendFriendRequest({ targetUserId: found.targetId, message: msg.trim() || undefined }).then(() => { ph = 'sent'; draw(); }).catch((e) => {
+            t.querySelector('span').textContent = '发送申请';
+            err(e instanceof Error ? e.message : '发送失败，请稍后重试');
+          });
+        } } });
     draw(false);
     return d;
   }
@@ -756,14 +812,32 @@ export const OC: any = {};
       <polygon class="pf-val" points="${vals.map((v, i) => pt(i, R * v / max).map((n) => n.toFixed(1)).join(',')).join(' ')}" fill="rgba(215,0,15,.78)" stroke="#111" stroke-width="2.4" stroke-linejoin="round"/>
       ${vals.map((v, i) => `<circle cx="${pt(i, R * v / max)[0].toFixed(1)}" cy="${pt(i, R * v / max)[1].toFixed(1)}" r="${i === sel ? 5 : 3}" fill="${i === sel ? '#F2E9DA' : '#111'}" stroke="#111" stroke-width="2"/>`).join('')}</svg>`;
   }
-  function profileCard({ coop = 'linked', prayed = false, friend = true, loggedIn = true, pactState = 'active' } = {}) {
+  function profileCard(cfOf = CF[0], { coop = 'linked', prayed = false, friend = true, loggedIn = true, pactState = 'active' } = {}) {
     let tab = 'attrs', sel = 0, cs = coop, pr = prayed;
-    const p = { nickname: '新岛真', userId: 'queen_makoto', totalLv: 31, hard: false, totalPoints: 4280, unlocked: 17, lv: { knowledge: 5, guts: 3, dexterity: 2, kindness: 3, charm: 2 }, goal: { title: '期末全科 A', subtitle: '还剩 12 天 · 每天自习 3 小时' } };
+    // 对方档案取真实在线同伴的云端档案（原来写死 新岛真 / queen_makoto / 4280 点）。
+    const lp = (cfOf && cfOf.linkedProfile) || null;
+    const realLv = (lp && lp.attributeLevels) || {};
+    const p = {
+      nickname: String((lp && lp.nickname) || (cfOf && cfOf.name) || '未命名同伴'),
+      userId: String((lp && lp.userId) || ''),
+      totalLv: Number((lp && lp.totalLv) || 0),
+      hard: !!(lp && lp.levelDifficulty === 'hard'),
+      totalPoints: Number((lp && lp.totalPoints) || 0),
+      unlocked: Number((lp && lp.unlockedCount) || 0),
+      lv: {
+        knowledge: Number(realLv.knowledge || 0), guts: Number(realLv.guts || 0), dexterity: Number(realLv.dexterity || 0),
+        kindness: Number(realLv.kindness || 0), charm: Number(realLv.charm || 0),
+      },
+      goal: (lp && lp.goal) || { title: '', subtitle: '' },
+      lastSyncedLabel: lp && lp.lastSyncedAt
+        ? `最近同步：${new Date(lp.lastSyncedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+        : '尚未同步过档案',
+    };
     const vals = P5.ATTR_ORDER.map((k) => p.lv[k]);
     const attrsHTML = () => `<div class="pf-att"><div class="pf-rw">${radarSVG(vals, 5, sel)}<small>外圈 = LV 5</small></div>
       <div class="pf-axes">${P5.ATTR_ORDER.map((k, i) => `<button type="button" data-a="ax" data-v="${i}" aria-pressed="${sel === i}"><b>${P5.ATTR[k].name}</b><small>LV${vals[i]}</small></button>`).join('')}</div>
       <div class="pf-selr"><span>${P5.ATTR[P5.ATTR_ORDER[sel]].en}</span><b>LV${vals[sel]}: ${RANKS[P5.ATTR_ORDER[sel]][vals[sel]] || ''}</b></div>
-      <div class="pf-mini"><div><span>TOTAL POINTS</span><b>${p.totalPoints.toLocaleString()}</b></div><div><span>UNLOCKED</span><b>${p.unlocked}</b></div></div><p class="oc-note c">最近同步：12 分钟前</p></div>`;
+      <div class="pf-mini"><div><span>TOTAL POINTS</span><b>${p.totalPoints.toLocaleString()}</b></div><div><span>UNLOCKED</span><b>${p.unlocked}</b></div></div><p class="oc-note c">${p.lastSyncedLabel}</p></div>`;
     const actsHTML = () => { const [l, s, tone] = COOP_ST[cs]; return `<div class="pf-acts">
         <button type="button" class="pf-btn pray ${pr || !loggedIn ? 'off' : ''}" data-a="pray" ${pr || !loggedIn ? 'disabled' : ''}><b>${U.star('var(--paper)', 'var(--ink)', 1.4)}${!loggedIn ? '登录后可祈愿' : pr ? '今日已祈愿' : '为 Ta 祈愿'}</b><small>${pr ? '凌晨 4 点刷新' : '双方各 +2 SP'}</small></button>
         <button type="button" class="pf-btn coop ${tone}" data-a="coop" ${tone === 'cd' || tone === 'wait' || tone === 'ok' ? 'aria-disabled="true"' : ''}><b>${l}</b><small>${s}</small></button></div>

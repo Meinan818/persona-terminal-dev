@@ -30,7 +30,7 @@ export async function cinema(q?: Q) {
 const confirmTexts = {
   avatar: () => OC.confirm({ eyebrow: 'CARD FACE', title: '同步换成卡面？', text: '选「同步」会把羁绊墙上这位同伴的整张塔罗牌面换成刚上传的图；选「只当头像」则仅在档案里用它，牌面保持塔罗。', ok: '同步卡面', cancel: '只当头像', onOk: () => P5.toast('已同步为卡面') }),
   del: () => { const cf = CF()[0]; OC.confirm({ eyebrow: 'DANGER', title: `确认彻底删除 ${cf.name}？`, text: '此操作不可撤销', list: ['这位同伴的档案、亲密度、能力解锁将一并被抹去', '所有互动记录与星移痕迹也会被清空', 'Ta 所占用的塔罗大阿卡纳将被释放，可重新分配给新的同伴', '如果只是暂时不想看见 Ta，建议使用「暂时归档」'], ok: '确认删除', onOk: () => P5.toast('已删除') }); },
-  sever: () => { const cf = CF()[3]; OC.confirm({ eyebrow: 'SEVER COOP', title: `解除与 ${cf.linkedProfile.nickname} 的 COOP 契约`, text: '解除后，本端的同伴卡会自动归档；对方下次同步时，那边的卡也会归档。<br>7 天内无法再次缔结 COOP。已积累的羁绊与历史会保留在归档里。', ok: '确认解除', onOk: () => P5.toast('已解除 COOP · 同伴卡已归档') }); },
+  sever: () => { const cf = CF()[3]; OC.confirm({ eyebrow: 'SEVER COOP', title: `解除与 ${cf?.linkedProfile?.nickname ?? ''} 的 COOP 契约`, text: '解除后，本端的同伴卡会自动归档；对方下次同步时，那边的卡也会归档。<br>7 天内无法再次缔结 COOP。已积累的羁绊与历史会保留在归档里。', ok: '确认解除', onOk: () => P5.toast('已解除 COOP · 同伴卡已归档') }); },
 };
 
 /** ConfidantNameFx 名字特效演示（待回祈流光 / 满级粒子 / 两态叠加），挂在列表条目同款黑底上 */

@@ -75,6 +75,7 @@ export function orgRaidCardData(view: OrgView) {
   const date = new Date(raid.createdAt);
   const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   return {
+    boss: raid.boss.name,
     left: Math.max(0, raid.hpMax - damage),
     hpMax: raid.hpMax,
     nights: [day, day],

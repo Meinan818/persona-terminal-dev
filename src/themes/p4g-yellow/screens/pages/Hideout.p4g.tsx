@@ -112,8 +112,8 @@ export default function Hideout({ tab, params }: PageProps) {
         <CollageItem>
           <HideoutMap view={view} section={section} onSection={pickSection} blocked={blocked} onSeat={setFlip}
             dots={{ board: section !== 'board' && !seen.board, meeting: meeting === 'open', ops: section !== 'ops' && !seen.ops }}
-            raid={raidCard ? { boss: '满月团战', left: raidCard.left / raidCard.hpMax, defeated: raidCard.left <= 0, dot: true } : null} onRaid={() => setRaidOpen(true)} />
-          {raidCard && <div className="mt-3"><RaidBanner onOpen={() => setRaidOpen(true)} /></div>}
+            raid={raidCard ? { boss: raidCard.boss, left: raidCard.left / raidCard.hpMax, defeated: raidCard.left <= 0, dot: true } : null} onRaid={() => setRaidOpen(true)} />
+          {raidCard && <div className="mt-3"><RaidBanner data={raidCard} onOpen={() => setRaidOpen(true)} /></div>}
         </CollageItem>
         <CollageItem>
           <SectionTitle section={section} alt={section === 'roster' && wall} onTitle={section === 'roster' ? () => setWall((w) => !w) : undefined}

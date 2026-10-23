@@ -127,8 +127,8 @@ export default function Hideout({ tab, params }: PageProps) {
         <motion.div {...stag(2)}>
           <HideoutMap view={view} section={section} onSection={pickSection} blocked={blocked} onSeat={setFlip} level={orgLevel.level}
             dots={{ board: section !== 'board' && !seen.board, meeting: meeting === 'open', ops: section !== 'ops' && !seen.ops }}
-            raid={raidCard ? { boss: '满月团战', left: raidCard.left / raidCard.hpMax, defeated: raidCard.left <= 0, dot: true } : undefined} onRaid={() => setRaidOpen(true)} />
-          {raidCard && <div className="mt-3"><RaidBanner onOpen={() => setRaidOpen(true)} /></div>}
+            raid={raidCard ? { boss: raidCard.boss, left: raidCard.left / raidCard.hpMax, defeated: raidCard.left <= 0, dot: true } : undefined} onRaid={() => setRaidOpen(true)} />
+          {raidCard && <div className="mt-3"><RaidBanner data={raidCard} onOpen={() => setRaidOpen(true)} /></div>}
         </motion.div>
         <motion.div {...stag(3)}>
           <div className="mb-3">

@@ -195,9 +195,12 @@ export function RaidPanel({ view, open, onClose, demo = 'open', onFlash }: { vie
 }
 
 /** 地图下方的团战横条 */
-export function RaidBanner({ onOpen, struck }: { onOpen: () => void; struck?: boolean }) {
-  const head = `满月团战 · ${NIGHT_NAME[RAID.nightIndex]}`;
-  const line = `「${RAID.boss.name}」还剩 ${Math.round((RAID.left / RAID.hpMax) * 100)}%${struck ? ' · 今晚已出手' : ' · 今晚还没出手'}`;
+export function RaidBanner({ onOpen, struck, data }: { onOpen: () => void; struck?: boolean; data?: { boss: string; left: number; hpMax: number } }) {
+  const boss = data?.boss ?? RAID.boss.name;
+  const left = data?.left ?? RAID.left;
+  const hpMax = data?.hpMax ?? RAID.hpMax;
+  const head = '满月团战';
+  const line = `「${boss}」还剩 ${Math.round((left / hpMax) * 100)}%${struck ? ' · 今晚已出手' : ' · 今晚还没出手'}`;
   return (
     <button type="button" onClick={onOpen} aria-label={`${head}：${line}。点了打开团战面板`} className="flex w-full min-w-0 items-center gap-3 px-5 py-2.5 text-left active:scale-[0.99]" style={{ background: 'linear-gradient(110deg, #0d162a, #101d3a)', color: '#eef8ff', clipPath: slantClip(12) }}>
       <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center text-[18px]" style={{ background: '#6f9aff', color: '#0d162a', clipPath: slantClip(6) }}>☾</span>

@@ -1,7 +1,8 @@
 // 灰盒表现层：three.js 方块 + HTML HUD。只读 Battle 状态、只调用 Battle 指令、只消费事件。
 import * as THREE from 'three';
 import { Battle, MAPS, key, eq, VOLTAGE_MAX, PASSIVE_INFO, SKILLS, UNIQUES } from './rules';
-import type { BattleEvent, SkillDef, Unit, Vec, StatusId } from './rules';
+import type { BattleEvent, SkillDef, Unit, Vec, StatusId, MapDef } from './rules';
+import { mountLevelSelect } from './game/levelSelect'; // Q12 关卡选择（最简按钮，Hark 美化）
 
 type Mode = 'auto' | 'melee' | 'gun' | 'skill' | 'unique';
 
@@ -858,12 +859,14 @@ $('#btn-restart').addEventListener('click', restart);
 const sel = $<HTMLSelectElement>('#map-select');
 sel.innerHTML = MAPS.map((m, i) => `<option value="${i}">${m.name}</option>`).join('');
 sel.value = String(mapIdx);
-sel.addEventListener('change', () => { mapIdx = Number(sel.value); restart(); });
+sel.addEventListener('change', () => { mapIdx = Number(sel.value); makeMap = () => MAPS[mapIdx].make(); restart(); });
+let makeMap: () => MapDef = () => MAPS[mapIdx].make();
+mountLevelSelect({ onPick: (make) => { makeMap = make; restart(); return battle; } });
 window.addEventListener('resize', () => { fitCamera(); refreshLabels(); });
 
 function restart() {
   $('#result').classList.add('hidden');
-  battle = new Battle(MAPS[mapIdx].make());
+  battle = new Battle(makeMap());
   selected = null; previewTile = null; previewTarget = null; inspectEnemy = null; mode = 'auto';
   build();
   void play(battle.start());
@@ -891,7 +894,7 @@ window.__p5t = {
   setSkill(id: string) { mode = 'skill'; skillId = id; refreshAll(); },
   tap: onTap,
   select(id: string) { onTap({ unit: id }); },
-  loadMap(i: number) { mapIdx = i; sel.value = String(i); restart(); },
+  loadMap(i: number) { mapIdx = i; sel.value = String(i); makeMap = () => MAPS[mapIdx].make(); restart(); },
   hook,
   play,
   key,

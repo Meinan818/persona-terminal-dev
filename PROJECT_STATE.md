@@ -2,6 +2,19 @@
 
 最后更新：2026-10-23（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 接手第一入口 · 2026-10-23 21:50 · r10 待真机验收（最新，先看这段）
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，HEAD `c867c0f`（本轮两个新提交）。工作树仍只余两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。
+- **本轮做了什么（两批，均只改数据与回调，零 JSX/className/style/动画改动）**：
+  1. `47a09cb` 账号与登录去假数据。三主题 `AccountManagePanel` / `LoginModal` 原本是演示壳——邮箱与 UserID 来自 mock 常量，改 UserID / 改密码 / 发重置邮件 / 登录 / 发验证码 / 验码全部走 `setTimeout` 假动作并一律报成功。新增 `src/themes/accountAuth.ts` 统一接 `@/services/auth` 真实 API，失败抛真实错误。顺带修三个真 bug：① `cloudUser.userId` 这个键在 `VelvetRecord` 里**不存在**（真实字段是 `username`），三主题 adapter 都读错，导致真实登录用户的 UserID 永远显示"还没设置"；② 蓝/粉账号页登录态写死 `'signed-in'`，未登录也假装已登录，改成从真实 `cloudUser` 派生；③ `velvetApi` 错误文案是英文 `velvet api error 401`，改成按状态码的中文兜底。账号页"未配置"提示里的 `VITE_PB_URL` 也改成了真实配置项 `VITE_API_URL`。
+  2. `c867c0f` 记账预算与图鉴去假数据。三主题 `LedgerStats` 的预算（mock 写死 6000）、省钱目标（mock 写死 500）、统计月份（写死 `2026-10`）、趋势（写死 `[1820, 2410, 2960, 2205]`）全部改真实 store；`LedgerBudgetSheet` 同样改真实预算 / 修改次数 / 重置日；黄色塔罗翻面卡与岁时翻面卡的图鉴进度改真实抽牌记录与印章表；三主题成就页的印记（mock 三枚假印记：秋分满月 / 雨夜委托 / 满月团战）改真实岁时印章表；成就 / 技能表单的属性名改真实 `settings.attributeNames`，编辑态取真实自定义条目而不是 mock 的 `custom_read` / `custom_sk_sketch`。新增 `src/themes/ledgerBudgetData.ts`。
+- **重要口径澄清（用户提出，已按代码核实）**：原"完成条 → 属性升级 → 成就 → 技能"四连的表述**不对**。代码里成就与技能**不在完成链里**——达成只写进度，解锁演出只在成就页手动点「解锁」时各播一次（`unlockAchievement` / `unlockSkill`）；属性升级也只在真升级时出现（`addActivity` 里 `newLevel > oldLevel`）。正确口径：完成条必现 → 属性升级仅在真升级时出现且必须排在完成条之后 → 完成条上的解锁提示用真实 `unlockHints` → 成就 / 技能演出属成就页手动解锁，不参与完成链。蓝/粉首页原先把 `unlockHint` 写死 `{achievements:0, skills:0}`，本轮已接真实 `result.unlockHints`，且 store 拒绝完成时不再弹假成功条。
+- **验证（2026-10-23 本轮实跑）**：`npx tsc --noEmit` exit 0；`npx vitest run` 68 文件 / 406 项通过（新增 `src/themes/__tests__/accountAuth.test.ts` 4 项）；`npm run build` 通过；Android `assembleDebug` 成功。浏览器真实路径（CDP 探针，`E:\MASKARIA\.cache\probe-account-real.mjs` 与 `probe-ledger-real.mjs`）：三主题账号管理弹层假邮箱 / 假 UserID 命中 0，未登录明确显示"未登录"；三主题登录弹层拦截网络后确认发出真实 `POST /api/velvet/otp/request`、**0 假成功**、显示真实错误文案；三主题记账页显示真实预算 `¥2,345` 与真实省钱目标 `678`，mock 的 `6000` / `500` 均不出现；假印记命中 0。
+- **本轮新包（待真机验收）**：`E:\MASKARIA\outputs\maskaria-theme-realdata-r10-20261023-debug.apk` 与 `D:\下载\互传\maskaria-theme-realdata-r10-20261023-debug.apk`（111,146,983 B，SHA-256 `4D84982FDEBF1930C034648EC44F636DD6544A5B7073A52863092ADF0CFB0D67`，两份哈希一致）。含 `ab9361d` 之后全部改动。
+- **真机验收现状**：**本机没有安卓设备**（`adb devices` 空列表；PnP 里名为 "S21" 的 USB 设备是 `VID_0D8C` 的音频芯片，不是手机；`E:\MASKARIA\.rivet\android-sdk` 无 emulator 二进制，`%USERPROFILE%\.android\avd` 无 AVD）。真机安装与观感一律由用户在手机上完成，AI 不得代为声称已验证。上一版 r9（SHA-256 `8E16F25A…`）已被 r10 取代，装 r10 即可。
+- **下一步（顺序不变）**：① 用户用 r10 做真机验收（完成条顺序与属性升级时点、三主题谏言开始/离线回复/打断/归档、COOP 提议/接受与羁绊之影、记账批量录入/核对/真实账户/删除、AI 设置区无假 Key/假连接/假余额/假模型数量、中长期占卜未授权时明确显示"AI 等待确认"、红轮盘尺寸与闪烁、蓝/粉助手开关闪烁）；② 继续扫剩余非主流程弹层的 demo fallback（红主题 `AccountBlocks`、主 App `src/pages/Account.tsx` 内的演示状态分支、`LedgerSettleSheet` 的 `SETTLE_ADVICE` / `SETTLE_REFLECTION` 文案是否算假数据待定）；③ 星象 AI / 中长期 AI / 成长总结 AI / 助手自由对话 / 收费视觉识别仍等用户 Key 决策，当前不发病态、不写占位 AI；④ 蓝色性能留到最后。
+- **红线（不变）**：不 Push（Push 须用户明确批准）；不改 `main` 与 `src/umbra`、`public/umbra-demo`；不改外观；不读/提交 `.env`、凭据、token/secret；不收费 AI、不部署；两个 `android/*.gradle` 不提交。
+
 ## 接手第一入口 · 2026-10-23 · 真实数据与交互收口待真机复验（新会话从这里开始）
 
 - **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，最近源码 HEAD `a7da79c`。工作树只余两个 `android/*.gradle` 的 cap sync 痕迹（不提交、不动）。全部本地提交，未 Push。

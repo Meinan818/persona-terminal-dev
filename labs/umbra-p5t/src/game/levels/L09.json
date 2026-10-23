@@ -1,0 +1,423 @@
+{
+ "id": "L09",
+ "name": "城下町·篝火广场",
+ "scene": "castle_bonfire_night",
+ "width": 20,
+ "height": 16,
+ "win": {
+  "type": "survive",
+  "turns": 5
+ },
+ "objective": "坚持 5 回合",
+ "turnTarget": 5,
+ "party": [
+  [
+   "joker",
+   9,
+   8
+  ],
+  [
+   "skull",
+   10,
+   8
+  ],
+  [
+   "mona",
+   9,
+   7
+  ]
+ ],
+ "reserves": [
+  "panther",
+  "fox"
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "doors": [],
+ "switches": [],
+ "elevators": [],
+ "links": [
+  {
+   "a": [
+    9,
+    5
+   ],
+   "b": [
+    9,
+    6
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    9,
+    10
+   ],
+   "b": [
+    9,
+    9
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    6,
+    7
+   ],
+   "b": [
+    7,
+    7
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    13,
+    8
+   ],
+   "b": [
+    12,
+    8
+   ],
+   "kind": "ladder"
+  }
+ ],
+ "cameras": [],
+ "chests": [],
+ "props": [
+  {
+   "id": "bar1",
+   "kind": "barrel",
+   "pos": [
+    9,
+    1
+   ]
+  },
+  {
+   "id": "bar2",
+   "kind": "barrel",
+   "pos": [
+    10,
+    14
+   ]
+  },
+  {
+   "id": "bar3",
+   "kind": "barrel",
+   "pos": [
+    1,
+    7
+   ]
+  },
+  {
+   "id": "bar4",
+   "kind": "barrel",
+   "pos": [
+    18,
+    8
+   ]
+  }
+ ],
+ "enemies": [
+  {
+   "id": "i1",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    5,
+    2
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "i2",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    14,
+    13
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "i3",
+   "name": "Mandrake",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    3,
+    10
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "i4",
+   "name": "Kelpie",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    16,
+    5
+   ],
+   "zone": "A"
+  }
+ ],
+ "events": [
+  {
+   "id": "w1",
+   "when": {
+    "type": "turn",
+    "turn": 1,
+    "phase": "enemy"
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "r1",
+       "name": "Bicorn",
+       "role": "revenger",
+       "hp": "PH",
+       "pos": [
+        10,
+        0
+       ]
+      },
+      {
+       "id": "r2",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        9,
+        0
+       ]
+      }
+     ]
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "w2",
+   "when": {
+    "type": "turn",
+    "turn": 2,
+    "phase": "enemy"
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "r3",
+       "name": "Kelpie",
+       "role": "brute",
+       "hp": "PH",
+       "pos": [
+        19,
+        7
+       ]
+      },
+      {
+       "id": "r4",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        19,
+        9
+       ]
+      },
+      {
+       "id": "r5",
+       "name": "Onmoraki",
+       "role": "launcher",
+       "hp": "PH",
+       "pos": [
+        19,
+        5
+       ]
+      }
+     ]
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "w3",
+   "when": {
+    "type": "turn",
+    "turn": 3,
+    "phase": "enemy"
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "r6",
+       "name": "Inugami",
+       "role": "brute",
+       "hp": "PH",
+       "pos": [
+        9,
+        15
+       ]
+      },
+      {
+       "id": "r7",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        11,
+        15
+       ]
+      },
+      {
+       "id": "r8",
+       "name": "Silky",
+       "role": "supporter",
+       "hp": "PH",
+       "pos": [
+        10,
+        15
+       ]
+      }
+     ]
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "w4",
+   "when": {
+    "type": "turn",
+    "turn": 4,
+    "phase": "enemy"
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "r9",
+       "name": "Bicorn",
+       "role": "revenger",
+       "hp": "PH",
+       "pos": [
+        0,
+        6
+       ]
+      },
+      {
+       "id": "r10",
+       "name": "Bicorn",
+       "role": "revenger",
+       "hp": "PH",
+       "pos": [
+        0,
+        9
+       ]
+      },
+      {
+       "id": "r11",
+       "name": "Nekomata",
+       "role": "teleporter",
+       "hp": "PH",
+       "pos": [
+        0,
+        4
+       ]
+      },
+      {
+       "id": "r12",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        0,
+        11
+       ]
+      }
+     ]
+    }
+   ],
+   "repeat": false
+  }
+ ],
+ "bonus": [
+  {
+   "type": "clear"
+  },
+  {
+   "type": "noKo"
+  },
+  {
+   "type": "hurtFewerThan",
+   "n": 6
+  }
+ ],
+ "intent": "中央 1 层高台（四面梯子）是据点；每个敌方回合从四个方向轮流来援军，越来越多；油桶在入口，炸援军。不用清场，撑满 5 回合即胜。",
+ "tiles": [
+  "###..............###",
+  "###..............###",
+  "###..............###",
+  ".........h..........",
+  "....h..........h....",
+  "....................",
+  ".......h....h.......",
+  "................h...",
+  "...h................",
+  ".......h....h.......",
+  "....................",
+  "....h..........h....",
+  "..........h.........",
+  "###..............###",
+  "###..............###",
+  "###..............###"
+ ],
+ "heights": [
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000001111110000000",
+  "00000001111110000000",
+  "00000001111110000000",
+  "00000001111110000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000"
+ ],
+ "zones": [
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA"
+ ]
+}

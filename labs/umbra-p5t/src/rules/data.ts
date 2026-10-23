@@ -184,8 +184,8 @@ export function enemy(id: string, name: string, role: UnitDef['role'], hp: numbe
 }
 export const dummyTarget = (id: string, name = '木人', hp = 250): UnitDef =>
   enemy(id, name, 'brute', hp, { move: 0, melee: 0 });
-export const prop = (id: string, kind: 'barrel' | 'box' | 'speaker', o: Partial<UnitDef> = {}): UnitDef => ({
-  id, name: kind === 'barrel' ? '油桶' : kind === 'box' ? '木箱' : '喇叭', side: 'neutral', prop: kind,
+export const prop = (id: string, kind: 'barrel' | 'box' | 'speaker' | 'flag', o: Partial<UnitDef> = {}): UnitDef => ({
+  id, name: kind === 'barrel' ? '油桶' : kind === 'box' ? '木箱' : kind === 'flag' ? '旗帜' : '喇叭', side: 'neutral', prop: kind,
   maxHp: kind === 'barrel' ? 1 : 999, maxSp: 0, move: 0, melee: 0, skills: [], ...o,
 });
 

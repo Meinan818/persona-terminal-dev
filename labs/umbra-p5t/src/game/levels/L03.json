@@ -1,0 +1,291 @@
+{
+ "id": "L03",
+ "name": "城下町·钟楼",
+ "scene": "castle_clock_tower",
+ "width": 20,
+ "height": 16,
+ "win": {
+  "type": "defeatAllExcept",
+  "exceptIds": [
+   "skull_ctrl"
+  ]
+ },
+ "objective": "击败全部敌人（不能击倒被操控的龙司）",
+ "turnTarget": 9,
+ "party": [
+  [
+   "joker",
+   9,
+   14
+  ],
+  [
+   "mona",
+   7,
+   14
+  ],
+  [
+   "panther",
+   11,
+   14
+  ]
+ ],
+ "reserves": [],
+ "lose": [
+  {
+   "type": "allKo"
+  },
+  {
+   "type": "unitKo",
+   "unitId": "skull_ctrl"
+  }
+ ],
+ "doors": [],
+ "switches": [],
+ "elevators": [],
+ "links": [
+  {
+   "a": [
+    6,
+    2
+   ],
+   "b": [
+    5,
+    2
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    13,
+    2
+   ],
+   "b": [
+    14,
+    2
+   ],
+   "kind": "ladder"
+  }
+ ],
+ "cameras": [],
+ "chests": [],
+ "props": [],
+ "enemies": [
+  {
+   "id": "skull_ctrl",
+   "name": "被操控的龙司",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    10,
+    5
+   ],
+   "zone": "B",
+   "protected": true,
+   "note": "用 SKULL 数值；不给 1 MORE；不能被推落致死"
+  },
+  {
+   "id": "a1",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    4,
+    9
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "a2",
+   "name": "Mandrake",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    15,
+    9
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "a3",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    17,
+    12
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "b1",
+   "name": "Jack-o'-Lantern",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    3,
+    2
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "b2",
+   "name": "Jack-o'-Lantern",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    16,
+    2
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "b3",
+   "name": "Kelpie",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    6,
+    5
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "b4",
+   "name": "Agathion",
+   "role": "supporter",
+   "hp": "PH",
+   "pos": [
+    13,
+    5
+   ],
+   "zone": "B"
+  }
+ ],
+ "events": [
+  {
+   "id": "unlockB",
+   "when": {
+    "type": "reach",
+    "pos": [
+     9,
+     8
+    ],
+    "side": "ally"
+   },
+   "do": [
+    {
+     "type": "unlockZone",
+     "zone": "B"
+    },
+    {
+     "type": "message",
+     "text": "龙司……被操控了！别打倒他！"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "w1",
+   "when": {
+    "type": "turn",
+    "turn": 4,
+    "phase": "enemy"
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "r1",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        0,
+        0
+       ]
+      },
+      {
+       "id": "r2",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        19,
+        0
+       ]
+      }
+     ]
+    }
+   ],
+   "repeat": false
+  }
+ ],
+ "bonus": [
+  {
+   "type": "clear"
+  },
+  {
+   "type": "withinTurns",
+   "n": 9
+  },
+  {
+   "type": "noKo"
+  }
+ ],
+ "intent": "照 P5T M3：龙司被洗脑在敌方，会主动来打你；打他只会扣血，HP 归 0=失败。走到桥头 (9,8) 开 B 区钟楼。",
+ "tiles": [
+  "........####........",
+  "........####........",
+  "........####........",
+  ".......h....h.......",
+  "....h..........h....",
+  ".........h..........",
+  "....................",
+  "########....########",
+  "....................",
+  "....................",
+  "...h......H.....h...",
+  "........h...h.......",
+  "......h.......h.....",
+  "....................",
+  "....................",
+  "...................."
+ ],
+ "heights": [
+  "00000000000000000000",
+  "00111100000000111100",
+  "00111100000000111100",
+  "00111100000000111100",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000"
+ ],
+ "zones": [
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA"
+ ]
+}

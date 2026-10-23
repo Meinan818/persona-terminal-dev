@@ -1,0 +1,342 @@
+{
+ "id": "L02",
+ "name": "城下町·兵营",
+ "scene": "castle_barracks",
+ "width": 20,
+ "height": 16,
+ "win": {
+  "type": "defeatAll"
+ },
+ "objective": "击败全部敌人",
+ "turnTarget": 9,
+ "party": [
+  [
+   "joker",
+   3,
+   14
+  ],
+  [
+   "skull",
+   5,
+   14
+  ],
+  [
+   "mona",
+   7,
+   14
+  ]
+ ],
+ "reserves": [],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "doors": [
+  {
+   "id": "D1",
+   "cells": [
+    [
+     6,
+     9
+    ],
+    [
+     7,
+     9
+    ]
+   ],
+   "open": false
+  },
+  {
+   "id": "D2",
+   "cells": [
+    [
+     12,
+     5
+    ],
+    [
+     12,
+     6
+    ]
+   ],
+   "open": false
+  }
+ ],
+ "switches": [
+  {
+   "id": "s1",
+   "pos": [
+    2,
+    11
+   ],
+   "kind": "toggle",
+   "doors": [
+    "D1"
+   ]
+  }
+ ],
+ "elevators": [],
+ "links": [],
+ "cameras": [],
+ "chests": [
+  {
+   "id": "ch1",
+   "pos": [
+    1,
+    1
+   ],
+   "reward": {
+    "gp": 3
+   }
+  }
+ ],
+ "props": [],
+ "enemies": [
+  {
+   "id": "a1",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    11,
+    10
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "a2",
+   "name": "Mandrake",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    16,
+    13
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "b1",
+   "name": "Kelpie",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    3,
+    5
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "b2",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    8,
+    4
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "b3",
+   "name": "Agathion",
+   "role": "supporter",
+   "hp": "PH",
+   "pos": [
+    6,
+    1
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "c1",
+   "name": "Inugami",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    15,
+    7
+   ],
+   "zone": "C"
+  },
+  {
+   "id": "c2",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    17,
+    3
+   ],
+   "zone": "C"
+  },
+  {
+   "id": "c3",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    14,
+    1
+   ],
+   "zone": "C"
+  },
+  {
+   "id": "c4",
+   "name": "卫兵队长 Bicorn",
+   "role": "revenger",
+   "hp": "PH",
+   "pos": [
+    18,
+    1
+   ],
+   "zone": "C",
+   "isLeader": true
+  }
+ ],
+ "events": [
+  {
+   "id": "unlockB",
+   "when": {
+    "type": "doorOpened",
+    "id": "D1"
+   },
+   "do": [
+    {
+     "type": "unlockZone",
+     "zone": "B"
+    },
+    {
+     "type": "message",
+     "text": "门开了！里面还有敌人。"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "clearB",
+   "when": {
+    "type": "zoneCleared",
+    "zone": "B"
+   },
+   "do": [
+    {
+     "type": "door",
+     "id": "D2",
+     "open": true
+    },
+    {
+     "type": "unlockZone",
+     "zone": "C"
+    },
+    {
+     "type": "message",
+     "text": "通往兵营深处的门打开了。"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "w1",
+   "when": {
+    "type": "enterZone",
+    "zone": "C",
+    "side": "ally"
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "r1",
+       "name": "Kelpie",
+       "role": "brute",
+       "hp": "PH",
+       "pos": [
+        0,
+        1
+       ]
+      },
+      {
+       "id": "r2",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        11,
+        0
+       ]
+      }
+     ]
+    }
+   ],
+   "repeat": false
+  }
+ ],
+ "bonus": [
+  {
+   "type": "clear"
+  },
+  {
+   "type": "withinTurns",
+   "n": 9
+  },
+  {
+   "type": "noKo"
+  }
+ ],
+ "intent": "A 区练手；踩开关开 D1 进 B 区（宝箱+3 敌）；B 区清完 D2 自动开进 C 区（队长+3 敌），进 C 区背后来 2 援军。",
+ "tiles": [
+  "............#.......",
+  "............#.......",
+  ".....h...h..#.h...h.",
+  "............#...H...",
+  "......H.....#....h..",
+  "........h...........",
+  "...h...........h....",
+  "............#.......",
+  "............#.......",
+  "######..############",
+  "....................",
+  "....h............h..",
+  "..........h....h....",
+  "............H.......",
+  "....................",
+  "...................."
+ ],
+ "heights": [
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000"
+ ],
+ "zones": [
+  "BBBBBBBBBBBBACCCCCCC",
+  "BBBBBBBBBBBBACCCCCCC",
+  "BBBBBBBBBBBBACCCCCCC",
+  "BBBBBBBBBBBBACCCCCCC",
+  "BBBBBBBBBBBBACCCCCCC",
+  "BBBBBBBBBBBBACCCCCCC",
+  "BBBBBBBBBBBBACCCCCCC",
+  "BBBBBBBBBBBBACCCCCCC",
+  "BBBBBBBBBBBBACCCCCCC",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA"
+ ]
+}

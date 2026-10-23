@@ -1,0 +1,368 @@
+{
+ "id": "L05",
+ "name": "城墙·双塔",
+ "scene": "castle_wall_towers",
+ "width": 20,
+ "height": 16,
+ "win": {
+  "type": "defeatAll"
+ },
+ "objective": "击败全部敌人",
+ "turnTarget": 10,
+ "party": [
+  [
+   "joker",
+   9,
+   14
+  ],
+  [
+   "panther",
+   7,
+   14
+  ],
+  [
+   "fox",
+   11,
+   14
+  ]
+ ],
+ "reserves": [
+  "skull",
+  "mona"
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "doors": [],
+ "switches": [
+  {
+   "id": "s1",
+   "pos": [
+    8,
+    12
+   ],
+   "kind": "elevator",
+   "elevator": "L1"
+  }
+ ],
+ "elevators": [
+  {
+   "id": "L1",
+   "cells": [
+    [
+     9,
+     9
+    ],
+    [
+     10,
+     9
+    ],
+    [
+     9,
+     10
+    ],
+    [
+     10,
+     10
+    ]
+   ],
+   "low": 0,
+   "high": 2,
+   "up": false
+  }
+ ],
+ "links": [
+  {
+   "a": [
+    3,
+    5
+   ],
+   "b": [
+    3,
+    4
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    16,
+    5
+   ],
+   "b": [
+    16,
+    4
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    8,
+    5
+   ],
+   "b": [
+    9,
+    5
+   ],
+   "kind": "jump"
+  },
+  {
+   "a": [
+    7,
+    5
+   ],
+   "b": [
+    7,
+    4
+   ],
+   "kind": "ladder"
+  }
+ ],
+ "cameras": [],
+ "chests": [],
+ "props": [
+  {
+   "id": "box1",
+   "kind": "box",
+   "pos": [
+    5,
+    12
+   ]
+  },
+  {
+   "id": "box2",
+   "kind": "box",
+   "pos": [
+    14,
+    12
+   ]
+  },
+  {
+   "id": "box3",
+   "kind": "box",
+   "pos": [
+    10,
+    6
+   ]
+  },
+  {
+   "id": "bar1",
+   "kind": "barrel",
+   "pos": [
+    8,
+    3
+   ]
+  }
+ ],
+ "enemies": [
+  {
+   "id": "t1",
+   "name": "Jack-o'-Lantern 狙击",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    3,
+    2
+   ],
+   "zone": "A",
+   "gunRange": 7
+  },
+  {
+   "id": "t2",
+   "name": "Jack-o'-Lantern 狙击",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    16,
+    2
+   ],
+   "zone": "A",
+   "gunRange": 7
+  },
+  {
+   "id": "w1",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    8,
+    4
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "w2",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    12,
+    3
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "g1",
+   "name": "Kelpie",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    6,
+    7
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "g2",
+   "name": "Kelpie",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    13,
+    7
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "g3",
+   "name": "Agathion",
+   "role": "supporter",
+   "hp": "PH",
+   "pos": [
+    10,
+    2
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "g4",
+   "name": "Onmoraki",
+   "role": "launcher",
+   "hp": "PH",
+   "pos": [
+    9,
+    6
+   ],
+   "zone": "A"
+  }
+ ],
+ "events": [
+  {
+   "id": "w1",
+   "when": {
+    "type": "enemiesLeft",
+    "n": 6
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "r1",
+       "name": "Bicorn",
+       "role": "revenger",
+       "hp": "PH",
+       "pos": [
+        0,
+        14
+       ]
+      },
+      {
+       "id": "r2",
+       "name": "Bicorn",
+       "role": "revenger",
+       "hp": "PH",
+       "pos": [
+        19,
+        14
+       ]
+      },
+      {
+       "id": "r3",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        10,
+        1
+       ]
+      }
+     ]
+    },
+    {
+     "type": "message",
+     "text": "城门方向来了援军！"
+    }
+   ],
+   "repeat": false
+  }
+ ],
+ "bonus": [
+  {
+   "type": "clear"
+  },
+  {
+   "type": "withinTurns",
+   "n": 10
+  },
+  {
+   "type": "noKo"
+  }
+ ],
+ "intent": "两座 2 层狙击塔压制中路；梯子爬上去=高打低；中间升降台 (9-10,9-10) 由 s1 升到 2 层可直接跳塔；木箱可打碎/推走；敌人剩 6 时城门援军。",
+ "tiles": [
+  "####################",
+  "....................",
+  "....h..........h....",
+  "....................",
+  "....................",
+  "....................",
+  "....................",
+  ".........h..........",
+  "......h......h......",
+  "..H..............H..",
+  "....................",
+  "....h..........h....",
+  "....................",
+  "....................",
+  "....................",
+  "...................."
+ ],
+ "heights": [
+  "00000000000000000000",
+  "00222200000000222200",
+  "00222200000000222200",
+  "00222211111111222200",
+  "00222211111111222200",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000"
+ ],
+ "zones": [
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA"
+ ]
+}

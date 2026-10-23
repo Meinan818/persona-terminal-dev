@@ -124,6 +124,18 @@ export interface UnitDef {
   facing?: Vec;
   /** 喇叭：禁止的行动种类 */
   bans?: ('melee' | 'gun' | 'skill')[];
+  /** 关卡区域（LEVELS.md：未解锁区域的敌人隐藏且不行动）；缺省 = 不属于任何区域（始终激活，增援即如此） */
+  zone?: string;
+  /** 受保护（L03 被操控的龙司）：打到 HP 1 停住不倒、不能被打倒（Down）、不给 1 MORE */
+  protected?: boolean;
+  /** 不离开该区域（AI 移动限制，L08 Boss） */
+  staysInZone?: string;
+  /** AI 强制目标（单位 id，如 toshiro） */
+  aiTarget?: string;
+  /** 旗子归属：'ally' = 艾丽娜 Flag of Freedom（缺省），'enemy' = 关卡里的敌方红旗（玛丽旗帜） */
+  flagSide?: 'ally' | 'enemy';
+  /** 关卡物件可被攻击摧毁（喇叭等；缺省不可） */
+  destructible?: boolean;
 }
 
 export interface Unit extends UnitDef {
@@ -192,7 +204,11 @@ export type EventTrigger =
   | { type: 'enemiesLeft'; n: number }
   | { type: 'unitKo'; unitId: string }
   | { type: 'reach'; pos: Vec; side?: 'ally' | 'enemy' }
-  | { type: 'flag'; flag: string };
+  | { type: 'flag'; flag: string }
+  | { type: 'doorOpened'; id: string }
+  | { type: 'zoneCleared'; zone: string }
+  | { type: 'enterZone'; zone: string; side?: 'ally' | 'enemy' }
+  | { type: 'everyTurns'; n: number; phase?: 'player' | 'enemy'; whileAlive?: string; flag?: string };
 export type EventAction =
   | { type: 'spawn'; units: { def: UnitDef; pos: Vec }[] }
   | { type: 'message'; text: string }
@@ -200,8 +216,19 @@ export type EventAction =
   | { type: 'door'; id: string; open: boolean }
   | { type: 'setWin'; win: WinCondition; objective?: string }
   | { type: 'setFlag'; flag: string }
-  | { type: 'end'; outcome: 'won' | 'lost'; reason?: string };
+  | { type: 'end'; outcome: 'won' | 'lost'; reason?: string }
+  | { type: 'unlockZone'; zone: string }
+  | { type: 'moveUnit'; unitId: string; pos: Vec };
 export interface MapEvent { id: string; when: EventTrigger; do: EventAction[]; repeat?: boolean }
+
+/** 败北条件（mission-types.md：我方全灭 / 关键 NPC 倒下 / 超回合 / 击倒受保护单位） */
+export type LoseCondition =
+  | { type: 'allKo' }
+  | { type: 'unitKo'; unitId: string }
+  | { type: 'turnLimit'; n: number };
+
+/** 宝箱：走上去 = 拿到，reward 先记账（LEVELS.md） */
+export interface ChestDef { id: string; pos: Vec; reward: Record<string, number> }
 
 export type WinCondition =
   | { type: 'defeatAll' }
@@ -246,6 +273,13 @@ export interface MapDef {
   elevators?: ElevatorDef[];
   cameras?: CameraDef[];
   events?: MapEvent[];
+  /** 每格区域字母 [y][x]（LEVELS.md）；缺省 = 无区域系统 */
+  zones?: string[][];
+  /** 开局已解锁区域；有 zones 时缺省 = ['A'] */
+  unlockedZones?: string[];
+  /** 败北条件；缺省 = [allKo]（turnLimit 字段仍兼容） */
+  lose?: LoseCondition[];
+  chests?: ChestDef[];
 }
 
 export type Difficulty = 'safety' | 'easy' | 'normal' | 'hard' | 'merciless';
@@ -335,6 +369,9 @@ export type BattleEvent =
   | { type: 'alarm'; cameraId: string; unitId: string }
   | { type: 'reinforce'; unitIds: string[]; source: string }
   | { type: 'message'; text: string }
+  | { type: 'zoneUnlocked'; zone: string }
+  | { type: 'chest'; chestId: string; unitId: string; reward: Record<string, number> }
+  | { type: 'teleport'; unitId: string; from: Vec; to: Vec }
   | { type: 'bossPhase'; unitId: string; phase: number }
   | { type: 'decoy'; unitId: string; ownerId: string; at: Vec }
   | { type: 'flagPlaced'; unitId: string; ownerId: string; at: Vec }

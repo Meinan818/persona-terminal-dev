@@ -1301,6 +1301,7 @@ export class Battle {
       case 'unitKo': return !!this.units.find((x) => x.id === w.unitId)?.ko;
       case 'reach': return this.units.some((u) => !u.ko && u.side === (w.side ?? 'ally') && eq(u.pos, w.pos));
       case 'flag': return this.rt.flags.has(w.flag);
+      default: return false;
     }
   }
   runEvents() {

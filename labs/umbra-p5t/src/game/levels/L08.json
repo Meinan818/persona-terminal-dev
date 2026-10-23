@@ -1,0 +1,374 @@
+{
+ "id": "L08",
+ "name": "城堡·中庭",
+ "scene": "castle_courtyard_night",
+ "width": 20,
+ "height": 16,
+ "win": {
+  "type": "defeatTarget",
+  "targetId": "boss"
+ },
+ "objective": "7 回合内击败近卫队长",
+ "turnTarget": 6,
+ "party": [
+  [
+   "joker",
+   2,
+   14
+  ],
+  [
+   "skull",
+   4,
+   14
+  ],
+  [
+   "queen",
+   3,
+   12
+  ]
+ ],
+ "reserves": [
+  "panther",
+  "mona"
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  },
+  {
+   "type": "turnLimit",
+   "n": 7
+  }
+ ],
+ "doors": [
+  {
+   "id": "D1",
+   "cells": [
+    [
+     4,
+     9
+    ],
+    [
+     5,
+     9
+    ]
+   ],
+   "open": false
+  },
+  {
+   "id": "D2",
+   "cells": [
+    [
+     15,
+     9
+    ],
+    [
+     16,
+     9
+    ]
+   ],
+   "open": true
+  },
+  {
+   "id": "D3",
+   "cells": [
+    [
+     10,
+     3
+    ],
+    [
+     10,
+     4
+    ]
+   ],
+   "open": false
+  }
+ ],
+ "switches": [
+  {
+   "id": "s1",
+   "pos": [
+    8,
+    12
+   ],
+   "kind": "toggle",
+   "doors": [
+    "D1",
+    "D3"
+   ]
+  },
+  {
+   "id": "s2",
+   "pos": [
+    13,
+    11
+   ],
+   "kind": "toggle",
+   "doors": [
+    "D2"
+   ]
+  }
+ ],
+ "elevators": [],
+ "links": [
+  {
+   "a": [
+    17,
+    3
+   ],
+   "b": [
+    17,
+    2
+   ],
+   "kind": "ladder"
+  }
+ ],
+ "cameras": [],
+ "chests": [],
+ "props": [],
+ "enemies": [
+  {
+   "id": "a1",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    10,
+    11
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "a2",
+   "name": "Mandrake",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    15,
+    13
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "a3",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    17,
+    10
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "b1",
+   "name": "Kelpie",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    3,
+    6
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "b2",
+   "name": "Pixie",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    7,
+    2
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "b3",
+   "name": "Silky",
+   "role": "supporter",
+   "hp": "PH",
+   "pos": [
+    5,
+    1
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "boss",
+   "name": "近卫队长 Berith",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    18,
+    1
+   ],
+   "zone": "C",
+   "isTarget": true,
+   "staysInZone": "C"
+  },
+  {
+   "id": "g1",
+   "name": "护卫 Archangel",
+   "role": "shielder",
+   "hp": "PH",
+   "pos": [
+    16,
+    3
+   ],
+   "zone": "C",
+   "facing": [
+    0,
+    1
+   ]
+  },
+  {
+   "id": "g2",
+   "name": "护卫 Archangel",
+   "role": "shielder",
+   "hp": "PH",
+   "pos": [
+    13,
+    1
+   ],
+   "zone": "C",
+   "facing": [
+    -1,
+    0
+   ]
+  }
+ ],
+ "events": [
+  {
+   "id": "unlockB",
+   "when": {
+    "type": "doorOpened",
+    "id": "D1"
+   },
+   "do": [
+    {
+     "type": "unlockZone",
+     "zone": "B"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "unlockC",
+   "when": {
+    "type": "doorOpened",
+    "id": "D3"
+   },
+   "do": [
+    {
+     "type": "unlockZone",
+     "zone": "C"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "unlockC2",
+   "when": {
+    "type": "reach",
+    "pos": [
+     15,
+     8
+    ],
+    "side": "ally"
+   },
+   "do": [
+    {
+     "type": "unlockZone",
+     "zone": "C"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "warn",
+   "when": {
+    "type": "turn",
+    "turn": 6,
+    "phase": "player"
+   },
+   "do": [
+    {
+     "type": "message",
+     "text": "只剩 2 回合！"
+    }
+   ],
+   "repeat": false
+  }
+ ],
+ "bonus": [
+  {
+   "type": "clear"
+  },
+  {
+   "type": "withinTurns",
+   "n": 6
+  },
+  {
+   "type": "noKo"
+  }
+ ],
+ "intent": "粉红开关迷宫：s1 开 D1/D3 关 D2，s2 反之；Boss 在 C 区角落，有 2 护卫；Boss 不会离开 C 区；7 回合不打倒=失败。走对路线 4 回合到 Boss。",
+ "turnLimit": 7,
+ "unlockedZones": [
+  "A"
+ ],
+ "tiles": [
+  "..........#.........",
+  "..........#.........",
+  "....H.....#.h.......",
+  "......h.............",
+  "..............H.....",
+  "..h.......#..h......",
+  "..........#....h....",
+  ".......h..#.........",
+  "..........#.........",
+  "####..#########..###",
+  "....................",
+  "...h................",
+  ".................h..",
+  ".......h....h.......",
+  "....................",
+  "...................."
+ ],
+ "heights": [
+  "00000000000000001111",
+  "00000000000000001111",
+  "00000000000000001111",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000"
+ ],
+ "zones": [
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA"
+ ]
+}

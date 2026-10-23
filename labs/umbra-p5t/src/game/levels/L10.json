@@ -1,0 +1,421 @@
+{
+ "id": "L10",
+ "name": "玛丽城·王座厅",
+ "scene": "castle_throne_room",
+ "width": 20,
+ "height": 16,
+ "win": {
+  "type": "defeatTarget",
+  "targetId": "boss"
+ },
+ "objective": "击败城主的影子",
+ "turnTarget": 12,
+ "party": [
+  [
+   "joker",
+   9,
+   14
+  ],
+  [
+   "skull",
+   7,
+   14
+  ],
+  [
+   "panther",
+   11,
+   14
+  ]
+ ],
+ "reserves": [
+  "mona",
+  "fox",
+  "queen"
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "doors": [
+  {
+   "id": "D1",
+   "cells": [
+    [
+     6,
+     4
+    ],
+    [
+     7,
+     4
+    ]
+   ],
+   "open": false
+  },
+  {
+   "id": "D2",
+   "cells": [
+    [
+     12,
+     4
+    ],
+    [
+     13,
+     4
+    ]
+   ],
+   "open": false
+  }
+ ],
+ "switches": [],
+ "elevators": [],
+ "links": [
+  {
+   "a": [
+    6,
+    5
+   ],
+   "b": [
+    6,
+    4
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    13,
+    5
+   ],
+   "b": [
+    13,
+    4
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    9,
+    7
+   ],
+   "b": [
+    9,
+    6
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    10,
+    7
+   ],
+   "b": [
+    10,
+    6
+   ],
+   "kind": "ladder"
+  }
+ ],
+ "cameras": [],
+ "chests": [],
+ "props": [],
+ "enemies": [
+  {
+   "id": "boss",
+   "name": "城主的影子",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    10,
+    5
+   ],
+   "zone": "A",
+   "isTarget": true,
+   "hpFloor": 0.5,
+   "bossPhase": 1,
+   "note": "阶段1 只近战+单体技能，数值 PH"
+  },
+  {
+   "id": "k1",
+   "name": "侍卫 Archangel",
+   "role": "shielder",
+   "hp": "PH",
+   "pos": [
+    7,
+    6
+   ],
+   "zone": "A",
+   "facing": [
+    0,
+    1
+   ]
+  },
+  {
+   "id": "k2",
+   "name": "侍卫 Archangel",
+   "role": "shielder",
+   "hp": "PH",
+   "pos": [
+    12,
+    6
+   ],
+   "zone": "A",
+   "facing": [
+    0,
+    1
+   ]
+  },
+  {
+   "id": "k3",
+   "name": "Jack-o'-Lantern",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    0,
+    6
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "k4",
+   "name": "Jack-o'-Lantern",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    19,
+    6
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "k5",
+   "name": "Agathion",
+   "role": "supporter",
+   "hp": "PH",
+   "pos": [
+    9,
+    5
+   ],
+   "zone": "A"
+  }
+ ],
+ "events": [
+  {
+   "id": "phase2",
+   "when": {
+    "type": "hpBelow",
+    "unitId": "boss",
+    "ratio": 0.5
+   },
+   "do": [
+    {
+     "type": "message",
+     "text": "「这点程度……别得意了！」"
+    },
+    {
+     "type": "door",
+     "id": "D1",
+     "open": true
+    },
+    {
+     "type": "door",
+     "id": "D2",
+     "open": true
+    },
+    {
+     "type": "unlockZone",
+     "zone": "C"
+    },
+    {
+     "type": "setUnit",
+     "unitId": "boss",
+     "patch": {
+      "hpFloor": 0,
+      "skills": [
+       "maragi",
+       "zionga"
+      ]
+     },
+     "healRatio": 0.2,
+     "bossPhase": 2
+    },
+    {
+     "type": "moveUnit",
+     "unitId": "boss",
+     "pos": [
+      9,
+      1
+     ]
+    },
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "p1",
+       "name": "护卫 Archangel",
+       "role": "shielder",
+       "hp": "PH",
+       "pos": [
+        8,
+        2
+       ],
+       "facing": [
+        0,
+        1
+       ]
+      },
+      {
+       "id": "p2",
+       "name": "护卫 Archangel",
+       "role": "shielder",
+       "hp": "PH",
+       "pos": [
+        11,
+        2
+       ],
+       "facing": [
+        0,
+        1
+       ]
+      },
+      {
+       "id": "p3",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        3,
+        1
+       ]
+      },
+      {
+       "id": "p4",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        16,
+        1
+       ]
+      }
+     ]
+    },
+    {
+     "type": "setWin",
+     "win": {
+      "type": "defeatTarget",
+      "targetId": "boss"
+     },
+     "objective": "击败城主"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "summon",
+   "when": {
+    "type": "everyTurns",
+    "n": 3,
+    "phase": "enemy",
+    "flag": "phase2"
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "sN",
+       "name": "Pixie",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        5,
+        0
+       ]
+      },
+      {
+       "id": "sN",
+       "name": "Kelpie",
+       "role": "brute",
+       "hp": "PH",
+       "pos": [
+        14,
+        0
+       ]
+      }
+     ]
+    }
+   ],
+   "repeat": true
+  }
+ ],
+ "bonus": [
+  {
+   "type": "clear"
+  },
+  {
+   "type": "withinTurns",
+   "n": 12
+  },
+  {
+   "type": "noKo"
+  }
+ ],
+ "intent": "阶段1：Boss 坐王座（锁血 50%），两侧侍卫；打到 50% → 阶段2：Boss 回 20% 血、王座后门 D1/D2 打开露出 C 区阳台（高 1 层）、Boss 跳到阳台、召唤 4 个护卫、目标改为「击败城主」、Boss 获得全体技能。阶段2 Boss 每 3 回合召 2 个小兵。",
+ "unlockedZones": [
+  "A"
+ ],
+ "tiles": [
+  "##................##",
+  "##.......h........##",
+  "##..h..........h..##",
+  "##................##",
+  "######..####..######",
+  "....................",
+  "....................",
+  "..#..............#..",
+  "h.#..h........h..#.h",
+  "....................",
+  ".........H..........",
+  "..#....h....h....#..",
+  "..#..............#..",
+  "....h..........h....",
+  "....................",
+  "...................."
+ ],
+ "heights": [
+  "00111111111111111100",
+  "00111111111111111100",
+  "00111111111111111100",
+  "00111111111111111100",
+  "00000000000000000000",
+  "00000000111100000000",
+  "00000000111100000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000"
+ ],
+ "zones": [
+  "CCCCCCCCCCCCCCCCCCCC",
+  "CCCCCCCCCCCCCCCCCCCC",
+  "CCCCCCCCCCCCCCCCCCCC",
+  "CCCCCCCCCCCCCCCCCCCC",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA"
+ ]
+}

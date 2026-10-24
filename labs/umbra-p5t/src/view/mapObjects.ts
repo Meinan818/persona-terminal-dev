@@ -318,12 +318,15 @@ export class MapObjects {
     }
   }
 
-  // ---------- 区域边界：P5T 式红色铁链虚线（所有区域交界，解锁前后都显示） ----------
+  // ---------- 区域边界：P5T 式隔离桩 + 下垂红铁链（所有区域交界，解锁前后都显示） ----------
+  // 每段格边两端立黑色短桩（金顶），桩顶之间挂一段下垂的红色粗链环；全部 InstancedMesh（桩/桩顶/链环 3 次 draw call）
   private buildZoneChains() {
     const z = this.b.map.zones;
     if (!z) return;
     const W = this.b.map.width, H = this.b.map.height;
-    const edges: { c: THREE.Vector3; along: 'x' | 'z' }[] = [];
+    const segs: { a: THREE.Vector3; b: THREE.Vector3 }[] = [];
+    const posts = new Map<string, THREE.Vector3>();
+    const post = (x: number, z: number, y: number) => { const k = `${x},${z}`; const o = posts.get(k); if (!o || o.y < y) posts.set(k, new THREE.Vector3(x, y, z)); return posts.get(k)!; };
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       if (this.b.map.tiles[y][x] === 'wall') continue;
       for (const [dx, dy] of [[1, 0], [0, 1]] as const) {
@@ -331,28 +334,42 @@ export class MapObjects {
         if (nx >= W || ny >= H || this.b.map.tiles[ny][nx] === 'wall') continue;
         const za = this.b.zoneOf({ x, y }), zb = this.b.zoneOf({ x: nx, y: ny });
         if (!za || !zb || za === zb) continue;
-        const pa = this.d.w2v({ x, y }, 0.05), pb = this.d.w2v({ x: nx, y: ny }, 0.05);
-        edges.push({ c: new THREE.Vector3((pa.x + pb.x) / 2, Math.max(pa.y, pb.y), (pa.z + pb.z) / 2), along: dx ? 'z' : 'x' });
+        const pa = this.d.w2v({ x, y }, 0), pb = this.d.w2v({ x: nx, y: ny }, 0);
+        const gy = Math.max(pa.y, pb.y), cx = (pa.x + pb.x) / 2, cz = (pa.z + pb.z) / 2;
+        // 格边两端
+        const e0 = dx ? [cx, cz - 0.5] : [cx - 0.5, cz], e1 = dx ? [cx, cz + 0.5] : [cx + 0.5, cz];
+        segs.push({ a: post(e0[0], e0[1], gy), b: post(e1[0], e1[1], gy) });
       }
     }
-    if (!edges.length) return;
-    const PER = 6;
-    const geo = new THREE.TorusGeometry(0.066, 0.022, 5, 10);
-    geo.scale(1.45, 1, 1);
-    const mesh = new THREE.InstancedMesh(geo, std(RED, { emissive: RED, emissiveIntensity: 0.45, metalness: 0.4, roughness: 0.4 }), edges.length * PER);
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1);
+    if (!segs.length) return;
+    const PH = 0.42; // 桩高
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
+    // 桩 + 桩顶
+    const pl = [...posts.values()];
+    const pm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.04, 0.055, PH, 8), std(BLACK, { roughness: 0.5, metalness: 0.3 }), pl.length);
+    const pt = new THREE.InstancedMesh(new THREE.SphereGeometry(0.06, 10, 8), std(0xe2b33a, { emissive: 0x4a3000, metalness: 0.6, roughness: 0.3 }), pl.length);
+    const pb = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.09, 0.1, 0.05, 10), std(BLACK, { roughness: 0.5 }), pl.length);
+    pl.forEach((p, i) => {
+      m.compose(new THREE.Vector3(p.x, p.y + PH / 2, p.z), q.identity(), one); pm.setMatrixAt(i, m);
+      m.compose(new THREE.Vector3(p.x, p.y + PH + 0.03, p.z), q, one); pt.setMatrixAt(i, m);
+      m.compose(new THREE.Vector3(p.x, p.y + 0.025, p.z), q, one); pb.setMatrixAt(i, m);
+    });
+    // 链环：沿下垂曲线排，长轴顺切线，相邻环绕切线转 90°
+    const PER = 9;
+    const geo = new THREE.TorusGeometry(0.05, 0.02, 6, 12);
+    geo.scale(1.5, 1, 1);
+    const cm = new THREE.InstancedMesh(geo, std(RED, { emissive: RED, emissiveIntensity: 0.55, metalness: 0.35, roughness: 0.35 }), segs.length * PER);
+    const X = new THREE.Vector3(1, 0, 0);
     let i = 0;
-    for (const ed of edges) for (let k = 0; k < PER; k++) {
-      const t = (k + 0.5) / PER - 0.5;
-      const p = ed.c.clone(); if (ed.along === 'x') p.x += t; else p.z += t;
-      // 链环交替：平躺 / 竖立，长轴沿边
-      e.set(k % 2 ? 0 : -Math.PI / 2, ed.along === 'x' ? 0 : Math.PI / 2, 0, 'YXZ');
-      q.setFromEuler(e);
-      m.compose(p, q, one); mesh.setMatrixAt(i++, m);
+    const at = (s: { a: THREE.Vector3; b: THREE.Vector3 }, t: number) => new THREE.Vector3().lerpVectors(s.a, s.b, t).setY(THREE.MathUtils.lerp(s.a.y, s.b.y, t) + PH - 0.03 - 0.16 * Math.sin(t * Math.PI));
+    for (const sg of segs) for (let k = 0; k < PER; k++) {
+      const t = (k + 0.5) / PER;
+      const p = at(sg, t), tan = at(sg, Math.min(1, t + 0.02)).sub(at(sg, Math.max(0, t - 0.02))).normalize();
+      q.setFromUnitVectors(X, tan);
+      if (k % 2) q.multiply(new THREE.Quaternion().setFromAxisAngle(X, Math.PI / 2));
+      m.compose(p, q, one); cm.setMatrixAt(i++, m);
     }
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.renderOrder = 2;
-    this.group.add(mesh);
+    for (const im of [pm, pt, pb, cm]) { im.instanceMatrix.needsUpdate = true; im.castShadow = true; im.renderOrder = 2; im.raycast = () => {}; im.computeBoundingSphere(); this.group.add(im); }
   }
 
   // ---------- 未解锁区域 ----------

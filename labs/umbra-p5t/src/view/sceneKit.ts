@@ -24,6 +24,8 @@ interface Scene extends Theme {
   floors: [number, number];
   half: string[]; full: string[]; strip: string[];
   bunting: number; night?: boolean; carpet?: boolean;
+  /** 地图内路灯数（夜景：靠在掩体格角上，远点采样均匀撒开） */
+  inLamps?: number;
 }
 const DARK: Theme = { bg: 0x141418, fogNear: 999, fogFar: 1000, hemiSky: 0xffffff, hemiGround: 0x302020, hemiInt: 1.4, sunColor: 0xffffff, sunInt: 1.6, tileA: 0x3b3b44, tileB: 0x33333b, tileHigh: 0x4a4656, tileHighB: 0x423e4d, wall: 0x55555f, cobble: false };
 
@@ -54,7 +56,7 @@ const SCENES: Record<string, Scene> = {
   L07: S({ style: 'town', half: ['planter', 'planter', 'barrels', 'stone'], full: ['statue', 'stall', 'crateStack'], strip: ['flagpole', 'pots', 'lamp', 'stall', 'bench', 'pots', 'flagpole', 'lamp'], bunting: 4 }),
   // L08 收容所·中庭（夜）：树篱花园、玫瑰花坛
   L08: S({ style: 'garden', sky: ['#040820', '#0b1a4a', '#1f3478'], bg: 0x0b1a4a, fogNear: 40, fogFar: 78, hemiSky: 0x7f92d8, hemiGround: 0x1a1d38, hemiInt: 0.95, sunColor: 0x9fb4ff, sunInt: 0.9,
-    tileA: 0xb8b0c0, tileB: 0xaea6b6, tileHigh: 0xc8c0d0, tileHighB: 0xbeb6c6, ground: 0x78897f, half: ['hedge', 'planter', 'stone'], full: ['tree', 'hedgeTall', 'statue'], strip: ['hedge', 'lamp', 'tree', 'pots', 'lamp', 'hedge', 'bench', 'lamp'], bunting: 0, night: true }),
+    tileA: 0xb8b0c0, tileB: 0xaea6b6, tileHigh: 0xc8c0d0, tileHighB: 0xbeb6c6, ground: 0x78897f, half: ['hedge', 'planter', 'stone'], full: ['tree', 'hedgeTall', 'statue'], strip: ['hedge', 'lamp', 'tree', 'pots', 'lamp', 'hedge', 'bench', 'lamp'], bunting: 0, night: true, inLamps: 8 }),
   // L09 篝火广场（夜）：火盆、摊位、拒马
   L09: S({ style: 'town', sky: ['#050a26', '#10205a', '#2c3c80'], bg: 0x10205a, fogNear: 40, fogFar: 78, hemiSky: 0x8496d8, hemiGround: 0x1c1a34, hemiInt: 0.95, sunColor: 0xa8b8ff, sunInt: 0.85, half: ['barrels', 'crates', 'sandbags'], full: ['spikes', 'stall', 'brazier'], strip: ['brazier', 'stall', 'lamp', 'barrels', 'crates', 'lamp', 'stall', 'brazier', 'pots', 'lamp'], bunting: 3, night: true }),
   // L10 玛丽城·王座厅：红地毯、金柱、长桌、书柜
@@ -256,6 +258,26 @@ export class SceneKit {
       const left = x > 0 && map.tiles[y][x - 1] === t, up = y > 0 && map.tiles[y - 1][x] === t;
       const r = left || up ? (seedOf(`${map.id}${t}${left ? x - 1 : x}${left ? y : y - 1}`) % list.length) : ((rnd() * list.length) | 0);
       this.recipe(inner, list[r], x, hOf(x, y) * LV, y, rnd);
+    }
+
+    // ---- 地图内路灯（夜景）：挑掩体格，远点采样撒开，灯杆立在掩体朝地图中心的一角，不占可走格 ----
+    if (sc.inLamps) {
+      const cand: [number, number][] = [];
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const t = map.tiles[y][x]; if ((t === 'half' || t === 'full') && claimed.has(`${x},${y}`)) cand.push([x, y]); }
+      const cx = (W - 1) / 2, cz = (H - 1) / 2;
+      const chosen: [number, number][] = [];
+      if (cand.length) chosen.push(cand.reduce((a, c) => (Math.hypot(c[0] - cx, c[1] - cz) < Math.hypot(a[0] - cx, a[1] - cz) ? c : a)));
+      while (chosen.length < Math.min(sc.inLamps, cand.length)) {
+        let best = cand[0], bd = -1;
+        for (const c of cand) { const d = Math.min(...chosen.map((o) => Math.hypot(c[0] - o[0], c[1] - o[1]))); if (d > bd) { bd = d; best = c; } }
+        chosen.push(best);
+      }
+      for (const [x, y] of chosen) {
+        const ox = x < cx ? 0.36 : -0.36, oz = y < cz ? 0.36 : -0.36;
+        const lx = x + ox, lz = y + oz, y0 = hOf(x, y) * LV;
+        inner.put(T('lantern'), lx, y0, lz, 0, 1.15);
+        this.glows.push({ x: lx, y: y0 + 1.05, z: lz, fire: false, side: -1 });
+      }
     }
 
     // ---- 高差：高台侧面石墙 + 边缘栏杆（梯子/跳台的边留空） ----

@@ -13,6 +13,7 @@ import {
   VelvetApiError,
   velvetRequest,
   getAuthGeneration,
+  SESSION_EXPIRED_MESSAGE,
 } from '../velvetApi';
 
 const ok = (body: unknown, status = 200) =>
@@ -63,6 +64,21 @@ describe('velvetApi 认证客户端', () => {
       body: { velvet: 'not_found' },
     });
     expect(isAuthenticated()).toBe(false);
+  });
+
+  it('已登录请求收到 401：清理过期会话并保留“本机数据仍在”的明确提示', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(ok({ token: 'expired-token', record: { id: 'u-expired', email: 'old@example.com' } }))
+      .mockResolvedValueOnce(ok({ velvet: 'not_found' }, 401)));
+    await authWithPassword('old@example.com', 'pw123456');
+
+    await expect(velvetRequest('/api/me')).rejects.toMatchObject({
+      status: 401,
+      message: SESSION_EXPIRED_MESSAGE,
+    });
+    expect(isAuthenticated()).toBe(false);
+    expect(localStorage.getItem('velvet.jwt')).toBeNull();
+    expect(localStorage.getItem('velvet.record')).toBeNull();
   });
 
   it('注册冲突 409：抛 VelvetApiError status=409', async () => {
@@ -130,5 +146,38 @@ describe('velvetApi 认证客户端', () => {
       clearAuth();
       expect(useCloudStore.getState()).toMatchObject({ cloudUser: null, syncStatus: 'idle', lastError: null });
     } finally { off(); }
+  });
+
+  it('换账号或重新登录时清空上一会话的同步水位、冲突与待确认提示', async () => {
+    const off = useCloudStore.getState().initAuthListener();
+    try {
+      vi.stubGlobal('fetch', vi.fn()
+        .mockResolvedValueOnce(ok({ token: 'token-a', record: { id: 'account-a', email: 'a@example.com' } }))
+        .mockResolvedValueOnce(ok({ token: 'token-b', record: { id: 'account-b', email: 'b@example.com' } })));
+      await authWithPassword('account-a', 'pw123456');
+      useCloudStore.setState({
+        lastSyncAt: new Date('2026-10-24T00:00:00.000Z'),
+        lastSyncDirection: 'pull',
+        conflictPending: true,
+        diffWarning: { tables: [] } as never,
+        mergeOpen: true,
+        mergeHint: ['activities'],
+      });
+
+      clearAuth();
+      await authWithPassword('account-b', 'pw123456');
+
+      expect(useCloudStore.getState()).toMatchObject({
+        cloudUser: expect.objectContaining({ id: 'account-b' }),
+        lastSyncAt: null,
+        lastSyncDirection: null,
+        conflictPending: false,
+        diffWarning: null,
+        mergeOpen: false,
+        mergeHint: null,
+      });
+    } finally {
+      off();
+    }
   });
 });

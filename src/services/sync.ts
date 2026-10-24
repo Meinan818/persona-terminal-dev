@@ -285,18 +285,50 @@ const AUTO_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 /** 表级计数差 ≥ 阈值即视为"较大差异" */
 const SIGNIFICANT_DIFF_THRESHOLD = 10;
 
-const saveLastSync = (date: Date): void => {
+const accountStorageKey = (base: string): string => {
+  const userId = getUserId();
+  return userId ? `${base}:${userId}` : base;
+};
+
+const readAccountStorage = (base: string): string | null => {
   try {
-    localStorage.setItem(LAST_SYNC_KEY, date.toISOString());
+    const scoped = localStorage.getItem(accountStorageKey(base));
+    if (scoped !== null) return scoped;
+    const userId = getUserId();
+    const owner = readSyncOwner();
+    if (userId && owner && owner !== userId) return null;
+    return localStorage.getItem(base);
   } catch {
-    /* localStorage 不可用时静默忽略 */
+    return null;
   }
+};
+
+const writeAccountStorage = (base: string, value: string): void => {
+  try {
+    localStorage.setItem(accountStorageKey(base), value);
+  } catch {
+    /* ignore */
+  }
+};
+
+const removeAccountStorage = (base: string): void => {
+  try {
+    localStorage.removeItem(accountStorageKey(base));
+    const userId = getUserId();
+    if (userId && readSyncOwner() === userId) localStorage.removeItem(base);
+  } catch {
+    /* ignore */
+  }
+};
+
+const saveLastSync = (date: Date): void => {
+  writeAccountStorage(LAST_SYNC_KEY, date.toISOString());
 };
 
 /** 读取上次同步完成时间（多设备冲突判定用） */
 export const readLastSync = (): Date | null => {
   try {
-    const s = localStorage.getItem(LAST_SYNC_KEY);
+    const s = readAccountStorage(LAST_SYNC_KEY);
     if (!s) return null;
     const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
@@ -307,7 +339,7 @@ export const readLastSync = (): Date | null => {
 
 const readLastAutoSync = (): Date | null => {
   try {
-    const s = localStorage.getItem(LAST_AUTO_SYNC_KEY);
+    const s = readAccountStorage(LAST_AUTO_SYNC_KEY);
     if (!s) return null;
     const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
@@ -317,11 +349,7 @@ const readLastAutoSync = (): Date | null => {
 };
 
 const saveLastAutoSync = (date: Date): void => {
-  try {
-    localStorage.setItem(LAST_AUTO_SYNC_KEY, date.toISOString());
-  } catch {
-    /* ignore */
-  }
+  writeAccountStorage(LAST_AUTO_SYNC_KEY, date.toISOString());
 };
 
 export const readSyncOwner = (): string | null => {
@@ -333,7 +361,7 @@ const saveSyncOwner = (userId: string): void => {
 
 const readAutoSyncFail = (): { at: number; n: number } | null => {
   try {
-    const raw = localStorage.getItem(AUTO_SYNC_FAIL_KEY);
+    const raw = readAccountStorage(AUTO_SYNC_FAIL_KEY);
     if (!raw) return null;
     const v = JSON.parse(raw) as { at?: number; n?: number };
     return typeof v.at === 'number' && typeof v.n === 'number' ? { at: v.at, n: v.n } : null;
@@ -341,10 +369,10 @@ const readAutoSyncFail = (): { at: number; n: number } | null => {
 };
 const noteAutoSyncFail = (): void => {
   const prev = readAutoSyncFail();
-  try { localStorage.setItem(AUTO_SYNC_FAIL_KEY, JSON.stringify({ at: Date.now(), n: (prev?.n ?? 0) + 1 })); } catch { /* ignore */ }
+  writeAccountStorage(AUTO_SYNC_FAIL_KEY, JSON.stringify({ at: Date.now(), n: (prev?.n ?? 0) + 1 }));
 };
 const clearAutoSyncFail = (): void => {
-  try { localStorage.removeItem(AUTO_SYNC_FAIL_KEY); } catch { /* ignore */ }
+  removeAccountStorage(AUTO_SYNC_FAIL_KEY);
 };
 
 /**
@@ -381,10 +409,10 @@ export class SyncSchemaError extends Error {
 }
 
 const readCloudSeen = (): Record<string, string> => {
-  try { return JSON.parse(localStorage.getItem(CLOUD_SEEN_KEY) || '{}') as Record<string, string>; } catch { return {}; }
+  try { return JSON.parse(readAccountStorage(CLOUD_SEEN_KEY) || '{}') as Record<string, string>; } catch { return {}; }
 };
 const rememberCloudSeen = (versions: Record<string, string>): void => {
-  try { localStorage.setItem(CLOUD_SEEN_KEY, JSON.stringify({ ...readCloudSeen(), ...versions })); } catch { /* ignore */ }
+  writeAccountStorage(CLOUD_SEEN_KEY, JSON.stringify({ ...readCloudSeen(), ...versions }));
 };
 
 // ── 云端快照：认得分片（key#n）与 _meta ──────────────────────────────────────
@@ -1437,8 +1465,10 @@ export const deleteAllCloudData = async (): Promise<{ deleted: number }> => {
     cloudStore.setLastSyncAt(null);
     cloudStore.setLastSyncDirection(null);
     cloudStore.setSyncStatus('idle');
-    try { localStorage.removeItem(LAST_SYNC_KEY); } catch { /* ignore */ }
-    try { localStorage.removeItem(LAST_AUTO_SYNC_KEY); } catch { /* ignore */ }
+    removeAccountStorage(LAST_SYNC_KEY);
+    removeAccountStorage(LAST_AUTO_SYNC_KEY);
+    removeAccountStorage(CLOUD_SEEN_KEY);
+    removeAccountStorage(AUTO_SYNC_FAIL_KEY);
     return { deleted };
   } catch (err) {
     cloudStore.setSyncStatus('error');

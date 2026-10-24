@@ -15,7 +15,7 @@ export function SysModal({ open, onBackdrop, title, subtitle, children, wide, on
     <Portal>
       <AnimatePresence>
         {open && (
-          <motion.div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 'var(--p3r-z-system)' as unknown as number }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div className={`fixed inset-0 flex items-center justify-center p-4 ${open ? '' : 'pointer-events-none'}`} style={{ zIndex: 'var(--p3r-z-system)' as unknown as number }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="absolute inset-0" style={{ background: 'var(--p3r-scrim)' }} onClick={onBackdrop} />
             <motion.div role="dialog" aria-modal="true" className={`relative w-full min-w-0 ${wide ? 'max-w-[480px]' : 'max-w-[440px]'}`}
               initial={anim ? { opacity: 0, scale: 0.92, x: -14, y: 14 } : { opacity: 0 }} animate={{ opacity: 1, scale: 1, x: 0, y: 0 }} exit={anim ? { opacity: 0, scale: 0.92, x: -14, y: 14 } : { opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 32 }}>

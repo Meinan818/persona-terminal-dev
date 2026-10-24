@@ -13,20 +13,25 @@ import { ATTR_ORDER, D } from '@/p5r-red/mock/data';
 import { useAppStore } from '@/store';
 import { useAccountIdentity } from '@/themes/accountAuth';
 import { deleteAllCloudData } from '@/services/sync';
+import { accountOps } from '@/themes/accountOperations';
+import { useCloudStore } from '@/store/cloud';
 import { ObCard, ObRow, ObSw, ObMsg, ObNote, ObSub, ObLink, ObBtn, ObLi, BusyBtn, useMsgBox, ObConfirm, ObTa } from './ObKit';
 
 export const TOTAL = ATTR_ORDER.reduce((s, k) => s + D.attrs[k].pts, 0);
 
 /* ═════ 账号页确认框（Account.tsx 4 个 ConfirmDialog） ═════ */
 export type AccountConfirmKind = 'logout' | 'reset' | 'deleteCloud' | 'pull';
-let delFailOnce = true;
 export function AccountConfirm({ kind, open, onClose, onDone }: { kind: AccountConfirmKind; open: boolean; onClose: () => void; onDone?: () => void }) {
-  const done = (m: string) => () => { toast(m); onDone?.(); };
+  const done = (message: string, action: () => void | Promise<void>) => async () => {
+    await action();
+    toast(message);
+    onDone?.();
+  };
   switch (kind) {
-    case 'logout': return <ObConfirm open={open} onClose={onClose} title="退出登录？" desc="退出后此设备将停止同步，但本机数据不会被删除。下次登录同一账号可继续。" confirm="确认退出" busy="退出中…" onConfirm={done('已退出登录 · 本机数据仍在')} />;
-    case 'reset': return <ObConfirm open={open} onClose={onClose} title="确认重置数据" danger desc="此操作将删除所有用户数据，包括：" list={['所有行为记录', '所有成就进度', '所有技能解锁', '所有属性进度']} warn="此操作无法撤销！" confirm="确认重置" onConfirm={() => { void useAppStore.getState().resetAllData().then(done('已清空所有数据')).catch(() => toast('重置失败，请重试')); }} />;
-    case 'deleteCloud': return <ObConfirm open={open} onClose={onClose} title="永久删除云端账号？" danger desc="将删除：" list={['云端账号（邮箱 / UserID / 档案）', '云端同步的全部数据', '与好友的 COOP 关联']} warn="本机数据不受影响，仍完整保留在此设备上。" confirm="永久删除" busy="正在删除…" fail="注销失败：网络不可用，请稍后再试（再点一次演示成功）" failNow={() => { const f = delFailOnce; delFailOnce = !delFailOnce; return f; }} onConfirm={done('云端账号已永久删除')} />;
-    default: return <ObConfirm open={open} onClose={onClose} title="从云端拉取数据？" desc={<>会用云端数据<b>覆盖本机</b>。如果本机有未同步的改动，请先点"立即同步到云端"。</>} confirm="确认拉取" busy="拉取中…" onConfirm={done('已从云端拉取')} />;
+    case 'logout': return <ObConfirm open={open} onClose={onClose} title="退出登录？" desc="退出后此设备将停止同步，但本机数据不会被删除。下次登录同一账号可继续。" confirm="确认退出" busy="退出中…" onConfirm={done('已退出登录 · 本机数据仍在', () => accountOps.logout())} />;
+    case 'reset': return <ObConfirm open={open} onClose={onClose} title="确认重置数据" danger desc="此操作将删除所有用户数据，包括：" list={['所有行为记录', '所有成就进度', '所有技能解锁', '所有属性进度']} warn="此操作无法撤销！" confirm="确认重置" onConfirm={done('已清空所有数据', () => useAppStore.getState().resetAllData())} />;
+    case 'deleteCloud': return <ObConfirm open={open} onClose={onClose} title="永久删除云端账号？" danger desc="将删除：" list={['云端账号（邮箱 / UserID / 档案）', '云端同步的全部数据', '与好友的 COOP 关联']} warn="本机数据不受影响，仍完整保留在此设备上。" confirm="永久删除" busy="正在删除…" onConfirm={done('云端账号已永久删除', () => accountOps.deleteAccount())} />;
+    default: return <ObConfirm open={open} onClose={onClose} title="从云端拉取数据？" desc={<>会用云端数据<b>覆盖本机</b>。如果本机有未同步的改动，请先点"立即同步到云端"。</>} confirm="确认拉取" busy="拉取中…" onConfirm={done('已从云端拉取', () => accountOps.pull())} />;
   }
 }
 
@@ -75,10 +80,26 @@ export const CLOUD_STATES: [string, string][] = [['signed-in', '已登录'], ['n
 export function CloudCard({ state = 'signed-in' }: { state?: string }) {
   const [dlg, setDlg] = useState<AccountConfirmKind | null>(null);
   const [copied, setCopied] = useState(false);
-  const [msg, setMsg] = useMsgBox(state === 'fail' ? <ObMsg kind="err">同步失败：Failed to fetch</ObMsg> : null);
+  const [pushing, setPushing] = useState(false);
+  const cloudStatus = useCloudStore((s) => s.syncStatus);
+  const lastCloudError = useCloudStore((s) => s.lastError);
+  const [msg, setMsg] = useMsgBox(state === 'fail' ? <ObMsg kind="err">{lastCloudError ?? '同步失败，请稍后再试'}</ObMsg> : null);
   // 邮箱 / UserID 取真实登录态（原来写死 yeji_0610 / yeji.mask@example.com）。
   const identity = useAccountIdentity();
   const uid = identity.username;
+  const push = async () => {
+    if (pushing || cloudStatus === 'syncing') return;
+    setPushing(true);
+    setMsg(null);
+    try {
+      const result = await accountOps.push();
+      if (result === 'pushed') setMsg(<ObMsg kind="ok">已同步到云端</ObMsg>);
+    } catch (error) {
+      setMsg(<ObMsg kind="err">{error instanceof Error ? error.message : '同步失败'}</ObMsg>);
+    } finally {
+      setPushing(false);
+    }
+  };
   if (state === 'unconf') return <ObCard title="云同步" en="CLOUD" seed={601} id="sec-cloud"><p className="ob-p">云同步功能未配置。如需启用，请在 <code>.env.local</code> 中设置 <code>VITE_API_URL</code>。</p></ObCard>;
   if (state === 'signed-out' || state === 'expired') return (
     <ObCard title="云同步" en="CLOUD" seed={603} id="sec-cloud">
@@ -88,7 +109,7 @@ export function CloudCard({ state = 'signed-in' }: { state?: string }) {
       <ObBtn seed={602} size="lg" className="ob-wide" onClick={() => openOverlay('account-login')}>登录云端</ObBtn>
     </ObCard>
   );
-  const noid = state === 'noid', syncing = state === 'syncing';
+  const noid = state === 'noid', syncing = state === 'syncing' || cloudStatus === 'syncing' || pushing;
   return (
     <>
       <ObCard title="云同步" en="CLOUD" seed={607} id="sec-cloud">
@@ -101,12 +122,12 @@ export function CloudCard({ state = 'signed-in' }: { state?: string }) {
           <button type="button" className="ob-acc-pts" aria-label="查看总点数" onClick={() => toast(`总点数 ${TOTAL}`)}><small>总点数</small><b>{TOTAL}</b></button>
         </div>
         {noid && <div className="ob-msg warn">你还没设置 UserID，好友系统无法找到你。 <ObLink onClick={() => openOverlay('account-manage', { state: 'userid-new' })}>现在就设一个 →</ObLink></div>}
-        {msg}
+        {msg ?? (state === 'fail' && lastCloudError ? <ObMsg kind="err">{lastCloudError}</ObMsg> : null)}
         <div className="ob-acts left">
-          {syncing ? <ObBtn seed={604} disabled>同步中…</ObBtn> : <BusyBtn label="立即同步到云端" busy="同步中…" seed={604} msg="已同步到云端" sfxKey="success" to={setMsg} />}
+          <ObBtn seed={604} disabled={syncing} onClick={() => void push()}>{syncing ? '同步中…' : '立即同步到云端'}</ObBtn>
           <ObBtn tone="ink" seed={605} onClick={() => setDlg('pull')}>↓ 拉取</ObBtn>
         </div>
-        <ObLi onClick={() => openOverlay('account-sync-merge')}><b>和云端对一对（查阅并合并，避免误覆盖）</b><em>›</em></ObLi>
+        <ObLi onClick={() => useCloudStore.getState().openMerge(null)}><b>和云端对一对（查阅并合并，避免误覆盖）</b><em>›</em></ObLi>
         <div className="ob-acts left"><ObBtn tone="paper" seed={606} onClick={() => setDlg('logout')}>退出登录</ObBtn><ObLink danger onClick={() => setDlg('deleteCloud')}>永久删除云端账号</ObLink></div>
       </ObCard>
       <PrivacyCard />

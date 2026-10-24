@@ -203,7 +203,7 @@ export function ObSheet({ open, onClose, title, seed = 31, wide, states, state, 
 /** 二段确认（v3 confirmDlg：ConfirmDialog 基座的 B 组形态 —— 切角纸卡 + 星爆章 + 双钮） */
 export interface ObConfirmProps {
   open: boolean; onClose: () => void; title: ReactNode; desc?: ReactNode; list?: ReactNode[]; warn?: ReactNode; extra?: ReactNode;
-  confirm?: string; cancel?: string; danger?: boolean; busy?: string; fail?: ReactNode; failNow?: () => boolean; onConfirm?: () => void; seed?: number;
+  confirm?: string; cancel?: string; danger?: boolean; busy?: string; fail?: ReactNode; failNow?: () => boolean; onConfirm?: () => void | Promise<void>; seed?: number;
 }
 export function ObConfirm({ open, onClose, title, desc, list, warn, extra, confirm = '确认', cancel = '取消', danger, busy, fail, failNow, onConfirm, seed = 77 }: ObConfirmProps) {
   const [mounted, setMounted] = useState(open);
@@ -228,6 +228,25 @@ export function ObConfirm({ open, onClose, title, desc, list, warn, extra, confi
   if (!mounted) return null;
   const ok = () => {
     if (isBusy) return;
+    let result: void | Promise<void>;
+    try {
+      result = onConfirm?.();
+    } catch (error) {
+      setErr(<ObMsg kind="err">{error instanceof Error ? error.message : '操作失败，请重试'}</ObMsg>);
+      return;
+    }
+    if (result && typeof (result as Promise<void>).then === 'function') {
+      setBusy(true);
+      setErr(null);
+      result.then(
+        () => { setBusy(false); onClose(); },
+        (error) => {
+          setBusy(false);
+          setErr(<ObMsg kind="err">{error instanceof Error ? error.message : '操作失败，请重试'}</ObMsg>);
+        },
+      );
+      return;
+    }
     if (busy) { setBusy(true); setTimeout(() => { setBusy(false); if (fail && failNow?.()) { setErr(<ObMsg kind="err">{fail}</ObMsg>); return; } onClose(); onConfirm?.(); }, 1000); }
     else { onClose(); onConfirm?.(); }
   };

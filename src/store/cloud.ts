@@ -73,12 +73,27 @@ export const useCloudStore = create<CloudState>(set => ({
    */
   initAuthListener: () => {
     if (!cloudEnabled) return () => {};
+    let currentUserId = getAuthRecord()?.id ?? null;
     return onAuthChange((record, reason) => {
       const expired = reason === 'session-expired';
-      set({
-        cloudUser: (record as CloudUser | null) ?? null,
-        syncStatus: expired ? 'error' : 'idle',
-        lastError: expired ? SESSION_EXPIRED_MESSAGE : null,
+      const nextUserId = record?.id ?? null;
+      const identityChanged = nextUserId !== currentUserId;
+      currentUserId = nextUserId;
+      set(() => {
+        const resetAccountState = identityChanged ? {
+          lastSyncAt: null,
+          lastSyncDirection: null,
+          conflictPending: false,
+          diffWarning: null,
+          mergeOpen: false,
+          mergeHint: null,
+        } : {};
+        return {
+          ...resetAccountState,
+          cloudUser: (record as CloudUser | null) ?? null,
+          syncStatus: expired ? 'error' : 'idle',
+          lastError: expired ? SESSION_EXPIRED_MESSAGE : null,
+        };
       });
     });
   },

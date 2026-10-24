@@ -5,6 +5,7 @@ const h = vi.hoisted(() => {
   const rows = new Map<string, Row[]>();
   const table = (key: string) => ({
     toArray: async () => rows.get(key) ?? [],
+    count: async () => (rows.get(key) ?? []).length,
     clear: async () => { rows.set(key, []); },
     bulkAdd: async (values: Row[]) => { rows.set(key, values); },
     where: () => ({ equals: () => ({ toArray: async () => [] }) }),
@@ -14,7 +15,7 @@ const h = vi.hoisted(() => {
     state: { settings: {}, user: null, attributes: [], achievements: [], skills: [], initializeApp: vi.fn(), runTasksMergeMigration: vi.fn() },
     cloud: { setSyncStatus: vi.fn(), setLastError: vi.fn(), setLastSyncAt: vi.fn(), setLastSyncDirection: vi.fn() },
     records: [] as { id: string; key: string; value: unknown; updated: string; created: string }[],
-    listRows: vi.fn(), deleteRow: vi.fn(), updateRow: vi.fn(), createRow: vi.fn(), updateProfile: vi.fn(),
+    listRows: vi.fn(), countRows: vi.fn(), deleteRow: vi.fn(), updateRow: vi.fn(), createRow: vi.fn(), updateProfile: vi.fn(),
     transaction: vi.fn(async (_mode: string, _tables: unknown, fn: () => Promise<void>) => fn()),
   };
 });
@@ -27,10 +28,10 @@ vi.mock('@/services/velvetApi', () => ({ getAuthGeneration: () => h.generation, 
 vi.mock('@/services/userDataApi', () => ({
   isAuthenticated: () => !!h.me, getUserId: () => h.me,
   listRows: h.listRows, getRow: async (id: string) => h.records.find(r => r.id === id),
-  deleteRow: h.deleteRow, updateRow: h.updateRow, createRow: h.createRow,
+  countRows: h.countRows, deleteRow: h.deleteRow, updateRow: h.updateRow, createRow: h.createRow,
   updateProfile: h.updateProfile, clearAvatar: async () => {},
 }));
-import { pullAll, pushAll } from '../sync';
+import { pullAll, pushAll, readLastSync, syncOnLogin } from '../sync';
 import { createUmbraRunRecord } from '@/umbra/runtime';
 import { createFreshUmbraProfile, normalizeUmbraProfile } from '@/umbra/state';
 
@@ -43,6 +44,7 @@ describe('云同步数据安全', () => {
     vi.clearAllMocks(); localStorage.clear(); h.rows.clear(); h.records = []; h.me = 'test-a'; h.generation = 0;
     h.rows.set('activities', local);
     h.listRows.mockImplementation(async () => h.records);
+    h.countRows.mockResolvedValue({ totalItems: 0 });
     h.deleteRow.mockResolvedValue(undefined); h.updateProfile.mockResolvedValue({});
     h.updateRow.mockResolvedValue({ id: 'updated', updated: '2026-10-13T14:00:00.000Z' });
     h.createRow.mockResolvedValue({ id: 'created', updated: '2026-10-13T14:00:00.000Z' });
@@ -82,6 +84,15 @@ describe('云同步数据安全', () => {
     await pullAll();
     expect(h.rows.get('activities')).toEqual([]);
     expect(h.cloud.setSyncStatus).toHaveBeenLastCalledWith('success');
+  });
+  it('最近同步时间按账号隔离，换号后不沿用上一份档案的水位', async () => {
+    h.records = [row('activities', [])];
+    await pullAll();
+    expect(localStorage.getItem('velvet:lastSyncAt')).toBeNull();
+    expect(readLastSync()).toBeInstanceOf(Date);
+
+    h.me = 'test-b';
+    expect(readLastSync()).toBeNull();
   });
   it.each(['2026-10-13T10:00:00.000Z', '2026-10-13 10:00:00.000Z', '2026-10-13T13:00:00+03:00'])('按时间选择较新分片（旧表时间 %s）', async date => {
     h.records = [meta(1), row('activities', [{ id: 'old' }], date), row('activities#1', [{ id: 'new' }])];
@@ -125,6 +136,36 @@ describe('云同步数据安全', () => {
     h.listRows.mockImplementation(async () => { h.me = 'test-b'; h.generation++; return []; });
     await expect(pushAll()).rejects.toThrow();
     expect(h.createRow).not.toHaveBeenCalled(); expect(h.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('换到另一账号且云端为空时，本机旧档案不自动推送', async () => {
+    h.rows.set('users', [{ id: 'local-user', name: '本机档案' }]);
+    localStorage.setItem('velvet:syncOwner', 'old-account');
+
+    await expect(syncOnLogin()).resolves.toBe('conflict');
+    expect(h.createRow).not.toHaveBeenCalled();
+    expect(localStorage.getItem('velvet:syncOwner')).toBe('old-account');
+  });
+
+  it('登录后查不到云端状态时不把本机旧档案当新账号数据推送', async () => {
+    h.rows.set('users', [{ id: 'local-user', name: '本机档案' }]);
+    h.countRows.mockRejectedValue(new Error('Failed to fetch'));
+
+    await expect(syncOnLogin()).rejects.toThrow('连不上云端');
+    expect(h.createRow).not.toHaveBeenCalled();
+    expect(h.cloud.setLastError).toHaveBeenCalledWith('连不上云端，先不同步；网络好了再到账号页手动同步');
+  });
+
+  it('记账、预算和资产始终留在本地，不被全量推送带上云', async () => {
+    h.rows.set('ledgerEntries', [{ id: 'entry-local' }]);
+    h.rows.set('budgets', [{ id: 'budget-local' }]);
+    h.rows.set('assets', [{ id: 'asset-local' }]);
+    h.records = [];
+
+    await pushAll();
+
+    const pushedKeys = h.createRow.mock.calls.map(([key]) => String(key));
+    expect(pushedKeys.some((key) => key.startsWith('ledger') || key === 'budgets' || key === 'assets')).toBe(false);
   });
 
   it('UMBRA 正式资料与 Demo 行程经过推送、清空和拉取后保持完整', async () => {

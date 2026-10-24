@@ -19,6 +19,9 @@ import { SyncPrivacySection } from '@yellow/screens/overlays/SyncPrivacyPanel.p4
 import { AccountConfirmView, type ConfirmKind } from '@yellow/screens/overlays/AccountConfirms.p4g';
 import { useAccountData } from '@yellow/adapters/pkg5';
 import { useAppStore } from '@/store';
+import { useCloudStore } from '@/store/cloud';
+import { SESSION_EXPIRED_MESSAGE } from '@/services/velvetApi';
+import { accountOps } from '@/themes/accountOperations';
 
 const Sub = ({ children }: { children: ReactNode }) => (
   <p className="mb-2 flex items-center gap-2 font-display text-body font-bold text-p4g-ink"><span aria-hidden className="h-4 w-2 -skew-x-12 bg-p4g-orange" />{children}</p>
@@ -29,7 +32,16 @@ export default function Account({ params }: PageProps) {
   const toast = useToast();
   const resetAllData = useAppStore((s) => s.resetAllData);
   const p = usePresence();
-  const derivedState = CLOUD_ENABLED ? (SIGNED_IN ? 'signed-in' : 'signed-out') : 'unconfigured';
+  const cloudStatus = useCloudStore((s) => s.syncStatus);
+  const lastCloudError = useCloudStore((s) => s.lastError);
+  const lastSyncAt = useCloudStore((s) => s.lastSyncAt);
+  const derivedState = CLOUD_ENABLED
+    ? (!SIGNED_IN && lastCloudError === SESSION_EXPIRED_MESSAGE
+      ? 'expired'
+      : SIGNED_IN
+        ? (cloudStatus === 'syncing' ? 'syncing' : cloudStatus === 'error' ? 'sync-error' : CLOUD_USER.username ? 'signed-in' : 'no-uid')
+        : 'signed-out')
+    : 'unconfigured';
   const [state, setState] = useState(params.get('state') ?? derivedState);
   useEffect(() => { if (!params.get('state')) setState(derivedState); }, [derivedState, params]);
   const [tip, setTip] = useState(true);
@@ -44,8 +56,8 @@ export default function Account({ params }: PageProps) {
   const [imgBusy, setImgBusy] = useState(false);
   const [uidCopied, setUidCopied] = useState(false);
   const [points, setPoints] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [lastSync, setLastSync] = useState<string | null>('3 分钟前');
+  const [syncing, setSyncing] = useState(cloudStatus === 'syncing' || params.get('state') === 'syncing');
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmKind | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [login, setLogin] = useState(false);
@@ -61,8 +73,27 @@ export default function Account({ params }: PageProps) {
   const focus = sec ?? (params.get('state') ? 'cloud' : null);
   useEffect(() => { const el = focus === 'data' ? dataRef.current : focus === 'privacy' ? privRef.current : focus === 'cloud' ? cloudRef.current : null; if (el) window.setTimeout(() => el.scrollIntoView({ block: 'start' }), 350); }, [focus]);
   useEffect(() => { setUid(state === 'no-uid' ? null : CLOUD_USER.username); }, [state, CLOUD_USER.username]);
+  useEffect(() => { setSyncing(cloudStatus === 'syncing'); }, [cloudStatus]);
   const ask = (k: ConfirmKind) => { setConfirm(k); setConfirmOpen(true); };
-  const signedIn = state === 'signed-in' || state === 'no-uid' || state === 'sync-error';
+  const signedIn = state === 'signed-in' || state === 'no-uid' || state === 'sync-error' || state === 'syncing';
+  const lastSync = lastSyncAt
+    ? new Date(lastSyncAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : null;
+  const pushCloud = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const result = await accountOps.push();
+      if (result === 'pushed') toast.success('已同步到云端');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '同步失败，请稍后再试';
+      setSyncError(message);
+      toast.error(`同步失败：${message}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const download = () => { const blob = new Blob([JSON.stringify({ user: { name: p.name }, attributes: ATTRIBUTES }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); const name = `maskaria-backup-${new Date().toISOString().slice(0, 10)}.json`; a.href = url; a.download = name; a.click(); setLink({ name, size: `${Math.max(1, Math.round(blob.size / 1024))} KB` }); setTimeout(() => URL.revokeObjectURL(url), 2000); };
   const copyJson = () => { const s = JSON.stringify({ user: { name: p.name } }); (navigator.clipboard?.writeText(s) ?? Promise.reject()).then(() => { setCopyState('ok'); setMsg('已复制到剪贴板（186 KB）'); }, () => { setCopyState('err'); setMsg('复制失败，请尝试下载'); }); setTimeout(() => setCopyState(null), 1800); };
@@ -198,12 +229,12 @@ export default function Account({ params }: PageProps) {
                     )}
                   </div>
                 </div>
-                {state === 'sync-error' && <p role="alert" className="rounded-sm border-3 border-p4g-black bg-p4g-red px-3 py-2 text-meta font-bold text-white">同步失败：网络连接失败，请稍后再试</p>}
+                {(state === 'sync-error' || syncError) && <p role="alert" className="rounded-sm border-3 border-p4g-black bg-p4g-red px-3 py-2 text-meta font-bold text-white">同步失败：{syncError ?? lastCloudError ?? '请稍后再试'}</p>}
                 <div className="grid min-w-0 grid-cols-[1fr_auto] gap-2">
-                  <P4Button size="lg" disabled={syncing} onClick={() => { setSyncing(true); setTimeout(() => { setSyncing(false); setLastSync('刚刚'); toast.success('已同步到云端'); }, 1200); }}>{syncing ? '同步中…' : '立即同步到云端'}</P4Button>
+                  <P4Button size="lg" disabled={syncing} onClick={() => void pushCloud()}>{syncing ? '同步中…' : '立即同步到云端'}</P4Button>
                   <P4Button size="lg" variant="secondary" disabled={syncing} onClick={() => ask('pull')}>↓ 拉取</P4Button>
                 </div>
-                <P4Button variant="black" block disabled={syncing} onClick={() => { window.location.hash = '#/overlay/account-sync-merge'; }}>和云端对一对（查阅并合并，避免误覆盖）</P4Button>
+                <P4Button variant="black" block disabled={syncing} onClick={() => useCloudStore.getState().openMerge(null)}>和云端对一对（查阅并合并，避免误覆盖）</P4Button>
                 <div ref={privRef} className="scroll-mt-4"><SyncPrivacySection defaultOpen={sec === 'privacy'} /></div>
                 <P4Button variant="secondary" block onClick={() => ask('logout')}>退出登录</P4Button>
                 <div className="text-center"><button type="button" onClick={() => ask('delete')} className="font-display text-meta font-bold text-p4g-danger underline decoration-2 underline-offset-4">永久删除云端账号</button></div>
@@ -216,15 +247,28 @@ export default function Account({ params }: PageProps) {
 
       <DevStateBar value={state} onChange={setState} items={[{ id: 'signed-in', label: '已登录' }, { id: 'no-uid', label: '未设 UserID' }, { id: 'sync-error', label: '同步失败' }, { id: 'signed-out', label: '未登录' }, { id: 'expired', label: '登录已失效' }, { id: 'unconfigured', label: '未配置' }]} />
 
-      <AccountConfirmView kind={confirm} open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={(k) => {
+      <AccountConfirmView kind={confirm} open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={async (k) => {
         if (k === 'reset') {
-          void resetAllData().then(() => toast.success('数据已清空')).catch(() => toast.error('重置失败，请重试'));
+          await resetAllData();
+          toast.success('数据已清空');
           return;
         }
+        if (k === 'pull') await accountOps.pull();
+        if (k === 'logout') accountOps.logout();
+        if (k === 'delete') await accountOps.deleteAccount();
         toast.success(({ pull: '已从云端拉取', logout: '已退出登录', delete: '云端账号已删除' })[k]);
         if (k === 'logout' || k === 'delete') setState('signed-out');
       }} />
-      <LoginModalView open={login} onClose={() => setLogin(false)} needConsent={state !== 'expired'} onLoggedIn={() => { setState('signed-in'); toast.success('欢迎回来'); }} />
+      {login && <LoginModalView open onClose={() => setLogin(false)} needConsent={state !== 'expired'} onLoggedIn={async () => {
+        setLogin(false);
+        setState('signed-in');
+        try {
+          await accountOps.afterLogin();
+          toast.success('欢迎回来');
+        } catch (err) {
+          setSyncError(err instanceof Error ? err.message : '登录成功，但同步失败');
+        }
+      }} />}
       <AccountManagePanelView open={manage} onClose={() => setManage(false)} userId={uid} onUserIdChange={(v) => setUid(v)} />
     </>
   );

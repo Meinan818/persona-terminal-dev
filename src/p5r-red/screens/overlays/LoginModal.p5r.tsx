@@ -17,6 +17,8 @@ import { toast } from '@/p5r-red/kit/P5Toast';
 import { P5BgSVG } from '@/p5r-red/fx/bg';
 import { useWide } from '@/p5r-red/lib/layout';
 import { P5CallingCardSection } from './P5CallingCard.p5r';
+import { accountAuthOps } from '@/themes/accountAuth';
+import { accountOps } from '@/themes/accountOperations';
 
 export const CLAUSES: [string, string, string][] = [
   ['🕯', '用爱发电，不保证永远在线', '同步服务器由开发者个人自费维护，没有服务等级承诺，也可能因为费用或精力而停运。真要关，会尽力提前公告并留出导出时间。'],
@@ -49,13 +51,76 @@ export default function LoginModal({ open, onClose, params }: OverlayProps) {
   const codeStep = consent && mode === 'otp' && step === 'code';
   useLayoutEffect(() => { if (scroll.current) scroll.current.scrollTop = 0; }, [consent, mode, step]);
 
-  const busy = (fn: () => void, ms = 650) => { setLoading(true); setTimeout(() => { setLoading(false); fn(); }, ms); };
-  const send = () => { setErr(''); setInfo(''); if (!id.trim()) { setErr('请输入 UserID 或邮箱'); return; } busy(() => { setStep('code'); setSignup(!id.includes('alice')); setInfo('验证码已发送'); setCd(60); }); };
-  const verify = () => {
-    setErr(''); if (code.trim().length < 4) { setErr('请输入完整的验证码'); return; }
-    busy(() => { if (code === '0000' || code === '000000') { setErr('验证码不正确或已过期'); setInfo(''); return; } setInfo(signup ? '登记完成 · 接下来完成房间初始化' : ''); setTimeout(() => { onClose(); toast('已登录 · 正在同步'); }, 500); });
+  const syncAfterLogin = async () => {
+    try {
+      await accountOps.afterLogin();
+    } catch (error) {
+      toast(`已登录，但同步失败：${error instanceof Error ? error.message : '请稍后重试'}`);
+    }
   };
-  const pwLogin = () => { setErr(''); if (!id.trim()) { setErr('请输入 UserID 或邮箱'); return; } if (!pw) { setErr('请输入密码'); return; } busy(() => { onClose(); toast('已登录'); }); };
+  const send = async () => {
+    setErr(''); setInfo('');
+    if (!id.trim()) { setErr('请输入 UserID 或邮箱'); return; }
+    setLoading(true);
+    try {
+      const result = await accountAuthOps.sendLoginCode(id);
+      setStep('code');
+      setSignup(result.wasSignup);
+      setInfo('验证码已发送');
+      setCd(60);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : '发送失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const resend = async () => {
+    setErr('');
+    if (cd > 0 || loading) return;
+    setLoading(true);
+    try {
+      const result = await accountAuthOps.sendLoginCode(id);
+      setSignup(result.wasSignup);
+      setCode('');
+      setCd(60);
+      setInfo(result.wasSignup ? '新客人登记验证码已重发' : '已重新发送');
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : '重发失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const verify = async () => {
+    setErr(''); if (code.trim().length < 4) { setErr('请输入完整的验证码'); return; }
+    setLoading(true);
+    try {
+      await accountAuthOps.verifyLoginCode(id, code);
+      onClose();
+      toast('已登录 · 正在同步');
+      void syncAfterLogin();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : '验证码不正确或已过期');
+      setInfo('');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const pwLogin = async () => {
+    setErr('');
+    if (!id.trim()) { setErr('请输入 UserID 或邮箱'); return; }
+    if (!pw) { setErr('请输入密码'); return; }
+    setLoading(true);
+    try {
+      await accountAuthOps.loginWithPassword(id, pw);
+      onClose();
+      toast('已登录');
+      void syncAfterLogin();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : '登录失败');
+    } finally {
+      setLoading(false);
+    }
+  };
   const msg = (c: boolean) => <>{err && <p className="oa-err" role="alert">{c ? P5txt(err) : err}</p>}{info && <p className="oa-info" role="status">{c ? Pinfo(info) : info}</p>}</>;
   const tabs = (
     <div className="oa-tabs" role="tablist">
@@ -77,22 +142,33 @@ export default function LoginModal({ open, onClose, params }: OverlayProps) {
       {mode === 'otp' && step === 'input' && (
         <>{tabs}<label className="fld"><span>UserID 或邮箱</span><input className="inp" autoComplete="username email" placeholder="alice_in_velvet 或 your@email.com" value={id} onChange={(e) => setId(e.target.value.toLowerCase())} onKeyDown={enter(send)} /></label>
           <p className="oa-fine l">新客人直接填邮箱——第一次验证就相当于登记。</p>{msg(false)}
-          <div className="oa-lg-cta"><P5Button seed={45} size="lg" disabled={loading} onClick={send}>{loading ? '发送中…' : '发送验证码'}</P5Button></div></>
+          <div className="oa-lg-cta"><P5Button seed={45} size="lg" disabled={loading} onClick={() => void send()}>{loading ? '发送中…' : '发送验证码'}</P5Button></div></>
       )}
       {mode === 'otp' && step === 'code' && (
         <>{tabs}<div className="oa-code-to"><p>验证码已发送至</p><b>{id}</b></div>
           <label className="oa-code-l" htmlFor="oa-code">潜入暗号 · 邮箱验证码</label>
           <input id="oa-code" className="inp oa-code" inputMode="numeric" maxLength={8} placeholder="······" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))} onKeyDown={enter(verify)} />
           <p className="oa-fine l">此暗号仅用于本次登录，请勿转发；若不是你申请，可忽略邮件。</p>{msg(true)}
-          <div className="oa-lg-cta"><P5Button seed={47} size="lg" disabled={loading} onClick={verify}>{loading ? '正在核对暗号…' : signup ? '完成登记 · 进入房间' : '揭下面具 · 进入房间'}</P5Button></div>
+          <div className="oa-lg-cta"><P5Button seed={47} size="lg" disabled={loading} onClick={() => void verify()}>{loading ? '正在核对暗号…' : signup ? '完成登记 · 进入房间' : '揭下面具 · 进入房间'}</P5Button></div>
           <div className="oa-lg-two"><button type="button" className="oa-link" onClick={() => { setStep('input'); setErr(''); setInfo(''); setSignup(false); }}>更换邮箱</button>
-            <button type="button" className="oa-link red" disabled={cd > 0} onClick={() => { setCode(''); setErr(''); setInfo(signup ? '新客人登记验证码已重发' : '已重新发送'); setCd(60); }}>{cd > 0 ? `重寄 (${cd}s)` : '重寄预告函'}</button></div></>
+            <button type="button" className="oa-link red" disabled={cd > 0 || loading} onClick={() => void resend()}>{cd > 0 ? `重寄 (${cd}s)` : '重寄预告函'}</button></div></>
       )}
       {mode === 'password' && (
         <>{tabs}<label className="fld"><span>UserID 或邮箱</span><input className="inp" autoComplete="username email" placeholder="alice_in_velvet 或 your@email.com" value={id} onChange={(e) => setId(e.target.value.toLowerCase())} onKeyDown={enter(pwLogin)} /></label>
           <label className="fld"><span>密码</span><input className="inp" type="password" autoComplete="current-password" placeholder="•••••••••" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={enter(pwLogin)} /></label>{msg(false)}
-          <div className="oa-lg-cta"><P5Button seed={49} size="lg" disabled={loading} onClick={pwLogin}>{loading ? '登录中…' : '进入房间'}</P5Button></div>
-          <div className="oa-lg-forgot"><button type="button" className="oa-link" onClick={() => { if (!id.trim()) { setErr('请先填上邮箱或 UserID'); setInfo(''); return; } setErr(''); setInfo('重置邮件已发送，请查收'); }}>忘记密码？</button></div></>
+          <div className="oa-lg-cta"><P5Button seed={49} size="lg" disabled={loading} onClick={() => void pwLogin()}>{loading ? '登录中…' : '进入房间'}</P5Button></div>
+          <div className="oa-lg-forgot"><button type="button" className="oa-link" onClick={async () => {
+            if (!id.trim()) { setErr('请先填上邮箱或 UserID'); setInfo(''); return; }
+            setErr(''); setInfo(''); setLoading(true);
+            try {
+              await accountAuthOps.sendPasswordReset(id);
+              setInfo('重置邮件已发送，请查收');
+            } catch (error) {
+              setErr(error instanceof Error ? error.message : '发送失败');
+            } finally {
+              setLoading(false);
+            }
+          }}>忘记密码？</button></div></>
       )}
       <p className="oa-fine sep">新客人也可以直接填邮箱，第一次验证就等于登记</p>
       <div className="oa-lg-later"><button type="button" className="oa-link" onClick={onClose}>稍后再说</button></div>

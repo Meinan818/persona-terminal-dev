@@ -27,6 +27,8 @@ import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { CloudCard, DataCards, CLOUD_STATES, DATA_STATES } from '@/p5r-red/screens/overlays/AccountBlocks';
 import { useAccountIdentity } from '@/themes/accountAuth';
 import { useAppStore } from '@/store';
+import { useCloudStore } from '@/store/cloud';
+import { SESSION_EXPIRED_MESSAGE } from '@/services/velvetApi';
 import { streakDates } from '@/utils/streak';
 import './Settings.p5r.css';
 
@@ -36,7 +38,15 @@ const EXPORT_STEPS = ['idle', 'exporting', 'download', 'shared', 'copied', 'copy
 export default function Account({ params }: PageProps) {
   // 登录态从真实 cloudUser 派生；路由参数 ?state= 仍可覆盖（演示/验收用）。
   const identity = useAccountIdentity();
-  const derivedState = identity.cloudEnabled ? (identity.signedIn ? 'signed-in' : 'signed-out') : 'unconf';
+  const cloudStatus = useCloudStore((s) => s.syncStatus);
+  const lastCloudError = useCloudStore((s) => s.lastError);
+  const derivedState = identity.cloudEnabled
+    ? (!identity.signedIn && lastCloudError === SESSION_EXPIRED_MESSAGE
+      ? 'expired'
+      : identity.signedIn
+        ? (cloudStatus === 'syncing' ? 'syncing' : cloudStatus === 'error' ? 'fail' : identity.username ? 'signed-in' : 'noid')
+        : 'signed-out')
+    : 'unconf';
   const state = params.get('state') ?? derivedState;
   // 存档槽文案走真实值（原来写死"已登录 · 上次同步 10.20 16:02" / "记录 42 天"）。
   const activities = useAppStore((s) => s.activities);

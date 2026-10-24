@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VelvetApiError } from '@/services/velvetApi';
+import { requestLoginOrSignupOTP } from '@/services/auth';
+
+beforeEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('账号错误的用户可读文案', () => {
   it('状态码没有对应文案时给中文兜底，不出现英文内部串', () => {
@@ -28,6 +33,17 @@ describe('账号身份的 UserID 字段名', () => {
     const username = String((record as { username?: string | null }).username ?? '');
     expect(username).toBe('real_user');
     expect('userId' in record).toBe(false);
+  });
+});
+
+describe('登录验证码发送', () => {
+  it('发码被限流时返回真实错误，不伪造 otpId 或登录状态', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ message: 'rate limited' }),
+      { status: 429, headers: { 'Content-Type': 'application/json' } },
+    )));
+
+    await expect(requestLoginOrSignupOTP('probe@example.invalid')).rejects.toThrow('操作太频繁，请稍后再试');
   });
 });
 

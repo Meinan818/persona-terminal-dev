@@ -4,7 +4,7 @@
  *   logout「退出登录？」→ 确认退出；delete「永久删除云端账号？」+ 清单 → 永久删除（正在删除…，busy 锁）
  * Harness：?which=reset|pull|logout|delete（默认 reset，顶部切换条）
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Dialog, P3Button, P3R, useToast } from '@pink/kit';
 
@@ -14,9 +14,15 @@ const Lines = ({ items }: { items: string[] }) => (
 );
 const Irrev = () => <p className="mt-3 text-center text-[14px] font-black" style={{ color: 'var(--p3r-coral-ink)' }}>此操作无法撤销！</p>;
 
-export function AccountConfirmView({ kind, open, onClose, onConfirm }: { kind: ConfirmKind | null; open: boolean; onClose: () => void; onConfirm?: (k: ConfirmKind) => void }) {
+export function AccountConfirmView({ kind, open, onClose, onConfirm }: { kind: ConfirmKind | null; open: boolean; onClose: () => void; onConfirm?: (k: ConfirmKind) => void | Promise<void> }) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const k = kind ?? 'reset';
+  useEffect(() => {
+    if (!open) return;
+    setBusy(false);
+    setError('');
+  }, [open, kind]);
   const C: Record<ConfirmKind, { title: string; desc: ReactNode; extra?: ReactNode; ok: string; danger: boolean }> = {
     reset: { title: '确认重置数据', desc: '此操作将删除所有用户数据，包括：', extra: <><Lines items={['所有行为记录', '所有成就进度', '所有技能解锁', '所有属性进度']} /><Irrev /></>, ok: '确认重置', danger: true },
     pull: { title: '从云端拉取数据？', desc: '会用云端数据覆盖本机。如果本机有未同步的改动，请先点"立即同步到云端"，否则这些改动会丢失。', ok: '确认拉取', danger: false },
@@ -24,11 +30,24 @@ export function AccountConfirmView({ kind, open, onClose, onConfirm }: { kind: C
     delete: { title: '永久删除云端账号？', desc: '将删除：', extra: <><Lines items={['云端账号（邮箱 / UserID / 档案）', '云端同步的全部数据', '与好友的 COOP 关联']} /><p className="mt-2 text-[12px] font-bold" style={{ color: P3R.inkSoft }}>本机数据不受影响，仍完整保留在此设备上。</p><Irrev /></>, ok: '永久删除', danger: true },
   };
   const c = C[k];
+  const run = async () => {
+    if (busy) return;
+    setError('');
+    setBusy(true);
+    try {
+      await onConfirm?.(k);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '操作失败，请重试');
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <P3Dialog open={open} onClose={onClose} variant="system" tone={c.danger ? 'danger' : 'default'} title={c.title} description={c.desc} confirmText={c.ok} cancelText="取消"
-      busy={busy} busyText={k === 'delete' ? '正在删除…' : '处理中…'}
-      onConfirm={() => { if (k === 'delete') { setBusy(true); window.setTimeout(() => { setBusy(false); onClose(); onConfirm?.(k); }, 900); } else { onClose(); onConfirm?.(k); } }}>
+      busy={busy} busyText={k === 'delete' ? '正在删除…' : '处理中…'} onConfirm={() => void run()}>
       {c.extra}
+      {error && <p role="alert" className="mt-3 px-3 py-2 text-[12px] font-black" style={{ background: 'var(--bk-danger-wash)', color: 'var(--p3r-coral-ink)', clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)' }}>{error}</p>}
     </P3Dialog>
   );
 }

@@ -20,6 +20,23 @@ export async function slashBanner(big = '增援', small = 'REINFORCEMENTS', ms =
   document.body.classList.remove('slashing');
 }
 
+/** 敌方回合开场：红底黑带斜切「ENEMY TURN」，TURN 反白黑框；可被 .frozen 暂停 */
+export async function enemyTurnBanner(ms = 900) {
+  const el = document.createElement('div');
+  el.className = 'fx-slash enemy';
+  const chars = (w: string, off: number, cls = '') => [...w].map((c, i) => `<i class="${cls}" style="--i:${i + off}">${c}</i>`).join('');
+  el.innerHTML = `<div class="sl-k"></div><div class="sl-r"></div><div class="sl-w"></div>
+    <div class="sl-txt"><b>${chars('ENEMY', 0)}<span class="gap"></span>${chars('TURN', 5, 't')}</b><small>敌方回合 · TAP 快进</small></div>`;
+  host().appendChild(el);
+  document.body.classList.add('slashing');
+  await wait(ms);
+  await waitFrozen();
+  el.classList.add('out');
+  await wait(Math.min(260, ms * 0.4));
+  el.remove();
+  document.body.classList.remove('slashing');
+}
+
 const REWARD_NAME: Record<string, string> = { gp: 'GP', sp: '技能点', skillPoint: '技能点', weapon: '武器', item: '道具', money: '金币', exp: 'EXP' };
 /** 宝箱道具提示：白底黑字斜框 + 红色 TREASURE 标签 */
 export function itemToast(reward: Record<string, number>, who?: string) {

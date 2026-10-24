@@ -8,7 +8,7 @@ import { CameraRig } from './view/cameraRig';
 import { attachCameraInput } from './view/cameraInput';
 import { MapObjects } from './view/mapObjects';
 import { makeFlag, makeSpeaker, waveFlag, pulseSpeaker } from './view/props';
-import { slashBanner, itemToast } from './fx/banners';
+import { slashBanner, itemToast, enemyTurnBanner } from './fx/banners';
 import { updateObjectiveHud, mountCamButtons } from './ui/hud';
 import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cutins';
 import type { CutWho } from './fx/cutins';
@@ -340,8 +340,9 @@ function refreshOverlay() {
 function refreshHud() {
   updateObjectiveHud(battle); // 右上目标框：胜利条件 + 回合 x/上限 + 剩余敌人，点开看败北条件
   const ph = $('#phase');
-  ph.textContent = battle.phase === 'enemy' ? 'ENEMY PHASE' : battle.phase === 'player' ? 'PLAYER PHASE' : battle.phase.toUpperCase();
-  ph.classList.toggle('enemy', battle.phase === 'enemy');
+  const showPh = busy && vPhase === 'enemy' ? 'enemy' : battle.phase; // 播放事件时按演出进度显示（规则层已结算到下回合）
+  ph.textContent = showPh === 'enemy' ? 'ENEMY PHASE' : showPh === 'player' ? 'PLAYER PHASE' : showPh.toUpperCase();
+  ph.classList.toggle('enemy', showPh === 'enemy');
   const vfull = battle.voltage >= VOLTAGE_MAX;
   $('#volt').classList.toggle('full', vfull);
   ($('#volt .vbar i') as HTMLElement).style.width = `${(100 * battle.voltage) / VOLTAGE_MAX}%`;
@@ -628,7 +629,8 @@ function flash(at: Vec, radius: number) {
 let aimActive = false;
 let aimAnim: { t0: number; dur: number; from: THREE.Vector3; to: THREE.Vector3; look: THREE.Vector3; fov0: number; fov1: number } | null = null;
 /** 过肩瞄准：射手右肩后上方 → 目标胸口；450ms 推近 + FOV 收窄，叠准星/黑边（P5T 枪击机位） */
-async function aimShot(attackerId: string, targetId: string) {
+async function aimShot(attackerId: string, targetId: string, reticle = true) {
+  const SPEED = aimSpeed(); // 敌方回合点屏快进时整体加速
   const a = unitMesh.get(attackerId), t = unitMesh.get(targetId);
   if (!a || !t) return;
   const ap = a.position.clone(), tp = t.position.clone();
@@ -644,11 +646,11 @@ async function aimShot(attackerId: string, targetId: string) {
   aimCam.position.copy(from); aimCam.lookAt(look); aimCam.fov = 50; aimCam.updateProjectionMatrix();
   aimAnim = { t0: performance.now(), dur: 450 / SPEED, from, to, look, fov0: 50, fov1: 34 };
   viewCam = aimCam; aimActive = true; document.body.classList.add('aiming');
-  const ov = $('#aim'); ov.classList.remove('hidden', 'fire'); void ov.offsetWidth; ov.classList.add('on');
+  const ov = $('#aim'); ov.classList.remove('hidden', 'fire'); ov.classList.toggle('noret', !reticle); ov.classList.toggle('foe', battle.unit(attackerId).side !== 'ally'); void ov.offsetWidth; ov.classList.add('on');
   const r = ov.querySelector('.reticle') as HTMLElement | null;
   if (r) { const v = look.clone().project(aimCam); r.style.left = `${(v.x + 1) * 50}%`; r.style.top = `${(1 - v.y) * 50}%`; }
-  await sleep(520 / SPEED);
-  ov.classList.add('fire');
+  await sleep((reticle ? 520 : 420) / SPEED);
+  if (reticle) ov.classList.add('fire');
   await sleep(90 / SPEED);
 }
 function aimStep() {
@@ -662,13 +664,60 @@ function aimStep() {
 }
 async function endAim(hold = 260) {
   if (!aimActive) return;
-  await sleep(hold / SPEED);
+  await sleep(hold / aimSpeed());
   aimActive = false; aimAnim = null; viewCam = camera; document.body.classList.remove('aiming');
   const ov = $('#aim'); ov.classList.remove('on', 'fire'); ov.classList.add('hidden');
 }
 
 const SPEED = Number(params.get('speed') ?? '1');
 setFxSpeed(SPEED);
+
+// ---------- 敌方回合镜头（Hark 演出，P5T 式；只动视图） ----------
+// 规则层 endPlayerPhase() 一次性结算完整个敌方回合，battle.phase 已是下一阶段，所以演出阶段用 vPhase 跟踪。
+let vPhase: 'player' | 'enemy' = 'player';
+const enemyCam = { saved: null as ReturnType<CameraRig['saveTarget']> | null, actor: null as string | null, skip: false };
+let camFollow: string | null = null; // 每帧跟随的单位（敌人走格时）
+const efast = () => SPEED > 1 || enemyCam.skip;
+function aimSpeed() { return vPhase === 'enemy' && enemyCam.skip ? SPEED * 3 : SPEED; }
+const isFoe = (id: string) => { const u = battle.unit(id); return !!u && u.side !== 'ally' && !u.prop; };
+async function startEnemyCam() {
+  vPhase = 'enemy';
+  enemyCam.saved = rig.saveTarget(); enemyCam.actor = null; enemyCam.skip = false;
+  document.body.classList.add('enemy-turn');
+  refreshHud();
+  await enemyTurnBanner(efast() ? 520 / SPEED : 900);
+}
+function endEnemyCam() {
+  if (vPhase !== 'enemy') return false;
+  vPhase = 'player'; camFollow = null; enemyCam.actor = null;
+  document.body.classList.remove('enemy-turn');
+  if (enemyCam.saved) { rig.restoreTarget(enemyCam.saved); enemyCam.saved = null; return true; }
+  return false;
+}
+/** 换到新的行动敌人：先把镜头平移推近到它身上，停一下再行动 */
+async function enemyActorIntro(id: string) {
+  if (vPhase !== 'enemy' || enemyCam.actor === id || !isFoe(id)) return;
+  enemyCam.actor = id;
+  const g = unitMesh.get(id);
+  rig.focus(g ? g.position.clone() : w2v(battle.unit(id).pos), Math.max(rig.userZoom, Math.min(rig.zMax, 1.45)));
+  if (g) actorPing(g.position.clone());
+  await sleep(efast() ? 90 / SPEED : 460);
+}
+/** 行动者脚下红色扩散环（谁在动一眼可见） */
+function actorPing(p: THREE.Vector3) {
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.46, 32), new THREE.MeshBasicMaterial({ color: 0xe60012, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, p.y + 0.04, p.z); ring.renderOrder = 5;
+  world.add(ring);
+  const t0 = performance.now(), dur = efast() ? 260 : 520;
+  const step = () => {
+    const k = Math.min(1, (performance.now() - t0) / dur);
+    ring.scale.setScalar(1 + k * 1.6); (ring.material as THREE.MeshBasicMaterial).opacity = 0.95 * (1 - k);
+    if (k < 1) requestAnimationFrame(step); else { world.remove(ring); ring.geometry.dispose(); }
+  };
+  step();
+}
+// 敌方回合点屏任意处 = 快进（剩余镜头停顿压到最短）
+window.addEventListener('pointerdown', () => { if (busy && vPhase === 'enemy') { enemyCam.skip = true; document.body.classList.add('enemy-skip'); } }, true);
 const hook = { pauseOn: null as string | null, pauseDelay: 0, paused: false, released: false, resume() { hook.released = true; document.body.classList.remove('frozen'); } }; // 解冻立即生效：物件动画（扫开/开箱）在事件处理中被 await
 async function play(events: BattleEvent[]) {
   busy = true;
@@ -690,11 +739,17 @@ async function play(events: BattleEvent[]) {
     }
     switch (e.type) {
       case 'phaseStart':
-        if (e.phase === 'enemy') { banner('ENEMY PHASE'); refreshHud(); await sleep(700 / SPEED); }
-        if (e.phase === 'player') camFocus(null); // 我方回合：镜头对准当前可行动角色
+        if (e.phase === 'enemy') await startEnemyCam();
+        if (e.phase === 'player') { document.body.classList.remove('enemy-skip'); if (!endEnemyCam()) camFocus(null); refreshHud(); } // 我方回合：回到玩家镜头（无存档则对准可行动角色）
         if (e.phase === 'player' && e.turn > 1) { banner(`TURN ${e.turn}`); await sleep(500 / SPEED); }
         break;
-      case 'move': if (battle.phase === 'enemy') { camFocus(e.path.length ? e.path[e.path.length - 1] : battle.unit(e.unitId).pos); await sleep(260 / SPEED); } await tweenPath(e.unitId, e.path.length ? e.path : [e.from, battle.unit(e.unitId).pos], 90 / SPEED); break;
+      case 'move': {
+        const foeCam = vPhase === 'enemy' && isFoe(e.unitId);
+        if (foeCam) { await enemyActorIntro(e.unitId); camFollow = e.unitId; }
+        await tweenPath(e.unitId, e.path.length ? e.path : [e.from, battle.unit(e.unitId).pos], (foeCam && !efast() ? 150 : 90) / SPEED);
+        if (foeCam) { camFollow = null; await sleep(efast() ? 0 : 160); }
+        break;
+      }
       case 'dash': popDamage(e.unitId, e.kind === 'ladder' ? 'DASH↕' : 'JUMP'); break;
       case 'knockback':
         if (!e.blocked || !eq(e.from, e.to)) await tweenPath(e.unitId, [e.from, e.to], 70 / SPEED, e.fly ? 1.2 : 0);
@@ -705,11 +760,15 @@ async function play(events: BattleEvent[]) {
       case 'fall': popDamage(e.unitId, '坠落!', 'big'); await sleep(220 / SPEED); break;
       case 'followUp': sawDown = true; banner('FOLLOW UP!', true); toast(`${battle.unit(e.shooterId).name} 追击！${battle.unit(e.creditId).name} 获得 1 MORE`); await sleep(600 / SPEED); break;
       case 'meleeStep': unitMesh.get(e.unitId)?.position.copy(w2v(e.to)); break;
-      case 'attack': if (battle.phase === 'enemy') { camFocus(battle.unit(e.targetId).pos, 1.25); await sleep(200 / SPEED); }
+      case 'attack': {
+        const foeAtk = vPhase === 'enemy' && isFoe(e.attackerId);
+        if (foeAtk) await enemyActorIntro(e.attackerId);
         if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
         if (e.kind === 'gun' && !params.has('noaim')) await aimShot(e.attackerId, e.targetId);
+        else if (foeAtk && !params.has('noaim')) await aimShot(e.attackerId, e.targetId, false); // 敌方近战/技能：过肩机位 + 上下黑边，无准星
         break;
-      case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); await endAim(); break;
+      }
+      case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); await endAim(vPhase === 'enemy' && !efast() ? 420 : 260); break;
       case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
       case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); await endAim(); break;
       case 'down': { popDamage(e.unitId, 'DOWN!'); sawDown = true; const g = unitMesh.get(e.unitId); if (g) { g.rotation.z = 1.2; g.position.y = gh(battle.unit(e.unitId).pos) + 0.15; } break; }
@@ -778,6 +837,8 @@ async function play(events: BattleEvent[]) {
     }
   }
   await endAim(0);
+  camFollow = null;
+  if (endEnemyCam()) document.body.classList.remove('enemy-skip'); // 敌方回合中途结算（败北等）也还原镜头
   fxKeep.clear();
   if (rebuild) build();
   for (const u of battle.units) unitMesh.get(u.id)?.position.copy(w2v(u.pos));
@@ -1045,6 +1106,7 @@ function restart() {
 function loop() {
   if (performance.now() < freezeUntil) { requestAnimationFrame(loop); return; } // 1 MORE 顿帧
   tfx.update();
+  if (camFollow) { const g = unitMesh.get(camFollow); if (g) rig.focus(g.position.clone(), rig.tgt.zoom); }
   camStep();
   aimStep();
   mapObj.update();
@@ -1075,6 +1137,9 @@ window.__p5t = {
   rig,
   mapObj,
   slashBanner,
+  enemyTurnBanner,
+  get vPhase() { return vPhase; },
+  enemyCam,
   /** 读 L01–L10 关卡 JSON 开局（截图/调试用） */
   loadLevel(id: string) { makeMap = () => levelMap(id); restart(); },
   loadMap(i: number) { mapIdx = i; sel.value = String(i); makeMap = () => MAPS[mapIdx].make(); restart(); },

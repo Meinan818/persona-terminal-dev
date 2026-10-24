@@ -1,8 +1,8 @@
-# 计划02 · 四主题行为对照（待续）
+# 计划02 · 四主题行为对照（已完成）
 
 核对日期：2026-10-24；源码基点 `f4b35577a14d46a4713459abdf8e70e2b4b4d211`；工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。
 
-本报告是计划02的专项证据，项目实时状态仍以 `PROJECT_STATE.md` 为唯一入口。本轮没有业务、CSS、素材、音效或动画修改，没有实施计划03及之后的修复。两次实际上下文压缩后按规则停止新增业务核查/测试，收尾提交已取得的结果。**计划02未关闭**：有逐项分类与具体缺陷，但正式首页快照、部分演出触发和87项内容差异的完整行为仍待确认，不能把初步分类写成全部审查完成。
+本报告是计划02的专项证据，项目实时状态仍以 `PROJECT_STATE.md` 为唯一入口。计划02没有业务、CSS、素材、音效或动画修改，没有实施计划03及之后的修复。原交接已保留764项loader结果；接手后只补R01–R03：7个页面/宿主场景各3轮定向时序复核、87项差异的分支解释、14条正式演出的生产/消费/关闭条件。**计划02可以关闭为“差异解释与正式链路对照完成”，不等于后续业务、视觉、真机或用户验收完成。**
 
 ## 证据与本轮结果
 
@@ -10,6 +10,9 @@
 - 原始证据 `E:\MASKARIA\outputs\theme-plan02-20261024\`：`files/report.json`、`files/report.md`、`changes.json`、`diffs/D001.patch`至`D212.patch`、`semantic/`、`runtime.json`。原始报告SHA-256已存上述JSON，可追溯但不整批提交浏览器档案/输出目录。
 - 文件核查使用已有 `scripts/audit-theme-demos.mjs`，本轮exit1来自7项缺失，非脚本崩溃。只是为02取得基点对照，未重复修复01。
 - 新增 `scripts/audit-theme-behavior.mjs`，`node --check`通过；本轮实际执行exit0，764/764个loader均成功，默认导出均为function，pageerror 0，本地HTTP 4xx/5xx为0，阻断外网/API请求2次。
+- R01使用独立探针和新隔离档案，只查原5个空正文及红色battle，不重跑loader：蓝/粉dashboard、蓝/粉boot、黄dashboard、红battle默认UMBRA门户、红battle `legacy=1`回退共7场景×3轮全部通过；pageerror 0、本地HTTP失败0。证据 `E:\MASKARIA\outputs\theme-plan02-r01-20261024-v3\r01.json`。
+- R02已为JSON中的87项“待确认”逐项补充分支说明、证据边界和后续计划归属；`待确认`仍表示动态业务验收未完成，不再表示差异原因未知。由 `scripts/review-theme-plan02-r02.mjs` 可复现。
+- R03用隔离store合成载荷补证正式宿主：蓝升级/愿望提议有消费者，蓝愿望进度/回归面板无自动消费者；黄愿望进度有消费者，黄一张归档宣告卡被两个宿主渲染为2份；红dashboard注入升级、愿望进度、BIG DEAL后均无全局消费者。证据 `E:\MASKARIA\outputs\theme-plan02-r03-20261024-v2\r03.json`。
 - 102项暂归“正常接入”、19项“需修复”、4项“仅说明”、87项“待确认”。这里是**文件数**，不能当功能通过数/独立缺陷数。正常接入仅指已查明改动意图及静态连接；没有证明业务闭环。
 - 没有重跑Vitest、类型检查、完整构建、Android或真机验证。计划01和历史406/413项数字均不计本轮成果；没有真实登录、真实账本/组织写入、收费模型调用或主观视觉验收。
 
@@ -38,12 +41,12 @@
 
 探针在E盘新建隔离Chrome profile，block serviceworker、外网和`/api`，写入合成本地用户及主题并禁用openaiEnabled；不读取真实登录档案。它直接调用registry的`entry.load()`，未渲染700个弹层、未逐参数打开1,342个清单状态。
 
-页面每项仅等600ms，reload后等1500ms，未断言主题标记/目标页面标题已稳定：
+R01前，页面每项仅等600ms，reload后等1500ms，未断言主题标记/目标页面标题已稳定：
 
 - 蓝dashboard、boot；粉dashboard、boot；黄dashboard共5个快照正文空、rootChildren=0。
 - 红battle快照正文只有“主页”、rootChildren=0；该路径为正式替换，不能归为原红demo缺页。
 - 其余58个快照有正文，但不构成58页业务通过或四主题外观通过。异步启动/Suspense/路由时序仍可能影响结果，尚未复验，不能直接判定业务白屏。
-- 所以脚本exit0只说明其loader/error断言通过，不等于64页通过。脚本没有对上述空快照设失败断言，原结果保留，不删除或补造通过。
+- R01已解释上述异常，原结果仍保留：蓝/粉boot在启动期有意等待，目标正文在稳定阶段出现；红battle默认由`UmbraDemoFrame`通过portal挂到body，`#root=0`不是白屏，`legacy=1`则挂正式BattleArena。7场景各3轮最终连续两次采样通过，R01的exit0仍不等于视觉验收。
 
 ## 演出触发地图（静态核实与待核分开）
 
@@ -63,6 +66,27 @@
 
 任务正确口径是“完成条出现；真的属性升级才追加升级演出；成就/技能由各自解锁动作触发”，不能把preview `homeQueue`按任务ID拼的演示四连当真实规则。上表记录消费者条件，尚未穷尽所有生产事件、互斥、重入与关闭后消费；尤其不能拿 `inventory.status='done'`作通过证据。原 `?rankup=`是DEV preview注入，非真实同伴升级。
 
+### R03 正式演出生产·消费·关闭矩阵
+
+逐项机器记录见JSON的`r03Review.eventChains`。这里的“已连接”指生产载荷和正式消费者有静态调用，且R03动态补证未出现相反结果；不表示业务触发、动画节奏、音效或视觉已验收。
+
+| 事件 | 正式生产 | 正式消费 | 关闭/清除条件 | R03结论 |
+|---|---|---|---|---|
+| 开屏 | 启动渲染 + 主题开屏偏好 | 蓝粉黄ThemeApp内原App/shell；红RedChannelCore内原App | SplashScreen `onComplete`后`showSplash=false` | 静态连接；时长/重入/音效未验 |
+| 导航转场 | shellBus/hash；三主题RouteBridge双向同步`currentPage` | 各主题AppShell/PageHost与transitionDirector | 过渡完成时清当前transition；overlay/index不写currentPage | 静态连接；真实手势与转场未验 |
+| 日夜/低动效 | 真实`settings.darkMode`、`useBoldness`、低帧/系统减弱动效 | 三主题PrefsBridge；红RedChannelRoot | 持续订阅，无一次性关闭 | 静态 + R01属性证据 |
+| 完成/升级/成就/技能 | `completeTodo`、`unlockAchievement`、`unlockSkill`写通知 | 蓝粉黄GlobalOverlayHost按升级>成就>技能消费；红只有Dashboard局部消费 | 宿主关闭时清对应通知；红首页650ms后取并清三类通知 | 蓝动态连接；红跨页缺口B07/B09 |
+| BIG DEAL收官 | 完成后写`bigDealClear` | 蓝粉黄GlobalOverlayHost；红无等价宿主 | `clearBigDealClear` | 红动态无消费者，B07 |
+| 愿望进度 | `bumpWishProgress/evaluateWishProgress`写`wishProgressCut` | 黄GlobalOverlayHost；蓝粉红无自动宿主 | 黄`clearWishProgressCut` | 蓝/红动态无消费者；黄有消费者 |
+| 愿望提议 | store `wishProposal`（dry-run） | 蓝粉黄GlobalOverlayHost | 取消清提议；确认先`setWishProgress`再关闭 | 蓝动态连接；未await写回风险B09 |
+| 宣告卡归档 | `archived && cutInShown=false && !terminal` | 蓝粉CallingCardOverlayHost；黄GlobalOverlayHost + CallingCardOverlayHost | 关闭后`markShown`；黄两宿主各自等待 | 蓝显示reason演示卡B17；黄动态双份B18 |
+| 羁绊升级/星移 | 真实互动结果与亲密变化 | 蓝粉页面本地链+旧全局队列；黄P4CinemaChain；红oc真实数据 | 各演出链结束回调 | 静态风险B05；未真实互动 |
+| 组织庆祝 | `pushOrgCelebration`按op/level/raid去重入队 | 蓝粉`!modalBlocker`消费；黄直接消费队首；红无 | 每次关闭`shiftOrgCelebration` | 黄blocker不等价；红消费缺口 |
+| 回归面板 | `markAppOpened`写`pendingReturnPayload` | 旧App ReturnPanel在主题提前return后绕过；主题无自动宿主 | `commitReturn`后`clearPendingReturnPayload` | 蓝动态无宿主；B04确认 |
+| PWA更新 | App内service worker/registerSW更新提示 | 旧App PWAUpdateToast；主题提前return后绕过 | 更新或“稍后”关闭 | 消费者缺口；本轮未注册service worker |
+| 孤儿图清理 | store `orphanImagesPrompt` | 三主题GlobalOverlayHost | `pruneOrphan`后立即dismiss | 失败不等待，B02 |
+| 红全局/局部通知 | 各业务写level/achievement/skill/bigdeal/wish等状态 | 红Dashboard仅局部消费三类；无红色全局宿主 | 首页清三类；其它状态不清 | R03注入三类均无全局UI；B07 |
+
 ## 7个缺文件逐项解释
 
 精确字节数与SHA见JSON的`missing`；蓝/粉TXT在旧报告中的 `鎵撳紑璇存槑.txt` 是文件名解码乱码，ZIP直接读取显示“打开说明.txt”，不是另一个业务模块。两项cacheOK=false，本轮直接读取ZIP对应TXT而未信任缓存。
@@ -79,7 +103,7 @@
 
 ## 具体缺陷与风险列表
 
-以下均未修复。确证的是源码分支/调用关系；没有声称真实网络/业务故障已经动态复现。
+以下均未修复。除B17/B18有R03隔离合成载荷证据外，其余主要是源码分支/调用关系；没有声称真实网络或真实业务故障已经动态复现。
 
 | ID/优先级 | 具体触发、影响、证据锚点 | 证据等级与去向 |
 |---|---|---|
@@ -88,8 +112,8 @@
 | B03/P1 | 三主题LedgerStats `budget = period === latestMonth ? realBudget.monthlyLimit : 0`。例如当前10月但最后流水9月，10月预算会展示到9月、10月隐藏；源码currentMonth已存在却未用于budget | 静态表达式确证，D060/120/181；05隔离月份复现 |
 | B04/P1 | pendingReturnPayload由旧App挂ReturnPanel，但四主题提前return绕过，主题中仅overlay registry引用/三主题组件内部读取，未找到自动消费者；因此“离开后首次打开”不由能预览证明 | 静态挂载缺口，D031/094/153及App/四主题宿主；09确认启动事件与最小恢复 |
 | B05/P1 | 蓝粉Cooperation本地链与旧全局rankup队列并存，固定gained/charges+1与store真实奖励可能重复；黄已有本地P4链但旧队列未消费。成就/宣告卡也须核局部与全局重复 | 静态风险，未证明已实际双播；D045/105/165、054/114/175及ThemeApp/bridge；07/09 |
-| B06/P1待核 | 蓝粉dashboard/boot、黄dashboard短等待后body空，红battle未见内容；不是模块加载失败，不直接断业务白屏 | 动态采样异常，runtime.json；R01，不先修业务 |
-| B07/P1待核 | 红首页check局部读取并清3种通知，RedChannelRoot/Core无三主题GlobalOverlayHost；其它页生成通知与BIG DEAL/组织/回归等全局消费未找到等价链 | 静态链缺口，D199与Root/Core；R03后04/07/09，不泛称全部不播 |
+| B06/P2已解释 | 蓝粉dashboard/boot、黄dashboard短等待后body空，红battle未见内容；R01确认前5项是启动/采样窗口，红battle是`UmbraDemoFrame` portal到body而非root白屏 | 原runtime保留，R01 v3共7场景×3轮通过；不再列为白屏缺陷 |
+| B07/P1已确认 | 红首页check局部读取并清3种通知，RedChannelRoot/Core无三主题GlobalOverlayHost；R03注入level/wish/bigdeal后均无全局UI，跨页生产事件会留在store | 静态链 + R03动态，D199与Root/Core；04/07/09补全局消费与关闭 |
 | B08/P2 | 三主题账号固定“128张/约46.2MB”；红菜单LV5、委托2、星象档案4等空库演示字样，d4的LR_CARDS/CAT仍常量；蓝粉统计Lv4/Lv3与points0需比真实字段，不直接认等级算法坏 | 动态正文+静态常量线索，D186/194/201、Account/Menu/Statistics；R02及05/09/10 |
 | B09/P1待核 | CounselArchive void delete后即成功；活动/任务/宣告卡/愿望部分先更新UI或关闭再void写回；红Activities/Dashboard有catch空 | 部分静态假成功确证、其余乐观更新风险；逐项JSON定位；04/07/09隔离失败验证 |
 | B10/P2边界 | 三主题LongReading/Summary自由生成明确等待确认；DailyDraw用离线牌意；助手草稿是真写回但自由AI不是；黄AISection真实诊断/save与蓝粉不同 | 能力未接/差异，非丢文件；D026/033/055/056/063等；10，不新增收费调用 |
@@ -99,14 +123,25 @@
 | B14/P1待核 | 红pkg3/openers删除/解除COOP确认的onOk仍仅toast，D195只加防空。需核真实页面点击是否走该演示opener，不能把接口存在当按钮已接 | 静态演示回调确证，正式可达性待R02；07 |
 | B15/P2 | 红个人卡“点击复制UserID”只setCopied(true)，未调用clipboard。真实identity替代了固定文本，但原包已有假复制未修 | 静态确证，D202；06 |
 | B16/P1 | 红SettingsBlocks.AISection保存/连接测试/逐档测试仍BusyBtn/setTimeout演示，声明成功、固定延迟/模型数；ObKit注释及BusyBtn实现可证。只把配置状态接真不能称AI设置已能保存/测试 | 静态确证，D204与ObKit.BusyBtn；09/10隔离验证，不发真实模型请求 |
+| B17/P1 | 蓝粉CallingCardOverlayHost能从真实`callingCards`挑出归档事件并打开演出，但没有把`card`传给CutIn；组件只按`reason`使用固定示例卡。R03注入标题「R03蓝宣告卡」后，实际显示「学会游泳 / 手动收存」，真实事件触发成立但内容不是当前卡 | R03动态确证 + 蓝组件静态；04/09修宿主数据传递并复验关闭后的markShown |
+| B18/P1 | 黄主题同时挂GlobalOverlayHost与CallingCardOverlayHost，两者都消费同一张`archived && cutInShown!==true`卡。R03注入一张「R03黄宣告卡」后同屏出现2份完整CALLING CARD演出 | R03动态确证；04/09去重为一个消费者并验证只markShown一次 |
 
-## 下一聊天仅续计划02
+## 计划02收尾结果
 
-1. **R01 页面采样复核**：先核基点、既有证据和服务；只补5个空正文及红battle的主题/路由稳定断言和启动时序证据。修正探针外壳参数放错位置的局限，保留原失败；不重复跑764项已有成功结果，不先改业务消除白屏。
-2. **R02 差异解释补完**：从JSON的87项“待确认”逐项缩小剩余分支，特别是红oc/d4/live、三主题设置持久化和账号/统计演示字样；已确证待后续计划修的缺陷不用提前修。不是开展03的全库权威来源审计，不能建立第二套store。
-3. **R03 演出生产者与消费者补齐**：核正式路径的开屏、导航、日夜、返回、PWA、愿望、宣告卡、羁绊/组织与红通知触发/关闭/消费条件；区分preview参数、局部宿主、旧全局宿主。对有疑问的具体链做隔离触发取证，不把700弹层全量渲染当必要业务验证。
-4. 02完成门槛是每项有足够解释或明确可追溯的缺陷归属，主路径加载异常均有结论、演出对照无未说明断点；达到后才在STATE/详细计划标完成并本地提交。该聊天随后仍停止，03另开聊天，不能自动跨计划。
+1. **R01已完成**：没有重跑764项loader。新探针只查原5个空正文和红battle，共7场景×3轮，最后一轮窗口延至12秒，全部通过；原空快照与第一次错误r01保留。默认红battle在4000ms出现`UmbraDemoFrame`与iframe，legacy回退在4000ms出现正式BattleArena。
+2. **R02已完成**：87项全部补了具体分支、读/写或回调位置、证据边界和后续计划。`classificationCounts`仍保留87“待确认”，含义改为“业务动态验收待后续计划”，不再是“差异原因未知”。
+3. **R03已完成**：14条正式事件链写入JSON；动态补证蓝愿望进度/回归面板无自动宿主、蓝宣告卡显示reason演示文案、黄宣告卡双宿主双份、红升级/愿望/BIG DEAL无全局消费者。
+4. 计划02关闭标准已达到：每个差异有解释或明确缺陷归属，主路径空快照有结论，演出生产/消费/关闭无未说明断点；B01–B18全部保留为后续计划工作，不在本轮修复。
 
-本轮只交付已完成的核对工具、证据整理和待续清单，不把未完成检查混写成完成。原始证据中的失败/空快照、7项缺失保持。本轮首次渲染分类JSON曾因文档脚本回调内await语法错误、继而黄色ModalP4匹配漏项退出；均在生成前失败，无业务影响，修正文档渲染后生成212行，未为此重跑浏览器。
+本轮仍没有业务、CSS、素材、音效或动画修改；没有真实登录、账本/组织写入、收费模型、真机、像素或用户验收。四主题外观和原失败证据均保留。
 
-后续如需复跑，必须新输出目录：先 `node scripts/audit-theme-demos.mjs --out E:/MASKARIA/outputs/theme-plan02-NEXT/files`，缺失仍会exit1；已有证据够用时直接复用，不机械重审。行为脚本 `node scripts/audit-theme-behavior.mjs E:/MASKARIA/outputs/theme-plan02-NEXT` 读取其files/report.json；不可覆盖原runtime.json。它会重跑全部loader，R01优先做针对性探针。默认服务5196，环境变量 `THEME_AUDIT_BASE`可调整；缓存/TEMP/TMP留E盘。既有Vite不是本轮启动，是否存活现场核，不代用户打开浏览器。
+复跑R01/R02/R03均必须使用新的输出目录：
+
+```powershell
+node scripts/verify-theme-plan02-r01.mjs E:/MASKARIA/outputs/theme-plan02-r01-NEXT
+node scripts/review-theme-plan02-r02.mjs docs/THEME-BEHAVIOR-AUDIT-20261024.json
+node scripts/verify-theme-plan02-r03.mjs E:/MASKARIA/outputs/theme-plan02-r03-NEXT
+node scripts/review-theme-plan02-r03.mjs docs/THEME-BEHAVIOR-AUDIT-20261024.json
+```
+
+默认服务为`http://127.0.0.1:5196`，可用`THEME_AUDIT_BASE`覆盖。R01/R03会阻断外网、API和service worker，保留隔离profile；缓存/TEMP/TMP应留E盘。

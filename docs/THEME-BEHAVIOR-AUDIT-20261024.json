@@ -1,6 +1,6 @@
 {
   "auditHead": "f4b35577a14d46a4713459abdf8e70e2b4b4d211",
-  "scope": "计划02核对；分类含待确认，未达到关闭标准。非修复/真实业务/视觉验收。",
+  "scope": "计划02已完成：保留764项loader证据，R01定向时序、R02差异分支解释、R03正式演出生产/消费/关闭条件均已补齐。动态业务、视觉、真机和用户验收仍分开记录。",
   "sourceEvidence": "E:/MASKARIA/outputs/theme-plan02-20261024",
   "zipHashes": [
     {
@@ -150,10 +150,14 @@
       "source": "p3r-blue/src/screens/overlays/ConfidantDetailModal.p3r.tsx",
       "category": "待确认",
       "followupPlan": "07",
-      "issueRefs": [],
-      "explanation": "接真实同伴、羁绊之影和增改归档；复杂权限/失败分支未完整核验。",
+      "issueRefs": [
+        "B14",
+        "B09"
+      ],
+      "explanation": "R02：详情改读真实同伴、linkedProfile、confidantEvents，并保留羁绊之影/归档/邀请动作；存在局部 `patch` 或定时器式回调和空失败分支，正式权限与写回待07/08。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读取和回调位置；未执行归档、解约、删除或邀请。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D009",
@@ -200,9 +204,10 @@
       "issueRefs": [
         "B11"
       ],
-      "explanation": "列表接computeSyncDiff；框内覆盖仍提示去账号页，蓝粉正式另有旧同步宿主、黄色不同。",
+      "explanation": "R02：差异让冲突列表读取 `computeSyncDiff` 的真实结果；弹窗覆盖按钮本身未执行合并，只提示去账号页。蓝粉仍有旧同步宿主，黄色宿主不同，需按正式挂载核等价性。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 diff 读取与未执行覆盖；未做同步冲突注入。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D012",
@@ -275,11 +280,15 @@
       "evidence": "diffs/D016.patch",
       "source": "p3r-blue/src/screens/overlays/CounselChatModal.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "07/10",
-      "issueRefs": [],
-      "explanation": "接真实会话、冷却、取消和归档；全部失败/取消/离线分支未动态验证。",
+      "followupPlan": "07",
+      "issueRefs": [
+        "B09",
+        "B10"
+      ],
+      "explanation": "R02：会话开始/追加/归档接 `cooperationOps` 与真实 store，冷却、取消和错误 UI 保留；归档 void 后立即反馈、离线/失败恢复仍待动态核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实会话 ops；未发模型请求或执行归档。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D017",
@@ -427,11 +436,13 @@
       "category": "待确认",
       "followupPlan": "10",
       "issueRefs": [
-        "B10"
+        "B10",
+        "B09"
       ],
-      "explanation": "真实消息持久化和可执行草稿替换种子消息；自由AI等待接入，失败闭环待验。",
+      "explanation": "R02：消息持久化与可执行草稿替换了固定演示种子，执行动作接真实 store；自由回答仍依赖后续 AI 能力，取消/失败/离线闭环待10。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证消息与草稿路径；未发模型请求。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D027",
@@ -490,10 +501,13 @@
       "source": "p3r-blue/src/screens/overlays/RaidSheet.p3r.tsx",
       "category": "待确认",
       "followupPlan": "08",
-      "issueRefs": [],
-      "explanation": "buildRaidPanelData、真实技能/strike服务替代演示；权限和失败写回待08。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：面板数据改由 `buildRaidPanelData`、真实技能/strike 服务构造；权限校验与失败写回仍属于据点专项。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证数据构造；未真实出战或结算。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D031",
@@ -536,13 +550,14 @@
       "evidence": "diffs/D033.patch",
       "source": "p3r-blue/src/screens/overlays/SummaryModal.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "档案读真实summaries，生成明确等待确认；真实AI未接。",
+      "explanation": "R02：历史总结读真实 summaries，生成动作明确进入等待确认；档案删除/查看仍要核真实写回。自由 AI 未接，不能把等待页当真实摘要。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证档案读取与等待分支；未请求模型或删除真实总结。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D034",
@@ -628,13 +643,14 @@
       "evidence": "diffs/D039.patch",
       "source": "p3r-blue/src/screens/overlays/WishProposalDialog.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "04",
+      "followupPlan": "09",
       "issueRefs": [
         "B09"
       ],
-      "explanation": "正式传真实props/回调，但未等待结果即关闭；预览无回调仍提示，需分开核。",
+      "explanation": "R02：正式宿主把真实愿望标题和进度区间传给弹窗，确认回调会 `setWishProgress`；但调用未 await 就立即清空 proposal，失败也会先关闭。预览无回调时的关闭路径与正式写回需分开验收。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证回调接线与未等待写入；未做失败注入或真实愿望推进。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D040",
@@ -666,9 +682,10 @@
       "issueRefs": [
         "B05"
       ],
-      "explanation": "列表/解锁接真实ops，本主题局部cut-in与全局通知是否重复待实测。",
+      "explanation": "R02：成就/技能列表和手动解锁调用真实 ops，页面自身 cut-in 与全局通知都订阅同一解锁结果。双击或多宿主是否重复播放仍需专项验证，不能据能解锁判演出正确。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确认两个可能消费面；未实测重复触发。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D042",
@@ -683,9 +700,10 @@
       "issueRefs": [
         "B09"
       ],
-      "explanation": "列表与增删接store，部分先改本地UI再void写入，错误恢复待验。",
+      "explanation": "R02：记录与增删改接真实 store，但部分先改本地 UI 再 `void` 写入，拒绝或异常恢复不完整。真实接入意图可追溯，闭环失败分支待04。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 store 调用与乐观更新；未注入失败或刷新。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D043",
@@ -696,13 +714,14 @@
       "evidence": "diffs/D043.patch",
       "source": "p3r-blue/src/screens/pages/Astrology.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "09",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "日占卜与档案接真实读写，AI/离线分支仍待10。",
+      "explanation": "R02：日占卜、档案和保存接真实 astrology 数据；自由 AI 解读仍由 DailyDraw/LongReading 的离线或等待分支承接，预览参数不证明真实 AI。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读写；未发模型请求或检查断网恢复。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D044",
@@ -715,11 +734,14 @@
       "category": "待确认",
       "followupPlan": "04",
       "issueRefs": [
-        "B09"
+        "B09",
+        "B05",
+        "B17"
       ],
-      "explanation": "宣告卡列表/操作接真实store，乐观更新/拒绝/刷新待04。",
+      "explanation": "R02：宣告卡列表/操作已接真实 store；部分页面先改本地状态或关闭弹层再写库，归档结算还有黄色双宿主风险。读取接线明确，重复演出与失败恢复未闭合。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实数据和调用；未做归档失败、并发或重复挂载验证。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D045",
@@ -734,9 +756,10 @@
       "issueRefs": [
         "B05"
       ],
-      "explanation": "同伴/好友/COOP/影和本主题升级链接真；蓝粉另有旧全局宿主，黄有P4CinemaChain，不可一概说不播。",
+      "explanation": "R02：同伴、好友、COOP、影战和本主题升级链接真实 adapter；蓝粉全局旧 rankup/邀请队列与页面本地队列并存，黄色则使用 P4CinemaChain 局部链。差异不是“演出丢失”，而是生产者/消费者去重和次数口径待专项核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证本地与全局宿主并存；未做真实互动双播测试。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D046",
@@ -749,11 +772,13 @@
       "category": "待确认",
       "followupPlan": "04",
       "issueRefs": [
-        "B06"
+        "B06",
+        "B09"
       ],
-      "explanation": "首页接homeOps真实数据，modalBlocker等待完成条；本轮快照正文为空，加载/时序未复验。",
+      "explanation": "R02：首页 `useHomeData/homeOps` 接真实任务、属性、愿望和组织摘要；R01 已在三轮12秒窗口确认此前空快照最终稳定挂载。完成写入失败时蓝粉有回滚分支，黄色只清 blocker 未回滚本地计数，仍需04失败注入。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "R01确认目标页最终挂载；未执行业务完成、拒绝或断网写入。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D047",
@@ -766,9 +791,10 @@
       "category": "待确认",
       "followupPlan": "08",
       "issueRefs": [],
-      "explanation": "useOrgView及登录/无组织空态接真，fallback buildView/权限/完整刷新和写回待08。",
+      "explanation": "R02：页面通过 `useOrgView` 和登录/无组织空态读取真实组织快照，演示组织仅作无账号回退；成员权限、完整刷新、公告/会议写回和多组织切换未在此页闭合。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读取与空态；未做真实组织写操作。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D048",
@@ -780,10 +806,14 @@
       "source": "p3r-blue/src/screens/pages/Ledger.p3r.tsx",
       "category": "待确认",
       "followupPlan": "05",
-      "issueRefs": [],
-      "explanation": "流水、周期、真实OCR入口接真，不再伪造小票；全闭环待05。",
+      "issueRefs": [
+        "B03",
+        "B09"
+      ],
+      "explanation": "R02：流水、周期、余额和真实 OCR 入口接 ledger 数据，不再用演示小票伪造识别结果；新增/删除/对账的取消、失败恢复和预算月份口径待05。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证数据入口；未使用真实账本或相册。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D049",
@@ -809,13 +839,15 @@
       "evidence": "diffs/D050.patch",
       "source": "p3r-blue/src/screens/pages/Statistics.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "04/05",
+      "followupPlan": "05",
       "issueRefs": [
-        "B08"
+        "B08",
+        "B03"
       ],
-      "explanation": "真实聚合替代演示；空库等级、预算与字段口径仍待业务对照。",
+      "explanation": "R02：统计聚合改读真实 activities/attributes；空库等级、预算月份和部分展示等级文案仍有口径风险，真实聚合代码不等于统计业务验收。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实 sources；未做跨月、空库或重启后的数值对照。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D051",
@@ -830,9 +862,10 @@
       "issueRefs": [
         "B09"
       ],
-      "explanation": "任务增改完成接真实actions，乐观状态/失败处理需04实测。",
+      "explanation": "R02：任务增改完成接真实 actions/store，但页面存在乐观更新、`void` 写回或不完整回滚。差异类型是真实接入中的错误闭环缺口，不是演示数据。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 store 调用；未做拒绝、重复完成或刷新。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D052",
@@ -859,10 +892,13 @@
       "source": "p3r-blue/src/screens/pkg2/GoalDeck.tsx",
       "category": "待确认",
       "followupPlan": "04",
-      "issueRefs": [],
-      "explanation": "真实weeklyGoals替代演示，局部初始化与刷新同步待核。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：周目标从真实 weeklyGoals 初始化并保留原有目标卡交互；局部初始化与 store 二次更新是否能同步、领取失败是否回滚未核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读取；未完成周目标或领取奖励。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D054",
@@ -877,9 +913,10 @@
       "issueRefs": [
         "B05"
       ],
-      "explanation": "星移接useStarShiftFlow；固定gained/次数与真实奖励/全局队列关系待核。",
+      "explanation": "R02：蓝粉 RankUpChain/黄色 P4CinemaChain 获星移使用真实 `useStarShiftFlow`；演出的 gained/charges 固定值、页面回调和全局队列可能重复消费，真实奖励返回值仍需逐事件对照。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 hook 接入与固定展示参数；未做真实升级/星移。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D055",
@@ -890,13 +927,14 @@
       "evidence": "diffs/D055.patch",
       "source": "p3r-blue/src/screens/pkg4/DailyDraw.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "随机牌和buildOfflineDaily写dailyDivinations；有AI配置时是否仍offline需核。",
+      "explanation": "R02：抽牌使用真实牌库并写 `dailyDivinations`，但当前选牌/翻牌路径均调用 `finish(true)`，`aiConfigured` 只控制提示，静态上没有进入真实流式解读的分支。这是“离线可用、AI未接”，不是文件缺失。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证所有可达选牌路径先走离线；未发模型请求。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D056",
@@ -907,13 +945,14 @@
       "evidence": "diffs/D056.patch",
       "source": "p3r-blue/src/screens/pkg4/LongReading.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "档案接真，AI_PENDING阻止假解读；预览缩为等待确认属能力未接，非文件丢失。",
+      "explanation": "R02：档案和详情读真实 longReadings，生成入口显示 AI 等待/待确认，未用占位文案伪造解读。能力未接，视觉与档案读取仍保留。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实档案读取与等待分支；未发模型请求或验证生成完成。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D057",
@@ -925,10 +964,13 @@
       "source": "p3r-blue/src/screens/pkg4/org/Board.tsx",
       "category": "待确认",
       "followupPlan": "08",
-      "issueRefs": [],
-      "explanation": "公告/反应/团战由真实posts/reactions/raids派生，权限和错误留08。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：公告、反应、团战信息由真实 posts/reactions/raids 派生；写操作权限、多组织归属和失败恢复未核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证读取来源；未真实发帖/反应或操作团战。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D058",
@@ -940,10 +982,13 @@
       "source": "p3r-blue/src/screens/pkg4/org/OpsMeeting.tsx",
       "category": "待确认",
       "followupPlan": "08",
-      "issueRefs": [],
-      "explanation": "作战历史、分工与会议改真实来源/saveMeeting，失败/多组织待08。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：作战历史、分工与会议读取真实数据并调用 saveMeeting；失败、多组织和非队长权限尚未闭环。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读写入口；未提交真实会议。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D059",
@@ -1016,13 +1061,14 @@
       "evidence": "diffs/D063.patch",
       "source": "p3r-blue/src/screens/pkg6/settings/AISection.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "蓝粉去假验证/余额/模型列表，连接测试未启用；黄另有buildAIDiagnostics/真实save，不可混报。",
+      "explanation": "R02：AI Key 与模型字段通过 settingsStore 写回真实 settings；连接测试、逐档测试和模型列表刷新明确显示“未启用/未执行”，不再伪造成功或模型数。真实连接能力仍是缺口。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证保存映射和诚实失败文案；未发收费模型请求。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D064",
@@ -1033,13 +1079,14 @@
       "evidence": "diffs/D064.patch",
       "source": "p3r-blue/src/screens/pkg6/settingsStore.ts",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "09",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "设置桥接真实store，去演示Key/verified；各主题局部字段和持久化仍需专项核。",
+      "explanation": "R02：设置 store 用 `TO_REAL` 把声音、背景、属性/阈值、记账、AI 模型、通知槽等字段写回真实 settings；天气 Key/城市、BGM 曲目映射、`splashSpeed`、通知权限和部分 Persona 展示状态仍只在本主题状态中存在，没有一一对应的安全落库口径。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证字段映射与未映射字段；未验证重启持久化、权限或敏感 Key 存储。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D065",
@@ -1143,10 +1190,14 @@
       "source": "p3r-pink/src/screens/overlays/ConfidantDetailModal.p3r.tsx",
       "category": "待确认",
       "followupPlan": "07",
-      "issueRefs": [],
-      "explanation": "接真实同伴、羁绊之影和增改归档；复杂权限/失败分支未完整核验。",
+      "issueRefs": [
+        "B14",
+        "B09"
+      ],
+      "explanation": "R02：详情改读真实同伴、linkedProfile、confidantEvents，并保留羁绊之影/归档/邀请动作；存在局部 `patch` 或定时器式回调和空失败分支，正式权限与写回待07/08。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读取和回调位置；未执行归档、解约、删除或邀请。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D072",
@@ -1193,9 +1244,10 @@
       "issueRefs": [
         "B11"
       ],
-      "explanation": "列表接computeSyncDiff；框内覆盖仍提示去账号页，蓝粉正式另有旧同步宿主、黄色不同。",
+      "explanation": "R02：差异让冲突列表读取 `computeSyncDiff` 的真实结果；弹窗覆盖按钮本身未执行合并，只提示去账号页。蓝粉仍有旧同步宿主，黄色宿主不同，需按正式挂载核等价性。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 diff 读取与未执行覆盖；未做同步冲突注入。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D075",
@@ -1268,11 +1320,15 @@
       "evidence": "diffs/D079.patch",
       "source": "p3r-pink/src/screens/overlays/CounselChatModal.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "07/10",
-      "issueRefs": [],
-      "explanation": "接真实会话、冷却、取消和归档；全部失败/取消/离线分支未动态验证。",
+      "followupPlan": "07",
+      "issueRefs": [
+        "B09",
+        "B10"
+      ],
+      "explanation": "R02：会话开始/追加/归档接 `cooperationOps` 与真实 store，冷却、取消和错误 UI 保留；归档 void 后立即反馈、离线/失败恢复仍待动态核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实会话 ops；未发模型请求或执行归档。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D080",
@@ -1420,11 +1476,13 @@
       "category": "待确认",
       "followupPlan": "10",
       "issueRefs": [
-        "B10"
+        "B10",
+        "B09"
       ],
-      "explanation": "真实消息持久化和可执行草稿替换种子消息；自由AI等待接入，失败闭环待验。",
+      "explanation": "R02：消息持久化与可执行草稿替换了固定演示种子，执行动作接真实 store；自由回答仍依赖后续 AI 能力，取消/失败/离线闭环待10。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证消息与草稿路径；未发模型请求。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D090",
@@ -1483,10 +1541,13 @@
       "source": "p3r-pink/src/screens/overlays/RaidSheet.p3r.tsx",
       "category": "待确认",
       "followupPlan": "08",
-      "issueRefs": [],
-      "explanation": "buildRaidPanelData、真实技能/strike服务替代演示；权限和失败写回待08。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：面板数据改由 `buildRaidPanelData`、真实技能/strike 服务构造；权限校验与失败写回仍属于据点专项。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证数据构造；未真实出战或结算。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D094",
@@ -1529,13 +1590,14 @@
       "evidence": "diffs/D096.patch",
       "source": "p3r-pink/src/screens/overlays/SummaryModal.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "档案读真实summaries，生成明确等待确认；真实AI未接。",
+      "explanation": "R02：历史总结读真实 summaries，生成动作明确进入等待确认；档案删除/查看仍要核真实写回。自由 AI 未接，不能把等待页当真实摘要。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证档案读取与等待分支；未请求模型或删除真实总结。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D097",
@@ -1576,13 +1638,14 @@
       "evidence": "diffs/D099.patch",
       "source": "p3r-pink/src/screens/overlays/WishProposalDialog.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "04",
+      "followupPlan": "09",
       "issueRefs": [
         "B09"
       ],
-      "explanation": "正式传真实props/回调，但未等待结果即关闭；预览无回调仍提示，需分开核。",
+      "explanation": "R02：正式宿主把真实愿望标题和进度区间传给弹窗，确认回调会 `setWishProgress`；但调用未 await 就立即清空 proposal，失败也会先关闭。预览无回调时的关闭路径与正式写回需分开验收。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证回调接线与未等待写入；未做失败注入或真实愿望推进。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D100",
@@ -1614,9 +1677,10 @@
       "issueRefs": [
         "B05"
       ],
-      "explanation": "列表/解锁接真实ops，本主题局部cut-in与全局通知是否重复待实测。",
+      "explanation": "R02：成就/技能列表和手动解锁调用真实 ops，页面自身 cut-in 与全局通知都订阅同一解锁结果。双击或多宿主是否重复播放仍需专项验证，不能据能解锁判演出正确。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确认两个可能消费面；未实测重复触发。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D102",
@@ -1631,9 +1695,10 @@
       "issueRefs": [
         "B09"
       ],
-      "explanation": "列表与增删接store，部分先改本地UI再void写入，错误恢复待验。",
+      "explanation": "R02：记录与增删改接真实 store，但部分先改本地 UI 再 `void` 写入，拒绝或异常恢复不完整。真实接入意图可追溯，闭环失败分支待04。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 store 调用与乐观更新；未注入失败或刷新。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D103",
@@ -1644,13 +1709,14 @@
       "evidence": "diffs/D103.patch",
       "source": "p3r-pink/src/screens/pages/Astrology.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "09",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "日占卜与档案接真实读写，AI/离线分支仍待10。",
+      "explanation": "R02：日占卜、档案和保存接真实 astrology 数据；自由 AI 解读仍由 DailyDraw/LongReading 的离线或等待分支承接，预览参数不证明真实 AI。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读写；未发模型请求或检查断网恢复。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D104",
@@ -1663,11 +1729,14 @@
       "category": "待确认",
       "followupPlan": "04",
       "issueRefs": [
-        "B09"
+        "B09",
+        "B05",
+        "B17"
       ],
-      "explanation": "宣告卡列表/操作接真实store，乐观更新/拒绝/刷新待04。",
+      "explanation": "R02：宣告卡列表/操作已接真实 store；部分页面先改本地状态或关闭弹层再写库，归档结算还有黄色双宿主风险。读取接线明确，重复演出与失败恢复未闭合。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实数据和调用；未做归档失败、并发或重复挂载验证。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D105",
@@ -1682,9 +1751,10 @@
       "issueRefs": [
         "B05"
       ],
-      "explanation": "同伴/好友/COOP/影和本主题升级链接真；蓝粉另有旧全局宿主，黄有P4CinemaChain，不可一概说不播。",
+      "explanation": "R02：同伴、好友、COOP、影战和本主题升级链接真实 adapter；蓝粉全局旧 rankup/邀请队列与页面本地队列并存，黄色则使用 P4CinemaChain 局部链。差异不是“演出丢失”，而是生产者/消费者去重和次数口径待专项核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证本地与全局宿主并存；未做真实互动双播测试。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D106",
@@ -1697,11 +1767,13 @@
       "category": "待确认",
       "followupPlan": "04",
       "issueRefs": [
-        "B06"
+        "B06",
+        "B09"
       ],
-      "explanation": "首页接homeOps真实数据，modalBlocker等待完成条；本轮快照正文为空，加载/时序未复验。",
+      "explanation": "R02：首页 `useHomeData/homeOps` 接真实任务、属性、愿望和组织摘要；R01 已在三轮12秒窗口确认此前空快照最终稳定挂载。完成写入失败时蓝粉有回滚分支，黄色只清 blocker 未回滚本地计数，仍需04失败注入。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "R01确认目标页最终挂载；未执行业务完成、拒绝或断网写入。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D107",
@@ -1714,9 +1786,10 @@
       "category": "待确认",
       "followupPlan": "08",
       "issueRefs": [],
-      "explanation": "useOrgView及登录/无组织空态接真，fallback buildView/权限/完整刷新和写回待08。",
+      "explanation": "R02：页面通过 `useOrgView` 和登录/无组织空态读取真实组织快照，演示组织仅作无账号回退；成员权限、完整刷新、公告/会议写回和多组织切换未在此页闭合。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读取与空态；未做真实组织写操作。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D108",
@@ -1728,10 +1801,14 @@
       "source": "p3r-pink/src/screens/pages/Ledger.p3r.tsx",
       "category": "待确认",
       "followupPlan": "05",
-      "issueRefs": [],
-      "explanation": "流水、周期、真实OCR入口接真，不再伪造小票；全闭环待05。",
+      "issueRefs": [
+        "B03",
+        "B09"
+      ],
+      "explanation": "R02：流水、周期、余额和真实 OCR 入口接 ledger 数据，不再用演示小票伪造识别结果；新增/删除/对账的取消、失败恢复和预算月份口径待05。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证数据入口；未使用真实账本或相册。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D109",
@@ -1757,13 +1834,15 @@
       "evidence": "diffs/D110.patch",
       "source": "p3r-pink/src/screens/pages/Statistics.p3r.tsx",
       "category": "待确认",
-      "followupPlan": "04/05",
+      "followupPlan": "05",
       "issueRefs": [
-        "B08"
+        "B08",
+        "B03"
       ],
-      "explanation": "真实聚合替代演示；空库等级、预算与字段口径仍待业务对照。",
+      "explanation": "R02：统计聚合改读真实 activities/attributes；空库等级、预算月份和部分展示等级文案仍有口径风险，真实聚合代码不等于统计业务验收。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实 sources；未做跨月、空库或重启后的数值对照。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D111",
@@ -1778,9 +1857,10 @@
       "issueRefs": [
         "B09"
       ],
-      "explanation": "任务增改完成接真实actions，乐观状态/失败处理需04实测。",
+      "explanation": "R02：任务增改完成接真实 actions/store，但页面存在乐观更新、`void` 写回或不完整回滚。差异类型是真实接入中的错误闭环缺口，不是演示数据。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 store 调用；未做拒绝、重复完成或刷新。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D112",
@@ -1807,10 +1887,13 @@
       "source": "p3r-pink/src/screens/pkg2/GoalDeck.tsx",
       "category": "待确认",
       "followupPlan": "04",
-      "issueRefs": [],
-      "explanation": "真实weeklyGoals替代演示，局部初始化与刷新同步待核。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：周目标从真实 weeklyGoals 初始化并保留原有目标卡交互；局部初始化与 store 二次更新是否能同步、领取失败是否回滚未核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读取；未完成周目标或领取奖励。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D114",
@@ -1825,9 +1908,10 @@
       "issueRefs": [
         "B05"
       ],
-      "explanation": "星移接useStarShiftFlow；固定gained/次数与真实奖励/全局队列关系待核。",
+      "explanation": "R02：蓝粉 RankUpChain/黄色 P4CinemaChain 获星移使用真实 `useStarShiftFlow`；演出的 gained/charges 固定值、页面回调和全局队列可能重复消费，真实奖励返回值仍需逐事件对照。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 hook 接入与固定展示参数；未做真实升级/星移。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D115",
@@ -1838,13 +1922,14 @@
       "evidence": "diffs/D115.patch",
       "source": "p3r-pink/src/screens/pkg4/DailyDraw.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "随机牌和buildOfflineDaily写dailyDivinations；有AI配置时是否仍offline需核。",
+      "explanation": "R02：抽牌使用真实牌库并写 `dailyDivinations`，但当前选牌/翻牌路径均调用 `finish(true)`，`aiConfigured` 只控制提示，静态上没有进入真实流式解读的分支。这是“离线可用、AI未接”，不是文件缺失。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证所有可达选牌路径先走离线；未发模型请求。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D116",
@@ -1855,13 +1940,14 @@
       "evidence": "diffs/D116.patch",
       "source": "p3r-pink/src/screens/pkg4/LongReading.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "档案接真，AI_PENDING阻止假解读；预览缩为等待确认属能力未接，非文件丢失。",
+      "explanation": "R02：档案和详情读真实 longReadings，生成入口显示 AI 等待/待确认，未用占位文案伪造解读。能力未接，视觉与档案读取仍保留。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实档案读取与等待分支；未发模型请求或验证生成完成。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D117",
@@ -1873,10 +1959,13 @@
       "source": "p3r-pink/src/screens/pkg4/org/Board.tsx",
       "category": "待确认",
       "followupPlan": "08",
-      "issueRefs": [],
-      "explanation": "公告/反应/团战由真实posts/reactions/raids派生，权限和错误留08。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：公告、反应、团战信息由真实 posts/reactions/raids 派生；写操作权限、多组织归属和失败恢复未核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证读取来源；未真实发帖/反应或操作团战。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D118",
@@ -1888,10 +1977,13 @@
       "source": "p3r-pink/src/screens/pkg4/org/OpsMeeting.tsx",
       "category": "待确认",
       "followupPlan": "08",
-      "issueRefs": [],
-      "explanation": "作战历史、分工与会议改真实来源/saveMeeting，失败/多组织待08。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：作战历史、分工与会议读取真实数据并调用 saveMeeting；失败、多组织和非队长权限尚未闭环。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读写入口；未提交真实会议。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D119",
@@ -1964,13 +2056,14 @@
       "evidence": "diffs/D123.patch",
       "source": "p3r-pink/src/screens/pkg6/settings/AISection.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "蓝粉去假验证/余额/模型列表，连接测试未启用；黄另有buildAIDiagnostics/真实save，不可混报。",
+      "explanation": "R02：AI Key 与模型字段通过 settingsStore 写回真实 settings；连接测试、逐档测试和模型列表刷新明确显示“未启用/未执行”，不再伪造成功或模型数。真实连接能力仍是缺口。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证保存映射和诚实失败文案；未发收费模型请求。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D124",
@@ -1981,13 +2074,14 @@
       "evidence": "diffs/D124.patch",
       "source": "p3r-pink/src/screens/pkg6/settingsStore.ts",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "09",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "设置桥接真实store，去演示Key/verified；各主题局部字段和持久化仍需专项核。",
+      "explanation": "R02：设置 store 用 `TO_REAL` 把声音、背景、属性/阈值、记账、AI 模型、通知槽等字段写回真实 settings；天气 Key/城市、BGM 曲目映射、`splashSpeed`、通知权限和部分 Persona 展示状态仍只在本主题状态中存在，没有一一对应的安全落库口径。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证字段映射与未映射字段；未验证重启持久化、权限或敏感 Key 存储。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D125",
@@ -2074,10 +2168,14 @@
       "source": "p4g-yellow/src/screens/overlays/ConfidantDetailModal.p4g.tsx",
       "category": "待确认",
       "followupPlan": "07",
-      "issueRefs": [],
-      "explanation": "接真实同伴、羁绊之影和增改归档；复杂权限/失败分支未完整核验。",
+      "issueRefs": [
+        "B14",
+        "B09"
+      ],
+      "explanation": "R02：详情改读真实同伴、linkedProfile、confidantEvents，并保留羁绊之影/归档/邀请动作；存在局部 `patch` 或定时器式回调和空失败分支，正式权限与写回待07/08。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读取和回调位置；未执行归档、解约、删除或邀请。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D131",
@@ -2124,9 +2222,10 @@
       "issueRefs": [
         "B11"
       ],
-      "explanation": "列表接computeSyncDiff；框内覆盖仍提示去账号页，蓝粉正式另有旧同步宿主、黄色不同。",
+      "explanation": "R02：差异让冲突列表读取 `computeSyncDiff` 的真实结果；弹窗覆盖按钮本身未执行合并，只提示去账号页。蓝粉仍有旧同步宿主，黄色宿主不同，需按正式挂载核等价性。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 diff 读取与未执行覆盖；未做同步冲突注入。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D134",
@@ -2199,11 +2298,15 @@
       "evidence": "diffs/D138.patch",
       "source": "p4g-yellow/src/screens/overlays/CounselChatModal.p4g.tsx",
       "category": "待确认",
-      "followupPlan": "07/10",
-      "issueRefs": [],
-      "explanation": "接真实会话、冷却、取消和归档；全部失败/取消/离线分支未动态验证。",
+      "followupPlan": "07",
+      "issueRefs": [
+        "B09",
+        "B10"
+      ],
+      "explanation": "R02：会话开始/追加/归档接 `cooperationOps` 与真实 store，冷却、取消和错误 UI 保留；归档 void 后立即反馈、离线/失败恢复仍待动态核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实会话 ops；未发模型请求或执行归档。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D139",
@@ -2351,11 +2454,13 @@
       "category": "待确认",
       "followupPlan": "10",
       "issueRefs": [
-        "B10"
+        "B10",
+        "B09"
       ],
-      "explanation": "真实消息持久化和可执行草稿替换种子消息；自由AI等待接入，失败闭环待验。",
+      "explanation": "R02：消息持久化与可执行草稿替换了固定演示种子，执行动作接真实 store；自由回答仍依赖后续 AI 能力，取消/失败/离线闭环待10。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证消息与草稿路径；未发模型请求。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D149",
@@ -2414,10 +2519,13 @@
       "source": "p4g-yellow/src/screens/overlays/RaidSheet.p4g.tsx",
       "category": "待确认",
       "followupPlan": "08",
-      "issueRefs": [],
-      "explanation": "buildRaidPanelData、真实技能/strike服务替代演示；权限和失败写回待08。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：面板数据改由 `buildRaidPanelData`、真实技能/strike 服务构造；权限校验与失败写回仍属于据点专项。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证数据构造；未真实出战或结算。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D153",
@@ -2460,13 +2568,14 @@
       "evidence": "diffs/D155.patch",
       "source": "p4g-yellow/src/screens/overlays/SummaryModal.p4g.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "档案读真实summaries，生成明确等待确认；真实AI未接。",
+      "explanation": "R02：历史总结读真实 summaries，生成动作明确进入等待确认；档案删除/查看仍要核真实写回。自由 AI 未接，不能把等待页当真实摘要。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证档案读取与等待分支；未请求模型或删除真实总结。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D156",
@@ -2507,13 +2616,14 @@
       "evidence": "diffs/D158.patch",
       "source": "p4g-yellow/src/screens/overlays/WishProposalDialog.p4g.tsx",
       "category": "待确认",
-      "followupPlan": "04",
+      "followupPlan": "09",
       "issueRefs": [
         "B09"
       ],
-      "explanation": "正式传真实props/回调，但未等待结果即关闭；预览无回调仍提示，需分开核。",
+      "explanation": "R02：正式宿主把真实愿望标题和进度区间传给弹窗，确认回调会 `setWishProgress`；但调用未 await 就立即清空 proposal，失败也会先关闭。预览无回调时的关闭路径与正式写回需分开验收。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证回调接线与未等待写入；未做失败注入或真实愿望推进。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D159",
@@ -2545,9 +2655,10 @@
       "issueRefs": [
         "B05"
       ],
-      "explanation": "列表/解锁接真实ops，本主题局部cut-in与全局通知是否重复待实测。",
+      "explanation": "R02：成就/技能列表和手动解锁调用真实 ops，页面自身 cut-in 与全局通知都订阅同一解锁结果。双击或多宿主是否重复播放仍需专项验证，不能据能解锁判演出正确。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确认两个可能消费面；未实测重复触发。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D161",
@@ -2577,9 +2688,10 @@
       "issueRefs": [
         "B09"
       ],
-      "explanation": "列表与增删接store，部分先改本地UI再void写入，错误恢复待验。",
+      "explanation": "R02：记录与增删改接真实 store，但部分先改本地 UI 再 `void` 写入，拒绝或异常恢复不完整。真实接入意图可追溯，闭环失败分支待04。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 store 调用与乐观更新；未注入失败或刷新。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D163",
@@ -2590,13 +2702,14 @@
       "evidence": "diffs/D163.patch",
       "source": "p4g-yellow/src/screens/pages/Astrology.p4g.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "09",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "日占卜与档案接真实读写，AI/离线分支仍待10。",
+      "explanation": "R02：日占卜、档案和保存接真实 astrology 数据；自由 AI 解读仍由 DailyDraw/LongReading 的离线或等待分支承接，预览参数不证明真实 AI。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读写；未发模型请求或检查断网恢复。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D164",
@@ -2609,11 +2722,15 @@
       "category": "待确认",
       "followupPlan": "04",
       "issueRefs": [
-        "B09"
+        "B09",
+        "B05",
+        "B17",
+        "B18"
       ],
-      "explanation": "黄色宣告卡板接真实store，错误/取消/刷新待04。",
+      "explanation": "R02：宣告卡列表/操作已接真实 store；部分页面先改本地状态或关闭弹层再写库，归档结算还有黄色双宿主风险。读取接线明确，重复演出与失败恢复未闭合。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实数据和调用；未做归档失败、并发或重复挂载验证。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D165",
@@ -2628,9 +2745,10 @@
       "issueRefs": [
         "B05"
       ],
-      "explanation": "同伴/好友/COOP/影和本主题升级链接真；蓝粉另有旧全局宿主，黄有P4CinemaChain，不可一概说不播。",
+      "explanation": "R02：同伴、好友、COOP、影战和本主题升级链接真实 adapter；蓝粉全局旧 rankup/邀请队列与页面本地队列并存，黄色则使用 P4CinemaChain 局部链。差异不是“演出丢失”，而是生产者/消费者去重和次数口径待专项核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证本地与全局宿主并存；未做真实互动双播测试。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D166",
@@ -2643,11 +2761,13 @@
       "category": "待确认",
       "followupPlan": "04",
       "issueRefs": [
-        "B06"
+        "B06",
+        "B09"
       ],
-      "explanation": "首页接homeOps真实数据，modalBlocker等待完成条；本轮快照正文为空，加载/时序未复验。",
+      "explanation": "R02：首页 `useHomeData/homeOps` 接真实任务、属性、愿望和组织摘要；R01 已在三轮12秒窗口确认此前空快照最终稳定挂载。完成写入失败时蓝粉有回滚分支，黄色只清 blocker 未回滚本地计数，仍需04失败注入。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "R01确认目标页最终挂载；未执行业务完成、拒绝或断网写入。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D167",
@@ -2660,9 +2780,10 @@
       "category": "待确认",
       "followupPlan": "08",
       "issueRefs": [],
-      "explanation": "useOrgView及登录/无组织空态接真，fallback buildView/权限/完整刷新和写回待08。",
+      "explanation": "R02：页面通过 `useOrgView` 和登录/无组织空态读取真实组织快照，演示组织仅作无账号回退；成员权限、完整刷新、公告/会议写回和多组织切换未在此页闭合。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读取与空态；未做真实组织写操作。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D168",
@@ -2674,10 +2795,14 @@
       "source": "p4g-yellow/src/screens/pages/Ledger.p4g.tsx",
       "category": "待确认",
       "followupPlan": "05",
-      "issueRefs": [],
-      "explanation": "流水、周期、真实OCR入口接真，不再伪造小票；全闭环待05。",
+      "issueRefs": [
+        "B03",
+        "B09"
+      ],
+      "explanation": "R02：流水、周期、余额和真实 OCR 入口接 ledger 数据，不再用演示小票伪造识别结果；新增/删除/对账的取消、失败恢复和预算月份口径待05。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证数据入口；未使用真实账本或相册。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D169",
@@ -2703,13 +2828,15 @@
       "evidence": "diffs/D170.patch",
       "source": "p4g-yellow/src/screens/pages/Statistics.p4g.tsx",
       "category": "待确认",
-      "followupPlan": "04/05",
+      "followupPlan": "05",
       "issueRefs": [
-        "B08"
+        "B08",
+        "B03"
       ],
-      "explanation": "真实聚合替代演示；空库等级、预算与字段口径仍待业务对照。",
+      "explanation": "R02：统计聚合改读真实 activities/attributes；空库等级、预算月份和部分展示等级文案仍有口径风险，真实聚合代码不等于统计业务验收。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实 sources；未做跨月、空库或重启后的数值对照。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D171",
@@ -2724,9 +2851,10 @@
       "issueRefs": [
         "B09"
       ],
-      "explanation": "任务增改完成接真实actions，乐观状态/失败处理需04实测。",
+      "explanation": "R02：任务增改完成接真实 actions/store，但页面存在乐观更新、`void` 写回或不完整回滚。差异类型是真实接入中的错误闭环缺口，不是演示数据。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 store 调用；未做拒绝、重复完成或刷新。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D172",
@@ -2768,10 +2896,13 @@
       "source": "p4g-yellow/src/screens/pkg2/GoalDeck.tsx",
       "category": "待确认",
       "followupPlan": "04",
-      "issueRefs": [],
-      "explanation": "真实weeklyGoals替代演示，局部初始化与刷新同步待核。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：周目标从真实 weeklyGoals 初始化并保留原有目标卡交互；局部初始化与 store 二次更新是否能同步、领取失败是否回滚未核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读取；未完成周目标或领取奖励。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D175",
@@ -2786,9 +2917,10 @@
       "issueRefs": [
         "B05"
       ],
-      "explanation": "P4CinemaChain星移接useStarShiftFlow，与onSaved链及真实奖励关系待核。",
+      "explanation": "R02：蓝粉 RankUpChain/黄色 P4CinemaChain 获星移使用真实 `useStarShiftFlow`；演出的 gained/charges 固定值、页面回调和全局队列可能重复消费，真实奖励返回值仍需逐事件对照。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 hook 接入与固定展示参数；未做真实升级/星移。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D176",
@@ -2799,13 +2931,14 @@
       "evidence": "diffs/D176.patch",
       "source": "p4g-yellow/src/screens/pkg4/DailyDraw.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "随机牌和buildOfflineDaily写dailyDivinations；有AI配置时是否仍offline需核。",
+      "explanation": "R02：抽牌使用真实牌库并写 `dailyDivinations`，但当前选牌/翻牌路径均调用 `finish(true)`，`aiConfigured` 只控制提示，静态上没有进入真实流式解读的分支。这是“离线可用、AI未接”，不是文件缺失。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证所有可达选牌路径先走离线；未发模型请求。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D177",
@@ -2816,13 +2949,14 @@
       "evidence": "diffs/D177.patch",
       "source": "p4g-yellow/src/screens/pkg4/LongReading.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "档案接真，AI_PENDING阻止假解读；预览缩为等待确认属能力未接，非文件丢失。",
+      "explanation": "R02：档案和详情读真实 longReadings，生成入口显示 AI 等待/待确认，未用占位文案伪造解读。能力未接，视觉与档案读取仍保留。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实档案读取与等待分支；未发模型请求或验证生成完成。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D178",
@@ -2834,10 +2968,13 @@
       "source": "p4g-yellow/src/screens/pkg4/org/Board.tsx",
       "category": "待确认",
       "followupPlan": "08",
-      "issueRefs": [],
-      "explanation": "公告/反应/团战由真实posts/reactions/raids派生，权限和错误留08。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：公告、反应、团战信息由真实 posts/reactions/raids 派生；写操作权限、多组织归属和失败恢复未核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证读取来源；未真实发帖/反应或操作团战。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D179",
@@ -2849,10 +2986,13 @@
       "source": "p4g-yellow/src/screens/pkg4/org/OpsMeeting.tsx",
       "category": "待确认",
       "followupPlan": "08",
-      "issueRefs": [],
-      "explanation": "作战历史、分工与会议改真实来源/saveMeeting，失败/多组织待08。",
+      "issueRefs": [
+        "B09"
+      ],
+      "explanation": "R02：作战历史、分工与会议读取真实数据并调用 saveMeeting；失败、多组织和非队长权限尚未闭环。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实读写入口；未提交真实会议。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D180",
@@ -2925,13 +3065,14 @@
       "evidence": "diffs/D184.patch",
       "source": "p4g-yellow/src/screens/pkg6/settingsStore.ts",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "09",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "设置桥接真实store，去演示Key/verified；各主题局部字段和持久化仍需专项核。",
+      "explanation": "R02：设置 store 用 `TO_REAL` 把声音、背景、属性/阈值、记账、AI 模型、通知槽等字段写回真实 settings；天气 Key/城市、BGM 曲目映射、`splashSpeed`、通知权限和部分 Persona 展示状态仍只在本主题状态中存在，没有一一对应的安全落库口径。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证字段映射与未映射字段；未验证重启持久化、权限或敏感 Key 存储。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D185",
@@ -2942,13 +3083,14 @@
       "evidence": "diffs/D185.patch",
       "source": "p4g-yellow/src/screens/pkg6/settings/AISection.tsx",
       "category": "待确认",
-      "followupPlan": "09/10",
+      "followupPlan": "10",
       "issueRefs": [
         "B10"
       ],
-      "explanation": "蓝粉去假验证/余额/模型列表，连接测试未启用；黄另有buildAIDiagnostics/真实save，不可混报。",
+      "explanation": "R02：AI Key 与模型字段通过 settingsStore 写回真实 settings；连接测试、逐档测试和模型列表刷新明确显示“未启用/未执行”，不再伪造成功或模型数。真实连接能力仍是缺口。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证保存映射和诚实失败文案；未发收费模型请求。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D186",
@@ -2960,10 +3102,14 @@
       "source": "p5r-red-demo/integration/src/p5r-red/adapter/live.ts",
       "category": "待确认",
       "followupPlan": "03",
-      "issueRefs": [],
-      "explanation": "live扩真实同伴字段、预算、流水ID、近9日支出与岁时记录，订阅加budgets；完整字段/固定值未穷尽。",
+      "issueRefs": [
+        "B08",
+        "B11"
+      ],
+      "explanation": "R02：补丁把红色全局 D 数据从固定 mock 扩成 live 快照，覆盖同伴、预算、流水 ID、近 9 日支出和岁时记录，并订阅 budgets；字段映射本身已可追溯。固定分类/牌阵常量不等于 live 全字段完成，真实缺失字段回退与同步等价仍由计划03/05/09核。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态核对 live 映射与订阅；未做真实组织/预算/流水写入、失败注入或逐字段空值穷举。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D187",
@@ -2995,9 +3141,10 @@
       "issueRefs": [
         "B13"
       ],
-      "explanation": "中间键新增touch-action:none/user-select等，影响触摸/文本选择，未做手势和视觉验收。",
+      "explanation": "R02：差异为中间键增加 `touch-action:none`、文本选择等触摸/可访问性控制。它是可感知交互与视觉差异，不是普通样式整理；历史授权和真机手感未在本轮核定。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态属性差异确证；未在触屏设备验证滑动、选择或误触。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D189",
@@ -3012,9 +3159,10 @@
       "issueRefs": [
         "B13"
       ],
-      "explanation": "轮盘K1.15→0.68、radius148→104、DEAD48→40并移除130ms随机高亮；历史记录为用户要求缩小，非本轮改动，未重验视觉。",
+      "explanation": "R02：轮盘缩放系数、半径/死区和随机高亮相对原包有差异，其中缩小轮盘有历史用户要求记录。代码差异已解释为历史可见调整，但不能据此声称当前视觉已验收。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态与STATE历史记录交叉；未做同机同视口像素或手感验收。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D190",
@@ -3044,9 +3192,10 @@
       "issueRefs": [
         "B09"
       ],
-      "explanation": "任务/宣告卡写回store，catch空等错误反馈和完成/拒绝/刷新仍待核。",
+      "explanation": "R02：任务、愿望和宣告卡的增删改/归档已调用真实 store，但仍普遍先改本地 DOM/数组再 `void` 写库，多个 `.catch(() => {})` 吞失败。差异已解释为乐观写回接入，失败恢复和完成/拒绝/刷新闭环未成立。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证调用点与空 catch；未注入失败或检查刷新后一致。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D192",
@@ -3073,10 +3222,14 @@
       "source": "p5r-red-demo/integration/src/p5r-red/screens/pkg4/ledger4.ts",
       "category": "待确认",
       "followupPlan": "05",
-      "issueRefs": [],
-      "explanation": "记账合计/预算/余额/记账/对账/支出柱接真，CAT_TYPE分类固定映射与闭环需核。",
+      "issueRefs": [
+        "B03",
+        "B09"
+      ],
+      "explanation": "R02：流水合计、预算、余额、对账和近 9 日支出已接真实 ledger store；CAT_TYPE 仍是固定 UI 映射，预算月份口径和写入失败恢复未在本轮闭合。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证读写接线；未使用真实账本，未做月份错位、删除失败或重入。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D194",
@@ -3087,13 +3240,15 @@
       "evidence": "diffs/D194.patch",
       "source": "p5r-red-demo/integration/src/p5r-red/screens/pkg4/d4.ts",
       "category": "待确认",
-      "followupPlan": "05/09/10",
+      "followupPlan": "09",
       "issueRefs": [
-        "B08"
+        "B08",
+        "B09"
       ],
-      "explanation": "愿望/委托/命运签/周目标接真，LR_CARDS牌阵和CAT分类常量仍在。",
+      "explanation": "R02：愿望、委托、命运签和周目标已从真实 store 派生，`WISHES.splice` 等路径替换了固定愿望；`LR_CARDS` 牌阵、CAT 分类和空库演示文字仍保留。真实接入与剩余常量混在同一文件，后续必须按功能拆开核，不能整文件判完成。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实数据替换范围；未验证空库、AI解读、牌阵映射和写失败。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D195",
@@ -3122,10 +3277,14 @@
       "source": "p5r-red-demo/integration/src/p5r-red/screens/pkg3/oc.ts",
       "category": "待确认",
       "followupPlan": "07",
-      "issueRefs": [],
-      "explanation": "详情/时间线/星移参考读真实id/confidantEvents，等级改共用阈值，搜索邀请/在线资料接真；复杂操作待07。",
+      "issueRefs": [
+        "B05",
+        "B14"
+      ],
+      "explanation": "R02：同伴详情、时间线、星移参考改读真实 id/confidantEvents，等级改共用阈值，搜索邀请与在线资料接真实服务；解除/删除确认里的演示 opener 是否仍可从正式页面到达、以及升级/星移演出是否重复消费尚未验证。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实同伴读取与部分回调；未执行真实邀请、解约、删除或升级互动。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D197",
@@ -3166,14 +3325,15 @@
       "evidence": "diffs/D199.patch",
       "source": "p5r-red-demo/integration/src/p5r-red/screens/pages/DashboardP5.p5r.tsx",
       "category": "待确认",
-      "followupPlan": "04/09",
+      "followupPlan": "04",
       "issueRefs": [
         "B07",
         "B09"
       ],
-      "explanation": "completeTodo后局部playQueue消费并清level/achievement/skill通知；无全局跨页消费保证，失败catch空。",
+      "explanation": "R02：`check()` 先乐观增加本地计数，完成后等待650ms读取 store 的 level/achievement/skill 三种通知，串行清除并交给局部 `playQueue`；拒绝时仅 return，catch 为空。来源与局部消费者已确认，但只覆盖当前页完成链，BIG DEAL、愿望、组织、宣告卡等跨页通知没有红色全局宿主，失败后的本地回滚也未闭合。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证局部生产/消费顺序；未动态验证真实升级、跨页通知、拒绝或写入失败。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D200",
@@ -3188,9 +3348,10 @@
       "issueRefs": [
         "B09"
       ],
-      "explanation": "行动增删接真实store，乐观本地更新且catch空；失败恢复待核。",
+      "explanation": "R02：行动增删改调用真实 store，但页面先修改本地数组/节点再 `void` 写库，记录与任务的部分 catch 为空。差异是真实接线，不是演示数据残留；失败恢复、重入和刷新一致性尚未闭合。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证 store 调用与乐观更新；未做拒绝、断网或刷新恢复。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D201",
@@ -3206,9 +3367,10 @@
         "B01",
         "B08"
       ],
-      "explanation": "账号身份/活跃天数接真，配图备份固定文案仍在，操作由AccountBlocks承接。",
+      "explanation": "R02：身份、UserID、最近同步和活跃天数改读真实 cloud/user/activity 数据；账号操作由 AccountBlocks 承接，配图备份的固定 MB/张数文案仍存在。真实身份显示与假成功操作风险是两条链，不能据页面真实 ID 判退出/删号/备份完成。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证真实身份读取；未执行真实退出、删云或备份。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D202",
@@ -3285,11 +3447,13 @@
       "category": "待确认",
       "followupPlan": "10",
       "issueRefs": [
-        "B10"
+        "B10",
+        "B09"
       ],
-      "explanation": "真实记账/任务草稿可执行，自由回复与会话持久化仍需专项核，不能报真实AI。",
+      "explanation": "R02：记账/任务草稿已能转换为可执行动作，消息和设置仍以本地会话状态为主；自由回复、会话持久化、取消/超时/离线闭环不能由可执行草稿证明。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态确证草稿执行入口；未发模型请求，未做对话恢复或取消测试。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     },
     {
       "id": "D207",
@@ -3381,9 +3545,10 @@
       "issueRefs": [
         "B13"
       ],
-      "explanation": "轮盘选中文字mix-blend-mode:multiply改isolation:isolate；历史可见差异，授权/视觉效果本轮未核定，保持。",
+      "explanation": "R02：轮盘选中文字由 `mix-blend-mode:multiply` 改为 `isolation:isolate`，属于明确可见效果差异，现保留原改法。当前授权和最终观感未核，不能在修复前擅自回退。",
       "wasInOriginal211": true,
-      "reviewBoundary": "已提取差异和接入意图，未完整确认全部分支，未关闭"
+      "reviewBoundary": "静态CSS差异确证；未做浏览器同环境视觉对照。",
+      "reviewStatus": "R02 branch explained; runtime closure deferred"
     }
   ],
   "missing": [
@@ -10382,5 +10547,291 @@
     "files/report.json": "43fb353071ae96f75b2ccdb0f6ffe183b2c8a398f6240497ae246db5ad6d8d84",
     "runtime.json": "1dee112284aa3fbb65aeda937623e97bbd351372323791207d8513362ace35a0",
     "changes.json": "a6b2c7b291dd03a22bcd85d7acadf6c9c9dcc73301a4e1e7c4edf79bbfbe7258"
+  },
+  "r02Review": {
+    "reviewedAt": "2026-10-24",
+    "reviewedPending": 87,
+    "status": "all branch explanations completed",
+    "categoryMeaning": "待确认 now denotes deferred runtime/business acceptance, not an unexplained file difference.",
+    "evidence": [
+      "E:/MASKARIA/outputs/theme-plan02-20261024/diffs/D001.patch through D212.patch",
+      "current source paths recorded in each difference",
+      "E:/MASKARIA/outputs/theme-plan02-r01-20261024-v3/r01.json"
+    ],
+    "knownDefectReferences": [
+      "B01",
+      "B03",
+      "B05",
+      "B06",
+      "B07",
+      "B08",
+      "B09",
+      "B10",
+      "B11",
+      "B13",
+      "B14",
+      "B17",
+      "B18"
+    ]
+  },
+  "r03Review": {
+    "reviewedAt": "2026-10-24",
+    "status": "formal production/consumer/close map completed",
+    "dynamicEvidence": "E:/MASKARIA/outputs/theme-plan02-r03-20261024-v2/r03.json",
+    "checks": [
+      {
+        "result": "pass",
+        "theme": "p3r-blue",
+        "event": "level-up",
+        "observed": "synthetic payload rendered once"
+      },
+      {
+        "result": "pass",
+        "theme": "p3r-blue",
+        "event": "wish-proposal",
+        "observed": "synthetic payload rendered once"
+      },
+      {
+        "result": "pass",
+        "theme": "p3r-blue",
+        "event": "wish-progress",
+        "observed": "zero consumers"
+      },
+      {
+        "result": "pass",
+        "theme": "p3r-blue",
+        "event": "return-panel",
+        "observed": "zero automatic consumers"
+      },
+      {
+        "result": "pass",
+        "theme": "p3r-blue",
+        "event": "calling-card",
+        "observed": "one trigger, static reason text instead of real card title"
+      },
+      {
+        "result": "pass",
+        "theme": "p4g-yellow",
+        "event": "wish-progress",
+        "observed": "payload rendered"
+      },
+      {
+        "result": "pass",
+        "theme": "p4g-yellow",
+        "event": "calling-card",
+        "observed": "duplicate host rendered title twice"
+      },
+      {
+        "result": "pass",
+        "theme": "p5r-red",
+        "event": "level-up",
+        "observed": "zero global consumers on dashboard"
+      },
+      {
+        "result": "pass",
+        "theme": "p5r-red",
+        "event": "wish-progress",
+        "observed": "zero global consumers"
+      },
+      {
+        "result": "pass",
+        "theme": "p5r-red",
+        "event": "big-deal-clear",
+        "observed": "zero global consumers"
+      }
+    ],
+    "eventChains": [
+      {
+        "id": "boot-splash",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "启动渲染与主题开屏偏好；各主题原 App/shell 决定开屏组件与时长",
+        "consumer": "蓝粉黄由 ThemeApp 内的原 App/shell 消费；红由 RedChannelCore 内的原 App 消费",
+        "close": "SplashScreen onComplete 将 showSplash 置 false；重入与真实时长未在02做像素/声音验收",
+        "status": "static connected"
+      },
+      {
+        "id": "navigation-transition",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "shellBus/navigate 或 hash 路由；蓝粉黄 RouteBridge 双向同步 store.currentPage",
+        "consumer": "各主题 AppShell/PageHost 与 transitionDirector 对应过渡层",
+        "close": "过渡导演在动画完成时清当前 transition；overlay/index 等调试路由不写 currentPage",
+        "status": "static connected; touch timing not acceptance"
+      },
+      {
+        "id": "day-night-low-motion",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "真实 settings.darkMode 与 useBoldness/低帧/系统减弱动效",
+        "consumer": "PrefsBridge 写主题 prefs；红由 RedChannelRoot 传 dark/lowMotion",
+        "close": "持续订阅，无一次性关闭；R01记录到 p3rMode/p3rMotion/p5rMode/p5rMotion 属性",
+        "status": "static + R01 attribute evidence"
+      },
+      {
+        "id": "todo-level-achievement-skill",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "completeTodo 产生完成条与 levelUpNotification；unlockAchievement/unlockSkill 产生各自通知",
+        "consumer": "蓝粉黄 GlobalOverlayHost 按 level > achievement > skill 和 modalBlocker 消费；红只在首页 check 的局部队列消费",
+        "close": "蓝粉黄关闭时 setLevelUp/Achievement/Skill(null)；红首页在650ms后读取并清三类通知后 playQueue",
+        "status": "blue dynamic pass; red cross-page gap B07/B09"
+      },
+      {
+        "id": "big-deal-clear",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "完成 BIG DEAL 后 store 写 bigDealClear 载荷并清状态",
+        "consumer": "蓝粉黄 GlobalOverlayHost；红没有等价全局宿主",
+        "close": "蓝粉黄 onClose 调 clearBigDealClear；红注入验证无可见消费者",
+        "status": "blue/pink/yellow connected; red gap B07"
+      },
+      {
+        "id": "wish-progress",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "bumpWishProgress/evaluateWishProgress 写 wishProgressCut（本地或AI来源、20秒节流）",
+        "consumer": "黄色 GlobalOverlayHost 的 WishProgressView；蓝粉红没有自动宿主",
+        "close": "黄色 onClose 调 clearWishProgressCut；蓝粉可用 registry 预览，但不等于正式消费",
+        "status": "yellow dynamic pass; blue dynamic zero; pink static same; red dynamic zero"
+      },
+      {
+        "id": "wish-proposal",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "store.wishProposal（助手提议，dry-run 不直接写进度）",
+        "consumer": "蓝粉黄 GlobalOverlayHost 的 WishProposalDialog；红无全局宿主",
+        "close": "取消清 proposal；确认先 get().setWishProgress，再清 proposal；调用未 await，失败也会先关",
+        "status": "blue dynamic pass; async failure gap B09"
+      },
+      {
+        "id": "calling-card-archive",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow"
+        ],
+        "producer": "callingCards 中出现 archived=true、cutInShown=false、非 terminal 的卡片",
+        "consumer": "蓝粉由 CallingCardOverlayHost 消费；黄同时由 GlobalOverlayHost 和 CallingCardOverlayHost 消费",
+        "close": "关闭后 callingCardOps.markShown/id 或 store.markCallingCardCutInShown；蓝粉组件未接收真实 card，标题回退为 reason 演示卡；黄双宿主各自等待关闭",
+        "status": "blue dynamic one host with fallback copy B17; yellow dynamic duplicate B18"
+      },
+      {
+        "id": "confidant-rankup-starshift",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "同伴互动保存后的真实亲密变化与星移结果",
+        "consumer": "蓝粉 Cooperation 本地 RankUpChain，同时 GlobalOverlayHost 挂旧 ConfidantRankUpCutIn/Invite；黄 Cooperation 调 P4CinemaChain；红 oc 读真实同伴/事件",
+        "close": "由各 RankUpChain/星移流程结束回调关闭；固定 gained/charges 与全局队列关系未验",
+        "status": "static risk B05; no real interaction executed in02"
+      },
+      {
+        "id": "org-celebration",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "cloudSocial.pushOrgCelebration 按 op/level/raid 去重入队",
+        "consumer": "蓝粉 GlobalOverlayHost 在 !modalBlocker 时显示；黄 GlobalOverlayHost 直接显示队首；红无等价全局宿主",
+        "close": "每次 onClose 调 shiftOrgCelebration，队列空则结束；黄的 blocker 条件不与蓝粉等价",
+        "status": "static; yellow blocker gap, red consumer gap"
+      },
+      {
+        "id": "return-panel",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "markAppOpened 在离开达到阈值后写 pendingReturnPayload，并更新 lastOpenedAt/lastReturnPanelAt",
+        "consumer": "旧 App 顶层 ReturnPanel 在主题提前 return 后不会挂载；主题内只有 overlay registry，无自动宿主",
+        "close": "面板完成 commitReturn 后 clearPendingReturnPayload；当前正式链无法自动进入",
+        "status": "blue dynamic zero; B04 confirmed"
+      },
+      {
+        "id": "pwa-update",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow",
+          "red"
+        ],
+        "producer": "App 的 service worker/registerSW 更新提示",
+        "consumer": "旧 App PWAUpdateToast 被主题提前 return 绕过；主题 overlay registry 可预览但没有自动宿主",
+        "close": "Toast 选择稍后或更新后自行关闭；本轮未注册 service worker，不能做帧级动态验证",
+        "status": "static consumer gap; no fake pass"
+      },
+      {
+        "id": "orphan-image-prune",
+        "themes": [
+          "blue",
+          "pink",
+          "yellow"
+        ],
+        "producer": "store.orphanImagesPrompt",
+        "consumer": "三主题 GlobalOverlayHost",
+        "close": "onConfirm 调 void pruneOrphan 后立即 dismissOrphan，未等待真实删除结果",
+        "status": "static confirmed B02"
+      },
+      {
+        "id": "red-local-notification",
+        "themes": [
+          "red"
+        ],
+        "producer": "store completeTodo/unlock 与 bigDealClear/wishProgress 等跨页事件",
+        "consumer": "只有 DashboardP5.check 读取 level/achievement/skill；RedChannelRoot/Core没有全局宿主",
+        "close": "首页局部消费后显式 set null；其它页面生成的同类通知会留在 store，注入动态验证无可见UI",
+        "status": "R03 dynamic zero; B07 confirmed"
+      }
+    ]
+  },
+  "plan02Status": {
+    "status": "complete",
+    "completedAt": "2026-10-24",
+    "r01": "7 targeted scenarios x 3 rounds passed; original empty snapshots retained as history",
+    "r02": "87/87 unresolved differences have branch explanations and follow-up ownership",
+    "r03": "14 formal event chains recorded; synthetic consumer checks documented",
+    "notProven": [
+      "real business writes",
+      "paid model calls",
+      "visual acceptance",
+      "physical device",
+      "user acceptance"
+    ]
   }
 }

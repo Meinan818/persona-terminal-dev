@@ -2,7 +2,7 @@
 
 最后更新：2026-10-24。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 历史交接 · 2026-10-24 · 计划08据点真实读写已完成，下一计划09待新聊天启动
+## 历史交接 · 2026-10-24 · 计划08据点真实读写已完成，下一计划09待新聊天启动（交接提交 `9a3766f`）
 
 - **本轮授权与现场**：用户明确执行计划08“据点真实读写”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，接手基点计划07交接提交`50d4318`；用户确认源聊天已停止共享写入。本轮未进入09及后续，未重做同伴、账号同步、记账、AI或四主题外观，未重跑764项loader，未Push/部署/APK/真实账号/真实组织数据/收费调用。
 - **计划状态**：**计划08完成，09及之后未启动**。专项报告`docs/THEME-HIDEOUT-REALRW-20261024.md`记录代码范围、四主题结果、5条隔离浏览器检查、截图和保留边界；详细计划状态已同步。
@@ -14,13 +14,13 @@
 - **保留边界**：AI互动解读、星移推演、COOP匹配与作战AI分工仍属计划10（按钮禁用并说明，不假装成功）；未连接真实组织后端/真实账号/真实社交关系；未真实请离/转让/解散、未发真实邮件或系统通知；未做Android真机、弱网、并发多标签或四主题整体视觉验收；未重跑764项loader。
 - **继承工作区**：两个Gradle行尾痕迹和未跟踪`scripts/p5r-red/_tmp-compare-local.mjs`仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
 - **运行与复查**：隔离服务需显式设置`VITE_API_URL=same-origin`并使用`http://127.0.0.1:5207`；探针`node scripts/verify-theme-plan08.mjs E:/MASKARIA/outputs/theme-plan08-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
-- **唯一下一任务/负责人**：用户在新聊天明确启动计划09“占卜、成就与设置”后，由接手者核日占卜/中长期、塔罗/岁时、成就/技能、总结与设置是否真正生效，并处理红 `d4.ts` 剩余牌阵数据；不自动跨入AI专项或UI重绘。本轮交接提交为本入口所在提交，用`git log -1`核实；提交后本聊天停止共享写入。
+- **唯一下一任务/负责人**：用户在新聊天明确启动计划09“占卜、成就与设置”后，由接手者核日占卜/中长期、塔罗/岁时、成就/技能、总结与设置是否真正生效，并处理红 `d4.ts` 剩余牌阵数据；不自动跨入AI专项或UI重绘。本轮交接提交为 `9a3766f`（`feat(theme): complete plan 08 hideout real read/write`，36 文件 / +2335 / -463）；`git log -1` 应为该 SHA；提交后本聊天停止共享写入。
 
 ## 当前接手入口 · 2026-10-24 · 计划09占卜成就与设置待新聊天启动
 
-- **本轮授权与现场**：上一轮为计划08“据点真实读写”（交接提交见上方历史段）。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`。**计划09尚未启动**：用户没有明确启动09之前，不进入占卜、成就、设置或AI专项，不重做据点、同伴、账号同步、记账或四主题外观。
+- **本轮授权与现场**：上一轮为计划08“据点真实读写”，交接提交 `9a3766f`（分支 `codex/theme-integrate`）。**计划09尚未启动**：用户没有明确启动09之前，不进入占卜、成就、设置或AI专项，不重做据点、同伴、账号同步、记账或四主题外观。
 - **计划状态**：**计划08完成；09及之后未启动**。据点读写在四主题已有真实 store/services 与隔离浏览器证据；详细计划表已同步。
-- **下一步怎么做**：新聊天先只读本入口→上方计划08历史段→[详细计划](docs/THEME-RECOVERY-PLAN-20261024.md)→[计划08专项报告](docs/THEME-HIDEOUT-REALRW-20261024.md)→AGENTS→Git状态与差异；核当前`git log -1`与源聊天是否已停止共享写入。
+- **下一步怎么做**：进入 `E:\MASKARIA\worktrees\theme-integrate` 后先只读本入口→上方计划08历史段→[详细计划](docs/THEME-RECOVERY-PLAN-20261024.md)→[计划08专项报告](docs/THEME-HIDEOUT-REALRW-20261024.md)→AGENTS→Git状态与差异；核 `git log -1` 为 `9a3766f`、工作区只剩两个Gradle行尾痕迹与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs`，并确认源聊天已停止共享写入，再等用户明确启动09。
 - **验证基线（2026-10-24计划08）**：`tsc --noEmit` exit0；`vitest` 71文件/435项；`npm run build` exit0；隔离探针 `outputs/theme-plan08-isolated-20261024-v11/report.json` `ok=true`。这些是上一轮的数字，重跑前不得当作本轮结果。
 - **工作区遗留**：两个Gradle行尾痕迹和未跟踪`scripts/p5r-red/_tmp-compare-local.mjs`属继承/外部证据，不纳入提交、不移动、不删除。无stash/reset/restore/clean。
 - **运行与复查**：隔离服务 `VITE_API_URL=same-origin` + `http://127.0.0.1:5207`；计划08探针 `node scripts/verify-theme-plan08.mjs E:/MASKARIA/outputs/theme-plan08-NEXT`（输出目录必须不存在）。缓存/TEMP/TMP放`E:\MASKARIA\.cache`。

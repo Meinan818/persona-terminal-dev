@@ -13,7 +13,8 @@ import { updateObjectiveHud, mountCamButtons } from './ui/hud';
 import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cutins';
 import type { CutWho } from './fx/cutins';
 import { TripleFx } from './view/tripleFx';
-import { SceneKit, themeFor, cobbleTex } from './view/sceneKit';
+import { SceneKit, themeFor, cobbleTex, preloadKit } from './view/sceneKit';
+void preloadKit(); // CC0 布景模型提前加载
 import { computeForecast, forecastHtml } from './view/forecast';
 import type { Forecast } from './view/forecast';
 
@@ -1127,6 +1128,7 @@ declare global { interface Window { __p5t: unknown } }
 window.__p5t = {
   get battle() { return battle; },
   sceneKit,
+  renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries }; },
   get busy() { return busy; },
   banner,
   summonCutIn,

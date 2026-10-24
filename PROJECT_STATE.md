@@ -1,8 +1,22 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-25（正式入口假实现收口：返回栈、红助手 AI、三主题 AI 设置、成长总结、中长期占卜、账号导入导出、同调与一起进步已接真实链路；新增静态漏网扫描）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-25（四主题真实助手、天气、人格、BGM、通知、归档与 AI 命名建议收口；蓝主题轻淡入入场恢复）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-25 · 正式入口假实现收口与漏网扫描
+## 当前接手入口 · 2026-10-25 · 四主题真实设置与助手动画热修
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。本轮代码提交 `3e4b22a`（`fix(theme): restore real assistant and settings flows`），本入口由后续本地文档提交保存。未 Push、未部署、未打 APK、未调用收费模型。
+- **红色助手**：会话列表改读正式 `useNavigatorStore` 人格库，内置人格显示“黑猫 / 烤面包机 / 熊”，自定义人格进入列表；移除正常 UI 中的 P5 硬编码姓名。新增模型回复到达时继续使用原 `msg_in` 提示音、头像 `nv-fg` 弹入、气泡 `nv-box` 绘框和连接黑带伸展。专项 `theme-live-regressions-20261025-v27/report.json`：`ok=true`、8项、pageErrors=0。
+- **天气**：蓝粉黄天气块不再使用固定杭州/西湖/朝阳列表与固定“小雨14°C”，城市搜索、天气取数、Key/Host/城市全部复用 `utils/weather` 并写回正式设置。专项 `theme-weather-live-20261025-v2/report.json`：蓝粉黄各一次真实城市检索和天气取数，`ok=true`、3项、pageErrors=0。
+- **四主题设置假成功收口**：人格生成/保存/切换/删除、会话归档、测试通知、BGM 导入/删除/音量预览、AI 名称匹配、等级称号刷新都接现有真实模块；蓝色/粉色/黄色天气和 BGM 字段桥回真实 `settings`。红色设置的人格提示与归档不再使用“摩尔加纳/高卷杏/坂本龙司”和固定摘要。
+- **设置真实链路证据**：`theme-settings-real-20261025-v12/report.json`，`ok=true`、13项、pageErrors=0，隔离 mock 模型请求 8 次；覆盖 AI 名称/称号、人格生成与持久化、蓝粉黄助手读共享人格、真实归档、Web 通知不假成功、BGM 本地库、红主题真实人格/归档/通知/称号建议。
+- **蓝色流畅度**：`PageEnter` 从上一版 200ms 纯位移硬切恢复为 300ms、16px 位移、从 0.82 轻淡入，避免恢复旧的从透明/深底整屏闪。最新逐帧 `theme-flash-frames-20261025-v4/report.json`：蓝主题亮度跨度 `201.31–218.14`、pageErrors=0；不是手机帧率或手感验收。
+- **语音与头像**：蓝粉黄助手“按住说话”改真实 `startRecording → transcribe`，不再插入固定“今天下雨…咖喱”；松手早于权限返回时取消迟到录音。头像上传保存为正式人格影子行，不再写设置页临时假列表。
+- **工程验证**：`node node_modules/typescript/bin/tsc --noEmit` exit0；全量 Vitest **72文件/437项通过**；`VITE_API_URL=http://150.158.174.9 npm.cmd run build` exit0；`node scripts/verify-release.mjs http://150.158.174.9 dist` 通过。构建仍有既有 caniuse、字体运行时解析、P5R `@import`顺序、动态/静态混合导入和大 chunk 警告，本轮未扩大处理。
+- **真实边界**：本轮浏览器证据使用本地 mock 模型和隔离 IndexedDB，不冒充真实收费模型、线上账号或真机行为。ADB 当前无设备；手机长期卡顿/闪屏、系统返回手势、通知栏、真实音频导入播放与四主题最终手感仍需物理设备验收。逆影战场按用户要求不纳入本轮。
+- **继承工作区**：`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle` 与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，未修改、移动、删除或提交；三项 SHA-256 仍为 `3793…43CF`、`B614…48AC`、`F332…491`。无 stash/reset/restore/checkout/clean。
+- **下一步/负责人**：由 Codex 根据用户新的具体手机反馈继续窄修；若需要安装验证，再由用户明确授权生成本轮新 APK，不能把旧 `livefix2` 冒充本轮结果。最终视觉、流畅度、声音与物理返回键由用户真机验收。未 Push。
+
+## 历史接手入口 · 2026-10-25 · 正式入口假实现收口与漏网扫描
 
 - **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`；本轮代码提交 `3262fb4`（`fix(theme): replace live demo stubs with real flows`）与 `bf7fe5e`（`fix(theme): wire assistant replies and remove page flashes`）。未 Push、未部署、未调用收费模型。
 - **返回键**：根因是原生返回只看 `currentPage`，首页/同步异常时直接进入双击退出，没有先退应用内历史。现在顺序为“顶层弹窗 → React Router 应用内历史 → 深浅链页面层级 → 根首页双击退出”；P3/P4/P6 Sheet、三主题和红色助手也注册了返回处理。单测 `useBackHandler.test.ts` 2 项通过。

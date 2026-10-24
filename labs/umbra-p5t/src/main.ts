@@ -13,6 +13,7 @@ import { updateObjectiveHud, mountCamButtons } from './ui/hud';
 import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cutins';
 import type { CutWho } from './fx/cutins';
 import { TripleFx } from './view/tripleFx';
+import { SceneKit, themeFor, cobbleTex } from './view/sceneKit';
 import { computeForecast, forecastHtml } from './view/forecast';
 import type { Forecast } from './view/forecast';
 
@@ -29,7 +30,9 @@ const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
 // 过肩瞄准镜头（P5T 开枪时切到射手肩后透视镜头，推近→开火→切回俯视）
 const aimCam = new THREE.PerspectiveCamera(44, 2, 0.05, 100);
 let viewCam: THREE.Camera = camera;
-scene.add(new THREE.HemisphereLight(0xffffff, 0x302020, 1.4));
+const hemi = new THREE.HemisphereLight(0xffffff, 0x302020, 1.4);
+scene.add(hemi);
+const sceneKit = new SceneKit();
 const sun = new THREE.DirectionalLight(0xffffff, 1.6);
 sun.position.set(6, 12, 4);
 sun.castShadow = true;
@@ -85,21 +88,28 @@ function build() {
   $('#labels').innerHTML = '';
   labelEl.clear();
   const m = battle.map;
+  const th = themeFor(m.id);
+  scene.background = new THREE.Color(th.bg);
+  scene.fog = th.fogNear < 900 ? new THREE.Fog(th.bg, th.fogNear, th.fogFar) : null;
+  hemi.color.set(th.hemiSky); hemi.groundColor.set(th.hemiGround); hemi.intensity = th.hemiInt;
+  sun.color.set(th.sunColor); sun.intensity = th.sunInt;
+  const claimed = sceneKit.build(world, m);
   for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) {
     const t = battle.grid.tile({ x, y });
     const h = battle.grid.h({ x, y });
     const door = battle.map.doors?.find((d) => d.cells.some((c) => c.x === x && c.y === y));
     const lift = battle.map.elevators?.some((e) => e.cells.some((c) => c.x === x && c.y === y));
     const light = (x + y) % 2 === 0;
-    const colH = h > 0 ? (light ? 0x4a4656 : 0x423e4d) : light ? 0x3b3b44 : 0x33333b;
+    const colH = h > 0 ? (light ? th.tileHigh : th.tileHighB) : light ? th.tileA : th.tileB;
     const top = 0.2 + h * LEVEL;
-    const tile = new THREE.Mesh(new THREE.BoxGeometry(0.96, top, 0.96), std(t === 'exit' ? 0x2a6b3a : lift ? 0x2f6b46 : colH, { roughness: 0.9 }));
+    const tile = new THREE.Mesh(new THREE.BoxGeometry(0.96, top, 0.96), std(t === 'exit' ? 0x2a6b3a : lift ? 0x2f6b46 : colH, { roughness: 0.9, ...(th.cobble && !lift && t !== 'exit' ? { map: cobbleTex() } : {}) }));
     tile.position.set(x, h * LEVEL - top / 2, y);
     tile.receiveShadow = true; tile.castShadow = h > 0;
     tile.userData = { x, y };
     world.add(tile);
     tileMeshes.push(tile);
     if (door) continue; // 门（开/关）由 MapObjects 画门板 + 门框
+    if (claimed.has(`${x},${y}`)) continue; // 布景（房屋/喷泉）已占用
     if (t === 'wall' || t === 'half' || t === 'full') {
       const bh = t === 'wall' ? 1.6 : t === 'full' ? 1.1 : 0.5;
       const col = door ? 0x3a6bd8 : t === 'wall' ? 0x55555f : t === 'full' ? 0x8a1f24 : 0xb5623a;
@@ -1009,6 +1019,7 @@ function loop() {
   aimStep();
   mapObj.update();
   const t = performance.now() / 1000;
+  sceneKit.update(rig.cur.yaw, t);
   for (const u of battle.units) if (u.prop === 'flag' || u.prop === 'speaker') { const g = unitMesh.get(u.id); if (g) (u.prop === 'flag' ? waveFlag : pulseSpeaker)(g, t); }
   renderer.render(scene, viewCam);
   refreshLabels();
@@ -1023,6 +1034,7 @@ loop();
 declare global { interface Window { __p5t: unknown } }
 window.__p5t = {
   get battle() { return battle; },
+  sceneKit,
   get busy() { return busy; },
   banner,
   summonCutIn,

@@ -2,6 +2,26 @@
 // 图片灯箱 ImageLightbox、记录图片抽屉 ActivityImagesSheet、写一句鼓励 DanmakuCompose。类名 .oa-*，样式 = legacy/css/a.css。
 // 改动：openConfirm → ConfirmDialog（kit P5Confirm）；openSummary 增加 { state }（busy=生成中 / noai=未配置 AI / none=无进行中）直达。
 import { P5 } from './p5';
+import { useAppStore, toLocalDateKey } from '@/store';
+import { aiConfigured, chatStream } from '@/utils/aiClient';
+import { effectiveModelName } from '@/utils/aiProviders';
+import {
+  followUpsOf,
+  parseSummaryResult,
+  summaryKindOf,
+  visibleSummaryText,
+  SUMMARY_FOLLOWUP_LIMIT,
+  SUMMARY_FOLLOWUP_MAX_TOKENS,
+} from '@/utils/summaryAI';
+import {
+  attachDraftFollowUp,
+  cancelSummaryJob,
+  continueSummaryJob,
+  markSummaryJobSaved,
+  resolveKeyFor,
+  startSummaryJob,
+  useSummaryJobs,
+} from '@/utils/summaryJobs';
 const R = () => P5.reduced();
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const openConfirm = (o) => P5.confirmDlg(o);
@@ -86,21 +106,65 @@ const openConfirm = (o) => P5.confirmDlg(o);
      ═════════════════════════════════════════════════════════════════ */
   const FAM = [['elizabeth', '🦋', '蓝蝶'], ['theodore', '🌿', '青侍'], ['margaret', '📖', '典藏'], ['caroline-justine', '⚔️', '双子审官']];
   const OTHER = [['igor', '馆长'], ['navi', '助手'], ['custom', '自定义']];
-  const LETTER = `客人，这一周你把「知识」推高了 9 点——图书馆那三个小时是最扎实的一块砖。\n\n「胆量」只动了 2 点。晨跑断了两天，但你在社团面试里站了出来，这比跑步更难。\n\n下周的建议：把吉他练习从 30 分钟拆成两个 15 分钟；给「魅力」留一格，哪怕只是主动和一个人打招呼。\n\n——我在天鹅绒房间等你的下一页。`;
   function openSummary({ view: v0 = 'generate', state = '' } = {}) {
-    const S = { view: v0, period: 'week', off: 0, preset: 'elizabeth', auto: true, special: false, job: null, archive: [
-      { id: 's1', kind: 'week', label: '10月第2周 总结', pts: 21, n: 14, fu: 1, auto: true, unread: true, preset: '蓝蝶', range: '2026-10-05 ~ 2026-10-11' },
-      { id: 's2', kind: 'month', label: '2026年9月 总结', pts: 86, n: 52, fu: 0, auto: false, unread: false, preset: '馆长', range: '2026-09-01 ~ 2026-09-30' },
-      { id: 's3', kind: 'year', label: '2025年 年度总结', pts: 812, n: 433, fu: 2, auto: false, unread: false, preset: '典藏', range: '2025-01-01 ~ 2025-12-31' } ], sel: null, confirmDel: null, fu: [], noKey: false };
-    const L = layer('oa-sum', `<div class="oa-sum-card" role="dialog" aria-modal="true" aria-label="成长总结">${rough(601, { face: 'var(--p5r-paper)', frame: '#111', jag: 7, d: [6, 7] })}<div class="oa-sum-hd"></div><div class="oa-sum-body"></div><div class="oa-sum-ft"></div></div>`, { z: 870 });
+    const settings0 = useAppStore.getState().settings;
+    const archiveRows = () => useAppStore.getState().summaries.map((s) => ({
+      id: s.id,
+      kind: summaryKindOf(s),
+      label: s.label,
+      pts: s.totalPoints,
+      n: s.activityCount,
+      fu: s.followUps?.length ?? (s.followUp ? 1 : 0),
+      auto: s.autoWritten === true,
+      unread: !s.viewedAt,
+      preset: s.promptPresetName,
+      range: `${s.startDate} ~ ${s.endDate}`,
+      content: s.content,
+      raw: s,
+    }));
+    const S = {
+      view: v0,
+      period: 'week',
+      off: 0,
+      annual: false,
+      preset: settings0.summaryActivePresetId ?? 'igor',
+      auto: settings0.summaryAutoWrite !== false,
+      special: settings0.summaryIncludeSpecial === true,
+      job: null,
+      archive: archiveRows(),
+      sel: null,
+      confirmDel: null,
+      fu: [],
+      noKey: !aiConfigured(settings0),
+    };
+    let unsubscribe = () => {};
+    const L = layer('oa-sum', `<div class="oa-sum-card" role="dialog" aria-modal="true" aria-label="成长总结">${rough(601, { face: 'var(--p5r-paper)', frame: '#111', jag: 7, d: [6, 7] })}<div class="oa-sum-hd"></div><div class="oa-sum-body"></div><div class="oa-sum-ft"></div></div>`, { z: 870, onClose: () => unsubscribe() });
     const hd = L.$('.oa-sum-hd'), bd = L.$('.oa-sum-body'), ft = L.$('.oa-sum-ft');
-    let stream = 0;
-    const range = () => { const d = new Date(); if (S.period === 'week') { const s = new Date(d - (d.getDay() + 6) % 7 * 864e5 + S.off * 7 * 864e5), e = new Date(+s + 6 * 864e5), f = (x) => `${x.getMonth() + 1}/${x.getDate()}`; return `${s.getFullYear()}年 ${f(s)} ~ ${f(e)}`; } const m = new Date(d.getFullYear(), d.getMonth() + S.off, 1); return `${m.getFullYear()}年${m.getMonth() + 1}月`; };
-    const titleOf = () => S.view === 'generate' ? '生成成长总结' : S.view === 'archive' ? '历史总结归档' : S.view === 'view' ? (S.sel ? S.sel.label : '总结详情') : !S.job ? '总结预览' : S.job.status === 'preparing' ? '正在整理简报…' : S.job.status === 'streaming' ? '✨ AI 正在书写…' : S.job.status === 'error' ? '生成失败' : `${S.job.label} · 草稿`;
+    let activeJob = null;
+    const rangeInfo = () => {
+      const now = new Date();
+      if (S.period === 'week') {
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + S.off * 7);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        return { period: 'week', startDate: toLocalDateKey(monday), endDate: toLocalDateKey(sunday) };
+      }
+      const first = new Date(now.getFullYear(), now.getMonth() + S.off, 1);
+      const last = new Date(now.getFullYear(), now.getMonth() + S.off + 1, 0);
+      return { period: 'month', startDate: toLocalDateKey(first), endDate: toLocalDateKey(last) };
+    };
+    const range = () => {
+      const info = rangeInfo();
+      if (info.period === 'month') return `${info.startDate.slice(0, 4)}年${Number(info.startDate.slice(5, 7))}月`;
+      const f = (key) => `${Number(key.slice(5, 7))}/${Number(key.slice(8, 10))}`;
+      return `${info.startDate.slice(0, 4)}年 ${f(info.startDate)} ~ ${f(info.endDate)}`;
+    };
+    const titleOf = () => S.view === 'generate' ? '生成成长总结' : S.view === 'archive' ? '历史总结归档' : S.view === 'view' ? (S.sel ? S.sel.label : '总结详情') : !S.job ? '总结预览' : S.job.status === 'preparing' ? '正在整理简报…' : S.job.status === 'thinking' ? '✨ 正在读你的记录…' : S.job.status === 'streaming' ? '✨ AI 正在书写…' : S.job.status === 'error' ? '生成失败' : `${S.job.label} · 草稿`;
     const stats = (a, b, c) => `<div class="oa-sum-stats">${[['总加点', a], ['记录数', b], ['风格', c]].map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>`;
     const sw = (on, k) => `<button class="oa-sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}" data-tog="${k}"><i></i></button>`;
-    const followUps = () => `<div class="oa-fu">${S.fu.map((q, i) => `<div class="oa-fu-q"><small>追问 ${i + 1}</small>${esc(q.q)}</div><div class="oa-fu-a">${esc(q.a)}</div>`).join('')}
-        ${S.fu.length < 3 ? `<p class="oa-fu-h">${S.fu.length === 0 ? '还有疑问？可以追问' : `还可以追问 ${3 - S.fu.length} 次`}</p>${S.fu.length === 0 ? '<button class="oa-fu-sug" data-sug>回答对方的问题：下周你最想先动哪一项？</button>' : ''}
+    const followUps = () => `<div class="oa-fu">${S.fu.map((q, i) => `<div class="oa-fu-q"><small>追问 ${i + 1}</small>${esc(q.q)}</div><div class="oa-fu-a">${esc(q.a)}${q.pending ? ' …' : ''}</div>`).join('')}
+        ${S.fu.length < SUMMARY_FOLLOWUP_LIMIT ? `<p class="oa-fu-h">${S.fu.length === 0 ? '还有疑问？可以追问' : `还可以追问 ${SUMMARY_FOLLOWUP_LIMIT - S.fu.length} 次`}</p>${S.fu.length === 0 && S.sel?.raw?.question ? `<button class="oa-fu-sug" data-sug>回答对方的问题：${esc(S.sel.raw.question)}</button>` : ''}
         <div class="oa-fu-in"><input class="inp" placeholder="${S.fu.length === 0 ? '回答上面的问题，或者问点别的' : '例如：如何具体提升知识属性？'}">${btn('发送', { seed: 71, size: 'sm', attrs: 'data-ask' })}</div>` : '<p class="oa-fu-h">追问机会已用完。</p>'}</div>`;
     const render = () => {
       hd.innerHTML = `<div class="oa-sum-tt">${P5.ui.plate(esc(titleOf()), { fs: 19 })}<p>${S.view === 'generate' ? '由 AI 分析你的成长记录，生成一封给你的信' : S.job && S.view === 'result' && S.job.status !== 'done' ? '关掉也没关系，它会在后台写完，回来就能看。' : ''}</p></div>
@@ -108,8 +172,7 @@ const openConfirm = (o) => P5.confirmDlg(o);
       let b = '', f = '';
       if (S.view === 'generate') {
         b = `${S.noKey ? '<div class="oa-warn"><b>未配置 AI API</b><p>请前往「设置 → AI 服务」配置 API 密钥后再使用此功能</p></div>' : ''}
-          ${S.archive.some((a) => a.unread) ? `<button class="oa-fresh" data-open="s1"><span>${star(22, 'var(--red)', { stroke: '#111', sw: 6 })}</span><span><b>「10月第2周 总结」写好了</b><small>按你的设置在后台写好的，还没看过</small></span><em>查看 ›</em></button>` : ''}
-          <button class="oa-annual ${S.annual ? 'on' : ''}" data-annual><b>2025年 年度总结 ${S.annual ? '<i class="tag">已选</i>' : ''}</b><small>成功的更生 — 回顾去年全部成长历程</small><small class="oa-annual-w">2026/1/2 写过一份，再生成会另存一份 <u data-open="s3">查看 ›</u></small></button>
+          ${(() => { const fresh = S.archive.find((a) => a.unread); return fresh ? `<button class="oa-fresh" data-open="${fresh.id}"><span>${star(22, 'var(--red)', { stroke: '#111', sw: 6 })}</span><span><b>「${esc(fresh.label)}」写好了</b><small>按你的设置在后台写好的，还没看过</small></span><em>查看 ›</em></button>` : ''; })()}
           <div class="oa-sum-k">选择时间范围</div>
           <div class="oa-per"><div class="seg">${['week', 'month'].map((p) => `<button aria-pressed="${S.period === p}" data-per="${p}">${p === 'week' ? '周总结' : '月总结'}</button>`).join('')}</div>
             <div class="oa-per-nav"><button data-off="-1" aria-label="上一期">‹</button><b>${range()}</b><button data-off="1" aria-label="下一期" ${S.off >= 0 ? 'disabled' : ''}>›</button></div></div>
@@ -118,21 +181,19 @@ const openConfirm = (o) => P5.confirmDlg(o);
             <div class="oa-oth">${OTHER.map(([id, n]) => `<button class="${S.preset === id ? 'on' : ''}" data-pre="${id}">${n}${S.preset === id ? ' ✓' : ''}</button>`).join('')}</div>
             <p class="oa-fine l">点击切换；在设置「AI 总结」里可新增 / 编辑自定义风格</p></div>
           <div class="oa-sum-opt"><div><span class="oa-sum-k">自动撰写</span><b>自动撰写上一期总结</b><p>新的一周、一个月第一次打开时，上一期还没写就在后台写好，写完提醒你一次。用当前选的风格。</p></div>${sw(S.auto, 'auto')}</div>
-          <div class="oa-sum-opt"><div><span class="oa-sum-k">统计口径</span><b>同时统计"特殊条目"</b><p>包括：逆影战场击破、本周目标、逆流、升级 / 成就 / 技能解锁 等。同伴（带"同伴"标签的条目）始终会被统计。</p></div>${sw(S.special, 'special')}</div>
-          <button class="oa-link" data-nokey>（demo）切换「未配置 API」状态</button>`;
+          <div class="oa-sum-opt"><div><span class="oa-sum-k">统计口径</span><b>同时统计"特殊条目"</b><p>包括：逆影战场击破、本周目标、逆流、升级 / 成就 / 技能解锁 等。同伴（带"同伴"标签的条目）始终会被统计。</p></div>${sw(S.special, 'special')}</div>`;
         f = btn(`${(FAM.find((x) => x[0] === S.preset) || ['', '✦'])[1]} 生成总结`, { seed: 73, size: 'lg', attrs: 'data-gen' + (S.noKey ? ' disabled' : ''), cls: 'oa-wide' + (S.noKey ? ' oa-dis' : '') });
       } else if (S.view === 'result') {
         const j = S.job;
         if (!j) b = '<div class="oa-empty-s">没有正在进行的总结。</div>';
-        else if (j.status === 'preparing') b = `<div class="oa-prep"><div class="oa-spin sm">${star(46, 'var(--red)', { stroke: '#111', sw: 6 })}</div><p>正在整理这一期的简报…</p></div>`;
-        else b = `${stats(`+${21}`, 14, j.preset)}<div class="oa-sum-meta"><button class="oa-chip" data-replay>✦ 重温开场</button>${j.status === 'streaming' ? '<span class="oa-live">正在读你的记录 <i class="oa-dots"><i>.</i><i>.</i><i>.</i></i></span>' : ''}</div>
+        else if (j.status === 'preparing' || j.status === 'thinking') b = `<div class="oa-prep"><div class="oa-spin sm">${star(46, 'var(--red)', { stroke: '#111', sw: 6 })}</div><p>${j.status === 'thinking' ? '正在读你的记录…' : '正在整理这一期的简报…'}</p></div>`;
+        else b = `${stats(`+${j.totalPoints ?? 0}`, j.activityCount ?? 0, j.preset)}<div class="oa-sum-meta">${j.status === 'streaming' ? '<span class="oa-live">正在读你的记录 <i class="oa-dots"><i>.</i><i>.</i><i>.</i></i></span>' : ''}</div>
             <article class="oa-letter">${esc(j.text).replace(/\n/g, '<br>')}${j.status === 'streaming' ? '<i class="oa-caret"></i>' : ''}</article>
-            ${j.status === 'error' ? '<div class="oa-err" role="alert">网络请求失败：无法连接到 API 服务。<div class="oa-row">' + btn('取消', { tone: 'paper', seed: 75, size: 'sm', attrs: 'data-v="generate"' }) + btn('重试', { seed: 76, size: 'sm', attrs: 'data-gen' }) + '</div></div>' : ''}
+            ${j.status === 'error' ? `<div class="oa-err" role="alert">${esc(j.error || '生成失败，请重试')}<div class="oa-row">${btn('取消', { tone: 'paper', seed: 75, size: 'sm', attrs: 'data-v="generate"' })}${btn('重试', { seed: 76, size: 'sm', attrs: 'data-gen' })}</div></div>` : ''}
             ${j.status === 'truncated' ? `<div class="oa-warn"><p>这封信写到一半断了（输出被截断或连接中途断开）。可以让它从断处接着写。</p>${btn('接着写', { tone: 'ink', seed: 77, size: 'sm', attrs: 'data-cont' })}</div>` : ''}
             ${j.status === 'done' ? followUps() : ''}`;
-        if (j) f = j.status === 'streaming' || j.status === 'preparing' ? btn('停止', { tone: 'paper', seed: 78, attrs: 'data-stop' }) + btn('生成中…', { seed: 79, attrs: 'disabled', cls: 'oa-dis' })
+        if (j) f = ['streaming', 'preparing', 'thinking'].includes(j.status) ? btn('停止', { tone: 'paper', seed: 78, attrs: 'data-stop' }) + btn('生成中…', { seed: 79, attrs: 'disabled', cls: 'oa-dis' })
           : btn('重新生成', { tone: 'paper', seed: 78, attrs: 'data-regen' }) + btn('归档保存', { seed: 79, attrs: 'data-save' });
-        f += `<button class="oa-link" data-trunc>（demo）模拟中途断开</button>`;
       } else if (S.view === 'archive') {
         b = S.archive.length ? `<div class="oa-arc">${S.archive.map((a, i) => `<div class="oa-arc-row" style="--r:${i % 2 ? .5 : -.5}deg"><div class="oa-arc-m" data-open="${a.id}"><div class="oa-arc-t"><i class="tag ${a.kind === 'year' ? '' : 'ink'}">${a.kind === 'week' ? '周' : a.kind === 'year' ? '年' : '月'}</i><b>${a.label}</b>${a.auto ? '<i class="tag paper">自动</i>' : ''}${a.unread ? '<i class="oa-dot" aria-label="未读"></i>' : ''}</div><small><span>+${a.pts} 点</span><span>${a.n} 条记录</span>${a.fu ? `<span>追问 ${a.fu}</span>` : ''}</small></div>
             <div class="oa-arc-b"><button class="oa-chip" data-open="${a.id}">查看</button>${S.confirmDel === a.id ? `<button class="oa-chip red" data-delok="${a.id}">确认</button>` : `<button class="oa-chip ghost" data-del="${a.id}">删除</button>`}</div></div>`).join('')}</div>`
@@ -140,48 +201,166 @@ const openConfirm = (o) => P5.confirmDlg(o);
         f = btn('生成新总结', { seed: 80, size: 'lg', attrs: 'data-v="generate"', cls: 'oa-wide' });
       } else if (S.view === 'view' && S.sel) {
         const a = S.sel;
-        b = `${a.kind === 'year' ? `<div class="oa-yl">✦ 2025 · 年度的信 ✦</div>` : ''}${stats(`+${a.pts}`, a.n, a.preset)}<p class="oa-fine l">${a.range} · 生成于 2026/10/12</p><div class="oa-sum-meta"><button class="oa-chip" data-replay>✦ 重温开场</button></div><article class="oa-letter">${esc(LETTER).replace(/\n/g, '<br>')}</article>${followUps()}`;
+        b = `${a.kind === 'year' ? `<div class="oa-yl">✦ ${a.range.slice(0, 4)} · 年度的信 ✦</div>` : ''}${stats(`+${a.pts}`, a.n, a.preset)}<p class="oa-fine l">${a.range} · 生成于 ${a.raw?.createdAt ? new Date(a.raw.createdAt).toLocaleDateString('zh-CN') : '未知'}</p><div class="oa-sum-meta"><button class="oa-chip" data-replay>✦ 重温开场</button></div><article class="oa-letter">${esc(a.content).replace(/\n/g, '<br>')}</article>${followUps()}`;
         f = btn(S.job ? '回到草稿' : '生成新总结', { seed: 81, size: 'lg', attrs: `data-v="${S.job ? 'result' : 'generate'}"`, cls: 'oa-wide' });
       }
       bd.innerHTML = b; ft.innerHTML = f; ft.hidden = !f;
       if (!R()) P5.panelIn(bd.children, { stagger: .03 });
     };
     const startGen = () => {
-      clearInterval(stream); S.view = 'result'; S.job = { status: 'preparing', text: '', label: range(), preset: (FAM.find((x) => x[0] === S.preset) || OTHER.find((x) => x[0] === S.preset) || ['', '', ''])[2] || (OTHER.find((x) => x[0] === S.preset) || [])[1] }; S.fu = []; render();
-      setTimeout(() => { if (!S.job || S.job.status !== 'preparing') return; S.job.status = 'streaming'; let k = 0; render();
-        stream = setInterval(() => { k += 3; S.job.text = LETTER.slice(0, k); const art = bd.querySelector('.oa-letter'); if (art) art.innerHTML = esc(S.job.text).replace(/\n/g, '<br>') + '<i class="oa-caret"></i>'; if (k >= LETTER.length) { clearInterval(stream); S.job.status = 'done'; render(); } }, 40); }, 900);
+      const settings = useAppStore.getState().settings;
+      S.noKey = !aiConfigured(settings);
+      if (S.noKey) { render(); return; }
+      const info = rangeInfo();
+      S.view = 'result';
+      S.fu = [];
+      startSummaryJob({ settings, period: info.period, startDate: info.startDate, endDate: info.endDate });
+      syncJob();
     };
+    const syncJob = () => {
+      activeJob = useSummaryJobs.getState().job;
+      if (!activeJob) { S.job = null; if (S.view === 'result') render(); return; }
+      S.job = {
+        status: activeJob.status === 'done' && activeJob.truncated ? 'truncated' : activeJob.status,
+        text: visibleSummaryText(activeJob.text || ''),
+        label: activeJob.req?.periodLabel ?? activeJob.draft?.label ?? range(),
+        preset: activeJob.req?.preset.name ?? activeJob.draft?.promptPresetName ?? '',
+        totalPoints: activeJob.req?.totalPoints ?? activeJob.draft?.totalPoints ?? 0,
+        activityCount: activeJob.req?.activityCount ?? activeJob.draft?.activityCount ?? 0,
+        error: activeJob.error,
+        continues: activeJob.continues,
+        draft: activeJob.draft,
+      };
+      S.fu = activeJob.draft?.followUps?.map((f) => ({ q: f.question, a: f.answer })) ?? S.fu;
+      if (S.view === 'result') render();
+    };
+    const currentSummaryContext = () => {
+      if (activeJob?.req) {
+        return {
+          messages: activeJob.req.messages,
+          content: activeJob.draft?.content ?? visibleSummaryText(activeJob.text),
+          followUps: activeJob.draft?.followUps ?? [],
+          cfg: { apiKey: activeJob.req.apiKey, baseUrl: activeJob.req.baseUrl, model: activeJob.req.model, provider: activeJob.req.provider },
+        };
+      }
+      const raw = S.sel?.raw;
+      if (!raw?.reqContext) return null;
+      const settings = useAppStore.getState().settings;
+      const key = resolveKeyFor(settings, raw.reqContext.provider);
+      if (!key) return { messages: raw.reqContext.messages, content: raw.content, followUps: followUpsOf(raw), cfg: null };
+      return {
+        messages: raw.reqContext.messages,
+        content: raw.content,
+        followUps: followUpsOf(raw),
+        cfg: { apiKey: key, baseUrl: raw.reqContext.baseUrl, model: effectiveModelName(raw.reqContext.model), provider: raw.reqContext.provider },
+      };
+    };
+    const askFollowUp = async (question) => {
+      const q = question.trim();
+      const ctx = currentSummaryContext();
+      if (!q || !ctx?.cfg || S.fu.length >= SUMMARY_FOLLOWUP_LIMIT) return;
+      const row = { q, a: '', pending: true };
+      S.fu.push(row);
+      render();
+      try {
+        const messages = [
+          ...ctx.messages,
+          { role: 'assistant', content: ctx.content },
+          ...ctx.followUps.flatMap((f) => [{ role: 'user', content: f.question }, { role: 'assistant', content: f.answer }]),
+          { role: 'user', content: `${q}\n\n（直接回答即可，不需要 <<<META>>> 那两行。）` },
+        ];
+        let answer = '';
+        for await (const chunk of chatStream(ctx.cfg, messages, { temperature: 0.7, maxTokens: SUMMARY_FOLLOWUP_MAX_TOKENS })) {
+          answer += chunk;
+          row.a = visibleSummaryText(answer);
+          render();
+        }
+        const clean = parseSummaryResult(answer).content;
+        if (!clean.trim()) throw new Error('追问没有返回正文');
+        row.pending = false;
+        row.a = clean;
+        const saved = { question: q, answer: clean, createdAt: new Date() };
+        if (activeJob?.draft) attachDraftFollowUp(saved);
+        if (S.sel?.raw) {
+          const updated = { ...S.sel.raw, followUps: [...followUpsOf(S.sel.raw), saved], followUp: undefined };
+          await useAppStore.getState().saveSummary(updated);
+          S.sel = archiveRows().find((item) => item.id === updated.id) ?? S.sel;
+        }
+      } catch (error) {
+        row.a = error instanceof Error ? error.message : '追问失败';
+        row.pending = false;
+      }
+      render();
+    };
+    unsubscribe = useSummaryJobs.subscribe(syncJob);
+    syncJob();
     const replay = () => { const v = document.createElement('div'); v.className = 'oa-replay'; v.innerHTML = `${P5.ui.ransom('YOUR WEEK', { h: 54, seed: 12 })}<p>${range()}</p>`; L.el.appendChild(v); slam(v.querySelectorAll('img'), 50); setTimeout(() => v.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'both' }).onfinish = () => v.remove(), 1400); };
     L.el.addEventListener('click', (e) => {
       const t = e.target, g = (s) => t.closest(s);
-      if (t === L.el || g('[data-x]')) { clearInterval(stream); return L.close(); }
+      if (t === L.el || g('[data-x]')) return L.close();
       let n;
-      if ((n = g('[data-v]'))) { S.view = n.dataset.v; S.confirmDel = null; return render(); }
+      if ((n = g('[data-v]'))) { S.view = n.dataset.v; S.confirmDel = null; if (S.view === 'result') syncJob(); return render(); }
       if ((n = g('[data-per]'))) { S.period = n.dataset.per; S.off = 0; return render(); }
       if ((n = g('[data-off]'))) { S.off = Math.min(0, S.off + +n.dataset.off); return render(); }
-      if ((n = g('[data-pre]'))) { S.preset = n.dataset.pre; return render(); }
-      if ((n = g('[data-tog]'))) { S[n.dataset.tog] = !S[n.dataset.tog]; return render(); }
-      if ((n = g('[data-open]'))) { e.stopPropagation(); S.sel = S.archive.find((a) => a.id === n.dataset.open); if (S.sel) { S.sel.unread = false; S.view = 'view'; S.fu = S.sel.fu ? [{ q: '我该先补哪一项？', a: '先补「魅力」：它最低，也最容易从一句问候开始。' }] : []; } return render(); }
-      if (g('[data-annual]')) { S.annual = !S.annual; return render(); }
-      if (g('[data-nokey]')) { S.noKey = !S.noKey; return render(); }
+      if ((n = g('[data-pre]'))) {
+        S.preset = n.dataset.pre === 'navi' ? 'lavenza' : n.dataset.pre;
+        void useAppStore.getState().updateSettings({ summaryActivePresetId: S.preset });
+        return render();
+      }
+      if ((n = g('[data-tog]'))) {
+        S[n.dataset.tog] = !S[n.dataset.tog];
+        void useAppStore.getState().updateSettings(n.dataset.tog === 'auto'
+          ? { summaryAutoWrite: S.auto }
+          : { summaryIncludeSpecial: S.special });
+        return render();
+      }
+      if ((n = g('[data-open]'))) {
+        e.stopPropagation();
+        S.sel = S.archive.find((a) => a.id === n.dataset.open);
+        if (S.sel) {
+          void useAppStore.getState().markSummaryViewed(S.sel.id);
+          S.sel.unread = false;
+          S.view = 'view';
+          S.fu = (S.sel.raw?.followUps ?? []).map((f) => ({ q: f.question, a: f.answer }));
+        }
+        return render();
+      }
       if (g('[data-gen]')) return startGen();
       if (g('[data-regen]')) return openConfirm({ title: '重新生成？', description: '这份草稿还没归档，重新生成会把它丢掉。', tone: 'danger', confirmText: '丢弃并重新生成', onConfirm: startGen });
-      if (g('[data-stop]')) { clearInterval(stream); S.job.status = 'done'; return render(); }
-      if (g('[data-trunc]')) { clearInterval(stream); if (!S.job) return; S.job.status = 'truncated'; return render(); }
-      if (g('[data-cont]')) { S.job.status = 'done'; return render(); }
-      if (g('[data-save]')) { P5.toast('保存中…'); setTimeout(() => { S.archive.unshift({ id: 's' + Date.now(), kind: S.period, label: S.job.label + ' 总结', pts: 21, n: 14, fu: S.fu.length, auto: false, unread: false, preset: S.job.preset, range: range() }); S.job = null; S.view = 'archive'; render(); P5.toast('已归档'); }, 500); return; }
+      if (g('[data-stop]')) { cancelSummaryJob(); S.job = null; S.view = 'generate'; return render(); }
+      if (g('[data-cont]')) { continueSummaryJob(useAppStore.getState().settings); return; }
+      if (g('[data-save]')) {
+        const draft = activeJob?.draft;
+        if (!draft) return P5.toast('这封信还没写完');
+        const button = g('[data-save]');
+        if (button) { button.disabled = true; button.textContent = '保存中…'; }
+        const toSave = { ...draft, viewedAt: draft.viewedAt ?? new Date() };
+        void useAppStore.getState().saveSummary(toSave).then(() => {
+          markSummaryJobSaved();
+          activeJob = null;
+          S.archive = archiveRows();
+          S.sel = S.archive.find((item) => item.id === toSave.id) ?? null;
+          S.view = S.sel ? 'view' : 'archive';
+          render();
+          P5.toast('已归档');
+        }).catch((error) => {
+          if (button) { button.disabled = false; button.textContent = '归档保存'; }
+          P5.toast(error instanceof Error ? error.message : '归档失败');
+        });
+        return;
+      }
       if (g('[data-replay]')) return replay();
       if ((n = g('[data-del]'))) { S.confirmDel = n.dataset.del; return render(); }
-      if ((n = g('[data-delok]'))) { S.archive = S.archive.filter((a) => a.id !== n.dataset.delok); S.confirmDel = null; return render(); }
-      if (g('[data-sug]')) { const i = bd.querySelector('.oa-fu-in input'); i.value = '下周你最想先动哪一项？'; i.focus(); return; }
-      if (g('[data-ask]')) { const i = bd.querySelector('.oa-fu-in input'); if (!i.value.trim()) return; S.fu.push({ q: i.value, a: '我会先从最低的那一项下手：每天一件 5 分钟能做完的小事，连着做七天。' }); return render(); }
+      if ((n = g('[data-delok]'))) { void useAppStore.getState().deleteSummary(n.dataset.delok).then(() => { S.archive = archiveRows(); S.confirmDel = null; render(); }); return; }
+      if (g('[data-sug]')) { const i = bd.querySelector('.oa-fu-in input'); i.value = S.sel?.raw?.question ?? ''; i.focus(); return; }
+      if (g('[data-ask]')) { const i = bd.querySelector('.oa-fu-in input'); if (!i.value.trim() || S.fu.some((row) => row.pending)) return; void askFollowUp(i.value); return; }
     });
     render();
     if (v0 === 'result' || state === 'busy') startGen();
     if (state === 'noai') { S.noKey = true; render(); }
     if (state === 'none') { S.view = 'result'; S.job = null; render(); }
-    if (v0 === 'detail') { S.sel = S.archive[0]; S.view = 'view'; S.fu = [{ q: '我该先补哪一项？', a: '先补「魅力」：它最低，也最容易从一句问候开始。' }]; render(); }
-    if (v0 === 'preview') { clearInterval(stream); S.view = 'result'; S.job = { status: 'done', text: LETTER, label: range(), preset: '蓝蝶' }; S.fu = []; render(); }
+    if (v0 === 'detail') { S.sel = S.archive[0] ?? null; S.view = S.sel ? 'view' : 'archive'; S.fu = (S.sel?.raw?.followUps ?? []).map((f) => ({ q: f.question, a: f.answer })); render(); }
+    if (v0 === 'preview') { S.view = 'result'; syncJob(); render(); }
     if (state === 'regen') setTimeout(() => L.el.querySelector('[data-regen]')?.click(), 300);
   }
   function openLightbox({ images = [fakeImg(0), fakeImg(1), fakeImg(2)], index = 0, caption = null, onDelete = null } = {}) {

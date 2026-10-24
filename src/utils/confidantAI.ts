@@ -608,9 +608,9 @@ function starShiftOffline(input: StarShiftInput): StarShiftResult {
   return { orientation, description, interpretation, advice, summary, source: 'offline' };
 }
 
-export async function starShiftConfidant(input: StarShiftInput, signal?: AbortSignal): Promise<StarShiftResult> {
+export async function starShiftConfidant(input: StarShiftInput, signal?: AbortSignal, allowAI: boolean = true): Promise<StarShiftResult> {
   const hasKey = aiConfigured(input.settings);
-  if (!hasKey) return starShiftOffline(input);
+  if (!hasKey || !allowAI) return starShiftOffline(input);
   try {
     return await callStarShiftAI(buildStarShiftRequest(input), signal);
   } catch (err) {

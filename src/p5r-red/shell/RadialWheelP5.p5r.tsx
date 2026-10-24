@@ -50,8 +50,7 @@ export function RadialWheelP5({ open, origin, hold, onClose, onNavigate, reduced
   const R = reduced || isLowMotion();
   const g = useMemo(() => {
     const ox = origin?.x ?? innerWidth / 2, oy = origin?.y ?? innerHeight - 46;
-    const K = 0.68;
-    const radius = Math.min(104, innerWidth / 2 - 40), DEAD = 40, SEG = 180 / WHEEL.length;
+    const K = 1.15, radius = Math.min(148, innerWidth / 2 - 46), DEAD = 48, SEG = 180 / WHEEL.length;
     return { ox, oy, K, radius, DEAD, SEG };
   }, [origin, open]); // eslint-disable-line react-hooks/exhaustive-deps
   const holdMode = hold ?? ptrDown;
@@ -71,9 +70,16 @@ export function RadialWheelP5({ open, origin, hold, onClose, onNavigate, reduced
     const onUp = (e: PointerEvent) => { if (holdMode) done(pick(e.clientX, e.clientY)); };
     const onCancel = () => onClose();
     const onTap = (e: MouseEvent) => { if (holdMode) return; if (R) { const b = (e.target as Element).closest<HTMLElement>('[data-id]'); onClose(); if (b) nav(b.dataset.id!); return; } done(pick(e.clientX, e.clientY)); };
+    // 红青活高亮
+    const live = window.setInterval(() => {
+      const h = el.querySelector('.oa-st.on .hl'); if (!h) return;
+      const r = (a: number, b: number) => (a + Math.random() * (b - a)).toFixed(1);
+      h.querySelector('.hr')!.setAttribute('points', `${r(0, 6)},${r(0, 10)} ${r(94, 100)},${r(0, 8)} ${r(90, 98)},${r(32, 40)} ${r(0, 5)},${r(30, 38)}`);
+      h.querySelector('.hc')!.setAttribute('points', `${r(2, 8)},${r(0, 8)} ${r(95, 100)},${r(0, 6)} ${r(88, 96)},${r(34, 40)} ${r(0, 6)},${r(34, 40)}`);
+    }, 130);
     addEventListener('pointermove', onMove); addEventListener('pointerup', onUp); addEventListener('pointercancel', onCancel);
     const tt = window.setTimeout(() => el.addEventListener('click', onTap), holdMode ? 0 : 60);
-    return () => { clearTimeout(tt); removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp); removeEventListener('pointercancel', onCancel); el.removeEventListener('click', onTap); };
+    return () => { clearInterval(live); clearTimeout(tt); removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp); removeEventListener('pointercancel', onCancel); el.removeEventListener('click', onTap); };
   }, [mounted, open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open || !mounted) return;
@@ -108,7 +114,7 @@ export function RadialWheelP5({ open, origin, hold, onClose, onNavigate, reduced
                   style={{ left: x, top: y, ['--w' as string]: `${W}px`, ['--h' as string]: `${H}px`, ['--tilt' as string]: `${tilt}deg`, ['--dx' as string]: `${ox - x}px`, ['--dy' as string]: `${oy - y}px`, ['--d' as string]: `${0.03 * i}s`, zIndex: 30 + i }}>
                   <div className="oa-st-in" style={{ width: W, height: H }}>
                     <i className="sd" style={{ clipPath: clip }} /><i className="rim" style={{ clipPath: clip }} /><i className="face" style={{ clipPath: clip }} />
-                    <i className="hl"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><polygon className="hr" points="2,6 98,0 94,38 0,34" fill="#ff0022" /><polygon className="hc" points="4,4 99,3 92,36 3,39" fill="#1cfeff" style={{ opacity: 0.55 }} /><polygon points="3,5 97,2 93,36 2,35" fill="#F2E9DA" /></svg></i>
+                    <i className="hl"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><polygon className="hr" points="2,6 98,0 94,38 0,34" fill="#ff0022" /><polygon className="hc" points="4,4 99,3 92,36 3,39" fill="#1cfeff" style={{ mixBlendMode: 'screen', opacity: 0.85 }} /><polygon points="3,5 97,2 93,36 2,35" fill="#F2E9DA" /></svg></i>
                     <div className="txt" style={{ clipPath: clip }}>
                       <div className="cn">{[...label].map((c, j) => jr(i * 13.7 + j * 31.9) < 0.36
                         ? <span key={j} className="rz" style={{ transform: `rotate(${((jr(i * 17.3 + j * 7.1) - 0.5) * 14).toFixed(1)}deg)`, clipPath: RCLIP[(i + j) % 3] }}>{c}</span>

@@ -7,12 +7,13 @@
  * AI：残响回复 = useAIStream（思考约 2.4s「正在说…」→ 逐字）；回复中可直接插话（打断，保留已说部分）。
  */
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Dialog, P3R, Portal, showToast, slantClip, tickClip, useEscape, useScrollLock } from '@pink/kit';
 import { useBoldness } from '@pink/lib/prefs';
 import { cx } from '@pink/lib/cx';
 import { cooperationOps, counselHasKey, streamCounselReply, useCooperationData } from '@pink/adapters/pkg3';
+import { useAppStore } from '@/store';
 import { Tarot } from '@pink/screens/pkg3/ui';
 import type { CounselMessage } from '@real/types';
 
@@ -43,7 +44,11 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
   const cooldownLocked = locked || counselCooldown.locked;
   const state: CState = previewState ?? (sessionLive ? 'live' : cooldownLocked ? 'cooldown' : 'intro');
   const msgs = counselSession?.messages ?? [];
-  const hasKey = counselHasKey(settings);
+  const hasKey = useSyncExternalStore(
+    useAppStore.subscribe,
+    () => counselHasKey(useAppStore.getState().settings),
+    () => false,
+  );
   const left = sessionLive
     ? Math.max(0, Math.floor((new Date(counselSession.expiresAt).getTime() - now) / 1000))
     : 0;
@@ -161,7 +166,7 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
       <AnimatePresence>
         {isOpen && (
           <motion.div key="counsel" className="fixed inset-0 flex items-stretch justify-center wide:items-center wide:p-6" style={{ zIndex: 'var(--p3r-z-sheet)' as unknown as number, background: 'var(--p3r-scrim)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div aria-label="谏言" role="dialog" aria-modal="true" className="relative flex h-full w-full min-w-0 max-w-[720px] flex-col overflow-hidden wide:h-[min(86vh,820px)]"
+            <motion.div aria-label="谏言" role="dialog" aria-modal="true" data-counsel-key={hasKey ? '1' : '0'} className="relative flex h-full w-full min-w-0 max-w-[720px] flex-col overflow-hidden wide:h-[min(86vh,820px)]"
               style={{ background: 'linear-gradient(180deg, var(--p3r-mulberry), rgb(var(--p3r-mulberry-rgb) / 0.94) 60%, rgb(var(--p3r-blue-deep-rgb) / 0.55))' }}
               initial={bold ? { opacity: 0, y: 24 } : { opacity: 0 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
               <span aria-hidden className="pointer-events-none absolute -right-6 top-16 select-none font-cond text-[120px] leading-none" style={{ color: 'rgba(255,255,255,0.05)', transform: 'rotate(-12deg)' }}>COUNSEL</span>

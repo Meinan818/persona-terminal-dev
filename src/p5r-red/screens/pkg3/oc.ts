@@ -2,11 +2,14 @@
 import { P5 } from './p5';
 import { RANKS } from '@/p5r-red/mock/data';
 import { useAppStore, toLocalDateKey } from '@/store';
+import { useCloudStore } from '@/store/cloud';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { searchUserByUserId, sendFriendRequest, severFriendship } from '@/services/friends';
 import { coopBondOps } from '@/themes/cooperationData';
 import { getUserId } from '@/services/velvetApi';
 import { thresholdsFor, levelBasePoints, MAX_INTIMACY } from '@/utils/confidantLevels';
+import { aiConfigured } from '@/utils/aiClient';
+import { evaluateInteraction, matchConfidant, starShiftConfidant } from '@/utils/confidantAI';
 /* ═══════════════════════════════════════════════════════════════════
    overlays/c.js — C 组「羁绊」全部弹层 / 演出（红主题 P5R 版）
    对应仓库 src/components/cooperation/*（红主题：*P5.tsx / confidantP5Fx.tsx / confidantP5Scenery.tsx /
@@ -414,7 +417,10 @@ export const OC: any = {};
   function starShift(cf = CF[0], { stage = 'input', offline = true } = {}) {
     const t = cf.card;
     let st = stage, note = '';
+    let preview = null;
     let saving = false, errorText = '星象暂时没有回应（网络错误）';
+    const settings = useAppStore.getState().settings;
+    const allowAI = cf.source !== 'online' || !!useCloudStore.getState().cloudUser;
     const root = document.createElement('div'); root.className = 'oc-sf';
     root.innerHTML = `${scenery('oc-sc', { still: true })}<div class="sf-sheet" data-oc-anchor="page3" role="dialog" aria-modal="true" aria-label="星移"><div class="sf-body"></div></div>`;
     document.body.appendChild(root);
@@ -433,10 +439,10 @@ export const OC: any = {};
         <div class="sf-box"><span class="k">最近 ${recentOf(cf.id).length} 条与 Ta 相关的记录（一同纳入星象推演）</span><div class="sf-scroll">${recentOf(cf.id).map(([d, x]) => `<div class="sf-row"><span class="d">${d}</span><span>${x}</span></div>`).join('')}</div></div>
         <div class="sf-acts single"><button type="button" class="sf-btn main" data-a="start" ${charges() <= 0 ? 'disabled' : ''}>✧ 重新落墨（消耗 1 次）</button></div>`;
       if (st === 'thinking') h = `${head('星象正在重写这段关系', true)}<div class="sf-center sf-pad"><div class="sf-spin">✦</div><p class="sf-sub">星移中……</p></div>`;
-      if (st === 'preview') h = `${head('预览新的落墨')}<div class="sf-box"><span class="k">✧ 这次的变化</span><small class="sf-strong">从「一起冲的伙伴」走向「会回头等对方的人」——你们开始照顾彼此的节奏。</small></div>
-        ${diff('关系描述', cf.description, '秀尽学园二年级的老搭档。冲在前面的人，现在也会回头等你。')}${diff('解读', cf.aiInterpretation, '战车正位 · 速度之外多了方向感，你们在为同一件事用力。')}${diff('未来', cf.aiAdvice, '把「下次一定」换成一个具体日期。')}
-        <div class="sf-box"><span class="k">牌面将调整</span><small>从 <b>${cf.orientation === 'reversed' ? '逆位' : '正位'}</b> 改为 <b>${cf.orientation === 'reversed' ? '正位' : '逆位'}</b></small></div>
-        <div class="sf-acts"><button type="button" class="sf-btn ghost" data-a="again">再想想</button><button type="button" class="sf-btn main" data-a="ink">落墨</button></div>${offline ? '<div class="sf-sub sf-center">· 本次为离线星移 ·</div>' : ''}`;
+      if (st === 'preview') h = `${head('预览新的落墨')}<div class="sf-box"><span class="k">✧ 这次的变化</span><small class="sf-strong">${esc(preview?.summary ?? '')}</small></div>
+        ${diff('关系描述', cf.description, preview?.description ?? '')}${diff('解读', cf.aiInterpretation, preview?.interpretation ?? '')}${diff('未来', cf.aiAdvice, preview?.advice ?? '')}
+        <div class="sf-box"><span class="k">牌面走向</span><small>${preview?.orientation === cf.orientation ? `维持 <b>${cf.orientation === 'reversed' ? '逆位' : '正位'}</b>` : `从 <b>${cf.orientation === 'reversed' ? '逆位' : '正位'}</b> 改为 <b>${preview?.orientation === 'reversed' ? '逆位' : '正位'}</b>`}</small></div>
+        <div class="sf-acts"><button type="button" class="sf-btn ghost" data-a="again">再想想</button><button type="button" class="sf-btn main" data-a="ink">落墨</button></div>${preview?.source === 'offline' ? '<div class="sf-sub sf-center">· 本次为离线星移 ·</div>' : ''}`;
       if (st === 'done') h = `<div class="sf-center sf-pad"><div class="sf-done">✧</div><p class="sf-sub">这一次的落墨已经收进档案</p></div>`;
       if (st === 'error') h = `<div class="sf-center sf-pad"><div class="sf-cloud">☁</div><p class="sf-title">${esc(errorText)}</p></div><div class="sf-acts single"><button type="button" class="sf-btn ghost" data-a="again">返回重试</button></div>`;
       body.innerHTML = h;
@@ -451,20 +457,44 @@ export const OC: any = {};
       const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
       const a = b.dataset.a;
       if (a === 'close') closeSw(originOf(e, b));
-      if (a === 'start') { go('thinking'); setTimeout(() => !closed && st === 'thinking' && go('preview'), 1600); }
+      if (a === 'start') {
+        go('thinking');
+        const recentActivities = realEventsOf(cf.id)
+          .filter((event) => event.userInput)
+          .slice(0, 6)
+          .map((event) => ({ date: event.date, text: event.userInput }));
+        void Promise.all([
+          starShiftConfidant({
+            settings,
+            confidantName: cf.name,
+            arcanaName: t.cn,
+            orientation: cf.orientation,
+            currentLevel: cf.intimacy,
+            previousDescription: cf.description,
+            previousInterpretation: cf.aiInterpretation,
+            previousAdvice: cf.aiAdvice,
+            changeNote: note.trim(),
+            recentActivities,
+          }, undefined, allowAI),
+          new Promise((resolve) => setTimeout(resolve, RD() ? 0 : 650)),
+        ]).then(([result]) => {
+          if (closed || st !== 'thinking') return;
+          preview = result;
+          go('preview');
+        }).catch((error) => {
+          if (closed) return;
+          errorText = error instanceof Error ? error.message : '星移失败，请稍后重试';
+          go('error');
+        });
+      }
       if (a === 'again') go('input');
       if (a === 'ink') {
         if (saving) return;
         saving = true;
         b.disabled = true;
         b.textContent = '落墨中…';
-        const next = {
-          description: '秀尽学园二年级的老搭档。冲在前面的人，现在也会回头等你。',
-          interpretation: '战车正位 · 速度之外多了方向感，你们在为同一件事用力。',
-          advice: '把「下次一定」换成一个具体日期。',
-          orientation: cf.orientation === 'reversed' ? 'upright' : 'reversed',
-          summary: '从「一起冲的伙伴」走向「会回头等对方的人」——你们开始照顾彼此的节奏。',
-        };
+        const next = preview;
+        if (!next) return;
         void useAppStore.getState().consumeStarShift(cf.id, next).then(() => {
           cf.starShiftCharges = Math.max(0, charges() - 1);
           cf.description = next.description;
@@ -501,6 +531,8 @@ export const OC: any = {};
   function detail(cf = CF[0], { readonly = false, shadow } = {}) {
     let tab = 'info', expanded = -1;
     const online = cf.source === 'online', isMax = cf.intimacy >= 10;
+    const canUseAI = aiConfigured(useAppStore.getState().settings)
+      && (cf.source !== 'online' || !!useCloudStore.getState().cloudUser);
     // 进度条百分比夹在 0–100（真实点数与阈值不同步时不越界）。
     const pct = isMax ? 100 : Math.max(0, Math.min(100, Math.round(((cf.intimacyPoints - cf.base) / Math.max(1, cf.next - cf.base)) * 100)));
     shadow = shadow !== undefined ? shadow : online ? { identified: true, hp: 62 } : null;
@@ -532,7 +564,7 @@ export const OC: any = {};
     };
     const decayText = () => online ? (cf.decayEnabled ? '逆流 · 双方同意，3 天无互动 −1/天' : '逆流未开启') : cf.decayEnabled ? '逆流 · 3 天无互动 −1/天' : '逆流未开启';
     const actsHTML = () => cf.archivedAt ? `<div class="dt-acts">${U.btn('恢复关系', { tone: 'paper', seed: 121, attrs: 'data-a="archive"' })}${U.btn('彻底删除', { tone: 'red', seed: 122, attrs: 'data-a="del"' })}<p class="oc-note">归档后能力暂停生效，但历史记录仍会保留</p></div>` : `<div class="dt-acts">
-        <div class="dt-row1${online ? ' two' : ''}">${U.btn(isMax ? '已圆满 ✧' : '今日互动 · 由 AI 解读加点', { tone: 'red', size: 'lg', seed: 117, attrs: `data-a="interact" ${isMax ? 'disabled' : ''}` })}${online ? `<button type="button" class="dt-pact" data-a="pact"><b>立下约定</b><small>每日打卡 · 第 3 天 / 共 14 天</small></button>` : ''}</div>
+        <div class="dt-row1${online ? ' two' : ''}">${U.btn(isMax ? '已圆满 ✧' : canUseAI ? '今日互动 · 由 AI 解读加点' : '今日互动 · 离线解读加点', { tone: 'red', size: 'lg', seed: 117, attrs: `data-a="interact" ${isMax ? 'disabled' : ''}` })}${online ? `<button type="button" class="dt-pact" data-a="pact"><b>立下约定</b><small>每日打卡 · 第 3 天 / 共 14 天</small></button>` : ''}</div>
         ${cf.starShiftCharges > 0 ? `<button type="button" class="dt-shift" data-a="shift"><span>✧ 星移</span><em>余 ${cf.starShiftCharges}</em><small>以当前状态重新落墨</small></button>` : ''}
         <div class="dt-row3">${U.btn('暂时归档', { tone: 'paper', seed: 118, attrs: 'data-a="archive"' })}${U.btn('彻底删除', { tone: 'ink', seed: 119, attrs: 'data-a="del"' })}</div>
         ${online ? `<button type="button" class="dt-sever" data-a="sever">解除与 ${esc(cf.linkedProfile?.nickname ?? '')} 的 COOP 契约</button>` : ''}
@@ -603,18 +635,22 @@ export const OC: any = {};
   function interaction(cf = CF[0], { stage = 'input', alreadyToday = false, onlineNoLogin = false, onDone } = {}) {
     let st = stage, text = '', sync = true, attr = cf.skillAttribute, pts = 2, delta = 3, saving = false;
     let errorText = 'AI 判断失败：网络超时';
-    const ai = 3;
+    let evalResult = null;
+    const settings = useAppStore.getState().settings;
+    const hasAI = aiConfigured(settings);
     const liveConfidant = useAppStore.getState().confidants.find((item) => item.id === cf.id);
+    const allowAI = cf.source !== 'online' || !!useCloudStore.getState().cloudUser;
+    onlineNoLogin = onlineNoLogin || (cf.source === 'online' && !allowAI);
     alreadyToday = alreadyToday || liveConfidant?.lastInteractionDate === toLocalDateKey();
     const sync3 = (hint) => `${chk(sync, '同步到「记录」（带「同伴」标签）', hint, 'sync')}${sync ? `<div class="oc-sub2"><span class="oc-k">选择加点属性（可不选）</span>${attrChips(attr)}<div class="it-pts"><span>加点</span>${[1, 2, 3].map((n) => `<button type="button" data-a="pts" data-v="${n}" aria-pressed="${pts === n}">+${n}</button>`).join('')}</div></div>` : ''}`;
     const view = () => {
-      if (st === 'input') return [`${alreadyToday ? note('今天已经记录过和 Ta 的互动了。同一天反复加点容易失真，明天再来吧。', 'warn') : ''}${onlineNoLogin ? note('这是一位在线同伴 —— 需要登录云端后才能让 AI 读懂你们之间的互动。<span> 当前会退回到通用模板记录，不会调 AI。</span>', 'warn') : ''}
+      if (st === 'input') return [`${alreadyToday ? note('今天已经记录过和 Ta 的互动了。同一天反复加点容易失真，明天再来吧。', 'warn') : ''}${onlineNoLogin ? note('这是一位在线同伴 —— 需要登录云端后才能让 AI 读懂你们之间的互动。<span> 当前会退回到通用模板记录，不会调 AI。</span>', 'warn') : !hasAI ? note('未配置 AI API，将使用离线模式评估这次互动。', 'warn') : ''}
         <label class="fld"><span>今天和 Ta 做了什么？发生了什么？</span><textarea class="inp" rows="4" data-in="t" placeholder="可以很具体——一起吃了什么饭、聊了什么话题、Ta 说了一句让你印象深刻的话…… 也可以写下一点感受。">${esc(text)}</textarea></label>
         ${sync3('会在记录列表里生成一条专属条目；可选择将这次相处经验换算为某一属性的加点（最多 +3）。')}<p class="oc-err" hidden></p>`, U.btn('解读这一段', { tone: 'red', size: 'lg', seed: 131, attrs: `data-a="eval" ${alreadyToday ? 'disabled' : ''}` })];
       if (st === 'thinking') return [`<div class="it-think"><div class="it-orb">${U.star('var(--red)', 'var(--ink)', 1.4)}</div><p>水晶球散发出了淡蓝色的微光……</p></div>`, ''];
-      if (st === 'result') return [`${sec('解读', '<p>战车正位：被搁置的目标重新亮起。你陪 Ta 回头看了一眼，这件事对 Ta 很重要。</p>')}${sec('未来', '<p>下次陪 Ta 去操场跑一圈，不用说太多。</p>')}
-        <div class="oc-sec"><div class="it-dh"><span class="oc-k">建议加点（可调整）</span><b>${cf.intimacy < 10 ? `+${delta} · ${DELTA_L[delta]}` : '已达圆满'}</b></div><div class="it-deltas">${[0, 1, 2, 3, 4, 5].map((n) => `<button type="button" data-a="delta" data-v="${n}" aria-pressed="${delta === n}">+${n}${n === ai ? '<small>AI 荐</small>' : ''}</button>`).join('')}</div><p class="oc-note">${LBL[cf.intimacy]}（当前） → Lv.${cf.intimacy} + ${delta} 点</p></div>
-        ${sync3('勾选后可选任一属性加 1–3 点，确认时会有音符弹起～')}${note('· 本次为离线评估 ·', 'c')}`, U.btn('修改描述', { tone: 'paper', seed: 132, attrs: 'data-a="edit"' }) + U.btn('就这样记下', { tone: 'red', size: 'lg', seed: 133, attrs: 'data-a="ok"' })];
+      if (st === 'result') return [`${sec('解读', `<p>${esc(evalResult?.narrative ?? '')}</p>`)}${sec('未来', `<p>${esc(evalResult?.advice ?? '')}</p>`)}
+        <div class="oc-sec"><div class="it-dh"><span class="oc-k">建议加点（可调整）</span><b>${cf.intimacy < 10 ? `+${delta} · ${DELTA_L[delta]}` : '已达圆满'}</b></div><div class="it-deltas">${[0, 1, 2, 3, 4, 5].map((n) => `<button type="button" data-a="delta" data-v="${n}" aria-pressed="${delta === n}">+${n}${n === evalResult?.delta ? `<small>${evalResult?.source === 'ai' ? 'AI 荐' : '离线荐'}</small>` : ''}</button>`).join('')}</div><p class="oc-note">${LBL[cf.intimacy]}（当前） → Lv.${cf.intimacy} + ${delta} 点</p></div>
+        ${sync3('勾选后可选任一属性加 1–3 点，确认时会有音符弹起～')}${evalResult?.source === 'offline' ? note('· 本次为离线评估 ·', 'c') : ''}`, U.btn('修改描述', { tone: 'paper', seed: 132, attrs: 'data-a="edit"' }) + U.btn('就这样记下', { tone: 'red', size: 'lg', seed: 133, attrs: 'data-a="ok"' })];
       if (st === 'done') return [`<div class="it-done"><div class="it-check">✓<i></i></div><p>今日的这一页被写进了你们的故事里</p>${sync && attr ? `<small>♪ ${P5.ATTR[attr].name} +${pts}</small>` : ''}</div>`, ''];
       return [`<div class="it-done"><div class="it-cloud">☁</div><p>${esc(errorText)}</p></div>`, U.btn('返回重试', { tone: 'paper', seed: 134, attrs: 'data-a="edit"' })];
     };
@@ -626,7 +662,31 @@ export const OC: any = {};
       on: {
         sync: () => { sync = !sync; draw(false); }, attr: (t) => { attr = attr === t.dataset.v ? null : t.dataset.v; draw(false); }, pts: (t) => { pts = +t.dataset.v; press(t); },
         delta: (t) => { delta = +t.dataset.v; draw(false); },
-        eval: () => { if (text.trim().length < 4) { const e = d.body.querySelector('.oc-err'); e.hidden = false; e.textContent = '请再多描述一点，星象才能照见'; return; } go('thinking'); setTimeout(() => st === 'thinking' && go('result'), 1500); },
+        eval: () => {
+          if (text.trim().length < 4) { const e = d.body.querySelector('.oc-err'); e.hidden = false; e.textContent = '请再多描述一点，星象才能照见'; return; }
+          go('thinking');
+          const recentUserInputs = realEventsOf(cf.id)
+            .filter((event) => event.type === 'conversation' && event.userInput)
+            .slice(0, 2)
+            .map((event) => ({ date: event.date, text: event.userInput }));
+          void evaluateInteraction({
+            settings,
+            confidantName: cf.name,
+            arcanaName: cf.card.cn,
+            orientation: cf.orientation,
+            currentLevel: cf.intimacy,
+            description: text.trim(),
+            relationshipSummary: cf.description,
+            recentUserInputs,
+          }, undefined, allowAI).then((result) => {
+            evalResult = result;
+            delta = result.delta;
+            go('result');
+          }).catch((error) => {
+            errorText = error instanceof Error ? error.message : '解读失败，请稍后再试';
+            go('error');
+          });
+        },
         edit: () => go('input'),
         ok: async () => {
           if (saving) return;
@@ -638,7 +698,8 @@ export const OC: any = {};
               id: cf.id,
               description: text.trim() || '与同伴的互动',
               delta,
-              narrative: '今日与同伴的互动',
+              narrative: evalResult?.narrative ?? '今日与同伴的互动',
+              advice: evalResult?.advice,
               createActivity: sync,
               activityAttribute: sync && attr ? attr : undefined,
               activityPoints: sync && attr ? pts : 0,
@@ -766,27 +827,56 @@ export const OC: any = {};
 
   /* ══════════ CoopAiMatchModal —— STAR MATCH 星象匹配（description → trait → matching → result；error） ══════════ */
   function aiMatch(targetName = '新岛真', { stage = 'description', onApply } = {}) {
-    let st = stage, step = 0, desc = ''; const ans = []; const v = { level: 4, attr: 'knowledge' }; const res = T.PRIESTESS;
+    let st = stage, step = 0, desc = '', errorText = '匹配失败，请稍后重试'; const ans = []; const v = { level: 4, attr: 'knowledge' };
+    let res = null;
+    const settings = useAppStore.getState().settings;
+    const hasAI = aiConfigured(settings);
     const view = () => {
-      if (st === 'description') { const ok = desc.trim().length >= 6; return [`<p class="oc-eb2">告诉星象 · 只给 AI 参考</p><label class="fld"><span>你眼中的 ${esc(targetName)} 是怎样的人？</span><textarea class="inp" rows="5" data-in="d" placeholder="比如：跟我一起十年的朋友，会在我说不出话的夜里发一段没头没尾的语音……">${esc(desc)}</textarea></label>${note('这段不会发给对方，只用来推荐塔罗。<br>对方看到的"留一句话"在结果页填。')}${note('未配置 AI API，将使用离线模式进行匹配', 'warn')}`, U.btn(ok ? '下一步（4 个小问题）' : '至少几个字，让塔罗有内容可参考', { tone: ok ? 'red' : 'ink', size: 'lg', seed: 161, attrs: `data-a="n" ${ok ? '' : 'disabled'}` })]; }
+      if (st === 'description') { const ok = desc.trim().length >= 6; return [`<p class="oc-eb2">告诉星象 · 只给 AI 参考</p><label class="fld"><span>你眼中的 ${esc(targetName)} 是怎样的人？</span><textarea class="inp" rows="5" data-in="d" placeholder="比如：跟我一起十年的朋友，会在我说不出话的夜里发一段没头没尾的语音……">${esc(desc)}</textarea></label>${note('这段不会发给对方，只用来推荐塔罗。<br>对方看到的"留一句话"在结果页填。')}${!hasAI ? note('未配置 AI API，将使用离线模式进行匹配', 'warn') : ''}`, U.btn(ok ? '下一步（4 个小问题）' : '至少几个字，让塔罗有内容可参考', { tone: ok ? 'red' : 'ink', size: 'lg', seed: 161, attrs: `data-a="n" ${ok ? '' : 'disabled'}` })]; }
       if (st === 'trait') return [traitHTML(step, ans), ''];
       if (st === 'matching') return [matchingHTML(), ''];
-      if (st === 'result') return [`<div class="cr-res">${cardHTML(res, 110, { cls: 'cr-card' })}<div><b class="cr-n">《${res.cn}》正位</b><small>${res.no} · ${res.en}</small><span class="tag">星象建议起点 Lv.3 · ${LBL[3]}</span></div></div>
-        ${sec('为什么是这张牌', '<p>女教皇正位：冷静、克制、洞察。Ta 习惯一个人扛，却总能看穿你的逞强。</p>')}${sec('未来', '<p>多分享你的计划，Ta 会帮你补上漏洞。</p>')}
+      if (st === 'result') { const card = res ? T[String(res.arcanaId).toUpperCase()] : T.PRIESTESS; return [`<div class="cr-res">${cardHTML(card, 110, { cls: 'cr-card', rev: res?.orientation === 'reversed' })}<div><b class="cr-n">《${card.cn}》${res?.orientation === 'reversed' ? '逆位' : '正位'}</b><small>${card.no} · ${card.en}</small><span class="tag">星象建议起点 Lv.${res?.initialIntimacy ?? 3} · ${LBL[res?.initialIntimacy ?? 3]}</span></div></div>
+        ${sec('为什么是这张牌', `<p>${esc(res?.interpretation ?? '')}</p>`)}${sec('未来', `<p>${esc(res?.advice ?? '')}</p>`)}
         <div class="oc-sec"><div class="it-dh"><span class="oc-k">起点羁绊（你最终决定）</span><b>Lv.${v.level} · ${LBL[v.level]}</b></div>${lvPicker(v.level)}</div>
         <div class="oc-sec"><div class="it-dh"><span class="oc-k">能力加成属性</span><small>默认来自塔罗花色</small></div>${attrChips(v.attr)}<p class="oc-note">Lv2 日常加点、Lv7 战斗固伤、Lv10 SP 道具都会指向这个属性。</p></div>
-        <label class="fld"><span>留一句话（给对方看，可选，≤ 200 字）</span><textarea class="inp" rows="2" maxlength="200" placeholder="想对 ${esc(targetName)} 说的话……"></textarea></label>${note('· 本次为离线匹配 ·', 'c')}`, U.btn('重新匹配', { tone: 'paper', seed: 162, attrs: 'data-a="redo"' }) + U.btn('就用这份 ✦', { tone: 'red', size: 'lg', seed: 163, attrs: 'data-a="apply"' })];
-      return [`<div class="it-done"><div class="it-cloud">☁</div><p>匹配失败：网络超时</p></div>`, U.btn('回去改一改', { tone: 'paper', seed: 164, attrs: 'data-a="redo"' })];
+        <label class="fld"><span>留一句话（给对方看，可选，≤ 200 字）</span><textarea class="inp" rows="2" maxlength="200" placeholder="想对 ${esc(targetName)} 说的话……"></textarea></label>${res?.source === 'offline' ? note('· 本次为离线匹配 ·', 'c') : ''}`, U.btn('重新匹配', { tone: 'paper', seed: 162, attrs: 'data-a="redo"' }) + U.btn('就用这份 ✦', { tone: 'red', size: 'lg', seed: 163, attrs: 'data-a="apply"' })]; }
+      return [`<div class="it-done"><div class="it-cloud">☁</div><p>${esc(errorText)}</p></div>`, U.btn('回去改一改', { tone: 'paper', seed: 164, attrs: 'data-a="redo"' })];
     };
     const draw = (anim = true) => { const [b, f] = view(); d.set(b, f, anim); d.locked = st === 'matching'; d.hideClose(st === 'matching');
       const ta = d.body.querySelector('[data-in="d"]'); ta && ta.addEventListener('input', () => { const was = desc.trim().length >= 6; desc = ta.value; if ((desc.trim().length >= 6) !== was) { const [, f2] = view(); d.foot.innerHTML = f2; } });
       if (st === 'matching') startFan(d.body); if (st === 'result') flipReveal(d.body.querySelector('.cr-card')); };
     const go = (s) => { st = s; draw(); };
+    const runMatch = () => {
+      go('matching');
+      const takenArcanaIds = CF
+        .filter((item) => item.id !== 'cf-empty')
+        .map((item) => TAROT_FILE[item.arcanaId] || String(item.arcanaId).toLowerCase());
+      const traits = TRAITS.map((question, index) => ({ question: question[0], answer: ans[index] || '' }));
+      void Promise.all([
+        matchConfidant({ settings, name: targetName, description: desc.trim(), takenArcanaIds, traits }),
+        new Promise((resolve) => setTimeout(resolve, RD() ? 0 : 650)),
+      ]).then(([result]) => {
+        const card = T[String(result.arcanaId).toUpperCase()] ?? T.PRIESTESS;
+        res = {
+          ...result,
+          id: card.id,
+          orientation: result.orientation,
+          level: result.initialIntimacy,
+          attr: EXTRA[card.id]?.attr ?? 'knowledge',
+        };
+        v.level = res.level;
+        v.attr = res.attr;
+        go('result');
+      }).catch((error) => {
+        errorText = error instanceof Error ? error.message : '匹配失败，请稍后重试';
+        go('error');
+      });
+    };
     const d = dialog({ eyebrow: '✦ STAR MATCH · 星象匹配', title: '星象匹配', sub: `星象为 ${esc(targetName)} 推演一张塔罗`, seed: 167,
       demo: [['description', '描述'], ['trait', '小问题'], ['matching', '匹配中'], ['result', '结果'], ['error', '报错']], demoCur: stage, onDemo: (k) => { step = 0; go(k); },
-      on: { n: () => { step = 0; go('trait'); }, trait: (t) => { ans[step] = t.dataset.v; press(t); setTimeout(() => { if (step < 3) { step++; draw(); } else { go('matching'); setTimeout(() => st === 'matching' && go('result'), 1800); } }, 220); },
+      on: { n: () => { step = 0; go('trait'); }, trait: (t) => { ans[step] = t.dataset.v; press(t); setTimeout(() => { if (step < 3) { step++; draw(); } else runMatch(); }, 220); },
         tprev: () => { step--; draw(); }, lv: (t) => { v.level = +t.dataset.v; draw(false); }, attr: (t) => { v.attr = t.dataset.v; press(t); },
-        redo: () => go('description'), apply: () => { d.close(); onApply ? onApply(res) : P5.toast(`已采用《${res.cn}》`); } } });
+        redo: () => go('description'), apply: () => { if (!res) return; const card = T[String(res.arcanaId).toUpperCase()] ?? T.PRIESTESS; d.close(); onApply ? onApply({ ...res, id: card.id, level: v.level, attr: v.attr }) : P5.toast(`已采用《${card.cn}》`); } } });
     draw(false);
     return d;
   }
@@ -810,7 +900,7 @@ export const OC: any = {};
     const go = (s) => { ph = s; draw(); };
     const d = dialog({ eyebrow: 'COOP · PROPOSE', title: `和 ${targetName} 缔结契约`, sub: '挑一张塔罗代表 Ta 在你眼里的样子。Ta 接受后，你们的在线同伴卡会自动建立。', seed: 175, size: 'l',
       demo: [['choice', '选择方式'], ['manual', '手动'], ['success', '已送出']], demoCur: phase, onDemo: (k) => go(k),
-      on: Object.assign(pickerOn(v, () => draw(false)), { ai: () => { go('ai'); aiMatch(targetName, { onApply: (r) => { v.arcanaId = r.id; go('manual'); } }); }, manual: () => go('manual'), back: () => go('choice'), send: async (t) => {
+      on: Object.assign(pickerOn(v, () => draw(false)), { ai: () => { go('ai'); aiMatch(targetName, { onApply: (r) => { v.arcanaId = r.id; v.orientation = r.orientation; v.level = r.level; v.attr = r.attr; go('manual'); } }); }, manual: () => go('manual'), back: () => go('choice'), send: async (t) => {
         if (!targetUserId) return P5.toast('没有找到可邀请的云端用户');
         t.querySelector('span').textContent = '发送中…';
         try {
@@ -868,7 +958,7 @@ export const OC: any = {};
     const d = dialog({ eyebrow: 'COOP · PROPOSAL', title: `${name} 想与你缔结契约`, sub: 'Ta 为你选了一张塔罗。看看代表你的这张牌 —— 然后挑一张代表 Ta。', seed: 187, size: 'l',
       demo: [['choice', '待响应'], ['manual', '手动'], ['nopick', '对方未选牌'], ['expired', '已失效']], demoCur: phase,
       onDemo: (k) => { theyPicked = k !== 'nopick'; stt = k === 'expired' ? 'expired' : 'pending'; ph = k === 'manual' ? 'manual' : 'choice'; draw(); },
-      on: Object.assign(pickerOn(v, () => draw(false)), { ai: () => { ph = 'ai'; draw(); aiMatch(name, { onApply: (r) => { v.arcanaId = r.id; ph = 'manual'; draw(); } }); }, manual: () => { ph = 'manual'; draw(); }, back: () => { ph = 'choice'; draw(); },
+      on: Object.assign(pickerOn(v, () => draw(false)), { ai: () => { ph = 'ai'; draw(); aiMatch(name, { onApply: (r) => { v.arcanaId = r.id; v.orientation = r.orientation; v.level = r.level; v.attr = r.attr; ph = 'manual'; draw(); } }); }, manual: () => { ph = 'manual'; draw(); }, back: () => { ph = 'choice'; draw(); },
         rej: async (t) => {
           if (!bond) return P5.toast('没有待响应的 COOP 提议');
           t.querySelector('span').textContent = '处理中…';

@@ -5,13 +5,14 @@
  * #/overlay/bond-counsel-chat?state=intro|live|expired|cooldown&dialog=leave|archive&ai=0&neterr=1
  */
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import { Portal, useEscape, useScrollLock, showToast } from '@yellow/kit';
 import { TVPowerOn } from '@yellow/fx';
 import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
 import { cooperationOps, counselHasKey, streamCounselReply, useCooperationData } from '@yellow/adapters/pkg3';
+import { useAppStore } from '@/store';
 import { TarotCard } from '@yellow/screens/pkg3/ui';
 import type { CounselMessage } from '@real/types';
 
@@ -41,7 +42,11 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
   const cooldownLocked = locked || counselCooldown.locked;
   const state: CState = previewState ?? (sessionLive ? 'live' : cooldownLocked ? 'cooldown' : 'intro');
   const msgs = counselSession?.messages ?? [];
-  const hasKey = counselHasKey(settings);
+  const hasKey = useSyncExternalStore(
+    useAppStore.subscribe,
+    () => counselHasKey(useAppStore.getState().settings),
+    () => false,
+  );
   const left = sessionLive
     ? Math.max(0, Math.floor((new Date(counselSession.expiresAt).getTime() - now) / 1000))
     : 0;
@@ -162,7 +167,7 @@ export function CounselChat({ isOpen, onClose, initialState = 'intro', initialDi
             <img src={p4gAsset('tv-world-fog.webp')} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />
             <div className="absolute inset-0 bg-p4g-black/35" />
             <TVPowerOn className="relative flex h-full w-full max-w-[720px] min-w-0 flex-col wide:h-[min(86vh,820px)]">
-              <div aria-label="谏言" className="relative flex h-full min-h-0 flex-col overflow-hidden border-p4g-black wide:rounded-sm wide:border-3 wide:shadow-[8px_8px_0_var(--p4g-orange)]">
+              <div aria-label="谏言" data-counsel-key={hasKey ? '1' : '0'} className="relative flex h-full min-h-0 flex-col overflow-hidden border-p4g-black wide:rounded-sm wide:border-3 wide:shadow-[8px_8px_0_var(--p4g-orange)]">
                 {/* 页头 */}
                 <div className="flex shrink-0 items-center gap-3 bg-p4g-black px-4 py-3 text-white">
                   <div className="min-w-0 flex-1">

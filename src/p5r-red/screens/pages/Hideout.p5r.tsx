@@ -7,11 +7,26 @@
  * 路由：?state=normal|two|notice|nocard|error|loading|empty|signed-out|member  ?tab=roster|board|ops|meeting  ?view=wall  ?raid=0
  */
 import type { PageProps } from '@/p5r-red/registry/types';
+import { useEffect } from 'react';
+import { useCloudStore } from '@/store/cloud';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { P5 } from '../pkg3/p5';
 import { ImperativePage } from '../pkg3/host';
 import { orgPage, applyParams } from '../pkg3/hideout';
 import '../pkg3/pkg3.css';
 
 export default function Hideout({ params, wide }: PageProps) {
+  useEffect(() => {
+    const social = useCloudSocialStore.subscribe((next, prev) => {
+      if (next.orgs !== prev.orgs) P5.rerender();
+    });
+    const auth = useCloudStore.subscribe((next, prev) => {
+      if (next.cloudUser !== prev.cloudUser) P5.rerender();
+    });
+    // 订阅前若状态已经变化，也用最新快照重绘。
+    P5.rerender();
+    return () => { social(); auth(); };
+  }, []);
   const key = params.toString();
   return <ImperativePage key={key} def={orgPage} wide={wide} before={() => applyParams(params)} />;
 }

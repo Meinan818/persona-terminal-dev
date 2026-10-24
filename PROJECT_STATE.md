@@ -2,7 +2,20 @@
 
 最后更新：2026-10-24。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-24 · 原始 demo 核对与详细计划交接
+## 当前接手入口 · 2026-10-24 · 计划01完成，后续节点未启动
+
+- **本轮授权与现场**：接手 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，基于交接提交 `c34c43e`；用户确认源聊天已停止共享写入。本轮仅执行 [详细计划](docs/THEME-RECOVERY-PLAN-20261024.md) 的01，不重审整库、不进入02/08、不大重构、不Push。最终提交以本段所在提交为准，可用 `git log -1` 核实。
+- **修复结果**：红色据点去掉非法可选链赋值，`render()` 每次读取正式 `cloud/cloudSocial` 快照，并订阅登录和组织状态变化重绘。未登录不显示缓存组织，无组织/空成员/离队作者/零有效作战成员均安全；当前成员按 `view.me.userId`、队长按 `org.leaderId` 判断，不靠数组首位。组织等级与作战进度复用现有业务函数；真实文字进入HTML前转义。预览状态单独保存，演示队长切换不提升正式权限，不填假成员补空态。
+- **涉及范围**：`adapter/hideoutData.ts`、`screens/pkg3/hideout.ts`、`screens/pages/Hideout.p5r.tsx`，新增数据/宿主回归测试与 `scripts/p5r-red/verify-hideout-plan01.mjs`。四主题CSS、素材、音效均未改，红据点14处 `.animate()` 调用与基点逐一一致；未声称四主题视觉或用户验收通过。
+- **已验证（2026-10-24本轮）**：`node node_modules/vitest/vitest.mjs run src/p5r-red/adapter/hideoutData.test.ts src/themes/__tests__/orgData.test.ts --reporter=dot`：2文件/11项通过；`tsc --noEmit` exit0；最终 `npm run build` exit0（含TypeScript与Vite）。`node --check scripts/p5r-red/verify-hideout-plan01.mjs`、`git diff --check`通过。构建仍提示大chunk及主包超过PWA预缓存上限，未在本轮扩大范围处理。
+- **浏览器证据与边界**：全新E盘隔离Chrome档案，阻断外网/API/serviceworker，用合成IndexedDB用户和正式store合成组织状态，沿正式App“羁绊→组织”路径实测：未登录→无组织→有组织（当前用户非首位）→四分区→宽屏→空成员→退出，10个检查点通过、pageerror0；作战区同时确认预览队长不能出现取消权限。报告与4张截图：`E:\MASKARIA\outputs\hideout-plan01-2026-10-24T01-37-01-521Z\report.json`（同目录PNG）。这是正式读取链与状态更新验证，不是线上真实组织/服务端写入验收。
+- **原失败保留**：交接的 `Invalid assignment target` 原文及WIP快照仍在 `outputs/theme-demo-audit-20261024-original/`。本轮首次完整构建曾因新增测试类型字段不全、MEM隐式any与缺少pageId失败，已修正后完整构建通过；失败日志 `E:\MASKARIA\.cache\plan01-hideout-build-20261024.log`，最终成功日志 `plan01-hideout-build-final-20261024.log`。浏览器首次仅定位器重名失败，原报告 `outputs/hideout-plan01-2026-10-24T01-31-54-825Z/report.json` 保留，改为原有标题类定位后通过。
+- **未完成与设计边界**：计划01恢复现有store读取和可靠空态；据点完整请求刷新、加载/失败、多组织选择、历史/会议纪要/团战、好友演示数据与写操作仍属计划08，不能称据点全部接真。未重跑整库测试，未构建Android或新APK，未做真机与线上验收。本轮无外观设计变更。
+- **保留的其他改动**：两个 `android/*.gradle` 与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，SHA256与接手时一致，不纳入本轮提交。继承据点WIP已纳入本轮修复提交；没有stash/reset/restore/clean。无Push、无部署，旧r12安装包不包含本次修复。
+- **本地复验**：已有Vite服务 `http://127.0.0.1:5196`（运行时存活须现场核实）；需要重启时在本工作树执行 `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5196 --strictPort`。探针命令 `node scripts/p5r-red/verify-hideout-plan01.mjs`，默认5196；每次另建输出目录，不读取真实用户档案。缓存与TEMP/TMP使用 `E:\MASKARIA\.cache`。
+- **下一项与负责人**：计划02“四主题行为对照”待用户后续授权后由接手者执行，本轮不启动；计划08边界保留。本次无需用户操作，程序化验证不代替后续主观/真机验收。普通协作，无新聊天、无自动化、无子代理。
+
+## 历史交接 · 2026-10-24 · 原始 demo 核对与详细计划
 
 - **用户决定**：用户担心此前集成遗漏四主题内容，提供 `D:\下载\DEMO\` 四个原始 ZIP；本轮先核查并给修复路线。最新明确要求“出完最终版详细计划表就准备交接”，随后担心上下文消耗、表示不懂技术。已停止新开发/测试，仅收尾文档和本地提交。交接完成后本聊天停止共享写入，等待用户明确继续；不创建新聊天或自动化。
 - **路线结论**：现有证据支持保留四套原 demo、复用可核验业务、逐模块修接入；不支持立即全量重写。详细计划见 [THEME-RECOVERY-PLAN-20261024.md](docs/THEME-RECOVERY-PLAN-20261024.md)。下一轮范围收小到一个节点，避免每次重审整库；技术判断与可自动验证工作由接手者承担。

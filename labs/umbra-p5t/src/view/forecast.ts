@@ -93,37 +93,40 @@ export function computeForecast(b: Battle, a: Unit, t: Unit, kind: FKind, skill:
 }
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
-const initials = (n: string) => (n.split(' ').pop() ?? n).slice(0, 2).toUpperCase();
-const COVER_SVG = (full: boolean) => `<svg viewBox="0 0 20 20" class="cv"><path d="M10 1 18 4v6c0 5-4 8-8 9-4-1-8-4-8-9V4z" fill="${full ? '#fff' : 'none'}" stroke="#fff" stroke-width="2"/>${full ? '' : '<path d="M10 3v15" stroke="#fff" stroke-width="2"/><path d="M10 3 16.5 5.4V10c0 4-3 6.5-6.5 7.6z" fill="#fff"/>'}</svg>`;
+/** P5T 心形掩护图标：full = 实心青心（全掩体），half = 左半实心（半掩体），none = 空心（暴露） */
+const HEART = 'M12 21 C4 15 1 11 1 6.8 1 3.6 3.6 1 6.8 1 9 1 10.9 2.2 12 4 13.1 2.2 15 1 17.2 1 20.4 1 23 3.6 23 6.8 23 11 20 15 12 21Z';
+export function heartSvg(cover: 0 | 1 | 2): string {
+  const fill = cover === 2 ? '#2bd9e8' : 'none';
+  const half = cover === 1 ? `<clipPath id="fch"><rect x="0" y="0" width="12" height="24"/></clipPath><path d="${HEART}" fill="#2bd9e8" clip-path="url(#fch)"/>` : '';
+  return `<svg viewBox="0 0 24 22" class="fc-heart c${cover}"><path d="${HEART}" fill="${cover === 2 ? fill : '#0008'}"/>${half}<path d="${HEART}" fill="none" stroke="#fff" stroke-width="2"/></svg>`;
+}
 
-/** 面板 HTML */
-export function forecastHtml(f: Forecast, colorOf: (id: string) => string): string {
+/**
+ * 目标头顶的紧凑预测（P5T：不是侧边大面板，而是贴在目标头上的数字+心形掩护+标签）。
+ * 位置由 main.ts refreshLabels 每帧按目标屏幕坐标摆放；箭头 --ax 指向目标。
+ */
+export function forecastHtml(f: Forecast, _colorOf?: (id: string) => string): string {
   const t = f.target, a = f.attacker;
-  const name = f.kind === 'melee' ? '近战 MELEE' : f.kind === 'gun' ? '枪击 GUN' : f.skill!.name;
-  const cost = f.kind === 'skill' ? (f.skill?.voltage ? '<span class="cost v">VOLTAGE</span>' : `<span class="cost">SP ${f.spCost}</span>`) : f.kind === 'gun' ? `<span class="cost">弹 ${a.ammo === Infinity ? '∞' : a.ammo}</span>` : '';
   const after = Math.max(0, t.hp - f.amount);
   const pct = (n: number) => `${(100 * n) / Math.max(1, t.maxHp)}%`;
-  const tags: string[] = [];
-  if (f.lethal) tags.push('<i class="tg kill">✖ KILL 击杀</i>');
-  if (f.cover) tags.push(`<i class="tg cover">${COVER_SVG(f.cover === 2)}掩体 ${f.cover === 2 ? '全' : '半'}</i>`);
-  if (f.height > 0) tags.push(`<i class="tg hi">▲ 高低差 优势</i>`);
-  if (f.weak && !f.lethal) tags.push('<i class="tg weak">WEAK</i>');
-  if (f.willDown) tags.push('<i class="tg down">击倒 → 1 MORE</i>');
-  if (f.push) tags.push(`<i class="tg push">${f.push.blocked && eq(f.push.to, f.push.from) ? '推人 ✕ 被挡' : `推人 ➜ ${Math.abs(f.push.to.x - f.push.from.x) + Math.abs(f.push.to.y - f.push.from.y)}格${f.push.fly ? '(吹飞)' : ''}`}</i>`);
-  if (f.aoe.length > 1) tags.push(`<i class="tg aoe">范围 ${f.aoe.length}格</i>`);
-  return `<div class="fc-in">
-    <div class="fc-head"><span class="fc-sk">${esc(name)}</span>${cost}</div>
-    <div class="fc-row">
-      <div class="fc-face me" style="--c:${colorOf(a.id)}">${initials(a.name)}</div>
-      <div class="fc-mid">
-        <div class="fc-dmg"><small>DMG</small><b>${f.amount}</b></div>
-        <div class="fc-hit"><small>HIT</small><b>${f.hit}</b><small>%</small></div>
-      </div>
-      <div class="fc-face foe">${initials(t.name)}${f.lethal ? '<em class="kill">KILL</em>' : ''}</div>
-    </div>
-    <div class="fc-hp"><span class="nm">${esc(t.name)}</span><span class="num">${t.hp}<small>→</small><b>${after}</b><small>/${t.maxHp}</small></span>
-      <div class="bar"><i class="rest" style="width:${pct(after)}"></i><i class="lose" style="left:${pct(after)};width:${pct(t.hp - after)}"></i></div></div>
-    ${tags.length ? `<div class="fc-tags">${tags.join('')}</div>` : ''}
-    <div class="fc-btns"><button data-fc="cancel">✕ 取消</button><button data-fc="ok" class="ok">${f.lethal ? '斩杀' : '确认'} ▶</button></div>
-  </div>`;
+  const miss = f.hit === 0;
+  const tag = f.lethal ? '<i class="tg kill">KILL</i>'
+    : miss ? '<i class="tg block">BLOCK</i>'
+    : f.willDown ? '<i class="tg weak">WEAK</i><i class="tg down">1 MORE</i>'
+    : f.weak ? '<i class="tg weak">WEAK</i>' : '<i class="tg res">RESIST</i>';
+  const extra: string[] = [];
+  if (f.height > 0) extra.push('<i class="mini hi">▲高</i>');
+  if (f.push) extra.push(`<i class="mini push">${f.push.blocked && eq(f.push.to, f.push.from) ? '推✕' : `推${Math.abs(f.push.to.x - f.push.from.x) + Math.abs(f.push.to.y - f.push.from.y)}`}</i>`);
+  if (f.aoe.length > 1) extra.push(`<i class="mini aoe">×${f.aoe.length}</i>`);
+  // 只有技能才需要一条小字（技能名+SP），近战/枪击不需要
+  const strip = f.kind === 'skill' && f.skill
+    ? `<div class="fc-sk"><span>${esc(f.skill.name)}</span>${f.skill.voltage ? '<b class="v">VOLT</b>' : `<b>SP${f.spCost}</b>`}</div>` : '';
+  const verb = f.kind === 'melee' ? 'ATTACK' : f.kind === 'gun' ? 'FIRE' : 'SKILL';
+  return `<div class="fc-in" data-who="${esc(a.id)}">
+    ${strip}
+    <div class="fc-main">${heartSvg(f.cover)}<b class="fc-dmg">${miss ? '—' : f.amount}</b><span class="fc-hit"><b>${f.hit}</b>%</span></div>
+    <div class="fc-bar"><i class="rest" style="width:${pct(after)}"></i><i class="lose" style="left:${pct(after)};width:${pct(t.hp - after)}"></i><span>${t.hp}→${after}</span></div>
+    <div class="fc-tags">${tag}${extra.join('')}</div>
+    <div class="fc-btns"><button data-fc="cancel" title="取消">✕</button><button data-fc="ok" class="ok">${verb} ▶</button></div>
+  </div><i class="fc-arrow"></i>`;
 }

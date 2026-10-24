@@ -221,6 +221,23 @@ function tileQuad(p: Vec, color: number, opacity = 0.45, y = 0.02) {
   q.position.copy(w2v(p, y));
   overlay.add(q);
 }
+/** P5T 目标格：红底+黑斜纹（CanvasTexture，只建一次） */
+let stripeTex: THREE.CanvasTexture | null = null;
+function stripeTile(p: Vec, y = 0.03) {
+  if (!stripeTex) {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const x = c.getContext('2d')!;
+    x.fillStyle = '#e60012'; x.fillRect(0, 0, 64, 64);
+    x.strokeStyle = '#140004'; x.lineWidth = 8;
+    for (let k = -64; k < 128; k += 21) { x.beginPath(); x.moveTo(k, 64); x.lineTo(k + 64, 0); x.stroke(); }
+    x.strokeStyle = '#fff'; x.lineWidth = 4; x.strokeRect(2, 2, 60, 60);
+    stripeTex = new THREE.CanvasTexture(c); stripeTex.colorSpace = THREE.SRGBColorSpace;
+  }
+  const q = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 0.94), new THREE.MeshBasicMaterial({ map: stripeTex, transparent: true, opacity: 0.88, depthWrite: false }));
+  q.rotation.x = -Math.PI / 2;
+  q.position.copy(w2v(p, y));
+  overlay.add(q);
+}
 function ring(p: Vec, color: number) {
   const r = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.46, 24), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
   r.rotation.x = -Math.PI / 2;
@@ -329,7 +346,7 @@ function refreshOverlay() {
   const fc = currentForecast();
   if (fc) {
     for (const p of fc.aoe) if (!eq(p, fc.target.pos)) tileQuad(p, 0xe60012, 0.38, 0.034);
-    tileQuad(fc.target.pos, 0xe60012, 0.75, 0.036);
+    stripeTile(fc.target.pos, 0.036);
     if (fc.push && !eq(fc.push.to, fc.push.from)) pushArrow(fc.push.from, fc.push.to);
     else if (fc.push) tileQuad(fc.push.from, 0xffffff, 0.3, 0.038);
   }
@@ -474,6 +491,23 @@ function avoidVoltStar(fcEl: HTMLElement, fcOn: boolean) {
   if (prev !== want) { vs.style.transform = want; vs.classList.toggle('dodge', !!want); }
 }
 
+/** 预测卡贴在目标头顶（屏幕空间）：水平居中对准目标、夹在屏幕内；上方放不下就放到脚下，箭头始终指向目标 */
+function placeForecast(fcEl: HTMLElement, id: string, w: number, h: number) {
+  const g = unitMesh.get(id);
+  if (!g) return;
+  const head = g.position.clone().add(new THREE.Vector3(0, 1.25, 0)).project(viewCam);
+  const foot = g.position.clone().project(viewCam);
+  const sx = ((head.x + 1) / 2) * w, hy = ((1 - head.y) / 2) * h, fy = ((1 - foot.y) / 2) * h;
+  const cw = fcEl.offsetWidth || 148, ch = fcEl.offsetHeight || 96;
+  const left = Math.round(Math.min(w - cw - 8, Math.max(8, sx - cw / 2)));
+  let top = Math.round(hy - ch - 12);
+  const below = top < 6;
+  if (below) top = Math.round(Math.min(h - ch - 6, fy + 14));
+  fcEl.classList.toggle('below', below);
+  fcEl.style.left = `${left}px`; fcEl.style.top = `${top}px`;
+  fcEl.style.setProperty('--ax', `${Math.round(Math.min(cw - 12, Math.max(12, sx - left)))}px`);
+}
+
 function refreshLabels() {
   const w = window.innerWidth, h = window.innerHeight;
   const act = $('#actions');
@@ -481,14 +515,7 @@ function refreshLabels() {
   const sg = su ? unitMesh.get(su.id) : null;
   const fcEl = $('#forecast');
   const fcOn = !fcEl.classList.contains('hidden');
-  if (fcOn && previewTarget) {
-    const tg = unitMesh.get(previewTarget);
-    if (tg) {
-      const v = tg.position.clone().project(viewCam);
-      const left = ((v.x + 1) / 2) * w > w * 0.5;
-      fcEl.classList.toggle('at-left', left); fcEl.classList.toggle('at-right', !left);
-    }
-  }
+  if (fcOn && previewTarget) placeForecast(fcEl, previewTarget, w, h);
   avoidVoltStar(fcEl, fcOn);
   if (sg && battle.phase === 'player' && !busy && !fcOn) {
     const v = sg.position.clone().add(new THREE.Vector3(0, 0.5, 0)).project(viewCam);
@@ -504,7 +531,7 @@ function refreshLabels() {
     const hidden = battle.isHidden(u); // 未解锁区域的敌人不画（HARK-NOTES-ENGINE #8）
     const gone = u.ko && !fxKeep.has(u.id); // 本批事件里还没播到 ko 的单位先留着（总攻/1 MORE 演出要看见它挨打）
     g.visible = !gone && !hidden;
-    if (gone || hidden) { el.style.display = 'none'; continue; }
+    if (gone || hidden || (fcOn && u.id === previewTarget)) { el.style.display = 'none'; continue; }
     const shield = g.getObjectByName('shield');
     if (shield && u.facing) { g.rotation.y = Math.atan2(u.facing.x, u.facing.y); }
     if (u.prop && u.prop !== 'flag' && u.prop !== 'speaker') { el.style.display = 'none'; continue; }

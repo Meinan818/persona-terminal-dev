@@ -440,60 +440,47 @@ body.fx-tt .hud, body.fx-tt #labels > .lbl { opacity: 0; transition: opacity .15
 #party .pm.om .act { background: #fff; color: var(--red); border-color: var(--red); font-weight: 900; }
 @keyframes omPulse { to { box-shadow: 0 0 0 6px #e6001288, 3px 3px 0 #000; } }
 
-/* ---------- P5T 攻击预测面板（Hark 美术） ---------- */
-#forecast { top: 84px; width: 272px; z-index: 7; filter: drop-shadow(4px 5px 0 #e60012); pointer-events: auto; }
-#forecast.at-left { left: max(14px, env(safe-area-inset-left)); }
-#forecast.at-right { right: max(14px, env(safe-area-inset-right)); }
-#forecast .fc-in { background: #0a0a0a; border: 3px solid #fff; transform: skewX(-9deg); padding: 6px 12px 8px; clip-path: polygon(0 0, 100% 0, 100% 86%, 94% 100%, 0 100%); }
-#forecast .fc-in > * { transform: skewX(9deg); }
-#forecast .fc-head { display: flex; align-items: center; gap: 8px; margin: -6px -12px 4px; padding: 3px 12px; background: #fff; color: #000; transform: none; }
-#forecast .fc-sk { font-weight: 900; font-size: 14px; letter-spacing: .5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; transform: skewX(9deg); }
-#forecast .cost { background: #000; color: #fff; font-size: 11px; font-weight: 900; padding: 1px 6px; transform: skewX(9deg); white-space: nowrap; }
-#forecast .cost.v { background: #ffd400; color: #000; }
-#forecast .fc-row { display: flex; align-items: center; gap: 8px; }
-#forecast .fc-face { position: relative; width: 44px; height: 44px; flex: none; display: grid; place-items: center; font-weight: 900; font-size: 16px; clip-path: polygon(12% 0, 100% 0, 88% 100%, 0 100%); }
-#forecast .fc-face.me { background: var(--c); color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000; border: 2px solid #fff; }
-#forecast .fc-face.foe { background: #e60012; color: #000; }
-#forecast .fc-face.foe { display: flex; flex-direction: column; justify-content: center; align-items: center; line-height: 1; }
-#forecast .fc-face .kill { margin-top: 2px; background: #000; color: #fff; font-style: normal; font-size: 9px; letter-spacing: 1px; padding: 1px 3px; }
-#forecast .tg.kill { background: #000; color: #fff; border: 1px solid #e60012; letter-spacing: 1px; }
-#forecast .fc-mid { flex: 1; display: flex; justify-content: space-around; align-items: baseline; gap: 8px; }
-#forecast .fc-mid small { font-size: 10px; font-weight: 900; opacity: .8; margin-right: 2px; }
-#forecast .fc-dmg b { font-size: 30px; font-weight: 900; color: #fff; text-shadow: 3px 3px 0 #e60012; font-style: italic; line-height: 1; }
-#forecast .fc-hit b { font-size: 20px; font-weight: 900; font-style: italic; }
-#forecast .fc-hp { margin-top: 3px; font-size: 11px; }
-#forecast .fc-hp .nm { font-weight: 900; }
-#forecast .fc-hp .num { float: right; font-weight: 800; }
-#forecast .fc-hp .num b { color: #ff3040; font-size: 13px; }
-#forecast .fc-hp .bar { position: relative; height: 8px; background: #333; border: 1px solid #fff; margin-top: 2px; clear: both; }
-#forecast .fc-hp .bar i { position: absolute; top: 0; bottom: 0; }
-#forecast .fc-hp .rest { left: 0; background: #fff; }
-#forecast .fc-hp .lose { background: #e60012; animation: fcblink .8s steps(2) infinite; }
-@keyframes fcblink { 50% { background: #ff8a95; } }
-#forecast .fc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
-#forecast .tg { font-style: normal; font-size: 10.5px; font-weight: 900; padding: 1px 6px; background: #fff; color: #000; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; transform: skewX(-9deg); }
-#forecast .tg .cv { width: 11px; height: 11px; }
-#forecast .tg.cover { background: #2b2b33; color: #fff; border: 1px solid #fff; }
-#forecast .tg.hi { background: #ffd400; }
+/* ---------- P5T 攻击预测：贴在目标头顶的紧凑显示（Hark 美术 round2） ---------- */
+#forecast { left: 0; top: 0; width: 148px; z-index: 7; pointer-events: auto; filter: drop-shadow(3px 3px 0 #e60012) drop-shadow(0 0 1px #000); --ax: 74px; }
+#forecast .fc-in { background: #0a0a0a; border: 2px solid #fff; transform: skewX(-8deg); padding: 3px 7px 5px; }
+#forecast .fc-in > * { transform: skewX(8deg); }
+#forecast .fc-sk { display: flex; gap: 4px; align-items: center; margin: -3px -7px 2px; padding: 1px 7px; background: #fff; color: #000; font-size: 10px; font-weight: 900; transform: none; }
+#forecast .fc-sk span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: skewX(8deg); }
+#forecast .fc-sk b { background: #000; color: #fff; padding: 0 4px; font-size: 9px; transform: skewX(8deg); }
+#forecast .fc-sk b.v { background: #ffd400; color: #000; }
+#forecast .fc-main { display: flex; align-items: center; gap: 5px; line-height: 1; }
+#forecast .fc-heart { width: 24px; height: 22px; flex: none; transform: rotate(-8deg); }
+#forecast .fc-dmg { flex: 1; font-size: 30px; font-weight: 900; font-style: italic; color: #fff; text-shadow: 2px 2px 0 #e60012; letter-spacing: -1px; }
+#forecast .fc-hit { font-size: 10px; font-weight: 900; color: #fff; opacity: .9; }
+#forecast .fc-hit b { font-size: 16px; font-style: italic; }
+#forecast .fc-bar { position: relative; height: 7px; background: #333; border: 1px solid #fff; margin-top: 3px; }
+#forecast .fc-bar i { position: absolute; top: 0; bottom: 0; }
+#forecast .fc-bar .rest { left: 0; background: #ff3b3b; }
+#forecast .fc-bar .lose { background: #fff; animation: fcblink .7s steps(2) infinite; }
+#forecast .fc-bar span { position: absolute; right: 0; top: -12px; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 1px 1px 0 #000; }
+@keyframes fcblink { 50% { background: #e60012; } }
+#forecast .fc-tags { display: flex; gap: 3px; margin-top: 4px; align-items: center; flex-wrap: wrap; row-gap: 2px; }
+#forecast .tg { font-style: italic; font-size: 11px; font-weight: 900; padding: 0 5px; letter-spacing: .5px; transform: skewX(-8deg); white-space: nowrap; }
 #forecast .tg.weak { background: #e60012; color: #fff; }
-#forecast .tg.down { background: #000; color: #ffd400; border: 1px solid #ffd400; }
-#forecast .tg.push { background: #fff; color: #e60012; }
-#forecast .tg.aoe { background: #444; color: #fff; }
-#forecast .fc-btns { display: flex; gap: 6px; margin-top: 6px; }
-#forecast .fc-btns button { flex: 1; height: 30px; font-weight: 900; font-size: 13px; background: #111; border: 2px solid #fff; transform: skewX(-9deg); }
-#forecast .fc-btns .ok { flex: 1.6; background: #e60012; }
-#forecast.lethal .fc-in { border-color: #e60012; }
-#forecast.lethal .fc-dmg b { color: #ffd400; }
-#forecast.at-right { top: 104px; }
+#forecast .tg.down { background: #ffd400; color: #000; }
+#forecast .tg.res { background: #2b8cff; color: #fff; }
+#forecast .tg.block { background: #fff; color: #000; }
+#forecast .tg.kill { background: #000; color: #ffd400; border: 1px solid #ffd400; }
+#forecast .mini { white-space: nowrap; font-style: normal; font-size: 9px; font-weight: 900; padding: 0 3px; background: #fff; color: #000; }
+#forecast .mini.hi { background: #ffd400; }
+#forecast .mini.push { color: #e60012; }
+#forecast .mini.aoe { background: #444; color: #fff; }
+#forecast .fc-btns { display: flex; gap: 4px; margin-top: 4px; }
+#forecast .fc-btns button { height: 22px; font-weight: 900; font-size: 11px; background: #111; border: 2px solid #fff; color: #fff; transform: skewX(-8deg); padding: 0 6px; }
+#forecast .fc-btns .ok { flex: 1; background: #e60012; letter-spacing: 1px; }
+#forecast .fc-arrow { position: absolute; left: var(--ax); bottom: -9px; width: 0; height: 0; margin-left: -8px; border: 8px solid transparent; border-bottom: 0; border-top: 9px solid #fff; }
+#forecast.below .fc-arrow { bottom: auto; top: -9px; border-top: 0; border-bottom: 9px solid #fff; }
+#forecast.lethal .fc-in { border-color: #ffd400; }
+#forecast.lethal .fc-dmg { color: #ffd400; }
 @media (max-height: 420px) {
-  #forecast { top: 78px; width: 252px; }
-  #forecast.at-right { top: 100px; }
-  #forecast .fc-in { padding: 5px 11px 6px; }
-  #forecast .fc-face { width: 36px; height: 36px; font-size: 14px; }
-  #forecast .fc-dmg b { font-size: 26px; }
-  #forecast .fc-tags { margin-top: 4px; }
-  #forecast .fc-btns { margin-top: 5px; }
-  #forecast .fc-btns button { height: 26px; font-size: 12px; }
+  #forecast { width: 136px; }
+  #forecast .fc-dmg { font-size: 26px; }
+  #forecast .fc-btns button { height: 20px; font-size: 10px; }
 }
 
 /* 预测面板打开：技能列表收起；VOLTAGE 星避让面板 */

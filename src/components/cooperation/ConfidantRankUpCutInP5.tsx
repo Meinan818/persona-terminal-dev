@@ -40,7 +40,9 @@ export function ConfidantRankUpCutInP5() {
   const compact = compactFx();
 
   const notice = queue[0] ?? null;
-  const realConfidant = notice ? confidants.find(c => c.id === notice.confidantId) ?? null : null;
+  const realConfidant = notice
+    ? confidants.find(c => c.id === notice.confidantId && !c.archivedAt) ?? null
+    : null;
   const confidant = realConfidant ?? (notice?.preview ? PREVIEW_CONFIDANT : null);
   const card = confidant ? TAROT_BY_ID[confidant.arcanaId] : undefined;
   // 牌面用 p5 那一套原图（与 demo 同一张），不走组件化卡面

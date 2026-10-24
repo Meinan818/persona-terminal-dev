@@ -39,6 +39,9 @@
   font-weight: 900;
   -webkit-font-smoothing: antialiased;
 }
+
+/* 红频道底导固定在 600；星移从 body portal 挂载，保持在升级链最上层。 */
+:root[data-ui-channel="p5"] .sf5-overlay { z-index: 930; }
 .sf5-overlay::-webkit-scrollbar { width: 0; height: 0; }
 
 /* ── 布景（照 demo .scenery）：fixed 铺满，内容滚动时纹丝不动 ── */

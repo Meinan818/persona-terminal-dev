@@ -29,6 +29,9 @@
   user-select: none;
 }
 
+/* 红频道底导固定在 600；P5 共享演出从 body portal 挂载，必须压在导航之上。 */
+:root[data-ui-channel="p5"] .rk5-root { z-index: 920; }
+
 /* ── 背景层：网点 / 同心星 / 两条猩红斜带 / 散落五角星 / 暗角 ── */
 .rk5-halftone {
   position: absolute;

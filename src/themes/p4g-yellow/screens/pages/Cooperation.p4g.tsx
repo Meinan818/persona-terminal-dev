@@ -229,9 +229,13 @@ function Companions({ params }: { params: URLSearchParams }) {
 
       {/* ── 弹窗串联 ── */}
       <ConfidantCreateSheet isOpen={createOpen} onClose={() => setCreateOpen(false)} remaining={remaining} onPickOnline={() => { setCreateOpen(false); setAddOnlineOpen(true); }}
-        onCreated={(r) => { void cooperationOps.add({ name: r.name, description: r.description, match: { arcanaId: r.arcanaId, orientation: r.orientation, initialIntimacy: Math.min(3, r.level), initialPoints: [0, 4, 9, 16, 25, 36, 50, 70, 95, 125, 160][r.level] ?? 0, interpretation: '', advice: '', source: 'offline' }, source: 'offline', initialLevel: r.level }).then((c) => { if (r.decay) void cooperationOps.update(c.id, { decayEnabled: true }); setDetailId(c.id); }).catch(() => showToast('没能创建这段羁绊')); }} />
+        onCreated={async (r) => {
+          const c = await cooperationOps.add({ name: r.name, description: r.description, match: { arcanaId: r.arcanaId, orientation: r.orientation, initialIntimacy: Math.min(3, r.level), initialPoints: [0, 4, 9, 16, 25, 36, 50, 70, 95, 125, 160][r.level] ?? 0, interpretation: '', advice: '', source: 'offline' }, source: 'offline', initialLevel: r.level });
+          if (r.decay) await cooperationOps.update(c.id, { decayEnabled: true });
+          setDetailId(c.id);
+        }} />
       <ConfidantDetailSheet isOpen={!!detail} onClose={() => setDetailId(null)} confidant={detail} loggedIn={loggedIn} hasShadow={!!detailShadow} shadow={detailShadow} interactedToday={!!(detail && interacted[detail.id])}
-        onUpdate={(p) => detail && updateConfidant(detail.id, p)} onDelete={() => { if (!detail) return; void cooperationOps.remove(detail.id); setConfidants((l) => l.filter((c) => c.id !== detail.id)); }}
+        onUpdate={(p) => detail && updateConfidant(detail.id, p)}
         onOpenCounsel={() => setCounselOpen(true)} onOpenInteraction={() => detail && setInteractionFor(detail)} onOpenPact={() => detail && setPactFor(detail)} onOpenMemorial={() => detail && setMemorialFor(detail)}
         onOpenStarShift={() => detail && setChain({ c: detail, notice: { oldLevel: detail.intimacy, newLevel: detail.intimacy, starShiftGained: false }, start: 'page3' })}
         onViewOnlineProfile={() => detail?.linkedProfile && setProfileCard(detail.linkedProfile)} onOpenCoopShadow={() => detail && setShadowBattle(detail.name)} />
@@ -242,13 +246,7 @@ function Companions({ params }: { params: URLSearchParams }) {
           if (!fresh) return;
           setInteracted((m) => ({ ...m, [fresh.id]: true }));
           setConfidants((l) => l.map((c) => (c.id === fresh.id ? fresh : c)));
-          window.setTimeout(() => {
-            setInteractionFor(null);
-            if (fresh.intimacy > old.intimacy) {
-              setDetailId(null);
-              setChain({ c: fresh, notice: { oldLevel: old.intimacy, newLevel: fresh.intimacy, starShiftGained: true }, start: 'stage' });
-            }
-          }, 700);
+          window.setTimeout(() => setInteractionFor(null), 700);
         }} />}
       {memorialFor && <MemorialSheet isOpen onClose={() => setMemorialFor(null)} confidant={memorialFor} />}
       <PactPanelModal open={!!pactFor} onClose={() => setPactFor(null)} partnerName={pactFor?.name ?? ''} />

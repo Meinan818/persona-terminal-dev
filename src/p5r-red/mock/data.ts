@@ -61,6 +61,19 @@ export interface MockConfidant {
   decayEnabled?: boolean;
 }
 
+export interface MockFriend {
+  id: string;
+  name: string;
+  uid: string;
+  lv: number;
+  status?: string | null;
+  goal: string;
+  pact: boolean;
+  waiting: boolean;
+  coop: 'none' | 'pending_out' | 'pending_in' | 'cooldown_rejected' | 'cooldown_severed' | 'linked';
+  profile: Record<string, unknown>;
+}
+
 export const D = {
   user: { name: '野鸡', title: '面具庭园的主人', status: '专注中', joined: '2026.09.13' },
   streak: 7,
@@ -97,6 +110,10 @@ export const D = {
     { name: '佐仓双叶', arcana: 'HERMIT', arcanaCn: '隐者', no: 'IX', rank: 8, desc: '天才黑客，长期闭门不出，正一点点走向外面的世界。' },
     { name: '奥村春', arcana: 'EMPRESS', arcanaCn: '女帝', no: 'III', rank: 3, desc: '温柔的三年级学姐，喜欢在屋顶种菜，奥村集团千金。' },
   ] as MockConfidant[],
+  friends: [
+    { id: 'f1', name: '喜多川祐介', uid: 'yusuke_k', lv: 18, status: '🎨 写生中', goal: '这周画完一幅油画', pact: false, waiting: false, coop: 'none', profile: { id: 'f1', userId: 'yusuke_k', nickname: '喜多川祐介', totalLv: 18 } },
+    { id: 'f2', name: '明智吾郎', uid: 'goro_a', lv: 26, status: null, goal: '每天读 30 页推理小说', pact: true, waiting: true, coop: 'pending_in', profile: { id: 'f2', userId: 'goro_a', nickname: '明智吾郎', totalLv: 26 } },
+  ] as MockFriend[],
 };
 export type MockData = typeof D;
 

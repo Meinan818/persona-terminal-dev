@@ -8,7 +8,7 @@
  * 这与 confidantRankUpShared.ts 是同一套理由（Wave 1 起沿用的模式）：
  * 共用逻辑下沉到不带 JSX 的文件，皮肤组件各自 import。
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/store';
 import { useBackHandler } from '@/utils/useBackHandler';
@@ -52,6 +52,7 @@ export function useStarShiftFlow(
   const [changeNote, setChangeNote] = useState('');
   const [result, setResult] = useState<StarShiftResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const confirmingRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -59,6 +60,7 @@ export function useStarShiftFlow(
       setChangeNote('');
       setResult(null);
       setErr(null);
+      confirmingRef.current = false;
     }
   }, [isOpen, confidant?.id]);
 
@@ -134,7 +136,8 @@ export function useStarShiftFlow(
   };
 
   const handleConfirm = async () => {
-    if (!confidant || !result) return;
+    if (!confidant || !result || confirmingRef.current) return;
+    confirmingRef.current = true;
     try {
       await consumeStarShift(confidant.id, {
         description: result.description,
@@ -148,6 +151,7 @@ export function useStarShiftFlow(
     } catch (e) {
       setErr(e instanceof Error ? e.message : '保存失败');
       setStage('error');
+      confirmingRef.current = false;
     }
   };
 

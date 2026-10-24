@@ -5,7 +5,7 @@ import { useCloudStore } from '@/store/cloud';
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { loadSocial } from '@/services/social';
 import { hasBeenPrayedByToday, hasPrayedToday } from '@/services/prayers';
-import { acceptCoopBond, proposeCoopBond, rejectCoopBond, viewFromMySide, type AcceptCoopBondInput, type ProposeCoopBondInput } from '@/services/coopBonds';
+import { acceptCoopBond, proposeCoopBond, rejectCoopBond, severCoopBond, viewFromMySide, type AcceptCoopBondInput, type ProposeCoopBondInput } from '@/services/coopBonds';
 import { getUserId } from '@/services/velvetApi';
 import type {
   AttributeId,
@@ -137,6 +137,13 @@ export const coopBondOps = {
   reject: async (bondId: string) => {
     const bond = await rejectCoopBond(bondId);
     useCloudSocialStore.getState().updateCoopBond(bond.id, bond);
+    void loadSocial({ force: true });
+    return bond;
+  },
+  sever: async (bondId: string, confidantId: string) => {
+    const bond = await severCoopBond(bondId);
+    useCloudSocialStore.getState().updateCoopBond(bond.id, bond);
+    await useAppStore.getState().archiveConfidant(confidantId);
     void loadSocial({ force: true });
     return bond;
   },

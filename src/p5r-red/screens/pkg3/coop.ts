@@ -59,6 +59,7 @@ const coopBody = (vis) => {
 export const coopPage = {
   nav: 'coop', title: '羁绊',
   render(wide) {
+    OC.refreshConfidants?.();
     const vis = coopVis(); if (coopIdx >= vis.length + 1) coopIdx = 0;
     return `<div class="coop5 ${coopView === 'list' ? 'cp-lv' : ''}">${bondHead('coop', coopMenuHTML(activeCount()))}${infoHTML()}
       ${K().bar(coopFilter, coopView)}
@@ -97,7 +98,11 @@ export const coopPage = {
       if (e.target.closest('[data-cpv]')) { coopView = cs.view = coopView === 'wall' ? 'list' : 'wall'; localStorage.setItem('p5demo_coop_view', coopView); P5.sfx('switch', .4); redraw(); return; }
       const pr = e.target.closest('[data-pray]'); if (pr) { e.stopPropagation(); K().pray(pr.dataset.pray, pr); return; }
       const sh = e.target.closest('[data-cpsh]'); if (sh) { e.stopPropagation(); OC.shadowBattle(); return; }
-      const fr = e.target.closest('[data-cpfr]'); if (fr) { OC.profileCard({ coop: 'none' }); return; }
+      const fr = e.target.closest('[data-cpfr]'); if (fr) {
+        const friend = P5.D.friends.find((item) => item.id === fr.dataset.cpfr);
+        if (friend) OC.profileCard({ linkedCloudUserId: friend.id, linkedProfile: friend.profile, name: friend.name }, { coop: friend.coop, friend: true });
+        return;
+      }
       const li = e.target.closest('[data-cpi]'); if (li) { OC.detail(OC.CF[+li.dataset.cpi]); return; }
       const t = e.target.closest('.tarot5'); if (t && !t.dataset.act) { const i = +t.dataset.i; if (i !== coopIdx) go(i); else { t.classList.add('flip'); setTimeout(() => { t.classList.remove('flip'); OC.detail(OC.CF[vis[coopIdx]]); }, 520); } return; }
       const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;

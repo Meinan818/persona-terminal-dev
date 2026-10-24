@@ -14,7 +14,7 @@ type Stage = 'basic' | 'description' | 'trait' | 'matching' | 'result' | 'error'
 export interface CreateResult { name: string; arcanaId: string; orientation: 'upright' | 'reversed'; level: number; description: string; decay: boolean }
 
 export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline, initialStage = 'basic', remaining = 15, aiConfigured = false }: {
-  isOpen: boolean; onClose: () => void; onCreated?: (r: CreateResult) => void; onPickOnline?: () => void; initialStage?: Stage; remaining?: number; aiConfigured?: boolean;
+  isOpen: boolean; onClose: () => void; onCreated?: (r: CreateResult) => void | Promise<void>; onPickOnline?: () => void; initialStage?: Stage; remaining?: number; aiConfigured?: boolean;
 }) {
   const [stage, setStage] = useState<Stage>(initialStage);
   const [name, setName] = useState(initialStage === 'basic' ? '' : '花村');
@@ -23,9 +23,10 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
   const [traitStep, setTraitStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(initialStage === 'error' ? '未能找到合适的阿卡纳，请调整描述后再试' : null);
+  const [saving, setSaving] = useState(false);
   const [picked, setPicked] = useState(4);
   const match = { arcanaId: 'magician', orientation: 'upright' as 'upright' | 'reversed', initialIntimacy: 4, interpretation: '魔术师正位：他手里永远握着下一个点子。你们的关系靠「一起折腾」点燃——那些看似胡闹的计划，其实是他表达在乎的方式。', advice: '下次他提出离谱的点子，先说「好啊」，再一起想怎么让它成真。' };
-  useEffect(() => { if (isOpen) { setStage(initialStage); setTraitStep(0); } }, [isOpen, initialStage]);
+  useEffect(() => { if (isOpen) { setStage(initialStage); setTraitStep(0); setSaving(false); setErr(initialStage === 'error' ? '未能找到合适的阿卡纳，请调整描述后再试' : null); } }, [isOpen, initialStage]);
   useEffect(() => {
     if (stage !== 'matching') return;
     const t = window.setTimeout(() => setStage('result'), 1800);
@@ -55,13 +56,26 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
   const title = stage === 'result' ? '塔罗的回响' : '结识一位同伴';
   const step = stage === 'basic' ? 0 : stage === 'description' ? 1 : stage === 'trait' ? 2 : 3;
   const card = TAROT_BY_ID[match.arcanaId];
+  const confirmCreate = async () => {
+    if (saving) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      await onCreated?.({ name: name || '花村', arcanaId: match.arcanaId, orientation: match.orientation, level: picked, description: desc, decay });
+      onClose();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : '创建失败');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <P4Sheet open={isOpen} onClose={onClose} title={title} en="NEW S.LINK" size="tall" dismissible={stage !== 'matching'}
       footer={stage === 'basic' ? <P4Button block size="lg" onClick={nextBasic}>下一步</P4Button>
         : stage === 'description' ? <P4Button block size="lg" onClick={nextDesc}>下一步（还有 4 个小问题）</P4Button>
         : stage === 'result' ? (
-          <div className="flex gap-3"><P4Button variant="secondary" block onClick={() => { setStage('trait'); setTraitStep(TRAIT_QUESTIONS.length - 1); }}>回去改一改</P4Button><P4Button block onClick={() => { onCreated?.({ name: name || '花村', arcanaId: match.arcanaId, orientation: match.orientation, level: picked, description: desc, decay }); onClose(); }}>就是 Ta 了</P4Button></div>
+          <div className="flex gap-3"><P4Button variant="secondary" block disabled={saving} onClick={() => { setStage('trait'); setTraitStep(TRAIT_QUESTIONS.length - 1); }}>回去改一改</P4Button><P4Button block busy={saving} disabled={saving} onClick={confirmCreate}>就是 Ta 了</P4Button></div>
         ) : stage === 'error' ? <P4Button block variant="secondary" onClick={() => setStage('trait')}>返回修改</P4Button> : undefined}
     >
       <div className="mb-3 flex items-center gap-2">
@@ -120,6 +134,7 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
           </div>
           <div className="rounded-sm border-3 border-p4g-line bg-p4g-surface-2 p-3"><MiniLabel>为什么是这张牌</MiniLabel><p className="text-body leading-relaxed">{match.interpretation}</p></div>
           <div className="rounded-sm border-3 border-p4g-black bg-[color:var(--p4g-msg)] p-3 text-[color:var(--p4g-msg-ink)]"><div className="mb-1 font-display text-cap font-bold tracking-[0.18em] text-p4g-yellow">未来</div><p className="text-body leading-relaxed">{match.advice}</p></div>
+          {err && <p className="text-center font-display text-meta font-bold text-p4g-danger">{err}</p>}
           {!aiConfigured && <div className="text-center text-cap text-p4g-ink-soft">· 本次为离线匹配 ·</div>}
         </div>
       )}

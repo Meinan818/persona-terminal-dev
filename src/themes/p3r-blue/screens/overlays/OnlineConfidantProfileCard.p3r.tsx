@@ -13,6 +13,8 @@ import { Sparkle, StatusTag } from '@blue/screens/pkg3/ui';
 import { PK3_PROFILES } from '@blue/mock/pkg3';
 import { PactPanelBody } from './PactPanel.p3r';
 import { PrayerEffect } from './PrayerEffectOverlay.p3r';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { severFriendship } from '@/services/friends';
 
 export type CoopStatus = 'none' | 'pending' | 'incoming' | 'cooldown_rejected' | 'cooldown_severed' | 'linked';
 
@@ -103,7 +105,23 @@ export function OnlineProfileSheet({ isOpen, onClose, profile, initialCoop = 'no
       </P3Sheet>
       <P3Dialog open={sever} onClose={() => setSever(false)} tone="danger" title="解除好友关系" busy={severing} busyText="处理中…" confirmText="确认解除" cancelText="再想想"
         description={<>确认要与 {name} 解除好友？{'\n'}解除后 7 天内无法再次相互邀请。</>}
-        onConfirm={() => { setSevering(true); window.setTimeout(() => { setSevering(false); setSever(false); showToast(`已与 ${name} 解除好友`); onClose(); }, 700); }} />
+        onConfirm={async () => {
+          if (severing) return;
+          const relation = useCloudSocialStore.getState().friendships.find((item) => item.otherProfile?.id === profile.id);
+          if (!relation) { showToast('没有找到可解除的好友关系', { kind: 'error' }); return; }
+          setSevering(true);
+          try {
+            const updated = await severFriendship(relation.id);
+            useCloudSocialStore.getState().updateFriendship(relation.id, updated);
+            setSever(false);
+            showToast(`已与 ${name} 解除好友`);
+            onClose();
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : '解除失败', { kind: 'error' });
+          } finally {
+            setSevering(false);
+          }
+        }} />
       <PrayerEffect isOpen={fx} kind="sent" targetName={name} onDismiss={() => setFx(false)} />
     </>
   );

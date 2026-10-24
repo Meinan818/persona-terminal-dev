@@ -484,10 +484,11 @@ const U = P5.ui, SH = P5.shape;
   /** ConfidantNameFx（红频道）：waiting = 待回祈流光（窗口高光横扫，只动 transform）；max = 满级猩红 + 三颗上浮粒子 */
   const nameFx = (name, { waiting = false, max = false } = {}) => !waiting && !max ? `<b>${name}</b>` : `<b class="cp-nfx ${waiting ? 'wait' : ''} ${max ? 'max' : ''}"><span class="nf-t">${name}</span>${waiting ? `<span class="nf-hl" aria-hidden="true"><span class="nf-hi">${name}</span></span>` : ''}${max ? '<i class="nf-sp" aria-hidden="true"><i></i><i></i><i></i></i>' : ''}</b>`;
   const LVL = ['初见', '初识', '熟面孔', '伙伴', '友人', '挚友', '知己', '羁绊', '共鸣', '灵魂伙伴', '圆满'];
-  const FRIENDS = [
+  const DEMO_FRIENDS = [
     { id: 'f1', name: '喜多川祐介', uid: 'yusuke_k', lv: 18, status: '🎨 写生中', goal: '这周画完一幅油画', pact: false, waiting: false },
     { id: 'f2', name: '明智吾郎', uid: 'goro_a', lv: 26, status: null, goal: '每天读 30 页推理小说', pact: true, waiting: true },
   ];
+  const friends = () => Array.isArray(P5.D.friends) ? P5.D.friends : DEMO_FRIENDS;
   const prayed = new Set();
   const cf = (i) => (OC.CF && OC.CF[i]) || {};
   const coopMeta = (i) => { const x = cf(i); return { online: x.source === 'online', archived: !!x.archivedAt, pts: x.intimacyPoints || 0, base: x.base || 0, next: x.next || 0, rev: x.orientation === 'reversed', decay: !!x.decayEnabled, waiting: i === 3, shadow: i === 3 ? 62 : null }; };
@@ -517,9 +518,9 @@ const U = P5.ui, SH = P5.shape;
         <small class="cp-gap">${max ? '圆满' : `还差 ${gap} 点到 Lv ${c.rank + 1}`}</small></span>
       <span class="cp-li-r">${m.shadow ? `<button type="button" class="cp-shadow" data-cpsh="${i}" title="羁绊之影 · HP ${m.shadow}%" aria-label="羁绊之影 · HP ${m.shadow}%">⚔<b>${m.shadow}%</b></button>` : ''}${m.online && !m.archived ? prayBtn('c' + i, m.waiting) : ''}</span></div>`; };
   const coopEmpty = (filter) => `<div class="cp-empty"><svg class="cp-empty-s" viewBox="0 0 24 24" width="52" height="52" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6L12 22.5l-2.6-7.9L1.5 12l7.9-2.6z" fill="none" stroke="var(--p5r-paper)" stroke-width="1.6" stroke-linejoin="miter"/></svg><p>${filter === 'archived' ? '暂无归档的同伴' : '尚未与任何同伴建立羁绊'}</p>${filter !== 'archived' ? '<button type="button" class="cp-empty-b" data-act="new">邀请第一位同伴</button>' : ''}</div>`;
-  const coopList = (vis, filter) => { const fr = filter === 'all' || filter === 'online' ? FRIENDS : []; if (!vis.length && !fr.length) return coopEmpty(filter); return `<div class="cp-list">${fr.map(friendCard).join('')}${vis.map(confCard).join('')}</div>`; };
+  const coopList = (vis, filter) => { const fr = filter === 'all' || filter === 'online' ? friends() : []; if (!vis.length && !fr.length) return coopEmpty(filter); return `<div class="cp-list">${fr.map(friendCard).join('')}${vis.map(confCard).join('')}</div>`; };
   const coopFab = (remaining, filter) => remaining > 0 && filter !== 'archived' ? `<button type="button" class="cp-fab" data-act="new" aria-label="新增同伴（还能缔结 ${remaining} 张）"><svg class="cp-fab-s" viewBox="0 0 100 100" aria-hidden="true"><polygon points="${SH.starPts(55, 57, 46, -90, .5)}" fill="#111"/><polygon points="${SH.starPts(50, 52, 46, -90, .5)}" fill="var(--red)" stroke="var(--p5r-paper)" stroke-width="4" stroke-linejoin="round"/></svg><svg class="cp-fab-p" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round"/></svg><small class="cp-fab-n">余 ${remaining} 张</small></button>` : '';
-  const pray = (key, el) => { if (prayed.has(key)) return; const waiting = key === 'c3' || key === 'f2'; prayed.add(key); const name = key[0] === 'f' ? FRIENDS.find((f) => f.id === key).name : P5.D.confidants[+key.slice(1)].name; if (OC.prayer) OC.prayer({ kind: waiting ? 'reciprocal' : 'sent', target: name }); else P5.toast('祈愿已送达'); const card = el.closest('.cp-li'); const t = document.createElement('div'); t.innerHTML = key[0] === 'f' ? friendCard(FRIENDS.find((f) => f.id === key), FRIENDS.findIndex((f) => f.id === key)) : confCard(+key.slice(1)); card.replaceWith(t.firstElementChild); };
+  const pray = (key, el) => { if (prayed.has(key)) return; const friend = friends().find((f) => f.id === key); const waiting = friend ? !!friend.waiting : key === 'c3'; prayed.add(key); const name = friend ? friend.name : P5.D.confidants[+key.slice(1)].name; if (OC.prayer) OC.prayer({ kind: waiting ? 'reciprocal' : 'sent', target: name }); else P5.toast('祈愿已送达'); const card = el.closest('.cp-li'); const t = document.createElement('div'); t.innerHTML = friend ? friendCard(friend, friends().findIndex((f) => f.id === key)) : confCard(+key.slice(1)); card.replaceWith(t.firstElementChild); };
   export const coopKit = { vis: coopVis, bar: coopBar, list: coopList, empty: coopEmpty, fab: coopFab, pray, total: 22 };
 
   /** 队长 / 成员标签预览：不改变真实成员与操作权限。 */

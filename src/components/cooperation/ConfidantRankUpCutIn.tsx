@@ -107,7 +107,9 @@ function RankUpCutInP3() {
   const modalBlocker = useAppStore(s => s.modalBlocker);
 
   const notice = queue[0] ?? null;
-  const realConfidant = notice ? confidants.find(c => c.id === notice.confidantId) ?? null : null;
+  const realConfidant = notice
+    ? confidants.find(c => c.id === notice.confidantId && !c.archivedAt) ?? null
+    : null;
   // 预览可以在没有真实同伴时用占位同伴（见 PREVIEW_CONFIDANT）
   const confidant = realConfidant ?? (notice?.preview ? PREVIEW_CONFIDANT : null);
   const card = confidant ? TAROT_BY_ID[confidant.arcanaId] : undefined;
@@ -416,7 +418,7 @@ export function ConfidantStarShiftInvite() {
   const setStarShiftInvite = useAppStore(s => s.setStarShiftInvite);
   const confidant = invite
     // 预览（?celebrate）用的是占位同伴，不在 store 里，单独兜一下
-    ? (invite === PREVIEW_CONFIDANT.id ? PREVIEW_CONFIDANT : confidants.find(c => c.id === invite) ?? null)
+    ? (invite === PREVIEW_CONFIDANT.id ? PREVIEW_CONFIDANT : confidants.find(c => c.id === invite && !c.archivedAt) ?? null)
     : null;
 
   // ── 只在开发时的预览入口 ───────────────────────────────────────────────

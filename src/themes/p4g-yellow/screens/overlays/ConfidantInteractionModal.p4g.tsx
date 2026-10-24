@@ -26,6 +26,7 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
   const [text, setText] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [sync, setSync] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [attr, setAttr] = useState<AttributeId | null>(null);
   const [pts, setPts] = useState(1);
   const [delta, setDelta] = useState(1);
@@ -34,7 +35,7 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
   const [evalResult, setEvalResult] = useState<InteractionEvalResult | null>(null);
   const card = TAROT_BY_ID[confidant.arcanaId];
   const interactedToday = alreadyToday || confidant.lastInteractionDate === toLocalDateKey();
-  useEffect(() => { if (isOpen) { setStage(initialStage); setText(''); setErr(null); setReading(''); setAdvice(''); setEvalResult(null); setDelta(1); } }, [isOpen, initialStage]);
+  useEffect(() => { if (isOpen) { setStage(initialStage); setText(''); setErr(null); setReading(''); setAdvice(''); setEvalResult(null); setDelta(1); setSaving(false); } }, [isOpen, initialStage]);
   const submit = () => {
     if (text.trim().length < 4) { setErr('请再多描述一点，星象才能照见'); return; }
     setErr(null); setStage('thinking');
@@ -59,31 +60,35 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
       setStage('result');
     }).catch(() => { setErr('解读失败，请稍后再试'); setStage('error'); });
   };
-  const save = () => {
-    if (!evalResult) return;
+  const save = async () => {
+    if (!evalResult || saving) return;
     setErr(null);
-    void recordConfidantInteraction({
-      id: confidant.id,
-      description: text.trim(),
-      delta,
-      narrative: evalResult.narrative,
-      advice: evalResult.advice,
-      createActivity: sync,
-      activityAttribute: sync && attr ? attr : undefined,
-      activityPoints: sync && attr ? pts : 0,
-    }).then(() => {
+    setSaving(true);
+    try {
+      await recordConfidantInteraction({
+        id: confidant.id,
+        description: text.trim(),
+        delta,
+        narrative: evalResult.narrative,
+        advice: evalResult.advice,
+        createActivity: sync,
+        activityAttribute: sync && attr ? attr : undefined,
+        activityPoints: sync && attr ? pts : 0,
+      });
       setStage('done');
       onSaved?.(delta);
-    }).catch((error) => {
+    } catch (error) {
       setErr(error instanceof Error ? error.message : '保存失败');
       setStage('error');
-    });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <P4Sheet open={isOpen} onClose={() => stage !== 'thinking' && onClose()} title={`今日与 ${confidant.name} 的互动`} en="DAILY TALK" size="tall"
       footer={stage === 'input' ? <P4Button block size="lg" disabled={interactedToday} onClick={submit} leading={<Sparkle size={16} />}>解读这一段</P4Button>
-        : stage === 'result' ? <div className="flex gap-3"><P4Button variant="secondary" block onClick={() => setStage('input')}>修改描述</P4Button><P4Button block onClick={save}>就这样记下</P4Button></div>
+        : stage === 'result' ? <div className="flex gap-3"><P4Button variant="secondary" block disabled={saving} onClick={() => setStage('input')}>修改描述</P4Button><P4Button block busy={saving} disabled={saving} onClick={save}>就这样记下</P4Button></div>
         : stage === 'done' ? <P4Button block onClick={onClose}>好的</P4Button>
         : stage === 'error' ? <P4Button block variant="secondary" onClick={() => setStage('input')}>返回重试</P4Button> : undefined}>
       <div className="mb-3 flex items-center gap-3">

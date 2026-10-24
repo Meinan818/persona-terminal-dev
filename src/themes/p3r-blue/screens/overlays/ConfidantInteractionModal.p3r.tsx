@@ -34,13 +34,14 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
   const [text, setText] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [sync, setSync] = useState(initialStage === 'done');
+  const [saving, setSaving] = useState(false);
   const [attr, setAttr] = useState<AttributeId | null>(initialStage === 'done' ? 'charm' : null);
   const [pts, setPts] = useState(1);
   const [delta, setDelta] = useState(1);
   const card = TAROT_BY_ID[confidant.arcanaId];
   const templateOnly = confidant.source === 'online' && !loggedIn;
   const interactedToday = alreadyToday || confidant.lastInteractionDate === toLocalDateKey();
-  useEffect(() => { if (isOpen) { setStage(initialStage); setText(''); setErr(null); setReading(''); setAdvice(''); setEvalResult(null); setDelta(1); } }, [isOpen, initialStage]);
+  useEffect(() => { if (isOpen) { setStage(initialStage); setText(''); setErr(null); setReading(''); setAdvice(''); setEvalResult(null); setDelta(1); setSaving(false); } }, [isOpen, initialStage]);
   useEffect(() => {
     if (stage === 'result' && reading && ai.phase === 'idle') ai.start();
   }, [ai, reading, stage]);
@@ -79,25 +80,29 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
       setStage('error');
     });
   };
-  const save = () => {
-    if (!evalResult) return;
+  const save = async () => {
+    if (!evalResult || saving) return;
     setErr(null);
-    void recordConfidantInteraction({
-      id: confidant.id,
-      description: text.trim(),
-      delta,
-      narrative: evalResult.narrative,
-      advice: evalResult.advice,
-      createActivity: sync,
-      activityAttribute: sync && attr ? attr : undefined,
-      activityPoints: sync && attr ? pts : 0,
-    }).then(() => {
+    setSaving(true);
+    try {
+      await recordConfidantInteraction({
+        id: confidant.id,
+        description: text.trim(),
+        delta,
+        narrative: evalResult.narrative,
+        advice: evalResult.advice,
+        createActivity: sync,
+        activityAttribute: sync && attr ? attr : undefined,
+        activityPoints: sync && attr ? pts : 0,
+      });
       setStage('done');
       onSaved?.(delta);
-    }).catch((error) => {
+    } catch (error) {
       setErr(error instanceof Error ? error.message : '保存失败');
       setStage('error');
-    });
+    } finally {
+      setSaving(false);
+    }
   };
   const offlineNote = aiFail === 'offline' || templateOnly || evalResult?.source === 'offline';
   const errText = err ?? (ai.phase === 'nokey' ? '尚未配置 AI 密钥' : ai.error?.code === 'offline' ? '当前离线，AI 暂时读不到这段互动' : 'AI 判断失败');
@@ -105,7 +110,7 @@ export function InteractionSheet({ isOpen, onClose, confidant, initialStage = 'i
   return (
     <P3Sheet open={isOpen} onClose={onClose} title={`今日与 ${confidant.name} 的互动`} en="DAILY TALK" size="tall" busy={stage === 'thinking'}
       footer={stage === 'input' ? <P3Button block size="lg" corner disabled={interactedToday} onClick={submit} leading={<Sparkle size={15} />}>解读这一段</P3Button>
-        : stage === 'result' ? <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block onClick={() => { ai.abort(); setStage('input'); }}>修改描述</P3Button><P3Button block corner disabled={ai.phase === 'streaming'} onClick={save}>就这样记下</P3Button></div>
+        : stage === 'result' ? <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block disabled={saving} onClick={() => { ai.abort(); setStage('input'); }}>修改描述</P3Button><P3Button block corner busy={saving} busyText="保存中…" disabled={ai.phase === 'streaming' || saving} onClick={save}>就这样记下</P3Button></div>
         : stage === 'done' ? <P3Button block size="lg" onClick={onClose}>好的</P3Button>
         : stage === 'error' ? (ai.phase === 'nokey'
           ? <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block onClick={() => setStage('input')}>返回</P3Button><P3Button block onClick={() => { onClose(); navigate('settings', undefined, { params: { group: 'ai' } }); }}>去配置密钥</P3Button></div>

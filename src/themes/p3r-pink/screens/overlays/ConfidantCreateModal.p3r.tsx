@@ -19,7 +19,7 @@ const MATCH = { arcanaId: 'magician', orientation: 'upright' as const, initialIn
   advice: '下次他提出离谱的点子，先说「好啊」，再一起想怎么让它成真。' };
 
 export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline, initialStage = 'basic', remaining = 15, fail }: {
-  isOpen: boolean; onClose: () => void; onCreated?: (r: CreateResult) => void; onPickOnline?: () => void; initialStage?: Stage; remaining?: number; fail?: AIFail;
+  isOpen: boolean; onClose: () => void; onCreated?: (r: CreateResult) => void | Promise<void>; onPickOnline?: () => void; initialStage?: Stage; remaining?: number; fail?: AIFail;
 }) {
   const [stage, setStage] = useState<Stage>(initialStage);
   const [kind, setKind] = useState<'offline' | 'online'>('offline');
@@ -29,11 +29,12 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
   const [traitStep, setTraitStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>(initialStage === 'trait' ? [] : TRAIT_QUESTIONS.map((q) => q.options[1]));
   const [err, setErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [picked, setPicked] = useState(MATCH.initialIntimacy);
   const aiFail: AIFail = initialStage === 'error' && !fail ? 'error' : fail;
   const ai = useAIStream({ text: MATCH.interpretation, fail: aiFail, initialPhase: initialStage === 'matching' ? 'thinking' : initialStage === 'result' ? 'streaming' : initialStage === 'error' ? 'error' : 'idle', failAt: initialStage === 'result' ? 0.08 : 0.45 });
   const offline = aiFail === 'nokey' || aiFail === 'offline';
-  useEffect(() => { if (isOpen) { setStage(initialStage); setTraitStep(0); } }, [isOpen, initialStage]);
+  useEffect(() => { if (isOpen) { setStage(initialStage); setTraitStep(0); setSaving(false); setErr(null); } }, [isOpen, initialStage]);
   // AI 相位 → 阶段
   useEffect(() => {
     if (stage !== 'matching') return;
@@ -63,6 +64,19 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
   const title = stage === 'result' ? '塔罗的回响' : '结识一位同伴';
   const step = stage === 'basic' ? 0 : stage === 'description' ? 1 : stage === 'trait' ? 2 : 3;
   const card = TAROT_BY_ID[MATCH.arcanaId];
+  const confirmCreate = async () => {
+    if (saving) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      await onCreated?.({ name: name || '友近', arcanaId: MATCH.arcanaId, orientation: MATCH.orientation, level: picked, description: desc, decay });
+      onClose();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : '创建失败');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <P3Sheet open={isOpen} onClose={onClose} title={title} en="NEW LINK" size="tall" busy={stage === 'matching'}
@@ -71,11 +85,12 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
         : stage === 'result' ? (
           <div className="grid grid-cols-2 gap-3">
             <P3Button tone="soft" block onClick={back}>回去改一改</P3Button>
-            <P3Button block corner disabled={ai.phase === 'streaming' || ai.phase === 'thinking'} onClick={() => { onCreated?.({ name: name || '友近', arcanaId: MATCH.arcanaId, orientation: MATCH.orientation, level: picked, description: desc, decay }); onClose(); }}>就是 Ta 了</P3Button>
+            <P3Button block corner busy={saving} busyText="创建中…" disabled={saving || ai.phase === 'streaming' || ai.phase === 'thinking'} onClick={confirmCreate}>就是 Ta 了</P3Button>
           </div>
         ) : stage === 'error' ? (
           <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block onClick={() => { setStage('trait'); setTraitStep(TRAIT_QUESTIONS.length - 1); }}>返回修改</P3Button><P3Button block onClick={() => { setStage('matching'); ai.retry(); }}>重新匹配</P3Button></div>
         ) : undefined}>
+      {err && stage === 'result' && <p className="mb-3 text-[12px] font-black" style={{ color: 'var(--p3r-coral-ink)' }}>{err}</p>}
       <div className="mb-4 flex min-w-0 items-center gap-2">
         {(stage === 'description' || stage === 'trait' || stage === 'result') && (
           <button type="button" aria-label="返回上一步" onClick={back} className="flex h-9 w-9 shrink-0 items-center justify-center" style={{ background: P3R.cyanFaint, clipPath: slantClip(6) }}>

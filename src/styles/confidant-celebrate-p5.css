@@ -30,6 +30,9 @@
 
   --cl5-exp: cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* 红频道底导固定在 600；恭喜页从 body portal 挂载，不能被导航截获。 */
+:root[data-ui-channel="p5"] .cl5-root { z-index: 920; }
 .cl5-root::-webkit-scrollbar { width: 0; height: 0; }
 
 /* ── 布景（照 demo .scenery）：fixed 铺满，长页滚动时纹丝不动 ── */

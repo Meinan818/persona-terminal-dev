@@ -785,7 +785,7 @@ interface AppState {
     delta: number,
     eventType?: ConfidantEvent['type'],
     narrative?: string,
-    extra?: { userInput?: string; advice?: string; eventId?: string; eventDate?: string; lastInteractionDate?: string; broadcast?: ConfidantEvent['broadcast'] },
+    extra?: { userInput?: string; advice?: string; eventId?: string; eventDate?: string; lastInteractionDate?: string; requireOnePerDay?: boolean; broadcast?: ConfidantEvent['broadcast'] },
   ) => Promise<{ leveledUp: boolean; newIntimacy: number; starShiftGained: number; eventId: string }>;
   /** 使用一次星移：写入新的 description / interpretation / advice / orientation，charges -1 */
   consumeStarShift: (
@@ -6493,6 +6493,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (extra?.eventId && (await db.confidantEvents.get(extra.eventId))) return 'dup' as const;
       const current = await db.confidants.get(id);
       if (!current) return null;
+      if (extra?.requireOnePerDay && current.lastInteractionDate === (extra.lastInteractionDate ?? toLocalDateKey(now))) {
+        throw new Error('今天已经和 Ta 解读过了，明天再来吧');
+      }
       const oldLv = current.intimacy;
       const newPoints = Math.max(0, current.intimacyPoints + delta);
       const newLv = pointsToLevel(newPoints, thresholdsFor(current));
@@ -6579,18 +6582,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   recordConfidantInteraction: async ({ id, description, delta, narrative, advice, createActivity, activityAttribute, activityPoints }) => {
     const current = await db.confidants.get(id);
-    if (!current) return { leveledUp: false, newIntimacy: 0 };
+    if (!current) throw new Error('这位同伴已经不存在了');
     const today = toLocalDateKey();
     if (current.lastInteractionDate === today) {
       throw new Error('今天已经和 Ta 解读过了，明天再来吧');
     }
     const accountId = getCloudUserId();
-    // 先把 lastInteractionDate 写进去（与 bumpConfidantIntimacy 的 loadConfidants 合并）
-    await db.confidants.put({ ...current, lastInteractionDate: today });
-    // 再 bump 亲密度：narrative=AI 解读、advice=相处建议、userInput=用户原话分别存储
+    // 每日限次与加点必须在同一个事务里判定：先写 lastInteractionDate 再失败会吞掉当天机会。
     const res = await get().bumpConfidantIntimacy(
       id, delta, 'conversation', narrative,
-      { userInput: description.trim(), advice, lastInteractionDate: today,
+      { userInput: description.trim(), advice, lastInteractionDate: today, requireOnePerDay: true,
         ...(current.source === 'online' && current.linkedCloudUserId && accountId
           ? { broadcast: { accountId, recipientId: current.linkedCloudUserId } } : {}),
       },
@@ -6652,29 +6653,33 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   consumeStarShift: async (id, payload) => {
-    const current = await db.confidants.get(id);
-    if (!current) return;
-    if ((current.starShiftCharges ?? 0) <= 0) throw new Error('没有可用的星移次数');
     const now = new Date();
-    await db.confidants.put({
-      ...current,
-      description: payload.description,
-      aiInterpretation: payload.interpretation,
-      aiAdvice: payload.advice,
-      orientation: payload.orientation,
-      starShiftCharges: (current.starShiftCharges ?? 0) - 1,
-      lastInteractionAt: now,
+    const saved = await db.transaction('rw', db.confidants, db.confidantEvents, async () => {
+      const current = await db.confidants.get(id);
+      if (!current) throw new Error('这位同伴已经不存在了');
+      if ((current.starShiftCharges ?? 0) <= 0) throw new Error('没有可用的星移次数');
+      await db.confidants.put({
+        ...current,
+        description: payload.description,
+        aiInterpretation: payload.interpretation,
+        aiAdvice: payload.advice,
+        orientation: payload.orientation,
+        starShiftCharges: (current.starShiftCharges ?? 0) - 1,
+        lastInteractionAt: now,
+      });
+      await db.confidantEvents.add({
+        id: uuidv4(),
+        confidantId: id,
+        date: toLocalDateKey(now),
+        type: 'star_shift',
+        narrative: payload.summary
+          ? `以当前状态重新落墨 —— ${payload.summary}`
+          : '以当前状态重新落墨',
+        createdAt: now,
+      });
+      return true;
     });
-    await db.confidantEvents.add({
-      id: uuidv4(),
-      confidantId: id,
-      date: toLocalDateKey(now),
-      type: 'star_shift',
-      narrative: payload.summary
-        ? `以当前状态重新落墨 —— ${payload.summary}`
-        : '以当前状态重新落墨',
-      createdAt: now,
-    });
+    if (!saved) return;
     await get().loadConfidants();
   },
 

@@ -51,7 +51,9 @@ export function ConfidantRankUpCutInP4() {
   const reduce = useReducedMotion();
 
   const notice = queue[0] ?? null;
-  const realConfidant = notice ? confidants.find(c => c.id === notice.confidantId) ?? null : null;
+  const realConfidant = notice
+    ? confidants.find(c => c.id === notice.confidantId && !c.archivedAt) ?? null
+    : null;
   const confidant = realConfidant ?? (notice?.preview ? PREVIEW_CONFIDANT : null);
   const card = confidant ? TAROT_BY_ID[confidant.arcanaId] : undefined;
   const artUrl = confidant ? tarotArtUrl(confidant.arcanaId, 'p4') : null;

@@ -11,7 +11,8 @@ import { P4Button, P4Dialog, P4Outline, P4Progress, P4Sheet, P4Switch, P4Tabs, s
 import { cx } from '@yellow/lib/cx';
 import { EVENT_LABEL, INTIMACY_LABELS, MAX_INTIMACY, TAROT_BY_ID, levelProgress, nextUnlockHint } from '@yellow/screens/pkg3/arcana';
 import { MiniLabel, PactTag, ShadowBadge, Sparkle, StatusTag, TarotCard } from '@yellow/screens/pkg3/ui';
-import { cooperationOps, pk3Events, shadowForConfidant, useCooperationData } from '@yellow/adapters/pkg3';
+import { coopBondOps, cooperationOps, pk3Events, shadowForConfidant, useCooperationData } from '@yellow/adapters/pkg3';
+import { useCloudSocialStore } from '@/store/cloudSocial';
 import { AvatarSyncConfirm } from './ConfidantDetailModalAvatarConfirm.p4g';
 
 export type DetailTab = 'info' | 'abilities' | 'history';
@@ -27,7 +28,6 @@ export interface DetailProps {
   hasShadow?: boolean;
   shadow?: { identifiedByMe: boolean; identifiedByPartner: boolean; hpCurrent: number; hpMax: number } | null;
   onUpdate?: (patch: Partial<Confidant>) => void;
-  onDelete?: () => void;
   onOpenCounsel?: () => void;
   onOpenInteraction?: () => void;
   onOpenStarShift?: () => void;
@@ -77,6 +77,63 @@ export function ConfidantDetailSheet(p: DetailProps) {
     const url = URL.createObjectURL(f);
     patch({ customAvatarDataUrl: url });
     setAvatarAsk(true);
+  };
+  const messageOf = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
+  const toggleArchive = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (archived) {
+        await cooperationOps.unarchive(c.id);
+        setLocal({ ...c, archivedAt: undefined });
+        showToast(`已恢复与 ${c.name} 的关系`);
+      } else {
+        await cooperationOps.archive(c.id);
+        setLocal({ ...c, archivedAt: new Date() });
+        showToast(`已暂时归档 ${c.name}`);
+      }
+    } catch (error) {
+      showToast(messageOf(error, archived ? '恢复失败' : '归档失败'), { kind: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const deleteConfidant = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await cooperationOps.remove(c.id);
+      setDelOpen(false);
+      onClose();
+      showToast(`已删除 ${c.name}`);
+    } catch (error) {
+      showToast(messageOf(error, '删除失败'), { kind: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const severCoop = async () => {
+    if (busy) return;
+    const bond = useCloudSocialStore.getState().coopBonds.find((item) =>
+      item.status === 'linked'
+      && !!c.linkedCloudUserId
+      && (item.userAId === c.linkedCloudUserId || item.userBId === c.linkedCloudUserId),
+    );
+    if (!bond) {
+      showToast('没有找到可解除的 COOP 契约', { kind: 'error' });
+      return;
+    }
+    setBusy(true);
+    try {
+      await coopBondOps.sever(bond.id, c.id);
+      setLocal({ ...c, archivedAt: new Date() });
+      setUnbindOpen(false);
+      showToast('已解除 COOP 契约');
+    } catch (error) {
+      showToast(messageOf(error, '解除失败'), { kind: 'error' });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -248,7 +305,7 @@ export function ConfidantDetailSheet(p: DetailProps) {
                 </>
               )}
               <div className="grid grid-cols-2 gap-3">
-                <P4Button variant="secondary" block onClick={() => patch({ archivedAt: archived ? undefined : new Date() })}>{archived ? '恢复关系' : '暂时归档'}</P4Button>
+                <P4Button variant="secondary" block busy={busy} disabled={busy} onClick={toggleArchive}>{archived ? '恢复关系' : '暂时归档'}</P4Button>
                 <P4Button variant="danger" block onClick={() => setDelOpen(true)}>彻底删除</P4Button>
               </div>
               {isOnline && c.linkedCloudUserId && !archived && (
@@ -269,7 +326,7 @@ export function ConfidantDetailSheet(p: DetailProps) {
       </P4Sheet>
 
       {/* 彻底删除 */}
-      <P4Dialog open={delOpen} onClose={() => setDelOpen(false)} danger actions="buttons" title={`确认彻底删除 ${c.name}？`} confirmText="确认删除" cancelText="再想想" onConfirm={() => { p.onDelete?.(); onClose(); showToast(`已删除 ${c.name}`); }}
+      <P4Dialog open={delOpen} onClose={() => !busy && setDelOpen(false)} danger actions="buttons" busy={busy} busyText="删除中…" keepOpen title={`确认彻底删除 ${c.name}？`} confirmText="确认删除" cancelText="再想想" onConfirm={deleteConfidant}
         message={<b className="text-p4g-orange">此操作不可撤销</b>}>
         <ul className="list-disc space-y-1 pl-5 text-meta text-[color:var(--p4g-msg-ink)]/85">
           <li>这位同伴的档案、亲密度、能力解锁将一并被抹去</li>
@@ -284,7 +341,7 @@ export function ConfidantDetailSheet(p: DetailProps) {
         message={<>解除后，本端的同伴卡会自动归档；对方下次同步时，那边的卡也会归档。<br />7 天内无法再次缔结 COOP。已积累的羁绊与历史会保留在归档里。</>}>
         <div className="flex gap-3 pb-1">
           <P4Button variant="secondary" block disabled={busy} onClick={() => setUnbindOpen(false)}>再想想</P4Button>
-          <P4Button variant="danger" block busy={busy} onClick={() => { setBusy(true); window.setTimeout(() => { setBusy(false); setUnbindOpen(false); patch({ archivedAt: new Date() }); showToast('已解除 COOP 契约'); }, 700); }}>{busy ? '处理中…' : '确认解除'}</P4Button>
+          <P4Button variant="danger" block busy={busy} disabled={busy} onClick={severCoop}>{busy ? '处理中…' : '确认解除'}</P4Button>
         </div>
       </P4Dialog>
 
@@ -309,7 +366,7 @@ export default function ConfidantDetailModal({ open, onClose, params }: OverlayP
   if (!c) return <P4Sheet open={open} onClose={onClose} title="同伴详情" en="SOCIAL LINK"><div className="py-8 text-center text-meta text-p4g-ink-soft">还没有可以查看的同伴。</div></P4Sheet>;
   return <ConfidantDetailSheet isOpen={open} onClose={onClose} confidant={c} loggedIn={params?.get('login') !== '0'} hasShadow={!!shadow} shadow={shadow}
     initialTab={(params?.get('tab') as DetailTab) || 'info'} initialDialog={(params?.get('dialog') as 'delete' | 'unbind' | 'avatar') || null}
-    onUpdate={(patch) => { void cooperationOps.update(c.id, patch); }} onDelete={() => { void cooperationOps.remove(c.id); }}
+    onUpdate={(patch) => { void cooperationOps.update(c.id, patch); }}
     onOpenCounsel={() => { window.location.hash = '#/overlay/bond-counsel-chat'; }} onOpenInteraction={() => { window.location.hash = '#/overlay/bond-interaction'; }}
     onOpenStarShift={() => { window.location.hash = '#/overlay/bond-starshift-p4'; }} onOpenPact={() => { window.location.hash = '#/overlay/bond-pact-panel'; }}
     onOpenMemorial={() => { window.location.hash = '#/overlay/bond-memorial'; }} onViewOnlineProfile={() => { window.location.hash = '#/overlay/bond-online-profile'; }}
@@ -320,7 +377,7 @@ export default function ConfidantDetailModal({ open, onClose, params }: OverlayP
 export function DeleteConfirmDemo({ open, onClose }: OverlayProps) {
   const { confidants } = useCooperationData();
   const c = confidants[2] ?? confidants[0] ?? null;
-  return <ConfidantDetailSheet isOpen={open} confidant={c} onClose={onClose} initialDialog={open ? 'delete' : null} onDelete={() => { if (c) void cooperationOps.remove(c.id); }} />;
+  return <ConfidantDetailSheet isOpen={open} confidant={c} onClose={onClose} initialDialog={open ? 'delete' : null} />;
 }
 /** #/overlay/bond-unbind-confirm：在线同伴详情 + 解除 COOP 确认 */
 export function UnbindConfirmDemo({ open, onClose }: OverlayProps) {

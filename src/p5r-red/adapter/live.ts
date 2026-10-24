@@ -14,13 +14,15 @@
  *   3. 字段对不上时只改这里的映射函数，不要去改页面。
  */
 import { useAppStore, toLocalDateKey } from '@/store';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { getUserId } from '@/services/velvetApi';
 import { OTD_VIEW } from '@/p5r-red/screens/overlays/OnThisDaySheet.p5r';
 import { useBoldness } from '@/utils/boldness';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
 import { TAROT_BY_ID } from '@/constants/tarot';
-import type { Activity, Achievement, AttributeId, CallingCard, Confidant, LedgerEntry, Skill, Todo } from '@/types';
+import type { Activity, Achievement, AttributeId, CallingCard, CloudProfile, Confidant, LedgerEntry, Skill, Todo } from '@/types';
 import { ledgerCycle } from '@/utils/ledgerFormat';
-import { D, type AttrId, type MockCallingCard, type MockConfidant, type MockTodo } from '@/p5r-red/mock/data';
+import { D, type AttrId, type MockCallingCard, type MockConfidant, type MockFriend, type MockTodo } from '@/p5r-red/mock/data';
 import { ACTIVITIES, CALLING_ARCHIVED, CALLING_CARDS, ACHIEVEMENTS, SKILLS, type MockAch, type MockActivity, type MockCC, type MockSkill, type CondType } from '@/p5r-red/mock/pkg5-data';
 import { FLOW } from '@/p5r-red/screens/pkg4/ledger4';
 
@@ -94,6 +96,29 @@ function confidantMock(c: Confidant): MockConfidant {
     source: c.source,
     decayEnabled: !!c.decayEnabled,
   } as MockConfidant;
+}
+function friendMock(profile: CloudProfile, social: ReturnType<typeof useCloudSocialStore.getState>): MockFriend {
+  const me = getUserId();
+  const bond = social.coopBonds.find((item) => item.userAId === profile.id || item.userBId === profile.id);
+  const coop: MockFriend['coop'] = bond
+    ? bond.status === 'linked' ? 'linked'
+      : bond.status === 'pending' ? (bond.initiatorId === me ? 'pending_out' : 'pending_in')
+        : bond.status === 'rejected' ? 'cooldown_rejected'
+          : bond.status === 'severed' ? 'cooldown_severed' : 'none'
+    : 'none';
+  const waiting = social.todayPrayers.some((prayer) => prayer.fromId === profile.id && prayer.toId === me);
+  return {
+    id: profile.id,
+    name: profile.nickname || profile.userId || '未命名客人',
+    uid: profile.userId ?? '',
+    lv: profile.totalLv ?? 0,
+    status: profile.status ? String(profile.status) : null,
+    goal: profile.goal?.title ?? '',
+    pact: false,
+    waiting,
+    coop,
+    profile: profile as unknown as Record<string, unknown>,
+  };
 }
 const CAT_OK = new Set(['achievement_unlock', 'skill_unlock', 'calling_card_clear', 'weekly_goal', 'confidant', 'shadow_defeat']);
 function activityPkg5(a: Activity): MockActivity {
@@ -204,6 +229,10 @@ export function syncLiveDataNow(s: S = useAppStore.getState()) {
   fill(SKILLS, s.skills.map(skillPkg5));
   // 羁绊（离线 + 在线同伴，未归档）
   fill(D.confidants, s.confidants.filter((c) => !c.archivedAt).map(confidantMock));
+  const social = useCloudSocialStore.getState();
+  fill(D.friends, social.friendships
+    .filter((friendship) => friendship.status === 'linked' && friendship.otherProfile)
+    .map((friendship) => friendMock(friendship.otherProfile!, social)));
   // 记账：本月流水（页面合计里的固定基数见 README「未接」）
   const cycle = ledgerCycle(s.settings.ledgerPayCycleEnabled === true, s.settings.ledgerResetDay ?? 1, today);
   fill(FLOW as ReturnType<typeof ledgerRow>[], s.ledgerEntries.filter((e) => e.date >= cycle.start && e.date <= cycle.end).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(ledgerRow));
@@ -227,12 +256,20 @@ const listeners = new Set<() => void>();
 const WATCH: (keyof S)[] = ['user', 'attributes', 'activities', 'achievements', 'skills', 'todos', 'todoCompletions', 'callingCards', 'weeklyGoals', 'wishes', 'confidants', 'ledgerEntries', 'budgets', 'settings'];
 export const LIVE = {
   start() {
-    return useAppStore.subscribe((s, prev) => {
-      if (!WATCH.some((k) => s[k] !== prev[k])) return;
-      syncLiveDataNow(s);
+    const tick = () => {
+      syncLiveDataNow(useAppStore.getState());
       version++;
       listeners.forEach((l) => l());
+    };
+    const unsubApp = useAppStore.subscribe((s, prev) => {
+      if (!WATCH.some((k) => s[k] !== prev[k])) return;
+      tick();
     });
+    const unsubSocial = useCloudSocialStore.subscribe((s, prev) => {
+      if (s.friendships === prev.friendships && s.coopBonds === prev.coopBonds && s.todayPrayers === prev.todayPrayers) return;
+      tick();
+    });
+    return () => { unsubApp(); unsubSocial(); };
   },
   subscribe(cb: () => void) { listeners.add(cb); return () => { listeners.delete(cb); }; },
   version: () => version,

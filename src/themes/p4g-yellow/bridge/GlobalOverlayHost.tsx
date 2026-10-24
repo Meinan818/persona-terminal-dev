@@ -12,6 +12,7 @@ import CallingCardCutIn from '@yellow/screens/overlays/CallingCardCutIn.p4g';
 import { OrgCelebration } from '@yellow/screens/overlays/OrgCelebrationCutIn.p4g';
 import WishProposalDialog from '@yellow/screens/overlays/WishProposalDialog.p4g';
 import OrphanImagesPrompt from '@yellow/screens/overlays/OrphanImagesPrompt.p4g';
+import { ConfidantRankUpCutIn, ConfidantStarShiftInvite } from '@/components/cooperation/ConfidantRankUpCutIn';
 
 export function GlobalOverlayHost() {
   const levelUp = useAppStore((s) => s.levelUpNotification);
@@ -48,6 +49,8 @@ export function GlobalOverlayHost() {
       <BigDealClearCutIn open={!!bigDeal && !blocker} onClose={clearBigDeal} data={bigDeal ?? undefined} />
       <CallingCardCutIn open={!!cutCard && !blocker} onClose={() => { if (cutCard) void markShown(cutCard.id); }} params={new URLSearchParams()} card={cutCard ?? undefined} reason={cutCard?.archiveReason ?? 'manual'} />
       <OrgCelebration head={orgHead} onClose={shiftOrg} />
+      <ConfidantRankUpCutIn />
+      <ConfidantStarShiftInvite />
       <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
         onConfirm={() => { const proposal = wishProposal; if (!proposal) return; void setWishProgress(proposal.wishId, proposal.toPct, { reason: proposal.reason }).then(() => setWishProposal(null)).catch(() => { /* 失败保留提议，避免假成功 */ }); }} />
       <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} count={orphan?.count} bytes={orphan?.bytes} onConfirm={() => { void pruneOrphan(); dismissOrphan(); }} />

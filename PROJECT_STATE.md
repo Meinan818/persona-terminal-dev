@@ -4,17 +4,18 @@
 
 ## 当前接手入口 · 2026-10-25 · 正式入口假实现收口与漏网扫描
 
-- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`；本轮代码提交 `3262fb4`（`fix(theme): replace live demo stubs with real flows`），共 42 文件。未 Push、未部署、未打 APK、未调用收费模型。
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`；本轮代码提交 `3262fb4`（`fix(theme): replace live demo stubs with real flows`）与 `bf7fe5e`（`fix(theme): wire assistant replies and remove page flashes`）。未 Push、未部署、未调用收费模型。
 - **返回键**：根因是原生返回只看 `currentPage`，首页/同步异常时直接进入双击退出，没有先退应用内历史。现在顺序为“顶层弹窗 → React Router 应用内历史 → 深浅链页面层级 → 根首页双击退出”；P3/P4/P6 Sheet、三主题和红色助手也注册了返回处理。单测 `useBackHandler.test.ts` 2 项通过。
-- **AI 真链路**：红助手删除正常发送路径的固定 `POOL/scriptedReply`，改走 `useNavigatorStore` 的正式会话、模型、持久化和动作卡；固定脚本只留显式 `?demo=play`。蓝粉黄 AI 设置改接正式 `summaryApiKey`、`aiProfiles`、连接测试、模型列表、逐档测试和诊断；成长总结接 `summaryJobs`，中长期占卜及追问接 `tarotJobs`。
+- **AI 真链路**：红助手删除正常发送路径的固定 `POOL/scriptedReply`；蓝粉黄助手也删除旧“AI 对话接入等待确认”占位，四主题正常发送统一走 `useNavigatorStore` 的正式会话、模型、持久化和动作卡。蓝粉黄 AI 设置接正式 `summaryApiKey`、`aiProfiles`、连接测试、模型列表、逐档测试和诊断；成长总结接 `summaryJobs`，中长期占卜及追问接 `tarotJobs`。
+- **切页闪屏**：用户截图和逐帧采样确认蓝色旧转场会短暂整屏深蓝/白色覆盖，亮度跨度 `94–235`。现在页面入场不再从透明淡入，蓝外壳只留一圈描边扩散，不再用实心圆盖屏；同一切页采样降到 `203–218`，最大白屏占比 `17.7%→7.96%`，无 pageerror。粉/黄也移除页面透明淡入。证据 `outputs/theme-flash-frames-20261025-v2/report.json` 与 `theme-flash-frames-20261025-baseline/report.json`。
 - **其他正式入口**：蓝粉黄账号导入/导出/复制改走 `backup.ts`、`restoreSummaryDraft` 同类真实 store 写入，不再只判断 JSON 后弹成功；同调借面具改走 `borrowMaskFromUi`；黄主题“一起进步”改复用正式 PactPanel；三主题建档接 `createUser`，备份入口接 `importData`。
-- **隔离浏览器证据**：`E:\MASKARIA\outputs\theme-live-regressions-20261025-v11\report.json`，`ok=true`、5 项检查、pageErrors=0；蓝粉黄三套 AI 设置均真实保存测试配置并取得模型列表；中长期占卜、成长总结和红助手都实际发出 mock 模型请求并拿到回复，未使用收费模型。
+- **隔离浏览器证据**：`E:\MASKARIA\outputs\theme-live-regressions-20261025-v20\report.json`，`ok=true`、8 项检查、pageErrors=0；蓝粉黄三套 AI 设置均真实保存测试配置并取得模型列表；四主题助手、中长期占卜和成长总结都实际发出 mock 模型请求并在对应用户消息后追加模型回复，未使用收费模型。
 - **工程验证**：`node node_modules/typescript/bin/tsc --noEmit` exit0；全量 Vitest **72 文件 / 437 项通过**；`npm run build` exit0。蓝切页专项仍为四次真实导航 0 碎裂 / 4 圆遮罩，菜单主题 `粉→红→黄→蓝→粉` 仍通过，均 pageErrors=0。
-- **新候选 APK（2026-10-25）**：`E:\MASKARIA\outputs\maskaria-livefix-20261025\maskaria-3.0.1-livefix-3262fb4.apk`，同步副本 `D:\下载\互传\maskaria-3.0.1-livefix-3262fb4.apk`；103,429,901 B，SHA-256 `A88CB6B23CD8B8D1718F3793AFE54345C20947971FC809FC0BB9F7EB64232CBE`。包名/版本仍为 `com.meinan818.personaterminal / 3.0.1 / 31`，沿用同一 Debug 证书 `a7f0f3d9…c0567` 支持覆盖安装；APK 内网页资源 2054 项，对本地 2052 个 `dist` 文件逐一比对缺失0、差异0，正式后端命中1，唯一 `localhost` 文本是 Dexie 的浏览器环境探测，不是 API 地址。
+- **新候选 APK（2026-10-25 最终一版）**：`E:\MASKARIA\outputs\maskaria-livefix2-20261025\maskaria-3.0.1-livefix2-bf7fe5e.apk`，同步副本 `D:\下载\互传\maskaria-3.0.1-livefix2-bf7fe5e.apk`；103,430,021 B，SHA-256 `7F3EE87C3FAEB3E4D7457521C1590BA868EBA4F51E031439DCBBE42FABE7378B`。包名/版本仍为 `com.meinan818.personaterminal / 3.0.1 / 31`，沿用同一 Debug 证书 `a7f0f3d9…c0567` 支持覆盖安装；APK 内网页资源 2054 项，对本地 2052 个 `dist` 文件逐一比对缺失0、差异0。
 - **漏网扫描**：新增 `scripts/audit-theme-live-stubs.mjs`，扫描 1088 个源文件，找“尚未启用、显式 demo、计时器假成功”。高风险写死正式路径由 7 条降到只剩 1 条 `KitHost` 说明注释；报告见 `outputs/theme-live-stub-audit-20261025-v5/report.json`。剩余 14 条显式 demo 与 9 条计时器主要是演示状态页、动画节拍、模拟失败按钮和红主题历史演示组件，仍逐项按可达性区分，不把静态命中直接删。
 - **未验证边界**：ADB 当前无设备，真实物理返回手势、手机长期闪屏/掉帧与 APK 内行为仍需用户安装上述新包验证。红主题历史演示夹具中仍有少量 `od.ts`/`SettingsBlocks.tsx` demo 文案，未证明是正式入口前不删改。
 - **继承工作区**：两个 Gradle 行尾痕迹和未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，不提交。无 stash/reset/restore/clean。
-- **唯一下一任务/负责人**：用户安装新 APK 后只做手机验收：逐级返回、四主题切页闪屏/流畅度、红助手是否走已配置模型、账号备份与 AI 设置；把具体失败页面/录屏交给接手者定位。Push、部署和收费模型仍未授权。
+- **唯一下一任务/负责人**：用户安装 `livefix2` 后只做手机验收：逐级返回、四主题切页闪屏/流畅度、四主题助手是否返回已配置模型内容、账号备份与 AI 设置；把具体失败页面/录屏交给接手者定位。Push、部署和收费模型仍未授权。
 
 ## 历史接手入口 · 2026-10-24 · 计划14真机反馈热修2：菜单切主题与蓝色切页已修
 

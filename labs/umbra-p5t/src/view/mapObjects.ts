@@ -58,7 +58,7 @@ export class MapObjects {
     this.chests.clear(); this.doors.clear(); this.levers.clear(); this.cellMeshes.clear(); this.pulses = [];
     for (const m of tileMeshes) this.regCell(m as THREE.Mesh, { x: m.userData.x, y: m.userData.y });
     this.buildDoors(); this.buildSwitches(); this.buildChests(); this.buildLinks();
-    this.paintFog(); this.buildFogEdges();
+    this.paintFog(); this.buildFogEdges(); this.buildZoneChains();
     this.refresh();
   }
   private regCell(m: THREE.Mesh, p: Vec) {
@@ -246,23 +246,45 @@ export class MapObjects {
       const [lo, hi] = this.b.grid.h(l.a) <= this.b.grid.h(l.b) ? [l.a, l.b] : [l.b, l.a];
       const y0 = this.b.grid.h(lo) * L, y1 = this.b.grid.h(hi) * L;
       if (l.kind === 'ladder') {
-        const len = Math.max(0.3, y1 - y0);
+        // P5T 式木梯：两根木扶手+横档，斜靠在高台墙面上（底部外撇），顶端铁钩挂住台沿，比台面高出一截
+        // 两端不相邻时，梯子贴在高处格朝向低处一侧的墙面
+        const dx = lo.x - hi.x, dy = lo.y - hi.y;
+        const ax = Math.abs(dx) >= Math.abs(dy) ? Math.sign(dx) : 0, ay = ax ? 0 : Math.sign(dy);
+        const len = Math.max(0.3, y1 - y0) + 0.28;
+        const lean = 0.18; // 底部离墙
+        const tilt = Math.atan2(lean, len);
         const g = new THREE.Group();
-        const rail = std(WHITE, { emissive: 0x333333 });
-        for (const off of [-0.2, 0.2]) {
-          const r = new THREE.Mesh(new THREE.BoxGeometry(0.06, len + 0.3, 0.06), rail);
-          r.position.set(off, len / 2 + 0.05, 0);
+        const wood = std(0x8a5a3a, { roughness: 0.85, emissive: 0x2a1408, emissiveIntensity: 0.6 });
+        const rungM = std(0xb98a55, { roughness: 0.8, emissive: 0x2a1408, emissiveIntensity: 0.6 });
+        const iron = std(0x2a2a30, { metalness: 0.6, roughness: 0.4 });
+        for (const off of [-0.19, 0.19]) {
+          const r = new THREE.Mesh(new THREE.BoxGeometry(0.06, len / Math.cos(tilt), 0.07), wood);
+          r.position.set(off, len / 2, 0);
           g.add(r);
+          const hook = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.016, 5, 8, Math.PI), iron);
+          hook.position.set(off, len - 0.02, -0.06); hook.rotation.y = Math.PI / 2;
+          g.add(hook);
         }
-        const n = Math.max(2, Math.round(len / 0.22));
-        for (let i = 1; i <= n; i++) {
-          const rung = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.05), std(RED, { emissive: RED, emissiveIntensity: 0.3 }));
-          rung.position.set(0, (len * i) / (n + 1), 0);
+        const n = Math.max(3, Math.round(len / 0.2));
+        for (let i = 1; i < n; i++) {
+          const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.38, 6), rungM);
+          rung.rotation.z = Math.PI / 2;
+          rung.position.set(0, (len * i) / n, 0);
           g.add(rung);
         }
-        g.position.set(lo.x * 0.56 + hi.x * 0.44, y0, lo.y * 0.56 + hi.y * 0.44);
-        g.rotation.y = hi.x !== lo.x ? Math.PI / 2 : 0;
-        this.group.add(g);
+        const shadow = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.26), basic(0x000000, { transparent: true, opacity: 0.28, depthWrite: false }));
+        shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.012, 0.06);
+        g.add(shadow);
+        // 组：本地 -z 朝墙；放在高处格墙面外侧
+        const wall = this.d.w2v(hi, 0);
+        const face = new THREE.Vector3(wall.x + ax * 0.5, y0, wall.z + ay * 0.5);
+        const pivot = new THREE.Group();
+        g.rotation.x = -tilt; // 顶靠墙、底外撇
+        g.position.set(0, 0, lean / 2 + 0.04);
+        pivot.add(g);
+        pivot.position.copy(face);
+        pivot.rotation.y = Math.atan2(ax, ay);
+        this.group.add(pivot);
       } else {
         // 跳台：白色虚线抛物弧 + 两端红色箭头
         const a = this.d.w2v(l.a, 0.12), b2 = this.d.w2v(l.b, 0.12);
@@ -294,6 +316,43 @@ export class MapObjects {
         this.group.add(mark);
       }
     }
+  }
+
+  // ---------- 区域边界：P5T 式红色铁链虚线（所有区域交界，解锁前后都显示） ----------
+  private buildZoneChains() {
+    const z = this.b.map.zones;
+    if (!z) return;
+    const W = this.b.map.width, H = this.b.map.height;
+    const edges: { c: THREE.Vector3; along: 'x' | 'z' }[] = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (this.b.map.tiles[y][x] === 'wall') continue;
+      for (const [dx, dy] of [[1, 0], [0, 1]] as const) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= W || ny >= H || this.b.map.tiles[ny][nx] === 'wall') continue;
+        const za = this.b.zoneOf({ x, y }), zb = this.b.zoneOf({ x: nx, y: ny });
+        if (!za || !zb || za === zb) continue;
+        const pa = this.d.w2v({ x, y }, 0.05), pb = this.d.w2v({ x: nx, y: ny }, 0.05);
+        edges.push({ c: new THREE.Vector3((pa.x + pb.x) / 2, Math.max(pa.y, pb.y), (pa.z + pb.z) / 2), along: dx ? 'z' : 'x' });
+      }
+    }
+    if (!edges.length) return;
+    const PER = 6;
+    const geo = new THREE.TorusGeometry(0.066, 0.022, 5, 10);
+    geo.scale(1.45, 1, 1);
+    const mesh = new THREE.InstancedMesh(geo, std(RED, { emissive: RED, emissiveIntensity: 0.45, metalness: 0.4, roughness: 0.4 }), edges.length * PER);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1);
+    let i = 0;
+    for (const ed of edges) for (let k = 0; k < PER; k++) {
+      const t = (k + 0.5) / PER - 0.5;
+      const p = ed.c.clone(); if (ed.along === 'x') p.x += t; else p.z += t;
+      // 链环交替：平躺 / 竖立，长轴沿边
+      e.set(k % 2 ? 0 : -Math.PI / 2, ed.along === 'x' ? 0 : Math.PI / 2, 0, 'YXZ');
+      q.setFromEuler(e);
+      m.compose(p, q, one); mesh.setMatrixAt(i++, m);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.renderOrder = 2;
+    this.group.add(mesh);
   }
 
   // ---------- 未解锁区域 ----------

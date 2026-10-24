@@ -53,10 +53,10 @@ const SCENES: Record<string, Scene> = {
   // L07 玛丽的旗帜·中央广场：大旗、花坛、雕像、节日彩旗
   L07: S({ style: 'town', half: ['planter', 'planter', 'barrels', 'stone'], full: ['statue', 'stall', 'crateStack'], strip: ['flagpole', 'pots', 'lamp', 'stall', 'bench', 'pots', 'flagpole', 'lamp'], bunting: 4 }),
   // L08 收容所·中庭（夜）：树篱花园、玫瑰花坛
-  L08: S({ style: 'garden', sky: ['#1e1a4a', '#3a2a78', '#6a3a9a'], bg: 0x3a2a6a, hemiSky: 0xc0b0f0, hemiGround: 0x2a2a4a, sunColor: 0xd8c8ff, sunInt: 1.6,
-    tileA: 0xb8b0c0, tileB: 0xaea6b6, tileHigh: 0xc8c0d0, tileHighB: 0xbeb6c6, ground: 0x78897f, half: ['hedge', 'planter', 'stone'], full: ['tree', 'hedgeTall', 'statue'], strip: ['hedge', 'lamp', 'tree', 'pots', 'hedge', 'bench'], bunting: 0, night: true }),
+  L08: S({ style: 'garden', sky: ['#040820', '#0b1a4a', '#1f3478'], bg: 0x0b1a4a, fogNear: 40, fogFar: 78, hemiSky: 0x7f92d8, hemiGround: 0x1a1d38, hemiInt: 0.95, sunColor: 0x9fb4ff, sunInt: 0.9,
+    tileA: 0xb8b0c0, tileB: 0xaea6b6, tileHigh: 0xc8c0d0, tileHighB: 0xbeb6c6, ground: 0x78897f, half: ['hedge', 'planter', 'stone'], full: ['tree', 'hedgeTall', 'statue'], strip: ['hedge', 'lamp', 'tree', 'pots', 'lamp', 'hedge', 'bench', 'lamp'], bunting: 0, night: true }),
   // L09 篝火广场（夜）：火盆、摊位、拒马
-  L09: S({ style: 'town', sky: ['#1a1440', '#4a2070', '#a03a7a'], bg: 0x4a2070, hemiSky: 0xd0b0e0, hemiGround: 0x2a1a3a, sunColor: 0xffb080, sunInt: 1.8, half: ['barrels', 'crates', 'sandbags'], full: ['spikes', 'stall', 'brazier'], strip: ['brazier', 'stall', 'barrels', 'lamp', 'crates', 'stall', 'brazier', 'pots'], bunting: 3, night: true }),
+  L09: S({ style: 'town', sky: ['#050a26', '#10205a', '#2c3c80'], bg: 0x10205a, fogNear: 40, fogFar: 78, hemiSky: 0x8496d8, hemiGround: 0x1c1a34, hemiInt: 0.95, sunColor: 0xa8b8ff, sunInt: 0.85, half: ['barrels', 'crates', 'sandbags'], full: ['spikes', 'stall', 'brazier'], strip: ['brazier', 'stall', 'lamp', 'barrels', 'crates', 'lamp', 'stall', 'brazier', 'pots', 'lamp'], bunting: 3, night: true }),
   // L10 玛丽城·王座厅：红地毯、金柱、长桌、书柜
   L10: S({ style: 'interior', bg: 0x2a0b1f, fogNear: 40, fogFar: 72, sky: ['#2a0b1f', '#3d1430', '#570716'], hemiSky: 0xffd8e0, hemiGround: 0x3a1a2a, hemiInt: 1.3, sunColor: 0xffe0c8, sunInt: 1.7,
     tileA: 0x93769a, tileB: 0x8a6e92, tileHigh: 0xa486aa, tileHighB: 0x9a7ea2, ground: 0x685271, wallTints: [0xb391a2, 0xa58598], half: ['table', 'bench', 'stone'], full: ['pillar', 'bookcase', 'statue'], strip: ['pillar', 'lampFloor', 'bookcase', 'lampFloor'], bunting: 0, carpet: true }),
@@ -175,18 +175,24 @@ const DIRS: [number, number][] = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 /** 让 +x 朝向 (dx,dz) 的绕 Y 角度 */
 const rotFor = (dx: number, dz: number) => Math.atan2(-dz, dx);
 
-interface Outer { g: THREE.Group; lo: THREE.Group; nx: number; nz: number; full: number }
+interface Outer { g: THREE.Group; lo: THREE.Group; nx: number; nz: number; full: number; glow?: THREE.Group }
+/** 夜景光源点（灯笼/落地灯/火盆）：地图内 side=-1，街边带记所属边 */
+interface Glow { x: number; y: number; z: number; fire: boolean; side: number }
 export class SceneKit {
   private outers: Outer[] = [];
   private center = new THREE.Vector3();
   private snap = true;
   private token = 0;
   private flames: THREE.Object3D[] = [];
+  private glows: Glow[] = [];
+  private glowSide = -1;
+  private night = false;
+  private flick: { o: THREE.Object3D; base: number; ph: number; light?: THREE.PointLight }[] = [];
   ready = false;
 
   /** 返回被布景占用的格（主程序不再画灰盒）；模型异步加载完再挂到 world 上 */
   build(world: THREE.Group, map: MapDef): Set<string> {
-    this.outers = []; this.snap = true; this.flames = []; this.ready = false;
+    this.outers = []; this.snap = true; this.flames = []; this.ready = false; this.glows = []; this.flick = []; this.glowSide = -1;
     const tok = ++this.token;
     const claimed = new Set<string>();
     const sc = SCENES[map.id];
@@ -317,7 +323,9 @@ export class SceneKit {
     let si = 0;
     const stripCell = (x: number, y: number, fx: number, fz: number) => {
       const s = sideOf(x, y);
+      this.glowSide = sides.indexOf(s);
       this.recipe(s.lo, sc.strip[si++ % sc.strip.length], x, 0, y, rnd, rotFor(fx, fz));
+      this.glowSide = -1;
     };
     for (let x = -R; x < W + R; x++) { stripCell(x, -1, 0, 1); stripCell(x, H, 0, -1); }
     for (let y = 0; y < H; y++) { stripCell(-1, y, 1, 0); stripCell(W, y, -1, 0); }
@@ -340,12 +348,15 @@ export class SceneKit {
       }
       world.add(g);
     }
-    for (const s of sides) {
+    this.night = !!sc.night;
+    const glowGroups = sides.map(() => new THREE.Group());
+    if (this.night) this.nightLights(world, glowGroups, W, H);
+    sides.forEach((s, i) => {
       const lo = s.lo.build(), hi = s.hi.build();
-      const g = new THREE.Group(); g.add(lo, hi);
+      const g = new THREE.Group(); g.add(lo, hi, glowGroups[i]);
       world.add(g);
-      this.outers.push({ g: hi, lo, nx: s.nx, nz: s.nz, full: 1 });
-    }
+      this.outers.push({ g: hi, lo, nx: s.nx, nz: s.nz, full: 1, glow: glowGroups[i] });
+    });
     this.snap = true;
   }
 
@@ -453,7 +464,7 @@ export class SceneKit {
       case 'sandbags': b.put('proc/sandbags', x, y0, z, r, 1); break;
       case 'hay': b.put('proc/hay', x, y0, z, r, 1); break;
       case 'spikes': b.put('proc/spikes', x, y0, z, r, 1); break;
-      case 'brazier': b.put('proc/brazier', x, y0, z, 0, 1); break;
+      case 'brazier': b.put('proc/brazier', x, y0, z, 0, 1); this.glows.push({ x, y: y0 + 1.15, z, fire: true, side: this.glowSide }); break;
       case 'statue': b.put('proc/statue', x, y0, z, r, 1); break;
       case 'stall': b.put(T(rnd() < 0.5 ? 'stall-red' : 'stall-green'), x, y0, z, r, 0.9); b.put('survival/box', x + 0.2, y0 + 0.36, z + j(), 0, 1.2); break;
       case 'cart': b.put(T('cart'), x, y0, z, r + 0.3, 0.72); break;
@@ -467,12 +478,39 @@ export class SceneKit {
       case 'bookcase': b.put('furniture/bookcaseClosedWide', x, y0, z, r, 1.15, null, 1.5); break;
       case 'table': b.put('furniture/tableCloth', x, y0, z, r, 0.9, null, 1.1); break;
       case 'bench': b.put(sc_bench(rnd), x, y0, z, r, sc_bench(rnd) === 'furniture/bench' ? 1.6 : 1); break;
-      case 'lamp': b.put(T('lantern'), x, y0, z, 0, 1.15); break;
-      case 'lampFloor': b.put('furniture/lampSquareFloor', x, y0, z, 0, 1.8); b.put('furniture/pottedPlant', x + 0.25, y0, z + 0.2, 0, 1.4); break;
+      case 'lamp': b.put(T('lantern'), x, y0, z, 0, 1.15); this.glows.push({ x, y: y0 + 1.05, z, fire: false, side: this.glowSide }); break;
+      case 'lampFloor': this.glows.push({ x, y: y0 + 1.0, z, fire: false, side: this.glowSide }); b.put('furniture/lampSquareFloor', x, y0, z, 0, 1.8); b.put('furniture/pottedPlant', x + 0.25, y0, z + 0.2, 0, 1.4); break;
       case 'pots': for (let i = 0; i < 2; i++) b.put('furniture/pottedPlant', x - 0.2 + i * 0.4, y0, z + j(), rnd() * 6, 1.5); break;
       case 'flagpole': b.put('proc/pole', x, y0, z, r, 1); break;
       case 'water': b.put('proc/water', x, y0, z, 0, 1); if (rnd() < 0.3) b.put('survival/barrel', x, y0 - 0.1, z, 0, 1.4); break;
       default: b.put('proc/stone', x, y0, z, r, 1);
+    }
+  }
+
+  /**
+   * 夜景（L08/L09）：每个灯笼/火盆 = 加色光晕精灵 + 地面暖色光斑（假光照，便宜）；
+   * 离地图中心最近的 6 个再挂真 PointLight（照亮周围掩体/墙）。街边带的光晕挂在所属边的组里，随外圈收起隐藏。
+   */
+  private nightLights(world: THREE.Group, sideGroups: THREE.Group[], W: number, H: number) {
+    const tex = glowTex();
+    const inMap = new THREE.Group(); world.add(inMap);
+    const cx = (W - 1) / 2, cz = (H - 1) / 2;
+    const ranked = [...this.glows].sort((a, b) => Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz));
+    const real = new Set(ranked.filter((g) => g.side < 0).slice(0, 4).concat(ranked.filter((g) => g.side >= 0).filter((_, i) => i % 6 === 0).slice(0, 2)));
+    for (const g of this.glows) {
+      const parent = g.side >= 0 ? sideGroups[g.side] : inMap;
+      const col = g.fire ? 0xff8a30 : 0xffd27a;
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: col, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.9, fog: false }));
+      halo.scale.setScalar(g.fire ? 2.2 : 1.9); halo.position.set(g.x, g.y, g.z); halo.renderOrder = 3;
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(g.fire ? 1.9 : 1.7, 24), new THREE.MeshBasicMaterial({ map: tex, color: col, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.65 }));
+      pool.rotation.x = -Math.PI / 2; pool.position.set(g.x, g.y - (g.fire ? 1.1 : 1.0) + 0.03, g.z);
+      parent.add(halo, pool);
+      const f = { o: halo as THREE.Object3D, base: halo.scale.x, ph: Math.random() * 6, light: undefined as THREE.PointLight | undefined };
+      if (real.has(g)) {
+        const L = new THREE.PointLight(col, g.fire ? 7 : 5, g.fire ? 6.5 : 5.5, 1.6);
+        L.position.set(g.x, g.y + 0.1, g.z); parent.add(L); f.light = L;
+      }
+      if (g.fire || f.light) this.flick.push(f);
     }
   }
 
@@ -485,9 +523,14 @@ export class SceneKit {
       o.full = this.snap ? target : o.full + (target - o.full) * 0.14;
       o.g.scale.y = Math.max(0.01, o.full); o.g.visible = o.full > 0.03;
       o.lo.scale.y = 0.32 + 0.68 * o.full;
+      if (o.glow) o.glow.visible = o.full > 0.6;
     }
     this.snap = false;
-    void t;
+    for (const f of this.flick) {
+      const k = 1 + Math.sin(t * 9 + f.ph) * 0.05 + Math.sin(t * 23 + f.ph * 2) * 0.04;
+      f.o.scale.setScalar(f.base * k);
+      if (f.light) f.light.intensity = (f.light.userData.base ??= f.light.intensity) * k;
+    }
   }
 }
 function pick<X>(a: X[], rnd: () => number) { return a[(rnd() * a.length) | 0]; }
@@ -515,3 +558,16 @@ function bunting(a: THREE.Vector3, b: THREE.Vector3, rnd: () => number) {
   return grp;
 }
 export type { Part };
+
+/** 径向渐变光晕贴图（白→透明，颜色由材质 color 决定） */
+let _glow: THREE.CanvasTexture | null = null;
+function glowTex() {
+  if (_glow) return _glow;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d')!;
+  const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,0.55)'); g.addColorStop(0.6, 'rgba(255,255,255,0.14)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  _glow = new THREE.CanvasTexture(c); _glow.colorSpace = THREE.SRGBColorSpace;
+  return _glow;
+}

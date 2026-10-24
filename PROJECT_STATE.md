@@ -1,6 +1,22 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-23（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-24。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+
+## 当前接手入口 · 2026-10-24 · 原始 demo 核对与详细计划交接
+
+- **用户决定**：用户担心此前集成遗漏四主题内容，提供 `D:\下载\DEMO\` 四个原始 ZIP；本轮先核查并给修复路线。最新明确要求“出完最终版详细计划表就准备交接”，随后担心上下文消耗、表示不懂技术。已停止新开发/测试，仅收尾文档和本地提交。交接完成后本聊天停止共享写入，等待用户明确继续；不创建新聊天或自动化。
+- **路线结论**：现有证据支持保留四套原 demo、复用可核验业务、逐模块修接入；不支持立即全量重写。详细计划见 [THEME-RECOVERY-PLAN-20261024.md](docs/THEME-RECOVERY-PLAN-20261024.md)。下一轮范围收小到一个节点，避免每次重审整库；技术判断与可自动验证工作由接手者承担。
+- **现场**：`E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，本轮提交前 HEAD `688405d`。本段所在提交即本轮交接提交，最终 SHA 用 `git log -1` 核实。该分支没有 upstream；本轮提交前相对本地 `origin/main` 为 0 落后/218 领先，不等于所有领先提交都未推送。本轮无 Push、无部署、无新 APK；r12仍是历史安装包，不能称本轮已验证。
+- **本轮原包静态核查**：1,909 个范围内文件；1,342 个清单项、64 个页面登记键、700 个弹层登记键保留，清单 ID 无缺失/路由变化/未登记入口。696 个资源文件中695个与原包字节一致，另1个为蓝 favicon 缺失。211个内容差异仍待逐项业务审查；4个受保护命名路径仅核存在未读正文。登记保留不代表真实流程可达或视觉通过。
+- **7个缺文件的口径**：蓝favicon、蓝/粉说明TXT、黄ASSETS.md、蓝/粉/黄各main.tsx。三个main的CSS顺序、initPrefs/initLayout、黄色字体安装及原App渲染已有ThemeApp接管的静态证据；动态等价待续，不能机械覆盖补回入口。
+- **证据**：`E:\MASKARIA\outputs\theme-demo-audit-20261024-original\report.md` / `report.json` 含逐文件结果与原包SHA。复查工具 `scripts/audit-theme-demos.mjs`；运行 `node scripts/audit-theme-demos.mjs --out E:/MASKARIA/outputs/theme-demo-audit-NEXT`（NEXT须新目录）。本轮exit1表示7个缺文件，非脚本崩溃；`node --check`已通过。
+- **继承半成品的真实阻断**：`src/p5r-red/screens/pkg3/hideout.ts:514` 两处 `MEM[n]?.leader = ...` 被esbuild实际拒绝，`Invalid assignment target`（列34/55）；文件有`@ts-nocheck`。`syncReal()`未调用、`useRedHideoutData`未import、stateForced未完成设置，常量已改空数组，不能称据点接真完成。原文件未修、未还原，失败证据保留在`runtime-report.json`。
+- **本轮验证边界**：`tsc --noEmit`实际exit0；esbuild上述转换失败。隔离浏览器阻断外网/API后仅访问首页，pageerror0/本地资源失败0；root有子节点不足以证明业务可用，没有验证四主题登录后主流程。整体runtime探针exit1。本轮未重跑Vitest、完整build、Android构建；历史406项/413项不是本轮结果。临时5194审计服务已停止，不提供仍在线的预览。
+- **工作区遗留归属**：接手前已有两份`android/*.gradle`的cap sync/换行痕迹、已修改`src/p5r-red/screens/pkg3/hideout.ts`、未跟踪`src/p5r-red/adapter/hideoutData.ts`与`scripts/p5r-red/_tmp-compare-local.mjs`。均未纳入本轮提交。后3个文件另存报告目录`inherited-wip/`并逐一核SHA一致，含manifest与hideout.patch；源文件保留，不把半成品伪称完成。
+- **本轮提交范围**：仅本STATE、详细计划、核对脚本。报告与WIP快照在E盘输出目录，不整批提交outputs。无业务/外观/素材/声音改动。
+- **接手下一项（仅此一项）**：用户明确继续后，先核AGENTS、当前Git/diff和WIP快照，处理红据点语法/空数组/真实状态来源，按真实未登录、无组织、有组织路径验证，再独立提交。不要先改全局架构或重做四套主题；既有`src/themes/homeData.ts`及三套`adapters/pkg2.ts`已存在，先读后用。详细后续依赖与验收见计划顺序01–14。
+- **铁律**：不Push、不动main/UMBRA、不收费AI、不部署、不读/提交受保护凭据、不擅改已接受视觉；不reset/stash/restore/clean，不覆盖或删除继承WIP。普通协作，不自动续办、不默认委派子代理。
+- **下一位先只读**：本入口→详细计划→适用AGENTS→Git status/diff→两份核查报告；核用户已明确继续与源会话已停止共享写入后再开发。用户无需复制整段聊天或解释代码；每次只交付一个可验证节点。
 
 ## 接手第一入口 · 2026-10-23 23:25 · r12 待真机验收（最新，先看这段）
 

@@ -16,18 +16,22 @@
 - **运行与复查**：隔离服务需显式设置`VITE_API_URL=same-origin`并使用`http://127.0.0.1:5207`；探针`node scripts/verify-theme-plan08.mjs E:/MASKARIA/outputs/theme-plan08-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
 - **唯一下一任务/负责人**：用户在新聊天明确启动计划09“占卜、成就与设置”后，由接手者核日占卜/中长期、塔罗/岁时、成就/技能、总结与设置是否真正生效，并处理红 `d4.ts` 剩余牌阵数据；不自动跨入AI专项或UI重绘。本轮交接提交为 `9a3766f`（`feat(theme): complete plan 08 hideout real read/write`，36 文件 / +2335 / -463）；`git log -1` 应为该 SHA；提交后本聊天停止共享写入。
 
-## 当前接手入口 · 2026-10-24 · 计划10「AI 能力专项」已完成，下一计划11待新聊天启动
+## 当前接手入口 · 2026-10-24 · 计划10「AI 能力专项」本轮授权已做完，另发现2项未修复缺陷，下一计划11待新聊天启动
 
 - **本轮授权与现场**：用户明确执行计划10“AI 能力专项”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，接手基点计划09交接提交`d28f5cc`（`git log -1` 已核实）。本轮只梳理AI入口归属与取消/超时/失败边界，未进入11及后续，未重做据点、同伴、账号同步、记账、占卜、成就、设置或四主题外观，未重跑764项loader，未Push/部署/APK/真实账号/真实组织数据/收费调用。默认只用隔离 mock 响应验证。
-- **计划状态**：**计划10完成，11及之后未启动**。专项报告`docs/THEME-AI-CAPABILITY-20261024.md`记录22类AI入口的逐个标注、传输层超时/取消/失败边界、BYOK与费用触发点。
+- **计划状态**：本轮授权的梳理与边界核对**已做完**（22类入口逐个标注、取消/超时/失败边界、BYOK与费用触发点成文）；**但这不是「AI 模块没问题」**——本轮新发现 2 项未修复缺陷，见下面单独一节，修不修由用户决定。计划11及之后未启动。专项报告`docs/THEME-AI-CAPABILITY-20261024.md`记录22类AI入口的逐个标注、传输层超时/取消/失败边界、BYOK与费用触发点。
 - **入口标注结论**：App内AI全部走同一把BYOK钥匙（`settings.summaryApiKey`+`aiProfiles`），统一经`src/utils/aiClient.ts`出门；未配Key时五档（快速/深思/助手/视觉/听觉）全部解析为`null`，入口只能禁用或明确离线兜底。助手对话/谏言/塔罗/命运/总结/记账/活动/愿望/同伴/COOP/据点分工/Persona/显形/视觉/听觉/称号命名/今日委托/UMBRA三桥均为「真实AI+（多数）离线兜底」，`source: ai | offline` 明确区分。
 - **不伪造结果**：`chatComplete` 总超时（90s，思维链300s，瞬发20/60s）与 `chatStream` 空闲超时（90s，思维链150s）分开；调用方`AbortSignal`合流，generator `finally` 主动掐断底层请求（否则服务商继续计费）。失败时：塔罗/命运/总结只把已写部分标`truncated`给「接着写」；记账/活动/分工抛真实错误；愿望评估/同伴解读/Persona台词回落本地兜底并标`source`。隔离探针实测：mock地址改为不可达后`longReadings`未新增，界面显示「连不上AI服务：网络断了或不稳定……」。
 - **费用触发点**：每次模型调用都可能计费，全部在用户动作或明确开关之后——「生成总结」「解读」「AI分析」「AI拆解」「重新匹配」「召唤Persona」，及设置里的「自动撰写上一期总结」「今日委托第四张卡」「愿望自动评估」。中转站保险、加预算重试、5xx重试会在同一次动作内多发一两次请求。本轮零真实收费调用。
 - **验证（2026-10-24本轮）**：`tsc --noEmit` exit0；全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **71文件/435项通过**；`npm run build` exit0（主题CSS、TypeScript、Vite、PWA）；`node --check scripts/verify-theme-plan10.mjs`与`git diff --check`通过。
 - **隔离浏览器证据**：`E:\MASKARIA\outputs\theme-plan10-ai-20261024-v21\report.json`，`ok=true`、10条检查、11条入口标注、四主题可读同一份真实`longReadings`、`pageErrors0`、`localFailures0`、外网阻断3、**真实AI请求3次**（全部指向隔离mock）。
-- **保留边界**：红色`oc.ts`的同伴互动/星移/星象匹配、`a4.ts`的成长总结弹层仍是固定文案+计时器+写死内容的演示态，与蓝粉黄真实AI口径不一致，本轮只标注未擅改，是否补真实AI链路需用户决定；三主题谏言overlay挂载时读一次settings，配置写在后、挂载在前时横幅会滞后显示「尚未配置AI密钥」（同一时刻`counselHasKey`已为true且真实请求已发出），属渲染时序待查；未做Android真机、弱网、并发多标签、四主题整体视觉验收；未重跑764项loader。
+- **本轮发现的未修复缺陷（2项，本轮均未动手，需用户决定）**：
+  - 缺陷1 红色演示态冒充 AI：`oc.ts` 的同伴互动/星移/星象匹配、`a4.ts` 的成长总结弹层，仍是固定文案+计时器+写死内容，与蓝粉黄的真实 AI 口径不一致。用户从红色「行动」页点进去会看到一封像 AI 写的信，实际没有任何模型调用。
+  - 缺陷2 三主题谏言横幅时序滞后：overlay 挂载时读一次 settings，配置写在后、挂载在前时会显示「尚未配置 AI 密钥」，而同一时刻 `counselHasKey` 已为 true、真实请求也已发出。不影响功能，但配好 Key 后第一次进谏言可能看到过期提示。
+- **未覆盖的验证面（非缺陷）**：未做 Android 真机、弱网、并发多标签、四主题整体视觉验收；未重跑764项loader；未做任何真实账号、真实组织数据或收费调用。
 - **继承工作区**：两个Gradle行尾痕迹和未跟踪`scripts/p5r-red/_tmp-compare-local.mjs`仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
 - **运行与复查**：隔离服务需显式设置`VITE_API_URL=same-origin`并使用`http://127.0.0.1:5211`；探针`node scripts/verify-theme-plan10.mjs E:/MASKARIA/outputs/theme-plan10-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
+- **这两项缺陷不会因为本轮交付而被视为已处理**；修不修、何时修由用户决定。
 - **唯一下一任务/负责人**：用户在新聊天明确启动计划11「四主题视觉和演出保真」后，由接手者逐项对照原包与改后页面（开屏、导航/轮盘、切页、弹层层级、音效与演出顺序），不自动跨入局部整理、候选版打包或UI重绘。本轮交接提交为本入口所在提交，用`git log -1`核实；提交后本聊天停止共享写入。
 
 ## 历史交接 · 2026-10-24 · 计划09占卜成就与设置已完成，下一计划10待新聊天启动（交接提交 `d28f5cc`）

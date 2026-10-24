@@ -4,10 +4,7 @@ import { CfgBlock, CfgBtn, CfgInput, CfgMsg, CfgSeg } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
 import { WeatherIcon } from '@blue/screens/pkg6/compat';
 import { cx } from '@blue/lib/cx';
-
-const CITIES = [
-  { name: '杭州', adm: '浙江省 · 杭州市' }, { name: '西湖', adm: '浙江省 · 杭州市' }, { name: '朝阳', adm: '北京市' }, { name: '朝阳', adm: '辽宁省 · 朝阳市' },
-];
+import { fetchWeatherNow, searchCity, weatherMissing, weatherReady, type WeatherCity } from '@/utils/weather';
 
 export function WeatherBlock({ highlight }: { highlight?: boolean }) {
   const s = useSettings();
@@ -15,25 +12,43 @@ export function WeatherBlock({ highlight }: { highlight?: boolean }) {
   const [guideOpen, setGuideOpen] = useState(false);
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
-  const [results, setResults] = useState<typeof CITIES>([]);
+  const [results, setResults] = useState<WeatherCity[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => { if (highlight) setTimeout(() => ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 350); }, [highlight]);
 
   const qw = s.weatherProvider === 'qweather';
-  const missing = [qw && !s.weatherKey.trim() && 'API KEY', qw && !s.weatherHost.trim() && 'API Host', !s.weatherCity && '城市'].filter(Boolean) as string[];
-  const ready = missing.length === 0;
-  const canSearch = !qw || (s.weatherKey.trim() && s.weatherHost.trim());
-  const search = () => {
-    if (!q.trim()) return;
-    setBusy(true); setMsg(null);
-    setTimeout(() => {
-      setBusy(false);
-      const list = CITIES.filter((c) => c.name.includes(q.trim()) || c.adm.includes(q.trim()));
+  const cfg = { provider: s.weatherProvider, apiKey: s.weatherKey, host: s.weatherHost, city: s.weatherCity };
+  const missingCodes = weatherMissing(cfg);
+  const missingLabels = { key: 'API KEY', host: 'API Host', city: '城市' } as const;
+  const missing = missingCodes.map((code) => missingLabels[code]);
+  const ready = weatherReady(cfg);
+  const canSearch = !qw || (!missingCodes.includes('key') && !missingCodes.includes('host'));
+  const search = async () => {
+    const query = q.trim();
+    if (!query || busy || !canSearch) return;
+    setBusy(true); setMsg(null); setResults([]);
+    try {
+      const list = await searchCity(query, cfg);
       setResults(list);
       if (!list.length) setMsg({ ok: false, text: '没找到这个地名，换个写法试试（区县名通常比街道名好用）' });
-    }, 500);
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : '检索失败' });
+    } finally {
+      setBusy(false);
+    }
   };
-  const test = () => { setBusy(true); setTimeout(() => { setBusy(false); setMsg({ ok: true, text: `✓ ${s.weatherCity?.name}　小雨 14°C　体感 12°C` }); }, 600); };
+  const test = async () => {
+    if (busy || !ready) return;
+    setBusy(true); setMsg(null);
+    try {
+      const w = await fetchWeatherNow(cfg, { force: true });
+      setMsg({ ok: true, text: `✓ ${s.weatherCity?.name}　${w.text} ${w.temp}°C　体感 ${w.feelsLike}°C` });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : '取数失败' });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div ref={ref} className={cx('scroll-mt-24', highlight && 'outline outline-4 outline-offset-4 outline-p3r-coral')}>
@@ -76,18 +91,18 @@ export function WeatherBlock({ highlight }: { highlight?: boolean }) {
         )}
         <div>
           <div className="mb-1 flex items-center justify-between gap-2"><span className="font-heavy text-meta font-bold">城市</span>
-            {s.weatherCity && <span className="flex min-w-0 items-center gap-2"><span className="truncate text-meta font-bold">◎ {s.weatherCity.name} · {s.weatherCity.adm}</span><CfgBtn onClick={() => updateSettings({ weatherCity: undefined })}>清除</CfgBtn></span>}</div>
+            {s.weatherCity && <span className="flex min-w-0 items-center gap-2"><span className="truncate text-meta font-bold">◎ {s.weatherCity.name}</span><CfgBtn onClick={() => updateSettings({ weatherCity: undefined })}>清除</CfgBtn></span>}</div>
           {canSearch ? (
             <>
               <div className="flex min-w-0 gap-2">
-                <CfgInput value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} placeholder="搜城市 / 区县，如「杭州」「朝阳」" aria-label="搜索城市" />
-                <CfgBtn tone="primary" onClick={search} disabled={busy}>{busy ? '…' : '搜索'}</CfgBtn>
+                <CfgInput value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void search()} placeholder="搜城市 / 区县，如「杭州」「朝阳」" aria-label="搜索城市" />
+                <CfgBtn tone="primary" onClick={() => void search()} disabled={busy || !canSearch}>{busy ? '…' : '搜索'}</CfgBtn>
               </div>
               {results.length > 0 && (
                 <ul className="mt-2 grid grid-cols-1 gap-1">
                   {results.map((c, i) => (
                     <li key={i}><button type="button" onClick={() => { updateSettings({ weatherCity: c }); setResults([]); setQ(''); }} className="flex w-full min-w-0 items-center gap-2 rounded-none bg-p3r-panel px-3 py-2 text-left hover:bg-p3r-ink hover:text-[color:var(--p3r-on-ink)]">
-                      <span className="shrink-0 font-heavy text-body font-bold">{c.name}</span><span className="truncate text-meta opacity-75">{c.adm}</span></button></li>
+                      <span className="shrink-0 font-heavy text-body font-bold">{c.name}</span><span className="truncate text-meta opacity-75">{c.lat.toFixed(2)}, {c.lon.toFixed(2)}</span></button></li>
                   ))}
                 </ul>
               )}
@@ -95,7 +110,7 @@ export function WeatherBlock({ highlight }: { highlight?: boolean }) {
           ) : <p className="text-meta text-p3r-ink-soft">先填好 API KEY 和 API Host，才能用和风搜城市。</p>}
         </div>
         {!ready && <p className="text-meta font-bold text-p3r-lilac-ink">还差：{missing.join('、')}</p>}
-        <CfgBtn tone="primary" className="w-full" disabled={!ready || busy} onClick={test}>{ready ? (busy ? '…' : '测试取数') : '填齐上面几项再测试'}</CfgBtn>
+        <CfgBtn tone="primary" className="w-full" disabled={!ready || busy} onClick={() => void test()}>{ready ? (busy ? '…' : '测试取数') : '填齐上面几项再测试'}</CfgBtn>
         {msg && <CfgMsg ok={msg.ok}>{msg.text}</CfgMsg>}
         <p className="text-2xs text-p3r-grey">{qw ? <>天气服务由 <a className="underline" href="https://www.qweather.com" target="_blank" rel="noopener noreferrer">和风天气</a> 驱动</> : <>天气数据来自 <a className="underline" href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Open-Meteo</a>（CC BY 4.0）</>}</p>
       </CfgBlock>

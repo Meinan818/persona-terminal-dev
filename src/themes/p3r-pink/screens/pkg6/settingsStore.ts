@@ -1,7 +1,7 @@
 /**
  * P6 私有：设置页的 store。
- * demo 版是纯本地假 store；接入后这里桥到真实 useAppStore.settings + setTheme。
- * 安全边界：API Key / 验证状态只在本机设置页读写，不回显到日志；和风 Key 仍是演示态。
+ * 页面状态桥到真实 useAppStore.settings + setTheme。
+ * 安全边界：API Key / 验证状态只在本机设置页读写，不回显到日志。
  */
 import { useMemo, useSyncExternalStore } from 'react';
 import { useAppStore } from '@/store';
@@ -12,8 +12,8 @@ export interface MockSettings {
   theme: ThemeType; customThemeColor: string; customSoundScheme: ThemeType; customTarotSet: 'p3' | 'p4' | 'p5';
   soundMuted: boolean; soundVolume: number; backgroundAnimation: string[]; splashStyle: string; splashSpeed: 'fast' | 'normal' | 'slow';
   backgroundImage?: string; backgroundOpacity: number; backgroundOrientation: 'landscape' | 'portrait';
-  weatherProvider: 'qweather' | 'openmeteo'; weatherKey: string; weatherHost: string; weatherCity?: { name: string; adm: string };
-  bgmEnabled: boolean; bgmVolume: number; bgmBattle: string; bgmBoss: string; bgmTower: string; bgmHome: Record<string, string>;
+  weatherProvider: 'qweather' | 'openmeteo'; weatherKey: string; weatherHost: string; weatherCity?: NonNullable<Settings['weatherCity']>;
+  bgmEnabled: boolean; bgmVolume: number; bgmBattle: string; bgmBoss: string; bgmTower: string; bgmHome: Partial<Record<ThemeType, string>>;
   provider: ProviderId; keys: Partial<Record<ProviderId, string>>; verified: Partial<Record<ProviderId, boolean>>; customName: string; customProtocol: 'openai' | 'anthropic'; customPreset: string; baseUrl: string;
   summaryModel: string; navigatorModel: string; visionModel: string; audioModel: string; assistantModel: string;
   tarotDeliberate: boolean; summaryDeliberate: boolean;
@@ -31,7 +31,7 @@ const DEFAULTS: MockSettings = {
   soundMuted: false, soundVolume: 80, backgroundAnimation: ['particles'], splashStyle: 'p3', splashSpeed: 'normal',
   backgroundImage: undefined, backgroundOpacity: 0.3, backgroundOrientation: 'landscape',
   weatherProvider: 'qweather', weatherKey: '', weatherHost: '', weatherCity: undefined,
-  bgmEnabled: true, bgmVolume: 60, bgmBattle: 't2', bgmBoss: '', bgmTower: '', bgmHome: { pink: 't1' },
+  bgmEnabled: true, bgmVolume: 60, bgmBattle: '', bgmBoss: '', bgmTower: '', bgmHome: {},
   provider: 'deepseek', keys: {}, verified: {}, customName: '', customProtocol: 'openai', customPreset: 'relay', baseUrl: '',
   summaryModel: '', navigatorModel: 'deepseek-reasoner-v4', visionModel: 'deepseek-flash', audioModel: 'qwen3-asr-flash', assistantModel: '',
   tarotDeliberate: false, summaryDeliberate: true,
@@ -44,6 +44,8 @@ const DEFAULTS: MockSettings = {
 };
 
 const TO_REAL: Record<string, keyof Settings> = {
+  weatherProvider: 'weatherProvider', weatherKey: 'weatherApiKey', weatherHost: 'weatherApiHost', weatherCity: 'weatherCity',
+  bgmEnabled: 'bgmEnabled', bgmVolume: 'bgmVolume', bgmBattle: 'bgmBattleTrackId', bgmBoss: 'bgmBossTrackId', bgmTower: 'bgmTowerTrackId', bgmHome: 'bgmHomeTrackIds',
   customThemeColor: 'customThemeColor', customSoundScheme: 'customSoundScheme', customTarotSet: 'customTarotSet',
   backgroundImage: 'backgroundImage', backgroundOpacity: 'backgroundOpacity', backgroundOrientation: 'backgroundOrientation',
   backgroundAnimation: 'backgroundAnimation', splashStyle: 'splashStyle',
@@ -81,6 +83,16 @@ function merge(real: Settings | undefined, theme: ThemeType | undefined, l: Part
     backgroundImage: r?.backgroundImage ?? DEFAULTS.backgroundImage,
     backgroundOpacity: r?.backgroundOpacity ?? DEFAULTS.backgroundOpacity,
     backgroundOrientation: r?.backgroundOrientation ?? DEFAULTS.backgroundOrientation,
+    weatherProvider: r?.weatherProvider ?? DEFAULTS.weatherProvider,
+    weatherKey: r?.weatherApiKey ?? DEFAULTS.weatherKey,
+    weatherHost: r?.weatherApiHost ?? DEFAULTS.weatherHost,
+    weatherCity: r?.weatherCity ?? DEFAULTS.weatherCity,
+    bgmEnabled: r?.bgmEnabled ?? DEFAULTS.bgmEnabled,
+    bgmVolume: r?.bgmVolume ?? DEFAULTS.bgmVolume,
+    bgmBattle: r?.bgmBattleTrackId ?? DEFAULTS.bgmBattle,
+    bgmBoss: r?.bgmBossTrackId ?? DEFAULTS.bgmBoss,
+    bgmTower: r?.bgmTowerTrackId ?? DEFAULTS.bgmTower,
+    bgmHome: r?.bgmHomeTrackIds ?? DEFAULTS.bgmHome,
     backgroundAnimation: r?.backgroundAnimation ?? DEFAULTS.backgroundAnimation,
     splashStyle: r?.splashStyle ?? DEFAULTS.splashStyle,
     soundMuted: r?.soundMuted ?? DEFAULTS.soundMuted,

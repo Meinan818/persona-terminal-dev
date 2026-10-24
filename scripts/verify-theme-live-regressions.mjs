@@ -31,6 +31,23 @@ const context = await browser.newContext({
   locale: 'zh-CN',
   timezoneId: 'Asia/Shanghai',
 });
+await context.addInitScript(() => {
+  window.__themeAuditAudio = [];
+  window.__themeAuditAnimations = [];
+  const NativeAudio = window.Audio;
+  function TrackedAudio(src) {
+    window.__themeAuditAudio.push(String(src));
+    return new NativeAudio(src);
+  }
+  TrackedAudio.prototype = NativeAudio.prototype;
+  window.Audio = TrackedAudio;
+  const nativeAnimate = Element.prototype.animate;
+  Element.prototype.animate = function trackedAnimate(keyframes, options) {
+    const className = typeof this.className === 'string' ? this.className : String(this.className?.baseVal ?? '');
+    if (/nv-(box|fg|bubble|card)/.test(className)) window.__themeAuditAnimations.push(className);
+    return nativeAnimate.call(this, keyframes, options);
+  };
+});
 await context.route('http://mock.local/**', async (route) => {
   const request = route.request();
   const path = new URL(request.url()).pathname;
@@ -158,7 +175,7 @@ async function verifyRedAssistant() {
     const { openAssistant } = await import('/src/p5r-red/shell/shellBus.ts');
     openAssistant();
   });
-  const dialog = page.getByRole('dialog', { name: /助手 · 摩尔加纳/ });
+  const dialog = page.getByRole('dialog', { name: /助手/ }).first();
   await dialog.waitFor({ state: 'visible', timeout: 15000 });
   await page.waitForFunction(async () => {
     const { useNavigatorStore } = await import('/src/store/navigator.ts');
@@ -167,6 +184,8 @@ async function verifyRedAssistant() {
   await page.evaluate(async () => {
     const { useNavigatorStore } = await import('/src/store/navigator.ts');
     useNavigatorStore.setState({ messages: [], phase: 'idle', sessionId: 'audit-red' });
+    window.__themeAuditAudio = [];
+    window.__themeAuditAnimations = [];
   });
   const before = report.requests.filter((request) => request.path.endsWith('/chat/completions')).length;
   const prompt = '主题 red 真实回复测试';
@@ -192,7 +211,18 @@ async function verifyRedAssistant() {
   }
   assert.ok(after > before, 'red assistant did not hit the mock model endpoint');
   assert.ok(matched, 'red assistant did not append the model reply after this prompt');
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(500);
+  const presentation = await page.evaluate(() => ({
+    audio: window.__themeAuditAudio,
+    animations: window.__themeAuditAnimations,
+    text: (document.body.textContent ?? '').replace(/\s+/g, ' '),
+  }));
+  assert.ok(presentation.audio.some((src) => /msg_in/.test(src)), 'red assistant incoming sound did not play');
+  assert.ok(presentation.animations.some((name) => /nv-(box|fg)/.test(name)), 'red assistant incoming bubble/avatar animation did not play');
+  assert.match(presentation.text, /黑猫/);
+  assert.match(presentation.text, /烤面包机/);
+  assert.match(presentation.text, /熊/);
+  assert.doesNotMatch(presentation.text, /高卷杏|摩尔加纳|坂本龙司/);
   report.checks.push('red assistant called the shared navigator model endpoint');
   await screenshot('red-assistant-ai');
 }
@@ -257,10 +287,11 @@ async function verifyThemeAssistant(theme, kit, shellModule) {
 
 async function verifyLongReadingAndSummaryJobs() {
   const before = report.requests.length;
-  await page.evaluate(async () => {
+  const longId = await page.evaluate(async () => {
     const { useAppStore, toLocalDateKey } = await import('/src/store/index.ts');
     const { drawRandom } = await import('/src/themes/p3r-blue/mock/pkg4-tarot.ts');
-    const { startLongJob } = await import('/src/utils/tarotJobs.ts');
+    const { startLongJob, useTarotJobs } = await import('/src/utils/tarotJobs.ts');
+    useTarotJobs.setState({ long: null, follow: null, fate: null });
     const settings = useAppStore.getState().settings;
     const ids = drawRandom(6);
     startLongJob({
@@ -270,29 +301,85 @@ async function verifyLongReadingAndSummaryJobs() {
       candidates: ids.map((id, index) => ({ cardId: id, orientation: index % 3 === 2 ? 'reversed' : 'upright' })),
       pickedIndices: [0, 1, 2],
     });
+    return useTarotJobs.getState().long?.id ?? '';
+  });
+  assert.ok(longId, 'long reading job did not start');
+  let longReady = false;
+  const longDeadline = Date.now() + 30000;
+  while (Date.now() < longDeadline) {
+    await page.waitForTimeout(200);
+    longReady = await page.evaluate(async ({ longId }) => {
+      const { useTarotJobs } = await import('/src/utils/tarotJobs.ts');
+      const long = useTarotJobs.getState().long;
+      return long?.id === longId && long.status === 'done' && !!long.result?.content.trim();
+    }, { longId });
+    if (longReady) break;
+  }
+  assert.ok(longReady, 'long reading job did not finish with content');
+
+  const summaryId = await page.evaluate(async () => {
+    const { useAppStore, toLocalDateKey } = await import('/src/store/index.ts');
     const { startSummaryJob } = await import('/src/utils/summaryJobs.ts');
+    const { useSummaryJobs } = await import('/src/utils/summaryJobs.ts');
+    useSummaryJobs.setState({ job: null });
+    window.__auditSummaryEvents = [];
+    window.__auditSummaryUnsub?.();
+    window.__auditSummaryUnsub = useSummaryJobs.subscribe((next, previous) => {
+      window.__auditSummaryEvents.push({
+        id: next.job?.id ?? '',
+        previousId: previous.job?.id ?? '',
+        status: next.job?.status ?? '',
+        previousStatus: previous.job?.status ?? '',
+        text: next.job?.text ?? '',
+        full: next.job?.full ?? '',
+        hasDraft: !!next.job?.draft,
+        error: next.job?.error ?? '',
+      });
+    });
+    const settings = useAppStore.getState().settings;
     const end = new Date();
     const start = new Date(end.getTime() - 6 * 86400_000);
     startSummaryJob({ settings, period: 'week', startDate: toLocalDateKey(start), endDate: toLocalDateKey(end) });
+    return useSummaryJobs.getState().job?.id ?? '';
   });
-  await page.waitForFunction(async () => {
+  assert.ok(summaryId, 'summary job did not start');
+  let summaryReady = false;
+  const summaryDeadline = Date.now() + 30000;
+  while (Date.now() < summaryDeadline) {
+    await page.waitForTimeout(200);
+    summaryReady = await page.evaluate(async ({ summaryId }) => {
+      const { useSummaryJobs } = await import('/src/utils/summaryJobs.ts');
+      const summary = useSummaryJobs.getState().job;
+      return summary?.id === summaryId && summary.status === 'done' && !!summary.draft?.content.trim();
+    }, { summaryId });
+    if (summaryReady) break;
+  }
+  assert.ok(summaryReady, 'summary job did not finish with content');
+  const state = await page.evaluate(async () => {
     const { useTarotJobs } = await import('/src/utils/tarotJobs.ts');
     const { useSummaryJobs } = await import('/src/utils/summaryJobs.ts');
     const long = useTarotJobs.getState().long;
     const summary = useSummaryJobs.getState().job;
-    return long?.status === 'done' && !!long.result && summary?.status === 'done' && !!summary.draft;
-  }, null, { timeout: 30000 });
-  const state = await page.evaluate(async () => {
-    const { useTarotJobs } = await import('/src/utils/tarotJobs.ts');
-    const { useSummaryJobs } = await import('/src/utils/summaryJobs.ts');
+    const summaryEvents = window.__auditSummaryEvents ?? [];
+    window.__auditSummaryUnsub?.();
+    delete window.__auditSummaryUnsub;
     return {
-      longContent: useTarotJobs.getState().long?.result?.content ?? '',
-      summaryContent: useSummaryJobs.getState().job?.draft?.content ?? '',
+      longId: long?.id ?? '',
+      longStatus: long?.status ?? '',
+      longContent: long?.result?.content ?? '',
+      summaryId: summary?.id ?? '',
+      summaryStatus: summary?.status ?? '',
+      summaryText: summary?.text ?? '',
+      summaryFull: summary?.full ?? '',
+      summaryContent: summary?.draft?.content ?? '',
+      summaryEvents,
     };
   });
   const requests = report.requests.slice(before).filter((request) => request.path.endsWith('/chat/completions'));
-  report.jobState = { requests: requests.length, ...state };
+  report.jobState = { requests: requests.length, startedLongId: longId, startedSummaryId: summaryId, ...state };
   assert.ok(requests.length >= 2, 'long reading and summary did not both call the model endpoint');
+  assert.equal(state.longId, longId, 'long reading job was replaced before inspection');
+  assert.equal(state.summaryId, summaryId, 'summary job was replaced before inspection');
   assert.match(state.longContent, /MOCK_RED_AI_REPLY/);
   assert.match(state.summaryContent, /MOCK_RED_AI_REPLY/);
   report.checks.push('long reading and growth summary completed through the shared model endpoint');
@@ -307,8 +394,8 @@ try {
   await verifyThemeAssistant('blue', 'p3r-blue', '/src/themes/p3r-blue/shell/shellBus.ts');
   await verifyThemeAssistant('pink', 'p3r-pink', '/src/themes/p3r-pink/shell/shellBus.ts');
   await verifyThemeAssistant('yellow', 'p4g-yellow', '/src/themes/p4g-yellow/shell/shellBus.ts');
-  await verifyLongReadingAndSummaryJobs();
   await verifyRedAssistant();
+  await verifyLongReadingAndSummaryJobs();
   assert.equal(report.pageErrors.length, 0, `page errors: ${report.pageErrors.join(' | ')}`);
   report.ok = true;
 } catch (error) {

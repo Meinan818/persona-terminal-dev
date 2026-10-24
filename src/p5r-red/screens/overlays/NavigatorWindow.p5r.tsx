@@ -18,7 +18,7 @@ import type { OverlayProps } from '@/p5r-red/registry/types';
 import { usePrefs, isLowMotion } from '@/p5r-red/lib/prefs';
 import { navigate, openOverlay } from '@/p5r-red/shell/shellBus';
 import { ObCrop } from './ObKit';
-import { cx, CHARS, charOf, Avatar, ChatToasts, chatToast, ChatSheet, ChatStage, chatImg, anim, EASE_BACK, sleep, hhmm, pts, playMsg, ATTR_CN, type ChatChar } from './NavigatorChatKit';
+import { cx, CHARS, Avatar, ChatToasts, chatToast, ChatSheet, ChatStage, chatImg, anim, EASE_BACK, sleep, hhmm, pts, playMsg, ATTR_CN, type ChatChar } from './NavigatorChatKit';
 import { ActionFormSheet, KIND, previewLines, type Draft, type DraftKind } from './NavigatorActionForm.p5r';
 import { NotebookSheet } from './NavigatorNotebook.p5r';
 import { useAppStore, toLocalDateKey } from '@/store';
@@ -26,6 +26,7 @@ import { useNavigatorStore, type NavigatorMessage } from '@/store/navigator';
 import { executeDraft, type NavigatorDraft } from '@/utils/navigatorRegistry';
 import { useBackHandler } from '@/utils/useBackHandler';
 import type { Todo } from '@/types';
+import { mergedNavigatorPresets } from '@/constants/navigatorPresets';
 
 /* ── 数据 ── */
 interface Msg { id: string; role: 'cat' | 'user' | 'summary' | 'card'; text?: string; img?: string; at: number; draft?: Draft; status?: 'pending' | 'done' | 'cancelled'; busy?: boolean; receipt?: string; fresh?: boolean; from?: DOMRect | null }
@@ -50,11 +51,11 @@ const seedThreads = (): Record<string, Msg[]> => ({
     { id: nid(), role: 'cat', text: '呃……这、这个就别提了吧！', at: T(60 * 26 - 3) },
   ],
 });
-const emptyThreads = (): Record<string, Msg[]> => Object.fromEntries(CHARS.map((c) => [c.key, []]));
-const toThreadMessage = (m: NavigatorMessage): Msg => {
-  if (m.role === 'summary') return { id: m.id, role: 'summary', text: m.text, at: m.createdAt };
-  if (m.role === 'card') return { id: m.id, role: 'card', draft: m.draft as Draft | undefined, status: m.cardStatus, receipt: m.receipt, at: m.createdAt };
-  return { id: m.id, role: m.role, text: m.text, img: m.imageDataUrl, at: m.createdAt };
+const emptyThreads = (chars: ChatChar[]): Record<string, Msg[]> => Object.fromEntries(chars.map((c) => [c.key, []]));
+const toThreadMessage = (m: NavigatorMessage, fresh = false): Msg => {
+  if (m.role === 'summary') return { id: m.id, role: 'summary', text: m.text, at: m.createdAt, fresh };
+  if (m.role === 'card') return { id: m.id, role: 'card', draft: m.draft as Draft | undefined, status: m.cardStatus, receipt: m.receipt, at: m.createdAt, fresh };
+  return { id: m.id, role: m.role, text: m.text, img: m.imageDataUrl, at: m.createdAt, fresh };
 };
 const SCRIPT: ({ t: 'typing'; ms: number } | { t: 'cat'; text: string } | { t: 'user'; text: string } | { t: 'card'; draft: Draft })[] = [
   { t: 'typing', ms: 900 }, { t: 'cat', text: '喂，你回来了啊。今天的情报，吾辈都替你整理好了。' },
@@ -226,11 +227,28 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const desktop = useDesktop();
   const navMessages = useNavigatorStore((s) => s.messages);
   const navPhase = useNavigatorStore((s) => s.phase);
+  const presetRows = useNavigatorStore((s) => s.presets);
   const activePresetId = useAppStore((s) => s.settings.navigatorPresetId);
   const todos = useAppStore((s) => s.todos);
-  const activeKey = CHARS.find((ch) => ch.id === activePresetId)?.key ?? 'morgana';
-  const initialKey = q.get('thread') && CHARS.some((ch) => ch.key === q.get('thread')) ? q.get('thread')! : activeKey;
-  const [threads, setThreads] = useState(emptyThreads);
+  const chars = useMemo(() => mergedNavigatorPresets(presetRows).map((row, index) => {
+    const visual = CHARS.find((ch) => ch.id === row.id) ?? CHARS[index % CHARS.length];
+    return {
+      ...visual,
+      key: row.id,
+      id: row.id,
+      name: row.name,
+      prompt: row.personaPrompt,
+      own: row.handoffLine || visual.own,
+      me: row.name,
+    } satisfies ChatChar;
+  }), [presetRows]);
+  const charFor = useCallback((key: string) => chars.find((ch) => ch.key === key) ?? chars[0], [chars]);
+  const threadAlias: Record<string, string> = { morgana: 'builtin-cat', ann: 'builtin-toaster', ryuji: 'builtin-bear' };
+  const activeKey = chars.find((ch) => ch.id === activePresetId)?.key ?? chars[0].key;
+  const requestedKey = q.get('thread') ?? '';
+  const initialKey = chars.some((ch) => ch.key === requestedKey) ? requestedKey
+    : chars.some((ch) => ch.key === threadAlias[requestedKey]) ? threadAlias[requestedKey] : activeKey;
+  const [threads, setThreads] = useState(() => emptyThreads(chars));
   const [current, setCurrent] = useState(initialKey);
   const [view, setView] = useState<'list' | 'chat'>(q.get('view') === 'list' ? 'list' : 'chat');
   const [typing, setTyping] = useState(q.get('state') === 'typing');
@@ -253,11 +271,17 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const txRef = useRef<HTMLDivElement>(null), innerRef = useRef<HTMLDivElement>(null), linesRef = useRef<SVGSVGElement>(null), sendRef = useRef<HTMLButtonElement>(null);
   const camRef = useRef<HTMLInputElement>(null), avRef = useRef<HTMLInputElement>(null), avTarget = useRef<string | null>(null);
   const geo = useRef(new Map<string, { w: number; shift: number }>()), growing = useRef<{ toId: string; t0: number } | null>(null);
+  const knownStoreIds = useRef<Set<string> | null>(null);
+  const knownStorePreset = useRef<string | undefined>(undefined);
+  const playingIn = useRef(0);
   const token = useRef(0);
   const curRef = useRef(current); curRef.current = current;
-  const c = charOf(current);
+  const c = charFor(current);
   const msgs = threads[current];
   const showTyping = typing || navPhase === 'collecting' || navPhase === 'thinking';
+  useEffect(() => {
+    if (!chars.some((ch) => ch.key === current)) setCurrent(activeKey);
+  }, [activeKey, chars, current]);
 
   /* 连接带：每次渲染后重画（新消息伸展用 rAF 续画） */
   const redraw = useCallback(() => {
@@ -276,8 +300,20 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
     requestAnimationFrame(step);
   }, []);
   useEffect(() => {
-    if (q.get('demo') === 'play' || charOf(current).id !== activePresetId) return;
-    setThreads((all) => ({ ...all, [current]: navMessages.map(toThreadMessage) }));
+    if (q.get('demo') === 'play' || charFor(current).id !== activePresetId) return;
+    const presetChanged = knownStorePreset.current !== activePresetId;
+    const previousIds = presetChanged ? null : knownStoreIds.current;
+    const freshIds = new Set(previousIds ? navMessages.filter((m) => !previousIds.has(m.id)).map((m) => m.id) : []);
+    const newCats = previousIds ? navMessages.filter((m) => !previousIds.has(m.id) && m.role === 'cat') : [];
+    setThreads((all) => ({ ...all, [current]: navMessages.map((m) => toThreadMessage(m, freshIds.has(m.id))) }));
+    knownStoreIds.current = new Set(navMessages.map((m) => m.id));
+    knownStorePreset.current = activePresetId;
+    if (newCats.length) {
+      playingIn.current += 1;
+      if (playingIn.current === 1) playMsg('in');
+      window.setTimeout(() => { playingIn.current = Math.max(0, playingIn.current - 1); }, 180);
+      growing.current = { toId: newCats[newCats.length - 1].id, t0: performance.now() };
+    }
     requestAnimationFrame(smoothBottom);
   }, [navMessages, activePresetId, current, smoothBottom]); // eslint-disable-line react-hooks/exhaustive-deps
   // 切会话：贴底、重置连接带锚
@@ -302,7 +338,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
     if (k === current && (desktop || view === 'chat')) return;
     token.current++;
     setTyping(false);
-    const next = charOf(k);
+    const next = charFor(k);
     void wipe(() => { setCurrent(k); setView('chat'); });
     void useNavigatorStore.getState().switchPreset(next.id).then(() => useNavigatorStore.getState().greet());
   };
@@ -323,21 +359,22 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
     if (demo === 'card') { push({ id: nid(), role: 'card', draft: { kind: 'todo', title: '报告开头三百字', attribute: 'knowledge', points: 2, repeatDaily: false, deadline: '' }, status: 'pending', at: Date.now() }); return; }
     if (demo === 'play') { void autoplay(tok); return; }
     if (st || q.get('sheet') || q.get('form') || q.get('menu') || q.get('view') || q.get('crop')) return;
-    void useNavigatorStore.getState().switchPreset(charOf(curRef.current).id)
+    void useNavigatorStore.getState().switchPreset(charFor(curRef.current).id)
       .then(() => useNavigatorStore.getState().greet());
     return () => { token.current++; };
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function typeInto(text: string, tok: number) { for (const ch of text) { if (tok !== token.current) return false; setInput((v) => v + ch); await sleep(55); } await sleep(250); return tok === token.current; }
   async function autoplay(tok: number) {
-    setCurrent('morgana'); setView('chat'); setThreads((t) => ({ ...t, morgana: seedThreads().morgana }));
+    const demoKey = charFor('builtin-cat').key;
+    setCurrent(demoKey); setView('chat'); setThreads((t) => ({ ...t, [demoKey]: seedThreads().morgana }));
     await sleep(900);
     for (const st of SCRIPT) {
       if (tok !== token.current) return;
       if (st.t === 'typing') { setTyping(true); await sleep(st.ms); setTyping(false); }
-      else if (st.t === 'cat') { push({ id: nid(), role: 'cat', text: st.text, at: Date.now() }, 'morgana'); await sleep(650); }
+      else if (st.t === 'cat') { push({ id: nid(), role: 'cat', text: st.text, at: Date.now() }, demoKey); await sleep(650); }
       else if (st.t === 'user') { if (!(await typeInto(st.text, tok))) return; doSend(st.text, true); await sleep(500); }
-      else { push({ id: nid(), role: 'card', draft: st.draft, status: 'pending', at: Date.now() }, 'morgana'); await sleep(900); }
+      else { push({ id: nid(), role: 'card', draft: st.draft, status: 'pending', at: Date.now() }, demoKey); await sleep(900); }
     }
   }
 
@@ -490,10 +527,10 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
               <span className={cx('mask-blink')} style={{ width: 62, height: 30, transform: 'rotate(8deg)' }}><img src={chatImg('mask_red_base')} alt="" /><img className={cx('open')} src={chatImg('mask_red_eyes_open')} alt="" /><img className={cx('closed')} src={chatImg('mask_red_eyes_closed')} alt="" /></span>
               <button type="button" className={cx('icon-btn')} aria-label="关闭助手" onClick={onClose}>✕</button>
             </div>
-            <div className={cx('list-sub')}>{CHARS.length} 条会话线 · 点一条切换人格</div>
+            <div className={cx('list-sub')}>{chars.length} 条会话线 · 点一条切换人格</div>
           </div>
           <div className={cx('threads')} role="list" ref={listRef}>
-            {CHARS.map((ch, i) => {
+            {chars.map((ch, i) => {
               const [pv, at] = lastPreview(ch.key), tilt = i % 2 === 0 ? -1.6 : 1.2, on = ch.key === current;
               return (
                 <button key={ch.key} type="button" className={cx('thread', on && 'active')} role="listitem" aria-current={on ? 'true' : undefined} style={{ marginLeft: [0, 14, 4, 18][i % 4], transform: `rotate(${tilt}deg)`, '--tilt': `${tilt}deg` } as CSSProperties} onClick={() => openThread(ch.key)}>
@@ -523,7 +560,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
                   <div className={cx('menu-veil')} onClick={() => setMenu(false)} />
                   <div className={cx('persona-menu')} role="menu" aria-label="人格菜单" ref={menuRef}>
                     <div className={cx('lab')}>切换人格</div>
-                    {CHARS.map((ch, i) => <button key={ch.key} type="button" className={cx('pm-item', ch.key === current && 'on')} role="menuitem" style={{ width: `calc(100% - ${i * 8}px)`, marginLeft: i * 8 }} onClick={() => { setMenu(false); if (ch.key !== current) openThread(ch.key); }}><Avatar c={ch} size="xs" photo={photos[ch.key]} /><span className={cx('nm')}>{ch.name}</span>{ch.key === current ? <span>当前</span> : null}</button>)}
+                    {chars.map((ch, i) => <button key={ch.key} type="button" className={cx('pm-item', ch.key === current && 'on')} role="menuitem" style={{ width: `calc(100% - ${i * 8}px)`, marginLeft: i * 8 }} onClick={() => { setMenu(false); if (ch.key !== current) openThread(ch.key); }}><Avatar c={ch} size="xs" photo={photos[ch.key]} /><span className={cx('nm')}>{ch.name}</span>{ch.key === current ? <span>当前</span> : null}</button>)}
                     {tools.map((t, i) => <button key={t.label} type="button" className={cx('pm-tool')} role="menuitem" style={{ width: `calc(100% - ${i * 10}px)`, marginLeft: i * 10 }} onClick={() => { setMenu(false); t.fn(); }}><span>{t.label}</span></button>)}
                   </div>
                 </div>
@@ -576,7 +613,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
       <div className={cx('wipe', wiping && 'play')} aria-hidden="true"><i className={cx('w1')} /><i className={cx('w3')} /><i className={cx('w2')} /></div>
       <div>{sheetEl}</div>
       <input type="file" ref={avRef} accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; const k = avTarget.current || current; avTarget.current = null; const r = new FileReader(); r.onload = () => setCrop({ key: k, src: String(r.result) }); r.readAsDataURL(f); }} />
-      <ObCrop open={!!crop} src={crop?.src} title={`调整${(CHARS.find((ch) => ch.key === crop?.key) ?? c).name}的头像`} onClose={() => setCrop(null)} onDone={() => { if (crop?.src) { setPhotos((p) => ({ ...p, [crop.key]: crop.src! })); chatToast('头像已更新（只存本机）'); } }} />
+      <ObCrop open={!!crop} src={crop?.src} title={`调整${(chars.find((ch) => ch.key === crop?.key) ?? c).name}的头像`} onClose={() => setCrop(null)} onDone={() => { if (crop?.src) { setPhotos((p) => ({ ...p, [crop.key]: crop.src! })); chatToast('头像已更新（只存本机）'); } }} />
       <ChatToasts />
       {!prefs.devHidden && (
         <div className={cx('demo-bar')}>

@@ -5,13 +5,19 @@
  */
 import { useState } from 'react';
 import type { OverlayProps } from '@/p5r-red/registry/types';
+import { useNavigatorStore } from '@/store/navigator';
+import { mergedNavigatorPresets } from '@/constants/navigatorPresets';
 import { ObSheet } from './ObKit';
 import { PersonaEditor } from './SettingsBlocks';
 export default function NavigatorPersonaEditor({ open, onClose, params }: OverlayProps) {
   const [st, setSt] = useState(params?.get('variant') ?? 'gen');
+  const presets = useNavigatorStore((state) => state.presets);
+  const editing = params?.get('id')
+    ? mergedNavigatorPresets(presets).find((preset) => preset.id === params.get('id')) ?? null
+    : null;
   return (
     <ObSheet open={open} onClose={onClose} title={st === 'edit' ? '编辑人格' : '新建人格'} seed={711} states={[['gen', '新建'], ['edit', '编辑'], ['generating', '生成中'], ['generr', '生成报错']]} state={st} onState={setSt}>
-      <PersonaEditor key={st} state={st} onClose={onClose} />
+      <PersonaEditor key={editing?.id ?? st} state={st} editing={editing} onClose={onClose} />
     </ObSheet>
   );
 }

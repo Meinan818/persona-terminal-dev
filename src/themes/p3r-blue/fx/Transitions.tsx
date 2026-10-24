@@ -118,9 +118,9 @@ export const PageEnter = ({ children, k, className }: { children: ReactNode; k: 
   const anim = useBoldness();
   return (
     <motion.div key={k} className={className}
-      initial={anim ? { x: -10 } : false}
-      animate={{ x: 0 }}
-      transition={{ duration: anim ? 0.2 : 0, ease: [0.22, 0.9, 0.3, 1] }}>
+      initial={anim ? { x: -16, opacity: 0.82 } : false}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: anim ? 0.3 : 0, ease: [0.22, 0.9, 0.3, 1] }}>
       {children}
     </motion.div>
   );

@@ -1,6 +1,10 @@
 /** 设置 · 助手（真实 components/navigator/NavigatorSettings.tsx） */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { NavigatorPreset } from '@real/types';
+import { useAppStore } from '@/store';
+import { useNavigatorStore } from '@/store/navigator';
+import { BUILTIN_NAVIGATOR_PRESETS, mergedNavigatorPresets } from '@/constants/navigatorPresets';
+import { getAIConfig } from '@/utils/aiClient';
 import { CfgBtn, CfgList, CfgRow, CfgSubhead, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
 import { PersonaEditor, Glyph } from '@blue/screens/overlays/NavigatorPersonaEditor.p3r';
@@ -9,9 +13,12 @@ import { Notebook } from '@blue/screens/overlays/NavigatorNotebook.p3r';
 import { ModelPicker } from '@blue/screens/overlays/ModelPickerSheet.p3r';
 import { useToast } from '@blue/kit';
 import { cx } from '@blue/lib/cx';
+import { finalizeStaleSessions } from '@/utils/navigatorMemory';
 
 export function NavigatorSection() {
   const s = useSettings();
+  const nav = useNavigatorStore();
+  const realSettings = useAppStore((state) => state.settings);
   const toast = useToast();
   const [editor, setEditor] = useState<{ open: boolean; editing: NavigatorPreset | null }>({ open: false, editing: null });
   const [del, setDel] = useState<NavigatorPreset | null>(null);
@@ -20,8 +27,24 @@ export function NavigatorSection() {
   const [archiveDone, setArchiveDone] = useState('');
   const [modelOpen, setModelOpen] = useState(false);
   const [picker, setPicker] = useState(false);
-  const hasKey = Object.values(s.keys).some(Boolean);
-  const activeName = s.personas.find((p) => p.id === s.activePersona)?.name ?? '黑猫';
+  const personas = mergedNavigatorPresets(nav.presets);
+  const builtinIds = new Set(BUILTIN_NAVIGATOR_PRESETS.map((item) => item.id));
+  const active = nav.activePreset();
+  const hasKey = !!getAIConfig(realSettings);
+  const activeName = active.name;
+  useEffect(() => { void nav.loadPresets(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const runArchive = async () => {
+    setArchiving(true);
+    setArchiveDone('');
+    try {
+      const last = await finalizeStaleSessions();
+      setArchiveDone(last ? `已归档，最近摘要：${last.summary.slice(0, 40)}…` : '没有待归档的会话');
+    } catch (e) {
+      setArchiveDone(e instanceof Error ? e.message : '整理失败，请稍后重试');
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -40,8 +63,8 @@ export function NavigatorSection() {
       <CfgSubhead en="PERSONA">人格</CfgSubhead>
       <p className="text-meta font-bold text-[color:var(--p3r-on-stage)]">切换人格会开启（或恢复）它今天的对话。能力不变，变的只是性格和嘴。</p>
       <ul className="grid grid-cols-1 gap-[6px]">
-        {s.personas.map((p) => {
-          const on = s.activePersona === p.id;
+        {personas.map((p) => {
+          const on = active.id === p.id;
           return (
             <li key={p.id} className={cx('group flex min-w-0 flex-wrap items-center gap-3 rounded-none px-3 py-2.5 transition-colors', on ? 'bg-p3r-ink text-[color:var(--p3r-on-ink)]' : 'bg-[rgb(var(--p3r-cyan-pale-rgb)/0.92)] text-p3r-ink')}>
               <span className={cx('flex h-11 w-11 shrink-0 items-center justify-center rounded-none border-2', on ? 'border-p3r-rose bg-p3r-rose text-p3r-on-rose' : 'border-p3r-lilac/50 bg-p3r-panel text-p3r-ink')}><Glyph id={p.avatar} size={26} /></span>
@@ -54,10 +77,10 @@ export function NavigatorSection() {
                 <p className="truncate text-meta opacity-75">{p.personaPrompt.replace(/^你是「[^」]*」—*/, '').slice(0, 40)}…</p>
               </div>
               <div className="ml-auto flex shrink-0 flex-wrap justify-end gap-1">
-                {!on && <CfgBtn tone="primary" onClick={() => { updateSettings({ activePersona: p.id }); toast(`已切换到「${p.name}」`, { duration: 1200 }); }}>切换</CfgBtn>}
+                {!on && <CfgBtn tone="primary" onClick={() => void nav.switchPreset(p.id).then(() => toast(`已切换到「${p.name}」`, { duration: 1200 }))}>切换</CfgBtn>}
                 {!p.isBuiltin && <CfgBtn aria-label={`编辑 ${p.name}`} onClick={() => setEditor({ open: true, editing: p })}>编辑</CfgBtn>}
                 {!p.isBuiltin && <CfgBtn tone="danger" aria-label={`删除 ${p.name}`} onClick={() => setDel(p)}>删除</CfgBtn>}
-                {p.isBuiltin && p.modified && <CfgBtn aria-label={`恢复 ${p.name} 默认`} onClick={() => { updateSettings({ personas: s.personas.map((x) => (x.id === p.id ? { ...x, modified: false } : x)) }); toast('已恢复默认'); }}>恢复默认</CfgBtn>}
+                {builtinIds.has(p.id) && nav.presets.some((item) => item.id === p.id) && <CfgBtn aria-label={`恢复 ${p.name} 默认`} onClick={() => void nav.deletePreset(p.id).then(() => toast('已恢复默认'))}>恢复默认</CfgBtn>}
               </div>
             </li>
           );
@@ -70,7 +93,7 @@ export function NavigatorSection() {
       <CfgList className="pt-3">
         <CfgRow inline label="✎ 记事本" hint="它记住的关于你的事：长期画像 + 零散记忆，可改可删，只存本机。"><CfgBtn tone="primary" onClick={() => setNotebook(true)}>打开</CfgBtn></CfgRow>
         <CfgRow inline label="整理旧对话" hint={archiveDone || '把之前没归档的聊天收进记忆（平时它会自己做）。'}>
-          <CfgBtn disabled={archiving} onClick={() => { setArchiving(true); setTimeout(() => { setArchiving(false); setArchiveDone('已归档，最近摘要：聊到了周五的面试和雨天去图书馆的计划…'); }, 1100); }}>{archiving ? '整理中…' : '整理'}</CfgBtn>
+          <CfgBtn disabled={archiving} onClick={() => void runArchive()}>{archiving ? '整理中…' : '整理'}</CfgBtn>
         </CfgRow>
       </CfgList>
 
@@ -96,7 +119,7 @@ export function NavigatorSection() {
       </div>
 
       <PersonaEditor open={editor.open} editing={editor.editing} onClose={() => setEditor((e) => ({ ...e, open: false }))} />
-      <PersonaDeleteDialog open={!!del} label={del?.name ?? ''} onClose={() => setDel(null)} onConfirm={() => { if (del) updateSettings({ personas: s.personas.filter((x) => x.id !== del.id), activePersona: s.activePersona === del.id ? 'builtin-cat' : s.activePersona }); }} />
+      <PersonaDeleteDialog open={!!del} label={del?.name ?? ''} onClose={() => setDel(null)} onConfirm={() => { if (del) void nav.deletePreset(del.id).then(() => setDel(null)); }} />
       <Notebook open={notebook} onClose={() => setNotebook(false)} />
       <ModelPicker mode="assistant" open={picker} onClose={() => setPicker(false)} />
     </div>

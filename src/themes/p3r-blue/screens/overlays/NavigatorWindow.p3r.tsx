@@ -21,7 +21,9 @@ import { navigate } from '@blue/shell/shellBus';
 import { ACTION_META, CHAT_CARD_DEMO, type ChatMsg, type DraftKind } from '@blue/mock/pkg6';
 import { navigatorThemeOps, useNavigatorThemeData } from '@blue/adapters/pkg6';
 import { useNavigatorStore } from '@/store/navigator';
-import { activePreset, attrLabel, updateSettings, useSettings } from '@blue/screens/pkg6/settingsStore';
+import { useAppStore } from '@/store';
+import { mergedNavigatorPresets, resolveNavigatorPreset } from '@/constants/navigatorPresets';
+import { attrLabel, updateSettings, useSettings } from '@blue/screens/pkg6/settingsStore';
 import { P6Sheet } from '@blue/screens/pkg6/sheet';
 import { DateHud, WaterLayer, popVariants, sampleImg } from '@blue/screens/pkg6/compat';
 import { ActionForm, emptyForm, type FormState } from './NavigatorActionForm.p3r';
@@ -29,11 +31,12 @@ import { Notebook } from './NavigatorNotebook.p3r';
 import { CropDialog } from './ImageCropDialog.p3r';
 import { Glyph } from './NavigatorPersonaEditor.p3r';
 import { useBackHandler } from '@/utils/useBackHandler';
+import { ensureOwnDay } from '@/utils/navigatorDay';
+import { recorderSupported, speechAvailable, startRecording, transcribe, type Recording } from '@/utils/speech';
 import '@blue/screens/pkg6/pkg6.css';
 
 type MicState = 'idle' | 'recording' | 'transcribing';
 type FormKind = Exclude<DraftKind, 'completeTodo'>;
-const OWN_DAY: Record<string, string> = { 'builtin-cat': '在窗台上晒了一下午太阳，顺便盯着楼下的月台', 'builtin-toaster': '自检完毕，今日面包烤得刚刚好', 'builtin-bear': '在电视里等了一整天，熊有点想你熊', 'c-glove': '把银器擦了三遍，等候主人吩咐' };
 const AI_STATES: AIPhase[] = ['thinking', 'streaming', 'error', 'truncated', 'aborted', 'nokey'];
 const DEMO_Q = '最近总觉得时间不够用，晚上回家就只想躺着';
 const replyOf = (pid: string) => pid === 'builtin-bear'
@@ -109,7 +112,10 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const toast = useToast();
   const prefs = usePrefs();
   const s = useSettings();
-  const preset = activePreset(s);
+  const realSettings = useAppStore((state) => state.settings);
+  const presetRows = useNavigatorStore((state) => state.presets);
+  const personas = mergedNavigatorPresets(presetRows);
+  const preset = resolveNavigatorPreset(realSettings.navigatorPresetId, presetRows);
   useScrollLock(open);
   useBackHandler(open, onClose);
   const q = params ?? new URLSearchParams();
@@ -137,10 +143,28 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const [stuck, setStuck] = useState<'off' | 'ask' | 'busy'>(qState === 'stuck' ? 'ask' : 'off');
   const [mic, setMic] = useState<MicState>(qState === 'recording' ? 'recording' : 'idle');
   const [micHint, setMicHint] = useState(qState === 'mic-error' ? '没能开始录音——检查一下麦克风权限' : '');
+  const [ownDay, setOwnDay] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
   const micStart = useRef<{ y: number; cancel: boolean } | null>(null);
+  const recordingRef = useRef<Recording | null>(null);
+  const micHeldRef = useRef(false);
+  useEffect(() => { void useNavigatorStore.getState().loadPresets(); }, []);
+  useEffect(() => {
+    if (open) return;
+    micHeldRef.current = false;
+    micStart.current = null;
+    recordingRef.current?.cancel();
+    recordingRef.current = null;
+    setMic('idle');
+  }, [open]);
+  useEffect(() => {
+    let live = true;
+    setOwnDay('');
+    void ensureOwnDay(preset, realSettings).then((day) => { if (live && day) setOwnDay(day.text); });
+    return () => { live = false; };
+  }, [preset.id, realSettings]);
   useEffect(() => {
     if (q.get('demo') === 'card') return;
     setMsgs(CHAT_MESSAGES);
@@ -177,14 +201,6 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   useEffect(() => { if (open) navigatorThemeOps.greet(); }, [open]);
   useEffect(() => { if (ai.phase === 'streaming') listRef.current?.scrollTo({ top: 1e6 }); }, [ai.text.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const catSay = (text: string, delay = 900) => {
-    setTyping(true);
-    const parts = s.realisticTyping ? text.split(/(?<=[。！？])/).filter(Boolean) : [text];
-    parts.forEach((p, i) => setTimeout(() => {
-      setMsgs((m) => [...m, { id: `c${Date.now()}${i}`, role: 'cat', text: p }]);
-      if (i === parts.length - 1) setTyping(false);
-    }, delay + (s.realisticTyping ? i * 1200 : 0)));
-  };
   const send = () => {
     const t = input.trim();
     if ((!t && !shot) || aiBusy) return;
@@ -215,27 +231,51 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   };
   const openForm = (kind: DraftKind) => { if (kind === 'completeTodo') { setPicker(true); return; } setForm({ kind, open: true }); };
   const jump = (page: string, tab?: string) => { onClose(); setTimeout(() => navigate(page, tab, { transition: 'wave' }), 120); };
-  const startMic = (e: React.PointerEvent) => {
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-    micStart.current = { y: e.clientY, cancel: false }; setMicHint(''); setMic('recording');
+  const startMic = async (e: React.PointerEvent) => {
+    micHeldRef.current = true;
+    if (!recorderSupported()) { micHeldRef.current = false; setMicHint('当前环境不支持录音'); return; }
+    try {
+      const recording = await startRecording();
+      if (!micHeldRef.current) { recording.cancel(); return; }
+      recordingRef.current = recording;
+      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+      micStart.current = { y: e.clientY, cancel: false };
+      setMicHint('');
+      setMic('recording');
+    } catch (error) {
+      micHeldRef.current = false;
+      setMicHint(error instanceof Error ? error.message : '没能开始录音');
+      setMic('idle');
+    }
   };
   const moveMic = (e: React.PointerEvent) => { if (micStart.current) micStart.current.cancel = micStart.current.y - e.clientY > 60; };
-  const endMic = () => {
-    if (!micStart.current) { if (mic === 'recording') setMic('idle'); return; }
+  const endMic = async () => {
+    const recording = recordingRef.current;
+    micHeldRef.current = false;
+    if (!micStart.current || !recording) { if (mic === 'recording') setMic('idle'); return; }
     const c = micStart.current.cancel; micStart.current = null;
-    if (c) { setMic('idle'); setMicHint('已取消'); return; }
+    recordingRef.current = null;
+    if (c) { recording.cancel(); setMic('idle'); setMicHint('已取消'); return; }
     setMic('transcribing');
-    setTimeout(() => { setMic('idle'); setInput((v) => (v ? `${v} ` : '') + '今天下雨，在家做了一顿咖喱'); }, 900);
+    try {
+      const blob = await recording.stop();
+      const text = await transcribe(blob, realSettings);
+      setInput((v) => (v ? `${v} ` : '') + text);
+      setMicHint('');
+    } catch (error) {
+      setMicHint(error instanceof Error ? error.message : '转写失败，请重试');
+    } finally {
+      setMic('idle');
+    }
   };
-  const switchPersona = (pid: string) => {
-    updateSettings({ activePersona: pid }); setMenu(false);
-    setMsgs((m) => [...m, { id: `h${Date.now()}`, role: 'divider' }]);
-    catSay(pid === 'builtin-bear' ? '锵锵——！帅熊登场熊！接下来交给熊吧！' : pid === 'builtin-toaster' ? '接管确认。本机体已上线，开始执行陪伴与记录支援任务。' : pid === 'builtin-cat' ? '（跳上桌子）吾辈回来了。继续。' : '在。今天有什么吩咐？', 400);
+  const switchPersona = async (pid: string) => {
+    setMenu(false);
+    await navigatorThemeOps.switchPreset(pid);
   };
 
-  const showMic = !!s.audioModel;
+  const showMic = speechAvailable(realSettings);
   const menuItems = [
-    ...s.personas.map((p) => ({ id: p.id, label: p.name, glyph: p.avatar, current: p.id === preset.id, run: () => switchPersona(p.id) })),
+    ...personas.map((p) => ({ id: p.id, label: p.name, glyph: p.avatar, current: p.id === preset.id, run: () => void switchPersona(p.id) })),
     { id: '__avatar', label: `上传头像（${preset.name}）`, run: () => { setMenu(false); avatarRef.current?.click(); } },
     { id: '__nb', label: '记事本', run: () => { setMenu(false); setNotebook(true); } },
     { id: '__more', label: '更多设置…', run: () => { setMenu(false); jump('settings', 'navigator'); } },
@@ -313,9 +353,9 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
                     </button>
                     <div className="min-w-0 flex-1">
                       <h2 className="truncate font-heavy text-[clamp(20px,6vw,26px)] leading-tight" style={{ color: P3R.ink }}>{preset.name}<span aria-hidden style={{ color: P3R.magenta }}>.</span></h2>
-                      <button type="button" onClick={() => setOwnOpen((v) => !v)} aria-label={`${preset.name}今天：${OWN_DAY[preset.id] ?? '安静地待着'}`}
+                      <button type="button" onClick={() => setOwnOpen((v) => !v)} aria-label={`${preset.name}今天：${ownDay || '安静地待着'}`}
                         className={cx('block max-w-full text-left text-[12px] font-bold', ownOpen ? 'whitespace-normal' : 'truncate')} style={{ color: P3R.inkSoft }}>
-                        <span style={{ color: 'var(--p3r-rose-ink)' }}>{preset.name}今天：</span>{OWN_DAY[preset.id] ?? '安静地待着'}
+                        <span style={{ color: 'var(--p3r-rose-ink)' }}>{preset.name}今天：</span>{ownDay || '安静地待着'}
                       </button>
                     </div>
                     <DateHud weather={night ? 'night' : 'rain'} className="hidden shrink-0 sm:flex" />
@@ -436,7 +476,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
                   </div>
                   {showMic && (
                     <button type="button" aria-label={mic === 'recording' ? '松手结束录音' : '按住说话'} title={mic === 'recording' ? '松手结束' : '按住说话'}
-                      onPointerDown={startMic} onPointerMove={moveMic} onPointerUp={endMic} onPointerCancel={endMic} onContextMenu={(e) => e.preventDefault()}
+                      onPointerDown={(event) => void startMic(event)} onPointerMove={moveMic} onPointerUp={() => void endMic()} onPointerCancel={() => void endMic()} onContextMenu={(e) => e.preventDefault()}
                       className={cx('flex h-11 w-11 shrink-0 touch-none select-none items-center justify-center transition-transform', mic === 'recording' && 'scale-110')}
                       style={{ background: mic === 'recording' ? P3R.magenta : P3R.panel, color: mic === 'recording' ? '#fff' : P3R.ink, clipPath: slantClip(7) }}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg></button>
                   )}
@@ -471,7 +511,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
         }} />
       <Notebook open={open && notebook} onClose={() => setNotebook(false)} />
       <CropDialog open={!!crop} src={crop ?? undefined} title={`调整${preset.name}的头像`} onClose={() => setCrop(null)}
-        onDone={(url) => { updateSettings({ personas: s.personas.map((p) => (p.id === preset.id ? { ...p, avatar: url } : p)) }); setCrop(null); toast.success('头像已更新'); }} />
+        onDone={(url) => { void useNavigatorStore.getState().savePreset({ ...preset, avatar: url, isBuiltin: false }).then(() => { setCrop(null); toast.success('头像已更新'); }); }} />
     </Portal>
   );
 }

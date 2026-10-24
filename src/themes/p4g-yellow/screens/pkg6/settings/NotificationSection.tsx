@@ -1,15 +1,57 @@
 /** 设置 · 通知提醒（真实 components/NotificationSettings.tsx） */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CfgBtn, CfgInput, CfgList, CfgRow, CfgToggle } from '../cfg';
 import { updateSettings, useSettings } from '../settingsStore';
 import { NOTIF_CONTENTS } from '@yellow/mock/pkg6';
 import { cx } from '@yellow/lib/cx';
+import { getNotifPermission, notifPlatformSupported, requestNotifPermission, sendTestNotification, type NotifPermission } from '@/utils/notifications';
 
 export function NotificationSection() {
   const s = useSettings();
-  const [sent, setSent] = useState(false);
+  const [perm, setPerm] = useState<NotifPermission>('prompt');
+  const [testMsg, setTestMsg] = useState('');
+  const supported = notifPlatformSupported();
   const slots = s.notifSlots;
   const upd = (id: string, p: Partial<(typeof slots)[number]>) => updateSettings({ notifSlots: slots.map((x) => (x.id === id ? { ...x, ...p } : x)) });
+  useEffect(() => {
+    if (!supported) return;
+    void getNotifPermission().then(setPerm);
+  }, [supported, s.notificationsEnabled]);
+  const authorize = async () => {
+    const next = await requestNotifPermission();
+    setPerm(next);
+    if (next === 'granted') updateSettings({ notifPermission: true });
+  };
+  const toggleEnabled = async (on: boolean) => {
+    if (!on) {
+      updateSettings({ notificationsEnabled: false });
+      return;
+    }
+    if (supported) {
+      const next = await requestNotifPermission();
+      setPerm(next);
+      if (next !== 'granted') return;
+    }
+    updateSettings({ notificationsEnabled: true });
+  };
+  const testNotification = async () => {
+    setTestMsg('');
+    let current = perm;
+    if (supported && current !== 'granted') {
+      current = await requestNotifPermission();
+      setPerm(current);
+    }
+    if (!supported) {
+      setTestMsg('测试通知只在 Android / iOS 客户端可用。');
+      return;
+    }
+    if (current !== 'granted') {
+      setTestMsg('通知权限未授予，无法发送。');
+      return;
+    }
+    const ok = await sendTestNotification();
+    setTestMsg(ok ? '✓ 已发送，请查看通知栏' : '发送失败，请检查系统通知权限。');
+  };
 
   return (
     <div className="space-y-2">
@@ -19,15 +61,15 @@ export function NotificationSection() {
       </div>
       <CfgList>
         <CfgRow inline label="每日提醒" hint="在你选的时段提醒抽塔罗、未竟待办、逆流预警等。内容在端上生成，不经服务器。">
-          <CfgToggle ariaLabel="每日提醒总开关" checked={s.notificationsEnabled} onChange={(v) => updateSettings({ notificationsEnabled: v })} />
+          <CfgToggle ariaLabel="每日提醒总开关" checked={s.notificationsEnabled} onChange={(v) => void toggleEnabled(v)} />
         </CfgRow>
       </CfgList>
       {s.notificationsEnabled && (
         <>
-          {!s.notifPermission && (
+          {supported && s.notificationsEnabled && perm !== 'granted' && (
             <div className="flex min-w-0 items-center gap-2 rounded-[4px] border-2 border-p4g-black bg-p4g-orange px-3 py-2 text-p4g-black night:border-p4g-yellow">
               <span className="min-w-0 flex-1 text-meta font-bold">⚠ <span>通知权限未授予，提醒不会送达。</span></span>
-              <CfgBtn onClick={() => updateSettings({ notifPermission: true })}>去授权</CfgBtn>
+              <CfgBtn onClick={() => void authorize()}>去授权</CfgBtn>
             </div>
           )}
           <CfgList>
@@ -65,7 +107,8 @@ export function NotificationSection() {
           </ul>
           <button type="button" onClick={() => updateSettings({ notifSlots: [...slots, { id: `n${Date.now()}`, time: '12:00', enabled: true, label: '新的提醒', contents: ['tarot'] }] })}
             className="p4g-press w-full rounded-[4px] border-3 border-dashed border-p4g-black bg-p4g-yellow py-2.5 font-display text-body font-bold text-p4g-black night:border-p4g-yellow">＋ 添加提醒时段</button>
-          <CfgBtn className="w-full" onClick={() => { setSent(true); setTimeout(() => setSent(false), 3000); }}>{sent ? '✓ 已发送，请查看通知栏' : '发送一条测试通知'}</CfgBtn>
+          <CfgBtn className="w-full" disabled={!supported} onClick={() => void testNotification()}>{testMsg.startsWith('✓') ? '✓ 已发送，请查看通知栏' : supported ? '发送一条测试通知' : '测试通知仅支持客户端'}</CfgBtn>
+          {testMsg && <p className="text-meta font-bold text-p3r-lilac-ink">{testMsg}</p>}
         </>
       )}
     </div>

@@ -6,10 +6,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { OverlayProps } from '@yellow/registry/types';
 import type { NavigatorPreset } from '@real/types';
+import { v4 as uuidv4 } from 'uuid';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { CfgInput, CfgTextarea, CfgMsg } from '@yellow/screens/pkg6/cfg';
 import { GLYPH_PATHS, TONE_WORDS } from '@yellow/mock/pkg6';
-import { updateSettings, getSettings } from '@yellow/screens/pkg6/settingsStore';
+import { useNavigatorStore } from '@/store/navigator';
+import { generatePersonaPrompt } from '@/utils/navigatorIntent';
 import { CropDialog } from './ImageCropDialog.p4g';
 import { P4Button, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
@@ -21,6 +23,7 @@ export function Glyph({ id, size = 24, className }: { id?: string; size?: number
 
 interface Gen { name: string; avatar: string; callMe: string; tones: string[]; coach: 'accompany' | 'push'; free: string; personaPrompt: string; likes: string; dislikes: string; habits: string; generating: boolean; error: string }
 const blank: Gen = { name: '', avatar: 'cat', callMe: '', tones: [], coach: 'accompany', free: '', personaPrompt: '', likes: '', dislikes: '', habits: '', generating: false, error: '' };
+const splitTraits = (value: string) => value.split(/[，,、；;\n]+/).map((item) => item.trim()).filter(Boolean);
 
 export function PersonaEditor({ open, onClose, editing }: { open: boolean; onClose: () => void; editing?: NavigatorPreset | null }) {
   const toast = useToast();
@@ -28,25 +31,55 @@ export function PersonaEditor({ open, onClose, editing }: { open: boolean; onClo
   const [crop, setCrop] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (open) setG(editing ? { ...blank, name: editing.name, avatar: editing.avatar ?? 'cat', personaPrompt: editing.personaPrompt, likes: '晒太阳、热可可', dislikes: '下雨、闹钟', habits: '下雨天话变少' } : blank);
+    if (open) setG(editing ? {
+      ...blank,
+      name: editing.name,
+      avatar: editing.avatar ?? 'cat',
+      personaPrompt: editing.personaPrompt,
+      likes: editing.traits?.likes.join('、') ?? '',
+      dislikes: editing.traits?.dislikes.join('、') ?? '',
+      habits: editing.traits?.habits.join('、') ?? '',
+    } : blank);
   }, [open, editing]);
   const chip = (on: boolean) => cx('p4g-press rounded-[3px] border-2 px-3 py-1.5 font-display text-meta font-bold', on ? 'border-p4g-black bg-p4g-black text-p4g-yellow night:border-p4g-yellow night:bg-p4g-yellow night:text-p4g-black' : 'border-p4g-line/50 bg-p4g-surface');
-  const generate = () => {
+  const generate = async () => {
     if (!g.name.trim()) { setG((s) => ({ ...s, error: '先给它起个名字' })); return; }
     setG((s) => ({ ...s, generating: true, error: '' }));
-    setTimeout(() => setG((s) => ({ ...s, generating: false, personaPrompt: `你是「${s.name}」——${s.tones.join('、') || '温柔'}的${s.coach === 'push' ? '督促型' : '陪伴型'}伙伴。${s.callMe ? `你称呼对方为「${s.callMe}」。` : ''}说话简短，偶尔吐槽，但每个约定都会记得。${s.free}` })), 1100);
+    try {
+      const personaPrompt = await generatePersonaPrompt({
+        name: g.name.trim(),
+        callUser: g.callMe.trim(),
+        toneWords: g.tones,
+        coach: g.coach,
+        freeText: g.free.trim(),
+      });
+      setG((s) => ({ ...s, generating: false, personaPrompt }));
+    } catch (e) {
+      setG((s) => ({ ...s, generating: false, error: e instanceof Error ? e.message : '人格生成失败' }));
+    }
   };
-  const save = () => {
+  const save = async () => {
     if (!g.name.trim() || !g.personaPrompt.trim()) { setG((s) => ({ ...s, error: '名字和人格设定都不能为空' })); return; }
-    const st = getSettings();
-    if (editing) updateSettings({ personas: st.personas.map((p) => (p.id === editing.id ? { ...p, name: g.name, avatar: g.avatar, personaPrompt: g.personaPrompt } : p)) });
-    else updateSettings({ personas: [...st.personas, { id: `c${Date.now()}`, name: g.name, avatar: g.avatar, personaPrompt: g.personaPrompt, isBuiltin: false, createdAt: new Date() }] });
-    toast.success(editing ? '人格已更新' : '新人格已加入'); onClose();
+    const traits = { likes: splitTraits(g.likes), dislikes: splitTraits(g.dislikes), habits: splitTraits(g.habits) };
+    const hasTraits = traits.likes.length + traits.dislikes.length + traits.habits.length > 0;
+    await useNavigatorStore.getState().savePreset({
+      id: editing?.id ?? uuidv4(),
+      name: g.name.trim(),
+      avatar: g.avatar,
+      personaPrompt: g.personaPrompt.trim(),
+      isBuiltin: false,
+      createdAt: editing?.createdAt ?? new Date(),
+      handoffLine: editing?.handoffLine,
+      examples: editing?.examples,
+      traits: hasTraits ? traits : undefined,
+    });
+    toast.success(editing ? '人格已更新' : '新人格已加入');
+    onClose();
   };
   return (
     <>
       <P6Sheet open={open} onClose={onClose} title={editing ? '编辑人格' : '新建人格'} en="PERSONA" size="tall"
-        footer={<div className="flex gap-3"><P4Button variant="secondary" block onClick={onClose}>取消</P4Button><P4Button block onClick={save}>保存</P4Button></div>}>
+        footer={<div className="flex gap-3"><P4Button variant="secondary" block onClick={onClose}>取消</P4Button><P4Button block onClick={() => void save()}>保存</P4Button></div>}>
         <div className="space-y-4 pt-1">
           <CfgInput aria-label="名字" placeholder="名字（如：白手套 / 老班长…）" value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} />
           <div>
@@ -74,7 +107,7 @@ export function PersonaEditor({ open, onClose, editing }: { open: boolean; onClo
             </div>
           </div>
           <CfgTextarea rows={2} aria-label="自由描述" placeholder="自由描述（可空）：口头禅、背景设定、想避免的说话方式…" value={g.free} onChange={(e) => setG({ ...g, free: e.target.value })} />
-          <P4Button block variant="black" busy={g.generating} disabled={g.generating} onClick={generate}>{g.generating ? '生成中…' : g.personaPrompt ? '换一版' : 'AI 生成人格设定'}</P4Button>
+          <P4Button block variant="black" busy={g.generating} disabled={g.generating} onClick={() => void generate()}>{g.generating ? '生成中…' : g.personaPrompt ? '换一版' : 'AI 生成人格设定'}</P4Button>
           {g.error && <CfgMsg>{g.error}</CfgMsg>}
           {(g.personaPrompt || editing) && (
             <>
@@ -99,6 +132,6 @@ export function PersonaEditor({ open, onClose, editing }: { open: boolean; onClo
 }
 
 export default function NavigatorPersonaEditor({ open, onClose, params }: OverlayProps) {
-  const edit = params?.get('variant') === 'edit' ? getSettings().personas[3] : null;
+  const edit = params?.get('variant') === 'edit' ? useNavigatorStore.getState().presets[0] ?? null : null;
   return <PersonaEditor open={open} onClose={onClose} editing={edit} />;
 }

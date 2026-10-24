@@ -4,7 +4,8 @@
  * SoundVolumeRow 在静音关时出现），长相 = v3 .ob-*。Settings.p5r.tsx 组装；各弹层（模型抽屉 / 称号确认 / 阈值确认 / 人格编辑…）从这里 openOverlay。
  * 每个区块收 state（演示状态，路由 ?state= / ?wx= / ?bgm= / ?vol= 切换）。
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { selectAppTheme, useSelectedTheme } from '@/themes/themeSelection';
 import { P5Tag } from '@/p5r-red/kit/P5Tag';
 import { toast } from '@/p5r-red/kit/P5Toast';
@@ -14,12 +15,32 @@ import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { setPrefs, usePrefs } from '@/p5r-red/lib/prefs';
 import { RANKS, ATTR_ORDER, ATTR } from '@/p5r-red/mock/data';
 import { useAppStore } from '@/store';
+import { useNavigatorStore } from '@/store/navigator';
+import { BUILTIN_NAVIGATOR_PRESETS, mergedNavigatorPresets } from '@/constants/navigatorPresets';
 import { AIServiceSettings } from '@/components/settings/AIServiceSettings';
+import { buildAIDiagnostics } from '@/utils/aiDiagnostics';
+import { getAIConfig, getAssistantAIConfig, getDeliberateAIConfig, getVisionAIConfig } from '@/utils/aiClient';
+import { fetchAvailableModels, testAIConnection, type ApiProvider } from '@/utils/aiProviders';
+import { generateAttributeLevelTitles } from '@/utils/attributeLevelTitles';
+import { finalizeStaleSessions } from '@/utils/navigatorMemory';
+import { generatePersonaPrompt } from '@/utils/navigatorIntent';
+import { getNotifPermission, notifPlatformSupported, requestNotifPermission, sendTestNotification } from '@/utils/notifications';
+import type { AttributeId, AttributeLevelTitles, NavigatorPreset, Settings } from '@/types';
 import { ObCard, ObRow, ObSw, ObSeg, ObInp, ObTa, ObSel, ObRange, ObMsg, ObChip, ObSub, ObNote, ObHint, ObLink, ObBtn, ObFold, ObLi, BusyBtn, useMsgBox, ObConfirm, ObCrop } from './ObKit';
 
 export const THEMES: [string, string, string][] = [['blue', '蓝', '#3B82F6'], ['yellow', '黄', '#F59E0B'], ['red', '红', '#D7000F'], ['pink', '粉', '#EC4899'], ['custom', '自定义', 'conic-gradient(#3B82F6,#F59E0B,#EF4444,#EC4899,#3B82F6)']];
 export const ATTR_META: [string, string, string][] = [['knowledge', '📘', '知识'], ['guts', '🔥', '胆量'], ['dexterity', '🎯', '灵巧'], ['kindness', '🌿', '温柔'], ['charm', '✨', '魅力']];
 export const THR = [0, 10, 25, 45, 70, 100, 140];
+const LEVEL_TITLE_SUGGESTIONS_KEY = 'velvet:levelTitleSuggestions.v1';
+export const consumeLevelTitleSuggestions = () => {
+  try {
+    const raw = sessionStorage.getItem(LEVEL_TITLE_SUGGESTIONS_KEY);
+    sessionStorage.removeItem(LEVEL_TITLE_SUGGESTIONS_KEY);
+    return raw ? JSON.parse(raw) as AttributeLevelTitles : null;
+  } catch {
+    return null;
+  }
+};
 
 export function Swatches({ sel = 'red', sm }: { sel?: string; sm?: boolean }) {
   const [cur, setCur] = useState<string>(useSelectedTheme() ?? sel);
@@ -171,11 +192,81 @@ export function AISection({ state = 'ok' }: { state?: string }) {
   const [preset, setPreset] = useState(settings.customProviderPreset ?? 'relay');
   const [testMsg, setTestMsg] = useMsgBox(state === 'tested' ? <ObMsg kind="ok">连接成功 · deepseek-flash · 412 ms · 模型列表已更新（9 个）</ObMsg> : state === 'testerr' ? <ObMsg kind="err">密钥里混进了 2 个看不见的空格 / 全角字符，已自动清理——测完记得点保存。{'\n'}401 Unauthorized</ObMsg> : null);
   const [tierRes, setTierRes] = useMsgBox();
+  const [refreshBusy, setRefreshBusy] = useState(false);
   const profileOf = (id: string) => (settings.aiProfiles as Record<string, { key?: string; verifiedAt?: number } | undefined> | undefined)?.[id];
   const currentProfile = profileOf(prov);
   const hasKey = !!(currentProfile?.key || settings.summaryApiKey?.trim());
   const P = PROV.find((p) => p[0] === prov)!, custom = prov === 'custom', none = state === 'none' || !hasKey;
   const savedProviders = Object.values(settings.aiProfiles ?? {}).filter((profile) => !!profile?.key).length;
+  const runTierTests = async () => {
+    setTierRes(<ObMsg kind="info">逐档测试中…</ObMsg>);
+    const rows: ReactNode[] = [];
+    const tiers: Array<[string, ReturnType<typeof getAIConfig>]> = [
+      ['快速响应', getAIConfig(settings)],
+      ['深思熟虑', getDeliberateAIConfig(settings)],
+      ['助手', getAssistantAIConfig(settings)],
+      ['视觉', getVisionAIConfig(settings)],
+    ];
+    for (const [label, config] of tiers) {
+      if (!config) {
+        rows.push(<li key={label}><b>{label}</b><span className="ob-mono">—</span><em>未启用</em></li>);
+        continue;
+      }
+      const result = await testAIConnection({
+        provider: config.provider as ApiProvider,
+        apiKey: config.apiKey,
+        baseUrl: config.baseUrl,
+        model: config.model,
+        nativeHosts: settings.aiNativeHosts,
+      });
+      rows.push(
+        <li key={label}>
+          <b>{label}</b><span className="ob-mono">{config.model}</span>
+          <em className={result.ok ? 'ok' : ''}>{result.ok ? `✓ 通了 · ${result.latencyMs} ms${result.transport === 'native' ? ' · 原生通道' : ''}` : `× ${result.error}`}</em>
+        </li>,
+      );
+    }
+    rows.push(<li key="audio"><b>听觉</b><span className="ob-mono">{settings.audioModel || '—'}</span><em>{settings.audioModel ? '已启用' : '未启用'}</em></li>);
+    setTierRes(<ul className="ob-tres">{rows}</ul>);
+  };
+  const refreshModels = async () => {
+    const config = getAIConfig(settings);
+    if (!config) { setTierRes(<ObMsg kind="err">先配置可用的 API Key</ObMsg>); return; }
+    setRefreshBusy(true);
+    setTierRes(<ObMsg kind="info">拉取中…</ObMsg>);
+    try {
+      const result = await fetchAvailableModels({
+        provider: config.provider as ApiProvider,
+        apiKey: config.apiKey,
+        baseUrl: config.baseUrl,
+        nativeHosts: settings.aiNativeHosts,
+      });
+      if (!result.ok) {
+        setTierRes(<ObMsg kind="err">{result.error}</ObMsg>);
+        return;
+      }
+      const provider = config.provider as ApiProvider;
+      await useAppStore.getState().updateSettings({
+        aiProfiles: {
+          ...(settings.aiProfiles ?? {}),
+          [provider]: {
+            ...(settings.aiProfiles?.[provider] ?? {}),
+            models: result.models,
+            modelCaps: result.caps,
+          },
+        },
+      });
+      setTierRes(<ObMsg kind="ok">已更新 {provider} 的模型列表，共 {result.models.length} 个</ObMsg>);
+    } catch (e) {
+      setTierRes(<ObMsg kind="err">{e instanceof Error ? e.message : '刷新失败'}</ObMsg>);
+    } finally {
+      setRefreshBusy(false);
+    }
+  };
+  const focusRealAI = () => {
+    document.querySelector('.ob-real')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    toast('已定位到下方真实 AI 配置');
+  };
   const statusLine = none ? <span className="ob-warnc">未配置 —— 展开填写 API Key</span> : custom ? <span className="ob-warnc">自定义 · 已存密钥，地址 / 模型可继续调整</span> : <><span className={`ob-dot${currentProfile?.verifiedAt || (prov === settings.summaryApiProvider && hasKey) ? ' on' : ''}`} /><b>{P[1]} · {currentProfile?.verifiedAt ? '连接正常' : '待测试'}</b><small>共 {savedProviders} 家</small></>;
   const tier = (icon: string, name: string, desc: string, val: string, ph: string, variant: string, extra?: ReactNode) => (
     <div className="ob-tier"><p className="ob-tier-h"><i>{icon}</i>{name}</p><p className="ob-hint">{desc}</p>
@@ -206,8 +297,8 @@ export function AISection({ state = 'ok' }: { state?: string }) {
               <p className="ob-hint">绝大多数中转站和平台都是 OpenAI 兼容（/chat/completions）。</p></div>
           )}
           <div className="ob-keyhd"><ObSub>{custom ? '自定义' : P[1]} 的 API 密钥</ObSub><ObLink toastMsg="外链：服务商控制台">去申请 ↗</ObLink></div>
-          <div className="ob-keyrow"><ObInp ph="sk-…" val="" type="password" aria="API 密钥" cls="ob-mono" /><BusyBtn label={none ? '保存' : '✓ 已保存'} busy="保存中…" done="✓ 已保存" tone="ink" seed={302} /></div>
-          <BusyBtn label={state === 'tested' ? '✓ 连接正常' : state === 'testerr' ? '× 连接失败' : '测试连接'} busy="测试中…" done="✓ 连接正常" seed={303} className="ob-wide" msg="连接成功 · deepseek-flash · 412 ms · 模型列表已更新（9 个）" fail="401 Unauthorized：Key 不对或已失效" failLabel="× 连接失败" to={setTestMsg} />
+          <div className="ob-keyrow"><ObInp ph="sk-…" val="" type="password" aria="API 密钥" cls="ob-mono" /><ObBtn tone="ink" seed={302} onClick={focusRealAI}>真实配置</ObBtn></div>
+          <ObBtn seed={303} className="ob-wide" onClick={focusRealAI}>到下方测试连接</ObBtn>
           <div className="ob-ai-test">{testMsg}</div>
           <ObNote>Key 保存在这台设备上，也会跟着本地备份走；默认不上云，在「账号与数据」的「云同步 · 数据类目选择」里打开「AI 模型 API」才会随同步上传。测试连接成功后这家会亮绿灯（换 Key 需重新测试）。</ObNote>
           <ObSub>{custom ? 'API 地址（必填）' : '自定义 API 地址（可选）'}</ObSub><p className="ob-hint">用中转站就填它给的接口地址，一般以 /v1 结尾；多贴的 /chat/completions 会自动去掉，少了 /v1 测试连接时会自动补上。</p>
@@ -220,8 +311,8 @@ export function AISection({ state = 'ok' }: { state?: string }) {
           <ObFold title="模型分档" meta="⚡ deepseek-flash · 🌙 qwen-max · 👁 deepseek-flash · 🎤 未启用" open={state === 'tiers'}>
             <div className="ob-tier-sum">{[['⚡', 'deepseek-flash'], ['🌙', 'qwen-max'], ['👁', 'deepseek-flash'], ['🎤', '未启用']].map(([i, m]) => <span key={i}><i>{i}</i>{m}</span>)}</div>
             <div className="ob-acts left">
-              <ObBtn tone="ink" size="sm" seed={304} onClick={() => { setTierRes(<ObMsg kind="info">逐档测试中…</ObMsg>); setTimeout(() => setTierRes(<ul className="ob-tres">{[['快速响应', 'deepseek-flash', '✓ 通了 · 388 ms'], ['深思熟虑', 'qwen-max', '✓ 通了 · 1204 ms · 走原生通道'], ['助手', '', '跟随深思熟虑'], ['视觉', 'deepseek-flash', '✓ 通了 · 512 ms'], ['听觉', '', '未启用']].map(([a, m, t]) => <li key={a}><b>{a}</b><span className="ob-mono">{m || '—'}</span><em className={t.startsWith('✓') ? 'ok' : ''}>{t}</em></li>)}</ul>), 1100); }}>逐档测一遍</ObBtn>
-              <BusyBtn label="刷新全部模型列表" busy="拉取中…" tone="paper" size="sm" seed={305} to={setTierRes} msg={<>已更新：DeepSeek 9 个、千问 42 个<br />跳过：Kimi（还没填 Key）<br />⚠ 这些档在用的模型已不在官方最新列表里，可能下线了，建议换一个：深思熟虑 qwen-max-0919</>} />
+              <ObBtn tone="ink" size="sm" seed={304} onClick={() => void runTierTests()}>逐档测一遍</ObBtn>
+              <ObBtn tone="paper" size="sm" seed={305} disabled={refreshBusy} onClick={() => void refreshModels()}>{refreshBusy ? '拉取中…' : '刷新当前服务商模型'}</ObBtn>
             </div>
             <div className="ob-tier-res">{tierRes}</div>
             {tier('⚡', '快速响应', '记账解析、每日塔罗、活动打分、成长总结等批量任务走这档——要快、便宜够用。跑在当前连接（DeepSeek）上。', 'deepseek-flash', '留空 = 默认（deepseek-flash）', 'fast',
@@ -240,7 +331,17 @@ export function AISection({ state = 'ok' }: { state?: string }) {
 }
 function CopyRow() {
   const [c, setC] = useState(false);
-  return <ObRow label="复制 AI 诊断信息" hint="最近 40 次请求的成败、耗时和服务商，不含聊天内容和 Key。遇到连不上时复制给我们。"><ObBtn tone="ink" size="sm" seed={306} onClick={() => { setC(true); setTimeout(() => setC(false), 1500); }}>{c ? '已复制' : '复制'}</ObBtn></ObRow>;
+  const copy = async () => {
+    const text = buildAIDiagnostics(useAppStore.getState().settings);
+    try {
+      await navigator.clipboard.writeText(text);
+      setC(true);
+      setTimeout(() => setC(false), 1500);
+    } catch {
+      toast('复制失败，请检查浏览器剪贴板权限');
+    }
+  };
+  return <ObRow label="复制 AI 诊断信息" hint="最近 40 次请求的成败、耗时和服务商，不含聊天内容和 Key。遇到连不上时复制给我们。"><ObBtn tone="ink" size="sm" seed={306} onClick={() => void copy()}>{c ? '已复制' : '复制'}</ObBtn></ObRow>;
 }
 
 /* ═════ AI 总结分区 ═════ */
@@ -343,38 +444,70 @@ function KwAdd({ onAdd }: { onAdd: (v: string) => void }) {
 /** 「AI 刷新」：刷新中… → 打开称号建议弹窗（真实 handleRefreshLevelTitles） */
 function LevelTitleRefreshBtn() {
   const [b, setB] = useState(false);
-  return <ObBtn tone="ink" size="sm" seed={518} disabled={b} onClick={() => { setB(true); setTimeout(() => { setB(false); openOverlay('settings-level-title-modal'); }, 900); }}>{b ? '刷新中…' : 'AI 刷新'}</ObBtn>;
+  const refresh = async () => {
+    const settings = useAppStore.getState().settings;
+    setB(true);
+    try {
+      const suggestions = await generateAttributeLevelTitles(settings, settings.levelThresholds.length);
+      sessionStorage.setItem(LEVEL_TITLE_SUGGESTIONS_KEY, JSON.stringify(suggestions));
+      openOverlay('settings-level-title-modal');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : '刷新等级称号失败');
+    } finally {
+      setB(false);
+    }
+  };
+  return <ObBtn tone="ink" size="sm" seed={518} disabled={b} onClick={() => void refresh()}>{b ? '刷新中…' : 'AI 刷新'}</ObBtn>;
 }
 
 /* ═════ 助手设置 NavigatorSettings ═════ */
 export const NAV_STATES: [string, string][] = [['normal', '常态'], ['nokey', '未配 Key'], ['nonotif', '提醒未开']];
-export const PERSONAS: [string, string, string, number, number, number][] = [['cat', '摩尔加纳', '自称「不是猫」的引路者，嘴上嫌麻烦，手上从不掉链子', 1, 1, 0], ['toaster', '高卷杏', '开朗直率的同伴，什么事都想陪你一起', 1, 0, 1], ['bear', '坂本龙司', '冲动热血的行动派，最擅长给你打气', 1, 0, 0], ['star', '白手套', '优雅的管家，礼貌、精确、偶尔毒舌', 0, 0, 0]];
 export const GLYPH: Record<string, string> = { cat: '猫', toaster: '吐', bear: '熊', butterfly: '蝶', star: '★' };
 export function NavigatorSection({ state = 'normal' }: { state?: string }) {
-  const nokey = state === 'nokey';
+  const nav = useNavigatorStore();
+  const appSettings = useAppStore((store) => store.settings);
+  const people = mergedNavigatorPresets(nav.presets);
+  const active = nav.activePreset();
+  const builtinIds = new Set(BUILTIN_NAVIGATOR_PRESETS.map((item) => item.id));
+  const nokey = state === 'nokey' || !getAIConfig(appSettings);
   const [arch, setArch] = useMsgBox();
-  const [del, setDel] = useState<string | null>(null);
+  const [del, setDel] = useState<NavigatorPreset | null>(null);
+  useEffect(() => { void nav.loadPresets(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const runArchive = async () => {
+    setArch('整理中…');
+    try {
+      const last = await finalizeStaleSessions();
+      setArch(last ? `已归档，最近摘要：${last.summary.slice(0, 40)}…` : '没有待归档的会话');
+    } catch (e) {
+      setArch(e instanceof Error ? e.message : '整理失败，请重试');
+    }
+  };
   return (
     <>
       <ObCard seed={701} en="NAVIGATOR">
         <ObRow label="拟真增强" hint="回复像真人打字：流式生成 + 按句子切成碎气泡逐条冒出（1.2s 一条）；括号里的颜文字、括注不拆开。低性能模式下自动停用。"><ObSw on label="拟真增强" /></ObRow>
         <ObRow label="主动提议更新愿望进度" hint={<>你在对话里提到某个愿望有推进时，它会问一句「要不要更新进度」。只在<b>明确指向单个愿望且确有推进</b>时才问，同一个愿望 6 小时内至多一次；落库永远要你点确认。关掉后它照旧知道你的愿望，只是不再主动问。</>}><ObSw on label="主动提议更新愿望进度" /></ObRow>
-        <ObRow label="主动找你" hint={<>每天最多一条推送：约好的事过后问你一句结果、认识满一个月这样的日子、好几天没见时说一次想念。夜里不发；锁屏上只写「摩尔加纳有话想跟你说」。{state === 'nonotif' ? <b> 要先在「提醒」里打开每日提醒。</b> : null}</>}><ObSw on={state !== 'nonotif'} label="主动找你" /></ObRow>
+        <ObRow label="主动找你" hint={<>每天最多一条推送：约好的事过后问你一句结果、认识满一个月这样的日子、好几天没见时说一次想念。夜里不发；锁屏上只写「{active.name}有话想跟你说」。{state === 'nonotif' ? <b> 要先在「提醒」里打开每日提醒。</b> : null}</>}><ObSw on={state !== 'nonotif'} label="主动找你" /></ObRow>
       </ObCard>
       <ObCard title="人格" en="PERSONA" seed={707}>
         <ObHint>切换人格会开启（或恢复）它今天的对话。能力不变，变的只是性格和嘴。</ObHint>
-        <div className="ob-personas">{PERSONAS.map(([av, n, p, builtin, cur, modified]) => (
-          <div key={av} className={`ob-persona${cur ? ' on' : ''}`}><span className="ob-glyph" aria-hidden="true">{GLYPH[av]}</span>
-            <div className="ob-persona-m"><b>{n} {builtin ? <P5Tag tone="paper">内置</P5Tag> : null}{cur ? <P5Tag>当前</P5Tag> : null}</b><small>{p}…</small></div>
-            <div className="ob-persona-a">{cur ? null : <ObBtn tone="ink" size="sm" seed={702} toastMsg={`已切换到 ${n}`}>切换</ObBtn>}
-              <ObLink aria={`编辑 ${n}`} onClick={() => openOverlay('settings-persona-editor', { variant: 'edit', name: n })}>编辑</ObLink>
-              {builtin ? (modified ? <ObLink aria={`恢复 ${n} 默认`} toastMsg={`已恢复 ${n} 默认`}>恢复默认</ObLink> : null) : <ObLink danger aria={`删除 ${n}`} onClick={() => setDel(n)}>删除</ObLink>}</div></div>
-        ))}</div>
+        <div className="ob-personas">{people.map((p) => {
+          const cur = p.id === active.id;
+          const builtin = builtinIds.has(p.id);
+          const modified = nav.presets.some((item) => item.id === p.id);
+          return (
+            <div key={p.id} className={`ob-persona${cur ? ' on' : ''}`}><span className="ob-glyph" aria-hidden="true">{GLYPH[p.avatar ?? ''] ?? '★'}</span>
+              <div className="ob-persona-m"><b>{p.name} {builtin ? <P5Tag tone="paper">内置</P5Tag> : null}{cur ? <P5Tag>当前</P5Tag> : null}</b><small>{p.personaPrompt.replace(/^你是「[^」]*」—*/, '').slice(0, 34)}…</small></div>
+              <div className="ob-persona-a">{cur ? null : <ObBtn tone="ink" size="sm" seed={702} onClick={() => void nav.switchPreset(p.id).then(() => toast(`已切换到 ${p.name}`))}>切换</ObBtn>}
+                <ObLink aria={`编辑 ${p.name}`} onClick={() => openOverlay('settings-persona-editor', { variant: 'edit', id: p.id })}>编辑</ObLink>
+                {builtin ? (modified ? <ObLink aria={`恢复 ${p.name} 默认`} onClick={() => void nav.deletePreset(p.id).then(() => toast(`已恢复 ${p.name} 默认`))}>恢复默认</ObLink> : null) : <ObLink danger aria={`删除 ${p.name}`} onClick={() => setDel(p)}>删除</ObLink>}</div></div>
+          );
+        })}</div>
         {nokey ? <ObNote>配置 AI 密钥后可创建自定义人格。</ObNote> : <ObBtn seed={703} className="ob-wide" onClick={() => openOverlay('settings-persona-editor')}>＋ 新建人格（AI 生成）</ObBtn>}
       </ObCard>
       <ObCard seed={710} en="MEMORY">
         <ObRow label="📓 记事本" hint="它记住的关于你的事：长期画像 + 零散记忆，可改可删，只存本机。"><ObBtn tone="ink" size="sm" seed={708} onClick={() => openOverlay('assistant-notebook')}>打开</ObBtn></ObRow>
-        <ObRow label="整理旧对话" hint="把之前没归档的聊天收进记忆（平时它会自己做）。"><BusyBtn label="整理" busy="整理中…" tone="paper" size="sm" seed={709} to={setArch} msg="已归档，最近摘要：聊了期中复习计划和周末去美术馆的事，约好周六早上…" fail="没有待归档的会话" /></ObRow>
+        <ObRow label="整理旧对话" hint="把之前没归档的聊天收进记忆（平时它会自己做）。"><ObBtn tone="paper" size="sm" seed={709} onClick={() => void runArchive()}>整理</ObBtn></ObRow>
         <div className="ob-archmsg">{arch}</div>
         <ObFold title="对话模型" meta={nokey ? '—' : '跟随深思熟虑档'}>
           {nokey ? <ObNote>先在「设置 → AI 智能功能」里配置 API Key，这里才能选模型。</ObNote> : (
@@ -383,44 +516,106 @@ export function NavigatorSection({ state = 'normal' }: { state?: string }) {
           )}
         </ObFold>
       </ObCard>
-      <PersonaDeleteConfirm name={del} onClose={() => setDel(null)} />
+      <PersonaDeleteConfirm preset={del} onClose={() => setDel(null)} />
     </>
   );
 }
-export function PersonaDeleteConfirm({ name, onClose }: { name: string | null; onClose: () => void }) {
-  return <ObConfirm open={!!name} onClose={onClose} title={`删除人格「${name ?? ''}」？`} desc="它的历史会话仍会保留。" danger confirm="删除" onConfirm={() => toast('已删除人格')} />;
+export function PersonaDeleteConfirm({ preset, onClose }: { preset: NavigatorPreset | null; onClose: () => void }) {
+  return <ObConfirm open={!!preset} onClose={onClose} title={`删除人格「${preset?.name ?? ''}」？`} desc="它的历史会话仍会保留。" danger confirm="删除" onConfirm={() => {
+    if (!preset) return;
+    void useNavigatorStore.getState().deletePreset(preset.id).then(() => {
+      toast('已删除人格');
+      onClose();
+    });
+  }} />;
 }
 
 /** 新建 / 编辑人格面板（NavigatorSettings gen 面板）：state = gen | edit | generating | generr */
-export function PersonaEditor({ state = 'gen', onClose }: { state?: string; onClose: () => void }) {
-  const g = state === 'edit';
+export function PersonaEditor({ state = 'gen', editing = null, onClose }: { state?: string; editing?: NavigatorPreset | null; onClose: () => void }) {
+  const g = !!editing || state === 'edit';
   const [msg, setMsg] = useMsgBox(state === 'generr' ? <ObMsg kind="err">名字和人格设定都不能为空</ObMsg> : null);
-  const [glyph, setGlyph] = useState('star');
+  const [name, setName] = useState(editing?.name ?? '');
+  const [glyph, setGlyph] = useState(editing?.avatar ?? 'star');
+  const [callMe, setCallMe] = useState('');
+  const [tones, setTones] = useState<string[]>([]);
+  const [coach, setCoach] = useState<'accompany' | 'push'>('accompany');
+  const [free, setFree] = useState('');
+  const [prompt, setPrompt] = useState(editing?.personaPrompt ?? '');
+  const [likes, setLikes] = useState(editing?.traits?.likes.join('、') ?? '');
+  const [dislikes, setDislikes] = useState(editing?.traits?.dislikes.join('、') ?? '');
+  const [habits, setHabits] = useState(editing?.traits?.habits.join('、') ?? '');
+  const [generating, setGenerating] = useState(state === 'generating');
   const [crop, setCrop] = useState(false);
-  const [generated, setGenerated] = useState(g || state === 'generating');
+  const generated = !!prompt || state === 'generating';
+  const splitTraits = (value: string) => value.split(/[，,、；;\n]+/).map((item) => item.trim()).filter(Boolean);
+  const generate = async () => {
+    if (!name.trim()) { setMsg('先给它起个名字'); return; }
+    setGenerating(true);
+    setMsg('');
+    try {
+      const next = await generatePersonaPrompt({
+        name: name.trim(),
+        callUser: callMe.trim(),
+        toneWords: tones,
+        coach,
+        freeText: free.trim(),
+      });
+      setPrompt(next);
+      setMsg('已生成人格设定，可在下面修改');
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : '人格生成失败');
+    } finally {
+      setGenerating(false);
+    }
+  };
+  const save = async () => {
+    if (!name.trim() || !prompt.trim()) { setMsg('名字和人格设定都不能为空'); return; }
+    const traits = { likes: splitTraits(likes), dislikes: splitTraits(dislikes), habits: splitTraits(habits) };
+    const hasTraits = traits.likes.length + traits.dislikes.length + traits.habits.length > 0;
+    try {
+      await useNavigatorStore.getState().savePreset({
+        id: editing?.id ?? uuidv4(),
+        name: name.trim(),
+        avatar: glyph,
+        personaPrompt: prompt.trim(),
+        isBuiltin: false,
+        createdAt: editing?.createdAt ?? new Date(),
+        handoffLine: editing?.handoffLine,
+        examples: editing?.examples,
+        traits: hasTraits ? traits : undefined,
+      });
+      toast(editing ? '已保存人格' : '已新建人格');
+      onClose();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : '保存人格失败');
+    }
+  };
   return (
     <div className="ob-gen">
       <div className="ob-gen-h"><b>{g ? '编辑人格' : '新建人格'}</b><button type="button" className="ob-x" aria-label="关闭" onClick={onClose}>✕</button></div>
-      <ObInp ph="名字（如：白手套 / 老班长…）" val={g ? '白手套' : ''} aria="人格名字" />
+      <ObInp ph="名字（如：白手套 / 老班长…）" val={name} aria="人格名字" onChange={(event: ChangeEvent<HTMLInputElement>) => setName(event.currentTarget.value)} />
       <ObSub>头像</ObSub>
       <div className="ob-glyphs">{Object.keys(GLYPH).map((k) => <button key={k} type="button" className="ob-glyph btn" aria-label={`剪影 ${k}`} aria-pressed={k === glyph} onClick={() => setGlyph(k)}>{GLYPH[k]}</button>)}<button type="button" className="ob-glyph up" onClick={() => setCrop(true)}>上传</button></div>
       <ObHint>上传头像只存本机，永不上云。</ObHint>
-      <ObInp ph="它怎么称呼你？（可空，如：老板 / 小朋友）" val={g ? '少爷' : ''} aria="称呼" />
+      <ObInp ph="它怎么称呼你？（可空，如：老板 / 小朋友）" val={callMe} aria="称呼" onChange={(event: ChangeEvent<HTMLInputElement>) => setCallMe(event.currentTarget.value)} />
       <ObSub>语气关键词（多选）</ObSub>
-      <div className="ob-chips">{['温柔', '毒舌', '元气', '冷淡', '正经', '幽默', '腹黑', '天然'].map((t, i) => <ObChip key={t} label={t} on={g ? i === 1 || i === 4 : i === 0} />)}</div>
-      <ObSeg opts={[['accompany', '陪伴型'], ['push', '督促型']]} sel={g ? 'push' : 'accompany'} aria="教练风格" />
-      <ObTa ph="自由描述（可空）：口头禅、背景设定、想避免的说话方式…" rows={2} aria="自由描述" />
-      {state === 'generating' ? <ObBtn tone="ink" seed={704} className="ob-wide" disabled>生成中…</ObBtn>
-        : <BusyBtn label={g || generated ? '换一版' : 'AI 生成人格设定'} busy="生成中…" done="换一版" tone="ink" seed={704} className="ob-wide" to={setMsg} msg="已生成人格设定，可在下面修改" fail="生成失败：429 Too Many Requests" onDone={(ok) => ok && setGenerated(true)} />}
+      <div className="ob-chips">{['温柔', '毒舌', '元气', '冷淡', '正经', '幽默', '腹黑', '天然'].map((t) => <ObChip key={t} label={t} on={tones.includes(t)} onClick={() => setTones((current) => current.includes(t) ? current.filter((item) => item !== t) : [...current, t])} />)}</div>
+      <ObSeg opts={[['accompany', '陪伴型'], ['push', '督促型']]} sel={coach} onChange={(value) => setCoach(value as 'accompany' | 'push')} aria="教练风格" />
+      <ObTa ph="自由描述（可空）：口头禅、背景设定、想避免的说话方式…" rows={2} aria="自由描述" onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setFree(event.currentTarget.value)} />
+      <ObBtn tone="ink" seed={704} className="ob-wide" disabled={generating} onClick={() => void generate()}>{generating ? '生成中…' : generated ? '换一版' : 'AI 生成人格设定'}</ObBtn>
       <div className="ob-genmsg">{msg}</div>
       {generated && (
         <>
-          <ObSub>人格设定（保存前可随意修改）</ObSub><ObTa val="你是「白手套」——一位优雅的管家，礼貌、精确、偶尔毒舌……" rows={4} aria="人格设定" />
+          <ObSub>人格设定（保存前可随意修改）</ObSub><ObTa val={prompt} value={prompt} rows={4} aria="人格设定" onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setPrompt(event.currentTarget.value)} />
           <ObHint>喜好（它每天的小状态会用到；用「、」隔开，留空的话第一次用到时按人格设定自动写）</ObHint>
-          <div className="ob-likes">{[['喜欢', '晒太阳、热可可'], ['讨厌', '下雨、闹钟'], ['小习惯', '下雨天话变少']].map(([l, ph]) => <label key={l} className="ob-inl"><span>{l}</span><ObInp ph={ph} aria={`${l}（用「、」隔开）`} /></label>)}</div>
+          <div className="ob-likes">
+            <label className="ob-inl"><span>喜欢</span><ObInp ph="晒太阳、热可可" val={likes} aria="喜欢（用「、」隔开）" onChange={(event: ChangeEvent<HTMLInputElement>) => setLikes(event.currentTarget.value)} /></label>
+            <label className="ob-inl"><span>讨厌</span><ObInp ph="下雨、闹钟" val={dislikes} aria="讨厌（用「、」隔开）" onChange={(event: ChangeEvent<HTMLInputElement>) => setDislikes(event.currentTarget.value)} /></label>
+            <label className="ob-inl"><span>小习惯</span><ObInp ph="下雨天话变少" val={habits} aria="小习惯（用「、」隔开）" onChange={(event: ChangeEvent<HTMLInputElement>) => setHabits(event.currentTarget.value)} /></label>
+          </div>
         </>
       )}
-      <div className="ob-acts"><ObBtn tone="paper" seed={705} onClick={onClose}>取消</ObBtn><ObBtn seed={706} toastMsg="已保存人格" onClick={onClose}>保存</ObBtn></div>
+      <div className="ob-acts"><ObBtn tone="paper" seed={705} onClick={onClose}>取消</ObBtn><ObBtn seed={706} onClick={() => void save()}>保存</ObBtn></div>
       <ObCrop open={crop} onClose={() => setCrop(false)} title="调整头像" />
     </div>
   );
@@ -434,11 +629,27 @@ export function NotificationsSection({ state: init = 'on' }: { state?: string })
   const [on, setOn] = useState(init !== 'off');
   const web = init === 'web';
   const [slots, setSlots] = useState<Slot[]>(init === 'empty' ? [] : [{ id: 1, t: '08:00', l: '早安', c: ['tarot', 'todos'] }, { id: 2, t: '21:30', l: '睡前回顾', c: ['record', 'countercurrent', 'summary'] }]);
+  const [testMsg, setTestMsg] = useState('');
+  const supported = notifPlatformSupported();
+  const authorize = async () => {
+    const permission = await requestNotifPermission();
+    if (permission === 'granted') toast('通知权限已授予');
+    else toast('通知权限未授予');
+  };
+  const testNotification = async () => {
+    const permission = await getNotifPermission();
+    if (permission !== 'granted') {
+      setTestMsg('通知权限未授予，无法发送');
+      return;
+    }
+    const ok = await sendTestNotification();
+    setTestMsg(ok ? '✓ 已发送，请查看通知栏' : '发送失败，请检查系统通知权限');
+  };
   return (
     <ObCard title="本地提醒" en="NOTIFY" seed={381}>
       {web && <ObMsg kind="warn">本地通知在 <b>Android / iOS 客户端</b> 送达（网页版没有这个能力）。你仍可在此预先配置时段与内容，装上客户端后即生效。</ObMsg>}
       <ObRow label="每日提醒" hint="在你选的时段提醒抽塔罗、未竟待办、逆流预警等。内容在端上生成，不经服务器。"><ObSw on={on} label="每日提醒总开关" onToggle={setOn} /></ObRow>
-      {init === 'denied' && <div className="ob-msg err">通知权限未授予，提醒不会送达。 <ObBtn tone="paper" size="sm" seed={371} toastMsg="已打开系统通知设置">去授权</ObBtn></div>}
+      {init === 'denied' && <div className="ob-msg err">通知权限未授予，提醒不会送达。 <ObBtn tone="paper" size="sm" seed={371} disabled={!supported} onClick={() => void authorize()}>去授权</ObBtn></div>}
       {on && (
         <>
           <ObRow label="让助手来写提醒文案" hint={<>每天用<b>当前人格</b>的口吻生成一套推送文案（走助手档模型，一天一次）。没配 AI、离线或生成失败时自动退回内置文案，提醒本身不受影响。</>}><ObSw on label="让助手来写提醒文案" /></ObRow>
@@ -453,7 +664,7 @@ export function NotificationsSection({ state: init = 'on' }: { state?: string })
             ))}
           </div>
           <ObBtn tone="paper" seed={372} className="ob-wide" onClick={() => setSlots([...slots, { id: Date.now(), t: '12:00', l: '新的提醒', c: ['tarot'] }])}>＋ 添加提醒时段</ObBtn>
-          {!web && <BusyBtn label="发送一条测试通知" busy="发送中…" done="✓ 已发送，请查看通知栏" revert={2200} tone="ink" seed={373} className="ob-wide" />}
+          <ObBtn tone="ink" seed={373} className="ob-wide" disabled={!supported} onClick={() => void testNotification()}>{testMsg || (supported ? '发送一条测试通知' : '测试通知仅支持客户端')}</ObBtn>
         </>
       )}
     </ObCard>

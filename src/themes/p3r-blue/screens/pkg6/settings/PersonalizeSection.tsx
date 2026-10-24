@@ -1,6 +1,6 @@
 /** 设置 · 体验个性化（真实 Settings.tsx section=personalize）：属性 / 记账 / 属性名称 / 等级需求 / 等级称号 / 今日委托 AI 卡 / 关键词规则 / 逆影战场 */
 import { useState } from 'react';
-import type { AttributeId } from '@real/types';
+import type { AttributeId, AttributeLevelTitles } from '@real/types';
 import { CfgBtn, CfgInput, CfgList, CfgRow, CfgSeg, CfgSelect, CfgSubhead, CfgToggle } from '../cfg';
 import { attrLabel, updateSettings, useSettings } from '../settingsStore';
 import { ATTRS, DEFAULT_LEVEL_TITLES, LEVEL_PRESETS } from '@blue/mock/pkg6';
@@ -8,6 +8,10 @@ import { LevelTitleModal } from '@blue/screens/overlays/SettingsLevelTitleModal.
 import { NameMatchModal } from '@blue/screens/overlays/SettingsNameMatchModal.p3r';
 import { ThresholdDialog, type ThresholdKind } from '@blue/screens/overlays/SettingsThresholdConfirm.p3r';
 import { cx } from '@blue/lib/cx';
+import { useAppStore } from '@/store';
+import { generateAttributeLevelTitles } from '@/utils/attributeLevelTitles';
+import { generatePresetNameMatches, type PresetNameMatchResult } from '@/utils/presetNameMatcher';
+import { restorePresetNames } from '@/utils/presetNameApply';
 
 const Pill = ({ children, tone = 'orange' }: { children: React.ReactNode; tone?: 'orange' | 'black' | 'green' }) => (
   <span className={cx('rounded-[2px] px-1.5 py-px font-heavy text-2xs font-bold', tone === 'orange' ? 'bg-p3r-coral text-p3r-ink' : tone === 'green' ? 'bg-p3r-mint text-p3r-ink' : 'bg-p3r-ink text-p3r-rose')}>{children}</span>
@@ -15,12 +19,15 @@ const Pill = ({ children, tone = 'orange' }: { children: React.ReactNode; tone?:
 
 export function PersonalizeSection() {
   const s = useSettings();
+  const settings = useAppStore((state) => state.settings);
   const [nameBusy, setNameBusy] = useState(false);
   const [nameMsg, setNameMsg] = useState('');
   const [nameModal, setNameModal] = useState(false);
+  const [nameSuggestions, setNameSuggestions] = useState<PresetNameMatchResult | null>(null);
   const [titleBusy, setTitleBusy] = useState(false);
   const [titleMsg, setTitleMsg] = useState('');
   const [titleModal, setTitleModal] = useState(false);
+  const [titleSuggestions, setTitleSuggestions] = useState<AttributeLevelTitles | null>(null);
   const [titleIdx, setTitleIdx] = useState(0);
   const [confirm, setConfirm] = useState<ThresholdKind | null>(null);
   const [confirmKind, setConfirmKind] = useState<ThresholdKind>('reset');
@@ -29,6 +36,47 @@ export function PersonalizeSection() {
   const th = s.levelThresholds;
   const openConfirm = (k: ThresholdKind) => { setConfirmKind(k); setConfirm(k); };
   const tMeta = ATTRS[titleIdx];
+  const matchNames = async () => {
+    if (nameBusy) return;
+    setNameBusy(true);
+    setNameMsg('');
+    try {
+      setNameSuggestions(await generatePresetNameMatches(settings));
+      setNameMsg('已生成建议，请选择要覆写的名称');
+      setNameModal(true);
+    } catch (e) {
+      setNameMsg(e instanceof Error ? e.message : 'AI 匹配成就/技能名称失败');
+    } finally {
+      setNameBusy(false);
+    }
+  };
+  const refreshTitles = async () => {
+    if (titleBusy) return;
+    setTitleBusy(true);
+    setTitleMsg('');
+    try {
+      setTitleSuggestions(await generateAttributeLevelTitles(settings, settings.levelThresholds.length));
+      setTitleMsg('已生成建议，请选择要刷新的属性');
+      setTitleModal(true);
+    } catch (e) {
+      setTitleMsg(e instanceof Error ? e.message : '刷新等级称号失败');
+    } finally {
+      setTitleBusy(false);
+    }
+  };
+  const restoreNames = async () => {
+    if (nameBusy) return;
+    setNameBusy(true);
+    setNameMsg('');
+    try {
+      const restored = await restorePresetNames();
+      setNameMsg(`已还原 ${restored} 项 AI 覆写前的成就/技能名称`);
+    } catch (e) {
+      setNameMsg(e instanceof Error ? e.message : '还原失败');
+    } finally {
+      setNameBusy(false);
+    }
+  };
 
   const addKw = (i: number) => {
     const v = (kwDraft[i] ?? '').trim(); if (!v) return;
@@ -84,8 +132,8 @@ export function PersonalizeSection() {
                 ))}
               </div>
               <div className="flex flex-wrap gap-2">
-                <CfgBtn tone="primary" disabled={nameBusy} onClick={() => { setNameBusy(true); setNameMsg(''); setTimeout(() => { setNameBusy(false); setNameMsg('已生成建议，请选择要覆写的名称'); setNameModal(true); }, 1000); }}>{nameBusy ? '匹配中…' : 'AI 匹配成就 / 技能名称'}</CfgBtn>
-                <CfgBtn disabled={nameBusy || !s.hasPresetNameBackup} onClick={() => { updateSettings({ hasPresetNameBackup: false }); setNameMsg('已还原到 AI 覆写前的成就/技能名称'); }}>还原</CfgBtn>
+                <CfgBtn tone="primary" disabled={nameBusy} onClick={() => void matchNames()}>{nameBusy ? '匹配中…' : 'AI 匹配成就 / 技能名称'}</CfgBtn>
+                <CfgBtn disabled={nameBusy || !s.hasPresetNameBackup} onClick={() => void restoreNames()}>还原</CfgBtn>
               </div>
               {nameMsg ? <p className="text-meta font-bold text-p3r-lilac-ink">{nameMsg}</p> : s.hasPresetNameBackup && <p className="text-meta opacity-75">当前有 AI 覆写记录，可还原到覆写前版本。</p>}
             </div>
@@ -138,7 +186,7 @@ export function PersonalizeSection() {
           below={
             <div className="space-y-2.5">
               <div className="flex flex-wrap gap-2">
-                <CfgBtn tone="primary" disabled={titleBusy} onClick={() => { setTitleBusy(true); setTimeout(() => { setTitleBusy(false); setTitleMsg('已生成建议，请选择要刷新的属性'); setTitleModal(true); }, 1000); }}>{titleBusy ? '刷新中' : 'AI 刷新'}</CfgBtn>
+                <CfgBtn tone="primary" disabled={titleBusy} onClick={() => void refreshTitles()}>{titleBusy ? '刷新中' : 'AI 刷新'}</CfgBtn>
                 <CfgBtn onClick={() => { updateSettings({ levelTitles: JSON.parse(JSON.stringify(DEFAULT_LEVEL_TITLES)) }); setTitleMsg('已填入默认等级称号'); }}>默认</CfgBtn>
               </div>
               {titleMsg && <p className="text-meta font-bold text-p3r-lilac-ink">{titleMsg}</p>}
@@ -214,8 +262,8 @@ export function PersonalizeSection() {
         </CfgRow>
       </CfgList>
 
-      <LevelTitleModal open={titleModal} onClose={() => setTitleModal(false)} onApplied={(n) => setTitleMsg(`已刷新 ${n} 个属性的等级称号`)} />
-      <NameMatchModal open={nameModal} onClose={() => setNameModal(false)} onApplied={() => setNameMsg('已覆写所选成就/技能名称，可还原到覆写前版本')} />
+      <LevelTitleModal open={titleModal} suggestions={titleSuggestions} onClose={() => { setTitleModal(false); setTitleSuggestions(null); }} onApplied={(n) => setTitleMsg(`已刷新 ${n} 个属性的等级称号`)} />
+      <NameMatchModal open={nameModal} suggestions={nameSuggestions} onClose={() => { setNameModal(false); setNameSuggestions(null); }} onApplied={() => setNameMsg('已覆写所选成就/技能名称，可还原到覆写前版本')} />
       <ThresholdDialog kind={confirmKind} open={!!confirm} onClose={() => setConfirm(null)} difficulty={s.difficulty} level={th.length} points={th[th.length - 1]}
         onConfirm={() => {
           if (confirmKind === 'reset') updateSettings({ levelThresholds: [...LEVEL_PRESETS[s.difficulty]] });

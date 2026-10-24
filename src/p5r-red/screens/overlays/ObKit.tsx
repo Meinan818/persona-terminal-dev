@@ -67,8 +67,8 @@ export function ObSeg({ opts, sel, multi, max = 0, aria = '', cls = '', onChange
 export function ObInp({ ph = '', val = '', aria, type = 'text', cls = '', ...rest }: { ph?: string; val?: string | number; aria?: string; type?: string; cls?: string; [k: string]: unknown }) {
   return <input className={`ob-inp ${cls}`.trim()} type={type} placeholder={ph} defaultValue={val} aria-label={aria ?? ph} {...rest} />;
 }
-export function ObTa({ ph = '', val = '', rows = 3, aria }: { ph?: string; val?: string; rows?: number; aria?: string }) {
-  return <textarea className="ob-inp ob-ta" rows={rows} placeholder={ph} defaultValue={val} aria-label={aria ?? ph} />;
+export function ObTa({ ph = '', val = '', rows = 3, aria, ...rest }: { ph?: string; val?: string; rows?: number; aria?: string; [k: string]: unknown }) {
+  return <textarea className="ob-inp ob-ta" rows={rows} placeholder={ph} {...(Object.prototype.hasOwnProperty.call(rest, 'value') ? {} : { defaultValue: val })} aria-label={aria ?? ph} {...rest} />;
 }
 export function ObSel({ opts, val, aria, onChange }: { opts: (string | [string, string])[]; val: string; aria: string; onChange?: (v: string) => void }) {
   return <select className="ob-inp ob-sel" aria-label={aria} value={val} onChange={(e) => onChange?.(e.target.value)}>{opts.map((o) => { const [v, l] = Array.isArray(o) ? o : [o, o]; return <option key={v} value={v}>{l}</option>; })}</select>;

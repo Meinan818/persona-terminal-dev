@@ -2,39 +2,52 @@
  * 刷新等级称号 · 建议选择（真实 Settings.tsx levelTitleModalOpen）。
  * 「确认刷新：X」「i / 5 · 已选 N 个属性」、上一个/下一个属性、圆点切换、「刷新这个属性」勾选、表格 等级/当前/建议、取消 / 应用 N 个（应用中）、关闭。
  */
-import { useState } from 'react';
-import type { AttributeId } from '@real/types';
+import { useEffect, useState } from 'react';
+import type { AttributeId, AttributeLevelTitles } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P6Sheet } from '@blue/screens/pkg6/sheet';
-import { ATTRS, DEFAULT_LEVEL_TITLES, SUGGESTED_LEVEL_TITLES } from '@blue/mock/pkg6';
+import { ATTRS, SUGGESTED_LEVEL_TITLES } from '@blue/mock/pkg6';
 import { attrLabel, updateSettings, useSettings } from '@blue/screens/pkg6/settingsStore';
 import { P3Button, useToast } from '@blue/kit';
 import { cx } from '@blue/lib/cx';
 
-export function LevelTitleModal({ open, onClose, onApplied }: { open: boolean; onClose: () => void; onApplied?: (n: number) => void }) {
+export function LevelTitleModal({ open, suggestions, onClose, onApplied }: {
+  open: boolean;
+  suggestions: AttributeLevelTitles | null;
+  onClose: () => void;
+  onApplied?: (n: number) => void;
+}) {
   const s = useSettings();
   const [idx, setIdx] = useState(0);
-  const [sel, setSel] = useState<Record<AttributeId, boolean>>({ knowledge: true, guts: true, dexterity: true, kindness: false, charm: true });
   const [busy, setBusy] = useState(false);
+  const [sel, setSel] = useState<Record<AttributeId, boolean>>({ knowledge: false, guts: false, dexterity: false, kindness: false, charm: false });
   const meta = ATTRS[idx];
   const count = Object.values(sel).filter(Boolean).length;
-  const cur = s.levelTitles[meta.id] ?? DEFAULT_LEVEL_TITLES[meta.id];
-  const sug = SUGGESTED_LEVEL_TITLES[meta.id];
-  const apply = () => {
+  const cur = s.levelTitles[meta.id] ?? [];
+  const sug = suggestions?.[meta.id] ?? [];
+  useEffect(() => {
+    if (suggestions) setSel(Object.fromEntries(ATTRS.map((a) => [a.id, true])) as Record<AttributeId, boolean>);
+  }, [suggestions]);
+  const apply = async () => {
+    if (!suggestions || busy) return;
     setBusy(true);
-    setTimeout(() => {
+    try {
       const next = { ...s.levelTitles };
-      ATTRS.forEach((a) => { if (sel[a.id]) next[a.id] = next[a.id].map((t, i) => SUGGESTED_LEVEL_TITLES[a.id][i] ?? t); });
-      updateSettings({ levelTitles: next }); setBusy(false); onApplied?.(count); onClose();
-    }, 800);
+      ATTRS.forEach((a) => { if (sel[a.id] && suggestions[a.id]) next[a.id] = [...suggestions[a.id]]; });
+      updateSettings({ levelTitles: next });
+      onApplied?.(count);
+      onClose();
+    } finally {
+      setBusy(false);
+    }
   };
   const Arrow = ({ dir }: { dir: -1 | 1 }) => (
     <button type="button" aria-label={dir < 0 ? '上一个属性' : '下一个属性'} onClick={() => setIdx((i) => (i + dir + ATTRS.length) % ATTRS.length)}
       className="p6-press flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-p3r-lilac/50 bg-p3r-rose font-heavy text-h2 font-bold text-p3r-on-rose">{dir < 0 ? '‹' : '›'}</button>
   );
   return (
-    <P6Sheet open={open} onClose={onClose} position="center" busy={busy} title={`确认刷新：${attrLabel(s, meta.id)}`} en={`${idx + 1} / ${ATTRS.length} · 已选 ${count} 个属性`}
-      footer={<div className="flex gap-3"><P3Button tone="soft" block disabled={busy} onClick={onClose}>取消</P3Button><P3Button block busy={busy} disabled={busy || count === 0} onClick={apply}>{busy ? '应用中' : `应用 ${count} 个`}</P3Button></div>}>
+    <P6Sheet open={open && !!suggestions} onClose={onClose} position="center" busy={busy} title={`确认刷新：${attrLabel(s, meta.id)}`} en={`${idx + 1} / ${ATTRS.length} · 已选 ${count} 个属性`}
+      footer={<div className="flex gap-3"><P3Button tone="soft" block disabled={busy} onClick={onClose}>取消</P3Button><P3Button block busy={busy} disabled={busy || count === 0} onClick={() => void apply()}>{busy ? '应用中' : `应用 ${count} 个`}</P3Button></div>}>
       <div className="space-y-3 pt-1">
         <div className="flex min-w-0 items-center gap-3">
           <Arrow dir={-1} />
@@ -67,5 +80,5 @@ export function LevelTitleModal({ open, onClose, onApplied }: { open: boolean; o
 
 export default function SettingsLevelTitleModal({ open, onClose }: OverlayProps) {
   const toast = useToast();
-  return <LevelTitleModal open={open} onClose={onClose} onApplied={(n) => toast.success(`已刷新 ${n} 个属性的等级称号`)} />;
+  return <LevelTitleModal open={open} suggestions={SUGGESTED_LEVEL_TITLES} onClose={onClose} onApplied={(n) => toast.success(`已刷新 ${n} 个属性的等级称号`)} />;
 }

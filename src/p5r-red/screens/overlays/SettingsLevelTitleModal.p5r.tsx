@@ -8,7 +8,10 @@ import type { OverlayProps } from '@/p5r-red/registry/types';
 import { toast } from '@/p5r-red/kit/P5Toast';
 import { RANKS, ATTR_ORDER } from '@/p5r-red/mock/data';
 import { ObSheet, ObBtn } from './ObKit';
-import { ATTR_META } from './SettingsBlocks';
+import { ATTR_META, consumeLevelTitleSuggestions } from './SettingsBlocks';
+import { useAppStore } from '@/store';
+import { ATTRIBUTE_IDS, normalizeAttributeLevelTitles } from '@/utils/attributeLevelTitles';
+import type { AttributeId, AttributeLevelTitles } from '@/types';
 
 const SUG: Record<string, string[]> = {
   knowledge: ['初窥门径', '小有所成', '博览群书', '学贯中西', '通今博古', '万卷在胸'], guts: ['初生牛犊', '敢作敢当', '胆识过人', '临危不惧', '一往无前', '狮心不灭'],
@@ -20,6 +23,12 @@ export default function SettingsLevelTitleModal({ open, onClose, params }: Overl
   const [st, setSt] = useState(params?.get('state') ?? 'ok');
   const [ai, setAi] = useState(0);
   const [sel, setSel] = useState([true, true, true, false, false]);
+  const [suggestions, setSuggestions] = useState<AttributeLevelTitles | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const generated = consumeLevelTitleSuggestions();
+    if (generated) setSuggestions(generated);
+  }, [open]);
   useEffect(() => {
     if (!fx || !open) return;
     const a = setTimeout(() => setAi(1), 900), b = setTimeout(onClose, 1900);
@@ -28,14 +37,33 @@ export default function SettingsLevelTitleModal({ open, onClose, params }: Overl
   const id = ATTR_ORDER[ai], [, ic, l] = ATTR_META[ai];
   const n = sel.filter(Boolean).length;
   const busy = st === 'busy';
+  const titles = suggestions?.[id as AttributeId] ?? SUG[id];
+  const apply = async () => {
+    if (!suggestions) {
+      toast(`已刷新 ${n} 个属性的等级称号`);
+      onClose();
+      return;
+    }
+    setSt('busy');
+    const store = useAppStore.getState();
+    const count = store.settings.levelThresholds.length;
+    const next = normalizeAttributeLevelTitles(store.settings.attributeLevelTitles, count);
+    const picked = normalizeAttributeLevelTitles(suggestions, count);
+    ATTRIBUTE_IDS.forEach((attribute, index) => {
+      if (sel[index]) next[attribute] = [...picked[attribute]];
+    });
+    await store.updateSettings({ attributeLevelTitles: next });
+    toast(`已刷新 ${n} 个属性的等级称号`);
+    onClose();
+  };
   return (
     <ObSheet open={open} onClose={onClose} title={`确认刷新：${l}`} seed={541} wide states={fx ? undefined : [['ok', '有建议'], ['busy', '应用中']]} state={st} onState={setSt}>
       <p className="ob-count">{ai + 1} / 5 · 已选 {n} 个属性</p>
       <div className="ob-car"><button type="button" className="ob-car-b" aria-label="上一个属性" onClick={() => setAi((ai + 4) % 5)}>◀</button><b className="ob-car-t">{ic} {l}</b><button type="button" className="ob-car-b" aria-label="下一个属性" onClick={() => setAi((ai + 1) % 5)}>▶</button></div>
       <label className="ob-check"><input type="checkbox" checked={sel[ai]} onChange={() => setSel(sel.map((x, j) => (j === ai ? !x : x)))} /><i /><span>刷新这个属性</span></label>
       <table className="ob-tbl"><thead><tr><th>等级</th><th>当前</th><th>建议</th></tr></thead>
-        <tbody>{RANKS[id].map((c, i) => <tr key={i}><td>Lv.{i + 1}</td><td>{c}</td><td><b>{SUG[id][i]}</b></td></tr>)}</tbody></table>
-      <div className="ob-acts"><ObBtn tone="paper" seed={542} onClick={onClose}>取消</ObBtn><ObBtn seed={543} size="lg" disabled={busy || !n} onClick={() => { toast(`已刷新 ${n} 个属性的等级称号`); onClose(); }}>{busy ? '应用中' : `应用 ${n} 个`}</ObBtn></div>
+        <tbody>{RANKS[id].map((c, i) => <tr key={i}><td>Lv.{i + 1}</td><td>{c}</td><td><b>{titles[i] ?? c}</b></td></tr>)}</tbody></table>
+      <div className="ob-acts"><ObBtn tone="paper" seed={542} onClick={onClose}>取消</ObBtn><ObBtn seed={543} size="lg" disabled={busy || !n} onClick={() => void apply()}>{busy ? '应用中' : `应用 ${n} 个`}</ObBtn></div>
     </ObSheet>
   );
 }

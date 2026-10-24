@@ -180,6 +180,7 @@ type PartOpts = { outline?: boolean };
 export class ChibiBuilder {
   readonly j = {} as Record<JointName, THREE.Group>;
   private parts = new Map<THREE.Group, { geo: THREE.BufferGeometry; outline: boolean }[]>();
+  private glows: { joint: JointName; geo: THREE.BufferGeometry; color: number; at?: { p?: [number, number, number]; q?: THREE.Quaternion; s?: [number, number, number] }; halo: number }[] = [];
   constructor(readonly spec: BodySpec) {
     const s = spec, J = (n: JointName, parent: THREE.Object3D | null, x: number, y: number, z: number) => {
       const g = new THREE.Group(); g.name = n; g.position.set(x, y, z); g.rotation.order = 'YXZ'; parent?.add(g); this.j[n] = g; return g;
@@ -216,7 +217,27 @@ export class ChibiBuilder {
     this.parts.get(jg)!.push({ geo: g, outline: o.outline !== false });
     return this;
   }
+  /** 自发光零件（不受光照/变暗影响，如敌兵面具红眼）：本体 + 加色光晕（halo = 光晕放大倍数，0 = 无） */
+  glow(joint: JointName, geo: THREE.BufferGeometry, color: number, at?: { p?: [number, number, number]; q?: THREE.Quaternion; s?: [number, number, number] }, halo = 2.2) {
+    this.glows.push({ joint, geo, color, at, halo });
+    return this;
+  }
   finalize(): { root: THREE.Group; mats: THREE.MeshToonMaterial[] } {
+    for (const gl of this.glows) {
+      const core = new THREE.Mesh(gl.geo, new THREE.MeshBasicMaterial({ color: gl.color, toneMapped: false }));
+      if (gl.at?.p) core.position.set(...gl.at.p);
+      if (gl.at?.q) core.quaternion.copy(gl.at.q);
+      if (gl.at?.s) core.scale.set(...gl.at.s);
+      core.raycast = () => {};
+      this.j[gl.joint].add(core);
+      if (gl.halo > 0) {
+        const h = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshBasicMaterial({ color: gl.color, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+        h.position.copy(core.position); h.quaternion.copy(core.quaternion);
+        h.scale.copy(core.scale).multiplyScalar(gl.halo); h.scale.y = core.scale.y; // 只沿表面方向外扩
+        h.raycast = () => {}; h.renderOrder = 5;
+        this.j[gl.joint].add(h);
+      }
+    }
     const mat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() });
     const ol = outlineMat(this.spec.outline ?? 0.012);
     for (const [jg, list] of this.parts) {

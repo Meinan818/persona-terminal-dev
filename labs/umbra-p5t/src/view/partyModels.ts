@@ -30,134 +30,155 @@ function limbs(b: ChibiBuilder, c: { sleeve: number; glove: number; pants: numbe
   }
 }
 
+/** 贴在球面上、绕法线再转 tilt 的扁椭球零件（脸上五官用）：局部 x = 宽，y = 厚（沿法线），z = 高 */
+function face(r: number, th: number, ph: number, tilt = 0) {
+  const o = onSphere(r, th, ph);
+  return { p: o.p, q: o.q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(Y, tilt)) };
+}
+
 // ---------------- Skull ----------------
-const SKULL: BodySpec = { height: 1.05, legLen: 0.27, torso: 0.25, headR: 0.245, neck: 0.19, shoulderX: 0.135, hipX: 0.066, upperArm: 0.125, foreArm: 0.115 };
+// 比例对齐 Joker GLB：身高约 1.1、头（含发）约占 30%，腿约 1/3
+const SKULL: BodySpec = { height: 1.1, legLen: 0.36, torso: 0.29, headR: 0.155, neck: 0.165, shoulderX: 0.125, hipX: 0.062, upperArm: 0.155, foreArm: 0.14, outline: 0.009 };
 export function makeSkull(): UnitRig {
   const b = new ChibiBuilder(SKULL), s = SKULL;
-  const SKIN = 0xf2c6a0, HAIR = 0xf4d03a, JACKET = 0x1c1c22, PANTS = 0x24242c, RED = 0xd8141e, SCARF = 0xf6c200, WHITE = 0xf4f1ea;
+  const SKIN = 0xf2c6a0, HAIR = 0xf4d03a, JACKET = 0x1c1c22, PANTS = 0x24242c, RED = 0xd8141e, SCARF = 0xf6c200, WHITE = 0xf6f3ec, HOLE = 0x0a0a0e;
   // 躯干：黑皮夹克 + 立领 + 黄围巾
-  b.add('chest', G.capsule(0.118, 0.11), JACKET, { p: [0, 0.135, 0], s: [1, 1, 0.82] });
-  b.add('chest', G.box(0.03, 0.2, 0.02), 0x3a3a44, { p: [0, 0.13, 0.098] }, { outline: false }); // 拉链
-  for (const sx of [1, -1]) b.add('chest', G.box(0.11, 0.09, 0.025), JACKET, { p: [sx * 0.07, s.torso + 0.01, 0.045], r: [-0.35, sx * 0.5, sx * 0.35] }); // 翻领
-  b.add('chest', G.torus(0.08, 0.036), SCARF, { p: [0, s.torso + 0.02, 0], r: [Math.PI / 2, 0, 0] });
-  b.add('chest', G.box(0.07, 0.17, 0.03), SCARF, { p: [0.05, s.torso - 0.06, 0.1], r: [0.2, 0, -0.25] }); // 垂下的围巾尾
-  b.add('hips', G.cyl(0.1, 0.105, 0.09), PANTS, { p: [0, -0.01, 0], s: [1, 1, 0.85] });
-  b.add('hips', G.torus(0.1, 0.014), 0x5a4a3a, { p: [0, 0.03, 0], r: [Math.PI / 2, 0, 0], s: [1, 0.85, 1] }, { outline: false });
-  limbs(b, { sleeve: JACKET, glove: RED, pants: PANTS, boot: 0x141418, sole: 0x55555e, cuff: RED });
-  // 肩上的夹克垫肩
-  for (const sd of ['L', 'R'] as const) b.add(`arm${sd}`, G.sphere(0.06, 12, 8), JACKET, { p: [0, -0.01, 0] });
-  // 头：皮肤 + 白色骷髅面具（盖住上半脸）+ 黑眼窝/鼻孔 + 咧嘴笑
+  b.add('chest', G.capsule(0.098, 0.15), JACKET, { p: [0, 0.14, 0], s: [1, 1, 0.8] });
+  b.add('chest', G.box(0.024, 0.24, 0.02), 0x3a3a44, { p: [0, 0.13, 0.08] }, { outline: false }); // 拉链
+  for (const sx of [1, -1]) b.add('chest', G.box(0.09, 0.08, 0.022), JACKET, { p: [sx * 0.058, s.torso - 0.01, 0.04], r: [-0.35, sx * 0.5, sx * 0.35] }); // 翻领
+  b.add('chest', G.torus(0.062, 0.028), SCARF, { p: [0, s.torso - 0.005, 0], r: [Math.PI / 2, 0, 0] });
+  b.add('chest', G.box(0.055, 0.15, 0.025), SCARF, { p: [0.04, s.torso - 0.08, 0.085], r: [0.2, 0, -0.25] }); // 垂下的围巾尾
+  b.add('hips', G.cyl(0.085, 0.09, 0.1), PANTS, { p: [0, -0.01, 0], s: [1, 1, 0.85] });
+  b.add('hips', G.torus(0.088, 0.012), 0x5a4a3a, { p: [0, 0.03, 0], r: [Math.PI / 2, 0, 0], s: [1, 0.85, 1] }, { outline: false });
+  limbs(b, { sleeve: JACKET, glove: RED, pants: PANTS, boot: 0x141418, sole: 0x55555e, cuff: RED, armR: 0.04, legR: 0.048 });
+  for (const sd of ['L', 'R'] as const) b.add(`arm${sd}`, G.sphere(0.052, 12, 8), JACKET, { p: [0, -0.01, 0] }); // 垫肩
+  // 头：皮肤 + 白色骷髅面具（额头到上唇）
   const R = s.headR;
-  b.add('head', G.sphere(R, 22, 16), SKIN);
-  b.add('head', shell(R * 1.035, 0.95, 1.95, 1.05), WHITE);
-  for (const sx of [1, -1]) { const e = onSphere(R * 0.98, 1.38, sx * 0.4); b.add('head', G.sphere(0.058, 12, 8), 0x0c0c10, { p: e.p, q: e.q, s: [1, 0.55, 1.1] }, { outline: false }); }
-  for (const sx of [1, -1]) { const n = onSphere(R * 1.0, 1.72, sx * 0.08); b.add('head', G.sphere(0.018, 8, 6), 0x0c0c10, { p: n.p }, { outline: false }); }
-  // 面具下缘的牙齿刻线
-  for (let i = -2; i <= 2; i++) { const t = onSphere(R * 1.04, 1.9, i * 0.12); b.add('head', G.box(0.006, 0.03, 0.006), 0x2a2a30, { p: t.p, q: t.q }, { outline: false }); }
-  b.add('head', G.torus(0.055, 0.009, Math.PI), 0x6a1a14, { p: [0, -0.15, R * 0.86], r: [-0.55, 0, Math.PI] }, { outline: false });
+  b.add('head', G.sphere(R, 24, 18), SKIN);
+  b.add('head', shell(R * 1.04, 0.8, 1.98, 1.18), WHITE);
+  // 眼窝：外黑大椭圆（外眼角上挑）+ 内一圈更深的洞，看起来有深度
+  for (const sx of [1, -1]) {
+    const e = face(R * 1.035, 1.3, sx * 0.42, sx * 0.38);
+    b.add('head', G.sphere(1, 16, 10), HOLE, { ...e, s: [0.27 * R, 0.06 * R, 0.22 * R] }, { outline: false });
+    const rim = face(R * 1.03, 1.3, sx * 0.42, sx * 0.38);
+    b.add('head', G.sphere(1, 16, 10), 0x55504a, { ...rim, s: [0.31 * R, 0.05 * R, 0.26 * R] }, { outline: false });
+  }
+  // 倒三角鼻孔
+  { const n = face(R * 1.045, 1.6, 0); b.add('head', G.cone(1, 1, 3), HOLE, { p: n.p, q: n.q.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0))), s: [0.09 * R, 0.13 * R, 0.03 * R] }, { outline: false }); }
+  // 牙齿线：面具下缘一条黑横线 + 竖线分出 7 颗牙
+  b.add('head', shell(R * 1.048, 1.8, 1.84, 0.62), HOLE, undefined, { outline: false });
+  for (let i = -3; i <= 3; i++) { const t = face(R * 1.05, 1.82, i * 0.15); b.add('head', G.box(0.012 * R / 0.155 * 0.5, 0.004, 0.12 * R), HOLE, t, { outline: false }); }
+  // 面具下的咧嘴笑
+  { const m = face(R * 0.99, 2.12, 0); b.add('head', G.torus(0.3 * R, 0.05 * R, Math.PI), 0x5a1810, { p: m.p, r: [-0.6, 0, Math.PI] }, { outline: false }); }
   // 金色刺头：头顶发帽 + 一圈尖刺
-  b.add('head', new THREE.SphereGeometry(R * 1.05, 22, 10, 0, Math.PI * 2, 0, 1.05), HAIR);
-  b.add('head', new THREE.SphereGeometry(R * 1.04, 22, 10, Math.PI * 1.5 - 1.5, 3.0, 0.9, 1.45), HAIR); // 后脑
+  const u = 0.72;
+  b.add('head', new THREE.SphereGeometry(R * 1.06, 22, 10, 0, Math.PI * 2, 0, 1.0), HAIR);
+  b.add('head', new THREE.SphereGeometry(R * 1.05, 22, 10, Math.PI * 1.5 - 1.5, 3.0, 0.9, 1.45), HAIR); // 后脑
   const spikes: [number, number, number][] = [[0.15, 0, 0.13], [0.45, 0.2, 0.14], [0.45, -0.2, 0.14], [0.55, 0.9, 0.13], [0.55, -0.9, 0.13], [0.75, 1.6, 0.12], [0.75, -1.6, 0.12], [0.6, 2.4, 0.13], [0.6, -2.4, 0.13], [0.5, Math.PI, 0.14], [0.95, 2.9, 0.11], [0.95, -2.9, 0.11], [0.85, 0.5, 0.1], [0.85, -0.5, 0.1], [1.05, 1.2, 0.09], [1.05, -1.2, 0.09]];
-  for (const [th, ph, h] of spikes) { const o = onSphere(R * 0.98, th, ph); b.add('head', G.cone(0.062, h + 0.04, 6), HAIR, { p: [o.p[0] + o.n.x * h * 0.5, o.p[1] + o.n.y * h * 0.5 + 0.02, o.p[2] + o.n.z * h * 0.5], q: o.q }); }
+  for (const [th, ph, h0] of spikes) { const h = h0 * u; const o = onSphere(R * 0.98, th, ph); b.add('head', G.cone(0.062 * u, h + 0.04 * u, 6), HAIR, { p: [o.p[0] + o.n.x * h * 0.5, o.p[1] + o.n.y * h * 0.5 + 0.015, o.p[2] + o.n.z * h * 0.5], q: o.q }); }
   // 铁管
-  b.add('weapon', G.cyl(0.019, 0.019, 0.52, 8), 0x8d929c, { p: [0, 0.2, 0] });
-  for (const y of [-0.04, 0.44]) b.add('weapon', G.cyl(0.026, 0.026, 0.04, 8), 0x5c6068, { p: [0, y, 0] });
-  b.add('weapon', G.cyl(0.022, 0.022, 0.1, 8), 0x2a2a2e, { p: [0, 0.02, 0] }, { outline: false });
+  b.add('weapon', G.cyl(0.017, 0.017, 0.5, 8), 0x8d929c, { p: [0, 0.2, 0] });
+  for (const y of [-0.04, 0.44]) b.add('weapon', G.cyl(0.023, 0.023, 0.04, 8), 0x5c6068, { p: [0, y, 0] });
+  b.add('weapon', G.cyl(0.02, 0.02, 0.1, 8), 0x2a2a2e, { p: [0, 0.02, 0] }, { outline: false });
   return new ProcRig(b, { idle: -0.75, attack: 'follow' });
 }
 
 // ---------------- Mona ----------------
-const MONA: BodySpec = { height: 0.9, legLen: 0.16, torso: 0.17, headR: 0.25, neck: 0.205, shoulderX: 0.1, hipX: 0.055, upperArm: 0.08, foreArm: 0.075, outline: 0.011 };
+// 身高约 Joker 的 0.8（含耳朵），猫头仍然偏大
+const MONA: BodySpec = { height: 0.88, legLen: 0.14, torso: 0.15, headR: 0.2, neck: 0.18, shoulderX: 0.088, hipX: 0.05, upperArm: 0.072, foreArm: 0.066, outline: 0.009 };
 export function makeMona(): UnitRig {
   const b = new ChibiBuilder(MONA), s = MONA;
-  const BLACK = 0x17171d, WHITE = 0xf6f4ee, YEL = 0xf5c400, BLUE = 0x2f8cff;
-  b.add('chest', G.capsule(0.088, 0.06), BLACK, { p: [0, 0.085, 0], s: [1, 1, 0.9] });
-  b.add('chest', G.sphere(0.07, 14, 10), WHITE, { p: [0, 0.08, 0.045], s: [0.85, 1.15, 0.7] }, { outline: false }); // 白肚
-  b.add('chest', G.torus(0.07, 0.034), YEL, { p: [0, s.torso + 0.005, 0], r: [Math.PI / 2, 0, 0] }); // 黄领巾
-  b.add('chest', G.cone(0.07, 0.12, 3), YEL, { p: [0, s.torso - 0.05, -0.07], r: [-0.35, 0, Math.PI], s: [1, 1, 0.35] }); // 领巾后摆
-  b.add('hips', G.cyl(0.085, 0.09, 0.07), BLACK, { p: [0, -0.005, 0] });
-  b.add('hips', G.torus(0.088, 0.02), YEL, { p: [0, 0.03, 0], r: [Math.PI / 2, 0, 0] }); // 黄腰带
-  b.add('hips', G.box(0.05, 0.04, 0.02), 0xc89a10, { p: [0, 0.03, 0.09] });
-  limbs(b, { sleeve: BLACK, glove: WHITE, pants: BLACK, boot: WHITE, armR: 0.036, legR: 0.042 });
-  // 尾巴：两节向后上翘
-  b.add('tail', G.capsule(0.022, 0.16), BLACK, { p: [0, 0.03, -0.1], r: [-1.1, 0, 0] });
-  b.add('tail', G.capsule(0.02, 0.12), BLACK, { p: [0, 0.16, -0.19], r: [-0.25, 0, 0] });
-  // 大圆黑头 + 白口鼻 + 蓝大眼 + 耳朵
-  const R = s.headR;
-  b.add('head', G.sphere(R, 24, 18), BLACK, { s: [1.08, 0.96, 1] });
-  b.add('head', G.sphere(0.13, 18, 12), WHITE, { p: [0, -0.085, R * 0.62], s: [1.35, 0.72, 0.75] });
-  b.add('head', G.sphere(0.022, 8, 6), 0xe0607a, { p: [0, -0.045, R * 0.97] }, { outline: false }); // 鼻
-  b.add('head', G.torus(0.035, 0.007, Math.PI), 0x111116, { p: [0, -0.095, R * 0.93], r: [-0.3, 0, Math.PI] }, { outline: false });
+  const BLACK = 0x17171d, WHITE = 0xf6f4ee, YEL = 0xf5c400, BLUE = 0x2f8cff, DBLUE = 0x0d2a6a;
+  b.add('chest', G.capsule(0.075, 0.05), BLACK, { p: [0, 0.075, 0], s: [1, 1, 0.9] });
+  b.add('chest', G.sphere(0.06, 14, 10), WHITE, { p: [0, 0.07, 0.04], s: [0.85, 1.15, 0.7] }, { outline: false }); // 白肚
+  b.add('chest', G.torus(0.06, 0.029), YEL, { p: [0, s.torso + 0.005, 0], r: [Math.PI / 2, 0, 0] }); // 黄领巾
+  b.add('chest', G.cone(0.06, 0.1, 3), YEL, { p: [0, s.torso - 0.045, -0.06], r: [-0.35, 0, Math.PI], s: [1, 1, 0.35] });
+  b.add('hips', G.cyl(0.073, 0.078, 0.06), BLACK, { p: [0, -0.005, 0] });
+  b.add('hips', G.torus(0.076, 0.017), YEL, { p: [0, 0.025, 0], r: [Math.PI / 2, 0, 0] }); // 黄腰带
+  b.add('hips', G.box(0.043, 0.034, 0.018), 0xc89a10, { p: [0, 0.025, 0.078] });
+  limbs(b, { sleeve: BLACK, glove: WHITE, pants: BLACK, boot: WHITE, armR: 0.031, legR: 0.036 });
+  b.add('tail', G.capsule(0.019, 0.14), BLACK, { p: [0, 0.025, -0.085], r: [-1.1, 0, 0] });
+  b.add('tail', G.capsule(0.017, 0.1), BLACK, { p: [0, 0.14, -0.16], r: [-0.25, 0, 0] });
+  // 大圆黑头 + 白口鼻
+  const R = s.headR, u = R / 0.25;
+  b.add('head', G.sphere(R, 26, 18), BLACK, { s: [1.04, 0.96, 1] });
+  b.add('head', G.sphere(0.13 * u, 18, 12), WHITE, { p: [0, -0.09 * u, R * 0.6], s: [1.4, 0.7, 0.78] });
+  // 眼睛：黑眼眶 → 白眼 → 蓝虹膜 → 深蓝瞳 → 两点高光（一大一小），往外略斜
   for (const sx of [1, -1]) {
-    const e = onSphere(R * 0.93, 1.42, sx * 0.36);
-    b.add('head', G.sphere(0.07, 16, 12), WHITE, { p: e.p, q: e.q, s: [0.95, 0.5, 1.25] });
-    const i = onSphere(R * 0.985, 1.42, sx * 0.33);
-    b.add('head', G.sphere(0.048, 14, 10), BLUE, { p: i.p, q: i.q, s: [0.95, 0.5, 1.2] }, { outline: false });
-    const pp = onSphere(R * 1.005, 1.43, sx * 0.32);
-    b.add('head', G.sphere(0.026, 10, 8), 0x07070a, { p: pp.p, q: pp.q, s: [0.9, 0.5, 1.2] }, { outline: false });
-    const hl = onSphere(R * 1.02, 1.33, sx * 0.3);
-    b.add('head', G.sphere(0.012, 8, 6), 0xffffff, { p: hl.p }, { outline: false });
+    const tilt = -sx * 0.18;
+    b.add('head', G.sphere(1, 18, 12), 0x050507, { ...face(R * 1.0, 1.36, sx * 0.4, tilt), s: [0.3 * R, 0.08 * R, 0.37 * R] }, { outline: false });
+    b.add('head', G.sphere(1, 18, 12), WHITE, { ...face(R * 1.02, 1.36, sx * 0.4, tilt), s: [0.255 * R, 0.07 * R, 0.32 * R] }, { outline: false });
+    b.add('head', G.sphere(1, 16, 12), BLUE, { ...face(R * 1.04, 1.4, sx * 0.37, tilt), s: [0.19 * R, 0.06 * R, 0.25 * R] }, { outline: false });
+    b.add('head', G.sphere(1, 14, 10), DBLUE, { ...face(R * 1.055, 1.42, sx * 0.36, tilt), s: [0.1 * R, 0.05 * R, 0.15 * R] }, { outline: false });
+    b.add('head', G.sphere(1, 10, 8), 0xffffff, { ...face(R * 1.075, 1.31, sx * 0.33), s: [0.065 * R, 0.04 * R, 0.075 * R] }, { outline: false });
+    b.add('head', G.sphere(1, 8, 6), 0xffffff, { ...face(R * 1.07, 1.5, sx * 0.4), s: [0.03 * R, 0.03 * R, 0.035 * R] }, { outline: false });
     // 耳朵
     const ea = onSphere(R * 0.82, 0.62, sx * 1.15);
-    b.add('head', G.cone(0.095, 0.2, 10), BLACK, { p: [ea.p[0] + ea.n.x * 0.1, ea.p[1] + ea.n.y * 0.1, ea.p[2] + ea.n.z * 0.1], q: ea.q, s: [1, 1, 0.6] });
-    b.add('head', G.cone(0.055, 0.12, 8), 0x45404e, { p: [ea.p[0] + ea.n.x * 0.1, ea.p[1] + ea.n.y * 0.1 - 0.005, ea.p[2] + ea.n.z * 0.1 + 0.03], q: ea.q, s: [1, 1, 0.3] }, { outline: false });
+    b.add('head', G.cone(0.095 * u, 0.2 * u, 10), BLACK, { p: [ea.p[0] + ea.n.x * 0.1 * u, ea.p[1] + ea.n.y * 0.1 * u, ea.p[2] + ea.n.z * 0.1 * u], q: ea.q, s: [1, 1, 0.6] });
+    b.add('head', G.cone(0.055 * u, 0.12 * u, 8), 0x45404e, { p: [ea.p[0] + ea.n.x * 0.1 * u, ea.p[1] + ea.n.y * 0.1 * u - 0.004, ea.p[2] + ea.n.z * 0.1 * u + 0.024], q: ea.q, s: [1, 1, 0.3] }, { outline: false });
   }
+  // 粉鼻头 + ω 小嘴
+  const mz = R * 0.6 + 0.13 * u * 0.78; // 口鼻前表面 z
+  b.add('head', G.sphere(0.024 * u, 10, 8), 0xe0607a, { p: [0, -0.06 * u, mz - 0.004], s: [1.3, 0.85, 0.8] }, { outline: false });
+  for (const sx of [1, -1]) b.add('head', G.torus(0.017 * u, 0.0042 * u, Math.PI), 0x111116, { p: [sx * 0.017 * u, -0.088 * u, mz - 0.006], r: [-0.25, 0, Math.PI] }, { outline: false });
+  b.add('head', G.box(0.004 * u, 0.022 * u, 0.004), 0x111116, { p: [0, -0.074 * u, mz - 0.002] }, { outline: false });
   // 弯刀：银色弧刃 + 金护手 + 棕柄
   const sh = new THREE.Shape();
   sh.moveTo(-0.022, 0.05); sh.quadraticCurveTo(-0.03, 0.26, 0.05, 0.42); sh.quadraticCurveTo(0.07, 0.25, 0.022, 0.05); sh.closePath();
   const blade = new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: false, curveSegments: 10 });
   blade.translate(0, 0, -0.006);
-  b.add('weapon', blade, 0xdfe6f0, { s: [1.3, 1.1, 1.6] });
-  b.add('weapon', G.box(0.1, 0.02, 0.03), 0xd8a820, { p: [0, 0.045, 0] });
-  b.add('weapon', G.cyl(0.015, 0.015, 0.09, 8), 0x6b3f1f, { p: [0, -0.005, 0] });
+  b.add('weapon', blade, 0xdfe6f0, { s: [1.15, 0.95, 1.4] });
+  b.add('weapon', G.box(0.09, 0.018, 0.028), 0xd8a820, { p: [0, 0.04, 0] });
+  b.add('weapon', G.cyl(0.013, 0.013, 0.08, 8), 0x6b3f1f, { p: [0, -0.005, 0] });
   return new ProcRig(b, { idle: 0.55, attack: 'follow' });
 }
 
 // ---------------- Marie 军卫兵（Shadow） ----------------
-const SOLDIER: BodySpec = { height: 1.06, legLen: 0.28, torso: 0.26, headR: 0.235, neck: 0.185, shoulderX: 0.14, hipX: 0.068, upperArm: 0.13, foreArm: 0.12 };
-const ROLE_ACCENT: Record<string, number> = { revenger: 0xd62ea0, shielder: 0x3a78e0, teleporter: 0x2ac6b8, launcher: 0xe0a020, supporter: 0x3cc04a };
+// 暗色化：黑军装 + 暗红饰边、细长身形、白骨面具红眼发光（P5 Shadow 感，不再像玩具兵）
+const SOLDIER: BodySpec = { height: 1.12, legLen: 0.37, torso: 0.3, headR: 0.15, neck: 0.165, shoulderX: 0.118, hipX: 0.055, upperArm: 0.165, foreArm: 0.15, outline: 0.009 };
+const ROLE_ACCENT: Record<string, number> = { revenger: 0xb0207e, shielder: 0x2a5cb0, teleporter: 0x1f9a90, launcher: 0xb07a14, supporter: 0x2c9038 };
 export function makeShadow(role?: string): UnitRig {
   const b = new ChibiBuilder(SOLDIER), s = SOLDIER;
-  const RED = 0xc4141c, DRED = 0x7e0a12, BLACK = 0x16141a, GOLD = 0xe2b33a, MASK = 0xf3efe6;
-  const acc = ROLE_ACCENT[role ?? ''] ?? RED;
-  // 红色军装上衣 + 下摆 + 黑腰带金扣 + 白斜挎带 + 金纽扣 + 黑立领
-  b.add('chest', G.capsule(0.122, 0.11), RED, { p: [0, 0.135, 0], s: [1, 1, 0.84] });
-  b.add('chest', G.box(0.035, 0.27, 0.02), 0xf2eee8, { p: [0, 0.13, 0.095], r: [0, 0, 0.62] }, { outline: false });
-  for (const y of [0.06, 0.12, 0.18]) b.add('chest', G.sphere(0.011, 6, 4), GOLD, { p: [0.04, y, 0.102] }, { outline: false });
-  b.add('chest', G.cyl(0.07, 0.08, 0.05), BLACK, { p: [0, s.torso + 0.01, 0] });
-  if (acc !== RED) b.add('chest', G.box(0.04, 0.28, 0.022), acc, { p: [0, 0.13, -0.095], r: [0, 0, -0.62] }, { outline: false });
-  b.add('hips', G.cyl(0.11, 0.15, 0.13, 14), RED, { p: [0, -0.03, 0], s: [1, 1, 0.85] });
-  b.add('hips', G.torus(0.112, 0.02), BLACK, { p: [0, 0.03, 0], r: [Math.PI / 2, 0, 0], s: [1, 0.85, 1] });
-  b.add('hips', G.box(0.05, 0.04, 0.02), GOLD, { p: [0, 0.03, 0.1] }, { outline: false });
-  limbs(b, { sleeve: RED, glove: BLACK, pants: BLACK, boot: BLACK, sole: 0x3a2a20, cuff: GOLD });
-  // 金穗肩章
-  for (const sd of ['L', 'R'] as const) b.add(`arm${sd}`, G.sphere(0.06, 12, 8), GOLD, { p: [0, 0.005, 0], s: [1.1, 0.55, 1] });
-  // 头：黑色影子皮肤 + 白面具（红眼缝）+ 红黑头盔 + 黑檐 + 金顶 + 羽饰
+  const COAT = 0x16121a, TRIM = 0x9a0e18, DRED = 0x5a0810, BLACK = 0x0c0a0e, GOLD = 0xa88430, MASK = 0xe6e0d4, EYE = 0xff2a1a;
+  const acc = ROLE_ACCENT[role ?? ''] ?? TRIM;
+  // 黑长军装（腰部收窄）+ 暗红斜挎带 + 暗金纽扣 + 红立领
+  b.add('chest', G.capsule(0.085, 0.17), COAT, { p: [0, 0.14, 0], s: [1, 1, 0.78] });
+  b.add('chest', G.box(0.028, 0.3, 0.018), acc, { p: [0, 0.13, 0.068], r: [0, 0, 0.55] }, { outline: false });
+  for (const y of [0.05, 0.11, 0.17, 0.23]) b.add('chest', G.sphere(0.009, 6, 4), GOLD, { p: [-0.03, y, 0.07] }, { outline: false });
+  b.add('chest', G.cyl(0.055, 0.065, 0.05), TRIM, { p: [0, s.torso + 0.0, 0] });
+  // 燕尾下摆：向下张开的长衣摆
+  b.add('hips', G.cyl(0.085, 0.12, 0.22, 14), COAT, { p: [0, -0.08, -0.005], s: [1, 1, 0.8] });
+  b.add('hips', G.cyl(0.121, 0.122, 0.02, 14), TRIM, { p: [0, -0.185, -0.005], s: [1, 1, 0.8] }, { outline: false });
+  b.add('hips', G.torus(0.086, 0.014), TRIM, { p: [0, 0.03, 0], r: [Math.PI / 2, 0, 0], s: [1, 0.8, 1] });
+  limbs(b, { sleeve: COAT, glove: BLACK, pants: BLACK, boot: BLACK, sole: 0x2a1a18, cuff: TRIM, armR: 0.034, legR: 0.04 });
+  for (const sd of ['L', 'R'] as const) b.add(`arm${sd}`, G.sphere(0.048, 12, 8), DRED, { p: [0, 0.005, 0], s: [1.15, 0.5, 1] }); // 肩章
+  // 头：黑影皮肤 + 白骨面具（尖下巴）+ 红纹 + 发光红眼
   const R = s.headR;
   b.add('head', G.sphere(R, 22, 16), BLACK);
-  b.add('head', shell(R * 1.03, 1.05, 2.25, 1.15), MASK);
+  b.add('head', shell(R * 1.04, 1.0, 2.3, 1.1), MASK);
+  b.add('head', G.cone(0.05, 0.07, 6), MASK, { p: [0, -R * 0.95, R * 0.42], r: [Math.PI + 0.35, 0, 0], s: [1.3, 1, 0.6] }); // 尖下巴
   for (const sx of [1, -1]) {
-    const e = onSphere(R * 1.0, 1.42, sx * 0.38);
-    b.add('head', G.sphere(0.05, 12, 8), 0x0b0a0e, { p: e.p, q: e.q, s: [1.25, 0.45, 0.5] }, { outline: false });
-    const g = onSphere(R * 1.03, 1.42, sx * 0.38);
-    b.add('head', G.sphere(0.022, 8, 6), 0xff3030, { p: g.p, q: g.q, s: [1.3, 0.4, 0.5] }, { outline: false });
-    const m = onSphere(R * 1.035, 1.85, sx * 0.3);
-    b.add('head', G.box(0.012, 0.06, 0.006), DRED, { p: m.p, q: m.q }, { outline: false }); // 面具红纹
+    const e = face(R * 1.035, 1.5, sx * 0.38, sx * 0.45);
+    b.add('head', G.sphere(1, 12, 8), 0x050406, { ...e, s: [0.3 * R, 0.06 * R, 0.13 * R] }, { outline: false });
+    const g = face(R * 1.06, 1.5, sx * 0.38, sx * 0.45);
+    b.glow('head', new THREE.SphereGeometry(1, 10, 6), EYE, { ...g, s: [0.19 * R, 0.04 * R, 0.06 * R] }, 1.9); // 发光眼缝 + 加色光晕
+    const m = face(R * 1.045, 1.85, sx * 0.3, sx * 0.2);
+    b.add('head', G.box(0.012, 0.004, 0.07), TRIM, m, { outline: false }); // 面具红纹
   }
-  b.add('head', new THREE.SphereGeometry(R * 1.09, 22, 10, 0, Math.PI * 2, 0, 1.12), DRED);
-  b.add('head', G.torus(R * 1.0, 0.026), BLACK, { p: [0, Math.cos(1.12) * R * 1.09, 0], r: [Math.PI / 2, 0, 0] });
-  b.add('head', G.box(0.03, 0.07, R * 1.5), BLACK, { p: [0, R * 1.1, -0.01] });
-  b.add('head', G.cone(0.03, 0.07, 6), GOLD, { p: [0, R * 1.2, 0.0] });
-  b.add('head', G.cone(0.055, 0.24, 8), acc === RED ? 0xff3a2a : acc, { p: [0, R * 1.22, -0.1], r: [-2.1, 0, 0], s: [0.55, 1, 1] }); // 马鬃羽饰（向后垂）
-  // 长枪：木杆 + 银枪头 + 红缨
-  b.add('weapon', G.cyl(0.016, 0.016, 1.0, 8), 0x6b4423, { p: [0, 0.22, 0] });
-  b.add('weapon', G.cone(0.036, 0.15, 6), 0xd6dde6, { p: [0, 0.79, 0] });
-  b.add('weapon', G.cone(0.04, 0.07, 8), RED, { p: [0, 0.69, 0], r: [Math.PI, 0, 0] });
+  // 黑色高筒头盔 + 暗红帽檐带 + 暗红马鬃
+  b.add('head', new THREE.CylinderGeometry(R * 0.95, R * 1.08, R * 1.1, 18), BLACK, { p: [0, R * 0.92, -0.005] });
+  b.add('head', G.torus(R * 1.07, 0.016), TRIM, { p: [0, R * 0.45, -0.005], r: [Math.PI / 2, 0, 0] });
+  b.add('head', G.box(R * 1.2, 0.02, 0.08), BLACK, { p: [0, R * 0.4, R * 0.98], r: [0.35, 0, 0] }); // 前檐
+  b.add('head', G.cone(0.025, 0.06, 6), GOLD, { p: [0, R * 1.52, 0] });
+  b.add('head', G.cone(0.05, 0.26, 8), acc === TRIM ? DRED : acc, { p: [0, R * 1.47, -0.11], r: [-2.15, 0, 0], s: [0.5, 1, 1] });
+// 长枪：木杆 + 银枪头 + 红缨
+  b.add('weapon', G.cyl(0.013, 0.013, 1.05, 8), 0x2a1a12, { p: [0, 0.24, 0] });
+  b.add('weapon', G.cone(0.03, 0.17, 4), 0xb8c0cc, { p: [0, 0.84, 0] });
+  b.add('weapon', G.cone(0.032, 0.06, 8), TRIM, { p: [0, 0.73, 0], r: [Math.PI, 0, 0] });
   // 盾兵：左小臂挂盾
   if (role === 'shielder') {
-    b.add('foreL', G.box(0.3, 0.36, 0.035), 0x8fb8ff, { p: [0.04, -0.07, 0.07] });
-    b.add('foreL', G.box(0.06, 0.24, 0.04), GOLD, { p: [0.04, -0.07, 0.085] }, { outline: false });
+    b.add('foreL', G.box(0.26, 0.34, 0.03), 0x24202a, { p: [0.04, -0.07, 0.06] });
+    b.add('foreL', G.box(0.05, 0.22, 0.036), acc, { p: [0.04, -0.07, 0.075] }, { outline: false });
   }
   return new ProcRig(b, { idle: 0, attack: Math.PI / 2 - 0.05 }, 'soldier');
 }

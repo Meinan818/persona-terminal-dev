@@ -1,21 +1,17 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-24（计划11「四主题视觉与演出保真」已完成，并修复计划10两项遗留缺陷）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-24（计划12「有证据的局部整理」已完成）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-24 · 计划11视觉/演出核对与两项计划10缺陷修复已完成，下一计划12待启动
+## 当前接手入口 · 2026-10-24 · 计划12有证据的局部整理已完成，下一计划13待启动
 
-- **本轮授权与现场**：用户明确启动计划11「四主题视觉与演出保真」，并在本轮追加授权修复计划10遗留的红色演示态冒充AI、三主题谏言横幅时序两项缺陷。工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，接手基点 `7a1e0bb`（已核实）。未进入12–14，未重跑764项loader，未Push、部署、打APK、接真实账号/组织数据或发收费模型调用。
-- **计划状态**：**计划11本轮授权已完成，计划10两项指定缺陷已修；计划12及之后未启动**。专项报告 `docs/THEME-VISUAL-PERFORMANCE-20261024.md` 记录源码对照、截图、像素差、音效、时序、缺陷修复和保留边界。
-- **视觉保真**：蓝/粉/黄关键界面源文件分别 43/43、29/29、52/52 与原包逐字一致或只差导入别名。四主题开屏、底导、轮盘、切页、弹层计算层级和演出顺序均完成同机隔离浏览器对照。蓝/粉底导局部像素差约 0.05%，黄土字回退约 1.95%，红导航元素截图约 23.66% 差异来自透明区后的原 demo 数据与真实空态，节点标签、尺寸和 z-index 一致。
-- **红色轮盘恢复**：`RadialWheelP5.p5r.tsx` 恢复原包的 `K=1.15`、半径 148、死区 48、130ms 红青活高亮和 `mix-blend-mode: screen`；D0 菜单与原包逐像素一致。红色剩余2个源码差异仅为助手键键盘操作和 `shell.css` 触摸/文本选择防护，均无视觉变化。
-- **黄色原包基线**：原 demo dist 缺 8 个 `assets/p4g/official/*` 文件，原包开屏/页面部分资源404。该缺失保留为原包基线，未修改原包，不把改后正常资源误记为“改坏”。
-- **计划10缺陷1修复**：红色 `oc.ts` 今日互动/星移/星象匹配改接 `evaluateInteraction`、`starShiftConfidant`、`matchConfidant`，真实渲染并持久化返回内容；`a4.ts` 成长总结改接 `summaryJobs`，真实流式生成、继续写、追问和归档。未配Key时红色互动显示「离线评估」且0模型请求；在线同伴未登录不调用AI。
-- **计划10缺陷2修复**：蓝/粉/黄 `CounselChatModal` 的密钥状态改为 `useSyncExternalStore` 直接订阅正式 store settings；overlay先挂载、后写Key时横幅会在同一打开会话内消失。
-- **验证（2026-10-24本轮）**：`node node_modules/typescript/bin/tsc --noEmit` exit 0；全量 Vitest **71文件/435项通过**；`npm run build` exit 0（主题CSS、TypeScript、Vite、PWA）；两个验证脚本 `node --check` 和 `git diff --check` 通过。构建保留既有大chunk、PWA主包不预缓存、字体运行时解析、CSS `@import`顺序与`eval`警告。
-- **隔离浏览器证据**：计划11 `E:\MASKARIA\outputs\theme-plan11-visual-20261024-v21\report.json`，`ok=true`、21项检查、`pageErrors=0`、`integratedLocalFailures=[]`；计划10缺陷修复 `E:\MASKARIA\outputs\theme-plan10-fixes-20261024-v19\report.json`，`ok=true`、11项检查、`pageErrors=0`、`localFailures=[]`，mock请求 interaction/starshift/match/summary 各1次。
+- **本轮授权与现场**：用户明确启动并确认计划12「有证据的局部整理」。工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，接手基点 `b60f0e6`（已核实）。未进入计划13候选打包、计划14真机验收，未重跑764项loader，未Push、部署、打APK、接真实账号/组织数据或调用收费模型。
+- **计划状态**：**计划01–12已完成；计划13–14未启动**。计划11的四主题视觉与演出保真、以及计划10两项缺陷修复仍为上一轮有效基线，详见 `docs/THEME-VISUAL-PERFORMANCE-20261024.md`。
+- **实际清理**：删除零引用的 `src/themes/integration/NavigatorBridge.tsx`（35行）；蓝/粉/黄 `ThemeApp.tsx` 的“两座桥”旧注释改为实际四座桥及职责。全仓引用搜索 `NavigatorBridge=0`，源码导入图直接导入方 `0`；未修改任何 CSS、素材、音效、动画、路由或交互。
+- **保留依据**：`Hideout.tsx` 的复制器仍有实际调用；三主题四座桥均由各自 `ThemeApp` 挂载，不能按文本相似删除。保留21处 `@ts-nocheck` 与362处 `eslint-disable`，它们位于视觉权威或旧命令式/UMBRA模块，当前无ESLint配置可用于验证，未扩大整理范围。计划10相关 `oc.ts`、`a4.ts` 和三套 `CounselChatModal` 未触碰。
+- **验证（2026-10-24本轮）**：`node node_modules/typescript/bin/tsc --noEmit` exit 0；全量 Vitest **71文件/435项通过**；`npm run build` exit 0（主题CSS、TypeScript、Vite、PWA）；`git diff --check` 通过。构建保留既有字体运行时解析、CSS `@import`顺序、动态/静态双导入、大chunk、PWA主包不预缓存与`eval`警告。本轮未改页面或脚本逻辑，没有拿计划11/10的浏览器探针充当本轮结果。
 - **继承工作区**：两个Gradle行尾痕迹和未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
-- **未覆盖边界**：未做Android/iOS真机、弱网、并发多标签、最终用户视觉/听感验收；音频只证明主题文件与Web Audio触发，不等同扬声器听感通过；截图动画存在采样时刻差异，权威依据同时包括500余个源文件的逐字/别名一致结果。
-- **唯一下一任务/负责人**：用户在新聊天明确启动计划12「有证据的局部整理」后，由接手者只核重复制器/桥接、陈旧注释和禁止检查标记，仅清理已确认无人使用且获授权的内容；不删除demo、不重画UI、不进入打包或真机验收。本入口所在提交为本轮交接提交，用 `git log -1` 核实；未Push。
+- **未覆盖边界**：本轮没有新增页面级或真机验证需求；Android/iOS真机、弱网、并发多标签和最终主观听感仍属后续发布前边界。无法证明安全的检查抑制标记和历史模块继续保留。
+- **唯一下一任务/负责人**：用户明确启动计划13「候选版验证与打包」后，由接手者重新核现场并按计划执行候选构建；不得自动进入计划14真机验收。本入口所在提交为本轮整理提交，用 `git log -1` 核实；未Push。
 
 ## 历史交接 · 2026-10-24 · 计划08据点真实读写已完成，下一计划09待新聊天启动（交接提交 `9a3766f`）
 

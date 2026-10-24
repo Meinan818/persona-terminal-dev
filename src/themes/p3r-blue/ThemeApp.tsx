@@ -1,7 +1,8 @@
 /**
  * blue 主题整套入口（由 tools/integrate.mjs 生成，可手改）。
  * 等价于 demo 的 src/main.tsx：同样的 CSS 引入顺序 + 同样的 init 调用，渲染 demo 原 App（HashRouter + 外壳 + 页面注册表）。
- * 两座桥：RouteBridge（store.currentPage ⇄ #/p/<page>）、PrefsBridge（settings.darkMode / 低动效 ⇄ demo prefs）。
+ * 四座桥：RouteBridge（store.currentPage ⇄ #/p/<page>）、PrefsBridge（settings.darkMode / 低动效 ⇄ demo prefs）、
+ * GlobalOverlayHost（主题全局演出层）与 CallingCardOverlayHost（宣告卡结算层）。
  */
 import './tokens/p3r.css';
 import './fx/motifs/motifs.css';

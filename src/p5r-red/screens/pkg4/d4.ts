@@ -20,6 +20,16 @@ import { lifeAttrMapStatus } from '@/utils/lifeQuestAI';
 import { v4 as uuidv4 } from 'uuid';
 import { claimLocalSettlement, localLedgerSettlement } from '@/themes/ledgerSettlement';
 import { catMeta, fmtMoney, ledgerCycle } from '@/utils/ledgerFormat';
+import { demoCardOf, demoRev, spreadPositions, rollDailyCandidates, rollLongCandidates, bonusMultiplierOf, archiveRows } from '@/p5r-red/adapter/tarotData';
+import {
+  useTarotJobs, startDailyJob, continueDailyJob, startLongJob, continueLongJob,
+  startFollowJob, continueFollowJob, TAROT_CONTINUE_LIMIT,
+  readLongPending, clearLongPending, writeLongPending, ackLongJob, ackFollowJob,
+} from '@/utils/tarotJobs';
+import { buildOfflineDaily } from '@/utils/tarotOffline';
+import { aiConfigured } from '@/utils/aiClient';
+import { FORTUNE_META, TAROT_BY_ID, inferFortune, PERIOD_LABELS } from '@/constants/tarot';
+import { renderMarkdown } from '@/utils/markdown';
 const U = P5.ui;
 const RM = () => P5.reduced();
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -789,126 +799,320 @@ export const YR: any = { show: null };
   }
 
   /* ══════════════════ 星象 astrology/* ══════════════════ */
-  const DRAW3 = [MAJ[17], MAJ[7], MAJ[18]];
+  /* 占卜数据接真实 store（adapter/tarotData.ts）：
+     · 今日塔罗：dailyDivination（只认今天）→ 洗牌 → 三选一 → AI / 离线兜底 → saveDailyDivination
+     · 中长期：longReadings → 提问 + 周期 → 洗牌 → 六选三（长远档先注入底色）→ AI 流式 → saveLongReading
+     · 档案：真实 longReadings；归档 / 删除 / 追问都写真实 action
+     解读跑在模块级 tarotJobs（与蓝粉黄同一套）：离开这页不中断，回来接着看。
+     订阅统一走 bindLive()：舞台关闭时反注册，不会在后台空转。 */
+  /** 把一个回调绑定到 store / tarotJobs 的变化上，随容器销毁自动退订 */
+  function bindLive(host, onChange) {
+    let off = null;
+    const tick = () => { if (!document.contains(host)) { off && off(); return; } onChange(); };
+    const u1 = useAppStore.subscribe(tick);
+    const u2 = useTarotJobs.subscribe(tick);
+    off = () => { u1(); u2(); };
+    return () => off && off();
+  }
   const nameReveal = (el, name, rev) => {
     el.innerHTML = `<span class="od-nr-n">${[...name].map((ch) => `<span>${ch}</span>`).join('')}</span><em class="od-nr-o">${rev ? '逆位' : '正位'}</em>`;
     if (RM()) return;
     el.querySelectorAll('.od-nr-n span').forEach((s, i) => { s.style.opacity = 0; P5.spring({ stiffness: 460, damping: 24, delay: i * .07, onUpdate: (p) => { s.style.opacity = Math.min(1, p * 1.5); s.style.transform = `translateY(${P5.lerp(26, 0, p)}px) scale(${P5.lerp(.7, 1, p)})`; } }); });
-    const em = el.querySelector('em'); em.style.transform = 'scale(0) rotate(-18deg)'; P5.spring({ stiffness: 480, damping: 18, delay: .1 + name.length * .07, onUpdate: (p) => em.style.transform = `scale(${p}) rotate(${P5.lerp(-18, -4, p)}deg)` });
-  };
+    const em = el.querySelector('em'); em.style.transform = 'scale(0) rotate(-18deg)'; P5.spring({ stiffness: 480, damping: 18, delay: .1 + name.length * .07, onUpdate: (p) => em.style.transform = `scale(${p}) rotate(${P5.lerp(-18, -4, p)}deg)` }); };
   const shuffleHTML = () => `<div class="od-shuf" aria-label="正在洗牌">${[0, 1, 2, 3, 4, 5].map((i) => `<span style="--i:${i}">${cardBack(96, 60 + i)}</span>`).join('')}</div>`;
-  const dailyDone = (c, rev, offline) => `<div class="od-dd-done"><figure class="od-dd-card ${rev ? 'rev' : ''}">${tarotFace(c, { w: 150, rev })}</figure><div class="od-dd-info">
-      <div class="od-nr" data-nr></div><small class="od-en">${c.en}</small>${offline ? U.tag('离线', 'line') : ''}
-      <p class="od-dd-eff">⚡ <b>${AN('knowledge')}</b> 加成 ×${rev ? '1.2' : '1.5'} <small>今日该属性记录额外加成</small></p>
-      <blockquote class="od-dd-adv">今天适合把一件拖了很久的小事做完，然后奖励自己早点睡。</blockquote>
-      <p class="od-kws">${['希望', '疗愈', '指引'].map((k) => U.tag(k, 'paper')).join(' ')}</p>
-      <div class="od-dd-sec">${ttl('本牌含义')}<p>${rev ? '希望暂时被云遮住，但它没有离开。' : '黑夜里最亮的那颗星——方向正在变清楚。'}</p><p class="muted-d">反思：此刻你最想靠近的，是哪一盏灯？</p></div>
-      <div class="od-dd-sec">${ttl('总体运势')}<b class="od-fortune">${rev ? '小吉' : '大吉'}</b></div><p class="od-note-c">每日一抽，明日再会。</p></div></div>`;
+  /** 真实牌 → demo 卡对象（取不到退回占位，不崩） */
+  const cardOf = (id) => demoCardOf(id) ?? { id: 'm17', name: '星星', en: 'THE STAR', no: 'XVII', major: true };
+  const todayDiv = () => { const d = useAppStore.getState().dailyDivination; return d && d.date === toLocalDateKey() ? d : null; };
+  const dailyJob = () => { const j = useTarotJobs.getState().daily; return j && j.date === toLocalDateKey() ? j : null; };
+  /** 是否未配置 AI（中长期占卜必须配 AI；今日塔罗可离线兜底） */
+  const noApiNow = () => !aiConfigured(useAppStore.getState().settings);
+  /** 今日塔罗完成态（读真实记录） */
+  const dailyDone = (d) => {
+    const c = cardOf(d.cardId), rev = d.orientation === 'reversed';
+    const card = TAROT_BY_ID[d.cardId];
+    const attrName = P5.ATTR[d.effect.attribute]?.name ?? '';
+    const fortune = d.fortune ?? (card ? inferFortune(d.cardId, d.orientation) : 'zhongji');
+    const fm = FORTUNE_META[fortune] ?? FORTUNE_META.zhongji;
+    const mean = card ? card[d.orientation] : null;
+    return `<div class="od-dd-done"><figure class="od-dd-card ${rev ? 'rev' : ''}">${tarotFace(c, { w: 150, rev })}</figure><div class="od-dd-info">
+      <div class="od-nr" data-nr></div><small class="od-en">${c.en}</small>${d.source === 'offline' ? U.tag('离线', 'line') : ''}
+      <p class="od-dd-eff">⚡ <b>${attrName}</b> 加成 ×${d.effect.multiplier} <small>今日该属性记录额外加成</small></p>
+      <blockquote class="od-dd-adv">${esc(d.advice || '')}</blockquote>
+      <p class="od-kws">${(mean?.keywords ?? []).map((k) => U.tag(k, 'paper')).join(' ')}</p>
+      <div class="od-dd-sec">${ttl('本牌含义')}<p>${esc(mean?.meaning ?? '')}</p><p class="muted-d">反思：${esc(mean?.reflection ?? '')}</p></div>
+      <div class="od-dd-sec">${ttl('总体运势')}<b class="od-fortune">${fm.label}</b></div><p class="od-note-c">每日一抽，明日再会。</p></div></div>`;
+  };
+  /** 今日塔罗的三张候选（进程内保持同一副，重进不重抽） */
+  let DAILY_CANDS = null;
+  const dailyCandidates = () => (DAILY_CANDS ??= rollDailyCandidates());
   function openDailyDraw(st0 = 'idle') {
-    stage({ title: '今日星象', en: 'DAILY DRAW', seed: 37, cls: 'od-astro', body: `${demoBar([['idle', '未抽'], ['noapi', '未配置 API'], ['done', '已抽过'], ['error', '解读失败'], ['resume', '上次未完成']], st0)}<div data-host></div>`, onMount(w) {
-      const draw = stateful(w, [], st0, (st) => {
-        if (st === 'done') return dailyDone(DRAW3[0], false, false);
-        if (st === 'error') return `${U.shp('div', { kind: 'torn', seed: 641, cls: 'od-dd-err' }, `<b class="od-cut-big">解读遇到了阻碍</b><p class="sh-p">上次的解读没能完成——这张牌已经为你留着，直接继续就好。</p><p class="muted-d">可重试 AI 或改用离线兜底</p><div class="sh-acts">${U.btn('使用离线兜底', { tone: 'ink', seed: 642, attrs: 'data-act="offline"' })}${U.btn('重试 AI 解读', { tone: 'red', size: 'lg', seed: 643, attrs: 'data-act="retry"' })}</div>`)}`;
-        if (st === 'resume') return `${U.shp('div', { kind: 'torn', seed: 644, cls: 'od-dd-err' }, `<b class="od-cut-big">解读者正在落笔</b><p class="sh-p">上次的解读没写完，牌还是那张「星星 · 正位」。</p><div class="sh-acts">${U.btn('重新解读', { tone: 'ink', seed: 645, attrs: 'data-act="retry"' })}${U.btn('接着写', { tone: 'red', size: 'lg', seed: 646, attrs: 'data-act="retry"' })}</div>`)}`;
-        return `<div class="od-dd-idle"><b class="od-cut-big">今日的星象正在汇聚</b><p>每日仅一次，慎重选择 · 正位 / 逆位皆有意义</p>${st === 'noapi' ? `<p class="od-warn">未配置 API — 选择任意卡牌将使用离线兜底</p>` : '<p class="muted-d">结合您近期的处境</p>'}<div class="od-dd-deck">${cardBack(130, 5)}</div>${U.btn('接入命运', { tone: 'red', size: 'lg', seed: 647, attrs: 'data-act="begin"' })}</div>`;
-      }, (h, st) => {
-        const nr = h.querySelector('[data-nr]'); if (nr) nameReveal(nr, '星星', false);
-        h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
-          if (a === 'begin') runDraw(h, st === 'noapi');
-          if (a === 'retry') reading(h, false); if (a === 'offline') { h.innerHTML = dailyDone(DRAW3[0], false, true); nameReveal(h.querySelector('[data-nr]'), '星星', false); } });
-      });
-      function runDraw(h, offline) {
-        h.innerHTML = `<p class="od-dd-ph">正在洗牌…</p>${shuffleHTML()}`; P5.sfx('tarot', .6);
-        setTimeout(() => {
-          h.innerHTML = `<p class="od-dd-ph">从三张牌中选择一张</p><div class="od-dd-fan">${DRAW3.map((c, i) => `<button class="od-flip od-dd-pick" data-i="${i}" style="--r:${(i - 1) * 9}deg" aria-label="第 ${i + 1} 张"><span class="od-flip-in"><span class="od-flip-b">${cardBack(120, 70 + i)}</span><span class="od-flip-f">${tarotFace(c, { w: 120 })}</span></span></button>`).join('')}</div><p class="muted-d od-c">每日仅一次，慎重选择</p>`;
-          const ps = h.querySelectorAll('.od-dd-pick'); ps.forEach((p, i) => p.animate([{ transform: 'translateY(-40vh) scale(.5)', opacity: 0 }, { transform: `rotate(${(i - 1) * 9}deg)`, opacity: 1 }], { duration: 480, delay: i * 110, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'backwards' }));
-          ps.forEach((p) => p.onclick = () => { if (h.querySelector('.od-flip-in.on')) return; P5.sfx('tarot', .6); h.querySelector('.od-dd-ph').textContent = '揭示命运…'; ps.forEach((o) => o !== p && o.animate([{ opacity: 1 }, { opacity: .15, transform: 'scale(.86)' }], { duration: 300, fill: 'forwards' })); p.querySelector('.od-flip-in').classList.add('on'); setTimeout(() => reading(h, offline), RM() ? 0 : 1100); });
-        }, RM() ? 0 : 1300);
+    const j0 = dailyJob();
+    const initial = todayDiv() ? 'done' : j0 && (j0.status === 'thinking' || j0.status === 'streaming') ? 'reading' : j0 && j0.status === 'error' ? 'error' : (st0 === 'idle' ? 'idle' : st0);
+    let pickedIndex = j0 ? j0.pickedIndex : null;
+    let go = (st) => {};
+    let off = null;
+    stage({ title: '今日星象', en: 'DAILY DRAW', seed: 37, cls: 'od-astro', body: `${demoBar([['idle', '未抽'], ['noapi', '未配置 API'], ['done', '已抽过'], ['error', '解读失败']], initial)}<div data-host></div>`,
+      onMount(w) {
+        const draw = stateful(w, [], initial, (st) => {
+          if (st === 'done') { const d = todayDiv(); return d ? dailyDone(d) : `<div class="od-empty"><b>今天还没有抽牌</b><p>回到未抽态重新抽一次。</p></div>`; }
+          if (st === 'error') {
+            const j = dailyJob();
+            const msg = j?.error ? j.error : '上次的解读没能完成——这张牌已经为你留着，直接继续就好。';
+            const trunc = !!j?.truncated;
+            return `${U.shp('div', { kind: 'torn', seed: 641, cls: 'od-dd-err' }, `<b class="od-cut-big">解读遇到了阻碍</b><p class="sh-p">${esc(msg)}</p><p class="muted-d">可重试 AI 或改用离线兜底</p><div class="sh-acts">${trunc ? U.btn('接着写', { tone: 'red', size: 'lg', seed: 646, attrs: 'data-act="cont"' }) : ''}${U.btn('使用离线兜底', { tone: 'ink', seed: 642, attrs: 'data-act="offline"' })}${U.btn('重试 AI 解读', { tone: 'red', size: 'lg', seed: 643, attrs: 'data-act="retry"' })}</div>`)}`;
+          }
+          if (st === 'reading') {
+            const j = dailyJob();
+            const cands = dailyCandidates();
+            const idx = j ? j.pickedIndex : pickedIndex;
+            const c = cands[idx] ? cardOf(cands[idx].cardId) : null;
+            return `<div class="od-dd-read">${c ? `<figure>${tarotFace(c, { w: 120 })}</figure>` : ''}${thinking('解读者正在思索', '离开这页也不会中断')}<p class="od-stream" data-stream>${esc(j?.text ?? '')}</p></div>`;
+          }
+          return `<div class="od-dd-idle"><b class="od-cut-big">今日的星象正在汇聚</b><p>每日仅一次，慎重选择 · 正位 / 逆位皆有意义</p>${st === 'noapi' ? `<p class="od-warn">未配置 API — 选择任意卡牌将使用离线兜底</p>` : '<p class="muted-d">结合您近期的处境</p>'}<div class="od-dd-deck">${cardBack(130, 5)}</div>${U.btn('接入命运', { tone: 'red', size: 'lg', seed: 647, attrs: 'data-act="begin"' })}</div>`;
+        }, (h, st, redraw) => {
+          const nr = h.querySelector('[data-nr]'); if (nr) nameReveal(nr, '星星', false);
+          h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
+            if (a === 'begin') runDraw(h, st === 'noapi');
+            if (a === 'offline') void resumeDraw(true);
+            if (a === 'retry') void resumeDraw(false);
+            if (a === 'cont') continueDailyJob(useAppStore.getState().settings);
+          });
+        });
+        go = draw;
+        /* 任务 / store 变化 → 推进状态机（任务写完由 store 落库驱动 done） */
+        off = bindLive(w, () => {
+          const j = dailyJob();
+          if (todayDiv()) { go('done'); return; }
+          if (!j) return;
+          if (j.status === 'error') { go('error'); return; }
+          if (j.status === 'thinking' || j.status === 'streaming') {
+            const el = w.querySelector('[data-stream]');
+            if (el) el.textContent = j.text ?? '';
+            if (w.querySelector('.od-dd-idle') || w.querySelector('.od-dd-err')) go('reading');
+          }
+        });
+      },
+      onClose() { off && off(); },
+    });
+    function runDraw(h, offline) {
+      h.innerHTML = `<p class="od-dd-ph">正在洗牌…</p>${shuffleHTML()}`; P5.sfx('tarot', .6);
+      setTimeout(() => {
+        const cands = dailyCandidates();
+        h.innerHTML = `<p class="od-dd-ph">从三张牌中选择一张</p><div class="od-dd-fan">${cands.map((c, i) => `<button class="od-flip od-dd-pick" data-i="${i}" style="--r:${(i - 1) * 9}deg" aria-label="第 ${i + 1} 张"><span class="od-flip-in"><span class="od-flip-b">${cardBack(120, 70 + i)}</span><span class="od-flip-f">${tarotFace(cardOf(c.cardId), { w: 120 })}</span></span></button>`).join('')}</div><p class="muted-d od-c">每日仅一次，慎重选择</p>`;
+        const ps = h.querySelectorAll('.od-dd-pick'); ps.forEach((p, i) => p.animate([{ transform: 'translateY(-40vh) scale(.5)', opacity: 0 }, { transform: `rotate(${(i - 1) * 9}deg)`, opacity: 1 }], { duration: 480, delay: i * 110, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'backwards' }));
+        ps.forEach((p) => p.onclick = () => { if (h.querySelector('.od-flip-in.on')) return; P5.sfx('tarot', .6); h.querySelector('.od-dd-ph').textContent = '揭示命运…'; ps.forEach((o) => o !== p && o.animate([{ opacity: 1 }, { opacity: .15, transform: 'scale(.86)' }], { duration: 300, fill: 'forwards' })); p.querySelector('.od-flip-in').classList.add('on'); pickedIndex = +p.dataset.i; setTimeout(() => go('reading'), RM() ? 0 : 1100); });
+      }, RM() ? 0 : 1300);
+    }
+    /** 离线兜底 / 重试：都在已选牌的前提下进行 */
+    async function resumeDraw(offline) {
+      const j = dailyJob();
+      const idx = j ? j.pickedIndex : pickedIndex;
+      if (idx === null || idx === undefined) { go('idle'); return; }
+      const cands = dailyCandidates(), picked = cands[idx];
+      if (!picked) { go('idle'); return; }
+      const settings = useAppStore.getState().settings;
+      if (offline || !aiConfigured(settings)) {
+        const o = buildOfflineDaily(TAROT_BY_ID[picked.cardId], picked.orientation);
+        await useAppStore.getState().saveDailyDivination({
+          id: uuidv4(), date: toLocalDateKey(), drawnFrom: cands.map((c) => c.cardId), pickedIndex: idx,
+          cardId: picked.cardId, orientation: picked.orientation,
+          effect: { attribute: o.attribute, multiplier: bonusMultiplierOf(picked.orientation) },
+          narration: o.narration, advice: o.advice, fortune: o.fortune, source: 'offline', createdAt: new Date(),
+        });
+        go('done');
+        return;
       }
-      function reading(h, offline) {
-        if (offline) { h.innerHTML = dailyDone(DRAW3[0], false, true); nameReveal(h.querySelector('[data-nr]'), '星星', false); return; }
-        h.innerHTML = `<div class="od-dd-read"><figure>${tarotFace(DRAW3[0], { w: 120 })}</figure>${thinking('解读者正在思索', '离开这页也不会中断')}<p class="od-stream"></p></div>`;
-        const s = '星星正位。今天适合把一件拖了很久的小事做完……', el = h.querySelector('.od-stream'); let i = 0;
-        setTimeout(() => { h.querySelector('.od-think b').firstChild.textContent = '落笔中'; const t = setInterval(() => { el.textContent = s.slice(0, ++i); if (i >= s.length) { clearInterval(t); setTimeout(() => { h.innerHTML = dailyDone(DRAW3[0], false, false); nameReveal(h.querySelector('[data-nr]'), '星星', false); P5.panelIn(h.querySelectorAll('.od-dd-info > *'), { stagger: .05 }); }, 500); } }, 50); }, 900);
-      }
-    } });
+      go('reading');
+      startDailyJob({ settings, cardId: picked.cardId, orientation: picked.orientation, drawnFrom: cands.map((c) => c.cardId), pickedIndex: idx });
+    }
   }
   function openShuffle() { sheet('洗牌 ShuffleAnim', `${shuffleHTML()}<p class="muted-d od-c">卡背左右交错抖动 0.9s（循环演示）；reduced-motion 时静止。</p>`, null, 59); }
   function openNameReveal() {
-    sheet('牌名逐字 CardNameReveal', `<div class="od-nr od-nr-big" data-nr></div><div class="sh-acts">${U.btn('重放 · 正位', { tone: 'paper', seed: 651, attrs: 'data-u' })}${U.btn('重放 · 逆位', { tone: 'ink', seed: 652, attrs: 'data-r' })}</div><p class="muted-d">每字 spring 460/24、间隔 .07s；正 / 逆位章 spring 480/18。</p>`, (sh) => { const el = sh.querySelector('[data-nr]'); nameReveal(el, '命运之轮', false); sh.querySelector('[data-u]').onclick = () => nameReveal(el, '命运之轮', false); sh.querySelector('[data-r]').onclick = () => nameReveal(el, '倒吊人', true); }, 61);
+    sheet('牌名逐字 CardNameReveal', `<div class="od-nr od-nr-big" data-nr></div><div class="sh-acts">${U.btn('重放 · 正位', { tone: 'paper', seed: 651, attrs: 'data-u' })}${U.btn('重放 · 逆位', { tone: 'ink', seed: 652, attrs: 'data-r' })}</div><p class="muted-d od-c">每字 spring 460/24、间隔 .07s；正 / 逆位章 spring 480/18。</p>`, (sh) => { const el = sh.querySelector('[data-nr]'); nameReveal(el, '命运之轮', false); sh.querySelector('[data-u]').onclick = () => nameReveal(el, '命运之轮', false); sh.querySelector('[data-r]').onclick = () => nameReveal(el, '倒吊人', true); }, 61);
   }
   function openThinking() { sheet('思索环 ThinkingCircle', `<div class="od-c">${thinking('推演中', '三张牌正在被放在一起推演')}</div>`, null, 63); }
-
   /* ── 深度解读 LongReadingFlow ── */
-  const PERIOD = { recent: ['最近', '这几天的走向', '未来 2–3 天', ['昨日', '今日', '明日']], midterm: ['一段时间', '几周内的脉络', '2–4 周', ['现状', '阻碍', '方向']], longterm: ['长远打算', '月或更久的长期', '数月以上', ['根基', '进程', '结果']] };
-  const LR_CARDS = [[MAJ[9], false], [MAJ[16], true], [MAJ[19], false]];
-  const lrSpread = (per, base) => `<div class="od-lr-spread">${base ? `<figure class="base"><span>${tarotFace(MAJ[21], { w: 84 })}</span><figcaption>底色</figcaption></figure>` : ''}${LR_CARDS.map(([c, r], i) => `<figure><span>${tarotFace(c, { w: 92, rev: r })}</span><figcaption>${PERIOD[per][3][i]} · ${c.name}${r ? ' 逆' : ''}</figcaption></figure>`).join('')}</div>`;
-  const lrText = `<div class="od-lr-txt"><h4>现状 · 隐士</h4><p>你正在一个人消化很多事。这不是坏事——安静的时候，问题会显出它真正的轮廓。</p><h4>阻碍 · 塔（逆位）</h4><p>你害怕的那场「崩塌」其实已经在慢慢发生，与其硬撑，不如主动拆掉一面不必要的墙。</p><h4>方向 · 太阳</h4><p>两到四周后会有一件让你松一口气的事。把精力留给它。</p><p class="od-fortune-line">吉凶：<b class="od-fortune">中吉</b></p></div>`;
-  const LR_STREAM = '隐士、塔（逆位）、太阳。这三张放在一起，说的是一段先收、后放的路。\n\n现状 · 隐士：你正在一个人消化很多事。安静的时候，问题会显出它真正的轮廓。\n阻碍 · 塔（逆位）：你害怕的那场「崩塌」其实已经在慢慢发生，与其硬撑，不如主动拆掉一面不必要的墙。\n方向 · 太阳：两到四周后会有一件让你松一口气的事。把精力留给它。';
-  function openLongReading(st0 = 'form') {
-    let per = 'midterm', picked = [];
-    stage({ title: '深度解读', en: 'READING', seed: 41, cls: 'od-astro', body: `${demoBar([['form', '提问'], ['pending', '上次未完成'], ['noapi', '未配置 API'], ['base', '长远 · 注入波纹'], ['picking', '六选三'], ['reading', '解读中'], ['stopped', '被截断'], ['error', '生成失败'], ['done', '解读详情'], ['followerr', '追问失败']], st0)}<div data-host></div>`, onMount(w, close) {
-      const draw = stateful(w, [], st0, (st) => {
-        const pos = (p) => (p === 'longterm' ? ['底色', ...PERIOD[p][3]] : PERIOD[p][3]).join(' · ');
-        if (st === 'form' || st === 'noapi' || st === 'pending') return `${st === 'pending' ? U.shp('div', { kind: 'cut', seed: 661, tone: 'ink', cls: 'od-lr-pend' }, `<b>上次的占卜没有生成完</b><small>「最近总是睡不好，是不是该换份工作？」· 一段时间</small><span class="sh-acts">${U.btn('放弃', { tone: 'paper', size: 'sm', seed: 662, attrs: 'data-act="drop"' })}${U.btn('用同一副牌继续', { tone: 'red', size: 'sm', seed: 663, attrs: 'data-act="cont"' })}</span>`) : ''}
-          ${U.shp('div', { kind: 'torn', seed: 664, cls: 'od-lr-form' }, `${st === 'noapi' ? '<p class="od-warn">中长期占卜需要 AI 解读，请先在「设置 → AI 服务」中配置 API 密钥。</p>' : ''}<label class="fld"><span>你想要询问什么？</span><textarea class="inp" rows="3" placeholder="例：我最近对工作的方向感到迷茫，接下来该如何取舍？"></textarea></label>
-            <div class="fld"><span>时间周期</span><div class="od-per">${Object.entries(PERIOD).map(([k, [l, h, d]]) => `<button data-per="${k}" aria-pressed="${k === per}"><b>${l}</b><small>${h}</small><em>${d}</em></button>`).join('')}</div></div>
-            <p class="od-lr-pos">牌阵：<b>${pos(per)}</b></p>${U.btn('🂠 开始洗牌', { tone: 'red', size: 'lg', seed: 665, attrs: `data-act="start" ${st === 'noapi' ? 'disabled' : ''}`, cls: `od-wide ${st === 'noapi' ? 'od-dis' : ''}` })}`)}`;
-        if (st === 'base') return `<div class="od-lr-base"><b class="od-cut-big" data-bt>请您注入命运的波纹</b><p data-bs>长按牌堆，直到波纹注满</p><button class="od-hold od-deck" aria-label="长按注入命运的波纹"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="none" stroke="rgba(242,233,218,.3)" stroke-width="4"/><circle class="od-hold-p" cx="50" cy="50" r="46" fill="none" stroke="var(--paper)" stroke-width="5" stroke-dasharray="0 290" transform="rotate(-90 50 50)"/></svg><span class="od-deck-c">${cardBack(110, 81)}</span></button>${U.btn('返回', { tone: 'ink', size: 'sm', seed: 666, attrs: 'data-act="back"' })}</div>`;
-        if (st === 'picking') return `<p class="od-dd-ph">从六张牌中选出三张 <b data-n>0</b>/3</p><div class="od-lr-six">${Array.from({ length: 6 }, (_, i) => `<button class="od-lr-c" data-i="${i}" aria-pressed="false" aria-label="第 ${i + 1} 张">${cardBack(90, 90 + i)}<small></small></button>`).join('')}</div><div class="sh-acts od-c">${U.btn('返回', { tone: 'ink', seed: 667, attrs: 'data-act="back"' })}${U.btn('揭示牌阵…', { tone: 'red', size: 'lg', seed: 668, attrs: 'data-act="reveal" disabled', cls: 'od-dis' })}</div>`;
-        if (st === 'reading' || st === 'stopped' || st === 'error') return `<p class="od-dd-ph">三张牌依次翻开，等候星象的解读</p>${lrSpread(per, per === 'longterm')}<div class="p4-lr-box"><div data-think>${thinking('正在展开牌阵')}</div><div class="od-stream p4-lr-stream" data-stream hidden></div></div>
-          <div class="sh-acts od-c" data-live hidden>${U.btn('停止', { tone: 'paper', size: 'sm', seed: 678, attrs: 'data-act="stop"' })}</div>
-          <div class="p4-lr-err" data-err hidden><p class="od-warn" data-errmsg></p><div class="sh-acts od-c"><span data-trunc>${U.btn('接着写', { tone: 'red', size: 'sm', seed: 671, attrs: 'data-act="resume"' })}${U.btn('就用这些', { tone: 'paper', size: 'sm', seed: 670, attrs: 'data-act="done"' })}</span>${U.btn('返回抽卡重试', { tone: 'ink', size: 'sm', seed: 669, attrs: 'data-act="picking"' })}</div></div>
-          <p class="muted-d od-c">离开这页也不会中断，回来接着看。</p>`;
-        /* done / followerr */
-        return `${U.shp('section', { kind: 'torn', seed: 672, cls: 'od-lr-done' }, `<div class="od-lr-q"><small class="od-k">问</small><b>最近总是睡不好，是不是该换份工作？</b><span>${U.tag(PERIOD[per][0])}${U.tag(md(today), 'ink')}${U.tag('活跃', 'line')}</span></div>${lrSpread(per, per === 'longterm')}${lrText}
-          <div class="od-lr-follow"><button class="od-addline" data-act="follow">追问（仅一次） ▼</button><div class="od-lr-fbox" hidden><textarea class="inp" rows="2" placeholder="想对先前的解读再深入问什么？"></textarea><div class="sh-acts">${U.btn('收起', { tone: 'ink', size: 'sm', seed: 673, attrs: 'data-act="fold"' })}${U.btn('抽一张牌', { tone: 'red', seed: 674, attrs: 'data-act="fdraw"' })}</div></div></div>
-          <div class="sh-acts">${U.btn('窥探命运', { tone: 'paper', size: 'sm', seed: 675, attrs: 'data-act="glimpse"' })}${U.btn('归档', { tone: 'ink', size: 'sm', seed: 676, attrs: 'data-act="arch"' })}${U.btn('删除', { tone: 'red', size: 'sm', seed: 677, attrs: 'data-act="del"' })}</div>`)}`;
-      }, (h, st, draw) => {
-        if (st === 'reading' || st === 'stopped' || st === 'error') {
-          const full = LR_STREAM, el = h.querySelector('[data-stream]'), th = h.querySelector('[data-think]'), live = h.querySelector('[data-live]'), er = h.querySelector('[data-err]');
-          P5.panelIn(h.querySelectorAll('.od-lr-spread figure'), { stagger: .25, from: 'up' });
-          let i = 0, t = 0; const k = st === 'stopped' ? Math.floor(full.length * .45) : full.length;
-          const showErr = (trunc) => { live.hidden = true; er.hidden = false; /* 文案 = 真实 utils/tarotJobs.ts（LENGTH_CUT / INTERRUPTED + CONTINUE_HINT）与 tarotAI.formatApiError（网络失败） */ h.querySelector('[data-errmsg]').textContent = trunc ? `${trunc === 'cut' ? '写到一半被截断了（模型输出预算不足）。' : '连接中途断开，正文没有收完。'}已写的部分留着，可以让它接着写。` : '连不上 AI 服务：网络断了或不稳定，稍后再试一次。网页版用中转站时，也可能是它没开放跨域访问（CORS）。'; h.querySelector('[data-trunc]').hidden = !trunc; };
-          const run = (to) => { th.hidden = true; el.hidden = false; live.hidden = false; er.hidden = true; t = setInterval(() => { if (!document.contains(el)) return clearInterval(t); i = Math.min(to, i + 2); el.innerHTML = esc(full.slice(0, i)).replace(/\n/g, '<br>') + '<i class="oa-caret"></i>'; if (i >= to) { clearInterval(t); if (to < full.length) showErr('cut'); else { live.hidden = true; el.innerHTML = esc(full).replace(/\n/g, '<br>'); setTimeout(() => { if (document.contains(el)) draw('done'); }, 700); } } }, RM() ? 1 : 40); };
-          if (st === 'error') { setTimeout(() => { th.hidden = true; showErr(false); }, RM() ? 0 : 900); }
-          else { let pc = 0; const pi = setInterval(() => { if (!document.contains(th)) return clearInterval(pi); pc = Math.min(100, pc + 9); th.innerHTML = thinking('三张牌正在被放在一起推演', `${pc}%`); if (pc >= 100) { clearInterval(pi); run(k); } }, RM() ? 1 : 110); th.innerHTML = thinking('正在展开牌阵'); }
-          h.__stop = () => { clearInterval(t); showErr('net'); };
-          h.__resume = () => run(full.length);
-        }
-        if (st === 'base') { const hold = h.querySelector('.od-hold'), p = hold.querySelector('.od-hold-p'); let t0 = 0, raf = 0, done = false; const step = (n) => { const k = Math.min(1, (n - t0) / 1400); p.setAttribute('stroke-dasharray', `${(290 * k).toFixed(0)} 290`); hold.style.transform = `scale(${1 + k * .05}) rotate(${Math.sin(n / 40) * k * 2}deg)`; if (k < 1) raf = requestAnimationFrame(step); else { done = true; raf = 0; hold.style.transform = ''; h.querySelector('[data-bt]').textContent = '命运的波纹已注入'; h.querySelector('[data-bs]').textContent = '底色已定，稍后与三张牌一起翻开'; P5.sfx('tarot', .6); setTimeout(() => draw('picking'), 1100); } };
-          hold.addEventListener('pointerdown', (e) => { if (done) return; e.preventDefault(); t0 = performance.now(); raf = requestAnimationFrame(step); }); ['pointerup', 'pointerleave'].forEach((k) => hold.addEventListener(k, () => { if (raf) { cancelAnimationFrame(raf); raf = 0; p.setAttribute('stroke-dasharray', '0 290'); hold.style.transform = ''; } })); }
-        if (st === 'picking') { picked = []; const n = h.querySelector('[data-n]'), rv = h.querySelector('[data-act="reveal"]'); h.querySelectorAll('.od-lr-c').forEach((c) => c.onclick = () => { const i = picked.indexOf(c); if (i >= 0) picked.splice(i, 1); else if (picked.length < 3) picked.push(c); h.querySelectorAll('.od-lr-c').forEach((x) => { const k = picked.indexOf(x); x.setAttribute('aria-pressed', k >= 0); x.querySelector('small').textContent = k >= 0 ? PERIOD[per][3][k] : ''; }); n.textContent = picked.length; rv.disabled = picked.length < 3; rv.classList.toggle('od-dis', picked.length < 3); }); }
-        h.addEventListener('click', (e) => { const pb = e.target.closest('[data-per]'); if (pb) { per = pb.dataset.per; h.querySelectorAll('[data-per]').forEach((x) => x.setAttribute('aria-pressed', x === pb)); h.querySelector('.od-lr-pos b').textContent = (per === 'longterm' ? ['底色', ...PERIOD[per][3]] : PERIOD[per][3]).join(' · '); return; }
-          const b = e.target.closest('[data-act]'); if (!b || b.disabled) return; const a = b.dataset.act;
-          if (a === 'start' || a === 'cont') { P5.sfx('tarot', .6); h.innerHTML = `<p class="od-dd-ph">正在洗牌…</p>${shuffleHTML()}`; setTimeout(() => draw(a === 'cont' ? 'reading' : per === 'longterm' ? 'base' : 'picking'), RM() ? 0 : 1100); }
-          if (a === 'drop') b.closest('.od-lr-pend').remove();
-          if (a === 'back') draw('form'); if (a === 'reveal') draw('reading'); if (a === 'picking') draw('picking'); if (a === 'done') draw('done'); if (a === 'reading') draw('reading');
-          if (a === 'follow') { h.querySelector('.od-lr-fbox').hidden = false; b.textContent = '追问（仅一次） ▲'; }
-          if (a === 'fold') { h.querySelector('.od-lr-fbox').hidden = true; h.querySelector('[data-act="follow"]').textContent = '追问（仅一次） ▼'; }
-          if (a === 'stop') h.__stop && h.__stop();
-          if (a === 'resume') h.__resume && h.__resume();
-          if (a === 'fdraw') { const box = h.querySelector('.od-lr-fbox'); let fail = st === 'followerr'; box.innerHTML = `<p class="od-dd-ph">从三张中选一张</p><div class="od-dd-fan sm">${[MAJ[1], MAJ[14], MAJ[4]].map((c, i) => `<button class="od-flip od-dd-pick" data-f="${i}" style="--r:${(i - 1) * 8}deg"><span class="od-flip-in"><span class="od-flip-b">${cardBack(80, 100 + i)}</span><span class="od-flip-f">${tarotFace(c, { w: 80 })}</span></span></button>`).join('')}</div>`;
-            const answer = (p) => { let pc = 0; box.innerHTML = thinking('正在思索'); const pi = setInterval(() => { if (!document.contains(box)) return clearInterval(pi); pc = Math.min(100, pc + 12); box.innerHTML = thinking('正在思索', `${pc}%`); if (pc < 100) return; clearInterval(pi);
-              if (fail) { box.innerHTML = `<p class="od-warn">回应失败</p><div class="sh-acts">${U.btn('重试', { tone: 'red', size: 'sm', seed: 680, attrs: 'data-act="fretry"' })}</div>`; box.querySelector('[data-act="fretry"]').onclick = (ev) => { ev.stopPropagation(); fail = false; answer(p); }; return; }
-              const name = ['魔术师', '节制', '皇帝'][+p.dataset.f], txt = '先不急着辞职。用两周时间把作息调回来，再判断累的是工作本身，还是长期睡眠不足。';
-              box.innerHTML = `<div class="od-lr-txt"><h4>追问（1/1） · ${name}</h4><p data-ans></p></div><p class="muted-d" data-note hidden>追问已记录，可在档案中回看。</p>`; const ans = box.querySelector('[data-ans]'); let j = 0; const ti = setInterval(() => { if (!document.contains(ans)) return clearInterval(ti); j = Math.min(txt.length, j + 1); ans.innerHTML = esc(txt.slice(0, j)) + (j < txt.length ? '<i class="oa-caret"></i>' : ''); if (j >= txt.length) { clearInterval(ti); box.querySelector('[data-note]').hidden = false; } }, RM() ? 1 : 45);
-              h.querySelector('[data-act="follow"]').disabled = true; h.querySelector('[data-act="follow"]').textContent = '追问（1/1）'; }, RM() ? 1 : 120); };
-            box.querySelectorAll('[data-f]').forEach((p) => p.onclick = () => { p.querySelector('.od-flip-in').classList.add('on'); setTimeout(() => answer(p), RM() ? 0 : 800); }); }
-          if (a === 'arch') { const on = b.querySelector('span').textContent === '归档'; b.querySelector('span').textContent = on ? '取消归档' : '归档'; const t = h.querySelector('.od-lr-q .tag.line'); t.textContent = on ? '已归档' : '活跃'; P5.toast(on ? '已归档' : '已取消归档'); }
-          if (a === 'del') confirm('删除这次占卜', '这次占卜和追问会从档案里删除。', '确认删除', () => { close(); P5.toast('已删除'); });
-          if (a === 'glimpse') openFateGlimpse();
+  const PERIODS: LongReadingPeriod[] = ['recent', 'midterm', 'longterm'];
+  const longJob = () => useTarotJobs.getState().long;
+  const followJob = () => useTarotJobs.getState().follow;
+  /** 牌阵图（真实 picked → demo 卡面；底色牌在最前并标 base） */
+  const lrSpread = (picked, period) => `<div class="od-lr-spread">${picked.map((d, i) => {
+    const c = cardOf(d.cardId), rev = d.orientation === 'reversed';
+    const pos = spreadPositions(period, picked.length)[i] ?? '';
+    return `<figure${i === 0 && picked.length === 4 ? ' class="base"' : ''}><span>${tarotFace(c, { w: 92, rev })}</span><figcaption>${pos} · ${c.name}${rev ? ' 逆' : ''}</figcaption></figure>`;
+  }).join('')}</div>`;
+  const posText = (p) => spreadPositions(p, p === 'longterm' ? 4 : 3).join(' · ');
+  /** 真实解读正文 → demo 的分段标题 + 段落 */
+  const lrText = (content) => `<div class="od-lr-txt">${mdToSections(content) || '<p class="muted-d">这份解读还没有正文。</p>'}</div>`;
+  const mdToSections = (md) => {
+    if (!md) return '';
+    const parts = md.split(/\n(?=#{2,4}\s)/).map((s) => s.trim()).filter(Boolean);
+    if (!parts.length) return `<p>${esc(md)}</p>`;
+    return parts.map((p) => {
+      const m = p.match(/^#{2,4}\s*(.+?)\s*\n([\s\S]*)$/);
+      if (!m) return `<p>${esc(p)}</p>`;
+      return `<h4>${esc(m[1])}</h4><p>${esc(m[2].trim())}</p>`;
+    }).join('');
+  };
+  function openLongReading(st0 = 'form', readingId = null) {
+    let per = 'midterm', picked = [], base = null, cands = [];
+  let question = '';
+    let reading = readingId ? useAppStore.getState().longReadings.find((r) => r.id === readingId) ?? null : null;
+    let off = null;
+    let go = (st) => {};
+    stage({ title: '深度解读', en: 'READING', seed: 41, cls: 'od-astro', body: `${demoBar([['form', '提问'], ['pending', '上次未完成'], ['noapi', '未配置 AI'], ['base', '长远 · 注入波纹'], ['picking', '六选三'], ['reading', '解读中'], ['stopped', '被截断'], ['error', '生成失败'], ['done', '解读详情'], ['followerr', '追问失败']], st0)}<div data-host></div>`,
+      onMount(w, close) {
+        const r_id = () => reading?.id ?? longJob()?.id ?? null;
+        const draw = stateful(w, [], st0, (st) => {
+          const pos = (p) => posText(p);
+          if (st === 'form' || st === 'noapi' || st === 'pending') {
+            const pend = readLongPending();
+            return `${st === 'pending' && pend ? U.shp('div', { kind: 'cut', seed: 661, tone: 'ink', cls: 'od-lr-pend' }, `<b>上次的占卜没有生成完</b><small>${esc(pend.question)} · ${PERIOD_LABELS[pend.period].label}</small><span class="sh-acts">${U.btn('放弃', { tone: 'paper', size: 'sm', seed: 662, attrs: 'data-act="drop"' })}${U.btn('用同一副牌继续', { tone: 'red', size: 'sm', seed: 663, attrs: 'data-act="cont"' })}</span>`) : ''}
+              ${U.shp('div', { kind: 'torn', seed: 664, cls: 'od-lr-form' }, `${noApiNow() ? '<p class="od-warn">中长期占卜需要 AI 解读，请先在「设置 → AI 服务」中配置 API 密钥。</p>' : ''}<label class="fld"><span>你想要询问什么？</span><textarea class="inp" rows="3" data-q placeholder="例：我最近对工作的方向感到迷茫，接下来该如何取舍？">${esc(pend?.question ?? '')}</textarea></label>
+                <div class="fld"><span>时间周期</span><div class="od-per">${PERIODS.map((k) => { const m = PERIOD_LABELS[k]; return `<button data-per="${k}" aria-pressed="${k === per}"><b>${m.label}</b><small>${m.hint}</small><em>${m.days}</em></button>`; }).join('')}</div></div>
+                <p class="od-lr-pos">牌阵：<b>${pos(per)}</b></p>${U.btn('🂠 开始洗牌', { tone: 'red', size: 'lg', seed: 665, attrs: `data-act="start" ${noApiNow() ? 'disabled' : ''}`, cls: `od-wide ${noApiNow() ? 'od-dis' : ''}` })}`)}`;
+          }
+          if (st === 'base') return `<div class="od-lr-base"><b class="od-cut-big" data-bt>请您注入命运的波纹</b><p data-bs>长按牌堆，直到波纹注满</p><button class="od-hold od-deck" aria-label="长按注入命运的波纹"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="none" stroke="rgba(242,233,218,.3)" stroke-width="4"/><circle class="od-hold-p" cx="50" cy="50" r="46" fill="none" stroke="var(--paper)" stroke-width="5" stroke-dasharray="0 290" transform="rotate(-90 50 50)"/></svg><span class="od-deck-c">${cardBack(110, 81)}</span></button>${U.btn('返回', { tone: 'ink', size: 'sm', seed: 666, attrs: 'data-act="back"' })}</div>`;
+          if (st === 'picking') return `<p class="od-dd-ph">从六张牌中选出三张 <b data-n>0</b>/3</p><div class="od-lr-six">${Array.from({ length: 6 }, (_, i) => `<button class="od-lr-c" data-i="${i}" aria-pressed="false" aria-label="第 ${i + 1} 张">${cardBack(90, 90 + i)}<small></small></button>`).join('')}</div><div class="sh-acts od-c">${U.btn('返回', { tone: 'ink', size: 'sm', seed: 667, attrs: 'data-act="back"' })}${U.btn('揭示牌阵…', { tone: 'red', size: 'lg', seed: 668, attrs: 'data-act="reveal" disabled', cls: 'od-dis' })}</div>`;
+          if (st === 'reading' || st === 'stopped' || st === 'error') {
+            const j = longJob();
+            const three = j ? j.pickedIndices.map((i) => j.candidates[i]).filter(Boolean) : [];
+            const shown = j?.base ? [j.base, ...three] : three;
+            return `<p class="od-dd-ph">三张牌依次翻开，等候星象的解读</p>${shown.length ? lrSpread(shown, j?.period ?? per) : ''}<div class="p4-lr-box"><div data-think>${thinking('正在展开牌阵')}</div><div class="od-stream p4-lr-stream" data-stream hidden>${esc(j?.text ?? '')}</div></div>
+              <div class="sh-acts od-c" data-live hidden>${U.btn('停止', { tone: 'paper', size: 'sm', seed: 678, attrs: 'data-act="stop"' })}</div>
+              <div class="p4-lr-err" data-err hidden><p class="od-warn" data-errmsg></p><div class="sh-acts od-c"><span data-trunc>${U.btn('接着写', { tone: 'red', size: 'sm', seed: 671, attrs: 'data-act="resume"' })}${U.btn('就用这些', { tone: 'paper', size: 'sm', seed: 670, attrs: 'data-act="done"' })}</span>${U.btn('返回抽卡重试', { tone: 'ink', size: 'sm', seed: 669, attrs: 'data-act="picking"' })}</div></div>
+              <p class="muted-d od-c">离开这页也不会中断，回来接着看。</p>`;
+          }
+          /* done / followerr：读真实 reading */
+          if (!reading) { const j = longJob(); reading = j?.result ?? useAppStore.getState().longReadings.find((x) => x.id === j?.id) ?? null; }
+          if (!reading) return `<div class="od-empty"><b>还没有这份解读</b><p>回到提问页重新发起一次。</p></div>`;
+          const r = reading;
+          const used = (r.followUps?.length ?? 0) > 0;
+          return `${U.shp('section', { kind: 'torn', seed: 672, cls: 'od-lr-done' }, `<div class="od-lr-q"><small class="od-k">问</small><b>${esc(r.question)}</b><span>${U.tag(PERIOD_LABELS[r.period].label)}${U.tag(mdKey(r.createdAt), 'ink')}${U.tag(r.archived ? '已归档' : '活跃', 'line')}</span></div>${lrSpread(r.picked, r.period)}${lrText(r.content)}
+            ${used ? (r.followUps ?? []).map((f) => `<div class="od-lr-txt"><h4>追问 · ${esc(f.question)}</h4><p>${esc(f.content)}</p></div>`).join('') : `<div class="od-lr-follow"><button class="od-addline" data-act="follow">追问（仅一次） ▼</button><div class="od-lr-fbox" hidden><textarea class="inp" rows="2" data-fq placeholder="想对先前的解读再深入问什么？"></textarea><div class="sh-acts">${U.btn('收起', { tone: 'ink', size: 'sm', seed: 673, attrs: 'data-act="fold"' })}${U.btn('抽一张牌', { tone: 'red', seed: 674, attrs: 'data-act="fdraw"' })}</div></div></div>`}
+            <div class="sh-acts">${U.btn('窥探命运', { tone: 'paper', size: 'sm', seed: 675, attrs: 'data-act="glimpse"' })}${U.btn(r.archived ? '取消归档' : '归档', { tone: 'ink', size: 'sm', seed: 676, attrs: 'data-act="arch"' })}${U.btn('删除', { tone: 'red', size: 'sm', seed: 677, attrs: 'data-act="del"' })}</div>`)}`;
+        }, (h, st, redraw) => {
+          go = redraw;
+          if (st === 'reading' || st === 'stopped' || st === 'error') {
+            const j = longJob();
+            const el = h.querySelector('[data-stream]'), th = h.querySelector('[data-think]'), live = h.querySelector('[data-live]'), er = h.querySelector('[data-err]');
+            P5.panelIn(h.querySelectorAll('.od-lr-spread figure'), { stagger: .25, from: 'up' });
+            const showErr = (trunc) => { live.hidden = true; er.hidden = false; h.querySelector('[data-errmsg]').textContent = trunc ? `${trunc === 'cut' ? '写到一半被截断了（模型输出预算不足）。' : '连接中途断开，正文没有收完。'}已写的部分留着，可以让它接着写。` : (j?.error ?? '连不上 AI 服务：网络断了或不稳定，稍后再试一次。'); h.querySelector('[data-trunc]').hidden = !trunc; };
+            if (j && j.status === 'error') { setTimeout(() => { th.hidden = true; showErr(!!j.truncated); }, RM() ? 0 : 900); }
+            else if (j && (j.status === 'thinking' || j.status === 'streaming')) { th.hidden = true; el.hidden = false; el.innerHTML = esc(j.text ?? '').replace(/\n/g, '<br>') + '<i class="oa-caret"></i>'; }
+            h.__stop = () => showErr('net');
+            h.__resume = () => continueLongJob(useAppStore.getState().settings);
+          }
+          if (st === 'base') { const hold = h.querySelector('.od-hold'), p = hold.querySelector('.od-hold-p'); let t0 = 0, raf = 0, done = false; const step = (n) => { const k = Math.min(1, (n - t0) / 1400); p.setAttribute('stroke-dasharray', `${(290 * k).toFixed(0)} 290`); hold.style.transform = `scale(${1 + k * .05}) rotate(${Math.sin(n / 40) * k * 2}deg)`; if (k < 1) raf = requestAnimationFrame(step); else { done = true; raf = 0; hold.style.transform = ''; h.querySelector('[data-bt]').textContent = '命运的波纹已注入'; h.querySelector('[data-bs]').textContent = '底色已定，稍后与三张牌一起翻开'; P5.sfx('tarot', .6); base = rollLongCandidates()[0]; setTimeout(() => redraw('picking'), 1100); } }; hold.addEventListener('pointerdown', (e) => { if (done) return; e.preventDefault(); t0 = performance.now(); raf = requestAnimationFrame(step); }); ['pointerup', 'pointerleave'].forEach((k) => hold.addEventListener(k, () => { if (raf) { cancelAnimationFrame(raf); raf = 0; p.setAttribute('stroke-dasharray', '0 290'); hold.style.transform = ''; } })); }
+          if (st === 'picking') { picked = []; const n = h.querySelector('[data-n]'), rv = h.querySelector('[data-act="reveal"]'); h.querySelectorAll('.od-lr-c').forEach((c) => c.onclick = () => { const i = picked.indexOf(c); if (i >= 0) picked.splice(i, 1); else if (picked.length < 3) picked.push(c); h.querySelectorAll('.od-lr-c').forEach((x) => { const k = picked.indexOf(x); x.setAttribute('aria-pressed', k >= 0); x.querySelector('small').textContent = k >= 0 ? spreadPositions(per, 3)[k] : ''; }); n.textContent = picked.length; rv.disabled = picked.length < 3; rv.classList.toggle('od-dis', picked.length < 3); }); }
+          h.addEventListener('click', (e) => { const pb = e.target.closest('[data-per]'); if (pb) { per = pb.dataset.per; h.querySelectorAll('[data-per]').forEach((x) => x.setAttribute('aria-pressed', x === pb)); h.querySelector('.od-lr-pos b').textContent = posText(per); return; }
+            const b = e.target.closest('[data-act]'); if (!b || b.disabled) return; const a = b.dataset.act;
+            if (a === 'start') {
+              const q = h.querySelector('[data-q]')?.value.trim() ?? '';
+              if (!q) { P5.toast('先写下你想问什么'); return; }
+              question = q;
+              /* 与蓝粉黄同口径：中长期占卜无法离线完成，未配 AI 就不放行（不假装能解） */
+              if (noApiNow()) { P5.toast('请先在「设置 → AI 服务」中配置 API 密钥'); redraw('noapi'); return; }
+              P5.sfx('tarot', .6);
+              base = null;
+              h.innerHTML = `<p class="od-dd-ph">正在洗牌…</p>${shuffleHTML()}`;
+              setTimeout(() => { cands = rollLongCandidates(); redraw(per === 'longterm' ? 'base' : 'picking'); }, RM() ? 0 : 1100);
+              return;
+            }
+            if (a === 'cont') { const p = readLongPending(); if (!p) { redraw('form'); return; } per = p.period; cands = p.candidates; base = p.base ?? null; P5.sfx('tarot', .6); redraw('reading'); startLongJob({ settings: useAppStore.getState().settings, question: p.question, period: p.period, candidates: p.candidates, pickedIndices: p.pickedIndices, base: p.base, id: p.id }); return; }
+            if (a === 'drop') { clearLongPending(); redraw('form'); return; }
+            if (a === 'back') redraw('form');
+            if (a === 'reveal') {
+              if (picked.length < 3) return;
+              const idxs = picked.map((c) => +c.dataset.i).filter((i) => i < cands.length);
+              if (idxs.length < 3) { P5.toast('重新洗一次牌'); redraw('picking'); return; }
+              if (!question) { P5.toast('先写下你想问什么'); redraw('form'); return; }
+              const baseCard = per === 'longterm' && base ? base : undefined;
+              redraw('reading');
+              startLongJob({ settings: useAppStore.getState().settings, question, period: per, candidates: cands, pickedIndices: idxs, base: baseCard });
+              return;
+            }
+            if (a === 'picking') redraw('picking');
+            if (a === 'done') { void acceptLongJob(useAppStore.getState().settings).then(() => { reading = useAppStore.getState().longReadings.find((x) => x.id === longJob()?.id) ?? reading; redraw('done'); }); return; }
+            if (a === 'stop') h.__stop && h.__stop();
+            if (a === 'resume') h.__resume && h.__resume();
+            if (a === 'follow') { h.querySelector('.od-lr-fbox').hidden = false; b.textContent = '追问（仅一次） ▲'; }
+            if (a === 'fold') { h.querySelector('.od-lr-fbox').hidden = true; h.querySelector('[data-act="follow"]').textContent = '追问（仅一次） ▼'; }
+            if (a === 'fdraw') {
+              const box = h.querySelector('.od-lr-fbox'), fq = box.querySelector('[data-fq]').value.trim();
+              if (!fq) { P5.toast('先写下你想追问什么'); return; }
+              if (!reading) { P5.toast('这份解读还没存好，稍后再追问'); return; }
+              const three = rollLongCandidates().slice(0, 3);
+              const target = reading;
+              box.innerHTML = `<p class="od-dd-ph">从三张中选一张</p><div class="od-dd-fan sm">${three.map((c, i) => `<button class="od-flip od-dd-pick" data-f="${i}" style="--r:${(i - 1) * 8}deg"><span class="od-flip-in"><span class="od-flip-b">${cardBack(80, 100 + i)}</span><span class="od-flip-f">${tarotFace(cardOf(c.cardId), { w: 80 })}</span></span></button>`).join('')}</div>`;
+              box.querySelectorAll('[data-f]').forEach((p) => p.onclick = () => {
+                p.querySelector('.od-flip-in').classList.add('on');
+                setTimeout(() => { box.innerHTML = thinking('正在思索'); startFollowJob({ settings: useAppStore.getState().settings, reading: target, question: fq, candidates: three, pickedIndex: +p.dataset.f }); }, RM() ? 0 : 800);
+              });
+              return;
+            }
+            if (a === 'arch') { const id = r_id(); if (!id) return; void useAppStore.getState().archiveLongReading(id, !reading?.archived).then(() => { reading = useAppStore.getState().longReadings.find((x) => x.id === id) ?? null; P5.toast(reading?.archived ? '已归档' : '已取消归档'); redraw('done'); }).catch(() => P5.toast('归档失败，解读没有改变')); return; }
+            if (a === 'del') { confirm('删除这次占卜', '这次占卜和追问会从档案里删除。', '确认删除', () => { const id = r_id(); if (!id) return; void useAppStore.getState().deleteLongReading(id).then(() => { P5.toast('已删除'); close(); }).catch(() => P5.toast('删除失败，解读没有改变')); }); return; }
+            if (a === 'glimpse') openFateGlimpse();
+          });
         });
-      });
-    } });
+        /* 任务 / store 变化 → 推进状态机 */
+        off = bindLive(w, () => {
+          const j = longJob(), fj = followJob();
+          if (j) {
+            if (j.status === 'error') { go('error'); return; }
+            if (j.status === 'done') { reading = j.result ?? useAppStore.getState().longReadings.find((x) => x.id === j.id) ?? null; go('done'); return; }
+            if (j.status === 'thinking' || j.status === 'streaming') {
+              const el = w.querySelector('[data-stream]');
+              if (el) { el.hidden = false; el.innerHTML = esc(j.text ?? '').replace(/\n/g, '<br>') + '<i class="oa-caret"></i>'; }
+              const th = w.querySelector('[data-think]'); if (th) th.hidden = true;
+              if (w.querySelector('.od-lr-form')) go('reading');
+            }
+          }
+          if (fj) {
+            if (fj.status === 'error') { const box = w.querySelector('.od-lr-fbox'); if (box) box.innerHTML = `<p class="od-warn">回应失败</p><div class="sh-acts">${U.btn('重试', { tone: 'red', size: 'sm', seed: 680, attrs: 'data-act="fretry"' })}</div>`; return; }
+            if (fj.status === 'thinking' || fj.status === 'streaming') { const box = w.querySelector('.od-lr-fbox'); if (box) box.innerHTML = `<div class="od-lr-txt"><h4>追问</h4><p>${esc(fj.text ?? '')}</p></div>`; }
+            if (fj.status === 'done') { reading = useAppStore.getState().longReadings.find((x) => x.id === fj.readingId) ?? reading; go('done'); }
+          }
+        });
+      },
+      onClose() { off && off(); ackLongJob(); ackFollowJob(); },
+    });
   }
   function openReadingArchive(st0 = 'list') {
-    const rows = [['最近总是睡不好，是不是该换份工作？', 'midterm', '10.18', 'active'], ['这学期能不能拿到奖学金？', 'longterm', '09.30', 'active'], ['周末的面试会顺利吗', 'recent', '09.02', 'archived'], ['要不要和老朋友和好', 'midterm', '07.11', 'archived']];
-    sheet('占卜档案', `${demoBar([['list', '有档案'], ['empty', '空']], st0)}<div data-host></div>`, (sh) => {
-      stateful(sh, [], st0, (st) => st === 'empty' ? `<div class="od-empty"><b>尚未有中长期占卜记录</b><p>发起一次占卜后，此处会保留全部档案</p></div>` : `${seg([['active', '活跃'], ['archived', '已归档']], 'active', 'data-t')}<div class="od-arch" data-l></div>`, (h) => {
-        const l = h.querySelector('[data-l]'); if (!l) return;
-        const draw = (t) => { l.innerHTML = rows.filter((r) => r[3] === t).map(([q, p, d], i) => `<button class="od-arch-r" data-i="${i}"><i class="req-bg"></i><span class="od-arch-cs">${LR_CARDS.map(([c, r]) => tarotFace(c, { w: 30, rev: r })).join('')}</span><span class="od-arch-m"><b>${q}</b><small>${PERIOD[p][0]} · ${d}${t === 'archived' ? ' · 已归档' : ''}</small></span><em>›</em></button>`).join(''); P5.panelIn(l.children, { from: 'right' }); l.querySelectorAll('button').forEach((b) => b.onclick = () => openLongReading('done')); };
-        h.querySelector('[data-t]').addEventListener('pick', (e) => draw(e.detail)); draw('active');
+    const rows0 = archiveRows(useAppStore.getState().longReadings, toLocalDateKey());
+    const initial = rows0.length ? (st0 === 'empty' ? 'list' : st0) : 'empty';
+    let off = null;
+    sheet('占卜档案', `${demoBar([['list', '有档案'], ['empty', '空']], initial)}<div data-host></div>`, (sh, close) => {
+      const paint = (t) => {
+        const l = sh.querySelector('[data-l]'); if (!l) return;
+        const rows = archiveRows(useAppStore.getState().longReadings, toLocalDateKey());
+        const list = rows.filter((r) => r.state === t);
+        l.innerHTML = list.map((r) => {
+          const real = useAppStore.getState().longReadings.find((x) => x.id === r.id);
+          const first = real?.picked?.[0];
+          const c = first ? cardOf(first.cardId) : null;
+          const fu = real?.followUps?.length ?? 0;
+          return `<button class="od-arch-r" data-id="${r.id}"><i class="req-bg"></i><span class="od-arch-cs">${c ? tarotFace(c, { w: 30, rev: demoRev(first.orientation) }) : ''}</span><span class="od-arch-m"><b>${esc(r.question)}</b><small>${PERIOD_LABELS[r.period].label} · ${r.date}${t === 'archived' ? ' · 已归档' : ''}${fu ? ` · ${fu} 次追问` : ''}</small></span><em>›</em></button>`;
+        }).join('') || `<div class="od-empty"><b>${t === 'active' ? '没有活跃的占卜' : '还没有归档'}</b><p>发起一次占卜后，此处会保留全部档案</p></div>`;
+        P5.panelIn(l.children, { from: 'right' });
+        l.querySelectorAll('.od-arch-r').forEach((b) => b.onclick = () => { off && off(); close(); openLongReading('done', b.dataset.id); });
+      };
+      const draw = stateful(sh, [], initial, (st) => {
+        const rows = archiveRows(useAppStore.getState().longReadings, toLocalDateKey());
+        if (st === 'empty' || !rows.length) return `<div class="od-empty"><b>尚未有中长期占卜记录</b><p>发起一次占卜后，此处会保留全部档案</p></div>`;
+        return `${seg([['active', '活跃'], ['archived', '已归档']], 'active', 'data-t')}<div class="od-arch" data-l></div>`;
+      }, (h) => {
+        h.querySelector('[data-t]')?.addEventListener('pick', (e) => paint(e.detail));
+        paint('active');
+      });
+      /* 真实档案变化（新解读 / 归档 / 删除）→ 重绘，空态与列表各自成立 */
+      off = bindLive(sh, () => {
+        const rows = archiveRows(useAppStore.getState().longReadings, toLocalDateKey());
+        const t = sh.querySelector('[data-t] button[aria-pressed="true"]');
+        if (!rows.length) { draw('empty'); return; }
+        if (sh.querySelector('.od-empty')) { draw('list'); return; }
+        if (t) paint(t.dataset.v);
       });
     }, 65);
   }
@@ -1121,4 +1325,6 @@ export const YR: any = { show: null };
 
 
 export const OD: any = { openDayReview, openWishBoard, openWishPanel, openWishFulfill, openWishProposal, openWishProgress, openWishMount, openRings, openWeeklySection, openGoalSetup, openCelebration, openClaimed, openBigHome, openBigPanel, openBigStep, openBigClear, openFateDraw, openQuestBoard, openReturn, openBackfill, openYearRecap, openFlipCard, openTarotFlip, openSeasonCard, openSeasonGallery, openCodex, openDailyDraw, openShuffle, openNameReveal, openThinking, openLongReading, openReadingArchive, openFateGlimpse, openCCCutIn, openCCEditor, openCCEmpty, openShareToOrg, openLedgerStats, openSettle, openAssetBoard, assetForm, openDonut,
-  tarotFace, cardBack, seasonFace, ring, arc, donut, thinking, danmaku, cutPanel, cutAnim, ttl, seg, sw, stepper, bar, chip, wire, demoBar, stateful, stage, sheet, confirm, ccLetter, MAJ, MIN, ALL, MARKS, WISHES, syncWishes, BIG, ORG, GOALS, goalLabel, weeklyCard, syncWeekly, resetWeeklyGoal, bigHome, mountPicker, growRings, growDonuts, DRAW3, LR_CARDS, PERIOD, shuffleHTML, nameReveal, dailyDone, CAT, yen };
+  tarotFace, cardBack, seasonFace, ring, arc, donut, thinking, danmaku, cutPanel, cutAnim, ttl, seg, sw, stepper, bar, chip, wire, demoBar, stateful, stage, sheet, confirm, ccLetter, MAJ, MIN, ALL, MARKS, WISHES, syncWishes, BIG, ORG, GOALS, goalLabel, weeklyCard, syncWeekly, resetWeeklyGoal, bigHome, mountPicker, growRings, growDonuts,
+  /* 星象页读真实占卜数据（替代原演示常量 DRAW3 / LR_CARDS / PERIOD / dailyDone） */
+  cardOf, todayDiv, archiveRows, demoRev, PERIOD_LABELS, spreadPositions, shuffleHTML, nameReveal, CAT, yen };

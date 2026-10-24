@@ -70,8 +70,8 @@ export function ObInp({ ph = '', val = '', aria, type = 'text', cls = '', ...res
 export function ObTa({ ph = '', val = '', rows = 3, aria }: { ph?: string; val?: string; rows?: number; aria?: string }) {
   return <textarea className="ob-inp ob-ta" rows={rows} placeholder={ph} defaultValue={val} aria-label={aria ?? ph} />;
 }
-export function ObSel({ opts, val, aria }: { opts: (string | [string, string])[]; val: string; aria: string }) {
-  return <select className="ob-inp ob-sel" aria-label={aria} defaultValue={val}>{opts.map((o) => { const [v, l] = Array.isArray(o) ? o : [o, o]; return <option key={v} value={v}>{l}</option>; })}</select>;
+export function ObSel({ opts, val, aria, onChange }: { opts: (string | [string, string])[]; val: string; aria: string; onChange?: (v: string) => void }) {
+  return <select className="ob-inp ob-sel" aria-label={aria} value={val} onChange={(e) => onChange?.(e.target.value)}>{opts.map((o) => { const [v, l] = Array.isArray(o) ? o : [o, o]; return <option key={v} value={v}>{l}</option>; })}</select>;
 }
 export function ObRange({ v: init, aria, min = 0, max = 100, step = 5, unit = '%', preview, onInput }: { v: number; aria: string; min?: number; max?: number; step?: number; unit?: string; preview?: string; onInput?: (v: number) => void }) {
   const [v, setV] = useState(init);

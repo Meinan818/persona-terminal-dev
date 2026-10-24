@@ -16,7 +16,23 @@
 - **运行与复查**：隔离服务需显式设置`VITE_API_URL=same-origin`并使用`http://127.0.0.1:5207`；探针`node scripts/verify-theme-plan08.mjs E:/MASKARIA/outputs/theme-plan08-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
 - **唯一下一任务/负责人**：用户在新聊天明确启动计划09“占卜、成就与设置”后，由接手者核日占卜/中长期、塔罗/岁时、成就/技能、总结与设置是否真正生效，并处理红 `d4.ts` 剩余牌阵数据；不自动跨入AI专项或UI重绘。本轮交接提交为 `9a3766f`（`feat(theme): complete plan 08 hideout real read/write`，36 文件 / +2335 / -463）；`git log -1` 应为该 SHA；提交后本聊天停止共享写入。
 
-## 当前接手入口 · 2026-10-24 · 计划09占卜成就与设置待新聊天启动
+## 当前接手入口 · 2026-10-24 · 计划09占卜成就与设置已完成，下一计划10待新聊天启动
+
+- **本轮授权与现场**：用户明确执行计划09“占卜、成就与设置”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，接手基点计划08交接提交`23836ca`；用户确认源聊天已停止共享写入。本轮未进入10及后续，未重做据点、同伴、账号同步、记账、AI或四主题外观，未重跑764项loader，未Push/部署/APK/真实账号/真实组织数据/收费调用。
+- **计划状态**：**计划09完成，10及之后未启动**。专项报告`docs/THEME-DIVINATION-ACHIEVEMENTS-20261024.md`记录代码范围、四主题结果、17条隔离浏览器检查、截图和保留边界；详细计划状态已同步。
+- **红色占卜真实化**：新增`src/p5r-red/adapter/tarotData.ts`（真实塔罗id→demo卡对象、牌阵位置、周期标签、抽牌、档案行）；`d4.ts`的`openDailyDraw`/`openLongReading`/`openReadingArchive`接真实`dailyDivination`/`longReadings`与`tarotJobs`；`DRAW3`/`LR_CARDS`/`PERIOD`与固定档案行退出运行时路径。
+- **今日塔罗**：未抽态三张候选改为真实抽牌，牌面文案来自同一份`constants/tarot`；点牌即按离线兜底写真实`saveDailyDivination`，刷新后仍是同一张；已完成态读真实记录，跨日回未抽态。
+- **中长期占卜**：提问、周期、六选三、长远档注入波纹抽底色牌保留原演出；解读跑真实`tarotJobs`（离开不中断、可续写、可同牌续跑）；**未配AI时按钮禁用并说明**，与真实仓库同口径，不用占位文案冒充解读。
+- **红色成就与技能**：从本地mock数组改为读真实`achievements`/`skills`；解锁、新增自定义、编辑、删除都等待真实action，失败不先改界面；进度复用三主题共用的`useAchievementProgressMap`。
+- **设置真正生效**：静音模式、夜间模式接真实`settings.soundMuted`/`darkMode`（此前红色读demo外壳独立localStorage，改了不跨主题生效）；记账开关、货币、消费评估、发薪日周期与发薪日接真实settings，直接影响计划05已验证的记账周期；AI服务分区挂载真实`AIServiceSettings`，密钥保存与测试连接不再是静态文案按钮。`ObSel`改为受控`value`+`onChange`以支持写回。
+- **验证（2026-10-24本轮）**：`tsc --noEmit` exit0；全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **71文件/435项通过**；`npm run build` exit0（主题CSS、TypeScript、Vite、PWA）；`node --check scripts/verify-theme-plan09.mjs`与`git diff --check`通过。
+- **真实浏览器证据**：`E:\MASKARIA\outputs\theme-plan09-isolated-20261024-v14\report.json`，`ok=true`、17条检查、四主题`ok=true`、pageErrors0、本地资源失败0、外网隔离阻断2。红色完整验证今日塔罗落库与刷新保留、中长期真实AI流式落库（picked=3）与档案可见、成就解锁落库与刷新保留、静音/夜间/发薪日周期写库与刷新保留；蓝粉黄验证档案计数与成就解锁态读真实共享store、六个页面可开且无pageerror。截图10张已人工检查。
+- **保留边界**：AI解读、星移推演、COOP匹配与作战AI分工仍属计划10；红色设置页仍有演示态分区（天气、BGM、背景图、开屏/背景动画、人格、通知时段、总结风格、关键词规则、逆影战场开关等），本轮只接了语义明确且影响已验收闭环的项，`?state=`演示态预览保留；demo外壳偏好`motion/fx/sidebar`仍是独立localStorage；未做Android真机、弱网、并发多标签或四主题整体视觉验收；未重跑764项loader。
+- **继承工作区**：两个Gradle行尾痕迹和未跟踪`scripts/p5r-red/_tmp-compare-local.mjs`仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
+- **运行与复查**：隔离服务需显式设置`VITE_API_URL=same-origin`并使用`http://127.0.0.1:5208`；探针`node scripts/verify-theme-plan09.mjs E:/MASKARIA/outputs/theme-plan09-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
+- **唯一下一任务/负责人**：用户在新聊天明确启动计划10“AI 能力专项”后，由接手者梳理每个AI入口属于“真实AI/等待配置/离线”、取消/超时/失败不伪造结果、BYOK与费用触发边界；不自动跨入视觉保真、候选版打包或UI重绘。本轮交接提交为本入口所在提交，用`git log -1`核实；提交后本聊天停止共享写入。
+
+## 历史交接 · 2026-10-24 · 计划09占卜成就与设置待新聊天启动（未启动，由后续聊天执行）
 
 - **本轮授权与现场**：上一轮为计划08“据点真实读写”，交接提交 `9a3766f`（分支 `codex/theme-integrate`）。**计划09尚未启动**：用户没有明确启动09之前，不进入占卜、成就、设置或AI专项，不重做据点、同伴、账号同步、记账或四主题外观。
 - **计划状态**：**计划08完成；09及之后未启动**。据点读写在四主题已有真实 store/services 与隔离浏览器证据；详细计划表已同步。

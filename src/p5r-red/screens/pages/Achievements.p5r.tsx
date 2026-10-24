@@ -25,11 +25,16 @@ import { kitImg } from '@/p5r-red/lib/asset';
 import { isLowMotion } from '@/p5r-red/lib/prefs';
 import { sfx } from '@/p5r-red/fx/sfx';
 import { ATTR, ATTR_ORDER, type AttrId } from '@/p5r-red/mock/data';
-import { ACHIEVEMENTS, SKILLS, SKILL_BONUS_MULT_CAP, skillEffect, type MockAch, type MockSkill } from '@/p5r-red/mock/pkg5-data';
+import { SKILL_BONUS_MULT_CAP, skillEffect, type MockAch, type MockSkill, type CondType } from '@/p5r-red/mock/pkg5-data';
 import { unlockCutInP5 } from '@/p5r-red/screens/overlays/cutins.p5r';
 import { AchievementForm } from '@/p5r-red/screens/overlays/AchievementForm.p5r';
 import { SkillForm } from '@/p5r-red/screens/overlays/SkillForm.p5r';
 import { AchievementsDeleteConfirm } from '@/p5r-red/screens/overlays/AchievementsDeleteConfirm.p5r';
+import { useAppStore } from '@/store';
+import { HIDDEN_ACHIEVEMENT_IDS } from '@/constants';
+import { useAchievementProgressMap } from '@/themes/astrologyData';
+import { toast } from '@/p5r-red/kit/P5Toast';
+import { v4 as uuidv4 } from 'uuid';
 import '../pkg5.p5r.css';
 
 type Tab = 'achievements' | 'skills' | 'codex';
@@ -50,17 +55,40 @@ const AddTile = ({ onClick }: { onClick: () => void }) => (
   <div className="ach5-cell"><button type="button" className="badge5 add" data-act="add" onClick={onClick}><span className="bd-medal"><b>＋</b></span><b className="bd-t">添加自定义成就</b></button></div>
 );
 
+/**
+ * 成就 / 技能 Tab（真实 store）：列表读 useAppStore.achievements / skills（adapter/live.ts 已把它们
+ * 原地投影进 mock 数组，这里直接读 store 更稳）；解锁 / 新增 / 编辑 / 删除都等待真实 action，
+ * 失败不先改界面，成功后由 store 驱动重渲染。hidden 成就沿用 MockAch 的 hidden 标记
+ * （真实 Achievement 用 HIDDEN_ACHIEVEMENT_IDS 常量判断，映射见 achievementPkg5）。
+ */
 function AchTab({ empty, filterInit, formInit }: { empty: boolean; filterInit: Filter; formInit: string | null }) {
-  const [list, setList] = useState<MockAch[]>(() => (empty ? [] : ACHIEVEMENTS.map((a) => ({ ...a }))));
+  const achievements = useAppStore((s) => s.achievements);
+  const attributes = useAppStore((s) => s.attributes);
+  /* 进度与三主题同一口径（astrologyData 的 useAchievementProgressMap），不自己另算 */
+  const progressMap = useAchievementProgressMap();
   const [filter, setFilter] = useState<Filter>(filterInit);
-  const [form, setForm] = useState<{ open: boolean; ach: MockAch | null }>({ open: !!formInit, ach: formInit === 'edit' ? ACHIEVEMENTS.find((a) => a.id.startsWith('custom_'))! : null });
+  const [form, setForm] = useState<{ open: boolean; ach: MockAch | null }>({ open: !!formInit, ach: null });
   const [del, setDel] = useState<MockAch | null>(null);
   useEffect(() => { try { localStorage.setItem('pg_achievements_filter', filter); } catch { /* */ } }, [filter]);
+  const list: MockAch[] = empty ? [] : achievements.map((a) => ({
+    id: a.id,
+    icon: a.icon,
+    letter: (a.id.match(/[a-z]/i)?.[0] ?? 'A').toUpperCase(),
+    title: a.title,
+    description: a.description,
+    condition: { type: (['total_points', 'consecutive_days', 'attribute_level', 'keyword_match', 'todo_completions'].includes(a.condition.type) ? a.condition.type : 'total_points') as CondType, value: a.condition.value, attribute: a.condition.attribute as AttrId | undefined, keywords: a.condition.keywords },
+    progress: progressMap[a.id] ?? 0,
+    unlocked: a.unlocked,
+    unlockedDate: a.unlockedDate ? new Date(a.unlockedDate).toISOString().slice(0, 10) : undefined,
+    hidden: HIDDEN_ACHIEVEMENT_IDS.has(a.id) && !a.unlocked,
+  }));
+  const customOf = (a: MockAch) => a.id.startsWith('custom_');
   const shown = list.filter((a) => filter === 'all' || (filter === 'unlocked' ? a.unlocked : !a.unlocked)).sort((a, b) => Number(!!a.hidden) - Number(!!b.hidden));
   const claim = (a: MockAch) => {
     sfx('level', 0.5);
-    setList((p) => p.map((x) => (x.id === a.id ? { ...x, unlocked: true, unlockedDate: new Date().toISOString().slice(0, 10) } : x)));
-    unlockCutInP5({ heading: '成就解锁！', name: a.title, lines: ['感谢您的努力，', '您是最棒的客人。'] });
+    void useAppStore.getState().unlockAchievement(a.id)
+      .then(() => unlockCutInP5({ heading: '成就解锁！', name: a.title, lines: ['感谢您的努力，', '您是最棒的客人。'] }))
+      .catch(() => toast('解锁失败，成就没有改变'));
   };
   return (
     <div className="ach5-tab">
@@ -72,7 +100,7 @@ function AchTab({ empty, filterInit, formInit }: { empty: boolean; filterInit: F
           {shown.map((a, i) => {
             const ready = !a.unlocked && !a.hidden && a.progress >= a.condition.value;
             const masked = a.hidden && !a.unlocked;
-            const custom = a.id.startsWith('custom_');
+            const custom = customOf(a);
             return (
               <div key={a.id} className="ach5-cell" style={{ ['--i' as string]: i }}>
                 <button type="button" className={`badge5 ${a.unlocked ? 'on' : ''} ${ready ? 'ready' : ''}`} disabled={!ready} aria-label={masked ? '隐藏成就' : `${a.title}：${a.description}`} onClick={() => ready && claim(a)}>
@@ -89,22 +117,46 @@ function AchTab({ empty, filterInit, formInit }: { empty: boolean; filterInit: F
           <AddTile onClick={() => setForm({ open: true, ach: null })} />
         </div>
       )}
-      <AchievementForm open={form.open} initial={form.ach} isCustom={!form.ach || form.ach.id.startsWith('custom_')} onClose={() => setForm((f) => ({ ...f, open: false }))}
-        onSave={(f) => setList((p) => form.ach ? p.map((x) => (x.id === form.ach!.id ? { ...x, ...f } : x)) : [...p, { id: `custom_${Date.now()}`, letter: 'C', progress: 0, unlocked: false, ...f }])}
-        onDelete={() => setList((p) => p.filter((x) => x.id !== form.ach?.id))} />
-      <AchievementsDeleteConfirm open={!!del} onClose={() => setDel(null)} onConfirm={() => { const id = del?.id; setList((p) => p.filter((x) => x.id !== id)); }} />
+      <AchievementForm open={form.open} initial={form.ach} isCustom={!form.ach || customOf(form.ach)} onClose={() => setForm((f) => ({ ...f, open: false }))}
+        onSave={(f) => {
+          const store = useAppStore.getState();
+          if (form.ach) {
+            void store.updateCustomAchievement(form.ach.id, f)
+              .then(() => toast('已保存'))
+              .catch(() => toast('保存失败，成就没有改变'));
+          } else {
+            void store.addCustomAchievement({ id: `custom_${uuidv4()}`, title: f.title, description: f.description, icon: f.icon, condition: f.condition })
+              .then(() => toast('已添加自定义成就'))
+              .catch(() => toast('添加失败，成就没有改变'));
+          }
+        }}
+        onDelete={() => { const id = form.ach?.id; if (!id) return; void useAppStore.getState().deleteCustomAchievement(id).then(() => toast('已删除')).catch(() => toast('删除失败，成就没有改变')); }} />
+      <AchievementsDeleteConfirm open={!!del} onClose={() => setDel(null)} onConfirm={() => { const id = del?.id; if (!id) return; void useAppStore.getState().deleteCustomAchievement(id).then(() => { setDel(null); toast('已删除'); }).catch(() => toast('删除失败，成就没有改变')); }} />
     </div>
   );
 }
 
 function SkillTab({ empty, filterInit, formInit }: { empty: boolean; filterInit: Filter; formInit: string | null }) {
-  const [list, setList] = useState<MockSkill[]>(() => (empty ? [] : SKILLS.map((s) => ({ ...s }))));
+  const skills = useAppStore((s) => s.skills);
+  const attributes = useAppStore((s) => s.attributes);
   const [filter, setFilter] = useState<Filter>(filterInit);
-  const [form, setForm] = useState<{ open: boolean; sk: MockSkill | null }>({ open: !!formInit, sk: formInit === 'edit' ? SKILLS.find((s) => s.id === 'custom_k5')! : null });
+  const [form, setForm] = useState<{ open: boolean; sk: MockSkill | null }>({ open: false, sk: null });
   useEffect(() => { try { localStorage.setItem('pg_skills_filter', filter); } catch { /* */ } }, [filter]);
+  const LEVELS: Record<AttrId, number> = { knowledge: 0, guts: 0, dexterity: 0, kindness: 0, charm: 0 };
+  for (const a of attributes) LEVELS[a.id as AttrId] = a.level;
+  const list: MockSkill[] = empty ? [] : skills.map((k) => ({
+    id: k.id, name: k.name, description: k.description,
+    requiredAttribute: k.requiredAttribute as AttrId, requiredLevel: k.requiredLevel,
+    bonusMultiplier: k.bonusMultiplier ?? 1, unlocked: k.unlocked,
+  }));
   const can = (s: MockSkill) => !s.unlocked && LEVELS[s.requiredAttribute] >= s.requiredLevel;
   const groups = useMemo(() => ATTR_ORDER.map((a) => ({ a, all: list.filter((s) => s.requiredAttribute === a) })).filter((g) => g.all.length), [list]);
-  const unlock = (s: MockSkill) => { sfx('level', 0.5); setList((p) => p.map((x) => (x.id === s.id ? { ...x, unlocked: true } : x))); unlockCutInP5({ heading: '技能解锁！', name: s.name, lines: ['新技能已激活', '属性加成自动生效'] }); };
+  const unlock = (s: MockSkill) => {
+    sfx('level', 0.5);
+    void useAppStore.getState().unlockSkill(s.id)
+      .then(() => unlockCutInP5({ heading: '技能解锁！', name: s.name, lines: ['新技能已激活', '属性加成自动生效'] }))
+      .catch(() => toast('解锁失败，技能没有改变'));
+  };
   const visible = (s: MockSkill) => filter === 'all' || (filter === 'unlocked' ? s.unlocked : !s.unlocked);
   const anyVisible = groups.some((g) => g.all.some(visible));
   return (
@@ -127,7 +179,7 @@ function SkillTab({ empty, filterInit, formInit }: { empty: boolean; filterInit:
                 <span className="req-main"><b className="req-t">{s.name}</b><span className="req-meta">{!s.unlocked && <P5Tag tone="line">需 Lv.{s.requiredLevel}</P5Tag>}{s.id.startsWith('custom_') && <P5Tag tone="paper">自定义</P5Tag>}</span><small className="ach5-desc">{s.description}</small></span>
                 <span className="ach5-sk-act">
                   {can(s) && <P5Button tone="red" size="sm" seed={170 + i} onClick={() => unlock(s)}>解锁</P5Button>}
-                  <button type="button" className="ach5-ic" aria-label={`编辑技能 ${s.name}`} onClick={() => setForm({ open: true, sk: s })}>✎</button>
+                  {s.id.startsWith('custom_') && <button type="button" className="ach5-ic" aria-label={`编辑技能 ${s.name}`} onClick={() => setForm({ open: true, sk: s })}>✎</button>}
                 </span>
               </div>
             ))}</div>
@@ -136,14 +188,26 @@ function SkillTab({ empty, filterInit, formInit }: { empty: boolean; filterInit:
       })}
       <div className="ach5-addsk"><P5Button tone="red" seed={160} onClick={() => setForm({ open: true, sk: null })}>+ 添加技能</P5Button></div>
       <SkillForm open={form.open} initial={form.sk} onClose={() => setForm((f) => ({ ...f, open: false }))}
-        onSave={(v) => setList((p) => form.sk ? p.map((x) => (x.id === form.sk!.id ? { ...x, ...v, description: skillEffect(v.requiredAttribute, v.bonusMultiplier, ATTR) } : x)) : [...p, { id: `custom_${Date.now()}`, unlocked: false, description: skillEffect(v.requiredAttribute, v.bonusMultiplier, ATTR), ...v }])}
-        onDelete={() => setList((p) => p.filter((x) => x.id !== form.sk?.id))} />
+        onSave={(v) => {
+          const store = useAppStore.getState();
+          if (form.sk) {
+            void store.updateCustomSkill(form.sk.id, v)
+              .then(() => toast('已保存'))
+              .catch(() => toast('保存失败，技能没有改变'));
+          } else {
+            void store.addCustomSkill({ id: `custom_${uuidv4()}`, description: skillEffect(v.requiredAttribute, v.bonusMultiplier, ATTR), ...v })
+              .then(() => toast('已添加技能'))
+              .catch(() => toast('添加失败，技能没有改变'));
+          }
+        }}
+        onDelete={() => { const id = form.sk?.id; if (!id) return; void useAppStore.getState().deleteCustomSkill(id).then(() => toast('已删除')).catch(() => toast('删除失败，技能没有改变')); }} />
     </div>
   );
 }
-
 export default function Achievements({ params, wide }: PageProps) {
   const root = useRef<HTMLDivElement>(null);
+  const achievements = useAppStore((s) => s.achievements);
+  const skills = useAppStore((s) => s.skills);
   const [tab, setTab] = useState<Tab>(((params.get('tab') as Tab) || 'achievements'));
   const empty = params.get('state') === 'empty';
   const filter = (params.get('filter') as Filter) || 'all';
@@ -155,7 +219,7 @@ export default function Achievements({ params, wide }: PageProps) {
   const tabs: { k: Tab; l: string }[] = [{ k: 'achievements', l: '成就' }, { k: 'skills', l: '技能' }, { k: 'codex', l: '图鉴' }];
   return (
     <div className="ach5 ach5p" ref={root}>
-      <P5PageHeader ransom="AWARDS" cn="成就 · 技能" sub={`已解锁 ${empty ? 0 : ACHIEVEMENTS.filter((a) => a.unlocked).length} / ${empty ? 0 : ACHIEVEMENTS.length} · 技能 ${empty ? 0 : SKILLS.filter((s) => s.unlocked).length}`} seed={71} right={<P5Back to="menu" />} />
+      <P5PageHeader ransom="AWARDS" cn="成就 · 技能" sub={`已解锁 ${empty ? 0 : achievements.filter((a) => a.unlocked).length} / ${empty ? 0 : achievements.length} · 技能 ${empty ? 0 : skills.filter((s) => s.unlocked).length}`} seed={71} right={<P5Back to="menu" />} />
       <div className="seg ach-tabs" role="tablist">{tabs.map((t) => (
         <button key={t.k} type="button" role="tab" aria-pressed={tab === t.k} aria-selected={tab === t.k} onClick={() => { if (tab === t.k) return; sfx('nav', 0.4); setTab(t.k); }}>{t.l}</button>
       ))}</div>

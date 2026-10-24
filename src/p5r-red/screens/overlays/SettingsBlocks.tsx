@@ -14,6 +14,7 @@ import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { setPrefs, usePrefs } from '@/p5r-red/lib/prefs';
 import { RANKS, ATTR_ORDER, ATTR } from '@/p5r-red/mock/data';
 import { useAppStore } from '@/store';
+import { AIServiceSettings } from '@/components/settings/AIServiceSettings';
 import { ObCard, ObRow, ObSw, ObSeg, ObInp, ObTa, ObSel, ObRange, ObMsg, ObChip, ObSub, ObNote, ObHint, ObLink, ObBtn, ObFold, ObLi, BusyBtn, useMsgBox, ObConfirm, ObCrop } from './ObKit';
 
 export const THEMES: [string, string, string][] = [['blue', '蓝', '#3B82F6'], ['yellow', '黄', '#F59E0B'], ['red', '红', '#D7000F'], ['pink', '粉', '#EC4899'], ['custom', '自定义', 'conic-gradient(#3B82F6,#F59E0B,#EF4444,#EC4899,#3B82F6)']];
@@ -115,7 +116,12 @@ export const THEME_STATES: [string, string][] = [['normal', '红主题'], ['cust
 export function ThemeSection({ state = 'normal', wx = 'ok', bgm = 'list', vol = 'ok', bgmOpen }: { state?: string; wx?: string; bgm?: string; vol?: string; bgmOpen?: boolean }) {
   const prefs = usePrefs();
   const custom = state === 'custom';
-  const [muted, setMuted] = useState(state === 'muted');
+  /* 静音 / 夜间接真实 settings（与其它主题同一口径）；demo 外壳的 sound/mode 只作本机演示层 */
+  const settings = useAppStore((s) => s.settings);
+  const muted = settings.soundMuted === true;
+  const setMuted = (v: boolean) => { void useAppStore.getState().updateSettings({ soundMuted: v }).catch(() => toast('设置保存失败')); };
+  const night = settings.darkMode === true;
+  const setNight = (v: boolean) => { void useAppStore.getState().updateSettings({ darkMode: v }).catch(() => toast('设置保存失败')); };
   return (
     <>
       <ObCard title="颜色与声音" en="COLOR · SOUND" seed={501}>
@@ -130,7 +136,7 @@ export function ThemeSection({ state = 'normal', wx = 'ok', bgm = 'list', vol = 
         )}
         <ObRow label="静音模式" hint="开启后所有音效静音"><ObSw on={muted} label="静音模式" onToggle={setMuted} /></ObRow>
         {!muted && <VolumeRow state={vol} />}
-        <ObRow label="夜间模式" hint="降低屏幕亮度，保护眼睛"><ObSw on={prefs.mode === 'night'} on2={prefs.mode === 'night'} label="夜间模式" onToggle={(v) => setPrefs({ mode: v ? 'night' : 'day' })} /></ObRow>
+        <ObRow label="夜间模式" hint="降低屏幕亮度，保护眼睛"><ObSw on={night} on2={night} label="夜间模式" onToggle={setNight} /></ObRow>
       </ObCard>
       <ObCard title="显示" en="DISPLAY" seed={502}>
         <ObRow label="左侧栏布局" hint="宽屏时导航在左边一列；只影响这台设备"><ObSw on={prefs.sidebar} on2={prefs.sidebar} label="左侧栏布局" onToggle={(v) => setPrefs({ sidebar: v })} /></ObRow>
@@ -227,6 +233,8 @@ export function AISection({ state = 'ok' }: { state?: string }) {
         )}
       </ObCard>
       <ObCard seed={313}><CopyRow /></ObCard>
+      {/* 真实 AI 配置（与其它主题同一份组件）：上面的演示卡只作状态预览，这里才是真正保存 Key / 测试连接 / 选模型的地方 */}
+      <div className="ob-real"><AIServiceSettings openConnection={state === 'none'} /></div>
     </>
   );
 }
@@ -265,7 +273,16 @@ export function SummarySection({ state: init = 'list', onGoAI }: { state?: strin
 export function PersonalizeSection() {
   const [ri, setRi] = useState(0);
   const [kw, setKw] = useState([['读书', '课程', '论文'], ['跑步', '演讲'], ['吉他', '做饭', '编程'], ['陪伴', '志愿'], []]);
-  const [ledger, setLedger] = useState(true);
+  /* 记账相关设置接真实 settings：改完立刻影响心相记账的开关、币种、周期与发薪日 */
+  const settings = useAppStore((s) => s.settings);
+  const save = (patch: Parameters<ReturnType<typeof useAppStore.getState>['updateSettings']>[0]) => {
+    void useAppStore.getState().updateSettings(patch).catch(() => toast('设置保存失败'));
+  };
+  const ledger = settings.ledgerEnabled !== false;
+  const setLedger = (v: boolean) => save({ ledgerEnabled: v });
+  const currency = settings.currency ?? 'CNY';
+  const payCycle = settings.ledgerPayCycleEnabled === true;
+  const resetDay = String(settings.ledgerResetDay ?? 1);
   return (
     <>
       <ObCard title="属性" en="ATTRIBUTES" seed={511}>
@@ -273,10 +290,10 @@ export function PersonalizeSection() {
         <ObRow label="记账" hint="低摩擦记账：总余额 / 预算 / 结转 + 四轴觉察。数据始终只存本地、不上云。" tag="新"><ObSw on={ledger} label="记账" onToggle={setLedger} /></ObRow>
         {ledger && (
           <div className="ob-nest">
-            <ObRow label="货币"><ObSel opts={[['CNY', '¥ 人民币'], ['USD', '$ 美元'], ['EUR', '€ 欧元'], ['JPY', '¥ 日元'], ['GBP', '£ 英镑'], ['HKD', 'HK$ 港币'], ['KRW', '₩ 韩元']]} val="CNY" aria="货币" /></ObRow>
-            <ObRow label="消费评估" hint="记账时可评「值 / 不值」，值得 +1 SP，比例进月报"><ObSw on label="消费评估" /></ObRow>
-            <ObRow label="发薪日周期" hint="预算 / 今日可花 / 规划窗按发薪日切分周期；关则按自然月。"><ObSw on label="发薪日周期" /></ObRow>
-            <ObRow label="发薪日"><ObSel opts={Array.from({ length: 28 }, (_, i) => [String(i + 1), `每月 ${i + 1} 号`] as [string, string])} val="10" aria="发薪日" /></ObRow>
+            <ObRow label="货币"><ObSel opts={[['CNY', '¥ 人民币'], ['USD', '$ 美元'], ['EUR', '€ 欧元'], ['JPY', '¥ 日元'], ['GBP', '£ 英镑'], ['HKD', 'HK$ 港币'], ['KRW', '₩ 韩元']]} val={currency} aria="货币" onChange={(v) => save({ currency: v })} /></ObRow>
+            <ObRow label="消费评估" hint="记账时可评「值 / 不值」，值得 +1 SP，比例进月报"><ObSw on={settings.spendEvalEnabled !== false} label="消费评估" onToggle={(v) => save({ spendEvalEnabled: v })} /></ObRow>
+            <ObRow label="发薪日周期" hint="预算 / 今日可花 / 规划窗按发薪日切分周期；关则按自然月。"><ObSw on={payCycle} label="发薪日周期" onToggle={(v) => save({ ledgerPayCycleEnabled: v })} /></ObRow>
+            {payCycle && <ObRow label="发薪日"><ObSel opts={Array.from({ length: 28 }, (_, i) => [String(i + 1), `每月 ${i + 1} 号`] as [string, string])} val={resetDay} aria="发薪日" onChange={(v) => save({ ledgerResetDay: Number(v) })} /></ObRow>}
           </div>
         )}
       </ObCard>

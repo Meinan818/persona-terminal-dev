@@ -26,10 +26,13 @@ import { panelIn } from '@/p5r-red/fx/motion';
 import { DevStateBar } from '@/p5r-red/kit/DevStateBar';
 import { P5Empty } from '@/p5r-red/kit/P5States';
 import '@/p5r-red/screens/pkg4/pkg4.css';
+import { useAppStore, toLocalDateKey } from '@/store';
+import { MAJOR_ARCANA, TAROT_BY_ID, drawRandomCards, randomOrientation, randomBonusMultiplier } from '@/constants/tarot';
+import { buildOfflineDaily } from '@/utils/tarotOffline';
+import { archiveRows, demoCardOf, demoRev, type ArchiveRow } from '@/p5r-red/adapter/tarotData';
+import { v4 as uuidv4 } from 'uuid';
 
 type Tab = 'daily' | 'long' | 'archive';
-const ROWS: [string, string, string, 'active' | 'archived'][] = [['最近总是睡不好，是不是该换份工作？', 'midterm', '10.18', 'active'], ['这学期能不能拿到奖学金？', 'longterm', '09.30', 'active'], ['周末的面试会顺利吗', 'recent', '09.02', 'archived'], ['要不要和老朋友和好', 'midterm', '07.11', 'archived']];
-
 function Inline({ play, dep }: { play: () => void; dep: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { INLINE.host = ref.current; INLINE.onClose = null; play(); INLINE.host = null; }, [dep]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -37,27 +40,44 @@ function Inline({ play, dep }: { play: () => void; dep: string }) {
 }
 
 function Archive({ empty, onOpen }: { empty: boolean; onOpen: () => void }) {
+  const readings = useAppStore((s) => s.longReadings);
+  const rows: ArchiveRow[] = archiveRows(readings, toLocalDateKey());
   const [t, setT] = useState<'active' | 'archived'>('active');
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { if (ref.current) return panelIn(ref.current.children, { from: 'right' }); }, [t]);
-  if (empty) return <div className="p4-astro-empty"><P5Empty text="尚未有中长期占卜记录" hint="发起一次占卜后，此处会保留全部档案" seed={7} /></div>;
+  if (empty || !rows.length) return <div className="p4-astro-empty"><P5Empty text="尚未有中长期占卜记录" hint="发起一次占卜后，此处会保留全部档案" seed={7} /></div>;
   return (
     <div className="p4-arch">
       <div className="seg od-seg">{(['active', 'archived'] as const).map((k) => <button key={k} type="button" aria-pressed={t === k} onClick={() => setT(k)}>{k === 'active' ? '活跃' : '已归档'}</button>)}</div>
       <div className="od-arch" ref={ref}>
-        {ROWS.filter((r) => r[3] === t).map(([q, p, d], i) => (
-          <button key={q} className="od-arch-r" data-i={i} onClick={onOpen}><i className="req-bg" />
-            <span className="od-arch-cs" dangerouslySetInnerHTML={{ __html: OD.LR_CARDS.map(([c, r]: [unknown, boolean]) => OD.tarotFace(c, { w: 30, rev: r })).join('') }} />
-            <span className="od-arch-m"><b>{q}</b><small>{OD.PERIOD[p][0]} · {d}{t === 'archived' ? ' · 已归档' : ''}</small></span><em>›</em>
+        {rows.filter((r) => r.state === t).map((r) => {
+          const real = readings.find((x) => x.id === r.id);
+          const first = real?.picked?.[0];
+          const c = first ? demoCardOf(first.cardId) : null;
+          const fu = real?.followUps?.length ?? 0;
+          return (
+          <button key={r.id} className="od-arch-r" data-id={r.id} onClick={onOpen}><i className="req-bg" />
+            <span className="od-arch-cs" dangerouslySetInnerHTML={{ __html: c ? OD.tarotFace(c, { w: 30, rev: demoRev(first!.orientation) }) : '' }} />
+            <span className="od-arch-m"><b>{r.question}</b><small>{OD.PERIOD_LABELS[r.period].label} · {r.date}{t === 'archived' ? ' · 已归档' : ''}{fu ? ` · ${fu} 次追问` : ''}</small></span><em>›</em>
           </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
-/** v3 MAJOR 原值 */
-const MAJOR: [string, string, string, string][] = [['THE STAR', '星星', 'XVII', '希望正在靠近。把今天交给一件小而确定的事。'], ['THE CHARIOT', '战车', 'VII', '意志驱动前进。先动起来，方向会在路上变清楚。'], ['THE MOON', '月亮', 'XVIII', '不安来自未知。把模糊的事写下来，它就小了一半。']];
+/**
+ * 占卜桌（今日塔罗 · 未抽态）：三张候选由真实抽牌决定（constants/tarot 的 drawRandomCards），
+ * 牌面文案来自同一份 constants；点一张即按离线兜底写真实 dailyDivination，
+ * 之后由 store 驱动页面切到完成态（daily === 'done' 分支）。
+ */
+type Face = { id: string; name: string; en: string; no: string; up: string; rv: string; upKw: string[]; rvKw: string[] };
+const FACES: Face[] = MAJOR_ARCANA.map((c) => ({
+  id: c.id, name: c.name, en: c.nameEn, no: c.roman ?? String(c.number),
+  up: c.advice?.upright ?? c.upright.meaning, rv: c.advice?.reversed ?? c.reversed.meaning,
+  upKw: c.upright.keywords, rvKw: c.reversed.keywords,
+}));
 
 /** v3 占卜桌（今日塔罗 · 未抽） */
 function FortuneTable({ onLong, onArchive }: { onLong: () => void; onArchive: () => void }) {
@@ -65,6 +85,14 @@ function FortuneTable({ onLong, onArchive }: { onLong: () => void; onArchive: ()
   const [pick, setPick] = useState<number | null>(null);
   const [named, setNamed] = useState(false);
   const timers = useRef<number[]>([]);
+  /* 三张候选：进程内抽一次，重进不重抽；正 / 逆位按随机 */
+  const cands = useRef<{ card: Face; rev: boolean }[] | null>(null);
+  if (!cands.current) {
+    cands.current = drawRandomCards(3, MAJOR_ARCANA).map((c) => {
+      const f = FACES.find((x) => x.id === c.id)!;
+      return { card: f, rev: randomOrientation() === 'reversed' };
+    });
+  }
   const low = isLowMotion();
   const shuffle = () => {
     const r = root.current; if (!r || low) return;
@@ -80,6 +108,27 @@ function FortuneTable({ onLong, onArchive }: { onLong: () => void; onArchive: ()
     r.querySelector('.as-read')?.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 400, delay: 300, fill: 'backwards' });
     return () => stops.forEach((s) => s());
   }, [named]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** 落库：按离线兜底写真实 dailyDivination；写完由 store 驱动页面切到完成态 */
+  const commit = async (i: number) => {
+    const picked = cands.current?.[i];
+    if (!picked) return;
+    const orientation = picked.rev ? 'reversed' as const : 'upright' as const;
+    const offline = buildOfflineDaily(TAROT_BY_ID[picked.card.id], orientation);
+    await useAppStore.getState().saveDailyDivination({
+      id: uuidv4(),
+      date: toLocalDateKey(),
+      drawnFrom: cands.current!.map((c) => c.card.id),
+      pickedIndex: i,
+      cardId: picked.card.id,
+      orientation,
+      effect: { attribute: offline.attribute, multiplier: randomBonusMultiplier(orientation) },
+      narration: offline.narration,
+      advice: offline.advice,
+      fortune: offline.fortune,
+      source: 'offline',
+      createdAt: new Date(),
+    });
+  };
   const choose = (i: number, el: HTMLElement) => {
     if (pick !== null) return; P5.sfx('tarot', 0.6);
     const r = root.current!;
@@ -87,20 +136,20 @@ function FortuneTable({ onLong, onArchive }: { onLong: () => void; onArchive: ()
       r.querySelectorAll<HTMLElement>('.as-card').forEach((o, k) => { if (k !== i) o.animate([{ opacity: 1 }, { opacity: 0.2, transform: `rotate(${(k - 1) * 9}deg) scale(.88)` }], { duration: 300, fill: 'forwards' }); });
       el.animate([{ translate: '0 0', scale: 1 }, { translate: '0 -18px', scale: 1.12 }] as Keyframe[], { duration: 300, fill: 'forwards', easing: 'cubic-bezier(.34,1.56,.64,1)' });
     }
-    timers.current.push(window.setTimeout(() => { setPick(i); timers.current.push(window.setTimeout(() => setNamed(true), low ? 0 : 700)); }, low ? 0 : 700));
+    timers.current.push(window.setTimeout(() => { setPick(i); timers.current.push(window.setTimeout(() => { setNamed(true); void commit(i); }, low ? 0 : 700)); }, low ? 0 : 700));
   };
   const reset = () => { root.current?.querySelectorAll('.as-card').forEach((c) => c.getAnimations().forEach((a) => a.cancel())); setPick(null); setNamed(false); shuffle(); };
-  const m = pick !== null ? MAJOR[pick] : null;
+  const m = pick !== null ? cands.current![pick] : null;
   return (
     <div className="as-table" ref={root}>
       <div className="as-deck">{[0, 1, 2, 3, 4].map((i) => <img key={i} className="as-dk" src={kitImg('card_emblem')} alt="" style={{ ['--i' as string]: i }} />)}</div>
       <div className="as-fan">{[0, 1, 2].map((i) => (
         <button key={i} type="button" className={`as-card${pick === i ? ' flip' : ''}${pick === i && named ? ' float' : ''}`} data-i={i} style={{ ['--r' as string]: `${(i - 1) * 9}deg` }} aria-label={`抽第 ${i + 1} 张`} onClick={(e) => choose(i, e.currentTarget)}>
-          <span className="fc-in"><img className="fc-b" src={kitImg('card_emblem')} alt="" /><span className="fc-f as-face"><small>{MAJOR[i][2]}</small><P5StarIcon fill="var(--red)" stroke="var(--ink)" sw={1.4} className="as-st" /><b>{MAJOR[i][1]}</b><em>{MAJOR[i][0]}</em></span></span>
+          <span className="fc-in"><img className="fc-b" src={kitImg('card_emblem')} alt="" /><span className="fc-f as-face"><small>{FACES[i].no}</small><P5StarIcon fill="var(--red)" stroke="var(--ink)" sw={1.4} className="as-st" /><b>{FACES[i].name}</b><em>{FACES[i].en}</em></span></span>
         </button>
       ))}</div>
-      <div className="as-name" aria-live="polite">{m && named && <>{[...m[1]].map((ch, k) => <span key={k}>{ch}</span>)}<em>正位</em></>}</div>
-      <p className="as-read">{m && named ? m[3] : ''}</p>
+      <div className="as-name" aria-live="polite">{m && named && <>{[...m.card.name].map((ch, k) => <span key={k}>{ch}</span>)}<em>正位</em></>}</div>
+      <p className="as-read">{m && named ? (m.rev ? m.card.rv : m.card.up) : ''}</p>
       <div className="as-acts">
         <P5Button tone="paper" seed={101} onClick={reset}>洗牌</P5Button>
         <P5Button tone="red" seed={102} onClick={onLong}>深度解读</P5Button>
@@ -116,20 +165,24 @@ export default function Astrology({ params }: PageProps) {
   const [detail, setDetail] = useState(params.get('detail') === '1');
   const st = params.get('state') ?? '';
   const step = params.get('step') ?? '';
+  const drawn = useAppStore((s) => (s.dailyDivination && s.dailyDivination.date === toLocalDateKey() ? s.dailyDivination : null));
+  const readings = useAppStore((s) => s.longReadings);
   const glimpseRef = useRef<HTMLDivElement>(null);
   const switchTab = (v: Tab) => { setTab(v); setDetail(false); P5.sfx('nav', 0.4); window.scrollTo(0, 0); };
   useLayoutEffect(() => { if (params.get('sec') === 'glimpse') setTimeout(() => glimpseRef.current?.scrollIntoView({ block: 'start' }), 80); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const daily = ['idle', 'noapi', 'reading', 'done', 'error', 'resume'].includes(st) ? st : 'idle';
+  /* 真实优先：今天已经抽过就直接进完成态；演示态 ?state=… 仍可强制查看 */
+  const daily = st ? st : drawn ? 'done' : 'idle';
   const longSt = st === 'noai' ? 'noapi' : ['form', 'pending', 'base', 'picking', 'reading', 'stopped', 'error', 'done', 'followerr'].includes(step) ? step : 'form';
+  const archCount = archiveRows(readings, toLocalDateKey()).length;
   return (
     <div className="p4-astro astro5">
       <div className="astro-rings astro5-rings" aria-hidden="true" />
       <P5PageHeader ransom="FORTUNE" cn="今日星象" sub="从三张塔罗牌中抽取今日指引" seed={51} right={<P5Back to="dashboard" />} />
-      <div className="seg astro5-tabs" role="tablist">{([['daily', '今日塔罗'], ['long', '中长期占卜'], ['archive', `档案 ${st === 'empty' ? 0 : ROWS.length}`]] as [Tab, string][]).map(([k, l]) => (
+      <div className="seg astro5-tabs" role="tablist">{([['daily', '今日塔罗'], ['long', '中长期占卜'], ['archive', `档案 ${st === 'empty' ? 0 : archCount}`]] as [Tab, string][]).map(([k, l]) => (
         <button key={k} type="button" role="tab" aria-pressed={tab === k} aria-selected={tab === k} onClick={() => switchTab(k)}>{l}</button>
       ))}</div>
       {tab === 'daily' && <>
-        {daily === 'idle' ? <FortuneTable onLong={() => switchTab('long')} onArchive={() => switchTab('archive')} /> : <Inline dep={`d-${daily}`} play={() => OD.openDailyDraw(daily)} />}
+        {daily === 'idle' && !drawn ? <FortuneTable onLong={() => switchTab('long')} onArchive={() => switchTab('archive')} /> : <Inline dep={`d-${daily}`} play={() => OD.openDailyDraw(daily)} />}
         <div ref={glimpseRef} id="fate-glimpse"><Inline dep={`g-${params.get('glimpse')}`} play={() => OD.openFateGlimpse(params.get('glimpse') === 'ready' ? 'ready' : 'progress')} /></div>
       </>}
       {tab === 'long' && <Inline dep={`l-${longSt}`} play={() => OD.openLongReading(longSt)} />}

@@ -1,7 +1,7 @@
 /**
  * AppShell —— 外壳：蓝白水面舞台（BlueStage）+ 导航（竖屏底导 / 宽屏侧栏，真实 layoutMode 规则）+ 内容列 + 全局浮层（轮盘、助手、转场、Dev 胶囊）。
  * 转场：shellBus.navigate(page, tab, { transition })
- *   water（底导）→ 前进 BlotIris 波形圆 / 返回 DoubleCircleIris 双圆；wave（默认 / 侧栏 / 轮盘 / 页内）→ Shatter 玻璃碎裂（夜 = 影时间变体）；none → 直接切（见 ShellTransition.tsx）。
+ *   water / wave（底导 / 侧栏 / 轮盘 / 页内）→ 统一 DoubleCircleIris 圆遮罩；none → 直接切（见 ShellTransition.tsx）。
  *   低动效：同步切页。新页内容层 PageEnter 斜切滑入。
  * 内容列：与真实一致（wide:ml-60 px-4 wide:px-8，底部留底导高度 + 安全区），内层 max-w-page 居中。
  * 舞台：页面路由 data 里 pageId==='dashboard' 时 variant='home'（首页自己挂 BlueHeroDecor）。

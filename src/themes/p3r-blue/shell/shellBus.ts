@@ -3,10 +3,10 @@
  *
  *   import { openAssistant, openWheel, navigate, closeAssistant, useShellState } from '@blue/shell/shellBus';
  *
- *   navigate('ledger')                         // → #/p/ledger（默认 wave 三斜板幕布）
+ *   navigate('ledger')                         // → #/p/ledger（默认 wave，外壳统一走圆遮罩）
  *   navigate('actions', 'todos')               // → #/p/actions?tab=todos
  *   navigate('todos')                          // 旧路由 id 兼容：等价于 navigate('actions','todos')
- *   navigate('settings', undefined, { transition: 'water', origin: {x,y} })   // 水波蓝光圈
+ *   navigate('settings', undefined, { transition: 'water', origin: {x,y} })   // 兼容名，同样走圆遮罩
  *   navigate('dashboard')                      // → #/
  *   openAssistant()                            // 打开助手面板（NavigatorWindow；真实：中间按钮短按）
  *   openWheel()                                // 打开长按轮盘（点选模式；真实：中间按钮长按 ≥500ms）
@@ -18,8 +18,7 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * water = 底导：水波 → 蓝光圈（真实 playHeavyTransition({effect:'water', origin})，RippleIris）
- * wave  = p3 频道幕布：三斜板交错（真实 WaveSliceAct；侧栏 / 轮盘 / 页内跳转默认）
+ * water / wave = 外壳统一圆形遮罩（保留两个名字兼容既有调用）
  * none  = 直接切（同页切 tab）
  * 兼容黄色版写法：'wipe' | 'noise' | 'wedge' 一律按 'wave' 处理。
  */

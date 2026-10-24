@@ -162,8 +162,13 @@ function build() {
   }
   for (const u of battle.units) addUnitMesh(u);
   mapObj.build(world, battle, tileMeshes);
+  const fresh = freshMap;
   fitCamera(!freshMap);
   freshMap = false;
+  if (fresh) { // 开局：P5T 式近景对准第一个可行动的我方角色（立即到位）
+    const a = battle.alive('ally').find((x) => !x.prop && !x.decoy && !x.acted);
+    if (a) { rig.focus(w2v(a.pos)); rig.cur = { ...rig.tgt }; rig.apply(); }
+  }
 }
 
 function addUnitMesh(u: Unit) {
@@ -232,7 +237,7 @@ function fitCamera(keep = true) {
   const m = battle.map;
   let maxH = 0;
   for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) maxH = Math.max(maxH, battle.grid.h({ x, y }));
-  rig.setMap({ width: m.width, height: m.height, maxY: 1.4 + maxH * LEVEL }, w / h, keep);
+  rig.setMap({ width: m.width, height: m.height, maxY: 1.4 + maxH * LEVEL }, w / h, keep, h);
 }
 /** 敌方回合镜头（Hark 演出）：推近并跟随行动者；null = 我方回合开始，对准当前可行动角色 */
 function camFocus(p: Vec | null, zoom = 1.35) {
@@ -919,7 +924,7 @@ async function play(events: BattleEvent[]) {
   if (selected && (battle.unit(selected).acted || battle.unit(selected).ko)) selected = null;
   if (battle.phase === 'player' && !selected) {
     const next = battle.alive('ally').find((a) => a.oneMore) ?? null;
-    if (next) selected = next.id;
+    if (next) { selected = next.id; rig.focus(w2v(next.pos)); }
   }
   previewTile = null; previewTarget = null; uniqueTile = null;
   if (mode === 'unique') mode = 'auto';
@@ -1023,8 +1028,9 @@ function pick(ev: PointerEvent): { tile?: Vec; unit?: string } {
 }
 
 // 单指拖 >8px = 平移镜头，否则 = 点击；捏合/滚轮缩放；双指扭转或 Q/E = 旋转 90°
-attachCameraInput(canvas, rig, (e) => onTap(pick(e)), () => !aimActive);
-mountCamButtons((d) => rig.rotate(d));
+const camOverview = () => { const a = selected ? battle.unit(selected) : battle.alive('ally').find((x) => !x.prop && !x.decoy && !x.acted); rig.toggleOverview(a ? w2v(a.pos) : null); };
+attachCameraInput(canvas, rig, (e) => onTap(pick(e)), () => !aimActive, camOverview);
+mountCamButtons((d) => rig.rotate(d), camOverview);
 
 function onTap(h: { tile?: Vec; unit?: string }) {
   if (busy || battle.phase !== 'player') return;
@@ -1044,7 +1050,7 @@ function onTap(h: { tile?: Vec; unit?: string }) {
       }
       if (selected === u.id && previewTile) { previewTile = null; previewTarget = null; }
       else if (u.decoy) toast('诱饵：敌人会优先攻击它，被打一下就消失');
-      else if (!u.acted) { selected = u.id; inspectEnemy = null; previewTile = null; previewTarget = null; mode = 'auto'; skillId = null; }
+      else if (!u.acted) { selected = u.id; inspectEnemy = null; previewTile = null; previewTarget = null; mode = 'auto'; skillId = null; rig.focus(w2v(u.pos)); } // 镜头跟随选中角色
       else toast(`${u.name} 已行动`);
       return refreshAll();
     }
@@ -1204,6 +1210,7 @@ window.__p5t = {
   renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries }; },
   get busy() { return busy; },
   rigs,
+  camera,
   get jokerModel() { return rigs.size > 0; },
   /** 截图用特写机位：从单位前方 ang 弧度方向、距离 dist 看它（null 还原俯视） */
   portrait(id: string | null, ang = 0, dist = 2.2, h = 0.9) {

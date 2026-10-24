@@ -4,7 +4,7 @@ import type { CameraRig } from './cameraRig';
 
 export const TAP_SLOP = 8;
 
-export function attachCameraInput(el: HTMLElement, rig: CameraRig, onTap: (ev: PointerEvent) => void, canControl: () => boolean = () => true) {
+export function attachCameraInput(el: HTMLElement, rig: CameraRig, onTap: (ev: PointerEvent) => void, canControl: () => boolean = () => true, overview: () => void = () => rig.toggleOverview()) {
   const pts = new Map<number, { x: number; y: number; sx: number; sy: number }>();
   let dragging = false;
   let multi = false; // 本次手势出现过双指 → 抬起时不算点击
@@ -63,5 +63,6 @@ export function attachCameraInput(el: HTMLElement, rig: CameraRig, onTap: (ev: P
     else if (e.key === 'e' || e.key === 'E') rig.rotate(1);
     else if (e.key === '+' || e.key === '=') rig.zoomStep(1);
     else if (e.key === '-') rig.zoomStep(-1);
+    else if (e.key === 'm' || e.key === 'M') overview();
   });
 }

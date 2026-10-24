@@ -79,7 +79,13 @@ if (ONLY.includes('enemy')) {
 if (ONLY.includes('full')) {
   for (const [w, h] of [[1280, 720], [844, 390]]) {
     const page = await open('L01', w, h);
-    await snap(page, `full-L01-${w}x${h}`, 600);
+    await snap(page, `default-L01-${w}x${h}`, 600);
+    const px = await page.evaluate(() => { const P = window.__p5t, r = P.rigs.get('joker'), g = r.root.parent; const cam = P.camera; const a = g.position.clone().project(cam), b = g.position.clone().setY(g.position.y + 1.1).project(cam); return Math.round(Math.abs(b.y - a.y) / 2 * innerHeight); });
+    console.log('joker px', w, h, px);
+    if (w === 1280) {
+      await page.keyboard.press('KeyE'); await page.waitForTimeout(2200); await snap(page, `default-L01-rot90-${w}x${h}`, 300);
+      await page.keyboard.press('KeyM'); await page.waitForTimeout(1800); await snap(page, `overview-L01-${w}x${h}`, 300);
+    }
     await page.close();
   }
 }

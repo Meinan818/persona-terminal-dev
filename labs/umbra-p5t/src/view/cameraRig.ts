@@ -22,6 +22,8 @@ export class CameraRig {
   userZoom = 1;
   zMax = 2.6;
   levels: number[] = [1, 1.6, 2.6];
+  /** 默认（P5T 式）近景倍率：角色约 50–60px 高（1280×720），地图部分出画 */
+  defZoom = 1;
   step = 0; // 当前 90° 步数
 
   constructor(cam: THREE.OrthographicCamera) { this.cam = cam; }
@@ -52,17 +54,20 @@ export class CameraRig {
   }
 
   /** 新地图 / 窗口尺寸变化 */
-  setMap(box: MapBox, aspect: number, keepView = false) {
+  setMap(box: MapBox, aspect: number, keepView = false, pxH = 720) {
     this.box = box; this.aspect = aspect;
     const f = this.fit(this.cur.yaw);
-    // 最大倍率：竖直方向约看见 7 格；至少 1.8 倍
-    this.zMax = Math.max(1.8, f.halfH / 3.2);
-    const mid = Math.sqrt(this.zMax);
-    this.levels = [1, mid, this.zMax];
+    // 默认近景：身高 1.1 格的角色在屏幕上约 px 像素（720 高 ≈ 56px，手机横屏 390 高 ≈ 40px）
+    const upY = this.axes(this.cur.yaw).up.y;
+    const px = Math.min(58, Math.max(40, pxH * 0.078));
+    this.defZoom = Math.max(1, (px * 2 * f.halfH) / (1.1 * upY * pxH));
+    // 最大倍率：竖直方向约看见 7 格；至少 1.8 倍，且比默认近景再近一档
+    this.zMax = Math.max(1.8, f.halfH / 3.2, this.defZoom * 1.45);
+    const mid = Math.sqrt(this.defZoom);
+    this.levels = [...new Set([1, mid, this.defZoom, this.zMax].map((z) => +z.toFixed(3)))].sort((a, b) => a - b);
     if (!keepView) {
       this.step = 0;
-      const big = Math.max(box.width, box.height) > 24; // 32×40 这种大图：开局不缩到整图，先给中档
-      this.cur = { ox: f.cx, oy: f.cy, zoom: big ? mid : 1, yaw: BASE_YAW };
+      this.cur = { ox: f.cx, oy: f.cy, zoom: this.defZoom, yaw: BASE_YAW };
       this.tgt = { ...this.cur };
       this.userZoom = this.cur.zoom;
     }
@@ -163,6 +168,11 @@ export class CameraRig {
     const z = this.tgt.zoom;
     const best = this.levels.reduce((a, b) => (Math.abs(Math.log(b / z)) < Math.abs(Math.log(a / z)) ? b : a));
     this.zoomBy(best / z);
+  }
+  /** 全图 ⇄ 默认近景（近景时对准 p） */
+  toggleOverview(p?: { x: number; y: number; z: number } | null) {
+    if (this.tgt.zoom > 1.05) { this.userZoom = 1; this.focus(null, 1); }
+    else { this.userZoom = this.defZoom; this.focus(p ?? null, this.defZoom); }
   }
   /** 90° 步进旋转（+1 = 顺时针） */
   rotate(dir: 1 | -1) {

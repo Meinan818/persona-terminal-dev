@@ -58,14 +58,15 @@ let b0: Battle | null = null;
 export function setObjectiveOpen(v: boolean) { open = v; if (b0) updateObjectiveHud(b0); }
 
 /** 左下（结束回合旁）旋转按钮 */
-export function mountCamButtons(onRotate: (dir: 1 | -1) => void) {
+export function mountCamButtons(onRotate: (dir: 1 | -1) => void, onOverview?: () => void) {
   const el = document.createElement('div');
   el.id = 'camctl';
   el.className = 'hud';
-  el.innerHTML = `<button data-r="-1" title="向左旋转 (Q)"><span>⟲</span><small>Q</small></button><button data-r="1" title="向右旋转 (E)"><span>⟳</span><small>E</small></button>`;
+  el.innerHTML = `<button data-r="-1" title="向左旋转 (Q)"><span>⟲</span><small>Q</small></button><button data-r="1" title="向右旋转 (E)"><span>⟳</span><small>E</small></button>${onOverview ? '<button data-o="1" title="全图 / 近景 (M)"><span style="font-size:13px">全</span><small>M</small></button>' : ''}`;
   el.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('button');
-    if (b) onRotate(Number(b.dataset.r) as 1 | -1);
+    if (b?.dataset.o) onOverview?.();
+    else if (b) onRotate(Number(b.dataset.r) as 1 | -1);
   });
   (document.getElementById('app') ?? document.body).appendChild(el);
   return el;

@@ -4,6 +4,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { RigBase, toonGradient, outlineMat as sharedOutline, swingArm } from './chibiRig';
+import type { AnimFrame } from './chibiRig';
 
 const BASE = `${import.meta.env.BASE_URL ?? './'}models/private/`;
 /** 优先怪盗服（发色被 mod 改黄，加载后改回近黑）；没有再用学生服（眼镜片会渲成白色，隐藏镜片） */
@@ -16,14 +18,7 @@ let proto: THREE.Object3D | null = null;
 let protoH = 1;
 let loading: Promise<boolean> | null = null;
 
-let grad: THREE.DataTexture | null = null;
-function gradient() {
-  if (grad) return grad;
-  grad = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 215, 215, 215, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat);
-  grad.minFilter = grad.magFilter = THREE.NearestFilter;
-  grad.needsUpdate = true;
-  return grad;
-}
+const gradient = toonGradient;
 
 /** 加载一次；成功 true，文件不存在/损坏 false（不抛错） */
 export function preloadJoker(): Promise<boolean> {
@@ -65,14 +60,7 @@ function toonOf(src: THREE.MeshStandardMaterial): THREE.Material | null {
   return m;
 }
 
-function outlineMat() {
-  const m = new THREE.MeshBasicMaterial({ color: 0x050508, side: THREE.BackSide });
-  m.onBeforeCompile = (sh) => {
-    sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n transformed += normalize( normal ) * ${OUTLINE_W.toFixed(4)};`);
-  };
-  m.customProgramCacheKey = () => 'joker-outline';
-  return m;
-}
+const outlineMat = () => sharedOutline(OUTLINE_W);
 
 function prepare(root: THREE.Object3D) {
   const meshes: THREE.SkinnedMesh[] = [];
@@ -105,29 +93,41 @@ function addOutlines(root: THREE.Object3D) {
   }
 }
 
-type Pose = 'idle' | 'run' | 'aim' | 'downed';
 const AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new THREE.Vector3(0, 0, 1);
 const BONES = ['Jnt_C_Hips_00', 'Jnt_C_Spine_00', 'Jnt_C_Spine_01', 'Jnt_C_Spine_02', 'Jnt_C_Neck_00', 'Jnt_C_Head_00',
-  'Jnt_L_Arm_00', 'Jnt_R_Arm_00', 'Jnt_L_ForeArm_00', 'Jnt_R_ForeArm_00',
+  'Jnt_L_Arm_00', 'Jnt_R_Arm_00', 'Jnt_L_ForeArm_00', 'Jnt_R_ForeArm_00', 'Jnt_R_Hand_00',
   'Jnt_L_UpLeg_00', 'Jnt_R_UpLeg_00', 'Jnt_L_Leg_00', 'Jnt_R_Leg_00'] as const;
 type BoneName = typeof BONES[number];
 
-/** 一个 Joker 实例：root 挂进单位 Group；inner 负责朝向/倒地；update() 每帧驱动骨骼 */
-export class JokerRig {
-  readonly root = new THREE.Group();
-  private inner = new THREE.Group();
+/** Joker 小手枪（P5T：右手单手持枪）：枪管沿 +Z，握把朝 -Y；每帧贴到右手骨骼，枪管顺着小臂方向 */
+function makePistol() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshToonMaterial({ color: 0x4a4d57, gradientMap: toonGradient() });
+  const dark = new THREE.MeshToonMaterial({ color: 0x23242a, gradientMap: toonGradient() });
+  const ol = sharedOutline(0.006);
+  const part = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rx = 0) => {
+    const a = new THREE.Mesh(geo, m); a.position.set(x, y, z); a.rotation.x = rx; a.castShadow = true;
+    const o = new THREE.Mesh(geo, ol); o.position.copy(a.position); o.rotation.copy(a.rotation);
+    g.add(a, o);
+  };
+  part(new THREE.BoxGeometry(0.032, 0.042, 0.15), mat, 0, 0.012, 0.045);       // 枪身/套筒
+  part(new THREE.BoxGeometry(0.028, 0.075, 0.04), dark, 0, -0.03, -0.006, -0.25); // 握把
+  part(new THREE.CylinderGeometry(0.009, 0.009, 0.04, 8), dark, 0, 0.018, 0.13, Math.PI / 2); // 枪口
+  g.traverse((o) => { (o as THREE.Mesh).raycast = () => {}; });
+  return g;
+}
+
+/** 一个 Joker 实例：root 挂进单位 Group；动画状态机见 chibiRig.RigBase，这里把权重落到 GLB 骨骼上 */
+export class JokerRig extends RigBase {
   private model: THREE.Object3D;
   private bone = new Map<BoneName, THREE.Bone>();
-  private rest = new Map<THREE.Bone, THREE.Quaternion>();
+  private restQ = new Map<THREE.Bone, THREE.Quaternion>();
   private sideL = 1; // 左臂在模型 +x 还是 -x
-  private mats: { m: THREE.MeshToonMaterial | THREE.MeshBasicMaterial; base: THREE.Color }[] = [];
-  private yaw = 0; private yawT = 0;
-  private running = false; private runPhase = 0; private runW = 0;
-  private aimUntil = 0; private aimW = 0; private aimKind: 'gun' | 'melee' | 'skill' = 'gun';
-  private hitT = -10; private downed = false; private downW = 0; private dimmed = false;
-  private last = performance.now();
+  private pistol = makePistol();
+  private ready = false;
 
   constructor() {
+    super(TARGET_H);
     this.model = skClone(proto!);
     // 材质按实例复制（行动后变暗互不影响）
     this.model.traverse((o) => {
@@ -135,63 +135,25 @@ export class JokerRig {
       if (!sm.isSkinnedMesh) return;
       const cp = (m: THREE.Material) => { const c = m.clone(); c.onBeforeCompile = m.onBeforeCompile; c.customProgramCacheKey = m.customProgramCacheKey; const cc = c as THREE.MeshToonMaterial; if (cc.color) this.mats.push({ m: cc, base: cc.color.clone() }); return c; };
       sm.material = Array.isArray(sm.material) ? sm.material.map(cp) : cp(sm.material);
-      sm.raycast = () => {}; // 拾取走下面的包围柱，避免对 6 万面蒙皮网格逐顶点求交
+      sm.raycast = () => {}; // 拾取走包围柱，避免对 6 万面蒙皮网格逐顶点求交
       sm.castShadow = true;
     });
     addOutlines(this.model);
     this.model.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.raycast = () => {}; });
-    for (const n of BONES) { const b = this.model.getObjectByName(n) as THREE.Bone | undefined; if (b) { this.bone.set(n, b); this.rest.set(b, b.quaternion.clone()); } }
+    for (const n of BONES) { const b = this.model.getObjectByName(n) as THREE.Bone | undefined; if (b) { this.bone.set(n, b); this.restQ.set(b, b.quaternion.clone()); } }
     this.model.updateMatrixWorld(true);
     const hand = this.model.getObjectByName('Jnt_L_Hand_00') ?? this.model.getObjectByName('Jnt_L_ForeArm_00');
     if (hand) this.sideL = Math.sign(hand.getWorldPosition(new THREE.Vector3()).x) || 1;
-    const s = TARGET_H / protoH;
-    this.model.scale.setScalar(s);
+    this.model.scale.setScalar(TARGET_H / protoH);
     this.inner.add(this.model);
-    this.root.add(this.inner);
-    // 拾取用隐形包围柱（Raycaster 不看 visible）
-    const hit = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, TARGET_H, 8), new THREE.MeshBasicMaterial());
-    hit.position.y = TARGET_H / 2; hit.visible = false; hit.castShadow = false;
-    hit.name = 'jokerHit';
-    this.root.add(hit);
-    this.apply(0, 0);
-  }
-
-  /** 朝向世界坐标点（xz） */
-  faceTo(worldTarget: THREE.Vector3) {
-    const p = this.root.getWorldPosition(new THREE.Vector3());
-    const dx = worldTarget.x - p.x, dz = worldTarget.z - p.z;
-    if (dx * dx + dz * dz < 1e-4) return;
-    this.yawT = Math.atan2(dx, dz);
-  }
-  setRunning(on: boolean) { this.running = on; }
-  aim(target: THREE.Vector3 | null, kind: 'gun' | 'melee' | 'skill' = 'gun', ms = 1600) { if (target) this.faceTo(target); this.aimKind = kind; this.aimUntil = performance.now() + ms; }
-  endAim() { this.aimUntil = 0; }
-  flinch(from?: THREE.Vector3) { if (from && !this.downed) this.faceTo(from); this.hitT = performance.now() / 1000; }
-  setDowned(on: boolean) { this.downed = on; }
-  setDim(on: boolean) {
-    if (on === this.dimmed) return;
-    this.dimmed = on;
-    for (const { m, base } of this.mats) m.color.copy(base).multiplyScalar(on ? 0.5 : 1);
-  }
-  get pose(): Pose { return this.downed ? 'downed' : performance.now() < this.aimUntil ? 'aim' : this.running ? 'run' : 'idle'; }
-
-  update(now = performance.now()) {
-    const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now;
-    const t = now / 1000;
-    // 平滑转身（取最短角）
-    let d = this.yawT - this.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
-    this.yaw += d * Math.min(1, dt * 14);
-    const k = (cur: number, on: boolean, sp: number) => cur + ((on ? 1 : 0) - cur) * Math.min(1, dt * sp);
-    this.runW = k(this.runW, this.running && !this.downed, 10);
-    this.aimW = k(this.aimW, now < this.aimUntil && !this.downed, 12);
-    this.downW = k(this.downW, this.downed, 8);
-    if (this.running) this.runPhase += dt * 13;
-    this.apply(t, dt);
+    this.root.add(this.pistol);
+    this.ready = true;
+    this.update();
   }
 
   // ---------- 骨骼 ----------
   private chainQ(b: THREE.Object3D): THREE.Quaternion {
-    // b 相对模型根的世界朝向（只乘局部旋转，模型内节点均无非均匀缩放）
+    // b 相对模型根的朝向（只乘局部旋转，模型内节点均无非均匀缩放）
     const q = new THREE.Quaternion();
     const list: THREE.Object3D[] = [];
     for (let o: THREE.Object3D | null = b; o && o !== this.model; o = o.parent) list.push(o);
@@ -200,61 +162,83 @@ export class JokerRig {
   }
   /** 绕「模型空间」轴旋转骨骼 */
   private rot(n: BoneName, axis: THREE.Vector3, ang: number) {
+    if (Math.abs(ang) < 1e-5) return;
+    this.rotQ(n, new THREE.Quaternion().setFromAxisAngle(axis, ang));
+  }
+  private rotQ(n: BoneName, qd: THREE.Quaternion) {
     const b = this.bone.get(n);
-    if (!b || Math.abs(ang) < 1e-5) return;
+    if (!b) return;
     const qp = b.parent ? this.chainQ(b.parent) : new THREE.Quaternion();
-    const qd = new THREE.Quaternion().setFromAxisAngle(axis, ang);
     const inv = qp.clone().invert();
     b.quaternion.premultiply(inv.multiply(qd).multiply(qp));
   }
+  /** 把骨骼 n（朝向子骨骼 child）在模型空间里转向 dir，权重 w */
+  private point(n: BoneName, child: BoneName, dir: THREE.Vector3, w: number) {
+    const b = this.bone.get(n), c = this.bone.get(child);
+    if (!b || !c || w < 1e-3) return;
+    const cur = c.position.clone().applyQuaternion(this.chainQ(b)).normalize();
+    const qd = new THREE.Quaternion().setFromUnitVectors(cur, dir.clone().normalize());
+    this.rotQ(n, new THREE.Quaternion().slerp(qd, w));
+  }
 
-  private apply(t: number, _dt: number) {
-    for (const [b, q] of this.rest) b.quaternion.copy(q);
+  protected applyPose(f: AnimFrame) {
+    if (!this.ready) return;
+    for (const [b, q] of this.restQ) b.quaternion.copy(q);
     const L = this.sideL, R = -this.sideL;
-    const run = this.runW, aim = this.aimW, down = this.downW;
-    const hitAge = t - this.hitT, hit = hitAge < 0.45 ? Math.sin((hitAge / 0.45) * Math.PI) * (1 - hitAge / 0.45 * 0.5) : 0;
-    const ph = this.runPhase, sw = Math.sin(ph);
-    const breath = Math.sin(t * 2.2);
+    const { run, aim, down, hit, sw, breath } = f;
+    const gun = f.kind === 'gun';
 
-    // 躯干：呼吸 + 跑步前倾 + 受击后仰 + 举枪侧身
+    // 躯干：呼吸 + 跑步前倾 + 受击后仰 + 举枪侧身（右肩向前）
     this.rot('Jnt_C_Spine_00', AX, 0.18 * run - 0.42 * hit);
     this.rot('Jnt_C_Spine_01', AX, 0.025 * breath * (1 - run));
-    this.rot('Jnt_C_Spine_01', AY, R * 0.25 * aim * (this.aimKind === 'gun' ? 1 : 0.4));
+    this.rot('Jnt_C_Spine_01', AY, R * 0.3 * aim * (gun ? 1 : 0.4));
     this.rot('Jnt_C_Spine_02', AY, sw * 0.12 * run);
     this.rot('Jnt_C_Head_00', AX, -0.2 * hit + 0.02 * breath - 0.1 * run);
-    this.rot('Jnt_C_Head_00', AY, -R * 0.15 * aim);
+    this.rot('Jnt_C_Head_00', AY, -R * 0.22 * aim * (gun ? 1 : 0.5));
 
-    // 手臂：T-pose → 自然下垂（A-pose），跑步前后摆，倒地张开
+    // 手臂：T-pose → 自然下垂，跑步前后摆，倒地张开
     const lower = 1.22 * (1 - 0.55 * down);
     const idleSway = 0.04 * breath * (1 - run);
-    // 左臂
     this.rot('Jnt_L_Arm_00', AZ, -L * (lower + idleSway));
     this.rot('Jnt_L_Arm_00', AX, sw * 0.75 * run + 0.12 * hit);
     this.rot('Jnt_L_ForeArm_00', AY, -L * (0.25 + 0.6 * run));
-    // 右臂：举枪时直指前方（P5T 单手持枪）
-    const rLower = lower * (1 - aim);
-    this.rot('Jnt_R_Arm_00', AZ, -R * (rLower + idleSway));
-    this.rot('Jnt_R_Arm_00', AX, -sw * 0.75 * run * (1 - aim) + 0.12 * hit);
-    const aimYaw = this.aimKind === 'melee' ? 0.9 : Math.PI / 2;
-    const aimUp = this.aimKind === 'skill' ? 0.9 : this.aimKind === 'melee' ? 0.5 : 0.08;
-    this.rot('Jnt_R_Arm_00', AY, R * -aimYaw * aim);
-    this.rot('Jnt_R_Arm_00', AX, -aimUp * aim);
-    this.rot('Jnt_R_ForeArm_00', AY, -R * (0.25 + 0.6 * run) * (1 - aim));
+    this.rot('Jnt_R_Arm_00', AZ, -R * (lower + idleSway));
+    this.rot('Jnt_R_Arm_00', AX, -sw * 0.75 * run + 0.12 * hit);
+    this.rot('Jnt_R_ForeArm_00', AY, -R * (0.25 + 0.6 * run));
+    // 右臂攻击：直接求方向（模型空间 +Z = 正前方），上臂+小臂伸直
+    if (aim > 1e-3) {
+      let dir: THREE.Vector3;
+      if (gun) dir = new THREE.Vector3(L * 0.1, 0.16, 1);                  // 平举略高、略向身体中线收：过肩镜头里枪口对准目标
+      else if (f.kind === 'skill') dir = new THREE.Vector3(R * 0.15, 1.6, 0.6); // 技能：举手
+      else { const a = -swingArm(f.aimAge); dir = new THREE.Vector3(R * 0.2, -Math.cos(a), Math.sin(a)); } // 近战：举刀劈下
+      this.point('Jnt_R_Arm_00', 'Jnt_R_ForeArm_00', dir, aim);
+      this.point('Jnt_R_ForeArm_00', 'Jnt_R_Hand_00', dir, aim);
+    }
 
     // 腿：跑步交替摆 + 屈膝；待机微屈
     this.rot('Jnt_L_UpLeg_00', AX, -sw * 0.7 * run);
     this.rot('Jnt_R_UpLeg_00', AX, sw * 0.7 * run);
     this.rot('Jnt_L_Leg_00', AX, (0.15 + 0.9 * Math.max(0, sw)) * run + 0.05 * (1 - run));
     this.rot('Jnt_R_Leg_00', AX, (0.15 + 0.9 * Math.max(0, -sw)) * run + 0.05 * (1 - run));
+  }
 
-    // 整体：跑步上下颠 + 待机呼吸起伏；倒地 = 仰面躺下
-    const bob = run * Math.abs(Math.cos(ph)) * 0.05 + (1 - run) * 0.006 * (breath + 1);
-    this.inner.rotation.set(-Math.PI / 2 * down, this.yaw, 0, 'YXZ');
-    this.inner.position.set(0, bob + down * 0.12 - hit * 0.02, 0);
-    if (hit) { // 受击后退一小步（模型朝向反方向）
-      this.inner.position.x -= Math.sin(this.yaw) * hit * 0.08;
-      this.inner.position.z -= Math.cos(this.yaw) * hit * 0.08;
-    }
+  update(now = performance.now()) {
+    super.update(now);
+    this.placePistol();
+  }
+  /** 手枪贴右手：位置 = 手骨，枪管方向 = 小臂 → 手 */
+  private placePistol() {
+    const fa = this.bone.get('Jnt_R_ForeArm_00'), h = this.bone.get('Jnt_R_Hand_00');
+    if (!fa || !h) { this.pistol.visible = false; return; }
+    this.root.updateMatrixWorld(true);
+    const pf = fa.getWorldPosition(new THREE.Vector3()), ph = h.getWorldPosition(new THREE.Vector3());
+    const dir = ph.clone().sub(pf).normalize();
+    const at = ph.clone().addScaledVector(dir, 0.035);
+    this.pistol.position.copy(this.root.worldToLocal(at.clone()));
+    this.pistol.up.set(0, 1, 0);
+    if (Math.abs(dir.y) > 0.97) this.pistol.up.set(0, 0, 1).applyQuaternion(this.inner.getWorldQuaternion(new THREE.Quaternion()));
+    this.pistol.lookAt(at.clone().add(dir));
+    this.pistol.scale.setScalar(this.inner.scale.x);
   }
 }
 

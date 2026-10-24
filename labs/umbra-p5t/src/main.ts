@@ -17,25 +17,33 @@ import { SceneKit, themeFor, cobbleTex, preloadKit } from './view/sceneKit';
 void preloadKit(); // CC0 布景模型提前加载
 import { computeForecast, forecastHtml } from './view/forecast';
 import type { Forecast } from './view/forecast';
-import { preloadJoker, makeJoker, jokerReady, JokerRig } from './view/jokerModel';
-// Joker 实体模型（私用文件，缺失时用占位胶囊）；加载完成后就地替换已建好的占位
-const rigs = new Map<string, JokerRig>();
-const wantsRig = (u: Unit) => u.id === 'joker' && u.side === 'ally' && !u.decoy && !u.prop;
+import { preloadJoker, makeJoker, jokerReady } from './view/jokerModel';
+import type { UnitRig } from './view/chibiRig';
+import { makeSkull, makeMona, makeShadow } from './view/partyModels';
+// 角色模型：Joker = 私用 GLB（缺文件时占位胶囊，加载完成后就地替换）；Skull/Mona/敌兵 = 程序化 Q 版（chibiRig 共用动画）
+const rigs = new Map<string, UnitRig>();
+const wantsRig = (u: Unit) => !u.decoy && !u.prop && (u.side === 'enemy' || (u.side === 'ally' && (u.id === 'joker' || u.id === 'skull' || u.id === 'mona')));
+function makeRigFor(u: Unit): UnitRig | null {
+  if (!wantsRig(u)) return null;
+  if (u.side === 'enemy') return makeShadow(u.role);
+  if (u.id === 'joker') return makeJoker();
+  return u.id === 'skull' ? makeSkull() : makeMona();
+}
 void preloadJoker().then((ok) => { if (ok && battle) swapInRigs(); });
 function swapInRigs() {
   for (const u of battle.units) {
     const g = unitMesh.get(u.id);
     if (!g || !wantsRig(u) || rigs.has(u.id)) continue;
-    const r = makeJoker(); if (!r) return;
+    const r = makeRigFor(u); if (!r) continue;
     while (g.children.length) g.remove(g.children[0]);
     attachRig(g, r, u);
   }
 }
-function attachRig(g: THREE.Group, r: JokerRig, u: Unit) {
+function attachRig(g: THREE.Group, r: UnitRig, u: Unit) {
   g.add(r.root);
-  r.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) { if (o.name !== 'jokerHit') o.castShadow = true; o.userData = { ...o.userData, unit: u.id }; } });
+  r.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.userData = { ...o.userData, unit: u.id }; } });
   if (u.facing) r.faceTo(new THREE.Vector3(g.position.x + u.facing.x, 0, g.position.z + u.facing.y));
-  else r.faceTo(new THREE.Vector3(g.position.x, 0, g.position.z + 1));
+  else r.faceTo(new THREE.Vector3(g.position.x, 0, g.position.z + (u.side === 'enemy' ? -1 : 1)));
   rigs.set(u.id, r);
 }
 
@@ -176,7 +184,7 @@ function addUnitMesh(u: Unit) {
     } else {
       makeSpeaker(g);
     }
-  } else if (wantsRig(u) && jokerReady()) {
+  } else if (wantsRig(u) && (u.id !== 'joker' || jokerReady())) {
     // 实体模型分支在 traverse 之后挂（见下）
   } else if (u.side === 'ally') {
     const mat = std(u.decoy ? 0x9fd0ff : COLORS[u.id] ?? 0xffffff, { roughness: 0.5, transparent: !!u.decoy, opacity: u.decoy ? 0.55 : 1 });
@@ -204,7 +212,7 @@ function addUnitMesh(u: Unit) {
   }
   g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.userData = { unit: u.id }; } });
   g.position.copy(w2v(u.pos));
-  if (wantsRig(u) && !g.children.length) { const r = makeJoker(); if (r) attachRig(g, r, u); }
+  if (wantsRig(u) && !g.children.length) { const r = makeRigFor(u); if (r) attachRig(g, r, u); }
   g.userData = { unit: u.id };
   world.add(g);
   unitMesh.set(u.id, g);
@@ -570,7 +578,7 @@ function refreshLabels() {
       continue;
     }
     const rg = rigs.get(u.id);
-    const v = g.position.clone().add(new THREE.Vector3(0, rg ? 1.3 : 1.05, 0)).project(viewCam);
+    const v = g.position.clone().add(new THREE.Vector3(0, rg ? rg.height + 0.2 : 1.05, 0)).project(viewCam);
     el.style.display = '';
     el.style.left = `${((v.x + 1) / 2) * w}px`;
     el.style.top = `${((1 - v.y) / 2) * h}px`;
@@ -586,6 +594,8 @@ function refreshLabels() {
       : `${u.name.split(' ').pop()}${tags}<div class="hp"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>`;
     if (rg) {
       if (!busy) rg.setDowned(u.downed);
+      if (!u.ko && rg.pose === 'dead') rg.revive();
+      if (!busy && u.role === 'shielder' && u.facing) rg.faceTo(new THREE.Vector3(g.position.x + u.facing.x, 0, g.position.z + u.facing.y)); // 盾兵朝向 = 盾的方向
       rg.setDim(u.acted && battle.phase === 'player');
       if (!busy) g.position.y = gh(u.pos);
       continue;
@@ -862,7 +872,7 @@ async function play(events: BattleEvent[]) {
       case 'penalty': popDamage(e.unitId, '违规!', 'big'); toast(`喇叭禁止「${ACT_NAME[e.action]}」→ 惩罚`); break;
       case 'speakerBan': toast(`喇叭：本回合禁止「${e.bans.map((b) => ACT_NAME[b]).join('、')}」`); break;
       case 'skipTurn': popDamage(e.unitId, ST_NAME[e.reason]); break;
-      case 'ko': popDamage(e.unitId, 'KO'); await sleep(200 / SPEED); fxKeep.delete(e.unitId); break;
+      case 'ko': { popDamage(e.unitId, 'KO'); const kr = rigs.get(e.unitId); if (kr) kr.die(); await sleep((kr ? 650 : 200) / SPEED); } fxKeep.delete(e.unitId); break;
       case 'batonPassReady': toast(`${battle.unit(e.koId).name} 倒下：可 Baton Pass 换替补`); break;
       case 'batonPass': rebuild = true; banner('BATON PASS', true); break;
       case 'error': toast(e.message); break;

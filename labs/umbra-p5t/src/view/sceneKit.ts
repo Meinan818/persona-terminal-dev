@@ -8,8 +8,10 @@
 // 近相机两侧的外圈：高处（2 楼以上、屋顶、远景）收起，底层压成矮墙，旋转镜头时平滑切换。
 import * as THREE from 'three';
 import type { MapDef } from '../rules';
-import { Batch, loadKit, defineProc, hasModel, trs } from './kitLib';
-import type { Part } from './kitLib';
+import { Batch, loadKit, defineProc, hasModel, trs, makeFoldUniforms } from './kitLib';
+import type { Part, FoldUniforms } from './kitLib';
+/** 地图内会挡视线的房屋件（墙板/屋顶/阳台/城墙）：镜头旋转后靠相机一侧的压成一层高 */
+const FOLD_RE = /^(town\/(wall|roof|overhang|banner|balcony|chimney)|castle\/(wall|tower))/;
 
 export interface Theme {
   bg: number; fogNear: number; fogFar: number; hemiSky: number; hemiGround: number; hemiInt: number; sunColor: number; sunInt: number;
@@ -191,10 +193,11 @@ export class SceneKit {
   private night = false;
   private flick: { o: THREE.Object3D; base: number; ph: number; light?: THREE.PointLight }[] = [];
   ready = false;
+  private fold: FoldUniforms | null = null;
 
   /** 返回被布景占用的格（主程序不再画灰盒）；模型异步加载完再挂到 world 上 */
   build(world: THREE.Group, map: MapDef): Set<string> {
-    this.outers = []; this.snap = true; this.flames = []; this.ready = false; this.glows = []; this.flick = []; this.glowSide = -1;
+    this.outers = []; this.snap = true; this.flames = []; this.ready = false; this.glows = []; this.flick = []; this.glowSide = -1; this.fold = null;
     const tok = ++this.token;
     const claimed = new Set<string>();
     const sc = SCENES[map.id];
@@ -297,7 +300,8 @@ export class SceneKit {
       }
     }
 
-    world.add(inner.build());
+    this.fold = makeFoldUniforms(this.center);
+    world.add(inner.build(true, { re: FOLD_RE, u: this.fold }));
 
     // ---- 地图外：街边带 + 两排房屋 + 远景 ----
     const sides: { nx: number; nz: number; lo: Batch; hi: Batch }[] = DIRS.map(([dx, dy]) => ({ nx: dx, nz: dy, lo: new Batch(), hi: new Batch() }));
@@ -374,7 +378,7 @@ export class SceneKit {
     const glowGroups = sides.map(() => new THREE.Group());
     if (this.night) this.nightLights(world, glowGroups, W, H);
     sides.forEach((s, i) => {
-      const lo = s.lo.build(), hi = s.hi.build();
+      const fo = { re: FOLD_RE, u: this.fold! }; const lo = s.lo.build(true, fo), hi = s.hi.build(true, fo); // 外圈也接同一套遮挡收起（补上侧边归属不准的转角楼）
       const g = new THREE.Group(); g.add(lo, hi, glowGroups[i]);
       world.add(g);
       this.outers.push({ g: hi, lo, nx: s.nx, nz: s.nz, full: 1, glow: glowGroups[i] });
@@ -539,6 +543,7 @@ export class SceneKit {
   /** 每帧：近相机两侧外圈收起高处、底层压矮；火焰闪烁 */
   update(yaw: number, t: number) {
     const cx = Math.sin(yaw), cz = Math.cos(yaw);
+    if (this.fold) this.fold.uFoldDir.value.set(cx, 0, cz);
     for (const o of this.outers) {
       const near = o.nx * cx + o.nz * cz;
       const target = near > 0.2 ? 0 : 1;

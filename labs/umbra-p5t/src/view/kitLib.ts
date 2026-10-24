@@ -93,14 +93,16 @@ export class Batch {
     it.m.push(m); it.c.push(color == null ? null : new THREE.Color(color)); this.count++;
   }
   put(name: string, x: number, y: number, z: number, ry = 0, s = 1, color?: number | null, sy = s) { this.add(name, trs(x, y, z, ry, s, sy, s), color); }
-  build(shadow = true): THREE.Group {
+  /** fold：给名字匹配 fold.re 的件（房屋墙板/屋顶等）换上「靠相机一侧高处压扁」的材质，见 foldMat() */
+  build(shadow = true, fold?: { re: RegExp; u: FoldUniforms }): THREE.Group {
     const g = new THREE.Group();
     for (const [name, it] of this.items) {
       const parts = ready.get(name);
       if (!parts?.length) continue;
       const tinted = it.c.some((c) => c);
+      const folds = !!fold && fold.re.test(name);
       for (const pt of parts) {
-        const im = new THREE.InstancedMesh(pt.geo, pt.mat, it.m.length);
+        const im = new THREE.InstancedMesh(pt.geo, folds ? foldMat(pt.mat, fold!.u) : pt.mat, it.m.length);
         it.m.forEach((m, i) => { im.setMatrixAt(i, m); if (tinted) im.setColorAt(i, it.c[i] ?? WHITE); });
         im.instanceMatrix.needsUpdate = true;
         im.castShadow = shadow; im.receiveShadow = true;
@@ -112,3 +114,38 @@ export class Batch {
   }
 }
 const WHITE = new THREE.Color(1, 1, 1);
+
+// ---------- 旋转镜头时的遮挡收起（地图内房屋） ----------
+// 每个实例按自身原点到地图中心、沿「中心 → 相机」水平方向的距离 d 算收起量 k = smoothstep(edge.x, edge.y, d) * amt；
+// 世界高度超过 cap 的顶点压到 cap + (y - cap) * (1 - 0.92k)：靠相机一侧的房子只剩一层高的「剖面」，棋盘不被挡。
+export interface FoldUniforms { uFoldDir: { value: THREE.Vector3 }; uFoldCtr: { value: THREE.Vector3 }; uFoldEdge: { value: THREE.Vector2 }; uFoldCap: { value: number }; uFoldAmt: { value: number } }
+export function makeFoldUniforms(center: THREE.Vector3): FoldUniforms {
+  return { uFoldDir: { value: new THREE.Vector3(0, 0, 1) }, uFoldCtr: { value: center.clone() }, uFoldEdge: { value: new THREE.Vector2(1.5, 3.5) }, uFoldCap: { value: 1.25 }, uFoldAmt: { value: 1 } };
+}
+const foldCache = new Map<string, THREE.Material>();
+export function foldMat(m: THREE.Material, u: FoldUniforms) {
+  const key = m.uuid + '|' + u.uFoldCtr.value.toArray().join(',');
+  let f = foldCache.get(key);
+  if (f) return f;
+  f = m.clone();
+  f.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, u);
+    sh.vertexShader = 'uniform vec3 uFoldDir; uniform vec3 uFoldCtr; uniform vec2 uFoldEdge; uniform float uFoldCap; uniform float uFoldAmt;\n' + sh.vertexShader.replace('#include <project_vertex>', `
+      vec4 fpos = vec4( transformed, 1.0 );
+      #ifdef USE_INSTANCING
+        fpos = instanceMatrix * fpos;
+        vec3 forg = ( modelMatrix * instanceMatrix * vec4( 0.0, 0.0, 0.0, 1.0 ) ).xyz;
+      #else
+        vec3 forg = ( modelMatrix * vec4( 0.0, 0.0, 0.0, 1.0 ) ).xyz;
+      #endif
+      vec4 fw = modelMatrix * fpos;
+      float fd = dot( forg.xz - uFoldCtr.xz, normalize( uFoldDir.xz ) );
+      float fk = smoothstep( uFoldEdge.x, uFoldEdge.y, fd ) * uFoldAmt;
+      if ( fw.y > uFoldCap ) fw.y = uFoldCap + ( fw.y - uFoldCap ) * ( 1.0 - 0.92 * fk );
+      vec4 mvPosition = viewMatrix * fw;
+      gl_Position = projectionMatrix * mvPosition;`);
+  };
+  f.customProgramCacheKey = () => 'fold';
+  foldCache.set(key, f);
+  return f;
+}

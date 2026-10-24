@@ -93,9 +93,10 @@ if (ONLY.includes('l08')) {
 
 if (ONLY.includes('rotate')) {
   const page = await open('L01');
+  await snap(page, 'rotate-L01-0', 300);
   for (const k of [1, 2]) {
     await page.keyboard.press('KeyE');
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(2500);
     await snap(page, `rotate-L01-${k * 90}`, 400);
   }
   await page.close();

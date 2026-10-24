@@ -104,6 +104,12 @@ export interface ImportDataResult {
   orphanImages: { count: number; bytes: number };
 }
 
+export interface TodoCompletionResult {
+  /** 本次是否完成了任务目标；计数任务的中间进度为 false。 */
+  completed: boolean;
+  unlockHints: { achievements: number; skills: number };
+}
+
 interface ActivityOptions {
   important?: boolean;
   date?: Date;
@@ -492,10 +498,11 @@ interface AppState {
   /** 今日「应做」的活跃待办（active + 未来启用日排除 + weekdays 不含今天排除）；短路决策候选与入口卡计数共用，统一全站口径。 */
   getDueTodosToday: () => Todo[];
 
-  addTodo: (todo: Omit<Todo, 'id' | 'createdAt'>) => Promise<void>;
+  addTodo: (todo: Omit<Todo, 'id' | 'createdAt'>) => Promise<Todo>;
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<void>;
   deleteTodo: (id: string) => Promise<void>;
-  completeTodo: (todoId: string) => Promise<{ unlockHints: { achievements: number; skills: number } } | null>;
+  /** null 表示拒绝完成（任务不存在、已停用、跨日或角色变化）；中间计数仍返回 completed=false。 */
+  completeTodo: (todoId: string) => Promise<TodoCompletionResult | null>;
   /**
    * 撤销今日的 todo 完成：从 activity 历史里抠出当天因这条 todo 触发的活动，
    * 走 deleteActivity 完整撤销链路（扣回属性点数、回算 level、删 todoCompletion、还原 todo 为 active）。
@@ -3126,7 +3133,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // 新行为（事务原子）：
     //   - 取该活动的 pointsAwarded，从对应属性点数里逐项扣回
     //   - 扣回后按阈值表回算 level，若跌破则一并下调（最低不低于 1）
-    //   - 删除同 method='todo' 当日的 todoCompletion（或递减计数）
+    //   - 删除同 method='todo' 当日的 todoCompletion（奖励记录对应整次达成）
     //   - 该 todo 若因完成而被自动归档（isActive=false + completedAt），自动恢复成 active
     //   - 顺手清理掉这次 addActivity 同次写入的 level_up 副记录（同 userId / 同分钟内 / category='level_up'），
     //     避免历史里出现"幽灵升级"
@@ -3202,15 +3209,11 @@ export const useAppStore = create<AppState>((set, get) => ({
             if (todo) {
               const completion = await db.todoCompletions.where('todoId').equals(todo.id)
                 .filter(c => c.date === todayKey).first();
-              if (completion) {
-                if (completion.count > 1) {
-                  await db.todoCompletions.update(completion.id, { count: completion.count - 1 });
-                } else {
-                  await db.todoCompletions.delete(completion.id);
-                }
-              }
-              // 若 todo 因这次完成而被归档（非 repeatDaily / 非 isLongTerm），恢复为 active
-              if (!todo.isActive && !todo.repeatDaily && !todo.isLongTerm) {
+              // 一条“完成任务”奖励记录对应整次目标达成；撤销时删掉当天整条计数，
+              // 不能只减 1，否则计次任务会留下 2/3 之类未真正完成却仍有奖励历史的中间态。
+              if (completion) await db.todoCompletions.delete(completion.id);
+              // 若 todo 因这次完成而被归档（非 repeatDaily），恢复为 active
+              if (!todo.isActive && !todo.repeatDaily) {
                 await db.todos.update(todo.id, { isActive: true, archivedAt: undefined, completedAt: undefined });
               }
               if (todo.pact) pactRetract = { id: todo.pact.id, day: todayKey };
@@ -3791,6 +3794,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
     await db.todos.add(newTodo);
     await get().loadData();
+    return newTodo;
   },
 
   updateTodo: async (id, updates) => {
@@ -3868,11 +3872,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       const today = toLocalDateKey();
       const completion = await db.todoCompletions.where('todoId').equals(todoId).filter(c => c.date === today).first();
       const target = todo.frequency === 'count' ? (todo.targetCount || 1) : 1;
-      if (completion && completion.count >= target) return null;
+      const allCompletions = todo.isLongTerm
+        ? await db.todoCompletions.where('todoId').equals(todoId).toArray()
+        : [];
+      const totalBefore = allCompletions.reduce((sum, row) => sum + row.count, 0);
+      if (todo.isLongTerm) {
+        if (totalBefore >= target) return null;
+      } else if (completion && completion.count >= target) {
+        return null;
+      }
       const newCount = completion ? completion.count + 1 : 1;
       if (completion) await db.todoCompletions.update(completion.id, { count: newCount });
       else await db.todoCompletions.add({ id: uuidv4(), todoId, date: today, count: newCount });
-      if (newCount < target) return { todo, today, result: null };
+      const reachedTarget = todo.isLongTerm ? totalBefore + 1 >= target : newCount >= target;
+      if (!reachedTarget) return { todo, today, result: null, completed: false };
 
       const points: Record<string, number> = { knowledge: 0, guts: 0, dexterity: 0, kindness: 0, charm: 0 };
       points[todo.attribute] = todo.points;
@@ -3889,16 +3902,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         await get().addActivity(`命运加成: ${todo.title}`, bonus, 'todo', { skipLoad: true, deferCommitEffects });
       }
       await get().checkTodoCompletionAchievements({ skipLoad: true });
-      if (!todo.repeatDaily && !todo.isLongTerm) {
+      if (!todo.repeatDaily) {
         await db.todos.update(todo.id, { archivedAt: new Date(), completedAt: new Date(), isActive: false });
       }
       if (get().user?.id !== user.id) throw new Error('角色已变化，本次任务完成已停止');
-      return { todo, today, result };
+      return { todo, today, result, completed: true };
     });
     if (!outcome) return null;
-    if (get().user?.id !== user.id) return outcome.result;
+    const completionResult: TodoCompletionResult = {
+      completed: outcome.completed,
+      unlockHints: outcome.result?.unlockHints ?? { achievements: 0, skills: 0 },
+    };
+    if (get().user?.id !== user.id) return completionResult;
     for (const effect of afterCommit) {
-      if (get().user?.id !== user.id) return outcome.result;
+      if (get().user?.id !== user.id) return completionResult;
       await effect();
     }
     await get().loadData();
@@ -3925,9 +3942,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       void get().syncNotifications(); // 待办完成 → 重排，撤掉已完成的「今日待办」提醒
-      return result;
+      return completionResult;
     }
-    return null;
+    return completionResult;
   },
 
   undoTodayTodoCompletion: async (todoId: string) => {
@@ -3935,7 +3952,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // "当天误触" 的语义：把这一次 todo 完成当成从未发生过：
     //   · 属性点数扣回，level 跌破阈值则下调
     //   · 历史 activity 记录连同 level_up 副记录一起删掉
-    //   · todoCompletion 计数减 1（=0 则整条删）
+    //   · 删除当天 todoCompletion 整条记录（撤销的是“今天已达成”这件事）
     //   · todo 重新 isActive=true、清掉 completedAt/archivedAt
     // 实现复用 deleteActivity 已有的事务化撤销（v2.1 改造），保证语义统一。
     const todo = get().todos.find(t => t.id === todoId);
@@ -3968,13 +3985,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         .where('todoId').equals(todoId)
         .filter(c => c.date === today)
         .first();
-      if (completion) {
-        if (completion.count > 1) {
-          await db.todoCompletions.update(completion.id, { count: completion.count - 1 });
-        } else {
-          await db.todoCompletions.delete(completion.id);
-        }
-      }
+      if (completion) await db.todoCompletions.delete(completion.id);
       const t = await db.todos.get(todoId);
       if (t && !t.isActive) {
         await db.todos.update(todoId, { isActive: true, completedAt: undefined, archivedAt: undefined });

@@ -13,6 +13,8 @@ import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3Input, P3Sheet, P3Tag, P3R, slantClip } from '@blue/kit';
 import { AIThinking } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
+import { actionsOps } from '@blue/adapters/pkg2';
+import { useAppStore } from '@/store';
 import { ATTR_NAMES, TODAY_KEY, TODOS } from '@blue/mock/pkg2';
 import { daysBetween, MiniHead, Ring } from '@blue/screens/pkg2/common';
 import { StepList } from '@blue/screens/pkg2/StepList';
@@ -42,6 +44,11 @@ export default function BigDealPanel({ open, onClose, params, todo: t0, onChange
   const [stepCut, setStepCut] = useState<{ done: number; total: number; step: string; next?: string } | null>(null);
   const [clearCut, setClearCut] = useState(false);
   const upd = (p: Partial<Todo>) => setTodo((cur) => { const n = { ...cur, ...p }; onChange?.(n); return n; });
+  const syncReal = () => {
+    const fresh = useAppStore.getState().todos.find((t) => t.id === todo.id);
+    if (fresh) { setTodo(fresh); onChange?.(fresh); }
+    return fresh;
+  };
   const aiSplit = () => { setAiBusy(true); setNotice(null); window.setTimeout(() => { setAiBusy(false); setTodo((cur) => ({ ...cur, steps: [...(cur.steps ?? []), { id: `ai${Date.now()}`, title: '把错题本按章节重新整理', source: 'ai' }, { id: `ai2${Date.now()}`, title: '考前一晚早点睡', source: 'ai' }] })); setNotice('AI 续拆了 2 条——不合适的直接删'); }, 2400); };
   useEffect(() => {
     if (!open) return;
@@ -57,13 +64,50 @@ export default function BigDealPanel({ open, onClose, params, todo: t0, onChange
   const allDone = steps.length > 0 && done === steps.length;
   const dl = dlText(todo.deadline);
   const sp = Math.min(20, steps.length * 3);
-  const toggle = (i: number) => {
+  const toggle = async (i: number) => {
     const s = steps[i];
-    const ns = steps.map((x, j) => (j === i ? { ...x, done: !x.done, doneAt: !x.done ? TODAY_KEY : undefined } : x));
-    upd({ steps: ns });
-    if (!s.done) setStepCut({ done: ns.filter((x) => x.done).length, total: ns.length, step: s.title, next: ns.find((x) => !x.done)?.title });
+    if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) {
+      const ns = steps.map((x, j) => (j === i ? { ...x, done: !x.done, doneAt: !x.done ? TODAY_KEY : undefined } : x));
+      upd({ steps: ns });
+      if (!s.done) setStepCut({ done: ns.filter((x) => x.done).length, total: ns.length, step: s.title, next: ns.find((x) => !x.done)?.title });
+      return;
+    }
+    try {
+      const result = s.done
+        ? (await actionsOps.undoTodoStep(todo.id, s.id), null)
+        : await actionsOps.completeTodoStep(todo.id, s.id);
+      const fresh = syncReal();
+      if (result?.collapsed) {
+        setCleared(true);
+        onClose();
+        return;
+      }
+      const nextSteps = fresh?.steps ?? [];
+      if (!s.done) setStepCut({
+        done: nextSteps.filter((x) => x.done).length,
+        total: nextSteps.length,
+        step: s.title,
+        next: nextSteps.find((x) => !x.done)?.title,
+      });
+    } catch {
+      setNotice('子步没有写入，进度保持不变');
+    }
   };
-  const collapse = () => { setCollapsing(true); window.setTimeout(() => { setCollapsing(false); setCleared(true); setClearCut(true); }, 800); };
+  const collapse = async () => {
+    if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) {
+      setCleared(true); setClearCut(true); return;
+    }
+    setCollapsing(true);
+    try {
+      await actionsOps.collapseBigDeal(todo.id);
+      const fresh = syncReal();
+      if (fresh && !fresh.isActive) { setCleared(true); onClose(); }
+    } catch {
+      setNotice('收官失败，进度保持不变');
+    } finally {
+      setCollapsing(false);
+    }
+  };
   return (
     <>
       <P3Sheet open={open} onClose={onClose} title={todo.title} en="BIG DEAL" size="tall" busy={collapsing || rebuilding}>
@@ -89,12 +133,25 @@ export default function BigDealPanel({ open, onClose, params, todo: t0, onChange
           </div>
           <MiniHead title="子步" en="STEPS" />
           {steps.length === 0 ? <p className="py-3 text-center text-[14px] font-bold" style={{ color: P3R.grey }}>还没有子步——先拆第一步</p>
-            : <StepList steps={steps} locked={cleared} onToggle={toggle} onDelete={(i) => upd({ steps: steps.filter((_, j) => j !== i) })} />}
+            : <StepList steps={steps} locked={cleared} onToggle={toggle} onDelete={(i) => {
+              const step = steps[i];
+              if (!step) return;
+              if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) { upd({ steps: steps.filter((_, j) => j !== i) }); return; }
+              void actionsOps.removeTodoStep(todo.id, step.id).then(syncReal).catch(() => setNotice('子步删除失败，进度保持不变'));
+            }} />}
           {!cleared && (
             <>
               <div className="flex min-w-0 gap-2">
                 <div className="min-w-0 flex-1"><P3Input placeholder="追加一个够得着的小步…" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="追加子步" /></div>
-                <P3Button disabled={!draft.trim()} onClick={() => { upd({ steps: [...steps, { id: `n${Date.now()}`, title: draft.trim(), source: 'manual' }] }); setDraft(''); }}>添加</P3Button>
+                <P3Button disabled={!draft.trim()} onClick={() => {
+                  const title = draft.trim();
+                  if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) {
+                    upd({ steps: [...steps, { id: `n${Date.now()}`, title, source: 'manual' }] });
+                    setDraft('');
+                    return;
+                  }
+                  void actionsOps.addTodoStep(todo.id, title).then(() => { syncReal(); setDraft(''); }).catch(() => setNotice('子步添加失败，请重试'));
+                }}>添加</P3Button>
               </div>
               <P3Button block tone="outline" busy={aiBusy} busyText="正在续拆…" onClick={aiSplit}>✦ AI 续拆下一组</P3Button>
               {aiBusy && <AIThinking label="正在看你已经走到哪了…" sub="按现状续拆两三条够得着的小步" />}
@@ -112,7 +169,18 @@ export default function BigDealPanel({ open, onClose, params, todo: t0, onChange
             <div className="px-5 py-4" style={{ background: P3R.cyanFaint, clipPath: slantClip(12) }}>
               <p className="text-[13px] leading-relaxed" style={{ color: P3R.ink }}>会新立一条同名同步骤的大事，子步全部重置为未完成；<b>当前这条原样归档</b>，已领的奖励和历史记录都不受影响。</p>
               <div className="mt-3 flex gap-2">
-                <P3Button tone="ink" block busy={rebuilding} busyText="重建中…" onClick={() => { setRebuilding(true); window.setTimeout(() => { setRebuilding(false); setRebuild(false); setCleared(false); upd({ steps: steps.map((s) => ({ ...s, done: false, doneAt: undefined })) }); }, 700); }}>确认重建</P3Button>
+                <P3Button tone="ink" block busy={rebuilding} busyText="重建中…" onClick={() => {
+                  if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) {
+                    setRebuild(false); setCleared(false); upd({ steps: steps.map((s) => ({ ...s, done: false, doneAt: undefined })) });
+                    return;
+                  }
+                  setRebuilding(true);
+                  void actionsOps.rebuildBigDeal(todo.id).then((newId) => {
+                    const fresh = useAppStore.getState().todos.find((t) => t.id === newId);
+                    if (fresh) { setTodo(fresh); onChange?.(fresh); }
+                    setRebuild(false); setCleared(false);
+                  }).catch(() => setNotice('重建失败，原大事未改变')).finally(() => setRebuilding(false));
+                }}>确认重建</P3Button>
                 <P3Button tone="soft" block onClick={() => setRebuild(false)}>算了</P3Button>
               </div>
             </div>

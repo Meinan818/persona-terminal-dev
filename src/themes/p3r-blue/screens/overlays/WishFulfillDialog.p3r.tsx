@@ -15,10 +15,11 @@ import { actionsOps, useActionsData } from '@blue/adapters/pkg2';
 
 const HOLD_MS = 1100;
 const CLIP = 'polygon(0 3%, 100% 0, 100% 97%, 0 100%)';
+const EMPTY_WISH: Wish = { id: '', title: '', status: 'archived', source: 'manual', createdAt: new Date(0) };
 export default function WishFulfillDialog({ open, onClose, params, wish, onFulfilled }: OverlayProps & { wish?: Wish | null; onFulfilled?: (id: string) => void }) {
   const anim = useBoldness();
   const { WISHES, WISH_TIMES } = useActionsData();
-  const w = wish ?? WISHES[0];
+  const w = wish ?? WISHES[0] ?? EMPTY_WISH;
   const stage = params?.get('stage');
   const times = WISH_TIMES[w.id] ?? 0;
   const [pressing, setPressing] = useState(false);
@@ -30,6 +31,7 @@ export default function WishFulfillDialog({ open, onClose, params, wish, onFulfi
   useEffect(() => { if (open && stage !== 'done') { setResult(null); setBusy(false); setPressing(false); } }, [open]); // eslint-disable-line
   useEffect(() => () => { clearTimeout(timer.current); auto.current.forEach(clearTimeout); }, []);
   const fire = () => {
+    if (!w.id) { setBusy(false); onClose(); return; }
     setPressing(false); setBusy(true);
     window.setTimeout(async () => { const r = await actionsOps.fulfillWish(w.id); setResult({ title: r?.title ?? w.title, timesLogged: r?.timesLogged ?? times, archivedTodos: r?.archivedTodos ?? 0 }); setBusy(false); onFulfilled?.(w.id); }, 380);
   };

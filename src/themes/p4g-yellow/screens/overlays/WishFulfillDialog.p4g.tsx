@@ -7,15 +7,18 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import type { Wish } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
-import { P4Button, P4Outline, Portal, useEscape, useScrollLock } from '@yellow/kit';
+import { P4Button, P4Outline, Portal, useEscape, useScrollLock, useToast } from '@yellow/kit';
 import { tvPowerVariants, TVFlash } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
-import { WISHES, WISH_TIMES } from '@yellow/mock/pkg2';
+import { actionsOps, useActionsData } from '@yellow/adapters/pkg2';
 
 const HOLD = 1100;
+const EMPTY_WISH: Wish = { id: '', title: '', status: 'archived', source: 'manual', createdAt: new Date(0) };
 export default function WishFulfillDialog({ open, onClose, params, wish, onFulfilled }: OverlayProps & { wish?: Wish | null; onFulfilled?: (id: string) => void }) {
   const low = useLowMotion();
-  const w = wish ?? WISHES[0];
+  const toast = useToast();
+  const { WISHES, WISH_TIMES } = useActionsData();
+  const w = wish ?? WISHES[0] ?? EMPTY_WISH;
   const times = WISH_TIMES[w.id] ?? 0;
   const [pressing, setPressing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -24,7 +27,7 @@ export default function WishFulfillDialog({ open, onClose, params, wish, onFulfi
   useEffect(() => { if (open) { setResult(params?.get('step') === 'done' ? { timesLogged: times, archivedTodos: 1 } : null); setBusy(false); } }, [open]); // eslint-disable-line
   useScrollLock(open);
   useEscape(open, onClose);
-  const down = () => { if (busy) return; setPressing(true); t.current = window.setTimeout(() => { setPressing(false); setBusy(true); window.setTimeout(() => { setBusy(false); setResult({ timesLogged: times, archivedTodos: 1 }); onFulfilled?.(w.id); }, 600); }, low ? 300 : HOLD); };
+  const down = () => { if (busy || !w.id) return; setPressing(true); t.current = window.setTimeout(() => { setPressing(false); setBusy(true); window.setTimeout(() => { void actionsOps.fulfillWish(w.id).then((r) => { setBusy(false); setResult({ timesLogged: r?.timesLogged ?? times, archivedTodos: r?.archivedTodos ?? 0 }); onFulfilled?.(w.id); }).catch(() => { setBusy(false); toast.error('实现失败，数据没有改变；请重试'); }); }, 600); }, low ? 300 : HOLD); };
   const up = () => { clearTimeout(t.current); setPressing(false); };
   return (
     <Portal>

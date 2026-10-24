@@ -101,19 +101,18 @@ export default function Dashboard({ params }: PageProps) {
       useAppStore.getState().setModalBlocker(true);
     }
     void homeOps.completeTodo(t.id).then((result) => {
-      if (!willComplete) return;
-      // store 拒绝这次完成（今日已完成 / 跨天 / 角色变化）→ 不弹完成条，回滚乐观计数。
-      // 计数任务未到目标时 store 同样返回 null，但那属于正常中途，不回滚。
+      // store 拒绝这次完成（今日已完成 / 跨天 / 角色变化）→ 回滚乐观计数。
+      // 计数任务未到目标时返回 completed=false，属于已落库的正常中途。
       if (!result) {
-        useAppStore.getState().setModalBlocker(false);
+        if (willComplete) useAppStore.getState().setModalBlocker(false);
         setTodos((ts) => ts.map((x) => (x.id === t.id ? { ...x, count: t.count } : x)));
         return;
       }
+      if (!result.completed) return;
       const pts = t.points + (t.extraBoosts?.reduce((s, b) => s + b.points, 0) ?? 0);
       window.setTimeout(() => setCutin({ title: t.title, points: pts, hint: result.unlockHints }), anim ? 260 : 0);
     }).catch(() => {
-      if (!willComplete) return;
-      useAppStore.getState().setModalBlocker(false);
+      if (willComplete) useAppStore.getState().setModalBlocker(false);
       setTodos((ts) => ts.map((x) => (x.id === t.id ? { ...x, count: t.count } : x)));
     });
   };

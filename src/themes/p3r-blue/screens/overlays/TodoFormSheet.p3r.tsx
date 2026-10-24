@@ -42,7 +42,7 @@ const DateRow = ({ label, hint, value, onChange, id }: { label: ReactNode; hint?
   </P3Field>
 );
 
-export default function TodoFormSheet({ open, onClose, params, todo, onSave }: OverlayProps & { todo?: Todo | null; onSave?: (f: TodoForm, id?: string) => void }) {
+export default function TodoFormSheet({ open, onClose, params, todo, onSave }: OverlayProps & { todo?: Todo | null; onSave?: (f: TodoForm, id?: string) => boolean | void | Promise<boolean | void> }) {
   const toast = useToast();
   const anim = useBoldness();
   const v = params?.get('variant');
@@ -54,6 +54,7 @@ export default function TodoFormSheet({ open, onClose, params, todo, onSave }: O
   const [stepDraft, setStepDraft] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [schedule, setSchedule] = useState(false);
+  const [saving, setSaving] = useState(false);
   const set = (p: Partial<TodoForm>) => setF((cur) => ({ ...cur, ...p }));
   const aiSplit = (title = f.title) => {
     setAiBusy(true); setAiError(null);
@@ -72,12 +73,24 @@ export default function TodoFormSheet({ open, onClose, params, todo, onSave }: O
   const used = new Set<string>([f.attribute, ...f.extraBoosts.map((b) => b.attribute)]);
   const firstUnused = (ATTR_IDS.find((a) => !used.has(a)) ?? 'knowledge') as AttributeId;
   const canAddBoost = f.extraBoosts.length < 2 && used.size < ATTR_IDS.length;
-  const save = () => { if (!f.title.trim()) { toast.error('先写一个标题'); return; } if (onSave) onSave(f, editing?.id); else toast.success(editing ? '已保存' : '已添加'); onClose(); };
+  const save = async () => {
+    if (!f.title.trim()) { toast.error('先写一个标题'); return; }
+    if (!onSave) { toast.success(editing ? '已保存' : '已添加'); onClose(); return; }
+    setSaving(true);
+    try {
+      const saved = await onSave(f, editing?.id);
+      if (saved !== false) onClose();
+    } catch {
+      toast.error('保存失败，任务没有写入；请重试');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
       <P3Sheet open={open} onClose={onClose} title={editing ? '编辑任务' : '添加任务'} en={editing ? 'EDIT' : 'NEW QUEST'} size="tall"
-        footer={<div className="flex gap-3"><P3Button tone="soft" block onClick={onClose}>取消</P3Button><P3Button block corner onClick={save}>{editing ? '保存' : '添加'}</P3Button></div>}>
+        footer={<div className="flex gap-3"><P3Button tone="soft" block disabled={saving} onClick={onClose}>取消</P3Button><P3Button block corner busy={saving} busyText="保存中…" onClick={save}>{editing ? '保存' : '添加'}</P3Button></div>}>
         <div className="space-y-4">
           {!editing && (
             <button type="button" disabled={scheduleBusy} onClick={() => { setScheduleBusy(true); window.setTimeout(() => { setScheduleBusy(false); setSchedule(true); }, 1400); }}

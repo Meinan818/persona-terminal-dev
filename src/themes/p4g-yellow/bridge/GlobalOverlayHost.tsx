@@ -49,7 +49,7 @@ export function GlobalOverlayHost() {
       <CallingCardCutIn open={!!cutCard && !blocker} onClose={() => { if (cutCard) void markShown(cutCard.id); }} params={new URLSearchParams()} card={cutCard ?? undefined} reason={cutCard?.archiveReason ?? 'manual'} />
       <OrgCelebration head={orgHead} onClose={shiftOrg} />
       <WishProposalDialog open={!!wishProposal && !blocker} onClose={() => setWishProposal(null)} params={new URLSearchParams()} wishTitle={wishProposal?.wishTitle} fromPct={wishProposal?.fromPct} toPct={wishProposal?.toPct} reason={wishProposal?.reason}
-        onConfirm={() => { if (wishProposal) void setWishProgress(wishProposal.wishId, wishProposal.toPct, { reason: wishProposal.reason }); setWishProposal(null); }} />
+        onConfirm={() => { const proposal = wishProposal; if (!proposal) return; void setWishProgress(proposal.wishId, proposal.toPct, { reason: proposal.reason }).then(() => setWishProposal(null)).catch(() => { /* 失败保留提议，避免假成功 */ }); }} />
       <OrphanImagesPrompt open={!!orphan && !blocker} onClose={dismissOrphan} params={new URLSearchParams()} count={orphan?.count} bytes={orphan?.bytes} onConfirm={() => { void pruneOrphan(); dismissOrphan(); }} />
     </P4ToastProvider>
   );

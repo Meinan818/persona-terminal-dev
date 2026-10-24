@@ -32,6 +32,7 @@ import { ATTR, ATTR_ORDER, D, RANKS, shadowNow, type AttrId, type MockTodo } fro
 import { SeasonStampBadgeP5 } from '@/p5r-red/screens/overlays/SeasonStampBadge.chip';
 import { OnThisDayGlyph, onThisDaySub, OTD_VIEW } from '@/p5r-red/screens/overlays/OnThisDaySheet.p5r';
 import { playQueue, type QueueStep } from '@/p5r-red/screens/overlays/cutins.p5r';
+import { completeRedTask } from '@/p5r-red/screens/taskGrowth';
 import { BackToastP5, useBackToast } from '@/p5r-red/screens/overlays/GlobalToasts.p5r';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { calcMaxStreak, streakDates } from '@/utils/streak';
@@ -282,33 +283,12 @@ export default function DashboardP5({ wide, params }: PageProps) {
   const [todos, setTodos] = useState<MockTodo[]>(() => (st === 'empty' ? [] : D.todos.map((t) => ({ ...t }))));
   const check = (t: MockTodo) => {
     if (t.count >= t.target) return;
-    const finishes = t.count + 1 >= t.target;
     setTodos((ts) => ts.map((x) => (x.id === t.id ? { ...x, count: x.count + 1 } : x)));
-    void useAppStore.getState().completeTodo(t.id).then(async (result) => {
-      if (!finishes) return;
-      if (!result) return;
-      const hints = result?.unlockHints;
-      await new Promise((resolve) => window.setTimeout(resolve, 650));
-      const state = useAppStore.getState();
-      const queue: QueueStep[] = [{
-        kind: 'todo', title: t.title,
-        points: t.points + (t.extra?.reduce((sum, boost) => sum + boost.points, 0) ?? 0),
-        unlock: !!((hints?.achievements ?? 0) + (hints?.skills ?? 0)),
-      }];
-      if (state.levelUpNotification) {
-        queue.push({ kind: 'level', attr: state.levelUpNotification.displayName, level: state.levelUpNotification.level, stars: state.levelUpNotification.masteryStars });
-        state.setLevelUpNotification(null);
+    void completeRedTask({ id: t.id, title: t.title, points: t.points, extra: t.extra }).then((result) => {
+      if (!result.accepted) {
+        setTodos((ts) => ts.map((x) => (x.id === t.id ? { ...x, count: t.count } : x)));
       }
-      if (state.achievementNotification) {
-        queue.push({ kind: 'achievement', name: state.achievementNotification.title });
-        state.setAchievementNotification(null);
-      }
-      if (state.skillNotification) {
-        queue.push({ kind: 'skill', name: state.skillNotification.name });
-        state.setSkillNotification(null);
-      }
-      playQueue(queue);
-    }).catch(() => {});
+    });
   };
   // 返回键 Toast（P1-19）：已在首页时按返回（demo：Esc，且没有弹层开着）→「再次点击回到现实」，2 秒内再按退出
   const back = useBackToast();

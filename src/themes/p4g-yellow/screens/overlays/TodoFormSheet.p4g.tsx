@@ -35,12 +35,13 @@ const AttrPick = ({ value, onChange, disabled }: { value: AttributeId; onChange:
   </div>
 );
 
-export default function TodoFormSheet({ open, onClose, params, todo, onSave }: OverlayProps & { todo?: Todo | null; onSave?: (f: Form, id?: string) => void }) {
+export default function TodoFormSheet({ open, onClose, params, todo, onSave }: OverlayProps & { todo?: Todo | null; onSave?: (f: Form, id?: string) => boolean | void | Promise<boolean | void> }) {
   const toast = useToast();
   const v = params?.get('variant');
   const editing = todo ?? (v === 'edit' ? TODOS[0] : v === 'big' ? TODOS.find((t) => t.isBigDeal)! : v === 'pact' ? TODOS.find((t) => t.pact)! : null);
   const [f, setF] = useState<Form>(empty());
   const [more, setMore] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [stepDraft, setStepDraft] = useState('');
@@ -52,13 +53,25 @@ export default function TodoFormSheet({ open, onClose, params, todo, onSave }: O
   const used = new Set<string>([f.attribute, ...f.extraBoosts.map((b) => b.attribute)]);
   const firstUnused = (ATTR_IDS.find((a) => !used.has(a)) ?? 'knowledge') as AttributeId;
   const canAddBoost = f.extraBoosts.length < 2 && used.size < ATTR_IDS.length;
-  const save = () => { if (!f.title.trim()) { toast.error('先写一个标题'); return; } onSave ? onSave(f, editing?.id) : toast.success(editing ? '已保存' : '已添加'); onClose(); };
+  const save = async () => {
+    if (!f.title.trim()) { toast.error('先写一个标题'); return; }
+    if (!onSave) { toast.success(editing ? '已保存' : '已添加'); onClose(); return; }
+    setSaving(true);
+    try {
+      const saved = await onSave(f, editing?.id);
+      if (saved !== false) onClose();
+    } catch {
+      toast.error('保存失败，任务没有写入；请重试');
+    } finally {
+      setSaving(false);
+    }
+  };
   const aiSplit = () => { setAiBusy(true); setAiError(null); setTimeout(() => { setAiBusy(false); if (!f.title.trim()) { setAiError('这次没拆出能用的小步。换个说法，或手写一条吧'); return; } set({ steps: [...f.steps, ...['列出要做的所有事', '先做最小的那一件', '给自己留一天缓冲'].map((t, i) => ({ id: `ai${Date.now()}${i}`, title: t, source: 'ai' as const }))] }); }, 900); };
 
   return (
     <>
       <P4Sheet open={open} onClose={onClose} title={editing ? '编辑任务' : '添加任务'} en={editing ? 'EDIT QUEST' : 'NEW QUEST'} size="tall"
-        footer={<div className="flex gap-3"><P4Button variant="secondary" block onClick={onClose}>取消</P4Button><P4Button block onClick={save}>{editing ? '保存' : '添加'}</P4Button></div>}>
+        footer={<div className="flex gap-3"><P4Button variant="secondary" block disabled={saving} onClick={onClose}>取消</P4Button><P4Button block busy={saving} onClick={save}>{saving ? '保存中…' : editing ? '保存' : '添加'}</P4Button></div>}>
         <div className="space-y-4">
           {!editing && (
             <button type="button" disabled={scheduleBusy} onClick={() => { setScheduleBusy(true); setTimeout(() => { setScheduleBusy(false); setSchedule(true); }, 900); }}

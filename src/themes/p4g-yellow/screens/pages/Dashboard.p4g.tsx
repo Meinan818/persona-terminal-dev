@@ -124,12 +124,15 @@ export default function Dashboard({ params }: PageProps) {
     void homeOps.completeTodo(id).then((result) => {
       if (!result) {
         if (willComplete) useAppStore.getState().setModalBlocker(false);
+        setCounts((c) => ({ ...c, [id]: counts[id] ?? 0 }));
         return;
       }
+      if (!result.completed) return;
       const pts = t.points + (t.extraBoosts?.reduce((sum, boost) => sum + boost.points, 0) ?? 0);
       setCompleted({ title: t.title, pts, hint: result.unlockHints });
     }).catch(() => {
       if (willComplete) useAppStore.getState().setModalBlocker(false);
+      setCounts((c) => ({ ...c, [id]: counts[id] ?? 0 }));
     });
   };
 

@@ -15,6 +15,7 @@ import { openTodoForm } from './todoform4';
 import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { useAppStore } from '@/store';
 import { CALLING_ARCHIVED } from '@/p5r-red/mock/pkg5-data';
+import { completeRedTask } from '@/p5r-red/screens/taskGrowth';
 const U = P5.ui;
 const WK = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'], WKC = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const slot = (h) => (h < 7 ? '清晨' : h < 12 ? '上午' : h < 13 ? '午休' : h < 16 ? '下午' : h < 19 ? '放学后' : '夜晚');
@@ -86,7 +87,7 @@ const row = (t, i) => {
       <span class="req-prog"><small>今日进度</small><i><b style="width:${Math.round(t.count / t.target * 100)}%"></b></i><em>${t.count}/${t.target}</em></span>
     </span>
     ${done ? '<span class="req-clear">CLEAR!</span>' : ''}
-    <button class="req-arc" data-act="archive" title="归档（不启用）" aria-label="归档（不启用）"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M3 7h18v3H3zM5 10v10h14V10M10 14h4"/></svg></button>
+    ${done ? '<button class="req-arc" data-act="undo" title="撤销今日完成（同时回退点数和记录）" aria-label="撤销今日完成（同时回退点数和记录）">↶</button>' : '<button class="req-arc" data-act="archive" title="归档（不启用）" aria-label="归档（不启用）"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M3 7h18v3H3zM5 10v10h14V10M10 14h4"/></svg></button>'}
   </div>`;
 };
 /** 愿望面（WishBoard 行：距离环 + 标题 + 次数；⋯ 菜单） */
@@ -133,10 +134,52 @@ export function todosMount(root, wide) {
     const c = st.cards.find((x) => x.pinned), el = root.querySelector('.cdb-clock'); if (!el || !document.contains(el) || !c) { if (!document.contains(root)) clearInterval(iv); return; }
     const ms = new Date(c.target + 'T00:00:00') - Date.now(); const h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4), s = Math.floor(ms % 6e4 / 1e3); el.textContent = [h, m, s].map((v) => String(Math.max(0, v)).padStart(2, '0')).join(':');
   }, 1000);
-  const bindRows = () => root.querySelectorAll('.req').forEach((r) => { if (r._lp) return; r._lp = 1; P5.longPress(r, () => {
-    const t = st.todos.find((x) => x.id === r.dataset.id); if (!t) return; r.animate([{ transform: 'scale(.97)' }, { transform: 'none' }], { duration: 150 });
-    P5.actionSheet(t.title, [{ label: '编辑', onClick: () => openTodoForm({ todo: t, onSaved: (d) => { Object.assign(t, d); void useAppStore.getState().updateTodo(t.id, { title: d.title, attribute: d.attribute, points: d.points, frequency: d.frequency, targetCount: d.targetCount, isBigDeal: d.isBigDeal, steps: d.steps, repeatDaily: d.repeatDaily, important: d.important, ...(d.deadline ? { deadline: d.deadline } : {}) }).catch(() => {}); redrawMain(); } }) }, { label: '归档', onClick: () => archiveRow(r) }, { label: '删除', tone: 'danger', onClick: () => confirmDel(t.title, () => { st.todos = st.todos.filter((x) => x !== t); r.remove(); void useAppStore.getState().deleteTodo(t.id).catch(() => {}); }) }]);
-  }); });
+  const bindRows = () => root.querySelectorAll('.req').forEach((r) => {
+    if (!r._tap) {
+      r._tap = 1;
+      r.addEventListener('click', (e) => {
+        if (e._longPress || e.target.closest('button')) return;
+        const t = st.todos.find((x) => x.id === r.dataset.id);
+        if (!t) return;
+        void completeRedTask(t).then((result) => {
+          if (!result.accepted) return;
+          if (!result.completed) {
+            t.count = Math.min(t.target, t.count + 1);
+            redrawMain();
+            return;
+          }
+          const saved = useAppStore.getState().todos.find((x) => x.id === t.id);
+          if (saved?.isActive) {
+            t.count = useAppStore.getState().getTodayTodoProgress(t.id).count;
+          } else {
+            st.todos = st.todos.filter((x) => x.id !== t.id);
+          }
+          redrawMain();
+        });
+      });
+    }
+    if (r._lp) return;
+    r._lp = 1;
+    P5.longPress(r, () => {
+      const t = st.todos.find((x) => x.id === r.dataset.id); if (!t) return; r.animate([{ transform: 'scale(.97)' }, { transform: 'none' }], { duration: 150 });
+      P5.actionSheet(t.title, [
+        { label: '编辑', onClick: () => openTodoForm({ todo: t, onSaved: (d) => {
+          void useAppStore.getState().updateTodo(t.id, { title: d.title, attribute: d.attribute, points: d.points, frequency: d.frequency, targetCount: d.targetCount, isBigDeal: d.isBigDeal, steps: d.steps, repeatDaily: d.repeatDaily, important: d.important, ...(d.deadline ? { deadline: d.deadline } : {}) })
+            .then(() => { Object.assign(t, d); redrawMain(); P5.toast('任务已保存'); })
+            .catch(() => P5.toast('保存失败，任务没有改变'));
+        } }) },
+        { label: '归档', onClick: () => archiveRow(r) },
+        { label: '删除', tone: 'danger', onClick: () => confirmDel(t.title, async () => {
+          await useAppStore.getState().deleteTodo(t.id);
+          {
+            st.todos = st.todos.filter((x) => x !== t);
+            r.remove();
+            redrawMain();
+          }
+        }) },
+      ]);
+    });
+  });
   const bindArc = () => root.querySelectorAll('.p4-cc-arch').forEach((r) => { if (r._lp) return; r._lp = 1; P5.longPress(r, () => ccDelete(st.archivedCards[+r.dataset.i], true)); });
   bindRows(); bindArc(); bindWeekly(root);
   const redrawGoal = (dir = 0) => swapGoal(root, dir, () => { bindArc(); bindWeekly(root); });
@@ -174,7 +217,11 @@ export function todosMount(root, wide) {
     if (a === 'pane') { st.pane = st.pane === 'wish' ? 'todos' : 'wish'; const m = root.querySelector('.main5'); if (P5.reduced()) return redrawMain(); m.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-18px)' }], { duration: 120, fill: 'both' }).onfinish = redrawMain; }
     if (a === 'fate') return OD.openFateDraw();
     if (a === 'quest') return OD.openQuestBoard();
-    if (a === 'add') return st.pane === 'wish' ? wishSheet(() => redrawMain()) : openTodoForm({ onSaved: (t) => { st.todos.push(t); redrawMain(); void useAppStore.getState().addTodo({ title: t.title, attribute: t.attribute, points: t.points, frequency: t.frequency, targetCount: t.targetCount, repeatDaily: t.repeatDaily !== false, important: !!t.important, deadline: t.deadline, isActive: true, isBigDeal: !!t.isBigDeal, steps: t.steps }).then(() => { const real = useAppStore.getState().todos.find((x) => x.title === t.title && x.isActive && !x.archivedAt); if (real) t.id = real.id; }).catch(() => {}); } });
+    if (a === 'add') return st.pane === 'wish' ? wishSheet(() => redrawMain()) : openTodoForm({ onSaved: (t) => {
+      void useAppStore.getState().addTodo({ title: t.title, attribute: t.attribute, points: t.points, frequency: t.frequency, targetCount: t.targetCount, repeatDaily: t.repeatDaily !== false, important: !!t.important, deadline: t.deadline, isActive: true, isBigDeal: !!t.isBigDeal, steps: t.steps })
+        .then((real) => { st.todos.push({ ...t, id: real.id }); redrawMain(); P5.toast('任务已添加'); })
+        .catch(() => P5.toast('添加失败，任务没有写入'));
+    } });
     if (a === 'archive') { e.stopPropagation(); return archiveRow(b.closest('.req')); }
     if (a === 'new-cc') { e.stopPropagation(); return OD.openCCEditor(false, { onSaved: (d) => ccSaved(null, d) }); }
     if (a === 'cc-menu') { e.stopPropagation(); return ccMenu(+b.dataset.i); }
@@ -184,9 +231,32 @@ export function todosMount(root, wide) {
     if (a === 'arc-toggle') { st.arcOpen = !st.arcOpen; b.setAttribute('aria-expanded', st.arcOpen); b.querySelector('i').style.transform = `rotate(${st.arcOpen ? 90 : 0}deg)`; const l = root.querySelector('.p4-cc-arc-l'); l.hidden = !st.arcOpen; if (st.arcOpen) P5.panelIn(l.children, { from: 'up' }); }
     if (a === 'w-panel') { const w = OD.WISHES[+b.closest('.od-wish').dataset.i]; return OD.openWishPanel(w); }
     if (a === 'w-menu') { const row = b.closest('.od-wish'), w = OD.WISHES[+row.dataset.i]; if (!w) return; return P5.actionSheet(w.title, [{ label: '拆子任务', onClick: () => OD.openWishPanel(w) }, { label: '愿望已实现', onClick: () => OD.openWishFulfill(w) }, { label: '收起', onClick: () => { void useAppStore.getState().setWishStatus(w.id, 'archived').then(() => { row.remove(); P5.toast('已收起 · 在 菜单 → 归档 里'); }).catch(() => P5.toast('收起失败，请重试')); } }, { label: '删除', tone: 'danger', onClick: () => OD.confirm('删除愿望', `「${w.title}」和挂在它下面的进度记录会一起删掉。`, '删除', () => { void useAppStore.getState().deleteWish(w.id).then(() => { row.remove(); P5.toast('已删除'); }).catch(() => P5.toast('删除失败，请重试')); }) }]); }
-    if (a === 'undo') P5.toast('已撤销今日完成，点数与记录已回退');
-    if (a === 'restore') { const r = b.closest('.arch-row'); r.animate([{ transform: 'none' }, { transform: 'translateX(60px) rotate(3deg)', opacity: 0 }], { duration: 240, fill: 'both' }).onfinish = () => r.remove(); P5.toast('已恢复到今日任务'); }
-    if (a === 'del') { const r = b.closest('.arch-row'); confirmDel(r.querySelector('b').textContent, () => r.remove()); }
+    if (a === 'undo') {
+      const r = b.closest('.arch-row,.req'), id = r?.dataset.id;
+      if (!id) return;
+      void useAppStore.getState().undoTodayTodoCompletion(id).then(() => {
+        const live = st.todos.find((x) => x.id === id);
+        if (live) { live.count = Math.max(0, live.count - 1); redrawMain(); }
+        else r.remove();
+        P5.toast('已撤销今日完成，点数与记录已回退');
+      }).catch(() => P5.toast('撤销失败，数据没有改变'));
+    }
+    if (a === 'restore') {
+      const r = b.closest('.arch-row'), id = r?.dataset.id;
+      if (!id) return;
+      void useAppStore.getState().updateTodo(id, { isActive: true, archivedAt: undefined }).then(() => {
+        r.animate([{ transform: 'none' }, { transform: 'translateX(60px) rotate(3deg)', opacity: 0 }], { duration: P5.reduced() ? 0 : 240, fill: 'both' }).onfinish = () => r.remove();
+        P5.toast('已恢复到今日任务');
+      }).catch(() => P5.toast('恢复失败，任务没有改变'));
+    }
+    if (a === 'del') {
+      const r = b.closest('.arch-row'), id = r?.dataset.id;
+      if (!id) return;
+      confirmDel(r.querySelector('b').textContent, async () => {
+        await useAppStore.getState().deleteTodo(id);
+        r.remove();
+      });
+    }
   });
   // BIG DEAL 卡：点卡 → 二级面板；⋯ / 长按 → 管理菜单
   const bd = () => root.querySelector('.p4-bdh .od-bdh');
@@ -235,10 +305,31 @@ function swapGoal(root, dir, after) {
   if (P5.reduced() || !dir) return put();
   body.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-18 * dir}px)` }], { duration: 120, fill: 'both' }).onfinish = put;
 }
-function archiveRow(r) { const go = () => { const id = r.dataset.id; st.todos = st.todos.filter((x) => x.id !== id); r.remove(); void useAppStore.getState().updateTodo(id, { isActive: false }).catch(() => {}); P5.toast('已归档（不启用）'); }; if (P5.reduced()) return go(); r.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(-30px) rotate(-4deg) scale(.96)', opacity: 0 }], { duration: 260, easing: 'cubic-bezier(.6,0,.8,.4)', fill: 'both' }).onfinish = go; }
+function archiveRow(r) {
+  const go = async () => {
+    const id = r.dataset.id;
+    try {
+      await useAppStore.getState().updateTodo(id, { isActive: false });
+      st.todos = st.todos.filter((x) => x.id !== id);
+      if (P5.reduced()) r.remove();
+      else r.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(-30px) rotate(-4deg) scale(.96)', opacity: 0 }], { duration: 260, easing: 'cubic-bezier(.6,0,.8,.4)', fill: 'both' }).onfinish = () => r.remove();
+      P5.toast('已归档（不启用）');
+    } catch {
+      P5.toast('归档失败，任务没有改变');
+    }
+  };
+  void go();
+}
 /** 删除任务确认（真实 Todos.tsx 页面级 ConfirmDialog） */
 export function confirmDel(title, done) {
-  return P5.confirmDlg({ title: '删除任务', description: `任务「${title}」将被永久删除，无法撤销。`, tone: 'danger', confirmText: '删除', cancelText: '取消', onConfirm: () => { done && done(); P5.toast('已删除'); } });
+  return P5.confirmDlg({ title: '删除任务', description: `任务「${title}」将被永久删除，无法撤销。`, tone: 'danger', confirmText: '删除', cancelText: '取消', onConfirm: async () => {
+    try {
+      if (done) await done();
+      P5.toast('已删除');
+    } catch {
+      P5.toast('删除失败，任务没有改变');
+    }
+  } });
 }
 /** 记下一个愿望（真实 Todos.tsx wishAddOpen SheetModal） */
 export function wishSheet(onSaved) {

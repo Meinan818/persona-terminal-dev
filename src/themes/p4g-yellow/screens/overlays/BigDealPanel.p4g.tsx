@@ -12,6 +12,8 @@ import { P4Button, P4Input, P4Sheet, IconCheck, IconTrash } from '@yellow/kit';
 import { ATTR_NAMES, TODOS, TODAY_KEY } from '@yellow/mock/pkg2';
 import { Ring, daysBetween } from '@yellow/screens/pkg2/common';
 import { cx } from '@yellow/lib/cx';
+import { actionsOps } from '@yellow/adapters/pkg2';
+import { useAppStore } from '@/store';
 import BigDealStepCutIn from './BigDealStepCutIn.p4g';
 import BigDealClearCutIn from './BigDealClearCutIn.p4g';
 
@@ -44,17 +46,48 @@ export default function BigDealPanel({ open, onClose, params, todo: t0, onChange
     setTodo(b); setCleared(st === 'cleared'); setNotice(null); setRebuild(false);
   }, [open]); // eslint-disable-line
   const upd = (p: Partial<Todo>) => { const n = { ...todo, ...p }; setTodo(n); onChange?.(n); };
+  const syncReal = () => {
+    const fresh = useAppStore.getState().todos.find((t) => t.id === todo.id);
+    if (fresh) { setTodo(fresh); onChange?.(fresh); }
+    return fresh;
+  };
   const steps = todo.steps ?? [];
   const done = steps.filter((s) => s.done).length;
   const allDone = steps.length > 0 && done === steps.length;
   const dl = dlText(todo.deadline);
-  const toggle = (i: number) => {
+  const toggle = async (i: number) => {
     const s = steps[i];
-    const ns = steps.map((x, j) => (j === i ? { ...x, done: !x.done, doneAt: !x.done ? TODAY_KEY : undefined } : x));
-    upd({ steps: ns });
-    if (!s.done) setStepCut({ done: ns.filter((x) => x.done).length, total: ns.length, step: s.title });
+    if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) {
+      const ns = steps.map((x, j) => (j === i ? { ...x, done: !x.done, doneAt: !x.done ? TODAY_KEY : undefined } : x));
+      upd({ steps: ns });
+      if (!s.done) setStepCut({ done: ns.filter((x) => x.done).length, total: ns.length, step: s.title });
+      return;
+    }
+    try {
+      const result = s.done
+        ? (await actionsOps.undoTodoStep(todo.id, s.id), null)
+        : await actionsOps.completeTodoStep(todo.id, s.id);
+      const fresh = syncReal();
+      if (result?.collapsed) { setCleared(true); onClose(); return; }
+      const nextSteps = fresh?.steps ?? [];
+      if (!s.done) setStepCut({ done: nextSteps.filter((x) => x.done).length, total: nextSteps.length, step: s.title });
+    } catch {
+      setNotice('子步没有写入，进度保持不变');
+    }
   };
-  const collapse = () => { setCollapsing(true); setTimeout(() => { setCollapsing(false); setCleared(true); setClearCut(true); }, 700); };
+  const collapse = async () => {
+    if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) { setCleared(true); setClearCut(true); return; }
+    setCollapsing(true);
+    try {
+      await actionsOps.collapseBigDeal(todo.id);
+      const fresh = syncReal();
+      if (fresh && !fresh.isActive) { setCleared(true); onClose(); }
+    } catch {
+      setNotice('收官失败，进度保持不变');
+    } finally {
+      setCollapsing(false);
+    }
+  };
   return (
     <>
       <P4Sheet open={open} onClose={onClose} title={todo.title} en="BIG DEAL" size="tall">
@@ -81,7 +114,10 @@ export default function BigDealPanel({ open, onClose, params, todo: t0, onChange
                   <span className="w-6 shrink-0 p4g-num text-meta text-p4g-orange-deep night:text-p4g-orange">{String(i + 1).padStart(2, '0')}</span>
                   <button type="button" disabled={cleared} aria-label={s.done ? '撤销这一步' : '完成这一步'} onClick={() => toggle(i)} className={cx('flex h-7 w-7 shrink-0 items-center justify-center border-3 border-p4g-black disabled:opacity-60', s.done ? 'bg-p4g-orange text-p4g-black' : 'bg-white text-transparent')}><IconCheck size={13} /></button>
                   <span className={cx('min-w-0 flex-1 truncate text-body font-bold text-p4g-ink', s.done && 'line-through opacity-50')}>{s.title}</span>
-                  {!cleared && <button type="button" aria-label="删除子步" onClick={() => upd({ steps: steps.filter((_, j) => j !== i) })} className="flex h-8 w-8 shrink-0 items-center justify-center text-p4g-ink-soft"><IconTrash size={14} /></button>}
+                  {!cleared && <button type="button" aria-label="删除子步" onClick={() => {
+                    if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) { upd({ steps: steps.filter((_, j) => j !== i) }); return; }
+                    void actionsOps.removeTodoStep(todo.id, s.id).then(syncReal).catch(() => setNotice('子步删除失败，进度保持不变'));
+                  }} className="flex h-8 w-8 shrink-0 items-center justify-center text-p4g-ink-soft"><IconTrash size={14} /></button>}
                 </li>
               ))}
             </ol>
@@ -90,7 +126,11 @@ export default function BigDealPanel({ open, onClose, params, todo: t0, onChange
             <>
               <div className="flex min-w-0 gap-2">
                 <P4Input wrapClassName="min-w-0 flex-1" placeholder="追加一个够得着的小步…" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="追加子步" />
-                <P4Button disabled={!draft.trim()} onClick={() => { upd({ steps: [...steps, { id: `n${Date.now()}`, title: draft.trim(), source: 'manual' }] }); setDraft(''); }}>添加</P4Button>
+                <P4Button disabled={!draft.trim()} onClick={() => {
+                  const title = draft.trim();
+                  if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) { upd({ steps: [...steps, { id: `n${Date.now()}`, title, source: 'manual' }] }); setDraft(''); return; }
+                  void actionsOps.addTodoStep(todo.id, title).then(() => { syncReal(); setDraft(''); }).catch(() => setNotice('子步添加失败，请重试'));
+                }}>添加</P4Button>
               </div>
               <P4Button block variant="secondary" disabled={aiBusy} onClick={() => { setAiBusy(true); setTimeout(() => { setAiBusy(false); upd({ steps: [...steps, { id: `ai${Date.now()}`, title: '把错题本按章节重新整理', source: 'ai' }, { id: `ai2${Date.now()}`, title: '考前一晚早点睡', source: 'ai' }] }); setNotice('AI 续拆了 2 条——不合适的直接删'); }, 900); }}>{aiBusy ? '正在续拆…' : '✦ AI 续拆下一组'}</P4Button>
               {notice && <p className="text-center text-meta font-bold text-p4g-ink-soft">{notice}</p>}
@@ -102,7 +142,15 @@ export default function BigDealPanel({ open, onClose, params, todo: t0, onChange
               <div className="rounded-sm border-3 border-p4g-black bg-p4g-yellow p-3 text-p4g-black shadow-hard-sm">
                 <p className="text-meta leading-relaxed">会新立一条同名同步骤的大事，子步全部重置为未完成；<b>当前这条原样归档</b>，已领的奖励和历史记录都不受影响。</p>
                 <div className="mt-2 flex gap-2">
-                  <P4Button variant="black" block disabled={rebuilding} onClick={() => { setRebuilding(true); setTimeout(() => { setRebuilding(false); setRebuild(false); setCleared(false); upd({ steps: steps.map((s) => ({ ...s, done: false, doneAt: undefined })) }); }, 600); }}>{rebuilding ? '重建中…' : '确认重建'}</P4Button>
+                  <P4Button variant="black" block disabled={rebuilding} onClick={() => {
+                    if (!useAppStore.getState().todos.some((t) => t.id === todo.id)) { setRebuild(false); setCleared(false); upd({ steps: steps.map((s) => ({ ...s, done: false, doneAt: undefined })) }); return; }
+                    setRebuilding(true);
+                    void actionsOps.rebuildBigDeal(todo.id).then((newId) => {
+                      const fresh = useAppStore.getState().todos.find((t) => t.id === newId);
+                      if (fresh) { setTodo(fresh); onChange?.(fresh); }
+                      setRebuild(false); setCleared(false);
+                    }).catch(() => setNotice('重建失败，原大事未改变')).finally(() => setRebuilding(false));
+                  }}>{rebuilding ? '重建中…' : '确认重建'}</P4Button>
                   <P4Button variant="secondary" block onClick={() => setRebuild(false)}>算了</P4Button>
                 </div>
               </div>

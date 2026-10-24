@@ -7,6 +7,7 @@
  */
 import type { ReactNode } from 'react';
 import RedChannelCore from '@/p5r-red/RedChannelCore';
+import { RedGrowthHost } from '@/p5r-red/RedGrowthHost';
 import { LIVE, useLiveFlags, syncLiveDataNow } from '@/p5r-red/adapter/live';
 
 let firstSync = false;
@@ -14,5 +15,5 @@ export default function RedChannelRoot({ battle }: { battle?: ReactNode }) {
   // 首次渲染前同步一次：页面模块（pkg3 / pkg4 在模块初始化时读一次 mock）拿到的就是真实数据
   if (!firstSync) { firstSync = true; syncLiveDataNow(); }
   const { dark, lowMotion } = useLiveFlags();
-  return <RedChannelCore dark={dark} lowMotion={lowMotion} battle={battle} live={LIVE} />;
+  return <><RedChannelCore dark={dark} lowMotion={lowMotion} battle={battle} live={LIVE} /><RedGrowthHost /></>;
 }

@@ -256,6 +256,7 @@ export async function executeDraft(draft: NavigatorDraft): Promise<string> {
     case 'completeTodo': {
       const result = await s.completeTodo(draft.todoId);
       if (!result) return `「${draft.todoTitle}」今天已经完成过了——重复邀功可不行。`;
+      if (!result.completed) return `「${draft.todoTitle}」记了一次进度，还没到目标；到目标才会发点数。`;
       const unlockLine = result.unlockHints.achievements + result.unlockHints.skills > 0
         ? ' 顺带解锁了点什么，自己去确认。'
         : '';

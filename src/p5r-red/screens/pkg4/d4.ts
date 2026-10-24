@@ -211,7 +211,28 @@ export const YR: any = { show: null };
     const s = useAppStore.getState();
     WISHES.splice(0, WISHES.length, ...s.wishes.filter((w) => !w.archivedAt && !w.parentId && w.status === 'active').map((w) => wishView(s, w)));
   }
-  const BIG = { title: '准备雅思 7 分', days: 23, steps: [{ t: '做一套听力真题', done: true }, { t: '背完剑桥核心词 1–10', done: true }, { t: '每周两篇大作文', done: false }, { t: '约一次口语模考', done: false }], status: '听力稳了，写作还虚', pts: 2, sp: 30 };
+  const BIG = { id: '', title: '', days: 0, steps: [], status: '', pts: 0, sp: 0, attribute: 'knowledge' };
+  function syncBig() {
+    const s = useAppStore.getState();
+    const t = s.todos.find((x) => x.isBigDeal && x.isActive && !x.archivedAt)
+      ?? s.todos.find((x) => x.isBigDeal);
+    if (!t) {
+      Object.assign(BIG, { id: '', title: '', days: 0, steps: [], status: '', pts: 0, sp: 0, attribute: 'knowledge' });
+      return null;
+    }
+    const days = t.deadline ? Math.round((new Date(t.deadline + 'T00:00:00') - new Date(new Date().toDateString())) / 864e5) : 0;
+    Object.assign(BIG, {
+      id: t.id,
+      title: t.title,
+      days,
+      steps: (t.steps ?? []).map((step) => ({ id: step.id, t: step.title, done: !!step.done, attribute: step.attribute ?? t.attribute })),
+      status: t.currentState ?? '',
+      pts: t.points,
+      sp: t.clearedActivityId ? 0 : Math.min(20, (t.steps?.length ?? 0) * 3),
+      attribute: t.attribute,
+    });
+    return t;
+  }
   const ORG = { name: '夜读小队', motto: '一起熬过期末', code: 'MASK7Q2K', level: 3, emblem: '★', members: [['野鸡', '愚者', '0', true], ['坂本龙司', '战车', 'VII'], ['高卷杏', '恋人', 'VI'], ['新岛真', '女祭司', 'II'], ['佐仓双叶', '隐士', 'IX']] };
 
   /* ══════════════════ 愿望 wish/* ══════════════════ */
@@ -420,6 +441,7 @@ export const YR: any = { show: null };
   /* ══════════════════ BIG DEAL bigdeal/* ══════════════════ */
   const bdDue = (d) => d > 0 ? `剩 ${d} 天` : d === 0 ? '今天截止' : '已过截止';
   function bigHome(st = 'progress') {
+    if (!syncBig()) return '';
     const steps = st === 'empty' ? [] : st === 'all' ? BIG.steps.map((s) => ({ ...s, done: true })) : BIG.steps, dn = steps.filter((s) => s.done).length, next = steps.find((s) => !s.done);
     const due = st === 'over' ? -2 : st === 'today' ? 0 : BIG.days;
     return U.shp('div', { kind: 'torn', seed: 491, cls: 'od-bdh', attrs: 'role="button" tabindex="0" data-act="open" aria-label="打开大事面板"' }, `<span class="od-bdh-corner" aria-hidden="true">BIG<br>DEAL</span>
@@ -427,13 +449,27 @@ export const YR: any = { show: null };
       <div class="od-bdh-p"><small>总进度</small>${bar(steps.length ? dn / steps.length * 100 : 0)}<em>${dn}/${steps.length}</em></div>
       <div class="od-bdh-next">${!steps.length ? '<b>去拆第一步 ›</b>' : next ? `<span>下一步：</span><b>${next.t}</b>` : '<b class="red">全部完成——进去收官 ›</b>'}</div>`);
   }
-  const bdMenu = () => P5.actionSheet(BIG.title, [{ label: '打开二级面板', onClick: () => openBigPanel() }, { label: '编辑', onClick: () => P5.toast('打开编辑（同任务编辑抽屉）') }, { label: '归档', onClick: () => P5.toast('已归档') }, { label: '删除', tone: 'danger', onClick: () => confirm('删除大事', `「${BIG.title}」及其子步将被删除。`, '删除', () => P5.toast('已删除')) }]);
+  const bdMenu = () => { syncBig(); if (!BIG.id) { P5.toast('还没有进行中的大事'); return; } return P5.actionSheet(BIG.title, [
+    { label: '打开二级面板', onClick: () => openBigPanel() },
+    { label: '编辑', onClick: () => {
+      const real = syncBig();
+      if (!real) return;
+      openTodoForm({ todo: real, onSaved: (d) => {
+        void useAppStore.getState().updateTodo(real.id, { title: d.title, attribute: d.attribute, points: d.points, targetCount: d.targetCount, important: d.important, deadline: d.deadline || undefined, steps: d.steps })
+          .then(() => { P5.toast('大事已保存'); P5.rerender(); })
+          .catch(() => P5.toast('保存失败，大事没有改变'));
+      } });
+    } },
+    { label: '归档', onClick: () => { void useAppStore.getState().updateTodo(BIG.id, { isActive: false }).then(() => { P5.toast('已归档'); P5.rerender(); }).catch(() => P5.toast('归档失败，任务没有改变')); } },
+    { label: '删除', tone: 'danger', onClick: () => confirm('删除大事', `「${BIG.title}」及其子步将被删除。`, '删除', () => { const id = BIG.id; void useAppStore.getState().deleteTodo(id).then(() => { P5.toast('已删除'); P5.rerender(); }).catch(() => P5.toast('删除失败，任务没有改变')); }) },
+  ]); };
   function openBigHome(st0 = 'progress') {
     stage({ title: '大事卡', en: 'BIG DEAL', seed: 15, sil: 'leap', body: `${demoBar([['progress', '进行中'], ['empty', '未拆步'], ['all', '全部完成'], ['today', '今天截止'], ['over', '已过截止']], st0)}<div data-host></div><p class="od-note">首页与任务页共用：只露总进度 + 未完成第一步；点卡进二级面板；⋯ 或长按 = 管理菜单（首页不传 ⋯）。</p>`, onMount(w) {
       stateful(w, [], st0, bigHome, (h) => { const c = h.querySelector('.od-bdh'); P5.longPress(c, bdMenu); c.addEventListener('click', (e) => { if (e.target.closest('[data-act="manage"]')) { e.stopPropagation(); return bdMenu(); } openBigPanel(); }); });
     } });
   }
   function openBigPanel(st0 = 'progress') {
+    if (!syncBig()) { P5.toast('还没有进行中的大事'); return; }
     sheet('BIG DEAL', `${demoBar([['progress', '进行中'], ['ready', '全成待收官'], ['cleared', '已收官']], st0)}<div data-host></div>`, (sh, close) => {
       stateful(sh, [], st0, (st) => {
         const steps = st === 'progress' ? BIG.steps : BIG.steps.map((s) => ({ ...s, done: true })), dn = steps.filter((s) => s.done).length, lock = st === 'cleared';
@@ -443,12 +479,36 @@ export const YR: any = { show: null };
           <div class="od-row-acts">${U.btn('✦ 续拆下一组', { tone: 'paper', size: 'sm', seed: 503, attrs: 'data-act="split"' })}</div>
           ${st === 'ready' ? U.btn(`收官 · 领取奖励（SP +${BIG.sp}）`, { tone: 'red', size: 'lg', seed: 504, attrs: 'data-act="clear"', cls: 'od-wide' }) : ''}`}`;
       }, (h, st, draw) => {
-        bindSteps(h, true, (row) => { const all = [...h.querySelectorAll('.od-step')], dn = all.filter((r) => r.classList.contains('done')).length; if (dn === all.length) { close(); openBigClear(); } else openBigStep(dn, all.length, row.querySelector('b').textContent); });
+        bindSteps(h, true, (row) => { const all = [...h.querySelectorAll('.od-step')], dn = all.filter((r) => r.classList.contains('done')).length; if (dn < all.length) openBigStep(dn, all.length, row.querySelector('b').textContent); }, {
+          onToggle: (row, on) => {
+            const real = syncBig();
+            const idx = [...h.querySelectorAll('.od-step')].indexOf(row);
+            const step = real?.steps?.[idx];
+            if (!real?.id || !step) return;
+            const run = on ? useAppStore.getState().completeTodoStep(real.id, step.id) : useAppStore.getState().undoTodoStep(real.id, step.id);
+            void Promise.resolve(run).then((result) => {
+              syncBig();
+              if (result?.collapsed) { close(); return; }
+              draw(st);
+            }).catch(() => { P5.toast('子步没有写入，进度保持不变'); draw(st); });
+          },
+          onDelete: (row) => {
+            const real = syncBig();
+            const idx = [...h.querySelectorAll('.od-step')].indexOf(row);
+            const step = real?.steps?.[idx];
+            if (!real?.id || !step) return;
+            void useAppStore.getState().removeTodoStep(real.id, step.id).then(() => { syncBig(); draw(st); }).catch(() => P5.toast('子步删除失败，进度保持不变'));
+          },
+        });
         h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
-          if (a === 'addstep') { const i = h.querySelector('.od-addrow input'); addSteps(h, [i.value.trim() || '新的子步']); i.value = ''; }
+          if (a === 'addstep') {
+            const i = h.querySelector('.od-addrow input'), title = i.value.trim();
+            if (!title) return;
+            void useAppStore.getState().addTodoStep(BIG.id, title).then(() => { syncBig(); i.value = ''; draw(st); P5.toast('子步已添加'); }).catch(() => P5.toast('子步添加失败，请重试'));
+          }
           if (a === 'split') { const s = b.querySelector('span'); s.textContent = '正在续拆…'; setTimeout(() => { s.textContent = '✦ 续拆下一组'; addSteps(h, ['整理一页写作模板句', '限时 40 分钟写一篇小作文']); P5.toast('续拆了 2 条——不合适的直接删'); }, 800); }
-          if (a === 'clear') { b.querySelector('span').textContent = '结算中…'; setTimeout(() => { close(); openBigClear(); }, 500); }
-          if (a === 'rebuild') confirm('重建这件大事', '会新立一条同名同步骤的大事，子步全部重置为未完成；当前这条原样归档，已领的奖励和历史记录都不受影响。', '确认重建', () => P5.toast('已重建'), { cancel: '算了' });
+          if (a === 'clear') { b.querySelector('span').textContent = '结算中…'; void useAppStore.getState().collapseBigDeal(BIG.id).then(() => close()).catch(() => { b.querySelector('span').textContent = '收官失败'; P5.toast('收官失败，进度保持不变'); }); }
+          if (a === 'rebuild') confirm('重建这件大事', '会新立一条同名同步骤的大事，子步全部重置为未完成；当前这条原样归档，已领的奖励和历史记录都不受影响。', '确认重建', () => { void useAppStore.getState().rebuildBigDeal(BIG.id).then((newId) => { if (newId) { close(); P5.toast('已重建'); P5.rerender(); } }).catch(() => P5.toast('重建失败，原大事未改变')); }, { cancel: '算了' });
         });
       });
     }, 49);

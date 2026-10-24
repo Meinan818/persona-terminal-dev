@@ -14,7 +14,7 @@ import { useAppStore, toLocalDateKey } from '@/store';
 import { RED_LEDGER } from '@/p5r-red/adapter/live';
 import { RED_LEDGER_BARS } from '@/p5r-red/adapter/live';
 import { ledgerOps } from '@/themes/ledgerOperations';
-import { parseLedgerOffline, splitSegments } from '@/utils/ledgerAI';
+import { parseLedgerInput, parseLedgerBatch } from '@/utils/ledgerAI';
 const U = P5.ui;
 const fmt = (n) => Math.abs(n).toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 const yen = (n) => `¥${fmt(n)}`;
@@ -25,6 +25,7 @@ const CATS = ['餐饮', '交通', '学习', '娱乐', '日用', '其它'];
 const CHANNELS = ['微信', '支付宝', '银行卡', '信用卡'];
 const SOURCES = ['工资', '兼职', '红包', '奖学金'];
 const CAT_TYPE = { 餐饮: 'food', 交通: 'transport', 学习: 'study', 娱乐: 'fun', 日用: 'shopping', 其它: 'other' };
+const TYPE_CAT = { food: '餐饮', transport: '交通', study: '学习', fun: '娱乐', shopping: '日用', home: '日用', other: '其它' };
 export const FLOW = [
   { note: '午饭 · 拉面', amount: 32, dir: 'expense', ch: '微信', d: 0 }, { note: '地铁', amount: 4, dir: 'expense', ch: '支付宝', d: 0 },
   { note: '奶茶', amount: 18, dir: 'expense', ch: '微信', d: 1 }, { note: '家教收入', amount: 300, dir: 'income', ch: '银行卡', d: 1 },
@@ -204,8 +205,8 @@ export function openEntrySheet({ text = '', hint = '', dir: d0 = 'expense', pars
     const draw = () => {
       body.innerHTML = `${hint ? `<p class="p4-ocr-msg">${hint}</p>` : ''}
         <div class="p4-amt"><div class="seg" data-dir>${['expense', 'income'].map((k) => `<button type="button" aria-pressed="${dir === k}" data-v="${k}">${k === 'expense' ? '支出' : '收入'}</button>`).join('')}</div><span class="p4-amt-y">¥</span><input class="inp p4-amt-in" data-amt inputmode="decimal" value="${esc(p.amount)}" placeholder="0" aria-label="金额"></div>
-        <label class="fld"><span>日期</span><input class="inp" type="date" value="${new Date().toISOString().slice(0, 10)}"></label>
-        ${dir === 'expense' ? `<div class="fld"><span>细分类目 <small class="muted-d">可选</small></span>${chips('cat', CATS, '餐饮')}<input class="inp p4-mt" placeholder="如：早餐" aria-label="细分类目"></div>
+        <label class="fld"><span>日期</span><input class="inp" type="date" value="${p.date || new Date().toISOString().slice(0, 10)}"></label>
+        ${dir === 'expense' ? `<div class="fld"><span>细分类目 <small class="muted-d">可选</small></span>${chips('cat', CATS, TYPE_CAT[p.type] || '餐饮')}<input class="inp p4-mt" placeholder="如：早餐" aria-label="细分类目" value="${esc(p.category || '')}"></div>
           <div class="fld"><span>支付渠道</span>${chips('ch', CHANNELS, '微信', '新渠道')}</div>
           <div class="fld"><span>这笔值得吗？</span>${chips('worth', ['值得', '不值'], '')}</div>`
         : `<div class="fld"><span>来源</span>${chips('src', SOURCES, '兼职', '新来源')}</div>
@@ -235,14 +236,30 @@ export function openEntrySheet({ text = '', hint = '', dir: d0 = 'expense', pars
       bindChips(body);
       if (!P5.reduced()) P5.panelIn(body.children, { stagger: .03 });
     };
-    if (parsing && text) setTimeout(draw, P5.reduced() ? 0 : 900); else draw();
+    if (parsing && text) {
+      void (async () => {
+        try {
+          const ai = await parseLedgerInput(text, useAppStore.getState().settings);
+          if (ai) {
+            p.amount = String(ai.amount);
+            p.note = ai.note;
+            p.type = ai.type;
+            p.category = ai.category;
+            p.date = ai.date;
+            dir = ai.direction;
+            labor = ai.incomeType === 'labor';
+          }
+        } finally {
+          draw();
+        }
+      })();
+    } else draw();
   } });
 }
 
 /** 确认 N 笔（真实 Ledger.tsx batch SheetModal） */
 export function openBatchSheet({ text = '', hint = '', onSaved } = {}) {
-  const rows = []; (text.match(/[^\d\s.]*\s*\d+(?:\.\d+)?/g) || []).forEach((seg) => { const p = parse(seg.trim()); rows.push({ dir: 'expense', cat: /地铁|公交|打车/.test(p.note) ? '交通' : '餐饮', amount: p.amount, ch: '微信', note: p.note }); });
-  if (!rows.length) rows.push({ dir: 'expense', cat: '餐饮', amount: '', ch: '微信', note: '' });
+  const rows = [];
   let close0;
   const rowHTML = (r, i) => `<div class="p4-brow" data-i="${i}" style="--r:${i % 2 ? .5 : -.5}deg">
       <div class="seg p4-bdir" data-bdir>${['expense', 'income'].map((k) => `<button type="button" aria-pressed="${r.dir === k}" data-v="${k}">${k === 'expense' ? '支' : '收'}</button>`).join('')}</div>
@@ -251,16 +268,32 @@ export function openBatchSheet({ text = '', hint = '', onSaved } = {}) {
       <select class="inp p4-bsel" data-f="ch" aria-label="${r.dir === 'expense' ? '渠道' : '到账账户'}"><option value="">${r.dir === 'expense' ? '渠道…' : '到账账户…'}</option>${CHANNELS.map((c) => `<option ${c === r.ch ? 'selected' : ''}>${c}</option>`).join('')}</select>
       <input class="inp p4-bnote" data-f="note" value="${esc(r.note)}" placeholder="备注" aria-label="备注">
       <button type="button" class="od-del" data-act="rm" aria-label="删除此行">✕</button></div>`;
-  return P5.sheet(`确认 ${rows.length} 笔`, `<div data-body></div>`, { seed: 43, onMount: (sh, close) => {
+  return P5.sheet('确认多笔', `<div data-body>${OD.thinking('AI 解析中', '正在把这段话拆成多笔账目')}</div>`, { seed: 43, onMount: (sh, close) => {
     close0 = close; const body = sh.querySelector('[data-body]'), h3 = sh.querySelector('h3 .plate span');
     const draw = () => {
+      if (h3) h3.textContent = `确认 ${rows.length} 笔`;
       body.innerHTML = `${hint ? `<p class="p4-ocr-msg">${hint}</p>` : ''}<p class="sh-p">识别到多笔，逐行确认 / 增删后一次保存</p><div class="p4-brows">${rows.map(rowHTML).join('')}</div>
         <button class="od-addline" data-act="addrow">＋ 再加一行</button>
         <label class="fld"><span>日期（应用到全部）</span><input class="inp" type="date" value="${new Date().toISOString().slice(0, 10)}"></label>
         <div class="sh-acts">${U.btn(`全部保存（${rows.length}）`, { tone: 'red', size: 'lg', seed: 187, attrs: `data-ok ${rows.length ? '' : 'disabled'}`, cls: rows.length ? '' : 'od-dis' })}</div>`;
       if (h3) h3.textContent = `确认 ${rows.length} 笔`;
     };
-    draw();
+    void (async () => {
+      try {
+        const results = text ? await parseLedgerBatch(text, useAppStore.getState().settings) : [];
+        rows.splice(0, rows.length, ...results.map((r) => ({
+          dir: r.direction,
+          cat: TYPE_CAT[r.type] || r.category || (r.direction === 'income' ? r.category || '其它收入' : '其它'),
+          amount: String(r.amount),
+          ch: r.direction === 'income' ? '银行卡' : '微信',
+          note: r.note,
+        })));
+      } catch {
+        rows.splice(0, rows.length);
+      }
+      if (!rows.length) rows.push({ dir: 'expense', cat: '餐饮', amount: '', ch: '微信', note: '' });
+      draw();
+    })();
     body.addEventListener('input', (e) => { const r = e.target.closest('.p4-brow'), f = e.target.dataset.f; if (r && f) rows[+r.dataset.i][f] = e.target.value; });
     body.addEventListener('change', (e) => { const r = e.target.closest('.p4-brow'), f = e.target.dataset.f; if (r && f) rows[+r.dataset.i][f] = e.target.value; });
     body.addEventListener('click', async (e) => {

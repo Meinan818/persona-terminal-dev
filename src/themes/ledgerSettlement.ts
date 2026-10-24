@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
-import { buildSettlementData, offlineSettlement, settleRange, shiftSettleAnchor, type SettleScope } from '@/utils/ledgerSettlement';
+import { buildSettlementData, generateSettlement, offlineSettlement, settleRange, shiftSettleAnchor, type SettleScope, type SettlementResult } from '@/utils/ledgerSettlement';
 import { ledgerCycle } from '@/utils/ledgerFormat';
+import { getAIConfig } from '@/utils/aiClient';
 
 let rewardQueue: Promise<unknown> = Promise.resolve();
 const claimsInFlight = new Map<string, Promise<{ bonus: boolean; challenge: number | null }>>();
@@ -55,6 +56,7 @@ export function claimLocalSettlement(snapshot: ReturnType<typeof localLedgerSett
 export function useLocalLedgerSettlement(open: boolean, period: string | undefined, scope: SettleScope, offset: number) {
   const { entries, budgets, settings, loaded } = useAppStore(useShallow(s => ({ entries: s.ledgerEntries, budgets: s.budgets, settings: s.settings, loaded: s.ledgerLoaded })));
   const [readError, setReadError] = useState('');
+  const [aiResult, setAiResult] = useState<SettlementResult | null>(null);
   const snapshot = useMemo(() => period ? localLedgerSettlement(scope, period, offset) : null, [period, scope, offset, entries, budgets, settings, loaded]);
   const [claim, setClaim] = useState<{ key: string; bonus: boolean; challenge: number | null; error?: string }>({ key: '', bonus: false, challenge: null });
   useEffect(() => {
@@ -74,8 +76,27 @@ export function useLocalLedgerSettlement(open: boolean, period: string | undefin
     // 领奖状态写回settings不重复触发；异步旧范围的结果不覆盖新范围。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, key, loaded]);
+  useEffect(() => {
+    if (!open || !snapshot || !loaded || !getAIConfig(settings)) {
+      setAiResult(null);
+      return;
+    }
+    const ac = new AbortController();
+    let cancelled = false;
+    setAiResult(null);
+    void generateSettlement(snapshot.data, settings, ac.signal).then((result) => {
+      if (!cancelled) setAiResult(result);
+    });
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+    // snapshot.key 已覆盖本期范围；settings 变化需要按新配置重算。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, loaded, snapshot?.key, settings]);
   if (!snapshot) return null;
   const currentClaim = claim.key === snapshot.key ? claim : { bonus: false, challenge: null, error: undefined };
-  const reflection = `本地账目回顾（未调用 AI）\n\n${snapshot.result.reflection.replace(/\*\*/g, '')}${currentClaim.error ? '\n\n' + currentClaim.error : ''}`;
-  return { ...snapshot, ...currentClaim, reflection, advice: snapshot.result.advice, loading: !loaded, readError };
+  const result = aiResult ?? snapshot.result;
+  const reflection = `${aiResult ? '伊戈尔回望' : '本地账目回顾（未调用 AI）'}\n\n${result.reflection.replace(/\*\*/g, '')}${currentClaim.error ? '\n\n' + currentClaim.error : ''}`;
+  return { ...snapshot, ...currentClaim, result, reflection, advice: result.advice, loading: !loaded, readError, aiUsed: !!aiResult };
 }

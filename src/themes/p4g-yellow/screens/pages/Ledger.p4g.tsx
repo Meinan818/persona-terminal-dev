@@ -25,8 +25,7 @@ import { CNY, INCOME_META, catMeta } from '@yellow/mock/pkg5';
 import { daysAgoKey, fmtMoney, fmtSigned, ledgerDateLabel, monthLabel, roundMoney, shiftMonth, weekdayCN, useLedgerData } from '@yellow/adapters/pkg5';
 import { ledgerOps } from '@/themes/ledgerOperations';
 import { readAsDataUrl, downscaleDataUrl } from '@/utils/imageCrop';
-import { recognizeText } from '@/utils/ocr';
-import { parseLedgerOffline, splitSegments } from '@/utils/ledgerAI';
+import { parseLedgerBatch, parseLedgerShot } from '@/utils/ledgerAI';
 import { useAppStore } from '@/store';
 
 const WEEK_EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -117,13 +116,13 @@ export default function Ledger({ tab, params }: PageProps) {
   const monthSum = grouped.reduce((acc, [, es]) => { es.forEach((e) => { if (e.direction === 'expense') acc.exp += e.amount; else if (e.direction === 'income') acc.inc += e.amount; }); return acc; }, { exp: 0, inc: 0 });
 
   const startDraft = (d: EntryDraft) => { setDraft(d); setDraftOpen(true); };
-  const handleEntry = () => {
+  const handleEntry = async () => {
     if (nlBusy) return;
     const t = nlText.trim();
     if (!t) { setShotHint(null); startDraft(emptyDraft()); return; }
     setNlBusy(true);
     try {
-      const results = splitSegments(t).map((segment) => parseLedgerOffline(segment)).filter((r): r is NonNullable<ReturnType<typeof parseLedgerOffline>> => !!r && r.amount > 0);
+      const results = await parseLedgerBatch(t, settings);
       if (results.length >= 2) {
         setBatchDate(results.find((r) => r.date)?.date ?? P5_TODAY);
         setBatchRows(results.map((r) => ({
@@ -160,17 +159,44 @@ export default function Ledger({ tab, params }: PageProps) {
     setShotBusy(true); setShotHint(null);
     try {
       const dataUrl = await downscaleDataUrl(await readAsDataUrl(file));
-      const text = (await recognizeText(dataUrl))?.trim();
-      if (!text) {
-        setShotHint('本机没有读出小票文字，请手动填写');
-        startDraft(emptyDraft());
+      const shot = await parseLedgerShot(dataUrl, settings);
+      if (shot.results.length >= 2) {
+        setBatchDate(shot.results.find((r) => r.date)?.date ?? P5_TODAY);
+        setBatchRows(shot.results.map((r) => ({
+          direction: r.direction,
+          amount: String(r.amount),
+          type: r.type ?? 'other',
+          channel: settings.ledgerLastChannel || '微信',
+          incomeSource: r.incomeType === 'labor' ? '工资' : r.category || '其它收入',
+          note: r.note,
+        })));
+        setShotHint('视觉模型读出多笔，请核对');
+        setBatchOpen(true);
         return;
       }
-      const amount = text.match(/(?:¥|￥)?\s*(\d+(?:\.\d{1,2})?)/)?.[1];
-      const note = text.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !/^\d+(?:\.\d{1,2})?$/.test(line))?.slice(0, 40) ?? '';
-      setShotHint('本机识字完成，请核对金额和说明');
-      if (amount) startDraft({ ...emptyDraft(), amount, note });
-      else setNlText(text.slice(0, 100));
+      if (shot.results.length === 1) {
+        const r = shot.results[0];
+        setShotHint(shot.via === 'vision' ? '视觉模型已读出，请核对金额和说明' : '本机识别完成，请核对金额和说明');
+        startDraft({
+          ...emptyDraft(),
+          direction: r.direction,
+          amount: String(r.amount),
+          type: r.type ?? 'other',
+          incomeSource: r.incomeType === 'labor' ? '工资' : r.category || '',
+          category: r.category || '',
+          channel: settings.ledgerLastChannel || '',
+          note: r.note,
+          date: r.date ?? P5_TODAY,
+        });
+        return;
+      }
+      if (shot.ocrText?.trim()) {
+        setNlText(shot.ocrText.trim().slice(0, 100));
+        setShotHint('读到了文字，但没有识别出金额，请补充后重试');
+      } else {
+        setShotHint(shot.via === 'none' ? '没有可用的视觉模型，也没有读出本机文字，请手动填写' : '这张没读出金额，请手动填写');
+        startDraft(emptyDraft());
+      }
     } catch {
       setShotHint('图片读取失败，换一张或手动填写');
     } finally {
@@ -298,10 +324,10 @@ export default function Ledger({ tab, params }: PageProps) {
             <div className="flex min-w-0 items-stretch gap-0">
               <label className="relative flex min-w-0 flex-1 items-center rounded-l-sm border-3 border-r-0 border-p4g-line bg-p4g-surface-2 focus-within:shadow-[4px_4px_0_var(--p4g-yellow)] night:focus-within:shadow-[4px_4px_0_var(--p4g-orange)]">
                 <span aria-hidden className="ml-3 shrink-0 font-display text-lead font-bold text-p4g-orange">&gt;</span>
-                <input value={nlText} onChange={(e) => setNlText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleEntry(); }} placeholder="一句话记多笔；空着点 = 手动填" aria-label="一句话记账"
+                <input value={nlText} onChange={(e) => setNlText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void handleEntry(); }} placeholder="一句话记多笔；空着点 = 手动填" aria-label="一句话记账"
                   className="h-14 min-w-0 flex-1 bg-transparent px-2 text-body font-bold text-p4g-ink outline-none focus-visible:outline-none placeholder:font-normal placeholder:text-p4g-muted" />
               </label>
-              <button type="button" onClick={handleEntry} disabled={nlBusy} className="p4g-press relative h-14 shrink-0 overflow-hidden rounded-r-sm border-3 border-p4g-black bg-p4g-black px-5 font-display text-lead font-bold text-p4g-yellow shadow-hard disabled:opacity-50 night:border-p4g-yellow">
+              <button type="button" onClick={() => { void handleEntry(); }} disabled={nlBusy} className="p4g-press relative h-14 shrink-0 overflow-hidden rounded-r-sm border-3 border-p4g-black bg-p4g-black px-5 font-display text-lead font-bold text-p4g-yellow shadow-hard disabled:opacity-50 night:border-p4g-yellow">
                 <span aria-hidden className="absolute inset-y-0 left-0 w-1.5 bg-p4g-orange" />
                 {nlBusy ? '…' : '记一笔'}
               </button>

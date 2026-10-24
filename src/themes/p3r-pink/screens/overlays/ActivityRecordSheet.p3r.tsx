@@ -9,6 +9,10 @@ import type { AttributeId } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Button, P3Check, P3Sheet, P3Stepper, P3Textarea, useToast, P3R, slantClip, tickClip, IconClose } from '@pink/kit';
 import { AIThinking } from '@pink/fx';
+import { analyzeActivityAI } from '@/utils/activityAI';
+import { extractActivitiesFromImage, VISION_UNCONFIGURED } from '@/utils/visionIntake';
+import { readAsDataUrl, downscaleDataUrl } from '@/utils/imageCrop';
+import { useAppStore } from '@/store';
 import { ATTR_IDS, ATTR_NAMES, KEYWORD_RESULT, SPARE_IMAGES, WISHES } from '@pink/mock/pkg2';
 import { MiniHead, Photo } from '@pink/screens/pkg2/common';
 
@@ -59,30 +63,53 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
   const [aiBusy, setAiBusy] = useState(false);
   const [aiReason, setAiReason] = useState<string | null>(null);
   const [wish, setWish] = useState<string | undefined>();
+  const shotInput = useRef<HTMLInputElement>(null);
   const timers = useRef<number[]>([]);
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  const readShot = () => {
+  const readShot = () => shotInput.current?.click();
+  const readShotFile = async (file: File) => {
     setShotBusy(true); setShotHint(null);
-    later(() => {
+    try {
+      const dataUrl = await downscaleDataUrl(await readAsDataUrl(file));
+      const settings = useAppStore.getState().settings;
+      const items = await extractActivitiesFromImage(dataUrl, settings, settings.attributeNames);
+      if (!items.length) {
+        setShotHint('这张图里没有读出可入档的活动，请手动填写');
+        return;
+      }
+      setShotCandidates(items.map((item) => ({ text: item.text, on: true })));
+      setShotOffer(dataUrl);
+      setDesc(items.map((item) => item.text).join('；'));
+      setShotHint('视觉模型已回填，勾掉不要的那几条，再点「AI 分析」给分');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '读图失败';
+      setShotHint(message === VISION_UNCONFIGURED ? VISION_UNCONFIGURED : `读图失败：${message}`);
+    } finally {
       setShotBusy(false);
-      setShotCandidates([{ text: '跑步 5.2 公里，配速 6\'10"', on: true }, { text: '拉伸 15 分钟', on: true }, { text: '喝水 2L', on: false }]);
-      setShotOffer('chushu.webp');
-      setDesc('跑步 5.2 公里，配速 6\'10"；拉伸 15 分钟');
-      setShotHint('已回填，勾掉不要的那几条，再点「分析关键词」给分');
-    }, 1300);
+    }
   };
-  const ai = () => {
-    setAiBusy(true);
-    later(() => { setAiBusy(false); setAnalyzed({ knowledge: 2, guts: 1, dexterity: 0, kindness: 2, charm: 0 }); setAiReason('读书算知识；主动给同桌讲题是在照顾别人，给温柔；坚持去图书馆也要一点胆量。'); }, 2400);
+  const ai = async (text = desc) => {
+    if (!text.trim()) return;
+    setAiBusy(true); setAiReason(null);
+    try {
+      const settings = useAppStore.getState().settings;
+      const result = await analyzeActivityAI(text.trim(), settings.attributeNames, settings);
+      setAnalyzed(result.points);
+      setAiReason(result.reason || 'AI 已按这段记录评估加点');
+    } catch (error) {
+      setAiReason(error instanceof Error ? `分析失败：${error.message}` : '分析失败，请重试');
+    } finally {
+      setAiBusy(false);
+    }
   };
   useEffect(() => {
     if (!open) return;
     const st = params?.get('step');
     if (st === 'analyzed' || st === 'ai') { setDesc('在图书馆把第 4 章读完了，还帮同桌讲了两道题'); setAnalyzed({ ...KEYWORD_RESULT }); setImages(['bailu.webp']); }
-    if (st === 'ai') ai();
-    if (st === 'reading') readShot();
+    if (st === 'ai') void ai('在图书馆把第 4 章读完了，还帮同桌讲了两道题');
+    if (st === 'reading') setShotHint('请选择一张活动截图');
   }, [open]); // eslint-disable-line
 
   const reset = () => { setDesc(''); setImportant(false); setImages([]); setAnalyzed(null); setAiReason(null); setShotHint(null); setShotOffer(null); setShotCandidates(null); setWish(undefined); };
@@ -120,6 +147,7 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
       <P3Textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="描述你刚才做了什么..." rows={4} aria-label="描述你刚才做了什么" />
 
       <div className="mt-3 flex flex-wrap gap-2">
+        <input ref={shotInput} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void readShotFile(file); }} />
         <AttachChip icon="✎" label={shotBusy ? '正在读图…' : '读图代打字'} onClick={shotBusy ? undefined : readShot} disabled={shotBusy} active={shotBusy} />
         <AttachChip icon="▣" label={imgBusy ? '处理中…' : images.length ? `已附 ${images.length} 张` : '附一张图'} onClick={imgBusy ? undefined : attach} disabled={imgBusy} active={images.length > 0} />
       </div>
@@ -150,7 +178,7 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
         {!analyzed ? (
           <P3Button tone="ink" size="lg" disabled={!desc.trim()} onClick={() => setAnalyzed({ ...KEYWORD_RESULT })} ariaLabel="分析关键词" className="px-10">分析关键词</P3Button>
         ) : (
-          <P3Button tone="outline" size="lg" disabled={!desc.trim()} busy={aiBusy} busyText="⋯ AI 思考中" onClick={ai} ariaLabel="AI 分析" className="px-10">✦ AI 分析</P3Button>
+          <P3Button tone="outline" size="lg" disabled={!desc.trim()} busy={aiBusy} busyText="⋯ AI 思考中" onClick={() => { void ai(); }} ariaLabel="AI 分析" className="px-10">✦ AI 分析</P3Button>
         )}
       </div>
       {aiReason && (

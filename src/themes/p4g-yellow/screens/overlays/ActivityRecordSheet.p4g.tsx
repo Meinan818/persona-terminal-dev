@@ -11,6 +11,10 @@ import { P4Button, P4Chip, P4Sheet, P4Stepper, P4Textarea, useToast, IconClose }
 import { p4gAsset } from '@yellow/lib/asset';
 import { ATTR_IDS, ATTR_NAMES, KEYWORD_RESULT, WISHES } from '@yellow/mock/pkg2';
 import { cx } from '@yellow/lib/cx';
+import { useAppStore } from '@/store';
+import { analyzeActivityAI } from '@/utils/activityAI';
+import { extractActivitiesFromImage, VISION_UNCONFIGURED } from '@/utils/visionIntake';
+import { readAsDataUrl, downscaleDataUrl } from '@/utils/imageCrop';
 
 export interface RecordSavePayload { description: string; points: Record<AttributeId, number>; important: boolean; images: string[]; backdate?: string; wishId?: string }
 
@@ -50,6 +54,7 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
   const [analyzed, setAnalyzed] = useState<Record<AttributeId, number> | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiReason, setAiReason] = useState<string | null>(null);
+  const shotInput = useRef<HTMLInputElement>(null);
   const [wish, setWish] = useState<string | undefined>();
   const timers = useRef<number[]>([]);
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
@@ -66,20 +71,42 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
     setImgBusy(true);
     later(() => { setImgBusy(false); setImages((v) => [...v, ['town-night.webp', 'tv-world-fog.webp', 'menu-squares.webp'][v.length % 3]]); }, 600);
   };
-  const readShot = () => {
+  const readShot = () => shotInput.current?.click();
+  const readShotFile = async (file: File) => {
     setShotBusy(true); setShotHint(null);
-    later(() => {
+    try {
+      const dataUrl = await downscaleDataUrl(await readAsDataUrl(file));
+      const settings = useAppStore.getState().settings;
+      const items = await extractActivitiesFromImage(dataUrl, settings, settings.attributeNames);
+      if (!items.length) {
+        setShotHint('这张图里没有读出可入档的活动，请手动填写');
+        return;
+      }
+      setShotCandidates(items.map((item) => ({ text: item.text, on: true })));
+      setShotOffer(dataUrl);
+      setDesc(items.map((item) => item.text).join('；'));
+      setShotHint('视觉模型已回填，勾掉不要的那几条，再点「AI 分析」给分');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '读图失败';
+      setShotHint(message === VISION_UNCONFIGURED ? VISION_UNCONFIGURED : `读图失败：${message}`);
+    } finally {
       setShotBusy(false);
-      setShotCandidates([{ text: '跑步 5.2 公里，配速 6\'10"', on: true }, { text: '拉伸 15 分钟', on: true }, { text: '喝水 2L', on: false }]);
-      setShotOffer('tv-world-fog.webp');
-      setDesc('跑步 5.2 公里，配速 6\'10"；拉伸 15 分钟');
-      setShotHint('已回填，点「分析」给分');
-    }, 900);
+    }
   };
   const analyze = () => { setAnalyzed({ ...KEYWORD_RESULT }); };
-  const ai = () => {
-    setAiBusy(true);
-    later(() => { setAiBusy(false); setAnalyzed({ knowledge: 2, guts: 1, dexterity: 0, kindness: 2, charm: 0 }); setAiReason('读书算知识；主动讲题是在照顾别人，给温柔；坚持去图书馆也要一点胆量。'); }, 1100);
+  const ai = async () => {
+    if (!desc.trim()) return;
+    setAiBusy(true); setAiReason(null);
+    try {
+      const settings = useAppStore.getState().settings;
+      const result = await analyzeActivityAI(desc.trim(), settings.attributeNames, settings);
+      setAnalyzed(result.points);
+      setAiReason(result.reason || 'AI 已按这段记录评估加点');
+    } catch (error) {
+      setAiReason(error instanceof Error ? `分析失败：${error.message}` : '分析失败，请重试');
+    } finally {
+      setAiBusy(false);
+    }
   };
   const save = () => {
     if (imgBusy) { toast('图片还在处理，稍等一下再保存'); return; }
@@ -106,6 +133,7 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
 
       {/* 附件筹码 */}
       <div className="mt-3 flex flex-wrap gap-2">
+        <input ref={shotInput} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void readShotFile(file); }} />
         <P4Chip tone="outline" onClick={shotBusy ? undefined : readShot} icon={<span>📷</span>}>{shotBusy ? '正在读图…' : '读图代打字'}</P4Chip>
         <P4Chip tone="outline" onClick={imgBusy ? undefined : attach} icon={<span>🖼</span>}>{imgBusy ? '处理中…' : images.length ? `已附 ${images.length} 张` : '附一张图'}</P4Chip>
       </div>
@@ -124,7 +152,7 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 p4g-noscroll">
           {images.map((src, i) => (
             <div key={i} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xs border-3 border-p4g-black bg-p4g-black shadow-hard-sm night:border-p4g-yellow">
-              <img src={p4gAsset(src)} alt="" className="h-full w-full object-cover" />
+              <img src={/^data:/.test(src) ? src : p4gAsset(src)} alt="" className="h-full w-full object-cover" />
               <button type="button" aria-label="移除这张图" onClick={() => setImages((v) => v.filter((_, j) => j !== i))} className="absolute right-0.5 top-0.5 flex h-6 w-6 items-center justify-center rounded-xs bg-p4g-black text-p4g-yellow"><IconClose size={11} /></button>
             </div>
           ))}
@@ -139,7 +167,7 @@ export default function ActivityRecordSheet({ open, onClose, params, backdate, o
         {!analyzed ? (
           <P4Button variant="black" size="lg" disabled={!desc.trim()} onClick={analyze} aria-label="分析关键词" className="px-10">分析关键词</P4Button>
         ) : (
-          <P4Button variant="secondary" size="lg" disabled={!desc.trim() || aiBusy} onClick={ai} aria-label="AI 分析" className="px-10">{aiBusy ? '⋯ AI 思考中' : '✦ AI 分析'}</P4Button>
+          <P4Button variant="secondary" size="lg" disabled={!desc.trim() || aiBusy} onClick={() => { void ai(); }} aria-label="AI 分析" className="px-10">{aiBusy ? '⋯ AI 思考中' : '✦ AI 分析'}</P4Button>
         )}
       </div>
       {aiReason && <div className="mt-2 rounded-sm bg-p4g-msg px-3 py-2 text-meta leading-relaxed text-[color:var(--p4g-msg-ink)]"><span className="mr-1 font-bold text-p4g-yellow">AI:</span>{aiReason}</div>}

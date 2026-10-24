@@ -29,6 +29,8 @@ import '@/p5r-red/screens/pkg4/pkg4.css';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { MAJOR_ARCANA, TAROT_BY_ID, drawRandomCards, randomOrientation, randomBonusMultiplier } from '@/constants/tarot';
 import { buildOfflineDaily } from '@/utils/tarotOffline';
+import { aiConfigured } from '@/utils/aiClient';
+import { useTarotJobs, startDailyJob } from '@/utils/tarotJobs';
 import { archiveRows, demoCardOf, demoRev, type ArchiveRow } from '@/p5r-red/adapter/tarotData';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -80,7 +82,7 @@ const FACES: Face[] = MAJOR_ARCANA.map((c) => ({
 }));
 
 /** v3 占卜桌（今日塔罗 · 未抽） */
-function FortuneTable({ onLong, onArchive }: { onLong: () => void; onArchive: () => void }) {
+function FortuneTable({ onLong, onArchive, onStarted }: { onLong: () => void; onArchive: () => void; onStarted: () => void }) {
   const root = useRef<HTMLDivElement>(null);
   const [pick, setPick] = useState<number | null>(null);
   const [named, setNamed] = useState(false);
@@ -108,11 +110,23 @@ function FortuneTable({ onLong, onArchive }: { onLong: () => void; onArchive: ()
     r.querySelector('.as-read')?.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 400, delay: 300, fill: 'backwards' });
     return () => stops.forEach((s) => s());
   }, [named]); // eslint-disable-line react-hooks/exhaustive-deps
-  /** 落库：按离线兜底写真实 dailyDivination；写完由 store 驱动页面切到完成态 */
+  /** 有 AI 配置时交给后台任务；只有未配置或显式离线才落本地兜底。 */
   const commit = async (i: number) => {
     const picked = cands.current?.[i];
     if (!picked) return;
     const orientation = picked.rev ? 'reversed' as const : 'upright' as const;
+    const settings = useAppStore.getState().settings;
+    if (aiConfigured(settings)) {
+      onStarted();
+      startDailyJob({
+        settings,
+        cardId: picked.card.id,
+        orientation,
+        drawnFrom: cands.current!.map((c) => c.card.id),
+        pickedIndex: i,
+      });
+      return;
+    }
     const offline = buildOfflineDaily(TAROT_BY_ID[picked.card.id], orientation);
     await useAppStore.getState().saveDailyDivination({
       id: uuidv4(),
@@ -163,15 +177,18 @@ export default function Astrology({ params }: PageProps) {
   const t0 = params.get('tab') as Tab | null;
   const [tab, setTab] = useState<Tab>(t0 === 'long' || t0 === 'archive' ? t0 : 'daily');
   const [detail, setDetail] = useState(params.get('detail') === '1');
+  const [requestedDaily, setRequestedDaily] = useState(false);
   const st = params.get('state') ?? '';
   const step = params.get('step') ?? '';
   const drawn = useAppStore((s) => (s.dailyDivination && s.dailyDivination.date === toLocalDateKey() ? s.dailyDivination : null));
+  const dailyJob = useTarotJobs((s) => s.daily);
+  const todayJob = dailyJob?.date === toLocalDateKey() ? dailyJob : null;
   const readings = useAppStore((s) => s.longReadings);
   const glimpseRef = useRef<HTMLDivElement>(null);
   const switchTab = (v: Tab) => { setTab(v); setDetail(false); P5.sfx('nav', 0.4); window.scrollTo(0, 0); };
   useLayoutEffect(() => { if (params.get('sec') === 'glimpse') setTimeout(() => glimpseRef.current?.scrollIntoView({ block: 'start' }), 80); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /* 真实优先：今天已经抽过就直接进完成态；演示态 ?state=… 仍可强制查看 */
-  const daily = st ? st : drawn ? 'done' : 'idle';
+  const daily = st ? st : drawn ? 'done' : todayJob ? (todayJob.status === 'error' ? 'error' : 'reading') : requestedDaily ? 'reading' : 'idle';
   const longSt = st === 'noai' ? 'noapi' : ['form', 'pending', 'base', 'picking', 'reading', 'stopped', 'error', 'done', 'followerr'].includes(step) ? step : 'form';
   const archCount = archiveRows(readings, toLocalDateKey()).length;
   return (
@@ -182,7 +199,9 @@ export default function Astrology({ params }: PageProps) {
         <button key={k} type="button" role="tab" aria-pressed={tab === k} aria-selected={tab === k} onClick={() => switchTab(k)}>{l}</button>
       ))}</div>
       {tab === 'daily' && <>
-        {daily === 'idle' && !drawn ? <FortuneTable onLong={() => switchTab('long')} onArchive={() => switchTab('archive')} /> : <Inline dep={`d-${daily}`} play={() => OD.openDailyDraw(daily)} />}
+        {daily === 'idle' && !drawn
+          ? <FortuneTable onLong={() => switchTab('long')} onArchive={() => switchTab('archive')} onStarted={() => setRequestedDaily(true)} />
+          : <Inline dep={`d-${daily}`} play={() => OD.openDailyDraw(daily)} />}
         <div ref={glimpseRef} id="fate-glimpse"><Inline dep={`g-${params.get('glimpse')}`} play={() => OD.openFateGlimpse(params.get('glimpse') === 'ready' ? 'ready' : 'progress')} /></div>
       </>}
       {tab === 'long' && <Inline dep={`l-${longSt}`} play={() => OD.openLongReading(longSt)} />}

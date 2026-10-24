@@ -17,6 +17,7 @@ import { useAstrologyData, useFateWindow, TODAY, WEEKDAY_CN, shiftKey } from '@b
 import { TAROT_BY_ID as REAL_TAROT_BY_ID, drawRandomCards, MAJOR_ARCANA, randomOrientation, randomBonusMultiplier } from '@/constants/tarot';
 import { buildOfflineDaily } from '@/utils/tarotOffline';
 import { aiConfigured } from '@/utils/aiClient';
+import { useTarotJobs, startDailyJob, continueDailyJob, readDailyPending, writeDailyPending, clearDailyPending } from '@/utils/tarotJobs';
 import { v4 as uuidv4 } from 'uuid';
 import { Arcana, PinkBack, FlipCard, ShuffleDeck, CardNameReveal, ThinkingCircle, Markdownish, useFakeProgress } from './tarot';
 import { PhaseTitle, HintStrip, ErrStrip, Label, SlantAction, StateFade } from './ui';
@@ -40,16 +41,26 @@ export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligib
   const vw = useViewportWidth();
   const astro = useAstrologyData(false);
   const today = TODAY;
+  const job = useTarotJobs((state) => state.daily);
+  const jobToday = job?.date === today ? job : null;
   const [phase, setPhase] = useState<DailyPhase>(init.phase);
-  const cands = useMemo<Cand[]>(() => drawRandomCards(3, MAJOR_ARCANA).map((card) => ({ id: card.id, orientation: randomOrientation() })), []);
-  const [picked, setPicked] = useState<number | null>(init.phase === 'intro' || init.phase === 'pick' ? null : 0);
+  const cands = useMemo<Cand[]>(() => {
+    const pending = readDailyPending();
+    if (pending && pending.cards.length > 0) {
+      return pending.cards.map((card) => ({ id: card.id, orientation: card.orientation }));
+    }
+    return drawRandomCards(3, MAJOR_ARCANA).map((card) => ({ id: card.id, orientation: randomOrientation() }));
+  }, []);
+  const [picked, setPicked] = useState<number | null>(
+    jobToday?.pickedIndex ?? (init.phase === 'intro' || init.phase === 'pick' ? null : 0),
+  );
   const [result, setResult] = useState<DailyDivination | null>(
     astro.dailyDivination?.date === today ? astro.dailyDivination : init.phase === 'done' && init.offline ? offlineOf(cands[0]) : null,
   );
   const [resumeMsg, setResumeMsg] = useState<string | null>(init.resume ? '上次的解读没能完成——这张牌已经为你留着，直接继续就好。' : null);
   const [aborted, setAborted] = useState(false);
   const noApiKey = init.noApiKey || !aiConfigured(astro.settings);
-  const ai = useAIStream({ text: '', fail: init.fail, initialPhase: 'idle', thinkMs: 0, cps: 30 });
+  const demoAI = useAIStream({ text: '', fail: init.fail, initialPhase: 'idle', thinkMs: 0, cps: 30 });
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
@@ -60,35 +71,78 @@ export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligib
     setPhase('done');
   }, [astro.dailyDivination, today]);
 
-  const finish = (offline: boolean) => {
-    const c = cands[picked ?? 0];
-    const next = offlineOf(c);
+  useEffect(() => {
+    if (!jobToday) return;
+    if (jobToday.status === 'error') {
+      setResumeMsg(jobToday.error ?? '解读失败');
+      setPhase('error');
+      return;
+    }
+    setPicked(jobToday.pickedIndex);
+    setPhase('calling');
+  }, [jobToday?.status, jobToday?.error, jobToday?.pickedIndex]);
+
+  useEffect(() => {
+    if (phase === 'done' || astro.dailyDivination?.date === today) return;
+    writeDailyPending({
+      date: today,
+      cards: cands.map((card) => ({ id: card.id, orientation: card.orientation })),
+      pickedIndex: picked,
+    });
+  }, [astro.dailyDivination?.date, cands, phase, picked, today]);
+
+  const finish = (offline: boolean, index: number | null = picked) => {
+    const pickedIndex = index ?? picked;
+    const c = cands[pickedIndex ?? 0];
+    if (!offline) {
+      if (!c || pickedIndex === null) return;
+      setResumeMsg(null);
+      setPhase('calling');
+      startDailyJob({
+        settings: astro.settings,
+        cardId: c.id,
+        orientation: c.orientation,
+        drawnFrom: cands.map((card) => card.id),
+        pickedIndex,
+      });
+      return;
+    }
+    const next = offlineOf(c, pickedIndex ?? 0, cands);
     setResult(next);
     void astro.saveDailyDivination(next);
+    clearDailyPending();
     setPhase('done');
   };
   const pick = (i: number, useOffline = false, force = false) => {
     if (!force && phase !== 'pick') return;
     setPicked(i); setResumeMsg(null); setAborted(false);
     setPhase('flipping');
-    later(() => finish(true), low ? 150 : 700);
+    later(() => finish(useOffline || noApiKey, i), low ? 150 : 700);
   };
 
   // ?phase=flipping 直达 = 从翻牌阶段开播（真实：翻牌 700ms 后发起请求 → calling），而不是停在牌背
   useEffect(() => {
     if (init.phase !== 'flipping') return;
     later(() => {
-      finish(true);
+      finish(noApiKey, 0);
     }, low ? 150 : 700);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (phase === 'done' && result) return (<><DoneView d={result} /><FateGlimpseSection variant={glimpse} /></>);
 
-  const title = { intro: '正在洗牌…', pick: '从三张牌中选择一张', flipping: '揭示命运…', calling: ai.text ? '解读者正在落笔' : '正在解读星象…', error: '解读遇到了阻碍', done: '' }[phase];
-  const sub = { intro: '今日的星象正在汇聚', pick: '每日仅一次，慎重选择', flipping: '正位 / 逆位皆有意义', calling: ai.phase === 'thinking' && !ai.text ? '解读者正在思索，离开这页也不会中断' : '结合您近期的处境', error: '可重试 AI 或改用离线兜底', done: '' }[phase];
+  const livePhase = jobToday?.status === 'thinking' ? 'thinking' : jobToday?.status === 'streaming' ? 'streaming' : jobToday?.status === 'error' ? 'error' : jobToday?.status === 'done' ? 'done' : 'idle';
+  const aiPhase = jobToday ? livePhase : demoAI.phase;
+  const aiText = jobToday ? jobToday.text : demoAI.text;
+  const thinking = jobToday ? (jobToday.thinking || (jobToday.status === 'thinking' && !jobToday.text)) : demoAI.phase === 'thinking';
+  const title = { intro: '正在洗牌…', pick: '从三张牌中选择一张', flipping: '揭示命运…', calling: aiText ? '解读者正在落笔' : '正在解读星象…', error: '解读遇到了阻碍', done: '' }[phase];
+  const sub = { intro: '今日的星象正在汇聚', pick: '每日仅一次，慎重选择', flipping: '正位 / 逆位皆有意义', calling: thinking && !aiText ? '解读者正在思索，离开这页也不会中断' : '结合您近期的处境', error: '可重试 AI 或改用离线兜底', done: '' }[phase];
   const pickW = Math.max(78, Math.min(104, Math.floor((Math.min(vw, 576) - 32 - 36) / 3)));
-  const canContinue = ai.phase === 'truncated';
-  const errText = resumeMsg ?? (ai.error?.code === 'offline' ? '当前离线：解读服务连不上。可以改用离线兜底，牌面会保持不变。' : ai.error?.code === 'truncated' ? '解读被截断了——半截解读已经留着，可以让它从断处接着写（最多三次）。' : ai.error ? `解读失败：${ai.error.message}` : '解读失败');
+  const canContinue = !!jobToday && jobToday.status === 'error' && jobToday.truncated;
+  const errText = resumeMsg ?? (jobToday?.truncated
+    ? '解读被截断了——半截解读已经留着，可以让它从断处接着写（最多三次）。'
+    : jobToday?.error ? `解读失败：${jobToday.error}` : demoAI.error?.code === 'offline'
+      ? '当前离线：解读服务连不上。可以改用离线兜底，牌面会保持不变。'
+      : demoAI.error ? `解读失败：${demoAI.error.message}` : '解读失败');
 
   return (
     <div className="space-y-5">
@@ -128,22 +182,22 @@ export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligib
         )}
       </div>
 
-      {phase === 'calling' && <StreamPanel ai={ai} onLeave={() => { ai.abort(); setAborted(true); }} />}
-      {aborted && ai.phase === 'aborted' && (
+      {phase === 'calling' && <StreamPanel text={aiText} phase={aiPhase} thinking={thinking} onLeave={jobToday ? undefined : () => { demoAI.abort(); setAborted(true); }} />}
+      {aborted && demoAI.phase === 'aborted' && !jobToday && (
         <div className="space-y-3">
           <HintStrip>你刚才离开了这页——解读者没有停笔，回来就接着看。</HintStrip>
-          <div className="flex gap-2"><SlantAction onClick={() => { setAborted(false); setPhase('calling'); ai.resume(); }}>接着看</SlantAction></div>
+          <div className="flex gap-2"><SlantAction onClick={() => { setAborted(false); setPhase('calling'); demoAI.resume(); }}>接着看</SlantAction></div>
         </div>
       )}
 
-      {phase === 'error' && canContinue && !!ai.text && <StreamPanel ai={ai} still />}
+      {phase === 'error' && canContinue && !!aiText && <StreamPanel text={aiText} phase={aiPhase} thinking={false} still />}
       {phase === 'error' && (
         <div className="space-y-3">
           <ErrStrip>{errText}</ErrStrip>
           <div className="flex gap-2">
-            {canContinue && <SlantAction onClick={() => { setPhase('calling'); ai.resume(); }}>接着写</SlantAction>}
+            {canContinue && <SlantAction onClick={() => { setPhase('calling'); continueDailyJob(astro.settings); }}>接着写</SlantAction>}
             <SlantAction tone={canContinue ? 'soft' : 'primary'} onClick={() => pick(picked ?? 0, false, true)}>{canContinue ? '重新解读' : '重试 AI 解读'}</SlantAction>
-            <SlantAction tone="soft" onClick={() => pick(picked ?? 0, true, true)}>使用离线兜底</SlantAction>
+            <SlantAction tone="soft" onClick={() => finish(true, picked ?? 0)}>使用离线兜底</SlantAction>
           </div>
         </div>
       )}
@@ -155,14 +209,13 @@ export function DailyDraw({ init, glimpse }: { init: DailyInit; glimpse: 'eligib
   );
 }
 
-function offlineOf(c: Cand): DailyDivination {
-  const card = TAROT_BY_ID[c.id];
+function offlineOf(c: Cand, pickedIndex = 0, all: Cand[] = [c]): DailyDivination {
   const offline = buildOfflineDaily(REAL_TAROT_BY_ID[c.id], c.orientation);
   return {
     id: uuidv4(),
     date: TODAY,
-    drawnFrom: [c.id],
-    pickedIndex: 0,
+    drawnFrom: all.map((card) => card.id),
+    pickedIndex,
     cardId: c.id,
     orientation: c.orientation,
     effect: { attribute: offline.attribute, multiplier: randomBonusMultiplier(c.orientation) },
@@ -175,19 +228,18 @@ function offlineOf(c: Cand): DailyDivination {
 }
 
 /** 思维链阵图 / 流式落笔面板（真实 StreamPanel：今日运势 + 落笔中 / 思索中；无字时 ThinkingCircle pentagram 124） */
-function StreamPanel({ ai, still, onLeave }: { ai: ReturnType<typeof useAIStream>; still?: boolean; onLeave?: () => void }) {
-  const thinking = ai.phase === 'thinking';
+function StreamPanel({ text, phase, thinking, still, onLeave }: { text: string; phase: AIPhase; thinking: boolean; still?: boolean; onLeave?: () => void }) {
   const prog = useFakeProgress(thinking, 2400);
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative min-h-[96px] px-5 py-4" style={{ background: P3R.panel, clipPath: slantClip(14), boxShadow: 'var(--p3r-shadow)' }}>
       <div className="mb-2 flex items-center gap-2">
         <span className="font-cond text-[11px] uppercase tracking-[2px]" style={{ color: P3R.blue }}>今日运势</span>
-        <span className="text-[11px] font-bold" style={{ color: P3R.grey }}>{ai.text ? (still ? '已停笔' : '落笔中') : thinking ? '思索中' : '解读中'}</span>
-        {onLeave && !still && (ai.phase === 'thinking' || ai.phase === 'streaming') && (
+        <span className="text-[11px] font-bold" style={{ color: P3R.grey }}>{text ? (still ? '已停笔' : '落笔中') : thinking ? '思索中' : '解读中'}</span>
+        {onLeave && !still && (phase === 'thinking' || phase === 'streaming') && (
           <button type="button" onClick={onLeave} className="ml-auto text-[11px] font-black underline" style={{ color: P3R.grey }}>离开这页</button>
         )}
       </div>
-      {ai.text ? <AIText ai={ai} /> : (
+      {text ? <div className="whitespace-pre-wrap text-[15px] leading-[1.85]" style={{ color: P3R.ink }}>{text}</div> : (
         <div className="flex justify-center py-2"><ThinkingCircle variant="pentagram" progress={prog} size={124} label={thinking ? '解读者正在思索' : '正在解读星象'} /></div>
       )}
     </motion.div>

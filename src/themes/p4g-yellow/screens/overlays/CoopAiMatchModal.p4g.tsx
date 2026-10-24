@@ -9,6 +9,9 @@ import { P4Button, P4Outline, P4Sheet, P4Textarea } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { ATTR_IDS, ATTR_NAMES, INTIMACY_LABELS, TAROT_BY_ID, TRAIT_QUESTIONS } from '@yellow/screens/pkg3/arcana';
 import { LevelGrid, MatchingSpinner, MiniLabel, TarotCard, TraitQuiz } from '@yellow/screens/pkg3/ui';
+import { useAppStore } from '@/store';
+import { matchConfidant, type ConfidantMatchResult } from '@/utils/confidantAI';
+import { getAIConfig } from '@/utils/aiClient';
 
 type Step = 'description' | 'trait' | 'matching' | 'result' | 'error';
 export interface AiMatchResult { arcanaId: string; orientation: 'upright' | 'reversed'; level: number; attr: AttributeId; message: string }
@@ -18,26 +21,47 @@ export function CoopAiMatchSheet({ isOpen, onClose, targetName, onConfirm, initi
   const [desc, setDesc] = useState(initialStep === 'description' ? '' : '一起搞过很多荒唐计划的损友，关键时刻从不掉链子。');
   const [ts, setTs] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
-  const m = { arcanaId: 'magician', orientation: 'upright' as 'upright' | 'reversed', initialIntimacy: 3, interpretation: '魔术师：他总能把手边的东西变成一场冒险。你们之间的能量来自「一起动手」。', advice: '把下一次的胡闹，变成一次真正完成的小项目。' };
-  const [level, setLevel] = useState(m.initialIntimacy);
-  const [attr, setAttr] = useState<AttributeId>(TAROT_BY_ID[m.arcanaId].attr);
+  const DEMO_MATCH = { arcanaId: 'magician', orientation: 'upright' as 'upright' | 'reversed', initialIntimacy: 3, interpretation: '魔术师：他总能把手边的东西变成一场冒险。你们之间的能量来自「一起动手」。', advice: '把下一次的胡闹，变成一次真正完成的小项目。' };
+  const [matchResult, setMatchResult] = useState<ConfidantMatchResult | null>(null);
+  const liveSettings = useAppStore((state) => state.settings);
+  const hasAI = aiConfigured || !!getAIConfig(liveSettings);
+  const [level, setLevel] = useState(DEMO_MATCH.initialIntimacy);
+  const [attr, setAttr] = useState<AttributeId>(TAROT_BY_ID[DEMO_MATCH.arcanaId].attr);
   const [message, setMessage] = useState('');
   useEffect(() => { if (isOpen) { setStep(initialStep); setTs(0); } }, [isOpen, initialStep]);
-  useEffect(() => { if (step !== 'matching') return; const t = window.setTimeout(() => setStep('result'), 1700); return () => clearTimeout(t); }, [step]);
   const valid = desc.trim().length >= 4;
-  const answer = (v: string) => { const a = [...answers]; a[ts] = v; setAnswers(a); if (ts < TRAIT_QUESTIONS.length - 1) window.setTimeout(() => setTs(ts + 1), 160); else window.setTimeout(() => setStep('matching'), 200); };
+  const runMatch = async (traits: string[]) => {
+    setStep('matching');
+    try {
+      const result = await matchConfidant({
+        settings: liveSettings,
+        name: targetName,
+        description: desc.trim(),
+        takenArcanaIds: useAppStore.getState().confidants.map((item) => item.arcanaId),
+        traits: TRAIT_QUESTIONS.map((q, i) => ({ question: q.question, answer: traits[i] ?? '' })),
+      });
+      setMatchResult(result);
+      setLevel(Math.max(1, Math.min(10, result.initialIntimacy)));
+      setAttr(TAROT_BY_ID[result.arcanaId]?.attr ?? TAROT_BY_ID[DEMO_MATCH.arcanaId].attr);
+      setStep('result');
+    } catch {
+      setStep('error');
+    }
+  };
+  const answer = (v: string) => { const a = [...answers]; a[ts] = v; setAnswers(a); if (ts < TRAIT_QUESTIONS.length - 1) window.setTimeout(() => setTs(ts + 1), 160); else window.setTimeout(() => { void runMatch(a); }, 200); };
+  const m = matchResult ?? DEMO_MATCH;
   const card = TAROT_BY_ID[m.arcanaId];
   return (
     <P4Sheet open={isOpen} onClose={onClose} title={`星象为 ${targetName} 推演一张塔罗`} en="✨ STAR MATCH · 星象匹配" size="tall" dismissible={step !== 'matching'}
       footer={step === 'description' ? <P4Button block size="lg" disabled={!valid} onClick={() => { setStep('trait'); setTs(0); }}>{valid ? '下一步（4 个小问题）' : '至少几个字，让塔罗有内容可参考'}</P4Button>
-        : step === 'result' ? <div className="grid grid-cols-3 gap-2"><P4Button size="sm" variant="secondary" onClick={() => { setStep('trait'); setTs(TRAIT_QUESTIONS.length - 1); }}>回去改一改</P4Button><P4Button size="sm" variant="secondary" onClick={() => setStep('matching')}>重新匹配</P4Button><P4Button size="sm" onClick={() => { onConfirm?.({ arcanaId: m.arcanaId, orientation: m.orientation, level, attr, message }); onClose(); }}>就用这份 ✨</P4Button></div>
-        : step === 'error' ? <P4Button block variant="secondary" onClick={() => setStep('trait')}>回去改一改</P4Button> : undefined}>
+        : step === 'result' ? <div className="grid grid-cols-3 gap-2"><P4Button size="sm" variant="secondary" onClick={() => { setStep('trait'); setTs(TRAIT_QUESTIONS.length - 1); }}>回去改一改</P4Button><P4Button size="sm" variant="secondary" onClick={() => { void runMatch(answers); }}>重新匹配</P4Button><P4Button size="sm" onClick={() => { onConfirm?.({ arcanaId: m.arcanaId, orientation: m.orientation, level, attr, message }); onClose(); }}>就用这份 ✨</P4Button></div>
+        : step === 'error' ? <div className="flex gap-3"><P4Button block variant="secondary" onClick={() => setStep('trait')}>回去改一改</P4Button><P4Button block onClick={() => { void runMatch(answers); }}>重新匹配</P4Button></div> : undefined}>
       {step === 'description' && (
         <div>
           <MiniLabel>告诉星象 · 只给 AI 参考</MiniLabel>
           <P4Textarea label={`你眼中的 ${targetName} 是怎样的人？`} rows={5} maxLength={500} showCount value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="比如：跟我一起十年的朋友，会在我说不出话的夜里发一段没头没尾的语音……" />
           <p className="mt-2 text-cap text-p4g-ink-soft">这段不会发给对方，只用来推荐塔罗。<br />对方看到的"留一句话"在结果页填。</p>
-          {!aiConfigured && <p className="mt-2 rounded-sm border-2 border-dashed border-p4g-line px-3 py-2 text-cap text-p4g-ink-soft">未配置 AI API，将使用离线模式进行匹配</p>}
+          {!hasAI && <p className="mt-2 rounded-sm border-2 border-dashed border-p4g-line px-3 py-2 text-cap text-p4g-ink-soft">未配置 AI API，将使用离线模式进行匹配</p>}
         </div>
       )}
       {step === 'trait' && <TraitQuiz step={ts} answers={answers} onAnswer={answer} onPrev={() => setTs(ts - 1)} />}
@@ -57,7 +81,7 @@ export function CoopAiMatchSheet({ isOpen, onClose, targetName, onConfirm, initi
             <p className="mt-1.5 text-2xs text-p4g-ink-soft">Lv2 日常加点、Lv7 战斗固伤、Lv10 SP 道具都会指向这个属性。</p>
           </div>
           <P4Textarea label="留一句话（给对方看，可选，≤ 200 字）" rows={3} maxLength={200} showCount value={message} onChange={(e) => setMessage(e.target.value)} placeholder={`想对 ${targetName} 说的话……`} />
-          {!aiConfigured && <div className="text-center text-cap text-p4g-ink-soft">· 本次为离线匹配 ·</div>}
+          {(matchResult?.source === 'offline' || (!matchResult && !hasAI)) && <div className="text-center text-cap text-p4g-ink-soft">· 本次为离线匹配 ·</div>}
         </div>
       )}
       {step === 'error' && <div className="py-10 text-center text-body font-bold text-p4g-danger">未能找到合适的阿卡纳，请调整描述后再试</div>}

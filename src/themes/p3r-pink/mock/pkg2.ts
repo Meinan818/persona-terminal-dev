@@ -139,7 +139,7 @@ export const ORGS = [
   { id: 'o2', name: '晨跑互助会', left: 0 },
 ];
 
-export interface MockSummary { id: string; period: 'week' | 'month' | 'year'; label: string; startDate: string; endDate: string; totalPoints: number; activityCount: number; promptPresetName: string; autoWritten?: boolean; viewed?: boolean; createdAt: Date; followUps: number; body: string; deliberate?: boolean }
+export interface MockSummary { id: string; period: 'week' | 'month' | 'year'; label: string; startDate: string; endDate: string; totalPoints: number; activityCount: number; promptPresetName: string; autoWritten?: boolean; viewed?: boolean; createdAt: Date; followUps: number; body: string; deliberate?: boolean; reqContext?: import('@/types').PeriodSummary['reqContext'] }
 export const SUMMARY_BODY = `这一周，你像在雾里走路的人——看不清远处，却一步也没停。
 
 **知识**是这周长得最快的一维：图书馆的那几个晚上，你把《雾中小镇》从第 2 章读到了第 4 章，还做了笔记。这不是突击，是习惯在成形。

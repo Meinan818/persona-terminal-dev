@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Button, P3ConfigRow, P3Empty, P3Input, P3OnOff, P3Segment, P3Sheet, P3Tag, useToast, P3R, slantClip, tickClip, IconBack, IconChevron } from '@blue/kit';
-import { AIThinking, useAIStream, type AIFail, type AIPhase, type AIState } from '@blue/fx';
+import { AIThinking, type AIFail, type AIPhase, type AIState } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
 import { SUMMARY_BODY, type MockSummary } from '@blue/adapters/pkg2';
 import { useActionsData } from '@blue/adapters/pkg2';
@@ -25,11 +25,11 @@ import {
   cancelSummaryJob, continueSummaryJob, discardSummaryJob, markSummaryJobSaved,
   startSummaryJob, useSummaryJobs,
 } from '@/utils/summaryJobs';
+import { useSummaryFollowUp } from '@/components/astrology/useSummaryFollowUp';
 
 type View = 'generate' | 'result' | 'archive' | 'view';
 interface Job { period: 'week' | 'month' | 'year'; label: string; saved?: boolean; continues: number; followUps: { q: string; a: string }[]; preparing?: boolean }
 
-const FU_ANSWER = '听起来那一刻你比自己想的更有胆量。把它记成一条，下周的总结会接着它往下写——这样「做不到」就会变成「做到过」。';
 const fmtR = (s: Date, e: Date) => `${s.getFullYear()}年 ${s.getMonth() + 1}/${s.getDate()} ~ ${e.getMonth() + 1}/${e.getDate()}`;
 const weekRange = (off: number) => ({ s: new Date(2026, 9, 19 + off * 7), e: new Date(2026, 9, 25 + off * 7) });
 const monthRange = (off: number) => ({ s: new Date(2026, 9 + off, 1), e: new Date(2026, 10 + off, 0) });
@@ -171,11 +171,20 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const [job, setJob] = useState<Job | null>(() => (summaryJob
     ? { period: summaryJob.period, label: summaryJob.draft?.label ?? '进行中的总结', continues: summaryJob.continues, followUps: [], preparing: summaryJob.status === 'preparing' }
     : st === 'none' || initialView !== 'result' ? null : { period: 'week', label: '10月第4周', continues: 0, followUps: [], preparing: st === 'busy' }));
-  // 追问逐字
-  const [fuQ, setFuQ] = useState<string | null>(fuParam === 'streaming' ? '这周最难的是周三，那天差点没去跑步' : null);
-  const fuQRef = useRef(fuQ); fuQRef.current = fuQ;
-  const fuAI = useAIStream({ text: FU_ANSWER, initialPhase: fuParam === 'streaming' ? 'streaming' : 'idle', thinkMs: 1600, failAt: 0.3,
-    onDone: (a) => { const q = fuQRef.current; if (q) setJob((j) => j && { ...j, followUps: [...j.followUps, { q, a }] }); setFuQ(null); } });
+  const draftFollow = useSummaryFollowUp({
+    settings,
+    job: summaryJob,
+    archived: null,
+    content: summaryJob?.draft?.content ?? '',
+    followUps: job?.followUps ?? [],
+  });
+  const detailFollow = useSummaryFollowUp({
+    settings,
+    job: null,
+    archived: selected,
+    content: selected?.body ?? '',
+    followUps: detailFU,
+  });
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   useEffect(() => { if (st !== 'empty') setArchive(realSummaries); }, [realSummaries, st]);
@@ -195,6 +204,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const phase = summaryJob?.status ?? (job?.preparing ? 'preparing' : ai.phase);
   const running = !!job && (phase === 'preparing' || phase === 'thinking' || phase === 'streaming');
   const generate = () => {
+    setView('result');
     runJob({ period, label, continues: 0, followUps: [] });
   };
   const stop = () => { timers.current.forEach(clearTimeout); if (job?.preparing) { setJob((j) => j && { ...j, preparing: false }); } cancelSummaryJob(); };
@@ -324,8 +334,9 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                   </SignalBar>
                 )}
                 {ai.phase === 'done' && (
-                  <FollowUps items={job.followUps} remaining={3 - job.followUps.length - (fuQ ? 1 : 0)} question="这周哪一件事，是你原本以为自己做不到的？"
-                    pending={fuQ ? { q: fuQ, ai: fuAI } : null} onSend={(q) => { setFuQ(q); fuAI.reset(); window.setTimeout(() => fuAI.start(), 0); }} />
+                  <FollowUps items={job.followUps} remaining={3 - job.followUps.length - (draftFollow.question ? 1 : 0)} question="这周哪一件事，是你原本以为自己做不到的？"
+                    pending={draftFollow.question ? { q: draftFollow.question, ai: draftFollow.ai } : null}
+                    onSend={(q) => { void draftFollow.ask(q, (followUp) => setJob((current) => current && { ...current, followUps: [...current.followUps, { q: followUp.question, a: followUp.answer }] })); }} />
                 )}
               </>
             )}
@@ -363,7 +374,8 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                 <Body text={selected.body} annual={selected.period === 'year' ? 2025 : undefined} />
                 <FollowUps items={detailFU} remaining={3 - detailFU.length}
                   disabled={(fuParam as 'nokey' | 'legacy' | 'used' | null) ?? (selected.id === 'sm2' ? 'legacy' : null)}
-                  onSend={(q) => setDetailFU((f) => [...f, { q, a: '把这个问题拆成一件今天就能做的小事——比如十分钟。做完了记一条。' }])} />
+                  pending={detailFollow.question ? { q: detailFollow.question, ai: detailFollow.ai } : null}
+                  onSend={(q) => { void detailFollow.ask(q, (followUp) => setDetailFU((items) => [...items, { q: followUp.question, a: followUp.answer }])); }} />
               </>
             )}
           </motion.div>

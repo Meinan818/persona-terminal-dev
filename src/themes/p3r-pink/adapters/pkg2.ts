@@ -95,6 +95,7 @@ const toSummaryView = (summary: PeriodSummary): MockSummary => ({
   createdAt: new Date(summary.createdAt),
   followUps: (summary.followUps?.length ?? 0) + (summary.followUp ? 1 : 0),
   body: summary.content,
+  reqContext: summary.reqContext,
   deliberate: summary.deliberate,
 });
 

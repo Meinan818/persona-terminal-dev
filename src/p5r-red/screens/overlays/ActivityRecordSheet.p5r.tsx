@@ -17,6 +17,10 @@ import { roughSlant, starPts } from '@/p5r-red/kit/p5r';
 import { ATTR, ATTR_ORDER, D, type AttrId } from '@/p5r-red/mock/data';
 import { playSaveSuccess } from './SaveSuccessModal.p5r';
 import { playStatUp } from './ActivitiesStatUp.p5r';
+import { useAppStore } from '@/store';
+import { analyzeActivityAI } from '@/utils/activityAI';
+import { extractActivitiesFromImage, VISION_UNCONFIGURED } from '@/utils/visionIntake';
+import { readAsDataUrl, downscaleDataUrl } from '@/utils/imageCrop';
 import '../pkg5.p5r.css';
 
 const MAX_IMAGES = 3;
@@ -60,22 +64,50 @@ export function ActivityRecordSheet({ open, onClose, step = 'input', backdate = 
   const [wish, setWish] = useState<string | undefined>(undefined);
   const [important, setImportant] = useState(false);
   const timers = useRef<number[]>([]);
+  const shotInput = useRef<HTMLInputElement>(null);
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  const readShot = () => {
+  const readShot = () => shotInput.current?.click();
+  const readShotFile = async (file: File) => {
     setShotBusy(true); setShotHint(null);
-    later(() => { setShotBusy(false); setDesc((d) => (d ? d + '\n' : '') + '背单词 120 个'); setShotHint('已回填，点「分析」给分'); setLastShot(fakeThumb(2)); setPicks([{ text: '跑步 5.2 公里', attribute: 'guts' }]); }, 1400);
+    try {
+      const dataUrl = await downscaleDataUrl(await readAsDataUrl(file));
+      const settings = useAppStore.getState().settings;
+      const items = await extractActivitiesFromImage(dataUrl, settings, settings.attributeNames);
+      if (!items.length) {
+        setShotHint('这张图里没有读出可入档的活动，请手动填写');
+        return;
+      }
+      setDesc((current) => [current, ...items.map((item) => item.text)].filter(Boolean).join('\n'));
+      setPicks(items.map((item) => ({ text: item.text, attribute: item.attribute ?? undefined })));
+      setLastShot(dataUrl);
+      setShotHint('视觉模型已回填，点「分析」给分');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '读图失败';
+      setShotHint(message === VISION_UNCONFIGURED ? VISION_UNCONFIGURED : `读图失败：${message}`);
+    } finally {
+      setShotBusy(false);
+    }
   };
   const attach = () => {
     setImgBusy(true); setImgHint(null);
     later(() => { setImgBusy(false); setImgs((a) => [...a, fakeThumb(a.length)].slice(0, MAX_IMAGES)); }, 1100);
   };
   const analyze = () => { if (!desc.trim()) return; setPoints(analyzeLocal(desc)); };
-  const analyzeAI = () => {
+  const analyzeAI = async () => {
     if (!desc.trim() || aiBusy) return;
     setAiBusy(true); setAiError(null); setAiReason(null);
-    later(() => { setAiBusy(false); setPoints({ knowledge: 3 }); setAiReason(AI_REASON); }, 1600);
+    try {
+      const settings = useAppStore.getState().settings;
+      const result = await analyzeActivityAI(desc.trim(), settings.attributeNames, settings);
+      setPoints(result.points as Partial<Record<AttrId, number>>);
+      setAiReason(result.reason || AI_REASON);
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : '分析失败，请重试');
+    } finally {
+      setAiBusy(false);
+    }
   };
   // red-ai-record：自动演一遍
   useEffect(() => {
@@ -104,6 +136,7 @@ export function ActivityRecordSheet({ open, onClose, step = 'input', backdate = 
       <div className="ar-box">
         <textarea className="inp ar-ta" rows={4} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="描述你刚才做了什么..." aria-label="描述你刚才做了什么" />
         <div className="ar-tools">
+          <input ref={shotInput} type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void readShotFile(file); }} />
           {vision && <AttachChip icon="◉" label={shotBusy ? '正在读图…' : '读图代打字'} disabled={shotBusy} onClick={readShot} seed={31} />}
           <AttachChip icon="▣" label={imgBusy ? '处理中…' : imgs.length ? `已附 ${imgs.length} 张` : '附一张图'} active={imgs.length > 0} disabled={imgBusy || imgs.length >= MAX_IMAGES} onClick={attach} seed={57} />
         </div>

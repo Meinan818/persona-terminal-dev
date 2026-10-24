@@ -14,8 +14,11 @@ import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
 import { TAROT_BY_ID, ORI_LABEL, ATTR_NAMES } from '@yellow/mock/pkg4-tarot';
 import { WINDOW_DAYS, LAST_GLIMPSE, WEEKDAY_CN } from '@yellow/mock/pkg4-astro';
-import { TarotFace, TarotBack, Markdownish, ThinkingTV, useHold, useFakeProgress, useTypewriter, cardH } from '@yellow/screens/pkg4/tarot';
+import { TarotFace, TarotBack, Markdownish, ThinkingTV, useHold, useFakeProgress, cardH } from '@yellow/screens/pkg4/tarot';
 import { MsgBox, Kicker } from '@yellow/screens/pkg4/ui';
+import { useFateWindow } from '@yellow/adapters/pkg4-astro';
+import { useAppStore } from '@/store';
+import { useTarotJobs, startFateJob, continueFateJob, resolveFateOffline } from '@/utils/tarotJobs';
 
 // ───────────────────────── 当日塔罗回看 ─────────────────────────
 export function DayReviewDialog({ d, open, onClose }: { d: DailyDivination | null; open: boolean; onClose: () => void }) {
@@ -70,32 +73,51 @@ export function GlimpseFlowOverlay({ open, onClose, mode = 'new', glimpse = LAST
   open: boolean; onClose: () => void; mode?: 'new' | 'review'; glimpse?: FateGlimpse; days?: DailyDivination[]; forceError?: boolean; forceOffline?: boolean;
 }) {
   const low = useLowMotion();
+  const fateWindow = useFateWindow();
+  const fateJob = useTarotJobs((state) => state.fate);
+  const activeGlimpse = fateJob?.result ?? fateWindow.lastGlimpse ?? glimpse;
+  const dayRows = fateWindow.days.length ? fateWindow.days : WINDOW_DAYS;
+  const activeDays = dayRows.map((d) => d.drawn).filter((d): d is DailyDivination => !!d);
+  const fateDays = dayRows.filter((d) => d.drawn).map((d) => ({
+    date: d.date,
+    cardId: d.drawn!.cardId,
+    orientation: d.drawn!.orientation,
+    attribute: d.drawn!.effect.attribute,
+  }));
   useScrollLock(open);
   useEscape(open, onClose);
   const [stage, setStage] = useState<Stage>(mode === 'review' ? 'revealed' : 'gather');
-  const [ai, setAi] = useState<Ai>(mode === 'review' ? 'done' : 'pending');
-  const [offline, setOffline] = useState(!!forceOffline || glimpse.source === 'offline');
-  const [continued, setContinued] = useState(0);
+  const ai: Ai = fateJob?.status === 'thinking' ? 'pending'
+    : fateJob?.status === 'streaming' ? 'streaming'
+      : fateJob?.status === 'error' ? 'error'
+        : fateJob?.status === 'done' ? 'done'
+          : mode === 'review' ? 'done' : forceError ? 'error' : 'pending';
+  const offline = forceOffline || fateJob?.source === 'offline' || (!fateJob && glimpse.source === 'offline');
   useEffect(() => {
     if (!open) return;
-    setStage(mode === 'review' ? 'revealed' : 'gather'); setAi(mode === 'review' ? 'done' : 'pending'); setOffline(!!forceOffline);
+    setStage(mode === 'review' ? 'revealed' : 'gather');
     if (mode === 'review') return;
     const t = setTimeout(() => setStage('await'), low ? 200 : 1300);
     return () => clearTimeout(t);
-  }, [open, mode, low, forceOffline]);
-  const onCharged = useCallback(() => { setStage('flipping'); setTimeout(() => setStage('revealed'), low ? 100 : 650); }, [low]);
+  }, [open, mode, low]);
+  const onCharged = useCallback(() => {
+    setStage('flipping');
+    startFateJob({
+      settings: useAppStore.getState().settings,
+      days: fateDays,
+      force: true,
+    });
+    setTimeout(() => setStage('revealed'), low ? 100 : 650);
+  }, [fateDays, low]);
   const hold = useHold(low ? 600 : 2200, onCharged, stage === 'await');
   // 解读：思索 → 流式 → 完成 / 出错
   const thinking = stage === 'revealed' && ai === 'pending';
   const prog = useFakeProgress(thinking, 2400);
-  useEffect(() => { if (thinking && prog >= 1) setAi(forceError && !continued ? 'error' : 'streaming'); }, [thinking, prog, forceError, continued]);
-  const full = `${glimpse.summary}`;
-  const tw = useTypewriter(full, ai === 'streaming', 90);
-  useEffect(() => { if (ai === 'streaming' && tw.done) setAi('done'); }, [ai, tw.done]);
+  const liveText = fateJob?.text ?? '';
   const revealed = stage === 'revealed';
-  const verdict = revealed ? glimpse.verdict : null;
+  const verdict = revealed ? activeGlimpse.verdict : null;
   const w = revealed ? 44 : 54;
-  const top = days.slice(0, 4), bottom = days.slice(4, 7);
+  const top = activeDays.slice(0, 4), bottom = activeDays.slice(4, 7);
 
   return (
     <Portal>
@@ -154,25 +176,25 @@ export function GlimpseFlowOverlay({ open, onClose, mode = 'new', glimpse = LAST
                 {revealed && (
                   <div className="mt-5 space-y-4">
                     {ai === 'pending' && <div className="flex justify-center"><ThinkingTV progress={prog} label={prog < 0.6 ? '七张牌正在被逐一推演' : '七张牌的线索正在汇成一段命运'} /></div>}
-                    {ai === 'streaming' && <ReadingBlock label="总结" en="RETROSPECT" delay={0} text={tw.text || '…'} />}
+                    {ai === 'streaming' && <ReadingBlock label="总结" en="RETROSPECT" delay={0} text={liveText || '…'} />}
                     {ai === 'error' && (
                       <>
-                        <ReadingBlock label="总结" en="RETROSPECT" delay={0} text={glimpse.summary.slice(0, 48) + '…'} />
+                        <ReadingBlock label="总结" en="RETROSPECT" delay={0} text={(liveText || activeGlimpse.summary).slice(0, 48) + '…'} />
                         <div className="rounded-sm border-3 border-p4g-yellow bg-p4g-black p-3 text-center">
                           <div className="font-display text-body font-bold text-p4g-yellow">命运仍在落笔……</div>
                           <div className="mt-3 flex flex-wrap justify-center gap-2">
-                            <P4Button size="sm" onClick={() => { setContinued((c) => c + 1); setAi('streaming'); }}>接着写</P4Button>
-                            <P4Button size="sm" variant="secondary" onClick={() => { setContinued((c) => c + 1); setAi('pending'); }}>{continued ? '重试 AI 解读' : '重新解读'}</P4Button>
-                            <P4Button size="sm" variant="secondary" onClick={() => { setOffline(true); setAi('done'); }}>使用离线兜底</P4Button>
+                            {fateJob?.truncated && <P4Button size="sm" onClick={() => continueFateJob()}>接着写</P4Button>}
+                            <P4Button size="sm" variant="secondary" onClick={() => startFateJob({ settings: useAppStore.getState().settings, days: fateDays, force: true })}>{fateJob?.truncated ? '重试 AI 解读' : '重新解读'}</P4Button>
+                            <P4Button size="sm" variant="secondary" onClick={() => { void resolveFateOffline(); }}>使用离线兜底</P4Button>
                           </div>
                         </div>
                       </>
                     )}
                     {ai === 'done' && (
                       <>
-                        <ReadingBlock label="总结" en="RETROSPECT" delay={0} text={glimpse.summary} />
-                        <ReadingBlock label="展望" en="OUTLOOK" delay={0.12} text={glimpse.outlook} />
-                        <ReadingBlock label="建议" en="GUIDANCE" delay={0.24} text={glimpse.advice} />
+                        <ReadingBlock label="总结" en="RETROSPECT" delay={0} text={activeGlimpse.summary} />
+                        <ReadingBlock label="展望" en="OUTLOOK" delay={0.12} text={activeGlimpse.outlook} />
+                        <ReadingBlock label="建议" en="GUIDANCE" delay={0.24} text={activeGlimpse.advice} />
                         <motion.div initial={{ opacity: 0, y: low ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }} className="relative overflow-hidden rounded-sm border-3 border-p4g-black bg-p4g-yellow p-3 text-p4g-black shadow-[5px_5px_0_var(--p4g-orange)]">
                           <div aria-hidden className="absolute inset-y-0 right-0 w-16 p4g-hazard opacity-30" />
                           <div className="relative flex items-center gap-2">

@@ -22,6 +22,7 @@ import {
   cancelSummaryJob, continueSummaryJob, discardSummaryJob, markSummaryJobSaved,
   startSummaryJob, useSummaryJobs,
 } from '@/utils/summaryJobs';
+import { useSummaryFollowUp, type SummaryFollowUpAI } from '@/components/astrology/useSummaryFollowUp';
 
 type View = 'generate' | 'result' | 'archive' | 'view';
 type JobStatus = 'preparing' | 'thinking' | 'streaming' | 'done' | 'error';
@@ -59,7 +60,7 @@ function Body({ text, streaming, annual }: { text: string; streaming?: boolean; 
   );
 }
 
-function FollowUps({ items, remaining, question, disabled, onSend }: { items: { q: string; a: string }[]; remaining: number; question?: string; disabled?: 'nokey' | 'legacy' | 'used' | null; onSend: (q: string) => void }) {
+function FollowUps({ items, remaining, question, disabled, pending, onSend }: { items: { q: string; a: string }[]; remaining: number; question?: string; disabled?: 'nokey' | 'legacy' | 'used' | null; pending?: { q: string; ai: SummaryFollowUpAI } | null; onSend: (q: string) => void }) {
   const [q, setQ] = useState('');
   return (
     <div className="space-y-2">
@@ -69,10 +70,16 @@ function FollowUps({ items, remaining, question, disabled, onSend }: { items: { 
           <div className="mr-8 rounded-sm bg-p4g-msg px-3 py-2 text-body leading-relaxed text-[color:var(--p4g-msg-ink)]">{f.a}</div>
         </div>
       ))}
+      {pending && (
+        <div className="space-y-1.5">
+          <div className="ml-8 rounded-sm bg-p4g-black px-3 py-2 text-body text-white night:bg-p4g-yellow night:text-p4g-black"><span className="mr-1.5 font-display text-2xs font-bold uppercase tracking-wider opacity-70">追问 {items.length + 1}</span>{pending.q}</div>
+          <div className="mr-8 rounded-sm bg-p4g-msg px-3 py-2 text-body leading-relaxed text-[color:var(--p4g-msg-ink)]">{pending.ai.text || '正在想怎么回答你……'}</div>
+        </div>
+      )}
       {disabled === 'nokey' && <p className="px-1 text-cap text-p4g-ink-soft">当前没有这份总结所用平台的 API Key，无法在此追问。</p>}
       {disabled === 'legacy' && <p className="px-1 text-cap text-p4g-ink-soft">这条归档生成于较早版本，没有保留追问所需的上下文，无法在此追问。</p>}
-      {(disabled === 'used' || (!disabled && remaining <= 0)) && <p className="px-1 text-cap text-p4g-ink-soft">追问机会已用完。</p>}
-      {!disabled && remaining > 0 && (
+      {(disabled === 'used' || (!disabled && remaining <= 0 && !pending)) && <p className="px-1 text-cap text-p4g-ink-soft">追问机会已用完。</p>}
+      {!disabled && remaining > 0 && !pending && (
         <div className="rounded-sm border-3 border-dashed border-p4g-line p-2.5">
           <div className="mb-1.5 font-display text-meta font-bold text-p4g-ink">{items.length === 0 ? '还有疑问？可以追问' : `还可以追问 ${remaining} 次`}</div>
           {question && items.length === 0 && <div className="mb-2 rounded-xs bg-p4g-yellow px-2 py-1 text-meta font-bold text-p4g-black">回答对方的问题：{question}</div>}
@@ -144,6 +151,20 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
     if (!summaryJob) return;
     setJob({ status: summaryJob.status, text: summaryJob.text, period: summaryJob.period, label: summaryJob.draft?.label ?? '进行中的总结', truncated: summaryJob.truncated, continues: summaryJob.continues, followUps: [] });
   }, [summaryJob]);
+  const draftFollow = useSummaryFollowUp({
+    settings,
+    job: summaryJob,
+    archived: null,
+    content: summaryJob?.draft?.content ?? '',
+    followUps: job?.followUps ?? [],
+  });
+  const detailFollow = useSummaryFollowUp({
+    settings,
+    job: null,
+    archived: selected,
+    content: selected?.body ?? '',
+    followUps: detailFU,
+  });
 
   const range = period === 'week' ? weekRange(off) : period === 'month' ? monthRange(off) : { s: new Date(2026, 0, 1), e: new Date(2026, 11, 31) };
   const label = period === 'year' ? '2026 年度总结' : period === 'week' ? `10月第${4 + off}周` : `${range.s.getMonth() + 1}月`;
@@ -300,8 +321,9 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                   </div>
                 )}
                 {job.status === 'done' && !job.truncated && (
-                  <FollowUps items={job.followUps} remaining={3 - job.followUps.length} question="这周哪一件事，是你原本以为自己做不到的？"
-                    onSend={(q) => setJob((j) => j && { ...j, followUps: [...j.followUps, { q, a: '听起来那一刻你比自己想的更有胆量。把它记成一条，下周的总结会接着它往下写。' }] })} />
+                  <FollowUps items={job.followUps} remaining={3 - job.followUps.length - (draftFollow.question ? 1 : 0)} question="这周哪一件事，是你原本以为自己做不到的？"
+                    pending={draftFollow.question ? { q: draftFollow.question, ai: draftFollow.ai } : null}
+                    onSend={(q) => { void draftFollow.ask(q, (followUp) => setJob((current) => current && { ...current, followUps: [...current.followUps, { q: followUp.question, a: followUp.answer }] })); }} />
                 )}
               </>
             )}
@@ -342,7 +364,8 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                 <Body text={selected.body} annual={selected.period === 'year' ? 2025 : undefined} />
                 <FollowUps items={detailFU} remaining={3 - detailFU.length}
                   disabled={(params?.get('followup') as 'nokey' | 'legacy' | 'used' | null) ?? (selected.id === 'sm2' ? 'legacy' : null)}
-                  onSend={(q) => setDetailFU((f) => [...f, { q, a: '把这个问题拆成一件今天就能做的小事——比如十分钟。做完了记一条。' }])} />
+                  pending={detailFollow.question ? { q: detailFollow.question, ai: detailFollow.ai } : null}
+                  onSend={(q) => { void detailFollow.ask(q, (followUp) => setDetailFU((items) => [...items, { q: followUp.question, a: followUp.answer }])); }} />
               </>
             )}
           </motion.div>

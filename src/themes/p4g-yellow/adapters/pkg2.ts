@@ -145,6 +145,7 @@ export function useActionsData() {
         createdAt: new Date(s.createdAt),
         followUps: followUpsOf(s).length,
         body: s.content,
+        reqContext: s.reqContext,
         deliberate: s.deliberate,
       }))
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());

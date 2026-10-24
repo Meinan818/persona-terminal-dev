@@ -25,8 +25,10 @@ import {
   useTarotJobs, startDailyJob, continueDailyJob, startLongJob, continueLongJob,
   startFollowJob, continueFollowJob, TAROT_CONTINUE_LIMIT,
   readLongPending, clearLongPending, writeLongPending, ackLongJob, ackFollowJob,
+  startFateJob, continueFateJob, resolveFateOffline,
 } from '@/utils/tarotJobs';
 import { buildOfflineDaily } from '@/utils/tarotOffline';
+import { generateSettlement } from '@/utils/ledgerSettlement';
 import { aiConfigured } from '@/utils/aiClient';
 import { FORTUNE_META, TAROT_BY_ID, inferFortune, PERIOD_LABELS } from '@/constants/tarot';
 import { renderMarkdown } from '@/utils/markdown';
@@ -1129,23 +1131,47 @@ export const YR: any = { show: null };
   }
   function openFateGlimpse(st0 = 'progress') {
     const WK = '日一二三四五六';
+    let winData = null;
+    let offLive = null;
+    const fateDaysOf = (data) => (data?.days ?? []).filter((d) => d.drawn).map((d) => ({
+      date: d.date, cardId: d.drawn.cardId, orientation: d.drawn.orientation, attribute: d.drawn.effect.attribute,
+    }));
     stage({ title: '窥探命运', en: 'GLIMPSE', seed: 43, cls: 'od-astro', body: `${demoBar([['progress', '4 / 7'], ['ready', '七星连缀'], ['ritual', '仪式'], ['read', '解读'], ['bless', '祝福'], ['active', '祝福生效中']], st0)}<div data-host></div>`, onMount(w, close) {
       const stars = (n) => `<div class="od-gl-row">${Array.from({ length: 7 }, (_, i) => { const d = addD(i - 6), on = i >= 7 - n; return `<button class="od-gl-s ${on ? 'on' : ''}" ${on ? `data-day="${i}"` : 'disabled'} aria-label="${on ? `查看 ${md(d)} 的塔罗解读` : '未抽'}"><svg viewBox="0 0 40 40" aria-hidden="true"><polygon points="${P5.shape.starPts(20, 21, 18)}" fill="${on ? '#D7000F' : 'none'}" stroke="#F2E9DA" stroke-width="2"/></svg><small>${i === 6 ? '今日' : '周' + WK[d.getDay()]}</small></button>`; }).join('')}</div><svg class="od-gl-line" viewBox="0 0 700 20" preserveAspectRatio="none" aria-hidden="true"><path d="M50 10 L650 10" stroke="#F2E9DA" stroke-width="3" stroke-dasharray="${n >= 7 ? '0' : '6 8'}"/></svg>`;
       const draw = stateful(w, [], st0, (st) => {
-        if (st === 'progress' || st === 'ready' || st === 'active') { const n = st === 'progress' ? 4 : 7;
+        const realDays = winData?.days?.filter((d) => d.drawn) ?? [];
+        if (st === 'progress' || st === 'ready' || st === 'active') { const n = st === 'active' ? 2 : winData ? realDays.length : st === 'progress' ? 4 : 7;
           return `${U.shp('section', { kind: 'cut', seed: 681, tone: 'ink', cls: 'od-gl' }, `<b class="od-gl-t">七日连星</b>${stars(st === 'active' ? 2 : n)}<p>连续七日抽取每日塔罗，七星连缀之时，可窥探一次命运。</p>${st === 'active' ? '<p class="od-gl-bl">命运的祝福生效中：战场伤害 +10%，每日首次记录 +1 点。七日计数已重新开始。</p>' : ''}
             <div class="sh-acts">${U.btn('回顾上次', { tone: 'paper', size: 'sm', seed: 682, attrs: 'data-act="last"' })}${st === 'active' ? U.btn('查看解读', { tone: 'paper', size: 'sm', seed: 683, attrs: 'data-act="read"' }) : U.btn('窥 探 命 运', { tone: 'red', size: 'lg', seed: 684, attrs: `data-act="go" ${n < 7 ? 'disabled' : ''}`, cls: n < 7 ? 'od-dis' : '' })}</div>`)}`; }
         if (st === 'ritual') return `<div class="od-gl-rit"><p class="od-dd-ph" data-p>七日的牌正在聚拢……</p><div class="od-gl-ring">${Array.from({ length: 7 }, (_, i) => `<span style="--a:${i * 360 / 7}deg">${cardBack(54, 120 + i)}</span>`).join('')}<button class="od-hold od-gl-core" aria-label="长按中央的命运之牌"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="od-hold-p" cx="50" cy="50" r="46" fill="none" stroke="var(--paper)" stroke-width="5" stroke-dasharray="0 290" transform="rotate(-90 50 50)"/></svg>${cardBack(96, 130)}</button></div><p class="od-c" data-s>长按中央的命运之牌</p></div>`;
-        if (st === 'read') return `${U.shp('section', { kind: 'torn', seed: 685, cls: 'od-lr-done' }, `<div class="od-gl-seven">${MAJ.slice(10, 17).map((c, i) => tarotFace(c, { w: 44, rev: i % 3 === 1 })).join('')}</div><div class="od-lr-txt"><h4>总结</h4><p>这七天你一直在「收拾残局」，但每一张牌都在说：底子还在。</p><h4>展望</h4><p>接下来三天适合开一个小头——不必是大计划。</p><h4>建议</h4><p>把最想逃避的那件事，拆成十分钟能做完的一步。</p></div><p class="muted-d">命运仍在落笔…… 卡住时：</p><div class="sh-acts">${U.btn('使用离线兜底', { tone: 'ink', size: 'sm', seed: 686, attrs: 'data-act="noop"' })}${U.btn('重试 AI 解读', { tone: 'paper', size: 'sm', seed: 687, attrs: 'data-act="noop"' })}${U.btn('重新解读', { tone: 'paper', size: 'sm', seed: 688, attrs: 'data-act="noop"' })}${U.btn('接着写', { tone: 'red', size: 'sm', seed: 689, attrs: 'data-act="bless"' })}</div>`)}`;
+        if (st === 'read') {
+          const job = useTarotJobs.getState().fate;
+          const r = job?.result ?? useAppStore.getState().fateGlimpses?.[0];
+          if (job && (job.status === 'thinking' || job.status === 'streaming')) {
+            return `<div class="od-gl-read">${thinking('七张牌正在被逐一推演', '七张牌的线索正在汇成一段命运')}<p class="od-stream">${esc(job.text ?? '')}</p></div>`;
+          }
+          if (job?.status === 'error') {
+            const acts = `${job.truncated ? U.btn('接着写', { tone: 'red', size: 'sm', seed: 689, attrs: 'data-act="cont"' }) : ''}${U.btn('重试 AI 解读', { tone: 'paper', size: 'sm', seed: 687, attrs: 'data-act="retry"' })}${U.btn('使用离线兜底', { tone: 'ink', size: 'sm', seed: 686, attrs: 'data-act="offline"' })}`;
+            return U.shp('section', { kind: 'torn', seed: 685, cls: 'od-lr-done' }, `<h4>解读遇到了阻碍</h4><p>${esc(job.error ?? 'AI 解读失败')}</p><div class="sh-acts">${acts}</div>`);
+          }
+          if (r) {
+            const cardsHtml = realDays.slice(0, 7).map((d) => tarotFace(cardOf(d.drawn.cardId), { w: 44, rev: d.drawn.orientation === 'reversed' })).join('');
+            const adviceHtml = esc(r.advice).replace(/\n/g, '<br>');
+            return U.shp('section', { kind: 'torn', seed: 685, cls: 'od-lr-done' }, `<div class="od-gl-seven">${cardsHtml}</div><div class="od-lr-txt"><h4>总结</h4><p>${esc(r.summary)}</p><h4>展望</h4><p>${esc(r.outlook)}</p><h4>建议</h4><p>${adviceHtml}</p></div><p class="muted-d">${job?.source === 'offline' ? '· 本次为离线兜底 ·' : esc(r.verdict ?? '')}</p>`);
+          }
+          return U.shp('section', { kind: 'torn', seed: 685, cls: 'od-lr-done' }, '<div class="od-lr-txt"><h4>总结</h4><p>这七天你一直在「收拾残局」，但每一张牌都在说：底子还在。</p><h4>展望</h4><p>接下来三天适合开一个小头——不必是大计划。</p><h4>建议</h4><p>把最想逃避的那件事，拆成十分钟能做完的一步。</p></div>');
+        }
         return `<div class="od-gl-bless">${U.burst('×1.1', { sz: 120 })}<b class="od-cut-big">命运的祝福 · 三日</b><p>逆影战场伤害 <b>+10%</b> · 每日首次记录，最高的那项属性加点额外 <b>+1</b></p>${U.btn('收下命运的低语', { tone: 'red', size: 'lg', seed: 690, attrs: 'data-act="take"' })}</div>`;
       }, (h, st, draw) => {
         if (st === 'ritual') { setTimeout(() => { const p = h.querySelector('[data-p]'); if (p) p.textContent = '窥探命运'; }, 900); const hold = h.querySelector('.od-gl-core'), pp = hold.querySelector('.od-hold-p'), s = h.querySelector('[data-s]'); let t0, raf = 0;
-          const step = (n) => { const k = Math.min(1, (n - t0) / 1600); pp.setAttribute('stroke-dasharray', `${(290 * k).toFixed(0)} 290`); if (k < 1) raf = requestAnimationFrame(step); else { raf = 0; s.textContent = '命运正在凝聚成文字……'; h.querySelector('.od-gl-ring').classList.add('gather'); setTimeout(() => draw('read'), 1200); } };
+          const step = (n) => { const k = Math.min(1, (n - t0) / 1600); pp.setAttribute('stroke-dasharray', `${(290 * k).toFixed(0)} 290`); if (k < 1) raf = requestAnimationFrame(step); else { raf = 0; s.textContent = '命运正在凝聚成文字……'; h.querySelector('.od-gl-ring').classList.add('gather'); startFateJob({ settings: useAppStore.getState().settings, days: fateDaysOf(winData), force: true }); setTimeout(() => draw('read'), 1200); } };
           hold.addEventListener('pointerdown', (e) => { e.preventDefault(); t0 = performance.now(); s.textContent = '别松手——命运正在显形'; raf = requestAnimationFrame(step); }); ['pointerup', 'pointerleave'].forEach((k) => hold.addEventListener(k, () => { if (raf) { cancelAnimationFrame(raf); raf = 0; pp.setAttribute('stroke-dasharray', '0 290'); s.textContent = '长按中央的命运之牌'; } })); }
         h.addEventListener('click', (e) => { const d = e.target.closest('[data-day]'); if (d) return openDayReview(+d.dataset.day); if (false) { const c = MAJ[0], dd = today; return sheet('当日塔罗回看', `<div class="od-otd-g"><figure class="od-otd-c">${tarotFace(c, { w: 110, rev: +d.dataset.day % 3 === 0 })}<figcaption>${c.name}${+d.dataset.day % 3 === 0 ? ' · 逆位' : ' · 正位'}</figcaption></figure><div>${ttl('当日解读', `${md(dd)} 周${WK[dd.getDay()]}`)}<p class="sh-p">${MEAN.up[+d.dataset.day % 4]}。那天你记下了 3 条。</p></div></div><div class="sh-acts">${U.btn('关闭', { tone: 'ink', seed: 691, attrs: 'data-x' })}</div>`, (sh, c2) => sh.querySelector('[data-x]').onclick = c2, 67); }
           const b = e.target.closest('[data-act]'); if (!b || b.disabled) return; const a = b.dataset.act;
-          if (a === 'go') draw('ritual'); if (a === 'last' || a === 'read') draw('read'); if (a === 'bless') draw('bless'); if (a === 'take') { P5.sfx('level'); draw('active'); P5.toast('命运的祝福生效中'); } if (a === 'noop') P5.toast('已重新请求'); });
+          if (a === 'go') draw('ritual'); if (a === 'last' || a === 'read') draw('read'); if (a === 'bless') draw('bless'); if (a === 'retry') startFateJob({ settings: useAppStore.getState().settings, days: fateDaysOf(winData), force: true }); if (a === 'offline') void resolveFateOffline(); if (a === 'cont') continueFateJob(); if (a === 'take') { P5.sfx('level'); draw('active'); P5.toast('命运的祝福生效中'); } });
       });
+        if (!offLive) offLive = bindLive(w, () => { if (useTarotJobs.getState().fate) draw('read'); });
+        void useAppStore.getState().getFateWindow().then((data) => { winData = data; draw(data.complete ? 'ready' : 'progress'); }).catch(() => {});
     } });
   }
 
@@ -1281,9 +1307,10 @@ export const YR: any = { show: null };
           ? await claimLocalSettlement(snapshot).catch(() => ({ bonus: false, challenge: null }))
           : { bonus: false, challenge: null };
         const d = snapshot.data;
+        const settlement = await generateSettlement(d, store.settings);
         const x = d.extremes;
         const expected = d.expectedDailyAvg == null ? '未设预算' : `预期 ${yen(d.expectedDailyAvg)}`;
-        const tips = snapshot.result.advice.map((a) => `<p>✦ ${esc(a)}</p>`).join('');
+        const tips = settlement.advice.map((a) => `<p>✦ ${esc(a)}</p>`).join('');
         b.innerHTML = `${p === 'month' && claim.challenge != null ? `<p class="od-sp">🏆 省钱挑战达成 · 省下 ${yen(claim.challenge)} · +10 SP</p>` : ''}
           ${p === 'month' && claim.bonus ? '<p class="od-sp">🎉 本期不超预算 · +10 SP</p>' : ''}
           <div class="od-ls-kpi sm">${[['支出', d.totalExpense], ['收入', d.totalIncome], ['结余', d.totalIncome - d.totalExpense]].map(([k, v]) => `<div class="q-row"><span class="q-k">${k}</span><b>${yen(v)}</b></div>`).join('')}</div>
@@ -1294,7 +1321,7 @@ export const YR: any = { show: null };
             ['日均 / 预期', `${yen(d.actualDailyAvg)} / ${expected}`],
             [`共 ${d.days} 天`, `本期预算 ${d.periodBudget == null ? '未设' : yen(d.periodBudget)}`],
           ].map(([k, v]) => `<div class="od-os-row"><span class="od-k">${k}</span><b>${v}</b></div>`).join('')}</div>
-          ${U.shp('div', { kind: 'quad', seed: 841, tone: 'ink', cls: 'od-igor' }, `<b>伊戈尔的回望</b><p>${esc(snapshot.result.reflection.replace(/\*\*/g, ''))}</p>${tips}`)}`;
+          ${U.shp('div', { kind: 'quad', seed: 841, tone: 'ink', cls: 'od-igor' }, `<b>伊戈尔的回望</b><p>${esc(settlement.reflection.replace(/\*\*/g, ''))}</p>${tips}`)}`;
         P5.panelIn(b.children, { stagger: .06 });
       };
       sh.querySelector('[data-p]').addEventListener('pick', (e) => draw(e.detail)); draw('month');

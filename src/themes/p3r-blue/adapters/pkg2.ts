@@ -89,6 +89,7 @@ export interface MockSummary {
   deliberate?: boolean;
   question?: string;
   content: string;
+  reqContext?: PeriodSummary['reqContext'];
 }
 
 const summaryToView = (s: PeriodSummary): MockSummary => ({
@@ -106,6 +107,7 @@ const summaryToView = (s: PeriodSummary): MockSummary => ({
   followUps: followUpsOf(s).length,
   body: s.content,
   content: s.content,
+  reqContext: s.reqContext,
   deliberate: s.deliberate,
   question: s.question,
 });

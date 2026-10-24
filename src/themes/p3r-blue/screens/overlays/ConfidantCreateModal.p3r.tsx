@@ -10,11 +10,13 @@ import { P3Button, P3Field, P3Input, P3OnOff, P3R, P3Sheet, P3Textarea, slantCli
 import { AIText, useAIStream, type AIFail } from '@blue/fx';
 import { INTIMACY_LABELS, MAJOR_ARCANA_IDS, TAROT_BY_ID, TRAIT_QUESTIONS } from '@blue/screens/pkg3/arcana';
 import { LevelGrid, MatchingSpinner, MiniLabel, Panel, Sparkle, Tarot, TraitQuiz } from '@blue/screens/pkg3/ui';
+import { useAppStore } from '@/store';
+import { matchConfidant, type ConfidantMatchResult } from '@/utils/confidantAI';
 
 type Stage = 'basic' | 'description' | 'trait' | 'matching' | 'result' | 'error';
 export interface CreateResult { name: string; arcanaId: string; orientation: 'upright' | 'reversed'; level: number; description: string; decay: boolean }
 
-const MATCH = { arcanaId: 'magician', orientation: 'upright' as const, initialIntimacy: 4,
+const DEMO_MATCH = { arcanaId: 'magician', orientation: 'upright' as const, initialIntimacy: 4,
   interpretation: '魔术师正位：他手里永远握着下一个点子。你们的关系靠「一起折腾」点燃——那些看似胡闹的计划，其实是他表达在乎的方式。',
   advice: '下次他提出离谱的点子，先说「好啊」，再一起想怎么让它成真。' };
 
@@ -30,11 +32,16 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
   const [answers, setAnswers] = useState<string[]>(initialStage === 'trait' ? [] : TRAIT_QUESTIONS.map((q) => q.options[1]));
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [picked, setPicked] = useState(MATCH.initialIntimacy);
+  const [picked, setPicked] = useState(DEMO_MATCH.initialIntimacy);
+  const [matchResult, setMatchResult] = useState<ConfidantMatchResult | null>(null);
+  const [reading, setReading] = useState(DEMO_MATCH.interpretation);
   const aiFail: AIFail = initialStage === 'error' && !fail ? 'error' : fail;
-  const ai = useAIStream({ text: MATCH.interpretation, fail: aiFail, initialPhase: initialStage === 'matching' ? 'thinking' : initialStage === 'result' ? 'streaming' : initialStage === 'error' ? 'error' : 'idle', failAt: initialStage === 'result' ? 0.08 : 0.45 });
+  const ai = useAIStream({ text: reading, fail: aiFail, initialPhase: initialStage === 'matching' ? 'thinking' : initialStage === 'result' ? 'streaming' : initialStage === 'error' ? 'error' : 'idle', failAt: initialStage === 'result' ? 0.08 : 0.45 });
   const offline = aiFail === 'nokey' || aiFail === 'offline';
   useEffect(() => { if (isOpen) { setStage(initialStage); setTraitStep(0); setSaving(false); setErr(null); } }, [isOpen, initialStage]);
+  useEffect(() => {
+    if (stage === 'result' && matchResult && ai.phase === 'idle') ai.start();
+  }, [ai, matchResult, stage]);
   // AI 相位 → 阶段
   useEffect(() => {
     if (stage !== 'matching') return;
@@ -56,20 +63,40 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
     setErr(null); setStage('description');
   };
   const nextDesc = () => { if (desc.trim().length < 4) return setErr('请用至少几个字描述 Ta，让塔罗有内容可参考'); setErr(null); setStage('trait'); setTraitStep(0); };
+  const runMatch = async (traits: string[]) => {
+    setStage('matching'); setErr(null);
+    try {
+      const result = await matchConfidant({
+        settings: useAppStore.getState().settings,
+        name: name || '友近',
+        description: desc.trim(),
+        takenArcanaIds: useAppStore.getState().confidants.map((item) => item.arcanaId),
+        traits: TRAIT_QUESTIONS.map((q, i) => ({ question: q.question, answer: traits[i] ?? '' })),
+      });
+      setMatchResult(result);
+      setReading(result.interpretation);
+      setPicked(Math.max(1, Math.min(10, result.initialIntimacy)));
+      setStage('result');
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : '匹配失败');
+      setStage('error');
+    }
+  };
   const answer = (v: string) => {
     const a = [...answers]; a[traitStep] = v; setAnswers(a);
     if (traitStep < TRAIT_QUESTIONS.length - 1) window.setTimeout(() => setTraitStep(traitStep + 1), 160);
-    else window.setTimeout(() => { setStage('matching'); ai.start(); }, 200);
+    else window.setTimeout(() => { void runMatch(a); }, 200);
   };
   const title = stage === 'result' ? '塔罗的回响' : '结识一位同伴';
   const step = stage === 'basic' ? 0 : stage === 'description' ? 1 : stage === 'trait' ? 2 : 3;
-  const card = TAROT_BY_ID[MATCH.arcanaId];
+  const matched = matchResult ?? DEMO_MATCH;
+  const card = TAROT_BY_ID[matched.arcanaId];
   const confirmCreate = async () => {
     if (saving) return;
     setSaving(true);
     setErr(null);
     try {
-      await onCreated?.({ name: name || '友近', arcanaId: MATCH.arcanaId, orientation: MATCH.orientation, level: picked, description: desc, decay });
+      await onCreated?.({ name: name || '友近', arcanaId: matched.arcanaId, orientation: matched.orientation, level: picked, description: desc, decay });
       onClose();
     } catch (error) {
       setErr(error instanceof Error ? error.message : '创建失败');
@@ -88,7 +115,7 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
             <P3Button block corner busy={saving} busyText="创建中…" disabled={saving || ai.phase === 'streaming' || ai.phase === 'thinking'} onClick={confirmCreate}>就是 Ta 了</P3Button>
           </div>
         ) : stage === 'error' ? (
-          <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block onClick={() => { setStage('trait'); setTraitStep(TRAIT_QUESTIONS.length - 1); }}>返回修改</P3Button><P3Button block onClick={() => { setStage('matching'); ai.retry(); }}>重新匹配</P3Button></div>
+          <div className="grid grid-cols-2 gap-3"><P3Button tone="soft" block onClick={() => { setStage('trait'); setTraitStep(TRAIT_QUESTIONS.length - 1); }}>返回修改</P3Button><P3Button block onClick={() => { void runMatch(answers); }}>重新匹配</P3Button></div>
         ) : undefined}>
       {err && stage === 'result' && <p className="mb-3 text-[12px] font-black" style={{ color: 'var(--p3r-coral-ink)' }}>{err}</p>}
       <div className="mb-4 flex min-w-0 items-center gap-2">
@@ -143,11 +170,11 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
         <div className="grid grid-cols-1 gap-4">
           <div className="relative flex min-w-0 items-center gap-4 overflow-hidden px-4 py-3" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(14) }}>
             <span aria-hidden className="pointer-events-none absolute -right-2 -top-3 font-cond text-[72px] leading-none opacity-20">{card?.roman}</span>
-            <Tarot arcanaId={MATCH.arcanaId} width={80} />
+            <Tarot arcanaId={matched.arcanaId} width={80} />
             <div className="relative min-w-0">
               <div className="font-cond text-[12px] tracking-[0.2em] opacity-85">ARCANA MATCHED</div>
-              <div className="font-heavy text-[clamp(22px,6vw,28px)] leading-tight">《{card?.name}》正位</div>
-              <div className="mt-1 text-[13px] font-black">星象建议 Lv.{MATCH.initialIntimacy} · {INTIMACY_LABELS[MATCH.initialIntimacy]}</div>
+              <div className="font-heavy text-[clamp(22px,6vw,28px)] leading-tight">《{card?.name}》{matched.orientation === 'reversed' ? '逆位' : '正位'}</div>
+              <div className="mt-1 text-[13px] font-black">星象建议 Lv.{picked} · {INTIMACY_LABELS[picked]}</div>
             </div>
           </div>
           <Panel>
@@ -164,10 +191,10 @@ export function ConfidantCreateSheet({ isOpen, onClose, onCreated, onPickOnline,
           {(ai.phase === 'done' || ai.phase === 'idle') && (
             <div className="relative px-4 py-3" style={{ background: 'var(--p3r-mulberry)', color: 'var(--p3r-cream)', clipPath: slantClip(12) }}>
               <div className="mb-1 font-cond text-[12px] tracking-[0.2em]" style={{ color: 'var(--bk-bubble-a)' }}>FUTURE · 未来</div>
-              <p className="text-[14px] leading-relaxed">{MATCH.advice}</p>
+              <p className="text-[14px] leading-relaxed">{matched.advice}</p>
             </div>
           )}
-          {offline && <div className="text-center text-[12px]" style={{ color: P3R.grey }}>· 本次为离线匹配 ·</div>}
+          {(offline || matchResult?.source === 'offline') && <div className="text-center text-[12px]" style={{ color: P3R.grey }}>· 本次为离线匹配 ·</div>}
         </div>
       )}
 

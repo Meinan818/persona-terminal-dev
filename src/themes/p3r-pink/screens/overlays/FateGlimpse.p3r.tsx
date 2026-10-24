@@ -17,6 +17,9 @@ import { useLowMotion } from '@pink/lib/prefs';
 import { TAROT_BY_ID, ATTR_NAMES, FORTUNE_LABEL } from '@pink/mock/pkg4-tarot';
 import { WINDOW_DAYS, LAST_GLIMPSE, WEEKDAY_CN } from '@pink/mock/pkg4-astro';
 import { Arcana, PinkBack, ThinkingCircle, Markdownish, useHold, useFakeProgress, cardH } from '@pink/screens/pkg4/tarot';
+import { useFateWindow } from '@pink/adapters/pkg4-astro';
+import { useAppStore } from '@/store';
+import { useTarotJobs, startFateJob, continueFateJob, resolveFateOffline } from '@/utils/tarotJobs';
 
 // ───────────────────────── 当日塔罗回看 ─────────────────────────
 export function DayReviewSheet({ d, open, onClose }: { d: DailyDivination | null; open: boolean; onClose: () => void }) {
@@ -116,8 +119,17 @@ export function GlimpseRitual({ open, onClose, mode = 'new', initialStage, fail,
 }
 
 function RitualBody({ onClose, mode, initialStage, fail, autoHold, low, aiStart }: { onClose: () => void; mode: 'new' | 'review'; initialStage?: RitualStage; fail?: AIFail; autoHold?: boolean; low: boolean; aiStart?: AIPhase }) {
-  const glimpse = LAST_GLIMPSE;
-  const days = WINDOW_DAYS.map((d) => d.drawn!).filter(Boolean);
+  const fateWindow = useFateWindow();
+  const fateJob = useTarotJobs((state) => state.fate);
+  const glimpse = fateJob?.result ?? fateWindow.lastGlimpse ?? LAST_GLIMPSE;
+  const dayRows = fateWindow.days.length ? fateWindow.days : WINDOW_DAYS;
+  const days = dayRows.map((d) => d.drawn).filter((d): d is DailyDivination => !!d);
+  const fateDays = dayRows.filter((d) => d.drawn).map((d) => ({
+    date: d.date,
+    cardId: d.drawn!.cardId,
+    orientation: d.drawn!.orientation,
+    attribute: d.drawn!.effect.attribute,
+  }));
   const start: RitualStage = mode === 'review' ? 'revealed' : initialStage ?? 'gather';
   const [stage, setStage] = useState<RitualStage>(start);
   const [offline, setOffline] = useState(fail === 'offline');
@@ -134,7 +146,17 @@ function RitualBody({ onClose, mode, initialStage, fail, autoHold, low, aiStart 
     if (stage === 'revealed' && ai.phase === 'idle') later(() => ai.start(), low ? 0 : 650);
   }, [stage]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onCharged = useCallback(() => { setBurst(true); setStage('flipping'); }, []);
+  const onCharged = useCallback(() => {
+    setBurst(true);
+    setStage('flipping');
+    if (mode === 'new') {
+      startFateJob({
+        settings: useAppStore.getState().settings,
+        days: fateDays,
+        force: true,
+      });
+    }
+  }, [fateDays, mode]);
   const endBurst = useCallback(() => setBurst(false), []);
   const hold = useHold(low ? 600 : 2200, onCharged, stage === 'await');
   // 自动蓄力（演出连播 / ?demo=1）：模拟按住
@@ -148,12 +170,24 @@ function RitualBody({ onClose, mode, initialStage, fail, autoHold, low, aiStart 
     return () => cancelAnimationFrame(raf);
   }, [autoHold, stage, low, onCharged]);
   const progress = stage === 'await' ? Math.max(hold.progress, auto) : stage === 'gather' ? 0 : 1;
+  const livePhase: AIPhase = fateJob?.status === 'thinking' ? 'thinking'
+    : fateJob?.status === 'streaming' ? 'streaming'
+      : fateJob?.status === 'error' ? (fateJob.truncated ? 'truncated' : 'error')
+        : fateJob?.status === 'done' ? 'done' : ai.phase;
+  const liveAI = fateJob ? {
+    ...ai,
+    phase: livePhase,
+    text: fateJob.text,
+    full: fateJob.full,
+    progress: fateJob.status === 'thinking' ? 0.35 : fateJob.status === 'streaming' ? 0.75 : 1,
+    error: fateJob.error ? { code: fateJob.truncated ? 'truncated' as const : 'network' as const, message: fateJob.error } : null,
+  } : ai;
   const revealed = stage === 'revealed';
-  const thinking = revealed && ai.phase === 'thinking';
+  const thinking = revealed && liveAI.phase === 'thinking';
   const prog = useFakeProgress(thinking, 2400);
-  const pending = revealed && (ai.phase === 'idle' || ai.phase === 'thinking');
-  const failed = ai.phase === 'error' || ai.phase === 'truncated';
-  const done = ai.phase === 'done';
+  const pending = revealed && (liveAI.phase === 'idle' || liveAI.phase === 'thinking');
+  const failed = liveAI.phase === 'error' || liveAI.phase === 'truncated';
+  const done = liveAI.phase === 'done';
   const cw = revealed ? 108 : 126;
   const top = days.slice(0, 4), bottom = days.slice(4, 7);
 
@@ -215,9 +249,9 @@ function RitualBody({ onClose, mode, initialStage, fail, autoHold, low, aiStart 
                   <ThinkingCircle variant="spokes" progress={prog} size={136} label={prog < 0.6 ? '七张牌正在被逐一推演' : '七张牌的线索正在汇成一段命运'} showPercent />
                 </div>
               )}
-              {ai.phase === 'streaming' && (
+              {liveAI.phase === 'streaming' && (
                 <>
-                  <ReadingBlock label="总结" en="RETROSPECT"><AIText ai={ai} className="text-[14px]" /></ReadingBlock>
+                  <ReadingBlock label="总结" en="RETROSPECT"><AIText ai={liveAI} className="text-[14px]" /></ReadingBlock>
                   <div className="flex items-center justify-center gap-2 py-1 text-[12px] font-bold" style={{ color: CREAM_SOFT }}>
                     <motion.span aria-hidden animate={low ? undefined : { rotate: 360 }} transition={{ repeat: Infinity, duration: 1.4, ease: 'linear' }} style={{ color: 'var(--p3r-gold)' }}>✦</motion.span>命运仍在落笔……
                   </div>
@@ -225,15 +259,15 @@ function RitualBody({ onClose, mode, initialStage, fail, autoHold, low, aiStart 
               )}
               {failed && (
                 <>
-                  {ai.text && <ReadingBlock label="总结" en="RETROSPECT"><div className="whitespace-pre-wrap">{ai.text}…</div></ReadingBlock>}
+                  {liveAI.text && <ReadingBlock label="总结" en="RETROSPECT"><div className="whitespace-pre-wrap">{liveAI.text}…</div></ReadingBlock>}
                   <div className="px-4 py-3.5" style={{ background: 'rgba(255,141,107,0.14)', clipPath: slantClip(12) }}>
                     <p className="whitespace-pre-wrap text-[12.5px] font-bold leading-relaxed" style={{ color: '#ffb59c' }}>
-                      {ai.phase === 'truncated' ? '命运写到一半停住了——已经写下的部分都留着，可以让它从断处接着写。' : offline ? '当前离线：七张牌的推演连不上解读服务。' : `解读失败：${ai.error?.message ?? '连接超时'}`}
+                      {liveAI.phase === 'truncated' ? '命运写到一半停住了——已经写下的部分都留着，可以让它从断处接着写。' : offline ? '当前离线：七张牌的推演连不上解读服务。' : `解读失败：${liveAI.error?.message ?? '连接超时'}`}
                     </p>
                     <div className="mt-3 flex gap-2">
-                      {ai.phase === 'truncated' && <button type="button" onClick={() => ai.resume()} className="min-w-0 flex-1 py-2.5 text-[13px] font-black" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(8) }}>接着写</button>}
-                      <button type="button" onClick={() => ai.start()} className="min-w-0 flex-1 py-2.5 text-[13px] font-black" style={ai.phase === 'truncated' ? { background: 'rgba(255,244,236,0.12)', color: CREAM, clipPath: slantClip(8) } : { background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(8) }}>{ai.phase === 'truncated' ? '重新解读' : '重试 AI 解读'}</button>
-                      <button type="button" onClick={() => { setOffline(true); ai.skip(); }} className="min-w-0 flex-1 py-2.5 text-[13px] font-black" style={{ background: 'rgba(255,244,236,0.12)', color: CREAM, clipPath: slantClip(8) }}>使用离线兜底</button>
+                      {liveAI.phase === 'truncated' && <button type="button" onClick={() => continueFateJob()} className="min-w-0 flex-1 py-2.5 text-[13px] font-black" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(8) }}>接着写</button>}
+                      <button type="button" onClick={() => startFateJob({ settings: useAppStore.getState().settings, days: fateDays, force: true })} className="min-w-0 flex-1 py-2.5 text-[13px] font-black" style={liveAI.phase === 'truncated' ? { background: 'rgba(255,244,236,0.12)', color: CREAM, clipPath: slantClip(8) } : { background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(8) }}>{liveAI.phase === 'truncated' ? '重新解读' : '重试 AI 解读'}</button>
+                      <button type="button" onClick={() => { setOffline(true); void resolveFateOffline(); }} className="min-w-0 flex-1 py-2.5 text-[13px] font-black" style={{ background: 'rgba(255,244,236,0.12)', color: CREAM, clipPath: slantClip(8) }}>使用离线兜底</button>
                     </div>
                   </div>
                 </>

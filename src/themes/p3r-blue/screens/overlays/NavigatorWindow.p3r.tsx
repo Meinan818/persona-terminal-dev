@@ -27,6 +27,7 @@ import { ActionForm, emptyForm, type FormState } from './NavigatorActionForm.p3r
 import { Notebook } from './NavigatorNotebook.p3r';
 import { CropDialog } from './ImageCropDialog.p3r';
 import { Glyph } from './NavigatorPersonaEditor.p3r';
+import { useBackHandler } from '@/utils/useBackHandler';
 import '@blue/screens/pkg6/pkg6.css';
 
 type MicState = 'idle' | 'recording' | 'transcribing';
@@ -109,6 +110,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const s = useSettings();
   const preset = activePreset(s);
   useScrollLock(open);
+  useBackHandler(open, onClose);
   const q = params ?? new URLSearchParams();
   const { CHAT_MESSAGES, PICKER_TODOS } = useNavigatorThemeData();
   const qState = q.get('state');

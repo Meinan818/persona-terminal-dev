@@ -10,6 +10,7 @@ import { AnimatePresence, motion, useDragControls, type PanInfo } from 'framer-m
 import { BubbleShape } from '@blue/fx/motifs/Water';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { Portal, useEscape, useScrollLock } from './Portal';
+import { useBackHandler } from '@/utils/useBackHandler';
 import { useBoldness } from '@blue/lib/prefs';
 import { cx } from '@blue/lib/cx';
 import { P3R, SelectWedge, sheetTopClip, slantClip, tickClip } from './base';
@@ -55,6 +56,7 @@ export const P3Dialog = ({ open, onClose, title, description, icon, tone = 'defa
   const tid = useId();
   const safeClose = useCallback(() => { if (!busy) onClose(); }, [busy, onClose]);
   useEscape(open, safeClose);
+  useBackHandler(open, safeClose);
   useScrollLock(open);
   const acts = actions?.slice(0, 3);
   const [focus, setFocus] = useState(0);
@@ -247,6 +249,7 @@ export const P3ActionSheet = ({ open, onClose, title, description, actions, onSe
   useEffect(() => { if (open) setFocus(actions.find((a) => !a.disabled)?.id ?? null); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const safeClose = useCallback(() => { if (!busy) { onCancel?.(); onClose(); } }, [busy, onCancel, onClose]);
   useEscape(open, safeClose);
+  useBackHandler(open, safeClose);
   useScrollLock(open);
   const pick = (id: string) => {
     onSelect?.(id);

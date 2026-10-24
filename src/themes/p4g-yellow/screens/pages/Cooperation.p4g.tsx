@@ -249,7 +249,7 @@ function Companions({ params }: { params: URLSearchParams }) {
           window.setTimeout(() => setInteractionFor(null), 700);
         }} />}
       {memorialFor && <MemorialSheet isOpen onClose={() => setMemorialFor(null)} confidant={memorialFor} />}
-      <PactPanelModal open={!!pactFor} onClose={() => setPactFor(null)} partnerName={pactFor?.name ?? ''} />
+      <PactPanelModal open={!!pactFor} onClose={() => setPactFor(null)} partnerId={pactFor?.id ?? ''} partnerName={pactFor?.name ?? ''} />
       <CounselChat isOpen={counselOpen} onClose={() => setCounselOpen(false)} initialState={counselState === 'cooldown' ? 'cooldown' : counselState === 'active' ? 'live' : 'intro'} />
       <CounselArchiveSheet isOpen={archiveOpen} onClose={() => setArchiveOpen(false)} />
       <NotificationsSheet isOpen={notifOpen} onClose={() => setNotifOpen(false)} onOpenCoopAccept={() => setAcceptOpen(true)} onOpenPactRespond={() => setPactRespondOpen(true)} />

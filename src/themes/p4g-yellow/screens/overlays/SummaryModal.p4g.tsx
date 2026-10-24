@@ -17,6 +17,11 @@ import { SUMMARY_BODY, type MockSummary } from '@yellow/adapters/pkg2';
 import { useActionsData } from '@yellow/adapters/pkg2';
 import SummaryModalRegenConfirm from './SummaryModalRegenConfirm.p4g';
 import YearRecapStage from './YearRecapStage.p4g';
+import { useAppStore, toLocalDateKey } from '@/store';
+import {
+  cancelSummaryJob, continueSummaryJob, discardSummaryJob, markSummaryJobSaved,
+  startSummaryJob, useSummaryJobs,
+} from '@/utils/summaryJobs';
 
 type View = 'generate' | 'result' | 'archive' | 'view';
 type JobStatus = 'preparing' | 'thinking' | 'streaming' | 'done' | 'error';
@@ -101,6 +106,9 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const summaryPresets = summaryData.SUMMARY_PRESETS;
   const toast = useToast();
   const low = useLowMotion();
+  const settings = useAppStore((state) => state.settings);
+  const saveSummary = useAppStore((state) => state.saveSummary);
+  const summaryJob = useSummaryJobs((state) => state.job);
   const pv = params?.get('view');
   const st = params?.get('state');
   const initialView: View = pv === 'preview' || st === 'busy' || st === 'error' || st === 'none' || st === 'truncated' ? 'result' : pv === 'archive' || st === 'empty' ? 'archive' : pv === 'detail' ? 'view' : 'generate';
@@ -123,6 +131,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const timers = useRef<number[]>([]);
   const clearT = () => { timers.current.forEach(clearTimeout); timers.current = []; };
   const [job, setJob] = useState<Job | null>(() => {
+    if (summaryJob) return { status: summaryJob.status, text: summaryJob.text, period: summaryJob.period, label: summaryJob.draft?.label ?? '进行中的总结', truncated: summaryJob.truncated, continues: summaryJob.continues, followUps: [] };
     if (st === 'none') return null;
     if (st === 'busy') return { status: 'preparing', text: '', period: 'week', label: '10月第4周', continues: 0, followUps: [] };
     if (st === 'error') return { status: 'error', text: '', period: 'week', label: '10月第4周', continues: 0, followUps: [] };
@@ -131,6 +140,10 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   });
   useEffect(() => () => clearT(), []);
   useEffect(() => { if (st !== 'empty') setArchive(realSummaries); }, [realSummaries, st]);
+  useEffect(() => {
+    if (!summaryJob) return;
+    setJob({ status: summaryJob.status, text: summaryJob.text, period: summaryJob.period, label: summaryJob.draft?.label ?? '进行中的总结', truncated: summaryJob.truncated, continues: summaryJob.continues, followUps: [] });
+  }, [summaryJob]);
 
   const range = period === 'week' ? weekRange(off) : period === 'month' ? monthRange(off) : { s: new Date(2026, 0, 1), e: new Date(2026, 11, 31) };
   const label = period === 'year' ? '2026 年度总结' : period === 'week' ? `10月第${4 + off}周` : `${range.s.getMonth() + 1}月`;
@@ -138,29 +151,30 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const stream = (base: Job) => {
     clearT();
     setJob({ ...base, status: 'preparing', text: '' });
-    timers.current.push(window.setTimeout(() => setJob((j) => j && { ...j, status: 'thinking' }), 900));
-    timers.current.push(window.setTimeout(() => setJob((j) => j && { ...j, status: 'streaming' }), 2400));
-    const step = 14;
-    for (let k = 1; k * step <= SUMMARY_BODY.length + step; k++) {
-      timers.current.push(window.setTimeout(() => setJob((j) => j && { ...j, text: SUMMARY_BODY.slice(0, k * step) }), 2400 + k * 70));
-    }
-    timers.current.push(window.setTimeout(() => setJob((j) => j && { ...j, status: 'done', text: SUMMARY_BODY }), 2400 + (SUMMARY_BODY.length / step + 2) * 70));
+    const r = base.period === 'week' ? weekRange(off) : base.period === 'month' ? monthRange(off) : { s: new Date(2026, 0, 1), e: new Date(2026, 11, 31) };
+    startSummaryJob({ settings, period: base.period, startDate: toLocalDateKey(r.s), endDate: toLocalDateKey(r.e) });
   };
   // ?state=busy：进来就开始跑
   useEffect(() => { if (open && st === 'busy') stream({ status: 'preparing', text: '', period: 'week', label: '10月第4周', continues: 0, followUps: [] }); }, [open]); // eslint-disable-line
 
   const running = !!job && job.status !== 'done' && job.status !== 'error';
-  const generate = () => { toast.error('成长总结 AI 接入等待确认；本次不生成占位内容'); };
-  const stop = () => { clearT(); setJob((j) => j && { ...j, status: 'done', truncated: true }); };
+  const generate = () => { stream({ status: 'preparing', text: '', period, label, continues: 0, followUps: [] }); setView('result'); };
+  const stop = () => { clearT(); cancelSummaryJob(); setJob(null); };
   const regenerate = () => { if (job && job.status === 'done' && !job.saved) setRegen(true); else generate(); };
-  const save = () => {
-    if (!job) return;
+  const save = async () => {
+    if (!job || !summaryJob?.draft) return;
     setSaving(true);
-    setTimeout(() => {
+    try {
+      const toSave = { ...summaryJob.draft, viewedAt: summaryJob.draft.viewedAt ?? new Date() };
+      await saveSummary(toSave);
+      markSummaryJobSaved();
+      setArchive((a) => [{ ...toSave, followUps: toSave.followUps?.length ?? 0, body: toSave.content } as MockSummary, ...a]);
+      setJob(null);
+      toast.success('已归档保存');
+      setView('archive');
+    } finally {
       setSaving(false);
-      setArchive((a) => [{ id: `sm${Date.now()}`, period: job.period, label: job.label, startDate: '2026-10-19', endDate: '2026-10-25', totalPoints: 13, activityCount: 9, promptPresetName: summaryPresets[preset] ?? '', viewed: true, createdAt: new Date(), followUps: job.followUps.length, body: job.text } as MockSummary, ...a]);
-      setJob(null); toast.success('已归档保存'); setView('archive');
-    }, 600);
+    }
   };
 
   const headerTitle = useMemo(() => {
@@ -282,7 +296,7 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
                 {job.status === 'done' && job.truncated && (
                   <div className="flex items-center gap-3 rounded-sm border-3 border-p4g-black bg-p4g-yellow p-3 text-p4g-black shadow-hard-sm">
                     <div className="min-w-0 flex-1 text-meta leading-relaxed">{job.continues >= 3 ? '已经续写了三次，剩下的就这样吧；可以直接归档，或者重新生成。' : '这封信写到一半断了（输出被截断或连接中途断开）。可以让它从断处接着写。'}</div>
-                    {job.continues < 3 && <P4Button size="sm" variant="black" onClick={() => setJob((j) => j && { ...j, text: SUMMARY_BODY, truncated: false, continues: j.continues + 1 })}>接着写</P4Button>}
+                  {job.continues < 3 && <P4Button size="sm" variant="black" onClick={() => continueSummaryJob(settings)}>接着写</P4Button>}
                   </div>
                 )}
                 {job.status === 'done' && !job.truncated && (

@@ -25,6 +25,8 @@ import { isLowMotion } from '@/p5r-red/lib/prefs';
 import { openOverlay } from '@/p5r-red/shell/shellBus';
 import { slam } from './cutins.p5r';
 import './WelcomeModal.p5r.css';
+import { useAppStore } from '@/store';
+import { importImagesBundle, isImagesBundleJson } from '@/utils/activityImages';
 
 type Step = 'welcome' | 'name' | 'preset' | 'customize' | 'done' | 'guide' | 'blessing' | 'import';
 const PRESETS = [
@@ -94,16 +96,36 @@ export default function WelcomeModal({ open, onClose, params }: OverlayProps) {
     else if (step === 'done') go('guide');
     else if (step === 'guide') go('blessing');
     else if (step === 'blessing' && bless !== null && !submitting) finish(x, y);
-    else if (step === 'import' && json.trim()) { toast('正在导入…（demo）'); setTimeout(() => { onClose(); toast('导入完成'); }, 700); }
+    else if (step === 'import' && json.trim()) { void doImport(); }
   };
   const back = () => { const m: Record<Step, Step> = { welcome: 'welcome', name: 'welcome', preset: 'name', customize: 'preset', done: custom ? 'preset' : 'customize', guide: 'done', blessing: 'guide', import: 'welcome' }; if (step === 'import') setJson(''); go(m[step], -1); };
-  const finish = (x?: number, y?: number) => {
+  const doImport = async () => {
+    try {
+      if (isImagesBundleJson(json)) await importImagesBundle(json);
+      else await useAppStore.getState().importData(json);
+      onClose();
+      toast('导入完成');
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : '导入失败，请检查备份文件');
+    }
+  };
+  const finish = async (x?: number, y?: number) => {
     if (demoErr) { setSubmitting(true); setTimeout(() => { setSubmitting(false); setErr('本地数据库写入失败（demo）'); setDemoErr(false); }, 600); return; }
-    const done = () => { onClose(); toast(`欢迎，${name || '客人'}`); };
-    if (isLowMotion()) { setTimeout(done, 400); return; }
-    setFin({ x: x ?? innerWidth / 2, y: y ?? innerHeight / 2 });
-    sfx('level', 0.5);
-    setTimeout(done, 1850);
+    setSubmitting(true);
+    try {
+      const ids = ['knowledge', 'guts', 'dexterity', 'kindness', 'charm'] as const;
+      const attrNames = Object.fromEntries(ids.map((id, index) => [id, attrs[index]?.trim() || id]));
+      const blessId = bless === null ? undefined : ids[bless];
+      await useAppStore.getState().createUser(name.trim(), attrNames, blessId);
+      const done = () => { onClose(); toast(`欢迎，${name || '客人'}`); };
+      if (isLowMotion()) { setTimeout(() => { setSubmitting(false); done(); }, 400); return; }
+      setFin({ x: x ?? innerWidth / 2, y: y ?? innerHeight / 2 });
+      sfx('level', 0.5);
+      setTimeout(() => { setSubmitting(false); done(); }, 1850);
+    } catch (error) {
+      setSubmitting(false);
+      setErr(error instanceof Error ? error.message : '建档失败，请重试');
+    }
   };
   useLayoutEffect(() => {
     const v = finRef.current; if (!fin || !v) return;

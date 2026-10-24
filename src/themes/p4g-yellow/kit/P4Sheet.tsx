@@ -18,6 +18,7 @@
 import { AnimatePresence, motion, useDragControls, type PanInfo } from 'framer-motion';
 import { useCallback, type ReactNode } from 'react';
 import { Portal, useEscape, useScrollLock } from './Portal';
+import { useBackHandler } from '@/utils/useBackHandler';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { TVFlash } from '@yellow/fx/TVPower';
 import { P4Outline } from './P4Outline';
@@ -38,6 +39,7 @@ export function P4Sheet({ open, onClose, title, en, children, footer, size = 'au
   const close = useCallback(() => { if (dismissible && !busy) onClose(); }, [dismissible, busy, onClose]);
   const closeBtn = useCallback(() => { if (!busy) onClose(); }, [busy, onClose]);
   useEscape(open, close);
+  useBackHandler(open, close);
   const screen = size === 'screen';
   const center = position === 'center' && !screen;
   const canSwipe = swipeToClose && !center && !screen && !low && !busy;

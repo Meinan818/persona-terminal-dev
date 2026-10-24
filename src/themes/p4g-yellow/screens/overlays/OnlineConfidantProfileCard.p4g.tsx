@@ -78,7 +78,7 @@ export function OnlineProfileSheet({ isOpen, onClose, profile, initialCoop = 'no
           </div>
         </div>
 
-        <div className="mt-4"><PactPanelBody partnerName={name} isConfidant={coop === 'linked'} initialState={loggedIn ? 'none' : 'guest'} proposeLabel="发起共同行动" /></div>
+        <div className="mt-4"><PactPanelBody partnerId={profile.userId ?? ''} partnerName={name} isConfidant={coop === 'linked'} initialState={loggedIn ? 'none' : 'guest'} proposeLabel="发起共同行动" /></div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <button type="button" disabled={prayed || pending || !loggedIn} onClick={pray} className={cx('p4g-press flex min-w-0 flex-col items-center justify-center rounded-sm border-3 px-2 py-2.5 text-center disabled:cursor-default', prayed || !loggedIn ? 'border-p4g-line bg-p4g-surface-2 text-p4g-muted' : 'border-p4g-black bg-p4g-yellow text-p4g-black shadow-hard')}>

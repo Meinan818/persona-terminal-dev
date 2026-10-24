@@ -6,20 +6,21 @@
  */
 import { motion, type PanInfo } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import type { OrgMember } from '@real/types';
+import type { OrgMember, OrgView } from '@real/types';
 import type { OverlayProps } from '@blue/registry/types';
 import { P3Sheet, P3Button, P3Tag, P3R, slantClip, useToast } from '@blue/kit';
 import { useLowMotion } from '@blue/lib/prefs';
 import { ATTR_NAMES, ATTR_COLOR } from '@blue/mock/pkg4-tarot';
 import { BORROW_BATTLES_PER_WEEK, LEVEL, MEMBERS } from '@blue/mock/pkg4-org';
 import { displayCodename } from '@blue/screens/pkg4/org/common';
+import { borrowMaskFromUi } from '@/services/borrowMask';
 
 const TYPE_LABEL: Record<string, string> = { damage: '伤害', crit: '暴击', buff: '增伤', debuff: '易伤', charge: '蓄力', heal: '回复', attack_boost: '攻击增益' };
 const isDamage = (t: string) => t === 'damage' || t === 'crit' || t === 'attack_boost';
 const borrowed = (p: number) => Math.round(p * LEVEL.mult);
 const effectText = (t: string, p: number) => (t === 'buff' ? '下次伤害 +50%' : t === 'debuff' ? '易伤：下次 +30%' : t === 'charge' ? '蓄力：下次伤害 ×2' : t === 'heal' ? `回复 ${Math.max(1, Math.round(borrowed(p) * 0.3))} HP` : '');
 
-export function BorrowMask({ member, open, onClose, hasOwn = true, current, onBorrowed }: { member: OrgMember | null; open: boolean; onClose: () => void; hasOwn?: boolean; current?: { name: string; owner: string } | null; onBorrowed: (msg: string) => void }) {
+export function BorrowMask({ view, member, open, onClose, hasOwn = true, current, onBorrowed, onError }: { view?: OrgView; member: OrgMember | null; open: boolean; onClose: () => void; hasOwn?: boolean; current?: { name: string; owner: string } | null; onBorrowed: (msg: string) => void; onError?: (msg: string) => void }) {
   const low = useLowMotion();
   const masks = member?.card.personas ?? [];
   const [i, setI] = useState(0);
@@ -29,7 +30,21 @@ export function BorrowMask({ member, open, onClose, hasOwn = true, current, onBo
   const name = member ? displayCodename(member) : '';
   const go = (d: number) => setI((v) => Math.max(0, Math.min(masks.length - 1, v + d)));
   const onPanEnd = (_: unknown, info: PanInfo) => { if (info.offset.x < -40) go(1); else if (info.offset.x > 40) go(-1); };
-  const borrow = (pn: string) => { setBusy(true); window.setTimeout(() => { setBusy(false); setEquipped(pn); onBorrowed(`同调成功：「${pn}」在逆影战场面具切换栏的最后一格`); }, 600); };
+  const borrow = async (personaIndex: number) => {
+    if (!view || !member) return;
+    const persona = masks[personaIndex];
+    if (!persona) return;
+    setBusy(true);
+    try {
+      await borrowMaskFromUi(view, member, persona);
+      setEquipped(persona.name);
+      onBorrowed(`同调成功：「${persona.name}」在逆影战场面具切换栏的最后一格`);
+    } catch (error) {
+      onError?.(error instanceof Error ? error.message : '同调失败，请稍后重试');
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <P3Sheet open={open && !!member} onClose={onClose} busy={busy} title="同调" en="SYNC · BORROW MASK">
       <div className="space-y-3 pt-1">
@@ -65,7 +80,7 @@ export function BorrowMask({ member, open, onClose, hasOwn = true, current, onBo
                           ))}
                           {p.skills.length === 0 && <li className="text-[12px] font-bold" style={{ color: 'rgba(238,248,255,0.6)' }}>这张面具还没有解锁的技能</li>}
                         </ul>
-                        <div className="px-5 pb-4"><P3Button block tone={on ? 'soft' : 'primary'} disabled={on || !hasOwn} busy={busy && !on} onClick={() => borrow(p.name)}>{on ? '已装备' : '借用'}</P3Button></div>
+                        <div className="px-5 pb-4"><P3Button block tone={on ? 'soft' : 'primary'} disabled={on || !hasOwn || !view} busy={busy && !on} onClick={() => void borrow(k)}>{on ? '已装备' : '借用'}</P3Button></div>
                       </div>
                     </div>
                   );

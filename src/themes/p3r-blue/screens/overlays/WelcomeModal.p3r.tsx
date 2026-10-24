@@ -17,6 +17,8 @@ import { BlueStage } from '@blue/fx';
 import { useBoldness } from '@blue/lib/prefs';
 import { ATTR_IDS, MOCK_USER_NAME, MOON_NAMES, SEVEN_THINGS, WELCOME_ATTR_PLACEHOLDERS, WELCOME_PRESETS } from '@blue/mock/pkg1';
 import { OverlayByKey } from '@blue/screens/pkg1/DashboardParts';
+import { useAppStore } from '@/store';
+import { importImagesBundle, isImagesBundleJson } from '@/utils/activityImages';
 
 type Step = 'welcome' | 'name' | 'preset' | 'customize' | 'done' | 'guide' | 'blessing' | 'import';
 const STEP_ORDER: Step[] = ['welcome', 'name', 'preset', 'customize', 'done', 'guide', 'blessing'];
@@ -136,17 +138,21 @@ export default function WelcomeModal({ open, onClose, params }: OverlayProps) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [hero]);
 
-  const submit = () => {
+  const submit = async () => {
     setSubmitting(true); setSubmitError(null);
-    window.setTimeout(() => {
+    try {
       if (failOnce.current) {
         failOnce.current = false;
         setSubmitError('IndexedDB 写入失败：QuotaExceededError（存储空间不足）'); setSubmitting(false);
         setFinish(null); setHidden([]); busy.current = false; return;
       }
+      await useAppStore.getState().createUser(name.trim(), names, blessing ?? undefined);
       setSubmitting(false); busy.current = false; setFinish(null);
       onClose(); showToast(`建档完成，欢迎来到面具庭园，${name || '客人'}`, { kind: 'success' });
-    }, 500);
+    } catch (error) {
+      setSubmitting(false); busy.current = false; setFinish(null); setHidden([]);
+      setSubmitError(error instanceof Error ? error.message : '建档失败，请重试');
+    }
   };
   const startFinish = () => {
     if (busy.current || submitting || !blessing) return;
@@ -198,10 +204,19 @@ export default function WelcomeModal({ open, onClose, params }: OverlayProps) {
   const doImport = () => {
     if (!importJson.trim()) return;
     setImportLoading(true); setImportError(null);
-    window.setTimeout(() => {
-      if (importFail.current || !importJson.trim().startsWith('{')) { importFail.current = false; setImportError('导入失败，请检查备份文件格式'); setImportLoading(false); return; }
-      setImportLoading(false); onClose(); showToast('备份已导入，欢迎回来', { kind: 'success' });
-    }, 900);
+    void (async () => {
+      try {
+        if (importFail.current || !importJson.trim().startsWith('{')) throw new Error('导入失败，请检查备份文件格式');
+        if (isImagesBundleJson(importJson)) await importImagesBundle(importJson);
+        else await useAppStore.getState().importData(importJson);
+        importFail.current = false;
+        setImportLoading(false); onClose(); showToast('备份已导入，欢迎回来', { kind: 'success' });
+      } catch (error) {
+        importFail.current = false;
+        setImportError(error instanceof Error ? error.message : '导入失败，请检查备份文件');
+        setImportLoading(false);
+      }
+    })();
   };
 
   if (!open) return null;

@@ -1,7 +1,7 @@
 /**
  * P6 私有：设置页的 store。
  * demo 版是纯本地假 store；接入后这里桥到真实 useAppStore.settings + setTheme。
- * 安全边界：API Key / 验证状态 / 和风 Key 一律留在本地，不读取、不显示、不写回真实 settings。
+ * 安全边界：API Key / 验证状态只在本机设置页读写，不回显到日志；和风 Key 仍是演示态。
  */
 import { useMemo, useSyncExternalStore } from 'react';
 import { useAppStore } from '@/store';
@@ -54,6 +54,7 @@ const TO_REAL: Record<string, keyof Settings> = {
   countercurrentEnabled: 'countercurrentEnabled', ledgerEnabled: 'ledgerEnabled', currency: 'currency',
   spendEvalEnabled: 'spendEvalEnabled', ledgerPayCycleEnabled: 'ledgerPayCycleEnabled', ledgerResetDay: 'ledgerResetDay',
   summaryModel: 'summaryModel', navigatorModel: 'navigatorModel', assistantModel: 'assistantModel',
+  visionModel: 'visionModel', audioModel: 'audioModel',
   tarotDeliberate: 'tarotDailyDeliberate', summaryDeliberate: 'summaryDeliberate',
   summaryPresets: 'summaryPromptPresets', summaryPresetId: 'summaryActivePresetId', autoSummary: 'summaryAutoWrite',
   provider: 'summaryApiProvider', customName: 'customProviderName', customProtocol: 'customProviderProtocol',
@@ -101,6 +102,8 @@ function merge(real: Settings | undefined, theme: ThemeType | undefined, l: Part
     summaryModel: r?.summaryModel ?? DEFAULTS.summaryModel,
     navigatorModel: r?.navigatorModel ?? DEFAULTS.navigatorModel,
     assistantModel: r?.assistantModel ?? DEFAULTS.assistantModel,
+    visionModel: r?.visionModel ?? DEFAULTS.visionModel,
+    audioModel: r?.audioModel ?? DEFAULTS.audioModel,
     tarotDeliberate: r?.tarotDailyDeliberate ?? DEFAULTS.tarotDeliberate,
     summaryDeliberate: r?.summaryDeliberate ?? DEFAULTS.summaryDeliberate,
     summaryPresets: r?.summaryPromptPresets ?? DEFAULTS.summaryPresets,

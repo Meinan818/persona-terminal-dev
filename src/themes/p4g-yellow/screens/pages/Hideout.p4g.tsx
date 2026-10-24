@@ -222,7 +222,7 @@ export default function Hideout({ tab, params }: PageProps) {
           if (a === 'view') setFlip(m); else if (a === 'edit-card') setOnb('card'); else if (a === 'sync') setBorrowFor(m); else if (a === 'leader') setSettingsOpen(true);
           else { const was = blocked.has(m.userId); toggleBlock(m.userId); toast(was ? '已解除屏蔽' : '已屏蔽，之后不再显示 Ta 的动态'); }
         }} />
-      <BorrowMask member={borrowFor} open={!!borrowFor} onClose={() => setBorrowFor(null)} onBorrowed={(s) => toast.success(s)} />
+        <BorrowMask view={view} member={borrowFor} open={!!borrowFor} onClose={() => setBorrowFor(null)} onBorrowed={(s) => toast.success(s)} onError={(s) => toast.error(s)} />
       <RaidPanel view={view} open={raidOpen} onClose={() => setRaidOpen(false)} onFlash={(s) => toast(s)} />
       <OrgTitles view={view} open={titlesOpen} onClose={() => setTitlesOpen(false)} leader={leader} onFlash={(s) => toast.success(s)} />
       <OrgSettings view={view} open={settingsOpen} onClose={() => setSettingsOpen(false)} leader={leader} blocked={[...blocked]} onUnblock={toggleBlock}

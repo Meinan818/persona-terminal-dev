@@ -39,6 +39,23 @@ export function tryHandleBack(): boolean {
 }
 
 /**
+ * 是否还有应用内历史可退。React Router 的 history state 带递增 idx：
+ * idx=0 是本次启动的第一条应用内路由，继续后退会离开应用，必须交给页面层级兜底。
+ */
+export function hasInAppHistory(): boolean {
+  if (typeof window === 'undefined') return false;
+  const idx = Number((window.history.state as { idx?: unknown } | null)?.idx);
+  return Number.isFinite(idx) && idx > 0;
+}
+
+/** 后退一条应用内路由。返回 false 表示已经是启动后的根记录。 */
+export function backInAppHistory(): boolean {
+  if (!hasInAppHistory()) return false;
+  window.history.back();
+  return true;
+}
+
+/**
  * 注册一个"返回键"处理回调。
  *
  * @param isActive 是否参与拦截（通常传 Modal 的 `isOpen`）

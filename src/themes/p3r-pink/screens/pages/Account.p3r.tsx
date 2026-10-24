@@ -22,6 +22,8 @@ import { useAppStore } from '@/store';
 import { useCloudStore } from '@/store/cloud';
 import { SESSION_EXPIRED_MESSAGE } from '@/services/velvetApi';
 import { accountOps } from '@/themes/accountOperations';
+import { copyBackupToClipboard, downloadBackup, readBackupFile } from '@/services/backup';
+import { importImagesBundle, isImagesBundleJson } from '@/utils/activityImages';
 
 const Sub = ({ children, right }: { children: ReactNode; right?: ReactNode }) => (
   <div className="mb-2 flex min-w-0 items-center gap-2">
@@ -103,18 +105,55 @@ export default function Account({ params }: PageProps) {
       setSyncing(false);
     }
   };
-  const download = () => {
-    const blob = new Blob([JSON.stringify({ user: { name: p.name }, attributes: ATTRIBUTES }, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'maskaria-backup-2026-10-20.json'; a.click(); window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-    setLink({ name: 'maskaria-backup-2026-10-20.json', size: '186 KB' });
+  const download = async () => {
+    try {
+      const result = await downloadBackup();
+      if (result) setLink({ name: result.filename, size: result.size });
+      else setMsg('分享面板已打开，请选择保存位置');
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : '导出备份失败');
+    }
   };
-  const copyJson = () => {
-    const s = JSON.stringify({ user: { name: p.name } });
-    (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject(new Error('no clipboard'))).then(() => { setCopyState('ok'); setMsg('已复制到剪贴板（186 KB）'); }, () => { setCopyState('err'); setMsg('复制失败，请尝试「下载备份」'); });
-    window.setTimeout(() => setCopyState(null), 1600);
+  const copyJson = async () => {
+    try {
+      const size = await copyBackupToClipboard();
+      setCopyState('ok');
+      setMsg(`已复制到剪贴板（${size}）`);
+    } catch {
+      setCopyState('err');
+      setMsg('复制失败，请尝试「下载备份」');
+    } finally {
+      window.setTimeout(() => setCopyState(null), 1600);
+    }
   };
-  const readFile = (f: File) => { const r = new FileReader(); r.onload = () => { setImportJson(String(r.result).slice(0, 4000)); setFileLoaded(true); }; r.onerror = () => setMsg('读取备份文件失败'); r.readAsText(f); };
-  const doImport = () => { setImporting(true); window.setTimeout(() => { setImporting(false); if (!importJson.trim().startsWith('{')) { setMsg('导入失败：不是有效的备份 JSON'); return; } setMsg('导入成功！数据已恢复。'); setImportJson(''); setFileLoaded(false); }, 1100); };
+  const readFile = async (f: File) => {
+    try {
+      const text = await readBackupFile(f);
+      setImportJson(text);
+      setFileLoaded(!!text);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : '读取备份文件失败');
+    }
+  };
+  const doImport = async () => {
+    if (!importJson.trim()) return;
+    setImporting(true);
+    try {
+      if (isImagesBundleJson(importJson)) {
+        const result = await importImagesBundle(importJson);
+        setMsg(`这是图片包：已导入 ${result.imported} 张${result.orphaned ? `，${result.orphaned} 张找不到所属记录` : ''}`);
+      } else {
+        await useAppStore.getState().importData(importJson);
+        setMsg('导入成功，数据已恢复。');
+      }
+      setImportJson('');
+      setFileLoaded(false);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : '导入失败，请检查备份文件');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   return (
     <div className="relative mx-auto min-w-0 max-w-2xl pb-8">

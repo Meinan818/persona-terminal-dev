@@ -69,7 +69,7 @@ import { CallingCardCutIn } from '@/components/callingCard/CallingCardCutIn';
 import { isNative } from '@/utils/native';
 import { warmDisplayFontShards } from '@/utils/fontWarmup';
 import { checkForUpdate } from '@/utils/appUpdate';
-import { tryHandleBack } from '@/utils/useBackHandler';
+import { tryHandleBack, backInAppHistory } from '@/utils/useBackHandler';
 import { initBoldnessRuntime, schedulePerfSample, setStraightenMode, useBoldness } from '@/utils/boldness';
 import { TransitionLayer } from '@/components/transition/HeavyTransition';
 import { consumePendingCircleReveal, consumeCurtainMidpoint } from '@/ui/transitionDirector';
@@ -490,8 +490,9 @@ function App() {
   // ── Android 返回键：分层处理 ───────────────────────────────
   // 优先级：
   //   1. 有注册的 back handler（Modal / 临时页）→ 关闭最顶层
-  //   2. 当前 currentPage 不是 dashboard → 回到 dashboard
-  //   3. 已经在 dashboard → "再次点击回到现实"，2 秒内再按则退出
+  //   2. 有应用内历史 → 按真实上一级返回
+  //   3. 深链进入、没有应用内历史 → 按页面层级回退
+  //   4. 已经在根 dashboard → "再次点击回到现实"，2 秒内再按则退出
   useEffect(() => {
     if (!isNative()) return; // 仅在原生平台生效
 
@@ -503,7 +504,11 @@ function App() {
         // 步骤 1：交给栈顶注册的 back handler（BattleModal / VictoryModal 等）
         if (tryHandleBack()) return;
 
-        // 步骤 2：非 dashboard 页 → 返回 dashboard
+        // 步骤 2：优先沿真实路由历史退一级。若先按 currentPage 直接跳首页，
+        // 菜单子页、查询参数页和主题浮层都会被错误压回 dashboard。
+        if (backInAppHistory()) return;
+
+        // 步骤 3：深链进入且没有应用内历史 → 按页面归属回退
         // 例外：宫格子页（成就 / 统计 / 战场 / 设置 / 账号与数据）的入口都在「菜单」宫格
         // （v2.5 五格 IA），系统返回与 UI 返回必须同走菜单，避免「界面返回去菜单、系统返回
         // 去首页」的分裂。即便首页 widget 也能直达战场/统计，宫格化后这些页的归属是菜单。
@@ -524,7 +529,7 @@ function App() {
           return;
         }
 
-        // 步骤 3：dashboard 上执行双击退出
+        // 步骤 4：dashboard 根记录上执行双击退出
         const now = Date.now();
         const DOUBLE_PRESS_MS = 2000;
         if (now - lastBackPressRef.current < DOUBLE_PRESS_MS) {

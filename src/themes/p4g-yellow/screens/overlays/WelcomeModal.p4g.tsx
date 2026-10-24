@@ -19,6 +19,8 @@ import { p4gAsset } from '@yellow/lib/asset';
 import { cx } from '@yellow/lib/cx';
 import { MoonGlyph, OverlayByKey, Sparkle4 } from '@yellow/screens/pkg1/bits';
 import { ATTR_IDS, MOON_NAMES, WELCOME_ATTR_PLACEHOLDERS, WELCOME_GUIDE, WELCOME_PRESETS } from '@yellow/mock/pkg1';
+import { useAppStore } from '@/store';
+import { importImagesBundle, isImagesBundleJson } from '@/utils/activityImages';
 
 type Step = 'welcome' | 'name' | 'preset' | 'customize' | 'done' | 'guide' | 'blessing' | 'import';
 const STEP_ORDER: Step[] = ['welcome', 'name', 'preset', 'customize', 'done', 'guide', 'blessing'];
@@ -105,14 +107,18 @@ export default function WelcomeModal({ open, onClose, params }: OverlayProps) {
     setStep(to);
   };
   const choosePreset = (i: number) => { setPreset(i); setNames(i !== 2 ? { ...WELCOME_PRESETS[i].names! } : (p) => ({ ...p })); };
-  const startFinish = () => {
+  const startFinish = async () => {
     if (!blessing || submitting) return;
     setSubmitting(true); setSubmitError(null);
-    window.setTimeout(() => {
+    try {
       if (failOnce.current) { failOnce.current = false; setSubmitting(false); setSubmitError('IndexedDB 写入超时（QuotaExceededError）'); return; }
+      await useAppStore.getState().createUser(name.trim(), names, blessing);
       setFinishing(true);
       window.setTimeout(() => { setSubmitting(false); setFinishing(false); onClose(); showToast('建档完成，欢迎来到面具庭园', { kind: 'success' }); }, low ? 400 : 1500);
-    }, 700);
+    } catch (error) {
+      setSubmitting(false);
+      setSubmitError(error instanceof Error ? error.message : '建档失败，请重试');
+    }
   };
   const goNext = () => {
     if (step === 'welcome') go('name');
@@ -151,11 +157,18 @@ export default function WelcomeModal({ open, onClose, params }: OverlayProps) {
   };
   const doImport = () => {
     setImportLoading(true); setImportError(null);
-    window.setTimeout(() => {
-      setImportLoading(false);
-      try { const o = JSON.parse(importJson); if (!o || typeof o !== 'object' || !('user' in o)) throw new Error('导入失败，请检查备份文件格式'); onClose(); showToast('导入完成', { kind: 'success' }); }
-      catch (e) { setImportError(e instanceof Error && e.message.startsWith('导入') ? e.message : '导入失败，请检查备份文件格式'); }
-    }, 800);
+    void (async () => {
+      try {
+        const parsed = JSON.parse(importJson);
+        if (!parsed || typeof parsed !== 'object') throw new Error('导入失败，请检查备份文件格式');
+        if (isImagesBundleJson(importJson)) await importImagesBundle(importJson);
+        else await useAppStore.getState().importData(importJson);
+        setImportLoading(false); onClose(); showToast('导入完成', { kind: 'success' });
+      } catch (error) {
+        setImportLoading(false);
+        setImportError(error instanceof Error && error.message.startsWith('导入') ? error.message : '导入失败，请检查备份文件格式');
+      }
+    })();
   };
 
   const phase = dayPhase(now);

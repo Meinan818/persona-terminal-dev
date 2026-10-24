@@ -4,26 +4,28 @@
  */
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
-import type { LongReading, LongReadingPeriod, TarotOrientation, DrawnCard } from '@real/types';
+import type { LongReading, LongReadingPeriod, TarotOrientation } from '@real/types';
 import { P4Button, P4Card, P4Chip, P4Textarea, P4EmptyState, P4Dialog, IconBack } from '@yellow/kit';
 import { CollageStagger, CollageItem } from '@yellow/fx';
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
 import { TAROT_BY_ID, ORI_LABEL, PERIOD_LABELS, spreadPositionsFor, periodHasBase, BASE_POSITION, drawRandom, randomOri } from '@yellow/mock/pkg4-tarot';
-import { TODAY, shiftKey } from '@yellow/adapters/pkg4-astro';
-import { TarotFace, TarotBack, FlipCard, Markdownish, ThinkingTV, useHold, useFakeProgress, useTypewriter, cardH } from './tarot';
+import { TODAY } from '@yellow/adapters/pkg4-astro';
+import { TarotFace, TarotBack, FlipCard, Markdownish, ThinkingTV, useHold, useFakeProgress, cardH } from './tarot';
 import { CardLabel, MsgBox, StateFade } from './ui';
+import { useAppStore } from '@/store';
+import { acceptLongJob, ackLongJob, continueLongJob, startFollowJob, startLongJob, useTarotJobs } from '@/utils/tarotJobs';
 
 export type LongStep = 'form' | 'base' | 'picking' | 'revealing' | 'reading' | 'done';
 interface Cand { id: string; orientation: TarotOrientation }
 
 const PERIODS: LongReadingPeriod[] = ['recent', 'midterm', 'longterm'];
-const AI_PENDING = '星象 AI 接入等待确认；本次没有发起模型请求，也不会生成占位解读。';
-
 export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, resume, onSaved, onBack }: {
   initialStep?: LongStep; noApiKey: boolean; activeCount: number; resume?: boolean; onSaved: (r: LongReading) => void; onBack: () => void;
 }) {
   const low = useLowMotion();
+  const settings = useAppStore((state) => state.settings);
+  const longJob = useTarotJobs((state) => state.long);
   const [phase, setPhase] = useState<LongStep>(initialStep);
   const [question, setQuestion] = useState('');
   const [period, setPeriod] = useState<LongReadingPeriod>(initialStep === 'base' ? 'longterm' : 'midterm');
@@ -32,7 +34,6 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
   const [base, setBase] = useState<Cand | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(!!resume);
-  const [truncated, setTruncated] = useState(false);
   const [saved, setSaved] = useState<LongReading | null>(null);
   const cap = activeCount >= 2;
   const hasBase = periodHasBase(period);
@@ -52,23 +53,27 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
   };
   const reveal = () => {
     if (picks.length !== 3) return;
-    setError(noApiKey ? '请先在「设置 → AI 服务」中配置 API 密钥。中长期占卜无法离线完成。' : AI_PENDING);
+    if (noApiKey) { setError('请先在「设置 → AI 服务」中配置 API 密钥。中长期占卜无法离线完成。'); return; }
+    setError(null);
+    setPhase('revealing');
+    startLongJob({ settings, question: question.trim(), period, candidates: cands.map((c) => ({ cardId: c.id, orientation: c.orientation })), pickedIndices: picks, base: base ? { cardId: base.id, orientation: base.orientation } : undefined });
+    setTimeout(() => setPhase('reading'), low ? 200 : 1300);
   };
   const reading = phase === 'reading';
   const prog = useFakeProgress(reading, 2400);
-  const tw = useTypewriter('', reading && prog >= 1, 80);
-  const accept = () => {
-    if (!tw.text.trim()) { setError(AI_PENDING); return; }
-    const picked: DrawnCard[] = [...(base ? [{ cardId: base.id, orientation: base.orientation }] : []), ...picks.map((i) => ({ cardId: cands[i].id, orientation: cands[i].orientation }))];
-    const r: LongReading = { id: `lr-${Date.now()}`, question: question.trim(), period, drawnFrom: cands.map((c) => c.id), picked, content: tw.text, followUps: [], archived: false, createdAt: new Date(), expiresAt: shiftKey(14) };
-    setSaved(r); onSaved(r); setPhase('done');
-  };
-  useEffect(() => { if (reading && tw.done && prog >= 1 && !truncated) { const t = setTimeout(accept, 600); return () => clearTimeout(t); } }, [reading, tw.done, prog, truncated]); // eslint-disable-line
+  const accept = () => acceptLongJob(settings);
   useEffect(() => {
-    if (initialStep === 'revealing' || initialStep === 'reading' || initialStep === 'done') {
-      setError(AI_PENDING);
-      setPhase('form');
-    }
+    if (!longJob?.result) return;
+    setSaved(longJob.result);
+    onSaved(longJob.result);
+    setPhase('done');
+    ackLongJob();
+  }, [longJob?.result]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (longJob?.status === 'error') setError(longJob.error ?? '解读失败，请重试');
+  }, [longJob?.status, longJob?.error]);
+  useEffect(() => {
+    if ((initialStep === 'reading' || initialStep === 'revealing') && longJob) setPhase('reading');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (phase === 'done' && saved) return <ReadingDetail reading={saved} canFollowUp onBack={onBack} onArchive={(a) => setSaved({ ...saved, archived: a })} onDelete={onBack} onFollowSaved={(f) => setSaved({ ...saved, followUps: [f] })} />;
@@ -80,9 +85,9 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
           {pending && (
             <MsgBox speaker="系统">
               <div className="font-display text-body font-bold text-p4g-yellow">上次的占卜没有生成完</div>
-              <div className="mt-1 text-meta opacity-85">上次的牌阵仍然保留；AI 解读尚未接入。</div>
+              <div className="mt-1 text-meta opacity-85">上次的牌阵仍然保留；可以继续等待或重新发起解读。</div>
               <div className="mt-3 flex gap-2">
-                <P4Button size="sm" className="flex-1" onClick={() => { setPending(false); setError(AI_PENDING); }}>用同一副牌继续</P4Button>
+                <P4Button size="sm" className="flex-1" onClick={() => { setPending(false); setPhase('reading'); }}>用同一副牌继续</P4Button>
                 <P4Button size="sm" variant="secondary" onClick={() => setPending(false)}>放弃</P4Button>
               </div>
             </MsgBox>
@@ -173,15 +178,15 @@ export function LongReadingFlow({ initialStep = 'form', noApiKey, activeCount, r
           <Spread cands={[...(base ? [base] : []), ...picks.map((i) => cands[i])]} positions={spreadPositionsFor(period, base ? 4 : 3)} sequential={phase === 'revealing'} />
           {phase === 'reading' && (
             <>
-              {prog < 1 ? (
+              {longJob?.status === 'thinking' && !longJob.full ? (
                 <div className="flex justify-center"><ThinkingTV progress={prog} label={prog < 0.7 ? '三张牌正在被放在一起推演' : '正在展开牌阵'} /></div>
               ) : (
-                <MsgBox speaker="解读"><Markdownish text={tw.text || '…'} /></MsgBox>
+                <MsgBox speaker="解读"><Markdownish text={longJob?.full || '正在等待解读内容…'} /></MsgBox>
               )}
-              {prog >= 1 && !tw.done && (
+              {longJob?.status === 'error' && (
                 <div className="flex flex-wrap justify-center gap-2">
-                  <P4Button size="sm" variant="secondary" onClick={() => setTruncated(true)}>接着写</P4Button>
-                  <P4Button size="sm" onClick={accept}>就用这些</P4Button>
+                  {longJob.truncated && <P4Button size="sm" variant="secondary" onClick={() => continueLongJob(settings)}>接着写</P4Button>}
+                  {longJob.truncated && !!longJob.full && <P4Button size="sm" onClick={() => void accept()}>就用这些</P4Button>}
                   <P4Button size="sm" variant="ghost" onClick={() => setPhase('picking')}>返回抽卡重试</P4Button>
                 </div>
               )}
@@ -307,7 +312,7 @@ export function ReadingDetail({ reading, canFollowUp, onBack, onArchive, onDelet
           </div>
         </P4Card>
       </CollageItem>
-      {followOpen && <CollageItem><FollowUpPanel onClose={() => setFollowOpen(false)} onSaved={(f) => { onFollowSaved(f); }} /></CollageItem>}
+      {followOpen && <CollageItem><FollowUpPanel reading={reading} onClose={() => setFollowOpen(false)} onSaved={(f) => { onFollowSaved(f); }} /></CollageItem>}
       <CollageItem>
         <div className="flex flex-wrap gap-2.5 pt-1">
           {canAsk && !followOpen && <P4Button className="flex-1" variant="black" onClick={() => setFollowOpen(true)}>追问（1/1）</P4Button>}
@@ -319,11 +324,31 @@ export function ReadingDetail({ reading, canFollowUp, onBack, onArchive, onDelet
   );
 }
 
-function FollowUpPanel({ onClose, onSaved }: { onClose: () => void; onSaved: (f: LongReading['followUps'][number]) => void }) {
+function FollowUpPanel({ reading, onClose, onSaved }: { reading: LongReading; onClose: () => void; onSaved: (f: LongReading['followUps'][number]) => void }) {
+  const settings = useAppStore((state) => state.settings);
+  const followJob = useTarotJobs((state) => state.follow);
   const [phase, setPhase] = useState<'form' | 'picking' | 'reading' | 'error' | 'done'>('form');
   const [q, setQ] = useState('');
   const [cands, setCands] = useState<Cand[]>([]);
   const [idx, setIdx] = useState<number | null>(null);
+  useEffect(() => {
+    if (!followJob?.result) return;
+    onSaved(followJob.result);
+    setPhase('done');
+  }, [followJob?.result]); // eslint-disable-line react-hooks/exhaustive-deps
+  const start = (index: number) => {
+    const picked = cands[index];
+    if (!picked) return;
+    setIdx(index);
+    setPhase('reading');
+    startFollowJob({
+      settings,
+      reading,
+      question: q.trim(),
+      candidates: cands.map((c) => ({ cardId: c.id, orientation: c.orientation })),
+      pickedIndex: index,
+    });
+  };
   return (
     <P4Card tone="surface" cut="br">
       <CardLabel en="ONE MORE" right={phase !== 'done' && <button type="button" onClick={onClose} className="font-display text-meta font-bold text-p4g-ink-soft underline">收起</button>}>追问（仅一次）</CardLabel>
@@ -336,14 +361,16 @@ function FollowUpPanel({ onClose, onSaved }: { onClose: () => void; onSaved: (f:
       {phase === 'picking' && (
         <div>
           <div className="mb-2 text-center font-display text-body font-bold text-p4g-ink">从三张中选一张</div>
-          <div className="flex justify-center gap-3">{cands.map((c, i) => <button key={i} type="button" aria-label={`第 ${i + 1} 张`} onClick={() => { setIdx(i); setPhase('reading'); }} className="p4g-press"><TarotBack width={72} /></button>)}</div>
+          <div className="flex justify-center gap-3">{cands.map((c, i) => <button key={i} type="button" aria-label={`第 ${i + 1} 张`} onClick={() => start(i)} className="p4g-press"><TarotBack width={72} /></button>)}</div>
         </div>
       )}
       {(phase === 'reading' || phase === 'error' || phase === 'done') && idx !== null && (
         <div className="flex gap-3">
           <TarotFace id={cands[idx].id} orientation={cands[idx].orientation} width={64} />
           <div className="min-w-0 flex-1">
-            <p className="text-body leading-relaxed text-p4g-ink">{AI_PENDING}</p>
+            <p className={cx('whitespace-pre-wrap text-body leading-relaxed', followJob?.error && phase !== 'done' ? 'text-p4g-danger' : 'text-p4g-ink')}>
+              {phase === 'done' ? followJob?.result?.content ?? '追问已记录。' : followJob?.error ?? followJob?.full ?? '正在连接占卜服务，整理这一张牌的回应…'}
+            </p>
           </div>
         </div>
       )}

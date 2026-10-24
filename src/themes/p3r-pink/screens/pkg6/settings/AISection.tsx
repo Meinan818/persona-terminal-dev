@@ -7,14 +7,26 @@ import { ModelPicker, type ModelPickerMode } from '@pink/screens/overlays/ModelP
 import { cx } from '@pink/lib/cx';
 import { useAppStore } from '@/store';
 import { buildAIDiagnostics } from '@/utils/aiDiagnostics';
+import { cleanApiKey, fetchAvailableModels, testAIConnection, type ApiProvider } from '@/utils/aiProviders';
+import { hostOfUrl } from '@/utils/aiTransport';
+import type { Settings } from '@/types';
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'error';
 const pv = (id: ProviderId) => PROVIDERS.find((p) => p.id === id)!;
+const keyOf = (settings: Settings, id: ProviderId): string => {
+  const provider = id as ApiProvider;
+  const active = settings.summaryApiProvider === provider ? settings.summaryApiKey?.trim() : '';
+  return active || settings.aiProfiles?.[provider]?.key?.trim() || '';
+};
+const verifiedOf = (settings: Settings, id: ProviderId): boolean =>
+  !!settings.aiProfiles?.[id as ApiProvider]?.verifiedAt;
 
 export function AISection() {
   const s = useSettings();
-  const [expanded, setExpanded] = useState(!s.keys[s.provider]);
-  const [keyDraft, setKeyDraft] = useState(s.keys[s.provider] ?? '');
+  const realSettings = useAppStore((state) => state.settings);
+  const updateRealSettings = useAppStore((state) => state.updateSettings);
+  const [expanded, setExpanded] = useState(() => !keyOf(realSettings, s.provider));
+  const [keyDraft, setKeyDraft] = useState(keyOf(realSettings, s.provider));
   const [saved, setSaved] = useState(false);
   const [test, setTest] = useState<TestStatus>('idle');
   const [testMsg, setTestMsg] = useState('');
@@ -29,32 +41,134 @@ export function AISection() {
   const [diag, setDiag] = useState<'' | 'ok' | 'fail'>('');
   const provider = s.provider;
   const isCustom = provider === 'custom';
-  const configured = !!s.keys[provider];
-  const savedCount = Object.values(s.keys).filter(Boolean).length;
+  const configured = !!keyOf(realSettings, provider);
+  const savedCount = PROVIDERS.filter((p) => !!keyOf(realSettings, p.id)).length;
   const customMissing = isCustom ? [!s.baseUrl.trim() && '地址', !s.summaryModel.trim() && '模型'].filter(Boolean) as string[] : [];
 
-  const switchPv = (id: ProviderId) => { updateSettings({ provider: id }); setKeyDraft(s.keys[id] ?? ''); setTest('idle'); setTestMsg(''); setSaved(false); };
+  const switchPv = (id: ProviderId) => {
+    const currentKey = cleanApiKey(keyDraft).key || keyOf(realSettings, provider);
+    const profiles = { ...(realSettings.aiProfiles ?? {}) };
+    profiles[provider as ApiProvider] = {
+      ...(profiles[provider as ApiProvider] ?? {}),
+      key: currentKey || undefined,
+      baseUrl: s.baseUrl,
+      model: s.summaryModel,
+      navModel: s.navigatorModel,
+      navProvider: realSettings.navigatorProvider,
+    };
+    const next = profiles[id as ApiProvider] ?? {};
+    void updateRealSettings({
+      aiProfiles: profiles,
+      summaryApiProvider: id as ApiProvider,
+      summaryApiKey: next.key ?? '',
+      summaryApiBaseUrl: next.baseUrl ?? '',
+      summaryModel: next.model ?? '',
+      navigatorModel: next.navModel ?? '',
+      navigatorProvider: next.navModel ? next.navProvider : undefined,
+    });
+    setKeyDraft(next.key ?? '');
+    setTest('idle');
+    setTestMsg('');
+    setSaved(false);
+  };
   const save = () => {
-    updateSettings({ keys: { ...s.keys, [provider]: keyDraft }, verified: { ...s.verified, [provider]: false } });
+    const key = cleanApiKey(keyDraft).key;
+    setKeyDraft(key);
+    void updateRealSettings({
+      summaryApiKey: key,
+      aiProfiles: {
+        ...(realSettings.aiProfiles ?? {}),
+        [provider as ApiProvider]: {
+          ...(realSettings.aiProfiles?.[provider as ApiProvider] ?? {}),
+          key: key || undefined,
+          baseUrl: s.baseUrl,
+          model: s.summaryModel,
+          verifiedAt: undefined,
+        },
+      },
+    });
     setTest('idle');
     setTestMsg('');
     setSaved(true);
   };
-  const runTest = () => {
-    if (!keyDraft.trim()) { setTest('error'); setTestMsg('请先填写 API 密钥'); return; }
+  const runTest = async () => {
+    const key = cleanApiKey(keyDraft).key || keyOf(realSettings, provider);
+    if (!key) { setTest('error'); setTestMsg('请先填写 API 密钥'); return; }
     if (isCustom && !s.baseUrl.trim()) { setTest('error'); setTestMsg('先填 API 地址（或点上面的预设）'); return; }
-    setTest('error');
-    setTestMsg('真实连接测试尚未启用。当前不会把未验证的 Key 标记为“连接正常”。');
+    setTest('testing');
+    setTestMsg('');
+    const result = await testAIConnection({
+      provider: provider as ApiProvider,
+      apiKey: key,
+      baseUrl: s.baseUrl,
+      model: isCustom ? s.summaryModel : s.summaryModel || pv(provider).defaultModel,
+      nativeHosts: realSettings.aiNativeHosts,
+      ...(isCustom ? { protocol: s.customProtocol } : {}),
+    });
+    if (!result.ok) {
+      setTest('error');
+      setTestMsg(result.error);
+      return;
+    }
+    const hosts = [...(realSettings.aiNativeHosts ?? [])];
+    if (result.nativeHost && !hosts.includes(result.nativeHost)) hosts.push(result.nativeHost);
+    const models = await fetchAvailableModels({
+      provider: provider as ApiProvider,
+      apiKey: key,
+      baseUrl: result.baseUrlUsed,
+      nativeHosts: hosts,
+      ...(isCustom ? { protocol: s.customProtocol } : {}),
+    });
+    await updateRealSettings({
+      ...(result.corrected ? { summaryApiBaseUrl: result.baseUrlUsed } : {}),
+      ...(hosts.length !== (realSettings.aiNativeHosts ?? []).length ? { aiNativeHosts: hosts } : {}),
+      summaryApiKey: key,
+      aiProfiles: {
+        ...(realSettings.aiProfiles ?? {}),
+        [provider as ApiProvider]: {
+          ...(realSettings.aiProfiles?.[provider as ApiProvider] ?? {}),
+          key,
+          baseUrl: result.baseUrlUsed,
+          model: s.summaryModel,
+          verifiedAt: Date.now(),
+          ...(models.ok ? { models: models.models, modelCaps: models.caps } : {}),
+        },
+      },
+    });
+    setKeyDraft(key);
+    setSaved(true);
+    setTest('ok');
+    setTestMsg(`连接成功 · ${result.model} · ${result.latencyMs} ms${models.ok ? ` · 已取得 ${models.models.length} 个模型` : ''}${result.nativeHost ? ` · 原生通道 ${hostOfUrl(result.baseUrlUsed)}` : ''}`);
   };
-  const tierTest = () => {
+  const tierTest = async () => {
+    if (tierTesting) return;
+    setTierTesting(true);
+    const out: { label: string; model: string; text: string }[] = [];
+    const testOne = async (label: string, id: ProviderId, model: string) => {
+      const key = keyOf(realSettings, id);
+      if (!key) { out.push({ label, model, text: '那家还没保存 Key' }); setTierResults([...out]); return; }
+      const baseUrl = id === realSettings.summaryApiProvider ? s.baseUrl : realSettings.aiProfiles?.[id as ApiProvider]?.baseUrl;
+      const result = await testAIConnection({
+        provider: id as ApiProvider,
+        apiKey: key,
+        baseUrl,
+        model: model || pv(id).defaultModel,
+        nativeHosts: realSettings.aiNativeHosts,
+        ...(id === 'custom' ? { protocol: s.customProtocol } : {}),
+      });
+      out.push({ label, model, text: result.ok ? `✓ 通了 · ${result.latencyMs} ms${result.transport === 'native' ? ' · 原生通道' : ''}` : `× ${result.error}` });
+      setTierResults([...out]);
+    };
+    await testOne('快速响应', provider, s.summaryModel || pv(provider).defaultModel);
+    if (s.navigatorModel) await testOne('深思熟虑', (realSettings.navigatorProvider ?? provider) as ProviderId, s.navigatorModel);
+    else { out.push({ label: '深思熟虑', model: '', text: '跟随快速响应' }); setTierResults([...out]); }
+    if (s.assistantModel) await testOne('助手', provider, s.assistantModel);
+    else { out.push({ label: '助手', model: '', text: '跟随深思熟虑' }); setTierResults([...out]); }
+    if (s.visionModel || realSettings.visionModel) await testOne('视觉', (realSettings.visionProvider ?? provider) as ProviderId, s.visionModel || realSettings.visionModel || '');
+    else { out.push({ label: '视觉', model: '', text: '未启用' }); setTierResults([...out]); }
+    out.push({ label: '听觉', model: s.audioModel, text: s.audioModel ? '要按住话筒说一句才测得了：在助手输入栏试' : '未启用' });
+    setTierResults([...out]);
     setTierTesting(false);
-    setTierResults([
-      { label: '快速响应', model: s.summaryModel || pv(provider).defaultModel, text: '未执行 · 真实连接测试待启用' },
-      { label: '深思熟虑', model: s.navigatorModel || '', text: s.navigatorModel ? '未执行 · 真实连接测试待启用' : '跟随快速响应' },
-      { label: '助手', model: s.assistantModel, text: s.assistantModel ? '未执行 · 真实连接测试待启用' : '跟随深思熟虑' },
-      { label: '视觉', model: s.visionModel, text: s.visionModel ? '未执行 · 真实连接测试待启用' : '未启用' },
-      { label: '听觉', model: s.audioModel, text: s.audioModel ? '要按住话筒说一句才测得了：在助手输入栏试' : '未启用' },
-    ]);
   };
   const ModelBtn = ({ mode, value, fallback }: { mode: ModelPickerMode; value: string; fallback: string }) => (
     <button type="button" onClick={() => setPicker(mode)} className="flex w-full min-w-0 items-center gap-2 rounded-none border-2 border-p3r-lilac/50 bg-p3r-panel px-3 py-2 text-left text-p3r-ink">
@@ -70,10 +184,10 @@ export function AISection() {
       <CfgSubhead en="CONNECTION">连接</CfgSubhead>
       <button type="button" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}
         className="group flex w-full min-w-0 items-center gap-3 rounded-none bg-p3r-ink px-3 py-3 text-left text-p3r-on-ink night:border-2">
-        <span aria-hidden className={cx('h-3 w-3 shrink-0 rounded-full', configured ? (s.verified[provider] ? 'bg-p3r-mint' : 'bg-p3r-coral') : 'bg-p3r-coral')} />
+        <span aria-hidden className={cx('h-3 w-3 shrink-0 rounded-full', configured ? (verifiedOf(realSettings, provider) ? 'bg-p3r-mint' : 'bg-p3r-coral') : 'bg-p3r-coral')} />
         <span className="min-w-0 flex-1">
           {customMissing.length ? <span className="block truncate font-heavy text-body font-bold">{pv(provider).label} · 还差{customMissing.join('和')}——展开填写</span>
-            : configured ? <span className="block truncate font-heavy text-body font-bold">{pv(provider).label} · {s.verified[provider] ? '连接正常' : '待测试'}</span>
+            : configured ? <span className="block truncate font-heavy text-body font-bold">{pv(provider).label} · {verifiedOf(realSettings, provider) ? '连接正常' : '待测试'}</span>
               : <span className="block truncate font-heavy text-body font-bold">未配置 —— 展开填写 API Key</span>}
           {configured && <span className="block text-2xs text-p3r-on-ink/70">共 {savedCount} 家</span>}
         </span>
@@ -99,11 +213,11 @@ export function AISection() {
               <div role="radiogroup" aria-label="提供商" className="grid w-full grid-cols-2 gap-1.5 sm:grid-cols-3">
                 {PROVIDERS.map((p) => {
                   const on = provider === p.id;
-                  const has = !!s.keys[p.id];
+                  const has = !!keyOf(realSettings, p.id);
                   return (
                     <button key={p.id} type="button" role="radio" aria-checked={on} onClick={() => switchPv(p.id)}
                       className={cx('p6-press relative min-w-0 rounded-none border-2 px-2 py-1.5 text-left', on ? 'border-p3r-lilac/50 bg-p3r-rose text-p3r-on-rose' : 'border-current border-dashed')}>
-                      <span className="flex min-w-0 items-center gap-1 font-heavy text-body font-bold">{has && <span aria-hidden className={cx('h-2 w-2 shrink-0 rounded-full', s.verified[p.id] ? 'bg-p3r-mint' : 'bg-p3r-coral')} />}<span className="truncate">{p.id === 'custom' ? '＋ 自定义' : p.label}</span></span>
+                      <span className="flex min-w-0 items-center gap-1 font-heavy text-body font-bold">{has && <span aria-hidden className={cx('h-2 w-2 shrink-0 rounded-full', verifiedOf(realSettings, p.id) ? 'bg-p3r-mint' : 'bg-p3r-coral')} />}<span className="truncate">{p.id === 'custom' ? '＋ 自定义' : p.label}</span></span>
                       <span className="block truncate text-2xs opacity-75">{p.id === 'custom' ? '中转站 · 硅基流动 · 智谱 · OpenRouter · Anthropic…' : p.id === 'kimi' ? <><span aria-label="可能已下线">！ </span>kimi-k2</> : p.defaultModel}</span>
                     </button>
                   );
@@ -129,7 +243,7 @@ export function AISection() {
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <CfgBtn tone={saved ? 'default' : 'primary'} onClick={save}>{saved ? '✓ 已保存' : '保存'}</CfgBtn>
-                  <CfgBtn onClick={runTest} disabled={test === 'testing'}>{test === 'testing' ? '测试中…' : test === 'ok' ? '✓ 连接正常' : test === 'error' ? '× 连接失败' : '测试连接'}</CfgBtn>
+                  <CfgBtn onClick={() => void runTest()} disabled={test === 'testing'}>{test === 'testing' ? '测试中…' : test === 'ok' ? '✓ 连接正常' : test === 'error' ? '× 连接失败' : '测试连接'}</CfgBtn>
                 </div>
                 {testMsg && <div className="mt-2"><CfgMsg ok={test === 'ok'}>{testMsg}</CfgMsg></div>}
               </>} />
@@ -153,8 +267,18 @@ export function AISection() {
       {tiersOpen && (configured ? (
         <div className="space-y-2">
           <div className="flex min-w-0 flex-wrap gap-2">
-            <CfgBtn tone="primary" onClick={tierTest} disabled={tierTesting}>{tierTesting ? '逐档测试中…' : '逐档测一遍'}</CfgBtn>
-            <CfgBtn onClick={() => { setFetching(false); setFetchMsg('模型列表刷新尚未启用；当前不会伪造模型数量。'); }} disabled={fetching}>{fetching ? '拉取中…' : '刷新全部模型列表'}</CfgBtn>
+            <CfgBtn tone="primary" onClick={() => void tierTest()} disabled={tierTesting}>{tierTesting ? '逐档测试中…' : '逐档测一遍'}</CfgBtn>
+            <CfgBtn onClick={() => {
+              const key = cleanApiKey(keyDraft).key || keyOf(realSettings, provider);
+              if (!key) { setFetchMsg('先保存当前服务商的 API Key'); return; }
+              setFetching(true);
+              setFetchMsg('');
+              void fetchAvailableModels({ provider: provider as ApiProvider, apiKey: key, baseUrl: s.baseUrl, nativeHosts: realSettings.aiNativeHosts, ...(isCustom ? { protocol: s.customProtocol } : {}) }).then((result) => {
+                if (!result.ok) { setFetchMsg(result.error); return; }
+                setFetchMsg(`已取得 ${result.models.length} 个模型；可在上方各档选择。`);
+                void updateRealSettings({ aiProfiles: { ...(realSettings.aiProfiles ?? {}), [provider as ApiProvider]: { ...(realSettings.aiProfiles?.[provider as ApiProvider] ?? {}), models: result.models, modelCaps: result.caps } } });
+              }).finally(() => setFetching(false));
+            }} disabled={fetching}>{fetching ? '拉取中…' : '刷新全部模型列表'}</CfgBtn>
           </div>
           {fetchMsg && <CfgMsg ok={false}>{fetchMsg}</CfgMsg>}
           {tierResults.length > 0 && (

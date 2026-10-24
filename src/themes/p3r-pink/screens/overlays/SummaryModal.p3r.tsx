@@ -20,6 +20,11 @@ import { useActionsData } from '@pink/adapters/pkg2';
 import { Butterfly, MiniHead } from '@pink/screens/pkg2/common';
 import SummaryModalRegenConfirm from './SummaryModalRegenConfirm.p3r';
 import YearRecapStage from './YearRecapStage.p3r';
+import { useAppStore, toLocalDateKey } from '@/store';
+import {
+  cancelSummaryJob, continueSummaryJob, discardSummaryJob, markSummaryJobSaved,
+  startSummaryJob, useSummaryJobs,
+} from '@/utils/summaryJobs';
 
 type View = 'generate' | 'result' | 'archive' | 'view';
 interface Job { period: 'week' | 'month' | 'year'; label: string; saved?: boolean; continues: number; followUps: { q: string; a: string }[]; preparing?: boolean }
@@ -54,7 +59,6 @@ function Body({ text, ai, annual }: { text: string; ai?: AIState; annual?: numbe
         <div className="whitespace-pre-wrap break-words text-[15px] leading-[1.9]" style={{ color: P3R.ink }} aria-live="polite">
           {parts.map((p, i) => (p.startsWith('**') && p.endsWith('**') ? <b key={i} className="px-0.5 font-black" style={{ background: 'rgb(var(--p3r-blue-rgb) / 0.18)', color: P3R.ink }}>{p.slice(2, -2)}</b> : <span key={i}>{p}</span>))}
           {ai && (ai.phase === 'streaming' || ai.phase === 'thinking') && <span aria-hidden className="pk-caret ml-0.5 inline-block h-[1.05em] w-[3px] translate-y-[3px]" style={{ background: P3R.blue }} />}
-          {ai?.phase === 'streaming' && <button type="button" onClick={ai.skip} className="ml-3 align-middle font-cond text-[12px] tracking-wider" style={{ color: P3R.roseInk }}>SKIP ›</button>}
         </div>
       </div>
     </div>
@@ -119,6 +123,9 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const summaryPresets = summaryData.SUMMARY_PRESETS;
   const toast = useToast();
   const anim = useBoldness();
+  const settings = useAppStore((state) => state.settings);
+  const saveSummary = useAppStore((state) => state.saveSummary);
+  const summaryJob = useSummaryJobs((state) => state.job);
   const pv = params?.get('view');
   const st = params?.get('state');
   const fuParam = params?.get('followup');
@@ -128,7 +135,27 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const noKey = st === 'nokey' || params?.get('fail') === 'nokey';
   const fail = (params?.get('fail') as AIFail) ?? (st === 'error' ? 'error' : st === 'truncated' ? 'truncate' : undefined);
   const initialPhase: AIPhase = st === 'thinking' ? 'thinking' : st === 'streaming' ? 'streaming' : st === 'error' ? 'error' : st === 'truncated' ? 'truncated' : pv === 'preview' ? 'done' : 'idle';
-  const ai = useAIStream({ text: SUMMARY_BODY, fail, initialPhase, failAt: 0.42 });
+  const aiPhase: AIPhase = summaryJob?.status === 'preparing' ? 'thinking'
+    : summaryJob?.status === 'thinking' ? 'thinking'
+      : summaryJob?.status === 'streaming' ? 'streaming'
+        : summaryJob?.status === 'done' ? 'done'
+          : summaryJob?.status === 'error' ? (summaryJob.truncated ? 'truncated' : 'error') : 'idle';
+  const ai: AIState = {
+    phase: aiPhase,
+    text: summaryJob?.text ?? '',
+    full: summaryJob?.full ?? '',
+    progress: summaryJob?.status === 'preparing' ? 0.15 : summaryJob?.status === 'thinking' ? 0.55 : summaryJob?.status === 'streaming' ? 0.85 : summaryJob?.status === 'done' ? 1 : 0,
+    error: summaryJob?.error ? { code: summaryJob.truncated ? 'truncated' : 'network', message: summaryJob.error } : null,
+    start: () => {},
+    skip: () => {},
+    abort: cancelSummaryJob,
+    resume: () => continueSummaryJob(settings),
+    retry: () => {
+      const r = period === 'week' ? weekRange(off) : period === 'month' ? monthRange(off) : { s: new Date(2026, 0, 1), e: new Date(2026, 11, 31) };
+      startSummaryJob({ settings, period, startDate: toLocalDateKey(r.s), endDate: toLocalDateKey(r.e) });
+    },
+    reset: discardSummaryJob,
+  };
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('week');
   const [off, setOff] = useState(0);
   const [preset, setPreset] = useState(0);
@@ -141,7 +168,9 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   const [recap, setRecap] = useState(false);
   const [saving, setSaving] = useState(false);
   const [detailFU, setDetailFU] = useState<{ q: string; a: string }[]>([]);
-  const [job, setJob] = useState<Job | null>(() => (st === 'none' || (initialView !== 'result') ? null : { period: 'week', label: '10月第4周', continues: 0, followUps: [], preparing: st === 'busy' }));
+  const [job, setJob] = useState<Job | null>(() => (summaryJob
+    ? { period: summaryJob.period, label: summaryJob.draft?.label ?? '进行中的总结', continues: summaryJob.continues, followUps: [], preparing: summaryJob.status === 'preparing' }
+    : st === 'none' || initialView !== 'result' ? null : { period: 'week', label: '10月第4周', continues: 0, followUps: [], preparing: st === 'busy' }));
   // 追问逐字
   const [fuQ, setFuQ] = useState<string | null>(fuParam === 'streaming' ? '这周最难的是周三，那天差点没去跑步' : null);
   const fuQRef = useRef(fuQ); fuQRef.current = fuQ;
@@ -157,27 +186,33 @@ export default function SummaryModal({ open, onClose, params }: OverlayProps) {
   /** 真实三段：preparing（整理简报 ~0.9s）→ thinking（读记录 ~2.4s）→ streaming（书写） */
   const runJob = (base: Job) => {
     timers.current.forEach(clearTimeout); timers.current = [];
-    ai.reset();
     setJob({ ...base, preparing: true });
-    timers.current.push(window.setTimeout(() => { setJob((j) => j && { ...j, preparing: false }); ai.start(); }, anim ? 900 : 0));
+    const r = base.period === 'week' ? weekRange(off) : base.period === 'month' ? monthRange(off) : { s: new Date(2026, 0, 1), e: new Date(2026, 11, 31) };
+    startSummaryJob({ settings, period: base.period, startDate: toLocalDateKey(r.s), endDate: toLocalDateKey(r.e) });
   };
   useEffect(() => { if (open && st === 'busy') runJob({ period: 'week', label: '10月第4周', continues: 0, followUps: [] }); }, [open]); // eslint-disable-line
 
-  const phase = job?.preparing ? 'preparing' : ai.phase;
+  const phase = summaryJob?.status ?? (job?.preparing ? 'preparing' : ai.phase);
   const running = !!job && (phase === 'preparing' || phase === 'thinking' || phase === 'streaming');
   const generate = () => {
-    toast.error('成长总结 AI 接入等待确认；本次不生成占位内容');
+    runJob({ period, label, continues: 0, followUps: [] });
   };
-  const stop = () => { timers.current.forEach(clearTimeout); if (job?.preparing) { setJob((j) => j && { ...j, preparing: false }); } ai.abort(); };
+  const stop = () => { timers.current.forEach(clearTimeout); if (job?.preparing) { setJob((j) => j && { ...j, preparing: false }); } cancelSummaryJob(); };
   const regenerate = () => { if (job && ai.phase === 'done' && !job.saved) setRegen(true); else generate(); };
-  const save = () => {
-    if (!job) return;
+  const save = async () => {
+    if (!job || !summaryJob?.draft) return;
     setSaving(true);
-    window.setTimeout(() => {
+    try {
+      const toSave = { ...summaryJob.draft, viewedAt: summaryJob.draft.viewedAt ?? new Date() };
+      await saveSummary(toSave);
+      markSummaryJobSaved();
+      setArchive((a) => [{ ...toSave, followUps: toSave.followUps?.length ?? 0, body: toSave.content } as MockSummary, ...a]);
+      setJob(null);
+      toast.success('已归档保存');
+      setView('archive');
+    } finally {
       setSaving(false);
-      setArchive((a) => [{ id: `sm${Date.now()}`, period: job.period, label: job.label, startDate: '2026-10-19', endDate: '2026-10-25', totalPoints: 13, activityCount: 9, promptPresetName: summaryPresets[preset] ?? '', viewed: true, createdAt: new Date(), followUps: job.followUps.length, body: ai.text } as MockSummary, ...a]);
-      setJob(null); ai.reset(); toast.success('已归档保存'); setView('archive');
-    }, 700);
+    }
   };
 
   const headerTitle = useMemo(() => {

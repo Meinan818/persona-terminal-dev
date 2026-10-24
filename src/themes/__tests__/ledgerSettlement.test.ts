@@ -95,18 +95,20 @@ describe('theme local ledger settlement', () => {
     expect(claimLedgerChallengeBonus).toHaveBeenCalledTimes(1);
   });
 
-  it('does not turn a natural-month settlement into a pay-cycle reward', async () => {
+  it('uses the configured pay cycle for both totals and completed-period rewards', async () => {
     mockState.current.settings = {
       ...(mockState.current.settings as Settings),
       ledgerPayCycleEnabled: true,
+      ledgerResetDay: 15,
     };
     const snapshot = localLedgerSettlement('month', '2026-09');
 
-    await expect(claimLocalSettlement(snapshot)).resolves.toEqual({
-      bonus: false,
-      challenge: null,
-    });
-    expect(claimLedgerBudgetBonus).not.toHaveBeenCalled();
-    expect(claimLedgerChallengeBonus).not.toHaveBeenCalled();
+    expect(snapshot.data.rangeStart).toBe('2026-09-15');
+    expect(snapshot.data.rangeEnd).toBe('2026-10-14');
+    expect(snapshot.data.totalExpense).toBe(170);
+    expect(snapshot.data.totalIncome).toBe(300);
+    await expect(claimLocalSettlement(snapshot)).resolves.toEqual({ bonus: true, challenge: 70 });
+    expect(claimLedgerBudgetBonus).toHaveBeenCalledWith('2026-09');
+    expect(claimLedgerChallengeBonus).toHaveBeenCalledWith('2026-09');
   });
 });

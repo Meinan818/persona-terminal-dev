@@ -7,6 +7,7 @@ import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { CNY, fmtMoney, fmtPlain, fmtSigned, roundMoney, sanitizeMoneyInput, type P5Account } from '@yellow/mock/pkg5';
+import { ledgerOps } from '@/themes/ledgerOperations';
 
 export function LedgerReconcileSheetView({ open, onClose, initial, remaining = 2, ready = true, accounts = [], onSaved }: { open: boolean; onClose: () => void; initial?: boolean; remaining?: number; ready?: boolean; accounts?: P5Account[]; onSaved?: () => void }) {
   const toast = useToast();
@@ -18,9 +19,24 @@ export function LedgerReconcileSheetView({ open, onClose, initial, remaining = 2
   const canSave = ready && !busy && (initial || remaining > 0) && changed.length > 0;
   const label = !ready ? '账本还在读取…' : busy ? '记录中…' : initial ? (changed.length ? `就这么记（${changed.length} 个账户）` : '填一个账户的余额') : remaining > 0 ? (changed.length ? `校准 ${changed.length} 个账户` : '改了哪个账户就校准哪个') : '本月对账已用完';
   const balanceText = (a: P5Account) => (a.isDebt && a.balance < 0 ? `欠 ${CNY}${fmtMoney(-a.balance)}` : fmtSigned(a.balance));
+  const save = async () => {
+    if (!canSave) return;
+    setBusy(true);
+    try {
+      await ledgerOps.reconcile(changed.map((a) => ({
+        account: a.unassigned ? null : a.name,
+        target: roundMoney(Number(vals[a.name])),
+      })));
+      onClose();
+      onSaved ? onSaved() : toast.success(initial ? '余额已记下' : `已校准 ${changed.length} 个账户`);
+    } catch (e) {
+      setBusy(false);
+      toast.error(`对账失败：${(e as Error)?.message ?? '请重试'}`);
+    }
+  };
   return (
     <P4Sheet open={open} onClose={onClose} title={initial ? '设置当前余额' : '余额对账'} en={initial ? 'OPENING BALANCE' : 'RECONCILE'} size="tall"
-      footer={<P4Button block size="lg" disabled={!canSave} onClick={() => { setBusy(true); window.setTimeout(() => { onClose(); onSaved ? onSaved() : toast.success(initial ? '余额已记下' : `已校准 ${changed.length} 个账户`); }, 420); }}>{label}</P4Button>}>
+      footer={<P4Button block size="lg" disabled={!canSave} onClick={() => void save()}>{label}</P4Button>}>
       <div className="flex min-w-0 flex-col gap-3 pt-1">
         <p className="text-body leading-relaxed text-p4g-ink-soft">
           {initial

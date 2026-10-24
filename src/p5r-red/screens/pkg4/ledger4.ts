@@ -13,6 +13,8 @@ import { todoCompleteP5 } from '@/p5r-red/screens/overlays/cutins.p5r';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { RED_LEDGER } from '@/p5r-red/adapter/live';
 import { RED_LEDGER_BARS } from '@/p5r-red/adapter/live';
+import { ledgerOps } from '@/themes/ledgerOperations';
+import { parseLedgerOffline, splitSegments } from '@/utils/ledgerAI';
 const U = P5.ui;
 const fmt = (n) => Math.abs(n).toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 const yen = (n) => `¥${fmt(n)}`;
@@ -90,15 +92,54 @@ export function ledgerMount(root) {
   };
   const drawBal = () => { const b = root.querySelector('.led-bal'); b.innerHTML = balCard(); };
   const bindRows = () => root.querySelectorAll('.led-row').forEach((r) => { if (r._lp) return; r._lp = 1; P5.longPress(r, () => delRow(+r.dataset.i)); });
-  const delRow = (i) => { const r = L.rows[i]; if (!r) return; P5.confirmDlg({ title: '删除这一笔？', description: `${r.note || (r.dir === 'income' ? '收入' : '支出')} · ¥${fmt(r.amount)}`, tone: 'danger', confirmText: '删除', cancelText: '取消', onConfirm: () => { L.rows.splice(i, 1); drawView(); drawBal(); if (r.id) void useAppStore.getState().deleteLedgerEntry(r.id).catch(() => {}); P5.toast('已删除'); } }); };
-  const saved = (rows) => {
-    const local = rows.map((r) => ({ ...r }));
-    local.forEach((r) => L.rows.unshift(r)); L.empty = false; drawView(); drawBal(); playSaved(local);
-    const store = useAppStore.getState();
-    local.forEach((r) => {
-      void store.addLedgerEntry({ direction: r.dir === 'income' ? 'income' : 'expense', amount: r.amount, note: r.note || undefined, date: r.date || toLocalDateKey(), source: r.source || 'manual', channel: r.ch || undefined, category: r.cat || undefined, type: r.dir === 'expense' ? CAT_TYPE[r.cat] : undefined, incomeType: r.dir === 'income' ? (r.labor ? 'labor' : 'other') : undefined, evalWorth: r.worth === '值得' ? 'worth' : r.worth === '不值' ? 'notWorth' : undefined })
-        .then((e) => { r.id = e.id; }).catch(() => {});
+  const delRow = (i) => {
+    const r = L.rows[i];
+    if (!r) return;
+    P5.confirmDlg({
+      title: '删除这一笔？',
+      description: `${r.note || (r.dir === 'income' ? '收入' : '支出')} · ¥${fmt(r.amount)}`,
+      tone: 'danger',
+      confirmText: '删除',
+      cancelText: '取消',
+      onConfirm: async () => {
+        if (!r.id) return;
+        try {
+          await ledgerOps.remove(r.id);
+          L.rows.splice(i, 1);
+          drawView();
+          drawBal();
+          P5.toast('已删除');
+        } catch (e) {
+          P5.toast(`删除失败：${e?.message || '请重试'}`);
+        }
+      },
     });
+  };
+  const saved = async (rows) => {
+    const requests = rows.map((r) => ({ input: {
+      direction: r.dir === 'income' ? 'income' : 'expense',
+      amount: r.amount,
+      note: r.note || undefined,
+      date: r.date || toLocalDateKey(),
+      source: 'manual',
+      channel: r.ch || undefined,
+      category: r.cat || undefined,
+      type: r.dir === 'expense' ? CAT_TYPE[r.cat] || 'other' : undefined,
+      incomeType: r.dir === 'income' ? (r.labor ? 'labor' : 'other') : undefined,
+      evalWorth: r.worth === '值得' || r.worth === 'worth' ? 'worth' : r.worth === '不值' || r.worth === 'notWorth' ? 'notWorth' : undefined,
+    } }));
+    try {
+      await ledgerOps.saveBatch(requests);
+    } catch (e) {
+      P5.toast(`记账失败：${e?.message || '请重试'}`);
+      throw e;
+    }
+    const local = rows.map((r) => ({ ...r }));
+    L.empty = false;
+    L.rows = FLOW.map((r) => ({ ...r }));
+    drawView();
+    drawBal();
+    playSaved(local);
   };
   bindRows();
   if (L.view === 'stats') drawView();
@@ -107,7 +148,7 @@ export function ledgerMount(root) {
     const row = e.target.closest('.led-row'); if (row && root.contains(row)) return delRow(+row.dataset.i);
     const b = e.target.closest('[data-act]'); if (!b || !root.contains(b) || b.disabled) return; const a = b.dataset.act;
     if (a === 'bal') { L.bal = L.bal === 'month' ? 'total' : 'month'; drawBal(); }
-    if (a === 'budget') openBudgetSheet({ mode: RED_LEDGER.budget != null ? 'edit' : 'first', onSaved: (v, sav) => { L.budget = true; void useAppStore.getState().setBudget(toLocalDateKey().slice(0, 7), { monthlyLimit: v, ...(sav != null ? { savingsGoal: sav } : {}) }).catch(() => {}); drawBal(); } });
+    if (a === 'budget') openBudgetSheet({ mode: RED_LEDGER.budget != null ? 'edit' : 'first', locked: RED_LEDGER.savingsGoalEdits >= 2, onSaved: () => { L.budget = true; drawBal(); } });
     if (a === 'reconcile') openReconcileSheet({ remaining: RED_LEDGER.adjustCount >= 3 ? 0 : 3 - RED_LEDGER.adjustCount });
     if (a === 'setup') openReconcileSheet({ initial: true, remaining: RED_LEDGER.adjustCount >= 3 ? 0 : 3 - RED_LEDGER.adjustCount, onSaved: () => { L.first = false; root.querySelector('.p4-led-setup')?.remove(); } });
     if (a === 'mon') { L.month = Math.min(0, L.month + +b.dataset.d); drawView(); }
@@ -175,18 +216,21 @@ export function openEntrySheet({ text = '', hint = '', dir: d0 = 'expense', pars
       OD.wire(body);
       body.querySelector('[data-dir]').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; p.amount = body.querySelector('[data-amt]').value; p.note = body.querySelector('[data-note]').value; dir = b.dataset.v; draw(); };
       const lb = body.querySelector('[data-labor]'); if (lb) lb.addEventListener('click', () => (labor = lb.classList.contains('on')));
-      body.querySelector('[data-ok]').onclick = (e) => {
+      body.querySelector('[data-ok]').onclick = async (e) => {
         const amt = parseFloat(body.querySelector('[data-amt]').value); if (!(amt > 0)) { shake(body.querySelector('.p4-amt')); body.querySelector('[data-amt]').classList.add('p4-bad'); return; }
         const b = e.currentTarget; b.querySelector('span').textContent = '保存中…'; b.disabled = true;
-        setTimeout(() => {
-          const cat = body.querySelector('[data-chips="cat"] .on')?.dataset.v;
-          const worth = body.querySelector('[data-chips="worth"] .on')?.dataset.v;
-          const date = body.querySelector('.fld input[type="date"]')?.value || toLocalDateKey();
-          const ch = body.querySelector('[data-chips="ch"] .on, [data-chips="acct"] .on')?.dataset.v || '微信';
+        const cat = body.querySelector('[data-chips="cat"] .on')?.dataset.v;
+        const worth = body.querySelector('[data-chips="worth"] .on')?.dataset.v;
+        const date = body.querySelector('.fld input[type="date"]')?.value || toLocalDateKey();
+        const ch = body.querySelector('[data-chips="ch"] .on, [data-chips="acct"] .on')?.dataset.v || '微信';
+        const out = [{ note: body.querySelector('[data-note]').value.trim() || (dir === 'income' ? '收入' : '支出'), amount: amt, dir, ch, d: 0, labor, cat, worth, date, source: 'manual' }];
+        try {
+          if (onSaved) await onSaved(out); else playSaved(out);
           close();
-          const out = [{ note: body.querySelector('[data-note]').value.trim() || (dir === 'income' ? '收入' : '支出'), amount: amt, dir, ch, d: 0, labor, cat, worth, date, source: text ? 'ai' : 'manual' }];
-          onSaved ? onSaved(out) : playSaved([{ note: '咖啡', amount: amt, dir, labor }]);
-        }, P5.reduced() ? 0 : 600);
+        } catch {
+          b.querySelector('span').textContent = '保存';
+          b.disabled = false;
+        }
       };
       bindChips(body);
       if (!P5.reduced()) P5.panelIn(body.children, { stagger: .03 });
@@ -219,13 +263,21 @@ export function openBatchSheet({ text = '', hint = '', onSaved } = {}) {
     draw();
     body.addEventListener('input', (e) => { const r = e.target.closest('.p4-brow'), f = e.target.dataset.f; if (r && f) rows[+r.dataset.i][f] = e.target.value; });
     body.addEventListener('change', (e) => { const r = e.target.closest('.p4-brow'), f = e.target.dataset.f; if (r && f) rows[+r.dataset.i][f] = e.target.value; });
-    body.addEventListener('click', (e) => {
+    body.addEventListener('click', async (e) => {
       const d = e.target.closest('[data-bdir] button'); if (d) { const i = +d.closest('.p4-brow').dataset.i; rows[i].dir = d.dataset.v; rows[i].cat = d.dataset.v === 'expense' ? '餐饮' : '兼职'; draw(); return; }
       const b = e.target.closest('[data-act]'); if (b) { if (b.dataset.act === 'rm') { rows.splice(+b.closest('.p4-brow').dataset.i, 1); draw(); } if (b.dataset.act === 'addrow') { rows.push({ dir: 'expense', cat: '餐饮', amount: '', ch: '微信', note: '' }); draw(); P5.panelIn([body.querySelector('.p4-brows').lastElementChild], { from: 'right' }); } return; }
       const ok = e.target.closest('[data-ok]'); if (!ok || ok.disabled) return;
       const bad = rows.findIndex((r) => !(parseFloat(r.amount) > 0)); if (bad >= 0) { const el = body.querySelectorAll('.p4-brow')[bad]; el.querySelector('.p4-bamt').classList.add('p4-bad'); shake(el); return; }
       ok.querySelector('span').textContent = '保存中…'; ok.disabled = true;
-      setTimeout(() => { close(); const out = rows.map((r) => ({ note: r.note || r.cat, amount: parseFloat(r.amount), dir: r.dir, ch: r.ch || '微信', d: 0, cat: r.cat, date: toLocalDateKey(), source: 'ai' })); onSaved ? onSaved(out) : playSaved(out); }, P5.reduced() ? 0 : 600);
+      const date = body.querySelector('.fld input[type="date"]')?.value || toLocalDateKey();
+      const out = rows.map((r) => ({ note: r.note || r.cat, amount: parseFloat(r.amount), dir: r.dir, ch: r.ch || '微信', d: 0, cat: r.cat, date, source: 'manual' }));
+      try {
+        if (onSaved) await onSaved(out); else playSaved(out);
+        close();
+      } catch {
+        ok.querySelector('span').textContent = `全部保存（${rows.length}）`;
+        ok.disabled = false;
+      }
     });
   } });
 }
@@ -233,23 +285,38 @@ export function openBatchSheet({ text = '', hint = '', onSaved } = {}) {
 /** 本月预算 / 新的一程（真实 Ledger.tsx#BudgetSheet）：mode first | edit；locked = 本月修改次数已用完 */
 export function openBudgetSheet({ mode = 'edit', locked = false, onSaved } = {}) {
   const first = mode === 'first';
+  const resetDay = RED_LEDGER.resetDay || 1;
   return P5.sheet(first ? '新的一程 · 立个目标' : '本月预算', `<p class="sh-p">${first ? '新的一程开始了——给自己定个花费节奏，和一个想攒下的小目标。' : '设一个本月的花费上限——它是你的纪律线，不影响总余额。'}</p>
     <label class="fld"><span>花费目标 <small class="muted-d">本月</small></span><input class="inp p4-amt-in" data-lim inputmode="decimal" value="${first ? '' : (RED_LEDGER.budget ?? '')}" placeholder="¥ 0"></label>
     <div class="fld"><span>🏆 省钱挑战 · 这个月想省下 <small class="${locked ? 'od-err' : 'muted-d'}">${locked ? '本月修改次数已用完' : '还可改 2 次'}</small></span><input class="inp" inputmode="decimal" value="${first ? '' : (RED_LEDGER.savingsGoal ?? '')}" placeholder="¥ 0" ${locked ? 'disabled' : ''}><small class="muted-d">月底「预算 − 实际花费」达到这个数，次月结算 +10 SP 🎉</small></div>
-    <div class="fld"><span>每月重置日 <small class="muted-d">发薪日 · 决定何时提醒你规划新一程</small></span><select class="inp" aria-label="每月重置日">${Array.from({ length: 28 }, (_, i) => `<option ${i + 1 === 10 ? 'selected' : ''} value="${i + 1}">${i + 1} 日起算${i === 0 ? '（自然月初）' : ''}</option>`).join('')}</select></div>
+    <div class="fld"><span>每月重置日 <small class="muted-d">发薪日 · 决定何时提醒你规划新一程</small></span><select class="inp" data-reset aria-label="每月重置日">${Array.from({ length: 28 }, (_, i) => `<option ${i + 1 === resetDay ? 'selected' : ''} value="${i + 1}">${i + 1} 日起算${i === 0 ? '（自然月初）' : ''}</option>`).join('')}</select></div>
     <div class="sh-acts">${U.btn('就这么定', { tone: 'red', size: 'lg', seed: 331, attrs: 'data-ok' })}</div>`, { seed: 45, onMount: (sh, close) => {
-    sh.querySelector('[data-ok]').onclick = () => { const v = parseFloat(sh.querySelector('[data-lim]').value); if (!(v > 0)) { sh.querySelector('[data-lim]').classList.add('p4-bad'); shake(sh.querySelector('[data-lim]')); return; } const sav = parseFloat(sh.querySelectorAll('input.inp')[1]?.value); close(); onSaved && onSaved(v, Number.isFinite(sav) ? sav : undefined); };
+    sh.querySelector('[data-ok]').onclick = async (e) => {
+      const v = parseFloat(sh.querySelector('[data-lim]').value);
+      if (!(v > 0)) { sh.querySelector('[data-lim]').classList.add('p4-bad'); shake(sh.querySelector('[data-lim]')); return; }
+      const sav = parseFloat(sh.querySelectorAll('input.inp')[1]?.value);
+      const nextReset = Number(sh.querySelector('[data-reset]').value) || 1;
+      const btn = e.currentTarget;
+      const label = btn.querySelector('span');
+      label.textContent = '保存中…';
+      btn.disabled = true;
+      try {
+        await ledgerOps.saveBudget(v, Number.isFinite(sav) ? sav : undefined, nextReset);
+        close();
+        onSaved && onSaved(v, Number.isFinite(sav) ? sav : undefined);
+      } catch (err) {
+        P5.toast(`预算失败：${err?.message || '请重试'}`);
+        label.textContent = '就这么定';
+        btn.disabled = false;
+      }
+    };
   } });
 }
 
 /** 余额对账 / 设置当前余额（真实 Ledger.tsx#ReconcileSheet）：initial 首次；remaining 剩余轮数；fail 演示对账失败 */
-const ACCTS = [
-  { name: '支付宝', bal: 0 }, { name: '微信', bal: 0 }, { name: '银行卡', bal: 0 },
-  { name: '信用卡', bal: 0, debt: true }, { name: '未分配', bal: 0, unassigned: true },
-];
 function realAccounts() {
   const rows = useAppStore.getState().getAccountBalances();
-  return ACCTS.map((a) => ({ ...a, bal: rows.find((r) => r.name === a.name)?.balance ?? 0, debt: rows.find((r) => r.name === a.name)?.isDebt ?? a.debt ?? false }));
+  return rows.map((a) => ({ name: a.name, bal: a.balance, debt: a.isDebt, unassigned: a.unassigned }));
 }
 export function openReconcileSheet({ initial = false, remaining = 2, fail = false, onSaved } = {}) {
   const vals = {};
@@ -264,13 +331,33 @@ export function openReconcileSheet({ initial = false, remaining = 2, fail = fals
       ok.disabled = !can; ok.classList.toggle('od-dis', !can); };
     sh.addEventListener('input', (e) => { const a = e.target.dataset.a; if (!a) return; e.target.value = e.target.value.replace(/[^\d.-]/g, ''); vals[a] = e.target.value; upd(); });
     upd();
-    ok.onclick = () => { if (ok.disabled) return; lab.textContent = '记录中…'; ok.disabled = true; const er = sh.querySelector('[data-err]'); er.hidden = true;
-      setTimeout(() => { if (fail) { er.hidden = false; er.textContent = '对账失败'; ok.disabled = false; upd(); return; }
-        const targets = Object.entries(vals).map(([account, target]) => ({ account, target: Number(target) })).filter((t) => Number.isFinite(t.target));
-        void useAppStore.getState().adjustAccountBalances(targets).then((r) => {
-          if (!r.ok) { er.hidden = false; er.textContent = r.reason ?? '对账失败'; ok.disabled = false; upd(); return; }
-          close(); P5.toast(initial ? '余额已设置' : '已校准'); onSaved && onSaved();
-        }).catch(() => { er.hidden = false; er.textContent = '对账失败'; ok.disabled = false; upd(); });
-      }, P5.reduced() ? 0 : 700); };
+    ok.onclick = async () => {
+      if (ok.disabled) return;
+      lab.textContent = '记录中…';
+      ok.disabled = true;
+      const er = sh.querySelector('[data-err]');
+      er.hidden = true;
+      if (fail) {
+        er.hidden = false;
+        er.textContent = '对账失败';
+        ok.disabled = false;
+        upd();
+        return;
+      }
+      const targets = Object.entries(vals)
+        .map(([account, target]) => ({ account: account === '未分配' ? null : account, target: Number(target) }))
+        .filter((t) => Number.isFinite(t.target));
+      try {
+        await ledgerOps.reconcile(targets);
+        close();
+        P5.toast(initial ? '余额已设置' : '已校准');
+        onSaved && onSaved();
+      } catch (err) {
+        er.hidden = false;
+        er.textContent = err?.message || '对账失败';
+        ok.disabled = false;
+        upd();
+      }
+    };
   } });
 }

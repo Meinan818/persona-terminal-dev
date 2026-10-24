@@ -19,6 +19,7 @@ import { useBoldness } from '@/utils/boldness';
 import { calcCurrentStreak, streakDates } from '@/utils/streak';
 import { TAROT_BY_ID } from '@/constants/tarot';
 import type { Activity, Achievement, AttributeId, CallingCard, Confidant, LedgerEntry, Skill, Todo } from '@/types';
+import { ledgerCycle } from '@/utils/ledgerFormat';
 import { D, type AttrId, type MockCallingCard, type MockConfidant, type MockTodo } from '@/p5r-red/mock/data';
 import { ACTIVITIES, CALLING_ARCHIVED, CALLING_CARDS, ACHIEVEMENTS, SKILLS, type MockAch, type MockActivity, type MockCC, type MockSkill, type CondType } from '@/p5r-red/mock/pkg5-data';
 import { FLOW } from '@/p5r-red/screens/pkg4/ledger4';
@@ -108,11 +109,33 @@ function skillPkg5(k: Skill): MockSkill {
   return { id: k.id, name: k.name, description: k.description, requiredAttribute: k.requiredAttribute as AttrId, requiredLevel: k.requiredLevel, bonusMultiplier: k.bonusMultiplier ?? 1, unlocked: k.unlocked };
 }
 function ledgerRow(e: LedgerEntry) {
-  return { id: e.id, note: e.note || e.category || (e.direction === 'income' ? '收入' : '支出'), amount: e.amount, dir: e.direction === 'income' ? 'income' : 'expense', ch: e.channel || '', d: daysAgo(e.date) };
+  return {
+    id: e.id,
+    note: e.note || e.category || (e.direction === 'income' ? '收入' : '支出'),
+    amount: e.amount,
+    dir: e.direction === 'income' ? 'income' : 'expense',
+    ch: e.channel || '',
+    d: daysAgo(e.date),
+    date: e.date,
+    type: e.type,
+    cat: e.category,
+    labor: e.incomeType === 'labor',
+    worth: e.evalWorth,
+  };
 }
 
 /** 记账页真实合计（页面在渲染时读，随 store 同步更新） */
-export const RED_LEDGER = { expense: 0, income: 0, total: 0, budget: null as number | null, savingsGoal: null as number | null, adjustCount: 0 };
+export const RED_LEDGER = {
+  expense: 0,
+  income: 0,
+  total: 0,
+  budget: null as number | null,
+  savingsGoal: null as number | null,
+  savingsGoalEdits: 0,
+  adjustCount: 0,
+  period: '',
+  resetDay: 1,
+};
 
 /** 近 9 日每日支出（真实流水派生）；没有记录的日期是 0，不填演示数字 */
 export const RED_LEDGER_BARS: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -182,15 +205,18 @@ export function syncLiveDataNow(s: S = useAppStore.getState()) {
   // 羁绊（离线 + 在线同伴，未归档）
   fill(D.confidants, s.confidants.filter((c) => !c.archivedAt).map(confidantMock));
   // 记账：本月流水（页面合计里的固定基数见 README「未接」）
-  const month = today.slice(0, 7);
-  fill(FLOW as ReturnType<typeof ledgerRow>[], s.ledgerEntries.filter((e) => e.date.startsWith(month)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(ledgerRow));
-  RED_LEDGER.expense = s.getPeriodExpense(month);
-  RED_LEDGER.income = s.getPeriodIncome(month);
+  const cycle = ledgerCycle(s.settings.ledgerPayCycleEnabled === true, s.settings.ledgerResetDay ?? 1, today);
+  fill(FLOW as ReturnType<typeof ledgerRow>[], s.ledgerEntries.filter((e) => e.date >= cycle.start && e.date <= cycle.end).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30).map(ledgerRow));
+  RED_LEDGER.expense = s.getPeriodExpense(cycle.key);
+  RED_LEDGER.income = s.getPeriodIncome(cycle.key);
   RED_LEDGER.total = s.getTotalBalance();
-  const budget = s.getBudget(month);
+  const budget = s.getBudget(cycle.key);
   RED_LEDGER.budget = budget?.monthlyLimit ?? null;
   RED_LEDGER.savingsGoal = budget?.savingsGoal ?? null;
+  RED_LEDGER.savingsGoalEdits = budget?.savingsGoalEdits ?? 0;
   RED_LEDGER.adjustCount = s.getAdjustCountThisMonth();
+  RED_LEDGER.period = cycle.key;
+  RED_LEDGER.resetDay = s.settings.ledgerResetDay ?? 1;
   // 近 9 日支出
   syncDailyBars(s);
 }

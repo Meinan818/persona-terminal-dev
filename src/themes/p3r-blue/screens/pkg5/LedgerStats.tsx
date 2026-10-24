@@ -12,8 +12,8 @@ import { useBoldness } from '@blue/lib/prefs';
 import { BarRow, GlassSlab, MiniHead, MonthNav, Ring, TrophyGlyph } from './ui';
 import { LedgerSettleSheetView } from '@blue/screens/overlays/LedgerSettleSheet.p3r';
 import { CNY, catMeta, fmtMoney, fmtSigned, monthLabel, shiftMonth } from '@blue/mock/pkg5';
-import { useMonthlyLedgerTotals, useRealLedgerBudget } from '@/themes/ledgerBudgetData';
-import { toLocalDateKey } from '@/store';
+import { useAppStore, toLocalDateKey } from '@/store';
+import { cycleRangeForKey, ledgerCycle } from '@/utils/ledgerFormat';
 import type { LedgerEntry, LedgerExpenseType } from '@real/types';
 
 export const OrbGlyph = () => (
@@ -22,38 +22,49 @@ export const OrbGlyph = () => (
 
 export function LedgerStats({ entries, forceEmpty }: { entries: LedgerEntry[]; forceEmpty?: boolean }) {
   const anim = useBoldness();
-  // 统计月份从真实流水里取最近有记录的一个月（原来写死 '2026-10'）。
-  const monthlyTotals = useMonthlyLedgerTotals();
-  const realBudget = useRealLedgerBudget();
-  const latestMonth = monthlyTotals.length > 0 ? monthlyTotals[monthlyTotals.length - 1].month : toLocalDateKey().slice(0, 7);
-  const currentMonth = toLocalDateKey().slice(0, 7);
-  const [period, setPeriod] = useState(latestMonth);
+  const settings = useAppStore((s) => s.settings);
+  const getBudget = useAppStore((s) => s.getBudget);
+  const payCycle = settings.ledgerPayCycleEnabled === true;
+  const resetDay = settings.ledgerResetDay ?? 1;
+  const today = toLocalDateKey();
+  const currentMonth = ledgerCycle(payCycle, resetDay, today).key;
+  const rangeOf = (key: string) => cycleRangeForKey(payCycle, resetDay, key);
+  const rangeLabel = (key: string) => {
+    if (!payCycle) return monthLabel(key);
+    const [start, end] = rangeOf(key);
+    return `${Number(start.slice(5, 7))}/${Number(start.slice(8, 10))} – ${Number(end.slice(5, 7))}/${Number(end.slice(8, 10))}`;
+  };
+  const [period, setPeriod] = useState(currentMonth);
+  const [periodStart, periodEnd] = rangeOf(period);
+  const [prevStart, prevEnd] = rangeOf(shiftMonth(period, -1));
   const [settle, setSettle] = useState(false);
-  const inP = entries.filter((e) => e.date.startsWith(period) && !forceEmpty);
+  const inP = forceEmpty ? [] : entries.filter((e) => e.date >= periodStart && e.date <= periodEnd);
   const exp = inP.filter((e) => e.direction === 'expense');
   const inc = inP.filter((e) => e.direction === 'income');
   const totalExpense = exp.reduce((s, e) => s + e.amount, 0);
   const totalIncome = inc.reduce((s, e) => s + e.amount, 0);
-  const prevExpense = entries.filter((e) => e.direction === 'expense' && e.date.startsWith(shiftMonth(period, -1))).reduce((s, e) => s + e.amount, 0);
+  const prevExpense = entries.filter((e) => e.direction === 'expense' && e.date >= prevStart && e.date <= prevEnd).reduce((s, e) => s + e.amount, 0);
   const byCat = Object.entries(exp.reduce<Record<string, number>>((m, e) => { m[e.type ?? 'other'] = (m[e.type ?? 'other'] ?? 0) + e.amount; return m; }, {})).sort((a, b) => b[1] - a[1]) as [LedgerExpenseType, number][];
   const byCh = Object.entries(exp.reduce<Record<string, number>>((m, e) => { const k = e.channel ?? '未填'; m[k] = (m[k] ?? 0) + e.amount; return m; }, {})).sort((a, b) => b[1] - a[1]);
   const labor = inc.filter((e) => e.incomeType === 'labor').reduce((s, e) => s + e.amount, 0);
-  // 预算只对当前真实周期生效；翻到别的月份没有预算记录就不显示预算条。
-  const budget = period === latestMonth ? realBudget.monthlyLimit : 0;
+  const selectedBudget = getBudget(period);
+  const budget = selectedBudget?.monthlyLimit ?? 0;
+  const savingsGoal = selectedBudget?.savingsGoal ?? 0;
   const over = totalExpense > budget;
   const progress = budget ? totalExpense / budget : 0;
   const momPct = prevExpense > 0 ? ((totalExpense - prevExpense) / prevExpense) * 100 : null;
-  // 趋势取真实月度汇总；没有记录的月份就是 0（原来用写死的 1820/2410/2960/2205）。
+  // 趋势与预算使用同一周期口径，发薪日周期开启时不再把日历月当作预算周期。
   const trend = [-5, -4, -3, -2, -1, 0].map((d) => {
     const m = shiftMonth(period, d);
-    const v = d === 0 ? totalExpense : d === -1 ? prevExpense : monthlyTotals.find((t) => t.month === m)?.expense ?? 0;
+    const [start, end] = rangeOf(m);
+    const v = entries.filter((e) => e.direction === 'expense' && e.date >= start && e.date <= end).reduce((sum, e) => sum + e.amount, 0);
     return { m, v };
   });
   const maxTrend = Math.max(1, ...trend.map((t) => t.v));
   const hasAny = totalExpense > 0 || totalIncome > 0;
   return (
     <P3Stagger className="flex min-w-0 flex-col gap-4">
-      <P3StaggerItem><MonthNav label={monthLabel(period)} onPrev={() => setPeriod((p) => shiftMonth(p, -1))} onNext={() => setPeriod((p) => shiftMonth(p, 1))} nextDisabled={period >= currentMonth} /></P3StaggerItem>
+      <P3StaggerItem><MonthNav label={rangeLabel(period)} onPrev={() => setPeriod((p) => shiftMonth(p, -1))} onNext={() => setPeriod((p) => shiftMonth(p, 1))} nextDisabled={period >= currentMonth} /></P3StaggerItem>
       <P3StaggerItem>
         <GlassSlab cut={16}>
           <div className="px-6 py-4">
@@ -83,9 +94,9 @@ export function LedgerStats({ entries, forceEmpty }: { entries: LedgerEntry[]; f
               <div className="relative h-[11px] w-full overflow-hidden" style={{ background: 'var(--p3r-track)', clipPath: slantClip(3) }}>
                 <motion.div className="absolute inset-y-0 left-0 w-full origin-left" style={{ background: over ? P3R.magenta : `linear-gradient(90deg, ${P3R.blue}, ${P3R.cyan})` }} initial={anim ? { scaleX: 0 } : false} animate={{ scaleX: Math.min(1, progress) }} transition={{ type: 'spring', stiffness: 110, damping: 20 }} />
               </div>
-              {realBudget.savingsGoal > 0 && (
+              {savingsGoal > 0 && (
                 <div className="mt-3 flex items-baseline justify-between border-t-2 border-dotted pt-2 text-[13px] font-black" style={{ borderColor: 'rgb(var(--p3r-cyan-rgb) / 0.6)', color: P3R.ink }}>
-                  <span><TrophyGlyph /> 省钱挑战 · 想省</span><span className="font-cond text-[16px]" style={{ color: P3R.roseInk }}>{CNY}{fmtMoney(realBudget.savingsGoal)}</span>
+                  <span><TrophyGlyph /> 省钱挑战 · 想省</span><span className="font-cond text-[16px]" style={{ color: P3R.roseInk }}>{CNY}{fmtMoney(savingsGoal)}</span>
                 </div>
               )}
             </div>

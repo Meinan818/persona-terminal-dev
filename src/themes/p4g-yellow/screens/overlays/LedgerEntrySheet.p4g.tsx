@@ -11,6 +11,7 @@ import { cx } from '@yellow/lib/cx';
 import { P5Label, P5Pick, TagPicker, DateQuickPicker } from '@yellow/screens/pkg5/ui';
 import { ATTR_IDS, ATTR_NAMES, CATEGORY_KEYS, CNY, DEFAULT_CHANNELS, DEFAULT_INCOME_SOURCES, P5_TODAY, catMeta, fmtMoney, incomeTypeFromSource, isGrowthCategory, moneyFromInput, sanitizeMoneyInput } from '@yellow/adapters/pkg5';
 import { ledgerOps } from '@/themes/ledgerOperations';
+import { useAppStore } from '@/store';
 
 export interface EntryDraft {
   direction: 'expense' | 'income'; amount: string; type: LedgerExpenseType; incomeSource: string; category: string; channel: string; note: string; date: string;
@@ -22,14 +23,23 @@ export interface LedgerEntrySheetProps { open: boolean; onClose: () => void; ini
 
 export function LedgerEntrySheetView({ open, onClose, initial, hint, spendEval = true, onSaved }: LedgerEntrySheetProps) {
   const toast = useToast();
+  const settings = useAppStore((s) => s.settings);
   const [d, setD] = useState<EntryDraft>(initial ?? emptyDraft());
-  const [channels, setChannels] = useState(DEFAULT_CHANNELS);
-  const [sources, setSources] = useState(DEFAULT_INCOME_SOURCES);
-  const [subCats, setSubCats] = useState<string[]>(['早餐', '午饭', '咖啡']);
+  const [channels, setChannels] = useState(settings.ledgerChannels ?? DEFAULT_CHANNELS);
+  const [sources, setSources] = useState(settings.ledgerIncomeSources ?? DEFAULT_INCOME_SOURCES);
+  const [subCats, setSubCats] = useState<string[]>(settings.ledgerCategories ?? []);
   const [chExpanded, setChExpanded] = useState(false);
   const [subOpen, setSubOpen] = useState(!!initial?.category);
   const [saving, setSaving] = useState(false);
-  useEffect(() => { if (open) { setD(initial ?? emptyDraft()); setSubOpen(!!initial?.category); setSaving(false); } }, [open]); // eslint-disable-line
+  useEffect(() => {
+    if (!open) return;
+    setD(initial ?? { ...emptyDraft(), channel: settings.ledgerLastChannel || emptyDraft().channel });
+    setChannels(settings.ledgerChannels ?? DEFAULT_CHANNELS);
+    setSources(settings.ledgerIncomeSources ?? DEFAULT_INCOME_SOURCES);
+    setSubCats(settings.ledgerCategories ?? []);
+    setSubOpen(!!initial?.category);
+    setSaving(false);
+  }, [open]); // eslint-disable-line
   const set = (p: Partial<EntryDraft>) => setD((x) => ({ ...x, ...p }));
   const amt = moneyFromInput(d.amount);
   const save = () => {
@@ -37,18 +47,23 @@ export function LedgerEntrySheetView({ open, onClose, initial, hint, spendEval =
     setSaving(true);
     const label = d.note.trim() || (d.direction === 'income' ? d.incomeSource.trim() : d.category.trim() || d.channel.trim()) || (d.direction === 'expense' ? '支出' : '收入');
     const s = `${d.direction === 'expense' ? '−' : '+'}${CNY}${fmtMoney(amt)} · ${label}`;
-    ledgerOps.add({
+    ledgerOps.saveEntry({
       direction: d.direction,
       amount: amt,
       type: d.direction === 'expense' ? d.type : undefined,
-      category: d.category || undefined,
+      category: (d.direction === 'income' ? d.incomeSource : d.category).trim() || undefined,
       channel: d.channel || undefined,
       note: d.note || undefined,
       date: d.date,
       source: 'manual',
       incomeType: d.direction === 'income' ? incomeTypeFromSource(d.incomeSource) : undefined,
-      ...(d.attribute ? { attribute: d.attribute } : {}),
+      ...(d.direction === 'expense' && isGrowthCategory(d.type) && d.attribute ? { attribute: d.attribute } : {}),
       ...(d.evalWorth ? { evalWorth: d.evalWorth } : {}),
+    }, {
+      attribute: d.attribute,
+      attrPoints: d.attrPoints,
+      evalWorth: d.evalWorth,
+      registerAsset: d.direction === 'expense' && d.registerAsset,
     }).then(() => {
       onClose();
       onSaved ? onSaved(s) : toast.success(`记账完成 ${s}`);
@@ -57,7 +72,12 @@ export function LedgerEntrySheetView({ open, onClose, initial, hint, spendEval =
       toast.error(`记账失败：${(e as Error)?.message ?? '请重试'}`);
     });
   };
-  const add = (setter: (f: (x: string[]) => string[]) => void) => (v: string) => setter((xs) => (xs.includes(v) ? xs : [...xs, v]));
+  const add = (kind: 'channel' | 'incomeSource' | 'category', setter: (f: (x: string[]) => string[]) => void) => (raw: string) => {
+    const v = raw.trim();
+    if (!v) return;
+    setter((xs) => (xs.includes(v) ? xs : [...xs, v]));
+    void ledgerOps.rememberOption(kind, v).catch((e) => toast.error(`选项保存失败：${(e as Error)?.message ?? '请重试'}`));
+  };
 
   return (
     <P4Sheet open={open} onClose={onClose} title="确认这一笔" en="ENTRY CHECK" size="tall"
@@ -94,10 +114,10 @@ export function LedgerEntrySheetView({ open, onClose, initial, hint, spendEval =
         ) : (
           <div className="flex min-w-0 flex-col gap-2">
             <P5Label>来源</P5Label>
-            <TagPicker options={sources} value={d.incomeSource} onChange={(v) => set({ incomeSource: v })} onAdd={add(setSources)} addPlaceholder="新来源" accent="green" />
+            <TagPicker options={sources} value={d.incomeSource} onChange={(v) => set({ incomeSource: v })} onAdd={add('incomeSource', setSources)} addPlaceholder="新来源" accent="green" />
             {incomeTypeFromSource(d.incomeSource) === 'labor' && <span className="w-max rounded-xs bg-p4g-green px-2 py-0.5 font-display text-meta font-bold text-p4g-black">劳动所得 · 记账 +10 SP</span>}
             <P5Label aside="可选" className="pt-1">到账账户</P5Label>
-            <TagPicker options={channels} value={d.channel} onChange={(v) => set({ channel: v })} onAdd={add(setChannels)} addPlaceholder="新账户" collapsedCount={6} expanded={chExpanded} onToggleExpand={() => setChExpanded((x) => !x)} />
+            <TagPicker options={channels} value={d.channel} onChange={(v) => set({ channel: v })} onAdd={add('channel', setChannels)} addPlaceholder="新账户" collapsedCount={6} expanded={chExpanded} onToggleExpand={() => setChExpanded((x) => !x)} />
           </div>
         )}
 
@@ -142,12 +162,12 @@ export function LedgerEntrySheetView({ open, onClose, initial, hint, spendEval =
           <>
             <div className="flex min-w-0 flex-col gap-2">
               <P5Label>支付渠道</P5Label>
-              <TagPicker options={channels} value={d.channel} onChange={(v) => set({ channel: v })} onAdd={add(setChannels)} addPlaceholder="新渠道" collapsedCount={6} expanded={chExpanded} onToggleExpand={() => setChExpanded((x) => !x)} />
+              <TagPicker options={channels} value={d.channel} onChange={(v) => set({ channel: v })} onAdd={add('channel', setChannels)} addPlaceholder="新渠道" collapsedCount={6} expanded={chExpanded} onToggleExpand={() => setChExpanded((x) => !x)} />
             </div>
             {subOpen ? (
               <div className="flex min-w-0 flex-col gap-2">
                 <P5Label aside="可选">细分类目</P5Label>
-                <TagPicker options={subCats} value={d.category} onChange={(v) => set({ category: v })} onAdd={add(setSubCats)} addPlaceholder="如：早餐" />
+                <TagPicker options={subCats} value={d.category} onChange={(v) => set({ category: v })} onAdd={add('category', setSubCats)} addPlaceholder="如：早餐" />
               </div>
             ) : (
               <button type="button" onClick={() => setSubOpen(true)} className="w-max font-display text-meta font-bold text-p4g-ink-soft underline decoration-p4g-orange decoration-2 underline-offset-4">＋ 细分类目（可选）</button>

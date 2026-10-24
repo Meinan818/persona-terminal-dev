@@ -48,6 +48,12 @@ it('预算设置失败可重试，不重复消耗挑战次数；两次写入的�
   expect(h.budgets.get('2026-10')?.savingsGoalEdits).toBe(1);
   expect(h.settings?.ledgerResetDay).toBe(10);
 });
+it('未填写省钱目标不占用修改次数', async () => {
+  await ledgerOps.saveBudget(1200, 0, 5);
+  expect(h.budgets.get('2026-10')?.monthlyLimit).toBe(1200);
+  expect(h.budgets.get('2026-10')?.savingsGoalEdits ?? 0).toBe(0);
+  expect(h.budgets.get('2026-10')?.savingsGoal).toBeUndefined();
+});
 it('非法预算和资产金额拒绝落库', async () => {
   for (const n of [NaN, Infinity, 0, -1]) {
     await expect(ledgerOps.saveBudget(n, undefined, 1)).rejects.toThrow('无效');
@@ -89,4 +95,95 @@ it('对账第二笔失败整批回滚，内存恢复后重试只写一组', asyn
   expect(h.entries).toEqual([]); expect(useAppStore.getState().ledgerEntries).toEqual([]);
   await ledgerOps.reconcile(targets);
   expect(h.entries).toHaveLength(2); expect(useAppStore.getState().getTotalBalance()).toBe(600);
+});
+it('单笔落账等待奖励与资产回链，失败不会被界面当成成功', async () => {
+  const addLedgerEntry = vi.fn(async (input: Omit<LedgerEntry, 'id' | 'createdAt' | 'currency'>) => {
+    const entry = { ...input, id: 'entry-1', currency: 'CNY', createdAt: new Date() } as LedgerEntry;
+    h.entries.push(entry);
+    return entry;
+  });
+  const rewardForLedgerEntry = vi.fn(async () => {});
+  const addAsset = vi.fn(async (input: Omit<LedgerAsset, 'id' | 'createdAt'>) => ({ ...input, id: 'asset-1', createdAt: new Date() }));
+  const updateSettings = vi.fn(async () => {});
+  useAppStore.setState({ ...useAppStore.getState(), addLedgerEntry, rewardForLedgerEntry, addAsset, updateSettings });
+
+  const saved = await ledgerOps.saveEntry({
+    direction: 'expense',
+    amount: 399,
+    date: '2026-10-21',
+    source: 'manual',
+    type: 'study',
+    channel: '微信',
+    note: '课程',
+  }, {
+    attribute: 'knowledge',
+    attrPoints: 2,
+    evalWorth: 'worth',
+    registerAsset: true,
+  });
+
+  expect(saved.id).toBe('entry-1');
+  expect(rewardForLedgerEntry).toHaveBeenCalledWith(saved, {
+    attribute: 'knowledge',
+    attrPoints: 2,
+    evalWorth: 'worth',
+  });
+  expect(addAsset).toHaveBeenCalledWith(expect.objectContaining({
+    name: '课程',
+    price: 399,
+    purchaseDate: '2026-10-21',
+    linkedEntryId: 'entry-1',
+  }));
+  expect(updateSettings).toHaveBeenCalledWith({ ledgerLastChannel: '微信' });
+
+  rewardForLedgerEntry.mockRejectedValueOnce(new Error('synthetic reward failure'));
+  const deleteLedgerEntry = vi.fn(async () => {});
+  useAppStore.setState({ ...useAppStore.getState(), deleteLedgerEntry });
+  await expect(ledgerOps.saveEntry({
+    direction: 'expense', amount: 10, date: '2026-10-21', source: 'manual', type: 'food',
+  })).rejects.toThrow('synthetic reward failure');
+  expect(deleteLedgerEntry).toHaveBeenCalledWith('entry-1');
+});
+it('批量落账先全量校验；中途中失败会回收已写条目', async () => {
+  const addLedgerEntry = vi.fn()
+    .mockImplementationOnce(async (input: Omit<LedgerEntry, 'id' | 'createdAt' | 'currency'>) => {
+      const entry = { ...input, id: 'entry-1', currency: 'CNY', createdAt: new Date() } as LedgerEntry;
+      h.entries.push(entry);
+      return entry;
+    })
+    .mockRejectedValueOnce(new Error('synthetic batch failure'));
+  const deleteLedgerEntry = vi.fn(async (id: string) => { h.entries = h.entries.filter(e => e.id !== id); });
+  const rewardForLedgerEntry = vi.fn(async () => {});
+  useAppStore.setState({ ...useAppStore.getState(), addLedgerEntry, deleteLedgerEntry, rewardForLedgerEntry, updateSettings: vi.fn(async () => {}) });
+
+  await expect(ledgerOps.saveBatch([
+    { input: { direction: 'expense', amount: 10, date: '2026-10-21', source: 'manual', type: 'food' } },
+    { input: { direction: 'expense', amount: 20, date: '2026-10-21', source: 'manual', type: 'food' } },
+  ])).rejects.toThrow('synthetic batch failure');
+  expect(deleteLedgerEntry).toHaveBeenCalledWith('entry-1');
+  expect(h.entries).toEqual([]);
+
+  addLedgerEntry.mockClear();
+  await expect(ledgerOps.saveBatch([
+    { input: { direction: 'expense', amount: 10, date: '2026-10-21', source: 'manual', type: 'food' } },
+    { input: { direction: 'expense', amount: 0, date: '2026-10-21', source: 'manual', type: 'food' } },
+  ])).rejects.toThrow('金额');
+  expect(addLedgerEntry).not.toHaveBeenCalled();
+});
+it('账户、来源和细分类目选项持久化到真实 settings', async () => {
+  const updateSettings = vi.fn(async () => {});
+  useAppStore.setState({ ...useAppStore.getState(), updateSettings });
+  await ledgerOps.rememberOption('channel', '新钱包');
+  await ledgerOps.rememberOption('incomeSource', '稿费');
+  await ledgerOps.rememberOption('category', '早餐');
+  expect(updateSettings).toHaveBeenNthCalledWith(1, expect.objectContaining({ ledgerChannels: expect.arrayContaining(['新钱包']) }));
+  expect(updateSettings).toHaveBeenNthCalledWith(2, expect.objectContaining({ ledgerIncomeSources: expect.arrayContaining(['稿费']) }));
+  expect(updateSettings).toHaveBeenNthCalledWith(3, expect.objectContaining({ ledgerCategories: expect.arrayContaining(['早餐']) }));
+});
+it('发薪日周期下预算写到当前周期键，而不是日历月', async () => {
+  h.settings = { ...h.settings!, ledgerPayCycleEnabled: true, ledgerResetDay: 25 };
+  useAppStore.setState({ ...useAppStore.getState(), settings: h.settings });
+  await ledgerOps.saveBudget(1800, 200, 25);
+  expect(h.budgets.get('2026-09')).toMatchObject({ monthlyLimit: 1800, savingsGoal: 200 });
+  expect(h.budgets.has('2026-10')).toBe(false);
 });

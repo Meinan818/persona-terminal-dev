@@ -7,7 +7,7 @@
 //   · 宣告卡编辑器 openCCEditor 增加 { card, onSaved } 参数（P0-07 行动页倒计时面复用）。
 import { P5 } from './p5';
 import { thinkingCircleHTML } from '@/p5r-red/fx/thinkingCircle';
-import { useAppStore } from '@/store';
+import { useAppStore, toLocalDateKey } from '@/store';
 import { db } from '@/db';
 import { useCloudStore } from '@/store/cloud';
 import { useCloudSocialStore } from '@/store/cloudSocial';
@@ -18,6 +18,8 @@ import { ensureLifeQuestDay, lifeContextNow, lifeDayKeyOf, lifeQuestsFor, normTi
 import { lifeAttrSigOf, resolveLifeAttrs } from '@/utils/lifeQuestAttrMap';
 import { lifeAttrMapStatus } from '@/utils/lifeQuestAI';
 import { v4 as uuidv4 } from 'uuid';
+import { claimLocalSettlement, localLedgerSettlement } from '@/themes/ledgerSettlement';
+import { catMeta, fmtMoney, ledgerCycle } from '@/utils/ledgerFormat';
 const U = P5.ui;
 const RM = () => P5.reduced();
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1016,14 +1018,38 @@ export const YR: any = { show: null };
   function openLedgerStats(st0 = 'data') {
     stage({ title: '收支统计', en: 'STATS', seed: 91, cls: 'od-led', body: `${demoBar([['data', '有记录'], ['over', '超预算'], ['empty', '空']], st0)}<div data-host></div>`, onMount(w) {
       stateful(w, [], st0, (st) => { if (st === 'empty') return `<div class="od-empty"><b>这个月还没有记录。</b><p>记一笔之后，这里会出现类目、趋势和伊戈尔的提点。</p></div>`;
-        const ex = st === 'over' ? 2860 : 2410, inc = 3200, bud = 2600;
+        const store = useAppStore.getState();
+        const todayKey = toLocalDateKey();
+        const cycle = ledgerCycle(store.settings.ledgerPayCycleEnabled === true, store.settings.ledgerResetDay ?? 1, todayKey);
+        const snapshot = localLedgerSettlement('month', cycle.key);
+        if (snapshot.empty) return `<div class="od-empty"><b>这个月还没有记录。</b><p>记一笔之后，这里会出现类目、趋势和伊戈尔的提点。</p></div>`;
+        const d = snapshot.data;
+        const previous = localLedgerSettlement('month', cycle.key, -1);
+        const entries = store.ledgerEntries.filter((e) => e.date >= d.rangeStart && e.date <= d.rangeEnd);
+        const byCh = [...entries.filter((e) => e.direction === 'expense').reduce((map, e) => {
+          const key = e.channel?.trim() || '未填';
+          map.set(key, (map.get(key) ?? 0) + e.amount);
+          return map;
+        }, new Map<string, number>()).entries()].sort((a, b) => b[1] - a[1]);
+        const labor = entries.filter((e) => e.direction === 'income' && e.incomeType === 'labor').reduce((sum, e) => sum + e.amount, 0);
+        const budget = store.getBudget(cycle.key);
+        const bud = budget?.monthlyLimit ?? 0;
+        const ex = d.totalExpense, inc = d.totalIncome;
+        const colors = ['#D7000F', '#111', '#8E0010', '#6b6862', '#b9b2a6'];
+        const cats = d.byCat.map((c, i) => ({ ...c, color: catMeta(c.key).hex || colors[i % colors.length] }));
+        const trend = [-5, -4, -3, -2, -1, 0].map((offset) => {
+          const item = localLedgerSettlement('month', cycle.key, offset);
+          return { label: item.data.label, value: item.data.totalExpense };
+        });
+        const maxTrend = Math.max(1, ...trend.map((t) => t.value));
+        const mom = previous.data.totalExpense;
         return `<div class="od-ls-top">${seg([['month', '本月收支'], ['period', '本期收支']], 'month')}${U.btn('🔮 让伊戈尔结算（周 / 月）', { tone: 'red', size: 'sm', seed: 831, attrs: 'data-act="settle"' })}</div>
           <div class="od-ls-kpi">${[['支出', ex, ''], ['收入', inc, 'in'], ['结余', inc - ex, inc - ex >= 0 ? 'in' : '']].map(([k, v, c], i) => U.shp('div', { kind: 'cut', seed: 832 + i, tone: i === 0 ? 'red' : 'ink', cls: 'od-kpi' }, `<small>${k}</small><b class="${c}">${yen(v)}</b>`)).join('')}</div>
-          ${U.shp('div', { kind: 'torn', seed: 836, cls: 'od-ls-bud' }, `<div class="od-ls-bh"><b>本月预算 ${yen(bud)}</b><span>已花 <b>${yen(ex)}</b> · ${ex > bud ? `<em class="od-err">超 ${yen(ex - bud)}</em>` : `剩 ${yen(bud - ex)}`}</span></div>${bar(ex / bud * 100, ex > bud ? 'over' : '')}<p class="muted-d">🏆 省钱挑战 · 想省 ¥300 · 进度 ${ex > bud ? '0' : '62'}%</p>`)}
-          <div class="od-ls-grid">${U.shp('div', { kind: 'torn', seed: 837, cls: 'od-ls-c' }, `${ttl('支出类目')}<div class="od-ls-dn">${donut(CAT.map(([, v, c]) => ({ value: v, color: c })), CAT.reduce((a, c) => a + c[1], 0), { inner: `<small>本月支出</small><b>${yen(ex)}</b>` })}<ul class="od-lg">${CAT.map(([n, v, c]) => `<li><i style="background:${c}"></i>${n}<b>${yen(v)}</b></li>`).join('')}</ul></div>`)}
-            ${U.shp('div', { kind: 'torn', seed: 838, cls: 'od-ls-c' }, `${ttl('环比上月')}<div class="od-mom">${CAT.slice(0, 4).map(([n, v], i) => { const d = [12, -8, 30, -15][i]; return `<span><b>${n}</b><em class="${d > 0 ? 'up' : 'dn'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}%</em></span>`; }).join('')}</div>${ttl('月度支出趋势')}<div class="od-trend">${[1980, 2300, 2050, 2700, 2210, ex].map((v, i) => `<span><i style="height:${v / 30}%"></i><small>${(today.getMonth() - 4 + i + 12) % 12 || 12}月</small></span>`).join('')}</div>`)}
-            ${U.shp('div', { kind: 'torn', seed: 839, cls: 'od-ls-c' }, `${ttl('支付渠道')}<div class="od-ls-dn">${donut([{ value: 1400, color: '#D7000F' }, { value: 760, color: '#111' }, { value: 250, color: '#b9b2a6' }], 2410, { size: 110, inner: '<small>3 种</small>' })}<ul class="od-lg"><li><i style="background:#D7000F"></i>微信<b>¥1,400</b></li><li><i style="background:#111"></i>支付宝<b>¥760</b></li><li><i style="background:#b9b2a6"></i>银行卡<b>¥250</b></li></ul></div>`)}
-            ${U.shp('div', { kind: 'torn', seed: 840, cls: 'od-ls-c' }, `${ttl('收入构成')}<div class="od-inc"><span><b>劳动所得</b>${bar(84)}<em>¥2,700</em></span><span><b>其它收入</b>${bar(16)}<em>¥500</em></span></div><p class="muted-d">劳动所得 · 记账 +10 SP · 每日封顶 +2</p>`)}</div>`; },
+          ${bud > 0 ? U.shp('div', { kind: 'torn', seed: 836, cls: 'od-ls-bud' }, `<div class="od-ls-bh"><b>本期预算 ${yen(bud)}</b><span>已花 <b>${yen(ex)}</b> · ${ex > bud ? `<em class="od-err">超 ${yen(ex - bud)}</em>` : `剩 ${yen(bud - ex)}`}</span></div>${bar(ex / bud * 100, ex > bud ? 'over' : '')}${budget?.savingsGoal ? `<p class="muted-d">🏆 省钱挑战 · 想省 ${yen(budget.savingsGoal)}</p>` : ''}`) : ''}
+          <div class="od-ls-grid">${U.shp('div', { kind: 'torn', seed: 837, cls: 'od-ls-c' }, `${ttl('支出类目')}<div class="od-ls-dn">${donut(cats.map((c) => ({ value: c.amount, color: c.color })), ex || 1, { inner: `<small>本期支出</small><b>${yen(ex)}</b>` })}<ul class="od-lg">${cats.map((c) => `<li><i style="background:${c.color}"></i>${c.label}<b>${yen(c.amount)}</b></li>`).join('')}</ul></div>`)}
+            ${U.shp('div', { kind: 'torn', seed: 838, cls: 'od-ls-c' }, `${ttl('环比上期')}<div class="od-mom"><span><b>上期支出</b><em>${yen(mom)}</em></span><span><b>本期变化</b><em class="${ex > mom ? 'up' : 'dn'}">${mom > 0 ? `${ex > mom ? '▲' : '▼'} ${Math.abs(Math.round((ex - mom) / mom * 100))}%` : '—'}</em></span></div>${ttl('月度支出趋势')}<div class="od-trend">${trend.map((t) => `<span><i style="height:${Math.max(2, t.value / maxTrend * 100)}%"></i><small>${esc(t.label.replace('年', '/').replace('月', ''))}</small></span>`).join('')}</div>`)}
+            ${U.shp('div', { kind: 'torn', seed: 839, cls: 'od-ls-c' }, `${ttl('支付渠道')}<div class="od-ls-dn">${donut(byCh.map(([name, value], i) => ({ value, color: colors[i % colors.length] })), ex || 1, { size: 110, inner: `<small>${byCh.length} 种</small>` })}<ul class="od-lg">${byCh.map(([name, value], i) => `<li><i style="background:${colors[i % colors.length]}"></i>${esc(name)}<b>${yen(value)}</b></li>`).join('')}</ul></div>`)}
+            ${U.shp('div', { kind: 'torn', seed: 840, cls: 'od-ls-c' }, `${ttl('收入构成')}<div class="od-inc"><span><b>劳动所得</b>${bar(inc > 0 ? labor / inc * 100 : 0)}<em>${yen(labor)}</em></span><span><b>其它收入</b>${bar(inc > 0 ? (inc - labor) / inc * 100 : 0)}<em>${yen(inc - labor)}</em></span></div><p class="muted-d">劳动所得 · 记账 +10 SP · 每日封顶 +2</p>`)}</div>`; },
       (h) => h.addEventListener('click', (e) => { if (e.target.closest('[data-act="settle"]')) openSettle(); }));
       growDonuts(w);
     } });
@@ -1031,10 +1057,37 @@ export const YR: any = { show: null };
   const growDonuts = (root) => { if (RM()) return; root.querySelectorAll('.od-donut > svg').forEach((c, i) => c.animate([{ transform: 'scale(.6) rotate(-60deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, delay: 150 + i * 60, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' })); };
   function openSettle() {
     sheet('心相结算', `${seg([['month', '按月'], ['week', '按周']], 'month', 'data-p')}<div data-body></div>`, (sh) => {
-      const draw = (p) => { const b = sh.querySelector('[data-body]'); b.innerHTML = `<div class="od-c">${thinking('伊戈尔正凝视着你的账目……')}</div>`;
-        setTimeout(() => { b.innerHTML = `${p === 'month' ? `<p class="od-sp">🎉 本月不超预算 · +10 SP</p>` : ''}<div class="od-ls-kpi sm">${[['支出', p === 'month' ? 2410 : 560], ['收入', p === 'month' ? 3200 : 300], ['结余', p === 'month' ? 790 : -260]].map(([k, v]) => `<div class="q-row"><span class="q-k">${k}</span><b>${yen(v)}</b></div>`).join('')}</div>
-          <div class="od-settle">${[['最贵一笔', '二手书 · ¥245'], ['花最多的一天', '10月6日 · ¥388'], ['花最少的一天', '10月14日 · ¥6'], ['预期', `¥${p === 'month' ? '2,600' : '600'} · 省 ¥${p === 'month' ? 190 : 40}`], [`共 ${p === 'month' ? 20 : 7} 天`, `日均消费 ¥${p === 'month' ? 120 : 80}`]].map(([k, v]) => `<div class="od-os-row"><span class="od-k">${k}</span><b>${v}</b></div>`).join('')}</div>
-          ${U.shp('div', { kind: 'quad', seed: 841, tone: 'ink', cls: 'od-igor' }, `<b>伊戈尔的提点</b><p>「吃饭花得最多，这无可厚非。但那本二手书……客人，知识是不会打折的，可你的钱包会。」</p>`)}`; P5.panelIn(b.children, { stagger: .06 }); }, RM() ? 0 : 900); };
+      const draw = async (p) => {
+        const b = sh.querySelector('[data-body]');
+        b.innerHTML = `<div class="od-c">${thinking('伊戈尔正凝视着你的账目……')}</div>`;
+        await new Promise((resolve) => setTimeout(resolve, RM() ? 0 : 500));
+        const store = useAppStore.getState();
+        const cycle = ledgerCycle(store.settings.ledgerPayCycleEnabled === true, store.settings.ledgerResetDay ?? 1, toLocalDateKey());
+        const snapshot = localLedgerSettlement(p, cycle.key);
+        if (snapshot.empty) {
+          b.innerHTML = '<div class="od-empty"><b>这段时间还没有记录。</b></div>';
+          return;
+        }
+        const claim = p === 'month'
+          ? await claimLocalSettlement(snapshot).catch(() => ({ bonus: false, challenge: null }))
+          : { bonus: false, challenge: null };
+        const d = snapshot.data;
+        const x = d.extremes;
+        const expected = d.expectedDailyAvg == null ? '未设预算' : `预期 ${yen(d.expectedDailyAvg)}`;
+        const tips = snapshot.result.advice.map((a) => `<p>✦ ${esc(a)}</p>`).join('');
+        b.innerHTML = `${p === 'month' && claim.challenge != null ? `<p class="od-sp">🏆 省钱挑战达成 · 省下 ${yen(claim.challenge)} · +10 SP</p>` : ''}
+          ${p === 'month' && claim.bonus ? '<p class="od-sp">🎉 本期不超预算 · +10 SP</p>' : ''}
+          <div class="od-ls-kpi sm">${[['支出', d.totalExpense], ['收入', d.totalIncome], ['结余', d.totalIncome - d.totalExpense]].map(([k, v]) => `<div class="q-row"><span class="q-k">${k}</span><b>${yen(v)}</b></div>`).join('')}</div>
+          <div class="od-settle">${[
+            ['最贵一笔', x.priciestEntry ? `${esc(x.priciestEntry.note)} · ${yen(x.priciestEntry.amount)}` : '—'],
+            ['花最多的一天', x.priciestDay ? `${esc(x.priciestDay.date)} · ${yen(x.priciestDay.amount)}` : '—'],
+            ['花最少的一天', x.cheapestDay ? `${esc(x.cheapestDay.date)} · ${yen(x.cheapestDay.amount)}` : '—'],
+            ['日均 / 预期', `${yen(d.actualDailyAvg)} / ${expected}`],
+            [`共 ${d.days} 天`, `本期预算 ${d.periodBudget == null ? '未设' : yen(d.periodBudget)}`],
+          ].map(([k, v]) => `<div class="od-os-row"><span class="od-k">${k}</span><b>${v}</b></div>`).join('')}</div>
+          ${U.shp('div', { kind: 'quad', seed: 841, tone: 'ink', cls: 'od-igor' }, `<b>伊戈尔的回望</b><p>${esc(snapshot.result.reflection.replace(/\*\*/g, ''))}</p>${tips}`)}`;
+        P5.panelIn(b.children, { stagger: .06 });
+      };
       sh.querySelector('[data-p]').addEventListener('pick', (e) => draw(e.detail)); draw('month');
     }, 93);
   }

@@ -10,7 +10,7 @@ import { FLabel, MoneyBox, NoteBox, TrophyGlyph } from '@pink/screens/pkg5/ui';
 import { CNY, fmtMoney, fmtPlain, monthLabel } from '@pink/mock/pkg5';
 import { useRealLedgerBudget } from '@/themes/ledgerBudgetData';
 
-export function LedgerBudgetSheetView({ open, onClose, newCycle, locked: forceLocked, days = 31, onSaved }: { open: boolean; onClose: () => void; newCycle?: boolean; locked?: boolean; days?: number; onSaved?: (monthly: number) => void }) {
+export function LedgerBudgetSheetView({ open, onClose, newCycle, locked: forceLocked, days = 31, onSaved }: { open: boolean; onClose: () => void; newCycle?: boolean; locked?: boolean; days?: number; onSaved?: (monthly: number, savings: number | undefined, resetDay: number) => void | Promise<void> }) {
   const toast = useToast();
   // 预算 / 省钱目标 / 修改次数 / 重置日全部取真实 store，不再用演示常量 6000 / 500。
   const budget = useRealLedgerBudget();
@@ -21,15 +21,29 @@ export function LedgerBudgetSheetView({ open, onClose, newCycle, locked: forceLo
   const [savings, setSavings] = useState('');
   const [challenge, setChallenge] = useState(false);
   const [resetDay, setResetDay] = useState(budget.resetDay);
+  const [saving, setSaving] = useState(false);
   const fromDaily = useRef<string | null>(null);
   const dailyOf = (m: string) => { const n = Number(m); return n > 0 ? fmtPlain(n / days) : ''; };
-  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(budget.savingsGoal)); setChallenge(!newCycle); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { setMonthly(String(current)); setDaily(dailyOf(String(current))); setSavings(String(budget.savingsGoal)); setChallenge(!newCycle); setResetDay(budget.resetDay); setSaving(false); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (fromDaily.current === monthly) { fromDaily.current = null; return; } setDaily(dailyOf(monthly)); }, [monthly]); // eslint-disable-line react-hooks/exhaustive-deps
   const m = Number(monthly);
   const locked = editsLeft <= 0;
+  const save = async () => {
+    if (!(m > 0) || saving) return;
+    setSaving(true);
+    try {
+      const savingsValue = Number(savings);
+      await onSaved?.(m, Number.isFinite(savingsValue) ? savingsValue : undefined, resetDay);
+      if (!onSaved) toast.success(`预算已定：${CNY}${fmtMoney(m)}`);
+      onClose();
+    } catch (e) {
+      setSaving(false);
+      toast.error(`预算失败：${(e as Error)?.message ?? '请重试'}`);
+    }
+  };
   return (
     <P3Sheet open={open} onClose={onClose} title={newCycle ? '新的一程 · 立个目标' : '本月预算'} en={newCycle ? 'NEW CYCLE' : 'BUDGET'}
-      footer={<P3Button block size="lg" corner disabled={!(m > 0)} onClick={() => { onClose(); if (onSaved) onSaved(m); else toast.success(`预算已定：${CNY}${fmtMoney(m)}`); }}>{newCycle ? '就这么定' : '保存'}</P3Button>}>
+      footer={<P3Button block size="lg" corner disabled={!(m > 0)} busy={saving} busyText="保存中…" onClick={() => void save()}>{newCycle ? '就这么定' : '保存'}</P3Button>}>
       <div className="flex min-w-0 flex-col gap-4 pt-1">
         <NoteBox>
           {newCycle ? '新的一程开始了——给自己定个花费节奏，和一个想攒下的小目标。' : '设一个本月的花费上限——它是你的纪律线，不影响总余额。'}

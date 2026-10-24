@@ -2,19 +2,29 @@ import { useEffect, useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { buildSettlementData, offlineSettlement, settleRange, shiftSettleAnchor, type SettleScope } from '@/utils/ledgerSettlement';
+import { ledgerCycle } from '@/utils/ledgerFormat';
 
-const calendar = { payCycle: false, resetDay: 1 };
 let rewardQueue: Promise<unknown> = Promise.resolve();
 const claimsInFlight = new Map<string, Promise<{ bonus: boolean; challenge: number | null }>>();
 
-/** 三主题统计页按自然月展示；结算沿用相同口径，收费生成不在此入口调用。 */
+/** 四主题共用本地结算；读取真实预算周期，收费生成不在此入口调用。 */
 export function localLedgerSettlement(scope: SettleScope, period: string, offset = 0) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period) || !Number.isInteger(offset)) throw new Error('结算月份无效');
   const s = useAppStore.getState(), today = toLocalDateKey();
-  const base = period === today.slice(0, 7) ? today : settleRange('month', period + '-01')[1];
+  const calendar = {
+    payCycle: s.settings.ledgerPayCycleEnabled === true,
+    resetDay: s.settings.ledgerResetDay ?? 1,
+  };
+  const currentKey = ledgerCycle(calendar.payCycle, calendar.resetDay, today).key;
+  const base = period === currentKey
+    ? today
+    : calendar.payCycle
+      ? `${period}-${String(calendar.resetDay).padStart(2, '0')}`
+      : settleRange('month', period + '-01', calendar)[1];
   const anchor = shiftSettleAnchor(scope, base, offset, calendar);
   const [, end] = settleRange(scope, anchor, calendar);
-  const budget = s.getBudget(end.slice(0, 7))?.monthlyLimit;
+  const budgetPeriod = ledgerCycle(calendar.payCycle, calendar.resetDay, end).key;
+  const budget = s.getBudget(budgetPeriod)?.monthlyLimit;
   const data = buildSettlementData(s.ledgerLoaded ? s.ledgerEntries : [], scope, anchor, budget, s.settings.currency, calendar);
   return {
     data, result: offlineSettlement(data), key: `${scope}:${data.rangeStart}:${data.rangeEnd}`,
@@ -27,8 +37,8 @@ export function claimLocalSettlement(snapshot: ReturnType<typeof localLedgerSett
   const existing = claimsInFlight.get(snapshot.key);
   if (existing) return existing;
   const operation = rewardQueue.then(async () => {
-    // 既有领奖action按设置的周期计算；发薪日周期启用时不把自然月结算误当周期领奖。
-    if (snapshot.data.scope !== 'month' || snapshot.data.rangeEnd >= toLocalDateKey() || useAppStore.getState().settings.ledgerPayCycleEnabled) return { bonus: false, challenge: null };
+    // 既有领奖 action 与本页共用真实周期；仅完整结束的月/周期可以领取。
+    if (snapshot.data.scope !== 'month' || snapshot.data.rangeEnd >= toLocalDateKey()) return { bonus: false, challenge: null };
     const period = snapshot.data.rangeStart.slice(0, 7);
     const bonus = await useAppStore.getState().claimLedgerBudgetBonus(period);
     const challenge = await useAppStore.getState().claimLedgerChallengeBonus(period);

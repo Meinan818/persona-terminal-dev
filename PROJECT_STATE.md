@@ -1,8 +1,21 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-24（计划13「候选版验证与打包」已完成，候选 APK 待计划14真机验收）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-24（计划14真机反馈热修1：红主题菜单资料卡头像、裁切、移除与菜单遮挡已修复，待用户复验）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-24 · 计划13候选 APK 已生成，等待计划14用户真机验收
+## 当前接手入口 · 2026-10-24 · 计划14真机反馈热修1：红主题资料卡头像与遮挡已修复
+
+- **用户反馈与授权**：用户安装计划13候选包后反馈：红主题菜单资料卡无法正常更换头像，头像菜单遮挡资料内容；同时要求复核菜单主题切换。用户从候选项中选择了第2项，只授权修复红主题资料卡头像/裁切/移除/持久化与遮挡，不进入蓝粉黄 AI 设置接线。
+- **根因**：红色 `UserProfileCard.p5r.tsx` 仍使用演示头像状态；`ImageCropDialog.p5r.tsx` 的“完成裁切”只关闭并提示，不产出 dataURL；`Menu.p5r.tsx` 始终画 P5 剪影。头像菜单 `.ob-avmenu` 绝对定位，覆盖下方总点数/五维区域。证据：旧实现没有头像 file input、没有 `updateUser({ avatarDataUrl })`，裁切回调无参数。
+- **修复**：红资料卡改读正式 `user.avatarDataUrl` / `user.name` / 真实五维；选择图片后进入 P5 风格真实裁切，Canvas 输出压缩 JPEG 并通过 `updateUser` 持久化；移除头像同样写回正式 store；菜单左上头像同步显示正式头像；头像菜单改为正常流式布局，不再覆盖资料内容。未修改 `legacy/css/pages.css` 或 `legacy/css/b.css`，原包视觉文件保持不变。
+- **主题切换复核**：专项探针关闭资料层后从红菜单主题 Sheet 切蓝，结果 `data-theme=blue`、`data-kit=p3r-blue`，存储主题也是 blue；未复现主题切换失败，也没有为它改动外观或逻辑。
+- **窄验证证据**：`E:\MASKARIA\outputs\theme-plan14-red-profile-20261024-v6\report.json`，`ok=true`、4 项检查、pageErrors=0；上传后 store/菜单头像均为真实 `data:image/jpeg`，刷新后保留；移除后 store 为空且刷新仍为空；头像菜单底边 748px < 总点数栏顶边 772px，前后均无重叠；红主题切蓝成功。
+- **工程验证**：`node node_modules/typescript/bin/tsc --noEmit` exit 0；全量 Vitest **71文件/435项通过**；`npm run build` exit 0（正式后端构建）；`node --check scripts/verify-theme-red-profile.mjs`、`git diff --check`、Android `assembleRelease --rerun-tasks` 通过。
+- **热修候选包**：`E:\MASKARIA\outputs\theme-plan14-red-profile-hotfix-20261024\maskaria-theme-hotfix-red-profile-3.0.1.apk`，103,423,808 B，SHA-256 `C516322F447CABB321C7DF8C8E2591DC492E4B2D7DCF1F24CC16A5A5D7D182DF`；`3.0.1 / versionCode 31`，正式后端 `http://150.158.174.9`，沿用原 Debug 证书；包内2050个 `dist` 文件逐字节一致，缺失0、差异0，API命中1、localhost命中0。
+- **仍未处理**：蓝/粉/黄 AI 服务页仍是主题演示表单，“测试连接”硬编码为未启用；这是用户候选项中的第1项，本轮未改。计划14真机整体验收仍待用户完成。
+- **继承工作区**：两个Gradle行尾痕迹和未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
+- **唯一下一任务/负责人**：用户安装上述热修包，复验红主题菜单资料卡的上传/裁切/移除、刷新保留、菜单头像同步和遮挡；由用户做最终视觉/手感验收，Codex只在收到具体反馈后继续修。
+
+## 历史候选入口 · 2026-10-24 · 计划13候选 APK 已生成，等待计划14用户真机验收
 
 - **本轮授权与现场**：用户明确启动计划13「候选版验证与打包」。工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，构建基线 `1b3f22a`。未进入计划14真机验收，未重跑764项loader，未Push、部署、接真实账号/组织数据或调用收费模型。
 - **计划状态**：**计划01–13已完成；计划14等待用户真机验收**。计划13生成的候选包不冒充已发布包，正式发布、下载通道和商店上架均未改变。

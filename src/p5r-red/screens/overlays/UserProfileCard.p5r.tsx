@@ -15,13 +15,14 @@ import { P5Shp } from '@/p5r-red/kit/P5Shp';
 import { P5Button } from '@/p5r-red/kit/P5Button';
 import { P5Tag } from '@/p5r-red/kit/P5Tag';
 import { P5StarIcon } from '@/p5r-red/kit/P5StarIcon';
-import { Portal } from '@/p5r-red/kit/Portal';
 import { toast } from '@/p5r-red/kit/P5Toast';
 import { P5Sil } from '@/p5r-red/fx/sil';
 import { panelIn } from '@/p5r-red/fx/motion';
 import { isLowMotion, usePrefs } from '@/p5r-red/lib/prefs';
 import { useAccountIdentity } from '@/themes/accountAuth';
-import { ATTR, ATTR_ORDER, D } from '@/p5r-red/mock/data';
+import { D } from '@/p5r-red/mock/data';
+import { useAppStore } from '@/store';
+import ImageCropDialog from './ImageCropDialog.p5r';
 
 type PSt = 'hasav' | 'avatar' | 'name' | 'err' | 'noav';
 type PrSt = 'status' | 'set' | 'goal' | 'goalerr' | 'nocard' | 'audit' | 'missing' | 'empty';
@@ -89,61 +90,72 @@ export function PresenceSheet({ open, onClose, initial = 'status' }: { open: boo
   );
 }
 
-/* ── 头像裁切（UserProfileCard 内第二套 ImageCropModal） ── */
-export function ProfileCropDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [sc, setSc] = useState(120);
-  const pos = useRef({ dx: 0, dy: 0, drag: null as null | [number, number] });
-  const img = useRef<HTMLDivElement>(null);
-  const veil = useRef<HTMLDivElement>(null);
-  const ap = () => { if (img.current) img.current.style.transform = `translate(${pos.current.dx}px,${pos.current.dy}px) scale(${sc / 100})`; };
-  useEffect(ap, [sc, open]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (open && veil.current && !isLowMotion()) veil.current.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 }); }, [open]);
-  if (!open) return null;
-  const close = (msg?: string) => { const v = veil.current; const done = () => { onClose(); if (msg) toast(msg); }; if (!v || isLowMotion()) return done(); v.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'both' }).onfinish = done; };
-  return (
-    <Portal>
-      <div className="ob-dlg-veil" style={{ zIndex: 885 }} ref={veil} onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
-        <P5Shp kind="cut" seed={431} tone="paper" className="ob-dlg ob-crop" role="dialog" aria-modal="true">
-          <h3 className="ob-dlg-t">调整我的头像</h3>
-          <div className="ob-crop-a">
-            <div className="ob-crop-img" ref={img}
-              onPointerDown={(e) => { pos.current.drag = [e.clientX - pos.current.dx, e.clientY - pos.current.dy]; e.currentTarget.setPointerCapture(e.pointerId); }}
-              onPointerMove={(e) => { const d = pos.current.drag; if (!d) return; pos.current.dx = e.clientX - d[0]; pos.current.dy = e.clientY - d[1]; ap(); }}
-              onPointerUp={() => { pos.current.drag = null; }}><P5Sil name="point" style={{ height: '100%', width: 'auto' }} /></div>
-            <i className="ob-crop-ring" aria-hidden="true" />
-          </div>
-          <div className="ob-row"><div className="ob-row-m"><b>缩放</b><small>拖动图片调整位置</small></div><div className="ob-row-c">
-            <span className="ob-range-w"><input type="range" className="ob-range" min={100} max={300} step={10} value={sc} aria-label="缩放" style={{ ['--p' as string]: `${((sc - 100) / 200) * 100}%` }} onChange={(e) => setSc(+e.target.value)} /><output>{sc}%</output></span>
-          </div></div>
-          <div className="ob-dlg-a"><P5Button tone="paper" seed={432} onClick={() => close()}>取消</P5Button><P5Button seed={433} size="lg" onClick={() => close('头像已更新')}>确定</P5Button></div>
-        </P5Shp>
-      </div>
-    </Portal>
-  );
-}
-
 export default function UserProfileCard({ open, onClose, params }: OverlayProps) {
   // UserID / 邮箱取真实登录态（原来写死 yeji_0610 / yeji.mask@example.com）。
   const identity = useAccountIdentity();
+  const user = useAppStore((state) => state.user);
+  const attributes = useAppStore((state) => state.attributes);
+  const updateUser = useAppStore((state) => state.updateUser);
   const st0 = (params?.get('state') as PSt) || 'hasav';
   const [st, setSt] = useState<PSt>(st0);
   const [pres, setPres] = useState(false);
   const [crop, setCrop] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [fold, setFold] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [name, setName] = useState(D.user.name);
+  const [name, setName] = useState(user?.name ?? D.user.name);
+  const fileRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
+    setName(user?.name ?? D.user.name);
     if (!open) { setPres(false); setCrop(false); return; }
     setSt(st0);
     const ts = [params?.get('panel') === 'status' && window.setTimeout(() => setPres(true), 420), params?.get('step') === 'crop' && window.setTimeout(() => setCrop(true), 420)].filter(Boolean) as number[];
     return () => ts.forEach(clearTimeout);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, user?.name]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!copied) return; const t = setTimeout(() => setCopied(false), 1500); return () => clearTimeout(t); }, [copied]);
   const body = usePaint(st);
   const foldRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (fold && foldRef.current && !isLowMotion()) return panelIn(foldRef.current.children, { from: 'right', stagger: 0.025 }); }, [fold]);
-  const tot = ATTR_ORDER.reduce((s, k) => s + D.attrs[k].pts, 0), lv = ATTR_ORDER.reduce((s, k) => s + D.attrs[k].level, 0);
-  const hasAv = st === 'hasav' || st === 'avatar';
+  const tot = attributes.reduce((sum, attribute) => sum + attribute.points, 0);
+  const lv = attributes.reduce((sum, attribute) => sum + attribute.level, 0);
+  const avatar = st === 'noav' ? null : user?.avatarDataUrl ?? null;
+  const hasAv = !!avatar;
+  const saveName = async () => {
+    const next = name.trim();
+    if (!next) { setName(user?.name ?? D.user.name); setSt('hasav'); return; }
+    try {
+      await updateUser({ name: next });
+      setSt('hasav');
+      toast('已保存');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : '保存失败');
+    }
+  };
+  const saveAvatar = async (dataUrl: string) => {
+    setCrop(false);
+    setPendingFile(null);
+    setUploading(true);
+    try {
+      await updateUser({ avatarDataUrl: dataUrl });
+      setSt('hasav');
+      toast('头像已更新');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : '上传失败');
+    } finally {
+      setUploading(false);
+    }
+  };
+  const removeAvatar = async () => {
+    setSt('hasav');
+    try {
+      await updateUser({ avatarDataUrl: undefined });
+      setSt('noav');
+      toast('头像已移除');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : '移除失败');
+    }
+  };
   return (
     <>
       <P5Sheet open={open} onClose={onClose} title="用户资料" seed={441} className="ob-sheet">
@@ -151,24 +163,34 @@ export default function UserProfileCard({ open, onClose, params }: OverlayProps)
         <div className="ob-sbody" ref={body}>
           <P5Shp kind="cut" seed={421} tone="paper" className="ob-prof">
             <div className="ob-av-w">
-              <button type="button" className="ob-av" aria-label="头像菜单" aria-expanded={st === 'avatar'} onClick={() => setSt(st === 'avatar' ? 'hasav' : 'avatar')}>
-                {hasAv ? <span className="ob-av-img"><P5Sil name="point" style={{ height: '120%', width: 'auto' }} /></span> : <b>{name.charAt(0)}</b>}
+              <button type="button" className="ob-av" aria-label="头像菜单" aria-expanded={st === 'avatar'} disabled={uploading} onClick={() => setSt(st === 'avatar' ? 'hasav' : 'avatar')}>
+                {hasAv ? <span className="ob-av-img"><img src={avatar!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /></span> : <b>{name.charAt(0)}</b>}
                 <P5StarIcon fill="var(--red)" stroke="var(--paper)" sw={1.4} className="ob-av-star" />
+                {uploading && <span style={{ position: 'absolute', inset: 6, zIndex: 2, display: 'grid', placeItems: 'center', background: 'rgba(17,17,17,.68)', color: '#fff', font: '900 11px/1 var(--f-title)' }}>上传中</span>}
               </button>
               {st === 'avatar' && (
-                <div className="ob-avmenu" role="menu">
-                  <P5Button tone="ink" size="sm" seed={422} role="menuitem" onClick={() => setCrop(true)}>更换头像</P5Button>
-                  <P5Button tone="red" size="sm" seed={423} role="menuitem" onClick={() => { toast('头像已移除'); setSt('noav'); }}>移除头像</P5Button>
+                <div className="ob-avmenu" role="menu" style={{ position: 'relative', left: 'auto', top: 'auto', marginTop: 8 }}>
+                  <P5Button tone="ink" size="sm" seed={422} role="menuitem" onClick={() => fileRef.current?.click()}>{hasAv ? '更换头像' : '上传头像'}</P5Button>
+                  {hasAv && <P5Button tone="red" size="sm" seed={423} role="menuitem" onClick={() => void removeAvatar()}>移除头像</P5Button>}
                   <P5Button tone="paper" size="sm" seed={424} role="menuitem" onClick={() => setSt('hasav')}>取消</P5Button>
                 </div>
               )}
+              <input ref={fileRef} type="file" accept="image/*" hidden onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (!file) return;
+                if (!file.type.startsWith('image/')) { toast('请选择图片文件'); return; }
+                setSt('hasav');
+                setPendingFile(file);
+                setCrop(true);
+              }} />
             </div>
             <div className="ob-prof-m">
               {st === 'name' ? (
                 <div className="ob-namerow">
                   <input className="ob-inp" placeholder="名字" aria-label="用户名" maxLength={20} value={name} onChange={(e) => setName(e.target.value)} />
-                  <P5Button size="sm" seed={425} onClick={() => { toast('已保存'); setSt('hasav'); }}>保存</P5Button>
-                  <P5Button tone="paper" size="sm" seed={426} onClick={() => { setName(D.user.name); setSt('hasav'); }}>取消</P5Button>
+                  <P5Button size="sm" seed={425} onClick={() => void saveName()}>保存</P5Button>
+                  <P5Button tone="paper" size="sm" seed={426} onClick={() => { setName(user?.name ?? D.user.name); setSt('hasav'); }}>取消</P5Button>
                 </div>
               ) : <div className="ob-namerow"><h3>{name}</h3><button type="button" className="ob-pen" aria-label="修改用户名" onClick={() => setSt('name')}>✎</button></div>}
               <div className="ob-lvrow"><P5Tag tone="ink">LV {lv}</P5Tag><div className="ob-pres"><button type="button" className="ob-pill" onClick={() => setPres(true)}>＋状态</button><button type="button" className="ob-pill" onClick={() => setPres(true)}>＋目标</button></div></div>
@@ -180,7 +202,7 @@ export default function UserProfileCard({ open, onClose, params }: OverlayProps)
               <div className={`ob-fold ${fold ? 'open' : ''}`}>
                 <button type="button" className="ob-fold-h" aria-expanded={fold} onClick={() => setFold(!fold)}><b>总点数：<em>{tot}</em></b><small>{lv} 级累计</small><i className="ob-caret">{fold ? '▲' : '▼'}</i></button>
                 <div className="ob-fold-b" hidden={!fold} ref={foldRef}>
-                  <ul className="ob-attrs">{ATTR_ORDER.map((k) => <li key={k}><b>{ATTR[k].name}</b><span className="ob-bar"><i style={{ width: `${(D.attrs[k].pts / D.attrs[k].next) * 100}%` }} /></span><em>Lv{D.attrs[k].level}</em></li>)}</ul>
+                  <ul className="ob-attrs">{attributes.map((attribute) => <li key={attribute.id}><b>{attribute.displayName}</b><span className="ob-bar"><i style={{ width: `${Math.min(100, Math.max(0, attribute.level / Math.max(1, ...attributes.map((item) => item.level)) * 100))}%` }} /></span><em>Lv{attribute.level}</em></li>)}</ul>
                 </div>
               </div>
             </div>
@@ -188,7 +210,14 @@ export default function UserProfileCard({ open, onClose, params }: OverlayProps)
         </div>
       </P5Sheet>
       <PresenceSheet open={open && pres} onClose={() => setPres(false)} initial={(params?.get('pstate') as PrSt) || 'status'} />
-      <ProfileCropDialog open={open && crop} onClose={() => setCrop(false)} />
+      <ImageCropDialog
+        open={open && crop}
+        onClose={() => { setCrop(false); setPendingFile(null); }}
+        file={pendingFile}
+        title="调整我的头像"
+        onDone={(dataUrl) => void saveAvatar(dataUrl)}
+        doneToast={null}
+      />
     </>
   );
 }

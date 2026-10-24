@@ -21,6 +21,7 @@ import { isLowMotion } from '@/p5r-red/lib/prefs';
 import { navigate, openOverlay } from '@/p5r-red/shell/shellBus';
 import { sfx } from '@/p5r-red/fx/sfx';
 import { ATTR_ORDER, D, shadowNow } from '@/p5r-red/mock/data';
+import { useAppStore } from '@/store';
 
 /** v3 burstPts（P5.rng 同算法 → 同 seed 同形） */
 const burstPts = (n = 9, seed = 3) => {
@@ -38,6 +39,7 @@ let menuSel = 0;
 
 export default function Menu({ wide, params }: PageProps) {
   const root = useRef<HTMLDivElement>(null);
+  const avatar = useAppStore((state) => state.user?.avatarDataUrl);
   const ledgerVisible = params.get('ledger') !== '0', battleVisible = params.get('battle') !== '0';
   const inShadowTime = params.get('shadow') === '1' || shadowNow();
   const hasUpdate = params.get('update') !== '0';
@@ -88,7 +90,7 @@ export default function Menu({ wide, params }: PageProps) {
         <svg className="mn2-prof-bg" viewBox="0 0 300 150" preserveAspectRatio="none" aria-hidden="true"><polygon points="6,10 296,0 288,146 0,138" fill="#111" /><polygon points="12,15 290,7 283,139 6,132" fill="var(--p5r-paper)" /></svg>
         <span className="mn2-av">
           <svg className="mn2-av-burst" viewBox="0 0 100 100" aria-hidden="true"><polygon points={AV_BURST_A} fill="#111" /><polygon points={AV_BURST_B} fill="var(--red)" transform="translate(50 50) scale(.86) translate(-50 -50)" /></svg>
-          <span className="mn2-av-face"><P5Sil name="point" fill="#111" rim="#F2E9DA" rw={10} style={{ height: '150%', width: 'auto', marginTop: '6%' }} /></span>
+          <span className="mn2-av-face">{avatar ? <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <P5Sil name="point" fill="#111" rim="#F2E9DA" rw={10} style={{ height: '150%', width: 'auto', marginTop: '6%' }} />}</span>
           <i className="mn2-av-star"><P5StarIcon fill="#111" stroke="#F2E9DA" sw={1.4} /></i>
         </span>
         <span className="mn2-info"><b className="mn2-name">{name}</b>

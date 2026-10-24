@@ -1,8 +1,23 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-25（四主题真实助手、天气、人格、BGM、通知、归档与 AI 命名建议收口；蓝主题轻淡入入场恢复）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-25（`livefix4`：四主题 1490 条路由全量隔离审计；首页天气统一真实数据；蓝色切页移除整页 clip-path，改轻量合成层淡入）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-25 · 四主题真实设置与助手动画热修
+## 当前接手入口 · 2026-10-25 · livefix4 全量路由与首页天气收口
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。本轮代码提交 `d13a121`（`fix(theme): unify home weather and smooth blue navigation`）。未 Push、未部署、未接真实账号/组织数据、未调用收费模型。
+- **上次天气误报纠正**：上一轮只验证了设置页“测试取数”，没有验证首页消费，因此把“天气可用”说大了。黄色首页实际仍写死 `rain / 17°`；现在蓝粉黄首页统一通过 `useSkyBadge` 读取正式 `settings + utils/weather`，设置页与首页使用同一份结果。
+- **首页天气证据**：`theme-weather-live-20261025-v4/report.json`，`ok=true`、6项、pageErrors=0。蓝粉黄每套都验证“搜索城市 → 测试取数 23°晴 → 回首页仍显示同一 23°晴”，并断言不再出现 `17° 雨`。
+- **蓝色转场**：蓝色切页不再对整页执行 `clip-path` 圆擦，离场页也不再静态垫底等待；只保留轻量圆环提示，新页内容走 280ms opacity 淡入。`theme-blue-transition-20261025-v2/report.json`：4次真实导航、0 Shatter 多边形、0 全屏 clip-path、每次 opacity 动画启动、pageErrors=0；headless rAF 最大间隔 5.70–11.10ms。该数字不能替代手机手感。
+- **全量路由审计**：新增 `scripts/verify-theme-all-routes.mjs`，按四主题 registry + Inventory 双重枚举；每条路由独立重载隔离，检查空白、错误边界、页面异常、本地资源失败、弹层可见性和可操作控件数量。`theme-all-routes-20261025-v4/report.json`：总计 **1490 条**（蓝384 / 粉379 / 黄310 / 红417），`ok=1453`、`expected=37`、`fail=0`、pageErrors=0、localFailures=0。expected 为启动错误/崩溃演示态、开屏演出和用户明确排除的红色战场。
+- **全量控件边界**：审计实际盘点了每路由当前可见控件：共约 20,561 个控件实例（含重复导航），红色与其它主题页面均无加载崩溃。脚本只记录控件可用性/disabled 状态，没有逐一点击两万多个操作；业务写成功仍由各专项测试和代码路径负责，不把“渲染正常”冒充“每个按钮语义已验收”。
+- **顺带真实崩溃修复**：红色 `actions-bigdeal-home` 在无大事数据时 `.od-bdh` 为空导致 `addEventListener` 崩溃；`actions-todo-menu` 和 `home-fx-queue` 在隔离空数据下读取不存在任务。三处均补空态守卫，三路由窄复验 3/3、pageErrors=0。
+- **工程验证**：`tsc --noEmit` exit0；全量 Vitest **72文件/437项通过**；`VITE_API_URL=http://150.158.174.9 npm.cmd run build` exit0；`verify-release` 通过；Android `assembleRelease --rerun-tasks` 成功。构建仍有既有 caniuse、字体运行时解析、P5R `@import`顺序、动态/静态混合导入和大 chunk 警告。
+- **新 APK `livefix4`**：`E:\MASKARIA\outputs\maskaria-livefix4-20261025-d13a121\maskaria-3.0.1-livefix4-d13a121.apk`，副本 `D:\下载\互传\maskaria-3.0.1-livefix4-d13a121.apk`；103,437,800 B，SHA-256 `E4ABDD67F9B869293E34052156839DE51DDFF143C82F7B6F063B7ECFF93827DD`。包名 `com.meinan818.personaterminal`、`3.0.1 / 31`，沿用 Debug 证书 `a7f0f3d9…c0567`，可覆盖安装；APK `assets/public` 2057项，对本地 `dist` 2055项缺失0、差异0，额外2项为 Capacitor 必需脚本。
+- **未验证边界**：浏览器全量路由和 headless 帧时序不等于手机流畅度；真实 Android 返回键、长期闪屏、通知栏、麦克风、真实音频和收费 AI 仍未本轮实测。用户明确排除的逆影战场不纳入本轮成品标准。
+- **继承工作区**：两个 Gradle 行尾痕迹与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 仍保持原 SHA-256，未修改、移动、删除或提交；无 stash/reset/restore/checkout/clean。
+- **唯一下一步/负责人**：用户安装 `livefix4` 后复验黄色首页天气与蓝色切页；如仍有手机手感问题，由 Codex 根据具体录屏/页面继续修。旧 `livefix2` / `livefix3` 不包含本轮首页天气和蓝转场修改，不能冒充。未 Push。
+
+## 历史接手入口 · 2026-10-25 · 四主题真实设置与助手动画热修
 
 - **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。本轮代码提交 `3e4b22a`（`fix(theme): restore real assistant and settings flows`），文档提交 `c9d5df6`（`docs(state): record real settings and assistant hotfix`）；生成 `livefix3` 后再做一次本入口更新。未 Push、未部署、未调用收费模型。
 - **红色助手**：会话列表改读正式 `useNavigatorStore` 人格库，内置人格显示“黑猫 / 烤面包机 / 熊”，自定义人格进入列表；移除正常 UI 中的 P5 硬编码姓名。新增模型回复到达时继续使用原 `msg_in` 提示音、头像 `nv-fg` 弹入、气泡 `nv-box` 绘框和连接黑带伸展。专项 `theme-live-regressions-20261025-v27/report.json`：`ok=true`、8项、pageErrors=0。

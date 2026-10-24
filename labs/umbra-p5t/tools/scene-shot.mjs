@@ -2,6 +2,7 @@
 import { chromium } from 'playwright';
 import { preview } from 'vite';
 const OUT = process.env.OUT || '/workspace/work/notes/shots/2026-10-25';
+const PFX = process.env.PFX || 'scene';
 const LVS = (process.env.LV || 'L01').split(',');
 const server = await preview({ preview: { port: 4323, host: '127.0.0.1' } });
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -18,11 +19,11 @@ for (const lv of LVS) for (const [w, h] of sizes) {
   const t0 = Date.now(); await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n < 10 ? requestAnimationFrame(f) : r()); requestAnimationFrame(f); }));
   const info = await page.evaluate(() => window.__p5t.renderInfo?.());
   console.log(lv, `${w}x${h}`, '10 frames ms', Date.now() - t0, JSON.stringify(info));
-  await page.screenshot({ path: `${OUT}/scene-${lv}-${w}x${h}.png` });
+  await page.screenshot({ path: `${OUT}/${PFX}-${lv}-${w}x${h}.png` });
   if (process.env.ROT && w > 1000) {
     await page.evaluate(() => { window.__p5t.rig.rotate(1); window.__p5t.rig.rotate(1); });
     await page.waitForTimeout(3500);
-    await page.screenshot({ path: `${OUT}/scene-${lv}-rot180.png` });
+    await page.screenshot({ path: `${OUT}/${PFX}-${lv}-rot180.png` });
   }
   await page.close();
 }

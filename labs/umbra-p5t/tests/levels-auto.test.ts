@@ -8,15 +8,20 @@ import type { Difficulty } from '../src/rules';
 
 // 10-23：敌人推进（Hark #12）+ Boss PH-tuned HP 后，贪心 bot 在 L03/L08/L10 只赢得了 safety（bot 弱，不代表关卡难度）
 const WIN_DIFF: Record<string, Difficulty> = {
-  L01: 'easy', L02: 'easy', L03: 'safety', L04: 'normal', L05: 'easy',
+  L01: 'easy', L02: 'easy', L03: 'safety', L04: 'safety', L05: 'easy',
   L06: 'safety', L07: 'normal', L08: 'safety', L09: 'normal', L10: 'safety',
 };
 /** 10-24：L08 改照原版 M17「7 回合内全灭」后，贪心 bot 走开关门迷宫要 8 回合才清完（差 1 回合）→ 赢的测试给 bot 放宽回合上限（只放宽 bot 测试，关卡本身仍是 7） */
 const BOT_TURN_SLACK: Record<string, number> = { L08: 2 };
 /** L09（生存 5 回合）normal 下我方站着不打也撑得过 5 回合 → 用 merciless 验证「能输」 */
 const LOSE_DIFF: Record<string, Difficulty> = { L09: 'merciless' };
+/**
+ * 10-25 掩体加密（P5T 密度，掩体约 27% 可走格）后：L04 贪心 bot 赢的难度 normal→safety；
+ * L09 不攻击的「输」bot 靠满地掩体任何难度都撑过 5 回合 → L09 改用「赢」bot 在 hard 下验证能输（hard/merciless 实测都输）。
+ */
+const LOSE_MODE: Record<string, { mode: 'win' | 'lose'; diff: Difficulty }> = { L09: { mode: 'win', diff: 'hard' } };
 
-function play(id: string, mode: 'win' | 'lose', difficulty: Difficulty) {
+function play(id: string, mode: 'win' | 'lose', difficulty: Difficulty, botMode: 'win' | 'lose' = mode) {
   const map = levelMap(id);
   const slack = mode === 'win' ? BOT_TURN_SLACK[id] ?? 0 : 0;
   if (slack) {
@@ -28,7 +33,7 @@ function play(id: string, mode: 'win' | 'lose', difficulty: Difficulty) {
   let reason = '';
   b.on((e) => { if (e.type === 'error') errors.push(e.message); if (e.type === 'result') reason = e.reason ?? ''; });
   b.start();
-  autoBattle(b, { mode, maxTurns: 30 });
+  autoBattle(b, { mode: botMode, maxTurns: 30 });
   return { b, errors, reason };
 }
 
@@ -40,8 +45,9 @@ describe('Q10 L01–L10 自动对战', () => {
       expect(errors).toEqual([]);
       expect(b.phase).toBe('won');
     });
-    it(`${id} 能输（难度 ${LOSE_DIFF[id] ?? 'normal'}）`, () => {
-      const { b, errors, reason } = play(id, 'lose', LOSE_DIFF[id] ?? 'normal');
+    const lm = LOSE_MODE[id];
+    it(`${id} 能输（难度 ${lm?.diff ?? LOSE_DIFF[id] ?? 'normal'}${lm ? '，赢 bot' : ''}）`, () => {
+      const { b, errors, reason } = lm ? play(id, 'lose', lm.diff, lm.mode) : play(id, 'lose', LOSE_DIFF[id] ?? 'normal');
       expect(errors).toEqual([]);
       expect(b.phase).toBe('lost');
       expect(reason.length).toBeGreaterThan(0);

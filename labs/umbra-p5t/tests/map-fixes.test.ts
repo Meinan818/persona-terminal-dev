@@ -29,7 +29,8 @@ describe('Hark 图纸修正（10-23）', () => {
     expect(b.grid.linkUsable({ a: { x: 6, y: 4 }, b: { x: 6, y: 3 }, kind: 'ladder' })).toBe(true);
     b.setDoor('D1', true); b.setDoor('D2', true);
     const s = closure(b, b.unit('joker').pos);
-    for (const p of [{ x: 6, y: 3 }, { x: 13, y: 3 }, { x: 9, y: 2 }]) expect(s.has(key(p))).toBe(true);
+    for (const p of [{ x: 6, y: 3 }, { x: 13, y: 3 }, { x: 10, y: 3 }]) // 10-25 掩体加密后 (9,2) 成了掩体，改查阳台中间空地 (10,3)
+      expect(s.has(key(p))).toBe(true);
   });
   it('L05：地面能上两座塔顶（2 层）；升降台在低位时梯子通向两塔', () => {
     const b = new Battle(levelMap('L05'));

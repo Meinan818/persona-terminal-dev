@@ -4,7 +4,7 @@
 
 ## 当前接手入口 · 2026-10-25 · 四主题真实设置与助手动画热修
 
-- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。本轮代码提交 `3e4b22a`（`fix(theme): restore real assistant and settings flows`），本入口由后续本地文档提交保存。未 Push、未部署、未打 APK、未调用收费模型。
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。本轮代码提交 `3e4b22a`（`fix(theme): restore real assistant and settings flows`），文档提交 `c9d5df6`（`docs(state): record real settings and assistant hotfix`）；生成 `livefix3` 后再做一次本入口更新。未 Push、未部署、未调用收费模型。
 - **红色助手**：会话列表改读正式 `useNavigatorStore` 人格库，内置人格显示“黑猫 / 烤面包机 / 熊”，自定义人格进入列表；移除正常 UI 中的 P5 硬编码姓名。新增模型回复到达时继续使用原 `msg_in` 提示音、头像 `nv-fg` 弹入、气泡 `nv-box` 绘框和连接黑带伸展。专项 `theme-live-regressions-20261025-v27/report.json`：`ok=true`、8项、pageErrors=0。
 - **天气**：蓝粉黄天气块不再使用固定杭州/西湖/朝阳列表与固定“小雨14°C”，城市搜索、天气取数、Key/Host/城市全部复用 `utils/weather` 并写回正式设置。专项 `theme-weather-live-20261025-v2/report.json`：蓝粉黄各一次真实城市检索和天气取数，`ok=true`、3项、pageErrors=0。
 - **四主题设置假成功收口**：人格生成/保存/切换/删除、会话归档、测试通知、BGM 导入/删除/音量预览、AI 名称匹配、等级称号刷新都接现有真实模块；蓝色/粉色/黄色天气和 BGM 字段桥回真实 `settings`。红色设置的人格提示与归档不再使用“摩尔加纳/高卷杏/坂本龙司”和固定摘要。
@@ -12,9 +12,10 @@
 - **蓝色流畅度**：`PageEnter` 从上一版 200ms 纯位移硬切恢复为 300ms、16px 位移、从 0.82 轻淡入，避免恢复旧的从透明/深底整屏闪。最新逐帧 `theme-flash-frames-20261025-v4/report.json`：蓝主题亮度跨度 `201.31–218.14`、pageErrors=0；不是手机帧率或手感验收。
 - **语音与头像**：蓝粉黄助手“按住说话”改真实 `startRecording → transcribe`，不再插入固定“今天下雨…咖喱”；松手早于权限返回时取消迟到录音。头像上传保存为正式人格影子行，不再写设置页临时假列表。
 - **工程验证**：`node node_modules/typescript/bin/tsc --noEmit` exit0；全量 Vitest **72文件/437项通过**；`VITE_API_URL=http://150.158.174.9 npm.cmd run build` exit0；`node scripts/verify-release.mjs http://150.158.174.9 dist` 通过。构建仍有既有 caniuse、字体运行时解析、P5R `@import`顺序、动态/静态混合导入和大 chunk 警告，本轮未扩大处理。
+- **新 APK `livefix3`**：`E:\MASKARIA\outputs\maskaria-livefix3-20261025-c9d5df6\maskaria-3.0.1-livefix3-c9d5df6.apk`，同份副本 `D:\下载\互传\maskaria-3.0.1-livefix3-c9d5df6.apk`；103,437,226 B，SHA-256 `739EDC3AB2A7B9D03FD540FB07AD8D21DE57D440CC9774339A4080C84C1AFA51`。包名 `com.meinan818.personaterminal`、`3.0.1 / 31`，沿用同一 Debug 证书 `a7f0f3d9…c0567`，支持覆盖安装。APK 内 `assets/public` 2057 项；本地 `dist` 2055 项缺失 0、差异 0，额外 2 项为 Capacitor 的 `cordova.js` / `cordova_plugins.js`。
 - **真实边界**：本轮浏览器证据使用本地 mock 模型和隔离 IndexedDB，不冒充真实收费模型、线上账号或真机行为。ADB 当前无设备；手机长期卡顿/闪屏、系统返回手势、通知栏、真实音频导入播放与四主题最终手感仍需物理设备验收。逆影战场按用户要求不纳入本轮。
 - **继承工作区**：`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle` 与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，未修改、移动、删除或提交；三项 SHA-256 仍为 `3793…43CF`、`B614…48AC`、`F332…491`。无 stash/reset/restore/checkout/clean。
-- **下一步/负责人**：由 Codex 根据用户新的具体手机反馈继续窄修；若需要安装验证，再由用户明确授权生成本轮新 APK，不能把旧 `livefix2` 冒充本轮结果。最终视觉、流畅度、声音与物理返回键由用户真机验收。未 Push。
+- **下一步/负责人**：用户安装上述 `livefix3` 后复验红色助手进入动画/音效与真实人格名、天气、红色设置人格、蓝色切页流畅度、BGM/通知/归档；由 Codex 根据具体手机反馈继续窄修。旧 `livefix2` 不含本轮改动，不能冒充。最终视觉、流畅度、声音与物理返回键由用户真机验收。未 Push。
 
 ## 历史接手入口 · 2026-10-25 · 正式入口假实现收口与漏网扫描
 

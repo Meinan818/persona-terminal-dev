@@ -194,28 +194,24 @@ export const BlotIris = ({ active, origin, onCovered, onDone }: IrisProps) => {
   );
 };
 
-/** 返回：两个圆分别从 origin 与其对角扩开、在中间合拢（无光圈、无水纹），遮满 onCovered@330ms，680ms 淡出 */
+/** 轻量圆形强调：页面先原子切换，只保留一圈描边扩散；不再用整屏实心圆盖住页面。 */
 export const DoubleCircleIris = ({ active, origin, onCovered, onDone }: IrisProps) => {
   const anim = useBoldness();
   useSyncFallback(active, anim, onCovered, onDone);
-  useTimeline(active, anim, 330, 680, onCovered, onDone);
+  useTimeline(active, anim, 40, 360, onCovered, onDone);
   if (!active || !anim) return null;
   const W = window.innerWidth, H = window.innerHeight;
-  const a = origin ?? { x: W * 0.18, y: H - 40 };
-  const b = { x: W - a.x, y: H - a.y };
-  const R = Math.hypot(W, H) * 0.62;
-  const disc = (c: { x: number; y: number }, bg: string, delay: number) => (
-    <motion.span style={{ position: 'absolute', left: c.x - R, top: c.y - R, width: R * 2, height: R * 2, borderRadius: '50%', background: bg }}
-      initial={{ scale: 0.02 }} animate={{ scale: 1 }} transition={{ duration: 0.32, delay, ease: [0.7, 0, 0.3, 1] }} />
-  );
+  const a = origin ?? { x: W / 2, y: H - 40 };
+  const R = Math.hypot(Math.max(a.x, W - a.x), Math.max(a.y, H - a.y)) + 24;
   return (
     <Portal>
-      <motion.div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: zVar('transition'), pointerEvents: 'auto', overflow: 'hidden' }}
-        initial={{ opacity: 1 }} animate={{ opacity: [1, 1, 0] }} transition={{ duration: 0.68, times: [0, 0.55, 1] }}>
-        {disc(a, 'var(--bk-sea-2)', 0)}
-        {disc(b, 'var(--bk-sea-3)', 0.03)}
-        {disc(a, 'var(--p3r-bg)', 0.1)}
-        {disc(b, 'var(--p3r-bg)', 0.13)}
+      <motion.div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: zVar('transition'), pointerEvents: 'none', overflow: 'hidden' }}>
+        <motion.span
+          style={{ position: 'absolute', left: a.x - 24, top: a.y - 24, width: 48, height: 48, borderRadius: '50%', border: '3px solid var(--p3r-blue)', boxShadow: '0 0 0 1px var(--p3r-cyan)' }}
+          initial={{ scale: 0.25, opacity: 0.95 }}
+          animate={{ scale: Math.max(1, R / 24), opacity: [0.95, 0.75, 0] }}
+          transition={{ duration: 0.35, ease: [0.2, 0.75, 0.25, 1] }}
+        />
       </motion.div>
     </Portal>
   );

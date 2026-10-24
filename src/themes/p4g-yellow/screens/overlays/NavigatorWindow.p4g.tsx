@@ -19,6 +19,7 @@ import { cx } from '@yellow/lib/cx';
 import { navigate } from '@yellow/shell/shellBus';
 import { ACTION_META, CHAT_CARD_DEMO, type ChatMsg, type DraftKind } from '@yellow/mock/pkg6';
 import { navigatorThemeOps, useNavigatorThemeData } from '@yellow/adapters/pkg6';
+import { useNavigatorStore } from '@/store/navigator';
 import { activePreset, attrLabel, updateSettings, useSettings } from '@yellow/screens/pkg6/settingsStore';
 import { P6Sheet } from '@yellow/screens/pkg6/sheet';
 import { ActionForm, emptyForm, type FormState } from './NavigatorActionForm.p4g';
@@ -97,6 +98,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   useBackHandler(open, onClose);
   const q = params ?? new URLSearchParams();
   const { CHAT_MESSAGES, PICKER_TODOS } = useNavigatorThemeData();
+  const navPhase = useNavigatorStore((state) => state.phase);
   const qState = q.get('state');
   const [msgs, setMsgs] = useState<ChatMsg[]>(() => q.get('demo') === 'card' ? [...CHAT_CARD_DEMO] : [...CHAT_MESSAGES]);
   const [older, setOlder] = useState(false);
@@ -124,6 +126,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   }, [CHAT_MESSAGES, q]);
 
   useEffect(() => { if (open) setTimeout(() => listRef.current?.scrollTo({ top: 1e6 }), 60); }, [open, msgs.length, typing]);
+  useEffect(() => { if (open) navigatorThemeOps.greet(); }, [open]);
   const isP = !!q.get('menu') || !!q.get('sheet');
   void isP;
 
@@ -137,24 +140,10 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   };
   const send = () => {
     const t = input.trim();
-    if (!t && !shot) return;
-    navigatorThemeOps.pushUser(t, shot ?? undefined);
+    if ((!t && !shot) || navPhase === 'collecting' || navPhase === 'thinking' || navPhase === 'replying') return;
+    navigatorThemeOps.userSend(t, shot ?? undefined);
     setInput(''); setShot(null);
-    if (/卡住|不知道从哪|好难|拖延/.test(t)) { navigatorThemeOps.pushCat('嗯……这件事听起来有点大。'); setTimeout(() => setStuck('ask'), 1300); return; }
-    const money = t.match(/(\d+(?:\.\d+)?)\s*(块|元|¥)/) || t.match(/¥\s*(\d+(?:\.\d+)?)/);
-    if (money) {
-      navigatorThemeOps.pushCard({
-        kind: 'ledger',
-        direction: 'expense',
-        amount: Number(money[1]),
-        note: t.replace(money[0], '').trim(),
-        type: 'food',
-        incomeType: 'labor',
-        channel: '',
-      });
-      return;
-    }
-    navigatorThemeOps.pushCat('AI 对话接入等待确认；这条消息已经保存，尚未发起模型请求。');
+    if (/卡住|不知道从哪|好难|拖延/.test(t)) setTimeout(() => setStuck('ask'), 1300);
   };
   const confirmCard = async (id: string) => {
     setBusyId(id);
@@ -289,7 +278,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
                     </motion.div>
                   );
                 })}
-                {typing && (
+                {(typing || navPhase === 'collecting' || navPhase === 'thinking' || navPhase === 'replying') && (
                   <div role="status" aria-label="助手正在输入"><MsgBox name={preset.name}><span className="p6-typing inline-flex gap-1 align-middle text-p4g-yellow"><i /><i /><i /></span></MsgBox></div>
                 )}
               </div>

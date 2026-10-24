@@ -123,6 +123,10 @@ async function verifyAISettings(theme, kit) {
   await page.getByRole('button', { name: '保存', exact: true }).first().click();
   await page.getByRole('button', { name: '测试连接', exact: true }).first().click();
   await page.getByText(/连接成功/).first().waitFor({ state: 'visible', timeout: 20000 });
+  await page.waitForFunction(async () => {
+    const { useAppStore } = await import('/src/store/index.ts');
+    return (useAppStore.getState().settings.aiProfiles?.deepseek?.verifiedAt ?? 0) > 0;
+  }, null, { timeout: 10000 });
   const state = await page.evaluate(async () => {
     const { useAppStore } = await import('/src/store/index.ts');
     const settings = useAppStore.getState().settings;
@@ -156,11 +160,99 @@ async function verifyRedAssistant() {
   });
   const dialog = page.getByRole('dialog', { name: /助手 · 摩尔加纳/ });
   await dialog.waitFor({ state: 'visible', timeout: 15000 });
-  await page.locator('.nv-txt').filter({ hasText: /MOCK_RED_AI_REPLY/ }).first().waitFor({ state: 'visible', timeout: 20000 });
-  const chatRequests = report.requests.filter((request) => request.path.endsWith('/chat/completions'));
-  assert.ok(chatRequests.length > 0, 'red assistant did not call the model endpoint');
+  await page.waitForFunction(async () => {
+    const { useNavigatorStore } = await import('/src/store/navigator.ts');
+    return useNavigatorStore.getState().phase === 'idle';
+  }, null, { timeout: 15000 });
+  await page.evaluate(async () => {
+    const { useNavigatorStore } = await import('/src/store/navigator.ts');
+    useNavigatorStore.setState({ messages: [], phase: 'idle', sessionId: 'audit-red' });
+  });
+  const before = report.requests.filter((request) => request.path.endsWith('/chat/completions')).length;
+  const prompt = '主题 red 真实回复测试';
+  const input = dialog.locator('input[aria-label^="给"]').first();
+  await input.fill(prompt);
+  await dialog.getByRole('button', { name: '发送', exact: true }).click();
+  let after = before;
+  let matched = false;
+  const deadline = Date.now() + 25000;
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(200);
+    after = report.requests.filter((request) => request.path.endsWith('/chat/completions')).length;
+    matched = await page.evaluate(async ({ prompt }) => {
+      const { useNavigatorStore } = await import('/src/store/navigator.ts');
+      const state = useNavigatorStore.getState();
+      const lastUser = state.messages.map((message) => message.role === 'user' && message.text === prompt).lastIndexOf(true);
+      return state.phase === 'idle'
+        && lastUser >= 0
+        && state.messages.slice(lastUser + 1).some((message) => message.role === 'cat'
+          && (/MOCK_RED_AI_REPLY/.test(String(message.text ?? '')) || String(message.text ?? '').trim() === 'pong'));
+    }, { prompt });
+    if (after > before && matched) break;
+  }
+  assert.ok(after > before, 'red assistant did not hit the mock model endpoint');
+  assert.ok(matched, 'red assistant did not append the model reply after this prompt');
+  await page.waitForTimeout(400);
   report.checks.push('red assistant called the shared navigator model endpoint');
   await screenshot('red-assistant-ai');
+}
+
+async function verifyThemeAssistant(theme, kit, shellModule) {
+  await setTheme(theme);
+  await waitTheme(theme, kit);
+  await page.evaluate(async ({ shellModule, theme }) => {
+    const { useAppStore } = await import('/src/store/index.ts');
+    await useAppStore.getState().updateSettings({
+      summaryApiProvider: 'deepseek',
+      summaryApiBaseUrl: 'http://mock.local/v1',
+      summaryModel: 'mock-model',
+      summaryApiKey: `sk-mock-${theme}`,
+      navigatorPresetId: 'builtin-cat',
+    });
+    const shell = await import(shellModule);
+    shell.openAssistant();
+  }, { shellModule, theme });
+  const dialog = page.getByRole('dialog', { name: /助手/ }).first();
+  await dialog.waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForFunction(async () => {
+    const { useNavigatorStore } = await import('/src/store/navigator.ts');
+    return useNavigatorStore.getState().phase === 'idle';
+  }, null, { timeout: 15000 });
+  await page.evaluate(async ({ theme }) => {
+    const { useNavigatorStore } = await import('/src/store/navigator.ts');
+    useNavigatorStore.setState({ messages: [], phase: 'idle', sessionId: `audit-${theme}` });
+  }, { theme });
+  const before = report.requests.filter((request) => request.path.endsWith('/chat/completions')).length;
+  const input = dialog.locator('input[aria-label^="给"]').first();
+  await input.fill(`主题 ${theme} 真实回复测试`);
+  await dialog.getByRole('button', { name: '发送', exact: true }).click();
+  const prompt = `主题 ${theme} 真实回复测试`;
+  let after = before;
+  let matched = false;
+  const deadline = Date.now() + 25000;
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(200);
+    after = report.requests.filter((request) => request.path.endsWith('/chat/completions')).length;
+    matched = await page.evaluate(async ({ prompt }) => {
+      const { useNavigatorStore } = await import('/src/store/navigator.ts');
+      const state = useNavigatorStore.getState();
+      const lastUser = state.messages.map((message) => message.role === 'user' && message.text === prompt).lastIndexOf(true);
+      return state.phase === 'idle'
+        && lastUser >= 0
+        && state.messages.slice(lastUser + 1).some((message) => message.role === 'cat'
+          && (/MOCK_RED_AI_REPLY/.test(String(message.text ?? '')) || String(message.text ?? '').trim() === 'pong'));
+    }, { prompt });
+    if (after > before && matched) break;
+  }
+  assert.ok(after > before, `${theme} assistant did not hit the mock model endpoint`);
+  assert.ok(matched, `${theme} assistant did not append the model reply after this prompt`);
+  report.assistantChecks = [...(report.assistantChecks ?? []), { theme, before, after }];
+  report.checks.push(`${theme}: assistant sent through the shared navigator model endpoint`);
+  await screenshot(`${theme}-assistant-ai`);
+  await page.evaluate(async (shellModule) => {
+    const shell = await import(shellModule);
+    shell.closeAssistant();
+  }, shellModule);
 }
 
 async function verifyLongReadingAndSummaryJobs() {
@@ -212,6 +304,9 @@ try {
   await verifyAISettings('blue', 'p3r-blue');
   await verifyAISettings('pink', 'p3r-pink');
   await verifyAISettings('yellow', 'p4g-yellow');
+  await verifyThemeAssistant('blue', 'p3r-blue', '/src/themes/p3r-blue/shell/shellBus.ts');
+  await verifyThemeAssistant('pink', 'p3r-pink', '/src/themes/p3r-pink/shell/shellBus.ts');
+  await verifyThemeAssistant('yellow', 'p4g-yellow', '/src/themes/p4g-yellow/shell/shellBus.ts');
   await verifyLongReadingAndSummaryJobs();
   await verifyRedAssistant();
   assert.equal(report.pageErrors.length, 0, `page errors: ${report.pageErrors.join(' | ')}`);

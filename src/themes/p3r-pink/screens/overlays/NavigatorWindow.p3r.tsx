@@ -20,6 +20,7 @@ import { cx } from '@pink/lib/cx';
 import { navigate } from '@pink/shell/shellBus';
 import { ACTION_META, CHAT_CARD_DEMO, type ChatMsg, type DraftKind } from '@pink/mock/pkg6';
 import { navigatorThemeOps, useNavigatorThemeData } from '@pink/adapters/pkg6';
+import { useNavigatorStore } from '@/store/navigator';
 import { activePreset, attrLabel, updateSettings, useSettings } from '@pink/screens/pkg6/settingsStore';
 import { P6Sheet } from '@pink/screens/pkg6/sheet';
 import { DateHud, WaterLayer, popVariants, sampleImg } from '@pink/screens/pkg6/compat';
@@ -113,6 +114,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   useBackHandler(open, onClose);
   const q = params ?? new URLSearchParams();
   const { CHAT_MESSAGES, PICKER_TODOS } = useNavigatorThemeData();
+  const navPhase = useNavigatorStore((state) => state.phase);
   const qState = q.get('state');
   const aiDirect = (qState === 'offline' ? 'error' : AI_STATES.includes(qState as AIPhase) ? qState : null) as AIPhase | null;
   const failParam = (q.get('fail') as AIFail) ?? null;
@@ -161,7 +163,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   }, [ai.phase]); // eslint-disable-line react-hooks/exhaustive-deps
   // 关窗 = 中断（回来可「继续」）
   useEffect(() => { if (!open && (ai.phase === 'thinking' || ai.phase === 'streaming')) ai.abort(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-  const aiBusy = job.active && (ai.phase === 'thinking' || ai.phase === 'streaming');
+  const aiBusy = (job.active && (ai.phase === 'thinking' || ai.phase === 'streaming')) || navPhase === 'collecting' || navPhase === 'thinking' || navPhase === 'replying';
   const askAI = (text: string) => {
     pendingStart.current = true;
     setJob((j) => ({ id: j.id + 1, text, fail: failParam && j.id === 0 ? failParam : null, active: true }));
@@ -172,6 +174,7 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const anySub = menu || picker || form.open || notebook || !!crop;
   useEscape(open && !anySub, onClose);
   useEffect(() => { if (open) setTimeout(() => listRef.current?.scrollTo({ top: 1e6 }), 60); }, [open, msgs.length, typing, ai.phase, job.id]);
+  useEffect(() => { if (open) navigatorThemeOps.greet(); }, [open]);
   useEffect(() => { if (ai.phase === 'streaming') listRef.current?.scrollTo({ top: 1e6 }); }, [ai.text.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const catSay = (text: string, delay = 900) => {
@@ -185,23 +188,9 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
   const send = () => {
     const t = input.trim();
     if ((!t && !shot) || aiBusy) return;
-    navigatorThemeOps.pushUser(t, shot ?? undefined);
+    navigatorThemeOps.userSend(t, shot ?? undefined);
     setInput(''); setShot(null);
-    if (/卡住|不知道从哪|好难|拖延/.test(t)) { navigatorThemeOps.pushCat('嗯……这件事听起来有点大。'); setTimeout(() => setStuck('ask'), 1300); return; }
-    const money = t.match(/(\d+(?:\.\d+)?)\s*(块|元|¥)/) || t.match(/¥\s*(\d+(?:\.\d+)?)/);
-    if (money) {
-      navigatorThemeOps.pushCard({
-        kind: 'ledger',
-        direction: 'expense',
-        amount: Number(money[1]),
-        note: t.replace(money[0], '').trim(),
-        type: 'food',
-        incomeType: 'labor',
-        channel: '',
-      });
-      return;
-    }
-    navigatorThemeOps.pushCat('AI 对话接入等待确认；这条消息已经保存，尚未发起模型请求。');
+    if (/卡住|不知道从哪|好难|拖延/.test(t)) setTimeout(() => setStuck('ask'), 1300);
   };
   const confirmCard = async (id: string) => {
     setBusyId(id);
@@ -394,7 +383,8 @@ export default function NavigatorWindow({ open, onClose, params }: OverlayProps)
                     </motion.div>
                   );
                 })}
-                {typing && <div role="status" aria-label="助手正在输入"><CatBubble name={preset.name}><span className="p6-typing inline-flex gap-1 align-middle" style={{ color: P3R.blue }}><i /><i /><i /></span></CatBubble></div>}
+                {(typing || navPhase === 'collecting' || navPhase === 'replying') && <div role="status" aria-label="助手正在输入"><CatBubble name={preset.name}><span className="p6-typing inline-flex gap-1 align-middle" style={{ color: P3R.blue }}><i /><i /><i /></span></CatBubble></div>}
+                {navPhase === 'thinking' && <CatBubble name={preset.name}><AIThinking label={`${preset.name}正在想…`} sub="THINKING" ring={false} /></CatBubble>}
                 {aiBubble()}
               </div>
 

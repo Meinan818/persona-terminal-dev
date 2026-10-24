@@ -76,6 +76,9 @@ export function useNavigatorThemeData() {
 
 export const navigatorThemeOps = {
   hydrate: () => useNavigatorStore.getState().hydrateSession(),
+  greet: () => useNavigatorStore.getState().greet(),
+  userSend: (text: string, imageDataUrl?: string) => useNavigatorStore.getState().userSend(text, imageDataUrl),
+  switchPreset: (id: string) => useNavigatorStore.getState().switchPreset(id),
   pushUser: (text: string, imageDataUrl?: string) => useNavigatorStore.getState().pushUser(text, imageDataUrl),
   pushCat: (text: string) => useNavigatorStore.getState().pushCat(text),
   pushCard: (draft: Parameters<ReturnType<typeof useNavigatorStore.getState>['pushCard']>[0]) => useNavigatorStore.getState().pushCard(draft),

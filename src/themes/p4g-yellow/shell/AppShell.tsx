@@ -77,9 +77,7 @@ export function AppShell({ children, chromeless = false }: { children: ReactNode
         <motion.div
           key={loc.pathname + loc.search}
           className={chromeless ? '' : 'mx-auto w-full max-w-page min-w-0'}
-          initial={{ opacity: fx ? 1 : 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: low ? 0.08 : 0.18 }}
+          initial={false}
         >
           {children}
         </motion.div>

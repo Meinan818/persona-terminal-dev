@@ -2,7 +2,21 @@
 
 最后更新：2026-10-24。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-24 · 计划04已完成，下一计划05待新聊天启动
+## 当前接手入口 · 2026-10-24 · 计划05记账主闭环已完成，下一计划06待新聊天启动
+
+- **本轮授权与现场**：用户明确只执行计划05“记账闭环”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，接手基点`150b696`；用户确认源聊天已停止共享写入，接手时Git除两个Gradle行尾痕迹和既有临时脚本外与交接一致。本轮未进入06及后续，未重建业务层，未重跑764项loader，未改四主题CSS/素材/音效，未Push/部署/APK/真实登录/真实用户账本/收费调用。
+- **计划状态**：**计划05主闭环完成，现有UI的独立“编辑流水”入口边界保留；06及之后未启动**。专项报告`docs/THEME-LEDGER-CLOSURE-20261024.md`记录代码范围、13个真实浏览器检查点、截图和保留边界；详细计划状态已同步。
+- **共用写入契约**：`ledgerOperations.ts`新增`saveEntry/saveBatch`。单笔先校验，再等待`addLedgerEntry → rewardForLedgerEntry → addAsset/设置记忆`；批量先全量校验，中途失败回收已完成条目。界面成功后才关闭，失败保留表单并显示真实错误。没有新增第二套账本、预算或账户层。
+- **四主题接线**：蓝粉黄单笔、批量、预算、对账都等待真实Promise；账户/收入来源/细分类目新增项写入`settings.ledgerChannels/ledgerIncomeSources/ledgerCategories`。红色`live.ts`投影真实当前周期流水，`ledger4.ts`的单笔/批量/删除/预算/对账不再先改UI或吞错。
+- **周期与统计**：预算键、统计范围、趋势、心相结算和已结束周期领奖统一走`ledgerCycle + cycleRangeForKey`；发薪日周期开启时不再把日历月当预算周期。结算读取真实流水、预算、类目、极值与离线回望，保留原主题伊戈尔演出但不调用收费模型。
+- **验证（2026-10-24本轮）**：全量`node node_modules/vitest/vitest.mjs run --reporter=dot`为**70文件/419项通过**；`tsc --noEmit` exit0；`npm run build` exit0（主题CSS、TypeScript、Vite、PWA）；`node --check scripts/verify-theme-plan05.mjs`与`git diff --check`通过。构建仍保留既有大chunk、PWA主包不预缓存、Vite CSS `@import`顺序、字体运行时解析和`eval`警告。
+- **真实浏览器证据**：`E:\MASKARIA\outputs\theme-plan05-blue-first-20261024-final-v2\report.json`，13个检查点通过、pageerror0、本地资源失败0、API/模型请求0、外网隔离阻断。蓝主题完整验证初始余额、取消不写、单笔、两笔批量、预算、真实统计/结算、对账、刷新和删除；粉黄各验证单笔与对账；红验证单笔、真实对账限额、统计与本地结算。截图已人工检查，不等同四主题整体视觉或真机验收。
+- **边界与遗留**：现有主题没有独立编辑流水入口，本轮未擅自增加可见控件；当前修改路径仍是原有删除后重记、余额对账和预算编辑。红色资产板整体、AI自然语言解析/收费模型、账号同步、组织据点、音效节奏、弱网和Android真机不在05内。没有重跑764项loader。
+- **继承工作区**：两个Gradle行尾痕迹和未跟踪`scripts/p5r-red/_tmp-compare-local.mjs`仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
+- **运行与复查**：隔离服务`http://127.0.0.1:5198`；探针`node scripts/verify-theme-plan05.mjs E:/MASKARIA/outputs/theme-plan05-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
+- **唯一下一任务/负责人**：用户在新聊天明确启动计划06“账号与同步边界”后，由接手者核对登录/退出/过期、网络失败、同步合并/冲突与本地档案隔离；不真实执行删云数据，不自动跨入记账返工、据点、AI或UI重绘。本轮交接提交为本入口所在提交，用`git log -1`核实；提交后本聊天停止共享写入。
+
+## 历史交接 · 2026-10-24 · 计划04已完成，下一计划05待新聊天启动
 
 - **本轮授权与现场**：用户明确只执行计划04“任务与成长闭环”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，接手基点`3928e2a`；用户确认源聊天已停止共享写入，接手时Git除两个Gradle行尾痕迹和既有临时脚本外与交接一致。本轮未进入05及后续，未重建业务层，未重跑764项loader，未改四主题CSS/素材/音效，未Push/部署/APK/收费调用。
 - **计划状态**：**计划04完成，05及之后未启动**。专项报告`docs/THEME-TASK-GROWTH-20261024.md`记录代码范围、13个真实浏览器检查点、截图和保留边界；详细计划状态已同步。

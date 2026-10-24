@@ -1,8 +1,9 @@
 /**
  * 红色据点（hideout）的真实数据派生层。
  *
- * 计划01接通组织、名册、动态、进行中作战的读取与空态；
- * 历史、纪要、团战与写操作仍留给计划08，不在这里补演示数据。
+ * 计划01接通组织、名册、动态、进行中作战的读取与空态；计划08补齐多组织、
+ * 纪要、结束作战历史、成员称号/点数与团战投影。写操作仍由 orgSync/orgOpsSync 负责，
+ * 这里不做本地乐观写入。
  * 真实来源是 cloudSocial 的 orgs（OrgView：org / members / posts / reactions / ops / checkins）。
  *
  * 这里只做数据映射，不碰任何渲染：页面继续用原来的 MEM / ORG / POSTS / OPS 结构，
@@ -11,8 +12,10 @@
 import { useCloudSocialStore } from '@/store/cloudSocial';
 import { useCloudStore } from '@/store/cloud';
 import { TAROT_BY_ID } from '@/constants/tarot';
-import type { OrgMember, OrgPost, OrgView } from '@/types';
+import type { OrgMember, OrgMinutesSnapshot, OrgPost, OrgView } from '@/types';
+import { endedOrgOps, orgRaidCardData } from '@/themes/orgData';
 import { opsForBoard, orgLevelOfView } from '@/utils/orgOps';
+import { orgWeekKey, zonedDay } from '@/utils/orgLogic';
 
 /** 红色成员结构（与 hideout.ts 里的 MEM 同形）。 */
 export interface RedMember {
@@ -35,6 +38,8 @@ export interface RedMember {
   joined: string;
   /** 五维等级 */
   stats: number[];
+  /** 五维累计点数 */
+  points: number[];
   absent?: boolean;
 }
 
@@ -79,15 +84,55 @@ export interface RedOp {
   rows: string[][];
 }
 
+export interface RedHistory {
+  id: string;
+  status: 'achieved' | 'failed' | 'cancelled';
+  title: string;
+  done: number;
+  counted: number;
+  day: string;
+}
+
+export interface RedMinutes extends OrgMinutesSnapshot {
+  /** 纪要发布时冻结的代号映射；展示层用这个，不拿当前名册猜。 */
+  names: Record<string, string>;
+}
+
+export interface RedRaid {
+  boss: string;
+  left: number;
+  hpMax: number;
+  hitters: Array<{ userId: string; name: string; nights: number; allout: boolean }>;
+}
+
+export interface RedOrgChoice {
+  id: string;
+  name: string;
+  emblem: string;
+  slot: 'own' | 'joined';
+  members: number;
+}
+
 export interface RedHideout {
   org: RedOrg | null;
   members: RedMember[];
   posts: RedPost[];
   ops: RedOp[];
+  history: RedHistory[];
+  minutes: RedMinutes | null;
+  raid: RedRaid | null;
+  orgs: RedOrgChoice[];
   /** 是否存在真实组织（成员为空也可以安全渲染）。 */
   hasData: boolean;
   /** 是否已登录云端（false 时页面显示「登录之后才能用组织」） */
   signedIn: boolean;
+  /** 社交组织还没拉完。 */
+  loading: boolean;
+  /** 最近一次组织同步失败原因；没拿到组织时不把失败当空组织。 */
+  error: string | null;
+  boardLoaded: boolean;
+  opsFailed: boolean;
+  raidsFailed: boolean;
 }
 
 const ATTR_ORDER = ['knowledge', 'guts', 'dexterity', 'kindness', 'charm'] as const;
@@ -133,11 +178,16 @@ function agoText(d: Date | string | undefined): string {
   return days <= 1 ? '昨天' : `${days} 天前`;
 }
 
-function memberOf(view: OrgView, m: OrgMember): RedMember {
+function memberOf(view: OrgView, m: OrgMember, titles: Map<string, string[]>): RedMember {
   const card = m.card ?? ({} as OrgMember['card']);
+  const week = orgWeekKey(new Date(), view.org.tz);
   const stats = ATTR_ORDER.map((id) => {
     const a = (card.attrs ?? []).find((x) => x.id === id);
     return a ? a.level : 0;
+  });
+  const points = ATTR_ORDER.map((id) => {
+    const a = (card.attrs ?? []).find((x) => x.id === id);
+    return a?.points ?? 0;
   });
   const masks = (card.personas ?? (card.persona ? [card.persona] : [])).map((p) => p.name).filter(Boolean);
   const weekBits = card.week?.days ?? 0;
@@ -154,25 +204,51 @@ function memberOf(view: OrgView, m: OrgMember): RedMember {
     status: null,
     streak: card.streak ?? 0,
     week: weekBits,
-    titles: [],
-    goal: m.goal ?? null,
-    result: m.result ?? null,
+    titles: titles.get(m.userId) ?? [],
+    goal: m.goalWeek === week ? m.goal ?? null : null,
+    result: m.resultWeek === week ? m.result ?? null : null,
     masks,
     joined: joinedOf(m.createdAt),
     stats,
+    points,
     absent,
   };
 }
 
+function latestMinutesOf(view: OrgView): OrgMinutesSnapshot | null {
+  return [...(view.posts ?? [])]
+    .filter((p): p is OrgPost & { minutes: OrgMinutesSnapshot } => p.kind === 'minutes' && !!p.minutes)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]?.minutes ?? null;
+}
+
 /** 从 OrgView 派生红色据点需要的全部真实数据。 */
-export function getRedHideoutData(): RedHideout {
-  const orgs = useCloudSocialStore.getState().orgs ?? [];
+export function getRedHideoutData(orgId?: string | null): RedHideout {
+  const social = useCloudSocialStore.getState();
+  const orgs = social.orgs ?? [];
   const signedIn = !!useCloudStore.getState().cloudUser;
-  const view = orgs[0] as OrgView | undefined;
+  const view = (orgId ? orgs.find((x) => x.org.id === orgId) : undefined) ?? orgs.find((x) => x.org.id === social.hideoutOrgId) ?? orgs[0] as OrgView | undefined;
+  const orgChoices: RedOrgChoice[] = orgs.map((x) => ({
+    id: x.org.id,
+    name: x.org.name,
+    emblem: x.org.emblem,
+    slot: x.me.slot,
+    members: x.members.length,
+  }));
+  const loading = signedIn && !social.orgsLoaded && !social.lastError;
+  const error = signedIn && social.lastError ? social.lastError : null;
   if (!signedIn || !view || !view.org) {
-    return { org: null, members: [], posts: [], ops: [], hasData: false, signedIn };
+    return {
+      org: null, members: [], posts: [], ops: [], history: [], minutes: null, raid: null,
+      orgs: orgChoices, hasData: false, signedIn, loading, error,
+      boardLoaded: false, opsFailed: false, raidsFailed: false,
+    };
   }
-  const members = (view.members ?? []).map((m) => memberOf(view, m));
+  const latestMinutes = latestMinutesOf(view);
+  const titleMap = new Map<string, string[]>();
+  for (const row of latestMinutes?.titles ?? []) {
+    titleMap.set(row.userId, [...(titleMap.get(row.userId) ?? []), row.title]);
+  }
+  const members = (view.members ?? []).map((m) => memberOf(view, m, titleMap));
   const myId = view.me?.userId ?? '';
 
   // 动态：只取真实动态（kind = moment），作战达成卡 / 纪要各走自己的区
@@ -220,6 +296,41 @@ export function getRedHideoutData(): RedHideout {
     };
   });
 
+  const today = zonedDay(new Date(), view.org.tz).key;
+  const history: RedHistory[] = endedOrgOps(view, today)
+    .filter((h): h is typeof h & { status: RedHistory['status'] } => h.status !== null)
+    .map((h) => ({
+      id: h.id,
+      status: h.status,
+      title: h.title,
+      done: h.done,
+      counted: h.counted,
+      day: h.day,
+    }));
+
+  const minutes: RedMinutes | null = latestMinutes ? {
+    ...latestMinutes,
+    names: Object.fromEntries([
+      ...latestMinutes.done,
+      ...latestMinutes.goals,
+      ...latestMinutes.titles,
+      ...latestMinutes.absent,
+    ].map((row) => [row.userId, row.codename])),
+  } : null;
+
+  const raidCard = orgRaidCardData(view);
+  const raid: RedRaid | null = raidCard ? {
+    boss: raidCard.boss,
+    left: raidCard.left,
+    hpMax: raidCard.hpMax,
+    hitters: raidCard.hitters.map((h) => ({
+      userId: h.userId,
+      name: members.find((m) => m.id === h.userId)?.name ?? '已离开的成员',
+      nights: h.nights,
+      allout: h.allout,
+    })),
+  } : null;
+
   const level = orgLevelOfView(view);
   return {
     org: {
@@ -234,7 +345,16 @@ export function getRedHideoutData(): RedHideout {
     members,
     posts,
     ops,
+    history,
+    minutes,
+    raid,
+    orgs: orgChoices,
     hasData: true,
     signedIn,
+    loading,
+    error,
+    boardLoaded: view.posts !== undefined,
+    opsFailed: !!view.opsFailed,
+    raidsFailed: !!view.raidsFailed,
   };
 }

@@ -2,20 +2,41 @@
 
 最后更新：2026-10-24。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-24 · 计划07同伴与羁绊已完成，下一计划08待新聊天启动
+## 历史交接 · 2026-10-24 · 计划08据点真实读写已完成，下一计划09待新聊天启动
 
-- **本轮授权与现场**：用户明确只执行计划07“同伴与羁绊”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，接手基点计划06交接提交`182aa7e`；用户确认源聊天已停止共享写入。本轮未进入08及后续，未重做账号同步、记账、据点、AI或四主题外观，未重跑764项loader，未Push/部署/APK/真实社交后端/收费调用。
-- **计划状态**：**计划07完成，08及之后未启动**。专项报告`docs/THEME-COMPANIONSHIP-20261024.md`记录代码范围、四主题结果、11个隔离浏览器检查点、截图和保留边界；详细计划状态已同步。
-- **互动与星移事务**：`recordConfidantInteraction`的每日限次判定与亲密度加点进入同一Dexie事务；失败不再先吞掉当天机会。`consumeStarShift`的扣次与`star_shift`事件进入同一事务，共用hook增加双击守卫。创建、保存、归档、恢复、删除和解除COOP均等待真实Promise。
-- **升级只消费一次**：蓝粉页面本地升级链已删除，统一由全局P3宿主消费`confidantRankUpQueue`；黄主题改由黄色`GlobalOverlayHost`挂载P4链；红频道挂回P5主角牌层、升级、恭喜和星移。已归档/删除同伴会跳过遗留队列。
-- **在线邀请与COOP**：蓝粉黄的在线好友搜索、好友申请、COOP提议/接受/拒绝/解除复用现有services与`coopBondOps`；计时器假成功已去掉。红主题真实好友和COOP状态从`useCloudSocialStore`映射到原P5页面，命令式互动/星移/归档/删除等待真实写回，同伴投影在刷新时重建。
-- **原主题演出**：蓝粉为P3R链，黄为P4电视特辑，红为P5红黑剪报链。红主题此前底导`z-index:600`压住P5演出的确认键，现已用红频道专属层级修复；主角牌、恭喜和星移由同一P5层接管。
-- **验证（2026-10-24本轮）**：全量`node node_modules/vitest/vitest.mjs run --reporter=dot`为**71文件/434项通过**；`tsc --noEmit` exit0；`npm run build` exit0（主题CSS、TypeScript、Vite、PWA）；`node --check scripts/verify-theme-plan07.mjs`与`git diff --check`通过。
-- **真实浏览器证据**：`E:\MASKARIA\outputs\theme-plan07-blue-first-20261024-final-v14\report.json`，11个检查点通过、四主题`ok=true`、pageerror0、本地资源失败0、外网隔离阻断2。覆盖蓝完整互动→升级→星移→归档、粉单次升级、黄P4单次链与队列清空、红P5互动/星移/归档、在线邀请及COOP提议/接受/拒绝隔离接口；截图5张已人工检查。
-- **保留边界**：AI互动解读、星移推演和COOP星象匹配仍为离线/未配置路径，真实AI取消、超时、费用留计划10；未连接真实社交后端或真实账号，未发真实邮件/系统通知，未真实解绑；未做Android真机、弱网、并发多标签或四主题整体视觉验收；未重跑764项loader。
+- **本轮授权与现场**：用户明确执行计划08“据点真实读写”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，接手基点计划07交接提交`50d4318`；用户确认源聊天已停止共享写入。本轮未进入09及后续，未重做同伴、账号同步、记账、AI或四主题外观，未重跑764项loader，未Push/部署/APK/真实账号/真实组织数据/收费调用。
+- **计划状态**：**计划08完成，09及之后未启动**。专项报告`docs/THEME-HIDEOUT-REALRW-20261024.md`记录代码范围、四主题结果、5条隔离浏览器检查、截图和保留边界；详细计划状态已同步。
+- **红色据点真实数据**：`hideoutData.ts` 按 `hideoutOrgId` 从 `cloudSocial.orgs` 选组织，补真实纪要、结束作战、成员称号/五维点数、团战投影与多组织入口；未登录、未拉完、拉取失败、无组织、有组织各自独立，公告板未拉到和作战未拉到不再显示成空列表。
+- **红色页面真实写**：刷新、复制邀请码、组织切换、贴标签、举报、删除动态、退出/取消作战、写分工、会议提交都走现有 `orgSync`/`orgOpsSync`；建组、加组、选牌、换码、请离、转让、退出、解散、标题与称号保存走现有 services；失败保留现场并显示真实错误。
+- **三主题同类入口**：蓝粉黄的发起作战、分享到据点、设置确认、称号保存、建组/加组/选牌、作战打卡/取消/退出、会议提交、贴标签/删帖/举报，全部从计时器假成功改为等待真实 services；`useOrgView` 增加 `lastError`，三主题补 loading/error 状态。
+- **验证（2026-10-24本轮）**：`tsc --noEmit` exit0；全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **71文件/435项通过**；`npm run build` exit0（主题CSS、TypeScript、Vite、PWA）；`node --check scripts/verify-theme-plan08.mjs` 与 `git diff --check` 通过。
+- **真实浏览器证据**：`E:\MASKARIA\outputs\theme-plan08-isolated-20261024-v11\report.json`，`ok=true`、5条检查、四主题`ok=true`、pageErrors0、本地资源失败0、外网隔离阻断2。四主题都读到同一真实组织与队友且无旧演示名册；四套发起目标都产生真实 `POST /api/social/orgs/org1/ops`；红主题公告板标签产生真实 `POST /api/social/orgs/org1/reactions`。截图4张已人工检查。
+- **保留边界**：AI互动解读、星移推演、COOP匹配与作战AI分工仍属计划10（按钮禁用并说明，不假装成功）；未连接真实组织后端/真实账号/真实社交关系；未真实请离/转让/解散、未发真实邮件或系统通知；未做Android真机、弱网、并发多标签或四主题整体视觉验收；未重跑764项loader。
 - **继承工作区**：两个Gradle行尾痕迹和未跟踪`scripts/p5r-red/_tmp-compare-local.mjs`仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
-- **运行与复查**：隔离服务需显式设置`VITE_API_URL=same-origin`并使用`http://127.0.0.1:5207`；探针`node scripts/verify-theme-plan07.mjs E:/MASKARIA/outputs/theme-plan07-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
-- **唯一下一任务/负责人**：用户在新聊天明确启动计划08“据点真实读写”后，由接手者核对红`hideoutData.ts`、`hideout.ts`、`od.ts`名册/动态/作战/历史/总结，并同步检查三主题同类入口；不自动跨入AI或UI重绘。本轮交接提交为本入口所在提交，用`git log -1`核实；提交后本聊天停止共享写入。
+- **运行与复查**：隔离服务需显式设置`VITE_API_URL=same-origin`并使用`http://127.0.0.1:5207`；探针`node scripts/verify-theme-plan08.mjs E:/MASKARIA/outputs/theme-plan08-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
+- **唯一下一任务/负责人**：用户在新聊天明确启动计划09“占卜、成就与设置”后，由接手者核日占卜/中长期、塔罗/岁时、成就/技能、总结与设置是否真正生效，并处理红 `d4.ts` 剩余牌阵数据；不自动跨入AI专项或UI重绘。本轮交接提交为本入口所在提交，用`git log -1`核实；提交后本聊天停止共享写入。
+
+## 当前接手入口 · 2026-10-24 · 计划09占卜成就与设置待新聊天启动
+
+- **本轮授权与现场**：上一轮为计划08“据点真实读写”（交接提交见上方历史段）。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`。**计划09尚未启动**：用户没有明确启动09之前，不进入占卜、成就、设置或AI专项，不重做据点、同伴、账号同步、记账或四主题外观。
+- **计划状态**：**计划08完成；09及之后未启动**。据点读写在四主题已有真实 store/services 与隔离浏览器证据；详细计划表已同步。
+- **下一步怎么做**：新聊天先只读本入口→上方计划08历史段→[详细计划](docs/THEME-RECOVERY-PLAN-20261024.md)→[计划08专项报告](docs/THEME-HIDEOUT-REALRW-20261024.md)→AGENTS→Git状态与差异；核当前`git log -1`与源聊天是否已停止共享写入。
+- **验证基线（2026-10-24计划08）**：`tsc --noEmit` exit0；`vitest` 71文件/435项；`npm run build` exit0；隔离探针 `outputs/theme-plan08-isolated-20261024-v11/report.json` `ok=true`。这些是上一轮的数字，重跑前不得当作本轮结果。
+- **工作区遗留**：两个Gradle行尾痕迹和未跟踪`scripts/p5r-red/_tmp-compare-local.mjs`属继承/外部证据，不纳入提交、不移动、不删除。无stash/reset/restore/clean。
+- **运行与复查**：隔离服务 `VITE_API_URL=same-origin` + `http://127.0.0.1:5207`；计划08探针 `node scripts/verify-theme-plan08.mjs E:/MASKARIA/outputs/theme-plan08-NEXT`（输出目录必须不存在）。缓存/TEMP/TMP放`E:\MASKARIA\.cache`。
+- **本次无需用户操作**：程序化验证不代替后续主观/真机验收。未Push、未部署、无新APK。
+
+- **本轮授权与现场**：用户明确执行计划08“据点真实读写”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，接手基点计划07交接提交`50d4318`；用户确认源聊天已停止共享写入。本轮未进入09及后续，未重做同伴、账号同步、记账、AI或四主题外观，未重跑764项loader，未Push/部署/APK/真实账号/真实组织数据/收费调用。
+- **计划状态**：**计划08完成，09及之后未启动**。专项报告`docs/THEME-HIDEOUT-REALRW-20261024.md`记录代码范围、四主题结果、5条隔离浏览器检查、截图和保留边界；详细计划状态已同步。
+- **红色据点真实数据**：`hideoutData.ts` 按 `hideoutOrgId` 从 `cloudSocial.orgs` 选组织，补真实纪要、结束作战、成员称号/五维点数、团战投影与多组织入口；未登录、未拉完、拉取失败、无组织、有组织各自独立，公告板未拉到和作战未拉到不再显示成空列表。
+- **红色页面真实写**：刷新、复制邀请码、组织切换、贴标签、举报、删除动态、退出/取消作战、写分工、会议提交都走现有 `orgSync`/`orgOpsSync`；建组、加组、选牌、换码、请离、转让、退出、解散、标题与称号保存走现有 services；失败保留现场并显示真实错误。
+- **三主题同类入口**：蓝粉黄的发起作战、分享到据点、设置确认、称号保存、建组/加组/选牌、作战打卡/取消/退出、会议提交、贴标签/删帖/举报，全部从计时器假成功改为等待真实 services；`useOrgView` 增加 `lastError`，三主题补 loading/error 状态。
+- **验证（2026-10-24本轮）**：`tsc --noEmit` exit0；全量 `node node_modules/vitest/vitest.mjs run --reporter=dot` 为 **71文件/435项通过**；`npm run build` exit0（主题CSS、TypeScript、Vite、PWA）；`node --check scripts/verify-theme-plan08.mjs` 与 `git diff --check` 通过。
+- **真实浏览器证据**：`E:\MASKARIA\outputs\theme-plan08-isolated-20261024-v11\report.json`，`ok=true`、5条检查、四主题`ok=true`、pageErrors0、本地资源失败0、外网隔离阻断2。四主题都读到同一真实组织与队友且无旧演示名册；四套发起目标都产生真实 `POST /api/social/orgs/org1/ops`；红主题公告板标签产生真实 `POST /api/social/orgs/org1/reactions`。截图4张已人工检查。
+- **保留边界**：AI互动解读、星移推演、COOP匹配与作战AI分工仍属计划10（按钮禁用并说明，不假装成功）；未连接真实组织后端/真实账号/真实社交关系；未真实请离/转让/解散、未发真实邮件或系统通知；未做Android真机、弱网、并发多标签或四主题整体视觉验收；未重跑764项loader。
+- **继承工作区**：两个Gradle行尾痕迹和未跟踪`scripts/p5r-red/_tmp-compare-local.mjs`仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
+- **运行与复查**：隔离服务需显式设置`VITE_API_URL=same-origin`并使用`http://127.0.0.1:5207`；探针`node scripts/verify-theme-plan08.mjs E:/MASKARIA/outputs/theme-plan08-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
+- **唯一下一任务/负责人**：用户在新聊天明确启动计划09“占卜、成就与设置”后，由接手者核日占卜/中长期、塔罗/岁时、成就/技能、总结与设置是否真正生效，并处理红 `d4.ts` 剩余牌阵数据；不自动跨入AI专项或UI重绘。本轮交接提交为本入口所在提交，用`git log -1`核实；提交后本聊天停止共享写入。
 
 ## 历史交接 · 2026-10-24 · 计划06账号与同步边界已完成，计划07已由后续接续
 

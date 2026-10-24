@@ -14,10 +14,13 @@ import { MAJOR, TAROT_BY_ID } from '@pink/mock/pkg4-tarot';
 import { ORG, ORG_CODENAME_MAX, ORG_EMBLEMS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_RULES } from '@pink/mock/pkg4-org';
 import { Coverflow } from '@pink/screens/pkg4/org/common';
 import { Arcana } from '@pink/screens/pkg4/tarot';
+import { useAppStore } from '@/store';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { acceptOrgRules, createOrgFromUi, joinOrgFromUi, previewOrg, saveMyCardFromUi } from '@/services/orgSync';
+import type { Org } from '@/types';
 
 export type OnbMode = 'create' | 'join' | 'card';
 type Step = 'rules' | 'form' | 'code' | 'preview' | 'card' | 'codename' | 'welcome';
-const TAKEN = new Set(['chariot', 'empress', 'magician']);
 const VALID_CODE = /^[A-HJ-NP-Z2-9]{8}$/;
 const pick3 = (on: boolean) => ({ clipPath: slantClip(8), background: on ? P3R.blue : 'var(--p3r-row)', color: on ? P3R.onBlue : P3R.ink, boxShadow: on ? undefined : 'inset 0 0 0 1.5px var(--p3r-track)' });
 
@@ -34,25 +37,47 @@ export function OrgOnboarding({ mode, open, onClose, initialStep, err, onDone }:
   const [error, setError] = useState('');
   const [idx, setIdx] = useState(0);
   const [tarotId, setTarotId] = useState<string>('');
+  const [activeOrgId, setActiveOrgId] = useState('');
+  const [previewData, setPreviewData] = useState<Org | null>(null);
   const [kind, setKind] = useState<'nickname' | 'tarot' | 'custom'>('nickname');
   const [custom, setCustom] = useState('');
   const [orgName, setOrgName] = useState(ORG.name);
-  useEffect(() => { if (open) { setStep(initialStep ?? first); setError(''); setBusy(false); if (initialStep === 'codename') setTarotId('fool'); if (initialStep === 'preview' || initialStep === 'code') setCode('NIGHT7RD'); } }, [open, mode]); // eslint-disable-line react-hooks/exhaustive-deps
-  const nickname = '夜读人';
+  const orgs = useCloudSocialStore((s) => s.orgs);
+  const activeView = orgs.find((v) => v.org.id === activeOrgId) ?? orgs.find((v) => v.org.id === useCloudSocialStore.getState().hideoutOrgId) ?? orgs[0];
+  const taken = new Set((activeView?.members ?? []).filter((m) => m.userId !== activeView?.me.userId).map((m) => m.tarotId).filter(Boolean));
+  useEffect(() => {
+    if (!open) return;
+    const current = orgs.find((v) => v.org.id === useCloudSocialStore.getState().hideoutOrgId) ?? orgs[0];
+    setStep(initialStep ?? first);
+    setError('');
+    setBusy(false);
+    setPreviewData(null);
+    setActiveOrgId(mode === 'card' ? current?.org.id ?? '' : '');
+    setOrgName(current?.org.name ?? ORG.name);
+    setTarotId(mode === 'card' ? current?.me.tarotId ?? '' : '');
+    if (initialStep === 'codename') setTarotId('fool');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mode]);
+  const nickname = [...(useAppStore.getState().user?.name ?? '').trim()].slice(0, ORG_CODENAME_MAX).join('') || '夜读人';
   const pick = MAJOR[idx];
-  const pickTaken = TAKEN.has(pick.id);
+  const pickTaken = taken.has(pick.id);
   const preview = kind === 'tarot' ? (TAROT_BY_ID[tarotId]?.name ?? '（先选一张牌）') : kind === 'nickname' ? nickname : (custom.trim() || '（写一个代号）');
-  const run = (fn: () => void, ms = 700) => { setBusy(true); setError(''); window.setTimeout(() => { setBusy(false); fn(); }, ms); };
+  const run = async (fn: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try { await fn(); } catch (e) { setError(e instanceof Error && e.message ? e.message : '操作没完成，请重试'); } finally { setBusy(false); }
+  };
   const titles: Record<Step, string> = { rules: '据点守则', form: '建立组织', code: '加入组织', preview: '加入组织', card: mode === 'card' ? '换代表牌' : '选代表牌', codename: mode === 'card' ? '我的成员牌' : '定代号', welcome: '' };
   const normalized = code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
 
   const footer = (() => {
-    if (step === 'rules') return <P3Button block size="lg" corner onClick={() => setStep(mode === 'create' ? 'form' : 'code')}>同意并继续</P3Button>;
-    if (step === 'form') return <P3Button block size="lg" corner disabled={!name.trim()} busy={busy} busyText="建立中…" onClick={() => run(() => { setOrgName(name.trim()); setStep('card'); })}>建立组织</P3Button>;
-    if (step === 'code') return <P3Button block size="lg" corner disabled={normalized.length !== 8} busy={busy} busyText="查找中…" onClick={() => run(() => { if (err === 'bad' || !VALID_CODE.test(normalized)) setError('邀请码不对，或者组织已经换了新码'); else setStep('preview'); })}>查找</P3Button>;
-    if (step === 'preview') return <div className="flex gap-2"><P3Button tone="soft" disabled={busy} onClick={() => { setStep('code'); setError(''); }}>换个码</P3Button><P3Button className="flex-1" corner busy={busy} busyText="加入中…" onClick={() => run(() => { if (err === 'gone') setError('找不到这个组织了'); else setStep('card'); })}>加入</P3Button></div>;
+    if (step === 'rules') return <P3Button block size="lg" corner onClick={() => { acceptOrgRules(); setStep(mode === 'create' ? 'form' : 'code'); }}>同意并继续</P3Button>;
+    if (step === 'form') return <P3Button block size="lg" corner disabled={!name.trim()} busy={busy} busyText="建立中…" onClick={() => void run(async () => { const id = await createOrgFromUi({ name, motto, emblem }); setActiveOrgId(id); setOrgName(name.trim()); setStep('card'); })}>建立组织</P3Button>;
+    if (step === 'code') return <P3Button block size="lg" corner disabled={normalized.length !== 8} busy={busy} busyText="查找中…" onClick={() => void run(async () => { if (!VALID_CODE.test(normalized)) throw new Error('邀请码不对，或者组织已经换了新码'); const p = await previewOrg(normalized); if (!p) throw new Error('邀请码不对，或者组织已经换了新码'); setPreviewData(p); setOrgName(p.name); setStep('preview'); })}>查找</P3Button>;
+    if (step === 'preview') return <div className="flex gap-2"><P3Button tone="soft" disabled={busy} onClick={() => { setStep('code'); setError(''); }}>换个码</P3Button><P3Button className="flex-1" corner busy={busy} busyText="加入中…" onClick={() => void run(async () => { const id = await joinOrgFromUi(normalized); setActiveOrgId(id); setOrgName(useCloudSocialStore.getState().orgs.find((v) => v.org.id === id)?.org.name ?? orgName); setStep('card'); })}>加入</P3Button></div>;
     if (step === 'card') return <P3Button block size="lg" corner disabled={pickTaken} onClick={() => { setTarotId(pick.id); setStep('codename'); }}>{pickTaken ? '这张已经有人了' : `就选「${pick.name}」`}</P3Button>;
-    if (step === 'codename') return <div className="flex gap-2"><P3Button tone="soft" disabled={busy} onClick={() => { setStep('card'); setError(''); }}>换一张</P3Button><P3Button className="flex-1" corner disabled={!tarotId} busy={busy} busyText="保存中…" onClick={() => run(() => { if (kind === 'custom' && !custom.trim()) { setError('写一个代号'); return; } if (mode === 'card') { onDone(orgName); onClose(); } else setStep('welcome'); })}>{mode === 'card' ? '保存' : '放进名册'}</P3Button></div>;
+    if (step === 'codename') return <div className="flex gap-2"><P3Button tone="soft" disabled={busy} onClick={() => { setStep('card'); setError(''); }}>换一张</P3Button><P3Button className="flex-1" corner disabled={!tarotId} busy={busy} busyText="保存中…" onClick={() => void run(async () => { if (kind === 'custom' && !custom.trim()) throw new Error('写一个代号'); const orgId = activeOrgId || useCloudSocialStore.getState().hideoutOrgId || orgs[0]?.org.id; if (!orgId) throw new Error('找不到这个组织了'); await saveMyCardFromUi(orgId, { tarotId, codenameKind: kind === 'custom' ? 'custom' : kind, codename: kind === 'custom' ? custom : kind === 'tarot' ? pick.name : nickname }); setActiveOrgId(orgId); setOrgName(useCloudSocialStore.getState().orgs.find((v) => v.org.id === orgId)?.org.name ?? orgName); if (mode === 'card') { onDone(orgName); onClose(); } else setStep('welcome'); })}>{mode === 'card' ? '保存' : '放进名册'}</P3Button></div>;
     return null;
   })();
 
@@ -98,7 +123,7 @@ export function OrgOnboarding({ mode, open, onClose, initialStep, err, onDone }:
               <span aria-hidden className="absolute -right-6 top-0 h-full w-24" style={{ background: 'rgba(255,255,255,0.14)', clipPath: 'polygon(40% 0, 100% 0, 60% 100%, 0 100%)' }} />
               <div className="relative flex items-center gap-3">
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center text-[28px] font-black" style={{ background: 'var(--p3r-cream)', color: 'var(--p3r-blue-deep)', clipPath: chamferClip(8, 8) }}>☾</span>
-                <div className="min-w-0"><div className="truncate font-heavy text-[22px]">{ORG.name}</div><div className="truncate text-[12px] font-bold opacity-85">「{ORG.motto}」</div><div className="mt-1 text-[12px] font-black">5 / 7 人 · 队长 夜读人</div></div>
+                <div className="min-w-0"><div className="truncate font-heavy text-[22px]">{previewData?.name ?? orgName}</div><div className="truncate text-[12px] font-bold opacity-85">「{previewData?.motto ?? ''}」</div></div>
               </div>
               {error && <div className="relative mt-3 px-2 py-1 text-[12px] font-black" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)', clipPath: slantClip(4) }}>{error}</div>}
             </div>
@@ -106,11 +131,11 @@ export function OrgOnboarding({ mode, open, onClose, initialStep, err, onDone }:
           {step === 'card' && (
             <div className="space-y-2">
               <Coverflow items={MAJOR} index={idx} onIndex={setIdx} cardW={cw} height={Math.round(cw * 1.66) + 24} ariaLabel="代表牌"
-                itemLabel={(c) => `${c.name}${TAKEN.has(c.id) ? '（已有人持有）' : ''}`}
+                itemLabel={(c) => `${c.name}${taken.has(c.id) ? '（已有人持有）' : ''}`}
                 render={(c) => (
                   <span className="relative block" style={{ height: Math.round(cw * 1.66) }}>
-                    <span className={TAKEN.has(c.id) ? 'block opacity-40' : 'block'}><Arcana id={c.id} width={cw} tag={false} /></span>
-                    {TAKEN.has(c.id) && <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 py-1 text-center text-[12px] font-black tracking-[0.1em]" style={{ background: 'color-mix(in srgb, var(--p3r-mulberry) 85%, transparent)', color: '#fff' }}>已有人持有</span>}
+                    <span className={taken.has(c.id) ? 'block opacity-40' : 'block'}><Arcana id={c.id} width={cw} tag={false} /></span>
+                    {taken.has(c.id) && <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 py-1 text-center text-[12px] font-black tracking-[0.1em]" style={{ background: 'color-mix(in srgb, var(--p3r-mulberry) 85%, transparent)', color: '#fff' }}>已有人持有</span>}
                   </span>
                 )} />
               <div className="text-center">

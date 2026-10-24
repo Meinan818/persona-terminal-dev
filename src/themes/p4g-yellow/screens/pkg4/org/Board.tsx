@@ -8,7 +8,7 @@ import { navigate } from '@yellow/shell/shellBus';
 import { ATTR_COLOR } from '@yellow/mock/pkg4-tarot';
 import { REACTIONS } from '@yellow/mock/pkg4-org';
 import { orgRaidCardData, orgReactionData } from '@/themes/orgData';
-import { setReaction } from '@/services/orgs';
+import { deletePostFromUi, reactToPost, reportPostFromUi } from '@/services/orgSync';
 import { BoardMenus } from '@yellow/screens/overlays/BoardMenus.p4g';
 import { MeChip, MemberThumb } from './common';
 
@@ -45,7 +45,7 @@ export function BoardSection({ view, blocked, failed, empty, leader, onBlockTogg
   if (failed) return <P4Card tone="paper"><div className="text-body font-bold text-p4g-ink-soft">公告板还没拉到，稍后点右上角刷新。</div></P4Card>;
   const react = (pid: string, tag: OrgReactionTag) => {
     const existing = (view.reactions ?? []).find((item) => item.postId === pid && item.userId === view.me.userId);
-    void setReaction(view.org.id, pid, tag, existing).then(() => setMine((m) => { const cur = m[pid] ?? []; return { ...m, [pid]: cur.includes(tag) ? cur.filter((x) => x !== tag) : [...cur, tag] }; })).catch(() => toast('没贴上，稍后再试'));
+    void reactToPost(view.org.id, pid, tag).then(() => setMine((m) => { const cur = m[pid] ?? []; return { ...m, [pid]: cur.includes(tag) ? cur.filter((x) => x !== tag) : [...cur, tag] }; })).catch((error) => toast(error instanceof Error ? error.message : '没贴上，稍后再试'));
   };
   const filters: Array<[Filter, string]> = [['all', '全部'], ['moment', '动态'], ['operation', '作战'], ['minutes', '纪要']];
   return (
@@ -84,8 +84,8 @@ export function BoardSection({ view, blocked, failed, empty, leader, onBlockTogg
       <div className="text-center font-display text-2xs font-bold text-[color:var(--p4g-on-stage)] opacity-80">公告板只显示最近 30 天 · 长按一条可以举报或屏蔽</div>
       <BoardMenus post={menuFor} step={step} onStep={setStep} mine={menuFor?.userId === view.me.userId} leader={leader} blocked={!!menuFor && blocked.has(menuFor.userId)} onClose={() => setStep(null)}
         onBlock={() => { if (!menuFor) return; const was = blocked.has(menuFor.userId); onBlockToggle(menuFor.userId); toast(was ? '已解除屏蔽' : '已屏蔽，不再显示 Ta 的动态和标签'); }}
-        onReported={() => { if (menuFor) setPosts((l) => l.filter((x) => x.id !== menuFor.id)); setStep(null); toast.success('已举报，这条不再显示；会在 2 天内处理'); }}
-        onDeleted={() => { if (menuFor) setPosts((l) => l.filter((x) => x.id !== menuFor.id)); toast('删掉了'); }} />
+        onReported={(reason) => { if (!menuFor) return; void reportPostFromUi(menuFor, reason as never).then(() => { setPosts((l) => l.filter((x) => x.id !== menuFor.id)); setStep(null); toast.success('已举报，这条不再显示；会在 2 天内处理'); }).catch((error) => toast(error instanceof Error ? error.message : '举报没发出去，请重试')); }}
+        onDeleted={() => { if (!menuFor) return; void deletePostFromUi(view.org.id, menuFor.id).then(() => { setPosts((l) => l.filter((x) => x.id !== menuFor.id)); setStep(null); toast('删掉了'); }).catch((error) => toast(error instanceof Error ? error.message : '没删掉，请重试')); }} />
     </div>
   );
 }

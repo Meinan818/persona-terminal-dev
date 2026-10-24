@@ -3,6 +3,24 @@
 // openOrgSettings / openOrgTitles / openBorrowMask / openOrgOnboard / openOrgCeleb。
 import { P5 } from './p5';
 import { thinkingCircleHTML } from '@/p5r-red/fx/thinkingCircle';
+import { useAppStore } from '@/store';
+import { useCloudSocialStore } from '@/store/cloudSocial';
+import { getRedHideoutData } from '../../adapter/hideoutData';
+import {
+  acceptOrgRules, createOrgFromUi, dissolveFromUi, joinOrgFromUi, kickFromUi, leaveFromUi,
+  previewOrg, refreshOrg, rotateCodeFromUi, saveMyCardFromUi, setShownMasksFromUi,
+  setMemberBlocked, shareActivity, submitMeeting, transferFromUi, updateOrgCustomFromUi, updateOrgFromUi,
+} from '@/services/orgSync';
+import { allOutFromUi, strikeFromUi } from '@/services/orgRaidSync';
+import { cancelOpFromUi, createOpFromUi, optOutFromUi, writeMyPartFromUi } from '@/services/orgOpsSync';
+import { buildRaidPanelData } from '@/themes/orgData';
+import { ORG_EMBLEMS, ORG_MAX_SHOWN_MASKS, ORG_POSTS_PER_DAY, canShareActivity, defaultShareText, meetingState, myPostsToday, normalizeInviteInput, orgWeekKey, shiftDayKey, zonedDay } from '@/utils/orgLogic';
+import { normalizeOpDraft, opDeadlineRange } from '@/utils/orgOps';
+import {
+  ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_LEVEL_NAME_MAX,
+  ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, newCustomTitleId,
+} from '@/utils/orgTitles';
+import type { AttributeId, Org, OrgCodenameKind, OrgCustom, OrgCustomTitle, OrgView } from '@/types';
 const U = P5.ui;
   const RM = () => P5.reduced();
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -122,129 +140,778 @@ const U = P5.ui;
       <polygon points="10,158 112,154 108,182 12,180" fill="#111"/><text x="60" y="171" text-anchor="middle" font-family="Noto Sans SC Black" font-weight="900" font-size="${c.name.length > 4 ? 10 : 13}" fill="#F2E9DA">${c.name}</text>
       <text x="60" y="179" text-anchor="middle" font-family="Noto Sans SC Black" font-weight="900" font-size="5.5" fill="#D7000F" letter-spacing=".6">${c.en}</text></svg>`;
   }
-  const ORG = { name: '夜读小队', motto: '一起熬过期末', code: 'MASK7Q2K', level: 3, emblem: '★', members: [['野鸡', '愚者', '0', true], ['坂本龙司', '战车', 'VII'], ['高卷杏', '恋人', 'VI'], ['新岛真', '女祭司', 'II'], ['佐仓双叶', '隐士', 'IX']] };
+  type RedOrgUiMember = [name: string, card: string, roman: string, leader: boolean, memberId: string, userId: string, masks: string[]];
+  const EMPTY_ORG = {
+    id: '', name: '', motto: '', code: '', level: 1, emblem: 'star',
+    members: [] as RedOrgUiMember[], tz: 'Asia/Shanghai', custom: undefined as OrgCustom | undefined,
+  };
+  let ORG = { ...EMPTY_ORG };
+
+  function orgView(): OrgView | undefined {
+    const social = useCloudSocialStore.getState();
+    return social.orgs.find((v) => v.org.id === social.hideoutOrgId) ?? social.orgs[0];
+  }
+
+  /** 每次打开弹层都从同一个 store 重新投影，避免延续上一次组织/成员的快照。 */
+  function syncOrg() {
+    const d = getRedHideoutData(useCloudSocialStore.getState().hideoutOrgId);
+    const raw = orgView();
+    Object.assign(ORG, {
+      id: raw?.org.id ?? '',
+      name: d.org?.name ?? '',
+      motto: d.org?.motto ?? '',
+      code: d.org?.code ?? '',
+      level: d.org?.level ?? 1,
+      emblem: raw?.org.emblem ?? 'star',
+      members: d.members.map((m) => [m.name, m.card[0], m.card[2], m.leader, m.id, m.id, m.masks] as RedOrgUiMember),
+      tz: raw?.org.tz ?? 'Asia/Shanghai',
+      custom: raw?.org.custom,
+    });
+    return { data: d, view: raw };
+  }
+  const errText = (e: unknown, fallback: string) => e instanceof Error && e.message ? e.message : fallback;
+  const markBusy = (button: Element | null, busyText: string) => {
+    if (!(button instanceof HTMLElement)) return () => {};
+    const text = button.querySelector('span');
+    const oldText = text?.textContent ?? '';
+    button.setAttribute('aria-busy', 'true');
+    button.setAttribute('aria-disabled', 'true');
+    if (text) text.textContent = busyText;
+    return () => {
+      button.removeAttribute('aria-busy');
+      button.removeAttribute('aria-disabled');
+      if (text) text.textContent = oldText;
+    };
+  };
 
   /* ══════════════════ 据点 org/* ══════════════════ */
   const memCard = (m, i, { sm = false, sel = false } = {}) => { const c = MAJ.find((x) => x.name === m[1]) || MAJ[0]; return `<span class="od-mem ${sm ? 'sm' : ''} ${sel ? 'sel' : ''}">${tarotFace(c, { w: sm ? 64 : 96 })}<b>${m[0]}${m[3] ? ' <i class="tag">队长</i>' : ''}</b></span>`; };
-  function openOrgOnboard(flow = 'create') {
-    let step = 'rules';
-    const steps = { create: ['rules', 'info', 'card', 'name', 'welcome'], join: ['rules', 'code', 'preview', 'card', 'name', 'welcome'] };
-    sheet(flow === 'create' ? '建立组织' : '加入组织', `${demoBar([['create', '建立流程'], ['join', '加入流程']], flow)}<div class="od-ob-steps" data-steps></div><div data-host></div>`, (sh) => {
-      let ci = 7;
-      const render = (st) => {
-        if (st === 'rules') return `${ttl('据点守则')}<p class="sh-p">组织是一小群人互相看见、互相打气的地方。第一次建立或加入之前，先读一下这几条：</p><ol class="od-rules"><li>这里是一小群人互相打气的地方。不发广告、不留联系方式和链接。</li><li>不骚扰、不攻击任何人，不发色情、暴力、违法或让人不适的内容。</li><li>违反守则的内容会被删除；队长可以请离成员，严重的账号会被限制使用。</li><li>看到不合适的内容，长按就能举报或屏蔽；举报会在 2 天内处理。</li></ol><div class="sh-acts">${U.btn('同意并继续', { tone: 'red', size: 'lg', seed: 731, attrs: 'data-next' })}</div>`;
-        if (st === 'info') return `${ttl('建立组织')}<label class="fld"><span>组织名</span><input class="inp" placeholder="比如：夜读小队"></label><label class="fld"><span>口号（可以不写）</span><input class="inp" placeholder="一句大家都认的话"></label><div class="fld"><span>徽记</span><div class="od-emb">${['星', '月', '日', '钥匙', '面具', '鸦', '蝶', '狐', '猫', '火', '浪', '冠'].map((e, i) => `<button aria-pressed="${i === 0}" aria-label="徽记：${e}">${e}</button>`).join('')}</div></div><p class="muted-d">建好之后你是队长，坐 1 号座位；把邀请码发给朋友，最多 7 个人。每人最多自建一个、加入一个组织。</p><div class="sh-acts">${U.btn('建立组织', { tone: 'red', size: 'lg', seed: 732, attrs: 'data-next data-busy="建立中…"' })}</div>`;
-        if (st === 'code') return `${ttl('加入组织')}<label class="fld"><span>邀请码</span><input class="inp od-code" maxlength="8" placeholder="8 位字母和数字" value="MASK7Q2"></label><p class="muted-d">邀请码在队长的据点页底部。码里没有 0、O、1、I，看着像的都按别的字母输。</p><p class="od-err" data-err hidden>邀请码不对，或者组织已经换了新码</p><div class="sh-acts">${U.btn('（演示：码错）', { tone: 'paper', size: 'sm', seed: 733, attrs: 'data-bad' })}${U.btn('查找', { tone: 'red', size: 'lg', seed: 734, attrs: 'data-next data-busy="查找中…"' })}</div>`;
-        if (st === 'preview') return `${U.shp('div', { kind: 'cut', seed: 735, tone: 'ink', cls: 'od-ob-pv' }, `<span class="od-emb-b">★</span><b>${ORG.name}</b><small>「${ORG.motto}」· ${ORG.members.length} 人 · Lv.${ORG.level}</small>`)}<div class="sh-acts">${U.btn('换个码', { tone: 'ink', seed: 736, attrs: 'data-prev' })}${U.btn('加入', { tone: 'red', size: 'lg', seed: 737, attrs: 'data-next data-busy="加入中…"' })}</div>`;
-        if (st === 'card') return `${ttl('选一张代表牌', '左右滑动挑一张 · 同一组织里每张只能一个人')}<div class="od-ob-cf"><button class="od-ob-nav" data-cf="-1" aria-label="上一张">‹</button><div class="od-ob-cards">${[-1, 0, 1].map((d) => { const c = MAJ[(ci + d + 22) % 22], taken = ORG.members.some((m) => m[1] === c.name); return `<span class="${d ? 'side' : 'mid'} ${taken ? 'taken' : ''}">${tarotFace(c, { w: d ? 78 : 120 })}${taken && !d ? '<em>这张已经有人了</em>' : ''}</span>`; }).join('')}</div><button class="od-ob-nav" data-cf="1" aria-label="下一张">›</button></div><div class="sh-acts">${U.btn(`就选「${MAJ[ci].name}」`, { tone: 'red', size: 'lg', seed: 738, attrs: `data-next ${ORG.members.some((m) => m[1] === MAJ[ci].name) ? 'disabled' : ''}`, cls: ORG.members.some((m) => m[1] === MAJ[ci].name) ? 'od-dis' : '' })}</div>`;
-        if (st === 'name') return `${ttl('写一个代号')}<div class="fld"><span>代号</span>${seg([['nick', '用昵称'], ['card', '用牌名'], ['own', '自己写']], 'nick', 'data-cn')}</div><input class="inp" data-cv maxlength="8" value="野鸡" placeholder="（写一个代号）"><p class="muted-d">最多 8 个字 · 名册上显示为：<b data-cp>野鸡</b></p><div class="sh-acts">${U.btn('放进名册', { tone: 'red', size: 'lg', seed: 739, attrs: 'data-next data-busy="保存中…"' })}</div>`;
-        return `<div class="od-ob-wel">${tarotFace(MAJ[ci], { w: 120 })}<b class="od-cut-big">${flow === 'create' ? `今天起，你是「${ORG.name}」的一员` : `欢迎加入「${ORG.name}」`}</b><p>「${ORG.name}」收下了你的名字</p><small class="muted-d">点一下继续</small></div>`;
-      };
-      const host = sh.querySelector('[data-host]');
-      const draw = () => { const S = steps[flow]; sh.querySelector('[data-steps]').innerHTML = S.map((s, i) => `<i class="${i <= S.indexOf(step) ? 'on' : ''}"></i>`).join(''); host.innerHTML = render(step); wire(host); P5.panelIn(host.children, { from: 'right', stagger: .04 });
-        const cn = host.querySelector('[data-cn]'); if (cn) { const cv = host.querySelector('[data-cv]'), cp = host.querySelector('[data-cp]'); cn.addEventListener('pick', (e) => { cv.value = e.detail === 'nick' ? '野鸡' : e.detail === 'card' ? MAJ[ci].name : ''; cp.textContent = cv.value || '（写一个代号）'; if (e.detail === 'own') cv.focus(); }); cv.oninput = () => cp.textContent = cv.value || '（写一个代号）'; }
-        const w = host.querySelector('.od-ob-wel'); if (w) { P5.sfx('fanfare', .5); w.onclick = () => { document.querySelector('.sheet-veil .x').click(); P5.toast('进入据点'); }; } };
-      host.addEventListener('click', (e) => { const n = e.target.closest('[data-next]'); if (n && !n.disabled) { const S = steps[flow]; const go = () => { step = S[S.indexOf(step) + 1]; draw(); }; if (n.dataset.busy) { n.querySelector('span').textContent = n.dataset.busy; setTimeout(go, 500); } else go(); }
-        if (e.target.closest('[data-prev]')) { step = 'code'; draw(); } if (e.target.closest('[data-bad]')) host.querySelector('[data-err]').hidden = false;
-        const cf = e.target.closest('[data-cf]'); if (cf) { ci = (ci + +cf.dataset.cf + 22) % 22; draw(); } const em = e.target.closest('.od-emb button'); if (em) host.querySelectorAll('.od-emb button').forEach((x) => x.setAttribute('aria-pressed', x === em)); });
-      sh.querySelector('.od-demo').addEventListener('click', (e) => { const b = e.target.closest('[data-st]'); if (!b) return; flow = b.dataset.st; step = 'rules'; sh.querySelectorAll('.od-demo button').forEach((x) => x.setAttribute('aria-pressed', x === b)); draw(); });
-      draw();
-    }, 77);
+  function openOrgOnboard(flow: 'create' | 'join' | 'card' = 'create') {
+    syncOrg();
+    const initialStep = flow === 'card' ? 'card' : 'rules';
+    let step = initialStep;
+    let activeOrgId = ORG.id;
+    let preview: Org | null = null;
+    let selectedTarot = '';
+    let nicknameKind: OrgCodenameKind = 'nickname';
+    let custom = '';
+    let ci = MAJ.findIndex((c) => c.id === (ORG.members.find((m) => m[5] === orgView()?.me.userId)?.[4] ? orgView()?.me.tarotId : ''));
+    if (ci < 0) ci = 0;
+    const steps = {
+      create: ['rules', 'info', 'card', 'name', 'welcome'],
+      join: ['rules', 'code', 'preview', 'card', 'name', 'welcome'],
+      card: ['card', 'name', 'welcome'],
+    };
+    const nickname = () => [...(useAppStore.getState().user?.name ?? '').trim()].slice(0, 8).join('');
+    sheet(flow === 'create' ? '建立组织' : flow === 'join' ? '加入组织' : '我的成员牌',
+      `${demoBar([['create', '建立流程'], ['join', '加入流程']], flow === 'join' ? 'join' : 'create')}<div class="od-ob-steps" data-steps></div><div data-host></div>`,
+      (sh) => {
+        let busy = false;
+        const render = (state) => {
+          const v = orgView();
+          const taken = new Set((v?.members ?? []).filter((m) => m.userId !== v?.me.userId).map((m) => m.tarotId).filter(Boolean));
+          if (state === 'rules') return `${ttl('据点守则')}<p class="sh-p">组织是一小群人互相看见、互相打气的地方。第一次建立或加入之前，先读一下这几条：</p><ol class="od-rules"><li>这里是一小群人互相打气的地方。不发广告、不留联系方式和链接。</li><li>不骚扰、不攻击任何人，不发色情、暴力、违法或让人不适的内容。</li><li>违反守则的内容会被删除；队长可以请离成员，严重的账号会被限制使用。</li><li>看到不合适的内容，长按就能举报或屏蔽；举报会在 2 天内处理。</li></ol><div class="sh-acts">${U.btn('同意并继续', { tone: 'red', size: 'lg', seed: 731, attrs: 'data-next' })}</div>`;
+          if (state === 'info') return `${ttl('建立组织')}<label class="fld"><span>组织名</span><input class="inp" data-name maxlength="12" placeholder="比如：夜读小队"></label><label class="fld"><span>口号（可以不写）</span><input class="inp" data-motto maxlength="30" placeholder="一句大家都认的话"></label><div class="fld"><span>徽记</span><div class="od-emb">${ORG_EMBLEMS.map((e) => `<button data-emblem="${e.id}" aria-pressed="${e.id === 'moon'}" aria-label="徽记：${e.label}">${e.label.slice(0, 1)}</button>`).join('')}</div></div><p class="muted-d">建好之后你是队长，坐 1 号座位；把邀请码发给朋友，最多 7 个人。每人最多自建一个、加入一个组织。</p><div class="sh-acts">${U.btn('建立组织', { tone: 'red', size: 'lg', seed: 732, attrs: 'data-next' })}</div>`;
+          if (state === 'code') return `${ttl('加入组织')}<label class="fld"><span>邀请码</span><input class="inp od-code" data-code maxlength="8" placeholder="8 位字母和数字"></label><p class="muted-d">邀请码在队长的据点页底部。码里没有 0、O、1、I，看着像的都按别的字母输。</p><p class="od-err" data-err ${preview === null ? 'hidden' : ''}>${preview === null ? '' : '邀请码不对，或者组织已经换了新码'}</p><div class="sh-acts">${U.btn('查找', { tone: 'red', size: 'lg', seed: 734, attrs: 'data-next' })}</div>`;
+          if (state === 'preview' && preview) return `${U.shp('div', { kind: 'cut', seed: 735, tone: 'ink', cls: 'od-ob-pv' }, `<span class="od-emb-b">${ORG_EMBLEMS.find((e) => e.id === preview!.emblem)?.label.slice(0, 1) ?? '★'}</span><b>${esc(preview.name)}</b><small>「${esc(preview.motto)}」· Lv.${ORG.level}</small>`)}<div class="sh-acts">${U.btn('换个码', { tone: 'ink', seed: 736, attrs: 'data-prev' })}${U.btn('加入', { tone: 'red', size: 'lg', seed: 737, attrs: 'data-next' })}</div>`;
+          if (state === 'card') return `${ttl('选一张代表牌', '左右滑动挑一张 · 同一组织里每张只能一个人')}<div class="od-ob-cf"><button class="od-ob-nav" data-cf="-1" aria-label="上一张">‹</button><div class="od-ob-cards">${[-1, 0, 1].map((d) => { const c = MAJ[(ci + d + 22) % 22], used = taken.has(c.id); return `<span class="${d ? 'side' : 'mid'} ${used ? 'taken' : ''}">${tarotFace(c, { w: d ? 78 : 120 })}${used && !d ? '<em>这张已经有人了</em>' : ''}</span>`; }).join('')}</div><button class="od-ob-nav" data-cf="1" aria-label="下一张">›</button></div><div class="sh-acts">${U.btn(`就选「${MAJ[ci].name}」`, { tone: 'red', size: 'lg', seed: 738, attrs: `data-next ${taken.has(MAJ[ci].id) ? 'disabled' : ''}`, cls: taken.has(MAJ[ci].id) ? 'od-dis' : '' })}</div>`;
+          if (state === 'name') {
+            const fallback = nicknameKind === 'tarot' ? MAJ[ci].name : nicknameKind === 'nickname' ? nickname() : custom;
+            return `${ttl('写一个代号')}<div class="fld"><span>代号</span>${seg([['nickname', '用昵称'], ['tarot', '用牌名'], ['custom', '自己写']], nicknameKind, 'data-cn')}</div><input class="inp" data-cv maxlength="8" value="${esc(custom || fallback)}" placeholder="（写一个代号）"><p class="muted-d">最多 8 个字 · 名册上显示为：<b data-cp>${esc(fallback || '（写一个代号）')}</b></p><div class="sh-acts">${U.btn(flow === 'card' ? '保存' : '放进名册', { tone: 'red', size: 'lg', seed: 739, attrs: 'data-next' })}</div>`;
+          }
+          return `<div class="od-ob-wel">${tarotFace(selectedTarot ? MAJ.find((c) => c.id === selectedTarot) ?? MAJ[ci] : MAJ[ci], { w: 120 })}<b class="od-cut-big">${flow === 'create' ? `今天起，你是「${ORG.name}」的一员` : `欢迎加入「${ORG.name}」`}</b><p>「${ORG.name}」收下了你的名字</p><small class="muted-d">点一下继续</small></div>`;
+        };
+        const host = sh.querySelector('[data-host]');
+        const draw = () => {
+          const list = steps[flow];
+          sh.querySelector('[data-steps]').innerHTML = list.map((s, i) => `<i class="${i <= list.indexOf(step) ? 'on' : ''}"></i>`).join('');
+          host.innerHTML = render(step);
+          wire(host);
+          P5.panelIn(host.children, { from: 'right', stagger: .04 });
+          const cn = host.querySelector('[data-cn]');
+          const cv = host.querySelector('[data-cv]');
+          const cp = host.querySelector('[data-cp]');
+          if (cv) cv.oninput = () => {
+            custom = cv.value;
+            if (cp) cp.textContent = cv.value || '（写一个代号）';
+          };
+          if (cn) cn.addEventListener('pick', (e) => {
+            nicknameKind = e.detail as OrgCodenameKind;
+            custom = nicknameKind === 'custom' ? cv?.value ?? '' : nicknameKind === 'tarot' ? MAJ[ci].name : nickname();
+            if (cv) cv.value = custom;
+            if (cp) cp.textContent = custom || '（写一个代号）';
+            if (nicknameKind === 'custom') cv?.focus();
+          });
+          const welcome = host.querySelector('.od-ob-wel');
+          if (welcome) {
+            P5.sfx('fanfare', .5);
+            welcome.onclick = () => {
+              document.querySelector('.sheet-veil .x')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+              P5.toast(flow === 'card' ? '成员牌改好了' : '进入据点');
+              P5.rerender();
+            };
+          }
+        };
+        host.addEventListener('click', async (e) => {
+          const target = e.target as HTMLElement;
+          const next = target.closest('[data-next]') as HTMLElement | null;
+          const prev = target.closest('[data-prev]');
+          const flip = target.closest('[data-cf]') as HTMLElement | null;
+          const emblem = target.closest('[data-emblem]') as HTMLElement | null;
+          if (emblem) {
+            host.querySelectorAll('[data-emblem]').forEach((x) => x.setAttribute('aria-pressed', x === emblem));
+            return;
+          }
+          if (flip) {
+            ci = (ci + Number(flip.dataset.cf) + 22) % 22;
+            draw();
+            return;
+          }
+          if (prev) {
+            step = 'code';
+            preview = null;
+            draw();
+            return;
+          }
+          if (!next || next.hasAttribute('disabled') || busy) return;
+          busy = true;
+          const done = markBusy(next, step === 'info' ? '建立中…' : step === 'code' ? '查找中…' : step === 'preview' ? '加入中…' : step === 'name' ? '保存中…' : '处理中…');
+          try {
+            if (step === 'rules') {
+              acceptOrgRules();
+              step = flow === 'card' ? 'card' : flow === 'join' ? 'code' : 'info';
+            } else if (step === 'info') {
+              const name = (host.querySelector('[data-name]') as HTMLInputElement | null)?.value?.trim() ?? '';
+              const motto = (host.querySelector('[data-motto]') as HTMLInputElement | null)?.value?.trim() ?? '';
+              const chosenEmblem = (host.querySelector('[data-emblem][aria-pressed="true"]') as HTMLElement | null)?.dataset.emblem ?? 'star';
+              activeOrgId = await createOrgFromUi({ name, motto, emblem: chosenEmblem });
+              syncOrg();
+              step = 'card';
+            } else if (step === 'code') {
+              const input = host.querySelector('[data-code]') as HTMLInputElement | null;
+              const code = normalizeInviteInput(input?.value ?? '');
+              preview = await previewOrg(code);
+              if (!preview) throw new Error('邀请码不对，或者组织已经换了新码');
+              step = 'preview';
+            } else if (step === 'preview') {
+              const input = host.querySelector('[data-code]') as HTMLInputElement | null;
+              activeOrgId = await joinOrgFromUi(normalizeInviteInput(input?.value ?? ''));
+              syncOrg();
+              step = 'card';
+            } else if (step === 'card') {
+              selectedTarot = MAJ[ci].id;
+              step = 'name';
+            } else if (step === 'name') {
+              const typed = (host.querySelector('[data-cv]') as HTMLInputElement | null)?.value?.trim() ?? '';
+              const kind = nicknameKind;
+              const codename = kind === 'custom' ? typed : kind === 'tarot' ? MAJ[ci].name : nickname();
+              if (!activeOrgId) throw new Error('找不到这个组织了');
+              if (!selectedTarot) selectedTarot = orgView()?.me.tarotId ?? MAJ[ci].id;
+              await saveMyCardFromUi(activeOrgId, { tarotId: selectedTarot, codenameKind: kind, codename });
+              useCloudSocialStore.getState().setHideoutOrgId(activeOrgId);
+              await refreshOrg(activeOrgId);
+              syncOrg();
+              if (flow === 'card') {
+                close();
+                P5.toast('成员牌改好了');
+                P5.rerender();
+                return;
+              }
+              step = 'welcome';
+            } else {
+              step = 'welcome';
+            }
+            draw();
+          } catch (error) {
+            P5.toast(errText(error, '操作没完成，稍后再试'));
+            if (step === 'code') {
+              const err = host.querySelector('[data-err]');
+              if (err) {
+                err.textContent = errText(error, '邀请码不对，或者组织已经换了新码');
+                err.removeAttribute('hidden');
+              }
+            }
+          } finally {
+            busy = false;
+            done();
+          }
+        });
+        sh.querySelector('.od-demo')?.addEventListener('click', (e) => {
+          const b = (e.target as HTMLElement).closest('[data-st]') as HTMLElement | null;
+          if (!b) return;
+          flow = b.dataset.st === 'join' ? 'join' : 'create';
+          step = 'rules';
+          preview = null;
+          sh.querySelectorAll('.od-demo button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+          draw();
+        });
+        draw();
+      }, 77);
   }
-  function openOrgSettings(leader = true) {
-    sheet('据点设置', `${demoBar([['leader', '队长视角'], ['member', '成员视角']], leader ? 'leader' : 'member')}<div data-host></div>`, (sh) => {
-      stateful(sh, [], leader ? 'leader' : 'member', (st) => { const L = st === 'leader';
-        return `<section class="od-os">${ttl('我的成员牌')}<div class="od-os-me">${memCard(ORG.members[0], 0, { sm: true })}<span><b>代表牌与代号</b><small>愚者 · 野鸡</small></span>${U.btn('修改', { tone: 'ink', size: 'sm', seed: 741, attrs: 'data-act="card"' })}</div>
-          <div class="od-os-masks"><b>在名册背面展示的面具</b><small>最多展示 3 张</small><div>${['亚森', '卡门', '佐罗'].map((n, i) => `<button class="od-chip on" aria-label="${n}，第 ${i + 1} 张">✓ ${n}</button>`).join('')}<button class="od-chip" data-act="mask4">阿尔塞斯</button></div></div></section>
-          <section class="od-os">${ttl('等级与称号', L ? '给每一级起名字、给称号改名、加自己的称号' : '每一级叫什么、每个称号怎么拿')}<div class="od-os-row"><span>Lv.${ORG.level} · 特别活动部</span>${U.btn(L ? '编辑' : '查看', { tone: 'ink', size: 'sm', seed: 742, attrs: 'data-act="titles"' })}</div></section>
-          <section class="od-os">${ttl('组织资料')}<div class="od-os-row"><span><b>${ORG.name}</b> · 「${ORG.motto}」 · 徽记：星</span>${L ? U.btn('修改', { tone: 'ink', size: 'sm', seed: 743, attrs: 'data-act="info"' }) : ''}</div><div class="od-os-edit" hidden><label class="fld"><span>组织名</span><input class="inp" value="${ORG.name}"></label><label class="fld"><span>口号（可以不写）</span><input class="inp" value="${ORG.motto}"></label><div class="od-emb">${['星', '月', '日', '钥匙', '面具', '鸦'].map((e, i) => `<button aria-pressed="${i === 0}" aria-label="徽记：${e}">${e}</button>`).join('')}</div><div class="sh-acts">${U.btn('取消', { tone: 'ink', size: 'sm', seed: 744, attrs: 'data-act="infox"' })}${U.btn('保存', { tone: 'red', size: 'sm', seed: 745, attrs: 'data-act="infook"' })}</div></div>
+  function openOrgSettings(_previewLeader = true) {
+    const { view } = syncOrg();
+    if (!view) return P5.toast('找不到这个组织了');
+    let editing = false;
+    let rulesOpen = false;
+    let selectedMasks = (view.me.card.personas ?? (view.me.card.persona ? [view.me.card.persona] : [])).map((p) => p.attribute);
+    let currentName = view.org.name;
+    let currentMotto = view.org.motto;
+    let currentEmblem = view.org.emblem;
+
+    const refreshView = async (orgId = ORG.id) => {
+      await refreshOrg(orgId);
+      syncOrg();
+    };
+
+    sheet('据点设置', '<div data-host></div>', (sh) => {
+      let busy = false;
+      const draw = () => {
+        const v = orgView();
+        if (!v) return;
+        const L = v.org.leaderId === v.me.userId;
+        const me = v.members.find((m) => m.userId === v.me.userId) ?? v.me;
+        const maskAttrs = ['knowledge', 'guts', 'dexterity', 'kindness', 'charm'] as AttributeId[];
+        const blocked = useCloudSocialStore.getState().orgBlocked;
+        const blockedMembers = v.members.filter((m) => m.userId !== v.me.userId && blocked.includes(m.userId));
+        const host = sh.querySelector('[data-host]');
+        host.innerHTML = `
+          <section class="od-os">${ttl('我的成员牌')}<div class="od-os-me">${memCard([me.codename, me.tarotId ?? '', '', L, me.id, me.userId, []], 0, { sm: true })}<span><b>代表牌与代号</b><small>${esc(me.tarotId || '还没选代表牌')} · ${esc(me.codename)}</small></span>${U.btn('修改', { tone: 'ink', size: 'sm', seed: 741, attrs: 'data-act="card"' })}</div>
+            <div class="od-os-masks"><b>在名册背面展示的面具</b><small>最多展示 ${ORG_MAX_SHOWN_MASKS} 张</small><div>${maskAttrs.map((a) => {
+              const p = v.me.card.personas?.find((x) => x.attribute === a) ?? (v.me.card.persona?.attribute === a ? v.me.card.persona : null);
+              if (!p) return '';
+              const idx = selectedMasks.indexOf(a);
+              return `<button class="od-chip ${idx >= 0 ? 'on' : ''}" data-mask="${a}" aria-pressed="${idx >= 0}" aria-label="${esc(p.name)}${idx >= 0 ? `，第 ${idx + 1} 张` : ''}">${idx >= 0 ? '✓ ' : ''}${esc(p.name)}</button>`;
+            }).join('') || '<small class="muted-d">还没有可展示的面具</small>'}</div></div></section>
+          <section class="od-os">${ttl('等级与称号', L ? '给每一级起名字、给称号改名、加自己的称号' : '每一级叫什么、每个称号怎么拿')}<div class="od-os-row"><span>Lv.${ORG.level} · ${esc(v.org.custom?.levelNames?.[ORG.level - 1] || '')}</span>${U.btn(L ? '编辑' : '查看', { tone: 'ink', size: 'sm', seed: 742, attrs: 'data-act="titles"' })}</div></section>
+          <section class="od-os">${ttl('组织资料')}<div class="od-os-row"><span><b>${esc(v.org.name)}</b> · 「${esc(v.org.motto)}」 · 徽记：${esc(ORG_EMBLEMS.find((e) => e.id === v.org.emblem)?.label ?? v.org.emblem)}</span>${L ? U.btn('修改', { tone: 'ink', size: 'sm', seed: 743, attrs: 'data-act="info"' }) : ''}</div>
+            <div class="od-os-edit" ${editing ? '' : 'hidden'}><label class="fld"><span>组织名</span><input class="inp" data-info-name maxlength="12" value="${esc(currentName)}"></label><label class="fld"><span>口号（可以不写）</span><input class="inp" data-info-motto maxlength="30" value="${esc(currentMotto)}"></label><div class="od-emb">${ORG_EMBLEMS.map((e) => `<button data-info-emblem="${e.id}" aria-pressed="${e.id === currentEmblem}" aria-label="徽记：${e.label}">${e.label.slice(0, 1)}</button>`).join('')}</div><div class="sh-acts">${U.btn('取消', { tone: 'ink', size: 'sm', seed: 744, attrs: 'data-act="infox"' })}${U.btn('保存', { tone: 'red', size: 'sm', seed: 745, attrs: 'data-act="infook"' })}</div></div>
             ${L ? `<div class="od-os-row"><span><b>换一个邀请码</b><small>码外传了、或者不想再有人加入时用</small></span>${U.btn('换码', { tone: 'paper', size: 'sm', seed: 746, attrs: 'data-act="code"' })}</div>` : ''}</section>
-          <section class="od-os">${ttl('成员', ORG.members.length + ' 人')}${ORG.members.slice(1).map((m, i) => `<div class="od-os-row"><span><b>${m[0]}</b> <small>${m[1]} · ${i + 2} 号</small></span>${L ? `${U.btn('转让', { tone: 'paper', size: 'sm', seed: 747 + i, attrs: `data-act="give" data-n="${m[0]}"` })}${U.btn('请离', { tone: 'red', size: 'sm', seed: 752 + i, attrs: `data-act="kick" data-n="${m[0]}"` })}` : ''}</div>`).join('')}</section>
-          <section class="od-os">${ttl('屏蔽名单（只在本机生效）')}<div class="od-os-row"><span>路人甲</span>${U.btn('解除', { tone: 'ink', size: 'sm', seed: 757, attrs: 'data-act="unblock"' })}</div></section>
-          <section class="od-os">${ttl('据点守则 · 别人能看到什么')}<button class="od-addline" data-act="rules">展开 ▼</button><div class="od-os-rules" hidden><p class="muted-d">名册：代表牌、代号、展示的面具、连续天数；公告板：你主动分享的动态；会议：你写的周目标。你的记录内容、点数明细都不会给别人看。</p></div></section>
-          <section class="od-os danger">${L ? `<p class="muted-d">队长不能直接退出：先把队长转让给别人，或者解散组织。</p>${U.btn('解散组织', { tone: 'red', seed: 758, attrs: 'data-act="dissolve"' })}` : U.btn('退出组织', { tone: 'red', seed: 759, attrs: 'data-act="leave"' })}</section>`; },
-      (h) => h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act, n = b.dataset.n;
-        if (a === 'card') openOrgOnboard('create'); if (a === 'titles') openOrgTitles(); if (a === 'mask4') P5.toast('最多展示 3 张：先去掉一张');
-        if (a === 'info') h.querySelector('.od-os-edit').hidden = false; if (a === 'infox') h.querySelector('.od-os-edit').hidden = true; if (a === 'infook') { h.querySelector('.od-os-edit').hidden = true; P5.toast('改好了'); }
-        if (a === 'code') confirm('换一个邀请码？', '旧码会立即作废，已经在组织里的人不受影响。', '换码', () => P5.toast('换好了，旧码已经作废'), { danger: false });
-        if (a === 'kick') sheet(`请「${n}」离开？`, `<p class="sh-p">对方会从名册里消失；邀请码会一起换掉，旧码不能再用。</p><div class="tg"><b>同时删除 Ta 的动态和标签</b>${sw(false)}</div><div class="sh-acts">${U.btn('取消', { tone: 'ink', seed: 761, attrs: 'data-x' })}${U.btn('请离', { tone: 'red', size: 'lg', seed: 762, attrs: 'data-ok' })}</div>`, (s2, c2) => { s2.querySelector('[data-x]').onclick = c2; s2.querySelector('[data-ok]').onclick = () => { c2(); P5.toast(`已请离「${n}」，邀请码也换了新的`); }; });
-        if (a === 'give') confirm(`把队长交给「${n}」？`, '转让之后你是普通成员，改资料、换码、请离都由新队长来做。', '转让', () => P5.toast(`队长已经交给「${n}」`), { danger: false });
-        if (a === 'unblock') { b.closest('.od-os-row').remove(); P5.toast('已解除'); }
-        if (a === 'rules') { const r = h.querySelector('.od-os-rules'); r.hidden = !r.hidden; b.textContent = r.hidden ? '展开 ▼' : '收起 ▲'; }
-        if (a === 'dissolve') confirm(`解散「${ORG.name}」？`, '组织、名册会一起删除，所有成员都会收到「你已不在」的提示。这一步不能撤销。', '解散', () => P5.toast('组织已解散'));
-        if (a === 'leave') confirm(`退出「${ORG.name}」？`, '你的成员牌会从名册里拿掉，你在这里分享的动态和贴的标签也会一起删除；以后想回来要重新拿邀请码。', '退出', () => P5.toast('已退出'));
-      }));
+          <section class="od-os">${ttl('成员', v.members.length + ' 人')}${v.members.filter((m) => m.userId !== v.me.userId).map((m, i) => `<div class="od-os-row"><span><b>${esc(m.codename)}</b> <small>${esc(m.tarotId || '未选牌')} · ${String(m.seat).padStart(2, '0')} 号</small></span>${L ? `${U.btn('转让', { tone: 'paper', size: 'sm', seed: 747 + i, attrs: `data-act="give" data-member="${m.id}"` })}${U.btn('请离', { tone: 'red', size: 'sm', seed: 752 + i, attrs: `data-act="kick" data-member="${m.id}"` })}` : ''}</div>`).join('') || '<p class="muted-d">还没有其他成员。</p>'}</section>
+          ${blockedMembers.length ? `<section class="od-os">${ttl('屏蔽名单（只在本机生效）')}${blockedMembers.map((m) => `<div class="od-os-row"><span>${esc(m.codename)}</span>${U.btn('解除', { tone: 'ink', size: 'sm', seed: 757, attrs: `data-act="unblock" data-user="${m.userId}"` })}</div>`).join('')}</section>` : ''}
+          <section class="od-os">${ttl('据点守则 · 别人能看到什么')}<button class="od-addline" data-act="rules">${rulesOpen ? '收起 ▲' : '展开 ▼'}</button><div class="od-os-rules" ${rulesOpen ? '' : 'hidden'}><p class="muted-d">名册：代表牌、代号、展示的面具、连续天数；公告板：你主动分享的动态；会议：你写的周目标。你的记录内容、点数明细都不会给别人看。</p></div></section>
+          <section class="od-os danger">${L ? `<p class="muted-d">队长不能直接退出：先把队长转让给别人，或者解散组织。</p>${U.btn('解散组织', { tone: 'red', seed: 758, attrs: 'data-act="dissolve"' })}` : U.btn('退出组织', { tone: 'red', seed: 759, attrs: 'data-act="leave"' })}</section>`;
+        wire(host);
+      };
+      draw();
+      sh.addEventListener('click', async (e) => {
+        const target = e.target as HTMLElement;
+        const button = target.closest('[data-act]') as HTMLElement | null;
+        const emblem = target.closest('[data-info-emblem]') as HTMLElement | null;
+        const mask = target.closest('[data-mask]') as HTMLElement | null;
+        if (emblem) {
+          currentEmblem = emblem.dataset.infoEmblem ?? currentEmblem;
+          sh.querySelectorAll('[data-info-emblem]').forEach((x) => x.setAttribute('aria-pressed', x === emblem));
+          return;
+        }
+        if (mask) {
+          if (busy) return;
+          const attr = mask.dataset.mask as AttributeId;
+          const next = selectedMasks.includes(attr) ? selectedMasks.filter((x) => x !== attr) : selectedMasks.length >= ORG_MAX_SHOWN_MASKS ? null : [...selectedMasks, attr];
+          if (next === null) return P5.toast(`最多展示 ${ORG_MAX_SHOWN_MASKS} 张：先去掉一张`);
+          busy = true;
+          try {
+            await setShownMasksFromUi(ORG.id, next);
+            selectedMasks = next;
+            await refreshView();
+            draw();
+          } catch (error) {
+            P5.toast(errText(error, '面具没保存，请重试'));
+          } finally {
+            busy = false;
+          }
+          return;
+        }
+        if (!button || busy) return;
+        const act = button.dataset.act;
+        if (act === 'card') {
+          document.querySelector('.sheet-veil .x')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          openOrgOnboard('card');
+          return;
+        }
+        if (act === 'titles') {
+          openOrgTitles(!!orgView() && orgView()!.org.leaderId === orgView()!.me.userId);
+          return;
+        }
+        if (act === 'info') {
+          editing = true;
+          const v = orgView();
+          currentName = v?.org.name ?? currentName;
+          currentMotto = v?.org.motto ?? currentMotto;
+          currentEmblem = v?.org.emblem ?? currentEmblem;
+          draw();
+          return;
+        }
+        if (act === 'infox') {
+          editing = false;
+          draw();
+          return;
+        }
+        if (act === 'rules') {
+          rulesOpen = !rulesOpen;
+          draw();
+          return;
+        }
+        if (act === 'infook') {
+          currentName = (sh.querySelector('[data-info-name]') as HTMLInputElement | null)?.value?.trim() ?? '';
+          currentMotto = (sh.querySelector('[data-info-motto]') as HTMLInputElement | null)?.value?.trim() ?? '';
+          busy = true;
+          const done = markBusy(button, '保存中…');
+          try {
+            await updateOrgFromUi(ORG.id, { name: currentName, motto: currentMotto, emblem: currentEmblem });
+            editing = false;
+            await refreshView();
+            draw();
+            P5.toast('改好了');
+          } catch (error) {
+            P5.toast(errText(error, '没保存成功，请重试'));
+          } finally {
+            busy = false;
+            done();
+          }
+          return;
+        }
+        if (act === 'code') {
+          confirm('换一个邀请码？', '旧码会立即作废，已经在组织里的人不受影响。', '换码', async () => {
+            try {
+              await rotateCodeFromUi(ORG.id);
+              await refreshView();
+              draw();
+              P5.toast('换好了，旧码已经作废');
+            } catch (error) {
+              P5.toast(errText(error, '换码失败，请重试'));
+            }
+          }, { danger: false });
+          return;
+        }
+        if (act === 'kick') {
+          const memberId = button.dataset.member ?? '';
+          const member = orgView()?.members.find((m) => m.id === memberId);
+          if (!member) return;
+          sheet(`请「${esc(member.codename)}」离开？`, `<p class="sh-p">对方会从名册里消失；邀请码会一起换掉，旧码不能再用。</p><div class="tg"><b>同时删除 Ta 的动态和标签</b>${sw(true)}</div><div class="sh-acts">${U.btn('取消', { tone: 'ink', seed: 761, attrs: 'data-x' })}${U.btn('请离', { tone: 'red', size: 'lg', seed: 762, attrs: 'data-ok' })}</div>`, (s2, close) => {
+            const swEl = s2.querySelector('.sw');
+            s2.querySelector('[data-x]')?.addEventListener('click', close);
+            s2.querySelector('[data-ok]')?.addEventListener('click', async (ev) => {
+              const ok = ev.currentTarget as HTMLElement;
+              const done = markBusy(ok, '请离中…');
+              try {
+                const rotated = await kickFromUi(ORG.id, member.id, swEl?.classList.contains('on') ?? true);
+                close();
+                await refreshView();
+                draw();
+                P5.toast(rotated ? `已请离「${member.codename}」，邀请码也换了新的` : `已请离「${member.codename}」；邀请码没换成，记得手动换一个`);
+              } catch (error) {
+                P5.toast(errText(error, '请离失败，请重试'));
+              } finally {
+                done();
+              }
+            });
+          });
+          return;
+        }
+        if (act === 'give') {
+          const member = orgView()?.members.find((m) => m.id === button.dataset.member);
+          if (!member) return;
+          confirm(`把队长交给「${esc(member.codename)}」？`, '转让之后你是普通成员，改资料、换码、请离都由新队长来做。', '转让', async () => {
+            try {
+              await transferFromUi(ORG.id, member.id);
+              await refreshView();
+              draw();
+              P5.toast(`队长已经交给「${member.codename}」`);
+            } catch (error) {
+              P5.toast(errText(error, '转让失败，请重试'));
+            }
+          }, { danger: false });
+          return;
+        }
+        if (act === 'unblock') {
+          try {
+            setMemberBlocked(button.dataset.user ?? '', false);
+            draw();
+            P5.toast('已解除');
+          } catch (error) {
+            P5.toast(errText(error, '没解除成功，请重试'));
+          }
+          return;
+        }
+        if (act === 'dissolve') {
+          confirm(`解散「${esc(ORG.name)}」？`, '组织、名册会一起删除，所有成员都会收到「你已不在」的提示。这一步不能撤销。', '解散', async () => {
+            try {
+              await dissolveFromUi(ORG.id);
+              document.querySelector('.sheet-veil .x')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+              P5.toast('组织已解散');
+              P5.rerender();
+            } catch (error) {
+              P5.toast(errText(error, '解散失败，请重试'));
+            }
+          });
+          return;
+        }
+        if (act === 'leave') {
+          confirm(`退出「${esc(ORG.name)}」？`, '你的成员牌会从名册里拿掉，你在这里分享的动态和贴的标签也会一起删除；以后想回来要重新拿邀请码。', '退出', async () => {
+            try {
+              await leaveFromUi(ORG.id);
+              document.querySelector('.sheet-veil .x')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+              P5.toast('已退出');
+              P5.rerender();
+            } catch (error) {
+              P5.toast(errText(error, '退出失败，请重试'));
+            }
+          });
+        }
+      });
     }, 79);
   }
-  function openOrgTitles(leader = true) {
-    const LV = ['据点', '秘密基地', '特别活动部', '作战本部', '要塞', '不夜城'];
-    const BT = [['本周出勤王', '这周记录的天数全队最多（至少 5 天，并列都给）'], ['全勤', '这周 7 天都有记录'], ['周末不打烊', '周六、周日都有记录'], ['连续 7 天', '连续记录 7 天以上'], ['连续 14 天', '连续记录 14 天以上'], ['连续 30 天', '连续记录 30 天以上'], ['言出必行', '做到了会上写的目标；连续几周做到会写「· N 周」'], ['作战完成者', '这周有目标或作战达成，而且你在名单里'], ['月下同行', '这周的满月团战出过手']];
-    const CONDS = [['week_days', '这周记录天数', '天', 5], ['weekend', '周六周日都记', '', 0], ['streak', '连续记录天数', '天', 21], ['goal_weeks', '连续做到会上的目标', '周', 3], ['ops', '这周完成的作战', '场', 2], ['raid', '这周团战出手', '次', 3], ['lv', '总等级', '级', 20]];
-    sheet('等级与称号', `${demoBar([['leader', '队长'], ['member', '成员']], leader ? 'leader' : 'member')}<div data-host></div>`, (sh) => {
-      stateful(sh, [], leader ? 'leader' : 'member', (st) => { const L = st === 'leader';
-        return `<p class="sh-p">${L ? '队长可以给每一级起名字、给称号改名，也可以加自己的称号。改名只影响之后的纪要，称号册里改名前后算同一个称号。' : '据点每一级的名字、每周纪要里发的称号都在这里。名字由队长定。'}</p>
-          ${ttl('等级名字', `现在 Lv.${ORG.level}`)}<div class="od-lv">${LV.map((d, i) => `<label class="od-lv-r ${i + 1 === ORG.level ? 'cur' : ''}"><b>Lv.${i + 1}</b>${L ? `<input class="inp" maxlength="6" placeholder="${d}" aria-label="Lv.${i + 1} 的名字（默认：${d}）">` : `<span>${d}</span>`}${i + 1 === ORG.level ? U.tag('现在') : ''}</label>`).join('')}</div>
-          ${ttl('称号', `${BT.length} 个`)}<div class="od-tt">${BT.map(([n, h]) => `<div class="od-tt-r"><b>${n}</b><small>${h}</small>${L ? `<button class="od-mini" data-act="ren" aria-label="称号「${n}」改名">改</button>` : ''}</div>`).join('')}</div>
-          ${ttl('自定义称号')}<div class="od-tt" data-custom><div class="od-tt-r"><b>夜猫子</b><small>这周记录天数 ≥ 6 天</small>${L ? '<button class="od-mini" data-act="edit">改</button><button class="od-mini" data-act="delc">删</button>' : ''}</div></div>
-          ${L ? `<button class="od-addline" data-act="add">＋ 加一个称号</button><div class="od-tt-form" hidden><label class="fld"><span>称号名字（最多 8 个字）</span><input class="inp" maxlength="8" placeholder="给称号起个名字"></label><div class="fld"><span>条件</span>${seg(CONDS.map(([k, l]) => [k, l]), 'week_days', 'data-cond')}</div><div class="od-cond-v">${stepper(5, 'data-min="1" data-max="7"')}<b data-unit>天</b></div><p class="muted-d" data-ct>每周一发纪要时，这周记录天数 ≥ 5 天的人拿到「（称号名）」。</p><div class="sh-acts">${U.btn('取消', { tone: 'ink', size: 'sm', seed: 771, attrs: 'data-act="fx"' })}${U.btn('加上', { tone: 'red', seed: 772, attrs: 'data-act="fok"' })}</div></div>
-            <div class="sh-acts">${U.btn('保存', { tone: 'red', size: 'lg', seed: 773, attrs: 'data-act="save"' })}</div>` : '<p class="muted-d">队长还没加。</p>'}`; },
-      (h) => { const cs = h.querySelector('[data-cond]'); if (cs) cs.addEventListener('pick', (e) => { const c = CONDS.find((x) => x[0] === e.detail); h.querySelector('.od-cond-v').hidden = !c[2]; h.querySelector('[data-unit]').textContent = c[2]; h.querySelector('.od-cond-v b').textContent = c[3]; h.querySelector('[data-ct]').textContent = `每周一发纪要时，${c[1]}${c[2] ? ` ≥ ${c[3]} ${c[2]}` : ''}的人拿到「（称号名）」。`; });
-        h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
-          if (a === 'add' || a === 'edit') { h.querySelector('.od-tt-form').hidden = false; } if (a === 'fx') h.querySelector('.od-tt-form').hidden = true;
-          if (a === 'fok') { const n = h.querySelector('.od-tt-form input').value.trim() || '新称号'; h.querySelector('[data-custom]').insertAdjacentHTML('beforeend', `<div class="od-tt-r"><b>${esc(n)}</b><small>${h.querySelector('[data-ct]').textContent.replace(/^每周一发纪要时，|的人拿到.*$/g, '')}</small><button class="od-mini" data-act="edit">改</button><button class="od-mini" data-act="delc">删</button></div>`); h.querySelector('.od-tt-form').hidden = true; }
-          if (a === 'delc') b.closest('.od-tt-r').remove(); if (a === 'ren') { const r = b.closest('.od-tt-r'); const bb = r.querySelector('b'); bb.contentEditable = true; bb.focus(); P5.toast('直接改字，改完点保存'); }
-          if (a === 'save') { b.querySelector('span').textContent = '存着…'; setTimeout(() => { b.querySelector('span').textContent = '保存'; P5.toast('改好了：之后的纪要用新名字'); }, 600); } }); });
+  function openOrgTitles(_previewLeader = true) {
+    const { view } = syncOrg();
+    if (!view) return P5.toast('找不到这个组织了');
+    const leader = view.org.leaderId === view.me.userId;
+    let levels = [...(view.org.custom?.levelNames ?? [])];
+    let names = { ...(view.org.custom?.titleNames ?? {}) };
+    let titles: OrgCustomTitle[] = [...(view.org.custom?.titles ?? [])];
+    let form: OrgCustomTitle | null = null;
+    let editing: { type: 'level'; index: number } | { type: 'title'; id: string } | null = null;
+    sheet('等级与称号', '<div data-host></div>', (sh) => {
+      let busy = false;
+      const draw = () => {
+        const host = sh.querySelector('[data-host]');
+        host.innerHTML = `<p class="sh-p">${leader ? '队长可以给每一级起名字、给称号改名，也可以加自己的称号。改名只影响之后的纪要，称号册里改名前后算同一个称号。' : '据点每一级的名字、每周纪要里发的称号都在这里。名字由队长定。'}</p>
+          ${ttl('等级名字', `现在 Lv.${ORG.level}`)}<div class="od-lv">${ORG_LEVEL_NAMES.map((name, i) => `<label class="od-lv-r ${i + 1 === ORG.level ? 'cur' : ''}"><b>Lv.${i + 1}</b>${leader ? (editing?.type === 'level' && editing.index === i ? `<input class="inp" data-level="${i}" maxlength="${ORG_LEVEL_NAME_MAX}" value="${esc(levels[i] ?? '')}" placeholder="${name}" aria-label="Lv.${i + 1} 的名字">` : `<button class="od-mini" data-edit-level="${i}">${esc(levels[i] || name)}</button>`) : `<span>${esc(levels[i] || name)}</span>`}${i + 1 === ORG.level ? U.tag('现在') : ''}</label>`).join('')}</div>
+          ${ttl('称号', `${ORG_BUILTIN_TITLES.length} 个`)}<div class="od-tt">${ORG_BUILTIN_TITLES.map((t) => `<div class="od-tt-r"><b>${esc(names[t.id] || t.name)}</b><small>${esc(t.how)}</small>${leader ? (editing?.type === 'title' && editing.id === t.id ? `<input class="inp" data-title="${t.id}" maxlength="${ORG_TITLE_NAME_MAX}" value="${esc(names[t.id] ?? '')}" placeholder="${esc(t.name)}" aria-label="称号「${esc(t.name)}」改名">` : `<button class="od-mini" data-edit-title="${t.id}">改</button>`) : ''}</div>`).join('')}</div>
+          ${ttl('自定义称号', `${titles.length} / ${ORG_CUSTOM_TITLES_MAX}`)}<div class="od-tt" data-custom>${titles.map((t) => `<div class="od-tt-r"><b>${esc(t.name)}</b><small>${esc(condText(t.cond))}</small>${leader ? `<button class="od-mini" data-act="edit-custom" data-id="${t.id}">改</button><button class="od-mini" data-act="del-custom" data-id="${t.id}">删</button>` : ''}</div>`).join('') || '<p class="muted-d">还没有自定义称号。</p>'}</div>
+          ${leader && !form ? `<button class="od-addline" data-act="add">＋ 加一个称号</button>` : ''}
+          ${leader && form ? `<div class="od-tt-form"><label class="fld"><span>称号名字（最多 ${ORG_TITLE_NAME_MAX} 个字）</span><input class="inp" data-custom-name maxlength="${ORG_TITLE_NAME_MAX}" value="${esc(form.name)}" placeholder="给称号起个名字"></label><div class="fld"><span>条件</span>${seg(ORG_TITLE_CONDS.map((c) => [c.type, c.label]), form.cond.type, 'data-cond')}</div><div class="od-cond-v">${stepper(form.cond.value, `data-min="${ORG_TITLE_CONDS.find((c) => c.type === form!.cond.type)?.min ?? 1}" data-max="${ORG_TITLE_CONDS.find((c) => c.type === form!.cond.type)?.max ?? 999}"`)}<b data-unit>${esc(ORG_TITLE_CONDS.find((c) => c.type === form!.cond.type)?.unit ?? '')}</b></div><p class="muted-d" data-ct>每周一发纪要时，${esc(condText(form.cond))}的人拿到「${esc(form.name || '（称号名）')}」。</p><div class="sh-acts">${U.btn('取消', { tone: 'ink', size: 'sm', seed: 771, attrs: 'data-act="fx"' })}${U.btn('加上', { tone: 'red', seed: 772, attrs: 'data-act="fok"' })}</div></div>` : ''}
+          ${leader ? `<div class="sh-acts">${U.btn('保存', { tone: 'red', size: 'lg', seed: 773, attrs: 'data-act="save"' })}</div>` : ''}`;
+        wire(host);
+        host.querySelectorAll('.stepper button').forEach((button, index) => {
+          button.addEventListener('click', () => {
+            if (!form) return;
+            const def = ORG_TITLE_CONDS.find((c) => c.type === form!.cond.type) ?? ORG_TITLE_CONDS[0];
+            form.cond = { ...form.cond, value: Math.max(def.min, Math.min(def.max, form.cond.value + (index === 1 ? 1 : -1))) };
+          });
+        });
+        const condition = host.querySelector('[data-cond]');
+        condition?.addEventListener('pick', (e) => {
+          if (!form) return;
+          const def = ORG_TITLE_CONDS.find((c) => c.type === (e as CustomEvent).detail) ?? ORG_TITLE_CONDS[0];
+          form = { ...form, cond: { type: def.type, value: def.def } };
+          draw();
+        });
+      };
+      draw();
+      sh.addEventListener('click', async (e) => {
+        const target = e.target as HTMLElement;
+        const editLevel = target.closest('[data-edit-level]') as HTMLElement | null;
+        const editTitle = target.closest('[data-edit-title]') as HTMLElement | null;
+        const button = target.closest('[data-act]') as HTMLElement | null;
+        if (editLevel) {
+          editing = { type: 'level', index: Number(editLevel.dataset.editLevel) };
+          draw();
+          (sh.querySelector(`[data-level="${editing.index}"]`) as HTMLInputElement | null)?.focus();
+          return;
+        }
+        if (editTitle) {
+          editing = { type: 'title', id: editTitle.dataset.editTitle ?? '' };
+          draw();
+          (sh.querySelector(`[data-title="${editing.id}"]`) as HTMLInputElement | null)?.focus();
+          return;
+        }
+        if (!button || busy) return;
+        const act = button.dataset.act;
+        if (act === 'add') {
+          form = { id: newCustomTitleId(), name: '', cond: { type: 'week_days', value: 5 } };
+          draw();
+          return;
+        }
+        if (act === 'edit-custom') {
+          const item = titles.find((t) => t.id === button.dataset.id);
+          if (item) {
+            form = { ...item, cond: { ...item.cond } };
+            draw();
+          }
+          return;
+        }
+        if (act === 'del-custom') {
+          titles = titles.filter((t) => t.id !== button.dataset.id);
+          draw();
+          return;
+        }
+        if (act === 'fx') {
+          form = null;
+          draw();
+          return;
+        }
+        if (act === 'fok' && form) {
+          const name = (sh.querySelector('[data-custom-name]') as HTMLInputElement | null)?.value?.trim() ?? '';
+          if (!name) return P5.toast('给称号起个名字');
+          const cond = form.cond;
+          titles = titles.some((t) => t.id === form!.id)
+            ? titles.map((t) => t.id === form!.id ? { ...t, name, cond } : t)
+            : [...titles, { ...form, name, cond }];
+          form = null;
+          draw();
+          return;
+        }
+        if (act === 'save') {
+          sh.querySelectorAll<HTMLInputElement>('[data-level]').forEach((input) => { levels[Number(input.dataset.level)] = input.value.trim(); });
+          sh.querySelectorAll<HTMLInputElement>('[data-title]').forEach((input) => { names = { ...names, [input.dataset.title!]: input.value.trim() }; });
+          const custom: OrgCustom = {
+            levelNames: levels.map((x) => (x ?? '').trim()).slice(0, ORG_LEVEL_NAMES.length),
+            titleNames: names,
+            titles: titles.slice(0, ORG_CUSTOM_TITLES_MAX),
+          };
+          busy = true;
+          const done = markBusy(button, '存着…');
+          try {
+            await updateOrgCustomFromUi(ORG.id, custom);
+            await refreshOrg(ORG.id);
+            syncOrg();
+            P5.toast('改好了：之后的纪要用新名字');
+            document.querySelector('.sheet-veil .x')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          } catch (error) {
+            P5.toast(errText(error, '没保存成功，请重试'));
+          } finally {
+            busy = false;
+            done();
+          }
+        }
+      });
     }, 81);
   }
-  function openOpCreate(kind = 'small') {
-    sheet('发起目标 / 作战', `<div class="fld"><span>类型</span><div class="od-per two">${[['small', '目标', '一句话，大家做同一件事'], ['big', '作战', '一个作战目标，每人分一份 · 只有队长能发']].map(([k, l, d]) => `<button data-k="${k}" aria-pressed="${k === kind}"><b>${l}</b><small>${d}</small></button>`).join('')}</div></div>
-      <label class="fld"><span data-gl>${kind === 'big' ? '作战目标' : '这次一起做什么'}</span><input class="inp" data-goal placeholder="${kind === 'big' ? '比如：一起做完期末复习' : '比如：这周每人跑一次 5 公里'}"></label>
-      <div class="fld"><span>截止日</span>${seg([['0', '今天'], ['3', '3 天'], ['7', '一周'], ['14', '两周'], ['30', '30 天']], '7', 'data-due')}<p class="muted-d" data-dl>7 天后</p></div>
-      <div class="fld"><span>这次练哪个属性</span>${seg(P5.ATTR_ORDER.map((a) => [a, AN(a)]), 'guts')}<p class="muted-d">每个人任务里那一条默认加这个属性（+3），自己可以改。</p></div>
-      <div class="fld"><span>参与者</span><div class="od-chips">${ORG.members.map((m, i) => chip(i === 0 ? '我' : m[0], true)).join('')}</div></div>
-      <div class="fld" data-split ${kind === 'big' ? '' : 'hidden'}><span>分工（可以空着）</span><div class="od-row-acts">${U.btn('✦ AI 拆解分工', { tone: 'red', size: 'sm', seed: 781, attrs: 'data-act="ai"' })}<small class="muted-d">按作战目标和每个人的代表牌、面具拆，拆完还能改</small></div>
-        ${ORG.members.slice(0, 4).map((m, i) => `<label class="od-split"><b>${i === 0 ? '我' : m[0]}</b><input class="inp" placeholder="空着 = Ta 自己写" aria-label="${m[0]} 的子任务"></label>`).join('')}<p class="muted-d">空着的人会在作战里「写下我的一份」；没写之前，Ta 的任务就是作战目标本身。</p></div>
-      <div class="sh-acts">${U.btn(`发起这个${kind === 'big' ? '作战' : '目标'}`, { tone: 'red', size: 'lg', seed: 782, attrs: 'data-ok' })}</div>`, (sh, close) => {
-      sh.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { const k = b.dataset.k; sh.querySelectorAll('[data-k]').forEach((x) => x.setAttribute('aria-pressed', x === b)); sh.querySelector('[data-split]').hidden = k !== 'big'; sh.querySelector('[data-gl]').textContent = k === 'big' ? '作战目标' : '这次一起做什么'; sh.querySelector('[data-goal]').placeholder = k === 'big' ? '比如：一起做完期末复习' : '比如：这周每人跑一次 5 公里'; sh.querySelector('[data-ok] span').textContent = `发起这个${k === 'big' ? '作战' : '目标'}`; });
-      sh.querySelector('[data-due]').addEventListener('pick', (e) => sh.querySelector('[data-dl]').textContent = e.detail === '0' ? '今天截止' : `${e.detail} 天后`);
-      sh.querySelector('[data-act="ai"]').onclick = (e) => { const g = sh.querySelector('[data-goal]').value.trim(); if (!g) return P5.toast('先写作战目标'); const s = e.currentTarget.querySelector('span'); s.textContent = '拆解中…'; setTimeout(() => { s.textContent = '✦ AI 拆解分工'; const t = ['整理第 1–3 章笔记', '刷两套真题', '做思维导图', '出 20 道自测题']; sh.querySelectorAll('.od-split input').forEach((i, k) => i.value = t[k]); }, 800); };
-      sh.querySelector('[data-ok]').onclick = (e) => { e.currentTarget.querySelector('span').textContent = '发出中…'; setTimeout(() => { close(); P5.toast('发出去了：你的任务里也多了一条'); }, 500); };
+  function openOpCreate(initialKind: 'small' | 'big' = 'small') {
+    const { view } = syncOrg();
+    if (!view) return P5.toast('找不到这个组织了');
+    const range = opDeadlineRange(view.org.tz);
+    const leader = view.org.leaderId === view.me.userId;
+    let kind = initialKind === 'big' && leader ? 'big' : 'small';
+    let days = 7;
+    let deadline = shiftDayKey(range.min, days);
+    let attr: AttributeId = 'guts';
+    let chosen = new Set(view.members.map((m) => m.userId));
+    let titleDraft = '';
+    const taskDraft: Record<string, string> = {};
+    sheet('发起目标 / 作战', '<div data-host></div>', (sh, close) => {
+      let busy = false;
+      const draw = () => {
+        const host = sh.querySelector('[data-host]');
+        host.innerHTML = `<div class="fld"><span>类型</span><div class="od-per two">${[['small', '目标', '一句话，大家做同一件事'], ['big', '作战', '一个作战目标，每人分一份 · 只有队长能发']].map(([k, l, d]) => `<button data-k="${k}" aria-pressed="${k === kind}" ${k === 'big' && !leader ? 'disabled' : ''}><b>${l}</b><small>${d}</small></button>`).join('')}</div></div>
+          <label class="fld"><span data-gl>${kind === 'big' ? '作战目标' : '这次一起做什么'}</span><input class="inp" data-goal maxlength="20" value="${esc(titleDraft)}" placeholder="${kind === 'big' ? '比如：一起做完期末复习' : '比如：这周每人跑一次 5 公里'}"></label>
+          <div class="fld"><span>截止日</span>${seg([['0', '今天'], ['3', '3 天'], ['7', '一周'], ['14', '两周'], ['30', '30 天']], String(days), 'data-due')}<p class="muted-d" data-dl>${days === 0 ? '今天截止' : `${days} 天后`}</p></div>
+          <div class="fld"><span>这次练哪个属性</span>${seg(P5.ATTR_ORDER.map((a) => [a, AN(a)]), attr, 'data-attr-seg')}<p class="muted-d">每个人任务里那一条默认加这个属性（+3），自己可以改。</p></div>
+          <div class="fld"><span>参与者</span><div class="od-chips">${view.members.map((m) => `<button type="button" class="od-chip ${chosen.has(m.userId) ? 'on' : ''}" data-participant="${m.userId}" aria-pressed="${chosen.has(m.userId)}">${chosen.has(m.userId) ? '✓ ' : ''}${esc(m.userId === view.me.userId ? '我' : m.codename)}</button>`).join('')}</div></div>
+          <div class="fld" data-split ${kind === 'big' ? '' : 'hidden'}><span>分工（可以空着）</span><div class="od-row-acts"><button class="od-mini" disabled>AI 分工留计划10</button><small class="muted-d">现在可以自己写，真实 AI 拆解不在计划08内。</small></div>
+            ${view.members.filter((m) => chosen.has(m.userId)).map((m) => `<label class="od-split"><b>${esc(m.userId === view.me.userId ? '我' : m.codename)}</b><input class="inp" data-task="${m.userId}" maxlength="20" value="${esc(taskDraft[m.userId] ?? '')}" placeholder="空着 = Ta 自己写" aria-label="${esc(m.codename)} 的子任务"></label>`).join('')}<p class="muted-d">空着的人会在作战里「写下我的一份」；没写之前，Ta 的任务就是作战目标本身。</p></div>
+          <div class="sh-acts">${U.btn(`发起这个${kind === 'big' ? '作战' : '目标'}`, { tone: 'red', size: 'lg', seed: 782, attrs: 'data-ok' })}</div>`;
+        wire(host);
+        (host.querySelector('[data-goal]') as HTMLInputElement | null)?.addEventListener('input', (event) => {
+          titleDraft = (event.currentTarget as HTMLInputElement).value;
+        });
+        host.querySelectorAll<HTMLInputElement>('[data-task]').forEach((input) => {
+          input.addEventListener('input', () => { taskDraft[input.dataset.task!] = input.value; });
+        });
+      };
+      draw();
+      sh.addEventListener('click', async (e) => {
+        const target = e.target as HTMLElement;
+        const k = target.closest('[data-k]') as HTMLElement | null;
+        const p = target.closest('[data-participant]') as HTMLElement | null;
+        const ok = target.closest('[data-ok]') as HTMLElement | null;
+        if (k) {
+          const next = k.dataset.k as 'small' | 'big';
+          if (next === 'big' && !leader) return;
+          kind = next;
+          draw();
+          return;
+        }
+        if (p) {
+          const uid = p.dataset.participant ?? '';
+          if (chosen.has(uid)) chosen.delete(uid); else chosen.add(uid);
+          draw();
+          return;
+        }
+        if (!ok || busy) return;
+        const title = (sh.querySelector('[data-goal]') as HTMLInputElement | null)?.value?.trim() ?? '';
+        if (!title) return P5.toast(kind === 'big' ? '先写作战目标' : '先写这次一起做什么');
+        if (chosen.size < 2) return P5.toast('至少选 2 人');
+        const assignments: Record<string, string> = {};
+        sh.querySelectorAll<HTMLInputElement>('[data-task]').forEach((input) => {
+          const text = input.value.trim();
+          if (text) assignments[input.dataset.task!] = text;
+        });
+        const draft = normalizeOpDraft({
+          kind, attr, title, deadline,
+          participants: [...chosen],
+          assignments,
+        }, view.members);
+        busy = true;
+        const done = markBusy(ok, '发出中…');
+        try {
+          const op = await createOpFromUi(view.org.id, draft);
+          await refreshOrg(view.org.id);
+          close();
+          P5.toast(op.participants.includes(view.me.userId) ? '发出去了：你的任务里也多了一条' : '发出去了');
+          P5.rerender();
+        } catch (error) {
+          P5.toast(errText(error, '没发出去，请稍后再试'));
+        } finally {
+          busy = false;
+          done();
+        }
+      });
+      sh.querySelector('[data-due]')?.addEventListener('pick', (event) => {
+        days = Number((event as CustomEvent).detail);
+        deadline = shiftDayKey(range.min, days);
+        const label = sh.querySelector('[data-dl]');
+        if (label) label.textContent = days === 0 ? '今天截止' : `${days} 天后`;
+      });
+      sh.querySelector('[data-attr-seg]')?.addEventListener('pick', (event) => { attr = (event as CustomEvent).detail as AttributeId; });
     }, 83);
   }
-  function openRaid(st0 = 'night') {
-    const MASKS = [['亚森', [['疾风斩', 18, 0, '伤害'], ['暴击连舞', 26, 8, '暴击'], ['鼓舞', 0, 4, '增益']]], ['卡门', [['火焰', 22, 6, '伤害'], ['蓄力', 0, 5, '蓄力']]], ['佐罗', [['回复之风', 0, 4, '回复'], ['削弱', 0, 3, '削弱']]]];
-    let mi = 0;
-    sheet('满月团战', `${demoBar([['night', '今晚可出手'], ['day', '白天'], ['struck', '今晚已出手'], ['allout', '总攻击已解锁'], ['nosp', '无 SP'], ['down', '暗影击退'], ['failed', '拉取失败']], st0)}<div data-host></div>`, (sh) => {
-      stateful(sh, [], st0, (st) => { const hp = st === 'down' ? 0 : 62, sp = st === 'nosp' ? 0 : 24;
-        return `<div class="od-raid-hd">${U.shp('div', { kind: 'cut', seed: 791, tone: 'ink', cls: 'od-raid-boss' }, `<small>满月团战 · ${st === 'day' ? '前一晚' : '满月夜'} · ${md(addD(1))} 满月</small><b>暴食之影</b><span class="od-raid-sil">${P5.sil('crouch', { style: 'height:100%;width:auto' })}</span><div class="od-raid-hp" aria-label="首领还剩的血"><i style="width:${hp}%"></i><em>${st === 'down' ? '暗影击退' : `还剩 ${hp}%`}</em></div><span class="od-raid-ns">${['前一晚', '满月夜', '后一晚'].map((n, i) => `<i class="${i === 1 ? 'cur' : i === 0 ? 'past' : ''}">${n}${i === 0 ? '，我出过手' : i === 1 ? '（满月，伤害 ×1.2）' : ''}</i>`).join('')}</span>`)}</div>
-          ${st === 'down' ? `<div class="od-raid-down">${U.ransom('DOWN!', { h: 40, seed: 9 })}<p>暗影击退！出过手的人各 +30 SP，岁时册多一枚印记，据点每人 +20 经验。</p><p class="muted-d">最后一击：坂本龙司</p></div>`
-          : st === 'failed' ? `<p class="od-warn">团战暂时拉不到（可能是网络，或者服务器还没准备好）。稍后刷新再看看。</p>`
-          : st === 'day' ? `<p class="od-warn">白天 · 18:00 开打 · 白天不能出手，18:00 开打。</p>`
-          : st === 'struck' ? `<p class="od-warn">今晚已出手 · 明晚 18:00 再来。</p>`
-          : `<section>${ttl('今日的锋芒', `现在有 ${sp} SP`)}${sp ? `<div class="od-raid-mask"><button data-mk="-1" aria-label="上一张面具">‹</button><b data-mn>${MASKS[mi][0]}</b><button data-mk="1" aria-label="下一张面具">›</button></div><div class="od-raid-sk" data-sk>${skills(MASKS[mi][1], sp)}</div>` : '<p class="od-warn">逆影战场还没开始，没有 SP：这次先用普攻。</p>'}
-            <div class="sh-acts">${U.btn(sp ? '释放 疾风斩' : '出手！普攻', { tone: 'red', size: 'lg', seed: 792, attrs: 'data-act="hit"' })}</div>
-            ${U.btn('总攻击！', { tone: st === 'allout' ? 'red' : 'ink', seed: 793, attrs: `data-act="allout" ${st === 'allout' ? '' : 'disabled'}`, cls: `od-wide ${st === 'allout' ? '' : 'od-dis'}` })}<p class="muted-d">${st === 'allout' ? '已解锁：每人每次满月一次，不花 SP' : '全队再出手 3 次解锁 · 先出一次手才能发动'}</p></section>`}
-          <section>${ttl('谁出过手', '只显示谁出过手，不排名次')}<div class="od-raid-hit">${ORG.members.slice(0, 4).map((m, i) => `<span>${U.star(i < 3 ? 'var(--red)' : '#cfc6b6', 'var(--ink)')}<b>${m[0]}</b><small>${i < 3 ? `出手 ${3 - i} 晚${i === 1 ? ' · 总攻击' : ''}` : '还没出手'}</small></span>`).join('')}<span>${U.star('#cfc6b6', 'var(--ink)')}<b>已离开的成员</b><small>出手 1 晚</small></span></div></section>
-          <p class="muted-d">满月那天的前一晚、当晚、后一晚，每晚 18:00 到第二天 07:00 能出手（按据点的时区）。首领的等级就是开团时的据点等级，血量按名册和它定（每高一级 +5%），三晚里据点升级也不变；之后进来的人也能出手。</p>`; },
-      (h, st, draw) => {
-        h.addEventListener('click', (e) => { const mk = e.target.closest('[data-mk]'); if (mk) { mi = (mi + +mk.dataset.mk + 3) % 3; h.querySelector('[data-mn]').textContent = MASKS[mi][0]; h.querySelector('[data-sk]').innerHTML = skills(MASKS[mi][1], 24); return; }
-          const sk = e.target.closest('.od-sk'); if (sk && !sk.disabled) { h.querySelectorAll('.od-sk').forEach((x) => x.setAttribute('aria-pressed', x === sk)); h.querySelector('[data-act="hit"] span').textContent = '释放 ' + sk.dataset.n; return; }
-          const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
-          if (b.dataset.act === 'hit' || b.dataset.act === 'allout') { b.querySelector('span').textContent = '出手中…'; setTimeout(() => { const card = P5.cutIn(cutPanel(b.dataset.act === 'allout' ? 'ALL OUT' : 'WEAK!', `<div class="od-cut-paper"><b class="od-cut-n">−${b.dataset.act === 'allout' ? 96 : 32}</b><div><b class="od-cut-big">${b.dataset.act === 'allout' ? '总攻击！' : '打中弱点！'}</b><p>× 弱点 1.5 × 满月 1.2</p></div></div>`, { seed: 21 }), { autoMs: 1800, sfx: 'fanfare' }); cutAnim(card); draw('struck'); }, 400); }
-        });
+  function openRaid(_state = 'night') {
+    const { view } = syncOrg();
+    if (!view) return P5.toast('找不到这个组织了');
+    const panel = buildRaidPanelData(view);
+    if (!panel) {
+      sheet('满月团战', '<p class="od-warn">当前没有真实团战。等下一次满月开团后再来。</p>', () => {}, 85);
+      return;
+    }
+    const persona = useAppStore.getState().persona;
+    const attrs: AttributeId[] = ['knowledge', 'guts', 'dexterity', 'kindness', 'charm'];
+    let mask = 0;
+    let left = panel.state.left;
+    let struck = panel.struckTonight;
+    let allOutUsed = panel.options.allOutUsed;
+    let busy = false;
+    sheet('满月团战', '<div data-host></div>', (sh, close) => {
+      const draw = () => {
+        const host = sh.querySelector('[data-host]');
+        const attr = attrs[mask];
+        const maskName = persona?.attributePersonas?.[attr]?.name ?? AN(attr);
+        const skills = [
+          { name: '普攻', power: 10, plus: 0, sp: 0, type: '普攻' },
+          ...(persona?.skills?.[attr] ?? []).slice(0, 4).map((s) => ({ name: s.name, power: s.power, plus: 0, sp: s.spCost, type: s.type })),
+        ];
+        const defeated = panel.state.defeated || left <= 0;
+        const canStrike = panel.options.canStrike && !defeated && !struck;
+        host.innerHTML = `<div class="od-raid-hd">${U.shp('div', { kind: 'cut', seed: 791, tone: 'ink', cls: 'od-raid-boss' }, `<small>满月团战 · ${esc(panel.current.phase)}</small><b>${esc(panel.raid.boss.name)}</b><span class="od-raid-sil">${P5.sil('crouch', { style: 'height:100%;width:auto' })}</span><div class="od-raid-hp" aria-label="首领还剩的血"><i style="width:${left / Math.max(1, panel.raid.hpMax) * 100}%"></i><em>${defeated ? '暗影击退' : `还剩 ${left} / ${panel.raid.hpMax}`}</em></div><span class="od-raid-ns">${panel.nights.map((n, i) => `<i class="${i === panel.current.nightIndex ? 'cur' : ''}">${esc(n)}${panel.myNights[i] ? '，我出过手' : ''}</i>`).join('')}</span>`)}</div>
+          ${defeated ? `<div class="od-raid-down">${U.ransom('DOWN!', { h: 40, seed: 9 })}<p>暗影击退！出过手的人各 +${panel.reward} SP，据点每人 +20 经验。</p></div>`
+          : panel.current.phase !== 'night' ? `<p class="od-warn">${panel.current.phase === 'day' ? '白天 · 18:00 开打。' : '这次团战已经结束。'}</p>`
+          : struck ? `<p class="od-warn">今晚已出手 · ${esc(struck.skill)} · ${struck.damage}。明晚 18:00 再来。</p>`
+          : `<section>${ttl('今日的锋芒', `弱点 ${AN(panel.raid.boss.weak)}`)}<div class="od-raid-mask"><button data-mk="-1" aria-label="上一张面具">‹</button><b data-mn>${esc(maskName)}</b><button data-mk="1" aria-label="下一张面具">›</button></div><div class="od-raid-sk">${skills.map((s, i) => `<button class="od-sk" data-skill="${esc(s.name)}" data-power="${s.power}" data-plus="${s.plus}" data-sp="${s.sp}" aria-pressed="${i === 0}" ${s.sp > 0 && !persona ? 'disabled' : ''}><b>${esc(s.name)}</b>${U.tag(s.type, 'ink')}<small>威力 ${s.power}${s.sp ? ` · ${s.sp} SP` : '，不花 SP'}</small></button>`).join('')}</div>
+            ${canStrike ? `<div class="sh-acts">${U.btn('出手！普攻', { tone: 'red', size: 'lg', seed: 792, attrs: 'data-act="hit"' })}</div>` : ''}
+            ${U.btn('总攻击！', { tone: 'ink', seed: 793, attrs: `data-act="allout" ${panel.options.canAllOut && !allOutUsed && !defeated ? '' : 'disabled'}`, cls: `od-wide ${panel.options.canAllOut && !allOutUsed ? '' : 'od-dis'}` })}<p class="muted-d">${allOutUsed ? '这次满月你已经用过了' : panel.options.allOutNeed > 0 ? `全队再出手 ${panel.options.allOutNeed} 次解锁` : '已解锁：每人每次满月一次，不花 SP'}</p></section>`}
+          <section>${ttl('谁出过手', '只显示谁出过手，不排名次')}<div class="od-raid-hit">${panel.hitters.map((h) => `<span>${U.star('var(--red)', 'var(--ink)')}<b>${esc(view.members.find((m) => m.userId === h.userId)?.codename ?? '已离开的成员')}</b><small>出手 ${h.nights} 晚${h.allout ? ' · 总攻击' : ''}</small></span>`).join('') || '<p class="muted-d">还没有人出手。</p>'}</div></section>
+          <p class="muted-d">满月那天的前一晚、当晚、后一晚，每晚 18:00 到第二天 07:00 能出手（按据点的时区）。</p>`;
+        wire(host);
+      };
+      draw();
+      sh.addEventListener('click', async (event) => {
+        const target = event.target as HTMLElement;
+        const maskButton = target.closest('[data-mk]') as HTMLElement | null;
+        if (maskButton) {
+          mask = (mask + Number(maskButton.dataset.mk) + attrs.length) % attrs.length;
+          draw();
+          return;
+        }
+        const skillButton = target.closest('.od-sk') as HTMLElement | null;
+        const hitButton = target.closest('[data-act="hit"]') as HTMLElement | null;
+        if (skillButton) {
+          sh.querySelectorAll('.od-sk').forEach((x) => x.setAttribute('aria-pressed', x === skillButton));
+          if (hitButton?.querySelector('span')) hitButton.querySelector('span')!.textContent = `释放 ${skillButton.dataset.skill}`;
+          return;
+        }
+        const action = target.closest('[data-act]') as HTMLElement | null;
+        if (!action || busy || action.hasAttribute('disabled')) return;
+        if (action.dataset.act !== 'hit' && action.dataset.act !== 'allout') return;
+        const selected = sh.querySelector('.od-sk[aria-pressed="true"]') as HTMLElement | null;
+        busy = true;
+        const done = markBusy(action, '出手中…');
+        try {
+          const result = action.dataset.act === 'allout'
+            ? await allOutFromUi(view.org.id)
+            : await strikeFromUi(view.org.id, {
+                attr: attrs[mask],
+                power: Number(selected?.dataset.power ?? 10),
+                plus: Number(selected?.dataset.plus ?? 0),
+                skill: selected?.dataset.skill ?? '普攻',
+                spCost: Number(selected?.dataset.sp ?? 0),
+              });
+          left = Math.max(0, left - result.damage);
+          if (action.dataset.act === 'allout') allOutUsed = true;
+          else struck = { skill: selected?.dataset.skill ?? '普攻', damage: result.damage };
+          const card = P5.cutIn(cutPanel(action.dataset.act === 'allout' ? 'ALL OUT' : result.isWeak ? 'WEAK!' : 'HIT!', `<div class="od-cut-paper"><b class="od-cut-n">−${result.damage}</b><div><b class="od-cut-big">${action.dataset.act === 'allout' ? '总攻击！' : result.isWeak ? '打中弱点！' : '出手！'}</b><p>${result.defeated ? '暗影击退' : '伤害已写回据点'}</p></div></div>`, { seed: 21 }), { autoMs: 1800, sfx: 'fanfare' });
+          cutAnim(card);
+          await refreshOrg(view.org.id);
+          const next = buildRaidPanelData(orgView()!);
+          if (next) {
+            left = next.state.left;
+            struck = next.struckTonight;
+            allOutUsed = next.options.allOutUsed;
+          }
+          draw();
+          P5.rerender();
+        } catch (error) {
+          P5.toast(errText(error, '出手失败，请重试'));
+        } finally {
+          busy = false;
+          done();
+        }
       });
     }, 85);
-    function skills(arr, sp) { return arr.map(([n, d, c, t], i) => `<button class="od-sk" data-n="${n}" aria-pressed="${i === 0}" ${c > sp ? 'disabled' : ''}><b>${n}</b>${U.tag(t, 'ink')}<small>预估 ${d || '—'}${c ? ` · ${c} SP` : '，不花 SP'}${c > sp ? '，SP 不够' : ''}</small></button>`).join(''); }
   }
-  function openShareToOrg(st0 = 'form') {
-    sheet('分享到据点', `${demoBar([['form', '可分享'], ['used', '今天用完了'], ['ok', '分享好了']], st0)}<div data-host></div>`, (sh, close) => {
-      stateful(sh, [], st0, (st) => st === 'ok' ? `<div class="od-ob-wel">${U.ransom('SHARED', { h: 34, seed: 2 })}<b class="od-cut-big">分享好了</b><p>大家打开据点的公告板就能看到，可以给你贴标签打气。</p><div class="sh-acts">${U.btn('好', { tone: 'ink', seed: 801, attrs: 'data-act="x"' })}${U.btn('去公告板看看', { tone: 'red', size: 'lg', seed: 802, attrs: 'data-act="board"' })}</div></div>`
-        : `<p class="sh-p">大家打开据点的公告板就能看到，可以给你贴标签打气。</p><div class="fld"><span>分享到</span><div class="od-chips">${chip(`★ ${ORG.name}`, true, 'data-solo')}</div></div><label class="fld"><span>说一句</span><input class="inp" data-say maxlength="40" placeholder="比如：跑完了第一个五公里" aria-label="分享的那一句"></label>
-          <div class="fld"><span>大家会看到</span>${U.shp('div', { kind: 'quad', seed: 803, tone: 'ink', cls: 'od-share-pv' }, `<b>野鸡</b><small>刚刚</small><p data-pv>（写一句）</p>${U.tag('胆量 +2')}`)}</div>
-          <p class="muted-d">${st === 'used' ? `今天在「${ORG.name}」已经分享了 3 条，明天再来。` : `今天还能在「${ORG.name}」分享 2 条。`}</p>
-          <div class="sh-acts">${U.btn(st === 'used' ? '今天的 3 条用完了' : '分享', { tone: 'red', size: 'lg', seed: 804, attrs: `data-act="share" ${st === 'used' ? 'disabled' : ''}`, cls: st === 'used' ? 'od-dis' : '' })}</div>`,
-      (h, st, draw) => { const i = h.querySelector('[data-say]'); if (i) i.oninput = () => h.querySelector('[data-pv]').textContent = i.value || '（写一句）';
-        h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b || b.disabled) return; if (b.dataset.act === 'share') { b.querySelector('span').textContent = '分享中…'; setTimeout(() => draw('ok'), 500); } if (b.dataset.act === 'x') close(); if (b.dataset.act === 'board') { close(); P5.go('hideout', { via: 'tear' }); } }); });
+  function openShareToOrg(_state = 'form') {
+    const { view } = syncOrg();
+    const activities = useAppStore.getState().activities ?? [];
+    const activity = activities.find((a) => canShareActivity(a)) ?? null;
+    const me = view?.me.userId ?? '';
+    const left = view ? Math.max(0, ORG_POSTS_PER_DAY - myPostsToday(view.posts, me)) : 0;
+    let text = activity ? defaultShareText(activity.description) : '';
+    let done = false;
+    sheet('分享到据点', '<div data-host></div>', (sh, close) => {
+      let busy = false;
+      const draw = () => {
+        const host = sh.querySelector('[data-host]');
+        host.innerHTML = done
+          ? `<div class="od-ob-wel">${U.ransom('SHARED', { h: 34, seed: 2 })}<b class="od-cut-big">分享好了</b><p>大家打开据点的公告板就能看到，可以给你贴标签打气。</p><div class="sh-acts">${U.btn('好', { tone: 'ink', seed: 801, attrs: 'data-act="x"' })}${U.btn('去公告板看看', { tone: 'red', size: 'lg', seed: 802, attrs: 'data-act="board"' })}</div></div>`
+          : `<p class="sh-p">大家打开据点的公告板就能看到，可以给你贴标签打气。</p>
+            ${!view ? '<p class="od-warn">还没有组织，先在据点里建立或加入一个。</p>' : `<div class="fld"><span>分享到</span><div class="od-chips">${chip(`★ ${esc(view.org.name)}`, true, 'data-solo')}</div></div>
+            <label class="fld"><span>说一句</span><input class="inp" data-say maxlength="20" value="${esc(text)}" placeholder="比如：跑完了第一个五公里" aria-label="分享的那一句"></label>
+            ${!activity ? '<p class="od-warn">最近没有可分享的记录。</p>' : `<p class="muted-d">${left > 0 ? `今天还能在「${esc(view.org.name)}」分享 ${left} 条。` : `今天在「${esc(view.org.name)}」已经分享了 ${ORG_POSTS_PER_DAY} 条，明天再来。`}</p>`}
+            <div class="sh-acts">${U.btn(left <= 0 ? `今天的 ${ORG_POSTS_PER_DAY} 条用完了` : '分享', { tone: 'red', size: 'lg', seed: 804, attrs: `data-act="share" ${!activity || left <= 0 ? 'disabled' : ''}`, cls: !activity || left <= 0 ? 'od-dis' : '' })}</div>`}`;
+        wire(host);
+        host.querySelector<HTMLInputElement>('[data-say]')?.addEventListener('input', (event) => {
+          text = (event.currentTarget as HTMLInputElement).value;
+        });
+      };
+      draw();
+      sh.addEventListener('click', async (event) => {
+        const target = event.target as HTMLElement;
+        const button = target.closest('[data-act]') as HTMLElement | null;
+        if (!button || busy) return;
+        if (button.dataset.act === 'x') return close();
+        if (button.dataset.act === 'board') {
+          if (view) {
+            useCloudSocialStore.getState().setHideoutOrgId(view.org.id);
+            useCloudSocialStore.getState().setHideoutSection('board');
+          }
+          close();
+          P5.go('hideout', { via: 'tear' });
+          return;
+        }
+        if (button.dataset.act !== 'share' || !activity || !view) return;
+        if (!text.trim()) return P5.toast('先写一句');
+        busy = true;
+        const doneButton = markBusy(button, '分享中…');
+        try {
+          await shareActivity(view.org.id, activity, text);
+          done = true;
+          draw();
+        } catch (error) {
+          P5.toast(errText(error, '没分享出去，稍后再试'));
+        } finally {
+          busy = false;
+          doneButton();
+        }
+      });
     }, 87);
   }
   function openBorrowMask(st0 = 'ok') {
@@ -270,28 +937,93 @@ const U = P5.ui;
     const card = P5.cutIn(cutPanel(K[0], `<div class="od-cut-paper"><span class="od-emb-b">★</span><div><b class="od-cut-big">${K[1]}</b><p>${K[2]}</p><em>${K[3]}</em></div></div>`, { seed: 25 }), { autoMs: 3200, sfx: 'fanfare' });
     cutAnim(card);
   }
-  function openHideoutMap(st0 = 'raid') {
-    stage({ title: '据点地图', en: 'HIDEOUT', seed: 101, cls: 'od-hm-st', body: `${demoBar([['raid', '团战进行中'], ['down', '已击退'], ['calm', '无团战']], st0)}<div data-host></div><p class="od-note">据点分区：点分区跳到对应区块；点座位打开成员牌（可同调面具）。</p>`, onMount(w) {
-      stateful(w, [], st0, (st) => `${st === 'calm' ? '' : `<button class="od-hm-raid" data-act="raid">${U.tag('满月团战')}<b>「暴食之影」${st === 'down' ? '已击退' : '还剩 62%，今晚你还没出手'}</b><small>点了打开团战面板 ›</small></button>`}
+  function openHideoutMap(_state = 'raid') {
+    const { data } = syncOrg();
+    if (!data.hasData) return P5.toast('还没有据点');
+    const myId = orgView()?.me.userId ?? '';
+    stage({ title: '据点地图', en: 'HIDEOUT', seed: 101, cls: 'od-hm-st', body: '<div data-host></div><p class="od-note">据点分区：点分区跳到对应区块；点座位回到真实名册。</p>', onMount(w, close) {
+      const raidPct = data.raid ? Math.round(data.raid.left / Math.max(1, data.raid.hpMax) * 100) : 0;
+      w.querySelector('[data-host]').innerHTML = `${data.raid ? `<button class="od-hm-raid" data-act="raid">${U.tag('满月团战')}<b>「${esc(data.raid.boss)}」${data.raid.left <= 0 ? '已击退' : `还剩 ${raidPct}%`}</b><small>点了打开团战面板 ›</small></button>` : ''}
         <div class="od-hm" role="group" aria-label="据点分区"><svg class="od-hm-floor" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true"><polygon points="20,40 380,10 392,280 6,292" fill="#2a0306"/><polygon points="20,40 380,10 392,280 6,292" fill="url(#hmg)" opacity=".5"/><defs><pattern id="hmg" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(-8)"><path d="M0 0H24M0 0V24" stroke="#F2E9DA" stroke-width=".6" opacity=".4"/></pattern></defs></svg>
           ${[['roster', '名册', 'ROSTER', 6, 8], ['board', '公告板', 'BOARD', 52, 6], ['meeting', '会议', 'MEETING', 8, 56], ['ops', '作战', 'OPS', 54, 54]].map(([k, n, en, x, y], i) => `<button class="od-hm-z" data-z="${k}" style="left:${x}%;top:${y}%;--r:${[-3, 2, 2.5, -2][i]}deg">${U.ransom(en, { h: 18, seed: 10 + i })}<b>${n}</b></button>`).join('')}
-          </div><div class="od-hm-seats">${Array.from({ length: 8 }, (_, s) => { const m = ORG.members[s]; return `<button class="od-hm-seat ${m ? 'on' : ''} ${s === 0 ? 'me' : ''}" ${m ? `data-seat="${s}" aria-label="${s + 1} 号 ${m[0]}${s === 0 ? '（我）（队长）' : ''}：打开成员牌"` : `disabled aria-label="${s + 1} 号空座"`}><i>${s + 1}</i>${m ? `<b>${m[0]}</b>` : ''}${st === 'raid' && m && s < 3 ? '<em>击</em>' : ''}</button>`; }).join('')}</div>`,
-      (h) => h.addEventListener('click', (e) => { if (e.target.closest('[data-act="raid"]')) return openRaid(st0 === 'down' ? 'down' : 'night'); const z = e.target.closest('[data-z]'); if (z) { if (z.dataset.z === 'meeting') return openMeeting(); if (z.dataset.z === 'ops') return openOpCreate(); P5.toast('跳到「' + z.querySelector('b').textContent + '」区'); } const s = e.target.closest('[data-seat]'); if (s) openBorrowMask(); }));
+          </div><div class="od-hm-seats">${Array.from({ length: 7 }, (_, s) => { const m = ORG.members[s]; return `<button class="od-hm-seat ${m ? 'on' : ''} ${m && m[5] === myId ? 'me' : ''}" ${m ? `data-seat="${s}" aria-label="${s + 1} 号 ${esc(m[0])}：回到名册"` : `disabled aria-label="${s + 1} 号空座"`}><i>${s + 1}</i>${m ? `<b>${esc(m[0])}</b>` : ''}${data.raid && m && s < data.raid.hitters.length ? '<em>击</em>' : ''}</button>`; }).join('')}</div>`;
+      wire(w);
+      w.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('[data-act="raid"]')) return openRaid('night');
+        const zone = (e.target as HTMLElement).closest('[data-z]') as HTMLElement | null;
+        if (zone) {
+          const section = zone.dataset.z as 'roster' | 'board' | 'meeting' | 'ops';
+          useCloudSocialStore.getState().setHideoutSection(section);
+          close();
+          P5.go('hideout', { via: 'tear' });
+          return;
+        }
+        if ((e.target as HTMLElement).closest('[data-seat]')) {
+          useCloudSocialStore.getState().setHideoutSection('roster');
+          close();
+          P5.go('hideout', { via: 'tear' });
+        }
+      });
     } });
   }
-  function openMeeting(st0 = 'open') {
-    stage({ title: '周日会议', en: 'MEETING', seed: 103, sil: 'cat', body: `${demoBar([['before', '还没开'], ['open', '开会中'], ['submitted', '已交'], ['empty', '没人立目标']], st0)}<div data-host></div>`, onMount(w) {
-      stateful(w, [], st0, (st) => {
-        const goals = st === 'empty' ? '<p class="sh-p">这周还没人立目标。周日会上写一句吧。</p>' : `<div class="od-mt-gl">${[['我的', '每天背 30 个单词', true], ['坂本龙司', '跑三次 5 公里', true], ['高卷杏', '早睡 5 天', false], ['新岛真', '读完一本书', true]].map(([n, g, ok]) => `<div class="q-row"><span class="q-k">${n}</span><b>「${g}」</b>${U.tag(ok ? '做到了' : '还在路上', ok ? '' : 'ink')}</div>`).join('')}</div>`;
-        return `${U.shp('section', { kind: 'torn', seed: 821, cls: 'od-mt' }, `<div class="od-mt-hd">${U.plate('周日会议', { fs: 17 })}${U.tag(st === 'before' ? '明天就开' : st === 'open' ? '开会中' : '开到周一凌晨 4 点', st === 'open' ? '' : 'ink')}</div>
-          ${st === 'before' ? '<p class="sh-p">周日会议 · 明天就开（开到周一凌晨 4 点）。</p>' : st === 'submitted' ? `<p class="sh-p">你已经交了 · 下周目标：<b>「每天背 30 个单词」</b></p>${U.btn('改一改', { tone: 'ink', size: 'sm', seed: 822, attrs: 'data-act="edit"' })}`
-          : `<p class="sh-p">这周的目标：<b>「每天背 20 个单词」</b>做到了吗？</p><div class="seg od-seg">${['做到了', '差一点', '没做到'].map((t, i) => `<button data-v="${i}" aria-pressed="${i === 0}">${t}</button>`).join('')}</div>
-            <label class="fld"><span>下周想做到的一件事</span><input class="inp" placeholder="比如：每天背 30 个单词"></label><div class="sh-acts">${U.btn('取消', { tone: 'ink', seed: 823, attrs: 'data-act="cancel"' })}${U.btn('交上去', { tone: 'red', size: 'lg', seed: 824, attrs: 'data-act="submit"' })}</div>`}
-          <p class="muted-d">会议时间按组织所在的时区（Asia/Shanghai）算。</p>`)}
-          <section>${ttl('点名', '谁来了')}<div class="od-mt-roll">${ORG.members.map((m, i) => `<span class="${i < 3 || st === 'submitted' && i === 0 ? 'in' : ''}">${U.star(i < 3 ? 'var(--red)' : '#cfc6b6', 'var(--ink)')}<b>${m[0]}${i === 0 ? '（我）' : ''}</b></span>`).join('')}</div></section>
-          <section>${ttl('这周大家的目标')}${goals}</section>
-          <section>${ttl('上一次的会议纪要', md(addD(-((today.getDay()) || 7))))}${U.shp('div', { kind: 'quad', seed: 825, tone: 'ink', cls: 'od-mt-min' }, `<p>4 人到场 · 3 人做到了上周目标。</p><p>称号：${U.tag('本周出勤王')} 坂本龙司　${U.tag('言出必行 · 3 周')} 新岛真　${U.tag('月下同行')} 野鸡</p>`)}</section>`;
-      }, (h, st, draw) => h.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act; if (a === 'submit') { b.querySelector('span').textContent = '提交中…'; setTimeout(() => { P5.toast('交上去了，下周见'); draw('submitted'); }, 500); } if (a === 'edit') draw('open'); if (a === 'cancel') P5.toast('已取消'); }));
+  function openMeeting(_state = 'open') {
+    const { view } = syncOrg();
+    if (!view) return P5.toast('找不到这个组织了');
+    const meet = meetingState(new Date(), view.org.tz);
+    const week = meet.week;
+    const mine = view.members.find((m) => m.userId === view.me.userId) ?? view.me;
+    const goals = view.members.filter((m) => m.goalWeek === week && m.goal);
+    const minutes = [...(view.posts ?? [])].find((p) => p.kind === 'minutes')?.minutes ?? null;
+    let result: 'done' | 'partial' | 'missed' | null = null;
+    let goal = mine.goalWeek === week ? mine.goal ?? '' : '';
+    let editing = meet.open;
+    stage({ title: '周日会议', en: 'MEETING', seed: 103, sil: 'cat', body: '<div data-host></div>', onMount(w, close) {
+      let busy = false;
+      const draw = () => {
+        const host = w.querySelector('[data-host]');
+        host.innerHTML = `${U.shp('section', { kind: 'torn', seed: 821, cls: 'od-mt' }, `<div class="od-mt-hd">${U.plate('周日会议', { fs: 17 })}${U.tag(meet.open ? '开会中' : '还没开', meet.open ? '' : 'ink')}</div>
+          ${!meet.open ? '<p class="sh-p">周日会议还没开。到周日（周一凌晨 4 点前）再来写目标。</p>' : !editing ? `<p class="sh-p">你已经交了 · 本周目标：<b>「${esc(mine.goalWeek === week ? mine.goal ?? '' : '还没写')}」</b></p>${U.btn('改一改', { tone: 'ink', size: 'sm', seed: 822, attrs: 'data-act="edit"' })}`
+          : `<p class="sh-p">${mine.goalWeek === week && mine.goal ? `这周的目标：「${esc(mine.goal)}」做到了吗？` : '先给这周写一句目标。'}</p><div class="seg od-seg" data-result-seg>${['done', 'partial', 'missed'].map((value, i) => `<button data-v="${value}" aria-pressed="${value === (result ?? 'done')}">${['做到了', '差一点', '没做到'][i]}</button>`).join('')}</div>
+            <label class="fld"><span>下周想做到的一件事</span><input class="inp" data-meeting-goal maxlength="20" value="${esc(goal)}" placeholder="比如：每天背 30 个单词"></label><div class="sh-acts">${U.btn('交上去', { tone: 'red', size: 'lg', seed: 824, attrs: 'data-act="submit"' })}</div>`}
+          <p class="muted-d">会议时间按组织所在的时区（${esc(view.org.tz)}）算。</p>`)}
+          <section>${ttl('点名', '谁来了')}<div class="od-mt-roll">${view.members.map((m) => `<span class="${m.goalWeek === week && m.goal ? 'in' : ''}">${U.star(m.goalWeek === week && m.goal ? 'var(--red)' : '#cfc6b6', 'var(--ink)')}<b>${esc(m.codename)}${m.userId === view.me.userId ? '（我）' : ''}</b></span>`).join('')}</div></section>
+          <section>${ttl('这周大家的目标')}<div class="od-mt-gl">${goals.map((m) => `<div class="q-row"><span class="q-k">${esc(m.userId === view.me.userId ? '我的' : m.codename)}</span><b>「${esc(m.goal ?? '')}」</b>${m.resultWeek === week ? U.tag(m.result === 'done' ? '做到了' : m.result === 'partial' ? '差一点' : '没做到', m.result === 'done' ? '' : 'ink') : ''}</div>`).join('') || '<p class="sh-p">这周还没人立目标。</p>'}</div></section>
+          <section>${ttl('上一次的会议纪要', minutes?.week ?? '')}${minutes ? U.shp('div', { kind: 'quad', seed: 825, tone: 'ink', cls: 'od-mt-min' }, `<p>${minutes.rate.done}/${minutes.rate.total} 人做到了上周目标。</p><p>称号：${minutes.titles.map((t) => `${U.tag(t.title)} ${esc(t.codename)}`).join('　') || '无'} · 缺席：${minutes.absent.map((a) => esc(a.codename)).join('、') || '无'}</p>`) : '<p class="sh-p">还没有会议纪要。</p>'}</section>`;
+        wire(host);
+        host.querySelector<HTMLInputElement>('[data-meeting-goal]')?.addEventListener('input', (event) => {
+          goal = (event.currentTarget as HTMLInputElement).value;
+        });
+        host.querySelector('[data-result-seg]')?.addEventListener('pick', (event) => {
+          result = (event as CustomEvent).detail as 'done' | 'partial' | 'missed';
+        });
+      };
+      draw();
+      w.addEventListener('click', async (event) => {
+        const button = (event.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
+        if (!button || busy) return;
+        if (button.dataset.act === 'edit') {
+          editing = true;
+          draw();
+          return;
+        }
+        if (button.dataset.act !== 'submit') return;
+        if (!goal.trim()) return P5.toast('写一句下周目标');
+        busy = true;
+        const done = markBusy(button, '提交中…');
+        try {
+          await submitMeeting(view.org.id, { result: result ?? undefined, goal });
+          await refreshOrg(view.org.id);
+          syncOrg();
+          close();
+          P5.toast('交上去了，下周见');
+          P5.rerender();
+        } catch (error) {
+          P5.toast(errText(error, '没交上去，请重试'));
+        } finally {
+          busy = false;
+          done();
+        }
+      });
     } });
   }
 

@@ -12,9 +12,10 @@ import { ATTR_IDS, ATTR_NAMES, ATTR_COLOR } from '@pink/mock/pkg4-tarot';
 import { buildView, OP_KIND_LABEL, ORG_OP_MIN_PEOPLE, ORG_OP_TITLE_MAX } from '@pink/mock/pkg4-org';
 import { shiftKey, TODAY } from '@pink/mock/pkg4-astro';
 import { displayCodename, MemberThumb } from '@pink/screens/pkg4/org/common';
+import { createOpFromUi } from '@/services/orgOpsSync';
+import { refreshOrg } from '@/services/orgSync';
 
 const QUICK: Array<[string, number]> = [['今天', 0], ['3 天', 3], ['一周', 7], ['两周', 14], ['30 天', 30]];
-const AI_SPLIT = ['整理第三章的笔记', '背完公式表', '做两套模拟卷', '把错题本过一遍', '画一张思维导图'];
 const chip = (on: boolean) => ({ clipPath: slantClip(6), background: on ? P3R.blue : 'var(--p3r-row)', color: on ? P3R.onBlue : P3R.ink, boxShadow: on ? undefined : 'inset 0 0 0 1.5px var(--p3r-track)' });
 
 export function OpCreate({ view, open, onClose, leader, aiOk = true, initialKind = 'small', onDone }: { view: OrgView; open: boolean; onClose: () => void; leader: boolean; aiOk?: boolean; initialKind?: OrgOpKind; onDone: (msg: string) => void }) {
@@ -27,13 +28,27 @@ export function OpCreate({ view, open, onClose, leader, aiOk = true, initialKind
   const [assign, setAssign] = useState<Record<string, string>>({});
   const [aiBusy, setAiBusy] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => { if (open) { setKind(leader ? initialKind : 'small'); setTitle(initialKind === 'big' && leader ? '一起做完期末复习' : ''); setAssign({}); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const len = [...title].length;
   const daysLeft = Math.round((Date.parse(deadline) - Date.parse(TODAY)) / 86400_000);
   const problem = chosen.length < ORG_OP_MIN_PEOPLE ? `至少 ${ORG_OP_MIN_PEOPLE} 人` : '';
   const toggle = (uid: string) => setChosen((c) => (c.includes(uid) ? c.filter((x) => x !== uid) : [...c, uid]));
-  const ai = () => { if (!title.trim()) return; setAiBusy(true); window.setTimeout(() => { setAiBusy(false); setAssign(Object.fromEntries(chosen.map((u, i) => [u, AI_SPLIT[i % AI_SPLIT.length]]))); }, 900); };
-  const submit = () => { if (!title.trim() || problem) return; setBusy(true); window.setTimeout(() => { setBusy(false); onDone(chosen.includes(view.me.userId) ? '发出去了：你的任务里也多了一条' : '发出去了'); onClose(); }, 700); };
+  const submit = async () => {
+    if (!title.trim() || problem || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await createOpFromUi(view.org.id, { kind, attr, title, deadline, participants: chosen, assignments: assign });
+      await refreshOrg(view.org.id);
+      onDone(chosen.includes(view.me.userId) ? '发出去了：你的任务里也多了一条' : '发出去了');
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : '没发出去，请稍后再试');
+    } finally {
+      setBusy(false);
+    }
+  };
   const kl = OP_KIND_LABEL[kind];
   return (
     <P3Sheet open={open} onClose={onClose} busy={busy} title={`发起${kl}`} en="NEW OPERATION" size="tall"
@@ -81,8 +96,8 @@ export function OpCreate({ view, open, onClose, leader, aiOk = true, initialKind
         {kind === 'big' && (
           <P3Field label="分工（可以空着）" hint="空着的人会在作战里「写下我的一份」；没写之前，Ta 的任务就是作战目标本身。">
             <div className="flex flex-wrap items-center gap-2">
-              <P3Button size="sm" tone="ink" disabled={!aiOk || !title.trim()} busy={aiBusy} busyText="拆解中…" onClick={ai} leading={<span aria-hidden>✦</span>}>AI 拆解分工</P3Button>
-              <span className="min-w-0 flex-1 text-[11px] font-bold" style={{ color: P3R.grey }}>{aiOk ? (title.trim() ? '按作战目标和每个人的代表牌、面具拆，拆完还能改' : '先写作战目标') : '要先在「设置 → AI 服务」里填好 API Key'}</span>
+              <P3Button size="sm" tone="ink" disabled busy={false} onClick={() => {}} leading={<span aria-hidden>✦</span>}>AI 拆解分工</P3Button>
+              <span className="min-w-0 flex-1 text-[11px] font-bold" style={{ color: P3R.grey }}>AI 分工留到计划10；现在可以自己写。</span>
             </div>
             <div className="mt-2 space-y-1.5">
               {view.members.filter((m) => chosen.includes(m.userId)).map((m) => (
@@ -94,6 +109,7 @@ export function OpCreate({ view, open, onClose, leader, aiOk = true, initialKind
             </div>
           </P3Field>
         )}
+        {error && <p role="alert" className="text-[12px] font-bold" style={{ color: 'var(--p3r-coral-ink)' }}>{error}</p>}
       </div>
     </P3Sheet>
   );

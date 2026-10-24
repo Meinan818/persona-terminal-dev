@@ -9,7 +9,8 @@ import { ATTR_NAMES } from '@blue/mock/pkg4-tarot';
 import { OP_KIND_LABEL, RESULT_LABEL } from '@blue/mock/pkg4-org';
 import { shiftKey, TODAY } from '@blue/adapters/pkg4-astro';
 import { activeOrgOps, buildOrgOpsState, endedOrgOps } from '@/themes/orgData';
-import { cancelOperation, createCheckin, saveMeeting } from '@/services/orgs';
+import { cancelOpFromUi, optOutFromUi, writeMyPartFromUi } from '@/services/orgOpsSync';
+import { submitMeeting } from '@/services/orgSync';
 import { weekRangeOf } from '@/utils/questBoard';
 import { OpsDialogs, type OpsStep } from '@blue/screens/overlays/OpsDialogs.p3r';
 import { OpCreate } from '@blue/screens/overlays/OpCreateSheet.p3r';
@@ -53,7 +54,7 @@ export function OpsSection({ view, blocked, leader, state, onBlockToggle }: { vi
         {active.map((op, i) => (
           <motion.div key={op.id} {...item(i)}>
             <OpCard view={view} op={op} states={st[op.id] ?? {}} leader={leader}
-              onWrite={(t) => { void createCheckin(op, 'plan', { text: t }).then(() => { setSt((s) => ({ ...s, [op.id]: { ...s[op.id], [view.me.userId]: { ...s[op.id][view.me.userId], plan: t } } })); toast.success('写好了，任务里那条也跟着改了'); }).catch((error) => toast(error instanceof Error ? error.message : '没写进去，请重试')); }}
+              onWrite={async (t) => { try { await writeMyPartFromUi(view.org.id, op.id, t); setSt((s) => ({ ...s, [op.id]: { ...s[op.id], [view.me.userId]: { ...s[op.id][view.me.userId], plan: t } } })); toast.success('写好了，任务里那条也跟着改了'); } catch (error) { toast(error instanceof Error ? error.message : '没写进去，请重试'); throw error; } }}
               onOut={() => { setDlgOp(op); setStep('out'); }} onCancel={() => { setDlgOp(op); setStep('cancel'); }} onMore={op.initiatorId !== view.me.userId ? () => { setDlgOp(op); setStep('menu'); } : undefined} />
           </motion.div>
         ))}
@@ -81,14 +82,14 @@ export function OpsSection({ view, blocked, leader, state, onBlockToggle }: { vi
         onReported={() => { setStep(null); toast.success('已举报，会在 2 天内处理'); }}
         onConfirm={(k) => {
           if (!dlgOp) return;
-          if (k === 'out') { void createCheckin(dlgOp, 'out').then(() => { setSt((s) => ({ ...s, [dlgOp.id]: { ...s[dlgOp.id], [view.me.userId]: { state: 'out' } } })); toast('这次不参加了，任务里那条已经收起来'); }).catch(() => toast('没退出成功，请重试')); }
-          else { void cancelOperation(dlgOp.id).then(() => { setOps((l) => l.map((o) => (o.id === dlgOp.id ? { ...o, status: 'cancelled' } : o))); toast(`${OP_KIND_LABEL[dlgOp.kind]}已取消`); }).catch(() => toast('取消失败，请重试')); }
+          if (k === 'out') { void optOutFromUi(view.org.id, dlgOp.id).then(() => { setSt((s) => ({ ...s, [dlgOp.id]: { ...s[dlgOp.id], [view.me.userId]: { state: 'out' } } })); toast('这次不参加了，任务里那条已经收起来'); }).catch((error) => toast(error instanceof Error ? error.message : '没退出成功，请重试')); }
+          else { void cancelOpFromUi(view.org.id, dlgOp.id).then(() => { setOps((l) => l.map((o) => (o.id === dlgOp.id ? { ...o, status: 'cancelled' } : o))); toast(`${OP_KIND_LABEL[dlgOp.kind]}已取消`); }).catch((error) => toast(error instanceof Error ? error.message : '取消失败，请重试')); }
         }} />
     </div>
   );
 }
 
-function OpCard({ view, op, states, leader, onWrite, onOut, onCancel, onMore }: { view: OrgView; op: OrgOperation; states: Record<string, { state: string; plan?: string }>; leader: boolean; onWrite: (t: string) => void; onOut: () => void; onCancel: () => void; onMore?: () => void }) {
+function OpCard({ view, op, states, leader, onWrite, onOut, onCancel, onMore }: { view: OrgView; op: OrgOperation; states: Record<string, { state: string; plan?: string }>; leader: boolean; onWrite: (t: string) => Promise<void>; onOut: () => void; onCancel: () => void; onMore?: () => void }) {
   const [writing, setWriting] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -100,7 +101,16 @@ function OpCard({ view, op, states, leader, onWrite, onOut, onCancel, onMore }: 
   const myTask = op.assignments[view.me.userId] || mine?.plan;
   const daysLeft = Math.round((Date.parse(op.deadline) - Date.parse(TODAY)) / 86400_000);
   const canCancel = op.initiatorId === view.me.userId || leader;
-  const save = () => { setBusy(true); window.setTimeout(() => { setBusy(false); setWriting(false); onWrite(draft); }, 500); };
+  const save = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onWrite(draft);
+      setWriting(false);
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <div className="relative min-w-0 overflow-hidden" style={panel(16)}>
       <div className="flex min-w-0 items-center gap-2 px-5 py-1.5" style={{ background: P3R.ink, color: 'var(--p3r-on-ink)' }}>
@@ -172,7 +182,7 @@ export function MeetingSection({ view, mode }: { view: OrgView; mode: MeetMode }
   const wroteCount = view.members.filter((member) => !!member.goal).length;
   const submit = () => {
     setBusy(true);
-    void saveMeeting(view.me.id, { week: currentWeek, nextWeek, result: result ?? 'done', goal })
+    void submitMeeting(view.org.id, { result: result ?? 'done', goal })
       .then(() => { setMine({ result: result ?? 'done', goal }); setEditing(false); toast.success(wrote ? '改好了' : '交上去了，下周见'); })
       .catch((error) => toast(error instanceof Error ? error.message : '没交上去，请重试'))
       .finally(() => setBusy(false));

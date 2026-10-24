@@ -5,27 +5,52 @@
  * 路由：#/overlay/hideout-titles?leader=0&form=1
  */
 import { useEffect, useState } from 'react';
+import type { OrgView } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Input, P4Chip, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
-import { LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@yellow/mock/pkg4-org';
+import { buildView, LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@yellow/mock/pkg4-org';
+import { refreshOrg, updateOrgCustomFromUi } from '@/services/orgSync';
+import { orgLevelOfView } from '@/utils/orgOps';
 
 interface Custom { id: string; name: string; cond: { type: CondType; value: number } }
 const clip = (v: string, n: number) => [...v].slice(0, n).join('');
 
-export function OrgTitles({ open, onClose, leader, startForm, onFlash }: { open: boolean; onClose: () => void; leader: boolean; startForm?: boolean; onFlash: (s: string) => void }) {
-  const [levels, setLevels] = useState<string[]>(['', '', '', '', '', '']);
-  const [names, setNames] = useState<Record<string, string>>({});
-  const [titles, setTitles] = useState<Custom[]>([{ id: 'c1', name: '夜猫子', cond: { type: 'week_days', value: 6 } }]);
+export function OrgTitles({ view, open, onClose, leader, startForm, onFlash }: { view: OrgView; open: boolean; onClose: () => void; leader: boolean; startForm?: boolean; onFlash: (s: string) => void }) {
+  const [levels, setLevels] = useState<string[]>(view.org.custom?.levelNames ?? ['', '', '', '', '', '']);
+  const [names, setNames] = useState<Record<string, string>>(view.org.custom?.titleNames ?? {});
+  const [titles, setTitles] = useState<Custom[]>(view.org.custom?.titles ?? []);
   const [form, setForm] = useState<Custom | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const startNew = () => { setError(''); setForm({ id: `c${Date.now()}`, name: '', cond: { type: 'week_days', value: 5 } }); };
-  useEffect(() => { if (open && startForm && leader) startNew(); }, [open]); // eslint-disable-line
+  useEffect(() => {
+    if (!open) return;
+    setLevels(view.org.custom?.levelNames ?? ['', '', '', '', '', '']);
+    setNames(view.org.custom?.titleNames ?? {});
+    setTitles(view.org.custom?.titles ?? []);
+    setForm(null);
+    if (startForm && leader) startNew();
+    // eslint-disable-next-line
+  }, [open, view.org.custom]);
   const def = form ? ORG_TITLE_CONDS.find((c) => c.type === form.cond.type)! : null;
   const step = (d: number) => setForm((f) => (f && def ? { ...f, cond: { ...f.cond, value: Math.max(def.min, Math.min(def.max, f.cond.value + d)) } } : f));
   const commit = () => { if (!form) return; const n = form.name.trim(); if (!n) { setError('给称号起个名字'); return; } setError(''); setTitles((l) => (l.some((t) => t.id === form.id) ? l.map((t) => (t.id === form.id ? { ...form, name: n } : t)) : [...l, { ...form, name: n }])); setForm(null); };
-  const save = () => { setBusy(true); setTimeout(() => { setBusy(false); onFlash('改好了：之后的纪要用新名字'); onClose(); }, 600); };
+  const save = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await updateOrgCustomFromUi(view.org.id, { levelNames: levels, titleNames: names, titles });
+      await refreshOrg(view.org.id);
+      onFlash('改好了：之后的纪要用新名字');
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : '没保存成功，请重试');
+    } finally {
+      setBusy(false);
+    }
+  };
   const sec = (t: string, meta?: string) => <div className="mb-2 flex items-center gap-1.5"><span aria-hidden className="inline-block h-3.5 w-1.5 -skew-x-12 bg-p4g-orange" /><span className="font-display text-meta font-bold text-p4g-ink">{t}</span>{meta && <span className="ml-auto font-display text-2xs font-bold text-p4g-ink-soft">{meta}</span>}</div>;
   const rowBg = { background: 'var(--p4g-surface-grad)' };
   return (
@@ -34,10 +59,10 @@ export function OrgTitles({ open, onClose, leader, startForm, onFlash }: { open:
       <div className="space-y-5 pt-1">
         <p className="text-meta leading-relaxed text-p4g-ink-soft">{leader ? '队长可以给每一级起名字、给称号改名，也可以加自己的称号。改名只影响之后的纪要，称号册里改名前后算同一个称号。' : '据点每一级的名字、每周纪要里发的称号都在这里。名字由队长定。'}</p>
         <section>
-          {sec('等级名字', `现在 Lv.${LEVEL.level}`)}
+          {sec('等级名字', `现在 Lv.${orgLevelOfView(view).level}`)}
           <div className="space-y-1.5">
             {ORG_LEVEL_NAMES.map((d, i) => {
-              const cur = i + 1 === LEVEL.level;
+              const cur = i + 1 === orgLevelOfView(view).level;
               return (
                 <div key={d} className={cx('flex min-w-0 items-center gap-2 rounded-sm border-3 px-2 py-1.5', cur ? 'border-p4g-select bg-p4g-select text-[color:var(--p4g-select-ink)]' : 'border-p4g-line text-p4g-ink')} style={cur ? undefined : rowBg}>
                   <span className="w-11 shrink-0 font-display text-body font-bold italic">Lv.{i + 1}</span>
@@ -100,5 +125,5 @@ export function OrgTitles({ open, onClose, leader, startForm, onFlash }: { open:
 
 export default function OrgTitlesSheet({ open, onClose, params }: OverlayProps) {
   const toast = useToast();
-  return <OrgTitles open={open} onClose={onClose} leader={params?.get('leader') !== '0'} startForm={params?.get('form') === '1'} onFlash={(s) => toast.success(s)} />;
+  return <OrgTitles view={buildView()} open={open} onClose={onClose} leader={params?.get('leader') !== '0'} startForm={params?.get('form') === '1'} onFlash={(s) => toast.success(s)} />;
 }

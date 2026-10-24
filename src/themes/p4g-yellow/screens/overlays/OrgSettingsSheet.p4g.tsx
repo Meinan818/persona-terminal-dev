@@ -6,23 +6,29 @@
  * 路由：#/overlay/hideout-settings?leader=0
  */
 import { useEffect, useState } from 'react';
-import type { OrgView } from '@real/types';
+import type { AttributeId, OrgView } from '@real/types';
 import type { OverlayProps } from '@yellow/registry/types';
 import { P4Sheet, P4Button, P4Input, P4Switch, P4Section, useToast } from '@yellow/kit';
 import { cx } from '@yellow/lib/cx';
 import { ATTR_NAMES } from '@yellow/mock/pkg4-tarot';
-import { buildView, LEVEL, ORG_EMBLEMS, ORG_LEVEL_NAMES, ORG_MAX_SHOWN_MASKS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_PRIVACY_NOTE, ORG_RULES } from '@yellow/mock/pkg4-org';
+import { buildView, ORG_EMBLEMS, ORG_MAX_SHOWN_MASKS, ORG_MOTTO_MAX, ORG_NAME_MAX, ORG_PRIVACY_NOTE, ORG_RULES } from '@yellow/mock/pkg4-org';
 import { displayCodename, MemberThumb } from '@yellow/screens/pkg4/org/common';
 import { OrgSettingsConfirm, type SettingsConfirm } from './OrgSettingsSheetConfirm.p4g';
-
-const MY_MASKS = [{ id: 'guts', name: '伊邪那岐' }, { id: 'knowledge', name: '智慧之书' }, { id: 'charm', name: '魅惑之镜' }, { id: 'kindness', name: '慈母观音' }];
+import {
+  dissolveFromUi, kickFromUi, leaveFromUi, rotateCodeFromUi, setShownMasksFromUi,
+  transferFromUi, transferMustLeave, updateOrgFromUi,
+} from '@/services/orgSync';
+import { orgLevelOfView } from '@/utils/orgOps';
+import { orgLevelName } from '@/utils/orgTitles';
 
 export function OrgSettings({ view, open, onClose, leader, blocked, onUnblock, onEditCard, onEditTitles, onFlash, onGone }: {
   view: OrgView; open: boolean; onClose: () => void; leader: boolean; blocked: string[]; onUnblock: (uid: string) => void;
   onEditCard: () => void; onEditTitles: () => void; onFlash: (s: string) => void; onGone: () => void;
 }) {
-  const [shown, setShown] = useState<string[]>(['guts']);
+  const shownNow = (view.me.card.personas ?? (view.me.card.persona ? [view.me.card.persona] : [])).map((p) => p.attribute);
+  const [shown, setShown] = useState<AttributeId[]>(shownNow);
   const [maskOn, setMaskOn] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(view.org.name);
   const [motto, setMotto] = useState(view.org.motto);
@@ -31,12 +37,21 @@ export function OrgSettings({ view, open, onClose, leader, blocked, onUnblock, o
   const [confirm, setConfirm] = useState<SettingsConfirm | null>(null);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
-  useEffect(() => { if (open) { setEditing(false); setError(''); setInfo(''); } }, [open]);
-  const toggleMask = (id: string) => {
+  useEffect(() => { if (open) { setEditing(false); setError(''); setInfo(''); setShown(shownNow); setName(view.org.name); setMotto(view.org.motto); setEmblem(view.org.emblem); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const toggleMask = async (id: AttributeId) => {
+    if (busy) return;
     setError('');
-    if (shown.includes(id)) { setShown((s) => s.filter((x) => x !== id)); return; }
-    if (shown.length >= ORG_MAX_SHOWN_MASKS) { setError(`最多展示 ${ORG_MAX_SHOWN_MASKS} 张：先去掉一张`); return; }
-    setShown((s) => [...s, id]);
+    const next = shown.includes(id) ? shown.filter((x) => x !== id) : [...shown, id];
+    if (!shown.includes(id) && shown.length >= ORG_MAX_SHOWN_MASKS) { setError(`最多展示 ${ORG_MAX_SHOWN_MASKS} 张：先去掉一张`); return; }
+    setBusy(true);
+    try {
+      await setShownMasksFromUi(view.org.id, next);
+      setShown(next);
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : '面具没保存，请重试');
+    } finally {
+      setBusy(false);
+    }
   };
   const others = view.members.filter((m) => m.userId !== view.me.userId);
   const blockedMembers = view.members.filter((m) => blocked.includes(m.userId));
@@ -62,10 +77,10 @@ export function OrgSettings({ view, open, onClose, leader, blocked, onUnblock, o
               <div className="mt-0.5 text-2xs font-bold leading-relaxed text-p4g-ink-soft">最多 {ORG_MAX_SHOWN_MASKS} 张。队友可以同调其中一张，在逆影战场里用（每周 3 场）。</div>
               {maskOn && (
                 <div className="mt-2 grid grid-cols-2 gap-1.5">
-                  {MY_MASKS.map((mk) => { const idx = shown.indexOf(mk.id); const on = idx >= 0; return (
-                    <button key={mk.id} type="button" aria-pressed={on} aria-label={`${mk.name}（${ATTR_NAMES[mk.id as 'guts']}）${on ? `，第 ${idx + 1} 张` : ''}`} onClick={() => toggleMask(mk.id)} className={cx('p4g-press flex min-w-0 items-center gap-1.5 rounded-sm border-3 px-2 py-1.5 text-left', on ? 'border-p4g-select bg-p4g-select text-[color:var(--p4g-select-ink)]' : 'border-p4g-line bg-p4g-surface-2 text-p4g-ink')}>
+                  {(view.me.card.personas ?? (view.me.card.persona ? [view.me.card.persona] : [])).map((mk) => { const idx = shown.indexOf(mk.attribute); const on = idx >= 0; return (
+                    <button key={mk.attribute} type="button" disabled={busy} aria-pressed={on} aria-label={`${mk.name}（${ATTR_NAMES[mk.attribute]}）${on ? `，第 ${idx + 1} 张` : ''}`} onClick={() => void toggleMask(mk.attribute)} className={cx('p4g-press flex min-w-0 items-center gap-1.5 rounded-sm border-3 px-2 py-1.5 text-left disabled:opacity-50', on ? 'border-p4g-select bg-p4g-select text-[color:var(--p4g-select-ink)]' : 'border-p4g-line bg-p4g-surface-2 text-p4g-ink')}>
                       <span className={cx('flex h-5 w-5 shrink-0 items-center justify-center rounded-xs p4g-num-upright text-2xs', on ? 'bg-p4g-orange text-p4g-black' : 'border-thin border-p4g-line')}>{on ? idx + 1 : ''}</span>
-                      <span className="min-w-0 truncate font-display text-meta font-bold">{mk.name}</span><span className="ml-auto shrink-0 text-2xs opacity-75">{ATTR_NAMES[mk.id as 'guts']}</span>
+                      <span className="min-w-0 truncate font-display text-meta font-bold">{mk.name}</span><span className="ml-auto shrink-0 text-2xs opacity-75">{ATTR_NAMES[mk.attribute]}</span>
                     </button>); })}
                 </div>
               )}
@@ -74,7 +89,7 @@ export function OrgSettings({ view, open, onClose, leader, blocked, onUnblock, o
           <section>
             {sec('等级与称号')}
             <div className={row} style={rowBg}>
-              <div className="min-w-0 flex-1"><div className="truncate font-display text-body font-bold text-p4g-ink">据点 Lv.{LEVEL.level} · {ORG_LEVEL_NAMES[LEVEL.level - 1]}</div><div className="text-2xs font-bold text-p4g-ink-soft">{leader ? '给每一级起名字、给称号改名、加自己的称号' : '每一级叫什么、每个称号怎么拿'}</div></div>
+              <div className="min-w-0 flex-1"><div className="truncate font-display text-body font-bold text-p4g-ink">据点 Lv.{orgLevelOfView(view).level} · {orgLevelName(view.org.custom, orgLevelOfView(view).level)}</div><div className="text-2xs font-bold text-p4g-ink-soft">{leader ? '给每一级起名字、给称号改名、加自己的称号' : '每一级叫什么、每个称号怎么拿'}</div></div>
               <P4Button size="sm" variant="secondary" onClick={onEditTitles}>{leader ? '编辑' : '查看'}</P4Button>
             </div>
           </section>
@@ -92,7 +107,7 @@ export function OrgSettings({ view, open, onClose, leader, blocked, onUnblock, o
                   <P4Input aria-label="组织名" value={name} onChange={(e) => setName([...e.target.value].slice(0, ORG_NAME_MAX).join(''))} />
                   <P4Input aria-label="口号" placeholder="口号（可以不写）" value={motto} onChange={(e) => setMotto([...e.target.value].slice(0, ORG_MOTTO_MAX).join(''))} />
                   <div className="grid grid-cols-6 gap-1.5">{ORG_EMBLEMS.map((e) => <button key={e.id} type="button" aria-pressed={e.id === emblem} aria-label={`徽记：${e.label}`} onClick={() => setEmblem(e.id)} className={cx('p4g-press flex aspect-square items-center justify-center rounded-sm border-3 font-display text-h3', e.id === emblem ? 'border-p4g-black bg-p4g-black text-p4g-yellow night:border-p4g-yellow' : 'border-p4g-line bg-p4g-surface text-p4g-ink')}>{e.glyph}</button>)}</div>
-                  <div className="flex justify-end gap-2"><P4Button size="sm" variant="secondary" onClick={() => setEditing(false)}>取消</P4Button><P4Button size="sm" disabled={!name.trim()} onClick={() => { setEditing(false); setInfo('改好了'); }}>保存</P4Button></div>
+                  <div className="flex justify-end gap-2"><P4Button size="sm" variant="secondary" onClick={() => setEditing(false)} disabled={busy}>取消</P4Button><P4Button size="sm" disabled={!name.trim() || busy} onClick={async () => { setBusy(true); setError(''); try { await updateOrgFromUi(view.org.id, { name, motto, emblem }); setEditing(false); setInfo('改好了'); } catch (e) { setError(e instanceof Error && e.message ? e.message : '没保存成功，请重试'); } finally { setBusy(false); } }}>保存</P4Button></div>
                 </div>
               )}
               <div className={cx(row, 'mt-2.5')} style={rowBg}>
@@ -143,11 +158,18 @@ export function OrgSettings({ view, open, onClose, leader, blocked, onUnblock, o
           </section>
         </div>
       </P4Sheet>
-      <OrgSettingsConfirm confirm={confirm} orgName={view.org.name} onClose={() => setConfirm(null)} onConfirm={(c) => {
-        if (c.kind === 'rotate') setInfo('换好了，旧码已经作废');
-        else if (c.kind === 'kick') setInfo(`已请离「${displayCodename(c.member)}」，邀请码也换了新的`);
-        else if (c.kind === 'transfer') setInfo(`队长已经交给「${displayCodename(c.member)}」`);
-        else { onFlash(c.kind === 'leave' ? `已退出「${view.org.name}」` : `「${view.org.name}」已解散`); onGone(); }
+      <OrgSettingsConfirm confirm={confirm} orgName={view.org.name} onClose={() => setConfirm(null)} onConfirm={async (c, purge) => {
+        setError('');
+        try {
+          if (c.kind === 'rotate') { await rotateCodeFromUi(view.org.id); setInfo('换好了，旧码已经作废'); }
+          else if (c.kind === 'kick') { const rotated = await kickFromUi(view.org.id, c.member.id, purge); setInfo(rotated ? `已请离「${displayCodename(c.member)}」，邀请码也换了新的` : `已请离「${displayCodename(c.member)}」；邀请码没换成，记得手动换一个`); }
+          else if (c.kind === 'transfer') { const leaving = transferMustLeave(view.org.id); await transferFromUi(view.org.id, c.member.id); if (leaving) onGone(); else setInfo(`队长已经交给「${displayCodename(c.member)}」`); }
+          else if (c.kind === 'leave') { await leaveFromUi(view.org.id); onFlash(`已退出「${view.org.name}」`); onGone(); }
+          else { await dissolveFromUi(view.org.id); onFlash(`「${view.org.name}」已解散`); onGone(); }
+        } catch (e) {
+          setError(e instanceof Error && e.message ? e.message : '操作没完成，请重试');
+          throw e;
+        }
       }} />
     </>
   );

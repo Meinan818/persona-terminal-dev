@@ -51,14 +51,17 @@ export default function Hideout({ tab, params }: PageProps) {
   const [wall, setWall] = useState(params.get('view') === 'wall');
   const blockedList = useCloudSocialStore((s) => s.orgBlocked);
   const blocked = useMemo(() => new Set(blockedList), [blockedList]);
-  const { orgs, orgsLoaded, signedIn } = useOrgView();
+  const { orgs, orgsLoaded, lastError, signedIn } = useOrgView();
   const realView = orgs.length ? orgs[Math.min(orgIdx, orgs.length - 1)] : null;
   const base = useMemo(() => realView ?? buildView(), [realView]);
   useEffect(() => {
     if (params.get('state')) return;
     if (!signedIn) setPstate('signed-out');
+    else if (!orgsLoaded) setPstate('loading');
+    else if (lastError && !realView) setPstate('error');
     else if (orgsLoaded && !realView) setPstate('empty');
-  }, [orgsLoaded, realView, params, signedIn]);
+    else setPstate('ok');
+  }, [lastError, orgsLoaded, realView, params, signedIn]);
   const op = params.get('open');
   const [flip, setFlip] = useState<OrgMember | null>(op === 'flip' ? base.members[1] : null);
   const [menuFor, setMenuFor] = useState<OrgMember | null>(op === 'menu' ? base.members[1] : null);
@@ -243,7 +246,7 @@ export default function Hideout({ tab, params }: PageProps) {
           }} />
         <BorrowMask member={borrowFor} open={!!borrowFor} onClose={() => setBorrowFor(null)} onBorrowed={(s) => toast.success(s)} />
         <RaidPanel view={view} open={raidOpen} onClose={() => setRaidOpen(false)} onFlash={(s) => toast(s)} />
-        <OrgTitles open={titlesOpen} onClose={() => setTitlesOpen(false)} leader={leader} onFlash={(s) => toast.success(s)} />
+        <OrgTitles view={view} open={titlesOpen} onClose={() => setTitlesOpen(false)} leader={leader} onFlash={(s) => toast.success(s)} />
         <OpCreate view={view} open={createOpen} onClose={() => setCreateOpen(false)} leader={leader} onDone={(m) => toast.success(m)} />
         <OrgSettings view={view} open={settingsOpen} onClose={() => setSettingsOpen(false)} leader={leader} blocked={[...blocked]} onUnblock={toggleBlock}
           onEditCard={() => { setSettingsOpen(false); setOnb('card'); }} onEditTitles={() => { setSettingsOpen(false); setTitlesOpen(true); }} onFlash={(s) => toast(s)} onGone={() => { setSettingsOpen(false); setPstate('empty'); }} />

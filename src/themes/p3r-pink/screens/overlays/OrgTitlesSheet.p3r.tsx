@@ -5,9 +5,12 @@
  * 路由：#/overlay/hideout-titles?leader=0&form=1
  */
 import { useEffect, useState, type ReactNode } from 'react';
+import type { OrgView } from '@real/types';
 import type { OverlayProps } from '@pink/registry/types';
 import { P3Sheet, P3Button, P3Input, P3R, SectionMark, slantClip, useToast } from '@pink/kit';
-import { LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@pink/mock/pkg4-org';
+import { buildView, LEVEL, ORG_BUILTIN_TITLES, ORG_CUSTOM_TITLES_MAX, ORG_LEVEL_NAMES, ORG_TITLE_CONDS, ORG_TITLE_NAME_MAX, condText, type CondType } from '@pink/mock/pkg4-org';
+import { refreshOrg, updateOrgCustomFromUi } from '@/services/orgSync';
+import { orgLevelOfView } from '@/utils/orgOps';
 
 interface Custom { id: string; name: string; cond: { type: CondType; value: number } }
 const clip = (v: string, n: number) => [...v].slice(0, n).join('');
@@ -15,19 +18,41 @@ const Box = ({ children, on }: { children: ReactNode; on?: boolean }) => (
   <div className="relative min-w-0 px-4 py-2" style={{ background: on ? P3R.ink : 'var(--p3r-row)', color: on ? 'var(--p3r-on-ink)' : P3R.ink, clipPath: slantClip(10), boxShadow: on ? undefined : 'inset 0 0 0 1px var(--p3r-track)' }}>{children}</div>
 );
 
-export function OrgTitles({ open, onClose, leader, startForm, onFlash }: { open: boolean; onClose: () => void; leader: boolean; startForm?: boolean; onFlash: (s: string) => void }) {
-  const [levels, setLevels] = useState<string[]>(['', '', '', '', '', '']);
-  const [names, setNames] = useState<Record<string, string>>({});
-  const [titles, setTitles] = useState<Custom[]>([{ id: 'c1', name: '夜猫子', cond: { type: 'week_days', value: 6 } }]);
+export function OrgTitles({ view, open, onClose, leader, startForm, onFlash }: { view: OrgView; open: boolean; onClose: () => void; leader: boolean; startForm?: boolean; onFlash: (s: string) => void }) {
+  const [levels, setLevels] = useState<string[]>(view.org.custom?.levelNames ?? ['', '', '', '', '', '']);
+  const [names, setNames] = useState<Record<string, string>>(view.org.custom?.titleNames ?? {});
+  const [titles, setTitles] = useState<Custom[]>(view.org.custom?.titles ?? []);
   const [form, setForm] = useState<Custom | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const startNew = () => { setError(''); setForm({ id: `c${Date.now()}`, name: '', cond: { type: 'week_days', value: 5 } }); };
-  useEffect(() => { if (open && startForm && leader) startNew(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!open) return;
+    setLevels(view.org.custom?.levelNames ?? ['', '', '', '', '', '']);
+    setNames(view.org.custom?.titleNames ?? {});
+    setTitles(view.org.custom?.titles ?? []);
+    setForm(null);
+    if (startForm && leader) startNew();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, view.org.custom]);
   const def = form ? ORG_TITLE_CONDS.find((c) => c.type === form.cond.type)! : null;
   const step = (d: number) => setForm((f) => (f && def ? { ...f, cond: { ...f.cond, value: Math.max(def.min, Math.min(def.max, f.cond.value + d)) } } : f));
   const commit = () => { if (!form) return; const n = form.name.trim(); if (!n) { setError('给称号起个名字'); return; } setError(''); setTitles((l) => (l.some((t) => t.id === form.id) ? l.map((t) => (t.id === form.id ? { ...form, name: n } : t)) : [...l, { ...form, name: n }])); setForm(null); };
-  const save = () => { setBusy(true); window.setTimeout(() => { setBusy(false); onFlash('改好了：之后的纪要用新名字'); onClose(); }, 600); };
+  const save = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await updateOrgCustomFromUi(view.org.id, { levelNames: levels, titleNames: names, titles });
+      await refreshOrg(view.org.id);
+      onFlash('改好了：之后的纪要用新名字');
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : '没保存成功，请重试');
+    } finally {
+      setBusy(false);
+    }
+  };
   const meta = (t: string) => <span className="font-cond text-[13px]" style={{ color: P3R.blue }}>{t}</span>;
   const stepBtn = (label: string, d: number, dis: boolean) => <button type="button" onClick={() => step(d)} disabled={dis} aria-label={label} className="flex h-10 w-10 items-center justify-center text-[20px] font-black disabled:opacity-30" style={{ background: P3R.blue, color: P3R.onBlue, clipPath: slantClip(6) }}>{d < 0 ? '−' : '+'}</button>;
   return (
@@ -36,9 +61,9 @@ export function OrgTitles({ open, onClose, leader, startForm, onFlash }: { open:
       <div className="space-y-5 pt-1">
         <p className="text-[12.5px] leading-relaxed" style={{ color: P3R.inkSoft }}>{leader ? '队长可以给每一级起名字、给称号改名，也可以加自己的称号。改名只影响之后的纪要，称号册里改名前后算同一个称号。' : '据点每一级的名字、每周纪要里发的称号都在这里。名字由队长定。'}</p>
         <section className="space-y-2">
-          <SectionMark title="等级名字" en="RANK" meta={meta(`现在 Lv.${LEVEL.level}`)} />
+          <SectionMark title="等级名字" en="RANK" meta={meta(`现在 Lv.${orgLevelOfView(view).level}`)} />
           {ORG_LEVEL_NAMES.map((d, i) => {
-            const cur = i + 1 === LEVEL.level;
+            const cur = i + 1 === orgLevelOfView(view).level;
             return (
               <Box key={d} on={cur}>
                 <div className="flex min-w-0 items-center gap-2">
@@ -98,5 +123,5 @@ export function OrgTitles({ open, onClose, leader, startForm, onFlash }: { open:
 
 export default function OrgTitlesSheet({ open, onClose, params }: OverlayProps) {
   const toast = useToast();
-  return <OrgTitles open={open} onClose={onClose} leader={params?.get('leader') !== '0'} startForm={params?.get('form') === '1'} onFlash={(s) => toast.success(s)} />;
+  return <OrgTitles view={buildView()} open={open} onClose={onClose} leader={params?.get('leader') !== '0'} startForm={params?.get('form') === '1'} onFlash={(s) => toast.success(s)} />;
 }

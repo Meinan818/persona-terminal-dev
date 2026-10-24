@@ -79,10 +79,10 @@ export function useFateWindow() {
 }
 
 export function useOrgView() {
-  const { orgs, orgsLoaded, setOrgs } = useCloudSocialStore(useShallow((s) => ({ orgs: s.orgs, orgsLoaded: s.orgsLoaded, setOrgs: s.setOrgs })));
+  const { orgs, orgsLoaded, lastError, setOrgs } = useCloudSocialStore(useShallow((s) => ({ orgs: s.orgs, orgsLoaded: s.orgsLoaded, lastError: s.lastError, setOrgs: s.setOrgs })));
   const signedIn = useCloudStore((s) => !!s.cloudUser);
   useEffect(() => { void loadSocial(); }, []);
-  return { orgs, orgsLoaded, setOrgs, signedIn };
+  return { orgs, orgsLoaded, lastError, setOrgs, signedIn };
 }
 
 export function useCloudUser() {

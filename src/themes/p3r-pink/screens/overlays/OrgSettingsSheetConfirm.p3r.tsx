@@ -20,13 +20,24 @@ export function confirmCopy(c: SettingsConfirm, orgName: string) {
   return { title: `解散「${orgName}」？`, desc: '组织、名册会一起删除，所有成员都会收到「你已不在」的提示。这一步不能撤销。', ok: '解散', danger: true };
 }
 
-export function OrgSettingsConfirm({ confirm, orgName, onClose, onConfirm }: { confirm: SettingsConfirm | null; orgName: string; onClose: () => void; onConfirm: (c: SettingsConfirm, purge: boolean) => void }) {
+export function OrgSettingsConfirm({ confirm, orgName, onClose, onConfirm }: { confirm: SettingsConfirm | null; orgName: string; onClose: () => void; onConfirm: (c: SettingsConfirm, purge: boolean) => void | Promise<void> }) {
   const [purge, setPurge] = useState(true);
   const [busy, setBusy] = useState(false);
   const c = confirm ? confirmCopy(confirm, orgName) : null;
   return (
     <P3Dialog open={!!confirm} onClose={onClose} title={c?.title ?? ''} description={c?.desc} confirmText={c?.ok} cancelText="取消" tone={c?.danger ? 'danger' : 'default'} busy={busy} busyText="处理中…"
-      onConfirm={() => { if (!confirm) return; setBusy(true); window.setTimeout(() => { setBusy(false); onConfirm(confirm, purge); onClose(); }, 500); }}>
+      onConfirm={async () => {
+        if (!confirm || busy) return;
+        setBusy(true);
+        try {
+          await onConfirm(confirm, purge);
+          onClose();
+        } catch {
+          // 父层保留错误提示与当前确认框
+        } finally {
+          setBusy(false);
+        }
+      }}>
       {confirm?.kind === 'kick' && <div className="mt-1 flex justify-center"><P3Check checked={purge} onChange={setPurge} label="同时删除 Ta 的动态和标签" /></div>}
     </P3Dialog>
   );

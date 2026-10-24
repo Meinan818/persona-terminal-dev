@@ -56,14 +56,17 @@ export default function Hideout({ tab, params }: PageProps) {
   const [noise, setNoise] = useState(false);
   const [seen, setSeen] = useState<Partial<Record<HideoutSection, boolean>>>({});
 
-  const { orgs, orgsLoaded, signedIn } = useOrgView();
+  const { orgs, orgsLoaded, lastError, signedIn } = useOrgView();
   const realView = orgs.length ? orgs[Math.min(orgIdx, orgs.length - 1)] : null;
   const base = useMemo(() => realView ?? buildView(), [realView]);
   useEffect(() => {
     if (params.get('state')) return;
     if (!signedIn) setPstate('signed-out');
+    else if (!orgsLoaded) setPstate('loading');
+    else if (lastError && !realView) setPstate('error');
     else if (orgsLoaded && !realView) setPstate('empty');
-  }, [orgsLoaded, realView, params, signedIn]);
+    else setPstate('ok');
+  }, [lastError, orgsLoaded, realView, params, signedIn]);
   const view: OrgView = useMemo(() => {
     const leaderId = role === 'leader' ? base.me.userId : 'u2';
     const me = noCard ? { ...base.me, tarotId: undefined } : base.me;
@@ -221,7 +224,7 @@ export default function Hideout({ tab, params }: PageProps) {
         }} />
       <BorrowMask member={borrowFor} open={!!borrowFor} onClose={() => setBorrowFor(null)} onBorrowed={(s) => toast.success(s)} />
       <RaidPanel view={view} open={raidOpen} onClose={() => setRaidOpen(false)} onFlash={(s) => toast(s)} />
-      <OrgTitles open={titlesOpen} onClose={() => setTitlesOpen(false)} leader={leader} onFlash={(s) => toast.success(s)} />
+      <OrgTitles view={view} open={titlesOpen} onClose={() => setTitlesOpen(false)} leader={leader} onFlash={(s) => toast.success(s)} />
       <OrgSettings view={view} open={settingsOpen} onClose={() => setSettingsOpen(false)} leader={leader} blocked={[...blocked]} onUnblock={toggleBlock}
         onEditCard={() => { setSettingsOpen(false); setOnb('card'); }} onEditTitles={() => { setSettingsOpen(false); setTitlesOpen(true); }} onFlash={(s) => toast(s)} onGone={() => { setSettingsOpen(false); setPstate('empty'); }} />
       <OrgOnboarding mode={onb} open={!!onb} onClose={() => setOnb(null)} onDone={(n) => { if (onb !== 'card') { setPstate('ok'); toast.success(`已加入「${n}」`); } else { setNoCard(false); toast.success('成员牌改好了'); } }} />

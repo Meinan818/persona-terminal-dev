@@ -21,11 +21,11 @@ export function confirmCopy(c: SettingsConfirm, orgName: string) {
   return { title: `解散「${orgName}」？`, desc: '组织、名册会一起删除，所有成员都会收到「你已不在」的提示。这一步不能撤销。', ok: '解散', danger: true };
 }
 
-export function OrgSettingsConfirm({ confirm, orgName, onClose, onConfirm }: { confirm: SettingsConfirm | null; orgName: string; onClose: () => void; onConfirm: (c: SettingsConfirm, purge: boolean) => void }) {
+export function OrgSettingsConfirm({ confirm, orgName, onClose, onConfirm }: { confirm: SettingsConfirm | null; orgName: string; onClose: () => void; onConfirm: (c: SettingsConfirm, purge: boolean) => void | Promise<void> }) {
   const [purge, setPurge] = useState(true);
   const c = confirm ? confirmCopy(confirm, orgName) : null;
   return (
-    <P4Dialog open={!!confirm} onClose={onClose} title={c?.title} message={c?.desc} confirmText={c?.ok} cancelText="取消" danger={c?.danger} onConfirm={() => confirm && onConfirm(confirm, purge)}>
+    <P4Dialog open={!!confirm} onClose={onClose} title={c?.title} message={c?.desc} confirmText={c?.ok} cancelText="取消" danger={c?.danger} onConfirm={async () => { if (!confirm) return; try { await onConfirm(confirm, purge); onClose(); } catch { /* 父层保留错误提示与当前确认框 */ } }}>
       {confirm?.kind === 'kick' && (
         <label className="flex cursor-pointer items-center gap-2.5">
           <button type="button" role="checkbox" aria-checked={purge} onClick={() => setPurge((v) => !v)} className={cx('flex h-6 w-6 shrink-0 items-center justify-center rounded-xs border-3 border-p4g-yellow font-bold', purge ? 'bg-p4g-yellow text-p4g-black' : 'bg-transparent text-transparent')}>✓</button>

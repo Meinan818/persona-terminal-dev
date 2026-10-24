@@ -32,6 +32,8 @@ export default defineConfig({
       //   - 现有的 PWAUpdateToast UI 就是 prompt 模式设计的（"✦ 有新版本可用 · 立即更新"）。
       registerType: 'prompt',
       workbox: {
+        // 主入口约 2.27 MiB；默认 2 MiB 上限会把它排除，导致断网重载白屏。
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         // webp 故意不进预缓存：塔罗三套共 66 张（~3.8 MB），全塞进安装包会显著拖慢
         // 首次安装与 iOS 的磁盘占用。改由下面的 runtimeCaching 在首次看到时收编。
         globPatterns: ['**/*.{js,css,html,ico,png,svg,mp3}'],

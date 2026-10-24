@@ -1,17 +1,19 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-24（计划12「有证据的局部整理」已完成）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-24（计划13「候选版验证与打包」已完成，候选 APK 待计划14真机验收）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-24 · 计划12有证据的局部整理已完成，下一计划13待启动
+## 当前接手入口 · 2026-10-24 · 计划13候选 APK 已生成，等待计划14用户真机验收
 
-- **本轮授权与现场**：用户明确启动并确认计划12「有证据的局部整理」。工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，接手基点 `b60f0e6`（已核实）。未进入计划13候选打包、计划14真机验收，未重跑764项loader，未Push、部署、打APK、接真实账号/组织数据或调用收费模型。
-- **计划状态**：**计划01–12已完成；计划13–14未启动**。计划11的四主题视觉与演出保真、以及计划10两项缺陷修复仍为上一轮有效基线，详见 `docs/THEME-VISUAL-PERFORMANCE-20261024.md`。
-- **实际清理**：删除零引用的 `src/themes/integration/NavigatorBridge.tsx`（35行）；蓝/粉/黄 `ThemeApp.tsx` 的“两座桥”旧注释改为实际四座桥及职责。全仓引用搜索 `NavigatorBridge=0`，源码导入图直接导入方 `0`；未修改任何 CSS、素材、音效、动画、路由或交互。
-- **保留依据**：`Hideout.tsx` 的复制器仍有实际调用；三主题四座桥均由各自 `ThemeApp` 挂载，不能按文本相似删除。保留21处 `@ts-nocheck` 与362处 `eslint-disable`，它们位于视觉权威或旧命令式/UMBRA模块，当前无ESLint配置可用于验证，未扩大整理范围。计划10相关 `oc.ts`、`a4.ts` 和三套 `CounselChatModal` 未触碰。
-- **验证（2026-10-24本轮）**：`node node_modules/typescript/bin/tsc --noEmit` exit 0；全量 Vitest **71文件/435项通过**；`npm run build` exit 0（主题CSS、TypeScript、Vite、PWA）；`git diff --check` 通过。构建保留既有字体运行时解析、CSS `@import`顺序、动态/静态双导入、大chunk、PWA主包不预缓存与`eval`警告。本轮未改页面或脚本逻辑，没有拿计划11/10的浏览器探针充当本轮结果。
+- **本轮授权与现场**：用户明确启动计划13「候选版验证与打包」。工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，构建基线 `1b3f22a`。未进入计划14真机验收，未重跑764项loader，未Push、部署、接真实账号/组织数据或调用收费模型。
+- **计划状态**：**计划01–13已完成；计划14等待用户真机验收**。计划13生成的候选包不冒充已发布包，正式发布、下载通道和商店上架均未改变。
+- **候选产物**：`E:\MASKARIA\outputs\theme-plan13-candidate-20261024-1b3f22a\maskaria-theme-plan13-3.0.1-1b3f22a.apk`，103,423,423 B，SHA-256 `40EC338EDEF20D83E90150470D33477161CFD3F40F834E43772E6FC50932F98A`；包名 `com.meinan818.personaterminal`，`versionCode 31 / versionName 3.0.1`，后端 `http://150.158.174.9`。沿用既有 Android Debug 证书 `a7f0f3d9…c0567`，支持覆盖同签名旧包。
+- **离线阻断修复**：主入口约2.27 MiB，原Workbox 2 MiB单文件上限导致断网重载白屏；`vite.config.ts` 仅将上限提高到3 MiB。重建后 `sw.js` 预缓存947项/19,451.72 KiB，并明确包含主入口 `assets/index-Dc4hUqH7.js`；未改其他缓存策略、UI或业务。
+- **包内一致性**：APK 内 `assets/public` 共2052项；逐字节比较本地2050个 `dist` 文件，缺失0、差异0；正式后端地址命中1处，`localhost/127.0.0.1` 命中0。
+- **网页候选验证**：`E:\MASKARIA\outputs\theme-plan13-web-20261024-1b3f22a-v13\report.json`，`ok=true`、3项检查、四主题通过、pageErrors=0、localFailures=0；首次启动走完隔离七步建档，蓝→粉→黄→红切换和刷新持久化通过，断网重载成功。自动Service Worker注册在隔离浏览器未观察到，显式注册同一`sw.js`后激活并接管；该边界已记录，不冒充自动注册通过。
+- **验证（2026-10-24本轮）**：`tsc --noEmit` exit 0；全量 Vitest **71文件/435项通过**；`npm run build` exit 0（主题CSS、TypeScript、Vite、PWA）；`verify-release`、`node --check`、`git diff --check` 与Gradle `assembleRelease --rerun-tasks` 通过。
+- **已知边界**：本机 `adb devices` 为空，未安装或启动APK；原生APK内资源完整，浏览器PWA离线时仍记录31次按需字体/WebP未命中，黄主题保留计划11已登记的10次原包官方资源404基线。四主题最终观感、声音、手感与手机离线行为必须由用户按计划14验收。
 - **继承工作区**：两个Gradle行尾痕迹和未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
-- **未覆盖边界**：本轮没有新增页面级或真机验证需求；Android/iOS真机、弱网、并发多标签和最终主观听感仍属后续发布前边界。无法证明安全的检查抑制标记和历史模块继续保留。
-- **唯一下一任务/负责人**：用户明确启动计划13「候选版验证与打包」后，由接手者重新核现场并按计划执行候选构建；不得自动进入计划14真机验收。本入口所在提交为本轮整理提交，用 `git log -1` 核实；未Push。
+- **唯一下一任务/负责人**：用户在自己的安卓设备安装上述候选APK并按计划14反馈四主题外观、音效、手感、刷新、离线和切主题结果；由用户执行真机操作，Codex只在收到具体反馈后修复或准备下一候选。本入口所在提交用 `git log -1` 核实；未Push。
 
 ## 历史交接 · 2026-10-24 · 计划08据点真实读写已完成，下一计划09待新聊天启动（交接提交 `9a3766f`）
 

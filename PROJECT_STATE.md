@@ -10,10 +10,11 @@
 - **其他正式入口**：蓝粉黄账号导入/导出/复制改走 `backup.ts`、`restoreSummaryDraft` 同类真实 store 写入，不再只判断 JSON 后弹成功；同调借面具改走 `borrowMaskFromUi`；黄主题“一起进步”改复用正式 PactPanel；三主题建档接 `createUser`，备份入口接 `importData`。
 - **隔离浏览器证据**：`E:\MASKARIA\outputs\theme-live-regressions-20261025-v11\report.json`，`ok=true`、5 项检查、pageErrors=0；蓝粉黄三套 AI 设置均真实保存测试配置并取得模型列表；中长期占卜、成长总结和红助手都实际发出 mock 模型请求并拿到回复，未使用收费模型。
 - **工程验证**：`node node_modules/typescript/bin/tsc --noEmit` exit0；全量 Vitest **72 文件 / 437 项通过**；`npm run build` exit0。蓝切页专项仍为四次真实导航 0 碎裂 / 4 圆遮罩，菜单主题 `粉→红→黄→蓝→粉` 仍通过，均 pageErrors=0。
+- **新候选 APK（2026-10-25）**：`E:\MASKARIA\outputs\maskaria-livefix-20261025\maskaria-3.0.1-livefix-3262fb4.apk`，同步副本 `D:\下载\互传\maskaria-3.0.1-livefix-3262fb4.apk`；103,429,901 B，SHA-256 `A88CB6B23CD8B8D1718F3793AFE54345C20947971FC809FC0BB9F7EB64232CBE`。包名/版本仍为 `com.meinan818.personaterminal / 3.0.1 / 31`，沿用同一 Debug 证书 `a7f0f3d9…c0567` 支持覆盖安装；APK 内网页资源 2054 项，对本地 2052 个 `dist` 文件逐一比对缺失0、差异0，正式后端命中1，唯一 `localhost` 文本是 Dexie 的浏览器环境探测，不是 API 地址。
 - **漏网扫描**：新增 `scripts/audit-theme-live-stubs.mjs`，扫描 1088 个源文件，找“尚未启用、显式 demo、计时器假成功”。高风险写死正式路径由 7 条降到只剩 1 条 `KitHost` 说明注释；报告见 `outputs/theme-live-stub-audit-20261025-v5/report.json`。剩余 14 条显式 demo 与 9 条计时器主要是演示状态页、动画节拍、模拟失败按钮和红主题历史演示组件，仍逐项按可达性区分，不把静态命中直接删。
-- **未验证边界**：本机没有安卓设备，真实物理返回手势、手机长期闪屏/掉帧、APK 内行为仍需真机；本轮没有新 APK，旧热修包不含这些改动。红主题历史演示夹具中仍有少量 `od.ts`/`SettingsBlocks.tsx` demo 文案，未证明是正式入口前不删改。
+- **未验证边界**：ADB 当前无设备，真实物理返回手势、手机长期闪屏/掉帧与 APK 内行为仍需用户安装上述新包验证。红主题历史演示夹具中仍有少量 `od.ts`/`SettingsBlocks.tsx` demo 文案，未证明是正式入口前不删改。
 - **继承工作区**：两个 Gradle 行尾痕迹和未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，不提交。无 stash/reset/restore/clean。
-- **唯一下一任务/负责人**：由接手者先做 Android 真机返回键与持续帧率采样，确认物理行为后再决定是否打包；新 APK、Push、部署和收费模型仍需用户明确授权。
+- **唯一下一任务/负责人**：用户安装新 APK 后只做手机验收：逐级返回、四主题切页闪屏/流畅度、红助手是否走已配置模型、账号备份与 AI 设置；把具体失败页面/录屏交给接手者定位。Push、部署和收费模型仍未授权。
 
 ## 历史接手入口 · 2026-10-24 · 计划14真机反馈热修2：菜单切主题与蓝色切页已修
 

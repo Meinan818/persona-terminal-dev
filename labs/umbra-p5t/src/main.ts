@@ -17,6 +17,27 @@ import { SceneKit, themeFor, cobbleTex, preloadKit } from './view/sceneKit';
 void preloadKit(); // CC0 布景模型提前加载
 import { computeForecast, forecastHtml } from './view/forecast';
 import type { Forecast } from './view/forecast';
+import { preloadJoker, makeJoker, jokerReady, JokerRig } from './view/jokerModel';
+// Joker 实体模型（私用文件，缺失时用占位胶囊）；加载完成后就地替换已建好的占位
+const rigs = new Map<string, JokerRig>();
+const wantsRig = (u: Unit) => u.id === 'joker' && u.side === 'ally' && !u.decoy && !u.prop;
+void preloadJoker().then((ok) => { if (ok && battle) swapInRigs(); });
+function swapInRigs() {
+  for (const u of battle.units) {
+    const g = unitMesh.get(u.id);
+    if (!g || !wantsRig(u) || rigs.has(u.id)) continue;
+    const r = makeJoker(); if (!r) return;
+    while (g.children.length) g.remove(g.children[0]);
+    attachRig(g, r, u);
+  }
+}
+function attachRig(g: THREE.Group, r: JokerRig, u: Unit) {
+  g.add(r.root);
+  r.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) { if (o.name !== 'jokerHit') o.castShadow = true; o.userData = { ...o.userData, unit: u.id }; } });
+  if (u.facing) r.faceTo(new THREE.Vector3(g.position.x + u.facing.x, 0, g.position.z + u.facing.y));
+  else r.faceTo(new THREE.Vector3(g.position.x, 0, g.position.z + 1));
+  rigs.set(u.id, r);
+}
 
 type Mode = 'auto' | 'melee' | 'gun' | 'skill' | 'unique';
 
@@ -84,7 +105,7 @@ function build() {
   overlay = new THREE.Group();
   scene.add(world);
   world.add(overlay);
-  unitMesh.clear();
+  unitMesh.clear(); rigs.clear();
   tileMeshes.length = 0;
   $('#labels').innerHTML = '';
   labelEl.clear();
@@ -155,6 +176,8 @@ function addUnitMesh(u: Unit) {
     } else {
       makeSpeaker(g);
     }
+  } else if (wantsRig(u) && jokerReady()) {
+    // 实体模型分支在 traverse 之后挂（见下）
   } else if (u.side === 'ally') {
     const mat = std(u.decoy ? 0x9fd0ff : COLORS[u.id] ?? 0xffffff, { roughness: 0.5, transparent: !!u.decoy, opacity: u.decoy ? 0.55 : 1 });
     const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.55, 16), mat);
@@ -181,6 +204,7 @@ function addUnitMesh(u: Unit) {
   }
   g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.userData = { unit: u.id }; } });
   g.position.copy(w2v(u.pos));
+  if (wantsRig(u) && !g.children.length) { const r = makeJoker(); if (r) attachRig(g, r, u); }
   g.userData = { unit: u.id };
   world.add(g);
   unitMesh.set(u.id, g);
@@ -545,7 +569,8 @@ function refreshLabels() {
       el.innerHTML = `<span class="pn">${u.prop === 'flag' ? '敌旗' : '喇叭'}</span><b>${u.hp}</b><div class="hp"><i style="width:${(100 * u.hp) / Math.max(1, u.maxHp)}%"></i></div>`;
       continue;
     }
-    const v = g.position.clone().add(new THREE.Vector3(0, 1.05, 0)).project(viewCam);
+    const rg = rigs.get(u.id);
+    const v = g.position.clone().add(new THREE.Vector3(0, rg ? 1.3 : 1.05, 0)).project(viewCam);
     el.style.display = '';
     el.style.left = `${((v.x + 1) / 2) * w}px`;
     el.style.top = `${((1 - v.y) / 2) * h}px`;
@@ -559,6 +584,12 @@ function refreshLabels() {
     el.innerHTML = u.side === 'enemy'
       ? `<div class="heart"><b>${u.hp}</b></div>${tags}` // P5T：敌人头顶心形 + HP 数字
       : `${u.name.split(' ').pop()}${tags}<div class="hp"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>`;
+    if (rg) {
+      if (!busy) rg.setDowned(u.downed);
+      rg.setDim(u.acted && battle.phase === 'player');
+      if (!busy) g.position.y = gh(u.pos);
+      continue;
+    }
     if (!busy) {
       g.rotation.z = u.downed ? 1.2 : 0;
       g.position.y = gh(u.pos) + (u.downed ? 0.15 : 0);
@@ -626,6 +657,8 @@ async function tweenPath(id: string, path: Vec[], msPerTile = 90, arc = 0) {
   if (!g) return;
   for (let i = 1; i < path.length; i++) {
     const a = w2v(path[i - 1]), b = w2v(path[i]);
+    const rg = rigs.get(id);
+    if (rg) { rg.faceTo(b); rg.setRunning(!arc); }
     const dur = msPerTile * Math.max(1, Math.abs(path[i].x - path[i - 1].x) + Math.abs(path[i].y - path[i - 1].y)) * (arc ? 0.6 : 1);
     const t0 = performance.now();
     await new Promise<void>((res) => {
@@ -638,6 +671,7 @@ async function tweenPath(id: string, path: Vec[], msPerTile = 90, arc = 0) {
       step();
     });
   }
+  rigs.get(id)?.setRunning(false);
 }
 function flash(at: Vec, radius: number) {
   const s = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffa020, transparent: true, opacity: 0.8 }));
@@ -791,15 +825,16 @@ async function play(events: BattleEvent[]) {
       case 'attack': {
         const foeAtk = vPhase === 'enemy' && isFoe(e.attackerId);
         if (foeAtk) await enemyActorIntro(e.attackerId);
+        { const tg = unitMesh.get(e.targetId); const ar = rigs.get(e.attackerId); if (tg && ar) ar.aim(tg.position, e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'gun', 2400 / SPEED); const tr = rigs.get(e.targetId); const ag = unitMesh.get(e.attackerId); if (tr && ag) tr.faceTo(ag.position); }
         if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
         if (e.kind === 'gun' && !params.has('noaim')) await aimShot(e.attackerId, e.targetId);
         else if (foeAtk && !params.has('noaim')) await aimShot(e.attackerId, e.targetId, false); // 敌方近战/技能：过肩机位 + 上下黑边，无准星
         break;
       }
-      case 'damage': popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); await endAim(vPhase === 'enemy' && !efast() ? 420 : 260); break;
+      case 'damage': rigs.get(e.unitId)?.flinch(); popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); await endAim(vPhase === 'enemy' && !efast() ? 420 : 260); break;
       case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
       case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); await endAim(); break;
-      case 'down': { popDamage(e.unitId, 'DOWN!'); sawDown = true; const g = unitMesh.get(e.unitId); if (g) { g.rotation.z = 1.2; g.position.y = gh(battle.unit(e.unitId).pos) + 0.15; } break; }
+      case 'down': { popDamage(e.unitId, 'DOWN!'); sawDown = true; const g = unitMesh.get(e.unitId); const dr = rigs.get(e.unitId); if (dr) dr.setDowned(true); else if (g) { g.rotation.z = 1.2; g.position.y = gh(battle.unit(e.unitId).pos) + 0.15; } break; }
       case 'oneMore': {
         const u = battle.unit(e.unitId);
         if (!sawDown || u.prop) { banner('1 MORE!'); await sleep(650 / SPEED); break; }
@@ -1138,6 +1173,7 @@ function loop() {
   camStep();
   aimStep();
   mapObj.update();
+  for (const r of rigs.values()) r.update();
   const t = performance.now() / 1000;
   sceneKit.update(rig.cur.yaw, t);
   for (const u of battle.units) if (u.prop === 'flag' || u.prop === 'speaker') { const g = unitMesh.get(u.id); if (g) (u.prop === 'flag' ? waveFlag : pulseSpeaker)(g, t); }
@@ -1157,6 +1193,17 @@ window.__p5t = {
   sceneKit,
   renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries }; },
   get busy() { return busy; },
+  rigs,
+  get jokerModel() { return rigs.size > 0; },
+  /** 截图用特写机位：从单位前方 ang 弧度方向、距离 dist 看它（null 还原俯视） */
+  portrait(id: string | null, ang = 0, dist = 2.2, h = 0.9) {
+    if (!id) { viewCam = camera; return; }
+    const g = unitMesh.get(id); if (!g) return;
+    const c = g.position.clone().add(new THREE.Vector3(0, 0.55, 0));
+    aimCam.aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight); aimCam.fov = 40;
+    aimCam.position.copy(c).add(new THREE.Vector3(Math.sin(ang) * dist, h, Math.cos(ang) * dist));
+    aimCam.lookAt(c); aimCam.updateProjectionMatrix(); viewCam = aimCam;
+  },
   banner,
   summonCutIn,
   setMode(m: Mode) { mode = m; refreshAll(); },

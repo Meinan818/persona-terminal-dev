@@ -1,2 +1,4 @@
 node_modules
 dist
+# 私用模型（社区提取，不入库）：由 tools/fetch-private-models.sh 从本地素材目录拷入
+public/models/private/

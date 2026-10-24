@@ -2,7 +2,22 @@
 
 最后更新：2026-10-24。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-24 · 计划03已完成，下一计划04待新聊天启动
+## 当前接手入口 · 2026-10-24 · 计划04已完成，下一计划05待新聊天启动
+
+- **本轮授权与现场**：用户明确只执行计划04“任务与成长闭环”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，接手基点`3928e2a`；用户确认源聊天已停止共享写入，接手时Git除两个Gradle行尾痕迹和既有临时脚本外与交接一致。本轮未进入05及后续，未重建业务层，未重跑764项loader，未改四主题CSS/素材/音效，未Push/部署/APK/收费调用。
+- **计划状态**：**计划04完成，05及之后未启动**。专项报告`docs/THEME-TASK-GROWTH-20261024.md`记录代码范围、13个真实浏览器检查点、截图和保留边界；详细计划状态已同步。
+- **完成结果契约**：`completeTodo`现在区分拒绝（`null`）、计次中间进度（`completed=false`）和目标达成（`completed=true`）。`addTodo`返回真实`Todo`。计次任务到目标才发奖励；每日任务完成后仍保留当天状态但可撤销；长期任务按跨天累计，达标只结算一次并归档。
+- **任务页写入**：蓝粉黄任务创建、编辑、完成、撤销、归档、删除和恢复均先等待store/Dexie结果；失败不先改列表。红色命令式任务页同样接入真实动作和真实UUID，去掉固定ID/title猜ID及空catch。每日任务已完成时，今日行直接提供原有撤销按钮。
+- **BIG DEAL与愿望**：蓝粉黄BIG DEAL子步、收官、重建接真实actions；红色BIG DEAL改从真实active任务投影，子步、收官、重建、归档和删除接store。蓝粉黄愿望新增/收起/删除/恢复/实现、手动进度、子任务和自动重估设置接真实写入；黄愿望实现改真实store；空愿望库挂载崩溃已修。
+- **通知顺序**：蓝粉黄任务页完成时复用原完成条并设置`modalBlocker`，关闭后由原全局宿主消费升级→成就→技能。红色新增`RedGrowthHost`，跨页消费升级/成就/技能/BIG DEAL/愿望进度；原P5 cut-in外观不变。
+- **验证（2026-10-24本轮）**：`node node_modules/vitest/vitest.mjs run --reporter=dot`为**70文件/414项通过**；`tsc --noEmit` exit0；`npm run build` exit0（含主题CSS、TypeScript、Vite、PWA）；`node --check scripts/verify-theme-plan04.mjs`与`git diff --check`通过。构建仍保留既有大chunk、PWA主包不预缓存、Vite CSS `@import`顺序和字体运行时解析警告，本轮未扩大范围处理。
+- **真实浏览器证据**：`E:\MASKARIA\outputs\theme-plan04-blue-first-20261024-final-v3\report.json`，13个检查点通过、pageerror0、本地资源失败0、外网/API/service worker隔离阻断。蓝主题完整验证计次1/3→3/3、刷新保留、撤销清零、创建真实ID、长按编辑、归档、愿望收起、BIG DEAL收官、完成条→真升级；粉黄红完成任务落库，红色额外验证跨页完成条→升级。证据目录含8张完成/结算/升级截图，已人工检查渲染，不等同四主题整体视觉或真机验收。
+- **验证边界与遗留**：蓝粉黄愿望“评估一次距离”和BIG DEAL“AI续拆”仍是演示计时器，真实AI、取消/超时/费用留计划10；B17宣告卡载荷、B18黄双宿主及红其他跨页通知仍按计划09；未真实登录、真实社交/组织、真实账本、Android/真机、音效节奏或四主题整体视觉验收；未重跑764项loader。
+- **继承工作区**：两个Gradle行尾痕迹和未跟踪`scripts/p5r-red/_tmp-compare-local.mjs`仍属继承/外部证据，不纳入本轮，不移动、不删除。无stash/reset/restore/clean。
+- **运行与复查**：隔离服务`http://127.0.0.1:5197`；探针`node scripts/verify-theme-plan04.mjs E:/MASKARIA/outputs/theme-plan04-NEXT`，输出目录必须不存在。缓存/TEMP/TMP放`E:\MASKARIA\.cache`，不读真实浏览器档案。
+- **唯一下一任务/负责人**：用户在新聊天明确启动计划05“记账闭环”后，由接手者复用现有ledger actions/services，先修流水/账户/分类/导入/核对/预算/统计与离线闭环；不自动跨入账号、据点、AI或UI重绘。本轮交接提交为本入口所在提交，用`git log -1`核实；提交后本聊天停止共享写入。
+
+## 历史交接 · 2026-10-24 · 计划03完成，下一计划04待新聊天启动
 
 - **本轮授权与现场**：用户明确在接管聊天中只执行计划03“核接入边界”。工作树`E:\MASKARIA\worktrees\theme-integrate`，分支`codex/theme-integrate`，核对基点`b942018`；用户确认源聊天已停止共享写入。本轮只做接入边界核对与文档，不修复04及后续、不重跑764项loader、不改四主题外观、不Push、不部署、不打APK、不收费调用。交接提交为本入口所在提交，用`git log -1`核实。
 - **计划状态**：**计划03完成，计划04及之后未启动**。专项报告`docs/THEME-INTEGRATION-BOUNDARY-20261024.md`记录真实读取源、正式写入口、保存位置、错误来源和四主题接线；详细计划状态已同步。

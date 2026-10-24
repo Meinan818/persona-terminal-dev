@@ -1109,14 +1109,14 @@ const REVEAL_MS = 540;
 /** 旧路由 id todos/activities 与 actions 同页，归一避免瞬间误 remount */
 const normPageKey = (id: string) => (id === 'todos' || id === 'activities' ? 'actions' : id);
 
-const PageShell = ({ leaving, coveredByWipe, stageBg, stageDecor, onRevealed, children }: {
-  leaving: boolean; coveredByWipe: boolean; stageBg: string; stageDecor?: ReactNode; onRevealed?: () => void; children: ReactNode;
+const PageShell = ({ leaving, coveredByWipe, lightweightReveal, stageBg, stageDecor, onRevealed, children }: {
+  leaving: boolean; coveredByWipe: boolean; lightweightReveal: boolean; stageBg: string; stageDecor?: ReactNode; onRevealed?: () => void; children: ReactNode;
 }) => {
   // D0（reduced-motion / 校直 / 低帧永久降级）：圆形揭示是装饰动效，按降级铁律直出
   // ——origin 置 null 走普通淡切路径（与 TransitionLayer 拒接波纹演出同一口径，
   // 否则 D0 用户只剩一个没有波纹陪衬的裸 clip 扩散，观感是"莫名其妙的圆"）
   const bold = useBoldness();
-  const [origin] = useState(() => (bold ? consumePendingCircleReveal() : null)); // 入场时查询一次（读取不清除，StrictMode 双挂载安全）
+  const [origin] = useState(() => (bold && !lightweightReveal ? consumePendingCircleReveal() : null)); // 入场时查询一次（读取不清除，StrictMode 双挂载安全）
   // 垫底色以 App 根的**实际计算色**为准：夜间频道毯式规则会把根的 dark:bg-gray-900
   // 翻成频道色（蓝→靛/黄→紫），stageBg 里写死的 #111827 与之差一档——垫层一卸就是
   // 一次底色跳变，即夜间开背景动画/背景图时的"切页背景闪烁"。量不到再退回 stageBg。
@@ -1243,7 +1243,7 @@ const PageShell = ({ leaving, coveredByWipe, stageBg, stageDecor, onRevealed, ch
    * 两张页面就都不透明地叠在一起（用户上报的"1 秒点 3~4 次出现两个页面"）。
    * 所以改由外部传 coveredByWipe。
    */
-  const holdStatic = leaving && coveredByWipe;
+  const holdStatic = leaving && coveredByWipe && !lightweightReveal;
   // 兜底：leaving 超过这个时长仍没被出栈（擦除没来 / prune 被连点冲掉），强制淡出。
   // 宁可少一次"垫底等擦除"的观感，也不能留一张不透明的旧页压在新页上。
   const [forceFade, setForceFade] = useState(false);
@@ -1514,7 +1514,8 @@ const PageSwitcher = ({ current, stageBg, stageDecor, render }: {
   // D0 下 PageShell 不放圆擦除（见其 origin 初始化），这里同口径按"无擦除"走，
   // 否则旧页会垫底空等一个不会来的擦除（虽有 260ms forceFade 兜底，但何必）
   const bold = useBoldness();
-  const hasPendingWipe = bold && !!consumePendingCircleReveal();
+  const lightweightReveal = useAppStore((state) => state.user?.theme === 'blue');
+  const hasPendingWipe = bold && !lightweightReveal && !!consumePendingCircleReveal();
   return (
     <div className="relative">
       {stack.map((p) => (
@@ -1524,6 +1525,7 @@ const PageSwitcher = ({ current, stageBg, stageDecor, render }: {
           // 只有"新页确实会放圆形擦除"时，离场页才值得原样垫底等着被盖掉。
           // 复活场景（reviving）不会再擦一次 —— 必须直接淡出，否则两张页面都留在屏上。
           coveredByWipe={!p.reviving && hasPendingWipe}
+          lightweightReveal={lightweightReveal}
           stageBg={stageBg}
           stageDecor={stageDecor}
           // 擦除一到位就把旧页出栈。原先固定等 PAGE_HOLD_MS(520ms)，比擦除(420ms)晚

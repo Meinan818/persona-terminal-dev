@@ -32,6 +32,8 @@ import { UrgentToastP4G, urgentText } from '@yellow/screens/overlays/DashboardTo
 import { ATTR_IDS, levelTitle, masteryOf, masteryTitle } from '@yellow/mock/pkg1';
 import { homeOps, useHomeData } from '@/themes/homeData';
 import { useAppStore } from '@/store';
+import { useSkyBadge } from '@/components/sky/useSkyBadge';
+import type { WeatherIcon } from '@/utils/weather';
 
 const GREETINGS: Record<string, string[]> = {
   dawn: ['n，新的一天开始了', 'n，晨光已到，起身了', 'n，早安，今天也要加油', 'n，清晨的空气真好'],
@@ -54,13 +56,30 @@ const SUBTEXTS: Record<string, string[]> = {
 const slotOf = (h: number) => (h >= 5 && h < 9 ? 'dawn' : h < 12 && h >= 9 ? 'morning' : h >= 12 && h < 14 ? 'noon' : h >= 14 && h < 17 ? 'afternoon' : h >= 17 && h < 19 ? 'dusk' : h >= 19 && h < 22 ? 'evening' : 'night');
 const seed = Math.random();
 const pick = (a: string[]) => a[Math.floor(seed * a.length)];
+const p4WeatherOf = (icon: WeatherIcon | undefined): P4Weather => {
+  if (icon === 'clear-day' || icon === 'clear-night') return 'sunny';
+  if (icon === 'rain' || icon === 'heavy-rain') return 'rain';
+  if (icon === 'snow') return 'snow';
+  if (icon === 'fog' || icon === 'haze') return 'fog';
+  if (icon === 'thunder') return 'thunder';
+  return 'cloudy';
+};
 
 export default function Dashboard({ params }: PageProps) {
   const { ATTR_NAMES, MOCK_ACHIEVEMENTS, MOCK_ATTRIBUTES, MOCK_COUNTERCURRENT, MOCK_STATS, MOCK_TODOS, MOCK_USER_NAME } = useHomeData();
   const state = params.get('state');
-  const [sky, setSky] = useState<'moon' | 'weather'>(params.get('sky') === 'weather' ? 'weather' : 'moon');
-  const wx = (params.get('wx') as SkyWx) || 'ok';
-  const weather = (params.get('weather') as P4Weather) || 'rain';
+  const skyBadge = useSkyBadge();
+  const [demoSky, setDemoSky] = useState<'moon' | 'weather'>(params.get('sky') === 'weather' ? 'weather' : 'moon');
+  const sky = params.has('sky') ? demoSky : skyBadge.mode;
+  const setSky = (next: 'moon' | 'weather') => {
+    if (params.has('sky')) setDemoSky(next);
+    else if (next !== skyBadge.mode) skyBadge.toggle();
+  };
+  const wx = params.has('wx')
+    ? (params.get('wx') as SkyWx)
+    : !skyBadge.ready ? 'unset' : skyBadge.errorKind === 'config' ? 'config' : skyBadge.errorKind ? 'error' : skyBadge.loading ? 'loading' : 'ok';
+  const weather = params.has('weather') ? (params.get('weather') as P4Weather) : p4WeatherOf(skyBadge.weather?.icon);
+  const temp = params.has('weather') ? 17 : skyBadge.weather?.temp ?? 0;
   const greet = (params.get('greet') as GreetMode) || 'card';
   const empty = state === 'empty';
   const [counts, setCounts] = useState<Record<string, number>>(() => Object.fromEntries(MOCK_TODOS.map((t) => [t.id, t._count])));
@@ -147,7 +166,7 @@ export default function Dashboard({ params }: PageProps) {
       {bg === 'image' && <BackgroundImage opacity={0.3} />}
       <div className="relative z-[1] min-w-0">
         <CollageStagger className="flex min-w-0 flex-col gap-5">
-          <CollageItem><DashHeader weather={weather} sky={sky} setSky={setSky} wx={wx} temp={17} /></CollageItem>
+          <CollageItem><DashHeader weather={weather} sky={sky} setSky={setSky} wx={wx} temp={temp} /></CollageItem>
           <CollageItem tilt={0}>
             <GreetingPlate subtext={pick(SUBTEXTS[slotOf(h)])} greeting={pick(GREETINGS[slotOf(h)]).replace('n', MOCK_USER_NAME || '朋友')} mode={greet} completed={doneCount} total={tickable.length} />
           </CollageItem>

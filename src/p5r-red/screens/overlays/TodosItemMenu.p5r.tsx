@@ -7,4 +7,11 @@ import { P5 } from '@/p5r-red/screens/pkg4/p5';
 import { openTodoForm } from '@/p5r-red/screens/pkg4/todoform4';
 import { confirmDel } from '@/p5r-red/screens/pkg4/todos4';
 
-export default v3Overlay(() => { const t = P5.D.todos[0]; P5.actionSheet(t.title, [{ label: '编辑', onClick: () => (openTodoForm as any)({ todo: t }) }, { label: '归档', onClick: () => P5.toast('已归档（不启用）') }, { label: '删除', tone: 'danger', onClick: () => (confirmDel as any)(t.title) }]); });
+export default v3Overlay(() => {
+  const t = P5.D.todos[0];
+  if (!t) {
+    P5.actionSheet('暂无任务', [{ label: '关闭', onClick: () => {} }]);
+    return;
+  }
+  P5.actionSheet(t.title, [{ label: '编辑', onClick: () => (openTodoForm as any)({ todo: t }) }, { label: '归档', onClick: () => P5.toast('已归档（不启用）') }, { label: '删除', tone: 'danger', onClick: () => (confirmDel as any)(t.title) }]);
+});

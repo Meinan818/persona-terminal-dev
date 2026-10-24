@@ -16,6 +16,7 @@ import { lazyOf } from '@pink/shell/lazyRegistry';
 import duskImg from '@pink/assets/pink/pink-dusk-day.webp';
 import { LEVEL_THRESHOLDS, MAX_LEVEL, MOCK_WEATHER, levelTitle, masteryOf, masteryTitle, moonPhaseOf, daysUntil, type MockTodo } from '@pink/mock/pkg1';
 import { relatedAchievements, useHomeData } from '@/themes/homeData';
+import { useSkyBadge } from '@/components/sky/useSkyBadge';
 import { TRI_CLIP, TRI_PATH } from './fxbits';
 
 /* ─────────── 天空位：月相 ⇄ 天气 ─────────── */
@@ -69,16 +70,19 @@ const WeatherGlyph = ({ kind }: { kind: 'cloud' | 'none' }) => (
   </svg>
 );
 export type WeatherState = 'ok' | 'unset' | 'config' | 'error' | 'loading';
-export const SkyBadge = ({ date, initial = 'moon', weather = 'ok' }: { date: Date; initial?: 'moon' | 'weather'; weather?: WeatherState }) => {
-  const [mode, setMode] = useState(initial);
-  const toggle = () => setMode((m) => (m === 'moon' ? 'weather' : 'moon'));
+export const SkyBadge = ({ date, demoMode, demoState }: { date: Date; demoMode?: 'moon' | 'weather'; demoState?: WeatherState }) => {
+  const live = useSkyBadge();
+  const [demo, setDemo] = useState<'moon' | 'weather'>(demoMode ?? 'moon');
+  const mode = demoMode ?? live.mode;
+  const state = demoState ?? (!live.ready ? 'unset' : live.errorKind === 'config' ? 'config' : live.errorKind ? 'error' : live.loading ? 'loading' : 'ok');
+  const toggle = () => demoMode ? setDemo((m) => (m === 'moon' ? 'weather' : 'moon')) : live.toggle();
   if (mode === 'weather') {
-    const main = weather === 'unset' ? '去设置天气' : weather === 'config' ? '天气设置有误' : weather === 'error' ? '天气取不到' : weather === 'loading' ? '取数中…' : `${MOCK_WEATHER.temp}°C ${MOCK_WEATHER.text}`;
-    const sub = weather === 'unset' || weather === 'config' ? 'SET UP' : weather === 'error' ? 'RETRY' : `FEELS ${weather === 'loading' ? '--' : MOCK_WEATHER.feelsLike}°`;
+    const main = state === 'unset' ? '去设置天气' : state === 'config' ? '天气设置有误' : state === 'error' ? '天气取不到' : state === 'loading' ? '取数中…' : `${live.weather?.temp ?? '--'}°C ${live.weather?.text ?? ''}`;
+    const sub = state === 'unset' || state === 'config' ? 'SET UP' : state === 'error' ? 'RETRY' : `FEELS ${state === 'loading' || !live.weather ? '--' : `${live.weather.feelsLike}°`}`;
     return (
       <button type="button" onClick={toggle} aria-label="天气（点击切回月相）" className="ml-0.5 flex min-w-0 items-center gap-2 text-left">
         <span className="relative flex h-11 w-12 shrink-0 items-center justify-center" style={{ background: P3R.cyanFaint, clipPath: slantClip(8) }}>
-          <WeatherGlyph kind={weather === 'ok' || weather === 'loading' ? 'cloud' : 'none'} />
+          <WeatherGlyph kind={state === 'ok' || state === 'loading' ? 'cloud' : 'none'} />
           <Corner />
         </span>
         <span className="flex min-w-0 flex-col gap-1 leading-none">

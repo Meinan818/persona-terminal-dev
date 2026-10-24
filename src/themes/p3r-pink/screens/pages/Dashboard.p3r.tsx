@@ -213,7 +213,7 @@ export default function Dashboard({ params }: PageProps) {
           <span className="flex flex-col gap-0.5 font-cond text-[14px] leading-none" style={{ color: P3R.roseInk }}><span>{MONTHS[now.getMonth()]}</span><span>{WEEKDAYS[now.getDay()]}</span></span>
           {q('season') !== '0' && <SeasonStampChip collected={q('collected') === '1'} className="self-center" />}
           <span aria-hidden className="ml-1 h-10 w-[3px]" style={{ background: P3R.blue, transform: 'skewX(-24deg)' }} />
-          <SkyBadge date={now} initial={q('sky') === 'weather' ? 'weather' : 'moon'} weather={(q('weather') as WeatherState) || 'ok'} />
+          <SkyBadge date={now} demoMode={params.has('sky') ? (q('sky') === 'weather' ? 'weather' : 'moon') : undefined} demoState={params.has('weather') ? (q('weather') as WeatherState) : undefined} />
         </div>
       </header>
 

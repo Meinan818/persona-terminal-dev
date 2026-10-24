@@ -477,7 +477,12 @@ export const YR: any = { show: null };
   ]); };
   function openBigHome(st0 = 'progress') {
     stage({ title: '大事卡', en: 'BIG DEAL', seed: 15, sil: 'leap', body: `${demoBar([['progress', '进行中'], ['empty', '未拆步'], ['all', '全部完成'], ['today', '今天截止'], ['over', '已过截止']], st0)}<div data-host></div><p class="od-note">首页与任务页共用：只露总进度 + 未完成第一步；点卡进二级面板；⋯ 或长按 = 管理菜单（首页不传 ⋯）。</p>`, onMount(w) {
-      stateful(w, [], st0, bigHome, (h) => { const c = h.querySelector('.od-bdh'); P5.longPress(c, bdMenu); c.addEventListener('click', (e) => { if (e.target.closest('[data-act="manage"]')) { e.stopPropagation(); return bdMenu(); } openBigPanel(); }); });
+      stateful(w, [], st0, bigHome, (h) => {
+        const c = h.querySelector('.od-bdh');
+        if (!c) return;
+        P5.longPress(c, bdMenu);
+        c.addEventListener('click', (e) => { if (e.target.closest('[data-act="manage"]')) { e.stopPropagation(); return bdMenu(); } openBigPanel(); });
+      });
     } });
   }
   function openBigPanel(st0 = 'progress') {

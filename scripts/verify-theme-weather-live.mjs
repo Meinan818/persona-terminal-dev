@@ -136,7 +136,20 @@ async function verifyTheme(theme, kit) {
   assert.equal(settings.city?.lon, 114.5391);
   assert.ok(report.requests.slice(requestsBefore).some((request) => request.url.includes('/v1/search?')));
   assert.ok(report.requests.slice(requestsBefore).some((request) => request.url.includes('/v1/forecast?')));
+
+  await page.evaluate(async () => {
+    const { useAppStore } = await import('/src/store/index.ts');
+    await useAppStore.getState().updateSettings({ homeSkyMode: 'weather' });
+    location.hash = '#/p/dashboard';
+  });
+  await page.getByText(/23°C?\s*晴/).first().waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForTimeout(900);
+  const dashboardText = await page.locator('body').textContent();
+  assert.match(dashboardText ?? '', /MASKARIA/);
+  assert.doesNotMatch(dashboardText ?? '', /17°\s*雨/);
+
   report.checks.push(`${theme}: live city search and weather fetch persisted to real settings`);
+  report.checks.push(`${theme}: dashboard consumes the same live weather result as settings`);
   await screenshot(`${theme}-weather-live`);
 }
 

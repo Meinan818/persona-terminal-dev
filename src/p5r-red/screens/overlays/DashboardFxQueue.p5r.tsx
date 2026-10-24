@@ -11,7 +11,8 @@ import { playQueue, useCutIn } from './cutins.p5r';
 
 export default function DashboardFxQueue({ open, onClose, params }: OverlayProps) {
   const v = params?.get('variant') ?? 'default';
-  const t = v === 'mastery' ? D.todos.find((x) => x.id === 't3')! : v === 'plain' ? D.todos.find((x) => x.id === 't5')! : D.todos[0];
+  const fallback = { id: 'demo-todo', title: '示例任务', attribute: 'guts' as const, points: 2, frequency: 'single' as const, repeatDaily: false, important: false, count: 0, target: 1 };
+  const t = (v === 'mastery' ? D.todos.find((x) => x.id === 't3') : v === 'plain' ? D.todos.find((x) => x.id === 't5') : D.todos[0]) ?? fallback;
   useCutIn(open, (done) => playQueue(homeQueue(t, v === 'default' ? '1' : v), done), onClose);
   return null;
 }

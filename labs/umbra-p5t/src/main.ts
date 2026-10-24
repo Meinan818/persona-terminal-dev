@@ -404,6 +404,7 @@ function refreshHud() {
   const pv = $('#preview');
   const fcEl = $('#forecast');
   fcEl.classList.add('hidden');
+  try {
   if (busy) pv.classList.add('hidden');
   else if (sel && previewTarget) {
     const t = battle.unit(previewTarget);
@@ -433,6 +434,10 @@ function refreshHud() {
     pv.classList.remove('hidden');
     pv.innerHTML = '再点一次同一格确认移动';
   } else pv.classList.add('hidden');
+  } finally {
+    // 预测面板打开时收起技能列表（P5T：确认阶段只留面板），VOLTAGE 星避让见 refreshLabels
+    $('#app').classList.toggle('fc-open', !fcEl.classList.contains('hidden'));
+  }
 }
 
 function meleeViaMove(u: Unit, t: Unit): { kind: 'melee'; via: Vec } | null {
@@ -441,6 +446,30 @@ function meleeViaMove(u: Unit, t: Unit): { kind: 'melee'; via: Vec } | null {
   let best: Vec | null = null;
   for (const p of tiles) if (battle.canMelee(u, t, p) && (!best || battle.grid.hasAnyCover(p) > battle.grid.hasAnyCover(best))) best = p;
   return best ? { kind: 'melee', via: best } : null;
+}
+
+/** 预测面板与右下 VOLTAGE 星（含标签）重叠时，把星整体左移到面板左侧外（只动视图，不动面板） */
+function avoidVoltStar(fcEl: HTMLElement, fcOn: boolean) {
+  const vs = $('#volt-star') as HTMLElement;
+  if (!fcOn) { if (vs.style.transform) vs.style.transform = ''; return; }
+  const prev = vs.style.transform;
+  // 用 offset*（不受 transform/过渡影响）取星的原始位置，避免每帧重置 transform 打断过渡
+  const ar = (vs.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? { left: 0, top: 0 };
+  const b = { left: ar.left + vs.offsetLeft, top: ar.top + vs.offsetTop, right: ar.left + vs.offsetLeft + vs.offsetWidth, bottom: ar.top + vs.offsetTop + vs.offsetHeight, height: vs.offsetHeight };
+  const a = fcEl.getBoundingClientRect();
+  const pad = 10;
+  const hit = a.left < b.right + pad && a.right + pad > b.left && a.top < b.bottom + pad && a.bottom + pad > b.top;
+  let want = '';
+  if (hit) {
+    // 优先往下挪到面板下方（不压地图）；放不下（会压到队伍头像/CHARGE）再左移到面板外侧
+    const pr = ($('#party') as HTMLElement).getBoundingClientRect();
+    const dy = Math.ceil(a.bottom + 4 - b.top);
+    const avail = pr.top - 2 - (a.bottom + 4);
+    if (b.bottom + dy <= pr.top - 2) want = `translateY(${dy}px)`;
+    else if (avail >= b.height * 0.7) want = `translateY(${dy}px) scale(${(avail / b.height).toFixed(3)})`;
+    else want = `translateX(${-Math.ceil(b.right - a.left + pad)}px)`;
+  }
+  if (prev !== want) { vs.style.transform = want; vs.classList.toggle('dodge', !!want); }
 }
 
 function refreshLabels() {
@@ -458,6 +487,7 @@ function refreshLabels() {
       fcEl.classList.toggle('at-left', left); fcEl.classList.toggle('at-right', !left);
     }
   }
+  avoidVoltStar(fcEl, fcOn);
   if (sg && battle.phase === 'player' && !busy && !fcOn) {
     const v = sg.position.clone().add(new THREE.Vector3(0, 0.5, 0)).project(viewCam);
     const sx = ((v.x + 1) / 2) * w, sy = ((1 - v.y) / 2) * h;

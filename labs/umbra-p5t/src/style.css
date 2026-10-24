@@ -495,3 +495,8 @@ body.fx-tt .hud, body.fx-tt #labels > .lbl { opacity: 0; transition: opacity .15
   #forecast .fc-btns { margin-top: 5px; }
   #forecast .fc-btns button { height: 26px; font-size: 12px; }
 }
+
+/* 预测面板打开：技能列表收起；VOLTAGE 星避让面板 */
+#app.fc-open #skills { display: none !important; }
+#app.fc-open #preview { display: none; }
+#volt-star { transform-origin: 100% 0; transition: transform .18s ease-out; }

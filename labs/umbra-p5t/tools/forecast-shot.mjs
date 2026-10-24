@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import { preview } from 'vite';
-const OUT = '/workspace/work/notes/shots/2026-10-24';
+const OUT = process.env.OUT || '/workspace/work/notes/shots/2026-10-24';
 const server = await preview({ preview: { port: 4321, host: '127.0.0.1' } });
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2 });
@@ -24,7 +24,7 @@ for (const [name, demo, who, mode, sk, tgt] of cases) {
     p.tap({ unit: tgt });
   }, [demo, who, mode, sk, tgt]);
   await page.waitForTimeout(900);
-  const info = await page.evaluate(() => { const f = document.querySelector('#forecast'); const r = f.getBoundingClientRect(); return { hidden: f.classList.contains('hidden'), r: [r.left, r.top, r.right, r.bottom].map(Math.round), text: f.innerText.replace(/\s+/g, ' ') }; });
+  const info = await page.evaluate(() => { const f = document.querySelector('#forecast'); const r = f.getBoundingClientRect(); const v = document.querySelector('#volt-star').getBoundingClientRect(); const sk = getComputedStyle(document.querySelector('#skills')).display; const ov = !(r.right < v.left || r.left > v.right || r.bottom < v.top || r.top > v.bottom); return { voltOverlap: ov, skillsDisplay: sk, hidden: f.classList.contains('hidden'), r: [r.left, r.top, r.right, r.bottom].map(Math.round), text: f.innerText.replace(/\s+/g, ' ') }; });
   console.log(name, JSON.stringify(info));
   await page.screenshot({ path: `${OUT}/forecast-${name}.png` });
 }

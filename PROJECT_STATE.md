@@ -1,8 +1,18 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-24（计划14真机反馈热修1：红主题菜单资料卡头像、裁切、移除与菜单遮挡已修复，待用户复验）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-24（计划14真机反馈热修2：四主题菜单切换改走正式 store，蓝色切页改为纯圆遮罩；返回键、跨主题闪屏卡顿、红色固定回复与三主题 AI 设置仍未处理）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
-## 当前接手入口 · 2026-10-24 · 计划14真机反馈热修1：红主题资料卡头像与遮挡已修复
+## 当前接手入口 · 2026-10-24 · 计划14真机反馈热修2：菜单切主题与蓝色切页已修
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，接手 HEAD `258b7f2`。本轮两个本地提交为 `bf1175a`（`fix(theme): switch menu themes through the real store`）与 `14bec4b`（`fix(theme): use circle-only blue page transitions`）；未 Push、未部署、未打 APK、未调用收费模型。
+- **菜单主题根因与修复**：粉/蓝/黄菜单色板此前只写 demo presence 并弹“已切换”，没有调用正式 `selectAppTheme()`，所以页面和勾选都不变。三个 `MenuThemeSheet` 改为复用 `useSelectedTheme()` 与正式 store action，保留原 JSX/CSS；红菜单原本已接正式 action。窄验证 `E:\MASKARIA\outputs\theme-menu-switch-20261024-v4-blue-circle-session\report.json`：`pink→red→yellow→blue→pink` 全部通过，4 项、pageErrors=0。
+- **蓝色切页根因与修复**：蓝色外壳默认 `wave` 固定挂 `Shatter`，一次生成 14 个运动碎片和裂纹；`water` 才走圆形遮罩。蓝外壳现让 `water/wave` 统一复用 `DoubleCircleIris`，保留 transition 名兼容既有调用，不改舞台、页面、素材、音效、四套 demo 或视觉权威文件。修改前专项复现为 14 个碎裂多边形，修改后四次真实底导点击均为 0 个碎裂、4 个圆遮罩；证据 `E:\MASKARIA\outputs\theme-blue-circle-transition-20261024-v8-fixed\report.json`，pageErrors=0。该结果证明转场节点显著减少，不冒充手机帧率或用户手感已经验收。
+- **工程验证（本轮实跑）**：`node node_modules/typescript/bin/tsc --noEmit` exit 0；全量 Vitest **71 文件 / 435 项通过**；`npm run build` exit 0（主题 CSS、TypeScript、Vite、PWA）。构建仍有既有 caniuse、字体运行时解析、P5R `@import` 顺序、动态/静态混合导入和大 chunk 警告，本轮未扩大范围处理。
+- **仍未处理**：安卓返回键常直接回桌面，尚未复现并确认返回栈/消费链根因；整体闪屏卡顿在其他三主题仍存在，本轮只缩小蓝色切页转场成本，未做手机长期帧率/内存采样；红色 `NavigatorWindow.p5r.tsx` 仍含 `POOL` 与 `scriptedReply` 固定回复，尚未接正式 `useNavigatorStore`/AI；蓝粉黄 AI 服务设置仍显示“真实连接测试尚未启用”，未接正式 `AIServiceSettings`。这些都不因本轮通过而视为完成。
+- **继承工作区**：`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle` 两个行尾痕迹与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，未修改、移动、删除或提交。当前除这三项外工作区干净；无 stash/reset/restore/clean。
+- **唯一下一任务/负责人**：由接手者先只读复现安卓返回键“上一级→桌面”，记录路由历史与 `useBackHandler` 消费链后再最小修复；同日后续再采样跨主题闪屏和红助手固定回复。当前源码修复没有新 APK，手机复验需等后续明确授权打包，不得把旧热修包冒充包含本轮改动。
+
+## 历史接手入口 · 2026-10-24 · 计划14真机反馈热修1：红主题资料卡头像与遮挡已修复
 
 - **用户反馈与授权**：用户安装计划13候选包后反馈：红主题菜单资料卡无法正常更换头像，头像菜单遮挡资料内容；同时要求复核菜单主题切换。用户从候选项中选择了第2项，只授权修复红主题资料卡头像/裁切/移除/持久化与遮挡，不进入蓝粉黄 AI 设置接线。
 - **根因**：红色 `UserProfileCard.p5r.tsx` 仍使用演示头像状态；`ImageCropDialog.p5r.tsx` 的“完成裁切”只关闭并提示，不产出 dataURL；`Menu.p5r.tsx` 始终画 P5 剪影。头像菜单 `.ob-avmenu` 绝对定位，覆盖下方总点数/五维区域。证据：旧实现没有头像 file input、没有 `updateUser({ avatarDataUrl })`，裁切回调无参数。

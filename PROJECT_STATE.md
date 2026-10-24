@@ -1,6 +1,19 @@
 ﻿# MASKARIA 项目总日志
 
-最后更新：2026-10-25（`livefix4`：四主题 1490 条路由全量隔离审计；首页天气统一真实数据；蓝色切页移除整页 clip-path，改轻量合成层淡入）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-25（AI 全量收口：四主题每日占卜、结识同伴、星象匹配、窥探命运、总结追问、一句话记账、拍小票、记录分析、心相结算及共用称号/名称/人格/组织/委托/通知/谏言/互动/星移全部改走真实模型链路，隔离探针 37 项通过）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+
+## 当前接手入口 · 2026-10-25 · 四主题 AI 入口全量接通（逆影战场除外）
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，本轮接手 HEAD `fc50e91`（上一轮代码 `d13a121`）。本轮代码提交 `f95c028`（`fix(ai): connect all four themes to the real model pipeline`）。未 Push、未部署、未打包、未接真实账号/组织数据、未调用收费模型。
+- **本轮起因**：用户明确要求“所有需要 AI 的地方都核验一遍，逆影战场除外”，并指出每日占卜仍走离线。上一轮只覆盖了中长期占卜、成长总结和助手，没跑每日占卜的真实请求，是实际缺口，不是用户误报。
+- **根因分类**：一部分是配置/分支正确但前端没调用（蓝粉黄每日占卜翻牌后直接 `finish(true)` 写离线，从未 `startDailyJob`；结识同伴/星象匹配/记录分析/一句话记账/拍小票只用固定文案或正则，从未调 `matchConfidant`/`analyzeActivityAI`/`parseLedgerBatch`/`parseLedgerShot`）；另一部分是界面有推演气氛但后台无请求（窥探命运四主题都写死“收拾残局”；总结追问返回固定 `FU_ANSWER`；心相结算标着本地未调 AI）。所有修复都复用现有 `utils/*AI.ts`、`tarotJobs`、`summaryJobs`、`ledgerSettlement`，没有新增第二套 AI 通道。
+- **AI 全量探针**：新增 `scripts/verify-theme-ai-all.mjs`，四主题各自独立浏览器档案，模型全部指向 `http://mock.local` 本地 mock（SSE 与非流式都覆盖），不访问外网。最终 `outputs/theme-ai-all-20261025-full-v4/report.json`：`ok=true`、**37 项检查、121 次本地模型请求、0 页面错误、0 失败**。覆盖：四主题每日占卜（落库 `source=ai`、正文来自 mock）、三主题结识同伴与星象匹配（返回“星星”与 mock 解读，不再是固定魔术师）、四主题窥探命运（真实长按后 `fate` 任务落库）、三主题成长总结追问、四主题一句话记账与拍小票视觉档、四主题记录分析、四主题心相结算，以及四主题共用的等级称号/名称匹配/人格生成/组织分工/今日委托第四张卡/通知口吻/谏言/同伴互动/星移/同伴匹配。
+- **既有回归未破坏**：`scripts/verify-theme-live-regressions.mjs`（`outputs/theme-ai-core-regressions-20261025-v1/report.json`）8 项通过、pageErrors=0；`scripts/verify-theme-plan10-fixes.mjs`（`outputs/theme-ai-plan10-regressions-20261025-v1/report.json`）11 项通过，红互动/星移/匹配/总结仍走真实链路且离线路径 0 请求。本轮没有顺手重构这两处。
+- **工程验证（本轮实跑）**：`node node_modules/typescript/bin/tsc --noEmit` exit0；全量 Vitest **72 文件 / 437 项通过**；`npm run build` exit0（主题 CSS、TypeScript、Vite、PWA）。构建仍有既有 caniuse、字体运行时解析、P5R `@import` 顺序、动态/静态混合导入和大 chunk 警告，本轮未扩大处理。
+- **保留边界**：逆影战场（`battleAI`/`battleAdvisorAI`/Persona 召唤/Boss 心魔）按用户要求不纳入。蓝粉黄“沉思环/年度回顾/伊戈尔结算”里剩余的 `useAIStream` 是逐字演出壳，正文已来自真实任务或本地模板，不再伪造“AI 正在思考”。所有 AI 入口保留离线兜底：无 Key 或请求失败时明确标注离线，不把模板文案冒充模型结果。
+- **未验证边界**：本轮证据全部来自本地 mock 模型与隔离 IndexedDB，没有真实收费模型、真实账号、真实组织数据。真机返回键、手机流畅度、闪屏、通知栏、麦克风、真实音频仍未实测。探针证明了“请求发出 + 结果落库/上屏”，不等于用户在手机上的最终手感。
+- **继承工作区**：`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle` 两个 Gradle 行尾痕迹与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，未修改、移动、删除或提交；三项 SHA-256 仍为 `3793…43CF`、`B614…48AC`、`F332…491`。无 stash/reset/restore/checkout/clean。
+- **唯一下一步/负责人**：由用户在自己手机上装包含 `f95c028` 的包后逐项复验 AI 入口（每日占卜、结识同伴、窥探命运、总结追问、记账、记录分析、结算），把具体失败页面交给 Codex 继续窄修；需要新 APK 时由 Codex 打包。未 Push。
 
 ## 当前接手入口 · 2026-10-25 · livefix4 全量路由与首页天气收口
 

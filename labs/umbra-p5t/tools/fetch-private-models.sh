@@ -55,10 +55,11 @@ CH = {  # key: (GLB 相对路径, 贴图目录)
   'wp_wp02900': ('../batch-03/weapons/Skull/Wp02900.glb', None),
   'wp_gn03000': ('../batch-03/weapons/Mona/Gn03000.glb', None),
   'wp_wp03900': ('../batch-03/weapons/Mona/Wp03900.glb', None),
-  'wp_gn05000': ('../batch-03/weapons/Panther/Panther_Gn05000.glb', None),
-  'wp_wp05900': ('../batch-03/weapons/Panther/Panther_Wp05900.glb', None),
-  'wp_gn04000': ('../batch-03/characters/Fox/weapons/Fox_Gn04000.glb', None),
-  'wp_wp04900': ('../batch-03/characters/Fox/weapons/Fox_Wp04900.glb', None),
+  # umbra-assets cc1f631 已按 units.csv 纠正文件夹：Panther=04、Fox=05
+  'wp_gn04000': ('../batch-03/characters/Panther/weapons/Panther_Gn04000.glb', None),
+  'wp_wp04900': ('../batch-03/characters/Panther/weapons/Panther_Wp04900.glb', None),
+  'wp_gn05000': ('../batch-03/characters/Fox/weapons/Fox_Gn05000.glb', None),
+  'wp_wp05900': ('../batch-03/characters/Fox/weapons/Fox_Wp05900.glb', None),
 }
 strip = lambda n: re.sub(r'__-?\d+(?=\.png$)', '', re.sub(r'^[0-9a-f]{12}__', '', n))
 for key, (glb, tex) in CH.items():

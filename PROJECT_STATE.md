@@ -115,6 +115,17 @@ git switch -c investigate/umbra-p5t archive/2026-10-25/umbra-p5t
 - UMBRA 暂停，不引入 Pixi；等新的 three.js 3D 任务书。
 - iOS 未完成；国产 Android ROM 的后台通知策略未完整验证。
 
+## 代码卫生存量
+
+本轮只做安全的仓库与文档整理，没有为了“看起来干净”批量删除历史实现。当前可见存量：
+
+- `@ts-nocheck`：21 个源文件。
+- `eslint-disable`：370 处。
+- `TODO` / `FIXME` / `HACK`：151 处。
+- 构建仍有 Tailwind `@import` 顺序、动态/静态混合导入、大 chunk 和 `caniuse-lite` 过期警告。
+
+后续应按模块处理：先补行为测试，再逐步移除 `@ts-nocheck` / lint 豁免，最后处理分包和性能。不要一次性全局删除豁免或注释。
+
 ## 接手顺序
 
 1. 读 `README.md`、本文件、`AGENTS.md`。

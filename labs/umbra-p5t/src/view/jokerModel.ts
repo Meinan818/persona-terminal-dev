@@ -1,11 +1,12 @@
-// Joker 实体模型（Hark 美术区）：P5T 社区提取模型，仅本地私用，不入 git。
+// Joker 实体模型（Hark 美术区）：优先 jokerAnim.ts（P5T 正版 PC0001_151 + 原版动作）；缺文件时退回这里的 P5T 社区提取模型，仅本地私用，不入 git。
 // 文件由 tools/fetch-private-models.sh 拷到 public/models/private/；缺文件时 preloadJoker() 返回 false，main.ts 继续用占位胶囊。
 // 模型是 T-pose、无动画：这里用「从静止姿势出发、按模型空间轴旋转骨骼」的程序化动画做 待机呼吸 / 跑步 / 举枪 / 受击 / 倒地。
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { RigBase, toonGradient, outlineMat as sharedOutline, swingArm } from './chibiRig';
-import type { AnimFrame } from './chibiRig';
+import type { AnimFrame, UnitRig } from './chibiRig';
+import { preloadJokerPilot, makeJokerPilot, jokerPilotReady } from './jokerAnim';
 
 const BASE = `${import.meta.env.BASE_URL ?? './'}models/private/`;
 /** 优先怪盗服（发色被 mod 改黄，加载后改回近黑）；没有再用学生服（眼镜片会渲成白色，隐藏镜片） */
@@ -25,6 +26,7 @@ export function preloadJoker(): Promise<boolean> {
   if (loading) return loading;
   const loader = new GLTFLoader();
   loading = (async () => {
+    if (await preloadJokerPilot()) return true; // 正版试点模型 + 原版动作优先
     for (const f of FILES) {
       try {
         const res = await fetch(BASE + f, { method: 'HEAD' });
@@ -39,7 +41,7 @@ export function preloadJoker(): Promise<boolean> {
   })();
   return loading;
 }
-export const jokerReady = () => !!proto;
+export const jokerReady = () => jokerPilotReady() || !!proto;
 
 function toonOf(src: THREE.MeshStandardMaterial): THREE.Material | null {
   const n = src.name || '';
@@ -242,4 +244,4 @@ export class JokerRig extends RigBase {
   }
 }
 
-export function makeJoker(): JokerRig | null { return proto ? new JokerRig() : null; }
+export function makeJoker(): UnitRig | null { return makeJokerPilot() ?? (proto ? new JokerRig() : null); }

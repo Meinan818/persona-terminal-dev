@@ -352,6 +352,12 @@
 
 /* ═════ 图鉴 ═════ */
 :root[data-ui-channel="p5"] .od-tf, :root[data-ui-channel="p5"] .od-tb, :root[data-ui-channel="p5"] .od-sf { display: block; height: auto; }
+/* 图鉴格子宽度是自适应的（大阿卡纳 ~78px / 小阿卡纳 ~62px / 岁时 ~113px），
+   而卡面 <img> 带着写死的 width 属性（100 / 84）。不拉满列宽就会溢出压到邻格，
+   看起来"解锁的比没解锁大、全挤在一起"。这里只对图鉴格子里的卡面拉满 100%。 */
+:root[data-ui-channel="p5"] .od-cx > .od-tf,
+:root[data-ui-channel="p5"] .od-cx > .od-tb,
+:root[data-ui-channel="p5"] .od-sx > .od-sf { width: 100%; height: auto; }
 :root[data-ui-channel="p5"] .od-codex-tabs .seg button { font-size: 16px; padding: 10px 22px; }
 :root[data-ui-channel="p5"] .od-codex section { padding: 12px; background: rgba(242,233,218,.94); box-shadow: var(--p5r-shadow); clip-path: polygon(0 0, 100% .6%, 99.6% 100%, .4% 99.4%); }
 :root[data-ui-channel="p5"] .od-cx-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 10px 8px; }

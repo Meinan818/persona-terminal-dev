@@ -11,6 +11,7 @@ import { Portal, useEscape, useScrollLock } from './Portal';
 import { useBoldness } from '@pink/lib/prefs';
 import { useViewportWidth } from '@pink/lib/layout';
 import { cx } from '@pink/lib/cx';
+import { tarotAsset } from '@pink/lib/asset';
 import { P3R, GhostWords, chamferClip, slantClip, tickClip, P3Progress, CondNum } from './base';
 import { P3Button } from './controls';
 
@@ -245,13 +246,20 @@ export const P3Lightbox = ({ open, onClose, images, index = 0, captions }: { ope
 
 /* ───────────────────────── 塔罗牌面 ───────────────────────── */
 /**
- * 塔罗牌面（粉卡框）：有图（真实 public/tarot/pink/ 只有 56 张小阿卡纳）就用图；大阿卡纳仓库里粉套缺图 → 程序卡面（罗马数 + 牌名 + 八芒星）。
+ * 塔罗牌面（粉卡框）：真实 public/assets/tarot/pink/ 78 张全图——小阿卡纳传 src，
+ * 大阿卡纳按罗马数自动取图（majorFileOf）；图片加载失败才回落程序卡面。back = 粉卡背。
  *   <TarotFace name="恋人" roman="VI" reversed />   <TarotFace src={tarotAsset('cups_3.webp')} name="圣杯三" />   <TarotFace back />
  */
+/** 大阿卡纳 0–XXI → 真实 public/assets/tarot/pink/ 文件名（粉套 78 张全图，含 22 张大阿卡纳） */
+const MAJOR_FILES = ['fool', 'magician', 'high_priestess', 'empress', 'emperor', 'hierophant', 'lovers', 'chariot', 'strength', 'hermit', 'wheel_of_fortune', 'justice', 'hanged_man', 'death', 'temperance', 'devil', 'tower', 'star', 'moon', 'sun', 'judgement', 'world'];
+const ROMAN_LIST = ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX', 'XXI'];
+const majorFileOf = (roman?: string): string | undefined => { const i = roman ? ROMAN_LIST.indexOf(roman) : -1; return i >= 0 ? `${MAJOR_FILES[i]}.webp` : undefined; };
 /** fill：铺满父容器（宽高 100%；width 仍用于字号 / 星形比例） */
 export const TarotFace = ({ src, name, roman, en, reversed, back, width = 120, className, glow, fill }: { src?: string; name?: ReactNode; roman?: string; en?: string; reversed?: boolean; back?: boolean; width?: number; className?: string; glow?: boolean; fill?: boolean }) => {
   const [broken, setBroken] = useState(false);
   const h = Math.round(width * 1.66);
+  const mf = !src ? majorFileOf(roman) : undefined;
+  if (mf) src = tarotAsset(mf);
   const star = (r: number) => Array.from({ length: 16 }).map((_, i) => { const a = (Math.PI / 8) * i - Math.PI / 2; const rr = i % 2 ? r * 0.42 : r; return `${50 + rr * Math.cos(a)},${50 + rr * Math.sin(a)}`; }).join(' ');
   return (
     <span className={cx('relative inline-block shrink-0', className)} style={fill ? { width: '100%', height: '100%' } : { width, height: h }}>

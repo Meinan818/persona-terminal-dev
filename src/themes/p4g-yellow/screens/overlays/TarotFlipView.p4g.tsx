@@ -1,7 +1,7 @@
 /**
  * 塔罗翻面卡（真实 src/components/codex/TarotFlipView.tsx）：「X · 图鉴」；正面牌图，背面牌名 / 英文 / 罗马数字 / 正位·逆位关键词与牌意
  * / 正位·逆位「首次 日期 · N 次 / 尚未抽到」；提示「点一下或左右拖动翻面 · 背面是牌意」。?card=<id>
- * 牌面：大阿卡纳用 public/assets/tarot/p4/<id>.webp（P4 包已拷入；缺失时 P4G 生成式牌面兜底），小阿卡纳用生成式牌面。
+ * 牌面：大小阿卡纳都用 public/assets/tarot/p4/<id>.webp（全套 78 张已入库；缺失时 P4G 生成式牌面兜底）。
  */
 import type { OverlayProps } from '@yellow/registry/types';
 import { asset } from '@yellow/lib/asset';
@@ -13,7 +13,7 @@ import { useTarotCollectedMap } from '@/themes/astrologyData';
 
 /** 牌面：有图用图，否则 P4G 风格生成牌面（黄底黑框 + 巨号罗马数字 + 名字条）*/
 export function TarotFace({ card, dim, className }: { card: P5TarotCard; dim?: boolean; className?: string }) {
-  const src = card.arcana === 'major' ? asset(`tarot/p4/${card.id}.webp`) : undefined;
+  const src = asset(`tarot/p4/${card.id}.webp`);
   const ok = useImageOk(src);
   const suit = card.suit ? P5_SUIT_META[card.suit] : null;
   return (

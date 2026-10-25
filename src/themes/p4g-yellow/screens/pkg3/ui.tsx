@@ -6,6 +6,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode }
 import { useLowMotion } from '@yellow/lib/prefs';
 import { cx } from '@yellow/lib/cx';
 import { useSlot } from '@yellow/lib/slots';
+import { asset } from '@yellow/lib/asset';
 import { TAROT_BY_ID, TRAIT_QUESTIONS } from './arcana';
 import './pkg3.css';
 
@@ -42,15 +43,18 @@ export function AsteriskFlower({ size = 64, className }: { size?: number; classN
   );
 }
 
-/** 卡面图：官方插槽优先 → 生成素材 → null（走 CSS 卡面） */
+/** 卡面图：官方插槽优先 → 真实 P4 牌面 → 包内生成图（走 CSS 卡面） */
 export function useArcanaArt(arcanaId: string): string | null {
   return useArcanaSrc(arcanaId).src;
 }
-/** official=true：用户放入了官方整张牌面（自带牌名/编号，不再叠我们的名牌） */
+/**
+ * 官方插槽优先；否则用真实 P4 牌面 public/assets/tarot/p4/<id>.webp（全套 78 张，自带牌名/编号）。
+ * 两者都是整张牌面，所以 official 恒为 true —— 不再叠我们的罗马数字 / 名牌栏。
+ */
 export function useArcanaSrc(arcanaId: string): { src: string | null; official: boolean } {
-  const gen = PK3_ART[arcanaId] ?? '';
-  const src = useSlot(`arcana-${arcanaId}`, gen);
-  return { src: src || null, official: !!src && src !== gen };
+  const real = asset(`tarot/p4/${arcanaId}.webp`);
+  const src = useSlot(`arcana-${arcanaId}`, real);
+  return { src: src || null, official: !!src };
 }
 export function useCardBack(): string { return useSlot('card-back', cardBack); }
 

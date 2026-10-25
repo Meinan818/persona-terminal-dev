@@ -10,6 +10,8 @@ import { MapObjects } from './view/mapObjects';
 import { makeFlag, makeSpeaker, waveFlag, pulseSpeaker } from './view/props';
 import { slashBanner, itemToast, enemyTurnBanner } from './fx/banners';
 import { updateObjectiveHud, mountCamButtons } from './ui/hud';
+import { p5, PORTRAIT, initP5tHud, letterPop } from './ui/p5tHud';
+import './p5t-hud.css';
 import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cutins';
 import type { CutWho } from './fx/cutins';
 import { TripleFx } from './view/tripleFx';
@@ -392,6 +394,21 @@ function refreshOverlay() {
 }
 
 // ---------- HUD ----------
+/** P5T 正版头像条：party_<角色> 头像（HP≤25% 换 dying_ 头像，阈值为推测）+ panel_gage_window 底 + HP/SP 原版字样 + 原版色条；ACTION / 1MORE ACTION 原版标签。数字是 TMP 字体（未提取）→ 文字 */
+function partyP5(a: Unit) {
+  const pk = PORTRAIT[a.id];
+  const low = a.hp <= a.maxHp * 0.25;
+  const face = pk && p5.has(`party_${pk}`) ? p5.img(`${low && p5.has(`dying_${pk}`) ? 'dying' : 'party'}_${pk}`, 'face')
+    : `<div class="face" style="--c:${'#' + (COLORS[a.id] ?? 0x888888).toString(16).padStart(6, '0')}">${(a.name.split(' ').pop() ?? a.name).slice(0, 1)}</div>`;
+  const canAct = !a.acted && battle.phase === 'player';
+  const tag = canAct ? (a.oneMore ? p5.img('word_1more', 'act om') : p5.img('word_action', 'act')) : '';
+  const pct = (n: number, m: number) => `${Math.max(0, Math.min(100, (100 * n) / Math.max(1, m)))}%`;
+  return `<div class="pm p5${a.id === selected ? ' cur' : ''}${a.acted ? ' done' : ''}${a.oneMore && canAct ? ' om' : ''}" data-uid="${a.id}">
+    <div class="pf">${face}${tag}</div>
+    <div class="gw">${p5.img('word_hp', 'whp')}${p5.img('word_sp', 'wsp')}<b class="nh">${String(a.hp).padStart(4, '0')}</b>${p5.img('gage_slash', 'sl')}<b class="ns">${String(a.sp).padStart(3, '0')}</b>
+      <i class="bar hp" style="--p:${pct(a.hp, a.maxHp)}"></i><i class="bar sp" style="--p:${pct(a.sp, a.maxSp ?? 100)}"></i></div>
+    </div>`;
+}
 function refreshHud() {
   updateObjectiveHud(battle); // 右上目标框：胜利条件 + 回合 x/上限 + 剩余敌人，点开看败北条件
   const ph = $('#phase');
@@ -407,7 +424,7 @@ function refreshHud() {
   $('#volt-star').classList.toggle('full', vfull);
   ($('#endbar button') as HTMLButtonElement).disabled = battle.phase !== 'player' || busy;
   const allies = battle.units.filter((x) => x.side === 'ally' && !x.ko && !x.decoy && !x.prop);
-  $('#party').innerHTML = allies.map((a) => `<div class="pm${a.id === selected ? ' cur' : ''}${a.acted ? ' done' : ''}${a.oneMore && !a.acted && battle.phase === 'player' ? ' om' : ''}" data-uid="${a.id}">
+  $('#party').innerHTML = allies.map((a) => p5.has('gage_window') ? partyP5(a) : `<div class="pm${a.id === selected ? ' cur' : ''}${a.acted ? ' done' : ''}${a.oneMore && !a.acted && battle.phase === 'player' ? ' om' : ''}" data-uid="${a.id}">
     <div class="face" style="--c:${'#' + (COLORS[a.id] ?? 0x888888).toString(16).padStart(6, '0')}">${(a.name.split(' ').pop() ?? a.name).slice(0, 1)}</div>
     ${!a.acted && battle.phase === 'player' ? '<b class="act">ACTION</b>' : ''}
     <div class="nums"><span class="hp"><small>HP</small>${a.hp}</span><span class="sp"><small>SP</small>${a.sp}</span></div>
@@ -654,13 +671,15 @@ function toast(text: string) {
 function popAt(pos: THREE.Vector3, text: string, cls = '') {
   const v = pos.clone().add(new THREE.Vector3(0, 1.2, 0)).project(viewCam);
   const el = document.createElement('div');
-  el.className = `dmg ${cls}`;
-  el.textContent = text;
+  // DOWN / 盾挡 → P5T 原版字母贴图 + anim_ui2d_down_start 时序（缺图时保持文字）
+  const pop = text === 'DOWN!' ? letterPop('down') : text === '盾挡!' ? letterPop('block') : '';
+  el.className = `dmg ${cls}${pop ? ' p5' : ''}`;
+  if (pop) el.innerHTML = pop; else el.textContent = text;
   el.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`;
   el.style.top = `${((1 - v.y) / 2) * window.innerHeight}px`;
   $('#labels').appendChild(el);
   const rm = () => (document.body.classList.contains('frozen') ? setTimeout(rm, 200) : el.remove());
-  setTimeout(rm, 950);
+  setTimeout(rm, pop ? fxMs(1400) : 950);
 }
 function popDamage(unitId: string, text: string, cls = '') {
   const g = unitMesh.get(unitId);
@@ -1200,6 +1219,7 @@ function loop() {
 
 if (params.get('level')) { const lv = params.get('level')!; makeMap = () => levelMap(lv); }
 restart();
+void initP5tHud(() => refreshAll()); // P5T 正版 HUD 贴图（有 public/p5t-hud/ 才启用）
 loop();
 
 // 调试/截图钩子
@@ -1223,6 +1243,12 @@ window.__p5t = {
   },
   banner,
   summonCutIn,
+  /** P5T 正版 HUD 截图钩子 */
+  p5,
+  fx: {
+    oneMore: (id = 'joker') => oneMoreFx(battle.unit(id)),
+    pop: (id: string, text: string) => popDamage(id, text),
+  },
   setMode(m: Mode) { mode = m; refreshAll(); },
   setSkill(id: string) { mode = 'skill'; skillId = id; refreshAll(); },
   tap: onTap,

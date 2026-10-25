@@ -1,5 +1,6 @@
 // P5T 式攻击预测面板（Hark 美术区）：只读 Battle，不改规则。
 // 数值全部来自 battle.previewDamage / coverOf / hitBonus；击退落点为只读模拟（镜像 battle.push 的逐格规则，不改状态）。
+import { p5 } from '../ui/p5tHud';
 import type { Battle, SkillDef, Unit, Vec } from '../rules';
 import { MELEE_KNOCKBACK, SWEEP_DIST, DAREDEVIL_KNOCK, eq } from '../rules';
 
@@ -110,8 +111,9 @@ export function forecastHtml(f: Forecast, _colorOf?: (id: string) => string): st
   const after = Math.max(0, t.hp - f.amount);
   const pct = (n: number) => `${(100 * n) / Math.max(1, t.maxHp)}%`;
   const miss = f.hit === 0;
-  const tag = f.lethal ? '<i class="tg kill">KILL</i>'
-    : miss ? '<i class="tg block">BLOCK</i>'
+  // KILL / BLOCK：P5T 原版贴图（target_kill_red 骷髅标；BLOCK 原版字母块），缺图时文字
+  const tag = f.lethal ? (p5.has('target_kill') ? `<i class="tg kill p5">${p5.img('target_kill')}KILL</i>` : '<i class="tg kill">KILL</i>')
+    : miss ? (p5.has('block_k') ? `<i class="tg block p5">${['b', 'l', 'o', 'c', 'k'].map((l) => p5.img(`block_${l}`)).join('')}</i>` : '<i class="tg block">BLOCK</i>')
     : f.willDown ? '<i class="tg weak">WEAK</i><i class="tg down">1 MORE</i>'
     : f.weak ? '<i class="tg weak">WEAK</i>' : '<i class="tg res">RESIST</i>';
   const extra: string[] = [];

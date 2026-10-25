@@ -1,0 +1,162 @@
+/* =====================================================================================
+   P5T 正版战斗 HUD（Codex 提取的 2160p 贴图，tools/fetch-p5t-hud.sh → public/p5t-hud/，不入 git）
+   只在 body.p5hud（贴图加载成功）时生效；没贴图时整段不生效 → 回退 style.css 的 CSS 版。
+   --u = 一个 2160p 贴图像素（按屏高缩放，和 Unity 画布按高适配一致）；手机矮屏设下限保证字可读。
+   位置/比例依据：notes/refs/p5t 官方截图量的（原版 prefab 的 RectTransform 大多没导出）。
+   ===================================================================================== */
+:root { --u: max(calc(100vh / 2160), .25px); --cu: calc(100vh / 1080); }
+.p5i { display: block; width: calc(var(--w) * var(--u)); height: calc(var(--h) * var(--u)); pointer-events: none; user-select: none; }
+
+/* ---------------- 右上：TURN + 目标（bom05_window_turn_01）+ 敌人数（bom05_window_enemy_01） ---------------- */
+body.p5hud #hud-tl { width: calc(1332 * var(--u)); right: max(8px, env(safe-area-inset-right)); top: 6px; align-items: flex-end; }
+body.p5hud #phase { display: none; } /* 原版没有常驻 PLAYER PHASE 字样（回合由横幅 + ACTION 标表示） */
+body.p5hud #objective { align-self: flex-start; position: relative; width: calc(1210 * var(--u)); height: calc(266 * var(--u)); min-width: 0; padding: 0; border: 0; box-shadow: none; transform: none; background: var(--p5-turn-win) 0 0 / 100% 100% no-repeat; display: block; }
+/* 黑条：x=242 处 y77–227，x=1089 处 y18–110 → 中线斜率 -5.9°；文字放中段 */
+body.p5hud #objective .txt { position: absolute; left: 20%; right: 5%; top: 23%; height: 34%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: max(calc(54 * var(--u)), 12px); letter-spacing: .5px; transform: rotate(-5.9deg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.p5hud #objective .caret { position: absolute; right: 9%; top: 9%; color: #e60012; font-size: max(calc(30 * var(--u)), 8px); }
+/* 回合数：原版 TURN 字在贴图左上（x0–180, y40–115），数字在其右，衬原版米色块 bot02_cursor_on_white_02_ui；数字字体 TMP 未提取 → 文字 */
+body.p5hud #turn { position: absolute; left: calc(172 * var(--u)); top: calc(34 * var(--u)); width: calc(116 * var(--u)); height: calc(84 * var(--u)); margin: 0; padding: 0; z-index: 2; background: var(--p5-turn-num-bg) center / 100% 100% no-repeat; transform: none; display: flex; align-items: center; justify-content: center; color: #111; font-style: normal; }
+body.p5hud #turn b { font-size: max(calc(76 * var(--u)), 17px); font-weight: 900; line-height: 1; font-family: "Arial Black", "UMBRA SC", sans-serif; transform: rotate(-4deg); }
+body.p5hud #turn.warn { animation: none; background-color: transparent; box-shadow: none; }
+body.p5hud #turn.warn b { color: #e60012; }
+/* 敌人数窗：参考图量得相对 turn 窗偏移 (504, 97) → 右对齐、上移 169 */
+body.p5hud #obj-foes { position: relative; width: calc(828 * var(--u)); height: calc(304 * var(--u)); margin-top: calc(-169 * var(--u)); padding: 0; background: var(--p5-enemy-win) 0 0 / 100% 100% no-repeat; transform: none; display: block; pointer-events: none; }
+body.p5hud #obj-foes .cnt { position: absolute; left: 22%; right: 8%; top: 30%; height: 42%; display: flex; align-items: center; justify-content: center; gap: calc(14 * var(--u)); transform: rotate(-8.5deg); color: #fff; }
+body.p5hud #obj-foes .cnt .ic { width: calc(86 * var(--u)); height: calc(86 * var(--u)); }
+body.p5hud #obj-foes .cnt b { font-size: max(calc(58 * var(--u)), 12px); font-weight: 900; font-style: italic; }
+body.p5hud #obj-foes .cnt em { font-style: normal; color: #e60012; font-weight: 900; }
+body.p5hud #obj-foes .crown { position: absolute; right: 2%; top: 100%; margin: 0; background: #000; color: #ffd400; font-size: 10px; font-weight: 900; padding: 1px 8px; transform: skewX(-12deg); white-space: nowrap; }
+/* 原版「剩余 N TURN」（bot02_cursor_on_nokori / bot01_menu_battle_info 数字 / TURN），有回合上限才显示 */
+body.p5hud #obj-foes .left { position: absolute; left: -2%; top: 88%; display: flex; align-items: flex-end; gap: 2px; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 1px #fff); }
+body.p5hud #obj-foes .left .p5i { width: calc(var(--w) * var(--u) * .62); height: calc(var(--h) * var(--u) * .62); }
+body.p5hud #obj-lose { margin-top: 18px; }
+
+/* ---------------- 右下：Voltage（bop01_p_gage_base_dialog + 星填充） ---------------- */
+body.p5hud #volt-star { width: calc(448 * var(--u)); height: calc(350 * var(--u)); right: max(16px, env(safe-area-inset-right)); bottom: calc(max(6px, env(safe-area-inset-bottom)) + 470 * var(--u)); display: block; background: var(--p5-volt-base) 0 0 / 100% 100% no-repeat; }
+body.p5hud #volt-star > span { display: none; } /* VOLTAGE 字在原版贴图里 */
+/* 星内位置：合成比对得 (184, 56) */
+body.p5hud #volt-star .star { position: absolute; left: calc(182 * var(--u)); top: calc(54 * var(--u)); width: calc(222 * var(--u)); height: calc(216 * var(--u)); background: var(--p5-volt-empty) 0 0 / 100% 100% no-repeat; clip-path: none; transform: none; overflow: visible; filter: none; animation: none; }
+body.p5hud #volt-star .star i { left: 0; right: 0; bottom: 0; background: var(--p5-volt-fill) center bottom / calc(222 * var(--u)) calc(216 * var(--u)) no-repeat; transition: height .3s; }
+body.p5hud #volt-star.full .star::before { content: ''; position: absolute; left: 50%; top: 50%; width: calc(356 * var(--u)); height: calc(380 * var(--u)); transform: translate(-50%, -50%); background: var(--p5-volt-glow) 0 0 / 100% 100% no-repeat; animation: p5glow .8s ease-in-out infinite alternate; }
+body.p5hud #volt-star.full .star i { background-color: transparent; }
+@keyframes p5glow { from { opacity: .45; } to { opacity: 1; } }
+
+/* ---------------- 右下：队伍头像条（party_* / dying_* + panel_gage_window + HP/SP 字样 + 色条） ---------------- */
+body.p5hud #party { gap: calc(10 * var(--u)); align-items: flex-end; }
+body.p5hud #party .pm.p5 { --s: .58; width: auto; position: relative; text-align: left; }
+body.p5hud #party .pm.p5.cur { --s: .8; }
+body.p5hud #party .pm.p5.done { opacity: 1; }
+body.p5hud #party .pm.p5.done .face { filter: grayscale(1) brightness(.75); }
+body.p5hud #party .pm.p5 .pf { position: relative; }
+body.p5hud #party .pm.p5 .p5i.face { width: calc(var(--w) * var(--u) * var(--s)); height: calc(var(--h) * var(--u) * var(--s)); margin: 0 auto calc(-70 * var(--u) * var(--s)); border: 0; border-radius: 0; box-shadow: none; background: none; }
+body.p5hud #party .pm.p5 div.face { margin: 0 auto; }
+body.p5hud #party .pm.p5 .p5i.face, body.p5hud #party .pm.p5.om .p5i.face { box-shadow: none; animation: none; }
+body.p5hud #party .pm.p5 .act { position: absolute; right: calc(-60 * var(--u) * var(--s)); top: calc(-10 * var(--u) * var(--s)); width: calc(var(--w) * var(--u) * var(--s) * .95); height: calc(var(--h) * var(--u) * var(--s) * .95); background: none; border: 0; padding: 0; transform: none; }
+/* 数值窗：343×130，按 --s×1.45 显示 */
+body.p5hud #party .gw { --g: calc(var(--u) * var(--s) * 1.45); position: relative; width: calc(343 * var(--g)); height: calc(130 * var(--g)); background: var(--p5-gage-window) 0 0 / 100% 100% no-repeat; margin-left: auto; }
+body.p5hud #party .gw .whp { position: absolute; left: calc(4 * var(--g)); top: calc(-34 * var(--g)); width: calc(76 * var(--g)); height: calc(66 * var(--g)); }
+body.p5hud #party .gw .wsp { position: absolute; left: calc(176 * var(--g)); top: calc(-46 * var(--g)); width: calc(74 * var(--g)); height: calc(62 * var(--g)); }
+body.p5hud #party .gw .sl { position: absolute; left: calc(160 * var(--g)); top: calc(22 * var(--g)); width: calc(46 * var(--g)); height: calc(64 * var(--g)); }
+body.p5hud #party .gw b { position: absolute; top: calc(14 * var(--g)); font-size: max(calc(70 * var(--g)), 11px); line-height: 1; font-weight: 900; font-style: italic; font-family: "Arial Black", "UMBRA SC", sans-serif; letter-spacing: -.5px; -webkit-text-stroke: 1px #000; paint-order: stroke fill; transform: rotate(-6deg); }
+body.p5hud #party .gw .nh { left: calc(14 * var(--g)); color: #5fe6d8; }
+body.p5hud #party .gw .ns { left: calc(196 * var(--g)); color: #d667d6; }
+/* 原版 HP/SP 色条贴图是白色 → 用 mask 着色（原版颜色在 Image.m_Color，未导出 → 取参考截图色） */
+body.p5hud #party .gw .bar { position: absolute; height: calc(26 * var(--g)); -webkit-mask: var(--mask) 0 0 / calc(253 * var(--g)) 100% no-repeat; mask: var(--mask) 0 0 / calc(253 * var(--g)) 100% no-repeat; clip-path: inset(0 calc(100% - var(--p)) 0 0); }
+body.p5hud #party .gw .bar.hp { --mask: var(--p5-gage-hp); left: calc(20 * var(--g)); top: calc(96 * var(--g)); width: calc(253 * var(--g)); background: #5fe6d8; }
+body.p5hud #party .gw .bar.sp { --mask: var(--p5-gage-sp); left: calc(60 * var(--g)); top: calc(116 * var(--g)); width: calc(250 * var(--g)); height: calc(30 * var(--g)); -webkit-mask-size: calc(250 * var(--g)) 100%; mask-size: calc(250 * var(--g)) 100%; background: #d667d6; }
+
+/* ---------------- 指令栏 Triple Threat 按钮（bom02_tri_bang_le_dialog「TRIBANGLE!! 总攻击」） ---------------- */
+body.p5hud #actions .triple { background: var(--p5-tri-btn) center / contain no-repeat !important; color: transparent !important; border: 0 !important; box-shadow: none !important; min-width: calc(736 * var(--u) * .5); height: max(calc(222 * var(--u) * .5), 34px) !important; clip-path: none; text-shadow: none; font-size: 0; }
+
+/* ---------------- 预测卡 KILL / BLOCK ---------------- */
+body.p5hud #forecast .tg.kill.p5 { display: inline-flex; align-items: center; gap: 2px; }
+body.p5hud #forecast .tg.kill.p5 .p5i { width: 16px; height: 15px; }
+body.p5hud #forecast .tg.block.p5 { display: inline-flex; background: none; padding: 0; transform: none; }
+body.p5hud #forecast .tg.block.p5 .p5i { width: auto; height: 15px; }
+
+/* ---------------- DOWN / BLOCK 字母（anim_ui2d_down_start：60fps，y +100→0 回弹 +10，0.083s 错开；0.833s 起下落 -100 淡出） ---------------- */
+#labels .dmg.p5 { animation: none; text-shadow: none; transform: translate(-50%, -100%); }
+.p5pop { display: flex; align-items: flex-end; }
+.p5pop .lt { position: relative; margin-left: calc(-12 * var(--u)); opacity: 0; animation: p5drop calc(1.083s * var(--fxk)) calc(var(--i) * .083s * var(--fxk)) linear forwards; }
+.p5pop .lt:first-child { margin-left: 0; }
+.p5pop .lt .p5i { width: calc(var(--w) * var(--u) * .5); height: calc(var(--h) * var(--u) * .5); }
+.p5pop .lt .sh { position: absolute; left: calc(8 * var(--u)); top: calc(8 * var(--u)); opacity: .76; }
+.p5pop .lt .fg { position: relative; }
+.p5pop.block .lt .p5i { width: calc(var(--w) * var(--u) * .62); height: calc(var(--h) * var(--u) * .62); }
+@keyframes p5drop {
+  0% { transform: translateY(calc(-100 * var(--u))); opacity: 0; }
+  15.4% { transform: translateY(0); opacity: 1; }
+  18.5% { transform: translateY(calc(-10 * var(--u))); }
+  21.5% { transform: translateY(0); }
+  76.9% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(calc(100 * var(--u))); opacity: 0; }
+}
+.frozen .p5pop .lt { animation-play-state: paused !important; }
+
+/* ---------------- 1 MORE（prefab_ui2d_1more / anim_ui2d_one_more，1.083s） ---------------- */
+.fx-cut.om.p5 .frames .fr { position: absolute; left: 50%; top: 50%; width: calc(var(--w) * 100vh / 2160); height: calc(var(--h) * 100vh / 2160); transform: translate(-50%, -50%); opacity: 0; animation: p5fr calc(.067s * var(--fxk)) steps(1, end) forwards; }
+/* om_anime_2…5 存的是 1/2 尺寸（fetch 时缩小），manifest 的 --w/--h 仍是原尺寸 → 显示尺寸不变 */
+.fx-cut.om.p5 .fr.f1 { animation-delay: calc(.267s * var(--fxk)); }
+.fx-cut.om.p5 .fr.f2 { animation-delay: calc(.333s * var(--fxk)); }
+.fx-cut.om.p5 .fr.f3 { animation-delay: calc(.400s * var(--fxk)); }
+.fx-cut.om.p5 .fr.f4 { animation-delay: calc(.467s * var(--fxk)); }
+.fx-cut.om.p5 .fr.f5 { animation-delay: calc(.533s * var(--fxk)); }
+.fx-cut.om.p5 .fr.f6 { animation-delay: calc(.600s * var(--fxk)); }
+@keyframes p5fr { 0% { opacity: 1; } 99.9% { opacity: 1; } 100% { opacity: 0; } }
+.fx-cut.om.p5 .txt { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+/* 大字：锚点 (455, 85)（画布单位，y 向上）；2160p 贴图按 1/2 显示 */
+.fx-cut.om.p5 .big { position: absolute; left: 0; top: 0; width: calc(1344 * 100vh / 2160); height: calc(1100 * 100vh / 2160); animation: p5omText calc(1.083s * var(--fxk)) linear forwards; }
+.fx-cut.om.p5 .eff { position: absolute; left: 0; top: 0; width: calc(522 * 100vh / 2160); height: calc(406 * 100vh / 2160); opacity: 0; animation: p5omEff calc(1.083s * var(--fxk)) linear forwards; }
+@keyframes p5omText {
+  0% { transform: translate(-50%, -50%) translate(calc(455 * var(--cu)), calc(-85 * var(--cu))) scale(.9); opacity: 1; }
+  1.6% { transform: translate(-50%, -50%) translate(calc(455 * var(--cu)), calc(-85 * var(--cu))) scale(.88); }
+  3.1% { transform: translate(-50%, -50%) translate(calc(455 * var(--cu)), calc(-85 * var(--cu))) scale(1); }
+  6.2% { transform: translate(-50%, -50%) translate(calc(455 * var(--cu)), calc(-85 * var(--cu))) scale(1.08); }
+  9.2% { transform: translate(-50%, -50%) translate(calc(455 * var(--cu)), calc(-85 * var(--cu))) scale(1.03); }
+  12.3% { transform: translate(-50%, -50%) translate(calc(448 * var(--cu)), calc(-80 * var(--cu))) scale(.96); }
+  15.4% { transform: translate(-50%, -50%) translate(calc(448 * var(--cu)), calc(-75 * var(--cu))) scale(.91); }
+  18.5% { transform: translate(-50%, -50%) translate(calc(448 * var(--cu)), calc(-80 * var(--cu))) scale(.95); }
+  21.5% { transform: translate(-50%, -50%) translate(calc(455 * var(--cu)), calc(-85 * var(--cu))) scale(1); }
+  92.2% { transform: translate(-50%, -50%) translate(calc(455 * var(--cu)), calc(-85 * var(--cu))) scale(1); opacity: 1; }
+  92.3%, 100% { transform: translate(-50%, -50%) translate(calc(455 * var(--cu)), calc(-85 * var(--cu))) scale(1); opacity: 0; }
+}
+@keyframes p5omEff {
+  0%, 3.0% { opacity: 0; transform: translate(-50%, -50%) translate(calc(286.5 * var(--cu)), calc(187 * var(--cu))) scale(1); }
+  3.1% { opacity: 1; transform: translate(-50%, -50%) translate(calc(286.5 * var(--cu)), calc(187 * var(--cu))) scale(.55); }
+  6.2% { transform: translate(-50%, -50%) translate(calc(272 * var(--cu)), calc(203 * var(--cu))) scale(.75); }
+  9.2% { transform: translate(-50%, -50%) translate(calc(257 * var(--cu)), calc(217 * var(--cu))) scale(1); }
+  12.3% { transform: translate(-50%, -50%) translate(calc(266 * var(--cu)), calc(208 * var(--cu))) scale(.85); }
+  15.4% { transform: translate(-50%, -50%) translate(calc(275 * var(--cu)), calc(200 * var(--cu))) scale(.73); }
+  18.5% { transform: translate(-50%, -50%) translate(calc(266 * var(--cu)), calc(208 * var(--cu))) scale(.85); }
+  21.5% { transform: translate(-50%, -50%) translate(calc(257 * var(--cu)), calc(217 * var(--cu))) scale(1); }
+  92.2% { opacity: 1; transform: translate(-50%, -50%) translate(calc(257 * var(--cu)), calc(217 * var(--cu))) scale(1); }
+  92.3%, 100% { opacity: 0; transform: translate(-50%, -50%) translate(calc(257 * var(--cu)), calc(217 * var(--cu))) scale(1); }
+}
+
+/* ---------------- Triple Threat（bom04_tri_bang_le + anim_ui2d_battle_tribangle_fade 的 scale 脉冲） ---------------- */
+.fx-cut.tt .ttb.p5 { display: flex; justify-content: center; }
+.fx-cut.tt .ttb.p5 .go { animation: p5tri calc(.667s * var(--fxk)) linear both; }
+.fx-cut.tt .ttb.p5 .go .p5i { width: calc(590 * 100vh / 2160 * 1.5); height: calc(384 * 100vh / 2160 * 1.5); }
+@keyframes p5tri { 0% { transform: scale(1); } 25% { transform: scale(1.1); } 50% { transform: scale(1); } 75% { transform: scale(1.1); } 100% { transform: scale(1); } }
+/* 总攻拟声字「啪」「滋」+ obi_line（位置/时序为估计） */
+.fx-cut.tt .allout { position: absolute; inset: 0; pointer-events: none; }
+.fx-cut.tt .allout .obi { position: absolute; left: -10%; width: 120%; height: calc(256 * 100vh / 2160 * .5); transform: rotate(-8deg) scaleX(0); animation: p5obi calc(.18s * var(--fxk)) ease-out forwards; }
+.fx-cut.tt .allout .obi.o1 { top: 18%; }
+.fx-cut.tt .allout .obi.o2 { bottom: 18%; animation-delay: calc(.06s * var(--fxk)); }
+.fx-cut.tt .allout .ch { position: absolute; top: 50%; width: calc(1024 * 100vh / 2160 * .62); height: calc(1024 * 100vh / 2160 * .62); filter: drop-shadow(6px 6px 0 #e60012) drop-shadow(0 0 2px #000); transform: translate(-50%, -50%) scale(2.2); opacity: 0; animation: p5ch calc(.16s * var(--fxk)) cubic-bezier(.3,1.5,.5,1) forwards; }
+.fx-cut.tt .allout .ch.ba { left: 36%; }
+.fx-cut.tt .allout .ch.zu { left: 64%; animation-delay: calc(.12s * var(--fxk)); }
+@keyframes p5obi { to { transform: rotate(-8deg) scaleX(1); } }
+@keyframes p5ch { to { transform: translate(-50%, -50%) scale(1) rotate(-6deg); opacity: 1; } }
+
+/* ---------------- 敌方回合横幅（bom05_window_enemy_02 + shadow + flame + 原版 TURN 字） ---------------- */
+.fx-slash.enemy.p5 .win { position: absolute; left: 50%; top: 46%; width: calc(1160 * var(--u) * 1.25); height: calc(348 * var(--u) * 1.25); transform: translate(-50%, -50%) translateX(120vw); animation: p5winIn calc(.22s * var(--fxk)) cubic-bezier(.2,.9,.3,1) forwards; }
+.fx-slash.enemy.p5 .win > .p5i { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.fx-slash.enemy.p5 .win .sh { transform: translate(calc(16 * var(--u)), calc(16 * var(--u))); opacity: .85; }
+.fx-slash.enemy.p5 .win .fl { left: auto; right: -3%; top: -14%; width: calc(114 * var(--u) * 1.2); height: calc(104 * var(--u) * 1.2); }
+.fx-slash.enemy.p5 .tx { position: absolute; left: 6%; right: 6%; top: 18%; height: 58%; display: flex; align-items: center; justify-content: center; gap: calc(28 * var(--u)); transform: rotate(-8deg); }
+.fx-slash.enemy.p5 .tx b { color: #fff; font-size: max(calc(150 * var(--u)), 30px); font-weight: 900; font-style: italic; letter-spacing: 4px; line-height: 1; text-shadow: 4px 4px 0 #e60012; font-family: "Arial Black", "UMBRA SC", sans-serif; }
+.fx-slash.enemy.p5 .tx .wt { width: calc(96 * var(--u) * 2.4); height: calc(40 * var(--u) * 2.4); background: var(--p5-turn-num-bg) center / 112% 140% no-repeat; padding: 2px 6px; box-sizing: content-box; }
+.fx-slash.enemy.p5 small { position: absolute; right: 8%; top: 100%; margin-top: 4px; background: #fff; color: #000; font-size: 12px; font-weight: 900; letter-spacing: 3px; padding: 1px 12px; transform: skewX(-14deg); white-space: nowrap; }
+@keyframes p5winIn { to { transform: translate(-50%, -50%); } }
+.fx-slash.enemy.p5.out .win { transition: transform calc(.22s * var(--fxk)) cubic-bezier(.6,0,.9,.4), opacity .22s; transform: translate(-50%, -50%) translateX(-120vw); }

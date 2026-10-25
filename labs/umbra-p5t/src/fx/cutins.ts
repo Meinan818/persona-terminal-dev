@@ -4,6 +4,8 @@
 //   - 点屏幕可跳过（Skip.fire()：剩余等待全部立即结束）
 //   - prefers-reduced-motion：只缩短（×0.55），不去掉
 
+import { p5 } from '../ui/p5tHud';
+
 export interface CutWho { id: string; name: string; color: string; side: 'ally' | 'enemy' | 'neutral'; tag?: string }
 
 const host = () => document.getElementById('app') ?? document.body;
@@ -61,6 +63,7 @@ function layer(cls: string, html: string) {
  * 约 1.0s（速度 1）。onPeak 在大字到位时回调（主程序借此做镜头推近的回拉）。
  */
 export async function oneMoreCutIn(who: CutWho, skip = new Skip(), onPeak?: () => void) {
+  if (p5.has('om_text')) return oneMoreP5(who, skip, onPeak);
   const chars = [...'1 MORE!'].map((c, i) => c === ' ' ? '<i class="gap"></i>' : `<b style="--i:${i}">${c}</b>`).join('');
   const el = layer(`om ${who.side}`, `<div class="fl"></div>
     <div class="slab k"></div><div class="slab r"></div><div class="slab w"></div>
@@ -72,6 +75,28 @@ export async function oneMoreCutIn(who: CutWho, skip = new Skip(), onPeak?: () =
   await skip.wait(300);
   el.classList.add('out');
   await skip.wait(200);
+  el.remove(); tapper.remove();
+}
+
+/**
+ * P5T 正版 1 MORE（prefab_ui2d_1more + 剪辑 anim_ui2d_one_more，60fps，1.083s）：
+ *  - anime_1…6（红色斜切 6 帧）：各亮 0.067s，依次 0.267/0.333/0.400/0.467/0.533/0.600s
+ *  - anime_text_1more（大字）：锚点 (455, 85)，scale 0.9→0.88→1→1.08→1.03→0.96→0.91→0.95→1（0→0.233s），1.0s 关
+ *  - anime_text_1more_effect（红色放射）：0.033s 开，锚点 (286.5,-187)→(257,-217)，scale 0.55→0.75→1→0.85→0.73→0.85→1，1.0s 关
+ *  坐标是 Unity 画布单位（1920×1080 参考、按高适配）→ CSS 里 1 单位 = 100vh/1080；2160p 贴图按 1/2 显示。曲线细节在 p5t-hud.css。
+ *  原版帧图的 RectTransform 位置没导出（prefab 子节点解析失败）→ 6 帧按画面居中摆（估计）。
+ *  敌方 1 MORE 用同一套（原版未见敌方专用贴图）。
+ */
+async function oneMoreP5(who: CutWho, skip: Skip, onPeak?: () => void) {
+  const frames = [1, 2, 3, 4, 5, 6].map((i) => p5.img(`om_anime_${i}`, `fr f${i}`)).join('');
+  const el = layer(`om p5 ${who.side}`, `<div class="frames">${frames}</div>
+    <div class="txt">${p5.img('om_effect', 'eff')}${p5.img('om_text', 'big')}</div>`);
+  const tapper = tapToSkip(skip);
+  await skip.wait(600);
+  onPeak?.();
+  await skip.wait(400);
+  el.classList.add('out');
+  await skip.wait(83);
   el.remove(); tapper.remove();
 }
 
@@ -118,8 +143,10 @@ export async function tripleThreatSeq(allies: CutWho[], hooks: TripleHooks, skip
     await skip.wait(420);
     if (!skip.skipped) {
       const ban = document.createElement('div');
-      ban.className = 'ttb';
-      ban.innerHTML = `<div class="band"></div><div class="band b2"></div><div class="word">${ransom('TRIPLE', 3)}<br/>${ransom('THREAT', 11)}</div><div class="sub">ALL-OUT ATTACK</div>`;
+      ban.className = p5.has('tri_go') ? 'ttb p5' : 'ttb';
+      // P5T 正版：bom04_tri_bang_le（「TRIBANGLE GO!!」）+ anim_ui2d_battle_tribangle_fade 的 scale 脉冲（1→1.1→1→1.1→1，0.667s）
+      if (p5.has('tri_go')) ban.innerHTML = `<div class="go">${p5.img('tri_go')}</div>`;
+      else ban.innerHTML = `<div class="band"></div><div class="band b2"></div><div class="word">${ransom('TRIPLE', 3)}<br/>${ransom('THREAT', 11)}</div><div class="sub">ALL-OUT ATTACK</div>`;
       root.appendChild(ban);
       await skip.wait(700);
       ban.classList.add('out');
@@ -135,6 +162,13 @@ export async function tripleThreatSeq(allies: CutWho[], hooks: TripleHooks, skip
     }
     if (!skip.skipped) {
       document.body.classList.add('fx-shake');
+      // P5T 正版总攻拟声字「啪」「滋」（allout_ba / allout_zu）+ obi_line 黑带（位置/时序原版未导出 → 估计：命中开始时弹出）
+      if (p5.has('allout_ba') && p5.has('allout_zu')) {
+        const ao = document.createElement('div');
+        ao.className = 'allout';
+        ao.innerHTML = `${p5.img('obi_line', 'obi o1')}${p5.img('obi_line', 'obi o2')}${p5.img('allout_ba', 'ch ba')}${p5.img('allout_zu', 'ch zu')}`;
+        root.appendChild(ao);
+      }
       for (let i = 0; i < hooks.victims && !skip.skipped; i++) { hooks.hit(hitsDone++); await skip.wait(90); }
       await skip.wait(Math.max(0, 420 - 90 * hooks.victims));
     }

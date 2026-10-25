@@ -2,3 +2,5 @@ node_modules
 dist
 # 私用模型（社区提取，不入库）：由 tools/fetch-private-models.sh 从本地素材目录拷入
 public/models/private/
+# P5T 正版 HUD 贴图（不入库）：由 tools/fetch-p5t-hud.sh 拷入
+public/p5t-hud/

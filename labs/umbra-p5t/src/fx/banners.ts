@@ -1,5 +1,7 @@
 // P5 式演出（Hark 美术区）：增援斜切横幅、宝箱拿到道具提示。纯 DOM + CSS（样式在 style.css「fx」段）。
 
+import { p5 } from '../ui/p5tHud';
+
 const host = () => document.getElementById('app') ?? document.body;
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function waitFrozen() { while (document.body.classList.contains('frozen')) await wait(50); }
@@ -24,9 +26,17 @@ export async function slashBanner(big = '增援', small = 'REINFORCEMENTS', ms =
 export async function enemyTurnBanner(ms = 900) {
   const el = document.createElement('div');
   el.className = 'fx-slash enemy';
+  if (p5.has('enemy_win2') && p5.has('word_turn')) {
+    // P5T 正版窗框：bom05_window_enemy_02 + 阴影 bom05_shadow_enemy_02 + 火焰撇 bom05_window_flame_02 + 原版「TURN」字；
+    // 「ENEMY」原版是 TMP 字体（未提取）→ 文字。进出场时序原版未导出 → 沿用现有斜切进出。
+    el.classList.add('p5');
+    el.innerHTML = `<div class="win">${p5.img('enemy_shadow2', 'sh')}${p5.img('enemy_win2', 'bg')}${p5.img('flame_win2', 'fl')}
+      <div class="tx"><b>ENEMY</b>${p5.img('word_turn', 'wt')}</div><small>敌方回合 · TAP 快进</small></div>`;
+  } else {
   const chars = (w: string, off: number, cls = '') => [...w].map((c, i) => `<i class="${cls}" style="--i:${i + off}">${c}</i>`).join('');
   el.innerHTML = `<div class="sl-k"></div><div class="sl-r"></div><div class="sl-w"></div>
     <div class="sl-txt"><b>${chars('ENEMY', 0)}<span class="gap"></span>${chars('TURN', 5, 't')}</b><small>敌方回合 · TAP 快进</small></div>`;
+  }
   host().appendChild(el);
   document.body.classList.add('slashing');
   await wait(ms);

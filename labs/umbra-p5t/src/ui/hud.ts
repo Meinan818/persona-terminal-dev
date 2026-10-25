@@ -1,5 +1,6 @@
 // HUD 扩展（Hark 美术区）：右上目标框（胜利条件 + 回合 x/上限 + 剩余敌人，点开看败北条件）、左下镜头旋转按钮。
 import type { Battle, LoseCondition } from '../rules';
+import { p5 } from './p5tHud';
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
 
@@ -33,14 +34,19 @@ export function updateObjectiveHud(b: Battle) {
   const lim = turnLimitOf(b);
   const surv = b.map.win.type === 'survive' ? b.map.win.turns : undefined;
   const cap = lim ?? surv;
-  turn.innerHTML = `<small>TURN</small><b>${b.turn}</b>${cap ? `<small>/${cap}</small>` : ''}`;
+  // P5T 正版：TURN 字样在 turn_win 贴图里，这里只放数字（原版是 TMP 字体，未提取 → 文字）；有回合上限时下方加原版「剩余 N TURN」
+  turn.innerHTML = p5.has('turn_win') ? `<b>${b.turn}</b>` : `<small>TURN</small><b>${b.turn}</b>${cap ? `<small>/${cap}</small>` : ''}`;
   turn.classList.toggle('warn', !!lim && lim - b.turn <= 1);
   const foes = b.units.filter((u) => u.side === 'enemy' && !u.ko && !u.prop && !b.isHidden(u)).length;
   const hidden = b.units.some((u) => u.side === 'enemy' && !u.ko && !u.prop && b.isHidden(u));
-  obj.innerHTML = `<span class="lab">目标</span><span class="txt">${esc(winText(b))}</span><i class="caret">${open ? '▲' : '▼'}</i>`;
+  obj.innerHTML = p5.has('turn_win') ? `<span class="txt">${esc(winText(b))}</span><i class="caret">${open ? '▲' : '▼'}</i>` : `<span class="lab">目标</span><span class="txt">${esc(winText(b))}</span><i class="caret">${open ? '▲' : '▼'}</i>`;
   let foe = document.getElementById('obj-foes');
   if (!foe) { foe = document.createElement('div'); foe.id = 'obj-foes'; obj.after(foe); }
-  foe.innerHTML = `<i class="sk"></i>×${foes}${hidden ? '<em>+?</em>' : ''}${b.map.turnTarget ? `<span class="crown">♛ ${b.map.turnTarget} 回合内</span>` : ''}`;
+  const left = cap ? Math.max(0, cap - b.turn + 1) : 0;
+  const leftHtml = cap && p5.has('word_nokori') && [...String(left)].every((d) => p5.has(`num_${d}`))
+    ? `<span class="left">${p5.img('word_nokori', 'nk')}${[...String(left)].map((d) => p5.img(`num_${d}`, 'dg')).join('')}${p5.img('word_turn', 'wt')}</span>` : '';
+  if (p5.has('enemy_win')) foe.innerHTML = `<span class="cnt">${p5.img('icon_soldier', 'ic')}<b>×${foes}</b>${hidden ? '<em>+?</em>' : ''}</span>${b.map.turnTarget ? `<span class="crown">♛ ${b.map.turnTarget} 回合内</span>` : ''}${leftHtml}`;
+  else foe.innerHTML = `<i class="sk"></i>×${foes}${hidden ? '<em>+?</em>' : ''}${b.map.turnTarget ? `<span class="crown">♛ ${b.map.turnTarget} 回合内</span>` : ''}`;
   let lose = document.getElementById('obj-lose');
   if (!lose) {
     lose = document.createElement('div'); lose.id = 'obj-lose'; foe.after(lose);

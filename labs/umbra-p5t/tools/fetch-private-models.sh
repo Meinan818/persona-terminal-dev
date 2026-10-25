@@ -18,3 +18,6 @@ copyp a_joker_qbattle/Joker_PC0001_151_battle.glb joker_pc0001_151.glb
 # Joker 赛璐璐暗面贴图（GLB 里只嵌了 BaseMap）
 mkdir -p "$DST/joker_pc0001_151"
 for t in T_PC0001_C051_ShadeMap_High.png T_PC0001_H000_ShadeMap_High.png; do copyp "a_joker_qbattle/textures/$t" "joker_pc0001_151/$t"; done
+
+# 正版战斗 HUD 贴图（同样不入库）
+bash tools/fetch-p5t-hud.sh

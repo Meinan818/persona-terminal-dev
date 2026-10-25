@@ -7,7 +7,7 @@
 ## 一眼结论
 
 - 当前开发基线是 **3.0.1**，四主题、真实数据链路、AI 入口和卡面素材已经合入 `main`。
-- 本地 `main` 与 `origin/main` 一致，均为 `cfa8967`。
+- 本地 `main` 与 `origin/main` 一致；接手时用 `git rev-parse HEAD origin/main` 现场核对。
 - 远端仓库只保留两个开发分支：
   - `main`：当前唯一主线。
   - `feat/umbra-app-m2`：UMBRA 独立开发线，最新 `d480023`；暂停等待 3D 任务书。
@@ -19,7 +19,7 @@
 - 主工作树：`E:\MASKARIA`
 - 远端：`git@github.com:Meinan818/persona-terminal-dev.git`
 - 当前分支：`main`
-- 当前 HEAD：`cfa8967`
+- 当前 HEAD：以 `git log -1 --oneline` 与 `git rev-parse HEAD` 现场结果为准。
 
 ## 本轮验证
 

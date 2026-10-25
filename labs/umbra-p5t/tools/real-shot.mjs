@@ -3,7 +3,7 @@
 import { chromium } from 'playwright';
 import { preview } from 'vite';
 const OUT = process.env.OUT || '/workspace/work/notes/shots/2026-10-25';
-const ONLY = (process.argv[2] || 'default,anim,face,map').split(',');
+const ONLY = (process.argv[2] || 'default,anim,face').split(',');
 const PFX = process.env.PFX || 'real';
 const server = await preview({ preview: { port: 4333, host: '127.0.0.1' } });
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -78,7 +78,7 @@ if (ONLY.includes('anim')) {
 if (ONLY.includes('face')) {
   const page = await open('L01');
   await stage(page);
-  await page.evaluate(() => window.__p5t.portrait('joker', 0.3, 1.5, 0.75));
+  await page.evaluate(() => window.__p5t.portrait('joker', 0.3, 1.35, 0.3));
   await snap(page, 'joker-face', 900);
   await page.close();
 }

@@ -2,8 +2,8 @@
  "id": "L04",
  "name": "地下水道·撤退",
  "scene": "sewer_tunnel",
- "width": 20,
- "height": 16,
+ "width": 13,
+ "height": 30,
  "win": {
   "type": "reachExit",
   "all": true
@@ -13,18 +13,18 @@
  "party": [
   [
    "joker",
-   17,
-   7
-  ],
-  [
-   "skull",
-   18,
-   8
+   9,
+   26
   ],
   [
    "mona",
-   17,
-   9
+   9,
+   28
+  ],
+  [
+   "erina",
+   8,
+   27
   ]
  ],
  "reserves": [],
@@ -33,182 +33,118 @@
    "type": "allKo"
   }
  ],
- "doors": [
-  {
-   "id": "D1",
-   "cells": [
-    [
-     6,
-     7
-    ],
-    [
-     6,
-     8
-    ]
-   ],
-   "open": false
-  }
- ],
- "switches": [
-  {
-   "id": "s1",
-   "pos": [
-    10,
-    2
-   ],
-   "kind": "toggle",
-   "doors": [
-    "D1"
-   ]
-  }
- ],
+ "doors": [],
+ "switches": [],
  "elevators": [],
- "links": [
-  {
-   "a": [
-    2,
-    12
-   ],
-   "b": [
-    2,
-    13
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    5,
-    13
-   ],
-   "b": [
-    4,
-    13
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    5,
-    14
-   ],
-   "b": [
-    4,
-    14
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    15,
-    3
-   ],
-   "b": [
-    15,
-    2
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    18,
-    1
-   ],
-   "b": [
-    17,
-    1
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    17,
-    3
-   ],
-   "b": [
-    17,
-    2
-   ],
-   "kind": "ladder"
-  }
- ],
+ "links": [],
  "cameras": [],
  "chests": [],
  "props": [],
  "enemies": [
   {
-   "id": "b1",
-   "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
-   "pos": [
-    9,
-    6
-   ],
-   "zone": "B"
-  },
-  {
-   "id": "b2",
+   "id": "e1",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
-   "pos": [
-    12,
-    3
-   ],
-   "zone": "B"
-  },
-  {
-   "id": "b3",
-   "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
-   "pos": [
-    8,
-    12
-   ],
-   "zone": "B"
-  },
-  {
-   "id": "c1",
-   "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
-   "pos": [
-    4,
-    5
-   ],
-   "zone": "C"
-  },
-  {
-   "id": "c2",
-   "name": "Drummer",
-   "role": "supporter",
-   "hp": "PH",
-   "pos": [
-    2,
-    11
-   ],
-   "zone": "C"
-  },
-  {
-   "id": "c3",
-   "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 60,
+   "move": 3,
+   "unitId": 10001010,
    "pos": [
     3,
-    2
+    20
    ],
-   "zone": "C"
+   "role": "shooter",
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
+   "zone": "A"
+  },
+  {
+   "id": "e2",
+   "name": "Musketeer",
+   "hp": 60,
+   "move": 3,
+   "unitId": 10001010,
+   "pos": [
+    7,
+    7
+   ],
+   "role": "shooter",
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
+   "zone": "A"
+  },
+  {
+   "id": "e3",
+   "name": "Musketeer",
+   "hp": 60,
+   "move": 3,
+   "unitId": 10001010,
+   "pos": [
+    5,
+    7
+   ],
+   "role": "shooter",
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
+   "zone": "A"
+  },
+  {
+   "id": "e4",
+   "name": "Musketeer",
+   "hp": 60,
+   "move": 3,
+   "unitId": 10001010,
+   "pos": [
+    4,
+    20
+   ],
+   "role": "shooter",
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
+   "zone": "A"
+  },
+  {
+   "id": "e5",
+   "name": "Musketeer",
+   "hp": 60,
+   "move": 3,
+   "unitId": 10001010,
+   "pos": [
+    2,
+    19
+   ],
+   "role": "shooter",
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
+   "zone": "A"
+  },
+  {
+   "id": "e6",
+   "name": "Musketeer",
+   "hp": 60,
+   "move": 3,
+   "unitId": 10001010,
+   "pos": [
+    5,
+    19
+   ],
+   "role": "shooter",
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
+   "zone": "A"
   }
  ],
  "events": [
   {
-   "id": "w1",
+   "id": "reinf1",
    "when": {
-    "type": "turn",
-    "turn": 2,
-    "phase": "enemy"
+    "type": "enterZone",
+    "zone": "B",
+    "side": "ally"
    },
    "do": [
     {
@@ -216,121 +152,44 @@
      "units": [
       {
        "id": "r1",
-       "name": "Grenadier",
-       "role": "revenger",
-       "hp": "PH",
+       "name": "举止异常的SKULL",
+       "hp": 100,
+       "move": 5,
+       "unitId": 2054,
        "pos": [
-        19,
-        2
-       ]
+        10,
+        27
+       ],
+       "role": "brute",
+       "protected": true
       },
       {
        "id": "r2",
-       "name": "Grenadier",
-       "role": "revenger",
-       "hp": "PH",
+       "name": "举止异常的PANTHER",
+       "hp": 100,
+       "move": 5,
+       "unitId": 4054,
        "pos": [
-        19,
-        13
-       ]
-      }
-     ]
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "w2",
-   "when": {
-    "type": "turn",
-    "turn": 4,
-    "phase": "enemy"
-   },
-   "do": [
-    {
-     "type": "spawn",
-     "units": [
+        11,
+        26
+       ],
+       "role": "brute",
+       "protected": true
+      },
       {
        "id": "r3",
-       "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
+       "name": "举止异常的FOX",
+       "hp": 100,
+       "move": 7,
+       "unitId": 5054,
        "pos": [
-        19,
-        6
-       ]
-      },
-      {
-       "id": "r4",
-       "name": "Grenadier",
+        11,
+        28
+       ],
        "role": "brute",
-       "hp": "PH",
-       "pos": [
-        19,
-        8
-       ]
-      },
-      {
-       "id": "r5",
-       "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
-       "pos": [
-        19,
-        10
-       ]
+       "protected": true
       }
      ]
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "w3",
-   "when": {
-    "type": "turn",
-    "turn": 6,
-    "phase": "enemy"
-   },
-   "do": [
-    {
-     "type": "spawn",
-     "units": [
-      {
-       "id": "r6",
-       "name": "Grenadier",
-       "role": "brute",
-       "hp": "PH",
-       "pos": [
-        1,
-        4
-       ]
-      },
-      {
-       "id": "r7",
-       "name": "Grenadier",
-       "role": "brute",
-       "hp": "PH",
-       "pos": [
-        1,
-        11
-       ]
-      }
-     ]
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "unlockC",
-   "when": {
-    "type": "doorOpened",
-    "id": "D1"
-   },
-   "do": [
-    {
-     "type": "unlockZone",
-     "zone": "C"
     }
    ],
    "repeat": false
@@ -348,7 +207,7 @@
    "type": "noKo"
   }
  ],
- "intent": "照 P5T M4（全员抵达目标；原版 Musketeer×6，第3-4回合后方来援军，不必理会直接冲出口）。从右往左撤；后面第2/4/6回合追兵；中间开关 s1 开 D1（会被敌人占住）；C 区第6回合出口边埋伏2个。",
+ "intent": "原版 M04 布局（p5t/1_data/missions/M04.json（StageId 01040，scene_map_010204））。",
  "unlockedZones": [
   "A",
   "B"
@@ -359,57 +218,103 @@
   "ratio": 0.272
  },
  "tiles": [
-  "####################",
-  "....hh#h...hH#......",
-  "h.....#H....H#......",
-  "h..hh.#H.h...#......",
-  "...h..#h.h.Hh#.h...H",
-  ".....H#..h...#.Hh..h",
-  "E...hh#....h....H...",
-  "E.h.h...hh.Hh.......",
-  "E.h......H.....Hh...",
-  "E...Hh#....HH.......",
-  ".....h###..###..hh..",
-  "H..h.h###..###H.h..H",
-  "H..h..#......#h.H..h",
-  "H.....#H..hh.#h.....",
-  "H.....#H.....#h.hhh.",
-  "####################"
+  "........EEEEE",
+  "........EEEEE",
+  "........EEEEE",
+  "........#####",
+  "........#####",
+  "........#####",
+  "........#####",
+  "###.....#####",
+  "###..HhH#####",
+  "###..........",
+  "###H.........",
+  "#####........",
+  "#####hh..hh..",
+  "#####........",
+  "#####........",
+  "#####........",
+  "#####HHHH....",
+  ".............",
+  ".............",
+  "........#####",
+  "........#####",
+  "...HH...#####",
+  "........#####",
+  "........#####",
+  "HhH..HhH#####",
+  ".............",
+  "...HH........",
+  ".............",
+  ".............",
+  "............."
  ],
  "heights": [
-  "00000000000000000000",
-  "00000000000000022200",
-  "00000000000000022200",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "02222000000000000000",
-  "02222000000000000000",
-  "00000000000000000000"
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000",
+  "0000000000000"
  ],
  "zones": [
-  "AAAAAAAAAAAAAAAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "CCCCCCCBBBBBBBAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA"
- ]
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAABBAABB",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA",
+  "AAAAAAAAAAAAA"
+ ],
+ "heightMap": {
+  "1.0": 0
+ },
+ "source": "p5t/1_data/missions/M04.json（StageId 01040，scene_map_010204）"
 }

@@ -1,6 +1,6 @@
 // Q6：区域解锁（开关开门 / 触发格 / 清区）+ 增援（按回合 / 按触发）；Q9 事件与动作
 import { describe, expect, it } from 'vitest';
-import { levelMap } from '../src/game/levels';
+import { legacyMap as levelMap } from './legacyLevels'; // 区域/门/开关/增援接口测试用 10-25 自编图纸冻结副本（见 legacyLevels.ts）
 import { Battle } from '../src/rules';
 import type { BattleEvent, MapDef } from '../src/rules';
 

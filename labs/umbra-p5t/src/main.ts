@@ -21,22 +21,43 @@ import { computeForecast, forecastHtml } from './view/forecast';
 import type { Forecast } from './view/forecast';
 import { preloadJoker, makeJoker, jokerReady } from './view/jokerModel';
 import type { UnitRig } from './view/chibiRig';
+import { RUN_MS_PER_TILE } from './view/chibiRig';
 import { makeSkull, makeMona, makeShadow } from './view/partyModels';
-// 角色模型：Joker = 私用 GLB（缺文件时占位胶囊，加载完成后就地替换）；Skull/Mona/敌兵 = 程序化 Q 版（chibiRig 共用动画）
+import { preloadChar, makeChar } from './view/p5tChar';
+// 角色模型：全部优先 P5T 正版模型 + 原版动作（p5tChar.ts；私用 GLB 不入库，缺文件时 → 程序化 chibiRig 回退，加载完成后就地替换）。
+// Joker 另有社区模型回退（jokerModel.ts）。敌兵：火枪手系（shooter / teleporter）= Em0001_110；被洗脑的 Skull = Skull 模型；Marie = Em0501；
+// 守卫（Grenadier）/伴奏者（Drummer）等原版模型（Em0002/Em0003…）还没提取 → 程序化回退（已列入 HARK-TO-CODEX 请求）。
 const rigs = new Map<string, UnitRig>();
 const wantsRig = (u: Unit) => !u.decoy && !u.prop && (u.side === 'enemy' || (u.side === 'ally' && (u.id === 'joker' || u.id === 'skull' || u.id === 'mona')));
+/** 单位 → 正版角色 key（null = 没有对应原版模型） */
+function p5tKeyFor(u: Unit): string | null {
+  if (u.side === 'ally') return u.id === 'joker' ? null : u.id;
+  if (/Marie/.test(u.name) || u.id === 'boss' && /玛丽|Marie/.test(u.name)) return 'marie';
+  if (/龙司|SKULL|Skull/.test(u.name)) return 'skull';
+  if (u.role === 'shooter' || u.role === 'teleporter' || /Musketeer|火枪手/.test(u.name)) return 'em0001_110';
+  return null;
+}
 function makeRigFor(u: Unit): UnitRig | null {
   if (!wantsRig(u)) return null;
+  if (u.side === 'ally' && u.id === 'joker') return makeJoker();
+  const k = p5tKeyFor(u);
+  const real = k ? makeChar(k) : null;
+  if (real) return real;
   if (u.side === 'enemy') return makeShadow(u.role);
-  if (u.id === 'joker') return makeJoker();
   return u.id === 'skull' ? makeSkull() : makeMona();
 }
 void preloadJoker().then((ok) => { if (ok && battle) swapInRigs(); });
-function swapInRigs() {
+for (const k of ['skull', 'mona', 'em0001_110', 'marie']) void preloadChar(k).then((ok) => { if (ok && battle) swapInRigs(k); });
+/** 正版模型加载完：把还是占位/程序化的单位就地换掉（key 给定时只换该角色） */
+function swapInRigs(key?: string) {
   for (const u of battle.units) {
     const g = unitMesh.get(u.id);
-    if (!g || !wantsRig(u) || rigs.has(u.id)) continue;
-    const r = makeRigFor(u); if (!r) continue;
+    if (!g || !wantsRig(u)) continue;
+    const old = rigs.get(u.id);
+    if (old && !key) continue;
+    if (key && (u.id === 'joker' ? 'joker' : p5tKeyFor(u)) !== key) continue;
+    if (old && 'key' in old) continue; // 已是正版
+    const r = makeRigFor(u); if (!r || r === old) continue;
     while (g.children.length) g.remove(g.children[0]);
     attachRig(g, r, u);
   }
@@ -686,6 +707,11 @@ function popDamage(unitId: string, text: string, cls = '') {
   if (g) popAt(g.position, text, cls);
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** 走格时长：按该单位原版 Run 步速（p5tChar.msPerTile；程序化 rig 用 RUN_MS_PER_TILE），快进时 ÷ SPEED */
+const walkMs = (id: string) => (rigs.get(id)?.msPerTile ?? RUN_MS_PER_TILE) / SPEED;
+/** 等单位当前单次动作（攻击/受击）播完再继续；快进（敌方回合点屏 / speed>1）时封顶更短 */
+const settleRig = (id: string | null | undefined, max = 2500) => { const r = id ? rigs.get(id) : undefined; return r?.settle ? r.settle(efast() ? Math.min(max, 400) : max) : Promise.resolve(); };
+let lastAttacker: string | null = null;
 async function tweenPath(id: string, path: Vec[], msPerTile = 90, arc = 0) {
   const g = unitMesh.get(id);
   if (!g) return;
@@ -842,7 +868,8 @@ async function play(events: BattleEvent[]) {
       case 'move': {
         const foeCam = vPhase === 'enemy' && isFoe(e.unitId);
         if (foeCam) { await enemyActorIntro(e.unitId); camFollow = e.unitId; }
-        await tweenPath(e.unitId, e.path.length ? e.path : [e.from, battle.unit(e.unitId).pos], (foeCam && !efast() ? 150 : 90) / SPEED);
+        await settleRig(e.unitId, 1500); // 上一个动作（如受击）播完再起步
+        await tweenPath(e.unitId, e.path.length ? e.path : [e.from, battle.unit(e.unitId).pos], walkMs(e.unitId));
         if (foeCam) { camFollow = null; await sleep(efast() ? 0 : 160); }
         break;
       }
@@ -852,20 +879,26 @@ async function play(events: BattleEvent[]) {
         if (e.blocked) popDamage(e.unitId, e.collidedWith ? '撞击!' : '挡住');
         break;
       case 'pull': await tweenPath(e.unitId, e.path.length ? e.path : [e.from, e.to], 80 / SPEED); popDamage(e.unitId, e.effect === 'hypno' ? '催眠' : '漩涡'); break;
-      case 'dizzyMove': await tweenPath(e.unitId, [e.from, e.to], 90 / SPEED, 0.3); popDamage(e.unitId, '眩晕'); break;
+      case 'dizzyMove': await tweenPath(e.unitId, [e.from, e.to], walkMs(e.unitId), 0.3); popDamage(e.unitId, '眩晕'); break;
       case 'fall': popDamage(e.unitId, '坠落!', 'big'); await sleep(220 / SPEED); break;
       case 'followUp': sawDown = true; banner('FOLLOW UP!', true); toast(`${battle.unit(e.shooterId).name} 追击！${battle.unit(e.creditId).name} 获得 1 MORE`); await sleep(600 / SPEED); break;
       case 'meleeStep': unitMesh.get(e.unitId)?.position.copy(w2v(e.to)); break;
       case 'attack': {
         const foeAtk = vPhase === 'enemy' && isFoe(e.attackerId);
         if (foeAtk) await enemyActorIntro(e.attackerId);
+        lastAttacker = e.attackerId;
         { const tg = unitMesh.get(e.targetId); const ar = rigs.get(e.attackerId); if (tg && ar) ar.aim(tg.position, e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'gun', 2400 / SPEED); const tr = rigs.get(e.targetId); const ag = unitMesh.get(e.attackerId); if (tr && ag) tr.faceTo(ag.position); }
         if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
         if (e.kind === 'gun' && !params.has('noaim')) await aimShot(e.attackerId, e.targetId);
         else if (foeAtk && !params.has('noaim')) await aimShot(e.attackerId, e.targetId, false); // 敌方近战/技能：过肩机位 + 上下黑边，无准星
         break;
       }
-      case 'damage': rigs.get(e.unitId)?.flinch(); popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED); await endAim(vPhase === 'enemy' && !efast() ? 420 : 260); break;
+      case 'damage':
+        // 攻击动作（GunStart→GunFire / Attack / Skill*）播完才结算受击，受击 Damage 播完才往下走（原版 clip 没导出动画事件点 → 以 clip 结束为准）
+        if (e.source !== 'triple') await settleRig(lastAttacker, 2600);
+        rigs.get(e.unitId)?.flinch(); popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED);
+        await settleRig(e.unitId, 1800);
+        await endAim(vPhase === 'enemy' && !efast() ? 420 : 260); break;
       case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
       case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); await endAim(); break;
       case 'down': { popDamage(e.unitId, 'DOWN!'); sawDown = true; const g = unitMesh.get(e.unitId); const dr = rigs.get(e.unitId); if (dr) dr.setDowned(true); else if (g) { g.rotation.z = 1.2; g.position.y = gh(battle.unit(e.unitId).pos) + 0.15; } break; }
@@ -896,7 +929,7 @@ async function play(events: BattleEvent[]) {
       case 'penalty': popDamage(e.unitId, '违规!', 'big'); toast(`喇叭禁止「${ACT_NAME[e.action]}」→ 惩罚`); break;
       case 'speakerBan': toast(`喇叭：本回合禁止「${e.bans.map((b) => ACT_NAME[b]).join('、')}」`); break;
       case 'skipTurn': popDamage(e.unitId, ST_NAME[e.reason]); break;
-      case 'ko': { popDamage(e.unitId, 'KO'); const kr = rigs.get(e.unitId); if (kr) kr.die(); await sleep((kr ? 650 : 200) / SPEED); } fxKeep.delete(e.unitId); break;
+      case 'ko': { popDamage(e.unitId, 'KO'); const kr = rigs.get(e.unitId); if (kr) { await settleRig(e.unitId, 1500); kr.die(); await sleep(250 / SPEED); await settleRig(e.unitId, 2500); } else await sleep(200 / SPEED); } fxKeep.delete(e.unitId); break;
       case 'batonPassReady': toast(`${battle.unit(e.koId).name} 倒下：可 Baton Pass 换替补`); break;
       case 'batonPass': rebuild = true; banner('BATON PASS', true); break;
       case 'error': toast(e.message); break;
@@ -1230,6 +1263,7 @@ window.__p5t = {
   renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries }; },
   get busy() { return busy; },
   rigs,
+  unitMesh,
   camera,
   get jokerModel() { return rigs.size > 0; },
   /** 截图用特写机位：从单位前方 ang 弧度方向、距离 dist 看它（null 还原俯视） */

@@ -109,15 +109,19 @@ export const PASSIVE_INFO: Record<PassiveId, { name: string; desc: string }> = {
   reverseTheScales: { name: 'Reverse the Scales', desc: '1 More 中开枪时与目标换位，每回合 1 次' },
 };
 
-// ---------- 我方（Cogito 角色表 Lv19/21：HP SP MOV MEL RNG R 枪型） ----------
+// ---------- 我方 ----------
+// 10-26 起 Joker/Skull/Mona 的 HP / 近战 / 枪伤 / 移动 / 射程 = P5T 原版数据表（umbra-assets/p5t/0_list/data.md：unitdatabase 1051/2051/3051 HP·MoveRun，
+// 近战 = unit_grow Lv1 sword_atk，枪伤 = weapondatabase 1000/2000/3000 DamageMin–Max，射程 = skilldatabase 101/201/301 Range）。
+// 枪伤原版是区间：引擎确定性结算取下限 power，上限记在 powerMax。SP 仍是 Cogito Lv19（原版 unitdatabase SP 与 unit_grow 首级不一致，未换）。
+// 其余角色（Panther 及以后）原版数据未核对 → 仍是 Cogito 角色表 Lv19/21。
 export const JOKER: UnitDef = {
   id: 'joker', name: 'Joker', side: 'ally', isLeader: true,
-  maxHp: 136, maxSp: 49, move: 6, melee: 21, gun: { power: 17, range: 8, shape: 'single' },
+  maxHp: 99, maxSp: 49, move: 6, melee: 20, gun: { power: 17, powerMax: 22, range: 8, shape: 'single' },
   skills: [SKILLS.eiha], unique: UNIQUES.phantomJudge, charges: CHARGES.joker, passives: ['trumpCard'],
 };
 export const SKULL: UnitDef = {
   id: 'skull', name: '龙司 Skull', side: 'ally',
-  maxHp: 171, maxSp: 34, move: 6, melee: 28, gun: { power: 19, range: 5, shape: 'aoe' },
+  maxHp: 130, maxSp: 34, move: 6, melee: 25, gun: { power: 19, powerMax: 24, range: 5, shape: 'aoe' },
   skills: [SKILLS.zio], unique: UNIQUES.brigantine, charges: CHARGES.skull, passives: ['endure'],
 };
 export const PANTHER: UnitDef = {
@@ -127,7 +131,7 @@ export const PANTHER: UnitDef = {
 };
 export const MONA: UnitDef = {
   id: 'mona', name: '摩尔加纳 Mona', side: 'ally',
-  maxHp: 101, maxSp: 58, move: 7, melee: 20, gun: { power: 14, range: 7, shape: 'single' },
+  maxHp: 65, maxSp: 58, move: 7, melee: 18, gun: { power: 14, powerMax: 19, range: 7, shape: 'single' },
   skills: [SKILLS.garu, SKILLS.dia, SKILLS.media], unique: UNIQUES.windsOfTime, charges: CHARGES.mona, passives: ['luckyPunch'],
 };
 export const FOX: UnitDef = {
@@ -180,8 +184,10 @@ export function enemy(id: string, name: string, role: UnitDef['role'], hp: numbe
   const base: UnitDef = {
     id, name, side: 'enemy', role, maxHp: hp, maxSp: 99, move: 4, melee: 14, skills: [],
   };
-  if (role === 'shooter') Object.assign(base, { move: 4, melee: 8, gun: { power: 14, range: 6 } });
+  // shooter = 原版 火枪手 10001010（HP 60 / MoveRun 3 / ShotDamage 13–18 / 枪技能 30001001 射程 6）；近战值原版未确认 → 仍 PH 8
+  if (role === 'shooter') Object.assign(base, { move: 3, melee: 8, gun: { power: 13, powerMax: 18, range: 6 } });
   if (role === 'brute') Object.assign(base, { move: 5, melee: 18 });
+  // revenger = 原版 守卫 10002010（Grenadier，反击型）：MoveRun 4（HP 100 见 level.ts PH_HP）；攻击值原版未确认 → 仍 PH 22
   if (role === 'revenger') Object.assign(base, { move: 4, melee: 22 });
   if (role === 'shielder') Object.assign(base, { move: 3, melee: 10, gun: { power: 14, range: 5 }, facing: { x: 0, y: 1 } });
   if (role === 'teleporter') Object.assign(base, { move: 4, melee: 16, gun: { power: 12, range: 5 } });

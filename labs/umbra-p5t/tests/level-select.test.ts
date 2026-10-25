@@ -23,8 +23,8 @@ describe('Q12 关卡选择', () => {
     const b = new Battle(levelMap('L01'));
     trackResult(b, 'L01', st);
     b.start();
-    for (const e of b.alive('enemy')) { e.hp = 0; e.ko = true; }
-    b.checkEnd();
+    // 原版 M1：初始 2 个火枪手全倒 → 增援 2 个（enemiesLeft 0 事件），再全倒才赢
+    for (let i = 0; i < 3 && b.phase !== 'won'; i++) { for (const e of b.alive('enemy')) { e.hp = 0; e.ko = true; } b.checkEnd(); }
     expect(b.phase).toBe('won');
     expect(loadSave(st).levels.L01.cleared).toBe(true);
   });

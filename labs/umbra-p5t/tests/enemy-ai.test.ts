@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Battle, parseMap, W } from '../src/rules';
 import type { BattleEvent, MapDef, RuleOptions, UnitDef, Vec } from '../src/rules';
 import { levelMap } from '../src/game/levels';
+import { legacyMap } from './legacyLevels';
 import { autoBattle } from '../src/game/autoplay';
 
 const A = (id: string, o: Partial<UnitDef> = {}): UnitDef => ({ id, name: id, side: 'ally', maxHp: 100, maxSp: 100, move: 4, melee: 10, gun: { power: 10, range: 6 }, skills: [], ...o });
@@ -67,7 +68,7 @@ describe('Q11 敌人 AI（ENEMY-AI.md）', () => {
     expect(b.unit('e1').pos).not.toEqual(v(5, 0));
   });
   it('7 staysInZone 的 Boss 永不离开 C 区（L08 自动战斗 7 回合）', () => {
-    const b = new Battle(levelMap('L08'));
+    const b = new Battle(legacyMap('L08'));
     const zones: (string | null)[] = [];
     b.on((e) => { if ((e.type === 'move' || e.type === 'teleport' || e.type === 'knockback') && e.unitId === 'boss') zones.push(b.zoneOf(b.unit('boss').pos)); });
     b.start();
@@ -78,7 +79,7 @@ describe('Q11 敌人 AI（ENEMY-AI.md）', () => {
     expect(zones.every((z) => z === 'C') || zones.length === 0).toBe(true);
   });
   it('8 aiTarget=toshiro 的增援优先打 Toshiro（L06）', () => {
-    const b = new Battle(levelMap('L06'));
+    const b = new Battle(legacyMap('L06'));
     b.start();
     b.turn = 5; // 跳到第 5 回合：敌方阶段刷 r3/r4（aiTarget: toshiro）
     const ev = b.endPlayerPhase();

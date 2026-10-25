@@ -1,0 +1,404 @@
+{
+ "id": "L07",
+ "name": "玛丽的旗帜·中央广场",
+ "scene": "castle_square_flag",
+ "width": 20,
+ "height": 16,
+ "win": {
+  "type": "defeatTarget",
+  "targetIds": [
+   "flag"
+  ]
+ },
+ "objective": "破坏敌方红旗",
+ "turnTarget": 8,
+ "party": [
+  [
+   "joker",
+   9,
+   14
+  ],
+  [
+   "skull",
+   7,
+   13
+  ],
+  [
+   "queen",
+   11,
+   13
+  ]
+ ],
+ "reserves": [
+  "panther",
+  "fox"
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "doors": [],
+ "switches": [],
+ "elevators": [],
+ "links": [
+  {
+   "a": [
+    9,
+    4
+   ],
+   "b": [
+    9,
+    3
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    10,
+    4
+   ],
+   "b": [
+    10,
+    3
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    3,
+    12
+   ],
+   "b": [
+    2,
+    12
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    1,
+    10
+   ],
+   "b": [
+    1,
+    11
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    1,
+    14
+   ],
+   "b": [
+    1,
+    13
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    16,
+    12
+   ],
+   "b": [
+    17,
+    12
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    18,
+    10
+   ],
+   "b": [
+    18,
+    11
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    18,
+    14
+   ],
+   "b": [
+    18,
+    13
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    6,
+    1
+   ],
+   "b": [
+    7,
+    1
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    13,
+    1
+   ],
+   "b": [
+    12,
+    1
+   ],
+   "kind": "ladder"
+  }
+ ],
+ "cameras": [],
+ "chests": [],
+ "props": [
+  {
+   "id": "flag",
+   "kind": "flag",
+   "pos": [
+    10,
+    1
+   ],
+   "hp": 60,
+   "phTuned": true,
+   "aura": 3,
+   "note": "旗子光环：半径3内敌人防御+（数值取数据表）"
+  },
+  {
+   "id": "sp1",
+   "kind": "speaker",
+   "pos": [
+    2,
+    3
+   ],
+   "hp": 30,
+   "phTuned": true,
+   "bans": [
+    "skill"
+   ]
+  }
+ ],
+ "enemies": [
+  {
+   "id": "s1",
+   "name": "盾兵 Grenadier",
+   "role": "shielder",
+   "hp": "PH",
+   "pos": [
+    9,
+    2
+   ],
+   "zone": "B",
+   "facing": [
+    0,
+    1
+   ]
+  },
+  {
+   "id": "s2",
+   "name": "盾兵 Grenadier",
+   "role": "shielder",
+   "hp": "PH",
+   "pos": [
+    11,
+    2
+   ],
+   "zone": "B",
+   "facing": [
+    0,
+    1
+   ]
+  },
+  {
+   "id": "a1",
+   "name": "Musketeer",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    3,
+    9
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "a2",
+   "name": "Musketeer",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    16,
+    9
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "a3",
+   "name": "Grenadier",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    9,
+    8
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "b1",
+   "name": "Musketeer",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    4,
+    1
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "b2",
+   "name": "Musketeer",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    15,
+    1
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "b3",
+   "name": "Musketeer",
+   "role": "teleporter",
+   "hp": "PH",
+   "pos": [
+    13,
+    3
+   ],
+   "zone": "B"
+  }
+ ],
+ "events": [
+  {
+   "id": "unlockB",
+   "when": {
+    "type": "enterZone",
+    "zone": "B",
+    "side": "ally"
+   },
+   "do": [
+    {
+     "type": "unlockZone",
+     "zone": "B"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "reinf",
+   "when": {
+    "type": "everyTurns",
+    "n": 2,
+    "phase": "enemy",
+    "whileAlive": "flag"
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "rN",
+       "name": "Musketeer",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        10,
+        0
+       ]
+      }
+     ]
+    }
+   ],
+   "repeat": true
+  }
+ ],
+ "bonus": [
+  {
+   "type": "clear"
+  },
+  {
+   "type": "withinTurns",
+   "n": 8
+  },
+  {
+   "type": "noKo"
+  }
+ ],
+ "intent": "照 P5T M11/M13：红旗在 B 区高台，两盾兵面朝我方守旗；旗还在就每 2 回合补 1 个射手；喇叭 sp1 在场时禁用技能（打掉喇叭解禁）。左右两条路包抄。",
+ "notes": "rN 每次生成要加流水号 rN1/rN2…；出生格被占就用 (9,0)/(11,0)。",
+ "unlockedZones": [
+  "A",
+  "B"
+ ],
+ "coverStats": {
+  "cover": 84,
+  "walkable": 304,
+  "ratio": 0.276
+ },
+ "tiles": [
+  ".hhh....HH....hHHh..",
+  "...................h",
+  "hh..hh........hh.H.h",
+  "h................h.h",
+  "....hh.hh..h.hhh.h..",
+  ".Hh..h.hh..h.....h..",
+  "###..##########..###",
+  "........hhh......h..",
+  ".hh..Hh......hHh.h.h",
+  "..h.....hh....h..h.h",
+  "....h.h.hh..........",
+  "....h.h....h.hhH....",
+  "........hh.h.H......",
+  "...............h....",
+  ".....Hhhh.h.h..HH...",
+  "..Hh......h.h..H...."
+ ],
+ "heights": [
+  "00000001111110000000",
+  "00000001111110000000",
+  "00000001111110000000",
+  "00000001111110000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "22200000000000000222",
+  "22200000000000000222",
+  "22200000000000000222",
+  "00000000000000000000",
+  "00000000000000000000"
+ ],
+ "zones": [
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "BBBBBBBBBBBBBBBBBBBB",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA"
+ ]
+}

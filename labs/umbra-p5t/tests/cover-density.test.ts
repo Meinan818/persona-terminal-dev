@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { LEVEL_IDS, levelJson } from '../src/game/levels';
 
 describe('P5T 掩体密度（gen_levels.py densify）', () => {
-  for (const id of LEVEL_IDS) {
+  // 10-26：有原版布局的关（json.source）掩体/梯子照原版，不再套 densify 密度
+  for (const id of LEVEL_IDS.filter((i) => !levelJson(i).source)) {
     it(`${id} 掩体占非墙格 25–35%，梯子 ≥2`, () => {
       const j = levelJson(id);
       const all = j.tiles.join('');

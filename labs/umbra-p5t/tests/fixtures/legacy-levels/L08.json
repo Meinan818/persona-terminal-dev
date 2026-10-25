@@ -1,0 +1,418 @@
+{
+ "id": "L08",
+ "name": "收容所·中庭",
+ "scene": "castle_courtyard_night",
+ "width": 20,
+ "height": 16,
+ "win": {
+  "type": "defeatAll"
+ },
+ "objective": "7 回合内击败全部敌人",
+ "turnTarget": 5,
+ "party": [
+  [
+   "joker",
+   2,
+   14
+  ],
+  [
+   "skull",
+   4,
+   14
+  ],
+  [
+   "queen",
+   3,
+   12
+  ]
+ ],
+ "reserves": [
+  "panther",
+  "mona"
+ ],
+ "lose": [
+  {
+   "type": "allKo"
+  },
+  {
+   "type": "turnLimit",
+   "n": 7
+  }
+ ],
+ "doors": [
+  {
+   "id": "D1",
+   "cells": [
+    [
+     4,
+     9
+    ],
+    [
+     5,
+     9
+    ]
+   ],
+   "open": false
+  },
+  {
+   "id": "D2",
+   "cells": [
+    [
+     15,
+     9
+    ],
+    [
+     16,
+     9
+    ]
+   ],
+   "open": true
+  },
+  {
+   "id": "D3",
+   "cells": [
+    [
+     10,
+     3
+    ],
+    [
+     10,
+     4
+    ]
+   ],
+   "open": false
+  }
+ ],
+ "switches": [
+  {
+   "id": "s1",
+   "pos": [
+    8,
+    12
+   ],
+   "kind": "toggle",
+   "doors": [
+    "D1",
+    "D3"
+   ]
+  },
+  {
+   "id": "s2",
+   "pos": [
+    13,
+    11
+   ],
+   "kind": "toggle",
+   "doors": [
+    "D2"
+   ]
+  }
+ ],
+ "elevators": [],
+ "links": [
+  {
+   "a": [
+    17,
+    3
+   ],
+   "b": [
+    17,
+    2
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    16,
+    14
+   ],
+   "b": [
+    17,
+    14
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    18,
+    12
+   ],
+   "b": [
+    18,
+    13
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    2,
+    7
+   ],
+   "b": [
+    1,
+    7
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    0,
+    5
+   ],
+   "b": [
+    0,
+    6
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    2,
+    8
+   ],
+   "b": [
+    1,
+    8
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    15,
+    1
+   ],
+   "b": [
+    16,
+    1
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    19,
+    3
+   ],
+   "b": [
+    19,
+    2
+   ],
+   "kind": "ladder"
+  }
+ ],
+ "cameras": [],
+ "chests": [],
+ "props": [],
+ "enemies": [
+  {
+   "id": "a1",
+   "name": "Musketeer 狙击",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    10,
+    11
+   ],
+   "zone": "A",
+   "gunRange": 7
+  },
+  {
+   "id": "a3",
+   "name": "Musketeer 狙击",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    17,
+    10
+   ],
+   "zone": "A",
+   "gunRange": 7
+  },
+  {
+   "id": "b2",
+   "name": "Musketeer 狙击",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    7,
+    2
+   ],
+   "zone": "B",
+   "gunRange": 7
+  },
+  {
+   "id": "b3",
+   "name": "Drummer",
+   "role": "supporter",
+   "hp": "PH",
+   "pos": [
+    5,
+    1
+   ],
+   "zone": "B"
+  },
+  {
+   "id": "boss",
+   "name": "看守长 Grenadier",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    18,
+    1
+   ],
+   "zone": "C",
+   "isLeader": true,
+   "staysInZone": "C"
+  },
+  {
+   "id": "g2",
+   "name": "Musketeer 狙击",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    13,
+    1
+   ],
+   "zone": "C",
+   "gunRange": 7
+  }
+ ],
+ "events": [
+  {
+   "id": "unlockB",
+   "when": {
+    "type": "doorOpened",
+    "id": "D1"
+   },
+   "do": [
+    {
+     "type": "unlockZone",
+     "zone": "B"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "unlockC",
+   "when": {
+    "type": "doorOpened",
+    "id": "D3"
+   },
+   "do": [
+    {
+     "type": "unlockZone",
+     "zone": "C"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "unlockC2",
+   "when": {
+    "type": "reach",
+    "pos": [
+     15,
+     8
+    ],
+    "side": "ally"
+   },
+   "do": [
+    {
+     "type": "unlockZone",
+     "zone": "C"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "warn",
+   "when": {
+    "type": "turn",
+    "turn": 6,
+    "phase": "player"
+   },
+   "do": [
+    {
+     "type": "message",
+     "text": "只剩 2 回合！"
+    }
+   ],
+   "repeat": false
+  }
+ ],
+ "bonus": [
+  {
+   "type": "clear"
+  },
+  {
+   "type": "withinTurns",
+   "n": 5
+  },
+  {
+   "type": "noKo"
+  }
+ ],
+ "intent": "照 P5T M17 Detention Facility（Defeat all enemies within 7 turns；原版 Sniper×4 + Grenadier×1 + Drummer×1）。粉红开关迷宫：s1 开 D1/D3 关 D2，s2 反之；看守长 Grenadier（id 仍为 boss）在 C 区角落、狙击手护着、不离开 C 区；7 回合内没清光=失败。",
+ "turnLimit": 7,
+ "unlockedZones": [
+  "A"
+ ],
+ "coverStats": {
+  "cover": 82,
+  "walkable": 297,
+  "ratio": 0.276
+ },
+ "tiles": [
+  "hh..hh.hh.#.......hh",
+  ".h........#.H.......",
+  "....H...hh#hh.......",
+  "hhh.h.h.......h.....",
+  "......hh......H.....",
+  "..hh.....h#..h..h..h",
+  ".........h#.HH.hhh.h",
+  "......hh.h#........h",
+  ".........h#.hhh....h",
+  "####..#########..###",
+  "h..H..H.hh.hh......H",
+  "h..h.Hh..........h.h",
+  "h...........h...hh..",
+  "..hhh..h.hh.hh......",
+  "......hh............",
+  ".hh........Hh.hh..hh"
+ ],
+ "heights": [
+  "00000000000000001111",
+  "00000000000000001111",
+  "00000000000000001111",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "22000000000000000000",
+  "22000000000000000000",
+  "22000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000222",
+  "00000000000000000222",
+  "00000000000000000222"
+ ],
+ "zones": [
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "BBBBBBBBBBACCCCCCCCC",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA"
+ ]
+}

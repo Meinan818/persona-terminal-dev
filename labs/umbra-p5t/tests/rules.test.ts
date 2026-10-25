@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   Battle, parseMap, pointInTriangle, testMap, followUpMap, specialsMap, escortMap, rangeMapA, rangeMapB, SKILLS, UNIQUES, prop,
-  RESIST_MULT, SKILL_SCALE, TRIPLE_THREAT_MULT, VOLTAGE_MAX, DESPAIR_MOVE, JOKER,
+  RESIST_MULT, SKILL_SCALE, TRIPLE_THREAT_MULT, VOLTAGE_MAX, DESPAIR_MOVE, JOKER, SKULL, MONA, enemy,
 } from '../src/rules';
 import type { MapDef, UnitDef, BattleEvent, RuleOptions, SkillDef, Vec } from '../src/rules';
 
@@ -750,8 +750,12 @@ describe('测试图整关（贪心自动玩家）', () => {
     expect(dmgOf(ev2).filter((d) => d.source === 'explosion').map((d) => d.unitId).sort()).toEqual(['bicorn2', 'jack2']);
   });
 
-  it('公开数据：Joker Lv19 HP136 / SP49 / 移动 6 / 近战 21 / 枪攻 17 / 射程 8', () => {
-    expect([JOKER.maxHp, JOKER.maxSp, JOKER.move, JOKER.melee, JOKER.gun!.power, JOKER.gun!.range]).toEqual([136, 49, 6, 21, 17, 8]);
+  it('原版数据：Joker HP99 / SP49(Cogito) / 移动 6 / 近战 20 / 枪伤 17–22 / 射程 8（p5t/0_list/data.md）', () => {
+    expect([JOKER.maxHp, JOKER.maxSp, JOKER.move, JOKER.melee, JOKER.gun!.power, JOKER.gun!.powerMax, JOKER.gun!.range]).toEqual([99, 49, 6, 20, 17, 22, 8]);
+    expect([SKULL.maxHp, SKULL.move, SKULL.melee, SKULL.gun!.power, SKULL.gun!.powerMax, SKULL.gun!.range]).toEqual([130, 6, 25, 19, 24, 5]);
+    expect([MONA.maxHp, MONA.move, MONA.melee, MONA.gun!.power, MONA.gun!.powerMax, MONA.gun!.range]).toEqual([65, 7, 18, 14, 19, 7]);
+    const mus = enemy('m', 'Musketeer', 'shooter', 60); // 原版 火枪手 10001010
+    expect([mus.maxHp, mus.move, mus.gun!.power, mus.gun!.powerMax, mus.gun!.range]).toEqual([60, 3, 13, 18, 6]);
     expect([SKILLS.agi.power, SKILLS.agi.sp, SKILLS.zio.power, SKILLS.eiha.power]).toEqual([45, 14, 45, 35]);
   });
 });

@@ -1,0 +1,322 @@
+{
+ "id": "L01",
+ "name": "城下町·广场入口",
+ "scene": "castle_town_plaza_day",
+ "width": 20,
+ "height": 16,
+ "win": {
+  "type": "defeatAll"
+ },
+ "objective": "击败全部敌人",
+ "turnTarget": 3,
+ "party": [
+  [
+   "joker",
+   4,
+   13
+  ],
+  [
+   "skull",
+   6,
+   14
+  ],
+  [
+   "mona",
+   8,
+   13
+  ]
+ ],
+ "reserves": [],
+ "lose": [
+  {
+   "type": "allKo"
+  }
+ ],
+ "doors": [],
+ "switches": [],
+ "elevators": [],
+ "links": [
+  {
+   "a": [
+    9,
+    2
+   ],
+   "b": [
+    10,
+    2
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    5,
+    2
+   ],
+   "b": [
+    5,
+    1
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    7,
+    1
+   ],
+   "b": [
+    6,
+    1
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    7,
+    0
+   ],
+   "b": [
+    6,
+    0
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    14,
+    13
+   ],
+   "b": [
+    15,
+    13
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    16,
+    11
+   ],
+   "b": [
+    16,
+    12
+   ],
+   "kind": "ladder"
+  },
+  {
+   "a": [
+    19,
+    13
+   ],
+   "b": [
+    18,
+    13
+   ],
+   "kind": "ladder"
+  }
+ ],
+ "cameras": [],
+ "chests": [],
+ "props": [],
+ "enemies": [
+  {
+   "id": "e1",
+   "name": "Musketeer",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    8,
+    5
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "e2",
+   "name": "Grenadier",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    13,
+    7
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "e3",
+   "name": "Musketeer",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    15,
+    4
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "e4",
+   "name": "Grenadier",
+   "role": "brute",
+   "hp": "PH",
+   "pos": [
+    5,
+    4
+   ],
+   "zone": "A"
+  },
+  {
+   "id": "e5",
+   "name": "Musketeer",
+   "role": "shooter",
+   "hp": "PH",
+   "pos": [
+    11,
+    1
+   ],
+   "zone": "A"
+  }
+ ],
+ "events": [
+  {
+   "id": "tut1",
+   "when": {
+    "type": "turn",
+    "turn": 1,
+    "phase": "player"
+   },
+   "do": [
+    {
+     "type": "message",
+     "text": "点格子移动，站到掩体（盾牌图标）旁边可以减伤。"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "tut2",
+   "when": {
+    "type": "turn",
+    "turn": 2,
+    "phase": "player"
+   },
+   "do": [
+    {
+     "type": "message",
+     "text": "打倒站在空地上的敌人 → 1 MORE，再行动一次！"
+    }
+   ],
+   "repeat": false
+  },
+  {
+   "id": "w1",
+   "when": {
+    "type": "turn",
+    "turn": 3,
+    "phase": "enemy"
+   },
+   "do": [
+    {
+     "type": "spawn",
+     "units": [
+      {
+       "id": "r1",
+       "name": "Grenadier",
+       "role": "brute",
+       "hp": "PH",
+       "pos": [
+        0,
+        8
+       ]
+      },
+      {
+       "id": "r2",
+       "name": "Musketeer",
+       "role": "shooter",
+       "hp": "PH",
+       "pos": [
+        19,
+        8
+       ]
+      }
+     ]
+    },
+    {
+     "type": "message",
+     "text": "敌人增援！"
+    }
+   ],
+   "repeat": false
+  }
+ ],
+ "bonus": [
+  {
+   "type": "clear"
+  },
+  {
+   "type": "withinTurns",
+   "n": 3
+  },
+  {
+   "type": "hurtFewerThan",
+   "n": 3
+  }
+ ],
+ "intent": "教学：第1回合学走格子+掩体；e2 站空地→打倒→1 MORE；e3 躲全掩体→必须绕侧面；第3回合左右各来1个增援学「背后有人」。",
+ "coverStats": {
+  "cover": 77,
+  "walkable": 284,
+  "ratio": 0.271
+ },
+ "tiles": [
+  "####.....Hhh....####",
+  "####..........hh####",
+  "####..........Hh####",
+  "####............####",
+  "..H.h...hhh.h.......",
+  "h.h.Hh....h.h.HH..h.",
+  "h.h.h..Hh...h.Hh..h.",
+  "h.h......##.........",
+  "......hh.##....hhh..",
+  "....h..h.HH.h...h..H",
+  "hh..H.......h.H...HH",
+  "......hh.H....h.....",
+  ".......h.H.hH.......",
+  ".hh......h..........",
+  ".hh.hh.......H......",
+  "....hh..hhhh.h.hh..."
+ ],
+ "heights": [
+  "00002220000000000000",
+  "00002220001110000000",
+  "00000000001110000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000022220",
+  "00000000000000022220",
+  "00000000000000022220",
+  "00000000000000000000"
+ ],
+ "zones": [
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA"
+ ]
+}

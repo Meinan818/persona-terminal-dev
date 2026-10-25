@@ -19,6 +19,8 @@ export interface LevelUnitJson {
   id: string; name: string; role: EnemyRole; hp: number | 'PH'; pos: XY; zone?: string;
   isLeader?: boolean; isTarget?: boolean; protected?: boolean; staysInZone?: string; aiTarget?: string;
   gunRange?: number; hpFloor?: number; bossPhase?: number; facing?: XY; note?: string;
+  /** 原版单位数值覆盖（gen_levels.py from_stage：unitdatabase MoveRun / ShotDamageMin–Max）；unitId = 原版单位 ID */
+  move?: number; gunPower?: number; gunPowerMax?: number; unitId?: number;
   /** Hark 调过的占位数值（PH-tuned，等正版数据再换） */
   phTuned?: boolean;
 }
@@ -34,7 +36,7 @@ export interface LevelJson {
   doors?: { id: string; cells: XY[]; open: boolean; everyTurns?: number }[];
   switches?: { id: string; pos: XY; kind: SwitchDef['kind']; doors?: string[]; elevator?: string }[];
   elevators?: { id: string; cells: XY[]; low: number; high: number; up: boolean }[];
-  links?: { a: XY; b: XY; kind: DashLink['kind'] }[];
+  links?: { a: XY; b: XY; kind: DashLink['kind']; src?: string }[];
   cameras?: { id: string; pos: XY; cells: XY[]; spawn: LevelUnitJson[]; damage?: number }[];
   chests?: { id: string; pos: XY; reward: Record<string, number> }[];
   props?: LevelPropJson[];
@@ -45,10 +47,12 @@ export interface LevelJson {
   intent?: string;
   unlockedZones?: string[];
   tiles: string[]; heights?: string[]; zones?: string[];
+  /** 原版关卡来源（有 = 布局来自 P5T StageSettingData） */
+  source?: string;
 }
 
 /** hp = "PH"：用 data.ts 现有地图里 enemy() 同 role 的默认 HP（Hark 拿到 p5t/0_list/data.md 正版数据后换数） */
-export const PH_HP: Record<EnemyRole, number> = { shooter: 60, brute: 70, revenger: 80, shielder: 70, teleporter: 60, launcher: 80, supporter: 55 };
+export const PH_HP: Record<EnemyRole, number> = { shooter: 60 /* 原版 10001010 */, brute: 70, revenger: 100 /* 原版 守卫 10002010 */, shielder: 70, teleporter: 60, launcher: 80, supporter: 55 };
 /** 物件 hp = "PH"（旗子/喇叭）：PH，待 Hark 给数 */
 export const PH_PROP_HP = { flag: 60, speaker: 30 } as const; // 10-23 Hark 决定（PH-tuned）；L07 JSON 已写明 60/30
 
@@ -80,6 +84,8 @@ export function enemyDef(u: LevelUnitJson): UnitDef {
   if (u.aiTarget) d.aiTarget = u.aiTarget;
   if (u.facing) d.facing = v(u.facing);
   if (u.gunRange != null) d.gun = { ...(d.gun ?? { power: 14 }), range: u.gunRange };
+  if (u.gunPower != null) d.gun = { ...(d.gun ?? { range: u.gunRange ?? 6 }), power: u.gunPower, powerMax: u.gunPowerMax };
+  if (u.move != null) d.move = u.move;
   if (u.hpFloor != null && u.hpFloor > 0) d.hpFloor = Math.floor(hp * u.hpFloor);
   return d;
 }

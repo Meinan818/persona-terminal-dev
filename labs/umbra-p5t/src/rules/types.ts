@@ -90,7 +90,7 @@ export interface UnitDef {
   /** 近战攻击力（Cogito 表 MEL 列） */
   melee: number;
   /** P5T 原作枪无弹数限制：ammo 缺省 = 无限；填数字则启用弹数（GDD 选项） */
-  gun?: { power: number; range: number; ammo?: number; shape?: GunShape };
+  gun?: { power: number; range: number; ammo?: number; shape?: GunShape; /** 原版枪伤上限（weapondatabase DamageMax / unitdatabase ShotDamageMax）；规则层确定性结算只用 power = 下限 */ powerMax?: number };
   skills: SkillDef[];
   /** Voltage 满时可用的专属技能 */
   unique?: SkillDef;

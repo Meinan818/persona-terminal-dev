@@ -3,7 +3,7 @@
  "name": "城下町·小巷",
  "scene": "castle_alley_dusk",
  "width": 20,
- "height": 16,
+ "height": 35,
  "win": {
   "type": "reachExit",
   "unitId": "toshiro"
@@ -13,18 +13,18 @@
  "party": [
   [
    "joker",
-   3,
-   14
+   2,
+   29
   ],
   [
    "skull",
-   1,
-   13
+   4,
+   29
   ],
   [
    "panther",
-   4,
-   12
+   6,
+   29
   ]
  ],
  "reserves": [],
@@ -37,255 +37,188 @@
    "unitId": "toshiro"
   }
  ],
- "doors": [
-  {
-   "id": "D1",
-   "cells": [
-    [
-     12,
-     4
-    ],
-    [
-     13,
-     4
-    ]
-   ],
-   "open": false
-  }
- ],
- "switches": [
-  {
-   "id": "s1",
-   "pos": [
-    15,
-    8
-   ],
-   "kind": "toggle",
-   "doors": [
-    "D1"
-   ]
-  }
- ],
+ "doors": [],
+ "switches": [],
  "elevators": [],
  "links": [
   {
    "a": [
+    0,
+    19
+   ],
+   "b": [
+    0,
+    18
+   ],
+   "kind": "ladder",
+   "src": "warp1"
+  },
+  {
+   "a": [
+    10,
+    19
+   ],
+   "b": [
+    10,
+    18
+   ],
+   "kind": "ladder",
+   "src": "warp4"
+  },
+  {
+   "a": [
+    5,
+    14
+   ],
+   "b": [
+    10,
+    14
+   ],
+   "kind": "jump",
+   "src": "warp2"
+  },
+  {
+   "a": [
+    4,
+    13
+   ],
+   "b": [
+    4,
+    8
+   ],
+   "kind": "jump",
+   "src": "warp3"
+  },
+  {
+   "a": [
     15,
-    6
+    13
    ],
    "b": [
-    16,
-    6
+    15,
+    12
    ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    17,
-    4
-   ],
-   "b": [
-    17,
-    5
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    19,
-    4
-   ],
-   "b": [
-    19,
-    5
-   ],
-   "kind": "ladder"
+   "kind": "ladder",
+   "src": "warp5"
   }
  ],
- "cameras": [
-  {
-   "id": "cam1",
-   "pos": [
-    9,
-    5
-   ],
-   "cells": [
-    [
-     8,
-     6
-    ],
-    [
-     9,
-     6
-    ],
-    [
-     10,
-     6
-    ],
-    [
-     9,
-     7
-    ],
-    [
-     10,
-     7
-    ],
-    [
-     8,
-     7
-    ]
-   ],
-   "spawn": [
-    {
-     "id": "r1",
-     "name": "Grenadier",
-     "role": "brute",
-     "hp": "PH",
-     "pos": [
-      6,
-      5
-     ]
-    },
-    {
-     "id": "r2",
-     "name": "Musketeer",
-     "role": "shooter",
-     "hp": "PH",
-     "pos": [
-      15,
-      7
-     ]
-    }
-   ]
-  }
- ],
+ "cameras": [],
  "chests": [],
  "props": [],
  "enemies": [
   {
-   "id": "a1",
+   "id": "e1",
    "name": "Musketeer",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
+   "pos": [
+    2,
+    22
+   ],
    "role": "shooter",
-   "hp": "PH",
-   "pos": [
-    8,
-    12
-   ],
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
    "zone": "A"
   },
   {
-   "id": "a2",
-   "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
+   "id": "e2",
+   "name": "Musketeer",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
-    9,
-    14
+    6,
+    24
    ],
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
    "zone": "A"
   },
   {
-   "id": "b1",
+   "id": "e3",
    "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
+   "hp": 130,
+   "move": 4,
+   "unitId": 10002011,
+   "pos": [
+    4,
+    22
+   ],
+   "role": "revenger",
+   "zone": "A"
+  },
+  {
+   "id": "e4",
+   "name": "Musketeer",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
     7,
-    7
+    16
    ],
-   "zone": "B"
-  },
-  {
-   "id": "b2",
-   "name": "Musketeer",
    "role": "shooter",
-   "hp": "PH",
-   "pos": [
-    12,
-    6
-   ],
-   "zone": "B"
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
+   "zone": "A"
   },
   {
-   "id": "b3",
-   "name": "Drummer",
-   "role": "supporter",
-   "hp": "PH",
-   "pos": [
-    14,
-    5
-   ],
-   "zone": "B"
-  },
-  {
-   "id": "c1",
-   "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
-   "pos": [
-    15,
-    2
-   ],
-   "zone": "C"
-  },
-  {
-   "id": "c2",
+   "id": "e5",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
-    18,
-    3
+    8,
+    16
    ],
-   "zone": "C"
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
+   "zone": "A"
   },
   {
-   "id": "c3",
+   "id": "e6",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
-    17,
-    7
+    6,
+    13
    ],
-   "zone": "C"
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
+   "zone": "A"
+  },
+  {
+   "id": "e7",
+   "name": "Musketeer",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
+   "pos": [
+    9,
+    13
+   ],
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
+   "zone": "A"
   }
  ],
  "events": [
   {
-   "id": "unlockB",
-   "when": {
-    "type": "reach",
-    "pos": [
-     7,
-     10
-    ],
-    "side": "ally"
-   },
-   "do": [
-    {
-     "type": "unlockZone",
-     "zone": "B"
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "unlockC",
-   "when": {
-    "type": "doorOpened",
-    "id": "D1"
-   },
-   "do": [
-    {
-     "type": "unlockZone",
-     "zone": "C"
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "w5",
+   "id": "reinf1",
    "when": {
     "type": "turn",
     "turn": 5,
@@ -296,26 +229,46 @@
      "type": "spawn",
      "units": [
       {
-       "id": "r3",
-       "name": "Grenadier",
-       "role": "launcher",
-       "hp": "PH",
+       "id": "r1",
+       "name": "Musketeer",
+       "hp": 90,
+       "move": 5,
+       "unitId": 10001011,
        "pos": [
-        0,
-        11
+        13,
+        4
        ],
-       "aiTarget": "toshiro"
+       "role": "shooter",
+       "gunPower": 18,
+       "gunPowerMax": 23,
+       "gunRange": 6
       },
       {
-       "id": "r4",
-       "name": "Grenadier",
-       "role": "revenger",
-       "hp": "PH",
+       "id": "r2",
+       "name": "Musketeer",
+       "hp": 90,
+       "move": 5,
+       "unitId": 10001011,
        "pos": [
-        9,
-        11
+        15,
+        4
        ],
-       "aiTarget": "toshiro"
+       "role": "shooter",
+       "gunPower": 18,
+       "gunPowerMax": 23,
+       "gunRange": 6
+      },
+      {
+       "id": "r3",
+       "name": "Grenadier",
+       "hp": 130,
+       "move": 4,
+       "unitId": 10002011,
+       "pos": [
+        14,
+        6
+       ],
+       "role": "revenger"
       }
      ]
     }
@@ -335,12 +288,12 @@
    "type": "defeatAll"
   }
  ],
- "intent": "照 P5T M9（Have Toshiro reach the target；原版 Grenadier×1 + Musketeer×5，Toshiro 不能爬梯、要躲掩体）：Toshiro 不能攻击，倒下即败；小巷三段；B 区监视摄像头踩到就来援军；第5回合敌人从屋顶直扑 Toshiro。",
+ "intent": "原版 M09 布局（p5t/1_data/missions/M09.json（StageId 01090，scene_map_010503））。原版有 3 个开关格（m_SwitchId），m_SwitchGimmickData 为空、作用不明 → 没做",
  "party_extra": [
   [
    "toshiro",
-   2,
-   14
+   4,
+   32
   ]
  ],
  "unlockedZones": [
@@ -352,34 +305,72 @@
   "ratio": 0.272
  },
  "tiles": [
-  "############..hh.EE.",
-  "############h......h",
-  "############h.h..HhH",
-  "############..h.h...",
-  "############........",
-  "######....HH........",
-  "######.h.....h......",
-  "######....hh.H....hh",
-  "######h.H.hH......hh",
-  "######h.h.######....",
-  "######....##########",
-  "...h...hh.##########",
-  "..hh...H..##########",
-  "..h..h....##########",
-  ".....h..h.##########",
-  ".hh....hhh##########"
+  "##########EEEEEEEE##",
+  "##########EEEEEEEE##",
+  "##########EEEEEEEE##",
+  "####..............H#",
+  "####..............H#",
+  "####.........hhh..H#",
+  "####.........h.h..H#",
+  "####.........h.h..H#",
+  "####..............H#",
+  "####..............H#",
+  "####.......Hh....HHH",
+  "####................",
+  "####................",
+  "....................",
+  "......h..h......####",
+  "................####",
+  "................####",
+  ".......hh.......####",
+  "................####",
+  "..H...H..H.........#",
+  "..H................#",
+  "...................#",
+  ".......hh..........#",
+  "..H................#",
+  "...................#",
+  "......H..###########",
+  ".........###########",
+  "....H....###########",
+  "HH.....HH###########",
+  ".........###########",
+  ".........###########",
+  ".........###########",
+  ".........###########",
+  ".........###########",
+  ".........###########"
  ],
  "heights": [
   "00000000000000000000",
   "00000000000000000000",
   "00000000000000000000",
+  "00001111110000000000",
+  "00001111110000000000",
+  "00001111110000000000",
+  "00001111110000000000",
+  "00001111110000000000",
+  "00001111110000000000",
   "00000000000000000000",
   "00000000000000000000",
-  "00000000000000001111",
-  "00000000000000001111",
-  "00000000000000001111",
-  "00000000000000001111",
-  "00000000000000001111",
+  "00000000000000000000",
+  "00000000000000000000",
+  "11111100001111110000",
+  "11111100001111110000",
+  "11111100001111110000",
+  "11111100001111110000",
+  "11111100001111110000",
+  "11111100001111110000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
+  "00000000000000000000",
   "00000000000000000000",
   "00000000000000000000",
   "00000000000000000000",
@@ -388,21 +379,48 @@
   "00000000000000000000"
  ],
  "zones": [
-  "AAAAAAAAAAAACCCCCCCC",
-  "AAAAAAAAAAAACCCCCCCC",
-  "AAAAAAAAAAAACCCCCCCC",
-  "AAAAAAAAAAAACCCCCCCC",
-  "AAAAAAAAAAAACCCCCCCC",
-  "AAAAAABBBBBBBBBBCCCC",
-  "AAAAAABBBBBBBBBBCCCC",
-  "AAAAAABBBBBBBBBBCCCC",
-  "AAAAAABBBBBBBBBBCCCC",
-  "AAAAAABBBBBBBBBBCCCC",
-  "AAAAAABBBBBBBBBBAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAA",
   "AAAAAAAAAAAAAAAAAAAA",
   "AAAAAAAAAAAAAAAAAAAA",
   "AAAAAAAAAAAAAAAAAAAA",
   "AAAAAAAAAAAAAAAAAAAA",
   "AAAAAAAAAAAAAAAAAAAA"
+ ],
+ "heightMap": {
+  "1.0": 0,
+  "4.0": 1
+ },
+ "source": "p5t/1_data/missions/M09.json（StageId 01090，scene_map_010503）",
+ "notes_src": [
+  "原版有 3 个开关格（m_SwitchId），m_SwitchGimmickData 为空、作用不明 → 没做"
  ]
 }

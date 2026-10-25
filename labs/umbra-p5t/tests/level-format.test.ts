@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadLevel, validateLevel, cellAt, PH_HP, MAX_W, MAX_H, type LevelJson } from '../src/game/level';
 import { LEVEL_JSON, levelMap, levelJson } from '../src/game/levels';
 import { Battle } from '../src/rules';
+import { legacyMap } from './legacyLevels';
 
 const tiny = (o: Partial<LevelJson> = {}): LevelJson => ({
   id: 'T', name: 't', width: 3, height: 2, win: { type: 'defeatAll' }, turnTarget: 3,
@@ -47,10 +48,11 @@ describe('Q4 关卡 JSON 读取器', () => {
     const m = levelMap('L06');
     expect(m.units.find((u) => u.def.id === 'toshiro')?.def.escort).toBe(true);
     expect(m.lose).toEqual([{ type: 'allKo' }, { type: 'unitKo', unitId: 'toshiro' }]);
-    const l2 = levelMap('L02');
+    const l2 = legacyMap('L02'); // 宝箱/门：10-25 自编图纸（冻结副本）；原版 M2 没有
     expect(l2.chests).toEqual([{ id: 'ch1', pos: { x: 1, y: 1 }, reward: { gp: 3 } }]);
     expect(l2.doors![0]).toMatchObject({ id: 'D1', open: false, cells: [{ x: 6, y: 9 }, { x: 7, y: 9 }] });
     expect(levelMap('L05').reserves!.map((r) => r.id)).toEqual(['skull', 'mona']);
+    expect(levelMap('L06').units.find((u) => u.def.id === 'toshiro')!.pos).toEqual({ x: 4, y: 32 }); // 原版 M9 PartyIndex 3 出生格 (4,2)
   });
   it('reinforcements[{turn|trigger, units}] 转成事件', () => {
     const m = loadLevel(tiny({ reinforcements: [
@@ -66,8 +68,24 @@ describe('Q4 关卡 JSON 读取器', () => {
     expect(validateLevel(tiny({ tiles: ['..x', 'E.#'] }))).toEqual(['tiles (2,0) 非法字符 \'x\'']);
     expect(() => loadLevel(tiny({ tiles: ['..', 'E.#'] }))).toThrow();
   });
-  it('JSON 原样复制：敌人名照抄', () => {
-    expect(levelJson('L03').enemies[0].name).toBe('被操控的龙司');
-    expect(levelMap('L03').units.find((u) => u.def.id === 'skull_ctrl')!.def.name).toBe('被操控的龙司');
+  it('JSON 原样复制：敌人名照抄（原版 M3 单位 2052「举止异常的SKULL」）', () => {
+    expect(levelJson('L03').enemies[0].name).toBe('举止异常的SKULL');
+    expect(levelMap('L03').units.find((u) => u.def.id === 'skull_ctrl')!.def.name).toBe('举止异常的SKULL');
+  });
+  it('10-26 原版布局：L01–L06/L08 来自 P5T StageSettingData，尺寸/敌兵/回合照原版', () => {
+    for (const id of ['L01', 'L02', 'L03', 'L04', 'L05', 'L06', 'L08']) expect(levelJson(id).source).toMatch(/missions\/M\d\d\.json/);
+    expect([levelJson('L01').width, levelJson('L01').height]).toEqual([9, 18]);
+    expect([levelJson('L04').width, levelJson('L04').height]).toEqual([13, 30]);
+    expect([levelJson('L06').width, levelJson('L06').height]).toEqual([20, 35]);
+    expect([levelJson('L08').width, levelJson('L08').height]).toEqual([23, 28]);
+    // M4：6 个火枪手 10001010（HP 60 / 移动 3 / 枪伤 13–18 / 射程 6）
+    const m4 = levelMap('L04').units.filter((u) => u.def.side === 'enemy');
+    expect(m4.length).toBe(6);
+    for (const u of m4) expect([u.def.maxHp, u.def.move, u.def.gun!.power, u.def.gun!.powerMax, u.def.gun!.range]).toEqual([60, 3, 13, 18, 6]);
+    // M17：三星 5 回合（m_TurnLimit），败北 7 回合（m_EnemyJudgeData TurnCount）
+    expect(levelJson('L08').turnTarget).toBe(5);
+    expect(levelMap('L08').turnLimit).toBe(7);
+    expect(levelJson('L05').turnTarget).toBe(5);
+    expect(levelJson('L06').turnTarget).toBe(8);
   });
 });

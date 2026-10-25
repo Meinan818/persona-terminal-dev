@@ -22,7 +22,13 @@ export interface UnitRig {
   revive(): void;
   setDim(on: boolean): void;
   update(now?: number): void;
+  /** 走一格的毫秒数（正版 rig = 原版 Run 步速；缺省用 RUN_MS_PER_TILE） */
+  readonly msPerTile?: number;
+  /** 等当前单次动作（攻击/受击/倒地…）播完；maxMs 封顶 */
+  settle?(maxMs?: number): Promise<void>;
 }
+/** 程序化/占位 rig 的走格时间：取正版 Joker/Skull/Em0001 Run 实测（半个循环 = 一步 = 一格，0.667s/2） */
+export const RUN_MS_PER_TILE = 333;
 
 // ---------- toon 材质 / 描边 ----------
 let grad: THREE.DataTexture | null = null;

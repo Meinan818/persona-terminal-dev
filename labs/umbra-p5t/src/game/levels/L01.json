@@ -2,8 +2,8 @@
  "id": "L01",
  "name": "城下町·广场入口",
  "scene": "castle_town_plaza_day",
- "width": 20,
- "height": 16,
+ "width": 9,
+ "height": 18,
  "win": {
   "type": "defeatAll"
  },
@@ -12,18 +12,18 @@
  "party": [
   [
    "joker",
-   4,
-   13
-  ],
-  [
-   "skull",
-   6,
+   5,
    14
   ],
   [
    "mona",
-   8,
-   13
+   4,
+   14
+  ],
+  [
+   "skull",
+   3,
+   14
   ]
  ],
  "reserves": [],
@@ -35,85 +35,7 @@
  "doors": [],
  "switches": [],
  "elevators": [],
- "links": [
-  {
-   "a": [
-    9,
-    2
-   ],
-   "b": [
-    10,
-    2
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    5,
-    2
-   ],
-   "b": [
-    5,
-    1
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    7,
-    1
-   ],
-   "b": [
-    6,
-    1
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    7,
-    0
-   ],
-   "b": [
-    6,
-    0
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    14,
-    13
-   ],
-   "b": [
-    15,
-    13
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    16,
-    11
-   ],
-   "b": [
-    16,
-    12
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    19,
-    13
-   ],
-   "b": [
-    18,
-    13
-   ],
-   "kind": "ladder"
-  }
- ],
+ "links": [],
  "cameras": [],
  "chests": [],
  "props": [],
@@ -121,96 +43,42 @@
   {
    "id": "e1",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 32,
+   "move": 0,
+   "unitId": 10001001,
    "pos": [
-    8,
-    5
+    4,
+    6
    ],
+   "role": "shooter",
+   "gunPower": 12,
+   "gunPowerMax": 14,
+   "gunRange": 6,
    "zone": "A"
   },
   {
    "id": "e2",
-   "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
-   "pos": [
-    13,
-    7
-   ],
-   "zone": "A"
-  },
-  {
-   "id": "e3",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 50,
+   "move": 5,
+   "unitId": 10001007,
    "pos": [
-    15,
+    7,
     4
    ],
-   "zone": "A"
-  },
-  {
-   "id": "e4",
-   "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
-   "pos": [
-    5,
-    4
-   ],
-   "zone": "A"
-  },
-  {
-   "id": "e5",
-   "name": "Musketeer",
    "role": "shooter",
-   "hp": "PH",
-   "pos": [
-    11,
-    1
-   ],
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
    "zone": "A"
   }
  ],
  "events": [
   {
-   "id": "tut1",
+   "id": "reinf1",
    "when": {
-    "type": "turn",
-    "turn": 1,
-    "phase": "player"
-   },
-   "do": [
-    {
-     "type": "message",
-     "text": "点格子移动，站到掩体（盾牌图标）旁边可以减伤。"
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "tut2",
-   "when": {
-    "type": "turn",
-    "turn": 2,
-    "phase": "player"
-   },
-   "do": [
-    {
-     "type": "message",
-     "text": "打倒站在空地上的敌人 → 1 MORE，再行动一次！"
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "w1",
-   "when": {
-    "type": "turn",
-    "turn": 3,
-    "phase": "enemy"
+    "type": "enemiesLeft",
+    "n": 0
    },
    "do": [
     {
@@ -218,29 +86,35 @@
      "units": [
       {
        "id": "r1",
-       "name": "Grenadier",
-       "role": "brute",
-       "hp": "PH",
+       "name": "Musketeer",
+       "hp": 50,
+       "move": 0,
+       "unitId": 10001002,
        "pos": [
-        0,
-        8
-       ]
+        2,
+        2
+       ],
+       "role": "shooter",
+       "gunPower": 12,
+       "gunPowerMax": 14,
+       "gunRange": 6
       },
       {
        "id": "r2",
        "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
+       "hp": 50,
+       "move": 0,
+       "unitId": 10001002,
        "pos": [
-        19,
-        8
-       ]
+        6,
+        2
+       ],
+       "role": "shooter",
+       "gunPower": 12,
+       "gunPowerMax": 14,
+       "gunRange": 6
       }
      ]
-    },
-    {
-     "type": "message",
-     "text": "敌人增援！"
     }
    ],
    "repeat": false
@@ -259,64 +133,77 @@
    "n": 3
   }
  ],
- "intent": "教学：第1回合学走格子+掩体；e2 站空地→打倒→1 MORE；e3 躲全掩体→必须绕侧面；第3回合左右各来1个增援学「背后有人」。",
+ "intent": "原版 M01 布局（p5t/1_data/missions/M01.json（StageId 01010，scene_map_010201））。",
  "coverStats": {
   "cover": 77,
   "walkable": 284,
   "ratio": 0.271
  },
  "tiles": [
-  "####.....Hhh....####",
-  "####..........hh####",
-  "####..........Hh####",
-  "####............####",
-  "..H.h...hhh.h.......",
-  "h.h.Hh....h.h.HH..h.",
-  "h.h.h..Hh...h.Hh..h.",
-  "h.h......##.........",
-  "......hh.##....hhh..",
-  "....h..h.HH.h...h..H",
-  "hh..H.......h.H...HH",
-  "......hh.H....h.....",
-  ".......h.H.hH.......",
-  ".hh......h..........",
-  ".hh.hh.......H......",
-  "....hh..hhhh.h.hh..."
+  ".........",
+  ".........",
+  "....H....",
+  "..h...h..",
+  ".........",
+  ".H..H..H.",
+  ".........",
+  "...hhh...",
+  ".........",
+  ".........",
+  "#.H.H.H.#",
+  "#.......#",
+  "#.......#",
+  "#.......#",
+  "#.......#",
+  "#.......#",
+  "#.......#",
+  "#.......#"
  ],
  "heights": [
-  "00002220000000000000",
-  "00002220001110000000",
-  "00000000001110000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000022220",
-  "00000000000000022220",
-  "00000000000000022220",
-  "00000000000000000000"
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000"
  ],
  "zones": [
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA"
- ]
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA"
+ ],
+ "heightMap": {
+  "1.0": 0
+ },
+ "unlockedZones": [
+  "A"
+ ],
+ "source": "p5t/1_data/missions/M01.json（StageId 01010，scene_map_010201）"
 }

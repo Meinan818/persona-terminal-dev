@@ -1,6 +1,6 @@
 // 10-23 Hark 图纸修正（gen_levels.py）：L10 阳台梯子、L05 地面↔塔顶 + 升降台↔两塔梯子 —— 用引擎自己的寻路验证真的走得上去
 import { describe, expect, it } from 'vitest';
-import { levelMap } from '../src/game/levels';
+import { legacyMap as levelMap } from './legacyLevels'; // 10-23 图纸修正测试：针对自编图纸（冻结副本），原版布局见 level-format.test.ts
 import { Battle } from '../src/rules';
 import { key } from '../src/rules/grid';
 import type { Vec } from '../src/rules/types';

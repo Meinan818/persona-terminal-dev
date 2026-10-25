@@ -21,3 +21,44 @@ for t in T_PC0001_C051_ShadeMap_High.png T_PC0001_H000_ShadeMap_High.png; do cop
 
 # 正版战斗 HUD 贴图（同样不入库）
 bash tools/fetch-p5t-hud.sh
+
+# ---- P5T 正版 batch-02（Codex 提取，umbra-assets/p5t/1_battle/batch-02）：Skull / Mona / Em0001 敌兵 / Marie / Joker 20 动作 + 正版枪刀 ----
+# 每个角色：GLB → public/models/private/p5t/<key>.glb；GLB 内嵌 BaseMap 对应的 ShadeMap（GLB 不含）→ p5t/<key>/ + shade.json（BaseMap 名 → ShadeMap 文件）
+B2="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_battle/batch-02"
+python3 - "$B2" "$DST/p5t" <<'PY'
+import json, os, re, shutil, struct, sys
+src, dst = sys.argv[1], sys.argv[2]
+os.makedirs(dst, exist_ok=True)
+CH = {  # key: (GLB 相对路径, 贴图目录)
+  'joker': ('JokerAddendum/Joker_PC0001_151_battle.glb', 'JokerAddendum/textures'),
+  'skull': ('Skull/Skull_PC0002_151_battle.glb', 'Skull/textures'),
+  'mona': ('Mona/Mona_PC0003_151_battle.glb', 'Mona/textures'),
+  'em0001_110': ('Em0001/Em0001_110_battle.glb', 'Em0001/textures'),
+  'em0001_610': ('Em0001/Em0001_610_battle.glb', 'Em0001/textures'),
+  'marie': ('Marie/Marie_Em0501_010_battle.glb', 'Marie/textures'),
+  'wp_gn01000': ('JokerAddendum/weapons/Joker_Gn01000.glb', None),
+  'wp_wp01900': ('JokerAddendum/weapons/Joker_Wp01900.glb', None),
+}
+strip = lambda n: re.sub(r'__-?\d+(?=\.png$)', '', re.sub(r'^[0-9a-f]{12}__', '', n))
+for key, (glb, tex) in CH.items():
+    p = os.path.join(src, glb)
+    if not os.path.isfile(p): print(f'miss batch-02/{glb}（跳过，回退旧模型/程序化）'); continue
+    shutil.copyfile(p, os.path.join(dst, key + '.glb')); print(f'ok   p5t/{key}.glb')
+    if not tex: continue
+    b = open(p, 'rb').read(); n = struct.unpack('<I', b[12:16])[0]; j = json.loads(b[20:20 + n])
+    files = {strip(f): f for f in sorted(os.listdir(os.path.join(src, tex)))}
+    od = os.path.join(dst, key); os.makedirs(od, exist_ok=True); m = {}; rt = {}
+    for im in j.get('images', []):
+        name = im.get('name') or ''
+        # Marie：batch-02 GLB 绑的是 unit_10501011 的灰度版贴图（*011*，过场/石化用），同包里有 unit_10501000_common 的彩色正版贴图（*000*）→ 换成彩色
+        if key == 'marie' and '011_' in name:
+            col = re.sub(r'011_Base[Mm]ap', '000_BaseMap', name)
+            if col in files:
+                shutil.copyfile(os.path.join(src, tex, files[col]), os.path.join(od, col)); rt[name] = col; name = col
+        want = re.sub(r'Base[Mm]ap', 'ShadeMap', name)
+        if want == name or want not in files: continue
+        shutil.copyfile(os.path.join(src, tex, files[want]), os.path.join(od, want)); m[im.get('name')] = want
+    json.dump(m, open(os.path.join(od, 'shade.json'), 'w'), indent=1); print(f'     {key}: {len(m)} ShadeMap')
+    json.dump(rt, open(os.path.join(od, 'retex.json'), 'w'), indent=1)
+    if rt: print(f'     {key}: 换彩色 BaseMap {len(rt)} 张')
+PY

@@ -2,8 +2,8 @@
  "id": "L03",
  "name": "城下町·钟楼",
  "scene": "castle_clock_tower",
- "width": 20,
- "height": 16,
+ "width": 9,
+ "height": 14,
  "win": {
   "type": "defeatAllExcept",
   "exceptIds": [
@@ -15,278 +15,93 @@
  "party": [
   [
    "joker",
-   9,
-   14
+   5,
+   8
   ],
   [
    "mona",
-   7,
-   14
-  ],
-  [
-   "panther",
-   11,
-   14
+   3,
+   8
   ]
  ],
  "reserves": [],
  "lose": [
   {
    "type": "allKo"
-  },
-  {
-   "type": "unitKo",
-   "unitId": "skull_ctrl"
   }
  ],
  "doors": [],
  "switches": [],
  "elevators": [],
- "links": [
-  {
-   "a": [
-    6,
-    2
-   ],
-   "b": [
-    5,
-    2
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    13,
-    2
-   ],
-   "b": [
-    14,
-    2
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    3,
-    14
-   ],
-   "b": [
-    2,
-    14
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    1,
-    12
-   ],
-   "b": [
-    1,
-    13
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    16,
-    14
-   ],
-   "b": [
-    17,
-    14
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    18,
-    12
-   ],
-   "b": [
-    18,
-    13
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    3,
-    4
-   ],
-   "b": [
-    3,
-    3
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    16,
-    4
-   ],
-   "b": [
-    16,
-    3
-   ],
-   "kind": "ladder"
-  }
- ],
+ "links": [],
  "cameras": [],
  "chests": [],
  "props": [],
  "enemies": [
   {
    "id": "skull_ctrl",
-   "name": "被操控的龙司",
-   "role": "brute",
-   "hp": "PH",
-   "pos": [
-    10,
-    5
-   ],
-   "zone": "B",
-   "protected": true,
-   "note": "用 SKULL 数值；不给 1 MORE；不能被推落致死"
-  },
-  {
-   "id": "a1",
-   "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "name": "举止异常的SKULL",
+   "hp": 100,
+   "move": 3,
+   "unitId": 2052,
    "pos": [
     4,
-    9
+    0
    ],
-   "zone": "A"
-  },
-  {
-   "id": "a2",
-   "name": "Grenadier",
    "role": "brute",
-   "hp": "PH",
-   "pos": [
-    15,
-    9
-   ],
+   "protected": true,
    "zone": "A"
   },
   {
-   "id": "a3",
+   "id": "e1",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 30,
+   "move": 2,
+   "unitId": 10001003,
    "pos": [
-    17,
-    12
+    1,
+    4
    ],
+   "role": "shooter",
+   "gunPower": 12,
+   "gunPowerMax": 14,
+   "gunRange": 6,
    "zone": "A"
   },
   {
-   "id": "b1",
+   "id": "e2",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 30,
+   "move": 2,
+   "unitId": 10001003,
    "pos": [
-    3,
-    2
+    7,
+    4
    ],
-   "zone": "B"
+   "role": "shooter",
+   "gunPower": 12,
+   "gunPowerMax": 14,
+   "gunRange": 6,
+   "zone": "A"
   },
   {
-   "id": "b2",
+   "id": "e3",
    "name": "Musketeer",
+   "hp": 30,
+   "move": 2,
+   "unitId": 10001003,
+   "pos": [
+    4,
+    4
+   ],
    "role": "shooter",
-   "hp": "PH",
-   "pos": [
-    16,
-    2
-   ],
-   "zone": "B"
-  },
-  {
-   "id": "b3",
-   "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
-   "pos": [
-    6,
-    5
-   ],
-   "zone": "B"
-  },
-  {
-   "id": "b4",
-   "name": "Drummer",
-   "role": "supporter",
-   "hp": "PH",
-   "pos": [
-    13,
-    5
-   ],
-   "zone": "B"
+   "gunPower": 12,
+   "gunPowerMax": 14,
+   "gunRange": 6,
+   "zone": "A"
   }
  ],
- "events": [
-  {
-   "id": "unlockB",
-   "when": {
-    "type": "reach",
-    "pos": [
-     9,
-     8
-    ],
-    "side": "ally"
-   },
-   "do": [
-    {
-     "type": "unlockZone",
-     "zone": "B"
-    },
-    {
-     "type": "message",
-     "text": "龙司……被操控了！别打倒他！"
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "w1",
-   "when": {
-    "type": "turn",
-    "turn": 4,
-    "phase": "enemy"
-   },
-   "do": [
-    {
-     "type": "spawn",
-     "units": [
-      {
-       "id": "r1",
-       "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
-       "pos": [
-        0,
-        0
-       ]
-      },
-      {
-       "id": "r2",
-       "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
-       "pos": [
-        19,
-        0
-       ]
-      }
-     ]
-    }
-   ],
-   "repeat": false
-  }
- ],
+ "events": [],
  "bonus": [
   {
    "type": "clear"
@@ -300,64 +115,65 @@
    "n": 3
   }
  ],
- "intent": "照 P5T M3：龙司被洗脑在敌方，会主动来打你；打他只会扣血，HP 归 0=失败。走到桥头 (9,8) 开 B 区钟楼。",
+ "intent": "原版 M03 布局（p5t/1_data/missions/M03.json（StageId 01030，scene_map_010203））。",
  "coverStats": {
   "cover": 84,
   "walkable": 292,
   "ratio": 0.288
  },
  "tiles": [
-  "....Hh.h####h.......",
-  ".h.....h####h..hh.H.",
-  ".h......####......hH",
-  ".......hh..hh.......",
-  "h...hh......h.hh....",
-  "h.h.h..H.h.........h",
-  "..h....h.h..hhh.hh.h",
-  "########....########",
-  "...hh......hh.h.hhh.",
-  "h.....hhh...h.h...h.",
-  "h..h......H...h.h...",
-  "...h....h.h.h...Hh..",
-  "......h.h...h.h.....",
-  "......H.H.....H.....",
-  "h...................",
-  "hh...hhhh.hhhh....hh"
+  ".........",
+  ".........",
+  "....H....",
+  "..h...h..",
+  ".........",
+  ".H..H..H.",
+  ".........",
+  "...hhh...",
+  ".........",
+  ".........",
+  "#.H.H.H.#",
+  "#.......#",
+  "#.......#",
+  "#.......#"
  ],
  "heights": [
-  "00000000000000000000",
-  "00111100000000111100",
-  "00111100000000111100",
-  "00111100000000111100",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "22200000000000000222",
-  "22200000000000000222",
-  "22200000000000000222"
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000",
+  "000000000"
  ],
  "zones": [
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA"
- ]
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA",
+  "AAAAAAAAA"
+ ],
+ "heightMap": {
+  "1.0": 0
+ },
+ "unlockedZones": [
+  "A"
+ ],
+ "source": "p5t/1_data/missions/M03.json（StageId 01030，scene_map_010203）"
 }

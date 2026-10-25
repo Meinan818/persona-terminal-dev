@@ -2,6 +2,22 @@
 
 最后更新：2026-10-22（北京时间）。新窗口先完整读本文件，再核 Git 与当前任务现场。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 接手第一入口 · 2026-10-22 · UMBRA v1.3 收口，等 3D 任务书
+
+- **本次是「准备交接」收尾**：现场已收干净，`git status` 无已跟踪未提交改动，分支与远端一致；本轮只补本入口并本地提交（不 Push、不部署、不改 main、不 reset/stash/clean）。
+- **当前分支与现场**：`E:\MASKARIA`，分支 `feat/umbra-app-m2`，HEAD `8c4ff88`（`docs(umbra): 登记三档音量 UI 完成`），与 `origin/feat/umbra-app-m2` 一致（无未推条数）。远端 `git@github.com:Meinan818/persona-terminal-dev.git`；未动 `main`。
+- **本轮完成（UMBRA 引擎 / 皮肤包 v1）**：
+  - 按 `docs/umbra-design/TASK-APP-v1.3.md` 完成步 1–4：契约 `src/umbra/skins/_contract/`（49 事件名、53 原语、payload、Recipe.sfx/bgm、roster.showtime）、时长上限 `director.ts`（CAPS/capOf/wallMs）、Director（重叠层优先级 / A 类旁路 / 可跳过 / skip）、规则层 HOLD UP 三选一事件序列（`P5Battle.emit`）。
+  - 步 6 音频：`src/umbra/audio/`（AudioBus 缺文件静默、三档音量、voiceLine；`bgm:cue` 选曲纯函数；`scripts/generate-present.mjs` + `npm run present:gen`）。
+  - 步 7 skin:check：`scripts/skin-check.mjs` 增加事件/原语白名单、wallMs（含 merges 组合预算）、labels、holdup 命中区、camera.keys、音频引用告警、原语单项上限。
+  - 合并四皮皮肤包 `origin/feat/umbra-skins-v1`（`src/umbra/skins/{p5r-red,p3-blue,p3r-pink,p4-yellow}/`）；接线 `partyFromRoster` 用 `roster.partyDefault`、新增 `src/umbra/engine/companionPersonas.ts`（24 个同伴专属面具，经 registerSyntheticPersona 注册）。
+  - 设置页三档音量：`src/components/AudioVolumeGroup.tsx`（BGM/音效/语音），新增 `Settings.voiceVolume`，沿用 SoundVolumeRow 样式写档。
+- **验证数字（本轮实测）**：`npx tsc --noEmit` exit 0；全仓 `vitest run` 93 文件/534 项通过；`npm run build` `✓ built in 31.14s` exit 0；`npm run skin:check` 红/蓝/黄 `OK`。粉皮 `action.agilao` 墙钟 1860ms 超 1800ms 由主策划修，本会话不再处理。
+- **下一步（等 3D 任务书，不要自行继续）**：主策划暂停 Pixi 移植（不要引入 `pixi.js`），正在做 3D 试样，战斗渲染器可能改 `three.js`，定了会另发任务书。收到任务书后再动。当前无待办开发节点。
+- **铁律（沿用）**：不动 `main`；不 reset/stash/clean；不整目录 add、不清理/搬移未跟踪材料；不改 `src/umbra/skins/<任何主题>/`（皮肤包由主策划做）；不接未授权的可见 UI；不读/提交 `.env`、凭据、token/secret；不收费 AI、不部署、不打正式包。Push 仍须用户明确批准。
+- **怎么复现/自检**：`npx tsc --noEmit`；`node node_modules/vitest/vitest.mjs run --reporter=dot`；`npm run skin:check -- <skinId>`；`npm run present:gen`；`npm run sim:balance`；dev `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173 --strictPort`（重核端口/PID，不按旧 PID 停进程）。
+- **本次回执**：只本地提交 `PROJECT_STATE.md`；未 Push（如需 Push 请说一声）。提交后本聊天停止共享文件写入，等 3D 任务书或新的明确任务。
+
 ## 接手第一入口 · 2026-10-22 · 接手核验完成，等待重构方案
 
 - **本次是接手核验与交接收尾**：用户明确说「准备交接」「接手项目」。本轮只核现场、修正交接入口并提交文档；不重跑测试/构建、不改业务源码、不 Push、不合并 `main`、不接幽影协议、不创建或迁移自动化。读取本入口后，没有新的明确任务时保持只读。

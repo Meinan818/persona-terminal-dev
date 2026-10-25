@@ -2,6 +2,21 @@
 
 最后更新：2026-10-25（AI 全量收口：四主题每日占卜、结识同伴、星象匹配、窥探命运、总结追问、一句话记账、拍小票、记录分析、心相结算及共用称号/名称/人格/组织/委托/通知/谏言/互动/星移全部改走真实模型链路，隔离探针 37 项通过）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前接手入口 · 2026-10-25 · 四主题卡面素材全量接通（第二轮：羁绊/占卜/图鉴不再走占位图）
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。本轮接手 HEAD `1157bb0`。本轮代码提交 `48e12c3`（`fix(assets): wire every theme to its tarot and season art`）。未 Push、未部署、未接真实账号/组织数据、未调用收费模型。
+- **本轮起因**：用户装 `fullfix` 包后反馈"红色黄色粉色的羁绊界面占卜……界面等一系列需要卡片素材的地方一个你也没用上去全是占位"，并补充"红色主题的图鉴排版什么的……红色系图鉴一个也没有用上素材，还有其他主题也是，全面排查"。上一轮只证明了"文件在、URL 通"，没证明"页面真的把图渲染出来"，是实际缺口。
+- **两套路径机制（排查关键，接手者必读）**：四主题卡面**不走同一套路径**。蓝/粉/黄走各自 `themes/*/lib/asset.ts` 的 `tarotAsset()` / `seasonAsset()` → `assets/tarot/{set}`、`assets/season/{set}`；**红主题走 `slots/tarot/p5` 素材槽**（用户 2026-10-21 决定：羁绊也读素材槽，`d4.ts` 的 `tarotFace` / `seasonFace` 直接拼 `slots/...` 路径）。另有第三条路径 `public/tarot`、`public/season` 给 `constants/tarotArt.ts` 的 `tarotArtUrl` / `seasonArtUrl` 用。三条路径互不相等，补一边不代表另一边齐。
+- **排查结果（修复前真实缺口）**：`assets/tarot/p3` 78 张齐；`assets/tarot/pink` 只 56 张（缺 22 张大阿卡纳）；`assets/tarot/p4` **只有 22 张大阿卡纳，56 张小阿卡纳全缺**；`assets/tarot/p5` **整个目录不存在**；`assets/season/p5` 同样不存在。同期 `public/tarot` 与 `public/season` 下四套都齐（78/44）。结论：蓝粉黄三主题的羁绊、占卜、图鉴里大量卡面一直在走兜底占位图。**红色主题图鉴本来就是通的**（探针实测 40 张 `slots/tarot/p5` 图解码成功，已收录显示真图、未收录显示 MASKARIA 剪影卡背），不是缺陷——用户看到的"红色图鉴没用素材"与实际代码不符，已在回复中说明。
+- **修复**：把 `public/tarot/{p3,p4,p5,pink}` 与 `public/season/{同}` 共 **488 个文件**同步到 `public/assets/` 下对应目录，四主题 `assets/` 路径四套全齐（塔罗 78×4 + 岁时 44×4）。其中 `assets/tarot/p4` 原有 22 张是 demo 包自带的 **360×576 低清版**，`public/tarot/p4` 是 **560×896 高清版**（与其他主题统一规格），已按高清版覆盖。逐张 SHA-256 复核：488 个文件与 `public/tarot`、`public/season` 完全一致。
+- **素材全量核对（两条路径都查）**：`scripts/verify-art-http.mjs`，证据 `outputs/art-http-20261025-v7/report.json`（`ok=true`）：`tarot/{p3,p4,p5,pink}` 与 `assets/tarot/{同}`、`season/{同}` 与 `assets/season/{同}` 共 **976 张逐张真实 GET，全部 HTTP 200、`Content-Type: image/webp`、字节数正常，异常 0**；四主题各取样 12 张在页面里 `Image.decode()` 全部解出真实像素，失败 0。新增 `scripts/verify-theme-art-wiring.mjs`（证据 `outputs/art-wiring-20261025-v2/report.json`，`ok=true`）按每个主题的真实路径复验，四主题全过。
+- **红色图鉴实况（澄清用户误解）**：`#/overlay/achv-codex` 下 45 个 img 中 40 个是 `slots/tarot/p5/*.webp`，全部 `naturalWidth > 0`；已收录卡显示真实塔罗图，未收录卡显示 MASKARIA 剪影卡背并标"（未收录）"，正/逆各有独立格子，排版整齐。截图 `E:\MASKARIA\outputs\red-codex-after-fix.png`。红色羁绊/星象页的 img 不走 `tarot/` `season/` 路径是设计如此（走 `slots/`），不是没接素材。
+- **既有回归未破坏**：`tsc --noEmit` exit0；全量 Vitest **72 文件 / 437 项通过**；`VITE_API_URL=http://150.158.174.9 npm run build` exit0；`verify-release` 通过；`cap sync android` 通过；红色全量路由 417 条 fail 0 / pageErrors 0 / localFailures 0。
+- **新 APK `artfix-v2`**：`E:\MASKARIA\outputs\maskaria-artfix-20261025-v2\maskaria-3.0.1-artfix-v2.apk`，副本 `D:\下载\互传\maskaria-3.0.1-artfix-v2.apk`；122,946,142 B，SHA-256 `334BB8623604E63737BA7F49D56AA712DF36693422DB2A6EED694A9CA0DCC5BA`。包名 `com.meinan818.personaterminal`、`3.0.1 / 31`，沿用线上 2.8.2 的 Android Debug 证书，可覆盖升级。`node scripts/verify-apk-assets.mjs <apk> dist`：APK `assets/public` 2279 项，对本地 dist 2277 项**缺失 0、差异 0**，多出 2 项为 Capacitor 必需的 `cordova.js` / `cordova_plugins.js`。`dist/assets/tarot` 与 `dist/assets/season` 四套各 78 / 44 张已在内，`dist/slots/tarot/p5` 78 张在内。旧 `fullfix` / `ai-wire` / `livefix4` 包**不含**本轮素材补齐，不能冒充。
+- **未验证边界**：本轮证据全部来自本地 mock 模型与隔离 IndexedDB，没有真实收费模型、真实账号、真实组织数据。卡面"能不能显示"已验证，"显示得好不好看、该用哪张"需用户真机目验。真机返回键、手机流畅度、闪屏、通知栏、麦克风、真实音频仍未实测。逆影战场按用户要求继续不纳入。
+- **继承工作区**：`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle` 两个 Gradle 行尾痕迹与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，未修改、移动、删除或提交；三项 SHA-256 仍为 `3793…43CF`、`B614…48AC`、`F332…491`。无 stash/reset/restore/checkout/clean。
+- **下一步/负责人**：用户安装 `artfix-v2` 包，复验蓝/粉/黄三主题的羁绊、占卜、图鉴卡面是否都出真图（此前大量走占位图），以及红色图鉴的已收录/未收录显示。把具体还显示占位的页面截图交给接手 Codex 继续窄修。未 Push。
+
 ## 当前接手入口 · 2026-10-25 · 三项用户遗留全清：红排版加号归位、委托角标接真数据、塔罗粉色大阿卡纳补齐
 
 - **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，本轮接手 HEAD `736113a`。本轮两个代码提交：`208c556`（`fix(red): pin task FAB to viewport and show real quest count`）与 `18a610d`（`test(assets): verify every tarot and season art file over HTTP and on screen`）。未 Push、未部署、未接真实账号/组织数据、未调用收费模型。

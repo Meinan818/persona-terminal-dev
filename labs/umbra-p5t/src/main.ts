@@ -16,6 +16,9 @@ import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cuti
 import type { CutWho } from './fx/cutins';
 import { TripleFx } from './view/tripleFx';
 import { SceneKit, themeFor, cobbleTex, preloadKit } from './view/sceneKit';
+import { sfx, installUnlock, preloadSfx } from './view/sfx';
+import { buildDamageView, playDamageClip, digitPx } from './view/damagePop';
+import { attachGimmicks, swapPropModel, releaseGimmicks } from './view/gimmick';
 import { origCfg, origFailed, attachOrigMap, releaseOrigMap, updateOrigMap, origSurfaceY } from './view/origMap';
 void preloadKit(); // CC0 布景模型提前加载
 import { computeForecast, forecastHtml } from './view/forecast';
@@ -26,9 +29,9 @@ import { RUN_MS_PER_TILE } from './view/chibiRig';
 import { makeSkull, makeMona, makeShadow } from './view/partyModels';
 import { preloadChar, makeChar, charReady, SPECS } from './view/p5tChar';
 import { SummonDim, skillHit, CASTER_LAYER } from './view/skillFx';
-import { hitstopMs, shake, applyShake, undoShake, spark, updateHitFx, recoil } from './view/hitFx';
+import { hitstopMs, shake, applyShake, undoShake, spark, updateHitFx, recoil, preloadHitFx, lastSparkKind } from './view/hitFx';
 import type { HitSpec } from './view/hitFx';
-import { loadSdfFont, renderSdf } from './ui/sdfFont';
+import { loadSdfFont, renderSdf, hydrateSdf } from './ui/sdfFont';
 // 角色模型：全部优先 P5T 正版模型 + 原版动作（p5tChar.ts；私用 GLB 不入库，缺文件时 → 程序化 chibiRig 回退，加载完成后就地替换）。
 // Joker 另有社区模型回退（jokerModel.ts）。敌兵：火枪手系（shooter / teleporter）= Em0001_110；被洗脑的 Skull = Skull 模型；Marie = Em0501；
 // 守卫（Grenadier）/伴奏者（Drummer）等原版模型（Em0002/Em0003…）还没提取 → 程序化回退（已列入 HARK-TO-CODEX 请求）。
@@ -150,7 +153,9 @@ const gh = (p: Vec) => (battle ? battle.grid.h(p) * LEVEL : 0);
 const w2v = (p: Vec, y = 0) => new THREE.Vector3(p.x, y + gh(p), p.y);
 const std = (color: number, extra: Partial<THREE.MeshStandardMaterialParameters> = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
 
+let gimmickCount = 0, placeholderCount = -1;
 function build() {
+  preloadHitFx(); preloadSfx();
   if (world) scene.remove(world);
   world = new THREE.Group();
   overlay = new THREE.Group();
@@ -186,19 +191,23 @@ function build() {
     attachOrigMap(world, m.id, { w: m.width, h: m.height }, (ok, st) => {
       origLoading = false; origStats = st ?? null;
       if (!ok) { build(); return; }
-      // 原版掩体多是关卡运行时生成的 gimmick 单位（桶/箱，模型未导出）：场景里该格没有实物时，用 Kenney 掩体占位（自制占位，已标明）
+      // r8：原版掩体 = 关卡运行时生成的 gimmick 单位 → 按原版 m_GimmickList 摆原版预制体（view/gimmick.ts）；
+      // 剩下的掩体格若原版场景里也没有实物，才用 Kenney 掩体占位（自制占位，已标明）
       world.updateMatrixWorld(true);
+      const orig = attachGimmicks(world, m.id, (x, y) => battle.grid.h({ x, y }) * LEVEL, (n) => { gimmickCount = n; });
       const miss = new Set<string>();
       for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) {
         const t = battle.grid.tile({ x, y }); if (t !== 'half' && t !== 'full') continue;
+        if (orig.has(`${x},${y}`)) continue;
         const sy = origSurfaceY(x, y); const base = battle.grid.h({ x, y }) * LEVEL;
         if (sy === null || sy < base + 0.3) miss.add(`${x},${y}`);
       }
+      placeholderCount = miss.size;
       if (miss.size) sceneKit.coverOnly(world, m, miss, LEVEL);
       sceneKit.ready = true;
     });
   } else {
-    releaseOrigMap();
+    releaseOrigMap(); releaseGimmicks(); gimmickCount = 0; placeholderCount = -1;
     claimed = sceneKit.build(world, m);
   }
   for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) {
@@ -257,9 +266,13 @@ function addUnitMesh(u: Unit) {
       body.position.y = 0.3;
       const band = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.08, 16), std(0xffd400, { emissive: 0x332200 }));
       band.position.y = 0.36;
+      body.userData.placeholder = band.userData.placeholder = true;
       g.add(body, band);
+      swapPropModel(g, 'barrel'); // r8：原版炸弹桶 unit_20001010（缺文件保留占位）
     } else if (u.prop === 'flag') {
       makeFlag(g);
+      for (const c of g.children) c.userData.placeholder = true;
+      swapPropModel(g, 'flag'); // r8：原版「真理惠军的不祥旗帜」unit_20001240（静态网格，原版布料动画未导出）
     } else if (u.prop === 'box') {
       const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), std(0x8a5a2b));
       box.position.y = 0.4;
@@ -483,7 +496,7 @@ function partyP5(a: Unit) {
   const pct = (n: number, m: number) => `${Math.max(0, Math.min(100, (100 * n) / Math.max(1, m)))}%`;
   return `<div class="pm p5${a.id === selected ? ' cur' : ''}${a.acted ? ' done' : ''}${a.oneMore && canAct ? ' om' : ''}" data-uid="${a.id}">
     <div class="pf">${face}${tag}</div>
-    <div class="gw">${p5.img('word_hp', 'whp')}${p5.img('word_sp', 'wsp')}<b class="nh">${String(a.hp).padStart(4, '0')}</b>${p5.img('gage_slash', 'sl')}<b class="ns">${String(a.sp).padStart(3, '0')}</b>
+    <div class="gw">${p5.img('word_hp', 'whp')}${p5.img('word_sp', 'wsp')}<b class="nh" data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#68ffe1" data-back="#338776" data-pad="4" data-out="#000000" data-ow="0.3" data-sp="-26">${a.hp}</b>${p5.img('gage_slash', 'sl')}<b class="ns" data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#ef51f8" data-back="#783671" data-pad="3" data-out="#000000" data-ow="0.3" data-sp="-26">${a.sp}</b>
       <i class="bar hp" style="--p:${pct(a.hp, a.maxHp)}"></i><i class="bar sp" style="--p:${pct(a.sp, a.maxSp ?? 100)}"></i></div>
     </div>`;
 }
@@ -529,6 +542,7 @@ function refreshHud() {
       ${u.passives?.length ? `<div class="pas">被动：${u.passives.map((p) => PASSIVE_INFO[p].name).join('、')}</div>` : ''}</div>
       ${u.side === 'ally' && u.charges?.length && battle.phase === 'player' ? `<div class="chg">${u.charges.map((c) => `<button class="small${c === u.charge ? ' sel' : ''}" data-charge="${c}">${CHARGE_NAME[c] ?? c}</button>`).join('')}</div>` : ''}</div>`;
   } else card.classList.add('hidden');
+  hydrateSdf(document.body); // r8：原版 TMP 字体（HP/SP/TURN/敌人数）
   const sel = selected ? battle.unit(selected) : null;
   document.querySelectorAll<HTMLButtonElement>('#actions button').forEach((b) => {
     const a = b.dataset.act!;
@@ -760,8 +774,29 @@ function popAt(pos: THREE.Vector3, text: string, cls = '', yOff = 1.2) {
   // DOWN / 盾挡 → P5T 原版字母贴图 + anim_ui2d_down_start 时序（缺图时保持文字）
   const pop = text === 'DOWN!' ? letterPop('down') : text === '盾挡!' ? letterPop('block') : '';
   // r7：伤害数字用原版 TMP 字体 FOT_YURUKASTD_UB_SDF_BattleNumber2（白面黑描边，原版材质参数）自绘；缺字体 → CSS 文字
-  const num = !pop && /^\d+▼?$/.test(text) && (cls === '' || cls === 'tt' || cls.startsWith('hit')) ? renderSdf(BN_FONT, text.replace('▼', ''), { px: (cls.includes('heavy') ? 64 : cls === 'tt' ? 58 : 46) * DPR }) : null;
+  // r8：普通命中数字 → 原版 prefab_ui2d_damageview 结构 + anime_btl_damage 曲线（view/damagePop.ts）；总攻（tt）沿用 r7 尺寸
+  const orig = !pop && (cls === '' || cls.startsWith('hit')) && /^\d+▼?$/.test(text);
+  const num = !pop && /^\d+▼?$/.test(text) && (cls === '' || cls === 'tt' || cls.startsWith('hit')) ? renderSdf(BN_FONT, text.replace('▼', ''), { px: (orig ? digitPx(cls.includes('heavy')) / 0.8 : cls === 'tt' ? 58 : 46) * DPR }) : null;
   if (num) num.style.width = `${num.width / DPR}px`;
+  if (orig && num) {
+    const rz = text.endsWith('▼') ? Object.assign(document.createElement('i'), { className: 'resist', textContent: '▼' }) : undefined;
+    const dv = buildDamageView(num, rz);
+    dv.root.classList.add('dmg', 'orig'); if (cls.includes('heavy')) dv.root.classList.add('heavy');
+    dv.root.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`;
+    dv.root.style.top = `${((1 - v.y) / 2) * window.innerHeight}px`;
+    $('#labels').appendChild(dv.root);
+    playDamageClip(dv, 'anime_btl_damage', () => dv.root.remove());
+    return;
+  }
+  if (cls === 'heal' && /^\+\d+$/.test(text)) { // 回复：原版 anime_btl_heal 曲线（数字字形仍是 CSS 文字）
+    const sp = document.createElement('span'); sp.textContent = text;
+    const dv = buildDamageView(sp); dv.root.classList.add('dmg', 'orig', 'heal');
+    dv.root.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`;
+    dv.root.style.top = `${((1 - v.y) / 2) * window.innerHeight}px`;
+    $('#labels').appendChild(dv.root);
+    playDamageClip(dv, 'anime_btl_heal', () => dv.root.remove());
+    return;
+  }
   el.className = `dmg ${cls}${pop ? ' p5' : ''}${num ? ' sdf' : ''}`;
   if (pop) el.innerHTML = pop; else if (num) { el.appendChild(num); if (text.endsWith('▼')) { const r = document.createElement('i'); r.className = 'resist'; r.textContent = '▼'; el.appendChild(r); } } else el.textContent = text;
   el.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`;
@@ -1009,7 +1044,7 @@ async function play(events: BattleEvent[]) {
       case 'dash': popDamage(e.unitId, e.kind === 'ladder' ? 'DASH↕' : 'JUMP'); break;
       case 'knockback':
         if (!e.blocked || !eq(e.from, e.to)) await tweenPath(e.unitId, [e.from, e.to], 70 / SPEED, e.fly ? 1.2 : 0);
-        if (e.blocked) popDamage(e.unitId, e.collidedWith ? '撞击!' : '挡住');
+        if (e.blocked) { if (e.collidedWith) sfx('damage_hit_wall'); popDamage(e.unitId, e.collidedWith ? '撞击!' : '挡住'); }
         break;
       case 'pull': await tweenPath(e.unitId, e.path.length ? e.path : [e.from, e.to], 80 / SPEED); popDamage(e.unitId, e.effect === 'hypno' ? '催眠' : '漩涡'); break;
       case 'dizzyMove': await tweenPath(e.unitId, [e.from, e.to], walkMs(e.unitId), 0.3); popDamage(e.unitId, '眩晕'); break;
@@ -1032,6 +1067,8 @@ async function play(events: BattleEvent[]) {
         // 攻击动作（GunStart→GunFire / Attack / Skill*）播完才结算受击，受击 Damage 播完才往下走（原版 clip 没导出动画事件点 → 以 clip 结束为准）
         // r7：等到攻击动作的原版命中帧（AnimationEvent：GunFire 开火帧 / Attack flag 2 / SkillActStart 末标记）就结算，不再等整段 clip 播完
         if (e.source !== 'triple') await impactRig(lastAttacker, 2600);
+        // r8 原版 SE：枪 = 开火帧（原版 AnimationEvent GunFire）放 gun_fire + 命中 gun_impact；近战 = 命中帧 attack_hit
+        if (e.source !== 'triple') { if (lastAtkKind === 'gun') { sfx('gun_fire'); sfx('gun_impact', 0.9); } else if (lastAtkKind === 'melee') sfx('melee_hit'); else sfx('gun_hit_v1', 0.8); }
         if (lastSkill && e.source !== 'triple') { const tg = unitMesh.get(e.unitId); if (tg) void skillHit(world, tg.position.clone(), lastSkill, rigs.get(e.unitId)?.height ?? 1.1, SPEED); }
         {
           const hs = hitSpecFor(e, events, ei);
@@ -1043,10 +1080,11 @@ async function play(events: BattleEvent[]) {
         await settleRig(e.unitId, 1800);
         await endAim(vPhase === 'enemy' && !efast() ? 420 : 260); break;
       case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
-      case 'miss': popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); await endAim(); break;
-      case 'down': { popDamage(e.unitId, 'DOWN!'); sawDown = true; const g = unitMesh.get(e.unitId); const dr = rigs.get(e.unitId); if (dr) dr.setDowned(true); else if (g) { g.rotation.z = 1.2; g.position.y = gh(battle.unit(e.unitId).pos) + 0.15; } break; }
+      case 'miss': if (lastAtkKind === 'gun') sfx('gun_fire'); popDamage(e.unitId, e.reason === 'shield' ? '盾挡!' : 'MISS'); await sleep(240 / SPEED); await endAim(); break;
+      case 'down': { sfx('down_fall_ground'); popDamage(e.unitId, 'DOWN!'); sawDown = true; const g = unitMesh.get(e.unitId); const dr = rigs.get(e.unitId); if (dr) dr.setDowned(true); else if (g) { g.rotation.z = 1.2; g.position.y = gh(battle.unit(e.unitId).pos) + 0.15; } break; }
       case 'oneMore': {
         const u = battle.unit(e.unitId);
+        sfx('one_more');
         if (!sawDown || u.prop) { banner('1 MORE!'); await sleep(650 / SPEED); break; }
         sawDown = false;
         await oneMoreFx(u);
@@ -1072,7 +1110,7 @@ async function play(events: BattleEvent[]) {
       case 'penalty': popDamage(e.unitId, '违规!', 'big'); toast(`喇叭禁止「${ACT_NAME[e.action]}」→ 惩罚`); break;
       case 'speakerBan': toast(`喇叭：本回合禁止「${e.bans.map((b) => ACT_NAME[b]).join('、')}」`); break;
       case 'skipTurn': popDamage(e.unitId, ST_NAME[e.reason]); break;
-      case 'ko': { popDamage(e.unitId, 'KO'); const kr = rigs.get(e.unitId); if (kr) { await settleRig(e.unitId, 1500); kr.die(); await sleep(250 / SPEED); await settleRig(e.unitId, 2500); } else await sleep(200 / SPEED); } fxKeep.delete(e.unitId); break;
+      case 'ko': { sfx('damage_blow_away', 0.7); popDamage(e.unitId, 'KO'); const kr = rigs.get(e.unitId); if (kr) { await settleRig(e.unitId, 1500); kr.die(); await sleep(250 / SPEED); await settleRig(e.unitId, 2500); } else await sleep(200 / SPEED); } fxKeep.delete(e.unitId); break;
       case 'batonPassReady': toast(`${battle.unit(e.koId).name} 倒下：可 Baton Pass 换替补`); break;
       case 'batonPass': rebuild = true; banner('BATON PASS', true); break;
       case 'error': toast(e.message); break;
@@ -1156,11 +1194,13 @@ async function tripleFx(e: Extract<BattleEvent, { type: 'tripleThreat' }>, dmgs:
   const aPos = allies.map((a) => pos(a.id)), vPos = e.victims.map(pos);
   const saved = rig.saveTarget();
   clearOverlay();
+  sfx('all_out_in');
+  let ttHit = 0;
   await tripleThreatSeq(allies.map(cutWho), {
     victims: dmgs.length,
-    showTriangle() { tfx.show(aPos, vPos, fxMs(380)); rig.fitPoints([...aPos, ...vPos], 2); },
-    hit(i) { const d = dmgs[i]; tfx.hit(pos(d.unitId)); popDamage(d.unitId, String(d.amount), 'tt'); },
-    done() { tfx.clear(); rig.restoreTarget(saved); },
+    showTriangle() { sfx('all_out_cutin', 0.8); tfx.show(aPos, vPos, fxMs(380)); rig.fitPoints([...aPos, ...vPos], 2); },
+    hit(i) { if (!ttHit++) sfx('all_out_attack'); else sfx('gun_hit_v2', 0.8); const d = dmgs[i]; tfx.hit(pos(d.unitId)); popDamage(d.unitId, String(d.amount), 'tt'); },
+    done() { sfx('all_out_end', 0.8); tfx.clear(); rig.restoreTarget(saved); },
   }, new Skip());
 }
 
@@ -1240,12 +1280,12 @@ function onTap(h: { tile?: Vec; unit?: string }) {
         const evs: BattleEvent[] = [];
         if (previewTile && !eq(previewTile, s.pos)) evs.push(...battle.move(s.id, previewTile));
         evs.push(...battle.skill(s.id, sk.id, u.id));
-        void play(evs);
+        sfx('ui_confirm_1'); void play(evs);
         return;
       }
       if (selected === u.id && previewTile) { previewTile = null; previewTarget = null; }
       else if (u.decoy) toast('诱饵：敌人会优先攻击它，被打一下就消失');
-      else if (!u.acted) { selected = u.id; inspectEnemy = null; previewTile = null; previewTarget = null; mode = 'auto'; skillId = null; rig.focus(w2v(u.pos)); } // 镜头跟随选中角色
+      else if (!u.acted) { sfx('ui_confirm_short', 0.7); selected = u.id; inspectEnemy = null; previewTile = null; previewTarget = null; mode = 'auto'; skillId = null; rig.focus(w2v(u.pos)); } // 镜头跟随选中角色
       else toast(`${u.name} 已行动`);
       return refreshAll();
     }
@@ -1269,6 +1309,7 @@ function commitAttack(s: Unit, u: Unit) {
     const at = attackFrom(s, from, u);
     const via = !at ? meleeViaMove(s, u) : null;
     if (!at && !via) return;
+    sfx('ui_confirm_1');
     const evs: BattleEvent[] = [];
     const dest = via ? via.via : previewTile;
     if (dest && !eq(dest, s.pos)) evs.push(...battle.move(s.id, dest));
@@ -1294,7 +1335,7 @@ function onTapTile(h: { tile?: Vec; unit?: string }) {
     const s = battle.unit(selected);
     const ok = battle.moveTiles(s).some((p) => eq(p, h.tile!)) || (eq(h.tile, s.anchor) && !eq(s.pos, s.anchor));
     if (!ok) { selected = null; previewTile = null; previewTarget = null; return refreshAll(); }
-    if (previewTile && eq(previewTile, h.tile)) { void play(battle.move(s.id, h.tile)); return; }
+    if (previewTile && eq(previewTile, h.tile)) { sfx('ui_confirm_short'); void play(battle.move(s.id, h.tile)); return; }
     previewTile = h.tile; previewTarget = null;
     return refreshAll();
   }
@@ -1302,7 +1343,8 @@ function onTapTile(h: { tile?: Vec; unit?: string }) {
   refreshAll();
 }
 
-$('#endbar').addEventListener('click', () => { if (busy || battle.phase !== 'player') return; selected = null; void play(battle.endPlayerPhase()); });
+installUnlock();
+$('#endbar').addEventListener('click', () => { if (busy || battle.phase !== 'player') return; sfx('ui_confirm_2'); selected = null; void play(battle.endPlayerPhase()); });
 $('#party').addEventListener('click', (ev) => {
   const c = (ev.target as HTMLElement).closest('[data-charge]') as HTMLElement | null;
   if (c && selected && !busy) { void play(battle.selectCharge(selected, c.dataset.charge as never)); return; }
@@ -1412,7 +1454,7 @@ window.__p5t = {
   get battle() { return battle; },
   THREE,
   sceneKit,
-  renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, texs: renderer.info.memory.textures, origLoading, origStats }; },
+  renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, texs: renderer.info.memory.textures, origLoading, origStats, gimmickCount, placeholderCount, lastSparkKind }; },
   get busy() { return busy; },
   rigs,
   unitMesh,

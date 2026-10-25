@@ -40,6 +40,9 @@ export const ORIG_MAPS: Record<string, OrigMapCfg> = {
   L04: { m: 'M04', file: 'M04.glb', rx: 0, rz: 0, D: 30, base: 1, step: 0.6, ...DAY },
   L05: { m: 'M05', file: 'M05.glb', rx: 0, rz: 0, D: 20, base: 1, step: 0.6, ...DAY },
   L06: { m: 'M09', file: 'M09.glb', rx: 0, rz: 0, D: 35, base: 1, step: 3, ...DAY },
+  // r8：L07 = M08（两层，原版可走高度 1.0 / 6.0 → 层高 5m）、L09 = M07（单层）；M7/M8 是封闭外壳 → 高处裁切
+  L07: { m: 'M08', file: 'M08.glb', rx: 0, rz: 0, D: 28, base: 1, step: 5, clipY: 9.2, ...DAY },
+  L09: { m: 'M07', file: 'M07.glb', rx: 0, rz: 0, D: 24, base: 1, step: 0.6, clipY: 4.2, ...INDOOR },
   L08: { m: 'M17', file: 'M17.glb', rx: 0, rz: 0, D: 28, base: 1, step: 4, clipY: 8.2, ...INDOOR },
 };
 export const origCfg = (id: string): OrigMapCfg | null => ORIG_MAPS[id] ?? null;

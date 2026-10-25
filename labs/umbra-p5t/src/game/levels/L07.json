@@ -1,36 +1,35 @@
 {
  "id": "L07",
- "name": "玛丽的旗帜·中央广场",
- "scene": "castle_square_flag",
- "width": 20,
- "height": 16,
+ "name": "城下町·反击的狼烟",
+ "scene": "orig_M08",
+ "width": 23,
+ "height": 28,
  "win": {
   "type": "defeatTarget",
   "targetIds": [
-   "flag"
+   "ally_ctrl0"
   ]
  },
- "objective": "破坏敌方红旗",
- "turnTarget": 8,
+ "objective": "击败被洗脑的 Panther",
+ "turnTarget": 7,
  "party": [
   [
    "joker",
-   9,
-   14
+   11,
+   25
   ],
   [
    "skull",
-   7,
-   13
+   9,
+   25
   ],
   [
-   "queen",
-   11,
-   13
+   "mona",
+   13,
+   25
   ]
  ],
  "reserves": [
-  "panther",
   "fox"
  ],
  "lose": [
@@ -41,287 +40,188 @@
  "doors": [],
  "switches": [],
  "elevators": [],
- "links": [
-  {
-   "a": [
-    9,
-    4
-   ],
-   "b": [
-    9,
-    3
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    10,
-    4
-   ],
-   "b": [
-    10,
-    3
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    3,
-    12
-   ],
-   "b": [
-    2,
-    12
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    1,
-    10
-   ],
-   "b": [
-    1,
-    11
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    1,
-    14
-   ],
-   "b": [
-    1,
-    13
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    16,
-    12
-   ],
-   "b": [
-    17,
-    12
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    18,
-    10
-   ],
-   "b": [
-    18,
-    11
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    18,
-    14
-   ],
-   "b": [
-    18,
-    13
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    6,
-    1
-   ],
-   "b": [
-    7,
-    1
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    13,
-    1
-   ],
-   "b": [
-    12,
-    1
-   ],
-   "kind": "ladder"
-  }
- ],
+ "links": [],
  "cameras": [],
  "chests": [],
  "props": [
   {
-   "id": "flag",
-   "kind": "flag",
+   "id": "bar1",
+   "kind": "barrel",
    "pos": [
-    10,
-    1
-   ],
-   "hp": 60,
-   "phTuned": true,
-   "aura": 3,
-   "note": "旗子光环：半径3内敌人防御+（数值取数据表）"
+    5,
+    13
+   ]
   },
   {
-   "id": "sp1",
-   "kind": "speaker",
+   "id": "bar2",
+   "kind": "barrel",
    "pos": [
-    2,
-    3
-   ],
-   "hp": 30,
-   "phTuned": true,
-   "bans": [
-    "skill"
+    15,
+    15
+   ]
+  },
+  {
+   "id": "bar3",
+   "kind": "barrel",
+   "pos": [
+    6,
+    20
    ]
   }
  ],
  "enemies": [
   {
-   "id": "s1",
-   "name": "盾兵 Grenadier",
-   "role": "shielder",
-   "hp": "PH",
-   "pos": [
-    9,
-    2
-   ],
-   "zone": "B",
-   "facing": [
-    0,
-    1
-   ]
-  },
-  {
-   "id": "s2",
-   "name": "盾兵 Grenadier",
-   "role": "shielder",
-   "hp": "PH",
+   "id": "ally_ctrl0",
+   "name": "被洗脑的 Panther",
+   "hp": 65,
+   "move": 5,
+   "unitId": 4053,
    "pos": [
     11,
-    2
+    12
    ],
-   "zone": "B",
-   "facing": [
-    0,
-    1
-   ]
-  },
-  {
-   "id": "a1",
-   "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
-   "pos": [
-    3,
-    9
-   ],
-   "zone": "A"
-  },
-  {
-   "id": "a2",
-   "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
-   "pos": [
-    16,
-    9
-   ],
-   "zone": "A"
-  },
-  {
-   "id": "a3",
-   "name": "Grenadier",
    "role": "brute",
-   "hp": "PH",
+   "zone": "A",
+   "isTarget": true
+  },
+  {
+   "id": "e1",
+   "name": "Musketeer",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
-    9,
-    8
+    7,
+    20
    ],
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
    "zone": "A"
   },
   {
-   "id": "b1",
+   "id": "e2",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
-    4,
-    1
+    11,
+    21
    ],
-   "zone": "B"
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
+   "zone": "A"
   },
   {
-   "id": "b2",
+   "id": "e3",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
-    15,
-    1
+    10,
+    21
    ],
-   "zone": "B"
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
+   "zone": "A"
   },
   {
-   "id": "b3",
+   "id": "e4",
    "name": "Musketeer",
-   "role": "teleporter",
-   "hp": "PH",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
-    13,
-    3
+    6,
+    13
    ],
-   "zone": "B"
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
+   "zone": "A"
+  },
+  {
+   "id": "e5",
+   "name": "Musketeer",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
+   "pos": [
+    12,
+    14
+   ],
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
+   "zone": "A"
   }
  ],
  "events": [
   {
-   "id": "unlockB",
+   "id": "reinf1",
    "when": {
-    "type": "enterZone",
-    "zone": "B",
-    "side": "ally"
-   },
-   "do": [
-    {
-     "type": "unlockZone",
-     "zone": "B"
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "reinf",
-   "when": {
-    "type": "everyTurns",
-    "n": 2,
-    "phase": "enemy",
-    "whileAlive": "flag"
+    "type": "enemiesLeft",
+    "n": 0
    },
    "do": [
     {
      "type": "spawn",
      "units": [
       {
-       "id": "rN",
-       "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
+       "id": "r1",
+       "name": "Grenadier",
+       "hp": 130,
+       "move": 4,
+       "unitId": 10002011,
        "pos": [
-        10,
-        0
-       ]
+        11,
+        6
+       ],
+       "role": "revenger"
+      },
+      {
+       "id": "r2",
+       "name": "Musketeer",
+       "hp": 90,
+       "move": 5,
+       "unitId": 10001011,
+       "pos": [
+        9,
+        5
+       ],
+       "role": "shooter",
+       "gunPower": 18,
+       "gunPowerMax": 23,
+       "gunRange": 6
+      },
+      {
+       "id": "r3",
+       "name": "Musketeer",
+       "hp": 90,
+       "move": 5,
+       "unitId": 10001011,
+       "pos": [
+        13,
+        5
+       ],
+       "role": "shooter",
+       "gunPower": 18,
+       "gunPowerMax": 23,
+       "gunRange": 6
       }
      ]
     }
    ],
-   "repeat": true
+   "repeat": false
   }
  ],
  "bonus": [
@@ -330,17 +230,16 @@
   },
   {
    "type": "withinTurns",
-   "n": 8
+   "n": 7
   },
   {
    "type": "noKo"
   }
  ],
- "intent": "照 P5T M11/M13：红旗在 B 区高台，两盾兵面朝我方守旗；旗还在就每 2 回合补 1 个射手；喇叭 sp1 在场时禁用技能（打掉喇叭解禁）。左右两条路包抄。",
+ "intent": "原版 M08 布局（p5t/1_data/missions/M08.json（StageId 01080，scene_map_010402））。原版有 4 个开关格（m_SwitchId），m_SwitchGimmickData 为空、作用不明 → 没做；原版胜利条件 M8 = Defeat Panther（m_JudgeType 17、m_NotTargetId [4053]，引擎按 defeatTarget 处理）；炸弹桶 20001010 ×3 照原版落点",
  "notes": "rN 每次生成要加流水号 rN1/rN2…；出生格被占就用 (9,0)/(11,0)。",
  "unlockedZones": [
-  "A",
-  "B"
+  "A"
  ],
  "coverStats": {
   "cover": 84,
@@ -348,57 +247,101 @@
   "ratio": 0.276
  },
  "tiles": [
-  ".hhh....HH....hHHh..",
-  "...................h",
-  "hh..hh........hh.H.h",
-  "h................h.h",
-  "....hh.hh..h.hhh.h..",
-  ".Hh..h.hh..h.....h..",
-  "###..##########..###",
-  "........hhh......h..",
-  ".hh..Hh......hHh.h.h",
-  "..h.....hh....h..h.h",
-  "....h.h.hh..........",
-  "....h.h....h.hhH....",
-  "........hh.h.H......",
-  "...............h....",
-  ".....Hhhh.h.h..HH...",
-  "..Hh......h.h..H...."
+  "#######################",
+  "#######################",
+  "###########.###########",
+  "#######################",
+  "######H.........H######",
+  "######H.........H######",
+  "####hhH..h...h..Hhh####",
+  "####...............####",
+  "####...............####",
+  "####HH..HH..H...H..####",
+  "####HH..HH..HH..H..####",
+  "####...............####",
+  "####...............####",
+  "####...............####",
+  "####..H........h...####",
+  "####....H...H......####",
+  "####....HHHHH..h...####",
+  "####...............####",
+  "####...............####",
+  "####hhHH...........####",
+  "####.........h.....####",
+  "####.....H...H.....####",
+  "####.....HHHHH.....####",
+  "####...............####",
+  "####.Hh..H.H.H..HH.####",
+  "####.H..........HH.####",
+  "####...............####",
+  "####...............####"
  ],
  "heights": [
-  "00000001111110000000",
-  "00000001111110000000",
-  "00000001111110000000",
-  "00000001111110000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "22200000000000000222",
-  "22200000000000000222",
-  "22200000000000000222",
-  "00000000000000000000",
-  "00000000000000000000"
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000100000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000",
+  "00000000000000000000000"
  ],
  "zones": [
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "BBBBBBBBBBBBBBBBBBBB",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA"
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAAAAAAA"
+ ],
+ "heightMap": {
+  "1.0": 0,
+  "6.0": 1
+ },
+ "source": "p5t/1_data/missions/M08.json（StageId 01080，scene_map_010402）",
+ "notes_src": [
+  "原版有 4 个开关格（m_SwitchId），m_SwitchGimmickData 为空、作用不明 → 没做"
  ]
 }

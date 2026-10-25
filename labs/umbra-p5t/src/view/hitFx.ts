@@ -1,6 +1,5 @@
-// r7 打击感（Hark）：顿帧时长 / 震屏 / 命中火花 / 受击后仰位移。
-// 原版命中 VFX（effect/physical_attack/eff_0200xx 的 bullet_sphere、Fire02_flash、shockwave_2x2 等贴图）在 P5T 包里有，但还没导出到 umbra-assets
-// → 本文件的火花是自制（程序化星形闪光 + 冲击环 + 放射线），已标明，等 Codex 导出后换原版贴图。
+// r7/r8 打击感（Hark）：顿帧时长 / 震屏 / 命中火花 / 受击后仰位移。
+// r8：命中火花换成原版 physical_attack 贴图 + 原版 VFX Graph 参数重建（见下方说明）；顿帧/震屏/后仰的数值仍是自定。
 import * as THREE from 'three';
 
 export interface HitSpec { ratio: number; heavy: boolean; kind: 'gun' | 'melee' | 'skill' | 'other' }
@@ -32,7 +31,81 @@ export function applyShake(cam: THREE.Camera, worldPerPx = 0): THREE.Vector3 | n
 }
 export function undoShake(cam: THREE.Camera, o: THREE.Vector3 | null) { if (o) { cam.position.sub(o); cam.updateMatrixWorld(); } }
 
-// ---------- 命中火花（自制） ----------
+// ---------- 命中火花：原版贴图 + 原版 VFX Graph 参数重建（r8，已标明为重建） ----------
+// 贴图 = 原版 effect/physical_attack（Codex 3a56e5a）→ tools/fetch-p5t-fx.sh → public/p5t-fx/hit/*.webp（不入库）。
+// Unity VFX Graph 不能直接跑 → 按原版系统结构重建（三角形 sprite + 翻页），取原版能确定的参数：
+//   枪 = eff_020001_lw1：Impact×1（shotgun_Sheet_4x2 翻 8 帧，TexIndex 曲线 0→7.9；Impact_Yellow 渐变 (1,.92,.33)）、
+//        Flare×1（Fire02_flash）、Shock×1（shockwave_2x2 翻 4 帧）、Fire_sub 容量 40（Grain 火星，HDR 渐变 (24,15,.63)→(24,.63,0)，α 1→.5）
+//   近战 = eff_020201_lw1：impact×1（shockwave_2x2，TexIndex 0→4）、flare×1、line×5（Line，放射）、grenade_shot_fire×10（Grain，渐变 (1,.95,.03)→白）
+// 未知（发布版字节码无语义名，Codex 未猜）：各系统寿命/尺寸/速度 → 按 P5T 观感取值（自定，已标明）。缺贴图 → 回退自制星形火花。
+const FX = 'p5t-fx/hit/';
+const texCache = new Map<string, THREE.Texture | null>();
+const texLoader = new THREE.TextureLoader();
+let fxOk: boolean | null = null;
+function otex(name: string): THREE.Texture | null {
+  if (texCache.has(name)) return texCache.get(name)!;
+  texCache.set(name, null);
+  texLoader.load(FX + name + '.webp', (t) => { t.colorSpace = THREE.SRGBColorSpace; texCache.set(name, t); fxOk = true; }, undefined, () => { if (fxOk === null) fxOk = false; });
+  return null;
+}
+/** 预加载（关卡开始调用一次） */
+export function preloadHitFx() { for (const n of ['shotgun_Sheet_4x2', 'shockwave_2x2', 'Fire02_flash', 'Grain', 'Line']) otex(n); }
+const C = (r: number, g: number, b: number) => new THREE.Color(r, g, b);
+/** HDR 渐变色（原版 >1）→ 加色混合里 clamp 前的亮度：除以最大分量再乘一点溢出感 */
+const hdr = (r: number, g: number, b: number) => { const m = Math.max(r, g, b, 1); return C(r / m, g / m, b / m); };
+function flip(name: string, cols: number, rows: number, color: THREE.Color, parent: THREE.Object3D, at: THREE.Vector3, size: number, dur: number, frames: number, rot = Math.random() * Math.PI * 2) {
+  const base = otex(name); if (!base) return;
+  const t = base.clone(); t.repeat.set(1 / cols, 1 / rows); t.needsUpdate = true;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, color, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true }));
+  sp.material.rotation = rot; sp.position.copy(at); sp.renderOrder = 61; sp.scale.set(size, size, 1);
+  parent.add(sp);
+  lives.push({ o: sp, t0: performance.now(), dur, step: (k) => {
+    const f = Math.min(frames - 1, Math.floor(k * frames)); // 原版 TexIndex 曲线线性 0→N
+    t.offset.set((f % cols) / cols, 1 - (Math.floor(f / cols) + 1) / rows);
+    sp.material.opacity = k < 0.8 ? 1 : (1 - k) / 0.2;
+  }, extra: t });
+}
+function glow(name: string, color: THREE.Color, parent: THREE.Object3D, at: THREE.Vector3, s0: number, s1: number, dur: number, a0 = 1) {
+  const tx = otex(name); if (!tx) return;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, color, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true }));
+  sp.position.copy(at); sp.renderOrder = 60; parent.add(sp);
+  lives.push({ o: sp, t0: performance.now(), dur, step: (k) => { const s = s0 + (s1 - s0) * Math.sqrt(k); sp.scale.set(s, s, 1); sp.material.opacity = a0 * (1 - k * k); } });
+}
+function sparks(name: string, n: number, c0: THREE.Color, c1: THREE.Color, parent: THREE.Object3D, at: THREE.Vector3, speed: number, size: number, dur: number, streak = false) {
+  const tx = otex(name); if (!tx) return;
+  for (let i = 0; i < n; i++) {
+    const d = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.9 - 0.15, Math.random() - 0.5).normalize();
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, color: c0.clone(), blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true }));
+    sp.position.copy(at); sp.renderOrder = 62; parent.add(sp);
+    const v = speed * (0.5 + Math.random() * 0.7); const life = dur * (0.6 + Math.random() * 0.5); const sz = size * (0.6 + Math.random() * 0.8);
+    lives.push({ o: sp, t0: performance.now(), dur: life, step: (k) => {
+      const e = 1 - (1 - k) * (1 - k);
+      sp.position.copy(at).addScaledVector(d, v * e).add(new THREE.Vector3(0, -0.25 * k * k, 0));
+      (sp.material.color as THREE.Color).copy(c0).lerp(c1, k); sp.material.opacity = 1 - k * 0.5 - (k > 0.7 ? (k - 0.7) / 0.3 * 0.5 : 0);
+      if (streak) { sp.scale.set(sz * 0.35, sz * (1.6 - k), 1); sp.material.rotation = Math.atan2(d.y, d.x) - Math.PI / 2; } else { const s = sz * (1 - 0.6 * k); sp.scale.set(s, s, 1); }
+    } });
+  }
+}
+function origSpark(parent: THREE.Object3D, at: THREE.Vector3, h: HitSpec): boolean {
+  if (fxOk === false || !otex('shotgun_Sheet_4x2') || !otex('shockwave_2x2') || !otex('Fire02_flash') || !otex('Grain')) return false;
+  const k = 1 + Math.min(1, h.ratio) * 0.3 + (h.heavy ? 0.25 : 0);
+  if (h.kind === 'melee') {
+    // eff_020201_lw1 重建
+    flip('shockwave_2x2', 2, 2, hdr(1, 0.954, 0.034), parent, at, 0.75 * k, 260, 4);
+    glow('Fire02_flash', hdr(0.985, 1, 0.169), parent, at, 0.25 * k, 0.6 * k, 180, 0.55);
+    sparks('Line', 5, C(1, 1, 1), hdr(1, 0.954, 0.034), parent, at, 0.6 * k, 0.55 * k, 240, true);
+    sparks('Grain', h.heavy ? 14 : 10, C(1, 0.95, 0.5), C(1, 0.6, 0.1), parent, at, 0.6 * k, 0.1 * k, 380);
+  } else {
+    // eff_020001_lw1 重建（枪 / 技能 / 其他）
+    flip('shotgun_Sheet_4x2', 4, 2, C(1, 0.922, 0.329), parent, at, 0.6 * k, 300, 8);
+    glow('Fire02_flash', C(1, 1, 1), parent, at, 0.2 * k, 0.55 * k, 170, 0.5);
+    flip('shockwave_2x2', 2, 2, C(1, 0.95, 0.85), parent, at, 0.85 * k, 240, 4, 0);
+    sparks('Grain', h.heavy ? 26 : 18, hdr(23.97, 15.06, 0.63), hdr(23.97, 0.63, 0), parent, at, 0.55 * k, 0.08 * k, 360);
+  }
+  return true;
+}
+
+// ---------- 自制星形火花（仅在原版贴图缺失时回退） ----------
 let starTex: THREE.Texture | null = null;
 function tex() {
   if (starTex) return starTex;
@@ -47,33 +120,17 @@ function tex() {
   starTex = new THREE.CanvasTexture(c); starTex.colorSpace = THREE.SRGBColorSpace;
   return starTex;
 }
-interface Live { o: THREE.Object3D; t0: number; dur: number; step: (k: number) => void }
+interface Live { o: THREE.Object3D; t0: number; dur: number; step: (k: number) => void; extra?: THREE.Texture }
 const lives: Live[] = [];
+export let lastSparkKind: 'orig' | 'homemade' | null = null;
 export function spark(parent: THREE.Object3D, at: THREE.Vector3, h: HitSpec, color = 0xffffff) {
+  if (origSpark(parent, at, h)) { lastSparkKind = 'orig'; return; }
+  lastSparkKind = 'homemade';
   const s0 = 0.55 + Math.min(1, h.ratio) * 0.5 + (h.heavy ? 0.45 : 0);
-  // 1) 星形闪光（加色，面向相机）
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(), color, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true }));
   sp.position.copy(at); sp.renderOrder = 60; sp.material.rotation = Math.random() * Math.PI;
   parent.add(sp);
   lives.push({ o: sp, t0: performance.now(), dur: 200, step: (k) => { const s = s0 * (0.5 + 1.1 * Math.sqrt(k)); sp.scale.set(s, s, 1); sp.material.opacity = 1 - k * k; } });
-  // 2) 冲击环
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 32), new THREE.MeshBasicMaterial({ color: h.heavy ? 0xffd400 : 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
-  ring.position.copy(at); ring.renderOrder = 61;
-  parent.add(ring);
-  lives.push({ o: ring, t0: performance.now(), dur: 260, step: (k) => { ring.quaternion.copy((parent as THREE.Object3D & { __camQ?: THREE.Quaternion }).__camQ ?? ring.quaternion); const s = s0 * (0.3 + 1.4 * k); ring.scale.set(s, s, s); (ring.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - k); } });
-  // 3) 放射线（近战/重击多一些）
-  const n = h.kind === 'melee' || h.heavy ? 9 : 6;
-  const pos = new Float32Array(n * 6); const dirs: THREE.Vector3[] = [];
-  for (let i = 0; i < n; i++) dirs.push(new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.8 - 0.2, Math.random() - 0.5).normalize());
-  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xfff2b0, transparent: true, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false }));
-  lines.position.copy(at); lines.renderOrder = 62; lines.frustumCulled = false;
-  parent.add(lines);
-  lives.push({ o: lines, t0: performance.now(), dur: 220, step: (k) => {
-    const r0 = s0 * (0.15 + 0.8 * k), r1 = s0 * (0.35 + 1.2 * Math.sqrt(k));
-    dirs.forEach((d, i) => { pos.set([d.x * r0, d.y * r0, d.z * r0, d.x * r1, d.y * r1, d.z * r1], i * 6); });
-    geo.attributes.position.needsUpdate = true; (lines.material as THREE.LineBasicMaterial).opacity = 1 - k;
-  } });
 }
 /** 每帧推进火花；顿帧期间也推进（火花在冻结的画面上炸开 = P5 式命中定格） */
 export function updateHitFx(cam: THREE.Camera, root: THREE.Object3D) {
@@ -84,7 +141,7 @@ export function updateHitFx(cam: THREE.Camera, root: THREE.Object3D) {
     l.step(k);
     if (k >= 1) {
       l.o.removeFromParent();
-      const m = l.o as THREE.Mesh; m.geometry?.dispose?.(); (m.material as THREE.Material)?.dispose?.();
+      const m = l.o as THREE.Mesh; if (!(m as unknown as THREE.Sprite).isSprite) m.geometry?.dispose?.(); (m.material as THREE.Material)?.dispose?.(); l.extra?.dispose();
       lives.splice(i, 1);
     }
   }

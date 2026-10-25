@@ -515,3 +515,10 @@ body.enemy-skip #phase::after { content: ' ▶▶'; color: #ffd400; }
 #labels .dmg.sdf.heavy canvas { filter: drop-shadow(3px 3px 0 #e60012); }
 @keyframes sdfpop { 0% { transform: translate(-50%, -60%) scale(1.9); opacity: 0; } 12% { transform: translate(-50%, -100%) scale(.88); opacity: 1; } 22% { transform: translate(-50%, -100%) scale(1.06); } 30% { transform: translate(-50%, -100%) scale(1); } 75% { transform: translate(-50%, -125%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -150%) scale(1); opacity: 0; } }
 .frozen #labels .dmg.sdf { animation-play-state: paused !important; }
+/* r8：原版 prefab_ui2d_damageview 结构（动画由 view/damagePop.ts 逐帧按原版曲线驱动，不用 CSS 动画） */
+#labels .dmg.orig { animation: none; text-shadow: none; transform: translate(-50%, -50%); pointer-events: none; }
+#labels .dmg.orig .dmgv-ofs, #labels .dmg.orig .dmgv-sc, #labels .dmg.orig .dmgv-go { display: flex; justify-content: center; align-items: center; transform-origin: 50% 50%; }
+#labels .dmg.orig canvas { display: block; height: auto; }
+#labels .dmg.orig.heavy canvas { filter: drop-shadow(3px 3px 0 #e60012); }
+#labels .dmg.orig .dmgv-resist { position: absolute; left: 50%; top: 50%; font-style: normal; color: #6cf; -webkit-text-stroke: 1px #000; font-size: 28px; font-weight: 900; }
+#labels .dmg.orig.heal span { font-size: 34px; font-weight: 900; color: #fff; -webkit-text-stroke: 2px #1a8f45; paint-order: stroke fill; }

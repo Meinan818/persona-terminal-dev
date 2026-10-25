@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadLevel, type LevelJson } from '../src/game/level';
 import { levelMap } from '../src/game/levels';
+import { legacyMap } from './legacyLevels';
 import { Battle, parseMap, W, SKILLS } from '../src/rules';
 import type { MapDef, UnitDef } from '../src/rules';
 import { manhattan } from '../src/rules/grid';
@@ -63,8 +64,8 @@ describe('Hark 决定 #9 关卡喇叭 = 硬禁用技能', () => {
     b.unit('sp1').ko = true;
     expect(b.canSkill(j, sk, e)).toBe(true);
   });
-  it('L07 的喇叭 30 HP、红旗 60 HP（PH-tuned）、喇叭为硬禁用', () => {
-    const b = new Battle(levelMap('L07'));
+  it('L07 的喇叭 30 HP、红旗 60 HP（PH-tuned）、喇叭为硬禁用（r8 L07 换原版 M08 后改用自编图纸冻结副本）', () => {
+    const b = new Battle(legacyMap('L07'));
     expect(b.unit('sp1').maxHp).toBe(30);
     expect(b.unit('sp1').hardBan).toBe(true);
     expect(b.unit('flag').maxHp).toBe(60);

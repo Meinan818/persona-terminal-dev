@@ -1,30 +1,29 @@
 {
  "id": "L09",
- "name": "城下町·篝火广场",
- "scene": "castle_bonfire_night",
- "width": 20,
- "height": 16,
+ "name": "监狱·囚室",
+ "scene": "orig_M07",
+ "width": 18,
+ "height": 24,
  "win": {
-  "type": "survive",
-  "turns": 5
+  "type": "defeatAll"
  },
- "objective": "坚持 5 回合",
+ "objective": "击败全部敌人",
  "turnTarget": 5,
  "party": [
   [
    "joker",
-   9,
-   8
+   16,
+   18
   ],
   [
    "skull",
-   10,
-   8
+   16,
+   20
   ],
   [
    "mona",
-   9,
-   7
+   15,
+   19
   ]
  ],
  "reserves": [
@@ -39,478 +38,213 @@
  "doors": [],
  "switches": [],
  "elevators": [],
- "links": [
-  {
-   "a": [
-    9,
-    5
-   ],
-   "b": [
-    9,
-    6
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    9,
-    10
-   ],
-   "b": [
-    9,
-    9
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    6,
-    7
-   ],
-   "b": [
-    7,
-    7
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    13,
-    8
-   ],
-   "b": [
-    12,
-    8
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    4,
-    2
-   ],
-   "b": [
-    4,
-    1
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    6,
-    1
-   ],
-   "b": [
-    5,
-    1
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    6,
-    0
-   ],
-   "b": [
-    5,
-    0
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    15,
-    13
-   ],
-   "b": [
-    15,
-    14
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    13,
-    14
-   ],
-   "b": [
-    14,
-    14
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    13,
-    15
-   ],
-   "b": [
-    14,
-    15
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    11,
-    5
-   ],
-   "b": [
-    11,
-    6
-   ],
-   "kind": "ladder"
-  },
-  {
-   "a": [
-    8,
-    10
-   ],
-   "b": [
-    8,
-    9
-   ],
-   "kind": "ladder"
-  }
- ],
+ "links": [],
  "cameras": [],
  "chests": [],
- "props": [
-  {
-   "id": "bar1",
-   "kind": "barrel",
-   "pos": [
-    9,
-    1
-   ]
-  },
-  {
-   "id": "bar2",
-   "kind": "barrel",
-   "pos": [
-    10,
-    14
-   ]
-  },
-  {
-   "id": "bar3",
-   "kind": "barrel",
-   "pos": [
-    1,
-    7
-   ]
-  },
-  {
-   "id": "bar4",
-   "kind": "barrel",
-   "pos": [
-    18,
-    8
-   ]
-  }
- ],
+ "props": [],
  "enemies": [
   {
-   "id": "i1",
+   "id": "e1",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 60,
+   "move": 2,
+   "unitId": 10001009,
    "pos": [
-    5,
-    2
+    7,
+    19
    ],
+   "role": "shooter",
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
    "zone": "A"
   },
   {
-   "id": "i2",
+   "id": "e2",
    "name": "Musketeer",
-   "role": "shooter",
-   "hp": "PH",
+   "hp": 60,
+   "move": 2,
+   "unitId": 10001009,
    "pos": [
-    14,
-    13
+    4,
+    17
    ],
+   "role": "shooter",
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
    "zone": "A"
   },
   {
-   "id": "i3",
-   "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
+   "id": "e3",
+   "name": "Musketeer",
+   "hp": 60,
+   "move": 2,
+   "unitId": 10001009,
+   "pos": [
+    4,
+    21
+   ],
+   "role": "shooter",
+   "gunPower": 13,
+   "gunPowerMax": 18,
+   "gunRange": 6,
+   "zone": "A"
+  },
+  {
+   "id": "e4",
+   "name": "Musketeer",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
+   "pos": [
+    6,
+    7
+   ],
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
+   "zone": "A"
+  },
+  {
+   "id": "e5",
+   "name": "Musketeer",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
     3,
-    10
+    6
    ],
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
    "zone": "A"
   },
   {
-   "id": "i4",
-   "name": "Grenadier",
-   "role": "brute",
-   "hp": "PH",
+   "id": "e6",
+   "name": "Musketeer",
+   "hp": 90,
+   "move": 5,
+   "unitId": 10001011,
    "pos": [
-    16,
-    5
+    9,
+    4
    ],
+   "role": "shooter",
+   "gunPower": 18,
+   "gunPowerMax": 23,
+   "gunRange": 6,
    "zone": "A"
   }
  ],
- "events": [
-  {
-   "id": "w1",
-   "when": {
-    "type": "turn",
-    "turn": 1,
-    "phase": "enemy"
-   },
-   "do": [
-    {
-     "type": "spawn",
-     "units": [
-      {
-       "id": "r1",
-       "name": "Grenadier",
-       "role": "revenger",
-       "hp": "PH",
-       "pos": [
-        10,
-        0
-       ]
-      },
-      {
-       "id": "r2",
-       "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
-       "pos": [
-        9,
-        0
-       ]
-      }
-     ]
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "w2",
-   "when": {
-    "type": "turn",
-    "turn": 2,
-    "phase": "enemy"
-   },
-   "do": [
-    {
-     "type": "spawn",
-     "units": [
-      {
-       "id": "r3",
-       "name": "Grenadier",
-       "role": "brute",
-       "hp": "PH",
-       "pos": [
-        19,
-        7
-       ]
-      },
-      {
-       "id": "r4",
-       "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
-       "pos": [
-        19,
-        9
-       ]
-      },
-      {
-       "id": "r5",
-       "name": "Grenadier",
-       "role": "launcher",
-       "hp": "PH",
-       "pos": [
-        19,
-        5
-       ]
-      }
-     ]
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "w3",
-   "when": {
-    "type": "turn",
-    "turn": 3,
-    "phase": "enemy"
-   },
-   "do": [
-    {
-     "type": "spawn",
-     "units": [
-      {
-       "id": "r6",
-       "name": "Grenadier",
-       "role": "brute",
-       "hp": "PH",
-       "pos": [
-        9,
-        15
-       ]
-      },
-      {
-       "id": "r7",
-       "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
-       "pos": [
-        11,
-        15
-       ]
-      },
-      {
-       "id": "r8",
-       "name": "Drummer",
-       "role": "supporter",
-       "hp": "PH",
-       "pos": [
-        10,
-        15
-       ]
-      }
-     ]
-    }
-   ],
-   "repeat": false
-  },
-  {
-   "id": "w4",
-   "when": {
-    "type": "turn",
-    "turn": 4,
-    "phase": "enemy"
-   },
-   "do": [
-    {
-     "type": "spawn",
-     "units": [
-      {
-       "id": "r9",
-       "name": "Grenadier",
-       "role": "revenger",
-       "hp": "PH",
-       "pos": [
-        0,
-        6
-       ]
-      },
-      {
-       "id": "r10",
-       "name": "Grenadier",
-       "role": "revenger",
-       "hp": "PH",
-       "pos": [
-        0,
-        9
-       ]
-      },
-      {
-       "id": "r11",
-       "name": "Musketeer",
-       "role": "teleporter",
-       "hp": "PH",
-       "pos": [
-        0,
-        4
-       ]
-      },
-      {
-       "id": "r12",
-       "name": "Musketeer",
-       "role": "shooter",
-       "hp": "PH",
-       "pos": [
-        0,
-        11
-       ]
-      }
-     ]
-    }
-   ],
-   "repeat": false
-  }
- ],
+ "events": [],
  "bonus": [
   {
    "type": "clear"
   },
   {
-   "type": "noKo"
+   "type": "withinTurns",
+   "n": 5
   },
   {
-   "type": "hurtFewerThan",
-   "n": 6
+   "type": "noKo"
   }
  ],
- "intent": "原创补位（玛丽王国 M1–M22 没有「坚持 N 回合」关；剧情接 M19–M21 攻城前夜）。中央 1 层高台（四面梯子）是据点；每个敌方回合从四个方向轮流来援军，越来越多；油桶在入口，炸援军。不用清场，撑满 5 回合即胜。",
+ "intent": "原版 M07 布局（p5t/1_data/missions/M07.json（StageId 01070，scene_map_010401））。原版有 3 个开关格（m_SwitchId），m_SwitchGimmickData 为空、作用不明 → 没做",
  "coverStats": {
   "cover": 77,
   "walkable": 284,
   "ratio": 0.271
  },
  "tiles": [
-  "###...........Hh.###",
-  "###.........h.HH.###",
-  "###......h..h....###",
-  "Hhh.....hh..h.....hh",
-  "....hhh.....h..hh.hh",
-  "..H.................",
-  "..hHH..h....hH....h.",
-  "h..............hh.h.",
-  "h.Hh................",
-  "..Hh.hHh...Hh..hhh..",
-  "......h............h",
-  "...Hh........H.hhh.h",
-  "hh.hh.hH.hh.HH..H..h",
-  "###...hH....H....###",
-  "###..............###",
-  "###hh.Hhh........###"
+  "...H.....HH..H####",
+  "...H.....HH..H####",
+  "...H..........####",
+  "..............####",
+  "..........H...####",
+  ".........HH..H####",
+  "..H..........H####",
+  "..HH..........####",
+  "......h.......####",
+  "..............####",
+  "..HH.....HH..H####",
+  "....h...h....H####",
+  "..................",
+  "..................",
+  ".....HHH..........",
+  "HH.......HH.......",
+  "H........H........",
+  ".....H............",
+  "..................",
+  "........h..H......",
+  "..................",
+  ".....H............",
+  "H........H........",
+  "HH.......HH......."
  ],
  "heights": [
-  "00022200000000000000",
-  "00022200000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000001111110000000",
-  "00000001111110000000",
-  "00000001111110000000",
-  "00000001111110000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "00000000000000222000",
-  "00000000000000222000"
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000",
+  "000000000000000000"
  ],
  "zones": [
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAA"
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA",
+  "AAAAAAAAAAAAAAAAAA"
+ ],
+ "heightMap": {
+  "1.0": 0
+ },
+ "unlockedZones": [
+  "A"
+ ],
+ "source": "p5t/1_data/missions/M07.json（StageId 01070，scene_map_010401）",
+ "notes_src": [
+  "原版有 3 个开关格（m_SwitchId），m_SwitchGimmickData 为空、作用不明 → 没做"
  ]
 }

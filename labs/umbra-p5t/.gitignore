@@ -4,3 +4,6 @@ dist
 public/models/private/
 # P5T 正版 HUD 贴图（不入库）：由 tools/fetch-p5t-hud.sh 拷入
 public/p5t-hud/
+# r8：原版 P5T gimmick 模型 / 命中特效贴图 / 战斗音效（不入库）：tools/fetch-p5t-gimmick.sh / fetch-p5t-fx.sh / fetch-p5t-sfx.sh
+public/p5t-fx/
+public/p5t-sfx/

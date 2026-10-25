@@ -26,6 +26,23 @@ for (const n of root.listNodes()) {
   const nm = n.getName() || '';
   if (/^LOD_?[1-9]\b/i.test(nm) || /_LOD[1-9]$/i.test(nm)) { kill(n); removed++; }
 }
+// 1b) r8 gimmick 单位（PREFAB_UNSCALE=1）：Codex 的 FBX→GLB 在 prefab 根上多了 0.01 缩放（顶点本身已是米）→ 改回 1
+if (process.env.PREFAB_UNSCALE) for (const n of root.listNodes()) {
+  const sc = n.getScale(); if (/^prefab_/.test(n.getName() || '') && Math.abs(sc[0] - 0.01) < 1e-4) n.setScale([1, 1, 1]);
+}
+// 1c) 同上：场景根上游离在 prefab 外、没有 Unity 坐标转换的网格节点（20001200 的 mesh1/mesh2 = 未挂 LOD 组的 LOD_1/LOD_2 副本）→ 删
+if (process.env.PREFAB_UNSCALE) for (const sc of root.listScenes()) for (const n of sc.listChildren()) {
+  if (!/^prefab_/.test(n.getName() || '') && n.getMesh()) { kill(n); removed++; }
+}
+// 1d) 同上：xxx_mesh0/_mesh1/_mesh2 三个同包围盒、三角形递减（96/60/26、1046/565/292…）= LOD0/1/2 叠放 → 只留 _mesh0
+if (process.env.PREFAB_UNSCALE) {
+  const names = new Set(root.listNodes().filter((n) => !n.isDisposed?.()).map((n) => n.getName()));
+  for (const n of root.listNodes()) {
+    if (n.isDisposed?.()) continue;
+    const m = /^(.*)_mesh([12])$/.exec(n.getName() || '');
+    if (m && names.has(m[1] + '_mesh0')) { kill(n); removed++; }
+  }
+}
 // 2) 合并绘制：除 Roof（运行时隐藏用）外清空节点名 → flatten + join 按材质合批（不改几何/贴图，只减 draw call）
 const KEEP = /^(Roof|Ceiling)/i;
 const under = (n) => { for (let p = n; p; p = p.getParentNode()) if (KEEP.test(p.getName() || '')) return true; return false; };

@@ -68,10 +68,10 @@ function glyphCanvas(f: Font, gl: Glyph, scale: number, face: string, outline: s
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 function parse(c: string): [number, number, number, number] {
   const m = c.match(/rgba?\(([^)]+)\)/); if (m) { const p = m[1].split(',').map(Number); return [p[0], p[1], p[2], p[3] ?? 1]; }
-  const h = c.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), 1];
+  let h = c.replace('#', ''); if (h.length === 3) h = h.split('').map((x) => x + x).join(''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), 1];
 }
 
-export interface SdfOpts { px?: number; face?: string; outline?: string; outlineWidth?: number; tracking?: number }
+export interface SdfOpts { px?: number; face?: string; outline?: string; outlineWidth?: number; tracking?: number; /** TMP characterSpacing（em/100） */ spacing?: number }
 /** 一行文字 → 画布（失败 / 字体未加载 → null，调用方回退 CSS 文字） */
 export function renderSdf(name: string, text: string, o: SdfOpts = {}): HTMLCanvasElement | null {
   const f = ready.get(name);
@@ -85,11 +85,33 @@ export function renderSdf(name: string, text: string, o: SdfOpts = {}): HTMLCanv
   const top = f.ascent * scale + pad;
   for (const gl of gls as Glyph[]) {
     if (gl.w > 0) { const c = glyphCanvas(f, gl, scale, face, outline, ow); items.push({ c, x: x + gl.bx * scale - pad, y: top - gl.by * scale - pad }); }
-    x += (gl.adv + (o.tracking ?? 0)) * scale;
+    x += (gl.adv + (o.tracking ?? 0) + ((o.spacing ?? 0) / 100) * f.size) * scale;
   }
   const W = Math.ceil(x + pad * 2), H = Math.ceil(top + (f.size - f.ascent) * scale * 0.4 + pad * 2);
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d')!;
   for (const it of items) g.drawImage(it.c, it.x, it.y);
   return c;
+}
+
+// r8：HUD 文字换原版 TMP 字体——任何带 data-sdf 的元素按其 CSS 字号用原版 SDF 字体重绘（字体只有 ASCII：数字/拉丁字母；中文仍是 CSS 文字）。
+// data-sdf=字体名  data-col=TMP font_color（原版 RectTransform/TMP 组件导出值）  data-out / data-ow=描边  data-sp=characterSpacing  data-back=前导零底字颜色
+const DPR = Math.min(3, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
+export function hydrateSdf(root: ParentNode) {
+  root.querySelectorAll<HTMLElement>('[data-sdf]').forEach((el) => {
+    const font = el.dataset.sdf!; const txt = el.dataset.txt ?? el.textContent ?? '';
+    if (el.dataset.done === txt) return;
+    if (!ready.has(font)) { void loadSdfFont(font).then((f) => { if (f) hydrateSdf(root); }); return; }
+    const px = parseFloat(getComputedStyle(el).fontSize) || 16;
+    const o: SdfOpts = { px: px * DPR, face: el.dataset.col, outline: el.dataset.out, outlineWidth: el.dataset.ow ? +el.dataset.ow : undefined, spacing: el.dataset.sp ? +el.dataset.sp : undefined };
+    const pad = el.dataset.pad ? +el.dataset.pad : 0;
+    const front = renderSdf(font, txt, o);
+    if (!front) return; // 缺字形 → 保留 CSS 文字
+    const box = document.createElement('span'); box.className = 'sdfbox';
+    const put = (c: HTMLCanvasElement, cls: string) => { c.className = cls; c.style.width = `${c.width / DPR}px`; c.style.height = `${c.height / DPR}px`; box.appendChild(c); };
+    if (pad && txt.length < pad && el.dataset.back) { const back = renderSdf(font, txt.padStart(pad, '0'), { ...o, face: el.dataset.back }); if (back) put(back, 'sdf-back'); }
+    put(front, 'sdf-front');
+    el.dataset.txt = txt; el.dataset.done = txt; el.setAttribute('aria-label', txt);
+    el.replaceChildren(box); el.classList.add('sdf-on');
+  });
 }

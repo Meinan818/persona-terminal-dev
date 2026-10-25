@@ -160,3 +160,9 @@ body.p5hud #forecast .tg.block.p5 .p5i { width: auto; height: 15px; }
 .fx-slash.enemy.p5 small { position: absolute; right: 8%; top: 100%; margin-top: 4px; background: #fff; color: #000; font-size: 12px; font-weight: 900; letter-spacing: 3px; padding: 1px 12px; transform: skewX(-14deg); white-space: nowrap; }
 @keyframes p5winIn { to { transform: translate(-50%, -50%); } }
 .fx-slash.enemy.p5.out .win { transition: transform calc(.22s * var(--fxk)) cubic-bezier(.6,0,.9,.4), opacity .22s; transform: translate(-50%, -50%) translateX(-120vw); }
+/* r8：原版 TMP 字体（ui/sdfFont.ts hydrateSdf）：HP/SP 前导零底字 + 亮色数字叠放右对齐；font_style 3 = 粗斜体 → 斜切 */
+.sdf-on { font-style: normal !important; -webkit-text-stroke: 0 !important; }
+.sdf-on .sdfbox { display: inline-grid; justify-items: end; align-items: center; line-height: 0; }
+.sdf-on .sdfbox > canvas { grid-area: 1 / 1; display: block; }
+body.p5hud #party .gw b.sdf-on { transform: rotate(-6deg) skewX(-10deg); }
+body.p5hud #turn b.sdf-on { transform: rotate(-4deg); }

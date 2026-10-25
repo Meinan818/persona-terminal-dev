@@ -46,6 +46,20 @@ export interface CharSpec {
   weapons?: { file: string; loc: string; show: (k: ClipKey) => boolean }[];
 }
 
+/** 持枪/持近战武器的手：原版数据没写，按原版 GunLoop / Attack 姿势里哪只手的 Loc_Wp_* 挂点在身前实测（tools/hand-probe.mjs） */
+const HAND: Record<string, { gun: 'L' | 'R'; sword: 'L' | 'R' }> = {
+  // 实测（10-26）：GunLoop 末帧挂点 z（身前）L/R —— Joker 参照 -0.26/0.39（右手，与已验收一致）、Skull 0.33/0.10、Mona 0.14/-0.23、
+  //   Panther 0.27/0.03、Fox 0.41/0.23；Attack 挂点路程 L/R —— Skull 6.23/4.05、Mona 4.60/5.52、Panther 5.01/5.81、Fox 3.01/3.76。
+  //   Skull/Mona 另拍 L/R 对照图目检（notes/shots/2026-10-26/hand-*.png）一致。
+  skull: { gun: 'L', sword: 'L' }, mona: { gun: 'L', sword: 'R' }, panther: { gun: 'L', sword: 'R' }, fox: { gun: 'L', sword: 'R' },
+};
+function wp(gun: string, sword: string, h: { gun: 'L' | 'R'; sword: 'L' | 'R' }): CharSpec['weapons'] {
+  return [
+    { file: `p5t/wp_${gun}.glb`, loc: `Loc_Wp_Gun_${h.gun}`, show: (k) => /^Gun/.test(k) },
+    { file: `p5t/wp_${sword}.glb`, loc: `Loc_Wp_Sword_${h.sword}`, show: (k) => k === 'Attack' },
+  ];
+}
+
 export const SPECS: Record<string, CharSpec> = {
   joker: {
     key: 'joker', files: ['p5t/joker.glb', 'joker_pc0001_151.glb'],
@@ -54,8 +68,23 @@ export const SPECS: Record<string, CharSpec> = {
       { file: 'p5t/wp_wp01900.glb', loc: 'Loc_Wp_Sword_R', show: (k) => k === 'Attack' },
     ],
   },
-  skull: { key: 'skull', files: ['p5t/skull.glb'] },
-  mona: { key: 'mona', files: ['p5t/mona.glb'] },
+  skull: { key: 'skull', files: ['p5t/skull.glb'], weapons: wp('gn02000', 'wp02900', HAND.skull) },
+  mona: { key: 'mona', files: ['p5t/mona.glb'], weapons: wp('gn03000', 'wp03900', HAND.mona) },
+  // batch-03：Panther PC0004_151 / Fox PC0005_151 / Queen PC0006_151 / Erina PC0011_000（Queen/Erina 正版武器未导出 → 空手）
+  // 武器按原版数据：units.csv 4051(Panther) GunId 4000 / SwordId 20401→PrefabNo 4900（鞭），5051(Fox) GunId 5000 / SwordId 20501→5900（刀）。
+  //   batch-03 文件夹把 Gn04000/Wp04900 放在 Fox 下、Gn05000/Wp05900 放在 Panther 下 —— 与数据表相反，这里按数据表挂（已回报 Codex）
+  panther: { key: 'panther', files: ['p5t/panther.glb'], weapons: wp('gn04000', 'wp04900', HAND.panther) },
+  fox: { key: 'fox', files: ['p5t/fox.glb'], weapons: wp('gn05000', 'wp05900', HAND.fox) },
+  queen: { key: 'queen', files: ['p5t/queen.glb'] },
+  erina: { key: 'erina', files: ['p5t/erina.glb'] },
+  // 被洗脑（举止异常的）Panther / Fox：PC0004_053 / PC0005_053
+  // 洗脑款 4053/5053（关卡 4054/5054 的 PrefabNo 也是 4053/5053）原版 GunId 10000401/10000501 未导出 → 沿用本人正版武器（Gn04000/Wp04900、Gn05000/Wp05900）
+  panther_bw: { key: 'panther_bw', files: ['p5t/panther_bw.glb'], weapons: wp('gn04000', 'wp04900', HAND.panther) },
+  fox_bw: { key: 'fox_bw', files: ['p5t/fox_bw.glb'], weapons: wp('gn05000', 'wp05900', HAND.fox) },
+  // 敌兵：Em0001_016 狙击火枪手（10001015/016）、Em0002_010 Grenadier（守卫 10002010；无枪 clip / 无 Dead）、Em0003_010 Drummer（伴奏者 10003010）
+  em0001_016: { key: 'em0001_016', files: ['p5t/em0001_016.glb'] },
+  em0002_010: { key: 'em0002_010', files: ['p5t/em0002_010.glb'] },
+  em0003_010: { key: 'em0003_010', files: ['p5t/em0003_010.glb'] },
   // Em0001_110 = 火枪手（unit_10001110 用 T_Em0001_010 贴图，与关卡里 10001010 系火枪手同一外观；枪在模型里）
   em0001_110: { key: 'em0001_110', files: ['p5t/em0001_110.glb'] },
   // Em0001_610 = 暴徒（unitdatabase 10001610 系「暴徒」，玛丽王国 L01–L10 没有登场；接好待用）

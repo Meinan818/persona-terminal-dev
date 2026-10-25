@@ -149,7 +149,9 @@ button.small.on { background: #e60012; }
 #actions .triple::before { content: none; }
 
 /* 召唤切入（Hark 演出） */
-#summon { position: absolute; inset: 0; z-index: 9; pointer-events: none; overflow: hidden; background: radial-gradient(ellipse at 30% 60%, #001a4dcc 0%, #000c 60%); animation: sumFade .95s linear both; }
+#summon { position: absolute; inset: 0; z-index: 9; pointer-events: none; overflow: hidden; animation: sumFade .95s linear both; } /* 暗幕在 3D 里（SummonDim，只压背景） */
+#summon.l .strip { right: auto; left: -6%; padding: 6px 60px 8px 15%; text-align: left; transform: rotate(-7deg) translateX(-110%); }
+#summon.l .sk { right: auto; left: 6%; }
 #summon .flame { position: absolute; left: 8%; bottom: -10%; width: 44%; height: 120%; background:
   radial-gradient(ellipse 30% 40% at 50% 80%, #bff4ff 0%, #3ac8ff 25%, transparent 60%),
   radial-gradient(ellipse 22% 55% at 35% 70%, #2a8cff 0%, transparent 70%),

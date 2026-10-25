@@ -23,18 +23,29 @@ import { preloadJoker, makeJoker, jokerReady } from './view/jokerModel';
 import type { UnitRig } from './view/chibiRig';
 import { RUN_MS_PER_TILE } from './view/chibiRig';
 import { makeSkull, makeMona, makeShadow } from './view/partyModels';
-import { preloadChar, makeChar } from './view/p5tChar';
+import { preloadChar, makeChar, charReady, SPECS } from './view/p5tChar';
+import { SummonDim, skillHit, CASTER_LAYER } from './view/skillFx';
 // 角色模型：全部优先 P5T 正版模型 + 原版动作（p5tChar.ts；私用 GLB 不入库，缺文件时 → 程序化 chibiRig 回退，加载完成后就地替换）。
 // Joker 另有社区模型回退（jokerModel.ts）。敌兵：火枪手系（shooter / teleporter）= Em0001_110；被洗脑的 Skull = Skull 模型；Marie = Em0501；
 // 守卫（Grenadier）/伴奏者（Drummer）等原版模型（Em0002/Em0003…）还没提取 → 程序化回退（已列入 HARK-TO-CODEX 请求）。
 const rigs = new Map<string, UnitRig>();
-const wantsRig = (u: Unit) => !u.decoy && !u.prop && (u.side === 'enemy' || (u.side === 'ally' && (u.id === 'joker' || u.id === 'skull' || u.id === 'mona')));
-/** 单位 → 正版角色 key（null = 没有对应原版模型） */
+const wantsRig = (u: Unit) => !u.decoy && !u.prop && (u.side === 'enemy' || (u.side === 'ally' && (u.id === 'joker' || u.id in SPECS)));
+/**
+ * 单位 → 正版角色 key（null = 没有对应原版模型）。敌兵按关卡里原版单位名/职能对到原版模型：
+ *   Musketeer 火枪手 10001xxx → Em0001_110（狙击 10001015 → Em0001_016）；Grenadier 10002xxx → Em0002_010；Drummer 10003xxx → Em0003_010；
+ *   举止异常的 SKULL/FOX/PANTHER（2052/2054、5054、4054）→ Skull PC0002_151 / 被洗脑 PC0005_053 / PC0004_053（053 是导出到的洗脑款，054 未单独导出）。
+ *   本作自编关卡里的「盾兵/护卫 Grenadier」也用 Em0002_010（原版盾兵外观未导出）。
+ */
 function p5tKeyFor(u: Unit): string | null {
-  if (u.side === 'ally') return u.id === 'joker' ? null : u.id;
+  if (u.side === 'ally') return u.id === 'joker' ? null : u.id in SPECS ? u.id : null;
   if (/Marie/.test(u.name) || u.id === 'boss' && /玛丽|Marie/.test(u.name)) return 'marie';
+  if (/FOX|Fox/.test(u.name)) return 'fox_bw';
+  if (/PANTHER|Panther/.test(u.name)) return 'panther_bw';
   if (/龙司|SKULL|Skull/.test(u.name)) return 'skull';
+  if (/狙击|Sniper/.test(u.name)) return 'em0001_016';
+  if (/Drummer|鼓手|伴奏/.test(u.name) || u.role === 'supporter') return 'em0003_010';
   if (u.role === 'shooter' || u.role === 'teleporter' || /Musketeer|火枪手/.test(u.name)) return 'em0001_110';
+  if (/Grenadier|守卫|看守|侍卫|护卫/.test(u.name) || u.role === 'revenger' || u.role === 'brute' || u.role === 'shielder' || u.role === 'launcher') return 'em0002_010';
   return null;
 }
 function makeRigFor(u: Unit): UnitRig | null {
@@ -44,10 +55,15 @@ function makeRigFor(u: Unit): UnitRig | null {
   const real = k ? makeChar(k) : null;
   if (real) return real;
   if (u.side === 'enemy') return makeShadow(u.role);
-  return u.id === 'skull' ? makeSkull() : makeMona();
+  return u.id === 'skull' ? makeSkull() : u.id === 'mona' ? makeMona() : null;
 }
 void preloadJoker().then((ok) => { if (ok && battle) swapInRigs(); });
-for (const k of ['skull', 'mona', 'em0001_110', 'marie']) void preloadChar(k).then((ok) => { if (ok && battle) swapInRigs(k); });
+/** 只加载当前战斗用得到的正版模型（全部 13 个约 140MB，不一次性拉） */
+function ensureChars() {
+  const keys = new Set<string>();
+  for (const u of battle.units) { const k = wantsRig(u) ? p5tKeyFor(u) : null; if (k) keys.add(k); }
+  for (const k of keys) void preloadChar(k).then((ok) => { if (ok && battle) swapInRigs(k); });
+}
 /** 正版模型加载完：把还是占位/程序化的单位就地换掉（key 给定时只换该角色） */
 function swapInRigs(key?: string) {
   for (const u of battle.units) {
@@ -137,6 +153,7 @@ function build() {
   scene.add(world);
   world.add(overlay);
   unitMesh.clear(); rigs.clear();
+  ensureChars();
   tileMeshes.length = 0;
   $('#labels').innerHTML = '';
   labelEl.clear();
@@ -212,7 +229,7 @@ function addUnitMesh(u: Unit) {
     } else {
       makeSpeaker(g);
     }
-  } else if (wantsRig(u) && (u.id !== 'joker' || jokerReady())) {
+  } else if (wantsRig(u) && (u.id !== 'joker' || jokerReady()) && (u.side === 'enemy' || u.id === 'joker' || u.id === 'skull' || u.id === 'mona' || charReady(u.id))) {
     // 实体模型分支在 traverse 之后挂（见下）
   } else if (u.side === 'ally') {
     const mat = std(u.decoy ? 0x9fd0ff : COLORS[u.id] ?? 0xffffff, { roughness: 0.5, transparent: !!u.decoy, opacity: u.decoy ? 0.55 : 1 });
@@ -665,11 +682,19 @@ async function summonCutIn(unitId: string, skillId: string) {
   const sk = (SKILLS as Record<string, SkillDef>)[skillId] ?? (UNIQUES as Record<string, SkillDef>)[skillId];
   const el = $('#summon');
   const shards = Array.from({ length: 9 }, (_, i) => `<i class="sh" style="--a:${i * 40 + 10}deg;--d:${60 + (i % 3) * 30}px"></i>`).join('');
-  el.innerHTML = `<div class="flame"></div><div class="mask">${shards}</div><div class="strip"><div class="who">${u.name}</div><div class="per">${PERSONA_NAME[u.id] ?? 'PERSONA'}!</div></div><div class="sk">${sk?.name ?? skillId}</div>`;
-  el.classList.remove('hidden'); el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
-  await sleep(950 / SPEED);
+  // 10-26 r6：暗屏改在 3D 里「只压背景」（SummonDim 三遍渲染，施法者画在暗幕之上）；蓝焰在施法者身后；面具碎片对准施法者头部；
+  //   文字条放到施法者对侧，不盖住 Skill 动作
+  const g = unitMesh.get(unitId);
+  const ms = 950 / SPEED;
+  if (g) { scene.traverse((o) => { if ((o as THREE.Light).isLight) o.layers.enable(CASTER_LAYER); }); sdim.start(g, ms); }
+  const sp = sdim.screenOf(viewCam, (rigs.get(unitId)?.height ?? 1.1) * 0.85) ?? { x: 0.3, y: 0.46 };
+  el.innerHTML = `<div class="mask" style="left:${(sp.x * 100).toFixed(1)}%;top:${(sp.y * 100).toFixed(1)}%">${shards}</div><div class="strip"><div class="who">${u.name}</div><div class="per">${PERSONA_NAME[u.id] ?? 'PERSONA'}!</div></div><div class="sk">${sk?.name ?? skillId}</div>`;
+  el.classList.toggle('l', sp.x > 0.5);
+  el.classList.remove('hidden'); el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; el.style.animationDuration = `${ms}ms`;
+  await sleep(ms);
   el.classList.add('hidden');
 }
+const sdim = new SummonDim();
 
 function banner(text: string, yellow = false) {
   const b = $('#banner');
@@ -712,6 +737,8 @@ const walkMs = (id: string) => (rigs.get(id)?.msPerTile ?? RUN_MS_PER_TILE) / SP
 /** 等单位当前单次动作（攻击/受击）播完再继续；快进（敌方回合点屏 / speed>1）时封顶更短 */
 const settleRig = (id: string | null | undefined, max = 2500) => { const r = id ? rigs.get(id) : undefined; return r?.settle ? r.settle(efast() ? Math.min(max, 400) : max) : Promise.resolve(); };
 let lastAttacker: string | null = null;
+/** 当前攻击是技能时的技能 id（受击时在目标身上播技能命中特效） */
+let lastSkill: string | null = null;
 async function tweenPath(id: string, path: Vec[], msPerTile = 90, arc = 0) {
   const g = unitMesh.get(id);
   if (!g) return;
@@ -750,7 +777,47 @@ function flash(at: Vec, radius: number) {
 
 let aimActive = false;
 let aimAnim: { t0: number; dur: number; from: THREE.Vector3; to: THREE.Vector3; look: THREE.Vector3; fov0: number; fov1: number } | null = null;
-/** 过肩瞄准：射手右肩后上方 → 目标胸口；450ms 推近 + FOV 收窄，叠准星/黑边（P5T 枪击机位） */
+/**
+ * 过肩机位（10-26 r6：我方/敌方同一算法）：按射手当前姿势的实际包围盒（含帽子、手里的枪）求机位，
+ * 先试右肩、再试左肩，侧移/后退逐级加大，直到「机位 → 目标胸口」视线不穿过射手自身模型；Joker 身高下与原机位一致（后 1.05、侧 0.5、高 1.05）。
+ */
+function shoulderCam(attackerId: string, ap: THREE.Vector3, dir: THREE.Vector3, look: THREE.Vector3) {
+  const right = new THREE.Vector3(-dir.z, 0, dir.x);
+  const g = unitMesh.get(attackerId);
+  const h = rigs.get(attackerId)?.height ?? 1.1;
+  const box = new THREE.Box3();
+  if (g) {
+    g.updateMatrixWorld(true);
+    g.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || !m.visible || o.userData.outline || o.name === 'rigHit') return;
+      const sm = m as THREE.SkinnedMesh;
+      if (sm.isSkinnedMesh) { sm.computeBoundingBox(); const b = sm.boundingBox!.clone().applyMatrix4(sm.matrixWorld); box.union(b); }
+      else box.expandByObject(m);
+    });
+  }
+  if (box.isEmpty()) box.setFromCenterAndSize(ap.clone().add(new THREE.Vector3(0, h / 2, 0)), new THREE.Vector3(0.6, h, 0.6));
+  box.expandByScalar(0.04);
+  const hs = Math.max(0.8, Math.min(1.6, box.max.y - ap.y)) / 1.1; // 机位高度跟射手实际高度（含帽子）
+  const half = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) / 2;
+  const ray = new THREE.Ray();
+  const clear = (c: THREE.Vector3) => {
+    if (box.containsPoint(c)) return false;
+    ray.origin.copy(c); ray.direction.copy(look).sub(c).normalize();
+    const hit = ray.intersectBox(box, new THREE.Vector3());
+    return !hit || hit.distanceTo(c) > look.distanceTo(c);
+  };
+  let to: THREE.Vector3 | null = null, side = 1, back = 1.05, lat = 0.5;
+  outer: for (const extra of [0, 0.15, 0.3, 0.45, 0.65]) for (const sd of [1, -1]) {
+    const b = Math.max(1.05, half + 0.55) + extra * 0.6, l = Math.max(0.5, half * 0.9) + extra;
+    const c = ap.clone().addScaledVector(dir, -b).addScaledVector(right, sd * l).add(new THREE.Vector3(0, 1.05 * hs, 0));
+    if (clear(c)) { to = c; side = sd; back = b; lat = l; break outer; }
+  }
+  if (!to) to = ap.clone().addScaledVector(dir, -back).addScaledVector(right, lat).add(new THREE.Vector3(0, 1.05 * hs + 0.4, 0));
+  const from = ap.clone().addScaledVector(dir, -back * 2).addScaledVector(right, side * (lat + 0.35)).add(new THREE.Vector3(0, 1.55 * hs, 0));
+  return { from, to };
+}
+/** 过肩瞄准：射手肩后上方 → 目标胸口；450ms 推近 + FOV 收窄，叠准星/黑边（P5T 枪击机位） */
 async function aimShot(attackerId: string, targetId: string, reticle = true) {
   const SPEED = aimSpeed(); // 敌方回合点屏快进时整体加速
   const a = unitMesh.get(attackerId), t = unitMesh.get(targetId);
@@ -759,10 +826,8 @@ async function aimShot(attackerId: string, targetId: string, reticle = true) {
   const dir = tp.clone().sub(ap); dir.y = 0;
   if (dir.lengthSq() < 1e-4) return;
   dir.normalize();
-  const right = new THREE.Vector3(-dir.z, 0, dir.x);
   const look = tp.clone().add(new THREE.Vector3(0, 0.55, 0));
-  const from = ap.clone().addScaledVector(dir, -2.1).addScaledVector(right, 0.85).add(new THREE.Vector3(0, 1.55, 0));
-  const to = ap.clone().addScaledVector(dir, -1.05).addScaledVector(right, 0.5).add(new THREE.Vector3(0, 1.05, 0));
+  const { from, to } = shoulderCam(attackerId, ap, dir, look);
   const el = canvas;
   aimCam.aspect = el.clientWidth / Math.max(1, el.clientHeight);
   aimCam.position.copy(from); aimCam.lookAt(look); aimCam.fov = 50; aimCam.updateProjectionMatrix();
@@ -887,6 +952,7 @@ async function play(events: BattleEvent[]) {
         const foeAtk = vPhase === 'enemy' && isFoe(e.attackerId);
         if (foeAtk) await enemyActorIntro(e.attackerId);
         lastAttacker = e.attackerId;
+        lastSkill = (e.kind === 'skill' || e.kind === 'unique') && e.skillId ? e.skillId : null;
         { const tg = unitMesh.get(e.targetId); const ar = rigs.get(e.attackerId); if (tg && ar) ar.aim(tg.position, e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'gun', 2400 / SPEED); const tr = rigs.get(e.targetId); const ag = unitMesh.get(e.attackerId); if (tr && ag) tr.faceTo(ag.position); }
         if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
         if (e.kind === 'gun' && !params.has('noaim')) await aimShot(e.attackerId, e.targetId);
@@ -896,6 +962,7 @@ async function play(events: BattleEvent[]) {
       case 'damage':
         // 攻击动作（GunStart→GunFire / Attack / Skill*）播完才结算受击，受击 Damage 播完才往下走（原版 clip 没导出动画事件点 → 以 clip 结束为准）
         if (e.source !== 'triple') await settleRig(lastAttacker, 2600);
+        if (lastSkill && e.source !== 'triple') { const tg = unitMesh.get(e.unitId); if (tg) void skillHit(world, tg.position.clone(), lastSkill, rigs.get(e.unitId)?.height ?? 1.1, SPEED); }
         rigs.get(e.unitId)?.flinch(); popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED);
         await settleRig(e.unitId, 1800);
         await endAim(vPhase === 'enemy' && !efast() ? 420 : 260); break;
@@ -1245,7 +1312,7 @@ function loop() {
   const t = performance.now() / 1000;
   sceneKit.update(rig.cur.yaw, t);
   for (const u of battle.units) if (u.prop === 'flag' || u.prop === 'speaker') { const g = unitMesh.get(u.id); if (g) (u.prop === 'flag' ? waveFlag : pulseSpeaker)(g, t); }
-  renderer.render(scene, viewCam);
+  sdim.render(renderer, scene, viewCam as THREE.PerspectiveCamera);
   refreshLabels();
   requestAnimationFrame(loop);
 }
@@ -1266,6 +1333,7 @@ window.__p5t = {
   unitMesh,
   camera,
   get jokerModel() { return rigs.size > 0; },
+  chars: { preloadChar, makeChar },
   /** 截图用特写机位：从单位前方 ang 弧度方向、距离 dist 看它（null 还原俯视） */
   portrait(id: string | null, ang = 0, dist = 2.2, h = 0.9) {
     if (!id) { viewCam = camera; return; }
@@ -1282,6 +1350,9 @@ window.__p5t = {
   fx: {
     oneMore: (id = 'joker') => oneMoreFx(battle.unit(id)),
     pop: (id: string, text: string) => popDamage(id, text),
+    skillHit: (id: string, skill = 'eiha', speed = SPEED) => { const g = unitMesh.get(id); return g ? skillHit(world, g.position.clone(), skill, rigs.get(id)?.height ?? 1.1, speed) : null; },
+    aimShot: (a: string, t: string, ret = true) => aimShot(a, t, ret),
+    endAim: (ms = 0) => endAim(ms),
   },
   setMode(m: Mode) { mode = m; refreshAll(); },
   setSkill(id: string) { mode = 'skill'; skillId = id; refreshAll(); },

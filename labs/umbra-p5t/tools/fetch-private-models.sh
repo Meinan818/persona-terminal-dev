@@ -25,6 +25,8 @@ bash tools/fetch-p5t-hud.sh
 # ---- P5T 正版 batch-02（Codex 提取，umbra-assets/p5t/1_battle/batch-02）：Skull / Mona / Em0001 敌兵 / Marie / Joker 20 动作 + 正版枪刀 ----
 # 每个角色：GLB → public/models/private/p5t/<key>.glb；GLB 内嵌 BaseMap 对应的 ShadeMap（GLB 不含）→ p5t/<key>/ + shade.json（BaseMap 名 → ShadeMap 文件）
 B2="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_battle/batch-02"
+# batch-03（10-26）：Panther/Fox/Queen/Erina、被洗脑 Panther/Fox、Em0001_016 狙击、Em0002_010 Grenadier、Em0003_010 Drummer、
+#   Marie 正式 000 贴图修正版、Skull/Mona/Panther/Fox 枪+近战武器（路径以 ../batch-03/ 开头）
 python3 - "$B2" "$DST/p5t" <<'PY'
 import json, os, re, shutil, struct, sys
 src, dst = sys.argv[1], sys.argv[2]
@@ -38,6 +40,25 @@ CH = {  # key: (GLB 相对路径, 贴图目录)
   'marie': ('Marie/Marie_Em0501_010_battle.glb', 'Marie/textures'),
   'wp_gn01000': ('JokerAddendum/weapons/Joker_Gn01000.glb', None),
   'wp_wp01900': ('JokerAddendum/weapons/Joker_Wp01900.glb', None),
+  # ---- batch-03 ----
+  'marie': ('../batch-03/marie_corrected/Marie_Em0501_010_corrected_battle.glb', '../batch-03/marie_corrected/textures'),
+  'panther': ('../batch-03/characters/Panther/Panther_PC0004_151_battle.glb', '../batch-03/characters/Panther/textures'),
+  'fox': ('../batch-03/characters/Fox/Fox_PC0005_151_battle.glb', '../batch-03/characters/Fox/textures'),
+  'queen': ('../batch-03/party/Queen/Queen_PC0006_151_battle.glb', '../batch-03/party/Queen/textures'),
+  'erina': ('../batch-03/party/Erina/Erina_PC0011_000_battle.glb', '../batch-03/party/Erina/textures'),
+  'panther_bw': ('../batch-03/enemies/PantherBrainwashed/PantherBrainwashed_PC0004_053_battle.glb', '../batch-03/enemies/PantherBrainwashed/textures'),
+  'fox_bw': ('../batch-03/enemies/FoxBrainwashed/FoxBrainwashed_PC0005_053_battle.glb', '../batch-03/enemies/FoxBrainwashed/textures'),
+  'em0001_016': ('../batch-03/enemies/Em0001_016/Em0001_016_battle.glb', '../batch-03/enemies/Em0001_016/textures'),
+  'em0002_010': ('../batch-03/enemies/Em0002_010/Em0002_010_battle.glb', '../batch-03/enemies/Em0002_010/textures'),
+  'em0003_010': ('../batch-03/enemies/Em0003_010/Em0003_010_battle.glb', '../batch-03/enemies/Em0003_010/textures'),
+  'wp_gn02000': ('../batch-03/weapons/Skull/Gn02000.glb', None),
+  'wp_wp02900': ('../batch-03/weapons/Skull/Wp02900.glb', None),
+  'wp_gn03000': ('../batch-03/weapons/Mona/Gn03000.glb', None),
+  'wp_wp03900': ('../batch-03/weapons/Mona/Wp03900.glb', None),
+  'wp_gn05000': ('../batch-03/weapons/Panther/Panther_Gn05000.glb', None),
+  'wp_wp05900': ('../batch-03/weapons/Panther/Panther_Wp05900.glb', None),
+  'wp_gn04000': ('../batch-03/characters/Fox/weapons/Fox_Gn04000.glb', None),
+  'wp_wp04900': ('../batch-03/characters/Fox/weapons/Fox_Wp04900.glb', None),
 }
 strip = lambda n: re.sub(r'__-?\d+(?=\.png$)', '', re.sub(r'^[0-9a-f]{12}__', '', n))
 for key, (glb, tex) in CH.items():
@@ -56,6 +77,7 @@ for key, (glb, tex) in CH.items():
             if col in files:
                 shutil.copyfile(os.path.join(src, tex, files[col]), os.path.join(od, col)); rt[name] = col; name = col
         want = re.sub(r'Base[Mm]ap', 'ShadeMap', name)
+        if want not in files and want.replace('_High', '') in files: want = want.replace('_High', '')
         if want == name or want not in files: continue
         shutil.copyfile(os.path.join(src, tex, files[want]), os.path.join(od, want)); m[im.get('name')] = want
     json.dump(m, open(os.path.join(od, 'shade.json'), 'w'), indent=1); print(f'     {key}: {len(m)} ShadeMap')

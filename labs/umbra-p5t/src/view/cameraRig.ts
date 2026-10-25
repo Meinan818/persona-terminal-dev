@@ -61,10 +61,13 @@ export class CameraRig {
     const upY = this.axes(this.cur.yaw).up.y;
     const px = Math.min(58, Math.max(40, pxH * 0.078));
     this.defZoom = Math.max(1, (px * 2 * f.halfH) / (1.1 * upY * pxH));
-    // 最大倍率：竖直方向约看见 7 格；至少 1.8 倍，且比默认近景再近一档
-    this.zMax = Math.max(1.8, f.halfH / 3.2, this.defZoom * 1.45);
+    // 最大倍率（10-26 r6）：照 P5T 近景机位，1.1 格高的角色约 pxH × 0.19 像素（720 高 ≈ 137px，手机 390 高 ≈ 74px）；
+    // 中间加一档「中近景」（≈ 90px@720）
+    const zClose = (Math.max(70, pxH * 0.19) * 2 * f.halfH) / (1.1 * upY * pxH);
+    this.zMax = Math.max(1.8, f.halfH / 3.2, this.defZoom * 1.45, zClose);
     const mid = Math.sqrt(this.defZoom);
-    this.levels = [...new Set([1, mid, this.defZoom, this.zMax].map((z) => +z.toFixed(3)))].sort((a, b) => a - b);
+    const near = Math.sqrt(this.defZoom * this.zMax);
+    this.levels = [...new Set([1, mid, this.defZoom, near, this.zMax].map((z) => +z.toFixed(3)))].sort((a, b) => a - b);
     if (!keepView) {
       this.step = 0;
       this.cur = { ox: f.cx, oy: f.cy, zoom: this.defZoom, yaw: BASE_YAW };

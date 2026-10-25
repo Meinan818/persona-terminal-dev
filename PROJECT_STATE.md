@@ -2,6 +2,20 @@
 
 最后更新：2026-10-25（AI 全量收口：四主题每日占卜、结识同伴、星象匹配、窥探命运、总结追问、一句话记账、拍小票、记录分析、心相结算及共用称号/名称/人格/组织/委托/通知/谏言/互动/星移全部改走真实模型链路，隔离探针 37 项通过）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前接手入口 · 2026-10-25 · 三项用户遗留全清：红排版加号归位、委托角标接真数据、塔罗粉色大阿卡纳补齐
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，本轮接手 HEAD `736113a`。本轮两个代码提交：`208c556`（`fix(red): pin task FAB to viewport and show real quest count`）与 `18a610d`（`test(assets): verify every tarot and season art file over HTTP and on screen`）。未 Push、未部署、未接真实账号/组织数据、未调用收费模型。
+- **本轮起因**：用户装上一轮 `ai-wire` 包后反馈三个遗留项：① 红色任务页"添加新任务"的星星加号不固定、反而贴在任务/归档区上；② 委托那个"2项/2"是假数据；③ 塔罗旧素材消失、岁时卡有的主题有有的没有。用户随后明确"全部解决，我只要成品"，故三项一并做完并打包。
+- **加号不固定的根因与修复**：根因不在加号自身。`src/p5r-red/screens/pkg4/pkg4.css` 给 `.act-panel` 常驻 `will-change: transform`，而 `will-change: transform` 会让该元素成为**固定定位的包含块**——`Actions.p5r.tsx` 把整个任务面板（含 `.fab5`）包在 `.act-panel` 里，于是 `position: fixed` 的加号锚在面板上而非视口，面板内容滚到哪它跟到哪，最后压住「已归档」区块。实测修前加号落在 y=1293–1369，归档块在 1183–1473，纵向重叠 59px、横向 76px。修法：`will-change` 改为只在横移动画那一帧挂（`Actions.p5r.tsx` 挂 `data-p4-anim`，`anim.finished` 后撤掉），加号回到视口锚定 y=664–740，底边 740 < 导航栏顶 762，不再压任何内容。动画走 Web Animations API，不需要常驻 will-change。
+- **委托角标假数据的根因与修复**：角标读 `src/p5r-red/mock/data.ts` 写死的 `quests: { claimable: 2 }`，与真实 `db.quests` 无关——用户一张可领没有时也显示 2。修复：`d4.ts` 新增 `syncQuestBadge()`，读本周 `db.quests` 真实未领取张数写回同一字段；`todos4.ts` 的 `todosMount` 里刷新角标文字与 `aria-label`。对账证据：库里塞 3 张、已领 1 张时角标显示 2；空档案显示 0，均与真实数一致。
+- **塔罗/岁时卡素材的根因与修复**：`public/tarot/` 被 `.gitignore:112` **有意隔离**（上游美术，不进公开仓库），所以塔罗素材天生不随 git 走——换工作树或重新克隆就"消失"。核对发现 `public/tarot/pink` 只有 56 张小阿卡纳，**22 张大阿卡纳整批缺失**；git 全历史里 pink 从头到尾只有 56 个文件，说明那 22 张从未入库（提交 `90bdc93` 的消息提到"22 张"但 git 里没有对应文件）。主仓 `E:\MASKARIA\public\tarot/pink` 有齐全 78 张，按 SHA-256 逐张比对后补入本工作树，未动已有 56 张。岁时卡四套各 44 张本就齐全，不是缺陷。**注意：补齐文件因 gitignore 不入库，只在本机与构建产物生效；换机器/重新克隆需从主仓再补。**
+- **素材全量核对（补上原有测试的缺口）**：`tarotArt.test.ts` / `seasonArt.test.ts` 原先只验 URL 字符串映射，证不了文件在不在、请求通不通、页面显不显示。新增 `scripts/verify-art-http.mjs`，证据 `outputs/art-http-20261025-v6/report.json`（`ok=true`）：塔罗四套各 78 张 + 岁时卡四套各 44 张共 **488 张逐张真实 GET，全部 HTTP 200、`Content-Type: image/webp`、字节数正常，异常 0**；四主题各取样 11 张（含补齐的 `fool`/`star`/`world`）在页面里 `Image.decode()` 全部解出真实像素，失败 0；四主题 pageerror 0、资源请求失败 0。
+- **既有回归未破坏**：`tsc --noEmit` exit0；全量 Vitest **72 文件 / 437 项通过**；`VITE_API_URL=http://150.158.174.9 npm run build` exit0；`verify-release` 通过；`cap sync android` 通过；既有 `verify-theme-plan10-fixes.mjs` 11 项通过、`verify-theme-live-regressions.mjs` 8 项通过、红色全量路由 417 条 fail 0 / pageErrors 0 / localFailures 0。
+- **新 APK `fullfix`**：`E:\MASKARIA\outputs\maskaria-fullfix-20261025-208c556\maskaria-3.0.1-fullfix-208c556.apk`，副本 `D:\下载\互传\maskaria-3.0.1-fullfix-208c556.apk`；105,022,541 B，SHA-256 `049078D788DB85718828566A2D1A5592EF139B8CF99B0374735B4EFE5A7229AA`。包名 `com.meinan818.personaterminal`、`3.0.1 / 31`，沿用线上 2.8.2 的 Android Debug 证书，可覆盖升级。`node scripts/verify-apk-assets.mjs <apk> dist`：APK `assets/public` 2079 项，对本地 dist 2077 项**缺失 0、差异 0**，多出 2 项为 Capacitor 必需的 `cordova.js` / `cordova_plugins.js`。`dist/tarot` 四套各 78 张已在内。旧 `ai-wire` / `livefix4` 包**不含**本轮加号与角标修复，不能冒充。
+- **未验证边界**：本轮浏览器证据全部来自本地 mock 模型与隔离 IndexedDB，没有真实收费模型、真实账号、真实组织数据。加号是否还压内容、委托角标数字对不对，需用户在真机上确认。真机返回键、手机流畅度、闪屏、通知栏、麦克风、真实音频仍未实测。逆影战场按用户要求继续不纳入。
+- **继承工作区**：`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle` 两个 Gradle 行尾痕迹与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，未修改、移动、删除或提交；三项 SHA-256 仍为 `3793…43CF`、`B614…48AC`、`F332…491`。无 stash/reset/restore/checkout/clean。另注意 `scripts/p5r-red/check-copy.mjs` 在 HEAD 上本就 FAIL 45 处（红频道大量文件与 demo MANIFEST 不一致，均为既有提交所致，非本轮引入），本轮未据此扩大改动。
+- **下一步/负责人**：用户安装上述 `fullfix` 包，复验三件事：红色任务页星星加号是否浮在空白处不压归档区、委托角标数字是否与真实可领数一致、粉主题抽到大阿卡纳时是否显示真实卡面（而非程序化占位）。把具体失败页面交给接手 Codex 继续窄修。未 Push。
+
 ## 当前接手入口 · 2026-10-25 · 四主题 AI 入口全量接通（逆影战场除外）
 
 - **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`，本轮接手 HEAD `fc50e91`（上一轮代码 `d13a121`）。本轮代码提交 `f95c028`（`fix(ai): connect all four themes to the real model pipeline`）。未 Push、未部署、未打包、未接真实账号/组织数据、未调用收费模型。

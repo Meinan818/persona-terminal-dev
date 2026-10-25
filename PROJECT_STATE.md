@@ -1,6 +1,15 @@
 # MASKARIA 项目总日志
 
-最后更新：2026-10-25（AI 全量收口：四主题每日占卜、结识同伴、星象匹配、窥探命运、总结追问、一句话记账、拍小票、记录分析、心相结算及共用称号/名称/人格/组织/委托/通知/谏言/互动/星移全部改走真实模型链路，隔离探针 37 项通过）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+最后更新：2026-10-25（`codex/theme-integrate` 已 fast-forward 到本地 `main`，类型检查、72 文件 / 437 项测试、正式后端地址构建和发布产物校验均通过；随后在用户明确授权下推送 `origin/main`）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
+
+## 合并入口 · 2026-10-25 · `codex/theme-integrate` → 本地 `main`
+
+- **用户决定**：不再等真机验收，按正常流程完成合并前准备、合并和合并后验证，并明确授予本次 Push 权限。
+- **合并**：主工作树 `E:\MASKARIA` 先切到 `main`，从 `7c88082` 无冲突 fast-forward 到 `1d18b69`；随后新增 `7233859`（`chore(styles): 刷新 P4G 生成样式`）。该生成文件连续两次重建 SHA-256 均为 `49508178BE11433B04E55ACD8602150F08AC1700F70C8D330696B00B654A96E9`。
+- **唯一合并阻碍及处理**：根工作区原有未跟踪 `scripts/verify-red-parity.mjs`（8,111 B，SHA-256 `ACA6C18A9BBC1E33F670F855B6E563D06BC6C2F1ED61FDCFCD6DC05882C7F85B`）与分支同名受控文件不同，不能覆盖。已先完整移动到 `E:\MASKARIA\outputs\handoff-preserved\verify-red-parity-20261025.mjs`，移动前后哈希一致；目标分支版本随后正常检出。
+- **本轮实测**：`npm run typecheck` exit 0；`npm test` **72/72 文件、437/437 项通过**；普通 `npm run build` exit 0；`VITE_API_URL=http://150.158.174.9 npm run build` exit 0（3429 modules，PWA precache 1036 entries / 21,916.94 KiB）；`node scripts/verify-release.mjs http://150.158.174.9 dist` 输出“正式产物后端地址校验通过”。构建仍有既有 Tailwind `@import` 顺序、动态/静态混合导入、大 chunk 与 `caniuse-lite` 过期警告，本轮未扩大处理。
+- **边界**：用户明确跳过真机验收；没有部署、改线上文件、合并远端以外的分支或打新 APK。最新可用于手机的本地包仍是 `artfix-v3`，但未获真机确认。
+- **Push 回执**：本入口所在文档提交会随 `main` 推送；最终必须用 `git ls-remote --heads origin main` 核实远端 SHA 与本入口提交一致，不能只凭 `git push` 退出码认定成功。
 
 ## 接手第一入口 · 2026-10-25 · `codex/theme-integrate` 二次交接核验
 

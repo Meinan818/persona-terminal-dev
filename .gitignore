@@ -152,5 +152,6 @@ deliverables/
 outputs/*
 !outputs/battle-experience-v3/
 !outputs/battle-experience-v3/**
+deploy/staging/caddy.service.d.conf
 
 

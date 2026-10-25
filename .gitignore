@@ -141,4 +141,16 @@ site/download/*.apk
 # 主题对比截图输出
 .theme-compare/
 
+# ===== 本机运行缓存与一次性验证产物（2026-10-25）=====
+# 只影响 Git 是否展示，不删除本地内容；已跟踪文件不受 ignore 影响。
+.cache/
+.impeccable/
+.rivet-config.json
+worktrees/
+demo/
+deliverables/
+outputs/*
+!outputs/battle-experience-v3/
+!outputs/battle-experience-v3/**
+
 

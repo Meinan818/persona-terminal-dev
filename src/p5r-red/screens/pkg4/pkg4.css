@@ -11,7 +11,10 @@
 :root[data-ui-channel="p5"] .p4-tabs-slot { display: contents; }
 :root[data-ui-channel="p5"] .t-hd .act-tabs-wrap { grid-column: 1; grid-row: 2; margin-top: 10px; }
 @media (min-width: 1024px) and (orientation: landscape) { :root[data-ui-channel="p5"] .t-hd .act-tabs-wrap { grid-column: 2; grid-row: 1; margin: 0 0 10px; } }
-:root[data-ui-channel="p5"] .act-panel { will-change: transform, opacity; }
+/* will-change: transform 会让 .act-panel 成为固定定位的包含块，
+   把页面里的 .fab5（position: fixed）锚到面板而不是视口，加号会跟着内容跑、压住归档区。
+   横移动画走 Web Animations API，不需要常驻 will-change；只在这一帧加上、动画结束撤掉。 */
+:root[data-ui-channel="p5"] .act-panel[data-p4-anim] { will-change: transform, opacity; }
 
 /* ── 倒计时面（CallingCardSection） ── */
 :root[data-ui-channel="p5"] .p4-cd-h { display: inline-flex; align-items: baseline; gap: 8px; }

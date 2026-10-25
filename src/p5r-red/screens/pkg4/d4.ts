@@ -7,6 +7,7 @@
 //   · 宣告卡编辑器 openCCEditor 增加 { card, onSaved } 参数（P0-07 行动页倒计时面复用）。
 import { P5 } from './p5';
 import { thinkingCircleHTML } from '@/p5r-red/fx/thinkingCircle';
+import { D } from '@/p5r-red/mock/data';
 import { useAppStore, toLocalDateKey } from '@/store';
 import { db } from '@/db';
 import { useCloudStore } from '@/store/cloud';
@@ -641,6 +642,8 @@ export const YR: any = { show: null };
     const range = weekRangeOf(new Date());
     let rows = await db.quests.where('weekKey').equals(range.weekKey).sortBy('slot');
     if (!rows.length) { await s.refreshQuests(); rows = await db.quests.where('weekKey').equals(range.weekKey).sortBy('slot'); }
+    // 任务页「委托」角标：读本周真实未领取张数，覆盖 mock 里写死的演示值
+    D.quests.claimable = rows.filter((q) => !q.claimedAt).length;
     const [divinations, images, ledger] = await Promise.all([db.dailyDivinations.toArray(), db.activityImages.where('createdAt').aboveOrEqual(range.start).toArray(), db.ledgerEntries.toArray()]);
     const data = { activities: s.activities, todos: s.todos, completions: s.todoCompletions, summaries: s.summaries, battleState: s.battleState, pacts: useCloudSocialStore.getState().pacts, myId: useCloudStore.getState().cloudUser?.id, divinations, images, ledger, aiReady: !!getAIConfig(s.settings), now: new Date() };
     const swapped = rows.some((q) => q.swapped);
@@ -648,6 +651,14 @@ export const YR: any = { show: null };
       const progress = Math.min(questProgress(q, data, range), q.target);
       return { id: q.id, t: questTitle(q, s.settings.attributeNames), g: `+${q.rewardSp} SP`, n: q.target, cur: progress, st: q.claimedAt ? 'claimed' : progress >= q.target ? 'claim' : 'doing', swap: !q.claimedAt && progress < q.target && !swapped, tag: q.autoClaimed ? '上周替你领的' : '' };
     }));
+  }
+  /** 任务页「委托」角标：把本周真实未领取张数写进 D.quests.claimable（覆盖 mock 写死的 2） */
+  async function syncQuestBadge() {
+    const s = useAppStore.getState();
+    const range = weekRangeOf(new Date());
+    let rows = await db.quests.where('weekKey').equals(range.weekKey).sortBy('slot');
+    if (!rows.length) { await s.refreshQuests(); rows = await db.quests.where('weekKey').equals(range.weekKey).sortBy('slot'); }
+    D.quests.claimable = rows.filter((q) => !q.claimedAt).length;
   }
   function openQuestBoard(st0 = 'normal') {
     syncLifeQuests();
@@ -1357,6 +1368,8 @@ export const YR: any = { show: null };
 
 
 export const OD: any = { openDayReview, openWishBoard, openWishPanel, openWishFulfill, openWishProposal, openWishProgress, openWishMount, openRings, openWeeklySection, openGoalSetup, openCelebration, openClaimed, openBigHome, openBigPanel, openBigStep, openBigClear, openFateDraw, openQuestBoard, openReturn, openBackfill, openYearRecap, openFlipCard, openTarotFlip, openSeasonCard, openSeasonGallery, openCodex, openDailyDraw, openShuffle, openNameReveal, openThinking, openLongReading, openReadingArchive, openFateGlimpse, openCCCutIn, openCCEditor, openCCEmpty, openShareToOrg, openLedgerStats, openSettle, openAssetBoard, assetForm, openDonut,
+  /* 任务页「委托」角标：同步本周真实未领取张数，覆盖 mock 里写死的演示值 */
+  syncQuestBadge,
   tarotFace, cardBack, seasonFace, ring, arc, donut, thinking, danmaku, cutPanel, cutAnim, ttl, seg, sw, stepper, bar, chip, wire, demoBar, stateful, stage, sheet, confirm, ccLetter, MAJ, MIN, ALL, MARKS, WISHES, syncWishes, BIG, ORG, GOALS, goalLabel, weeklyCard, syncWeekly, resetWeeklyGoal, bigHome, mountPicker, growRings, growDonuts,
   /* 星象页读真实占卜数据（替代原演示常量 DRAW3 / LR_CARDS / PERIOD / dailyDone） */
   cardOf, todayDiv, archiveRows, demoRev, PERIOD_LABELS, spreadPositions, shuffleHTML, nameReveal, CAT, yen };

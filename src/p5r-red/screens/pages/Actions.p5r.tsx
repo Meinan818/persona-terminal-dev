@@ -61,7 +61,12 @@ export default function Actions(props: PageProps) {
     if (first.current) { first.current = false; return; }
     const el = panel.current; if (!el || isLowMotion()) return;
     const dx = tab === 'activities' ? -24 : 24;
-    el.animate([{ opacity: 0, transform: `translateX(${dx}px)` }, { opacity: 1, transform: 'none' }], { duration: 180, easing: 'ease-out' });
+    // 只在动画这一帧挂 data-p4-anim（CSS 据此加 will-change）。
+    // 常驻 will-change: transform 会让 .act-panel 成为固定定位包含块，
+    // 页面里的 .fab5 就不再锚在视口上，会跟着内容滚动、压住归档区。
+    el.dataset.p4Anim = '';
+    const anim = el.animate([{ opacity: 0, transform: `translateX(${dx}px)` }, { opacity: 1, transform: 'none' }], { duration: 180, easing: 'ease-out' });
+    anim.finished.then(() => { delete el.dataset.p4Anim; }).catch(() => { delete el.dataset.p4Anim; });
   }, [tab]);
   const tabs = <ActionsTabs active={tab} />;
   return (

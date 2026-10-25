@@ -130,6 +130,15 @@ export function todosRender(wide) {
 }
 
 export function todosMount(root, wide) {
+  // 「委托」角标读本周真实未领取张数，回来后重画角标（覆盖 mock 写死的演示值）
+  void OD.syncQuestBadge().then(() => {
+    if (!document.contains(root)) return;
+    const n = P5.D.quests.claimable;
+    const badge = root.querySelector('.q-badge');
+    if (badge) badge.textContent = String(n);
+    const btn = root.querySelector('.tool.quest');
+    if (btn) btn.setAttribute('aria-label', `委托板，${n} 张可领取`);
+  }).catch(() => {});
   const iv = setInterval(() => {
     const c = st.cards.find((x) => x.pinned), el = root.querySelector('.cdb-clock'); if (!el || !document.contains(el) || !c) { if (!document.contains(root)) clearInterval(iv); return; }
     const ms = new Date(c.target + 'T00:00:00') - Date.now(); const h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4), s = Math.floor(ms % 6e4 / 1e3); el.textContent = [h, m, s].map((v) => String(Math.max(0, v)).padStart(2, '0')).join(':');

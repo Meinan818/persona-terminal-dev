@@ -2,6 +2,28 @@
 
 最后更新：2026-10-25（AI 全量收口：四主题每日占卜、结识同伴、星象匹配、窥探命运、总结追问、一句话记账、拍小票、记录分析、心相结算及共用称号/名称/人格/组织/委托/通知/谏言/互动/星移全部改走真实模型链路，隔离探针 37 项通过）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 当前接手入口 · 2026-10-25 · 四主题卡面真图渲染收口（第三轮：占位图根因、粉/黄缺自动取图、红图鉴排版）
+
+- **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。本轮代码提交 `a91b51c`（`fix(themes): render real tarot and season art in every theme, not placeholders`）。未 Push、未部署、未接真实账号/组织数据、未调用收费模型。
+- **本轮起因**：用户装 `artfix-v2` 后连发多张真机截图，指出粉色羁绊/图鉴全是程序化卡面、红色图鉴里"解锁的比没解锁小、都挤在一起"、红色小阿卡纳与岁时排版乱，并强调"我的素材不是这一套""把老子素材弄哪里去了"，随后指到 `D:\桌面\P51\`（44 张岁时卡原图）。
+- **四条根因（都用几何/文件哈希坐实，不靠猜）**：
+  1. **粉主题没有大阿卡纳取图逻辑**。`themes/p3r-blue/kit/surfaces.tsx` 的 `TarotFace` 有 `majorFileOf(roman)` 自动把罗马数字转成 `assets/tarot/p3/<name>.webp`；**`themes/p3r-pink/kit/surfaces.tsx` 完全没有这段**（当年 pink 缺大阿卡纳时写的程序卡面兜底，图补齐后代码没跟着改）。所以粉色的羁绊与图鉴里 22 张大阿卡纳全走程序化卡面。
+  2. **黄主题没指向真实 P4 牌面**。`themes/p4g-yellow/screens/pkg3/ui.tsx` 的 `useArcanaSrc` 只在 `PK3_ART`（仅 8 张包内生成图）和官方插槽 `assets/p4g/official/` 里找，从没指向 `assets/tarot/p4`；`TarotFlipView.p4g.tsx` 又只给大阿卡纳接真图、小阿卡纳留生成牌面。
+  3. **红色 slots 里是占位图**。`public/slots/tarot/p5` 与 `public/slots/season/p5` 存的是 `scripts/slots/gen-slots.mjs` 生成的默认图（9–18 KB），设计上要用户手动替换；而 `public/tarot/p5`、`public/season/p5` 里才是真素材（65–115 KB）。`d4.ts` 的 `tarotFace`/`seasonFace` 直接拼 `slots/...`，所以红色一直显示占位图。
+  4. **红色图鉴卡面溢出格子**。图鉴列宽自适应（大阿卡纳 ~78px / 小阿卡纳 ~62px / 岁时 ~113px），但卡面 `<img>` 带写死 `width` 属性（100 / 84），实测溢出 23px / 38px 压到邻格；未解锁走 SVG（`width:100%`）反而正常，于是出现"解锁的比没解锁大、全挤在一起"。
+- **修复**：
+  - 粉色 `kit/surfaces.tsx` 补 `MAJOR_FILES` / `ROMAN_LIST` / `majorFileOf`，`TarotFace` 里 `const mf = !src ? majorFileOf(roman) : undefined; if (mf) src = tarotAsset(mf);`（与蓝色同口径）。
+  - 黄色 `useArcanaSrc` 改为"官方插槽优先 → 否则 `assets/tarot/p4/<id>.webp`"，`official` 恒为 true（真图自带牌名编号，不叠名牌栏）；`TarotFlipView.p4g.tsx` 大/小阿卡纳都接同一真实路径。
+  - `public/tarot/p5`（78 张）与 `public/season/p5`（44 张）整体覆盖 `public/slots/tarot/p5`、`public/slots/season/p5`，逐张 SHA-256 复核一致。
+  - `legacy/css/d.css` 只对图鉴格子加 `width: 100%`（选择器 `.od-cx > .od-tf/.od-tb`、`.od-sx > .od-sf`），不动其他页面的固定宽度用法。
+- **验证（这轮补上了"页面真的渲染出真图"的证据）**：新增 `scripts/verify-theme-card-pixels.mjs`，证据 `outputs/card-pixels-20261025-v5/report.json`（`ok=true`）。它不看 URL 字符串，而是读页面上 `<img>` 的 `naturalWidth`——真素材原图宽 560，占位图明显更小。四主题 × 羁绊/星象/图鉴 共 12 项全部 `naturalWidth=560`、宽<400 的 0 张、坏图 0 张：蓝 2/1/78、粉 2/1/78、黄 2/1/78、红 2/1/40（红图鉴未收录按设计显示卡背）。红图鉴几何复测：大阿卡纳 78→78px、小阿卡纳 62→62px、岁时 113→113px，溢出全部 0。
+- **"素材不是这一套"的结论**：`D:\桌面\P51\` 的 44 张 PNG 与 `public/season/p5/*.webp` 是同一套画风（立春黑红白整张插画），`public/tarot/p5/fool.webp` 是黑白红 P5 整张插画，`public/tarot/pink/*`、`public/tarot/p3/*`、`public/tarot/p4/*` 各是主题专属插画。用户看到"不是我的素材"，实际是 `slots/` 的生成占位图盖住了真图，真素材一直都在。P51 里 `festival_furujie`/`red_lixia` 两个名字与仓库 `festival_funvjie`/`lixia` 不同，仓库那份是对的，无需改名。
+- **既有回归未破坏**：`tsc --noEmit` exit0；全量 Vitest **72 文件 / 437 项通过**；`VITE_API_URL=http://150.158.174.9 npm run build` exit0；`verify-release` 通过；`cap sync android` 通过；`verify-apk-assets` 2277 项**缺失 0、差异 0**。
+- **新 APK `artfix-v3`**：`E:\MASKARIA\outputs\maskaria-artfix-20261025-v3\maskaria-3.0.1-artfix-v3.apk`，副本 `D:\下载\互传\maskaria-3.0.1-artfix-v3.apk`；133,663,911 B，SHA-256 `9F0AD5519FA3596EA73E244F8D2EACC9504A26FF0F0BC702C82A48A16E78D29F`。包名 `com.meinan818.personaterminal`、`3.0.1 / 31`，沿用线上 2.8.2 的 Android Debug 证书，可覆盖升级。旧 `artfix-v2` / `fullfix` / `ai-wire` / `livefix4` **不含**本轮修复，不能冒充。
+- **未验证边界**：本轮证据全部来自本地 390×844 浏览器档案与本地 mock，没有真实账号、真实组织数据、收费模型。真机上的实际字号/间距观感、以及"够不够好看"仍需用户目验；逆影战场按用户要求继续不纳入。
+- **继承工作区**：`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle` 与未跟踪 `scripts/p5r-red/_tmp-compare-local.mjs` 原样保留，未修改、移动、删除或提交；三项 SHA-256 仍为 `3793…43CF`、`B614…48AC`、`F332…491`。无 stash/reset/restore/checkout/clean。
+- **下一步/负责人**：用户安装 `artfix-v3` 复验：粉主题羁绊与图鉴的大阿卡纳是否出真插画、黄主题羁绊/图鉴小阿卡纳是否出真图、红主题图鉴大/小阿卡纳与岁时格子是否整齐不重叠。仍不满意的具体页面请截图交给接手 Codex 窄修。未 Push。
+
 ## 当前接手入口 · 2026-10-25 · 四主题卡面素材全量接通（第二轮：羁绊/占卜/图鉴不再走占位图）
 
 - **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。本轮接手 HEAD `1157bb0`。本轮代码提交 `48e12c3`（`fix(assets): wire every theme to its tarot and season art`）。未 Push、未部署、未接真实账号/组织数据、未调用收费模型。

@@ -2,6 +2,119 @@
 
 最后更新：2026-10-25（AI 全量收口：四主题每日占卜、结识同伴、星象匹配、窥探命运、总结追问、一句话记账、拍小票、记录分析、心相结算及共用称号/名称/人格/组织/委托/通知/谏言/互动/星移全部改走真实模型链路，隔离探针 37 项通过）。新窗口先读下方当前入口，再核 Git 与当前任务现场；历史章节只作追溯，不把旧“最新”标题、SHA与测试数字当现况。这里记录项目全貌、发展过程、踩坑、用户决定、真实发布去向和下一步；只进私有开发仓库，不含凭据正文和真实用户数据。
 
+## 交接第一入口 · 2026-10-25 · 四主题卡面真图 + 红任务页两缺陷 收尾
+
+> 用户已说「准备交接」，本节点之后停止业务改动，等用户明确说继续才动。
+
+### 现场
+
+- 工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。**HEAD = 本交接提交**（`docs(state): handoff entry for four-theme card art round`）；上一代码提交 `276516a`，本轮最后一个功能提交 `a91b51c`。
+- **未 Push，领先 `origin/main` 264 个提交**（本轮从接手 HEAD `736113a` 起新增 **10 个提交**，含本交接提交）。Push 须用户单独批准。
+- 工作区除三个继承项外干净；三项**未修改、未移动、未删除、未提交**，SHA-256 未变：
+  - `android/app/capacitor.build.gradle` = `3793CACCDE242E188B5CF3E89A89345E47BD35822842B502596BEDA87B6343CF`
+  - `android/capacitor.settings.gradle` = `B6146C73191366881B1BD13BB1FE5DD4D9DDA1B2CEEC4633168C2E7CB1F548AC`
+  - `scripts/p5r-red/_tmp-compare-local.mjs`（未跟踪）= `F3320337E89ADFC6168FF4078B484ACE688D26967C62D7BB92D81D7D2D159491`
+- 未做 stash / reset / restore / checkout / clean。未部署、未接真实账号/组织数据、未调用收费模型。
+- 开发服务当前在 `http://127.0.0.1:5212` 监听（pid 37144）。重启命令见文末「怎么起服务」。
+
+### 本轮 10 个提交（按时间，最早在上）
+
+| SHA | 内容 |
+|---|---|
+| `208c556` | 红色任务页：加号 FAB 回归视口锚定；委托角标改读 `db.quests` 真实未领取数 |
+| `18a610d` | 新增 `scripts/verify-art-http.mjs`（素材全量 HTTP 核对） |
+| `1157bb0` | 文档：fullfix 包与塔罗 pink 补齐记录 |
+| `48e12c3` | 新增 `scripts/verify-theme-art-wiring.mjs`；四主题 assets/ 素材路径补齐说明 |
+| `e8b9654` | 文档：artfix-v2 包记录 |
+| `13304d7` | 按用户「可以进私人仓库」把 222 个素材文件纳入版本管理 |
+| `4a5ebd1` | 文档：入库决定与跟踪清单 |
+| `a91b51c` | **核心修复**：粉缺 `majorFileOf`、黄未接真实 P4 牌面、红 slots 占位图覆盖真图、红图鉴固定 px 溢出 |
+| `276516a` | 文档：artfix-v3 包记录 |
+| 本交接提交（HEAD） | 接手第一入口：现场 / 成果 / 验证 / 待办 / 铁律 / 探针用法 |
+
+### 本轮解决的用户问题（都有截图/几何证据，非猜测）
+
+1. **红色任务页加号不固定、压在任务/归档上** — 根因是 `pkg4.css` 给 `.act-panel` 常驻 `will-change: transform`，使面板成为固定定位包含块，`.fab5` 锚在面板而非视口。改为只在横移动画那一帧挂 `data-p4-anim`。修前 y=1293–1369 压归档块（1183–1473），修后 y=664–740，底边 740 < 导航栏顶 762。
+2. **委托「2项/2」是假数据** — 角标读 `mock/data.ts` 写死 `quests.claimable=2`。新增 `d4.ts syncQuestBadge()` 读 `db.quests` 真实未领取数；实测库里 3 张已领 1 张 → 角标 2，空档案 → 0。
+3. **粉色羁绊/图鉴全是程序化卡面** — `p3r-pink/kit/surfaces.tsx` 的 `TarotFace` 缺 `majorFileOf`（蓝色有）。补上 `MAJOR_FILES`/`ROMAN_LIST`/`majorFileOf` + `tarotAsset`。
+4. **黄色羁绊只有 8 张生成图、图鉴小阿卡纳无真图** — `useArcanaSrc` 只认 `PK3_ART`（8 张）与官方插槽；改为「官方插槽 → `assets/tarot/p4/<id>.webp`」，`official` 恒 true；图鉴大/小阿卡纳都接同一路径。
+5. **红色 slots 里是占位图（用户说"把老子素材弄哪去了"）** — `public/slots/tarot/p5`、`slots/season/p5` 存的是 `gen-slots.mjs` 生成的 9–18KB 默认图，真图在 `public/tarot/p5`、`public/season/p5`（65–115KB）。用真图整体覆盖 78+44 张，逐张 SHA-256 一致。**用户素材从未丢失。**
+6. **红图鉴"解锁的比没解锁小、都挤在一起"** — 图鉴列宽自适应（大阿 ~78px / 小阿 ~62px / 岁时 ~113px），卡面 `<img>` 带写死 `width`（100/84）溢出 23/38px。`legacy/css/d.css` 只对图鉴格子加 `width:100%`。修后三方向溢出全部 0。
+7. **塔罗 pink 缺 22 张大阿卡纳** — 工作树 `public/tarot/pink` 只有 56 张；主仓 `E:\MASKARIA\public\tarot\pink` 有 78 张，按 SHA-256 核对后补入。
+
+### 验证数字（本机实跑，非历史引用）
+
+- `node node_modules/typescript/bin/tsc --noEmit` → exit 0
+- `npx vitest run` → **72 文件 / 437 项全通过**
+- `VITE_API_URL=http://150.158.174.9 npm run build` → exit 0
+- `node scripts/verify-release.mjs http://150.158.174.9 dist` → 通过
+- `node scripts/verify-art-http.mjs` → **976 张逐张 GET 全部 HTTP 200 / image/webp / 字节正常，异常 0**
+- `node scripts/verify-theme-card-pixels.mjs` → **四主题 × 羁绊/星象/图鉴 12 项，页面渲染 `<img>` 全部 naturalWidth=560，宽<400 占位图 0 张，坏图 0 张**（蓝 2/1/78、粉 2/1/78、黄 2/1/78、红 2/1/40）
+- 红图鉴几何：大阿 78→78px、小阿 62→62px、岁时 113→113px，溢出 0
+- 既有回归：`verify-theme-plan10-fixes.mjs` 11 项、`verify-theme-live-regressions.mjs` 8 项、红色全量路由 417 条 fail 0 / pageErrors 0
+- `node scripts/verify-apk-assets.mjs <apk> dist` → 2277 项**缺失 0、差异 0**
+
+### 最新产物
+
+**`artfix-v3`（本轮最终包）**
+- `E:\MASKARIA\outputs\maskaria-artfix-20261025-v3\maskaria-3.0.1-artfix-v3.apk`
+- 副本 `D:\下载\互传\maskaria-3.0.1-artfix-v3.apk`
+- 133,663,911 B，SHA-256 `9F0AD5519FA3596EA73E244F8D2EACC9504A26FF0F0BC702C82A48A16E78D29F`
+- 包名 `com.meinan818.personaterminal`、`3.0.1 / versionCode 31`，沿用线上 2.8.2 的 Android Debug 证书，可覆盖升级
+
+旧包 `artfix-v2` / `fullfix` / `ai-wire` / `livefix4` **不含本轮修复，不能冒充**。
+
+### 待办与优先级
+
+| 优先级 | 事项 | 负责人 |
+|---|---|---|
+| P0 | 用户装 `artfix-v3` 做真机目验：粉主题羁绊/图鉴大阿卡纳、黄主题羁绊/图鉴小阿卡纳、红图鉴大小阿与岁时格子是否整齐不重叠、红任务页加号与委托角标 | 用户 |
+| P1 | 用户报具体不满意页面 → 按截图窄修 | Codex |
+| P2 | 真机返回键、流畅度、闪屏、通知栏、麦克风、真实音频仍未实测 | 用户/Codex |
+| — | 逆影战场（`battleAI` / `battleAdvisorAI` / Persona 召唤 / Boss 心魔）按用户要求**不纳入**，不要自行扩大 | — |
+| — | Push 未获授权 | 用户决定 |
+
+### 动手铁律（接手必读）
+
+1. **四主题卡面走三套互不相通的路径**，补一边不代表另一边齐，必须分别核对：
+   - 蓝/粉/黄：`themes/*/lib/asset.ts` 的 `tarotAsset()`/`seasonAsset()` → `public/assets/tarot/{set}`、`public/assets/season/{set}`
+   - 红：`slots/tarot/p5`、`slots/season/p5`（`d4.ts` 的 `tarotFace`/`seasonFace` 直接拼路径）
+   - `constants/tarotArt.ts`：`public/tarot/{set}`、`public/season/{set}`
+2. **`public/tarot/` 与 `public/season/` 被 `.gitignore:112` 有意隔离**（上游美术不进公开仓库）；`public/assets/` 可入库。两边都要存在，别只补一边。
+3. **验证卡面必须看页面渲染结果**，不能只看 URL 能 200：真素材原图宽 560，占位图更小。用 `scripts/verify-theme-card-pixels.mjs` 读 `<img>.naturalWidth`。
+4. **图鉴格子宽度自适应、卡面 `<img>` 带写死 width 属性**是红色图鉴重叠的根因；改尺寸只动 `d.css` 里 `.od-cx > .od-tf/.od-tb`、`.od-sx > .od-sf` 这几条选择器，别全局改 `.od-tf`（其他页面靠固定宽度）。
+5. `scripts/p5r-red/check-copy.mjs` 在 HEAD 上**本来就 FAIL 45 处**（红频道大量文件与 demo MANIFEST 不一致，历史提交所致），不要据此回滚任何东西，也不要顺手修它。
+6. 禁止 stash / reset --hard / restore / checkout -- / clean / rm -rf / 未批准 Push。三个继承项不得触碰。
+7. 素材、UI、配色、布局变更前先拿用户明确同意；`artfix-v3` 之后没有新的授权。
+
+### 怎么起服务与跑探针
+
+```powershell
+# 起开发服务（当前已在 5212 监听；端口被占就换一个，并同步改 THEME_AUDIT_BASE）
+cd E:\MASKARIA\worktrees\theme-integrate
+Start-Process -FilePath 'E:\nodejs\node.exe' `
+  -ArgumentList 'node_modules\vite\bin\vite.js','--host','127.0.0.1','--port','5212' `
+  -WorkingDirectory 'E:\MASKARIA\worktrees\theme-integrate' -WindowStyle Hidden
+
+# 四主题卡面是否真的渲染出真图（核心证据，12 项）
+node scripts\verify-theme-card-pixels.mjs E:\MASKARIA\outputs\card-pixels-<新目录>
+
+# 素材全量 HTTP（976 张）
+node scripts\verify-art-http.mjs E:\MASKARIA\outputs\art-http-<新目录>
+
+# 按主题真实路径复验
+node scripts\verify-theme-art-wiring.mjs E:\MASKARIA\outputs\art-wiring-<新目录>
+
+# 红色视觉回归（独立浏览器像素比对；本机自带的 headless shell 会崩，脚本已改用系统 Chrome）
+node scripts\verify-red-parity.mjs E:\MASKARIA\outputs\red-parity-<新目录>
+$env:RED_PARITY_ONLY='ledger'   # 只跑某几页
+
+# 红色任务页两缺陷复核
+node scripts\verify-red-fab-quest.mjs E:\MASKARIA\outputs\red-fab-quest-<新目录>
+```
+
+拦路坑：`npx playwright install` 的 headless_shell 在本机启动即崩（exit 3221225595），所有新探针统一用 `process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe'`；`page.evaluate` 不能把 `import.meta.env.BASE_URL` 或函数引用带进页面，一律用字面量路径 + 普通对象传参。
+
 ## 当前接手入口 · 2026-10-25 · 四主题卡面真图渲染收口（第三轮：占位图根因、粉/黄缺自动取图、红图鉴排版）
 
 - **现场**：工作树 `E:\MASKARIA\worktrees\theme-integrate`，分支 `codex/theme-integrate`。本轮代码提交 `a91b51c`（`fix(themes): render real tarot and season art in every theme, not placeholders`）。未 Push、未部署、未接真实账号/组织数据、未调用收费模型。

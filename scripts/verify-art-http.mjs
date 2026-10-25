@@ -14,6 +14,10 @@ const MAJORS = ['fool','magician','high_priestess','empress','emperor','hieropha
 const SUITS = ['wands','cups','swords','pentacles'];
 const MINORS = SUITS.flatMap((s) => Array.from({ length: 14 }, (_, i) => `${s}_${i + 1}`));
 const TAROT_SETS = ['p3','p4','p5','pink'];
+// 两套路径都要查：public/tarot/{set} 给 constants/tarotArt.ts 用，
+// public/assets/tarot/{set} 给 themes/*/lib/asset.ts 的 tarotAsset() 用（历史上只补过一部分）
+const TAROT_ROOTS = ['tarot', 'assets/tarot'];
+const SEASON_ROOTS = ['season', 'assets/season'];
 const TERMS = ['xiaohan','dahan','lichun','yushui','jingzhe','chunfen','qingming','guyu','lixia','xiaoman','mangzhong','xiazhi','xiaoshu','dashu','liqiu','chushu','bailu','qiufen','hanlu','shuangjiang','lidong','xiaoxue','daxue','dongzhi'];
 const FESTIVALS = ['yuandan','qingrenjie','funvjie','laodongjie','qingnianjie','ertongjie','jiaoshijie','guoqingjie','wanshengye','shuangshiyi','pinganye','shengdanjie','kuanianye','chuxi','chunjie','yuanxiao','duanwu','qixi','zhongqiu','chongyang'].map((f) => `festival_${f}`);
 
@@ -46,25 +50,29 @@ async function probeUrl(url) {
 
 for (const set of TAROT_SETS) {
   const ids = [...MAJORS, ...MINORS];
-  const results = [];
-  for (const id of ids) {
-    results.push({ id, ...(await probeUrl(`${base}/tarot/${set}/${id}.webp`)) });
+  for (const root of TAROT_ROOTS) {
+    const results = [];
+    for (const id of ids) {
+      results.push({ id, ...(await probeUrl(`${base}/${root}/${set}/${id}.webp`)) });
+    }
+    report.http[`${root}/${set}`] = results;
+    const bad = results.filter((r) => r.status !== 200 || r.bytes < 1000 || !/image\//.test(r.type));
+    report.checks.push(`${root}/${set}: ${results.length} 张全部 HTTP 200 且是图片，异常 ${bad.length}`);
+    if (bad.length) report.failures.push(`${root}/${set} 异常 ${bad.length} 张: ${bad.slice(0, 8).map((b) => `${b.id}@${b.status}`).join(',')}`);
   }
-  report.http[`tarot/${set}`] = results;
-  const bad = results.filter((r) => r.status !== 200 || r.bytes < 1000 || !/image\//.test(r.type));
-  report.checks.push(`tarot/${set}: ${results.length} 张全部 HTTP 200 且是图片，异常 ${bad.length}`);
-  if (bad.length) report.failures.push(`tarot/${set} 异常 ${bad.length} 张: ${bad.slice(0, 8).map((b) => `${b.id}@${b.status}`).join(',')}`);
 }
 for (const set of TAROT_SETS) {
   const slugs = [...TERMS, ...FESTIVALS];
-  const results = [];
-  for (const slug of slugs) {
-    results.push({ id: slug, ...(await probeUrl(`${base}/season/${set}/${slug}.webp`)) });
+  for (const root of SEASON_ROOTS) {
+    const results = [];
+    for (const slug of slugs) {
+      results.push({ id: slug, ...(await probeUrl(`${base}/${root}/${set}/${slug}.webp`)) });
+    }
+    report.http[`${root}/${set}`] = results;
+    const bad = results.filter((r) => r.status !== 200 || r.bytes < 1000 || !/image\//.test(r.type));
+    report.checks.push(`${root}/${set}: ${results.length} 张全部 HTTP 200 且是图片，异常 ${bad.length}`);
+    if (bad.length) report.failures.push(`${root}/${set} 异常 ${bad.length} 张: ${bad.slice(0, 8).map((b) => `${b.id}@${b.status}`).join(',')}`);
   }
-  report.http[`season/${set}`] = results;
-  const bad = results.filter((r) => r.status !== 200 || r.bytes < 1000 || !/image\//.test(r.type));
-  report.checks.push(`season/${set}: ${results.length} 张全部 HTTP 200 且是图片，异常 ${bad.length}`);
-  if (bad.length) report.failures.push(`season/${set} 异常 ${bad.length} 张: ${bad.slice(0, 8).map((b) => `${b.id}@${b.status}`).join(',')}`);
 }
 
 // 2 · 四主题真实页面：按当前主题算出的卡面 URL 必须真的解码出像素
@@ -88,10 +96,15 @@ for (const theme of THEMES) {
   }, theme.id).catch(() => {});
   await tpage.waitForTimeout(2500);
 
-  // 卡面套按主题直接算（与 constants/tarotArt.ts 的 tarotSetOf 同口径）；函数不能带进页面
-  const SET_OF_THEME = { blue: 'p3', pink: 'pink', yellow: 'p4', red: 'p5' };
-  const set = SET_OF_THEME[theme.id];
-  const probe = await tpage.evaluate(async (set) => {
+  // 每个主题真实读取卡面的路径：红主题走 slots/ 素材槽，蓝粉黄走 assets/（函数不能带进页面）
+  const ART_OF_THEME = {
+    blue: { tarot: 'assets/tarot/p3', season: 'assets/season/p3' },
+    pink: { tarot: 'assets/tarot/pink', season: 'assets/season/pink' },
+    yellow: { tarot: 'assets/tarot/p4', season: 'assets/season/p4' },
+    red: { tarot: 'slots/tarot/p5', season: 'slots/season/p5' },
+  };
+  const art = ART_OF_THEME[theme.id];
+  const probe = await tpage.evaluate(async (art) => {
     const load = async (u) => {
       const i = new Image();
       i.src = u;
@@ -99,15 +112,15 @@ for (const theme of THEMES) {
       catch { return { url: u, w: 0, h: 0 }; }
     };
     const tarot = [];
-    for (const id of ['fool','star','world','wands_1','cups_14','swords_7','pentacles_10']) tarot.push(await load(`/tarot/${set}/${id}.webp`));
+    for (const id of ['fool','star','world','wands_1','cups_14','swords_7','pentacles_10']) tarot.push(await load(`/${art.tarot}/${id}.webp`));
     const season = [];
-    for (const slug of ['lichun','xiazhi','festival_zhongqiu','dongzhi']) season.push(await load(`/season/${set}/${slug}.webp`));
+    for (const slug of ['lichun','xiazhi','festival_zhongqiu','dongzhi']) season.push(await load(`/${art.season}/${slug}.webp`));
     return { tarot, season };
-  }, set).catch((e) => ({ error: String(e).slice(0, 200) }));
+  }, art).catch((e) => ({ error: String(e).slice(0, 200) }));
 
   const broken = [...(probe.tarot ?? []), ...(probe.season ?? [])].filter((x) => !x.w);
-  report.render.push({ theme: theme.id, set: probe.set, broken: broken.map((b) => b.url), pageErrors, failedImages });
-  report.checks.push(`${theme.label}: 卡面套=${probe.set}，取样 ${(probe.tarot ?? []).length + (probe.season ?? []).length} 张全部解码出像素，失败 ${broken.length}`);
+  report.render.push({ theme: theme.id, art, broken: broken.map((b) => b.url), pageErrors, failedImages });
+  report.checks.push(`${theme.label}: ${art.tarot} + ${art.season}，取样 ${(probe.tarot ?? []).length + (probe.season ?? []).length} 张全部解码出像素，失败 ${broken.length}`);
   if (probe.error) report.failures.push(`${theme.id} 探针出错: ${probe.error}`);
   if (broken.length) report.failures.push(`${theme.id} 图片解码失败: ${broken.map((b) => b.url).join(',')}`);
   if (pageErrors.length) report.failures.push(`${theme.id} pageerror: ${pageErrors.join(' | ')}`);

@@ -8,7 +8,7 @@ import { spawnWarnings } from './predict';
 const RED = 0xe60012, BLACK = 0x0d0d0f, WHITE = 0xf4f4f4;
 const SPEAKER_R = 3;
 
-export interface MapObjDeps { w2v: (p: Vec, y?: number) => THREE.Vector3; level: number }
+export interface MapObjDeps { w2v: (p: Vec, y?: number) => THREE.Vector3; level: number; /** 原版场景关卡：梯子等由原版几何提供，不再画程序化木梯 */ origScene?: boolean }
 type Tween = { t0: number; dur: number; fn: (k: number) => void; done?: () => void };
 
 let hatchTex: THREE.CanvasTexture | null = null;
@@ -246,6 +246,7 @@ export class MapObjects {
       const [lo, hi] = this.b.grid.h(l.a) <= this.b.grid.h(l.b) ? [l.a, l.b] : [l.b, l.a];
       const y0 = this.b.grid.h(lo) * L, y1 = this.b.grid.h(hi) * L;
       if (l.kind === 'ladder') {
+        if (this.d.origScene) continue;
         // P5T 式木梯：两根木扶手+横档，斜靠在高台墙面上（底部外撇），顶端铁钩挂住台沿，比台面高出一截
         // 两端不相邻时，梯子贴在高处格朝向低处一侧的墙面
         const dx = lo.x - hi.x, dy = lo.y - hi.y;

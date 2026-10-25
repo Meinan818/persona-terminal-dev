@@ -84,3 +84,4 @@ for key, (glb, tex) in CH.items():
     json.dump(rt, open(os.path.join(od, 'retex.json'), 'w'), indent=1)
     if rt: print(f'     {key}: 换彩色 BaseMap {len(rt)} 张')
 PY
+bash tools/fetch-private-maps.sh

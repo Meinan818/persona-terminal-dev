@@ -507,3 +507,11 @@ body.enemy-skip #phase::after { content: ' ▶▶'; color: #ffd400; }
 #aim.noret .reticle, #aim.noret .aimtag { display: none; }
 #aim.foe .bar.t { border-bottom-color: #fff; }
 #aim.foe .bar.b { border-top-color: #fff; }
+
+/* r7：原版 TMP 字体伤害数字（canvas 自绘），弹出：放大 → 回弹 → 上浮淡出 */
+#labels .dmg.sdf { text-shadow: none; animation: sdfpop .95s cubic-bezier(.2,.9,.3,1) forwards; display: flex; align-items: flex-end; }
+#labels .dmg.sdf canvas { display: block; height: auto; }
+#labels .dmg.sdf .resist { font-style: normal; color: #6cf; -webkit-text-stroke: 1px #000; margin-left: 2px; }
+#labels .dmg.sdf.heavy canvas { filter: drop-shadow(3px 3px 0 #e60012); }
+@keyframes sdfpop { 0% { transform: translate(-50%, -60%) scale(1.9); opacity: 0; } 12% { transform: translate(-50%, -100%) scale(.88); opacity: 1; } 22% { transform: translate(-50%, -100%) scale(1.06); } 30% { transform: translate(-50%, -100%) scale(1); } 75% { transform: translate(-50%, -125%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -150%) scale(1); opacity: 0; } }
+.frozen #labels .dmg.sdf { animation-play-state: paused !important; }

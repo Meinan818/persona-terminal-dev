@@ -97,3 +97,9 @@ for line in lst.split('\n'):
 json.dump(man, open(os.path.join(dst, 'manifest.json'), 'w'), ensure_ascii=False, indent=0)
 print(f'ok   {len(man)} 张 HUD 贴图 -> {dst}/' + (f'；缺 {len(miss)}：' + ', '.join(miss) if miss else ''))
 PY
+
+# r7：原版 TMP SDF 字体（umbra-assets p5t/1_ui/font_sdf_v2）：图集 + 字形表 + 材质（描边/膨胀参数），游戏里按 TMP 着色器公式自绘（src/ui/sdfFont.ts）
+FONTS="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_ui/font_sdf_v2"
+for F in FOT_YURUKASTD_UB_SDF_BattleNumber2 FOT_YURUKASTD_UB_SDF NikkyouSans-mLKax_SDF; do
+  if [ -f "$FONTS/$F/atlas.png" ]; then mkdir -p "$DST/font/$F"; cp -f "$FONTS/$F"/{atlas.png,glyphs.json,materials.json,summary.json} "$DST/font/$F/"; echo "ok   font/$F"; else echo "miss font/$F"; fi
+done

@@ -16,6 +16,7 @@ import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cuti
 import type { CutWho } from './fx/cutins';
 import { TripleFx } from './view/tripleFx';
 import { SceneKit, themeFor, cobbleTex, preloadKit } from './view/sceneKit';
+import { origCfg, origFailed, attachOrigMap, releaseOrigMap, updateOrigMap, origSurfaceY } from './view/origMap';
 void preloadKit(); // CC0 布景模型提前加载
 import { computeForecast, forecastHtml } from './view/forecast';
 import type { Forecast } from './view/forecast';
@@ -25,6 +26,9 @@ import { RUN_MS_PER_TILE } from './view/chibiRig';
 import { makeSkull, makeMona, makeShadow } from './view/partyModels';
 import { preloadChar, makeChar, charReady, SPECS } from './view/p5tChar';
 import { SummonDim, skillHit, CASTER_LAYER } from './view/skillFx';
+import { hitstopMs, shake, applyShake, undoShake, spark, updateHitFx, recoil } from './view/hitFx';
+import type { HitSpec } from './view/hitFx';
+import { loadSdfFont, renderSdf } from './ui/sdfFont';
 // 角色模型：全部优先 P5T 正版模型 + 原版动作（p5tChar.ts；私用 GLB 不入库，缺文件时 → 程序化 chibiRig 回退，加载完成后就地替换）。
 // Joker 另有社区模型回退（jokerModel.ts）。敌兵：火枪手系（shooter / teleporter）= Em0001_110；被洗脑的 Skull = Skull 模型；Marie = Em0501；
 // 守卫（Grenadier）/伴奏者（Drummer）等原版模型（Em0002/Em0003…）还没提取 → 程序化回退（已列入 HARK-TO-CODEX 请求）。
@@ -118,7 +122,7 @@ const CHARGE_NAME: Record<string, string> = {
   overPowered: 'Over Powered 攻×1.2', bulletBreak: 'Bullet Break 枪击必倒', springStorm: 'Spring Storm 射程+1', clairvoyance: 'Clairvoyance 射程+2', essenceOfSorcery: 'Essence of Sorcery 技能范围+1',
 };
 const SWITCH_COL = { hold: 0x22d3ee, toggle: 0xd946ef, elevator: 0x22c55e } as const;
-const LEVEL = 0.6; // 每层高度
+let LEVEL = 0.6; // 每层高度（原版地图关卡 = 原版两层可走高度差，见 view/origMap.ts）
 const ST_NAME: Record<StatusId, string> = { burn: '灼烧', freeze: '冻结', shock: '感电', dizzy: '眩晕', despair: '绝望', forget: '遗忘', sleep: '睡眠' };
 const ST_SHORT: Record<StatusId, string> = { burn: '灼', freeze: '冻', shock: '电', dizzy: '晕', despair: '绝', forget: '忘', sleep: '睡' };
 const ACT_NAME = { melee: '近战', gun: '枪', skill: '技能' } as const;
@@ -163,7 +167,40 @@ function build() {
   scene.fog = th.fogNear < 900 ? new THREE.Fog(th.bg, th.fogNear, th.fogFar) : null;
   hemi.color.set(th.hemiSky); hemi.groundColor.set(th.hemiGround); hemi.intensity = th.hemiInt;
   sun.color.set(th.sunColor); sun.intensity = th.sunInt;
-  const claimed = sceneKit.build(world, m);
+  // r7：L01–L06/L08 用原版 P5T 关卡场景（缺文件 → 回退 Kenney 布景）
+  const oc = origCfg(m.id);
+  const useOrig = !!oc && !origFailed(m.id);
+  LEVEL = useOrig ? oc!.step : 0.6;
+  let claimed: Set<string>;
+  if (useOrig) {
+    const cfg = oc!;
+    scene.background = new THREE.Color(cfg.bg); scene.fog = null;
+    hemi.color.set(cfg.hemi[0]); hemi.groundColor.set(cfg.hemi[1]); hemi.intensity = cfg.hemi[2];
+    sun.color.set(cfg.sun[0]); sun.intensity = cfg.sun[1];
+    sun.position.set((m.width - 1) / 2 + cfg.sunDir[0], cfg.sunDir[1], (m.height - 1) / 2 + cfg.sunDir[2]); sun.target.position.set((m.width - 1) / 2, 0, (m.height - 1) / 2); scene.add(sun.target);
+    const R = Math.max(m.width, m.height) * 0.75 + 4; const sc = sun.shadow.camera; sc.left = -R; sc.right = R; sc.top = R; sc.bottom = -R; sc.near = 0.5; sc.far = 60; sc.updateProjectionMatrix();
+    sceneKit.build(world, { ...m, id: '__none__' });
+    claimed = new Set();
+    for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) claimed.add(`${x},${y}`); // 掩体/墙都在原版场景里
+    origLoading = true; sceneKit.ready = false;
+    attachOrigMap(world, m.id, { w: m.width, h: m.height }, (ok, st) => {
+      origLoading = false; origStats = st ?? null;
+      if (!ok) { build(); return; }
+      // 原版掩体多是关卡运行时生成的 gimmick 单位（桶/箱，模型未导出）：场景里该格没有实物时，用 Kenney 掩体占位（自制占位，已标明）
+      world.updateMatrixWorld(true);
+      const miss = new Set<string>();
+      for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) {
+        const t = battle.grid.tile({ x, y }); if (t !== 'half' && t !== 'full') continue;
+        const sy = origSurfaceY(x, y); const base = battle.grid.h({ x, y }) * LEVEL;
+        if (sy === null || sy < base + 0.3) miss.add(`${x},${y}`);
+      }
+      if (miss.size) sceneKit.coverOnly(world, m, miss, LEVEL);
+      sceneKit.ready = true;
+    });
+  } else {
+    releaseOrigMap();
+    claimed = sceneKit.build(world, m);
+  }
   for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) {
     const t = battle.grid.tile({ x, y });
     const h = battle.grid.h({ x, y });
@@ -176,6 +213,7 @@ function build() {
     tile.position.set(x, h * LEVEL - top / 2, y);
     tile.receiveShadow = true; tile.castShadow = h > 0;
     tile.userData = { x, y };
+    if (useOrig) tile.visible = false; // 原版场景自带地面：格子只留作点选射线目标
     world.add(tile);
     tileMeshes.push(tile);
     if (door) continue; // 门（开/关）由 MapObjects 画门板 + 门框
@@ -269,7 +307,9 @@ function addUnitMesh(u: Unit) {
 
 // P5T 镜头（Hark）：拖动平移 / 捏合·滚轮缩放 / 90° 步进旋转，见 view/cameraRig.ts
 const rig = new CameraRig(camera);
-const mapObj = new MapObjects({ w2v: (p, y = 0) => w2v(p, y), level: LEVEL });
+const mapObj = new MapObjects({ w2v: (p, y = 0) => w2v(p, y), get level() { return LEVEL; }, get origScene() { return !!battle && !!origCfg(battle.map.id) && !origFailed(battle.map.id); } });
+let origLoading = false;
+let origStats: { tris: number; meshes: number; bytes: number } | null = null;
 let freshMap = true;
 function fitCamera(keep = true) {
   const w = window.innerWidth, h = window.innerHeight;
@@ -714,28 +754,56 @@ function toast(text: string) {
   clearTimeout((toast as unknown as { h: number }).h);
   (toast as unknown as { h: number }).h = window.setTimeout(() => t.classList.add('hidden'), 1800);
 }
-function popAt(pos: THREE.Vector3, text: string, cls = '') {
-  const v = pos.clone().add(new THREE.Vector3(0, 1.2, 0)).project(viewCam);
+function popAt(pos: THREE.Vector3, text: string, cls = '', yOff = 1.2) {
+  const v = pos.clone().add(new THREE.Vector3(0, yOff, 0)).project(viewCam);
   const el = document.createElement('div');
   // DOWN / 盾挡 → P5T 原版字母贴图 + anim_ui2d_down_start 时序（缺图时保持文字）
   const pop = text === 'DOWN!' ? letterPop('down') : text === '盾挡!' ? letterPop('block') : '';
-  el.className = `dmg ${cls}${pop ? ' p5' : ''}`;
-  if (pop) el.innerHTML = pop; else el.textContent = text;
+  // r7：伤害数字用原版 TMP 字体 FOT_YURUKASTD_UB_SDF_BattleNumber2（白面黑描边，原版材质参数）自绘；缺字体 → CSS 文字
+  const num = !pop && /^\d+▼?$/.test(text) && (cls === '' || cls === 'tt' || cls.startsWith('hit')) ? renderSdf(BN_FONT, text.replace('▼', ''), { px: (cls.includes('heavy') ? 64 : cls === 'tt' ? 58 : 46) * DPR }) : null;
+  if (num) num.style.width = `${num.width / DPR}px`;
+  el.className = `dmg ${cls}${pop ? ' p5' : ''}${num ? ' sdf' : ''}`;
+  if (pop) el.innerHTML = pop; else if (num) { el.appendChild(num); if (text.endsWith('▼')) { const r = document.createElement('i'); r.className = 'resist'; r.textContent = '▼'; el.appendChild(r); } } else el.textContent = text;
   el.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`;
   el.style.top = `${((1 - v.y) / 2) * window.innerHeight}px`;
   $('#labels').appendChild(el);
   const rm = () => (document.body.classList.contains('frozen') ? setTimeout(rm, 200) : el.remove());
   setTimeout(rm, pop ? fxMs(1400) : 950);
 }
+const BN_FONT = 'FOT_YURUKASTD_UB_SDF_BattleNumber2';
+const DPR = Math.min(3, window.devicePixelRatio || 1);
+void loadSdfFont(BN_FONT);
 function popDamage(unitId: string, text: string, cls = '') {
   const g = unitMesh.get(unitId);
-  if (g) popAt(g.position, text, cls);
+  if (g) popAt(g.position, text, cls, (rigs.get(unitId)?.height ?? 1.1) * 0.95);
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** 走格时长：按该单位原版 Run 步速（p5tChar.msPerTile；程序化 rig 用 RUN_MS_PER_TILE），快进时 ÷ SPEED */
 const walkMs = (id: string) => (rigs.get(id)?.msPerTile ?? RUN_MS_PER_TILE) / SPEED;
 /** 等单位当前单次动作（攻击/受击）播完再继续；快进（敌方回合点屏 / speed>1）时封顶更短 */
 const settleRig = (id: string | null | undefined, max = 2500) => { const r = id ? rigs.get(id) : undefined; return r?.settle ? r.settle(efast() ? Math.min(max, 400) : max) : Promise.resolve(); };
+/** 等攻击者动作到原版命中帧（无正版 rig → 等动作播完的旧逻辑） */
+const impactRig = (id: string | null | undefined, max = 2600) => { const r = id ? rigs.get(id) : undefined; return r?.impact ? r.impact(efast() ? Math.min(max, 500) : max) : settleRig(id, max); };
+let lastAtkKind: HitSpec['kind'] = 'other';
+/** 本次受击的力度：伤害占最大 HP 比例；之后紧跟 DOWN/KO 或打出弱点 = 重击 */
+function hitSpecFor(e: Extract<BattleEvent, { type: 'damage' }>, events: BattleEvent[], i: number): HitSpec {
+  const u = battle.unit(e.unitId);
+  const ratio = u ? e.amount / Math.max(1, u.maxHp) : 0.2;
+  let heavy = ratio >= 0.45;
+  for (let j = i + 1; j < Math.min(events.length, i + 5); j++) { const n = events[j]; if ((n.type === 'down' || n.type === 'ko') && n.unitId === e.unitId) heavy = true; if (n.type === 'damage') break; }
+  return { ratio, heavy, kind: e.source === 'triple' ? 'other' : lastAtkKind };
+}
+/** 命中：顿帧 + 震屏 + 命中火花（自制）+ 受击后仰 */
+function hitImpact(id: string, hs: HitSpec) {
+  const g = unitMesh.get(id); if (!g) return;
+  const h = rigs.get(id)?.height ?? 1.1;
+  const at = g.position.clone().add(new THREE.Vector3(0, h * 0.55, 0));
+  spark(world, at, hs);
+  shake(hs);
+  const a = lastAttacker ? unitMesh.get(lastAttacker) : null;
+  if (a && a !== g) recoil(g, g.position.clone().sub(a.position), hs);
+  if (!efast()) freezeUntil = Math.max(freezeUntil, performance.now() + fxMs(hitstopMs(hs)));
+}
 let lastAttacker: string | null = null;
 /** 当前攻击是技能时的技能 id（受击时在目标身上播技能命中特效） */
 let lastSkill: string | null = null;
@@ -952,6 +1020,7 @@ async function play(events: BattleEvent[]) {
         const foeAtk = vPhase === 'enemy' && isFoe(e.attackerId);
         if (foeAtk) await enemyActorIntro(e.attackerId);
         lastAttacker = e.attackerId;
+        lastAtkKind = e.kind === 'gun' ? 'gun' : e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'other';
         lastSkill = (e.kind === 'skill' || e.kind === 'unique') && e.skillId ? e.skillId : null;
         { const tg = unitMesh.get(e.targetId); const ar = rigs.get(e.attackerId); if (tg && ar) ar.aim(tg.position, e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'gun', 2400 / SPEED); const tr = rigs.get(e.targetId); const ag = unitMesh.get(e.attackerId); if (tr && ag) tr.faceTo(ag.position); }
         if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
@@ -961,9 +1030,16 @@ async function play(events: BattleEvent[]) {
       }
       case 'damage':
         // 攻击动作（GunStart→GunFire / Attack / Skill*）播完才结算受击，受击 Damage 播完才往下走（原版 clip 没导出动画事件点 → 以 clip 结束为准）
-        if (e.source !== 'triple') await settleRig(lastAttacker, 2600);
+        // r7：等到攻击动作的原版命中帧（AnimationEvent：GunFire 开火帧 / Attack flag 2 / SkillActStart 末标记）就结算，不再等整段 clip 播完
+        if (e.source !== 'triple') await impactRig(lastAttacker, 2600);
         if (lastSkill && e.source !== 'triple') { const tg = unitMesh.get(e.unitId); if (tg) void skillHit(world, tg.position.clone(), lastSkill, rigs.get(e.unitId)?.height ?? 1.1, SPEED); }
-        rigs.get(e.unitId)?.flinch(); popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`); await sleep(240 / SPEED);
+        {
+          const hs = hitSpecFor(e, events, ei);
+          rigs.get(e.unitId)?.flinch();
+          hitImpact(e.unitId, hs);
+          popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`, hs.heavy ? 'hit heavy' : 'hit');
+        }
+        await sleep(240 / SPEED);
         await settleRig(e.unitId, 1800);
         await endAim(vPhase === 'enemy' && !efast() ? 420 : 260); break;
       case 'heal': popDamage(e.unitId, `+${e.amount}`, 'heal'); await sleep(200 / SPEED); break;
@@ -1302,7 +1378,11 @@ function restart() {
 }
 
 function loop() {
-  if (performance.now() < freezeUntil) { requestAnimationFrame(loop); return; } // 1 MORE 顿帧
+  if (performance.now() < freezeUntil) { // 顿帧（1 MORE / r7 命中）：角色动画时钟停住，火花照放
+    const now = performance.now(); for (const r of rigs.values()) r.freeze?.(now);
+    if (!document.body.classList.contains('hitstop')) { updateHitFx(viewCam, world); const so = applyShake(viewCam); sdim.render(renderer, scene, viewCam as THREE.PerspectiveCamera); undoShake(viewCam, so); }
+    requestAnimationFrame(loop); return;
+  }
   tfx.update();
   if (camFollow) { const g = unitMesh.get(camFollow); if (g) rig.focus(g.position.clone(), rig.tgt.zoom); }
   camStep();
@@ -1311,8 +1391,12 @@ function loop() {
   for (const r of rigs.values()) r.update();
   const t = performance.now() / 1000;
   sceneKit.update(rig.cur.yaw, t);
+  updateOrigMap(camera);
   for (const u of battle.units) if (u.prop === 'flag' || u.prop === 'speaker') { const g = unitMesh.get(u.id); if (g) (u.prop === 'flag' ? waveFlag : pulseSpeaker)(g, t); }
+  updateHitFx(viewCam, world);
+  const so = applyShake(viewCam);
   sdim.render(renderer, scene, viewCam as THREE.PerspectiveCamera);
+  undoShake(viewCam, so);
   refreshLabels();
   requestAnimationFrame(loop);
 }
@@ -1326,8 +1410,9 @@ loop();
 declare global { interface Window { __p5t: unknown } }
 window.__p5t = {
   get battle() { return battle; },
+  THREE,
   sceneKit,
-  renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries }; },
+  renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, texs: renderer.info.memory.textures, origLoading, origStats }; },
   get busy() { return busy; },
   rigs,
   unitMesh,
@@ -1353,6 +1438,21 @@ window.__p5t = {
     skillHit: (id: string, skill = 'eiha', speed = SPEED) => { const g = unitMesh.get(id); return g ? skillHit(world, g.position.clone(), skill, rigs.get(id)?.height ?? 1.1, speed) : null; },
     aimShot: (a: string, t: string, ret = true) => aimShot(a, t, ret),
     endAim: (ms = 0) => endAim(ms),
+  },
+  /** r7 对齐检查：在原版场景上叠格子（白=可走 青=半掩体 蓝=全掩体 红=墙，数字=引擎层） */
+  gridOverlay(on = true) {
+    world.getObjectByName('gridOverlay')?.removeFromParent();
+    if (!on) return;
+    const g = new THREE.Group(); g.name = 'gridOverlay';
+    const col: Record<string, number> = { wall: 0xff2030, half: 0x30e0ff, full: 0x2050ff, exit: 0x30ff60 };
+    const edge = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.8, depthTest: false });
+    for (let y = 0; y < battle.map.height; y++) for (let x = 0; x < battle.map.width; x++) {
+      const t = battle.grid.tile({ x, y });
+      const q = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), new THREE.MeshBasicMaterial({ color: col[t] ?? 0xffffff, transparent: true, opacity: t === 'floor' ? 0.25 : 0.55, depthTest: false, depthWrite: false }));
+      q.rotation.x = -Math.PI / 2; q.position.copy(w2v({ x, y }, 0.04)); q.renderOrder = 50; g.add(q);
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(1, 1)), edge); e.rotation.x = -Math.PI / 2; e.position.copy(q.position); e.renderOrder = 51; g.add(e);
+    }
+    world.add(g);
   },
   setMode(m: Mode) { mode = m; refreshAll(); },
   setSkill(id: string) { mode = 'skill'; skillId = id; refreshAll(); },

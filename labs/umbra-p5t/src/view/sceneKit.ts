@@ -214,6 +214,22 @@ export class SceneKit {
     return claimed;
   }
 
+  /** r7：原版场景关卡里，原版 gimmick 掩体（运行时生成、模型未导出）缺实物的格子 → 只摆 Kenney 掩体占位（自制占位） */
+  coverOnly(world: THREE.Group, map: MapDef, cells: Set<string>, L: number) {
+    const tok = this.token;
+    void preloadKit().then(() => {
+      if (tok !== this.token || !world.parent) return;
+      const rnd = mulberry(seedOf(map.id + 'cover'));
+      const b = new Batch();
+      for (const k of cells) {
+        const [x, y] = k.split(',').map(Number); const t = map.tiles[y][x];
+        const list = t === 'half' ? ['barrels', 'crates'] : ['crateStack', 'bigBarrel'];
+        this.recipe(b, list[(rnd() * list.length) | 0], x, (map.heights?.[y]?.[x] ?? 0) * L, y, rnd);
+      }
+      const g = b.build(false); g.name = 'coverPlaceholder'; world.add(g);
+    });
+  }
+
   private dress(world: THREE.Group, map: MapDef, sc: Scene, claimed: Set<string>) {
     const rnd = mulberry(seedOf(map.id));
     const pick = <X>(a: X[]) => a[(rnd() * a.length) | 0];

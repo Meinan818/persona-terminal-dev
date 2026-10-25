@@ -26,6 +26,10 @@ export interface UnitRig {
   readonly msPerTile?: number;
   /** 等当前单次动作（攻击/受击/倒地…）播完；maxMs 封顶 */
   settle?(maxMs?: number): Promise<void>;
+  /** 等攻击动作的原版命中帧（正版 rig） */
+  impact?(maxMs?: number): Promise<void>;
+  /** 顿帧：动画时钟停住 */
+  freeze?(now?: number): void;
 }
 /** 程序化/占位 rig 的走格时间：取正版 Joker/Skull/Em0001 Run 实测（半个循环 = 一步 = 一格，0.667s/2） */
 export const RUN_MS_PER_TILE = 333;

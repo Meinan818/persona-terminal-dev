@@ -11,6 +11,7 @@
 // 身高：所有角色用同一个「模型单位 → 世界格」比例（以 Joker 绑定姿势 1.1 格为基准），各角色相对身高 = 原模型比例。
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { HIT_EVENTS } from './p5tAnimEvents';
 import { clone as skClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { outlineMat } from './chibiRig';
 import type { UnitRig, AimKind, Pose } from './chibiRig';
@@ -251,6 +252,7 @@ export class P5tRig implements UnitRig {
   private cur: THREE.AnimationAction | null = null;
   oneShot: ClipKey | null = null;
   private shotEnd = 0;
+  private shotStart = 0;
   private seq: ClipKey[] = [];
   baseKey: ClipKey = 'Idle';
   private tints: Tint[] = [];
@@ -352,6 +354,30 @@ export class P5tRig implements UnitRig {
       tick();
     });
   }
+  /**
+   * r7：等到攻击动作的原版命中帧（AnimationEvent，见 p5tAnimEvents.ts）——枪 = GunFire 开火帧，近战 = Attack flag 2，
+   * 技能 = SkillActStart 最后标记；没有事件的 clip / 动作已播完 → 立刻返回。maxMs 封顶。
+   */
+  impact(maxMs = 2600): Promise<void> {
+    const ev = HIT_EVENTS[this.key] ?? {};
+    const t0 = performance.now();
+    return new Promise((res) => {
+      const tick = () => {
+        if (performance.now() - t0 > maxMs) return res();
+        const cur = this.oneShot;
+        const pend = [cur, ...this.seq].filter((k): k is ClipKey => !!k && ev[k] !== undefined);
+        if (!pend.length) { // 序列里已没有带命中帧的 clip；这个角色原版没有任何事件表 → 退回等动作播完（旧行为）
+          if (!Object.keys(ev).length && (this.oneShot || this.seq.length)) { setTimeout(tick, 8); return; }
+          return res();
+        }
+        if (cur && ev[cur] !== undefined && this.clock - this.shotStart >= ev[cur]!) return res();
+        setTimeout(tick, 8);
+      };
+      tick();
+    });
+  }
+  /** 顿帧期间：动画时钟不前进（恢复后不跳帧） */
+  freeze(now = performance.now()) { this.last = now; }
   private play(k: ClipKey, fade = XFADE) {
     const a = this.act.get(k);
     if (!a) return;
@@ -366,7 +392,7 @@ export class P5tRig implements UnitRig {
   private enqueue(keys: ClipKey[]) { this.seq = keys.filter((k) => this.act.has(k)); this.next(); }
   private next() {
     const k = this.seq.shift();
-    if (k) { this.oneShot = k; this.play(k); this.shotEnd = this.clock + Math.max(0.12, this.dur(k) - XFADE * 0.6); }
+    if (k) { this.oneShot = k; this.shotStart = this.clock; this.play(k); this.shotEnd = this.clock + Math.max(0.12, this.dur(k) - XFADE * 0.6); }
     else { this.oneShot = null; if (!(this.dead && this.cur === this.act.get(this.baseKey) && !LOOPS.includes(this.baseKey))) this.play(this.baseKey); }
   }
   private setBase(k: ClipKey) {

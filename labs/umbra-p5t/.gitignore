@@ -11,3 +11,5 @@ public/p5t-sfx/
 public/p5t-turn/
 # r13：原版战斗 BGM（不入库）：tools/fetch-p5t-bgm.sh
 public/p5t-bgm/
+# r13：原版场内表现贴图（不入库）：tools/fetch-p5t-fieldfx.sh
+public/p5t-fieldfx/

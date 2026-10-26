@@ -263,3 +263,14 @@ body:not(.debug) .lbl.ally, body:not(.debug) #unit-card .charges, body:not(.debu
 #hintbar .ff { display: none; }
 #app.enemy-ph #hintbar span { display: none; } #app.enemy-ph #hintbar .ff { display: flex; }
 @media (max-height: 430px) { #hintbar { font-size: 12px; gap: 9px; -webkit-text-stroke-width: 3px; } }
+
+/* r13：过肩瞄准左侧 SHOT 牌（aim_1420_3：黑色楔形朝右指向射手 + 红色锯齿衬底 + 白粗斜体 SHOT + 中文「使用枪械攻击」+ 绿色 A 钮）。原版贴图不在已导出图集 → CSS 重建 */
+#aim .aimtag { left: 9%; top: 41%; width: 290px; height: 92px; padding: 0; background: none; box-shadow: none; font: inherit; transform: translateX(-140%) rotate(-12deg); }
+#aim.on .aimtag { transform: translateX(0) rotate(-12deg); }
+#aim .aimtag::before { content: ''; position: absolute; inset: -10px -14px -12px -18px; background: #e60012; clip-path: polygon(4% 30%, 12% 22%, 10% 8%, 60% 26%, 100% 70%, 96% 82%, 52% 92%, 6% 96%, 9% 70%, 0 62%); }
+#aim .aimtag::after { content: ''; position: absolute; inset: 0; background: #0a0a0a; clip-path: polygon(6% 22%, 58% 30%, 100% 72%, 52% 84%, 8% 92%, 10% 64%); }
+#aim .aimtag > * { position: absolute; z-index: 1; }
+#aim .aimtag b { left: 18%; top: 20%; font: 900 40px/1 'Arial Black', sans-serif; color: #fff; transform: skewX(-10deg); }
+#aim .aimtag small { left: 17%; top: 64%; font: 900 14px/1 'UMBRA SC', sans-serif; color: #fff; -webkit-text-stroke: 3px #000; paint-order: stroke fill; }
+#aim .aimtag .abtn { right: 8%; top: 52%; width: 30px; height: 30px; border-radius: 50%; background: #5fce3c; border: 3px solid #111; box-shadow: 0 0 0 2px #fff; color: #111; font: 900 18px/24px 'Arial Black', sans-serif; text-align: center; font-style: normal; }
+@media (max-height: 430px) { #aim .aimtag { transform-origin: 0 50%; scale: .7; } }

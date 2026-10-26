@@ -84,6 +84,13 @@ const L = {
   uLmOn: { value: 0 }, uLmScale: { value: 4.59 },
   uFogOn: { value: 0 }, uFogCol: { value: new THREE.Color(0.5, 0.3, 0.7) }, uFog: { value: new THREE.Vector3(20, 100, 15) },
 };
+// r13：过肩瞄准时「镜头—目标」之间的遮挡物抖动镂空（原版 14:21 帧：挡在镜头前的木箱变成网格状半透明）。
+// 原版做法（着色器/脚本）未导出 → 重建：圆柱（半径 0.8m）内、比目标近、离地 >0.12m 的片元按 2×2 有序抖动丢 3/4。
+const AIM = { uAimOn: { value: 0 }, uAimCam: { value: new THREE.Vector3() }, uAimTgt: { value: new THREE.Vector3() }, uAimFloor: { value: 0 } };
+export function setAimSeeThrough(cam: THREE.Vector3 | null, tgt?: THREE.Vector3, floorY = 0) {
+  AIM.uAimOn.value = cam && tgt ? 1 : 0;
+  if (cam && tgt) { AIM.uAimCam.value.copy(cam); AIM.uAimTgt.value.copy(tgt); AIM.uAimFloor.value = floorY + 0.12; }
+}
 let curLighting: OrigLighting | null = null;
 let FOG_CAM_DIST = 15;
 export const origLighting = () => curLighting;
@@ -93,7 +100,7 @@ const LM_DECODE = 4.59; // Unity 线性色彩空间 dLDR lightmap：2^2.2（推�
 export function patchOrigLit(m: THREE.MeshLambertMaterial, opts: { clip?: boolean } = {}) {
   const clip = opts.clip ?? false;
   m.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, L);
+    Object.assign(sh.uniforms, L, AIM);
     if (clip) { sh.uniforms.uClipY = clipU; sh.uniforms.uRect = rectU; sh.uniforms.uToCam = toCamU; sh.uniforms.uCut = cutU; }
     else sh.uniforms.uRect = rectU;
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWorldP;')
@@ -103,7 +110,15 @@ varying vec3 vWorldP;
 uniform vec3 uAmbSky, uAmbEq, uAmbGround, uDirScale, uFogCol, uFog;
 uniform float uLmOn, uLmScale, uFogOn;
 uniform vec4 uRect;
+uniform float uAimOn, uAimFloor; uniform vec3 uAimCam, uAimTgt;
 ${clip ? 'uniform float uClipY; uniform vec2 uToCam; uniform float uCut;' : ''}`);
+    f = f.replace('void main() {', `void main() {
+  if (uAimOn > 0.5 && vWorldP.y > uAimFloor) {
+    vec3 ab = uAimTgt - uAimCam; float t = dot(vWorldP - uAimCam, ab) / max(dot(ab, ab), 1e-4);
+    if (t > 0.0 && t < 0.9 && length(vWorldP - (uAimCam + ab * t)) < 0.8) {
+      vec2 q = mod(floor(gl_FragCoord.xy), 2.0); if (q.x + q.y > 0.5) discard;
+    }
+  }`);
     if (clip) f = f.replace('void main() {', `void main() {
   if (vWorldP.y > uClipY) discard;
   if (vWorldP.y > uCut) {

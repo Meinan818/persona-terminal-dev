@@ -1,0 +1,28 @@
+// r13：掩体后开枪（侧移出掩体 → 过肩瞄准(遮挡物抖动镂空) → 暴击正面特写 → 回掩体）逐帧截图。node tools/r13-aim-shot.mjs OUT
+import { chromium } from 'playwright';
+import { preview } from 'vite';
+import fs from 'node:fs';
+const OUT = process.argv[2] || '/tmp/r13aim'; fs.mkdirSync(OUT, { recursive: true });
+const port = 4460 + Math.floor(Math.random() * 30);
+const server = await preview({ preview: { port, host: '127.0.0.1' } });
+const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
+await page.addInitScript({ path: new URL('./rec-r13/vclock.js', import.meta.url).pathname });
+await page.goto(`http://127.0.0.1:${port}/?speed=1&level=L01`);
+await page.waitForFunction(() => window.__p5t && window.__p5t.started && window.__p5t.charsReady && !window.__p5t.busy, null, { timeout: 110000, polling: 300 });
+await page.evaluate(() => document.fonts.ready);
+await page.evaluate(async () => { const P = window.__p5t, B = P.battle; B.map.events = []; if (B.rt?.events) B.rt.events = []; const j = B.unit('joker'); j.pos = { x: 6, y: 11 }; const a = B.unit('e1'); a.pos = { x: 6, y: 8 }; a.hp = a.maxHp = 90; const b = B.unit('e2'); b.pos = { x: 1, y: 4 }; await P.play([]); });
+await page.waitForTimeout(500);
+await page.evaluate(() => window.__vc.setAuto(false));
+const P = (c) => page.evaluate(`(()=>{const P=window.__p5t;${c}})()`);
+const step = async (n, tag) => { for (let i = 0; i < n; i++) { await page.evaluate(() => window.__vc.step(1000 / 30)); if (tag && i % 4 === 3) await page.screenshot({ path: `${OUT}/${tag}_${String(i).padStart(3, '0')}.jpg`, quality: 88 }); } };
+await P("P.select('joker')"); await step(25);
+await page.screenshot({ path: `${OUT}/a_command.png` });
+await P("document.querySelector('#cmd .gun')?.click()"); await step(20);
+await P("P.tap({unit:'e1'})"); await step(25);
+await page.screenshot({ path: `${OUT}/b_aimpreview.png` });
+await P("P.tap({unit:'e1'})");
+await step(Number(process.env.N || 110), 'fire');
+console.log('errors', JSON.stringify(errs.slice(0, 5)));
+await browser.close(); await server.close();

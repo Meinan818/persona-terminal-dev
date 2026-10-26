@@ -241,7 +241,10 @@ function redHullMat() {
     sh.uniforms.uOlPx = { value: RED_OUTLINE.px };
     sh.vertexShader = 'uniform vec2 uOlPx;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
       { vec3 nv = normalize( normalMatrix * objectNormal ); vec4 nc = projectionMatrix * vec4( nv, 0.0 ); vec2 d = nc.xy; float L = length( d );
-        if ( L > 1e-5 ) gl_Position.xy += ( d / L ) * uOlPx * gl_Position.w; }`);
+        if ( L > 1e-5 ) gl_Position.xy += ( d / L ) * uOlPx * gl_Position.w;
+        // r14 自查：外套/披风是开口薄片，外扩后的背面会在衣服内侧露出 → 整件外套被涂红（command 截图里 Joker 下摆一片红）。
+        //   深度往后推 0.12m（视空间），只让轮廓外缘露出，内部被自身正面挡住
+        vec4 pb = projectionMatrix * ( mvPosition + vec4( 0.0, 0.0, -0.12, 0.0 ) ); gl_Position.z = pb.z / pb.w * gl_Position.w; }`);
   };
   m.customProgramCacheKey = () => 'p5t-red-hull';
   redHull = m; return m;

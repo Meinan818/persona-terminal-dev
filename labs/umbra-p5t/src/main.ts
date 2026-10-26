@@ -9,11 +9,15 @@ import { attachCameraInput } from './view/cameraInput';
 import { MapObjects } from './view/mapObjects';
 import { makeFlag, makeSpeaker, waveFlag, pulseSpeaker } from './view/props';
 import { slashBanner, itemToast, enemyTurnBanner } from './fx/banners';
+import { playTurnChange, turnChangeAvailable, turnChangeReady } from './fx/turnChange';
 import { updateObjectiveHud, mountCamButtons } from './ui/hud';
 import { p5, PORTRAIT, initP5tHud, letterPop } from './ui/p5tHud';
 import './p5t-hud.css';
 import './skill-list.css';
 import { SkillList, skillNameZh, SKL_TEX } from './ui/skillList';
+import { CommandMenu } from './ui/commandMenu';
+import { showResultScreen } from './ui/resultScreen';
+import type { CmdKey } from './ui/commandMenu';
 import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cutins';
 import type { CutWho } from './fx/cutins';
 import { TripleFx } from './view/tripleFx';
@@ -328,7 +332,19 @@ function addUnitMesh(u: Unit) {
 }
 
 // P5T 镜头（Hark）：拖动平移 / 捏合·滚轮缩放 / 90° 步进旋转，见 view/cameraRig.ts
+const cmdMenu = new CommandMenu($('#app'), (a) => doAct(a));
+document.body.classList.add('cmd-p5');
 const rig = new CameraRig(camera);
+rig.persp = params.get('cam') !== 'ortho'; // r12：原版透视战斗镜头（?cam=ortho = 旧正交俯视）
+const baseCam = () => rig.view;
+/** r12：开局镜头方位 = 从敌方看向我方的反向（相机在我方身后看向敌人，hud_idle_1212），按 90° 取整 */
+function baseYawFor(): number {
+  const al = battle.units.filter((u) => u.side === 'ally' && !u.prop && !u.decoy && !u.ko), en = battle.units.filter((u) => u.side === 'enemy' && !u.ko);
+  if (!al.length || !en.length) return Math.PI / 4;
+  const c = (us: Unit[]) => us.reduce((a, u) => ({ x: a.x + u.pos.x / us.length, y: a.y + u.pos.y / us.length }), { x: 0, y: 0 });
+  const a = c(al), e = c(en);
+  return Math.round(Math.atan2(a.x - e.x, a.y - e.y) / (Math.PI / 2)) * (Math.PI / 2);
+}
 const mapObj = new MapObjects({ w2v: (p, y = 0) => w2v(p, y), get level() { return LEVEL; }, get origScene() { return !!battle && !!origCfg(battle.map.id) && !origFailed(battle.map.id); } });
 let origLoading = false;
 let origStats: { tris: number; meshes: number; bytes: number } | null = null;
@@ -339,6 +355,7 @@ function fitCamera(keep = true) {
   const m = battle.map;
   let maxH = 0;
   for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) maxH = Math.max(maxH, battle.grid.h({ x, y }));
+  if (!keep) rig.baseYaw = baseYawFor();
   rig.setMap({ width: m.width, height: m.height, maxY: 1.4 + maxH * LEVEL }, w / h, keep, h);
 }
 /** 敌方回合镜头（Hark 演出）：推近并跟随行动者；null = 我方回合开始，对准当前可行动角色 */
@@ -358,6 +375,114 @@ function tileEdge(p: Vec) {
   const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.96, 0.96)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthTest: false }));
   e.rotation.x = -Math.PI / 2; e.position.copy(w2v(p, 0.04)); e.renderOrder = 12; overlay.add(e);
 }
+
+// ---------- r12：原版移动格样式（move_1346/1419/3532/3544/3805、command_1255） ----------
+// 可移动范围 = 整块区域外轮廓白色细线（不填色）；站位/终点格 = 红色半透明 + 白描边；移动光标 = 黄色粗下箭头；
+// 掩体（进入后可隐蔽）= 黑白盾牌图标，挂在掩体格朝单位一侧；其他队友脚下粉色圆环；路径 = 青蓝发光粗线（move_3805，推断为路径）。
+const MOVE_EDGE = 0xffffff, STAND_RED = 0xe60012, PATH_CYAN = 0x29d8ff, CURSOR_YEL = 0xffd21a, MATE_PINK = 0xff5fae;
+function rangeOutline(tiles: Vec[]) {
+  const set = new Set(tiles.map((t) => key(t)));
+  const mat = new THREE.MeshBasicMaterial({ color: MOVE_EDGE, transparent: true, opacity: 0.95, depthWrite: false });
+  const W = 0.045;
+  for (const t of tiles) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+    const n = { x: t.x + dx, y: t.y + dy };
+    if (set.has(key(n)) && battle.grid.h(n) === battle.grid.h(t)) continue;
+    const g = new THREE.PlaneGeometry(dx ? W : 1 + W, dx ? 1 + W : W);
+    const m = new THREE.Mesh(g, mat); m.rotation.x = -Math.PI / 2;
+    const c = w2v(t, 0.035); m.position.set(c.x + dx * 0.5, c.y, c.z + dy * 0.5); m.renderOrder = 11; overlay.add(m);
+  }
+}
+function standTile(p: Vec) {
+  tileQuad(p, STAND_RED, 0.5, 0.03);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.9, 0.9)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthTest: false }));
+  e.rotation.x = -Math.PI / 2; e.position.copy(w2v(p, 0.04)); e.renderOrder = 12; overlay.add(e);
+}
+function glowPath(path: Vec[]) {
+  if (path.length < 2) return;
+  const curve = new THREE.CatmullRomCurve3(path.map((p) => w2v(p, 0.07)), false, 'catmullrom', 0.05);
+  overlay.add(new THREE.Mesh(new THREE.TubeGeometry(curve, path.length * 8, 0.11, 6), new THREE.MeshBasicMaterial({ color: PATH_CYAN, transparent: true, opacity: 0.35, depthWrite: false })));
+  overlay.add(new THREE.Mesh(new THREE.TubeGeometry(curve, path.length * 8, 0.05, 6), new THREE.MeshBasicMaterial({ color: 0xc8f6ff })));
+}
+let arrowGeo: THREE.BufferGeometry | null = null;
+function moveCursor(p: Vec) {
+  if (!arrowGeo) { // 粗下箭头（平面外形挤出，黑边由第二层放大实现）
+    const s = new THREE.Shape(); s.moveTo(-0.13, 0.5); s.lineTo(0.13, 0.5); s.lineTo(0.13, 0.18); s.lineTo(0.3, 0.18); s.lineTo(0, -0.18); s.lineTo(-0.3, 0.18); s.lineTo(-0.13, 0.18); s.closePath();
+    arrowGeo = new THREE.ExtrudeGeometry(s, { depth: 0.08, bevelEnabled: false }); arrowGeo.translate(0, 0, -0.04);
+  }
+  const g = new THREE.Group();
+  const a = new THREE.Mesh(arrowGeo, new THREE.MeshBasicMaterial({ color: CURSOR_YEL }));
+  const b = new THREE.Mesh(arrowGeo, new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.BackSide })); b.scale.setScalar(1.18);
+  g.add(b, a); g.position.copy(w2v(p, 1.25)); g.userData.billboard = true; g.name = 'moveCursor'; overlay.add(g);
+}
+let shieldTex: THREE.CanvasTexture | null = null;
+function coverShield(cover: Vec, from: Vec) {
+  if (!shieldTex) {
+    const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d')!;
+    const path = () => { x.beginPath(); x.moveTo(64, 10); x.quadraticCurveTo(100, 22, 112, 22); x.quadraticCurveTo(112, 92, 64, 118); x.quadraticCurveTo(16, 92, 16, 22); x.quadraticCurveTo(28, 22, 64, 10); x.closePath(); };
+    x.lineJoin = 'round'; path(); x.lineWidth = 14; x.strokeStyle = '#e60012'; x.stroke(); x.fillStyle = '#111'; x.fill();
+    x.save(); path(); x.clip(); x.fillStyle = '#fff'; x.fillRect(0, 0, 64, 64); x.fillRect(64, 64, 64, 64); x.restore();
+    path(); x.lineWidth = 5; x.strokeStyle = '#fff'; x.stroke();
+    shieldTex = new THREE.CanvasTexture(c); shieldTex.colorSpace = THREE.SRGBColorSpace;
+  }
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: shieldTex, depthTest: false, transparent: true }));
+  const c = w2v(cover, 0.75), f = w2v(from, 0.75);
+  sp.position.copy(c.lerp(f, 0.32)); sp.scale.setScalar(0.62); sp.renderOrder = 13; overlay.add(sp);
+}
+function adjCovers(p: Vec): Vec[] {
+  const out: Vec[] = [];
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = { x: p.x + dx, y: p.y + dy }; if (!battle.grid.inBounds(n)) continue; const t = battle.grid.tile(n); if (t === 'half' || t === 'full') out.push(n); }
+  return out;
+}
+
+function aimArc(a: Vec, b: Vec) {
+  const p0 = w2v(a, 0.9), p2 = w2v(b, 0.9), mid = p0.clone().lerp(p2, 0.5); mid.y += 0.25 + p0.distanceTo(p2) * 0.12;
+  const c = new THREE.QuadraticBezierCurve3(p0, mid, p2);
+  const m = new THREE.Mesh(new THREE.TubeGeometry(c, 24, 0.022, 5), new THREE.MeshBasicMaterial({ color: 0xff1a2a, transparent: true, opacity: 0.9, depthTest: false }));
+  m.renderOrder = 14; overlay.add(m);
+}
+let xTex: THREE.CanvasTexture | null = null;
+function guardX(p: Vec) {
+  if (!xTex) {
+    const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d')!;
+    x.lineCap = 'round'; for (const [w, col] of [[30, '#111'], [18, '#ff1a2a']] as const) { x.lineWidth = w; x.strokeStyle = col; x.beginPath(); x.moveTo(24, 24); x.lineTo(104, 104); x.moveTo(104, 24); x.lineTo(24, 104); x.stroke(); }
+    xTex = new THREE.CanvasTexture(c); xTex.colorSpace = THREE.SRGBColorSpace;
+  }
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: xTex, depthTest: false, transparent: true }));
+  sp.position.copy(w2v(p, 0.6)); sp.scale.setScalar(0.9); sp.renderOrder = 15; overlay.add(sp);
+}
+
+let thornTex: { fill: THREE.Texture | null; line: THREE.Texture | null } | null = null;
+function thornsReticle(p: Vec) {
+  if (!thornTex) {
+    const ld = new THREE.TextureLoader(), get = (n: string) => (p5.has(n) ? ld.load(p5.url(n), () => refreshOverlay()) : null);
+    thornTex = { fill: get('thorns_fill'), line: get('thorns_line') };
+    for (const t of [thornTex.fill, thornTex.line]) if (t) t.colorSpace = THREE.SRGBColorSpace;
+  }
+  const g = new THREE.Group(); g.name = 'thorns';
+  const mk = (map: THREE.Texture | null, color: number, op: number, sc: number) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map, color, transparent: true, opacity: op, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+    m.rotation.x = -Math.PI / 2; m.scale.setScalar(sc); m.renderOrder = 16; return m;
+  };
+  if (thornTex.fill && thornTex.line) { g.add(mk(thornTex.fill, 0xff2030, 0.55, 1.15), mk(thornTex.line, 0xff4050, 1, 1.6)); }
+  else { // 缺贴图：画 10 角锯齿星
+    const sh = new THREE.Shape(); for (let i = 0; i < 20; i++) { const r = i % 2 ? 0.36 : 0.62, a = (i / 20) * Math.PI * 2; i ? sh.lineTo(Math.cos(a) * r, Math.sin(a) * r) : sh.moveTo(r, 0); }
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: 0xe60012, transparent: true, opacity: 0.8, depthTest: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 16; g.add(m);
+  }
+  g.position.copy(w2v(p, 0.06)); overlay.add(g);
+}
+function chainLine(a: Vec, b: Vec) {
+  const p0 = w2v(a, 0.55), p2 = w2v(b, 0.55), mid = p0.clone().lerp(p2, 0.5); mid.y += 0.35 + p0.distanceTo(p2) * 0.08;
+  const c = new THREE.QuadraticBezierCurve3(p0, mid, p2), L = c.getLength(), n = Math.max(4, Math.round(L / 0.16));
+  const geo = new THREE.TorusGeometry(0.07, 0.022, 5, 10), mat = new THREE.MeshBasicMaterial({ color: 0xff1a2a, depthTest: false });
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, q = c.getPoint(t), tg = c.getTangent(t);
+    const m = new THREE.Mesh(geo, mat); m.position.copy(q);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(-tg.z, 0, tg.x).normalize()); // 环面含切线
+    if (i % 2) m.rotateOnWorldAxis(tg, Math.PI / 2);
+    m.renderOrder = 15; overlay.add(m);
+  }
+}
+let lastPreviewKey = '';
 function clearOverlay() { while (overlay.children.length) overlay.remove(overlay.children[0]); }
 function tileQuad(p: Vec, color: number, opacity = 0.45, y = 0.02) {
   const q = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.92), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
@@ -481,22 +606,36 @@ function refreshOverlay() {
     for (let y = 0; y < battle.map.height; y++) for (let x = 0; x < battle.map.width; x++) if (battle.canSkillAt(u, u.unique!, { x, y }, from)) tileQuad({ x, y }, 0xffd400, 0.18, 0.016);
     if (uniqueTile) tileQuad(uniqueTile, 0xffd400, 0.6, 0.03);
   }
-  ring(u.pos, 0xffffff);
+  standTile(u.pos);
+  for (const a of battle.alive('ally')) if (a.id !== u.id && !a.prop && !a.decoy) ring(a.pos, MATE_PINK);
   const skr = curSkill(u);
   if (skillPhase !== 'none' && skr && skr.kind === 'attack') {
     // r10：技能射程格（skill_list_2459：列表打开时场上同步画范围；红色半透明）
     const from0 = previewTile ?? u.pos;
-    for (let y = 0; y < battle.map.height; y++) for (let x = 0; x < battle.map.width; x++) if (battle.canSkillAt(u, skr, { x, y }, from0)) { tileQuad({ x, y }, 0x700008, 0.28, 0.014); }
+    // r12：红色半透明 + 白描边（skill_list_2459；格子贴图未导出 → 按帧颜色重建）
+    for (let y = 0; y < battle.map.height; y++) for (let x = 0; x < battle.map.width; x++) if (battle.canSkillAt(u, skr, { x, y }, from0)) { tileQuad({ x, y }, 0xe60012, 0.3, 0.014); tileEdge({ x, y }); }
   }
-  if (skillPhase === 'none') for (const p of battle.moveTiles(u)) tileQuad(p, 0x2a8cff, 0.42);
-  if (!eq(u.anchor, u.pos)) tileQuad(u.anchor, 0x2a8cff, 0.25);
+  if (skillPhase === 'none') { const mt = battle.moveTiles(u); const mates = battle.alive('ally').filter((a) => a.id !== u.id && mt.some((m) => Math.abs(m.x - a.pos.x) + Math.abs(m.y - a.pos.y) === 1)).map((a) => a.pos); // 队友站的格算进区域（不在边界上画框）
+    rangeOutline([u.pos, ...(eq(u.anchor, u.pos) ? [] : [u.anchor]), ...mt, ...mates]); }
   const from = previewTile ?? u.pos;
-  if (previewTile) { pathLine(battle.pathFor(u, previewTile)); tileQuad(previewTile, 0xffffff, 0.55, 0.03); }
+  if (previewTile) { glowPath(battle.pathFor(u, previewTile)); standTile(previewTile); moveCursor(previewTile); }
+  { const pk = previewTile ? key(previewTile) : ''; if (pk !== lastPreviewKey) { lastPreviewKey = pk; if (previewTile && skillPhase === 'none' && !previewTarget) rig.focus(w2v(previewTile)); } } // r12：镜头跟到站位格（原版角色真的走过去，镜头跟随）
+  if (skillPhase === 'none') for (const c of adjCovers(from)) coverShield(c, from);
   if (!u.acted) for (const e of battle.units) if (!e.ko && e.side !== 'ally' && e.prop !== 'speaker' && attackFrom(u, from, e)) ring(e.pos, previewTarget === e.id ? 0xffd400 : 0xe60012);
+  // r12：红色弧形瞄准线连向可射击敌人（command_2448/3429、aim_1458）；射程内处于 GUARD 的敌人画红色大 X（command_3410）
+  if (!u.acted && skillPhase === 'none' && (mode === 'auto' || mode === 'gun')) for (const e of battle.units) {
+    if (e.ko || e.side === 'ally' || e.prop || battle.isHidden(e)) continue;
+    const inR = Math.abs(e.pos.x - from.x) + Math.abs(e.pos.y - from.y) <= battle.gunRange(u);
+    if (e.guard && inR) guardX(e.pos); // GUARD 中的敌人：红色大 X（command_3410，INDEX/验收要求）
+    else if (battle.canShoot(u, e, from)) aimArc(from, e.pos);
+  }
   const fc = currentForecast();
   if (fc) {
     for (const p of fc.aoe) if (!eq(p, fc.target.pos)) { tileQuad(p, 0xe60012, 0.42, 0.034); if (fc.kind === 'skill') tileEdge(p); }
-    stripeTile(fc.target.pos, 0.036);
+    if (fc.kind === 'skill') { // r12：选技能目标——中心红色锯齿准星（原版 sprite bom04_icon_thorns_01/02，乘红为推断）+ 施法者→目标红色锁链线（重建）（predict_1719_5/2501_2）
+      tileQuad(fc.target.pos, 0xe60012, 0.42, 0.034); tileEdge(fc.target.pos);
+      thornsReticle(fc.target.pos); chainLine(from, fc.target.pos);
+    } else stripeTile(fc.target.pos, 0.036);
     if (fc.push && !eq(fc.push.to, fc.push.from)) pushArrow(fc.push.from, fc.push.to);
     else if (fc.push) tileQuad(fc.push.from, 0xffffff, 0.3, 0.038);
   }
@@ -698,6 +837,16 @@ function refreshLabels() {
     act.style.top = `${Math.min(h - 200, Math.max(60, sy - 70))}px`; act.style.bottom = 'auto';
     act.classList.remove('hidden');
   } else act.classList.add('hidden');
+  // r12：原版指令菜单——站位格（移动预览格）上方角色头顶旁；技能列表/选目标/瞄准时不显示
+  if (su && sg && battle.phase === 'player' && !busy && !fcOn && skillPhase === 'none' && !su.acted && !aimActive) {
+    const from = previewTile ?? su.pos;
+    const hp = w2v(from, (rigs.get(su.id)?.height ?? 1.1) + 0.05).project(viewCam);
+    const keys: CmdKey[] = [];
+    if (su.skills.length) keys.push('persona');
+    keys.push('gun');
+    if (battle.units.some((t) => !t.ko && t.side !== 'ally' && !t.prop && battle.canMelee(su, t, from))) keys.push('sword');
+    cmdMenu.show(((hp.x + 1) / 2) * w, ((1 - hp.y) / 2) * h, keys, key(from), mode === 'auto' ? null : mode, h);
+  } else cmdMenu.hide();
   for (const u of battle.units) {
     const el = labelEl.get(u.id);
     const g = unitMesh.get(u.id);
@@ -977,7 +1126,7 @@ async function aimShot(attackerId: string, targetId: string, reticle = true) {
 /** r11：技能列表/选目标期间切到原版式透视镜头；平滑跟随光标所在技能的目标。离开技能流程 → 回到俯视镜头 */
 function skillCamStep() {
   const on = skillPhase !== 'none' && !!selected && !aimActive && battle.phase === 'player';
-  if (!on) { if (viewCam === skillCam) { viewCam = camera; setOrigCamCut(null); } skCam = null; return; }
+  if (!on) { if (viewCam === skillCam) { viewCam = baseCam(); setOrigCamCut(rig.persp ? 0.4 : null); } skCam = null; return; }
   const u = battle.unit(selected!);
   const a = w2v(previewTile ?? u.pos);
   const t = previewTarget ? battle.unit(previewTarget) : null;
@@ -1017,7 +1166,7 @@ function aimStep() {
 async function endAim(hold = 260) {
   if (!aimActive) return;
   await sleep(hold / aimSpeed());
-  aimActive = false; aimAnim = null; viewCam = camera; document.body.classList.remove('aiming');
+  aimActive = false; aimAnim = null; viewCam = baseCam(); document.body.classList.remove('aiming');
   const ov = $('#aim'); ov.classList.remove('on', 'fire'); ov.classList.add('hidden');
 }
 
@@ -1037,7 +1186,8 @@ async function startEnemyCam() {
   enemyCam.saved = rig.saveTarget(); enemyCam.actor = null; enemyCam.skip = false;
   document.body.classList.add('enemy-turn');
   refreshHud();
-  await enemyTurnBanner(efast() ? 520 / SPEED : 900);
+  if (turnChangeAvailable()) { sfx('ui_confirm_3', 0.8) /* 原版回合切换 SE 未导出，借用 ui_confirm_3 */; await playTurnChange('enemy', efast() ? SPEED * 1.7 : SPEED); } // r12：原版 ENEMY TURN（turn_start_enemy 2.0s）
+  else await enemyTurnBanner(efast() ? 520 / SPEED : 900);
 }
 function endEnemyCam() {
   if (vPhase !== 'enemy') return false;
@@ -1093,7 +1243,10 @@ async function play(events: BattleEvent[]) {
       case 'phaseStart':
         if (e.phase === 'enemy') await startEnemyCam();
         if (e.phase === 'player') { document.body.classList.remove('enemy-skip'); if (!endEnemyCam()) camFocus(null); refreshHud(); } // 我方回合：回到玩家镜头（无存档则对准可行动角色）
-        if (e.phase === 'player' && e.turn > 1) { banner(`TURN ${e.turn}`); await sleep(500 / SPEED); }
+        if (e.phase === 'player' && e.turn > 1) {
+          // r12：原版 YOUR TURN（prefab_ui2d_turn_change_ally + turn_start 2.0s，other_3405）；缺贴图回退旧横幅
+          if (turnChangeAvailable()) { sfx('ui_confirm_3', 0.8) /* 原版回合切换 SE 未导出，借用 ui_confirm_3 */; await playTurnChange('ally', SPEED); } else { banner(`TURN ${e.turn}`); await sleep(500 / SPEED); }
+        }
         break;
       case 'move': {
         const foeCam = vPhase === 'enemy' && isFoe(e.unitId);
@@ -1296,7 +1449,27 @@ function zoneCenter(z: string): Vec | null {
   return n ? { x: Math.round(sx / n), y: Math.round(sy / n) } : null;
 }
 
+let resultCtl: { next: () => void } | null = null;
 function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
+  if (e.outcome === 'won') { // r12：原版结算两页（prefab_ui2d_result_win 布局；贴图待导出 → 占位）
+    const party = battle.mainAllies().filter((u) => !u.prop && !u.decoy).slice(0, 3);
+    const lead = party.find((u) => !u.ko) ?? party[0];
+    const g = lead ? unitMesh.get(lead.id) : null;
+    if (g) { // 结算机位（原版 A_CA9999_BTL0070 系列未导出，自定：主角斜前方半身）
+      const c = g.position.clone().add(new THREE.Vector3(0, 0.6, 0));
+      aimCam.aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight); aimCam.fov = 38;
+      const yaw = rig.cur.yaw + 0.5; aimCam.position.copy(c).add(new THREE.Vector3(Math.sin(yaw) * 2.6, 0.35, Math.cos(yaw) * 2.6));
+      aimCam.lookAt(c.clone().add(new THREE.Vector3(Math.cos(yaw) * 0.6, 0, -Math.sin(yaw) * 0.6))); aimCam.updateProjectionMatrix(); viewCam = aimCam; aimActive = true;
+    }
+    resultCtl = showResultScreen($('#app'), {
+      level: battle.map.id, turns: e.turn, won: true, awards: e.crowns.items.map((i) => ({ ok: i.ok, label: i.label })),
+      party: party.map((u) => ({ id: u.id, name: u.name, persona: PERSONA_NAME[u.id] ?? 'PERSONA', lv: 1 })),
+    }, () => { resultCtl = null; aimActive = false; viewCam = baseCam(); showResultPlain(e); });
+    return;
+  }
+  showResultPlain(e);
+}
+function showResultPlain(e: Extract<BattleEvent, { type: 'result' }>) {
   const r = $('#result');
   r.classList.remove('hidden');
   const row = (ok: boolean, t: string) => `<div class="${ok ? 'ok' : 'ng'}">${ok ? '♛' : '♔'} ${t}</div>`;
@@ -1311,7 +1484,7 @@ const ray = new THREE.Raycaster();
 function pick(ev: PointerEvent): { tile?: Vec; unit?: string } {
   const r = canvas.getBoundingClientRect();
   const ndc = new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
-  ray.setFromCamera(ndc, viewCam === skillCam ? skillCam : camera);
+  ray.setFromCamera(ndc, viewCam === skillCam ? skillCam : baseCam());
   const unitObjs = [...unitMesh.values()].filter((g) => g.visible);
   const hu = ray.intersectObjects(unitObjs, true)[0];
   if (hu) return { unit: hu.object.userData.unit };
@@ -1480,7 +1653,10 @@ $('#party').addEventListener('click', (ev) => {
 $('#actions').addEventListener('click', (ev) => {
   const b = (ev.target as HTMLElement).closest('button');
   if (!b || busy) return;
-  const a = b.dataset.act!;
+  doAct(b.dataset.act!);
+});
+function doAct(a: string) {
+  if (busy) return;
   if (a === 'end') { selected = null; void play(battle.endPlayerPhase()); return; }
   if (a === 'triple') { void play(battle.tripleThreat()); return; }
   if (!selected) return;
@@ -1496,10 +1672,11 @@ $('#actions').addEventListener('click', (ev) => {
     }
   }
   if (a === 'skill') { openSkillList(); return; }
+  sfx('ui_confirm_short', 0.7);
   mode = mode === a ? 'auto' : (a as Mode);
   previewTarget = null;
   refreshAll();
-});
+}
 let cardOpen = false;
 $('#unit-card').addEventListener('click', (ev) => {
   if ((ev.target as HTMLElement).closest('.name')) { cardOpen = !cardOpen; $('#unit-card').classList.toggle('open', cardOpen); refreshAll(); return; }
@@ -1554,14 +1731,18 @@ function loop() {
   }
   tfx.update();
   if (camFollow) { const g = unitMesh.get(camFollow); if (g) rig.focus(g.position.clone(), rig.tgt.zoom); }
+  // r12：镜头档位——敌方行动者 / 选中单位（指令·移动）/ 待机
+  rig.shot = vPhase === 'enemy' ? (enemyCam.actor ? 'enemy' : 'idle') : selected ? 'unit' : 'idle';
   camStep();
+  if (viewCam === camera || viewCam === rig.pcam) { viewCam = baseCam(); if (rig.persp) setOrigCamCut(0.4); }
   skillCamStep();
+  { const mc = overlay?.getObjectByName('moveCursor'); if (mc) { const cp = (viewCam as THREE.Camera).position; mc.rotation.y = Math.atan2(cp.x - mc.position.x, cp.z - mc.position.z); mc.position.y = (mc.userData.y0 ??= mc.position.y) + Math.abs(Math.sin(performance.now() / 260)) * 0.12; } }
   aimStep();
   mapObj.update();
   for (const r of rigs.values()) r.update();
   const t = performance.now() / 1000;
   sceneKit.update(rig.cur.yaw, t);
-  updateOrigMap(viewCam === skillCam ? skillCam : camera);
+  updateOrigMap(viewCam === skillCam ? skillCam : baseCam());
   for (const u of battle.units) if (u.prop === 'flag' || u.prop === 'speaker') { const g = unitMesh.get(u.id); if (g) (u.prop === 'flag' ? waveFlag : pulseSpeaker)(g, t); }
   updateHitFx(viewCam, world);
   const so = applyShake(viewCam);
@@ -1573,7 +1754,8 @@ function loop() {
 
 if (params.get('level')) { const lv = params.get('level')!; makeMap = () => levelMap(lv); }
 restart();
-void initP5tHud(() => refreshAll()); // P5T 正版 HUD 贴图（有 public/p5t-hud/ 才启用）
+void initP5tHud(() => refreshAll());
+void turnChangeReady(); // P5T 正版 HUD 贴图（有 public/p5t-hud/ 才启用）
 loop();
 
 // 调试/截图钩子
@@ -1595,7 +1777,7 @@ window.__p5t = {
   chars: { preloadChar, makeChar },
   /** 截图用特写机位：从单位前方 ang 弧度方向、距离 dist 看它（null 还原俯视） */
   portrait(id: string | null, ang = 0, dist = 2.2, h = 0.9) {
-    if (!id) { viewCam = camera; return; }
+    if (!id) { viewCam = baseCam(); return; }
     const g = unitMesh.get(id); if (!g) return;
     const c = g.position.clone().add(new THREE.Vector3(0, 0.55, 0));
     aimCam.aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight); aimCam.fov = 40;
@@ -1604,6 +1786,10 @@ window.__p5t = {
   },
   banner,
   summonCutIn,
+  turnChange: (side: 'ally' | 'enemy', speed = 1) => playTurnChange(side, speed),
+  cmdMenu,
+  resultNext() { resultCtl?.next(); },
+  showResult: (won = true) => showResult({ type: 'result', outcome: won ? 'won' : 'lost', turn: battle.turn, crowns: battle.crowns(won ? 'won' : 'lost'), reason: '' } as never),
   /** P5T 正版 HUD 截图钩子 */
   p5,
   fx: {

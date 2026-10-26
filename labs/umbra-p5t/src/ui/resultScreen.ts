@@ -1,0 +1,77 @@
+// r12：原版结算画面（result_1610 第 1 页 money/exp/persona exp、result_1613/2606 第 2 页 item/award/turn）。
+// 布局 = prefab_ui2d_result_win 的 RectTransform（tools/gen-result-layout.py → ui/data/result-layout.json，画布 1920×1080，按屏高缩放居中）。
+// 贴图全部运行时绑定（serialized_null），image/battle/result 尚未导出 → RESULT_TEX 为 null 时画纯色块并标「待原版贴图」；填上路径即替换。
+// 背景红色斜带（ResultLineManager Line1–4 是脚本画的线，参数未导出）= 自制近似；背景是战场 3D 画面 + 结算机位（A_CA9999_BTL0070 系列镜头未导出，自定）。
+// 金额/经验 = stage_rewards.csv 对应 StageId 的 Money / StageBaseExp / StagePersonaExp（注意：原版帧 result_1610 显示 ¥160，表里 1010 为 60，差额来源未查明）。
+import L from './data/result-layout.json';
+import { p5 } from './p5tHud';
+/** 原版贴图（fetch-p5t-ui.sh → public/p5t-hud 短名）；没有 → RESULT_TEX 里的手填路径 → 占位 */
+const T = (short: string, k: string) => (p5.has(short) ? p5.url(short) : RESULT_TEX[k] ?? null);
+// 每块底板 = 红底（大）+ 黑底：prefab 两个同名 *_base 兄弟，红底相对黑底的 anchoredPosition / sizeDelta（Unity y 向上）
+const RED: Record<string, [number, number, number, number]> = { money: [10, 4, 534, 168], exp: [8, 2, 536, 228], personaexp: [4, -1, 872, 518], item_small: [-2, 4, 712, 201], turn: [2, -1, 458, 238], award: [-9, 6, 742, 298] };
+function redBox(b: Box, k: string): Box { const r = RED[k]; const cx = b[0] + b[2] / 2 + r[0], cy = b[1] + b[3] / 2 - r[1]; return [cx - r[2] / 2, cy - r[3] / 2, r[2], r[3]]; }
+function base2(b: Box, k: string, inner: string) {
+  const red = T(`rs_red_${k}`, k), blk = T(`rs_black_${k}`, k);
+  if (!red || !blk) return slot('base', b, null, inner);
+  return `<div class="rs tex" style="${px(redBox(b, k))};background-image:url(${red})"></div><div class="rs base tex" style="${px(b)};background-image:url(${blk})">${inner}</div>`;
+}
+
+type Box = number[];
+export const RESULT_TEX: Record<string, string | null> = {
+  money_base: null, money_title: null, money_icon: null, exp_base: null, exp_title: null, exp_gauge: null, pexp_base: null, pexp_title: null, face: null,
+  item_base: null, item_title: null, item_none: null, turn_base: null, turn_title: null, award_base: null, award_title: null, check: null, next: null, clear: null,
+};
+export interface ResultData {
+  level: string; turns: number; awards: { ok: boolean; label: string }[]; won: boolean;
+  party: { id: string; name: string; persona: string; lv: number; face?: string }[];
+}
+const px = (b: Box) => `left:${b[0]}px;top:${b[1]}px;width:${b[2]}px;height:${b[3]}px`;
+function slot(cls: string, b: Box, tex: string | null, inner = '', ph = true) {
+  return `<div class="rs ${cls}${tex ? ' tex' : ''}" style="${px(b)}${tex ? `;background-image:url(${tex})` : ''}">${inner}${!tex && ph ? '<em class="ph">待原版贴图</em>' : ''}</div>`;
+}
+export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () => void): { next: () => void; el: HTMLElement } {
+  const p1 = L.p1 as Record<string, Box>, p2 = L.p2 as unknown as Record<string, Box> & { award_rows: { box: Box; text: Box }[] };
+  const rw = (L.rewards as Record<string, { money: number; exp: number; personaExp: number }>)[d.level] ?? { money: 0, exp: 0, personaExp: 0 };
+  const el = document.createElement('div'); el.id = 'rs'; el.className = 'rs-wrap';
+  const lines = `<div class="rs-lines"><i style="--r:-18deg;--y:12%"></i><i style="--r:14deg;--y:46%"></i><i style="--r:-9deg;--y:70%"></i><i style="--r:24deg;--y:90%"></i></div>`;
+  const page1 = `<div class="rs-page p1">
+    ${base2(p1.money_base, 'money', `<b class="num money">${rw.money.toLocaleString()}</b><span class="get">GET!!</span>`)}${slot('micon', p1.money_icon, T('rs_money_icon', 'money_icon'), T('rs_money_icon', 'money_icon') ? '' : '¥', false)}
+    ${slot('title', p1.money_title, RESULT_TEX.money_title, '<span>money</span>')}
+    ${base2(p1.exp_base, 'exp', `<span class="lbl">怪盗团 LV.</span><b class="num">1</b><small>+${rw.exp} EXP</small>`)}
+    ${slot('title', p1.exp_title, RESULT_TEX.exp_title, '<span>exp</span>')}
+    ${slot('gauge' + (T('rs_lv_base', 'exp_gauge') ? ' lvtex' : ''), p1.exp_gauge, T('rs_lv_base', 'exp_gauge'), `<i style="width:35%${T('rs_lv_white', 'x') ? `;background:url(${T('rs_lv_white', 'x')}) 0 50%/381px 18px no-repeat` : ''}"></i>`, false)}
+    ${base2(p1.pexp_base, 'personaexp', '')}
+    ${slot('title', p1.pexp_title, RESULT_TEX.pexp_title, '<span>persona exp</span>')}
+    ${[1, 2, 3].map((i) => { const c = d.party[i - 1]; if (!c) return ''; return `
+      ${slot('face', p1[`c${i}_face`], c.face ?? RESULT_TEX.face, '', !c.face)}
+      <div class="rs txt pname" style="${px(p1[`c${i}_name`])}">${c.persona}</div>
+      <div class="rs txt plv" style="${px(p1[`c${i}_lv`])}">LV<b>${c.lv}</b></div>
+      ${slot('gauge dash', p1[`c${i}_gauge`], null, `<i style="width:${30 + i * 13}%"></i><small>+${rw.personaExp}</small>`, false)}`; }).join('')}
+    ${slot('next', p1.next, RESULT_TEX.next, '<i class="btn">A</i><b>继续</b>')}
+  </div>`;
+  const page2 = `<div class="rs-page p2">
+    ${base2(p2.item_base, 'item_small', '')}
+    ${slot('title', p2.item_title, RESULT_TEX.item_title, '<span>item</span>')}
+    ${slot('none', p2.item_none, RESULT_TEX.item_none, '<b>NONE</b>', false)}
+    ${base2(p2.turn_base, 'turn', `<b class="num big">${d.turns}</b><span class="tt">TURN</span>`)}
+    ${slot('title', p2.turn_title, RESULT_TEX.turn_title, '<span>turn</span>')}
+    ${base2(p2.award_base, 'award', '')}
+    ${slot('title', p2.award_title, RESULT_TEX.award_title, '<span>award</span>')}
+    ${p2.award_rows.map((r, i) => { const a = d.awards[i]; if (!a) return ''; return `<div class="rs chk${a.ok ? ' ok' : ''}${T('rs_check_box', 'check') ? ' tex' : ''}" style="${px(r.box)}${T('rs_check_box', 'check') ? `;background-image:url(${T('rs_check_box', 'check')})` : ''}">${a.ok && T('rs_check', 'check') ? `<img class="ck" src="${T('rs_check', 'check')}">` : '<i></i>'}</div><div class="rs txt award" style="${px(r.text)}">${a.label}</div>`; }).join('')}
+    ${d.awards.every((a) => a.ok) ? `<div class="rs clear" style="left:1125px;top:900px;width:240px;height:120px">CLEAR!!</div>` : ''}
+    ${slot('next', p2.next, RESULT_TEX.next, '<i class="btn">A</i><b>继续</b>')}
+  </div>`;
+  el.innerHTML = `<div class="rs-stage">${lines}${page1}${page2}</div>`;
+  host.appendChild(el); document.body.classList.add('result-on');
+  const stage = el.querySelector<HTMLElement>('.rs-stage')!;
+  const fit = () => { const W = host.clientWidth || innerWidth, H = host.clientHeight || innerHeight, s = H / 1080; stage.style.transform = `translate(${(W - 1920 * s) / 2}px,0) scale(${s})`; };
+  fit(); addEventListener('resize', fit);
+  let page = 1;
+  el.classList.add('pg1');
+  const next = () => {
+    if (page === 1) { page = 2; el.classList.remove('pg1'); el.classList.add('pg2'); return; }
+    removeEventListener('resize', fit); el.remove(); document.body.classList.remove('result-on'); onDone();
+  };
+  el.addEventListener('click', next);
+  return { next, el };
+}

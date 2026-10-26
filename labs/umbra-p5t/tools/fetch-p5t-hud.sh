@@ -103,3 +103,6 @@ FONTS="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_ui/font_sdf_v2"
 for F in FOT_YURUKASTD_UB_SDF_BattleNumber2 FOT_YURUKASTD_UB_SDF NikkyouSans-mLKax_SDF; do
   if [ -f "$FONTS/$F/atlas.png" ]; then mkdir -p "$DST/font/$F"; cp -f "$FONTS/$F"/{atlas.png,glyphs.json,materials.json,summary.json} "$DST/font/$F/"; echo "ok   font/$F"; else echo "miss font/$F"; fi
 done
+
+# r12：原版指令/结算/技能列表立绘等（umbra-assets p5t/1_ui/image）
+"$(dirname "$0")/fetch-p5t-ui.sh"

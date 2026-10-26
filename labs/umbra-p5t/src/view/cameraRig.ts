@@ -7,6 +7,18 @@ export interface MapBox { width: number; height: number; maxY: number }
 interface CamState { ox: number; oy: number; zoom: number; yaw: number }
 
 const DIST = 30;
+// r12：原版常规战斗镜头（透视）。从原版帧反求（tools/r12-fit-cam.py，notes/P5T-R12-2026-10-26.md）：
+//  idle  = hud_idle_1212 待机：12 个已知格点最小二乘，vFOV 41.1° 俯角 19.0° 视点距 11.0m（相机高 3.6m），视点在当前角色前方 4.7m，rms 2.7px；
+//  unit  = command_3456 选中单位（指令/移动）：脚下 1m 格近/远边宽 135/122px、纵深 86px，按同一 vFOV 解 → 俯角 35.4° 视点距 9.3m，视点在角色前方 2.5m（估算）；
+//  enemy = other_1316 敌方回合行动者：8 个格点，固定 vFOV 41 → 俯角 39.3° 视点距 8.7m，视点=行动者（rms 7.7px，估算）。
+// FOV 只在 idle 帧上解得出（20–60° 扫描 rms 21→2.9→18px），另两档沿用同一镜头 FOV（推断：原版镜头参数未导出）。
+export const BATTLE_FOV = 41;
+export type Shot = 'idle' | 'unit' | 'enemy';
+export const SHOTS: Record<Shot, { pitch: number; dist: number; ahead: number }> = {
+  idle: { pitch: 19.0, dist: 11.0, ahead: 4.7 },
+  unit: { pitch: 35.4, dist: 9.3, ahead: 2.5 },
+  enemy: { pitch: 39.3, dist: 8.7, ahead: 0 },
+};
 const PITCH_DIR_Y = 1.25; // 与原 fitCamera 的 (1,1.25,1) 同俯角
 const BASE_YAW = Math.PI / 4;
 
@@ -26,7 +38,37 @@ export class CameraRig {
   defZoom = 1;
   step = 0; // 当前 90° 步数
 
+  /** r12：原版式透视战斗镜头（默认开；?cam=ortho 回到旧正交俯视） */
+  persp = true;
+  readonly pcam = new THREE.PerspectiveCamera(BATTLE_FOV, 2, 0.1, 400);
+  shot: Shot = 'idle';
+  /** 新地图的初始方位（相机在视点的 (sin, cos) 方向）：我方→敌方方向的反向，按 90° 取整 */
+  baseYaw = BASE_YAW;
+  private ps = { pitch: SHOTS.idle.pitch, dist: SHOTS.idle.dist, ahead: SHOTS.idle.ahead };
+  private pxH = 720;
   constructor(cam: THREE.OrthographicCamera) { this.cam = cam; }
+  get view(): THREE.Camera { return this.persp ? this.pcam : this.cam; }
+  /** 透视镜头距离倍率：默认近景倍率 = 1（原版距离），整图 = 拉远 */
+  private get dMul() { return Math.min(3.2, Math.max(0.55, this.defZoom / Math.max(0.01, this.cur.zoom))); }
+  private posePersp(k = 0) {
+    const t = SHOTS[this.shot];
+    this.ps.pitch += (t.pitch - this.ps.pitch) * k; this.ps.dist += (t.dist - this.ps.dist) * k; this.ps.ahead += (t.ahead - this.ps.ahead) * k;
+    const P = this.groundAtCenter(this.cur);
+    const yaw = this.cur.yaw, m = this.dMul;
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw); // 水平前方（相机 → 视点）
+    const look = new THREE.Vector3(P.x + fx * this.ps.ahead * m, 0, P.z + fz * this.ps.ahead * m);
+    const pr = THREE.MathUtils.degToRad(this.ps.pitch), d = this.ps.dist * m;
+    this.pcam.position.set(look.x - fx * Math.cos(pr) * d, Math.sin(pr) * d, look.z - fz * Math.cos(pr) * d);
+    this.pcam.up.set(0, 1, 0); this.pcam.lookAt(look);
+    this.pcam.aspect = this.aspect; this.pcam.fov = BATTLE_FOV;
+    this.pcam.updateProjectionMatrix(); this.pcam.updateMatrixWorld();
+  }
+  /** 当前镜头下 1 屏幕像素对应的地面米数（透视：在视点处；正交：视图平面） */
+  private groundPerPx() {
+    if (!this.persp) return { x: (this.cam.right - this.cam.left) / this.pxH / this.aspect, y: (this.cam.top - this.cam.bottom) / this.pxH };
+    const d = this.ps.dist * this.dMul, s = (2 * d * Math.tan(THREE.MathUtils.degToRad(BATTLE_FOV / 2))) / this.pxH;
+    return { x: s, y: s / Math.sin(THREE.MathUtils.degToRad(this.ps.pitch)) };
+  }
 
   get center() { return new THREE.Vector3((this.box.width - 1) / 2, 0, (this.box.height - 1) / 2); }
   private axes(yaw: number) {
@@ -55,7 +97,7 @@ export class CameraRig {
 
   /** 新地图 / 窗口尺寸变化 */
   setMap(box: MapBox, aspect: number, keepView = false, pxH = 720) {
-    this.box = box; this.aspect = aspect;
+    this.box = box; this.aspect = aspect; this.pxH = pxH;
     const f = this.fit(this.cur.yaw);
     // 默认近景：身高 1.1 格的角色在屏幕上约 px 像素（720 高 ≈ 56px，手机横屏 390 高 ≈ 40px）
     const upY = this.axes(this.cur.yaw).up.y;
@@ -70,12 +112,13 @@ export class CameraRig {
     this.levels = [...new Set([1, mid, this.defZoom, near, this.zMax].map((z) => +z.toFixed(3)))].sort((a, b) => a - b);
     if (!keepView) {
       this.step = 0;
-      this.cur = { ox: f.cx, oy: f.cy, zoom: this.defZoom, yaw: BASE_YAW };
+      this.cur = { ox: f.cx, oy: f.cy, zoom: this.defZoom, yaw: this.persp ? this.baseYaw : BASE_YAW };
       this.tgt = { ...this.cur };
       this.userZoom = this.cur.zoom;
     }
     this.clamp(this.cur); this.clamp(this.tgt);
     this.apply();
+    if (this.persp && !keepView) this.posePersp(1);
   }
 
   /** 把视野中心限制在地图投影范围内（放大倍率越高可移动范围越大；整图倍率时锁在中心） */
@@ -86,7 +129,8 @@ export class CameraRig {
     const slack = 0.6; // 允许边缘多看半格
     // 放大后视野中心可以一直移到地图边缘（大图 32×40 也能看到角落）
     const free = 1 - 1 / s.zoom;
-    const rx = Math.max(0, f.extW + slack - hw, f.extW * free), ry = Math.max(0, f.extH + slack - hh, f.extH * free);
+    let rx = Math.max(0, f.extW + slack - hw, f.extW * free), ry = Math.max(0, f.extH + slack - hh, f.extH * free);
+    if (this.persp) { rx = f.extW + 1; ry = f.extH + 1; } // r12 透视：视点要能落到边缘格（角色在画面下部，视点在其前方）
     s.ox = Math.min(f.cx + rx, Math.max(f.cx - rx, s.ox));
     s.oy = Math.min(f.cy + ry, Math.max(f.cy - ry, s.oy));
   }
@@ -118,6 +162,7 @@ export class CameraRig {
     this.cam.left = -hw; this.cam.right = hw; this.cam.top = hh; this.cam.bottom = -hh;
     this.cam.updateProjectionMatrix();
     this.cam.updateMatrixWorld();
+    if (this.persp) this.posePersp();
   }
 
   /** 每帧：平滑逼近目标 */
@@ -135,12 +180,17 @@ export class CameraRig {
     }
     c.zoom += (t.zoom - c.zoom) * k;
     this.apply();
+    if (this.persp) this.posePersp(0.1);
   }
   get rotating() { return !!this.pivot; }
 
   /** 拖动平移：屏幕像素位移（立即生效，目标同步） */
   panPixels(dx: number, dy: number, screenW: number, screenH: number) {
     const hw = this.cam.right - this.cam.left, hh = this.cam.top - this.cam.bottom;
+    if (this.persp) { // 透视：按视点处地面米/像素换算到正交视图偏移（正交俯角 51.3°）
+      const g = this.groundPerPx(), oy = Math.sin(Math.atan(PITCH_DIR_Y));
+      dx *= g.x / (hw / screenW); dy *= (g.y * oy) / (hh / screenH);
+    }
     this.cur.ox -= (dx / screenW) * hw; this.cur.oy += (dy / screenH) * hh;
     this.clamp(this.cur);
     this.tgt.ox = this.cur.ox; this.tgt.oy = this.cur.oy;
@@ -213,7 +263,7 @@ export class CameraRig {
   restoreTarget(s: CamState) { this.tgt = { ...s, yaw: this.tgt.yaw }; this.clamp(this.tgt); }
   /** 世界点是否在当前画面里（留 margin 比例） */
   inView(p: THREE.Vector3, margin = 0.15) {
-    const v = p.clone().project(this.cam);
+    const v = p.clone().project(this.view);
     return Math.abs(v.x) < 1 - margin && Math.abs(v.y) < 1 - margin;
   }
 }

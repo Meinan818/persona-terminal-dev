@@ -2,6 +2,12 @@
 // 除 Roof 外按材质合批、贴图转 WebP 限尺寸、quantize + meshopt 压缩）。由 tools/fetch-private-maps.sh 调用。
 // 依赖 @gltf-transform/{core,extensions,functions} + meshoptimizer + sharp，从 $GLTF_TOOLS/node_modules 解析（不进游戏依赖）。
 // 用法: node tools/build-orig-map.mjs in.glb out.glb [maxTex=1024]
+// r9 可选环境变量（fetch-private-maps.sh 传）：
+//   LM_DIR   = umbra-assets r7/lighting/missions/Mxx → 贴回原版 lightmap UV（TEXCOORD_1，见 tools/orig-lightmap-uv.mjs）
+//   MAT_JSON = umbra-assets r7/material_params/missions/Mxx/materials.json、TEX_DIR = batch-03/maps/Mxx/textures
+//              → 按原版材质参数补绑 GLB 里缺的贴图槽：_BumpMap(+_BumpScale) → normalTexture、_EmissionMap(+_EmissionColor) → emissive、
+//                _DetailAlbedoMap(_UVSec=1 → TEXCOORD_2 = 原版作者 UV1，_DetailMapValue) → 借 occlusionTexture 槽传给运行时
+//                （运行时 origMap.ts 把它当细节层用，不当 AO）；_BaseColor、_AlphaClip/_Cutoff。
 import { createRequire } from 'node:module';
 import path from 'node:path';
 const req = createRequire(path.join(process.env.GLTF_TOOLS || '/workspace/work/gltf-tools', 'package.json'));
@@ -10,6 +16,8 @@ const { NodeIO } = await imp('@gltf-transform/core');
 const { ALL_EXTENSIONS } = await imp('@gltf-transform/extensions');
 const { dedup, prune, flatten, join, textureCompress, reorder, quantize, meshopt } = await imp('@gltf-transform/functions');
 const { MeshoptEncoder, MeshoptDecoder } = await imp('meshoptimizer');
+const fs = await import('node:fs');
+const { applyLightmapUV } = await import(new URL('./orig-lightmap-uv.mjs', import.meta.url).href);
 const sharp = (await imp('sharp')).default;
 
 const [inp, out, maxTexS] = process.argv.slice(2);
@@ -43,6 +51,43 @@ if (process.env.PREFAB_UNSCALE) {
     if (m && names.has(m[1] + '_mesh0')) { kill(n); removed++; }
   }
 }
+// 1e) r9：原版材质参数 → 补绑贴图槽
+const s2l = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const detailMats = new Set();
+const matLog = [];
+if (process.env.MAT_JSON && fs.existsSync(process.env.MAT_JSON)) {
+  const P = new Map(); for (const m of JSON.parse(fs.readFileSync(process.env.MAT_JSON, 'utf8'))) if (!P.has(m.material)) P.set(m.material, m);
+  const texCache = new Map();
+  const tex = (name) => {
+    if (!name) return null;
+    if (texCache.has(name)) return texCache.get(name);
+    const f = path.join(process.env.TEX_DIR || '', name + '.png');
+    const t = fs.existsSync(f) ? doc.createTexture(name).setImage(fs.readFileSync(f)).setMimeType('image/png').setURI(name + '.png') : null;
+    texCache.set(name, t); return t;
+  };
+  for (const mat of root.listMaterials()) {
+    const pm = P.get(mat.getName()); if (!pm) continue;
+    const T = Object.fromEntries(pm.textures.filter((t) => t.texture).map((t) => [t.slot, t.texture]));
+    const F = Object.fromEntries(pm.floats); const C = Object.fromEntries(pm.colors);
+    const log = { m: mat.getName() };
+    if (C._BaseColor) { const c = C._BaseColor; mat.setBaseColorFactor([s2l(c.r), s2l(c.g), s2l(c.b), c.a]); }
+    if (T._BumpMap && (F._BumpScale ?? 1) > 0) { const t = tex(T._BumpMap); if (t) { mat.setNormalTexture(t); mat.getNormalTextureInfo().setTexCoord(0); mat.setNormalScale(F._BumpScale ?? 1); log.bump = F._BumpScale; } }
+    const ec = C._EmissionColor;
+    if (T._EmissionMap && ec && ec.r + ec.g + ec.b > 0) { const t = tex(T._EmissionMap); if (t) { mat.setEmissiveTexture(t); mat.setEmissiveFactor([s2l(ec.r), s2l(ec.g), s2l(ec.b)]); log.emis = [ec.r, ec.g, ec.b].map((q) => +q.toFixed(3)); } }
+    if (T._DetailAlbedoMap && (F._DetailMapValue ?? 0) > 0) {
+      const t = tex(T._DetailAlbedoMap);
+      if (t) { mat.setOcclusionTexture(t); mat.getOcclusionTextureInfo().setTexCoord(F._UVSec === 1 ? 2 : 0); mat.setOcclusionStrength(F._DetailMapValue); if (F._UVSec === 1) detailMats.add(mat.getName()); log.detail = [F._UVSec, F._DetailMapValue]; }
+    }
+    if (F._AlphaClip === 1) { mat.setAlphaMode('MASK'); mat.setAlphaCutoff(F._Cutoff ?? 0.5); log.clip = F._Cutoff; }
+    if (Object.keys(log).length > 1) matLog.push(log);
+  }
+}
+// 1f) r9：原版 lightmap UV
+let lmStats = null;
+if (process.env.LM_DIR && fs.existsSync(path.join(process.env.LM_DIR, 'uv_lightmap.bin'))) {
+  const st = applyLightmapUV(doc, process.env.LM_DIR, detailMats);
+  lmStats = { offset: st.offset, lmRenderers: st.lmRenderers, nodes: st.nodesMatched, tris: st.tris, trisHit: st.trisHit, detailTris: st.detailTris, detailHit: st.detailHit, miss: st.miss.length };
+}
 // 2) 合并绘制：除 Roof（运行时隐藏用）外清空节点名 → flatten + join 按材质合批（不改几何/贴图，只减 draw call）
 const KEEP = /^(Roof|Ceiling)/i;
 const under = (n) => { for (let p = n; p; p = p.getParentNode()) if (KEEP.test(p.getName() || '')) return true; return false; };
@@ -52,12 +97,14 @@ await doc.transform(
   prune({ keepLeaves: false }),
   flatten(),
   join({ keepNamed: true }),
-  textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [maxTex, maxTex], quality: 88 }),
+  // r9：补绑的法线/自发光/细节层限 512（手机包体）；BaseMap 仍 ≤ maxTex
+  textureCompress({ encoder: sharp, targetFormat: 'webp', slots: /^(normalTexture|emissiveTexture|occlusionTexture)$/, resize: [512, 512], quality: 85 }),
+  textureCompress({ encoder: sharp, targetFormat: 'webp', slots: /^(?!normalTexture$|emissiveTexture$|occlusionTexture$).*$/, resize: [maxTex, maxTex], quality: 88 }),
   reorder({ encoder: MeshoptEncoder }),
-  quantize(),
+  quantize({ quantizeTexcoord: 16 }), // r9：TEXCOORD_1 是 lightmap 图集坐标（2048 图集，12 bit 不够）
   meshopt({ encoder: MeshoptEncoder, level: 'medium' }),
 );
 await io.write(out, doc);
 let tris = 0, prims = 0;
 for (const m of root.listMeshes()) for (const p of m.listPrimitives()) { prims++; const idx = p.getIndices(); tris += (idx ? idx.getCount() : p.getAttribute('POSITION').getCount()) / 3; }
-console.log(JSON.stringify({ out, removedLOD: removed, meshes: root.listMeshes().length, prims, trisUnique: tris, textures: root.listTextures().length }));
+console.log(JSON.stringify({ out, lightmap: lmStats, mats: matLog.length, matLog: process.env.MAT_LOG ? matLog : undefined, removedLOD: removed, meshes: root.listMeshes().length, prims, trisUnique: tris, textures: root.listTextures().length }));

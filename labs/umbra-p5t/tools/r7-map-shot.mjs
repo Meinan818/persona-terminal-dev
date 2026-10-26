@@ -2,6 +2,7 @@
 import { chromium } from 'playwright';
 import { preview } from 'vite';
 const OUT = process.env.OUT || '/workspace/work/notes/shots/2026-10-26';
+const PFX = process.env.PFX || 'r7-map'; // r9: PFX=r9-before / r9-after
 const LV = (process.argv[2] || 'L01,L02,L03,L04,L05,L06,L08').split(',');
 const MODES = (process.env.MODES || 'grid,plain,default').split(',');
 const server = await preview({ preview: { port: 4343, host: '127.0.0.1' } });
@@ -15,13 +16,13 @@ for (const lv of LV) {
   await page.goto(`http://127.0.0.1:4343/?speed=1&level=${lv}`);
   await page.waitForFunction(() => window.__p5t && !window.__p5t.busy && window.__p5t.sceneKit.ready && window.__p5t.rigs.size >= window.__p5t.battle.units.filter((u) => !u.prop && !u.ko).length, null, { timeout: 150000 });
   await page.waitForTimeout(1500);
-  if (MODES.includes('default')) await page.screenshot({ path: `${OUT}/r7-map-${lv}-default.png` });
+  if (MODES.includes('default')) await page.screenshot({ path: `${OUT}/${PFX}-${lv}-default.png` });
   stats[lv] = await page.evaluate(() => window.__p5t.renderInfo());
   await page.evaluate(() => { const r = window.__p5t.rig; r.userZoom = 1; r.focus(null, 1); r.cur = { ...r.tgt }; r.apply(); });
   await page.waitForTimeout(400);
   stats[lv].overview = await page.evaluate(() => window.__p5t.renderInfo());
-  if (MODES.includes('plain')) await page.screenshot({ path: `${OUT}/r7-map-${lv}-overview.png` });
-  if (MODES.includes('grid')) { await page.evaluate(() => window.__p5t.gridOverlay(true)); await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/r7-map-${lv}-grid.png` }); }
+  if (MODES.includes('plain')) await page.screenshot({ path: `${OUT}/${PFX}-${lv}-overview.png` });
+  if (MODES.includes('grid')) { await page.evaluate(() => window.__p5t.gridOverlay(true)); await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/${PFX}-${lv}-grid.png` }); }
   await page.close();
 }
 console.log(JSON.stringify(stats, null, 1));

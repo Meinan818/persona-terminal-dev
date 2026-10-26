@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { GIMMICK_PLACEMENTS, GIMMICK_UNITS } from './gimmickData';
+import { patchOrigLit } from './origMap';
 
 const BASE = 'models/private/gimmick/';
 const loader = new GLTFLoader();
@@ -15,7 +16,9 @@ const done = new Map<string, THREE.Group>();
 function conv(src: THREE.Material): THREE.Material {
   const s = src as THREE.MeshStandardMaterial;
   const m = new THREE.MeshLambertMaterial({ map: s.map, color: s.color, transparent: s.transparent, alphaTest: s.alphaTest || (s.transparent ? 0.3 : 0), side: s.side });
-  m.name = s.name; return m;
+  m.name = s.name;
+  patchOrigLit(m); // r9：同地图——原版环境光/方向光比例/雾（gimmick 不在 lightmap 里，用 Trilight 环境光）
+  return m;
 }
 export function loadGimmick(file: string): Promise<THREE.Group | null> {
   let p = cache.get(file);

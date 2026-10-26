@@ -53,7 +53,23 @@ export function preloadHitFx() { for (const n of ['shotgun_Sheet_4x2', 'shockwav
 const C = (r: number, g: number, b: number) => new THREE.Color(r, g, b);
 /** HDR 渐变色（原版 >1）→ 加色混合里 clamp 前的亮度：除以最大分量再乘一点溢出感 */
 const hdr = (r: number, g: number, b: number) => { const m = Math.max(r, g, b, 1); return C(r / m, g / m, b / m); };
-function flip(name: string, cols: number, rows: number, color: THREE.Color, parent: THREE.Object3D, at: THREE.Vector3, size: number, dur: number, frames: number, rot = Math.random() * Math.PI * 2) {
+// r9：贴图尺寸是世界米数，按默认俯视镜头定的；过肩瞄准近景（透视、离目标 1–3m）里同样 0.85m 的冲击波会铺满半屏，
+// 前两帧 shockwave_2x2 中心是实心白（原版贴图如此）→ 看起来像一块白圆盘。按当前镜头把每个火花精灵的屏幕高度限到 maxFrac。
+let fxCam: THREE.Camera | null = null;
+const _wp = new THREE.Vector3();
+function screenFrac(sp: THREE.Object3D, worldSize: number): number {
+  const cam = fxCam; if (!cam) return 0;
+  if ((cam as THREE.PerspectiveCamera).isPerspectiveCamera) {
+    const pc = cam as THREE.PerspectiveCamera; sp.getWorldPosition(_wp);
+    const d = Math.max(0.05, _wp.distanceTo(pc.position)); return worldSize / (2 * d * Math.tan((pc.fov * Math.PI) / 360));
+  }
+  const oc = cam as THREE.OrthographicCamera; return (worldSize * oc.zoom) / Math.max(1e-6, oc.top - oc.bottom);
+}
+/** 世界尺寸 s 在当前镜头下若超过屏高 maxFrac，就缩到 maxFrac（只在近景生效，默认俯视镜头不变） */
+function capSize(sp: THREE.Object3D, s: number, maxFrac: number): number {
+  const f = screenFrac(sp, s); return f > maxFrac ? s * (maxFrac / f) : s;
+}
+function flip(name: string, cols: number, rows: number, color: THREE.Color, parent: THREE.Object3D, at: THREE.Vector3, size: number, dur: number, frames: number, rot = Math.random() * Math.PI * 2, maxFrac = 0.22) {
   const base = otex(name); if (!base) return;
   const t = base.clone(); t.repeat.set(1 / cols, 1 / rows); t.needsUpdate = true;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, color, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true }));
@@ -63,13 +79,14 @@ function flip(name: string, cols: number, rows: number, color: THREE.Color, pare
     const f = Math.min(frames - 1, Math.floor(k * frames)); // 原版 TexIndex 曲线线性 0→N
     t.offset.set((f % cols) / cols, 1 - (Math.floor(f / cols) + 1) / rows);
     sp.material.opacity = k < 0.8 ? 1 : (1 - k) / 0.2;
+    const sc = capSize(sp, size, maxFrac); sp.scale.set(sc, sc, 1);
   }, extra: t });
 }
 function glow(name: string, color: THREE.Color, parent: THREE.Object3D, at: THREE.Vector3, s0: number, s1: number, dur: number, a0 = 1) {
   const tx = otex(name); if (!tx) return;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, color, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true }));
   sp.position.copy(at); sp.renderOrder = 60; parent.add(sp);
-  lives.push({ o: sp, t0: performance.now(), dur, step: (k) => { const s = s0 + (s1 - s0) * Math.sqrt(k); sp.scale.set(s, s, 1); sp.material.opacity = a0 * (1 - k * k); } });
+  lives.push({ o: sp, t0: performance.now(), dur, step: (k) => { const s = capSize(sp, s0 + (s1 - s0) * Math.sqrt(k), 0.2); sp.scale.set(s, s, 1); sp.material.opacity = a0 * (1 - k * k); } });
 }
 function sparks(name: string, n: number, c0: THREE.Color, c1: THREE.Color, parent: THREE.Object3D, at: THREE.Vector3, speed: number, size: number, dur: number, streak = false) {
   const tx = otex(name); if (!tx) return;
@@ -99,7 +116,7 @@ function origSpark(parent: THREE.Object3D, at: THREE.Vector3, h: HitSpec): boole
     // eff_020001_lw1 重建（枪 / 技能 / 其他）
     flip('shotgun_Sheet_4x2', 4, 2, C(1, 0.922, 0.329), parent, at, 0.6 * k, 300, 8);
     glow('Fire02_flash', C(1, 1, 1), parent, at, 0.2 * k, 0.55 * k, 170, 0.5);
-    flip('shockwave_2x2', 2, 2, C(1, 0.95, 0.85), parent, at, 0.85 * k, 240, 4, 0);
+    flip('shockwave_2x2', 2, 2, C(1, 0.95, 0.85), parent, at, 0.85 * k, 240, 4, 0, 0.16); // 近景屏高 ≤16%（前两帧实心）
     sparks('Grain', h.heavy ? 26 : 18, hdr(23.97, 15.06, 0.63), hdr(23.97, 0.63, 0), parent, at, 0.55 * k, 0.08 * k, 360);
   }
   return true;
@@ -130,11 +147,12 @@ export function spark(parent: THREE.Object3D, at: THREE.Vector3, h: HitSpec, col
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(), color, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true }));
   sp.position.copy(at); sp.renderOrder = 60; sp.material.rotation = Math.random() * Math.PI;
   parent.add(sp);
-  lives.push({ o: sp, t0: performance.now(), dur: 200, step: (k) => { const s = s0 * (0.5 + 1.1 * Math.sqrt(k)); sp.scale.set(s, s, 1); sp.material.opacity = 1 - k * k; } });
+  lives.push({ o: sp, t0: performance.now(), dur: 200, step: (k) => { const s = capSize(sp, s0 * (0.5 + 1.1 * Math.sqrt(k)), 0.22); sp.scale.set(s, s, 1); sp.material.opacity = 1 - k * k; } });
 }
 /** 每帧推进火花；顿帧期间也推进（火花在冻结的画面上炸开 = P5 式命中定格） */
 export function updateHitFx(cam: THREE.Camera, root: THREE.Object3D) {
   (root as THREE.Object3D & { __camQ?: THREE.Quaternion }).__camQ = cam.quaternion;
+  fxCam = cam;
   const now = performance.now();
   for (let i = lives.length - 1; i >= 0; i--) {
     const l = lives[i]; const k = Math.min(1, (now - l.t0) / l.dur);

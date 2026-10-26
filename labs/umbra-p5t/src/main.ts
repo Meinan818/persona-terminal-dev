@@ -19,7 +19,7 @@ import { SceneKit, themeFor, cobbleTex, preloadKit } from './view/sceneKit';
 import { sfx, installUnlock, preloadSfx } from './view/sfx';
 import { buildDamageView, playDamageClip, digitPx } from './view/damagePop';
 import { attachGimmicks, swapPropModel, releaseGimmicks } from './view/gimmick';
-import { origCfg, origFailed, attachOrigMap, releaseOrigMap, updateOrigMap, origSurfaceY } from './view/origMap';
+import { origCfg, origFailed, attachOrigMap, releaseOrigMap, updateOrigMap, origSurfaceY, applyOrigSun } from './view/origMap';
 void preloadKit(); // CC0 布景模型提前加载
 import { computeForecast, forecastHtml } from './view/forecast';
 import type { Forecast } from './view/forecast';
@@ -183,6 +183,8 @@ function build() {
     hemi.color.set(cfg.hemi[0]); hemi.groundColor.set(cfg.hemi[1]); hemi.intensity = cfg.hemi[2];
     sun.color.set(cfg.sun[0]); sun.intensity = cfg.sun[1];
     sun.position.set((m.width - 1) / 2 + cfg.sunDir[0], cfg.sunDir[1], (m.height - 1) / 2 + cfg.sunDir[2]); sun.target.position.set((m.width - 1) / 2, 0, (m.height - 1) / 2); scene.add(sun.target);
+    // r9：方向按原版 Directional Light（地图材质的直射强度/颜色也按原版，见 origMap.applyOrigSun）
+    applyOrigSun(sun, cfg, new THREE.Vector3((m.width - 1) / 2, 0, (m.height - 1) / 2));
     const R = Math.max(m.width, m.height) * 0.75 + 4; const sc = sun.shadow.camera; sc.left = -R; sc.right = R; sc.top = R; sc.bottom = -R; sc.near = 0.5; sc.far = 60; sc.updateProjectionMatrix();
     sceneKit.build(world, { ...m, id: '__none__' });
     claimed = new Set();

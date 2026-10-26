@@ -109,3 +109,27 @@ body.p5hud #party { right: max(calc(45 * var(--cu)), env(safe-area-inset-right))
 #skill-list .sk-info .sk-dmg.tint { padding-left: calc(30 * var(--cu)); }
 /* r14：选技能目标（predict_1719_5）同样只有技能自己的确定/返回提示，全局提示条与 CHARGE 牌叠字 → 隐藏 */
 #app.sk-target #hintbar, #app.sk-target .chgs { display: none !important; }
+
+/* r16：技能列表立绘上的 HP/SP 换成与右下头像卡相同的原版 gauge 组件（skill_list_1756_8：HP 字样+0099/024 前导零暗色+/ 斜杠+青/粉条，
+   原版两处是同一套 bop01_panel 贴图；位置/缩放按帧量：块 x≈45–170 y≈578–640@720 → 画布 x 66 y 886，--g = 0.55 画布单位，推测） */
+#skill-list .sk-stat .gw { --g: calc(var(--u) * var(--s) * 1.45); position: relative; width: calc(343 * var(--g)); height: calc(130 * var(--g)); background: var(--p5-gage-window) 0 0 / 100% 100% no-repeat; margin-left: auto; }
+#skill-list .sk-stat .gw .whp { position: absolute; left: calc(4 * var(--g)); top: calc(-34 * var(--g)); width: calc(76 * var(--g)); height: calc(66 * var(--g)); }
+#skill-list .sk-stat .gw .wsp { position: absolute; left: calc(176 * var(--g)); top: calc(-46 * var(--g)); width: calc(74 * var(--g)); height: calc(62 * var(--g)); }
+#skill-list .sk-stat .gw .sl { position: absolute; left: calc(160 * var(--g)); top: calc(22 * var(--g)); width: calc(46 * var(--g)); height: calc(64 * var(--g)); }
+#skill-list .sk-stat .gw b { position: absolute; top: calc(14 * var(--g)); font-size: max(calc(70 * var(--g)), 11px); line-height: 1; font-weight: 900; font-style: italic; font-family: "Arial Black", "UMBRA SC", sans-serif; letter-spacing: -.5px; -webkit-text-stroke: 1px #000; paint-order: stroke fill; transform: rotate(-6deg); }
+#skill-list .sk-stat .gw .nh { left: calc(14 * var(--g)); color: #5fe6d8; }
+#skill-list .sk-stat .gw .ns { left: calc(196 * var(--g)); color: #d667d6; }
+#skill-list .sk-stat .gw .bar { position: absolute; height: calc(26 * var(--g)); -webkit-mask: var(--mask) 0 0 / calc(253 * var(--g)) 100% no-repeat; mask: var(--mask) 0 0 / calc(253 * var(--g)) 100% no-repeat; clip-path: inset(0 calc(100% - var(--p)) 0 0); }
+#skill-list .sk-stat .gw .bar.hp { --mask: var(--p5-gage-hp); left: calc(20 * var(--g)); top: calc(96 * var(--g)); width: calc(253 * var(--g)); background: #5fe6d8; }
+#skill-list .sk-stat .gw .bar.sp { --mask: var(--p5-gage-sp); left: calc(60 * var(--g)); top: calc(116 * var(--g)); width: calc(250 * var(--g)); height: calc(30 * var(--g)); -webkit-mask-size: calc(250 * var(--g)) 100%; mask-size: calc(250 * var(--g)) 100%; background: #d667d6; }
+#skill-list .sk-stat .gw b.sdf-on { transform: rotate(-6deg) skewX(-10deg); }
+#skill-list .sk-stat .gw b { font-size: max(calc(54 * var(--g)), 10px); top: calc(26 * var(--g)); }
+#skill-list .sk-stat .gw { --g: calc(0.62 * var(--cu)); position: absolute; margin: 0; }
+#skill-list .sk-stat .gw b { font-size: calc(54 * var(--g)) !important; }
+/* r16：黑面板按帧量（skill_list_1717_2/1733_5/1756_8 逐行找暗区右缘）：右缘 x≈650@y425 → 675@y675（向右下外斜，r15 方向反了），
+   上缘右高左低（x210→y460、x640→y415），下缘 y≈685、上缘起 40px 由半透明渐到几乎不透明（帧内亮度 50→5）。原版窗贴图未导出（skill_select README：运行时绑定）→ 形状/透明度是按帧重建 */
+#skill-list .sk-win:not([style*="url("]) { background: linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,.88) 11%, rgba(0,0,0,.93) 100%) !important; clip-path: polygon(0 21%, 93.2% 0, 98% 97.5%, 0 97.5%) !important; }
+/* r16：原版立绘压在黑面板之上（INDEX：面板「左边被半身像压住」），之前面板盖住立绘把它压暗 */
+#skill-list .sk-win { z-index: 1; }
+#skill-list .sk-chara { z-index: 2; }
+#skill-list .sk-stat, #skill-list .sk-rows, #skill-list .sk-info { z-index: 3; }

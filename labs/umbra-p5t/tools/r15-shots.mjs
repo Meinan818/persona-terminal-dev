@@ -10,7 +10,7 @@ const server = await preview({ preview: { port, host: '127.0.0.1' } });
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => console.log('ERR', String(e), e.stack));
-await page.goto(`http://127.0.0.1:${port}/?speed=1&level=L01`);
+await page.goto(`http://127.0.0.1:${port}/?speed=1&level=L01${process.env.QS || ""}`);
 await page.waitForFunction(() => window.__p5t && window.__p5t.started && window.__p5t.charsReady && !window.__p5t.busy, null, { timeout: 150000, polling: 500 });
 await page.evaluate(async () => { const P = window.__p5t, B = P.battle, a = B.unit('e1'); B.map.events = []; a.pos = { x: 6, y: 8 }; a.guard = false; await P.play([]); });
 await page.waitForTimeout(1500);

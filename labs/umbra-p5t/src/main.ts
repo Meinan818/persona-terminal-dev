@@ -40,7 +40,7 @@ import { makeSkull, makeMona, makeShadow } from './view/partyModels';
 import { preloadChar, makeChar, charReady, SPECS } from './view/p5tChar';
 import RESULT_CAM from './view/data/result-cam.json';
 import { SummonDim, skillHit, CASTER_LAYER } from './view/skillFx';
-import { origSkillHit, hasOrigSkillFx, preloadSkillFx, setSkillFxCamera, showPersona, summonAura, PERSONA_OF } from './view/skillFxOrig';
+import { origSkillHit, hasOrigSkillFx, preloadSkillFx, setSkillFxCamera, showPersona, summonAura, personaKeyOf, preloadPersonas } from './view/skillFxOrig';
 import { hitstopMs, shake, applyShake, undoShake, spark, updateHitFx, recoil, preloadHitFx, lastSparkKind } from './view/hitFx';
 import type { HitSpec } from './view/hitFx';
 import { loadSdfFont, renderSdf, hydrateSdf } from './ui/sdfFont';
@@ -177,6 +177,7 @@ const std = (color: number, extra: Partial<THREE.MeshStandardMaterialParameters>
 let gimmickCount = 0, placeholderCount = -1;
 function build() {
   preloadHitFx(); preloadSfx(); preloadSkillFx();
+  if (battle) preloadPersonas(battle.units.filter((u) => u.side === 'ally').map((u) => u.id)); // r16：本关上场者的原版 Persona
   if (world) scene.remove(world);
   world = new THREE.Group();
   overlay = new THREE.Group();
@@ -1474,11 +1475,11 @@ async function play(events: BattleEvent[]) {
         lastSkill = (e.kind === 'skill' || e.kind === 'unique') && e.skillId ? e.skillId : null;
         { const tg = unitMesh.get(e.targetId); const ar = rigs.get(e.attackerId); if (tg && ar) ar.aim(tg.position, e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'gun', 2400 / SPEED); const tr = rigs.get(e.targetId); const ag = unitMesh.get(e.attackerId); if (tr && ag) tr.faceTo(ag.position); }
         if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
-        // r14：切入后原版 Persona（Joker=Arsene）在身后现身 + 共通层 10300 蓝焰（原版贴图 Fire_5x2），直到命中结算后
+        // r14/r16：切入后原版 Persona（Joker=Arsene、Skull=Kidd、Mona=Zorro…）在身后现身 + 共通层 10300 蓝焰（原版贴图 Fire_5x2），直到命中结算后
         if (e.skillId && battle.unit(e.attackerId).side === 'ally' && (e.kind === 'skill' || e.kind === 'unique')) {
           const ag = unitMesh.get(e.attackerId), tg = unitMesh.get(e.targetId); const hh = rigs.get(e.attackerId)?.height ?? 1.1;
           personaFx?.end(); personaFx = null;
-          if (ag && tg && PERSONA_OF[e.attackerId]) personaFx = showPersona(world, ag, tg.position.clone(), hh, SPEED);
+          if (ag && tg && personaKeyOf(e.attackerId)) personaFx = showPersona(world, ag, tg.position.clone(), hh, SPEED, e.attackerId, e.kind === 'unique'); // r16：全员原版 Persona（batch-10）
           if (ag) void summonAura(world, ag.position.clone(), hh, 1500 / SPEED);
         }
         if (e.kind === 'gun' && !params.has('noaim')) {
@@ -1686,7 +1687,7 @@ function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
     resultCtl = showResultScreen($('#app'), {
       level: battle.map.id, turns: e.turn, won: true, band3d: !!staged, awards: e.crowns.items.map((i) => ({ ok: i.ok, label: i.label })),
       party: party.map((u) => ({ id: u.id, name: u.name, persona: PERSONA_NAME[u.id] ?? 'PERSONA', lv: 1 })),
-    }, () => { resultCtl = null; resultHold = false; resultAnim = null; resultBandMesh?.removeFromParent(); aimActive = false; viewCam = baseCam(); showResultPlain(e); }, (page) => { if (page === 2 && staged) staged.cut(); });
+    }, () => { resultCtl = null; resultHold = false; resultAnim = null; resultBandMesh?.removeFromParent(); setAimSeeThrough(null); aimActive = false; viewCam = baseCam(); showResultPlain(e); }, (page) => { if (page === 2 && staged) staged.cut(); });
     return;
   }
   showResultPlain(e);
@@ -1701,7 +1702,7 @@ function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
 const RCAM = RESULT_CAM as unknown as Record<string, { dur: number; frames: number[][] }>;
 let resultAnim: { P: THREE.Vector3; fwd: THREE.Vector3; t0: number; cut: number } | null = null;
 // 正负号按 result_1610 定：相机在前排右侧（x=+0.66）、摇镜 +6.5° 向左 → 前排在画面左中（≈0.34）、BackR 在最右且更近（≈0.88）、BackL 居中靠后（≈0.76），与原版 Skull/Mona/Joker 构图一致
-const RC_SX = 1, RC_SYAW = 1, RC_SPAN = 1;
+const RC_FLIP = new URLSearchParams(location.search).has('rcflip');
 function resultCamFrame(clip: string, t: number) {
   const c = RCAM[clip]; const f = Math.min(c.frames.length - 1, t * 30); const i = Math.floor(f), k = f - i, A = c.frames[i], B = c.frames[Math.min(c.frames.length - 1, i + 1)];
   return A.map((v, j) => v + (B[j] - v) * k);
@@ -1709,17 +1710,39 @@ function resultCamFrame(clip: string, t: number) {
 /** r15：结算红色斜带（ResultLineManager 脚本画的，参数未导出 → 重建）。原版斜带在角色「后面」（result_1610 人物压在红带上），
  *  之前画在 DOM 层整个盖住 3D 角色 → 改成跟随结算相机的 3D 平面：放在后排角色之后、背景之前，铺满视锥。 */
 let resultBandMesh: THREE.Mesh | null = null;
-function resultBand() {
-  if (resultBandMesh) return resultBandMesh;
-  const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720; const c = cv.getContext('2d')!;
-  const poly = (pts: number[][], fill: string, edge = 0) => { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); if (edge) { c.lineWidth = edge; c.strokeStyle = '#000'; c.stroke(); } c.fillStyle = fill; c.fill(); };
-  // 按 result_1610 量：主带上沿 (0,575)→(1280,95)、下沿 (0,760)→(1280,330)；右上楔形在 money 牌后；左下角一条细带
-  poly([[-40, 590], [1320, 80], [1320, 345], [-40, 780]], '#e60012', 22);
-  poly([[560, 0], [900, 0], [700, 150], [470, 170]], '#e60012', 16);
-  poly([[-40, 440], [380, 330], [400, 360], [-40, 485]], '#e60012', 12);
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  resultBandMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
-  resultBandMesh.renderOrder = -1; resultBandMesh.name = 'resultBand';
+let resultBandPage = 0;
+/** r16：结算红带按原版帧逐页重描（ResultLineManager Line1–4 是脚本运行时画的，prefab 里 RectTransform 为空、无参数 → 不可能拿到原始数据）。
+ *  做法：把 result_1610（第 1 页）/ result_2606（第 2 页）按「纯红 R>170,G<60,B<70」做掩膜（notes/r16/mask-*.png），
+ *  去掉 UI 面板与角色后的大块红色区域描成多边形（坐标 = 1280×720 帧像素）。无黑描边（原版红带直接压在背景上）。属于「按帧重建」，非原始数据。 */
+const RESULT_BANDS: Record<number, number[][][]> = {
+  1: [
+    [[0, 226], [700, 0], [800, 0], [0, 262]],
+    [[0, 520], [300, 330], [420, 250], [560, 140], [700, 0], [820, 0], [640, 250], [330, 470], [0, 650]],
+    [[320, 480], [1280, 195], [1280, 720], [560, 720]],
+    [[0, 600], [330, 470], [560, 720], [0, 720]],
+  ],
+  2: [
+    [[160, 212], [745, 288], [750, 322], [600, 350], [160, 240]],
+    [[480, 105], [1280, 95], [1280, 150], [480, 140]],
+    [[820, 0], [1280, 0], [1280, 85], [880, 15]],
+    [[560, 450], [980, 345], [1280, 405], [1280, 620], [820, 560]],
+    [[0, 612], [340, 580], [820, 560], [1280, 640], [1280, 720], [0, 720]],
+  ],
+};
+function resultBand(page = 1) {
+  if (!resultBandMesh) {
+    const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720;
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    resultBandMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
+    resultBandMesh.renderOrder = -1; resultBandMesh.name = 'resultBand';
+  }
+  if (resultBandPage !== page) {
+    resultBandPage = page;
+    const tex = (resultBandMesh.material as THREE.MeshBasicMaterial).map as THREE.CanvasTexture; const cv = tex.image as HTMLCanvasElement; const c = cv.getContext('2d')!;
+    c.clearRect(0, 0, 1280, 720); c.fillStyle = '#e60012';
+    for (const pts of RESULT_BANDS[page] ?? []) { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill(); }
+    tex.needsUpdate = true;
+  }
   return resultBandMesh;
 }
 function resultStep() {
@@ -1733,15 +1756,18 @@ function resultStep() {
     const t = (now - resultAnim.t0) / 1000, d0 = RCAM.ResultIn.dur, dl = RCAM.ResultLoop.dur;
     fr = t < d0 ? resultCamFrame('ResultIn', t) : resultCamFrame('ResultLoop', (t - d0) % dl);
   }
-  const [x, y, z, fov, pan, yaw] = fr;
+  // r16：CA9999 tracks（右手系）：相机局部位置 + 注视点 camera1_aim，均在 camera1_group 坐标系（绕 Y 转 gy 弧度）里；?rcflip=1 时左右镜像（核对用）
+  const [x, y, z, fov, ax, ay, az, gy] = fr;
   const { P, fwd } = resultAnim;
-  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(fwd.x, fwd.z) + RC_SYAW * THREE.MathUtils.degToRad(yaw));
-  const local = new THREE.Vector3(RC_SX * x, y, z).applyQuaternion(q);
-  resultCam.position.copy(P).add(local);
-  const look = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), RC_SPAN * THREE.MathUtils.degToRad(pan)).applyQuaternion(q);
-  resultCam.lookAt(resultCam.position.clone().add(look));
+  const sx = RC_FLIP ? -1 : 1;
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(fwd.x, fwd.z) + sx * gy);
+  resultCam.position.copy(P).add(new THREE.Vector3(sx * x, y, z).applyQuaternion(q));
+  const aimW = P.clone().add(new THREE.Vector3(sx * ax, ay, az).applyQuaternion(q));
+  const look = aimW.clone().sub(resultCam.position).normalize();
+  resultCam.up.set(0, 1, 0); resultCam.lookAt(aimW);
+  setAimSeeThrough(resultCam.position, P.clone().add(new THREE.Vector3(0, 0.6, 0)), P.y); // r16：结算机位与角色之间的场景物体半透（第 2 页机位在 3.5m 外，常被柱/雕像挡住）
   resultCam.fov = fov; resultCam.aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight); resultCam.updateProjectionMatrix();
-  const band = resultBand(); if (!band.parent) scene.add(band);
+  const band = resultBand(resultAnim.cut ? 2 : 1); if (!band.parent) scene.add(band);
   const d = resultCam.position.distanceTo(P) + 2.2, hh = Math.tan(THREE.MathUtils.degToRad(fov / 2)) * d;
   band.position.copy(resultCam.position).addScaledVector(look.normalize(), d); band.quaternion.copy(resultCam.quaternion); band.scale.set(hh * 2 * resultCam.aspect, hh * 2, 1);
 }

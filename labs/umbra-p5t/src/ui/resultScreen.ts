@@ -33,6 +33,23 @@ const px = (b: Box) => `left:${b[0]}px;top:${b[1]}px;width:${b[2]}px;height:${b[
 function slot(cls: string, b: Box, tex: string | null, inner = '', ph = false) { // r14：不再显示「待原版贴图」占位字
   return `<div class="rs ${cls}${tex ? ' tex' : ''}" style="${px(b)}${tex ? `;background-image:url(${tex})` : ''}">${inner}${!tex && ph ? '<em class="ph">待原版贴图</em>' : ''}</div>`;
 }
+/** r16：原版 ResultBackManager 序列帧（flash_01–22 入场闪光 / smoke_01–22 翻页烟雾，fetch-p5t-result.sh）。
+ *  原版节点默认关闭、由脚本激活，播放速率未导出 → 按 30fps 播一遍（推测；result_1613 帧里翻页时可见白色烟雾）。 */
+const SEQ = 'p5t-hud/result_seq/';
+// r16：未达成 award = 原版 brc_award_not 删除线（prefab Toggle/Text/Image 412×8）
+function playSeq(stage: HTMLElement, kind: 'flash' | 'smoke', fps = 30) {
+  const img = document.createElement('img'); img.className = `rs-seq ${kind}`; img.alt = '';
+  for (let i = 1; i <= 22; i++) { const pre = new Image(); pre.src = `${SEQ}${kind}_${String(i).padStart(2, '0')}.webp`; }
+  stage.appendChild(img);
+  const t0 = performance.now();
+  const tick = () => {
+    const f = Math.floor(((performance.now() - t0) / 1000) * fps) + 1;
+    if (f > 22) { img.remove(); return; }
+    const src = `${SEQ}${kind}_${String(f).padStart(2, '0')}.webp`; if (!img.src.endsWith(src)) img.src = src;
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
 export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () => void, onPage?: (page: number) => void): { next: () => void; el: HTMLElement } {
   const p1 = L.p1 as Record<string, Box>, p2 = L.p2 as unknown as Record<string, Box> & { award_rows: { box: Box; text: Box }[] };
   const rw = (L.rewards as Record<string, { money: number; exp: number; personaExp: number }>)[d.level] ?? { money: 0, exp: 0, personaExp: 0 };
@@ -63,7 +80,7 @@ export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () =>
     ${slot('title', p2.turn_title, RESULT_TEX.turn_title, '<span>turn</span>')}
     ${base2(p2.award_base, 'award', '')}
     ${slot('title', p2.award_title, RESULT_TEX.award_title, '<span>award</span>')}
-    ${p2.award_rows.map((r, i) => { const a = d.awards[i]; if (!a) return ''; return `<div class="rs chk${a.ok ? ' ok' : ''}${T('rs_check_box', 'check') ? ' tex' : ''}" style="${px(r.box)}${T('rs_check_box', 'check') ? `;background-image:url(${T('rs_check_box', 'check')})` : ''}">${a.ok && T('rs_check', 'check') ? `<img class="ck" src="${T('rs_check', 'check')}">` : '<i></i>'}</div><div class="rs txt award" style="${px(r.text)}">${a.label}</div>`; }).join('')}
+    ${p2.award_rows.map((r, i) => { const a = d.awards[i]; if (!a) return ''; return `<div class="rs chk${a.ok ? ' ok' : ''}${T('rs_check_box', 'check') ? ' tex' : ''}" style="${px(r.box)}${T('rs_check_box', 'check') ? `;background-image:url(${T('rs_check_box', 'check')})` : ''}">${a.ok && T('rs_check', 'check') ? `<img class="ck" src="${T('rs_check', 'check')}">` : '<i></i>'}</div><div class="rs txt award${a.ok ? '' : ' ng'}" style="${px(r.text)}">${a.label}${!a.ok && T('rs_award_not', 'x') ? `<img class="anot" src="${T('rs_award_not', 'x')}" alt="">` : ''}</div>`; }).join('')}
     ${d.awards.every((a) => a.ok) ? `<div class="rs clear" style="left:1125px;top:900px;width:240px;height:120px">CLEAR!!</div>` : ''}
     ${slot('next', p2.next, RESULT_TEX.next, '<i class="btn">A</i><b>继续</b>')}
   </div>`;
@@ -72,12 +89,13 @@ export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () =>
   const stage = el.querySelector<HTMLElement>('.rs-stage')!;
   const fit = () => { const W = host.clientWidth || innerWidth, H = host.clientHeight || innerHeight, s = H / 1080; stage.style.transform = `translate(${(W - 1920 * s) / 2}px,0) scale(${s})`; };
   fit(); addEventListener('resize', fit);
+  playSeq(stage, 'flash');
   let page = 1;
   el.classList.add('pg1');
   const t0 = performance.now();
   const next = () => {
     if (performance.now() - t0 < 700) return; // r13：结算出现前的那次点击/按键不翻页（r12 录像页1只露 0.2s）
-    if (page === 1) { page = 2; el.classList.remove('pg1'); el.classList.add('pg2'); onPage?.(2); return; }
+    if (page === 1) { page = 2; el.classList.remove('pg1'); el.classList.add('pg2'); playSeq(stage, 'smoke'); onPage?.(2); return; }
     removeEventListener('resize', fit); el.remove(); document.body.classList.remove('result-on'); onDone();
   };
   el.addEventListener('click', next);

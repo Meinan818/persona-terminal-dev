@@ -127,10 +127,8 @@ export class SkillList {
       <div class="sk-chara" data-ph="${p5.has(`chara_${pk}`) ? '' : '待原版立绘：暂用原版 party Q 版头像'}" style="${pos(L.chara)}">${face}</div>
       <div class="sk-win" style="${pos(L.window)}${tex(SKL_TEX.window)}"></div>
       <div class="sk-stat">
-        <b class="hp" style="${pos({ x: L.hpGauge.x - 30, y: L.hpLabel.y - 4 })}" data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#68ffe1" data-back="#338776" data-pad="3" data-out="#000000" data-ow="0.3" data-sp="-26">${u.hp}</b>
-        <b class="sp" style="${pos({ x: L.spLabel.x + 18, y: L.spLabel.y - 2 })}" data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#ef51f8" data-back="#783671" data-pad="3" data-out="#000000" data-ow="0.3" data-sp="-26">${u.sp}</b>
-        <i class="g hp" style="${pos(L.hpGauge)}${tex(SKL_TEX.hpGauge)}--p:${pct(u.hp, u.maxHp)}"></i>
-        <i class="g sp" style="${pos(L.spGauge)}${tex(SKL_TEX.spGauge)}--p:${pct(u.sp, u.maxSp ?? 1)}"></i>
+        <div class="gw" style="${pos({ x: 66, y: 886 })}">${p5.img('word_hp', 'whp')}${p5.img('word_sp', 'wsp')}<b class="nh" data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#68ffe1" data-back="#338776" data-pad="4" data-out="#000000" data-ow="0.3" data-sp="-26">${u.hp}</b>${p5.img('gage_slash', 'sl')}<b class="ns" data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#ef51f8" data-back="#783671" data-pad="3" data-out="#000000" data-ow="0.3" data-sp="-26">${u.sp}</b>
+          <i class="bar hp" style="--p:${pct(u.hp, u.maxHp)}"></i><i class="bar sp" style="--p:${pct(u.sp, u.maxSp ?? 1)}"></i></div>
       </div>
       <div class="sk-rows">
         <div class="sk-cursor" style="${pos({ x: L.cursor.x + (this.cur % 2) * L.rowStagger, y: L.cursor.y + cur * L.rowPitch, w: L.cursor.w, h: L.cursor.h })}${tex(SKL_TEX.cursor)}"></div>

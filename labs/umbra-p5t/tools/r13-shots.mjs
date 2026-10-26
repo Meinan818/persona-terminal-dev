@@ -22,6 +22,7 @@ if (only.includes('command')) await shot('command');
 if (only.includes('target')) {
   await P("document.querySelector('#cmd .persona')?.click()"); await page.waitForTimeout(2500);
   await shot('skilllist');
+  if (process.env.PROBE) console.log('PROBE', await P(process.env.PROBE));
   await P("P.skillPick()"); await page.waitForTimeout(800);
   const tid = await P("const B=P.battle;const e=B.units.filter(u=>u.side==='enemy'&&!u.ko);return e[0]&&e[0].id");
   await P(`P.tap({unit:'${tid}'})`); await page.waitForTimeout(2500);

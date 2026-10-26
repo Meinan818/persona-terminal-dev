@@ -306,3 +306,9 @@ body.p5hud #party .gw b { font-size: max(calc(54 * var(--g)), 10px); top: calc(2
 /* r15：心形 HP 数字按 aim_1420_3（"31" 字高约 26px@720，我们 20px）放大 */
 #labels .lbl.enemy .heart.p5h b { font-size: calc(80 * var(--u)); left: -4%; top: -22%; }
 .rs.next .btn { display: none !important; } /* r15：结算「Ⓐ继续」去手柄圆钮 */
+/* r16：结算原版序列帧（flash 入场 / smoke 翻页）铺满 1920×1080 画布；未达成 award 原版删除线 412×8（prefab Image 位于文字中线 x −30） */
+.rs-seq { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; z-index: 5; }
+.rs.txt.award { position: absolute; }
+.rs.txt.award .anot { position: absolute; left: -10px; top: 50%; width: 412px; height: 8px; transform: translateY(-50%); }
+/* r16：smoke 序列贴图本身是土黄色（运行时材质着色未导出），原版翻页帧 result_1613 是白色烟雾 → 去色提亮（推测） */
+.rs-seq.smoke { filter: grayscale(1) brightness(1.9); }

@@ -10,7 +10,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
 await page.addInitScript({ path: new URL('./rec-r13/vclock.js', import.meta.url).pathname });
 await page.goto(`http://127.0.0.1:${port}/?speed=1&level=L01`);
-await page.waitForFunction(() => window.__p5t && window.__p5t.started && window.__p5t.charsReady && !window.__p5t.busy, null, { timeout: 110000, polling: 300 });
+await page.waitForFunction(() => window.__p5t && window.__p5t.started && window.__p5t.charsReady && !window.__p5t.busy, null, { timeout: 240000, polling: 300 });
 await page.evaluate(() => document.fonts.ready);
 await page.evaluate(async () => { const P = window.__p5t, B = P.battle; B.map.events = []; if (B.rt?.events) B.rt.events = []; const j = B.unit('joker'); j.pos = { x: 6, y: 11 }; const a = B.unit('e1'); a.pos = { x: 6, y: 8 }; a.hp = a.maxHp = 90; const b = B.unit('e2'); b.pos = { x: 1, y: 4 }; await P.play([]); });
 await page.waitForTimeout(500);

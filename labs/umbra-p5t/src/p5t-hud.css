@@ -312,3 +312,35 @@ body.p5hud #party .gw b { font-size: max(calc(54 * var(--g)), 10px); top: calc(2
 .rs.txt.award .anot { position: absolute; left: -10px; top: 50%; width: 412px; height: 8px; transform: translateY(-50%); }
 /* r16：smoke 序列贴图本身是土黄色（运行时材质着色未导出），原版翻页帧 result_1613 是白色烟雾 → 去色提亮（推测） */
 .rs-seq.smoke { filter: grayscale(1) brightness(1.9); }
+/* r16b：结算 UI 再对 result_1610/2606（以下全部「重建」——标题/GET!!/CLEAR!!/继续 牌的 sprite 不在导出图集里，prefab 里 m_Sprite 运行时绑定）
+   标题 money/exp/persona exp/item/turn/award：原版是黑色粗马克笔小写手写体压在红底上 → Sedgwick Ave Display（OFL，子集 10KB）黑字 + 同色描边加粗、微倾斜；
+   GET!!/CLEAR!!：原版是金色渐变粗衬线斜体 + 橙色外发光 + 后面一层浅色残影 → Alfa Slab One（OFL，子集 3KB）。 */
+@font-face { font-family: 'P5 Marker'; src: url('./fonts/sedgwick-ave-display-sub.woff2') format('woff2'); font-display: block; }
+@font-face { font-family: 'P5 Stamp'; src: url('./fonts/alfa-slab-one-sub.woff2') format('woff2'); font-display: block; }
+.rs.title:not(.tex) span { font: 400 124px / 1 'P5 Marker', 'Arial Black', sans-serif; color: #0a0a0a; -webkit-text-stroke: 5px #0a0a0a; letter-spacing: -2px; transform: rotate(-4deg); bottom: 14%; z-index: 4; }
+.rs.title { z-index: 4; }
+.rs.get2, .rs.clear { font-family: 'P5 Stamp', 'Arial Black', serif; font-style: italic; font-weight: 400; color: transparent; letter-spacing: 0;
+  background: linear-gradient(180deg, #fffbd0 0%, #ffe14a 38%, #e0a400 62%, #fff0a0 100%); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: 2px #7a4a00; filter: drop-shadow(0 0 10px rgba(255, 150, 0, .85)) drop-shadow(2px 3px 0 rgba(0, 0, 0, .6)); }
+.rs.get2 { font-size: 84px; transform: rotate(-14deg) skewX(-12deg); }
+.rs.clear { font-size: 80px; line-height: 120px; transform: rotate(-14deg) skewX(-12deg); }
+/* NONE：原版灰色直立无衬线粗体（非斜体），字内浅灰 + 深灰描边 */
+.rs.none b { font: 900 70px / 61px 'Arial Black', 'UMBRA SC', sans-serif; font-style: normal; color: #9a9a9a; -webkit-text-stroke: 2px #5a5a5a; letter-spacing: 1px; }
+/* TURN：大号白色直立数字 + 灰色 TURN（result_2606） */
+.p2 .num.big { font-style: normal; font-size: 168px; top: 8%; left: 12%; }
+.rs .tt { color: #d8d8d8; font-size: 50px; top: 56%; left: 44%; }
+/* 继续牌：原版 = 白色粗箭头（黑描边，指左下）+ Ⓐ 圆钮（网页隐藏）+ 白色锯齿底黑描边的「继续」（result_1610 / 2606 左下） */
+.rs.next:not(.tex) { overflow: visible; }
+.rs.next:not(.tex) svg.rsn { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+.rs.next:not(.tex) b { display: none; }
+.rs.title:not(.tex) span.two { line-height: .62; text-align: right; bottom: 6%; }
+/* r16b：原版 result/titles 贴图（有图时） */
+.rs.get3, .rs.clear3 { position: absolute; z-index: 3; pointer-events: none; animation: rsStamp3 .3s .25s ease-out both; }
+@keyframes rsStamp3 { from { opacity: 0; transform: scale(1.8); } }
+.rs.lblimg { z-index: 2; }
+.rs .tt2 { position: absolute; left: 47%; top: 50%; width: 142px; height: 46px; background: right bottom / 142px 123px no-repeat; } /* brc_turn_icon 下半「TURN」（上半斜杠原版帧里不可见 → 只露下半，推断） */
+.rs.next.tex { overflow: visible; }
+
+/* r16b：ResultIn 前整屏红底（实机 16:05.15 星形红块从右缘 0.12s 扩满、#f71400 纯红保持 1.2s；星形外形为重建） */
+.rs-wipe { position: fixed; inset: 0; background: #f71400; z-index: 9000; pointer-events: none; animation: rsWipe 120ms linear both; }
+@keyframes rsWipe { from { clip-path: polygon(calc(100% + 0.0vmax) calc(40% + -2.0vmax), calc(100% + 0.4vmax) calc(40% + -1.0vmax), calc(100% + 1.4vmax) calc(40% + -1.4vmax), calc(100% + 1.0vmax) calc(40% + -0.4vmax), calc(100% + 2.0vmax) calc(40% + 0.0vmax), calc(100% + 1.0vmax) calc(40% + 0.4vmax), calc(100% + 1.4vmax) calc(40% + 1.4vmax), calc(100% + 0.4vmax) calc(40% + 1.0vmax), calc(100% + 0.0vmax) calc(40% + 2.0vmax), calc(100% + -0.4vmax) calc(40% + 1.0vmax), calc(100% + -1.4vmax) calc(40% + 1.4vmax), calc(100% + -1.0vmax) calc(40% + 0.4vmax), calc(100% + -2.0vmax) calc(40% + 0.0vmax), calc(100% + -1.0vmax) calc(40% + -0.4vmax), calc(100% + -1.4vmax) calc(40% + -1.4vmax), calc(100% + -0.4vmax) calc(40% + -1.0vmax)); } to { clip-path: polygon(calc(100% + 0.0vmax) calc(40% + -260.0vmax), calc(100% + 54.7vmax) calc(40% + -132.1vmax), calc(100% + 183.8vmax) calc(40% + -183.8vmax), calc(100% + 132.1vmax) calc(40% + -54.7vmax), calc(100% + 260.0vmax) calc(40% + 0.0vmax), calc(100% + 132.1vmax) calc(40% + 54.7vmax), calc(100% + 183.8vmax) calc(40% + 183.8vmax), calc(100% + 54.7vmax) calc(40% + 132.1vmax), calc(100% + 0.0vmax) calc(40% + 260.0vmax), calc(100% + -54.7vmax) calc(40% + 132.1vmax), calc(100% + -183.8vmax) calc(40% + 183.8vmax), calc(100% + -132.1vmax) calc(40% + 54.7vmax), calc(100% + -260.0vmax) calc(40% + 0.0vmax), calc(100% + -132.1vmax) calc(40% + -54.7vmax), calc(100% + -183.8vmax) calc(40% + -183.8vmax), calc(100% + -54.7vmax) calc(40% + -132.1vmax)); } }

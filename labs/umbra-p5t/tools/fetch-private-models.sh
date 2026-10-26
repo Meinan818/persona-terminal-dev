@@ -60,6 +60,11 @@ CH = {  # key: (GLB 相对路径, 贴图目录)
   'wp_wp04900': ('../batch-03/characters/Panther/weapons/Panther_Wp04900.glb', None),
   'wp_gn05000': ('../batch-03/characters/Fox/weapons/Fox_Gn05000.glb', None),
   'wp_wp05900': ('../batch-03/characters/Fox/weapons/Fox_Wp05900.glb', None),
+  # r16c：Queen / Erina 正版武器（batch-07/weapons；units.csv 6051 GunId 6000 / SwordId 20601→6901，11000 GunId 11000 / SwordId 21101→11900）
+  'wp_gn06000': ('../batch-07/weapons/Queen/Gn06000.glb', None),
+  'wp_wp06901': ('../batch-07/weapons/Queen/Wp06901.glb', None),
+  'wp_gn11000': ('../batch-07/weapons/Erina/Gn11000.glb', None),
+  'wp_wp11900': ('../batch-07/weapons/Erina/Wp11900.glb', None),
 }
 strip = lambda n: re.sub(r'__-?\d+(?=\.png$)', '', re.sub(r'^[0-9a-f]{12}__', '', n))
 for key, (glb, tex) in CH.items():

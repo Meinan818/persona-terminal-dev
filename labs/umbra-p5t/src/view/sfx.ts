@@ -7,7 +7,8 @@ export type SfxName =
   | 'gun_fire' | 'gun_impact' | 'gun_hit_v1' | 'gun_hit_v2' | 'gun_ambush' | 'melee_hit'
   | 'damage_blow_away' | 'damage_hit_wall' | 'down_fall_ground' | 'down_fall_ground_high' | 'down_stand_up'
   | 'one_more' | 'ui_confirm_1' | 'ui_confirm_2' | 'ui_confirm_3' | 'ui_confirm_short'
-  | 'all_out_attack' | 'all_out_end' | 'all_out_in' | 'all_out_people_fs' | 'all_out_people_gaya' | 'all_out_cutin';
+  | 'all_out_attack' | 'all_out_end' | 'all_out_in' | 'all_out_people_fs' | 'all_out_people_gaya' | 'all_out_cutin'
+  | 'se_btl_wipe_win'; // r16b：battle_result.acb（tools/fetch-p5t-result-sfx.sh）
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;

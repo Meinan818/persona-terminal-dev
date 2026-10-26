@@ -45,7 +45,8 @@ export interface CharSpec {
   /** 近战动作：原版 Attack；没有 Attack 的角色用该角色原版里的近距离技能 clip 序列（写明出处） */
   melee?: { seq: ClipKey[]; hold?: ClipKey };
   /** 武器 GLB（静态，挂到原版挂点） */
-  weapons?: { file: string; loc: string; show: (k: ClipKey) => boolean }[];
+  /** fix：挂点空间修正旋转（欧拉 XYZ，弧度），world = loc · fix · weapon */
+  weapons?: { file: string; loc: string; show: (k: ClipKey) => boolean; fix?: [number, number, number] }[];
 }
 
 /** 持枪/持近战武器的手：原版数据没写，按原版 GunLoop / Attack 姿势里哪只手的 Loc_Wp_* 挂点在身前实测（tools/hand-probe.mjs） */
@@ -53,11 +54,24 @@ const HAND: Record<string, { gun: 'L' | 'R'; sword: 'L' | 'R' }> = {
   // 实测（10-26）：GunLoop 末帧挂点 z（身前）L/R —— Joker 参照 -0.26/0.39（右手，与已验收一致）、Skull 0.33/0.10、Mona 0.14/-0.23、
   //   Panther 0.27/0.03、Fox 0.41/0.23；Attack 挂点路程 L/R —— Skull 6.23/4.05、Mona 4.60/5.52、Panther 5.01/5.81、Fox 3.01/3.76。
   //   Skull/Mona 另拍 L/R 对照图目检（notes/shots/2026-10-26/hand-*.png）一致。
-  skull: { gun: 'L', sword: 'L' }, mona: { gun: 'L', sword: 'R' }, panther: { gun: 'L', sword: 'R' }, fox: { gun: 'L', sword: 'R' },
+  // r16b 更正：umbra-assets weapon_attachments（原版 GunLoop/Result clip 实际驱动的挂点通道）→ Skull/Panther/Fox 枪 = R（之前目测 L 是看反了，
+  //   结算第 1 页 Skull 枪悬空就是挂错手）；Mona 枪 L、近战 R 与通道一致；Skull 近战无通道 → 维持实测 L。
+  skull: { gun: 'R', sword: 'L' }, mona: { gun: 'L', sword: 'R' }, panther: { gun: 'R', sword: 'R' }, fox: { gun: 'R', sword: 'R' },
+  // r16c：Queen 枪 clip（GunStart/Loop/Fire）只驱动 Loc_Wp_Gun_R、Attack 驱动 Loc_Wp_Sword_R；Erina 枪 clip 只驱动 Loc_Wp_Gun_R、Attack 驱动 Sword_R（weapon_attachments/locator_channel_activity.csv）
+  queen: { gun: 'R', sword: 'R' }, erina: { gun: 'R', sword: 'R' },
+};
+// r16c（rebuilt）：枪的挂点空间修正旋转。原版每把武器另有 weapon_motion（武器自身的握持/朝向动画）未导出（已请 Codex R5），
+//   直接挂 Loc_Wp_Gun_* 时 Mona/Queen/Erina 的枪管在 GunLoop 里与正前方偏 129.6°/91.9°/89.7°（tools/r16c-aimfix.mjs，t=0.1/0.4/0.8 三帧一致）。
+//   这里取 t=0.4 求得的「枪管 Jnt_C_WpGunCenter_00→Loc_WpGun_Fire 转到角色 +z」的最小旋转；拿到原版 weapon_motion 后应删掉换原始数据。
+//   Joker/Skull/Panther/Fox 原本偏差 ≤18.7°，不加修正。
+const GUN_FIX: Record<string, [number, number, number]> = {
+  gn03000: [0.363, -0.61, -2.0859], // Mona
+  gn06000: [-1.6991, -1.3033, -1.4372], // Queen
+  gn11000: [-1.551, -1.2898, -1.2612], // Erina
 };
 function wp(gun: string, sword: string, h: { gun: 'L' | 'R'; sword: 'L' | 'R' }): CharSpec['weapons'] {
   return [
-    { file: `p5t/wp_${gun}.glb`, loc: `Loc_Wp_Gun_${h.gun}`, show: (k) => /^Gun/.test(k) },
+    { file: `p5t/wp_${gun}.glb`, loc: `Loc_Wp_Gun_${h.gun}`, show: (k) => /^Gun/.test(k), fix: GUN_FIX[gun] },
     { file: `p5t/wp_${sword}.glb`, loc: `Loc_Wp_Sword_${h.sword}`, show: (k) => k === 'Attack' },
   ];
 }
@@ -78,8 +92,8 @@ export const SPECS: Record<string, CharSpec> = {
   //   batch-03 文件夹把 Gn04000/Wp04900 放在 Fox 下、Gn05000/Wp05900 放在 Panther 下 —— 与数据表相反，这里按数据表挂（已回报 Codex）
   panther: { key: 'panther', files: ['p5t/panther.glb'], weapons: wp('gn04000', 'wp04900', HAND.panther) },
   fox: { key: 'fox', files: ['p5t/fox.glb'], weapons: wp('gn05000', 'wp05900', HAND.fox) },
-  queen: { key: 'queen', files: ['p5t/queen.glb'] },
-  erina: { key: 'erina', files: ['p5t/erina.glb'] },
+  queen: { key: 'queen', files: ['p5t/queen.glb'], weapons: wp('gn06000', 'wp06901', HAND.queen) }, // r16c：batch-07 正版武器
+  erina: { key: 'erina', files: ['p5t/erina.glb'], weapons: wp('gn11000', 'wp11900', HAND.erina) },
   // 被洗脑（举止异常的）Panther / Fox：PC0004_053 / PC0005_053
   // 洗脑款 4053/5053（关卡 4054/5054 的 PrefabNo 也是 4053/5053）原版 GunId 10000401/10000501 未导出 → 沿用本人正版武器（Gn04000/Wp04900、Gn05000/Wp05900）
   panther_bw: { key: 'panther_bw', files: ['p5t/panther_bw.glb'], weapons: wp('gn04000', 'wp04900', HAND.panther) },
@@ -98,7 +112,7 @@ export const SPECS: Record<string, CharSpec> = {
 
 interface Proto {
   scene: THREE.Object3D; clips: Map<ClipKey, THREE.AnimationClip>; shade: Map<string, THREE.Texture>;
-  weapons: { scene: THREE.Object3D; loc: string; show: (k: ClipKey) => boolean }[];
+  weapons: { scene: THREE.Object3D; loc: string; show: (k: ClipKey) => boolean; fix?: [number, number, number] }[];
 }
 const protos = new Map<string, Proto>();
 const loading = new Map<string, Promise<boolean>>();
@@ -174,7 +188,7 @@ export function preloadChar(key: string): Promise<boolean> {
       const weapons: Proto['weapons'] = [];
       for (const w of spec.weapons ?? []) {
         if (!(await exists(BASE + w.file))) continue; // 缺正版武器就不拿（不再程序化）
-        try { const wg = await new GLTFLoader().loadAsync(BASE + w.file); weapons.push({ scene: wg.scene, loc: w.loc, show: w.show }); } catch { /* 跳过 */ }
+        try { const wg = await new GLTFLoader().loadAsync(BASE + w.file); weapons.push({ scene: wg.scene, loc: w.loc, show: w.show, fix: w.fix }); } catch { /* 跳过 */ }
       }
       protos.set(key, { scene: g.scene, clips, shade, weapons });
       return true;
@@ -257,6 +271,16 @@ function redHullMat() {
   redHull = m; return m;
 }
 
+let cyanHull: THREE.MeshBasicMaterial | null = null;
+function cyanHullMat() {
+  if (cyanHull) return cyanHull;
+  const m = redHullMat().clone(); m.color.set(0x33e7f0); m.onBeforeCompile = redHullMat().onBeforeCompile; m.customProgramCacheKey = () => 'p5t-red-hull';
+  cyanHull = m; return m;
+}
+
+const RESULT_WP_FLIP = [0, Math.PI, 0]; // r16b：8 种候选（tools/r16b-wpflip-probe.mjs）里只有绕挂点 Y 180° 与 result_1610 一致（枪口朝上）
+const ZERO3: [number, number, number] = [0, 0, 0];
+const _flipQ = new THREE.Quaternion(), _flipE = new THREE.Euler();
 /** Unity 专用网格：描边网格、脸部阴影叠片、备用嘴型/眼型（表情切换用）、刀光 */
 export function hiddenMesh(meshName: string, matName: string): boolean {
   if (/Outline/.test(meshName) || /^DefaultMaterial$|Outline/.test(matName) || /_Sh0\d$/.test(matName)) return true;
@@ -289,12 +313,18 @@ export class P5tRig implements UnitRig {
   private aimUntil = 0;
   private dimmed = false;
   private last = performance.now();
-  private wps: { obj: THREE.Object3D; show: (k: ClipKey) => boolean }[] = [];
+  private wps: { obj: THREE.Object3D; show: (k: ClipKey) => boolean; fixQ: THREE.Quaternion }[] = [];
   private clock = 0;
   private redHulls: THREE.SkinnedMesh[] = [];
   private hl = false;
   /** r14：红色选中/锁定描边 */
   setHighlight(on: boolean) { if (on === this.hl) return; this.hl = on; for (const r of this.redHulls) r.visible = on; }
+  /** r16b：结算第 2 页 Joker 外圈青色描边（result_2606：约 6px@720 的青色 #33e7f0 剪影边 + 轻微外发光）。原版是屏幕空间描边，shader 未导出 → 复用红描边外扩壳换青色材质（重建，无发光） */
+  private rim = false;
+  setRim(on: boolean) {
+    if (on === this.rim) return; this.rim = on;
+    for (const r of this.redHulls) { r.material = on ? cyanHullMat() : redHullMat(); r.visible = on || this.hl; }
+  }
 
   constructor(private spec: CharSpec, P: Proto) {
     this.key = spec.key;
@@ -363,7 +393,7 @@ export class P5tRig implements UnitRig {
         const r = celMat(src, null); m.material = r.m; this.tints.push(r.tint); m.castShadow = true;
       });
       obj.visible = false; obj.name = 'wp_' + w.loc;
-      loc.add(obj); this.wps.push({ obj, show: w.show });
+      loc.add(obj); this.wps.push({ obj, show: w.show, fixQ: new THREE.Quaternion().setFromEuler(new THREE.Euler(...(w.fix ?? ZERO3))) });
     }
 
     this.mixer = new THREE.AnimationMixer(this.model);
@@ -482,9 +512,15 @@ export class P5tRig implements UnitRig {
   private updateWeapons() {
     const k = this.oneShot ?? this.baseKey;
     const ok = !this.downed && !this.dead;
-    for (const w of this.wps) w.obj.visible = ok && w.show(k);
+    // r16b：结算 ResultFront* 里 Skull 的枪按原版 clip 的 Loc_Wp_Gun_R 旋转（≈绕 Y 180°）挂上去是「枪口朝下」，result_1610 是举枪枪口朝上 →
+    //   结算动作时武器绕挂点 Y 轴再转 180°（按帧目测校正，不是原始数据；战斗 GunLoop 不受影响、wp-probe 核对正确）
+    const f = /^Result/.test(k) ? ((globalThis as { __wpFlip?: number[] }).__wpFlip ?? RESULT_WP_FLIP) : ZERO3;
+    _flipQ.setFromEuler(_flipE.set(f[0], f[1], f[2]));
+    for (const w of this.wps) { w.obj.visible = ok && w.show(k); w.obj.quaternion.copy(w.fixQ).multiply(_flipQ); }
   }
 
+  /** r16b：直接给朝向（弧度，世界 Y 轴；结算站位用——faceTo 以 root 世界坐标为起点，结算 clip 的 Center 位移大时方向会被带偏） */
+  setYaw(y: number) { this.yawT = y; this.yaw = y; this.inner.rotation.y = y; } // 结算按画面锚定：直接到位（不走 14/s 平滑，否则冻结帧拟合时朝向不生效）
   faceTo(p: THREE.Vector3) {
     const w = this.root.getWorldPosition(new THREE.Vector3());
     const dx = p.x - w.x, dz = p.z - w.z;

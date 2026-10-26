@@ -39,6 +39,7 @@ import { RUN_MS_PER_TILE } from './view/chibiRig';
 import { makeSkull, makeMona, makeShadow } from './view/partyModels';
 import { preloadChar, makeChar, charReady, SPECS } from './view/p5tChar';
 import RESULT_CAM from './view/data/result-cam.json';
+import RESULT_BANDS_JSON from './view/data/result-bands.json';
 import { SummonDim, skillHit, CASTER_LAYER } from './view/skillFx';
 import { origSkillHit, hasOrigSkillFx, preloadSkillFx, setSkillFxCamera, showPersona, summonAura, personaKeyOf, preloadPersonas } from './view/skillFxOrig';
 import { hitstopMs, shake, applyShake, undoShake, spark, updateHitFx, recoil, preloadHitFx, lastSparkKind } from './view/hitFx';
@@ -1676,9 +1677,39 @@ function zoneCenter(z: string): Vec | null {
 }
 
 let resultCtl: { next: () => void } | null = null;
+let resultWipe: HTMLElement | null = null;
+const RS_WIPE_MS = 120, RS_PRERED_MS = 1200; // 擦入 0.12s + 纯红 1.2s（实机 16:05.15→16:05.27→16:06.47）
+const RS_RED_MS = 1500; // ResultIn 后背景仍是纯红、只有角色跳入（实机 16:06.47→16:07.97，红色占比 0.99 → 16:08.0 起场景出现）
+const RS_LAYER = 3; // 结算角色单独一遍画在红带之上（原版红带是 UI 层压在 3D 背景上、角色再压在红带上）
+const bandScene = new THREE.Scene(); const bandCam = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0, 10); bandCam.position.z = 1;
+/** r16b：结算三遍渲染 —— ① 背景（RS_LAYER 外的场景；ResultIn 头 1.5s 用纯红代替）② 红带（屏幕空间，按帧重描）③ 清深度后只画结算角色。
+ *  之前红带是世界空间平面夹在角色与背景之间：半透明/镂空的背景物体走透明队列会画到红带上面（红带区域 IoU 被吃掉），第 2 页前景物体会挡住角色。 */
+function renderResult(r: THREE.WebGLRenderer) {
+  const cam = resultCam, mask = cam.layers.mask, ac = r.autoClear;
+  const dbg = (window as unknown as { __rsDbg?: string | null }).__rsDbg; // 'key' = 背景纯绿且无红带（IoU 去角色用）；'noband' = 背景照常但无红带（IoU 去地毯用）
+  const red = !dbg && !!resultAnim && performance.now() - resultAnim.t0 < RS_RED_MS;
+  if (dbg === 'key') { const cc = r.getClearColor(new THREE.Color()), ca = r.getClearAlpha(); r.setClearColor(0x00ff00, 1); r.clear(); r.setClearColor(cc, ca); }
+  else if (red) { const cc = r.getClearColor(new THREE.Color()), ca = r.getClearAlpha(); r.setClearColor(0xf71400, 1); r.clear(); r.setClearColor(cc, ca); }
+  else { cam.layers.set(0); r.render(scene, cam); }
+  r.autoClear = false;
+  if (!red && !dbg && resultBandMesh) r.render(bandScene, bandCam);
+  r.clearDepth(); cam.layers.set(RS_LAYER);
+  const bg = scene.background; scene.background = null; r.render(scene, cam); scene.background = bg;
+  cam.layers.mask = mask; r.autoClear = ac;
+}
 function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
   skillTag.classList.add('hidden'); // r12：结算前收起技能名牌
   stopBgm(1200); // r13：原版结算曲不是战斗曲（录像 16:08/26:04 与战斗段互相关 ≤0.21），且未导出 → 战斗曲淡出（推断）
+  // r16b：进结算的原版 SE se_btl_wipe_win（battle_result.acb）——与实机视频 4 场结算前窗口滑动比对 chroma 0.80–0.81 / spec 0.81–0.85，4 场同一时刻（结算画面出现前约 5s 的切入），
+  //   notes/r16b/audio/REPORT.md。胜利 BGM 不接（085_bgm_s05 最高 0.65–0.81，未到 ~0.9 门槛）。
+  if (e.outcome === 'won' && !resultWipe) { // r16b：ResultIn 前的原版整屏红底（实机 16:05.15 红色星形从右缘 0.12s 扩满 → 16:05.27–16:06.47 纯红 #f71400 1.2s → ResultIn）。
+    //   颜色/时长按实机逐帧量（30fps）；星形擦入的外形是重建（原版擦入 shader/贴图未导出）。SE se_btl_wipe_win 与擦入同一时刻（音频比对 b1 @965.1s）。
+    sfx('se_btl_wipe_win'); skillTag.classList.add('hidden');
+    const w = document.createElement('div'); w.className = 'rs-wipe'; document.body.appendChild(w); resultWipe = w;
+    setTimeout(() => { showResult(e); }, RS_WIPE_MS + RS_PRERED_MS);
+    return;
+  }
+  if (resultWipe) { resultWipe.remove(); resultWipe = null; }
   if (e.outcome === 'won') { // r12：原版结算两页（prefab_ui2d_result_win 布局；贴图待导出 → 占位）
     const party = battle.mainAllies().filter((u) => !u.prop && !u.decoy).slice(0, 3);
     const lead = party.find((u) => !u.ko) ?? party[0];
@@ -1687,7 +1718,7 @@ function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
     resultCtl = showResultScreen($('#app'), {
       level: battle.map.id, turns: e.turn, won: true, band3d: !!staged, awards: e.crowns.items.map((i) => ({ ok: i.ok, label: i.label })),
       party: party.map((u) => ({ id: u.id, name: u.name, persona: PERSONA_NAME[u.id] ?? 'PERSONA', lv: 1 })),
-    }, () => { resultCtl = null; resultHold = false; resultAnim = null; resultBandMesh?.removeFromParent(); setAimSeeThrough(null); aimActive = false; viewCam = baseCam(); showResultPlain(e); }, (page) => { if (page === 2 && staged) staged.cut(); });
+    }, () => { for (const r of rigs.values()) (r as { setRim?: (on: boolean) => void }).setRim?.(false); world.getObjectByName('origGimmicks')?.children.forEach((o) => { if (o.userData.rsHid) { o.visible = true; delete o.userData.rsHid; } }); for (const g of unitMesh.values()) g.traverse((o) => { if (o.userData.rsLM !== undefined) { o.layers.mask = o.userData.rsLM; delete o.userData.rsLM; } }); resultCtl = null; resultHold = false; resultAnim = null; resultBandMesh?.removeFromParent(); setAimSeeThrough(null); aimActive = false; viewCam = baseCam(); showResultPlain(e); }, (page) => { if (page === 2 && staged) staged.cut(); });
     return;
   }
   showResultPlain(e);
@@ -1700,7 +1731,53 @@ function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
 //   Unity→three 的左右手性：x 与轴心旋转方向的正负号按 result_1610 构图（前排在画面左中、后排在右）选定。
 //   站位：三人同站轴心原点、同朝镜头，后排左右位移来自各自原版 Result clip 的 Jnt_C_Center 平移（BackR/BackL InLoop 自带约 1.2m 后移 + 左右错开）。
 const RCAM = RESULT_CAM as unknown as Record<string, { dur: number; frames: number[][] }>;
-let resultAnim: { P: THREE.Vector3; fwd: THREE.Vector3; t0: number; cut: number } | null = null;
+let resultAnim: { P: THREE.Vector3; fwd: THREE.Vector3; t0: number; cut: number; cast: { g: THREE.Object3D; id: string; role: RsRole; center: THREE.Object3D | null; r?: { faceTo: (p: THREE.Vector3) => void } }[] } | null = null;
+/** r16b：结算站位「按画面锚定」（重建）。原版角色落点/朝向由 IL2CPP 运行时编排，bundle 里没有（tracks/README：未导出总时间线）；
+ *  「三人同站轴心 + 各自 Result clip 的 Jnt_C_Center 位移」拟合不上原版两页（notes/r16b/fit2-root-motion.py）。
+ *  所以：相机走原版 CA9999 轨道（位置/注视/FOV/轴心转），角色每帧按目标「画面横坐标 x（0–1）+ 沿镜头深度 d（米）+ 高度偏移 y（米）」摆到 Center 骨骼上，
+ *  朝向 = 面向相机 + yaw（度）。x/d/y 由 tools/r16b-fit.mjs 在与原版「同一时间点」（第 1 页 = ResultIn 开始后 3.53s，对应实机 16:10.0；
+ *  第 2 页 = 翻页后 1.95s，对应 16:14.25 / 26:06.0）把每个角色的头部框（Jnt_C_Head 及子骨骼主导的顶点投影）对齐原版帧里量的头部框，属于按帧重建。
+ *  角色（实机视频 16:12–16:17 与 26:02–26:07 两场核对）：hero1 = 前排（最后一击者；ResultFront 动作）——第 1 页左前，第 2 页「挥拳特写 + 青色描边」也是他；
+ *  other = Mona（第 1 页中、第 2 页左）；hero2 = 第三人（第 1 页右后，第 2 页不在画面）。 */
+type RsRole = 'hero1' | 'hero2' | 'other';
+type RsT = { x: number; d: number; y?: number; yaw: number; hide?: boolean };
+const RS_TARGET: Record<1 | 2, Record<RsRole, RsT>> = { // r16b/r16c：tools/r16b-fit.mjs 拟合值（/workspace/work/notes/r16b/fit/fit-A.json），头部框误差 0.0%（≤5% 门槛）
+  1: { hero1: { x: 0.2415, d: 1.8541, y: 0.0843, yaw: 20 }, other: { x: 0.5023, d: 2.9145, y: 0.0717, yaw: 30 }, hero2: { x: 0.8055, d: 2.3792, y: 0.2516, yaw: 40 } },
+  2: { hero1: { x: 0.5945, d: 0.9944, y: -0.0269, yaw: 75 }, hero2: { x: 1.4000, d: 2.0000, y: 0.0000, yaw: 0, hide: true }, other: { x: 0.1972, d: 1.6524, y: -0.0334, yaw: 30 } },
+};
+/** r16b：第 2 页前排按角色覆盖（场景 B：Joker 最后一击，对 result_2606 拟合）；没有的角色用 RS_TARGET[2].hero1 */
+const RS_P2_FRONT: Record<string, RsT> = { joker: { x: 0.6339, d: 0.7712, y: -0.0677, yaw: 75 } }; // 场景 B 拟合（fit-B.json，对 result_2606 / b3p2_1566.0）
+(window as unknown as { __rsP2F?: typeof RS_P2_FRONT }).__rsP2F = RS_P2_FRONT;
+/** 原版帧里量的头部框（1280×720 像素：中心 x、中心 y、宽）——r16b-fit 与验收用（notes/r16b/ref/*.png，网格读数） */
+export const RS_REF_HEAD = {
+  p1: { hero1: [365, 165, 160], other: [685, 230, 170], hero2: [1010, 122, 150] }, // 16:10.0 = result_1610（Skull / Mona / Joker）
+  p2: { hero1: [920, 167, 260], other: [255, 365, 210] }, // 16:14.25（Skull 前排特写 / Mona）；26:06.0 = result_2606 同构图（Joker 前排 [842,152,285] / Mona [255,365,210]）
+};
+(window as unknown as { __rsT?: typeof RS_TARGET }).__rsT = RS_TARGET; // 调参/截图钩子
+(window as unknown as { __rsCam?: THREE.Camera }).__rsCam = resultCam;
+/** r16b 验收/拟合：每个结算角色的头部框（Jnt_C_Head_00 及子骨骼为主权重的顶点，蒙皮后投影到 1280×720 像素）→ {role: [cx, cy, w, h]} */
+const _rsHeadIdx = new WeakMap<THREE.SkinnedMesh, number[]>();
+(window as unknown as { __rsHead?: () => unknown }).__rsHead = () => {
+  if (!resultAnim) return null; const out: Record<string, number[]> = {}; const v = new THREE.Vector3();
+  for (const c of resultAnim.cast) {
+    if (!c.g.visible) continue; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; c.g.updateMatrixWorld(true);
+    c.g.traverse((o) => {
+      const m = o as THREE.SkinnedMesh; if (!m.isSkinnedMesh || !m.visible || m.name.endsWith('_red')) return;
+      let idx = _rsHeadIdx.get(m);
+      if (!idx) {
+        const bones = m.skeleton.bones, isHead = bones.map((b) => { for (let q: THREE.Object3D | null = b; q; q = q.parent) if (q.name === 'Jnt_C_Head_00') return true; return false; });
+        const si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight; idx = [];
+        for (let i = 0; i < si.count; i += 2) { let bi = 0, bw = -1; for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; bi = si.getComponent(i, k); } } if (isHead[bi]) idx.push(i); }
+        _rsHeadIdx.set(m, idx);
+      }
+      for (const i of idx) { m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld).project(resultCam); const px = (v.x + 1) * 640, py = (1 - v.y) * 360; if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py; }
+    });
+    if (x1 > x0) out[c.role] = [Math.round((x0 + x1) / 2), Math.round((y0 + y1) / 2), Math.round(x1 - x0), Math.round(y1 - y0)];
+  }
+  return out;
+};
+
+(window as unknown as { __rsProbe?: () => unknown }).__rsProbe = () => resultAnim?.cast.map((c) => { const w = c.center?.getWorldPosition(new THREE.Vector3()); return { role: c.role, vis: c.g.visible, g: c.g.position.toArray().map((v) => +v.toFixed(2)), c: w?.toArray().map((v) => +v.toFixed(2)), cam: resultCam.position.toArray().map((v) => +v.toFixed(2)), dist: w ? +w.distanceTo(resultCam.position).toFixed(2) : null, act: (c.r as unknown as { baseKey?: string; oneShot?: string })?.baseKey + '/' + (c.r as unknown as { oneShot?: string })?.oneShot }; });
 // 正负号按 result_1610 定：相机在前排右侧（x=+0.66）、摇镜 +6.5° 向左 → 前排在画面左中（≈0.34）、BackR 在最右且更近（≈0.88）、BackL 居中靠后（≈0.76），与原版 Skull/Mona/Joker 构图一致
 const RC_FLIP = new URLSearchParams(location.search).has('rcflip');
 function resultCamFrame(clip: string, t: number) {
@@ -1714,33 +1791,23 @@ let resultBandPage = 0;
 /** r16：结算红带按原版帧逐页重描（ResultLineManager Line1–4 是脚本运行时画的，prefab 里 RectTransform 为空、无参数 → 不可能拿到原始数据）。
  *  做法：把 result_1610（第 1 页）/ result_2606（第 2 页）按「纯红 R>170,G<60,B<70」做掩膜（notes/r16/mask-*.png），
  *  去掉 UI 面板与角色后的大块红色区域描成多边形（坐标 = 1280×720 帧像素）。无黑描边（原版红带直接压在背景上）。属于「按帧重建」，非原始数据。 */
-const RESULT_BANDS: Record<number, number[][][]> = {
-  1: [
-    [[0, 226], [700, 0], [800, 0], [0, 262]],
-    [[0, 520], [300, 330], [420, 250], [560, 140], [700, 0], [820, 0], [640, 250], [330, 470], [0, 650]],
-    [[320, 480], [1280, 195], [1280, 720], [560, 720]],
-    [[0, 600], [330, 470], [560, 720], [0, 720]],
-  ],
-  2: [
-    [[160, 212], [745, 288], [750, 322], [600, 350], [160, 240]],
-    [[480, 105], [1280, 95], [1280, 150], [480, 140]],
-    [[820, 0], [1280, 0], [1280, 85], [880, 15]],
-    [[560, 450], [980, 345], [1280, 405], [1280, 620], [820, 560]],
-    [[0, 612], [340, 580], [820, 560], [1280, 640], [1280, 720], [0, 720]],
-  ],
-};
+// r16b：改为由 tools/r16b-trace-bands.py 从原版帧红色掩膜（R>170,G<70,B<80）自动描边：闭运算 9px + 开运算 5px、填内洞（被 UI 面板/角色挡住的部分按红带连续处理）、
+//   approxPolyDP ε=2px → src/view/data/result-bands.json（1280×720 帧像素）。仍属「按帧重建」：ResultLineManager 线条参数不在 bundle 里。
+const RESULT_BANDS = RESULT_BANDS_JSON as unknown as Record<string, number[][][]>;
 function resultBand(page = 1) {
   if (!resultBandMesh) {
     const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720;
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-    resultBandMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
-    resultBandMesh.renderOrder = -1; resultBandMesh.name = 'resultBand';
+    // r16b：不再靠深度夹在角色与背景之间（第 2 页机位离背景建筑近，红带平面被建筑挡掉 → IoU 只有 0.18）。改成「不透明 + alphaTest 镂空、关深度测试」，
+    //   renderOrder 1 画在背景之后，结算角色 renderOrder 2 再画在红带上（placeResultCast 里设置）。
+    resultBandMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
+    resultBandMesh.name = 'resultBand'; resultBandMesh.frustumCulled = false; // r16b：屏幕空间（bandScene 正交相机铺满视口），renderResult 第②遍画
   }
   if (resultBandPage !== page) {
     resultBandPage = page;
     const tex = (resultBandMesh.material as THREE.MeshBasicMaterial).map as THREE.CanvasTexture; const cv = tex.image as HTMLCanvasElement; const c = cv.getContext('2d')!;
-    c.clearRect(0, 0, 1280, 720); c.fillStyle = '#e60012';
-    for (const pts of RESULT_BANDS[page] ?? []) { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill(); }
+    c.clearRect(0, 0, 1280, 720); c.fillStyle = '#fa0000'; // r16b：原版红带取色（b1p1 红带像素中位数 BGR 0/0/250）
+    for (const pts of RESULT_BANDS[String(page)] ?? []) { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill(); }
     tex.needsUpdate = true;
   }
   return resultBandMesh;
@@ -1763,23 +1830,53 @@ function resultStep() {
   const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(fwd.x, fwd.z) + sx * gy);
   resultCam.position.copy(P).add(new THREE.Vector3(sx * x, y, z).applyQuaternion(q));
   const aimW = P.clone().add(new THREE.Vector3(sx * ax, ay, az).applyQuaternion(q));
-  const look = aimW.clone().sub(resultCam.position).normalize();
   resultCam.up.set(0, 1, 0); resultCam.lookAt(aimW);
-  setAimSeeThrough(resultCam.position, P.clone().add(new THREE.Vector3(0, 0.6, 0)), P.y); // r16：结算机位与角色之间的场景物体半透（第 2 页机位在 3.5m 外，常被柱/雕像挡住）
+  const focus = resultAnim.cast.find((c) => c.role === 'hero1')?.center?.getWorldPosition(new THREE.Vector3()) ?? P.clone().add(new THREE.Vector3(0, 0.6, 0));
+  // r16b：原版 gimmick（旗杆/木箱/炸弹桶）不走地图材质的镂空 → 机位与当页主角之间 1.2m 内的整件隐藏（结束时恢复）
+  { const gm = world.getObjectByName('origGimmicks'); const ab = focus.clone().sub(resultCam.position), L2 = Math.max(1e-4, ab.lengthSq());
+    gm?.children.forEach((o) => { const w = o.getWorldPosition(new THREE.Vector3()); w.y = focus.y; const t = THREE.MathUtils.clamp(w.clone().sub(resultCam.position).dot(ab) / L2, 0, 1.05);
+      const near = w.distanceTo(resultCam.position.clone().addScaledVector(ab, t)) < 1.2; if (near && o.visible) { o.visible = false; o.userData.rsHid = true; } else if (!near && o.userData.rsHid) { o.visible = true; delete o.userData.rsHid; } }); }
+  setAimSeeThrough(resultCam.position, focus, P.y, true); // r16b：半透圆柱指向当页主角（第 2 页 = Joker 特写）；r16：结算机位与角色之间的场景物体半透（第 2 页机位在 3.5m 外，常被柱/雕像挡住）
   resultCam.fov = fov; resultCam.aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight); resultCam.updateProjectionMatrix();
-  const band = resultBand(resultAnim.cut ? 2 : 1); if (!band.parent) scene.add(band);
-  const d = resultCam.position.distanceTo(P) + 2.2, hh = Math.tan(THREE.MathUtils.degToRad(fov / 2)) * d;
-  band.position.copy(resultCam.position).addScaledVector(look.normalize(), d); band.quaternion.copy(resultCam.quaternion); band.scale.set(hh * 2 * resultCam.aspect, hh * 2, 1);
+  resultCam.updateMatrixWorld();
+  placeResultCast(resultAnim.cut ? Math.min(1, (now - resultAnim.cut) / 1000 / RCAM.ResultCutchange.dur) : 0);
+  const band = resultBand(resultAnim.cut ? 2 : 1); if (!band.parent) bandScene.add(band);
+}
+const _rsV = new THREE.Vector3(), _rsC = new THREE.Vector3(), _rsF = new THREE.Vector3();
+function placeResultCast(k: number) {
+  if (!resultAnim) return;
+  const T = (window as unknown as { __rsT?: typeof RS_TARGET }).__rsT ?? RS_TARGET;
+  resultCam.getWorldDirection(_rsF);
+  for (const c of resultAnim.cast) {
+    const a = T[1][c.role], b = (c.role === 'hero1' && RS_P2_FRONT[c.id]) || T[2][c.role]; // 第 2 页前排按角色单独拟合（Skull 场 vs Joker 场原版帧构图不同）
+    const x = a.x + (b.x - a.x) * k, d = a.d + (b.d - a.d) * k, yaw = a.yaw + (b.yaw - a.yaw) * k;
+    const yo = (a.y ?? 0) + ((b.y ?? 0) - (a.y ?? 0)) * k; c.g.position.y = resultAnim.P.y + yo;
+    c.g.visible = !(k > 0.5 ? b.hide : a.hide);
+    _rsV.set(x * 2 - 1, 0, 0.5).unproject(resultCam).sub(resultCam.position).normalize();
+    const pt = resultCam.position.clone().addScaledVector(_rsV, d / Math.max(0.05, _rsV.dot(_rsF)));
+    const fy = Math.atan2(resultCam.position.x - pt.x, resultCam.position.z - pt.z) + THREE.MathUtils.degToRad(yaw);
+    // 绝对定位：g = 目标点 − (Center 世界坐标 − g)（只动水平；Result clip 自带的 Center 位移/跳跃高度保留在 y 上）
+    if (c.center) { c.center.getWorldPosition(_rsC); c.g.position.x = pt.x - (_rsC.x - c.g.position.x); c.g.position.z = pt.z - (_rsC.z - c.g.position.z); }
+    else { c.g.position.x = pt.x; c.g.position.z = pt.z; }
+    (c.r as unknown as { setYaw?: (y: number) => void } | undefined)?.setYaw?.(fy);
+  }
 }
 function stageResult(party: Unit[], lead: Unit) {
   const g0 = unitMesh.get(lead.id)!;
   const fwd = baseCam().position.clone().sub(g0.position).setY(0); // 指向当前俯视镜头一侧
   if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, 1); fwd.normalize();
-  const la = lastAttacker ? party.find((u) => u.id === lastAttacker && !u.ko) : undefined;
+  const qs = new URLSearchParams(location.search); // 截图核对用：?rsfront=joker&rsparty=joker,mona（复现 26:02 那场：Joker 最后一击、两人队）
+  if (qs.get('rsparty')) { const ids = qs.get('rsparty')!.split(','); party = party.filter((u) => ids.includes(u.id)); }
+  const la = qs.get('rsfront') ? party.find((u) => u.id === qs.get('rsfront')) : lastAttacker ? party.find((u) => u.id === lastAttacker && !u.ko) : undefined;
   const front = la ?? party.find((u) => u.id === 'skull' && !u.ko) ?? party.find((u) => u.id !== 'joker' && !u.ko) ?? lead; // result_1610：前排 = 打出最后一击的 Skull，Joker 在后排右（推断：最后一击者在前，样本 1）
   const P = (unitMesh.get(front.id) ?? g0).position.clone();
-  const order = [front, ...party.filter((u) => u !== front)];
-  const slots: ('front' | 'backR' | 'backL')[] = ['front', 'backR', 'backL'];
+  const rest = party.filter((u) => u !== front);
+  const other = rest.find((u) => u.id === 'mona') ?? rest[1] ?? rest[0]; // 两场实机里 Mona 都在「第 1 页中 / 第 2 页左」
+  const third = rest.filter((u) => u !== other);
+  const order = [front, ...third, ...(other ? [other] : [])];
+  const slots = order.map((u, i) => (i === 0 ? 'front' : u === other ? 'backL' : 'backR')) as ('front' | 'backR' | 'backL')[];
+  const roles = order.map((u, i) => (i === 0 ? 'hero1' : u === other ? 'other' : 'hero2')) as RsRole[];
+  const cast: NonNullable<typeof resultAnim>['cast'] = [];
   const missing: string[] = [];
   order.forEach((u, i) => {
     const g = unitMesh.get(u.id), r = rigs.get(u.id); if (!g) return;
@@ -1790,16 +1887,19 @@ function stageResult(party: Unit[], lead: Unit) {
       //   按 result_1610 前排约 3/4 正面朝镜头、举枪手在画面左校正（角度为目测拟合）
       const fy = Math.atan2(fwd.x, fwd.z) + (i === 0 ? THREE.MathUtils.degToRad(75) : 0);
       r.faceTo(P.clone().add(new THREE.Vector3(Math.sin(fy), 0, Math.cos(fy))));
-      if (!(r as { playResult?: (s: string) => boolean }).playResult?.(slots[i])) { missing.push(u.id); g.position.addScaledVector(fwd, -0.9 * (i ? 1 : 0)).addScaledVector(new THREE.Vector3(fwd.z, 0, -fwd.x), i === 1 ? 0.9 : i === 2 ? -0.8 : 0); }
+      if (!(r as { playResult?: (s: string) => boolean }).playResult?.(slots[i])) missing.push(u.id);
     }
+    g.traverse((o) => { o.userData.rsLM ??= o.layers.mask; o.layers.set(RS_LAYER); }); // r16b：结算角色单独一遍画（renderResult ③）
+    cast.push({ g, id: u.id, role: roles[i], center: g.getObjectByName('Jnt_C_Center_00') ?? null, r: r as { faceTo: (p: THREE.Vector3) => void } | undefined });
   });
+  scene.traverse((o) => { if ((o as THREE.Light).isLight) o.layers.enable(RS_LAYER); }); // 灯光也要在角色那一遍的层上
   for (const u of battle.units) if (!order.includes(u)) { const g = unitMesh.get(u.id); if (g) g.visible = false; }
   for (const el of labelEl.values()) el.style.display = 'none';
   clearOverlay();
-  resultAnim = { P: P.clone(), fwd: fwd.clone(), t0: performance.now(), cut: 0 };
+  resultAnim = { P: P.clone(), fwd: fwd.clone(), t0: performance.now(), cut: 0, cast };
   aimAnim = null; viewCam = resultCam; aimActive = true; resultHold = true; setAimSeeThrough(null); resultStep();
   (window as unknown as { __resultMissing?: string[] }).__resultMissing = missing;
-  return { cut: () => { if (resultAnim) resultAnim.cut = performance.now(); order.forEach((u, i) => (rigs.get(u.id) as { playResult?: (s: string, c: boolean) => boolean } | undefined)?.playResult?.(slots[i], true)); } };
+  return { cut: () => { if (resultAnim) resultAnim.cut = performance.now(); const h2 = order[0] && rigs.get(order[0].id); (h2 as { setRim?: (on: boolean) => void } | undefined)?.setRim?.(true); order.forEach((u, i) => (rigs.get(u.id) as { playResult?: (s: string, c: boolean) => boolean } | undefined)?.playResult?.(slots[i], true)); } };
 }
 function showResultPlain(e: Extract<BattleEvent, { type: 'result' }>) {
   const r = $('#result');
@@ -2101,7 +2201,7 @@ function loop() {
   for (const u of battle.units) if (u.prop === 'flag' || u.prop === 'speaker') { const g = unitMesh.get(u.id); if (g) (u.prop === 'flag' ? waveFlag : pulseSpeaker)(g, t); }
   updateHitFx(viewCam, world); setSkillFxCamera(viewCam);
   const so = applyShake(viewCam);
-  postFx.render(renderer, () => sdim.render(renderer, scene, viewCam as THREE.PerspectiveCamera));
+  postFx.render(renderer, () => (resultAnim && viewCam === resultCam ? renderResult(renderer) : sdim.render(renderer, scene, viewCam as THREE.PerspectiveCamera)));
   undoShake(viewCam, so);
   refreshLabels();
   requestAnimationFrame(loop);

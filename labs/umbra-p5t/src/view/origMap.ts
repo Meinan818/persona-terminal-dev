@@ -87,8 +87,9 @@ const L = {
 // r13：过肩瞄准时「镜头—目标」之间的遮挡物抖动镂空（原版 14:21 帧：挡在镜头前的木箱变成网格状半透明）。
 // 原版做法（着色器/脚本）未导出 → 重建：圆柱（半径 0.8m）内、比目标近、离地 >0.12m 的片元按 2×2 有序抖动丢 3/4。
 const AIM = { uAimOn: { value: 0 }, uAimCam: { value: new THREE.Vector3() }, uAimTgt: { value: new THREE.Vector3() }, uAimFloor: { value: 0 } };
-export function setAimSeeThrough(cam: THREE.Vector3 | null, tgt?: THREE.Vector3, floorY = 0) {
-  AIM.uAimOn.value = cam && tgt ? 1 : 0;
+/** full = r16b 结算：圆柱内场景几何整块镂空（不做棋盘半透），半径 1.4m —— 第 2 页 Joker 特写机位前常有雕像/旗杆 */
+export function setAimSeeThrough(cam: THREE.Vector3 | null, tgt?: THREE.Vector3, floorY = 0, full = false) {
+  AIM.uAimOn.value = cam && tgt ? (full ? 2 : 1) : 0;
   if (cam && tgt) { AIM.uAimCam.value.copy(cam); AIM.uAimTgt.value.copy(tgt); AIM.uAimFloor.value = floorY + 0.12; }
 }
 let curLighting: OrigLighting | null = null;
@@ -115,8 +116,8 @@ ${clip ? 'uniform float uClipY; uniform vec2 uToCam; uniform float uCut;' : ''}`
     f = f.replace('void main() {', `void main() {
   if (uAimOn > 0.5 && vWorldP.y > uAimFloor) {
     vec3 ab = uAimTgt - uAimCam; float t = dot(vWorldP - uAimCam, ab) / max(dot(ab, ab), 1e-4);
-    if (t > 0.0 && t < 0.9 && length(vWorldP - (uAimCam + ab * t)) < 0.8) {
-      vec2 q = mod(floor(gl_FragCoord.xy), 2.0); if (q.x + q.y > 0.5) discard;
+    if (t > 0.0 && t < 0.9 && length(vWorldP - (uAimCam + ab * t)) < (uAimOn > 1.5 ? 1.4 : 0.8)) {
+      vec2 q = mod(floor(gl_FragCoord.xy), 2.0); if (uAimOn > 1.5 || q.x + q.y > 0.5) discard;
     }
   }`);
     if (clip) f = f.replace('void main() {', `void main() {

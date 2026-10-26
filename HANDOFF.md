@@ -97,3 +97,9 @@ npx tsc --noEmit   # 仅类型检查
 
 ## 12. 存档位置
 完整 Hark 工作区（笔记、帧库、视频、设计、脚本）：**umbra-assets/`hark-workspace/`**，清单见 `hark-workspace/MANIFEST.md`。
+
+## 最新状态（2026-10-27 01:20 CST，月度额度到 95% 停止开发时）
+- 代码最终提交 327a888（feat/umbra-app-m2）：结算按原版同帧对齐（头部框误差 0%、红带区域 IoU 0.885–0.954、原版标题/GET!!/CLEAR!!/继续 Sprite）；Mona/Queen/Erina 枪挂点修正（GUN_FIX，rebuilt，等原版 weapon_motion）。
+- 结算剩余差距：第2页青色描边偏细；场景B Joker 非原版出拳姿势；Skull 表情不同；胜利曲无 ≥0.9 匹配未接。见 notes/R13-BACKLOG.md。
+- Codex：R1–R4 已报完成待验收；R5（weapon_motion 导出）已派。
+- 对比图/视频：hark-workspace/notes/shots/2026-10-26/r16b-result-vs-orig.jpg、r16b-result.mp4、r16c-weapons.jpg。

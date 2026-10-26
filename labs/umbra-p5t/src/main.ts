@@ -23,6 +23,7 @@ import type { CutWho } from './fx/cutins';
 import { TripleFx } from './view/tripleFx';
 import { SceneKit, themeFor, cobbleTex, preloadKit } from './view/sceneKit';
 import { sfx, installUnlock, preloadSfx } from './view/sfx';
+import { playLevelBgm, stopBgm } from './view/bgm';
 import { buildDamageView, playDamageClip, digitPx } from './view/damagePop';
 import { attachGimmicks, swapPropModel, releaseGimmicks } from './view/gimmick';
 import { SKILL_CAM, poseSkillCam } from './view/skillCam';
@@ -1452,6 +1453,7 @@ function zoneCenter(z: string): Vec | null {
 let resultCtl: { next: () => void } | null = null;
 function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
   skillTag.classList.add('hidden'); // r12：结算前收起技能名牌
+  stopBgm(1200); // r13：原版结算曲不是战斗曲（录像 16:08/26:04 与战斗段互相关 ≤0.21），且未导出 → 战斗曲淡出（推断）
   if (e.outcome === 'won') { // r12：原版结算两页（prefab_ui2d_result_win 布局；贴图待导出 → 占位）
     const party = battle.mainAllies().filter((u) => !u.prop && !u.decoy).slice(0, 3);
     const lead = party.find((u) => !u.ko) ?? party[0];
@@ -1721,6 +1723,7 @@ function restart() {
   selected = null; previewTile = null; previewTarget = null; inspectEnemy = null; mode = 'auto';
   if (typeof skillList !== 'undefined') endSkillFlow();
   build();
+  playLevelBgm(battle.map.id); // r13：原版 BgmId（stages.csv）对应曲目，无缝循环
   void play(battle.start());
 }
 

@@ -9,3 +9,5 @@ public/p5t-fx/
 public/p5t-sfx/
 # r12：原版回合切换贴图（不入库）：tools/fetch-p5t-turn.sh
 public/p5t-turn/
+# r13：原版战斗 BGM（不入库）：tools/fetch-p5t-bgm.sh
+public/p5t-bgm/

@@ -30,6 +30,8 @@ function ensureCtx(): AudioContext | null {
   master = ctx.createGain(); master.gain.value = muted ? 0 : getVolume(); master.connect(ctx.destination);
   return ctx;
 }
+/** r13：与 BGM 共用的 AudioContext */
+export function audioCtx(): AudioContext | null { return ensureCtx(); }
 const ext = () => { const a = document.createElement('audio'); return a.canPlayType('audio/ogg; codecs=opus') ? 'ogg' : 'm4a'; };
 function load(name: string): Promise<AudioBuffer | null> {
   let p = bufs.get(name);

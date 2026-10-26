@@ -1,8 +1,9 @@
-// 技能演出（Hark 自制 —— 原版技能 VFX 是 Unity VFX Graph，网页跑不了；Codex 导出的 VFX JSON 只是参数，不能直接播放）：
+// 技能演出（r14：召唤蓝焰与技能命中已换原版贴图，见 skillFxOrig.ts；本文件余下为缺图回退 + 三遍渲染。原注：Hark 自制 —— 原版技能 VFX 是 Unity VFX Graph，网页跑不了；Codex 导出的 VFX JSON 只是参数，不能直接播放）：
 //  1) SummonDim：召唤切入的暗屏改成「只压背景」——三遍渲染：整场景 → 暗幕 + 施法者身后蓝焰（正交全屏层）→ 清深度后只画施法者（layer 1），
 //     施法者的 SkillStart→SkillActStart 动作不再被盖住。
 //  2) SkillHit：技能命中特效落在目标身上（按属性配色：火/冰/电/风/核/念/祝/咒/万能）。
 import * as THREE from 'three';
+import { summonFlameTex, flipbookMaterial, setFlipbookFrame, FIRE_COLS, FIRE_ROWS, FIRE_FRAMES } from './skillFxOrig';
 
 export const CASTER_LAYER = 1;
 
@@ -37,7 +38,8 @@ export class SummonDim {
   private scene = new THREE.Scene();
   private cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 2);
   private quad: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
-  private flames: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
+  private flames: THREE.Mesh<THREE.PlaneGeometry, THREE.Material>[] = [];
+  private origFlame = false;
   private t0 = 0; private dur = 950;
   caster: THREE.Object3D | null = null;
   private ndc = new THREE.Vector2(); private ndcTop = new THREE.Vector2();
@@ -91,12 +93,16 @@ export class SummonDim {
     // 施法者身后蓝焰（人格面具召唤）：脚下起、高约 1.6 倍身高
     const hN = Math.max(0.25, (this.ndcTop.y - this.ndc.y) * 1.6);
     const grow = Math.min(1, k / 0.3);
+    // r14：有原版共通层 10300 的 Fire_5x2 蓝焰翻页贴图 → 换上（9 帧循环，颜色按 summon_v58_3150 取蓝；Canvas 火舌只作缺图回退）
+    const ft = summonFlameTex();
+    if (ft && !this.origFlame) { this.origFlame = true; this.flames.forEach((f, i) => { f.material.dispose(); const m = flipbookMaterial(ft, i === 1 ? 0x46b4ff : 0x2a64ff, true); m.depthTest = false; f.material = m; }); }
     this.flames.forEach((f, i) => {
       const off = (i - 1) * hN * 0.28 / asp;
       const hh = hN * (i === 1 ? 1 : 0.78) * (0.1 + 0.9 * grow) * (1 + 0.05 * Math.sin(performance.now() / 70 + i));
       f.scale.set(hN * 0.55 / asp, hh, 1);
       f.position.set(this.ndc.x + off, this.ndc.y + hh / 2 - hN * 0.06, 0);
-      f.material.opacity = a * 0.9;
+      if (this.origFlame) { const m = f.material as ReturnType<typeof flipbookMaterial>; m.uniforms.uO.value = a; setFlipbookFrame(m, FIRE_COLS, FIRE_ROWS, (performance.now() / 55 + i * 3) % FIRE_FRAMES); f.scale.x *= 1.25; }
+      else (f.material as THREE.MeshBasicMaterial).opacity = a * 0.9;
     });
     const ac = r.autoClear; r.autoClear = false;
     r.render(this.scene, this.cam);

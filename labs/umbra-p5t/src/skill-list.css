@@ -105,3 +105,5 @@ body.p5hud #party { right: max(calc(45 * var(--cu)), env(safe-area-inset-right))
 #skill-list .sk-info .sk-dmg.tint { background: none !important; clip-path: none !important; overflow: visible; }
 #skill-list .sk-info .sk-dmg.tint b { font-size: calc(22 * var(--cu)) !important; transform: skewX(-8deg) !important; margin-left: calc(4 * var(--cu)); }
 #skill-list .sk-info .sk-dmg.tint { padding-left: calc(30 * var(--cu)); }
+/* r14：选技能目标（predict_1719_5）同样只有技能自己的确定/返回提示，全局提示条与 CHARGE 牌叠字 → 隐藏 */
+#app.sk-target #hintbar, #app.sk-target .chgs { display: none !important; }

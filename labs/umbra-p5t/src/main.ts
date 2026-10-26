@@ -39,6 +39,7 @@ import { RUN_MS_PER_TILE } from './view/chibiRig';
 import { makeSkull, makeMona, makeShadow } from './view/partyModels';
 import { preloadChar, makeChar, charReady, SPECS } from './view/p5tChar';
 import { SummonDim, skillHit, CASTER_LAYER } from './view/skillFx';
+import { origSkillHit, hasOrigSkillFx, preloadSkillFx, setSkillFxCamera, showPersona, summonAura, PERSONA_OF } from './view/skillFxOrig';
 import { hitstopMs, shake, applyShake, undoShake, spark, updateHitFx, recoil, preloadHitFx, lastSparkKind } from './view/hitFx';
 import type { HitSpec } from './view/hitFx';
 import { loadSdfFont, renderSdf, hydrateSdf } from './ui/sdfFont';
@@ -174,7 +175,7 @@ const std = (color: number, extra: Partial<THREE.MeshStandardMaterialParameters>
 
 let gimmickCount = 0, placeholderCount = -1;
 function build() {
-  preloadHitFx(); preloadSfx();
+  preloadHitFx(); preloadSfx(); preloadSkillFx();
   if (world) scene.remove(world);
   world = new THREE.Group();
   overlay = new THREE.Group();
@@ -1101,6 +1102,7 @@ function hitImpact(id: string, hs: HitSpec) {
 let lastAttacker: string | null = null;
 /** 当前攻击是技能时的技能 id（受击时在目标身上播技能命中特效） */
 let lastSkill: string | null = null;
+let personaFx: { end: () => void } | null = null;
 async function tweenPath(id: string, path: Vec[], msPerTile = 90, arc = 0) {
   const g = unitMesh.get(id);
   if (!g) return;
@@ -1427,6 +1429,13 @@ async function play(events: BattleEvent[]) {
         lastSkill = (e.kind === 'skill' || e.kind === 'unique') && e.skillId ? e.skillId : null;
         { const tg = unitMesh.get(e.targetId); const ar = rigs.get(e.attackerId); if (tg && ar) ar.aim(tg.position, e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'gun', 2400 / SPEED); const tr = rigs.get(e.targetId); const ag = unitMesh.get(e.attackerId); if (tr && ag) tr.faceTo(ag.position); }
         if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
+        // r14：切入后原版 Persona（Joker=Arsene）在身后现身 + 共通层 10300 蓝焰（原版贴图 Fire_5x2），直到命中结算后
+        if (e.skillId && battle.unit(e.attackerId).side === 'ally' && (e.kind === 'skill' || e.kind === 'unique')) {
+          const ag = unitMesh.get(e.attackerId), tg = unitMesh.get(e.targetId); const hh = rigs.get(e.attackerId)?.height ?? 1.1;
+          personaFx?.end(); personaFx = null;
+          if (ag && tg && PERSONA_OF[e.attackerId]) personaFx = showPersona(world, ag, tg.position.clone(), hh, SPEED);
+          if (ag) void summonAura(world, ag.position.clone(), hh, 1500 / SPEED);
+        }
         if (e.kind === 'gun' && !params.has('noaim')) {
           await stepOutIfCovered(e.attackerId, e.targetId);
           const dmg = events.slice(ei + 1).find((x) => x.type === 'damage' && x.unitId === e.targetId) as Extract<BattleEvent, { type: 'damage' }> | undefined;
@@ -1443,7 +1452,11 @@ async function play(events: BattleEvent[]) {
         if (e.source !== 'triple') await impactRig(lastAttacker, 2600);
         // r8 原版 SE：枪 = 开火帧（原版 AnimationEvent GunFire）放 gun_fire + 命中 gun_impact；近战 = 命中帧 attack_hit
         if (e.source !== 'triple') { if (lastAtkKind === 'gun') { sfx('gun_fire'); sfx('gun_impact', 0.9); } else if (lastAtkKind === 'melee') sfx('melee_hit'); else sfx('gun_hit_v1', 0.8); }
-        if (lastSkill && e.source !== 'triple') { const tg = unitMesh.get(e.unitId); if (tg) void skillHit(world, tg.position.clone(), lastSkill, rigs.get(e.unitId)?.height ?? 1.1, SPEED); }
+        if (lastSkill && e.source !== 'triple') {
+          const tg = unitMesh.get(e.unitId); const th = rigs.get(e.unitId)?.height ?? 1.1;
+          if (tg) void (hasOrigSkillFx(lastSkill) ? origSkillHit(world, tg.position.clone(), lastSkill, th, SPEED) : skillHit(world, tg.position.clone(), lastSkill, th, SPEED));
+          const pf = personaFx; if (pf) setTimeout(() => { pf.end(); if (personaFx === pf) personaFx = null; }, 700 / SPEED);
+        }
         {
           const hs = hitSpecFor(e, events, ei);
           rigs.get(e.unitId)?.flinch();
@@ -1936,7 +1949,7 @@ function restart() {
 function loop() {
   if (performance.now() < freezeUntil) { // 顿帧（1 MORE / r7 命中）：角色动画时钟停住，火花照放
     const now = performance.now(); for (const r of rigs.values()) r.freeze?.(now);
-    if (!document.body.classList.contains('hitstop')) { updateHitFx(viewCam, world); const so = applyShake(viewCam); sdim.render(renderer, scene, viewCam as THREE.PerspectiveCamera); undoShake(viewCam, so); }
+    if (!document.body.classList.contains('hitstop')) { updateHitFx(viewCam, world); setSkillFxCamera(viewCam); const so = applyShake(viewCam); sdim.render(renderer, scene, viewCam as THREE.PerspectiveCamera); undoShake(viewCam, so); }
     requestAnimationFrame(loop); return;
   }
   tfx.update();
@@ -1954,7 +1967,7 @@ function loop() {
   sceneKit.update(rig.cur.yaw, t);
   updateOrigMap(viewCam === skillCam ? skillCam : baseCam());
   for (const u of battle.units) if (u.prop === 'flag' || u.prop === 'speaker') { const g = unitMesh.get(u.id); if (g) (u.prop === 'flag' ? waveFlag : pulseSpeaker)(g, t); }
-  updateHitFx(viewCam, world);
+  updateHitFx(viewCam, world); setSkillFxCamera(viewCam);
   const so = applyShake(viewCam);
   postFx.render(renderer, () => sdim.render(renderer, scene, viewCam as THREE.PerspectiveCamera));
   undoShake(viewCam, so);
@@ -2007,7 +2020,7 @@ window.__p5t = {
   fx: {
     oneMore: (id = 'joker') => oneMoreFx(battle.unit(id)),
     pop: (id: string, text: string) => popDamage(id, text),
-    skillHit: (id: string, skill = 'eiha', speed = SPEED) => { const g = unitMesh.get(id); return g ? skillHit(world, g.position.clone(), skill, rigs.get(id)?.height ?? 1.1, speed) : null; },
+    skillHit: (id: string, skill = 'eiha', speed = SPEED) => { const g = unitMesh.get(id); return g ? (hasOrigSkillFx(skill) ? origSkillHit : skillHit)(world, g.position.clone(), skill, rigs.get(id)?.height ?? 1.1, speed) : null; },
     aimShot: (a: string, t: string, ret = true) => aimShot(a, t, ret),
     endAim: (ms = 0) => endAim(ms),
   },

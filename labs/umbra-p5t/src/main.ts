@@ -12,6 +12,8 @@ import { slashBanner, itemToast, enemyTurnBanner } from './fx/banners';
 import { updateObjectiveHud, mountCamButtons } from './ui/hud';
 import { p5, PORTRAIT, initP5tHud, letterPop } from './ui/p5tHud';
 import './p5t-hud.css';
+import './skill-list.css';
+import { SkillList, skillNameZh, SKL_TEX } from './ui/skillList';
 import { oneMoreCutIn, tripleThreatSeq, Skip, setFxSpeed, fxMs } from './fx/cutins';
 import type { CutWho } from './fx/cutins';
 import { TripleFx } from './view/tripleFx';
@@ -19,7 +21,7 @@ import { SceneKit, themeFor, cobbleTex, preloadKit } from './view/sceneKit';
 import { sfx, installUnlock, preloadSfx } from './view/sfx';
 import { buildDamageView, playDamageClip, digitPx } from './view/damagePop';
 import { attachGimmicks, swapPropModel, releaseGimmicks } from './view/gimmick';
-import { origCfg, origFailed, attachOrigMap, releaseOrigMap, updateOrigMap, origSurfaceY, applyOrigSun } from './view/origMap';
+import { origCfg, origFailed, attachOrigMap, releaseOrigMap, updateOrigMap, origSurfaceY, applyOrigSun, origTone } from './view/origMap';
 void preloadKit(); // CC0 布景模型提前加载
 import { computeForecast, forecastHtml } from './view/forecast';
 import type { Forecast } from './view/forecast';
@@ -143,6 +145,8 @@ const tileMeshes: THREE.Mesh[] = [];
 let selected: string | null = null;
 let mode: Mode = 'auto';
 let skillId: string | null = null;
+/** r10：技能流程阶段（原版：指令牌 → 技能列表 → 选目标(左上技能名牌) → 切入 → 释放） */
+let skillPhase: 'none' | 'list' | 'target' = 'none';
 let previewTile: Vec | null = null;
 let previewTarget: string | null = null;
 let showThreat = false;
@@ -346,6 +350,11 @@ function camFocus(p: Vec | null, zoom = 1.35) {
 function camStep() { rig.update(); }
 
 // ---------- 覆盖层 ----------
+/** r10：白描边格（技能范围格：红色半透明 + 白描边，skill_list_2459 / predict_2501_2） */
+function tileEdge(p: Vec) {
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.96, 0.96)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthTest: false }));
+  e.rotation.x = -Math.PI / 2; e.position.copy(w2v(p, 0.04)); e.renderOrder = 12; overlay.add(e);
+}
 function clearOverlay() { while (overlay.children.length) overlay.remove(overlay.children[0]); }
 function tileQuad(p: Vec, color: number, opacity = 0.45, y = 0.02) {
   const q = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.92), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false }));
@@ -470,14 +479,20 @@ function refreshOverlay() {
     if (uniqueTile) tileQuad(uniqueTile, 0xffd400, 0.6, 0.03);
   }
   ring(u.pos, 0xffffff);
-  for (const p of battle.moveTiles(u)) tileQuad(p, 0x2a8cff, 0.42);
+  const skr = curSkill(u);
+  if (skillPhase !== 'none' && skr && skr.kind === 'attack') {
+    // r10：技能射程格（skill_list_2459：列表打开时场上同步画范围；红色半透明）
+    const from0 = previewTile ?? u.pos;
+    for (let y = 0; y < battle.map.height; y++) for (let x = 0; x < battle.map.width; x++) if (battle.canSkillAt(u, skr, { x, y }, from0)) { tileQuad({ x, y }, 0x700008, 0.28, 0.014); }
+  }
+  if (skillPhase === 'none') for (const p of battle.moveTiles(u)) tileQuad(p, 0x2a8cff, 0.42);
   if (!eq(u.anchor, u.pos)) tileQuad(u.anchor, 0x2a8cff, 0.25);
   const from = previewTile ?? u.pos;
   if (previewTile) { pathLine(battle.pathFor(u, previewTile)); tileQuad(previewTile, 0xffffff, 0.55, 0.03); }
   if (!u.acted) for (const e of battle.units) if (!e.ko && e.side !== 'ally' && e.prop !== 'speaker' && attackFrom(u, from, e)) ring(e.pos, previewTarget === e.id ? 0xffd400 : 0xe60012);
   const fc = currentForecast();
   if (fc) {
-    for (const p of fc.aoe) if (!eq(p, fc.target.pos)) tileQuad(p, 0xe60012, 0.38, 0.034);
+    for (const p of fc.aoe) if (!eq(p, fc.target.pos)) { tileQuad(p, 0xe60012, 0.42, 0.034); if (fc.kind === 'skill') tileEdge(p); }
     stripeTile(fc.target.pos, 0.036);
     if (fc.push && !eq(fc.push.to, fc.push.from)) pushArrow(fc.push.from, fc.push.to);
     else if (fc.push) tileQuad(fc.push.from, 0xffffff, 0.3, 0.038);
@@ -494,7 +509,8 @@ function partyP5(a: Unit) {
   const face = pk && p5.has(`party_${pk}`) ? p5.img(`${low && p5.has(`dying_${pk}`) ? 'dying' : 'party'}_${pk}`, 'face')
     : `<div class="face" style="--c:${'#' + (COLORS[a.id] ?? 0x888888).toString(16).padStart(6, '0')}">${(a.name.split(' ').pop() ?? a.name).slice(0, 1)}</div>`;
   const canAct = !a.acted && battle.phase === 'player';
-  const tag = canAct ? (a.oneMore ? p5.img('word_1more', 'act om') : p5.img('word_action', 'act')) : '';
+  // r10：原版 ACTION 牌只挂在当前操作角色卡上（hud_idle_1212 待机无 ACTION；command_* 当前角色放大 + ACTION）
+  const tag = canAct && a.id === selected ? (a.oneMore ? p5.img('word_1more', 'act om') : p5.img('word_action', 'act')) : '';
   const pct = (n: number, m: number) => `${Math.max(0, Math.min(100, (100 * n) / Math.max(1, m)))}%`;
   return `<div class="pm p5${a.id === selected ? ' cur' : ''}${a.acted ? ' done' : ''}${a.oneMore && canAct ? ' om' : ''}" data-uid="${a.id}">
     <div class="pf">${face}${tag}</div>
@@ -555,7 +571,8 @@ function refreshHud() {
     else b.disabled = !sel || sel.acted || busy || battle.phase !== 'player';
   });
   const skEl = $('#skills');
-  if (mode === 'skill' && sel) {
+  // r10：旧版技能按钮列表停用（换成原版技能列表 SkillList）
+  if ((false as boolean) && sel) {
     skEl.classList.remove('hidden');
     skEl.innerHTML = sel.skills.map((s) => `<button data-skill="${s.id}" class="${s.id === skillId ? 'sel' : ''}" ${sel.sp < s.sp ? 'disabled' : ''}>${s.name} · SP${s.sp} · ${s.kind === 'attack' ? `${s.range}格${s.radius ? ` 范围${s.radius}` : ''}${s.effect ? ` · ${s.effect}` : ''}` : s.kind === 'heal' ? '回复' : '辅助'}</button>`).join('');
   } else skEl.classList.add('hidden');
@@ -586,10 +603,9 @@ function refreshHud() {
       const at = direct ?? (via ? { kind: 'melee' as const } : null);
       const fc = currentForecast();
       if (fc) {
+        // r10：原版没有独立预测面板 → 伤害数字 + 骷髅画在敌人头顶（refreshLabels），这里不再弹面板
         pv.classList.add('hidden');
-        fcEl.classList.remove('hidden');
-        fcEl.innerHTML = forecastHtml(fc, hexOf);
-        fcEl.classList.toggle('lethal', fc.lethal);
+        void forecastHtml; void hexOf;
       } else if (at) {
         const p = battle.previewDamage(sel, t, at.kind, at.skill, via ? via.via : from);
         const tName = at.kind === 'melee' ? '近战(击退4格)' : at.kind === 'gun' ? '枪击' : at.skill!.name;
@@ -604,6 +620,13 @@ function refreshHud() {
   } finally {
     // 预测面板打开时收起技能列表（P5T：确认阶段只留面板），VOLTAGE 星避让见 refreshLabels
     $('#app').classList.toggle('fc-open', !fcEl.classList.contains('hidden'));
+    // r10：单位操作（指令/移动/选目标）与我方行动演出时隐藏 TURN/目标面板；技能列表打开时显示（原版 command_3429 / skill_list_1717_2）
+    const app = $('#app');
+    app.classList.toggle('unit-op', ((!!selected && battle.phase === 'player') || (busy && vPhase === 'player')) && skillPhase !== 'list');
+    app.classList.toggle('sk-open', skillPhase === 'list');
+    app.classList.toggle('sk-target', skillPhase === 'target');
+    if (skillPhase !== 'none' && (!selected || busy)) { if (!busy) endSkillFlow(); }
+    keyguide.classList.toggle('hidden', skillPhase === 'none' || busy);
   }
 }
 
@@ -679,7 +702,7 @@ function refreshLabels() {
     const hidden = battle.isHidden(u); // 未解锁区域的敌人不画（HARK-NOTES-ENGINE #8）
     const gone = u.ko && !fxKeep.has(u.id); // 本批事件里还没播到 ko 的单位先留着（总攻/1 MORE 演出要看见它挨打）
     g.visible = !gone && !hidden;
-    if (gone || hidden || (fcOn && u.id === previewTarget)) { el.style.display = 'none'; continue; }
+    if (gone || hidden) { el.style.display = 'none'; continue; }
     const shield = g.getObjectByName('shield');
     if (shield && u.facing) { g.rotation.y = Math.atan2(u.facing.x, u.facing.y); }
     if (u.prop && u.prop !== 'flag' && u.prop !== 'speaker') { el.style.display = 'none'; continue; }
@@ -705,8 +728,11 @@ function refreshLabels() {
       u.charged ? '<span class="tag chg">CHG</span>' : '',
       ...u.status.map((s) => `<span class="tag st">${ST_SHORT[s.id]}</span>`),
     ].join('');
+    const pf = u.side === 'enemy' && u.id === previewTarget && skillPhase !== 'list' ? currentForecast() : null;
+    // r10 头顶预测：伤害数字（青）+ 骷髅（可击杀，原版 target_kill 贴图）；枪击瞄准无掩体敌人 → CHANCE!!（暴击/打倒预告，aim_1420_3）
+    const pred = pf ? `<div class="pred"><b>${pf.amount}</b>${pf.lethal ? (p5.has('target_kill') ? p5.img('target_kill', 'sk') : '<i class="sk css"></i>') : ''}</div>${pf.kind === 'gun' && pf.weak && !pf.lethal ? '<div class="chance">CHANCE!!</div>' : ''}` : '';
     el.innerHTML = u.side === 'enemy'
-      ? `<div class="heart"><b>${u.hp}</b></div>${tags}` // P5T：敌人头顶心形 + HP 数字
+      ? `${pred}<div class="heart"><b>${u.hp}</b></div>${tags}` // P5T：敌人头顶心形 + HP 数字
       : `${u.name.split(' ').pop()}${tags}<div class="hp"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>`;
     if (rg) {
       if (!busy) rg.setDowned(u.downed);
@@ -744,7 +770,7 @@ async function summonCutIn(unitId: string, skillId: string) {
   const ms = 950 / SPEED;
   if (g) { scene.traverse((o) => { if ((o as THREE.Light).isLight) o.layers.enable(CASTER_LAYER); }); sdim.start(g, ms); }
   const sp = sdim.screenOf(viewCam, (rigs.get(unitId)?.height ?? 1.1) * 0.85) ?? { x: 0.3, y: 0.46 };
-  el.innerHTML = `<div class="mask" style="left:${(sp.x * 100).toFixed(1)}%;top:${(sp.y * 100).toFixed(1)}%">${shards}</div><div class="strip"><div class="who">${u.name}</div><div class="per">${PERSONA_NAME[u.id] ?? 'PERSONA'}!</div></div><div class="sk">${sk?.name ?? skillId}</div>`;
+  el.innerHTML = `<div class="mask" style="left:${(sp.x * 100).toFixed(1)}%;top:${(sp.y * 100).toFixed(1)}%">${shards}</div><div class="strip"><div class="who">${u.name}</div><div class="per">${PERSONA_NAME[u.id] ?? 'PERSONA'}!</div></div><div class="sk">${sk ? skillNameZh(sk) : skillId}</div>`;
   el.classList.toggle('l', sp.x > 0.5);
   el.classList.remove('hidden'); el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; el.style.animationDuration = `${ms}ms`;
   await sleep(ms);
@@ -1287,7 +1313,7 @@ function onTap(h: { tile?: Vec; unit?: string }) {
       }
       if (selected === u.id && previewTile) { previewTile = null; previewTarget = null; }
       else if (u.decoy) toast('诱饵：敌人会优先攻击它，被打一下就消失');
-      else if (!u.acted) { sfx('ui_confirm_short', 0.7); selected = u.id; inspectEnemy = null; previewTile = null; previewTarget = null; mode = 'auto'; skillId = null; rig.focus(w2v(u.pos)); } // 镜头跟随选中角色
+      else if (!u.acted) { endSkillFlow(); sfx('ui_confirm_short', 0.7); selected = u.id; inspectEnemy = null; previewTile = null; previewTarget = null; mode = 'auto'; skillId = null; rig.focus(w2v(u.pos)); } // 镜头跟随选中角色
       else toast(`${u.name} 已行动`);
       return refreshAll();
     }
@@ -1319,7 +1345,9 @@ function commitAttack(s: Unit, u: Unit) {
     if (kind === 'melee') evs.push(...battle.melee(s.id, u.id));
     else if (kind === 'gun') evs.push(...battle.shoot(s.id, u.id));
     else evs.push(...battle.skill(s.id, at!.skill!.id, u.id));
-    void play(evs);
+    // r10：技能名牌在切入/释放期间保持（other_1759_6、hit_1722），演出结束后收起
+    if (kind === 'skill') { skillPhase = 'none'; skillTag.classList.remove('hidden'); }
+    void play(evs).then(() => { skillTag.classList.add('hidden'); refreshAll(); });
 }
 function onTapTile(h: { tile?: Vec; unit?: string }) {
   if (h.tile && selected && mode === 'unique' && tileUnique(battle.unit(selected))) {
@@ -1344,6 +1372,68 @@ function onTapTile(h: { tile?: Vec; unit?: string }) {
   inspectEnemy = null; selected = null;
   refreshAll();
 }
+
+// ---------- r10 技能列表流程 ----------
+const skillTag = document.createElement('div'); skillTag.id = 'skill-tag'; skillTag.className = 'hidden'; $('#app').appendChild(skillTag);
+const keyguide = document.createElement('div'); keyguide.id = 'keyguide'; keyguide.className = 'hidden';
+keyguide.innerHTML = '<button data-k="a"><i>A</i>确定</button><button data-k="b"><i>B</i>返回</button>'; // 原版还有「≡暂停」：本作暂停菜单未做 → 不放假按钮
+$('#app').appendChild(keyguide);
+/** 列表里光标所在技能的默认目标：射程内最近的敌人（镜头转过去、画范围格） */
+function defaultSkillTarget(u: Unit, sk: SkillDef): Unit | null {
+  const from = previewTile ?? u.pos;
+  let best: Unit | null = null, bd = 1e9;
+  for (const e of battle.units) if (!e.ko && e.side === 'enemy' && !battle.isHidden(e) && battle.canSkill(u, sk, e, from)) { const d = Math.abs(e.pos.x - from.x) + Math.abs(e.pos.y - from.y); if (d < bd) { bd = d; best = e; } }
+  return best;
+}
+const skillList = new SkillList($('#app'), {
+  onHover(id) {
+    if (!selected) return;
+    const u = battle.unit(selected); skillId = id; mode = 'skill';
+    const sk = curSkill(u); const t = sk && sk.kind === 'attack' ? defaultSkillTarget(u, sk) : null;
+    previewTarget = t ? t.id : null;
+    sfx('ui_confirm_short', 0.45);
+    // 打开时镜头转向目标（skill_list_2459）：对准施法者与目标的中点
+    if (t) { const a = w2v(previewTile ?? u.pos), b = w2v(t.pos); rig.focus(a.add(b).multiplyScalar(0.5), rig.userZoom); }
+    refreshAll();
+  },
+  onPick(id) {
+    if (!selected) return;
+    skillId = id; skillList.hide(); skillPhase = 'target';
+    const sk = curSkill(battle.unit(selected));
+    skillTag.textContent = sk ? skillNameZh(sk) : '';
+    skillTag.style.cssText = p5.has(SKL_TEX.tag) ? `background:url("${p5.url(SKL_TEX.tag)}") 0 0/100% 100% no-repeat` : '';
+    skillTag.classList.remove('hidden');
+    sfx('ui_confirm_1');
+    refreshAll();
+  },
+  onBack() { sfx('ui_confirm_3', 0.6); endSkillFlow(); refreshAll(); },
+});
+function openSkillList() {
+  if (!selected) return;
+  const u = battle.unit(selected);
+  if (!u.skills.length) { toast('没有可用技能'); return; }
+  skillPhase = 'list'; mode = 'skill'; skillTag.classList.add('hidden');
+  sfx('ui_confirm_short', 0.8);
+  skillList.show(u, u.skills, skillId);
+}
+/** 回到指令牌（B / 返回 / 换人） */
+function endSkillFlow() {
+  if (skillPhase === 'none' && !skillList.open) return;
+  skillList.hide(); skillTag.classList.add('hidden');
+  skillPhase = 'none'; mode = 'auto'; skillId = null; previewTarget = null;
+  if (selected) rig.focus(w2v(previewTile ?? battle.unit(selected).pos), rig.userZoom);
+}
+keyguide.addEventListener('click', (ev) => {
+  const b = (ev.target as HTMLElement).closest('button'); if (!b || busy) return;
+  if (b.dataset.k === 'b') { if (skillPhase === 'target') { sfx('ui_confirm_3', 0.6); openSkillList(); } else { sfx('ui_confirm_3', 0.6); endSkillFlow(); refreshAll(); } return; }
+  if (skillPhase === 'list') { const s = skillList.current; if (s && skillList.usable(s)) skillList['hooks'].onPick(s.id); return; }
+  if (skillPhase === 'target' && selected && previewTarget) commitAttack(battle.unit(selected), battle.unit(previewTarget));
+});
+window.addEventListener('keydown', (e) => {
+  if (skillPhase !== 'target' || busy) return;
+  if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'x') { sfx('ui_confirm_3', 0.6); openSkillList(); e.preventDefault(); }
+  else if ((e.key === 'Enter' || e.key === 'z') && selected && previewTarget) { commitAttack(battle.unit(selected), battle.unit(previewTarget)); e.preventDefault(); }
+});
 
 installUnlock();
 $('#endbar').addEventListener('click', () => { if (busy || battle.phase !== 'player') return; sfx('ui_confirm_2'); selected = null; void play(battle.endPlayerPhase()); });
@@ -1371,8 +1461,8 @@ $('#actions').addEventListener('click', (ev) => {
       return;
     }
   }
+  if (a === 'skill') { openSkillList(); return; }
   mode = mode === a ? 'auto' : (a as Mode);
-  if (mode === 'skill') skillId = battle.unit(selected).skills[0]?.id ?? null;
   previewTarget = null;
   refreshAll();
 });
@@ -1417,6 +1507,7 @@ function restart() {
   battle = new Battle(makeMap());
   freshMap = true; mapObj.reset();
   selected = null; previewTile = null; previewTarget = null; inspectEnemy = null; mode = 'auto';
+  if (typeof skillList !== 'undefined') endSkillFlow();
   build();
   void play(battle.start());
 }
@@ -1454,6 +1545,10 @@ loop();
 declare global { interface Window { __p5t: unknown } }
 window.__p5t = {
   get battle() { return battle; },
+  get world() { return world; },
+  get scene() { return scene; },
+  renderer,
+  origTone,
   THREE,
   sceneKit,
   renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, texs: renderer.info.memory.textures, origLoading, origStats, gimmickCount, placeholderCount, lastSparkKind }; },
@@ -1500,6 +1595,12 @@ window.__p5t = {
   },
   setMode(m: Mode) { mode = m; refreshAll(); },
   setSkill(id: string) { mode = 'skill'; skillId = id; refreshAll(); },
+  /** r10：打开原版技能列表 / 列表里移光标 / 确定 / 返回 */
+  openSkills() { openSkillList(); },
+  skillCursor(id: string) { skillList['hooks'].onHover(id); },
+  skillPick() { const s = skillList.current; if (s) skillList['hooks'].onPick(s.id); },
+  skillBack() { if (skillPhase === 'target') openSkillList(); else { endSkillFlow(); refreshAll(); } },
+  get skillPhase() { return skillPhase; },
   tap: onTap,
   select(id: string) { onTap({ unit: id }); },
   rig,

@@ -85,6 +85,7 @@ const L = {
   uFogOn: { value: 0 }, uFogCol: { value: new THREE.Color(0.5, 0.3, 0.7) }, uFog: { value: new THREE.Vector3(20, 100, 15) },
 };
 let curLighting: OrigLighting | null = null;
+let FOG_CAM_DIST = 15;
 export const origLighting = () => curLighting;
 const LM_DECODE = 4.59; // Unity 线性色彩空间 dLDR lightmap：2^2.2（推断原版是 dLDR：EXR 最大值正好 1.0、alpha 恒 1）
 
@@ -113,7 +114,11 @@ ${clip ? 'uniform float uClipY; uniform vec2 uToCam; uniform float uCut;' : ''}`
     // 细节层（原版 _DetailAlbedoMap，GLB 里借 occlusionTexture 槽 → three aoMap）：albedo = mix(base, detail.rgb, detail.a × _DetailMapValue)（混合方式为重建）
     f = f.replace('#include <map_fragment>', `#include <map_fragment>
 #ifdef USE_AOMAP
-  { vec4 dt = texture2D(aoMap, vAoMapUv); diffuseColor.rgb = mix(diffuseColor.rgb, dt.rgb, dt.a * aoMapIntensity); }
+  { vec4 dt = texture2D(aoMap, vAoMapUv); float bA = 1.0;
+#ifdef USE_SPECULARMAP
+    bA = texture2D(specularMap, vSpecularMapUv).g; // r10 推断：原版 BaseMap alpha=0 处（如 Field01 红地毯）不叠细节层（原版帧里红地毯干净无污渍）
+#endif
+    diffuseColor.rgb = mix(diffuseColor.rgb, dt.rgb, dt.a * aoMapIntensity * bA); }
 #endif`).replace('#include <aomap_fragment>', '')
       .replace('#include <lights_fragment_maps>', `{
   vec3 wN = inverseTransformDirection(normal, viewMatrix);
@@ -145,6 +150,8 @@ function convertMaterial(src: THREE.Material): THREE.Material {
   if (s.normalMap) { m.normalMap = s.normalMap; m.normalScale.copy(s.normalScale); }
   if (s.emissiveMap) { m.emissiveMap = s.emissiveMap; m.emissive.copy(s.emissive); }
   if (s.aoMap) { s.aoMap.colorSpace = THREE.SRGBColorSpace; m.aoMap = s.aoMap; m.aoMapIntensity = s.aoMapIntensity; }
+  // r10：原版 BaseMap 的 alpha 遮罩（build-orig-map 存进 metallicRoughness 槽）→ 借 Lambert 的 specularMap 槽取样（无 envMap，不影响光照）
+  if (s.metalnessMap ?? s.roughnessMap) { m.specularMap = (s.metalnessMap ?? s.roughnessMap)!; m.specularMap.colorSpace = THREE.NoColorSpace; }
   if (lmTex) { m.lightMap = lmTex; m.lightMap.channel = 1; }
   m.name = name;
   patchOrigLit(m, { clip: true });
@@ -236,7 +243,7 @@ function setLighting(cfg: OrigMapCfg) {
   L.uAmbGround.value.setRGB(lt.ambGround[0] * k, lt.ambGround[1] * k, lt.ambGround[2] * k, THREE.LinearSRGBColorSpace);
   L.uFogOn.value = lt.fog.on && lt.fog.mode === 1 ? 1 : 0;
   L.uFogCol.value.setRGB(lt.fog.color[0], lt.fog.color[1], lt.fog.color[2], THREE.LinearSRGBColorSpace);
-  L.uFog.value.set(lt.fog.start, lt.fog.end, 15);
+  L.uFog.value.set(lt.fog.start, lt.fog.end, FOG_CAM_DIST);
 }
 /** r9：主方向光按原版 Directional 的方向；地图材质的直射光强度/颜色按原版（uDirScale = π×原版线性颜色×强度 ÷ 当前 sun；π 抵消 three 的 BRDF_Lambert 1/π），
  *  角色仍用游戏里调好的 sun 强度（卡通角色材质不是原版地图着色器）。返回原版方向（光线行进方向）或 null。 */
@@ -251,6 +258,12 @@ export function applyOrigSun(sun: THREE.DirectionalLight, cfg: OrigMapCfg, cente
 }
 /** 当前关卡 lightmap 是否在用（调试/统计） */
 export const origLmOn = () => L.uLmOn.value > 0.5;
+/** r10 色调校准钩子（截图对比用）：lightmap 解码倍数 / 雾的假定镜头距离 */
+export function origTone(o: { lm?: number; fogDist?: number } = {}) {
+  if (o.lm != null) L.uLmScale.value = o.lm;
+  if (o.fogDist != null) { FOG_CAM_DIST = o.fogDist; L.uFog.value.z = o.fogDist; }
+  return { lm: L.uLmScale.value, fogDist: L.uFog.value.z };
+}
 
 /** 离开原版地图关卡（换到自编关卡）时释放显存 */
 export function releaseOrigMap() { if (cur) { dispose(cur); cur = null; } }

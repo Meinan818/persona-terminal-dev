@@ -92,14 +92,34 @@ if (process.env.LM_DIR && fs.existsSync(path.join(process.env.LM_DIR, 'uv_lightm
 const KEEP = /^(Roof|Ceiling)/i;
 const under = (n) => { for (let p = n; p; p = p.getParentNode()) if (KEEP.test(p.getName() || '')) return true; return false; };
 for (const n of root.listNodes()) { if (n.isDisposed?.()) continue; if (under(n)) { if (n.getMesh()) n.setName('ROOF_' + (n.getName() || '')); } else n.setName(''); }
+// r10：不透明材质的 BaseMap 去掉 alpha 再压 WebP。原版 BaseMap 的 alpha 不是透明度（如 Field01 红地毯区域 RGB=(170,0,0)、A=0，
+// 是给原版着色器的遮罩通道）；有损 WebP 编码会把 A=0 处的 RGB 抹成黑 → r7–r9 红地毯丢失（发白发粉的主因之一）。MASK/BLEND 材质的贴图保留 alpha。
+{
+  const keepA = new Set();
+  for (const m of root.listMaterials()) if (m.getAlphaMode() !== 'OPAQUE') { const t = m.getBaseColorTexture(); if (t) keepA.add(t); }
+  let n = 0;
+  for (const m of root.listMaterials()) {
+    const t = m.getBaseColorTexture(); if (!t || keepA.has(t) || t.getExtras()?.r10noA) continue;
+    const img = t.getImage(); if (!img) continue;
+    const meta = await sharp(Buffer.from(img)).metadata(); if (!meta.hasAlpha) continue;
+    // 有细节层的材质：把原 alpha 存成灰度遮罩，放进（Lambert 不用的）metallicRoughness 槽，运行时乘到细节层混合权重上（推断：见 origMap.ts）
+    if (m.getOcclusionTexture() && !m.getMetallicRoughnessTexture()) {
+      const a = await sharp(Buffer.from(img)).extractChannel('alpha').toColourspace('b-w').png().toBuffer();
+      const ta = doc.createTexture((t.getName() || 'base') + '_A').setImage(new Uint8Array(a)).setMimeType('image/png');
+      for (const m2 of root.listMaterials()) if (m2.getBaseColorTexture() === t && m2.getOcclusionTexture()) m2.setMetallicRoughnessTexture(ta);
+    }
+    t.setImage(new Uint8Array(await sharp(Buffer.from(img)).removeAlpha().png().toBuffer())).setMimeType('image/png'); t.setExtras({ ...(t.getExtras() || {}), r10noA: true }); n++;
+  }
+  matLog.push({ m: '__r10_opaqueBaseNoAlpha', n });
+}
 await doc.transform(
   dedup(),
   prune({ keepLeaves: false }),
   flatten(),
   join({ keepNamed: true }),
   // r9：补绑的法线/自发光/细节层限 512（手机包体）；BaseMap 仍 ≤ maxTex
-  textureCompress({ encoder: sharp, targetFormat: 'webp', slots: /^(normalTexture|emissiveTexture|occlusionTexture)$/, resize: [512, 512], quality: 85 }),
-  textureCompress({ encoder: sharp, targetFormat: 'webp', slots: /^(?!normalTexture$|emissiveTexture$|occlusionTexture$).*$/, resize: [maxTex, maxTex], quality: 88 }),
+  textureCompress({ encoder: sharp, targetFormat: 'webp', slots: /^(normalTexture|emissiveTexture|occlusionTexture|metallicRoughnessTexture)$/, resize: [512, 512], quality: 85 }),
+  textureCompress({ encoder: sharp, targetFormat: 'webp', slots: /^(?!normalTexture$|emissiveTexture$|occlusionTexture$|metallicRoughnessTexture$).*$/, resize: [maxTex, maxTex], quality: 88 }),
   reorder({ encoder: MeshoptEncoder }),
   quantize({ quantizeTexcoord: 16 }), // r9：TEXCOORD_1 是 lightmap 图集坐标（2048 图集，12 bit 不够）
   meshopt({ encoder: MeshoptEncoder, level: 'medium' }),

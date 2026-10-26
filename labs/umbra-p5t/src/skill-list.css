@@ -1,0 +1,85 @@
+/* =====================================================================================
+   r10 技能列表 / 技能名牌 / 键位提示 / 头顶预测（位置由 src/ui/skillList.ts 按原版 RectTransform 内联；这里只管外观）
+   画布单位 --cu = 100vh/1080（原版 Unity 画布 1920×1080 按高缩放）。
+   【待原版贴图】的槽位都是最简纯色块（skillList.ts SKL_TEX 有图时用内联 background 覆盖）。
+   ===================================================================================== */
+#skill-list { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+#skill-list.hidden { display: none; }
+#skill-list > div > *, #skill-list > div { position: absolute; }
+#skill-list .sk-rows, #skill-list .sk-info, #skill-list .sk-stat { inset: 0; }
+
+/* 立绘（原版 Character 1195×1669 ×0.5，轴心 (0.745,0.575)）；缺图时用 party Q 版头像垫在立绘位下半【待原版贴图】 */
+#skill-list .sk-chara { display: flex; align-items: flex-end; justify-content: flex-end; }
+#skill-list .sk-chara .p5i.full { width: 100%; height: 100%; }
+#skill-list .sk-chara .p5i.stand-in { position: absolute; right: calc(60 * var(--cu)); bottom: calc(300 * var(--cu)); width: calc(var(--w) * var(--cu) * 1.25); height: calc(var(--h) * var(--cu) * 1.25); filter: drop-shadow(calc(-16 * var(--cu)) calc(8 * var(--cu)) 0 #000c); }
+
+/* 黑色半透明面板（action_window：Image 颜色 白 α0.949 × 运行时贴图；帧里是黑色半透明右倾平行四边形）【待原版贴图】 */
+#skill-list .sk-win:not([style*="url("]) { background: #000c; clip-path: polygon(14% 0, 100% 0, 93% 100%, 0 100%); }
+
+/* 光标（cursor，材质 mat_command_cursor）：帧里是鲜红色略斜横条【待原版贴图】 */
+#skill-list .sk-cursor:not([style*="url("]) { background: #e60012; clip-path: polygon(1.2% 0, 100% 6%, 98.8% 100%, 0 92%); }
+#skill-list .sk-row { pointer-events: auto; cursor: pointer; display: block; color: #fff; }
+#skill-list .sk-row::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: max(100%, 44px); transform: translateY(-50%); } /* 触控目标 ≥44px */
+#skill-list .sk-row > span { position: absolute; display: flex; align-items: center; white-space: nowrap; }
+#skill-list .sk-row .lab:not([style*="url("]) { background: #000; clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%); }
+#skill-list .sk-row .lab { gap: calc(6 * var(--cu)); padding-left: calc(10 * var(--cu)); box-sizing: border-box; }
+#skill-list .sk-row .lab .ic { display: block; width: calc(26 * var(--cu)); height: calc(26 * var(--cu)); transform: rotate(45deg) scale(.8); flex: none; }
+#skill-list .sk-row .lab em { font-style: normal; font-weight: 700; font-size: calc(22 * var(--cu)); color: #fff; letter-spacing: calc(1 * var(--cu)); }
+#skill-list .sk-row .nm { font-size: calc(29 * var(--cu)); font-weight: 700; letter-spacing: calc(3.14 * 29 / 100 * var(--cu)); }
+#skill-list .sk-row .cost { gap: calc(2 * var(--cu)); }
+#skill-list .sk-row .cost b { font-size: calc(27 * 1.2 * var(--cu)); font-style: italic; font-weight: 900; color: #fe78e9; display: inline-block; transform: scaleX(.667); transform-origin: right center; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+#skill-list .sk-row .cost small { font-size: calc(17 * var(--cu)); font-weight: 900; font-style: italic; color: #fe78e9; -webkit-text-stroke: .6px #000; paint-order: stroke fill; }
+#skill-list .sk-row.off { opacity: .45; }
+#skill-list .sk-row:not(.sel) .nm { color: #fff; }
+
+/* 说明行：威力红窗（damage_window 颜色 #ff0000）+ 说明（#d3d3d3 27） */
+#skill-list .sk-info .sk-dmg { display: flex; align-items: center; gap: calc(6 * var(--cu)); padding-left: calc(10 * var(--cu)); box-sizing: border-box; }
+#skill-list .sk-info .sk-dmg:not([style*="url("]) { background: #ff0000; clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%); }
+#skill-list .sk-info .sk-dmg .di { display: block; width: calc(22 * var(--cu)); height: calc(22 * var(--cu)); background: #fff; clip-path: polygon(50% 0, 62% 35%, 100% 30%, 70% 55%, 90% 100%, 50% 72%, 10% 100%, 30% 55%, 0 30%, 38% 35%); }
+#skill-list .sk-info .sk-dmg b { font-size: calc(18 * 2.8 * var(--cu)); line-height: 1; font-style: italic; font-weight: 900; color: #fff; transform: scaleX(.714) translateY(calc(-4 * var(--cu))); transform-origin: left center; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+#skill-list .sk-info .txt { color: #d3d3d3; font-size: calc(27 * var(--cu)); line-height: 1.15; letter-spacing: calc(-3.89 * 27 / 100 * var(--cu)); white-space: nowrap; transform: translateY(calc(8 * var(--cu))); }
+
+/* 立绘上的 HP/SP（原版 status：HP 青 #68ffe1 / SP 粉紫 #ef51f8，TMP 字体，旋转 5°） */
+#skill-list .sk-stat b { font-size: calc(62 * var(--cu)); line-height: 1; font-weight: 900; font-style: italic; transform: rotate(-5deg); -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+#skill-list .sk-stat b.hp { color: #68ffe1; }
+#skill-list .sk-stat b.sp { color: #ef51f8; font-size: calc(50 * var(--cu)); }
+#skill-list .sk-stat .g { overflow: hidden; }
+#skill-list .sk-stat .g:not([style*="url("]) { background: #0008; clip-path: polygon(4% 0, 100% 0, 96% 100%, 0 100%); }
+#skill-list .sk-stat .g::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: var(--p); background: #68ffe1; }
+#skill-list .sk-stat .g.sp::before { background: #ef51f8; }
+
+/* 入场：立绘滑入 + 面板淡入 0.2s，技能行晚 0.1s（INDEX.md 17:16.4→17:16.6） */
+#skill-list.in .sk-chara { animation: skChara .2s ease-out both; }
+#skill-list.in .sk-win, #skill-list.in .sk-info, #skill-list.in .sk-stat { animation: skFade .2s linear both; }
+#skill-list.in .sk-rows { animation: skFade .1s .1s linear both; }
+@keyframes skChara { from { transform: translateX(calc(-180 * var(--cu))); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes skFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* 左上技能名牌（predict_1719_5 / other_1759_6：黑底、红色细边、斜切，帧 x≈360–670 y≈70–130）【待原版贴图】 */
+#skill-tag { position: fixed; z-index: 31; left: calc(50vw + (540 - 960) * var(--cu)); top: calc(50vh + (105 - 540) * var(--cu)); width: calc(465 * var(--cu)); height: calc(90 * var(--cu)); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: calc(46 * var(--cu)); letter-spacing: calc(4 * var(--cu)); pointer-events: none; }
+#skill-tag:not([style*="url("]) { background: #000; clip-path: polygon(4% 0, 100% 8%, 96% 100%, 0 92%); box-shadow: inset 0 0 0 calc(3 * var(--cu)) #e60012; }
+#skill-tag::before { content: ''; position: absolute; inset: calc(4 * var(--cu)); border: calc(3 * var(--cu)) solid #e60012; clip-path: inherit; }
+#skill-tag.hidden { display: none; }
+
+/* 左下键位提示（skill_list_2459：≡暂停 Ⓐ确定 Ⓑ返回，x≈35–235 y≈672–698）；可点，触控目标 ≥44px */
+#keyguide { position: fixed; z-index: 32; left: calc(50vw + (52 - 960) * var(--cu)); bottom: calc(50vh - (1047 - 540) * var(--cu)); display: flex; gap: calc(18 * var(--cu)); align-items: flex-end; }
+#keyguide.hidden { display: none; }
+#keyguide button { position: relative; background: none; border: 0; padding: 0; color: #fff; font-weight: 700; font-size: max(calc(26 * var(--cu)), 11px); display: flex; align-items: center; gap: calc(6 * var(--cu)); text-shadow: 0 0 3px #000, 0 0 2px #000; cursor: pointer; min-width: 44px; }
+#keyguide button::after { content: ''; position: absolute; left: -6px; right: -6px; bottom: -6px; height: max(100%, 44px); }
+#keyguide button i { font-style: normal; display: inline-flex; align-items: center; justify-content: center; width: max(calc(32 * var(--cu)), 14px); height: max(calc(32 * var(--cu)), 14px); border-radius: 50%; background: #fff; color: #000; font-size: max(calc(20 * var(--cu)), 9px); font-weight: 900; }
+
+/* 头顶预测（原版没有独立预测面板：伤害数字 + 骷髅画在敌人头上；瞄准无掩体敌人时 CHANCE!!） */
+#labels .lbl .pred { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -2px); display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+#labels .lbl .pred b { font-size: max(calc(48 * var(--cu)), 18px); font-weight: 900; font-style: italic; color: #4ff0ff; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; line-height: 1; }
+#labels .lbl .pred .sk { width: max(calc(40 * var(--cu)), 16px); height: max(calc(40 * var(--cu)), 16px); }
+#labels .lbl .pred .sk.css { background: #fff; border: 2px solid #000; border-radius: 45% 45% 30% 30%; box-sizing: border-box; }
+#labels .lbl .chance { position: absolute; left: 50%; top: calc(100% + 30px); transform: translateX(-30%) rotate(-8deg); background: #e60012; color: #fff; font-weight: 900; font-style: italic; font-size: max(calc(34 * var(--cu)), 13px); padding: 2px 10px; white-space: nowrap; clip-path: polygon(0 20%, 8% 0, 18% 15%, 30% 0, 45% 12%, 60% 0, 74% 14%, 88% 0, 100% 22%, 94% 50%, 100% 80%, 88% 100%, 72% 86%, 56% 100%, 40% 88%, 24% 100%, 10% 86%, 0 78%, 6% 50%); animation: chancePulse .6s ease-in-out infinite alternate; }
+@keyframes chancePulse { from { transform: translateX(-30%) rotate(-8deg) scale(1); } to { transform: translateX(-30%) rotate(-8deg) scale(1.08); } }
+
+/* 单位操作时隐藏 TURN/目标面板（原版行为：command_3429 指令时隐藏；技能列表打开时又显示） */
+#app.unit-op #hud-tl { visibility: hidden; }
+#app.sk-open #actions, #app.sk-open #endbar, #app.sk-open #skills, #app.sk-target #actions, #app.sk-target #endbar { display: none !important; }
+
+/* r10 HUD 对齐 hud_idle_1212（1280×720 量：TURN/目标面板 x≈850–1275 y≈10–135；头像卡 x≈950–1250 底≈690） */
+body.p5hud #hud-tl { transform: scale(.955); transform-origin: right top; }
+body.p5hud #party { right: max(calc(45 * var(--cu)), env(safe-area-inset-right)); bottom: max(calc(36 * var(--cu)), env(safe-area-inset-bottom)); transform: scale(.94); transform-origin: right bottom; }

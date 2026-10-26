@@ -77,6 +77,9 @@ export function playTurnChange(side: 'ally' | 'enemy', speed = 1, host: HTMLElem
   const wrap = document.createElement('div'); wrap.className = 'tc-wrap';
   const stage = document.createElement('div'); stage.className = 'tc-stage';
   const root = new Node(data, '');
+  // r12 修正（按原版帧 other_3405 校准，非 prefab 数据）：原值下红色细带 bar_3_image_0 比原版帧高约 12px（720p），
+  // 盖住 YOUR TURN 字样下沿；下移 18 单位（1080 画布）后字样完整、红带上沿与原版帧对齐。原因未查明（疑 CanvasScaler/sprite 网格差异）。
+  if (side === 'ally') { const b = findByName(root, 'bar_3_image_0'); if (b) b.ap[1] -= 18; }
   // 动画路径相对 GameObject（Animation 组件所在节点）
   const anim = root.kids.find((k) => k.d.n === 'GameObject')!;
   for (const k of anim.kids) k.path = k.d.n, fixPaths(k);
@@ -113,4 +116,5 @@ export function playTurnChange(side: 'ally' | 'enemy', speed = 1, host: HTMLElem
     requestAnimationFrame(step);
   });
 }
+function findByName(n: Node, name: string): Node | null { if (n.d.n === name) return n; for (const k of n.kids) { const f = findByName(k, name); if (f) return f; } return null; }
 function fixPaths(n: Node) { for (const k of n.kids) { k.path = `${n.path}/${k.d.n}`; fixPaths(k); } }

@@ -1451,6 +1451,7 @@ function zoneCenter(z: string): Vec | null {
 
 let resultCtl: { next: () => void } | null = null;
 function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
+  skillTag.classList.add('hidden'); // r12：结算前收起技能名牌
   if (e.outcome === 'won') { // r12：原版结算两页（prefab_ui2d_result_win 布局；贴图待导出 → 占位）
     const party = battle.mainAllies().filter((u) => !u.prop && !u.decoy).slice(0, 3);
     const lead = party.find((u) => !u.ko) ?? party[0];
@@ -1515,7 +1516,7 @@ function onTap(h: { tile?: Vec; unit?: string }) {
         const evs: BattleEvent[] = [];
         if (previewTile && !eq(previewTile, s.pos)) evs.push(...battle.move(s.id, previewTile));
         evs.push(...battle.skill(s.id, sk.id, u.id));
-        sfx('ui_confirm_1'); void play(evs);
+        sfx('ui_confirm_1'); skillPhase = 'none'; void play(evs).then(() => skillTag.classList.add('hidden')); // r12：辅助技能释放后也收起名牌
         return;
       }
       if (selected === u.id && previewTile) { previewTile = null; previewTarget = null; }
@@ -1643,7 +1644,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 installUnlock();
-$('#endbar').addEventListener('click', () => { if (busy || battle.phase !== 'player') return; sfx('ui_confirm_2'); selected = null; void play(battle.endPlayerPhase()); });
+$('#endbar').addEventListener('click', () => { if (busy || battle.phase !== 'player') return; sfx('ui_confirm_2'); endSkillFlow(); skillTag.classList.add('hidden'); selected = null; void play(battle.endPlayerPhase()); }); // r12：结束回合时收起技能流程/名牌（之前选目标未释放时名牌会一直挂到敌方回合）
 $('#party').addEventListener('click', (ev) => {
   const c = (ev.target as HTMLElement).closest('[data-charge]') as HTMLElement | null;
   if (c && selected && !busy) { void play(battle.selectCharge(selected, c.dataset.charge as never)); return; }

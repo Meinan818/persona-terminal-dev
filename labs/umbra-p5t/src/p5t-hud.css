@@ -303,3 +303,6 @@ body.p5hud #party .gw b { font-size: max(calc(54 * var(--g)), 10px); top: calc(2
    技能列表左下「确定/返回」同样去掉 A/B 圆钮、保留可点文字。 */
 #cmd .btn, #aim .abtn, #hintbar .k, #keyguide button i { display: none !important; }
 #hintbar span:not([data-h="end"]) { display: none !important; }
+/* r15：心形 HP 数字按 aim_1420_3（"31" 字高约 26px@720，我们 20px）放大 */
+#labels .lbl.enemy .heart.p5h b { font-size: calc(80 * var(--u)); left: -4%; top: -22%; }
+.rs.next .btn { display: none !important; } /* r15：结算「Ⓐ继续」去手柄圆钮 */

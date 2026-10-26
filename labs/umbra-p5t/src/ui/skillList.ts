@@ -137,7 +137,7 @@ export class SkillList {
         ${rows}
       </div>
       <div class="sk-info">
-        <span class="sk-dmg" style="${pos(L.dmgWin)}${tex(SKL_TEX.dmgWin)}">${p5.has(SKL_TEX.dmgIcon) ? p5.img(SKL_TEX.dmgIcon, 'di') : '<i class="di"></i>'}<b data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#ffffff" data-out="#000000" data-ow="0.3" data-sp="-25">${su?.power ?? s?.power ?? ''}</b></span>
+        <span class="sk-dmg${p5.has(SKL_TEX.dmgWin) ? ' tint' : ''}" style="${pos(L.dmgWin)}">${p5.has(SKL_TEX.dmgWin) ? `<i class="dwbg" style="-webkit-mask:url('${p5.url(SKL_TEX.dmgWin)}') 0 0/100% 100% no-repeat;mask:url('${p5.url(SKL_TEX.dmgWin)}') 0 0/100% 100% no-repeat"></i><small class="dlab">DAMAGE</small>` : ''}${p5.has(SKL_TEX.dmgIcon) ? p5.img(SKL_TEX.dmgIcon, 'di') : '<i class="di"></i>'}<b data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#ffffff" data-out="#000000" data-ow="0.3" data-sp="-25">${su?.power ?? s?.power ?? ''}</b></span>
         <span class="txt" style="${pos({ x: L.info.x, y: L.info.y })}">${(su?.desc ?? '').replace(/\n/g, '<br/>')}</span>
       </div>`;
   }

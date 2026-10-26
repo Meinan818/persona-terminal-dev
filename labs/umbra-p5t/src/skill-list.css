@@ -88,3 +88,20 @@ body.p5hud #party { right: max(calc(45 * var(--cu)), env(safe-area-inset-right))
    暗部蓝紫抬升；选目标阶段 predict_1719_5 不压暗）。按帧统计拟合成「58% 原色 + 42% 深蓝紫」，颜色/透明度为推断。 */
 #sk-dim { position: absolute; inset: 0; pointer-events: none; background: rgba(10, 6, 70, 0.42); opacity: 0; transition: opacity 0.2s linear; z-index: 1; }
 #app.sk-open #sk-dim { opacity: 1; }
+/* r14：对照 skill_list_1717_2 —— 属性图标原版 icon_N 按原尺寸 ×0.75（≈30px@720，原来 ~14px 太小）放在属性字右侧；
+   伤害牌 = 原版 skl_damage_window（白色底图，Unity Image.color 着色 → 红色 mask 着色，颜色按帧取）+ 顶上小字 DAMAGE；数字缩到帧上字高 ~16px@720 */
+#skill-list .sk-row .lab img.ic { width: calc(var(--w) * var(--u) * .75); height: calc(var(--h) * var(--u) * .75); transform: none; order: 2; margin: calc(-8 * var(--cu)) 0; }
+#skill-list .sk-row .lab em { order: 1; }
+#skill-list .sk-info .sk-dmg.tint { position: absolute; }
+#skill-list .sk-info .sk-dmg .dwbg { position: absolute; inset: 0; background: #e8000b; z-index: 0; }
+#skill-list .sk-info .sk-dmg > :not(.dwbg) { position: relative; z-index: 1; }
+#skill-list .sk-info .sk-dmg .dlab { position: absolute; left: 22%; top: calc(-14 * var(--cu)); font: 900 italic calc(15 * var(--cu)) / 1 'Arial Black', sans-serif; color: #e8000b; -webkit-text-stroke: calc(3 * var(--cu)) #000; paint-order: stroke fill; }
+#skill-list .sk-info .sk-dmg b { font-size: calc(34 * var(--cu)) !important; transform: none !important; }
+#skill-list .sk-info .sk-dmg .di { width: calc(26 * var(--cu)); height: calc(24 * var(--cu)); }
+/* r14：skill_list_1717_2 底部只有技能列表自己的「暂停 / 确定」提示，没有全局操作提示条，也没有 CHARGE 牌 → 列表打开时隐藏（之前两条提示叠在一起） */
+#app.sk-open #hintbar, #app.sk-open .chgs { display: none !important; }
+#skill-list .sk-info .sk-dmg b { font-size: calc(28 * var(--cu)) !important; }
+/* 原版窗形由 skl_damage_window 遮罩给出 → 关掉回退用的平行四边形裁切（它把圆角窗和 DAMAGE 小字一起裁掉了） */
+#skill-list .sk-info .sk-dmg.tint { background: none !important; clip-path: none !important; overflow: visible; }
+#skill-list .sk-info .sk-dmg.tint b { font-size: calc(22 * var(--cu)) !important; transform: skewX(-8deg) !important; margin-left: calc(4 * var(--cu)); }
+#skill-list .sk-info .sk-dmg.tint { padding-left: calc(30 * var(--cu)); }

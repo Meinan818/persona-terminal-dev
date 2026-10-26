@@ -72,12 +72,16 @@ function makeRigFor(u: Unit): UnitRig | null {
   if (u.side === 'enemy') return makeShadow(u.role);
   return u.id === 'skull' ? makeSkull() : u.id === 'mona' ? makeMona() : null;
 }
-void preloadJoker().then((ok) => { if (ok && battle) swapInRigs(); });
+// r13：Joker 没有程序化回退 → 正版模型到之前只有黑色占位胶囊（r12 选目标截图里那个黑胶囊就是首载 ~18s 内截的图）。
+// 修：开战时盖一层 LOADING（原版换关也是 LOADING 黑屏；贴图未导出 → 自绘黑底白字，重建），等所有正版角色模型加载完/失败（最多 25s）再揭开。
+let charPending = 1;
+void preloadJoker().then((ok) => { if (ok && battle) swapInRigs(); }).finally(() => { charPending--; });
+const charsReady = () => charPending <= 0 && (!battle || battle.units.every((u) => !(u.side === 'ally' && u.id === 'joker') || rigs.has(u.id) || !jokerReady()));
 /** 只加载当前战斗用得到的正版模型（全部 13 个约 140MB，不一次性拉） */
 function ensureChars() {
   const keys = new Set<string>();
   for (const u of battle.units) { const k = wantsRig(u) ? p5tKeyFor(u) : null; if (k) keys.add(k); }
-  for (const k of keys) void preloadChar(k).then((ok) => { if (ok && battle) swapInRigs(k); });
+  for (const k of keys) { charPending++; void preloadChar(k).then((ok) => { if (ok && battle) swapInRigs(k); }).finally(() => { charPending--; }); }
 }
 /** 正版模型加载完：把还是占位/程序化的单位就地换掉（key 给定时只换该角色） */
 function swapInRigs(key?: string) {
@@ -1716,6 +1720,14 @@ let makeMap: () => MapDef = () => MAPS[mapIdx].make();
 mountLevelSelect({ onPick: (make) => { makeMap = make; restart(); return battle; } });
 window.addEventListener('resize', () => { fitCamera(true); refreshLabels(); });
 
+function showLoadCover(): Promise<void> {
+  let el = document.getElementById('loadcover');
+  if (!el) { el = document.createElement('div'); el.id = 'loadcover'; el.innerHTML = '<span>LOADING</span>'; document.body.appendChild(el); }
+  el.classList.remove('gone');
+  const t0 = performance.now();
+  return new Promise((res) => { const tick = () => { if (charsReady() || performance.now() - t0 > 45000) { el!.classList.add('gone'); res(); return; } setTimeout(tick, 150); }; tick(); });
+}
+let started = false;
 function restart() {
   $('#result').classList.add('hidden');
   battle = new Battle(makeMap());
@@ -1723,8 +1735,13 @@ function restart() {
   selected = null; previewTile = null; previewTarget = null; inspectEnemy = null; mode = 'auto';
   if (typeof skillList !== 'undefined') endSkillFlow();
   build();
-  playLevelBgm(battle.map.id); // r13：原版 BgmId（stages.csv）对应曲目，无缝循环
-  void play(battle.start());
+  const b = battle; started = false; busy = true; // 遮罩期间不接受操作
+  void showLoadCover().then(() => {
+    if (battle !== b) return;
+    busy = false; started = true;
+    playLevelBgm(battle.map.id); // r13：原版 BgmId（stages.csv）对应曲目，无缝循环
+    void play(battle.start());
+  });
 }
 
 function loop() {
@@ -1774,6 +1791,8 @@ window.__p5t = {
   sceneKit,
   renderInfo() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, texs: renderer.info.memory.textures, origLoading, origStats, gimmickCount, placeholderCount, lastSparkKind }; },
   get busy() { return busy; },
+  get charsReady() { return charsReady(); },
+  get started() { return started; },
   rigs,
   unitMesh,
   camera,

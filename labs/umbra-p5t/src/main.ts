@@ -21,7 +21,8 @@ import { SceneKit, themeFor, cobbleTex, preloadKit } from './view/sceneKit';
 import { sfx, installUnlock, preloadSfx } from './view/sfx';
 import { buildDamageView, playDamageClip, digitPx } from './view/damagePop';
 import { attachGimmicks, swapPropModel, releaseGimmicks } from './view/gimmick';
-import { origCfg, origFailed, attachOrigMap, releaseOrigMap, updateOrigMap, origSurfaceY, applyOrigSun, origTone } from './view/origMap';
+import { SKILL_CAM, poseSkillCam } from './view/skillCam';
+import { origCfg, origFailed, attachOrigMap, releaseOrigMap, updateOrigMap, setOrigCamCut, origSurfaceY, applyOrigSun, origTone } from './view/origMap';
 void preloadKit(); // CC0 布景模型提前加载
 import { computeForecast, forecastHtml } from './view/forecast';
 import type { Forecast } from './view/forecast';
@@ -108,6 +109,8 @@ const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
 // 过肩瞄准镜头（P5T 开枪时切到射手肩后透视镜头，推近→开火→切回俯视）
 const aimCam = new THREE.PerspectiveCamera(44, 2, 0.05, 100);
 let viewCam: THREE.Camera = camera;
+const skillCam = new THREE.PerspectiveCamera(SKILL_CAM.fov, 2, 0.1, 300);
+let skCam: { look: THREE.Vector3; yaw: number; dist: number; pitch: number } | null = null;
 const hemi = new THREE.HemisphereLight(0xffffff, 0x302020, 1.4);
 scene.add(hemi);
 const sceneKit = new SceneKit();
@@ -971,6 +974,37 @@ async function aimShot(attackerId: string, targetId: string, reticle = true) {
   if (reticle) ov.classList.add('fire');
   await sleep(90 / SPEED);
 }
+/** r11：技能列表/选目标期间切到原版式透视镜头；平滑跟随光标所在技能的目标。离开技能流程 → 回到俯视镜头 */
+function skillCamStep() {
+  const on = skillPhase !== 'none' && !!selected && !aimActive && battle.phase === 'player';
+  if (!on) { if (viewCam === skillCam) { viewCam = camera; setOrigCamCut(null); } skCam = null; return; }
+  const u = battle.unit(selected!);
+  const a = w2v(previewTile ?? u.pos);
+  const t = previewTarget ? battle.unit(previewTarget) : null;
+  let b = t ? w2v(t.pos) : null;
+  let look: THREE.Vector3;
+  if (b) look = a.clone().add(b).multiplyScalar(0.5);
+  else { // 射程内没有目标：仍朝最近的敌人看（视点放在施法者前方 2 格）
+    let nb: THREE.Vector3 | null = null, nd = 1e9;
+    for (const e of battle.units) if (!e.ko && e.side === 'enemy' && !battle.isHidden(e)) { const v = w2v(e.pos); const d = v.distanceTo(a); if (d < nd) { nd = d; nb = v; } }
+    look = nb ? a.clone().add(nb.clone().sub(a).setY(0).normalize().multiplyScalar(Math.min(2, nd / 2))) : a.clone();
+    b = nb && nd > 0.5 ? nb : null;
+  }
+  // 从施法者身后看向目标（skill_list_1756_8 沿红地毯看向敌人）；无目标时沿用当前俯视镜头的方位
+  let yaw = rig.cur.yaw;
+  if (b && (Math.abs(b.x - a.x) + Math.abs(b.z - a.z)) > 0.5) yaw = Math.atan2(a.x - b.x, a.z - b.z);
+  const span = t && b ? Math.hypot(b.x - a.x, b.z - a.z) : 0;
+  const dist = Math.max(SKILL_CAM.dist, span * 1.6 + 6);
+  const pitch = THREE.MathUtils.degToRad(SKILL_CAM.pitchDeg);
+  if (!skCam) skCam = { look: look.clone(), yaw, dist: dist * 1.25, pitch: pitch + 0.45 }; // 打开时从更高处落下来（过渡自定）
+  const k = SKILL_CAM.ease;
+  skCam.look.lerp(look, k);
+  let dy = yaw - skCam.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); skCam.yaw += dy * k;
+  skCam.dist += (dist - skCam.dist) * k; skCam.pitch += (pitch - skCam.pitch) * k;
+  // 视点落在画面中心偏右下（列表压在左侧；1717_2 施法者—目标中点 ≈ (715,440)/1280×720）
+  poseSkillCam(skillCam, skCam.look, skCam.yaw, skCam.dist, skCam.pitch, canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight);
+  viewCam = skillCam; setOrigCamCut(0.4);
+}
 function aimStep() {
   if (!aimAnim) return;
   const k = Math.min(1, (performance.now() - aimAnim.t0) / aimAnim.dur), e = 1 - Math.pow(1 - k, 3);
@@ -1277,7 +1311,7 @@ const ray = new THREE.Raycaster();
 function pick(ev: PointerEvent): { tile?: Vec; unit?: string } {
   const r = canvas.getBoundingClientRect();
   const ndc = new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
-  ray.setFromCamera(ndc, camera);
+  ray.setFromCamera(ndc, viewCam === skillCam ? skillCam : camera);
   const unitObjs = [...unitMesh.values()].filter((g) => g.visible);
   const hu = ray.intersectObjects(unitObjs, true)[0];
   if (hu) return { unit: hu.object.userData.unit };
@@ -1521,12 +1555,13 @@ function loop() {
   tfx.update();
   if (camFollow) { const g = unitMesh.get(camFollow); if (g) rig.focus(g.position.clone(), rig.tgt.zoom); }
   camStep();
+  skillCamStep();
   aimStep();
   mapObj.update();
   for (const r of rigs.values()) r.update();
   const t = performance.now() / 1000;
   sceneKit.update(rig.cur.yaw, t);
-  updateOrigMap(camera);
+  updateOrigMap(viewCam === skillCam ? skillCam : camera);
   for (const u of battle.units) if (u.prop === 'flag' || u.prop === 'speaker') { const g = unitMesh.get(u.id); if (g) (u.prop === 'flag' ? waveFlag : pulseSpeaker)(g, t); }
   updateHitFx(viewCam, world);
   const so = applyShake(viewCam);

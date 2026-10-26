@@ -83,3 +83,8 @@
 /* r10 HUD 对齐 hud_idle_1212（1280×720 量：TURN/目标面板 x≈850–1275 y≈10–135；头像卡 x≈950–1250 底≈690） */
 body.p5hud #hud-tl { transform: scale(.955); transform-origin: right top; }
 body.p5hud #party { right: max(calc(45 * var(--cu)), env(safe-area-inset-right)); bottom: max(calc(36 * var(--cu)), env(safe-area-inset-bottom)); transform: scale(.94); transform-origin: right bottom; }
+
+/* r11：技能列表打开时场景整体压暗偏紫（原版 skill_list_1717_2/1756_8 对 hud_idle_1212：同一广场 95 分位亮度 ≈ 0.6 倍、
+   暗部蓝紫抬升；选目标阶段 predict_1719_5 不压暗）。按帧统计拟合成「58% 原色 + 42% 深蓝紫」，颜色/透明度为推断。 */
+#sk-dim { position: absolute; inset: 0; pointer-events: none; background: rgba(10, 6, 70, 0.42); opacity: 0; transition: opacity 0.2s linear; z-index: 1; }
+#app.sk-open #sk-dim { opacity: 1; }

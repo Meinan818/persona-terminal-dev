@@ -214,7 +214,7 @@ export function attachOrigMap(world: THREE.Group, id: string, size: { w: number;
   const cfg = ORIG_MAPS[id];
   if (!cfg) { onDone(false); return; }
   rectU.value.set(-0.5, -0.5, size.w - 0.5, size.h - 0.5);
-  cutU.value = cfg.step > 1 ? cfg.step + 2.2 : 2.4;
+  cutU.value = baseCut = cfg.step > 1 ? cfg.step + 2.2 : 2.4;
   clipU.value = cfg.clipY ?? 1e6;
   setLighting(cfg);
   const place = (l: Loaded) => {
@@ -256,6 +256,10 @@ export function applyOrigSun(sun: THREE.DirectionalLight, cfg: OrigMapCfg, cente
   sun.shadow.intensity = lt.shadowStrength;
   return d;
 }
+let baseCut = 2.4;
+/** r11：技能透视镜头（低俯角）期间把「格子矩形外、朝镜头一侧」的裁切高度压低，免得近处花坛/推车/柱子挡住画面
+ *（原版有 BattleCameraCollider 遮挡处理，具体做法未导出 → 这里是近似）。null = 还原关卡默认值 */
+export function setOrigCamCut(h: number | null) { cutU.value = h == null ? baseCut : Math.min(baseCut, h); }
 /** 当前关卡 lightmap 是否在用（调试/统计） */
 export const origLmOn = () => L.uLmOn.value > 0.5;
 /** r10 色调校准钩子（截图对比用）：lightmap 解码倍数 / 雾的假定镜头距离 */

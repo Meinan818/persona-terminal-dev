@@ -2,7 +2,7 @@
 """UMBRA r9：原版 Lightmap-0_comp_light.exr（Codex 导出，2048² half）→ 手机版 WebP（私用不入库）。
 EXR 里是原版贴图的原始值（0..1，最大值正好 1.0 → 原版是 LDR 编码的 dLDR lightmap，不是 HDR）。
 游戏里解码：线性光照 = 原始值 × 4.59（Unity 线性色彩空间下 dLDR 的 unity_Lightmap_HDR.x = 2^2.2；推断，已标明）。
-存储：sRGB 曲线编码原始值（暗部精度更高）→ three 按 SRGBColorSpace 采样即回到原始值；≤1024，WebP q92。
+存储（r13：游戏内 ×1，BC6H 线性）：sRGB 曲线编码原始值（暗部精度更高）→ three 按 SRGBColorSpace 采样即回到原始值；≤1024，WebP q92。
 用法: conv-lightmap.py in.exr out.webp [max=1024]"""
 import sys, numpy as np, OpenEXR
 from PIL import Image

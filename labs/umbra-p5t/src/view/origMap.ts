@@ -76,12 +76,12 @@ const cutU = { value: 2.4 };
 // lightmap 当间接光，其余（m_LightProbeUsage 多为 0）用 RenderSettings Trilight 环境光。Point/Area（M07/M08/M17）是烘焙灯，只在 lightmap 里。
 // 数值：view/origLighting.ts（tools/gen-orig-lighting.py 从原始 typetree 生成）。
 // 重建/推断（已标明）：P5T 地图着色器源码不在包里 → 漫反射用 Lambert（albedo ×（间接 + N·L·直射·阴影）），不做原版卡通分阶/高光/边缘光；
-// lightmap 解码 = 原始值 × 4.59（Unity 线性空间 dLDR）；Trilight 用 sky/equator/ground 按法线 y 线性插值（Unity 是转成 SH，略软）；
+// lightmap 解码：r13 起按 Codex 核实的 BC6H + Linear（m_TextureFormat=24, m_ColorSpace=0）→ EXR 值就是线性光照，×1（r9–r12 的 ×4.59 dLDR 推断作废）；Trilight 用 sky/equator/ground 按法线 y 线性插值（Unity 是转成 SH，略软）；
 // 雾：原版是相机深度线性雾，这里按“到格子矩形的水平距离 + 15m（假定战斗镜头距离）”算，免得俯视正交镜头把整图雾掉。
 const L = {
   uAmbSky: { value: new THREE.Color(1, 1, 1) }, uAmbEq: { value: new THREE.Color(0.5, 0.5, 0.5) }, uAmbGround: { value: new THREE.Color(0.1, 0.1, 0.1) },
   uDirScale: { value: new THREE.Vector3(1, 1, 1) },
-  uLmOn: { value: 0 }, uLmScale: { value: 4.59 },
+  uLmOn: { value: 0 }, uLmScale: { value: 1.0 },
   uFogOn: { value: 0 }, uFogCol: { value: new THREE.Color(0.5, 0.3, 0.7) }, uFog: { value: new THREE.Vector3(20, 100, 15) },
 };
 // r13：过肩瞄准时「镜头—目标」之间的遮挡物抖动镂空（原版 14:21 帧：挡在镜头前的木箱变成网格状半透明）。
@@ -94,7 +94,7 @@ export function setAimSeeThrough(cam: THREE.Vector3 | null, tgt?: THREE.Vector3,
 let curLighting: OrigLighting | null = null;
 let FOG_CAM_DIST = 15;
 export const origLighting = () => curLighting;
-const LM_DECODE = 4.59; // Unity 线性色彩空间 dLDR lightmap：2^2.2（推断原版是 dLDR：EXR 最大值正好 1.0、alpha 恒 1）
+const LM_DECODE = 1.0; // r13：BC6H 线性 HDR，原值直接用（CODEX-TO-HARK「缺口 2」）
 
 /** 把原版光照（Trilight 环境光 + 方向光比例 + lightmap 间接光 + 雾）接到一个 Lambert 材质上；gimmick 单位也用（无 lightmap）。 */
 export function patchOrigLit(m: THREE.MeshLambertMaterial, opts: { clip?: boolean } = {}) {

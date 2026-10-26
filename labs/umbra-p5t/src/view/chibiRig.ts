@@ -24,6 +24,8 @@ export interface UnitRig {
   update(now?: number): void;
   /** 走一格的毫秒数（正版 rig = 原版 Run 步速；缺省用 RUN_MS_PER_TILE） */
   readonly msPerTile?: number;
+  /** r14：红色选中/锁定描边（正版 rig） */
+  setHighlight?(on: boolean): void;
   /** 等当前单次动作（攻击/受击/倒地…）播完；maxMs 封顶 */
   settle?(maxMs?: number): Promise<void>;
   /** 等攻击动作的原版命中帧（正版 rig） */

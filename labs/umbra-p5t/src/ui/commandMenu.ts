@@ -13,13 +13,17 @@ export const CMD_TEX: Record<'persona' | 'gun' | 'sword' | 'btnY' | 'btnX' | 'bt
 import { p5 } from './p5tHud';
 import { hydrateSdf } from './sdfFont';
 export type CmdKey = 'persona' | 'gun' | 'sword';
-const ITEMS: Record<CmdKey, { act: string; btn: 'Y' | 'X' | 'A'; en: string; zh: string; x: number; y: number; w: number; h: number; boxW: number; boxH: number }> = {
-  // x/y = 可见牌中心相对头顶（px@720）；w/h = 帧上可见牌尺寸；boxW/H = prefab bg 尺寸 ×0.5 ×(720/1080)
-  // r13：按 command_3456 重新量（Joker 头顶 ≈ (632,362)：PERSONA 牌中心 (795,378)、GUN (752,440)、SWORD (800,505)）→ 牌左尖贴住角色右肩
-  persona: { act: 'skill', btn: 'Y', en: 'PERSONA', zh: '使用技能', x: 148, y: 16, w: 205, h: 70, boxW: 240, boxH: 83 },
-  gun: { act: 'gun', btn: 'X', en: 'GUN', zh: '举枪瞄准', x: 106, y: 78, w: 170, h: 55, boxW: 206, boxH: 64 },
-  sword: { act: 'melee', btn: 'A', en: 'SWORD', zh: '近战武器攻击', x: 152, y: 143, w: 200, h: 60, boxW: 242, boxH: 99 },
+// r14：按 command_3456 逐像素重量（1280×720，Joker 头顶 ≈ (645,367)；见 tools/r14-cmd-overlay.py 的叠图核对）。
+//  - 底牌 = 原版 bom01_*_ui 2160p 贴图 ×1/3（=720/2160）原尺寸、不旋转（倾斜已画在贴图里），左上角相对头顶 box=(x,y)；叠图与原帧重合。
+//  - 按钮圆心 btn、英文字样中心 en（宽/字高/旋转）、中文小字中心 zh（宽/字高/旋转）全部取自原帧。
+//  - SWORD 始终显示（原版指令牌固定三项；无近战目标时点了进近战选目标模式）。
+type Box = { x: number; y: number; w: number; h: number; r: number };
+const ITEMS: Record<CmdKey, { act: string; btn: 'Y' | 'X' | 'A'; en: string; zh: string; box: [number, number]; tex: [number, number]; b: [number, number]; E: Box; Z: Box }> = {
+  persona: { act: 'skill', btn: 'Y', en: 'PERSONA', zh: '使用技能', box: [35, -37], tex: [712, 244], b: [71, 18], E: { x: 155, y: -7, w: 124, h: 32, r: -12 }, Z: { x: 202, y: 13, w: 76, h: 17, r: -10 } },
+  gun: { act: 'gun', btn: 'X', en: 'GUN', zh: '举枪瞄准', box: [-3, 38], tex: [618, 192], b: [45, 65], E: { x: 117, y: 63, w: 74, h: 31, r: -3 }, Z: { x: 120, y: 85, w: 52, h: 14, r: -2 } },
+  sword: { act: 'melee', btn: 'A', en: 'SWORD', zh: '近战武器攻击', box: [35, 90], tex: [706, 290], b: [82, 105], E: { x: 165, y: 119, w: 124, h: 33, r: 7 }, Z: { x: 187, y: 146, w: 86, h: 16, r: 12 } },
 };
+const bx = (B: Box) => `--cx:${B.x};--cy:${B.y};--bw:${B.w};--bh:${B.h};--r:${B.r}deg`;
 export class CommandMenu {
   readonly el: HTMLDivElement;
   private shown = '';
@@ -37,9 +41,9 @@ export class CommandMenu {
     if (sig !== this.shown || anchor !== this.anchorKey) {
       this.el.innerHTML = keys.map((k) => {
         const it = ITEMS[k];
-        const tex0 = p5.has(`cmd_${k}`) ? p5.url(`cmd_${k}`) : CMD_TEX[k], tex = tex0 ? new URL(tex0, location.href).href : null, bt = CMD_TEX[`btn${it.btn}` as const];
-        return `<div class="cp ${k}${sel === it.act ? ' sel' : ''}${tex ? ' tex' : ''}" data-act="${it.act}" style="--x:${it.x};--y:${it.y};--w:${it.w};--h:${it.h};--bw:${it.boxW};--bh:${it.boxH}${tex ? `;--tex:url(${tex})` : ''}">
-          <i class="btn b${it.btn}"${bt ? ` style="background-image:url(${bt})"` : ''}>${bt ? '' : it.btn}</i><b data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#ffffff" data-out="#000000" data-ow="0.3" data-sp="-6">${it.en}</b><small>${it.zh}</small><em class="ph">待原版贴图</em></div>`;
+        const tex0 = p5.has(`cmd_${k}`) ? p5.url(`cmd_${k}`) : CMD_TEX[k], tex = tex0 ? new URL(tex0, location.href).href : null;
+        return `<div class="cp ${k}${sel === it.act ? ' sel' : ''}${tex ? ' tex' : ''}" data-act="${it.act}" style="--x:${it.box[0]};--y:${it.box[1]};--w:${it.tex[0] / 3};--h:${it.tex[1] / 3}${tex ? `;--tex:url(${tex})` : ''}">
+          <i class="btn b${it.btn}" style="--bx:${it.b[0] - it.box[0]};--by:${it.b[1] - it.box[1]}">${it.btn}</i><b class="en" style="${bx({ ...it.E, x: it.E.x - it.box[0], y: it.E.y - it.box[1] })}" data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#ffffff" data-out="#000000" data-ow="0.25" data-sp="-6">${it.en}</b><small style="${bx({ ...it.Z, x: it.Z.x - it.box[0], y: it.Z.y - it.box[1] })}">${it.zh}</small></div>`;
       }).join('');
       hydrateSdf(this.el); // r13：英文字样 = 原版 TMP 字体 FOT-Yuruka Std UB（umbra-assets p5t/1_ui/fonts/tmp），白字黑描边；字体对应是推断（按字形比对 command_3456）
       this.el.classList.remove('in'); void this.el.offsetWidth; this.el.classList.add('in');

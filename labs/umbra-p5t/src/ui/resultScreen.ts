@@ -4,7 +4,7 @@
 // 背景红色斜带（ResultLineManager Line1–4 是脚本画的线，参数未导出）= 自制近似；背景是战场 3D 画面 + 结算机位（A_CA9999_BTL0070 系列镜头未导出，自定）。
 // 金额/经验 = stage_rewards.csv 对应 StageId 的 Money / StageBaseExp / StagePersonaExp（注意：原版帧 result_1610 显示 ¥160，表里 1010 为 60，差额来源未查明）。
 import L from './data/result-layout.json';
-import { p5 } from './p5tHud';
+import { p5, PORTRAIT } from './p5tHud';
 /** 原版贴图（fetch-p5t-ui.sh → public/p5t-hud 短名）；没有 → RESULT_TEX 里的手填路径 → 占位 */
 const T = (short: string, k: string) => (p5.has(short) ? p5.url(short) : RESULT_TEX[k] ?? null);
 // 每块底板 = 红底（大）+ 黑底：prefab 两个同名 *_base 兄弟，红底相对黑底的 anchoredPosition / sizeDelta（Unity y 向上）
@@ -26,10 +26,10 @@ export interface ResultData {
   party: { id: string; name: string; persona: string; lv: number; face?: string }[];
 }
 const px = (b: Box) => `left:${b[0]}px;top:${b[1]}px;width:${b[2]}px;height:${b[3]}px`;
-function slot(cls: string, b: Box, tex: string | null, inner = '', ph = true) {
+function slot(cls: string, b: Box, tex: string | null, inner = '', ph = false) { // r14：不再显示「待原版贴图」占位字
   return `<div class="rs ${cls}${tex ? ' tex' : ''}" style="${px(b)}${tex ? `;background-image:url(${tex})` : ''}">${inner}${!tex && ph ? '<em class="ph">待原版贴图</em>' : ''}</div>`;
 }
-export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () => void): { next: () => void; el: HTMLElement } {
+export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () => void, onPage?: (page: number) => void): { next: () => void; el: HTMLElement } {
   const p1 = L.p1 as Record<string, Box>, p2 = L.p2 as unknown as Record<string, Box> & { award_rows: { box: Box; text: Box }[] };
   const rw = (L.rewards as Record<string, { money: number; exp: number; personaExp: number }>)[d.level] ?? { money: 0, exp: 0, personaExp: 0 };
   const el = document.createElement('div'); el.id = 'rs'; el.className = 'rs-wrap';
@@ -43,7 +43,7 @@ export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () =>
     ${base2(p1.pexp_base, 'personaexp', '')}
     ${slot('title', p1.pexp_title, RESULT_TEX.pexp_title, '<span>persona exp</span>')}
     ${[1, 2, 3].map((i) => { const c = d.party[i - 1]; if (!c) return ''; return `
-      ${slot('face', p1[`c${i}_face`], c.face ?? RESULT_TEX.face, '', !c.face)}
+      ${slot('face', p1[`c${i}_face`], c.face ?? (PORTRAIT[c.id] && p5.has(`party_${PORTRAIT[c.id]}`) ? p5.url(`party_${PORTRAIT[c.id]}`) : RESULT_TEX.face), '', false)}
       <div class="rs txt pname" style="${px(p1[`c${i}_name`])}">${c.persona}</div>
       <div class="rs txt plv" style="${px(p1[`c${i}_lv`])}">LV<b>${c.lv}</b></div>
       ${slot('gauge dash', p1[`c${i}_gauge`], null, `<i style="width:${30 + i * 13}%"></i><small>+${rw.personaExp}</small>`, false)}`; }).join('')}
@@ -71,7 +71,7 @@ export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () =>
   const t0 = performance.now();
   const next = () => {
     if (performance.now() - t0 < 700) return; // r13：结算出现前的那次点击/按键不翻页（r12 录像页1只露 0.2s）
-    if (page === 1) { page = 2; el.classList.remove('pg1'); el.classList.add('pg2'); return; }
+    if (page === 1) { page = 2; el.classList.remove('pg1'); el.classList.add('pg2'); onPage?.(2); return; }
     removeEventListener('resize', fit); el.remove(); document.body.classList.remove('result-on'); onDone();
   };
   el.addEventListener('click', next);

@@ -32,8 +32,9 @@ export type ClipKey = 'Idle' | 'Run' | 'GunStart' | 'GunLoop' | 'GunFire' | 'Gun
   | 'DownStart' | 'DownStartLoop' | 'DownGround' | 'DownGroundLoop' | 'DownReturn' | 'Dead'
   | 'SkillStart' | 'SkillStartLoop' | 'SkillActStart' | 'SkillActLoop' | 'SkillActEnd' | 'SkillCancel'
   | 'Personal' | 'ChainFishingStart' | 'ChainFishingLoop' | 'ChainFishingEnd' | 'BombStart' | 'BombLoop' | 'BombEnd'
-  | 'ReadyStart' | 'ReadyLoop' | 'ReadyReturn' | 'HideL' | 'HideR';
-const LOOPS: ClipKey[] = ['Idle', 'Run', 'GunLoop', 'DownStartLoop', 'DownGroundLoop', 'SkillStartLoop', 'SkillActLoop', 'ChainFishingLoop', 'BombLoop', 'ReadyLoop'];
+  | 'ReadyStart' | 'ReadyLoop' | 'ReadyReturn' | 'HideL' | 'HideR'
+  | 'ResultFrontIn' | 'ResultFrontInLoop' | 'ResultFrontCutchange' | 'ResultFrontCutEndLoop' | 'ResultBackRInLoop' | 'ResultBackRCutchange' | 'ResultBackRCutEndLoop' | 'ResultBackLInLoop' | 'ResultBackLCutchange' | 'ResultBackLCutEndLoop';
+const LOOPS: ClipKey[] = ['ResultFrontInLoop', 'ResultFrontCutEndLoop', 'ResultBackRInLoop', 'ResultBackRCutEndLoop', 'ResultBackLInLoop', 'ResultBackLCutEndLoop', 'Idle', 'Run', 'GunLoop', 'DownStartLoop', 'DownGroundLoop', 'SkillStartLoop', 'SkillActLoop', 'ChainFishingLoop', 'BombLoop', 'ReadyLoop'];
 /** 按住型 base：到时自动收（Loop → End） */
 const HOLD_END: Partial<Record<ClipKey, ClipKey>> = { GunLoop: 'GunEnd', SkillActLoop: 'SkillActEnd', ChainFishingLoop: 'ChainFishingEnd' };
 
@@ -229,6 +230,23 @@ function hullMat(w: number, push = 0) {
   return m;
 }
 
+/** r14：选中/被锁定单位的红色描边（command_3456 / aim_1420_3：角色外一圈 ~4px@720 的纯红剪影边）。
+ *  原版是 URP 的屏幕空间描边（Renderer Feature，shader 源码未导出）→ 重建：背面外扩壳，按裁剪空间法线方向偏移固定像素。 */
+export const RED_OUTLINE = { px: new THREE.Vector2(4 / 1280 * 2, 4 / 720 * 2) };
+let redHull: THREE.MeshBasicMaterial | null = null;
+function redHullMat() {
+  if (redHull) return redHull;
+  const m = new THREE.MeshBasicMaterial({ color: 0xff0a14, side: THREE.BackSide });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uOlPx = { value: RED_OUTLINE.px };
+    sh.vertexShader = 'uniform vec2 uOlPx;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      { vec3 nv = normalize( normalMatrix * objectNormal ); vec4 nc = projectionMatrix * vec4( nv, 0.0 ); vec2 d = nc.xy; float L = length( d );
+        if ( L > 1e-5 ) gl_Position.xy += ( d / L ) * uOlPx * gl_Position.w; }`);
+  };
+  m.customProgramCacheKey = () => 'p5t-red-hull';
+  redHull = m; return m;
+}
+
 /** Unity 专用网格：描边网格、脸部阴影叠片、备用嘴型/眼型（表情切换用）、刀光 */
 export function hiddenMesh(meshName: string, matName: string): boolean {
   if (/Outline/.test(meshName) || /^DefaultMaterial$|Outline/.test(matName) || /_Sh0\d$/.test(matName)) return true;
@@ -263,6 +281,10 @@ export class P5tRig implements UnitRig {
   private last = performance.now();
   private wps: { obj: THREE.Object3D; show: (k: ClipKey) => boolean }[] = [];
   private clock = 0;
+  private redHulls: THREE.SkinnedMesh[] = [];
+  private hl = false;
+  /** r14：红色选中/锁定描边 */
+  setHighlight(on: boolean) { if (on === this.hl) return; this.hl = on; for (const r of this.redHulls) r.visible = on; }
 
   constructor(private spec: CharSpec, P: Proto) {
     this.key = spec.key;
@@ -308,6 +330,11 @@ export class P5tRig implements UnitRig {
       o.frustumCulled = false; o.raycast = () => {}; o.name = sm.name + '_ol'; o.userData.outline = true;
       o.position.copy(sm.position); o.quaternion.copy(sm.quaternion); o.scale.copy(sm.scale);
       sm.parent!.add(o);
+      if (!push) { // r14 红色选中描边壳（默认隐藏）
+        const r = new THREE.SkinnedMesh(sm.geometry, redHullMat());
+        r.bind(sm.skeleton, sm.bindMatrix); r.bindMode = sm.bindMode; r.frustumCulled = false; r.raycast = () => {}; r.visible = false;
+        r.position.copy(sm.position); r.quaternion.copy(sm.quaternion); r.scale.copy(sm.scale); r.name = sm.name + '_red'; sm.parent!.add(r); this.redHulls.push(r);
+      }
     }
     this.model.scale.setScalar(s);
     this.inner.add(this.model);
@@ -402,6 +429,25 @@ export class P5tRig implements UnitRig {
     const end = HOLD_END[prev];
     if (end && k !== 'Dead' && k !== 'DownGroundLoop') this.enqueue([end]);
     else this.play(k);
+  }
+  /** r14：击飞——起飞播原版 DownStart → 空中 DownStartLoop（BTL0036/0037）；落地 DownGround（BTL0038），未倒地则 DownReturn 起身 */
+  knockAir(): boolean {
+    if (!this.act.has('DownStart')) return false;
+    this.running = false; this.baseKey = this.hold('DownStartLoop'); this.enqueue(['DownStart']); return true;
+  }
+  knockLand(stayDown: boolean) {
+    if (stayDown) { this.downed = true; this.baseKey = this.hold('DownGroundLoop'); this.enqueue(['DownGround']); }
+    else { this.baseKey = this.idleBase(); this.enqueue(['DownGround', 'DownReturn']); }
+  }
+  /** r14：结算动作（原版 BTL0070–0079：Front=中央前排 In→InLoop；BackR/BackL=后排左右 InLoop；翻页 Cutchange→CutEndLoop）。没有该 clip 返回 false */
+  playResult(slot: 'front' | 'backR' | 'backL', cut = false): boolean {
+    const S = slot === 'front' ? 'Front' : slot === 'backR' ? 'BackR' : 'BackL';
+    const loop = (cut ? `Result${S}CutEndLoop` : `Result${S}InLoop`) as ClipKey;
+    if (!this.act.has(loop)) return false;
+    this.running = false; this.downed = false; this.dead = false; this.aimUntil = 0;
+    this.baseKey = loop;
+    this.enqueue((cut ? [`Result${S}Cutchange`] : slot === 'front' ? ['ResultFrontIn'] : []) as ClipKey[]);
+    return true;
   }
   private idleBase(): ClipKey { return this.running ? 'Run' : 'Idle'; }
   private hold(k: ClipKey): ClipKey { return this.act.has(k) ? k : this.idleBase(); }

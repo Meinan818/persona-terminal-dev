@@ -170,29 +170,26 @@ body.p5hud #turn b.sdf-on { transform: rotate(-4deg); }
 /* r12：原版指令菜单（src/ui/commandMenu.ts）。占位：黑底斜切牌 + 红色碎片底 + 原版式按钮圈；原版贴图到位后 .tex 改用 --tex */
 #cmd { position: absolute; width: 0; height: 0; z-index: 6; pointer-events: none; }
 #cmd.hidden { display: none; }
-#cmd .cp { position: absolute; pointer-events: auto; cursor: pointer; left: calc((var(--x) - var(--w) / 2) * var(--u) * 1px); top: calc((var(--y) - var(--h) / 2) * var(--u) * 1px);
-  width: calc(var(--w) * var(--u) * 1px); height: calc(var(--h) * var(--u) * 1px); color: #fff; font-style: italic; }
+/* r14：全部按 command_3456 像素量（commandMenu.ts ITEMS）；单位 = px@720 × --u */
+#cmd .cp { position: absolute; pointer-events: none; left: calc(var(--x) * var(--u) * 1px); top: calc(var(--y) * var(--u) * 1px);
+  width: calc(var(--w) * var(--u) * 1px); height: calc(var(--h) * var(--u) * 1px); color: #fff; }
+#cmd .cp.tex { background: var(--tex) 0 0 / 100% 100% no-repeat; }
+#cmd .cp:not(.tex) { background: #0b0b0b; clip-path: polygon(0 80%, 30% 30%, 100% 0, 100% 70%); }
 #cmd.in .cp { animation: cmdIn .2s linear both; }
 @keyframes cmdIn { from { opacity: 0; } to { opacity: 1; } }
-#cmd .cp::before { content: ''; position: absolute; inset: 8% -6% 4% 18%; background: #e60012; clip-path: polygon(6% 18%, 100% 0, 92% 100%, 0 82%); transform: rotate(-4deg); }
-#cmd .cp::after { content: ''; position: absolute; inset: 0 4% 18% 12%; background: #0b0b0b; border: calc(2px * var(--u)) solid #fff; clip-path: polygon(3% 10%, 100% 0, 97% 100%, 0 88%); transform: rotate(-5deg); }
-#cmd .cp.tex::before, #cmd .cp.tex::after { display: none; }
-#cmd .cp.tex { background: var(--tex) center / calc(var(--bw) * var(--u) * 1px) calc(var(--bh) * var(--u) * 1px) no-repeat; }
-#cmd .cp > * { position: absolute; z-index: 1; }
-/* r13：按钮圈 = 原版 menu_button_icon_001_{Y,X,A}（未导出）→ 重建：彩色实心圆 + 黑圈 + 白细外环、深色字母（按 command_3456 取色） */
-#cmd .btn { left: calc(-2px * var(--u)); top: 22%; width: calc(25px * var(--u)); height: calc(25px * var(--u)); border-radius: 50%; background: #111 center / contain no-repeat;
-  border: calc(2.5px * var(--u)) solid #111; box-shadow: 0 0 0 calc(1.5px * var(--u)) #fff; color: #111;
-  font: 900 calc(15px * var(--u)) / calc(20px * var(--u)) 'Arial Black', sans-serif; text-align: center; font-style: normal; }
-#cmd .bY { background-color: #f2d21b; } #cmd .bX { background-color: #48a8f0; } #cmd .bA { background-color: #5fce3c; }
-#cmd .cp b { left: 17%; top: 0; font: 900 calc(34px * var(--u)) / 1 'Arial Black', Impact, sans-serif; letter-spacing: calc(-1px * var(--u)); transform: rotate(-6deg) skewX(-8deg); transform-origin: 0 50%; -webkit-text-stroke: calc(1.5px * var(--u)) #000; paint-order: stroke fill; }
-#cmd .gun b { font-size: calc(36px * var(--u)); left: 22%; } #cmd .sword b { font-size: calc(34px * var(--u)); transform: rotate(4deg) skewX(-8deg); }
-#cmd .cp b .sdfbox { display: block; } #cmd .cp b canvas { display: block; }
-#cmd .cp small { right: 6%; bottom: 14%; font: 900 calc(14px * var(--u)) / 1 'UMBRA SC', sans-serif; font-style: normal; color: #fff; transform: rotate(-6deg);
-  -webkit-text-stroke: calc(3px * var(--u)) #000; paint-order: stroke fill; letter-spacing: calc(.5px * var(--u)); }
-#cmd .gun small { right: 22%; bottom: 8%; } #cmd .sword small { transform: rotate(4deg); bottom: 4%; right: 2%; }
-#cmd .cp .ph { right: 0; bottom: -2%; font: 600 calc(8px * var(--u)) / 1 sans-serif; color: #ffd4d8; opacity: .75; font-style: normal; }
-#cmd .cp.tex .ph { display: none; }
-#cmd .cp.sel::after { background: #e60012; }
+#cmd .cp > * { position: absolute; z-index: 1; pointer-events: auto; cursor: pointer; }
+#cmd .cp > .en, #cmd .cp > small { left: calc(var(--cx) * var(--u) * 1px); top: calc(var(--cy) * var(--u) * 1px); width: calc(var(--bw) * var(--u) * 1px); height: calc(var(--bh) * var(--u) * 1px);
+  transform: translate(-50%, -50%) rotate(var(--r)); display: block; margin: 0; }
+#cmd .cp > .en { font: 900 calc(var(--bh) * 0.95 * var(--u) * 1px) / 1 'Arial Black', Impact, sans-serif; font-style: normal; white-space: nowrap; text-align: center; -webkit-text-stroke: calc(1.5px * var(--u)) #000; paint-order: stroke fill; }
+#cmd .cp > .en .sdfbox, #cmd .cp > .en canvas { display: block; width: 100% !important; height: 100% !important; }
+#cmd .cp > small { font: 900 calc(var(--bh) * 1px * var(--u)) / 1 'UMBRA SC', sans-serif; font-style: normal; color: #fff; text-align: justify; text-align-last: justify; white-space: nowrap;
+  -webkit-text-stroke: calc(3px * var(--u)) #000; paint-order: stroke fill; }
+/* 按钮圈：原版 menu_button_icon（prefab_ButtonHelpIcon）贴图未导出 → 重建：彩色实心圆 + 黑圈 + 白外环，直径 35px@720（command_3456 实测） */
+#cmd .btn { left: calc((var(--bx) - 17.5) * var(--u) * 1px); top: calc((var(--by) - 17.5) * var(--u) * 1px); width: calc(35px * var(--u)); height: calc(35px * var(--u)); box-sizing: border-box; border-radius: 50%;
+  border: calc(4px * var(--u)) solid #111; box-shadow: 0 0 0 calc(2px * var(--u)) #fff; color: #222;
+  font: 900 calc(19px * var(--u)) / calc(27px * var(--u)) 'Arial Black', sans-serif; text-align: center; font-style: normal; }
+#cmd .bY { background-color: #f2e21b; } #cmd .bX { background-color: #3ea3f2; } #cmd .bA { background-color: #6ad43c; }
+#cmd .cp.sel { filter: drop-shadow(0 0 calc(3px * var(--u)) #e60012); }
 body.cmd-p5 #actions button[data-act="melee"], body.cmd-p5 #actions button[data-act="gun"], body.cmd-p5 #actions button[data-act="skill"] { display: none; }
 
 /* r12：原版回合切换（src/fx/turnChange.ts） */
@@ -215,7 +212,7 @@ body.result-on .hud, body.result-on #labels, body.result-on #camctl, body.result
 .rs.base:not(.tex) { background: #0b0b0b; clip-path: polygon(2% 6%, 100% 0, 98% 100%, 0 94%); }
 .rs.title:not(.tex) { background: rgba(230, 0, 18, .0); }
 .rs.title:not(.tex) span { position: absolute; left: 4%; bottom: 8%; font: italic 900 92px / 1 'Arial Black', Impact, sans-serif; color: #111; -webkit-text-stroke: 4px #e60012; paint-order: stroke; letter-spacing: -4px; transform: rotate(-4deg); white-space: nowrap; }
-.rs .ph { position: absolute; right: 6px; bottom: 4px; font: 600 18px / 1 sans-serif; color: #ff9aa4; font-style: normal; opacity: .8; z-index: 2; }
+.rs .ph { position: absolute; right: 6px; bottom: 4px; font: 600 18px / 1 'UMBRA SC', sans-serif; color: #ff9aa4; font-style: normal; opacity: .8; z-index: 2; }
 .rs .num { position: absolute; font: italic 900 84px / 1 'Arial Black', Impact, sans-serif; }
 .rs .num.money { left: 18%; top: 18%; }
 .rs .get { position: absolute; right: 6%; top: 30%; font: italic 900 46px / 1 'Arial Black', sans-serif; color: #ffd400; }
@@ -224,17 +221,17 @@ body.result-on .hud, body.result-on #labels, body.result-on #camctl, body.result
 .p1 .rs.base small { position: absolute; left: 12%; bottom: 10%; font: 700 26px / 1 sans-serif; color: #ffd400; }
 .rs.gauge { background: #333; } .rs.gauge i { position: absolute; inset: 0 auto 0 0; background: #e60012; }
 .rs.gauge.dash { background: repeating-linear-gradient(90deg, #fff 0 14px, transparent 14px 22px); height: 6px !important; margin-top: 6px; }
-.rs.gauge.dash i { background: #e60012; } .rs.gauge.dash small { position: absolute; right: 0; top: -36px; font: 700 24px / 1 sans-serif; color: #ffd400; }
+.rs.gauge.dash i { background: #e60012; } .rs.gauge.dash small { position: absolute; right: 0; top: -36px; font: 700 24px / 1 'UMBRA SC', sans-serif; color: #ffd400; }
 .rs.face:not(.tex) { background: #3a3a3a; border: 4px solid #fff; clip-path: polygon(8% 0, 100% 4%, 92% 100%, 0 96%); }
 .rs.txt { font-size: 34px; line-height: 50px; font-weight: 800; white-space: nowrap; }
 .rs.plv { font-size: 22px; line-height: 31px; } .rs.plv b { font: italic 900 34px / 31px 'Arial Black', sans-serif; margin-left: 4px; }
-.rs.next:not(.tex) .btn { position: absolute; left: 28%; top: 30%; width: 58px; height: 58px; border-radius: 50%; background: #39d16a; border: 5px solid #fff; color: #111; font: 900 34px / 50px sans-serif; text-align: center; font-style: normal; }
-.rs.next:not(.tex) b { position: absolute; left: 50%; top: 32%; background: #fff; color: #111; padding: 2px 14px; font: 900 40px / 1.2 sans-serif; transform: rotate(-6deg); }
+.rs.next:not(.tex) .btn { position: absolute; left: 28%; top: 30%; width: 58px; height: 58px; border-radius: 50%; background: #39d16a; border: 5px solid #fff; color: #111; font: 900 34px / 50px 'UMBRA SC', sans-serif; text-align: center; font-style: normal; }
+.rs.next:not(.tex) b { position: absolute; left: 50%; top: 32%; background: #fff; color: #111; padding: 2px 14px; font: 900 40px / 1.2 'UMBRA SC', sans-serif; transform: rotate(-6deg); }
 .rs.none b { font: italic 900 66px / 61px 'Arial Black', sans-serif; color: #8a8a8a; }
 .p2 .num.big { left: 18%; top: 18%; font-size: 150px; }
 .rs .tt { position: absolute; left: 50%; top: 52%; font: 900 52px / 1 'Arial Black', sans-serif; color: #ccc; }
 .rs.chk { border: 4px solid #777; background: #222; }
-.rs.chk.ok i::after { content: '✔'; position: absolute; left: -2px; top: -26px; font: 900 68px / 1 sans-serif; color: #e60012; }
+.rs.chk.ok i::after { content: '✔'; position: absolute; left: -2px; top: -26px; font: 900 68px / 1 'UMBRA SC', sans-serif; color: #e60012; }
 .rs.award { font-size: 30px; }
 .rs.clear { font: italic 900 74px / 120px 'Arial Black', Impact, sans-serif; color: #ffd400; -webkit-text-stroke: 3px #7a3a00; transform: rotate(-12deg); animation: rsStamp .3s .3s ease-out both; }
 @keyframes rsStamp { from { opacity: 0; transform: rotate(-12deg) scale(2.2); } }
@@ -274,3 +271,14 @@ body:not(.debug) .lbl.ally, body:not(.debug) #unit-card .charges, body:not(.debu
 #aim .aimtag small { left: 17%; top: 64%; font: 900 14px/1 'UMBRA SC', sans-serif; color: #fff; -webkit-text-stroke: 3px #000; paint-order: stroke fill; }
 #aim .aimtag .abtn { right: 8%; top: 52%; width: 30px; height: 30px; border-radius: 50%; background: #5fce3c; border: 3px solid #111; box-shadow: 0 0 0 2px #fff; color: #111; font: 900 18px/24px 'Arial Black', sans-serif; text-align: center; font-style: normal; }
 @media (max-height: 430px) { #aim .aimtag { transform-origin: 0 50%; scale: .7; } }
+
+/* r14：敌人头顶心形 HP（原版 target_gage_black/white/red，2160p 原尺寸 × --u）+ CHANCE!!（原版 attack_CHANCE） */
+#labels .lbl.enemy .heart.p5h { position: relative; width: calc(174 * var(--u)); height: calc(176 * var(--u)); margin: 0 auto; background: none; clip-path: none; transform: none; display: block; }
+#labels .lbl.enemy .heart.p5h > * { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; }
+#labels .lbl.enemy .heart.p5h .ol { width: calc(174 * var(--u)); height: calc(176 * var(--u)); }
+#labels .lbl.enemy .heart.p5h i.fill { width: calc(136 * var(--u)); height: calc(128 * var(--u)); transform: translate(-56%, -58%); background: #2fd6c8; -webkit-mask: var(--p5-heart-white) center / 100% 100% no-repeat; mask: var(--p5-heart-white) center / 100% 100% no-repeat; }
+#labels .lbl.enemy .heart.p5h img.fill { width: calc(198 * var(--u)); height: calc(200 * var(--u)); transform: translate(-48%, -52%); }
+#labels .lbl.enemy .heart.p5h b { left: 30%; top: 22%; font: 900 calc(60 * var(--u)) / 1 'Arial Black', sans-serif; color: #fff; -webkit-text-stroke: calc(4 * var(--u)) #000; paint-order: stroke fill; text-shadow: none; }
+#labels .lbl.enemy .heart.p5h.red b { color: #68ffe1; }
+#labels .lbl .chance-i { position: absolute; left: 50%; top: calc(100% + var(--uh, 120) * 0.12px); width: calc(var(--uh, 120) * 0.38px); transform: translateX(-62%) rotate(-4deg); animation: none; pointer-events: none; }
+.rs.face.tex { background-size: contain; background-position: center bottom; background-repeat: no-repeat; } /* r14：结算黑白小头像未导出 → 用原版 party_* 头像替代 */

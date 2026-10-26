@@ -16,7 +16,9 @@ export const BATTLE_FOV = 41;
 export type Shot = 'idle' | 'unit' | 'enemy';
 export const SHOTS: Record<Shot, { pitch: number; dist: number; ahead: number }> = {
   idle: { pitch: 19.0, dist: 11.0, ahead: 4.7 },
-  unit: { pitch: 35.4, dist: 9.3, ahead: 2.5 },
+  // r13：指令/移动镜头拉近压低——command_3456 里 Joker 身高 ≈185px（1/4 屏高），r12 的 9.3m 下我们的 Q 版模型只有 ≈130px（模型比例 ≠ 原版格子比例），
+  // 按单位屏占比改 7.0m、俯角 33°（推断：以单位大小为准而非格子透视；原版镜头参数未导出）
+  unit: { pitch: 33.0, dist: 7.0, ahead: 1.2 },
   enemy: { pitch: 39.3, dist: 8.7, ahead: 0 },
 };
 const PITCH_DIR_Y = 1.25; // 与原 fitCamera 的 (1,1.25,1) 同俯角
@@ -54,7 +56,7 @@ export class CameraRig {
     const t = SHOTS[this.shot];
     this.ps.pitch += (t.pitch - this.ps.pitch) * k; this.ps.dist += (t.dist - this.ps.dist) * k; this.ps.ahead += (t.ahead - this.ps.ahead) * k;
     const P = this.groundAtCenter(this.cur);
-    const yaw = this.cur.yaw, m = this.dMul;
+    const yaw = this.cur.yaw, m = this.shot === 'unit' ? Math.min(1, this.dMul) : this.dMul; // r13：选中单位时不随玩家缩小而拉远
     const fx = -Math.sin(yaw), fz = -Math.cos(yaw); // 水平前方（相机 → 视点）
     const look = new THREE.Vector3(P.x + fx * this.ps.ahead * m, 0, P.z + fz * this.ps.ahead * m);
     const pr = THREE.MathUtils.degToRad(this.ps.pitch), d = this.ps.dist * m;

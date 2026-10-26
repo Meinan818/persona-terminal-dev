@@ -769,6 +769,7 @@ function refreshHud() {
     $('#app').classList.toggle('fc-open', !fcEl.classList.contains('hidden'));
     // r10：单位操作（指令/移动/选目标）与我方行动演出时隐藏 TURN/目标面板；技能列表打开时显示（原版 command_3429 / skill_list_1717_2）
     const app = $('#app');
+    app.classList.toggle('enemy-ph', busy && vPhase === 'enemy');
     app.classList.toggle('unit-op', ((!!selected && battle.phase === 'player') || (busy && vPhase === 'player')) && skillPhase !== 'list');
     app.classList.toggle('sk-open', skillPhase === 'list');
     app.classList.toggle('sk-target', skillPhase === 'target');
@@ -1650,6 +1651,15 @@ window.addEventListener('keydown', (e) => {
 });
 
 installUnlock();
+// r13：调试工具栏/关卡按钮/旋转按钮/旧指令按钮/单位名牌默认隐藏（原版画面没有），?debug 显示
+if (params.has('debug')) document.body.classList.add('debug');
+$('#hintbar').addEventListener('click', (ev) => {
+  const h = (ev.target as HTMLElement).closest<HTMLElement>('[data-h]')?.dataset.h;
+  if (!h) return;
+  if (h === 'end') { $<HTMLButtonElement>('#endbar button').click(); return; }
+  if (h === 'range') { $('#btn-threat').click(); return; }
+  if (h === 'cycle' && battle.phase === 'player' && !busy) { const al = battle.units.filter((u) => u.side === 'ally' && !u.ko && !u.acted && !u.prop && !u.decoy); if (al.length) { const i = al.findIndex((u) => u.id === selected); onTap({ unit: al[(i + 1) % al.length].id }); } }
+});
 $('#endbar').addEventListener('click', () => { if (busy || battle.phase !== 'player') return; sfx('ui_confirm_2'); endSkillFlow(); skillTag.classList.add('hidden'); selected = null; void play(battle.endPlayerPhase()); }); // r12：结束回合时收起技能流程/名牌（之前选目标未释放时名牌会一直挂到敌方回合）
 $('#party').addEventListener('click', (ev) => {
   const c = (ev.target as HTMLElement).closest('[data-charge]') as HTMLElement | null;

@@ -11,12 +11,14 @@ export const CMD_TEX: Record<'persona' | 'gun' | 'sword' | 'btnY' | 'btnX' | 'bt
   persona: null, gun: null, sword: null, btnY: null, btnX: null, btnA: null,
 };
 import { p5 } from './p5tHud';
+import { hydrateSdf } from './sdfFont';
 export type CmdKey = 'persona' | 'gun' | 'sword';
 const ITEMS: Record<CmdKey, { act: string; btn: 'Y' | 'X' | 'A'; en: string; zh: string; x: number; y: number; w: number; h: number; boxW: number; boxH: number }> = {
   // x/y = 可见牌中心相对头顶（px@720）；w/h = 帧上可见牌尺寸；boxW/H = prefab bg 尺寸 ×0.5 ×(720/1080)
-  persona: { act: 'skill', btn: 'Y', en: 'PERSONA', zh: '使用技能', x: 187, y: -5, w: 205, h: 70, boxW: 240, boxH: 83 },
-  gun: { act: 'gun', btn: 'X', en: 'GUN', zh: '举枪瞄准', x: 135, y: 67, w: 170, h: 55, boxW: 206, boxH: 64 },
-  sword: { act: 'melee', btn: 'A', en: 'SWORD', zh: '近战攻击', x: 170, y: 130, w: 200, h: 60, boxW: 242, boxH: 99 },
+  // r13：按 command_3456 重新量（Joker 头顶 ≈ (632,362)：PERSONA 牌中心 (795,378)、GUN (752,440)、SWORD (800,505)）→ 牌左尖贴住角色右肩
+  persona: { act: 'skill', btn: 'Y', en: 'PERSONA', zh: '使用技能', x: 148, y: 16, w: 205, h: 70, boxW: 240, boxH: 83 },
+  gun: { act: 'gun', btn: 'X', en: 'GUN', zh: '举枪瞄准', x: 106, y: 78, w: 170, h: 55, boxW: 206, boxH: 64 },
+  sword: { act: 'melee', btn: 'A', en: 'SWORD', zh: '近战武器攻击', x: 152, y: 143, w: 200, h: 60, boxW: 242, boxH: 99 },
 };
 export class CommandMenu {
   readonly el: HTMLDivElement;
@@ -30,14 +32,16 @@ export class CommandMenu {
   /** headX/headY = 角色头顶屏幕像素；keys = 可用指令；anchor = 站位格键（换格则重新淡入） */
   show(headX: number, headY: number, keys: CmdKey[], anchor: string, sel: string | null, pxH: number) {
     const u = pxH / 720;
-    const sig = keys.join(',') + '|' + sel;
+    this.el.style.setProperty('--u', String(u)); this.el.classList.remove('hidden'); // 先定字号再画 SDF（否则 calc 无 --u → 16px）
+    const sig = keys.join(',') + '|' + sel + '|' + u.toFixed(3);
     if (sig !== this.shown || anchor !== this.anchorKey) {
       this.el.innerHTML = keys.map((k) => {
         const it = ITEMS[k];
         const tex0 = p5.has(`cmd_${k}`) ? p5.url(`cmd_${k}`) : CMD_TEX[k], tex = tex0 ? new URL(tex0, location.href).href : null, bt = CMD_TEX[`btn${it.btn}` as const];
         return `<div class="cp ${k}${sel === it.act ? ' sel' : ''}${tex ? ' tex' : ''}" data-act="${it.act}" style="--x:${it.x};--y:${it.y};--w:${it.w};--h:${it.h};--bw:${it.boxW};--bh:${it.boxH}${tex ? `;--tex:url(${tex})` : ''}">
-          <i class="btn b${it.btn}"${bt ? ` style="background-image:url(${bt})"` : ''}>${bt ? '' : it.btn}</i><b>${it.en}</b><small>${it.zh}</small><em class="ph">待原版贴图</em></div>`;
+          <i class="btn b${it.btn}"${bt ? ` style="background-image:url(${bt})"` : ''}>${bt ? '' : it.btn}</i><b data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#ffffff" data-out="#000000" data-ow="0.3" data-sp="-6">${it.en}</b><small>${it.zh}</small><em class="ph">待原版贴图</em></div>`;
       }).join('');
+      hydrateSdf(this.el); // r13：英文字样 = 原版 TMP 字体 FOT-Yuruka Std UB（umbra-assets p5t/1_ui/fonts/tmp），白字黑描边；字体对应是推断（按字形比对 command_3456）
       this.el.classList.remove('in'); void this.el.offsetWidth; this.el.classList.add('in');
       this.shown = sig; this.anchorKey = anchor;
     }

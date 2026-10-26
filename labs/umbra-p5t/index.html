@@ -36,6 +36,9 @@
   <div id="banner" class="hidden"></div>
   <div id="toast" class="hidden"></div>
   <div id="result" class="hidden"></div>
+  <!-- r13：原版底部操作提示条（move_3532/command_3429：LB 切换角色 RB / 分析 / 回合结束 / 切换显示范围 / 暂停；敌方回合只有「快进」）。
+       键位图标贴图未导出 → CSS 重建；文字白字黑描边。手机上各项可点（原版是手柄键位）。 -->
+  <div id="hintbar" class="hud"><span data-h="cycle"><i class="k pill">LB</i>切换角色<i class="k pill">RB</i></span><span data-h="analyse"><i class="k lt">LT</i>分析</span><span data-h="end" class="hl"><i class="k view"></i>回合结束</span><span data-h="range"><i class="k dpad"></i>切换显示范围</span><span data-h="pause"><i class="k menu"></i>暂停</span><span data-h="ff" class="ff"><i class="k pill">A</i>快进</span></div>
   <div id="rotate-hint">请横屏游玩</div>
 </div>
 <script type="module" src="./src/main.ts"></script>

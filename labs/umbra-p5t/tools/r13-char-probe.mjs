@@ -10,7 +10,7 @@ for (let i = 0; i < 40; i++) {
   await page.waitForTimeout(2000);
   const s = await page.evaluate(() => { const P = window.__p5t; if (!P) return null; const r = P.rigs; return { size: r.size, ids: [...r.keys()], joker: r.get('joker') ? (r.get('joker').key ?? 'proc') : null, ready: P.charsReady, cover: document.getElementById('loadcover')?.className }; });
   console.log(i, JSON.stringify(s));
-  if (s && s.ready) break;
+  if (s && s.ready) { for (let k=0;k<8;k++){ await page.waitForTimeout(1000); console.log(await page.evaluate(()=>window.__p5t.started+' '+window.__p5t.busy+' '+document.getElementById('loadcover').className)); } break; }
 }
 await page.screenshot({ path: '/tmp/jprobe.png' });
 await browser.close(); await server.close();

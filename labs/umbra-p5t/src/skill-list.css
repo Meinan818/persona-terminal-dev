@@ -78,6 +78,8 @@
 
 /* 单位操作时隐藏 TURN/目标面板（原版行为：command_3429 指令时隐藏；技能列表打开时又显示） */
 #app.unit-op #hud-tl { visibility: hidden; }
+/* r15：指令牌打开时 TURN/目标面板显示（command_3456 / command_3410 可见；2448/3429/1255 不可见——原版两种都有，按用户要求取可见） */
+body:has(#cmd:not(.hidden)) #app.unit-op #hud-tl { visibility: visible; }
 #app.sk-open #actions, #app.sk-open #endbar, #app.sk-open #skills, #app.sk-target #actions, #app.sk-target #endbar { display: none !important; }
 
 /* r10 HUD 对齐 hud_idle_1212（1280×720 量：TURN/目标面板 x≈850–1275 y≈10–135；头像卡 x≈950–1250 底≈690） */

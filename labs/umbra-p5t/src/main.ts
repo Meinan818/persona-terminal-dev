@@ -38,6 +38,7 @@ import type { UnitRig } from './view/chibiRig';
 import { RUN_MS_PER_TILE } from './view/chibiRig';
 import { makeSkull, makeMona, makeShadow } from './view/partyModels';
 import { preloadChar, makeChar, charReady, SPECS } from './view/p5tChar';
+import RESULT_CAM from './view/data/result-cam.json';
 import { SummonDim, skillHit, CASTER_LAYER } from './view/skillFx';
 import { origSkillHit, hasOrigSkillFx, preloadSkillFx, setSkillFxCamera, showPersona, summonAura, PERSONA_OF } from './view/skillFxOrig';
 import { hitstopMs, shake, applyShake, undoShake, spark, updateHitFx, recoil, preloadHitFx, lastSparkKind } from './view/hitFx';
@@ -490,6 +491,23 @@ function coverShield(cover: Vec, from: Vec) {
 }
 let guardTex: THREE.Texture | null = null;
 let guardGeo: THREE.BufferGeometry | null | undefined;
+/** r15：单位是否「躲在掩体后」：相邻掩体格里朝向最近对手最正的那一格（夹角 < ~70°）。返回背离掩体的朝向与探头侧（L/R 判定为推断）。
+ *  选中待操作的我方单位站起来（move_3544：Joker 选中时贴墙站立） */
+function coverPose(u: Unit): { side: 'L' | 'R'; fx: number; fz: number } | null {
+  if (u.ko || u.downed || u.side === 'neutral') return null;
+  if (battle.phase === 'player' && u.side === 'ally' && u.id === selected && !u.acted) return null;
+  const foes = battle.alive(u.side === 'ally' ? 'enemy' : 'ally');
+  if (!foes.length) return null;
+  let foe = foes[0], best = 1e9;
+  for (const f of foes) { const d = Math.abs(f.pos.x - u.pos.x) + Math.abs(f.pos.y - u.pos.y); if (d < best) { best = d; foe = f; } }
+  const vx = foe.pos.x - u.pos.x, vz = foe.pos.y - u.pos.y, vl = Math.hypot(vx, vz) || 1;
+  let pick: Vec | null = null, pd = 0.35;
+  for (const c of adjCovers(u.pos)) { const dx = c.x - u.pos.x, dz = c.y - u.pos.y; const dot = (dx * vx + dz * vz) / vl; if (dot > pd) { pd = dot; pick = c; } }
+  if (!pick) return null;
+  const fx = -(pick.x - u.pos.x), fz = -(pick.y - u.pos.y);
+  const lx = fz, lz = -fx; // 面朝 f 时角色左手方向
+  return { side: vx * lx + vz * lz >= 0 ? 'L' : 'R', fx, fz };
+}
 function adjCovers(p: Vec): Vec[] {
   const out: Vec[] = [];
   for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = { x: p.x + dx, y: p.y + dy }; if (!battle.grid.inBounds(n)) continue; const t = battle.grid.tile(n); if (t === 'half' || t === 'full') out.push(n); }
@@ -954,10 +972,20 @@ function refreshLabels() {
     const showChance = (pf && pf.kind === 'gun' && pf.weak && !pf.lethal) || (aimT && aimChance);
     // r14：CHANCE!! = 原版 attack_CHANCE sprite，贴在目标身上（脸部高度），随目标在屏幕上的大小缩放（command_3456 宽≈0.36×身高、aim_1420_3 同比）
     const chance = showChance ? (p5.has('chance') ? `<img class="chance-i" src="${p5.url('chance')}" alt=""/>` : '<div class="chance">CHANCE!!</div>') : '';
-    const pred = pf ? `<div class="pred"><b>${pf.amount}</b>${pf.lethal ? (p5.has('target_kill') ? p5.img('target_kill', 'sk') : '<i class="sk css"></i>') : ''}</div>` : '';
+    // r15：枪击原版（command_3456 / aim_1420_3）头顶只有心形 HP 数字，不另显示伤害数字（预计伤害 = 心形红段）
+    const pred = pf && (pf.kind !== 'gun' || pf.lethal) ? `<div class="pred">${pf.kind !== 'gun' && !aimT ? `<b>${pf.amount}</b>` : ''}${pf.lethal ? (p5.has('target_kill') ? p5.img('target_kill', 'sk') : '<i class="sk css"></i>') : ''}</div>` : '';
     // r14：头顶心形 = 原版 target_gage_black（黑底）+ target_gage_white（青色填充）/ target_gage_red（被锁定时红色），HP 数字 = 原版 TMP 字体
-    const locked = u.id === previewTarget || aimT;
-    const heart = p5.has('heart_ol') ? `<div class="heart p5h${locked ? ' red' : ''}">${p5.img('heart_ol', 'ol')}${locked ? p5.img('heart_red', 'fill') : '<i class="fill"></i>'}${locked ? `<b data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#68ffe1" data-out="#000000" data-ow="0.3" data-sp="-10">${u.hp}</b>` : ''}</div>` : `<div class="heart"><b>${u.hp}</b></div>`; // 未锁定的敌人只有青色心形、不显示数字（skill_list_1717_2 / predict_1719_5）
+    // r15：心形 = HP 量表（aim_1420_3 放大核对：横向，青色 = 打完剩下的 HP、红色 = 这一击预计扣掉的、暗色 = 已损失；
+    //   锁定时外圈 target_gage_red 红色光圈 + 左上青色 HP 数字）。r14 把 target_gage_red 当成整颗心的填充 → 整颗心变红；命中后又画满格青心 → 看不出掉血。
+    const hv = hpView.get(u.id);
+    if (hv && !busy && performance.now() > hv.hitUntil) hpView.delete(u.id);
+    const hitShow = !!hv && performance.now() < hv.hitUntil;
+    const locked = u.id === previewTarget || aimT || hitShow;
+    const hpNow = shownHp(u), mx = Math.max(1, u.maxHp);
+    const dmgPred = Math.min(hpNow, pf ? pf.amount : hv && !hv.t0 && aimT ? hv.pred : 0);
+    const pc = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 1000) / 10;
+    const cyan = `clip-path:inset(0 ${pc(1 - (hpNow - dmgPred) / mx)}% 0 0)`, red = dmgPred > 0 ? `clip-path:inset(0 ${pc(1 - hpNow / mx)}% 0 ${pc((hpNow - dmgPred) / mx)}%)` : '';
+    const heart = p5.has('heart_ol') ? `<div class="heart p5h${locked ? ' red' : ''}">${locked && p5.has('heart_red') ? p5.img('heart_red', 'ring') : ''}${p5.img('heart_ol', 'ol')}<i class="fill" style="${cyan}"></i>${red ? `<i class="fill pr" style="${red}"></i>` : ''}${locked ? `<b data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#68ffe1" data-out="#000000" data-ow="0.3" data-sp="-10">${hpNow}</b>` : ''}</div>` : `<div class="heart"><b>${hpNow}</b></div>`;
     if (chance) { const ft = g.position.clone().project(viewCam); el.style.setProperty('--uh', String(Math.max(20, (v.y - ft.y) / 2 * h))); }
     const html = u.side === 'enemy'
       ? `${pred}${heart}${chance}${tags}` // P5T：敌人头顶心形 + HP 数字
@@ -968,6 +996,11 @@ function refreshLabels() {
       rg.setHighlight?.(!u.ko && (aimIds.includes(u.id) || (!busy && battle.phase === 'player' && (u.id === selected && !u.acted || u.id === previewTarget))));
       if (!busy) rg.setDowned(u.downed);
       if (!u.ko && rg.pose === 'dead') rg.revive();
+      if (!busy && u.role !== 'shielder') { // r15：掩体后待机 = 原版 HideL/HideR 蹲姿（背靠掩体，探头朝最近的对手一侧）
+        const cv = coverPose(u);
+        (rg as { setCover?: (s: 'L' | 'R' | null) => void }).setCover?.(cv ? cv.side : null);
+        if (cv) rg.faceTo(new THREE.Vector3(g.position.x + cv.fx, 0, g.position.z + cv.fz));
+      }
       if (!busy && u.role === 'shielder' && u.facing) rg.faceTo(new THREE.Vector3(g.position.x + u.facing.x, 0, g.position.z + u.facing.y)); // 盾兵朝向 = 盾的方向
       rg.setDim(u.acted && battle.phase === 'player');
       if (!busy) g.position.y = gh(u.pos);
@@ -1145,7 +1178,8 @@ let aimAnim: { t0: number; dur: number; from: THREE.Vector3; to: THREE.Vector3; 
  * 过肩机位（10-26 r6：我方/敌方同一算法）：按射手当前姿势的实际包围盒（含帽子、手里的枪）求机位，
  * 先试右肩、再试左肩，侧移/后退逐级加大，直到「机位 → 目标胸口」视线不穿过射手自身模型；Joker 身高下与原机位一致（后 1.05、侧 0.5、高 1.05）。
  */
-const AIM_CAM = { back: 1.9, lat: 0.7, h: 0.9, lookY: 0.62 };
+// r15：aim_1420_3 原版射手全身入画、占屏高约 60%、位于画面左 1/3，目标在中间偏右 → 镜头拉远（身后 2.7、右 0.85、头高）
+const AIM_CAM = { back: 2.7, lat: 0.85, h: 0.95, lookY: 0.62 };
 function shoulderCam(attackerId: string, ap: THREE.Vector3, dir: THREE.Vector3, look: THREE.Vector3) {
   const right = new THREE.Vector3(-dir.z, 0, dir.x);
   const g = unitMesh.get(attackerId);
@@ -1181,7 +1215,8 @@ function shoulderCam(attackerId: string, ap: THREE.Vector3, dir: THREE.Vector3, 
     const c = ap.clone().addScaledVector(dir, -b).addScaledVector(right, sd * l).add(new THREE.Vector3(0, AIM_CAM.h * hs, 0));
     if (clear(c)) { to = c; side = sd; back = b; lat = l; break outer; }
   }
-  if (!to) to = ap.clone().addScaledVector(dir, -back).addScaledVector(right, lat).add(new THREE.Vector3(0, AIM_CAM.h * hs + 0.4, 0));
+  // r15：全部候选都被挡（射手贴着全掩体时视线必穿过掩体）→ 用标准机位，掩体交给 setAimSeeThrough 半透（之前回退到 1.05m 贴脑后机位，Joker 后脑勺占半屏）
+  if (!to) { back = Math.max(AIM_CAM.back, half + 0.45); lat = Math.max(AIM_CAM.lat, half * 0.8); to = ap.clone().addScaledVector(dir, -back).addScaledVector(right, lat).add(new THREE.Vector3(0, AIM_CAM.h * hs, 0)); }
   const from = ap.clone().addScaledVector(dir, -back * 2).addScaledVector(right, side * (lat + 0.35)).add(new THREE.Vector3(0, 1.55 * hs, 0));
   return { from, to };
 }
@@ -1189,7 +1224,7 @@ function shoulderCam(attackerId: string, ap: THREE.Vector3, dir: THREE.Vector3, 
 const losRay = new THREE.Raycaster();
 function losBlockedAt(p: THREE.Vector3, t: THREE.Vector3): number | null {
   const d = t.clone().sub(p); const len = d.length(); if (len < 0.05) return null;
-  losRay.set(p, d.divideScalar(len)); losRay.near = 0.05; losRay.far = Math.max(0.1, len - 0.45);
+  losRay.set(p, d.divideScalar(len)); losRay.camera = viewCam as THREE.Camera; losRay.near = 0.05; // r15：Sprite.raycast 需要 camera（否则场景里有 Sprite 时瞄准直接抛错） losRay.far = Math.max(0.1, len - 0.45);
   for (const h of losRay.intersectObject(world, true)) {
     let o: THREE.Object3D | null = h.object, skip = !(h.object as THREE.Mesh).visible || (h.object as THREE.Sprite).isSprite;
     while (o && !skip) { if (o === overlay || o.userData.unit) skip = true; o = o.parent; }
@@ -1295,6 +1330,7 @@ function skillCamStep() {
   viewCam = skillCam; setOrigCamCut(0.4);
 }
 function aimStep() {
+  resultStep();
   if (!aimAnim) return;
   const k = Math.min(1, (performance.now() - aimAnim.t0) / aimAnim.dur), e = 1 - Math.pow(1 - k, 3);
   aimCam.position.lerpVectors(aimAnim.from, aimAnim.to, e);
@@ -1363,7 +1399,16 @@ function actorPing(p: THREE.Vector3) {
 // 敌方回合点屏任意处 = 快进（剩余镜头停顿压到最短）
 window.addEventListener('pointerdown', () => { if (busy && vPhase === 'enemy') { enemyCam.skip = true; document.body.classList.add('enemy-skip'); } }, true);
 const hook = { pauseOn: null as string | null, pauseDelay: 0, paused: false, released: false, resume() { hook.released = true; document.body.classList.remove('frozen'); } }; // 解冻立即生效：物件动画（扫开/开箱）在事件处理中被 await
+/** r15：敌人头顶心形显示的 HP（用户 r14 视频：挨打时心形变红再变回青色，但数字/血量不掉）。
+ *  原因：规则层先结算，u.hp 在演出开始前就是扣血后的值；心形只在锁定时显示数字，命中后解除锁定 → 只剩满格青心，看不到掉血。
+ *  改：演出期间按 damage 事件的 hpLeft 逐次扣（450ms 缩减），命中后保持红心+数字 1.3s；心形青色填充（target_gage_white，「gage」= 血槽）按 HP 比例从上往下缩。 */
+const hpView = new Map<string, { from: number; to: number; t0: number; hitUntil: number; pred: number }>();
+function shownHp(u: Unit) { const v = hpView.get(u.id); if (!v) return u.hp; const k = Math.min(1, (performance.now() - v.t0) / 450); return Math.round(v.from + (v.to - v.from) * (1 - Math.pow(1 - k, 2))); }
 async function play(events: BattleEvent[]) {
+  for (const ev of events) if (ev.type === 'damage') {
+    const v = hpView.get(ev.unitId);
+    if (!v) { const h0 = ev.hpLeft + ev.amount; hpView.set(ev.unitId, { from: h0, to: h0, t0: 0, hitUntil: 0, pred: ev.amount }); } else if (!v.t0) v.pred += ev.amount;
+  }
   busy = true;
   clearOverlay();
   refreshHud();
@@ -1446,7 +1491,10 @@ async function play(events: BattleEvent[]) {
         else if (foeAtk && !params.has('noaim')) await aimShot(e.attackerId, e.targetId, false); // 敌方近战/技能：过肩机位 + 上下黑边，无准星
         break;
       }
-      case 'damage':
+      case 'damage': {
+        const hv = battle.unit(e.unitId); const nowT = performance.now();
+        hpView.set(e.unitId, { from: hv ? shownHp(hv) : e.hpLeft + e.amount, to: e.hpLeft, t0: nowT, hitUntil: nowT + 1300 / SPEED, pred: 0 });
+      }
         // 攻击动作（GunStart→GunFire / Attack / Skill*）播完才结算受击，受击 Damage 播完才往下走（原版 clip 没导出动画事件点 → 以 clip 结束为准）
         // r7：等到攻击动作的原版命中帧（AnimationEvent：GunFire 开火帧 / Attack flag 2 / SkillActStart 末标记）就结算，不再等整段 clip 播完
         if (e.source !== 'triple') await impactRig(lastAttacker, 2600);
@@ -1496,6 +1544,11 @@ async function play(events: BattleEvent[]) {
       case 'explode': flash(e.at, e.radius); popAt(w2v(e.at), 'BOOM!', 'big'); await sleep(300 / SPEED); break;
       case 'penalty': popDamage(e.unitId, '违规!', 'big'); toast(`喇叭禁止「${ACT_NAME[e.action]}」→ 惩罚`); break;
       case 'speakerBan': toast(`喇叭：本回合禁止「${e.bans.map((b) => ACT_NAME[b]).join('、')}」`); break;
+      case 'standUp': { // r15：倒地单位在己方阶段开始起身（规则层 beginSidePhase）→ 先播原版 DownReturn（batch-08 BTL0040）再行动；之前 busy 时不刷新姿势，敌兵趴着开枪
+        const r = rigs.get(e.unitId); if (r) { r.setDowned(false); await (r.settle?.(1400) ?? sleep(400)); }
+        else { const g = unitMesh.get(e.unitId); if (g) { g.rotation.z = 0; g.position.y = gh(battle.unit(e.unitId).pos); } }
+        break;
+      }
       case 'skipTurn': popDamage(e.unitId, ST_NAME[e.reason]); break;
       case 'ko': { sfx('damage_blow_away', 0.7); popDamage(e.unitId, 'KO'); const kr = rigs.get(e.unitId); if (kr) { await settleRig(e.unitId, 1500); kr.die(); await sleep(250 / SPEED); await settleRig(e.unitId, 2500); } else await sleep(200 / SPEED); } fxKeep.delete(e.unitId); break;
       case 'batonPassReady': toast(`${battle.unit(e.koId).name} 倒下：可 Baton Pass 换替补`); break;
@@ -1631,9 +1684,9 @@ function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
     const g = lead ? unitMesh.get(lead.id) : null;
     const staged = g ? stageResult(party, lead!) : null;
     resultCtl = showResultScreen($('#app'), {
-      level: battle.map.id, turns: e.turn, won: true, awards: e.crowns.items.map((i) => ({ ok: i.ok, label: i.label })),
+      level: battle.map.id, turns: e.turn, won: true, band3d: !!staged, awards: e.crowns.items.map((i) => ({ ok: i.ok, label: i.label })),
       party: party.map((u) => ({ id: u.id, name: u.name, persona: PERSONA_NAME[u.id] ?? 'PERSONA', lv: 1 })),
-    }, () => { resultCtl = null; resultHold = false; aimActive = false; viewCam = baseCam(); showResultPlain(e); }, (page) => { if (page === 2 && staged) staged.cut(); });
+    }, () => { resultCtl = null; resultHold = false; resultAnim = null; resultBandMesh?.removeFromParent(); aimActive = false; viewCam = baseCam(); showResultPlain(e); }, (page) => { if (page === 2 && staged) staged.cut(); });
     return;
   }
   showResultPlain(e);
@@ -1641,33 +1694,86 @@ function showResult(e: Extract<BattleEvent, { type: 'result' }>) {
 /** r14：结算 3D 站位 + 原版 Result 动作（result_1610：前排中央一人举枪 ResultFront、后排左右 ResultBackL/R；镜头正面略低、三人占满画面）。
  *  原版结算镜头 A_CA9999_BTL0070 系列与站位数据未导出 → 站位/机位按 result_1610 构图重建；动作 = 角色 GLB 里的原版 BTL0070–0079。
  *  Joker/Skull/Mona 现有 GLB 只有 20 个 clip、无 Result（等 Codex batch-08）→ 退回原版 Idle，并记缺口。 */
+// r15：结算镜头 = 原版 A_CA9999_BTL0070–0073 Timeline 轨道（tools/gen-result-cam.py 解出：相机局部位置/FOV/脚本角 + 轴心 Y 旋转）。
+//   原版相机自身朝向没有轨道 → 推断：水平看向轴心（局部 -Z），脚本角按「水平摇镜」用（静止 6.5°；也可能是 Dutch 滚转，未查明）。
+//   Unity→three 的左右手性：x 与轴心旋转方向的正负号按 result_1610 构图（前排在画面左中、后排在右）选定。
+//   站位：三人同站轴心原点、同朝镜头，后排左右位移来自各自原版 Result clip 的 Jnt_C_Center 平移（BackR/BackL InLoop 自带约 1.2m 后移 + 左右错开）。
+const RCAM = RESULT_CAM as unknown as Record<string, { dur: number; frames: number[][] }>;
+let resultAnim: { P: THREE.Vector3; fwd: THREE.Vector3; t0: number; cut: number } | null = null;
+// 正负号按 result_1610 定：相机在前排右侧（x=+0.66）、摇镜 +6.5° 向左 → 前排在画面左中（≈0.34）、BackR 在最右且更近（≈0.88）、BackL 居中靠后（≈0.76），与原版 Skull/Mona/Joker 构图一致
+const RC_SX = 1, RC_SYAW = 1, RC_SPAN = 1;
+function resultCamFrame(clip: string, t: number) {
+  const c = RCAM[clip]; const f = Math.min(c.frames.length - 1, t * 30); const i = Math.floor(f), k = f - i, A = c.frames[i], B = c.frames[Math.min(c.frames.length - 1, i + 1)];
+  return A.map((v, j) => v + (B[j] - v) * k);
+}
+/** r15：结算红色斜带（ResultLineManager 脚本画的，参数未导出 → 重建）。原版斜带在角色「后面」（result_1610 人物压在红带上），
+ *  之前画在 DOM 层整个盖住 3D 角色 → 改成跟随结算相机的 3D 平面：放在后排角色之后、背景之前，铺满视锥。 */
+let resultBandMesh: THREE.Mesh | null = null;
+function resultBand() {
+  if (resultBandMesh) return resultBandMesh;
+  const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720; const c = cv.getContext('2d')!;
+  const poly = (pts: number[][], fill: string, edge = 0) => { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); if (edge) { c.lineWidth = edge; c.strokeStyle = '#000'; c.stroke(); } c.fillStyle = fill; c.fill(); };
+  // 按 result_1610 量：主带上沿 (0,575)→(1280,95)、下沿 (0,760)→(1280,330)；右上楔形在 money 牌后；左下角一条细带
+  poly([[-40, 590], [1320, 80], [1320, 345], [-40, 780]], '#e60012', 22);
+  poly([[560, 0], [900, 0], [700, 150], [470, 170]], '#e60012', 16);
+  poly([[-40, 440], [380, 330], [400, 360], [-40, 485]], '#e60012', 12);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  resultBandMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
+  resultBandMesh.renderOrder = -1; resultBandMesh.name = 'resultBand';
+  return resultBandMesh;
+}
+function resultStep() {
+  if (!resultAnim || viewCam !== resultCam) { if (resultBandMesh?.parent && !resultHold) resultBandMesh.removeFromParent(); return; }
+  const now = performance.now();
+  let fr: number[];
+  if (resultAnim.cut) {
+    const t = (now - resultAnim.cut) / 1000, d0 = RCAM.ResultCutchange.dur;
+    fr = t < d0 ? resultCamFrame('ResultCutchange', t) : resultCamFrame('ResultCutEndLoop', Math.min(RCAM.ResultCutEndLoop.dur, t - d0));
+  } else {
+    const t = (now - resultAnim.t0) / 1000, d0 = RCAM.ResultIn.dur, dl = RCAM.ResultLoop.dur;
+    fr = t < d0 ? resultCamFrame('ResultIn', t) : resultCamFrame('ResultLoop', (t - d0) % dl);
+  }
+  const [x, y, z, fov, pan, yaw] = fr;
+  const { P, fwd } = resultAnim;
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(fwd.x, fwd.z) + RC_SYAW * THREE.MathUtils.degToRad(yaw));
+  const local = new THREE.Vector3(RC_SX * x, y, z).applyQuaternion(q);
+  resultCam.position.copy(P).add(local);
+  const look = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), RC_SPAN * THREE.MathUtils.degToRad(pan)).applyQuaternion(q);
+  resultCam.lookAt(resultCam.position.clone().add(look));
+  resultCam.fov = fov; resultCam.aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight); resultCam.updateProjectionMatrix();
+  const band = resultBand(); if (!band.parent) scene.add(band);
+  const d = resultCam.position.distanceTo(P) + 2.2, hh = Math.tan(THREE.MathUtils.degToRad(fov / 2)) * d;
+  band.position.copy(resultCam.position).addScaledVector(look.normalize(), d); band.quaternion.copy(resultCam.quaternion); band.scale.set(hh * 2 * resultCam.aspect, hh * 2, 1);
+}
 function stageResult(party: Unit[], lead: Unit) {
   const g0 = unitMesh.get(lead.id)!;
   const fwd = baseCam().position.clone().sub(g0.position).setY(0); // 指向当前俯视镜头一侧
   if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, 1); fwd.normalize();
-  const right = new THREE.Vector3(fwd.z, 0, -fwd.x);
   const la = lastAttacker ? party.find((u) => u.id === lastAttacker && !u.ko) : undefined;
-  const front = la ?? party.find((u) => u.id !== 'joker' && !u.ko) ?? lead; // result_1610：前排 = 打出最后一击的 Skull，Joker 在后排右（推断：最后一击者在前，样本 1）
+  const front = la ?? party.find((u) => u.id === 'skull' && !u.ko) ?? party.find((u) => u.id !== 'joker' && !u.ko) ?? lead; // result_1610：前排 = 打出最后一击的 Skull，Joker 在后排右（推断：最后一击者在前，样本 1）
   const P = (unitMesh.get(front.id) ?? g0).position.clone();
   const order = [front, ...party.filter((u) => u !== front)];
   const slots: ('front' | 'backR' | 'backL')[] = ['front', 'backR', 'backL'];
-  const off = [new THREE.Vector3(0, 0, 0), right.clone().multiplyScalar(0.95).addScaledVector(fwd, -0.9), right.clone().multiplyScalar(-0.75).addScaledVector(fwd, -0.7)];
   const missing: string[] = [];
   order.forEach((u, i) => {
     const g = unitMesh.get(u.id), r = rigs.get(u.id); if (!g) return;
-    g.visible = true; g.position.copy(P).add(off[i]); g.rotation.set(0, 0, 0);
-    const camPos = P.clone().addScaledVector(fwd, 3);
-    if (r) { r.revive(); r.setHighlight?.(false); r.faceTo(new THREE.Vector3(camPos.x, g.position.y, camPos.z)); if (!(r as { playResult?: (s: string) => boolean }).playResult?.(slots[i])) missing.push(u.id); }
+    g.visible = true; g.position.copy(P); g.rotation.set(0, 0, 0);
+    if (r) {
+      r.revive(); r.setHighlight?.(false); (r as { setCover?: (s: null) => void }).setCover?.(null);
+      // 前排 ResultFront clip 的 Jnt_C_Center 自带约 +90° 侧身（root 朝镜头时前排侧对镜头、脸朝画面右）→ 前排 root 转 +75°，
+      //   按 result_1610 前排约 3/4 正面朝镜头、举枪手在画面左校正（角度为目测拟合）
+      const fy = Math.atan2(fwd.x, fwd.z) + (i === 0 ? THREE.MathUtils.degToRad(75) : 0);
+      r.faceTo(P.clone().add(new THREE.Vector3(Math.sin(fy), 0, Math.cos(fy))));
+      if (!(r as { playResult?: (s: string) => boolean }).playResult?.(slots[i])) { missing.push(u.id); g.position.addScaledVector(fwd, -0.9 * (i ? 1 : 0)).addScaledVector(new THREE.Vector3(fwd.z, 0, -fwd.x), i === 1 ? 0.9 : i === 2 ? -0.8 : 0); }
+    }
   });
   for (const u of battle.units) if (!order.includes(u)) { const g = unitMesh.get(u.id); if (g) g.visible = false; }
   for (const el of labelEl.values()) el.style.display = 'none';
   clearOverlay();
-  const look = P.clone().add(new THREE.Vector3(0, 0.62, 0)).addScaledVector(fwd, -0.35).addScaledVector(right, 0.15);
-  resultCam.aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight); resultCam.fov = 40;
-  resultCam.position.copy(P).addScaledVector(fwd, 3.3).addScaledVector(right, -0.3).add(new THREE.Vector3(0, 0.62, 0));
-  resultCam.lookAt(look); resultCam.updateProjectionMatrix(); aimAnim = null; viewCam = resultCam; aimActive = true; resultHold = true; setAimSeeThrough(null);
+  resultAnim = { P: P.clone(), fwd: fwd.clone(), t0: performance.now(), cut: 0 };
+  aimAnim = null; viewCam = resultCam; aimActive = true; resultHold = true; setAimSeeThrough(null); resultStep();
   (window as unknown as { __resultMissing?: string[] }).__resultMissing = missing;
-  return { cut: () => order.forEach((u, i) => (rigs.get(u.id) as { playResult?: (s: string, c: boolean) => boolean } | undefined)?.playResult?.(slots[i], true)) };
+  return { cut: () => { if (resultAnim) resultAnim.cut = performance.now(); order.forEach((u, i) => (rigs.get(u.id) as { playResult?: (s: string, c: boolean) => boolean } | undefined)?.playResult?.(slots[i], true)); } };
 }
 function showResultPlain(e: Extract<BattleEvent, { type: 'result' }>) {
   const r = $('#result');

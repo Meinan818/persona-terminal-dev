@@ -247,6 +247,8 @@ button.small.on { background: #e60012; }
 #party .chgs { order: -1; display: flex; flex-direction: column; gap: 3px; margin-right: 6px; align-self: center; }
 #party .chgs i { font-style: normal; font-size: 9px; font-weight: 800; background: #000; border: 1px solid #fff; padding: 2px 6px; white-space: nowrap; transform: skewX(-12deg); cursor: pointer; }
 #party .chgs i.sel { background: #e60012; }
+/* r15：原版指令/待机画面没有 CHARGE 牌（command_3456、hud_idle_1212）→ 不显示（CHARGE 选择仍在单位信息卡里） */
+#party .chgs { display: none !important; }
 /* P5T 敌人头顶心形 HP */
 .lbl.enemy .heart { position: relative; width: 34px; height: 30px; margin: 0 auto; background: #2fd6c8; clip-path: path('M17 29 C 6 20, 0 14, 0 8 C 0 3, 4 0, 8.5 0 C 12 0, 15 2, 17 5 C 19 2, 22 0, 25.5 0 C 30 0, 34 3, 34 8 C 34 14, 28 20, 17 29 Z'); display: flex; align-items: center; justify-content: center; transform: rotate(-8deg); }
 .lbl.enemy .heart b { font-size: 13px; font-weight: 900; color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; margin-top: -4px; }
@@ -258,7 +260,8 @@ button.small.on { background: #e60012; }
 #aim.fire::after { content: ''; position: absolute; inset: 0; background: #fff; animation: aimFlash .18s ease-out both; }
 @keyframes aimFlash { from { opacity: .85; } to { opacity: 0; } }
 @media (max-height: 430px) { #aim .aimtag { font-size: 22px; } }
-body.aiming .hud, body.aiming #labels > :not(.dmg):not(.aimt) { opacity: 0; transition: opacity .12s; }
+/* r15：aim_1420_3 瞄准时右下头像卡仍在 → 不藏 #party */
+body.aiming .hud:not(#party), body.aiming #labels > :not(.dmg):not(.aimt) { opacity: 0; transition: opacity .12s; }
 body.aiming #labels .dmg { font-size: 1.6em; }
 
 /* ===== P5T 目标框 v2（Hark）：TURN x/上限 黑签 + 白斜框胜利条件（点开 ▼ 看败北条件）+ 黑条剩余敌人 ===== */
@@ -496,6 +499,8 @@ body.enemy-turn #app::after { content: ''; position: absolute; inset: 0; pointer
 body.enemy-turn #actions, body.enemy-turn #skills, body.enemy-turn #forecast { display: none !important; }
 body.enemy-skip #phase::after { content: ' ▶▶'; color: #ffd400; }
 #aim.noret .aimtag { display: none; }
+/* r15：SHOT/Ⓐ 是玩家操作提示，敌方回合过肩镜头不显示（用户 r14 31s 抓到；原版敌回合无按键牌） */
+#aim.foe .aimtag { display: none; }
 
 /* r7：原版 TMP 字体伤害数字（canvas 自绘），弹出：放大 → 回弹 → 上浮淡出 */
 #labels .dmg.sdf { text-shadow: none; animation: sdfpop .95s cubic-bezier(.2,.9,.3,1) forwards; display: flex; align-items: flex-end; }

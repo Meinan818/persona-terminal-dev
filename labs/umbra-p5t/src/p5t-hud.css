@@ -216,7 +216,7 @@ body.result-on .hud, body.result-on #labels, body.result-on #camctl, body.result
 .rs .num { position: absolute; font: italic 900 84px / 1 'Arial Black', Impact, sans-serif; }
 .rs .num.money { left: 18%; top: 18%; }
 .rs .get { position: absolute; right: 6%; top: 30%; font: italic 900 46px / 1 'Arial Black', sans-serif; color: #ffd400; }
-.rs .lbl { position: absolute; left: 12%; top: 34%; font-size: 40px; font-weight: 900; line-height: 1; }
+.rs .lbl { transform: none; text-align: left; white-space: nowrap; position: absolute; left: 12%; top: 34%; font-size: 40px; font-weight: 900; line-height: 1; }
 .p1 .rs.base .num { right: 14%; top: 26%; font-size: 70px; }
 .p1 .rs.base small { position: absolute; left: 12%; bottom: 10%; font: 700 26px / 1 sans-serif; color: #ffd400; }
 .rs.gauge { background: #333; } .rs.gauge i { position: absolute; inset: 0 auto 0 0; background: #e60012; }
@@ -284,3 +284,22 @@ body:not(.debug) .lbl.ally, body:not(.debug) #unit-card .charges, body:not(.debu
 .rs.face.tex { background-size: contain; background-position: center bottom; background-repeat: no-repeat; } /* r14：结算黑白小头像未导出 → 用原版 party_* 头像替代 */
 /* r14 自查（hud_idle_1212 对照）：头像卡 HP/SP 数字字高原版约为我们的 0.77（Mona/Skull 卡同宽时原版字高 ~15px@720，我们 ~20px）→ 70→54，下移补齐基线 */
 body.p5hud #party .gw b { font-size: max(calc(54 * var(--g)), 10px); top: calc(26 * var(--g)); }
+
+/* r15：结算 money 行按 result_1610：¥ 图标右侧大号斜体白数字；GET!! = 金色渐变斜体（原版 TMP 字+渐变材质，未导出 → 重建），压在牌右下角外 */
+.rs.num.money2 { font: italic 900 96px / 1 'Arial Black', Impact, sans-serif; color: #fff; letter-spacing: -4px; transform: rotate(-6deg); transform-origin: left center; white-space: nowrap; z-index: 2; }
+.rs.get2 { left: 1185px; top: 195px; font: italic 900 78px / 1 'Arial Black', Impact, sans-serif; letter-spacing: -2px; transform: rotate(-17deg); white-space: nowrap; z-index: 3;
+  background: linear-gradient(180deg, #fff6b0 0%, #ffd400 45%, #c88a00 70%, #fff3a0 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  -webkit-text-stroke: 3px #5a3a00; filter: drop-shadow(3px 4px 0 #000); }
+/* r15：persona exp 行按 result_1610 只有头像 + 一排原版 brc_hyphen_icon 短横（没有面具名/LV/+EXP 字）；exp 行没有 +EXP 小字 */
+.rs.gauge.hy { background-color: transparent; background-size: 100% 100%; height: 10px !important; margin-top: 4px; }
+.p1 .rs.base .lbl { font-size: 54px; left: 8%; top: 30%; }
+.p1 .rs.base .num { font-size: 92px; right: auto; left: 64%; top: 14%; }
+/* r15：心形 HP 量表（aim_1420_3）：外圈红光 target_gage_red（锁定时）在最底层；黑心 target_gage_black 底；青色/红色两层都用 target_gage_white 做遮罩、按 HP 横向裁切 */
+#labels .lbl.enemy .heart.p5h img.ring { width: calc(198 * var(--u)); height: calc(200 * var(--u)); transform: translate(-48%, -52%); }
+#labels .lbl.enemy .heart.p5h i.fill.pr { background: #ff1428; }
+#labels .lbl.enemy .heart.p5h b { left: 2%; top: -14%; }
+/* r15（用户 19:59）：Ⓐ/Ⓨ/Ⓧ/LB/RB/≡ 是原版手柄键位，网页（触屏/键鼠）都不显示；原版 PC 键鼠提示贴图未在导出里找到 → 一律隐藏，不自绘。
+   指令牌只去圆钮（牌本身可点）；底部提示条只留可点的「回合结束」（网页唯一的结束回合入口，去掉键位图标），其余项（切换角色/分析/显示范围/暂停）隐藏；
+   技能列表左下「确定/返回」同样去掉 A/B 圆钮、保留可点文字。 */
+#cmd .btn, #aim .abtn, #hintbar .k, #keyguide button i { display: none !important; }
+#hintbar span:not([data-h="end"]) { display: none !important; }

@@ -18,7 +18,8 @@ export const SHOTS: Record<Shot, { pitch: number; dist: number; ahead: number }>
   idle: { pitch: 19.0, dist: 11.0, ahead: 4.7 },
   // r13：指令/移动镜头拉近压低——command_3456 里 Joker 身高 ≈185px（1/4 屏高），r12 的 9.3m 下我们的 Q 版模型只有 ≈130px（模型比例 ≠ 原版格子比例），
   // 按单位屏占比改 7.0m、俯角 33°（推断：以单位大小为准而非格子透视；原版镜头参数未导出）
-  unit: { pitch: 33.0, dist: 7.0, ahead: 1.2 },
+  // r15：r14 对照 command_3456 Joker 仍只占屏高 ~20%（原版 ~31%）→ 距离 ×0.65、俯角再压 2°（推断，以单位屏占比为准）
+  unit: { pitch: 31.0, dist: 4.6, ahead: 0.8 },
   enemy: { pitch: 39.3, dist: 8.7, ahead: 0 },
 };
 const PITCH_DIR_Y = 1.25; // 与原 fitCamera 的 (1,1.25,1) 同俯角

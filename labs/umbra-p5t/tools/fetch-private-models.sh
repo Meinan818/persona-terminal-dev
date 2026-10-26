@@ -85,4 +85,9 @@ for key, (glb, tex) in CH.items():
     json.dump(rt, open(os.path.join(od, 'retex.json'), 'w'), indent=1)
     if rt: print(f'     {key}: 换彩色 BaseMap {len(rt)} 张')
 PY
+# r15：batch-08 全量战斗动作（Joker/Skull/Mona 的现有 GLB 只有 20 个 clip；batch-08 各约 80 个，骨骼同名同绑定）→ 瘦动作 GLB
+B8="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_battle/batch-08/anims"
+for p in PC0001_151:joker PC0002_151:skull PC0003_151:mona; do
+  if [ -f "$B8/${p%%:*}.glb" ]; then python3 tools/build-anim-glb.py "$B8/${p%%:*}.glb" "$DST/p5t/${p##*:}_anims.glb"; else echo "miss batch-08/${p%%:*}.glb（跳过，只用 20 个 clip）"; fi
+done
 bash tools/fetch-private-maps.sh

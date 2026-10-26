@@ -34,7 +34,7 @@ export type ClipKey = 'Idle' | 'Run' | 'GunStart' | 'GunLoop' | 'GunFire' | 'Gun
   | 'Personal' | 'ChainFishingStart' | 'ChainFishingLoop' | 'ChainFishingEnd' | 'BombStart' | 'BombLoop' | 'BombEnd'
   | 'ReadyStart' | 'ReadyLoop' | 'ReadyReturn' | 'HideL' | 'HideR'
   | 'ResultFrontIn' | 'ResultFrontInLoop' | 'ResultFrontCutchange' | 'ResultFrontCutEndLoop' | 'ResultBackRInLoop' | 'ResultBackRCutchange' | 'ResultBackRCutEndLoop' | 'ResultBackLInLoop' | 'ResultBackLCutchange' | 'ResultBackLCutEndLoop';
-const LOOPS: ClipKey[] = ['ResultFrontInLoop', 'ResultFrontCutEndLoop', 'ResultBackRInLoop', 'ResultBackRCutEndLoop', 'ResultBackLInLoop', 'ResultBackLCutEndLoop', 'Idle', 'Run', 'GunLoop', 'DownStartLoop', 'DownGroundLoop', 'SkillStartLoop', 'SkillActLoop', 'ChainFishingLoop', 'BombLoop', 'ReadyLoop'];
+const LOOPS: ClipKey[] = ['ResultFrontInLoop', 'ResultFrontCutEndLoop', 'ResultBackRInLoop', 'ResultBackRCutEndLoop', 'ResultBackLInLoop', 'ResultBackLCutEndLoop', 'Idle', 'Run', 'HideL', 'HideR', 'ReadyLoop', 'GunLoop', 'DownStartLoop', 'DownGroundLoop', 'SkillStartLoop', 'SkillActLoop', 'ChainFishingLoop', 'BombLoop', 'ReadyLoop'];
 /** 按住型 base：到时自动收（Loop → End） */
 const HOLD_END: Partial<Record<ClipKey, ClipKey>> = { GunLoop: 'GunEnd', SkillActLoop: 'SkillActEnd', ChainFishingLoop: 'ChainFishingEnd' };
 
@@ -70,7 +70,8 @@ export const SPECS: Record<string, CharSpec> = {
       { file: 'p5t/wp_wp01900.glb', loc: 'Loc_Wp_Sword_R', show: (k) => k === 'Attack' },
     ],
   },
-  skull: { key: 'skull', files: ['p5t/skull.glb'], weapons: wp('gn02000', 'wp02900', HAND.skull) },
+  // r15：result_1610 前排 Skull 举着枪 → ResultFront* 也显示枪（其他角色结算没有帧证据，不加）
+  skull: { key: 'skull', files: ['p5t/skull.glb'], weapons: wp('gn02000', 'wp02900', HAND.skull)!.map((w, i) => (i === 0 ? { ...w, show: (k: ClipKey) => /^Gun|^ResultFront/.test(k) } : w)) },
   mona: { key: 'mona', files: ['p5t/mona.glb'], weapons: wp('gn03000', 'wp03900', HAND.mona) },
   // batch-03：Panther PC0004_151 / Fox PC0005_151 / Queen PC0006_151 / Erina PC0011_000（Queen/Erina 正版武器未导出 → 空手）
   // 武器按原版数据：units.csv 4051(Panther) GunId 4000 / SwordId 20401→PrefabNo 4900（鞭），5051(Fox) GunId 5000 / SwordId 20501→5900（刀）。
@@ -144,6 +145,11 @@ export function preloadChar(key: string): Promise<boolean> {
       const clips = new Map<ClipKey, THREE.AnimationClip>();
       for (const c of g.animations) { const k = clipKey(c.name); if (k && !clips.has(k)) clips.set(k, c); }
       if (!clips.has('Idle')) return false;
+      // r15：batch-08 全量动作（<key>_anims.glb，tools/build-anim-glb.py 由 batch-08 生成）——同名 clip 以 batch-08 为准，新增 HideL/R、Jump*、Ready*、Personal、Result* 等
+      const animFile = file.replace(/\.glb$/, '_anims.glb');
+      if (animFile !== file && await exists(BASE + animFile)) {
+        try { const ga = await new GLTFLoader().loadAsync(BASE + animFile); for (const c of ga.animations) { const k = clipKey(c.name); if (k) clips.set(k, c); } } catch { /* 只用模型自带 clip */ }
+      }
       // ShadeMap：<key>/shade.json（BaseMap 图名 → ShadeMap 文件）；旧 pilot 路径用 LEGACY_SHADE
       const dir = file.replace(/\.glb$/, '/');
       let map: Record<string, string> = {};
@@ -232,7 +238,8 @@ function hullMat(w: number, push = 0) {
 
 /** r14：选中/被锁定单位的红色描边（command_3456 / aim_1420_3：角色外一圈 ~4px@720 的纯红剪影边）。
  *  原版是 URP 的屏幕空间描边（Renderer Feature，shader 源码未导出）→ 重建：背面外扩壳，按裁剪空间法线方向偏移固定像素。 */
-export const RED_OUTLINE = { px: new THREE.Vector2(4 / 1280 * 2, 4 / 720 * 2) };
+// r15：aim_1420_3 / command_3456 实测红边约 7px@720（r14 的 4px 偏细）
+export const RED_OUTLINE = { px: new THREE.Vector2(7 / 1280 * 2, 7 / 720 * 2) };
 let redHull: THREE.MeshBasicMaterial | null = null;
 function redHullMat() {
   if (redHull) return redHull;
@@ -244,7 +251,7 @@ function redHullMat() {
         if ( L > 1e-5 ) gl_Position.xy += ( d / L ) * uOlPx * gl_Position.w;
         // r14 自查：外套/披风是开口薄片，外扩后的背面会在衣服内侧露出 → 整件外套被涂红（command 截图里 Joker 下摆一片红）。
         //   深度往后推 0.12m（视空间），只让轮廓外缘露出，内部被自身正面挡住
-        vec4 pb = projectionMatrix * ( mvPosition + vec4( 0.0, 0.0, -0.12, 0.0 ) ); gl_Position.z = pb.z / pb.w * gl_Position.w; }`);
+        vec4 pb = projectionMatrix * ( mvPosition + vec4( 0.0, 0.0, -0.22, 0.0 ) ); gl_Position.z = pb.z / pb.w * gl_Position.w; }`);
   };
   m.customProgramCacheKey = () => 'p5t-red-hull';
   redHull = m; return m;
@@ -452,7 +459,25 @@ export class P5tRig implements UnitRig {
     this.enqueue((cut ? [`Result${S}Cutchange`] : slot === 'front' ? ['ResultFrontIn'] : []) as ClipKey[]);
     return true;
   }
-  private idleBase(): ClipKey { return this.running ? 'Run' : 'Idle'; }
+  private idleBase(): ClipKey { return this.running ? 'Run' : this.coverK ?? (this.ready && this.act.has('ReadyLoop') ? 'ReadyLoop' : 'Idle'); }
+  private coverK: ClipKey | null = null;
+  private ready = false;
+  private isRestBase() { return this.baseKey === 'Idle' || this.baseKey === 'HideL' || this.baseKey === 'HideR' || this.baseKey === 'ReadyLoop'; }
+  /** r15：贴掩体蹲姿（batch-08 BTL0015/0016 HideL/HideR；enemy_turn_3536_5 原版敌兵背靠木箱蹲着）。side = 探头方向；null = 不在掩体后 */
+  setCover(side: 'L' | 'R' | null) {
+    const k = side ? (`Hide${side}` as ClipKey) : null;
+    const nk = k && this.act.has(k) ? k : null;
+    if (nk === this.coverK) return;
+    this.coverK = nk;
+    if (!this.running && !this.downed && !this.dead && this.isRestBase()) this.setBase(this.idleBase());
+  }
+  /** r15：警戒站姿（BTL0050–0052 ReadyStart→ReadyLoop→ReadyReturn）——当前行动单位（推断：原版选中单位/敌兵行动前抬枪警戒） */
+  setReady(on: boolean) {
+    if (on === this.ready || !this.act.has('ReadyLoop')) { this.ready = on; return; }
+    this.ready = on;
+    if (this.running || this.downed || this.dead || this.coverK || !this.isRestBase() || this.oneShot) return;
+    this.baseKey = this.idleBase(); this.enqueue(on ? ['ReadyStart'] : ['ReadyReturn']);
+  }
   private hold(k: ClipKey): ClipKey { return this.act.has(k) ? k : this.idleBase(); }
   private updateWeapons() {
     const k = this.oneShot ?? this.baseKey;
@@ -472,7 +497,7 @@ export class P5tRig implements UnitRig {
     if (this.downed || this.dead) return;
     if (HOLD_END[this.baseKey]) return;
     if (on && this.oneShot) { this.seq = []; this.oneShot = null; }
-    if (!on && !this.oneShot && this.baseKey === 'Run') { this.baseKey = 'Idle'; this.play('Idle', STOP_FADE); return; }
+    if (!on && !this.oneShot && this.baseKey === 'Run') { this.baseKey = this.idleBase(); this.play(this.baseKey, STOP_FADE); return; }
     this.setBase(this.idleBase());
   }
   aim(target: THREE.Vector3 | null, kind: AimKind = 'gun', ms = 1600) {

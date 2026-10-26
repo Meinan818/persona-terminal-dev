@@ -17,6 +17,8 @@ function base2(b: Box, k: string, inner: string) {
 }
 
 type Box = number[];
+/** 原版录像里实际看到的结算金额（result_1610 = L01 / 原版 1010） */
+const MONEY_SEEN: Record<string, number> = { L01: 160 };
 export const RESULT_TEX: Record<string, string | null> = {
   money_base: null, money_title: null, money_icon: null, exp_base: null, exp_title: null, exp_gauge: null, pexp_base: null, pexp_title: null, face: null,
   item_base: null, item_title: null, item_none: null, turn_base: null, turn_title: null, award_base: null, award_title: null, check: null, next: null, clear: null,
@@ -24,6 +26,8 @@ export const RESULT_TEX: Record<string, string | null> = {
 export interface ResultData {
   level: string; turns: number; awards: { ok: boolean; label: string }[]; won: boolean;
   party: { id: string; name: string; persona: string; lv: number; face?: string }[];
+  /** r15：红色斜带由 3D 层画（在角色之后） */
+  band3d?: boolean;
 }
 const px = (b: Box) => `left:${b[0]}px;top:${b[1]}px;width:${b[2]}px;height:${b[3]}px`;
 function slot(cls: string, b: Box, tex: string | null, inner = '', ph = false) { // r14：不再显示「待原版贴图」占位字
@@ -32,21 +36,23 @@ function slot(cls: string, b: Box, tex: string | null, inner = '', ph = false) {
 export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () => void, onPage?: (page: number) => void): { next: () => void; el: HTMLElement } {
   const p1 = L.p1 as Record<string, Box>, p2 = L.p2 as unknown as Record<string, Box> & { award_rows: { box: Box; text: Box }[] };
   const rw = (L.rewards as Record<string, { money: number; exp: number; personaExp: number }>)[d.level] ?? { money: 0, exp: 0, personaExp: 0 };
+  // r15：金额——stage_rewards.csv 1010 的 Money=60，但原版帧 result_1610 显示 ¥160（差额来源未查明，可能是首通/敌人掉落）→ 有帧证据的关按帧显示
+  const money = MONEY_SEEN[d.level] ?? rw.money;
   const el = document.createElement('div'); el.id = 'rs'; el.className = 'rs-wrap';
+  if (p5.has('rs_hyphen')) el.style.setProperty('--rs-hyphen', `url(${p5.url('rs_hyphen')}) 0 50% / contain`);
   const lines = `<div class="rs-lines"><i style="--r:-18deg;--y:12%"></i><i style="--r:14deg;--y:46%"></i><i style="--r:-9deg;--y:70%"></i><i style="--r:24deg;--y:90%"></i></div>`;
   const page1 = `<div class="rs-page p1">
-    ${base2(p1.money_base, 'money', `<b class="num money">${rw.money.toLocaleString()}</b><span class="get">GET!!</span>`)}${slot('micon', p1.money_icon, T('rs_money_icon', 'money_icon'), T('rs_money_icon', 'money_icon') ? '' : '¥', false)}
+    ${base2(p1.money_base, 'money', '')}${slot('micon', p1.money_icon, T('rs_money_icon', 'money_icon'), T('rs_money_icon', 'money_icon') ? '' : '¥', false)}
+    <b class="rs num money2" style="left:${p1.money_num[0] - 8}px;top:${p1.money_num[1] - 52}px">${money.toLocaleString()}</b><span class="rs get2">GET!!</span>
     ${slot('title', p1.money_title, RESULT_TEX.money_title, '<span>money</span>')}
-    ${base2(p1.exp_base, 'exp', `<span class="lbl">怪盗团 LV.</span><b class="num">1</b><small>+${rw.exp} EXP</small>`)}
+    ${base2(p1.exp_base, 'exp', `<span class="lbl">怪盗团 LV.</span><b class="num">1</b>`)}
     ${slot('title', p1.exp_title, RESULT_TEX.exp_title, '<span>exp</span>')}
-    ${slot('gauge' + (T('rs_lv_base', 'exp_gauge') ? ' lvtex' : ''), p1.exp_gauge, T('rs_lv_base', 'exp_gauge'), `<i style="width:35%${T('rs_lv_white', 'x') ? `;background:url(${T('rs_lv_white', 'x')}) 0 50%/381px 18px no-repeat` : ''}"></i>`, false)}
+    ${slot('gauge' + (T('rs_lv_base', 'exp_gauge') ? ' lvtex' : ''), p1.exp_gauge, T('rs_lv_base', 'exp_gauge'), `<i style="width:82%${T('rs_lv_white', 'x') ? `;background:url(${T('rs_lv_white', 'x')}) 0 50%/381px 18px no-repeat` : ''}"></i>`, false)}
     ${base2(p1.pexp_base, 'personaexp', '')}
     ${slot('title', p1.pexp_title, RESULT_TEX.pexp_title, '<span>persona exp</span>')}
     ${[1, 2, 3].map((i) => { const c = d.party[i - 1]; if (!c) return ''; return `
       ${slot('face', p1[`c${i}_face`], c.face ?? (PORTRAIT[c.id] && p5.has(`party_${PORTRAIT[c.id]}`) ? p5.url(`party_${PORTRAIT[c.id]}`) : RESULT_TEX.face), '', false)}
-      <div class="rs txt pname" style="${px(p1[`c${i}_name`])}">${c.persona}</div>
-      <div class="rs txt plv" style="${px(p1[`c${i}_lv`])}">LV<b>${c.lv}</b></div>
-      ${slot('gauge dash', p1[`c${i}_gauge`], null, `<i style="width:${30 + i * 13}%"></i><small>+${rw.personaExp}</small>`, false)}`; }).join('')}
+      ${slot('gauge hy', p1[`c${i}_gauge`], T('rs_hyphen', 'x'), '', false)}`; }).join('')}
     ${slot('next', p1.next, RESULT_TEX.next, '<i class="btn">A</i><b>继续</b>')}
   </div>`;
   const page2 = `<div class="rs-page p2">
@@ -61,7 +67,7 @@ export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () =>
     ${d.awards.every((a) => a.ok) ? `<div class="rs clear" style="left:1125px;top:900px;width:240px;height:120px">CLEAR!!</div>` : ''}
     ${slot('next', p2.next, RESULT_TEX.next, '<i class="btn">A</i><b>继续</b>')}
   </div>`;
-  el.innerHTML = `<div class="rs-stage">${lines}${page1}${page2}</div>`;
+  el.innerHTML = `<div class="rs-stage">${d.band3d ? '' : lines}${page1}${page2}</div>`; // r15：3D 斜带（main.ts resultBand）时不画 DOM 红线
   host.appendChild(el); document.body.classList.add('result-on');
   const stage = el.querySelector<HTMLElement>('.rs-stage')!;
   const fit = () => { const W = host.clientWidth || innerWidth, H = host.clientHeight || innerHeight, s = H / 1080; stage.style.transform = `translate(${(W - 1920 * s) / 2}px,0) scale(${s})`; };

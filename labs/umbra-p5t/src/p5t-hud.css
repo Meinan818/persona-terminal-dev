@@ -282,3 +282,5 @@ body:not(.debug) .lbl.ally, body:not(.debug) #unit-card .charges, body:not(.debu
 #labels .lbl.enemy .heart.p5h.red b { color: #68ffe1; }
 #labels .lbl .chance-i { position: absolute; left: 50%; top: calc(100% + var(--uh, 120) * 0.12px); width: calc(var(--uh, 120) * 0.38px); transform: translateX(-62%) rotate(-4deg); animation: none; pointer-events: none; }
 .rs.face.tex { background-size: contain; background-position: center bottom; background-repeat: no-repeat; } /* r14：结算黑白小头像未导出 → 用原版 party_* 头像替代 */
+/* r14 自查（hud_idle_1212 对照）：头像卡 HP/SP 数字字高原版约为我们的 0.77（Mona/Skull 卡同宽时原版字高 ~15px@720，我们 ~20px）→ 70→54，下移补齐基线 */
+body.p5hud #party .gw b { font-size: max(calc(54 * var(--g)), 10px); top: calc(26 * var(--g)); }

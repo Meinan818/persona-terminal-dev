@@ -80,6 +80,10 @@ export function playTurnChange(side: 'ally' | 'enemy', speed = 1, host: HTMLElem
   // r12 修正（按原版帧 other_3405 校准，非 prefab 数据）：原值下红色细带 bar_3_image_0 比原版帧高约 12px（720p），
   // 盖住 YOUR TURN 字样下沿；下移 18 单位（1080 画布）后字样完整、红带上沿与原版帧对齐。原因未查明（疑 CanvasScaler/sprite 网格差异）。
   if (side === 'ally') { const b = findByName(root, 'bar_3_image_0'); if (b) b.ap[1] -= 18; }
+  // r13 修正（按原版帧 other_3405，非 prefab 数据）：原版里黑色斜带+YOUR TURN 字样压在红色 X 笔触（bar_0/bar_2）之上、角色卡在最上；
+  // 按 prefab 兄弟顺序绘制时 bar_0/bar_2 后画，把字样盖住（t≈1.0s 只露 "YOUR TUR"）。这里只调层级：bar_3 抬到红笔触之上，character 再在其上。
+  // Unity 端的实际排序来源（Canvas sortingOrder / 子 Canvas）未导出，层级为推断。
+  if (side === 'ally') for (const [n, z] of [['bar_3', 2], ['character', 3]] as const) { const k = findByName(root, n); if (k) k.el.style.zIndex = String(z); }
   // 动画路径相对 GameObject（Animation 组件所在节点）
   const anim = root.kids.find((k) => k.d.n === 'GameObject')!;
   for (const k of anim.kids) k.path = k.d.n, fixPaths(k);

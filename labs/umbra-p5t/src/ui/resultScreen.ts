@@ -68,7 +68,9 @@ export function showResultScreen(host: HTMLElement, d: ResultData, onDone: () =>
   fit(); addEventListener('resize', fit);
   let page = 1;
   el.classList.add('pg1');
+  const t0 = performance.now();
   const next = () => {
+    if (performance.now() - t0 < 700) return; // r13：结算出现前的那次点击/按键不翻页（r12 录像页1只露 0.2s）
     if (page === 1) { page = 2; el.classList.remove('pg1'); el.classList.add('pg2'); return; }
     removeEventListener('resize', fit); el.remove(); document.body.classList.remove('result-on'); onDone();
   };

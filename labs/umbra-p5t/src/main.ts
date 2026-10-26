@@ -1317,7 +1317,7 @@ async function play(events: BattleEvent[]) {
       case 'phaseStart':
         if (e.phase === 'enemy') await startEnemyCam();
         if (e.phase === 'player') { document.body.classList.remove('enemy-skip'); if (!endEnemyCam()) camFocus(null); refreshHud(); } // 我方回合：回到玩家镜头（无存档则对准可行动角色）
-        if (e.phase === 'player' && e.turn > 1) {
+        if (e.phase === 'player' && e.turn >= 1) { // r13：开战第 1 回合也播 YOUR TURN（原版每次我方回合开始都有；第 1 回合是否有按印象推断，参考录像开战段未截到）
           // r12：原版 YOUR TURN（prefab_ui2d_turn_change_ally + turn_start 2.0s，other_3405）；缺贴图回退旧横幅
           if (turnChangeAvailable()) { sfx('ui_confirm_3', 0.8) /* 原版回合切换 SE 未导出，借用 ui_confirm_3 */; await playTurnChange('ally', SPEED); } else { banner(`TURN ${e.turn}`); await sleep(500 / SPEED); }
         }

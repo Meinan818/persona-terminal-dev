@@ -36,6 +36,9 @@ export type ClipKey = 'Idle' | 'Run' | 'GunStart' | 'GunLoop' | 'GunFire' | 'Gun
   | 'ResultFrontIn' | 'ResultFrontInLoop' | 'ResultFrontCutchange' | 'ResultFrontCutEndLoop' | 'ResultBackRInLoop' | 'ResultBackRCutchange' | 'ResultBackRCutEndLoop' | 'ResultBackLInLoop' | 'ResultBackLCutchange' | 'ResultBackLCutEndLoop';
 const LOOPS: ClipKey[] = ['ResultFrontInLoop', 'ResultFrontCutEndLoop', 'ResultBackRInLoop', 'ResultBackRCutEndLoop', 'ResultBackLInLoop', 'ResultBackLCutEndLoop', 'Idle', 'Run', 'HideL', 'HideR', 'ReadyLoop', 'GunLoop', 'DownStartLoop', 'DownGroundLoop', 'SkillStartLoop', 'SkillActLoop', 'ChainFishingLoop', 'BombLoop', 'ReadyLoop'];
 /** 按住型 base：到时自动收（Loop → End） */
+/** r17c：瞄准待命时 GunLoop 定格的归一化时刻（按第一章 M01 aim_1420_3 剪影逐帧比对：Joker GunLoop t=0.30 IoU 0.839，循环里最差 0.672；
+ *  /workspace/work/cal10、cal11）。只标了 Joker，其它角色照常循环。 */
+const AIM_HOLD_T: Record<string, number> = { joker: 0.30 };
 const HOLD_END: Partial<Record<ClipKey, ClipKey>> = { GunLoop: 'GunEnd', SkillActLoop: 'SkillActEnd', ChainFishingLoop: 'ChainFishingEnd' };
 
 export interface CharSpec {
@@ -318,6 +321,7 @@ export class P5tRig implements UnitRig {
   private seq: ClipKey[] = [];
   baseKey: ClipKey = 'Idle';
   private tints: Tint[] = [];
+  private aimHold = false; // r17c：raise() 举枪待命中（开火 aim()/放下 lower() 解除）→ GunLoop 定在 AIM_HOLD_T
   private yaw = 0; private yawT = 0;
   private running = false; private downed = false; private dead = false;
   private aimUntil = 0;
@@ -560,7 +564,7 @@ export class P5tRig implements UnitRig {
   }
   aim(target: THREE.Vector3 | null, kind: AimKind = 'gun', ms = 1600) {
     if (target) this.faceTo(target);
-    this.aimUntil = performance.now() + ms;
+    this.aimUntil = performance.now() + ms; this.aimHold = false;
     if (this.downed || this.dead) return;
     if (kind === 'gun') {
       const already = this.baseKey === 'GunLoop';
@@ -581,12 +585,18 @@ export class P5tRig implements UnitRig {
   raise(target: THREE.Vector3 | null) {
     if (target) this.faceTo(target);
     if (this.downed || this.dead || !this.act.has('GunLoop')) return;
-    this.aimUntil = performance.now() + 36e5;
+    this.aimUntil = performance.now() + 36e5; this.aimHold = true;
     if (this.baseKey === 'GunLoop') return;
     this.baseKey = 'GunLoop'; this.enqueue(['GunStart']);
   }
   /** r17：放下枪（BACK / 退出瞄准）→ update() 里按 HOLD_END 播 GunEnd 回待机 */
-  lower() { if (this.baseKey === 'GunLoop') this.aimUntil = 0; }
+  lower() { this.aimHold = false; if (this.baseKey === 'GunLoop') this.aimUntil = 0; }
+  /** r17c：把当前 GunLoop（及武器 GunLoop）定到归一化时刻 k 并立即求值（标定接口 aimTune.clipT + 瞄准待命定格 AIM_HOLD_T） */
+  gunLoopAt(k: number) {
+    const a = this.act.get('GunLoop'); if (!a || this.cur !== a) return;
+    a.time = k * a.getClip().duration; this.mixer.update(0);
+    for (const w of this.wps) { const wa = w.act?.get('GunLoop'); if (wa && w.mixer) { wa.time = k * wa.getClip().duration; w.mixer.update(0); } }
+  }
   flinch(from?: THREE.Vector3) {
     if (this.dead) return;
     if (from && !this.downed) this.faceTo(from);
@@ -637,3 +647,5 @@ export class P5tRig implements UnitRig {
     this.updateWeapons();
   }
 }
+    const hk = AIM_HOLD_T[this.key];
+    if (this.aimHold && hk != null && !this.oneShot && this.baseKey === 'GunLoop') this.gunLoopAt(hk);

@@ -2541,8 +2541,9 @@ window.__p5t = {
     return { a, b };
   },
   /** r17 机位标定：改 AIM_CAM 后按当前射手/目标重摆过肩机位，返回剪影图对 + 目标投影 */
-  aimTune(cfg: Partial<typeof AIM_CAM> & { yawOff?: number }) {
-    const { yawOff, ...cc } = cfg; Object.assign(AIM_CAM, cc); if (aimIds.length < 2) return null;
+  aimTune(cfg: Partial<typeof AIM_CAM> & { yawOff?: number; clipT?: number }) {
+    const { yawOff, clipT, ...cc } = cfg; Object.assign(AIM_CAM, cc); if (aimIds.length < 2) return null;
+    if (clipT != null) { const r = rigs.get(aimIds[0]) as unknown as { gunLoopAt?: (k: number) => void }; r.gunLoopAt?.(clipT); } // r17c：GunLoop 取帧（0..1 归一化）
     if (yawOff != null) { const r = rigs.get(aimIds[0]) as unknown as { setYaw?: (y: number) => void }; const a = unitMesh.get(aimIds[0])!.position, t = unitMesh.get(aimIds[1])!.position; r.setYaw?.(Math.atan2(t.x - a.x, t.z - a.z) + yawOff * Math.PI / 180); }
     const { pos, look } = aimPose(aimIds[0], aimIds[1]); aimAnim = null;
     aimCam.position.copy(pos); aimCam.fov = AIM_CAM.fov; aimCam.lookAt(look); aimCam.updateProjectionMatrix(); aimCam.updateMatrixWorld(true); aimLook.copy(look);

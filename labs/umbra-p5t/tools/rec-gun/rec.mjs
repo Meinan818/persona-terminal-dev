@@ -17,6 +17,10 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errs = [];
 page.on('pageerror', (e) => errs.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('GL Driver')) errs.push(m.text()); });
+// 素材审计：vite preview 缺文件会回 200 + index.html → 按 content-type 判回退；另记 4xx/5xx 与 requestfailed
+const net = { ok: 0, fallback: [], bad: [], failed: [] };
+page.on('response', (r) => { const u = new URL(r.url()); if (!u.host.startsWith('127.0.0.1')) return; const ct = r.headers()['content-type'] || ''; const p = u.pathname; if (r.status() >= 400) net.bad.push(`${r.status()} ${p}`); else if (ct.includes('text/html') && p !== '/' && !p.endsWith('.html')) net.fallback.push(`${ct} ${p}`); else net.ok++; });
+page.on('requestfailed', (r) => net.failed.push(`${r.failure()?.errorText} ${r.url()}`));
 await page.addInitScript({ path: new URL('./vclock.js', import.meta.url).pathname });
 await page.addInitScript(() => { window.__ff = true; }); // 加载/开场 YOUR TURN 期间不画 WebGL（swiftshader 下自动时钟每秒只走 ~25ms，开场横幅会卡 80s）；录制前关掉
 const t0 = Date.now();
@@ -79,7 +83,7 @@ const tlL10 = [
 ];
 // r17 机位标定：CAL=<json 文件>（[{back,lat,h,lookY,fov,mix}...]）→ 进瞄准后逐组重摆机位、存剪影图对 + 截图，然后退出
 const CAL = process.env.CAL ? JSON.parse(fs.readFileSync(process.env.CAL, 'utf8')) : null;
-const tlCal = CAL && [...tlL01.slice(0, 4), ['f', 1, async () => {
+const tlCal = CAL && [...tlL01.slice(0, 4), ...(process.env.CALT === 'e1' ? [['f', 16, () => P("P.tap({unit:'e1'})"), 'CALT 切目标 e1']] : []), ['f', process.env.CALT === 'e1' ? 20 : 1, async () => {
   const res = [];
   for (const [n, cfg] of CAL.entries()) {
     const r = await page.evaluate((c) => { const f = window.__ff; window.__ff = false; const o = window.__p5t.aimTune(c); window.__ff = f; return o; }, cfg);
@@ -146,3 +150,5 @@ console.log(log.join('\n'));
 console.log('state', await P("return P.battle.units.map(u=>u.id+'@'+u.pos.x+','+u.pos.y+' hp'+u.hp+(u.ko?' KO':'')+(u.downed?' D':'')).join(' | ')"));
 console.log('errors', JSON.stringify(errs.slice(0, 8)));
 await browser.close(); await server.close();
+fs.writeFileSync(`${OUT}/net.json`, JSON.stringify(net, null, 1));
+console.log('NET ok', net.ok, 'fallback', net.fallback.length, 'bad', net.bad.length, 'failed', net.failed.length, JSON.stringify([...net.fallback, ...net.bad, ...net.failed].slice(0, 20)));

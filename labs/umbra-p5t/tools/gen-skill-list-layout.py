@@ -5,7 +5,7 @@ Unity 画布 1920×1080（左上原点、y 向下）里的外接矩形和旋转�
 （1280×720）对得上（黑面板 x92–691 y414–691 vs 帧 160–685/415–690；红色光标 x199–604 y471–502 vs 帧 210–615/466–498；
 说明 y601–634 vs 帧 612–640）。用法：python3 tools/gen-skill-list-layout.py [umbra-assets]"""
 import csv, json, math, sys, os
-UA = sys.argv[1] if len(sys.argv) > 1 else '/workspace/work/umbra-assets'
+UA = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets')))
 W, H = 1920.0, 1080.0
 rows = list(csv.DictReader(open(f'{UA}/p5t/1_ui/ui_layout_v2/screens/skill_list/nodes.csv', encoding='utf-8-sig')))
 by = {r['path']: r for r in rows}

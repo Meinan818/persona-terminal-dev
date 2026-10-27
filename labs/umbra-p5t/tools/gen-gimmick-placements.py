@@ -2,7 +2,7 @@
 """r8：umbra-assets cover_units/gimmick_placements.csv（原版 m_GimmickList）→ src/view/gimmickData.ts。
 引擎格 (x, y) = (stage_x, D-1-stage_z)（同 view/origMap.ts 对齐）。只含坐标/UnitId/朝向，不含美术。"""
 import csv, json, os, sys
-A = os.environ.get('UMBRA_ASSETS', '/workspace/work/umbra-assets')
+A = os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets')))
 P = list(csv.DictReader(open(f'{A}/p5t/1_battle/r7/cover_units/gimmick_placements.csv', encoding='utf-8')))
 U = {r['unit_id']: r for r in csv.DictReader(open(f'{A}/p5t/1_battle/r7/cover_units/gimmick_unit_mapping.csv', encoding='utf-8'))}
 here = os.path.dirname(os.path.abspath(__file__))

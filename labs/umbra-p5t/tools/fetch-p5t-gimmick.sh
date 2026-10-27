@@ -4,7 +4,7 @@
 # 落点数据（StageSettingData.m_GimmickList，只是坐标/UnitId）由 tools/gen-gimmick-placements.py 生成到 src/view/gimmickData.ts（入库）。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SRC="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_battle/r7/cover_units"
+SRC="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_battle/r7/cover_units"
 DST="public/models/private/gimmick"
 mkdir -p "$DST"
 for d in "$SRC"/unit_*/; do

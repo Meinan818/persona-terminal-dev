@@ -4,7 +4,7 @@
 # 只压缩、截到 loop_end（index.csv 原值），不改音量；循环点在 src/view/bgmData.ts。只转 bgmData.ts 用到的曲目。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SRC="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_audio/bgm"
+SRC="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_audio/bgm"
 DST="public/p5t-bgm"
 mkdir -p "$DST"
 for cue in $(grep -o "bgm_0[0-9][0-9]: {" src/view/bgmData.ts | cut -d: -f1 | sort -u); do

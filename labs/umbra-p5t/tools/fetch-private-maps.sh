@@ -4,7 +4,7 @@
 # 需要 GLTF_TOOLS 目录里装好 @gltf-transform/cli（默认 /workspace/work/gltf-tools）。缺文件时游戏回退 Kenney 布景。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-UA="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_battle"
+UA="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_battle"
 SRC="$UA/batch-03/maps"
 DST="public/models/private/maps"
 mkdir -p "$DST"

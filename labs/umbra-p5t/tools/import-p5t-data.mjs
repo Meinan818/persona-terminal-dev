@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const ASSETS = process.argv[2] ?? '/workspace/work/umbra-assets';
+const ASSETS = process.argv[2] ?? process.env.UMBRA_ASSETS ?? new URL('../../../../umbra-assets', import.meta.url).pathname;
 const SRC = join(ASSETS, 'p5t/data');
 const OUT = join(ROOT, 'src/rules/data');
 mkdirSync(OUT, { recursive: true });

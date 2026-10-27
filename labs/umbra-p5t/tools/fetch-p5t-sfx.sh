@@ -4,7 +4,7 @@
 # 只压缩，不剪辑、不改音量。缺文件时游戏静音。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SRC="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_battle/r7/battle_sfx/wav"
+SRC="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_battle/r7/battle_sfx/wav"
 DST="public/p5t-sfx"
 mkdir -p "$DST"
 for f in "$SRC"/*/*.wav; do

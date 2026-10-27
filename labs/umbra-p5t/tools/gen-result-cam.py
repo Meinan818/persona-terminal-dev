@@ -8,7 +8,7 @@
 import json, os, sys, math
 sys.path.insert(0, os.path.dirname(__file__))
 import ca9999_decode as D
-SRC = os.environ.get('CA9999', '/workspace/work/umbra-assets/p5t/1_battle/batch-08/anims/CA9999/json')
+SRC = os.environ.get('CA9999', os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets'))) + '/p5t/1_battle/batch-08/anims/CA9999/json')
 CAM, PIV = 2811360559, 464429447
 out = {}
 for nm in ['A_CA9999_BTL0070_BASE_ResultIn', 'A_CA9999_BTL0071_BASE_ResultLoop', 'A_CA9999_BTL0072_BASE_ResultCutchange', 'A_CA9999_BTL0073_BASE_ResultCutEndLoop']:

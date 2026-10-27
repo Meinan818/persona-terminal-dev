@@ -1,6 +1,6 @@
 # 生成 src/view/p5tAnimEvents.ts：从 umbra-assets 原版 AnimationEvent 表取命中帧（见该文件头注释）
 import csv, json, collections, os
-SRC = os.environ.get('UMBRA_ASSETS', '/workspace/work/umbra-assets') + '/p5t/1_battle/animation_events/events.csv'
+SRC = os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets'))) + '/p5t/1_battle/animation_events/events.csv'
 T = {'Joker': 'joker', 'Skull': 'skull', 'Mona': 'mona', 'Panther': 'panther', 'Fox': 'fox', 'Queen': 'queen', 'Erina': 'erina', 'PantherBrainwashed': 'panther_bw', 'FoxBrainwashed': 'fox_bw', 'Em0001': 'em0001_110', 'Em0001_016': 'em0001_016', 'Em0002_010': 'em0002_010', 'Em0003_010': 'em0003_010', 'Marie': 'marie'}
 ev = collections.defaultdict(dict)
 for r in csv.DictReader(open(SRC)):

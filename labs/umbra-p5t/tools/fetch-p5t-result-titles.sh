@@ -3,7 +3,7 @@
 #   → public/p5t-hud/rst_<名>.png（追加 manifest.json；正版贴图不入游戏 git）。key_titles.csv：sprite 名为原版，界面用途按字样推断。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SRC="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_ui/result/titles/sprites"
+SRC="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_ui/result/titles/sprites"
 DST=public/p5t-hud; mkdir -p "$DST"; [ -f "$DST/manifest.json" ] || echo '{}' > "$DST/manifest.json"
 [ -d "$SRC" ] || { echo "miss $SRC"; exit 0; }
 python3 - "$SRC" "$DST" <<'PY'

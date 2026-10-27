@@ -2,7 +2,7 @@
 """r8：umbra-assets damage_ui（Codex a53ccda）原版 AnimationClip 曲线 + prefab_ui2d_damageview 布局 → src/view/damageClips.ts。
 只是数值（关键帧时间/值/切线、RectTransform），不含贴图。曲线 key = [t, v, inSlope, outSlope]，向量曲线按分量拆开（.x/.y）。"""
 import json, os, csv
-A = os.environ.get('UMBRA_ASSETS', '/workspace/work/umbra-assets') + '/p5t/1_battle/r7/damage_ui'
+A = os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets'))) + '/p5t/1_battle/r7/damage_ui'
 here = os.path.dirname(os.path.abspath(__file__))
 def num(v):
     return 0.0 if v is None else float(v)

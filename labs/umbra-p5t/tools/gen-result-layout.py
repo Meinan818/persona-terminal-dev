@@ -3,7 +3,7 @@
 同 gen-skill-list-layout.py 的父链换算（画布 1920×1080，左上原点）。另附 stage_rewards.csv 里 L01–L09 对应 StageId 的 Money/StageBaseExp/StagePersonaExp。
 贴图全部 serialized_null（运行时绑定，image/battle/result 未导出）→ 游戏里画纯色块占位并标「待原版贴图」。"""
 import csv, json, math, sys, os
-UA = sys.argv[1] if len(sys.argv) > 1 else '/workspace/work/umbra-assets'
+UA = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets')))
 W, H = 1920.0, 1080.0
 rows = list(csv.DictReader(open(f'{UA}/p5t/1_ui/ui_layout_v2/screens/result/nodes.csv', encoding='utf-8-sig')))
 by = {}

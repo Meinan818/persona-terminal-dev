@@ -14,7 +14,7 @@
 """
 import json, struct, glob, os, sys
 
-A = os.environ.get('UMBRA_ASSETS', '/workspace/work/umbra-assets') + '/p5t/1_battle'
+A = os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets'))) + '/p5t/1_battle'
 OUT = os.path.join(os.path.dirname(__file__), '..', 'src', 'view', 'origLighting.ts')
 MISSIONS = ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M07', 'M08', 'M09', 'M10', 'M17']
 DEFAULT_SKY = (0.212, 0.227, 0.259)  # Unity 新建场景默认环境光（附加的 hit 场景里那份），跳过

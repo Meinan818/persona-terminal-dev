@@ -2,7 +2,7 @@
 # r14：局内表现全部换原版（umbra-assets p5t/1_battle/field_fx + pilot/c_battle_hud + d_one_more_allout）→ public/p5t-fieldfx/ 与 public/p5t-hud/（gitignore，正版不入库）
 set -euo pipefail
 cd "$(dirname "$0")/.."
-A="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t"
+A="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t"
 mkdir -p public/p5t-fieldfx public/p5t-hud
 python3 - "$A" <<'PY'
 import sys, json, glob, shutil

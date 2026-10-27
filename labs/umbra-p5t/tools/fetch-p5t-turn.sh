@@ -3,7 +3,7 @@
 # 拷到 public/p5t-turn/<Sprite 名>.webp（已 gitignore）。缺目录时游戏回退旧 CSS 横幅。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SRC="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_ui/turn_transition/sprites"
+SRC="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_ui/turn_transition/sprites"
 DST="public/p5t-turn"
 rm -rf "$DST"; mkdir -p "$DST"
 python3 - "$SRC" "$DST" <<'PY'

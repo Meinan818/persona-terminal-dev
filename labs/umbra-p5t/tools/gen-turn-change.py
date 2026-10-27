@@ -3,7 +3,7 @@
 读 umbra-assets/p5t/1_ui/turn_transition/prefabs/*.json（RectTransform/Image/CanvasGroup/RectMask2D 原值）与 animations/*.json（原版曲线，含切线）。
 turn_text_image 在 prefab 里没有 Image 组件（运行时绑定）→ 绑 YOUR_TURN_YOUR_TURN / ENEMY_TURN_ENEMY（同包里唯一的字样 sprite，推断）。"""
 import json, math, sys, os
-UA = sys.argv[1] if len(sys.argv) > 1 else '/workspace/work/umbra-assets'
+UA = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets')))
 D = f'{UA}/p5t/1_ui/turn_transition'
 def node(n):
     rt = n.get('rect_transform') or {}

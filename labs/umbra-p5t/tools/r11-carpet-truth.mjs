@@ -10,7 +10,7 @@ const { NodeIO } = await imp('@gltf-transform/core');
 const { ALL_EXTENSIONS } = await imp('@gltf-transform/extensions');
 const sharp = (await imp('sharp')).default;
 const src = fs.readFileSync(new URL('../src/view/origMap.ts', import.meta.url), 'utf8');
-const UA = (process.env.UMBRA_ASSETS || '/workspace/work/umbra-assets') + '/p5t/1_battle/batch-03/maps';
+const UA = (process.env.UMBRA_ASSETS || new URL('../../../../umbra-assets', import.meta.url).pathname) + '/p5t/1_battle/batch-03/maps';
 const lvJson = (id) => JSON.parse(fs.readFileSync(new URL(`../src/game/levels/${id}.json`, import.meta.url), 'utf8'));
 export const isRed = (r, g, b) => r > 70 && r > 2.2 * g && r > 2.2 * b;
 const out = {};

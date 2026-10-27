@@ -7,7 +7,9 @@ import json, math, sys, os
 from PIL import Image, ImageDraw, ImageFont
 D, OUT = sys.argv[1:3]
 M = json.load(open(f'{D}/metrics.json'))
-F = '/workspace/work/fonts-src/NotoSansSC.ttf'
+# 标注用中文字体：CJK_FONT 覆盖；旧沙箱 /workspace/work/fonts-src/NotoSansSC.ttf；都没有就用仓库 public/fonts 里的思源系 woff2（Pillow/FreeType 可直接读）
+F = next((p for p in [os.environ.get('CJK_FONT', ''), '/workspace/work/fonts-src/NotoSansSC.ttf',
+                      os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../public/fonts/velvet-sans-sc.woff2')] if p and os.path.exists(p)), None)
 f1, f2, f3 = ImageFont.truetype(F, 22), ImageFont.truetype(F, 17), ImageFont.truetype(F, 28)
 ROWS = ['joker', 'skull', 'mona', 'panther', 'fox', 'queen', 'erina', 'noir', 'crow', 'kasumi']
 NAME = dict(joker='Joker', skull='Skull', mona='Mona（已修正）', panther='Panther', fox='Fox', queen='Queen（已修正）', erina='Erina（已修正）', noir='Noir', crow='Crow', kasumi='Kasumi')

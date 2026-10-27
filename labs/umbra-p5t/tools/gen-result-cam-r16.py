@@ -5,7 +5,7 @@
 FOV 不在 tracks 里 → 沿用 r15 从 typetree 解的 Camera.field of view（同一 clip、同一时间轴）。r15 的「脚本浮点（疑似 Dutch）」不再使用：有了注视点后不需要。
 输出 src/view/data/result-cam.json：cols = camX camY camZ fov aimX aimY aimZ groupYawRad（右手系，30fps）。"""
 import json, os, bisect
-SRC = os.environ.get('CA9999T', '/workspace/work/umbra-assets/p5t/1_battle/batch-08/anims/CA9999/tracks')
+SRC = os.environ.get('CA9999T', os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets'))) + '/p5t/1_battle/batch-08/anims/CA9999/tracks')
 old = json.load(open('src/view/data/result-cam.json'))
 out = {'_': 'r16 cols = camX camY camZ fov aimX aimY aimZ groupYawRad（CA9999 tracks 右手系，相机看向 aim；30fps）'}
 for key in ['ResultIn', 'ResultLoop', 'ResultCutchange', 'ResultCutEndLoop']:

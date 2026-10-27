@@ -5,7 +5,7 @@
   属性签文字 = conditions[AddEffectTypeParam1].NameWordKey（帧：吉欧「触电」、加尔「疾风」、耶哈「绝望」与表一致）；图标类型 = BattleMenuIconType；Range/HitType/HitParam 原样。
 只导出游戏里 data.ts 用到的技能（按 src/rules/data/p5t-skills.json 的英文名→ID）。缺文本的列入 _gaps。"""
 import csv, json, os, re, sys
-UA = sys.argv[1] if len(sys.argv) > 1 else '/workspace/work/umbra-assets'
+UA = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('UMBRA_ASSETS', os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../../umbra-assets')))
 D = f'{UA}/p5t/1_data'
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 word = {r['Id']: r['Word_raw'] for r in csv.DictReader(open(f'{D}/word_database_zh_cn.csv', encoding='utf-8-sig'))}

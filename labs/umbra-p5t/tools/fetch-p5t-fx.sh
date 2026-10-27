@@ -3,7 +3,7 @@
 # → public/p5t-fx/hit/*.webp（gitignore；手机端：WebP 带 alpha，最大 512）。缺文件时游戏回退自制火花。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SRC="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_battle/r7/hit_effects"
+SRC="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_battle/r7/hit_effects"
 DST="public/p5t-fx/hit"
 mkdir -p "$DST"
 python3 - "$SRC" "$DST" <<'PY'

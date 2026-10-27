@@ -4,7 +4,7 @@
 # 必须在 fetch-p5t-hud.sh 之后跑（fetch-p5t-hud.sh 末尾会自动调用本脚本）。2160p 切图宽 > 2048 的按 1/2 缩。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-IMG="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_ui/image"
+IMG="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_ui/image"
 DST="public/p5t-hud"
 [ -d "$IMG" ] || { echo "miss $IMG（跳过：指令/结算/立绘保持占位）"; exit 0; }
 mkdir -p "$DST"; [ -f "$DST/manifest.json" ] || echo '{}' > "$DST/manifest.json"

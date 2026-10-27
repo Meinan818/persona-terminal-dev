@@ -5,7 +5,7 @@
 # 源目录可用 UMBRA_ASSETS 覆盖。超过 2048px 宽的整屏帧（1 MORE 红色斜切 6 帧）按 1/2 缩小存（保持比例；CSS 按原尺寸摆放）。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PILOT="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_battle/pilot"
+PILOT="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_battle/pilot"
 DST="public/p5t-hud"
 rm -rf "$DST"; mkdir -p "$DST"
 # 短名=目录:Sprite 原名（文件名形如 <bundle>__<原名>__<pathid>.png，取第一个匹配）
@@ -99,7 +99,7 @@ print(f'ok   {len(man)} 张 HUD 贴图 -> {dst}/' + (f'；缺 {len(miss)}：' + 
 PY
 
 # r7：原版 TMP SDF 字体（umbra-assets p5t/1_ui/font_sdf_v2）：图集 + 字形表 + 材质（描边/膨胀参数），游戏里按 TMP 着色器公式自绘（src/ui/sdfFont.ts）
-FONTS="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_ui/font_sdf_v2"
+FONTS="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_ui/font_sdf_v2"
 for F in FOT_YURUKASTD_UB_SDF_BattleNumber2 FOT_YURUKASTD_UB_SDF NikkyouSans-mLKax_SDF; do
   if [ -f "$FONTS/$F/atlas.png" ]; then mkdir -p "$DST/font/$F"; cp -f "$FONTS/$F"/{atlas.png,glyphs.json,materials.json,summary.json} "$DST/font/$F/"; echo "ok   font/$F"; else echo "miss font/$F"; fi
 done

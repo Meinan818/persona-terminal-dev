@@ -2,6 +2,13 @@
 
 > ⚠️ **安全：Meinan818/persona-terminal-dev 当前是 PUBLIC，且含原作衍生文件（`labs/umbra-p5t/public` 下模型等、`scripts/p5r-red/reference`）。此仓库须设为 private。** 我们的 GitHub 授权无权改可见性（API：Resource not accessible by integration），需用户本人在 GitHub → Settings → Danger Zone → Change visibility 改为 Private。不要删历史。
 
+## 0. 最新（2026-10-28 01:25 CST，每日续干）
+- 代码 feat/umbra-app-m2 2ed1745：r18 枪击流程——过肩瞄准红描边改「剪影左移投影」（aim_1420_3 逐行实测左侧纯红 22px@720、右侧 0）；瞄准中射手不再被每帧拧回掩体朝向；敌人接 batch-08 全量动作（Em0001_110/610 共用 016 骨骼，121 根同名）；rec-gun 正面特写剪影改取切入首帧。
+- 实测（第一章 M01，参考帧 notes/p5t-ref-video/frames）：过肩瞄准 aim_1420_3 位置误差 ≤1.3%、高度 1.3%、剪影 IoU 0.850（参考剪影为手工描点 = guessed）；暴击特写 hit_1422 位置误差 ≤1.6%、高度 0.7%（参考只有手画框，未算 IoU）；开火 hit_1304 位置误差 ≤3.6%，但原版是 Skull 开枪、我方是 Joker → 不算同刻对比。
+- 剩余差距：导航员吐槽框（等 Codex R7b 台词表）、我方 BACK 牌原版此帧未显示待核、测试布景机位/地面与原版不同站位、Skull 同刻开火对比未做。
+- Codex：R6a–d 验收通过；R7（镜头组件实例/导航员台词/敌人全量动作/结算表情）已派。
+- ⚠️ 本轮发现另一个 Hark 会话同时在改同一工作区（提交 5a9a820 r17c、/workspace/work/recgun_r17d、refvid-user），接手先 git log/status，避免互相覆盖。
+
 ## 1. 项目目标
 - UMBRA = 1:1 还原《女神异闻录5 战略版》(P5T) 战斗，网页 + 安卓。
 - 皮肤顺序：**红 P5 优先** → P4 黄 → P3 蓝 → P3R 粉。

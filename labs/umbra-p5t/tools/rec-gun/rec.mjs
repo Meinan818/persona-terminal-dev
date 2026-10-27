@@ -53,22 +53,23 @@ const SK = (id, name, eff) => `const j=P.battle.unit('joker');const z=P.battle.u
 const RESET = "for(const u of P.battle.units){if(u.side==='ally'){u.acted=false;u.moved=false;u.sp=u.maxSp;u.oneMore=false;}else{u.downed=false;}};try{document.querySelector('#cmd')?.classList.add('hidden');}catch(e){};P.play([]);";
 const CLR = "for(const u of P.battle.units){u.oneMore=false;if(u.side!=='ally')u.downed=false;};P.play([]);"; // 布景：吉欧/加尔击倒 → 1 MORE 会锁定当前角色，录像要换人 → 清掉
 // r17：e1(3,11) 无掩体（CHANCE → CRITICAL 正面特写）、e2(5,11) GUARD（贴 (4,10)/(6,10) 全掩体；默认锁定 = 最近 = e2）
-const MK = (tag) => async () => { const r = await page.evaluate(() => { const f = window.__ff; window.__ff = false; const o = { m: window.__p5t.maskOf('joker'), c: window.__p5t.aimCardRects() }; window.__ff = f; return o; }); if (r.m) for (const k of ['a', 'b']) fs.writeFileSync(`${OUT}/mask_${tag}_${k}.png`, Buffer.from(r.m[k].split(',')[1], 'base64')); fs.writeFileSync(`${OUT}/cards_${tag}.json`, JSON.stringify(r.c)); };
+const MK = (tag, tid) => async () => { const r = await page.evaluate((tid) => { const f = window.__ff; window.__ff = false; const o = { m: window.__p5t.maskOf('joker'), t: tid ? window.__p5t.maskOf(tid) : null, c: window.__p5t.aimCardRects() }; window.__ff = f; return o; }, tid); if (r.m) for (const k of ['a', 'b']) fs.writeFileSync(`${OUT}/mask_${tag}_${k}.png`, Buffer.from(r.m[k].split(',')[1], 'base64')); if (r.t) for (const k of ['a', 'b']) fs.writeFileSync(`${OUT}/tmask_${tag}_${k}.png`, Buffer.from(r.t[k].split(',')[1], 'base64')); fs.writeFileSync(`${OUT}/cards_${tag}.json`, JSON.stringify(r.c)); };
 const tlL01 = [
   ['f', 15, () => P("P.play([{type:'phaseStart',phase:'player',turn:1}])"), '开战'],
   ['idle', 8, () => P("P.select('joker')"), 'select joker'],
   ['f', 30, () => click('#cmd .gun'), 'joker GUN（自动锁定 e2）'],
-  ['f', 24, MK('aimE2'), 'mask aim e2'],
+  ['f', 24, MK('aimE2', 'e2'), 'mask aim e2'],
   ['f', 16, () => P("P.tap({unit:'e1'})"), '切目标 e1'],
   ['f', 20, MK('aimE1'), 'mask aim e1'],
   ['f', 16, () => P("P.tap({unit:'e2'})"), '切回 e2'],
   ['f', 30, () => click('#aim .aimcard.shot'), 'SHOT → 打 GUARD e2'],
-  ['f', 16, MK('fireE2'), 'mask fire e2'],
+  ['f', 16, MK('fireE2', 'e2'), 'mask fire e2'],
   ['idle', 10, () => P(RESET + "setTimeout(()=>P.select('joker'),50);"), '重置行动 + select joker'],
   ['f', 30, () => click('#cmd .gun'), 'joker GUN 第 2 枪'],
   ['f', 30, () => P("P.tap({unit:'e1'})"), '切目标 e1'],
   ['f', 30, () => P("P.tap({unit:'e1'})"), '再点 e1 → 开火（CRITICAL 正面特写）'],
-  ['f', 150, null, 'done'],
+  ['f', 6, MK('crit'), 'mask crit（正面特写中）'],
+  ['f', 144, null, 'done'],
 ];
 const tlL10 = [
   ['f', 10, () => P("P.play([{type:'phaseStart',phase:'player',turn:1}])"), 'L10 开战 YOUR TURN'],
@@ -127,7 +128,7 @@ while (k < tl.length && i <= TO) {
   const ta = Date.now();
   await ev(() => window.__vc.step(1000 / 30));
   const tb = Date.now();
-  if (!ff) await page.screenshot({ path: `${OUT}/f${String(i).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 92 });
+  if (!ff) await page.screenshot({ path: `${OUT}/f${String(i).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 92, timeout: 120000 });
   if (!ff && i % 10 === 0) console.log('t', i, tb - ta, Date.now() - tb);
   if (process.env.ZLOG && [0,30,59,61,70,80,100,200,300].includes(i)) console.log('Z', i, await page.evaluate(() => { const r = window.__p5t.rig; return [r.cur.zoom.toFixed(3), r.tgt.zoom.toFixed(3), innerWidth, innerHeight].join(' '); }));
   i++; since++;

@@ -1265,8 +1265,8 @@ const gunTid = () => (gunAim ? gunAim.targets[gunAim.idx] : null);
  */
 // r15：aim_1420_3 原版射手全身入画、占屏高约 60%、位于画面左 1/3，目标在中间偏右 → 镜头拉远（身后 2.7、右 0.85、头高）
 // r17：按 o_aim.png（54.75s）/ o_t1（54.85s）重量：射手包围盒中心 (0.324,0.600)、高 0.66 屏（头顶 195px、衣摆 ≈670px@720）、目标在画面中偏右 → 机位见下（tools/rec-gun 实测迭代）
-// r17b：标定 cal4#6（/workspace/work/cal4/cal.json n=6）
-const AIM_CAM = { back: 2.4, lat: 1.25, h: 0.95, lookY: 0.45, fov: 34, mix: 0.28 };
+// r17b：在原版 M01 上按第一章 aim_1420_3 重标（/workspace/work/cal7 #12 = cal8 #0：剪影中心误差 0.026/0.020、高度 0.010、IoU 0.820）；cal4#6 是按 DLC 帧标的，作废
+const AIM_CAM = { back: 2.8, lat: 1.3, h: 0.95, lookY: 0.45, fov: 34, mix: 0.28 };
 const SWOOP_MS = 250; // r17b：原版快速硬切感（0.25–0.5s 内到位）
 function shoulderCam(attackerId: string, ap: THREE.Vector3, dir: THREE.Vector3, look: THREE.Vector3) {
   const right = new THREE.Vector3(-dir.z, 0, dir.x);
@@ -1406,7 +1406,7 @@ function camOrbit(center: THREE.Vector3, pos: THREE.Vector3, look: THREE.Vector3
   aimAnim = { t0: performance.now(), dur: Math.max(1, ms), step };
 }
 /** r17：开火镜头（o_aim → o_hit，sheet_b 第 9–10 帧：SHOT/BACK 收起后约 0.25s 内机位后拉、升高，射手缩到约 0.37 屏高，目标留在画面中偏右上） */
-const FIRE_CAM = { pull: 1.7, up: 0.55, ms: 260, lookDy: 0, fov: 34, latK: 1 };
+const FIRE_CAM = { pull: 1.7, up: 0.55, ms: 260, lookDy: 0, fov: 34, latK: 1, lookMix: 0 };
 let lastFire: { aid: string; tid: string | null; p0: THREE.Vector3; look: THREE.Vector3 } | null = null;
 function fireEnd(aid: string, p0: THREE.Vector3, look0: THREE.Vector3) {
   // r17b：机位相对射手分解为 后退(沿 -dir)/侧移(right)/高度 → 后退×pull、侧移×latK、高度+up（hit_1304：射手几乎居中、目标在其右上）
@@ -1414,7 +1414,8 @@ function fireEnd(aid: string, p0: THREE.Vector3, look0: THREE.Vector3) {
   const dir = look0.clone().sub(c).setY(0).normalize(), right = new THREE.Vector3(-dir.z, 0, dir.x), rel = p0.clone().sub(c);
   const bk = rel.dot(dir), lt = rel.dot(right);
   const p1 = c.clone().addScaledVector(dir, bk * FIRE_CAM.pull).addScaledVector(right, lt * FIRE_CAM.latK).add(new THREE.Vector3(0, rel.y + FIRE_CAM.up, 0));
-  return { p1, look: look0.clone().add(new THREE.Vector3(0, FIRE_CAM.lookDy, 0)) };
+  const lk = look0.clone().lerp(new THREE.Vector3(c.x, look0.y, c.z), FIRE_CAM.lookMix).add(new THREE.Vector3(0, FIRE_CAM.lookDy, 0)); // lookMix：注视点向射手（同高）偏移
+  return { p1, look: lk };
 }
 function fireCam(aid: string, tid: string | null = null) {
   const a = unitMesh.get(aid); if (!a) return;
@@ -2543,7 +2544,7 @@ window.__p5t = {
     const { yawOff, ...cc } = cfg; Object.assign(AIM_CAM, cc); if (aimIds.length < 2) return null;
     if (yawOff != null) { const r = rigs.get(aimIds[0]) as unknown as { setYaw?: (y: number) => void }; const a = unitMesh.get(aimIds[0])!.position, t = unitMesh.get(aimIds[1])!.position; r.setYaw?.(Math.atan2(t.x - a.x, t.z - a.z) + yawOff * Math.PI / 180); }
     const { pos, look } = aimPose(aimIds[0], aimIds[1]); aimAnim = null;
-    aimCam.position.copy(pos); aimCam.fov = AIM_CAM.fov; aimCam.lookAt(look); aimCam.updateProjectionMatrix(); aimLook.copy(look);
+    aimCam.position.copy(pos); aimCam.fov = AIM_CAM.fov; aimCam.lookAt(look); aimCam.updateProjectionMatrix(); aimCam.updateMatrixWorld(true); aimLook.copy(look);
     const tg = unitMesh.get(aimIds[1])!, th = rigs.get(aimIds[1])?.height ?? 1.1; const tv = tg.position.clone().add(new THREE.Vector3(0, th / 2, 0)).project(aimCam);
     const rr = rigs.get(aimIds[0]) as unknown as { baseKey?: string; oneShot?: string; cur?: THREE.AnimationAction };
     return { m: (this as { maskOf: (id: string) => unknown }).maskOf(aimIds[0]), tgt: [(tv.x + 1) / 2, (1 - tv.y) / 2], st: [rr?.baseKey, rr?.oneShot, rr?.cur?.getClip().name] };

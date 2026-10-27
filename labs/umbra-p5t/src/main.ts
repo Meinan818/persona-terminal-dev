@@ -1265,7 +1265,9 @@ const gunTid = () => (gunAim ? gunAim.targets[gunAim.idx] : null);
  */
 // r15：aim_1420_3 原版射手全身入画、占屏高约 60%、位于画面左 1/3，目标在中间偏右 → 镜头拉远（身后 2.7、右 0.85、头高）
 // r17：按 o_aim.png（54.75s）/ o_t1（54.85s）重量：射手包围盒中心 (0.324,0.600)、高 0.66 屏（头顶 195px、衣摆 ≈670px@720）、目标在画面中偏右 → 机位见下（tools/rec-gun 实测迭代）
-const AIM_CAM = { back: 2.7, lat: 0.85, h: 0.95, lookY: 0.62, fov: 34, mix: 0 };
+// r17b：标定 cal4#6（/workspace/work/cal4/cal.json n=6）
+const AIM_CAM = { back: 2.4, lat: 1.25, h: 0.95, lookY: 0.45, fov: 34, mix: 0.28 };
+const SWOOP_MS = 250; // r17b：原版快速硬切感（0.25–0.5s 内到位）
 function shoulderCam(attackerId: string, ap: THREE.Vector3, dir: THREE.Vector3, look: THREE.Vector3) {
   const right = new THREE.Vector3(-dir.z, 0, dir.x);
   const g = unitMesh.get(attackerId);
@@ -1424,12 +1426,12 @@ async function aimShot(attackerId: string, targetId: string, _reticle = true) {
   if (dir.lengthSq() < 1e-4) return;
   const { pos, look } = aimPose(attackerId, targetId);
   if (aimActive && viewCam === aimCam) camOrbit(a.position, pos, look, 280 / SPEED);
-  else camSwoop(pos, look, AIM_CAM.fov, 400 / SPEED);
+  else camSwoop(pos, look, AIM_CAM.fov, SWOOP_MS / SPEED);
   aimActive = true; aimFiring = false; document.body.classList.add('aiming');
   const ov = $('#aim'); ov.classList.remove('hidden', 'fire', 'on');
   aimIds = [attackerId, targetId]; labelEl.get(targetId)?.classList.add('aimt');
   rigs.get(attackerId)?.raise?.(t.position);
-  await sleep(400 / SPEED + 380 / SPEED); // 飞入 0.4s + 举枪瞄准停留（原版敌兵瞄准约 0.4s，按录像目估）
+  await sleep(SWOOP_MS / SPEED + 380 / SPEED); // 飞入 0.25s + 举枪瞄准停留（原版敌兵瞄准约 0.4s，按录像目估）
 }
 /** r11：技能列表/选目标期间切到原版式透视镜头；平滑跟随光标所在技能的目标。离开技能流程 → 回到俯视镜头 */
 function skillCamStep() {
@@ -2142,12 +2144,12 @@ function startGunAim(): boolean {
   setTimeout(() => {
     if (gunAim !== ga) return;
     const t = gunTid()!; const { pos, look } = aimPose(ga.sid, t);
-    camSwoop(pos, look, AIM_CAM.fov, 400 / SPEED);
+    camSwoop(pos, look, AIM_CAM.fov, SWOOP_MS / SPEED);
     document.body.classList.add('aiming');
     aimIds = [ga.sid, t]; labelEl.get(t)?.classList.add('aimt'); aimChance = gunAimChance(ga.sid, t);
     rigs.get(ga.sid)?.raise?.(unitMesh.get(t)!.position);
     const ov = $('#aim'); ov.classList.remove('hidden', 'fire', 'on');
-    setTimeout(() => { if (gunAim !== ga) return; ga.ready = true; ov.classList.add('on'); refreshAll(); }, 400 / SPEED);
+    setTimeout(() => { if (gunAim !== ga) return; ga.ready = true; ov.classList.add('on'); refreshAll(); }, SWOOP_MS / SPEED);
     refreshAll();
   }, 100 / SPEED);
   return true;

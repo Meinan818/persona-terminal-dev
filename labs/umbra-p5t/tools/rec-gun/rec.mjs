@@ -88,7 +88,26 @@ const tlCal = CAL && [...tlL01.slice(0, 4), ['f', 1, async () => {
   }
   fs.writeFileSync(`${OUT}/cal.json`, JSON.stringify(res));
 }, 'calibrate'], ['f', 1, null, 'done']];
-const tl = tlCal || ((process.env.LEVEL || 'L01') === 'L10' ? tlL10 : tlL01);
+// r17b：FCAL=<json>（[{pull,up,lookDy,fov}...]）→ SHOT 后 10 帧逐组摆开火镜头终点，存射手(fN_a/b)/目标(tN_a/b)剪影；RCAL=<json>（FRONT_CAM 组）→ 瞄准 e1 时逐组摆正面特写机位，存 rN_a/b
+const wr = (n, d) => fs.writeFileSync(`${OUT}/${n}.png`, Buffer.from(d.split(',')[1], 'base64'));
+const FCAL = process.env.FCAL ? JSON.parse(fs.readFileSync(process.env.FCAL, 'utf8')) : null;
+const tlF = FCAL && [...tlL01.slice(0, 8), ['f', 10, async () => {
+  for (const [n, cfg] of FCAL.entries()) {
+    const r = await page.evaluate((c) => { const f = window.__ff; window.__ff = false; const o = window.__p5t.fireTune(c); window.__ff = f; return o; }, cfg);
+    if (!r) { console.log('fireTune null'); continue; }
+    wr(`f${n}_a`, r.a.a); wr(`f${n}_b`, r.a.b); if (r.t) { wr(`t${n}_a`, r.t.a); wr(`t${n}_b`, r.t.b); }
+  }
+  fs.writeFileSync(`${OUT}/fcal.json`, JSON.stringify(FCAL));
+}, 'fire calibrate'], ['f', 1, null, 'done']];
+const RCAL = process.env.RCAL ? JSON.parse(fs.readFileSync(process.env.RCAL, 'utf8')) : null;
+const tlR = RCAL && [...tlL01.slice(0, 5), ['f', 12, async () => {
+  for (const [n, cfg] of RCAL.entries()) {
+    const r = await page.evaluate((c) => { const f = window.__ff; window.__ff = false; const o = window.__p5t.frontTune('joker', 'e1', c); window.__ff = f; return o; }, cfg);
+    if (r) { wr(`r${n}_a`, r.a); wr(`r${n}_b`, r.b); }
+  }
+  fs.writeFileSync(`${OUT}/rcal.json`, JSON.stringify(RCAL));
+}, 'front calibrate'], ['f', 1, null, 'done']];
+const tl = tlF || tlR || tlCal || ((process.env.LEVEL || 'L01') === 'L10' ? tlL10 : tlL01);
 let i = 0, k = 0, since = 0, idleRun = 0, ff = null;
 const log = [];
 const tStart = Date.now();

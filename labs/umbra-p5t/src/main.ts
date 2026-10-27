@@ -1353,10 +1353,7 @@ async function stepBackToCover() {
  *  时序：切入后等原版 GunFire 开火帧（impactRig）+0.12s → 硬切回过肩机位（hit_1422_8），命中与 CRITICAL!! 在过肩机位里出。触发 = 目标无掩体（CHANCE），仅 1 个正样本，标「推断」。 */
 async function frontCloseUp(aid: string, tid: string) {
   const a = unitMesh.get(aid), t = unitMesh.get(tid); if (!a || !t) return;
-  const dir = t.position.clone().sub(a.position).setY(0).normalize(), right = new THREE.Vector3(-dir.z, 0, dir.x);
-  const h = rigs.get(aid)?.height ?? 1.1;
-  const look = a.position.clone().addScaledVector(right, FRONT_CAM.lookSide).add(new THREE.Vector3(0, h * FRONT_CAM.lookH, 0));
-  const pos = a.position.clone().addScaledVector(dir, FRONT_CAM.dist).addScaledVector(right, FRONT_CAM.side).add(new THREE.Vector3(0, h * FRONT_CAM.h, 0));
+  const { pos, look } = frontPose(aid, tid)!;
   const keep = { p: aimCam.position.clone(), q: aimCam.quaternion.clone(), fov: aimCam.fov, look: aimLook.clone() };
   aimAnim = null; aimCam.position.copy(pos); aimCam.fov = FRONT_CAM.fov; aimCam.lookAt(look); aimCam.updateProjectionMatrix();
   setAimSeeThrough(pos, look, a.position.y);
@@ -1369,7 +1366,17 @@ async function frontCloseUp(aid: string, tid: string) {
   aimCam.position.copy(keep.p); aimCam.quaternion.copy(keep.q); aimCam.fov = keep.fov; aimCam.updateProjectionMatrix(); aimLook.copy(keep.look);
   setAimSeeThrough(keep.p, keep.look, t.position.y);
 }
-const FRONT_CAM = { dist: 1.55, side: 0.2, h: 0.55, lookSide: 0.32, lookH: 0.6, fov: 40 };
+// r17b：hit_1422 重看——枪口指向画面左、Joker 脸朝镜头 → 机位在瞄准线的「射手左侧」（-right，GunLoop 身体正面朝 -right，o_aim 过肩看到的是背），
+// 不是 r17 的瞄准线正前方（那样枪口直指镜头、只看到侧面举枪，f00344）。dist=沿 -right 距离、fwd=沿瞄准方向、look 偏向枪那侧让射手落在画面右半。
+const FRONT_CAM = { dist: 1.3, fwd: 0.35, h: 0.75, lookFwd: 0.4, lookH: 0.7, fov: 40 };
+function frontPose(aid: string, tid: string) {
+  const a = unitMesh.get(aid), t = unitMesh.get(tid); if (!a || !t) return null;
+  const dir = t.position.clone().sub(a.position).setY(0).normalize(), right = new THREE.Vector3(-dir.z, 0, dir.x);
+  const h = rigs.get(aid)?.height ?? 1.1;
+  const look = a.position.clone().addScaledVector(dir, FRONT_CAM.lookFwd).add(new THREE.Vector3(0, h * FRONT_CAM.lookH, 0));
+  const pos = a.position.clone().addScaledVector(right, -FRONT_CAM.dist).addScaledVector(dir, FRONT_CAM.fwd).add(new THREE.Vector3(0, h * FRONT_CAM.h, 0));
+  return { pos, look };
+}
 const easeIO = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const easeOut = (k: number) => 1 - Math.pow(1 - k, 3);
 /** r17：从当前画面镜头快速飞入过肩机位（o_011→o_015：俯视 → 过肩约 0.4s 一气呵成，无中途远景机位 → 去掉 r16 开火前那帧空白紫屏：旧版从身后 5m 外的 from 机位起推，常落在建筑体内） */
@@ -1399,14 +1406,19 @@ function camOrbit(center: THREE.Vector3, pos: THREE.Vector3, look: THREE.Vector3
   aimAnim = { t0: performance.now(), dur: Math.max(1, ms), step };
 }
 /** r17：开火镜头（o_aim → o_hit，sheet_b 第 9–10 帧：SHOT/BACK 收起后约 0.25s 内机位后拉、升高，射手缩到约 0.37 屏高，目标留在画面中偏右上） */
-const FIRE_CAM = { pull: 1.7, up: 0.55, ms: 260 };
-function fireCam(aid: string) {
-  const a = unitMesh.get(aid); if (!a) return;
-  const c = a.position.clone();
-  const p0 = aimCam.position.clone();
+const FIRE_CAM = { pull: 1.7, up: 0.55, ms: 260, lookDy: 0, fov: 34 };
+let lastFire: { aid: string; tid: string | null; p0: THREE.Vector3; look: THREE.Vector3 } | null = null;
+function fireEnd(aid: string, p0: THREE.Vector3, look0: THREE.Vector3) {
+  const c = unitMesh.get(aid)!.position.clone();
   const p1 = c.clone().add(p0.clone().sub(c).multiplyScalar(FIRE_CAM.pull)).add(new THREE.Vector3(0, FIRE_CAM.up, 0));
-  const look = aimLook.clone();
-  aimAnim = { t0: performance.now(), dur: FIRE_CAM.ms / aimSpeed(), step: (k) => { aimCam.position.lerpVectors(p0, p1, easeOut(k)); aimCam.lookAt(look); } };
+  return { p1, look: look0.clone().add(new THREE.Vector3(0, FIRE_CAM.lookDy, 0)) };
+}
+function fireCam(aid: string, tid: string | null = null) {
+  const a = unitMesh.get(aid); if (!a) return;
+  const p0 = aimCam.position.clone(), l0 = aimLook.clone(), f0 = aimCam.fov;
+  lastFire = { aid, tid, p0, look: l0 };
+  const { p1, look } = fireEnd(aid, p0, l0);
+  aimAnim = { t0: performance.now(), dur: FIRE_CAM.ms / aimSpeed(), step: (k) => { const e = easeOut(k); aimCam.position.lerpVectors(p0, p1, e); aimCam.fov = f0 + (FIRE_CAM.fov - f0) * e; aimCam.updateProjectionMatrix(); aimCam.lookAt(new THREE.Vector3().lerpVectors(l0, look, e)); } };
 }
 function aimPose(attackerId: string, targetId: string) {
   const a = unitMesh.get(attackerId)!, t = unitMesh.get(targetId)!;
@@ -1628,7 +1640,7 @@ async function play(events: BattleEvent[]) {
           await stepOutIfCovered(e.attackerId, e.targetId);
           const ar = rigs.get(e.attackerId), tg = unitMesh.get(e.targetId);
           if (crit) await frontCloseUp(e.attackerId, e.targetId); // hit_1422 → 切回过肩（1422_8）
-          else { fireCam(e.attackerId); if (ar && tg) ar.aim(tg.position, 'gun', 2400 / SPEED); }
+          else { fireCam(e.attackerId, e.targetId); if (ar && tg) ar.aim(tg.position, 'gun', 2400 / SPEED); }
         }
         else if (foeAtk && !params.has('noaim')) await aimShot(e.attackerId, e.targetId, false); // 敌方近战/技能：过肩机位 + 上下黑边，无准星
         break;
@@ -2524,13 +2536,27 @@ window.__p5t = {
     return { a, b };
   },
   /** r17 机位标定：改 AIM_CAM 后按当前射手/目标重摆过肩机位，返回剪影图对 + 目标投影 */
-  aimTune(cfg: Partial<typeof AIM_CAM>) {
-    Object.assign(AIM_CAM, cfg); if (aimIds.length < 2) return null;
+  aimTune(cfg: Partial<typeof AIM_CAM> & { yawOff?: number }) {
+    const { yawOff, ...cc } = cfg; Object.assign(AIM_CAM, cc); if (aimIds.length < 2) return null;
+    if (yawOff != null) { const r = rigs.get(aimIds[0]) as unknown as { setYaw?: (y: number) => void }; const a = unitMesh.get(aimIds[0])!.position, t = unitMesh.get(aimIds[1])!.position; r.setYaw?.(Math.atan2(t.x - a.x, t.z - a.z) + yawOff * Math.PI / 180); }
     const { pos, look } = aimPose(aimIds[0], aimIds[1]); aimAnim = null;
     aimCam.position.copy(pos); aimCam.fov = AIM_CAM.fov; aimCam.lookAt(look); aimCam.updateProjectionMatrix(); aimLook.copy(look);
     const tg = unitMesh.get(aimIds[1])!, th = rigs.get(aimIds[1])?.height ?? 1.1; const tv = tg.position.clone().add(new THREE.Vector3(0, th / 2, 0)).project(aimCam);
     const rr = rigs.get(aimIds[0]) as unknown as { baseKey?: string; oneShot?: string; cur?: THREE.AnimationAction };
     return { m: (this as { maskOf: (id: string) => unknown }).maskOf(aimIds[0]), tgt: [(tv.x + 1) / 2, (1 - tv.y) / 2], st: [rr?.baseKey, rr?.oneShot, rr?.cur?.getClip().name] };
+  },
+  /** r17b 标定：开火镜头终点（FIRE_CAM）按 cfg 直接摆好，返回射手/目标剪影图对 */
+  fireTune(cfg: Partial<typeof FIRE_CAM> & { lookDy?: number; fov?: number }) {
+    if (!lastFire) return null; const { lookDy, fov, ...cc } = cfg; Object.assign(FIRE_CAM, cc); if (lookDy != null) FIRE_CAM.lookDy = lookDy; if (fov != null) FIRE_CAM.fov = fov;
+    const { p1, look } = fireEnd(lastFire.aid, lastFire.p0, lastFire.look); aimAnim = null; viewCam = aimCam;
+    aimCam.position.copy(p1); aimCam.fov = FIRE_CAM.fov; aimCam.updateProjectionMatrix(); aimCam.lookAt(look);
+    const self = this as { maskOf: (id: string) => unknown }; return { a: self.maskOf(lastFire.aid), t: lastFire.tid ? self.maskOf(lastFire.tid) : null };
+  },
+  /** r17b 标定：正面特写机位（FRONT_CAM）按 cfg 摆好，返回射手剪影图对 */
+  frontTune(aid: string, tid: string, cfg: Partial<typeof FRONT_CAM>) {
+    Object.assign(FRONT_CAM, cfg); const r = frontPose(aid, tid); if (!r) return null; aimAnim = null; viewCam = aimCam;
+    aimCam.position.copy(r.pos); aimCam.fov = FRONT_CAM.fov; aimCam.lookAt(r.look); aimCam.updateProjectionMatrix();
+    return (this as { maskOf: (id: string) => unknown }).maskOf(aid);
   },
   aimCardRects() { return Array.from(document.querySelectorAll("#aim .aimcard")).map((e) => { const r = e.getBoundingClientRect(); return { cls: e.className, x: r.x, y: r.y, w: r.width, h: r.height }; }); },
   select(id: string) { onTap({ unit: id }); },

@@ -1405,8 +1405,9 @@ function camOrbit(center: THREE.Vector3, pos: THREE.Vector3, look: THREE.Vector3
   };
   aimAnim = { t0: performance.now(), dur: Math.max(1, ms), step };
 }
-/** r17：开火镜头（o_aim → o_hit，sheet_b 第 9–10 帧：SHOT/BACK 收起后约 0.25s 内机位后拉、升高，射手缩到约 0.37 屏高，目标留在画面中偏右上） */
-const FIRE_CAM = { pull: 1.7, up: 0.55, ms: 260, lookDy: 0, fov: 34, latK: 1, lookMix: 0 };
+/** r17：开火镜头：SHOT/BACK 收起后约 0.25s 内机位升高、注视点向射手偏（r17b 按第一章 hit_1304 重标；r17 依据的 o_hit 是 DLC 关，作废） */
+// r17b：在原版 M01 上按第一章 hit_1304 标定（/workspace/work/fcal5 #2）：机位后退不变、侧移×0.8、升高 1.2，注视点向射手偏 0.5 → 射手居中偏左、目标右上
+const FIRE_CAM = { pull: 1.0, up: 1.2, ms: 260, lookDy: 0, fov: 34, latK: 0.8, lookMix: 0.5 };
 let lastFire: { aid: string; tid: string | null; p0: THREE.Vector3; look: THREE.Vector3 } | null = null;
 function fireEnd(aid: string, p0: THREE.Vector3, look0: THREE.Vector3) {
   // r17b：机位相对射手分解为 后退(沿 -dir)/侧移(right)/高度 → 后退×pull、侧移×latK、高度+up（hit_1304：射手几乎居中、目标在其右上）

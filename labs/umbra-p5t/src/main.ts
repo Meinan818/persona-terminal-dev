@@ -37,7 +37,7 @@ import { preloadJoker, makeJoker, jokerReady } from './view/jokerModel';
 import type { UnitRig } from './view/chibiRig';
 import { RUN_MS_PER_TILE } from './view/chibiRig';
 import { makeSkull, makeMona, makeShadow } from './view/partyModels';
-import { preloadChar, makeChar, charReady, SPECS } from './view/p5tChar';
+import { preloadChar, makeChar, charReady, SPECS, setRedOutlineMode } from './view/p5tChar';
 import RESULT_CAM from './view/data/result-cam.json';
 import RESULT_BANDS_JSON from './view/data/result-bands.json';
 import { SummonDim, skillHit, CASTER_LAYER } from './view/skillFx';
@@ -2443,6 +2443,7 @@ function loop() {
   skillCamStep();
   { const mc = overlay?.getObjectByName('moveCursor'); if (mc) { const cp = (viewCam as THREE.Camera).position; mc.rotation.y = Math.atan2(cp.x - mc.position.x, cp.z - mc.position.z); mc.position.y = (mc.userData.y0 ??= mc.position.y) + Math.abs(Math.sin(performance.now() / 260)) * 0.12; } }
   aimStep();
+  setRedOutlineMode(viewCam === aimCam && !document.body.classList.contains('aim-front') ? 'aim' : 'base'); // r18：过肩瞄准红描边 = 左移投影（aim_1420_3）
   mapObj.update();
   for (const r of rigs.values()) r.update();
   const t = performance.now() / 1000;

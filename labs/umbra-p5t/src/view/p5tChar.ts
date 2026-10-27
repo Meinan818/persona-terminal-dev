@@ -266,16 +266,22 @@ function hullMat(w: number, push = 0) {
 /** r14：选中/被锁定单位的红色描边（command_3456 / aim_1420_3：角色外一圈 ~4px@720 的纯红剪影边）。
  *  原版是 URP 的屏幕空间描边（Renderer Feature，shader 源码未导出）→ 重建：背面外扩壳，按裁剪空间法线方向偏移固定像素。 */
 // r15：aim_1420_3 / command_3456 实测红边约 7px@720（r14 的 4px 偏细）
-export const RED_OUTLINE = { px: new THREE.Vector2(7 / 1280 * 2, 7 / 720 * 2) };
+export const RED_OUTLINE = { px: new THREE.Vector2(7 / 1280 * 2, 7 / 720 * 2), shift: new THREE.Vector2(0, 0) };
+/** r18：过肩瞄准时的红描边不是均匀一圈——aim_1420_3（第一章 M01）逐行实测：射手剪影左侧纯红带宽 22px@1280×720（15 行中位数 22，范围 20–24），
+ *  头顶 2–4px，右侧 0px → 原版是「剪影整体向屏幕左平移」的红色投影（屏幕空间，shader 未导出 → 重建：外扩 2px + 左移 20px）。其它镜头保持 r15 的均匀 7px。 */
+export function setRedOutlineMode(mode: 'aim' | 'base') {
+  if (mode === 'aim') { RED_OUTLINE.px.set(2 / 1280 * 2, 2 / 720 * 2); RED_OUTLINE.shift.set(-20 / 1280 * 2, 0); }
+  else { RED_OUTLINE.px.set(7 / 1280 * 2, 7 / 720 * 2); RED_OUTLINE.shift.set(0, 0); }
+}
 let redHull: THREE.MeshBasicMaterial | null = null;
 function redHullMat() {
   if (redHull) return redHull;
   const m = new THREE.MeshBasicMaterial({ color: 0xff0a14, side: THREE.BackSide });
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uOlPx = { value: RED_OUTLINE.px };
-    sh.vertexShader = 'uniform vec2 uOlPx;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+    sh.uniforms.uOlPx = { value: RED_OUTLINE.px }; sh.uniforms.uOlShift = { value: RED_OUTLINE.shift };
+    sh.vertexShader = 'uniform vec2 uOlPx; uniform vec2 uOlShift;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
       { vec3 nv = normalize( normalMatrix * objectNormal ); vec4 nc = projectionMatrix * vec4( nv, 0.0 ); vec2 d = nc.xy; float L = length( d );
-        if ( L > 1e-5 ) gl_Position.xy += ( d / L ) * uOlPx * gl_Position.w;
+        if ( L > 1e-5 ) gl_Position.xy += ( d / L ) * uOlPx * gl_Position.w; gl_Position.xy += uOlShift * gl_Position.w;
         // r14 自查：外套/披风是开口薄片，外扩后的背面会在衣服内侧露出 → 整件外套被涂红（command 截图里 Joker 下摆一片红）。
         //   深度往后推 0.12m（视空间），只让轮廓外缘露出，内部被自身正面挡住
         vec4 pb = projectionMatrix * ( mvPosition + vec4( 0.0, 0.0, -0.22, 0.0 ) ); gl_Position.z = pb.z / pb.w * gl_Position.w; }`);
@@ -315,13 +321,13 @@ export class P5tRig implements UnitRig {
   readonly mixer: THREE.AnimationMixer;
   private act = new Map<ClipKey, THREE.AnimationAction>();
   private cur: THREE.AnimationAction | null = null;
+  private aimHold = false; // r17c：raise() 举枪待命中（开火 aim()/放下 lower() 解除）→ GunLoop 定在 AIM_HOLD_T
   oneShot: ClipKey | null = null;
   private shotEnd = 0;
   private shotStart = 0;
   private seq: ClipKey[] = [];
   baseKey: ClipKey = 'Idle';
   private tints: Tint[] = [];
-  private aimHold = false; // r17c：raise() 举枪待命中（开火 aim()/放下 lower() 解除）→ GunLoop 定在 AIM_HOLD_T
   private yaw = 0; private yawT = 0;
   private running = false; private downed = false; private dead = false;
   private aimUntil = 0;
@@ -641,11 +647,11 @@ export class P5tRig implements UnitRig {
     if (this.oneShot && this.clock >= this.shotEnd) this.next();
     this.mixer.update(dt);
     for (const w of this.wps) w.mixer?.update(dt);
+    const hk = AIM_HOLD_T[this.key];
+    if (this.aimHold && hk != null && !this.oneShot && this.baseKey === 'GunLoop') this.gunLoopAt(hk);
     let d = this.yawT - this.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
     this.yaw += d * Math.min(1, dt * 14);
     this.inner.rotation.y = this.yaw;
     this.updateWeapons();
   }
 }
-    const hk = AIM_HOLD_T[this.key];
-    if (this.aimHold && hk != null && !this.oneShot && this.baseKey === 'GunLoop') this.gunLoopAt(hk);

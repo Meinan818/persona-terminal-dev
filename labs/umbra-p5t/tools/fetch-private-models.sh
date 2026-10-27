@@ -92,7 +92,8 @@ for key, (glb, tex) in CH.items():
 PY
 # r15：batch-08 全量战斗动作（Joker/Skull/Mona 的现有 GLB 只有 20 个 clip；batch-08 各约 80 个，骨骼同名同绑定）→ 瘦动作 GLB
 B8="${UMBRA_ASSETS:-$(cd ../../.. && pwd)/umbra-assets}/p5t/1_battle/batch-08/anims"
-for p in PC0001_151:joker PC0002_151:skull PC0003_151:mona; do
+# r18：敌人同样用 batch-08 全量动作。Em0001_110/610 与 Em0001_016 共用 unit_motion（121 根骨同名、clip 名均为 A_Em0001_*，Codex R6d 也确认同一批 Down clip 导进了 010/016/110/610）→ 用 Em0001_016 的动作
+for p in PC0001_151:joker PC0002_151:skull PC0003_151:mona Em0001_016:em0001_016 Em0001_016:em0001_110 Em0001_016:em0001_610 Em0002_010:em0002_010 Em0003_010:em0003_010 Em0501_010:marie; do
   if [ -f "$B8/${p%%:*}.glb" ]; then python3 tools/build-anim-glb.py "$B8/${p%%:*}.glb" "$DST/p5t/${p##*:}_anims.glb"; else echo "miss batch-08/${p%%:*}.glb（跳过，只用 20 个 clip）"; fi
 done
 bash tools/fetch-private-maps.sh

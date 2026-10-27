@@ -2,6 +2,14 @@
 
 > ⚠️ **安全：Meinan818/persona-terminal-dev 当前是 PUBLIC，且含原作衍生文件（`labs/umbra-p5t/public` 下模型等、`scripts/p5r-red/reference`）。此仓库须设为 private。** 我们的 GitHub 授权无权改可见性（API：Resource not accessible by integration），需用户本人在 GitHub → Settings → Danger Zone → Change visibility 改为 Private。不要删历史。
 
+## 交接（2026-10-28 02:20 CST，用户叫停本会话，交回给之前的 Hark）
+- 最新提交 8be15d3（r19 Joker 面具眼白修复）。从 e17941b（上个 Hark 最终版）到现在：0 个文件被删，src 76 个文件不变，+958/−104 行。
+- r20（命中定格/死亡墨团）已取消，未提交，没有半成品。
+- 已知回归只在录像：tools/rec-gun 无音轨且 15fps。交付视频请用 tools/rec-r15（mix.py 混 BGM+SFX）/ rec-r16b，30fps+AAC。
+- 新沙箱开工必须先跑全部 tools/fetch-*.sh（地图/BGM/音效等 gitignore 素材），Playwright 查 0 个 404/回退。
+- 待办：r20 命中/死亡打击感、瞄准 UI 换 Codex R6c 原版、帧率显示+删 main.ts Kenney 预加载、手机实测；Codex R7/R8 待验收。详见 umbra-assets hark-workspace/notes/STATUS-LOG.md、R13-BACKLOG.md。
+- 每日 00:20 定时续干任务已暂停。
+
 ## 0. 最新（2026-10-28 01:25 CST，每日续干）
 - 代码 feat/umbra-app-m2 2ed1745：r18 枪击流程——过肩瞄准红描边改「剪影左移投影」（aim_1420_3 逐行实测左侧纯红 22px@720、右侧 0）；瞄准中射手不再被每帧拧回掩体朝向；敌人接 batch-08 全量动作（Em0001_110/610 共用 016 骨骼，121 根同名）；rec-gun 正面特写剪影改取切入首帧。
 - 实测（第一章 M01，参考帧 notes/p5t-ref-video/frames）：过肩瞄准 aim_1420_3 位置误差 ≤1.3%、高度 1.3%、剪影 IoU 0.850（参考剪影为手工描点 = guessed）；暴击特写 hit_1422 位置误差 ≤1.6%、高度 0.7%（参考只有手画框，未算 IoU）；开火 hit_1304 位置误差 ≤3.6%，但原版是 Skull 开枪、我方是 Joker → 不算同刻对比。

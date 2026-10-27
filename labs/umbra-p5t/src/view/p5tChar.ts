@@ -237,8 +237,8 @@ function celMat(src: THREE.MeshStandardMaterial, shade: THREE.Texture | null): {
   m.customProgramCacheKey = () => `p5t-cel-${shade ? 1 : 0}-${blend ? 1 : 0}`;
   return { m, tint };
 }
-function flatMat(src: THREE.MeshStandardMaterial, push = 0): { m: THREE.MeshBasicMaterial; tint: Tint } {
-  const blend = src.transparent;
+function flatMat(src: THREE.MeshStandardMaterial, push = 0, forceOpaque = false): { m: THREE.MeshBasicMaterial; tint: Tint } {
+  const blend = src.transparent && !forceOpaque;
   const m = new THREE.MeshBasicMaterial({ map: src.map, name: src.name, transparent: blend, depthWrite: !blend, alphaTest: blend ? 0.02 : 0, side: src.side });
   const tint: Tint = { value: m.color };
   if (push > 0) {
@@ -308,6 +308,11 @@ export function hiddenMesh(meshName: string, matName: string): boolean {
   if (/Blur/.test(meshName)) return true;
   return false;
 }
+/** r19：虹膜网格 Obj_Eye*UV 的材质（_E00 等）一律不透明。Joker PC0001_151 的 GLB 里 High_MI_PC0001_E00 被 FBX2glTF 标成 BLEND
+ *  （贴图 T_PC0001_E000 的 alpha 只在虹膜处为 1，RGB 在 alpha=0 处是 231–252 的眼白渐变）→ 旧代码按 alpha 透明 + alphaTest 丢弃 → 眼白整块消失，
+ *  面具眼洞里露出后推的肤色脸皮，正面特写像「戴眼镜」。同一材质在 Skull/Panther/Fox/Queen/Erina 的导出里都是 OPAQUE（眼白靠 RGB 显示），
+ *  原版 hit_1422（第一章 M01）眼洞内为白色眼白 → 按不透明画。Mona 的 E50（Obj_Eyelid00，非 UV 网格）不受影响。 */
+export const irisOpaque = (mesh: string, mat: string) => /^Obj_Eye\d*UV$/.test(mesh) && /_E\d\d$/.test(mat);
 /** 平涂类：眼/嘴/脸贴片（_Fa）/面具；脸皮（_F00 / F0xx）单独后推 */
 const isFace = (mat: string) => /_F\d\d$/.test(mat);
 const isFlat = (mat: string) => /_(E\d\d|M\d\d)(_|$)|_Fa$/.test(mat);
@@ -375,7 +380,7 @@ export class P5tRig implements UnitRig {
         if (hiddenMesh(sm.name, n)) return new THREE.MeshBasicMaterial({ visible: false });
         let r: { m: THREE.Material; tint: Tint };
         if (isFace(n)) { r = flatMat(src, FACE_PUSH * s); face = true; }
-        else if (isFlat(n)) r = flatMat(src);
+        else if (isFlat(n)) r = flatMat(src, 0, irisOpaque(sm.name, n));
         else { r = celMat(src, P.shade.get((src.map?.name ?? '').replace(/\.png$/, '')) ?? null); body = true; }
         this.tints.push(r.tint);
         return r.m;

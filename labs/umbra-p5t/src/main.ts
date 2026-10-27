@@ -1053,7 +1053,7 @@ function refreshLabels() {
       if (!busy && u.role !== 'shielder') { // r15：掩体后待机 = 原版 HideL/HideR 蹲姿（背靠掩体，探头朝最近的对手一侧）
         const cv = coverPose(u);
         (rg as { setCover?: (s: 'L' | 'R' | null) => void }).setCover?.(cv ? cv.side : null);
-        if (cv) rg.faceTo(new THREE.Vector3(g.position.x + cv.fx, 0, g.position.z + cv.fz));
+        if (cv && !aimIds.includes(u.id)) rg.faceTo(new THREE.Vector3(g.position.x + cv.fx, 0, g.position.z + cv.fz)); // r18：瞄准中不再每帧转回掩体朝向（之前举枪的射手身体被拧回掩体方向，aim_1420_3 剪影 IoU 0.70；朝向目标时 0.85）
       }
       if (!busy && u.role === 'shielder' && u.facing) rg.faceTo(new THREE.Vector3(g.position.x + u.facing.x, 0, g.position.z + u.facing.y)); // 盾兵朝向 = 盾的方向
       rg.setDim(u.acted && battle.phase === 'player');

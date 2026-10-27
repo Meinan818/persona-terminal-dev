@@ -32,7 +32,8 @@
     <button data-act="triple" class="triple hidden">TRIPLE THREAT</button>
   </div>
   <div id="skills" class="hud hidden"></div>
-  <div id="aim" class="hidden"><div class="aimtag"><b data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#ffffff" data-out="#000000" data-ow="0.25" data-sp="-6">SHOT</b><small>使用枪械攻击</small><i class="abtn">A</i></div></div>
+  <!-- r17：枪击瞄准牌 = 原版 bom02_shot/back_reversal_dialog（含「使用枪械攻击 / 放弃」字样）；A/B 圆钮 prefab_ButtonHelpIcon 未导出 → CSS 重建 -->
+  <div id="aim" class="hidden"><div class="aimcard shot" data-aim="shot"><span class="fb"><b>SHOT</b><small>使用枪械攻击</small></span><i class="pad pa">A</i></div><div class="aimcard back" data-aim="back"><span class="fb"><b>BACK</b><small>放弃</small></span><i class="pad pb">B</i></div></div>
   <div id="banner" class="hidden"></div>
   <div id="toast" class="hidden"></div>
   <div id="result" class="hidden"></div>

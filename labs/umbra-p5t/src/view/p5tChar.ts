@@ -46,7 +46,7 @@ export interface CharSpec {
   melee?: { seq: ClipKey[]; hold?: ClipKey };
   /** 武器 GLB（静态，挂到原版挂点） */
   /** fix：挂点空间修正旋转（欧拉 XYZ，弧度），world = loc · fix · weapon */
-  weapons?: { file: string; loc: string; show: (k: ClipKey) => boolean; fix?: [number, number, number] }[];
+  weapons?: { file: string; loc: string; show: (k: ClipKey) => boolean; fix?: [number, number, number]; motion?: string }[];
 }
 
 /** 持枪/持近战武器的手：原版数据没写，按原版 GunLoop / Attack 姿势里哪只手的 Loc_Wp_* 挂点在身前实测（tools/hand-probe.mjs） */
@@ -71,7 +71,9 @@ const GUN_FIX: Record<string, [number, number, number]> = {
 };
 function wp(gun: string, sword: string, h: { gun: 'L' | 'R'; sword: 'L' | 'R' }): CharSpec['weapons'] {
   return [
-    { file: `p5t/wp_${gun}.glb`, loc: `Loc_Wp_Gun_${h.gun}`, show: (k) => /^Gun/.test(k), fix: GUN_FIX[gun] },
+    // r17：没有 GUN_FIX 的枪（Skull/Panther/Fox）换 batch-11 原版 weapon_motion（带 GunStart/Loop/Fire/End 武器骨骼动画，original）；
+    //   Mona/Queen/Erina 的 weapon_motion 与 r16c 修正旋转的叠加关系未核对 → 维持静态 + 修正（待核）
+    { file: `p5t/wp_${gun}.glb`, loc: `Loc_Wp_Gun_${h.gun}`, show: (k) => /^Gun/.test(k), fix: GUN_FIX[gun], motion: GUN_FIX[gun] ? undefined : `p5t/wpm_${gun}.glb` },
     { file: `p5t/wp_${sword}.glb`, loc: `Loc_Wp_Sword_${h.sword}`, show: (k) => k === 'Attack' },
   ];
 }
@@ -80,7 +82,8 @@ export const SPECS: Record<string, CharSpec> = {
   joker: {
     key: 'joker', files: ['p5t/joker.glb', 'joker_pc0001_151.glb'],
     weapons: [
-      { file: 'p5t/wp_gn01000.glb', loc: 'Loc_Wp_Gun_R', show: (k) => /^Gun/.test(k) },
+      // r17：batch-11 weapon_motion/Gn01000.glb（原版武器骨骼 + A_Gn0001_BTL0011–0014 GunStart/Loop/Fire/End，与角色同号 clip 同步播放；original）
+      { file: 'p5t/wp_gn01000.glb', loc: 'Loc_Wp_Gun_R', show: (k) => /^Gun/.test(k), motion: 'p5t/wpm_gn01000.glb' },
       { file: 'p5t/wp_wp01900.glb', loc: 'Loc_Wp_Sword_R', show: (k) => k === 'Attack' },
     ],
   },
@@ -112,7 +115,7 @@ export const SPECS: Record<string, CharSpec> = {
 
 interface Proto {
   scene: THREE.Object3D; clips: Map<ClipKey, THREE.AnimationClip>; shade: Map<string, THREE.Texture>;
-  weapons: { scene: THREE.Object3D; loc: string; show: (k: ClipKey) => boolean; fix?: [number, number, number] }[];
+  weapons: { scene: THREE.Object3D; loc: string; show: (k: ClipKey) => boolean; fix?: [number, number, number]; clips: Map<ClipKey, THREE.AnimationClip> }[];
 }
 const protos = new Map<string, Proto>();
 const loading = new Map<string, Promise<boolean>>();
@@ -187,8 +190,15 @@ export function preloadChar(key: string): Promise<boolean> {
       await Promise.all(Object.entries(map).map(async ([base, f]) => { const t = await loadTex(BASE + f); if (t) shade.set(base.replace(/\.png$/, ''), t); }));
       const weapons: Proto['weapons'] = [];
       for (const w of spec.weapons ?? []) {
-        if (!(await exists(BASE + w.file))) continue; // 缺正版武器就不拿（不再程序化）
-        try { const wg = await new GLTFLoader().loadAsync(BASE + w.file); weapons.push({ scene: wg.scene, loc: w.loc, show: w.show, fix: w.fix }); } catch { /* 跳过 */ }
+        // r17：优先原版 weapon_motion（带武器自身动画），没有再退回静态武器
+        const wf = w.motion && await exists(BASE + w.motion) ? w.motion : w.file;
+        if (!(await exists(BASE + wf))) continue; // 缺正版武器就不拿（不再程序化）
+        try {
+          const wg = await new GLTFLoader().loadAsync(BASE + wf);
+          const wc = new Map<ClipKey, THREE.AnimationClip>();
+          for (const c of wg.animations) { const k = clipKey(c.name); if (k && !wc.has(k)) wc.set(k, c); }
+          weapons.push({ scene: wg.scene, loc: w.loc, show: w.show, fix: wf === w.file ? w.fix : undefined, clips: wc });
+        } catch { /* 跳过 */ }
       }
       protos.set(key, { scene: g.scene, clips, shade, weapons });
       return true;
@@ -313,7 +323,7 @@ export class P5tRig implements UnitRig {
   private aimUntil = 0;
   private dimmed = false;
   private last = performance.now();
-  private wps: { obj: THREE.Object3D; show: (k: ClipKey) => boolean; fixQ: THREE.Quaternion }[] = [];
+  private wps: { obj: THREE.Object3D; show: (k: ClipKey) => boolean; fixQ: THREE.Quaternion; mixer?: THREE.AnimationMixer; act?: Map<ClipKey, THREE.AnimationAction>; cur?: THREE.AnimationAction }[] = [];
   private clock = 0;
   private redHulls: THREE.SkinnedMesh[] = [];
   private hl = false;
@@ -393,7 +403,12 @@ export class P5tRig implements UnitRig {
         const r = celMat(src, null); m.material = r.m; this.tints.push(r.tint); m.castShadow = true;
       });
       obj.visible = false; obj.name = 'wp_' + w.loc;
-      loc.add(obj); this.wps.push({ obj, show: w.show, fixQ: new THREE.Quaternion().setFromEuler(new THREE.Euler(...(w.fix ?? ZERO3))) });
+      const ent: P5tRig['wps'][number] = { obj, show: w.show, fixQ: new THREE.Quaternion().setFromEuler(new THREE.Euler(...(w.fix ?? ZERO3))) };
+      if (w.clips.size) { // r17：武器自身动画（原版 weapon_motion）；clip 名与角色同号（BTL0011 GunStart…），随角色 clip 一起切
+        ent.mixer = new THREE.AnimationMixer(obj); ent.act = new Map();
+        for (const [k, c] of w.clips) { const a = ent.mixer.clipAction(c); if (LOOPS.includes(k)) a.setLoop(THREE.LoopRepeat, Infinity); else { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } ent.act.set(k, a); }
+      }
+      loc.add(obj); this.wps.push(ent);
     }
 
     this.mixer = new THREE.AnimationMixer(this.model);
@@ -453,6 +468,13 @@ export class P5tRig implements UnitRig {
     if (this.cur && this.cur !== a && fade > 0) this.cur.crossFadeTo(a, fade, false);
     else if (this.cur && this.cur !== a) this.cur.stop();
     this.cur = a;
+    for (const w of this.wps) { // r17：武器 clip 跟角色 clip 同步（没有同名 clip 的保持上一姿势）
+      const wa = w.act?.get(k); if (!wa) continue;
+      if (w.cur === wa && LOOPS.includes(k)) continue;
+      wa.reset(); wa.setEffectiveWeight(1); wa.play();
+      if (w.cur && w.cur !== wa) { if (fade > 0) w.cur.crossFadeTo(wa, fade, false); else w.cur.stop(); }
+      w.cur = wa;
+    }
     this.updateWeapons();
   }
   private dur(k: ClipKey) { return this.act.get(k)?.getClip().duration ?? 0.3; }
@@ -555,6 +577,16 @@ export class P5tRig implements UnitRig {
     }
   }
   endAim() { this.aimUntil = 0; }
+  /** r17：举枪瞄准待命（o_aim / o_t1：选 GUN 后射手立即 GunStart → GunLoop 举枪指向目标，开火前一直保持）。开火仍走 aim(…,'gun')（已在 GunLoop → 只播 GunFire） */
+  raise(target: THREE.Vector3 | null) {
+    if (target) this.faceTo(target);
+    if (this.downed || this.dead || !this.act.has('GunLoop')) return;
+    this.aimUntil = performance.now() + 36e5;
+    if (this.baseKey === 'GunLoop') return;
+    this.baseKey = 'GunLoop'; this.enqueue(['GunStart']);
+  }
+  /** r17：放下枪（BACK / 退出瞄准）→ update() 里按 HOLD_END 播 GunEnd 回待机 */
+  lower() { if (this.baseKey === 'GunLoop') this.aimUntil = 0; }
   flinch(from?: THREE.Vector3) {
     if (this.dead) return;
     if (from && !this.downed) this.faceTo(from);
@@ -598,6 +630,7 @@ export class P5tRig implements UnitRig {
     }
     if (this.oneShot && this.clock >= this.shotEnd) this.next();
     this.mixer.update(dt);
+    for (const w of this.wps) w.mixer?.update(dt);
     let d = this.yawT - this.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
     this.yaw += d * Math.min(1, dt * 14);
     this.inner.rotation.y = this.yaw;

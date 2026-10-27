@@ -96,3 +96,10 @@ for p in PC0001_151:joker PC0002_151:skull PC0003_151:mona; do
   if [ -f "$B8/${p%%:*}.glb" ]; then python3 tools/build-anim-glb.py "$B8/${p%%:*}.glb" "$DST/p5t/${p##*:}_anims.glb"; else echo "miss batch-08/${p%%:*}.glb（跳过，只用 20 个 clip）"; fi
 done
 bash tools/fetch-private-maps.sh
+
+# ---- r17：batch-11 原版 weapon_motion（Codex R5：武器骨骼 + 原版 GunStart/Loop/Fire/End 等 clip）→ p5t/wpm_<gun>.glb ----
+WM="${UMBRA_ASSETS:-/workspace/work/umbra-assets}/p5t/1_battle/batch-11/weapon_motion"
+for g in gn01000 gn02000 gn03000 gn04000 gn05000 gn06000 gn11000; do
+  G=$(echo "$g" | sed 's/^gn/Gn/')
+  if [ -f "$WM/$G.glb" ]; then cp -f "$WM/$G.glb" "$DST/p5t/wpm_$g.glb"; echo "ok   p5t/wpm_$g.glb  <- batch-11/weapon_motion/$G.glb"; else echo "miss batch-11/weapon_motion/$G.glb"; fi
+done

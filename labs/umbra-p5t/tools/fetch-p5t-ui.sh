@@ -54,6 +54,13 @@ for pk, i in CH.items():
     cands = [f for f in os.listdir(skc) if f.startswith(f'charadata_{i:05d}') and f.endswith('__normal.sprite.png')]
     if not cands: miss.append(f'charadata_{i:05d}*normal'); continue
     put(f'chara_{pk}', os.path.join(skc, sorted(cands)[0]), 'battle/skillcommand/2160p/' + sorted(cands)[0])
+# r17：枪击瞄准牌（prefab 菜单 02：SHOT/BACK 带「使用枪械攻击 / 放弃」中文字样，o_aim 里尖头朝右 = *_reversal 版）+ CRITICAL!!（1422_8）——lang_text/zh_cn
+lt = os.path.join(os.path.dirname(img), 'lang_text', 'zh_cn', 'sprites')
+for short, fn in [('aim_shot', 'battle_operation_menu_dialog_02__bom02_shot_reversal_dialog'), ('aim_back', 'battle_operation_menu_dialog_02__bom02_back_reversal_dialog'),
+                  ('critical', 'battle_operation_target_dialog__bot01_critical_icon_dialog')]:
+    p = os.path.join(lt, fn + '.sprite.png')
+    if os.path.exists(p): put(short, p, os.path.relpath(p, os.path.dirname(img)))
+    else: miss.append(fn)
 json.dump(man, open(os.path.join(dst, 'manifest.json'), 'w'), ensure_ascii=False, indent=0)
 print(f'ok   {ok} 张原版 UI 贴图 -> {dst}/' + (f'；缺 {len(miss)}：' + ', '.join(miss) if miss else ''))
 PY

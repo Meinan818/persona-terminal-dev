@@ -516,6 +516,53 @@ function adjCovers(p: Vec): Vec[] {
   return out;
 }
 
+/** r17：瞄准阶段场上表现——
+ *  ① 射程边界红色锁链（o_t1 / o_guard：粗红链沿射程区外沿与高低差边缘铺在地面；原版 chain 贴图/网格未导出 → 按帧重建：链环长 ≈1/4 格、平/立交替，颜色 #ff2436）；
+ *  ② GUARD 目标脚下黄黑斜纹（o_guard：原版 DangerZone 图集左上格，eff_011600；铺在目标格及周围可站格）。 */
+let chainGeo: THREE.TorusGeometry | null = null;
+function gunAimOverlay() {
+  if (!gunAim) return;
+  const u = battle.unit(gunAim.sid), from = u.pos, R = battle.gunRange(u);
+  const tiles: Vec[] = [];
+  for (let y = 0; y < battle.map.height; y++) for (let x = 0; x < battle.map.width; x++) {
+    const p = { x, y }; if (Math.abs(x - from.x) + Math.abs(y - from.y) > R) continue;
+    const t = battle.grid.tile(p); if (t === 'wall') continue; tiles.push(p);
+  }
+  const set = new Set(tiles.map((t) => key(t)));
+  const edges: { c: THREE.Vector3; along: 'x' | 'z' }[] = [];
+  for (const t of tiles) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+    const n = { x: t.x + dx, y: t.y + dy };
+    if (set.has(key(n)) && battle.grid.h(n) === battle.grid.h(t)) continue;
+    const c = w2v(t, 0.07); c.x += dx * 0.46; c.z += dy * 0.46;
+    edges.push({ c, along: dx ? 'z' : 'x' });
+  }
+  chainGeo ??= new THREE.TorusGeometry(0.07, 0.024, 5, 12);
+  const per = 4, cnt = edges.length * per;
+  const mat = new THREE.MeshBasicMaterial({ color: 0xff2436 });
+  const flat = new THREE.InstancedMesh(chainGeo, mat, Math.ceil(cnt / 2)), up = new THREE.InstancedMesh(chainGeo, mat, Math.ceil(cnt / 2));
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(1.75, 1, 1), e1 = new THREE.Euler();
+  let nf = 0, nu = 0;
+  for (const e of edges) for (let i = 0; i < per; i++) {
+    const o = -0.5 + (i + 0.5) / per; const p = e.c.clone(); if (e.along === 'x') p.x += o; else p.z += o;
+    const yaw = e.along === 'x' ? 0 : Math.PI / 2;
+    if (i % 2 === 0) { e1.set(-Math.PI / 2, yaw, 0, 'YXZ'); q.setFromEuler(e1); m4.compose(p, q, sc); flat.setMatrixAt(nf++, m4); }
+    else { e1.set(0, yaw, 0, 'YXZ'); q.setFromEuler(e1); m4.compose(p, q, sc); up.setMatrixAt(nu++, m4); }
+  }
+  flat.count = nf; up.count = nu; flat.renderOrder = up.renderOrder = 11; flat.raycast = up.raycast = () => {};
+  overlay.add(flat, up);
+  // GUARD 目标：黄黑斜纹
+  const t = battle.unit(gunTid()!);
+  if (t && (t.guard || battle.hasResistance(t, from))) {
+    const dz = ffx('dangerzone');
+    let tex: THREE.Texture | null = null;
+    if (dz) { tex = (dz.userData.q0 as THREE.Texture | undefined) ?? null; if (!tex) { tex = dz.clone(); tex.repeat.set(0.5, 0.5); tex.offset.set(0, 0.5); tex.needsUpdate = true; dz.userData.q0 = tex; } }
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const p = { x: t.pos.x + dx, y: t.pos.y + dy }; if (!battle.grid.inBounds(p) || !battle.grid.walkable(p) || battle.grid.h(p) !== battle.grid.h(t.pos)) continue;
+      const qd = new THREE.Mesh(new THREE.PlaneGeometry(0.98, 0.98), tex ? new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }) : new THREE.MeshBasicMaterial({ color: 0xffe100, transparent: true, opacity: 0.5, depthWrite: false }));
+      qd.rotation.x = -Math.PI / 2; qd.position.copy(w2v(p, 0.045)); qd.renderOrder = 11; overlay.add(qd);
+    }
+  }
+}
 function aimArc(a: Vec, b: Vec) {
   const p0 = w2v(a, 0.9), p2 = w2v(b, 0.9), mid = p0.clone().lerp(p2, 0.5); mid.y += 0.25 + p0.distanceTo(p2) * 0.12;
   const c = new THREE.QuadraticBezierCurve3(p0, mid, p2);
@@ -662,6 +709,7 @@ function attackFrom(u: Unit, from: Vec, t: Unit): { kind: 'melee' | 'gun' | 'ski
 function refreshOverlay() {
   clearOverlay();
   if (battle.phase !== 'player') return;
+  if (aimActive) { if (gunAim && gunAim.ready && !aimFiring) gunAimOverlay(); return; } // r17：过肩瞄准时只画射程锁链 + GUARD 斜纹
   if (showThreat || inspectEnemy) {
     for (const it of battle.intents) {
       if (inspectEnemy && it.enemyId !== inspectEnemy) continue;
@@ -988,14 +1036,18 @@ function refreshLabels() {
     const pc = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 1000) / 10;
     const cyan = `clip-path:inset(0 ${pc(1 - (hpNow - dmgPred) / mx)}% 0 0)`, red = dmgPred > 0 ? `clip-path:inset(0 ${pc(1 - hpNow / mx)}% 0 ${pc((hpNow - dmgPred) / mx)}%)` : '';
     const heart = p5.has('heart_ol') ? `<div class="heart p5h${locked ? ' red' : ''}">${locked && p5.has('heart_red') ? p5.img('heart_red', 'ring') : ''}${p5.img('heart_ol', 'ol')}<i class="fill" style="${cyan}"></i>${red ? `<i class="fill pr" style="${red}"></i>` : ''}${locked ? `<b data-sdf="FOT_YURUKASTD_UB_SDF" data-col="#68ffe1" data-out="#000000" data-ow="0.3" data-sp="-10">${hpNow}</b>` : ''}</div>` : `<div class="heart"><b>${hpNow}</b></div>`;
-    if (chance) { const ft = g.position.clone().project(viewCam); el.style.setProperty('--uh', String(Math.max(20, (v.y - ft.y) / 2 * h))); }
+    // r17：锁定标 = 原版 bom04_icon_thorns_01/02 锯齿圈贴在目标身上（o_t2 红色 = 普通锁定；o_t1 青色 + attack_GUARD = GUARD 目标），瞄准阶段显示、开火时收起
+    const lockOn = aimT && !!gunAim && gunAim.ready && !aimFiring;
+    const grd = lockOn && (u.guard || battle.hasResistance(u, battle.unit(gunAim!.sid).pos));
+    const lock = lockOn && p5.has('thorns_fill') ? `<div class="lockr${grd ? ' g' : ''}"><i class="t2"></i><i class="t1"></i>${grd && p5.has('guard_word') ? `<img class="gw" src="${p5.url('guard_word')}" alt=""/>` : ''}</div>` : '';
+    if (chance || lock) { const ft = g.position.clone().project(viewCam); el.style.setProperty('--uh', String(Math.max(20, (v.y - ft.y) / 2 * h))); }
     const html = u.side === 'enemy'
-      ? `${pred}${heart}${chance}${tags}` // P5T：敌人头顶心形 + HP 数字
+      ? `${pred}${heart}${grd ? '' : chance}${lock}${tags}` // P5T：敌人头顶心形 + HP 数字
       : `${u.name.split(' ').pop()}${tags}<div class="hp"><i style="width:${(100 * u.hp) / u.maxHp}%"></i></div>`;
     if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; if (html.includes('data-sdf')) hydrateSdf(el); }
     if (rg) {
       // r14：选中我方 / 锁定目标 / 瞄准中的射手与目标 → 红色描边（command_3456、aim_1420_3）
-      rg.setHighlight?.(!u.ko && (aimIds.includes(u.id) || (!busy && battle.phase === 'player' && (u.id === selected && !u.acted || u.id === previewTarget))));
+      rg.setHighlight?.(!u.ko && ((aimIds.includes(u.id) && !aimFiring) || (!busy && battle.phase === 'player' && (u.id === selected && !u.acted || u.id === previewTarget))));
       if (!busy) rg.setDowned(u.downed);
       if (!u.ko && rg.pose === 'dead') rg.revive();
       if (!busy && u.role !== 'shielder') { // r15：掩体后待机 = 原版 HideL/HideR 蹲姿（背靠掩体，探头朝最近的对手一侧）
@@ -1063,8 +1115,9 @@ function toast(text: string) {
   clearTimeout((toast as unknown as { h: number }).h);
   (toast as unknown as { h: number }).h = window.setTimeout(() => t.classList.add('hidden'), 1800);
 }
-function popAt(pos: THREE.Vector3, text: string, cls = '', yOff = 1.2) {
+function popAt(pos: THREE.Vector3, text: string, cls = '', yOff = 1.2, track?: THREE.Object3D) {
   const v = pos.clone().add(new THREE.Vector3(0, yOff, 0)).project(viewCam);
+  const follow = (el: HTMLElement) => { if (!track) return; const tick = () => { if (!el.isConnected) return; const q = track.position.clone().add(new THREE.Vector3(0, yOff, 0)).project(viewCam); el.style.left = `${((q.x + 1) / 2) * window.innerWidth}px`; el.style.top = `${((1 - q.y) / 2) * window.innerHeight}px`; requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
   const el = document.createElement('div');
   // DOWN / 盾挡 → P5T 原版字母贴图 + anim_ui2d_down_start 时序（缺图时保持文字）
   const pop = text === 'DOWN!' ? letterPop('down') : text === '盾挡!' ? letterPop('block') : '';
@@ -1079,7 +1132,7 @@ function popAt(pos: THREE.Vector3, text: string, cls = '', yOff = 1.2) {
     dv.root.classList.add('dmg', 'orig'); if (cls.includes('heavy')) dv.root.classList.add('heavy');
     dv.root.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`;
     dv.root.style.top = `${((1 - v.y) / 2) * window.innerHeight}px`;
-    $('#labels').appendChild(dv.root);
+    $('#labels').appendChild(dv.root); follow(dv.root);
     playDamageClip(dv, 'anime_btl_damage', () => dv.root.remove());
     return;
   }
@@ -1105,7 +1158,28 @@ const DPR = Math.min(3, window.devicePixelRatio || 1);
 void loadSdfFont(BN_FONT);
 function popDamage(unitId: string, text: string, cls = '') {
   const g = unitMesh.get(unitId);
-  if (g) popAt(g.position, text, cls, (rigs.get(unitId)?.height ?? 1.1) * 0.95);
+  // r17：过肩镜头里伤害数字贴在目标身上（o_hit：白字在目标胸口），并逐帧跟随目标投影（r16 只在弹出时算一次位置，镜头后拉后数字落到屏幕下方）
+  const h = rigs.get(unitId)?.height ?? 1.1;
+  if (g) popAt(g.position, text, cls, aimActive ? h * 0.55 : h * 0.95, aimActive ? g : undefined);
+}
+/** r17：CRITICAL!!（hit_1422_8：原版 bot01_critical_icon_dialog 872×324，按 damageview 画布比例 ×CODE_SCALE 摆在目标上方；出现/消失曲线未导出 → 0.12s 放大入、0.9s 后淡出，重建） */
+function popCritical(unitId: string) {
+  const g = unitMesh.get(unitId); if (!g || !p5.has('critical')) return;
+  const h = rigs.get(unitId)?.height ?? 1.1;
+  const el = document.createElement('img'); el.className = 'crit-pop'; el.src = p5.url('critical'); el.alt = '';
+  el.style.width = `${872 * (window.innerHeight / 1080) * 0.5}px`;
+  $('#labels').appendChild(el);
+  const t0 = performance.now();
+  const step = () => {
+    if (!el.isConnected) return;
+    const v = g.position.clone().add(new THREE.Vector3(0, h * 1.05, 0)).project(viewCam);
+    el.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`; el.style.top = `${((1 - v.y) / 2) * window.innerHeight}px`;
+    const k = (performance.now() - t0) / 1000;
+    el.style.transform = `translate(-50%, -100%) scale(${k < 0.12 ? 0.6 + (k / 0.12) * 0.4 : 1})`;
+    el.style.opacity = String(k < 0.9 ? 1 : Math.max(0, 1 - (k - 0.9) / 0.2));
+    if (k < 1.1) requestAnimationFrame(step); else el.remove();
+  };
+  step();
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** 走格时长：按该单位原版 Run 步速（p5tChar.msPerTile；程序化 rig 用 RUN_MS_PER_TILE），快进时 ÷ SPEED */
@@ -1175,13 +1249,23 @@ function flash(at: Vec, radius: number) {
 }
 
 let aimActive = false;
-let aimAnim: { t0: number; dur: number; from: THREE.Vector3; to: THREE.Vector3; look: THREE.Vector3; fov0: number; fov1: number } | null = null;
+/** r17：过肩镜头动画——step(k) 摆机位（k 0→1），aimLook = 当前注视点（半透圆柱 / 切目标转向用） */
+let aimAnim: { t0: number; dur: number; step: (k: number) => void } | null = null;
+const aimLook = new THREE.Vector3();
+/** r17：开火阶段（SHOT/BACK/描边/锁定标已收起） */
+let aimFiring = false;
+/** r17：本枪是 CRITICAL（目标无掩体 → 正面特写 + CRITICAL!!，hit_1422 / hit_1422_8） */
+let aimCrit = false;
+/** r17：玩家枪击瞄准阶段（o_aim / o_t1：按 GUN 后直接进过肩镜头并锁定默认目标，点其他敌人切目标，SHOT/再点目标 = 开火，BACK = 回指令牌） */
+let gunAim: { sid: string; targets: string[]; idx: number; ready: boolean } | null = null;
+const gunTid = () => (gunAim ? gunAim.targets[gunAim.idx] : null);
 /**
  * 过肩机位（10-26 r6：我方/敌方同一算法）：按射手当前姿势的实际包围盒（含帽子、手里的枪）求机位，
  * 先试右肩、再试左肩，侧移/后退逐级加大，直到「机位 → 目标胸口」视线不穿过射手自身模型；Joker 身高下与原机位一致（后 1.05、侧 0.5、高 1.05）。
  */
 // r15：aim_1420_3 原版射手全身入画、占屏高约 60%、位于画面左 1/3，目标在中间偏右 → 镜头拉远（身后 2.7、右 0.85、头高）
-const AIM_CAM = { back: 2.7, lat: 0.85, h: 0.95, lookY: 0.62 };
+// r17：按 o_aim.png（54.75s）/ o_t1（54.85s）重量：射手包围盒中心 (0.324,0.600)、高 0.66 屏（头顶 195px、衣摆 ≈670px@720）、目标在画面中偏右 → 机位见下（tools/rec-gun 实测迭代）
+const AIM_CAM = { back: 2.7, lat: 0.85, h: 0.95, lookY: 0.62, fov: 34, mix: 0 };
 function shoulderCam(attackerId: string, ap: THREE.Vector3, dir: THREE.Vector3, look: THREE.Vector3) {
   const right = new THREE.Vector3(-dir.z, 0, dir.x);
   const g = unitMesh.get(attackerId);
@@ -1243,6 +1327,8 @@ async function tweenMesh(g: THREE.Object3D, to: THREE.Vector3, ms: number) {
 }
 async function stepOutIfCovered(aid: string, tid: string) {
   const a = unitMesh.get(aid), t = unitMesh.get(tid); if (!a || !t) return;
+  // r17：半掩体（木箱）后不闪出、直接隔箱开火（V3 第 5 段 5:51–5:54）；全掩体墙后的闪出保留 r13 做法（原版证据待核）
+  { const au = battle.unit(aid), tu = battle.unit(tid); if (au && tu && battle.grid.coverAgainst(au.pos, tu.pos) < 2) return; }
   const up = new THREE.Vector3(0, 0.6, 0), ap = a.position.clone().add(up), tp = t.position.clone().add(up);
   const d0 = losBlockedAt(ap, tp); if (d0 == null || d0 > 1.4) return;
   const dir = tp.clone().sub(ap).setY(0).normalize(), right = new THREE.Vector3(-dir.z, 0, dir.x);
@@ -1252,7 +1338,7 @@ async function stepOutIfCovered(aid: string, tid: string) {
   stepped = { id: aid, home: a.position.clone() };
   const r = rigs.get(aid); r?.setRunning(true);
   await tweenMesh(a, a.position.clone().add(off), 220 / aimSpeed());
-  r?.setRunning(false); r?.aim(t.position, 'gun', 2400 / aimSpeed());
+  r?.setRunning(false); r?.raise?.(t.position); // r17：开火动作由 attack 分支统一触发
 }
 async function stepBackToCover() {
   if (!stepped) return; const s = stepped; stepped = null;
@@ -1260,45 +1346,90 @@ async function stepBackToCover() {
   const r = rigs.get(s.id); r?.setRunning(true);
   await tweenMesh(g, s.home, 300 / aimSpeed()); r?.setRunning(false);
 }
-/** r13：正面特写（14:21.5：CHANCE!! 暴击那一枪切到射手正前方低机位、枪口朝镜头 ≈0.6s，再切命中）。
- *  录像里 12:49（打掩体后敌人 12）、12:57（Mona 11）、13:02（Skull 击杀 14）都没有这个切镜 → 触发条件 = 暴击（目标无掩体/无抗性，CHANCE）；仅 1 个正样本，标「推断」。
- *  机位按帧估：射手前方 1.5m、偏左 0.35m、高 0.45m 仰看胸口，FOV 38（原版镜头数据只有 Camera 组件，无用途对应 → 不能用）。 */
+/** r17：正面特写（hit_1422：CRITICAL 那一枪切到射手正前方、胸口高度略仰，射手在画面右半、持枪手在画面左侧，枪口朝镜头左前）。
+ *  r13 版机位偏低且朝天（gun_cmp.jpg）→ 按 hit_1422 重定：射手前 1.55m、看点在射手身侧（世界 right +0.32 = 画面左），高 0.55×身高，FOV 40（按帧估，原版镜头数据无对应 → 重建）。
+ *  时序：切入后等原版 GunFire 开火帧（impactRig）+0.12s → 硬切回过肩机位（hit_1422_8），命中与 CRITICAL!! 在过肩机位里出。触发 = 目标无掩体（CHANCE），仅 1 个正样本，标「推断」。 */
 async function frontCloseUp(aid: string, tid: string) {
   const a = unitMesh.get(aid), t = unitMesh.get(tid); if (!a || !t) return;
   const dir = t.position.clone().sub(a.position).setY(0).normalize(), right = new THREE.Vector3(-dir.z, 0, dir.x);
   const h = rigs.get(aid)?.height ?? 1.1;
-  const look = a.position.clone().add(new THREE.Vector3(0, h * 0.62, 0));
-  const pos = a.position.clone().addScaledVector(dir, 1.5).addScaledVector(right, -0.35).add(new THREE.Vector3(0, h * 0.42, 0));
-  const keep = { p: aimCam.position.clone(), fov: aimCam.fov, anim: aimAnim };
-  aimAnim = null; aimCam.position.copy(pos); aimCam.fov = 38; aimCam.lookAt(look); aimCam.updateProjectionMatrix();
+  const look = a.position.clone().addScaledVector(right, FRONT_CAM.lookSide).add(new THREE.Vector3(0, h * FRONT_CAM.lookH, 0));
+  const pos = a.position.clone().addScaledVector(dir, FRONT_CAM.dist).addScaledVector(right, FRONT_CAM.side).add(new THREE.Vector3(0, h * FRONT_CAM.h, 0));
+  const keep = { p: aimCam.position.clone(), q: aimCam.quaternion.clone(), fov: aimCam.fov, look: aimLook.clone() };
+  aimAnim = null; aimCam.position.copy(pos); aimCam.fov = FRONT_CAM.fov; aimCam.lookAt(look); aimCam.updateProjectionMatrix();
   setAimSeeThrough(pos, look, a.position.y);
   document.body.classList.add('aim-front');
-  await sleep(620 / aimSpeed());
+  rigs.get(aid)?.aim(t.position, 'gun', 2400 / aimSpeed());
+  await sleep(90 / aimSpeed());
+  await impactRig(aid, 900);
+  await sleep(120 / aimSpeed());
   document.body.classList.remove('aim-front');
-  aimCam.position.copy(keep.p); aimCam.fov = keep.fov; if (keep.anim) aimCam.lookAt(keep.anim.look); aimCam.updateProjectionMatrix();
-  if (keep.anim) setAimSeeThrough(keep.p, keep.anim.look, t.position.y);
+  aimCam.position.copy(keep.p); aimCam.quaternion.copy(keep.q); aimCam.fov = keep.fov; aimCam.updateProjectionMatrix(); aimLook.copy(keep.look);
+  setAimSeeThrough(keep.p, keep.look, t.position.y);
 }
-/** 过肩瞄准：射手肩后 → 目标胸口；450ms 推近 + FOV 收窄（r14：无准星/黑边，射手+目标红描边，目标头顶红心+CHANCE 保留——aim_1420_3） */
-async function aimShot(attackerId: string, targetId: string, reticle = true) {
+const FRONT_CAM = { dist: 1.55, side: 0.2, h: 0.55, lookSide: 0.32, lookH: 0.6, fov: 40 };
+const easeIO = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const easeOut = (k: number) => 1 - Math.pow(1 - k, 3);
+/** r17：从当前画面镜头快速飞入过肩机位（o_011→o_015：俯视 → 过肩约 0.4s 一气呵成，无中途远景机位 → 去掉 r16 开火前那帧空白紫屏：旧版从身后 5m 外的 from 机位起推，常落在建筑体内） */
+function camSwoop(pos: THREE.Vector3, look: THREE.Vector3, fov: number, ms: number) {
+  const src = viewCam as THREE.PerspectiveCamera;
+  aimCam.aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight);
+  const dc = new THREE.PerspectiveCamera(); dc.position.copy(pos); dc.lookAt(look); dc.updateMatrixWorld();
+  const p1 = pos.clone(), q1 = dc.quaternion.clone();
+  const p0 = src.getWorldPosition(new THREE.Vector3()), q0 = src.getWorldQuaternion(new THREE.Quaternion()), f0 = src.isPerspectiveCamera ? src.fov : fov;
+  aimLook.copy(look);
+  const step = (k: number) => { const e = easeIO(k); aimCam.position.lerpVectors(p0, p1, e); aimCam.quaternion.slerpQuaternions(q0, q1, e); aimCam.fov = f0 + (fov - f0) * e; aimCam.updateProjectionMatrix(); };
+  step(ms > 0 ? 0 : 1);
+  aimAnim = ms > 0 ? { t0: performance.now(), dur: ms, step } : null;
+  viewCam = aimCam;
+}
+/** r17：以射手为轴转向新目标（o_022→o_024 ≈0.25–0.3s） */
+function camOrbit(center: THREE.Vector3, pos: THREE.Vector3, look: THREE.Vector3, ms: number) {
+  const p0 = aimCam.position.clone(), l0 = aimLook.clone();
+  const a0 = Math.atan2(p0.x - center.x, p0.z - center.z), a1 = Math.atan2(pos.x - center.x, pos.z - center.z);
+  const r0 = Math.hypot(p0.x - center.x, p0.z - center.z), r1 = Math.hypot(pos.x - center.x, pos.z - center.z);
+  let da = a1 - a0; da = Math.atan2(Math.sin(da), Math.cos(da));
+  const step = (k: number) => {
+    const e = easeOut(k), a = a0 + da * e, r = r0 + (r1 - r0) * e;
+    aimCam.position.set(center.x + Math.sin(a) * r, p0.y + (pos.y - p0.y) * e, center.z + Math.cos(a) * r);
+    aimLook.lerpVectors(l0, look, e); aimCam.lookAt(aimLook);
+  };
+  aimAnim = { t0: performance.now(), dur: Math.max(1, ms), step };
+}
+/** r17：开火镜头（o_aim → o_hit，sheet_b 第 9–10 帧：SHOT/BACK 收起后约 0.25s 内机位后拉、升高，射手缩到约 0.37 屏高，目标留在画面中偏右上） */
+const FIRE_CAM = { pull: 1.7, up: 0.55, ms: 260 };
+function fireCam(aid: string) {
+  const a = unitMesh.get(aid); if (!a) return;
+  const c = a.position.clone();
+  const p0 = aimCam.position.clone();
+  const p1 = c.clone().add(p0.clone().sub(c).multiplyScalar(FIRE_CAM.pull)).add(new THREE.Vector3(0, FIRE_CAM.up, 0));
+  const look = aimLook.clone();
+  aimAnim = { t0: performance.now(), dur: FIRE_CAM.ms / aimSpeed(), step: (k) => { aimCam.position.lerpVectors(p0, p1, easeOut(k)); aimCam.lookAt(look); } };
+}
+function aimPose(attackerId: string, targetId: string) {
+  const a = unitMesh.get(attackerId)!, t = unitMesh.get(targetId)!;
+  const ap = a.position.clone(), tp = t.position.clone();
+  const dir = tp.clone().sub(ap); dir.y = 0; dir.normalize();
+  // mix：注视点从目标向射手胸口偏移的比例（让目标落在画面中偏右，o_aim）
+  const look = tp.clone().add(new THREE.Vector3(0, AIM_CAM.lookY, 0)).lerp(ap.clone().add(new THREE.Vector3(0, AIM_CAM.lookY, 0)), AIM_CAM.mix);
+  const { to } = shoulderCam(attackerId, ap, dir, look);
+  return { pos: to, look };
+}
+/** 过肩瞄准（敌方回合 / 未经瞄准阶段的开枪）：从当前镜头飞入过肩机位，射手+目标红描边，目标头顶红心+CHANCE（aim_1420_3） */
+async function aimShot(attackerId: string, targetId: string, _reticle = true) {
   const SPEED = aimSpeed(); // 敌方回合点屏快进时整体加速
   const a = unitMesh.get(attackerId), t = unitMesh.get(targetId);
   if (!a || !t) return;
-  const ap = a.position.clone(), tp = t.position.clone();
-  const dir = tp.clone().sub(ap); dir.y = 0;
+  const dir = t.position.clone().sub(a.position); dir.y = 0;
   if (dir.lengthSq() < 1e-4) return;
-  dir.normalize();
-  const look = tp.clone().add(new THREE.Vector3(0, AIM_CAM.lookY, 0));
-  const { from, to } = shoulderCam(attackerId, ap, dir, look);
-  const el = canvas;
-  aimCam.aspect = el.clientWidth / Math.max(1, el.clientHeight);
-  aimCam.position.copy(from); aimCam.lookAt(look); aimCam.fov = 50; aimCam.updateProjectionMatrix();
-  aimAnim = { t0: performance.now(), dur: 450 / SPEED, from, to, look, fov0: 50, fov1: 34 };
-  viewCam = aimCam; aimActive = true; document.body.classList.add('aiming');
-  const ov = $('#aim'); ov.classList.remove('hidden', 'fire'); ov.classList.toggle('noret', !reticle); ov.classList.toggle('foe', battle.unit(attackerId).side !== 'ally'); void ov.offsetWidth; ov.classList.add('on');
+  const { pos, look } = aimPose(attackerId, targetId);
+  if (aimActive && viewCam === aimCam) camOrbit(a.position, pos, look, 280 / SPEED);
+  else camSwoop(pos, look, AIM_CAM.fov, 400 / SPEED);
+  aimActive = true; aimFiring = false; document.body.classList.add('aiming');
+  const ov = $('#aim'); ov.classList.remove('hidden', 'fire', 'on');
   aimIds = [attackerId, targetId]; labelEl.get(targetId)?.classList.add('aimt');
-  await sleep((reticle ? 520 : 420) / SPEED);
-  if (reticle) ov.classList.add('fire');
-  await sleep(90 / SPEED);
+  rigs.get(attackerId)?.raise?.(t.position);
+  await sleep(400 / SPEED + 380 / SPEED); // 飞入 0.4s + 举枪瞄准停留（原版敌兵瞄准约 0.4s，按录像目估）
 }
 /** r11：技能列表/选目标期间切到原版式透视镜头；平滑跟随光标所在技能的目标。离开技能流程 → 回到俯视镜头 */
 function skillCamStep() {
@@ -1334,11 +1465,10 @@ function skillCamStep() {
 function aimStep() {
   resultStep();
   if (!aimAnim) return;
-  const k = Math.min(1, (performance.now() - aimAnim.t0) / aimAnim.dur), e = 1 - Math.pow(1 - k, 3);
-  aimCam.position.lerpVectors(aimAnim.from, aimAnim.to, e);
-  aimCam.fov = aimAnim.fov0 + (aimAnim.fov1 - aimAnim.fov0) * e;
-  aimCam.lookAt(aimAnim.look); aimCam.updateProjectionMatrix();
-  setAimSeeThrough(aimCam.position, aimAnim.look, aimAnim.look.y - 0.55);
+  const k = Math.min(1, (performance.now() - aimAnim.t0) / aimAnim.dur);
+  aimAnim.step(k);
+  setAimSeeThrough(aimCam.position, aimLook, aimLook.y - 0.55);
+  if (k >= 1) aimAnim = null;
 }
 async function endAim(hold = 260) {
   if (!aimActive) return;
@@ -1346,7 +1476,7 @@ async function endAim(hold = 260) {
   if (resultHold) { aimAnim = null; document.body.classList.remove('aiming'); $('#aim').classList.add('hidden'); return; } // r14：结算已接管镜头
   aimActive = false; aimAnim = null; viewCam = baseCam(); document.body.classList.remove('aiming'); setAimSeeThrough(null);
   const ov = $('#aim'); ov.classList.remove('on', 'fire'); ov.classList.add('hidden');
-  for (const id of aimIds) labelEl.get(id)?.classList.remove('aimt'); aimIds = []; aimChance = false;
+  for (const id of aimIds) labelEl.get(id)?.classList.remove('aimt'); aimIds = []; aimChance = false; aimFiring = false; aimCrit = false; gunAim = null;
   await stepBackToCover();
 }
 
@@ -1474,7 +1604,8 @@ async function play(events: BattleEvent[]) {
         lastAttacker = e.attackerId;
         lastAtkKind = e.kind === 'gun' ? 'gun' : e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'other';
         lastSkill = (e.kind === 'skill' || e.kind === 'unique') && e.skillId ? e.skillId : null;
-        { const tg = unitMesh.get(e.targetId); const ar = rigs.get(e.attackerId); if (tg && ar) ar.aim(tg.position, e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'gun', 2400 / SPEED); const tr = rigs.get(e.targetId); const ag = unitMesh.get(e.attackerId); if (tr && ag) tr.faceTo(ag.position); }
+        const gunCam = e.kind === 'gun' && !params.has('noaim'); // r17：枪击的开火动作在镜头就位、SHOT/BACK 收起后才放（sheet_b 第 9→10 帧）
+        { const tg = unitMesh.get(e.targetId); const ar = rigs.get(e.attackerId); if (tg && ar) { if (gunCam) ar.faceTo(tg.position); else ar.aim(tg.position, e.kind === 'melee' || e.kind === 'counter' ? 'melee' : e.kind === 'skill' || e.kind === 'unique' ? 'skill' : 'gun', 2400 / SPEED); } const tr = rigs.get(e.targetId); const ag = unitMesh.get(e.attackerId); if (tr && ag) tr.faceTo(ag.position); }
         if (e.skillId && battle.unit(e.attackerId).side === 'ally') await summonCutIn(e.attackerId, e.skillId);
         // r14/r16：切入后原版 Persona（Joker=Arsene、Skull=Kidd、Mona=Zorro…）在身后现身 + 共通层 10300 蓝焰（原版贴图 Fire_5x2），直到命中结算后
         if (e.skillId && battle.unit(e.attackerId).side === 'ally' && (e.kind === 'skill' || e.kind === 'unique')) {
@@ -1483,12 +1614,19 @@ async function play(events: BattleEvent[]) {
           if (ag && tg && personaKeyOf(e.attackerId)) personaFx = showPersona(world, ag, tg.position.clone(), hh, SPEED, e.attackerId, e.kind === 'unique'); // r16：全员原版 Persona（batch-10）
           if (ag) void summonAura(world, ag.position.clone(), hh, 1500 / SPEED);
         }
-        if (e.kind === 'gun' && !params.has('noaim')) {
-          await stepOutIfCovered(e.attackerId, e.targetId);
+        if (gunCam) {
           const dmg = events.slice(ei + 1).find((x) => x.type === 'damage' && x.unitId === e.targetId) as Extract<BattleEvent, { type: 'damage' }> | undefined;
-          aimChance = !!dmg && !dmg.resist && dmg.cover === 0 && !isFoe(e.attackerId); // aim_1420_3：瞄准时目标身上挂 CHANCE!!
-          await aimShot(e.attackerId, e.targetId);
-          if (dmg && !dmg.resist && dmg.cover === 0 && !isFoe(e.attackerId)) await frontCloseUp(e.attackerId, e.targetId);
+          const crit = !!dmg && !dmg.resist && dmg.cover === 0 && !isFoe(e.attackerId);
+          // r17：玩家瞄准阶段已在过肩机位、锁定同一目标 → 不再重新切镜；敌方回合 / 未经瞄准阶段 → 飞入过肩机位（同一套镜头，无 SHOT/BACK）
+          const pre = aimActive && viewCam === aimCam && aimIds[0] === e.attackerId && aimIds[1] === e.targetId;
+          aimChance = crit; // aim_1420_3：瞄准时目标身上挂 CHANCE!!
+          if (!pre) await aimShot(e.attackerId, e.targetId, false);
+          // 确认后：SHOT/BACK、射程锁链、锁定标、红描边先收起（sheet_b 第 9 帧）
+          aimFiring = true; aimCrit = crit; $('#aim').classList.remove('on'); clearOverlay(); refreshLabels();
+          await stepOutIfCovered(e.attackerId, e.targetId);
+          const ar = rigs.get(e.attackerId), tg = unitMesh.get(e.targetId);
+          if (crit) await frontCloseUp(e.attackerId, e.targetId); // hit_1422 → 切回过肩（1422_8）
+          else { fireCam(e.attackerId); if (ar && tg) ar.aim(tg.position, 'gun', 2400 / SPEED); }
         }
         else if (foeAtk && !params.has('noaim')) await aimShot(e.attackerId, e.targetId, false); // 敌方近战/技能：过肩机位 + 上下黑边，无准星
         break;
@@ -1512,6 +1650,10 @@ async function play(events: BattleEvent[]) {
           rigs.get(e.unitId)?.flinch();
           hitImpact(e.unitId, hs);
           popDamage(e.unitId, `${e.amount}${e.resist ? '▼' : ''}`, hs.heavy ? 'hit heavy' : 'hit');
+          if (lastAtkKind === 'gun' && aimCrit && aimActive) popCritical(e.unitId); // r17：1422_8 CRITICAL!!（原版 bot01_critical_icon_dialog）
+        }
+        if (lastAtkKind === 'gun' && aimActive && aimFiring) { // r17：命中后在同一镜头停留约 0.8s 再回俯视（o_hit 58.25s → 回俯视）
+          await sleep(800 / aimSpeed()); await endAim(0); break;
         }
         await sleep(240 / SPEED);
         await settleRig(e.unitId, 1800);
@@ -1936,6 +2078,7 @@ mountCamButtons((d) => rig.rotate(d), camOverview);
 
 function onTap(h: { tile?: Vec; unit?: string }) {
   if (busy || battle.phase !== 'player') return;
+  if (gunAim) { if (h.unit) gunAimTap(h.unit); return; } // r17：瞄准阶段只认敌人（切目标 / 再点当前目标 = 开火）
   if (h.unit) {
     const u = battle.unit(h.unit);
     if (u.side === 'ally') {
@@ -1970,6 +2113,93 @@ function onTap(h: { tile?: Vec; unit?: string }) {
   }
   onTapTile(h);
 }
+// ---------- r17 枪击瞄准阶段（原版 part9 0:53–1:01 逐帧：o_011 俯视 → o_015 过肩 + SHOT/BACK → o_018/o_022 切目标 → sheet_b 开火） ----------
+/** 射程内可打的敌人，默认目标排第一：最近（同距离时无 GUARD 的优先） */
+function gunTargetsOf(u: Unit, from: Vec): string[] {
+  const md = (e: Unit) => Math.abs(e.pos.x - from.x) + Math.abs(e.pos.y - from.y);
+  return battle.units.filter((e) => !e.ko && e.side !== 'ally' && !e.prop && !battle.isHidden(e) && battle.canShoot(u, e, from))
+    .sort((a, b) => md(a) - md(b) || Number(!!a.guard) - Number(!!b.guard)).map((e) => e.id);
+}
+function gunAimChance(sid: string, tid: string) {
+  const s = battle.unit(sid), t = battle.unit(tid), p = battle.previewDamage(s, t, 'gun', undefined, s.pos);
+  return !p.resist && p.cover === 0 && !p.miss;
+}
+function startGunAim(): boolean {
+  if (!selected || busy || battle.phase !== 'player' || aimActive) return false;
+  const u = battle.unit(selected);
+  if (u.acted || !u.gun) return false;
+  // 站位格还没确认（只预览）→ 维持旧流程（先移动再开枪，事件里会飞入过肩机位）
+  if (previewTile && !eq(previewTile, u.pos)) return false;
+  const targets = gunTargetsOf(u, u.pos);
+  if (!targets.length) return false;
+  sfx('ui_confirm_short', 0.7);
+  mode = 'gun'; gunAim = { sid: u.id, targets, idx: 0, ready: false };
+  previewTarget = targets[0];
+  aimActive = true; // 指令牌收起、镜头手势停用
+  refreshAll();
+  const ga = gunAim;
+  // o_011 → o_015：按 GUN 后约 0.1s 开始、0.4s 飞入过肩机位；SHOT/BACK 在镜头到位时滑入
+  setTimeout(() => {
+    if (gunAim !== ga) return;
+    const t = gunTid()!; const { pos, look } = aimPose(ga.sid, t);
+    camSwoop(pos, look, AIM_CAM.fov, 400 / SPEED);
+    document.body.classList.add('aiming');
+    aimIds = [ga.sid, t]; labelEl.get(t)?.classList.add('aimt'); aimChance = gunAimChance(ga.sid, t);
+    rigs.get(ga.sid)?.raise?.(unitMesh.get(t)!.position);
+    const ov = $('#aim'); ov.classList.remove('hidden', 'fire', 'on');
+    setTimeout(() => { if (gunAim !== ga) return; ga.ready = true; ov.classList.add('on'); refreshAll(); }, 400 / SPEED);
+    refreshAll();
+  }, 100 / SPEED);
+  return true;
+}
+/** 切到另一个可打目标：锁定标跳过去，镜头以射手为轴转向（o_022→o_024 ≈0.3s） */
+function gunAimSwitch(idx: number) {
+  if (!gunAim || !gunAim.ready) return;
+  const n = gunAim.targets.length; idx = ((idx % n) + n) % n;
+  if (idx === gunAim.idx) return;
+  const old = gunTid()!; labelEl.get(old)?.classList.remove('aimt');
+  gunAim.idx = idx; const t = gunTid()!;
+  previewTarget = t; aimIds = [gunAim.sid, t]; labelEl.get(t)?.classList.add('aimt'); aimChance = gunAimChance(gunAim.sid, t);
+  sfx('ui_confirm_short', 0.5);
+  const a = unitMesh.get(gunAim.sid)!, tp = unitMesh.get(t)!.position;
+  rigs.get(gunAim.sid)?.raise?.(tp);
+  const { pos, look } = aimPose(gunAim.sid, t);
+  camOrbit(a.position, pos, look, 300 / SPEED);
+  refreshAll();
+}
+function gunAimFire() {
+  if (!gunAim || !gunAim.ready || busy) return;
+  const s = battle.unit(gunAim.sid), t = battle.unit(gunTid()!);
+  gunAim = null; previewTarget = t.id;
+  commitAttack(s, t);
+  mode = 'auto';
+}
+function gunAimBack() {
+  if (!gunAim) return;
+  const sid = gunAim.sid; gunAim = null;
+  sfx('ui_confirm_3', 0.6);
+  rigs.get(sid)?.lower?.();
+  previewTarget = null; mode = 'auto';
+  void endAim(0).then(() => refreshAll());
+}
+function gunAimTap(id: string) {
+  if (!gunAim || !gunAim.ready) return;
+  const i = gunAim.targets.indexOf(id);
+  if (i < 0) return; // 打不到的敌人点了没反应（原版光标只在可打目标间切换）
+  if (i === gunAim.idx) gunAimFire(); else gunAimSwitch(i);
+}
+$('#aim').addEventListener('click', (ev) => {
+  const b = (ev.target as HTMLElement).closest<HTMLElement>('[data-aim]'); if (!b) return;
+  ev.stopPropagation();
+  if (b.dataset.aim === 'shot') gunAimFire(); else gunAimBack();
+});
+window.addEventListener('keydown', (e) => {
+  if (!gunAim || busy) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { gunAimSwitch(gunAim.idx - 1); e.preventDefault(); }
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { gunAimSwitch(gunAim.idx + 1); e.preventDefault(); }
+  else if (e.key === 'Enter' || e.key === 'z') { gunAimFire(); e.preventDefault(); }
+  else if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'x') { gunAimBack(); e.preventDefault(); }
+});
 /** 执行对敌攻击（第二次点目标 / 预测面板「确认」） */
 function commitAttack(s: Unit, u: Unit) {
     const from = previewTile ?? s.pos;
@@ -2113,6 +2343,7 @@ function doAct(a: string) {
     }
   }
   if (a === 'skill') { openSkillList(); return; }
+  if (a === 'gun' && startGunAim()) return; // r17：GUN = 直接进过肩瞄准（射程内没有可打目标时退回旧的选目标模式）
   sfx('ui_confirm_short', 0.7);
   mode = mode === a ? 'auto' : (a as Mode);
   previewTarget = null;
@@ -2280,6 +2511,26 @@ window.__p5t = {
   skillBack() { if (skillPhase === 'target') openSkillList(); else { endSkillFlow(); refreshAll(); } },
   get skillPhase() { return skillPhase; },
   tap: onTap,
+  /** r17 验收：某单位在当前画面里的剪影——同一机位各渲染一次「有/无该单位」，返回两张 PNG dataURL（差分即剪影，含红描边壳） */
+  maskOf(id: string) {
+    const g = unitMesh.get(id); if (!g) return null;
+    const cam = viewCam as THREE.PerspectiveCamera;
+    const sh: THREE.Object3D[] = []; g.traverse((o) => { if (o.castShadow) { sh.push(o); o.castShadow = false; } }); // 影子不算剪影
+    renderer.render(scene, cam); const a = renderer.domElement.toDataURL('image/png');
+    g.visible = false; renderer.render(scene, cam); const b = renderer.domElement.toDataURL('image/png'); g.visible = true;
+    for (const o of sh) o.castShadow = true;
+    return { a, b };
+  },
+  /** r17 机位标定：改 AIM_CAM 后按当前射手/目标重摆过肩机位，返回剪影图对 + 目标投影 */
+  aimTune(cfg: Partial<typeof AIM_CAM>) {
+    Object.assign(AIM_CAM, cfg); if (aimIds.length < 2) return null;
+    const { pos, look } = aimPose(aimIds[0], aimIds[1]); aimAnim = null;
+    aimCam.position.copy(pos); aimCam.fov = AIM_CAM.fov; aimCam.lookAt(look); aimCam.updateProjectionMatrix(); aimLook.copy(look);
+    const tg = unitMesh.get(aimIds[1])!, th = rigs.get(aimIds[1])?.height ?? 1.1; const tv = tg.position.clone().add(new THREE.Vector3(0, th / 2, 0)).project(aimCam);
+    const rr = rigs.get(aimIds[0]) as unknown as { baseKey?: string; oneShot?: string; cur?: THREE.AnimationAction };
+    return { m: (this as { maskOf: (id: string) => unknown }).maskOf(aimIds[0]), tgt: [(tv.x + 1) / 2, (1 - tv.y) / 2], st: [rr?.baseKey, rr?.oneShot, rr?.cur?.getClip().name] };
+  },
+  aimCardRects() { return Array.from(document.querySelectorAll("#aim .aimcard")).map((e) => { const r = e.getBoundingClientRect(); return { cls: e.className, x: r.x, y: r.y, w: r.width, h: r.height }; }); },
   select(id: string) { onTap({ unit: id }); },
   rig,
   mapObj,

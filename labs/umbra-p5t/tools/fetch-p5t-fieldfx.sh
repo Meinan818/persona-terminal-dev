@@ -14,3 +14,6 @@ for n in ['red', 'yellow']:
     print('guard', n)
 PY
 ls -la "$DST"
+# r17：GUARD 目标脚下黄黑斜纹 = 原版 area_target/eff_011600 DangerZone（4 宫格图集，左上 = 黄框斜纹；o_guard 55.9s 核对；用途对应为推断）
+DZ="$SRC/area_target/textures/effect__battle_versatile__eff_011600__Textures__DangerZone.png.png"
+[ -f "$DZ" ] && cp -f "$DZ" "$DST/dangerzone.png" && echo "ok   dangerzone.png" || echo "miss DangerZone"

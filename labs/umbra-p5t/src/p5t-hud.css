@@ -344,3 +344,27 @@ body.p5hud #party .gw b { font-size: max(calc(54 * var(--g)), 10px); top: calc(2
 /* r16b：ResultIn 前整屏红底（实机 16:05.15 星形红块从右缘 0.12s 扩满、#f71400 纯红保持 1.2s；星形外形为重建） */
 .rs-wipe { position: fixed; inset: 0; background: #f71400; z-index: 9000; pointer-events: none; animation: rsWipe 120ms linear both; }
 @keyframes rsWipe { from { clip-path: polygon(calc(100% + 0.0vmax) calc(40% + -2.0vmax), calc(100% + 0.4vmax) calc(40% + -1.0vmax), calc(100% + 1.4vmax) calc(40% + -1.4vmax), calc(100% + 1.0vmax) calc(40% + -0.4vmax), calc(100% + 2.0vmax) calc(40% + 0.0vmax), calc(100% + 1.0vmax) calc(40% + 0.4vmax), calc(100% + 1.4vmax) calc(40% + 1.4vmax), calc(100% + 0.4vmax) calc(40% + 1.0vmax), calc(100% + 0.0vmax) calc(40% + 2.0vmax), calc(100% + -0.4vmax) calc(40% + 1.0vmax), calc(100% + -1.4vmax) calc(40% + 1.4vmax), calc(100% + -1.0vmax) calc(40% + 0.4vmax), calc(100% + -2.0vmax) calc(40% + 0.0vmax), calc(100% + -1.0vmax) calc(40% + -0.4vmax), calc(100% + -1.4vmax) calc(40% + -1.4vmax), calc(100% + -0.4vmax) calc(40% + -1.0vmax)); } to { clip-path: polygon(calc(100% + 0.0vmax) calc(40% + -260.0vmax), calc(100% + 54.7vmax) calc(40% + -132.1vmax), calc(100% + 183.8vmax) calc(40% + -183.8vmax), calc(100% + 132.1vmax) calc(40% + -54.7vmax), calc(100% + 260.0vmax) calc(40% + 0.0vmax), calc(100% + 132.1vmax) calc(40% + 54.7vmax), calc(100% + 183.8vmax) calc(40% + 183.8vmax), calc(100% + 54.7vmax) calc(40% + 132.1vmax), calc(100% + 0.0vmax) calc(40% + 260.0vmax), calc(100% + -54.7vmax) calc(40% + 132.1vmax), calc(100% + -183.8vmax) calc(40% + 183.8vmax), calc(100% + -132.1vmax) calc(40% + 54.7vmax), calc(100% + -260.0vmax) calc(40% + 0.0vmax), calc(100% + -132.1vmax) calc(40% + -54.7vmax), calc(100% + -183.8vmax) calc(40% + -183.8vmax), calc(100% + -54.7vmax) calc(40% + -132.1vmax)); } }
+
+/* ---------- r17 枪击瞄准（o_aim.png 54.75s 模板匹配：SHOT 牌 x114 y296 246×102、BACK 牌 x142 y422 221×85 @1280×720；A 钮心 (297,381)、B 钮心 (309,434)，直径 ≈30px） ---------- */
+#aim { --a: calc(100vh / 720); }
+#aim .aimcard { position: absolute; pointer-events: auto; cursor: pointer; background: center / 100% 100% no-repeat; opacity: 0; transform: translateX(-40%); transition: opacity .1s, transform .16s cubic-bezier(.2, .9, .3, 1); }
+#aim.on .aimcard { opacity: 1; transform: none; }
+#aim .aimcard.shot { left: calc(114 * var(--a)); top: calc(296 * var(--a)); width: calc(246 * var(--a)); height: calc(102 * var(--a)); background-image: var(--p5-aim-shot); }
+#aim .aimcard.back { left: calc(142 * var(--a)); top: calc(422 * var(--a)); width: calc(221 * var(--a)); height: calc(85 * var(--a)); background-image: var(--p5-aim-back); transition-delay: .03s; }
+body.p5hud #aim .aimcard .fb { display: none; }
+#aim .aimcard .fb { position: absolute; inset: 0; background: #e60012; clip-path: polygon(0 20%, 100% 60%, 0 100%); color: #fff; font: 900 calc(30 * var(--a)) / 1 'Arial Black', sans-serif; padding: calc(10 * var(--a)) 0 0 calc(16 * var(--a)); }
+#aim .aimcard .fb small { display: block; font: 900 calc(12 * var(--a)) / 1.4 'UMBRA SC', sans-serif; }
+/* 圆钮：白底黑圈、A 绿字 / B 粉字（o_aim 放大核对；rebuilt） */
+#aim .aimcard .pad { position: absolute; width: calc(30 * var(--a)); height: calc(30 * var(--a)); margin: calc(-15 * var(--a)) 0 0 calc(-15 * var(--a)); box-sizing: border-box; border-radius: 50%; background: #fff; border: calc(3 * var(--a)) solid #111; box-shadow: 0 0 0 calc(1.5 * var(--a)) #fff; font: 900 calc(17 * var(--a)) / calc(24 * var(--a)) 'Arial Black', sans-serif; text-align: center; font-style: normal; }
+#aim .aimcard .pa { left: calc(183 * var(--a)); top: calc(85 * var(--a)); color: #3cbc3c; }
+#aim .aimcard .pb { left: calc(167 * var(--a)); top: calc(12 * var(--a)); color: #ee3d78; }
+#aim.foe .aimcard, #aim.noret .aimcard { display: none; }
+/* 锁定锯齿圈（原版 thorns_01 填充 + thorns_02 外线，运行时着色：红 = 普通、青 = GUARD；尺寸 ≈0.85×目标屏高，按 o_t1/o_t2 目估） */
+#labels .lbl .lockr { position: absolute; left: 50%; top: calc(100% + var(--uh, 80) * 0.42px); width: clamp(34px, calc(var(--uh, 80) * 0.85px), 130px); aspect-ratio: 276 / 262; transform: translate(-50%, -50%); pointer-events: none; }
+#labels .lbl .lockr i { position: absolute; inset: 0; background: #ff1f2d; -webkit-mask: var(--p5-thorns-line) center / contain no-repeat; mask: var(--p5-thorns-line) center / contain no-repeat; animation: lockspin 2.4s linear infinite; }
+#labels .lbl .lockr i.t1 { inset: 14%; background: #ff1f2d; opacity: .85; -webkit-mask-image: var(--p5-thorns-fill); mask-image: var(--p5-thorns-fill); animation-direction: reverse; }
+#labels .lbl .lockr.g i { background: #22d4ee; }
+#labels .lbl .lockr.g i.t1 { background: #f4ffff; opacity: .9; }
+#labels .lbl .lockr .gw { position: absolute; left: 50%; top: 50%; width: 92%; transform: translate(-50%, -50%) rotate(-6deg); }
+@keyframes lockspin { to { rotate: 360deg; } }
+#labels .crit-pop { position: absolute; pointer-events: none; z-index: 12; transform-origin: 50% 100%; }

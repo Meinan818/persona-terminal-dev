@@ -16,6 +16,9 @@ export interface UnitRig {
   setRunning(on: boolean): void;
   aim(target: THREE.Vector3 | null, kind?: AimKind, ms?: number): void;
   endAim(): void;
+  /** r17：举枪待命 / 放下（P5tRig 实现；程序化 rig 没有） */
+  raise?(target: THREE.Vector3 | null): void;
+  lower?(): void;
   flinch(from?: THREE.Vector3): void;
   setDowned(on: boolean): void;
   die(): void;

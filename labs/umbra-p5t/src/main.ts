@@ -1368,7 +1368,7 @@ async function frontCloseUp(aid: string, tid: string) {
 }
 // r17b：hit_1422 重看——枪口指向画面左、Joker 脸朝镜头 → 机位在瞄准线的「射手左侧」（-right，GunLoop 身体正面朝 -right，o_aim 过肩看到的是背），
 // 不是 r17 的瞄准线正前方（那样枪口直指镜头、只看到侧面举枪，f00344）。dist=沿 -right 距离、fwd=沿瞄准方向、look 偏向枪那侧让射手落在画面右半。
-const FRONT_CAM = { dist: 1.3, fwd: 0.35, h: 0.75, lookFwd: 0.4, lookH: 0.7, fov: 40 };
+const FRONT_CAM = { dist: 1.1, fwd: 0.5, h: 0.7, lookFwd: 0.19, lookH: 0.7, fov: 40 }; // r17b：M01 上按 hit_1422 标定（/workspace/work/rcal2 #4 + lookFwd 插值）
 function frontPose(aid: string, tid: string) {
   const a = unitMesh.get(aid), t = unitMesh.get(tid); if (!a || !t) return null;
   const dir = t.position.clone().sub(a.position).setY(0).normalize(), right = new THREE.Vector3(-dir.z, 0, dir.x);
@@ -1406,11 +1406,14 @@ function camOrbit(center: THREE.Vector3, pos: THREE.Vector3, look: THREE.Vector3
   aimAnim = { t0: performance.now(), dur: Math.max(1, ms), step };
 }
 /** r17：开火镜头（o_aim → o_hit，sheet_b 第 9–10 帧：SHOT/BACK 收起后约 0.25s 内机位后拉、升高，射手缩到约 0.37 屏高，目标留在画面中偏右上） */
-const FIRE_CAM = { pull: 1.7, up: 0.55, ms: 260, lookDy: 0, fov: 34 };
+const FIRE_CAM = { pull: 1.7, up: 0.55, ms: 260, lookDy: 0, fov: 34, latK: 1 };
 let lastFire: { aid: string; tid: string | null; p0: THREE.Vector3; look: THREE.Vector3 } | null = null;
 function fireEnd(aid: string, p0: THREE.Vector3, look0: THREE.Vector3) {
+  // r17b：机位相对射手分解为 后退(沿 -dir)/侧移(right)/高度 → 后退×pull、侧移×latK、高度+up（hit_1304：射手几乎居中、目标在其右上）
   const c = unitMesh.get(aid)!.position.clone();
-  const p1 = c.clone().add(p0.clone().sub(c).multiplyScalar(FIRE_CAM.pull)).add(new THREE.Vector3(0, FIRE_CAM.up, 0));
+  const dir = look0.clone().sub(c).setY(0).normalize(), right = new THREE.Vector3(-dir.z, 0, dir.x), rel = p0.clone().sub(c);
+  const bk = rel.dot(dir), lt = rel.dot(right);
+  const p1 = c.clone().addScaledVector(dir, bk * FIRE_CAM.pull).addScaledVector(right, lt * FIRE_CAM.latK).add(new THREE.Vector3(0, rel.y + FIRE_CAM.up, 0));
   return { p1, look: look0.clone().add(new THREE.Vector3(0, FIRE_CAM.lookDy, 0)) };
 }
 function fireCam(aid: string, tid: string | null = null) {

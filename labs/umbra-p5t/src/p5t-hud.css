@@ -368,3 +368,5 @@ body.p5hud #aim .aimcard .fb { display: none; }
 #labels .lbl .lockr .gw { position: absolute; left: 50%; top: 50%; width: 92%; transform: translate(-50%, -50%) rotate(-6deg); }
 @keyframes lockspin { to { rotate: 360deg; } }
 #labels .crit-pop { position: absolute; pointer-events: none; z-index: 12; transform-origin: 50% 100%; }
+/* r17b：CRITICAL 正面特写（hit_1422）画面里没有 SHOT/BACK 牌和锁定标 → 特写期间整块隐藏（r17 录像 f00344 牌在淡出中仍可见） */
+body.aim-front #aim .aimcard, body.aim-front #aim .aimlock { visibility: hidden !important; }
